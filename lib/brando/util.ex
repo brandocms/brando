@@ -332,46 +332,29 @@ defmodule Brando.Util do
     end
   end
 
+  @doc """
+  Maybe implementation. If `arg1` is nil, do nothing.
+  Else, invoke `fun` on `item`.
+  """
   def maybe(nil, _fun), do: nil
   def maybe(item, fun), do: fun.(item)
 
-  def log_error(kind, error, stacktrace) do
-    Logger.error Exception.format_banner(kind, error, stacktrace) <> "\n" <>
-                 Exception.format_stacktrace(stacktrace)
-  end
 
+  @doc """
+  Convenience function for getting yesterday's date
+  """
   def yesterday do
     {today, _time} = :calendar.universal_time()
     today_days = :calendar.date_to_gregorian_days(today)
     :calendar.gregorian_days_to_date(today_days - 1)
   end
 
+  @doc """
+  Convenience function for getting `now` in Ecto format
+  """
   def ecto_now do
     Ecto.DateTime.from_erl(:calendar.universal_time)
   end
-
-  def parse_integer(string, default) when is_binary(string) do
-    case Integer.parse(string) do
-      {int, ""} -> int
-      _ -> default
-    end
-  end
-  def parse_integer(_, default), do: default
-
-  def binarify(binary) when is_binary(binary),
-    do: binary
-  def binarify(number) when is_number(number),
-    do: number
-  def binarify(atom) when is_nil(atom) or is_boolean(atom),
-    do: atom
-  def binarify(atom) when is_atom(atom),
-    do: Atom.to_string(atom)
-  def binarify(list) when is_list(list),
-    do: for(elem <- list, do: binarify(elem))
-  def binarify(map) when is_map(map),
-    do: for(elem <- map, into: %{}, do: binarify(elem))
-  def binarify(tuple) when is_tuple(tuple),
-    do: for(elem <- Tuple.to_list(tuple), do: binarify(elem)) |> List.to_tuple
 
   @doc """
   Converts an ecto datetime record to ISO 8601 format.
@@ -404,6 +387,9 @@ defmodule Brando.Util do
     acc
   end
 
+  @doc """
+  Opens a Porcelain shell running `cmd` and returns the status
+  """
   def shell(cmd) do
     stream = IO.binstream(:standard_io, :line)
     result = Porcelain.shell(cmd, out: stream, err: :out)
