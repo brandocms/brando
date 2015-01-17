@@ -13,3 +13,4 @@ priv/static/brando/old_js
 assets/fonts
 brando.sublime-project
 docs
+excoveralls.post.json
