@@ -49,6 +49,11 @@ defmodule Brando.Users.Model.User do
   @doc """
   Casts and validates `params` against `user` to create a valid
   changeset when action is :create.
+
+  ## Example
+
+      user_changeset = changeset(%__MODULE__{}, :create, params)
+
   """
   def changeset(user, :create, params) do
     params
@@ -64,6 +69,11 @@ defmodule Brando.Users.Model.User do
   @doc """
   Casts and validates `params` against `user` to create a valid
   changeset when action is :update.
+
+  ## Example
+
+      user_changeset = changeset(%__MODULE__{}, :update, params)
+
   """
   def changeset(user, :update, params) do
     params

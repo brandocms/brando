@@ -55,6 +55,10 @@ defmodule Brando.Form do
           Example: `values: @user`
         * `errors`: Pass @errors through the form builder
 
+      ## Example:
+
+          <%= get_form(action: :create, params: [], values: @user, errors: @errors) %>
+
       """
       def get_form(action: action, params: params, values: values, errors: errors) do
         form = [helper: @form_helper, source: @form_source,
