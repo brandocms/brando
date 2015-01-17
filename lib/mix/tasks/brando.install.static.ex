@@ -21,15 +21,7 @@ defmodule Mix.Tasks.Brando.Install.Static do
     """
   end
 
-  def brando_template_dir do
-    Application.app_dir(:brando, "priv/templates/brando")
-  end
-
-  def users_template_dir do
-    Application.app_dir(:brando, "priv/templates/users")
-  end
-
-  def static_dir do
+  defp static_dir do
     Application.app_dir(:brando, "priv/static")
   end
 end
