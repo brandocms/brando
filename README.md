@@ -1,5 +1,4 @@
-Brando
-======
+![Brando logo](https://raw.githubusercontent.com/twined/brando/master/priv/static/brando/img/brando-big.png)
 
 *EXPERIMENTAL, DO NOT USE*
 
