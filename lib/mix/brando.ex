@@ -3,8 +3,8 @@ defmodule Mix.Brando do
   # Conveniences for Brando mix tasks.
   @moduledoc false
 
-    @doc """
-  Copy's the files from one directory to the specified directory, renaming files as needed.
+  @doc """
+  Copies the files from one directory to the specified directory, renaming files as needed.
   """
   def copy_from(source_dir, target_dir, file_name_template, fun) do
     source_paths =
