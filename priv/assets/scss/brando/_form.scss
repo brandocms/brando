@@ -1,0 +1,12 @@
+.has-error > label {
+  color: #f00 !important;
+}
+
+.required > label:after {
+  content:"*";
+  color:red;
+}
+
+input[type=checkbox] {
+  margin-right: 12px;
+}

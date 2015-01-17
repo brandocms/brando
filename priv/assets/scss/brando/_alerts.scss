@@ -1,0 +1,15 @@
+.alert {
+  font-size: 15px;
+  font-weight: bold;
+  margin-top: 15px;
+  padding: 10px;
+  color: #555;
+  &.alert-info {
+    background-color: #CCF5CC;
+    border-bottom: 4px solid #ABE4AB;
+  }
+  &.alert-danger {
+    background-color: #F5CCCC;
+    border-bottom: 4px solid #E4ABAB;
+  }
+}

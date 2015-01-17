@@ -1,0 +1,80 @@
+<div class="form-group<%= if opts[:required] do %> required<% end %><%= if errors != [] do %><%= if Map.has_key?(errors, name) do %> has-error<% end %><% end %>">
+<%= if opts[:type] in [:text, :email, :password] do %>
+  <%= if opts[:label] do %>
+    <label class="<%= if opts[:label_class] do %><%= opts[:label_class] %><% end %>" for="<%= field_name %>"><%= opts[:label] %></label>
+  <% end %>
+  <%= if opts[:wrapper_class] do %>
+  <div class="<%= opts[:wrapper_class] %>">
+  <% end %>
+    <input class="<%= if opts[:class] do %><%= opts[:class] %><% end %>"
+           placeholder="<%= if opts[:placeholder] do %><%= opts[:placeholder] %><% end %>"
+           type="<%= opts[:type] %>"
+           value="<%= if values != [] do %><%= if Map.has_key?(values, Atom.to_string(name)) do %><%= values[Atom.to_string(name)] %><% end %><% else %><%= opts[:value] %><% end %>"
+           name="<%= field_name %>" />
+    <%= if errors != [] do %>
+    <%= if Map.has_key?(errors, name) do %>
+      <p class="error-block">&#8627; <%= errors[name] %></p>
+    <% end %>
+    <% end %>
+    <%= if opts[:help_text] do %>
+      <p class="help-block"><%= opts[:help_text] %></p>
+    <% end %>
+  <%= if opts[:wrapper_class] do %>
+  </div>
+  <% end %>
+<% end %>
+<%= if opts[:type] == :checkbox do %>
+  <%= if opts[:wrapper_class] do %>
+    <div class="<%= opts[:wrapper_class] %>">
+  <% end %>
+    <div class="checkbox">
+      <label>
+        <input value="true" type="checkbox" name="<%= field_name %>" <%= if values != [] do %><%= if Map.has_key?(values, Atom.to_string(name)) do %>checked <% end %><% else %><%= if opts[:default] == true do %>checked <% end %><% end %>/> <%= opts[:label] %>
+      </label>
+    </div>
+  <%= if opts[:wrapper_class] do %>
+  </div>
+  <% end %>
+<% end %>
+<%= if opts[:type] == :select do %>
+  <%= if opts[:label] do %>
+    <label class="<%= if opts[:label_class] do %><%= opts[:label_class] %><% end %>" for="<%= field_name %>"><%= opts[:label] %></label>
+  <% end %>
+  <%= if opts[:wrapper_class] do %>
+    <div class="<%= opts[:wrapper_class] %>">
+  <% end %>
+    <select name="<%= field_name %>" class="<%= opts[:class] %>">
+    <%= for choice <- get_choices(opts[:choices]) do %>
+    <option value="<%= choice[:value] %>"<%= if values != [] do %><%= if Map.has_key?(values, Atom.to_string(name)) do %><%= if values[Atom.to_string(name)] == choice[:value] do %> selected<% end %><% end %><% else %><%= if opts[:default] do %><%= if opts[:default] == choice[:value] do %> selected<% end %><% end %><% end %>>
+      <%= choice[:text] %>
+    </option>
+    <% end %>
+    </select>
+  <%= if opts[:wrapper_class] do %>
+    </div>
+  <% end %>
+<% end %>
+<%= if opts[:type] == :file do %>
+  <%= if opts[:label] do %>
+    <label class="<%= if opts[:label_class] do %><%= opts[:label_class] %><% end %>" for="<%= field_name %>"><%= opts[:label] %></label>
+  <% end %>
+  <%= if opts[:wrapper_class] do %>
+  <div class="<%= opts[:wrapper_class] %>">
+  <% end %>
+    <input class="<%= if opts[:class] do %><%= opts[:class] %><% end %>"
+           placeholder="<%= if opts[:placeholder] do %><%= opts[:placeholder] %><% end %>"
+           type="<%= opts[:type] %>"
+           name="<%= field_name %>" />
+    <%= if errors != [] do %>
+      <%= if Map.has_key?(errors, name) do %>
+        <p class="error-block">&#8627; <%= errors[name] %></p>
+      <% end %>
+    <% end %>
+    <%= if opts[:help_text] do %>
+      <p class="help-block"><%= opts[:help_text] %></p>
+    <% end %>
+  <%= if opts[:wrapper_class] do %>
+  </div>
+  <% end %>
+<% end %>
+</div>

@@ -1,0 +1,73 @@
+    <h1>Brukeroversikt</h1>
+    <table class="table table-striped">
+      <colgroup>
+      <col span="1" style="width: 50px; font-weight: bold;">
+      <col span="1" style="width: 60px;">
+      <col span="1" style="width: 200px;">
+      <col span="1" style="">
+      <col span="2" style="width: 60px;">
+      <col span="1" style="width: 40px;">
+    </colgroup>
+    <thead>
+      <tr>
+        <th class="center-text">&#8470;</th>
+        <th>Brukernavn</th>
+        <th>Epost</th>
+        <th>Fullt navn</th>
+        <th>Opprettet</th>
+        <th>Avatar</th>
+        <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <%= for user <- @users do %>
+        <tr>
+          <td class="center-text text-mono"><small><span class="text-muted">#</span><%= zero_pad(user.id) %></small></td>
+          <td><%= user.username %></td>
+          <td><%= user.email %></td>
+          <td><%= user.full_name %></td>
+          <td><%= format_date(user.inserted_at) %></td>
+          <td><%= user.avatar %></td>
+          <td>
+            <div class="dropdown">
+              <a class="dropdown-toggle ddbutton" data-toggle="dropdown">
+                <i class="fa fa-bars"></i>
+              </a>
+              <ul class="dropdown-menu" style="right: 0; left: auto;">
+                <li>
+                <a href="<%= admin_user_path @conn, :show, user.id %>">
+                    <i class="fa fa-search m-r-sm"> </i>
+                    Vis bruker
+                  </a>
+                </li>
+                <li>
+                  <a href="<%= admin_user_path @conn, :edit, user.id %>">
+                    <i class="fa fa-edit m-r-sm"> </i>
+                    Endre bruker
+                  </a>
+                </li>
+
+                <li class="divider"></li>
+
+                  <form method="POST" action="<%= admin_user_path @conn, :destroy, user.id %>">
+                    <input type="hidden" name="_method" value="delete" />
+                    <li>
+                    <button>
+                      <i class="fa fa-trash-o m-r-sm"> </i>
+                      Slett bruker
+                    </button>
+                    </li>
+                  </form>
+
+              </ul>
+            </div>
+          </td>
+        </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <div class="form-actions">
+      <a href="<%= admin_user_path @conn, :new %>" class="btn btn-primary">
+        <i class="fa fa-plus m-r-xs"></i> Ny bruker
+      </a>
+    </div>

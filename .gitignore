@@ -1,0 +1,14 @@
+/_build
+/bower_components
+/deps
+/tmp
+erl_crash.dump
+*.ez
+.DS_Store
+brando.sublime-workspace
+.sass-cache
+node_modules
+priv/static/brando/old_css
+priv/static/brando/old_js
+assets/fonts
+brando.sublime-project

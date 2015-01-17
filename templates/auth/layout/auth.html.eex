@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>AUTH</title>
+    <link rel="stylesheet" href="/static/css/phoenix.css">
+    <link rel="stylesheet" href="/static/brando/css/admin.css">
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>Auth</h1>
+      <%= if get_flash(@conn, :error) do %>
+        <div class="alert alert-block alert-danger">
+          <a class="close" data-dismiss="alert" href="#">×</a>
+          <%= get_flash(@conn, :error) %>
+        </div>
+      <% end %>
+
+      <%= if get_flash(@conn, :notice) do %>
+        <div class="alert alert-block alert-info">
+          <a class="close" data-dismiss="alert" href="#">×</a>
+          <%= get_flash(@conn, :notice) %>
+        </div>
+      <% end %>
+      <%= @inner %>
+    </div> <!-- /container -->
+  </body>
+</html>
