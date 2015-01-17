@@ -164,6 +164,15 @@ defmodule Brando.Mugshots.Fields.ImageField do
     end
   end
 
+  @doc """
+  Goes through `user`'s fields, matching them to `imagefields`,
+  then passing to `delete_media/2` for removal
+
+  ## Example:
+
+      delete_connected_images(user, @imagefields)
+
+  """
   def delete_connected_images(user, imagefields) do
     require Logger
     for {field, cfg} <- imagefields do

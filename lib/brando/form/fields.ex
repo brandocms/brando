@@ -141,22 +141,44 @@ defmodule Brando.Form.Fields do
     ~s(<#{tag} name="#{name}" class="#{class}">#{contents}</#{tag}>)
   end
 
+  @doc """
+  Matches `cv` to `v`. If true then return "selected" to be used in
+  <select>'s <option>s.
+  """
   def get_selected(cv, v) when cv == v, do: " " <> "selected"
   def get_selected(_, _), do: ""
 
+  @doc """
+  If `true`, returns required
+  """
   def get_required(true), do: " " <> "required"
   def get_required(false), do: ""
   def get_required(nil), do: ""
 
+  @doc """
+  If whatever is passed to `get_has_error/1` isn't an empty list,
+  it returns "has-error".
+  """
   def get_has_error([]), do: ""
   def get_has_error(_), do: " " <> "has-error"
 
+  @doc """
+  If `placeholder` is not nil, returns placeholder
+  """
   def get_placeholder(nil), do: ""
   def get_placeholder(placeholder), do: " " <> "placeholder=\"#{placeholder}\""
 
+  @doc """
+  If `class` is not nil, returns class
+  """
   def get_class(nil), do: ""
   def get_class(class), do: " " <> "class=\"#{class}\""
 
+  @doc """
+  If `value` is not nil, returns value.
+  If it's a map, return blank. This is to deal with Plug.Upload
+  maps. TODO: handle this better.
+  """
   def get_value([]), do: ""
   def get_value(nil), do: ""
   def get_value(value) when is_map(value), do: ""

@@ -42,6 +42,20 @@ defmodule Brando.Form do
 
       unquote(block)
 
+      @doc """
+      Returns a rendered form marked safe for the module.
+
+      ## Options:
+
+        * `action`: Action the form is performing.
+          Example: `action: :create`
+        * `params`: Any parameters to the :action function helper.
+          Example: `params: [to_string(@id)]`
+        * `values`: Pass @values through the form builder
+          Example: `values: @user`
+        * `errors`: Pass @errors through the form builder
+
+      """
       def get_form(action: action, params: params, values: values, errors: errors) do
         form = [helper: @form_helper, source: @form_source,
                 multipart: @form_multipart, class: @form_class]

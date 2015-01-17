@@ -1,5 +1,17 @@
 defmodule Brando.Users.Admin.UserController do
-  @doc false
+  @moduledoc """
+  This is a boilerplate UserController.
+
+  ## Example:
+
+      use Brando.Users.Admin.UserController,
+        layout: MyLayout,
+        model:  MyUser
+
+  where `layout` is the layout you want to use, and `model` is your
+  user model.
+  """
+
   defmacro __using__(options) do
     layout = Dict.fetch! options, :layout
     model = Dict.fetch! options, :model
