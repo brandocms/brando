@@ -40,6 +40,7 @@ defmodule Brando.Mugshots.Fields.ImageField do
                                               env.module, :imagefields))
   end
 
+  @doc false
   def compile(imagefields) do
     imagefields =
      for {name, contents} <- imagefields do
@@ -98,6 +99,15 @@ defmodule Brando.Mugshots.Fields.ImageField do
     end
   end
 
+  @doc """
+  Handles the upload by starting a chain of operations on the plug.
+
+  ## Parameters
+
+    * `plug`: a Plug.Upload struct.
+    * `cfg`: the field's cfg from has_image_field
+
+  """
   def handle_upload(plug, cfg) do
     case plug.filename |> is_valid_filename?(cfg) do
       {:ok, filename} ->
@@ -180,6 +190,17 @@ defmodule Brando.Mugshots.Fields.ImageField do
     end
   end
 
+  @doc """
+  Deletes `file` by joining it to `get_media_abspath/0` and
+  File.rm!'ing it. Loops through the field's config :sizes entries,
+  deleting all generated images.
+
+  ## Parameters
+
+    * `file`: file to be deleted. Includes partial path.
+    * `cfg`: the field's cfg list.
+
+  """
   def delete_media(file, cfg) do
     file = Path.join([get_media_abspath, file])
     File.rm!(file)

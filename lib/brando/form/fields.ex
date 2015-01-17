@@ -75,6 +75,14 @@ defmodule Brando.Form.Fields do
 
   @doc """
   Renders a <select> tag. Passes `choices` to __tag__/4
+
+  ## Parameters:
+
+    * `name`: name of field
+    * `choices`: list of choices to be iterated as <option>s
+    * `opts`: list with options for the field
+    * `_value`: empty
+    * `_errors`: empty
   """
   def __select__(_, name, choices, opts, _value, _errors) do
     opts = List.delete(opts, :default)

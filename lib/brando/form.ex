@@ -1,4 +1,13 @@
 defmodule Brando.Form do
+  @moduledoc """
+  Brando.Form exposes some macros and helpers to help create
+  form schemas for generating HTML forms.
+
+  ## Usage
+
+      use Brando.Form
+
+  """
   alias Brando.Form.Fields, as: F
   alias Brando.Util
 
@@ -112,6 +121,10 @@ defmodule Brando.Form do
     end
   end
 
+  @doc """
+  Marks the field as a <fieldset> tag opening. This means we are
+  :in_fieldset, which we need for proper form markup.
+  """
   def __fieldset_open__(mod, opts) do
     name = String.to_atom("fs" <> to_string(:erlang.phash2(:os.timestamp)))
     fields = Module.get_attribute(mod, :form_fields)
@@ -125,6 +138,10 @@ defmodule Brando.Form do
     end
   end
 
+  @doc """
+  Marks the field as a <fieldset> tag closing. This means we are no
+  longer :in_fieldset.
+  """
   def __fieldset_close__(mod) do
     opts = []
     name = String.to_atom("fs" <> to_string(:erlang.phash2(:os.timestamp)))
@@ -139,6 +156,9 @@ defmodule Brando.Form do
     end
   end
 
+  @doc """
+  Marks the field as a submit button.
+  """
   def __submit__(mod, text, opts) do
     if opts[:name], do:
       name = opts[:name],
@@ -160,6 +180,9 @@ defmodule Brando.Form do
     end
   end
 
+  @doc """
+  Marks the field as a field of some `type`
+  """
   def __field__(mod, name, type, opts) do
     check_type!(type)
     fields = Module.get_attribute(mod, :form_fields)
@@ -187,9 +210,7 @@ defmodule Brando.Form do
   @doc """
   Evals the quoted choices function and returns the result
   """
-  def get_choices({mod, fun}) do
-    apply(mod, fun, [])
-  end
+  def get_choices({mod, fun}), do: apply(mod, fun, [])
 
   @doc """
   Evals the quoted action function, normally a path helper,
@@ -242,6 +263,9 @@ defmodule Brando.Form do
     end
   end
 
+  @doc """
+  Renders field by type. Wraps the field with a label and row span
+  """
   def render_field(action, name, :file, opts, value, errors) do
     F.__input__(:file, action, name, value, errors, opts)
     |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
@@ -285,6 +309,9 @@ defmodule Brando.Form do
     |> F.__data_row_span__(opts[:in_fieldset])
   end
 
+  @doc """
+  Iterates through `opts` :choices key, rendering <option>s for <select>
+  """
   def render_choices(action, opts, value, _errors) do
     for choice <- get_choices(opts[:choices]) do
       F.__option__(action, choice[:value], choice[:text], value, opts[:default])
