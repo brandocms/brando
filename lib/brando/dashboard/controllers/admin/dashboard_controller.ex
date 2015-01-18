@@ -1,5 +1,5 @@
 defmodule Brando.Dashboard.Admin.DashboardController do
-  @doc """
+  @moduledoc """
   A module for the admin dashboard.
 
   ## Example
