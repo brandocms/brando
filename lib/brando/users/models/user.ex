@@ -86,6 +86,11 @@ defmodule Brando.Users.Model.User do
     |> validate_length(:password, min: 6, too_short: "Passord må være > 6 tegn")
   end
 
+  @doc """
+  Create a changeset for the user model by passing `params`.
+  If valid, generate a hashed password and insert user to Repo.
+  If not valid, return errors from changeset
+  """
   def create(params) do
     user_changeset = changeset(%__MODULE__{}, :create, params)
     case user_changeset.valid? do
@@ -97,6 +102,12 @@ defmodule Brando.Users.Model.User do
     end
   end
 
+  @doc """
+  Create an `update` changeset for the user model by passing `params`.
+  If password is in changeset, hash and insert in changeset.
+  If valid, update user in Repo.
+  If not valid, return errors from changeset
+  """
   def update(user, params) do
     user_changeset = changeset(user, :update, params)
     case user_changeset.valid? do
