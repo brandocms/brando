@@ -1,6 +1,6 @@
 defmodule Brando.Users.Form.UserForm do
   @moduledoc """
-  A form module for the User model. See the form module for more
+  A form for the User model. See the `Brando.Form` module for more
   documentation
   """
   use Brando.Form
