@@ -5,6 +5,9 @@ defmodule Brando.Users.Model.User do
   alias Brando.Util
 
   before_insert __MODULE__, :add_timestamps
+  @doc """
+  Add current timestamps to `user` model
+  """
   def add_timestamps(user) do
     now = Ecto.DateTime.utc
     user
@@ -13,6 +16,9 @@ defmodule Brando.Users.Model.User do
   end
 
   before_update __MODULE__, :bump_update
+  @doc """
+  Bumps `user`'s `updated_at` to now.
+  """
   def bump_update(user) do
     now = Ecto.DateTime.utc
     put_change(user, :updated_at, now)
@@ -235,14 +241,19 @@ defmodule Brando.Users.Model.User do
     Brando.get_repo.all(q)
   end
 
+  @doc """
+  Bumps `user`'s `last_login` to current time.
+  """
   def set_last_login(user) do
     user = %{user | last_login: Ecto.DateTime.local}
     |> Brando.get_repo.update
     user
   end
 
+  @doc """
+  Checks `password` against `user`. Return bool.
+  """
   def auth?(nil, _password), do: false
-
   def auth?(user, password) do
     stored_hash = user.password
     password    = String.to_char_list(password)
@@ -260,10 +271,16 @@ defmodule Brando.Users.Model.User do
     :erlang.list_to_binary(hash)
   end
 
+  @doc """
+  Checks if `user` has administrative access
+  """
   def is_admin?(user) do
     user.administrator
   end
 
+  @doc """
+  Checks if `user` has editor access
+  """
   def is_editor?(user) do
     user.editor
   end
