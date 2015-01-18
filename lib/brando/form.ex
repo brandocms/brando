@@ -107,6 +107,75 @@ defmodule Brando.Form do
     end
   end
 
+  @doc """
+  Macro for marking field as `type`.
+
+  ## Parameters
+
+    * `name`: The field name. Used in HTML attribute. Must be unique
+              per form.
+
+    * `type`: The type of the field.
+      * `:text`, `:email`, `:password`:
+
+        # Options
+        * `required`: true
+        * `label`: "Label for field"
+        * `help_text`: "Help text for field"
+        * `placeholder`: "Placeholder for field"
+
+      * `checkbox`:
+        Standard checkbox
+
+        # Options
+        * `label`: "Label for field"
+        * `default`: true/false
+
+      * `select`:
+        Select with options through `choices`.
+
+        # Options
+        * `choices`: {__MODULE__, :get_status_choices}
+                     Points to `get_status_choices/0` function
+                     in the module the form was defined.
+        * `default`: "1"
+        * `label`: "Label for the select"
+
+      * `file`:
+        Attach a file to the form. Sets the form to multipart.
+
+        # Options
+        * `label`: "Label for file field"
+
+
+  """
+  defmacro field(name, type \\ :text, opts \\ []) do
+    quote do
+      Brando.Form.__field__(__MODULE__, unquote(name), unquote(type), unquote(opts))
+    end
+  end
+
+  @doc """
+  Marks the field as a field of some `type`. See docs for `field/3` macro.
+  """
+  def __field__(mod, name, type, opts) do
+    check_type!(type)
+    fields = Module.get_attribute(mod, :form_fields)
+
+    if Module.get_attribute(mod, :in_fieldset) do
+      opts = [in_fieldset: Module.get_attribute(mod, :in_fieldset)] ++ opts
+    end
+
+    clash = Enum.any?(fields, fn {prev, _} -> name == prev end)
+    if clash do
+      raise ArgumentError, message: "field `#{name}` was already set on schema"
+    end
+
+    Module.put_attribute(mod, :form_fields, [{name, [type: type] ++ opts}|fields])
+
+    if type == :file, do: Module.put_attribute(mod, :form_multipart, true)
+  end
+
   defmacro fieldset(opts \\ [], [do: block]) do
     quote do
       fieldset_open(unquote(opts))
@@ -172,33 +241,6 @@ defmodule Brando.Form do
     end
 
     Module.put_attribute(mod, :form_fields, [{name, [type: :submit, text: text] ++ opts}|fields])
-  end
-
-  defmacro field(name, type \\ :text, opts \\ []) do
-    quote do
-      Brando.Form.__field__(__MODULE__, unquote(name), unquote(type), unquote(opts))
-    end
-  end
-
-  @doc """
-  Marks the field as a field of some `type`
-  """
-  def __field__(mod, name, type, opts) do
-    check_type!(type)
-    fields = Module.get_attribute(mod, :form_fields)
-
-    if Module.get_attribute(mod, :in_fieldset) do
-      opts = [in_fieldset: Module.get_attribute(mod, :in_fieldset)] ++ opts
-    end
-
-    clash = Enum.any?(fields, fn {prev, _} -> name == prev end)
-    if clash do
-      raise ArgumentError, message: "field `#{name}` was already set on schema"
-    end
-
-    Module.put_attribute(mod, :form_fields, [{name, [type: type] ++ opts}|fields])
-
-    if type == :file, do: Module.put_attribute(mod, :form_multipart, true)
   end
 
   defp check_type!(type) when type in [:text, :password, :select, :email, :checkbox, :file], do: :ok
