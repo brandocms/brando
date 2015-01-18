@@ -4,28 +4,24 @@ defmodule Brando.Users.Admin.UserController do
 
   ## Example:
 
-      use Brando.Users.Admin.UserController,
-        layout: MyLayout,
-        model:  MyUser
+      @model MyApp.Model.User
+      @layout {MyApp.Admin.LayoutView, "admin.html"}
+      use Brando.Users.Admin.UserController
 
-  where `layout` is the layout you want to use, and `model` is your
+  where `@layout` is the layout you want to use, and `@model` is your
   user model.
   """
 
-  defmacro __using__(options) do
-    layout = Dict.fetch! options, :layout
-    model = Dict.fetch! options, :model
-
-    quote bind_quoted: [layout: layout, model: model] do
+  defmacro __using__(_) do
+    quote do
       use Phoenix.Controller
-      alias Brando.Users.Model.User
 
-      plug :put_layout, layout
+      plug :put_layout, @layout
       plug :action
 
       def index(conn, _params) do
         conn
-        |> assign(:users, unquote(model).all)
+        |> assign(:users, @model.all)
         |> render("index.html")
       end
 
@@ -36,14 +32,14 @@ defmodule Brando.Users.Admin.UserController do
       end
 
       def new(conn, _params) do
-        case unquote(model).is_admin?(get_session(conn, :current_user)) do
+        case @model.is_admin?(get_session(conn, :current_user)) do
           true -> conn |> render("new.html")
           false -> conn
         end
       end
 
       def edit(conn, %{"id" => user_id}) do
-        form_data = unquote(model).get(id: String.to_integer(user_id))
+        form_data = @model.get(id: String.to_integer(user_id))
         conn
         |> assign(:user, form_data)
         |> assign(:id, user_id)
@@ -52,10 +48,10 @@ defmodule Brando.Users.Admin.UserController do
 
       def create(conn, %{"user" => form_data}) do
         require Logger
-        created_user = unquote(model).create(form_data)
+        created_user = @model.create(form_data)
         case created_user do
           {:ok, created_user} ->
-            case User.check_for_uploads(created_user, form_data) do
+            case @model.check_for_uploads(created_user, form_data) do
               {:ok, val} -> conn |> put_flash(:notice, "Bilde lastet opp.")
               :nouploads -> nil
             end
@@ -76,8 +72,8 @@ defmodule Brando.Users.Admin.UserController do
       end
 
       def update(conn, %{"user" => form_data, "id" => user_id}) do
-        user = unquote(model).get(id: String.to_integer(user_id))
-        case unquote(model).update(user, form_data) do
+        user = @model.get(id: String.to_integer(user_id))
+        case @model.update(user, form_data) do
           {:ok, updated_user} ->
             conn
             |> put_flash(:notice, "Bruker oppdatert.")
@@ -92,8 +88,8 @@ defmodule Brando.Users.Admin.UserController do
       end
 
       def destroy(conn, %{"id" => user_id}) do
-        user = unquote(model).get(id: String.to_integer(user_id))
-        User.delete(user)
+        user = @model.get(id: String.to_integer(user_id))
+        @model.delete(user)
         conn
         |> put_flash(:notice, "Bruker #{user.username} slettet.")
         |> redirect(to: Brando.get_helpers.admin_user_path(conn, :index))
