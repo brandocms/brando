@@ -39,6 +39,7 @@ defmodule Brando.Mixfile do
       {:cowboy, "~> 1.0"},
       {:plug, "~> 0.9"},
       {:phoenix, "~> 0.8.0"},
+      {:mogrify, github: "twined/mogrify"},
       {:bcrypt, github: "opscode/erlang-bcrypt"},
       {:excoveralls, "~> 0.3", only: :test},
       {:ex_doc, "~> 0.6", only: :docs},
