@@ -1,6 +1,11 @@
 defmodule Brando.Users.Form.UserForm do
+  @moduledoc """
+  A form module for the User model. See the form module for more
+  documentation
+  """
   use Brando.Form
 
+  @doc false
   def get_status_choices do
     [[value: "0", text: "Valg 1"],
      [value: "1", text: "Valg 2"]]

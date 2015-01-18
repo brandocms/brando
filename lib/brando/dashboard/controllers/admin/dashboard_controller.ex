@@ -1,14 +1,23 @@
 defmodule Brando.Dashboard.Admin.DashboardController do
-  @doc false
+  @doc """
+  A module for the admin dashboard.
+
+  ## Example
+
+      use Brando.Dashboard.Admin.DashboardController
+
+  """
   defmacro __using__(options) do
     layout = Dict.fetch! options, :layout
-    #model = Dict.fetch! options, :model
 
     quote do
       use Phoenix.Controller
 
       plug :action
 
+      @doc """
+      Renders the main dashboard for the admin area.
+      """
       def dashboard(conn, _params) do
         conn
         |> put_layout(unquote(layout))

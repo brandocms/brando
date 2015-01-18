@@ -43,7 +43,7 @@ defmodule Mix.Tasks.Brando.Gen.Headlines do
     """
   end
 
-  def template_dir do
+  defp template_dir do
     Application.app_dir(:brando, "priv/templates/headlines")
   end
 end

@@ -24,6 +24,7 @@ defmodule Brando.Menu do
       menu "Admin",
         %{name: "Admin", anchor: "admin", bgcolor: "#ffaaff", icon: "fa fa-dashboard icon",
           submenu: [%{name: "Dashboard", url: admin_dashboard_path(:dashboard)}]}
+
   """
   defmacro menu(name, contents) do
     quote bind_quoted: [name: name, contents: Macro.escape(contents)] do
@@ -44,6 +45,9 @@ defmodule Brando.Menu do
 
   defp defmenu(contents) do
     quote do
+      @doc """
+      Get the menu for the module `menu/2` was called from.
+      """
       def get_menu do
         unquote(contents)
       end
