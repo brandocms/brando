@@ -56,6 +56,34 @@ defmodule Brando.AdminView do
       def media_path(file) do
         Path.join([Brando.config(:media_url), file])
       end
+
+      @doc """
+      If any javascripts have been assigned to :js_extra on `conn`,
+      render each as a <script> tag. If nil, do nothing.
+      To assign to `:js_extra`, use `Brando.Util.add_js/2`
+      """
+      def js_extra(conn) do
+        do_js_extra(conn.assigns[:js_extra])
+      end
+
+      defp do_js_extra(nil), do: ""
+      defp do_js_extra(js) do
+        for j <- js, do: safe(~s(<script type="text/javascript" src="#{j}" charset="utf-8"></script>))
+      end
+
+      @doc """
+      If any css files have been assigned to :css_extra on `conn`,
+      render each as a <link> tag. If nil, do nothing.
+      To assign to `:css_extra`, use `Brando.Util.add_css/2`
+      """
+      def css_extra(conn) do
+        do_css_extra(conn.assigns[:css_extra])
+      end
+
+      defp do_css_extra(nil), do: ""
+      defp do_css_extra(css) do
+        for c <- css, do: safe(~s(<link rel="stylesheet" href="#{c}">))
+      end
     end
   end
 end

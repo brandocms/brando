@@ -3,6 +3,7 @@ defmodule Brando.Util do
   Assorted utility functions.
   """
 
+  import Plug.Conn, only: [assign: 3]
   require Logger
 
   @ucmap %{
@@ -396,11 +397,45 @@ defmodule Brando.Util do
     result.status
   end
 
+  @doc """
+  Runs `fun` as a Task.start(). If env is :test, call the
+  function without Task.
+  """
   defmacro task_start(fun) do
     if Mix.env == :test do
       quote do: unquote(fun).()
     else
       quote do: Task.start(unquote(fun))
     end
+  end
+
+  @doc """
+  Assign `js` to `conn` as `:js_extra`.
+  Is available as `conn.assigns[:js_extra]`, but is normally
+  extracted through `<%= js_extra(@conn) %>` in `AdminView`.
+
+  ## Example (in your controller)
+
+        import Brando.Util, only: [add_js: 2]
+        conn |> add_js(["somescript.js", "anotherscript.js"])
+
+  """
+  def add_js(conn, js) when is_list(js) do
+    conn |> assign(:js_extra, js)
+  end
+
+  @doc """
+  Assign `css` to `conn` as `:css_extra`.
+  Is available as `conn.assigns[:css_extra]`, but is normally
+  extracted through `<%= css_extra(@conn) %>` in `AdminView`.
+
+  ## Example (in your controller)
+
+        import Brando.Util, only: [add_css: 2]
+        conn |> add_css(["somescript.css", "anotherscript.css"])
+
+  """
+  def add_css(conn, css) when is_list(css) do
+    conn |> assign(:css_extra, css)
   end
 end
