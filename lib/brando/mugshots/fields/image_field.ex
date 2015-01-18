@@ -192,7 +192,7 @@ defmodule Brando.Mugshots.Fields.ImageField do
   @doc """
   Deletes `file` by joining it to `get_media_abspath/0` and
   File.rm!'ing it. Loops through the field's config :sizes entries,
-  deleting all generated images.
+  deleting all generated images. If `file` is nil, do nothing.
 
   ## Parameters
 
@@ -200,6 +200,8 @@ defmodule Brando.Mugshots.Fields.ImageField do
     * `cfg`: the field's cfg list.
 
   """
+  def delete_media(nil, _cfg), do: nil
+  def delete_media("", _cfg), do: nil
   def delete_media(file, cfg) do
     file = Path.join([get_media_abspath, file])
     File.rm!(file)
