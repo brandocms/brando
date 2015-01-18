@@ -54,6 +54,9 @@ defmodule Brando.Mugshots.Fields.ImageField do
 
   defp defcfg(name, contents) do
     quote do
+      @doc """
+      Get `field_name`'s image field configuration
+      """
       def get_image_cfg(field_name) when field_name == unquote(name) do
         unquote(contents)
       end
