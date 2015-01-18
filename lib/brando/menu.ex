@@ -1,4 +1,16 @@
 defmodule Brando.Menu do
+  @moduledoc """
+  A module for administration area menus.
+
+  ## Example
+
+      use Brando.Menu
+      menu "Admin",
+        %{name: "Admin", anchor: "admin", bgcolor: "#ffaaff", icon: "fa fa-dashboard icon",
+          submenu: [%{name: "Dashboard", url: admin_dashboard_path(:dashboard)}]}
+
+  """
+
   defmacro __using__(_) do
     quote do
       Module.register_attribute(__MODULE__, :menus, accumulate: true)
@@ -6,9 +18,6 @@ defmodule Brando.Menu do
       @before_compile Brando.Menu
     end
   end
-  @moduledoc """
-  A module for administration area menus.
-  """
 
   @doc false
   defmacro __before_compile__(env) do
@@ -20,7 +29,6 @@ defmodule Brando.Menu do
 
   ## Usage
 
-      use Brando.Menu
       menu "Admin",
         %{name: "Admin", anchor: "admin", bgcolor: "#ffaaff", icon: "fa fa-dashboard icon",
           submenu: [%{name: "Dashboard", url: admin_dashboard_path(:dashboard)}]}
@@ -32,6 +40,9 @@ defmodule Brando.Menu do
     end
   end
 
+  @doc """
+  Compile the `menus` down to a module attribute
+  """
   def compile(menus) do
     menus =
       for {_name, contents} <- menus do

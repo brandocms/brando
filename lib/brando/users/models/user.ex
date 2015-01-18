@@ -1,4 +1,8 @@
 defmodule Brando.Users.Model.User do
+  @moduledoc """
+  Ecto schema for the User model, as well as image field definitions
+  and helper functions for dealing with the user model.
+  """
   use Ecto.Model
   use Brando.Mugshots.Fields.ImageField
   import Ecto.Query, only: [from: 2]

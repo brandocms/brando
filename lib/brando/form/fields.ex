@@ -1,4 +1,9 @@
 defmodule Brando.Form.Fields do
+  @moduledoc """
+  A set of functions for rendering form fields. These are all called
+  from the `Brando.Form` module, and handled through `Brando.Form.get_form/4`
+  """
+
   @doc """
   Returns a div classed as `form-group` (used in bootstrap).
 
