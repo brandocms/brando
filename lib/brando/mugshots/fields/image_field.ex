@@ -184,7 +184,6 @@ defmodule Brando.Mugshots.Fields.ImageField do
 
   """
   def delete_connected_images(user, imagefields) do
-    require Logger
     for {field, cfg} <- imagefields do
       delete_media(Map.get(user, field), cfg)
     end
