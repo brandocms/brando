@@ -31,7 +31,7 @@ defmodule Mix.Tasks.Brando.Install do
         pipeline :admin do
           plug :accepts, ~w(html json)
           plug :fetch_session
-          plug <%= application_name %>.Plugs.LoginRequired
+          plug Brando.Plugs.Authenticate
         end
 
         scope "/admin", as: :admin do
