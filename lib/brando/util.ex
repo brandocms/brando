@@ -426,15 +426,6 @@ defmodule Brando.Util do
   end
 
   @doc """
-  Opens a Porcelain shell running `cmd` and returns the status
-  """
-  def shell(cmd) do
-    stream = IO.binstream(:standard_io, :line)
-    result = Porcelain.shell(cmd, out: stream, err: :out)
-    result.status
-  end
-
-  @doc """
   Runs `fun` as a Task.start(). If env is :test, call the
   function without Task.
   """
