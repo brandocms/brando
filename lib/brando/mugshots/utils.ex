@@ -3,23 +3,7 @@ defmodule Brando.Mugshots.Utils do
   General utilities pertaining to the Mugshots module
   """
 
-  @doc """
-  Splits `file` (a path and filename).
-  Return {`path`, `filename`}
-
-  ## Example
-
-      iex> split_path("test/dir/filename.jpg")
-      {"test/dir", "filename.jpg"}
-  """
-  def split_path(file) do
-    filename = Path.split(file)
-    |> List.last
-    path = Path.split(file)
-    |> List.delete_at(-1)
-    |> Path.join
-    {path, filename}
-  end
+  import Brando.Util
 
   @doc """
   Splits `file` with `split_path/1`, adds `size` to the path before

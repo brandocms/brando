@@ -299,8 +299,7 @@ defmodule Brando.Util do
 
   """
   def slugify_filename(filename) do
-    ext = Path.extname(filename)
-    basename = Path.basename(filename, ext)
+    {basename, ext} = split_filename(filename)
     slugged_filename = slugify(basename)
     "#{slugged_filename}#{ext}"
   end
@@ -317,6 +316,44 @@ defmodule Brando.Util do
       |> Integer.to_string(32)
       |> String.downcase
     "#{rnd_basename}#{ext}"
+  end
+
+  @doc """
+  Splits `file` (a path and filename).
+  Return {`path`, `filename`}
+
+  ## Example
+
+      iex> split_path("test/dir/filename.jpg")
+      {"test/dir", "filename.jpg"}
+  """
+  def split_path(file) do
+    case String.contains?(file, "/") do
+      true ->
+        filename = Path.split(file)
+        |> List.last
+        path = Path.split(file)
+        |> List.delete_at(-1)
+        |> Path.join
+        {path, filename}
+      false ->
+        {"", file}
+    end
+  end
+
+  @doc """
+  Splits `filename` into `basename` and `extension`
+  Return {`basename`, `ext`}
+
+  ## Example
+
+      iex> split_filename("filename.jpg")
+      {"filename", ".jpg"}
+  """
+  def split_filename(filename) do
+    ext = Path.extname(filename)
+    basename = Path.basename(filename, ext)
+    {basename, ext}
   end
 
   @doc """
@@ -420,9 +457,7 @@ defmodule Brando.Util do
         conn |> add_js(["somescript.js", "anotherscript.js"])
 
   """
-  def add_js(conn, js) when is_list(js) do
-    conn |> assign(:js_extra, js)
-  end
+  def add_js(conn, js), do: conn |> assign(:js_extra, js)
 
   @doc """
   Assign `css` to `conn` as `:css_extra`.
@@ -435,7 +470,5 @@ defmodule Brando.Util do
         conn |> add_css(["somescript.css", "anotherscript.css"])
 
   """
-  def add_css(conn, css) when is_list(css) do
-    conn |> assign(:css_extra, css)
-  end
+  def add_css(conn, css), do: conn |> assign(:css_extra, css)
 end

@@ -21,6 +21,7 @@ defmodule Brando.Mugshots.Fields.ImageField do
         ]
       ]
   """
+  import Brando.Util, only: [split_path: 1]
   import Brando.Mugshots.Utils
   require Logger
 
