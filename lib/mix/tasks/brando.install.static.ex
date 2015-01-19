@@ -14,7 +14,6 @@ defmodule Mix.Tasks.Brando.Install.Static do
   def run(args) do
     run(args, nil)
   end
-
   def run(_, _opts) do
     application_atom   = Mix.Project.config()[:app]
     application_name   = Naming.camelize(application_atom)
