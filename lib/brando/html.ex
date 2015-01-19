@@ -1,4 +1,7 @@
 defmodule Brando.HTML do
+  @moduledoc """
+  Helper and convenience functions. Imported in Brando.AdminView.
+  """
 
   @doc false
   defmacro __using__(_) do
@@ -7,29 +10,57 @@ defmodule Brando.HTML do
     end
   end
 
+  @doc """
+  Returns the application name set in config.exs
+  """
   def app_name do
     Brando.config(:app_name)
   end
 
+  @doc """
+  Joins the path fragments from `conn`.path_info to a binary.
+  """
   def path(conn) do
     Path.join(["/"] ++ conn.path_info)
   end
 
+  @doc """
+  Checks if `url_to_match` matches `current_path`.
+  Returns "active", or "".
+  """
   def is_active?(url_to_match, current_path) when url_to_match == current_path, do: "active"
   def is_active?(_, _), do: ""
 
+  @doc """
+  Formats `arg1` (Ecto.DateTime) as a binary.
+  """
   def format_date(%Ecto.DateTime{year: year, month: month, day: day}) do
     "#{day}/#{month}/#{year}"
   end
 
+  @doc """
+  Return DATE ERROR if `_erroneus_date` is not an Ecto.DateTime
+  """
   def format_date(_erroneus_date) do
     ">>DATE ERROR<<"
   end
 
+  @doc """
+  Zero pad `int` as a binary.
+
+  ## Example
+
+      iex> zero_pad(5)
+      "005"
+
+  """
   def zero_pad(int) do
     String.rjust(Integer.to_string(int), 3, ?0)
   end
 
+  @doc """
+  Split `full_name` and return first name
+  """
   def first_name(full_name) do
     full_name
     |> String.split
