@@ -8,26 +8,6 @@ defmodule Brando.Users.Model.User do
   import Ecto.Query, only: [from: 2]
   alias Brando.Util
 
-  before_insert __MODULE__, :add_timestamps
-  @doc """
-  Add current timestamps to `user` model
-  """
-  def add_timestamps(user) do
-    now = Ecto.DateTime.utc
-    user
-    |> put_change(:inserted_at, now)
-    |> put_change(:updated_at, now)
-  end
-
-  before_update __MODULE__, :bump_update
-  @doc """
-  Bumps `user`'s `updated_at` to now.
-  """
-  def bump_update(user) do
-    now = Ecto.DateTime.utc
-    put_change(user, :updated_at, now)
-  end
-
   schema "users" do
     field :username, :string
     field :email, :string
@@ -37,8 +17,7 @@ defmodule Brando.Users.Model.User do
     field :editor, :boolean
     field :administrator, :boolean
     field :last_login, :datetime
-    field :inserted_at, :datetime
-    field :updated_at, :datetime
+    timestamps
   end
 
   has_image_field :avatar,
