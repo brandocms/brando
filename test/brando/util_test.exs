@@ -1,5 +1,6 @@
 defmodule Brando.UtilTest do
   use ExUnit.Case
+  use Plug.Test
   import Brando.Util
   alias Brando.UtilTest.TestStruct
 
@@ -56,5 +57,45 @@ defmodule Brando.UtilTest do
     assert to_string_map(nil) == nil
     assert to_string_map(test_struct) == test_map
     assert to_string_map(test_map) == test_map
+  end
+
+  test "split_path/1" do
+    assert split_path("test/dir/filename.jpg") == {"test/dir", "filename.jpg"}
+    assert split_path("filename.jpg") == {"", "filename.jpg"}
+  end
+
+  test "split_filename/1" do
+    assert split_filename("filename.jpg") == {"filename", ".jpg"}
+    assert split_filename("file name.jpg") == {"file name", ".jpg"}
+    assert split_filename("filename") == {"filename", ""}
+    assert split_filename("test/filename.jpg") == {"filename", ".jpg"}
+  end
+
+  test "maybe/2" do
+    assert maybe(nil, &String.upcase/1) == nil
+    assert maybe("hello", &String.upcase/1) == "HELLO"
+  end
+
+  test "secure_compare/2" do
+    assert secure_compare("asdf", "asdf")
+    refute secure_compare("asdf", "dfsa")
+  end
+
+  test "add_js/2" do
+    conn = conn(:get, "/")
+    assert conn.assigns[:js_extra] == nil
+    conn = conn |> add_js("test.js")
+    assert conn.assigns[:js_extra] == "test.js"
+    conn = conn |> add_js(["test1.js", "test2.js"])
+    assert conn.assigns[:js_extra] == ["test1.js", "test2.js"]
+  end
+
+  test "add_css/2" do
+    conn = conn(:get, "/")
+    assert conn.assigns[:css_extra] == nil
+    conn = conn |> add_css("test.css")
+    assert conn.assigns[:css_extra] == "test.css"
+    conn = conn |> add_css(["test1.css", "test2.css"])
+    assert conn.assigns[:css_extra] == ["test1.css", "test2.css"]
   end
 end
