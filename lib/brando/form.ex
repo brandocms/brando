@@ -252,7 +252,7 @@ defmodule Brando.Form do
   @doc """
   Evals the quoted choices function and returns the result
   """
-  def get_choices({mod, fun}), do: apply(mod, fun, [])
+  def get_choices(fun), do: apply(fun, [])
 
   @doc """
   Evals the quoted action function, normally a path helper,

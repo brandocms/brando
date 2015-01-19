@@ -43,7 +43,7 @@ defmodule Brando.Users.Form.UserForm do
     end
 
     field :status, :select,
-      [choices: {__MODULE__, :get_status_choices},
+      [choices: &__MODULE__.get_status_choices/0,
        default: "1",
        label: "Status"]
     field :avatar, :file,
