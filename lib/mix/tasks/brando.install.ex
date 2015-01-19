@@ -9,6 +9,10 @@ defmodule Mix.Tasks.Brando.Install do
   Generates admin, common files as well as Users; Brando's user management
   """
 
+  @doc """
+  Copies Brando files from template and static directories to OTP app.
+  """
+
   def run(args) do
     run(args, nil)
   end

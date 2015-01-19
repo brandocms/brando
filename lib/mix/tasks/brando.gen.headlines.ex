@@ -13,6 +13,9 @@ defmodule Mix.Tasks.Brando.Gen.Headlines do
     run(args, nil)
   end
 
+  @doc """
+  Copies Headlines files from template directory to OTP app.
+  """
   def run(_, _opts) do
     application_atom   = Mix.Project.config()[:app]
     application_name   = Naming.camelize(application_atom)

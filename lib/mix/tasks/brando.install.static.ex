@@ -1,14 +1,16 @@
 defmodule Mix.Tasks.Brando.Install.Static do
+  @moduledoc """
+  Copies all needed static files for Brando
+  """
   use Mix.Task
   alias Phoenix.Naming
   import Mix.Brando
 
   @shortdoc "Copies static files for Brando."
 
-  @moduledoc """
-  Copies all needed static files for Brando
+  @doc """
+  Copies static directory to OTP app.
   """
-
   def run(args) do
     run(args, nil)
   end
