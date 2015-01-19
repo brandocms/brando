@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/twined/brando.svg?branch=master)](https://travis-ci.org/twined/brando)
 [![Inline docs](http://inch-ci.org/github/twined/brando.svg?branch=master)](http://inch-ci.org/github/twined/brando)
+[![Coverage Status](https://coveralls.io/repos/twined/brando/badge.svg?branch=master)](https://coveralls.io/r/twined/brando?branch=master)
 
 *EXPERIMENTAL, DO NOT USE*
 
