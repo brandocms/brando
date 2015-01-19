@@ -83,8 +83,8 @@ Now run the migration:
 Routes/pipelines/plugs in `router.ex`:
 
 ```elixir
-plug LoginRequired,
-  helpers: MyApp.Router.Helpers
+alias Brando.Plugs.Authenticate
+plug Authenticate
 ```
 
 Endpoint config in `endpoint.ex`:
