@@ -56,13 +56,13 @@ defmodule Brando.Form do
 
       ## Options:
 
-        * `action`: Action the form is performing.
+        * `action` - Action the form is performing.
           Example: `action: :create`
-        * `params`: Any parameters to the :action function helper.
+        * `params` - Any parameters to the :action function helper.
           Example: `params: [to_string(@id)]`
-        * `values`: Pass @values through the form builder
+        * `values` - Pass @values through the form builder
           Example: `values: @user`
-        * `errors`: Pass @errors through the form builder
+        * `errors` - Pass @errors through the form builder
 
       ## Example:
 
@@ -116,37 +116,33 @@ defmodule Brando.Form do
               per form.
 
     * `type`: The type of the field.
-      * `:text`, `:email`, `:password`:
+      * `:text`, `:email`, `:password` -
 
         # Options
-        * `required`: true
-        * `label`: "Label for field"
-        * `help_text`: "Help text for field"
-        * `placeholder`: "Placeholder for field"
+        * `required` - true
+        * `label` - "Label for field"
+        * `help_text` - "Help text for field"
+        * `placeholder` - "Placeholder for field"
 
-      * `checkbox`:
-        Standard checkbox
+      * `checkbox` - Standard checkbox
 
         # Options
         * `label`: "Label for field"
         * `default`: true/false
 
-      * `select`:
-        Select with options through `choices`.
+      * `select` - Select with options through `choices`.
 
         # Options
-        * `choices`: {__MODULE__, :get_status_choices}
+        * `choices` - &__MODULE__.get_status_choices/0
                      Points to `get_status_choices/0` function
                      in the module the form was defined.
-        * `default`: "1"
-        * `label`: "Label for the select"
+        * `default` - "1"
+        * `label` - "Label for the select"
 
-      * `file`:
-        Attach a file to the form. Sets the form to multipart.
+      * `file` - Attach a file to the form. Sets the form to multipart.
 
         # Options
-        * `label`: "Label for file field"
-
+        * `label` - "Label for file field"
 
   """
   defmacro field(name, type \\ :text, opts \\ []) do
