@@ -98,4 +98,10 @@ defmodule Brando.UtilTest do
     conn = conn |> add_css(["test1.css", "test2.css"])
     assert conn.assigns[:css_extra] == ["test1.css", "test2.css"]
   end
+
+  test "to_iso8601/1" do
+    dt = %Ecto.DateTime{year: 2014, month: 1, day: 1,
+                        hour: 12, min: 0, sec: 0}
+    assert to_iso8601(dt) == "2014-01-01T12:00:00Z"
+  end
 end
