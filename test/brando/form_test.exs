@@ -65,14 +65,6 @@ defmodule Brando.FormTest do
     end
   end
 
-  #require Brando.Form.Fields, as: F
-
-  #@opts [context: Brando.Form.Fields]
-
-  #test "render form" do
-  #  assert UserForm.get_form(action: :create, params: [], values: nil, errors: []) == ""
-  #end
-
   test "render_fields/6 :create" do
     form_fields =
       [submit: [type: :submit, text: "Save", class: "btn btn-default"],
