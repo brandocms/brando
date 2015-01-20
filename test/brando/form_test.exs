@@ -81,10 +81,12 @@ defmodule Brando.FormTest do
        editor: [type: :checkbox, in_fieldset: 2, label: "Editor", default: true],
        administrator: [type: :checkbox, in_fieldset: 2, label: "Administrator", default: false],
        fs34070328: [type: :fieldset, legend: "Permissions", row_span: 2],
+       status: [type: :select, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"]]
     f = UserForm.render_fields("user", form_fields, :create, [], nil, nil)
     assert f ==
       ["<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"user[email]\" class=\"\">E-mail</label><input name=\"user[email]\" type=\"email\" placeholder=\"E-mail\" />\n  \n</div>\n</div>",
+       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status]\" class=\"\">Status</label><select name=\"user[status]\" class=\"\"><option value=\"0\">Valg 1</option><option value=\"1\" selected>Valg 2</option></select>\n  \n</div>\n</div>",
        "<fieldset><legend><br>Permissions</legend><div data-row-span=\"2\">",
        "<div data-field-span=\"1\" class=\"form-group\">\n  <div class=\"checkbox\"><label for=\"user[administrator]\" class=\"\"></label><label for=\"user[administrator]\" class=\"\"><input name=\"user[administrator]\" type=\"checkbox\" />Administrator</label></div>\n  \n</div>\n",
        "<div data-field-span=\"1\" class=\"form-group\">\n  <div class=\"checkbox\"><label for=\"user[editor]\" class=\"\"></label><label for=\"user[editor]\" class=\"\"><input name=\"user[editor]\" type=\"checkbox\" checked=\"checked\" />Editor</label></div>\n  \n</div>\n",
@@ -100,7 +102,8 @@ defmodule Brando.FormTest do
        fs123477010: [type: :fieldset_close],
        editor: [type: :checkbox, in_fieldset: 2, label: "Editor", default: true],
        administrator: [type: :checkbox, in_fieldset: 2, label: "Administrator", default: false],
-       fs34070328: [type: :fieldset, legend: "Permissions", row_span: 2],
+       fs34070328: [type: :fieldset, row_span: 2],
+       status: [type: :select, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"]]
     values = %Brando.Users.Model.User{administrator: true, avatar: "images/default/0.jpeg",
                                       editor: true, email: "test@email.com",
@@ -113,7 +116,8 @@ defmodule Brando.FormTest do
     f = UserForm.render_fields("user", form_fields, :update, [], values, nil)
     assert f ==
       ["<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"user[email]\" class=\"\">E-mail</label><input name=\"user[email]\" type=\"email\" value=\"test@email.com\" placeholder=\"E-mail\" />\n  \n</div>\n</div>",
-       "<fieldset><legend><br>Permissions</legend><div data-row-span=\"2\">",
+       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status]\" class=\"\">Status</label><select name=\"user[status]\" class=\"\"><option value=\"0\">Valg 1</option><option value=\"1\">Valg 2</option></select>\n  \n</div>\n</div>",
+       "<fieldset><div data-row-span=\"2\">",
        "<div data-field-span=\"1\" class=\"form-group\">\n  <div class=\"checkbox\"><label for=\"user[administrator]\" class=\"\"></label><label for=\"user[administrator]\" class=\"\"><input name=\"user[administrator]\" type=\"checkbox\" checked=\"checked\" />Administrator</label></div>\n  \n</div>\n",
        "<div data-field-span=\"1\" class=\"form-group\">\n  <div class=\"checkbox\"><label for=\"user[editor]\" class=\"\"></label><label for=\"user[editor]\" class=\"\"><input name=\"user[editor]\" type=\"checkbox\" checked=\"checked\" />Editor</label></div>\n  \n</div>\n",
        "</div></fieldset>",
