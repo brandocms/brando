@@ -11,25 +11,27 @@ defmodule Brando.Plugs.Authenticate do
 
   def init(options), do: options
 
-  def call(conn, _opts), do: conn |> is_editor?
+  def call(conn, opts) do
+    login_url = Dict.fetch!(opts, :login_url)
+    conn |> is_editor?(login_url)
+  end
 
-  defp is_editor?(conn) do
+  defp is_editor?(conn, login_url) do
     if current_user = get_session(conn, :current_user) do
       assign(conn, :current_user, current_user)
       case current_user.editor do
         true -> conn
-        false -> auth_failed(conn)
+        false -> auth_failed(conn, login_url)
       end
     else
-      auth_failed(conn)
+      auth_failed(conn, login_url)
     end
   end
 
-  defp auth_failed(conn) do
-    helpers = Brando.get_helpers
+  defp auth_failed(conn, login_url) do
     conn
     |> delete_session(:current_user)
-    |> put_resp_header("Location", helpers.auth_path(:login))
+    |> put_resp_header("Location", login_url)
     |> resp(302, "")
     |> put_flash(:error, "Ingen tilgang.")
     |> send_resp

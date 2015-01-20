@@ -85,7 +85,7 @@ Routes/pipelines/plugs in `router.ex`:
 
 ```elixir
 alias Brando.Plugs.Authenticate
-plug Authenticate
+plug Authenticate, login_url: "/login"
 ```
 
 Endpoint config in `endpoint.ex`:
