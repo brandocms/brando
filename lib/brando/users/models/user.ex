@@ -228,8 +228,7 @@ defmodule Brando.Users.Model.User do
   Bumps `user`'s `last_login` to current time.
   """
   def set_last_login(user) do
-    user = %{user | last_login: Ecto.DateTime.local}
-    |> Brando.get_repo.update
+    {:ok, user} = update_field(user, [last_login: Ecto.DateTime.local])
     user
   end
 
