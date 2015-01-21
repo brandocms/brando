@@ -178,7 +178,7 @@ defmodule Brando.Users.Model.User do
   """
   def get(username: username) do
     from(u in __MODULE__,
-         where: fragment("lower(?) == lower(?)", u.username, ^username),
+         where: fragment("lower(?) = lower(?)", u.username, ^username),
          limit: 1)
     |> Brando.get_repo.all
     |> List.first
@@ -189,7 +189,7 @@ defmodule Brando.Users.Model.User do
   """
   def get(email: email) do
     from(u in __MODULE__,
-         where: fragment("? == lower(?)", u.email, ^email),
+         where: fragment("? = lower(?)", u.email, ^email),
          limit: 1)
     |> Brando.get_repo.all
     |> List.first
