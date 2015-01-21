@@ -161,7 +161,7 @@ defmodule Brando.Users.Model.User do
 
   # Example:
 
-      transform_checkbox_vals(params, ~w(administrator, editor))
+      transform_checkbox_vals(params, ~w(administrator editor))
 
   """
   def transform_checkbox_vals(params, keys) do
