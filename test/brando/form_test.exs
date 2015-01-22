@@ -22,6 +22,7 @@ defmodule Brando.FormTest do
           [required: true,
            label: "Brukernavn",
            placeholder: "Brukernavn"]
+        submit "Submit", [name: "submit"]
       end
     end
   end
@@ -167,6 +168,18 @@ defmodule Brando.FormTest do
 
   test "get_form" do
     assert TestForm.get_form(action: :create, params: [], values: nil, errors: nil) == {:safe,
-            "<form class=\"grid-form\" role=\"form\" action=\"/some/trash\" method=\"POST\"><fieldset><legend><br>Brukerinfo</legend><div data-row-span=\"2\">\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[full_name]\" class=\"\">Fullt navn</label><input name=\"test[full_name]\" type=\"text\" placeholder=\"Fullt navn\" />\n  \n</div>\n\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[username]\" class=\"\">Brukernavn</label><input name=\"test[username]\" type=\"text\" placeholder=\"Brukernavn\" />\n  \n</div>\n\n</div></fieldset></form>"}
+      "<form class=\"grid-form\" role=\"form\" action=\"/some/trash\" method=\"POST\"><fieldset><legend><br>Brukerinfo</legend><div data-row-span=\"2\">\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[full_name]\" class=\"\">Fullt navn</label><input name=\"test[full_name]\" type=\"text\" placeholder=\"Fullt navn\" />\n  \n</div>\n\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[username]\" class=\"\">Brukernavn</label><input name=\"test[username]\" type=\"text\" placeholder=\"Brukernavn\" />\n  \n</div>\n\n<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <input name=\"test[submit]\" type=\"submit\" />\n  \n</div>\n</div>\n</div></fieldset></form>"}
+  end
+
+  test "method_override/1" do
+    assert method_override(:update) == "<input name=\"_method\" type=\"hidden\" value=\"patch\" />"
+    assert method_override(:destroy) == "<input name=\"_method\" type=\"hidden\" value=\"delete\" />"
+    assert method_override(:what) == ""
+  end
+
+  test "get_method/1" do
+    assert get_method(:update) == " method=\"POST\""
+    assert get_method(:destroy) == " method=\"POST\""
+    assert get_method(:what) == " method=\"GET\""
   end
 end
