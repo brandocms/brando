@@ -28,18 +28,9 @@ defmodule Mix.Brando do
   @doc """
   Creates a file or folder, renaming where applicable.
   """
-  def make_destination_path(source_path, source_dir, target_dir, {string_to_replace, name_of_generated}) do
-    target_path =
-      source_path
-      |> String.replace(string_to_replace, String.downcase(name_of_generated))
-      |> Path.relative_to(source_dir)
-    Path.join(target_dir, target_path)
-  end
-
   def make_destination_path(source_path, source_dir, target_dir, {}) do
     target_path =
       source_path
-      #|> String.replace(string_to_replace, String.downcase(name_of_generated))
       |> Path.relative_to(source_dir)
     Path.join(target_dir, target_path)
   end
