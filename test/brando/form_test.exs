@@ -1,6 +1,30 @@
+defmodule Brando.TestHelpers do
+  def test_path(_conn, _action, _params) do
+    "/some/trash"
+  end
+end
+
 defmodule Brando.FormTest do
   use ExUnit.Case
   import Brando.Form
+
+  defmodule TestForm do
+    use Brando.Form
+
+    form "test", [helper: :test_path, class: "grid-form"] do
+      fieldset [legend: "Brukerinfo", row_span: 2] do
+        field :full_name, :text,
+          [required: true,
+           label: "Fullt navn",
+           placeholder: "Fullt navn",
+           help_text: "Skriv inn ditt fødselsnavn - fornavn og etternavn"]
+        field :username, :text,
+          [required: true,
+           label: "Brukernavn",
+           placeholder: "Brukernavn"]
+      end
+    end
+  end
 
   defmodule UserForm do
     use Brando.Form
@@ -10,7 +34,7 @@ defmodule Brando.FormTest do
        [value: "1", text: "Valg 2"]]
     end
 
-    form "user", [action: "", class: "col-md-offset-2"] do
+    form "user", [helper: :admin_user_path, class: "grid-form"] do
       field :full_name, :text,
         [required: true,
          label: "Full name",
@@ -139,5 +163,10 @@ defmodule Brando.FormTest do
     assert render_choices(:create, [choices: &UserForm.get_status_choices/0],
                           "val", nil) == ["<option value=\"0\">Valg 1</option>",
                                           "<option value=\"1\">Valg 2</option>"]
+  end
+
+  test "get_form" do
+    assert TestForm.get_form(action: :create, params: [], values: nil, errors: nil) == {:safe,
+            "<form class=\"grid-form\" role=\"form\" action=\"/some/trash\" method=\"POST\"><fieldset><legend><br>Brukerinfo</legend><div data-row-span=\"2\">\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[full_name]\" class=\"\">Fullt navn</label><input name=\"test[full_name]\" type=\"text\" placeholder=\"Fullt navn\" />\n  \n</div>\n\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[username]\" class=\"\">Brukernavn</label><input name=\"test[username]\" type=\"text\" placeholder=\"Brukernavn\" />\n  \n</div>\n\n</div></fieldset></form>"}
   end
 end
