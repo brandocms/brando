@@ -75,4 +75,31 @@ defmodule Brando.Integration.UserTest do
     assert {:ok, user} = User.create(@params)
     assert User.is_editor?(user)
   end
+
+  test "check_for_uploads/2 success" do
+    assert {:ok, user} = User.create(@params)
+    up_plug =
+      %Plug.Upload{content_type: "image/png",
+                   filename: "sample.png",
+                   path: "#{Path.expand("../../../", __DIR__)}/fixtures/sample.png"}
+    up_params = Dict.put(@params, "avatar", up_plug)
+    assert {:ok, dict} = User.check_for_uploads(user, up_params)
+    user = User.get(email: "fanogigyni@gmail.com")
+    assert user.avatar == elem(dict[:file], 1)
+  end
+
+  test "check_for_uploads/2 error" do
+    assert {:ok, user} = User.create(@params)
+    up_plug =
+      %Plug.Upload{content_type: "image/png",
+                   filename: "",
+                   path: "#{Path.expand("../../../", __DIR__)}/fixtures/sample.png"}
+    up_params = Dict.put(@params, "avatar", up_plug)
+    assert {:errors, _dict} = User.check_for_uploads(user, up_params)
+  end
+
+  test "check_for_uploads/2 noupload" do
+    assert {:ok, user} = User.create(@params)
+    assert :nouploads = User.check_for_uploads(user, @params)
+  end
 end

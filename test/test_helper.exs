@@ -1,6 +1,10 @@
 Logger.configure(level: :info)
 ExUnit.start
 
+# Clear tmp dir
+File.rm_rf!(Path.join([Mix.Project.app_path, "tmp", "media"]))
+File.mkdir_p!(Path.join([Mix.Project.app_path, "tmp", "media"]))
+
 # Basic test repo
 alias Brando.Integration.TestRepo
 
