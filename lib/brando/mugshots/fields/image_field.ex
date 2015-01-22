@@ -149,7 +149,7 @@ defmodule Brando.Mugshots.Fields.ImageField do
     new_file = Path.join(upload_path, filename)
     case File.cp(temp_path, new_file, fn _, _ -> false end) do
       :ok -> create_image_sizes(new_file, cfg)
-      {:error, reason} -> Logger.error("copy_uploaded_file: #{new_file} -> #{reason}")
+      {:error, reason} -> {:error, reason}
     end
   end
 
