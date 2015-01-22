@@ -27,6 +27,8 @@ defmodule Mix.Tasks.Brando.Install do
     copy_from static_dir, Path.join("./", "priv/static"), application_name, &File.read!(&1)
     Mix.shell.info """
     ------------------------------------------------------------------
+    Brando finished copying.
+    ------------------------------------------------------------------
     Add to `web/router.ex`:
         pipeline :admin do
           plug :accepts, ~w(html json)
