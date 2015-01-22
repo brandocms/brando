@@ -33,5 +33,11 @@ defmodule Brando do
   @doc """
   Gets the parent app's helpers, as set in config.exs
   """
-  def get_helpers, do: Module.concat(get_router, "Helpers")
+  def get_helpers do
+    if Mix.env == :test do
+      Brando.TestHelpers
+    else
+      Module.concat(get_router, "Helpers")
+    end
+  end
 end
