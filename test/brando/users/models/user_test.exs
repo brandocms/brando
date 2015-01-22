@@ -115,6 +115,28 @@ defmodule Brando.Integration.UserTest do
     assert {:errors, _dict} = User.check_for_uploads(user, up_params)
   end
 
+  test "check_for_uploads/2 format error" do
+    assert {:ok, user} = User.create(@params)
+    up_plug =
+      %Plug.Upload{content_type: "image/gif",
+                   filename: "sample.gif",
+                   path: "#{Path.expand("../../../", __DIR__)}/fixtures/sample.png"}
+    up_params = Dict.put(@params, "avatar", up_plug)
+    assert {:errors, dict} = User.check_for_uploads(user, up_params)
+    assert dict == [error: {:avatar, "Ikke gyldig filformat (image/gif)"}]
+  end
+
+  test "check_for_uploads/2 copy error" do
+    assert {:ok, user} = User.create(@params)
+    up_plug =
+      %Plug.Upload{content_type: "image/png",
+                   filename: "sample.png",
+                   path: "#{Path.expand("../../../", __DIR__)}/fixtures/non_existant.png"}
+    up_params = Dict.put(@params, "avatar", up_plug)
+    assert {:errors, dict} = User.check_for_uploads(user, up_params)
+    assert dict == [error: {:avatar, :enoent}]
+  end
+
   test "check_for_uploads/2 noupload" do
     assert {:ok, user} = User.create(@params)
     assert :nouploads = User.check_for_uploads(user, @params)
