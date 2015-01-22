@@ -137,7 +137,11 @@ defmodule Brando.Users.Model.User do
     end)
     case dict do
       [] -> :nouploads
-      dict -> {:ok, dict}
+      dict ->
+        case Dict.has_key?(dict, :error) do
+          true -> {:errors, dict}
+          false -> {:ok, dict}
+        end
     end
   end
 
