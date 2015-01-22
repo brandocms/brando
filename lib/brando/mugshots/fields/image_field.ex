@@ -159,7 +159,7 @@ defmodule Brando.Mugshots.Fields.ImageField do
       size_dir = Path.join([file_path, Atom.to_string(size_name)])
       File.mkdir_p(size_dir)
       sized_image = Path.join([size_dir, filename])
-      Task.start_link(fn -> do_create_image_size(file, sized_image, size_cfg) end)
+      Brando.Util.task_start(fn -> do_create_image_size(file, sized_image, size_cfg) end)
     end
     {:ok, Path.join([cfg[:upload_path], filename])}
   end

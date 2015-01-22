@@ -426,6 +426,17 @@ defmodule Brando.Util do
   end
 
   @doc """
+  Task.start `fun` unless we are testing, then just exec `fun`
+  """
+  defmacro task_start(fun) do
+    if Mix.env == :test do
+      quote do: unquote(fun).()
+    else
+      quote do: Task.start(unquote(fun))
+    end
+  end
+
+  @doc """
   Assign `js` to `conn` as `:js_extra`.
   Is available as `conn.assigns[:js_extra]`, but is normally
   extracted through `<%= js_extra(@conn) %>` in `AdminView`.
