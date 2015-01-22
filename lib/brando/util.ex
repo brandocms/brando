@@ -377,23 +377,6 @@ defmodule Brando.Util do
   def maybe(nil, _fun), do: nil
   def maybe(item, fun), do: fun.(item)
 
-
-  @doc """
-  Convenience function for getting yesterday's date
-  """
-  def yesterday do
-    {today, _time} = :calendar.universal_time()
-    today_days = :calendar.date_to_gregorian_days(today)
-    :calendar.gregorian_days_to_date(today_days - 1)
-  end
-
-  @doc """
-  Convenience function for getting `now` in Ecto format
-  """
-  def ecto_now do
-    Ecto.DateTime.from_erl(:calendar.universal_time)
-  end
-
   @doc """
   Converts an ecto datetime record to ISO 8601 format.
   """
