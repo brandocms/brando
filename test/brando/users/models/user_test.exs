@@ -20,6 +20,19 @@ defmodule Brando.Integration.UserTest do
     refute updated_password_user.password == "newpass"
   end
 
+  test "create/1 errors" do
+    {_v, params} = Dict.pop @params, "email"
+    assert {:error, err} = User.create(params)
+    assert err == [email: :required]
+  end
+
+  test "update/1 errors" do
+    assert {:ok, user} = User.create(@params)
+    params = Dict.put @params, "email", "asdf"
+    assert {:error, err} = User.update(user, params)
+    assert err == [email: :format]
+  end
+
   test "update_field/2" do
     assert {:ok, user} = User.create(@params)
     assert {:ok, model} = User.update_field(user, [full_name: "James Bond"])
@@ -34,11 +47,12 @@ defmodule Brando.Integration.UserTest do
   end
 
   test "get/1" do
-    assert {:ok, _user} = User.create(@params)
+    assert {:ok, user} = User.create(@params)
     refute User.get(username: "zabuzasixu") == nil
     assert User.get(username: "elvis") == nil
     refute User.get(email: "fanogigyni@gmail.com") == nil
     assert User.get(email: "elvis@hotmail.com") == nil
+    assert User.get(id: user.id) == user
   end
 
   test "delete/1" do
