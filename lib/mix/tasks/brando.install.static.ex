@@ -19,6 +19,9 @@ defmodule Mix.Tasks.Brando.Install.Static do
     application_name   = Naming.camelize(application_atom)
     copy_from static_dir, Path.join("./", "priv/static"), application_name, &File.read!(&1)
     Mix.shell.info """
+    ------------------------------------------------------------------
+    Brando finished copying.
+    ------------------------------------------------------------------
     """
   end
 

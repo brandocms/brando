@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Brando.Gen.Headlines do
+defmodule Mix.Tasks.Brando.Install.Headlines do
   use Mix.Task
   alias Phoenix.Naming
   import Mix.Brando
@@ -28,6 +28,8 @@ defmodule Mix.Tasks.Brando.Gen.Headlines do
 
     copy_from template_dir, "./", {}, &EEx.eval_file(&1, binding)
     Mix.shell.info """
+    ------------------------------------------------------------------
+    Brando finished copying.
     ------------------------------------------------------------------
     Don't forget to add your new controller to your web/router.ex.
 

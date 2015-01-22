@@ -36,4 +36,14 @@ defmodule Mix.Tasks.Brando.GenerateTest do
     assert_file "web/controllers/admin/dashboard_controller.ex"
     assert File.exists?("web/views")
   end
+
+  test "brando.install.static" do
+    assert String.contains?(capture_io(fn -> Mix.Tasks.Brando.Install.Static.run([]) end), "Brando finished copying.")
+    assert_file "priv/static/brando/css/brando.css"
+    assert File.exists?("priv/static")
+  end
+
+  test "brando.install.headlines" do
+    assert String.contains?(capture_io(fn -> Mix.Tasks.Brando.Install.Headlines.run([]) end), "Brando finished copying.")
+  end
 end
