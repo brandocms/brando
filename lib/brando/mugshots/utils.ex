@@ -30,7 +30,11 @@ defmodule Brando.Mugshots.Utils do
   `Mix.Project.app_path` with `priv/media`
   """
   def get_media_abspath do
-    Path.join([Mix.Project.app_path, "priv", "media"])
+    if Mix.env == :test do
+      Path.join([Mix.Project.app_path, "tmp", "media"])
+    else
+      Path.join([Mix.Project.app_path, "priv", "media"])
+    end
   end
 
 end
