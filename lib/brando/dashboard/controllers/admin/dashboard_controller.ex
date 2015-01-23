@@ -7,12 +7,11 @@ defmodule Brando.Dashboard.Admin.DashboardController do
       use Brando.Dashboard.Admin.DashboardController
 
   """
-  defmacro __using__(options) do
-    layout = Dict.fetch! options, :layout
-
+  defmacro __using__(_) do
     quote do
       use Phoenix.Controller
 
+      plug :put_layout, @layout
       plug :action
 
       @doc """
@@ -20,7 +19,6 @@ defmodule Brando.Dashboard.Admin.DashboardController do
       """
       def dashboard(conn, _params) do
         conn
-        |> put_layout(unquote(layout))
         |> render
       end
 
