@@ -31,19 +31,6 @@ defmodule Mix.Tasks.Brando.Install.Headlines do
     ------------------------------------------------------------------
     Brando finished copying.
     ------------------------------------------------------------------
-    Don't forget to add your new controller to your web/router.ex.
-
-    For frontend:
-        headlines_frontend "/posts", #{controller_name}Controller
-
-    For backend, stick the headlines_backend inside your admin scope:
-        scope "/admin" do
-          pipe_through :admin
-          headlines_backend "/posts", #{controller_name}Controller
-        end
-
-    application_name = #{application_name}
-    ------------------------------------------------------------------
     """
   end
 
