@@ -19,8 +19,8 @@ def application do
 end
 
 defp deps do
-  [{:postgrex, "~> 0.5"},
-   {:ecto, "~> 0.5"},
+  [{:postgrex, "~> 0.7"},
+   {:ecto, "~> 0.6"},
    {:bcrypt, github: "opscode/erlang-bcrypt"},
    {:brando, github: "twined/brando"]}
 end
