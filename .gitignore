@@ -15,3 +15,4 @@ brando.sublime-project
 docs
 excoveralls.post.json
 priv/static/villain
+coveralls.json
