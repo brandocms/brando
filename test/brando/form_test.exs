@@ -99,10 +99,14 @@ defmodule Brando.FormTest do
        administrator: [type: :checkbox, in_fieldset: 2, label: "Administrator", default: false],
        fs34070328: [type: :fieldset, legend: "Permissions", row_span: 2],
        status: [type: :select, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
-       email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"]]
-    f = UserForm.render_fields("user", form_fields, :create, [], nil, nil)
+       email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"],
+       username: [type: :text, required: true, label: "Username", placeholder: "Username"]
+     ]
+    errors = [password: {:too_short, 6}, username: :format, email: :format, password: :required, email: :required, full_name: :required, username: :required]
+    f = UserForm.render_fields("user", form_fields, :create, [], nil, errors)
     assert f ==
-      ["<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"user[email]\" class=\"\">E-mail</label><input name=\"user[email]\" type=\"email\" placeholder=\"E-mail\" />\n  \n</div>\n</div>",
+      ["<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group required has-error\">\n  <label for=\"user[username]\" class=\"\">Username</label><input name=\"user[username]\" type=\"text\" placeholder=\"Username\" />\n  <div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet har feil format.</div><div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet er påkrevet.</div>\n</div>\n</div>",
+       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group required has-error\">\n  <label for=\"user[email]\" class=\"\">E-mail</label><input name=\"user[email]\" type=\"email\" placeholder=\"E-mail\" />\n  <div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet har feil format.</div><div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet er påkrevet.</div>\n</div>\n</div>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status]\" class=\"\">Status</label><select name=\"user[status]\" class=\"\"><option value=\"0\">Valg 1</option><option value=\"1\" selected>Valg 2</option></select>\n  \n</div>\n</div>",
        "<fieldset><legend><br>Permissions</legend><div data-row-span=\"2\">",
        "<div data-field-span=\"1\" class=\"form-group\">\n  <div class=\"checkbox\"><label for=\"user[administrator]\" class=\"\"></label><label for=\"user[administrator]\" class=\"\"><input name=\"user[administrator]\" type=\"checkbox\" />Administrator</label></div>\n  \n</div>\n",
