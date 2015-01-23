@@ -48,7 +48,7 @@ Create an initial migration for the `users` table:
 
     $ mix ecto.gen.migration MyApp.Repo add_users_table
 
-then add the following to the generated file:
+then add the following to the generated file: (old syntax)
 
 ```elixir
 defmodule MyApp.Repo.Migrations.AddUsersTable do
@@ -73,6 +73,36 @@ defmodule MyApp.Repo.Migrations.AddUsersTable do
 
   def down do
     "DROP TABLE IF EXISTS users"
+  end
+end
+```
+
+or new syntax (~> 0.6.0):
+
+```elixir
+defmodule MyApp.Repo.Migrations.AddUsersTable do
+  use Ecto.Migration
+
+  def up do
+    create table(:users) do
+      add :username,      :text
+      add :full_name,     :text
+      add :email,         :text
+      add :password,      :text
+      add :avatar,        :text
+      add :administrator, :bool
+      add :editor,        :bool
+      add :last_login,    :datetime
+      timestamps
+    end
+    create index(:users, [:username], unique: true)
+    create index(:users, [:email], unique: true)
+  end
+
+  def down do
+    drop table(:users)
+    drop index(:users, [:username], unique: true)
+    drop index(:users, [:email], unique: true)
   end
 end
 ```
