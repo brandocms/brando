@@ -8,6 +8,8 @@ defmodule Brando.Users.Model.User do
   import Ecto.Query, only: [from: 2]
   alias Brando.Util
 
+  @roles %{none: 0, staff: 1, admin: 2, superuser: 4}
+
   schema "users" do
     field :username, :string
     field :email, :string
@@ -16,7 +18,7 @@ defmodule Brando.Users.Model.User do
     field :avatar, :string
     field :editor, :boolean
     field :administrator, :boolean
-    field :last_login, :datetime
+    field :last_login, Ecto.DateTime
     timestamps
   end
 

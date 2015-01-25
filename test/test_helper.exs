@@ -32,10 +32,10 @@ defmodule Brando.Integration.TestCase do
   end
 
   setup do
-    :ok = Ecto.Adapters.Postgres.begin_test_transaction(TestRepo, [])
+    :ok = Ecto.Adapters.SQL.begin_test_transaction(TestRepo, [])
 
     on_exit fn ->
-      :ok = Ecto.Adapters.Postgres.rollback_test_transaction(TestRepo, [])
+      :ok = Ecto.Adapters.SQL.rollback_test_transaction(TestRepo, [])
     end
 
     :ok

@@ -35,9 +35,10 @@ defmodule Brando.Mixfile do
   defp deps do
     [
       {:postgrex, "~> 0.5"},
-      {:ecto, "~> 0.6"},
+      {:ecto, "~> 0.7"},
       {:cowboy, "~> 1.0"},
-      {:plug, "~> 0.9"},
+      #{:plug, "~> 0.9"},
+      {:plug, github: "elixir-lang/plug", override: true},
       {:phoenix, "~> 0.8.0"},
       {:mogrify, github: "twined/mogrify"},
       {:bcrypt, github: "opscode/erlang-bcrypt"},
