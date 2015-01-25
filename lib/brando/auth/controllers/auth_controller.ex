@@ -6,12 +6,6 @@ defmodule Brando.Auth.AuthController do
       plug :put_layout, @layout
       plug :action
 
-      def login(conn = %Plug.Conn{private: %{plug_session: %{current_user: _}}}, _params) do
-        conn
-        |> put_flash(:notice, "Du er allerede innlogget.")
-        |> redirect(to: "/admin")
-      end
-
       def login(conn, %{"user" => %{"email" => email, "password" => password}}) do
         user = @model.get(email: email)
         case @model.auth?(user, password) do
