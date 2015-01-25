@@ -1,4 +1,5 @@
 defmodule Brando.Integration.UserTest do
+  use ExUnit.Case, async: true
   use Brando.Integration.TestCase
   alias Brando.Users.Model.User
   @params %{"avatar" => "", "editor" => "on",

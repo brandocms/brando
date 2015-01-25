@@ -1,5 +1,5 @@
 defmodule Brando.Mugshots.UtilsTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   import Brando.Mugshots.Utils
 
   test "size_dir/2 binary" do

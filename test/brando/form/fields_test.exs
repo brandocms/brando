@@ -1,5 +1,5 @@
 defmodule Brando.Form.FieldsTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   require Brando.Form.Fields, as: F
 

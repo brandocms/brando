@@ -1,5 +1,5 @@
 defmodule Brando.Mugshots.HelpersTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   import Brando.Mugshots.Helpers
 
   test "img/2" do

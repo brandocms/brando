@@ -5,7 +5,7 @@ defmodule Brando.TestHelpers do
 end
 
 defmodule Brando.FormTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   import Brando.Form
 
   defmodule TestForm do

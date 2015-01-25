@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Brando.CreateadminTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Brando.Integration.TestCase
   alias Brando.Users.Model.User
 

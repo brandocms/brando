@@ -1,5 +1,5 @@
 defmodule Brando.Plugs.AuthenticateTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Plug.Test
   alias Brando.Plugs.Authenticate
 

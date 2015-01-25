@@ -1,5 +1,5 @@
 defmodule Brando.UtilTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Plug.Test
   import Brando.Util
   alias Brando.UtilTest.TestStruct

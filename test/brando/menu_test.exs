@@ -1,5 +1,5 @@
 defmodule Brando.MenuTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Plug.Test
 
   defmodule Menu do

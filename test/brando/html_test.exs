@@ -1,5 +1,5 @@
 defmodule Brando.HTMLTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Plug.Test
   import Brando.Util
   import Brando.HTML
