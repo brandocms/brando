@@ -306,7 +306,7 @@ defmodule Brando.Form do
   Renders field by type. Wraps the field with a label and row span
   """
   def render_field(action, name, :file, opts, value, errors) do
-    F.__input__(:file, action, name, value, errors, opts)
+    F.__file__(action, name, value, errors, opts)
     |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
     |> F.__form_group__(name, opts, errors)
     |> F.__data_row_span__(opts[:in_fieldset])

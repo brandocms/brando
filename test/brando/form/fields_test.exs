@@ -56,4 +56,9 @@ defmodule Brando.Form.FieldsTest do
     assert F.__parse_error__(:format) == "Feltet har feil format."
     assert F.__parse_error__({:too_short, 5}) == "Feltets verdi er for kort. Må være > 5 tegn."
   end
+
+  test "__file__/4" do
+    assert F.__file__(:update, "user[avatar]", "images/default/0.jpeg",
+                      [], [type: :file, label: "Bilde"]) == "<div class=\"image-preview\"><img src=\"images/default/thumb/0.jpeg\" /></div><input name=\"user[avatar]\" type=\"file\" />"
+  end
 end

@@ -79,6 +79,28 @@ defmodule Brando.Form.Fields do
   end
 
   @doc """
+  Render a file field for :update. If we have `value`, try to render
+  an img element with a thumbnail.
+  """
+  def __file__(:update, name, value, _errors, opts) do
+    opts = List.delete(opts, :default)
+    img =
+      if value do
+        ~s(<div class="image-preview"><img src="#{Brando.HTML.media_path(Brando.Mugshots.Helpers.img(value, :thumb))}" /></div>)
+      else
+        ""
+      end
+   img <> __file__(:create, name, value, _errors, opts)
+  end
+
+  @doc """
+  Render a file field for :create.
+  """
+  def __file__(:create, name, _value, _errors, opts) do
+    ~s(<input name="#{name}" type="file"#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])} />)
+  end
+
+  @doc """
   Renders a <select> tag. Passes `choices` to __tag__/4
 
   ## Parameters:
