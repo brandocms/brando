@@ -6,9 +6,10 @@ defmodule Brando.Users.Form.UserForm do
   use Brando.Form
 
   @doc false
-  def get_status_choices do
-    [[value: "choice1", text: "Valg 1"],
-     [value: "choice2", text: "Valg 2"]]
+  def get_role_choices do
+    [[value: "1", text: "Staff"],
+     [value: "2", text: "Admin"],
+     [value: "4", text: "Superuser"]]
   end
 
   form "user", [helper: :admin_user_path, class: "grid-form"] do
@@ -42,11 +43,10 @@ defmodule Brando.Users.Form.UserForm do
          default: true]
     end
 
-    field :status, :select,
-      [choices: &__MODULE__.get_status_choices/0,
-       default: "1",
+    field :role, :select,
+      [choices: &__MODULE__.get_role_choices/0,
        multiple: true,
-       label: "Status"]
+       label: "Rolle"]
     field :avatar, :file,
       [label: "Bilde"]
     submit "Lagre",

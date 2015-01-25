@@ -32,7 +32,7 @@ defmodule Brando.Users.Admin.UserController do
       end
 
       def new(conn, _params) do
-        case @model.is_admin?(get_session(conn, :current_user)) do
+        case @model.has_role?(get_session(conn, :current_user), :superuser) do
           true -> conn |> render("new.html")
           false -> conn
         end

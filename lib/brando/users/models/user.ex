@@ -8,7 +8,7 @@ defmodule Brando.Users.Model.User do
   import Ecto.Query, only: [from: 2]
   alias Brando.Util
 
-  @roles %{none: 0, staff: 1, admin: 2, superuser: 4}
+  @roles %{staff: 1, admin: 2, superuser: 4}
 
   schema "users" do
     field :username, :string
@@ -16,8 +16,7 @@ defmodule Brando.Users.Model.User do
     field :full_name, :string
     field :password, :string
     field :avatar, :string
-    field :editor, :boolean
-    field :administrator, :boolean
+    field :role, Brando.Type.Role
     field :last_login, Ecto.DateTime
     timestamps
   end
@@ -48,8 +47,7 @@ defmodule Brando.Users.Model.User do
   """
   def changeset(user, :create, params) do
     params
-    |> transform_checkbox_vals(~w(editor administrator))
-    |> cast(user, ~w(username full_name email password), ~w(editor administrator))
+    |> cast(user, ~w(username full_name email password), ~w(role))
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
     |> validate_unique(:email, on: Brando.get_repo())
@@ -68,8 +66,7 @@ defmodule Brando.Users.Model.User do
   """
   def changeset(user, :update, params) do
     params
-    |> transform_checkbox_vals(~w(editor administrator))
-    |> cast(user, [], ~w(username full_name email password editor administrator))
+    |> cast(user, [], ~w(username full_name email password role))
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
     |> validate_unique(:email, on: Brando.get_repo())
@@ -87,7 +84,8 @@ defmodule Brando.Users.Model.User do
     case user_changeset.valid? do
       true ->
         user_changeset = put_change(user_changeset, :password, gen_password(user_changeset.changes[:password]))
-        {:ok, Brando.get_repo().insert(user_changeset)}
+        inserted_user = Brando.get_repo().insert(user_changeset)
+        {:ok, inserted_user}
       false ->
         {:error, user_changeset.errors}
     end
@@ -260,16 +258,16 @@ defmodule Brando.Users.Model.User do
   end
 
   @doc """
-  Checks if `user` has administrative access
+  Checks if `user` has `role`.
   """
-  def is_admin?(user) do
-    user.administrator
+  def has_role?(user, role) when is_atom(role) do
+    if role in user.role, do: true, else: false
   end
 
   @doc """
-  Checks if `user` has editor access
+  Checks if `user` has access to admin area.
   """
-  def is_editor?(user) do
-    user.editor
+  def can_login?(user) do
+    if user.role > 0, do: true, else: false
   end
 end

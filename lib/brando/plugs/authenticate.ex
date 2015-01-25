@@ -6,6 +6,7 @@ defmodule Brando.Plugs.Authenticate do
   """
   import Plug.Conn
   import Phoenix.Controller, only: [put_flash: 3]
+  alias Brando.Users.Model.User
 
   @behaviour Plug
 
@@ -13,15 +14,17 @@ defmodule Brando.Plugs.Authenticate do
 
   def call(conn, opts) do
     login_url = Dict.fetch!(opts, :login_url)
-    conn |> is_editor?(login_url)
+    conn |> allowed?(login_url)
   end
 
-  defp is_editor?(conn, login_url) do
+  defp allowed?(conn, login_url) do
     if current_user = get_session(conn, :current_user) do
-      assign(conn, :current_user, current_user)
-      case current_user.editor do
-        true -> conn
-        false -> auth_failed(conn, login_url)
+      case User.can_login?(current_user) do
+        true ->
+          assign(conn, :current_user, current_user)
+          conn
+        false ->
+          auth_failed(conn, login_url)
       end
     else
       auth_failed(conn, login_url)

@@ -9,8 +9,7 @@ defmodule Brando.Integration.Migration do
         email text UNIQUE,
         password text,
         avatar text,
-        administrator bool,
-        editor bool,
+        role integer,
         last_login timestamp,
         inserted_at timestamp,
         updated_at timestamp)"

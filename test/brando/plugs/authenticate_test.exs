@@ -47,7 +47,7 @@ defmodule Brando.Plugs.AuthenticateTest do
     end
 
     def put_current_user(conn, _) do
-      conn |> put_session(:current_user, %{editor: false})
+      conn |> put_session(:current_user, %{role: 0})
     end
   end
 
@@ -74,7 +74,7 @@ defmodule Brando.Plugs.AuthenticateTest do
     end
 
     def put_current_user(conn, _) do
-      conn |> put_session(:current_user, %{editor: true})
+      conn |> put_session(:current_user, %{role: 7})
     end
   end
 

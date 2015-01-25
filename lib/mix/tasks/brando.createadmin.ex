@@ -32,7 +32,7 @@ defmodule Mix.Tasks.Brando.Createadmin do
     full_name = Keyword.fetch!(opts, :fullname)
     ret = User.create(%{"email" => email, "username" => username,
                   "password" => password, "full_name" => full_name,
-                  "administrator" => "on", "editor" => "on"})
+                  "role" => ["1", "2", "4"]})
     case ret do
       {:ok, _user} ->
         Mix.shell.info """

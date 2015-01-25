@@ -30,6 +30,12 @@ defmodule Brando.FormTest do
   defmodule UserForm do
     use Brando.Form
 
+    def get_role_choices do
+      [[value: "1", text: "Staff"],
+       [value: "2", text: "Admin"],
+       [value: "4", text: "Superuser"]]
+    end
+
     def get_status_choices do
       [[value: "1", text: "Valg 1"],
        [value: "2", text: "Valg 2"]]
@@ -65,24 +71,15 @@ defmodule Brando.FormTest do
          placeholder: "Passord",
          class: "form-control",
          wrapper_class: ""]
-      field :administrator, :checkbox,
-        [label: "Administrator",
-         wrapper_class: "",
-         default: false]
-      field :editor, :checkbox,
-        [label: "Editor",
-         wrapper_class: "",
-         default: true]
-      field :status, :select,
-        [choices: &__MODULE__.get_status_choices/0,
-         default: "1",
-         label: "Status",
+      field :role, :select,
+        [choices: &__MODULE__.get_role_choices/0,
+         multiple: true,
+         label: "Role",
          label_class: "control-label",
          class: "form-control",
          wrapper_class: ""]
       field :status2, :select,
         [choices: &__MODULE__.get_status_choices/0,
-         multiple: true,
          default: "1",
          label: "Status",
          label_class: "control-label",
@@ -136,8 +133,9 @@ defmodule Brando.FormTest do
        fs34070328: [type: :fieldset, row_span: 2],
        status: [type: :select, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"]]
-    values = %Brando.Users.Model.User{administrator: true, avatar: "images/default/0.jpeg",
-                                      editor: true, email: "test@email.com",
+    values = %Brando.Users.Model.User{avatar: "images/default/0.jpeg",
+                                      email: "test@email.com",
+                                      role: 4,
                                       full_name: "Test Name", id: 1,
                                       inserted_at: %Ecto.DateTime{day: 7, hour: 4, min: 36, month: 12, sec: 26, year: 2014},
                                       last_login: %Ecto.DateTime{day: 9, hour: 5, min: 2, month: 12, sec: 36, year: 2014},
@@ -149,7 +147,7 @@ defmodule Brando.FormTest do
       ["<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"user[email]\" class=\"\">E-mail</label><input name=\"user[email]\" type=\"email\" value=\"test@email.com\" placeholder=\"E-mail\" />\n  \n</div>\n</div>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status]\" class=\"\">Status</label><select name=\"user[status]\" class=\"\"><option value=\"1\">Valg 1</option><option value=\"2\">Valg 2</option></select>\n  \n</div>\n</div>",
        "<fieldset><div data-row-span=\"2\">",
-       "<div data-field-span=\"1\" class=\"form-group\">\n  <div class=\"checkbox\"><label for=\"user[administrator]\" class=\"\"></label><label for=\"user[administrator]\" class=\"\"><input name=\"user[administrator]\" type=\"checkbox\" checked=\"checked\" />Administrator</label></div>\n  \n</div>\n",
+       "<div data-field-span=\"1\" class=\"form-group\">\n  <div class=\"checkbox\"><label for=\"user[administrator]\" class=\"\"></label><label for=\"user[administrator]\" class=\"\"><input name=\"user[administrator]\" type=\"checkbox\" />Administrator</label></div>\n  \n</div>\n",
        "<div data-field-span=\"1\" class=\"form-group\">\n  <div class=\"checkbox\"><label for=\"user[editor]\" class=\"\"></label><label for=\"user[editor]\" class=\"\"><input name=\"user[editor]\" type=\"checkbox\" checked=\"checked\" />Editor</label></div>\n  \n</div>\n",
        "</div></fieldset>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[avatar]\" class=\"\">Avatar</label><input name=\"user[avatar]\" type=\"file\" value=\"images/default/0.jpeg\" />\n  \n</div>\n</div>",

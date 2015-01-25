@@ -1,8 +1,8 @@
 defmodule Brando.Integration.UserTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
   use Brando.Integration.TestCase
   alias Brando.Users.Model.User
-  @params %{"avatar" => "", "editor" => "on",
+  @params %{"avatar" => "", "role" => ["2", "4"],
             "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
             "password" => "finimeze", "status" => "1",
             "submit" => "Submit", "username" => "zabuzasixu"}
@@ -41,9 +41,14 @@ defmodule Brando.Integration.UserTest do
   end
 
   test "transform_checkbox_vals/2" do
-    assert User.transform_checkbox_vals(@params, ~w(administrator editor)) ==
+    params =
+      %{"avatar" => "", "role" => ["2", "4"], "editor" => "on",
+        "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
+        "password" => "finimeze", "status" => "1",
+        "submit" => "Submit", "username" => "zabuzasixu"}
+    assert User.transform_checkbox_vals(params, ~w(administrator editor)) ==
       %{"avatar" => "", "editor" => true, "email" => "fanogigyni@gmail.com",
-        "full_name" => "Nita Bond", "password" => "finimeze",
+        "full_name" => "Nita Bond", "password" => "finimeze", "role" => ["2", "4"],
         "status" => "1", "submit" => "Submit", "username" => "zabuzasixu"}
   end
 
@@ -81,14 +86,11 @@ defmodule Brando.Integration.UserTest do
     refute user.last_login == new_user.last_login
   end
 
-  test "is_admin?/1" do
+  test "has_role?/1" do
     assert {:ok, user} = User.create(@params)
-    refute User.is_admin?(user)
-  end
-
-  test "is_editor?/1" do
-    assert {:ok, user} = User.create(@params)
-    assert User.is_editor?(user)
+    assert User.has_role?(user, :superuser)
+    assert User.has_role?(user, :admin)
+    refute User.has_role?(user, :staff)
   end
 
   test "check_for_uploads/2 success" do

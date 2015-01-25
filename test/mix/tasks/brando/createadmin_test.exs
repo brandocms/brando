@@ -12,7 +12,7 @@ defmodule Mix.Tasks.Brando.CreateadminTest do
     assert String.contains?(cap, "my@email.com")
     user = User.get(username: "user")
     assert user
-    assert User.is_admin?(user)
+    assert User.has_role?(user, :superuser)
   end
 
   test "brando.createadmin fails" do
