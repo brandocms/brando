@@ -133,6 +133,7 @@ defmodule Brando.Form do
       * `select` - Select with options through `choices`.
 
         # Options
+        * `multiple` - The select returns multiple options, if true.
         * `choices` - &__MODULE__.get_status_choices/0
                      Points to `get_status_choices/0` function
                      in the module the form was defined.

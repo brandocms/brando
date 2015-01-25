@@ -31,8 +31,8 @@ defmodule Brando.FormTest do
     use Brando.Form
 
     def get_status_choices do
-      [[value: "0", text: "Valg 1"],
-       [value: "1", text: "Valg 2"]]
+      [[value: "1", text: "Valg 1"],
+       [value: "2", text: "Valg 2"]]
     end
 
     form "user", [helper: :admin_user_path, class: "grid-form"] do
@@ -80,6 +80,14 @@ defmodule Brando.FormTest do
          label_class: "control-label",
          class: "form-control",
          wrapper_class: ""]
+      field :status2, :select,
+        [choices: &__MODULE__.get_status_choices/0,
+         multiple: true,
+         default: "1",
+         label: "Status",
+         label_class: "control-label",
+         class: "form-control",
+         wrapper_class: ""]
       field :avatar, :file,
         [label: "Avatar",
          label_class: "control-label",
@@ -99,6 +107,7 @@ defmodule Brando.FormTest do
        administrator: [type: :checkbox, in_fieldset: 2, label: "Administrator", default: false],
        fs34070328: [type: :fieldset, legend: "Permissions", row_span: 2],
        status: [type: :select, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
+       status2: [type: :select, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"],
        username: [type: :text, required: true, label: "Username", placeholder: "Username"]
      ]
@@ -107,7 +116,8 @@ defmodule Brando.FormTest do
     assert f ==
       ["<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group required has-error\">\n  <label for=\"user[username]\" class=\"\">Username</label><input name=\"user[username]\" type=\"text\" placeholder=\"Username\" />\n  <div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet har feil format.</div><div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet er påkrevet.</div>\n</div>\n</div>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group required has-error\">\n  <label for=\"user[email]\" class=\"\">E-mail</label><input name=\"user[email]\" type=\"email\" placeholder=\"E-mail\" />\n  <div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet har feil format.</div><div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet er påkrevet.</div>\n</div>\n</div>",
-       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status]\" class=\"\">Status</label><select name=\"user[status]\" class=\"\"><option value=\"0\">Valg 1</option><option value=\"1\" selected>Valg 2</option></select>\n  \n</div>\n</div>",
+       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status2]\" class=\"\">Status</label><select name=\"user[status2][]\" multiple><option value=\"1\" selected>Valg 1</option><option value=\"2\">Valg 2</option></select>\n  \n</div>\n</div>",
+       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status]\" class=\"\">Status</label><select name=\"user[status]\" class=\"\"><option value=\"1\" selected>Valg 1</option><option value=\"2\">Valg 2</option></select>\n  \n</div>\n</div>",
        "<fieldset><legend><br>Permissions</legend><div data-row-span=\"2\">",
        "<div data-field-span=\"1\" class=\"form-group\">\n  <div class=\"checkbox\"><label for=\"user[administrator]\" class=\"\"></label><label for=\"user[administrator]\" class=\"\"><input name=\"user[administrator]\" type=\"checkbox\" />Administrator</label></div>\n  \n</div>\n",
        "<div data-field-span=\"1\" class=\"form-group\">\n  <div class=\"checkbox\"><label for=\"user[editor]\" class=\"\"></label><label for=\"user[editor]\" class=\"\"><input name=\"user[editor]\" type=\"checkbox\" checked=\"checked\" />Editor</label></div>\n  \n</div>\n",
@@ -137,7 +147,7 @@ defmodule Brando.FormTest do
     f = UserForm.render_fields("user", form_fields, :update, [], values, nil)
     assert f ==
       ["<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"user[email]\" class=\"\">E-mail</label><input name=\"user[email]\" type=\"email\" value=\"test@email.com\" placeholder=\"E-mail\" />\n  \n</div>\n</div>",
-       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status]\" class=\"\">Status</label><select name=\"user[status]\" class=\"\"><option value=\"0\">Valg 1</option><option value=\"1\">Valg 2</option></select>\n  \n</div>\n</div>",
+       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status]\" class=\"\">Status</label><select name=\"user[status]\" class=\"\"><option value=\"1\">Valg 1</option><option value=\"2\">Valg 2</option></select>\n  \n</div>\n</div>",
        "<fieldset><div data-row-span=\"2\">",
        "<div data-field-span=\"1\" class=\"form-group\">\n  <div class=\"checkbox\"><label for=\"user[administrator]\" class=\"\"></label><label for=\"user[administrator]\" class=\"\"><input name=\"user[administrator]\" type=\"checkbox\" checked=\"checked\" />Administrator</label></div>\n  \n</div>\n",
        "<div data-field-span=\"1\" class=\"form-group\">\n  <div class=\"checkbox\"><label for=\"user[editor]\" class=\"\"></label><label for=\"user[editor]\" class=\"\"><input name=\"user[editor]\" type=\"checkbox\" checked=\"checked\" />Editor</label></div>\n  \n</div>\n",
@@ -147,7 +157,7 @@ defmodule Brando.FormTest do
   end
 
   test "get_choices/1" do
-    assert get_choices(&UserForm.get_status_choices/0) == [[value: "0", text: "Valg 1"], [value: "1", text: "Valg 2"]]
+    assert get_choices(&UserForm.get_status_choices/0) == [[value: "1", text: "Valg 1"], [value: "2", text: "Valg 2"]]
   end
 
   test "get_value/2" do
@@ -166,8 +176,8 @@ defmodule Brando.FormTest do
 
   test "render_choices/4" do
     assert render_choices(:create, [choices: &UserForm.get_status_choices/0],
-                          "val", nil) == ["<option value=\"0\">Valg 1</option>",
-                                          "<option value=\"1\">Valg 2</option>"]
+                          "val", nil) == ["<option value=\"1\">Valg 1</option>",
+                                          "<option value=\"2\">Valg 2</option>"]
   end
 
   test "get_form" do

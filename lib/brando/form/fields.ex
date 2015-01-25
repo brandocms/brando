@@ -91,7 +91,10 @@ defmodule Brando.Form.Fields do
   """
   def __select__(_, name, choices, opts, _value, _errors) do
     opts = List.delete(opts, :default)
-    __tag__("select", name, choices, opts[:class])
+    case opts[:multiple] do
+      nil  -> __tag__("select", name, choices, opts[:class])
+      true -> ~s(<select name="#{name}[]" multiple>#{choices}</select>)
+    end
   end
 
   def __option__(:update, choice_value, choice_text, value, _default) do
@@ -159,6 +162,9 @@ defmodule Brando.Form.Fields do
   <select>'s <option>s.
   """
   def get_selected(cv, v) when cv == v, do: " " <> "selected"
+  def get_selected(cv, v) when is_list(v) do
+    if cv in v, do: " " <> "selected"
+  end
   def get_selected(_, _), do: ""
 
   @doc """
