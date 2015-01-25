@@ -47,7 +47,6 @@ defmodule Brando.Users.Admin.UserController do
       end
 
       def create(conn, %{"user" => form_data}) do
-        require Logger
         created_user = @model.create(form_data)
         case created_user do
           {:ok, created_user} ->
