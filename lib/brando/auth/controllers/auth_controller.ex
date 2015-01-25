@@ -27,7 +27,7 @@ defmodule Brando.Auth.AuthController do
 
       def logout(conn, _params) do
         conn
-        |> Plug.Conn.delete_session(:current_user)
+        |> delete_session(:current_user)
         |> render(:logout)
       end
     end
