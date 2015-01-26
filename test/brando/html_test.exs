@@ -51,4 +51,9 @@ defmodule Brando.HTMLTest do
       [safe: "<link rel=\"stylesheet\" href=\"test1.css\">",
        safe: "<link rel=\"stylesheet\" href=\"test2.css\">"]
   end
+
+  test "format_date/1" do
+    date = %Ecto.DateTime{year: 2015, month: 1, day: 1}
+    assert format_date(date) == "1/1/2015"
+  end
 end
