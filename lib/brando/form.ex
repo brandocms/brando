@@ -145,6 +145,14 @@ defmodule Brando.Form do
         # Options
         * `label` - "Label for file field"
 
+      * `radio` - A group of radio buttons through `choices`
+
+        # Options
+        * `choices` - &__MODULE__.get_status_choices/0
+        * `label` - Label for the entire group. Each individual radio
+                    gets its label from the `choices` function.
+        * `label_class` - Label class for the main label.
+
   """
   defmacro field(name, type \\ :text, opts \\ []) do
     quote do
@@ -240,7 +248,7 @@ defmodule Brando.Form do
     Module.put_attribute(mod, :form_fields, [{name, [type: :submit, text: text] ++ opts}|fields])
   end
 
-  defp check_type!(type) when type in [:text, :password, :select, :email, :checkbox, :file], do: :ok
+  defp check_type!(type) when type in [:text, :password, :select, :email, :checkbox, :file, :radio], do: :ok
 
   defp check_type!(type) do
     raise ArgumentError, message: "`#{Macro.to_string(type)}` is not a valid field type"
@@ -312,6 +320,14 @@ defmodule Brando.Form do
     |> F.__data_row_span__(opts[:in_fieldset])
   end
 
+  def render_field(action, name, :radio, opts, value, errors) do
+    render_radios(action, name, opts, value, errors)
+    |> Enum.join("")
+    |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
+    |> F.__form_group__(name, opts, errors)
+    |> F.__data_row_span__(opts[:in_fieldset])
+  end
+
   def render_field(action, name, :checkbox, opts, value, errors) do
     F.__concat__(F.__label__(name, opts[:label_class], F.__input__(:checkbox, action, name, value, errors, opts) <> opts[:label]), F.__label__(name, "", ""))
     |> F.__div__("checkbox")
@@ -320,7 +336,7 @@ defmodule Brando.Form do
   end
 
   def render_field(action, name, :select, opts, value, errors) do
-    choices = render_choices(action, opts, value, errors)
+    choices = render_options(action, opts, value, errors)
     F.__select__(action, name, choices, opts, value, errors)
     |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
     |> F.__form_group__(name, opts, errors)
@@ -351,9 +367,18 @@ defmodule Brando.Form do
   @doc """
   Iterates through `opts` :choices key, rendering <option>s for <select>
   """
-  def render_choices(action, opts, value, _errors) do
+  def render_options(action, opts, value, _errors) do
     for choice <- get_choices(opts[:choices]) do
       F.__option__(action, choice[:value], choice[:text], value, opts[:default])
+    end
+  end
+
+  @doc """
+  Iterates through `opts` :choices key, rendering <input type="radio">s
+  """
+  def render_radios(action, name, opts, value, _errors) do
+    for choice <- get_choices(opts[:choices]) do
+      F.__radio__(action, name, choice[:value], choice[:text], value, opts[:default])
     end
   end
 end

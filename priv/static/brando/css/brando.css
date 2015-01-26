@@ -3078,7 +3078,8 @@ fieldset[disabled] .btn-gplus.active {
   content: "*";
   color: red; }
 
-input[type=checkbox] {
+input[type=checkbox],
+input[type=radio] {
   margin-right: 12px; }
 
 #menu {

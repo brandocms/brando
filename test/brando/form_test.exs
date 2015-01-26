@@ -85,6 +85,9 @@ defmodule Brando.FormTest do
          label_class: "control-label",
          class: "form-control",
          wrapper_class: ""]
+      field :role2, :radio,
+        [choices: &__MODULE__.get_role_choices/0,
+        label: "Rolle 2"]
       field :avatar, :file,
         [label: "Avatar",
          label_class: "control-label",
@@ -105,6 +108,7 @@ defmodule Brando.FormTest do
        fs34070328: [type: :fieldset, legend: "Permissions", row_span: 2],
        status: [type: :select, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        status2: [type: :select, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
+       status3: [type: :radio, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"],
        username: [type: :text, required: true, label: "Username", placeholder: "Username"]
      ]
@@ -113,6 +117,7 @@ defmodule Brando.FormTest do
     assert f ==
       ["<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group required has-error\">\n  <label for=\"user[username]\" class=\"\">Username</label><input name=\"user[username]\" type=\"text\" placeholder=\"Username\" />\n  <div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet har feil format.</div><div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet er påkrevet.</div>\n</div>\n</div>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group required has-error\">\n  <label for=\"user[email]\" class=\"\">E-mail</label><input name=\"user[email]\" type=\"email\" placeholder=\"E-mail\" />\n  <div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet har feil format.</div><div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet er påkrevet.</div>\n</div>\n</div>",
+       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status3]\" class=\"\">Status</label><div class=\"radio\"><label for=\"user[status3]\"></label><label for=\"user[status3]\"><input name=\"user[status3]\" type=\"radio\" value=\"1\" checked />Valg 1</label></div><div class=\"radio\"><label for=\"user[status3]\"></label><label for=\"user[status3]\"><input name=\"user[status3]\" type=\"radio\" value=\"2\" />Valg 2</label></div>\n  \n</div>\n</div>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status2]\" class=\"\">Status</label><select name=\"user[status2][]\" multiple><option value=\"1\" selected>Valg 1</option><option value=\"2\">Valg 2</option></select>\n  \n</div>\n</div>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status]\" class=\"\">Status</label><select name=\"user[status]\" class=\"\"><option value=\"1\" selected>Valg 1</option><option value=\"2\">Valg 2</option></select>\n  \n</div>\n</div>",
        "<fieldset><legend><br>Permissions</legend><div data-row-span=\"2\">",
@@ -173,7 +178,7 @@ defmodule Brando.FormTest do
   end
 
   test "render_choices/4" do
-    assert render_choices(:create, [choices: &UserForm.get_status_choices/0],
+    assert render_options(:create, [choices: &UserForm.get_status_choices/0],
                           "val", nil) == ["<option value=\"1\">Valg 1</option>",
                                           "<option value=\"2\">Valg 2</option>"]
   end

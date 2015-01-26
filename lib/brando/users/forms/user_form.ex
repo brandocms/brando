@@ -47,6 +47,9 @@ defmodule Brando.Users.Form.UserForm do
       [choices: &__MODULE__.get_role_choices/0,
        multiple: true,
        label: "Rolle"]
+    field :role2, :radio,
+      [choices: &__MODULE__.get_role_choices/0,
+      label: "Rolle 2"]
     field :avatar, :file,
       [label: "Bilde"]
     submit "Lagre",
