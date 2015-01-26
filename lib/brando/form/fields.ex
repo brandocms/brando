@@ -140,6 +140,14 @@ defmodule Brando.Form.Fields do
     ~s(<div class="radio"><label for="#{name}"></label><label for="#{name}"><input name="#{name}" type="radio" value="#{choice_value}"#{get_checked(choice_value, value)} />#{choice_text}</label></div>)
   end
 
+  def __checkbox__(:create, name, choice_value, choice_text, [], default) do
+    ~s(<div class="checkboxes"><label for="#{name}[]"></label><label for="#{name}[]"><input name="#{name}[]" type="checkbox" value="#{choice_value}"#{get_checked(choice_value, default)} />#{choice_text}</label></div>)
+  end
+
+  def __checkbox__(_, name, choice_value, choice_text, value, _default) do
+    ~s(<div class="checkboxes"><label for="#{name}[]"></label><label for="#{name}[]"><input name="#{name}[]" type="checkbox" value="#{choice_value}"#{get_checked(choice_value, value)} />#{choice_text}</label></div>)
+  end
+
   def __fieldset_open__(nil, in_fieldset) do
     ~s(<fieldset><div data-row-span="#{in_fieldset}">)
   end

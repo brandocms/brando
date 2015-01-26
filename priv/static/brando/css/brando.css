@@ -3082,6 +3082,10 @@ input[type=checkbox],
 input[type=radio] {
   margin-right: 12px; }
 
+/* labels for input checkbox/radio etc */
+form label {
+  font-size: 15px; }
+
 #menu {
   border-top: 3px solid #ff0000;
   border-right: 1px solid #cfcfcf;

@@ -127,8 +127,12 @@ defmodule Brando.Form do
       * `checkbox` - Standard checkbox
 
         # Options
+        * `multiple` - Multiple checkboxes.
+                       Gets labels/values from `choices` option
+        * `choices` - &__MODULE__.get_status_choices/0
         * `label`: "Label for field"
-        * `default`: true/false
+        * `default`: true/false. Set as a value when using `multiple`.
+          - ex: "2"
 
       * `select` - Select with options through `choices`.
 
@@ -329,10 +333,18 @@ defmodule Brando.Form do
   end
 
   def render_field(action, name, :checkbox, opts, value, errors) do
-    F.__concat__(F.__label__(name, opts[:label_class], F.__input__(:checkbox, action, name, value, errors, opts) <> opts[:label]), F.__label__(name, "", ""))
-    |> F.__div__("checkbox")
-    |> F.__form_group__(name, opts, errors)
-    |> F.__data_row_span__(opts[:in_fieldset])
+    if opts[:multiple] do
+      render_checks(action, name, opts, value, errors)
+      |> Enum.join("")
+      |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
+      |> F.__form_group__(name, opts, errors)
+      |> F.__data_row_span__(opts[:in_fieldset])
+    else
+      F.__concat__(F.__label__(name, opts[:label_class], F.__input__(:checkbox, action, name, value, errors, opts) <> opts[:label]), F.__label__(name, "", ""))
+      |> F.__div__("checkbox")
+      |> F.__form_group__(name, opts, errors)
+      |> F.__data_row_span__(opts[:in_fieldset])
+    end
   end
 
   def render_field(action, name, :select, opts, value, errors) do
@@ -379,6 +391,15 @@ defmodule Brando.Form do
   def render_radios(action, name, opts, value, _errors) do
     for choice <- get_choices(opts[:choices]) do
       F.__radio__(action, name, choice[:value], choice[:text], value, opts[:default])
+    end
+  end
+
+  @doc """
+  Iterates through `opts` :choices key, rendering <input type="checkbox">s
+  """
+  def render_checks(action, name, opts, value, _errors) do
+    for choice <- get_choices(opts[:choices]) do
+      F.__checkbox__(action, name, choice[:value], choice[:text], value, opts[:default])
     end
   end
 end

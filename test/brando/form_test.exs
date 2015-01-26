@@ -109,6 +109,7 @@ defmodule Brando.FormTest do
        status: [type: :select, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        status2: [type: :select, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        status3: [type: :radio, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
+       status4: [type: :checkbox, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"],
        username: [type: :text, required: true, label: "Username", placeholder: "Username"]
      ]
@@ -117,6 +118,7 @@ defmodule Brando.FormTest do
     assert f ==
       ["<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group required has-error\">\n  <label for=\"user[username]\" class=\"\">Username</label><input name=\"user[username]\" type=\"text\" placeholder=\"Username\" />\n  <div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet har feil format.</div><div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet er påkrevet.</div>\n</div>\n</div>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group required has-error\">\n  <label for=\"user[email]\" class=\"\">E-mail</label><input name=\"user[email]\" type=\"email\" placeholder=\"E-mail\" />\n  <div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet har feil format.</div><div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet er påkrevet.</div>\n</div>\n</div>",
+       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status4]\" class=\"\">Status</label><div class=\"checkboxes\"><label for=\"user[status4][]\"></label><label for=\"user[status4][]\"><input name=\"user[status4][]\" type=\"checkbox\" value=\"1\" checked />Valg 1</label></div><div class=\"checkboxes\"><label for=\"user[status4][]\"></label><label for=\"user[status4][]\"><input name=\"user[status4][]\" type=\"checkbox\" value=\"2\" />Valg 2</label></div>\n  \n</div>\n</div>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status3]\" class=\"\">Status</label><div class=\"radio\"><label for=\"user[status3]\"></label><label for=\"user[status3]\"><input name=\"user[status3]\" type=\"radio\" value=\"1\" checked />Valg 1</label></div><div class=\"radio\"><label for=\"user[status3]\"></label><label for=\"user[status3]\"><input name=\"user[status3]\" type=\"radio\" value=\"2\" />Valg 2</label></div>\n  \n</div>\n</div>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status2]\" class=\"\">Status</label><select name=\"user[status2][]\" multiple><option value=\"1\" selected>Valg 1</option><option value=\"2\">Valg 2</option></select>\n  \n</div>\n</div>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status]\" class=\"\">Status</label><select name=\"user[status]\" class=\"\"><option value=\"1\" selected>Valg 1</option><option value=\"2\">Valg 2</option></select>\n  \n</div>\n</div>",
@@ -137,6 +139,7 @@ defmodule Brando.FormTest do
        administrator: [type: :checkbox, in_fieldset: 2, label: "Administrator", default: false],
        fs34070328: [type: :fieldset, row_span: 2],
        status: [type: :select, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
+       status2: [type: :checkbox, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        status3: [type: :radio, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"]]
     values = %Brando.Users.Model.User{avatar: "images/default/0.jpeg",
@@ -152,6 +155,7 @@ defmodule Brando.FormTest do
     assert f ==
       ["<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"user[email]\" class=\"\">E-mail</label><input name=\"user[email]\" type=\"email\" value=\"test@email.com\" placeholder=\"E-mail\" />\n  \n</div>\n</div>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status3]\" class=\"\">Status</label><div class=\"radio\"><label for=\"user[status3]\"></label><label for=\"user[status3]\"><input name=\"user[status3]\" type=\"radio\" value=\"1\" />Valg 1</label></div><div class=\"radio\"><label for=\"user[status3]\"></label><label for=\"user[status3]\"><input name=\"user[status3]\" type=\"radio\" value=\"2\" />Valg 2</label></div>\n  \n</div>\n</div>",
+       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status2]\" class=\"\">Status</label><div class=\"checkboxes\"><label for=\"user[status2][]\"></label><label for=\"user[status2][]\"><input name=\"user[status2][]\" type=\"checkbox\" value=\"1\" />Valg 1</label></div><div class=\"checkboxes\"><label for=\"user[status2][]\"></label><label for=\"user[status2][]\"><input name=\"user[status2][]\" type=\"checkbox\" value=\"2\" />Valg 2</label></div>\n  \n</div>\n</div>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[status]\" class=\"\">Status</label><select name=\"user[status]\" class=\"\"><option value=\"1\">Valg 1</option><option value=\"2\">Valg 2</option></select>\n  \n</div>\n</div>",
        "<fieldset><div data-row-span=\"2\">",
        "<div data-field-span=\"1\" class=\"form-group\">\n  <div class=\"checkbox\"><label for=\"user[administrator]\" class=\"\"></label><label for=\"user[administrator]\" class=\"\"><input name=\"user[administrator]\" type=\"checkbox\" />Administrator</label></div>\n  \n</div>\n",
