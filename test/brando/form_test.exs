@@ -201,4 +201,42 @@ defmodule Brando.FormTest do
     assert get_method(:destroy) == " method=\"POST\""
     assert get_method(:what) == " method=\"GET\""
   end
+
+  test "field name clash" do
+    assert_raise ArgumentError, "field `full_name` was already set on schema", fn ->
+      defmodule FormDuplicateFields do
+        use Brando.Form
+        form "test", [helper: :test_path, class: "grid-form"] do
+          field :full_name, :text,
+            [required: true]
+          field :full_name, :text,
+            [required: true]
+          submit "Submit", [name: "submit"]
+        end
+      end
+    end
+  end
+
+  test "submit name clash" do
+    assert_raise ArgumentError, "submit field `submit` was already set on schema", fn ->
+      defmodule FormDuplicateFields do
+        use Brando.Form
+        form "test", [helper: :test_path, class: "grid-form"] do
+          submit "Submit", [name: "submit"]
+          submit "Submit", [name: "submit"]
+        end
+      end
+    end
+  end
+
+  test "nonexistant field type" do
+    assert_raise ArgumentError, "`:foo` is not a valid field type", fn ->
+      defmodule FormDuplicateFields do
+        use Brando.Form
+        form "test", [helper: :test_path, class: "grid-form"] do
+          field :full_name, :foo
+        end
+      end
+    end
+  end
 end
