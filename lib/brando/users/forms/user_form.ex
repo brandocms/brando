@@ -34,22 +34,9 @@ defmodule Brando.Users.Form.UserForm do
        label: "Passord",
        placeholder: "Passord"]
 
-    fieldset [legend: "Rettigheter", row_span: 2] do
-      field :administrator, :checkbox,
-        [label: "Administrator",
-         default: false]
-      field :editor, :checkbox,
-        [label: "Redaktør",
-         default: true]
-    end
-
-    field :role, :select,
+    field :role, :checkbox,
       [choices: &__MODULE__.get_role_choices/0,
-       multiple: true,
-       label: "Rolle"]
-    field :role2, :checkbox,
-      [choices: &__MODULE__.get_role_choices/0,
-      label: "Rolle 2", multiple: true]
+      label: "Rolle", multiple: true]
     field :avatar, :file,
       [label: "Bilde"]
     submit "Lagre",
