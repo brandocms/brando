@@ -20,7 +20,7 @@ defmodule Brando.Mixfile do
       """,
 
       # Docs
-      name: "Ecto",
+      name: "Brando",
       docs: [source_ref: "v#{@version}",
              source_url: "https://github.com/twined/brando"]
     ]
