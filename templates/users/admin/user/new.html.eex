@@ -2,10 +2,10 @@
     <%= Brando.Users.Form.UserForm.get_form(action: :create, params: [], values: @user, errors: @errors) %>
     <%= inspect(@errors) %>
     <div class="form-actions col-sm-offset-2">
-      <a href="<%= admin_user_path(@conn, :index) %>" class="btn btn-default">
+      <a href="<%= helpers(@conn).admin_user_path(@conn, :index) %>" class="btn btn-default">
         <i class="fa fa-list fa-fw m-r-sm"></i> Tilbake til oversikten
       </a>
-      <a href="<%= admin_user_path(@conn, :edit, current_user(@conn).id) %>" class="btn btn-default">
+      <a href="<%= helpers(@conn).admin_user_path(@conn, :edit, current_user(@conn).id) %>" class="btn btn-default">
         <i class="fa fa-edit fa-fw m-r-sm"></i> Editer profil
       </a>
     </div>

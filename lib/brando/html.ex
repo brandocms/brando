@@ -18,6 +18,13 @@ defmodule Brando.HTML do
   end
 
   @doc """
+  Returns the Helpers module from the router.
+  """
+  def helpers(conn) do
+    Phoenix.Controller.router_module(conn).__helpers__
+  end
+
+  @doc """
   Joins the path fragments from `conn`.path_info to a binary.
   """
   def path(conn) do

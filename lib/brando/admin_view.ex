@@ -6,7 +6,6 @@ defmodule Brando.AdminView do
     quote do
       use Phoenix.View, root: unquote(root)
       import Plug.Conn, only: [get_session: 2]
-      import MyApp.Router.Helpers
       import Brando.Mugshots.Helpers
 
       # Use Phoenix.HTML to import all HTML functions (forms, tags, etc)
