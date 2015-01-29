@@ -3,19 +3,8 @@ defmodule Brando.Auth.AuthController do
 
   plug :action
 
-  def init(options) do
-    options
-  end
-
-  def call(conn, opts) do
-    conn = conn
-    |> put_layout(opts[:layout])
-    |> assign(:model, opts[:model])
-    super(conn, action_name(conn))
-  end
-
   def login(conn, %{"user" => %{"email" => email, "password" => password}}) do
-    model = conn.assigns[:model]
+    model = conn.private[:model]
     user = model.get(email: email)
     case model.auth?(user, password) do
       true ->
@@ -33,11 +22,13 @@ defmodule Brando.Auth.AuthController do
 
   def login(conn, _params) do
     conn
+    |> put_layout(conn.private[:layout])
     |> render(:login)
   end
 
   def logout(conn, _params) do
     conn
+    |> put_layout(conn.private[:layout])
     |> delete_session(:current_user)
     |> render(:logout)
   end
