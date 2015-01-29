@@ -101,7 +101,7 @@ defmodule Brando.Form.Fields do
   end
 
   @doc """
-  Renders a <select> tag. Passes `choices` to __tag__/4
+  Renders a select tag. Passes `choices` to __tag__/4
 
   ## Parameters:
 

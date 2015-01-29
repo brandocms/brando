@@ -377,7 +377,7 @@ defmodule Brando.Form do
   end
 
   @doc """
-  Iterates through `opts` :choices key, rendering <option>s for <select>
+  Iterates through `opts` :choices key, rendering options for the select
   """
   def render_options(action, opts, value, _errors) do
     for choice <- get_choices(opts[:choices]) do
@@ -386,7 +386,7 @@ defmodule Brando.Form do
   end
 
   @doc """
-  Iterates through `opts` :choices key, rendering <input type="radio">s
+  Iterates through `opts` :choices key, rendering input type="radio"s
   """
   def render_radios(action, name, opts, value, _errors) do
     for choice <- get_choices(opts[:choices]) do
@@ -395,7 +395,7 @@ defmodule Brando.Form do
   end
 
   @doc """
-  Iterates through `opts` :choices key, rendering <input type="checkbox">s
+  Iterates through `opts` :choices key, rendering input type="checkbox"s
   """
   def render_checks(action, name, opts, value, _errors) do
     for choice <- get_choices(opts[:choices]) do
