@@ -20,7 +20,7 @@ end
 
 defp deps do
   [{:postgrex, "~> 0.7"},
-   {:ecto, "~> 0.6"},
+   {:ecto, "~> 0.7"},
    {:bcrypt, github: "opscode/erlang-bcrypt"},
    {:brando, github: "twined/brando"]}
 end
@@ -113,8 +113,36 @@ Now run the migration:
 Routes/pipelines/plugs in `router.ex`:
 
 ```elixir
+import Brando.Users.Admin.Routes
 alias Brando.Plugs.Authenticate
-plug Authenticate, login_url: "/login"
+
+pipeline :admin do
+  plug :accepts, ~w(html json)
+  plug :fetch_session
+  plug :fetch_flash
+  plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
+  plug Authenticate, login_url: "/login"
+end
+
+scope "/admin", as: :admin do
+  pipe_through :admin
+  users_resources "/brukere", private: %{model: Brando.Users.Model.User}
+  get "/", Brando.Dashboard.Admin.DashboardController, :dashboard
+
+end
+
+scope "/" do
+  pipe_through :browser
+  get "/login", Brando.Auth.AuthController, :login,
+    private: %{model: Brando.Users.Model.User,
+               layout: {Brando.Auth.LayoutView, "auth.html"}}
+  post "/login", Brando.Auth.AuthController, :login,
+    private: %{model: Brando.Users.Model.User,
+               layout: {Brando.Auth.LayoutView, "auth.html"}}
+  get "/logout", Brando.Auth.AuthController, :logout,
+    private: %{model: Brando.Users.Model.User,
+               layout: {Brando.Auth.LayoutView, "auth.html"}}
+end
 ```
 
 Endpoint config in `endpoint.ex`:
