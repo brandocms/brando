@@ -106,7 +106,7 @@ defmodule Brando.Form.Fields do
   ## Parameters:
 
     * `name`: name of field
-    * `choices`: list of choices to be iterated as <option>s
+    * `choices`: list of choices to be iterated as options
     * `opts`: list with options for the field
     * `_value`: empty
     * `_errors`: empty
@@ -197,7 +197,7 @@ defmodule Brando.Form.Fields do
 
   @doc """
   Matches `cv` to `v`. If true then return "selected" to be used in
-  <select>'s <option>s.
+  select's options.
   """
   def get_selected(cv, v) when cv == v, do: " " <> "selected"
   def get_selected(cv, v) when is_list(v) do
@@ -207,7 +207,7 @@ defmodule Brando.Form.Fields do
 
   @doc """
   Matches `cv` to `v`. If true then return "checked" to be used in
-  <input> type radio and checkbox
+  input type radio and checkbox
   """
   def get_checked(cv, v) when cv == v, do: " " <> "checked"
   def get_checked(cv, v) when is_list(v) do
