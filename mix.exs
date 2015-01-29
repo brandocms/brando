@@ -9,16 +9,14 @@ defmodule Brando.Mixfile do
       version: @version,
       elixir: "~> 1.0",
       deps: deps,
+      compilers: [:phoenix] ++ Mix.compilers,
       test_coverage: [tool: ExCoveralls],
       package: [
         contributors: ["Trond Mjøen"],
         licenses: ["MIT"],
         links: %{github: "https://github.com/twined/brando"}
       ],
-      description: """
-      Boilerplate for Twined applications.
-      """,
-
+      description: "Boilerplate for Twined applications.",
       # Docs
       name: "Brando",
       docs: [source_ref: "v#{@version}",
@@ -28,7 +26,7 @@ defmodule Brando.Mixfile do
 
   def application do
     [
-      applications: [:postgrex, :ecto, :cowboy, :plug, :bcrypt]
+      applications: [:phoenix, :postgrex, :ecto, :cowboy, :plug, :bcrypt]
     ]
   end
 
