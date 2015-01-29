@@ -196,13 +196,13 @@ defmodule Brando.FormTest do
 
   test "method_override/1" do
     assert method_override(:update) == "<input name=\"_method\" type=\"hidden\" value=\"patch\" />"
-    assert method_override(:destroy) == "<input name=\"_method\" type=\"hidden\" value=\"delete\" />"
+    assert method_override(:delete) == "<input name=\"_method\" type=\"hidden\" value=\"delete\" />"
     assert method_override(:what) == ""
   end
 
   test "get_method/1" do
     assert get_method(:update) == " method=\"POST\""
-    assert get_method(:destroy) == " method=\"POST\""
+    assert get_method(:delete) == " method=\"POST\""
     assert get_method(:what) == " method=\"GET\""
   end
 
