@@ -4,8 +4,8 @@ defmodule Brando.Users.Admin.UserController do
   """
 
   use Phoenix.Controller
-
   import Brando.Plugs.Role
+
   plug :check_role, :superuser when action in [:new, :create, :delete]
   plug :action
 
@@ -78,7 +78,7 @@ defmodule Brando.Users.Admin.UserController do
     end
   end
 
-  def destroy(conn, %{"id" => user_id}) do
+  def delete(conn, %{"id" => user_id}) do
     model = conn.private[:model]
     user = model.get(id: String.to_integer(user_id))
     model.delete(user)
