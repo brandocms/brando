@@ -49,7 +49,7 @@
 
                 <li class="divider"></li>
 
-                  <form method="POST" action="<%= admin_user_path @conn, :destroy, user.id %>">
+                  <form method="POST" action="<%= admin_user_path @conn, :delete, user.id %>">
                     <input type="hidden" name="_method" value="delete" />
                     <li>
                     <button>

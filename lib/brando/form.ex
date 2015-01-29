@@ -277,7 +277,7 @@ defmodule Brando.Form do
   def method_override(action)
   def method_override(:update), do:
     ~s(<input name="_method" type="hidden" value="patch" />)
-  def method_override(:destroy), do:
+  def method_override(:delete), do:
     ~s(<input name="_method" type="hidden" value="delete" />)
   def method_override(_), do: ""
 
@@ -286,7 +286,7 @@ defmodule Brando.Form do
   for proper method overriding.
   """
   def get_method(:update), do: " " <> ~s(method="POST")
-  def get_method(:destroy), do: " " <> ~s(method="POST")
+  def get_method(:delete), do: " " <> ~s(method="POST")
   def get_method(:create), do: " " <> ~s(method="POST")
   def get_method(_), do: " " <> ~s(method="GET")
 
