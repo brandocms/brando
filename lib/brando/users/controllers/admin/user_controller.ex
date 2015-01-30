@@ -1,6 +1,6 @@
 defmodule Brando.Users.Admin.UserController do
   @moduledoc """
-  This is a boilerplate UserController.
+  Controller for the Brando Users module.
   """
 
   use Phoenix.Controller

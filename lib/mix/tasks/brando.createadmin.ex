@@ -15,6 +15,9 @@ defmodule Mix.Tasks.Brando.Createadmin do
     {opts, args, _} = OptionParser.parse(args)
     run(args, opts)
   end
+  @doc """
+  See run/1
+  """
   def run([], []) do
     Mix.raise """
     brando.createadmin expects --email, --username, --password and --fullname options.
@@ -23,6 +26,9 @@ defmodule Mix.Tasks.Brando.Createadmin do
 
     """
   end
+  @doc """
+  See run/1
+  """
   def run(_args, opts) do
     Brando.get_repo.start_link
     :bcrypt.start
