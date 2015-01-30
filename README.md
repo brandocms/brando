@@ -89,8 +89,7 @@ defmodule MyApp.Repo.Migrations.AddUsersTable do
       add :email,         :text
       add :password,      :text
       add :avatar,        :text
-      add :administrator, :bool
-      add :editor,        :bool
+      add :role,          :integer
       add :last_login,    :datetime
       timestamps
     end
