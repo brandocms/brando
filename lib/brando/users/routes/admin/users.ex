@@ -42,20 +42,20 @@ defmodule Brando.Users.Admin.Routes do
       ctrl = resource.controller
       opts = resource.route
 
-      Enum.each resource.actions, fn action ->
+      Enum.each [:profile] ++ resource.actions, fn action ->
         case action do
-          :index   -> get    "#{path}",               ctrl, :index, opts
-          :show    -> get    "#{path}/:#{parm}",      ctrl, :show, opts
-          :new     -> get    "#{path}/ny",           ctrl, :new, opts
+          :index   -> get    "#{path}",                ctrl, :index, opts
+          :profile -> get    "#{path}/profil",         ctrl, :profile, opts
+          :show    -> get    "#{path}/:#{parm}",       ctrl, :show, opts
+          :new     -> get    "#{path}/ny",             ctrl, :new, opts
           :edit    -> get    "#{path}/:#{parm}/endre", ctrl, :edit, opts
-          :create  -> post   "#{path}",               ctrl, :create, opts
-          :delete  -> delete "#{path}/:#{parm}",      ctrl, :delete, opts
+          :create  -> post   "#{path}",                ctrl, :create, opts
+          :delete  -> delete "#{path}/:#{parm}",       ctrl, :delete, opts
           :update  ->
             patch "#{path}/:#{parm}", ctrl, :update, opts
             put   "#{path}/:#{parm}", ctrl, :update, Keyword.put(opts, :as, nil)
         end
       end
-      get    "#{path}/profil",      ctrl, :profile, opts
       scope resource.member do
         unquote(context)
       end

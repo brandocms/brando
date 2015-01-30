@@ -24,6 +24,7 @@ defmodule Mix.Tasks.Brando.Install do
 
     copy_from brando_template_dir, "./", {}, &EEx.eval_file(&1, binding)
     copy_from users_template_dir, "./", {}, &EEx.eval_file(&1, binding)
+    copy_from media_dir, "./priv/media", application_name, &File.read!(&1)
     copy_from static_dir, Path.join("./", "priv/static"), application_name, &File.read!(&1)
     Mix.shell.info """
     ------------------------------------------------------------------
@@ -73,5 +74,9 @@ defmodule Mix.Tasks.Brando.Install do
 
   defp static_dir do
     Application.app_dir(:brando, "priv/static")
+  end
+
+  defp media_dir do
+    Application.app_dir(:brando, "priv/media")
   end
 end

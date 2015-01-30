@@ -9,6 +9,7 @@ defmodule Brando.Users.Admin.UserController do
   plug :check_role, :superuser when action in [:new, :create, :delete]
   plug :action
 
+  @doc false
   def index(conn, _params) do
     model = conn.private[:model]
     conn
@@ -16,16 +17,29 @@ defmodule Brando.Users.Admin.UserController do
     |> render("index.html")
   end
 
-  def show(conn, _params) do
+  @doc false
+  def show(conn, %{"id" => user_id}) do
+    model = conn.private[:model]
+    conn
+    |> assign(:user, model.get(id: user_id))
+    |> render("show.html")
+  end
+
+  @doc false
+  def profile(conn, _params) do
+    require Logger
+    Logger.error("profile")
     conn
     |> assign(:user, get_session(conn, :current_user))
     |> render("show.html")
   end
 
+  @doc false
   def new(conn, _params) do
     conn |> render("new.html")
   end
 
+  @doc false
   def edit(conn, %{"id" => user_id}) do
     model = conn.private[:model]
     form_data = model.get(id: String.to_integer(user_id))
@@ -35,6 +49,7 @@ defmodule Brando.Users.Admin.UserController do
     |> render(:edit)
   end
 
+  @doc false
   def create(conn, %{"user" => form_data}) do
     model = conn.private[:model]
     created_user = model.create(form_data)
@@ -57,10 +72,12 @@ defmodule Brando.Users.Admin.UserController do
     end
   end
 
+  @doc false
   def create(conn, _params) do
     conn |> render(:new)
   end
 
+  @doc false
   def update(conn, %{"user" => form_data, "id" => user_id}) do
     model = conn.private[:model]
     user = model.get(id: String.to_integer(user_id))
@@ -78,6 +95,7 @@ defmodule Brando.Users.Admin.UserController do
     end
   end
 
+  @doc false
   def delete(conn, %{"id" => user_id}) do
     model = conn.private[:model]
     user = model.get(id: String.to_integer(user_id))

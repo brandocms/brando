@@ -31,7 +31,7 @@
         </td>
         <td>
           <div class="imageserie m-b-md" id="series-">
-            <img id="image-61" src="<%= media_path(img(@user.avatar, :thumb)) %>" style="padding-bottom: 3px;" />
+            <img id="image-61" src="<%= media_path(img(@user.avatar, :thumb, "defaults/avatar_default.jpg")) %>" style="padding-bottom: 3px;" />
             <hr>
             <a href="" id="series-edit" class="btn btn-default" data-seriesid="22">
               Endre profilbilde
@@ -44,7 +44,7 @@
       <a href="<%= helpers(@conn).admin_user_path(@conn, :index) %>" class="btn btn-default">
         <i class="fa fa-list fa-fw m-r-sm"></i> Tilbake til oversikten
       </a>
-      <a href="<%= helpers(@conn).admin_user_path(@conn, :edit, current_user(@conn).id) %>" class="btn btn-default">
+      <a href="<%= helpers(@conn).admin_user_path(@conn, :edit, @user.id) %>" class="btn btn-default">
         <i class="fa fa-edit fa-fw m-r-sm"></i> Editer profil
       </a>
     </div>
