@@ -1,35 +1,28 @@
 defmodule Brando.Users.Admin.Routes do
+  @moduledoc """
+  Routes for Brando.Users
+
+  ## Usage:
+
+  In `router.ex`
+
+      scope "/admin", as: :admin do
+        pipe_through :admin
+        users_resources "/brukere", private: %{model: Brando.Users.Model.User}
+
+  """
   alias Phoenix.Router.Resource
 
   @doc """
-    Defines "RESTful" endpoints for a resource.
-    The given definition:
-        users_resources "/users"
-    will include routes to the following actions:
-      * `GET /users` => `:index`
-      * `GET /users/new` => `:new`
-      * `POST /users` => `:create`
-      * `GET /users/:id` => `:show`
-      * `GET /users/:id/edit` => `:edit`
-      * `PATCH /users/:id` => `:update`
-      * `PUT /users/:id` => `:update`
-      * `DELETE /users/:id` => `:destroy`
-    ## Options
-    This macro accepts a set of options:
-      * `:only` - a list of actions to generate routes for, for example: `[:show, :edit]`
-      * `:except` - a list of actions to exclude generated routes from, for example: `[:destroy]`
-      * `:param` - the name of the paramter for this resource, defaults to `"id"`
-      * `:name` - the prefix for this resource. This is used for the named helper
-        and as the prefix for the parameter in nested resources. The default value
-        is automatically derived from the controller name, i.e. `UserController` will
-        have name `"user"`
-      * `:as` - configures the named helper exclusively
+  Defines "RESTful" endpoints for the users resource.
   """
-
   defmacro users_resources(path, opts) do
     add_users_resources path, Brando.Users.Admin.UserController, opts, do: nil
   end
 
+  @doc """
+  See users_resources/2
+  """
   defmacro users_resources(path) do
     add_users_resources path, Brando.Users.Admin.UserController, [], do: nil
   end
@@ -60,6 +53,5 @@ defmodule Brando.Users.Admin.Routes do
         unquote(context)
       end
     end
-
   end
 end

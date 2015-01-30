@@ -1,6 +1,8 @@
 defmodule Brando.Type.Role do
+  @moduledoc """
+  Defines a type for managing roles in user models.
+  """
   use Bitwise, only_operators: true
-  require Logger
 
   @behaviour Ecto.Type
   @roles %{staff: 1, admin: 2, superuser: 4}
@@ -70,5 +72,4 @@ defmodule Brando.Type.Role do
     {:ok, acc}
   end
   def dump(_), do: :errorend
-  def dump(), do: :errorend
 end

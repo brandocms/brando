@@ -1,8 +1,12 @@
 defmodule Brando.Auth.AuthController do
+  @moduledoc """
+  Controller for authentication actions.
+  """
   use Phoenix.Controller
 
   plug :action
 
+  @doc false
   def login(conn, %{"user" => %{"email" => email, "password" => password}}) do
     model = conn.private[:model]
     user = model.get(email: email)
@@ -20,12 +24,14 @@ defmodule Brando.Auth.AuthController do
     end
   end
 
+  @doc false
   def login(conn, _params) do
     conn
     |> put_layout(conn.private[:layout])
     |> render(:login)
   end
 
+  @doc false
   def logout(conn, _params) do
     conn
     |> put_layout(conn.private[:layout])
