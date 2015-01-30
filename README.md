@@ -42,11 +42,11 @@ Install Brando:
 
 Create the database:
 
-    $ mix ecto.create MyApp.Repo
+    $ mix ecto.create
 
 Create an initial migration for the `users` table:
 
-    $ mix ecto.gen.migration MyApp.Repo add_users_table
+    $ mix ecto.gen.migration add_users_table
 
 then add the following to the generated file: (old syntax)
 
