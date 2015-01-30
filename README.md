@@ -107,7 +107,7 @@ end
 
 Now run the migration:
 
-    $ mix ecto.migrate MyApp.Repo
+    $ mix ecto.migrate
 
 Routes/pipelines/plugs in `router.ex`:
 
