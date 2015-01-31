@@ -73,7 +73,12 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "create (post) w/params" do
-    conn = call_with_user(RouterHelper.TestRouter, :post, "/admin/brukere/", %{"user" => @params})
+    up_plug =
+      %Plug.Upload{content_type: "image/png",
+                   filename: "sample.png",
+                   path: "#{Path.expand("../../../", __DIR__)}/fixtures/sample.png"}
+    up_params = Dict.put(@params, "avatar", up_plug)
+    conn = call_with_user(RouterHelper.TestRouter, :post, "/admin/brukere/", %{"user" => up_params})
     assert conn.status == 302
     assert get_resp_header(conn, "Location") == ["/admin/brukere"]
     assert conn.path_info == ["admin", "brukere"]
@@ -86,6 +91,27 @@ defmodule Brando.Users.ControllerTest do
     conn = call_with_user(RouterHelper.TestRouter, :post, "/admin/brukere/", %{"user" => @broken_params})
     assert conn.status == 200
     assert conn.path_info == ["admin", "brukere"]
+    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+    %{phoenix_flash: flash} = conn.private
+    assert flash == %{"error" => "Feil i skjema"}
+  end
+
+  test "update (post) w/params" do
+    assert {:ok, user} = User.create(@params)
+    conn = call_with_user(RouterHelper.TestRouter, :patch, "/admin/brukere/#{user.id}", %{"user" => @params})
+    assert conn.status == 302
+    assert get_resp_header(conn, "Location") == ["/admin/brukere"]
+    assert conn.path_info == ["admin", "brukere", "#{user.id}"]
+    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+    %{phoenix_flash: flash} = conn.private
+    assert flash == %{"notice" => "Bruker oppdatert."}
+  end
+
+  test "update (post) w/broken params" do
+    assert {:ok, user} = User.create(@params)
+    conn = call_with_user(RouterHelper.TestRouter, :patch, "/admin/brukere/#{user.id}", %{"user" => @broken_params})
+    assert conn.status == 200
+    assert conn.path_info == ["admin", "brukere", "#{user.id}"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
     %{phoenix_flash: flash} = conn.private
     assert flash == %{"error" => "Feil i skjema"}
