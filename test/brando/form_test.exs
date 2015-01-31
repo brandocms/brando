@@ -2,8 +2,11 @@ defmodule Brando.TestHelpers do
   def test_path(_conn, _action, _params) do
     "/some/trash"
   end
-  def admin_user_path(_conn, _action, _params) do
+  def admin_user_path(_conn, _action, _params \\ nil) do
     "/whatever"
+  end
+  def admin_dashboard_path(_conn, _action, _params \\ nil) do
+    "/admin/dashboard"
   end
 end
 
