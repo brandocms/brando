@@ -2,6 +2,9 @@ defmodule Brando.TestHelpers do
   def test_path(_conn, _action, _params) do
     "/some/trash"
   end
+  def admin_user_path(_conn, _action, _params) do
+    "/whatever"
+  end
 end
 
 defmodule Brando.FormTest do

@@ -15,7 +15,7 @@ defmodule Brando.Users.ControllerTest do
   test "index redirects to /login when no :current_user" do
     conn = call_with_session(RouterHelper.TestRouter, :get, "/admin/brukere")
     assert conn.status == 302
-    assert elem(List.keyfind(conn.resp_headers, "Location", 0), 1) == "/login"
+    assert get_resp_header(conn, "Location") == ["/login"]
   end
 
   test "index with logged in user" do
@@ -26,7 +26,6 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "show" do
-    # create user
     assert {:ok, user} = User.create(@params)
     conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/brukere/#{user.id}")
     assert conn.status == 200
@@ -36,12 +35,18 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "profile" do
-    # create user
     assert {:ok, _user} = User.create(@params)
     conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/brukere/profil")
     assert conn.status == 200
     assert conn.path_info == ["admin", "brukere", "profil"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
     assert String.contains?(conn.resp_body, "iggypop")
+  end
+
+  test "new" do
+    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/brukere/new")
+    assert conn.status == 200
+    assert conn.path_info == ["admin", "brukere", "new"]
+    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
   end
 end
