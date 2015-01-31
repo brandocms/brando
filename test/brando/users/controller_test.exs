@@ -1,11 +1,18 @@
 Code.require_file("router_helper.exs", Path.join([__DIR__, "..", ".."]))
 
 defmodule Brando.Users.ControllerTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
+  use Brando.Integration.TestCase
   use Plug.Test
   use RouterHelper
+  alias Brando.Users.Model.User
 
-  test "index redirects to /login" do
+  @params %{"avatar" => "", "role" => ["2", "4"],
+            "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
+            "password" => "finimeze", "status" => "1",
+            "submit" => "Submit", "username" => "zabuzasixu"}
+
+  test "index redirects to /login when no :current_user" do
     conn = call_with_session(RouterHelper.TestRouter, :get, "/admin/brukere")
     assert conn.status == 302
     assert elem(List.keyfind(conn.resp_headers, "Location", 0), 1) == "/login"
@@ -14,5 +21,27 @@ defmodule Brando.Users.ControllerTest do
   test "index with logged in user" do
     conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/brukere")
     assert conn.status == 200
+    assert conn.path_info == ["admin", "brukere"]
+    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+  end
+
+  test "show" do
+    # create user
+    assert {:ok, user} = User.create(@params)
+    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/brukere/#{user.id}")
+    assert conn.status == 200
+    assert conn.path_info == ["admin", "brukere", "#{user.id}"]
+    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+    assert String.contains?(conn.resp_body, "Nita Bond")
+  end
+
+  test "profile" do
+    # create user
+    assert {:ok, _user} = User.create(@params)
+    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/brukere/profil")
+    assert conn.status == 200
+    assert conn.path_info == ["admin", "brukere", "profil"]
+    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+    assert String.contains?(conn.resp_body, "iggypop")
   end
 end

@@ -27,8 +27,6 @@ defmodule Brando.Users.Admin.UserController do
 
   @doc false
   def profile(conn, _params) do
-    require Logger
-    Logger.error("profile")
     conn
     |> assign(:user, get_session(conn, :current_user))
     |> render("show.html")
