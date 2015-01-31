@@ -89,6 +89,7 @@ defmodule Brando.Users.Admin.UserController do
         |> assign(:user, form_data)
         |> assign(:errors, errors)
         |> assign(:id, user_id)
+        |> put_flash(:error, "Feil i skjema")
         |> render(:edit)
     end
   end
