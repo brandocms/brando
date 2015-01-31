@@ -31,7 +31,7 @@ defmodule Brando.Users.ControllerTest do
     assert conn.status == 200
     assert conn.path_info == ["admin", "brukere", "#{user.id}"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    assert String.contains?(conn.resp_body, "Nita Bond")
+    assert conn.resp_body =~ "Nita Bond"
   end
 
   test "profile" do
@@ -40,7 +40,7 @@ defmodule Brando.Users.ControllerTest do
     assert conn.status == 200
     assert conn.path_info == ["admin", "brukere", "profil"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    assert String.contains?(conn.resp_body, "iggypop")
+    assert conn.resp_body =~ "iggypop"
   end
 
   test "new" do
@@ -48,5 +48,22 @@ defmodule Brando.Users.ControllerTest do
     assert conn.status == 200
     assert conn.path_info == ["admin", "brukere", "new"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+  end
+
+  test "edit" do
+    assert {:ok, user} = User.create(@params)
+    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/brukere/#{user.id}/edit")
+    assert conn.status == 200
+    assert conn.path_info == ["admin", "brukere", "#{user.id}", "edit"]
+    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+    assert conn.resp_body =~ "value=\"Nita Bond\""
+  end
+
+  test "create (post)" do
+    conn = call_with_user(RouterHelper.TestRouter, :post, "/admin/brukere/")
+    assert conn.status == 200
+    assert conn.path_info == ["admin", "brukere"]
+    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+    assert conn.resp_body =~ "<form class=\"grid-form\" role=\"form\" action=\"/whatever\""
   end
 end
