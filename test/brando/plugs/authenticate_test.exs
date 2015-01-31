@@ -84,7 +84,7 @@ defmodule Brando.Plugs.AuthenticateTest do
     |> AuthPlugFail.call([])
     assert conn.status == 302
     %{phoenix_flash: errors} = conn.private
-    assert errors == %{error: "Ingen tilgang."}
+    assert errors == %{"error" => "Ingen tilgang."}
   end
 
   test "auth succeeds" do
@@ -101,7 +101,7 @@ defmodule Brando.Plugs.AuthenticateTest do
     |> AuthPlugFailsPerms.call([])
     assert conn.status == 302
     %{phoenix_flash: errors} = conn.private
-    assert errors == %{error: "Ingen tilgang."}
+    assert errors == %{"error" => "Ingen tilgang."}
   end
 
 end
