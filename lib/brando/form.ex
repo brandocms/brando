@@ -84,7 +84,7 @@ defmodule Brando.Form do
         action = " " <> "action=\"#{get_action(action_fun, action, params)}\""
         class  = " " <> "class=\"#{form[:class]}\""
         role   = " " <> "role=\"form\""
-        if form[:multipart], do: multipart = ~s(enctype="multipart/form-data"),
+        if form[:multipart], do: multipart = ~s( enctype="multipart/form-data"),
         else: multipart = ""
         ~s(<form#{class}#{role}#{action}#{method}#{multipart}>#{method_tag}#{fields}</form>)
       end
