@@ -40,4 +40,10 @@ defmodule Brando.Auth.ControllerTest do
     assert flash == %{"error" => "Innloggingen feilet"}
   end
 
+  test "logout" do
+    conn = call_with_session(RouterHelper.TestRouter, :get, "/logout")
+    assert conn.status == 200
+    assert conn.path_info == ["logout"]
+    assert conn.resp_body =~ "logout"
+  end
 end
