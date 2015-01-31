@@ -12,6 +12,11 @@ defmodule Brando.Users.ControllerTest do
             "password" => "finimeze", "status" => "1",
             "submit" => "Submit", "username" => "zabuzasixu"}
 
+  @broken_params %{"avatar" => "", "role" => ["2", "4"],
+                   "email" => "fanogigynigmail.com", "full_name" => "Nita Bond",
+                   "password" => "fi", "status" => "1",
+                   "submit" => "Submit", "username" => ""}
+
   test "index redirects to /login when no :current_user" do
     conn = call_with_session(RouterHelper.TestRouter, :get, "/admin/brukere")
     assert conn.status == 302
@@ -59,12 +64,31 @@ defmodule Brando.Users.ControllerTest do
     assert conn.resp_body =~ "value=\"Nita Bond\""
   end
 
-  test "create (post)" do
+  test "create (post) no params" do
     conn = call_with_user(RouterHelper.TestRouter, :post, "/admin/brukere/")
     assert conn.status == 200
     assert conn.path_info == ["admin", "brukere"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
     assert conn.resp_body =~ "<form class=\"grid-form\" role=\"form\" action=\"/whatever\""
+  end
+
+  test "create (post) w/params" do
+    conn = call_with_user(RouterHelper.TestRouter, :post, "/admin/brukere/", %{"user" => @params})
+    assert conn.status == 302
+    assert get_resp_header(conn, "Location") == ["/admin/brukere"]
+    assert conn.path_info == ["admin", "brukere"]
+    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+    %{phoenix_flash: flash} = conn.private
+    assert flash == %{"notice" => "Bruker opprettet."}
+  end
+
+  test "create (post) w/erroneus params" do
+    conn = call_with_user(RouterHelper.TestRouter, :post, "/admin/brukere/", %{"user" => @broken_params})
+    assert conn.status == 200
+    assert conn.path_info == ["admin", "brukere"]
+    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+    %{phoenix_flash: flash} = conn.private
+    assert flash == %{"error" => "Feil i skjema"}
   end
 
   test "delete" do
