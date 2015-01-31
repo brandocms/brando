@@ -66,4 +66,13 @@ defmodule Brando.Users.ControllerTest do
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
     assert conn.resp_body =~ "<form class=\"grid-form\" role=\"form\" action=\"/whatever\""
   end
+
+  test "delete" do
+    assert {:ok, user} = User.create(@params)
+    conn = call_with_user(RouterHelper.TestRouter, :delete, "/admin/brukere/#{user.id}")
+    assert conn.status == 302
+    assert conn.path_info == ["admin", "brukere", "#{user.id}"]
+    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+    assert get_resp_header(conn, "Location") == ["/admin/brukere"]
+  end
 end
