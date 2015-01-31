@@ -280,11 +280,11 @@ defmodule Brando.Util do
   """
   @spec slugify(String.t) :: String.t
   def slugify(string) do
-    slug = for char <- String.codepoints(string) do @ucmap[char] || "" end
+    for char <- String.codepoints(string) do @ucmap[char] || "" end
     |> Enum.join("")
     |> String.downcase
-    slug = Regex.replace(~r/-+/, slug, "-")
-    Regex.replace(~r/^-|-$/, slug, "")
+    |> String.replace(~r/-+/, "-")
+    |> String.replace(~r/^-|-$/, "")
   end
 
   @doc """
