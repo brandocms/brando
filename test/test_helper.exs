@@ -19,6 +19,7 @@ Application.put_env(:brando, :menu_colors, ["#FBA026;", "#F87117;", "#CF3510;", 
                                            "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
                                            "#870B46;", "#D0201A;", "#FF641A;"])
 Application.put_env(:brando, :router, RouterHelper.TestRouter)
+Application.put_env(:brando, :repo, Brando.Integration.TestRepo)
 
 defmodule Brando.Integration.TestRepo do
   use Ecto.Repo,

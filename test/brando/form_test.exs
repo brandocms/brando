@@ -1,15 +1,3 @@
-defmodule Brando.TestHelpers do
-  def test_path(_conn, _action, _params) do
-    "/some/trash"
-  end
-  def admin_user_path(_conn, _action, _params \\ nil) do
-    "/whatever"
-  end
-  def admin_dashboard_path(_conn, _action, _params \\ nil) do
-    "/admin/dashboard"
-  end
-end
-
 defmodule Brando.FormTest do
   use ExUnit.Case, async: true
   import Brando.Form
@@ -17,7 +5,7 @@ defmodule Brando.FormTest do
   defmodule TestForm do
     use Brando.Form
 
-    form "test", [helper: :test_path, class: "grid-form"] do
+    form "test", [helper: :admin_user_path, class: "grid-form"] do
       fieldset [legend: "Brukerinfo", row_span: 2] do
         field :full_name, :text,
           [required: true,
@@ -197,7 +185,7 @@ defmodule Brando.FormTest do
 
   test "get_form" do
     assert TestForm.get_form(action: :create, params: [], values: nil, errors: nil) == {:safe,
-      "<form class=\"grid-form\" role=\"form\" action=\"/some/trash\" method=\"POST\"><fieldset><legend><br>Brukerinfo</legend><div data-row-span=\"2\">\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[full_name]\" class=\"\">Fullt navn</label><input name=\"test[full_name]\" type=\"text\" placeholder=\"Fullt navn\" />\n  \n</div>\n\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[username]\" class=\"\">Brukernavn</label><input name=\"test[username]\" type=\"text\" placeholder=\"Brukernavn\" />\n  \n</div>\n\n<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <input name=\"test[submit]\" type=\"submit\" />\n  \n</div>\n</div>\n</div></fieldset></form>"}
+      "<form class=\"grid-form\" role=\"form\" action=\"/admin/brukere\" method=\"POST\"><fieldset><legend><br>Brukerinfo</legend><div data-row-span=\"2\">\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[full_name]\" class=\"\">Fullt navn</label><input name=\"test[full_name]\" type=\"text\" placeholder=\"Fullt navn\" />\n  \n</div>\n\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[username]\" class=\"\">Brukernavn</label><input name=\"test[username]\" type=\"text\" placeholder=\"Brukernavn\" />\n  \n</div>\n\n<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <input name=\"test[submit]\" type=\"submit\" />\n  \n</div>\n</div>\n</div></fieldset></form>"}
   end
 
   test "method_override/1" do
@@ -216,7 +204,7 @@ defmodule Brando.FormTest do
     assert_raise ArgumentError, "field `full_name` was already set on schema", fn ->
       defmodule FormDuplicateFields do
         use Brando.Form
-        form "test", [helper: :test_path, class: "grid-form"] do
+        form "test", [helper: :admin_user_path, class: "grid-form"] do
           field :full_name, :text,
             [required: true]
           field :full_name, :text,
@@ -231,7 +219,7 @@ defmodule Brando.FormTest do
     assert_raise ArgumentError, "submit field `submit` was already set on schema", fn ->
       defmodule FormDuplicateFields do
         use Brando.Form
-        form "test", [helper: :test_path, class: "grid-form"] do
+        form "test", [helper: :admin_user_path, class: "grid-form"] do
           submit "Submit", [name: "submit"]
           submit "Submit", [name: "submit"]
         end
@@ -243,7 +231,7 @@ defmodule Brando.FormTest do
     assert_raise ArgumentError, "`:foo` is not a valid field type", fn ->
       defmodule FormDuplicateFields do
         use Brando.Form
-        form "test", [helper: :test_path, class: "grid-form"] do
+        form "test", [helper: :admin_user_path, class: "grid-form"] do
           field :full_name, :foo
         end
       end

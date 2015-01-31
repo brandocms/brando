@@ -69,7 +69,7 @@ defmodule Brando.Users.ControllerTest do
     assert conn.status == 200
     assert conn.path_info == ["admin", "brukere"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    assert conn.resp_body =~ "<form class=\"grid-form\" role=\"form\" action=\"/whatever\""
+    assert conn.resp_body =~ "<form class=\"grid-form\" role=\"form\""
   end
 
   test "create (post) w/params" do

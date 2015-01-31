@@ -23,21 +23,13 @@ defmodule Brando do
   Gets the parent app's repo, as set in config.exs
   """
   def get_repo do
-    if Mix.env == :test do
-      Brando.Integration.TestRepo
-    else
-      config(:repo)
-    end
+    config(:repo)
   end
 
   @doc """
   Gets the parent app's helpers, as set in config.exs
   """
   def get_helpers do
-    if Mix.env == :test do
-      Brando.TestHelpers
-    else
-      Module.concat(get_router, "Helpers")
-    end
+    Module.concat(get_router, "Helpers")
   end
 end
