@@ -6,7 +6,7 @@ defmodule Brando.Admin.Menu do
   use Brando.Menu
 
   menu "Admin",
-    %{name: "Admin", anchor: "admin", bgcolor: "#ffaaff", icon: "fa fa-dashboard icon",
+    %{name: "Admin", anchor: "admin", icon: "fa fa-dashboard icon",
       submenu: [%{name: "Dashboard", url: {:admin_dashboard_path, :dashboard}}]}
 
 end

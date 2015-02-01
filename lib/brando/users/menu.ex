@@ -5,7 +5,7 @@ defmodule Brando.Users.Menu do
   """
   use Brando.Menu
 
-  menu "Brukere", %{name: "Brukere", anchor: "brukere", bgcolor: "#ffaaff", icon: "fa fa-users icon",
+  menu "Brukere", %{name: "Brukere", anchor: "brukere", icon: "fa fa-users icon",
                     submenu: [%{name: "Oversikt", url: {:admin_user_path, :index}},
                               %{name: "Profil", url: {:admin_user_path, :profile}},
                               %{name: "Legg til", url: {:admin_user_path, :new}}]}
