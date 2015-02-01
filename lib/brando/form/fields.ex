@@ -101,8 +101,7 @@ defmodule Brando.Form.Fields do
   end
 
   @doc """
-  Render a textarea field for :update. If we have `value`, try to render
-  an img element with a thumbnail.
+  Render a textarea field for :update.
   """
   def __textarea__(:update, name, value, _errors, opts) do
     opts = List.delete(opts, :default)
