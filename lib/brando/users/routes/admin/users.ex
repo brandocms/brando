@@ -12,19 +12,20 @@ defmodule Brando.Users.Admin.Routes do
 
   """
   alias Phoenix.Router.Resource
+  alias Brando.Users.Admin.UserController
 
   @doc """
   Defines "RESTful" endpoints for the users resource.
   """
   defmacro users_resources(path, opts) do
-    add_users_resources path, Brando.Users.Admin.UserController, opts, do: nil
+    add_users_resources path, UserController, opts, do: nil
   end
 
   @doc """
   See users_resources/2
   """
   defmacro users_resources(path) do
-    add_users_resources path, Brando.Users.Admin.UserController, [], do: nil
+    add_users_resources path, UserController, [], do: nil
   end
 
   defp add_users_resources(path, controller, options, do: context) do

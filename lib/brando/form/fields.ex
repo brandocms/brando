@@ -23,7 +23,7 @@ defmodule Brando.Form.Fields do
   end
 
   @doc """
-  Renders `errors` in a nicely formatted <div> by calling __parse_error__/1
+  Renders `errors` in a nicely formatted div by calling __parse_error__/1
   on each error in the `errors` list.
   """
   def __render_errors__([]), do: ""

@@ -2,7 +2,7 @@ defmodule Brando.Admin.LayoutView do
   @moduledoc """
   Main layout view for Brando admin.
   """
-  use Brando.AdminView, root: "templates" # Brando.config(:templates_path)
+  use Brando.AdminView, root: "templates"
 
   @doc """
   Returns menus for admin.
