@@ -86,7 +86,7 @@ defmodule Brando.Form.Fields do
     opts = List.delete(opts, :default)
     img =
       if value do
-        ~s(<div class="image-preview"><img src="#{Brando.HTML.media_path(Brando.Mugshots.Helpers.img(value, :thumb))}" /></div>)
+        ~s(<div class="image-preview"><img src="#{Brando.HTML.media_url(Brando.Mugshots.Helpers.img(value, :thumb))}" /></div>)
       else
         ""
       end

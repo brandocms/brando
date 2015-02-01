@@ -96,8 +96,16 @@ defmodule Brando.HTML do
   Return joined path of `file` and the :media_url config option
   as set in your app's config.exs.
   """
-  def media_path(file) do
+  def media_url(file) do
     Path.join([Brando.config(:media_url), file])
+  end
+
+  @doc """
+  Return joined path of `file` and the :static_url config option
+  as set in your app's config.exs.
+  """
+  def static_url(file) do
+    Path.join([Brando.config(:static_url), file])
   end
 
   @doc """
@@ -111,9 +119,9 @@ defmodule Brando.HTML do
 
   defp do_js_extra(nil), do: ""
   defp do_js_extra(js) when is_list(js) do
-    for j <- js, do: Phoenix.HTML.safe(~s(<script type="text/javascript" src="#{j}" charset="utf-8"></script>))
+    for j <- js, do: do_js_extra(j)
   end
-  defp do_js_extra(js), do: Phoenix.HTML.safe(~s(<script type="text/javascript" src="#{js}" charset="utf-8"></script>))
+  defp do_js_extra(js), do: Phoenix.HTML.safe(~s(<script type="text/javascript" src="#{static_url(js)}" charset="utf-8"></script>))
 
   @doc """
   If any css files have been assigned to :css_extra on `conn`,
@@ -126,7 +134,7 @@ defmodule Brando.HTML do
 
   defp do_css_extra(nil), do: ""
   defp do_css_extra(css) when is_list(css) do
-    for c <- css, do: Phoenix.HTML.safe(~s(<link rel="stylesheet" href="#{c}">))
+    for c <- css, do: do_css_extra(c)
   end
-  defp do_css_extra(css), do: Phoenix.HTML.safe(~s(<link rel="stylesheet" href="#{css}">))
+  defp do_css_extra(css), do: Phoenix.HTML.safe(~s(<link rel="stylesheet" href="#{static_url(css)}">))
 end

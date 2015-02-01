@@ -33,7 +33,7 @@
         <div class="menu-profile">
           <!-- menu top with avatar & info -->
           <div class="avatar">
-            <img src="<%= media_path(img(current_user(@conn).avatar, :thumb)) %>" />
+            <img src="<%= media_url(img(current_user(@conn).avatar, :thumb)) %>" />
           </div>
           <div class="name">
             <%= current_user(@conn).full_name %>
