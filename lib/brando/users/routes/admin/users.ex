@@ -17,6 +17,13 @@ defmodule Brando.Users.Admin.Routes do
   @doc """
   Defines "RESTful" endpoints for the users resource.
   """
+  defmacro users_resources(path, ctrl, opts) do
+    add_users_resources path, ctrl, opts, do: nil
+  end
+
+  @doc """
+  See users_resources/2
+  """
   defmacro users_resources(path, opts) do
     add_users_resources path, UserController, opts, do: nil
   end
