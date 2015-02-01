@@ -4,10 +4,9 @@ defmodule Brando.Users.Menu do
   more information
   """
   use Brando.Menu
-  alias Brando, as: B
 
   menu "Brukere", %{name: "Brukere", anchor: "brukere", bgcolor: "#ffaaff", icon: "fa fa-users icon",
-                    submenu: [%{name: "Oversikt", url: B.get_helpers().admin_user_path(B.get_endpoint(), :index)},
-                              %{name: "Profil", url: B.get_helpers().admin_user_path(B.get_endpoint(), :profile)},
-                              %{name: "Legg til", url: B.get_helpers().admin_user_path(B.get_endpoint(), :new)}]}
+                    submenu: [%{name: "Oversikt", url: {:admin_user_path, :index}},
+                              %{name: "Profil", url: {:admin_user_path, :profile}},
+                              %{name: "Legg til", url: {:admin_user_path, :new}}]}
 end

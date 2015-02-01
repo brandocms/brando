@@ -25,6 +25,17 @@ defmodule Brando.HTML do
   end
 
   @doc """
+  Creates an URL from a menu item.
+
+  ## Example
+
+      iex> menu_url(conn, {:admin_user_path, :new})
+
+  """
+  def menu_url(conn, {fun, action}) do
+    apply(helpers(conn), fun, [conn, action])
+  end
+  @doc """
   Joins the path fragments from `conn`.path_info to a binary.
   """
   def path(conn) do
