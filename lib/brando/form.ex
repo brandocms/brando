@@ -252,7 +252,8 @@ defmodule Brando.Form do
     Module.put_attribute(mod, :form_fields, [{name, [type: :submit, text: text] ++ opts}|fields])
   end
 
-  defp check_type!(type) when type in [:text, :password, :select, :email, :checkbox, :file, :radio], do: :ok
+  defp check_type!(type) when type in [:text, :password, :select, :email,
+                                       :checkbox, :file, :radio, :textarea], do: :ok
 
   defp check_type!(type) do
     raise ArgumentError, message: "`#{Macro.to_string(type)}` is not a valid field type"
@@ -319,6 +320,13 @@ defmodule Brando.Form do
   """
   def render_field(action, name, :file, opts, value, errors) do
     F.__file__(action, name, value, errors, opts)
+    |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
+    |> F.__form_group__(name, opts, errors)
+    |> F.__data_row_span__(opts[:in_fieldset])
+  end
+
+  def render_field(action, name, :textarea, opts, value, errors) do
+    F.__textarea__(action, name, value, errors, opts)
     |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
     |> F.__form_group__(name, opts, errors)
     |> F.__data_row_span__(opts[:in_fieldset])

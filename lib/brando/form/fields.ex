@@ -101,6 +101,25 @@ defmodule Brando.Form.Fields do
   end
 
   @doc """
+  Render a textarea field for :update. If we have `value`, try to render
+  an img element with a thumbnail.
+  """
+  def __textarea__(:update, name, value, _errors, opts) do
+    opts = List.delete(opts, :default)
+    __textarea__(:create, name, value, _errors, opts)
+  end
+
+  @doc """
+  Render a textarea field for :create.
+  """
+  def __textarea__(:create, name, [], _errors, opts) do
+    ~s(<textarea name="#{name}"#{get_class(opts[:class])}></textarea>)
+  end
+  def __textarea__(:create, name, value, _errors, opts) do
+    ~s(<textarea name="#{name}"#{get_class(opts[:class])}>#{value}</textarea>)
+  end
+
+  @doc """
   Renders a select tag. Passes `choices` to __tag__/4
 
   ## Parameters:
