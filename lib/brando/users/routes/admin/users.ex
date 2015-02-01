@@ -13,6 +13,7 @@ defmodule Brando.Users.Admin.Routes do
   """
   alias Phoenix.Router.Resource
   alias Brando.Users.Admin.UserController
+  alias Brando.Users.Model.User
 
   @doc """
   Defines "RESTful" endpoints for the users resource.
@@ -36,6 +37,7 @@ defmodule Brando.Users.Admin.Routes do
   end
 
   defp add_users_resources(path, controller, options, do: context) do
+    if options == [], do: options = quote(do: [private: %{model: User}])
     quote do
       resource = Resource.build(unquote(path), unquote(controller), unquote(options))
       parm = resource.param
