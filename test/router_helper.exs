@@ -80,6 +80,7 @@ defmodule RouterHelper do
   defmodule TestRouter do
     use Phoenix.Router
     alias Brando.Plugs.Authenticate
+    import Brando.Users.Admin.Routes
 
     pipeline :admin do
       plug :accepts, ~w(html json)
@@ -101,8 +102,7 @@ defmodule RouterHelper do
 
     scope "/admin", as: :admin do
       pipe_through :admin
-      get "/brukere/profil", Brando.Users.Admin.UserController, :profile, private: %{model: Brando.Users.Model.User}
-      resources "/brukere", Brando.Users.Admin.UserController, private: %{model: Brando.Users.Model.User}
+      users_resources "/brukere", Brando.Users.Admin.UserController, private: %{model: Brando.Users.Model.User}
       get "/", Brando.Dashboard.Admin.DashboardController, :dashboard
     end
 

@@ -49,17 +49,17 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "new" do
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/brukere/new")
+    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/brukere/ny")
     assert conn.status == 200
-    assert conn.path_info == ["admin", "brukere", "new"]
+    assert conn.path_info == ["admin", "brukere", "ny"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
   end
 
   test "edit" do
     assert {:ok, user} = User.create(@params)
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/brukere/#{user.id}/edit")
+    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/brukere/#{user.id}/endre")
     assert conn.status == 200
-    assert conn.path_info == ["admin", "brukere", "#{user.id}", "edit"]
+    assert conn.path_info == ["admin", "brukere", "#{user.id}", "endre"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
     assert conn.resp_body =~ "value=\"Nita Bond\""
   end
