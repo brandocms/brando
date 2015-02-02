@@ -13,8 +13,8 @@ defmodule Brando.News.Admin.NewsController do
   @doc false
   def new(conn, _params) do
     conn
-    |> add_css("villain/villain-min.css")
-    |> add_js("villain/villain-min.js")
+    |> add_css("villain/villain.css")
+    |> add_js("villain/villain.js")
     |> render("new.html")
   end
 end
