@@ -1,12 +1,10 @@
     <h1>Ny post</h1>
     <%= PostForm.get_form(action: :create, params: [], values: @post, errors: @errors) %>
-    <div id="villain"></div>
        <script type="text/javascript">
            $(document).ready(function() {
-               v = new Villain.Editor({ el: '#villain', textArea: 'textarea[name="post[body]"]' });
+               v = new Villain.Editor({ textArea: 'textarea[name="post[body]"]' });
            });
        </script>
-    <%= inspect(@errors) %>
     <div class="form-actions col-sm-offset-2">
       <a href="<%= helpers(@conn).admin_user_path(@conn, :index) %>" class="btn btn-default">
         <i class="fa fa-list fa-fw m-r-sm"></i> Tilbake til oversikten
