@@ -3,6 +3,8 @@ defmodule Brando.Users.Model.User do
   Ecto schema for the User model, as well as image field definitions
   and helper functions for dealing with the user model.
   """
+  @type t :: __MODULE__
+
   use Ecto.Model
   use Brando.Mugshots.Fields.ImageField
   import Ecto.Query, only: [from: 2]
@@ -45,6 +47,7 @@ defmodule Brando.Users.Model.User do
       user_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
+  @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(user, :create, params) do
     params
     |> cast(user, ~w(username full_name email password), ~w(role))
@@ -64,6 +67,7 @@ defmodule Brando.Users.Model.User do
       user_changeset = changeset(%__MODULE__{}, :update, params)
 
   """
+  @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(user, :update, params) do
     params
     |> cast(user, [], ~w(username full_name email password role))
@@ -231,6 +235,7 @@ defmodule Brando.Users.Model.User do
   @doc """
   Bumps `user`'s `last_login` to current time.
   """
+  @spec set_last_login(t) :: t
   def set_last_login(user) do
     {:ok, user} = update_field(user, [last_login: Ecto.DateTime.local])
     user
@@ -260,6 +265,7 @@ defmodule Brando.Users.Model.User do
   @doc """
   Checks if `user` has `role`.
   """
+  @spec has_role?(t, atom) :: boolean
   def has_role?(user, role) when is_atom(role) do
     if role in user.role, do: true, else: false
   end
@@ -267,6 +273,7 @@ defmodule Brando.Users.Model.User do
   @doc """
   Checks if `user` has access to admin area.
   """
+  @spec can_login?(t) :: boolean
   def can_login?(user) do
     if user.role > 0, do: true, else: false
   end

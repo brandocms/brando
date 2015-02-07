@@ -40,6 +40,7 @@ defmodule Brando.Mixfile do
       {:phoenix, github: "phoenixframework/phoenix"},
       {:mogrify, github: "twined/mogrify"},
       {:bcrypt, github: "opscode/erlang-bcrypt"},
+      {:dialyze, "~> 0.1.3", only: :dev},
       {:excoveralls, "~> 0.3", only: :test},
       {:ex_doc, "~> 0.6", only: :docs},
       {:earmark, "~> 0.1", only: :docs},

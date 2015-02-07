@@ -15,6 +15,16 @@ defmodule Brando.News.Admin.NewsController do
     conn
     |> add_css("villain/villain.css")
     |> add_js("villain/villain.js")
-    |> render("new.html")
+    |> render(:new)
+  end
+
+  def create(conn, %{"post" => post}) do
+    require Logger
+    Logger.debug(inspect(Poison.decode!(post["body"])))
+    conn
+    |> add_css("villain/villain.css")
+    |> add_js("villain/villain.js")
+    |> assign(:post, post)
+    |> render(:new)
   end
 end
