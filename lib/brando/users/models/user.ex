@@ -3,7 +3,7 @@ defmodule Brando.Users.Model.User do
   Ecto schema for the User model, as well as image field definitions
   and helper functions for dealing with the user model.
   """
-  @type t :: __MODULE__
+  @type t :: %__MODULE__{}
 
   use Ecto.Model
   use Brando.Mugshots.Fields.ImageField
