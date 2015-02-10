@@ -3837,4 +3837,4 @@ table th[class*="col-"] {
   font-family: "a-mono", "Monaco", "Courier New" !important; }
 
 .text-center {
-  text-align: center; }
+  text-align: center !important; }
