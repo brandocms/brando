@@ -181,6 +181,56 @@ config :my_app, MyApp.Repo,
   hostname: "localhost"
 ```
 
+News
+====
+
+Create an initial migration for the `posts` table:
+
+    $ mix ecto.gen.migration add_posts_table
+
+then add the following to the generated file:
+
+```elixir
+defmodule MyApp.Repo.Migrations.AddPostsTable do
+  use Ecto.Migration
+
+  def up do
+    create table(:posts) do
+      add :language,          :text
+      add :header,            :text
+      add :slug,              :text
+      add :lead,              :text
+      add :data,              :json
+      add :cover,             :text
+      add :status,            :integer
+      add :creator_id,        references(:user)
+      add :meta_description,  :text
+      add :meta_keywords,     :text
+      add :featured,          :boolean
+      add :published,         :boolean
+      add :publish_at,        :datetime
+      timestamps
+    end
+    create index(:posts, [:language])
+    create index(:posts, [:slug])
+    create index(:posts, [:status])
+  end
+
+  def down do
+    drop table(:posts)
+    drop index(:posts, [:language])
+    drop index(:posts, [:slug])
+    drop index(:posts, [:status])
+  end
+end
+```
+
+Now run the migration:
+
+    $ mix ecto.migrate
+
+
+
 Mugshots
 ========
 
