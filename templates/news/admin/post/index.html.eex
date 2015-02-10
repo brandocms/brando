@@ -1,5 +1,5 @@
     <h1>Postoversikt</h1>
-<%= if @posts == nil do %>
+<%= if @posts != [] do %>
     <div class="status-indicators">
       <span class="m-r-sm"><span class="status-published"><i class="fa fa-circle m-r-sm"> </i> </span> Publisert</span>
       <span class="m-r-sm"><span class="status-pending"><i class="fa fa-circle m-r-sm"> </i> </span> Venter</span>
@@ -17,7 +17,7 @@
     </colgroup>
     <thead>
       <tr>
-        <th class="center-text">&#8470;</th>
+        <th class="text-center">&#8470;</th>
         <th><!-- status --></th>
         <th><!-- promoted post --></th>
         <th>Overskrift</th>
@@ -27,14 +27,14 @@
         </tr>
       </thead>
       <tbody>
-        <%= for post <- @posts || [] do %>
+        <%= for post <- @posts do %>
         <tr>
-          <td class="center-text text-mono"><small><span class="text-muted">#</span><%= zero_pad(post.id) %></small></td>
-          <td><%= post.postname %></td>
-          <td><%= post.email %></td>
-          <td><%= post.full_name %></td>
+          <td class="text-center text-mono"><small><span class="text-muted">#</span><%= zero_pad(post.id) %></small></td>
+          <td class="text-center"><i class="fa fa-circle"></i></td>
+          <td class="text-center"><%= if post.featured do %><i class="fa fa-star text-warning"></i><% end %></td>
+          <td><%= post.header %></td>
           <td><%= format_date(post.inserted_at) %></td>
-          <td><%= post.avatar %></td>
+          <td><%= post.creator.username %></td>
           <td>
             <div class="dropdown">
               <a class="dropdown-toggle ddbutton" data-toggle="dropdown">
