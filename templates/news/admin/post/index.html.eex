@@ -30,7 +30,7 @@
         <%= for post <- @posts do %>
         <tr>
           <td class="text-center text-mono"><small><span class="text-muted">#</span><%= zero_pad(post.id) %></small></td>
-          <td class="text-center"><i class="fa fa-circle"></i></td>
+          <td class="text-center"><i class="fa fa-circle status-<%= Atom.to_string(post.status) %>"></i></td>
           <td class="text-center"><%= if post.featured do %><i class="fa fa-star text-warning"></i><% end %></td>
           <td><%= post.header %></td>
           <td><%= format_date(post.inserted_at) %></td>

@@ -3838,3 +3838,15 @@ table th[class*="col-"] {
 
 .text-center {
   text-align: center !important; }
+
+.status-published {
+  color: #65BD77; }
+
+.status-pending {
+  color: #FFC333; }
+
+.status-draft {
+  color: #727272; }
+
+.status-deleted {
+  color: #FB6B5B; }
