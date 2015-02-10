@@ -20,7 +20,7 @@
         </tr>
       </thead>
       <tbody>
-        <%= for user <- @users do %>
+        <%= for user <- @users || [] do %>
         <tr>
           <td class="center-text text-mono"><small><span class="text-muted">#</span><%= zero_pad(user.id) %></small></td>
           <td><%= user.username %></td>

@@ -3564,6 +3564,24 @@ form label {
 .modal-footer:after {
   clear: both; }
 
+.status-indicators {
+  font-size: 15px;
+  margin-bottom: 25px; }
+  .status-indicators > span {
+    padding-right: 10px; }
+  .status-indicators .status-published {
+    color: #65BD77;
+    padding-right: 5px; }
+  .status-indicators .status-pending {
+    color: #FFC333;
+    padding-right: 5px; }
+  .status-indicators .status-draft {
+    color: #727272;
+    padding-right: 5px; }
+  .status-indicators .status-deleted {
+    color: #FB6B5B;
+    padding-right: 5px; }
+
 table {
   background-color: transparent; }
 

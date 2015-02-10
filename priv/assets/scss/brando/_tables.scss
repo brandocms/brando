@@ -1,3 +1,27 @@
+.status-indicators {
+  font-size: 15px;
+  margin-bottom: 25px;
+  > span {
+    padding-right: 10px;
+  }
+  .status-published {
+    color: #65BD77;
+    padding-right: 5px;
+  }
+  .status-pending {
+    color: #FFC333;
+    padding-right: 5px;
+  }
+  .status-draft {
+    color: #727272;
+    padding-right: 5px;
+  }
+  .status-deleted {
+    color: #FB6B5B;
+    padding-right: 5px;
+  }
+}
+
 table {
   background-color: transparent;
 }
