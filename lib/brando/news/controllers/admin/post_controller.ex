@@ -12,7 +12,9 @@ defmodule Brando.News.Admin.PostController do
 
   @doc false
   def index(conn, _params) do
+    model = conn.private[:model]
     conn
+    |> assign(:posts, model.all)
     |> render(:index)
   end
 
