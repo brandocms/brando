@@ -1,4 +1,4 @@
-defmodule Brando.News.Admin.NewsController do
+defmodule Brando.News.Admin.PostController do
   @moduledoc """
   Controller for the Brando News module.
   """

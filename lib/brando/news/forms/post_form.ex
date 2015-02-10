@@ -5,7 +5,7 @@ defmodule Brando.News.Form.PostForm do
   """
   use Brando.Form
 
-  form "post", [helper: :admin_news_path, class: "grid-form"] do
+  form "post", [helper: :admin_post_path, class: "grid-form"] do
     field :header, :text,
       [required: true,
        label: "Overskrift",

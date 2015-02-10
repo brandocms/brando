@@ -1,4 +1,4 @@
-defmodule Brando.News.Admin.NewsView do
+defmodule Brando.News.Admin.PostView do
   @moduledoc """
   View for the Brando News module.
   """

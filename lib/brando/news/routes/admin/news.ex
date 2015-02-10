@@ -12,7 +12,7 @@ defmodule Brando.News.Admin.Routes do
 
   """
   alias Phoenix.Router.Resource
-  alias Brando.News.Admin.NewsController
+  alias Brando.News.Admin.PostController
   alias Brando.News.Model.Post
 
   @doc """
@@ -26,14 +26,14 @@ defmodule Brando.News.Admin.Routes do
   See news_resources/2
   """
   defmacro news_resources(path, opts) do
-    add_news_resources path, NewsController, opts, do: nil
+    add_news_resources path, PostController, opts, do: nil
   end
 
   @doc """
   See news_resources/2
   """
   defmacro news_resources(path) do
-    add_news_resources path, NewsController, [], do: nil
+    add_news_resources path, PostController, [], do: nil
   end
 
   defp add_news_resources(path, controller, options, do: context) do
