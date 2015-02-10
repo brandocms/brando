@@ -11,6 +11,12 @@ defmodule Brando.News.Admin.PostController do
   plug :action
 
   @doc false
+  def index(conn, _params) do
+    conn
+    |> render(:index)
+  end
+
+  @doc false
   def new(conn, _params) do
     conn
     |> add_css("villain/villain.css")
@@ -18,6 +24,7 @@ defmodule Brando.News.Admin.PostController do
     |> render(:new)
   end
 
+  @doc false
   def create(conn, %{"post" => post}) do
     require Logger
     Logger.debug(inspect(Poison.decode!(post["body"])))
