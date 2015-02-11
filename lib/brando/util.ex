@@ -330,8 +330,7 @@ defmodule Brando.Util do
   def split_path(file) do
     case String.contains?(file, "/") do
       true ->
-        filename = Path.split(file)
-        |> List.last
+        filename = Path.split(file) |> List.last
         path = Path.split(file)
         |> List.delete_at(-1)
         |> Path.join
