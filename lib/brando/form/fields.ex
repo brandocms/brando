@@ -137,16 +137,25 @@ defmodule Brando.Form.Fields do
     end
   end
 
-  def __option__(:update, choice_value, choice_text, value, _default) do
-    ~s(<option value="#{choice_value}"#{get_selected(choice_value, value)}>#{choice_text}</option>)
+  def __option__(action, choice_value, choice_text, value, default, is_selected_fun \\ nil)
+  def __option__(:update, choice_value, choice_text, value, _default, is_selected_fun) do
+    if is_selected_fun do
+      selected = case is_selected_fun.(choice_value, value) do
+        true  -> " " <> "selected"
+        false -> ""
+      end
+    else
+      selected = get_selected(choice_value, value)
+    end
+    ~s(<option value="#{choice_value}"#{selected}>#{choice_text}</option>)
   end
 
   # no `value` - :create - match `choice_value` to `default`
-  def __option__(:create, choice_value, choice_text, [], default) do
+  def __option__(:create, choice_value, choice_text, [], default, _) do
     ~s(<option value="#{choice_value}"#{get_selected(choice_value, default)}>#{choice_text}</option>)
   end
 
-  def __option__(:create, choice_value, choice_text, value, _default) do
+  def __option__(:create, choice_value, choice_text, value, _default, _) do
     ~s(<option value="#{choice_value}"#{get_selected(choice_value, value)}>#{choice_text}</option>)
   end
 
@@ -158,12 +167,21 @@ defmodule Brando.Form.Fields do
     ~s(<div class="radio"><label for="#{name}"></label><label for="#{name}"><input name="#{name}" type="radio" value="#{choice_value}"#{get_checked(choice_value, value)} />#{choice_text}</label></div>)
   end
 
-  def __checkbox__(:create, name, choice_value, choice_text, [], default) do
+  def __checkbox__(action, name, choice_value, choice_text, value, default, is_selected_fun \\ nil)
+  def __checkbox__(:create, name, choice_value, choice_text, [], default, _) do
     ~s(<div class="checkboxes"><label for="#{name}[]"></label><label for="#{name}[]"><input name="#{name}[]" type="checkbox" value="#{choice_value}"#{get_checked(choice_value, default)} />#{choice_text}</label></div>)
   end
 
-  def __checkbox__(_, name, choice_value, choice_text, value, _default) do
-    ~s(<div class="checkboxes"><label for="#{name}[]"></label><label for="#{name}[]"><input name="#{name}[]" type="checkbox" value="#{choice_value}"#{get_checked(choice_value, value)} />#{choice_text}</label></div>)
+  def __checkbox__(_, name, choice_value, choice_text, value, _default, is_selected_fun) do
+    if is_selected_fun do
+      checked = case is_selected_fun.(choice_value, value) do
+        true  -> " " <> "checked"
+        false -> ""
+      end
+    else
+      checked = get_checked(choice_value, value)
+    end
+    ~s(<div class="checkboxes"><label for="#{name}[]"></label><label for="#{name}[]"><input name="#{name}[]" type="checkbox" value="#{choice_value}"#{checked} />#{choice_text}</label></div>)
   end
 
   def __fieldset_open__(nil, in_fieldset) do
@@ -221,7 +239,7 @@ defmodule Brando.Form.Fields do
   def get_selected(cv, v) when is_list(v) do
     if cv in v, do: " " <> "selected"
   end
-  def get_selected(_, _), do: ""
+  def get_selected(cv, v), do: ""
 
   @doc """
   Matches `cv` to `v`. If true then return "checked" to be used in

@@ -48,6 +48,7 @@ defmodule Brando.Users.Model.User do
 
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
+  def changeset(user, action, params \\ nil)
   def changeset(user, :create, params) do
     params
     |> cast(user, ~w(username full_name email password), ~w(role))

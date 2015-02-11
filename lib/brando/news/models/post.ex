@@ -57,7 +57,7 @@ defmodule Brando.News.Model.Post do
   def changeset(model, :create, params) do
     params
     |> transform_checkbox_vals(~w(featured))
-    |> cast(model, ~w(status header data lead creator_id), ~w(featured))
+    |> cast(model, ~w(status header data lead creator_id language), ~w(featured))
   end
 
   @doc """
@@ -73,7 +73,7 @@ defmodule Brando.News.Model.Post do
   def changeset(model, :update, params) do
     params
     |> transform_checkbox_vals(~w(featured))
-    |> cast(model, [], ~w(status header data lead creator_id featured))
+    |> cast(model, [], ~w(status header data lead creator_id featured language))
   end
 
   @doc """
@@ -181,6 +181,17 @@ defmodule Brando.News.Model.Post do
   """
   def put_creator(params, current_user), do:
     Map.put(params, "creator_id", current_user.id)
+
+  @doc """
+  Get model from DB by `id`
+  """
+  def get(id: id) do
+    from(m in __MODULE__,
+         where: m.id == ^id,
+         limit: 1)
+    |> Brando.get_repo.all
+    |> List.first
+  end
 
   @doc """
   Delete `model` from database. Also deletes any connected image fields,

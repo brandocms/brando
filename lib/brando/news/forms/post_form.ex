@@ -17,6 +17,12 @@ defmodule Brando.News.Form.PostForm do
      [value: "3", text: "Slettet"]]
   end
 
+  def is_status_selected?(choice_value, value) do
+    # translate value from atom to corresponding int as string
+    {:ok, status_int} = Brando.Type.Status.dump(value)
+    choice_value == to_string(status_int)
+  end
+
   form "post", [helper: :admin_post_path, class: "grid-form"] do
     fieldset [row_span: 4] do
       field :language, :select,
@@ -30,7 +36,8 @@ defmodule Brando.News.Form.PostForm do
         [required: true,
         label: "Status",
         default: "2",
-        choices: &__MODULE__.get_status_choices/0]
+        choices: &__MODULE__.get_status_choices/0,
+        is_selected: &__MODULE__.is_status_selected?/2]
     end
     fieldset [row_span: 4] do
       field :featured, :checkbox,
