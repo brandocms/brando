@@ -36,6 +36,7 @@ defmodule Brando.Mixfile do
       {:ecto, "~> 0.7"},
       {:cowboy, "~> 1.0"},
       #{:plug, "~> 0.9"},
+      {:earmark, "~> 0.1"},
       {:plug, github: "elixir-lang/plug", override: true},
       {:phoenix, github: "phoenixframework/phoenix"},
       {:mogrify, github: "twined/mogrify"},
@@ -43,7 +44,6 @@ defmodule Brando.Mixfile do
       {:dialyze, "~> 0.1.3", only: :dev},
       {:excoveralls, "~> 0.3", only: :test},
       {:ex_doc, "~> 0.6", only: :docs},
-      {:earmark, "~> 0.1", only: :docs},
       {:inch_ex, only: :docs}
     ]
   end
