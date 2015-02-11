@@ -25,7 +25,7 @@ $(function() {
     var GridForms = {
         el: {
             fieldsRows: $('[data-row-span]'),
-            fieldsContainers: $('[data-field-span]'),
+            fieldsContainers: $('[data-field-span]:not(.no-height)'),
             focusableFields: $('input, textarea, select', '[data-field-span]'),
             window: $(window)
         },

@@ -25,7 +25,7 @@ $(function() {
     var GridForms = {
         el: {
             fieldsRows: $('[data-row-span]'),
-            fieldsContainers: $('[data-field-span]'),
+            fieldsContainers: $('[data-field-span]:not(.no-height)'),
             focusableFields: $('input, textarea, select', '[data-field-span]'),
             window: $(window)
         },
@@ -42,15 +42,15 @@ $(function() {
         },
         events: function() {
             var that = this;
-            that.el.fieldsContainers.click(function() {
-                $(this).find('input[type="text"], textarea, select').focus();
-            });
-            that.el.focusableFields.focus(function() {
-                that.focusField($(this));
-            });
-            that.el.focusableFields.blur(function() {
-                that.removeFieldFocus();
-            });
+            // that.el.fieldsContainers.click(function() {
+            //     $(this).find('input[type="text"], textarea, select').focus();
+            // });
+            // that.el.focusableFields.focus(function() {
+            //     that.focusField($(this));
+            // });
+            // that.el.focusableFields.blur(function() {
+            //     that.removeFieldFocus();
+            // });
             that.el.window.resize(function() {
                 that.equalizeFieldHeights();
             });
