@@ -97,9 +97,9 @@ end
 
 scope "/admin", as: :admin do
   pipe_through :admin
+  # only pass private if you need a custom model.
   users_resources "/brukere", private: %{model: Brando.Users.Model.User}
   get "/", Brando.Dashboard.Admin.DashboardController, :dashboard
-
 end
 
 scope "/" do
@@ -201,7 +201,15 @@ Now run the migration:
 
     $ mix ecto.migrate
 
+Add to your `router.ex` in your `admin` scope:
 
+```elixir
+scope "/admin", as: :admin do
+  # (...)
+  # only pass private if you need a custom model.
+  news_resources "/nyheter", private: %{model: Brando.Users.Model.User}
+end
+```
 
 Mugshots
 ========
