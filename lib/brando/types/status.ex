@@ -13,10 +13,9 @@ defmodule Brando.Type.Status do
 
   @doc """
   Cast should return OUR type no matter what the input.
-  In this case, `list` will be a list of binaries from a form.
-  Ex: ["1", "2", "4"]
   """
   def cast(atom) when is_atom(atom), do: {:ok, @status_codes[atom]}
+  def cast(binary) when is_binary(binary), do: {:ok, String.to_integer(binary)}
 
   @doc """
   Cast anything else is a failure
@@ -47,5 +46,7 @@ defmodule Brando.Type.Status do
   other options as well.
   """
   def dump(atom) when is_atom(atom), do: {:ok, @status_codes[atom]}
+  def dump(binary) when is_binary(binary), do: {:ok, String.to_integer(binary)}
+  def dump(integer) when is_integer(integer), do: {:ok, integer}
   def dump(_), do: :errorend
 end
