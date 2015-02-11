@@ -13,11 +13,12 @@ Application.put_env(:brando, TestRepo,
   size: 1,
   max_overflow: 0)
 
-Application.put_env(:brando, :use_modules, [Brando.Admin, Brando.Users])
-Application.put_env(:brando, :menu_colors, ["#FBA026;", "#F87117;", "#CF3510;", "#890606;", "#FF1B79;",
-                                           "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
-                                           "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
-                                           "#870B46;", "#D0201A;", "#FF641A;"])
+Application.put_env(:brando, Brando.Menu, [
+  modules: [Brando.Admin, Brando.Users],
+  colors: ["#FBA026;", "#F87117;", "#CF3510;", "#890606;", "#FF1B79;",
+           "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
+           "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
+           "#870B46;", "#D0201A;", "#FF641A;"]])
 Application.put_env(:brando, :router, RouterHelper.TestRouter)
 Application.put_env(:brando, :repo, Brando.Integration.TestRepo)
 
