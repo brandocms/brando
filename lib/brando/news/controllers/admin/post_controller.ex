@@ -81,4 +81,14 @@ defmodule Brando.News.Admin.PostController do
     end
   end
 
+  @doc false
+  def delete(conn, %{"id" => id}) do
+    model = conn.private[:model]
+    post = model.get(id: String.to_integer(id))
+    model.delete(post)
+    conn
+    |> put_flash(:notice, "Post #{post.header} slettet.")
+    |> redirect(to: router_module(conn).__helpers__.admin_post_path(conn, :index))
+  end
+
 end
