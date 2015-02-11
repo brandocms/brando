@@ -3,7 +3,7 @@ var sass = require('gulp-ruby-sass');
 var watch = require('gulp-watch');
 
 gulp.task('sass', function () {
-    return sass('priv/assets/scss/brando.scss')
+    return sass('assets/scss/brando.scss')
         .on('error', function (err) { console.log(err.message); })
         .pipe(gulp.dest('priv/static/brando/css'));
 });
@@ -13,7 +13,7 @@ gulp.task('default', function() {
 });
 
 gulp.task('watch', function () {
-    watch('priv/assets/scss/**/*.scss', function () {
+    watch('assets/scss/**/*.scss', function () {
         gulp.start('sass');
     });
 });
