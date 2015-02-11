@@ -17,10 +17,17 @@ defmodule Brando.News.Form.PostForm do
      [value: "3", text: "Slettet"]]
   end
 
-  def is_status_selected?(choice_value, value) do
+  @doc """
+  Check is status' choice is selected.
+  Translates the `model_value` from an atom to an int as string
+  through `Brando.Type.Status.dump/1`.
+  Returns boolean.
+  """
+  @spec is_status_selected?(String.t, atom) :: boolean
+  def is_status_selected?(form_value, model_value) do
     # translate value from atom to corresponding int as string
-    {:ok, status_int} = Brando.Type.Status.dump(value)
-    choice_value == to_string(status_int)
+    {:ok, status_int} = Brando.Type.Status.dump(model_value)
+    form_value == to_string(status_int)
   end
 
   form "post", [helper: :admin_post_path, class: "grid-form"] do
