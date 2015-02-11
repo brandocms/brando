@@ -206,8 +206,8 @@ defmodule Brando.News.Model.Post do
   Get all posts. Ordered by `id`. Preload :creator.
   """
   def all do
-    q = from u in __MODULE__,
-        order_by: u.id,
+    q = from m in __MODULE__,
+        order_by: [asc: m.status, desc: m.inserted_at],
         preload: [:creator]
     Brando.get_repo.all(q)
   end

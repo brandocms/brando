@@ -4,7 +4,7 @@ defmodule Brando.Type.Status do
   """
 
   @behaviour Ecto.Type
-  @status_codes %{draft: 0, pending: 1, published: 2, deleted: 3}
+  @status_codes %{draft: 0, published: 1, pending: 2, deleted: 3}
 
   @doc """
   Returns the internal type representation of our `Role` type for pg
@@ -35,8 +35,8 @@ defmodule Brando.Type.Status do
   def load(status) when is_integer(status) do
     case status do
       0 -> {:ok, :draft}
-      1 -> {:ok, :pending}
-      2 -> {:ok, :published}
+      1 -> {:ok, :published}
+      2 -> {:ok, :pending}
       3 -> {:ok, :deleted}
     end
   end

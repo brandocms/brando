@@ -12,8 +12,8 @@ defmodule Brando.News.Form.PostForm do
 
   def get_status_choices do
     [[value: "0", text: "Kladd"],
-     [value: "1", text: "Venter"],
-     [value: "2", text: "Publisert"],
+     [value: "1", text: "Publisert"],
+     [value: "2", text: "Venter"],
      [value: "3", text: "Slettet"]]
   end
 
