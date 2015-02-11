@@ -8,7 +8,6 @@ defmodule Brando.News.Model.Post do
   use Ecto.Model
   use Brando.Mugshots.Fields.ImageField
   import Ecto.Query, only: [from: 2]
-  alias Brando.Util
   alias Brando.Type.Status
   alias Brando.Users.Model.User
 
