@@ -4,10 +4,8 @@ defmodule Brando.News.Admin.PostController do
   """
 
   use Phoenix.Controller
-  import Brando.Plugs.Role
   import Brando.Util, only: [add_css: 2, add_js: 2]
 
-  plug :check_role, :superuser when action in [:new, :create, :delete]
   plug :action
 
   @doc false
@@ -28,8 +26,9 @@ defmodule Brando.News.Admin.PostController do
 
   @doc false
   def create(conn, %{"post" => post}) do
-    require Logger
-    Logger.debug(inspect(Poison.decode!(post["body"])))
+    model = conn.private[:model]
+    created_user = model.create(post, Brando.HTML.current_user(conn))
+
     conn
     |> add_css("villain/villain.css")
     |> add_js("villain/villain.js")

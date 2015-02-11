@@ -57,7 +57,7 @@ defmodule Brando.News.Model.Post do
   def changeset(model, :create, params) do
     params
     |> transform_checkbox_vals(~w(featured))
-    |> cast(model, ~w(status header data lead), ~w(featured))
+    |> cast(model, ~w(status header data lead creator_id), ~w(featured))
   end
 
   @doc """
@@ -72,7 +72,8 @@ defmodule Brando.News.Model.Post do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
     params
-    |> cast(model, [], ~w())
+    |> transform_checkbox_vals(~w(featured))
+    |> cast(model, [], ~w(status header data lead creator_id featured))
   end
 
   @doc """
@@ -80,7 +81,8 @@ defmodule Brando.News.Model.Post do
   If valid, generate a hashed password and insert model to Repo.
   If not valid, return errors from changeset
   """
-  def create(params) do
+  def create(params, current_user) do
+    params = put_creator(params, current_user)
     model_changeset = changeset(%__MODULE__{}, :create, params)
     case model_changeset.valid? do
       true ->
@@ -173,6 +175,12 @@ defmodule Brando.News.Model.Post do
       end
     end), %{})
   end
+
+  @doc """
+  Puts `id` from `current_user` in the `params` map.
+  """
+  def put_creator(params, current_user), do:
+    Map.put(params, "creator_id", current_user.id)
 
   @doc """
   Delete `model` from database. Also deletes any connected image fields,

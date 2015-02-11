@@ -10,6 +10,13 @@ defmodule Brando.News.Form.PostForm do
      [value: "en", text: "English"]]
   end
 
+  def get_status_choices do
+    [[value: "0", text: "Kladd"],
+     [value: "1", text: "Venter"],
+     [value: "2", text: "Publisert"],
+     [value: "3", text: "Slettet"]]
+  end
+
   form "post", [helper: :admin_post_path, class: "grid-form"] do
     fieldset [row_span: 4] do
       field :language, :select,
@@ -17,6 +24,13 @@ defmodule Brando.News.Form.PostForm do
         label: "Språk",
         default: "no",
         choices: &__MODULE__.get_language_choices/0]
+    end
+    fieldset [row_span: 4] do
+      field :status, :select,
+        [required: true,
+        label: "Status",
+        default: "2",
+        choices: &__MODULE__.get_status_choices/0]
     end
     fieldset [row_span: 4] do
       field :featured, :checkbox,
@@ -29,7 +43,7 @@ defmodule Brando.News.Form.PostForm do
        placeholder: "Overskrift"]
     field :lead, :textarea,
       [label: "Ingress"]
-    field :body, :textarea,
+    field :data, :textarea,
       [label: "Innhold"]
     submit "Lagre",
       [class: "btn btn-default"]

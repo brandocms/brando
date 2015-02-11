@@ -2,7 +2,7 @@
     <%= PostForm.get_form(action: :create, params: [], values: @post, errors: @errors) %>
        <script type="text/javascript">
            $(document).ready(function() {
-               v = new Villain.Editor({ textArea: 'textarea[name="post[body]"]' });
+               v = new Villain.Editor({ textArea: 'textarea[name="post[data]"]' });
            });
        </script>
     <!-- <div class="form-actions col-sm-offset-2">
