@@ -411,7 +411,7 @@ defmodule Brando.Form do
   """
   def render_radios(action, name, opts, value, _errors) do
     for choice <- get_choices(opts[:choices]) do
-      F.__radio__(action, name, choice[:value], choice[:text], value, opts[:default])
+      F.__radio__(action, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
     end
   end
 
