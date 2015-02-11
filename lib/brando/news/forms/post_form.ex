@@ -32,7 +32,7 @@ defmodule Brando.News.Form.PostForm do
         choices: &__MODULE__.get_language_choices/0]
     end
     fieldset [row_span: 4] do
-      field :status, :radio,
+      field :status, :select,
         [required: true,
         label: "Status",
         default: "2",
