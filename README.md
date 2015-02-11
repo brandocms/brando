@@ -140,11 +140,13 @@ config :brando,
   media_url: "/media",
   static_url: "/static",
   templates_path: "path/to/brando/templates",
-  use_modules: [MyApp.Admin, MyApp.Users, MyApp.MyModule],
-  menu_colors: ["#FBA026;", "#F87117;", "#CF3510;", "#890606;", "#FF1B79;",
-                "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
-                "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
-                "#870B46;", "#D0201A;", "#FF641A;"]
+
+config :brando, Brando.Menu,
+  colors: ["#FBA026;", "#F87117;", "#CF3510;", "#890606;", "#FF1B79;",
+           "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
+           "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
+           "#870B46;", "#D0201A;", "#FF641A;"],
+  modules: [Brando.Admin, Brando.Users, Brando.News]
 
 config :my_app, MyApp.Repo,
   database: "my_app",

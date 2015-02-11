@@ -7,7 +7,7 @@ defmodule Villain do
   """
   def parse(json) do
     {:ok, data} = Poison.decode(json)
-    parser_module = Brando.config(:villain_parser)
+    parser_module = Brando.config(Villain)[:parser]
     html = Enum.reduce(data, [], fn(d, acc) ->
       [apply(parser_module, String.to_atom(d["type"]), [d["data"]])|acc]
     end)
