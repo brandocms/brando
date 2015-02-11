@@ -27,7 +27,20 @@ defmodule Brando.News.Admin.PostController do
   @doc false
   def create(conn, %{"post" => post}) do
     model = conn.private[:model]
-    created_user = model.create(post, Brando.HTML.current_user(conn))
+    case model.create(post, Brando.HTML.current_user(conn)) do
+      {:ok, _} ->
+        conn
+        |> put_flash(:notice, "Post opprettet.")
+        |> redirect(to: router_module(conn).__helpers__.admin_post_path(conn, :index))
+      {:error, errors} ->
+        conn
+        |> assign(:post, post)
+        |> assign(:errors, errors)
+        |> add_css("villain/villain.css")
+        |> add_js("villain/villain.js")
+        |> put_flash(:error, "Feil i skjema")
+        |> render(:new)
+    end
 
     conn
     |> add_css("villain/villain.css")
