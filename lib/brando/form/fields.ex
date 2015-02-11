@@ -15,7 +15,7 @@ defmodule Brando.Form.Fields do
   @spec __form_group__(String.t, String.t, Keyword.t, Keyword.t) :: String.t
   def __form_group__(contents, _name, opts, errors) do
     """
-    <div data-field-span="1" class="form-group#{get_required(opts[:required])}#{get_has_error(errors)}">
+    <div data-field-span="1" class="form-group #{opts[:form_group_class] || ""}#{get_required(opts[:required])}#{get_has_error(errors)}">
       #{contents}
       #{__render_errors__(errors)}
     </div>

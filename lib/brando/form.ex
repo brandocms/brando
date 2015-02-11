@@ -325,7 +325,12 @@ defmodule Brando.Form do
     |> F.__data_row_span__(opts[:in_fieldset])
   end
 
+  @doc """
+  Render textarea.
+  Pass a form_group_class to ensure we don't set height on wrapper.
+  """
   def render_field(action, name, :textarea, opts, value, errors) do
+    opts = Keyword.put(opts, :form_group_class, "no-height")
     F.__textarea__(action, name, value, errors, opts)
     |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
     |> F.__form_group__(name, opts, errors)
