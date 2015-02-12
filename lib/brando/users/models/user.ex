@@ -51,7 +51,7 @@ defmodule Brando.Users.Model.User do
   def changeset(user, action, params \\ nil)
   def changeset(user, :create, params) do
     params
-    |> cast(user, ~w(username full_name email password), ~w(role))
+    |> cast(user, ~w(username full_name email password), ~w(role avatar))
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
     |> validate_unique(:email, on: Brando.get_repo())
@@ -71,7 +71,7 @@ defmodule Brando.Users.Model.User do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(user, :update, params) do
     params
-    |> cast(user, [], ~w(username full_name email password role))
+    |> cast(user, [], ~w(username full_name email password role avatar))
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
     |> validate_unique(:email, on: Brando.get_repo())
@@ -122,20 +122,18 @@ defmodule Brando.Users.Model.User do
   Also updates the affected fields in the database if `handle_upload`
   returns {:ok, file_url}
   """
-  def check_for_uploads(user, form_fields) do
-    form_fields = Enum.filter(form_fields, fn (form_field) ->
-      case form_field do
-        {_, %Plug.Upload{}} -> true
-        {_, _} -> false
-      end
-    end)
-
-    dict = Enum.reduce(form_fields, [], fn {field_name, plug}, dict ->
-      cfg = get_image_cfg(String.to_atom(field_name))
+  def check_for_uploads(model, form_fields) do
+    dict = Enum.reduce(filter_plugs(form_fields), [], fn {field_name, plug}, dict ->
+      f_name = String.to_atom(field_name)
+      cfg = get_image_cfg(f_name)
       case handle_upload(plug, cfg) do
         {:ok, file_url} ->
-          apply(__MODULE__, :update_field, [user, Keyword.new([{String.to_atom(field_name), file_url}])])
-          [file: {String.to_atom(field_name), file_url}] ++ dict
+          params = Map.put(%{}, Atom.to_string(f_name), file_url)
+          case model.id do
+            nil -> {:ok, entry} = apply(&create/1, [params])
+            _   -> {:ok, entry} = apply(&update/2, [model, params])
+          end
+          [entry|dict]
         {:error, error} ->
           [error: {String.to_atom(field_name), error}] ++ dict
       end
