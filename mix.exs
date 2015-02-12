@@ -33,7 +33,7 @@ defmodule Brando.Mixfile do
   defp deps do
     [
       {:postgrex, "~> 0.5"},
-      {:ecto, "~> 0.7"},
+      {:ecto, "~> 0.8"},
       {:cowboy, "~> 1.0"},
       #{:plug, "~> 0.9"},
       {:earmark, "~> 0.1"},
