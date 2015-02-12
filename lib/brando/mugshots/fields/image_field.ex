@@ -204,4 +204,16 @@ defmodule Brando.Mugshots.Fields.ImageField do
       File.rm!(sized_file)
     end
   end
+
+  @doc """
+  Filters out all fields except `%Plug.Upload{}` fields.
+  """
+  def filter_plugs(params) do
+    Enum.filter(params, fn (param) ->
+      case param do
+        {_, %Plug.Upload{}} -> true
+        {_, _} -> false
+      end
+    end)
+  end
 end

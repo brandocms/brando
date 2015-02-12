@@ -73,12 +73,7 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "create (post) w/params" do
-    up_plug =
-      %Plug.Upload{content_type: "image/png",
-                   filename: "sample.png",
-                   path: "#{Path.expand("../../../", __DIR__)}/fixtures/sample.png"}
-    up_params = Dict.put(@params, "avatar", up_plug)
-    conn = call_with_user(RouterHelper.TestRouter, :post, "/admin/brukere/", %{"user" => up_params})
+    conn = call_with_user(RouterHelper.TestRouter, :post, "/admin/brukere/", %{"user" => @params})
     assert conn.status == 302
     assert get_resp_header(conn, "Location") == ["/admin/brukere"]
     assert conn.path_info == ["admin", "brukere"]

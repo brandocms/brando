@@ -48,35 +48,7 @@ Create an initial migration for the `users` table:
 
     $ mix ecto.gen.migration add_users_table
 
-then add the following to the generated file: (old syntax)
-
-```elixir
-defmodule MyApp.Repo.Migrations.AddUsersTable do
-  use Ecto.Migration
-
-  def up do
-    ["CREATE TABLE users (
-        id serial PRIMARY KEY,
-        username text,
-        full_name text,
-        email text UNIQUE,
-        password text,
-        avatar text,
-        role integer,
-        last_login timestamp,
-        inserted_at timestamp,
-        updated_at timestamp)",
-
-      "CREATE UNIQUE INDEX ON users (lower(username))"]
-  end
-
-  def down do
-    "DROP TABLE IF EXISTS users"
-  end
-end
-```
-
-or new syntax (~> 0.6.0):
+then add the following to the generated file
 
 ```elixir
 defmodule MyApp.Repo.Migrations.AddUsersTable do
@@ -125,9 +97,9 @@ end
 
 scope "/admin", as: :admin do
   pipe_through :admin
+  # only pass private if you need a custom model.
   users_resources "/brukere", private: %{model: Brando.Users.Model.User}
   get "/", Brando.Dashboard.Admin.DashboardController, :dashboard
-
 end
 
 scope "/" do
@@ -168,17 +140,98 @@ config :brando,
   media_url: "/media",
   static_url: "/static",
   templates_path: "path/to/brando/templates",
-  use_modules: [MyApp.Admin, MyApp.Users, MyApp.MyModule],
-  menu_colors: ["#FBA026;", "#F87117;", "#CF3510;", "#890606;", "#FF1B79;",
-                "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
-                "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
-                "#870B46;", "#D0201A;", "#FF641A;"]
+
+config :brando, Brando.Menu,
+  colors: ["#FBA026;", "#F87117;", "#CF3510;", "#890606;", "#FF1B79;",
+           "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
+           "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
+           "#870B46;", "#D0201A;", "#FF641A;"],
+  modules: [Brando.Admin, Brando.Users, Brando.News]
 
 config :my_app, MyApp.Repo,
   database: "my_app",
   username: "postgres",
   password: "postgres",
   hostname: "localhost"
+```
+
+News
+====
+
+Create an initial migration for the `posts` & `postimages` table:
+
+    $ mix ecto.gen.migration add_posts_table
+    $ mix ecto.gen.migration add_postimages_table
+
+then add the following to the generated files:
+
+```elixir
+# posts
+defmodule MyApp.Repo.Migrations.AddPostsTable do
+  use Ecto.Migration
+
+  def up do
+    create table(:posts) do
+      add :language,          :text
+      add :header,            :text
+      add :slug,              :text
+      add :lead,              :text
+      add :data,              :json
+      add :html,              :text
+      add :cover,             :text
+      add :status,            :integer
+      add :creator_id,        references(:users)
+      add :meta_description,  :text
+      add :meta_keywords,     :text
+      add :featured,          :boolean
+      add :published,         :boolean
+      add :publish_at,        :datetime
+      timestamps
+    end
+    create index(:posts, [:language])
+    create index(:posts, [:slug])
+    create index(:posts, [:status])
+  end
+
+  def down do
+    drop table(:posts)
+    drop index(:posts, [:language])
+    drop index(:posts, [:slug])
+    drop index(:posts, [:status])
+  end
+end
+
+# postimages
+defmodule MyApp.Repo.Migrations.AddPostimagesTable do
+  use Ecto.Migration
+
+  def up do
+    create table(:postimages) do
+      add :title,              :text
+      add :credits,            :text
+      add :image,              :text
+      timestamps
+    end
+  end
+
+  def down do
+    drop table(:postimages)
+  end
+end
+```
+
+Now run the migrations:
+
+    $ mix ecto.migrate
+
+Add to your `router.ex` in your `admin` scope:
+
+```elixir
+scope "/admin", as: :admin do
+  # (...)
+  # only pass private if you need a custom model.
+  news_resources "/nyheter", private: %{model: Brando.Users.Model.User}
+end
 ```
 
 Mugshots

@@ -14,11 +14,13 @@
 
     <script type="text/javascript" src="/static/brando/js/jquery.min.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/gridforms.js" charset="utf-8"></script>
+    <script type="text/javascript" src="/static/brando/js/to-markdown.js" charset="utf-8"></script>
+    <script type="text/javascript" src="/static/brando/js/markdown.min.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/dropdown.js" charset="utf-8"></script>
 
-    <script type="text/javascript" src="/static/brando/js/libs/jquery/jquery.slugit.js" charset="utf-8"></script>
+<!--     <script type="text/javascript" src="/static/brando/js/libs/jquery/jquery.slugit.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/libs/jquery/jquery.debounce-1.0.5.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/brando/js/libs/jquery/jquery.autocomplete.min.js" charset="utf-8"></script>
+    <script type="text/javascript" src="/static/brando/js/libs/jquery/jquery.autocomplete.min.js" charset="utf-8"></script> -->
     <script type="text/javascript" src="/static/brando/js/libs/backbone/underscore.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/libs/backbone/backbone.js" charset="utf-8"></script>
 

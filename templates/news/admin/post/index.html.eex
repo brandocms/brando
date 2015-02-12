@@ -1,0 +1,94 @@
+    <h1>Postoversikt</h1>
+<%= if @posts != [] do %>
+    <div class="status-indicators">
+      <span class="m-r-sm"><span class="status-published"><i class="fa fa-circle m-r-sm"> </i> </span> Publisert</span>
+      <span class="m-r-sm"><span class="status-pending"><i class="fa fa-circle m-r-sm"> </i> </span> Venter</span>
+      <span class="m-r-sm"><span class="status-draft"><i class="fa fa-circle m-r-sm"> </i> </span> Utkast</span>
+      <span class="m-r-sm"><span class="status-deleted"><i class="fa fa-circle m-r-sm"> </i> </span> Slettet</span>
+    </div>
+    <table class="table table-striped">
+      <colgroup>
+      <col span="1" style="width: 50px; font-weight: bold;">
+      <col span="1" style="width: 40px;">
+      <col span="1" style="width: 40px;">
+      <col span="1" style="">
+      <col span="2" style="width: 60px;">
+      <col span="1" style="width: 40px;">
+    </colgroup>
+    <thead>
+      <tr>
+        <th class="text-center">&#8470;</th>
+        <th><!-- status --></th>
+        <th><!-- promoted post --></th>
+        <th>Overskrift</th>
+        <th>Opprettet</th>
+        <th>Bruker</th>
+        <th><!-- menu --></th>
+        </tr>
+      </thead>
+      <tbody>
+        <%= for post <- @posts do %>
+        <tr>
+          <td class="text-center text-mono"><small><span class="text-muted">#</span><%= zero_pad(post.id) %></small></td>
+          <td class="text-center">
+            <div class="dropdown">
+            <a class="dropdown-toggle" data-toggle="dropdown">
+            <i class="fa fa-circle status-<%= Atom.to_string(post.status) %>"></i>
+          </a>
+          <ul class="dropdown-menu" style="left: 0; right: auto;">
+            <li><a href=""><i class="fa fa-circle m-r-sm status-draft %>"></i> Kladd</a></li>
+            <li><a href=""><i class="fa fa-circle m-r-sm status-published %>"></i> Publisert</a></li>
+            <li><a href=""><i class="fa fa-circle m-r-sm status-pending %>"></i> Venter</a></li>
+            <li><a href=""><i class="fa fa-circle m-r-sm status-deleted %>"></i> Slettet</a></li>
+          </ul>
+          </td>
+          <td class="text-center"><%= if post.featured do %><i class="fa fa-star text-warning"></i><% end %></td>
+          <td><%= post.header %></td>
+          <td><%= format_date(post.inserted_at) %></td>
+          <td><%= post.creator.username %></td>
+          <td>
+            <div class="dropdown">
+              <a class="dropdown-toggle ddbutton" data-toggle="dropdown">
+                <i class="fa fa-bars"></i>
+              </a>
+              <ul class="dropdown-menu" style="right: 0; left: auto;">
+                <li>
+                <a href="<%= helpers(@conn).admin_post_path @conn, :show, post.id %>">
+                    <i class="fa fa-search m-r-sm"> </i>
+                    Vis post
+                  </a>
+                </li>
+                <li>
+                  <a href="<%= helpers(@conn).admin_post_path @conn, :edit, post.id %>">
+                    <i class="fa fa-edit m-r-sm"> </i>
+                    Endre post
+                  </a>
+                </li>
+
+                <li class="divider"></li>
+
+                  <form method="POST" action="<%= helpers(@conn).admin_post_path @conn, :delete, post.id %>">
+                    <input type="hidden" name="_method" value="delete" />
+                    <li>
+                    <button>
+                      <i class="fa fa-trash-o m-r-sm"> </i>
+                      Slett post
+                    </button>
+                    </li>
+                  </form>
+
+              </ul>
+            </div>
+          </td>
+        </tr>
+        <% end %>
+      </tbody>
+    </table>
+<% else %>
+    <p>Ingen poster</p>
+<% end %>
+    <div class="form-actions">
+      <a href="<%= helpers(@conn).admin_post_path @conn, :new %>" class="btn btn-primary">
+        <i class="fa fa-plus m-r-xs"></i> Ny post
+      </a>
+    </div>

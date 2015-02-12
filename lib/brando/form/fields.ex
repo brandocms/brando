@@ -15,7 +15,7 @@ defmodule Brando.Form.Fields do
   @spec __form_group__(String.t, String.t, Keyword.t, Keyword.t) :: String.t
   def __form_group__(contents, _name, opts, errors) do
     """
-    <div data-field-span="1" class="form-group#{get_required(opts[:required])}#{get_has_error(errors)}">
+    <div data-field-span="1" class="form-group#{get_form_group_class(opts[:form_group_class])}#{get_required(opts[:required])}#{get_has_error(errors)}">
       #{contents}
       #{__render_errors__(errors)}
     </div>
@@ -39,10 +39,11 @@ defmodule Brando.Form.Fields do
   @spec __parse_error__({atom, term} | atom) :: String.t
   def __parse_error__(error) do
     case error do
-      :required -> "Feltet er påkrevet."
-      :unique   -> "Feltet må være unikt. Verdien finnes allerede i databasen."
-      :format   -> "Feltet har feil format."
+      :required            -> "Feltet er påkrevet."
+      :unique              -> "Feltet må være unikt. Verdien finnes allerede i databasen."
+      :format              -> "Feltet har feil format."
       {:too_short, length} -> "Feltets verdi er for kort. Må være > #{length} tegn."
+      err                  -> inspect(err)
     end
   end
 
@@ -137,33 +138,60 @@ defmodule Brando.Form.Fields do
     end
   end
 
-  def __option__(:update, choice_value, choice_text, value, _default) do
-    ~s(<option value="#{choice_value}"#{get_selected(choice_value, value)}>#{choice_text}</option>)
+  def __option__(action, choice_value, choice_text, value, default, is_selected_fun \\ nil)
+  def __option__(:update, choice_value, choice_text, value, _default, is_selected_fun) do
+    if is_selected_fun do
+      selected = case is_selected_fun.(choice_value, value) do
+        true  -> " " <> "selected"
+        false -> ""
+      end
+    else
+      selected = get_selected(choice_value, value)
+    end
+    ~s(<option value="#{choice_value}"#{selected}>#{choice_text}</option>)
   end
 
   # no `value` - :create - match `choice_value` to `default`
-  def __option__(:create, choice_value, choice_text, [], default) do
+  def __option__(:create, choice_value, choice_text, [], default, _) do
     ~s(<option value="#{choice_value}"#{get_selected(choice_value, default)}>#{choice_text}</option>)
   end
 
-  def __option__(:create, choice_value, choice_text, value, _default) do
+  def __option__(:create, choice_value, choice_text, value, _default, _) do
     ~s(<option value="#{choice_value}"#{get_selected(choice_value, value)}>#{choice_text}</option>)
   end
 
-  def __radio__(:create, name, choice_value, choice_text, [], default) do
+  def __radio__(action, name, choice_value, choice_text, value, default, is_selected_fun \\ nil)
+  def __radio__(:create, name, choice_value, choice_text, [], default, _) do
     ~s(<div class="radio"><label for="#{name}"></label><label for="#{name}"><input name="#{name}" type="radio" value="#{choice_value}"#{get_checked(choice_value, default)} />#{choice_text}</label></div>)
   end
 
-  def __radio__(_, name, choice_value, choice_text, value, _default) do
-    ~s(<div class="radio"><label for="#{name}"></label><label for="#{name}"><input name="#{name}" type="radio" value="#{choice_value}"#{get_checked(choice_value, value)} />#{choice_text}</label></div>)
+  def __radio__(_, name, choice_value, choice_text, value, _default, is_selected_fun) do
+    if is_selected_fun do
+      checked = case is_selected_fun.(choice_value, value) do
+        true  -> " " <> "checked"
+        false -> ""
+      end
+    else
+      checked = get_checked(choice_value, value)
+    end
+    ~s(<div class="radio"><label for="#{name}"></label><label for="#{name}"><input name="#{name}" type="radio" value="#{choice_value}"#{checked} />#{choice_text}</label></div>)
   end
 
-  def __checkbox__(:create, name, choice_value, choice_text, [], default) do
+  def __checkbox__(action, name, choice_value, choice_text, value, default, is_selected_fun \\ nil)
+  def __checkbox__(:create, name, choice_value, choice_text, [], default, _) do
     ~s(<div class="checkboxes"><label for="#{name}[]"></label><label for="#{name}[]"><input name="#{name}[]" type="checkbox" value="#{choice_value}"#{get_checked(choice_value, default)} />#{choice_text}</label></div>)
   end
 
-  def __checkbox__(_, name, choice_value, choice_text, value, _default) do
-    ~s(<div class="checkboxes"><label for="#{name}[]"></label><label for="#{name}[]"><input name="#{name}[]" type="checkbox" value="#{choice_value}"#{get_checked(choice_value, value)} />#{choice_text}</label></div>)
+  def __checkbox__(_, name, choice_value, choice_text, value, _default, is_selected_fun) do
+    if is_selected_fun do
+      checked = case is_selected_fun.(choice_value, value) do
+        true  -> " " <> "checked"
+        false -> ""
+      end
+    else
+      checked = get_checked(choice_value, value)
+    end
+    ~s(<div class="checkboxes"><label for="#{name}[]"></label><label for="#{name}[]"><input name="#{name}[]" type="checkbox" value="#{choice_value}"#{checked} />#{choice_text}</label></div>)
   end
 
   def __fieldset_open__(nil, in_fieldset) do
@@ -268,5 +296,11 @@ defmodule Brando.Form.Fields do
   def get_value(nil), do: ""
   def get_value(value) when is_map(value), do: ""
   def get_value(value), do: " " <> "value=\"#{value}\""
+
+  @doc """
+  Return form_group_class as `value`, if present.
+  """
+  def get_form_group_class(nil), do: ""
+  def get_form_group_class(value), do: " " <> value
 
 end

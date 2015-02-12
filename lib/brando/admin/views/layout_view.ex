@@ -6,17 +6,17 @@ defmodule Brando.Admin.LayoutView do
 
   @doc """
   Returns menus for admin.
-  Modules are registered with `:user_modules` in `config.exs`
+  Modules are registered with `:modules` in `config.exs`
 
   ## Example:
 
-      config :brando,
-        use_modules: [Brando.Admin, Brando.Users]
+      config :brando, Brando.Menu,
+        modules: [Brando.Admin, Brando.Users]
 
   """
   def get_menus do
-    modules = Brando.config(:use_modules)
-    colors = Brando.config(:menu_colors)
+    modules = Brando.config(Brando.Menu)[:modules]
+    colors = Brando.config(Brando.Menu)[:colors]
     for {mod, color} <- Enum.zip(modules, colors) do
       {color, Module.concat(mod, "Menu").get_menu}
     end

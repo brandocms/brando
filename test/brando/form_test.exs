@@ -185,7 +185,7 @@ defmodule Brando.FormTest do
 
   test "get_form" do
     assert TestForm.get_form(action: :create, params: [], values: nil, errors: nil) == {:safe,
-      "<form class=\"grid-form\" role=\"form\" action=\"/admin/brukere\" method=\"POST\"><fieldset><legend><br>Brukerinfo</legend><div data-row-span=\"2\">\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[full_name]\" class=\"\">Fullt navn</label><input name=\"test[full_name]\" type=\"text\" placeholder=\"Fullt navn\" />\n  \n</div>\n\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[username]\" class=\"\">Brukernavn</label><input name=\"test[username]\" type=\"text\" placeholder=\"Brukernavn\" />\n  \n</div>\n\n<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <input name=\"test[submit]\" type=\"submit\" />\n  \n</div>\n</div>\n</div></fieldset></form>"}
+            "<form class=\"grid-form\" role=\"form\" action=\"/admin/brukere\" method=\"POST\"><fieldset><legend><br>Brukerinfo</legend><div data-row-span=\"2\">\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[full_name]\" class=\"\">Fullt navn</label><input name=\"test[full_name]\" type=\"text\" placeholder=\"Fullt navn\" />\n  \n</div>\n\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[username]\" class=\"\">Brukernavn</label><input name=\"test[username]\" type=\"text\" placeholder=\"Brukernavn\" />\n  \n</div>\n\n<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <input name=\"test[submit]\" type=\"submit\" />\n  \n</div>\n</div>\n</div></fieldset></form>"}
   end
 
   test "method_override/1" do

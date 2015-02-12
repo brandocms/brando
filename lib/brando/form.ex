@@ -130,6 +130,10 @@ defmodule Brando.Form do
         * `multiple` - Multiple checkboxes.
                        Gets labels/values from `choices` option
         * `choices` - &__MODULE__.get_status_choices/0
+        * `is_selected` - Pass a function that checks if `value` is selected.
+                          The function gets passed the checkbox's value, and
+                          the model's value.
+                          &__MODULE__.status_is_selected/2
         * `label`: "Label for field"
         * `default`: true/false. Set as a value when using `multiple`.
           - ex: "2"
@@ -141,6 +145,10 @@ defmodule Brando.Form do
         * `choices` - &__MODULE__.get_status_choices/0
                      Points to `get_status_choices/0` function
                      in the module the form was defined.
+        * `is_selected` - Pass a function that checks if `value` is selected.
+                          The function gets passed the option's value, and
+                          the model's value.
+                          &__MODULE__.status_is_selected/2
         * `default` - "1"
         * `label` - "Label for the select"
 
@@ -325,7 +333,12 @@ defmodule Brando.Form do
     |> F.__data_row_span__(opts[:in_fieldset])
   end
 
+  @doc """
+  Render textarea.
+  Pass a form_group_class to ensure we don't set height on wrapper.
+  """
   def render_field(action, name, :textarea, opts, value, errors) do
+    opts = Keyword.put(opts, :form_group_class, "no-height")
     F.__textarea__(action, name, value, errors, opts)
     |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
     |> F.__form_group__(name, opts, errors)
@@ -389,7 +402,7 @@ defmodule Brando.Form do
   """
   def render_options(action, opts, value, _errors) do
     for choice <- get_choices(opts[:choices]) do
-      F.__option__(action, choice[:value], choice[:text], value, opts[:default])
+      F.__option__(action, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
     end
   end
 
@@ -398,7 +411,7 @@ defmodule Brando.Form do
   """
   def render_radios(action, name, opts, value, _errors) do
     for choice <- get_choices(opts[:choices]) do
-      F.__radio__(action, name, choice[:value], choice[:text], value, opts[:default])
+      F.__radio__(action, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
     end
   end
 
@@ -407,7 +420,7 @@ defmodule Brando.Form do
   """
   def render_checks(action, name, opts, value, _errors) do
     for choice <- get_choices(opts[:choices]) do
-      F.__checkbox__(action, name, choice[:value], choice[:text], value, opts[:default])
+      F.__checkbox__(action, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
     end
   end
 end

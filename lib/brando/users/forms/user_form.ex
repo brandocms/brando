@@ -3,13 +3,31 @@ defmodule Brando.Users.Form.UserForm do
   A form for the User model. See the `Brando.Form` module for more
   documentation
   """
+  use Bitwise, only_operators: true
   use Brando.Form
+
+
+  @roles %{staff: 1, admin: 2, superuser: 4}
 
   @doc false
   def get_role_choices do
     [[value: "1", text: "Staff"],
      [value: "2", text: "Admin"],
      [value: "4", text: "Superuser"]]
+  end
+
+  @doc false
+  def role_selected?(choice_value, values) do
+    # first make an int out of the values list
+    role_int = Enum.reduce(values, 0, fn (role, acc) ->
+      case is_atom(role) do
+        true  -> acc + @roles[role]
+        false -> acc
+      end
+    end)
+    # choice_value to int
+    choice_int = String.to_integer(choice_value)
+    (role_int &&& choice_int) == choice_int
   end
 
   form "user", [helper: :admin_user_path, class: "grid-form"] do
@@ -36,7 +54,8 @@ defmodule Brando.Users.Form.UserForm do
 
     field :role, :checkbox,
       [choices: &__MODULE__.get_role_choices/0,
-      label: "Rolle", multiple: true]
+       is_selected: &__MODULE__.role_selected?/2,
+       label: "Rolle", multiple: true]
     field :avatar, :file,
       [label: "Bilde"]
     submit "Lagre",
