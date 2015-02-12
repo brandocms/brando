@@ -100,12 +100,12 @@ defmodule Brando.Integration.UserTest do
                    filename: "sample.png",
                    path: "#{Path.expand("../../../", __DIR__)}/fixtures/sample.png"}
     up_params = Dict.put(@params, "avatar", up_plug)
-    assert {:ok, dict} = User.check_for_uploads(user, up_params)
+    assert {:ok, [dict]} = User.check_for_uploads(user, up_params)
     user = User.get(email: "fanogigyni@gmail.com")
-    assert user.avatar == elem(dict[:file], 1)
-    assert File.exists?(Path.join([Brando.Mugshots.Utils.get_media_abspath, elem(dict[:file], 1)]))
+    assert user.avatar == dict.avatar
+    assert File.exists?(Path.join([Brando.Mugshots.Utils.get_media_abspath, dict.avatar]))
     User.delete(user)
-    refute File.exists?(Path.join([Brando.Mugshots.Utils.get_media_abspath, elem(dict[:file], 1)]))
+    refute File.exists?(Path.join([Brando.Mugshots.Utils.get_media_abspath, dict.avatar]))
   end
 
   test "check_for_uploads/2 error" do
