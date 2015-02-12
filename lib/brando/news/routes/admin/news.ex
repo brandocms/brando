@@ -44,16 +44,19 @@ defmodule Brando.News.Admin.Routes do
       path = resource.path
       ctrl = resource.controller
       opts = resource.route
+      actions = [:index, :edit, :new, :upload_image,
+                 :show, :create, :update, :delete]
 
-      Enum.each resource.actions, fn action ->
+      Enum.each actions, fn action ->
         case action do
-          :index   -> get    "#{path}",                ctrl, :index, opts
-          :show    -> get    "#{path}/:#{parm}",       ctrl, :show, opts
-          :new     -> get    "#{path}/ny",             ctrl, :new, opts
-          :edit    -> get    "#{path}/:#{parm}/endre", ctrl, :edit, opts
-          :create  -> post   "#{path}",                ctrl, :create, opts
-          :delete  -> delete "#{path}/:#{parm}",       ctrl, :delete, opts
-          :update  ->
+          :index        -> get    "#{path}",                  ctrl, :index, opts
+          :upload_image -> post   "#{path}/last-opp/bilde/",  ctrl, :upload_image, opts
+          :show         -> get    "#{path}/:#{parm}",         ctrl, :show, opts
+          :new          -> get    "#{path}/ny",               ctrl, :new, opts
+          :edit         -> get    "#{path}/:#{parm}/endre",   ctrl, :edit, opts
+          :create       -> post   "#{path}",                  ctrl, :create, opts
+          :delete       -> delete "#{path}/:#{parm}",         ctrl, :delete, opts
+          :update       ->
             patch "#{path}/:#{parm}", ctrl, :update, opts
             put   "#{path}/:#{parm}", ctrl, :update, Keyword.put(opts, :as, nil)
         end
