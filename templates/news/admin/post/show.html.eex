@@ -1,0 +1,49 @@
+
+    <h1>Vis post</h1>
+    <table class="table table-show">
+      <tr>
+        <td class="small b-r b-light text-uc text-right col-sm-2" style="padding:15px;">
+          Overskrift
+        </td>
+        <td class="text-mono">
+          <%= @post.header %>
+        </td>
+      </tr>
+      <tr>
+        <td class="small b-r b-light text-uc text-right" style="padding:15px;">
+          Brukernavn
+        </td>
+        <td>
+          <%= @post.creator.username %>
+        </td>
+      </tr>
+      <tr>
+        <td class="small b-r b-light text-uc text-right" style="padding:15px;">
+          Ingress
+        </td>
+        <td class="text-mono">
+          <%= @post.lead %>
+        </td>
+      </tr>
+      <tr>
+        <td class="small b-r b-light text-uc text-right" style="padding:15px;">
+          Innhold
+        </td>
+        <td class="text-mono">
+          <%= @post.html %>
+        </td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>
+          <div class="form-actions">
+            <a href="<%= helpers(@conn).admin_post_path(@conn, :index) %>" class="btn btn-default">
+              <i class="fa fa-list fa-fw m-r-sm"></i> Tilbake til oversikten
+            </a>
+            <a href="<%= helpers(@conn).admin_post_path(@conn, :edit, @post.id) %>" class="btn btn-default">
+              <i class="fa fa-edit fa-fw m-r-sm"></i> Editer post
+            </a>
+          </div>
+        </td>
+      </tr>
+    </table>

@@ -17,6 +17,14 @@ defmodule Brando.News.Admin.PostController do
   end
 
   @doc false
+  def show(conn, %{"id" => id}) do
+    model = conn.private[:model]
+    conn
+    |> assign(:post, model.get(id: id))
+    |> render(:show)
+  end
+
+  @doc false
   def new(conn, _params) do
     conn
     |> add_css("villain/villain.css")
@@ -51,13 +59,16 @@ defmodule Brando.News.Admin.PostController do
   @doc false
   def edit(conn, %{"id" => id}) do
     model = conn.private[:model]
-    post = model.get(id: String.to_integer(id))
-    conn
-    |> add_css("villain/villain.css")
-    |> add_js("villain/villain.js")
-    |> assign(:post, post)
-    |> assign(:id, id)
-    |> render(:edit)
+    if post = model.get(id: String.to_integer(id)) do
+      conn
+      |> add_css("villain/villain.css")
+      |> add_js("villain/villain.js")
+      |> assign(:post, post)
+      |> assign(:id, id)
+      |> render(:edit)
+    else
+      conn |> put_status(:not_found) |> render(:not_found)
+    end
   end
 
   @doc false
@@ -89,6 +100,11 @@ defmodule Brando.News.Admin.PostController do
     conn
     |> put_flash(:notice, "Post #{post.header} slettet.")
     |> redirect(to: router_module(conn).__helpers__.admin_post_path(conn, :index))
+  end
+
+  @doc false
+  def not_found(conn, _params) do
+    render conn, "not_found"
   end
 
 end
