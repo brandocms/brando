@@ -38,7 +38,7 @@ defmodule Brando.Mixfile do
       #{:plug, "~> 0.9"},
       {:earmark, "~> 0.1"},
       {:plug, github: "elixir-lang/plug", override: true},
-      {:phoenix, github: "phoenixframework/phoenix"},
+      {:phoenix, "~> 0.9"},
       {:mogrify, github: "twined/mogrify"},
       {:bcrypt, github: "opscode/erlang-bcrypt"},
       {:dialyze, "~> 0.1.3", only: :dev},
