@@ -2,10 +2,12 @@ defmodule Brando.News.Admin.PostController do
   @moduledoc """
   Controller for the Brando News module.
   """
-
-  use Phoenix.Controller
-  import Brando.Util, only: [add_css: 2, add_js: 2]
   alias Brando.News.Model.PostImage
+  use Phoenix.Controller
+  use Villain.Controller,
+    model: PostImage,
+    struct: %PostImage{}
+  import Brando.Util, only: [add_css: 2, add_js: 2]
 
   plug :action
 
@@ -101,31 +103,6 @@ defmodule Brando.News.Admin.PostController do
     conn
     |> put_flash(:notice, "Post #{post.header} slettet.")
     |> redirect(to: router_module(conn).__helpers__.admin_post_path(conn, :index))
-  end
-
-  def upload_image(conn, %{"uid" => uid} = params) do
-    {:ok, [image]} = PostImage.check_for_uploads(%PostImage{}, params)
-    json conn,
-      %{status: "200",
-        uid: uid,
-        image: %{id: image.id, src: Brando.HTML.media_url(image.image)},
-        form: %{
-          method: "post",
-          action: "last-opp/bildedata/",
-          name: "villain-imagedata",
-          fields: [
-            %{name: "title",
-              type: "text",
-              label: "Tittel",
-              value: ""},
-            %{name: "credits",
-              type: "text",
-              label: "Krediteringer",
-              value: ""
-            }
-          ]
-        }
-      }
   end
 
   @doc false
