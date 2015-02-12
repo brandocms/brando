@@ -6,6 +6,8 @@ defmodule Villain do
   Returns HTML.
   """
   @spec parse(String.t) :: String.t
+  def parse(""), do: ""
+  def parse(nil), do: ""
   def parse(json) do
     {:ok, data} = Poison.decode(json)
     parser_module = Brando.config(Villain)[:parser]
