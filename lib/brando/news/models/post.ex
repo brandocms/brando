@@ -29,8 +29,8 @@ defmodule Brando.News.Model.Post do
     timestamps
   end
 
-  before_insert __MODULE__, :generate_html
-  before_update __MODULE__, :generate_html
+  before_insert :generate_html
+  before_update :generate_html
 
   has_image_field :cover,
     [allowed_mimetypes: ["image/jpeg", "image/png"],
