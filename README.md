@@ -158,13 +158,15 @@ config :my_app, MyApp.Repo,
 News
 ====
 
-Create an initial migration for the `posts` table:
+Create an initial migration for the `posts` & `postimages` table:
 
     $ mix ecto.gen.migration add_posts_table
+    $ mix ecto.gen.migration add_postimages_table
 
-then add the following to the generated file:
+then add the following to the generated files:
 
 ```elixir
+# posts
 defmodule MyApp.Repo.Migrations.AddPostsTable do
   use Ecto.Migration
 
@@ -178,7 +180,7 @@ defmodule MyApp.Repo.Migrations.AddPostsTable do
       add :html,              :text
       add :cover,             :text
       add :status,            :integer
-      add :creator_id,        references(:user)
+      add :creator_id,        references(:users)
       add :meta_description,  :text
       add :meta_keywords,     :text
       add :featured,          :boolean
@@ -198,9 +200,27 @@ defmodule MyApp.Repo.Migrations.AddPostsTable do
     drop index(:posts, [:status])
   end
 end
+
+# postimages
+defmodule MyApp.Repo.Migrations.AddPostimagesTable do
+  use Ecto.Migration
+
+  def up do
+    create table(:postimages) do
+      add :title,              :text
+      add :credits,            :text
+      add :image,              :text
+      timestamps
+    end
+  end
+
+  def down do
+    drop table(:postimages)
+  end
+end
 ```
 
-Now run the migration:
+Now run the migrations:
 
     $ mix ecto.migrate
 
