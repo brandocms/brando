@@ -17,6 +17,7 @@ defmodule Brando.News.Model.Post do
     field :slug, :string
     field :lead, :string
     field :data, :string
+    field :html, :string
     field :cover, :string
     field :status, Status
     belongs_to :creator, User
@@ -27,6 +28,9 @@ defmodule Brando.News.Model.Post do
     field :publish_at, Ecto.DateTime
     timestamps
   end
+
+  before_insert __MODULE__, :generate_html
+  before_update __MODULE__, :generate_html
 
   has_image_field :cover,
     [allowed_mimetypes: ["image/jpeg", "image/png"],
@@ -42,6 +46,15 @@ defmodule Brando.News.Model.Post do
        thumb:  [size: "150x150^ -gravity center -extent 150x150", quality: 100, crop: true]
     ]
   ]
+
+  @doc """
+  Callback from before_insert/before_update to generate HTML.
+  Takes the model's `json` field and transforms to `html`.
+  """
+
+  def generate_html(changeset) do
+    changeset |> put_change(:html, Villain.parse(changeset.changes.data))
+  end
 
   @doc """
   Casts and validates `params` against `model` to create a valid

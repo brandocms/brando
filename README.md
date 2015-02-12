@@ -175,6 +175,7 @@ defmodule MyApp.Repo.Migrations.AddPostsTable do
       add :slug,              :text
       add :lead,              :text
       add :data,              :json
+      add :html,              :text
       add :cover,             :text
       add :status,            :integer
       add :creator_id,        references(:user)
