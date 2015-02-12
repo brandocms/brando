@@ -39,10 +39,11 @@ defmodule Brando.Form.Fields do
   @spec __parse_error__({atom, term} | atom) :: String.t
   def __parse_error__(error) do
     case error do
-      :required -> "Feltet er påkrevet."
-      :unique   -> "Feltet må være unikt. Verdien finnes allerede i databasen."
-      :format   -> "Feltet har feil format."
+      :required            -> "Feltet er påkrevet."
+      :unique              -> "Feltet må være unikt. Verdien finnes allerede i databasen."
+      :format              -> "Feltet har feil format."
       {:too_short, length} -> "Feltets verdi er for kort. Må være > #{length} tegn."
+      err                  -> inspect(err)
     end
   end
 
