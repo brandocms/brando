@@ -2,6 +2,7 @@ defmodule Brando.Integration.UserTest do
   use ExUnit.Case
   use Brando.Integration.TestCase
   alias Brando.Users.Model.User
+
   @params %{"avatar" => "", "role" => ["2", "4"],
             "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
             "password" => "finimeze", "status" => "1",
@@ -32,24 +33,6 @@ defmodule Brando.Integration.UserTest do
     params = Dict.put @params, "email", "asdf"
     assert {:error, err} = User.update(user, params)
     assert err == [email: :format]
-  end
-
-  test "update_field/2" do
-    assert {:ok, user} = User.create(@params)
-    assert {:ok, model} = User.update_field(user, [full_name: "James Bond"])
-    assert model.full_name == "James Bond"
-  end
-
-  test "transform_checkbox_vals/2" do
-    params =
-      %{"avatar" => "", "role" => ["2", "4"], "editor" => "on",
-        "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
-        "password" => "finimeze", "status" => "1",
-        "submit" => "Submit", "username" => "zabuzasixu"}
-    assert User.transform_checkbox_vals(params, ~w(administrator editor)) ==
-      %{"avatar" => "", "editor" => true, "email" => "fanogigyni@gmail.com",
-        "full_name" => "Nita Bond", "password" => "finimeze", "role" => ["2", "4"],
-        "status" => "1", "submit" => "Submit", "username" => "zabuzasixu"}
   end
 
   test "get/1" do

@@ -129,38 +129,6 @@ defmodule Brando.Users.Model.User do
   end
 
   @doc """
-  Updates a field on `model`.
-  `coll` should be [field_name: value]
-
-  ## Example:
-
-      {:ok, model} = update_field(model, [field_name: "value"])
-
-  """
-  def update_field(model, coll) do
-    changeset = change(model, coll)
-    {:ok, Brando.get_repo.update(changeset)}
-  end
-
-  @doc """
-  Checkbox values from forms come with value => "on". This transforms
-  them into bool values if params[key] is in keys.
-
-  # Example:
-
-      transform_checkbox_vals(params, ~w(administrator editor))
-
-  """
-  def transform_checkbox_vals(params, keys) do
-    Enum.into(Enum.map(params, fn({k, v}) ->
-      case k in keys and v == "on" do
-        true  -> {k, true}
-        false -> {k, v}
-      end
-    end), %{})
-  end
-
-  @doc """
   Get user from DB by `username`
   """
   def get(username: username) do
@@ -216,7 +184,7 @@ defmodule Brando.Users.Model.User do
   """
   @spec set_last_login(t) :: t
   def set_last_login(user) do
-    {:ok, user} = update_field(user, [last_login: Ecto.DateTime.local])
+    {:ok, user} = Utils.Model.update_field(user, [last_login: Ecto.DateTime.local])
     user
   end
 

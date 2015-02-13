@@ -10,6 +10,7 @@ defmodule Brando.News.Model.Post do
   import Ecto.Query, only: [from: 2]
   alias Brando.Type.Status
   alias Brando.Users.Model.User
+  alias Brando.Utils
 
   schema "posts" do
     field :language, :string
@@ -69,7 +70,7 @@ defmodule Brando.News.Model.Post do
   def changeset(model, :create, params) do
     params
     |> strip_unhandled_upload("cover")
-    |> transform_checkbox_vals(~w(featured))
+    |> Utils.Model.transform_checkbox_vals(~w(featured))
     |> cast(model, ~w(status header data lead creator_id language), ~w(featured))
   end
 
@@ -86,7 +87,7 @@ defmodule Brando.News.Model.Post do
   def changeset(model, :update, params) do
     params
     |> strip_unhandled_upload("cover")
-    |> transform_checkbox_vals(~w(featured))
+    |> Utils.Model.transform_checkbox_vals(~w(featured))
     |> cast(model, [], ~w(status header data lead creator_id featured language))
   end
 
@@ -96,7 +97,7 @@ defmodule Brando.News.Model.Post do
   If not valid, return errors from changeset
   """
   def create(params, current_user) do
-    params = put_creator(params, current_user)
+    params = Utils.Model.put_creator(params, current_user)
     model_changeset = changeset(%__MODULE__{}, :create, params)
     case model_changeset.valid? do
       true ->
@@ -133,44 +134,6 @@ defmodule Brando.News.Model.Post do
     |> filter_plugs
     |> Enum.reduce([], &handle_upload(&1, &2, model, __MODULE__, @imagefields))
   end
-
-  @doc """
-  Updates a field on `model`.
-  `coll` should be [field_name: value]
-
-  ## Example:
-
-      {:ok, model} = update_field(model, [field_name: "value"])
-
-  """
-  def update_field(model, coll) do
-    changeset = change(model, coll)
-    {:ok, Brando.get_repo.update(changeset)}
-  end
-
-  @doc """
-  Checkbox values from forms come with value => "on". This transforms
-  them into bool values if params[key] is in keys.
-
-  # Example:
-
-      transform_checkbox_vals(params, ~w(administrator editor))
-
-  """
-  def transform_checkbox_vals(params, keys) do
-    Enum.into(Enum.map(params, fn({k, v}) ->
-      case k in keys and v == "on" do
-        true  -> {k, true}
-        false -> {k, v}
-      end
-    end), %{})
-  end
-
-  @doc """
-  Puts `id` from `current_user` in the `params` map.
-  """
-  def put_creator(params, current_user), do:
-    Map.put(params, "creator_id", current_user.id)
 
   @doc """
   Get model from DB by `id`
