@@ -1,4 +1,4 @@
-defmodule Brando.Plugs.Role do
+defmodule Brando.Plug.Role do
   @moduledoc """
   A plug for checking roles on user.
   """

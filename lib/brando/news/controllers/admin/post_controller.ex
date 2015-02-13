@@ -6,7 +6,7 @@ defmodule Brando.News.Admin.PostController do
   use Phoenix.Controller
   use Villain.Controller,
     model: PostImage
-  import Brando.Util, only: [add_css: 2, add_js: 2]
+  import Brando.Utils, only: [add_css: 2, add_js: 2]
 
   plug :action
 

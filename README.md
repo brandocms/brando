@@ -85,7 +85,7 @@ Routes/pipelines/plugs in `router.ex`:
 
 ```elixir
 import Brando.Users.Admin.Routes
-alias Brando.Plugs.Authenticate
+alias Brando.Plug.Authenticate
 
 pipeline :admin do
   plug :accepts, ~w(html json)

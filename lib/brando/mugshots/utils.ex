@@ -3,7 +3,7 @@ defmodule Brando.Mugshots.Utils do
   General utilities pertaining to the Mugshots module
   """
 
-  import Brando.Util
+  import Brando.Utils
 
   @doc """
   Splits `file` with `split_path/1`, adds `size` to the path before

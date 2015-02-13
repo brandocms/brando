@@ -4,7 +4,7 @@ defmodule Brando.Users.Admin.UserController do
   """
 
   use Phoenix.Controller
-  import Brando.Plugs.Role
+  import Brando.Plug.Role
 
   plug :check_role, :superuser when action in [:new, :create, :delete]
   plug :action

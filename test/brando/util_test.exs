@@ -1,8 +1,8 @@
-defmodule Brando.UtilTest do
+defmodule Brando.UtilsTest do
   use ExUnit.Case, async: true
   use Plug.Test
-  import Brando.Util
-  alias Brando.UtilTest.TestStruct
+  import Brando.Utils
+  alias Brando.UtilsTest.TestStruct
 
   defmodule TestStruct do
     defstruct a: "a", b: "b"

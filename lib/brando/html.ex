@@ -111,7 +111,7 @@ defmodule Brando.HTML do
   @doc """
   If any javascripts have been assigned to :js_extra on `conn`,
   render each as a <script> tag. If nil, do nothing.
-  To assign to `:js_extra`, use `Brando.Util.add_js/2`
+  To assign to `:js_extra`, use `Brando.Utils.add_js/2`
   """
   def js_extra(conn) do
     do_js_extra(conn.assigns[:js_extra])
@@ -126,7 +126,7 @@ defmodule Brando.HTML do
   @doc """
   If any css files have been assigned to :css_extra on `conn`,
   render each as a <link> tag. If nil, do nothing.
-  To assign to `:css_extra`, use `Brando.Util.add_css/2`
+  To assign to `:css_extra`, use `Brando.Utils.add_css/2`
   """
   def css_extra(conn) do
     do_css_extra(conn.assigns[:css_extra])

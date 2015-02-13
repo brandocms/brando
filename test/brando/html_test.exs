@@ -1,7 +1,7 @@
 defmodule Brando.HTMLTest do
   use ExUnit.Case, async: true
   use Plug.Test
-  import Brando.Util
+  import Brando.Utils
   import Brando.HTML
 
   test "first_name/1" do

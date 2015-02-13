@@ -1,7 +1,7 @@
-defmodule Brando.Plugs.RoleTest do
+defmodule Brando.Plug.RoleTest do
   use ExUnit.Case, async: true
   use Plug.Test
-  import Brando.Plugs.Role
+  import Brando.Plug.Role
 
   defmodule RolePlugFail do
     import Plug.Conn

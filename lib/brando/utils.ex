@@ -1,4 +1,4 @@
-defmodule Brando.Util do
+defmodule Brando.Utils do
   @moduledoc """
   Assorted utility functions.
   """
@@ -425,7 +425,7 @@ defmodule Brando.Util do
 
   ## Example (in your controller)
 
-        import Brando.Util, only: [add_js: 2]
+        import Brando.Utils, only: [add_js: 2]
         conn |> add_js(["somescript.js", "anotherscript.js"])
 
   """
@@ -438,7 +438,7 @@ defmodule Brando.Util do
 
   ## Example (in your controller)
 
-        import Brando.Util, only: [add_css: 2]
+        import Brando.Utils, only: [add_css: 2]
         conn |> add_css(["somescript.css", "anotherscript.css"])
 
   """

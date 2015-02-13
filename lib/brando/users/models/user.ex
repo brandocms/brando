@@ -6,9 +6,9 @@ defmodule Brando.Users.Model.User do
   @type t :: %__MODULE__{}
 
   use Ecto.Model
-  use Brando.Mugshots.Fields.ImageField
+  use Brando.Mugshots.Field.ImageField
   import Ecto.Query, only: [from: 2]
-  alias Brando.Util
+  alias Brando.Utils
 
   @roles %{staff: 1, admin: 2, superuser: 4}
 
@@ -230,7 +230,7 @@ defmodule Brando.Users.Model.User do
     {:ok, hash} = :bcrypt.hashpw(password, stored_hash)
     hash        = :erlang.list_to_binary(hash)
 
-    Util.secure_compare(hash, stored_hash)
+    Utils.secure_compare(hash, stored_hash)
   end
 
   defp gen_password(password) do

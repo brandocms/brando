@@ -1,9 +1,9 @@
-defmodule Brando.Mugshots.Fields.ImageFieldTest do
+defmodule Brando.Mugshots.Field.ImageFieldTest do
   use ExUnit.Case, async: true
   import Brando.Mugshots.Utils
 
   defmodule TestModel do
-    use Brando.Mugshots.Fields.ImageField
+    use Brando.Mugshots.Field.ImageField
 
     has_image_field :avatar,
       [allowed_mimetypes: ["image/jpeg", "image/png"],
@@ -22,7 +22,7 @@ defmodule Brando.Mugshots.Fields.ImageFieldTest do
   end
 
   test "use works" do
-    assert Brando.Mugshots.Fields.ImageFieldTest.TestModel.get_image_cfg(:avatar) ==
+    assert Brando.Mugshots.Field.ImageFieldTest.TestModel.get_image_cfg(:avatar) ==
       [allowed_mimetypes: ["image/jpeg", "image/png"], default_size: :medium,
        upload_path: "images/default", random_filename: true,
        size_limit: 10240000,

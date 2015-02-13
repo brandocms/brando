@@ -79,7 +79,7 @@ defmodule RouterHelper do
 
   defmodule TestRouter do
     use Phoenix.Router
-    alias Brando.Plugs.Authenticate
+    alias Brando.Plug.Authenticate
     import Brando.Users.Admin.Routes
 
     pipeline :admin do

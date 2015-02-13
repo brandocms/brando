@@ -1,4 +1,4 @@
-defmodule Brando.Mugshots.Fields.ImageField do
+defmodule Brando.Mugshots.Field.ImageField do
   @moduledoc """
   Makes it possible to assign a field as an image field. This means
   you can configure the field with different sizes that will be
@@ -21,7 +21,7 @@ defmodule Brando.Mugshots.Fields.ImageField do
         ]
       ]
   """
-  import Brando.Util, only: [split_path: 1]
+  import Brando.Utils, only: [split_path: 1]
   import Brando.Mugshots.Utils
   alias Brando.Exception.UploadError
   require Logger
@@ -31,14 +31,14 @@ defmodule Brando.Mugshots.Fields.ImageField do
       Module.register_attribute(__MODULE__, :imagefields, accumulate: true)
       require Logger
       import Brando.Mugshots.Utils
-      import Brando.Mugshots.Fields.ImageField
-      @before_compile Brando.Mugshots.Fields.ImageField
+      import Brando.Mugshots.Field.ImageField
+      @before_compile Brando.Mugshots.Field.ImageField
     end
   end
 
   @doc false
   defmacro __before_compile__(env) do
-    Brando.Mugshots.Fields.ImageField.compile(Module.get_attribute(
+    Brando.Mugshots.Field.ImageField.compile(Module.get_attribute(
                                               env.module, :imagefields))
   end
 
@@ -140,8 +140,8 @@ defmodule Brando.Mugshots.Fields.ImageField do
 
   defp get_valid_filename({%{filename: filename} = plug, cfg}) do
     case cfg[:random_filename] do
-      true -> {Map.put(plug, :filename, Brando.Util.random_filename(filename)), cfg}
-      nil  -> {Map.put(plug, :filename, Brando.Util.slugify_filename(filename)), cfg}
+      true -> {Map.put(plug, :filename, Brando.Utils.random_filename(filename)), cfg}
+      nil  -> {Map.put(plug, :filename, Brando.Utils.slugify_filename(filename)), cfg}
     end
   end
 
@@ -175,7 +175,7 @@ defmodule Brando.Mugshots.Fields.ImageField do
       size_dir = Path.join([file_path, Atom.to_string(size_name)])
       File.mkdir_p(size_dir)
       sized_image = Path.join([size_dir, filename])
-      Brando.Util.task_start(fn -> do_create_image_size(file, sized_image, size_cfg) end)
+      Brando.Utils.task_start(fn -> do_create_image_size(file, sized_image, size_cfg) end)
     end
     {:ok, Path.join([cfg[:upload_path], filename])}
   end

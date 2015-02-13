@@ -1,4 +1,4 @@
-defmodule Brando.Plugs.Authenticate do
+defmodule Brando.Plug.Authenticate do
   @moduledoc """
   Basic plug for authenticating sessions. If :current_user is
   authenticated, assign :current_user to `conn`. If not, delete

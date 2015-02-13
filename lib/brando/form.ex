@@ -9,7 +9,7 @@ defmodule Brando.Form do
 
   """
   alias Brando.Form.Fields, as: F
-  alias Brando.Util
+  alias Brando.Utils
 
   defmacro __using__(_) do
     quote do
@@ -95,7 +95,7 @@ defmodule Brando.Form do
       `@form_source` with `name`. Gets any value or errors for the field.
       """
       def render_fields(form_source, form_fields, action, params, values, errors) do
-        values = Util.to_string_map(values)
+        values = Utils.to_string_map(values)
         if values == nil, do: values = []
         if errors == nil, do: errors = []
         Enum.reduce(form_fields, [], fn ({name, opts}, acc) ->

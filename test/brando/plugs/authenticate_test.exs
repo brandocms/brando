@@ -1,7 +1,7 @@
-defmodule Brando.Plugs.AuthenticateTest do
+defmodule Brando.Plug.AuthenticateTest do
   use ExUnit.Case, async: true
   use Plug.Test
-  alias Brando.Plugs.Authenticate
+  alias Brando.Plug.Authenticate
 
   defmodule AuthPlugFail do
     import Plug.Conn

@@ -6,7 +6,7 @@ defmodule Brando.News.Model.Post do
   @type t :: %__MODULE__{}
 
   use Ecto.Model
-  use Brando.Mugshots.Fields.ImageField
+  use Brando.Mugshots.Field.ImageField
   import Ecto.Query, only: [from: 2]
   alias Brando.Type.Status
   alias Brando.Users.Model.User
