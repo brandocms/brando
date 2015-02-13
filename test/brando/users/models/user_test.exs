@@ -99,8 +99,8 @@ defmodule Brando.Integration.UserTest do
       %Plug.Upload{content_type: "image/png",
                    filename: "sample.png",
                    path: "#{Path.expand("../../../", __DIR__)}/fixtures/sample.png"}
-    up_params = Dict.put(@params, "avatar", up_plug)
-    assert {:ok, [dict]} = User.check_for_uploads(user, up_params)
+    up_params = Dict.put(%{}, "avatar", up_plug)
+    assert {:ok, dict} = User.check_for_uploads(user, up_params)
     user = User.get(email: "fanogigyni@gmail.com")
     assert user.avatar == dict.avatar
     assert File.exists?(Path.join([Brando.Mugshots.Utils.get_media_abspath, dict.avatar]))
@@ -115,7 +115,9 @@ defmodule Brando.Integration.UserTest do
                    filename: "",
                    path: "#{Path.expand("../../../", __DIR__)}/fixtures/sample.png"}
     up_params = Dict.put(@params, "avatar", up_plug)
-    assert {:errors, _dict} = User.check_for_uploads(user, up_params)
+    assert_raise Brando.Exception.UploadError, "Blankt filnavn!", fn ->
+      User.check_for_uploads(user, up_params)
+    end
   end
 
   test "check_for_uploads/2 format error" do
@@ -125,8 +127,7 @@ defmodule Brando.Integration.UserTest do
                    filename: "sample.gif",
                    path: "#{Path.expand("../../../", __DIR__)}/fixtures/sample.png"}
     up_params = Dict.put(@params, "avatar", up_plug)
-    assert {:errors, dict} = User.check_for_uploads(user, up_params)
-    assert dict == [error: {:avatar, "Ikke gyldig filformat (image/gif)"}]
+    assert_raise Brando.Exception.UploadError, fn -> User.check_for_uploads(user, up_params) end
   end
 
   test "check_for_uploads/2 copy error" do
@@ -136,12 +137,13 @@ defmodule Brando.Integration.UserTest do
                    filename: "sample.png",
                    path: "#{Path.expand("../../../", __DIR__)}/fixtures/non_existant.png"}
     up_params = Dict.put(@params, "avatar", up_plug)
-    assert {:errors, dict} = User.check_for_uploads(user, up_params)
-    assert dict == [error: {:avatar, :enoent}]
+    assert_raise Brando.Exception.UploadError, "Feil under kopiering -> enoent", fn ->
+      User.check_for_uploads(user, up_params)
+    end
   end
 
   test "check_for_uploads/2 noupload" do
     assert {:ok, user} = User.create(@params)
-    assert :nouploads = User.check_for_uploads(user, @params)
+    assert [] = User.check_for_uploads(user, @params)
   end
 end

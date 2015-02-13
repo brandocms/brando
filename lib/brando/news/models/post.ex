@@ -68,6 +68,7 @@ defmodule Brando.News.Model.Post do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :create, params) do
     params
+    |> strip_unhandled_upload("cover")
     |> transform_checkbox_vals(~w(featured))
     |> cast(model, ~w(status header data lead creator_id language), ~w(featured))
   end
@@ -84,6 +85,7 @@ defmodule Brando.News.Model.Post do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
     params
+    |> strip_unhandled_upload("cover")
     |> transform_checkbox_vals(~w(featured))
     |> cast(model, [], ~w(status header data lead creator_id featured language))
   end
@@ -124,36 +126,12 @@ defmodule Brando.News.Model.Post do
   @doc """
   Checks `form_fields` for Plug.Upload fields and passes them on to
   `handle_upload` to check if we have a handler for the field.
-
-  Also updates the affected fields in the database if `handle_upload`
-  returns {:ok, file_url}
+  Returns {:ok, model} or raises
   """
-  def check_for_uploads(model, form_fields) do
-    form_fields = Enum.filter(form_fields, fn (form_field) ->
-      case form_field do
-        {_, %Plug.Upload{}} -> true
-        {_, _} -> false
-      end
-    end)
-
-    dict = Enum.reduce(form_fields, [], fn {field_name, plug}, dict ->
-      cfg = get_image_cfg(String.to_atom(field_name))
-      case handle_upload(plug, cfg) do
-        {:ok, file_url} ->
-          apply(__MODULE__, :update_field, [model, Keyword.new([{String.to_atom(field_name), file_url}])])
-          [file: {String.to_atom(field_name), file_url}] ++ dict
-        {:error, error} ->
-          [error: {String.to_atom(field_name), error}] ++ dict
-      end
-    end)
-    case dict do
-      [] -> :nouploads
-      dict ->
-        case Dict.has_key?(dict, :error) do
-          true -> {:errors, dict}
-          false -> {:ok, dict}
-        end
-    end
+  def check_for_uploads(model, params) do
+    params
+    |> filter_plugs
+    |> Enum.reduce([], &handle_upload(&1, &2, model, __MODULE__, @imagefields))
   end
 
   @doc """

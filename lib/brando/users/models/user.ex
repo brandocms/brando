@@ -51,6 +51,7 @@ defmodule Brando.Users.Model.User do
   def changeset(user, action, params \\ nil)
   def changeset(user, :create, params) do
     params
+    |> strip_unhandled_upload("avatar")
     |> cast(user, ~w(username full_name email password), ~w(role avatar))
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
@@ -71,6 +72,7 @@ defmodule Brando.Users.Model.User do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(user, :update, params) do
     params
+    |> strip_unhandled_upload("avatar")
     |> cast(user, [], ~w(username full_name email password role avatar))
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
@@ -118,34 +120,12 @@ defmodule Brando.Users.Model.User do
   @doc """
   Checks `form_fields` for Plug.Upload fields and passes them on to
   `handle_upload` to check if we have a handler for the field.
-
-  Also updates the affected fields in the database if `handle_upload`
-  returns {:ok, file_url}
+  Returns {:ok, model} or raises
   """
-  def check_for_uploads(model, form_fields) do
-    dict = Enum.reduce(filter_plugs(form_fields), [], fn {field_name, plug}, dict ->
-      f_name = String.to_atom(field_name)
-      cfg = get_image_cfg(f_name)
-      case handle_upload(plug, cfg) do
-        {:ok, file_url} ->
-          params = Map.put(%{}, Atom.to_string(f_name), file_url)
-          case model.id do
-            nil -> {:ok, entry} = apply(&create/1, [params])
-            _   -> {:ok, entry} = apply(&update/2, [model, params])
-          end
-          [entry|dict]
-        {:error, error} ->
-          [error: {String.to_atom(field_name), error}] ++ dict
-      end
-    end)
-    case dict do
-      [] -> :nouploads
-      dict ->
-        case Dict.has_key?(dict, :error) do
-          true -> {:errors, dict}
-          false -> {:ok, dict}
-        end
-    end
+  def check_for_uploads(model, params) do
+    params
+    |> filter_plugs
+    |> Enum.reduce([], &handle_upload(&1, &2, model, __MODULE__, @imagefields))
   end
 
   @doc """

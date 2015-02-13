@@ -15,7 +15,7 @@ defmodule Villain.Controller do
 
       @doc false
       def upload_image(conn, %{"uid" => uid} = params) do
-        {:ok, [image]} = unquote(model).check_for_uploads(unquote(struct), params)
+        {:ok, image} = unquote(model).check_for_uploads(unquote(struct), params)
         json conn,
           %{status: "200",
             uid: uid,

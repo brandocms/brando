@@ -56,7 +56,7 @@ defmodule Brando.Users.Admin.UserController do
         case model.check_for_uploads(created_user, form_data) do
           {:ok, _val} -> conn |> put_flash(:notice, "Bilde lastet opp.")
           {:errors, _errors} -> nil
-          :nouploads -> nil
+          [] -> nil
         end
         conn
         |> put_flash(:notice, "Bruker opprettet.")
