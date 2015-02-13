@@ -5,8 +5,7 @@ defmodule Brando.News.Admin.PostController do
   alias Brando.News.Model.PostImage
   use Phoenix.Controller
   use Villain.Controller,
-    model: PostImage,
-    struct: %PostImage{}
+    model: PostImage
   import Brando.Util, only: [add_css: 2, add_js: 2]
 
   plug :action
