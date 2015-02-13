@@ -1,7 +1,6 @@
 defmodule Villain.Controller do
   defmacro __using__(options) do
     model = Keyword.fetch!(options, :model)
-    struct = Keyword.fetch!(options, :struct)
     quote do
       @doc false
       def browse_images(conn, _params) do
@@ -15,7 +14,7 @@ defmodule Villain.Controller do
 
       @doc false
       def upload_image(conn, %{"uid" => uid} = params) do
-        {:ok, [image]} = unquote(model).check_for_uploads(unquote(struct), params)
+        {:ok, image} = unquote(model).check_for_uploads(%{}, params)
         json conn,
           %{status: "200",
             uid: uid,

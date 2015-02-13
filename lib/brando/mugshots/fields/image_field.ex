@@ -23,6 +23,7 @@ defmodule Brando.Mugshots.Fields.ImageField do
   """
   import Brando.Util, only: [split_path: 1]
   import Brando.Mugshots.Utils
+  alias Brando.Exception.UploadError
   require Logger
 
   defmacro __using__(_) do
@@ -112,48 +113,63 @@ defmodule Brando.Mugshots.Fields.ImageField do
     * `cfg`: the field's cfg from has_image_field
 
   """
-  def handle_upload(plug, cfg) do
-    case plug.filename |> is_valid_filename?(cfg) do
-      {:ok, filename} ->
-        case plug.content_type |> is_allowed_mimetype?(cfg[:allowed_mimetypes]) do
-          true  -> create_upload_path(filename, plug.path, cfg)
-          false -> {:error, "Ikke gyldig filformat (#{plug.content_type})"}
-        end
-      {:error, error} -> {:error, error}
-    end
+  def handle_upload({name, plug}, _acc, %{id: _id} = model, module, imagefields) do
+    {:ok, file} = do_upload(plug, imagefields[String.to_atom(name)])
+    params = Map.put(%{}, name, file)
+    apply(module, :update, [model, params])
   end
 
-  defp is_valid_filename?("", _cfg) do
-    {:error, :blank_filename}
+  def handle_upload({name, plug}, _acc, _model, module, imagefields) do
+    {:ok, file} = do_upload(plug, imagefields[String.to_atom(name)])
+    params = Map.put(%{}, name, file)
+    apply(module, :create, [params])
   end
-  defp is_valid_filename?(filename, cfg) do
+
+  defp do_upload(plug, cfg) do
+    {plug, cfg}
+    |> get_valid_filename
+    |> check_mimetype
+    |> create_upload_path
+    |> copy_uploaded_file
+    |> create_image_sizes
+  end
+
+  defp get_valid_filename({%{filename: ""}, _cfg}) do
+    raise UploadError, message: "Blankt filnavn!"
+  end
+
+  defp get_valid_filename({%{filename: filename} = plug, cfg}) do
     case cfg[:random_filename] do
-      true -> {:ok, Brando.Util.random_filename(filename)}
-      nil  -> {:ok, Brando.Util.slugify_filename(filename)}
+      true -> {Map.put(plug, :filename, Brando.Util.random_filename(filename)), cfg}
+      nil  -> {Map.put(plug, :filename, Brando.Util.slugify_filename(filename)), cfg}
     end
   end
 
-  defp is_allowed_mimetype?(content_type, allowed_mimetypes) do
-    content_type in allowed_mimetypes
+  defp check_mimetype({%{content_type: content_type} = plug, cfg}) do
+    if content_type in cfg[:allowed_mimetypes] do
+      {plug, cfg}
+    else
+      raise UploadError, message: "Ikke tillatt filtype -> #{content_type}"
+    end
   end
 
-  defp create_upload_path(filename, temp_path, cfg) do
+  defp create_upload_path({plug, cfg}) do
     upload_path = Path.join(get_media_abspath, cfg[:upload_path])
     case File.mkdir_p(upload_path) do
-      :ok -> copy_uploaded_file(filename, temp_path, upload_path, cfg)
-      {:error, reason} -> {:error, reason}
+      :ok -> {Map.put(plug, :upload_path, upload_path), cfg}
+      {:error, reason} -> raise UploadError, message: "Kunne ikke lage filbane -> #{inspect(reason)}"
     end
   end
 
-  defp copy_uploaded_file(filename, temp_path, upload_path, cfg) do
+  defp copy_uploaded_file({%{filename: filename, path: temp_path, upload_path: upload_path} = plug, cfg}) do
     new_file = Path.join(upload_path, filename)
     case File.cp(temp_path, new_file, fn _, _ -> false end) do
-      :ok -> create_image_sizes(new_file, cfg)
-      {:error, reason} -> {:error, reason}
+      :ok -> {Map.put(plug, :uploaded_file, new_file), cfg}
+      {:error, reason} -> raise UploadError, message: "Feil under kopiering -> #{reason}"
     end
   end
 
-  defp create_image_sizes(file, cfg) do
+  defp create_image_sizes({%{uploaded_file: file}, cfg}) do
     {file_path, filename} = split_path(file)
     for {size_name, size_cfg} <- cfg[:sizes] do
       size_dir = Path.join([file_path, Atom.to_string(size_name)])
@@ -215,5 +231,18 @@ defmodule Brando.Mugshots.Fields.ImageField do
         {_, _} -> false
       end
     end)
+  end
+
+  @doc """
+  Check if `to_strip` is an unhandled `Plug.Upload`.
+  If it is, strip it. If not, return `params`.
+  This is used to catch unhandled Plug.Uploads from forms.
+  We usually handle these after the fact.
+  """
+  def strip_unhandled_upload(params, to_strip) do
+    case params[to_strip] do
+      %Plug.Upload{} -> Map.delete(params, to_strip)
+      _ -> params
+    end
   end
 end
