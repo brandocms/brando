@@ -34,4 +34,10 @@ defmodule Brando.Utils.Model do
     changeset = Ecto.Changeset.change(model, coll)
     {:ok, Brando.get_repo.update(changeset)}
   end
+
+  @doc """
+  Puts `id` from `current_user` in the `params` map.
+  """
+  def put_creator(params, current_user), do:
+    Map.put(params, "creator_id", current_user.id)
 end

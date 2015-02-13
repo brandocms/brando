@@ -97,7 +97,7 @@ defmodule Brando.News.Model.Post do
   If not valid, return errors from changeset
   """
   def create(params, current_user) do
-    params = put_creator(params, current_user)
+    params = Utils.Model.put_creator(params, current_user)
     model_changeset = changeset(%__MODULE__{}, :create, params)
     case model_changeset.valid? do
       true ->
@@ -134,12 +134,6 @@ defmodule Brando.News.Model.Post do
     |> filter_plugs
     |> Enum.reduce([], &handle_upload(&1, &2, model, __MODULE__, @imagefields))
   end
-
-  @doc """
-  Puts `id` from `current_user` in the `params` map.
-  """
-  def put_creator(params, current_user), do:
-    Map.put(params, "creator_id", current_user.id)
 
   @doc """
   Get model from DB by `id`
