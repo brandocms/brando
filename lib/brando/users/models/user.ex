@@ -129,20 +129,6 @@ defmodule Brando.Users.Model.User do
   end
 
   @doc """
-  Updates a field on `model`.
-  `coll` should be [field_name: value]
-
-  ## Example:
-
-      {:ok, model} = update_field(model, [field_name: "value"])
-
-  """
-  def update_field(model, coll) do
-    changeset = change(model, coll)
-    {:ok, Brando.get_repo.update(changeset)}
-  end
-
-  @doc """
   Get user from DB by `username`
   """
   def get(username: username) do
@@ -198,7 +184,7 @@ defmodule Brando.Users.Model.User do
   """
   @spec set_last_login(t) :: t
   def set_last_login(user) do
-    {:ok, user} = update_field(user, [last_login: Ecto.DateTime.local])
+    {:ok, user} = Utils.Model.update_field(user, [last_login: Ecto.DateTime.local])
     user
   end
 

@@ -2,6 +2,7 @@ defmodule Brando.Integration.UserTest do
   use ExUnit.Case
   use Brando.Integration.TestCase
   alias Brando.Users.Model.User
+
   @params %{"avatar" => "", "role" => ["2", "4"],
             "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
             "password" => "finimeze", "status" => "1",
@@ -32,12 +33,6 @@ defmodule Brando.Integration.UserTest do
     params = Dict.put @params, "email", "asdf"
     assert {:error, err} = User.update(user, params)
     assert err == [email: :format]
-  end
-
-  test "update_field/2" do
-    assert {:ok, user} = User.create(@params)
-    assert {:ok, model} = User.update_field(user, [full_name: "James Bond"])
-    assert model.full_name == "James Bond"
   end
 
   test "get/1" do

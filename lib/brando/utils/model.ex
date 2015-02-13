@@ -20,4 +20,18 @@ defmodule Brando.Utils.Model do
       end
     end), %{})
   end
+
+  @doc """
+  Updates a field on `model`.
+  `coll` should be [field_name: value]
+
+  ## Example:
+
+      {:ok, model} = update_field(model, [field_name: "value"])
+
+  """
+  def update_field(model, coll) do
+    changeset = Ecto.Changeset.change(model, coll)
+    {:ok, Brando.get_repo.update(changeset)}
+  end
 end

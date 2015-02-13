@@ -107,20 +107,6 @@ defmodule Brando.News.Model.PostImage do
   end
 
   @doc """
-  Updates a field on `model`.
-  `coll` should be [field_name: value]
-
-  ## Example:
-
-      {:ok, model} = update_field(model, [field_name: "value"])
-
-  """
-  def update_field(model, coll) do
-    changeset = change(model, coll)
-    {:ok, Brando.get_repo.update(changeset)}
-  end
-
-  @doc """
   Get model from DB by `id`
   """
   def get(id: id) do

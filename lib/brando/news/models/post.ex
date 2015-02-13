@@ -136,20 +136,6 @@ defmodule Brando.News.Model.Post do
   end
 
   @doc """
-  Updates a field on `model`.
-  `coll` should be [field_name: value]
-
-  ## Example:
-
-      {:ok, model} = update_field(model, [field_name: "value"])
-
-  """
-  def update_field(model, coll) do
-    changeset = change(model, coll)
-    {:ok, Brando.get_repo.update(changeset)}
-  end
-
-  @doc """
   Puts `id` from `current_user` in the `params` map.
   """
   def put_creator(params, current_user), do:
