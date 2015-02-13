@@ -10,6 +10,7 @@ defmodule Brando.News.Model.Post do
   import Ecto.Query, only: [from: 2]
   alias Brando.Type.Status
   alias Brando.Users.Model.User
+  alias Brando.Utils
 
   schema "posts" do
     field :language, :string
@@ -69,7 +70,7 @@ defmodule Brando.News.Model.Post do
   def changeset(model, :create, params) do
     params
     |> strip_unhandled_upload("cover")
-    |> transform_checkbox_vals(~w(featured))
+    |> Utils.Model.transform_checkbox_vals(~w(featured))
     |> cast(model, ~w(status header data lead creator_id language), ~w(featured))
   end
 
@@ -86,7 +87,7 @@ defmodule Brando.News.Model.Post do
   def changeset(model, :update, params) do
     params
     |> strip_unhandled_upload("cover")
-    |> transform_checkbox_vals(~w(featured))
+    |> Utils.Model.transform_checkbox_vals(~w(featured))
     |> cast(model, [], ~w(status header data lead creator_id featured language))
   end
 
@@ -146,24 +147,6 @@ defmodule Brando.News.Model.Post do
   def update_field(model, coll) do
     changeset = change(model, coll)
     {:ok, Brando.get_repo.update(changeset)}
-  end
-
-  @doc """
-  Checkbox values from forms come with value => "on". This transforms
-  them into bool values if params[key] is in keys.
-
-  # Example:
-
-      transform_checkbox_vals(params, ~w(administrator editor))
-
-  """
-  def transform_checkbox_vals(params, keys) do
-    Enum.into(Enum.map(params, fn({k, v}) ->
-      case k in keys and v == "on" do
-        true  -> {k, true}
-        false -> {k, v}
-      end
-    end), %{})
   end
 
   @doc """
