@@ -21,8 +21,9 @@ defmodule Brando.Mugshots.Field.ImageField do
         ]
       ]
   """
-  import Brando.Utils, only: [split_path: 1]
   import Brando.Mugshots.Utils
+  import Brando.Utils, only: [split_path: 1, random_filename: 1,
+                              slugify_filename: 1, task_start: 1]
   alias Brando.Exception.UploadError
   require Logger
 
@@ -122,14 +123,14 @@ defmodule Brando.Mugshots.Field.ImageField do
     * `cfg`: the field's cfg from has_image_field
 
   """
-  def handle_upload({name, plug}, _acc, %{id: _id} = model, module, get_cfg_fun) do
-    {:ok, file} = do_upload(plug, get_cfg_fun.(String.to_atom(name)))
+  def handle_upload({name, plug}, _acc, %{id: _id} = model, module, cfg_fun) do
+    {:ok, file} = do_upload(plug, cfg_fun.(String.to_atom(name)))
     params = Map.put(%{}, name, file)
     apply(module, :update, [model, params])
   end
 
-  def handle_upload({name, plug}, _acc, _model, module, get_cfg_fun) do
-    {:ok, file} = do_upload(plug, get_cfg_fun.(String.to_atom(name)))
+  def handle_upload({name, plug}, _acc, _model, module, cfg_fun) do
+    {:ok, file} = do_upload(plug, cfg_fun.(String.to_atom(name)))
     params = Map.put(%{}, name, file)
     apply(module, :create, [params])
   end
@@ -149,8 +150,8 @@ defmodule Brando.Mugshots.Field.ImageField do
 
   defp get_valid_filename({%{filename: filename} = plug, cfg}) do
     case cfg[:random_filename] do
-      true -> {Map.put(plug, :filename, Brando.Utils.random_filename(filename)), cfg}
-      nil  -> {Map.put(plug, :filename, Brando.Utils.slugify_filename(filename)), cfg}
+      true -> {Map.put(plug, :filename, random_filename(filename)), cfg}
+      nil  -> {Map.put(plug, :filename, slugify_filename(filename)), cfg}
     end
   end
 
@@ -184,7 +185,7 @@ defmodule Brando.Mugshots.Field.ImageField do
       size_dir = Path.join([file_path, Atom.to_string(size_name)])
       File.mkdir_p(size_dir)
       sized_image = Path.join([size_dir, filename])
-      Brando.Utils.task_start(fn -> do_create_image_size(file, sized_image, size_cfg) end)
+      task_start(fn -> do_create_image_size(file, sized_image, size_cfg) end)
     end
     {:ok, Path.join([cfg[:upload_path], filename])}
   end
