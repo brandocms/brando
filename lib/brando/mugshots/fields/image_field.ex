@@ -33,6 +33,16 @@ defmodule Brando.Mugshots.Field.ImageField do
       import Brando.Mugshots.Utils
       import Brando.Mugshots.Field.ImageField
       @before_compile Brando.Mugshots.Field.ImageField
+      @doc """
+      Checks `form_fields` for Plug.Upload fields and passes them on to
+      `handle_upload` to check if we have a handler for the field.
+      Returns {:ok, model} or raises
+      """
+      def check_for_uploads(model, params) do
+        params
+        |> filter_plugs
+        |> Enum.reduce([], fn (plug, acc) -> handle_upload(plug, acc, model, __MODULE__, &__MODULE__.get_image_cfg/1) end)
+      end
     end
   end
 
@@ -113,14 +123,14 @@ defmodule Brando.Mugshots.Field.ImageField do
     * `cfg`: the field's cfg from has_image_field
 
   """
-  def handle_upload({name, plug}, _acc, %{id: _id} = model, module, imagefields) do
-    {:ok, file} = do_upload(plug, imagefields[String.to_atom(name)])
+  def handle_upload({name, plug}, _acc, %{id: _id} = model, module, get_cfg_fun) do
+    {:ok, file} = do_upload(plug, get_cfg_fun.(String.to_atom(name)))
     params = Map.put(%{}, name, file)
     apply(module, :update, [model, params])
   end
 
-  def handle_upload({name, plug}, _acc, _model, module, imagefields) do
-    {:ok, file} = do_upload(plug, imagefields[String.to_atom(name)])
+  def handle_upload({name, plug}, _acc, _model, module, get_cfg_fun) do
+    {:ok, file} = do_upload(plug, get_cfg_fun.(String.to_atom(name)))
     params = Map.put(%{}, name, file)
     apply(module, :create, [params])
   end
