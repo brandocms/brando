@@ -27,14 +27,14 @@ defmodule Brando.Auth.AuthController do
   @doc false
   def login(conn, _params) do
     conn
-    |> put_layout(conn.private[:layout])
+    |> put_layout({Brando.Auth.LayoutView, "auth.html"})
     |> render(:login)
   end
 
   @doc false
   def logout(conn, _params) do
     conn
-    |> put_layout(conn.private[:layout])
+    |> put_layout({Brando.Auth.LayoutView, "auth.html"})
     |> delete_session(:current_user)
     |> render(:logout)
   end

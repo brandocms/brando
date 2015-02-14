@@ -105,14 +105,11 @@ end
 scope "/" do
   pipe_through :browser
   get "/login", Brando.Auth.AuthController, :login,
-    private: %{model: Brando.Users.Model.User,
-               layout: {Brando.Auth.LayoutView, "auth.html"}}
+    private: %{model: Brando.Users.Model.User}
   post "/login", Brando.Auth.AuthController, :login,
-    private: %{model: Brando.Users.Model.User,
-               layout: {Brando.Auth.LayoutView, "auth.html"}}
+    private: %{model: Brando.Users.Model.User}
   get "/logout", Brando.Auth.AuthController, :logout,
-    private: %{model: Brando.Users.Model.User,
-               layout: {Brando.Auth.LayoutView, "auth.html"}}
+    private: %{model: Brando.Users.Model.User}
 end
 ```
 
