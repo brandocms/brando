@@ -125,17 +125,6 @@ defmodule Brando.News.Model.Post do
   end
 
   @doc """
-  Checks `form_fields` for Plug.Upload fields and passes them on to
-  `handle_upload` to check if we have a handler for the field.
-  Returns {:ok, model} or raises
-  """
-  def check_for_uploads(model, params) do
-    params
-    |> filter_plugs
-    |> Enum.reduce([], &handle_upload(&1, &2, model, __MODULE__, @imagefields))
-  end
-
-  @doc """
   Get model from DB by `id`
   """
   def get(id: id) do
