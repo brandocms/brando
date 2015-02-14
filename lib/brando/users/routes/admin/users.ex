@@ -42,7 +42,6 @@ defmodule Brando.Users.Admin.Routes do
     else
       options = Keyword.put([], :private, quote(do: %{model: User}))
     end
-
     quote do
       resource = Resource.build(unquote(path), unquote(controller), unquote(options))
       parm = resource.param

@@ -227,7 +227,7 @@ Add to your `router.ex` in your `admin` scope:
 scope "/admin", as: :admin do
   # (...)
   # only pass private if you need a custom model.
-  news_resources "/nyheter", private: %{model: Brando.Users.Model.User}
+  news_resources "/nyheter", model: Brando.News.Model.Post
 end
 ```
 
