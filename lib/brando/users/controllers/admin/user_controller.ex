@@ -80,7 +80,12 @@ defmodule Brando.Users.Admin.UserController do
     model = conn.private[:model]
     user = model.get(id: String.to_integer(user_id))
     case model.update(user, form_data) do
-      {:ok, _updated_user} ->
+      {:ok, updated_user} ->
+        case model.check_for_uploads(updated_user, form_data) do
+          {:ok, _val} -> conn |> put_flash(:notice, "Bilde lastet opp.")
+          {:errors, _errors} -> nil
+          [] -> nil
+        end
         conn
         |> put_flash(:notice, "Bruker oppdatert.")
         |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn, :index))
