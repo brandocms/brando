@@ -7,7 +7,7 @@ defmodule Villain.Controller do
         images = unquote(model).all
         image_list = Enum.map(images, fn image ->
           %{src: Brando.HTML.media_url(image.image),
-            thumb: Brando.HTML.media_url(Brando.Mugshots.Utils.size_dir(image.image, :thumb))}
+            thumb: Brando.HTML.media_url(Brando.Images.Utils.size_dir(image.image, :thumb))}
         end)
         json(conn, %{status: "200", images: image_list})
       end

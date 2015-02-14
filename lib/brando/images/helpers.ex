@@ -1,11 +1,11 @@
-defmodule Brando.Mugshots.Helpers do
+defmodule Brando.Images.Helpers do
   @moduledoc """
-  View helpers for the Mugshots module
+  View helpers for the Images module
   """
-  import Brando.Mugshots.Utils
+  import Brando.Images.Utils
 
   @doc """
-  View helper wrapper for `Brando.Mugshots.Utils.size_dir/2`
+  View helper wrapper for `Brando.Images.Utils.size_dir/2`
   Inserts the `size` into `file`, returning the path to the image.
   If `file` is nil, use `default` instead.
   """

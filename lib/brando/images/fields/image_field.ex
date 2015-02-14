@@ -1,4 +1,4 @@
-defmodule Brando.Mugshots.Field.ImageField do
+defmodule Brando.Images.Field.ImageField do
   @moduledoc """
   Makes it possible to assign a field as an image field. This means
   you can configure the field with different sizes that will be
@@ -21,7 +21,7 @@ defmodule Brando.Mugshots.Field.ImageField do
         ]
       ]
   """
-  import Brando.Mugshots.Utils
+  import Brando.Images.Utils
   import Brando.Utils, only: [split_path: 1, random_filename: 1,
                               slugify_filename: 1, task_start: 1]
   alias Brando.Exception.UploadError
@@ -30,7 +30,7 @@ defmodule Brando.Mugshots.Field.ImageField do
   defmacro __using__(_) do
     quote do
       Module.register_attribute(__MODULE__, :imagefields, accumulate: true)
-      import Brando.Mugshots.Utils
+      import Brando.Images.Utils
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
       @doc """
@@ -48,7 +48,7 @@ defmodule Brando.Mugshots.Field.ImageField do
 
   @doc false
   defmacro __before_compile__(env) do
-    Brando.Mugshots.Field.ImageField.compile(Module.get_attribute(
+    Brando.Images.Field.ImageField.compile(Module.get_attribute(
                                               env.module, :imagefields))
   end
 

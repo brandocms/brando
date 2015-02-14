@@ -1,6 +1,6 @@
-defmodule Brando.Mugshots.HelpersTest do
+defmodule Brando.Images.HelpersTest do
   use ExUnit.Case, async: true
-  import Brando.Mugshots.Helpers
+  import Brando.Images.Helpers
 
   test "img/2" do
     assert img("images/file.jpg", :thumb) == "images/thumb/file.jpg"

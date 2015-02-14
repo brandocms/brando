@@ -86,9 +86,9 @@ defmodule Brando.Integration.UserTest do
     assert {:ok, dict} = User.check_for_uploads(user, up_params)
     user = User.get(email: "fanogigyni@gmail.com")
     assert user.avatar == dict.avatar
-    assert File.exists?(Path.join([Brando.Mugshots.Utils.get_media_abspath, dict.avatar]))
+    assert File.exists?(Path.join([Brando.Images.Utils.get_media_abspath, dict.avatar]))
     User.delete(user)
-    refute File.exists?(Path.join([Brando.Mugshots.Utils.get_media_abspath, dict.avatar]))
+    refute File.exists?(Path.join([Brando.Images.Utils.get_media_abspath, dict.avatar]))
   end
 
   test "check_for_uploads/2 error" do

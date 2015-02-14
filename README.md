@@ -231,8 +231,8 @@ scope "/admin", as: :admin do
 end
 ```
 
-Mugshots
-========
+Images
+======
 
 Image processing and thumbnails for Brando
 
@@ -241,7 +241,7 @@ Config
 Optimizing images: (not implemented yet)
 
 ```elixir
-config :brando, :mugshots, :optimize
+config :brando, :images, :optimize
   png: [enabled: true,
         bin: "/usr/local/bin/pngquant",
         params: "--speed 1 --force --output \"#{new_filename}\" -- \"#{filename}\""],

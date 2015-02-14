@@ -1,6 +1,6 @@
-defmodule Brando.Mugshots.Utils do
+defmodule Brando.Images.Utils do
   @moduledoc """
-  General utilities pertaining to the Mugshots module
+  General utilities pertaining to the Images module
   """
 
   import Brando.Utils
