@@ -2635,6 +2635,9 @@ fieldset[disabled] .btn-gplus.active {
   color: #333;
   white-space: nowrap;
   background: none;
+  text-align: left;
+  padding: 5px 15px;
+  cursor: pointer;
   border: none; }
 
 .dropdown-menu > li > a:hover,

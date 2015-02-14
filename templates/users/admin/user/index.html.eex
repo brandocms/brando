@@ -52,7 +52,7 @@
                   <form method="POST" action="<%= helpers(@conn).admin_user_path @conn, :delete, user.id %>">
                     <input type="hidden" name="_method" value="delete" />
                     <li>
-                    <button>
+                    <button class="btn-block">
                       <i class="fa fa-trash-o m-r-sm"> </i>
                       Slett bruker
                     </button>

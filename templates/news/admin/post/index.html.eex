@@ -70,7 +70,7 @@
                   <form method="POST" action="<%= helpers(@conn).admin_post_path @conn, :delete, post.id %>">
                     <input type="hidden" name="_method" value="delete" />
                     <li>
-                    <button>
+                    <button class="btn-block">
                       <i class="fa fa-trash-o m-r-sm"> </i>
                       Slett post
                     </button>

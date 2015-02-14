@@ -13,6 +13,8 @@ defmodule Brando.AdminView do
 
       # Functions defined here are available to all other views/templates
       use Brando.HTML
+
+      def csrf_token(conn), do: conn.resp_cookies["_csrf_token"]
     end
   end
 end
