@@ -29,10 +29,9 @@ defmodule Brando.Mugshots.Field.ImageField do
   defmacro __using__(_) do
     quote do
       Module.register_attribute(__MODULE__, :imagefields, accumulate: true)
-      require Logger
       import Brando.Mugshots.Utils
-      import Brando.Mugshots.Field.ImageField
-      @before_compile Brando.Mugshots.Field.ImageField
+      import unquote(__MODULE__)
+      @before_compile unquote(__MODULE__)
       @doc """
       Checks `form_fields` for Plug.Upload fields and passes them on to
       `handle_upload` to check if we have a handler for the field.
