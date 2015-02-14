@@ -48,8 +48,8 @@ defmodule Brando.News.Admin.Routes do
       path = resource.path
       ctrl = resource.controller
       opts = resource.route
-      actions = [:index, :edit, :new, :upload_image,
-                 :browse_images, :image_info, :show, :create, :update, :delete]
+      actions = [:index, :edit, :new, :upload_image, :browse_images,
+                 :image_info, :show, :create, :update, :delete]
 
       Enum.each actions, fn action ->
         case action do
