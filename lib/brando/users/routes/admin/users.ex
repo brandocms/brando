@@ -36,8 +36,13 @@ defmodule Brando.Users.Admin.Routes do
     add_users_resources path, UserController, [], do: nil
   end
 
-  defp add_users_resources(path, controller, options, do: context) do
-    if options == [], do: options = quote(do: [private: %{model: User}])
+  defp add_users_resources(path, controller, opts, do: context) do
+    if model = Keyword.get(opts, :model) do
+      options = Keyword.put([], :private, quote(do: %{model: unquote(model)}))
+    else
+      options = Keyword.put([], :private, quote(do: %{model: User}))
+    end
+
     quote do
       resource = Resource.build(unquote(path), unquote(controller), unquote(options))
       parm = resource.param

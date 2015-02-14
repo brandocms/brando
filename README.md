@@ -97,8 +97,8 @@ end
 
 scope "/admin", as: :admin do
   pipe_through :admin
-  # only pass private if you need a custom model.
-  users_resources "/brukere", private: %{model: Brando.Users.Model.User}
+  # only pass `model` if you need a custom model.
+  users_resources "/brukere", model: Brando.Users.Model.User
   get "/", Brando.Dashboard.Admin.DashboardController, :dashboard
 end
 
