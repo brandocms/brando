@@ -234,7 +234,102 @@ end
 Images
 ======
 
-Image processing and thumbnails for Brando
+Create initial migrations:
+
+    $ mix ecto.gen.migration add_imagecategories_table
+    $ mix ecto.gen.migration add_imageseries_table
+    $ mix ecto.gen.migration add_images_table
+
+Populate with:
+
+```elixir
+# imagecategories
+
+defmodule MyApp.Repo.Migrations.AddImagecategoriesTable do
+  use Ecto.Migration
+  def up do
+    create table(:imagecategories) do
+      add :name,              :text
+      add :slug,              :text
+      add :cfg,               :json
+      add :creator_id,        references(:users)
+      timestamps
+    end
+    create index(:imagecategories, [:slug])
+    execute """
+      INSERT INTO
+        imagecategories
+        (name, slug, cfg, creator_id, inserted_at, updated_at)
+      VALUES
+        ('post', 'post', NULL, 1, NOW(), NOW());
+    """
+    execute """
+      INSERT INTO
+        imagecategories
+        (name, slug, cfg, creator_id, inserted_at, updated_at)
+      VALUES
+        ('page', 'page', NULL, 1, NOW(), NOW());
+    """
+  end
+
+  def down do
+    drop table(:imagecategories)
+    drop index(:imagecategories, [:slug])
+  end
+end
+
+# imageseries
+
+defmodule MyApp.Repo.Migrations.AddImageseriesTable do
+  use Ecto.Migration
+
+  def up do
+    create table(:imageseries) do
+      add :name,              :text
+      add :slug,              :text
+      add :credits,           :text
+      add :order,             :integer
+      add :creator_id,        references(:users)
+      add :category_id,       references(:imagecategories)
+      timestamps
+    end
+    create index(:imageseries, [:slug])
+    create index(:imageseries, [:order])
+  end
+
+  def down do
+    drop table(:imageseries)
+    drop index(:imageseries, [:slug])
+    drop index(:imageseries, [:order])
+  end
+end
+
+# images
+
+defmodule MyApp.Repo.Migrations.AddImagesTable do
+  use Ecto.Migration
+
+  def up do
+    create table(:images) do
+      add :title,             :text
+      add :credits,           :text
+      add :order,             :integer
+      add :optimized,         :boolean
+      add :creator_id,        references(:users)
+      add :series_id,         references(:imageseries)
+      timestamps
+    end
+    create index(:images, [:order])
+  end
+
+  def down do
+    drop table(:images)
+    drop index(:images, [:order])
+  end
+end
+
+
+```
 
 Config
 ------
