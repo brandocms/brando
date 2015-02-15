@@ -113,6 +113,8 @@ defmodule Brando.Images.Field.ImageField do
 
   @doc """
   Handles the upload by starting a chain of operations on the plug.
+  This function handles upload when we have an image field on a model,
+  not when the model itself represents an image. (See Brando.Images.Upload)
 
   ## Parameters
 
