@@ -16,7 +16,7 @@ defmodule Brando.Images.Model.ImageCategory do
     field :slug, :string
     field :cfg,  :string
     belongs_to :creator, User
-    has_many :series, ImageSeries
+    has_many :image_series, ImageSeries
     timestamps
   end
 end

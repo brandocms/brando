@@ -18,8 +18,17 @@ defmodule Brando.Images.Model.ImageSeries do
     field :credits, :string
     field :order, :integer
     belongs_to :creator, User
-    belongs_to :category, ImageCategory
+    belongs_to :image_category, ImageCategory
     has_many :images, Image
     timestamps
+  end
+
+  def get(slug: slug) do
+    from(m in __MODULE__,
+         where: m.slug == ^slug,
+         preload: [:images, :image_category],
+         limit: 1)
+    |> Brando.get_repo.all
+    |> List.first
   end
 end
