@@ -258,17 +258,17 @@ defmodule MyApp.Repo.Migrations.AddImagecategoriesTable do
     create index(:imagecategories, [:slug])
     execute """
       INSERT INTO
-        imagecategories
-        (name, slug, cfg, creator_id, inserted_at, updated_at)
+        imageseries
+        ("name", "slug", "credits", "order", "creator_id", "image_category_id", "inserted_at", "updated_at")
       VALUES
-        ('post', 'post', NULL, 1, NOW(), NOW());
+        ('post', 'post', NULL, 0, 1, 1, NOW(), NOW());
     """
     execute """
       INSERT INTO
-        imagecategories
-        (name, slug, cfg, creator_id, inserted_at, updated_at)
+        imageseries
+        ("name", "slug", "credits", "order", "creator_id", "image_category_id", "inserted_at", "updated_at")
       VALUES
-        ('page', 'page', NULL, 1, NOW(), NOW());
+        ('page', 'page', NULL, 0, 1, 1, NOW(), NOW());
     """
   end
 
@@ -290,11 +290,25 @@ defmodule MyApp.Repo.Migrations.AddImageseriesTable do
       add :credits,           :text
       add :order,             :integer
       add :creator_id,        references(:users)
-      add :category_id,       references(:imagecategories)
+      add :image_category_id, references(:imagecategories)
       timestamps
     end
     create index(:imageseries, [:slug])
     create index(:imageseries, [:order])
+    execute """
+      INSERT INTO
+        imageseries
+        ("name", "slug", "credits", "order", "creator_id", "image_category_id", "inserted_at", "updated_at")
+      VALUES
+        ('post', 'post', NULL, 0, 1, 1, NOW(), NOW());
+    """
+    execute """
+      INSERT INTO
+        imageseries
+        ("name", "slug", "credits", "order", "creator_id", "image_category_id", "inserted_at", "updated_at")
+      VALUES
+        ('page', 'page', NULL, 0, 1, 1, NOW(), NOW());
+    """
   end
 
   def down do
@@ -313,10 +327,11 @@ defmodule MyApp.Repo.Migrations.AddImagesTable do
     create table(:images) do
       add :title,             :text
       add :credits,           :text
+      add :image,             :text
       add :order,             :integer
       add :optimized,         :boolean
       add :creator_id,        references(:users)
-      add :series_id,         references(:imageseries)
+      add :image_series_id,   references(:imageseries)
       timestamps
     end
     create index(:images, [:order])
@@ -333,6 +348,23 @@ end
 
 Config
 ------
+
+Default image config
+
+```elixir
+config :brando, Brando.Images,
+  default_config: %{allowed_mimetypes: ["image/jpeg", "image/png"],
+                 default_size: :medium,
+                 upload_path: Path.join("images", "default"),
+                 random_filename: true,
+                 size_limit: 10240000,
+                 sizes: %{small:  %{size: "300", quality: 100},
+                         medium: %{size: "500", quality: 100},
+                         large:  %{size: "700", quality: 100},
+                         xlarge: %{size: "900", quality: 100},
+                         thumb:  %{size: "150x150^ -gravity center -extent 150x150", quality: 100, crop: true}}}
+```
+
 Optimizing images: (not implemented yet)
 
 ```elixir
