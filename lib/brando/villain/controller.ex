@@ -46,9 +46,8 @@ defmodule Villain.Controller do
       def image_info(conn, %{"form" => form, "id" => id, "uid" => uid}) do
         form = URI.decode_query(form)
         {:ok, image} = unquote(image_model).update(unquote(image_model).get(id: id), form)
-        json conn,
-          %{status: 200, id: id, uid: uid,
-            title: image.title, credits: image.credits}
+        json conn, %{status: 200, id: id, uid: uid,
+                     title: image.title, credits: image.credits}
       end
     end
   end
