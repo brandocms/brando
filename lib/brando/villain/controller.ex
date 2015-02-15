@@ -5,8 +5,6 @@ defmodule Villain.Controller do
     quote do
       @doc false
       def browse_images(conn, %{"id" => series_slug} = params) do
-        require Logger
-        Logger.info(inspect(series_slug))
         image_series = unquote(series_model).get(slug: series_slug)
         image_list = Enum.map(image_series.images, fn image ->
           %{src: Brando.HTML.media_url(image.image),
