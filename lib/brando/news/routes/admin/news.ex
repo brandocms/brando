@@ -54,8 +54,8 @@ defmodule Brando.News.Admin.Routes do
       Enum.each actions, fn action ->
         case action do
           :index         -> get    "#{path}",                    ctrl, :index, opts
-          :upload_image  -> post   "#{path}/villain/last-opp/",  ctrl, :upload_image, opts
-          :browse_images -> get    "#{path}/villain/bla/",       ctrl, :browse_images, opts
+          :upload_image  -> post   "#{path}/villain/last-opp/:#{parm}",  ctrl, :upload_image, opts
+          :browse_images -> get    "#{path}/villain/bla/:#{parm}",       ctrl, :browse_images, opts
           :image_info    -> post   "#{path}/villain/bildedata/:#{parm}", ctrl, :image_info, opts
           :show          -> get    "#{path}/:#{parm}",           ctrl, :show, opts
           :new           -> get    "#{path}/ny",                 ctrl, :new, opts
