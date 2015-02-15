@@ -155,10 +155,9 @@ config :my_app, MyApp.Repo,
 News
 ====
 
-Create an initial migration for the `posts` & `postimages` table:
+Create an initial migration for the `posts` table:
 
     $ mix ecto.gen.migration add_posts_table
-    $ mix ecto.gen.migration add_postimages_table
 
 then add the following to the generated files:
 
@@ -197,25 +196,6 @@ defmodule MyApp.Repo.Migrations.AddPostsTable do
     drop index(:posts, [:status])
   end
 end
-
-# postimages
-defmodule MyApp.Repo.Migrations.AddPostimagesTable do
-  use Ecto.Migration
-
-  def up do
-    create table(:postimages) do
-      add :title,              :text
-      add :credits,            :text
-      add :image,              :text
-      timestamps
-    end
-  end
-
-  def down do
-    drop table(:postimages)
-  end
-end
-```
 
 Now run the migrations:
 
