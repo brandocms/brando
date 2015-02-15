@@ -2,10 +2,12 @@ defmodule Brando.News.Admin.PostController do
   @moduledoc """
   Controller for the Brando News module.
   """
-  alias Brando.News.Model.PostImage
+  alias Brando.Images.Model.Image
+  alias Brando.Images.Model.ImageSeries
   use Phoenix.Controller
   use Villain.Controller,
-    model: PostImage
+    image_model: Image,
+    series_model: ImageSeries
   import Brando.Utils, only: [add_css: 2, add_js: 2]
 
   plug :action
