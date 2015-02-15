@@ -20,7 +20,7 @@ defmodule Villain.Controller do
         series = unquote(series_model).get(slug: series_slug)
         cfg = series.image_category.cfg || Brando.config(Brando.Images)[:default_config]
         opts = Map.put(%{}, "image_series_id", series.id)
-        {:ok, image} = Brando.Images.Model.Image.check_for_uploads(params, Brando.HTML.current_user(conn), cfg, opts)
+        {:ok, image} = unquote(image_model).check_for_uploads(params, Brando.HTML.current_user(conn), cfg, opts)
         json conn,
           %{status: "200",
             uid: uid,
