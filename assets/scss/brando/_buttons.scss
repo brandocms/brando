@@ -18,6 +18,10 @@
   background-image: none;
   border: 1px solid transparent;
   border-radius: 4px;
+
+  i {
+    margin-right: 7px;
+  }
 }
 .btn:focus,
 .btn:active:focus,
@@ -340,6 +344,10 @@ fieldset[disabled] .btn-link:focus {
   font-size: 12px;
   line-height: 1.5;
   border-radius: 3px;
+
+  i {
+    margin-right: 4px;
+  }
 }
 .btn-xs,
 .btn-group-xs > .btn {
@@ -347,6 +355,10 @@ fieldset[disabled] .btn-link:focus {
   font-size: 12px;
   line-height: 1.5;
   border-radius: 3px;
+
+  i {
+    margin-right: 3px;
+  }
 }
 .btn-block {
   display: block;
