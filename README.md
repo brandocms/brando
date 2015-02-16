@@ -248,7 +248,7 @@ defmodule MyApp.Repo.Migrations.AddImagecategoriesTable do
         imageseries
         ("name", "slug", "credits", "order", "creator_id", "image_category_id", "inserted_at", "updated_at")
       VALUES
-        ('page', 'page', NULL, 0, 1, 1, NOW(), NOW());
+        ('page', 'page', NULL, 0, 1, 2, NOW(), NOW());
     """
   end
 
