@@ -1,0 +1,27 @@
+<h1>Bildeoversikt</h1>
+<ul class="accordion-tabs-minimal">
+  <%= for category <- @categories do %>
+  <li class="tab-header-and-content">
+    <a href="#" class="tab-link<%= if List.first(@categories) == category do %> is-active<% end %>"><%= String.capitalize(category.name) %></a>
+    <div class="tab-content">
+      <%= for serie <- category.image_series do %>
+        <div class="image-serie">
+          <h2><%= String.capitalize(serie.name) %></h2>
+          <%= if serie.images != [] do %>
+            <%= for image <- serie.images do %>
+              <img src="<%= media_url(img(image.image, :thumb)) %>" />
+            <% end %>
+          <% else %>
+            <p>Ingen bilder i denne serien.</p>
+          <% end %>
+          <hr>
+          <a href="" class="btn btn-default">Last opp bilder</a>
+          <a href="" class="btn btn-default">Editer bildeserie</a>
+          <a href="" class="btn btn-default">Sortér bilder</a>
+          <a href="" class="btn btn-danger">Slett bildeserie</a>
+        </div>
+      <% end %>
+    </div>
+  </li>
+  <% end %>
+</ul>
