@@ -98,7 +98,7 @@ end
 scope "/admin", as: :admin do
   pipe_through :admin
   # only pass `model` if you need a custom model.
-  users_resources "/brukere", model: Brando.Users.Model.User
+  user_resources "/brukere", model: Brando.Users.Model.User
   get "/", Brando.Dashboard.Admin.DashboardController, :dashboard
 end
 
@@ -143,7 +143,7 @@ config :brando, Brando.Menu,
            "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
            "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
            "#870B46;", "#D0201A;", "#FF641A;"],
-  modules: [Brando.Admin, Brando.Users, Brando.News]
+  modules: [Brando.Admin, Brando.Users, Brando.News, Brando.Images]
 
 config :my_app, MyApp.Repo,
   database: "my_app",
@@ -207,7 +207,7 @@ Add to your `router.ex` in your `admin` scope:
 scope "/admin", as: :admin do
   # (...)
   # only pass private if you need a custom model.
-  news_resources "/nyheter", model: Brando.News.Model.Post
+  post_resources "/nyheter", model: Brando.News.Model.Post
 end
 ```
 
@@ -322,9 +322,15 @@ defmodule MyApp.Repo.Migrations.AddImagesTable do
     drop index(:images, [:order])
   end
 end
-
-
 ```
+
+Add to your `router.ex` in your `admin` scope:
+
+```elixir
+scope "/admin", as: :admin do
+  # (...)
+  image_resources "/bilder"
+end
 
 Config
 ------
