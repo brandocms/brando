@@ -1,0 +1,2 @@
+    <h1>Ny bildekategori</h1>
+    <%= ImageCategoryForm.get_form(action: :create, params: [], values: @imagecategory, errors: @errors) %>

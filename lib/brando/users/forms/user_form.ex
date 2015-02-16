@@ -6,7 +6,6 @@ defmodule Brando.Users.Form.UserForm do
   use Bitwise, only_operators: true
   use Brando.Form
 
-
   @roles %{staff: 1, admin: 2, superuser: 4}
 
   @doc false

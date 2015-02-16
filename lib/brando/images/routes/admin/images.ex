@@ -2,7 +2,7 @@ defmodule Brando.Images.Admin.Routes do
   alias Phoenix.Router.Resource
   alias Brando.Images.Admin.ImageController
   alias Brando.Images.Admin.ImageSeriesController
-  alias Brando.Images.Admin.ImageCategoriesController
+  alias Brando.Images.Admin.ImageCategoryController
   alias Brando.Images.Model.Image
   alias Brando.Images.Model.ImageSeries
   alias Brando.Images.Model.ImageCategory
@@ -20,16 +20,21 @@ defmodule Brando.Images.Admin.Routes do
     quote do
       image_ctrl = ImageController
       series_ctrl = ImageSeriesController
-      categories_ctrl = ImageCategoriesController
+      categories_ctrl = ImageCategoryController
       resource = Resource.build(unquote(path), image_ctrl, unquote(options))
+
       parm = resource.param
       path = resource.path
       ctrl = resource.controller
       opts = resource.route
 
       get    "#{path}",                   ctrl, :index, opts
-      get    "#{path}/serier",            series_ctrl, :index, opts
-      get    "#{path}/kategorier",        categories_ctrl, :index, opts
+      get    "#{path}/serier",            series_ctrl, :index, Keyword.put(opts, :as, "image_series")
+      get    "#{path}/serier/ny",         series_ctrl, :new, Keyword.put(opts, :as, "image_series")
+      post   "#{path}/serier",            series_ctrl, :create, Keyword.put(opts, :as, "image_series")
+      get    "#{path}/kategorier",        categories_ctrl, :index, Keyword.put(opts, :as, "image_category")
+      get    "#{path}/kategorier/ny",     categories_ctrl, :new, Keyword.put(opts, :as, "image_category")
+      post   "#{path}/kategorier",        categories_ctrl, :create, Keyword.put(opts, :as, "image_category")
     end
   end
 end

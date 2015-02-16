@@ -9,9 +9,15 @@ defmodule Brando.Images.Admin.ImageCategoryController do
 
   @doc false
   def index(conn, _params) do
-    model = conn.private[:model]
+    category_model = conn.private[:category_model]
     conn
-    |> assign(:categories, model.all)
+    |> assign(:categories, category_model.all)
     |> render(:index)
+  end
+
+  @doc false
+  def new(conn, _params) do
+    conn
+    |> render(:new)
   end
 end
