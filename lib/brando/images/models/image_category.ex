@@ -19,4 +19,14 @@ defmodule Brando.Images.Model.ImageCategory do
     has_many :image_series, ImageSeries
     timestamps
   end
+
+  @doc """
+  Get all records. Ordered by `id`.
+  """
+  def all do
+    q = from m in __MODULE__,
+        order_by: [asc: m.name],
+        preload: [:image_series, image_series: :images]
+    Brando.get_repo.all(q)
+  end
 end
