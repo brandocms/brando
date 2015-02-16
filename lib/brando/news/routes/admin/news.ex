@@ -8,7 +8,7 @@ defmodule Brando.News.Admin.Routes do
 
       scope "/admin", as: :admin do
         pipe_through :admin
-        news_resources "/news", private: %{model: Brando.News.Model.Post}
+        post_resources "/news", private: %{model: Brando.News.Model.Post}
 
   """
   alias Phoenix.Router.Resource
@@ -18,25 +18,25 @@ defmodule Brando.News.Admin.Routes do
   @doc """
   Defines "RESTful" endpoints for the news resource.
   """
-  defmacro news_resources(path, ctrl, opts) do
-    add_news_resources path, ctrl, opts, do: nil
+  defmacro post_resources(path, ctrl, opts) do
+    add_post_resources path, ctrl, opts, do: nil
   end
 
   @doc """
-  See news_resources/2
+  See post_resources/2
   """
-  defmacro news_resources(path, opts) do
-    add_news_resources path, PostController, opts, do: nil
+  defmacro post_resources(path, opts) do
+    add_post_resources path, PostController, opts, do: nil
   end
 
   @doc """
-  See news_resources/2
+  See post_resources/2
   """
-  defmacro news_resources(path) do
-    add_news_resources path, PostController, [], do: nil
+  defmacro post_resources(path) do
+    add_post_resources path, PostController, [], do: nil
   end
 
-  defp add_news_resources(path, controller, opts, do: context) do
+  defp add_post_resources(path, controller, opts, do: context) do
     if model = Keyword.get(opts, :model) do
       options = Keyword.put([], :private, quote(do: %{model: unquote(model)}))
     else

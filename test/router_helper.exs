@@ -102,9 +102,9 @@ defmodule RouterHelper do
 
     scope "/admin", as: :admin do
       pipe_through :admin
-      users_resources "/brukere", Brando.Users.Admin.UserController, private: %{model: Brando.Users.Model.User}
-      users_resources "/brukere2", private: %{model: Brando.Users.Model.User}
-      users_resources "/brukere3"
+      user_resources "/brukere", Brando.Users.Admin.UserController, private: %{model: Brando.Users.Model.User}
+      user_resources "/brukere2", private: %{model: Brando.Users.Model.User}
+      user_resources "/brukere3"
       get "/", Brando.Dashboard.Admin.DashboardController, :dashboard
     end
 

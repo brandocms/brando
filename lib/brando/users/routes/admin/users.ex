@@ -8,7 +8,7 @@ defmodule Brando.Users.Admin.Routes do
 
       scope "/admin", as: :admin do
         pipe_through :admin
-        users_resources "/brukere", private: %{model: Brando.Users.Model.User}
+        user_resources "/brukere", private: %{model: Brando.Users.Model.User}
 
   """
   alias Phoenix.Router.Resource
@@ -18,25 +18,25 @@ defmodule Brando.Users.Admin.Routes do
   @doc """
   Defines "RESTful" endpoints for the users resource.
   """
-  defmacro users_resources(path, ctrl, opts) do
-    add_users_resources path, ctrl, opts, do: nil
+  defmacro user_resources(path, ctrl, opts) do
+    add_user_resources path, ctrl, opts, do: nil
   end
 
   @doc """
-  See users_resources/2
+  See user_resources/2
   """
-  defmacro users_resources(path, opts) do
-    add_users_resources path, UserController, opts, do: nil
+  defmacro user_resources(path, opts) do
+    add_user_resources path, UserController, opts, do: nil
   end
 
   @doc """
-  See users_resources/2
+  See user_resources/2
   """
-  defmacro users_resources(path) do
-    add_users_resources path, UserController, [], do: nil
+  defmacro user_resources(path) do
+    add_user_resources path, UserController, [], do: nil
   end
 
-  defp add_users_resources(path, controller, opts, do: context) do
+  defp add_user_resources(path, controller, opts, do: context) do
     if model = Keyword.get(opts, :model) do
       options = Keyword.put([], :private, quote(do: %{model: unquote(model)}))
     else
