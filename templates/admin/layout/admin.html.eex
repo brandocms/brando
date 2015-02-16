@@ -13,10 +13,9 @@
     <%= css_extra(@conn) %>
 
     <script type="text/javascript" src="/static/brando/js/jquery.min.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/brando/js/gridforms.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/to-markdown.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/markdown.min.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/brando/js/dropdown.js" charset="utf-8"></script>
+    <script type="text/javascript" src="/static/brando/js/brando.js" charset="utf-8"></script>
 
 <!--     <script type="text/javascript" src="/static/brando/js/libs/jquery/jquery.slugit.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/libs/jquery/jquery.debounce-1.0.5.js" charset="utf-8"></script>
