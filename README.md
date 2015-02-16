@@ -196,6 +196,7 @@ defmodule MyApp.Repo.Migrations.AddPostsTable do
     drop index(:posts, [:status])
   end
 end
+```
 
 Now run the migrations:
 
@@ -257,7 +258,8 @@ defmodule MyApp.Repo.Migrations.AddImagecategoriesTable do
     drop index(:imagecategories, [:slug])
   end
 end
-
+```
+```elixir
 # imageseries
 
 defmodule MyApp.Repo.Migrations.AddImageseriesTable do
@@ -297,7 +299,8 @@ defmodule MyApp.Repo.Migrations.AddImageseriesTable do
     drop index(:imageseries, [:order])
   end
 end
-
+```
+```elixir
 # images
 
 defmodule MyApp.Repo.Migrations.AddImagesTable do
@@ -331,6 +334,7 @@ scope "/admin", as: :admin do
   # (...)
   image_resources "/bilder"
 end
+```
 
 Config
 ------
