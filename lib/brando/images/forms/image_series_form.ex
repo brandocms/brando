@@ -11,10 +11,12 @@ defmodule Brando.Images.ImageSeriesForm do
   end
 
   form "imageseries", [helper: :admin_image_series_path, class: "grid-form"] do
-    field :image_category_id, :select,
-      [required: true,
-       label: "Kategori",
-       choices: &__MODULE__.get_categories/0]
+    fieldset [row_span: 4] do
+      field :image_category_id, :select,
+        [required: true,
+         label: "Kategori",
+         choices: &__MODULE__.get_categories/0]
+    end
     field :name, :text,
       [required: true,
        label: "Navn",
