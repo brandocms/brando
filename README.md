@@ -97,8 +97,7 @@ end
 
 scope "/admin", as: :admin do
   pipe_through :admin
-  # only pass `model` if you need a custom model.
-  user_resources "/brukere", model: Brando.Users.Model.User
+  user_resources "/brukere"
   get "/", Brando.Dashboard.Admin.DashboardController, :dashboard
 end
 
@@ -207,8 +206,7 @@ Add to your `router.ex` in your `admin` scope:
 ```elixir
 scope "/admin", as: :admin do
   # (...)
-  # only pass private if you need a custom model.
-  post_resources "/nyheter", model: Brando.News.Model.Post
+  post_resources "/nyheter"
 end
 ```
 
