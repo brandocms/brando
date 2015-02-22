@@ -21,7 +21,7 @@ defmodule Brando.Users.Admin.UserController do
   def show(conn, %{"id" => user_id}) do
     model = conn.private[:model]
     conn
-    |> assign(:user, model.get(id: user_id))
+    |> assign(:user, model.get!(id: user_id))
     |> render("show.html")
   end
 
