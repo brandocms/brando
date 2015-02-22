@@ -32,10 +32,6 @@
         <td>
           <div class="imageserie m-b-md" id="series-">
             <img id="image-61" src="<%= media_url(img(@user.avatar, :thumb, "defaults/avatar_default.jpg")) %>" style="padding-bottom: 3px;" />
-            <hr>
-            <a href="" id="series-edit" class="btn btn-default" data-seriesid="22">
-              Endre profilbilde
-            </a>
           </div>
         </td>
       </tr>
