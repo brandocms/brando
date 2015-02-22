@@ -151,6 +151,13 @@ defmodule Brando.Users.Model.User do
   end
 
   @doc """
+  Get user by `val` or raise `Ecto.NoResultsError`.
+  """
+  def get!(val) do
+    get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
+  end
+
+  @doc """
   Delete `user` from database. Also deletes any connected image fields,
   including all generated sizes.
   """
