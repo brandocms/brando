@@ -35,19 +35,14 @@ defmodule Brando.HTML do
   def menu_url(conn, {fun, action}) do
     apply(helpers(conn), fun, [conn, action])
   end
-  @doc """
-  Joins the path fragments from `conn`.path_info to a binary.
-  """
-  def path(conn) do
-    Path.join(["/"] ++ conn.path_info)
-  end
 
   @doc """
-  Checks if `url_to_match` matches `current_path`.
+  Checks if `conn`'s `full_path` matches `current_path`.
   Returns "active", or "".
   """
-  def is_active?(url_to_match, current_path) when url_to_match == current_path, do: "active"
-  def is_active?(_, _), do: ""
+  def active_path(conn, url_to_match) do
+    if Plug.Conn.full_path(conn) == url_to_match, do: "active", else: ""
+  end
 
   @doc """
   Formats `arg1` (Ecto.DateTime) as a binary.

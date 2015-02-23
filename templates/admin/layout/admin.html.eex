@@ -62,8 +62,8 @@
                   <ul class="nav lt">
                   <%= for item <- menu.submenu do %>
                   <% url = menu_url(@conn, item.url) %>
-                    <li class="menuitem <%= is_active?(path(@conn), url) %>">
-                      <a href="<%= url %>" class="<%= is_active?(path(@conn), url) %>">
+                    <li class="menuitem <%= active_path(@conn, url) %>">
+                      <a href="<%= url %>" class="<%= active_path(@conn, url) %>">
                         <i class="fa fa-angle-right"></i>
                         <span><%= item.name %></span>
                       </a>

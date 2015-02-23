@@ -16,16 +16,10 @@ defmodule Brando.HTMLTest do
     assert zero_pad(1000) == "1000"
   end
 
-  test "is_active?/2" do
-    assert is_active?("/some/link", "/some/link") == "active"
-    assert is_active?("/some/link", "/some/other/link") == ""
-  end
-
-  test "path/1" do
-    conn = conn(:get, "/some/long/url")
-    assert path(conn) == "/some/long/url"
-    conn = conn(:get, "/url")
-    assert path(conn) == "/url"
+  test "active_path/2" do
+    conn = conn(:get, "/some/link")
+    assert active_path(conn, "/some/link") == "active"
+    assert active_path(conn, "/some/other/link") == ""
   end
 
   test "js_extra/2" do
