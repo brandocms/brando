@@ -276,7 +276,7 @@ defmodule Brando.Form do
   Evals the quoted action function, normally a path helper,
   and returns the result
   """
-  def get_action(fun, action, params) do
+  def get_action(fun, action, params \\ []) do
     apply(Brando.get_helpers, fun, [Brando.get_endpoint(), action, params])
   end
 
