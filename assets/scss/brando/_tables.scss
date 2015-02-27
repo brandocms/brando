@@ -277,3 +277,24 @@ table th[class*="col-"] {
   font-weight: bold;
   border-right: 1px solid #ccc;
 }
+
+.data-table > .table {
+  tr td:first-child {
+    width: 200px;
+    padding: 15px;
+    font-size: 12px;
+    font-weight: bold;
+    border-right: 1px solid #ccc;
+    text-align: right;
+  }
+}
+.data-table > h1 {
+  margin-left: 200px;
+}
+.data-table button {
+  margin-left: 200px;
+}
+.data-table p {
+  font-size: 16px;
+  margin-left: 200px;
+}

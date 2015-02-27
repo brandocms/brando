@@ -3103,9 +3103,10 @@ form label {
   font-size: 15px; }
 
 .image-serie {
-  background-color: #fafafa;
+  background-color: #FFFFFF;
   padding: 0 15px 15px 15px;
-  border-bottom: 4px solid #ddd; }
+  border: 1px solid #ddd;
+  margin-bottom: 10px; }
   .image-serie h2 {
     margin-top: 0;
     padding-top: 10px; }
@@ -3861,6 +3862,24 @@ table th[class*="col-"] {
   font-weight: bold;
   border-right: 1px solid #ccc; }
 
+.data-table > .table tr td:first-child {
+  width: 200px;
+  padding: 15px;
+  font-size: 12px;
+  font-weight: bold;
+  border-right: 1px solid #ccc;
+  text-align: right; }
+
+.data-table > h1 {
+  margin-left: 200px; }
+
+.data-table button {
+  margin-left: 200px; }
+
+.data-table p {
+  font-size: 16px;
+  margin-left: 200px; }
+
 .accordion-tabs-minimal {
   line-height: 1.5;
   padding: 0; }
@@ -3889,14 +3908,20 @@ table th[class*="col-"] {
     .accordion-tabs-minimal a.tab-link.is-active {
       border-bottom: 0;
       border: 1px solid gainsboro;
-      border-bottom-color: white;
-      margin-bottom: -1px; }
+      border-bottom-color: #F7F7F7;
+      margin-bottom: -1px;
+      background-color: #FAFAFA; }
   .accordion-tabs-minimal .tab-content {
     display: none;
     padding: 1.5em 10px;
     width: 100%;
     border-top: 1px solid gainsboro;
     float: left; }
+    .accordion-tabs-minimal .tab-content.is-open {
+      background-color: #FAFAFA;
+      border-left: 1px solid gainsboro;
+      border-bottom: 1px solid gainsboro;
+      border-right: 1px solid gainsboro; }
 
 .text-mono {
   font-family: "a-mono", "Monaco", "Courier New" !important; }

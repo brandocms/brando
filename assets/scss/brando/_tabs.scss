@@ -10,9 +10,10 @@
   $medium-screen: em(640) !default;
   //////////////////////////////////////////////////////////////////////////////////
 
+  $tab-active: #FAFAFA;
   $tab-link-color: $dark-gray;
   $tab-border: 1px solid $base-border-color;
-  $tab-active-background: $base-background-color;
+  $tab-active-background: #F7F7F7;
   $tab-inactive-color: $base-background-color;
   $tab-inactive-hover-color: silver;
   $tab-mode: $medium-screen;
@@ -23,10 +24,7 @@
 
   li.tab-header-and-content {
     list-style: none;
-
-
-      display: inline;
-
+    display: inline;
   }
 
   a.tab-link {
@@ -37,12 +35,8 @@
     font-weight: 400;
     padding: ($base-spacing / 2) $gutter;
     text-decoration: none;
-
-
-      //@include inline-block;
-      display: inline-block;
-      border-top: 0;
-
+    display: inline-block;
+    border-top: 0;
 
     &:hover {
       color: $base-link-color;
@@ -54,12 +48,10 @@
 
     &.is-active {
       border-bottom: 0;
-
-
-        border: $tab-border;
-        border-bottom-color: $tab-active-background;
-        margin-bottom: -1px;
-
+      border: $tab-border;
+      border-bottom-color: $tab-active-background;
+      margin-bottom: -1px;
+      background-color: $tab-active;
     }
   }
 
@@ -67,10 +59,15 @@
     display: none;
     padding: $base-spacing $gutter;
     width: 100%;
+    border-top: $tab-border;
+    float: left;
 
-
-      border-top: $tab-border;
-      float: left;
+    &.is-open {
+      background-color: $tab-active;
+      border-left: 1px solid gainsboro;
+      border-bottom: 1px solid gainsboro;
+      border-right: 1px solid gainsboro;
+    }
 
   }
 }
