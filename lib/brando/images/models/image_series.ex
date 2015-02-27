@@ -7,10 +7,18 @@ defmodule Brando.Images.Model.ImageSeries do
 
   use Ecto.Model
   import Ecto.Query, only: [from: 2]
-  alias Brando.Utils
   alias Brando.Users.Model.User
   alias Brando.Images.Model.Image
   alias Brando.Images.Model.ImageCategory
+
+  def __name__(:singular), do: "bildeserie"
+  def __name__(:plural), do: "bildeserier"
+
+  def __str__(model) do
+    model = Brando.get_repo.preload(model, :images)
+    image_count = Enum.count(model.images)
+    "#{model.name} – #{image_count} bilde(r)."
+  end
 
   schema "imageseries" do
     field :name, :string
