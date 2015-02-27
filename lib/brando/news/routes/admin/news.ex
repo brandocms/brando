@@ -36,11 +36,8 @@ defmodule Brando.News.Admin.Routes do
   end
 
   defp add_post_resources(path, controller, opts) do
-    if model = Keyword.get(opts, :model) do
-      options = Keyword.put([], :private, quote(do: %{model: unquote(model)}))
-    else
-      options = Keyword.put([], :private, quote(do: %{model: Post}))
-    end
+    map = Map.put(%{}, :model, Keyword.get(opts, :model) || Post)
+    options = Keyword.put([], :private, Macro.escape(map))
     quote do
       path = unquote(path)
       ctrl = unquote(controller)

@@ -24,9 +24,10 @@ defmodule Brando.Images.Admin.Routes do
 
   defp add_resources(path, opts) do
     options = []
-    options = Keyword.put(options, :private, quote(do: %{image_model: unquote(Keyword.get(opts, :image_model) || Image)}))
-    options = Keyword.put(options, :private, quote(do: %{series_model: unquote(Keyword.get(opts, :series_model) || ImageSeries)}))
-    options = Keyword.put(options, :private, quote(do: %{category_model: unquote(Keyword.get(opts, :category_model) || ImageCategory)}))
+    priv_map = Map.put(%{}, :image_model, Keyword.get(opts, :image_model) || Image)
+    priv_map = Map.put(priv_map, :series_model, Keyword.get(opts, :seriesmodel) || ImageSeries)
+    priv_map = Map.put(priv_map, :category_model, Keyword.get(opts, :category_model) || ImageCategory)
+    options = Keyword.put(options, :private, Macro.escape(priv_map))
 
     quote do
       image_ctrl = ImageController
@@ -39,11 +40,14 @@ defmodule Brando.Images.Admin.Routes do
       get "#{path}", image_ctrl, :index, opts
       get "#{path}/serier", series_ctrl, :index, Keyword.put(opts, :as, "image_series")
       get "#{path}/serier/ny", series_ctrl, :new, Keyword.put(opts, :as, "image_series")
+      get "#{path}/serier/slett/:id", series_ctrl, :delete_confirm, Keyword.put(opts, :as, "image_series")
+      delete "#{path}/serier", series_ctrl, :delete, Keyword.put(opts, :as, "image_series")
       post "#{path}/serier", series_ctrl, :create, Keyword.put(opts, :as, "image_series")
+
       get "#{path}/kategorier", categories_ctrl, :index, Keyword.put(opts, :as, "image_category")
+      get "#{path}/kategorier/ny", categories_ctrl, :new, Keyword.put(opts, :as, "image_category")
       get "#{path}/kategorier/slett/:id", categories_ctrl, :delete_confirm, Keyword.put(opts, :as, "image_category")
       delete "#{path}/kategorier", categories_ctrl, :delete, Keyword.put(opts, :as, "image_category")
-      get "#{path}/kategorier/ny", categories_ctrl, :new, Keyword.put(opts, :as, "image_category")
       post "#{path}/kategorier", categories_ctrl, :create, Keyword.put(opts, :as, "image_category")
     end
   end
