@@ -2,7 +2,6 @@ defmodule Brando.Images.Admin.ImageController do
   @moduledoc """
   Controller for the Brando ImageCategory module.
   """
-  alias Brando.Images.Model.Image
   use Phoenix.Controller
 
   plug :action
