@@ -147,7 +147,7 @@ defmodule Brando.Users.Model.User do
   end
 
   @doc """
-  Get user from DB by `id`
+  Get model from DB by `id`
   """
   def get(id: id) do
     from(u in __MODULE__,
@@ -158,19 +158,19 @@ defmodule Brando.Users.Model.User do
   end
 
   @doc """
-  Get user by `val` or raise `Ecto.NoResultsError`.
+  Get model by `val` or raise `Ecto.NoResultsError`.
   """
   def get!(val) do
     get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
   end
 
   @doc """
-  Delete `user` from database. Also deletes any connected image fields,
+  Delete `record` from database. Also deletes any connected image fields,
   including all generated sizes.
   """
-  def delete(user) do
-    Brando.get_repo.delete(user)
-    delete_connected_images(user, @imagefields)
+  def delete(record) do
+    Brando.get_repo.delete(record)
+    delete_connected_images(record, @imagefields)
   end
 
   @doc """
