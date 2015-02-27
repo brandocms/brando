@@ -20,6 +20,22 @@ defmodule Brando.Images.Model.ImageSeries do
     "#{model.name} – #{image_count} bilde(r)."
   end
 
+  use Linguist.Vocabulary
+  locale "no", [
+    model: [
+      id: "ID",
+      name: "Navn",
+      slug: "URL-tamp",
+      credits: "Kreditering",
+      order: "Rekkefølge",
+      creator: "Opprettet av",
+      images: "Bilder",
+      image_category: "Bildekategori",
+      inserted_at: "Opprettet",
+      updated_at: "Oppdatert"
+    ]
+  ]
+
   schema "imageseries" do
     field :name, :string
     field :slug, :string
@@ -36,7 +52,31 @@ defmodule Brando.Images.Model.ImageSeries do
          where: m.slug == ^slug,
          preload: [:images, :image_category],
          limit: 1)
-    |> Brando.get_repo.all
-    |> List.first
+    |> Brando.get_repo.one!
+  end
+
+  @doc """
+  Get model from DB by `id`
+  """
+  def get(id: id) do
+    from(m in __MODULE__,
+         where: m.id == ^id,
+         preload: [:creator, :images, :image_category],
+         limit: 1)
+    |> Brando.get_repo.one!
+  end
+
+  @doc """
+  Get model by `val` or raise `Ecto.NoResultsError`.
+  """
+  def get!(val) do
+    get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
+  end
+
+  @doc """
+  Delete `record` from database.
+  """
+  def delete(record) do
+    Brando.get_repo.delete(record)
   end
 end
