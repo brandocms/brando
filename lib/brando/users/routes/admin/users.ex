@@ -8,10 +8,9 @@ defmodule Brando.Users.Admin.Routes do
 
       scope "/admin", as: :admin do
         pipe_through :admin
-        user_resources "/brukere", private: %{model: Brando.Users.Model.User}
+        user_resources "/brukere", model: Brando.Users.Model.User
 
   """
-  alias Phoenix.Router.Resource
   alias Brando.Users.Admin.UserController
   alias Brando.Users.Model.User
 
@@ -19,53 +18,42 @@ defmodule Brando.Users.Admin.Routes do
   Defines "RESTful" endpoints for the users resource.
   """
   defmacro user_resources(path, ctrl, opts) do
-    add_user_resources path, ctrl, opts, do: nil
+    add_user_resources path, ctrl, opts
   end
 
   @doc """
   See user_resources/2
   """
   defmacro user_resources(path, opts) do
-    add_user_resources path, UserController, opts, do: nil
+    add_user_resources path, UserController, opts
   end
 
   @doc """
   See user_resources/2
   """
   defmacro user_resources(path) do
-    add_user_resources path, UserController, [], do: nil
+    add_user_resources path, UserController, []
   end
 
-  defp add_user_resources(path, controller, opts, do: context) do
+  defp add_user_resources(path, controller, opts) do
     if model = Keyword.get(opts, :model) do
       options = Keyword.put([], :private, quote(do: %{model: unquote(model)}))
     else
       options = Keyword.put([], :private, quote(do: %{model: User}))
     end
     quote do
-      resource = Resource.build(unquote(path), unquote(controller), unquote(options))
-      parm = resource.param
-      path = resource.path
-      ctrl = resource.controller
-      opts = resource.route
-
-      Enum.each [:profile] ++ resource.actions, fn action ->
-        case action do
-          :index   -> get    "#{path}",                ctrl, :index, opts
-          :profile -> get    "#{path}/profil",         ctrl, :profile, opts
-          :show    -> get    "#{path}/:#{parm}",       ctrl, :show, opts
-          :new     -> get    "#{path}/ny",             ctrl, :new, opts
-          :edit    -> get    "#{path}/:#{parm}/endre", ctrl, :edit, opts
-          :create  -> post   "#{path}",                ctrl, :create, opts
-          :delete  -> delete "#{path}/:#{parm}",       ctrl, :delete, opts
-          :update  ->
-            patch "#{path}/:#{parm}", ctrl, :update, opts
-            put   "#{path}/:#{parm}", ctrl, :update, Keyword.put(opts, :as, nil)
-        end
-      end
-      scope resource.member do
-        unquote(context)
-      end
+      opts = unquote(options)
+      ctrl = unquote(controller)
+      path = unquote(path)
+      get "#{path}", ctrl, :index, opts
+      get "#{path}/profil", ctrl, :profile, opts
+      get "#{path}/ny", ctrl, :new, opts
+      get "#{path}/:id/endre", ctrl, :edit, opts
+      get "#{path}/:id", ctrl, :show, opts
+      post "#{path}", ctrl, :create, opts
+      delete "#{path}/:id", ctrl, :delete, opts
+      patch "#{path}/:id", ctrl, :update, opts
+      put "#{path}/:id", ctrl, :update, Keyword.put(opts, :as, nil)
     end
   end
 end

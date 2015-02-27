@@ -1,5 +1,16 @@
 defmodule Brando.Images.Admin.Routes do
-  alias Phoenix.Router.Resource
+  @moduledoc """
+  Routes for Brando.Images
+
+  ## Usage:
+
+  In `router.ex`
+
+      scope "/admin", as: :admin do
+        pipe_through :admin
+        image_resources "/images"
+
+  """
   alias Brando.Images.Admin.ImageController
   alias Brando.Images.Admin.ImageSeriesController
   alias Brando.Images.Admin.ImageCategoryController
@@ -21,20 +32,19 @@ defmodule Brando.Images.Admin.Routes do
       image_ctrl = ImageController
       series_ctrl = ImageSeriesController
       categories_ctrl = ImageCategoryController
-      resource = Resource.build(unquote(path), image_ctrl, unquote(options))
 
-      parm = resource.param
-      path = resource.path
-      ctrl = resource.controller
-      opts = resource.route
+      path = unquote(path)
+      opts = unquote(options)
 
-      get    "#{path}",                   ctrl, :index, opts
-      get    "#{path}/serier",            series_ctrl, :index, Keyword.put(opts, :as, "image_series")
-      get    "#{path}/serier/ny",         series_ctrl, :new, Keyword.put(opts, :as, "image_series")
-      post   "#{path}/serier",            series_ctrl, :create, Keyword.put(opts, :as, "image_series")
-      get    "#{path}/kategorier",        categories_ctrl, :index, Keyword.put(opts, :as, "image_category")
-      get    "#{path}/kategorier/ny",     categories_ctrl, :new, Keyword.put(opts, :as, "image_category")
-      post   "#{path}/kategorier",        categories_ctrl, :create, Keyword.put(opts, :as, "image_category")
+      get "#{path}", image_ctrl, :index, opts
+      get "#{path}/serier", series_ctrl, :index, Keyword.put(opts, :as, "image_series")
+      get "#{path}/serier/ny", series_ctrl, :new, Keyword.put(opts, :as, "image_series")
+      post "#{path}/serier", series_ctrl, :create, Keyword.put(opts, :as, "image_series")
+      get "#{path}/kategorier", categories_ctrl, :index, Keyword.put(opts, :as, "image_category")
+      get "#{path}/kategorier/slett/:id", categories_ctrl, :delete_confirm, Keyword.put(opts, :as, "image_category")
+      delete "#{path}/kategorier", categories_ctrl, :delete, Keyword.put(opts, :as, "image_category")
+      get "#{path}/kategorier/ny", categories_ctrl, :new, Keyword.put(opts, :as, "image_category")
+      post "#{path}/kategorier", categories_ctrl, :create, Keyword.put(opts, :as, "image_category")
     end
   end
 end
