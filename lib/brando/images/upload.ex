@@ -6,7 +6,7 @@ defmodule Brando.Images.Upload do
 
   import Brando.Images.Utils
 
-  defmacro __using__(opts) do
+  defmacro __using__(_) do
     quote do
       import Brando.Images.Utils
       import unquote(__MODULE__)
