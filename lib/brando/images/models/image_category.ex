@@ -116,6 +116,13 @@ defmodule Brando.Images.Model.ImageCategory do
   end
 
   @doc """
+  Get model by `val` or raise `Ecto.NoResultsError`.
+  """
+  def get!(val) do
+    get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
+  end
+
+  @doc """
   Get all records. Ordered by `id`.
   """
   def all do
@@ -123,5 +130,12 @@ defmodule Brando.Images.Model.ImageCategory do
         order_by: [asc: m.name],
         preload: [:image_series, image_series: :images]
     Brando.get_repo.all(q)
+  end
+
+  @doc """
+  Delete `record` from database.
+  """
+  def delete(record) do
+    Brando.get_repo.delete(record)
   end
 end
