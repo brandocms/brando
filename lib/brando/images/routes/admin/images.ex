@@ -40,13 +40,15 @@ defmodule Brando.Images.Admin.Routes do
       get "#{path}", image_ctrl, :index, opts
       get "#{path}/serier", series_ctrl, :index, Keyword.put(opts, :as, "image_series")
       get "#{path}/serier/ny", series_ctrl, :new, Keyword.put(opts, :as, "image_series")
-      get "#{path}/serier/slett/:id", series_ctrl, :delete_confirm, Keyword.put(opts, :as, "image_series")
+      get "#{path}/serier/:id/slett", series_ctrl, :delete_confirm, Keyword.put(opts, :as, "image_series")
+      get "#{path}/serier/:id/last-opp", series_ctrl, :upload, Keyword.put(opts, :as, "image_series")
+      post "#{path}/serier/:id/last-opp", series_ctrl, :upload_post, Keyword.put(opts, :as, "image_series")
       delete "#{path}/serier", series_ctrl, :delete, Keyword.put(opts, :as, "image_series")
       post "#{path}/serier", series_ctrl, :create, Keyword.put(opts, :as, "image_series")
 
       get "#{path}/kategorier", categories_ctrl, :index, Keyword.put(opts, :as, "image_category")
       get "#{path}/kategorier/ny", categories_ctrl, :new, Keyword.put(opts, :as, "image_category")
-      get "#{path}/kategorier/slett/:id", categories_ctrl, :delete_confirm, Keyword.put(opts, :as, "image_category")
+      get "#{path}/kategorier/:id/slett", categories_ctrl, :delete_confirm, Keyword.put(opts, :as, "image_category")
       delete "#{path}/kategorier", categories_ctrl, :delete, Keyword.put(opts, :as, "image_category")
       post "#{path}/kategorier", categories_ctrl, :create, Keyword.put(opts, :as, "image_category")
     end

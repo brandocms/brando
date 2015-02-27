@@ -194,6 +194,10 @@ defmodule Brando.HTML do
     module.t!("no", "model." <> to_string(field))
   end
 
+  @doc """
+  Renders a delete button wrapped in a POST form.
+  Pass `record` instance of model, and `helper` path.
+  """
   def delete_form_button(record, helper) do
     action = Brando.Form.get_action(helper, :delete)
     Phoenix.HTML.safe("""
@@ -208,4 +212,26 @@ defmodule Brando.HTML do
     """)
   end
 
+  def dropzone_form(helper, id, cfg) do
+    cfg = cfg || Brando.config(Brando.Images)[:default_config]
+    path = Brando.Form.get_action(helper, :upload_post, id)
+    Phoenix.HTML.safe("""
+    <form action="#{path}"
+          class="dropzone"
+          id="brando-dropzone"></form>
+    <script type="text/javascript">
+      // "myAwesomeDropzone" is the camelized version of the HTML element's ID
+      Dropzone.options.brandoDropzone = {
+        paramName: "image", // The name that will be used to transfer the file
+        maxFilesize: 10, // MB
+        accept: function(file, done) {
+          if (file.name == "justinbieber.jpg") {
+            done("Naha, you don't.");
+          }
+          else { done(); }
+        }
+      };
+    </script>
+    """)
+  end
 end

@@ -12,6 +12,29 @@ defmodule Brando.Images.Model.Image do
   alias Brando.Users.Model.User
   alias Brando.Images.Model.ImageSeries
 
+  def __name__(:singular), do: "bilde"
+  def __name__(:plural), do: "bilder"
+
+  def __str__(model) do
+    "#{model.id} | #{model.image}"
+  end
+
+  use Linguist.Vocabulary
+  locale "no", [
+    model: [
+      id: "ID",
+      title: "Tittel",
+      credits: "Krediteringer",
+      image: "Bilde",
+      order: "Rekkefølge",
+      optimized: "Optimisert",
+      creator: "Opprettet av",
+      image_series: "Bildeserie",
+      inserted_at: "Opprettet",
+      updated_at: "Oppdatert"
+    ]
+  ]
+
   schema "images" do
     field :title, :string
     field :credits, :string

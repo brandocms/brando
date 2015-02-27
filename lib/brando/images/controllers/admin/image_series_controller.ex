@@ -3,6 +3,7 @@ defmodule Brando.Images.Admin.ImageSeriesController do
   Controller for the Brando ImageSeries module.
   """
   use Phoenix.Controller
+  import Brando.Utils, only: [add_css: 2, add_js: 2]
 
   plug :action
 
@@ -21,9 +22,30 @@ defmodule Brando.Images.Admin.ImageSeriesController do
   end
 
   @doc false
+  def upload(conn, %{"id" => id}) do
+    model = conn.private[:series_model]
+    series = model.get!(id: id)
+    conn
+    |> add_css("dropzone/dropzone.css")
+    |> add_js("dropzone/dropzone.js")
+    |> assign(:series, series)
+    |> render(:upload)
+  end
+
+  @doc false
+  def upload_post(conn, %{"id" => id} = params) do
+    series_model = conn.private[:series_model]
+    image_model = conn.private[:image_model]
+    series = series_model.get!(id: id)
+    opts = Map.put(%{}, "image_series_id", series.id)
+    cfg = series.image_category.cfg || Brando.config(Brando.Images)[:default_config]
+    {:ok, image} = image_model.check_for_uploads(params, Brando.HTML.current_user(conn), cfg, opts)
+    conn
+    |> render(:upload_post, image)
+  end
+
+  @doc false
   def delete_confirm(conn, %{"id" => id}) do
-    require Logger
-    Logger.debug(inspect(conn.private))
     model = conn.private[:series_model]
     record = model.get!(id: id)
     conn

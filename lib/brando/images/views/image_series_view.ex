@@ -4,4 +4,8 @@ defmodule Brando.Images.Admin.ImageSeriesView do
   """
   alias Brando.Images.ImageSeriesForm
   use Brando.AdminView, root: "templates"
+
+  def render("upload_post.json", _assigns) do
+    %{status: "200"}
+  end
 end

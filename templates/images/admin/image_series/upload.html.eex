@@ -1,0 +1,3 @@
+<h1>Bildeopplasting</h1>
+<p>Last opp bilder til bildeserien <strong><%= @series.name %></strong></p>
+<%= Brando.HTML.dropzone_form(:admin_image_series_path, @series.id, @series.image_category.cfg) %>
