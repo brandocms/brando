@@ -1,0 +1,8 @@
+<div class="data-table">
+    <h1>Slett <%= Brando.HTML.model_name(@record, :singular) %>: <%= Brando.HTML.model_str(@record) %></h1>
+    <p>
+      Du er i ferd med å slette dette objektet. Vennligst se over og merk at du også sletter avhengige objekter. Objektet kan ikke gjenopprettes.
+    </p>
+    <%= Brando.HTML.inspect_model(@record) %>
+    <%= Brando.HTML.delete_form_button(@record, :admin_image_category_path) %>
+</div>
