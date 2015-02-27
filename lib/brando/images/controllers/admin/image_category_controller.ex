@@ -47,4 +47,14 @@ defmodule Brando.Images.Admin.ImageCategoryController do
     |> assign(:record, record)
     |> render(:delete_confirm)
   end
+
+  @doc false
+  def delete(conn, %{"id" => id}) do
+    model = conn.private[:category_model]
+    record = model.get!(id: id)
+    model.delete(record)
+    conn
+    |> put_flash(:notice, "#{Brando.HTML.model_name(record, :singular)} #{model.__str__(record)} slettet.")
+    |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
+  end
 end
