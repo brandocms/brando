@@ -4,6 +4,7 @@
   <li class="tab-header-and-content">
     <a href="#" class="tab-link<%= if List.first(@categories) == category do %> is-active<% end %>"><%= String.capitalize(category.name) %></a>
     <div class="tab-content">
+    <%= if category.image_series != [] do %>
       <%= for serie <- category.image_series do %>
         <div class="image-serie">
           <h2><%= String.capitalize(serie.name) %></h2>
@@ -21,10 +22,14 @@
           <a href="" class="btn btn-danger">Slett bildeserie</a>
         </div>
       <% end %>
+    <% else %>
+      <p>Ingen bildeserier i denne kategorien</p>
+    <% end %>
+      <a href="<%= helpers(@conn).admin_image_category_path(@conn, :delete_confirm, category.id) %>" class="btn btn-danger m-t-sm">Slett kategori</a>
     </div>
   </li>
   <% end %>
   <a href="<%= helpers(@conn).admin_image_category_path(@conn, :new) %>" class="btn btn-xs btn-default"><i class="fa fa-plus"></i> Ny kategori</a>
 </ul>
 <hr>
-<a href="" class="btn btn-primary"><i class="fa fa-plus"></i> Ny bildeserie</a>
+<a href="" class="btn btn-primary m-t-sm"><i class="fa fa-plus"></i> Ny bildeserie</a>
