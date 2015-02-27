@@ -12,6 +12,13 @@ defmodule Brando.Users.Model.User do
 
   @roles %{staff: 1, admin: 2, superuser: 4}
 
+  def __name__(:singular), do: "bruker"
+  def __name__(:plural), do: "brukere"
+
+  def __str__(model) do
+    "#{model.full_name} (#{model.username})"
+  end
+
   schema "users" do
     field :username, :string
     field :email, :string
