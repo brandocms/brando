@@ -132,4 +132,80 @@ defmodule Brando.HTML do
     for c <- css, do: do_css_extra(c)
   end
   defp do_css_extra(css), do: Phoenix.HTML.safe(~s(<link rel="stylesheet" href="#{static_url(css)}">))
+
+  @doc """
+  Inspects and displays `model`
+  """
+  def inspect_model(model) do
+    module = model.__struct__
+    fields = module.__schema__(:fields)
+    assocs = module.__schema__(:associations)
+    rendered_fields = Enum.join(Enum.map(fields, fn (field) -> inspect_field(field, module, module.__schema__(:field, field), Map.get(model, field)) end))
+    rendered_assocs = Enum.join(Enum.map(assocs, fn (assoc) -> inspect_assoc(assoc, module, module.__schema__(:association, assoc), Map.get(model, assoc)) end))
+    Phoenix.HTML.safe(~s(<table class="table data-table">#{rendered_fields}#{rendered_assocs}</table>))
+  end
+
+  defp inspect_field(name, module, type, value) do
+    unless String.ends_with?(to_string(name), "_id"), do:
+      do_inspect_field(translate_field(module, name), type, value)
+  end
+
+  defp do_inspect_field(name, Ecto.DateTime, value) do
+    ~s(<tr><td>#{name}</td><td>#{value.day}/#{value.month}/#{value.year} #{value.hour}:#{value.min}</td></tr>)
+  end
+  defp do_inspect_field(name, _type, value) do
+    ~s(<tr><td>#{name}</td><td>#{value}</td></tr>)
+  end
+
+  defp inspect_assoc(name, module, type, value) do
+    do_inspect_assoc(translate_field(module, name), type, value)
+  end
+
+  defp do_inspect_assoc(name, %Ecto.Associations.BelongsTo{} = type, value) do
+    ~s(<tr><td>#{name}</td><td>#{type.assoc.__str__(value)}</td></tr>)
+  end
+  defp do_inspect_assoc(name, %Ecto.Associations.Has{}, %Ecto.Associations.NotLoaded{}) do
+    ~s(<tr><td>#{name}</td><td>Assosiasjonene er ikke hentet.</td></tr>)
+  end
+  defp do_inspect_assoc(name, %Ecto.Associations.Has{}, []) do
+    ~s(<tr><td>#{name}</td><td>Ingen assosiasjoner.</td></tr>)
+  end
+  defp do_inspect_assoc(_name, %Ecto.Associations.Has{} = type, value) do
+    Enum.map(value, fn (row) -> ~s(<tr><td><i class='fa fa-link'></i> Tilknyttet #{type.assoc.__name__(:singular)}</td><td>#{type.assoc.__str__(row)}</td></tr>) end)
+  end
+
+  @doc """
+  Returns the record's model name from __name__/1
+  `form` is `:singular` or `:plural`
+  """
+  @spec model_name(Struct.t, :singular | :plural) :: String.t
+  def model_name(record, form) do
+    record.__struct__.__name__(form)
+  end
+
+  @doc """
+  Returns the model's representation from __str__/0
+  """
+  def model_str(record) do
+    record.__struct__.__str__(record)
+  end
+
+  defp translate_field(module, field) do
+    module.t!("no", "model." <> to_string(field))
+  end
+
+  def delete_form_button(record, helper) do
+    action = Brando.Form.get_action(helper, :delete)
+    Phoenix.HTML.safe("""
+    <form method="POST" action="#{action}">
+      <input type="hidden" name="_method" value="delete" />
+      <input type="hidden" name="id" value="#{record.id}" />
+      <button class="btn btn-danger">
+        <i class="fa fa-trash-o m-r-sm"> </i>
+        Slett
+      </button>
+    </form>
+    """)
+  end
+
 end
