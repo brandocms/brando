@@ -19,7 +19,7 @@
           <a href="" class="btn btn-default">Last opp bilder</a>
           <a href="" class="btn btn-default">Editer bildeserie</a>
           <a href="" class="btn btn-default">Sortér bilder</a>
-          <a href="" class="btn btn-danger">Slett bildeserie</a>
+          <a href="<%= helpers(@conn).admin_image_series_path(@conn, :delete_confirm, serie.id) %>" class="btn btn-danger">Slett bildeserie</a>
         </div>
       <% end %>
     <% else %>
