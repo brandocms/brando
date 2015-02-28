@@ -171,7 +171,8 @@ defmodule Brando.HTML do
     ~s(<tr><td>#{name}</td><td>Ingen assosiasjoner.</td></tr>)
   end
   defp do_inspect_assoc(_name, %Ecto.Associations.Has{} = type, value) do
-    Enum.map(value, fn (row) -> ~s(<tr><td><i class='fa fa-link'></i> Tilknyttet #{type.assoc.__name__(:singular)}</td><td>#{type.assoc.__str__(row)}</td></tr>) end)
+    rows = Enum.map(value, fn (row) -> ~s(<div class="assoc #{type.field}">#{type.assoc.__str__(row)}</div>) end)
+    ~s(<tr><td><i class='fa fa-link'></i> Tilknyttede #{type.assoc.__name__(:plural)}</td><td>#{rows}</td></tr>)
   end
 
   @doc """
