@@ -1,0 +1,45 @@
+<h1>Bildesortéring</h1>
+<p>Sortér bilder i serien <strong><%= @series.name %></strong></p>
+<ul id="sortable" class="clearfix">
+<%= for i <- @series.images do %>
+  <li data-id="<%= i.id %>"><img src="<%= media_url(img(i.image, :thumb)) %>" /></li>
+<% end %>
+</ul>
+<hr>
+<div class="buttons m-t-md">
+  <a id="sort-post" href="<%= helpers(@conn).admin_image_series_path(@conn, :sort_post, @series.id) %>" class="btn btn-default">Lagre rekkefølge</a>
+  <a href="<%= helpers(@conn).admin_image_series_path(@conn, :edit, @series.id) %>" class="btn btn-default">Endre bildeserie</a>
+  <a href="<%= helpers(@conn).admin_image_path(@conn, :index) %>" class="btn btn-default">Tilbake til oversikten</a>
+</div>
+
+<script type="text/javascript">
+  var el = document.getElementById('sortable');
+  var sortable = new Sortable(el, {
+    animation: 150,
+    ghostClass: "sortable-ghost",
+    onUpdate: function (e) {
+      $('#sort-post').removeClass("btn-default", "btn-success").addClass("btn-warning").html("Lagre ny rekkefølge");
+    },
+  });
+
+  $('#sort-post').on('click', function(e) {
+    e.preventDefault();
+    $(this).removeClass("btn-default").addClass("btn-warning").html("Lagrer ...");
+
+    $.ajax({
+      headers: {Accept : "application/json; charset=utf-8"},
+      type: "POST",
+      url: "",
+      data: {
+        order: sortable.toArray()
+      },
+      //dataType: "json",
+      success: sortSuccess,
+    });
+  });
+  function sortSuccess(data) {
+    if (data.status == 200) {
+      $("#sort-post").removeClass("btn-warning").addClass("btn-success").html("Lagret rekkefølge!");;
+    }
+  }
+</script>
