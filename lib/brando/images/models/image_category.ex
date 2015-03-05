@@ -52,8 +52,8 @@ defmodule Brando.Images.Model.ImageCategory do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :create, params) do
-    params
-    |> cast(model, ~w(name slug creator_id), ~w(cfg))
+    model
+    |> cast(params, ~w(name slug creator_id), ~w(cfg))
   end
 
   @doc """
@@ -67,8 +67,8 @@ defmodule Brando.Images.Model.ImageCategory do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
-    params
-    |> cast(model, [], ~w(name slug cfg creator_id))
+    model
+    |> cast(params, [], ~w(name slug cfg creator_id))
   end
 
   @doc """

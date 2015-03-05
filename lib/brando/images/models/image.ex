@@ -57,8 +57,8 @@ defmodule Brando.Images.Model.Image do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :create, params) do
-    params
-    |> cast(model, ~w(image image_series_id), ~w(title credits order optimized creator_id))
+    model
+    |> cast(params, ~w(image image_series_id), ~w(title credits order optimized creator_id))
   end
 
   @doc """
@@ -72,8 +72,8 @@ defmodule Brando.Images.Model.Image do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
-    params
-    |> cast(model, [], ~w(image image_series_id title credits order optimized creator_id))
+    model
+    |> cast(params, [], ~w(image image_series_id title credits order optimized creator_id))
   end
 
   @doc """
@@ -116,4 +116,12 @@ defmodule Brando.Images.Model.Image do
     |> Brando.get_repo.all
     |> List.first
   end
+
+  def reorder_images(ids, vals) do
+    order = Enum.zip(vals, ids)
+    Brando.get_repo.transaction(fn -> Enum.map(order, fn ({val, id}) ->
+      Ecto.Adapters.SQL.query(Brando.get_repo, "UPDATE images SET \"order\" = $1 WHERE \"id\" = $2", [val, String.to_integer(id)])
+    end) end)
+  end
+
 end

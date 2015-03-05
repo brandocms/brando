@@ -47,6 +47,69 @@ defmodule Brando.Images.Model.ImageSeries do
     timestamps
   end
 
+  @doc """
+  Casts and validates `params` against `model` to create a valid
+  changeset when action is :create.
+
+  ## Example
+
+      model_changeset = changeset(%__MODULE__{}, :create, params)
+
+  """
+  @spec changeset(t, atom, Keyword.t | Options.t) :: t
+  def changeset(model, :create, params) do
+    model
+    |> cast(params, ~w(name slug image_category_id creator_id), ~w(credits order))
+  end
+
+  @doc """
+  Casts and validates `params` against `model` to create a valid
+  changeset when action is :update.
+
+  ## Example
+
+      model_changeset = changeset(%__MODULE__{}, :update, params)
+
+  """
+  @spec changeset(t, atom, Keyword.t | Options.t) :: t
+  def changeset(model, :update, params) do
+    model
+    |> cast(params, [], ~w(name slug image_category_id creator_id credits order))
+  end
+
+  @doc """
+  Create a changeset for the model by passing `params`.
+  If valid, generate a hashed password and insert model to Repo.
+  If not valid, return errors from changeset
+  """
+  def create(params, current_user) do
+    params = Utils.Model.put_creator(params, current_user)
+    model_changeset = changeset(%__MODULE__{}, :create, params)
+    case model_changeset.valid? do
+      true ->
+        inserted_model = Brando.get_repo().insert(model_changeset)
+        {:ok, inserted_model}
+      false ->
+        {:error, model_changeset.errors}
+    end
+  end
+
+  @doc """
+  Create an `update` changeset for the model by passing `params`.
+  If password is in changeset, hash and insert in changeset.
+  If valid, update model in Repo.
+  If not valid, return errors from changeset
+  """
+  def update(model, params) do
+    model_changeset = changeset(model, :update, params)
+    case model_changeset.valid? do
+      true ->
+        {:ok, Brando.get_repo().update(model_changeset)}
+      false ->
+        {:error, model_changeset.errors}
+    end
+  end
+
   def get(slug: slug) do
     from(m in __MODULE__,
          where: m.slug == ^slug,
