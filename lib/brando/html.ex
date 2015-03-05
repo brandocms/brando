@@ -161,16 +161,16 @@ defmodule Brando.HTML do
     do_inspect_assoc(translate_field(module, name), type, value)
   end
 
-  defp do_inspect_assoc(name, %Ecto.Associations.BelongsTo{} = type, value) do
+  defp do_inspect_assoc(name, %Ecto.Association.BelongsTo{} = type, value) do
     ~s(<tr><td>#{name}</td><td>#{type.assoc.__str__(value)}</td></tr>)
   end
-  defp do_inspect_assoc(name, %Ecto.Associations.Has{}, %Ecto.Associations.NotLoaded{}) do
+  defp do_inspect_assoc(name, %Ecto.Association.Has{}, %Ecto.Association.NotLoaded{}) do
     ~s(<tr><td>#{name}</td><td>Assosiasjonene er ikke hentet.</td></tr>)
   end
-  defp do_inspect_assoc(name, %Ecto.Associations.Has{}, []) do
+  defp do_inspect_assoc(name, %Ecto.Association.Has{}, []) do
     ~s(<tr><td>#{name}</td><td>Ingen assosiasjoner.</td></tr>)
   end
-  defp do_inspect_assoc(_name, %Ecto.Associations.Has{} = type, value) do
+  defp do_inspect_assoc(_name, %Ecto.Association.Has{} = type, value) do
     rows = Enum.map(value, fn (row) -> ~s(<div class="assoc #{type.field}">#{type.assoc.__str__(row)}</div>) end)
     ~s(<tr><td><i class='fa fa-link'></i> Tilknyttede #{type.assoc.__name__(:plural)}</td><td>#{rows}</td></tr>)
   end
