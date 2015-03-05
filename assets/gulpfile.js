@@ -12,7 +12,10 @@ gulp.task('sass', function () {
 });
 
 gulp.task('scripts', function () {
-    return gulp.src(['js/brando/accordion.js', 'js/brando/dropdown.js', 'js/brando/gridforms.js'])
+    return gulp.src(['js/brando/accordion.js',
+                     'js/brando/dropdown.js',
+                     'js/brando/sortable.js',
+                     'js/brando/gridforms.js'])
         .pipe(concat('brando.js'))
         .pipe(gulp.dest('../priv/static/brando/js'))
         .pipe(rename('brando-min.js'))
