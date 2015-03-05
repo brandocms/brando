@@ -46,20 +46,23 @@ defmodule Brando.Users.Model.User do
   ]
 
   @doc """
-  Casts and validates `params` against `user` to create a valid
+  Casts and validates `params` against `model` to create a valid
   changeset when action is :create.
 
   ## Example
 
-      user_changeset = changeset(%__MODULE__{}, :create, params)
+      model_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
-  def changeset(user, action, params \\ nil)
-  def changeset(user, :create, params) do
-    params
-    |> strip_unhandled_upload("avatar")
-    |> cast(user, ~w(username full_name email password), ~w(role avatar))
+  def changeset(model, action, params \\ nil)
+  def changeset(model, :create, params) do
+    params =
+      params
+      |> strip_unhandled_upload("avatar")
+
+    model
+    |> cast(params, ~w(username full_name email password), ~w(role avatar))
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
     |> validate_unique(:email, on: Brando.get_repo())
@@ -68,19 +71,22 @@ defmodule Brando.Users.Model.User do
   end
 
   @doc """
-  Casts and validates `params` against `user` to create a valid
+  Casts and validates `params` against `model` to create a valid
   changeset when action is :update.
 
   ## Example
 
-      user_changeset = changeset(%__MODULE__{}, :update, params)
+      model_changeset = changeset(%__MODULE__{}, :update, params)
 
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
-  def changeset(user, :update, params) do
-    params
-    |> strip_unhandled_upload("avatar")
-    |> cast(user, [], ~w(username full_name email password role avatar))
+  def changeset(model, :update, params) do
+    params =
+      params
+      |> strip_unhandled_upload("avatar")
+
+    model
+    |> cast(params, [], ~w(username full_name email password role avatar))
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
     |> validate_unique(:email, on: Brando.get_repo())
