@@ -2590,6 +2590,9 @@ fieldset[disabled] .btn-gplus.active {
 .btn-group-vertical > .btn:last-child:not(:first-child) {
   border-bottom-left-radius: 2px; }
 
+.buttons {
+  clear: both; }
+
 #content-wrapper {
   border-top: 3px solid orange;
   background-color: #f7f7f7;
@@ -3592,6 +3595,18 @@ form label {
 .panel-body:after,
 .modal-footer:after {
   clear: both; }
+
+#sortable {
+  list-style-type: none;
+  padding: 0; }
+  #sortable li {
+    float: left;
+    margin: 5px;
+    padding: 5px;
+    border: 1px solid #ddd; }
+
+.sortable-ghost {
+  opacity: 0.5; }
 
 .status-indicators {
   font-size: 15px;
