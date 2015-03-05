@@ -144,11 +144,14 @@ config :brando, Brando.Menu,
            "#870B46;", "#D0201A;", "#FF641A;"],
   modules: [Brando.Admin, Brando.Users, Brando.News, Brando.Images]
 
+# configures the repo
 config :my_app, MyApp.Repo,
   database: "my_app",
   username: "postgres",
   password: "postgres",
   hostname: "localhost"
+  adapter: Ecto.Adapters.Postgres,
+  extensions: [{Brando.Postgrex.Extension.JSON, library: Poison}]
 ```
 
 News
