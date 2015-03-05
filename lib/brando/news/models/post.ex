@@ -8,6 +8,7 @@ defmodule Brando.News.Model.Post do
   use Ecto.Model
   use Brando.Images.Field.ImageField
   import Ecto.Query, only: [from: 2]
+  alias Brando.Type.Json
   alias Brando.Type.Status
   alias Brando.Users.Model.User
   alias Brando.Utils
@@ -17,7 +18,7 @@ defmodule Brando.News.Model.Post do
     field :header, :string
     field :slug, :string
     field :lead, :string
-    field :data, :string
+    field :data, Json
     field :html, :string
     field :cover, :string
     field :status, Status
@@ -68,10 +69,14 @@ defmodule Brando.News.Model.Post do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :create, params) do
-    params
-    |> strip_unhandled_upload("cover")
-    |> Utils.Model.transform_checkbox_vals(~w(featured))
-    |> cast(model, ~w(status header data lead creator_id language), ~w(featured))
+    params =
+      params
+      |> encode_data
+      |> strip_unhandled_upload("cover")
+      |> Utils.Model.transform_checkbox_vals(~w(featured))
+
+    model
+    |> cast(params, ~w(status header data lead creator_id language), ~w(featured))
   end
 
   @doc """
@@ -85,10 +90,14 @@ defmodule Brando.News.Model.Post do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
-    params
-    |> strip_unhandled_upload("cover")
-    |> Utils.Model.transform_checkbox_vals(~w(featured))
-    |> cast(model, [], ~w(status header data lead creator_id featured language))
+    params =
+      params
+      |> encode_data
+      |> strip_unhandled_upload("cover")
+      |> Utils.Model.transform_checkbox_vals(~w(featured))
+
+    model
+    |> cast(params, [], ~w(status header data lead creator_id featured language))
   end
 
   @doc """
@@ -123,6 +132,9 @@ defmodule Brando.News.Model.Post do
         {:error, model_changeset.errors}
     end
   end
+
+  defp encode_data(params), do:
+    Map.put(params, "data", Poison.decode!(params["data"]))
 
   @doc """
   Get model from DB by `id`
