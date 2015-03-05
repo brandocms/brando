@@ -40,9 +40,14 @@ defmodule Brando.Images.Admin.Routes do
       get "#{path}", image_ctrl, :index, opts
       get "#{path}/serier", series_ctrl, :index, Keyword.put(opts, :as, "image_series")
       get "#{path}/serier/ny", series_ctrl, :new, Keyword.put(opts, :as, "image_series")
+      get "#{path}/serier/:id/endre", series_ctrl, :edit, Keyword.put(opts, :as, "image_series")
       get "#{path}/serier/:id/slett", series_ctrl, :delete_confirm, Keyword.put(opts, :as, "image_series")
       get "#{path}/serier/:id/last-opp", series_ctrl, :upload, Keyword.put(opts, :as, "image_series")
       post "#{path}/serier/:id/last-opp", series_ctrl, :upload_post, Keyword.put(opts, :as, "image_series")
+      get "#{path}/serier/:id/sorter", series_ctrl, :sort, Keyword.put(opts, :as, "image_series")
+      post "#{path}/serier/:id/sorter", series_ctrl, :sort_post, Keyword.put(opts, :as, "image_series")
+      patch "#{path}/serier/:id", series_ctrl, :update, Keyword.put(opts, :as, "image_series")
+      put "#{path}/serier/:id", series_ctrl, :update, Keyword.put(opts, :as, nil)
       delete "#{path}/serier", series_ctrl, :delete, Keyword.put(opts, :as, "image_series")
       post "#{path}/serier", series_ctrl, :create, Keyword.put(opts, :as, "image_series")
 
