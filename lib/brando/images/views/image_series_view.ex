@@ -8,4 +8,8 @@ defmodule Brando.Images.Admin.ImageSeriesView do
   def render("upload_post.json", _assigns) do
     %{status: "200"}
   end
+
+  def render("sort_post.json", _assigns) do
+    %{status: "200"}
+  end
 end
