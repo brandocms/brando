@@ -1,5 +1,5 @@
     <h1>Endre post</h1>
-    <%= PostForm.get_form(action: :update, params: [to_string(@id)], values: @post, errors: @errors) %>
+    <%= PostForm.get_form(action: :update, params: to_string(@id), values: @post, errors: @errors) %>
     <script type="text/javascript">
       $(document).ready(function() {
         v = new Villain.Editor({

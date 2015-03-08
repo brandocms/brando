@@ -59,7 +59,7 @@ defmodule Brando.Form do
         * `action` - Action the form is performing.
           Example: `action: :create`
         * `params` - Any parameters to the :action function helper.
-          Example: `params: [to_string(@id)]`
+          Example: `params: to_string(@id)`
         * `values` - Pass @values through the form builder
           Example: `values: @user`
         * `errors` - Pass @errors through the form builder

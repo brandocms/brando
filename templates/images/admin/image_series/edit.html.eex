@@ -1,5 +1,5 @@
   <h1>Endre <%= model_name(@image_series, :singular) %></h1>
-  <%= ImageSeriesForm.get_form(action: :update, params: [to_string(@id)], values: @image_series, errors: @errors) %>
+  <%= ImageSeriesForm.get_form(action: :update, params: to_string(@id), values: @image_series, errors: @errors) %>
   <div class="buttons m-t-md">
     <a href="<%= helpers(@conn).admin_image_path(@conn, :index) %>" class="btn btn-default">
       <i class="fa fa-list fa-fw m-r-sm"></i> Tilbake til oversikten

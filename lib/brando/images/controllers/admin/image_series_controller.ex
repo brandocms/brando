@@ -24,7 +24,7 @@ defmodule Brando.Images.Admin.ImageSeriesController do
   @doc false
   def edit(conn, %{"id" => id}) do
     model = conn.private[:series_model]
-    data = model.get(id: id)
+    data = model.get(id: String.to_integer(id))
     conn
     |> assign(:image_series, data)
     |> assign(:id, id)
