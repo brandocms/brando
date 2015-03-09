@@ -42,4 +42,23 @@ defmodule Mix.Brando do
       |> Path.relative_to(source_dir)
     Path.join(target_dir, target_path)
   end
+
+  def logo do
+    Mix.shell.info(IO.ANSI.red() <> ~s(
+     .S_SSSs     .S_sSSs     .S_SSSs     .S_sSSs     .S_sSSs      sSSs_sSSs
+    .SS~SSSSS   .SS~YS%%b   .SS~SSSSS   .SS~YS%%b   .SS~YS%%b    d%%SP~YS%%b
+    S%S   SSSS  S%S   `S%b  S%S   SSSS  S%S   `S%b  S%S   `S%b  d%S'     `S%b
+    S%S    S%S  S%S    S%S  S%S    S%S  S%S    S%S  S%S    S%S  S%S       S%S
+    S%S SSSS%P  S%S    d*S  S%S SSSS%S  S%S    S&S  S%S    S&S  S&S       S&S
+    S&S  SSSY   S&S   .S*S  S&S  SSS%S  S&S    S&S  S&S    S&S  S&S       S&S
+    S&S    S&S  S&S_sdSSS   S&S    S&S  S&S    S&S  S&S    S&S  S&S       S&S
+    S&S    S&S  S&S~YSY%b   S&S    S&S  S&S    S&S  S&S    S&S  S&S       S&S
+    S*S    S&S  S*S   `S%b  S*S    S&S  S*S    S*S  S*S    d*S  S*b       d*S
+    S*S    S*S  S*S    S%S  S*S    S*S  S*S    S*S  S*S   .S*S  S*S.     .S*S
+    S*S SSSSP   S*S    S&S  S*S    S*S  S*S    S*S  S*S_sdSSS    SSSbs_sdSSS
+    S*S  SSY    S*S    SSS  SSS    S*S  S*S    SSS  SSS~YSSY      YSSP~YSSY
+    SP          SP                 SP   SP
+    Y           Y                  Y    Y
+    ) <> IO.ANSI.default_color())
+  end
 end
