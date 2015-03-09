@@ -10,6 +10,7 @@ alias Brando.Integration.TestRepo
 
 Application.put_env(:brando, TestRepo,
   url: "ecto://postgres:postgres@localhost/brando_test",
+  adapter: Ecto.Adapters.Postgres,
   size: 1,
   max_overflow: 0)
 
@@ -24,8 +25,7 @@ Application.put_env(:brando, :repo, Brando.Integration.TestRepo)
 
 defmodule Brando.Integration.TestRepo do
   use Ecto.Repo,
-    otp_app: :brando,
-    adapter: Ecto.Adapters.Postgres
+    otp_app: :brando
 end
 
 defmodule Brando.Integration.TestCase do
