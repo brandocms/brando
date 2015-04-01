@@ -48,17 +48,12 @@
                 </li>
 
                 <li class="divider"></li>
-
-                  <form method="POST" action="<%= helpers(@conn).admin_user_path(@conn, :delete, user.id) %>">
-                    <input type="hidden" name="_method" value="delete" />
-                    <li>
-                    <button class="btn-block">
-                      <i class="fa fa-trash-o m-r-sm"> </i>
-                      Slett bruker
-                    </button>
-                    </li>
-                  </form>
-
+                <li>
+                  <a href="<%= helpers(@conn).admin_user_path(@conn, :delete_confirm, user.id) %>">
+                    <i class="fa fa-trash m-r-sm"> </i>
+                    Slett bruker
+                  </a>
+                </li>
               </ul>
             </div>
           </td>

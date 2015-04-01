@@ -66,17 +66,12 @@
                 </li>
 
                 <li class="divider"></li>
-
-                  <form method="POST" action="<%= helpers(@conn).admin_post_path @conn, :delete, post.id %>">
-                    <input type="hidden" name="_method" value="delete" />
-                    <li>
-                    <button class="btn-block">
-                      <i class="fa fa-trash-o m-r-sm"> </i>
-                      Slett post
-                    </button>
-                    </li>
-                  </form>
-
+                <li>
+                  <a href="<%= helpers(@conn).admin_post_path @conn, :delete_confirm, post.id %>">
+                    <i class="fa fa-trash-o m-r-sm"> </i>
+                    Slett post
+                  </a>
+                </li>
               </ul>
             </div>
           </td>
