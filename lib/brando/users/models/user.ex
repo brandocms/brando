@@ -10,6 +10,9 @@ defmodule Brando.Users.Model.User do
   import Ecto.Query, only: [from: 2]
   alias Brando.Utils
 
+  @required_fields ~w(username full_name email password)
+  @optional_fields ~w(role avatar)
+
   @roles %{staff: 1, admin: 2, superuser: 4}
 
   def __name__(:singular), do: "bruker"
@@ -19,12 +22,29 @@ defmodule Brando.Users.Model.User do
     "#{model.full_name} (#{model.username})"
   end
 
+  use Linguist.Vocabulary
+  locale "no", [
+    model: [
+      id: "ID",
+      username: "Brukernavn",
+      email: "Epost",
+      full_name: "Navn",
+      password: "Passord",
+      avatar: "Avatar",
+      creator: "Opprettet av",
+      role: "Roller",
+      last_login: "Siste innlogging",
+      inserted_at: "Opprettet",
+      updated_at: "Oppdatert"
+    ]
+  ]
+
   schema "users" do
     field :username, :string
     field :email, :string
     field :full_name, :string
     field :password, :string
-    field :avatar, :string
+    field :avatar, Brando.Type.Image
     field :role, Brando.Type.Role
     field :last_login, Ecto.DateTime
     timestamps
@@ -62,7 +82,7 @@ defmodule Brando.Users.Model.User do
       |> strip_unhandled_upload("avatar")
 
     model
-    |> cast(params, ~w(username full_name email password), ~w(role avatar))
+    |> cast(params, @required_fields, @optional_fields)
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
     |> validate_unique(:email, on: Brando.get_repo())
@@ -86,7 +106,7 @@ defmodule Brando.Users.Model.User do
       |> strip_unhandled_upload("avatar")
 
     model
-    |> cast(params, [], ~w(username full_name email password role avatar))
+    |> cast(params, [], @required_fields ++ @optional_fields)
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
     |> validate_unique(:email, on: Brando.get_repo())
