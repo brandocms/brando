@@ -48,13 +48,13 @@ defmodule Brando.Images.Admin.Routes do
       post "#{path}/serier/:id/sorter", series_ctrl, :sort_post, Keyword.put(opts, :as, "image_series")
       patch "#{path}/serier/:id", series_ctrl, :update, Keyword.put(opts, :as, "image_series")
       put "#{path}/serier/:id", series_ctrl, :update, Keyword.put(opts, :as, nil)
-      delete "#{path}/serier", series_ctrl, :delete, Keyword.put(opts, :as, "image_series")
+      delete "#{path}/serier/:id", series_ctrl, :delete, Keyword.put(opts, :as, "image_series")
       post "#{path}/serier", series_ctrl, :create, Keyword.put(opts, :as, "image_series")
 
       get "#{path}/kategorier", categories_ctrl, :index, Keyword.put(opts, :as, "image_category")
       get "#{path}/kategorier/ny", categories_ctrl, :new, Keyword.put(opts, :as, "image_category")
       get "#{path}/kategorier/:id/slett", categories_ctrl, :delete_confirm, Keyword.put(opts, :as, "image_category")
-      delete "#{path}/kategorier", categories_ctrl, :delete, Keyword.put(opts, :as, "image_category")
+      delete "#{path}/kategorier/:id", categories_ctrl, :delete, Keyword.put(opts, :as, "image_category")
       post "#{path}/kategorier", categories_ctrl, :create, Keyword.put(opts, :as, "image_category")
     end
   end
