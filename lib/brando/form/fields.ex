@@ -34,7 +34,7 @@ defmodule Brando.Form.Fields do
   end
 
   @doc """
-  Converts error atoms to strings
+  Translate errors
   """
   @spec __parse_error__({atom, term} | atom) :: String.t
   def __parse_error__(error) do
@@ -42,7 +42,7 @@ defmodule Brando.Form.Fields do
       "can't be blank"     -> "Feltet er påkrevet."
       "must be unique"     -> "Feltet må være unikt. Verdien finnes allerede i databasen."
       "has invalid format" -> "Feltet har feil format."
-      {:too_short, length} -> "Feltets verdi er for kort. Må være > #{length} tegn."
+      {"should be at least %{count} characters", length} -> "Feltets verdi er for kort. Må være > #{length} tegn."
       err                  -> inspect(err)
     end
   end
