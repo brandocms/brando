@@ -517,7 +517,7 @@ img {
   position: fixed; }
 
 /*
-	THE GRID
+  THE GRID
   --------
 
   Foundation's magical, flexbox-powered grid.
@@ -635,73 +635,58 @@ img {
   @output Resets to transform, position, and a few visual styles.
 */
 /*
-	Frames are containers that stretch to the full dimmensions of the browser window.
+  Frames are containers that stretch to the full dimmensions of the browser window.
 */
 /*
-	Groups are collections of content items. They're the "rows" of Foundation for Apps.
+  Groups are collections of content items. They're the "rows" of Foundation for Apps.
 */
 /*
-	Blocks are containers for actual content. They're the "columns" of Foundation for Apps.
+  Blocks are containers for actual content. They're the "columns" of Foundation for Apps.
 */
-/*
-	CSS Output
-*/
-/*
-  Shared styles for frames and blocks (parent elements)
-*/
-.grid-frame, .grid-block, .small-grid-block, .medium-grid-block, .large-grid-block {
-  backface-visibility: hidden; }
-  .vertical.grid-frame, .vertical.grid-block, .vertical.small-grid-block, .vertical.medium-grid-block, .vertical.large-grid-block {
+.vertical.grid-frame, .vertical.grid-block, .vertical.small-grid-block, .vertical.medium-grid-block, .vertical.large-grid-block {
+  flex-flow: column nowrap;
+  align-items: stretch; }
+.small-vertical.grid-frame, .small-vertical.grid-block, .small-vertical.small-grid-block, .small-vertical.medium-grid-block, .small-vertical.large-grid-block {
+  flex-flow: column nowrap;
+  align-items: stretch; }
+.small-horizontal.grid-frame, .small-horizontal.grid-block, .small-horizontal.small-grid-block, .small-horizontal.medium-grid-block, .small-horizontal.large-grid-block {
+  flex-flow: row wrap; }
+@media only screen and (min-width: 40em) {
+  .medium-vertical.grid-frame, .medium-vertical.grid-block, .medium-vertical.small-grid-block, .medium-vertical.medium-grid-block, .medium-vertical.large-grid-block {
     flex-flow: column nowrap;
     align-items: stretch; }
-  .small-vertical.grid-frame, .small-vertical.grid-block, .small-vertical.small-grid-block, .small-vertical.medium-grid-block, .small-vertical.large-grid-block {
+  .medium-horizontal.grid-frame, .medium-horizontal.grid-block, .medium-horizontal.small-grid-block, .medium-horizontal.medium-grid-block, .medium-horizontal.large-grid-block {
+    flex-flow: row wrap; } }
+@media only screen and (min-width: 75em) {
+  .large-vertical.grid-frame, .large-vertical.grid-block, .large-vertical.small-grid-block, .large-vertical.medium-grid-block, .large-vertical.large-grid-block {
     flex-flow: column nowrap;
     align-items: stretch; }
-  .small-horizontal.grid-frame, .small-horizontal.grid-block, .small-horizontal.small-grid-block, .small-horizontal.medium-grid-block, .small-horizontal.large-grid-block {
-    flex-flow: row wrap; }
-  @media only screen and (min-width: 40em) {
-    .medium-vertical.grid-frame, .medium-vertical.grid-block, .medium-vertical.small-grid-block, .medium-vertical.medium-grid-block, .medium-vertical.large-grid-block {
-      flex-flow: column nowrap;
-      align-items: stretch; }
-    .medium-horizontal.grid-frame, .medium-horizontal.grid-block, .medium-horizontal.small-grid-block, .medium-horizontal.medium-grid-block, .medium-horizontal.large-grid-block {
-      flex-flow: row wrap; } }
-  @media only screen and (min-width: 75em) {
-    .large-vertical.grid-frame, .large-vertical.grid-block, .large-vertical.small-grid-block, .large-vertical.medium-grid-block, .large-vertical.large-grid-block {
-      flex-flow: column nowrap;
-      align-items: stretch; }
-    .large-horizontal.grid-frame, .large-horizontal.grid-block, .large-horizontal.small-grid-block, .large-horizontal.medium-grid-block, .large-horizontal.large-grid-block {
-      flex-flow: row wrap; } }
-  .align-right.grid-frame, .align-right.grid-block, .align-right.small-grid-block, .align-right.medium-grid-block, .align-right.large-grid-block {
-    justify-content: flex-end; }
-  .align-center.grid-frame, .align-center.grid-block, .align-center.small-grid-block, .align-center.medium-grid-block, .align-center.large-grid-block {
-    justify-content: center; }
-  .align-justify.grid-frame, .align-justify.grid-block, .align-justify.small-grid-block, .align-justify.medium-grid-block, .align-justify.large-grid-block {
-    justify-content: space-between; }
-  .align-spaced.grid-frame, .align-spaced.grid-block, .align-spaced.small-grid-block, .align-spaced.medium-grid-block, .align-spaced.large-grid-block {
-    justify-content: space-around; }
-  .wrap.grid-frame, .wrap.grid-block, .wrap.small-grid-block, .wrap.medium-grid-block, .wrap.large-grid-block {
-    flex-wrap: wrap;
-    align-items: flex-start; }
+  .large-horizontal.grid-frame, .large-horizontal.grid-block, .large-horizontal.small-grid-block, .large-horizontal.medium-grid-block, .large-horizontal.large-grid-block {
+    flex-flow: row wrap; } }
+.align-right.grid-frame, .align-right.grid-block, .align-right.small-grid-block, .align-right.medium-grid-block, .align-right.large-grid-block {
+  justify-content: flex-end; }
+.align-center.grid-frame, .align-center.grid-block, .align-center.small-grid-block, .align-center.medium-grid-block, .align-center.large-grid-block {
+  justify-content: center; }
+.align-justify.grid-frame, .align-justify.grid-block, .align-justify.small-grid-block, .align-justify.medium-grid-block, .align-justify.large-grid-block {
+  justify-content: space-between; }
+.align-spaced.grid-frame, .align-spaced.grid-block, .align-spaced.small-grid-block, .align-spaced.medium-grid-block, .align-spaced.large-grid-block {
+  justify-content: space-around; }
+.wrap.grid-frame, .wrap.grid-block, .wrap.small-grid-block, .wrap.medium-grid-block, .wrap.large-grid-block {
+  flex-wrap: wrap;
+  align-items: flex-start; }
 
-/*
-  Shared styles for blocks and content blocks (child elements)
-*/
 .shrink.grid-block, .shrink.grid-content, .shrink.small-grid-block, .shrink.small-grid-content, .shrink.medium-grid-block, .shrink.medium-grid-content, .shrink.large-grid-block, .shrink.large-grid-content {
   flex: 0 0 auto; }
+.noscroll.grid-block, .noscroll.grid-content, .noscroll.small-grid-block, .noscroll.small-grid-content, .noscroll.medium-grid-block, .noscroll.medium-grid-content, .noscroll.large-grid-block, .noscroll.large-grid-content {
+  overflow: hidden; }
 
-/*
-  The core grid elements:
-   - Frame
-   - Block
-   - Content block
-   - Container
-*/
 .grid-frame {
   display: flex;
   height: 100vh;
   position: relative;
   overflow: hidden;
-  flex: 1 1;
+  backface-visibility: hidden;
+  flex: 1 1 auto;
   flex-flow: row wrap;
   flex-wrap: nowrap;
   align-items: stretch;
@@ -713,7 +698,8 @@ img {
   height: 100vh;
   position: relative;
   overflow: hidden;
-  flex: 1 1;
+  backface-visibility: hidden;
+  flex: 1 1 auto;
   flex-flow: row wrap;
   flex-wrap: nowrap;
   align-items: stretch;
@@ -723,9 +709,6 @@ img {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   -ms-overflow-style: -ms-autohiding-scrollbar; }
-  .grid-content .grid-block {
-    margin-left: -1rem;
-    margin-right: -1rem; }
 
 .grid-content {
   display: block;
@@ -733,9 +716,19 @@ img {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   -ms-overflow-style: -ms-autohiding-scrollbar;
-  flex: 1 1; }
+  flex: 1 1 auto; }
   .grid-content.collapse {
     padding: 0; }
+  .grid-content .grid-block {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    flex-wrap: wrap;
+    overflow: visible; }
+    .grid-content .grid-block.nowrap {
+      flex-wrap: nowrap;
+      align-items: stretch; }
+    .grid-content .grid-block .grid-content {
+      overflow: visible; }
 
 .grid-container {
   max-width: 56.25rem;
@@ -747,15 +740,13 @@ img {
     max-width: 56.25rem;
     margin: 0 0 0 auto; }
 
-/*
-  Breakpoint classes for blocks
-*/
 .small-grid-block {
   display: flex;
   height: 100vh;
   position: relative;
   overflow: hidden;
-  flex: 1 1;
+  backface-visibility: hidden;
+  flex: 1 1 auto;
   flex-flow: row wrap;
   flex-wrap: nowrap;
   align-items: stretch;
@@ -784,7 +775,7 @@ img {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   -ms-overflow-style: -ms-autohiding-scrollbar;
-  flex: 1 1; }
+  flex: 1 1 auto; }
   .small-grid-content.panel {
     transform: none;
     position: relative;
@@ -804,7 +795,8 @@ img {
     height: 100vh;
     position: relative;
     overflow: hidden;
-    flex: 1 1;
+    backface-visibility: hidden;
+    flex: 1 1 auto;
     flex-flow: row wrap;
     flex-wrap: nowrap;
     align-items: stretch;
@@ -834,7 +826,7 @@ img {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     -ms-overflow-style: -ms-autohiding-scrollbar;
-    flex: 1 1; }
+    flex: 1 1 auto; }
     .medium-grid-content.panel {
       transform: none;
       position: relative;
@@ -854,7 +846,8 @@ img {
     height: 100vh;
     position: relative;
     overflow: hidden;
-    flex: 1 1;
+    backface-visibility: hidden;
+    flex: 1 1 auto;
     flex-flow: row wrap;
     flex-wrap: nowrap;
     align-items: stretch;
@@ -884,7 +877,7 @@ img {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     -ms-overflow-style: -ms-autohiding-scrollbar;
-    flex: 1 1; }
+    flex: 1 1 auto; }
     .large-grid-content.panel {
       transform: none;
       position: relative;
@@ -898,9 +891,6 @@ img {
       bottom: auto;
       left: auto; } }
 
-/*
-  Sizing and ordering classes
-*/
 .order-1 {
   order: 1; }
 
@@ -1585,12 +1575,6 @@ img {
     .large-up-12 > li, .large-up-12 > div, .large-up-12 > section {
       padding: 0 1rem 1rem;
       flex: 0 0 8.33333%; } }
-.grid-content .grid-block {
-  flex-wrap: wrap;
-  overflow: visible; }
-  .grid-content .grid-block .grid-content {
-    overflow: visible; }
-
 .grid-content .modal .grid-block {
   flex-wrap: nowrap; }
 
@@ -3180,7 +3164,7 @@ form label {
   #menu .nav-primary li > a > i {
     margin: -12px -15px;
     line-height: 44px;
-    width: 44px;
+    width: 48px;
     float: left;
     margin-right: 10px;
     font-size: 14px;
@@ -3193,7 +3177,7 @@ form label {
     z-index: 2; }
   #menu .nav-primary li > a > i > b {
     position: absolute;
-    left: -42px;
+    left: -44px;
     width: 100%;
     top: 0;
     bottom: 0;
@@ -3884,10 +3868,13 @@ table th[class*="col-"] {
   font-weight: bold;
   border-right: 1px solid #ccc;
   text-align: right; }
+.data-table > .table tr:last-child td {
+  border-bottom: 1px solid #ddd; }
 
 .data-table > h1 {
   margin-left: 200px; }
 
+.data-table .form-actions,
 .data-table button {
   margin-left: 200px; }
 
@@ -4144,3 +4131,30 @@ table th[class*="col-"] {
 
 .m-b-n-xl {
   margin-bottom: -40px; }
+
+.text-primary {
+  color: #65bd77; }
+
+.text-info {
+  color: #4cc0c1; }
+
+.text-success {
+  color: #8ec165; }
+
+.text-warning {
+  color: #ffc333; }
+
+.text-danger {
+  color: #fb6b5b; }
+
+.text-light {
+  color: #f1f1f1; }
+
+.text-white {
+  color: #fff; }
+
+.text-dark {
+  color: #2e3e4e; }
+
+.text-muted {
+  color: #979797; }
