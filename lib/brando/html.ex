@@ -2,11 +2,13 @@ defmodule Brando.HTML do
   @moduledoc """
   Helper and convenience functions. Imported in Brando.AdminView.
   """
+  import Brando.Images.Helpers
 
   @doc false
   defmacro __using__(_) do
     quote do
       import Brando.HTML
+      import Brando.HTML.Inspect
     end
   end
 
@@ -134,83 +136,21 @@ defmodule Brando.HTML do
   defp do_css_extra(css), do: Phoenix.HTML.safe(~s(<link rel="stylesheet" href="#{static_url(css)}">))
 
   @doc """
-  Inspects and displays `model`
-  """
-  def inspect_model(model) do
-    module = model.__struct__
-    fields = module.__schema__(:fields)
-    assocs = module.__schema__(:associations)
-    rendered_fields = Enum.join(Enum.map(fields, fn (field) -> inspect_field(field, module, module.__schema__(:field, field), Map.get(model, field)) end))
-    rendered_assocs = Enum.join(Enum.map(assocs, fn (assoc) -> inspect_assoc(assoc, module, module.__schema__(:association, assoc), Map.get(model, assoc)) end))
-    Phoenix.HTML.safe(~s(<table class="table data-table">#{rendered_fields}#{rendered_assocs}</table>))
-  end
-
-  defp inspect_field(name, module, type, value) do
-    unless String.ends_with?(to_string(name), "_id"), do:
-      do_inspect_field(translate_field(module, name), type, value)
-  end
-
-  defp do_inspect_field(name, Ecto.DateTime, value) do
-    ~s(<tr><td>#{name}</td><td>#{value.day}/#{value.month}/#{value.year} #{value.hour}:#{value.min}</td></tr>)
-  end
-  defp do_inspect_field(name, _type, value) do
-    ~s(<tr><td>#{name}</td><td>#{value}</td></tr>)
-  end
-
-  defp inspect_assoc(name, module, type, value) do
-    do_inspect_assoc(translate_field(module, name), type, value)
-  end
-
-  defp do_inspect_assoc(name, %Ecto.Association.BelongsTo{} = type, value) do
-    ~s(<tr><td>#{name}</td><td>#{type.assoc.__str__(value)}</td></tr>)
-  end
-  defp do_inspect_assoc(name, %Ecto.Association.Has{}, %Ecto.Association.NotLoaded{}) do
-    ~s(<tr><td>#{name}</td><td>Assosiasjonene er ikke hentet.</td></tr>)
-  end
-  defp do_inspect_assoc(name, %Ecto.Association.Has{}, []) do
-    ~s(<tr><td>#{name}</td><td>Ingen assosiasjoner.</td></tr>)
-  end
-  defp do_inspect_assoc(_name, %Ecto.Association.Has{} = type, value) do
-    rows = Enum.map(value, fn (row) -> ~s(<div class="assoc #{type.field}">#{type.assoc.__str__(row)}</div>) end)
-    ~s(<tr><td><i class='fa fa-link'></i> Tilknyttede #{type.assoc.__name__(:plural)}</td><td>#{rows}</td></tr>)
-  end
-
-  @doc """
-  Returns the record's model name from __name__/1
-  `form` is `:singular` or `:plural`
-  """
-  @spec model_name(Struct.t, :singular | :plural) :: String.t
-  def model_name(record, form) do
-    record.__struct__.__name__(form)
-  end
-
-  @doc """
-  Returns the model's representation from __str__/0
-  """
-  def model_str(record) do
-    record.__struct__.__str__(record)
-  end
-
-  defp translate_field(module, field) do
-    module.t!("no", "model." <> to_string(field))
-  end
-
-  @doc """
   Renders a delete button wrapped in a POST form.
   Pass `record` instance of model, and `helper` path.
   """
   def delete_form_button(record, helper) do
-    action = Brando.Form.get_action(helper, :delete)
+    action = Brando.Form.get_action(helper, :delete, record)
     Phoenix.HTML.safe("""
     <form method="POST" action="#{action}">
       <input type="hidden" name="_method" value="delete" />
-      <input type="hidden" name="id" value="#{record.id}" />
       <button class="btn btn-danger">
         <i class="fa fa-trash-o m-r-sm"> </i>
         Slett
       </button>
     </form>
     """)
+    # <input type="hidden" name="id" value="#{record.id}" />
   end
 
   def dropzone_form(helper, id, cfg) do
@@ -221,7 +161,6 @@ defmodule Brando.HTML do
           class="dropzone"
           id="brando-dropzone"></form>
     <script type="text/javascript">
-      // "myAwesomeDropzone" is the camelized version of the HTML element's ID
       Dropzone.options.brandoDropzone = {
         paramName: "image", // The name that will be used to transfer the file
         maxFilesize: 10, // MB
