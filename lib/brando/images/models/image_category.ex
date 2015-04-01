@@ -11,6 +11,9 @@ defmodule Brando.Images.Model.ImageCategory do
   alias Brando.Users.Model.User
   alias Brando.Images.Model.ImageSeries
 
+  @required_fields ~w(name slug creator_id)
+  @optional_fields ~w(cfg)
+
   def __name__(:singular), do: "bildekategori"
   def __name__(:plural), do: "bildekategorier"
 
@@ -53,7 +56,7 @@ defmodule Brando.Images.Model.ImageCategory do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :create, params) do
     model
-    |> cast(params, ~w(name slug creator_id), ~w(cfg))
+    |> cast(params, @required_fields, @optional_fields)
   end
 
   @doc """
@@ -68,7 +71,7 @@ defmodule Brando.Images.Model.ImageCategory do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
     model
-    |> cast(params, [], ~w(name slug cfg creator_id))
+    |> cast(params, [], @required_fields ++ @optional_fields)
   end
 
   @doc """

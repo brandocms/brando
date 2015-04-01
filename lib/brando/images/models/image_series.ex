@@ -11,6 +11,9 @@ defmodule Brando.Images.Model.ImageSeries do
   alias Brando.Images.Model.Image
   alias Brando.Images.Model.ImageCategory
 
+  @required_fields ~w(name slug image_category_id creator_id)
+  @optional_fields ~w(credits order)
+
   def __name__(:singular), do: "bildeserie"
   def __name__(:plural), do: "bildeserier"
 
@@ -59,7 +62,7 @@ defmodule Brando.Images.Model.ImageSeries do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :create, params) do
     model
-    |> cast(params, ~w(name slug image_category_id creator_id), ~w(credits order))
+    |> cast(params, @required_fields, @optional_fields)
   end
 
   @doc """
@@ -74,7 +77,7 @@ defmodule Brando.Images.Model.ImageSeries do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
     model
-    |> cast(params, [], ~w(name slug image_category_id creator_id credits order))
+    |> cast(params, [], @required_fields ++ @optional_fields)
   end
 
   @doc """
