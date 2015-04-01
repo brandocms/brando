@@ -100,12 +100,21 @@ defmodule Brando.Users.Admin.UserController do
   end
 
   @doc false
+  def delete_confirm(conn, %{"id" => id}) do
+    model = conn.private[:model]
+    record = model.get!(id: id)
+    conn
+    |> assign(:record, record)
+    |> render(:delete_confirm)
+  end
+
+  @doc false
   def delete(conn, %{"id" => id}) do
     model = conn.private[:model]
     record = model.get!(id: id)
     model.delete(record)
     conn
-    |> put_flash(:notice, "Bruker #{record.username} slettet.")
+    |> put_flash(:notice, "#{Brando.HTML.Inspect.model_name(record, :singular)} #{model.__str__(record)} slettet.")
     |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn, :index))
   end
 end
