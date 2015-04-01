@@ -46,6 +46,7 @@ defmodule Brando.Users.Admin.Routes do
       get "#{path}/profil", ctrl, :profile, opts
       get "#{path}/ny", ctrl, :new, opts
       get "#{path}/:id/endre", ctrl, :edit, opts
+      get "#{path}/:id/slett", ctrl, :delete_confirm, opts
       get "#{path}/:id", ctrl, :show, opts
       post "#{path}", ctrl, :create, opts
       delete "#{path}/:id", ctrl, :delete, opts
