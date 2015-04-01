@@ -12,6 +12,9 @@ defmodule Brando.Images.Model.Image do
   alias Brando.Users.Model.User
   alias Brando.Images.Model.ImageSeries
 
+  @required_fields ~w(image image_series_id)
+  @optional_fields ~w(title credits order optimized creator_id)
+
   def __name__(:singular), do: "bilde"
   def __name__(:plural), do: "bilder"
 
@@ -38,7 +41,7 @@ defmodule Brando.Images.Model.Image do
   schema "images" do
     field :title, :string
     field :credits, :string
-    field :image, :string
+    field :image, Brando.Type.Image
     field :order, :integer
     field :optimized, :boolean
     belongs_to :creator, User
@@ -58,7 +61,7 @@ defmodule Brando.Images.Model.Image do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :create, params) do
     model
-    |> cast(params, ~w(image image_series_id), ~w(title credits order optimized creator_id))
+    |> cast(params, @required_fields, @optional_fields)
   end
 
   @doc """
@@ -73,7 +76,7 @@ defmodule Brando.Images.Model.Image do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
     model
-    |> cast(params, [], ~w(image image_series_id title credits order optimized creator_id))
+    |> cast(params, [], @required_fields ++ @optional_fields)
   end
 
   @doc """
