@@ -4,6 +4,7 @@ $button-padding: 0.85em 1em !default;
 $button-margin: 0 $global-padding $global-padding 0 !default;
 $button-style: solid !default;
 $button-background: $primary-color !default;
+$button-background-hover: scale-color($button-background, $lightness: -15%) !default;
 $button-color: auto !default;
 $button-radius: 0 !default;
 $button-sizes: (
@@ -14,7 +15,7 @@ $button-sizes: (
 ) !default;
 $button-font-size: 0.9rem !default;
 $button-opacity-disabled: 0.5 !default;
-$button-tag-selector: true !default;
+$button-tag-selector: false !default;
 ///
 
 %button {
@@ -67,21 +68,27 @@ $button-tag-selector: true !default;
     }
   }
 }
+
 @mixin button-expand($expand: true) {
   @if $expand {
     display: block;
+    width: 100%;
     margin-left: 0;
     margin-right: 0;
   }
   @else {
     display: inline-block;
+    width: auto;
     margin: $button-margin;
   }
 }
+
 @mixin button-style(
   $background: $button-background,
+  $background-hover: $button-background-hover,
   $color: $button-color,
   $style: $button-style,
+  $radius: $button-radius,
   $btngroup: false
 ){
   @if $style == hollow {
@@ -94,9 +101,6 @@ $button-tag-selector: true !default;
       background: transparent;
       color: scale-color($background, $lightness: 25%);
     }
-    &[data-popup-toggle]::after {
-      border-top-color: $background;
-    }
   }
   // Solid is the default
   @else {
@@ -108,11 +112,13 @@ $button-tag-selector: true !default;
     color: $color;
 
     &:hover, &:focus {
-      background: scale-color($background, $lightness: -15%);
+      @if $background-hover == auto {
+        background: scale-color($background, $lightness: -15%);
+      }
+      @else {
+        background: $background-hover;
+      }
       color: $color;
-    }
-    &[data-popup-toggle]::after {
-      border-top-color: $color;
     }
   }
 
@@ -139,21 +145,26 @@ $button-tag-selector: true !default;
     }
   }
 }
+
 @mixin button-disabled() {
   opacity: $button-opacity-disabled;
+  cursor: default;
   pointer-events: none;
 }
+
 @mixin button(
   $size: medium,
   $expand: false,
   $background: $button-background,
+  $background-hover: $button-background-hover,
   $color: $button-color,
-  $style: $button-style
+  $style: $button-style,
+  $radius: $button-radius
 ) {
   @extend %button;
   @include button-size($size);
   @include button-expand($expand);
-  @include button-style($background, $color, $style);
+  @include button-style($background, $background-hover, $color, $style);
 }
 
 @include exports(button) {
@@ -165,12 +176,12 @@ $button-tag-selector: true !default;
     &.large  { @include button-size(large); }
     &.expand { @include button-expand; }
 
-    &.secondary { @include button-style($secondary-color) }
-    &.success   { @include button-style($success-color) }
-    &.warning   { @include button-style($warning-color) }
-    &.alert     { @include button-style($alert-color) }
-    &.info      { @include button-style($info-color) }
-    &.dark      { @include button-style($dark-color) }
+    &.secondary { @include button-style($secondary-color, auto) }
+    &.success   { @include button-style($success-color, auto) }
+    &.warning   { @include button-style($warning-color, auto) }
+    &.alert     { @include button-style($alert-color, auto) }
+    &.info      { @include button-style($info-color, auto) }
+    &.dark      { @include button-style($dark-color, auto) }
 
     @if $button-style != hollow {
       &.hollow { @include button-style($style: hollow);
@@ -183,19 +194,12 @@ $button-tag-selector: true !default;
       }
     }
 
-    &.disabled { @include button-disabled;
-      &.secondary { @include button-disabled; }
-      &.success   { @include button-disabled; }
-      &.warning   { @include button-disabled; }
-      &.alert     { @include button-disabled; }
-      &.info      { @include button-disabled; }
-      &.dark      { @include button-disabled; }
-    }
+    &.disabled { @include button-disabled; }
   }
 
-  // @if $button-tag-selector {
-  //   button {
-  //     @extend .button;
-  //   }
-  // }
+  @if $button-tag-selector {
+    button {
+      @extend .button;
+    }
+  }
 }

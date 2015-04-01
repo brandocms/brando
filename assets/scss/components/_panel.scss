@@ -19,6 +19,8 @@ $panel-padding: 0 !default;
 
 $panel-background: #fff !default;
 $panel-shadow: 3px 0 10px rgba(black, 0.25) !default;
+
+// DEPRECATED: these variables will be removed in a future version.
 $panel-animation-speed: 0.25s !default;
 ///
 
@@ -117,7 +119,7 @@ $panel-animation-speed: 0.25s !default;
   background: $background;
 }
 
-@include exports(panels) {
+@include exports(panel) {
   .panel {
     @extend %panel-base;
     @include panel-style;
