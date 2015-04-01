@@ -1584,6 +1584,10 @@ body {
 a {
   text-decoration: none; }
 
+h1 {
+  border-bottom: 2px solid #727272;
+  display: inline-block; }
+
 .image-preview {
   margin-top: 5px;
   margin-bottom: 15px; }
