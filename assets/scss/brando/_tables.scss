@@ -287,10 +287,14 @@ table th[class*="col-"] {
     border-right: 1px solid #ccc;
     text-align: right;
   }
+  tr:last-child td {
+    border-bottom: 1px solid #ddd;
+  }
 }
 .data-table > h1 {
   margin-left: 200px;
 }
+.data-table .form-actions,
 .data-table button {
   margin-left: 200px;
 }
