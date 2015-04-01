@@ -107,7 +107,7 @@ defmodule Brando.FormTest do
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"],
        username: [type: :text, required: true, label: "Username", placeholder: "Username"]
      ]
-    errors = [password: {:too_short, 6}, username: :format, email: :format, password: :required, email: :required, full_name: :required, username: :required]
+    errors = [username: "has invalid format", email: "has invalid format", password: "can't be blank", email: "can't be blank", full_name: "can't be blank", username: "can't be blank"]
     f = UserForm.render_fields("user", form_fields, :create, [], nil, errors)
     assert f ==
       ["<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group required has-error\">\n  <label for=\"user[username]\" class=\"\">Username</label><input name=\"user[username]\" type=\"text\" placeholder=\"Username\" />\n  <div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet har feil format.</div><div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet er påkrevet.</div>\n</div>\n</div>",
