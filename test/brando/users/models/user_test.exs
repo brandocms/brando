@@ -3,7 +3,7 @@ defmodule Brando.Integration.UserTest do
   use Brando.Integration.TestCase
   alias Brando.Users.Model.User
 
-  @params %{"avatar" => "", "role" => ["2", "4"],
+  @params %{"avatar" => nil, "role" => ["2", "4"],
             "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
             "password" => "finimeze", "status" => "1",
             "submit" => "Submit", "username" => "zabuzasixu"}
@@ -86,9 +86,9 @@ defmodule Brando.Integration.UserTest do
     assert {:ok, dict} = User.check_for_uploads(user, up_params)
     user = User.get(email: "fanogigyni@gmail.com")
     assert user.avatar == dict.avatar
-    assert File.exists?(Path.join([Brando.Images.Utils.get_media_abspath, dict.avatar]))
+    assert File.exists?(Path.join([Brando.Images.Utils.get_media_abspath, dict.avatar.path]))
     User.delete(user)
-    refute File.exists?(Path.join([Brando.Images.Utils.get_media_abspath, dict.avatar]))
+    refute File.exists?(Path.join([Brando.Images.Utils.get_media_abspath, dict.avatar.path]))
   end
 
   test "check_for_uploads/2 error" do

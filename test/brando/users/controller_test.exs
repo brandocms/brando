@@ -7,12 +7,12 @@ defmodule Brando.Users.ControllerTest do
   use RouterHelper
   alias Brando.Users.Model.User
 
-  @params %{"avatar" => "", "role" => ["2", "4"],
+  @params %{"avatar" => nil, "role" => ["2", "4"],
             "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
             "password" => "finimeze", "status" => "1",
             "submit" => "Submit", "username" => "zabuzasixu"}
 
-  @broken_params %{"avatar" => "", "role" => ["2", "4"],
+  @broken_params %{"avatar" => nil, "role" => ["2", "4"],
                    "email" => "fanogigynigmail.com", "full_name" => "Nita Bond",
                    "password" => "fi", "status" => "1",
                    "submit" => "Submit", "username" => ""}

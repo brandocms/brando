@@ -121,7 +121,7 @@ defmodule Brando.FormTest do
        "<div data-field-span=\"1\" class=\"form-group\">\n  <div class=\"checkbox\"><label for=\"user[editor]\" class=\"\"></label><label for=\"user[editor]\" class=\"\"><input name=\"user[editor]\" type=\"checkbox\" checked=\"checked\" />Editor</label></div>\n  \n</div>\n",
        "</div></fieldset>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[avatar]\" class=\"\">Avatar</label><input name=\"user[avatar]\" type=\"file\" />\n  \n</div>\n</div>",
-       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <input name=\"user[submit]\" type=\"submit\" class=\"btn btn-default\" />\n  \n</div>\n</div>"]
+       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <input name=\"user[submit]\" type=\"submit\" value=\"Save\" class=\"btn btn-default\" />\n  \n</div>\n</div>"]
   end
 
   test "render_fields/6 :update" do
@@ -136,7 +136,7 @@ defmodule Brando.FormTest do
        status2: [type: :checkbox, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        status3: [type: :radio, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"]]
-    values = %Brando.Users.Model.User{avatar: "images/default/0.jpeg",
+    values = %Brando.Users.Model.User{avatar: nil,
                                       email: "test@email.com",
                                       role: 4,
                                       full_name: "Test Name", id: 1,
@@ -155,8 +155,8 @@ defmodule Brando.FormTest do
        "<div data-field-span=\"1\" class=\"form-group\">\n  <div class=\"checkbox\"><label for=\"user[administrator]\" class=\"\"></label><label for=\"user[administrator]\" class=\"\"><input name=\"user[administrator]\" type=\"checkbox\" />Administrator</label></div>\n  \n</div>\n",
        "<div data-field-span=\"1\" class=\"form-group\">\n  <div class=\"checkbox\"><label for=\"user[editor]\" class=\"\"></label><label for=\"user[editor]\" class=\"\"><input name=\"user[editor]\" type=\"checkbox\" checked=\"checked\" />Editor</label></div>\n  \n</div>\n",
        "</div></fieldset>",
-       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[avatar]\" class=\"\">Avatar</label><div class=\"image-preview\"><img src=\"images/default/thumb/0.jpeg\" /></div><input name=\"user[avatar]\" type=\"file\" />\n  \n</div>\n</div>",
-       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <input name=\"user[submit]\" type=\"submit\" class=\"btn btn-default\" />\n  \n</div>\n</div>"]
+       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <label for=\"user[avatar]\" class=\"\">Avatar</label><input name=\"user[avatar]\" type=\"file\" />\n  \n</div>\n</div>",
+       "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <input name=\"user[submit]\" type=\"submit\" value=\"Save\" class=\"btn btn-default\" />\n  \n</div>\n</div>"]
   end
 
   test "get_choices/1" do
@@ -185,7 +185,7 @@ defmodule Brando.FormTest do
 
   test "get_form" do
     assert TestForm.get_form(action: :create, params: [], values: nil, errors: nil) == {:safe,
-            "<form class=\"grid-form\" role=\"form\" action=\"/admin/brukere\" method=\"POST\"><fieldset><legend><br>Brukerinfo</legend><div data-row-span=\"2\">\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[full_name]\" class=\"\">Fullt navn</label><input name=\"test[full_name]\" type=\"text\" placeholder=\"Fullt navn\" />\n  \n</div>\n\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[username]\" class=\"\">Brukernavn</label><input name=\"test[username]\" type=\"text\" placeholder=\"Brukernavn\" />\n  \n</div>\n\n<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <input name=\"test[submit]\" type=\"submit\" />\n  \n</div>\n</div>\n</div></fieldset></form>"}
+            "<form class=\"grid-form\" role=\"form\" action=\"/admin/brukere\" method=\"POST\"><fieldset><legend><br>Brukerinfo</legend><div data-row-span=\"2\">\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[full_name]\" class=\"\">Fullt navn</label><input name=\"test[full_name]\" type=\"text\" placeholder=\"Fullt navn\" />\n  \n</div>\n\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[username]\" class=\"\">Brukernavn</label><input name=\"test[username]\" type=\"text\" placeholder=\"Brukernavn\" />\n  \n</div>\n\n<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <input name=\"test[submit]\" type=\"submit\" value=\"Submit\" />\n  \n</div>\n</div>\n</div></fieldset></form>"}
   end
 
   test "method_override/1" do
