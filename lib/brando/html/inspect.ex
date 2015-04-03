@@ -23,8 +23,6 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_field(name, Ecto.DateTime, value) do
-    require Logger
-    Logger.debug(inspect(value))
     ~s(<tr><td>#{name}</td><td>#{value.day}/#{value.month}/#{value.year} #{value.hour}:#{Ecto.DateTime.Util.zero_pad(value.min, 2)}</td></tr>)
   end
 
@@ -32,7 +30,7 @@ defmodule Brando.HTML.Inspect do
     ~s(<tr><td>#{name}</td><td>#{inspect(value)}</td></tr>)
   end
 
-  defp do_inspect_field(name, Brando.Type.Json, value) do
+  defp do_inspect_field(name, Brando.Type.Json, _value) do
     ~s(<tr><td>#{name}</td><td><em>Kodet verdi</em></td></tr>)
   end
 
