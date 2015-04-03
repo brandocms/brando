@@ -4,6 +4,7 @@ defmodule Brando.Images.Admin.ImageCategoryController do
   """
   use Phoenix.Controller
 
+  plug :scrub_params, "imagecategory" when action in [:create, :update]
   plug :action
 
   @doc false
