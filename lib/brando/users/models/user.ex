@@ -202,7 +202,7 @@ defmodule Brando.Users.Model.User do
     Brando.get_repo.delete(record)
   end
   def delete(id) do
-    record = get!(id)
+    record = get!(id: id)
     delete(record)
   end
 
