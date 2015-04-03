@@ -80,16 +80,22 @@
 
   $('.delete-selected-images').click(function(e) {
     e.preventDefault();
-    $(this).removeClass("btn-danger").addClass("btn-warning").html("Lagrer ...");
-
-    $.ajax({
-      headers: {Accept : "application/json; charset=utf-8"},
-      type: "POST",
-      url: addToPathName('slett-valgte-bilder'),
-      data: {
-        ids: imagePool
-      },
-      success: deleteSuccess,
+    vex.dialog.confirm({
+      message: 'Er du sikker på at du vil slette disse bildene?',
+      callback: function(value) {
+        if (value) {
+          $(this).removeClass("btn-danger").addClass("btn-warning").html("Lagrer ...");
+          $.ajax({
+            headers: {Accept : "application/json; charset=utf-8"},
+            type: "POST",
+            url: addToPathName('slett-valgte-bilder'),
+            data: {
+              ids: imagePool
+            },
+            success: deleteSuccess,
+          });
+        }
+      }
     });
   });
 
