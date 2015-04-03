@@ -13,7 +13,7 @@ defmodule Brando.Images.Model.Image do
   alias Brando.Images.Model.ImageSeries
 
   @required_fields ~w(image image_series_id)
-  @optional_fields ~w(title credits order optimized creator_id)
+  @optional_fields ~w(order creator_id)
 
   def __name__(:singular), do: "bilde"
   def __name__(:plural), do: "bilder"
@@ -26,11 +26,8 @@ defmodule Brando.Images.Model.Image do
   locale "no", [
     model: [
       id: "ID",
-      title: "Tittel",
-      credits: "Krediteringer",
       image: "Bilde",
       order: "Rekkefølge",
-      optimized: "Optimisert",
       creator: "Opprettet av",
       image_series: "Bildeserie",
       inserted_at: "Opprettet",
@@ -39,11 +36,8 @@ defmodule Brando.Images.Model.Image do
   ]
 
   schema "images" do
-    field :title, :string
-    field :credits, :string
     field :image, Brando.Type.Image
     field :order, :integer
-    field :optimized, :boolean
     belongs_to :creator, User
     belongs_to :image_series, ImageSeries
     timestamps
@@ -153,7 +147,7 @@ defmodule Brando.Images.Model.Image do
     Brando.get_repo.delete(record)
   end
   def delete(id) do
-    record = get!(id)
+    record = get!(id: id)
     delete(record)
   end
 
