@@ -13,5 +13,11 @@
     background-color: #ffffff;
     border: 1px solid #d7d7d7;
     padding: 5px;
+    margin: 5px 5px 5px 5px;
+  }
+  img.selected {
+    opacity: 0.5;
+    border: 3px solid #fb6b5b;
+    margin: 3px 3px 3px 3px;
   }
 }

@@ -189,12 +189,19 @@ defmodule Brando.News.Model.Post do
   end
 
   @doc """
-  Delete `model` from database. Also deletes any connected image fields,
+  Delete `id` from database. Also deletes any connected image fields,
   including all generated sizes.
   """
-  def delete(model) do
-    Brando.get_repo.delete(model)
-    delete_connected_images(model, @imagefields)
+  def delete(record) when is_map(record) do
+    if record.cover do
+      delete_media(record.cover.path)
+      delete_connected_images(record.cover.sizes)
+    end
+    Brando.get_repo.delete(record)
+  end
+  def delete(id) do
+    record = get!(id)
+    delete(record)
   end
 
   @doc """

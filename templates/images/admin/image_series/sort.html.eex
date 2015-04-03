@@ -33,13 +33,12 @@
       data: {
         order: sortable.toArray()
       },
-      //dataType: "json",
       success: sortSuccess,
     });
   });
   function sortSuccess(data) {
     if (data.status == 200) {
-      $("#sort-post").removeClass("btn-warning").addClass("btn-success").html("Lagret rekkefølge!");;
+      $("#sort-post").removeClass("btn-warning").addClass("btn-success").html("Lagret rekkefølge!");
     }
   }
 </script>

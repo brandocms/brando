@@ -93,6 +93,9 @@ defmodule Brando.HTML do
   Return joined path of `file` and the :media_url config option
   as set in your app's config.exs.
   """
+  def media_url(nil) do
+    Brando.config(:media_url)
+  end
   def media_url(file) do
     Path.join([Brando.config(:media_url), file])
   end

@@ -38,6 +38,7 @@ defmodule Brando.Images.Admin.Routes do
       opts = unquote(options)
 
       get "#{path}", image_ctrl, :index, opts
+      post "#{path}/slett-valgte-bilder", image_ctrl, :delete_selected, opts
       get "#{path}/serier", series_ctrl, :index, Keyword.put(opts, :as, "image_series")
       get "#{path}/serier/ny", series_ctrl, :new, Keyword.put(opts, :as, "image_series")
       get "#{path}/serier/:id/endre", series_ctrl, :edit, Keyword.put(opts, :as, "image_series")

@@ -7,7 +7,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title><%= app_name %> | Administrasjon</title>
+    <title><%= app_name %> | <%= @page_title || "Administrasjon" %></title>
     <link rel="stylesheet" href="/static/brando/css/font-awesome.min.css">
     <link rel="stylesheet" href="/static/brando/css/brando.css">
     <%= css_extra(@conn) %>
@@ -29,12 +29,17 @@
   </head>
 
   <body>
+    <main id="burger" class="show-for-small-only">
+      <header>
+        <button>☰</button>
+      </header>
+    </main>
     <div class="grid-frame">
-      <div id="menu">
+      <div id="menu" class="collapse grid-content shrink">
         <div class="menu-profile">
           <!-- menu top with avatar & info -->
           <div class="avatar">
-            <img src="<%= media_url(img(current_user(@conn).avatar, :thumb)) %>" />
+            <img src="<%= media_url(img(current_user(@conn).avatar, :thumb, "defaults/avatar_default.jpg")) %>" />
           </div>
           <div class="name">
             <%= current_user(@conn).full_name %>
@@ -49,7 +54,7 @@
             <%= for {color, menu} <- get_menus do %>
               <!-- menu item -->
                 <li class="menuparent">
-                  <a href="#<%= menu.anchor %>" style="overflow: hidden;">
+                  <a href="#<%= menu.anchor %>">
                     <i class="<%= menu.icon %>">
                       <b style="background-color: <%= color %>"></b>
                     </i>
@@ -102,6 +107,18 @@
         </div>
       </div>
     </div>
+    <script>
+      var slideout = new Slideout({
+        'panel': document.getElementById('burger'),
+        'menu': document.getElementById('menu'),
+        'padding': 0,
+        'tolerance': 70
+      });
+      document.querySelector('#burger button').addEventListener('click', function(e) {
+        e.preventDefault();
+        slideout.toggle();
+      });
+    </script>
   </body>
 </html>
 

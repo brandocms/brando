@@ -17,7 +17,7 @@ defmodule RouterHelper do
   )
 
   @current_user %{__struct__: Brando.Users.Model.User,
-      avatar: "images/default/0.jpeg", email: "test@test.com",
+      avatar: nil, email: "test@test.com",
       full_name: "Iggy Pop", id: 1,
       inserted_at: %Ecto.DateTime{day: 7, hour: 4, min: 36, month: 12, sec: 26, year: 2014},
       last_login: %Ecto.DateTime{day: 9, hour: 5, min: 2, month: 12, sec: 36, year: 2014},

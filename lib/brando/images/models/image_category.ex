@@ -136,9 +136,15 @@ defmodule Brando.Images.Model.ImageCategory do
   end
 
   @doc """
-  Delete `record` from database.
+  Delete `record` from database
+
+  Also delete all dependent image_series which in part deletes all
+  dependent images.
   """
   def delete(record) do
-    Brando.get_repo.delete(record)
+    Brando.Images.Model.ImageSeries.delete_dependent_image_series(record.id)
+    require Logger
+    Logger.error("deleting image_category")
+    #Brando.get_repo.delete(record)
   end
 end

@@ -39,7 +39,7 @@ defmodule Mix.Tasks.Brando.Install do
 
         scope "/admin", as: :admin do
           pipe_through :admin
-          Users_resources "/brukere"
+          users_resources "/brukere"
           get "/", <%= application_name %>.Dashboard.Admin.DashboardController, :dashboard
         end
 

@@ -30,6 +30,6 @@ defmodule Brando.Images.ImageSeriesForm do
        label: "Kreditering",
        placeholder: "Kreditering"]
     submit "Lagre",
-      [class: "btn btn-default"]
+      [class: "btn btn-success"]
   end
 end

@@ -4,6 +4,7 @@ defmodule Brando.Images.Admin.ImageSeriesController do
   """
   use Phoenix.Controller
   import Brando.Utils, only: [add_css: 2, add_js: 2]
+  alias Brando.HTML.Inspect
 
   plug :action
 
@@ -36,7 +37,7 @@ defmodule Brando.Images.Admin.ImageSeriesController do
     model = conn.private[:series_model]
     record = model.get(id: String.to_integer(id))
     case model.update(record, form_data) do
-      {:ok, updated_record} ->
+      {:ok, _updated_record} ->
         conn
         |> put_flash(:notice, "Serie oppdatert.")
         |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
@@ -105,7 +106,7 @@ defmodule Brando.Images.Admin.ImageSeriesController do
     record = model.get!(id: id)
     model.delete(record)
     conn
-    |> put_flash(:notice, "#{Brando.HTML.Inspect.model_name(record, :singular)} #{model.__str__(record)} slettet.")
+    |> put_flash(:notice, "#{Inspect.model_name(record, :singular)} #{model.__str__(record)} slettet.")
     |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
   end
 end

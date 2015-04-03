@@ -140,9 +140,27 @@ defmodule Brando.Images.Model.ImageSeries do
   end
 
   @doc """
-  Delete `record` from database.
+  Delete `record` from database
+
+  Also deletes all dependent images.
   """
   def delete(record) do
-    Brando.get_repo.delete(record)
+    Brando.Images.Model.Image.delete_dependent_images(record.id)
+    require Logger
+    Logger.error("deleting image_series")
+    #Brando.get_repo.delete(record)
+  end
+
+  @doc """
+  Delete all imageseries dependant on `category_id`
+  """
+  def delete_dependent_image_series(category_id) do
+    image_series =
+      from(m in __MODULE__, where: m.image_category_id == ^category_id)
+      |> Brando.get_repo.all
+
+    for is <- image_series do
+      delete(is)
+    end
   end
 end

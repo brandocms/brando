@@ -1,4 +1,4 @@
-defmodule Brando.News.Form.PostForm do
+defmodule Brando.News.PostForm do
   @moduledoc """
   A form for the Post model. See the `Brando.Form` module for more
   documentation
@@ -60,7 +60,7 @@ defmodule Brando.News.Form.PostForm do
     field :data, :textarea,
       [label: "Innhold"]
     submit "Lagre",
-      [class: "btn btn-default"]
+      [class: "btn btn-success"]
 
   end
 end

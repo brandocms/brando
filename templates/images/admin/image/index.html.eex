@@ -6,20 +6,25 @@
     <div class="tab-content">
     <%= if category.image_series != [] do %>
       <%= for serie <- category.image_series do %>
-        <div class="image-serie">
+        <div class="image-serie image-selection-pool">
           <h2><%= String.capitalize(serie.name) %></h2>
+          <!-- imagetoolbar -->
+          <div class="image-toolbar">
+            <button disabled class="delete-selected-images btn btn-danger m-t-sm m-b-sm">Slett valgte bilder</button>
+          </div>
+          <!-- /imagetoolbar -->
           <%= if serie.images != [] do %>
             <%= for image <- serie.images do %>
-              <img src="<%= media_url(img(image.image, :thumb)) %>" />
+            <img data-id="<%= image.id %>" src="<%= media_url(img(image.image, :thumb)) %>" />
             <% end %>
           <% else %>
             <p>Ingen bilder i denne serien.</p>
           <% end %>
           <hr>
-          <a href="<%= helpers(@conn).admin_image_series_path(@conn, :upload, serie.id) %>" class="btn btn-default">Last opp bilder</a>
-          <a href="<%= helpers(@conn).admin_image_series_path(@conn, :edit, serie.id) %>" class="btn btn-default">Editer bildeserie</a>
-          <a href="<%= helpers(@conn).admin_image_series_path(@conn, :sort, serie.id) %>" class="btn btn-default">Sortér bilder</a>
-          <a href="<%= helpers(@conn).admin_image_series_path(@conn, :delete_confirm, serie.id) %>" class="btn btn-danger">Slett bildeserie</a>
+          <a href="<%= helpers(@conn).admin_image_series_path(@conn, :upload, serie.id) %>" class="btn btn-default"><i class="fa fa-cloud"> </i>Last opp bilder</a>
+          <a href="<%= helpers(@conn).admin_image_series_path(@conn, :edit, serie.id) %>" class="btn btn-default"><i class="fa fa-edit"> </i>Editer bildeserie</a>
+          <a href="<%= helpers(@conn).admin_image_series_path(@conn, :sort, serie.id) %>" class="btn btn-default"><i class="fa fa-sort"> </i>Sortér bilder</a>
+          <a href="<%= helpers(@conn).admin_image_series_path(@conn, :delete_confirm, serie.id) %>" class="btn btn-danger"><i class="fa fa-trash"> </i>Slett bildeserie</a>
         </div>
       <% end %>
     <% else %>
@@ -28,8 +33,8 @@
       <a href="<%= helpers(@conn).admin_image_series_path(@conn, :new) %>" class="btn btn-primary m-t-sm">
         <i class="fa fa-plus"></i> Ny bildeserie
       </a>
-      <a href="<%= helpers(@conn).admin_image_series_path(@conn, :new) %>" class="btn btn-primary m-t-sm">
-        <i class="fa fa-plus"></i> Sortér bildeserier
+      <a href="<%= helpers(@conn).admin_image_series_path(@conn, :new) %>" class="btn btn-default m-t-sm">
+        <i class="fa fa-sort"></i> Sortér bildeserier
       </a>
       <a href="<%= helpers(@conn).admin_image_category_path(@conn, :delete_confirm, category.id) %>" class="btn btn-danger m-t-sm">
         <i class="fa fa-trash"></i> Slett kategori
@@ -40,3 +45,67 @@
   <a href="<%= helpers(@conn).admin_image_category_path(@conn, :new) %>" class="btn btn-xs btn-default"><i class="fa fa-plus"></i> Ny kategori</a>
 </ul>
 <hr>
+<script type="text/javascript">
+  var imagePool = [];
+  $('.image-selection-pool img').click(function(e) {
+    if ($(this).hasClass('selected')) {
+      // remove from selected pool
+      var pos;
+      for (var i = 0; i < imagePool.length; i++) {
+        if ( imagePool[i] == $(this).attr('data-id')) {
+          pos = i;
+          break;
+        }
+      }
+      imagePool.splice(pos, 1);
+    } else {
+      // add to selected pool
+      if (!imagePool) {
+        imagePool = new Array();
+      }
+      imagePool.push($(this).attr('data-id'));
+    }
+    $(this).toggleClass('selected');
+    checkButtonEnable();
+  });
+
+  function checkButtonEnable() {
+    $btn = $('.delete-selected-images');
+    if (imagePool.length > 0) {
+      $btn.removeAttr('disabled');
+    } else {
+      $btn.attr('disabled', 'disabled');
+    }
+  }
+
+  $('.delete-selected-images').click(function(e) {
+    e.preventDefault();
+    $(this).removeClass("btn-danger").addClass("btn-warning").html("Lagrer ...");
+
+    $.ajax({
+      headers: {Accept : "application/json; charset=utf-8"},
+      type: "POST",
+      url: addToPathName('slett-valgte-bilder'),
+      data: {
+        ids: imagePool
+      },
+      success: deleteSuccess,
+    });
+  });
+
+  function deleteSuccess(data) {
+    if (data.status == 200) {
+      $(".delete-selected-images").removeClass("btn-warning").addClass("btn-danger").html("Slett valgte bilder");
+      for (var i = 0; i < data.ids.length; i++) {
+        $('.image-selection-pool img[data-id=' + data.ids[i] + ']').fadeOut();
+      }
+      imagePool = [];
+    }
+  }
+
+  function addToPathName(relativeUrl) {
+    divider = (window.location.pathname.slice(-1) == "/") ? "" : "/";
+    return window.location.pathname + divider + relativeUrl;
+  }
+
+</script>

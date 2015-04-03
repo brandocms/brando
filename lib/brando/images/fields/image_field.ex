@@ -123,14 +123,14 @@ defmodule Brando.Images.Field.ImageField do
 
   """
   def handle_upload({name, plug}, _acc, %{id: _id} = model, module, cfg_fun) do
-    {:ok, file} = do_upload(plug, cfg_fun.(String.to_atom(name)))
-    params = Map.put(%{}, name, file)
+    {:ok, image_field} = do_upload(plug, cfg_fun.(String.to_atom(name)))
+    params = Map.put(%{}, name, image_field)
     apply(module, :update, [model, params])
   end
 
   def handle_upload({name, plug}, _acc, _model, module, cfg_fun) do
-    {:ok, file} = do_upload(plug, cfg_fun.(String.to_atom(name)))
-    params = Map.put(%{}, name, file)
+    {:ok, image_field} = do_upload(plug, cfg_fun.(String.to_atom(name)))
+    params = Map.put(%{}, name, image_field)
     apply(module, :create, [params])
   end
 end

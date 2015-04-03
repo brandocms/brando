@@ -18,6 +18,6 @@ defmodule Brando.Images.ImageCategoryForm do
       [label: "Konfigurasjon",
        default: "[]"]
     submit "Lagre",
-      [class: "btn btn-default"]
+      [class: "btn btn-success"]
   end
 end

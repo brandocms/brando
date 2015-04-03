@@ -53,7 +53,7 @@ defmodule Brando.Users.Model.User do
   has_image_field :avatar,
     [allowed_mimetypes: ["image/jpeg", "image/png"],
      default_size: :medium,
-     upload_path: Path.join("images", "default"),
+     upload_path: Path.join("images", "avatars"),
      random_filename: true,
      size_limit: 10240000,
      sizes: [
@@ -191,13 +191,21 @@ defmodule Brando.Users.Model.User do
   end
 
   @doc """
-  Delete `record` from database. Also deletes any connected image fields,
+  Delete `id` from database. Also deletes any connected image fields,
   including all generated sizes.
   """
-  def delete(record) do
+  def delete(record) when is_map(record) do
+    if record.avatar do
+      delete_media(record.avatar.path)
+      delete_connected_images(record.avatar.sizes)
+    end
     Brando.get_repo.delete(record)
-    delete_connected_images(record, @imagefields)
   end
+  def delete(id) do
+    record = get!(id)
+    delete(record)
+  end
+
 
   @doc """
   Get all users. Ordered by `id`
@@ -230,7 +238,7 @@ defmodule Brando.Users.Model.User do
     Utils.secure_compare(hash, stored_hash)
   end
 
-  defp gen_password(password) do
+  def gen_password(password) do
     password    = String.to_char_list(password)
     work_factor = 12
     {:ok, salt} = :bcrypt.gen_salt(work_factor)

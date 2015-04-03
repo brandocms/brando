@@ -30,7 +30,7 @@ defmodule Brando.Form do
           [required: true,
            label: "Full name",
         submit "Lagre",
-          [class: "btn btn-default"]
+          [class: "btn btn-success"]
       end
 
   ## Options
@@ -246,9 +246,10 @@ defmodule Brando.Form do
   Marks the field as a submit button.
   """
   def __submit__(mod, text, opts) do
-    if opts[:name], do:
-      name = opts[:name],
-    else: name = :submit
+    name =
+      if opts[:name], do:
+        opts[:name],
+      else: :submit
 
     fields = Module.get_attribute(mod, :form_fields)
 
@@ -376,8 +377,8 @@ defmodule Brando.Form do
     |> F.__data_row_span__(opts[:in_fieldset])
   end
 
-  def render_field(action, name, :submit, opts, value, errors) do
-    F.__input__(:submit, action, name, value, errors, opts)
+  def render_field(action, name, :submit, opts, _value, errors) do
+    F.__input__(:submit, action, name, opts[:text], errors, opts)
     |> F.__form_group__(name, opts, errors)
     |> F.__data_row_span__(opts[:in_fieldset])
   end

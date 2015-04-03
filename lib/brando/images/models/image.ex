@@ -112,6 +112,13 @@ defmodule Brando.Images.Model.Image do
     end
   end
 
+  @doc """
+  Get model by `val` or raise `Ecto.NoResultsError`.
+  """
+  def get!(val) do
+    get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
+  end
+
   def get(id: id) do
     from(m in __MODULE__,
          where: m.id == ^id,
@@ -125,6 +132,42 @@ defmodule Brando.Images.Model.Image do
     Brando.get_repo.transaction(fn -> Enum.map(order, fn ({val, id}) ->
       Ecto.Adapters.SQL.query(Brando.get_repo, "UPDATE images SET \"order\" = $1 WHERE \"id\" = $2", [val, String.to_integer(id)])
     end) end)
+  end
+
+  @doc """
+  Delete `record` from database
+
+  Also deletes all dependent image sizes.
+  """
+  def delete(ids) when is_list(ids) do
+    for id <- ids do
+      delete(id)
+    end
+  end
+
+  def delete(record) when is_map(record) do
+    if record.image do
+      delete_media(record.image.path)
+      delete_connected_images(record.image.sizes)
+    end
+    Brando.get_repo.delete(record)
+  end
+  def delete(id) do
+    record = get!(id)
+    delete(record)
+  end
+
+  @doc """
+  Delete all imageseries dependant on `category_id`
+  """
+  def delete_dependent_images(series_id) do
+    images =
+      from(m in __MODULE__, where: m.image_series_id == ^series_id)
+      |> Brando.get_repo.all
+
+    for img <- images do
+      delete(img)
+    end
   end
 
 end

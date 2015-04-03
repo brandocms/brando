@@ -193,3 +193,7 @@ $legend-border-color: #E0E0E0;
 .grid-form {
    @include grid-form($field-padding: 12px, $label-font-size: 11px, $grid-border-color: #cdcdcd);
 }
+
+form.grid-form {
+  margin-bottom: 15px;
+}

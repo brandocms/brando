@@ -56,14 +56,22 @@ defmodule Brando.Images.Utils do
   end
 
   defp create_image_sizes({%{uploaded_file: file}, cfg}) do
+    sizes = %{}
     {file_path, filename} = split_path(file)
-    for {size_name, size_cfg} <- cfg[:sizes] do
-      size_dir = Path.join([file_path, Atom.to_string(size_name)])
+
+    sizes = for {size_name, size_cfg} <- cfg[:sizes] do
+      size_dir = Path.join([file_path, to_string(size_name)])
       File.mkdir_p(size_dir)
       sized_image = Path.join([size_dir, filename])
-      task_start(fn -> do_create_image_size(file, sized_image, size_cfg) end)
+      #task_start(fn -> do_create_image_size(file, sized_image, size_cfg) end)
+      do_create_image_size(file, sized_image, size_cfg)
+      sized_path = Path.join([cfg[:upload_path], to_string(size_name), filename])
+      {size_name, sized_path}
     end
-    {:ok, Path.join([cfg[:upload_path], filename])}
+
+    {:ok, %Brando.Type.Image{}
+    |> Map.put(:sizes, Enum.into(sizes, %{}))
+    |> Map.put(:path, Path.join([cfg[:upload_path], filename]))}
   end
 
   defp do_create_image_size(file, sized_image, size_cfg) do
@@ -81,30 +89,28 @@ defmodule Brando.Images.Utils do
   end
 
   @doc """
-  Goes through `model`'s fields, matching them to `imagefields`,
+  Goes through `images`, which is a map of sizes from an imagefield
   then passing to `delete_media/2` for removal
 
   ## Example:
 
-      delete_connected_images(model, @imagefields)
+      delete_connected_images(record.cover.sizes)
 
   """
-  def delete_connected_images(model, imagefields) do
-    for {field, cfg} <- imagefields do
-      delete_media(Map.get(model, field), cfg)
+  def delete_connected_images(images) do
+    for {size, file} <- images do
+      delete_media(file)
     end
   end
 
-  defp delete_media(nil, _cfg), do: nil
-  defp delete_media("", _cfg), do: nil
-  defp delete_media(file, cfg) do
+  @doc """
+  Deletes `file` after joining it with `get_media_abspath`
+  """
+  def delete_media(nil), do: nil
+  def delete_media(""), do: nil
+  def delete_media(file) do
     file = Path.join([get_media_abspath, file])
-    File.rm!(file)
-    for {size, _} <- cfg[:sizes] do
-      {file_path, filename} = split_path(file)
-      sized_file = Path.join([file_path, Atom.to_string(size), filename])
-      File.rm!(sized_file)
-    end
+    File.rm(file)
   end
 
   @doc """

@@ -14,6 +14,7 @@ defmodule Brando.Users.Admin.UserController do
     model = conn.private[:model]
     conn
     |> assign(:users, model.all)
+    |> assign(:page_title, "Brukeroversikt")
     |> render("index.html")
   end
 
@@ -22,6 +23,7 @@ defmodule Brando.Users.Admin.UserController do
     model = conn.private[:model]
     conn
     |> assign(:user, model.get!(id: user_id))
+    |> assign(:page_title, "Vis bruker")
     |> render("show.html")
   end
 
@@ -29,12 +31,15 @@ defmodule Brando.Users.Admin.UserController do
   def profile(conn, _params) do
     conn
     |> assign(:user, get_session(conn, :current_user))
+    |> assign(:page_title, "Brukerprofil")
     |> render("show.html")
   end
 
   @doc false
   def new(conn, _params) do
-    conn |> render("new.html")
+    conn
+    |> assign(:page_title, "Ny bruker")
+    |> render("new.html")
   end
 
   @doc false
@@ -44,6 +49,7 @@ defmodule Brando.Users.Admin.UserController do
     conn
     |> assign(:user, form_data)
     |> assign(:id, user_id)
+    |> assign(:page_title, "Endre bruker")
     |> render(:edit)
   end
 
@@ -66,13 +72,16 @@ defmodule Brando.Users.Admin.UserController do
         |> assign(:user, form_data)
         |> assign(:errors, errors)
         |> put_flash(:error, "Feil i skjema")
+        |> assign(:page_title, "Ny bruker")
         |> render(:new)
     end
   end
 
   @doc false
   def create(conn, _params) do
-    conn |> render(:new)
+    conn
+    |> assign(:page_title, "Ny bruker")
+    |> render(:new)
   end
 
   @doc false
@@ -95,6 +104,7 @@ defmodule Brando.Users.Admin.UserController do
         |> assign(:errors, errors)
         |> assign(:id, user_id)
         |> put_flash(:error, "Feil i skjema")
+        |> assign(:page_title, "Endre bruker")
         |> render(:edit)
     end
   end
@@ -105,6 +115,7 @@ defmodule Brando.Users.Admin.UserController do
     record = model.get!(id: id)
     conn
     |> assign(:record, record)
+    |> assign(:page_title, "Bekreft sletting")
     |> render(:delete_confirm)
   end
 
