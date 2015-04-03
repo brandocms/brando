@@ -23,6 +23,23 @@ defmodule Brando.Images.Admin.ImageSeriesController do
   end
 
   @doc false
+  def create(conn, %{"imageseries" => image_series}) do
+    model = conn.private[:series_model]
+    case model.create(image_series, Brando.HTML.current_user(conn)) do
+      {:ok, _} ->
+        conn
+        |> put_flash(:notice, "Bildeserie opprettet.")
+        |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
+      {:error, errors} ->
+        conn
+        |> assign(:image_series, image_series)
+        |> assign(:errors, errors)
+        |> put_flash(:error, "Feil i skjema")
+        |> render(:new)
+    end
+  end
+
+  @doc false
   def edit(conn, %{"id" => id}) do
     model = conn.private[:series_model]
     data = model.get(id: String.to_integer(id))
@@ -84,7 +101,7 @@ defmodule Brando.Images.Admin.ImageSeriesController do
   end
 
   @doc false
-  def sort_post(conn, %{"id" => id, "order" => ids} = params) do
+  def sort_post(conn, %{"order" => ids} = _params) do
     vals = Range.new(0, length(ids))
     image_model = conn.private[:image_model]
     image_model.reorder_images(ids, vals)
