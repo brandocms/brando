@@ -16,7 +16,11 @@ gulp.task('scripts', function () {
                      'js/brando/dropdown.js',
                      'js/brando/sortable.js',
                      'js/brando/slideout.js',
-                     'js/brando/gridforms.js'])
+                     'js/brando/gridforms.js',
+                     'js/brando/vex.js',
+                     'js/brando/vex.dialog.js',
+                     'js/brando/admin.js'
+        ])
         .pipe(concat('brando.js'))
         .pipe(gulp.dest('../priv/static/brando/js'))
         .pipe(rename('brando-min.js'))
