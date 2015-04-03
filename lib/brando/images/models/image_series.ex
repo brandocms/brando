@@ -10,6 +10,7 @@ defmodule Brando.Images.Model.ImageSeries do
   alias Brando.Users.Model.User
   alias Brando.Images.Model.Image
   alias Brando.Images.Model.ImageCategory
+  alias Brando.Utils
 
   @required_fields ~w(name slug image_category_id creator_id)
   @optional_fields ~w(credits order)
@@ -146,9 +147,7 @@ defmodule Brando.Images.Model.ImageSeries do
   """
   def delete(record) do
     Brando.Images.Model.Image.delete_dependent_images(record.id)
-    require Logger
-    Logger.error("deleting image_series")
-    #Brando.get_repo.delete(record)
+    Brando.get_repo.delete(record)
   end
 
   @doc """
