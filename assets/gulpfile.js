@@ -4,6 +4,7 @@ var watch = require('gulp-watch');
 var concat = require('gulp-concat');
 var rename = require('gulp-rename');
 var uglify = require('gulp-uglify');
+var babel = require("gulp-babel");
 
 gulp.task('sass', function () {
     return sass('scss/brando.scss')
@@ -12,15 +13,17 @@ gulp.task('sass', function () {
 });
 
 gulp.task('scripts', function () {
-    return gulp.src(['js/brando/accordion.js',
-                     'js/brando/dropdown.js',
-                     'js/brando/sortable.js',
-                     'js/brando/slideout.js',
-                     'js/brando/gridforms.js',
-                     'js/brando/vex.js',
-                     'js/brando/vex.dialog.js',
-                     'js/brando/admin.js'
+    return gulp.src(['js/accordion.js',
+                     'js/dropdown.js',
+                     'js/sortable.js',
+                     'js/slideout.js',
+                     'js/gridforms.js',
+                     'js/vex.js',
+                     'js/vex.dialog.js',
+                     'js/brando/utils.js',
+                     'js/brando/init.js'
         ])
+        .pipe(babel())
         .pipe(concat('brando.js'))
         .pipe(gulp.dest('../priv/static/brando/js'))
         .pipe(rename('brando-min.js'))
