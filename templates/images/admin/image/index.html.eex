@@ -7,10 +7,10 @@
     <%= if category.image_series != [] do %>
       <%= for serie <- category.image_series do %>
         <div class="image-serie image-selection-pool">
-          <h2><%= String.capitalize(serie.name) %></h2>
+          <h2 class="m-b-sm"><%= String.capitalize(serie.name) %></h2>
           <!-- imagetoolbar -->
           <div class="image-toolbar">
-            <button disabled class="delete-selected-images btn btn-danger m-t-sm m-b-sm">Slett valgte bilder</button>
+            <button disabled class="delete-selected-images btn btn-danger m-b-sm">Slett valgte bilder</button>
           </div>
           <!-- /imagetoolbar -->
           <%= if serie.images != [] do %>
