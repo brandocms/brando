@@ -44,6 +44,6 @@ defmodule Brando.Auth.ControllerTest do
     conn = call_with_session(RouterHelper.TestRouter, :get, "/logout")
     assert conn.status == 200
     assert conn.path_info == ["logout"]
-    assert conn.resp_body =~ "logout"
+    assert conn.resp_body =~ "Du er logget ut av administrasjonsområdet"
   end
 end
