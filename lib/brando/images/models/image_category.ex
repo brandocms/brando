@@ -129,10 +129,12 @@ defmodule Brando.Images.Model.ImageCategory do
   Get all records. Ordered by `id`.
   """
   def all do
-    q = from m in __MODULE__,
-        order_by: [asc: m.name],
-        preload: [:image_series, image_series: :images]
-    Brando.get_repo.all(q)
+    (from m in __MODULE__,
+      left_join: is in assoc(m, :image_series),
+      left_join: i in assoc(is, :images),
+      order_by: [asc: m.name, asc: is.name, asc: i.order],
+      preload: [image_series: {is, images: i}])
+      |> Brando.get_repo.all
   end
 
   @doc """

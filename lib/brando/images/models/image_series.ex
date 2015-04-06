@@ -126,11 +126,12 @@ defmodule Brando.Images.Model.ImageSeries do
   Get model from DB by `id`
   """
   def get(id: id) do
-    from(m in __MODULE__,
-         where: m.id == ^id,
-         preload: [:creator, :images, :image_category],
-         limit: 1)
-    |> Brando.get_repo.one!
+    (from(m in __MODULE__,
+      join: i in assoc(m, :images),
+      where: m.id == ^id,
+      order_by: i.order,
+      preload: [:creator, :image_category, images: i]))
+      |> Brando.get_repo.one!
   end
 
   @doc """
