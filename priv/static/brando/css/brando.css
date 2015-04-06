@@ -3407,6 +3407,25 @@ input[type=radio] {
 form label {
   font-size: 15px; }
 
+.auth form label {
+  display: block; }
+
+.auth form .form-group {
+  margin: 15px 0; }
+  .auth form .form-group input[type="email"],
+  .auth form .form-group input[type="password"] {
+    padding: 10px 5px;
+    width: 250px; }
+
+.auth h1 {
+  margin: 0; }
+
+.auth .grid-block {
+  background-color: #fff; }
+
+.auth {
+  background-color: #D3E7D1; }
+
 .image-serie {
   background-color: #FFFFFF;
   padding: 0 15px 15px 15px;
@@ -4512,6 +4531,16 @@ table th[class*="col-"] {
 
 .text-muted {
   color: #979797; }
+
+.close {
+  float: right;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1;
+  color: #000;
+  text-shadow: 0 1px 0 #fff;
+  filter: alpha(opacity=20);
+  opacity: .2; }
 
 @keyframes vex-fadein {
   0% {

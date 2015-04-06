@@ -7,28 +7,33 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title>AUTH</title>
-    <link rel="stylesheet" href="/static/css/phoenix.css">
-    <link rel="stylesheet" href="/static/brando/css/admin.css">
+    <title><%= app_name %> | autorisering</title>
+    <link rel="stylesheet" href="/static/brando/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/static/brando/css/brando.css">
   </head>
 
-  <body>
-    <div class="container">
-      <h1>Auth</h1>
-      <%= if get_flash(@conn, :error) do %>
-        <div class="alert alert-block alert-danger">
-          <a class="close" data-dismiss="alert" href="#">×</a>
-          <%= get_flash(@conn, :error) %>
-        </div>
-      <% end %>
+  <body class="auth">
+    <div class="grid-frame">
+      <div class="grid-container v-align">
+        <div class="grid-block">
+          <div class="grid-content">
+            <%= if get_flash(@conn, :error) do %>
+              <div class="alert alert-block alert-danger">
+                <a class="close" data-dismiss="alert" href="#">×</a>
+                <%= get_flash(@conn, :error) %>
+              </div>
+            <% end %>
 
-      <%= if get_flash(@conn, :notice) do %>
-        <div class="alert alert-block alert-info">
-          <a class="close" data-dismiss="alert" href="#">×</a>
-          <%= get_flash(@conn, :notice) %>
+            <%= if get_flash(@conn, :notice) do %>
+              <div class="alert alert-block alert-info">
+                <a class="close" data-dismiss="alert" href="#">×</a>
+                <%= get_flash(@conn, :notice) %>
+              </div>
+            <% end %>
+            <%= @inner %>
+          </div>
         </div>
-      <% end %>
-      <%= @inner %>
-    </div> <!-- /container -->
+      </div>
+    </div>
   </body>
 </html>

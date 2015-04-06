@@ -22,9 +22,7 @@
     <script type="text/javascript" src="/static/brando/js/libs/jquery/jquery.autocomplete.min.js" charset="utf-8"></script> -->
     <script type="text/javascript" src="/static/brando/js/libs/backbone/underscore.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/libs/backbone/backbone.js" charset="utf-8"></script>
-
     <script type="text/javascript" src="/static/brando/js/twined-backbone.js" charset="utf-8"></script>
-
     <%= js_extra(@conn) %>
   </head>
 
