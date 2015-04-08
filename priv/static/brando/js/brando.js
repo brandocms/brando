@@ -6,19 +6,23 @@ $(document).ready(function () {
   });
 
   $('.accordion-tabs-minimal').on('click', 'li > a', function (event) {
-    if (!$(this).hasClass('is-active')) {
-      event.preventDefault();
-      var accordionTabs = $(this).closest('.accordion-tabs-minimal');
-      accordionTabs.find('.is-open').removeClass('is-open').hide();
-
-      $(this).next().toggleClass('is-open').toggle();
-      accordionTabs.find('.is-active').removeClass('is-active');
-      $(this).addClass('is-active');
-    } else {
-      event.preventDefault();
-    }
+    event.preventDefault();
+    activate_tab(this);
   });
 });
+
+function activate_tab(obj) {
+  console.log('activate_tab ', obj);
+  if (!$(obj).hasClass('is-active')) {
+    console.log('lets roll');
+    var accordionTabs = $(obj).closest('.accordion-tabs-minimal');
+    accordionTabs.find('.is-open').removeClass('is-open').hide();
+
+    $(obj).next().toggleClass('is-open').toggle();
+    accordionTabs.find('.is-active').removeClass('is-active');
+    $(obj).addClass('is-active');
+  }
+}
 /* ========================================================================
  * Bootstrap: dropdown.js v3.2.0
  * http://getbootstrap.com/javascript/#dropdowns
