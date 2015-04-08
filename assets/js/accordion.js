@@ -11,6 +11,8 @@ $(document).ready(function () {
 
 function activate_tab(obj) {
   if (!$(obj).hasClass('is-active')) {
+    // remove `tab-` from obj id
+    document.location.hash = $(obj).attr('id').replace('tab-', '');
     var accordionTabs = $(obj).closest('.accordion-tabs-minimal');
     accordionTabs.find('.is-open').removeClass('is-open').hide();
 
