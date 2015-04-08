@@ -1,8 +1,7 @@
 language: elixir
 elixir:
   - 1.0.3
-# sudo: false # to use faster container-based build env # breaks coveralls
-sudo: required
+sudo: false # to use faster container-based build env
 notifications:
   recipients:
     - trond@twined.net
