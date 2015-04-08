@@ -68,6 +68,23 @@ defmodule Brando.Images.Admin.ImageCategoryController do
   end
 
   @doc false
+  def configure(conn, %{"id" => category_id}) do
+    model = conn.private[:category_model]
+    data = model.get(id: String.to_integer(category_id))
+    require Logger
+    Logger.debug(inspect(data.cfg))
+    {:ok, cfg} = Brando.Type.Image.Config.dump(data.cfg)
+    data = Map.put(data, :cfg, cfg)
+    require Logger
+    Logger.debug(inspect(data.cfg))
+
+    conn
+    |> assign(:image_category, data)
+    |> assign(:id, category_id)
+    |> render(:configure)
+  end
+
+  @doc false
   def delete_confirm(conn, %{"id" => id}) do
     model = conn.private[:category_model]
     record = model.get!(id: id)

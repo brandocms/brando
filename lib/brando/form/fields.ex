@@ -112,11 +112,11 @@ defmodule Brando.Form.Fields do
   @doc """
   Render a textarea field for :create.
   """
-  def __textarea__(:create, name, [], _errors, opts) do
+  def __textarea__(_action, name, [], _errors, opts) do
     default = if opts[:default], do: opts[:default], else: ""
     ~s(<textarea name="#{name}"#{get_class(opts[:class])}>#{default}</textarea>)
   end
-  def __textarea__(:create, name, value, _errors, opts) do
+  def __textarea__(_action, name, value, _errors, opts) do
     ~s(<textarea name="#{name}"#{get_class(opts[:class])}>#{value}</textarea>)
   end
 
@@ -234,7 +234,7 @@ defmodule Brando.Form.Fields do
    __input__(type, :create, name, value, _errors, opts)
   end
 
-  def __input__(type, :create, name, value, _errors, opts) do
+  def __input__(type, _action, name, value, _errors, opts) do
     ~s(<input name="#{name}" type="#{type}"#{get_value(value)}#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])} />)
   end
 

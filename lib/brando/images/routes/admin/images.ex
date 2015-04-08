@@ -56,6 +56,7 @@ defmodule Brando.Images.Admin.Routes do
       get "#{path}/kategorier/ny", categories_ctrl, :new, Keyword.put(opts, :as, "image_category")
       get "#{path}/kategorier/:id/endre", categories_ctrl, :edit, Keyword.put(opts, :as, "image_category")
       get "#{path}/kategorier/:id/konfigurer", categories_ctrl, :configure, Keyword.put(opts, :as, "image_category")
+      patch "#{path}/kategorier/:id/konfigurer", categories_ctrl, :configure_patch, Keyword.put(opts, :as, "image_category")
       get "#{path}/kategorier/:id/slett", categories_ctrl, :delete_confirm, Keyword.put(opts, :as, "image_category")
       patch "#{path}/kategorier/:id", categories_ctrl, :update, Keyword.put(opts, :as, "image_category")
       delete "#{path}/kategorier/:id", categories_ctrl, :delete, Keyword.put(opts, :as, "image_category")

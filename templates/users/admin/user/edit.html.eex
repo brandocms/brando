@@ -1,5 +1,5 @@
   <h1>Endre bruker</h1>
-  <%= Brando.Users.UserForm.get_form(action: :update, params: to_string(@id), values: @user, errors: @errors) %>
+  <%= Brando.Users.UserForm.get_form(type: :update, action: :update, params: to_string(@id), values: @user, errors: @errors) %>
   <div class="form-actions">
   <a href="<%= helpers(@conn).admin_user_path(@conn, :index) %>" class="btn btn-default">
     <i class="fa fa-list fa-fw m-r-sm"></i> Tilbake til oversikten

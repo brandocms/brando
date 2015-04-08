@@ -3,5 +3,6 @@ defmodule Brando.Images.Admin.ImageCategoryView do
   View for the Brando Images module.
   """
   alias Brando.Images.ImageCategoryForm
+  alias Brando.Images.ImageCategoryConfigForm
   use Brando.AdminView, root: "templates"
 end

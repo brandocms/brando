@@ -56,8 +56,10 @@ defmodule Brando.Form do
 
       ## Options:
 
+        * `type`   - The form type
+          Example: `type: :create` or `type: :update`
         * `action` - Action the form is performing.
-          Example: `action: :create`
+          Example: `action: :create` or `action: :update_all`
         * `params` - Any parameters to the :action function helper.
           Example: `params: to_string(@id)`
         * `values` - Pass @values through the form builder
@@ -66,21 +68,21 @@ defmodule Brando.Form do
 
       ## Example:
 
-          <%= get_form(action: :create, params: [], values: @user, errors: @errors) %>
+          <%= get_form(type: :create, action: :create, params: [], values: @user, errors: @errors) %>
 
       """
-      def get_form(action: action, params: params, values: values, errors: errors) do
+      def get_form(type: form_type, action: action, params: params, values: values, errors: errors) do
         form = [helper: @form_helper, source: @form_source,
                 multipart: @form_multipart, class: @form_class]
-        render_fields(@form_source, @form_fields, action, params, values, errors)
+        render_fields(@form_source, @form_fields, form_type, params, values, errors)
         |> Enum.join("\n")
-        |> render_form(@form_helper, action, params, form)
+        |> render_form(form_type, @form_helper, action, params, form)
         |> safe
       end
 
-      defp render_form(fields, action_fun, action, params, form) do
-        method = get_method(action)
-        method_tag = method_override(action)
+      defp render_form(fields, form_type, action_fun, action, params, form) do
+        method = get_method(form_type)
+        method_tag = method_override(form_type)
         action = " " <> "action=\"#{get_action(action_fun, action, params)}\""
         class  = " " <> "class=\"#{form[:class]}\""
         role   = " " <> "role=\"form\""
@@ -94,12 +96,12 @@ defmodule Brando.Form do
       field as HTML. Builds the correct name for the field by joining
       `@form_source` with `name`. Gets any value or errors for the field.
       """
-      def render_fields(form_source, form_fields, action, params, values, errors) do
+      def render_fields(form_source, form_fields, form_type, params, values, errors) do
         values = Utils.to_string_map(values)
         if values == nil, do: values = []
         if errors == nil, do: errors = []
         Enum.reduce(form_fields, [], fn ({name, opts}, acc) ->
-          acc = [render_field(action, "#{form_source}[#{name}]", opts[:type],
+          acc = [render_field(form_type, "#{form_source}[#{name}]", opts[:type],
                               opts, get_value(values, name),
                               get_errors(errors, name))|acc]
         end)
@@ -327,8 +329,8 @@ defmodule Brando.Form do
   @doc """
   Renders field by type. Wraps the field with a label and row span
   """
-  def render_field(action, name, :file, opts, value, errors) do
-    F.__file__(action, name, value, errors, opts)
+  def render_field(type, name, :file, opts, value, errors) do
+    F.__file__(type, name, value, errors, opts)
     |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
     |> F.__form_group__(name, opts, errors)
     |> F.__data_row_span__(opts[:in_fieldset])
@@ -338,61 +340,61 @@ defmodule Brando.Form do
   Render textarea.
   Pass a form_group_class to ensure we don't set height on wrapper.
   """
-  def render_field(action, name, :textarea, opts, value, errors) do
+  def render_field(type, name, :textarea, opts, value, errors) do
     opts = Keyword.put(opts, :form_group_class, "no-height")
-    F.__textarea__(action, name, value, errors, opts)
+    F.__textarea__(type, name, value, errors, opts)
     |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
     |> F.__form_group__(name, opts, errors)
     |> F.__data_row_span__(opts[:in_fieldset])
   end
 
-  def render_field(action, name, :radio, opts, value, errors) do
-    render_radios(action, name, opts, value, errors)
+  def render_field(type, name, :radio, opts, value, errors) do
+    render_radios(type, name, opts, value, errors)
     |> Enum.join("")
     |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
     |> F.__form_group__(name, opts, errors)
     |> F.__data_row_span__(opts[:in_fieldset])
   end
 
-  def render_field(action, name, :checkbox, opts, value, errors) do
+  def render_field(type, name, :checkbox, opts, value, errors) do
     if opts[:multiple] do
-      render_checks(action, name, opts, value, errors)
+      render_checks(type, name, opts, value, errors)
       |> Enum.join("")
       |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
       |> F.__form_group__(name, opts, errors)
       |> F.__data_row_span__(opts[:in_fieldset])
     else
-      F.__concat__(F.__label__(name, opts[:label_class], F.__input__(:checkbox, action, name, value, errors, opts) <> opts[:label]), F.__label__(name, "", ""))
+      F.__concat__(F.__label__(name, opts[:label_class], F.__input__(:checkbox, type, name, value, errors, opts) <> opts[:label]), F.__label__(name, "", ""))
       |> F.__div__("checkbox")
       |> F.__form_group__(name, opts, errors)
       |> F.__data_row_span__(opts[:in_fieldset])
     end
   end
 
-  def render_field(action, name, :select, opts, value, errors) do
-    choices = render_options(action, opts, value, errors)
-    F.__select__(action, name, choices, opts, value, errors)
+  def render_field(form_type, name, :select, opts, value, errors) do
+    choices = render_options(form_type, opts, value, errors)
+    F.__select__(form_type, name, choices, opts, value, errors)
     |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
     |> F.__form_group__(name, opts, errors)
     |> F.__data_row_span__(opts[:in_fieldset])
   end
 
-  def render_field(action, name, :submit, opts, _value, errors) do
-    F.__input__(:submit, action, name, opts[:text], errors, opts)
+  def render_field(form_type, name, :submit, opts, _value, errors) do
+    F.__input__(:submit, form_type, name, opts[:text], errors, opts)
     |> F.__form_group__(name, opts, errors)
     |> F.__data_row_span__(opts[:in_fieldset])
   end
 
-  def render_field(_action, _name, :fieldset, opts, _value, _errors) do
+  def render_field(_form_type, _name, :fieldset, opts, _value, _errors) do
     F.__fieldset_open__(opts[:legend], opts[:row_span])
   end
 
-  def render_field(_action, _name, :fieldset_close, _opts, _value, _errors) do
+  def render_field(_form_type, _name, :fieldset_close, _opts, _value, _errors) do
     F.__fieldset_close__()
   end
 
-  def render_field(action, name, type, opts, value, errors) do
-    F.__input__(type, action, name, value, errors, opts)
+  def render_field(form_type, name, input_type, opts, value, errors) do
+    F.__input__(input_type, form_type, name, value, errors, opts)
     |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
     |> F.__form_group__(name, opts, errors)
     |> F.__data_row_span__(opts[:in_fieldset])
@@ -401,27 +403,27 @@ defmodule Brando.Form do
   @doc """
   Iterates through `opts` :choices key, rendering options for the select
   """
-  def render_options(action, opts, value, _errors) do
+  def render_options(type, opts, value, _errors) do
     for choice <- get_choices(opts[:choices]) do
-      F.__option__(action, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
+      F.__option__(type, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
     end
   end
 
   @doc """
   Iterates through `opts` :choices key, rendering input type="radio"s
   """
-  def render_radios(action, name, opts, value, _errors) do
+  def render_radios(type, name, opts, value, _errors) do
     for choice <- get_choices(opts[:choices]) do
-      F.__radio__(action, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
+      F.__radio__(type, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
     end
   end
 
   @doc """
   Iterates through `opts` :choices key, rendering input type="checkbox"s
   """
-  def render_checks(action, name, opts, value, _errors) do
+  def render_checks(type, name, opts, value, _errors) do
     for choice <- get_choices(opts[:choices]) do
-      F.__checkbox__(action, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
+      F.__checkbox__(type, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
     end
   end
 end
