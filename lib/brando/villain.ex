@@ -8,8 +8,14 @@ defmodule Villain do
   @spec parse(String.t) :: String.t
   def parse(""), do: ""
   def parse(nil), do: ""
-  def parse(json) do
+  def parse(json) when is_binary(json) do
     {:ok, data} = Poison.decode(json)
+    do_parse(data)
+  end
+  def parse(json) when is_list(json) do
+    do_parse(json)
+  end
+  defp do_parse(data) do
     parser_module = Brando.config(Villain)[:parser]
     html = Enum.reduce(data, [], fn(d, acc) ->
       [apply(parser_module, String.to_atom(d["type"]), [d["data"]])|acc]

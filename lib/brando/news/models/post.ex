@@ -6,20 +6,54 @@ defmodule Brando.News.Model.Post do
   @type t :: %__MODULE__{}
 
   use Ecto.Model
-  use Brando.Mugshots.Field.ImageField
+  use Brando.Images.Field.ImageField
   import Ecto.Query, only: [from: 2]
+  alias Brando.Type.Json
   alias Brando.Type.Status
   alias Brando.Users.Model.User
   alias Brando.Utils
+
+  @required_fields ~w(status header data lead creator_id language)
+  @optional_fields ~w(featured)
+
+  def __name__(:singular), do: "post"
+  def __name__(:plural), do: "poster"
+
+  def __str__(model) do
+    "#{model.header}"
+  end
+
+  use Linguist.Vocabulary
+  locale "no", [
+    model: [
+      id: "ID",
+      language: "Språk",
+      header: "Overskrift",
+      slug: "URL-tamp",
+      lead: "Ingress",
+      data: "Data",
+      html: "HTML",
+      cover: "Coverbilde",
+      status: "Status",
+      creator: "Opprettet av",
+      meta_description: "META beskrivelse",
+      meta_keywords: "META nøkkelord",
+      featured: "Vektet post",
+      published: "Publisert",
+      publish_at: "Publiseringstidspunkt",
+      inserted_at: "Opprettet",
+      updated_at: "Oppdatert"
+    ]
+  ]
 
   schema "posts" do
     field :language, :string
     field :header, :string
     field :slug, :string
     field :lead, :string
-    field :data, :string
+    field :data, Json
     field :html, :string
-    field :cover, :string
+    field :cover, Brando.Type.Image
     field :status, Status
     belongs_to :creator, User
     field :meta_description, :string
@@ -68,10 +102,14 @@ defmodule Brando.News.Model.Post do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :create, params) do
-    params
-    |> strip_unhandled_upload("cover")
-    |> Utils.Model.transform_checkbox_vals(~w(featured))
-    |> cast(model, ~w(status header data lead creator_id language), ~w(featured))
+    params =
+      params
+      |> encode_data
+      |> strip_unhandled_upload("cover")
+      |> Utils.Model.transform_checkbox_vals(~w(featured))
+
+    model
+    |> cast(params, @required_fields, @optional_fields)
   end
 
   @doc """
@@ -85,10 +123,14 @@ defmodule Brando.News.Model.Post do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
-    params
-    |> strip_unhandled_upload("cover")
-    |> Utils.Model.transform_checkbox_vals(~w(featured))
-    |> cast(model, [], ~w(status header data lead creator_id featured language))
+    params =
+      params
+      |> encode_data
+      |> strip_unhandled_upload("cover")
+      |> Utils.Model.transform_checkbox_vals(~w(featured))
+
+    model
+    |> cast(params, [], @required_fields ++ @optional_fields)
   end
 
   @doc """
@@ -124,6 +166,16 @@ defmodule Brando.News.Model.Post do
     end
   end
 
+  defp encode_data(params), do:
+    Map.put(params, "data", Poison.decode!(params["data"]))
+
+  @doc """
+  Get model by `val` or raise `Ecto.NoResultsError`.
+  """
+  def get!(val) do
+    get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
+  end
+
   @doc """
   Get model from DB by `id`
   """
@@ -137,12 +189,19 @@ defmodule Brando.News.Model.Post do
   end
 
   @doc """
-  Delete `model` from database. Also deletes any connected image fields,
+  Delete `id` from database. Also deletes any connected image fields,
   including all generated sizes.
   """
-  def delete(model) do
-    Brando.get_repo.delete(model)
-    delete_connected_images(model, @imagefields)
+  def delete(record) when is_map(record) do
+    if record.cover do
+      delete_media(record.cover.path)
+      delete_connected_images(record.cover.sizes)
+    end
+    Brando.get_repo.delete(record)
+  end
+  def delete(id) do
+    record = get!(id: id)
+    delete(record)
   end
 
   @doc """

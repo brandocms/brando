@@ -1,4 +1,4 @@
-
+  <div class="data-table">
     <h1>Brukerprofil</h1>
     <table class="table table-show">
       <tr>
@@ -30,17 +30,13 @@
           Profilbilde
         </td>
         <td>
-          <div class="imageserie m-b-md" id="series-">
-            <img id="image-61" src="<%= media_url(img(@user.avatar, :thumb, "defaults/avatar_default.jpg")) %>" style="padding-bottom: 3px;" />
-            <hr>
-            <a href="" id="series-edit" class="btn btn-default" data-seriesid="22">
-              Endre profilbilde
-            </a>
+          <div class="imageserie m-b-md">
+            <img src="<%= media_url(img(@user.avatar, :thumb, "defaults/avatar_default.jpg")) %>" style="padding-bottom: 3px;" />
           </div>
         </td>
       </tr>
     </table>
-    <div class="form-actions col-sm-offset-2">
+    <div class="form-actions">
       <a href="<%= helpers(@conn).admin_user_path(@conn, :index) %>" class="btn btn-default">
         <i class="fa fa-list fa-fw m-r-sm"></i> Tilbake til oversikten
       </a>
@@ -48,3 +44,4 @@
         <i class="fa fa-edit fa-fw m-r-sm"></i> Editer profil
       </a>
     </div>
+  </div>

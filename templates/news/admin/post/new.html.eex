@@ -1,10 +1,10 @@
     <h1>Ny post</h1>
-    <%= PostForm.get_form(action: :create, params: [], values: @post, errors: @errors) %>
+    <%= PostForm.get_form(type: :create, action: :create, params: [], values: @post, errors: @errors) %>
      <script type="text/javascript">
         $(document).ready(function() {
           v = new Villain.Editor({
-            browseURL: 'villain/bla/',
-            uploadURL: 'villain/last-opp/',
+            browseURL: 'villain/bla/post/',
+            uploadURL: 'villain/last-opp/post/',
             textArea: 'textarea[name="post[data]"]'
           });
         });

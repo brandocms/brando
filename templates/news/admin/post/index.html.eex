@@ -29,7 +29,7 @@
       <tbody>
         <%= for post <- @posts do %>
         <tr>
-          <td class="text-center text-mono"><small><span class="text-muted">#</span><%= zero_pad(post.id) %></small></td>
+          <td class="text-center text-mono text-muted"><small>#<%= zero_pad(post.id) %></small></td>
           <td class="text-center">
             <div class="dropdown">
             <a class="dropdown-toggle" data-toggle="dropdown">
@@ -66,17 +66,12 @@
                 </li>
 
                 <li class="divider"></li>
-
-                  <form method="POST" action="<%= helpers(@conn).admin_post_path @conn, :delete, post.id %>">
-                    <input type="hidden" name="_method" value="delete" />
-                    <li>
-                    <button class="btn-block">
-                      <i class="fa fa-trash-o m-r-sm"> </i>
-                      Slett post
-                    </button>
-                    </li>
-                  </form>
-
+                <li>
+                  <a href="<%= helpers(@conn).admin_post_path @conn, :delete_confirm, post.id %>">
+                    <i class="fa fa-trash-o m-r-sm"> </i>
+                    Slett post
+                  </a>
+                </li>
               </ul>
             </div>
           </td>

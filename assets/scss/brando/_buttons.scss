@@ -4,7 +4,7 @@
   display: inline-block;
   padding: 6px 12px;
   margin-bottom: 0;
-  font-size: 14px;
+  font-size: 1.0rem;
   font-weight: normal;
   line-height: 1.42857143;
   text-align: center;
@@ -18,6 +18,10 @@
   background-image: none;
   border: 1px solid transparent;
   border-radius: 4px;
+
+  i {
+    margin-right: 7px;
+  }
 }
 .btn:focus,
 .btn:active:focus,
@@ -340,6 +344,10 @@ fieldset[disabled] .btn-link:focus {
   font-size: 12px;
   line-height: 1.5;
   border-radius: 3px;
+
+  i {
+    margin-right: 4px;
+  }
 }
 .btn-xs,
 .btn-group-xs > .btn {
@@ -347,6 +355,10 @@ fieldset[disabled] .btn-link:focus {
   font-size: 12px;
   line-height: 1.5;
   border-radius: 3px;
+
+  i {
+    margin-right: 3px;
+  }
 }
 .btn-block {
   display: block;
@@ -961,4 +973,8 @@ fieldset[disabled] .btn-gplus.active {
 }
 .btn-group-vertical > .btn:last-child:not(:first-child) {
   border-bottom-left-radius: 2px;
+}
+
+.buttons {
+  clear: both;
 }

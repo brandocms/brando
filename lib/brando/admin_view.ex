@@ -6,10 +6,12 @@ defmodule Brando.AdminView do
     quote do
       use Phoenix.View, root: unquote(root)
       import Plug.Conn, only: [get_session: 2]
-      import Brando.Mugshots.Helpers
+      import Brando.Images.Helpers
 
       # Use Phoenix.HTML to import all HTML functions (forms, tags, etc)
       use Phoenix.HTML
+
+      import Phoenix.Controller, only: [get_flash: 2]
 
       # Functions defined here are available to all other views/templates
       use Brando.HTML

@@ -2,12 +2,15 @@ defmodule Brando.News.Admin.PostController do
   @moduledoc """
   Controller for the Brando News module.
   """
-  alias Brando.News.Model.PostImage
+  alias Brando.Images.Model.Image
+  alias Brando.Images.Model.ImageSeries
   use Phoenix.Controller
   use Villain.Controller,
-    model: PostImage
+    image_model: Image,
+    series_model: ImageSeries
   import Brando.Utils, only: [add_css: 2, add_js: 2]
 
+  plug :scrub_params, "post" when action in [:create, :update]
   plug :action
 
   @doc false
@@ -95,12 +98,21 @@ defmodule Brando.News.Admin.PostController do
   end
 
   @doc false
+  def delete_confirm(conn, %{"id" => id}) do
+    model = conn.private[:model]
+    record = model.get!(id: id)
+    conn
+    |> assign(:record, record)
+    |> render(:delete_confirm)
+  end
+
+  @doc false
   def delete(conn, %{"id" => id}) do
     model = conn.private[:model]
-    post = model.get(id: String.to_integer(id))
-    model.delete(post)
+    record = model.get!(id: id)
+    model.delete(record)
     conn
-    |> put_flash(:notice, "Post #{post.header} slettet.")
+    |> put_flash(:notice, "#{Brando.HTML.Inspect.model_name(record, :singular)} #{model.__str__(record)} slettet.")
     |> redirect(to: router_module(conn).__helpers__.admin_post_path(conn, :index))
   end
 

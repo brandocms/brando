@@ -97,8 +97,7 @@ end
 
 scope "/admin", as: :admin do
   pipe_through :admin
-  # only pass `model` if you need a custom model.
-  users_resources "/brukere", model: Brando.Users.Model.User
+  user_resources "/brukere"
   get "/", Brando.Dashboard.Admin.DashboardController, :dashboard
 end
 
@@ -113,7 +112,7 @@ scope "/" do
 end
 ```
 
-Endpoint config in `endpoint.ex`:
+Static config in `endpoint.ex`:
 
 ```elixir
 plug Plug.Static,
@@ -143,22 +142,24 @@ config :brando, Brando.Menu,
            "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
            "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
            "#870B46;", "#D0201A;", "#FF641A;"],
-  modules: [Brando.Admin, Brando.Users, Brando.News]
+  modules: [Brando.Admin, Brando.Users, Brando.News, Brando.Images]
 
+# configures the repo
 config :my_app, MyApp.Repo,
   database: "my_app",
   username: "postgres",
   password: "postgres",
   hostname: "localhost"
+  adapter: Ecto.Adapters.Postgres,
+  extensions: [{Brando.Postgrex.Extension.JSON, library: Poison}]
 ```
 
 News
 ====
 
-Create an initial migration for the `posts` & `postimages` table:
+Create an initial migration for the `posts` table:
 
     $ mix ecto.gen.migration add_posts_table
-    $ mix ecto.gen.migration add_postimages_table
 
 then add the following to the generated files:
 
@@ -197,24 +198,6 @@ defmodule MyApp.Repo.Migrations.AddPostsTable do
     drop index(:posts, [:status])
   end
 end
-
-# postimages
-defmodule MyApp.Repo.Migrations.AddPostimagesTable do
-  use Ecto.Migration
-
-  def up do
-    create table(:postimages) do
-      add :title,              :text
-      add :credits,            :text
-      add :image,              :text
-      timestamps
-    end
-  end
-
-  def down do
-    drop table(:postimages)
-  end
-end
 ```
 
 Now run the migrations:
@@ -226,22 +209,154 @@ Add to your `router.ex` in your `admin` scope:
 ```elixir
 scope "/admin", as: :admin do
   # (...)
-  # only pass private if you need a custom model.
-  news_resources "/nyheter", model: Brando.News.Model.Post
+  post_resources "/nyheter"
 end
 ```
 
-Mugshots
-========
+Images
+======
 
-Image processing and thumbnails for Brando
+Create initial migrations:
+
+    $ mix ecto.gen.migration add_imagecategories_table
+    $ mix ecto.gen.migration add_imageseries_table
+    $ mix ecto.gen.migration add_images_table
+
+Populate with:
+
+```elixir
+# imagecategories
+
+defmodule MyApp.Repo.Migrations.AddImagecategoriesTable do
+  use Ecto.Migration
+  def up do
+    create table(:imagecategories) do
+      add :name,              :text
+      add :slug,              :text
+      add :cfg,               :json
+      add :creator_id,        references(:users)
+      timestamps
+    end
+    create index(:imagecategories, [:slug])
+    execute """
+      INSERT INTO
+        imagecategories
+        ("name", "slug", "cfg", "creator_id", "inserted_at", "updated_at")
+      VALUES
+        ('post', 'post', NULL, 1, NOW(), NOW());
+    """
+    execute """
+      INSERT INTO
+        imagecategories
+        ("name", "slug", "cfg", "creator_id", "inserted_at", "updated_at")
+      VALUES
+        ('page', 'page', NULL, 1, NOW(), NOW());
+    """
+  end
+
+  def down do
+    drop table(:imagecategories)
+    drop index(:imagecategories, [:slug])
+  end
+end
+```
+```elixir
+# imageseries
+
+defmodule MyApp.Repo.Migrations.AddImageseriesTable do
+  use Ecto.Migration
+
+  def up do
+    create table(:imageseries) do
+      add :name,              :text
+      add :slug,              :text
+      add :credits,           :text
+      add :order,             :integer
+      add :creator_id,        references(:users)
+      add :image_category_id, references(:imagecategories)
+      timestamps
+    end
+    create index(:imageseries, [:slug])
+    create index(:imageseries, [:order])
+    execute """
+      INSERT INTO
+        imageseries
+        ("name", "slug", "credits", "order", "creator_id", "image_category_id", "inserted_at", "updated_at")
+      VALUES
+        ('post', 'post', NULL, 0, 1, 1, NOW(), NOW());
+    """
+    execute """
+      INSERT INTO
+        imageseries
+        ("name", "slug", "credits", "order", "creator_id", "image_category_id", "inserted_at", "updated_at")
+      VALUES
+        ('page', 'page', NULL, 0, 1, 1, NOW(), NOW());
+    """
+  end
+
+  def down do
+    drop table(:imageseries)
+    drop index(:imageseries, [:slug])
+    drop index(:imageseries, [:order])
+  end
+end
+```
+```elixir
+# images
+
+defmodule MyApp.Repo.Migrations.AddImagesTable do
+  use Ecto.Migration
+
+  def up do
+    create table(:images) do
+      add :image,             :text
+      add :order,             :integer
+      add :creator_id,        references(:users)
+      add :image_series_id,   references(:imageseries)
+      timestamps
+    end
+    create index(:images, [:order])
+  end
+
+  def down do
+    drop table(:images)
+    drop index(:images, [:order])
+  end
+end
+```
+
+Add to your `router.ex` in your `admin` scope:
+
+```elixir
+scope "/admin", as: :admin do
+  # (...)
+  image_resources "/bilder"
+end
+```
 
 Config
 ------
+
+Default image config
+
+```elixir
+config :brando, Brando.Images,
+  default_config: %{allowed_mimetypes: ["image/jpeg", "image/png"],
+                 default_size: :medium,
+                 upload_path: Path.join("images", "default"),
+                 random_filename: true,
+                 size_limit: 10240000,
+                 sizes: %{small:  %{size: "300", quality: 100},
+                         medium: %{size: "500", quality: 100},
+                         large:  %{size: "700", quality: 100},
+                         xlarge: %{size: "900", quality: 100},
+                         thumb:  %{size: "150x150^ -gravity center -extent 150x150", quality: 100, crop: true}}}
+```
+
 Optimizing images: (not implemented yet)
 
 ```elixir
-config :brando, :mugshots, :optimize
+config :brando, :images, :optimize
   png: [enabled: true,
         bin: "/usr/local/bin/pngquant",
         params: "--speed 1 --force --output \"#{new_filename}\" -- \"#{filename}\""],

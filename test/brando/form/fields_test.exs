@@ -51,14 +51,14 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "__parse_error__/1" do
-    assert F.__parse_error__(:required) == "Feltet er påkrevet."
-    assert F.__parse_error__(:unique) == "Feltet må være unikt. Verdien finnes allerede i databasen."
-    assert F.__parse_error__(:format) == "Feltet har feil format."
-    assert F.__parse_error__({:too_short, 5}) == "Feltets verdi er for kort. Må være > 5 tegn."
+    assert F.__parse_error__("can't be blank") == "Feltet er påkrevet."
+    assert F.__parse_error__("must be unique") == "Feltet må være unikt. Verdien finnes allerede i databasen."
+    assert F.__parse_error__("has invalid format") == "Feltet har feil format."
+    assert F.__parse_error__({"should be at least %{count} characters", 5}) == "Feltets verdi er for kort. Må være > 5 tegn."
   end
 
   test "__file__/4" do
-    assert F.__file__(:update, "user[avatar]", "images/default/0.jpeg",
+    assert F.__file__(:update, "user[avatar]", %{sizes: %{thumb: "images/default/thumb/0.jpeg"}},
                       [], [type: :file, label: "Bilde"]) == "<div class=\"image-preview\"><img src=\"images/default/thumb/0.jpeg\" /></div><input name=\"user[avatar]\" type=\"file\" />"
   end
 end

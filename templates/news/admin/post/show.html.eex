@@ -1,4 +1,4 @@
-
+  <div class="data-table">
     <h1>Vis post</h1>
     <table class="table table-show">
       <tr>
@@ -33,17 +33,13 @@
           <%= @post.html %>
         </td>
       </tr>
-      <tr>
-        <td></td>
-        <td>
-          <div class="form-actions">
-            <a href="<%= helpers(@conn).admin_post_path(@conn, :index) %>" class="btn btn-default">
-              <i class="fa fa-list fa-fw m-r-sm"></i> Tilbake til oversikten
-            </a>
-            <a href="<%= helpers(@conn).admin_post_path(@conn, :edit, @post.id) %>" class="btn btn-default">
-              <i class="fa fa-edit fa-fw m-r-sm"></i> Editer post
-            </a>
-          </div>
-        </td>
-      </tr>
     </table>
+    <div class="form-actions">
+      <a href="<%= helpers(@conn).admin_post_path(@conn, :index) %>" class="btn btn-default">
+        <i class="fa fa-list fa-fw m-r-sm"></i> Tilbake til oversikten
+      </a>
+      <a href="<%= helpers(@conn).admin_post_path(@conn, :edit, @post.id) %>" class="btn btn-default">
+        <i class="fa fa-edit fa-fw m-r-sm"></i> Editer post
+      </a>
+    </div>
+  </div>

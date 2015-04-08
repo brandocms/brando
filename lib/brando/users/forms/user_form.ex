@@ -1,11 +1,10 @@
-defmodule Brando.Users.Form.UserForm do
+defmodule Brando.Users.UserForm do
   @moduledoc """
   A form for the User model. See the `Brando.Form` module for more
   documentation
   """
   use Bitwise, only_operators: true
   use Brando.Form
-
 
   @roles %{staff: 1, admin: 2, superuser: 4}
 
@@ -59,7 +58,7 @@ defmodule Brando.Users.Form.UserForm do
     field :avatar, :file,
       [label: "Bilde"]
     submit "Lagre",
-      [class: "btn btn-default"]
+      [class: "btn btn-success"]
 
   end
 end

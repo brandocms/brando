@@ -1,0 +1,23 @@
+.image-serie {
+  background-color: #FFFFFF;
+  padding: 0 15px 15px 15px;
+  border: 1px solid #ddd;
+  margin-bottom: 10px;
+
+  h2 {
+    margin-top: 0;
+    padding-top: 10px;
+  }
+
+  img {
+    background-color: #ffffff;
+    border: 1px solid #d7d7d7;
+    padding: 5px;
+    margin: 5px 5px 5px 5px;
+  }
+  img.selected {
+    opacity: 0.5;
+    border: 3px solid #fb6b5b;
+    margin: 3px 3px 3px 3px;
+  }
+}

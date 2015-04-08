@@ -6,18 +6,45 @@ defmodule Brando.Users.Model.User do
   @type t :: %__MODULE__{}
 
   use Ecto.Model
-  use Brando.Mugshots.Field.ImageField
+  use Brando.Images.Field.ImageField
   import Ecto.Query, only: [from: 2]
   alias Brando.Utils
 
+  @required_fields ~w(username full_name email password)
+  @optional_fields ~w(role avatar)
+
   @roles %{staff: 1, admin: 2, superuser: 4}
+
+  def __name__(:singular), do: "bruker"
+  def __name__(:plural), do: "brukere"
+
+  def __str__(model) do
+    "#{model.full_name} (#{model.username})"
+  end
+
+  use Linguist.Vocabulary
+  locale "no", [
+    model: [
+      id: "ID",
+      username: "Brukernavn",
+      email: "Epost",
+      full_name: "Navn",
+      password: "Passord",
+      avatar: "Avatar",
+      creator: "Opprettet av",
+      role: "Roller",
+      last_login: "Siste innlogging",
+      inserted_at: "Opprettet",
+      updated_at: "Oppdatert"
+    ]
+  ]
 
   schema "users" do
     field :username, :string
     field :email, :string
     field :full_name, :string
     field :password, :string
-    field :avatar, :string
+    field :avatar, Brando.Type.Image
     field :role, Brando.Type.Role
     field :last_login, Ecto.DateTime
     timestamps
@@ -26,7 +53,7 @@ defmodule Brando.Users.Model.User do
   has_image_field :avatar,
     [allowed_mimetypes: ["image/jpeg", "image/png"],
      default_size: :medium,
-     upload_path: Path.join("images", "default"),
+     upload_path: Path.join("images", "avatars"),
      random_filename: true,
      size_limit: 10240000,
      sizes: [
@@ -39,20 +66,23 @@ defmodule Brando.Users.Model.User do
   ]
 
   @doc """
-  Casts and validates `params` against `user` to create a valid
+  Casts and validates `params` against `model` to create a valid
   changeset when action is :create.
 
   ## Example
 
-      user_changeset = changeset(%__MODULE__{}, :create, params)
+      model_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
-  def changeset(user, action, params \\ nil)
-  def changeset(user, :create, params) do
-    params
-    |> strip_unhandled_upload("avatar")
-    |> cast(user, ~w(username full_name email password), ~w(role avatar))
+  def changeset(model, action, params \\ nil)
+  def changeset(model, :create, params) do
+    params =
+      params
+      |> strip_unhandled_upload("avatar")
+
+    model
+    |> cast(params, @required_fields, @optional_fields)
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
     |> validate_unique(:email, on: Brando.get_repo())
@@ -61,19 +91,22 @@ defmodule Brando.Users.Model.User do
   end
 
   @doc """
-  Casts and validates `params` against `user` to create a valid
+  Casts and validates `params` against `model` to create a valid
   changeset when action is :update.
 
   ## Example
 
-      user_changeset = changeset(%__MODULE__{}, :update, params)
+      model_changeset = changeset(%__MODULE__{}, :update, params)
 
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
-  def changeset(user, :update, params) do
-    params
-    |> strip_unhandled_upload("avatar")
-    |> cast(user, [], ~w(username full_name email password role avatar))
+  def changeset(model, :update, params) do
+    params =
+      params
+      |> strip_unhandled_upload("avatar")
+
+    model
+    |> cast(params, [], @required_fields ++ @optional_fields)
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
     |> validate_unique(:email, on: Brando.get_repo())
@@ -140,7 +173,7 @@ defmodule Brando.Users.Model.User do
   end
 
   @doc """
-  Get user from DB by `id`
+  Get model from DB by `id`
   """
   def get(id: id) do
     from(u in __MODULE__,
@@ -151,13 +184,28 @@ defmodule Brando.Users.Model.User do
   end
 
   @doc """
-  Delete `user` from database. Also deletes any connected image fields,
+  Get model by `val` or raise `Ecto.NoResultsError`.
+  """
+  def get!(val) do
+    get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
+  end
+
+  @doc """
+  Delete `id` from database. Also deletes any connected image fields,
   including all generated sizes.
   """
-  def delete(user) do
-    Brando.get_repo.delete(user)
-    delete_connected_images(user, @imagefields)
+  def delete(record) when is_map(record) do
+    if record.avatar do
+      delete_media(record.avatar.path)
+      delete_connected_images(record.avatar.sizes)
+    end
+    Brando.get_repo.delete(record)
   end
+  def delete(id) do
+    record = get!(id: id)
+    delete(record)
+  end
+
 
   @doc """
   Get all users. Ordered by `id`
@@ -190,7 +238,7 @@ defmodule Brando.Users.Model.User do
     Utils.secure_compare(hash, stored_hash)
   end
 
-  defp gen_password(password) do
+  def gen_password(password) do
     password    = String.to_char_list(password)
     work_factor = 12
     {:ok, salt} = :bcrypt.gen_salt(work_factor)

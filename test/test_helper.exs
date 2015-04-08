@@ -10,6 +10,7 @@ alias Brando.Integration.TestRepo
 
 Application.put_env(:brando, TestRepo,
   url: "ecto://postgres:postgres@localhost/brando_test",
+  adapter: Ecto.Adapters.Postgres,
   size: 1,
   max_overflow: 0)
 
@@ -20,12 +21,17 @@ Application.put_env(:brando, Brando.Menu, [
            "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
            "#870B46;", "#D0201A;", "#FF641A;"]])
 Application.put_env(:brando, :router, RouterHelper.TestRouter)
+Application.put_env(:brando, :endpoint, Brando.Integration.Endpoint)
 Application.put_env(:brando, :repo, Brando.Integration.TestRepo)
 
 defmodule Brando.Integration.TestRepo do
   use Ecto.Repo,
-    otp_app: :brando,
-    adapter: Ecto.Adapters.Postgres
+    otp_app: :brando
+end
+
+defmodule Brando.Integration.Endpoint do
+  use Phoenix.Endpoint,
+    otp_app: :brando
 end
 
 defmodule Brando.Integration.TestCase do

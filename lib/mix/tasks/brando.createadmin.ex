@@ -19,25 +19,20 @@ defmodule Mix.Tasks.Brando.Createadmin do
   See run/1
   """
   def run([], []) do
-    Mix.raise """
-    brando.createadmin expects --email, --username, --password and --fullname options.
+    Mix.Brando.logo
+    Mix.shell.info "--------------------------------------------"
+    Mix.shell.info "% Create administrator"
+    Mix.shell.info "--------------------------------------------"
 
-        mix brando.createadmin --email=my@email.com --username=user --password=asdf1234 --fullname="Roger Wilco"
+    email = Mix.shell.prompt("Email:") |> String.strip
+    username = Mix.shell.prompt("Username:") |> String.strip
+    fullname = Mix.shell.prompt("Full Name:") |> String.strip
+    password = Mix.shell.prompt("Password:") |> String.strip
 
-    """
-  end
-  @doc """
-  See run/1
-  """
-  def run(_args, opts) do
     Brando.get_repo.start_link
     :bcrypt.start
-    email = Keyword.fetch!(opts, :email)
-    username = Keyword.fetch!(opts, :username)
-    password = Keyword.fetch!(opts, :password)
-    full_name = Keyword.fetch!(opts, :fullname)
     ret = User.create(%{"email" => email, "username" => username,
-                  "password" => password, "full_name" => full_name,
+                  "password" => password, "full_name" => fullname,
                   "role" => ["1", "2", "4"]})
     case ret do
       {:ok, _user} ->
@@ -54,6 +49,5 @@ defmodule Mix.Tasks.Brando.Createadmin do
         ------------------------------------------------------------------
         """
     end
-
   end
 end

@@ -14,6 +14,7 @@ defmodule Brando.Users.Admin.UserController do
     model = conn.private[:model]
     conn
     |> assign(:users, model.all)
+    |> assign(:page_title, "Brukeroversikt")
     |> render("index.html")
   end
 
@@ -21,7 +22,8 @@ defmodule Brando.Users.Admin.UserController do
   def show(conn, %{"id" => user_id}) do
     model = conn.private[:model]
     conn
-    |> assign(:user, model.get(id: user_id))
+    |> assign(:user, model.get!(id: user_id))
+    |> assign(:page_title, "Vis bruker")
     |> render("show.html")
   end
 
@@ -29,12 +31,15 @@ defmodule Brando.Users.Admin.UserController do
   def profile(conn, _params) do
     conn
     |> assign(:user, get_session(conn, :current_user))
+    |> assign(:page_title, "Brukerprofil")
     |> render("show.html")
   end
 
   @doc false
   def new(conn, _params) do
-    conn |> render("new.html")
+    conn
+    |> assign(:page_title, "Ny bruker")
+    |> render("new.html")
   end
 
   @doc false
@@ -44,6 +49,7 @@ defmodule Brando.Users.Admin.UserController do
     conn
     |> assign(:user, form_data)
     |> assign(:id, user_id)
+    |> assign(:page_title, "Endre bruker")
     |> render(:edit)
   end
 
@@ -66,13 +72,16 @@ defmodule Brando.Users.Admin.UserController do
         |> assign(:user, form_data)
         |> assign(:errors, errors)
         |> put_flash(:error, "Feil i skjema")
+        |> assign(:page_title, "Ny bruker")
         |> render(:new)
     end
   end
 
   @doc false
   def create(conn, _params) do
-    conn |> render(:new)
+    conn
+    |> assign(:page_title, "Ny bruker")
+    |> render(:new)
   end
 
   @doc false
@@ -95,17 +104,28 @@ defmodule Brando.Users.Admin.UserController do
         |> assign(:errors, errors)
         |> assign(:id, user_id)
         |> put_flash(:error, "Feil i skjema")
+        |> assign(:page_title, "Endre bruker")
         |> render(:edit)
     end
   end
 
   @doc false
-  def delete(conn, %{"id" => user_id}) do
+  def delete_confirm(conn, %{"id" => id}) do
     model = conn.private[:model]
-    user = model.get(id: String.to_integer(user_id))
-    model.delete(user)
+    record = model.get!(id: id)
     conn
-    |> put_flash(:notice, "Bruker #{user.username} slettet.")
+    |> assign(:record, record)
+    |> assign(:page_title, "Bekreft sletting")
+    |> render(:delete_confirm)
+  end
+
+  @doc false
+  def delete(conn, %{"id" => id}) do
+    model = conn.private[:model]
+    record = model.get!(id: id)
+    model.delete(record)
+    conn
+    |> put_flash(:notice, "#{Brando.HTML.Inspect.model_name(record, :singular)} #{model.__str__(record)} slettet.")
     |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn, :index))
   end
 end

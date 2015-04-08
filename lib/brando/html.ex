@@ -7,6 +7,8 @@ defmodule Brando.HTML do
   defmacro __using__(_) do
     quote do
       import Brando.HTML
+      import Brando.HTML.Inspect
+      import Brando.Images.Helpers
     end
   end
 
@@ -35,19 +37,14 @@ defmodule Brando.HTML do
   def menu_url(conn, {fun, action}) do
     apply(helpers(conn), fun, [conn, action])
   end
-  @doc """
-  Joins the path fragments from `conn`.path_info to a binary.
-  """
-  def path(conn) do
-    Path.join(["/"] ++ conn.path_info)
-  end
 
   @doc """
-  Checks if `url_to_match` matches `current_path`.
+  Checks if `conn`'s `full_path` matches `current_path`.
   Returns "active", or "".
   """
-  def is_active?(url_to_match, current_path) when url_to_match == current_path, do: "active"
-  def is_active?(_, _), do: ""
+  def active_path(conn, url_to_match) do
+    if Plug.Conn.full_path(conn) == url_to_match, do: "active", else: ""
+  end
 
   @doc """
   Formats `arg1` (Ecto.DateTime) as a binary.
@@ -96,6 +93,9 @@ defmodule Brando.HTML do
   Return joined path of `file` and the :media_url config option
   as set in your app's config.exs.
   """
+  def media_url(nil) do
+    Brando.config(:media_url)
+  end
   def media_url(file) do
     Path.join([Brando.config(:media_url), file])
   end
@@ -137,4 +137,55 @@ defmodule Brando.HTML do
     for c <- css, do: do_css_extra(c)
   end
   defp do_css_extra(css), do: Phoenix.HTML.safe(~s(<link rel="stylesheet" href="#{static_url(css)}">))
+
+  @doc """
+  Renders a delete button wrapped in a POST form.
+  Pass `record` instance of model, and `helper` path.
+  """
+  def delete_form_button(record, helper) do
+    action = Brando.Form.get_action(helper, :delete, record)
+    Phoenix.HTML.safe("""
+    <form method="POST" action="#{action}">
+      <input type="hidden" name="_method" value="delete" />
+      <button class="btn btn-danger">
+        <i class="fa fa-trash-o m-r-sm"> </i>
+        Slett
+      </button>
+    </form>
+    """)
+    # <input type="hidden" name="id" value="#{record.id}" />
+  end
+
+  def dropzone_form(helper, id, cfg) do
+    _cfg = cfg || Brando.config(Brando.Images)[:default_config]
+    path = Brando.Form.get_action(helper, :upload_post, id)
+    Phoenix.HTML.safe("""
+    <form action="#{path}"
+          class="dropzone"
+          id="brando-dropzone"></form>
+    <script type="text/javascript">
+      Dropzone.options.brandoDropzone = {
+        paramName: "image", // The name that will be used to transfer the file
+        maxFilesize: 10, // MB
+        accept: function(file, done) {
+          if (file.name == "justinbieber.jpg") {
+            done("Naha, you don't.");
+          }
+          else { done(); }
+        }
+      };
+    </script>
+    """)
+  end
+
+  def check_or_x(nil) do
+    Phoenix.HTML.safe(~s(<i class="fa fa-times text-danger"></i>))
+  end
+  def check_or_x(false) do
+    Phoenix.HTML.safe(~s(<i class="fa fa-times text-danger"></i>))
+  end
+
+  def check_or_x(_) do
+    Phoenix.HTML.safe(~s(<i class="fa fa-check text-success"></i>))
+  end
 end

@@ -5,19 +5,19 @@ defmodule Brando.Utils.ModelTest do
   alias Brando.Utils
   alias Brando.Users.Model.User
 
-  @params %{"avatar" => "", "role" => ["2", "4"],
+  @params %{"avatar" => nil, "role" => ["2", "4"],
             "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
             "password" => "finimeze", "status" => "1",
             "submit" => "Submit", "username" => "zabuzasixu"}
 
   test "transform_checkbox_vals/2" do
     params =
-      %{"avatar" => "", "role" => ["2", "4"], "editor" => "on",
+      %{"avatar" => nil, "role" => ["2", "4"], "editor" => "on",
         "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
         "password" => "finimeze", "status" => "1",
         "submit" => "Submit", "username" => "zabuzasixu"}
     assert Utils.Model.transform_checkbox_vals(params, ~w(administrator editor)) ==
-      %{"avatar" => "", "editor" => true, "email" => "fanogigyni@gmail.com",
+      %{"avatar" => nil, "editor" => true, "email" => "fanogigyni@gmail.com",
         "full_name" => "Nita Bond", "password" => "finimeze", "role" => ["2", "4"],
         "status" => "1", "submit" => "Submit", "username" => "zabuzasixu"}
   end

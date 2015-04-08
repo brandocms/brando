@@ -1,0 +1,24 @@
+
+@font-face {
+  font-family: "n-regular"; font-style: normal; font-weight: normal;
+  src: url('../fonts/n-regular.eot');
+  src: url('../fonts/n-regular.eot')  format('eot'),
+       url('../fonts/n-regular.woff') format('woff'),
+       url('../fonts/n-regular.ttf')  format('truetype');
+}
+
+@font-face {
+  font-family: "n-regular"; font-style: normal; font-weight: bold;
+  src: url('../fonts/n-semibold.eot');
+  src: url('../fonts/n-semibold.eot')  format('eot'),
+       url('../fonts/n-semibold.woff') format('woff'),
+       url('../fonts/n-semibold.ttf')  format('truetype');
+}
+
+@font-face {
+  font-family: "a-mono"; font-style: normal; font-weight: bold;
+  src: url('../fonts/a-mono.eot');
+  src: url('../fonts/a-mono.eot')  format('eot'),
+       url('../fonts/a-mono.woff') format('woff'),
+       url('../fonts/a-mono.ttf')  format('truetype');
+}

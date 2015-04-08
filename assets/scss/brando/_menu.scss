@@ -1,7 +1,10 @@
 #menu {
+  @include breakpoint(small only) {
+    background-color: #f00;
+  }
   border-top: 3px solid #ff0000;
   border-right: 1px solid #cfcfcf;
-  width: 220px;
+  width: 240px;
   > .menu-profile {
     padding-top: 15px;
     text-align: center;
@@ -10,12 +13,12 @@
       border-radius: 500px;
     }
     .name {
-      font-size: 15px;
+      font-size: 1.2rem;
       font-weight: bold;
       margin-top: 10px;
     }
     .role {
-      font-size: 11px;
+      font-size: 0.8rem;
     }
   }
 
@@ -76,15 +79,15 @@
     border-bottom: 1px solid #e9e9e9;
   }
   .nav-primary li {
-    line-height: 1.5;
+    line-height: 1.4;
   }
   .nav-primary li > a > i {
     margin: -12px -15px;
     line-height: 44px;
-    width: 44px;
+    width: 48px;
     float: left;
     margin-right: 10px;
-    font-size: 14px;
+    font-size: 1rem;
     border-right: 1px solid rgba(255,255,255,0.05);
     text-align: center;
     position: relative;
@@ -96,7 +99,7 @@
   }
   .nav-primary li > a > i > b {
     position: absolute;
-    left: -42px;
+    left: -44px;
     width: 100%;
     top: 0;
     bottom: 0;
@@ -108,7 +111,7 @@
     padding: 11px 15px;
     position: relative;
     font-weight: bold;
-    font-size: 14px;
+    font-size: 1rem;
     border-top: 1px solid transparent;
     border-color: rgba(255,255,255,0.05);
     transition: color .3s ease-in-out 0s;
@@ -166,7 +169,7 @@
   .nav-primary ul.nav > li li a {
     font-weight: normal;
     text-transform: none;
-    font-size: 13px;
+    font-size: 0.95rem;
   }
   .nav-primary ul.nav > li.active > ul {
     display: block;
@@ -523,4 +526,40 @@
 .panel-body:after,
 .modal-footer:after {
   clear: both;
+}
+
+.slideout-menu {
+  @include breakpoint(small only) {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    z-index: 0;
+    width: 256px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: none;
+  }
+}
+
+.slideout-panel {
+  @include breakpoint(small only) {
+    position: relative;
+    z-index: 50;
+  }
+}
+
+.slideout-open,
+.slideout-open body,
+.slideout-open .slideout-panel {
+  @include breakpoint(small only) {
+    overflow: hidden;
+  }
+}
+
+.slideout-open .slideout-menu {
+  @include breakpoint(small only) {
+    display: block;
+  }
 }

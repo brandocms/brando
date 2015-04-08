@@ -7,35 +7,37 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title><%= app_name %> | Administrasjon</title>
+    <title><%= app_name %> | <%= @page_title || "Administrasjon" %></title>
     <link rel="stylesheet" href="/static/brando/css/font-awesome.min.css">
     <link rel="stylesheet" href="/static/brando/css/brando.css">
     <%= css_extra(@conn) %>
 
     <script type="text/javascript" src="/static/brando/js/jquery.min.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/brando/js/gridforms.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/to-markdown.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/markdown.min.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/brando/js/dropdown.js" charset="utf-8"></script>
+    <script type="text/javascript" src="/static/brando/js/brando.js" charset="utf-8"></script>
 
 <!--     <script type="text/javascript" src="/static/brando/js/libs/jquery/jquery.slugit.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/libs/jquery/jquery.debounce-1.0.5.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/libs/jquery/jquery.autocomplete.min.js" charset="utf-8"></script> -->
     <script type="text/javascript" src="/static/brando/js/libs/backbone/underscore.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/libs/backbone/backbone.js" charset="utf-8"></script>
-
     <script type="text/javascript" src="/static/brando/js/twined-backbone.js" charset="utf-8"></script>
-
     <%= js_extra(@conn) %>
   </head>
 
   <body>
+    <main id="burger" class="show-for-small-only">
+      <header>
+        <button>☰</button>
+      </header>
+    </main>
     <div class="grid-frame">
-      <div id="menu">
+      <div id="menu" class="collapse grid-content shrink">
         <div class="menu-profile">
           <!-- menu top with avatar & info -->
           <div class="avatar">
-            <img src="<%= media_url(img(current_user(@conn).avatar, :thumb)) %>" />
+            <img src="<%= media_url(img(current_user(@conn).avatar, :thumb, "defaults/avatar_default.jpg")) %>" />
           </div>
           <div class="name">
             <%= current_user(@conn).full_name %>
@@ -50,7 +52,7 @@
             <%= for {color, menu} <- get_menus do %>
               <!-- menu item -->
                 <li class="menuparent">
-                  <a href="#<%= menu.anchor %>" style="overflow: hidden;">
+                  <a href="#<%= menu.anchor %>">
                     <i class="<%= menu.icon %>">
                       <b style="background-color: <%= color %>"></b>
                     </i>
@@ -63,8 +65,8 @@
                   <ul class="nav lt">
                   <%= for item <- menu.submenu do %>
                   <% url = menu_url(@conn, item.url) %>
-                    <li class="menuitem <%= is_active?(path(@conn), url) %>">
-                      <a href="<%= url %>" class="<%= is_active?(path(@conn), url) %>">
+                    <li class="menuitem <%= active_path(@conn, url) %>">
+                      <a href="<%= url %>" class="<%= active_path(@conn, url) %>">
                         <i class="fa fa-angle-right"></i>
                         <span><%= item.name %></span>
                       </a>
@@ -84,7 +86,7 @@
       <!-- /#menu -->
       </div>
 
-      <div id="content-wrapper" class="grid-block">
+      <div id="content-wrapper" class="grid-block noscroll">
         <div id="content" class="grid-content">
         <%= if get_flash(@conn, :error) do %>
           <div class="alert alert-block alert-danger">
@@ -103,6 +105,18 @@
         </div>
       </div>
     </div>
+    <script>
+      var slideout = new Slideout({
+        'panel': document.getElementById('burger'),
+        'menu': document.getElementById('menu'),
+        'padding': 0,
+        'tolerance': 70
+      });
+      document.querySelector('#burger button').addEventListener('click', function(e) {
+        e.preventDefault();
+        slideout.toggle();
+      });
+    </script>
   </body>
 </html>
 

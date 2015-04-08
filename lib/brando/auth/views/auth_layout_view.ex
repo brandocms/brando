@@ -4,4 +4,5 @@ defmodule Brando.Auth.LayoutView do
   Login/logout views use this.
   """
   use Brando.AdminView, root: "templates" # Brando.config(:templates_path)
+  import Phoenix.Controller, only: [get_flash: 2]
 end

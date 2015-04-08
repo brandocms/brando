@@ -10,7 +10,7 @@
     </colgroup>
     <thead>
       <tr>
-        <th class="center-text">&#8470;</th>
+        <th class="text-center">&#8470;</th>
         <th>Brukernavn</th>
         <th>Epost</th>
         <th>Fullt navn</th>
@@ -22,12 +22,12 @@
       <tbody>
         <%= for user <- @users || [] do %>
         <tr>
-          <td class="center-text text-mono"><small><span class="text-muted">#</span><%= zero_pad(user.id) %></small></td>
+          <td class="text-center text-mono text-muted"><small>#<%= zero_pad(user.id) %></small></td>
           <td><%= user.username %></td>
           <td><%= user.email %></td>
           <td><%= user.full_name %></td>
           <td><%= format_date(user.inserted_at) %></td>
-          <td><%= user.avatar %></td>
+          <td class="text-center"><%= check_or_x(user.avatar) %></td>
           <td>
             <div class="dropdown">
               <a class="dropdown-toggle ddbutton" data-toggle="dropdown">
@@ -35,30 +35,25 @@
               </a>
               <ul class="dropdown-menu" style="right: 0; left: auto;">
                 <li>
-                <a href="<%= helpers(@conn).admin_user_path @conn, :show, user.id %>">
+                <a href="<%= helpers(@conn).admin_user_path(@conn, :show, user.id) %>">
                     <i class="fa fa-search m-r-sm"> </i>
                     Vis bruker
                   </a>
                 </li>
                 <li>
-                  <a href="<%= helpers(@conn).admin_user_path @conn, :edit, user.id %>">
+                  <a href="<%= helpers(@conn).admin_user_path(@conn, :edit, user.id) %>">
                     <i class="fa fa-edit m-r-sm"> </i>
                     Endre bruker
                   </a>
                 </li>
 
                 <li class="divider"></li>
-
-                  <form method="POST" action="<%= helpers(@conn).admin_user_path @conn, :delete, user.id %>">
-                    <input type="hidden" name="_method" value="delete" />
-                    <li>
-                    <button class="btn-block">
-                      <i class="fa fa-trash-o m-r-sm"> </i>
-                      Slett bruker
-                    </button>
-                    </li>
-                  </form>
-
+                <li>
+                  <a href="<%= helpers(@conn).admin_user_path(@conn, :delete_confirm, user.id) %>">
+                    <i class="fa fa-trash m-r-sm"> </i>
+                    Slett bruker
+                  </a>
+                </li>
               </ul>
             </div>
           </td>
@@ -67,7 +62,7 @@
       </tbody>
     </table>
     <div class="form-actions">
-      <a href="<%= helpers(@conn).admin_user_path @conn, :new %>" class="btn btn-primary">
+      <a href="<%= helpers(@conn).admin_user_path(@conn, :new) %>" class="btn btn-primary">
         <i class="fa fa-plus m-r-xs"></i> Ny bruker
       </a>
     </div>
