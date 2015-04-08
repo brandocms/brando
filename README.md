@@ -112,7 +112,7 @@ scope "/" do
 end
 ```
 
-Endpoint config in `endpoint.ex`:
+Static config in `endpoint.ex`:
 
 ```elixir
 plug Plug.Static,
