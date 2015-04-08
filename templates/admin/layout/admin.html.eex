@@ -86,7 +86,7 @@
       <!-- /#menu -->
       </div>
 
-      <div id="content-wrapper" class="grid-block">
+      <div id="content-wrapper" class="grid-block noscroll">
         <div id="content" class="grid-content">
         <%= if get_flash(@conn, :error) do %>
           <div class="alert alert-block alert-danger">
