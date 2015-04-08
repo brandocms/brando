@@ -38,6 +38,10 @@ defmodule Brando.HTML.Inspect do
     ~s(<tr><td>#{name}</td><td><em>Inget tilknyttet bilde</em></td></tr>)
   end
 
+  defp do_inspect_field(name, Brando.Type.Image.Config, _value) do
+    ~s(<tr><td>#{name}</td><td><em>Konfigurasjonsdata</em></td></tr>)
+  end
+
   defp do_inspect_field(name, Brando.Type.Image, value) do
     ~s(<tr><td>#{name}</td><td><div class="imageserie m-b-md"><img src="#{media_url(img(value, :thumb))}" style="padding-bottom: 3px;" /></div></td></tr>)
   end
