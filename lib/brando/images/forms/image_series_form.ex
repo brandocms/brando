@@ -12,7 +12,7 @@ defmodule Brando.Images.ImageSeriesForm do
 
   form "imageseries", [helper: :admin_image_series_path, class: "grid-form"] do
     fieldset [row_span: 4] do
-      field :image_category_id, :select,
+      field :image_category_id, :radio,
         [required: true,
          label: "Kategori",
          choices: &__MODULE__.get_categories/0]
