@@ -2,13 +2,13 @@ defmodule Brando.HTML do
   @moduledoc """
   Helper and convenience functions. Imported in Brando.AdminView.
   """
-  import Brando.Images.Helpers
 
   @doc false
   defmacro __using__(_) do
     quote do
       import Brando.HTML
       import Brando.HTML.Inspect
+      import Brando.Images.Helpers
     end
   end
 
@@ -157,7 +157,7 @@ defmodule Brando.HTML do
   end
 
   def dropzone_form(helper, id, cfg) do
-    cfg = cfg || Brando.config(Brando.Images)[:default_config]
+    _cfg = cfg || Brando.config(Brando.Images)[:default_config]
     path = Brando.Form.get_action(helper, :upload_post, id)
     Phoenix.HTML.safe("""
     <form action="#{path}"
@@ -176,5 +176,16 @@ defmodule Brando.HTML do
       };
     </script>
     """)
+  end
+
+  def check_or_x(nil) do
+    Phoenix.HTML.safe(~s(<i class="fa fa-times text-danger"></i>))
+  end
+  def check_or_x(false) do
+    Phoenix.HTML.safe(~s(<i class="fa fa-times text-danger"></i>))
+  end
+
+  def check_or_x(_) do
+    Phoenix.HTML.safe(~s(<i class="fa fa-check text-success"></i>))
   end
 end
