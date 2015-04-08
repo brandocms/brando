@@ -38,7 +38,7 @@ defmodule Brando.Images.Model.ImageCategory do
   schema "imagecategories" do
     field :name, :string
     field :slug, :string
-    field :cfg,  :string
+    field :cfg, Brando.Type.Image.Config
     belongs_to :creator, User
     has_many :image_series, ImageSeries
     timestamps
@@ -81,7 +81,9 @@ defmodule Brando.Images.Model.ImageCategory do
   """
   def create(params, current_user) do
     params = Utils.Model.put_creator(params, current_user)
-    model_changeset = changeset(%__MODULE__{}, :create, params)
+    model_changeset =
+      changeset(%__MODULE__{}, :create, params)
+      |> put_change(:cfg, Brando.config(Brando.Images)[:default_config])
     case model_changeset.valid? do
       true ->
         inserted_model = Brando.get_repo().insert(model_changeset)
