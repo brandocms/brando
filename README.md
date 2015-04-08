@@ -240,17 +240,17 @@ defmodule MyApp.Repo.Migrations.AddImagecategoriesTable do
     create index(:imagecategories, [:slug])
     execute """
       INSERT INTO
-        imageseries
-        ("name", "slug", "credits", "order", "creator_id", "image_category_id", "inserted_at", "updated_at")
+        imagecategories
+        ("name", "slug", "cfg", "creator_id", "inserted_at", "updated_at")
       VALUES
-        ('post', 'post', NULL, 0, 1, 1, NOW(), NOW());
+        ('post', 'post', NULL, 1, NOW(), NOW());
     """
     execute """
       INSERT INTO
-        imageseries
-        ("name", "slug", "credits", "order", "creator_id", "image_category_id", "inserted_at", "updated_at")
+        imagecategories
+        ("name", "slug", "cfg", "creator_id", "inserted_at", "updated_at")
       VALUES
-        ('page', 'page', NULL, 0, 1, 2, NOW(), NOW());
+        ('page', 'page', NULL, 1, NOW(), NOW());
     """
   end
 
