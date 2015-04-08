@@ -127,7 +127,7 @@ defmodule Brando.Images.Model.ImageSeries do
   """
   def get(id: id) do
     (from(m in __MODULE__,
-      join: i in assoc(m, :images),
+      left_join: i in assoc(m, :images),
       where: m.id == ^id,
       order_by: i.order,
       preload: [:creator, :image_category, images: i]))
