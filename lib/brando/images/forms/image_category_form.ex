@@ -14,8 +14,6 @@ defmodule Brando.Images.ImageCategoryForm do
       [required: true,
        label: "URL-slug",
        placeholder: "URL-slug"]
-    field :cfg, :textarea,
-      [label: "Konfigurasjon"]
     submit "Lagre",
       [class: "btn btn-success"]
   end
