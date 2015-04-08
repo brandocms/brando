@@ -331,10 +331,10 @@ defmodule Brando.Form do
   end
 
   @doc """
-  Renders field by type. Wraps the field with a label and row span
+  Renders file field. Wraps the field with a label and row span
   """
-  def render_field(type, name, :file, opts, value, errors) do
-    F.__file__(type, name, value, errors, opts)
+  def render_field(form_type, name, :file, opts, value, errors) do
+    F.__file__(form_type, name, value, errors, opts)
     |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
     |> F.__form_group__(name, opts, errors)
     |> F.__data_row_span__(opts[:in_fieldset])
@@ -344,31 +344,31 @@ defmodule Brando.Form do
   Render textarea.
   Pass a form_group_class to ensure we don't set height on wrapper.
   """
-  def render_field(type, name, :textarea, opts, value, errors) do
+  def render_field(form_type, name, :textarea, opts, value, errors) do
     opts = Keyword.put(opts, :form_group_class, "no-height")
-    F.__textarea__(type, name, value, errors, opts)
+    F.__textarea__(form_type, name, value, errors, opts)
     |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
     |> F.__form_group__(name, opts, errors)
     |> F.__data_row_span__(opts[:in_fieldset])
   end
 
-  def render_field(type, name, :radio, opts, value, errors) do
-    render_radios(type, name, opts, value, errors)
+  def render_field(form_type, name, :radio, opts, value, errors) do
+    render_radios(form_type, name, opts, value, errors)
     |> Enum.join("")
     |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
     |> F.__form_group__(name, opts, errors)
     |> F.__data_row_span__(opts[:in_fieldset])
   end
 
-  def render_field(type, name, :checkbox, opts, value, errors) do
+  def render_field(form_type, name, :checkbox, opts, value, errors) do
     if opts[:multiple] do
-      render_checks(type, name, opts, value, errors)
+      render_checks(form_type, name, opts, value, errors)
       |> Enum.join("")
       |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
       |> F.__form_group__(name, opts, errors)
       |> F.__data_row_span__(opts[:in_fieldset])
     else
-      F.__concat__(F.__label__(name, opts[:label_class], F.__input__(:checkbox, type, name, value, errors, opts) <> opts[:label]), F.__label__(name, "", ""))
+      F.__concat__(F.__label__(name, opts[:label_class], F.__input__(:checkbox, form_type, name, value, errors, opts) <> opts[:label]), F.__label__(name, "", ""))
       |> F.__div__("checkbox")
       |> F.__form_group__(name, opts, errors)
       |> F.__data_row_span__(opts[:in_fieldset])
@@ -407,27 +407,27 @@ defmodule Brando.Form do
   @doc """
   Iterates through `opts` :choices key, rendering options for the select
   """
-  def render_options(type, opts, value, _errors) do
+  def render_options(form_type, opts, value, _errors) do
     for choice <- get_choices(opts[:choices]) do
-      F.__option__(type, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
+      F.__option__(form_type, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
     end
   end
 
   @doc """
   Iterates through `opts` :choices key, rendering input type="radio"s
   """
-  def render_radios(type, name, opts, value, _errors) do
+  def render_radios(form_type, name, opts, value, _errors) do
     for choice <- get_choices(opts[:choices]) do
-      F.__radio__(type, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
+      F.__radio__(form_type, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
     end
   end
 
   @doc """
   Iterates through `opts` :choices key, rendering input type="checkbox"s
   """
-  def render_checks(type, name, opts, value, _errors) do
+  def render_checks(form_type, name, opts, value, _errors) do
     for choice <- get_choices(opts[:choices]) do
-      F.__checkbox__(type, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
+      F.__checkbox__(form_type, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
     end
   end
 end
