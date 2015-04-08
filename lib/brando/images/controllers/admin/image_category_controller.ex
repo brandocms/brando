@@ -71,17 +71,30 @@ defmodule Brando.Images.Admin.ImageCategoryController do
   def configure(conn, %{"id" => category_id}) do
     model = conn.private[:category_model]
     data = model.get(id: String.to_integer(category_id))
-    require Logger
-    Logger.debug(inspect(data.cfg))
     {:ok, cfg} = Brando.Type.Image.Config.dump(data.cfg)
     data = Map.put(data, :cfg, cfg)
-    require Logger
-    Logger.debug(inspect(data.cfg))
-
     conn
     |> assign(:image_category, data)
     |> assign(:id, category_id)
     |> render(:configure)
+  end
+
+  def configure_patch(conn, %{"imagecategoryconfig" => form_data, "id" => id}) do
+    model = conn.private[:category_model]
+    record = model.get(id: String.to_integer(id))
+    case model.update(record, form_data) do
+      {:ok, _updated_record} ->
+        conn
+        |> put_flash(:notice, "Kategori oppdatert.")
+        |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
+      {:error, errors} ->
+        conn
+        |> assign(:image_category, form_data)
+        |> assign(:errors, errors)
+        |> assign(:id, id)
+        |> put_flash(:error, "Feil i skjema")
+        |> render(:edit)
+    end
   end
 
   @doc false
