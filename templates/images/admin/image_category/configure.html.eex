@@ -1,0 +1,7 @@
+  <h1>Konfigurér <%= model_name(@image_category, :singular) %></h1>
+  <%= ImageCategoryConfigForm.get_form(type: :update, action: :configure_patch, params: to_string(@id), values: @image_category, errors: @errors) %>
+  <div class="buttons m-t-md">
+    <a href="<%= helpers(@conn).admin_image_path(@conn, :index) %>" class="btn btn-default">
+      <i class="fa fa-list fa-fw m-r-sm"></i> Tilbake til oversikten
+    </a>
+  </div>
