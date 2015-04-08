@@ -1,2 +1,2 @@
     <h1>Ny bildeserie</h1>
-    <%= ImageSeriesForm.get_form(action: :create, params: [], values: @imageseries, errors: @errors) %>
+    <%= ImageSeriesForm.get_form(action: :create, params: [], values: @image_series, errors: @errors) %>
