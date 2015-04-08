@@ -37,7 +37,7 @@ defmodule Brando.Mixfile do
       {:cowboy, "~> 1.0"},
       {:plug, "~> 0.11", override: true},
       {:earmark, "~> 0.1"},
-      {:phoenix, "~> 0.10"},
+      {:phoenix, "~> 0.11"},
       {:linguist, "~> 0.1"},
       {:mogrify, github: "twined/mogrify"},
       {:bcrypt, github: "opscode/erlang-bcrypt"},

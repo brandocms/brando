@@ -11,6 +11,8 @@ defmodule Brando.AdminView do
       # Use Phoenix.HTML to import all HTML functions (forms, tags, etc)
       use Phoenix.HTML
 
+      import Phoenix.Controller, only: [get_flash: 2]
+
       # Functions defined here are available to all other views/templates
       use Brando.HTML
 
