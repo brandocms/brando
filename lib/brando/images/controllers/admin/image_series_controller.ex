@@ -17,8 +17,10 @@ defmodule Brando.Images.Admin.ImageSeriesController do
   end
 
   @doc false
-  def new(conn, _params) do
+  def new(conn, %{"id" => category_id}) do
+    image_series = %{"image_category_id" => String.to_integer(category_id)}
     conn
+    |> assign(:image_series, image_series)
     |> render(:new)
   end
 
