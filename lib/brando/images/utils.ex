@@ -98,7 +98,7 @@ defmodule Brando.Images.Utils do
 
   """
   def delete_connected_images(images) do
-    for {size, file} <- images do
+    for {_size, file} <- images do
       delete_media(file)
     end
   end
