@@ -112,11 +112,11 @@ defmodule Brando.Form.Fields do
   @doc """
   Render a textarea field for :create.
   """
-  def __textarea__(_action, name, [], _errors, opts) do
+  def __textarea__(_form_type, name, [], _errors, opts) do
     default = if opts[:default], do: opts[:default], else: ""
     ~s(<textarea name="#{name}"#{get_class(opts[:class])}>#{default}</textarea>)
   end
-  def __textarea__(_action, name, value, _errors, opts) do
+  def __textarea__(_form_type, name, value, _errors, opts) do
     ~s(<textarea name="#{name}"#{get_class(opts[:class])}>#{value}</textarea>)
   end
 
@@ -139,7 +139,7 @@ defmodule Brando.Form.Fields do
     end
   end
 
-  def __option__(action, choice_value, choice_text, value, default, is_selected_fun \\ nil)
+  def __option__(form_type, choice_value, choice_text, value, default, is_selected_fun \\ nil)
   def __option__(:update, choice_value, choice_text, value, _default, is_selected_fun) do
     if is_selected_fun do
       selected = case is_selected_fun.(choice_value, value) do
@@ -161,7 +161,7 @@ defmodule Brando.Form.Fields do
     ~s(<option value="#{choice_value}"#{get_selected(choice_value, value)}>#{choice_text}</option>)
   end
 
-  def __radio__(action, name, choice_value, choice_text, value, default, is_selected_fun \\ nil)
+  def __radio__(form_type, name, choice_value, choice_text, value, default, is_selected_fun \\ nil)
   def __radio__(:create, name, choice_value, choice_text, [], default, _) do
     ~s(<div class="radio"><label for="#{name}"></label><label for="#{name}"><input name="#{name}" type="radio" value="#{choice_value}"#{get_checked(choice_value, default)} />#{choice_text}</label></div>)
   end
@@ -178,7 +178,7 @@ defmodule Brando.Form.Fields do
     ~s(<div class="radio"><label for="#{name}"></label><label for="#{name}"><input name="#{name}" type="radio" value="#{choice_value}"#{checked} />#{choice_text}</label></div>)
   end
 
-  def __checkbox__(action, name, choice_value, choice_text, value, default, is_selected_fun \\ nil)
+  def __checkbox__(form_type, name, choice_value, choice_text, value, default, is_selected_fun \\ nil)
   def __checkbox__(:create, name, choice_value, choice_text, [], default, _) do
     ~s(<div class="checkboxes"><label for="#{name}[]"></label><label for="#{name}[]"><input name="#{name}[]" type="checkbox" value="#{choice_value}"#{get_checked(choice_value, default)} />#{choice_text}</label></div>)
   end
@@ -215,7 +215,7 @@ defmodule Brando.Form.Fields do
     content
   end
 
-  def __input__(:checkbox, _action, name, value, _errors, opts) do
+  def __input__(:checkbox, _form_type, name, value, _errors, opts) do
     checked =
       case value do
         v when v in ["on", true] -> " " <> "checked=\"checked\""
@@ -229,13 +229,13 @@ defmodule Brando.Form.Fields do
     ~s(<input name="#{name}" type="checkbox"#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])}#{checked} />)
   end
 
-  def __input__(type, :update, name, value, _errors, opts) do
+  def __input__(input_type, :update, name, value, _errors, opts) do
     opts = List.delete(opts, :default)
-   __input__(type, :create, name, value, _errors, opts)
+   __input__(input_type, :create, name, value, _errors, opts)
   end
 
-  def __input__(type, _action, name, value, _errors, opts) do
-    ~s(<input name="#{name}" type="#{type}"#{get_value(value)}#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])} />)
+  def __input__(input_type, _form_type, name, value, _errors, opts) do
+    ~s(<input name="#{name}" type="#{input_type}"#{get_value(value)}#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])} />)
   end
 
   def __tag__(tag, name, contents, class) do
