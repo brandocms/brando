@@ -56,7 +56,7 @@
 $legend-border-color: #E0E0E0;
 
 @mixin grid-form($max-columns: 12, $font-size-large: 18px, $legend-color: lighten(#333, 5%),
-    $field-padding: 8px, $label-font-size: 10px, $grid-border-color: #333,
+    $field-padding: 8px, $label-font-size: 0.8rem, $grid-border-color: #333,
     $label-color: #333, $field-focus-color: darken(#FFFDED, 5%)) {
 
     // Sacrifice compatibility with IE7 and below to use the border-box model
@@ -191,7 +191,7 @@ $legend-border-color: #E0E0E0;
 
 // Create Grid Form
 .grid-form {
-   @include grid-form($field-padding: 12px, $label-font-size: 11px, $grid-border-color: #cdcdcd);
+   @include grid-form($field-padding: 12px, $label-font-size: 0.8rem, $grid-border-color: #cdcdcd);
 }
 
 form.grid-form {

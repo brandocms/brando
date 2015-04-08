@@ -40,17 +40,16 @@ th {
 .table > tbody > tr > td,
 .table > tfoot > tr > td {
   padding: 8px;
-  line-height: 1.42857143;
   vertical-align: middle;
   border-top: 1px solid #ddd;
-  font-size: 15px;
+  font-size: 1rem;
 }
 .table > thead > tr > th {
   vertical-align: bottom;
   background-color: #333;
   color: #fff;
   border-top: none;
-  font-size: 13px;
+  font-size: 1rem;
 }
 .table > caption + thead > tr:first-child > th,
 .table > colgroup + thead > tr:first-child > th,

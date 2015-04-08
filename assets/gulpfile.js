@@ -5,10 +5,12 @@ var concat = require('gulp-concat');
 var rename = require('gulp-rename');
 var uglify = require('gulp-uglify');
 var babel = require("gulp-babel");
+var sourcemaps = require("gulp-sourcemaps")
 
 gulp.task('sass', function () {
-    return sass('scss/brando.scss')
+    return sass('scss/brando.scss', {sourcemap: true})
         .on('error', function (err) { console.log(err.message); })
+        .pipe(sourcemaps.write())
         .pipe(gulp.dest('../priv/static/brando/css'));
 });
 
