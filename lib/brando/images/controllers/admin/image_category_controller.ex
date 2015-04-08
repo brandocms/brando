@@ -39,6 +39,35 @@ defmodule Brando.Images.Admin.ImageCategoryController do
   end
 
   @doc false
+  def edit(conn, %{"id" => id}) do
+    model = conn.private[:category_model]
+    data = model.get(id: String.to_integer(id))
+    conn
+    |> assign(:image_category, data)
+    |> assign(:id, id)
+    |> render(:edit)
+  end
+
+  @doc false
+  def update(conn, %{"imagecategory" => form_data, "id" => id}) do
+    model = conn.private[:category_model]
+    record = model.get(id: String.to_integer(id))
+    case model.update(record, form_data) do
+      {:ok, _updated_record} ->
+        conn
+        |> put_flash(:notice, "Kategori oppdatert.")
+        |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
+      {:error, errors} ->
+        conn
+        |> assign(:image_category, form_data)
+        |> assign(:errors, errors)
+        |> assign(:id, id)
+        |> put_flash(:error, "Feil i skjema")
+        |> render(:edit)
+    end
+  end
+
+  @doc false
   def delete_confirm(conn, %{"id" => id}) do
     model = conn.private[:category_model]
     record = model.get!(id: id)
