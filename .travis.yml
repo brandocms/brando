@@ -1,6 +1,4 @@
 language: erlang
-services:
-  - redis-server
 otp_release:
   - 17.4
 sudo: false
