@@ -127,6 +127,8 @@ defmodule Brando.Form do
         # Options
         * `required` - true
         * `label` - "Label for field"
+        * `slug_from` - :name
+          Automatically slugs with `:name` as source.
         * `help_text` - "Help text for field"
         * `placeholder` - "Placeholder for field"
 
@@ -397,6 +399,7 @@ defmodule Brando.Form do
     F.__fieldset_close__()
   end
 
+  # catch all for (text, email, password ...)
   def render_field(form_type, name, input_type, opts, value, errors) do
     F.__input__(input_type, form_type, name, value, errors, opts)
     |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))

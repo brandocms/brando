@@ -15,11 +15,13 @@ gulp.task('sass', function () {
 });
 
 gulp.task('scripts', function () {
-    return gulp.src(['js/accordion.js',
+    return gulp.src(['../deps/phoenix/priv/static/phoenix.js',
+                     'js/accordion.js',
                      'js/dropdown.js',
                      'js/sortable.js',
                      'js/slideout.js',
                      'js/gridforms.js',
+                     'js/jquery/jquery.slugit.js',
                      'js/vex.js',
                      'js/vex.dialog.js',
                      'js/brando/utils.js',
@@ -29,7 +31,7 @@ gulp.task('scripts', function () {
         .pipe(concat('brando.js'))
         .pipe(gulp.dest('../priv/static/brando/js'))
         .pipe(rename('brando-min.js'))
-        .pipe(uglify())
+        .pipe(uglify()).on('error', errorHandler)
         .pipe(gulp.dest('../priv/static/brando/js'));
 });
 
@@ -41,4 +43,13 @@ gulp.task('watch', function () {
     watch('scss/**/*.scss', function () {
         gulp.start('sass');
     });
+    watch('js/**/*.js', function () {
+        gulp.start('scripts');
+    });
 });
+
+// Handle the error
+function errorHandler (error) {
+  console.log(error.toString());
+  this.emit('end');
+}

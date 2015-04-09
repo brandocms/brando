@@ -13,7 +13,8 @@ defmodule Brando.Images.ImageCategoryForm do
     field :slug, :text,
       [required: true,
        label: "URL-slug",
-       placeholder: "URL-slug"]
+       placeholder: "URL-slug",
+       slug_from: :name]
     submit "Lagre",
       [class: "btn btn-success"]
   end

@@ -235,7 +235,7 @@ defmodule Brando.Form.Fields do
   end
 
   def __input__(input_type, _form_type, name, value, _errors, opts) do
-    ~s(<input name="#{name}" type="#{input_type}"#{get_value(value)}#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])} />)
+    ~s(<input name="#{name}" type="#{input_type}"#{get_slug_from(name, opts)}#{get_value(value)}#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])} />)
   end
 
   def __tag__(tag, name, contents, class) do
@@ -291,7 +291,8 @@ defmodule Brando.Form.Fields do
   @doc """
   If `value` is not nil, returns value.
   If it's a map, return blank. This is to deal with Plug.Upload
-  maps. TODO: handle this better.
+  maps.
+  TODO: handle this better.
   """
   def get_value([]), do: ""
   def get_value(nil), do: ""
@@ -304,4 +305,15 @@ defmodule Brando.Form.Fields do
   def get_form_group_class(nil), do: ""
   def get_form_group_class(value), do: " " <> value
 
+  @doc """
+  Return slug_from option, if exists
+  """
+  def get_slug_from(name, opts) do
+    if opts[:slug_from] do
+      caps = Regex.named_captures(~r/(?<form_name>\w*)\[(\w*)\]/, name)
+      " " <> "data-slug-from=\"#{caps["form_name"]}[#{opts[:slug_from]}]\""
+    else
+      ""
+    end
+  end
 end
