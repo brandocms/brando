@@ -2,11 +2,11 @@ language: erlang
 services:
   - redis-server
 otp_release:
-  - 17.5
+  - 17.4
 sudo: false
 before_install:
-  - wget http://s3.hex.pm/builds/elixir/v1.0.4.zip
-  - unzip -d elixir v1.0.4.zip
+  - wget http://s3.hex.pm/builds/elixir/v1.0.3.zip
+  - unzip -d elixir v1.0.3.zip
 before_script:
   - export PATH=`pwd`/elixir/bin:$PATH
   - mix local.hex --force
