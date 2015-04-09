@@ -3,9 +3,11 @@ defmodule Brando.Images.Admin.ImageSeriesController do
   Controller for the Brando ImageSeries module.
   """
   use Phoenix.Controller
-  import Brando.Utils, only: [add_css: 2, add_js: 2]
   alias Brando.HTML.Inspect
+  import Brando.Utils, only: [add_css: 2, add_js: 2]
+  import Brando.Plug.Section
 
+  plug :put_section, "images"
   plug :action
 
   @doc false

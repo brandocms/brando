@@ -3,7 +3,9 @@ defmodule Brando.Images.Admin.ImageCategoryController do
   Controller for the Brando ImageCategory module.
   """
   use Phoenix.Controller
+  import Brando.Plug.Section
 
+  plug :put_section, "images"
   plug :scrub_params, "imagecategory" when action in [:create, :update]
   plug :action
 

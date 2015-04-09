@@ -9,7 +9,9 @@ defmodule Brando.News.Admin.PostController do
     image_model: Image,
     series_model: ImageSeries
   import Brando.Utils, only: [add_css: 2, add_js: 2]
+  import Brando.Plug.Section
 
+  plug :put_section, "news"
   plug :scrub_params, "post" when action in [:create, :update]
   plug :action
 
