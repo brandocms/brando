@@ -57,7 +57,7 @@ defmodule Brando.Form.FieldsTest do
     assert F.__parse_error__({"should be at least %{count} characters", 5}) == "Feltets verdi er for kort. Må være > 5 tegn."
   end
 
-  test "__textarea__/4" do
+  test "__textarea__/5" do
     assert F.__textarea__(:create, "name", [], nil, []) == ~s(<textarea name="name"></textarea>)
     assert F.__textarea__(:update, "name", "blah", nil, []) == ~s(<textarea name="name">blah</textarea>)
     assert F.__textarea__(:update, "name", "blah", nil, [default: "default"]) == ~s(<textarea name="name">blah</textarea>)
@@ -68,5 +68,30 @@ defmodule Brando.Form.FieldsTest do
   test "__file__/4" do
     assert F.__file__(:update, "user[avatar]", %{sizes: %{thumb: "images/default/thumb/0.jpeg"}},
                       [], [type: :file, label: "Bilde"]) == "<div class=\"image-preview\"><img src=\"images/default/thumb/0.jpeg\" /></div><input name=\"user[avatar]\" type=\"file\" />"
+  end
+
+  test "get_form_group_class/1" do
+    assert F.get_form_group_class(nil) == ""
+    assert F.get_form_group_class("test") == " test"
+  end
+
+  test "get_slug_from/2" do
+    assert F.get_slug_from("testform[title]", []) == ""
+    assert F.get_slug_from("testform[title]", [slug_from: :name]) ==
+      ~s( data-slug-from="testform[name]")
+  end
+
+  test "__input__ checkbox" do
+    assert F.__input__(:checkbox, :create, "name", [], [], []) ==
+      "<input name=\"name\" type=\"checkbox\" />"
+    assert F.__input__(:checkbox, :create, "name", false, [], []) ==
+      "<input name=\"name\" type=\"checkbox\" />"
+    assert F.__input__(:checkbox, :create, "name", nil, [], []) ==
+      "<input name=\"name\" type=\"checkbox\" />"
+    assert F.__input__(:checkbox, :create, "name", true, [], []) ==
+      "<input name=\"name\" type=\"checkbox\" checked=\"checked\" />"
+    assert F.__input__(:checkbox, :create, "name", "on", [], []) ==
+      "<input name=\"name\" type=\"checkbox\" checked=\"checked\" />"
+
   end
 end

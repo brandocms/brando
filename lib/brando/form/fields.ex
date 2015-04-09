@@ -224,6 +224,7 @@ defmodule Brando.Form.Fields do
           case opts[:default] do
             true  -> " " <> "checked=\"checked\""
             false -> ""
+            nil   -> ""
           end
       end
     ~s(<input name="#{name}" type="checkbox"#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])}#{checked} />)
