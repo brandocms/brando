@@ -1,13 +1,16 @@
 language: elixir
 elixir:
   - 1.0.3
-sudo: false # to use faster container-based build env
-notifications:
-  recipients:
-    - trond@twined.net
+sudo: false # to use faster container based build environment
+env:
+  - ELIXIR_ERL_OPTIONS=""
+  - ELIXIR_ERL_OPTIONS="+T 9"
 otp_release:
   - 17.3
 after_script:
   - mix deps.get --only docs
   - MIX_ENV=docs mix inch.report
   - "MIX_ENV=test mix compile && MIX_ENV=test mix coveralls.travis"
+notifications:
+  recipients:
+    - trond@twined.net
