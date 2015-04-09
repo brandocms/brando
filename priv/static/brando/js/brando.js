@@ -2913,10 +2913,17 @@ $(function () {
     // set up phoenix back channel
 
     // set up auto slug
-
     $('[data-slug-from]').each(function (index, elem) {
         var slugFrom = $(elem).attr('data-slug-from');
         $('[name="' + slugFrom + '"]').slugIt({
             output: $(elem) });
+    });
+
+    // set up dismissal of alerts
+    $('[data-dismiss]').each(function (index, elem) {
+        $(elem).click(function (e) {
+            e.preventDefault();
+            $(elem).parent().hide();
+        });
     });
 });
