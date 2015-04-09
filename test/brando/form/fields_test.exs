@@ -57,6 +57,14 @@ defmodule Brando.Form.FieldsTest do
     assert F.__parse_error__({"should be at least %{count} characters", 5}) == "Feltets verdi er for kort. Må være > 5 tegn."
   end
 
+  test "__textarea__/4" do
+    assert F.__textarea__(:create, "name", [], nil, []) == ~s(<textarea name="name"></textarea>)
+    assert F.__textarea__(:update, "name", "blah", nil, []) == ~s(<textarea name="name">blah</textarea>)
+    assert F.__textarea__(:update, "name", "blah", nil, [default: "default"]) == ~s(<textarea name="name">blah</textarea>)
+    assert F.__textarea__(:update, "name", [], nil, [default: "default"]) == ~s(<textarea name="name">default</textarea>)
+    assert F.__textarea__(:update, "name", [], nil, [default: "default", class: "class"]) == ~s(<textarea name="name" class="class">default</textarea>)
+  end
+
   test "__file__/4" do
     assert F.__file__(:update, "user[avatar]", %{sizes: %{thumb: "images/default/thumb/0.jpeg"}},
                       [], [type: :file, label: "Bilde"]) == "<div class=\"image-preview\"><img src=\"images/default/thumb/0.jpeg\" /></div><input name=\"user[avatar]\" type=\"file\" />"
