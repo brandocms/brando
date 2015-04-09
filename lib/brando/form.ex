@@ -81,6 +81,7 @@ defmodule Brando.Form do
       end
 
       defp render_form(fields, form_type, action_fun, action, params, form) do
+        csrf_tag = get_csrf(form_type)
         method = get_method(form_type)
         method_tag = method_override(form_type)
         action = " " <> "action=\"#{get_action(action_fun, action, params)}\""
@@ -92,7 +93,7 @@ defmodule Brando.Form do
           else
             ""
           end
-        ~s(<form#{class}#{role}#{action}#{method}#{multipart}>#{method_tag}#{fields}</form>)
+        ~s(<form#{class}#{role}#{action}#{method}#{multipart}>#{csrf_tag}#{method_tag}#{fields}</form>)
       end
 
       @doc """
@@ -307,6 +308,16 @@ defmodule Brando.Form do
   def get_method(:delete), do: " " <> ~s(method="POST")
   def get_method(:create), do: " " <> ~s(method="POST")
   def get_method(_), do: " " <> ~s(method="GET")
+
+  @doc """
+  Returns a csrf input tag
+  """
+  def get_csrf(form_type) when form_type in [:update, :delete, :create] do
+    ~s(<input name="_csrf_token" type="hidden" value="#{Phoenix.Controller.get_csrf_token()}">)
+  end
+  def get_csrf(_) do
+    ""
+  end
 
   @doc """
   Checks `values` for name and returns value if found.
