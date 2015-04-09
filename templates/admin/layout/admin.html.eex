@@ -15,18 +15,16 @@
     <script type="text/javascript" src="/static/brando/js/jquery.min.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/to-markdown.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/markdown.min.js" charset="utf-8"></script>
+    <script type="text/javascript" src="/static/brando/js/brando.vendor.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/brando.js" charset="utf-8"></script>
 
-<!--     <script type="text/javascript" src="/static/brando/js/libs/jquery/jquery.slugit.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/brando/js/libs/jquery/jquery.debounce-1.0.5.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/brando/js/libs/jquery/jquery.autocomplete.min.js" charset="utf-8"></script> -->
     <script type="text/javascript" src="/static/brando/js/libs/backbone/underscore.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/libs/backbone/backbone.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/twined-backbone.js" charset="utf-8"></script>
     <%= js_extra(@conn) %>
   </head>
 
-  <body>
+  <body<%= if @conn.private[:brando_section_name] do %> id="<%= @conn.private[:brando_section_name] %>"<% end %>>
     <main id="burger" class="show-for-small-only">
       <header>
         <button>☰</button>
@@ -105,18 +103,6 @@
         </div>
       </div>
     </div>
-    <script>
-      var slideout = new Slideout({
-        'panel': document.getElementById('burger'),
-        'menu': document.getElementById('menu'),
-        'padding': 0,
-        'tolerance': 70
-      });
-      document.querySelector('#burger button').addEventListener('click', function(e) {
-        e.preventDefault();
-        slideout.toggle();
-      });
-    </script>
   </body>
 </html>
 
