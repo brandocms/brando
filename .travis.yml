@@ -1,12 +1,18 @@
-language: elixir
-elixir:
-  - 1.0.4
-sudo: false # to use faster container based build environment
-env:
-  - ELIXIR_ERL_OPTIONS=""
-  - ELIXIR_ERL_OPTIONS="+T 9"
+language: erlang
+services:
+  - redis-server
 otp_release:
   - 17.5
+sudo: false
+before_install:
+  - wget http://s3.hex.pm/builds/elixir/v1.0.4.zip
+  - unzip -d elixir v1.0.4.zip
+before_script:
+  - export PATH=`pwd`/elixir/bin:$PATH
+  - mix local.hex --force
+  - mix deps.get --only test
+script:
+  - mix test
 after_script:
   - mix deps.get --only docs
   - MIX_ENV=docs mix inch.report
