@@ -50,13 +50,6 @@ defmodule Brando.Form.FieldsTest do
     assert F.__wrap__("test", "wrapper_class") == "<div class=\"wrapper_class\">test</div>"
   end
 
-  test "__parse_error__/1" do
-    assert F.__parse_error__("can't be blank") == "Feltet er påkrevet."
-    assert F.__parse_error__("must be unique") == "Feltet må være unikt. Verdien finnes allerede i databasen."
-    assert F.__parse_error__("has invalid format") == "Feltet har feil format."
-    assert F.__parse_error__({"should be at least %{count} characters", 5}) == "Feltets verdi er for kort. Må være > 5 tegn."
-  end
-
   test "__textarea__/5" do
     assert F.__textarea__(:create, "name", [], nil, []) == ~s(<textarea name="name"></textarea>)
     assert F.__textarea__(:update, "name", "blah", nil, []) == ~s(<textarea name="name">blah</textarea>)
@@ -92,6 +85,53 @@ defmodule Brando.Form.FieldsTest do
       "<input name=\"name\" type=\"checkbox\" checked=\"checked\" />"
     assert F.__input__(:checkbox, :create, "name", "on", [], []) ==
       "<input name=\"name\" type=\"checkbox\" checked=\"checked\" />"
+  end
 
+  test "__render_errors__/1" do
+    assert F.__render_errors__([]) == ""
+    assert F.__render_errors__(["can't be blank", "must be unique"]) ==
+      ["<div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet er påkrevet.</div>",
+       "<div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet må være unikt. Verdien finnes allerede i databasen.</div>"]
+  end
+
+  test "__parse_error__/1" do
+    assert F.__parse_error__("can't be blank") == "Feltet er påkrevet."
+    assert F.__parse_error__("must be unique") == "Feltet må være unikt. Verdien finnes allerede i databasen."
+    assert F.__parse_error__("has invalid format") == "Feltet har feil format."
+    assert F.__parse_error__({"should be at least %{count} characters", 10}) == "Feltets verdi er for kort. Må være > 10 tegn."
+  end
+
+  test "__label__/3" do
+    assert F.__label__("name", "class", "text") ==
+      ~s(<label for="name" class="class">text</label>)
+  end
+
+  test "__select__/6" do
+    assert F.__select__(:create, "name", "choices", [], [], []) ==
+      "<select name=\"name\" class=\"\">choices</select>"
+    assert F.__select__(:create, "name", "choices", [multiple: true], [], []) ==
+      "<select name=\"name[]\" multiple>choices</select>"
+  end
+
+  test "__option__/6" do
+    assert F.__option__(:create, "choice_val", "choice_text", [], nil, []) ==
+      "<option value=\"choice_val\">choice_text</option>"
+    assert F.__option__(:create, "choice_val", "choice_text", [], "choice_val", []) ==
+      "<option value=\"choice_val\" selected>choice_text</option>"
+    assert F.__option__(:create, "choice_val", "choice_text", "choice_wrong", "choice_val", []) ==
+      "<option value=\"choice_val\">choice_text</option>"
+    assert F.__option__(:create, "choice_val", "choice_text", "choice_val", "choice_val", []) ==
+      "<option value=\"choice_val\" selected>choice_text</option>"
+  end
+
+  test "__radio__/6" do
+    assert F.__radio__(:create, "choice_val", "choice_text", [], nil, []) ==
+      "<div class=\"radio\"><label for=\"choice_val\"></label><label for=\"choice_val\"><input name=\"choice_val\" type=\"radio\" value=\"choice_text\" /></label></div>"
+    assert F.__radio__(:create, "choice_val", "choice_text", [], "choice_val", []) ==
+      "<div class=\"radio\"><label for=\"choice_val\"></label><label for=\"choice_val\"><input name=\"choice_val\" type=\"radio\" value=\"choice_text\" /></label></div>"
+    assert F.__radio__(:create, "choice_val", "choice_text", "choice_wrong", "choice_val", []) ==
+      "<div class=\"radio\"><label for=\"choice_val\"></label><label for=\"choice_val\"><input name=\"choice_val\" type=\"radio\" value=\"choice_text\" />choice_wrong</label></div>"
+    assert F.__radio__(:create, "choice_val", "choice_text", "choice_val", "choice_val", []) ==
+      "<div class=\"radio\"><label for=\"choice_val\"></label><label for=\"choice_val\"><input name=\"choice_val\" type=\"radio\" value=\"choice_text\" />choice_val</label></div>"
   end
 end
