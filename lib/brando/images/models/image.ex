@@ -15,26 +15,6 @@ defmodule Brando.Images.Model.Image do
   @required_fields ~w(image image_series_id)
   @optional_fields ~w(order creator_id)
 
-  def __name__(:singular), do: "bilde"
-  def __name__(:plural), do: "bilder"
-
-  def __str__(model) do
-    "#{model.id} | #{model.image}"
-  end
-
-  use Linguist.Vocabulary
-  locale "no", [
-    model: [
-      id: "ID",
-      image: "Bilde",
-      order: "Rekkefølge",
-      creator: "Opprettet av",
-      image_series: "Bildeserie",
-      inserted_at: "Opprettet",
-      updated_at: "Oppdatert"
-    ]
-  ]
-
   schema "images" do
     field :image, Brando.Type.Image
     field :order, :integer
@@ -163,5 +143,20 @@ defmodule Brando.Images.Model.Image do
       delete(img)
     end
   end
+
+  #
+  # Meta
+
+  use Brando.Meta,
+    [singular: "bilde",
+     plural: "bilder",
+     repr: &("#{&1.id} | #{&1.image.path}"),
+     fields: [id: "ID",
+              image: "Bilde",
+              order: "Rekkefølge",
+              creator: "Opprettet av",
+              image_series: "Bildeserie",
+              inserted_at: "Opprettet",
+              updated_at: "Oppdatert"]]
 
 end

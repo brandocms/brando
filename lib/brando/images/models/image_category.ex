@@ -14,27 +14,6 @@ defmodule Brando.Images.Model.ImageCategory do
   @required_fields ~w(name slug creator_id)
   @optional_fields ~w(cfg)
 
-  def __name__(:singular), do: "bildekategori"
-  def __name__(:plural), do: "bildekategorier"
-
-  def __str__(model) do
-    "#{model.name}"
-  end
-
-  use Linguist.Vocabulary
-  locale "no", [
-    model: [
-      id: "ID",
-      name: "Navn",
-      slug: "URL-tamp",
-      cfg: "Konfigurasjon",
-      creator: "Opprettet av",
-      image_series: "Bildeserie",
-      inserted_at: "Opprettet",
-      updated_at: "Oppdatert"
-    ]
-  ]
-
   schema "imagecategories" do
     field :name, :string
     field :slug, :string
@@ -149,4 +128,20 @@ defmodule Brando.Images.Model.ImageCategory do
     Brando.Images.Model.ImageSeries.delete_dependent_image_series(record.id)
     Brando.get_repo.delete(record)
   end
+
+  #
+  # Meta
+
+  use Brando.Meta,
+    [singular: "bildekategori",
+     plural: "bildekategorier",
+     repr: &("#{&1.name}"),
+     fields: [id: "ID",
+              name: "Navn",
+              slug: "URL-tamp",
+              cfg: "Konfigurasjon",
+              creator: "Opprettet av",
+              image_series: "Bildeserie",
+              inserted_at: "Opprettet",
+              updated_at: "Oppdatert"]]
 end

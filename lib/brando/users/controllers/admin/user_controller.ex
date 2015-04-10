@@ -127,7 +127,7 @@ defmodule Brando.Users.Admin.UserController do
     record = model.get!(id: id)
     model.delete(record)
     conn
-    |> put_flash(:notice, "#{Brando.HTML.Inspect.model_name(record, :singular)} #{model.__str__(record)} slettet.")
+    |> put_flash(:notice, "#{Brando.HTML.Inspect.model_name(record, :singular)} #{model.__repr__(record)} slettet.")
     |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn, :index))
   end
 end

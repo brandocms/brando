@@ -15,30 +15,6 @@ defmodule Brando.Users.Model.User do
 
   @roles %{staff: 1, admin: 2, superuser: 4}
 
-  def __name__(:singular), do: "bruker"
-  def __name__(:plural), do: "brukere"
-
-  def __str__(model) do
-    "#{model.full_name} (#{model.username})"
-  end
-
-  use Linguist.Vocabulary
-  locale "no", [
-    model: [
-      id: "ID",
-      username: "Brukernavn",
-      email: "Epost",
-      full_name: "Navn",
-      password: "Passord",
-      avatar: "Avatar",
-      creator: "Opprettet av",
-      role: "Roller",
-      last_login: "Siste innlogging",
-      inserted_at: "Opprettet",
-      updated_at: "Oppdatert"
-    ]
-  ]
-
   schema "users" do
     field :username, :string
     field :email, :string
@@ -261,4 +237,24 @@ defmodule Brando.Users.Model.User do
   def can_login?(user) do
     if user.role > 0, do: true, else: false
   end
+
+  #
+  # Meta
+
+  use Brando.Meta,
+    [singular: "bruker",
+     plural: "brukere",
+     repr: &("#{&1.full_name} (#{&1.username})"),
+     fields: [id: "ID",
+              username: "Brukernavn",
+              email: "Epost",
+              full_name: "Navn",
+              password: "Passord",
+              avatar: "Avatar",
+              creator: "Opprettet av",
+              role: "Roller",
+              last_login: "Siste innlogging",
+              inserted_at: "Opprettet",
+              updated_at: "Oppdatert"]]
+
 end

@@ -16,36 +16,6 @@ defmodule Brando.News.Model.Post do
   @required_fields ~w(status header data lead creator_id language)
   @optional_fields ~w(featured)
 
-  def __name__(:singular), do: "post"
-  def __name__(:plural), do: "poster"
-
-  def __str__(model) do
-    "#{model.header}"
-  end
-
-  use Linguist.Vocabulary
-  locale "no", [
-    model: [
-      id: "ID",
-      language: "Språk",
-      header: "Overskrift",
-      slug: "URL-tamp",
-      lead: "Ingress",
-      data: "Data",
-      html: "HTML",
-      cover: "Coverbilde",
-      status: "Status",
-      creator: "Opprettet av",
-      meta_description: "META beskrivelse",
-      meta_keywords: "META nøkkelord",
-      featured: "Vektet post",
-      published: "Publisert",
-      publish_at: "Publiseringstidspunkt",
-      inserted_at: "Opprettet",
-      updated_at: "Oppdatert"
-    ]
-  ]
-
   schema "posts" do
     field :language, :string
     field :header, :string
@@ -213,4 +183,30 @@ defmodule Brando.News.Model.Post do
         preload: [:creator]
     Brando.get_repo.all(q)
   end
+
+  #
+  # Meta
+
+  use Brando.Meta,
+    [singular: "post",
+     plural: "poster",
+     repr: &("#{&1.header}"),
+     fields: [
+        id: "ID",
+        language: "Språk",
+        header: "Overskrift",
+        slug: "URL-tamp",
+        lead: "Ingress",
+        data: "Data",
+        html: "HTML",
+        cover: "Coverbilde",
+        status: "Status",
+        creator: "Opprettet av",
+        meta_description: "META beskrivelse",
+        meta_keywords: "META nøkkelord",
+        featured: "Vektet post",
+        published: "Publisert",
+        publish_at: "Publiseringstidspunkt",
+        inserted_at: "Opprettet",
+        updated_at: "Oppdatert"]]
 end

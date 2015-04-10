@@ -17,9 +17,9 @@ defmodule Brando.HTML.InspectTest do
     assert ret =~ "Nita Bond"
   end
 
-  test "model_str/1" do
+  test "model_repr/1" do
     assert {:ok, user} = User.create(@user_params)
-    assert model_str(user) == "Nita Bond (zabuzasixu)"
+    assert model_repr(user) == "Nita Bond (zabuzasixu)"
   end
 
   test "model_name/2" do

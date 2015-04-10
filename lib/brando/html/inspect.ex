@@ -86,7 +86,7 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_assoc(name, %Ecto.Association.BelongsTo{} = type, value) do
-    ~s(<tr><td>#{name}</td><td>#{type.assoc.__str__(value)}</td></tr>)
+    ~s(<tr><td>#{name}</td><td>#{type.assoc.__repr__(value)}</td></tr>)
   end
   defp do_inspect_assoc(name, %Ecto.Association.Has{}, %Ecto.Association.NotLoaded{}) do
     ~s(<tr><td>#{name}</td><td>Assosiasjonene er ikke hentet.</td></tr>)
@@ -95,7 +95,7 @@ defmodule Brando.HTML.Inspect do
     ~s(<tr><td>#{name}</td><td>Ingen assosiasjoner.</td></tr>)
   end
   defp do_inspect_assoc(_name, %Ecto.Association.Has{} = type, value) do
-    rows = Enum.map(value, fn (row) -> ~s(<div class="assoc #{type.field}">#{type.assoc.__str__(row)}</div>) end)
+    rows = Enum.map(value, fn (row) -> ~s(<div class="assoc #{type.field}">#{type.assoc.__repr__(row)}</div>) end)
     ~s(<tr><td><i class='fa fa-link'></i> Tilknyttede #{type.assoc.__name__(:plural)}</td><td>#{rows}</td></tr>)
   end
 
@@ -109,10 +109,10 @@ defmodule Brando.HTML.Inspect do
   end
 
   @doc """
-  Returns the model's representation from __str__/0
+  Returns the model's representation from __repr__/0
   """
-  def model_str(record) do
-    record.__struct__.__str__(record)
+  def model_repr(record) do
+    record.__struct__.__repr__(record)
   end
 
   defp translate_field(module, field) do

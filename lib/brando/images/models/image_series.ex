@@ -15,31 +15,6 @@ defmodule Brando.Images.Model.ImageSeries do
   @required_fields ~w(name slug image_category_id creator_id)
   @optional_fields ~w(credits order)
 
-  def __name__(:singular), do: "bildeserie"
-  def __name__(:plural), do: "bildeserier"
-
-  def __str__(model) do
-    model = Brando.get_repo.preload(model, :images)
-    image_count = Enum.count(model.images)
-    "#{model.name} – #{image_count} bilde(r)."
-  end
-
-  use Linguist.Vocabulary
-  locale "no", [
-    model: [
-      id: "ID",
-      name: "Navn",
-      slug: "URL-tamp",
-      credits: "Kreditering",
-      order: "Rekkefølge",
-      creator: "Opprettet av",
-      images: "Bilder",
-      image_category: "Bildekategori",
-      inserted_at: "Opprettet",
-      updated_at: "Oppdatert"
-    ]
-  ]
-
   schema "imageseries" do
     field :name, :string
     field :slug, :string
@@ -163,4 +138,26 @@ defmodule Brando.Images.Model.ImageSeries do
       delete(is)
     end
   end
+
+  #
+  # Meta
+
+  use Brando.Meta,
+    [singular: "bildeserie",
+     plural: "bildeserier",
+     repr: fn (model) ->
+        model = Brando.get_repo.preload(model, :images)
+        image_count = Enum.count(model.images)
+        "#{model.name} – #{image_count} bilde(r)."
+     end,
+     fields: [id: "ID",
+              name: "Navn",
+              slug: "URL-tamp",
+              credits: "Kreditering",
+              order: "Rekkefølge",
+              creator: "Opprettet av",
+              images: "Bilder",
+              image_category: "Bildekategori",
+              inserted_at: "Opprettet",
+              updated_at: "Oppdatert"]]
 end
