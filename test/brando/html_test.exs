@@ -50,4 +50,21 @@ defmodule Brando.HTMLTest do
     date = %Ecto.DateTime{year: 2015, month: 1, day: 1}
     assert format_date(date) == "1/1/2015"
   end
+
+  test "media_url/1" do
+    assert media_url("test") == "/media/test"
+    assert media_url(nil) == "/media"
+  end
+
+  test "delete_form_button/2" do
+    {:safe, ret} = delete_form_button(%{id: 1}, :admin_user_path)
+    assert ret =~ "/admin/brukere/1"
+    assert ret =~ "value=\"delete\""
+  end
+
+  test "check_or_x/1" do
+    assert check_or_x(false) == {:safe, "<i class=\"fa fa-times text-danger\"></i>"}
+    assert check_or_x(nil) == {:safe, "<i class=\"fa fa-times text-danger\"></i>"}
+    assert check_or_x(true) == {:safe, "<i class=\"fa fa-check text-success\"></i>"}
+  end
 end

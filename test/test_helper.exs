@@ -23,6 +23,7 @@ Application.put_env(:brando, Brando.Menu, [
 Application.put_env(:brando, :router, RouterHelper.TestRouter)
 Application.put_env(:brando, :endpoint, Brando.Integration.Endpoint)
 Application.put_env(:brando, :repo, Brando.Integration.TestRepo)
+Application.put_env(:brando, :media_url, "/media")
 
 defmodule Brando.Integration.TestRepo do
   use Ecto.Repo,
