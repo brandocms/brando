@@ -1,4 +1,26 @@
 defmodule Brando.Meta do
+  @moduledoc """
+  Meta functions for Brando models
+
+  ## Usage:
+
+      use Brando.Meta,
+        [singular: "post",
+         plural: "poster",
+         repr: fn (model) -> "interpolate from model" end,
+         fields: [
+            id: "ID",
+            language: "Språk"]]
+
+  ## Options:
+
+    * `singular`: The singular form of the models representation
+    * `plural`: The plural form of the models representation
+    * `repr`: Function returning the repr of the record.
+    * `fields`: Keyword list of fields in the model. Used for translation.
+
+  """
+  @doc false
   defmacro __using__(opts) do
     quote do
       def __name__(:singular), do: unquote(opts[:singular])
