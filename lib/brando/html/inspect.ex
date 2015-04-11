@@ -3,9 +3,33 @@ defmodule Brando.HTML.Inspect do
   Rendering functions for displaying model data
   """
 
-  import Brando.Images.Helpers
   import Brando.HTML
-  import Phoenix.HTML.Tag, only: [content_tag: 3]
+  import Brando.Images.Helpers
+  import Ecto.DateTime.Util, only: [zero_pad: 2]
+  import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2]
+
+  @doc """
+  Returns the record's model name from __name__/1
+  `form` is `:singular` or `:plural`
+  """
+  @spec model_name(Struct.t, :singular | :plural) :: String.t
+  def model_name(record, form) do
+    record.__struct__.__name__(form)
+  end
+
+  @doc """
+  Returns the model's representation from __repr__/0
+  """
+  def model_repr(record) do
+    record.__struct__.__repr__(record)
+  end
+
+  @doc """
+  Looks up `field` in `module` for Linguist translations
+  """
+  def translate_field(module, field) do
+    module.t!("no", "model." <> to_string(field))
+  end
 
   @doc """
   Inspects and displays `model`
@@ -31,7 +55,12 @@ defmodule Brando.HTML.Inspect do
   defp render_inspect_field(name, module, type, value) do
     if not String.ends_with?(to_string(name), "_id") and not name in module.__hidden_fields__ do
       val = inspect_field(name, type, value)
-      ~s(<tr><td>#{translate_field(module, name)}</td><td>#{val}</td></tr>)
+      """
+      <tr>
+        <td>#{translate_field(module, name)}</td>
+        <td>#{val}</td>
+      </tr>
+      """
     end
   end
 
@@ -47,7 +76,7 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_field(_name, Ecto.DateTime, value) do
-    ~s(#{value.day}/#{value.month}/#{value.year} #{Ecto.DateTime.Util.zero_pad(value.hour, 2)}:#{Ecto.DateTime.Util.zero_pad(value.min, 2)})
+    ~s(#{value.day}/#{value.month}/#{value.year} #{zero_pad(value.hour, 2)}:#{zero_pad(value.min, 2)})
   end
 
   defp do_inspect_field(_name, Brando.Type.Role, value) do
@@ -121,28 +150,5 @@ defmodule Brando.HTML.Inspect do
   defp do_inspect_assoc(_name, %Ecto.Association.Has{} = type, value) do
     rows = Enum.map(value, fn (row) -> ~s(<div class="assoc #{type.field}">#{type.assoc.__repr__(row)}</div>) end)
     ~s(<tr><td><i class='fa fa-link'></i> Tilknyttede #{type.assoc.__name__(:plural)}</td><td>#{rows}</td></tr>)
-  end
-
-  @doc """
-  Returns the record's model name from __name__/1
-  `form` is `:singular` or `:plural`
-  """
-  @spec model_name(Struct.t, :singular | :plural) :: String.t
-  def model_name(record, form) do
-    record.__struct__.__name__(form)
-  end
-
-  @doc """
-  Returns the model's representation from __repr__/0
-  """
-  def model_repr(record) do
-    record.__struct__.__repr__(record)
-  end
-
-  @doc """
-  Looks up `field` in `module` for Linguist translations
-  """
-  def translate_field(module, field) do
-    module.t!("no", "model." <> to_string(field))
   end
 end
