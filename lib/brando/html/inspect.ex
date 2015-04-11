@@ -1,6 +1,11 @@
 defmodule Brando.HTML.Inspect do
+  @moduledoc """
+  Rendering functions for displaying model data
+  """
+
   import Brando.Images.Helpers
   import Brando.HTML
+
   @doc """
   Inspects and displays `model`
   """
@@ -8,81 +13,96 @@ defmodule Brando.HTML.Inspect do
     module = model.__struct__
     fields = module.__schema__(:fields)
     assocs = module.__schema__(:associations)
-    rendered_fields = Enum.join(Enum.map(fields, fn (field) -> inspect_field(field, module, module.__schema__(:field, field), Map.get(model, field)) end))
-    rendered_assocs = Enum.join(Enum.map(assocs, fn (assoc) -> inspect_assoc(assoc, module, module.__schema__(:association, assoc), Map.get(model, assoc)) end))
+
+    rendered_fields = fields
+    |> Enum.map(&(render_inspect_field(&1, module, module.__schema__(:field, &1), Map.get(model, &1))))
+    |> Enum.join
+
+    rendered_assocs = assocs
+    |> Enum.map(&(render_inspect_assoc(&1, module, module.__schema__(:association, &1), Map.get(model, &1))))
+    |> Enum.join
     Phoenix.HTML.safe(~s(<table class="table data-table">#{rendered_fields}#{rendered_assocs}</table>))
   end
 
-  defp inspect_field(name, module, type, value) do
-    unless String.ends_with?(to_string(name), "_id"), do:
-      do_inspect_field(translate_field(module, name), type, value)
+  defp render_inspect_field(name, module, type, value) do
+    if not String.ends_with?(to_string(name), "_id") and not name in module.__hidden_fields__ do
+      val = inspect_field(name, type, value)
+      ~s(<tr><td>#{translate_field(module, name)}</td><td>#{val}</td></tr>)
+    end
   end
 
-  defp do_inspect_field(name, Ecto.DateTime, nil) do
-    ~s(<tr><td>#{name}</td><td><em>Ingen verdi<em></td></tr>)
+  @doc """
+  Public interface to field inspection
+  """
+  def inspect_field(name, type, value) do
+    do_inspect_field(name, type, value)
   end
 
-  defp do_inspect_field(name, Ecto.DateTime, value) do
-    ~s(<tr><td>#{name}</td><td>#{value.day}/#{value.month}/#{value.year} #{value.hour}:#{Ecto.DateTime.Util.zero_pad(value.min, 2)}</td></tr>)
+  defp do_inspect_field(_name, Ecto.DateTime, nil) do
+    ~s(<em>Ingen verdi<em>)
   end
 
-  defp do_inspect_field(name, Brando.Type.Role, value) do
-    ~s(<tr><td>#{name}</td><td>#{inspect(value)}</td></tr>)
+  defp do_inspect_field(_name, Ecto.DateTime, value) do
+    ~s(#{value.day}/#{value.month}/#{value.year} #{Ecto.DateTime.Util.zero_pad(value.hour, 2)}:#{Ecto.DateTime.Util.zero_pad(value.min, 2)})
   end
 
-  defp do_inspect_field(name, Brando.Type.Json, _value) do
-    ~s(<tr><td>#{name}</td><td><em>Kodet verdi</em></td></tr>)
+  defp do_inspect_field(_name, Brando.Type.Role, value) do
+    ~s(#{inspect(value)})
   end
 
-  defp do_inspect_field(name, Brando.Type.Image, nil) do
-    ~s(<tr><td>#{name}</td><td><em>Inget tilknyttet bilde</em></td></tr>)
+  defp do_inspect_field(_name, Brando.Type.Json, _value) do
+    ~s(<em>Kodet verdi</em>)
   end
 
-  defp do_inspect_field(name, Brando.Type.Image.Config, _value) do
-    ~s(<tr><td>#{name}</td><td><em>Konfigurasjonsdata</em></td></tr>)
+  defp do_inspect_field(_name, Brando.Type.Image, nil) do
+    ~s(<em>Inget tilknyttet bilde</em>)
   end
 
-  defp do_inspect_field(name, Brando.Type.Image, value) do
-    ~s(<tr><td>#{name}</td><td><div class="imageserie m-b-md"><img src="#{media_url(img(value, :thumb))}" style="padding-bottom: 3px;" /></div></td></tr>)
+  defp do_inspect_field(_name, Brando.Type.Image.Config, _value) do
+    ~s(<em>Konfigurasjonsdata</em>)
   end
 
-  defp do_inspect_field(name = "Passord", :string, _value) do
-    ~s(<tr><td>#{name}</td><td><em>** sensurert **</em></td></tr>)
+  defp do_inspect_field(_name, Brando.Type.Image, value) do
+    ~s(<div class="imageserie m-b-md"><img src="#{media_url(img(value, :thumb))}" style="padding-bottom: 3px;" /></div>)
   end
 
-  defp do_inspect_field(name, :string, nil) do
-    ~s(<tr><td>#{name}</td><td><em>Ingen verdi</em></td></tr>)
+  defp do_inspect_field(:password, :string, _value) do
+    ~s(<em>** sensurert **</em>)
   end
 
-  defp do_inspect_field(name, :string, "") do
-    ~s(<tr><td>#{name}</td><td><em>Ingen verdi</em></td></tr>)
+  defp do_inspect_field(_name, :string, nil) do
+    ~s(<em>Ingen verdi</em>)
   end
 
-  defp do_inspect_field(name, :string, value) do
-    ~s(<tr><td>#{name}</td><td>#{value}</td></tr>)
+  defp do_inspect_field(_name, :string, "") do
+    ~s(<em>Ingen verdi</em>)
   end
 
-  defp do_inspect_field(name, :integer, value) do
-    ~s(<tr><td>#{name}</td><td>#{value}</td></tr>)
+  defp do_inspect_field(_name, :string, value), do: value
+  defp do_inspect_field(_name, :integer, value), do: value
+
+  defp do_inspect_field(_name, :boolean, :true) do
+    ~s(<i class="fa fa-check text-success"></i>)
   end
 
-  defp do_inspect_field(name, :boolean, :true) do
-    ~s(<tr><td>#{name}</td><td><i class="fa fa-check text-success"></i></td></tr>)
+  defp do_inspect_field(_name, :boolean, nil) do
+    ~s(<i class="fa fa-times text-danger"></i>)
   end
 
-  defp do_inspect_field(name, :boolean, nil) do
-    ~s(<tr><td>#{name}</td><td><i class="fa fa-times text-danger"></i></td></tr>)
+  defp do_inspect_field(_name, _type, value), do: inspect(value)
+
+  #
+  # Associations
+
+  defp render_inspect_assoc(name, module, type, value) do
+    inspect_assoc(translate_field(module, name), type, value)
   end
 
-
-  defp do_inspect_field(name, _type, value) do
-    require Logger
-    Logger.debug(inspect(_type))
-    ~s(<tr><td>#{name}</td><td>#{inspect(value)}</td></tr>)
-  end
-
-  defp inspect_assoc(name, module, type, value) do
-    do_inspect_assoc(translate_field(module, name), type, value)
+  @doc """
+  Public interface to inspect model associations
+  """
+  def inspect_assoc(name, type, value) do
+    do_inspect_assoc(name, type, value)
   end
 
   defp do_inspect_assoc(name, %Ecto.Association.BelongsTo{} = type, value) do
@@ -115,7 +135,10 @@ defmodule Brando.HTML.Inspect do
     record.__struct__.__repr__(record)
   end
 
-  defp translate_field(module, field) do
+  @doc """
+  Looks up `field` in `module` for Linguist translations
+  """
+  def translate_field(module, field) do
     module.t!("no", "model." <> to_string(field))
   end
 end
