@@ -69,6 +69,9 @@ defmodule Brando.HTML do
       "005"
 
   """
+  def zero_pad(str) when is_binary(str) do
+    String.rjust(str, 3, ?0)
+  end
   def zero_pad(int) do
     String.rjust(Integer.to_string(int), 3, ?0)
   end
