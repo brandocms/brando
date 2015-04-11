@@ -152,10 +152,8 @@ defmodule Brando.News.Model.Post do
   def get(id: id) do
     from(m in __MODULE__,
          where: m.id == ^id,
-         preload: [:creator],
-         limit: 1)
-    |> Brando.get_repo.all
-    |> List.first
+         preload: [:creator])
+    |> Brando.get_repo.one
   end
 
   @doc """

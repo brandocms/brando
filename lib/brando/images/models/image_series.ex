@@ -106,7 +106,7 @@ defmodule Brando.Images.Model.ImageSeries do
       where: m.id == ^id,
       order_by: i.order,
       preload: [:creator, :image_category, images: i]))
-      |> Brando.get_repo.one!
+      |> Brando.get_repo.one
   end
 
   @doc """

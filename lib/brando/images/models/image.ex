@@ -95,10 +95,8 @@ defmodule Brando.Images.Model.Image do
 
   def get(id: id) do
     from(m in __MODULE__,
-         where: m.id == ^id,
-         limit: 1)
-    |> Brando.get_repo.all
-    |> List.first
+         where: m.id == ^id)
+    |> Brando.get_repo.one
   end
 
   def reorder_images(ids, vals) do

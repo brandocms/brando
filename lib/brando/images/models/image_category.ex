@@ -96,7 +96,7 @@ defmodule Brando.Images.Model.ImageCategory do
          where: m.id == ^id,
          preload: [:creator, :image_series],
          limit: 1)
-    |> Brando.get_repo.one!
+    |> Brando.get_repo.one
   end
 
   @doc """
