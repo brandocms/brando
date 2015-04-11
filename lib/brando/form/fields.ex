@@ -34,7 +34,7 @@ defmodule Brando.Form.Fields do
   @doc """
   Translate errors
   """
-  @spec __parse_error__({atom, term} | atom) :: String.t
+  @spec __parse_error__(String.t | {String.t, integer}) :: String.t
   def __parse_error__(error) do
     case error do
       "can't be blank"     -> "Feltet er påkrevet."
@@ -289,13 +289,9 @@ defmodule Brando.Form.Fields do
 
   @doc """
   If `value` is not nil, returns value.
-  If it's a map, return blank. This is to deal with Plug.Upload
-  maps.
-  TODO: handle this better.
   """
   def get_value([]), do: ""
   def get_value(nil), do: ""
-  def get_value(value) when is_map(value), do: ""
   def get_value(value), do: " " <> "value=\"#{value}\""
 
   @doc """
