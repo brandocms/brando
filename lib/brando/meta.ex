@@ -26,6 +26,12 @@ defmodule Brando.Meta do
       def __name__(:singular), do: unquote(opts[:singular])
       def __name__(:plural), do: unquote(opts[:plural])
       def __repr__(model), do: unquote(opts[:repr]).(model)
+      def __fields__ do
+        Keyword.keys(unquote(opts[:fields]))
+      end
+      def __hidden_fields__ do
+        unquote(opts[:hidden_fields] || [])
+      end
       use Linguist.Vocabulary
       locale "no", [model: unquote(opts[:fields])]
     end
