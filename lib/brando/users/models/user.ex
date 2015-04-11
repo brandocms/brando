@@ -244,11 +244,10 @@ defmodule Brando.Users.Model.User do
               email: "Epost",
               full_name: "Navn",
               password: "Passord",
-              avatar: "Avatar",
-              creator: "Opprettet av",
               role: "Roller",
               last_login: "Siste innlogging",
               inserted_at: "Opprettet",
-              updated_at: "Oppdatert"]]
-
+              updated_at: "Oppdatert",
+              avatar: "Avatar"],
+     hidden_fields: [:password, :creator]]
 end

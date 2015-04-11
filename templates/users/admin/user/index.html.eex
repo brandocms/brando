@@ -1,66 +1,9 @@
     <h1>Brukeroversikt</h1>
-    <table class="table table-striped">
-      <colgroup>
-      <col span="1" style="width: 50px; font-weight: bold;">
-      <col span="1" style="width: 60px;">
-      <col span="1" style="width: 200px;">
-      <col span="1" style="">
-      <col span="2" style="width: 60px;">
-      <col span="1" style="width: 40px;">
-    </colgroup>
-    <thead>
-      <tr>
-        <th class="text-center">&#8470;</th>
-        <th>Brukernavn</th>
-        <th>Epost</th>
-        <th>Fullt navn</th>
-        <th>Opprettet</th>
-        <th>Avatar</th>
-        <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <%= for user <- @users || [] do %>
-        <tr>
-          <td class="text-center text-mono text-muted"><small>#<%= zero_pad(user.id) %></small></td>
-          <td><%= user.username %></td>
-          <td><%= user.email %></td>
-          <td><%= user.full_name %></td>
-          <td><%= format_date(user.inserted_at) %></td>
-          <td class="text-center"><%= check_or_x(user.avatar) %></td>
-          <td>
-            <div class="dropdown">
-              <a class="dropdown-toggle ddbutton" data-toggle="dropdown">
-                <i class="fa fa-bars"></i>
-              </a>
-              <ul class="dropdown-menu" style="right: 0; left: auto;">
-                <li>
-                <a href="<%= helpers(@conn).admin_user_path(@conn, :show, user.id) %>">
-                    <i class="fa fa-search m-r-sm"> </i>
-                    Vis bruker
-                  </a>
-                </li>
-                <li>
-                  <a href="<%= helpers(@conn).admin_user_path(@conn, :edit, user.id) %>">
-                    <i class="fa fa-edit m-r-sm"> </i>
-                    Endre bruker
-                  </a>
-                </li>
-
-                <li class="divider"></li>
-                <li>
-                  <a href="<%= helpers(@conn).admin_user_path(@conn, :delete_confirm, user.id) %>">
-                    <i class="fa fa-trash m-r-sm"> </i>
-                    Slett bruker
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </td>
-        </tr>
-        <% end %>
-      </tbody>
-    </table>
+    <%= Brando.HTML.Tablize.tablize(@users,
+                [{"Vis bruker", "fa-search", @conn, :admin_user_path, :show, :id},
+                 {"Endre bruker", "fa-edit", @conn, :admin_user_path, :edit, :id},
+                 {"Slett bruker", "fa-trash", @conn, :admin_user_path, :delete_confirm, :id}],
+                check_or_x: [:avatar], hide: [:password, :updated_at, :inserted_at]) %>
     <div class="form-actions">
       <a href="<%= helpers(@conn).admin_user_path(@conn, :new) %>" class="btn btn-primary">
         <i class="fa fa-plus m-r-xs"></i> Ny bruker

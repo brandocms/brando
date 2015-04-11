@@ -8,6 +8,7 @@ defmodule Brando.HTML do
     quote do
       import Brando.HTML
       import Brando.HTML.Inspect
+      import Brando.HTML.Tablize
       import Brando.Images.Helpers
     end
   end
