@@ -3,7 +3,7 @@ defmodule Brando.Auth.AuthController do
   Controller for authentication actions.
   """
   use Phoenix.Controller
-
+  alias Brando.Users.Model.User
   plug :action
 
   @doc false
@@ -12,7 +12,10 @@ defmodule Brando.Auth.AuthController do
     user = model.get(email: email)
     case model.auth?(user, password) do
       true ->
-        user = Map.delete(user, :password)
+        user = user
+        |> User.set_last_login
+        |> Map.delete(:password)
+
         fetch_session(conn)
         |> put_session(:current_user, user)
         |> put_flash(:notice, "Innloggingen var vellykket")
