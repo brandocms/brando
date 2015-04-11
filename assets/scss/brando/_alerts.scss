@@ -1,15 +1,15 @@
 .alert {
-  font-size: 15px;
+  font-size: 1.1rem;
   font-weight: bold;
   margin-top: 15px;
-  padding: 10px;
-  color: #555;
+  padding: 12px 10px 10px 15px;
+  color: #fff;
   &.alert-info {
-    background-color: #CCF5CC;
-    border-bottom: 4px solid #ABE4AB;
+    background-color: #4AAE66;
+    border-bottom: 4px solid #299848;
   }
   &.alert-danger {
-    background-color: #F5CCCC;
-    border-bottom: 4px solid #E4ABAB;
+    background-color: #C04040;
+    border-bottom: 4px solid #9D2828;
   }
 }

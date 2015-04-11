@@ -239,11 +239,10 @@
 
 .close {
   float: right;
-  font-size: 21px;
+  padding-right: 10px;
+  font-size: 2rem;
   font-weight: 700;
-  line-height: 1;
-  color: #000;
+  line-height: 1.5rem;
+  color: #FFF;
   text-shadow: 0 1px 0 #fff;
-  filter: alpha(opacity=20);
-  opacity: .2;
 }

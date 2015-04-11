@@ -164,8 +164,12 @@ $legend-border-color: #E0E0E0;
             }
             .error {
                 margin-top: 6px;
-                font-size: 12px;
-                color: #B01E1E;
+                font-size: 0.9rem;
+                color: #fff;
+                background-color: #C04040;
+                font-weight: bold;
+                padding: 2px 10px;
+                display: inline-block;
 
                 i {
                     margin-right: 5px;
