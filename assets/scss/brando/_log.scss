@@ -1,0 +1,17 @@
+#log-wrapper {
+    background-color: #f7f7f7;
+    border-top: 3px solid #ff0000;
+    display: none;
+
+    #log-content {
+      background-color: #fff;
+
+      li {
+        list-style-type: none;
+        padding: 10px 0;
+        border-bottom: 1px solid #ddd;
+        font-size: 0.9rem;
+      }
+    }
+}
+

@@ -102,6 +102,10 @@
         <%= @inner %>
         </div>
       </div>
+      <div class="grid-block noscroll" id="log-wrapper">
+        <div class="grid-content" id="log-content">
+        </div>
+      </div>
     </div>
   </body>
 </html>

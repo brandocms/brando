@@ -5,6 +5,7 @@ defmodule Brando.HTML.Tablize do
 
   import Brando.HTML, only: [check_or_x: 1, zero_pad: 1]
   import Brando.HTML.Inspect, only: [inspect_field: 3, translate_field: 2]
+  import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2]
 
   @doc """
   Converts `records` into a formatted table with dropdown menus.
@@ -36,8 +37,9 @@ defmodule Brando.HTML.Tablize do
     module = List.first(records).__struct__
     table_header = render_thead(module.__fields__, module, opts)
     table_body = render_tbody(module.__fields__, records, module, dropdowns, opts)
-    table = ~s(<table class="table table-striped">#{table_header}#{table_body}</table>)
-    Phoenix.HTML.safe(table)
+    content_tag :table, class: "table table-striped" do
+      {:safe, "#{table_header}#{table_body}"}
+    end
   end
 
   defp render_tbody(fields, records, module, dropdowns, opts) do
