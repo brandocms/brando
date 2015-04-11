@@ -182,13 +182,13 @@ defmodule Brando.HTML do
   end
 
   def check_or_x(nil) do
-    Phoenix.HTML.safe(~s(<i class="fa fa-times text-danger"></i>))
+    ~s(<i class="fa fa-times text-danger"></i>)
   end
   def check_or_x(false) do
-    Phoenix.HTML.safe(~s(<i class="fa fa-times text-danger"></i>))
+    ~s(<i class="fa fa-times text-danger"></i>)
   end
 
   def check_or_x(_) do
-    Phoenix.HTML.safe(~s(<i class="fa fa-check text-success"></i>))
+    ~s(<i class="fa fa-check text-success"></i>)
   end
 end
