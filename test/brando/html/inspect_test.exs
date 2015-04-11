@@ -13,7 +13,6 @@ defmodule Brando.HTML.InspectTest do
     assert {:ok, user} = User.create(@user_params)
     {:safe, ret} = model(user)
     assert ret =~ "zabuzasixu"
-    assert ret =~ "** sensurert **"
     assert ret =~ "Nita Bond"
   end
 
