@@ -5,6 +5,7 @@ defmodule Brando.HTML.Inspect do
 
   import Brando.Images.Helpers
   import Brando.HTML
+  import Phoenix.HTML.Tag, only: [content_tag: 3]
 
   @doc """
   Inspects and displays `model`
@@ -21,7 +22,10 @@ defmodule Brando.HTML.Inspect do
     rendered_assocs = assocs
     |> Enum.map(&(render_inspect_assoc(&1, module, module.__schema__(:association, &1), Map.get(model, &1))))
     |> Enum.join
-    Phoenix.HTML.safe(~s(<table class="table data-table">#{rendered_fields}#{rendered_assocs}</table>))
+
+    content_tag :table, class: "table data-table" do
+      {:safe, "#{rendered_fields}#{rendered_assocs}"}
+    end
   end
 
   defp render_inspect_field(name, module, type, value) do
