@@ -39,7 +39,7 @@ gulp.task('scripts-brando', function() {
 
 
 gulp.task('scripts-vendor', function () {
-    return gulp.src(['../deps/phoenix/priv/static/phoenix.js',
+    return gulp.src([
                      'js/vendor/accordion.js',
                      'js/vendor/dropdown.js',
                      'js/vendor/sortable.js',
@@ -47,7 +47,8 @@ gulp.task('scripts-vendor', function () {
                      'js/vendor/gridforms.js',
                      'js/vendor/jquery.slugit.js',
                      'js/vendor/vex.js',
-                     'js/vendor/vex.dialog.js',])
+                     'js/vendor/vex.dialog.js'
+                    ])
         .pipe(babel()).on('error', errorHandler)
         .pipe(concat('brando.vendor.js'))
         .pipe(gulp.dest('../priv/static/brando/js'))
