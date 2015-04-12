@@ -82,7 +82,8 @@ defmodule Brando.HTML.Tablize do
   end
 
   defp do_th(field, module, nil) do
-    ~s(<th>#{translate_field(module, field)}</th>)
+    field = translate_field(module, field)
+    ~s(<th>#{field}</th>)
   end
 
   defp do_th(field, module, hidden_fields) do
