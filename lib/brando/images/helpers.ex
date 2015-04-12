@@ -5,19 +5,6 @@ defmodule Brando.Images.Helpers do
   import Brando.Images.Utils
 
   @doc """
-  View helper wrapper for `Brando.Images.Utils.size_dir/2`
-  Inserts the `size` into `file`, returning the path to the image.
-  If `file` is nil, use `default` instead.
-  """
-  def _img(file, size, default \\ nil)
-  def _img(nil, size, default) do
-    size_dir(default, size)
-  end
-  def _img(file, size, _default) do
-    size_dir(file, size)
-  end
-
-  @doc """
   Grabs `size` from the `image_field` json struct.
   If default is passed, return size_dir of `default`.
   Returns path to image.
