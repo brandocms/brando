@@ -7,5 +7,6 @@ defmodule Brando.Images.HelpersTest do
     assert img(img, :thumb) == "images/thumb/file.jpg"
     assert img(nil, :thumb, "default.jpg") == "thumb/default.jpg"
     assert img(img, :thumb, "default.jpg") == "images/thumb/file.jpg"
+    assert img(img, "thumb", "default.jpg") == "images/thumb/file.jpg"
   end
 end
