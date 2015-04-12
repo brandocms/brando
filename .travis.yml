@@ -1,4 +1,6 @@
 language: erlang
+addons:
+  postgresql: "9.3"
 otp_release:
   - 17.4
 sudo: false
