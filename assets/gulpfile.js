@@ -40,6 +40,7 @@ gulp.task('scripts-brando', function() {
 
 gulp.task('scripts-vendor', function () {
     return gulp.src([
+                     'js/vendor/jquery.min.js',
                      'js/vendor/accordion.js',
                      'js/vendor/dropdown.js',
                      'js/vendor/sortable.js',

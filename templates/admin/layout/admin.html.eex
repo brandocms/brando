@@ -12,15 +12,14 @@
     <link rel="stylesheet" href="/static/brando/css/brando.css">
     <%= css_extra(@conn) %>
 
-    <script type="text/javascript" src="/static/brando/js/jquery.min.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/brando/js/to-markdown.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/brando/js/markdown.min.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/brando.vendor.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/brando.js" charset="utf-8"></script>
+    <script type="text/javascript" src="/static/brando/js/to-markdown.js" charset="utf-8"></script>
+    <script type="text/javascript" src="/static/brando/js/markdown.min.js" charset="utf-8"></script>
 
     <script type="text/javascript" src="/static/brando/js/libs/backbone/underscore.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/libs/backbone/backbone.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/brando/js/twined-backbone.js" charset="utf-8"></script>
+    <!-- <script type="text/javascript" src="/static/brando/js/twined-backbone.js" charset="utf-8"></script> -->
     <%= js_extra(@conn) %>
   </head>
 
