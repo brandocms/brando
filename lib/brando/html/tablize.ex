@@ -13,16 +13,16 @@ defmodule Brando.HTML.Tablize do
   ## Example
 
       tablize(@users,
-              [{"Vis bruker", "fa-search", @conn, :admin_user_path, :show, :id},
-               {"Endre bruker", "fa-edit", @conn, :admin_user_path, :edit, :id},
-               {"Slett bruker", "fa-trash", @conn, :admin_user_path, :delete_confirm, :id}],
+              [{"Vis bruker", "fa-search", :admin_user_path, :show, :id},
+               {"Endre bruker", "fa-edit", :admin_user_path, :edit, :id},
+               {"Slett bruker", "fa-trash", :admin_user_path, :delete_confirm, :id}],
                check_or_x: [:avatar], hide: [:password, :last_login, :inserted_at])
 
   ## Arguments
 
     * `records` - List of records to render
     * `dropdowns` - List of dropdowns in format:
-                    {display_name, icon, conn, helper_path, action, identifier or nil}
+                    {display_name, icon, helper_path, action, identifier or nil}
 
   ## Options
 
@@ -93,9 +93,9 @@ defmodule Brando.HTML.Tablize do
 
   defp render_dropdowns(dropdowns, record) do
     dropdowns = for dropdown <- dropdowns do
-      {desc, icon, conn, helper, action, param} = dropdown
-      params = if param != nil, do: [conn, action, record], else: [conn, action]
-      url = apply(Brando.HTML.helpers(conn), helper, params)
+      {desc, icon, helper, action, param} = dropdown
+      params = if param != nil, do: [Brando.get_endpoint, action, record], else: [Brando.get_endpoint, action]
+      url = apply(Brando.get_helpers, helper, params)
       """
       <li>
         <a href="#{url}">
