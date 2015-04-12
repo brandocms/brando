@@ -81,11 +81,6 @@ defmodule Brando.HTML.Tablize do
     ~s(<th class="text-center">&#8470;</th>)
   end
 
-  defp do_th(field, module, nil) do
-    field = translate_field(module, field)
-    ~s(<th>#{field}</th>)
-  end
-
   defp do_th(field, module, hidden_fields) do
     unless field in hidden_fields do
       ~s(<th>#{translate_field(module, field)}</th>)
