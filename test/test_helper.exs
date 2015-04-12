@@ -11,6 +11,7 @@ alias Brando.Integration.TestRepo
 Application.put_env(:brando, TestRepo,
   url: "ecto://postgres:postgres@localhost/brando_test",
   adapter: Ecto.Adapters.Postgres,
+  extensions: [{Brando.Postgrex.Extension.JSON, library: Poison}],
   size: 1,
   max_overflow: 0)
 
@@ -24,6 +25,7 @@ Application.put_env(:brando, :router, RouterHelper.TestRouter)
 Application.put_env(:brando, :endpoint, Brando.Integration.Endpoint)
 Application.put_env(:brando, :repo, Brando.Integration.TestRepo)
 Application.put_env(:brando, :media_url, "/media")
+Application.put_env(:brando, Villain, parser: Brando.Villain.Parser.Default)
 
 defmodule Brando.Integration.TestRepo do
   use Ecto.Repo,

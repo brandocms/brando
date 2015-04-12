@@ -136,8 +136,10 @@ defmodule Brando.News.Model.Post do
     end
   end
 
-  defp encode_data(params), do:
+  defp encode_data(params) when is_binary(params), do:
     Map.put(params, "data", Poison.decode!(params["data"]))
+  defp encode_data(params) when is_map(params), do:
+    params
 
   @doc """
   Get model by `val` or raise `Ecto.NoResultsError`.
