@@ -67,6 +67,8 @@ defmodule Brando.News.ControllerTest do
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
     assert conn.resp_body =~ "Endre post"
     assert conn.resp_body =~ "value=\"Header\""
+    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/nyheter/1234/endre")
+    assert conn.status == 404
 
   end
 
