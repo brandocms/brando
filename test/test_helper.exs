@@ -1,4 +1,4 @@
-Logger.configure(level: :info)
+#Logger.configure(level: :info)
 ExUnit.start
 
 # Clear tmp dir
