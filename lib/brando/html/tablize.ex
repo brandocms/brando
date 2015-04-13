@@ -37,9 +37,7 @@ defmodule Brando.HTML.Tablize do
     module = List.first(records).__struct__
     table_header = render_thead(module.__fields__, module, opts)
     table_body = render_tbody(module.__fields__, records, module, dropdowns, opts)
-    content_tag :table, class: "table table-striped" do
-      {:safe, "#{table_header}#{table_body}"}
-    end
+    content_tag :table, {:safe, "#{table_header}#{table_body}"}, class: "table table-striped"
   end
 
   defp render_tbody(fields, records, module, dropdowns, opts) do
