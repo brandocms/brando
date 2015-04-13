@@ -112,10 +112,4 @@ defmodule Brando.News.Admin.PostController do
     |> put_flash(:notice, "#{Brando.HTML.Inspect.model_name(record, :singular)} #{model.__repr__(record)} slettet.")
     |> redirect(to: router_module(conn).__helpers__.admin_post_path(conn, :index))
   end
-
-  @doc false
-  def not_found(conn, _params) do
-    render conn, "not_found"
-  end
-
 end
