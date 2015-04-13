@@ -59,11 +59,6 @@ defmodule Brando.News.Admin.PostController do
   end
 
   @doc false
-  def create(conn, _params) do
-    conn |> render(:new)
-  end
-
-  @doc false
   def edit(conn, %{"id" => id}) do
     model = conn.private[:model]
     if post = model.get(id: String.to_integer(id)) do
