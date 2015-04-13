@@ -39,13 +39,13 @@ defmodule RouterHelper do
     |> Plug.Conn.fetch_session()
   end
 
-  def with_user(conn) do
+  def with_user(conn, user \\ nil) do
     conn
     |> Plug.Conn.put_private(:model, Brando.Users.Model.User)
     |> Map.put(:secret_key_base, String.duplicate("abcdefgh", 8))
     |> Plug.Session.call(@session)
     |> Plug.Conn.fetch_session()
-    |> Plug.Conn.put_session(:current_user, @current_user)
+    |> Plug.Conn.put_session(:current_user, user || @current_user)
   end
 
   def call(router, verb, path, params \\ nil, headers \\ []) do
@@ -61,6 +61,13 @@ defmodule RouterHelper do
   def call_with_user(router, verb, path, params \\ nil, headers \\ []) do
     conn = conn(verb, path, params, headers)
     |> with_user
+    |> Plug.Conn.fetch_params
+    router.call(conn, router.init([]))
+  end
+
+  def call_with_custom_user(router, verb, path, params \\ nil, headers \\ [], user: user) do
+    conn = conn(verb, path, params, headers)
+    |> with_user(user)
     |> Plug.Conn.fetch_params
     router.call(conn, router.init([]))
   end
@@ -81,6 +88,7 @@ defmodule RouterHelper do
     use Phoenix.Router
     alias Brando.Plug.Authenticate
     import Brando.Users.Admin.Routes
+    import Brando.News.Admin.Routes
 
     pipeline :admin do
       plug :accepts, ~w(html json)
@@ -105,6 +113,7 @@ defmodule RouterHelper do
       user_resources "/brukere", Brando.Users.Admin.UserController, private: %{model: Brando.Users.Model.User}
       user_resources "/brukere2", private: %{model: Brando.Users.Model.User}
       user_resources "/brukere3"
+      post_resources "/nyheter"
       get "/", Brando.Dashboard.Admin.DashboardController, :dashboard
     end
 
