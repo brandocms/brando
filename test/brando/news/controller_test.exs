@@ -106,6 +106,15 @@ defmodule Brando.News.ControllerTest do
     assert flash == %{"notice" => "Post oppdatert."}
   end
 
+  test "delete_confirm" do
+    user = create_user
+    assert {:ok, post} = Post.create(@post_params, user)
+    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/nyheter/#{post.id}/slett")
+    assert conn.status == 200
+    assert conn.path_info == ["admin", "nyheter", "#{post.id}", "slett"]
+    assert conn.resp_body =~ "Slett post: Header"
+  end
+
   test "delete" do
     user = create_user
     assert {:ok, post} = Post.create(@post_params, user)
