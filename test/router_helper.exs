@@ -89,6 +89,7 @@ defmodule RouterHelper do
     alias Brando.Plug.Authenticate
     import Brando.Users.Admin.Routes
     import Brando.News.Admin.Routes
+    import Brando.Images.Admin.Routes
 
     pipeline :admin do
       plug :accepts, ~w(html json)
@@ -114,6 +115,7 @@ defmodule RouterHelper do
       user_resources "/brukere2", private: %{model: Brando.Users.Model.User}
       user_resources "/brukere3"
       post_resources "/nyheter"
+      image_resources "/bilder"
       get "/", Brando.Dashboard.Admin.DashboardController, :dashboard
     end
 

@@ -14,6 +14,7 @@ defmodule Brando.HTMLTest do
     assert zero_pad(10) == "010"
     assert zero_pad(100) == "100"
     assert zero_pad(1000) == "1000"
+    assert zero_pad("1") == "001"
   end
 
   test "active_path/2" do
@@ -60,6 +61,12 @@ defmodule Brando.HTMLTest do
     {:safe, ret} = delete_form_button(%{id: 1}, :admin_user_path)
     assert ret =~ "/admin/brukere/1"
     assert ret =~ "value=\"delete\""
+  end
+
+  test "dropzone_form/3" do
+    {:safe, form} = dropzone_form(:admin_image_series_path, 1, nil)
+    assert form =~ "/admin/bilder/serier/1/last-opp"
+    assert form =~ "dropzone"
   end
 
   test "check_or_x/1" do
