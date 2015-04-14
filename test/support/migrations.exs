@@ -59,10 +59,8 @@ defmodule Brando.Integration.Migration do
     create index(:imageseries, [:order])
 
     create table(:images) do
-      add :title,             :text
-      add :credits,           :text
+      add :image,             :text
       add :order,             :integer
-      add :optimized,         :boolean
       add :creator_id,        references(:users)
       add :image_series_id,   references(:imageseries)
       timestamps
