@@ -39,7 +39,6 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert conn.resp_body =~ "value=\"test-category\""
     conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/kategorier/1234/endre")
     assert conn.status == 404
-
   end
 
   test "create (post) w/params" do
@@ -76,6 +75,32 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert flash == %{"notice" => "Kategori oppdatert."}
   end
 
+  test "config (get)" do
+    user = create_user
+    assert {:ok, category} = ImageCategory.create(@params, user)
+    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/kategorier/#{category.id}/konfigurer")
+    assert conn.status == 200
+    assert conn.path_info == ["admin", "bilder", "kategorier", "#{category.id}", "konfigurer"]
+    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+    assert conn.resp_body =~ "Konfigurér bildekategori"
+    assert conn.resp_body =~ "imagecategoryconfig[cfg]"
+    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/kategorier/1234/konfigurer")
+    assert conn.status == 404
+  end
+
+  test "config (post) w/params" do
+    user = create_user
+    params = Map.put(@params, "creator_id", user.id)
+    assert {:ok, category} = ImageCategory.create(params, user)
+    conn = call_with_user(RouterHelper.TestRouter, :patch, "/admin/bilder/kategorier/#{category.id}/konfigurer", %{"imagecategoryconfig" => params})
+    assert conn.status == 302
+    assert get_resp_header(conn, "Location") == ["/admin/bilder"]
+    assert conn.path_info == ["admin", "bilder", "kategorier", "#{category.id}", "konfigurer"]
+    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+    %{phoenix_flash: flash} = conn.private
+    assert flash == %{"notice" => "Kategori konfigurert."}
+  end
+
   test "delete_confirm" do
     user = create_user
     assert {:ok, category} = ImageCategory.create(@params, user)
@@ -93,5 +118,7 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert conn.path_info == ["admin", "bilder", "kategorier", "#{category.id}"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
     assert get_resp_header(conn, "Location") == ["/admin/bilder"]
+    %{phoenix_flash: flash} = conn.private
+    assert flash == %{"notice" => "bildekategori Test Category slettet."}
   end
 end

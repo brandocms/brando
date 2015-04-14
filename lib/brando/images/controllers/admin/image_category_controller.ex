@@ -10,14 +10,6 @@ defmodule Brando.Images.Admin.ImageCategoryController do
   plug :action
 
   @doc false
-  def index(conn, _params) do
-    category_model = conn.private[:category_model]
-    conn
-    |> assign(:categories, category_model.all)
-    |> render(:index)
-  end
-
-  @doc false
   def new(conn, _params) do
     conn
     |> render(:new)
@@ -75,13 +67,16 @@ defmodule Brando.Images.Admin.ImageCategoryController do
   @doc false
   def configure(conn, %{"id" => category_id}) do
     model = conn.private[:category_model]
-    data = model.get(id: String.to_integer(category_id))
-    {:ok, cfg} = Brando.Type.Image.Config.dump(data.cfg)
-    data = Map.put(data, :cfg, cfg)
-    conn
-    |> assign(:image_category, data)
-    |> assign(:id, category_id)
-    |> render(:configure)
+    if data = model.get(id: String.to_integer(category_id)) do
+      {:ok, cfg} = Brando.Type.Image.Config.dump(data.cfg)
+      data = Map.put(data, :cfg, cfg)
+      conn
+      |> assign(:image_category, data)
+      |> assign(:id, category_id)
+      |> render(:configure)
+    else
+      conn |> put_status(:not_found) |> render(:not_found)
+    end
   end
 
   def configure_patch(conn, %{"imagecategoryconfig" => form_data, "id" => id}) do
@@ -90,7 +85,7 @@ defmodule Brando.Images.Admin.ImageCategoryController do
     case model.update(record, form_data) do
       {:ok, _updated_record} ->
         conn
-        |> put_flash(:notice, "Kategori oppdatert.")
+        |> put_flash(:notice, "Kategori konfigurert.")
         |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
       {:error, errors} ->
         conn
