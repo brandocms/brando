@@ -43,11 +43,14 @@ defmodule Brando.Images.Admin.ImageCategoryController do
   @doc false
   def edit(conn, %{"id" => id}) do
     model = conn.private[:category_model]
-    data = model.get(id: String.to_integer(id))
-    conn
-    |> assign(:image_category, data)
-    |> assign(:id, id)
-    |> render(:edit)
+    if data = model.get(id: String.to_integer(id)) do
+      conn
+      |> assign(:image_category, data)
+      |> assign(:id, id)
+      |> render(:edit)
+    else
+      conn |> put_status(:not_found) |> render(:not_found)
+    end
   end
 
   @doc false
