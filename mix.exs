@@ -10,6 +10,7 @@ defmodule Brando.Mixfile do
       elixir: "~> 1.0",
       deps: deps,
       compilers: [:phoenix] ++ Mix.compilers,
+      elixirc_paths: elixirc_paths(Mix.env),
       test_coverage: [tool: ExCoveralls],
       package: [
         contributors: ["Trond Mjøen"],
@@ -47,4 +48,8 @@ defmodule Brando.Mixfile do
       {:inch_ex, only: :docs}
     ]
   end
+
+  # Specifies which paths to compile per environment
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_),     do: ["lib"]
 end
