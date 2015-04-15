@@ -65,9 +65,9 @@ defmodule RouterHelper do
     router.call(conn, router.init([]))
   end
 
-  def json_with_user(router, verb, path, params \\ nil) do
+  def json_with_custom_user(router, verb, path, params \\ nil, user: user) do
     conn = conn(verb, path, params)
-    |> with_user
+    |> with_user(user)
     |> put_req_header("accept", "application/json")
     |> put_req_header("X-Requested-With", "XMLHttpRequest")
     |> Plug.Conn.fetch_params

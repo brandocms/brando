@@ -125,8 +125,12 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "upload_post" do
-    series = create_series
-    conn = json_with_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params})
+    user = create_user
+    category = create_category(user)
+    series_params = Map.put(@series_params, "creator_id", user.id)
+    series_params = Map.put(series_params, "image_category_id", category.id)
+    {:ok, series} = ImageSeries.create(series_params, user)
+    conn = json_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params}, user: user)
     assert conn.status == 200
     assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "last-opp"]
     assert conn.resp_body == "{\"status\":\"200\"}"
