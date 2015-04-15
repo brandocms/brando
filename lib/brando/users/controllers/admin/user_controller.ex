@@ -3,7 +3,7 @@ defmodule Brando.Users.Admin.UserController do
   Controller for the Brando Users module.
   """
 
-  use Phoenix.Controller
+  use Brando.Web, :controller
   import Brando.Plug.Role
   import Brando.Plug.Section
 

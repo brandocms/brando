@@ -1,6 +1,6 @@
 defmodule Brando.HTML do
   @moduledoc """
-  Helper and convenience functions. Imported in Brando.AdminView.
+  Helper and convenience functions.
   """
 
   @doc false

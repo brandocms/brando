@@ -5,7 +5,7 @@ defmodule Brando.Images.Model.ImageSeries do
   """
   @type t :: %__MODULE__{}
 
-  use Ecto.Model
+  use Brando.Web, :model
   import Ecto.Query, only: [from: 2]
   alias Brando.Users.Model.User
   alias Brando.Images.Model.Image
@@ -66,7 +66,7 @@ defmodule Brando.Images.Model.ImageSeries do
     model_changeset = changeset(%__MODULE__{}, :create, params)
     case model_changeset.valid? do
       true ->
-        inserted_model = Brando.get_repo().insert(model_changeset)
+        inserted_model = Repo.insert(model_changeset)
         {:ok, inserted_model}
       false ->
         {:error, model_changeset.errors}
@@ -83,7 +83,7 @@ defmodule Brando.Images.Model.ImageSeries do
     model_changeset = changeset(model, :update, params)
     case model_changeset.valid? do
       true ->
-        {:ok, Brando.get_repo().update(model_changeset)}
+        {:ok, Repo.update(model_changeset)}
       false ->
         {:error, model_changeset.errors}
     end

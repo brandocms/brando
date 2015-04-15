@@ -5,7 +5,7 @@
                  {"Slett bruker", "fa-trash", :admin_user_path, :delete_confirm, :id}],
                 check_or_x: [:avatar], hide: [:password, :updated_at, :inserted_at]) %>
     <div class="form-actions">
-      <a href="<%= helpers(@conn).admin_user_path(@conn, :new) %>" class="btn btn-primary">
+      <a href="<%= Helpers.admin_user_path(@conn, :new) %>" class="btn btn-primary">
         <i class="fa fa-plus m-r-xs"></i> Ny bruker
       </a>
     </div>

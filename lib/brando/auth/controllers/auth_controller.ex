@@ -2,7 +2,7 @@ defmodule Brando.Auth.AuthController do
   @moduledoc """
   Controller for authentication actions.
   """
-  use Phoenix.Controller
+  use Brando.Web, :controller
   alias Brando.Users.Model.User
   plug :action
 

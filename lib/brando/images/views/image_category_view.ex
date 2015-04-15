@@ -4,6 +4,6 @@ defmodule Brando.Images.Admin.ImageCategoryView do
   """
   alias Brando.Images.ImageCategoryForm
   alias Brando.Images.ImageCategoryConfigForm
-  use Brando.AdminView, root: "templates"
+  use Brando.Web, :view
 
 end

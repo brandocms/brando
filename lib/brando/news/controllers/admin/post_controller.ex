@@ -4,7 +4,7 @@ defmodule Brando.News.Admin.PostController do
   """
   alias Brando.Images.Model.Image
   alias Brando.Images.Model.ImageSeries
-  use Phoenix.Controller
+  use Brando.Web, :controller
   use Villain.Controller,
     image_model: Image,
     series_model: ImageSeries

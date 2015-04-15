@@ -5,7 +5,7 @@ defmodule Brando.Users.Model.User do
   """
   @type t :: %__MODULE__{}
 
-  use Ecto.Model
+  use Brando.Web, :model
   use Brando.Images.Field.ImageField
   import Ecto.Query, only: [from: 2]
   alias Brando.Utils
@@ -61,7 +61,7 @@ defmodule Brando.Users.Model.User do
     |> cast(params, @required_fields, @optional_fields)
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
-    |> validate_unique(:email, on: Brando.get_repo())
+    |> validate_unique(:email, on: Repo)
     |> validate_format(:username, ~r/^[a-z0-9_\-\.!~\*'\(\)]+$/)
     |> validate_length(:password, min: 6, too_short: "Passord må være > 6 tegn")
   end
@@ -85,7 +85,7 @@ defmodule Brando.Users.Model.User do
     |> cast(params, [], @required_fields ++ @optional_fields)
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
-    |> validate_unique(:email, on: Brando.get_repo())
+    |> validate_unique(:email, on: Repo)
     |> validate_format(:username, ~r/^[a-z0-9_\-\.!~\*'\(\)]+$/)
     |> validate_length(:password, min: 6, too_short: "Passord må være > 6 tegn")
   end
@@ -100,7 +100,7 @@ defmodule Brando.Users.Model.User do
     case user_changeset.valid? do
       true ->
         user_changeset = put_change(user_changeset, :password, gen_password(user_changeset.changes[:password]))
-        inserted_user = Brando.get_repo().insert(user_changeset)
+        inserted_user = Repo.insert(user_changeset)
         {:ok, inserted_user}
       false ->
         {:error, user_changeset.errors}
@@ -120,7 +120,7 @@ defmodule Brando.Users.Model.User do
         if Dict.has_key?(user_changeset.changes, :password) do
           user_changeset = put_change(user_changeset, :password, gen_password(user_changeset.changes[:password]))
         end
-        {:ok, Brando.get_repo().update(user_changeset)}
+        {:ok, Repo.update(user_changeset)}
       false ->
         {:error, user_changeset.errors}
     end

@@ -5,7 +5,7 @@ defmodule Brando.News.Model.Post do
   """
   @type t :: %__MODULE__{}
 
-  use Ecto.Model
+  use Brando.Web, :model
   use Brando.Images.Field.ImageField
   import Ecto.Query, only: [from: 2]
   alias Brando.Type.Json
@@ -113,7 +113,7 @@ defmodule Brando.News.Model.Post do
     model_changeset = changeset(%__MODULE__{}, :create, params)
     case model_changeset.valid? do
       true ->
-        inserted_model = Brando.get_repo().insert(model_changeset)
+        inserted_model = Repo.insert(model_changeset)
         {:ok, inserted_model}
       false ->
         {:error, model_changeset.errors}
@@ -130,7 +130,7 @@ defmodule Brando.News.Model.Post do
     model_changeset = changeset(model, :update, params)
     case model_changeset.valid? do
       true ->
-        {:ok, Brando.get_repo().update(model_changeset)}
+        {:ok, Repo.update(model_changeset)}
       false ->
         {:error, model_changeset.errors}
     end

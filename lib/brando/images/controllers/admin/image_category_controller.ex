@@ -2,7 +2,7 @@ defmodule Brando.Images.Admin.ImageCategoryController do
   @moduledoc """
   Controller for the Brando ImageCategory module.
   """
-  use Phoenix.Controller
+  use Brando.Web, :controller
   import Brando.Plug.Section
 
   plug :put_section, "images"

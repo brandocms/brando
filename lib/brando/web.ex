@@ -1,0 +1,64 @@
+defmodule Brando.Web do
+  @moduledoc """
+  A module that keeps using definitions for controllers,
+  views and so on.
+
+  This can be used in your application as:
+
+      use Brando.Web, :controller
+      use Brando.Web, :view
+
+  Keep the definitions in this module short and clean,
+  mostly focused on imports, uses and aliases.
+  """
+
+  def view do
+    helpers = Brando.get_helpers()
+    quote do
+      use Phoenix.View, root: "templates"
+
+      # Import convenience functions from controllers
+      import Phoenix.Controller, only: [get_flash: 2]
+
+      # Alias URL helpers from the router as Helpers
+      alias unquote(helpers)
+
+      import Plug.Conn, only: [get_session: 2]
+
+      # Import all HTML functions (forms, tags, etc)
+      use Phoenix.HTML
+      use Brando.HTML
+    end
+  end
+
+  def controller do
+    helpers = Brando.get_helpers()
+    repo = Brando.get_repo()
+    quote do
+      use Phoenix.Controller
+
+      # Alias the data repository as a convenience
+      alias unquote(repo)
+
+      # Alias URL helpers from the router
+      alias unquote(helpers)
+    end
+  end
+
+  def model do
+    repo = Brando.get_repo()
+    quote do
+      use Ecto.Model
+
+      # Alias the data repository as a convenience
+      alias unquote(repo)
+    end
+  end
+
+  @doc """
+  When used, dispatch to the appropriate controller/view/etc.
+  """
+  defmacro __using__(which) when is_atom(which) do
+    apply(__MODULE__, which, [])
+  end
+end

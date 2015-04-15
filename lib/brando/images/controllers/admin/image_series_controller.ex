@@ -2,7 +2,7 @@ defmodule Brando.Images.Admin.ImageSeriesController do
   @moduledoc """
   Controller for the Brando ImageSeries module.
   """
-  use Phoenix.Controller
+  use Brando.Web, :controller
   alias Brando.HTML.Inspect
   import Brando.Utils, only: [add_css: 2, add_js: 2]
   import Brando.Plug.Section

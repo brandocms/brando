@@ -5,7 +5,7 @@ defmodule Brando.Images.Model.ImageCategory do
   """
   @type t :: %__MODULE__{}
 
-  use Ecto.Model
+  use Brando.Web, :model
   import Ecto.Query, only: [from: 2]
   alias Brando.Utils
   alias Brando.Users.Model.User
@@ -65,7 +65,7 @@ defmodule Brando.Images.Model.ImageCategory do
       |> put_change(:cfg, Brando.config(Brando.Images)[:default_config])
     case model_changeset.valid? do
       true ->
-        inserted_model = Brando.get_repo().insert(model_changeset)
+        inserted_model = Repo.insert(model_changeset)
         {:ok, inserted_model}
       false ->
         {:error, model_changeset.errors}
@@ -82,7 +82,7 @@ defmodule Brando.Images.Model.ImageCategory do
     model_changeset = changeset(model, :update, params)
     case model_changeset.valid? do
       true ->
-        {:ok, Brando.get_repo().update(model_changeset)}
+        {:ok, Repo.update(model_changeset)}
       false ->
         {:error, model_changeset.errors}
     end

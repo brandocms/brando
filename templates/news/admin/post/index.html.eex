@@ -53,13 +53,13 @@
               </a>
               <ul class="dropdown-menu" style="right: 0; left: auto;">
                 <li>
-                <a href="<%= helpers(@conn).admin_post_path @conn, :show, post.id %>">
+                <a href="<%= Helpers.admin_post_path @conn, :show, post.id %>">
                     <i class="fa fa-search m-r-sm"> </i>
                     Vis post
                   </a>
                 </li>
                 <li>
-                  <a href="<%= helpers(@conn).admin_post_path @conn, :edit, post.id %>">
+                  <a href="<%= Helpers.admin_post_path @conn, :edit, post.id %>">
                     <i class="fa fa-edit m-r-sm"> </i>
                     Endre post
                   </a>
@@ -67,7 +67,7 @@
 
                 <li class="divider"></li>
                 <li>
-                  <a href="<%= helpers(@conn).admin_post_path @conn, :delete_confirm, post.id %>">
+                  <a href="<%= Helpers.admin_post_path @conn, :delete_confirm, post.id %>">
                     <i class="fa fa-trash-o m-r-sm"> </i>
                     Slett post
                   </a>
@@ -83,7 +83,7 @@
     <p>Ingen poster</p>
 <% end %>
     <div class="form-actions">
-      <a href="<%= helpers(@conn).admin_post_path @conn, :new %>" class="btn btn-primary">
+      <a href="<%= Helpers.admin_post_path @conn, :new %>" class="btn btn-primary">
         <i class="fa fa-plus m-r-xs"></i> Ny post
       </a>
     </div>

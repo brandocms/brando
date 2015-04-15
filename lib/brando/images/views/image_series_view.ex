@@ -3,7 +3,7 @@ defmodule Brando.Images.Admin.ImageSeriesView do
   View for the Brando Images module.
   """
   alias Brando.Images.ImageSeriesForm
-  use Brando.AdminView, root: "templates"
+  use Brando.Web, :view
 
   def render("upload_post.json", _assigns) do
     %{status: "200"}

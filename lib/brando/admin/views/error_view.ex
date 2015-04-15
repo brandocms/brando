@@ -1,5 +1,5 @@
 defmodule Brando.ErrorView do
-  use Brando.AdminView, root: "templates"
+  use Brando.Web, :view
 
   def render("404.html", _assigns) do
     "Page not found - 404"

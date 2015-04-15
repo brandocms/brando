@@ -3,7 +3,7 @@ defmodule Brando.Dashboard.Admin.DashboardController do
   A module for the admin dashboard.
   """
 
-  use Phoenix.Controller
+  use Brando.Web, :controller
   plug :action
 
   @doc """

@@ -7,9 +7,9 @@
 </ul>
 <hr>
 <div class="buttons m-t-md">
-  <a id="sort-post" href="<%= helpers(@conn).admin_image_series_path(@conn, :sort_post, @series.id) %>" class="btn btn-default">Lagre rekkefølge</a>
-  <a href="<%= helpers(@conn).admin_image_series_path(@conn, :edit, @series.id) %>" class="btn btn-default">Endre bildeserie</a>
-  <a href="<%= helpers(@conn).admin_image_path(@conn, :index) %>" class="btn btn-default">Tilbake til oversikten</a>
+  <a id="sort-post" href="<%= Helpers.admin_image_series_path(@conn, :sort_post, @series.id) %>" class="btn btn-default">Lagre rekkefølge</a>
+  <a href="<%= Helpers.admin_image_series_path(@conn, :edit, @series.id) %>" class="btn btn-default">Endre bildeserie</a>
+  <a href="<%= Helpers.admin_image_path(@conn, :index) %>" class="btn btn-default">Tilbake til oversikten</a>
 </div>
 
 <script type="text/javascript">

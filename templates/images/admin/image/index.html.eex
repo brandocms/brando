@@ -21,33 +21,33 @@
             <p>Ingen bilder i denne serien.</p>
           <% end %>
           <hr>
-          <a href="<%= helpers(@conn).admin_image_series_path(@conn, :upload, serie.id) %>" class="btn btn-default"><i class="fa fa-cloud"> </i>Last opp bilder</a>
-          <a href="<%= helpers(@conn).admin_image_series_path(@conn, :edit, serie.id) %>" class="btn btn-default"><i class="fa fa-edit"> </i>Editer bildeserie</a>
-          <a href="<%= helpers(@conn).admin_image_series_path(@conn, :sort, serie.id) %>" class="btn btn-default"><i class="fa fa-sort"> </i>Sortér bilder</a>
-          <a href="<%= helpers(@conn).admin_image_series_path(@conn, :delete_confirm, serie.id) %>" class="btn btn-danger"><i class="fa fa-trash"> </i>Slett bildeserie</a>
+          <a href="<%= Helpers.admin_image_series_path(@conn, :upload, serie.id) %>" class="btn btn-default"><i class="fa fa-cloud"> </i>Last opp bilder</a>
+          <a href="<%= Helpers.admin_image_series_path(@conn, :edit, serie.id) %>" class="btn btn-default"><i class="fa fa-edit"> </i>Editer bildeserie</a>
+          <a href="<%= Helpers.admin_image_series_path(@conn, :sort, serie.id) %>" class="btn btn-default"><i class="fa fa-sort"> </i>Sortér bilder</a>
+          <a href="<%= Helpers.admin_image_series_path(@conn, :delete_confirm, serie.id) %>" class="btn btn-danger"><i class="fa fa-trash"> </i>Slett bildeserie</a>
         </div>
       <% end %>
     <% else %>
       <p>Ingen bildeserier i denne kategorien</p>
     <% end %>
-      <a href="<%= helpers(@conn).admin_image_series_path(@conn, :new, category.id) %>" class="btn btn-primary m-t-sm">
+      <a href="<%= Helpers.admin_image_series_path(@conn, :new, category.id) %>" class="btn btn-primary m-t-sm">
         <i class="fa fa-plus"></i> Ny bildeserie
       </a>
-      <a href="<%= helpers(@conn).admin_image_series_path(@conn, :new, category.id) %>" class="btn btn-default m-t-sm">
+      <a href="<%= Helpers.admin_image_series_path(@conn, :new, category.id) %>" class="btn btn-default m-t-sm">
         <i class="fa fa-sort"></i> Sortér bildeserier
       </a>
-      <a href="<%= helpers(@conn).admin_image_category_path(@conn, :edit, category.id) %>" class="btn btn-default m-t-sm">
+      <a href="<%= Helpers.admin_image_category_path(@conn, :edit, category.id) %>" class="btn btn-default m-t-sm">
         <i class="fa fa-edit"></i> Endre kategori
       </a>
-      <a href="<%= helpers(@conn).admin_image_category_path(@conn, :configure, category.id) %>" class="btn btn-default m-t-sm">
+      <a href="<%= Helpers.admin_image_category_path(@conn, :configure, category.id) %>" class="btn btn-default m-t-sm">
         <i class="fa fa-cogs"></i> Konfigurér kategori
       </a>
-      <a href="<%= helpers(@conn).admin_image_category_path(@conn, :delete_confirm, category.id) %>" class="btn btn-danger m-t-sm">
+      <a href="<%= Helpers.admin_image_category_path(@conn, :delete_confirm, category.id) %>" class="btn btn-danger m-t-sm">
         <i class="fa fa-trash"></i> Slett kategori
       </a>
     </div>
   </li>
   <% end %>
-  <a href="<%= helpers(@conn).admin_image_category_path(@conn, :new) %>" class="btn btn-xs btn-default"><i class="fa fa-plus"></i> Ny kategori</a>
+  <a href="<%= Helpers.admin_image_category_path(@conn, :new) %>" class="btn btn-xs btn-default"><i class="fa fa-plus"></i> Ny kategori</a>
 </ul>
 <hr>
