@@ -61,7 +61,9 @@ defmodule Brando.News.Admin.PostController do
   @doc false
   def edit(conn, %{"id" => id}) do
     model = conn.private[:model]
-    if post = model.get(id: String.to_integer(id)) do
+    if post = model.get(id: id) do
+      post = post
+      |> model.encode_data
       conn
       |> add_css("villain/villain.css")
       |> add_js("villain/villain.js")

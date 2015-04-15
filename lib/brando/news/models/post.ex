@@ -74,7 +74,6 @@ defmodule Brando.News.Model.Post do
   def changeset(model, :create, params) do
     params =
       params
-      |> encode_data
       |> strip_unhandled_upload("cover")
       |> Utils.Model.transform_checkbox_vals(~w(featured))
 
@@ -95,7 +94,6 @@ defmodule Brando.News.Model.Post do
   def changeset(model, :update, params) do
     params =
       params
-      |> encode_data
       |> strip_unhandled_upload("cover")
       |> Utils.Model.transform_checkbox_vals(~w(featured))
 
@@ -136,10 +134,12 @@ defmodule Brando.News.Model.Post do
     end
   end
 
-  defp encode_data(params) when is_binary(params), do:
-    Map.put(params, "data", Poison.decode!(params["data"]))
-  defp encode_data(params) when is_map(params), do:
-    params
+  def encode_data(params) do
+    cond do
+      is_binary(params.data) -> params
+      is_list(params.data) -> Map.put(params, :data, Poison.encode!(params.data))
+    end
+  end
 
   @doc """
   Get model by `val` or raise `Ecto.NoResultsError`.
