@@ -11,14 +11,6 @@ defmodule Brando.Images.Admin.ImageSeriesController do
   plug :action
 
   @doc false
-  def index(conn, _params) do
-    series_model = conn.private[:series_model]
-    conn
-    |> assign(:series, series_model.all)
-    |> render(:index)
-  end
-
-  @doc false
   def new(conn, %{"id" => category_id}) do
     image_series = %{"image_category_id" => String.to_integer(category_id)}
     conn
