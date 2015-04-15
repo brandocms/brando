@@ -55,7 +55,7 @@ defmodule Brando.Images.Model.ImageCategory do
 
   @doc """
   Create a changeset for the model by passing `params`.
-  If valid, generate a hashed password and insert model to Repo.
+  If valid, generate a hashed password and insert model to Brando.get_repo().
   If not valid, return errors from changeset
   """
   def create(params, current_user) do
@@ -65,7 +65,7 @@ defmodule Brando.Images.Model.ImageCategory do
       |> put_change(:cfg, Brando.config(Brando.Images)[:default_config])
     case model_changeset.valid? do
       true ->
-        inserted_model = Repo.insert(model_changeset)
+        inserted_model = Brando.get_repo().insert(model_changeset)
         {:ok, inserted_model}
       false ->
         {:error, model_changeset.errors}
@@ -75,14 +75,14 @@ defmodule Brando.Images.Model.ImageCategory do
   @doc """
   Create an `update` changeset for the model by passing `params`.
   If password is in changeset, hash and insert in changeset.
-  If valid, update model in Repo.
+  If valid, update model in Brando.get_repo().
   If not valid, return errors from changeset
   """
   def update(model, params) do
     model_changeset = changeset(model, :update, params)
     case model_changeset.valid? do
       true ->
-        {:ok, Repo.update(model_changeset)}
+        {:ok, Brando.get_repo().update(model_changeset)}
       false ->
         {:error, model_changeset.errors}
     end

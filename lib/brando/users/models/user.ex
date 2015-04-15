@@ -61,7 +61,7 @@ defmodule Brando.Users.Model.User do
     |> cast(params, @required_fields, @optional_fields)
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
-    |> validate_unique(:email, on: Repo)
+    |> validate_unique(:email, on: Brando.get_repo())
     |> validate_format(:username, ~r/^[a-z0-9_\-\.!~\*'\(\)]+$/)
     |> validate_length(:password, min: 6, too_short: "Passord må være > 6 tegn")
   end
@@ -85,14 +85,14 @@ defmodule Brando.Users.Model.User do
     |> cast(params, [], @required_fields ++ @optional_fields)
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
-    |> validate_unique(:email, on: Repo)
+    |> validate_unique(:email, on: Brando.get_repo())
     |> validate_format(:username, ~r/^[a-z0-9_\-\.!~\*'\(\)]+$/)
     |> validate_length(:password, min: 6, too_short: "Passord må være > 6 tegn")
   end
 
   @doc """
   Create a changeset for the user model by passing `params`.
-  If valid, generate a hashed password and insert user to Repo.
+  If valid, generate a hashed password and insert user to Brando.get_repo().
   If not valid, return errors from changeset
   """
   def create(params) do
@@ -100,7 +100,7 @@ defmodule Brando.Users.Model.User do
     case user_changeset.valid? do
       true ->
         user_changeset = put_change(user_changeset, :password, gen_password(user_changeset.changes[:password]))
-        inserted_user = Repo.insert(user_changeset)
+        inserted_user = Brando.get_repo().insert(user_changeset)
         {:ok, inserted_user}
       false ->
         {:error, user_changeset.errors}
@@ -110,7 +110,7 @@ defmodule Brando.Users.Model.User do
   @doc """
   Create an `update` changeset for the user model by passing `params`.
   If password is in changeset, hash and insert in changeset.
-  If valid, update user in Repo.
+  If valid, update user in Brando.get_repo().
   If not valid, return errors from changeset
   """
   def update(user, params) do
@@ -120,7 +120,7 @@ defmodule Brando.Users.Model.User do
         if Dict.has_key?(user_changeset.changes, :password) do
           user_changeset = put_change(user_changeset, :password, gen_password(user_changeset.changes[:password]))
         end
-        {:ok, Repo.update(user_changeset)}
+        {:ok, Brando.get_repo().update(user_changeset)}
       false ->
         {:error, user_changeset.errors}
     end

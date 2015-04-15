@@ -6,7 +6,7 @@ File.rm_rf!(Path.join([Mix.Project.app_path, "tmp", "media"]))
 File.mkdir_p!(Path.join([Mix.Project.app_path, "tmp", "media"]))
 
 # Basic test repo
-alias Brando.Integration.TestRepo
+alias Brando.Integration.TestRepo, as: Repo
 
 defmodule Brando.Integration.TestRepo do
   use Ecto.Repo,
@@ -24,17 +24,17 @@ defmodule Brando.Integration.TestCase do
   using do
     quote do
       import unquote(__MODULE__)
-      require TestRepo
+      require Repo
       import Ecto.Query
-      alias Ecto.Integration.TestRepo
+      alias Ecto.Integration.TestRepo, as: Repo
     end
   end
 
   setup do
-    :ok = Ecto.Adapters.SQL.begin_test_transaction(TestRepo, [])
+    :ok = Ecto.Adapters.SQL.begin_test_transaction(Repo, [])
 
     on_exit fn ->
-      :ok = Ecto.Adapters.SQL.rollback_test_transaction(TestRepo, [])
+      :ok = Ecto.Adapters.SQL.rollback_test_transaction(Repo, [])
     end
 
     :ok
@@ -43,7 +43,7 @@ end
 
 Code.require_file "support/migrations.exs", __DIR__
 
-_   = Ecto.Storage.down(TestRepo)
-:ok = Ecto.Storage.up(TestRepo)
-{:ok, _pid} = TestRepo.start_link
-:ok = Ecto.Migrator.up(TestRepo, 0, Brando.Integration.Migration, log: false)
+_   = Ecto.Storage.down(Repo)
+:ok = Ecto.Storage.up(Repo)
+{:ok, _pid} = Repo.start_link
+:ok = Ecto.Migrator.up(Repo, 0, Brando.Integration.Migration, log: false)
