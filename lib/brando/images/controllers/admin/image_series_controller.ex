@@ -87,7 +87,7 @@ defmodule Brando.Images.Admin.ImageSeriesController do
     cfg = series.image_category.cfg || Brando.config(Brando.Images)[:default_config]
     {:ok, image} = image_model.check_for_uploads(params, Brando.HTML.current_user(conn), cfg, opts)
     conn
-    |> render(:upload_post, image)
+    |> render(:upload_post, image: image)
   end
 
   @doc false

@@ -11,7 +11,7 @@ defmodule Brando.Images.Utils do
   Checks `plug` for filename, checks mimetype, creates upload path,
   copies files and creates all sizes of image according to `cfg`
   """
-  def do_upload(plug, cfg) do
+  def do_upload(plug, cfg) when is_map(cfg) do
     {plug, cfg}
     |> get_valid_filename
     |> check_mimetype
@@ -19,20 +19,23 @@ defmodule Brando.Images.Utils do
     |> copy_uploaded_file
     |> create_image_sizes
   end
+  def do_upload(plug, cfg) when is_list(cfg) do
+    do_upload(plug, Enum.into(cfg, %{}))
+  end
 
   defp get_valid_filename({%{filename: ""}, _cfg}) do
     raise UploadError, message: "Blankt filnavn!"
   end
 
   defp get_valid_filename({%{filename: filename} = plug, cfg}) do
-    case cfg[:random_filename] do
+    case Map.has_key?(cfg, :random_filename) do
       true -> {Map.put(plug, :filename, random_filename(filename)), cfg}
-      nil  -> {Map.put(plug, :filename, slugify_filename(filename)), cfg}
+      _    -> {Map.put(plug, :filename, slugify_filename(filename)), cfg}
     end
   end
 
   defp check_mimetype({%{content_type: content_type} = plug, cfg}) do
-    if content_type in cfg[:allowed_mimetypes] do
+    if content_type in Map.get(cfg, :allowed_mimetypes) do
       {plug, cfg}
     else
       raise UploadError, message: "Ikke tillatt filtype -> #{content_type}"
@@ -40,7 +43,7 @@ defmodule Brando.Images.Utils do
   end
 
   defp create_upload_path({plug, cfg}) do
-    upload_path = Path.join(get_media_abspath, cfg[:upload_path])
+    upload_path = Path.join(get_media_abspath, Map.get(cfg, :upload_path))
     case File.mkdir_p(upload_path) do
       :ok -> {Map.put(plug, :upload_path, upload_path), cfg}
       {:error, reason} -> raise UploadError, message: "Kunne ikke lage filbane -> #{inspect(reason)}"
@@ -59,19 +62,18 @@ defmodule Brando.Images.Utils do
     sizes = %{}
     {file_path, filename} = split_path(file)
 
-    sizes = for {size_name, size_cfg} <- cfg[:sizes] do
+    sizes = for {size_name, size_cfg} <- Map.get(cfg, :sizes) do
       size_dir = Path.join([file_path, to_string(size_name)])
       File.mkdir_p(size_dir)
       sized_image = Path.join([size_dir, filename])
-      #task_start(fn -> do_create_image_size(file, sized_image, size_cfg) end)
       do_create_image_size(file, sized_image, size_cfg)
-      sized_path = Path.join([cfg[:upload_path], to_string(size_name), filename])
+      sized_path = Path.join([Map.get(cfg, :upload_path), to_string(size_name), filename])
       {size_name, sized_path}
     end
 
     {:ok, %Brando.Type.Image{}
     |> Map.put(:sizes, Enum.into(sizes, %{}))
-    |> Map.put(:path, Path.join([cfg[:upload_path], filename]))}
+    |> Map.put(:path, Path.join([Map.get(cfg, :upload_path), filename]))}
   end
 
   defp do_create_image_size(file, sized_image, size_cfg) do

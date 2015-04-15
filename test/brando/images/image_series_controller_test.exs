@@ -17,6 +17,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   @series_params %{"name" => "Series name", "slug" => "series-name", "credits" => "Credits", "order" => 0, "creator_id" => 1}
   @category_params %{"cfg" => %Config{}, "creator_id" => 1, "name" => "Test Category", "slug" => "test-category"}
   @broken_params %{"cfg" => %Config{}, "creator_id" => 1}
+  @up_params %Plug.Upload{content_type: "image/png", filename: "sample2.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample2.png"}
 
   def create_user do
     {:ok, user} = User.create(@user_params)
@@ -28,6 +29,14 @@ defmodule Brando.ImageSeries.ControllerTest do
     category
   end
 
+  def create_series do
+    user = create_user
+    category = create_category(user)
+    series_params = Map.put(@series_params, "image_category_id", category.id)
+    {:ok, series} = ImageSeries.create(series_params, user)
+    series
+  end
+
   test "new" do
     category = create_category(create_user)
     conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/serier/ny/#{category.id}")
@@ -37,10 +46,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "edit" do
-    user = create_user
-    category = create_category(user)
-    series_params = Map.put(@series_params, "image_category_id", category.id)
-    assert {:ok, series} = ImageSeries.create(series_params, user)
+    series = create_series
     conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/serier/#{series.id}/endre")
     assert conn.status == 200
     assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "endre"]
@@ -81,7 +87,7 @@ defmodule Brando.ImageSeries.ControllerTest do
     category = create_category(user)
     series_params = Map.put(@series_params, "creator_id", user.id)
     series_params = Map.put(series_params, "image_category_id", category.id)
-    assert {:ok, series} = ImageSeries.create(series_params, user)
+    {:ok, series} = ImageSeries.create(series_params, user)
     conn = call_with_user(RouterHelper.TestRouter, :patch, "/admin/bilder/serier/#{series.id}", %{"imageseries" => series_params})
     assert conn.status == 302
     assert get_resp_header(conn, "Location") == ["/admin/bilder"]
@@ -92,11 +98,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "delete_confirm" do
-    user = create_user
-    category = create_category(user)
-    series_params = Map.put(@series_params, "creator_id", user.id)
-    series_params = Map.put(series_params, "image_category_id", category.id)
-    assert {:ok, series} = ImageSeries.create(series_params, user)
+    series = create_series
     conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/serier/#{series.id}/slett")
     assert conn.status == 200
     assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "slett"]
@@ -104,11 +106,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "delete" do
-    user = create_user
-    category = create_category(user)
-    series_params = Map.put(@series_params, "creator_id", user.id)
-    series_params = Map.put(series_params, "image_category_id", category.id)
-    assert {:ok, series} = ImageSeries.create(series_params, user)
+    series = create_series
     conn = call_with_user(RouterHelper.TestRouter, :delete, "/admin/bilder/serier/#{series.id}")
     assert conn.status == 302
     assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}"]
@@ -116,5 +114,22 @@ defmodule Brando.ImageSeries.ControllerTest do
     assert get_resp_header(conn, "Location") == ["/admin/bilder"]
     %{phoenix_flash: flash} = conn.private
     assert flash == %{"notice" => "bildeserie Series name – 0 bilde(r). slettet."}
+  end
+
+  test "upload" do
+    series = create_series
+    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/serier/#{series.id}/last-opp")
+    assert conn.status == 200
+    assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "last-opp"]
+    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+  end
+
+  test "upload_post" do
+    series = create_series
+    conn = json_with_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params})
+    assert conn.status == 200
+    assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "last-opp"]
+    assert conn.resp_body == "{\"status\":\"200\"}"
+    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
   end
 end
