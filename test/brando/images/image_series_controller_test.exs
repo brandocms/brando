@@ -17,7 +17,8 @@ defmodule Brando.ImageSeries.ControllerTest do
   @series_params %{"name" => "Series name", "slug" => "series-name", "credits" => "Credits", "order" => 0, "creator_id" => 1}
   @category_params %{"cfg" => %Config{}, "creator_id" => 1, "name" => "Test Category", "slug" => "test-category"}
   @broken_params %{"cfg" => %Config{}, "creator_id" => 1}
-  @up_params %Plug.Upload{content_type: "image/png", filename: "sample2.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample2.png"}
+  @up_params %Plug.Upload{content_type: "image/png", filename: "sample.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"}
+  @up_params2 %Plug.Upload{content_type: "image/png", filename: "sample2.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample2.png"}
 
   def create_user do
     {:ok, user} = User.create(@user_params)
@@ -135,5 +136,28 @@ defmodule Brando.ImageSeries.ControllerTest do
     assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "last-opp"]
     assert conn.resp_body == "{\"status\":\"200\"}"
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+  end
+
+  test "sort" do
+    user = create_user
+    category = create_category(user)
+    series_params = Map.put(@series_params, "creator_id", user.id)
+    series_params = Map.put(series_params, "image_category_id", category.id)
+    {:ok, series} = ImageSeries.create(series_params, user)
+    conn = json_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params}, user: user)
+    assert conn.status == 200
+    conn = json_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params2}, user: user)
+    assert conn.status == 200
+
+    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/serier/#{series.id}/sorter")
+    assert conn.status == 200
+    assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "sorter"]
+    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+    assert conn.resp_body =~ "<li data-id=\"1\"><img src=\"/media/images/default/thumb/sample.png\" /></li>"
+
+    conn = json_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/#{series.id}/sorter", %{"order" => ["2", "1"]}, user: user)
+    assert conn.status == 200
+    assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "sorter"]
+    assert conn.resp_body == "{\"status\":\"200\"}"
   end
 end
