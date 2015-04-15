@@ -19,9 +19,10 @@ defmodule Brando.Users.UserForm do
   def role_selected?(choice_value, values) do
     # first make an int out of the values list
     role_int = Enum.reduce(values, 0, fn (role, acc) ->
-      case is_atom(role) do
-        true  -> acc + @roles[role]
-        false -> acc
+      cond do
+        is_atom(role) -> acc + @roles[role]
+        is_binary(role) -> acc + String.to_integer(role)
+        is_integer(role) -> acc
       end
     end)
     # choice_value to int
