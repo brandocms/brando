@@ -144,6 +144,7 @@ defmodule Brando.ImageSeries.ControllerTest do
     series_params = Map.put(@series_params, "creator_id", user.id)
     series_params = Map.put(series_params, "image_category_id", category.id)
     {:ok, series} = ImageSeries.create(series_params, user)
+
     conn = json_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params}, user: user)
     assert conn.status == 200
     conn = json_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params2}, user: user)
@@ -159,5 +160,15 @@ defmodule Brando.ImageSeries.ControllerTest do
     assert conn.status == 200
     assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "sorter"]
     assert conn.resp_body == "{\"status\":\"200\"}"
+
+    series = Brando.get_repo.preload(series, :images)
+    images = series.images
+    for image <- images do
+      order = case image.image.path do
+        "images/default/sample.png" -> 1
+        "images/default/sample2.png" -> 0
+      end
+      assert image.order == order
+    end
   end
 end
