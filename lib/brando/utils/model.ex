@@ -38,6 +38,11 @@ defmodule Brando.Utils.Model do
   @doc """
   Puts `id` from `current_user` in the `params` map.
   """
-  def put_creator(params, current_user), do:
-    Map.put(params, "creator_id", current_user.id)
+  def put_creator(params, current_user) do
+    key = case is_atom(List.first(Map.keys(params))) do
+      true -> :creator_id
+      false -> "creator_id"
+    end
+    Map.put(params, key, current_user.id)
+  end
 end

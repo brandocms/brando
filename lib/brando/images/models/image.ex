@@ -130,7 +130,7 @@ defmodule Brando.Images.Model.Image do
   end
 
   @doc """
-  Delete all imageseries dependant on `category_id`
+  Delete all images depending on imageserie `series_id`
   """
   def delete_dependent_images(series_id) do
     images =

@@ -11,13 +11,11 @@ defmodule Brando.Integration.UserTest do
   test "create/1 and update/1" do
     assert {:ok, user} = User.create(@params)
 
-    params = %{"full_name" => "Elvis Presley"}
-    assert {:ok, updated_user} = User.update(user, params)
+    assert {:ok, updated_user} = User.update(user, %{"full_name" => "Elvis Presley"})
     assert updated_user.full_name == "Elvis Presley"
 
     old_pass = updated_user.password
-    params = %{"password" => "newpass"}
-    assert {:ok, updated_password_user} = User.update(updated_user, params)
+    assert {:ok, updated_password_user} = User.update(updated_user, %{"password" => "newpass"})
     refute old_pass == updated_password_user.password
     refute updated_password_user.password == "newpass"
   end

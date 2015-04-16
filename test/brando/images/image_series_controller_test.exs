@@ -154,21 +154,23 @@ defmodule Brando.ImageSeries.ControllerTest do
     assert conn.status == 200
     assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "sorter"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    assert conn.resp_body =~ "<li data-id=\"1\"><img src=\"/media/images/default/thumb/sample.png\" /></li>"
+    assert conn.resp_body =~ "<img src=\"/media/images/default/thumb/sample.png\" /></li>"
 
-    conn = json_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/#{series.id}/sorter", %{"order" => ["2", "1"]}, user: user)
+    series = Brando.get_repo.preload(series, :images)
+    [img1, img2] = series.images
+
+    conn = json_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/#{series.id}/sorter", %{"order" => [to_string(img2.id), to_string(img1.id)]}, user: user)
     assert conn.status == 200
     assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "sorter"]
     assert conn.resp_body == "{\"status\":\"200\"}"
 
+    series = ImageSeries.get(id: series.id)
     series = Brando.get_repo.preload(series, :images)
-    images = series.images
-    for image <- images do
-      order = case image.image.path do
-        "images/default/sample.png" -> 1
-        "images/default/sample2.png" -> 0
-      end
-      assert image.order == order
+
+    [img1, img2] = series.images
+    case img1.image.path do
+      "images/default/sample.png" -> assert img1.order > img2.order
+      "images/default/sample2.png" -> assert img1.order < img2.order
     end
   end
 end
