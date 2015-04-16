@@ -17,9 +17,7 @@ defmodule Brando.Villain.Parser.Default do
     ~s(<iframe src="//player.vimeo.com/video/#{remote_id}" width="500" height="281" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>)
   end
 
-  def image(%{"url" => url} = data) do
-    caption = data[:caption]
-    credits = data[:credits]
+  def image(%{"url" => url, "caption" => caption, "credits" => credits}) do
     ~s(<img src="#{url}" alt="#{caption} / #{credits}" class="img-responsive" />)
   end
 
