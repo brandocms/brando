@@ -9,13 +9,11 @@ defmodule Brando.Users.ControllerTest do
 
   @params %{"avatar" => nil, "role" => ["2", "4"],
             "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
-            "password" => "finimeze", "status" => "1",
-            "submit" => "Submit", "username" => "zabuzasixu"}
+            "password" => "finimeze", "status" => "1", "username" => "zabuzasixu"}
 
   @broken_params %{"avatar" => nil, "role" => ["2", "4"],
                    "email" => "fanogigynigmail.com", "full_name" => "Nita Bond",
-                   "password" => "fi", "status" => "1",
-                   "submit" => "Submit", "username" => ""}
+                   "password" => "fi", "status" => "1", "username" => ""}
 
   test "index redirects to /login when no :current_user" do
     conn = call_with_session(RouterHelper.TestRouter, :get, "/admin/brukere")
@@ -62,14 +60,6 @@ defmodule Brando.Users.ControllerTest do
     assert conn.path_info == ["admin", "brukere", "#{user.id}", "endre"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
     assert conn.resp_body =~ "value=\"Nita Bond\""
-  end
-
-  test "create (post) no params" do
-    conn = call_with_user(RouterHelper.TestRouter, :post, "/admin/brukere/")
-    assert conn.status == 200
-    assert conn.path_info == ["admin", "brukere"]
-    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    assert conn.resp_body =~ "<form class=\"grid-form\" role=\"form\""
   end
 
   test "create (post) w/params" do

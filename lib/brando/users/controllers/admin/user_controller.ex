@@ -8,6 +8,7 @@ defmodule Brando.Users.Admin.UserController do
   import Brando.Plug.Section
 
   plug :put_section, "users"
+  plug :scrub_params, "user" when action in [:create, :update]
   plug :check_role, :superuser when action in [:new, :create, :delete]
   plug :action
 
@@ -77,13 +78,6 @@ defmodule Brando.Users.Admin.UserController do
         |> assign(:page_title, "Ny bruker")
         |> render(:new)
     end
-  end
-
-  @doc false
-  def create(conn, _params) do
-    conn
-    |> assign(:page_title, "Ny bruker")
-    |> render(:new)
   end
 
   @doc false
