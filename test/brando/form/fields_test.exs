@@ -111,6 +111,12 @@ defmodule Brando.Form.FieldsTest do
     assert F.__parse_error__({"should be at least %{count} characters", 10}) == "Feltets verdi er for kort. Må være > 10 tegn."
   end
 
+  test "__render_help_text__/1" do
+    assert F.__render_help_text__(nil) == ""
+    assert F.__render_help_text__("Help text") ==
+      "<div class=\"help\"><i class=\"fa fa-fw fa-question-circle\"> </i><span>Help text</span></div>"
+  end
+
   test "__label__/3" do
     assert F.__label__("name", "class", "text") ==
       ~s(<label for="name" class="class">text</label>)
