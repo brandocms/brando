@@ -26,7 +26,7 @@ defmodule Brando.Form.FieldsTest do
 
   test "__form_group__/4" do
     assert F.__form_group__("1234", "name", [], []) ==
-      "<div data-field-span=\"1\" class=\"form-group\">\n      1234\n      \n    </div>"
+      "<div data-field-span=\"1\" class=\"form-group\">\n      1234\n      \n      \n    </div>"
     opts = [required: true]
     fg = F.__form_group__("1234", "name", opts, [:required])
     assert String.contains?(fg, "required")
