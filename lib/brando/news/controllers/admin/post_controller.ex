@@ -2,14 +2,14 @@ defmodule Brando.News.Admin.PostController do
   @moduledoc """
   Controller for the Brando News module.
   """
-  alias Brando.Images.Model.Image
-  alias Brando.Images.Model.ImageSeries
   use Brando.Web, :controller
   use Villain.Controller,
-    image_model: Image,
-    series_model: ImageSeries
+    image_model: Brando.Images.Model.Image,
+    series_model: Brando.Images.Model.ImageSeries
+
   import Brando.Utils, only: [add_css: 2, add_js: 2]
   import Brando.Plug.Section
+  import Brando.HTML.Inspect, only: [model_name: 2]
 
   plug :put_section, "news"
   plug :scrub_params, "post" when action in [:create, :update]
@@ -111,7 +111,7 @@ defmodule Brando.News.Admin.PostController do
     record = model.get!(id: id)
     model.delete(record)
     conn
-    |> put_flash(:notice, "#{Brando.HTML.Inspect.model_name(record, :singular)} #{model.__repr__(record)} slettet.")
+    |> put_flash(:notice, "#{model_name(record, :singular)} #{model.__repr__(record)} slettet.")
     |> redirect(to: router_module(conn).__helpers__.admin_post_path(conn, :index))
   end
 end

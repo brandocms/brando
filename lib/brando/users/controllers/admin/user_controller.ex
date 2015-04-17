@@ -6,6 +6,7 @@ defmodule Brando.Users.Admin.UserController do
   use Brando.Web, :controller
   import Brando.Plug.Role
   import Brando.Plug.Section
+  import Brando.HTML.Inspect, only: [model_name: 2]
 
   plug :put_section, "users"
   plug :scrub_params, "user" when action in [:create, :update]
@@ -46,17 +47,6 @@ defmodule Brando.Users.Admin.UserController do
   end
 
   @doc false
-  def edit(conn, %{"id" => user_id}) do
-    model = conn.private[:model]
-    form_data = model.get(id: String.to_integer(user_id))
-    conn
-    |> assign(:user, form_data)
-    |> assign(:id, user_id)
-    |> assign(:page_title, "Endre bruker")
-    |> render(:edit)
-  end
-
-  @doc false
   def create(conn, %{"user" => form_data}) do
     model = conn.private[:model]
     created_user = model.create(form_data)
@@ -74,10 +64,21 @@ defmodule Brando.Users.Admin.UserController do
         conn
         |> assign(:user, form_data)
         |> assign(:errors, errors)
-        |> put_flash(:error, "Feil i skjema")
         |> assign(:page_title, "Ny bruker")
+        |> put_flash(:error, "Feil i skjema")
         |> render(:new)
     end
+  end
+
+  @doc false
+  def edit(conn, %{"id" => user_id}) do
+    model = conn.private[:model]
+    form_data = model.get(id: String.to_integer(user_id))
+    conn
+    |> assign(:user, form_data)
+    |> assign(:id, user_id)
+    |> assign(:page_title, "Endre bruker")
+    |> render(:edit)
   end
 
   @doc false
@@ -99,8 +100,8 @@ defmodule Brando.Users.Admin.UserController do
         |> assign(:user, form_data)
         |> assign(:errors, errors)
         |> assign(:id, user_id)
-        |> put_flash(:error, "Feil i skjema")
         |> assign(:page_title, "Endre bruker")
+        |> put_flash(:error, "Feil i skjema")
         |> render(:edit)
     end
   end
@@ -121,7 +122,7 @@ defmodule Brando.Users.Admin.UserController do
     record = model.get!(id: id)
     model.delete(record)
     conn
-    |> put_flash(:notice, "#{Brando.HTML.Inspect.model_name(record, :singular)} #{model.__repr__(record)} slettet.")
+    |> put_flash(:notice, "#{model_name(record, :singular)} #{model.__repr__(record)} slettet.")
     |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn, :index))
   end
 end

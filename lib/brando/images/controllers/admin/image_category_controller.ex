@@ -4,6 +4,7 @@ defmodule Brando.Images.Admin.ImageCategoryController do
   """
   use Brando.Web, :controller
   import Brando.Plug.Section
+  import Brando.HTML.Inspect, only: [model_name: 2]
 
   plug :put_section, "images"
   plug :scrub_params, "imagecategory" when action in [:create, :update]
@@ -112,7 +113,7 @@ defmodule Brando.Images.Admin.ImageCategoryController do
     record = model.get!(id: id)
     model.delete(record)
     conn
-    |> put_flash(:notice, "#{Brando.HTML.Inspect.model_name(record, :singular)} #{model.__repr__(record)} slettet.")
+    |> put_flash(:notice, "#{model_name(record, :singular)} #{model.__repr__(record)} slettet.")
     |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
   end
 end

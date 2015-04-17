@@ -3,9 +3,10 @@ defmodule Brando.Images.Admin.ImageSeriesController do
   Controller for the Brando ImageSeries module.
   """
   use Brando.Web, :controller
-  alias Brando.HTML.Inspect
+
   import Brando.Utils, only: [add_css: 2, add_js: 2]
   import Brando.Plug.Section
+  import Brando.HTML.Inspect, only: [model_name: 2]
 
   plug :put_section, "images"
   plug :action
@@ -122,7 +123,7 @@ defmodule Brando.Images.Admin.ImageSeriesController do
     record = model.get!(id: id)
     model.delete(record)
     conn
-    |> put_flash(:notice, "#{Inspect.model_name(record, :singular)} #{model.__repr__(record)} slettet.")
+    |> put_flash(:notice, "#{model_name(record, :singular)} #{model.__repr__(record)} slettet.")
     |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
   end
 end

@@ -17,7 +17,13 @@ defmodule Brando.Form.Fields do
     ~s(<div data-field-span="1" class="form-group#{get_form_group_class(opts[:form_group_class])}#{get_required(opts[:required])}#{get_has_error(errors)}">
       #{contents}
       #{__render_errors__(errors)}
+      #{__render_help_text__(opts[:help_text])}
     </div>)
+  end
+
+  def __render_help_text__(nil), do: ""
+  def __render_help_text__(help_text) do
+    ~s(<div class="help"><i class="fa fa-fw fa-question-circle"> </i><span>#{help_text}</span></div>)
   end
 
   @doc """

@@ -49,7 +49,8 @@ defmodule Brando.News.PostForm do
     fieldset [row_span: 4] do
       field :featured, :checkbox,
         [label: "Vektet post",
-        default: false]
+        default: false,
+        help_text: "Posten vektes uavhengig av opprettelses- og publiseringsdato"]
     end
     field :header, :text,
       [required: true,
