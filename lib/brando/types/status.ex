@@ -14,8 +14,8 @@ defmodule Brando.Type.Status do
   @doc """
   Cast should return OUR type no matter what the input.
   """
-  def cast(atom) when is_atom(atom), do: {:ok, @status_codes[atom]}
-  def cast(binary) when is_binary(binary), do: {:ok, String.to_integer(binary)}
+  def cast(atom) when is_atom(atom), do: {:ok, atom}
+  def cast(binary) when is_binary(binary), do: {:ok, Enum.slice(Map.keys(@status_codes), String.to_integer(binary), 1)}
 
   @doc """
   Cast anything else is a failure

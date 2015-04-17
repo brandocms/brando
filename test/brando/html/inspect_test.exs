@@ -7,8 +7,7 @@ defmodule Brando.HTML.InspectTest do
 
   @user_params %{"avatar" => nil, "role" => ["2", "4"],
             "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
-            "password" => "finimeze", "status" => "1",
-            "submit" => "Submit", "username" => "zabuzasixu"}
+            "password" => "finimeze", "username" => "zabuzasixu"}
 
   @image_map %Brando.Type.Image{credits: nil, optimized: false, path: "images/avatars/27i97a.jpeg", title: nil,
                                 sizes: %{thumb: "images/avatars/thumb/27i97a.jpeg", medium: "images/avatars/medium/27i97a.jpeg"}}
@@ -33,6 +32,8 @@ defmodule Brando.HTML.InspectTest do
 
     assert {:ok, post} = Post.create(@post_params, user)
     post = post |> Brando.get_repo.preload(:creator)
+    require Logger
+    Logger.error(inspect(post))
     {:safe, ret} = model(post)
     assert ret =~ "<i class=\"fa fa-times text-danger\">"
     assert ret =~ "Nita Bond"

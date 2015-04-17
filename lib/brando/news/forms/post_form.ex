@@ -38,7 +38,7 @@ defmodule Brando.News.PostForm do
         default: "no",
         choices: &__MODULE__.get_language_choices/0]
     end
-    fieldset [row_span: 4] do
+    fieldset [row_span: 1] do
       field :status, :radio,
         [required: true,
         label: "Status",
@@ -46,7 +46,7 @@ defmodule Brando.News.PostForm do
         choices: &__MODULE__.get_status_choices/0,
         is_selected: &__MODULE__.is_status_selected?/2]
     end
-    fieldset [row_span: 4] do
+    fieldset [row_span: 1] do
       field :featured, :checkbox,
         [label: "Vektet post",
         default: false,

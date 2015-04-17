@@ -79,8 +79,17 @@ defmodule Brando.HTML.Inspect do
     ~s(#{value.day}/#{value.month}/#{value.year} #{zero_pad(value.hour, 2)}:#{zero_pad(value.min, 2)})
   end
 
-  defp do_inspect_field(_name, Brando.Type.Role, value) do
-    ~s(#{inspect(value)})
+  defp do_inspect_field(_name, Brando.Type.Role, roles) do
+    roles = Enum.map roles, fn (role) ->
+      role_name =
+        case role do
+          :superuser -> "superbruker"
+          :admin -> "admin"
+          :staff -> "stab"
+        end
+      ~s(<span class="label label-#{role}">#{role_name}</span>)
+    end
+    ~s(#{roles})
   end
 
   defp do_inspect_field(_name, Brando.Type.Json, _value) do
@@ -97,6 +106,17 @@ defmodule Brando.HTML.Inspect do
 
   defp do_inspect_field(_name, Brando.Type.Image, value) do
     ~s(<div class="imageserie m-b-md"><img src="#{media_url(img(value, :thumb))}" style="padding-bottom: 3px;" /></div>)
+  end
+
+  defp do_inspect_field(_name, Brando.Type.Status, value) do
+    status =
+      case value do
+        :published -> "publisert"
+        :pending -> "venter"
+        :draft -> "utkast"
+        :deleted -> "slettet"
+      end
+    ~s(<span class="label label-#{value}">#{status}</span>)
   end
 
   defp do_inspect_field(:password, :string, _value) do

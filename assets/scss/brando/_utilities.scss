@@ -19,6 +19,31 @@
   color: #FB6B5B;
 }
 
+.label {
+  padding: 5px 13px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: #fff;
+  background-color: #5A5A5A;
+  margin-right: 3px;
+}
+.label-published {
+  color: #fff;
+  background-color: #65BD77;
+}
+.label-pending {
+  color: #fff;
+  background-color: #FFC333;
+}
+.label-draft {
+  color: #fff;
+  background-color: #727272;
+}
+.label-deleted {
+  color: #fff;
+  background-color: #FB6B5B;
+}
+
 .m-xs {
   margin: 5px;
 }
