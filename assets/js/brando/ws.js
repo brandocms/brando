@@ -15,7 +15,8 @@ class WS {
         })
     }
     static log(level, icon, body) {
-        $(`<li><i class="fa fa-fw ${icon} m-r-sm"> </i> ${body}</li>`).appendTo("#log-content");
+        let date = new Date();
+        $(`<li><i class="fa fa-fw ${icon} m-l-sm m-r-sm"> </i> <span class="time p-r-sm">${date.getHours()}:${date.getMinutes()}</span>${body}</li>`).appendTo("#log-content");
     }
 }
 

@@ -17,8 +17,13 @@ defmodule Brando.AdminChannel do
     Brando.get_endpoint.broadcast!("admin:stream",
                                    "log_msg",
                                    %{level: :notice,
-                                     icon: "fa-cogs",
+                                     icon: "fa-info-circle",
                                      body: "Dette er en logg melding."})
+    Brando.get_endpoint.broadcast!("admin:stream",
+                                   "log_msg",
+                                   %{level: :notice,
+                                     icon: "fa-info-circle",
+                                     body: "Dette er en ny og lengre melding som kan vise hva som skjer når vi får linjeskift."})
   end
 
 end
