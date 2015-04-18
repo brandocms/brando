@@ -15,7 +15,7 @@ defmodule Brando.Web do
   def view do
     helpers = Brando.get_helpers()
     quote do
-      use Phoenix.View, root: "templates"
+      use Phoenix.View, root: "web/templates"
 
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_flash: 2]
