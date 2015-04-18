@@ -38,6 +38,7 @@ config :brando, :endpoint, Brando.Integration.Endpoint
 config :brando, :repo, Brando.Integration.TestRepo
 config :brando, :media_url, "/media"
 config :brando, Villain, parser: Brando.Villain.Parser.Default
+config :brando, :logging, disable_logging: true
 
 # Print only warnings and errors during test
 config :logger, level: :warn

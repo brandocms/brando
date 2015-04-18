@@ -24,7 +24,9 @@ defmodule Brando.AdminChannel do
   end
 
   defp do_log(level, icon, body) do
-    Brando.get_endpoint.broadcast!("admin:stream", "log_msg",
-                                   %{level: level, icon: icon, body: body})
+    unless Brando.config(:logging)[:disable_logging] do
+      Brando.get_endpoint.broadcast!("admin:stream", "log_msg",
+                                    %{level: level, icon: icon, body: body})
+    end
   end
 end

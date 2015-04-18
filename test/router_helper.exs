@@ -118,6 +118,10 @@ defmodule RouterHelper do
       plug :accepts, ~w(json)
     end
 
+    socket "/ws", Brando do
+      channel "admin:*", Brando.AdminChannel
+    end
+
     scope "/admin", as: :admin do
       pipe_through :admin
       user_resources "/brukere", Brando.Users.Admin.UserController, private: %{model: Brando.Users.Model.User}
