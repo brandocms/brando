@@ -13,17 +13,18 @@ defmodule Brando.AdminChannel do
     {:noreply, socket}
   end
 
-  def test do
-    Brando.get_endpoint.broadcast!("admin:stream",
-                                   "log_msg",
-                                   %{level: :notice,
-                                     icon: "fa-info-circle",
-                                     body: "Dette er en logg melding."})
-    Brando.get_endpoint.broadcast!("admin:stream",
-                                   "log_msg",
-                                   %{level: :notice,
-                                     icon: "fa-info-circle",
-                                     body: "Dette er en ny og lengre melding som kan vise hva som skjer når vi får linjeskift."})
+  def log(:logged_in, user) do
+    body = "#{user.full_name} logget inn"
+    do_log(:notice, "fa-info-circle", body)
   end
 
+  def log(:logged_out, user) do
+    body = "#{user.full_name} logget ut"
+    do_log(:notice, "fa-info-circle", body)
+  end
+
+  defp do_log(level, icon, body) do
+    Brando.get_endpoint.broadcast!("admin:stream", "log_msg",
+                                   %{level: level, icon: icon, body: body})
+  end
 end
