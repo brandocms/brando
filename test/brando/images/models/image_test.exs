@@ -1,10 +1,10 @@
 defmodule Brando.Integration.ImageTest do
   use ExUnit.Case
   use Brando.Integration.TestCase
-  alias Brando.Users.Model.User
-  alias Brando.Images.Model.Image
-  alias Brando.Images.Model.ImageSeries
-  alias Brando.Images.Model.ImageCategory
+  alias Brando.User
+  alias Brando.Image
+  alias Brando.ImageSeries
+  alias Brando.ImageCategory
   alias Brando.Type.Image.Config
 
   @params %{order: 0, image: %{title: "Title", credits: "credits",

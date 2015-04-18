@@ -4,8 +4,8 @@ defmodule Brando.News.Admin.PostController do
   """
   use Brando.Web, :controller
   use Villain.Controller,
-    image_model: Brando.Images.Model.Image,
-    series_model: Brando.Images.Model.ImageSeries
+    image_model: Brando.Image,
+    series_model: Brando.ImageSeries
 
   import Brando.Utils, only: [add_css: 2, add_js: 2]
   import Brando.Plug.Section

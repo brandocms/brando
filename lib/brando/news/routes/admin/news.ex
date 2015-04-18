@@ -8,11 +8,11 @@ defmodule Brando.News.Admin.Routes do
 
       scope "/admin", as: :admin do
         pipe_through :admin
-        post_resources "/news", model: Brando.News.Model.Post
+        post_resources "/news", model: Brando.Post
 
   """
   alias Brando.News.Admin.PostController
-  alias Brando.News.Model.Post
+  alias Brando.Post
 
   @doc """
   Defines "RESTful" endpoints for the news resource.

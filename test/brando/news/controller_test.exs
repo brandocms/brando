@@ -5,8 +5,8 @@ defmodule Brando.News.ControllerTest do
   use Brando.Integration.TestCase
   use Plug.Test
   use RouterHelper
-  alias Brando.News.Model.Post
-  alias Brando.Users.Model.User
+  alias Brando.Post
+  alias Brando.User
 
   @user_params %{"avatar" => nil, "role" => ["2", "4"],
                  "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",

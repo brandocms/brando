@@ -3,7 +3,7 @@ defmodule Brando.Utils.ModelTest do
   use Brando.Integration.TestCase
   use Plug.Test
   alias Brando.Utils
-  alias Brando.Users.Model.User
+  alias Brando.User
 
   @params %{"avatar" => nil, "role" => ["2", "4"],
             "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",

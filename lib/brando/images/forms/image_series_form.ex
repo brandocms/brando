@@ -4,7 +4,7 @@ defmodule Brando.Images.ImageSeriesForm do
   documentation
   """
   use Brando.Form
-  alias Brando.Images.Model.ImageCategory
+  alias Brando.ImageCategory
 
   def get_categories do
     for cat <- ImageCategory.all, do: [value: cat.id, text: cat.name]

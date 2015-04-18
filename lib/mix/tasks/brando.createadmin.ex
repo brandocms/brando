@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Brando.Createadmin do
   use Mix.Task
-  alias Brando.Users.Model.User
+  alias Brando.User
 
   @shortdoc "Generates admin for Brando."
 

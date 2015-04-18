@@ -16,7 +16,7 @@ defmodule RouterHelper do
     signing_salt: "yadayada"
   )
 
-  @current_user %{__struct__: Brando.Users.Model.User,
+  @current_user %{__struct__: Brando.User,
       avatar: nil, email: "test@test.com",
       full_name: "Iggy Pop", id: 1,
       inserted_at: %Ecto.DateTime{day: 7, hour: 4, min: 36, month: 12, sec: 26, year: 2014},
@@ -41,7 +41,7 @@ defmodule RouterHelper do
 
   def with_user(conn, user \\ nil) do
     conn
-    |> Plug.Conn.put_private(:model, Brando.Users.Model.User)
+    |> Plug.Conn.put_private(:model, Brando.User)
     |> Map.put(:secret_key_base, String.duplicate("abcdefgh", 8))
     |> Plug.Session.call(@session)
     |> Plug.Conn.fetch_session()
@@ -124,8 +124,8 @@ defmodule RouterHelper do
 
     scope "/admin", as: :admin do
       pipe_through :admin
-      user_resources "/brukere", Brando.Users.Admin.UserController, private: %{model: Brando.Users.Model.User}
-      user_resources "/brukere2", private: %{model: Brando.Users.Model.User}
+      user_resources "/brukere", Brando.Users.Admin.UserController, private: %{model: Brando.User}
+      user_resources "/brukere2", private: %{model: Brando.User}
       user_resources "/brukere3"
       post_resources "/nyheter"
       image_resources "/bilder"
@@ -135,13 +135,13 @@ defmodule RouterHelper do
     scope "/" do
       pipe_through :browser
       get "/login", Brando.Auth.AuthController, :login,
-        private: %{model: Brando.Users.Model.User,
+        private: %{model: Brando.User,
                    layout: {Brando.Auth.LayoutView, "auth.html"}}
       post "/login", Brando.Auth.AuthController, :login,
-        private: %{model: Brando.Users.Model.User,
+        private: %{model: Brando.User,
                    layout: {Brando.Auth.LayoutView, "auth.html"}}
       get "/logout", Brando.Auth.AuthController, :logout,
-        private: %{model: Brando.Users.Model.User,
+        private: %{model: Brando.User,
                    layout: {Brando.Auth.LayoutView, "auth.html"}}
     end
   end

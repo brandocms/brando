@@ -3,7 +3,7 @@ defmodule Brando.Auth.AuthController do
   Controller for authentication actions.
   """
   use Brando.Web, :controller
-  alias Brando.Users.Model.User
+  alias Brando.User
   alias Brando.AdminChannel
   plug :action
 

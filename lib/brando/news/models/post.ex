@@ -1,4 +1,4 @@
-defmodule Brando.News.Model.Post do
+defmodule Brando.Post do
   @moduledoc """
   Ecto schema for the Post model, as well as image field definitions
   and helper functions for dealing with the post model.
@@ -10,7 +10,7 @@ defmodule Brando.News.Model.Post do
   import Ecto.Query, only: [from: 2]
   alias Brando.Type.Json
   alias Brando.Type.Status
-  alias Brando.Users.Model.User
+  alias Brando.User
   alias Brando.Utils
 
   @required_fields ~w(status header data lead creator_id language)

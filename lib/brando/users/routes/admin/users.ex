@@ -8,11 +8,11 @@ defmodule Brando.Users.Admin.Routes do
 
       scope "/admin", as: :admin do
         pipe_through :admin
-        user_resources "/brukere", model: Brando.Users.Model.User
+        user_resources "/brukere", model: Brando.User
 
   """
   alias Brando.Users.Admin.UserController
-  alias Brando.Users.Model.User
+  alias Brando.User
 
   @doc """
   Defines "RESTful" endpoints for the users resource.

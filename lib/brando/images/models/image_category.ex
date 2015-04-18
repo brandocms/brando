@@ -1,4 +1,4 @@
-defmodule Brando.Images.Model.ImageCategory do
+defmodule Brando.ImageCategory do
   @moduledoc """
   Ecto schema for the Image Category model
   and helper functions for dealing with the model.
@@ -8,8 +8,8 @@ defmodule Brando.Images.Model.ImageCategory do
   use Brando.Web, :model
   import Ecto.Query, only: [from: 2]
   alias Brando.Utils
-  alias Brando.Users.Model.User
-  alias Brando.Images.Model.ImageSeries
+  alias Brando.User
+  alias Brando.ImageSeries
 
   @required_fields ~w(name slug creator_id)
   @optional_fields ~w(cfg)
@@ -125,7 +125,7 @@ defmodule Brando.Images.Model.ImageCategory do
   dependent images.
   """
   def delete(record) do
-    Brando.Images.Model.ImageSeries.delete_dependent_image_series(record.id)
+    Brando.ImageSeries.delete_dependent_image_series(record.id)
     Brando.get_repo.delete(record)
   end
 

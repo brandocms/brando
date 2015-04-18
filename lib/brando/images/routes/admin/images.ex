@@ -14,9 +14,9 @@ defmodule Brando.Images.Admin.Routes do
   alias Brando.Images.Admin.ImageController
   alias Brando.Images.Admin.ImageSeriesController
   alias Brando.Images.Admin.ImageCategoryController
-  alias Brando.Images.Model.Image
-  alias Brando.Images.Model.ImageSeries
-  alias Brando.Images.Model.ImageCategory
+  alias Brando.Image
+  alias Brando.ImageSeries
+  alias Brando.ImageCategory
 
   defmacro image_resources(path, opts \\ []) do
     add_resources(path, opts)

@@ -1,4 +1,4 @@
-defmodule Brando.Images.Model.Image do
+defmodule Brando.Image do
   @moduledoc """
   Ecto schema for the Image model
   and helper functions for dealing with the model.
@@ -9,8 +9,8 @@ defmodule Brando.Images.Model.Image do
   use Brando.Images.Upload
   import Ecto.Query, only: [from: 2]
   alias Brando.Utils
-  alias Brando.Users.Model.User
-  alias Brando.Images.Model.ImageSeries
+  alias Brando.User
+  alias Brando.ImageSeries
 
   @required_fields ~w(image image_series_id)
   @optional_fields ~w(order creator_id)

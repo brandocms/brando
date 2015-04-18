@@ -1,4 +1,4 @@
-defmodule Brando.Users.Model.User do
+defmodule Brando.User do
   @moduledoc """
   Ecto schema for the User model, as well as image field definitions
   and helper functions for dealing with the user model.

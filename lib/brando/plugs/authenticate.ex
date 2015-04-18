@@ -6,7 +6,7 @@ defmodule Brando.Plug.Authenticate do
   """
   import Plug.Conn
   import Phoenix.Controller, only: [put_flash: 3]
-  alias Brando.Users.Model.User
+  alias Brando.User
 
   @behaviour Plug
 

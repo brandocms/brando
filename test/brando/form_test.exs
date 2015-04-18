@@ -135,7 +135,7 @@ defmodule Brando.FormTest do
        status2: [type: :checkbox, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        status3: [type: :radio, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"]]
-    values = %Brando.Users.Model.User{avatar: nil,
+    values = %Brando.User{avatar: nil,
                                       email: "test@email.com",
                                       role: 4,
                                       full_name: "Test Name", id: 1,

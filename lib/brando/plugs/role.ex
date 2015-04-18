@@ -3,7 +3,7 @@ defmodule Brando.Plug.Role do
   A plug for checking roles on user.
   """
   import Plug.Conn
-  alias Brando.Users.Model.User
+  alias Brando.User
 
   @doc """
   Check `conn` for current_user's `role`.

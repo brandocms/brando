@@ -5,8 +5,8 @@ defmodule Brando.ImageCategory.ControllerTest do
   use Brando.Integration.TestCase
   use Plug.Test
   use RouterHelper
-  alias Brando.Images.Model.ImageCategory
-  alias Brando.Users.Model.User
+  alias Brando.ImageCategory
+  alias Brando.User
   alias Brando.Type.Image.Config
 
   @user_params %{"avatar" => nil, "role" => ["2", "4"],
