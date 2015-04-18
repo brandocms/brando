@@ -96,9 +96,9 @@ defmodule RouterHelper do
   defmodule TestRouter do
     use Phoenix.Router
     alias Brando.Plug.Authenticate
-    import Brando.Users.Admin.Routes
-    import Brando.News.Admin.Routes
-    import Brando.Images.Admin.Routes
+    import Brando.Routes.Admin.Users
+    import Brando.Routes.Admin.News
+    import Brando.Routes.Admin.Images
 
     pipeline :admin do
       plug :accepts, ~w(html json)
@@ -124,23 +124,23 @@ defmodule RouterHelper do
 
     scope "/admin", as: :admin do
       pipe_through :admin
-      user_resources "/brukere", Brando.Users.Admin.UserController, private: %{model: Brando.User}
+      user_resources "/brukere", Brando.Admin.UserController, private: %{model: Brando.User}
       user_resources "/brukere2", private: %{model: Brando.User}
       user_resources "/brukere3"
       post_resources "/nyheter"
       image_resources "/bilder"
-      get "/", Brando.Dashboard.Admin.DashboardController, :dashboard
+      get "/", Brando.Admin.DashboardController, :dashboard
     end
 
     scope "/" do
       pipe_through :browser
-      get "/login", Brando.Auth.AuthController, :login,
+      get "/login", Brando.AuthController, :login,
         private: %{model: Brando.User,
                    layout: {Brando.Auth.LayoutView, "auth.html"}}
-      post "/login", Brando.Auth.AuthController, :login,
+      post "/login", Brando.AuthController, :login,
         private: %{model: Brando.User,
                    layout: {Brando.Auth.LayoutView, "auth.html"}}
-      get "/logout", Brando.Auth.AuthController, :logout,
+      get "/logout", Brando.AuthController, :logout,
         private: %{model: Brando.User,
                    layout: {Brando.Auth.LayoutView, "auth.html"}}
     end

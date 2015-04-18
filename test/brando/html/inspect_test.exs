@@ -39,7 +39,7 @@ defmodule Brando.HTML.InspectTest do
   end
 
   test "inspect_field/3" do
-    assert inspect_field("name", Brando.Type.Image.Config, "value") ==
+    assert inspect_field("name", Brando.Type.ImageConfig, "value") ==
       ~s(<em>Konfigurasjonsdata</em>)
     assert inspect_field("name", Brando.Type.Image, @image_map) =~
       "/media/images/avatars/thumb/27i97a.jpeg"

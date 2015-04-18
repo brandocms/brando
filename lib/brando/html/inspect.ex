@@ -100,7 +100,7 @@ defmodule Brando.HTML.Inspect do
     ~s(<em>Inget tilknyttet bilde</em>)
   end
 
-  defp do_inspect_field(_name, Brando.Type.Image.Config, _value) do
+  defp do_inspect_field(_name, Brando.Type.ImageConfig, _value) do
     ~s(<em>Konfigurasjonsdata</em>)
   end
 

@@ -84,7 +84,7 @@ Now run the migration:
 Routes/pipelines/plugs in `router.ex`:
 
 ```elixir
-import Brando.Users.Admin.Routes
+import Brando.Routes.Admin.Users
 alias Brando.Plug.Authenticate
 
 pipeline :admin do
@@ -98,16 +98,16 @@ end
 scope "/admin", as: :admin do
   pipe_through :admin
   user_resources "/brukere"
-  get "/", Brando.Dashboard.Admin.DashboardController, :dashboard
+  get "/", Brando.Admin.DashboardController, :dashboard
 end
 
 scope "/" do
   pipe_through :browser
-  get "/login", Brando.Auth.AuthController, :login,
+  get "/login", Brando.AuthController, :login,
     private: %{model: Brando.User}
-  post "/login", Brando.Auth.AuthController, :login,
+  post "/login", Brando.AuthController, :login,
     private: %{model: Brando.User}
-  get "/logout", Brando.Auth.AuthController, :logout,
+  get "/logout", Brando.AuthController, :logout,
     private: %{model: Brando.User}
 end
 ```
@@ -142,7 +142,7 @@ config :brando, Brando.Menu,
            "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
            "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
            "#870B46;", "#D0201A;", "#FF641A;"],
-  modules: [Brando.Admin, Brando.Users, Brando.News, Brando.Images]
+  modules: [Admin, Users, News, Images]
 
 # configures the repo
 config :my_app, MyApp.Repo,

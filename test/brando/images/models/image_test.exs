@@ -5,7 +5,7 @@ defmodule Brando.Integration.ImageTest do
   alias Brando.Image
   alias Brando.ImageSeries
   alias Brando.ImageCategory
-  alias Brando.Type.Image.Config
+  alias Brando.Type.ImageConfig
 
   @params %{order: 0, image: %{title: "Title", credits: "credits",
                                        path: "/tmp/path/to/fake/image.jpg",
@@ -14,7 +14,7 @@ defmodule Brando.Integration.ImageTest do
                                        path: "/tmp/path/to/fake/image2.jpg",
                                        sizes: %{small: "/tmp/path/to/fake/image2.jpg", thumb: "/tmp/path/to/fake/thumb2.jpg"}}}
   @series_params %{name: "Series name", slug: "series-name", credits: "Credits", order: 0, creator_id: 1}
-  @category_params %{cfg: %Config{}, creator_id: 1, name: "Test Category", slug: "test-category"}
+  @category_params %{cfg: %ImageConfig{}, creator_id: 1, name: "Test Category", slug: "test-category"}
   @user_params %{avatar: nil, role: ["2", "4"],
                  email: "fanogigyni@gmail.com", full_name: "Nita Bond",
                  password: "finimeze", status: "1", username: "zabuzasixu"}
