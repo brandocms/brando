@@ -27,24 +27,24 @@ defmodule Brando.HTMLTest do
     conn = conn(:get, "/")
     conn = conn |> add_js("test.js")
     assert conn.assigns[:js_extra] == "test.js"
-    assert js_extra(conn) == {:safe, "<script type=\"text/javascript\" src=\"test.js\" charset=\"utf-8\"></script>"}
+    assert js_extra(conn) == {:safe, "<script type=\"text/javascript\" src=\"/static/test.js\" charset=\"utf-8\"></script>"}
     conn = conn |> add_js(["test1.js", "test2.js"])
     assert conn.assigns[:js_extra] == ["test1.js", "test2.js"]
     assert js_extra(conn) ==
-      [safe: "<script type=\"text/javascript\" src=\"test1.js\" charset=\"utf-8\"></script>",
-       safe: "<script type=\"text/javascript\" src=\"test2.js\" charset=\"utf-8\"></script>"]
+      [safe: "<script type=\"text/javascript\" src=\"/static/test1.js\" charset=\"utf-8\"></script>",
+       safe: "<script type=\"text/javascript\" src=\"/static/test2.js\" charset=\"utf-8\"></script>"]
   end
 
   test "css_extra/2" do
     conn = conn(:get, "/")
     conn = conn |> add_css("test.css")
     assert conn.assigns[:css_extra] == "test.css"
-    assert css_extra(conn) == {:safe, "<link rel=\"stylesheet\" href=\"test.css\">"}
+    assert css_extra(conn) == {:safe, "<link rel=\"stylesheet\" href=\"/static/test.css\">"}
     conn = conn |> add_css(["test1.css", "test2.css"])
     assert conn.assigns[:css_extra] == ["test1.css", "test2.css"]
     assert css_extra(conn) ==
-      [safe: "<link rel=\"stylesheet\" href=\"test1.css\">",
-       safe: "<link rel=\"stylesheet\" href=\"test2.css\">"]
+      [safe: "<link rel=\"stylesheet\" href=\"/static/test1.css\">",
+       safe: "<link rel=\"stylesheet\" href=\"/static/test2.css\">"]
   end
 
   test "format_date/1" do

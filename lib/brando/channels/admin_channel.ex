@@ -1,10 +1,10 @@
 defmodule Brando.AdminChannel do
   use Phoenix.Channel
 
-  def join("admin:stream", auth_msg, socket) do
+  def join("admin:stream", _auth_msg, socket) do
     {:ok, socket}
   end
-  def join("admin:" <> _private_room_id, _auth_msg, socket) do
+  def join("admin:" <> _private_room_id, _auth_msg, _socket) do
     :ignore
   end
 

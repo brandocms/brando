@@ -5,6 +5,42 @@
 # is restricted to this project.
 use Mix.Config
 
+config :brando,
+  app_name: "MyApp",
+  endpoint: Brando.Endpoint,
+  media_url: "/media",
+  repo: Brando.Repo,
+  router: Brando.Router,
+  static_url: "/static",
+  templates_path: "../brando/templates"
+
+config :brando, Brando.Images,
+  default_config: %{allowed_mimetypes: ["image/jpeg", "image/png"],
+                    default_size: :medium,
+                    upload_path: Path.join("images", "default"),
+                    random_filename: true,
+                    size_limit: 10240000,
+                    sizes: %{small:  %{size: "300", quality: 100},
+                             medium: %{size: "500", quality: 100},
+                             large:  %{size: "700", quality: 100},
+                             xlarge: %{size: "900", quality: 100},
+                             thumb:  %{size: "150x150^ -gravity center -extent 150x150", quality: 100, crop: true}}
+  }
+
+config :brando, Brando.Type.Role,
+  roles: %{staff: 1, admin: 2, superuser: 4}
+
+config :brando, Brando.Menu,
+  colors: ["#FBA026;", "#F87117;", "#CF3510;", "#890606;", "#FF1B79;",
+           "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
+           "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
+           "#870B46;", "#D0201A;", "#FF641A;"],
+  modules: [Brando.Admin, Brando.Users, Brando.News, Brando.Images]
+
+config :brando, Villain,
+  parser: Brando.Villain.Parser.Default
+
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{Mix.env}.exs"
