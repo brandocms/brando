@@ -5,12 +5,16 @@ var concat = require('gulp-concat');
 var rename = require('gulp-rename');
 var uglify = require('gulp-uglify');
 var babel = require("gulp-babel");
-var sourcemaps = require("gulp-sourcemaps")
+var sourcemaps = require("gulp-sourcemaps");
+var autoprefixer = require('gulp-autoprefixer');
 
 gulp.task('sass', function () {
     return sass('scss/brando.scss', {sourcemap: true})
         .on('error', function (err) { console.log(err.message); })
         .pipe(sourcemaps.write())
+        .pipe(autoprefixer({
+          browsers: ['last 2 versions']
+        }))
         .pipe(gulp.dest('../priv/static/brando/css'));
 });
 
