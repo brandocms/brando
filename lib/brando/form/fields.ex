@@ -222,8 +222,8 @@ defmodule Brando.Form.Fields do
   def __input__(:checkbox, _form_type, name, value, _errors, opts) do
     checked =
       case value do
-        v when v in ["on", true] -> " " <> "checked=\"checked\""
-        v when v in [false, nil] -> ""
+        v when v in ["on", true, "true"] -> " " <> "checked=\"checked\""
+        v when v in [false, nil, "false"] -> ""
         [] ->
           case opts[:default] do
             true  -> " " <> "checked=\"checked\""
@@ -231,7 +231,8 @@ defmodule Brando.Form.Fields do
             nil   -> ""
           end
       end
-    ~s(<input name="#{name}" type="checkbox"#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])}#{checked} />)
+    ~s(<input name="#{name}" type="hidden" value="false">
+       <input name="#{name}" value="true" type="checkbox"#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])}#{checked} />)
   end
 
   def __input__(input_type, :update, name, value, _errors, opts) do

@@ -71,5 +71,5 @@ defmodule Brando.Type.Role do
     end)
     {:ok, acc}
   end
-  def dump(_), do: :errorend
+  def dump(_), do: :error
 end

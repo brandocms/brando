@@ -13,8 +13,8 @@ defmodule Brando.Post do
   alias Brando.User
   alias Brando.Utils
 
-  @required_fields ~w(status header data lead creator_id language)
-  @optional_fields ~w(featured)
+  @required_fields ~w(status header data lead creator_id language featured)
+  @optional_fields ~w()
 
   schema "posts" do
     field :language, :string
@@ -72,10 +72,6 @@ defmodule Brando.Post do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :create, params) do
-    params =
-      params
-      |> Utils.Model.transform_checkbox_vals(~w(featured))
-
     model
     |> cast(params, @required_fields, @optional_fields)
   end
@@ -91,10 +87,6 @@ defmodule Brando.Post do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
-    params =
-      params
-      |> Utils.Model.transform_checkbox_vals(~w(featured))
-
     model
     |> cast(params, [], @required_fields ++ @optional_fields)
   end
