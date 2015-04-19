@@ -2,8 +2,8 @@ defmodule Brando.HTML.TablizeTest do
   use ExUnit.Case
   use Brando.Integration.TestCase
   import Brando.HTML.Tablize
-  alias Brando.Users.Model.User
-  alias Brando.News.Model.Post
+  alias Brando.User
+  alias Brando.Post
 
   @user_params %{"avatar" => nil, "role" => ["2", "4"],
             "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",

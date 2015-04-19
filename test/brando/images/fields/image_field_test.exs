@@ -3,7 +3,7 @@ defmodule Brando.Images.Field.ImageFieldTest do
   import Brando.Images.Utils
 
   defmodule TestModel do
-    use Brando.Images.Field.ImageField
+    use Brando.Field.ImageField
 
     has_image_field :avatar,
       [allowed_mimetypes: ["image/jpeg", "image/png"],

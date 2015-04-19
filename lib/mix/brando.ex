@@ -13,7 +13,7 @@ defmodule Mix.Brando do
       |> Path.wildcard(match_dot: true)
 
     for source_path <- source_paths do
-      unless source_path == ".DS_Store" do
+      unless Path.basename(source_path) == ".DS_Store" do
         target_path = make_destination_path(source_path, source_dir,
                                             target_dir, file_name_template)
 

@@ -4,7 +4,7 @@ defmodule Brando.Type.Status do
   """
 
   @behaviour Ecto.Type
-  @status_codes %{draft: 0, published: 1, pending: 2, deleted: 3}
+  @status_codes [draft: 0, published: 1, pending: 2, deleted: 3]
 
   @doc """
   Returns the internal type representation of our `Role` type for pg
@@ -15,7 +15,10 @@ defmodule Brando.Type.Status do
   Cast should return OUR type no matter what the input.
   """
   def cast(atom) when is_atom(atom), do: {:ok, atom}
-  def cast(binary) when is_binary(binary), do: {:ok, Enum.slice(Map.keys(@status_codes), String.to_integer(binary), 1)}
+  def cast(binary) when is_binary(binary) do
+    [atom] = for {k, v} <- @status_codes, v == String.to_integer(binary), do: k
+    {:ok, atom}
+  end
 
   @doc """
   Cast anything else is a failure
@@ -48,5 +51,7 @@ defmodule Brando.Type.Status do
   def dump(atom) when is_atom(atom), do: {:ok, @status_codes[atom]}
   def dump(binary) when is_binary(binary), do: {:ok, String.to_integer(binary)}
   def dump(integer) when is_integer(integer), do: {:ok, integer}
-  def dump(_), do: :errorend
+  def dump(_) do
+    :error
+  end
 end

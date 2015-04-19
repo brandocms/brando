@@ -86,15 +86,15 @@ defmodule Brando.Form.FieldsTest do
 
   test "__input__ checkbox" do
     assert F.__input__(:checkbox, :create, "name", [], [], []) ==
-      "<input name=\"name\" type=\"checkbox\" />"
+      "<input name=\"name\" type=\"hidden\" value=\"false\">\n       <input name=\"name\" value=\"true\" type=\"checkbox\" />"
     assert F.__input__(:checkbox, :create, "name", false, [], []) ==
-      "<input name=\"name\" type=\"checkbox\" />"
+      "<input name=\"name\" type=\"hidden\" value=\"false\">\n       <input name=\"name\" value=\"true\" type=\"checkbox\" />"
     assert F.__input__(:checkbox, :create, "name", nil, [], []) ==
-      "<input name=\"name\" type=\"checkbox\" />"
+      "<input name=\"name\" type=\"hidden\" value=\"false\">\n       <input name=\"name\" value=\"true\" type=\"checkbox\" />"
     assert F.__input__(:checkbox, :create, "name", true, [], []) ==
-      "<input name=\"name\" type=\"checkbox\" checked=\"checked\" />"
+      "<input name=\"name\" type=\"hidden\" value=\"false\">\n       <input name=\"name\" value=\"true\" type=\"checkbox\" checked=\"checked\" />"
     assert F.__input__(:checkbox, :create, "name", "on", [], []) ==
-      "<input name=\"name\" type=\"checkbox\" checked=\"checked\" />"
+      "<input name=\"name\" type=\"hidden\" value=\"false\">\n       <input name=\"name\" value=\"true\" type=\"checkbox\" checked=\"checked\" />"
   end
 
   test "__render_errors__/1" do

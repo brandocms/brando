@@ -35,7 +35,7 @@ config :brando, Brando.Menu,
            "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
            "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
            "#870B46;", "#D0201A;", "#FF641A;"],
-  modules: [Brando.Admin, Brando.Users, Brando.News, Brando.Images]
+  modules: [Admin, Users, News, Images]
 
 config :brando, Villain,
   parser: Brando.Villain.Parser.Default

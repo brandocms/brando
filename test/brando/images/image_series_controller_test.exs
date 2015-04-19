@@ -5,18 +5,18 @@ defmodule Brando.ImageSeries.ControllerTest do
   use Brando.Integration.TestCase
   use Plug.Test
   use RouterHelper
-  alias Brando.Images.Model.ImageSeries
-  alias Brando.Images.Model.ImageCategory
-  alias Brando.Users.Model.User
-  alias Brando.Type.Image.Config
+  alias Brando.ImageSeries
+  alias Brando.ImageCategory
+  alias Brando.User
+  alias Brando.Type.ImageConfig
 
   @user_params %{"avatar" => nil, "role" => ["2", "4"],
                  "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
   @series_params %{"name" => "Series name", "slug" => "series-name", "credits" => "Credits", "order" => 0, "creator_id" => 1}
-  @category_params %{"cfg" => %Config{}, "creator_id" => 1, "name" => "Test Category", "slug" => "test-category"}
-  @broken_params %{"cfg" => %Config{}, "creator_id" => 1}
+  @category_params %{"cfg" => %ImageConfig{}, "creator_id" => 1, "name" => "Test Category", "slug" => "test-category"}
+  @broken_params %{"cfg" => %ImageConfig{}, "creator_id" => 1}
   @up_params %Plug.Upload{content_type: "image/png", filename: "sample.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"}
   @up_params2 %Plug.Upload{content_type: "image/png", filename: "sample2.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample2.png"}
 

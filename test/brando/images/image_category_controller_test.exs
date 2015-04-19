@@ -5,16 +5,16 @@ defmodule Brando.ImageCategory.ControllerTest do
   use Brando.Integration.TestCase
   use Plug.Test
   use RouterHelper
-  alias Brando.Images.Model.ImageCategory
-  alias Brando.Users.Model.User
-  alias Brando.Type.Image.Config
+  alias Brando.ImageCategory
+  alias Brando.User
+  alias Brando.Type.ImageConfig
 
   @user_params %{"avatar" => nil, "role" => ["2", "4"],
                  "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
-  @params %{"cfg" => %Config{}, "creator_id" => 1, "name" => "Test Category", "slug" => "test-category"}
-  @broken_params %{"cfg" => %Config{}, "creator_id" => 1}
+  @params %{"cfg" => %ImageConfig{}, "creator_id" => 1, "name" => "Test Category", "slug" => "test-category"}
+  @broken_params %{"cfg" => %ImageConfig{}, "creator_id" => 1}
 
   def create_user do
     {:ok, user} = User.create(@user_params)

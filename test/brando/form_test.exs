@@ -117,8 +117,8 @@ defmodule Brando.FormTest do
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n      <label for=\"user[status2]\" class=\"\">Status</label><select name=\"user[status2][]\" multiple><option value=\"1\" selected>Valg 1</option><option value=\"2\">Valg 2</option></select>\n      \n      \n    </div></div>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n      <label for=\"user[status]\" class=\"\">Status</label><select name=\"user[status]\" class=\"\"><option value=\"1\" selected>Valg 1</option><option value=\"2\">Valg 2</option></select>\n      \n      \n    </div></div>",
        "<fieldset><legend><br>Permissions</legend><div data-row-span=\"2\">",
-       "<div data-field-span=\"1\" class=\"form-group\">\n      <div class=\"checkbox\"><label for=\"user[administrator]\" class=\"\"></label><label for=\"user[administrator]\" class=\"\"><input name=\"user[administrator]\" type=\"checkbox\" />Administrator</label></div>\n      \n      \n    </div>",
-       "<div data-field-span=\"1\" class=\"form-group\">\n      <div class=\"checkbox\"><label for=\"user[editor]\" class=\"\"></label><label for=\"user[editor]\" class=\"\"><input name=\"user[editor]\" type=\"checkbox\" checked=\"checked\" />Editor</label></div>\n      \n      \n    </div>",
+       "<div data-field-span=\"1\" class=\"form-group\">\n      <div class=\"checkbox\"><label for=\"user[administrator]\" class=\"\"></label><label for=\"user[administrator]\" class=\"\"><input name=\"user[administrator]\" type=\"hidden\" value=\"false\">\n       <input name=\"user[administrator]\" value=\"true\" type=\"checkbox\" />Administrator</label></div>\n      \n      \n    </div>",
+       "<div data-field-span=\"1\" class=\"form-group\">\n      <div class=\"checkbox\"><label for=\"user[editor]\" class=\"\"></label><label for=\"user[editor]\" class=\"\"><input name=\"user[editor]\" type=\"hidden\" value=\"false\">\n       <input name=\"user[editor]\" value=\"true\" type=\"checkbox\" checked=\"checked\" />Editor</label></div>\n      \n      \n    </div>",
        "</div></fieldset>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n      <label for=\"user[avatar]\" class=\"\">Avatar</label><input name=\"user[avatar]\" type=\"file\" />\n      \n      \n    </div></div>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n      <input name=\"user[submit]\" type=\"submit\" value=\"Save\" class=\"btn btn-default\" />\n      \n      \n    </div></div>"]
@@ -135,7 +135,7 @@ defmodule Brando.FormTest do
        status2: [type: :checkbox, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        status3: [type: :radio, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"]]
-    values = %Brando.Users.Model.User{avatar: nil,
+    values = %Brando.User{avatar: nil,
                                       email: "test@email.com",
                                       role: 4,
                                       full_name: "Test Name", id: 1,
@@ -151,13 +151,12 @@ defmodule Brando.FormTest do
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n      <label for=\"user[status2]\" class=\"\">Status</label><div class=\"checkboxes\"><label for=\"user[status2][]\"></label><label for=\"user[status2][]\"><input name=\"user[status2][]\" type=\"checkbox\" value=\"1\" />Valg 1</label></div><div class=\"checkboxes\"><label for=\"user[status2][]\"></label><label for=\"user[status2][]\"><input name=\"user[status2][]\" type=\"checkbox\" value=\"2\" />Valg 2</label></div>\n      \n      \n    </div></div>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n      <label for=\"user[status]\" class=\"\">Status</label><select name=\"user[status]\" class=\"\"><option value=\"1\">Valg 1</option><option value=\"2\">Valg 2</option></select>\n      \n      \n    </div></div>",
        "<fieldset><div data-row-span=\"2\">",
-       "<div data-field-span=\"1\" class=\"form-group\">\n      <div class=\"checkbox\"><label for=\"user[administrator]\" class=\"\"></label><label for=\"user[administrator]\" class=\"\"><input name=\"user[administrator]\" type=\"checkbox\" />Administrator</label></div>\n      \n      \n    </div>",
-       "<div data-field-span=\"1\" class=\"form-group\">\n      <div class=\"checkbox\"><label for=\"user[editor]\" class=\"\"></label><label for=\"user[editor]\" class=\"\"><input name=\"user[editor]\" type=\"checkbox\" checked=\"checked\" />Editor</label></div>\n      \n      \n    </div>",
+       "<div data-field-span=\"1\" class=\"form-group\">\n      <div class=\"checkbox\"><label for=\"user[administrator]\" class=\"\"></label><label for=\"user[administrator]\" class=\"\"><input name=\"user[administrator]\" type=\"hidden\" value=\"false\">\n       <input name=\"user[administrator]\" value=\"true\" type=\"checkbox\" />Administrator</label></div>\n      \n      \n    </div>",
+       "<div data-field-span=\"1\" class=\"form-group\">\n      <div class=\"checkbox\"><label for=\"user[editor]\" class=\"\"></label><label for=\"user[editor]\" class=\"\"><input name=\"user[editor]\" type=\"hidden\" value=\"false\">\n       <input name=\"user[editor]\" value=\"true\" type=\"checkbox\" checked=\"checked\" />Editor</label></div>\n      \n      \n    </div>",
        "</div></fieldset>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n      <label for=\"user[avatar]\" class=\"\">Avatar</label><input name=\"user[avatar]\" type=\"file\" />\n      \n      \n    </div></div>",
        "<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n      <input name=\"user[submit]\" type=\"submit\" value=\"Save\" class=\"btn btn-default\" />\n      \n      \n    </div></div>"]
   end
-
   test "get_choices/1" do
     assert get_choices(&UserForm.get_status_choices/0) == [[value: "1", text: "Valg 1"], [value: "2", text: "Valg 2"]]
   end

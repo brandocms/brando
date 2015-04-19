@@ -5,7 +5,7 @@ defmodule Brando.Auth.ControllerTest do
   use Brando.Integration.TestCase
   use Plug.Test
   use RouterHelper
-  alias Brando.Users.Model.User
+  alias Brando.User
 
   @params %{"avatar" => nil, "role" => ["2", "4"],
             "email" => "admin@gmail.com", "full_name" => "Admin Admin",

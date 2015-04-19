@@ -1,7 +1,7 @@
 defmodule Brando.Integration.UserTest do
   use ExUnit.Case
   use Brando.Integration.TestCase
-  alias Brando.Users.Model.User
+  alias Brando.User
 
   @params %{"avatar" => nil, "role" => ["2", "4"],
             "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
