@@ -53,10 +53,6 @@ defmodule Brando.User do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, action, params \\ nil)
   def changeset(model, :create, params) do
-    params =
-      params
-      |> strip_unhandled_upload("avatar")
-
     model
     |> cast(params, @required_fields, @optional_fields)
     |> update_change(:email, &String.downcase/1)
@@ -77,10 +73,6 @@ defmodule Brando.User do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
-    params =
-      params
-      |> strip_unhandled_upload("avatar")
-
     model
     |> cast(params, [], @required_fields ++ @optional_fields)
     |> update_change(:email, &String.downcase/1)

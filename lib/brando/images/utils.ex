@@ -128,19 +128,6 @@ defmodule Brando.Images.Utils do
   end
 
   @doc """
-  Check if `to_strip` is an unhandled `Plug.Upload`.
-  If it is, strip it. If not, return `params`.
-  This is used to catch unhandled Plug.Uploads from forms.
-  We usually handle these after the fact.
-  """
-  def strip_unhandled_upload(params, to_strip) do
-    case params[to_strip] do
-      %Plug.Upload{} -> Map.delete(params, to_strip)
-      _ -> params
-    end
-  end
-
-  @doc """
   Splits `file` with `split_path/1`, adds `size` to the path before
   concatenating it with the filename.
 

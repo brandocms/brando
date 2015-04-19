@@ -74,7 +74,6 @@ defmodule Brando.Post do
   def changeset(model, :create, params) do
     params =
       params
-      |> strip_unhandled_upload("cover")
       |> Utils.Model.transform_checkbox_vals(~w(featured))
 
     model
@@ -94,7 +93,6 @@ defmodule Brando.Post do
   def changeset(model, :update, params) do
     params =
       params
-      |> strip_unhandled_upload("cover")
       |> Utils.Model.transform_checkbox_vals(~w(featured))
 
     model
