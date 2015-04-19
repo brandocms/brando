@@ -144,6 +144,7 @@ defmodule Brando.Form do
                           the model's value.
                           &__MODULE__.status_is_selected/2
         * `label`: "Label for field"
+        * `empty_value`: Value to set if none of the boxes are checked.
         * `default`: true/false. Set as a value when using `multiple`.
           - ex: "2"
 
@@ -376,7 +377,6 @@ defmodule Brando.Form do
   def render_field(form_type, name, :checkbox, opts, value, errors) do
     if opts[:multiple] do
       render_checks(form_type, name, opts, value, errors)
-      |> Enum.join("")
       |> F.__concat__(F.__label__(name, opts[:label_class], opts[:label]))
       |> F.__form_group__(name, opts, errors)
       |> F.__data_row_span__(opts[:in_fieldset])
@@ -440,8 +440,14 @@ defmodule Brando.Form do
   Iterates through `opts` :choices key, rendering input type="checkbox"s
   """
   def render_checks(form_type, name, opts, value, _errors) do
-    for choice <- get_choices(opts[:choices]) do
+    checks = for choice <- get_choices(opts[:choices]) do
       F.__checkbox__(form_type, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
     end
+    empty_value =
+      case opts[:empty_value] do
+        nil -> ""
+        val -> ~s(<input type="hidden" value="#{val}" name="#{name}" />)
+      end
+    "#{empty_value}#{Enum.join(checks, "")}"
   end
 end

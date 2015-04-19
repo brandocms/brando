@@ -35,6 +35,13 @@ defmodule Brando.Type.Role do
   end
 
   @doc """
+  Only triggered by our default "0" value
+  """
+  def cast(binary) when is_binary(binary) do
+    {:ok, String.to_integer(binary)}
+  end
+
+  @doc """
   Cast anything else is a failure
   """
   def cast(_), do: :error

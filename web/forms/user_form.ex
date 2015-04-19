@@ -16,7 +16,7 @@ defmodule Brando.UserForm do
   end
 
   @doc false
-  def role_selected?(choice_value, values) do
+  def role_selected?(choice_value, values) when is_list(values) do
     # first make an int out of the values list
     role_int = Enum.reduce(values, 0, fn (role, acc) ->
       cond do
@@ -28,6 +28,10 @@ defmodule Brando.UserForm do
     # choice_value to int
     choice_int = String.to_integer(choice_value)
     (role_int &&& choice_int) == choice_int
+  end
+
+  def role_selected?(choice_value, values) do
+    false
   end
 
   form "user", [helper: :admin_user_path, class: "grid-form"] do
@@ -55,6 +59,7 @@ defmodule Brando.UserForm do
     field :role, :checkbox,
       [choices: &__MODULE__.get_role_choices/0,
        is_selected: &__MODULE__.role_selected?/2,
+       empty_value: 0,
        label: "Rolle", multiple: true]
     field :avatar, :file,
       [label: "Bilde"]
