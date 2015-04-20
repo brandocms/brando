@@ -33,6 +33,14 @@ import_config "brando.exs"
 import_config "#{Mix.env}.exs"
 ```
 
+Add to your relevant `config/%{env}.exs` Repo config:
+
+```elixir
+config :my_app, Repo,
+  # ...
+  extensions: [{Brando.Postgrex.Extension.JSON, library: Poison}]
+```
+
 Install Brando:
 
     $ mix brando.install
