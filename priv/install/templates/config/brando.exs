@@ -1,17 +1,10 @@
-# This file is responsible for configuring your application
-# and its dependencies with the aid of the Mix.Config module.
-#
-# This configuration file is loaded before any dependency and
-# is restricted to this project.
-use Mix.Config
-
 config :brando,
-  app_name: "MyApp",
-  endpoint: Brando.Endpoint,
+  app_name: "<%= application_module %>",
+  endpoint: <%= application_module %>.Endpoint,
   media_url: "/media",
-  repo: Brando.Repo,
-  router: Brando.Router,
-  helpers: Brando.Router.Helpers,
+  repo: <%= application_module %>.Repo,
+  router: <%= application_module %>.Router,
+  helpers: <%= application_module %>.Router.Helpers,
   static_url: "/static",
   templates_path: "../brando/templates"
 
@@ -39,9 +32,4 @@ config :brando, Brando.Menu,
   modules: [Admin, Users, News, Images]
 
 config :brando, Villain,
-  parser: Brando.Villain.Parser.Default
-
-
-# Import environment specific config. This must remain at the bottom
-# of this file so it overrides the configuration defined above.
-import_config "#{Mix.env}.exs"
+  parser: <%= application_module %>.Villain.Parser

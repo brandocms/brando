@@ -17,21 +17,9 @@ defmodule Brando.UserForm do
 
   @doc false
   def role_selected?(choice_value, values) when is_list(values) do
-    # first make an int out of the values list
-    role_int = Enum.reduce(values, 0, fn (role, acc) ->
-      cond do
-        is_atom(role) -> acc + @roles[role]
-        is_binary(role) -> acc + String.to_integer(role)
-        is_integer(role) -> acc
-      end
-    end)
-    # choice_value to int
+    {:ok, role_int} = Brando.Type.Role.dump(values)
     choice_int = String.to_integer(choice_value)
     (role_int &&& choice_int) == choice_int
-  end
-
-  def role_selected?(choice_value, values) do
-    false
   end
 
   form "user", [helper: :admin_user_path, class: "grid-form"] do
