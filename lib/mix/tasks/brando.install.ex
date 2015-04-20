@@ -1,9 +1,30 @@
 defmodule Mix.Tasks.Brando.Install do
   use Mix.Task
-  alias Phoenix.Naming
-  import Mix.Brando
+  import Mix.Generator
+  #alias Phoenix.Naming
+  #import Mix.Brando
 
   @shortdoc "Generates files for Brando."
+
+
+  @new [
+    {:eex,  "web/villain/parser.ex",                                    "web/villain/parser.ex"},
+    {:eex,  "config/brando.exs",                                        "config/brando.exs"},
+    {:eex,  "migrations/20150210211010_add_posts_table.exs",            "priv/repo/migrations/20150210211010_add_posts_table.exs"},
+    {:eex,  "migrations/20150212162739_add_postimages_table.exs",       "priv/repo/migrations/20150212162739_add_postimages_table.exs"},
+    {:eex,  "migrations/20150215090305_add_imagecategories_table.exs",  "priv/repo/migrations/20150215090305_add_imagecategories_table.exs"},
+    {:eex,  "migrations/20150215090306_add_imageseries_table.exs",      "priv/repo/migrations/20150215090306_add_imageseries_table.exs"},
+    {:eex,  "migrations/20150215090307_add_images_table.exs",           "priv/repo/migrations/20150215090307_add_images_table.exs"},
+  ]
+
+  root = Path.expand("../../../priv/install/templates", __DIR__)
+
+  for {format, source, _} <- @new do
+    unless format == :keep do
+      @external_resource Path.join(root, source)
+      def render(unquote(source)), do: unquote(File.read!(Path.join(root, source)))
+    end
+  end
 
   @moduledoc """
   Generates admin, common files as well as Users; Brando's user management
@@ -16,67 +37,36 @@ defmodule Mix.Tasks.Brando.Install do
     run(args, nil)
   end
   def run(_, _opts) do
-    application_atom   = Mix.Project.config()[:app]
-    application_name   = Naming.camelize(application_atom)
+    app = Mix.Project.config()[:app]
+    binding = [
+      application_module: Phoenix.Naming.camelize(app),
+      application_name: Atom.to_string(app),
+    ]
 
-    binding = [application_atom: application_atom,
-               application_name: application_name]
+    copy_from "./", binding, @new
 
-    copy_from brando_template_dir, "./", {}, &EEx.eval_file(&1, binding)
-    copy_from users_template_dir, "./", {}, &EEx.eval_file(&1, binding)
-    copy_from media_dir, "./priv/media", application_name, &File.read!(&1)
-    copy_from static_dir, Path.join("./", "priv/static"), application_name, &File.read!(&1)
     Mix.shell.info """
     ------------------------------------------------------------------
     Brando finished copying.
     ------------------------------------------------------------------
-    Add to `web/router.ex`:
-        pipeline :admin do
-          plug :accepts, ~w(html json)
-          plug :fetch_session
-          plug Brando.Plug.Authenticate
-        end
-
-        scope "/admin", as: :admin do
-          pipe_through :admin
-          users_resources "/brukere"
-          get "/", <%= application_name %>.Dashboard.Admin.DashboardController, :dashboard
-        end
-
-        scope "/" do
-          pipe_through :browser
-          get "/login", <%= application_name %>.AuthController, :login
-          post "/login", <%= application_name %>.AuthController, :login
-          get "/logout", <%= application_name %>.AuthController, :logout
-        end
-
-    Add to lib/your_app.ex
-        children = [
-          worker(YourApp.Repo, [])
-        ]
-
-    Add to mix.exs
-        def application do
-          [mod: {MyApp, []},
-            applications: [:phoenix, :cowboy, :logger, :postgrex, :ecto, :bcrypt]]
-        end
-    ------------------------------------------------------------------
     """
   end
 
-  defp brando_template_dir do
-    Application.app_dir(:brando, "priv/templates/brando")
-  end
+  defp copy_from(target_dir, binding, mapping) when is_list(mapping) do
+    application_name = Keyword.fetch!(binding, :application_name)
+    for {format, source, target_path} <- mapping do
+      target = Path.join(target_dir,
+                         String.replace(target_path, "application_name", application_name))
 
-  defp users_template_dir do
-    Application.app_dir(:brando, "priv/templates/users")
-  end
-
-  defp static_dir do
-    Application.app_dir(:brando, "priv/static")
-  end
-
-  defp media_dir do
-    Application.app_dir(:brando, "priv/media")
+      case format do
+        :keep ->
+          File.mkdir_p!(target)
+        :text ->
+          create_file(target, render(source))
+        :eex  ->
+          contents = EEx.eval_string(render(source), binding, file: source)
+          create_file(target, contents)
+      end
+    end
   end
 end

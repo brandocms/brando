@@ -21,7 +21,9 @@ defmodule Brando.Type.Role do
     # first turn the list of binaries into a sum
     roles = Enum.reduce(list, 0, fn (role, acc) ->
       cond do
-        is_binary(role) -> acc + String.to_integer(role)
+        is_binary(role)  -> acc + String.to_integer(role)
+        is_integer(role) -> acc + role
+        is_atom(role)    -> acc + @roles[role]
       end
     end)
 
@@ -73,9 +75,11 @@ defmodule Brando.Type.Role do
   def dump(integer) when is_integer(integer), do: {:ok, integer}
   def dump(string) when is_binary(string), do: {:ok, String.to_integer(string)}
   def dump(list) when is_list(list) do
-    acc = Enum.reduce(list, 0, fn (role, acc) ->
-        acc + @roles[role]
-    end)
+    cond do
+      is_atom(List.first(list))    -> acc = Enum.reduce(list, 0, &(&2 + @roles[&1]))
+      is_binary(List.first(list))  -> acc = Enum.reduce(list, 0, &(&2 + String.to_integer(&1)))
+      is_integer(List.first(list)) -> acc = Enum.reduce(list, 0, &(&2 + &1))
+    end
     {:ok, acc}
   end
   def dump(_), do: :error

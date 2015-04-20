@@ -9,11 +9,11 @@ defmodule Brando.Users.ControllerTest do
 
   @params %{"avatar" => nil, "role" => ["2", "4"],
             "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
-            "password" => "finimeze", "status" => "1", "username" => "zabuzasixu"}
+            "password" => "finimeze", "username" => "zabuzasixu"}
 
   @broken_params %{"avatar" => nil, "role" => ["2", "4"],
                    "email" => "fanogigynigmail.com", "full_name" => "Nita Bond",
-                   "password" => "fi", "status" => "1", "username" => ""}
+                   "password" => "fi", "username" => ""}
 
   test "index redirects to /login when no :current_user" do
     conn = call_with_session(RouterHelper.TestRouter, :get, "/admin/brukere")
