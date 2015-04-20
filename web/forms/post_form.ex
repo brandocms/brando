@@ -17,6 +17,10 @@ defmodule Brando.PostForm do
      [value: "3", text: "Slettet"]]
   end
 
+  def get_now do
+    Ecto.DateTime.to_string(Ecto.DateTime.local)
+  end
+
   @doc """
   Check is status' choice is selected.
   Translates the `model_value` from an atom to an int as string
@@ -60,6 +64,10 @@ defmodule Brando.PostForm do
       [label: "Ingress"]
     field :data, :textarea,
       [label: "Innhold"]
+    field :publish_at, :text,
+      [required: true,
+       label: "Publiseringstidspunkt",
+       default: &__MODULE__.get_now/0]
     submit "Lagre",
       [class: "btn btn-success"]
 
