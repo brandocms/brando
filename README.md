@@ -45,37 +45,54 @@ Run migrations:
 
     $ mix ecto.migrate
 
-Now for the routes/pipelines/plugs in `web/router.ex`:
+Now for the routes/pipelines/plugs in `web/router.ex`. Switch out
+MyApp with your application name:
 
 ```elixir
-import Brando.Routes.Admin.Users
-alias Brando.Plug.Authenticate
+defmodule MyApp.Router do
+  use MyApp.Web, :router
 
-pipeline :admin do
-  plug :accepts, ~w(html json)
-  plug :fetch_session
-  plug :fetch_flash
-  plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
-  plug Authenticate, login_url: "/login"
+  import Brando.Routes.Admin.Users
+  import Brando.Routes.Admin.News
+  import Brando.Routes.Admin.Images
+
+  alias Brando.Plug.Authenticate
+
+  pipeline :admin do
+    plug :accepts, ~w(html json)
+    plug :fetch_session
+    plug :fetch_flash
+    plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
+    plug Authenticate, login_url: "/login"
+  end
+
+  pipeline :browser do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_flash
+    plug :protect_from_forgery
+  end
+
+  pipeline :api do
+    plug :accepts, ["json"]
+  end
+
+  scope "/admin", as: :admin do
+    pipe_through :admin
+    user_resources "/brukere"
+    post_resources "/nyheter"
+    image_resources "/bilder"
+    get "/", Brando.Admin.DashboardController, :dashboard
+  end
+
+  scope "/" do
+    pipe_through :browser
+    get "/login", Brando.AuthController, :login, private: %{model: Brando.User}
+    post "/login", Brando.AuthController, :login, private: %{model: Brando.User}
+    get "/logout", Brando.AuthController, :logout, private: %{model: Brando.User}
+  end
 end
 
-scope "/admin", as: :admin do
-  pipe_through :admin
-  user_resources "/brukere"
-  post_resources "/nyheter"
-  image_resources "/bilder"
-  get "/", Brando.Admin.DashboardController, :dashboard
-end
-
-scope "/" do
-  pipe_through :browser
-  get "/login", Brando.AuthController, :login,
-    private: %{model: Brando.User}
-  post "/login", Brando.AuthController, :login,
-    private: %{model: Brando.User}
-  get "/logout", Brando.AuthController, :logout,
-    private: %{model: Brando.User}
-end
 ```
 
 Static config in `endpoint.ex`:
@@ -88,27 +105,7 @@ plug Plug.Static,
   at: "/media", from: "priv/media"
 ```
 
-Configuration:
---------------
-
-In your `config/config.exs`:
-
-```elixir
-config :brando,
-  app_name: "MyApp",
-  router: MyApp.Router,
-  endpoint: MyApp.Endpoint,
-  repo: MyApp.Repo,
-  media_url: "/media",
-  static_url: "/static",
-  templates_path: "path/to/brando/templates",
-
-config :brando, Brando.Menu,
-  colors: ["#FBA026;", "#F87117;", "#CF3510;", "#890606;", "#FF1B79;",
-           "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
-           "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
-           "#870B46;", "#D0201A;", "#FF641A;"],
-  modules: [Admin, Users, News, Images]
+Default login/pass is "admin@twined.net/admin"
 
 # configures the repo
 config :my_app, MyApp.Repo,
