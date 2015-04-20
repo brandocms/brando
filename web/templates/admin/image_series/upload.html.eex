@@ -1,6 +1,6 @@
 <h1>Bildeopplasting</h1>
 <p>Last opp bilder til bildeserien <strong><%= @series.name %></strong></p>
-<%= Brando.HTML.dropzone_form(:admin_image_series_path, @series.id, @series.image_category.cfg) %>
+<%= dropzone_form(:admin_image_series_path, @series.id, @series.image_category.cfg) %>
 <div class="buttons m-t-md">
   <a href="<%= Helpers.admin_image_series_path(@conn, :edit, @series.id) %>" class="btn btn-default">Endre bildeserie</a>
   <a class="btn btn-default">Sortér bildeserie</a>
