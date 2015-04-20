@@ -115,6 +115,9 @@ plug Plug.Static,
 
 Default login/pass is "admin@twined.net/admin"
 
+Repo config:
+
+```elixir
 # configures the repo
 config :my_app, MyApp.Repo,
   database: "my_app",
