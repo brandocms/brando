@@ -169,7 +169,7 @@ defmodule Brando.Post do
   """
   def all do
     (from m in __MODULE__,
-        order_by: [asc: m.status, desc: m.inserted_at],
+        order_by: [asc: m.status, desc: m.featured, desc: m.inserted_at],
         preload: [:creator])
     |> Brando.get_repo.all
   end
