@@ -3,7 +3,6 @@ defmodule Brando.AuthController do
   Controller for authentication actions.
   """
   use Brando.Web, :controller
-  alias Brando.User
   alias Brando.AdminChannel
   plug :action
 
@@ -14,7 +13,7 @@ defmodule Brando.AuthController do
     case model.auth?(user, password) do
       true ->
         user = user
-        |> User.set_last_login
+        |> model.set_last_login
         |> Map.delete(:password)
 
         Brando.AdminChannel.log(:logged_in, user)
