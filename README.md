@@ -41,6 +41,10 @@ Create the database:
 
     $ mix ecto.create
 
+Run migrations:
+
+    $ mix ecto.migrate
+
 Now for the routes/pipelines/plugs in `web/router.ex`:
 
 ```elixir
