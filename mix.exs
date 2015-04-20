@@ -12,12 +12,8 @@ defmodule Brando.Mixfile do
       compilers: [:phoenix] ++ Mix.compilers,
       elixirc_paths: elixirc_paths(Mix.env),
       test_coverage: [tool: ExCoveralls],
-      package: [
-        contributors: ["Trond Mjøen"],
-        licenses: ["MIT"],
-        links: %{github: "https://github.com/twined/brando"}
-      ],
-      description: "Boilerplate for Twined applications.",
+      package: package,
+      description: "Boilerplate for Twined applications. Experimental, do not use.",
       # Docs
       name: "Brando",
       docs: [source_ref: "v#{@version}",
@@ -26,9 +22,7 @@ defmodule Brando.Mixfile do
   end
 
   def application do
-    [
-      applications: [:phoenix, :postgrex, :ecto, :cowboy, :plug, :bcrypt]
-    ]
+    [applications: [:phoenix, :postgrex, :ecto, :cowboy, :plug, :bcrypt]]
   end
 
   defp deps do
@@ -47,6 +41,14 @@ defmodule Brando.Mixfile do
       {:ex_doc, "~> 0.6", only: :docs},
       {:inch_ex, only: :docs}
     ]
+  end
+
+  defp package do
+    [contributors: ["Trond Mjøen"],
+     licenses: ["MIT"],
+     files: ["assets", "config", "lib", "priv", "test", "web",
+             "mix.exs", "README.md", ".travis.yml", "CHANGELOG.md"],
+     links: %{github: "https://github.com/twined/brando"}]
   end
 
   # Specifies which paths to compile per environment
