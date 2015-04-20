@@ -8,7 +8,7 @@
 
 Install:
 --------
-Add Brando, Ecto, bcrypt and postgrex to your `deps` and `applications`
+Add Brando and bcrypt to your `deps` and `applications`
 in your project's `mix.exs`:
 
 ```elixir
@@ -19,9 +19,7 @@ def application do
 end
 
 defp deps do
-  [{:postgrex, ">= 0.0.0"},
-   {:ecto, "~> 0.8"},
-   {:bcrypt, github: "opscode/erlang-bcrypt"},
+  [{:bcrypt, github: "opscode/erlang-bcrypt"},
    {:brando, github: "twined/brando"]}
 end
 ```
@@ -35,16 +33,6 @@ import_config "brando.exs"
 import_config "#{Mix.env}.exs"
 ```
 
-Remember to start the Ecto repo in your `lib/my_app.ex`:
-
-```elixir
-children = [
-  # Define workers and child supervisors to be supervised
-  # worker(MyApp.Worker, [arg1, arg2, arg3])
-  worker(MyApp.Repo, [])
-]
-```
-
 Install Brando:
 
     $ mix brando.install
@@ -53,44 +41,7 @@ Create the database:
 
     $ mix ecto.create
 
-Create an initial migration for the `users` table:
-
-    $ mix ecto.gen.migration add_users_table
-
-then add the following to the generated file
-
-```elixir
-defmodule MyApp.Repo.Migrations.AddUsersTable do
-  use Ecto.Migration
-
-  def up do
-    create table(:users) do
-      add :username,      :text
-      add :full_name,     :text
-      add :email,         :text
-      add :password,      :text
-      add :avatar,        :text
-      add :role,          :integer
-      add :last_login,    :datetime
-      timestamps
-    end
-    create index(:users, [:username], unique: true)
-    create index(:users, [:email], unique: true)
-  end
-
-  def down do
-    drop table(:users)
-    drop index(:users, [:username], unique: true)
-    drop index(:users, [:email], unique: true)
-  end
-end
-```
-
-Now run the migration:
-
-    $ mix ecto.migrate
-
-Routes/pipelines/plugs in `router.ex`:
+Now for the routes/pipelines/plugs in `web/router.ex`:
 
 ```elixir
 import Brando.Routes.Admin.Users
@@ -107,6 +58,8 @@ end
 scope "/admin", as: :admin do
   pipe_through :admin
   user_resources "/brukere"
+  post_resources "/nyheter"
+  image_resources "/bilder"
   get "/", Brando.Admin.DashboardController, :dashboard
 end
 
@@ -161,186 +114,6 @@ config :my_app, MyApp.Repo,
   hostname: "localhost"
   adapter: Ecto.Adapters.Postgres,
   extensions: [{Brando.Postgrex.Extension.JSON, library: Poison}]
-```
-
-News
-====
-
-Create an initial migration for the `posts` table:
-
-    $ mix ecto.gen.migration add_posts_table
-
-then add the following to the generated files:
-
-```elixir
-# posts
-defmodule MyApp.Repo.Migrations.AddPostsTable do
-  use Ecto.Migration
-
-  def up do
-    create table(:posts) do
-      add :language,          :text
-      add :header,            :text
-      add :slug,              :text
-      add :lead,              :text
-      add :data,              :json
-      add :html,              :text
-      add :cover,             :text
-      add :status,            :integer
-      add :creator_id,        references(:users)
-      add :meta_description,  :text
-      add :meta_keywords,     :text
-      add :featured,          :boolean
-      add :published,         :boolean
-      add :publish_at,        :datetime
-      timestamps
-    end
-    create index(:posts, [:language])
-    create index(:posts, [:slug])
-    create index(:posts, [:status])
-  end
-
-  def down do
-    drop table(:posts)
-    drop index(:posts, [:language])
-    drop index(:posts, [:slug])
-    drop index(:posts, [:status])
-  end
-end
-```
-
-Now run the migrations:
-
-    $ mix ecto.migrate
-
-Add to your `router.ex` in your `admin` scope:
-
-```elixir
-scope "/admin", as: :admin do
-  # (...)
-  post_resources "/nyheter"
-end
-```
-
-Images
-======
-
-Create initial migrations:
-
-    $ mix ecto.gen.migration add_imagecategories_table
-    $ mix ecto.gen.migration add_imageseries_table
-    $ mix ecto.gen.migration add_images_table
-
-Populate with:
-
-```elixir
-# imagecategories
-
-defmodule MyApp.Repo.Migrations.AddImagecategoriesTable do
-  use Ecto.Migration
-  def up do
-    create table(:imagecategories) do
-      add :name,              :text
-      add :slug,              :text
-      add :cfg,               :json
-      add :creator_id,        references(:users)
-      timestamps
-    end
-    create index(:imagecategories, [:slug])
-    execute """
-      INSERT INTO
-        imagecategories
-        ("name", "slug", "cfg", "creator_id", "inserted_at", "updated_at")
-      VALUES
-        ('post', 'post', NULL, 1, NOW(), NOW());
-    """
-    execute """
-      INSERT INTO
-        imagecategories
-        ("name", "slug", "cfg", "creator_id", "inserted_at", "updated_at")
-      VALUES
-        ('page', 'page', NULL, 1, NOW(), NOW());
-    """
-  end
-
-  def down do
-    drop table(:imagecategories)
-    drop index(:imagecategories, [:slug])
-  end
-end
-```
-```elixir
-# imageseries
-
-defmodule MyApp.Repo.Migrations.AddImageseriesTable do
-  use Ecto.Migration
-
-  def up do
-    create table(:imageseries) do
-      add :name,              :text
-      add :slug,              :text
-      add :credits,           :text
-      add :order,             :integer
-      add :creator_id,        references(:users)
-      add :image_category_id, references(:imagecategories)
-      timestamps
-    end
-    create index(:imageseries, [:slug])
-    create index(:imageseries, [:order])
-    execute """
-      INSERT INTO
-        imageseries
-        ("name", "slug", "credits", "order", "creator_id", "image_category_id", "inserted_at", "updated_at")
-      VALUES
-        ('post', 'post', NULL, 0, 1, 1, NOW(), NOW());
-    """
-    execute """
-      INSERT INTO
-        imageseries
-        ("name", "slug", "credits", "order", "creator_id", "image_category_id", "inserted_at", "updated_at")
-      VALUES
-        ('page', 'page', NULL, 0, 1, 1, NOW(), NOW());
-    """
-  end
-
-  def down do
-    drop table(:imageseries)
-    drop index(:imageseries, [:slug])
-    drop index(:imageseries, [:order])
-  end
-end
-```
-```elixir
-# images
-
-defmodule MyApp.Repo.Migrations.AddImagesTable do
-  use Ecto.Migration
-
-  def up do
-    create table(:images) do
-      add :image,             :text
-      add :order,             :integer
-      add :creator_id,        references(:users)
-      add :image_series_id,   references(:imageseries)
-      timestamps
-    end
-    create index(:images, [:order])
-  end
-
-  def down do
-    drop table(:images)
-    drop index(:images, [:order])
-  end
-end
-```
-
-Add to your `router.ex` in your `admin` scope:
-
-```elixir
-scope "/admin", as: :admin do
-  # (...)
-  image_resources "/bilder"
-end
 ```
 
 Config
