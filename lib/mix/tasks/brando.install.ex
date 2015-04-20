@@ -10,6 +10,7 @@ defmodule Mix.Tasks.Brando.Install do
   @new [
     {:eex,  "web/villain/parser.ex",                                    "web/villain/parser.ex"},
     {:eex,  "config/brando.exs",                                        "config/brando.exs"},
+    {:text, "media/defaults/thumb/avatar_default.jpg",                  "priv/media/defaults/thumb/avatar_default.jpg"},
     {:eex,  "migrations/20150210211010_add_posts_table.exs",            "priv/repo/migrations/20150210211010_add_posts_table.exs"},
     {:eex,  "migrations/20150212162739_add_postimages_table.exs",       "priv/repo/migrations/20150212162739_add_postimages_table.exs"},
     {:eex,  "migrations/20150215090305_add_imagecategories_table.exs",  "priv/repo/migrations/20150215090305_add_imagecategories_table.exs"},
