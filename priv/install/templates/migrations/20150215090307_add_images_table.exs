@@ -3,10 +3,8 @@ defmodule <%= application_module %>.Repo.Migrations.AddImagesTable do
 
   def up do
     create table(:images) do
-      add :title,             :text
-      add :credits,           :text
+      add :image,             :text
       add :order,             :integer
-      add :optimized,         :boolean
       add :creator_id,        references(:users)
       add :image_series_id,   references(:imageseries)
       timestamps
