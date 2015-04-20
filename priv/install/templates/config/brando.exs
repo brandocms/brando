@@ -1,3 +1,7 @@
+# Default generated Brando configuration
+
+use Mix.Config
+
 config :brando,
   app_name: "<%= application_module %>",
   endpoint: <%= application_module %>.Endpoint,
