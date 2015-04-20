@@ -36,7 +36,6 @@ config :brando, Brando.Images, [
 config :brando, :router, RouterHelper.TestRouter
 config :brando, :endpoint, Brando.Integration.Endpoint
 config :brando, :repo, Brando.Integration.TestRepo
-config :brando, :helpers, RouterHelper.TestRouter.Helpers
 config :brando, :media_url, "/media"
 config :brando, Villain, parser: Brando.Villain.Parser.Default
 config :brando, :logging, disable_logging: true

@@ -26,15 +26,6 @@ defp deps do
 end
 ```
 
-Add to your `config/config.exs` right before the env-specific import:
-
-```elixir
-# insert -- begin
-import_config "brando.exs"
-# insert -- end
-import_config "#{Mix.env}.exs"
-```
-
 Remember to start the Ecto repo in your `lib/my_app.ex`:
 
 ```elixir

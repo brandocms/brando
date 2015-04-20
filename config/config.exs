@@ -11,7 +11,6 @@ config :brando,
   media_url: "/media",
   repo: Brando.Repo,
   router: Brando.Router,
-  helpers: Brando.Router.Helpers,
   static_url: "/static",
   templates_path: "../brando/templates"
 

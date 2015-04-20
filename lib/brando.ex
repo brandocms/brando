@@ -7,7 +7,7 @@ defmodule Brando do
   Gets the configuration for `module` under :brando,
   as set in config.exs
   """
-  def config(module), do: Application.get_env(:brando, module)
+  def config(module), do: Application.get_env(:brando, module, [])
 
   @doc """
   Gets the parent app's router, as set in config.exs
@@ -30,6 +30,6 @@ defmodule Brando do
   Gets the parent app's helpers, as set in config.exs
   """
   def get_helpers do
-    config(:helpers)
+    Module.concat(get_router, "Helpers")
   end
 end

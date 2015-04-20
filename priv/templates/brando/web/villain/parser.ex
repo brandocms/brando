@@ -1,4 +1,4 @@
-defmodule <%= application_module %>.Villain.Parser do
+defmodule <%= application_name %>.Villain.Parser do
   @behaviour Villain.Parser
 
   def header(%{"text" => text}) do
