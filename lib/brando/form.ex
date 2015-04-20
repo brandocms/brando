@@ -132,6 +132,8 @@ defmodule Brando.Form do
           Automatically slugs with `:name` as source.
         * `help_text` - "Help text for field"
         * `placeholder` - "Placeholder for field"
+        * `default` - Default value. Can also be a function like
+                      `&__MODULE__.default_func/0`
 
       * `checkbox` - Standard checkbox
 

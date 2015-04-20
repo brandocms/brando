@@ -241,7 +241,7 @@ defmodule Brando.Form.Fields do
   end
 
   def __input__(input_type, _form_type, name, value, _errors, opts) do
-    ~s(<input name="#{name}" type="#{input_type}"#{get_slug_from(name, opts)}#{get_value(value)}#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])} />)
+    ~s(<input name="#{name}" type="#{input_type}"#{get_slug_from(name, opts)}#{get_val(value, opts[:default])}#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])} />)
   end
 
   def __tag__(tag, name, contents, class) do
@@ -297,9 +297,14 @@ defmodule Brando.Form.Fields do
   @doc """
   If `value` is not nil, returns value.
   """
-  def get_value([]), do: ""
-  def get_value(nil), do: ""
-  def get_value(value), do: " " <> "value=\"#{value}\""
+  def get_val([]), do: ""
+  def get_val(nil), do: ""
+  def get_val(value), do: ~s( value="#{value}")
+  def get_val(value, nil), do: get_val(value)
+  def get_val([], default) when is_function(default), do: get_val(default.())
+  def get_val([], default), do: get_val(default)
+  def get_val(value, _), do: get_val(value)
+
 
   @doc """
   Return form_group_class as `value`, if present.
