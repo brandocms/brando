@@ -73,8 +73,8 @@ defmodule Brando.Admin.ImageSeriesController do
     model = conn.private[:series_model]
     series = model.get!(id: id)
     conn
-    |> add_css("dropzone/dropzone.css")
-    |> add_js("dropzone/dropzone.js")
+    |> add_css("brando/css/dropzone.css")
+    |> add_js("brando/js/dropzone.js")
     |> assign(:series, series)
     |> render(:upload)
   end
