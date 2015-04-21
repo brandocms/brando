@@ -174,10 +174,14 @@
   box-sizing: border-box; }
 
 .dropzone {
-  min-height: 150px;
-  border: 2px solid rgba(0, 0, 0, 0.3);
+  min-height: 250px;
+  border: 1px solid #ddd;
   background: white;
-  padding: 20px 20px; }
+  max-width: 730px;
+  }
+  .dropzone i {
+    padding-bottom: 15px;
+  }
   .dropzone.dz-clickable {
     cursor: pointer; }
     .dropzone.dz-clickable * {
@@ -192,7 +196,8 @@
       opacity: 0.5; }
   .dropzone .dz-message {
     text-align: center;
-    margin: 2em 0; }
+    font-weight: bold;
+    margin: 4em 0; }
   .dropzone .dz-preview {
     position: relative;
     display: inline-block;
@@ -204,7 +209,6 @@
       .dropzone .dz-preview:hover .dz-details {
         opacity: 1; }
     .dropzone .dz-preview.dz-file-preview .dz-image {
-      border-radius: 20px;
       background: #999;
       background: linear-gradient(to bottom, #eee, #ddd); }
     .dropzone .dz-preview.dz-file-preview .dz-details {
@@ -266,10 +270,9 @@
       -webkit-filter: blur(8px);
       filter: blur(8px); }
     .dropzone .dz-preview .dz-image {
-      border-radius: 20px;
       overflow: hidden;
-      width: 120px;
-      height: 120px;
+      width: 150px;
+      height: 150px;
       position: relative;
       display: block;
       z-index: 10; }

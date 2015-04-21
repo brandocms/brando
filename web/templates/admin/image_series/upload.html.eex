@@ -6,7 +6,9 @@
   <a class="btn btn-default">Sortér bildeserie</a>
   <a href="<%= Helpers.admin_image_path(@conn, :index) %>" class="btn btn-default">Tilbake til oversikten</a>
 </div>
-<h2>Allerede i serien</h2>
+<div class="image-serie m-t-md">
+  <h2>Allerede i serien</h2>
 <%= for i <- @series.images do %>
-<img src="<%= media_url(img(i.image, :thumb)) %>" />
+  <img src="<%= media_url(img(i.image, :thumb)) %>" />
 <% end %>
+</div>

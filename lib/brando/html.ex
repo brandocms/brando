@@ -170,13 +170,10 @@ defmodule Brando.HTML do
     <script type="text/javascript">
       Dropzone.options.brandoDropzone = {
         paramName: "image", // The name that will be used to transfer the file
-        maxFilesize: 10, // MB
-        accept: function(file, done) {
-          if (file.name == "justinbieber.jpg") {
-            done("Naha, you don't.");
-          }
-          else { done(); }
-        }
+        maxFilesize: 10,
+        thumbnailHeight: 150,
+        thumbnailWidth: 150,
+        dictDefaultMessage: '<i class="fa fa-upload fa-4x"></i><br>Trykk eller slipp bilder her for å laste opp'
       };
     </script>
     """)
