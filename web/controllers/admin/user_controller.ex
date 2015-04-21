@@ -94,7 +94,7 @@ defmodule Brando.Admin.UserController do
           [] -> nil
         end
         if Brando.HTML.current_user(conn).id == String.to_integer(user_id) do
-          conn = put_session(conn, :current_user, Map.delete(updated_user, :password))
+          conn = put_session(conn, :current_user, Map.drop(updated_user, [:password]))
         end
 
         conn
