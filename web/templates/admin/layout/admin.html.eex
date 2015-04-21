@@ -23,7 +23,7 @@
     <%= js_extra(@conn) %>
   </head>
 
-  <body<%= if @conn.private[:brando_section_name] do %> id="<%= @conn.private[:brando_section_name] %>"<% end %>>
+  <body<%= if @conn.private[:brando_section_name] do %> id="<%= @conn.private[:brando_section_name] %>" data-script="<%= @conn.private[:brando_section_name] %>-<%= @conn.private[:phoenix_action] %>"<% end %>>
     <main id="burger" class="show-for-small-only">
       <header>
         <button>☰</button>
