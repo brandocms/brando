@@ -139,6 +139,8 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "sort" do
+    File.rm_rf!(Path.join([Mix.Project.app_path, "tmp", "media"]))
+    File.mkdir_p!(Path.join([Mix.Project.app_path, "tmp", "media"]))
     user = create_user
     category = create_category(user)
     series_params = Map.put(@series_params, "creator_id", user.id)
@@ -154,7 +156,7 @@ defmodule Brando.ImageSeries.ControllerTest do
     assert conn.status == 200
     assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "sorter"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    assert conn.resp_body =~ "<img src=\"/media/images/default/thumb/sample-"
+    assert conn.resp_body =~ "<img src=\"/media/images/default/thumb/sample.png\" /></li>"
 
     series = Brando.get_repo.preload(series, :images)
     [img1, img2] = series.images
