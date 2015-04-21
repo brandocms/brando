@@ -19,9 +19,7 @@ defmodule Brando.Images.Utils do
     |> copy_uploaded_file
     |> create_image_sizes
   end
-  def do_upload(plug, cfg) when is_list(cfg) do
-    do_upload(plug, Enum.into(cfg, %{}))
-  end
+  def do_upload(plug, cfg) when is_list(cfg), do: do_upload(plug, Enum.into(cfg, %{}))
 
   defp get_valid_filename({%{filename: ""}, _cfg}) do
     raise UploadError, message: "Blankt filnavn!"
@@ -52,6 +50,9 @@ defmodule Brando.Images.Utils do
 
   defp copy_uploaded_file({%{filename: filename, path: temp_path, upload_path: upload_path} = plug, cfg}) do
     new_file = Path.join(upload_path, filename)
+    if File.exists?(new_file) do
+      new_file = Path.join(upload_path, unique_filename(filename))
+    end
     case File.cp(temp_path, new_file, fn _, _ -> false end) do
       :ok -> {Map.put(plug, :uploaded_file, new_file), cfg}
       {:error, reason} -> raise UploadError, message: "Feil under kopiering -> #{reason}"

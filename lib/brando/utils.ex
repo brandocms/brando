@@ -319,6 +319,20 @@ defmodule Brando.Utils do
   end
 
   @doc """
+  Adds an unique postfix to `filename`
+  """
+  def unique_filename(filename) do
+    ext = Path.extname(filename)
+    base = String.replace(filename, ext, "")
+    rnd_basename =
+      {filename, :erlang.now}
+      |> :erlang.phash2
+      |> Integer.to_string(32)
+      |> String.downcase
+    "#{base}-#{rnd_basename}#{ext}"
+  end
+
+  @doc """
   Splits `file` (a path and filename).
   Return {`path`, `filename`}
 

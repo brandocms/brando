@@ -51,11 +51,7 @@ defmodule Brando.Field.ImageField do
 
   @doc false
   def compile(imagefields) do
-    imagefields =
-     for {name, contents} <- imagefields do
-       defcfg(name, contents)
-     end
-
+    imagefields = for {name, contents} <- imagefields, do: defcfg(name, contents)
     quote do
       unquote(imagefields)
     end
