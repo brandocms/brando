@@ -154,7 +154,7 @@ defmodule Brando.ImageSeries.ControllerTest do
     assert conn.status == 200
     assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "sorter"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    assert conn.resp_body =~ "<img src=\"/media/images/default/thumb/sample.png\" /></li>"
+    assert conn.resp_body =~ "<img src=\"/media/images/default/thumb/sample-"
 
     series = Brando.get_repo.preload(series, :images)
     [img1, img2] = series.images
