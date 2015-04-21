@@ -109,7 +109,7 @@ defmodule Brando.User do
     user_changeset = changeset(user, :update, params)
     case user_changeset.valid? do
       true ->
-        if Dict.has_key?(user_changeset.changes, :password) do
+        unless user.password == user_changeset.changes.password do
           user_changeset = put_change(user_changeset, :password, gen_password(user_changeset.changes[:password]))
         end
         {:ok, Brando.get_repo().update(user_changeset)}
