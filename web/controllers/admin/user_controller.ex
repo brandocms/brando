@@ -85,6 +85,7 @@ defmodule Brando.Admin.UserController do
   def update(conn, %{"user" => form_data, "id" => user_id}) do
     model = conn.private[:model]
     user = model.get(id: String.to_integer(user_id))
+
     case model.update(user, form_data) do
       {:ok, updated_user} ->
         case model.check_for_uploads(updated_user, form_data) do
@@ -92,6 +93,10 @@ defmodule Brando.Admin.UserController do
           {:errors, _errors} -> nil
           [] -> nil
         end
+        if Brando.HTML.current_user(conn).id == String.to_integer(user_id) do
+          conn = put_session(conn, :current_user, Map.delete(updated_user, :password))
+        end
+
         conn
         |> put_flash(:notice, "Bruker oppdatert.")
         |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn, :index))
