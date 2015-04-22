@@ -13,7 +13,7 @@ defmodule Brando.User do
   @required_fields ~w(username full_name email password)
   @optional_fields ~w(role avatar)
 
-  @roles %{staff: 1, admin: 2, superuser: 4}
+  @roles Application.get_env(:brando, Brando.Type.Role)[:roles]
 
   schema "users" do
     field :username, :string
