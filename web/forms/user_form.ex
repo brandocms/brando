@@ -51,6 +51,7 @@ defmodule Brando.UserForm do
          empty_value: 0,
          label: "Rolle", multiple: true]
     end
+
     field :avatar, :file,
       [label: "Bilde"]
     submit "Lagre",
