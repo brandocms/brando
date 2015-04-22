@@ -224,7 +224,7 @@ defmodule Brando.Form do
   :in_fieldset, which we need for proper form markup.
   """
   def __fieldset_open__(mod, opts) do
-    name = String.to_atom("fs" <> to_string(:erlang.phash2(:os.timestamp)))
+    name = "fs" <> to_string(:erlang.phash2(:os.timestamp))
     fields = Module.get_attribute(mod, :form_fields)
     Module.put_attribute(mod, :in_fieldset, opts[:row_span])
     Module.put_attribute(mod, :form_fields, [{name, [type: :fieldset] ++ opts}|fields])
