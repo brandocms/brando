@@ -11,10 +11,10 @@ var autoprefixer = require('gulp-autoprefixer');
 gulp.task('sass', function () {
     return sass('scss/brando.scss', {sourcemap: true})
         .on('error', function (err) { console.log(err.message); })
-        .pipe(sourcemaps.write())
         .pipe(autoprefixer({
           browsers: ['last 2 versions']
         }))
+        .pipe(sourcemaps.write())
         .pipe(gulp.dest('../priv/static/brando/css'));
 });
 
