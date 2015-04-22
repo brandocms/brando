@@ -44,11 +44,13 @@ defmodule Brando.UserForm do
        label: "Passord",
        placeholder: "Passord"]
 
-    field :role, :checkbox,
-      [choices: &__MODULE__.get_role_choices/0,
-       is_selected: &__MODULE__.role_selected?/2,
-       empty_value: 0,
-       label: "Rolle", multiple: true]
+    fieldset [legend: "Rettigheter", row_span: 2] do
+      field :role, :checkbox,
+        [choices: &__MODULE__.get_role_choices/0,
+         is_selected: &__MODULE__.role_selected?/2,
+         empty_value: 0,
+         label: "Rolle", multiple: true]
+    end
     field :avatar, :file,
       [label: "Bilde"]
     submit "Lagre",
