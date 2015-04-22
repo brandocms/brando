@@ -23,10 +23,12 @@ defmodule Brando.Images.Upload do
     end
   end
 
+  @doc """
+  Handles Plug.Upload for our modules.
+  """
   def handle_upload({name, plug}, _acc, current_user, put_fields, module, cfg) do
     {:ok, file} = do_upload(plug, cfg)
     params = Map.put(put_fields, name, file)
     apply(module, :create, [params, current_user])
   end
-
 end

@@ -34,6 +34,9 @@ defmodule Mix.Tasks.Brando.Install do
   def run(args) do
     run(args, nil)
   end
+  @doc """
+  Copies Brando files from template and static directories to OTP app.
+  """
   def run(_, _opts) do
     app = Mix.Project.config()[:app]
     binding = [

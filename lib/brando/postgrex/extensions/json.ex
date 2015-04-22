@@ -1,4 +1,8 @@
 defmodule Brando.Postgrex.Extension.JSON do
+  @moduledoc """
+  Postgrex Extension for the JSON type.
+  Encodes and decodes json through Poison.
+  """
   alias Postgrex.TypeInfo
 
   @behaviour Postgrex.Extension

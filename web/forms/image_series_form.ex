@@ -6,6 +6,7 @@ defmodule Brando.ImageSeriesForm do
   use Brando.Form
   alias Brando.ImageCategory
 
+  @doc false
   def get_categories do
     for cat <- ImageCategory.all, do: [value: cat.id, text: cat.name]
   end

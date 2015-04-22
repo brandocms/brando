@@ -5,11 +5,13 @@ defmodule Brando.PostForm do
   """
   use Brando.Form
 
+  @doc false
   def get_language_choices do
     [[value: "no", text: "Norsk"],
      [value: "en", text: "English"]]
   end
 
+  @doc false
   def get_status_choices do
     [[value: "0", text: "Kladd"],
      [value: "1", text: "Publisert"],
@@ -17,6 +19,7 @@ defmodule Brando.PostForm do
      [value: "3", text: "Slettet"]]
   end
 
+  @doc false
   def get_now do
     Ecto.DateTime.to_string(Ecto.DateTime.local)
   end

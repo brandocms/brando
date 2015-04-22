@@ -157,9 +157,17 @@ defmodule Brando.HTML do
       </button>
     </form>
     """)
-    # <input type="hidden" name="id" value="#{record.id}" />
   end
 
+  @doc """
+  Renders a dropzone form.
+  Pass in a `helper`, the `id` we are uploading to and an optional `cfg`.
+
+  ## Example
+
+      dropzone_form(:admin_image_series_path, @series.id, @series.image_category.cfg)
+
+  """
   def dropzone_form(helper, id, cfg) do
     _cfg = cfg || Brando.config(Brando.Images)[:default_config]
     path = Brando.Form.get_action(helper, :upload_post, id)
@@ -179,13 +187,21 @@ defmodule Brando.HTML do
     """)
   end
 
+  @doc """
+  Returns a red X if value is nil
+  """
   def check_or_x(nil) do
     ~s(<i class="fa fa-times text-danger"></i>)
   end
+  @doc """
+  Returns a red X if value is false
+  """
   def check_or_x(false) do
     ~s(<i class="fa fa-times text-danger"></i>)
   end
-
+  @doc """
+  Returns a green check if value is anything but nil/false
+  """
   def check_or_x(_) do
     ~s(<i class="fa fa-check text-success"></i>)
   end

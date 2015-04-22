@@ -108,12 +108,23 @@ defmodule Brando.Image do
     get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
   end
 
+  @doc """
+  Get model by `id: id`.
+  """
   def get(id: id) do
     from(m in __MODULE__,
          where: m.id == ^id)
     |> Brando.get_repo.one
   end
 
+  @doc """
+  Reorder image order field.
+
+  ## Example:
+
+      reorder_images(["1", "2", "3"], ["3", "2", "1"]")
+
+  """
   def reorder_images(ids, vals) do
     order = Enum.zip(vals, ids)
     Brando.get_repo.transaction(fn -> Enum.map(order, fn ({val, id}) ->

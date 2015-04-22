@@ -1,4 +1,9 @@
 defmodule Villain do
+  @moduledoc """
+  Villain is our JS editor.
+  https://github.com/twined/villain
+  """
+
   @doc """
   Parses `json` (in Villain-format).
   Delegates to the module `villain_parser`, configured in the
