@@ -22,7 +22,7 @@ defmodule Villain.Controller do
         json conn,
           %{status: "200",
             uid: uid,
-            image: %{id: image.id, src: Brando.HTML.media_url(image.image)},
+            image: %{id: image.id, src: Brando.HTML.media_url(image.image.path)},
             form: %{
               method: "post",
               action: "villain/bildedata/#{image.id}",
@@ -45,9 +45,9 @@ defmodule Villain.Controller do
       @doc false
       def image_info(conn, %{"form" => form, "id" => id, "uid" => uid}) do
         form = URI.decode_query(form)
-        {:ok, image} = unquote(image_model).update(unquote(image_model).get(id: id), form)
+        {:ok, image} = unquote(image_model).update_image_meta(unquote(image_model).get(id: id), form["title"], form["credits"])
         json conn, %{status: 200, id: id, uid: uid,
-                     title: image.title, credits: image.credits}
+                     title: image.image.title, credits: image.image.credits}
       end
     end
   end

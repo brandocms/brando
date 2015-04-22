@@ -86,6 +86,21 @@ defmodule Brando.Image do
     end
   end
 
+  def update_image_meta(model, title, credits) do
+    image =
+      model.image
+      |> Map.put(:title, title)
+      |> Map.put(:credits, credits)
+
+    model_changeset = changeset(model, :update, %{"image" => image})
+    case model_changeset.valid? do
+      true ->
+        {:ok, Brando.get_repo().update(model_changeset)}
+      false ->
+        {:error, model_changeset.errors}
+    end
+  end
+
   @doc """
   Get model by `val` or raise `Ecto.NoResultsError`.
   """
