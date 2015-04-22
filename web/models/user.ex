@@ -193,20 +193,11 @@ defmodule Brando.User do
   """
   def auth?(nil, _password), do: false
   def auth?(user, password) do
-    stored_hash = user.password
-    password    = String.to_char_list(password)
-    {:ok, hash} = :bcrypt.hashpw(password, stored_hash)
-    hash        = :erlang.list_to_binary(hash)
-
-    Utils.secure_compare(hash, stored_hash)
+    Comeonin.Bcrypt.checkpw(password, user.password)
   end
 
   def gen_password(password) do
-    password    = String.to_char_list(password)
-    work_factor = 12
-    {:ok, salt} = :bcrypt.gen_salt(work_factor)
-    {:ok, hash} = :bcrypt.hashpw(password, salt)
-    :erlang.list_to_binary(hash)
+    Comeonin.Bcrypt.hashpwsalt(password, 12)
   end
 
   @doc """

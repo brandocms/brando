@@ -76,11 +76,6 @@ defmodule Brando.UtilsTest do
     assert maybe("hello", &String.upcase/1) == "HELLO"
   end
 
-  test "secure_compare/2" do
-    assert secure_compare("asdf", "asdf")
-    refute secure_compare("asdf", "dfsa")
-  end
-
   test "add_js/2" do
     conn = conn(:get, "/")
     assert conn.assigns[:js_extra] == nil

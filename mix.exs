@@ -22,7 +22,7 @@ defmodule Brando.Mixfile do
   end
 
   def application do
-    [applications: [:phoenix, :postgrex, :ecto, :cowboy, :plug, :bcrypt]]
+    [applications: [:phoenix, :postgrex, :ecto, :cowboy, :plug, :comeonin]]
   end
 
   defp deps do
@@ -35,7 +35,7 @@ defmodule Brando.Mixfile do
       {:phoenix, "~> 0.11"},
       {:linguist, "~> 0.1"},
       {:mogrify, github: "twined/mogrify"},
-      {:bcrypt, github: "opscode/erlang-bcrypt"},
+      {:comeonin, "~> 0.8"},
       {:dialyze, "~> 0.1.3", only: :dev},
       {:excoveralls, "~> 0.3", only: :test},
       {:ex_doc, "~> 0.6", only: :docs},
