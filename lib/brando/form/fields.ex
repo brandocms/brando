@@ -120,6 +120,9 @@ defmodule Brando.Form.Fields do
     default = if opts[:default], do: opts[:default], else: ""
     ~s(<textarea name="#{name}"#{get_class(opts[:class])}>#{default}</textarea>)
   end
+  def __textarea__(_form_type, name, value, _errors, opts) when is_map(value) do
+    ~s(<textarea name="#{name}"#{get_class(opts[:class])}>#{Poison.encode!(value)}</textarea>)
+  end
   def __textarea__(_form_type, name, value, _errors, opts) do
     ~s(<textarea name="#{name}"#{get_class(opts[:class])}>#{value}</textarea>)
   end

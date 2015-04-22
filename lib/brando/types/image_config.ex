@@ -41,9 +41,13 @@ defmodule Brando.Type.ImageConfig do
   receive an integer (as database are stricts) and we will
   just return it to be stored in the model struct.
   """
-  def load(val) do
+  def load(val) when is_binary(val) do
     val = Poison.decode!(val, as: Brando.Type.ImageConfig, keys: :atoms!)
     if val == nil, do: val = %Brando.Type.ImageConfig{}
+    {:ok, val}
+  end
+
+  def load(val) when is_map(val) do
     {:ok, val}
   end
 
@@ -51,8 +55,7 @@ defmodule Brando.Type.ImageConfig do
   When dumping data to the database we expect a `list`, but check for
   other options as well.
   """
-  def dump(val) do
-    val = Poison.encode!(val)
+  def dump(val) when is_map(val) do
     {:ok, val}
   end
 end

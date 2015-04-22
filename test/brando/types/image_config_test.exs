@@ -24,6 +24,6 @@ defmodule Brando.Types.ImageConfigTest do
   end
 
   test "dump" do
-    assert ImageConfig.dump(@struct) == {:ok, @raw}
+    assert ImageConfig.dump(@struct) == {:ok, @struct}
   end
 end

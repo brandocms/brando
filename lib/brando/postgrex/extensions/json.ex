@@ -13,10 +13,10 @@ defmodule Brando.Postgrex.Extension.JSON do
     do: :binary
 
   def encode(%TypeInfo{type: "json"}, map, _state, library) do
-    library.encode!(map)
+    library.encode!(map, keys: :atoms!)
   end
 
   def decode(%TypeInfo{type: "json"}, json, _state, library) do
-    library.decode!(json)
+    library.decode!(json, keys: :atoms!)
   end
 end
