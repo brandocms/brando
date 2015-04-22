@@ -2,6 +2,7 @@ defmodule Brando.Mixfile do
   use Mix.Project
 
   @version "0.1.0-dev"
+  @description "Boilerplate for Twined applications. Experimental, do not use."
 
   def project do
     [
@@ -13,7 +14,7 @@ defmodule Brando.Mixfile do
       elixirc_paths: elixirc_paths(Mix.env),
       test_coverage: [tool: ExCoveralls],
       package: package,
-      description: "Boilerplate for Twined applications. Experimental, do not use.",
+      description: @description,
       # Docs
       name: "Brando",
       docs: [source_ref: "v#{@version}",
