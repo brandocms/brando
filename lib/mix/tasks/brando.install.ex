@@ -1,11 +1,12 @@
 defmodule Mix.Tasks.Brando.Install do
   use Mix.Task
   import Mix.Generator
-  #alias Phoenix.Naming
-  #import Mix.Brando
+
+  @moduledoc """
+  Generates admin, common files as well as Users; Brando's user management
+  """
 
   @shortdoc "Generates files for Brando."
-
 
   @new [
     {:eex,  "web/villain/parser.ex",                                    "web/villain/parser.ex"},
@@ -26,10 +27,6 @@ defmodule Mix.Tasks.Brando.Install do
       def render(unquote(source)), do: unquote(File.read!(Path.join(root, source)))
     end
   end
-
-  @moduledoc """
-  Generates admin, common files as well as Users; Brando's user management
-  """
 
   @doc """
   Copies Brando files from template and static directories to OTP app.
