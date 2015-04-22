@@ -1,4 +1,7 @@
 defmodule Brando.AdminChannel do
+  @moduledoc """
+  Channel for admin information.
+  """
   use Phoenix.Channel
 
   def join("admin:stream", _auth_msg, socket) do
@@ -13,11 +16,17 @@ defmodule Brando.AdminChannel do
     {:noreply, socket}
   end
 
+  @doc """
+  Logs when `user` performs a successful login
+  """
   def log(:logged_in, user) do
     body = "#{user.full_name} logget inn"
     do_log(:notice, "fa-info-circle", body)
   end
 
+  @doc """
+  Logs when `user` performs a successful logout
+  """
   def log(:logged_out, user) do
     body = "#{user.full_name} logget ut"
     do_log(:notice, "fa-info-circle", body)

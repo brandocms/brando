@@ -303,6 +303,9 @@ defmodule Brando.Form.Fields do
   def get_val([]), do: ""
   def get_val(nil), do: ""
   def get_val(value), do: ~s( value="#{value}")
+  @doc """
+  If `value` is not nil, returns `value`. Else returns `default`
+  """
   def get_val(value, nil), do: get_val(value)
   def get_val([], default) when is_function(default), do: get_val(default.())
   def get_val([], default), do: get_val(default)

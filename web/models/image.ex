@@ -86,6 +86,9 @@ defmodule Brando.Image do
     end
   end
 
+  @doc """
+  Updates the `model`'s image JSON field with `title` and `credits`
+  """
   def update_image_meta(model, title, credits) do
     image =
       model.image

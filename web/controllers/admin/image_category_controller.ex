@@ -80,6 +80,7 @@ defmodule Brando.Admin.ImageCategoryController do
     end
   end
 
+  @doc false
   def configure_patch(conn, %{"imagecategoryconfig" => form_data, "id" => id}) do
     model = conn.private[:category_model]
     record = model.get(id: String.to_integer(id))
