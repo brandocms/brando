@@ -22,7 +22,7 @@ defmodule Brando.Mixfile do
   end
 
   def application do
-    [applications: [:phoenix, :postgrex, :ecto, :cowboy, :plug, :comeonin]]
+    [applications: [:comeonin]]
   end
 
   defp deps do
