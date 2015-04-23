@@ -8,19 +8,17 @@
 
 Install:
 --------
-Add Brando and bcrypt to your `deps` and `applications`
-in your project's `mix.exs`:
+Add Brando to your `deps` and `applications` in your project's `mix.exs`:
 
 ```elixir
 def application do
   [mod: {MyApp, []},
    applications: [:phoenix, :cowboy, :logger, :postgrex,
-                  :ecto, :bcrypt, :brando]]
+                  :ecto, :brando]]
 end
 
 defp deps do
-  [{:bcrypt, github: "opscode/erlang-bcrypt"},
-   {:brando, github: "twined/brando"]}
+  [{:brando, github: "twined/brando"]}
 end
 ```
 
