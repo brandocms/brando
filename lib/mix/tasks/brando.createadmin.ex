@@ -29,7 +29,7 @@ defmodule Mix.Tasks.Brando.Createadmin do
     fullname = Mix.shell.prompt("Full Name:") |> String.strip
     password = Mix.shell.prompt("Password:") |> String.strip
 
-    Brando.get_repo.start_link
+    Brando.repo.start_link
     :bcrypt.start
     ret = User.create(%{"email" => email, "username" => username,
                   "password" => password, "full_name" => fullname,

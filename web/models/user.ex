@@ -57,7 +57,7 @@ defmodule Brando.User do
     |> cast(params, @required_fields, @optional_fields)
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
-    |> validate_unique(:email, on: Brando.get_repo())
+    |> validate_unique(:email, on: Brando.repo)
     |> validate_format(:username, ~r/^[a-z0-9_\-\.!~\*'\(\)]+$/)
     |> validate_length(:password, min: 6, too_short: "Passord må være > 6 tegn")
   end
@@ -77,14 +77,14 @@ defmodule Brando.User do
     |> cast(params, [], @required_fields ++ @optional_fields)
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
-    |> validate_unique(:email, on: Brando.get_repo())
+    |> validate_unique(:email, on: Brando.repo)
     |> validate_format(:username, ~r/^[a-z0-9_\-\.!~\*'\(\)]+$/)
     |> validate_length(:password, min: 6, too_short: "Passord må være > 6 tegn")
   end
 
   @doc """
   Create a changeset for the user model by passing `params`.
-  If valid, generate a hashed password and insert user to Brando.get_repo().
+  If valid, generate a hashed password and insert user to Brando.repo.
   If not valid, return errors from changeset
   """
   def create(params) do
@@ -92,7 +92,7 @@ defmodule Brando.User do
     case user_changeset.valid? do
       true ->
         user_changeset = put_change(user_changeset, :password, gen_password(user_changeset.changes[:password]))
-        inserted_user = Brando.get_repo().insert(user_changeset)
+        inserted_user = Brando.repo.insert(user_changeset)
         {:ok, inserted_user}
       false ->
         {:error, user_changeset.errors}
@@ -102,7 +102,7 @@ defmodule Brando.User do
   @doc """
   Create an `update` changeset for the user model by passing `params`.
   If password is in changeset, hash and insert in changeset.
-  If valid, update user in Brando.get_repo().
+  If valid, update user in Brando.repo.
   If not valid, return errors from changeset
   """
   def update(user, params) do
@@ -113,7 +113,7 @@ defmodule Brando.User do
             Map.get(user_changeset.changes, :password) != nil) do
           user_changeset = put_change(user_changeset, :password, gen_password(user_changeset.changes[:password]))
         end
-        {:ok, Brando.get_repo().update(user_changeset)}
+        {:ok, Brando.repo.update(user_changeset)}
       false ->
         {:error, user_changeset.errors}
     end
@@ -125,7 +125,7 @@ defmodule Brando.User do
   def get(username: username) do
     from(u in __MODULE__,
          where: fragment("lower(?) = lower(?)", u.username, ^username))
-    |> Brando.get_repo.one
+    |> Brando.repo.one
   end
 
   @doc """
@@ -134,7 +134,7 @@ defmodule Brando.User do
   def get(email: email) do
     from(u in __MODULE__,
          where: fragment("? = lower(?)", u.email, ^email))
-    |> Brando.get_repo.one
+    |> Brando.repo.one
   end
 
   @doc """
@@ -143,7 +143,7 @@ defmodule Brando.User do
   def get(id: id) do
     from(u in __MODULE__,
          where: u.id == ^id)
-    |> Brando.get_repo.one
+    |> Brando.repo.one
   end
 
   @doc """
@@ -162,7 +162,7 @@ defmodule Brando.User do
       delete_media(record.avatar.path)
       delete_connected_images(record.avatar.sizes)
     end
-    Brando.get_repo.delete(record)
+    Brando.repo.delete(record)
   end
   def delete(id) do
     record = get!(id: id)
@@ -176,7 +176,7 @@ defmodule Brando.User do
   def all do
     q = from u in __MODULE__,
         order_by: u.id
-    Brando.get_repo.all(q)
+    Brando.repo.all(q)
   end
 
   @doc """

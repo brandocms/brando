@@ -93,7 +93,7 @@ defmodule Brando.Post do
 
   @doc """
   Create a changeset for the model by passing `params`.
-  If valid, generate a hashed password and insert model to Brando.get_repo().
+  If valid, generate a hashed password and insert model to Brando.repo.
   If not valid, return errors from changeset
   """
   def create(params, current_user) do
@@ -101,7 +101,7 @@ defmodule Brando.Post do
     model_changeset = changeset(%__MODULE__{}, :create, params)
     case model_changeset.valid? do
       true ->
-        inserted_model = Brando.get_repo().insert(model_changeset)
+        inserted_model = Brando.repo.insert(model_changeset)
         {:ok, inserted_model}
       false ->
         {:error, model_changeset.errors}
@@ -111,14 +111,14 @@ defmodule Brando.Post do
   @doc """
   Create an `update` changeset for the model by passing `params`.
   If password is in changeset, hash and insert in changeset.
-  If valid, update model in Brando.get_repo().
+  If valid, update model in Brando.repo.
   If not valid, return errors from changeset
   """
   def update(model, params) do
     model_changeset = changeset(model, :update, params)
     case model_changeset.valid? do
       true ->
-        {:ok, Brando.get_repo().update(model_changeset)}
+        {:ok, Brando.repo.update(model_changeset)}
       false ->
         {:error, model_changeset.errors}
     end
@@ -127,16 +127,15 @@ defmodule Brando.Post do
   def encode_data(params) do
     cond do
       is_binary(params.data) -> params
-      is_list(params.data) -> Map.put(params, :data, Poison.encode!(params.data))
+      is_list(params.data)   -> Map.put(params, :data, Poison.encode!(params.data))
     end
   end
 
   @doc """
   Get model by `val` or raise `Ecto.NoResultsError`.
   """
-  def get!(val) do
+  def get!(val), do:
     get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
-  end
 
   @doc """
   Get model from DB by `id`
@@ -145,7 +144,7 @@ defmodule Brando.Post do
     from(m in __MODULE__,
          where: m.id == ^id,
          preload: [:creator])
-    |> Brando.get_repo.one
+    |> Brando.repo.one
   end
 
   @doc """
@@ -157,7 +156,7 @@ defmodule Brando.Post do
       delete_media(record.cover.path)
       delete_connected_images(record.cover.sizes)
     end
-    Brando.get_repo.delete(record)
+    Brando.repo.delete(record)
   end
   def delete(id) do
     record = get!(id: id)
@@ -171,7 +170,7 @@ defmodule Brando.Post do
     (from m in __MODULE__,
         order_by: [asc: m.status, desc: m.featured, desc: m.inserted_at],
         preload: [:creator])
-    |> Brando.get_repo.all
+    |> Brando.repo.all
   end
 
   #

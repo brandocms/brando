@@ -6,7 +6,6 @@ defmodule Brando.Menu.News do
   use Brando.Menu
 
   menu "Nyheter", %{name: "Nyheter", anchor: "nyheter", icon: "fa fa-newspaper-o icon",
-                    submenu: [
-                      %{name: "Oversikt", url: {:admin_post_path, :index}},
-                      %{name: "Legg til", url: {:admin_post_path, :new}}]}
+                    submenu: [%{name: "Oversikt", url: {:admin_post_path, :index}},
+                              %{name: "Legg til", url: {:admin_post_path, :new}}]}
 end

@@ -33,7 +33,7 @@ defmodule Brando.Web do
 
   def controller do
     helpers = Brando.get_helpers()
-    repo = Brando.get_repo()
+    repo = Brando.repo
     quote do
       use Phoenix.Controller
 
@@ -46,7 +46,7 @@ defmodule Brando.Web do
   end
 
   def model do
-    repo = Brando.get_repo()
+    repo = Brando.repo
     quote do
       use Ecto.Model
 

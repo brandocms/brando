@@ -73,6 +73,5 @@ defmodule Brando.PostForm do
        default: &__MODULE__.get_now/0]
     submit "Lagre",
       [class: "btn btn-success"]
-
   end
 end

@@ -16,7 +16,7 @@ defmodule Brando.AuthController do
         |> model.set_last_login
         |> Map.delete(:password)
 
-        Brando.AdminChannel.log(:logged_in, user)
+        AdminChannel.log(:logged_in, user)
 
         fetch_session(conn)
         |> put_session(:current_user, user)

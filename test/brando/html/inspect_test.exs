@@ -31,7 +31,7 @@ defmodule Brando.HTML.InspectTest do
     assert ret =~ "Nita Bond"
 
     assert {:ok, post} = Post.create(@post_params, user)
-    post = post |> Brando.get_repo.preload(:creator)
+    post = post |> Brando.repo.preload(:creator)
     {:safe, ret} = model(post)
     assert ret =~ "<i class=\"fa fa-times text-danger\">"
     assert ret =~ "Nita Bond"

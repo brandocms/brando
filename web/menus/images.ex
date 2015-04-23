@@ -6,5 +6,5 @@ defmodule Brando.Menu.Images do
   use Brando.Menu
 
   menu "Bilder", %{name: "Bilder", anchor: "bilder", icon: "fa fa-picture-o icon",
-                    submenu: [%{name: "Oversikt", url: {:admin_image_path, :index}}]}
+                   submenu: [%{name: "Oversikt", url: {:admin_image_path, :index}}]}
 end

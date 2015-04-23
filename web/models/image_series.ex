@@ -58,7 +58,7 @@ defmodule Brando.ImageSeries do
 
   @doc """
   Create a changeset for the model by passing `params`.
-  If valid, generate a hashed password and insert model to Brando.get_repo().
+  If valid, generate a hashed password and insert model to Brando.repo.
   If not valid, return errors from changeset
   """
   def create(params, current_user) do
@@ -66,7 +66,7 @@ defmodule Brando.ImageSeries do
     model_changeset = changeset(%__MODULE__{}, :create, params)
     case model_changeset.valid? do
       true ->
-        inserted_model = Brando.get_repo().insert(model_changeset)
+        inserted_model = Brando.repo.insert(model_changeset)
         {:ok, inserted_model}
       false ->
         {:error, model_changeset.errors}
@@ -76,14 +76,14 @@ defmodule Brando.ImageSeries do
   @doc """
   Create an `update` changeset for the model by passing `params`.
   If password is in changeset, hash and insert in changeset.
-  If valid, update model in Brando.get_repo().
+  If valid, update model in Brando.repo.
   If not valid, return errors from changeset
   """
   def update(model, params) do
     model_changeset = changeset(model, :update, params)
     case model_changeset.valid? do
       true ->
-        {:ok, Brando.get_repo().update(model_changeset)}
+        {:ok, Brando.repo.update(model_changeset)}
       false ->
         {:error, model_changeset.errors}
     end
@@ -94,7 +94,7 @@ defmodule Brando.ImageSeries do
          where: m.slug == ^slug,
          preload: [:images, :image_category],
          limit: 1)
-    |> Brando.get_repo.one!
+    |> Brando.repo.one!
   end
 
   @doc """
@@ -106,7 +106,7 @@ defmodule Brando.ImageSeries do
       where: m.id == ^id,
       order_by: i.order,
       preload: [:creator, :image_category, images: i]))
-      |> Brando.get_repo.one
+      |> Brando.repo.one
   end
 
   @doc """
@@ -123,7 +123,7 @@ defmodule Brando.ImageSeries do
   """
   def delete(record) do
     Brando.Image.delete_dependent_images(record.id)
-    Brando.get_repo.delete(record)
+    Brando.repo.delete(record)
   end
 
   @doc """
@@ -132,11 +132,10 @@ defmodule Brando.ImageSeries do
   def delete_dependent_image_series(category_id) do
     image_series =
       from(m in __MODULE__, where: m.image_category_id == ^category_id)
-      |> Brando.get_repo.all
+      |> Brando.repo.all
 
-    for is <- image_series do
+    for is <- image_series, do:
       delete(is)
-    end
   end
 
   #
@@ -146,7 +145,7 @@ defmodule Brando.ImageSeries do
     [singular: "bildeserie",
      plural: "bildeserier",
      repr: fn (model) ->
-        model = Brando.get_repo.preload(model, :images)
+        model = Brando.repo.preload(model, :images)
         image_count = Enum.count(model.images)
         "#{model.name} – #{image_count} bilde(r)."
      end,

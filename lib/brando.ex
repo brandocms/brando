@@ -22,7 +22,7 @@ defmodule Brando do
   @doc """
   Gets the parent app's repo, as set in config.exs
   """
-  def get_repo do
+  def repo do
     config(:repo)
   end
 

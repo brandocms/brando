@@ -181,7 +181,7 @@ defmodule Brando.Integration.ImageTest do
     series =
       [id: series.id]
       |> ImageSeries.get!
-      |> Brando.get_repo.preload(:images)
+      |> Brando.repo.preload(:images)
 
     assert Enum.count(series.images) == 2
     Image.delete_dependent_images(series.id)
@@ -189,7 +189,7 @@ defmodule Brando.Integration.ImageTest do
     series =
       [id: series.id]
       |> ImageSeries.get!
-      |> Brando.get_repo.preload(:images)
+      |> Brando.repo.preload(:images)
 
     assert Enum.count(series.images) == 0
   end

@@ -56,6 +56,5 @@ defmodule Brando.UserForm do
       [label: "Bilde"]
     submit "Lagre",
       [class: "btn btn-success"]
-
   end
 end

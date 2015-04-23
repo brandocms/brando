@@ -47,7 +47,7 @@ defmodule Brando.Image do
       model_changeset = changeset(%__MODULE__{}, :update, params)
 
   """
-  @spec changeset(t, atom, Keyword.t | Options.t) :: t
+  @spec changeset(t, atom, %{binary => term} | %{atom => term}) :: t
   def changeset(model, :update, params) do
     model
     |> cast(params, [], @required_fields ++ @optional_fields)
@@ -55,15 +55,16 @@ defmodule Brando.Image do
 
   @doc """
   Create a changeset for the model by passing `params`.
-  If valid, generate a hashed password and insert model to Brando.get_repo().
+  If valid, generate a hashed password and insert model to Brando.repo.
   If not valid, return errors from changeset
   """
+  @spec update(%{binary => term} | %{atom => term}, User.t) :: {:ok, t} | {:error, Keyword.t}
   def create(params, current_user) do
     params = Utils.Model.put_creator(params, current_user)
     model_changeset = changeset(%__MODULE__{}, :create, params)
     case model_changeset.valid? do
       true ->
-        inserted_model = Brando.get_repo().insert(model_changeset)
+        inserted_model = Brando.repo.insert(model_changeset)
         {:ok, inserted_model}
       false ->
         {:error, model_changeset.errors}
@@ -73,14 +74,15 @@ defmodule Brando.Image do
   @doc """
   Create an `update` changeset for the model by passing `params`.
   If password is in changeset, hash and insert in changeset.
-  If valid, update model in Brando.get_repo().
+  If valid, update model in Brando.repo.
   If not valid, return errors from changeset
   """
+  @spec update(t, %{binary => term} | %{atom => term}) :: {:ok, t} | {:error, Keyword.t}
   def update(model, params) do
     model_changeset = changeset(model, :update, params)
     case model_changeset.valid? do
       true ->
-        {:ok, Brando.get_repo().update(model_changeset)}
+        {:ok, Brando.repo.update(model_changeset)}
       false ->
         {:error, model_changeset.errors}
     end
@@ -98,7 +100,7 @@ defmodule Brando.Image do
     model_changeset = changeset(model, :update, %{"image" => image})
     case model_changeset.valid? do
       true ->
-        {:ok, Brando.get_repo().update(model_changeset)}
+        {:ok, Brando.repo.update(model_changeset)}
       false ->
         {:error, model_changeset.errors}
     end
@@ -115,9 +117,8 @@ defmodule Brando.Image do
   Get model by `id: id`.
   """
   def get(id: id) do
-    from(m in __MODULE__,
-         where: m.id == ^id)
-    |> Brando.get_repo.one
+    from(m in __MODULE__, where: m.id == ^id)
+    |> Brando.repo.one
   end
 
   @doc """
@@ -130,8 +131,8 @@ defmodule Brando.Image do
   """
   def reorder_images(ids, vals) do
     order = Enum.zip(vals, ids)
-    Brando.get_repo.transaction(fn -> Enum.map(order, fn ({val, id}) ->
-      Ecto.Adapters.SQL.query(Brando.get_repo, "UPDATE images SET \"order\" = $1 WHERE \"id\" = $2", [val, String.to_integer(id)])
+    Brando.repo.transaction(fn -> Enum.map(order, fn ({val, id}) ->
+      Ecto.Adapters.SQL.query(Brando.repo, "UPDATE images SET \"order\" = $1 WHERE \"id\" = $2", [val, String.to_integer(id)])
     end) end)
   end
 
@@ -141,9 +142,8 @@ defmodule Brando.Image do
   Also deletes all dependent image sizes.
   """
   def delete(ids) when is_list(ids) do
-    for id <- ids do
+    for id <- ids, do:
       delete(id)
-    end
   end
 
   def delete(record) when is_map(record) do
@@ -151,8 +151,9 @@ defmodule Brando.Image do
       delete_media(record.image.path)
       delete_connected_images(record.image.sizes)
     end
-    Brando.get_repo.delete(record)
+    Brando.repo.delete(record)
   end
+
   def delete(id) do
     record = get!(id: id)
     delete(record)
@@ -164,7 +165,7 @@ defmodule Brando.Image do
   def delete_dependent_images(series_id) do
     images =
       from(m in __MODULE__, where: m.image_series_id == ^series_id)
-      |> Brando.get_repo.all
+      |> Brando.repo.all
 
     for img <- images do
       delete(img)

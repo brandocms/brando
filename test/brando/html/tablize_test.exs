@@ -24,7 +24,7 @@ defmodule Brando.HTML.TablizeTest do
   test "tablize/1" do
     assert {:ok, user} = User.create(@user_params)
     assert {:ok, post} = Post.create(@post_params, user)
-    post = post |> Brando.get_repo.preload(:creator)
+    post = post |> Brando.repo.preload(:creator)
     helpers = [{"Vis bruker", "fa-search", :admin_user_path, :show, :id},
             {"Endre bruker", "fa-edit", :admin_user_path, :edit, :id},
             {"Slett bruker", "fa-trash", :admin_user_path, :delete_confirm, :id}]
