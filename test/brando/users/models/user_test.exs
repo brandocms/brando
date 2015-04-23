@@ -96,7 +96,7 @@ defmodule Brando.Integration.UserTest do
                    filename: "",
                    path: "#{Path.expand("../../../", __DIR__)}/fixtures/sample.png"}
     up_params = Dict.put(@params, "avatar", up_plug)
-    assert_raise Brando.Exception.UploadError, "Blankt filnavn!", fn ->
+    assert_raise Brando.Exception.UploadError, "Blankt filnavn gitt under opplasting. Pass på at du har et gyldig filnavn.", fn ->
       User.check_for_uploads(user, up_params)
     end
   end
@@ -118,7 +118,7 @@ defmodule Brando.Integration.UserTest do
                    filename: "sample.png",
                    path: "#{Path.expand("../../../", __DIR__)}/fixtures/non_existant.png"}
     up_params = Dict.put(@params, "avatar", up_plug)
-    assert_raise Brando.Exception.UploadError, "Feil under kopiering -> enoent", fn ->
+    assert_raise Brando.Exception.UploadError, "Feil under kopiering -> :enoent", fn ->
       User.check_for_uploads(user, up_params)
     end
   end

@@ -17,23 +17,20 @@ defmodule Brando.Routes.Admin.Users do
   @doc """
   Defines "RESTful" endpoints for the users resource.
   """
-  defmacro user_resources(path, ctrl, opts) do
-    add_user_resources path, ctrl, opts
-  end
+  defmacro user_resources(path, ctrl, opts), do:
+    add_user_resources(path, ctrl, opts)
 
   @doc """
   See user_resources/2
   """
-  defmacro user_resources(path, opts) do
-    add_user_resources path, UserController, opts
-  end
+  defmacro user_resources(path, opts), do:
+    add_user_resources(path, UserController, opts)
 
   @doc """
   See user_resources/2
   """
-  defmacro user_resources(path) do
-    add_user_resources path, UserController, []
-  end
+  defmacro user_resources(path), do:
+    add_user_resources(path, UserController, [])
 
   defp add_user_resources(path, controller, opts) do
     map = Map.put(%{}, :model, Keyword.get(opts, :model) || User)

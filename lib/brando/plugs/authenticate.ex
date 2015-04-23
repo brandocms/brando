@@ -12,10 +12,8 @@ defmodule Brando.Plug.Authenticate do
 
   def init(options), do: options
 
-  def call(conn, opts) do
-    login_url = Dict.fetch!(opts, :login_url)
-    conn |> allowed?(login_url)
-  end
+  def call(conn, opts), do:
+    conn |> allowed?(Dict.fetch!(opts, :login_url))
 
   defp allowed?(conn, login_url) do
     if current_user = get_session(conn, :current_user) do

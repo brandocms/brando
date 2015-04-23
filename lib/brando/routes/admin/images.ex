@@ -18,16 +18,15 @@ defmodule Brando.Routes.Admin.Images do
   alias Brando.ImageSeries
   alias Brando.ImageCategory
 
-  defmacro image_resources(path, opts \\ []) do
+  defmacro image_resources(path, opts \\ []), do:
     add_resources(path, opts)
-  end
 
   defp add_resources(path, opts) do
-    options = []
-    priv_map = Map.put(%{}, :image_model, Keyword.get(opts, :image_model) || Image)
-    priv_map = Map.put(priv_map, :series_model, Keyword.get(opts, :seriesmodel) || ImageSeries)
-    priv_map = Map.put(priv_map, :category_model, Keyword.get(opts, :category_model) || ImageCategory)
-    options = Keyword.put(options, :private, Macro.escape(priv_map))
+    priv_map = %{}
+    |> Map.put(:image_model, Keyword.get(opts, :image_model) || Image)
+    |> Map.put(:series_model, Keyword.get(opts, :seriesmodel) || ImageSeries)
+    |> Map.put(:category_model, Keyword.get(opts, :category_model) || ImageCategory)
+    options = Keyword.put([], :private, Macro.escape(priv_map))
 
     quote do
       image_ctrl = ImageController
