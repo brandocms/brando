@@ -3,6 +3,132 @@ defmodule Brando.Form.Fields do
   A set of functions for rendering form fields. These are all called
   from the `Brando.Form` module, and handled through `Brando.Form.get_form/4`
   """
+  @doc """
+  Renders file field. Wraps the field with a label and row span
+  """
+  def render_field(form_type, name, :file, opts, value, errors) do
+    __file__(form_type, name, value, errors, opts)
+    |> __concat__(__label__(name, opts[:label_class], opts[:label]))
+    |> __form_group__(name, opts, errors)
+    |> __data_row_span__(opts[:in_fieldset])
+  end
+
+  @doc """
+  Render textarea.
+  Pass a form_group_class to ensure we don't set height on wrapper.
+  """
+  def render_field(form_type, name, :textarea, opts, value, errors) do
+    opts = Keyword.put(opts, :form_group_class, "no-height")
+    __textarea__(form_type, name, value, errors, opts)
+    |> __concat__(__label__(name, opts[:label_class], opts[:label]))
+    |> __form_group__(name, opts, errors)
+    |> __data_row_span__(opts[:in_fieldset])
+  end
+
+  @doc """
+  Render group of radio buttons.
+  """
+  def render_field(form_type, name, :radio, opts, value, errors) do
+    render_radios(form_type, name, opts, value, errors)
+    |> Enum.join("")
+    |> __concat__(__label__(name, opts[:label_class], opts[:label]))
+    |> __form_group__(name, opts, errors)
+    |> __data_row_span__(opts[:in_fieldset])
+  end
+
+  @doc """
+  Render checkboxes. Both groups and singles.
+  """
+  def render_field(form_type, name, :checkbox, opts, value, errors) do
+    if opts[:multiple] do
+      render_checks(form_type, name, opts, value, errors)
+      |> __concat__(__label__(name, opts[:label_class], opts[:label]))
+      |> __form_group__(name, opts, errors)
+      |> __data_row_span__(opts[:in_fieldset])
+    else
+      __concat__(__label__(name, opts[:label_class], __input__(:checkbox, form_type, name, value, errors, opts) <> opts[:label]), __label__(name, "", ""))
+      |> __div__("checkbox")
+      |> __form_group__(name, opts, errors)
+      |> __data_row_span__(opts[:in_fieldset])
+    end
+  end
+
+  @doc """
+  Render select. Calls `render_options`
+  """
+  def render_field(form_type, name, :select, opts, value, errors) do
+    choices = render_options(form_type, opts, value, errors)
+    __select__(form_type, name, choices, opts, value, errors)
+    |> __concat__(__label__(name, opts[:label_class], opts[:label]))
+    |> __form_group__(name, opts, errors)
+    |> __data_row_span__(opts[:in_fieldset])
+  end
+
+  @doc """
+  Render submit button
+  """
+  def render_field(form_type, name, :submit, opts, _value, errors) do
+    __input__(:submit, form_type, name, opts[:text], errors, opts)
+    |> __form_group__(name, opts, errors)
+    |> __data_row_span__(opts[:in_fieldset])
+  end
+
+  @doc """
+  Render fieldset open
+  """
+  def render_field(_form_type, _name, :fieldset, opts, _value, _errors) do
+    __fieldset_open__(opts[:legend], opts[:row_span])
+  end
+
+  @doc """
+  Render fieldset close
+  """
+  def render_field(_form_type, _name, :fieldset_close, _opts, _value, _errors) do
+    __fieldset_close__()
+  end
+
+  @doc """
+  Render text/password/email (catchall)
+  """
+  def render_field(form_type, name, input_type, opts, value, errors) do
+    __input__(input_type, form_type, name, value, errors, opts)
+    |> __concat__(__label__(name, opts[:label_class], opts[:label]))
+    |> __form_group__(name, opts, errors)
+    |> __data_row_span__(opts[:in_fieldset])
+  end
+
+  @doc """
+  Iterates through `opts` :choices key, rendering options for the select
+  """
+  def render_options(form_type, opts, value, _errors) do
+    for choice <- get_choices(opts[:choices]) do
+      __option__(form_type, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
+    end
+  end
+
+  @doc """
+  Iterates through `opts` :choices key, rendering input type="radio"s
+  """
+  def render_radios(form_type, name, opts, value, _errors) do
+    for choice <- get_choices(opts[:choices]) do
+      __radio__(form_type, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
+    end
+  end
+
+  @doc """
+  Iterates through `opts` :choices key, rendering input type="checkbox"s
+  """
+  def render_checks(form_type, name, opts, value, _errors) do
+    checks = for choice <- get_choices(opts[:choices]) do
+      __checkbox__(form_type, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
+    end
+    empty_value =
+      case opts[:empty_value] do
+        nil -> ""
+        val -> ~s(<input type="hidden" value="#{val}" name="#{name}" />)
+      end
+    "#{empty_value}#{Enum.join(checks, "")}"
+  end
 
   @doc """
   Returns a div classed as `form-group` (used in bootstrap).
@@ -21,6 +147,10 @@ defmodule Brando.Form.Fields do
     </div>)
   end
 
+  @doc """
+  Renders `help_text` in a nicely formatted div.
+  """
+  @spec __render_help_text__(String.t | nil) :: String.t
   def __render_help_text__(nil), do: ""
   def __render_help_text__(help_text) do
     ~s(<div class="help"><i class="fa fa-fw fa-question-circle"> </i><span>#{help_text}</span></div>)
@@ -30,6 +160,7 @@ defmodule Brando.Form.Fields do
   Renders `errors` in a nicely formatted div by calling __parse_error__/1
   on each error in the `errors` list.
   """
+  @spec __render_errors__(Options.t | Keyword.t) :: String.t
   def __render_errors__([]), do: ""
   def __render_errors__(errors) when is_list(errors) do
     for error <- errors do
@@ -63,6 +194,7 @@ defmodule Brando.Form.Fields do
   @doc """
   Returns a div with class=`class` and `content`
   """
+  @spec __div__(String.t, String.t) :: String.t
   def __div__(contents, class) do
     ~s(<div class="#{class}">#{contents}</div>)
   end
@@ -70,6 +202,7 @@ defmodule Brando.Form.Fields do
   @doc """
   Wraps `field` in a div with `wrapper_class` as class.
   """
+  @spec __wrap__(String.t, String.t | nil) :: String.t
   def __wrap__(field, nil), do: field
   def __wrap__(field, wrapper_class) do
     ~s(<div class="#{wrapper_class}">#{field}</div>)
@@ -79,6 +212,7 @@ defmodule Brando.Form.Fields do
   Renders a label for `name`, with `class` and `text` as the
   label's content.
   """
+  @spec __label__(String.t, String.t, String.t) :: String.t
   def __label__(name, class, text) do
     ~s(<label for="#{name}" class="#{class}">#{text}</label>)
   end
@@ -87,6 +221,7 @@ defmodule Brando.Form.Fields do
   Render a file field for :update. If we have `value`, try to render
   an img element with a thumbnail.
   """
+  @spec __file__(atom, String.t, String.t, Options.t | Keyword.t, Options.t | Keyword.t) :: String.t
   def __file__(:update, name, value, _errors, opts) do
     opts = List.delete(opts, :default)
     img =
@@ -108,6 +243,7 @@ defmodule Brando.Form.Fields do
   @doc """
   Render a textarea field for :update.
   """
+  @spec __textarea__(atom, String.t, String.t, Options.t | Keyword.t, Options.t | Keyword.t) :: String.t
   def __textarea__(:update, name, value, _errors, opts) do
     opts = List.delete(opts, :default)
     __textarea__(:create, name, value, _errors, opts)
@@ -329,4 +465,9 @@ defmodule Brando.Form.Fields do
       ""
     end
   end
+
+  @doc """
+  Evals the quoted choices function and returns the result
+  """
+  def get_choices(fun), do: apply(fun, [])
 end

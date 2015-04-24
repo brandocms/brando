@@ -1,9 +1,79 @@
 defmodule Brando.Form.FieldsTest do
   use ExUnit.Case, async: true
-
   require Brando.Form.Fields, as: F
 
   @opts [context: Brando.Form.Fields]
+
+  defmodule UserForm do
+    use Brando.Form
+
+    def get_role_choices do
+      [[value: "1", text: "Staff"],
+       [value: "2", text: "Admin"],
+       [value: "4", text: "Superuser"]]
+    end
+
+    def get_status_choices do
+      [[value: "1", text: "Valg 1"],
+       [value: "2", text: "Valg 2"]]
+    end
+
+    form "user", [helper: :admin_user_path, class: "grid-form"] do
+      field :full_name, :text,
+        [required: true,
+         label: "Full name",
+         label_class: "control-label",
+         placeholder: "Full name",
+         help_text: "Enter full name",
+         class: "form-control",
+         wrapper_class: ""]
+      field :username, :text,
+        [required: true,
+         label: "Brukernavn",
+         label_class: "control-label",
+         placeholder: "Brukernavn",
+         class: "form-control",
+         wrapper_class: ""]
+      field :email, :email,
+        [required: true,
+         label: "E-mail",
+         label_class: "control-label",
+         placeholder: "E-post",
+         class: "form-control",
+         wrapper_class: ""]
+      field :password, :password,
+        [required: true,
+         label: "Passord",
+         label_class: "control-label",
+         placeholder: "Passord",
+         class: "form-control",
+         wrapper_class: ""]
+      field :role, :select,
+        [choices: &__MODULE__.get_role_choices/0,
+         multiple: true,
+         label: "Role",
+         label_class: "control-label",
+         class: "form-control",
+         wrapper_class: ""]
+      field :status2, :select,
+        [choices: &__MODULE__.get_status_choices/0,
+         default: "1",
+         label: "Status",
+         label_class: "control-label",
+         class: "form-control",
+         wrapper_class: ""]
+      field :role2, :radio,
+        [choices: &__MODULE__.get_role_choices/0,
+        label: "Rolle 2"]
+      field :avatar, :file,
+        [label: "Avatar",
+         label_class: "control-label",
+         wrapper_class: ""]
+      submit "Save",
+        [class: "btn btn-default",
+         wrapper_class: ""]
+    end
+  end
 
   def selected_fun_true(_form_value, _model_value) do
     true
@@ -11,6 +81,16 @@ defmodule Brando.Form.FieldsTest do
 
   def selected_fun_false(_form_value, _model_value) do
     false
+  end
+
+  test "render_options/4" do
+    assert F.render_options(:create, [choices: &UserForm.get_status_choices/0],
+                          "val", nil) == ["<option value=\"1\">Valg 1</option>",
+                                          "<option value=\"2\">Valg 2</option>"]
+  end
+
+  test "get_choices/1" do
+    assert F.get_choices(&UserForm.get_status_choices/0) == [[value: "1", text: "Valg 1"], [value: "2", text: "Valg 2"]]
   end
 
   test "__concat__/2" do

@@ -148,10 +148,6 @@ defmodule Brando.FormTest do
     assert f =~ ~s(type="file")
   end
 
-  test "get_choices/1" do
-    assert get_choices(&UserForm.get_status_choices/0) == [[value: "1", text: "Valg 1"], [value: "2", text: "Valg 2"]]
-  end
-
   test "get_value/2" do
     values = %{"a" => "a val", "b" => "b val"}
     assert get_value(values, :a) == "a val"
@@ -165,17 +161,6 @@ defmodule Brando.FormTest do
     errors = [a: "error a", b: "error b", a: "another error a"]
     assert get_errors(errors, :a) == ["error a", "another error a"]
   end
-
-  test "render_choices/4" do
-    assert render_options(:create, [choices: &UserForm.get_status_choices/0],
-                          "val", nil) == ["<option value=\"1\">Valg 1</option>",
-                                          "<option value=\"2\">Valg 2</option>"]
-  end
-
-  # test "get_form" do
-  #   assert TestForm.get_form(type: :create, action: :create, params: [], values: nil, errors: nil) == {:safe,
-  #           "<form class=\"grid-form\" role=\"form\" action=\"/admin/brukere\" method=\"POST\"><input name=\"_csrf_token\" type=\"hidden\" value=\"C5JmQ/F4CaqcAB2RnLjjYlpWuodx0ga8FHcdgtuaJRg=\"><fieldset><legend><br>Brukerinfo</legend><div data-row-span=\"2\">\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[full_name]\" class=\"\">Fullt navn</label><input name=\"test[full_name]\" type=\"text\" placeholder=\"Fullt navn\" />\n  \n</div>\n\n<div data-field-span=\"1\" class=\"form-group required\">\n  <label for=\"test[username]\" class=\"\">Brukernavn</label><input name=\"test[username]\" type=\"text\" placeholder=\"Brukernavn\" />\n  \n</div>\n\n<div data-row-span=\"1\"><div data-field-span=\"1\" class=\"form-group\">\n  <input name=\"test[submit]\" type=\"submit\" value=\"Submit\" />\n  \n</div>\n</div>\n</div></fieldset></form>"}
-  # end
 
   test "method_override/1" do
     assert method_override(:update) == "<input name=\"_method\" type=\"hidden\" value=\"patch\" />"
