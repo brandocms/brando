@@ -88,11 +88,7 @@ defmodule Brando.Form do
         class  = " " <> "class=\"#{form[:class]}\""
         role   = " " <> "role=\"form\""
         multipart =
-          if form[:multipart] do
-            ~s( enctype="multipart/form-data")
-          else
-            ""
-          end
+          if form[:multipart], do: ~s( enctype="multipart/form-data"), else: ""
         ~s(<form#{class}#{role}#{action}#{method}#{multipart}>#{csrf_tag}#{method_tag}#{fields}</form>)
       end
 
@@ -224,7 +220,6 @@ defmodule Brando.Form do
   :in_fieldset, which we need for proper form markup.
   """
   def __fieldset_open__(mod, opts) do
-    # name = String.to_atom("fs" <> to_string(:erlang.phash2(:os.timestamp)))
     fields = Module.get_attribute(mod, :form_fields)
     Module.put_attribute(mod, :in_fieldset, opts[:row_span])
     Module.put_attribute(mod, :form_fields, [{:"fs", [type: :fieldset] ++ opts}|fields])
@@ -258,27 +253,20 @@ defmodule Brando.Form do
   Marks the field as a submit button.
   """
   def __submit__(mod, text, opts) do
-    name =
-      if opts[:name], do:
-        opts[:name],
-      else: :submit
-
+    name = if opts[:name], do: opts[:name], else: :submit
     fields = Module.get_attribute(mod, :form_fields)
-
     clash = Enum.any?(fields, fn {prev, _} -> name == prev end)
     if clash do
       raise ArgumentError, message: "submit field `#{name}` was already set on schema"
     end
-
     Module.put_attribute(mod, :form_fields, [{name, [type: :submit, text: text] ++ opts}|fields])
   end
 
   defp check_type!(type) when type in [:text, :password, :select, :email,
                                        :checkbox, :file, :radio, :textarea], do: :ok
 
-  defp check_type!(type) do
-    raise ArgumentError, message: "`#{Macro.to_string(type)}` is not a valid field type"
-  end
+  defp check_type!(type), do:
+    raise(ArgumentError, message: "`#{Macro.to_string(type)}` is not a valid field type")
 
   @doc """
   Evals the quoted choices function and returns the result
@@ -315,12 +303,9 @@ defmodule Brando.Form do
   @doc """
   Returns a csrf input tag
   """
-  def get_csrf(form_type) when form_type in [:update, :delete, :create] do
+  def get_csrf(form_type) when form_type in [:update, :delete, :create], do:
     ~s(<input name="_csrf_token" type="hidden" value="#{Phoenix.Controller.get_csrf_token()}">)
-  end
-  def get_csrf(_) do
-    ""
-  end
+  def get_csrf(_), do: ""
 
   @doc """
   Checks `values` for name and returns value if found.
@@ -330,7 +315,7 @@ defmodule Brando.Form do
   def get_value(values, name) do
     case Map.fetch(values, Atom.to_string(name)) do
       {:ok, val} -> val
-      :error -> []
+      :error     -> []
     end
   end
 
@@ -341,7 +326,7 @@ defmodule Brando.Form do
   def get_errors([], _), do: []
   def get_errors(errors, name) do
     case Keyword.get_values(errors, name) do
-      [] -> []
+      []     -> []
       values -> values
     end
   end
