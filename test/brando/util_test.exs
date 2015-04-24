@@ -29,11 +29,11 @@ defmodule Brando.UtilsTest do
   end
 
   test "slugify special characters" do
-    assert(slugify("special characters (#?@$%^*) are also ASCII") == "special-characters-are-also-ascii")
+    assert(slugify("special characters (#?@$%^*) are also ASCII") == "special-characters-at-are-also-ascii")
   end
 
   test "slugify & -> and" do
-    assert(slugify("tom & jerry") == "tom-and-jerry")
+    assert(slugify("tom & jerry") == "tom-jerry")
   end
 
   test "slugify strip extraneous dashes" do

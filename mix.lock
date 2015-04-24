@@ -21,4 +21,5 @@
   "poolboy": {:hex, :poolboy, "1.4.2"},
   "postgrex": {:hex, :postgrex, "0.8.0"},
   "ranch": {:hex, :ranch, "1.0.0"},
+  "slugger": {:hex, :slugger, "0.0.1"},
   "ssl_verify_hostname": {:hex, :ssl_verify_hostname, "1.0.4"}}
