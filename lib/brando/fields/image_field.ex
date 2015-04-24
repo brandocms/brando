@@ -38,20 +38,25 @@ defmodule Brando.Field.ImageField do
       def check_for_uploads(model, params) do
         params
         |> filter_plugs
-        |> Enum.reduce([], fn (plug, acc) -> handle_upload(plug, acc, model, __MODULE__, &__MODULE__.get_image_cfg/1) end)
+        |> Enum.reduce([], fn (plug, acc) ->
+            handle_upload(plug, acc, model, __MODULE__,
+                          &__MODULE__.get_image_cfg/1)
+            end)
       end
     end
   end
 
   @doc false
   defmacro __before_compile__(env) do
-    Module.get_attribute(env.module, :imagefields)
-    |> Brando.Field.ImageField.compile()
+    env.module
+    |> Module.get_attribute(:imagefields)
+    |> compile
   end
 
   @doc false
   def compile(imagefields) do
-    imagefields = for {name, contents} <- imagefields, do: defcfg(name, contents)
+    imagefields =
+      for {name, contents} <- imagefields, do: defcfg(name, contents)
     quote do
       unquote(imagefields)
     end
@@ -62,9 +67,8 @@ defmodule Brando.Field.ImageField do
       @doc """
       Get `field_name`'s image field configuration
       """
-      def get_image_cfg(field_name) when field_name == unquote(name) do
+      def get_image_cfg(field_name) when field_name == unquote(name), do:
         unquote(contents)
-      end
     end
   end
 
@@ -120,13 +124,11 @@ defmodule Brando.Field.ImageField do
   """
   def handle_upload({name, plug}, _acc, %{id: _id} = model, module, cfg_fun) do
     {:ok, image_field} = do_upload(plug, cfg_fun.(String.to_atom(name)))
-    params = Map.put(%{}, name, image_field)
-    apply(module, :update, [model, params])
+    apply(module, :update, [model, Map.put(%{}, name, image_field)])
   end
 
   def handle_upload({name, plug}, _acc, _model, module, cfg_fun) do
     {:ok, image_field} = do_upload(plug, cfg_fun.(String.to_atom(name)))
-    params = Map.put(%{}, name, image_field)
-    apply(module, :create, [params])
+    apply(module, :create, [Map.put(%{}, name, image_field)])
   end
 end

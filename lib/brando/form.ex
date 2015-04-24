@@ -210,7 +210,7 @@ defmodule Brando.Form do
 
   defmacro fieldset_open(opts) do
     quote do
-      Brando.Form.__fieldset_open__(__MODULE__, unquote(opts))
+      Brando.Form.fieldset_open(__MODULE__, unquote(opts))
     end
   end
 
@@ -218,7 +218,7 @@ defmodule Brando.Form do
   Marks the field as a <fieldset> tag opening. This means we are
   :in_fieldset, which we need for proper form markup.
   """
-  def __fieldset_open__(mod, opts) do
+  def fieldset_open(mod, opts) do
     fields = Module.get_attribute(mod, :form_fields)
     Module.put_attribute(mod, :in_fieldset, opts[:row_span])
     Module.put_attribute(mod, :form_fields, [{:"fs", [type: :fieldset] ++ opts}|fields])
@@ -226,7 +226,7 @@ defmodule Brando.Form do
 
   defmacro fieldset_close() do
     quote do
-      Brando.Form.__fieldset_close__(__MODULE__)
+      Brando.Form.fieldset_close(__MODULE__)
     end
   end
 
@@ -234,7 +234,7 @@ defmodule Brando.Form do
   Marks the field as a <fieldset> tag closing. This means we are no
   longer :in_fieldset.
   """
-  def __fieldset_close__(mod) do
+  def fieldset_close(mod) do
     opts = []
     name = String.to_atom("fs" <> to_string(:erlang.phash2(:os.timestamp)))
     fields = Module.get_attribute(mod, :form_fields)
@@ -255,9 +255,8 @@ defmodule Brando.Form do
     name = if opts[:name], do: opts[:name], else: :submit
     fields = Module.get_attribute(mod, :form_fields)
     clash = Enum.any?(fields, fn {prev, _} -> name == prev end)
-    if clash do
-      raise ArgumentError, message: "submit field `#{name}` was already set on schema"
-    end
+    if clash, do:
+      raise(ArgumentError, message: "submit field `#{name}` was already set on schema")
     Module.put_attribute(mod, :form_fields, [{name, [type: :submit, text: text] ++ opts}|fields])
   end
 
