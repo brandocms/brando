@@ -5,7 +5,7 @@ defmodule Brando.Type.Role do
   use Bitwise, only_operators: true
 
   @behaviour Ecto.Type
-  @roles Application.get_env(:brando, Brando.Type.Role)[:roles]
+  @roles Application.get_env(:brando, Brando.Type.Role) |> Keyword.get(:roles)
 
   @doc """
   Returns the internal type representation of our `Role` type for pg

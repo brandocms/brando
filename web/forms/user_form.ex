@@ -6,7 +6,7 @@ defmodule Brando.UserForm do
   use Bitwise, only_operators: true
   use Brando.Form
 
-  @roles Application.get_env(:brando, Brando.Type.Role)[:roles]
+  @roles Application.get_env(:brando, Brando.Type.Role) |> Keyword.get(:roles)
 
   @doc false
   def get_role_choices do

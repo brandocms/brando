@@ -13,7 +13,7 @@ defmodule Brando.User do
   @required_fields ~w(username full_name email password)
   @optional_fields ~w(role avatar)
 
-  @roles Application.get_env(:brando, Brando.Type.Role)[:roles]
+  @roles Application.get_env(:brando, Brando.Type.Role) |> Keyword.get(:roles)
 
   schema "users" do
     field :username, :string
@@ -196,9 +196,12 @@ defmodule Brando.User do
     Comeonin.Bcrypt.checkpw(password, user.password)
   end
 
-  def gen_password(password) do
+  @doc """
+  Hashes `password` using Comeonin.Bcrypt
+  """
+  @spec gen_password(String.t) :: String.t
+  def gen_password(password), do:
     Comeonin.Bcrypt.hashpwsalt(password, 12)
-  end
 
   @doc """
   Checks if `user` has `role`.
