@@ -35,6 +35,7 @@ defmodule Brando.Mixfile do
       {:earmark, "~> 0.1"},
       {:phoenix, "~> 0.11"},
       {:linguist, "~> 0.1"},
+      {:slugger, "~> 0.0.1"},
       {:mogrify, github: "twined/mogrify"},
       {:comeonin, "~> 0.8"},
       {:dialyze, "~> 0.1.3", only: :dev},
