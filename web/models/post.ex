@@ -14,7 +14,7 @@ defmodule Brando.Post do
   alias Brando.Utils
 
   @required_fields ~w(status header data lead creator_id language featured)
-  @optional_fields ~w()
+  @optional_fields ~w(publish_at)
 
   schema "posts" do
     field :language, :string
