@@ -6,14 +6,16 @@ defmodule Brando.Type.Json do
   @behaviour Ecto.Type
 
   @doc """
-  Returns the internal type representation of our `Role` type for pg
+  Returns the internal type representation of our `JSON` type for pg/postgrex
   """
   def type, do: :json
 
   @doc """
   Cast should return OUR type no matter what the input.
   """
-  def cast(json), do: {:ok, json}
+  def cast(json) when is_map(json), do: {:ok, json}
+  def cast(json) when is_list(json), do: {:ok, json}
+  def cast(json) when is_binary(json), do: {:ok, Poison.decode!(json, keys: :atoms!)}
 
   @doc """
   Integers are never considered blank
@@ -21,17 +23,16 @@ defmodule Brando.Type.Json do
   def blank?(_), do: false
 
   @doc """
-  When loading `roles` from the database, we are guaranteed to
-  receive an integer (as database are stricts) and we will
-  just return it to be stored in the model struct.
+  Load json from DB
   """
-  def load(json) do
-    {:ok, json}
-  end
+  def load(json) when is_map(json), do: {:ok, json}
+  def load(json) when is_list(json), do: {:ok, json}
 
   @doc """
   When dumping data to the database we expect a `list`, but check for
   other options as well.
   """
-  def dump(json), do: {:ok, json}
+  def dump(json) when is_map(json), do: {:ok, json}
+  def dump(json) when is_list(json), do: {:ok, json}
+  def dump(json) when is_binary(json), do: {:ok, Poison.decode!(json, keys: :atoms!)}
 end
