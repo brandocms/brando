@@ -78,7 +78,7 @@ defmodule Brando.Integration.ImageTest do
     assert image.order == 0
 
     assert {:error, errors} = image |> Image.update(%{"order" => "string"})
-    assert errors == [order: :invalid]
+    assert errors == [order: "is invalid"]
   end
 
   test "get/1", %{user: user, series: series} do

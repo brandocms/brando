@@ -108,7 +108,7 @@ defmodule Brando.Form.FieldsTest do
     assert F.form_group("1234", "name", [], []) ==
       "<div data-field-span=\"1\" class=\"form-group\">\n      1234\n      \n      \n    </div>"
     opts = [required: true]
-    fg = F.form_group("1234", "name", opts, [:required])
+    fg = F.form_group("1234", "name", opts, ["can't be blank"])
     assert String.contains?(fg, "required")
     assert String.contains?(fg, "has-error")
     assert String.contains?(fg, "fa-exclamation-circle")
@@ -126,7 +126,7 @@ defmodule Brando.Form.FieldsTest do
     refute String.contains?(fg, "required")
     refute String.contains?(fg, "has-error")
 
-    fg = assert F.form_group("1234", "name", opts, [:unique])
+    fg = assert F.form_group("1234", "name", opts, ["must be unique"])
     assert String.contains?(fg, "has-error")
     assert String.contains?(fg, "fa-exclamation-circle")
   end
