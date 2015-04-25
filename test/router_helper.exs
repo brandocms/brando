@@ -49,19 +49,19 @@ defmodule RouterHelper do
   end
 
   def call(router, verb, path, params \\ nil, headers \\ []) do
-    conn = conn(verb, path, params, headers) |> Plug.Conn.fetch_params
+    conn = conn(verb, path, params, headers) |> Plug.Conn.fetch_query_params
     router.call(conn, router.init([]))
   end
 
   def call_with_session(router, verb, path, params \\ nil, headers \\ []) do
-    conn = conn(verb, path, params, headers) |> with_session |> Plug.Conn.fetch_params
+    conn = conn(verb, path, params, headers) |> with_session |> Plug.Conn.fetch_query_params
     router.call(conn, router.init([]))
   end
 
   def call_with_user(router, verb, path, params \\ nil, headers \\ []) do
     conn = conn(verb, path, params, headers)
     |> with_user
-    |> Plug.Conn.fetch_params
+    |> Plug.Conn.fetch_query_params
     router.call(conn, router.init([]))
   end
 
@@ -70,19 +70,19 @@ defmodule RouterHelper do
     |> with_user(user)
     |> put_req_header("accept", "application/json")
     |> put_req_header("X-Requested-With", "XMLHttpRequest")
-    |> Plug.Conn.fetch_params
+    |> Plug.Conn.fetch_query_params
     router.call(conn, router.init([]))
   end
 
   def call_with_custom_user(router, verb, path, params \\ nil, headers \\ [], user: user) do
     conn = conn(verb, path, params, headers)
     |> with_user(user)
-    |> Plug.Conn.fetch_params
+    |> Plug.Conn.fetch_query_params
     router.call(conn, router.init([]))
   end
 
   def action(controller, verb, action, params \\ nil, headers \\ []) do
-    conn = conn(verb, "/", params, headers) |> Plug.Conn.fetch_params
+    conn = conn(verb, "/", params, headers) |> Plug.Conn.fetch_query_params
     controller.call(conn, controller.init(action))
   end
 
