@@ -113,20 +113,7 @@ plug Plug.Static,
 
 Default login/pass is "admin@twined.net/admin"
 
-Repo config:
-
-```elixir
-# configures the repo
-config :my_app, MyApp.Repo,
-  database: "my_app",
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost"
-  adapter: Ecto.Adapters.Postgres,
-  extensions: [{Brando.Postgrex.Extension.JSON, library: Poison}]
-```
-
-Optimizing images: (not implemented yet)
+## Optimizing images (not implemented yet)
 
 ```elixir
 config :brando, :images, :optimize
