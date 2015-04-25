@@ -49,7 +49,6 @@ gulp.task('scripts-vendor', function () {
                      'js/vendor/dropdown.js',
                      'js/vendor/sortable.js',
                      'js/vendor/slideout.js',
-                     'js/vendor/gridforms.js',
                      'js/vendor/jquery.slugit.js',
                      'js/vendor/vex.js',
                      'js/vendor/vex.dialog.js'
