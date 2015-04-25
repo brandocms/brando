@@ -121,8 +121,8 @@ $legend-border-color: #E0E0E0;
         }
     }
     [data-row-span] {
+        display: flex;
         border-bottom: 1px solid $grid-border-color;
-        width: 100%;
         @include _clear;
         @include _breakpoints(0, 700px) {
             border-bottom: none;
