@@ -162,6 +162,8 @@ $legend-border-color: #E0E0E0;
                 cursor: text;
             }
             .error, .help {
+                padding-top: 4px;
+                border-bottom: 3px solid #8B3131;
                 margin-top: 6px;
                 font-size: 0.9rem;
                 color: #fff;
@@ -177,7 +179,6 @@ $legend-border-color: #E0E0E0;
             .help {
                 background-color: #47868B;
                 border-bottom: 3px solid #3A6F73;
-                padding-top: 4px;
             }
         }
     }
