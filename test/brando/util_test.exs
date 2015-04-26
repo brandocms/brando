@@ -48,7 +48,7 @@ defmodule Brando.UtilsTest do
   test "random_filename/1" do
     f = random_filename("original-filename.jpg")
     refute(f == "original-filename.jpg")
-    assert(String.contains?(f, ".jpg"))
+    assert f =~ ".jpg"
   end
 
   test "to_string_map/1" do
