@@ -200,17 +200,17 @@ defmodule Brando.Form do
     if type == :file, do: Module.put_attribute(mod, :form_multipart, true)
   end
 
-  defmacro fieldset(opts \\ [], [do: block]) do
+  defmacro fieldset(legend \\ nil, [do: block]) do
     quote do
-      fieldset_open(unquote(opts))
+      fieldset_open(unquote(legend))
       unquote(block)
       fieldset_close
     end
   end
 
-  defmacro fieldset_open(opts) do
+  defmacro fieldset_open(legend) do
     quote do
-      Brando.Form.fieldset_open(__MODULE__, unquote(opts))
+      Brando.Form.fieldset_open(__MODULE__, unquote(legend))
     end
   end
 
@@ -218,10 +218,10 @@ defmodule Brando.Form do
   Marks the field as a <fieldset> tag opening. This means we are
   :in_fieldset, which we need for proper form markup.
   """
-  def fieldset_open(mod, opts) do
+  def fieldset_open(mod, legend) do
     fields = Module.get_attribute(mod, :form_fields)
-    Module.put_attribute(mod, :in_fieldset, opts[:row_span])
-    Module.put_attribute(mod, :form_fields, [{:"fs", [type: :fieldset] ++ opts}|fields])
+    Module.put_attribute(mod, :in_fieldset, true)
+    Module.put_attribute(mod, :form_fields, [{:"fs", [type: :fieldset] ++ [legend: legend]}|fields])
   end
 
   defmacro fieldset_close() do
@@ -235,10 +235,9 @@ defmodule Brando.Form do
   longer :in_fieldset.
   """
   def fieldset_close(mod) do
-    opts = []
     name = String.to_atom("fs" <> to_string(:erlang.phash2(:os.timestamp)))
     fields = Module.get_attribute(mod, :form_fields)
-    Module.put_attribute(mod, :form_fields, [{name, [type: :fieldset_close] ++ opts}|fields])
+    Module.put_attribute(mod, :form_fields, [{name, [type: :fieldset_close]}|fields])
     Module.put_attribute(mod, :in_fieldset, nil)
   end
 

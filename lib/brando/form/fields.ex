@@ -11,7 +11,7 @@ defmodule Brando.Form.Fields do
     file(form_type, name, value, errors, opts)
     |> concat_fields(label(name, opts[:label_class], opts[:label]))
     |> form_group(name, opts, errors)
-    |> data_row_span(opts[:in_fieldset])
+    |> div_form_row(opts[:in_fieldset])
   end
 
   @doc """
@@ -23,7 +23,7 @@ defmodule Brando.Form.Fields do
              Keyword.put(opts, :form_group_class, "no-height"))
     |> concat_fields(label(name, opts[:label_class], opts[:label]))
     |> form_group(name, opts, errors)
-    |> data_row_span(opts[:in_fieldset])
+    |> div_form_row(opts[:in_fieldset])
   end
 
   @doc """
@@ -34,7 +34,7 @@ defmodule Brando.Form.Fields do
     |> Enum.join("")
     |> concat_fields(label(name, opts[:label_class], opts[:label]))
     |> form_group(name, opts, errors)
-    |> data_row_span(opts[:in_fieldset])
+    |> div_form_row(opts[:in_fieldset])
   end
 
   @doc """
@@ -45,12 +45,12 @@ defmodule Brando.Form.Fields do
       render_checks(form_type, name, opts, value, errors)
       |> concat_fields(label(name, opts[:label_class], opts[:label]))
       |> form_group(name, opts, errors)
-      |> data_row_span(opts[:in_fieldset])
+      |> div_form_row(opts[:in_fieldset])
     else
       concat_fields(label(name, opts[:label_class], input(:checkbox, form_type, name, value, errors, opts) <> opts[:label]), label(name, "", ""))
       |> div_tag("checkbox")
       |> form_group(name, opts, errors)
-      |> data_row_span(opts[:in_fieldset])
+      |> div_form_row(opts[:in_fieldset])
     end
   end
 
@@ -62,7 +62,7 @@ defmodule Brando.Form.Fields do
     select(form_type, name, choices, opts, value, errors)
     |> concat_fields(label(name, opts[:label_class], opts[:label]))
     |> form_group(name, opts, errors)
-    |> data_row_span(opts[:in_fieldset])
+    |> div_form_row(opts[:in_fieldset])
   end
 
   @doc """
@@ -71,7 +71,7 @@ defmodule Brando.Form.Fields do
   def render_field(form_type, name, :submit, opts, _value, errors) do
     input(:submit, form_type, name, opts[:text], errors, opts)
     |> form_group(name, opts, errors)
-    |> data_row_span(opts[:in_fieldset])
+    |> div_form_row(opts[:in_fieldset])
   end
 
   @doc """
@@ -95,7 +95,7 @@ defmodule Brando.Form.Fields do
     input(input_type, form_type, name, value, errors, opts)
     |> concat_fields(label(name, opts[:label_class], opts[:label]))
     |> form_group(name, opts, errors)
-    |> data_row_span(opts[:in_fieldset])
+    |> div_form_row(opts[:in_fieldset])
   end
 
   @doc """
@@ -340,30 +340,22 @@ defmodule Brando.Form.Fields do
     ~s(<div class="checkboxes"><label for="#{name}[]"></label><label for="#{name}[]"><input name="#{name}[]" type="checkbox" value="#{choice_value}"#{checked} />#{choice_text}</label></div>)
   end
 
-  def fieldset_open_tag(nil, in_fieldset) do
+  def fieldset_open_tag(nil, _in_fieldset), do:
     ~s(<fieldset><div class="form-row">)
-  end
 
-  def fieldset_open_tag(legend, in_fieldset) do
+  def fieldset_open_tag(legend, _in_fieldset), do:
     ~s(<fieldset><legend><br>#{legend}</legend><div class="form-row">)
-  end
 
-  def fieldset_close_tag() do
+  def fieldset_close_tag(), do:
     ~s(</div></fieldset>)
-  end
 
-  def data_row_span(content, nil) do
-    ~s(<div class="form-row">#{content}</div>)
-  end
-
-  def data_row_span(content, _span) do
-    content
-  end
+  def div_form_row(content, nil), do: ~s(<div class="form-row">#{content}</div>)
+  def div_form_row(content, _span), do: content
 
   def input(:checkbox, _form_type, name, value, _errors, opts) do
     checked =
       case value do
-        v when v in ["on", true, "true"] -> " " <> "checked=\"checked\""
+        v when v in ["on", true, "true"]  -> " " <> "checked=\"checked\""
         v when v in [false, nil, "false"] -> ""
         [] ->
           case opts[:default] do

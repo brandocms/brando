@@ -38,14 +38,14 @@ defmodule Brando.PostForm do
   end
 
   form "post", [helper: :admin_post_path, class: "grid-form"] do
-    fieldset [row_span: 4] do
+    fieldset do
       field :language, :select,
         [required: true,
         label: "Språk",
         default: "no",
         choices: &__MODULE__.get_language_choices/0]
     end
-    fieldset [row_span: 1] do
+    fieldset do
       field :status, :radio,
         [required: true,
         label: "Status",
@@ -53,7 +53,7 @@ defmodule Brando.PostForm do
         choices: &__MODULE__.get_status_choices/0,
         is_selected: &__MODULE__.is_status_selected?/2]
     end
-    fieldset [row_span: 1] do
+    fieldset do
       field :featured, :checkbox,
         [label: "Vektet post",
         default: false,
@@ -63,10 +63,17 @@ defmodule Brando.PostForm do
       [required: true,
        label: "Publiseringstidspunkt",
        default: &__MODULE__.get_now/0]
-    field :header, :text,
-      [required: true,
-       label: "Overskrift",
-       placeholder: "Overskrift"]
+    fieldset do
+      field :header, :text,
+        [required: true,
+         label: "Overskrift",
+         placeholder: "Overskrift"]
+      field :slug, :text,
+        [required: true,
+         label: "URL-tamp",
+         placeholder: "URL-tamp",
+         slug_from: :header]
+    end
     field :lead, :textarea,
       [label: "Ingress"]
     field :data, :textarea,

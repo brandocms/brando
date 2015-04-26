@@ -6,7 +6,7 @@ defmodule Brando.FormTest do
     use Brando.Form
 
     form "test", [helper: :admin_user_path, class: "grid-form"] do
-      fieldset [legend: "Brukerinfo", row_span: 2] do
+      fieldset "Brukerinfo" do
         field :full_name, :text,
           [required: true,
            label: "Fullt navn",

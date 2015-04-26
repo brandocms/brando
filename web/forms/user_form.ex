@@ -23,7 +23,7 @@ defmodule Brando.UserForm do
   end
 
   form "user", [helper: :admin_user_path, class: "grid-form"] do
-    fieldset [legend: "Brukerinfo", row_span: 2] do
+    fieldset "Brukerinfo" do
       field :full_name, :text,
         [required: true,
          label: "Fullt navn",
@@ -43,7 +43,7 @@ defmodule Brando.UserForm do
        label: "Passord",
        placeholder: "Passord"]
 
-    fieldset [legend: "Rettigheter", row_span: 2] do
+    fieldset "Rettigheter" do
       field :role, :checkbox,
         [choices: &__MODULE__.get_role_choices/0,
          is_selected: &__MODULE__.role_selected?/2,
