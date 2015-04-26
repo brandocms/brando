@@ -106,29 +106,29 @@ defmodule Brando.Form.FieldsTest do
 
   test "form_group/4" do
     assert F.form_group("1234", "name", [], []) ==
-      "<div data-field-span=\"1\" class=\"form-group\">\n      1234\n      \n      \n    </div>"
+      "<div class=\"form-group\">\n      1234\n      \n      \n    </div>"
     opts = [required: true]
     fg = F.form_group("1234", "name", opts, ["can't be blank"])
-    assert String.contains?(fg, "required")
-    assert String.contains?(fg, "has-error")
-    assert String.contains?(fg, "fa-exclamation-circle")
+    assert fg =~ "required"
+    assert fg =~ "has-error"
+    assert fg =~ "fa-exclamation-circle"
 
     fg = F.form_group("1234", "name", opts, [])
-    assert String.contains?(fg, "required")
-    refute String.contains?(fg, "has-error")
+    assert fg =~ "required"
+    refute fg =~ "has-error"
 
     fg = F.form_group("1234", "name", [], [])
-    refute String.contains?(fg, "required")
-    refute String.contains?(fg, "has-error")
+    refute fg =~ "required"
+    refute fg =~ "has-error"
 
     opts = [required: false]
     fg = F.form_group("1234", "name", opts, [])
-    refute String.contains?(fg, "required")
-    refute String.contains?(fg, "has-error")
+    refute fg =~ "required"
+    refute fg =~ "has-error"
 
     fg = assert F.form_group("1234", "name", opts, ["must be unique"])
-    assert String.contains?(fg, "has-error")
-    assert String.contains?(fg, "fa-exclamation-circle")
+    assert fg =~ "has-error"
+    assert fg =~ "fa-exclamation-circle"
   end
 
   test "tag/4" do
