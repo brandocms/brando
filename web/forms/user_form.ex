@@ -16,7 +16,7 @@ defmodule Brando.UserForm do
   end
 
   @doc false
-  def role_selected?(choice_value, values) when is_list(values) do
+  def role_selected?(choice_value, values) do
     {:ok, role_int} = Brando.Type.Role.dump(values)
     choice_int = String.to_integer(choice_value)
     (role_int &&& choice_int) == choice_int
