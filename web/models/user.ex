@@ -55,7 +55,6 @@ defmodule Brando.User do
   def changeset(model, :create, params) do
     model
     |> cast(params, @required_fields, @optional_fields)
-    |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
     |> validate_unique(:email, on: Brando.repo)
     |> validate_format(:username, ~r/^[a-z0-9_\-\.!~\*'\(\)]+$/)
