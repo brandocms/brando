@@ -120,20 +120,18 @@ $legend-border-color: #E0E0E0;
             }
         }
     }
-    [data-row-span] {
+    .form-row {
         display: flex;
         border-bottom: 1px solid $grid-border-color;
         @include _clear;
         @include _breakpoints(0, 700px) {
             border-bottom: none;
         }
-        [data-field-span] {
+        .form-group {
+            flex-grow: 1;
             padding: $field-padding;
             float: left;
-            @include _breakpoints(0, 700px) {
-                border-bottom: 1px solid $grid-border-color;
-                width: 100% !important;
-            }
+
             @include _breakpoints(700px) {
                 border-right: 1px solid $grid-border-color;
                 display: block;
@@ -180,20 +178,6 @@ $legend-border-color: #E0E0E0;
                 background-color: #47868B;
                 border-bottom: 3px solid #3A6F73;
                 padding-top: 4px;
-            }
-        }
-    }
-    // Create row spans for n columns in the grid
-    @for $grid_i from 1 through $max-columns {
-        [data-row-span="#{$grid_i}"] {
-            // Each field can only span to the maximum row span
-            // For each possible field span
-            @for $span_i from 1 through $grid_i {
-                & > [data-field-span="#{$span_i}"] {
-                    // Divide the grid by $grid_i columns
-                    // Set the width for this particular field span
-                    width: percentage($span_i/$grid_i);
-                }
             }
         }
     }

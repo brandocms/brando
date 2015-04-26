@@ -141,7 +141,7 @@ defmodule Brando.Form.Fields do
   """
   @spec form_group(String.t, String.t, Keyword.t, Keyword.t) :: String.t
   def form_group(contents, _name, opts, errors) do
-    ~s(<div data-field-span="1" class="form-group#{get_form_group_class(opts[:form_group_class])}#{get_required(opts[:required])}#{get_has_error(errors)}">
+    ~s(<div class="form-group#{get_form_group_class(opts[:form_group_class])}#{get_required(opts[:required])}#{get_has_error(errors)}">
       #{contents}
       #{render_errors(errors)}
       #{render_help_text_(opts[:help_text])}
@@ -341,11 +341,11 @@ defmodule Brando.Form.Fields do
   end
 
   def fieldset_open_tag(nil, in_fieldset) do
-    ~s(<fieldset><div data-row-span="#{in_fieldset}">)
+    ~s(<fieldset><div class="form-row">)
   end
 
   def fieldset_open_tag(legend, in_fieldset) do
-    ~s(<fieldset><legend><br>#{legend}</legend><div data-row-span="#{in_fieldset}">)
+    ~s(<fieldset><legend><br>#{legend}</legend><div class="form-row">)
   end
 
   def fieldset_close_tag() do
@@ -353,7 +353,7 @@ defmodule Brando.Form.Fields do
   end
 
   def data_row_span(content, nil) do
-    ~s(<div data-row-span="1">#{content}</div>)
+    ~s(<div class="form-row">#{content}</div>)
   end
 
   def data_row_span(content, _span) do
