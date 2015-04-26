@@ -106,7 +106,7 @@ defmodule Brando.Form.FieldsTest do
 
   test "form_group/4" do
     assert F.form_group("1234", "name", [], []) ==
-      "<div class=\"form-group\">\n      1234\n      \n      \n    </div>"
+      "<div class=\"form-group\">1234</div>"
     opts = [required: true]
     fg = F.form_group("1234", "name", opts, ["can't be blank"])
     assert fg =~ "required"
@@ -166,15 +166,15 @@ defmodule Brando.Form.FieldsTest do
 
   test "input checkbox" do
     assert F.input(:checkbox, :create, "name", [], [], []) ==
-      "<input name=\"name\" type=\"hidden\" value=\"false\">\n       <input name=\"name\" value=\"true\" type=\"checkbox\" />"
+      "<input name=\"name\" type=\"hidden\" value=\"false\"><input name=\"name\" value=\"true\" type=\"checkbox\" />"
     assert F.input(:checkbox, :create, "name", false, [], []) ==
-      "<input name=\"name\" type=\"hidden\" value=\"false\">\n       <input name=\"name\" value=\"true\" type=\"checkbox\" />"
+      "<input name=\"name\" type=\"hidden\" value=\"false\"><input name=\"name\" value=\"true\" type=\"checkbox\" />"
     assert F.input(:checkbox, :create, "name", nil, [], []) ==
-      "<input name=\"name\" type=\"hidden\" value=\"false\">\n       <input name=\"name\" value=\"true\" type=\"checkbox\" />"
+      "<input name=\"name\" type=\"hidden\" value=\"false\"><input name=\"name\" value=\"true\" type=\"checkbox\" />"
     assert F.input(:checkbox, :create, "name", true, [], []) ==
-      "<input name=\"name\" type=\"hidden\" value=\"false\">\n       <input name=\"name\" value=\"true\" type=\"checkbox\" checked=\"checked\" />"
+      "<input name=\"name\" type=\"hidden\" value=\"false\"><input name=\"name\" value=\"true\" type=\"checkbox\" checked=\"checked\" />"
     assert F.input(:checkbox, :create, "name", "on", [], []) ==
-      "<input name=\"name\" type=\"hidden\" value=\"false\">\n       <input name=\"name\" value=\"true\" type=\"checkbox\" checked=\"checked\" />"
+      "<input name=\"name\" type=\"hidden\" value=\"false\"><input name=\"name\" value=\"true\" type=\"checkbox\" checked=\"checked\" />"
   end
 
   test "render_errors/1" do

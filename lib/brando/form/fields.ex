@@ -3,7 +3,8 @@ defmodule Brando.Form.Fields do
   A set of functions for rendering form fields. These are all called
   from the `Brando.Form` module, and handled through `Brando.Form.get_form/4`
   """
-  #import Phoenix.HTML.Tag, only: [content_tag: 3]
+  import Brando.HTML, only: [media_url: 1]
+  import Brando.Images.Helpers, only: [img: 2]
   @doc """
   Renders file field. Wraps the field with a label and row span
   """
@@ -47,7 +48,9 @@ defmodule Brando.Form.Fields do
       |> form_group(name, opts, errors)
       |> div_form_row(opts[:in_fieldset])
     else
-      concat_fields(label(name, opts[:label_class], input(:checkbox, form_type, name, value, errors, opts) <> opts[:label]), label(name, "", ""))
+      concat_fields(label(name, opts[:label_class],
+                          input(:checkbox, form_type, name, value, errors, opts) <>
+                          opts[:label]), label(name, "", ""))
       |> div_tag("checkbox")
       |> form_group(name, opts, errors)
       |> div_form_row(opts[:in_fieldset])
@@ -77,16 +80,14 @@ defmodule Brando.Form.Fields do
   @doc """
   Render fieldset open
   """
-  def render_field(_form_type, _name, :fieldset, opts, _value, _errors) do
+  def render_field(_, _, :fieldset, opts, _, _), do:
     fieldset_open_tag(opts[:legend], opts[:row_span])
-  end
 
   @doc """
   Render fieldset close
   """
-  def render_field(_form_type, _name, :fieldset_close, _opts, _value, _errors) do
+  def render_field(_, _, :fieldset_close, _, _, _), do:
     fieldset_close_tag()
-  end
 
   @doc """
   Render text/password/email (catchall)
@@ -141,11 +142,12 @@ defmodule Brando.Form.Fields do
   """
   @spec form_group(String.t, String.t, Keyword.t, Keyword.t) :: String.t
   def form_group(contents, _name, opts, errors) do
-    ~s(<div class="form-group#{get_form_group_class(opts[:form_group_class])}#{get_required(opts[:required])}#{get_has_error(errors)}">
-      #{contents}
-      #{render_errors(errors)}
-      #{render_help_text_(opts[:help_text])}
-    </div>)
+    "<div class=\"form-group#{get_form_group_class(opts[:form_group_class])}" <>
+    "#{get_required(opts[:required])}#{get_has_error(errors)}\">" <>
+    "#{contents}" <>
+    "#{render_errors(errors)}" <>
+    "#{render_help_text_(opts[:help_text])}" <>
+    "</div>"
   end
 
   @doc """
@@ -154,7 +156,10 @@ defmodule Brando.Form.Fields do
   @spec render_help_text_(String.t | nil) :: String.t
   def render_help_text_(nil), do: ""
   def render_help_text_(help_text) do
-    ~s(<div class="help"><i class="fa fa-fw fa-question-circle"> </i><span>#{help_text}</span></div>)
+    "<div class=\"help\">" <>
+    "<i class=\"fa fa-fw fa-question-circle\"> </i>" <>
+    "<span>#{help_text}</span>" <>
+    "</div>"
   end
 
   @doc """
@@ -165,7 +170,9 @@ defmodule Brando.Form.Fields do
   def render_errors([]), do: ""
   def render_errors(errors) when is_list(errors) do
     for error <- errors do
-      ~s(<div class="error"><i class="fa fa-exclamation-circle"> </i> #{parse_error(error)}</div>)
+      "<div class=\"error\">" <>
+      "<i class=\"fa fa-exclamation-circle\"> </i> #{parse_error(error)}" <>
+      "</div>"
     end
   end
 
@@ -189,35 +196,31 @@ defmodule Brando.Form.Fields do
   the first
   """
   @spec concat_fields(String.t, String.t) :: String.t
-  def concat_fields(wrapped_field, label) do
+  def concat_fields(wrapped_field, label), do:
     label <> wrapped_field
-  end
 
   @doc """
   Returns a div with class=`class` and `content`
   """
   @spec div_tag(String.t, String.t) :: String.t
-  def div_tag(contents, class) do
-    ~s(<div class="#{class}">#{contents}</div>)
-  end
+  def div_tag(contents, class), do:
+    "<div class=\"#{class}\">#{contents}</div>"
 
   @doc """
   Wraps `field` in a div with `wrapper_class` as class.
   """
   @spec wrap(String.t, String.t | nil) :: String.t
   def wrap(field, nil), do: field
-  def wrap(field, wrapper_class) do
-    ~s(<div class="#{wrapper_class}">#{field}</div>)
-  end
+  def wrap(field, wrapper_class), do:
+    "<div class=\"#{wrapper_class}\">#{field}</div>"
 
   @doc """
   Renders a label for `name`, with `class` and `text` as the
   label's content.
   """
   @spec label(String.t, String.t, String.t) :: String.t
-  def label(name, class, text) do
-    ~s(<label for="#{name}" class="#{class}">#{text}</label>)
-  end
+  def label(name, class, text), do:
+    "<label for=\"#{name}\" class=\"#{class}\">#{text}</label>"
 
   @doc """
   Render a file field for :update. If we have `value`, try to render
@@ -228,7 +231,9 @@ defmodule Brando.Form.Fields do
     opts = List.delete(opts, :default)
     img =
       if value do
-        ~s(<div class="image-preview"><img src="#{Brando.HTML.media_url(Brando.Images.Helpers.img(value, :thumb))}" /></div>)
+        "<div class=\"image-preview\">" <>
+        "<img src=\"#{media_url(img(value, :thumb))}\" />" <>
+        "</div>"
       else
         ""
       end
@@ -239,7 +244,7 @@ defmodule Brando.Form.Fields do
   Render a file field for :create.
   """
   def file(:create, name, _value, _errors, opts) do
-    ~s(<input name="#{name}" type="file"#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])} />)
+    "<input name=\"#{name}\" type=\"file\"#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])} />"
   end
 
   @doc """
@@ -308,7 +313,13 @@ defmodule Brando.Form.Fields do
 
   def radio(form_type, name, choice_value, choice_text, value, default, is_selected_fun \\ nil)
   def radio(:create, name, choice_value, choice_text, [], default, _) do
-    ~s(<div class="radio"><label for="#{name}"></label><label for="#{name}"><input name="#{name}" type="radio" value="#{choice_value}"#{get_checked(choice_value, default)} />#{choice_text}</label></div>)
+    "<div class=\"radio\">" <>
+    "<label for=\"#{name}\"></label>" <>
+    "<label for=\"#{name}\">" <>
+    "<input name=\"#{name}\" type=\"radio\" value=\"#{choice_value}\"#{get_checked(choice_value, default)} />" <>
+    "#{choice_text}" <>
+    "</label>" <>
+    "</div>"
   end
 
   def radio(_, name, choice_value, choice_text, value, _default, is_selected_fun) do
@@ -320,12 +331,24 @@ defmodule Brando.Form.Fields do
     else
       checked = get_checked(choice_value, value)
     end
-    ~s(<div class="radio"><label for="#{name}"></label><label for="#{name}"><input name="#{name}" type="radio" value="#{choice_value}"#{checked} />#{choice_text}</label></div>)
+    "<div class=\"radio\">" <>
+    "<label for=\"#{name}\"></label>" <>
+    "<label for=\"#{name}\">" <>
+    "<input name=\"#{name}\" type=\"radio\" value=\"#{choice_value}\"#{checked} />" <>
+    "#{choice_text}" <>
+    "</label>" <>
+    "</div>"
   end
 
   def checkbox(form_type, name, choice_value, choice_text, value, default, is_selected_fun \\ nil)
   def checkbox(:create, name, choice_value, choice_text, [], default, _) do
-    ~s(<div class="checkboxes"><label for="#{name}[]"></label><label for="#{name}[]"><input name="#{name}[]" type="checkbox" value="#{choice_value}"#{get_checked(choice_value, default)} />#{choice_text}</label></div>)
+    "<div class=\"checkboxes\">" <>
+    "<label for=\"#{name}[]\"></label>" <>
+    "<label for=\"#{name}[]\">" <>
+    "<input name=\"#{name}[]\" type=\"checkbox\" value=\"#{choice_value}\"#{get_checked(choice_value, default)} />" <>
+    "#{choice_text}" <>
+    "</label>" <>
+    "</div>"
   end
 
   def checkbox(_, name, choice_value, choice_text, value, _default, is_selected_fun) do
@@ -337,7 +360,13 @@ defmodule Brando.Form.Fields do
     else
       checked = get_checked(choice_value, value)
     end
-    ~s(<div class="checkboxes"><label for="#{name}[]"></label><label for="#{name}[]"><input name="#{name}[]" type="checkbox" value="#{choice_value}"#{checked} />#{choice_text}</label></div>)
+    "<div class=\"checkboxes\">" <>
+    "<label for=\"#{name}[]\"></label>" <>
+    "<label for=\"#{name}[]\">" <>
+    "<input name=\"#{name}[]\" type=\"checkbox\" value=\"#{choice_value}\"#{checked} />" <>
+    "#{choice_text}" <>
+    "</label>" <>
+    "</div>"
   end
 
   def fieldset_open_tag(nil, _in_fieldset), do:
@@ -349,7 +378,8 @@ defmodule Brando.Form.Fields do
   def fieldset_close_tag(), do:
     ~s(</div></fieldset>)
 
-  def div_form_row(content, nil), do: ~s(<div class="form-row">#{content}</div>)
+  def div_form_row(content, nil), do:
+    ~s(<div class="form-row">#{content}</div>)
   def div_form_row(content, _span), do: content
 
   def input(:checkbox, _form_type, name, value, _errors, opts) do
@@ -364,8 +394,8 @@ defmodule Brando.Form.Fields do
             nil   -> ""
           end
       end
-    ~s(<input name="#{name}" type="hidden" value="false">
-       <input name="#{name}" value="true" type="checkbox"#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])}#{checked} />)
+    "<input name=\"#{name}\" type=\"hidden\" value=\"false\">" <>
+    "<input name=\"#{name}\" value=\"true\" type=\"checkbox\"#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])}#{checked} />"
   end
 
   def input(input_type, :update, name, value, _errors, opts) do
@@ -374,7 +404,7 @@ defmodule Brando.Form.Fields do
   end
 
   def input(input_type, _form_type, name, value, _errors, opts) do
-    ~s(<input name="#{name}" type="#{input_type}"#{get_slug_from(name, opts)}#{get_val(value, opts[:default])}#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])} />)
+    "<input name=\"#{name}\" type=\"#{input_type}\"#{get_slug_from(name, opts)}#{get_val(value, opts[:default])}#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])} />"
   end
 
   def tag(tag, name, contents, class) do
