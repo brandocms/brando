@@ -27,8 +27,7 @@ defmodule Brando.UserForm do
       field :full_name, :text,
         [required: true,
          label: "Fullt navn",
-         placeholder: "Fullt navn",
-         help_text: "Skriv inn ditt fødselsnavn - fornavn og etternavn"]
+         placeholder: "Fullt navn"]
       field :username, :text,
         [required: true,
          label: "Brukernavn",
