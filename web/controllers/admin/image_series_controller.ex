@@ -102,9 +102,8 @@ defmodule Brando.Admin.ImageSeriesController do
 
   @doc false
   def sort_post(conn, %{"order" => ids} = _params) do
-    vals = Range.new(0, length(ids))
     image_model = conn.private[:image_model]
-    image_model.reorder_images(ids, vals)
+    image_model.reorder_images(ids, Range.new(0, length(ids)))
     conn |> render(:sort_post)
   end
 
