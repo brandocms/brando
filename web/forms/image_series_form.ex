@@ -24,8 +24,8 @@ defmodule Brando.ImageSeriesForm do
        placeholder: "Navn"]
     field :slug, :text,
       [required: true,
-       label: "URL-slug",
-       placeholder: "URL-slug"]
+       label: "URL-tamp",
+       placeholder: "URL-tamp"]
     field :credits, :text,
       [required: false,
        label: "Kreditering",

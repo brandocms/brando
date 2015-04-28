@@ -12,8 +12,8 @@ defmodule Brando.ImageCategoryForm do
        placeholder: "Navn"]
     field :slug, :text,
       [required: true,
-       label: "URL-slug",
-       placeholder: "URL-slug",
+       label: "URL-tamp",
+       placeholder: "URL-tamp",
        slug_from: :name]
     submit "Lagre",
       [class: "btn btn-success"]
