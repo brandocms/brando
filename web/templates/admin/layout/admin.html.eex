@@ -10,17 +10,11 @@
     <title><%= app_name %> | <%= @page_title || "Administrasjon" %></title>
     <link rel="stylesheet" href="/static/brando/css/font-awesome.min.css">
     <link rel="stylesheet" href="/static/brando/css/brando.css">
-    <%= css_extra(@conn) %>
+    <%= render_existing Phoenix.Controller.view_module(@conn), "_stylesheets." <> Phoenix.Controller.controller_template(@conn), assigns %>
 
     <script type="text/javascript" src="/static/brando/js/brando.vendor.js" charset="utf-8"></script>
     <script type="text/javascript" src="/static/brando/js/brando.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/brando/js/to-markdown.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/brando/js/markdown.min.js" charset="utf-8"></script>
-
-    <script type="text/javascript" src="/static/brando/js/libs/backbone/underscore.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/brando/js/libs/backbone/backbone.js" charset="utf-8"></script>
-    <!-- <script type="text/javascript" src="/static/brando/js/twined-backbone.js" charset="utf-8"></script> -->
-    <%= js_extra(@conn) %>
+    <%= render_existing Phoenix.Controller.view_module(@conn), "_scripts." <> Phoenix.Controller.controller_template(@conn), assigns %>
   </head>
 
   <body<%= if @conn.private[:brando_section_name] do %> id="<%= @conn.private[:brando_section_name] %>" data-script="<%= @conn.private[:brando_section_name] %>-<%= @conn.private[:phoenix_action] %>"<% end %>>

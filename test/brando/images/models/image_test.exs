@@ -7,13 +7,13 @@ defmodule Brando.Integration.ImageTest do
   alias Brando.ImageCategory
   alias Brando.Type.ImageConfig
 
-  @params %{order: 0, image: %{title: "Title", credits: "credits",
+  @params %{sequence: 0, image: %{title: "Title", credits: "credits",
                                        path: "/tmp/path/to/fake/image.jpg",
                                        sizes: %{small: "/tmp/path/to/fake/image.jpg", thumb: "/tmp/path/to/fake/thumb.jpg"}}}
-  @params2 %{order: 1, image: %{title: "Title2", credits: "credits2",
+  @params2 %{sequence: 1, image: %{title: "Title2", credits: "credits2",
                                        path: "/tmp/path/to/fake/image2.jpg",
                                        sizes: %{small: "/tmp/path/to/fake/image2.jpg", thumb: "/tmp/path/to/fake/thumb2.jpg"}}}
-  @series_params %{name: "Series name", slug: "series-name", credits: "Credits", order: 0, creator_id: 1}
+  @series_params %{name: "Series name", slug: "series-name", credits: "Credits", sequence: 0, creator_id: 1}
   @category_params %{cfg: %ImageConfig{}, creator_id: 1, name: "Test Category", slug: "test-category"}
   @user_params %{avatar: nil, role: ["2", "4"],
                  email: "fanogigyni@gmail.com", full_name: "Nita Bond",
@@ -60,10 +60,10 @@ defmodule Brando.Integration.ImageTest do
 
     assert image.creator_id == user.id
     assert image.image_series_id == series.id
-    assert image.order == 0
+    assert image.sequence == 0
 
-    assert {:ok, image} = image |> Image.update(%{"order" => 4})
-    assert image.order == 4
+    assert {:ok, image} = image |> Image.update(%{"sequence" => 4})
+    assert image.sequence == 4
   end
 
   test "update/2 bad params", %{user: user, series: series} do
@@ -75,10 +75,10 @@ defmodule Brando.Integration.ImageTest do
 
     assert image.creator_id == user.id
     assert image.image_series_id == series.id
-    assert image.order == 0
+    assert image.sequence == 0
 
-    assert {:error, errors} = image |> Image.update(%{"order" => "string"})
-    assert errors == [order: "is invalid"]
+    assert {:error, errors} = image |> Image.update(%{"sequence" => "string"})
+    assert errors == [sequence: "is invalid"]
   end
 
   test "get/1", %{user: user, series: series} do
@@ -104,7 +104,7 @@ defmodule Brando.Integration.ImageTest do
     end
   end
 
-  test "reorder_images/2", %{user: user, series: series} do
+  test "sequence/2", %{user: user, series: series} do
     assert {:ok, image1} =
       @params
       |> Map.put(:creator_id, user.id)
@@ -116,15 +116,15 @@ defmodule Brando.Integration.ImageTest do
       |> Map.put(:image_series_id, series.id)
       |> Image.create(user)
 
-    assert image1.order == 0
-    assert image2.order == 1
+    assert image1.sequence == 0
+    assert image2.sequence == 1
 
-    assert {:ok, _} = Image.reorder_images([to_string(image1.id), to_string(image2.id)], [1, 0])
+    assert {:ok, _} = Image.sequence([to_string(image1.id), to_string(image2.id)], [1, 0])
 
     image1 = Image.get!(id: image1.id)
     image2 = Image.get!(id: image2.id)
-    assert image1.order == 1
-    assert image2.order == 0
+    assert image1.sequence == 1
+    assert image2.sequence == 0
   end
 
   test "delete/1", %{user: user, series: series} do

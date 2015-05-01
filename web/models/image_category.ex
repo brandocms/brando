@@ -113,7 +113,7 @@ defmodule Brando.ImageCategory do
     (from m in __MODULE__,
       left_join: is in assoc(m, :image_series),
       left_join: i in assoc(is, :images),
-      order_by: [asc: m.name, asc: is.name, asc: i.order],
+      order_by: [asc: m.name, asc: is.name, asc: i.sequence],
       preload: [image_series: {is, images: i}])
       |> Brando.repo.all
   end

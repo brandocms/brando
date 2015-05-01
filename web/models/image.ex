@@ -7,19 +7,20 @@ defmodule Brando.Image do
 
   use Brando.Web, :model
   use Brando.Images.Upload
+  use Brando.Sequence, :model
   import Ecto.Query, only: [from: 2]
   alias Brando.Utils
   alias Brando.User
   alias Brando.ImageSeries
 
   @required_fields ~w(image image_series_id)
-  @optional_fields ~w(order creator_id)
+  @optional_fields ~w(sequence creator_id)
 
   schema "images" do
     field :image, Brando.Type.Image
-    field :order, :integer
     belongs_to :creator, User
     belongs_to :image_series, ImageSeries
+    sequenced
     timestamps
   end
 
@@ -119,6 +120,16 @@ defmodule Brando.Image do
   def get(id: id) do
     from(m in __MODULE__, where: m.id == ^id)
     |> Brando.repo.one
+  end
+
+  @doc """
+  Get all images in series `id`.
+  """
+  def get_by_series_id(id) do
+    from(m in __MODULE__,
+         where: m.image_series_id == ^id,
+         order_by: m.sequence)
+    |> Brando.repo.all
   end
 
   @doc """

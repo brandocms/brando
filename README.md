@@ -113,6 +113,61 @@ plug Plug.Static,
 
 Default login/pass is "admin@twined.net/admin"
 
+## Sequence
+
+Implements model sequencing.
+
+Controller:
+
+```elixir
+  use Brando.Sequence,
+    [:controller, [model: Brando.Image,
+                   filter: &Brando.Image.get_by_series_id/1]]
+```
+
+View:
+
+```elixir
+  use Brando.Sequence, :view
+```
+
+Model:
+
+```elixir
+  use Brando.Sequence, :model
+
+  schema "model" do
+    # ...
+    sequenced
+  end
+```
+
+Migration:
+
+```elixir
+  use Brando.Sequence, :migration
+
+  def up do
+    create table(:model) do
+      # ...
+      sequenced
+    end
+  end
+```
+
+Template (`sequence.html.eex`):
+
+```html
+<ul id="sequence" class="clearfix">
+<%= for i <- @items do %>
+  <li data-id="<%= i.id %>"><%= i.name %></li>
+<% end %>
+</ul>
+<a id="sort-post" href="<%= Helpers.your_path(@conn, :sequence_post, @filter) %>" class="btn btn-default">
+  Lagre rekkefølge
+</a>
+```
+
 ## Optimizing images (not implemented yet)
 
 ```elixir

@@ -3,7 +3,6 @@ defmodule Brando.Utils do
   Assorted utility functions.
   """
 
-  import Plug.Conn, only: [assign: 3]
   require Logger
 
   @doc """
@@ -141,30 +140,4 @@ defmodule Brando.Utils do
       quote do: Task.start(unquote(fun))
     end
   end
-
-  @doc """
-  Assign `js` to `conn` as `:js_extra`.
-  Is available as `conn.assigns[:js_extra]`, but is normally
-  extracted through `<%= js_extra(@conn) %>` in `AdminView`.
-
-  ## Example (in your controller)
-
-        import Brando.Utils, only: [add_js: 2]
-        conn |> add_js(["somescript.js", "anotherscript.js"])
-
-  """
-  def add_js(conn, js), do: conn |> assign(:js_extra, js)
-
-  @doc """
-  Assign `css` to `conn` as `:css_extra`.
-  Is available as `conn.assigns[:css_extra]`, but is normally
-  extracted through `<%= css_extra(@conn) %>` in `AdminView`.
-
-  ## Example (in your controller)
-
-        import Brando.Utils, only: [add_css: 2]
-        conn |> add_css(["somescript.css", "anotherscript.css"])
-
-  """
-  def add_css(conn, css), do: conn |> assign(:css_extra, css)
 end

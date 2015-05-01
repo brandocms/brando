@@ -76,24 +76,6 @@ defmodule Brando.UtilsTest do
     assert maybe("hello", &String.upcase/1) == "HELLO"
   end
 
-  test "add_js/2" do
-    conn = conn(:get, "/")
-    assert conn.assigns[:js_extra] == nil
-    conn = conn |> add_js("test.js")
-    assert conn.assigns[:js_extra] == "test.js"
-    conn = conn |> add_js(["test1.js", "test2.js"])
-    assert conn.assigns[:js_extra] == ["test1.js", "test2.js"]
-  end
-
-  test "add_css/2" do
-    conn = conn(:get, "/")
-    assert conn.assigns[:css_extra] == nil
-    conn = conn |> add_css("test.css")
-    assert conn.assigns[:css_extra] == "test.css"
-    conn = conn |> add_css(["test1.css", "test2.css"])
-    assert conn.assigns[:css_extra] == ["test1.css", "test2.css"]
-  end
-
   test "to_iso8601/1" do
     dt = %Ecto.DateTime{year: 2014, month: 1, day: 1,
                         hour: 12, min: 0, sec: 0}

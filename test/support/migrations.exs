@@ -1,5 +1,6 @@
 defmodule Brando.Integration.Migration do
   use Ecto.Migration
+  use Brando.Sequence, :migration
   def up do
     create table(:users) do
       add :username,      :text
@@ -60,12 +61,11 @@ defmodule Brando.Integration.Migration do
 
     create table(:images) do
       add :image,             :text
-      add :order,             :integer
       add :creator_id,        references(:users)
       add :image_series_id,   references(:imageseries)
+      sequenced
       timestamps
     end
-    create index(:images, [:order])
   end
 
   def down do
@@ -86,6 +86,5 @@ defmodule Brando.Integration.Migration do
     drop index(:imageseries, [:order])
 
     drop table(:images)
-    drop index(:images, [:order])
   end
 end
