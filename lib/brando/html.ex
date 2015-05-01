@@ -105,14 +105,6 @@ defmodule Brando.HTML do
   end
 
   @doc """
-  Return joined path of `file` and the :static_url config option
-  as set in your app's config.exs.
-  """
-  def static_url(file) do
-    Path.join([Brando.config(:static_url), file])
-  end
-
-  @doc """
   Renders a delete button wrapped in a POST form.
   Pass `record` instance of model, and `helper` path.
   """

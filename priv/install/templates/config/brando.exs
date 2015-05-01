@@ -8,9 +8,7 @@ config :brando,
   media_url: "/media",
   repo: <%= application_module %>.Repo,
   router: <%= application_module %>.Router,
-  helpers: <%= application_module %>.Router.Helpers,
-  static_url: "/static",
-  templates_path: "../brando/templates"
+  helpers: <%= application_module %>.Router.Helpers
 
 config :brando, Brando.Images,
   default_config: %{allowed_mimetypes: ["image/jpeg", "image/png"],

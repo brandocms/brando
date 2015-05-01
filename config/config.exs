@@ -11,8 +11,7 @@ config :brando,
   repo: Brando.Repo,
   router: Brando.Router,
   helpers: Brando.Router.Helpers,
-  media_url: "/media",
-  static_url: "/static"
+  media_url: "/media"
 
 config :brando, Brando.Images,
   default_config: %{allowed_mimetypes: ["image/jpeg", "image/png"],
