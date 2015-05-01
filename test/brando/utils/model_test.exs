@@ -1,5 +1,6 @@
 defmodule Brando.Utils.ModelTest do
   use ExUnit.Case
+  use Brando.ConnCase
   use Brando.Integration.TestCase
   use Plug.Test
   alias Brando.Utils

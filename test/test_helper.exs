@@ -29,16 +29,6 @@ defmodule Brando.Integration.TestCase do
       alias Ecto.Integration.TestRepo, as: Repo
     end
   end
-
-  setup do
-    :ok = Ecto.Adapters.SQL.begin_test_transaction(Repo, [])
-
-    on_exit fn ->
-      :ok = Ecto.Adapters.SQL.rollback_test_transaction(Repo, [])
-    end
-
-    :ok
-  end
 end
 
 Code.require_file "support/migrations.exs", __DIR__
@@ -47,3 +37,4 @@ _   = Ecto.Storage.down(Repo)
 :ok = Ecto.Storage.up(Repo)
 {:ok, _pid} = Repo.start_link
 :ok = Ecto.Migrator.up(Repo, 0, Brando.Integration.Migration, log: false)
+Ecto.Adapters.SQL.begin_test_transaction(Brando.Integration.TestRepo)

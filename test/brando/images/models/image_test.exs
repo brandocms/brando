@@ -1,5 +1,6 @@
 defmodule Brando.Integration.ImageTest do
   use ExUnit.Case
+  use Brando.ConnCase
   use Brando.Integration.TestCase
   alias Brando.User
   alias Brando.Image
