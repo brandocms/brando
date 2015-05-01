@@ -23,7 +23,6 @@ defmodule Brando.Integration.TestCase do
 
   using do
     quote do
-      import unquote(__MODULE__)
       require Repo
       import Ecto.Query
       alias Ecto.Integration.TestRepo, as: Repo
