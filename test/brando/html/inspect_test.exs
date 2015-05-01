@@ -1,5 +1,6 @@
 defmodule Brando.HTML.InspectTest do
   use ExUnit.Case
+  use Brando.ConnCase
   use Brando.Integration.TestCase
   import Brando.HTML.Inspect
   alias Brando.User

@@ -4,7 +4,7 @@ defmodule Brando.ConnCase do
   tests that require setting up a connection.
 
   Such tests rely on `Phoenix.ConnTest` and also
-  imports other functionalities to make it easier
+  imports other functionality to make it easier
   to build and query models.
 
   Finally, if the test case interacts with the database,
@@ -21,21 +21,23 @@ defmodule Brando.ConnCase do
       use Phoenix.ConnTest
 
       # Alias the data repository and import query/model functions
+      alias Brando.Integration.TestRepo
       import Ecto.Model
       import Ecto.Query, only: [from: 2]
 
       # Import URL helpers from the router
+      import RouterHelper.TestRouter.Helpers
 
       # The default endpoint for testing
-      @endpoint Brando.get_endpoint
-      @repo TestRepo
+      @endpoint Brando.Integration.Endpoint
     end
   end
 
-  # setup tags do
-  #   unless tags[:async] do
-  #     Ecto.Adapters.SQL.restart_test_transaction(TestRepo, [])
-  #   end
-  #   :ok
-  # end
+  setup tags do
+    unless tags[:async] do
+      Ecto.Adapters.SQL.restart_test_transaction(Brando.Integration.TestRepo, [])
+    end
+
+    :ok
+  end
 end

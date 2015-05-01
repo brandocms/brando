@@ -5,7 +5,7 @@ defmodule Brando.Plug.Authenticate do
   :current_user from session and redirect 302 to login page.
   """
   import Plug.Conn
-  import Phoenix.Controller, only: [put_flash: 3]
+  import Phoenix.Controller, only: [put_flash: 3, redirect: 2]
   alias Brando.User
 
   @behaviour Plug
@@ -32,10 +32,8 @@ defmodule Brando.Plug.Authenticate do
   defp auth_failed(conn, login_url) do
     conn
     |> delete_session(:current_user)
-    |> put_resp_header("Location", login_url)
-    |> resp(302, "")
     |> put_flash(:error, "Ingen tilgang.")
-    |> send_resp
+    |> redirect(to: login_url)
     |> halt
   end
 end

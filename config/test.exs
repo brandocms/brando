@@ -1,5 +1,4 @@
 use Mix.Config
-alias Brando.Integration.TestRepo
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
@@ -7,7 +6,7 @@ config :brando, Brando.Endpoint,
   http: [port: 4001],
   server: false
 
-config :brando, TestRepo,
+config :brando, Brando.Integration.TestRepo,
   url: "ecto://postgres:postgres@localhost/brando_test",
   adapter: Ecto.Adapters.Postgres,
   extensions: [{Brando.Postgrex.Extension.JSON, library: Poison}],

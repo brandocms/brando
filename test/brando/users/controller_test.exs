@@ -1,7 +1,8 @@
-Code.require_file("router_helper.exs", Path.join([__DIR__, "..", ".."]))
+#Code.require_file("router_helper.exs", Path.join([__DIR__, "..", ".."]))
 
 defmodule Brando.Users.ControllerTest do
   use ExUnit.Case
+  use Brando.ConnCase
   use Brando.Integration.TestCase
   use Plug.Test
   use RouterHelper
@@ -17,97 +18,66 @@ defmodule Brando.Users.ControllerTest do
 
   test "index redirects to /login when no :current_user" do
     conn = call_with_session(RouterHelper.TestRouter, :get, "/admin/brukere")
-    assert conn.status == 302
-    assert get_resp_header(conn, "Location") == ["/login"]
+    assert redirected_to(conn, 302) =~ "/login"
   end
 
   test "index with logged in user" do
     conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/brukere")
-    assert conn.status == 200
-    assert conn.path_info == ["admin", "brukere"]
-    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+    assert html_response(conn, 200) =~ "Brukeroversikt"
   end
 
   test "show" do
     assert {:ok, user} = User.create(@params)
     conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/brukere/#{user.id}")
-    assert conn.status == 200
-    assert conn.path_info == ["admin", "brukere", "#{user.id}"]
-    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    assert conn.resp_body =~ "Nita Bond"
+    assert html_response(conn, 200) =~ "Nita Bond"
   end
 
   test "profile" do
     assert {:ok, _user} = User.create(@params)
     conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/brukere/profil")
-    assert conn.status == 200
-    assert conn.path_info == ["admin", "brukere", "profil"]
-    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    assert conn.resp_body =~ "iggypop"
+    assert html_response(conn, 200) =~ "iggypop"
   end
 
   test "new" do
     conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/brukere/ny")
-    assert conn.status == 200
-    assert conn.path_info == ["admin", "brukere", "ny"]
-    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
+    assert html_response(conn, 200) =~ "Ny bruker"
   end
 
   test "edit" do
     assert {:ok, user} = User.create(@params)
     conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/brukere/#{user.id}/endre")
-    assert conn.status == 200
-    assert conn.path_info == ["admin", "brukere", "#{user.id}", "endre"]
-    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    assert conn.resp_body =~ "value=\"Nita Bond\""
+    assert html_response(conn, 200) =~ "Endre bruker"
   end
 
   test "create (post) w/params" do
     conn = call_with_user(RouterHelper.TestRouter, :post, "/admin/brukere/", %{"user" => @params})
-    assert conn.status == 302
-    assert get_resp_header(conn, "location") == ["/admin/brukere"]
-    assert conn.path_info == ["admin", "brukere"]
-    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    %{phoenix_flash: flash} = conn.private
-    assert flash == %{"notice" => "Bruker opprettet."}
+    assert redirected_to(conn, 302) =~ "/admin/brukere"
+    assert get_flash(conn, :notice) == "Bruker opprettet."
   end
 
   test "create (post) w/erroneus params" do
     conn = call_with_user(RouterHelper.TestRouter, :post, "/admin/brukere/", %{"user" => @broken_params})
-    assert conn.status == 200
-    assert conn.path_info == ["admin", "brukere"]
-    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    %{phoenix_flash: flash} = conn.private
-    assert flash == %{"error" => "Feil i skjema"}
+    assert html_response(conn, 200) =~ "Ny bruker"
+    assert get_flash(conn, :error) == "Feil i skjema"
   end
 
   test "update (post) w/params" do
     assert {:ok, user} = User.create(@params)
     conn = call_with_user(RouterHelper.TestRouter, :patch, "/admin/brukere/#{user.id}", %{"user" => @params})
-    assert conn.status == 302
-    assert get_resp_header(conn, "location") == ["/admin/brukere"]
-    assert conn.path_info == ["admin", "brukere", "#{user.id}"]
-    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    %{phoenix_flash: flash} = conn.private
-    assert flash == %{"notice" => "Bruker oppdatert."}
+    assert redirected_to(conn, 302) =~ "/admin/brukere"
+    assert get_flash(conn, :notice) == "Bruker oppdatert."
   end
 
   test "update (post) w/broken params" do
     assert {:ok, user} = User.create(@params)
     conn = call_with_user(RouterHelper.TestRouter, :patch, "/admin/brukere/#{user.id}", %{"user" => @broken_params})
-    assert conn.status == 200
-    assert conn.path_info == ["admin", "brukere", "#{user.id}"]
-    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    %{phoenix_flash: flash} = conn.private
-    assert flash == %{"error" => "Feil i skjema"}
+    assert html_response(conn, 200) =~ "Endre bruker"
+    assert get_flash(conn, :error) == "Feil i skjema"
   end
 
   test "delete" do
     assert {:ok, user} = User.create(@params)
     conn = call_with_user(RouterHelper.TestRouter, :delete, "/admin/brukere/#{user.id}")
-    assert conn.status == 302
-    assert conn.path_info == ["admin", "brukere", "#{user.id}"]
-    assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    assert get_resp_header(conn, "location") == ["/admin/brukere"]
+    assert redirected_to(conn, 302) =~ "/admin/brukere"
   end
 end

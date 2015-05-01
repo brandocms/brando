@@ -1,5 +1,6 @@
 defmodule Brando.HTML.TablizeTest do
   use ExUnit.Case
+  use Brando.ConnCase
   use Brando.Integration.TestCase
   import Brando.HTML.Tablize
   alias Brando.User

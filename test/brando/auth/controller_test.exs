@@ -1,7 +1,8 @@
-Code.require_file("router_helper.exs", Path.join([__DIR__, "..", ".."]))
+#Code.require_file("router_helper.exs", Path.join([__DIR__, "..", ".."]))
 
 defmodule Brando.Auth.ControllerTest do
   use ExUnit.Case
+  use Brando.ConnCase
   use Brando.Integration.TestCase
   use Plug.Test
   use RouterHelper
