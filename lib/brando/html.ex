@@ -113,36 +113,6 @@ defmodule Brando.HTML do
   end
 
   @doc """
-  If any javascripts have been assigned to :js_extra on `conn`,
-  render each as a <script> tag. If nil, do nothing.
-  To assign to `:js_extra`, use `Brando.Utils.add_js/2`
-  """
-  def js_extra(conn) do
-    do_js_extra(conn.assigns[:js_extra])
-  end
-
-  defp do_js_extra(nil), do: ""
-  defp do_js_extra(js) when is_list(js) do
-    for j <- js, do: do_js_extra(j)
-  end
-  defp do_js_extra(js), do: Phoenix.HTML.safe(~s(<script type="text/javascript" src="#{static_url(js)}" charset="utf-8"></script>))
-
-  @doc """
-  If any css files have been assigned to :css_extra on `conn`,
-  render each as a <link> tag. If nil, do nothing.
-  To assign to `:css_extra`, use `Brando.Utils.add_css/2`
-  """
-  def css_extra(conn) do
-    do_css_extra(conn.assigns[:css_extra])
-  end
-
-  defp do_css_extra(nil), do: ""
-  defp do_css_extra(css) when is_list(css) do
-    for c <- css, do: do_css_extra(c)
-  end
-  defp do_css_extra(css), do: Phoenix.HTML.safe(~s(<link rel="stylesheet" href="#{static_url(css)}">))
-
-  @doc """
   Renders a delete button wrapped in a POST form.
   Pass `record` instance of model, and `helper` path.
   """
