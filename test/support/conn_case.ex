@@ -26,7 +26,7 @@ defmodule Brando.ConnCase do
       import Ecto.Query, only: [from: 2]
 
       # Import URL helpers from the router
-      import RouterHelper.TestRouter.Helpers
+      alias RouterHelper.TestRouter.Helpers
 
       # The default endpoint for testing
       @endpoint Brando.get_endpoint
