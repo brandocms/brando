@@ -1,19 +1,18 @@
 defmodule <%= application_module %>.Repo.Migrations.AddImagesTable do
   use Ecto.Migration
+  use Brando.Sequence, :migration
 
   def up do
     create table(:images) do
       add :image,             :text
-      add :order,             :integer
       add :creator_id,        references(:users)
       add :image_series_id,   references(:imageseries)
+      sequenced
       timestamps
     end
-    create index(:images, [:order])
   end
 
   def down do
     drop table(:images)
-    drop index(:images, [:order])
   end
 end

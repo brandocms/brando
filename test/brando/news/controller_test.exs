@@ -77,7 +77,7 @@ defmodule Brando.News.ControllerTest do
     post_params = Map.put(@post_params, "creator_id", user.id)
     conn = call_with_custom_user(RouterHelper.TestRouter, :post, "/admin/nyheter/", %{"post" => post_params}, user: user)
     assert conn.status == 302
-    assert get_resp_header(conn, "Location") == ["/admin/nyheter"]
+    assert get_resp_header(conn, "location") == ["/admin/nyheter"]
     assert conn.path_info == ["admin", "nyheter"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
     %{phoenix_flash: flash} = conn.private
@@ -99,7 +99,7 @@ defmodule Brando.News.ControllerTest do
     assert {:ok, post} = Post.create(post_params, user)
     conn = call_with_user(RouterHelper.TestRouter, :patch, "/admin/nyheter/#{post.id}", %{"post" => post_params})
     assert conn.status == 302
-    assert get_resp_header(conn, "Location") == ["/admin/nyheter"]
+    assert get_resp_header(conn, "location") == ["/admin/nyheter"]
     assert conn.path_info == ["admin", "nyheter", "#{post.id}"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
     %{phoenix_flash: flash} = conn.private
@@ -122,6 +122,6 @@ defmodule Brando.News.ControllerTest do
     assert conn.status == 302
     assert conn.path_info == ["admin", "nyheter", "#{post.id}"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    assert get_resp_header(conn, "Location") == ["/admin/nyheter"]
+    assert get_resp_header(conn, "location") == ["/admin/nyheter"]
   end
 end

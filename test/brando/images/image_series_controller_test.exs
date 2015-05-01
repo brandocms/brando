@@ -65,7 +65,7 @@ defmodule Brando.ImageSeries.ControllerTest do
     series_params = Map.put(series_params, "image_category_id", category.id)
     conn = call_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/", %{"imageseries" => series_params}, user: user)
     assert conn.status == 302
-    assert get_resp_header(conn, "Location") == ["/admin/bilder"]
+    assert get_resp_header(conn, "location") == ["/admin/bilder"]
     assert conn.path_info == ["admin", "bilder", "serier"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
     %{phoenix_flash: flash} = conn.private
@@ -91,7 +91,7 @@ defmodule Brando.ImageSeries.ControllerTest do
     {:ok, series} = ImageSeries.create(series_params, user)
     conn = call_with_user(RouterHelper.TestRouter, :patch, "/admin/bilder/serier/#{series.id}", %{"imageseries" => series_params})
     assert conn.status == 302
-    assert get_resp_header(conn, "Location") == ["/admin/bilder"]
+    assert get_resp_header(conn, "location") == ["/admin/bilder"]
     assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
     %{phoenix_flash: flash} = conn.private
@@ -112,7 +112,7 @@ defmodule Brando.ImageSeries.ControllerTest do
     assert conn.status == 302
     assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    assert get_resp_header(conn, "Location") == ["/admin/bilder"]
+    assert get_resp_header(conn, "location") == ["/admin/bilder"]
     %{phoenix_flash: flash} = conn.private
     assert flash == %{"notice" => "bildeserie Series name – 0 bilde(r). slettet."}
   end
@@ -156,7 +156,7 @@ defmodule Brando.ImageSeries.ControllerTest do
     assert conn.status == 200
     assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "sorter"]
     assert conn.private.phoenix_layout == {Brando.Admin.LayoutView, "admin.html"}
-    assert conn.resp_body =~ "<img src=\"/media/images/default/thumb/sample.png\" /></li>"
+    assert conn.resp_body =~ "<img src=\"/media/images/default/thumb/sample.png\" />"
 
     series = Brando.repo.preload(series, :images)
     [img1, img2] = series.images
@@ -171,8 +171,8 @@ defmodule Brando.ImageSeries.ControllerTest do
 
     [img1, img2] = series.images
     case img1.image.path do
-      "images/default/sample.png" -> assert img1.order > img2.order
-      "images/default/sample2.png" -> assert img1.order < img2.order
+      "images/default/sample.png" -> assert img1.sequence > img2.sequence
+      "images/default/sample2.png" -> assert img1.sequence < img2.sequence
     end
   end
 end

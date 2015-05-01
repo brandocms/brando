@@ -2,7 +2,9 @@
 <ul class="accordion-tabs-minimal">
   <%= for category <- @categories do %>
   <li class="tab-header-and-content">
-    <a id="tab-<%= category.slug %>" href="#" class="tab-link<%= if List.first(@categories) == category do %> is-active<% end %>"><%= String.capitalize(category.name) %></a>
+    <a id="tab-<%= category.slug %>" href="#" class="tab-link<%= if List.first(@categories) == category do %> is-active<% end %>">
+      <%= String.capitalize(category.name) %>
+    </a>
     <div class="tab-content">
     <%= if category.image_series != [] do %>
       <%= for serie <- category.image_series do %>
@@ -23,7 +25,7 @@
           <hr>
           <a href="<%= Helpers.admin_image_series_path(@conn, :upload, serie.id) %>" class="btn btn-default"><i class="fa fa-cloud"> </i>Last opp bilder</a>
           <a href="<%= Helpers.admin_image_series_path(@conn, :edit, serie.id) %>" class="btn btn-default"><i class="fa fa-edit"> </i>Editer bildeserie</a>
-          <a href="<%= Helpers.admin_image_series_path(@conn, :sort, serie.id) %>" class="btn btn-default"><i class="fa fa-sort"> </i>Sortér bilder</a>
+          <a href="<%= Helpers.admin_image_series_path(@conn, :sequence, serie.id) %>" class="btn btn-default"><i class="fa fa-sort"> </i>Sortér bilder</a>
           <a href="<%= Helpers.admin_image_series_path(@conn, :delete_confirm, serie.id) %>" class="btn btn-danger"><i class="fa fa-trash"> </i>Slett bildeserie</a>
         </div>
       <% end %>

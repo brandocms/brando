@@ -3,8 +3,8 @@ defmodule Brando.Admin.ImageSeriesController do
   Controller for the Brando ImageSeries module.
   """
   use Brando.Web, :controller
+  use Brando.Sequence, [:controller, [model: Brando.Image, filter: &Brando.Image.get_by_series_id/1]]
 
-  import Brando.Utils, only: [add_css: 2, add_js: 2]
   import Brando.Plug.Section
   import Brando.HTML.Inspect, only: [model_name: 2]
 
@@ -73,8 +73,6 @@ defmodule Brando.Admin.ImageSeriesController do
     model = conn.private[:series_model]
     series = model.get!(id: id)
     conn
-    |> add_css("brando/css/dropzone.css")
-    |> add_js("brando/js/dropzone.js")
     |> assign(:series, series)
     |> render(:upload)
   end
@@ -89,22 +87,6 @@ defmodule Brando.Admin.ImageSeriesController do
     {:ok, image} = image_model.check_for_uploads(params, Brando.HTML.current_user(conn), cfg, opts)
     conn
     |> render(:upload_post, image: image)
-  end
-
-  @doc false
-  def sort(conn, %{"id" => id}) do
-    series_model = conn.private[:series_model]
-    series = series_model.get!(id: id)
-    conn
-    |> assign(:series, series)
-    |> render(:sort)
-  end
-
-  @doc false
-  def sort_post(conn, %{"order" => ids} = _params) do
-    image_model = conn.private[:image_model]
-    image_model.reorder_images(ids, Range.new(0, length(ids)))
-    conn |> render(:sort_post)
   end
 
   @doc false

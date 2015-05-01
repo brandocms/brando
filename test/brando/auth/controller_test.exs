@@ -26,7 +26,7 @@ defmodule Brando.Auth.ControllerTest do
     assert {:ok, _user} = User.create(@params)
     conn = call_with_session(RouterHelper.TestRouter, :post, "/login", %{"user" => @login})
     assert conn.status == 302
-    assert get_resp_header(conn, "Location") == ["/admin"]
+    assert get_resp_header(conn, "location") == ["/admin"]
     %{phoenix_flash: flash} = conn.private
     assert flash == %{"notice" => "Innloggingen var vellykket"}
   end
@@ -35,7 +35,7 @@ defmodule Brando.Auth.ControllerTest do
     assert {:ok, _user} = User.create(@params)
     conn = call_with_session(RouterHelper.TestRouter, :post, "/login", %{"user" => @bad_login})
     assert conn.status == 302
-    assert get_resp_header(conn, "Location") == ["/login"]
+    assert get_resp_header(conn, "location") == ["/login"]
     %{phoenix_flash: flash} = conn.private
     assert flash == %{"error" => "Innloggingen feilet"}
   end

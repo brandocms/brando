@@ -7,7 +7,6 @@ defmodule Brando.Admin.PostController do
     image_model: Brando.Image,
     series_model: Brando.ImageSeries
 
-  import Brando.Utils, only: [add_css: 2, add_js: 2]
   import Brando.Plug.Section
   import Brando.HTML.Inspect, only: [model_name: 2]
 
@@ -34,8 +33,6 @@ defmodule Brando.Admin.PostController do
   @doc false
   def new(conn, _params) do
     conn
-    |> add_css("villain/villain.css")
-    |> add_js("villain/villain.js")
     |> render(:new)
   end
 
@@ -51,8 +48,6 @@ defmodule Brando.Admin.PostController do
         conn
         |> assign(:post, post)
         |> assign(:errors, errors)
-        |> add_css("villain/villain.css")
-        |> add_js("villain/villain.js")
         |> put_flash(:error, "Feil i skjema")
         |> render(:new)
     end
@@ -65,8 +60,6 @@ defmodule Brando.Admin.PostController do
       post = post
       |> model.encode_data
       conn
-      |> add_css("villain/villain.css")
-      |> add_js("villain/villain.js")
       |> assign(:post, post)
       |> assign(:id, id)
       |> render(:edit)
@@ -86,8 +79,6 @@ defmodule Brando.Admin.PostController do
         |> redirect(to: router_module(conn).__helpers__.admin_post_path(conn, :index))
       {:error, errors} ->
         conn
-        |> add_css("villain/villain.css")
-        |> add_js("villain/villain.js")
         |> assign(:post, form_data)
         |> assign(:errors, errors)
         |> assign(:id, id)

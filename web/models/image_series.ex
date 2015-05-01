@@ -89,6 +89,13 @@ defmodule Brando.ImageSeries do
     end
   end
 
+  def get_slug(id: id) do
+    from(m in __MODULE__,
+      select: m.slug,
+      where: m.id == ^id)
+      |> Brando.repo.one!
+  end
+
   def get(slug: slug) do
     from(m in __MODULE__,
          where: m.slug == ^slug,
@@ -104,7 +111,7 @@ defmodule Brando.ImageSeries do
     (from(m in __MODULE__,
       left_join: i in assoc(m, :images),
       where: m.id == ^id,
-      order_by: i.order,
+      order_by: i.sequence,
       preload: [:creator, :image_category, images: i]))
       |> Brando.repo.one
   end

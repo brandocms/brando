@@ -6,6 +6,7 @@ import Slideout from "./slideout.js";
 import Utils from "./utils.js";
 import Vex from "./vex.js";
 import Images from "./images.js";
+import Sequence from "./sequence.js";
 import WS from "./ws.js";
 
 
@@ -15,6 +16,7 @@ $(() => {
     Autoslug.setup();
     Flash.setup();
     Slideout.setup();
+    Sequence.setup();
 
     /* set up brando js stuff */
     Images.setup();
