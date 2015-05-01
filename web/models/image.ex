@@ -133,21 +133,6 @@ defmodule Brando.Image do
   end
 
   @doc """
-  Reorder image order field.
-
-  ## Example:
-
-      reorder_images(["1", "2", "3"], ["3", "2", "1"]")
-
-  """
-  def reorder_images(ids, vals) do
-    order = Enum.zip(vals, ids)
-    Brando.repo.transaction(fn -> Enum.map(order, fn ({val, id}) ->
-      Ecto.Adapters.SQL.query(Brando.repo, "UPDATE images SET \"order\" = $1 WHERE \"id\" = $2", [val, String.to_integer(id)])
-    end) end)
-  end
-
-  @doc """
   Delete `record` from database
 
   Also deletes all dependent image sizes.
