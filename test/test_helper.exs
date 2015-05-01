@@ -31,6 +31,32 @@ defmodule Brando.Integration.TestCase do
   end
 end
 
+defmodule Forge do
+  use Blacksmith
+
+  @save_one_function &Blacksmith.Config.save/2
+  @save_all_function &Blacksmith.Config.save_all/2
+
+  register :user,
+    __struct__: Brando.User,
+    full_name: "James Williamson",
+    email: "james@thestooges.com",
+    password: "hunter2hunter2",
+    username: "jamesw",
+    avatar: nil,
+    role: ["2", "4"]
+end
+
+defmodule Blacksmith.Config do
+  def save(repo, map) do
+    repo.insert(map)
+  end
+
+  def save_all(repo, list) do
+    Enum.map(list, &repo.insert/1)
+  end
+end
+
 Code.require_file "support/migrations.exs", __DIR__
 
 _   = Ecto.Storage.down(Repo)

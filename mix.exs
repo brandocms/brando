@@ -23,8 +23,11 @@ defmodule Brando.Mixfile do
   end
 
   def application do
-    [applications: [:comeonin]]
+    [applications: applications(Mix.env)]
   end
+
+  defp applications(:test), do: applications(:all) ++ [:blacksmith]
+  defp applications(_all), do: [:comeonin]
 
   defp deps do
     [
@@ -37,10 +40,12 @@ defmodule Brando.Mixfile do
       {:linguist, "~> 0.1"},
       {:slugger, "~> 0.0.1"},
       {:poolboy, "~> 1.5.1", override: true},
+      {:poison, "~> 1.4.0", override: true},
       {:mogrify, github: "twined/mogrify"},
       {:comeonin, "~> 0.8"},
       {:dialyze, "~> 0.1.3", only: :dev},
       {:excoveralls, "~> 0.3", only: :test},
+      {:blacksmith, "~> 0.1.2", only: :test},
       {:ex_doc, "~> 0.6", only: :docs},
       {:inch_ex, only: :docs}
     ]

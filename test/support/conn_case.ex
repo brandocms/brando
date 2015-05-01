@@ -29,7 +29,7 @@ defmodule Brando.ConnCase do
       import RouterHelper.TestRouter.Helpers
 
       # The default endpoint for testing
-      @endpoint Brando.Integration.Endpoint
+      @endpoint Brando.get_endpoint
     end
   end
 
