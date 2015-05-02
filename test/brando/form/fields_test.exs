@@ -18,6 +18,14 @@ defmodule Brando.Form.FieldsTest do
        [value: "2", text: "Valg 2"]]
     end
 
+    def selected_fun_true(_form_value, _model_value) do
+      true
+    end
+
+    def selected_fun_false(_form_value, _model_value) do
+      false
+    end
+
     form "user", [helper: :admin_user_path, class: "grid-form"] do
       field :full_name, :text,
         [required: true,
@@ -73,14 +81,6 @@ defmodule Brando.Form.FieldsTest do
         [class: "btn btn-default",
          wrapper_class: ""]
     end
-  end
-
-  def selected_fun_true(_form_value, _model_value) do
-    true
-  end
-
-  def selected_fun_false(_form_value, _model_value) do
-    false
   end
 
   test "render_options/4" do
@@ -230,29 +230,33 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "option/6" do
-    assert F.option(:create, "choice_val", "choice_text", [], nil, []) ==
+    assert F.option(:create, "choice_val", "choice_text", [], nil, nil) ==
       "<option value=\"choice_val\">choice_text</option>"
-    assert F.option(:create, "choice_val", "choice_text", [], "choice_val", []) ==
+    assert F.option(:create, "choice_val", "choice_text", [], "choice_val", nil) ==
       "<option value=\"choice_val\" selected>choice_text</option>"
-    assert F.option(:create, "choice_val", "choice_text", "choice_wrong", "choice_val", []) ==
+    assert F.option(:create, "choice_val", "choice_text", "choice_wrong", "choice_val", nil) ==
       "<option value=\"choice_val\">choice_text</option>"
-    assert F.option(:create, "choice_val", "choice_text", "choice_val", "choice_val", []) ==
+    assert F.option(:create, "choice_val", "choice_text", "choice_val", "choice_val", nil) ==
       "<option value=\"choice_val\" selected>choice_text</option>"
+    assert F.option(:update, "choice_val", "choice_text", "choice_val", "choice_val", &__MODULE__.UserForm.selected_fun_true/2) ==
+      "<option value=\"choice_val\" selected>choice_text</option>"
+    assert F.option(:update, "choice_val", "choice_text", "choice_val", "choice_val", &__MODULE__.UserForm.selected_fun_false/2) ==
+      "<option value=\"choice_val\">choice_text</option>"
   end
 
-  test "radio/6" do
-    assert F.radio(:create, "choice_val", "choice_text", [], nil, []) ==
-      "<div class=\"radio\"><label for=\"choice_val\"></label><label for=\"choice_val\"><input name=\"choice_val\" type=\"radio\" value=\"choice_text\" /></label></div>"
-    assert F.radio(:create, "choice_val", "choice_text", [], "choice_val", []) ==
-      "<div class=\"radio\"><label for=\"choice_val\"></label><label for=\"choice_val\"><input name=\"choice_val\" type=\"radio\" value=\"choice_text\" /></label></div>"
-    assert F.radio(:create, "choice_val", "choice_text", "choice_wrong", "choice_val", []) ==
-      "<div class=\"radio\"><label for=\"choice_val\"></label><label for=\"choice_val\"><input name=\"choice_val\" type=\"radio\" value=\"choice_text\" />choice_wrong</label></div>"
-    assert F.radio(:create, "choice_val", "choice_text", "choice_val", "choice_val", []) ==
-      "<div class=\"radio\"><label for=\"choice_val\"></label><label for=\"choice_val\"><input name=\"choice_val\" type=\"radio\" value=\"choice_text\" />choice_val</label></div>"
+  test "radio/7" do
+    assert F.radio(:create, "choice_name", "choice_val", "choice_text", [], nil, nil) ==
+      "<div class=\"radio\"><label for=\"choice_name\"></label><label for=\"choice_name\"><input name=\"choice_name\" type=\"radio\" value=\"choice_val\" />choice_text</label></div>"
+    assert F.radio(:create, "choice_name", "choice_val", "choice_text", [], "choice_val", nil) ==
+      "<div class=\"radio\"><label for=\"choice_name\"></label><label for=\"choice_name\"><input name=\"choice_name\" type=\"radio\" value=\"choice_val\" checked />choice_text</label></div>"
+    assert F.radio(:create, "choice_name", "choice_val", "choice_text", "choice_wrong", "choice_val", nil) ==
+      "<div class=\"radio\"><label for=\"choice_name\"></label><label for=\"choice_name\"><input name=\"choice_name\" type=\"radio\" value=\"choice_val\" />choice_text</label></div>"
+    assert F.radio(:create, "choice_name", "choice_val", "choice_text", "choice_val", "choice_val", nil) ==
+      "<div class=\"radio\"><label for=\"choice_name\"></label><label for=\"choice_name\"><input name=\"choice_name\" type=\"radio\" value=\"choice_val\" checked />choice_text</label></div>"
 
-    assert F.radio(:create, "choice_val", "choice_text", "choice_val", "choice_val", fn -> true end) ==
-      "<div class=\"radio\"><label for=\"choice_val\"></label><label for=\"choice_val\"><input name=\"choice_val\" type=\"radio\" value=\"choice_text\" />choice_val</label></div>"
-    assert F.radio(:create, "choice_val", "choice_text", "choice_val", "choice_val", fn -> false end) ==
-      "<div class=\"radio\"><label for=\"choice_val\"></label><label for=\"choice_val\"><input name=\"choice_val\" type=\"radio\" value=\"choice_text\" />choice_val</label></div>"
+    assert F.radio(:create, "choice_name", "choice_val", "choice_text", "choice_val", "choice_val", &__MODULE__.UserForm.selected_fun_true/2) ==
+      "<div class=\"radio\"><label for=\"choice_name\"></label><label for=\"choice_name\"><input name=\"choice_name\" type=\"radio\" value=\"choice_val\" checked />choice_text</label></div>"
+    assert F.radio(:create, "choice_name", "choice_val", "choice_text", "choice_val", "choice_val", &__MODULE__.UserForm.selected_fun_false/2) ==
+      "<div class=\"radio\"><label for=\"choice_name\"></label><label for=\"choice_name\"><input name=\"choice_name\" type=\"radio\" value=\"choice_val\" />choice_text</label></div>"
   end
 end

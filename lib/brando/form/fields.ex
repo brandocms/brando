@@ -336,13 +336,14 @@ defmodule Brando.Form.Fields do
     else
       checked = get_checked(choice_value, value)
     end
+    if is_integer(choice_value), do:
+      choice_value = Integer.to_string(choice_value)
     "<div class=\"radio\">" <>
-    "<label for=\"#{name}\"></label>" <>
-    "<label for=\"#{name}\">" <>
-    "<input name=\"#{name}\" type=\"radio\" value=\"#{choice_value}\"#{checked} />" <>
-    "#{choice_text}" <>
-    "</label>" <>
-    "</div>"
+    "<label for=\"" <> name <> "\"></label>" <>
+    "<label for=\"" <> name <> "\">" <>
+    "<input name=\"" <> name <> "\" type=\"radio\" value=\"" <>
+    choice_value <> "\"" <> checked <> " />" <>
+    choice_text <> "</label>" <> "</div>"
   end
 
   def checkbox(form_type, name, choice_value, choice_text, value, default, is_selected_fun \\ nil)
