@@ -8,7 +8,7 @@ defmodule Brando.Villain.Parser.Default do
   Convert header (h1) to HTML
   """
   def header(%{text: text}) do
-    ~s(<h1>#{text}</h1>)
+    "<h1>" <> text <> "</h1>"
   end
 
   @doc """
