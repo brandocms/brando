@@ -175,6 +175,15 @@ defmodule Brando.Form.FieldsTest do
       ~s( data-slug-from="testform[name]")
   end
 
+  test "get_val/2" do
+    assert F.get_val([]) == ""
+    assert F.get_val(nil) == ""
+    assert F.get_val("test") == " value=\"test\""
+    assert F.get_val("test", nil) == " value=\"test\""
+    assert F.get_val("test", "default") == " value=\"test\""
+    assert F.get_val([], "default") == " value=\"default\""
+  end
+
   test "input checkbox" do
     assert F.input(:checkbox, :create, "name", [], [], []) ==
       "<input name=\"name\" type=\"hidden\" value=\"false\"><input name=\"name\" value=\"true\" type=\"checkbox\" />"
@@ -190,9 +199,8 @@ defmodule Brando.Form.FieldsTest do
 
   test "render_errors/1" do
     assert F.render_errors([]) == ""
-    assert F.render_errors(["can't be blank", "must be unique"]) ==
-      ["<div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet er påkrevet.</div>",
-       "<div class=\"error\"><i class=\"fa fa-exclamation-circle\"> </i> Feltet må være unikt. Verdien finnes allerede i databasen.</div>"]
+    assert F.render_errors(["can't be blank", "must be unique"]) =~ "Feltet er påkrevet."
+    assert F.render_errors(["can't be blank", "must be unique"]) =~ "Feltet må være unikt. Verdien finnes allerede i databasen."
   end
 
   test "parse_error/1" do

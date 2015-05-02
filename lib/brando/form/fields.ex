@@ -142,11 +142,13 @@ defmodule Brando.Form.Fields do
   """
   @spec form_group(String.t, String.t, Keyword.t, Keyword.t) :: String.t
   def form_group(contents, _name, opts, errors) do
-    "<div class=\"form-group#{get_form_group_class(opts[:form_group_class])}" <>
-    "#{get_required(opts[:required])}#{get_has_error(errors)}\">" <>
-    "#{contents}" <>
-    "#{render_errors(errors)}" <>
-    "#{render_help_text(opts[:help_text])}" <>
+    "<div class=\"form-group" <>
+    get_form_group_class(opts[:form_group_class]) <>
+    get_required(opts[:required]) <>
+    get_has_error(errors) <> "\">" <>
+    contents <>
+    render_errors(errors) <>
+    render_help_text(opts[:help_text]) <>
     "</div>"
   end
 
@@ -158,7 +160,7 @@ defmodule Brando.Form.Fields do
   def render_help_text(help_text) do
     "<div class=\"help\">" <>
     "<i class=\"fa fa-fw fa-question-circle\"> </i>" <>
-    "<span>#{help_text}</span>" <>
+    "<span>" <> help_text <> "</span>" <>
     "</div>"
   end
 
@@ -169,11 +171,12 @@ defmodule Brando.Form.Fields do
   @spec render_errors(Options.t | Keyword.t) :: String.t
   def render_errors([]), do: ""
   def render_errors(errors) when is_list(errors) do
-    for error <- errors do
+    errors = for error <- errors do
       "<div class=\"error\">" <>
-      "<i class=\"fa fa-exclamation-circle\"> </i> #{parse_error(error)}" <>
-      "</div>"
+      "<i class=\"fa fa-exclamation-circle\"> </i> " <>
+      parse_error(error) <> "</div>"
     end
+    Enum.join(errors)
   end
 
   @doc """
@@ -232,7 +235,7 @@ defmodule Brando.Form.Fields do
     img =
       if value do
         "<div class=\"image-preview\">" <>
-        "<img src=\"#{media_url(img(value, :thumb))}\" />" <>
+        "<img src=\"" <> media_url(img(value, :thumb)) <> "\" />" <>
         "</div>"
       else
         ""
@@ -314,10 +317,12 @@ defmodule Brando.Form.Fields do
   def radio(form_type, name, choice_value, choice_text, value, default, is_selected_fun \\ nil)
   def radio(:create, name, choice_value, choice_text, [], default, _) do
     "<div class=\"radio\">" <>
-    "<label for=\"#{name}\"></label>" <>
-    "<label for=\"#{name}\">" <>
-    "<input name=\"#{name}\" type=\"radio\" value=\"#{choice_value}\"#{get_checked(choice_value, default)} />" <>
-    "#{choice_text}" <>
+    "<label for=\"" <> name <> "\"></label>" <>
+    "<label for=\"" <> name <> "\">" <>
+    "<input name=\"" <> name <> "\" type=\"radio\" " <>
+    "value=\"" <> choice_value <>
+    "\"" <> get_checked(choice_value, default) <> " />" <>
+    choice_text <>
     "</label>" <>
     "</div>"
   end
@@ -343,30 +348,30 @@ defmodule Brando.Form.Fields do
   def checkbox(form_type, name, choice_value, choice_text, value, default, is_selected_fun \\ nil)
   def checkbox(:create, name, choice_value, choice_text, [], default, _) do
     "<div class=\"checkboxes\">" <>
-    "<label for=\"#{name}[]\"></label>" <>
-    "<label for=\"#{name}[]\">" <>
-    "<input name=\"#{name}[]\" type=\"checkbox\" value=\"#{choice_value}\"#{get_checked(choice_value, default)} />" <>
-    "#{choice_text}" <>
-    "</label>" <>
-    "</div>"
+    "<label for=\"" <> name <> "\"></label>" <>
+    "<label for=\"" <> name <> "\">" <>
+    "<input name=\"" <> name <>
+    "[]\" type=\"checkbox\" " <>
+    "value=\"" <> choice_value <>
+    "\"" <> get_checked(choice_value, default) <> " />" <>
+    choice_text <> "</label>" <> "</div>"
   end
 
   def checkbox(_, name, choice_value, choice_text, value, _default, is_selected_fun) do
-    if is_selected_fun do
-      checked = case is_selected_fun.(choice_value, value) do
+    checked = if is_selected_fun do
+      case is_selected_fun.(choice_value, value) do
         true  -> " " <> "checked"
         false -> ""
       end
     else
-      checked = get_checked(choice_value, value)
+      get_checked(choice_value, value)
     end
     "<div class=\"checkboxes\">" <>
-    "<label for=\"#{name}[]\"></label>" <>
-    "<label for=\"#{name}[]\">" <>
-    "<input name=\"#{name}[]\" type=\"checkbox\" value=\"#{choice_value}\"#{checked} />" <>
-    "#{choice_text}" <>
-    "</label>" <>
-    "</div>"
+    "<label for=\"" <> name <> "[]\"></label>" <>
+    "<label for=\"" <> name <> "[]\">" <>
+    "<input name=\"" <> name <> "[]\" type=\"checkbox\" " <>
+    "value=\"" <> choice_value <> "\"" <> checked <> " />" <>
+    choice_text <> "</label>" <> "</div>"
   end
 
   def fieldset_open_tag(nil, _in_fieldset), do:
@@ -394,8 +399,11 @@ defmodule Brando.Form.Fields do
             nil   -> ""
           end
       end
-    "<input name=\"#{name}\" type=\"hidden\" value=\"false\">" <>
-    "<input name=\"#{name}\" value=\"true\" type=\"checkbox\"#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])}#{checked} />"
+    "<input name=\"" <> name <> "\" type=\"hidden\" value=\"false\">" <>
+    "<input name=\"" <> name <> "\" value=\"true\" type=\"checkbox\"" <>
+    get_placeholder(opts[:placeholder]) <>
+    get_class(opts[:class]) <>
+    checked <> " />"
   end
 
   def input(input_type, :update, name, value, _errors, opts) do
@@ -427,7 +435,7 @@ defmodule Brando.Form.Fields do
   """
   def get_checked(cv, v) when cv == v, do: " " <> "checked"
   def get_checked(cv, v) when is_list(v) do
-    if cv in v, do: " " <> "checked"
+    if cv in v, do: " " <> "checked", else: ""
   end
   def get_checked(_, _), do: ""
 
