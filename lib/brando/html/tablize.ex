@@ -90,26 +90,23 @@ defmodule Brando.HTML.Tablize do
       {desc, icon, helper, action, param} = dropdown
       params = if param != nil, do: [Brando.get_endpoint, action, record], else: [Brando.get_endpoint, action]
       url = apply(Brando.get_helpers, helper, params)
-      """
-      <li>
-        <a href="#{url}">
-          <i class="fa #{icon} fa-fw m-r-sm"> </i>
-          #{desc}
-        </a>
-      </li>
-      """
+      "<li>" <>
+      "  <a href=\"" <> url <> "\">" <>
+      "    <i class=\"fa " <> icon <> " fa-fw m-r-sm\"> </i>" <>
+           desc <>
+      "  </a>" <>
+      "</li>"
     end
-    """
-    <td class="text-center">
-      <div class="dropdown">
-        <a class="dropdown-toggle ddbutton" data-toggle="dropdown">
-          <i class="fa fa-bars"></i>
-        </a>
-        <ul class="dropdown-menu" style="right: 0; left: auto;">
-          #{dropdowns}
-        </ul>
-      </div>
-    </td>
-    """
+
+    "<td class=\"text-center\">" <>
+    "  <div class=\"dropdown\">" <>
+    "    <a class=\"dropdown-toggle ddbutton\" data-toggle=\"dropdown\">" <>
+    "      <i class=\"fa fa-bars\"></i>" <>
+    "    </a>" <>
+    "    <ul class=\"dropdown-menu\" style=\"right: 0; left: auto;\">" <>
+          Enum.join(dropdowns) <>
+    "    </ul>" <>
+    "  </div>" <>
+    "</td>"
   end
 end
