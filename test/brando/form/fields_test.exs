@@ -89,6 +89,17 @@ defmodule Brando.Form.FieldsTest do
                                           "<option value=\"2\">Valg 2</option>"]
   end
 
+  test "get_required/1" do
+    assert F.get_required(nil) == ""
+    assert F.get_required(false) == ""
+    assert F.get_required(true) == " required"
+  end
+
+  test "get_has_error/1" do
+    assert F.get_has_error([]) == ""
+    assert F.get_has_error(["1", "2"]) == " has-error"
+  end
+
   test "get_choices/1" do
     assert F.get_choices(&UserForm.get_status_choices/0) == [[value: "1", text: "Valg 1"], [value: "2", text: "Valg 2"]]
   end
@@ -191,10 +202,11 @@ defmodule Brando.Form.FieldsTest do
     assert F.parse_error({"should be at least %{count} characters", 10}) == "Feltets verdi er for kort. Må være > 10 tegn."
   end
 
-  test "render_help_text_/1" do
-    assert F.render_help_text_(nil) == ""
-    assert F.render_help_text_("Help text") ==
-      "<div class=\"help\"><i class=\"fa fa-fw fa-question-circle\"> </i><span>Help text</span></div>"
+  test "render_help_text/1" do
+    help_text = "Help text"
+    assert F.render_help_text(nil) == ""
+    assert F.render_help_text("Help text") ==
+      "<div class=\"help\"><i class=\"fa fa-fw fa-question-circle\"> </i><span>#{help_text}</span></div>"
   end
 
   test "label/3" do
