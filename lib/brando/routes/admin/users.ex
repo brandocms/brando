@@ -33,7 +33,7 @@ defmodule Brando.Routes.Admin.Users do
     add_user_resources(path, UserController, [])
 
   defp add_user_resources(path, controller, opts) do
-    map = Map.put(%{}, :model, Keyword.get(opts, :model) || User)
+    map = Map.put(%{}, :model, Keyword.get(opts, :model, User))
     options = Keyword.put([], :private, Macro.escape(map))
     quote do
       opts = unquote(options)

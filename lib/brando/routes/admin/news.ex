@@ -17,14 +17,16 @@ defmodule Brando.Routes.Admin.News do
   @doc """
   Defines "RESTful" endpoints for the news resource.
   """
-  defmacro post_resources(path, ctrl, opts), do:
+  defmacro post_resources(path, ctrl, opts) do
     add_post_resources(path, ctrl, opts)
+  end
 
   @doc """
   See post_resources/2
   """
-  defmacro post_resources(path, opts), do:
+  defmacro post_resources(path, opts) do
     add_post_resources(path, PostController, opts)
+  end
 
   @doc """
   See post_resources/2
@@ -33,7 +35,7 @@ defmodule Brando.Routes.Admin.News do
     add_post_resources(path, PostController, [])
 
   defp add_post_resources(path, controller, opts) do
-    map = Map.put(%{}, :model, Keyword.get(opts, :model) || Post)
+    map = Map.put(%{}, :model, Keyword.get(opts, :model, Post))
     options = Keyword.put([], :private, Macro.escape(map))
     quote do
       path = unquote(path)

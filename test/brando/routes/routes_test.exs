@@ -29,11 +29,18 @@ defmodule Brando.TestRouter do
 
   scope "/admin", as: :admin do
     pipe_through :admin
-    user_resources "/brukere", Brando.Admin.UserController, private: %{model: Brando.User}
+    user_resources "/brukere", Brando.Admin.UserController,
+                               private: %{model: Brando.User}
     user_resources "/brukere2", private: %{model: Brando.User}
     user_resources "/brukere3"
     post_resources "/nyheter"
+    post_resources "/nyheter2", [model: Brando.User]
+    post_resources "/nyheter3", Brando.Admin.PostController,
+                                [model: Brando.User]
     image_resources "/bilder"
+    image_resources "/bilder2", [image_model: Brando.Image,
+                                 series_model: Brando.ImageSeries,
+                                 category_model: Brando.ImageCategory]
     get "/", Brando.Admin.DashboardController, :dashboard
   end
 
