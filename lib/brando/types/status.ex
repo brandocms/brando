@@ -19,6 +19,14 @@ defmodule Brando.Type.Status do
     [atom] = for {k, v} <- @status_codes, v == String.to_integer(binary), do: k
     {:ok, atom}
   end
+  def cast(status) when is_integer(status) do
+    case status do
+      0 -> {:ok, :draft}
+      1 -> {:ok, :published}
+      2 -> {:ok, :pending}
+      3 -> {:ok, :deleted}
+    end
+  end
 
   @doc """
   Cast anything else is a failure
