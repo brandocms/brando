@@ -76,6 +76,11 @@ defmodule Brando.UtilsTest do
     assert maybe("hello", &String.upcase/1) == "HELLO"
   end
 
+  test "unique_filename/1" do
+    filename = "testing.jpg"
+    refute unique_filename(filename) == filename
+  end
+
   test "to_iso8601/1" do
     dt = %Ecto.DateTime{year: 2014, month: 1, day: 1,
                         hour: 12, min: 0, sec: 0}

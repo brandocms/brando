@@ -59,7 +59,7 @@ defmodule Brando.Utils do
       |> :erlang.phash2
       |> Integer.to_string(32)
       |> String.downcase
-    "#{base}-#{rnd_basename}#{ext}"
+    base <> "-" <> rnd_basename <> ext
   end
 
   @doc """
