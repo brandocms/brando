@@ -146,16 +146,16 @@ defmodule Brando.Form.Fields do
     "#{get_required(opts[:required])}#{get_has_error(errors)}\">" <>
     "#{contents}" <>
     "#{render_errors(errors)}" <>
-    "#{render_help_text_(opts[:help_text])}" <>
+    "#{render_help_text(opts[:help_text])}" <>
     "</div>"
   end
 
   @doc """
   Renders `help_text` in a nicely formatted div.
   """
-  @spec render_help_text_(String.t | nil) :: String.t
-  def render_help_text_(nil), do: ""
-  def render_help_text_(help_text) do
+  @spec render_help_text(String.t | nil) :: String.t
+  def render_help_text(nil), do: ""
+  def render_help_text(help_text) do
     "<div class=\"help\">" <>
     "<i class=\"fa fa-fw fa-question-circle\"> </i>" <>
     "<span>#{help_text}</span>" <>
