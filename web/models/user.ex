@@ -191,9 +191,8 @@ defmodule Brando.User do
   Checks `password` against `user`. Return bool.
   """
   def auth?(nil, _password), do: false
-  def auth?(user, password) do
+  def auth?(user, password), do:
     Comeonin.Bcrypt.checkpw(password, user.password)
-  end
 
   @doc """
   Hashes `password` using Comeonin.Bcrypt

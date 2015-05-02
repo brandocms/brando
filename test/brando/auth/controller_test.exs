@@ -1,50 +1,35 @@
-#Code.require_file("router_helper.exs", Path.join([__DIR__, "..", ".."]))
-
 defmodule Brando.Auth.ControllerTest do
   use ExUnit.Case
   use Brando.ConnCase
   use Brando.Integration.TestCase
   use Plug.Test
   use RouterHelper
-  alias Brando.User
 
-  @params %{"avatar" => nil, "role" => ["2", "4"],
-            "email" => "admin@gmail.com", "full_name" => "Admin Admin",
-            "password" => "finimeze", "status" => "1",
-            "submit" => "Submit", "username" => "zabuzasixu"}
-
-  @login %{"email" => "admin@gmail.com", "password" => "finimeze"}
+  @login %{"email" => "james@thestooges.com", "password" => "hunter2hunter2"}
   @bad_login %{"email" => "bad@gmail.com", "password" => "finimeze"}
 
   test "login get" do
     conn = call_with_session(RouterHelper.TestRouter, :get, "/login")
-    assert conn.status == 200
-    assert conn.path_info == ["login"]
-    assert conn.resp_body =~ "<form"
+    assert html_response(conn, 200) =~ "Passord"
   end
 
   test "login post ok" do
-    assert {:ok, _user} = User.create(@params)
+    Forge.saved_user_w_hashed_pass(TestRepo)
     conn = call_with_session(RouterHelper.TestRouter, :post, "/login", %{"user" => @login})
-    assert conn.status == 302
-    assert get_resp_header(conn, "location") == ["/admin"]
-    %{phoenix_flash: flash} = conn.private
-    assert flash == %{"notice" => "Innloggingen var vellykket"}
+    assert redirected_to(conn, 302) =~ "/admin"
+    assert get_flash(conn, :notice) == "Innloggingen var vellykket"
+
   end
 
   test "login post failed" do
-    assert {:ok, _user} = User.create(@params)
+    Forge.saved_user_w_hashed_pass(TestRepo)
     conn = call_with_session(RouterHelper.TestRouter, :post, "/login", %{"user" => @bad_login})
-    assert conn.status == 302
-    assert get_resp_header(conn, "location") == ["/login"]
-    %{phoenix_flash: flash} = conn.private
-    assert flash == %{"error" => "Innloggingen feilet"}
+    assert redirected_to(conn, 302) =~ "/login"
+    assert get_flash(conn, :error) == "Innloggingen feilet"
   end
 
   test "logout" do
     conn = call_with_session(RouterHelper.TestRouter, :get, "/logout")
-    assert conn.status == 200
-    assert conn.path_info == ["logout"]
-    assert conn.resp_body =~ "Du er logget ut av administrasjonsområdet"
+    assert html_response(conn, 200) =~ "Du er logget ut av administrasjonsområdet"
   end
 end
