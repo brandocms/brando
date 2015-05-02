@@ -8,23 +8,13 @@ defmodule Brando.ImageSeries.ControllerTest do
   use RouterHelper
   alias Brando.ImageSeries
   alias Brando.ImageCategory
-  alias Brando.User
   alias Brando.Type.ImageConfig
 
-  @user_params %{"avatar" => nil, "role" => ["2", "4"],
-                 "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
-                 "password" => "finimeze", "status" => "1",
-                 "submit" => "Submit", "username" => "zabuzasixu"}
   @series_params %{"name" => "Series name", "slug" => "series-name", "credits" => "Credits", "order" => 0, "creator_id" => 1}
   @category_params %{"cfg" => %ImageConfig{}, "creator_id" => 1, "name" => "Test Category", "slug" => "test-category"}
   @broken_params %{"cfg" => %ImageConfig{}, "creator_id" => 1}
   @up_params %Plug.Upload{content_type: "image/png", filename: "sample.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"}
   @up_params2 %Plug.Upload{content_type: "image/png", filename: "sample2.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample2.png"}
-
-  def create_user do
-    {:ok, user} = User.create(@user_params)
-    user
-  end
 
   def create_category(user) do
     {:ok, category} = ImageCategory.create(@category_params, user)
@@ -32,7 +22,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   def create_series do
-    user = create_user
+    user = Forge.saved_user(TestRepo)
     category = create_category(user)
     series_params = Map.put(@series_params, "image_category_id", category.id)
     {:ok, series} = ImageSeries.create(series_params, user)
@@ -40,7 +30,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "new" do
-    category = create_category(create_user)
+    category = create_category(Forge.saved_user(TestRepo))
     conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/serier/ny/#{category.id}")
     assert html_response(conn, 200) =~ "Ny bildeserie"
   end
@@ -54,7 +44,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "create (post) w/params" do
-    user = create_user
+    user = Forge.saved_user(TestRepo)
     category = create_category(user)
     series_params =
       @series_params
@@ -66,7 +56,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "create (post) w/erroneus params" do
-    user = create_user
+    user = Forge.saved_user(TestRepo)
     series_params = Map.put(@series_params, "creator_id", user.id)
     conn = call_with_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/", %{"imageseries" => series_params})
     assert html_response(conn, 200) =~ "Ny bildeserie"
@@ -74,7 +64,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "update (post) w/params" do
-    user = create_user
+    user = Forge.saved_user(TestRepo)
     category = create_category(user)
     series_params =
       @series_params
@@ -106,7 +96,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "upload_post" do
-    user = create_user
+    user = Forge.saved_user(TestRepo)
     category = create_category(user)
     series_params =
       @series_params
@@ -120,7 +110,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   test "sort" do
     File.rm_rf!(Brando.config(:media_path))
     File.mkdir_p!(Brando.config(:media_path))
-    user = create_user
+    user = Forge.saved_user(TestRepo)
     category = create_category(user)
     series_params =
       @series_params
