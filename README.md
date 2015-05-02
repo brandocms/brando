@@ -111,7 +111,9 @@ plug Plug.Static,
   at: "/media", from: "priv/media"
 ```
 
-Default login/pass is "admin@twined.net/admin"
+## Default admin credentials
+
+Default login/pass is `admin@twined.net/admin`
 
 ## Sequence
 
