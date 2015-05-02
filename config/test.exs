@@ -14,7 +14,7 @@ config :brando, Brando.Integration.TestRepo,
   max_overflow: 0
 
 config :brando, Brando.Menu, [
-  modules: [Admin, Users],
+  modules: [Admin, Users, News, Images],
   colors: ["#FBA026;", "#F87117;", "#CF3510;", "#890606;", "#FF1B79;",
            "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
            "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
