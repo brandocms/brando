@@ -118,8 +118,8 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "sort" do
-    File.rm_rf!(Path.join([Mix.Project.app_path, "tmp", "media"]))
-    File.mkdir_p!(Path.join([Mix.Project.app_path, "tmp", "media"]))
+    File.rm_rf!(Brando.config(:media_path))
+    File.mkdir_p!(Brando.config(:media_path))
     user = create_user
     category = create_category(user)
     series_params =
