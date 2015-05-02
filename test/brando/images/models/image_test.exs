@@ -230,9 +230,9 @@ defmodule Brando.Integration.ImageTest do
   #   assert {:ok, dict} = Image.check_for_uploads(user, up_params)
   #   user = Image.get(email: "fanogigyni@gmail.com")
   #   assert user.avatar == dict.avatar
-  #   assert File.exists?(Path.join([Brando.Images.Utils.get_media_abspath, dict.avatar.path]))
+  #   assert File.exists?(Path.join([Brando.config(:media_path), dict.avatar.path]))
   #   Image.delete(user)
-  #   refute File.exists?(Path.join([Brando.Images.Utils.get_media_abspath, dict.avatar.path]))
+  #   refute File.exists?(Path.join([Brando.config(:media_path), dict.avatar.path]))
   # end
 
   # test "check_for_uploads/2 error" do

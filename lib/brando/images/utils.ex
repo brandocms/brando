@@ -41,7 +41,7 @@ defmodule Brando.Images.Utils do
   end
 
   defp create_upload_path({plug, cfg}) do
-    upload_path = Path.join(get_media_abspath, Map.get(cfg, :upload_path))
+    upload_path = Path.join(Brando.config(:media_path), Map.get(cfg, :upload_path))
     case File.mkdir_p(upload_path) do
       :ok -> {Map.put(plug, :upload_path, upload_path), cfg}
       {:error, reason} -> raise UploadError, message: "Kunne ikke lage filbane -> #{inspect(reason)}"
@@ -107,12 +107,12 @@ defmodule Brando.Images.Utils do
   end
 
   @doc """
-  Deletes `file` after joining it with `get_media_abspath`
+  Deletes `file` after joining it with `media_path`
   """
   def delete_media(nil), do: nil
   def delete_media(""), do: nil
   def delete_media(file) do
-    file = Path.join([get_media_abspath, file])
+    file = Path.join([Brando.config(:media_path), file])
     File.rm(file)
   end
 
@@ -147,17 +147,4 @@ defmodule Brando.Images.Utils do
     {path, filename} = split_path(file)
     Path.join([path, Atom.to_string(size), filename])
   end
-
-  @doc """
-  Returns the media absolute path by concatenating
-  `Mix.Project.app_path` with `priv/media`
-  """
-  def get_media_abspath do
-    if Mix.env == :test do
-      Path.join([Mix.Project.app_path, "tmp", "media"])
-    else
-      Path.join([Mix.Project.app_path, "priv", "media"])
-    end
-  end
-
 end

@@ -5,6 +5,7 @@ use Mix.Config
 config :brando,
   app_name: "<%= application_module %>",
   endpoint: <%= application_module %>.Endpoint,
+  media_path: Path.join([Mix.Project.app_path, "priv", "media"]),
   media_url: "/media",
   repo: <%= application_module %>.Repo,
   router: <%= application_module %>.Router,
