@@ -129,15 +129,4 @@ defmodule Brando.Utils do
     :io_lib.format("~4..0B-~2..0B-~2..0BT~2..0B:~2..0B:~2..0BZ", list)
     |> IO.iodata_to_binary
   end
-
-  @doc """
-  Task.start `fun` unless we are testing, then just exec `fun`
-  """
-  defmacro task_start(fun) do
-    if Mix.env == :test do
-      quote do: unquote(fun).()
-    else
-      quote do: Task.start(unquote(fun))
-    end
-  end
 end
