@@ -6,6 +6,7 @@ defmodule Brando.Type.ImageConfig do
   defstruct allowed_mimetypes: ["image/jpeg", "image/png"],
             default_size: :medium,
             upload_path: Path.join("images", "default"),
+            random_filename: false,
             size_limit: 10_240_000,
             sizes: %{small:  %{size: "300", quality: 100},
                      medium: %{size: "500", quality: 100},

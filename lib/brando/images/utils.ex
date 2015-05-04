@@ -26,7 +26,7 @@ defmodule Brando.Images.Utils do
   end
 
   defp get_valid_filename({%{filename: filename} = plug, cfg}) do
-    case Map.has_key?(cfg, :random_filename) do
+    case Map.get(cfg, :random_filename, false) do
       true -> {Map.put(plug, :filename, random_filename(filename)), cfg}
       _    -> {Map.put(plug, :filename, slugify_filename(filename)), cfg}
     end
