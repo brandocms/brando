@@ -4,6 +4,7 @@ defmodule Brando.Images.UtilsTest do
   alias Brando.Type.ImageConfig
 
   @cfg %ImageConfig{}
+  @broken_cfg %ImageConfig{upload_path: Path.join(["images", "default", "sample.png"])}
   @random_filename_cfg %ImageConfig{random_filename: true}
   @upload %Plug.Upload{content_type: "image/png", filename: "sample.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"}
   @blank_upload %Plug.Upload{content_type: "image/png", filename: "", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"}
@@ -17,6 +18,7 @@ defmodule Brando.Images.UtilsTest do
     assert image.path == "images/default/file-with-spaces.png"
     {:ok, image} = do_upload(@slug_upload, @random_filename_cfg)
     refute image.path == "images/default/file-with-spaces.png"
+    assert_raise Brando.Exception.UploadError, fn -> do_upload(@slug_upload, @broken_cfg) end
     assert_raise Brando.Exception.UploadError, fn -> do_upload(@blank_upload, @cfg) end
   end
 
