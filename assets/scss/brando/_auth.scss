@@ -1,0 +1,16 @@
+svg#triangles {
+  height: 100%;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.auth .grid-frame {
+  z-index: 9999;
+}
+
+.auth .grid-content {
+  padding: 3rem 4rem;
+}
