@@ -38,6 +38,7 @@ config :brando, :media_url, "/media"
 config :brando, :media_path, Path.join([Mix.Project.app_path, "tmp", "media"])
 config :brando, Villain, parser: Brando.Villain.Parser.Default
 config :brando, :logging, disable_logging: true
+config :brando, :login_url, "/login"
 
 # Print only warnings and errors during test
 config :logger, level: :warn

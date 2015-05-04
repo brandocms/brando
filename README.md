@@ -69,7 +69,7 @@ defmodule MyApp.Router do
     plug :fetch_session
     plug :fetch_flash
     plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
-    plug Authenticate, login_url: "/login"
+    plug Authenticate
   end
 
   pipeline :browser do
