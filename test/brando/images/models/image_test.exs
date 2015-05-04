@@ -2,26 +2,22 @@ defmodule Brando.Integration.ImageTest do
   use ExUnit.Case
   use Brando.ConnCase
   use Brando.Integration.TestCase
-  alias Brando.User
   alias Brando.Image
   alias Brando.ImageSeries
   alias Brando.ImageCategory
   alias Brando.Type.ImageConfig
 
   @params %{sequence: 0, image: %{title: "Title", credits: "credits",
-                                       path: "/tmp/path/to/fake/image.jpg",
-                                       sizes: %{small: "/tmp/path/to/fake/image.jpg", thumb: "/tmp/path/to/fake/thumb.jpg"}}}
+                                  path: "/tmp/path/to/fake/image.jpg",
+                                  sizes: %{small: "/tmp/path/to/fake/image.jpg", thumb: "/tmp/path/to/fake/thumb.jpg"}}}
   @params2 %{sequence: 1, image: %{title: "Title2", credits: "credits2",
-                                       path: "/tmp/path/to/fake/image2.jpg",
-                                       sizes: %{small: "/tmp/path/to/fake/image2.jpg", thumb: "/tmp/path/to/fake/thumb2.jpg"}}}
+                                   path: "/tmp/path/to/fake/image2.jpg",
+                                   sizes: %{small: "/tmp/path/to/fake/image2.jpg", thumb: "/tmp/path/to/fake/thumb2.jpg"}}}
   @series_params %{name: "Series name", slug: "series-name", credits: "Credits", sequence: 0, creator_id: 1}
   @category_params %{cfg: %ImageConfig{}, creator_id: 1, name: "Test Category", slug: "test-category"}
-  @user_params %{avatar: nil, role: ["2", "4"],
-                 email: "fanogigyni@gmail.com", full_name: "Nita Bond",
-                 password: "finimeze", status: "1", username: "zabuzasixu"}
 
   setup do
-    {:ok, user} = User.create(@user_params)
+    user = Forge.saved_user(TestRepo)
     {:ok, category} =
       @category_params
       |> Map.put(:creator_id, user.id)

@@ -78,9 +78,8 @@ defmodule Brando.Integration.UserTest do
   test "check_for_uploads/2 success" do
     assert {:ok, user} = User.create(@params)
     up_plug =
-      %Plug.Upload{content_type: "image/png",
-                   filename: "sample.png",
-                   path: "#{Path.expand("../../../", __DIR__)}/fixtures/sample.png"}
+      %Plug.Upload{content_type: "image/png", filename: "sample.png",
+                   path: Path.expand("../../../", __DIR__) <> "/fixtures/sample.png"}
     up_params = Dict.put(%{}, "avatar", up_plug)
     assert {:ok, dict} = User.check_for_uploads(user, up_params)
     user = User.get(email: "fanogigyni@gmail.com")
@@ -93,34 +92,34 @@ defmodule Brando.Integration.UserTest do
   test "check_for_uploads/2 error" do
     assert {:ok, user} = User.create(@params)
     up_plug =
-      %Plug.Upload{content_type: "image/png",
-                   filename: "",
-                   path: "#{Path.expand("../../../", __DIR__)}/fixtures/sample.png"}
+      %Plug.Upload{content_type: "image/png", filename: "",
+                   path: Path.expand("../../../", __DIR__) <> "/fixtures/sample.png"}
     up_params = Dict.put(@params, "avatar", up_plug)
-    assert_raise Brando.Exception.UploadError, "Blankt filnavn gitt under opplasting. Pass på at du har et gyldig filnavn.", fn ->
-      User.check_for_uploads(user, up_params)
+    assert_raise Brando.Exception.UploadError,
+                 "Blankt filnavn gitt under opplasting. Pass på at du har et gyldig filnavn.",
+                 fn -> User.check_for_uploads(user, up_params)
     end
   end
 
   test "check_for_uploads/2 format error" do
     assert {:ok, user} = User.create(@params)
     up_plug =
-      %Plug.Upload{content_type: "image/gif",
-                   filename: "sample.gif",
-                   path: "#{Path.expand("../../../", __DIR__)}/fixtures/sample.png"}
+      %Plug.Upload{content_type: "image/gif", filename: "sample.gif",
+                   path: Path.expand("../../../", __DIR__) <> "/fixtures/sample.png"}
     up_params = Dict.put(@params, "avatar", up_plug)
-    assert_raise Brando.Exception.UploadError, fn -> User.check_for_uploads(user, up_params) end
+    assert_raise Brando.Exception.UploadError,
+                 fn -> User.check_for_uploads(user, up_params) end
   end
 
   test "check_for_uploads/2 copy error" do
     assert {:ok, user} = User.create(@params)
     up_plug =
-      %Plug.Upload{content_type: "image/png",
-                   filename: "sample.png",
-                   path: "#{Path.expand("../../../", __DIR__)}/fixtures/non_existant.png"}
+      %Plug.Upload{content_type: "image/png", filename: "sample.png",
+                   path: Path.expand("../../../", __DIR__) <> "/fixtures/non_existant.png"}
     up_params = Dict.put(@params, "avatar", up_plug)
-    assert_raise Brando.Exception.UploadError, "Feil under kopiering -> :enoent", fn ->
-      User.check_for_uploads(user, up_params)
+    assert_raise Brando.Exception.UploadError,
+                 "Feil under kopiering -> :enoent",
+                 fn -> User.check_for_uploads(user, up_params)
     end
   end
 
