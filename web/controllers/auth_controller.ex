@@ -18,7 +18,8 @@ defmodule Brando.AuthController do
 
         AdminChannel.log(:logged_in, user)
 
-        fetch_session(conn)
+        conn
+        |> fetch_session
         |> put_session(:current_user, user)
         |> put_flash(:notice, "Innloggingen var vellykket")
         |> redirect(to: "/admin")
