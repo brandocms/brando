@@ -1,7 +1,7 @@
-defmodule Brando.Plug.RoleTest do
+defmodule Brando.Plug.AuthorizeTest do
   use ExUnit.Case, async: true
   use Plug.Test
-  import Brando.Plug.Role
+  import Brando.Plug.Authorize
 
   defmodule RolePlugFail do
     import Plug.Conn
@@ -16,7 +16,7 @@ defmodule Brando.Plug.RoleTest do
     plug :fetch_session
     plug :fetch_flash
     plug :put_secret_key_base
-    plug :check_role, :superuser
+    plug :authorize, :superuser
 
     def put_secret_key_base(conn, _) do
       put_in conn.secret_key_base, "C590A24F0CCB864E01DD077CFF144EFEAAAB7835775438E414E9847A4EE8035D"
@@ -37,7 +37,7 @@ defmodule Brando.Plug.RoleTest do
     plug :fetch_flash
     plug :put_secret_key_base
     plug :put_current_user
-    plug :check_role, :superuser
+    plug :authorize, :superuser
 
     def put_secret_key_base(conn, _) do
       put_in conn.secret_key_base, "C590A24F0CCB864E01DD077CFF144EFEAAAB7835775438E414E9847A4EE8035D"
@@ -62,7 +62,7 @@ defmodule Brando.Plug.RoleTest do
     plug :fetch_flash
     plug :put_secret_key_base
     plug :put_current_user
-    plug :check_role, :superuser
+    plug :authorize, :superuser
 
     def put_secret_key_base(conn, _) do
       put_in conn.secret_key_base, "C590A24F0CCB864E01DD077CFF144EFEAAAB7835775438E414E9847A4EE8035D"

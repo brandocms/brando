@@ -4,13 +4,13 @@ defmodule Brando.Admin.UserController do
   """
 
   use Brando.Web, :controller
-  import Brando.Plug.Role
+  import Brando.Plug.Authorize
   import Brando.Plug.Section
   import Brando.HTML.Inspect, only: [model_name: 2]
 
   plug :put_section, "users"
   plug :scrub_params, "user" when action in [:create, :update]
-  plug :check_role, :superuser when action in [:new, :create, :delete]
+  plug :authorize, :superuser when action in [:new, :create, :delete]
   plug :action
 
   @doc false
