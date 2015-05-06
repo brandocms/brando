@@ -184,8 +184,8 @@ Config is found in your app's `config/brando.exs`.
 `interval`: How often we poll for new images
 `auto_approve`: Set `approved` to `true` on grabbed images
 `fetch`: What to fetch.
-  * `{:user, "your_name"}
-  * `{:tags, ["tag1", "tag2"]}
+  * `{:user, "your_name"}`
+  * `{:tags, ["tag1", "tag2"]}`
 
 ## Optimizing images (not implemented yet)
 
