@@ -23,10 +23,15 @@ config :brando, Brando.Images,
                              medium: %{size: "500", quality: 100},
                              large:  %{size: "700", quality: 100},
                              xlarge: %{size: "900", quality: 100},
-                             thumb:  %{size: "150x150^ -gravity center -extent 150x150", quality: 100, crop: true}}}
+                             thumb:  %{size: "150x150", quality: 100, crop: true}}}
 
 config :brando, Brando.Type.Role,
   roles: %{staff: 1, admin: 2, superuser: 4}
+
+config :brando, Brando.Instagram,
+  client_id: "",
+  auto_approve: true,
+  interval: 1_000 * 60 * 60
 
 config :brando, Brando.Menu,
   colors: ["#FBA026;", "#F87117;", "#CF3510;", "#890606;", "#FF1B79;",
