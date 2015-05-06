@@ -4,9 +4,8 @@ defmodule Brando.Instagram.API do
   """
   use HTTPoison.Base
   alias HTTPoison.Response
+  alias Brando.Instagram
   alias Brando.InstagramImage
-
-  @cfg Application.get_env(:brando, Brando.Instagram)
 
   def process_url(url), do:
     "https://api.instagram.com/v1/" <> url
@@ -16,7 +15,7 @@ defmodule Brando.Instagram.API do
   Checks if we want `:user` or `:tags`
   """
   def fetch(filter) do
-    case @cfg[:fetch] do
+    case Instagram.cfg(:fetch) do
       {:user, username} ->
         if filter == :blank, do: filter = InstagramImage.get_last_created_time
         images_for_user(username, min_timestamp: filter)
@@ -33,7 +32,7 @@ defmodule Brando.Instagram.API do
   """
   def images_for_user(username, min_timestamp: last_created_time) do
     {:ok, user_id} = get_user_id(username)
-    case get!("users/#{user_id}/media/recent/?client_id=#{@cfg[:client_id]}&min_timestamp=#{last_created_time}") do
+    case get!("users/#{user_id}/media/recent/?client_id=#{Instagram.cfg(:client_id)}&min_timestamp=#{last_created_time}") do
       %Response{body: body, status_code: 200} ->
         parse_images_for_user(body, username)
     end
@@ -44,7 +43,7 @@ defmodule Brando.Instagram.API do
   """
   def images_for_tags(tags, min_id: min_id) do
     Enum.each tags, fn(tag) ->
-      case get!("tags/#{tag}/media/recent?client_id=#{@cfg[:client_id]}&min_tag_id=#{min_id}") do
+      case get!("tags/#{tag}/media/recent?client_id=#{Instagram.cfg(:client_id)}&min_tag_id=#{min_id}") do
         %Response{body: body, status_code: 200} ->
           parse_images_for_tag(body)
       end
@@ -77,7 +76,7 @@ defmodule Brando.Instagram.API do
   Get Instagram's user ID for `username`
   """
   def get_user_id(username) do
-    case get! "users/search?q=#{username}&client_id=#{@cfg[:client_id]}" do
+    case get! "users/search?q=#{username}&client_id=#{Instagram.cfg(:client_id)}" do
       %Response{body: [{:data, [%{"id" => id}]} | _]} -> {:ok, id}
       %Response{body: [data: [], meta: %{}]} -> {:error, "Fant ikke bruker: #{username}"}
       %Response{body: {:error, error}} -> {:error, "API feil fra Instagram: #{inspect(error)}"}

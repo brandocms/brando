@@ -18,4 +18,11 @@ defmodule Brando.Instagram do
     * `{:user, "your_name"}
     * `{:tags, ["tag1", "tag2"]}
   """
+
+  @doc """
+  Grab `key` from config
+  """
+  def cfg(key) do
+    Application.get_env(:brando, Brando.Instagram) |> Keyword.get(key)
+  end
 end

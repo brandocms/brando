@@ -3,8 +3,8 @@ defmodule Brando.Instagram.Server do
   Polls Instagram's API according to config's `interval` option.
   """
   use GenServer
+  alias Brando.Instagram
   alias Brando.Instagram.API
-  @cfg Application.get_env(:brando, Brando.Instagram)
 
   def start_link(server_name) do
     :gen_server.start_link({:local, server_name}, __MODULE__, [], [])
@@ -12,7 +12,7 @@ defmodule Brando.Instagram.Server do
 
   def init(_) do
     Process.flag(:trap_exit, true)
-    {:ok, timer} = :timer.send_interval(@cfg[:interval], :poll)
+    {:ok, timer} = :timer.send_interval(Instagram.cfg(:interval), :poll)
     {:ok, {timer, :blank}}
   end
 
