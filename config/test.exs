@@ -28,7 +28,7 @@ config :brando, Brando.Images, [
                              medium: %{size: "500", quality: 100},
                              large:  %{size: "700", quality: 100},
                              xlarge: %{size: "900", quality: 100},
-                             thumb:  %{size: "150x150^ -gravity center -extent 150x150", quality: 100, crop: true}}}]
+                             thumb:  %{size: "150x150", quality: 100, crop: true}}}]
 
 config :brando, :router, RouterHelper.TestRouter
 config :brando, :endpoint, Brando.Integration.Endpoint
