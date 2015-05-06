@@ -28,6 +28,10 @@ config :brando, Brando.Images,
 config :brando, Brando.Type.Role,
   roles: %{staff: 1, admin: 2, superuser: 4}
 
+config :brando, Brando.Instagram,
+  client_id: "",
+  interval: 1_000 * 60 * 60
+
 config :brando, Brando.Menu,
   colors: ["#FBA026;", "#F87117;", "#CF3510;", "#890606;", "#FF1B79;",
            "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",

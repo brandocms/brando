@@ -170,6 +170,22 @@ Template (`sequence.html.eex`):
 </a>
 ```
 
+## Instagram
+
+Add to your app's supervision tree:
+
+```elixir
+worker(Brando.Instagram.Server, [:myapp_instagram])
+```
+
+Config is found in your app's `config/brando.exs`.
+
+`client_id`: Your instagram client id. Find this in the developer section.
+`interval`: How often we poll for new images
+`fetch`: What to fetch.
+  * `{:user, "your_name"}
+  * `{:tags, ["tag1", "tag2"]}
+
 ## Optimizing images (not implemented yet)
 
 ```elixir

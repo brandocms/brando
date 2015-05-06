@@ -25,6 +25,10 @@ config :brando, Brando.Images,
                              thumb:  %{size: "150x150^ -gravity center -extent 150x150", quality: 100, crop: true}}
   }
 
+config :brando, Brando.Instagram,
+  client_id: "",
+  interval: 1_000 * 60 * 60
+
 config :brando, Brando.Type.Role,
   roles: %{staff: 1, admin: 2, superuser: 4}
 
