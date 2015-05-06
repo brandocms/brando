@@ -9,6 +9,8 @@ defmodule Brando.InstagramImage do
   require Logger
   import Ecto.Query, only: [from: 2]
 
+  @cfg Application.get_env(:brando, Brando.Instagram)
+
   @required_fields ~w(instagram_id caption link url_original
                       url_thumbnail created_time type approved deleted)
   @optional_fields ~w()
@@ -39,6 +41,7 @@ defmodule Brando.InstagramImage do
     model
     |> cast(params, @required_fields, @optional_fields)
     |> validate_unique(:instagram_id, on: Brando.repo)
+    |> put_change(:approved, @cfg[:auto_approve])
   end
 
   @doc """
