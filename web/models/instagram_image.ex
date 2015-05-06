@@ -125,6 +125,22 @@ defmodule Brando.InstagramImage do
   end
 
   @doc """
+  Get min_id from where we search for new images
+  """
+  def get_min_id do
+    id =
+      from(m in __MODULE__,
+           select: m.instagram_id,
+           order_by: [desc: m.instagram_id],
+           limit: 1)
+      |> Repo.one
+    case id do
+      nil -> ""
+      id -> Enum.at(String.split(id, "_"), 0)
+    end
+  end
+
+  @doc """
   Get model by `val` or raise `Ecto.NoResultsError`.
   """
   def get!(val) do

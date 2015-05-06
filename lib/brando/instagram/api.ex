@@ -15,12 +15,16 @@ defmodule Brando.Instagram.API do
   Main entry from genserver's `:poll`.
   Checks if we want `:user` or `:tags`
   """
-  def fetch(last_created_time) do
+  def fetch(filter) do
     case @cfg[:fetch] do
       {:user, username} ->
-        images_for_user(username, min_timestamp: last_created_time)
+        if filter == :blank, do: filter = InstagramImage.get_last_created_time
+        images_for_user(username, min_timestamp: filter)
         {:ok, InstagramImage.get_last_created_time}
-      {:tags, tags} -> nil
+      {:tags, tags} ->
+        if filter == :blank, do: filter = InstagramImage.get_min_id
+        images_for_tags(tags, min_id: filter)
+        {:ok, InstagramImage.get_min_id}
     end
   end
 
@@ -36,13 +40,24 @@ defmodule Brando.Instagram.API do
   end
 
   @doc """
-  Get images for `username`, with `max_id`. Called from pagination
+  Get images for `[tags]` by `min_timestamp`.
   """
-  def images_for_user(username, max_id: max_id) do
-    {:ok, user_id} = get_user_id(username)
-    case get!("users/#{user_id}/media/recent/?client_id=#{@cfg[:client_id]}&max_id=#{max_id}") do
-      %Response{body: body, status_code: 200} ->
-        parse_images_for_user(body, username)
+  def images_for_tags(tags, min_id: min_id) do
+    Enum.each tags, fn(tag) ->
+      case get!("tags/#{tag}/media/recent?client_id=#{@cfg[:client_id]}&min_tag_id=#{min_id}") do
+        %Response{body: body, status_code: 200} ->
+          parse_images_for_tag(body)
+      end
+    end
+  end
+
+  @doc """
+  Store each image in `data` when we have tags. Ignore pagination (we
+  could go on for years...)
+  """
+  def parse_images_for_tag([data: data, meta: _meta, pagination: _pagination]) do
+    Enum.each data, fn(image) ->
+      InstagramImage.store_image(image)
     end
   end
 

@@ -4,7 +4,6 @@ defmodule Brando.Instagram.Server do
   """
   use GenServer
   alias Brando.Instagram.API
-  alias Brando.InstagramImage
   @cfg Application.get_env(:brando, Brando.Instagram)
 
   def start_link(server_name) do
@@ -14,12 +13,12 @@ defmodule Brando.Instagram.Server do
   def init(_) do
     Process.flag(:trap_exit, true)
     {:ok, timer} = :timer.send_interval(@cfg[:interval], :poll)
-    {:ok, {timer, InstagramImage.get_last_created_time}}
+    {:ok, {timer, :blank}}
   end
 
-  def handle_info(:poll, {timer, last_created_time}) do
-    {:ok, last_created_time} = API.fetch(last_created_time)
-    {:noreply, {timer, last_created_time}}
+  def handle_info(:poll, {timer, filter}) do
+    {:ok, filter} = API.fetch(filter)
+    {:noreply, {timer, filter}}
   end
 
   def terminate(:shutdown, {timer, _}) do
