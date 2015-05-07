@@ -28,15 +28,98 @@ defmodule Brando.HTML do
   end
 
   @doc """
-  Creates an URL from a menu item.
-
-  ## Example
-
-      iex> menu_url(conn, {:admin_user_path, :new})
-
+  Renders a menu item.
+  Also calls to render submenu items, if `current_user` has required role
   """
-  def menu_url(conn, {fun, action}) do
-    apply(helpers(conn), fun, [conn, action])
+  def render_menu_item(conn, {color, menu}) do
+    submenu_items =
+      for item <- menu.submenu, do:
+        render_submenu_item(conn, item)
+    Phoenix.HTML.safe "" <>
+    "<!-- menu item -->" <>
+    "  <li class=\"menuparent\">" <>
+    "    <a href=\"#" <> menu.anchor <> "\">" <>
+    "      <i class=\"" <> menu.icon <> "\">" <>
+    "        <b style=\"background-color: " <> color <> "\"></b>" <>
+    "      </i>" <>
+    "      <span class=\"pull-right\">" <>
+    "        <i class=\"fa fa-angle-down text\"></i>" <>
+    "        <i class=\"fa fa-angle-up text-active\"></i>" <>
+    "      </span>" <>
+    "      <span>" <> menu.name <> "</span>" <>
+    "    </a>" <>
+    "    <ul class=\"nav lt\">" <>
+    "      " <> Enum.join(submenu_items) <>
+    "    </ul>" <>
+    "  </li>" <>
+    "<!-- /menu item -->"
+  end
+
+  @doc """
+  Creates a menu link from a submenu item.
+  Also checks if current_user has required role.
+  """
+  def render_submenu_item(conn, item) do
+    {fun, action} = item.url
+    if can_render?(conn, item) do
+      url = apply(helpers(conn), fun, [conn, action])
+      active = active_path(conn, url)
+      "<li class=\"menuitem " <> active <> "\">" <>
+      "  <a href=\"" <> url <> "\" class=\"" <> active <> "\">" <>
+      "    <i class=\"fa fa-angle-right\"></i>" <>
+      "    <span>" <> item.name <> "</span>" <>
+      "  </a>" <>
+      "</li>"
+    else
+      ""
+    end
+  end
+
+  @doc """
+  Checks if current_user in conn has `role`
+  """
+  def can_render?(_, %{role: nil}) do
+    true
+  end
+  def can_render?(conn, %{role: role}) do
+    if role in current_user(conn).role,
+    do: true, else: false
+  end
+  def can_render?(_, _) do
+    true
+  end
+
+  @doc """
+  Shows link if current_user is authorized for it
+  """
+  def auth_link(conn, link, role, do: {:safe, block}) do
+    do_auth_link("btn-default", conn, link, role, block)
+  end
+  def auth_link_primary(conn, link, role, do: {:safe, block}) do
+    do_auth_link("btn-primary", conn, link, role, block)
+  end
+  def auth_link_info(conn, link, role, do: {:safe, block}) do
+    do_auth_link("btn-info", conn, link, role, block)
+  end
+  def auth_link_success(conn, link, role, do: {:safe, block}) do
+    do_auth_link("btn-success", conn, link, role, block)
+  end
+  def auth_link_warning(conn, link, role, do: {:safe, block}) do
+    do_auth_link("btn-warning", conn, link, role, block)
+  end
+  def auth_link_danger(conn, link, role, do: {:safe, block}) do
+    do_auth_link("btn-danger", conn, link, role, block)
+  end
+  defp do_auth_link(class, conn, link, role, block) do
+    case can_render?(conn, %{role: role}) do
+      true ->
+        "<a href=\"" <> link <> "\" class=\"btn #{class}\">" <>
+        "  " <> to_string(block) <>
+        "</a>"
+      false ->
+        ""
+    end
+    |> Phoenix.HTML.safe
   end
 
   @doc """

@@ -1,4 +1,16 @@
 defmodule Villain.Controller do
+  @moduledoc """
+  Villain controller actions.
+
+  Defines `:upload_image`, `:image_info` actions.
+
+  ## Usage
+
+      use Villain.Controller,
+        image_model: Brando.Image,
+        series_model: Brando.ImageSeries
+
+  """
   defmacro __using__(options) do
     image_model = Keyword.fetch!(options, :image_model)
     series_model = Keyword.fetch!(options, :series_model)

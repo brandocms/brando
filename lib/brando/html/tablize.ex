@@ -12,7 +12,7 @@ defmodule Brando.HTML.Tablize do
 
   ## Example
 
-      tablize(@users,
+      tablize(@conn, @users,
               [{"Vis bruker", "fa-search", :admin_user_path, :show, :id},
                {"Endre bruker", "fa-edit", :admin_user_path, :edit, :id},
                {"Slett bruker", "fa-trash", :admin_user_path, :delete_confirm, :id}],
@@ -20,9 +20,10 @@ defmodule Brando.HTML.Tablize do
 
   ## Arguments
 
+    * `conn` - a Plug.Conn struct
     * `records` - List of records to render
     * `dropdowns` - List of dropdowns in format:
-                    {display_name, icon, helper_path, action, identifier or nil}
+                    {display_name, icon, helper_path, action, identifier or nil, role or nil}
 
   ## Options
 
@@ -31,27 +32,27 @@ defmodule Brando.HTML.Tablize do
     * `hide` - List of fields that should not be rendered.
 
   """
-  def tablize([], _, _), do: "Empty"
-  def tablize(nil, _, _), do: "Nil"
-  def tablize(records, dropdowns, opts) do
+  def tablize(_, [], _, _), do: "Empty"
+  def tablize(_, nil, _, _), do: "Nil"
+  def tablize(conn, records, dropdowns, opts) do
     module = List.first(records).__struct__
     table_header = render_thead(module.__fields__, module, opts)
-    table_body = render_tbody(module.__fields__, records, module, dropdowns, opts)
+    table_body = render_tbody(module.__fields__, records, module, conn, dropdowns, opts)
     content_tag :table, {:safe, "#{table_header}#{table_body}"}, class: "table table-striped"
   end
 
-  defp render_tbody(fields, records, module, dropdowns, opts) do
+  defp render_tbody(fields, records, module, conn, dropdowns, opts) do
     rendered_trs = records
-      |> Enum.map(&(do_tr(fields, &1, module, dropdowns, opts)))
+      |> Enum.map(&(do_tr(fields, &1, module, conn, dropdowns, opts)))
       |> Enum.join
     "<tbody>#{rendered_trs}</tbody>"
   end
 
-  defp do_tr(fields, record, module, dropdowns, opts) do
+  defp do_tr(fields, record, module, conn, dropdowns, opts) do
     tr_content = fields
       |> Enum.map(&(do_td(&1, record, module.__schema__(:field, &1), opts)))
       |> Enum.join
-    "<tr>#{tr_content}#{render_dropdowns(dropdowns, record)}</tr>"
+    "<tr>#{tr_content}#{render_dropdowns(conn, dropdowns, record)}</tr>"
   end
 
   defp do_td(:id, record, _type, _opts) do
@@ -85,17 +86,24 @@ defmodule Brando.HTML.Tablize do
     end
   end
 
-  defp render_dropdowns(dropdowns, record) do
+  defp render_dropdowns(conn, dropdowns, record) do
     dropdowns = for dropdown <- dropdowns do
-      {desc, icon, helper, action, param} = dropdown
+      case tuple_size(dropdown) do
+        5 -> {desc, icon, helper, action, param} = dropdown
+        6 -> {desc, icon, helper, action, param, role} = dropdown
+      end
       params = if param != nil, do: [Brando.get_endpoint, action, record], else: [Brando.get_endpoint, action]
       url = apply(Brando.get_helpers, helper, params)
-      "<li>" <>
-      "  <a href=\"" <> url <> "\">" <>
-      "    <i class=\"fa " <> icon <> " fa-fw m-r-sm\"> </i>" <>
-           desc <>
-      "  </a>" <>
-      "</li>"
+      if Brando.HTML.can_render?(conn, %{role: role}) do
+        "<li>" <>
+        "  <a href=\"" <> url <> "\">" <>
+        "    <i class=\"fa " <> icon <> " fa-fw m-r-sm\"> </i>" <>
+             desc <>
+        "  </a>" <>
+        "</li>"
+      else
+        ""
+      end
     end
 
     "<td class=\"text-center\">" <>

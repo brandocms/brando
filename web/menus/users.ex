@@ -8,5 +8,5 @@ defmodule Brando.Menu.Users do
   menu "Brukere", %{name: "Brukere", anchor: "brukere", icon: "fa fa-users icon",
                     submenu: [%{name: "Oversikt", url: {:admin_user_path, :index}},
                               %{name: "Profil", url: {:admin_user_path, :profile}},
-                              %{name: "Legg til", url: {:admin_user_path, :new}}]}
+                              %{name: "Legg til", url: {:admin_user_path, :new}, role: :superuser}]}
 end

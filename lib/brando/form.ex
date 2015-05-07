@@ -10,6 +10,8 @@ defmodule Brando.Form do
   """
   alias Brando.Utils
 
+  @type form_opts :: [{:helper, atom} | {:class, String.t}]
+
   defmacro __using__(_) do
     quote do
       import Brando.Form
@@ -24,7 +26,7 @@ defmodule Brando.Form do
 
   ## Usage
 
-      form "user", [action: :admin_user_path] do
+      form "user", [action: :admin_user_path, class: "grid-form"] do
         field :full_name, :text,
           [required: true,
            label: "Full name",
@@ -38,15 +40,19 @@ defmodule Brando.Form do
 
     * `action`: An atom representing the helper function that will
       get the form's action. I.E: :admin_user_path.
+    * `class`: Class name for the form
   """
+
+  @spec form(String.t, form_opts, [do: Macro.t]) :: Macro.t
   defmacro form(source, opts \\ [], block)
   defmacro form(source, opts, [do: block]) do
     quote do
-      @form_source unquote(source)
-      @form_helper unquote(opts[:helper])
-      @form_class unquote(opts[:class] || "")
+      @form_fields    []
+      @form_source    unquote(source)
+      @form_helper    unquote(opts[:helper])
+      @form_class     unquote(opts[:class] || "")
       @form_multipart false
-      @form_fields []
+
 
       unquote(block)
 
@@ -200,6 +206,7 @@ defmodule Brando.Form do
     if type == :file, do: Module.put_attribute(mod, :form_multipart, true)
   end
 
+  @doc false
   defmacro fieldset(legend \\ nil, [do: block]) do
     quote do
       fieldset_open(unquote(legend))
@@ -208,6 +215,7 @@ defmodule Brando.Form do
     end
   end
 
+  @doc false
   defmacro fieldset_open(legend) do
     quote do
       Brando.Form.fieldset_open(__MODULE__, unquote(legend))
@@ -215,7 +223,7 @@ defmodule Brando.Form do
   end
 
   @doc """
-  Marks the field as a <fieldset> tag opening. This means we are
+  Marks the field as a fieldset tag opening. This means we are
   :in_fieldset, which we need for proper form markup.
   """
   def fieldset_open(mod, legend) do
@@ -224,6 +232,7 @@ defmodule Brando.Form do
     Module.put_attribute(mod, :form_fields, [{:"fs", [type: :fieldset] ++ [legend: legend]}|fields])
   end
 
+  @doc false
   defmacro fieldset_close() do
     quote do
       Brando.Form.fieldset_close(__MODULE__)
@@ -231,7 +240,7 @@ defmodule Brando.Form do
   end
 
   @doc """
-  Marks the field as a <fieldset> tag closing. This means we are no
+  Marks the field as a fieldset tag closing. This means we are no
   longer :in_fieldset.
   """
   def fieldset_close(mod) do
@@ -241,6 +250,7 @@ defmodule Brando.Form do
     Module.put_attribute(mod, :in_fieldset, nil)
   end
 
+  @doc false
   defmacro submit(text \\ "Submit", opts \\ []) do
     quote do
       Brando.Form.__submit__(__MODULE__, unquote(text), unquote(opts))

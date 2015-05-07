@@ -40,32 +40,8 @@
         <!-- nav -->
         <nav class="nav-primary hidden-xs">
           <ul class="nav">
-            <%= for {color, menu} <- get_menus do %>
-              <!-- menu item -->
-                <li class="menuparent">
-                  <a href="#<%= menu.anchor %>">
-                    <i class="<%= menu.icon %>">
-                      <b style="background-color: <%= color %>"></b>
-                    </i>
-                    <span class="pull-right">
-                      <i class="fa fa-angle-down text"></i>
-                      <i class="fa fa-angle-up text-active"></i>
-                    </span>
-                    <span><%= menu.name %></span>
-                  </a>
-                  <ul class="nav lt">
-                  <%= for item <- menu.submenu do %>
-                  <% url = menu_url(@conn, item.url) %>
-                    <li class="menuitem <%= active_path(@conn, url) %>">
-                      <a href="<%= url %>" class="<%= active_path(@conn, url) %>">
-                        <i class="fa fa-angle-right"></i>
-                        <span><%= item.name %></span>
-                      </a>
-                    </li>
-                  <% end %>
-                  </ul>
-                </li>
-              <!-- /menu item -->
+            <%= for menu <- get_menus do %>
+              <%= render_menu_item(@conn, menu) %>
             <% end %>
           </ul>
         </nav>

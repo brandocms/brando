@@ -1,11 +1,11 @@
     <h1>Brukeroversikt</h1>
-    <%= Brando.HTML.Tablize.tablize(@users,
+    <%= Brando.HTML.Tablize.tablize(@conn, @users,
                 [{"Vis bruker", "fa-search", :admin_user_path, :show, :id},
-                 {"Endre bruker", "fa-edit", :admin_user_path, :edit, :id},
-                 {"Slett bruker", "fa-trash", :admin_user_path, :delete_confirm, :id}],
+                 {"Endre bruker", "fa-edit", :admin_user_path, :edit, :id, :superuser},
+                 {"Slett bruker", "fa-trash", :admin_user_path, :delete_confirm, :id, :superuser}],
                 check_or_x: [:avatar], hide: [:password, :updated_at, :inserted_at]) %>
     <div class="form-actions">
-      <a href="<%= Helpers.admin_user_path(@conn, :new) %>" class="btn btn-primary">
+      <%= auth_link_primary @conn, Helpers.admin_user_path(@conn, :new), :superuser do %>
         <i class="fa fa-plus m-r-xs"></i> Ny bruker
-      </a>
+      <% end %>
     </div>
