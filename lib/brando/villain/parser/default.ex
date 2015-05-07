@@ -2,7 +2,7 @@ defmodule Brando.Villain.Parser.Default do
   @moduledoc """
   Default parser for Villain.
   """
-  @behaviour Villain.Parser
+  @behaviour Brando.Villain.Parser
 
   @doc """
   Convert header (h1) to HTML

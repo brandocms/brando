@@ -40,5 +40,5 @@ config :brando, Brando.Menu,
            "#870B46;", "#D0201A;", "#FF641A;"],
   modules: [Admin, Users, News, Images]
 
-config :brando, Villain,
+config :brando, Brando.Villain,
   parser: <%= application_module %>.Villain.Parser

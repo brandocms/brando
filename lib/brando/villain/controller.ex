@@ -1,4 +1,4 @@
-defmodule Villain.Controller do
+defmodule Brando.Villain.Controller do
   @moduledoc """
   Villain controller actions.
 
@@ -6,7 +6,7 @@ defmodule Villain.Controller do
 
   ## Usage
 
-      use Villain.Controller,
+      use Brando.Villain.Controller,
         image_model: Brando.Image,
         series_model: Brando.ImageSeries
 

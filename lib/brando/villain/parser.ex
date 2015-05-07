@@ -1,4 +1,4 @@
-defmodule Villain.Parser do
+defmodule Brando.Villain.Parser do
   @moduledoc """
   Defines callbacks for the Villain.Parser behaviour.
   """

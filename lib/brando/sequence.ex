@@ -2,7 +2,8 @@ defmodule Brando.Sequence do
   @moduledoc """
   Helpers for sequencing models.
 
-  Adds a `sequence` field to your model. Remember to sort by this.
+  Adds a `sequence` field to your model. You still have to sort by
+  `sequence` in your model's module.
 
   ## Example/Usage
 

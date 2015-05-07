@@ -58,7 +58,7 @@ defmodule Brando.Post do
   """
 
   def generate_html(changeset) do
-    changeset |> put_change(:html, Villain.parse(changeset.changes.data))
+    changeset |> put_change(:html, Brando.Villain.parse(changeset.changes.data))
   end
 
   @doc """

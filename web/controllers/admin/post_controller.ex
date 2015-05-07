@@ -3,7 +3,7 @@ defmodule Brando.Admin.PostController do
   Controller for the Brando News module.
   """
   use Brando.Web, :controller
-  use Villain.Controller,
+  use Brando.Villain.Controller,
     image_model: Brando.Image,
     series_model: Brando.ImageSeries
 

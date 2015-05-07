@@ -1,4 +1,4 @@
-defmodule Villain do
+defmodule Brando.Villain do
   @moduledoc """
   Villain is our JS editor.
   https://github.com/twined/villain
@@ -18,7 +18,7 @@ defmodule Villain do
   def parse(json) when is_list(json), do: do_parse(json)
 
   defp do_parse(data) do
-    parser_module = Brando.config(Villain)[:parser]
+    parser_module = Brando.config(Brando.Villain)[:parser]
     html = Enum.reduce(data, [], fn(d, acc) ->
       [apply(parser_module, String.to_atom(d[:type]), [d[:data]])|acc]
     end)

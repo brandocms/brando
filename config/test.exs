@@ -36,7 +36,7 @@ config :brando, :repo, Brando.Integration.TestRepo
 config :brando, :helpers, RouterHelper.TestRouter.Helpers
 config :brando, :media_url, "/media"
 config :brando, :media_path, Path.join([Mix.Project.app_path, "tmp", "media"])
-config :brando, Villain, parser: Brando.Villain.Parser.Default
+config :brando, Brando.Villain, parser: Brando.Villain.Parser.Default
 config :brando, :logging, disable_logging: true
 config :brando, :login_url, "/login"
 
