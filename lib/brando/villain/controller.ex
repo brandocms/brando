@@ -2,13 +2,18 @@ defmodule Brando.Villain.Controller do
   @moduledoc """
   Villain controller actions.
 
-  Defines `:upload_image`, `:image_info` actions.
+  Defines `:browse_images`, `:upload_image`, `:image_info` actions.
 
   ## Usage
 
       use Brando.Villain.Controller,
         image_model: Brando.Image,
         series_model: Brando.ImageSeries
+
+  Add routes to your router.ex:
+
+      villain_routes MyController
+
 
   """
   defmacro __using__(options) do

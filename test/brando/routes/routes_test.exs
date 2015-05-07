@@ -4,6 +4,7 @@ defmodule Brando.TestRouter do
   import Brando.Routes.Admin.Users
   import Brando.Routes.Admin.News
   import Brando.Routes.Admin.Images
+  import Brando.Routes.Admin.Villain
 
   pipeline :admin do
     plug :accepts, ~w(html json)
@@ -41,6 +42,14 @@ defmodule Brando.TestRouter do
     image_resources "/bilder2", [image_model: Brando.Image,
                                  series_model: Brando.ImageSeries,
                                  category_model: Brando.ImageCategory]
+    scope "villain" do
+      villain_routes Brando.Admin.PostController
+    end
+
+    scope "villain2" do
+      villain_routes "2", Brando.Admin.PostController
+    end
+
     get "/", Brando.Admin.DashboardController, :dashboard
   end
 
@@ -80,6 +89,16 @@ defmodule Brando.RoutesTest do
   test "image_resources", %{routes: routes} do
     assert routes =~ "/admin/bilder/kategorier"
     assert routes =~ "/admin/bilder/kategorier/:id/endre"
+  end
+
+  test "villain_routes", %{routes: routes} do
+    assert routes =~ "/admin/villain/villain/last-opp"
+    assert routes =~ "/admin/villain/villain/bla"
+    assert routes =~ "/admin/villain/villain/bildedata"
+
+    assert routes =~ "/admin/villain2/2/villain/last-opp"
+    assert routes =~ "/admin/villain2/2/villain/bla"
+    assert routes =~ "/admin/villain2/2/villain/bildedata"
   end
 
 end
