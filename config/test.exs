@@ -40,5 +40,10 @@ config :brando, Brando.Villain, parser: Brando.Villain.Parser.Default
 config :brando, :logging, disable_logging: true
 config :brando, :login_url, "/login"
 
+config :brando, Brando.Instagram,
+  client_id: "CLIENT_ID",
+  interval: 1_000 * 60 * 60,
+  auto_approve: true
+
 # Print only warnings and errors during test
 config :logger, level: :warn

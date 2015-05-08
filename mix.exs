@@ -46,6 +46,7 @@ defmodule Brando.Mixfile do
       {:dialyze, "~> 0.1.3", only: :dev},
       {:excoveralls, "~> 0.3", only: :test},
       {:blacksmith, "~> 0.1.2", only: :test},
+      {:exvcr, "~> 0.4.0", only: :test},
       {:ex_doc, "~> 0.6", only: :docs},
       {:inch_ex, only: :docs}
     ]

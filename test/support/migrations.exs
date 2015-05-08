@@ -66,6 +66,18 @@ defmodule Brando.Integration.Migration do
       sequenced
       timestamps
     end
+
+    create table(:instagramimages) do
+      add :instagram_id,  :text
+      add :type,          :text
+      add :caption,       :text
+      add :link,          :text
+      add :url_original,  :text
+      add :url_thumbnail, :text
+      add :created_time,  :text
+      add :approved,      :boolean, default: false
+      add :deleted,       :boolean, default: false
+    end
   end
 
   def down do
@@ -86,5 +98,7 @@ defmodule Brando.Integration.Migration do
     drop index(:imageseries, [:order])
 
     drop table(:images)
+
+    drop table(:instagramimages)
   end
 end

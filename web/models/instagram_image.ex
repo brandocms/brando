@@ -159,6 +159,13 @@ defmodule Brando.InstagramImage do
   end
 
   @doc """
+  Get all results
+  """
+  def all do
+    from(m in __MODULE__, order_by: m.instagram_id)
+    |> Brando.repo.all
+  end
+  @doc """
   Delete `record` from database
 
   Also deletes all dependent image sizes.

@@ -36,6 +36,19 @@ defmodule Brando.Instagram.API do
       %Response{body: body, status_code: 200} ->
         parse_images_for_user(body, username)
     end
+    :ok
+  end
+
+  @doc """
+  Get images for `username` by `max_id`.
+  """
+  def images_for_user(username, max_id: max_id) do
+    {:ok, user_id} = get_user_id(username)
+    case get!("users/#{user_id}/media/recent/?client_id=#{Instagram.cfg(:client_id)}&max_id=#{max_id}") do
+      %Response{body: body, status_code: 200} ->
+        parse_images_for_user(body, username)
+    end
+    :ok
   end
 
   @doc """
@@ -48,6 +61,7 @@ defmodule Brando.Instagram.API do
           parse_images_for_tag(body)
       end
     end
+    :ok
   end
 
   @doc """
@@ -80,6 +94,7 @@ defmodule Brando.Instagram.API do
       %Response{body: [{:data, [%{"id" => id}]} | _]} -> {:ok, id}
       %Response{body: [data: [], meta: %{}]} -> {:error, "Fant ikke bruker: #{username}"}
       %Response{body: {:error, error}} -> {:error, "API feil fra Instagram: #{inspect(error)}"}
+      %Response{body: [meta: meta], status_code: 400} -> {:error, "API feil 400 fra Instagram: #{inspect(meta["error_message"])}"}
     end
   end
 

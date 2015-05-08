@@ -1,0 +1,60 @@
+[
+  {
+    "request": {
+      "body": "",
+      "headers": [],
+      "method": "get",
+      "options": {
+        "connect_timeout": 5000
+      },
+      "url": "https://api.instagram.com/v1/users/search?q=dummy_user&client_id=CLIENT_ID"
+    },
+    "response": {
+      "body": "{\"meta\":{\"code\":200},\"data\":[{\"username\":\"dummy_user\",\"profile_picture\":\"https:\\/\\/igcdn-photos-g-a.akamaihd.net\\/hphotos-ak-xfp1\\/t0\\/0.jpg\",\"id\":\"0123456\",\"full_name\":\"\"}]}",
+      "headers": {
+        "X-Ratelimit-Remaining": "4966",
+        "Content-Language": "en",
+        "Expires": "Sat, 01 Jan 2000 00:00:00 GMT",
+        "Vary": "Cookie, Accept-Language, Accept-Encoding",
+        "X-Ratelimit-Limit": "5000",
+        "Pragma": "no-cache",
+        "Cache-Control": "private, no-cache, no-store, must-revalidate",
+        "Date": "Fri, 08 May 2015 09:57:09 GMT",
+        "Content-Type": "application/json; charset=utf-8",
+        "Connection": "keep-alive",
+        "Content-Length": "218"
+      },
+      "status_code": 200,
+      "type": "ok"
+    }
+  },
+  {
+    "request": {
+      "body": "",
+      "headers": [],
+      "method": "get",
+      "options": {
+        "connect_timeout": 5000
+      },
+      "url": "https://api.instagram.com/v1/users/0123456/media/recent/?client_id=CLIENT_ID&min_timestamp=1412585305"
+    },
+    "response": {
+      "body": "{\"pagination\":{},\"meta\":{\"code\":200},\"data\":[{\"attribution\":null,\"tags\":[],\"location\":{\"latitude\":0,\"name\":\"Dummy\",\"longitude\":0,\"id\":0},\"comments\":{\"count\":2,\"data\":[{\"created_time\":\"1426980942\",\"text\":\"comment\",\"from\":{\"username\":\"dummy1\",\"profile_picture\":\"https:\\/\\/instagramimages-a.akamaihd.net\\/profiles\\/profile_1.jpg\",\"id\":\"1\",\"full_name\":\"Dummy\"},\"id\":\"1\"},{\"created_time\":\"1426983341\",\"text\":\"asdf\",\"from\":{\"username\":\"dummy2\",\"profile_picture\":\"https:\\/\\/igcdn-photos-d-a.akamaihd.net\\/hphotos-ak-xpf1\\/0\\/0.jpg\",\"id\":\"12\",\"full_name\":\"\\u00d8\"},\"id\":\"4\"}]},\"filter\":\"Hudson\",\"created_time\":\"1426980419\",\"link\":\"https:\\/\\/instagram.com\\/p\\/0\\/\",\"images\":{\"low_resolution\":{\"url\":\"https:\\/\\/scontent.cdninstagram.com\\/hphotos-xft1\\/t51.2885-15\\/s306x306\\/e15\\/1.jpg\",\"width\":306,\"height\":306},\"thumbnail\":{\"url\":\"https:\\/\\/scontent.cdninstagram.com\\/hphotos-xft1\\/t51.2885-15\\/s150x150\\/e15\\/1.jpg\",\"width\":150,\"height\":150},\"standard_resolution\":{\"url\":\"https:\\/\\/scontent.cdninstagram.com\\/hphotos-xft1\\/t51.2885-15\\/e15\\/1.jpg\",\"width\":640,\"height\":640}},\"users_in_photo\":[],\"caption\":null,\"type\":\"image\",\"id\":\"000000000000000000_000000\",\"user\":{\"username\":\"dummy_user\",\"profile_picture\":\"https:\\/\\/igcdn-photos-g-a.akamaihd.net\\/hphotos-ak-xfp1\\/t51.2885-19\\/0.jpg\",\"id\":\"012345\",\"full_name\":\"\"}},{\"attribution\":null,\"tags\":[],\"location\":{\"latitude\":0,\"longitude\":0},\"comments\":{\"count\":1,\"data\":[{\"created_time\":\"1412600134\",\"text\":\"Moses Koden \\ud83d\\ude0a\",\"from\":{\"username\":\"dummy5\",\"profile_picture\":\"https:\\/\\/instagramimages-a.akamaihd.net\\/profiles\\/profile_1.jpg\",\"id\":\"983002258\",\"full_name\":\"dummy5\"},\"id\":\"1634623462\"}]},\"filter\":\"Normal\",\"created_time\":\"1412585305\",\"link\":\"https:\\/\\/instagram.com\\/p\\/1\\/\",\"images\":{\"low_resolution\":{\"url\":\"https:\\/\\/scontent.cdninstagram.com\\/hphotos-xpf1\\/t51.2885-15\\/s306x306\\/e15\\/0.jpg\",\"width\":306,\"height\":306},\"thumbnail\":{\"url\":\"https:\\/\\/scontent.cdninstagram.com\\/hphotos-xpf1\\/t51.2885-15\\/s150x150\\/e15\\/0.jpg\",\"width\":150,\"height\":150},\"standard_resolution\":{\"url\":\"https:\\/\\/scontent.cdninstagram.com\\/hphotos-xpf1\\/t51.2885-15\\/e15\\/0.jpg\",\"width\":640,\"height\":640}},\"users_in_photo\":[],\"caption\":null,\"type\":\"image\",\"id\":\"1111111111111_0123456\",\"user\":{\"username\":\"dummy_user\",\"profile_picture\":\"https:\\/\\/igcdn-photos-g-a.akamaihd.net\\/hphotos-ak-xfp1\\/t51.2885-19\\/0.jpg\",\"id\":\"0123456\",\"full_name\":\"\"}}]}",
+      "headers": {
+        "X-Ratelimit-Remaining": "4965",
+        "Content-Language": "en",
+        "Expires": "Sat, 01 Jan 2000 00:00:00 GMT",
+        "Vary": "Cookie, Accept-Language, Accept-Encoding",
+        "X-Ratelimit-Limit": "5000",
+        "Pragma": "no-cache",
+        "Cache-Control": "private, no-cache, no-store, must-revalidate",
+        "Date": "Fri, 08 May 2015 09:57:09 GMT",
+        "Content-Type": "application/json; charset=utf-8",
+        "Connection": "keep-alive",
+        "Content-Length": "4563"
+      },
+      "status_code": 200,
+      "type": "ok"
+    }
+  }
+]
