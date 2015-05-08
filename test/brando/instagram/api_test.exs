@@ -6,7 +6,7 @@ defmodule Brando.Instagram.APITest do
 
   @instaimage %{approved: true, caption: "", created_time: "1412585304",
                 deleted: false, id: 3261, instagram_id: "968134024444958851_000000",
-                link: "https://instagram.com/p/fakelink/", type: "image",
+                username: "username", link: "https://instagram.com/p/fakelink/", type: "image",
                 url_original: "https://scontent.cdninstagram.com/hphotos-xft1/t51.2885-15/e15/0.jpg",
                 url_thumbnail: "https://scontent.cdninstagram.com/hphotos-xft1/t51.2885-15/s150x150/e15/0.jpg"}
 

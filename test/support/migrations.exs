@@ -72,6 +72,7 @@ defmodule Brando.Integration.Migration do
       add :type,          :text
       add :caption,       :text
       add :link,          :text
+      add :username,      :text
       add :url_original,  :text
       add :url_thumbnail, :text
       add :created_time,  :text

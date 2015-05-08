@@ -11,7 +11,7 @@ defmodule Brando.InstagramImage do
 
   @cfg Application.get_env(:brando, Brando.Instagram)
 
-  @required_fields ~w(instagram_id caption link url_original
+  @required_fields ~w(instagram_id caption link url_original username
                       url_thumbnail created_time type approved deleted)
   @optional_fields ~w()
 
@@ -20,6 +20,7 @@ defmodule Brando.InstagramImage do
     field :type, :string
     field :caption, :string
     field :link, :string
+    field :username, :string
     field :url_original, :string
     field :url_thumbnail, :string
     field :created_time, :string
@@ -96,11 +97,12 @@ defmodule Brando.InstagramImage do
   Takes a map provided from the API and transforms it to a map we can
   use to store in the DB.
   """
-  def store_image(%{"id" => instagram_id, "caption" => caption,
+  def store_image(%{"id" => instagram_id, "caption" => caption, "user" => user,
                     "images" => %{"thumbnail" => %{"url" => thumb},
                                   "standard_resolution" => %{"url" => org}}} = image) do
     image
     |> Map.drop(["images", "id"])
+    |> Map.put("username", user["username"])
     |> Map.put("instagram_id", instagram_id)
     |> Map.put("caption", (if caption, do: caption["text"], else: ""))
     |> Map.put("url_thumbnail", thumb)
