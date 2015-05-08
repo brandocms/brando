@@ -25,16 +25,24 @@ defmodule Brando.Instagram.APITest do
   end
 
   test "get images for user" do
+    Brando.repo.delete_all(InstagramImage)
     use_cassette "instagram_get_user_images", custom: true do
       assert API.images_for_user("dummy_user", min_timestamp: "1412585305") == :ok
-      assert length(InstagramImage.all) > 0
+      assert length(InstagramImage.all) == 2
     end
+    Brando.repo.delete_all(InstagramImage)
+    use_cassette "instagram_get_user_images", custom: true do
+      assert API.images_for_user("dummy_user", max_id: "968134024444958851") == :ok
+      assert length(InstagramImage.all) == 2
+    end
+
   end
 
   test "get images for tags" do
+    Brando.repo.delete_all(InstagramImage)
     use_cassette "instagram_get_tag_images", custom: true do
       assert API.images_for_tags(["haraball"], min_id: "968134024444958851") == :ok
-      assert length(InstagramImage.all) > 0
+      assert length(InstagramImage.all) == 1
     end
   end
 
