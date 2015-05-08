@@ -7,7 +7,7 @@ defmodule Brando.Instagram.API do
   alias Brando.Instagram
   alias Brando.InstagramImage
 
-  def process_url(url), do:
+  defp process_url(url), do:
     "https://api.instagram.com/v1/" <> url
 
   @doc """

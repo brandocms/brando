@@ -4,6 +4,12 @@ defmodule Brando.Instagram.APITest do
   alias Brando.Instagram.API
   alias Brando.InstagramImage
 
+  @instaimage %{approved: true, caption: "", created_time: "1412585304",
+                deleted: false, id: 3261, instagram_id: "968134024444958851_000000",
+                link: "https://instagram.com/p/fakelink/", type: "image",
+                url_original: "https://scontent.cdninstagram.com/hphotos-xft1/t51.2885-15/e15/0.jpg",
+                url_thumbnail: "https://scontent.cdninstagram.com/hphotos-xft1/t51.2885-15/s150x150/e15/0.jpg"}
+
   @rec_dir "../../test/fixtures/rec_cassettes"
   @dir "../../test/fixtures/cassettes"
 
@@ -29,6 +35,34 @@ defmodule Brando.Instagram.APITest do
     use_cassette "instagram_get_tag_images", custom: true do
       assert API.images_for_tags(["haraball"], min_id: "968134024444958851") == :ok
       assert length(InstagramImage.all) > 0
+    end
+  end
+
+  test "fetch user" do
+    # dump images
+    Brando.repo.delete_all(InstagramImage)
+    cfg = Application.get_env(:brando, Brando.Instagram)
+    |> Keyword.put(:fetch, {:user, "dummy_user"})
+    Application.put_env(:brando, Brando.Instagram, cfg)
+    # install fake image in db
+    {:ok, _} = InstagramImage.create(@instaimage)
+    use_cassette "instagram_get_user_images", custom: true do
+      assert API.fetch(:blank) == {:ok, "1426980420"}
+      assert API.fetch("1412585305") == {:ok, "1426980420"}
+    end
+  end
+
+  test "fetch tag" do
+    # dump images
+    Brando.repo.delete_all(InstagramImage)
+    cfg = Application.get_env(:brando, Brando.Instagram)
+    |> Keyword.put(:fetch, {:tags, ["haraball"]})
+    Application.put_env(:brando, Brando.Instagram, cfg)
+    # install fake image in db
+    {:ok, _} = InstagramImage.create(@instaimage)
+    use_cassette "instagram_get_tag_images", custom: true do
+      assert API.fetch(:blank) == {:ok, "970249962242331087"}
+      assert API.fetch("968134024444958851") == {:ok, "970249962242331087"}
     end
   end
 end

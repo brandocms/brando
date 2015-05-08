@@ -117,7 +117,7 @@ defmodule Brando.InstagramImage do
            select: m.created_time,
            order_by: [desc: m.created_time],
            limit: 1)
-      |> Repo.one
+      |> Brando.repo.one
     case max do
       nil -> ""
       max -> max
@@ -136,7 +136,7 @@ defmodule Brando.InstagramImage do
            select: m.instagram_id,
            order_by: [desc: m.instagram_id],
            limit: 1)
-      |> Repo.one
+      |> Brando.repo.one
     case id do
       nil -> ""
       id -> Enum.at(String.split(id, "_"), 0)
