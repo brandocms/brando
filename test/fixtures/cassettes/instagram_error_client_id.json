@@ -1,0 +1,32 @@
+[
+  {
+    "request": {
+      "body": "",
+      "headers": [],
+      "method": "get",
+      "options": {
+        "connect_timeout": 5000
+      },
+      "url": "https://api.instagram.com/v1/users/search?q=djasf98293h8a9283fh9a238fh&client_id=CLIENT_ID"
+    },
+    "response": {
+      "body": "{\"meta\":{\"error_type\":\"OAuthParameterException\",\"code\":400,\"error_message\":\"The client_id provided is invalid and does not match a valid application.\"}}",
+      "headers": {
+        "X-Ratelimit-Remaining": "4998",
+        "Content-Language": "en",
+        "Expires": "Sat, 01 Jan 2000 00:00:00 GMT",
+        "Vary": "Cookie, Accept-Language",
+        "X-Ratelimit-Limit": "5000",
+        "Pragma": "no-cache",
+        "Cache-Control": "private, no-cache, no-store, must-revalidate",
+        "Date": "Fri, 08 May 2015 12:37:54 GMT",
+        "Content-Type": "application/json; charset=utf-8",
+        "Set-Cookie": "csrftoken=8f9aa602d410dcda4f3927f4cd324437; expires=Fri, 06-May-2016 12:37:54 GMT; Max-Age=31449600; Path=/",
+        "Connection": "keep-alive",
+        "Content-Length": "152"
+      },
+      "status_code": 400,
+      "type": "ok"
+    }
+  }
+]

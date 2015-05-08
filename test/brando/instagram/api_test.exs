@@ -73,4 +73,16 @@ defmodule Brando.Instagram.APITest do
       assert API.fetch("968134024444958851") == {:ok, "970249962242331087"}
     end
   end
+
+  test "client_id error" do
+    use_cassette "instagram_error_client_id", custom: true do
+      API.get_user_id("djasf98293h8a9283fh9a238fh") == {:error, "Fant ikke bruker: djasf98293h8a9283fh9a238fh"}
+    end
+  end
+
+  test "user not found" do
+    use_cassette "instagram_error_user_not_found", custom: true do
+      API.get_user_id("djasf98293h8a9283fh9a238fh") == {:error, "Fant ikke bruker: djasf98293h8a9283fh9a238fh"}
+    end
+  end
 end
