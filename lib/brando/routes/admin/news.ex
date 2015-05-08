@@ -8,7 +8,7 @@ defmodule Brando.Routes.Admin.News do
 
       scope "/admin", as: :admin do
         pipe_through :admin
-        post_resources "/news", model: Brando.Post
+        post_routes "/news", model: Brando.Post
 
   """
   alias Brando.Admin.PostController
@@ -17,24 +17,24 @@ defmodule Brando.Routes.Admin.News do
   @doc """
   Defines "RESTful" endpoints for the news resource.
   """
-  defmacro post_resources(path, ctrl, opts) do
-    add_post_resources(path, ctrl, opts)
+  defmacro post_routes(path, ctrl, opts) do
+    add_post_routes(path, ctrl, opts)
   end
 
   @doc """
-  See post_resources/2
+  See post_routes/2
   """
-  defmacro post_resources(path, opts) do
-    add_post_resources(path, PostController, opts)
+  defmacro post_routes(path, opts) do
+    add_post_routes(path, PostController, opts)
   end
 
   @doc """
-  See post_resources/2
+  See post_routes/2
   """
-  defmacro post_resources(path), do:
-    add_post_resources(path, PostController, [])
+  defmacro post_routes(path), do:
+    add_post_routes(path, PostController, [])
 
-  defp add_post_resources(path, controller, opts) do
+  defp add_post_routes(path, controller, opts) do
     map = Map.put(%{}, :model, Keyword.get(opts, :model, Post))
     options = Keyword.put([], :private, Macro.escape(map))
     quote do

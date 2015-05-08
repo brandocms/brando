@@ -8,7 +8,7 @@ defmodule Brando.Routes.Admin.Images do
 
       scope "/admin", as: :admin do
         pipe_through :admin
-        image_resources "/images"
+        image_routes "/images"
 
   """
   alias Brando.Admin.ImageController
@@ -18,7 +18,7 @@ defmodule Brando.Routes.Admin.Images do
   alias Brando.ImageSeries
   alias Brando.ImageCategory
 
-  defmacro image_resources(path, opts \\ []), do:
+  defmacro image_routes(path, opts \\ []), do:
     add_resources(path, opts)
 
   defp add_resources(path, opts) do

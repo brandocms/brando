@@ -85,9 +85,9 @@ defmodule MyApp.Router do
 
   scope "/admin", as: :admin do
     pipe_through :admin
-    user_resources "/brukere"
-    post_resources "/nyheter"
-    image_resources "/bilder"
+    user_routes "/brukere"
+    post_routes "/nyheter"
+    image_routes "/bilder"
     get "/", Brando.Admin.DashboardController, :dashboard
   end
 

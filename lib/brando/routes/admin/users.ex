@@ -8,7 +8,7 @@ defmodule Brando.Routes.Admin.Users do
 
       scope "/admin", as: :admin do
         pipe_through :admin
-        user_resources "/brukere", model: Brando.User
+        user_routes "/brukere", model: Brando.User
 
   """
   alias Brando.Admin.UserController
@@ -17,22 +17,22 @@ defmodule Brando.Routes.Admin.Users do
   @doc """
   Defines "RESTful" endpoints for the users resource.
   """
-  defmacro user_resources(path, ctrl, opts), do:
-    add_user_resources(path, ctrl, opts)
+  defmacro user_routes(path, ctrl, opts), do:
+    add_user_routes(path, ctrl, opts)
 
   @doc """
-  See user_resources/2
+  See user_routes/2
   """
-  defmacro user_resources(path, opts), do:
-    add_user_resources(path, UserController, opts)
+  defmacro user_routes(path, opts), do:
+    add_user_routes(path, UserController, opts)
 
   @doc """
-  See user_resources/2
+  See user_routes/2
   """
-  defmacro user_resources(path), do:
-    add_user_resources(path, UserController, [])
+  defmacro user_routes(path), do:
+    add_user_routes(path, UserController, [])
 
-  defp add_user_resources(path, controller, opts) do
+  defp add_user_routes(path, controller, opts) do
     map = Map.put(%{}, :model, Keyword.get(opts, :model, User))
     options = Keyword.put([], :private, Macro.escape(map))
     quote do
