@@ -7,7 +7,7 @@
       "options": {
         "connect_timeout": 5000
       },
-      "url": "https://api.instagram.com/v1/users/search?q=djasf98293h8a9283fh9a238fh&client_id=CLIENT_ID"
+      "url": "https://api.instagram.com/v1/users/search?q=asf98293h8a9283fh9a238fh&client_id=CLIENT_ID"
     },
     "response": {
       "body": "{\"meta\":{\"error_type\":\"OAuthParameterException\",\"code\":400,\"error_message\":\"The client_id provided is invalid and does not match a valid application.\"}}",

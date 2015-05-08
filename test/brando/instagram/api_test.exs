@@ -76,13 +76,13 @@ defmodule Brando.Instagram.APITest do
 
   test "client_id error" do
     use_cassette "instagram_error_client_id", custom: true do
-      API.get_user_id("djasf98293h8a9283fh9a238fh") == {:error, "Fant ikke bruker: djasf98293h8a9283fh9a238fh"}
+      assert API.get_user_id("asf98293h8a9283fh9a238fh") == {:error, "API feil 400 fra Instagram: \"The client_id provided is invalid and does not match a valid application.\""}
     end
   end
 
   test "user not found" do
     use_cassette "instagram_error_user_not_found", custom: true do
-      API.get_user_id("djasf98293h8a9283fh9a238fh") == {:error, "Fant ikke bruker: djasf98293h8a9283fh9a238fh"}
+      assert API.get_user_id("djasf98293h8a9283fh9a238fh") == {:error, "Fant ikke bruker: djasf98293h8a9283fh9a238fh"}
     end
   end
 end
