@@ -25,7 +25,8 @@ defmodule Brando.ImageSeriesForm do
     field :slug, :text,
       [required: true,
        label: "URL-tamp",
-       placeholder: "URL-tamp"]
+       placeholder: "URL-tamp",
+       slug_from: :name]
     field :credits, :text,
       [required: false,
        label: "Kreditering",

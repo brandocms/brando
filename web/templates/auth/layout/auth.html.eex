@@ -18,6 +18,8 @@
         <div class="grid-container v-align">
           <div class="grid-block">
             <div class="grid-content">
+              <h1><%= app_name %></h1>
+              <div class="box">
               <%= if get_flash(@conn, :error) do %>
                 <div class="alert alert-block alert-danger">
                   <a class="close" data-dismiss="alert" href="#">×</a>
@@ -32,6 +34,7 @@
                 </div>
               <% end %>
               <%= @inner %>
+              </div>
             </div>
           </div>
         </div>
@@ -40,7 +43,8 @@
         var pattern = Trianglify({
             width: window.innerWidth,
             height: window.innerHeight,
-            cell_size: 210
+            cell_size: 210,
+            stroke_width: 500
         });
         svg = pattern.svg();
         svg.setAttribute("id", "triangles");

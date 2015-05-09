@@ -16,29 +16,3 @@ input[type=radio] {
 form label {
   font-size: 15px;
 }
-
-.auth form label {
-  display: block;
-}
-
-.auth form .form-group {
-  margin: 15px 0;
-
-  input[type="email"],
-  input[type="password"] {
-    padding: 10px 5px;
-    width: 250px;
-  }
-}
-
-.auth h1 {
-  margin: 0;
-}
-
-.auth .grid-block {
-  background-color: #fff;
-}
-
-.auth {
-  background-color: #D3E7D1
-}

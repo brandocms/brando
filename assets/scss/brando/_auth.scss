@@ -1,3 +1,13 @@
+body.auth {
+  color: #333;
+}
+
+.auth .box {
+  padding: 3em 4em;
+  background-color: #fff;
+  min-width: 370px;
+}
+
 svg#triangles {
   height: 100%;
   width: 100%;
@@ -12,5 +22,35 @@ svg#triangles {
 }
 
 .auth .grid-content {
-  padding: 3rem 4rem;
+
+}
+
+.auth .grid-block {
+  background-color: transparent;
+}
+
+.auth form label {
+  display: block;
+  text-transform: uppercase;
+  font-weight: bold;
+  padding-bottom: 5px;
+}
+
+.auth form .form-group {
+  margin: 15px 0;
+
+  input[type="email"],
+  input[type="password"] {
+    padding: 10px 5px;
+    width: 100%;
+  }
+}
+
+.auth h1 {
+  border-bottom: 5px solid #E5E5E5;
+  margin: 0;
+  text-align: center;
+  padding-bottom: 10px;
+  display: block;
+  font-size: 70px;
 }

@@ -8,6 +8,6 @@
         <input class="form-control" id="user_password" name="user[password]" type="password" />
       </div>
       <div class="form-group">
-        <input class="btn btn-primary btn-block btn-lg" name="commit" type="submit" value="Logg inn" />
+        <input class="btn btn-primary btn-block btn-lg m-t-md" name="commit" type="submit" value="Logg inn" />
       </div>
     </form>
