@@ -8,7 +8,6 @@ defmodule RouterHelper do
 
   import Plug.Test
   import Plug.Conn, only: [fetch_query_params: 1, fetch_session: 1, put_session: 3, put_private: 3]
-  import ExUnit.CaptureIO
   alias Plug.Session
 
   @session Plug.Session.init(store: :cookie, key: "_app", encryption_salt: "yadayada", signing_salt: "yadayada")
@@ -82,10 +81,6 @@ defmodule RouterHelper do
       plug :accepts, ~w(html)
       plug :fetch_session
       plug :fetch_flash
-    end
-
-    pipeline :api do
-      plug :accepts, ~w(json)
     end
 
     socket "/ws", Brando do
