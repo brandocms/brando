@@ -13,8 +13,7 @@ defmodule Brando.HTML.InspectTest do
   @image_map %Brando.Type.Image{credits: nil, optimized: false, path: "images/avatars/27i97a.jpeg", title: nil,
                                 sizes: %{thumb: "images/avatars/thumb/27i97a.jpeg", medium: "images/avatars/medium/27i97a.jpeg"}}
 
-  @post_params %{"avatar" => @image_map, "creator_id" => 1,
-                 "data" => "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\"}}]",
+  @post_params %{"avatar" => @image_map, "data" => "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\"}}]",
                  "featured" => true, "header" => "Header",
                  "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
                  "language" => "no", "lead" => "Asdf",

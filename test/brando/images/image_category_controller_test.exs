@@ -14,8 +14,8 @@ defmodule Brando.ImageCategory.ControllerTest do
                  "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
-  @params %{"cfg" => %ImageConfig{}, "creator_id" => 1, "name" => "Test Category", "slug" => "test-category"}
-  @broken_params %{"cfg" => %ImageConfig{}, "creator_id" => 1}
+  @params %{"cfg" => %ImageConfig{}, "name" => "Test Category", "slug" => "test-category"}
+  @broken_params %{"cfg" => %ImageConfig{}}
 
   def create_user do
     {:ok, user} = User.create(@user_params)

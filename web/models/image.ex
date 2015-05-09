@@ -8,8 +8,8 @@ defmodule Brando.Image do
   use Brando.Web, :model
   use Brando.Images.Upload
   use Brando.Sequence, :model
+  import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
-  alias Brando.Utils
   alias Brando.User
   alias Brando.ImageSeries
 
@@ -61,14 +61,13 @@ defmodule Brando.Image do
   """
   @spec update(%{binary => term} | %{atom => term}, User.t) :: {:ok, t} | {:error, Keyword.t}
   def create(params, current_user) do
-    params = Utils.Model.put_creator(params, current_user)
-    model_changeset = changeset(%__MODULE__{}, :create, params)
+    model_changeset =
+      %__MODULE__{}
+      |> put_creator(current_user)
+      |> changeset(:create, params)
     case model_changeset.valid? do
-      true ->
-        inserted_model = Brando.repo.insert(model_changeset)
-        {:ok, inserted_model}
-      false ->
-        {:error, model_changeset.errors}
+      true  -> {:ok, Brando.repo.insert(model_changeset)}
+      false -> {:error, model_changeset.errors}
     end
   end
 
@@ -80,12 +79,10 @@ defmodule Brando.Image do
   """
   @spec update(t, %{binary => term} | %{atom => term}) :: {:ok, t} | {:error, Keyword.t}
   def update(model, params) do
-    model_changeset = changeset(model, :update, params)
+    model_changeset = model |> changeset(:update, params)
     case model_changeset.valid? do
-      true ->
-        {:ok, Brando.repo.update(model_changeset)}
-      false ->
-        {:error, model_changeset.errors}
+      true ->  {:ok, Brando.repo.update(model_changeset)}
+      false -> {:error, model_changeset.errors}
     end
   end
 
@@ -98,12 +95,10 @@ defmodule Brando.Image do
       |> Map.put(:title, title)
       |> Map.put(:credits, credits)
 
-    model_changeset = changeset(model, :update, %{"image" => image})
+    model_changeset = model |> changeset(:update, %{"image" => image})
     case model_changeset.valid? do
-      true ->
-        {:ok, Brando.repo.update(model_changeset)}
-      false ->
-        {:error, model_changeset.errors}
+      true ->  {:ok, Brando.repo.update(model_changeset)}
+      false -> {:error, model_changeset.errors}
     end
   end
 

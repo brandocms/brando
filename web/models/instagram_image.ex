@@ -66,14 +66,10 @@ defmodule Brando.InstagramImage do
   """
   @spec create(%{binary => term} | %{atom => term}) :: {:ok, t} | {:error, Keyword.t}
   def create(params) do
-    model_changeset = changeset(%__MODULE__{}, :create, params)
+    model_changeset = %__MODULE__{} |> changeset(:create, params)
     case model_changeset.valid? do
-      true ->
-        inserted_model = Brando.repo.insert(model_changeset)
-        {:ok, inserted_model}
-      false ->
-        Logger.debug("Instagram: Bildet eksisterer i DB allerede.")
-        {:error, model_changeset.errors}
+      true ->  {:ok, Brando.repo.insert(model_changeset)}
+      false -> {:error, model_changeset.errors}
     end
   end
 
@@ -84,12 +80,10 @@ defmodule Brando.InstagramImage do
   """
   @spec update(t, %{binary => term} | %{atom => term}) :: {:ok, t} | {:error, Keyword.t}
   def update(model, params) do
-    model_changeset = changeset(model, :update, params)
+    model_changeset = model |> changeset(:update, params)
     case model_changeset.valid? do
-      true ->
-        {:ok, Brando.repo.update(model_changeset)}
-      false ->
-        {:error, model_changeset.errors}
+      true ->  {:ok, Brando.repo.update(model_changeset)}
+      false -> {:error, model_changeset.errors}
     end
   end
 

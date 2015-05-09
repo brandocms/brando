@@ -9,7 +9,7 @@ defmodule Brando.HTML.TablizeTest do
   @user_params %{"avatar" => nil, "role" => ["2", "4"], "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond", "password" => "finimeze", "username" => "zabuzasixu"}
   @image_map %Brando.Type.Image{credits: nil, optimized: false, path: "images/avatars/27i97a.jpeg", title: nil, sizes: %{thumb: "images/avatars/thumb/27i97a.jpeg", medium: "images/avatars/medium/27i97a.jpeg"}}
   @conn %Plug.Conn{private: %{plug_session: %{"current_user" => %{role: [:superuser]}}}}
-  @post_params %{"avatar" => @image_map, "creator_id" => 1,
+  @post_params %{"avatar" => @image_map,
                  "data" => "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\"}}]",
                  "featured" => true, "header" => "Header",
                  "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",

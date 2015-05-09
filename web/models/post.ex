@@ -7,11 +7,11 @@ defmodule Brando.Post do
 
   use Brando.Web, :model
   use Brando.Field.ImageField
+  import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
   alias Brando.Type.Json
   alias Brando.Type.Status
   alias Brando.User
-  alias Brando.Utils
 
   @required_fields ~w(status header data lead creator_id language featured)
   @optional_fields ~w(publish_at)
@@ -97,14 +97,13 @@ defmodule Brando.Post do
   If not valid, return errors from changeset
   """
   def create(params, current_user) do
-    params = Utils.Model.put_creator(params, current_user)
-    model_changeset = changeset(%__MODULE__{}, :create, params)
+    model_changeset =
+      %__MODULE__{}
+      |> put_creator(current_user)
+      |> changeset(:create, params)
     case model_changeset.valid? do
-      true ->
-        inserted_model = Brando.repo.insert(model_changeset)
-        {:ok, inserted_model}
-      false ->
-        {:error, model_changeset.errors}
+      true  -> {:ok, Brando.repo.insert(model_changeset)}
+      false -> {:error, model_changeset.errors}
     end
   end
 
@@ -115,19 +114,17 @@ defmodule Brando.Post do
   If not valid, return errors from changeset
   """
   def update(model, params) do
-    model_changeset = changeset(model, :update, params)
+    model_changeset = model |> changeset(:update, params)
     case model_changeset.valid? do
-      true ->
-        {:ok, Brando.repo.update(model_changeset)}
-      false ->
-        {:error, model_changeset.errors}
+      true  -> {:ok, Brando.repo.update(model_changeset)}
+      false -> {:error, model_changeset.errors}
     end
   end
 
   def encode_data(params) do
     cond do
-      is_binary(params.data) -> params
       is_list(params.data)   -> Map.put(params, :data, Poison.encode!(params.data))
+      is_binary(params.data) -> params
     end
   end
 
