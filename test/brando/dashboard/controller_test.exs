@@ -8,7 +8,10 @@ defmodule Brando.Dashboard.ControllerTest do
   use RouterHelper
 
   test "index" do
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/")
+    conn =
+      call(:get, "/admin/")
+      |> with_user
+      |> send_request
     assert html_response(conn, 200) =~ "Ahoy, Iggy!"
   end
 end

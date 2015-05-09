@@ -23,29 +23,49 @@ defmodule Brando.ImageCategory.ControllerTest do
   end
 
   test "new" do
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/kategorier/ny")
+    conn =
+      call(:get, "/admin/bilder/kategorier/ny")
+      |> with_user
+      |> send_request
+
     assert html_response(conn, 200) =~ "Ny bildekategori"
   end
 
   test "edit" do
     user = create_user
     assert {:ok, category} = ImageCategory.create(@params, user)
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/kategorier/#{category.id}/endre")
+    conn =
+      call(:get, "/admin/bilder/kategorier/#{category.id}/endre")
+      |> with_user
+      |> send_request
+
     assert html_response(conn, 200) =~ "Endre bildekategori"
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/kategorier/1234/endre")
+
+    conn =
+      call(:get, "/admin/bilder/kategorier/1234/endre")
+      |> with_user
+      |> send_request
+
     assert html_response(conn, 404)
   end
 
   test "create (post) w/params" do
     user = create_user
-    params = Map.put(@params, "creator_id", user.id)
-    conn = call_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/kategorier/", %{"imagecategory" => params}, user: user)
+    conn =
+      call(:post, "/admin/bilder/kategorier/", %{"imagecategory" => Map.put(@params, "creator_id", user.id)})
+      |> with_user
+      |> send_request
+
     assert redirected_to(conn, 302) =~ "/admin/bilder"
     assert get_flash(conn, :notice) == "Kategori opprettet."
   end
 
   test "create (post) w/erroneus params" do
-    conn = call_with_user(RouterHelper.TestRouter, :post, "/admin/bilder/kategorier/", %{"imagecategory" => @broken_params})
+    conn =
+      call(:post, "/admin/bilder/kategorier/", %{"imagecategory" => @broken_params})
+      |> with_user
+      |> send_request
+
     assert html_response(conn, 200) =~ "Ny bildekategori"
     assert get_flash(conn, :error) == "Feil i skjema"
   end
@@ -53,42 +73,75 @@ defmodule Brando.ImageCategory.ControllerTest do
   test "update (post) w/params" do
     user = create_user
     params = Map.put(@params, "creator_id", user.id)
+
     assert {:ok, category} = ImageCategory.create(params, user)
-    conn = call_with_user(RouterHelper.TestRouter, :patch, "/admin/bilder/kategorier/#{category.id}", %{"imagecategory" => params})
+
+    conn =
+      call(:patch, "/admin/bilder/kategorier/#{category.id}", %{"imagecategory" => params})
+      |> with_user
+      |> send_request
+
     assert redirected_to(conn, 302) =~ "/admin/bilder"
     assert get_flash(conn, :notice) == "Kategori oppdatert."
   end
 
   test "config (get)" do
     user = create_user
+
     assert {:ok, category} = ImageCategory.create(@params, user)
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/kategorier/#{category.id}/konfigurer")
+
+    conn =
+      call(:get, "/admin/bilder/kategorier/#{category.id}/konfigurer")
+      |> with_user
+      |> send_request
+
     assert html_response(conn, 200) =~ "Konfigurér bildekategori"
     assert html_response(conn, 200) =~ "imagecategoryconfig[cfg]"
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/kategorier/1234/konfigurer")
+
+    conn =
+      call(:get, "/admin/bilder/kategorier/1234/konfigurer")
+      |> with_user
+      |> send_request
+
     assert html_response(conn, 404)
   end
 
   test "config (post) w/params" do
     user = create_user
     params = Map.put(@params, "creator_id", user.id)
+
     assert {:ok, category} = ImageCategory.create(params, user)
-    conn = call_with_user(RouterHelper.TestRouter, :patch, "/admin/bilder/kategorier/#{category.id}/konfigurer", %{"imagecategoryconfig" => params})
+
+    conn =
+      call(:patch, "/admin/bilder/kategorier/#{category.id}/konfigurer", %{"imagecategoryconfig" => params})
+      |> with_user
+      |> send_request
+
     assert redirected_to(conn, 302) =~ "/admin/bilder"
     assert get_flash(conn, :notice) == "Kategori konfigurert."
   end
 
   test "delete_confirm" do
     user = create_user
+
     assert {:ok, category} = ImageCategory.create(@params, user)
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/kategorier/#{category.id}/slett")
+
+    conn =
+      call(:get, "/admin/bilder/kategorier/#{category.id}/slett")
+      |> with_user
+      |> send_request
+
     assert html_response(conn, 200) =~ "Slett bildekategori: Test Category"
   end
 
   test "delete" do
     user = create_user
     assert {:ok, category} = ImageCategory.create(@params, user)
-    conn = call_with_user(RouterHelper.TestRouter, :delete, "/admin/bilder/kategorier/#{category.id}")
+    conn =
+      call(:delete, "/admin/bilder/kategorier/#{category.id}")
+      |> with_user
+      |> send_request
+
     assert redirected_to(conn, 302) =~ "/admin/bilder"
     assert get_flash(conn, :notice) == "bildekategori Test Category slettet."
   end

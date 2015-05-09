@@ -30,7 +30,11 @@ defmodule Brando.Image.ControllerTest do
 
   test "index" do
     create_series
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/")
+    conn =
+      call(:get, "/admin/bilder/")
+      |> with_user
+      |> send_request
+
     assert html_response(conn, 200) =~ "Bildeoversikt"
     assert html_response(conn, 200) =~ "Test category"
     assert html_response(conn, 200) =~ "Series name"
@@ -45,16 +49,29 @@ defmodule Brando.Image.ControllerTest do
       |> Map.put("creator_id", user.id)
       |> Map.put("image_category_id", category.id)
     {:ok, series} = ImageSeries.create(series_params, user)
-    conn = json_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params}, user: user)
+    conn =
+      call(:post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params})
+      |> with_user(user)
+      |> as_json
+      |> send_request
+
     assert json_response(conn, 200) == %{"status" => "200"}
+
     q = from(m in Image,
              select: m.id,
              where: m.image_series_id == ^series.id,
              order_by: m.sequence)
     images = q |> Brando.repo.all
-    conn = json_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/slett-valgte-bilder", %{"ids" => images}, user: user)
+    conn =
+      call(:post, "/admin/bilder/slett-valgte-bilder", %{"ids" => images})
+      |> with_user(user)
+      |> as_json
+      |> send_request
+
     assert json_response(conn, 200) == %{"status" => "200", "ids" => images}
+
     images = q |> Brando.repo.all
+
     assert images == []
   end
 end

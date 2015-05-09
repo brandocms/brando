@@ -9,13 +9,19 @@ defmodule Brando.Auth.ControllerTest do
   @bad_login %{"email" => "bad@gmail.com", "password" => "finimeze"}
 
   test "login get" do
-    conn = call_with_session(RouterHelper.TestRouter, :get, "/login")
+    conn =
+      call(:get, "/login")
+      |> with_session
+      |> send_request
     assert html_response(conn, 200) =~ "Passord"
   end
 
   test "login post ok" do
     Forge.saved_user_w_hashed_pass(TestRepo)
-    conn = call_with_session(RouterHelper.TestRouter, :post, "/login", %{"user" => @login})
+    conn =
+      call(:post, "/login", %{"user" => @login})
+      |> with_session
+      |> send_request
     assert redirected_to(conn, 302) =~ "/admin"
     assert get_flash(conn, :notice) == "Innloggingen var vellykket"
 
@@ -23,13 +29,19 @@ defmodule Brando.Auth.ControllerTest do
 
   test "login post failed" do
     Forge.saved_user_w_hashed_pass(TestRepo)
-    conn = call_with_session(RouterHelper.TestRouter, :post, "/login", %{"user" => @bad_login})
+    conn =
+      call(:post, "/login", %{"user" => @bad_login})
+      |> with_session
+      |> send_request
     assert redirected_to(conn, 302) =~ "/login"
     assert get_flash(conn, :error) == "Innloggingen feilet"
   end
 
   test "logout" do
-    conn = call_with_session(RouterHelper.TestRouter, :get, "/logout")
+    conn =
+      call(:get, "/logout")
+      |> with_session
+      |> send_request
     assert html_response(conn, 200) =~ "Du er logget ut av administrasjonsområdet"
   end
 end

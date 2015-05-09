@@ -31,15 +31,24 @@ defmodule Brando.ImageSeries.ControllerTest do
 
   test "new" do
     category = create_category(Forge.saved_user(TestRepo))
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/serier/ny/#{category.id}")
+    conn =
+      call(:get, "/admin/bilder/serier/ny/#{category.id}")
+      |> with_user
+      |> send_request
     assert html_response(conn, 200) =~ "Ny bildeserie"
   end
 
   test "edit" do
     series = create_series
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/serier/#{series.id}/endre")
+    conn =
+      call(:get, "/admin/bilder/serier/#{series.id}/endre")
+      |> with_user
+      |> send_request
     assert html_response(conn, 200) =~ "Endre bildeserie"
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/serier/1234/endre")
+    conn =
+      call(:get, "/admin/bilder/serier/1234/endre")
+      |> with_user
+      |> send_request
     assert html_response(conn, 404)
   end
 
@@ -50,7 +59,10 @@ defmodule Brando.ImageSeries.ControllerTest do
       @series_params
       |> Map.put("creator_id", user.id)
       |> Map.put("image_category_id", category.id)
-    conn = call_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/", %{"imageseries" => series_params}, user: user)
+    conn =
+      call(:post, "/admin/bilder/serier/", %{"imageseries" => series_params})
+      |> with_user(user)
+      |> send_request
     assert redirected_to(conn, 302) =~ "/admin/bilder"
     assert get_flash(conn, :notice) == "Bildeserie opprettet."
   end
@@ -58,7 +70,10 @@ defmodule Brando.ImageSeries.ControllerTest do
   test "create (post) w/erroneus params" do
     user = Forge.saved_user(TestRepo)
     series_params = Map.put(@series_params, "creator_id", user.id)
-    conn = call_with_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/", %{"imageseries" => series_params})
+    conn =
+      call(:post, "/admin/bilder/serier/", %{"imageseries" => series_params})
+      |> with_user
+      |> send_request
     assert html_response(conn, 200) =~ "Ny bildeserie"
     assert get_flash(conn, :error) == "Feil i skjema"
   end
@@ -71,27 +86,39 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> Map.put("creator_id", user.id)
       |> Map.put("image_category_id", category.id)
     {:ok, series} = ImageSeries.create(series_params, user)
-    conn = call_with_user(RouterHelper.TestRouter, :patch, "/admin/bilder/serier/#{series.id}", %{"imageseries" => series_params})
+    conn =
+      call(:patch, "/admin/bilder/serier/#{series.id}", %{"imageseries" => series_params})
+      |> with_user
+      |> send_request
     assert redirected_to(conn, 302) =~ "/admin/bilder"
     assert get_flash(conn, :notice) == "Serie oppdatert."
   end
 
   test "delete_confirm" do
     series = create_series
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/serier/#{series.id}/slett")
+    conn =
+      call(:get, "/admin/bilder/serier/#{series.id}/slett")
+      |> with_user
+      |> send_request
     assert html_response(conn, 200) =~ "Slett bildeserie: Series name"
   end
 
   test "delete" do
     series = create_series
-    conn = call_with_user(RouterHelper.TestRouter, :delete, "/admin/bilder/serier/#{series.id}")
+    conn =
+      call(:delete, "/admin/bilder/serier/#{series.id}")
+      |> with_user
+      |> send_request
     assert redirected_to(conn, 302) =~ "/admin/bilder"
     assert get_flash(conn, :notice) == "bildeserie Series name – 0 bilde(r). slettet."
   end
 
   test "upload" do
     series = create_series
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/serier/#{series.id}/last-opp")
+    conn =
+      call(:get, "/admin/bilder/serier/#{series.id}/last-opp")
+      |> with_user
+      |> send_request
     assert html_response(conn, 200) =~ "Last opp"
   end
 
@@ -103,7 +130,11 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> Map.put("creator_id", user.id)
       |> Map.put("image_category_id", category.id)
     {:ok, series} = ImageSeries.create(series_params, user)
-    conn = json_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params}, user: user)
+    conn =
+      call(:post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params})
+      |> with_user(user)
+      |> as_json
+      |> send_request
     assert json_response(conn, 200) == %{"status" => "200"}
   end
 
@@ -118,19 +149,35 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> Map.put("image_category_id", category.id)
     {:ok, series} = ImageSeries.create(series_params, user)
 
-    conn = json_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params}, user: user)
+    conn =
+      call(:post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params})
+      |> with_user(user)
+      |> as_json
+      |> send_request
+
     assert conn.status == 200
-    conn = json_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params2}, user: user)
+    conn =
+      call(:post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params2}, user: user)
+      |> with_user(user)
+      |> as_json
+      |> send_request
     assert conn.status == 200
 
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/bilder/serier/#{series.id}/sorter")
+    conn =
+      call(:get, "/admin/bilder/serier/#{series.id}/sorter")
+      |> with_user
+      |> send_request
     assert conn.status == 200
     assert html_response(conn, 200) =~ "<img src=\"/media/images/default/thumb/sample.png\" />"
 
     series = Brando.repo.preload(series, :images)
     [img1, img2] = series.images
 
-    conn = json_with_custom_user(RouterHelper.TestRouter, :post, "/admin/bilder/serier/#{series.id}/sorter", %{"order" => [to_string(img2.id), to_string(img1.id)]}, user: user)
+    conn =
+      call(:post, "/admin/bilder/serier/#{series.id}/sorter", %{"order" => [to_string(img2.id), to_string(img1.id)]})
+      |> with_user(user)
+      |> as_json
+      |> send_request
     assert conn.status == 200
     assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "sorter"]
     assert json_response(conn, 200) == %{"status" => "200"}

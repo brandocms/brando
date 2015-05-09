@@ -7,18 +7,14 @@ defmodule RouterHelper do
   """
 
   import Plug.Test
+  import Plug.Conn, only: [fetch_query_params: 1, fetch_session: 1, put_session: 3, put_private: 3]
   import ExUnit.CaptureIO
+  alias Plug.Session
 
-  @session Plug.Session.init(
-    store: :cookie,
-    key: "_app",
-    encryption_salt: "yadayada",
-    signing_salt: "yadayada"
-  )
+  @session Plug.Session.init(store: :cookie, key: "_app", encryption_salt: "yadayada", signing_salt: "yadayada")
 
   @current_user %{__struct__: Brando.User,
-      avatar: nil, email: "test@test.com",
-      full_name: "Iggy Pop", id: 1,
+      avatar: nil, email: "test@test.com", full_name: "Iggy Pop", id: 1,
       inserted_at: %Ecto.DateTime{day: 7, hour: 4, min: 36, month: 12, sec: 26, year: 2014},
       last_login: %Ecto.DateTime{day: 9, hour: 5, min: 2, month: 12, sec: 36, year: 2014},
       role: [:superuser, :staff, :admin],
@@ -34,63 +30,37 @@ defmodule RouterHelper do
 
   def with_session(conn) do
     conn
+    |> with_secret_key_base
+    |> Session.call(@session)
+    |> fetch_session
+  end
+
+  defp with_secret_key_base(conn) do
+    conn
     |> Map.put(:secret_key_base, String.duplicate("abcdefgh", 8))
-    |> Plug.Session.call(@session)
-    |> Plug.Conn.fetch_session()
   end
 
   def with_user(conn, user \\ nil) do
     conn
-    |> Plug.Conn.put_private(:model, Brando.User)
-    |> Map.put(:secret_key_base, String.duplicate("abcdefgh", 8))
-    |> Plug.Session.call(@session)
-    |> Plug.Conn.fetch_session()
-    |> Plug.Conn.put_session(:current_user, user || @current_user)
+    |> put_private(:model, Brando.User)
+    |> with_session
+    |> put_session(:current_user, user || @current_user)
   end
 
-  def call(router, verb, path, params \\ nil, headers \\ []) do
-    conn = conn(verb, path, params, headers) |> Plug.Conn.fetch_query_params
-    router.call(conn, router.init([]))
-  end
-
-  def call_with_session(router, verb, path, params \\ nil, headers \\ []) do
-    conn = conn(verb, path, params, headers) |> with_session |> Plug.Conn.fetch_query_params
-    router.call(conn, router.init([]))
-  end
-
-  def call_with_user(router, verb, path, params \\ nil, headers \\ []) do
-    conn = conn(verb, path, params, headers)
-    |> with_user
-    |> Plug.Conn.fetch_query_params
-    router.call(conn, router.init([]))
-  end
-
-  def json_with_custom_user(router, verb, path, params \\ nil, user: user) do
-    conn = conn(verb, path, params)
-    |> with_user(user)
+  def as_json(conn) do
+    conn
     |> put_req_header("accept", "application/json")
-    |> put_req_header("X-Requested-With", "XMLHttpRequest")
-    |> Plug.Conn.fetch_query_params
-    router.call(conn, router.init([]))
   end
 
-  def call_with_custom_user(router, verb, path, params \\ nil, headers \\ [], user: user) do
-    conn = conn(verb, path, params, headers)
-    |> with_user(user)
-    |> Plug.Conn.fetch_query_params
-    router.call(conn, router.init([]))
+  def call(verb, path, params \\ nil, headers \\ []) do
+    conn(verb, path, params, headers)
   end
 
-  def action(controller, verb, action, params \\ nil, headers \\ []) do
-    conn = conn(verb, "/", params, headers) |> Plug.Conn.fetch_query_params
-    controller.call(conn, controller.init(action))
-  end
-
-  def capture_log(fun) do
-    capture_io(:user, fn ->
-      fun.()
-      Logger.flush()
-    end)
+  def send_request(conn) do
+    conn
+    |> put_private(:plug_skip_csrf_protection, true)
+    |> fetch_query_params
+    |> Brando.get_router.call(Brando.get_router.init([]))
   end
 
   defmodule TestRouter do

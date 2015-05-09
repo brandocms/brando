@@ -21,11 +21,13 @@ defmodule Brando.HTML.TablizeTest do
   test "tablize/4" do
     assert {:ok, user} = User.create(@user_params)
     assert {:ok, post} = Post.create(@post_params, user)
+
     post = post |> Brando.repo.preload(:creator)
     helpers = [{"Vis bruker", "fa-search", :admin_user_path, :show, :id},
-            {"Endre bruker", "fa-edit", :admin_user_path, :edit, :id},
-            {"Slett bruker", "fa-trash", :admin_user_path, :delete_confirm, :id}]
+               {"Endre bruker", "fa-edit", :admin_user_path, :edit, :id},
+               {"Slett bruker", "fa-trash", :admin_user_path, :delete_confirm, :id}]
     {:safe, ret} = tablize(@conn, [post], helpers, check_or_x: [:meta_keywords], hide: [:updated_at, :inserted_at])
+
     assert ret =~ "<i class=\"fa fa-times text-danger\">"
     assert ret =~ "/admin/brukere/#{post.id}"
     assert ret =~ "/admin/brukere/#{post.id}/endre"

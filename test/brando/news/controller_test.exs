@@ -35,42 +35,74 @@ defmodule Brando.News.ControllerTest do
   end
 
   test "index" do
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/nyheter")
+    conn =
+      call(:get, "/admin/nyheter")
+      |> with_user
+      |> send_request
+
     assert response_content_type(conn, :html) =~ "charset=utf-8"
     assert html_response(conn, 200) =~ "Postoversikt"
   end
 
   test "show" do
     user = create_user
+
     assert {:ok, post} = Post.create(@post_params, user)
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/nyheter/#{post.id}")
+
+    conn =
+      call(:get, "/admin/nyheter/#{post.id}")
+      |> with_user
+      |> send_request
+
     assert html_response(conn, 200) =~ "Header"
   end
 
   test "new" do
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/nyheter/ny")
+    conn =
+      call(:get, "/admin/nyheter/ny")
+      |> with_user
+      |> send_request
+
     assert html_response(conn, 200) =~ "Ny post"
   end
 
   test "edit" do
     user = create_user
+
     assert {:ok, post} = Post.create(@post_params, user)
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/nyheter/#{post.id}/endre")
+
+    conn =
+      call(:get, "/admin/nyheter/#{post.id}/endre")
+      |> with_user
+      |> send_request
+
     assert html_response(conn, 200) =~ "Endre post"
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/nyheter/1234/endre")
+
+    conn =
+      call(:get, "/admin/nyheter/1234/endre")
+      |> with_user
+      |> send_request
+
     assert html_response(conn, 404)
   end
 
   test "create (post) w/params" do
     user = create_user
-    post_params = Map.put(@post_params, "creator_id", user.id)
-    conn = call_with_custom_user(RouterHelper.TestRouter, :post, "/admin/nyheter/", %{"post" => post_params}, user: user)
+    conn =
+      call(:post, "/admin/nyheter/", %{"post" => Map.put(@post_params, "creator_id", user.id)})
+      |> with_user(user)
+      |> send_request
+
     assert redirected_to(conn, 302) =~ "/admin/nyheter"
     assert get_flash(conn, :notice) == "Post opprettet."
   end
 
   test "create (post) w/erroneus params" do
-    conn = call_with_user(RouterHelper.TestRouter, :post, "/admin/nyheter/", %{"post" => @broken_post_params})
+    conn =
+      call(:post, "/admin/nyheter/", %{"post" => @broken_post_params})
+      |> with_user
+      |> send_request
+
     assert html_response(conn, 200) =~ "Ny post"
     assert get_flash(conn, :error) == "Feil i skjema"
   end
@@ -78,23 +110,41 @@ defmodule Brando.News.ControllerTest do
   test "update (post) w/params" do
     user = create_user
     post_params = Map.put(@post_params, "creator_id", user.id)
+
     assert {:ok, post} = Post.create(post_params, user)
-    conn = call_with_user(RouterHelper.TestRouter, :patch, "/admin/nyheter/#{post.id}", %{"post" => post_params})
+
+    conn =
+      call(:patch, "/admin/nyheter/#{post.id}", %{"post" => post_params})
+      |> with_user
+      |> send_request
+
     assert redirected_to(conn, 302) =~ "/admin/nyheter"
     assert get_flash(conn, :notice) == "Post oppdatert."
   end
 
   test "delete_confirm" do
     user = create_user
+
     assert {:ok, post} = Post.create(@post_params, user)
-    conn = call_with_user(RouterHelper.TestRouter, :get, "/admin/nyheter/#{post.id}/slett")
+
+    conn =
+      call(:get, "/admin/nyheter/#{post.id}/slett")
+      |> with_user
+      |> send_request
+
     assert html_response(conn, 200) =~ "Slett post: Header"
   end
 
   test "delete" do
     user = create_user
+
     assert {:ok, post} = Post.create(@post_params, user)
-    conn = call_with_user(RouterHelper.TestRouter, :delete, "/admin/nyheter/#{post.id}")
+
+    conn =
+      call(:delete, "/admin/nyheter/#{post.id}")
+      |> with_user
+      |> send_request
+
     assert redirected_to(conn, 302) =~ "/admin/nyheter"
   end
 end
