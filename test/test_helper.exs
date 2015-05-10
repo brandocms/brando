@@ -1,4 +1,5 @@
 #Logger.configure(level: :info)
+:erlang.system_flag(:backtrace_depth, 1000)
 ExUnit.start
 
 # Clear tmp dir
@@ -71,4 +72,5 @@ _   = Ecto.Storage.down(Repo)
 :ok = Ecto.Storage.up(Repo)
 {:ok, _pid} = Repo.start_link
 :ok = Ecto.Migrator.up(Repo, 0, Brando.Integration.Migration, log: false)
+
 Ecto.Adapters.SQL.begin_test_transaction(Brando.Integration.TestRepo)
