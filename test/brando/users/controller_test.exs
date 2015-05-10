@@ -63,6 +63,16 @@ defmodule Brando.Users.ControllerTest do
     assert html_response(conn, 200) =~ "Endre bruker"
   end
 
+  test "edit profile" do
+    user = Forge.saved_user(TestRepo)
+    conn =
+      call(:get, "/admin/brukere/profil/endre")
+      |> with_user(user)
+      |> send_request
+
+    assert html_response(conn, 200) =~ "Endre profil"
+  end
+
   test "create (post) w/params" do
     user = Forge.user
     conn =
@@ -107,6 +117,31 @@ defmodule Brando.Users.ControllerTest do
       |> send_request
 
     assert html_response(conn, 200) =~ "Endre bruker"
+    assert get_flash(conn, :error) == "Feil i skjema"
+  end
+
+  test "update profile" do
+    user = Forge.saved_user(TestRepo)
+    conn =
+      call(:patch, "/admin/brukere/profil/endre", %{"user" => Map.delete(user, :__struct__)})
+      |> with_user(user)
+      |> send_request
+
+    assert redirected_to(conn, 302) =~ "/admin/brukere/profil"
+    assert get_flash(conn, :notice) == "Profil oppdatert."
+  end
+
+  test "update profile w/broken params" do
+    user =
+      Forge.saved_user(TestRepo)
+      |> Map.delete(:__struct__)
+      |> Map.put(:password, "1")
+    conn =
+      call(:patch, "/admin/brukere/profil/endre", %{"user" => user})
+      |> with_user(user)
+      |> send_request
+
+    assert html_response(conn, 200) =~ "Endre profil"
     assert get_flash(conn, :error) == "Feil i skjema"
   end
 

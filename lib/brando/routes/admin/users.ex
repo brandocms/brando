@@ -41,6 +41,8 @@ defmodule Brando.Routes.Admin.Users do
       path = unquote(path)
       get "#{path}", ctrl, :index, opts
       get "#{path}/profil", ctrl, :profile, opts
+      get "#{path}/profil/endre", ctrl, :profile_edit, opts
+      patch "#{path}/profil/endre", ctrl, :profile_update, opts
       get "#{path}/ny", ctrl, :new, opts
       get "#{path}/:id/endre", ctrl, :edit, opts
       get "#{path}/:id/slett", ctrl, :delete_confirm, opts
