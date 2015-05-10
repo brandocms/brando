@@ -92,15 +92,12 @@ defmodule Brando.InstagramImage do
   use to store in the DB.
   """
   def store_image(%{"id" => instagram_id, "caption" => caption, "user" => user,
-                    "images" => %{"thumbnail" => %{"url" => thumb},
-                                  "standard_resolution" => %{"url" => org}}} = image) do
+                    "images" => %{"thumbnail" => %{"url" => thumb}, "standard_resolution" => %{"url" => org}}} = image) do
     image
+    |> Map.merge(%{"username" => user["username"], "instagram_id" => instagram_id,
+                   "caption" => (if caption, do: caption["text"], else: ""),
+                   "url_thumbnail" => thumb, "url_original" => org})
     |> Map.drop(["images", "id"])
-    |> Map.put("username", user["username"])
-    |> Map.put("instagram_id", instagram_id)
-    |> Map.put("caption", (if caption, do: caption["text"], else: ""))
-    |> Map.put("url_thumbnail", thumb)
-    |> Map.put("url_original", org)
     |> create
   end
 
