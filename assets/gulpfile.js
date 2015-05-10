@@ -41,6 +41,18 @@ gulp.task('scripts-brando', function() {
   .pipe(gulp.dest('../priv/static/brando/js'));
 });
 
+gulp.task('scripts-auth', function () {
+    return gulp.src([
+                     'js/vendor/trianglify.min.js',
+                     'js/vendor/jquery.min.js',
+                     'js/vendor/fittext.js',
+                    ])
+        .pipe(concat('brando.auth.js'))
+        .pipe(gulp.dest('../priv/static/brando/js'))
+        .pipe(rename('brando.auth-min.js'))
+        .pipe(uglify()).on('error', errorHandler)
+        .pipe(gulp.dest('../priv/static/brando/js'));
+});
 
 gulp.task('scripts-vendor', function () {
     return gulp.src([
@@ -71,6 +83,7 @@ gulp.task('watch', function () {
     });
     watch('js/vendor/**/*.js', function () {
         gulp.start('scripts-vendor');
+        gulp.start('scripts-auth');
     });
     watch('js/brando/**/*.js', function () {
         gulp.start('scripts-brando');

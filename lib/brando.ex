@@ -32,4 +32,11 @@ defmodule Brando do
   def get_helpers do
     config(:helpers)
   end
+
+  @doc """
+  Get Brando version
+  """
+  def version do
+    Keyword.get(Brando.Mixfile.project, :version)
+  end
 end

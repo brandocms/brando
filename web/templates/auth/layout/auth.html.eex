@@ -10,7 +10,11 @@
     <title><%= app_name %> | autorisering</title>
     <link rel="stylesheet" href="/static/brando/css/font-awesome.min.css">
     <link rel="stylesheet" href="/static/brando/css/brando.css">
-    <script src="/static/brando/js/trianglify.min.js" type="text/javascript" charset="utf-8"></script>
+    <%= if Mix.env(:dev) do %>
+    <script src="/static/brando/js/brando.auth.js" type="text/javascript" charset="utf-8"></script>
+    <% else %>
+    <script src="/static/brando/js/brando.auth-min.js" type="text/javascript" charset="utf-8"></script>
+    <% end %>
   </head>
 
   <body class="auth">
@@ -18,8 +22,9 @@
         <div class="grid-container v-align">
           <div class="grid-block">
             <div class="grid-content">
-              <h1><%= app_name %></h1>
+              <div class="toolbar"></div>
               <div class="box">
+                <h1 id="app-name"><%= app_name %> admin</h1>
               <%= if get_flash(@conn, :error) do %>
                 <div class="alert alert-block alert-danger">
                   <a class="close" data-dismiss="alert" href="#">×</a>
@@ -34,6 +39,7 @@
                 </div>
               <% end %>
               <%= @inner %>
+              <span class="version">&beta; <%= Brando.version %></span>
               </div>
             </div>
           </div>
@@ -49,6 +55,9 @@
         svg = pattern.svg();
         svg.setAttribute("id", "triangles");
         document.body.appendChild(svg);
+        $(document).ready(function() {
+          textFit(document.getElementById("app-name"), {widthOnly: true});
+        });
     </script>
   </body>
 </html>

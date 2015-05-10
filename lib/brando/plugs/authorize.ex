@@ -3,6 +3,7 @@ defmodule Brando.Plug.Authorize do
   A plug for checking roles on user.
   """
   import Plug.Conn
+  import Phoenix.Controller, only: [render: 2, put_view: 2]
   alias Brando.User
 
   @doc """
@@ -15,5 +16,10 @@ defmodule Brando.Plug.Authorize do
   def authorize(conn, _) do
     conn |> no_access
   end
-  defp no_access(conn), do: conn |> send_resp(403, "Ingen adgang.") |> halt
+  defp no_access(conn) do
+    conn
+    |> put_view(Brando.AuthView)
+    |> render(:no_access)
+    |> halt
+  end
 end
