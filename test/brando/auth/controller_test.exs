@@ -38,9 +38,10 @@ defmodule Brando.Auth.ControllerTest do
   end
 
   test "logout" do
+    user = Forge.saved_user_w_hashed_pass(TestRepo)
     conn =
       call(:get, "/logout")
-      |> with_session
+      |> with_user(user)
       |> send_request
     assert html_response(conn, 200) =~ "Du er logget ut av administrasjonsområdet"
   end
