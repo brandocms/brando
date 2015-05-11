@@ -183,7 +183,7 @@ defmodule Brando.InstagramImage do
   use Brando.Meta,
     [singular: "instagrambilde",
      plural: "instagrambilder",
-     repr: &("#{&1.id} | #{&1.image.path}"),
+     repr: &("#{&1.id} | #{&1.caption}"),
      fields: [id: "ID",
               instagram_id: "Instagram ID",
               type: "Type",
