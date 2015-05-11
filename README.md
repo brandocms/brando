@@ -115,6 +115,13 @@ plug Plug.Static,
   at: "/media", from: "priv/media"
 ```
 
+To use Brando's error view, add to your Endpoint's config:
+
+```elixir
+config :my_app, MyApp.Endpoint,
+  render_errors: [view: Brando.ErrorView, format: "html"]
+```
+
 ## Default admin credentials
 
 Default login/pass is `admin@twined.net/admin`

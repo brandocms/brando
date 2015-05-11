@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title><%= app_name %> | autorisering</title>
+    <link rel="stylesheet" href="/static/brando/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/static/brando/css/brando.css">
+    <%= if Mix.env(:dev) do %>
+    <script src="/static/brando/js/brando.auth.js" type="text/javascript" charset="utf-8"></script>
+    <% else %>
+    <script src="/static/brando/js/brando.auth-min.js" type="text/javascript" charset="utf-8"></script>
+    <% end %>
+  </head>
+
+  <body class="auth">
+      <div class="grid-frame">
+        <div class="grid-container v-align">
+          <div class="grid-block">
+            <div class="grid-content">
+              <div class="toolbar"></div>
+              <div class="box">
+                <h1 id="app-name">FEIL</h1>
+                <code><%= inspect(@reason) %></code>
+                <span class="version">&beta; <%= Brando.version %></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    <script>
+        var pattern = Trianglify({
+            width: window.innerWidth,
+            height: window.innerHeight,
+            cell_size: 210,
+            stroke_width: 500
+        });
+        svg = pattern.svg();
+        svg.setAttribute("id", "triangles");
+        document.body.appendChild(svg);
+        $(document).ready(function() {
+          textFit(document.getElementById("app-name"), {widthOnly: true});
+        });
+    </script>
+  </body>
+</html>
