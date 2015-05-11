@@ -26,13 +26,19 @@ defmodule Brando.HTML.InspectTest do
 
   test "model/1" do
     assert {:ok, user} = User.create(@user_params)
+
     {:safe, ret} = model(user)
+    ret = ret |> IO.iodata_to_binary
+
     assert ret =~ "zabuzasixu"
     assert ret =~ "Nita Bond"
 
     assert {:ok, post} = Post.create(@post_params, user)
+
     post = post |> Brando.repo.preload(:creator)
     {:safe, ret} = model(post)
+    ret = ret |> IO.iodata_to_binary
+
     assert ret =~ "<i class=\"fa fa-times text-danger\">"
     assert ret =~ "Nita Bond"
     assert ret =~ "<p>zcxvxcv</p>"

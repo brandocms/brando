@@ -41,7 +41,7 @@ defmodule Mix.Tasks.Brando.Install do
   def run(_, _opts) do
     app = Mix.Project.config()[:app]
     binding = [
-      application_module: Phoenix.Naming.camelize(app),
+      application_module: Phoenix.Naming.camelize(Atom.to_string(app)),
       application_name: Atom.to_string(app),
     ]
 

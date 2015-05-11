@@ -35,7 +35,7 @@ defmodule Brando.HTML do
     submenu_items =
       for item <- menu.submenu, do:
         render_submenu_item(conn, item)
-    Phoenix.HTML.safe "" <>
+    Phoenix.HTML.raw "" <>
     "<!-- menu item -->" <>
     "  <li class=\"menuparent\">" <>
     "    <a href=\"#" <> menu.anchor <> "\">" <>
@@ -119,7 +119,7 @@ defmodule Brando.HTML do
       false ->
         ""
     end
-    |> Phoenix.HTML.safe
+    |> Phoenix.HTML.raw
   end
 
   @doc """
@@ -201,7 +201,7 @@ defmodule Brando.HTML do
     "    Slett" <>
     "  </button>" <>
     "</form>"
-    |> Phoenix.HTML.safe
+    |> Phoenix.HTML.raw
   end
 
   @doc """
@@ -229,7 +229,7 @@ defmodule Brando.HTML do
     "    dictDefaultMessage: '<i class=\"fa fa-upload fa-4x\"></i><br>Trykk eller slipp bilder her for å laste opp'" <>
     "  };" <>
     "</script>"
-    |> Phoenix.HTML.safe
+    |> Phoenix.HTML.raw
   end
 
   @doc """

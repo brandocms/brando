@@ -16,7 +16,7 @@ defmodule Brando.Form do
     quote do
       import Brando.Form
       import Brando.Form.Fields
-      import Phoenix.HTML, only: [safe: 1]
+      import Phoenix.HTML, only: [raw: 1]
     end
   end
 
@@ -82,7 +82,7 @@ defmodule Brando.Form do
         render_fields(@form_source, @form_fields, form_type, params, values, errors)
         |> Enum.join("\n")
         |> render_form(form_type, @form_helper, action, params, form)
-        |> safe
+        |> raw
       end
 
       defp render_form(fields, form_type, action_fun, action, params, form) do

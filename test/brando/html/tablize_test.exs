@@ -28,6 +28,7 @@ defmodule Brando.HTML.TablizeTest do
                {"Slett bruker", "fa-trash", :admin_user_path, :delete_confirm, :id}]
     {:safe, ret} = tablize(@conn, [post], helpers, check_or_x: [:meta_keywords], hide: [:updated_at, :inserted_at])
 
+    ret = ret |> IO.iodata_to_binary
     assert ret =~ "<i class=\"fa fa-times text-danger\">"
     assert ret =~ "/admin/brukere/#{post.id}"
     assert ret =~ "/admin/brukere/#{post.id}/endre"

@@ -31,11 +31,12 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:postgrex, ">= 0.0.0"},
-      {:phoenix_ecto, "~> 0.3"},
+      {:phoenix, "~> 0.13"},
+      {:phoenix_ecto, "~> 0.4"},
+      {:phoenix_html, "~> 1.0"},
 
+      {:postgrex, ">= 0.0.0"},
       {:earmark, "~> 0.1"},
-      {:phoenix, "~> 0.12"},
       {:linguist, "~> 0.1"},
       {:slugger, "~> 0.0.1"},
       {:poison, "~> 1.3"},
