@@ -24,8 +24,8 @@ defmodule Brando.TestRouter do
     plug :accepts, ~w(json)
   end
 
-  socket "/ws", Brando do
-    channel "admin:*", Brando.AdminChannel
+  socket "/admin/ws", Brando do
+    channel "system:*", Brando.SystemChannel
   end
 
   scope "/admin", as: :admin do

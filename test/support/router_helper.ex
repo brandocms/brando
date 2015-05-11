@@ -83,10 +83,6 @@ defmodule RouterHelper do
       plug :fetch_flash
     end
 
-    socket "/ws", Brando do
-      channel "admin:*", Brando.AdminChannel
-    end
-
     scope "/admin", as: :admin do
       pipe_through :admin
       user_routes "/brukere", Brando.Admin.UserController, private: %{model: Brando.User}
@@ -95,6 +91,10 @@ defmodule RouterHelper do
       post_routes "/nyheter"
       image_routes "/bilder"
       get "/", Brando.Admin.DashboardController, :dashboard
+    end
+
+    socket "/admin/ws", Brando do
+      channel "system:*", Brando.SystemChannel
     end
 
     scope "/" do

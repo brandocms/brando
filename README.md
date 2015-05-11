@@ -91,6 +91,10 @@ defmodule MyApp.Router do
     get "/", Brando.Admin.DashboardController, :dashboard
   end
 
+  socket "/admin/ws", Brando do
+    channel "system:*", Brando.SystemChannel
+  end
+
   scope "/" do
     pipe_through :browser
     get "/login", Brando.AuthController, :login, private: %{model: Brando.User}

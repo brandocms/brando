@@ -1,13 +1,13 @@
-defmodule Brando.AdminChannel do
+defmodule Brando.SystemChannel do
   @moduledoc """
-  Channel for admin information.
+  Channel for system information.
   """
   use Phoenix.Channel
 
-  def join("admin:stream", _auth_msg, socket) do
+  def join("system:stream", _auth_msg, socket) do
     {:ok, socket}
   end
-  def join("admin:" <> _private_room_id, _auth_msg, _socket) do
+  def join("system:" <> _private_room_id, _auth_msg, _socket) do
     :ignore
   end
 
@@ -34,7 +34,7 @@ defmodule Brando.AdminChannel do
 
   defp do_log(level, icon, body) do
     unless Brando.config(:logging)[:disable_logging] do
-      Brando.get_endpoint.broadcast!("admin:stream", "log_msg",
+      Brando.get_endpoint.broadcast!("system:stream", "log_msg",
                                     %{level: level, icon: icon, body: body})
     end
   end

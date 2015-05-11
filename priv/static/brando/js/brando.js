@@ -438,9 +438,9 @@ var WS = (function () {
         key: "setup",
         value: function setup() {
             var _this = this;
-            var socket = new _Socket.Socket("/ws");
+            var socket = new _Socket.Socket("/admin/ws");
             socket.connect();
-            socket.join("admin:stream", {}).receive("ok", function (chan) {
+            socket.join("system:stream", {}).receive("ok", function (chan) {
                 console.log("admin:stream hook ready.");
                 chan.on("log_msg", function (payload) {
                     _this.log(payload.level, payload.icon, payload.body);

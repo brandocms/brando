@@ -3,7 +3,7 @@ defmodule Brando.AuthController do
   Controller for authentication actions.
   """
   use Brando.Web, :controller
-  alias Brando.AdminChannel
+  alias Brando.SystemChannel
   plug :action
 
   @doc false
@@ -16,7 +16,7 @@ defmodule Brando.AuthController do
         |> model.set_last_login
         |> Map.delete(:password)
 
-        AdminChannel.log(:logged_in, user)
+        SystemChannel.log(:logged_in, user)
 
         conn
         |> fetch_session
@@ -40,7 +40,7 @@ defmodule Brando.AuthController do
   @doc false
   def logout(conn, _params) do
     if user = Brando.HTML.current_user(conn), do:
-      AdminChannel.log(:logged_out, user)
+      SystemChannel.log(:logged_out, user)
     conn
     |> put_layout({Brando.Auth.LayoutView, "auth.html"})
     |> delete_session(:current_user)
