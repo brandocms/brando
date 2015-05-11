@@ -38,17 +38,20 @@ defmodule Brando.Mixfile do
       {:phoenix, "~> 0.12"},
       {:linguist, "~> 0.1"},
       {:slugger, "~> 0.0.1"},
-      {:poolboy, "~> 1.5.1", override: true},
-      {:poison, "~> 1.4.0", override: true},
+      {:poison, "~> 1.3"},
       {:httpoison, "~> 0.6"},
       {:mogrify, github: "twined/mogrify"},
       {:comeonin, "~> 0.8"},
       {:dialyze, "~> 0.1.3", only: :dev},
+
+      # Test dependencies
       {:excoveralls, "~> 0.3", only: :test},
       {:blacksmith, "~> 0.1.2", only: :test},
       {:exvcr, "~> 0.4.0", only: :test},
+
+      # Documentation dependencies
       {:ex_doc, "~> 0.6", only: :docs},
-      {:inch_ex, only: :docs}
+      {:inch_ex, "~> 0.2", only: :docs}
     ]
   end
 

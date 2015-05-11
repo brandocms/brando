@@ -113,9 +113,11 @@ defmodule Brando.News.ControllerTest do
 
     assert {:ok, post} = Post.create(post_params, user)
 
+    post_params = Map.put(post_params, "data", "[{\"type\":\"text\",\"data\":{\"text\":\"asdf\"}}]")
+
     conn =
       call(:patch, "/admin/nyheter/#{post.id}", %{"post" => post_params})
-      |> with_user
+      |> with_user(user)
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/nyheter"
