@@ -4,4 +4,5 @@ defmodule Brando.Admin.UserView do
   """
   use Brando.Web, :view
   alias Brando.UserForm
+  alias Brando.UserProfileForm
 end
