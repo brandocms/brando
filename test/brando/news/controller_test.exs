@@ -147,4 +147,12 @@ defmodule Brando.News.ControllerTest do
 
     assert redirected_to(conn, 302) =~ "/admin/nyheter"
   end
+
+  test "uses villain" do
+    funcs = Brando.Admin.PostController.__info__(:functions) |> Keyword.keys
+
+    assert :browse_images in funcs
+    assert :upload_image in funcs
+    assert :image_info in funcs
+  end
 end
