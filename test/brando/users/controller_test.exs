@@ -145,6 +145,16 @@ defmodule Brando.Users.ControllerTest do
     assert get_flash(conn, :error) == "Feil i skjema"
   end
 
+  test "delete_confirm" do
+    user = Forge.saved_user(TestRepo)
+    conn =
+      call(:get, "/admin/brukere/#{user.id}/slett")
+      |> with_user
+      |> send_request
+
+    assert html_response(conn, 200) =~ "Slett bruker: James Williamson"
+  end
+
   test "delete" do
     user = Forge.saved_user(TestRepo)
     conn =
@@ -153,5 +163,6 @@ defmodule Brando.Users.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/brukere"
+    assert get_flash(conn, :notice) =~ "slettet"
   end
 end
