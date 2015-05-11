@@ -17,6 +17,12 @@ end
 defmodule Brando.Integration.Endpoint do
   use Phoenix.Endpoint,
     otp_app: :brando
+
+  plug Plug.Session,
+    store: :cookie,
+    key: "_test",
+    signing_salt: "signingsalt",
+    encryption_salt: "encsalt"
 end
 
 defmodule Brando.Integration.TestCase do

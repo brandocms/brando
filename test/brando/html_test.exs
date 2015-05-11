@@ -1,6 +1,7 @@
 defmodule Brando.HTMLTest do
   use ExUnit.Case, async: true
   use Plug.Test
+  use RouterHelper
   import Brando.HTML
 
   test "first_name/1" do
@@ -48,5 +49,22 @@ defmodule Brando.HTMLTest do
     assert check_or_x(false) == "<i class=\"fa fa-times text-danger\"></i>"
     assert check_or_x(nil) == "<i class=\"fa fa-times text-danger\"></i>"
     assert check_or_x(true) == "<i class=\"fa fa-check text-success\"></i>"
+  end
+
+  test "auth_links" do
+    conn = call(:get, "/admin/brukere") |> with_user
+
+    assert auth_link(conn, "test", :admin, do: {:safe, "link text"}) ==
+           {:safe, "<a href=\"test\" class=\"btn btn-default\">  link text</a>"}
+    assert auth_link_primary(conn, "test", :admin, do: {:safe, "link text"}) ==
+           {:safe, "<a href=\"test\" class=\"btn btn-primary\">  link text</a>"}
+    assert auth_link_info(conn, "test", :admin, do: {:safe, "link text"}) ==
+           {:safe, "<a href=\"test\" class=\"btn btn-info\">  link text</a>"}
+    assert auth_link_success(conn, "test", :admin, do: {:safe, "link text"}) ==
+           {:safe, "<a href=\"test\" class=\"btn btn-success\">  link text</a>"}
+    assert auth_link_warning(conn, "test", :admin, do: {:safe, "link text"}) ==
+           {:safe, "<a href=\"test\" class=\"btn btn-warning\">  link text</a>"}
+    assert auth_link_danger(conn, "test", :admin, do: {:safe, "link text"}) ==
+           {:safe, "<a href=\"test\" class=\"btn btn-danger\">  link text</a>"}
   end
 end

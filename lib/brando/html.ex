@@ -193,15 +193,15 @@ defmodule Brando.HTML do
   """
   def delete_form_button(record, helper) do
     action = Brando.Form.get_action(helper, :delete, record)
-    Phoenix.HTML.safe("""
-    <form method="POST" action="#{action}">
-      <input type="hidden" name="_method" value="delete" />
-      <button class="btn btn-danger">
-        <i class="fa fa-trash-o m-r-sm"> </i>
-        Slett
-      </button>
-    </form>
-    """)
+
+    "<form method=\"POST\" action=\"" <> action <> "\">" <>
+    "  <input type=\"hidden\" name=\"_method\" value=\"delete\" />" <>
+    "  <button class=\"btn btn-danger\">" <>
+    "    <i class=\"fa fa-trash-o m-r-sm\"> </i>" <>
+    "    Slett" <>
+    "  </button>" <>
+    "</form>"
+    |> Phoenix.HTML.safe
   end
 
   @doc """
@@ -213,23 +213,23 @@ defmodule Brando.HTML do
       dropzone_form(:admin_image_series_path, @series.id, @series.image_category.cfg)
 
   """
-  def dropzone_form(helper, id, cfg) do
+  def dropzone_form(helper, id, cfg \\ nil) do
     _cfg = cfg || Brando.config(Brando.Images)[:default_config]
     path = Brando.Form.get_action(helper, :upload_post, id)
-    Phoenix.HTML.safe("""
-    <form action="#{path}"
-          class="dropzone"
-          id="brando-dropzone"></form>
-    <script type="text/javascript">
-      Dropzone.options.brandoDropzone = {
-        paramName: "image", // The name that will be used to transfer the file
-        maxFilesize: 10,
-        thumbnailHeight: 150,
-        thumbnailWidth: 150,
-        dictDefaultMessage: '<i class="fa fa-upload fa-4x"></i><br>Trykk eller slipp bilder her for å laste opp'
-      };
-    </script>
-    """)
+
+    "<form action=\"" <> path <> "\"" <>
+    "      class=\"dropzone\"" <>
+    "      id=\"brando-dropzone\"></form>" <>
+    "<script type=\"text/javascript\">" <>
+    "  Dropzone.options.brandoDropzone = {" <>
+    "    paramName: \"image\", // The name that will be used to transfer the file" <>
+    "    maxFilesize: 10," <>
+    "    thumbnailHeight: 150," <>
+    "    thumbnailWidth: 150," <>
+    "    dictDefaultMessage: '<i class=\"fa fa-upload fa-4x\"></i><br>Trykk eller slipp bilder her for å laste opp'" <>
+    "  };" <>
+    "</script>"
+    |> Phoenix.HTML.safe
   end
 
   @doc """
