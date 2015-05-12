@@ -32,10 +32,10 @@ defmodule Brando.Routes.Admin.Images do
       image_ctrl = ImageController
       series_ctrl = ImageSeriesController
       categories_ctrl = ImageCategoryController
-      is_opts = Keyword.put(opts, :as, "image_series")
 
       path = unquote(path)
       opts = unquote(options)
+      is_opts = Keyword.put(opts, :as, "image_series")
 
       get    "#{path}",                           image_ctrl,      :index,           opts
       post   "#{path}/slett-valgte-bilder",       image_ctrl,      :delete_selected, opts
