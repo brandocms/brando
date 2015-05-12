@@ -1,13 +1,22 @@
 defmodule Brando.Form do
   @moduledoc """
-  Brando.Form exposes some macros and helpers to help create
-  form schemas for generating HTML forms.
+  Macros and helpers to help create form schemas for generating HTML forms.
 
   ## Usage
 
       use Brando.Form
 
+      form "user", [action: :admin_user_path, class: "grid-form"] do
+        field :full_name, :text,
+          [required: true,
+           label: "Full name",
+        submit "Lagre",
+          [class: "btn btn-success"]
+      end
+
+  See this module's `Brando.Form.form` and `Brando.Form.field` docs for more.
   """
+
   alias Brando.Utils
 
   @type form_opts :: [{:helper, atom} | {:class, String.t}]
@@ -42,7 +51,6 @@ defmodule Brando.Form do
       get the form's action. I.E: :admin_user_path.
     * `class`: Class name for the form
   """
-
   @spec form(String.t, form_opts, [do: Macro.t]) :: Macro.t
   defmacro form(source, opts \\ [], block)
   defmacro form(source, opts, [do: block]) do
@@ -177,7 +185,6 @@ defmodule Brando.Form do
         * `label` - Label for the entire group. Each individual radio
                     gets its label from the `choices` function.
         * `label_class` - Label class for the main label.
-
   """
   defmacro field(name, type \\ :text, opts \\ []) do
     quote do

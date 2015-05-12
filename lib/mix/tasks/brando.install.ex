@@ -3,7 +3,7 @@ defmodule Mix.Tasks.Brando.Install do
   import Mix.Generator
 
   @moduledoc """
-  Generates admin, common files as well as Users; Brando's user management
+  Install Brando.
   """
 
   @shortdoc "Generates files for Brando."

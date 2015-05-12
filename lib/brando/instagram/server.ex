@@ -1,8 +1,8 @@
 defmodule Brando.Instagram.Server do
   @moduledoc """
-  Polls Instagram API.
+  GenServer for polling Instagram's API.
 
-  See Brando.Instagram for more info
+  See Brando.Instagram for instructions
   """
 
   use GenServer

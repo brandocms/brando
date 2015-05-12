@@ -1,7 +1,8 @@
 defmodule Brando.Form.Fields do
   @moduledoc """
-  A set of functions for rendering form fields. These are all called
-  from the `Brando.Form` module, and handled through `Brando.Form.get_form/4`
+  Functions for rendering form fields.
+  These are all called from the `Brando.Form` module, and handled
+  through `Brando.Form.get_form/4`
   """
   import Brando.HTML, only: [media_url: 1]
   import Brando.Images.Helpers, only: [img: 2]

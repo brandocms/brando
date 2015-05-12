@@ -39,18 +39,19 @@ defmodule Brando.Routes.Admin.Users do
       opts = unquote(options)
       ctrl = unquote(controller)
       path = unquote(path)
-      get "#{path}", ctrl, :index, opts
-      get "#{path}/profil", ctrl, :profile, opts
-      get "#{path}/profil/endre", ctrl, :profile_edit, opts
-      patch "#{path}/profil/endre", ctrl, :profile_update, opts
-      get "#{path}/ny", ctrl, :new, opts
-      get "#{path}/:id/endre", ctrl, :edit, opts
-      get "#{path}/:id/slett", ctrl, :delete_confirm, opts
-      get "#{path}/:id", ctrl, :show, opts
-      post "#{path}", ctrl, :create, opts
-      delete "#{path}/:id", ctrl, :delete, opts
-      patch "#{path}/:id", ctrl, :update, opts
-      put "#{path}/:id", ctrl, :update, Keyword.put(opts, :as, nil)
+
+      get    "#{path}",              ctrl, :index,          opts
+      get    "#{path}/profil",       ctrl, :profile,        opts
+      get    "#{path}/profil/endre", ctrl, :profile_edit,   opts
+      patch  "#{path}/profil/endre", ctrl, :profile_update, opts
+      get    "#{path}/ny",           ctrl, :new,            opts
+      get    "#{path}/:id/endre",    ctrl, :edit,           opts
+      get    "#{path}/:id/slett",    ctrl, :delete_confirm, opts
+      get    "#{path}/:id",          ctrl, :show,           opts
+      post   "#{path}",              ctrl, :create,         opts
+      delete "#{path}/:id",          ctrl, :delete,         opts
+      patch  "#{path}/:id",          ctrl, :update,         opts
+      put    "#{path}/:id",          ctrl, :update,         Keyword.put(opts, :as, nil)
     end
   end
 end

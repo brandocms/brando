@@ -3,6 +3,11 @@ defimpl Plug.Exception, for: Postgrex.Error do
 end
 
 defmodule Brando.ErrorView do
+  @moduledoc """
+  Error views for Brando.
+
+  Diffentiates between admin paths and regular paths.
+  """
   use Brando.Web, :view
 
   def render("404.html", assigns) do
@@ -13,8 +18,8 @@ defmodule Brando.ErrorView do
     render("admin_500.html", assigns)
   end
 
-  def render("500.html", assigns) do
-    render("500.html", assigns)
+  def render("500.html", %{conn: %Plug.Conn{path_info: [_rest]}} = assigns) do
+    render("app_error.html", assigns)
   end
 
   def render("504.html", assigns) do

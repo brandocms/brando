@@ -49,6 +49,7 @@ defmodule Brando.Sequence do
       </a>
   """
   defmodule Model do
+    @moduledoc false
     @doc false
     defmacro sequenced do
       quote do
@@ -58,6 +59,7 @@ defmodule Brando.Sequence do
   end
 
   defmodule Migration do
+    @moduledoc false
     @doc false
     defmacro sequenced do
       quote do

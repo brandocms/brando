@@ -1,7 +1,8 @@
 defmodule Brando.Field.ImageField do
   @moduledoc """
-  Makes it possible to assign a field as an image field. This means
-  you can configure the field with different sizes that will be
+  Assign a model's field as an image field.
+
+  This means you can configure the field with different sizes that will be
   automatically created on file upload.
 
   ## Example
