@@ -4,15 +4,16 @@ import {Socket} from '../vendor/phoenix'
 
 class WS {
     static setup() {
-        var _this = this
-        let socket = new Socket("/admin/ws")
-        socket.connect()
-        socket.join("system:stream", {}).receive("ok", chan => {
-            console.log("admin:stream hook ready.")
-            chan.on("log_msg", payload => {
-                _this.log(payload.level, payload.icon, payload.body);
-            })
-        })
+        var _this = this;
+        let socket = new Socket("/admin/ws");
+        socket.connect();
+        let chan = socket.chan("system:stream", {});
+        chan.join().receive("ok", ({messages}) => {
+            console.log(">> System channel ready");
+        });
+        chan.on("log_msg", payload => {
+            _this.log(payload.level, payload.icon, payload.body);
+        });
     }
     static log(level, icon, body) {
         let date = new Date();

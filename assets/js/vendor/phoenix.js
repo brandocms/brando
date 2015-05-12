@@ -1,5 +1,98 @@
+// Phoenix Channels JavaScript client
+//
+// ## Socket Connection
+//
+// A single connection is established to the server and
+// channels are mulitplexed over the connection.
+// Connect to the server using the `Socket` class:
+//
+//     let socket = new Socket("/ws")
+//     socket.connect()
+//
+// The `Socket` constructor takes the mount point of the socket
+// as well as options that can be found in the Socket docs,
+// such as configuring the `LongPoller` transport, and heartbeat.
+//
+//
+// ## Channels
+//
+// Channels are isolated, concurrent processes on the server that
+// subscribe to topics and broker events between the client and server.
+// To join a channel, you must provide the topic, and channel params for
+// authorization. Here's an example chat room example where `"new_msg"`
+// events are listened for, messages are pushed to the server, and
+// the channel is joined with ok/error matches, and `after` hook:
+//
+//     let chan = socket.chan("rooms:123", {token: roomToken})
+//     chan.on("new_msg", msg => console.log("Got message", msg) )
+//     $input.onEnter( e => {
+//       chan.push("new_msg", {body: e.target.val})
+//           .receive("ok", (message) => console.log("created message", message) )
+//           .receive("error", (reasons) => console.log("create failed", reasons) )
+//           .after(10000, () => console.log("Networking issue. Still waiting...") )
+//     })
+//     chan.join()
+//         .receive("ok", ({messages}) => console.log("catching up", messages) )
+//         .receive("error", ({reason}) => console.log("failed join", reason) )
+//         .after(10000, () => console.log("Networking issue. Still waiting...") )
+//
+//
+// ## Joining
+//
+// Joining a channel with `chan.join(topic, params)`, binds the params to
+// `chan.params`. Subsequent rejoins will send up the modified params for
+// updating authorization params, or passing up last_message_id information.
+// Successful joins receive an "ok" status, while unsuccessful joins
+// receive "error".
+//
+//
+// ## Pushing Messages
+//
+// From the prevoius example, we can see that pushing messages to the server
+// can be done with `chan.push(eventName, payload)` and we can optionally
+// receive responses from the push. Additionally, we can use
+// `after(millsec, callback)` to abort waiting for our `receive` hooks and
+// take action after some period of waiting.
+//
+//
+// ## Socket Hooks
+//
+// Lifecycle events of the multiplexed connection can be hooked into via
+// `socket.onError()` and `socket.onClose()` events, ie:
+//
+//     socket.onError( () => console.log("there was an error with the connection!") )
+//     socket.onClose( () => console.log("the connection dropped") )
+//
+//
+// ## Channel Hooks
+//
+// For each joined channel, you can bind to `onError` and `onClose` events
+// to monitor the channel lifecycle, ie:
+//
+//     chan.onError( () => console.log("there was an error!") )
+//     chan.onClose( () => console.log("the channel has gone away gracefully") )
+//
+// ### onError hooks
+//
+// `onError` hooks are invoked if the socket connection drops, or the channel
+// crashes on the server. In either case, a channel rejoin is attemtped
+// automatically in an exponential backoff manner.
+//
+// ### onClose hooks
+//
+// `onClose` hooks are invoked only in two cases. 1) the channel explicitly
+// closed on the server, or 2). The client explicitly closed, by calling
+// `chan.leave()`
+//
+
 const SOCKET_STATES = {connecting: 0, open: 1, closing: 2, closed: 3}
-const CHANNEL_EVENTS = {
+const CHAN_STATES = {
+  closed: "closed",
+  errored: "errored",
+  joined: "joined",
+  joining: "joining",
+}
+const CHAN_EVENTS = {
   close: "phx_close",
   error: "phx_error",
   join: "phx_join",
@@ -14,37 +107,31 @@ class Push {
   // chan - The Channel
   // event - The event, ie `"phx_join"`
   // payload - The payload, ie `{user_id: 123}`
-  // mergePush - The optional `Push` to merge hooks from
-  constructor(chan, event, payload, mergePush){
+  //
+  constructor(chan, event, payload){
     this.chan         = chan
     this.event        = event
     this.payload      = payload || {}
     this.receivedResp = null
-    this.afterHooks   = []
-    this.recHooks     = {}
+    this.afterHook    = null
+    this.recHooks     = []
     this.sent         = false
-    if(mergePush){
-      mergePush.afterHooks.forEach( hook => this.after(hook.ms, hook.callback) )
-      for(var status in mergePush.recHooks){
-        if(mergePush.recHooks.hasOwnProperty(status)){
-          this.receive(status, mergePush.recHooks[status])
-        }
-      }
-    }
   }
 
   send(){
-    const ref      = this.chan.socket.makeRef()
-    const refEvent = this.chan.replyEventName(ref)
+    const ref         = this.chan.socket.makeRef()
+    this.refEvent     = this.chan.replyEventName(ref)
+    this.receivedResp = null
+    this.sent         = false
 
-    this.chan.on(refEvent, payload => {
+    this.chan.on(this.refEvent, payload => {
       this.receivedResp = payload
       this.matchReceive(payload)
-      this.chan.off(refEvent)
-      this.cancelAfters()
+      this.cancelRefEvent()
+      this.cancelAfter()
     })
 
-    this.startAfters()
+    this.startAfter()
     this.sent = true
     this.chan.socket.push({
       topic: this.chan.topic,
@@ -58,14 +145,16 @@ class Push {
     if(this.receivedResp && this.receivedResp.status === status){
       callback(this.receivedResp.response)
     }
-    this.recHooks[status] = callback
+
+    this.recHooks.push({status, callback})
     return this
   }
 
   after(ms, callback){
+    if(this.afterHook){ throw(`only a single after hook can be applied to a push`) }
     let timer = null
     if(this.sent){ timer = setTimeout(callback, ms) }
-    this.afterHooks.push({ms: ms, callback: callback, timer: timer})
+    this.afterHook = {ms: ms, callback: callback, timer: timer}
     return this
   }
 
@@ -73,110 +162,138 @@ class Push {
   // private
 
   matchReceive({status, response, ref}){
-    let callback = this.recHooks[status]
-    if(!callback){ return }
+    this.recHooks.filter( h => h.status === status )
+                 .forEach( h => h.callback(response) )
+  }
 
-    if(this.event === CHANNEL_EVENTS.join){
-      callback(this.chan)
-    } else {
-      callback(response)
+  cancelRefEvent(){ this.chan.off(this.refEvent) }
+
+  cancelAfter(){ if(!this.afterHook){ return }
+    clearTimeout(this.afterHook.timer)
+    this.afterHook.timer = null
+  }
+
+  startAfter(){ if(!this.afterHook){ return }
+    let callback = () => {
+      this.cancelRefEvent()
+      this.afterHook.callback()
     }
-  }
-
-  cancelAfters(){
-    this.afterHooks.forEach( hook => {
-      clearTimeout(hook.timer)
-      hook.timer = null
-    })
-  }
-
-  startAfters(){
-    this.afterHooks.map( hook => {
-      if(!hook.timer){
-        hook.timer = setTimeout(() => hook.callback(), hook.ms)
-      }
-    })
+    this.afterHook.timer = setTimeout(callback, this.afterHook.ms)
   }
 }
 
 export class Channel {
-  constructor(topic, message, callback, socket) {
-    this.topic      = topic
-    this.message    = message
-    this.callback   = callback
-    this.socket     = socket
-    this.bindings   = []
-    this.afterHooks = []
-    this.recHooks   = {}
-    this.joinPush   = new Push(this, CHANNEL_EVENTS.join, this.message)
+  constructor(topic, params, socket) {
+    this.state       = CHAN_STATES.closed
+    this.topic       = topic
+    this.params      = params || {}
+    this.socket      = socket
+    this.bindings    = []
+    this.joinedOnce  = false
+    this.joinPush    = new Push(this, CHAN_EVENTS.join, this.params)
+    this.pushBuffer = []
 
-    this.reset()
-  }
-
-  after(ms, callback){
-    this.joinPush.after(ms, callback)
-    return this
-  }
-
-  receive(status, callback){
-    this.joinPush.receive(status, callback)
-    return this
-  }
-
-  rejoin(){
-    this.reset()
-    this.joinPush.send()
-  }
-
-  onClose(callback){ this.on(CHANNEL_EVENTS.close, callback) }
-
-  onError(callback){
-    this.on(CHANNEL_EVENTS.error, reason => {
-      callback(reason)
-      this.trigger(CHANNEL_EVENTS.close, "error")
+    this.joinPush.receive("ok", () => {
+      this.state = CHAN_STATES.joined
     })
-  }
-
-  reset(){
-    this.bindings = []
-    let newJoinPush = new Push(this, CHANNEL_EVENTS.join, this.message, this.joinPush)
-    this.joinPush = newJoinPush
+    this.onClose( () => {
+      this.state = CHAN_STATES.closed
+      this.socket.remove(this)
+    })
     this.onError( reason => {
-      setTimeout(() => this.rejoin(), this.socket.reconnectAfterMs)
+      this.state = CHAN_STATES.errored
+      setTimeout( () => this.rejoinUntilConnected(), this.socket.reconnectAfterMs)
     })
-    this.on(CHANNEL_EVENTS.reply, payload => {
+    this.on(CHAN_EVENTS.reply, payload => {
       this.trigger(this.replyEventName(payload.ref), payload)
     })
   }
 
+  rejoinUntilConnected(){ if(this.state !== CHAN_STATES.errored){ return }
+    if(this.socket.isConnected()){
+      this.rejoin()
+    } else {
+      setTimeout(() => this.rejoinUntilConnected(), this.socket.reconnectAfterMs)
+    }
+  }
+
+  join(){
+    if(this.joinedOnce){
+      throw(`tried to join mulitple times. 'join' can only be called a singe time per channel instance`)
+    } else {
+      this.joinedOnce = true
+    }
+    this.sendJoin()
+    return this.joinPush
+  }
+
+  onClose(callback){ this.on(CHAN_EVENTS.close, callback) }
+
+  onError(callback){
+    this.on(CHAN_EVENTS.error, reason => callback(reason) )
+  }
+
   on(event, callback){ this.bindings.push({event, callback}) }
+
+  off(event){ this.bindings = this.bindings.filter( bind => bind.event !== event ) }
+
+  canPush(){ return this.socket.isConnected() && this.state === CHAN_STATES.joined }
+
+  push(event, payload){
+    if(!this.joinedOnce){
+      throw(`tried to push '${event}' to '${this.topic}' before joining. Use chan.join() before pushing events`)
+    }
+    let pushEvent = new Push(this, event, payload)
+    if(this.canPush()){
+      pushEvent.send()
+    } else {
+      this.pushBuffer.push(pushEvent)
+    }
+
+    return pushEvent
+  }
+
+  // Leaves the channel
+  //
+  // Unsubscribes from server events, and
+  // instructs channel to terminate on server
+  //
+  // Triggers onClose() hooks
+  //
+  // To receive leave acknowledgements, use the a `receive`
+  // hook to bind to the server ack, ie:
+  //
+  //     chan.leave().receive("ok", () => alert("left!") )
+  //
+  leave(){
+    return this.push(CHAN_EVENTS.leave).receive("ok", () => {
+      this.trigger(CHAN_EVENTS.close, "leave")
+    })
+  }
+
+
+  // private
 
   isMember(topic){ return this.topic === topic }
 
-  off(event){ this.bindings = this.bindings.filter( bind => bind.event !== event ) }
+  sendJoin(){
+    this.state = CHAN_STATES.joining
+    this.joinPush.send()
+  }
+
+  rejoin(){
+    this.sendJoin()
+    this.pushBuffer.forEach( pushEvent => pushEvent.send() )
+    this.pushBuffer = []
+  }
 
   trigger(triggerEvent, msg){
     this.bindings.filter( bind => bind.event === triggerEvent )
                  .map( bind => bind.callback(msg) )
   }
 
-  push(event, payload){
-    let pushEvent = new Push(this, event, payload)
-    pushEvent.send()
-
-    return pushEvent
-  }
-
   replyEventName(ref){ return `chan_reply_${ref}` }
-
-  leave(){
-    return this.push(CHANNEL_EVENTS.leave).receive("ok", () => {
-      this.socket.leave(this)
-      this.reset()
-    })
-  }
 }
-
 
 export class Socket {
 
@@ -198,9 +315,7 @@ export class Socket {
   // For IE8 support use an ES5-shim (https://github.com/es-shims/es5-shim)
   //
   constructor(endPoint, opts = {}){
-    this.states               = SOCKET_STATES
     this.stateChangeCallbacks = {open: [], close: [], error: [], message: []}
-    this.flushEveryMs         = 50
     this.reconnectTimer       = null
     this.channels             = []
     this.sendBuffer           = []
@@ -211,8 +326,6 @@ export class Socket {
     this.logger               = opts.logger || function(){} // noop
     this.longpoller_timeout   = opts.longpoller_timeout || 20000
     this.endPoint             = this.expandEndpoint(endPoint)
-
-    this.resetBufferTimer()
   }
 
   protocol(){ return location.protocol.match(/^https/) ? "wss" : "ws" }
@@ -244,11 +357,6 @@ export class Socket {
     })
   }
 
-  resetBufferTimer(){
-    clearTimeout(this.sendBufferTimer)
-    this.sendBufferTimer = setTimeout(() => this.flushSendBuffer(), this.flushEveryMs)
-  }
-
   // Logs the message. Override `this.logger` for specialized logging. noops by default
   log(msg){ this.logger(msg) }
 
@@ -256,7 +364,7 @@ export class Socket {
   //
   // Examples
   //
-  //    socket.onError function(error){ alert("An error occurred") }
+  //    socket.onError(function(error){ alert("An error occurred") })
   //
   onOpen     (callback){ this.stateChangeCallbacks.open.push(callback) }
   onClose    (callback){ this.stateChangeCallbacks.close.push(callback) }
@@ -264,18 +372,19 @@ export class Socket {
   onMessage  (callback){ this.stateChangeCallbacks.message.push(callback) }
 
   onConnOpen(){
+    this.flushSendBuffer()
     clearInterval(this.reconnectTimer)
     if(!this.conn.skipHeartbeat){
       clearInterval(this.heartbeatTimer)
       this.heartbeatTimer = setInterval(() => this.sendHeartbeat(), this.heartbeatIntervalMs)
     }
-    this.rejoinAll()
     this.stateChangeCallbacks.open.forEach( callback => callback() )
   }
 
   onConnClose(event){
     this.log("WS close:")
     this.log(event)
+    this.triggerChanError()
     clearInterval(this.reconnectTimer)
     clearInterval(this.heartbeatTimer)
     this.reconnectTimer = setInterval(() => this.connect(), this.reconnectAfterMs)
@@ -285,31 +394,33 @@ export class Socket {
   onConnError(error){
     this.log("WS error:")
     this.log(error)
+    this.triggerChanError()
     this.stateChangeCallbacks.error.forEach( callback => callback(error) )
+  }
+
+  triggerChanError(){
+    this.channels.forEach( chan => chan.trigger(CHAN_EVENTS.error) )
   }
 
   connectionState(){
     switch(this.conn && this.conn.readyState){
-      case this.states.connecting: return "connecting"
-      case this.states.open:       return "open"
-      case this.states.closing:    return "closing"
-      default:                     return "closed"
+      case SOCKET_STATES.connecting: return "connecting"
+      case SOCKET_STATES.open:       return "open"
+      case SOCKET_STATES.closing:    return "closing"
+      default:                       return "closed"
     }
   }
 
   isConnected(){ return this.connectionState() === "open" }
 
-  rejoinAll(){ this.channels.forEach( chan => chan.rejoin() ) }
-
-  join(topic, message, callback){
-    let chan = new Channel(topic, message, callback, this)
-    this.channels.push(chan)
-    if(this.isConnected()){ chan.rejoin() }
-    return chan
+  remove(chan){
+    this.channels = this.channels.filter( c => !c.isMember(chan.topic) )
   }
 
-  leave(chan){
-    this.channels = this.channels.filter( c => !c.isMember(chan.topic) )
+  chan(topic, params){
+    let chan = new Channel(topic, params, this)
+    this.channels.push(chan)
+    return chan
   }
 
   push(data){
@@ -339,7 +450,6 @@ export class Socket {
       this.sendBuffer.forEach( callback => callback() )
       this.sendBuffer = []
     }
-    this.resetBufferTimer()
   }
 
   onConnMessage(rawMessage){
@@ -367,10 +477,9 @@ export class LongPoller {
     this.onerror         = function(){} // noop
     this.onmessage       = function(){} // noop
     this.onclose         = function(){} // noop
-    this.states          = SOCKET_STATES
     this.upgradeEndpoint = this.normalizeEndpoint(endPoint)
     this.pollEndpoint    = this.upgradeEndpoint + (/\/$/.test(endPoint) ? "poll" : "/poll")
-    this.readyState      = this.states.connecting
+    this.readyState      = SOCKET_STATES.connecting
 
     this.poll()
   }
@@ -385,7 +494,7 @@ export class LongPoller {
 
   closeAndRetry(){
     this.close()
-    this.readyState = this.states.connecting
+    this.readyState = SOCKET_STATES.connecting
   }
 
   ontimeout(){
@@ -394,7 +503,7 @@ export class LongPoller {
   }
 
   poll(){
-    if(!(this.readyState === this.states.open || this.readyState === this.states.connecting)){ return }
+    if(!(this.readyState === SOCKET_STATES.open || this.readyState === SOCKET_STATES.connecting)){ return }
 
     Ajax.request("GET", this.endpointURL(), "application/json", null, this.timeout, this.ontimeout.bind(this), (resp) => {
       if(resp){
@@ -414,7 +523,7 @@ export class LongPoller {
           this.poll()
           break
         case 410:
-          this.readyState = this.states.open
+          this.readyState = SOCKET_STATES.open
           this.onopen()
           this.poll()
           break
@@ -438,7 +547,7 @@ export class LongPoller {
   }
 
   close(code, reason){
-    this.readyState = this.states.closed
+    this.readyState = SOCKET_STATES.closed
     this.onclose()
   }
 }
