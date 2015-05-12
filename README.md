@@ -186,11 +186,12 @@ Template (`sequence.html.eex`):
 Add to your app's supervision tree:
 
 ```elixir
-worker(Brando.Instagram.Server, [:myapp_instagram])
+worker(Brando.Instagram.Server, [Brando.Instagram.cfg(:server_name)])
 ```
 
 Config is found in your app's `config/brando.exs`.
 
+  * `server_name`: An atom naming your server - i.e.: `:myapp_instagram`.
   * `client_id`: Your instagram client id. Find this in the developer section.
   * `interval`: How often we poll for new images
   * `auto_approve`: Set `approved` to `true` on grabbed images
