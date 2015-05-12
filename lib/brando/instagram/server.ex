@@ -54,7 +54,7 @@ defmodule Brando.Instagram.Server do
   end
 
   @doc false
-  def terminate(reason, state) do
+  def terminate(_reason, _state) do
     :ok
   end
 end
