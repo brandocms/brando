@@ -87,14 +87,14 @@ defmodule Brando.User do
   If not valid, return errors from changeset
   """
   def create(params) do
-    user_changeset = changeset(%__MODULE__{}, :create, params)
-    case user_changeset.valid? do
+    cs = changeset(%__MODULE__{}, :create, params)
+    case cs.valid? do
       true ->
-        user_changeset = put_change(user_changeset, :password, gen_password(user_changeset.changes[:password]))
-        inserted_user = Brando.repo.insert(user_changeset)
+        cs = put_change(cs, :password, gen_password(cs.changes[:password]))
+        inserted_user = Brando.repo.insert(cs)
         {:ok, inserted_user}
       false ->
-        {:error, user_changeset.errors}
+        {:error, cs.errors}
     end
   end
 
@@ -105,16 +105,15 @@ defmodule Brando.User do
   If not valid, return errors from changeset
   """
   def update(user, params) do
-    user_changeset = changeset(user, :update, params)
-    case user_changeset.valid? do
+    cs = changeset(user, :update, params)
+    case cs.valid? do
       true ->
-        if (Map.get(user, :password) != Map.get(user_changeset.changes, :password) &&
-            Map.get(user_changeset.changes, :password) != nil) do
-          user_changeset = put_change(user_changeset, :password, gen_password(user_changeset.changes[:password]))
+        if password = get_change(cs, :password) do
+          cs = put_change(cs, :password, gen_password(password))
         end
-        {:ok, Brando.repo.update(user_changeset)}
+        {:ok, Brando.repo.update(cs)}
       false ->
-        {:error, user_changeset.errors}
+        {:error, cs.errors}
     end
   end
 
