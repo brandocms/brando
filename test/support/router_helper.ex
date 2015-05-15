@@ -65,6 +65,7 @@ defmodule RouterHelper do
   defmodule TestRouter do
     use Phoenix.Router
     alias Brando.Plug.Authenticate
+    import Brando.Routes.Admin.Dashboard
     import Brando.Routes.Admin.Users
     import Brando.Routes.Admin.News
     import Brando.Routes.Admin.Images
@@ -90,7 +91,7 @@ defmodule RouterHelper do
       user_routes "/brukere3"
       post_routes "/nyheter"
       image_routes "/bilder"
-      get "/", Brando.Admin.DashboardController, :dashboard
+      dashboard_routes "/"
     end
 
     socket "/admin/ws", Brando do
