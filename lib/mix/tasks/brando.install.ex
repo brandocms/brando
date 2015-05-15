@@ -40,10 +40,8 @@ defmodule Mix.Tasks.Brando.Install do
   """
   def run(_, _opts) do
     app = Mix.Project.config()[:app]
-    binding = [
-      application_module: Phoenix.Naming.camelize(Atom.to_string(app)),
-      application_name: Atom.to_string(app),
-    ]
+    binding = [application_module: Phoenix.Naming.camelize(Atom.to_string(app)),
+               application_name: Atom.to_string(app)]
 
     copy_from "./", binding, @new
 
@@ -57,17 +55,13 @@ defmodule Mix.Tasks.Brando.Install do
   defp copy_from(target_dir, binding, mapping) when is_list(mapping) do
     application_name = Keyword.fetch!(binding, :application_name)
     for {format, source, target_path} <- mapping do
-      target = Path.join(target_dir,
-                         String.replace(target_path, "application_name", application_name))
+      target = Path.join(target_dir, String.replace(target_path, "application_name", application_name))
 
       case format do
-        :keep ->
-          File.mkdir_p!(target)
-        :text ->
-          create_file(target, render(source))
-        :eex  ->
-          contents = EEx.eval_string(render(source), binding, file: source)
-          create_file(target, contents)
+        :keep -> File.mkdir_p!(target)
+        :text -> create_file(target, render(source))
+        :eex  -> contents = EEx.eval_string(render(source), binding, file: source)
+                 create_file(target, contents)
       end
     end
   end

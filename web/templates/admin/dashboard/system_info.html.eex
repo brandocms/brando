@@ -1,0 +1,11 @@
+<h1>Systeminformasjon</h1>
+
+<div id="systeminfo">
+  <p><i class="fa fa-fw fa-circle-o-notch fa-spin m-r-sm"></i> Henter systeminformasjon, vennligst vent ...</p>
+  <table>
+    <tr id="memory">
+      <td class="text">0 mb</td>
+      <td class="sparkline"></td>
+    </tr>
+  </table>
+</div>

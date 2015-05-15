@@ -4,13 +4,9 @@ import Utils from "./utils.js";
 var imagePool = [];
 class Images {
     static setup() {
-        switch ($('body').attr('data-script')) {
-            case "images-index":
-                this.getHash();
-                this.deleteListener();
-                this.imageSelectionListener();
-            return;
-        }
+        this.getHash();
+        this.deleteListener();
+        this.imageSelectionListener();
     }
     static getHash() {
         let hash = document.location.hash

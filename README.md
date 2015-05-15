@@ -60,6 +60,7 @@ defmodule MyApp.Router do
 
   import Brando.Routes.Admin.Users
   import Brando.Routes.Admin.News
+  import Brando.Routes.Admin.Dashboard
   import Brando.Routes.Admin.Images
 
   alias Brando.Plug.Authenticate
@@ -85,14 +86,15 @@ defmodule MyApp.Router do
 
   scope "/admin", as: :admin do
     pipe_through :admin
-    user_routes "/brukere"
-    post_routes "/nyheter"
-    image_routes "/bilder"
-    get "/", Brando.Admin.DashboardController, :dashboard
+    dashboard_routes "/"
+    user_routes      "/brukere"
+    post_routes      "/nyheter"
+    image_routes     "/bilder"
   end
 
   socket "/admin/ws", Brando do
-    channel "system:*", Brando.SystemChannel
+    channel "system:*", SystemChannel
+    channel "stats", StatsChannel
   end
 
   scope "/" do

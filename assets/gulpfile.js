@@ -62,6 +62,7 @@ gulp.task('scripts-vendor', function () {
                      'js/vendor/sortable.js',
                      'js/vendor/slideout.js',
                      'js/vendor/jquery.slugit.js',
+                     'js/vendor/sparkline.min.js',
                      'js/vendor/vex.js',
                      'js/vendor/vex.dialog.js'
                     ])
