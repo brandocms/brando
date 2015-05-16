@@ -23,6 +23,17 @@
         <button>☰</button>
       </header>
     </main>
+<!-- top menu -->
+    <div id="topmenu" class="clearfix">
+      <div class="branding">
+        <i class="fa fa-fw fa-diamond m-r-xs"> </i>
+        <span><strong><%= app_name %></strong> administrasjon</span>
+      </div>
+      <div class="user pull-right">
+
+      </div>
+    </div>
+<!-- /top menu -->
     <div class="grid-frame">
       <div id="menu" class="collapse grid-content shrink">
         <div class="menu-profile">
