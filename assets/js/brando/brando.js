@@ -8,6 +8,7 @@ import Vex from "./vex.js";
 import Images from "./images.js";
 import Sequence from "./sequence.js";
 import Stats from "./stats.js";
+import Toolbar from "./toolbar.js";
 import WS from "./ws.js";
 
 
@@ -18,6 +19,7 @@ $(() => {
     Flash.setup();
     Slideout.setup();
     Sequence.setup();
+    Toolbar.setup();
 
     switch ($('body').attr('data-script')) {
         case "images-index":

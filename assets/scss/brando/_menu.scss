@@ -10,6 +10,27 @@
     float: right;
   }
 
+  .toolbar {
+    button {
+      -webkit-appearance: none;
+      border: 0;
+      background-color: transparent;
+      i {
+        color: #717171;
+      }
+    }
+
+    button.active {
+      i {
+          color: #ffffff;
+        }
+    }
+
+    button:focus {
+      outline: none;
+    }
+  }
+
   i {
     color: #ff0000;
   }

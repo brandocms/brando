@@ -41,6 +41,13 @@ defmodule Brando.SystemChannel do
     do_log(:error, "fa-times-circle", message)
   end
 
+  @doc """
+  Logs system info
+  """
+  def log(:info, message) do
+    do_log(:info, "fa-info-circle", message)
+  end
+
   defp do_log(level, icon, body) do
     unless Brando.config(:logging)[:disable_logging] do
       Brando.get_endpoint.broadcast!("system:stream", "log_msg",

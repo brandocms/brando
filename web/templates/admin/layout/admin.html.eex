@@ -29,8 +29,8 @@
         <i class="fa fa-fw fa-diamond m-r-xs"> </i>
         <span><strong><%= app_name %></strong> administrasjon</span>
       </div>
-      <div class="user pull-right">
-
+      <div class="toolbar pull-right">
+        <button class="logbutton"> <i class="fa fa-fw fa-life-ring"></i></button>
       </div>
     </div>
 <!-- /top menu -->
@@ -91,4 +91,3 @@
     </div>
   </body>
 </html>
-
