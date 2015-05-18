@@ -108,7 +108,7 @@ defmodule Brando.Instagram.API do
   end
 
   @doc """
-  Poison's callback for processing the json into an elixir map
+  Poison's callback for processing the json into a map
   """
   def process_response_body(body) do
     case body |> Poison.decode do

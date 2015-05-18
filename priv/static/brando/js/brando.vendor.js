@@ -2052,6 +2052,16 @@ function activate_tab(obj) {
 
   Dropdown.VERSION = '3.2.0';
 
+  Dropdown.prototype.mouseenter = function (e) {
+    var $icon = $(this).find('input');
+    $icon.addClass('hover');
+  };
+
+  Dropdown.prototype.mouseleave = function (e) {
+    var $icon = $(this).find('input');
+    $icon.removeClass('hover');
+  };
+
   Dropdown.prototype.toggle = function (e) {
     var $this = $(this);
 
@@ -2074,6 +2084,8 @@ function activate_tab(obj) {
       if (e.isDefaultPrevented()) return;
 
       $this.trigger('focus');
+
+      $this.find('input').toggleClass('cross').toggleClass('bars');
 
       $parent.toggleClass('open').trigger('shown.bs.dropdown', relatedTarget);
     }
@@ -2123,6 +2135,8 @@ function activate_tab(obj) {
       if (!$parent.hasClass('open')) return;
       $parent.trigger(e = $.Event('hide.bs.dropdown', relatedTarget));
       if (e.isDefaultPrevented()) return;
+      $(this).find('input').removeClass('cross');
+      $(this).find('input').addClass('bars');
       $parent.removeClass('open').trigger('hidden.bs.dropdown', relatedTarget);
     });
   }
@@ -2172,29 +2186,8 @@ function activate_tab(obj) {
 
   $(document).on('click.bs.dropdown.data-api', clearMenus).on('click.bs.dropdown.data-api', '.dropdown form', function (e) {
     e.stopPropagation();
-  }).on('click.bs.dropdown.data-api', toggle, Dropdown.prototype.toggle).on('keydown.bs.dropdown.data-api', toggle + ', [role="menu"], [role="listbox"]', Dropdown.prototype.keydown);
+  }).on('click.bs.dropdown.data-api', toggle, Dropdown.prototype.toggle).on('mouseenter.bs.dropdown.data-api', toggle, Dropdown.prototype.mouseenter).on('mouseleave.bs.dropdown.data-api', toggle, Dropdown.prototype.mouseleave).on('keydown.bs.dropdown.data-api', toggle + ', [role="menu"], [role="listbox"]', Dropdown.prototype.keydown);
 })(jQuery);
-
-// popover
-// $("[data-toggle=popover]").popover();
-// $(document).on('click', '.popover-title .close', function(e){
-//   var $target = $(e.target), $popover = $target.closest('.popover').prev();
-//   $popover && $popover.popover('hide');
-// });
-
-// // ajax modal
-// $(document).on('click', '[data-toggle="ajaxModal"]',
-//   function(e) {
-//     $('#ajaxModal').remove();
-//     e.preventDefault();
-//     var $this = $(this)
-//       , $remote = $this.data('remote') || $this.attr('href')
-//       , $modal = $('<div class="modal" id="ajaxModal"><div class="modal-body"></div></div>');
-//     $('body').append($modal);
-//     $modal.modal();
-//     $modal.load($remote);
-//   }
-// );
 
 // dropdown menu
 $.fn.dropdown.Constructor.prototype.change = function (e) {

@@ -108,9 +108,9 @@ defmodule Brando.HTML.Tablize do
 
     "<td class=\"text-center\">" <>
     "  <div class=\"dropdown\">" <>
-    "    <a class=\"dropdown-toggle ddbutton\" data-toggle=\"dropdown\">" <>
-    "      <i class=\"fa fa-bars\"></i>" <>
-    "    </a>" <>
+    "    <label class=\"dropdown-toggle\" data-toggle=\"dropdown\">" <>
+    "      <input type=\"checkbox\" class=\"o-c bars\">" <>
+    "    </label>" <>
     "    <ul class=\"dropdown-menu\" style=\"right: 0; left: auto;\">" <>
           Enum.join(dropdowns) <>
     "    </ul>" <>

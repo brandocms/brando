@@ -21,6 +21,16 @@
 
   Dropdown.VERSION = '3.2.0'
 
+  Dropdown.prototype.mouseenter = function (e) {
+    var $icon = $(this).find('input')
+    $icon.addClass('hover')
+  }
+
+  Dropdown.prototype.mouseleave = function (e) {
+    var $icon = $(this).find('input')
+    $icon.removeClass('hover')
+  }
+
   Dropdown.prototype.toggle = function (e) {
     var $this = $(this)
 
@@ -43,6 +53,10 @@
       if (e.isDefaultPrevented()) return
 
       $this.trigger('focus')
+
+      $this.find('input')
+        .toggleClass('cross')
+        .toggleClass('bars')
 
       $parent
         .toggleClass('open')
@@ -93,6 +107,8 @@
       if (!$parent.hasClass('open')) return
       $parent.trigger(e = $.Event('hide.bs.dropdown', relatedTarget))
       if (e.isDefaultPrevented()) return
+      $(this).find('input').removeClass('cross')
+      $(this).find('input').addClass('bars')
       $parent.removeClass('open').trigger('hidden.bs.dropdown', relatedTarget)
     })
   }
@@ -146,82 +162,63 @@
     .on('click.bs.dropdown.data-api', clearMenus)
     .on('click.bs.dropdown.data-api', '.dropdown form', function (e) { e.stopPropagation() })
     .on('click.bs.dropdown.data-api', toggle, Dropdown.prototype.toggle)
+    .on('mouseenter.bs.dropdown.data-api', toggle, Dropdown.prototype.mouseenter)
+    .on('mouseleave.bs.dropdown.data-api', toggle, Dropdown.prototype.mouseleave)
     .on('keydown.bs.dropdown.data-api', toggle + ', [role="menu"], [role="listbox"]', Dropdown.prototype.keydown)
 
 }(jQuery);
 
-    // popover
-    // $("[data-toggle=popover]").popover();
-    // $(document).on('click', '.popover-title .close', function(e){
-    //   var $target = $(e.target), $popover = $target.closest('.popover').prev();
-    //   $popover && $popover.popover('hide');
-    // });
+// dropdown menu
+$.fn.dropdown.Constructor.prototype.change = function(e){
+  e.preventDefault();
+  var $item = $(e.target), $select, $checked = false, $menu, $label;
+  !$item.is('a') && ($item = $item.closest('a'));
+  $menu = $item.closest('.dropdown-menu');
+  $label = $menu.parent().find('.dropdown-label');
+  $labelHolder = $label.text();
+  $select = $item.find('input');
+  $checked = $select.is(':checked');
+  if($select.is(':disabled')) return;
+  if($select.attr('type') == 'radio' && $checked) return;
+  if($select.attr('type') == 'radio') $menu.find('li').removeClass('active');
+  $item.parent().removeClass('active');
+  !$checked && $item.parent().addClass('active');
+  $select.prop("checked", !$select.prop("checked"));
 
-    // // ajax modal
-    // $(document).on('click', '[data-toggle="ajaxModal"]',
-    //   function(e) {
-    //     $('#ajaxModal').remove();
-    //     e.preventDefault();
-    //     var $this = $(this)
-    //       , $remote = $this.data('remote') || $this.attr('href')
-    //       , $modal = $('<div class="modal" id="ajaxModal"><div class="modal-body"></div></div>');
-    //     $('body').append($modal);
-    //     $modal.modal();
-    //     $modal.load($remote);
-    //   }
-    // );
+  $items = $menu.find('li > a > input:checked');
+  if ($items.length) {
+      $text = [];
+      $items.each(function () {
+          var $str = $(this).parent().text();
+          $str && $text.push($.trim($str));
+      });
 
-    // dropdown menu
-    $.fn.dropdown.Constructor.prototype.change = function(e){
-      e.preventDefault();
-      var $item = $(e.target), $select, $checked = false, $menu, $label;
-      !$item.is('a') && ($item = $item.closest('a'));
-      $menu = $item.closest('.dropdown-menu');
-      $label = $menu.parent().find('.dropdown-label');
-      $labelHolder = $label.text();
-      $select = $item.find('input');
-      $checked = $select.is(':checked');
-      if($select.is(':disabled')) return;
-      if($select.attr('type') == 'radio' && $checked) return;
-      if($select.attr('type') == 'radio') $menu.find('li').removeClass('active');
-      $item.parent().removeClass('active');
-      !$checked && $item.parent().addClass('active');
-      $select.prop("checked", !$select.prop("checked"));
+      $text = $text.length < 4 ? $text.join(', ') : $text.length + ' selected';
+      $label.html($text);
+  }else{
+    $label.html($label.data('placeholder'));
+  }
+}
+$(document).on('click.dropdown-menu', '.dropdown-select > li > a', $.fn.dropdown.Constructor.prototype.change);
 
-      $items = $menu.find('li > a > input:checked');
-      if ($items.length) {
-          $text = [];
-          $items.each(function () {
-              var $str = $(this).parent().text();
-              $str && $text.push($.trim($str));
-          });
+// collapse nav
+$(document).on('click', '.nav-primary a', function (e) {
+  var $this = $(e.target), $active;
+  $this.is('a') || ($this = $this.closest('a'));
+  if( $('.nav-vertical').length ){
+    return;
+  }
 
-          $text = $text.length < 4 ? $text.join(', ') : $text.length + ' selected';
-          $label.html($text);
-      }else{
-        $label.html($label.data('placeholder'));
-      }
-    }
-    $(document).on('click.dropdown-menu', '.dropdown-select > li > a', $.fn.dropdown.Constructor.prototype.change);
+  $active = $this.parent().siblings( ".active" );
+  $active && $active.find('> a').toggleClass('active') && $active.toggleClass('active').find('> ul:visible').slideUp(200);
 
-    // collapse nav
-    $(document).on('click', '.nav-primary a', function (e) {
-      var $this = $(e.target), $active;
-      $this.is('a') || ($this = $this.closest('a'));
-      if( $('.nav-vertical').length ){
-        return;
-      }
+  ($this.hasClass('active') && $this.next().slideUp(200)) || $this.next().slideDown(200);
+  $this.toggleClass('active').parent().toggleClass('active');
 
-      $active = $this.parent().siblings( ".active" );
-      $active && $active.find('> a').toggleClass('active') && $active.toggleClass('active').find('> ul:visible').slideUp(200);
+  $this.next().is('ul') && e.preventDefault();
 
-      ($this.hasClass('active') && $this.next().slideUp(200)) || $this.next().slideDown(200);
-      $this.toggleClass('active').parent().toggleClass('active');
+  setTimeout(function(){ $(document).trigger('updateNav'); }, 300);
+});
 
-      $this.next().is('ul') && e.preventDefault();
-
-      setTimeout(function(){ $(document).trigger('updateNav'); }, 300);
-    });
-
-    // dropdown still
-    $(document).on('click.bs.dropdown.data-api', '.dropdown .on, .dropup .on', function (e) { e.stopPropagation() });
+// dropdown still
+$(document).on('click.bs.dropdown.data-api', '.dropdown .on, .dropup .on', function (e) { e.stopPropagation() });
