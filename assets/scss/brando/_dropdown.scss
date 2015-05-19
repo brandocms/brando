@@ -234,20 +234,20 @@ $duration: .3s;
 }
 
 .o-c.bars.hover {
-  background: $hover_color;
-  &:before { background: $hover_color; }
-  &:after  { background: $hover_color; }
+  background-color: $hover_color;
+  &:before { background-color: $hover_color; }
+  &:after  { background-color: $hover_color; }
 }
 
 /**
  * Cross Transform
  */
 .o-c.cross {
-  background: transparent;
+  background-color: transparent;
   transform: rotate(360deg);
   transition-timing-function: ease-out;
-  &:before { transform: rotate(45deg); background: $hover_color; }
-  &:after  { transform: rotate(-45deg); background: $hover_color; }
+  &:before { transform: rotate(45deg); background-color: $hover_color; }
+  &:after  { transform: rotate(-45deg); background-color: $hover_color; }
 }
 
 /**
