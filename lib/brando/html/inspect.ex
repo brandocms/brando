@@ -123,6 +123,14 @@ defmodule Brando.HTML.Inspect do
     ~s(<em>** sensurert **</em>)
   end
 
+  defp do_inspect_field(:language, :string, "no") do
+    ~s(<img src="/static/brando/img/blank.gif" class="flag flag-nb" alt="norsk" />)
+  end
+
+  defp do_inspect_field(:language, :string, "en") do
+    ~s(<img src="/static/brando/img/blank.gif" class="flag flag-en" alt="english" />)
+  end
+
   defp do_inspect_field(_name, :string, nil) do
     ~s(<em>Ingen verdi</em>)
   end
@@ -142,7 +150,19 @@ defmodule Brando.HTML.Inspect do
     ~s(<i class="fa fa-times text-danger"></i>)
   end
 
-  defp do_inspect_field(_name, _type, value), do: inspect(value)
+  defp do_inspect_field(_name, :boolean, :false) do
+    ~s(<i class="fa fa-times text-danger"></i>)
+  end
+
+  defp do_inspect_field(_name, _type, %Brando.User{} = user) do
+    user.username
+  end
+
+  defp do_inspect_field(_name, _type, value) do
+    require Logger
+    Logger.debug(inspect(_type))
+    inspect(value)
+  end
 
   #
   # Associations

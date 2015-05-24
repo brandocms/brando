@@ -1,0 +1,10 @@
+.flag {
+  width: 16px;
+  height: 11px;
+  background:url(/static/brando/img/flags.png) no-repeat;
+  padding-bottom: 15px;
+  padding-right: 20px;
+}
+
+.flag.flag-nb {background-position: -16px 0}
+.flag.flag-en {background-position: 0 -11px}

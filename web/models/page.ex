@@ -1,7 +1,6 @@
-defmodule Brando.Post do
+defmodule Brando.Page do
   @moduledoc """
-  Ecto schema for the Post model, as well as image field definitions
-  and helper functions for dealing with the post model.
+  Ecto schema for the Page model.
   """
   @type t :: %__MODULE__{}
 
@@ -13,44 +12,26 @@ defmodule Brando.Post do
   alias Brando.Type.Status
   alias Brando.User
 
-  @required_fields ~w(status header data lead creator_id language featured)
-  @optional_fields ~w(publish_at)
+  @required_fields ~w(key language title slug data status creator_id)
+  @optional_fields ~w()
 
-  schema "posts" do
+  schema "pages" do
+    field :key, :string
     field :language, :string
-    field :header, :string
+    field :title, :string
     field :slug, :string
-    field :lead, :string
     field :data, Json
     field :html, :string
-    field :cover, Brando.Type.Image
     field :status, Status
     belongs_to :creator, User
+    belongs_to :parent, __MODULE__
     field :meta_description, :string
     field :meta_keywords, :string
-    field :featured, :boolean
-    field :published, :boolean
-    field :publish_at, Ecto.DateTime
     timestamps
   end
 
   before_insert :generate_html
   before_update :generate_html
-
-  has_image_field :cover,
-    [allowed_mimetypes: ["image/jpeg", "image/png"],
-     default_size: :medium,
-     upload_path: Path.join(["images", "posts", "covers"]),
-     random_filename: true,
-     size_limit: 10240000,
-     sizes: [
-       small:  [size: "300", quality: 100],
-       medium: [size: "500", quality: 100],
-       large:  [size: "700", quality: 100],
-       xlarge: [size: "900", quality: 100],
-       thumb:  [size: "150x150", quality: 100, crop: true]
-    ]
-  ]
 
   @doc """
   Callback from before_insert/before_update to generate HTML.
@@ -139,12 +120,11 @@ defmodule Brando.Post do
     get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
 
   @doc """
-  Get model from DB by `id`
+  Get model from DB by `key`
   """
-  def get(id: id) do
+  def get(key: key) do
     from(m in __MODULE__,
-         where: m.id == ^id,
-         preload: [:creator])
+         where: m.key == ^key)
     |> Brando.repo.one
   end
 
@@ -165,38 +145,41 @@ defmodule Brando.Post do
   end
 
   @doc """
-  Get all posts. Ordered by `id`. Preload :creator.
+  Get all records. Ordered by `id`. Preload :creator.
   """
   def all do
     (from m in __MODULE__,
-        order_by: [asc: m.status, desc: m.featured, desc: m.inserted_at],
-        preload: [:creator])
+          order_by: [asc: m.status, desc: m.inserted_at],
+          preload: [:creator])
+    |> Brando.repo.all
+  end
+
+  def all_parents do
+    (from m in __MODULE__,
+          where: is_nil(m.parent_id),
+          order_by: [asc: m.status, desc: m.inserted_at])
     |> Brando.repo.all
   end
 
   #
   # Meta
 
-  use Brando.Meta,
-    [singular: "post",
-     plural: "poster",
-     repr: &("#{&1.header}"),
-     fields: [
-        id: "№",
-        status: "Status",
-        featured: "Vektet",
-        language: "Språk",
-        cover: "Cover",
-        header: "Overskrift",
-        slug: "URL-tamp",
-        lead: "Ingress",
-        data: "Data",
-        html: "HTML",
-        creator: "Bruker",
-        meta_description: "META beskrivelse",
-        meta_keywords: "META nøkkelord",
-        published: "Publisert",
-        publish_at: "Publiseringstidspunkt",
-        inserted_at: "Opprettet",
-        updated_at: "Oppdatert"]]
+  use Brando.Meta, [
+    singular: "side",
+    plural: "sider",
+    repr: &("#{&1.title}"),
+    fields: [
+       id: "№",
+       status: "Status",
+       language: "Språk",
+       key: "Id-nøkkel",
+       title: "Tittel",
+       slug: "URL-tamp",
+       data: "Data",
+       html: "HTML",
+       creator: "Opprettet av",
+       meta_description: "META beskrivelse",
+       meta_keywords: "META nøkkelord",
+       inserted_at: "Opprettet",
+       updated_at: "Oppdatert"]]
 end
