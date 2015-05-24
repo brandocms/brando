@@ -124,11 +124,11 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_field(:language, :string, "no") do
-    ~s(<img src="/static/brando/img/blank.gif" class="flag flag-nb" alt="norsk" />)
+    ~s(<div class="text-center"><img src="/static/brando/img/blank.gif" class="flag flag-nb" alt="norsk" /></div>)
   end
 
   defp do_inspect_field(:language, :string, "en") do
-    ~s(<img src="/static/brando/img/blank.gif" class="flag flag-en" alt="english" />)
+    ~s(<div class="text-center"><img src="/static/brando/img/blank.gif" class="flag flag-en" alt="english" /></div>)
   end
 
   defp do_inspect_field(_name, :string, nil) do
@@ -143,15 +143,15 @@ defmodule Brando.HTML.Inspect do
   defp do_inspect_field(_name, :integer, value), do: value
 
   defp do_inspect_field(_name, :boolean, :true) do
-    ~s(<i class="fa fa-check text-success"></i>)
+    ~s(<div class="text-center"><i class="fa fa-check text-success"></i></div>)
   end
 
   defp do_inspect_field(_name, :boolean, nil) do
-    ~s(<i class="fa fa-times text-danger"></i>)
+    ~s(<div class="text-center"><i class="fa fa-times text-danger"></i></div>)
   end
 
   defp do_inspect_field(_name, :boolean, :false) do
-    ~s(<i class="fa fa-times text-danger"></i>)
+    ~s(<div class="text-center"><i class="fa fa-times text-danger"></i></div>)
   end
 
   defp do_inspect_field(_name, _type, %Brando.User{} = user) do
