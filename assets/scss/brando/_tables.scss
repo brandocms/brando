@@ -306,5 +306,19 @@ table th[class*="col-"] {
 }
 
 tr.child td {
-  background-color: #E7E8AF !important;
+  background-color: #fff !important;
+}
+tr.child td.child-wrapper {
+  padding: 0 !important;
+}
+.table-child tr td {
+  border: 0 !important;
+}
+tr.child td:first-child {
+  font-size: 0;
+}
+tr.child td:first-child::before {
+  content: "↘";
+  font-size: 13px;
+  font-weight: bold;
 }
