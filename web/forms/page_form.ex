@@ -24,12 +24,11 @@ defmodule Brando.PageForm do
   def get_parent_choices do
     no_value = [value: "", text: "-----"]
     if parents = Page.all_parents() do
-      p = Enum.reduce parents, [], fn (parent, acc) ->
-        [value: Integer.to_string(parent.id), text: parent.title]
-      end
-      require Logger
-      Logger.error(inspect(p))
-      p
+      parents
+      |> Enum.reverse
+      |> Enum.reduce([no_value], fn (parent, acc) ->
+           acc ++ [[value: Integer.to_string(parent.id), text: parent.title]]
+         end)
     else
       [no_value]
     end
@@ -57,7 +56,6 @@ defmodule Brando.PageForm do
     field :parent_id, :select,
       [required: true,
       label: "Hører til",
-      #default: nil,
       choices: &__MODULE__.get_parent_choices/0]
     field :key, :text,
         [required: true,

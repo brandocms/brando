@@ -18,7 +18,7 @@ defmodule Brando.Admin.PageController do
   def index(conn, _params) do
     model = conn.private[:model]
     conn
-    |> assign(:pages, model.all)
+    |> assign(:pages, model.all_parents_and_children)
     |> render(:index)
   end
 

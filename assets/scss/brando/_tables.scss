@@ -304,3 +304,7 @@ table th[class*="col-"] {
 .data-table td p {
   margin-left: 0;
 }
+
+tr.child td {
+  background-color: #E7E8AF !important;
+}

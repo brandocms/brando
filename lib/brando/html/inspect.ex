@@ -5,6 +5,7 @@ defmodule Brando.HTML.Inspect do
 
   import Brando.HTML
   import Brando.Images.Helpers
+  import Brando.Render, only: [r: 1]
   import Ecto.DateTime.Util, only: [zero_pad: 2]
   import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2]
 
@@ -155,12 +156,10 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_field(_name, _type, %Brando.User{} = user) do
-    user.username
+    r(user)
   end
 
   defp do_inspect_field(_name, _type, value) do
-    require Logger
-    Logger.debug(inspect(_type))
     inspect(value)
   end
 

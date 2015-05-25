@@ -9,7 +9,10 @@ defmodule Brando.Images.UtilsTest do
   @upload %Plug.Upload{content_type: "image/png", filename: "sample.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"}
   @blank_upload %Plug.Upload{content_type: "image/png", filename: "", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"}
   @slug_upload %Plug.Upload{content_type: "image/png", filename: "file with spaces.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"}
-  @image %Brando.Type.Image{credits: nil, optimized: false, path: "images/default/sample.png", sizes: %{large: "images/default/large/sample.png", medium: "images/default/medium/sample.png", small: "images/default/small/sample.png", thumb: "images/default/thumb/sample.png", xlarge: "images/default/xlarge/sample.png"}, title: nil}
+  @image %Brando.Type.Image{credits: nil, optimized: false, path: "images/default/sample.png",
+                            sizes: %{large: "images/default/large/sample.png", medium: "images/default/medium/sample.png",
+                                     micro: "images/default/micro/sample.png", small: "images/default/small/sample.png",
+                                     thumb: "images/default/thumb/sample.png", xlarge: "images/default/xlarge/sample.png"}}
 
   test "do_upload/2" do
     assert do_upload(@upload, @cfg) == {:ok, @image}

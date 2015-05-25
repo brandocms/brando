@@ -42,10 +42,10 @@ defmodule Brando.HTML.Tablize do
   def tablize(_, nil, _, _), do: "Nil"
   def tablize(conn, records, dropdowns, opts) do
     module = List.first(records).__struct__
-    if opts[:colgroup] do
-      colgroup = render_colgroup(:manual, opts[:colgroup])
+    colgroup = if opts[:colgroup] do
+      render_colgroup(:manual, opts[:colgroup])
     else
-      colgroup = render_colgroup(:auto, module, opts)
+      render_colgroup(:auto, module, opts)
     end
     table_header = render_thead(module.__fields__, module, opts)
     table_body = render_tbody(module.__fields__, records, module, conn, dropdowns, opts)
@@ -89,7 +89,17 @@ defmodule Brando.HTML.Tablize do
     tr_content = fields
       |> Enum.map(&(do_td(&1, record, module.__schema__(:field, &1), opts)))
       |> Enum.join
-    "<tr>#{tr_content}#{render_dropdowns(conn, dropdowns, record)}</tr>"
+    row = "<tr>#{tr_content}#{render_dropdowns(conn, dropdowns, record)}</tr>"
+    if children = Map.get(record, opts[:children]) do
+      child_rows = for child <- children do
+        tr_content = fields
+          |> Enum.map(&(do_td(&1, child, module.__schema__(:field, &1), opts)))
+          |> Enum.join
+        row = ~s(<tr class="child">#{tr_content}#{render_dropdowns(conn, dropdowns, record)}</tr>)
+      end
+      row = row <> Enum.join(child_rows)
+    end
+    row
   end
 
   defp do_td(:id, record, _type, _opts) do

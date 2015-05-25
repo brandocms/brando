@@ -13,7 +13,7 @@ defmodule Brando.Page do
   alias Brando.User
 
   @required_fields ~w(key language title slug data status creator_id)
-  @optional_fields ~w()
+  @optional_fields ~w(parent_id)
 
   schema "pages" do
     field :key, :string
@@ -25,6 +25,7 @@ defmodule Brando.Page do
     field :status, Status
     belongs_to :creator, User
     belongs_to :parent, __MODULE__
+    has_many :children, __MODULE__, foreign_key: :parent_id
     field :meta_description, :string
     field :meta_keywords, :string
     timestamps
@@ -160,6 +161,18 @@ defmodule Brando.Page do
           order_by: [asc: m.status, desc: m.inserted_at])
     |> Brando.repo.all
   end
+
+  def all_parents_and_children do
+    (from m in __MODULE__,
+          left_join: c in assoc(m, :children),
+          join: u in assoc(m, :creator),
+          where: is_nil(m.parent_id),
+          preload: [children: c, creator: u],
+          order_by: [asc: m.status, desc: m.inserted_at],
+          select: m)
+    |> Brando.repo.all
+  end
+
 
   #
   # Meta
