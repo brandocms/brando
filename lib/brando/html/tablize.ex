@@ -90,16 +90,19 @@ defmodule Brando.HTML.Tablize do
       |> Enum.map(&(do_td(&1, record, module.__schema__(:field, &1), opts)))
       |> Enum.join
     row = "<tr>#{tr_content}#{render_dropdowns(conn, dropdowns, record)}</tr>"
-    if children = Map.get(record, opts[:children]) do
-      child_rows = for child <- children do
-        tr_content = fields
-          |> Enum.map(&(do_td(&1, child, module.__schema__(:field, &1), opts)))
-          |> Enum.join
-        row = ~s(<tr class="child">#{tr_content}#{render_dropdowns(conn, dropdowns, record)}</tr>)
-      end
-      row = row <> Enum.join(child_rows)
+    case Map.get(record, opts[:children]) do
+      nil -> row
+      [] -> row
+      children ->
+        child_rows = for child <- children do
+          tr_content =
+            fields
+            |> Enum.map(&(do_td(&1, child, module.__schema__(:field, &1), opts)))
+            |> Enum.join
+          ~s(<tr class="child">#{tr_content}#{render_dropdowns(conn, dropdowns, record)}</tr>)
+        end
+        row <> Enum.join(child_rows)
     end
-    row
   end
 
   defp do_td(:id, record, _type, _opts) do
