@@ -1,5 +1,5 @@
     <h1>Ny post</h1>
-    <%= PostForm.get_form(type: :create, action: :create, params: [], values: @post, errors: @errors) %>
+    <%= PostForm.get_form(type: :create, action: :create, params: [], values: assigns[:post], errors: assigns[:errors]) %>
      <script type="text/javascript">
         $(document).ready(function() {
           v = new Villain.Editor({

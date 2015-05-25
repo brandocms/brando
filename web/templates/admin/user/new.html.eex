@@ -1,5 +1,5 @@
     <h1>Ny bruker</h1>
-    <%= UserForm.get_form(type: :create, action: :create, params: [], values: @user, errors: @errors) %>
+    <%= UserForm.get_form(type: :create, action: :create, params: [], values: assigns[:user], errors: assigns[:errors]) %>
     <div class="form-actions">
       <a href="<%= Helpers.admin_user_path(@conn, :index) %>" class="btn btn-default">
         <i class="fa fa-list fa-fw m-r-sm"></i> Tilbake til oversikten
