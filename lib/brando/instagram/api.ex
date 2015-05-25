@@ -103,6 +103,10 @@ defmodule Brando.Instagram.API do
       {:ok, %Response{body: [data: [], meta: %{}]}}          -> {:error, "Fant ikke bruker: #{username}"}
       {:ok, %Response{body: {:error, error}}}                -> {:error, "API feil fra Instagram: #{inspect(error)}"}
       {:ok, %Response{body: [meta: meta], status_code: 400}} -> {:error, "API feil 400 fra Instagram: #{inspect(meta["error_message"])}"}
+      {:ok, %Response{body: [{:data, multiple} | _]}}        -> ret = for user <- multiple do
+                                                                  if Map.get(user, "username") == username, do: Map.get(user, "id"), else: ""
+                                                                end
+                                                                {:ok, Enum.join(ret)}
       {:error, %HTTPoison.Error{reason: reason}}             -> {:error, "Nettfeil fra HTTPoison: #{inspect(reason)}"}
     end
   end
