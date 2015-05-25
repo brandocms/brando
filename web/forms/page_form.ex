@@ -27,7 +27,7 @@ defmodule Brando.PageForm do
       parents
       |> Enum.reverse
       |> Enum.reduce([no_value], fn (parent, acc) ->
-           acc ++ [[value: Integer.to_string(parent.id), text: parent.title]]
+           acc ++ [[value: Integer.to_string(parent.id), text: parent.slug]]
          end)
     else
       [no_value]
