@@ -165,9 +165,10 @@ defmodule Brando.Page do
   def all_parents_and_children do
     (from m in __MODULE__,
           left_join: c in assoc(m, :children),
+          left_join: cu in assoc(c, :creator),
           join: u in assoc(m, :creator),
           where: is_nil(m.parent_id),
-          preload: [children: c, creator: u],
+          preload: [children: {c, creator: cu}, creator: u],
           order_by: [asc: m.status, desc: m.inserted_at],
           select: m)
     |> Brando.repo.all
