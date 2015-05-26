@@ -4,7 +4,6 @@ defmodule Brando.HTML.Inspect do
   """
 
   import Brando.HTML
-  import Brando.Images.Helpers
   import Brando.Render, only: [r: 1]
   import Ecto.DateTime.Util, only: [zero_pad: 2]
   import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2]
@@ -130,6 +129,16 @@ defmodule Brando.HTML.Inspect do
 
   defp do_inspect_field(:language, :string, "en") do
     ~s(<div class="text-center"><img src="/static/brando/img/blank.gif" class="flag flag-en" alt="english" /></div>)
+  end
+
+  defp do_inspect_field(:key, :string, val) do
+    split = String.split(val, "/", parts: 2)
+    if Enum.count(split) == 1 do
+      ~s(<strong>#{split}</strong>)
+    else
+      [main, rest] = split
+      ~s(<strong>#{main}</strong>/#{rest})
+    end
   end
 
   defp do_inspect_field(_name, :string, nil) do

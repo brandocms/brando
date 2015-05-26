@@ -67,4 +67,12 @@ defmodule Brando.HTMLTest do
     assert auth_link_danger(conn, "test", :admin, do: {:safe, "link text"}) ==
            {:safe, "<a href=\"test\" class=\"btn btn-danger\">  link text</a>"}
   end
+
+  test "img/2" do
+    img = %{sizes: %{thumb: "images/thumb/file.jpg"}}
+    assert img(img, :thumb) == "images/thumb/file.jpg"
+    assert img(nil, :thumb, "default.jpg") == "thumb/default.jpg"
+    assert img(img, :thumb, "default.jpg") == "images/thumb/file.jpg"
+    assert img(img, "thumb", "default.jpg") == "images/thumb/file.jpg"
+  end
 end
