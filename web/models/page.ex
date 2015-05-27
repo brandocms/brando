@@ -5,7 +5,6 @@ defmodule Brando.Page do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
-  use Brando.Field.ImageField
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
   alias Brando.Type.Json
@@ -130,14 +129,35 @@ defmodule Brando.Page do
   end
 
   @doc """
+  Get model from DB by `id`
+  """
+  def get(id: id) do
+    from(m in __MODULE__,
+         where: m.id == ^id,
+         preload: :creator)
+    |> Brando.repo.one
+  end
+
+  @doc """
+  Get model with children from DB by `id`
+  """
+  def get_with_children!(id: id) do
+    (from m in __MODULE__,
+          left_join: c in assoc(m, :children),
+          left_join: p in assoc(m, :parent),
+          left_join: cu in assoc(c, :creator),
+          join: u in assoc(m, :creator),
+          where: m.id == ^id,
+          preload: [children: {c, creator: cu}, creator: u, parent: p],
+          select: m)
+    |> Brando.repo.one!
+  end
+
+  @doc """
   Delete `id` from database. Also deletes any connected image fields,
   including all generated sizes.
   """
   def delete(record) when is_map(record) do
-    if record.cover do
-      delete_media(record.cover.path)
-      delete_connected_images(record.cover.sizes)
-    end
     Brando.repo.delete(record)
   end
   def delete(id) do
