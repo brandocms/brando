@@ -1,4 +1,4 @@
-    <h1>Ny post</h1>
+    <h1>Ny side</h1>
     <%= PageForm.get_form(type: :create, action: :create, params: [], values: assigns[:page], errors: assigns[:errors]) %>
      <script type="text/javascript">
         $(document).ready(function() {

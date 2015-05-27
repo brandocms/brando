@@ -11,7 +11,7 @@
                  {"Endre side", "fa-edit", :admin_page_path, :edit, :id, :superuser},
                  {"Slett side", "fa-trash", :admin_page_path, :delete_confirm, :id, :superuser}],
                  children: :children,
-                 check_or_x: [], hide: [:slug, :data, :html, :meta_description, :meta_keywords, :inserted_at]) %>
+                 check_or_x: [], hide: [:slug, :data, :html, :parent, :children, :meta_description, :meta_keywords, :inserted_at]) %>
 
 <% else %>
     <p>Ingen sider</p>

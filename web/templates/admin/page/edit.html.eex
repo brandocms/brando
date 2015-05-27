@@ -1,4 +1,4 @@
-    <h1>Endre post</h1>
+    <h1>Endre side</h1>
     <%= PageForm.get_form(type: :update, action: :update, params: to_string(@id), values: assigns[:page], errors: assigns[:errors]) %>
     <script type="text/javascript">
       $(document).ready(function() {
