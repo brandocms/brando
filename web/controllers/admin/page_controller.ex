@@ -26,7 +26,7 @@ defmodule Brando.Admin.PageController do
   def show(conn, %{"id" => id}) do
     model = conn.private[:model]
     conn
-    |> assign(:pages, model.get(id: id))
+    |> assign(:page, model.get_with_children!(id: id))
     |> render(:show)
   end
 
