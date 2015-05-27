@@ -75,7 +75,7 @@ defmodule Brando.Admin.PageFragmentController do
     case model.update(page_fragment, form_data) do
       {:ok, _updated_page_fragment} ->
         conn
-        |> put_flash(:notice, "Side oppdatert.")
+        |> put_flash(:notice, "Sidefragment oppdatert.")
         |> redirect(to: router_module(conn).__helpers__.admin_page_fragment_path(conn, :index))
       {:error, errors} ->
         conn

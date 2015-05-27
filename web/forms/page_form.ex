@@ -18,7 +18,7 @@ defmodule Brando.PageForm do
 
   @doc false
   def get_parent_choices do
-    no_value = [value: "", text: "-----"]
+    no_value = [value: "", text: "Ingen tilhørighet"]
     if parents = Page.all_parents() do
       parents
       |> Enum.reverse
@@ -52,6 +52,8 @@ defmodule Brando.PageForm do
     field :parent_id, :select,
       [required: true,
       label: "Hører til",
+      help_text: "Hvis siden du oppretter skal være en underside, " <>
+                 "velg tilhørende side her. Hvis ikke, velg <em>Ingen tilhørighet</em>",
       choices: &__MODULE__.get_parent_choices/0]
     field :key, :text,
         [required: true,

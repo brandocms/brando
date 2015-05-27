@@ -61,6 +61,7 @@ defmodule Brando.HTML.Tablize do
         type in @narrow_types  -> "<col style=\"width: 10px;\">"
         f in narrow_fields     -> "<col style=\"width: 10px;\">"
         f in @date_fields      -> "<col style=\"width: 140px;\">"
+        f == :creator          -> "<col style=\"width: 180px;\">"
         true                   -> "<col>"
       end
     end

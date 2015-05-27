@@ -90,7 +90,7 @@ defmodule Brando.Admin.PageController do
   @doc false
   def delete_confirm(conn, %{"id" => id}) do
     model = conn.private[:model]
-    record = model.get!(id: id)
+    record = model.get_with_children!(id: id)
     conn
     |> assign(:record, record)
     |> render(:delete_confirm)
