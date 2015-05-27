@@ -18,6 +18,7 @@ defmodule <%= application_module %>.Repo.Migrations.AddPagesTable do
     end
     create index(:pages, [:language])
     create index(:pages, [:slug])
+    create index(:pages, [:key])
     create index(:pages, [:parent_id])
     create index(:pages, [:status])
   end
@@ -26,6 +27,7 @@ defmodule <%= application_module %>.Repo.Migrations.AddPagesTable do
     drop table(:pages)
     drop index(:pages, [:language])
     drop index(:pages, [:slug])
+    drop index(:pages, [:key])
     drop index(:pages, [:parent_id])
     drop index(:pages, [:status])
   end
