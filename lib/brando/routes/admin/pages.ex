@@ -12,7 +12,9 @@ defmodule Brando.Routes.Admin.Pages do
 
   """
   alias Brando.Admin.PageController
+  alias Brando.Admin.PageFragmentController
   alias Brando.Page
+  alias Brando.PageFragment
 
   @doc """
   Defines "RESTful" endpoints for the pages resource.
@@ -35,12 +37,28 @@ defmodule Brando.Routes.Admin.Pages do
     add_page_routes(path, PageController, [])
 
   defp add_page_routes(path, controller, opts) do
-    map = Map.put(%{}, :model, Keyword.get(opts, :model, Page))
+    map = %{}
+          |> Map.put(:model, Keyword.get(opts, :model, Page))
+          |> Map.put(:fragment_model, Keyword.get(opts, :fragment_model, PageFragment))
     options = Keyword.put([], :private, Macro.escape(map))
     quote do
       path = unquote(path)
       ctrl = unquote(controller)
       opts = unquote(options)
+      fctrl = PageFragmentController
+
+      get    "#{path}/fragmenter",                       fctrl, :index,          opts
+      post   "#{path}/fragmenter/villain/last-opp/:id",  fctrl, :upload_image,   opts
+      get    "#{path}/fragmenter/villain/bla/:id",       fctrl, :browse_images,  opts
+      post   "#{path}/fragmenter/villain/bildedata/:id", fctrl, :image_info,     opts
+      get    "#{path}/fragmenter/ny",                    fctrl, :new,            opts
+      get    "#{path}/fragmenter/:id",                   fctrl, :show,           opts
+      get    "#{path}/fragmenter/:id/endre",             fctrl, :edit,           opts
+      get    "#{path}/fragmenter/:id/slett",             fctrl, :delete_confirm, opts
+      post   "#{path}/fragmenter",                       fctrl, :create,         opts
+      delete "#{path}/fragmenter/:id",                   fctrl, :delete,         opts
+      patch  "#{path}/fragmenter/:id",                   fctrl, :update,         opts
+      put    "#{path}/fragmenter/:id",                   fctrl, :update,         Keyword.put(opts, :as, nil)
 
       get    "#{path}",                       ctrl, :index,          opts
       post   "#{path}/villain/last-opp/:id",  ctrl, :upload_image,   opts

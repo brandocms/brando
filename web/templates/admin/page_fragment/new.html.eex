@@ -1,0 +1,11 @@
+    <h1>Nytt sidefragment</h1>
+    <%= PageFragmentForm.get_form(type: :create, action: :create, params: [], values: assigns[:page_fragment], errors: assigns[:errors]) %>
+     <script type="text/javascript">
+        $(document).ready(function() {
+          v = new Villain.Editor({
+            browseURL: 'villain/bla/post/',
+            uploadURL: 'villain/last-opp/post/',
+            textArea: 'textarea[name="page_fragment[data]"]'
+          });
+        });
+     </script>
