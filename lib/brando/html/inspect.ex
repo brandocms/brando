@@ -34,6 +34,12 @@ defmodule Brando.HTML.Inspect do
   @doc """
   Inspects and displays `model`
   """
+  def model(nil) do
+    ""
+  end
+  @doc """
+  Inspects and displays `model`
+  """
   def model(model) do
     module = model.__struct__
     fields = module.__schema__(:fields)
@@ -186,6 +192,9 @@ defmodule Brando.HTML.Inspect do
     do_inspect_assoc(name, type, value)
   end
 
+  defp do_inspect_assoc(name, %Ecto.Association.BelongsTo{}, nil) do
+    ~s(<tr><td>#{name}</td><td><em>Ingen assosiasjoner.</em></td></tr>)
+  end
   defp do_inspect_assoc(name, %Ecto.Association.BelongsTo{} = type, value) do
     ~s(<tr><td>#{name}</td><td>#{type.assoc.__repr__(value)}</td></tr>)
   end
@@ -193,7 +202,7 @@ defmodule Brando.HTML.Inspect do
     ~s(<tr><td>#{name}</td><td>Assosiasjonene er ikke hentet.</td></tr>)
   end
   defp do_inspect_assoc(name, %Ecto.Association.Has{}, []) do
-    ~s(<tr><td>#{name}</td><td>Ingen assosiasjoner.</td></tr>)
+    ~s(<tr><td>#{name}</td><td><em>Ingen assosiasjoner.</em></td></tr>)
   end
   defp do_inspect_assoc(_name, %Ecto.Association.Has{} = type, value) do
     rows = Enum.map(value, fn (row) -> ~s(<div class="assoc #{type.field}">#{type.assoc.__repr__(row)}</div>) end)
