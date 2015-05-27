@@ -304,6 +304,9 @@ table th[class*="col-"] {
 .data-table td p {
   margin-left: 0;
 }
+.data-table div.text-center {
+  text-align: left !important;
+}
 
 tr.child td {
   background-color: #fff !important;
