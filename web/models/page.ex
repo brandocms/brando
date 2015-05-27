@@ -191,6 +191,8 @@ defmodule Brando.Page do
        slug: "URL-tamp",
        data: "Data",
        html: "HTML",
+       parent: "Tilhører",
+       children: "Undersider",
        creator: "Opprettet av",
        meta_description: "META beskrivelse",
        meta_keywords: "META nøkkelord",
