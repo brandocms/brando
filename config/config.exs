@@ -8,6 +8,12 @@ use Mix.Config
 config :brando,
   app_name: "MyApp",
   endpoint: Brando.Endpoint,
+  languages: [[value: "no", text: "Norsk"],
+              [value: "en", text: "English"]],
+  status_choices: [[value: "0", text: "Kladd"],
+                   [value: "1", text: "Publisert"],
+                   [value: "2", text: "Venter"],
+                   [value: "3", text: "Slettet"]],
   repo: Brando.Repo,
   router: Brando.Router,
   helpers: Brando.Router.Helpers,
@@ -23,7 +29,8 @@ config :brando, Brando.Images,
                              medium: %{size: "500", quality: 100},
                              large:  %{size: "700", quality: 100},
                              xlarge: %{size: "900", quality: 100},
-                             thumb:  %{size: "150x150", quality: 100, crop: true}}}
+                             thumb:  %{size: "150x150", quality: 100, crop: true},
+                             micro:  %{size: "25x25", quality: 100, crop: true}}}
 
 config :brando, Brando.Type.Role,
   roles: %{staff: 1, admin: 2, superuser: 4}

@@ -69,6 +69,7 @@ defmodule RouterHelper do
     import Brando.Routes.Admin.Users
     import Brando.Routes.Admin.News
     import Brando.Routes.Admin.Images
+    import Brando.Routes.Admin.Pages
 
     pipeline :admin do
       plug :accepts, ~w(html json)
@@ -90,6 +91,7 @@ defmodule RouterHelper do
       user_routes "/brukere2", private: %{model: Brando.User}
       user_routes "/brukere3"
       post_routes "/nyheter"
+      page_routes "/sider"
       image_routes "/bilder"
       dashboard_routes "/"
     end

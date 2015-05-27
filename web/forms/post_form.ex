@@ -7,16 +7,12 @@ defmodule Brando.PostForm do
 
   @doc false
   def get_language_choices do
-    [[value: "no", text: "Norsk"],
-     [value: "en", text: "English"]]
+    Brando.config(:languages)
   end
 
   @doc false
   def get_status_choices do
-    [[value: "0", text: "Kladd"],
-     [value: "1", text: "Publisert"],
-     [value: "2", text: "Venter"],
-     [value: "3", text: "Slettet"]]
+    Brando.config(:status_choices)
   end
 
   @doc false

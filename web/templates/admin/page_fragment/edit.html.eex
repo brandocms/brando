@@ -1,0 +1,11 @@
+    <h1>Endre sidefragment</h1>
+    <%= PageFragmentForm.get_form(type: :update, action: :update, params: to_string(@id), values: assigns[:page_fragment], errors: assigns[:errors]) %>
+    <script type="text/javascript">
+      $(document).ready(function() {
+        v = new Villain.Editor({
+          browseURL: 'villain/bla/',
+          uploadURL: 'villain/last-opp/',
+          textArea: 'textarea[name="page_fragment[data]"]'
+        });
+      });
+     </script>

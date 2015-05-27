@@ -1,0 +1,22 @@
+    <h1>Sidefragmentoversikt</h1>
+<%= if @page_fragments != [] do %>
+    <div class="status-indicators">
+      <span class="m-r-sm"><span class="status-published"><i class="fa fa-circle m-r-sm"> </i> </span> Publisert</span>
+      <span class="m-r-sm"><span class="status-pending"><i class="fa fa-circle m-r-sm"> </i> </span> Venter</span>
+      <span class="m-r-sm"><span class="status-draft"><i class="fa fa-circle m-r-sm"> </i> </span> Utkast</span>
+      <span class="m-r-sm"><span class="status-deleted"><i class="fa fa-circle m-r-sm"> </i> </span> Slettet</span>
+    </div>
+    <%= Brando.HTML.Tablize.tablize(@conn, @page_fragments,
+                [{"Vis fragment", "fa-search", :admin_page_fragment_path, :show, :id},
+                 {"Endre fragment", "fa-edit", :admin_page_fragment_path, :edit, :id, :superuser},
+                 {"Slett fragment", "fa-trash", :admin_page_fragment_path, :delete_confirm, :id, :superuser}],
+                 check_or_x: [], hide: [:data, :html, :inserted_at]) %>
+
+<% else %>
+    <p>Ingen sidefragmenter</p>
+<% end %>
+    <div class="form-actions">
+      <a href="<%= Helpers.admin_page_fragment_path @conn, :new %>" class="btn btn-primary">
+        <i class="fa fa-plus m-r-xs"></i> Nytt sidefragment
+      </a>
+    </div>

@@ -61,12 +61,14 @@ defmodule Brando.Admin.UserController do
     case model.update(user, form_data) do
       {:ok, updated_user} ->
         case model.check_for_uploads(updated_user, form_data) do
-          {:ok, _val} -> conn |> put_flash(:notice, "Bilde lastet opp.")
+          {:ok, val} ->
+            updated_user = val
+            conn = conn |> put_flash(:notice, "Bilde lastet opp.")
           {:errors, _errors} -> nil
           [] -> nil
         end
         if current_user(conn).id == user_id do
-          conn = put_session(conn, :current_user, Map.drop(updated_user, [:password]))
+          conn = conn |> put_session(:current_user, Map.drop(updated_user, [:password]))
         end
 
         conn
@@ -133,7 +135,9 @@ defmodule Brando.Admin.UserController do
     case model.update(user, form_data) do
       {:ok, updated_user} ->
         case model.check_for_uploads(updated_user, form_data) do
-          {:ok, _val} -> conn |> put_flash(:notice, "Bilde lastet opp.")
+          {:ok, val} ->
+            updated_user = val
+            conn = conn |> put_flash(:notice, "Bilde lastet opp.")
           {:errors, _errors} -> nil
           [] -> nil
         end

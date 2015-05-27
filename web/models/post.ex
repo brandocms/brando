@@ -48,7 +48,8 @@ defmodule Brando.Post do
        medium: [size: "500", quality: 100],
        large:  [size: "700", quality: 100],
        xlarge: [size: "900", quality: 100],
-       thumb:  [size: "150x150", quality: 100, crop: true]
+       thumb:  [size: "150x150", quality: 100, crop: true],
+       micro:  [size: "25x25", quality: 100, crop: true]
     ]
   ]
 
@@ -58,7 +59,11 @@ defmodule Brando.Post do
   """
 
   def generate_html(changeset) do
-    changeset |> put_change(:html, Brando.Villain.parse(changeset.changes.data))
+    if get_change(changeset, :data) do
+      changeset |> put_change(:html, Brando.Villain.parse(changeset.changes.data))
+    else
+      changeset
+    end
   end
 
   @doc """
@@ -178,19 +183,19 @@ defmodule Brando.Post do
      plural: "poster",
      repr: &("#{&1.header}"),
      fields: [
-        id: "ID",
+        id: "№",
+        status: "Status",
+        featured: "Vektet",
         language: "Språk",
+        cover: "Cover",
         header: "Overskrift",
         slug: "URL-tamp",
         lead: "Ingress",
         data: "Data",
         html: "HTML",
-        cover: "Coverbilde",
-        status: "Status",
-        creator: "Opprettet av",
+        creator: "Bruker",
         meta_description: "META beskrivelse",
         meta_keywords: "META nøkkelord",
-        featured: "Vektet post",
         published: "Publisert",
         publish_at: "Publiseringstidspunkt",
         inserted_at: "Opprettet",

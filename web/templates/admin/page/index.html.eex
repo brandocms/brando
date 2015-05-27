@@ -1,0 +1,23 @@
+    <h1>Sideoversikt</h1>
+<%= if @pages != [] do %>
+    <div class="status-indicators">
+      <span class="m-r-sm"><span class="status-published"><i class="fa fa-circle m-r-sm"> </i> </span> Publisert</span>
+      <span class="m-r-sm"><span class="status-pending"><i class="fa fa-circle m-r-sm"> </i> </span> Venter</span>
+      <span class="m-r-sm"><span class="status-draft"><i class="fa fa-circle m-r-sm"> </i> </span> Utkast</span>
+      <span class="m-r-sm"><span class="status-deleted"><i class="fa fa-circle m-r-sm"> </i> </span> Slettet</span>
+    </div>
+    <%= Brando.HTML.Tablize.tablize(@conn, @pages,
+                [{"Vis side", "fa-search", :admin_page_path, :show, :id},
+                 {"Endre side", "fa-edit", :admin_page_path, :edit, :id, :superuser},
+                 {"Slett side", "fa-trash", :admin_page_path, :delete_confirm, :id, :superuser}],
+                 children: :children,
+                 check_or_x: [], hide: [:slug, :data, :html, :parent, :children, :meta_description, :meta_keywords, :inserted_at]) %>
+
+<% else %>
+    <p>Ingen sider</p>
+<% end %>
+    <div class="form-actions">
+      <a href="<%= Helpers.admin_page_path @conn, :new %>" class="btn btn-primary">
+        <i class="fa fa-plus m-r-xs"></i> Ny side
+      </a>
+    </div>

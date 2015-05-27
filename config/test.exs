@@ -28,6 +28,7 @@ config :brando, Brando.Images, [
                              medium: %{size: "500", quality: 100},
                              large:  %{size: "700", quality: 100},
                              xlarge: %{size: "900", quality: 100},
+                             micro:  %{size: "25x25", quality: 100, crop: true},
                              thumb:  %{size: "150x150", quality: 100, crop: true}}}]
 
 config :brando, :router, RouterHelper.TestRouter
@@ -39,6 +40,12 @@ config :brando, :media_path, Path.join([Mix.Project.app_path, "tmp", "media"])
 config :brando, Brando.Villain, parser: Brando.Villain.Parser.Default
 config :brando, :logging, disable_logging: true
 config :brando, :login_url, "/login"
+config :brando, :languages, [[value: "no", text: "Norsk"],
+                             [value: "en", text: "English"]]
+config :brando, :status_choices, [[value: "0", text: "Kladd"],
+                                  [value: "1", text: "Publisert"],
+                                  [value: "2", text: "Venter"],
+                                  [value: "3", text: "Slettet"]]
 
 config :brando, Brando.Instagram,
   client_id: "CLIENT_ID",

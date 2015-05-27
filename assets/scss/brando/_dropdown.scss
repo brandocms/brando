@@ -1,8 +1,9 @@
 .dropdown {
   position: relative;
-  padding-left: 15px;
   cursor: pointer;
   display: block;
+  margin: 0 auto;
+  width: 20px;
 }
 .dropdown-toggle:focus {
   outline: 0;

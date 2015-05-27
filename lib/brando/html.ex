@@ -3,13 +3,14 @@ defmodule Brando.HTML do
   Helper and convenience functions.
   """
 
+  import Brando.Images.Utils, only: [size_dir: 2]
+
   @doc false
   defmacro __using__(_) do
     quote do
       import Brando.HTML
       import Brando.HTML.Inspect
       import Brando.HTML.Tablize
-      import Brando.Images.Helpers
     end
   end
 
@@ -249,5 +250,21 @@ defmodule Brando.HTML do
   """
   def check_or_x(_) do
     ~s(<i class="fa fa-check text-success"></i>)
+  end
+
+  @doc """
+  Grabs `size` from the `image_field` json struct.
+  If default is passed, return size_dir of `default`.
+  Returns path to image.
+  """
+  def img(image_field, size, default \\ nil)
+  def img(nil, size, default) do
+    size_dir(default, size)
+  end
+  def img(image_field, size, _default) when is_binary(size) do
+    image_field.sizes[String.to_atom(size)]
+  end
+  def img(image_field, size, _default) when is_atom(size) do
+    image_field.sizes[size]
   end
 end

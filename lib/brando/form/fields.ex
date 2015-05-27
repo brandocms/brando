@@ -4,8 +4,9 @@ defmodule Brando.Form.Fields do
   These are all called from the `Brando.Form` module, and handled
   through `Brando.Form.get_form/4`
   """
-  import Brando.HTML, only: [media_url: 1]
-  import Brando.Images.Helpers, only: [img: 2]
+
+  import Brando.HTML, only: [media_url: 1, img: 2]
+
   @doc """
   Renders file field. Wraps the field with a label and row span
   """

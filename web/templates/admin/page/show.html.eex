@@ -1,0 +1,12 @@
+  <div class="data-table">
+    <h1>Vis side</h1>
+    <%= Brando.HTML.Inspect.model(@page) %>
+    <div class="form-actions">
+      <a href="<%= Helpers.admin_page_path(@conn, :index) %>" class="btn btn-default">
+        <i class="fa fa-list fa-fw m-r-sm"></i> Tilbake til oversikten
+      </a>
+      <a href="<%= Helpers.admin_page_path(@conn, :edit, @page.id) %>" class="btn btn-default">
+        <i class="fa fa-edit fa-fw m-r-sm"></i> Editer side
+      </a>
+    </div>
+  </div>

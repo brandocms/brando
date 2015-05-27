@@ -7,6 +7,10 @@ defmodule Brando.HTML.Tablize do
   import Brando.HTML.Inspect, only: [inspect_field: 3, translate_field: 2]
   import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2]
 
+  @narrow_fields [:language, :id, :status]
+  @narrow_types [:integer, :boolean]
+  @date_fields [:inserted_at, :updated_at, :published_at, :deleted_at]
+
   @doc """
   Converts `records` into a formatted table with dropdown menus.
 
@@ -30,19 +34,53 @@ defmodule Brando.HTML.Tablize do
     * `check_or_x` - Provide a list of fields that should be presented
                      with an X or a checkmark.
     * `hide` - List of fields that should not be rendered.
+    * `colgroup` - Column widths if you need to override.
+                   Supply as list `[100, nil, nil, 200, nil, 200]`
 
   """
   def tablize(_, [], _, _), do: "Empty"
   def tablize(_, nil, _, _), do: "Nil"
   def tablize(conn, records, dropdowns, opts) do
     module = List.first(records).__struct__
+    colgroup = if opts[:colgroup] do
+      render_colgroup(:manual, opts[:colgroup])
+    else
+      render_colgroup(:auto, module, opts)
+    end
     table_header = render_thead(module.__fields__, module, opts)
     table_body = render_tbody(module.__fields__, records, module, conn, dropdowns, opts)
-    content_tag :table, {:safe, "#{table_header}#{table_body}"}, class: "table table-striped"
+    content_tag :table, {:safe, "#{colgroup}#{table_header}#{table_body}"}, class: "table table-striped"
+  end
+
+  defp render_colgroup(:auto, module, opts) do
+    fields = if opts[:hide], do: module.__fields__ -- opts[:hide], else: module.__fields__
+    narrow_fields = if opts[:check_or_x], do: @narrow_fields ++ opts[:check_or_x], else: @narrow_fields
+    colgroups = for f <- fields do
+      type = module.__schema__(:field, f)
+      cond do
+        type in @narrow_types  -> "<col style=\"width: 10px;\">"
+        f in narrow_fields     -> "<col style=\"width: 10px;\">"
+        f in @date_fields      -> "<col style=\"width: 140px;\">"
+        f == :creator          -> "<col style=\"width: 180px;\">"
+        true                   -> "<col>"
+      end
+    end
+    # add menu col
+    colgroups = colgroups ++ "<col style=\"width: 80px;\">"
+    "<colgroup>" <> IO.iodata_to_binary(colgroups) <> "</colgroup>"
+  end
+
+  defp render_colgroup(:manual, list) do
+    colgroups = for col <- list do
+      if col, do: "<col style=\"width: #{col}px;\">", else: "<col>"
+    end
+    colgroups = colgroups ++ "<col style=\"width: 80px;\">"
+    "<colgroup>" <> IO.iodata_to_binary(colgroups) <> "</colgroup>"
   end
 
   defp render_tbody(fields, records, module, conn, dropdowns, opts) do
-    rendered_trs = records
+    rendered_trs =
+      records
       |> Enum.map(&(do_tr(fields, &1, module, conn, dropdowns, opts)))
       |> Enum.join
     "<tbody>#{rendered_trs}</tbody>"
@@ -52,7 +90,20 @@ defmodule Brando.HTML.Tablize do
     tr_content = fields
       |> Enum.map(&(do_td(&1, record, module.__schema__(:field, &1), opts)))
       |> Enum.join
-    "<tr>#{tr_content}#{render_dropdowns(conn, dropdowns, record)}</tr>"
+    row = "<tr>#{tr_content}#{render_dropdowns(conn, dropdowns, record)}</tr>"
+    case Map.get(record, opts[:children]) do
+      nil -> row
+      [] -> row
+      children ->
+        child_rows = for child <- children do
+          tr_content =
+            fields
+            |> Enum.map(&(do_td(&1, child, module.__schema__(:field, &1), opts)))
+            |> Enum.join
+          ~s(<tr class="child">#{tr_content}#{render_dropdowns(conn, dropdowns, record)}</tr>)
+        end
+        row <> Enum.join(child_rows)
+    end
   end
 
   defp do_td(:id, record, _type, _opts) do

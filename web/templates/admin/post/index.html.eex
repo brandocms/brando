@@ -6,79 +6,12 @@
       <span class="m-r-sm"><span class="status-draft"><i class="fa fa-circle m-r-sm"> </i> </span> Utkast</span>
       <span class="m-r-sm"><span class="status-deleted"><i class="fa fa-circle m-r-sm"> </i> </span> Slettet</span>
     </div>
-    <table class="table table-striped">
-      <colgroup>
-      <col span="1" style="width: 50px; font-weight: bold;">
-      <col span="1" style="width: 40px;">
-      <col span="1" style="width: 40px;">
-      <col span="1" style="">
-      <col span="2" style="width: 60px;">
-      <col span="1" style="width: 40px;">
-    </colgroup>
-    <thead>
-      <tr>
-        <th class="text-center">&#8470;</th>
-        <th><!-- status --></th>
-        <th><!-- promoted post --></th>
-        <th>Overskrift</th>
-        <th>Opprettet</th>
-        <th>Bruker</th>
-        <th><!-- menu --></th>
-        </tr>
-      </thead>
-      <tbody>
-        <%= for post <- @posts do %>
-        <tr>
-          <td class="text-center text-mono text-muted"><small>#<%= zero_pad(post.id) %></small></td>
-          <td class="text-center">
-            <div class="dropdown">
-            <a class="dropdown-toggle" data-toggle="dropdown">
-            <i class="fa fa-circle status-<%= Atom.to_string(post.status) %>"></i>
-          </a>
-          <ul class="dropdown-menu" style="left: 0; right: auto;">
-            <li><a href=""><i class="fa fa-circle m-r-sm status-draft %>"></i> Kladd</a></li>
-            <li><a href=""><i class="fa fa-circle m-r-sm status-published %>"></i> Publisert</a></li>
-            <li><a href=""><i class="fa fa-circle m-r-sm status-pending %>"></i> Venter</a></li>
-            <li><a href=""><i class="fa fa-circle m-r-sm status-deleted %>"></i> Slettet</a></li>
-          </ul>
-          </td>
-          <td class="text-center"><%= if post.featured do %><i class="fa fa-star text-warning"></i><% end %></td>
-          <td><%= post.header %></td>
-          <td><%= format_date(post.inserted_at) %></td>
-          <td><%= post.creator.username %></td>
-          <td>
-            <div class="dropdown">
-              <a class="dropdown-toggle ddbutton" data-toggle="dropdown">
-                <i class="fa fa-bars"></i>
-              </a>
-              <ul class="dropdown-menu" style="right: 0; left: auto;">
-                <li>
-                <a href="<%= Helpers.admin_post_path @conn, :show, post.id %>">
-                    <i class="fa fa-search m-r-sm"> </i>
-                    Vis post
-                  </a>
-                </li>
-                <li>
-                  <a href="<%= Helpers.admin_post_path @conn, :edit, post.id %>">
-                    <i class="fa fa-edit m-r-sm"> </i>
-                    Endre post
-                  </a>
-                </li>
-
-                <li class="divider"></li>
-                <li>
-                  <a href="<%= Helpers.admin_post_path @conn, :delete_confirm, post.id %>">
-                    <i class="fa fa-trash-o m-r-sm"> </i>
-                    Slett post
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </td>
-        </tr>
-        <% end %>
-      </tbody>
-    </table>
+    <%= Brando.HTML.Tablize.tablize(@conn, @posts,
+                [{"Vis side", "fa-search", :admin_post_path, :show, :id},
+                 {"Endre side", "fa-edit", :admin_post_path, :edit, :id, :superuser},
+                 {"Slett side", "fa-trash", :admin_post_path, :delete_confirm, :id, :superuser}],
+                check_or_x: [:cover],
+                hide: [:lead, :slug, :data, :html, :meta_description, :meta_keywords, :inserted_at, :publish_at]) %>
 <% else %>
     <p>Ingen poster</p>
 <% end %>

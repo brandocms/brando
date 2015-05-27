@@ -4,7 +4,7 @@ defmodule Brando.HTML.Inspect do
   """
 
   import Brando.HTML
-  import Brando.Images.Helpers
+  import Brando.Render, only: [r: 1]
   import Ecto.DateTime.Util, only: [zero_pad: 2]
   import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2]
 
@@ -31,6 +31,12 @@ defmodule Brando.HTML.Inspect do
     module.t!("no", "model." <> to_string(field))
   end
 
+  @doc """
+  Inspects and displays `model`
+  """
+  def model(nil) do
+    ""
+  end
   @doc """
   Inspects and displays `model`
   """
@@ -123,6 +129,24 @@ defmodule Brando.HTML.Inspect do
     ~s(<em>** sensurert **</em>)
   end
 
+  defp do_inspect_field(:language, :string, "no") do
+    ~s(<div class="text-center"><img src="/static/brando/img/blank.gif" class="flag flag-nb" alt="norsk" /></div>)
+  end
+
+  defp do_inspect_field(:language, :string, "en") do
+    ~s(<div class="text-center"><img src="/static/brando/img/blank.gif" class="flag flag-en" alt="english" /></div>)
+  end
+
+  defp do_inspect_field(:key, :string, val) do
+    split = String.split(val, "/", parts: 2)
+    if Enum.count(split) == 1 do
+      ~s(<strong>#{split}</strong>)
+    else
+      [main, rest] = split
+      ~s(<strong>#{main}</strong>/#{rest})
+    end
+  end
+
   defp do_inspect_field(_name, :string, nil) do
     ~s(<em>Ingen verdi</em>)
   end
@@ -135,14 +159,24 @@ defmodule Brando.HTML.Inspect do
   defp do_inspect_field(_name, :integer, value), do: value
 
   defp do_inspect_field(_name, :boolean, :true) do
-    ~s(<i class="fa fa-check text-success"></i>)
+    ~s(<div class="text-center"><i class="fa fa-check text-success"></i></div>)
   end
 
   defp do_inspect_field(_name, :boolean, nil) do
-    ~s(<i class="fa fa-times text-danger"></i>)
+    ~s(<div class="text-center"><i class="fa fa-times text-danger"></i></div>)
   end
 
-  defp do_inspect_field(_name, _type, value), do: inspect(value)
+  defp do_inspect_field(_name, :boolean, :false) do
+    ~s(<div class="text-center"><i class="fa fa-times text-danger"></i></div>)
+  end
+
+  defp do_inspect_field(_name, _type, %Brando.User{} = user) do
+    r(user)
+  end
+
+  defp do_inspect_field(_name, _type, value) do
+    inspect(value)
+  end
 
   #
   # Associations
@@ -158,6 +192,9 @@ defmodule Brando.HTML.Inspect do
     do_inspect_assoc(name, type, value)
   end
 
+  defp do_inspect_assoc(name, %Ecto.Association.BelongsTo{}, nil) do
+    ~s(<tr><td>#{name}</td><td><em>Ingen assosiasjoner.</em></td></tr>)
+  end
   defp do_inspect_assoc(name, %Ecto.Association.BelongsTo{} = type, value) do
     ~s(<tr><td>#{name}</td><td>#{type.assoc.__repr__(value)}</td></tr>)
   end
@@ -165,7 +202,7 @@ defmodule Brando.HTML.Inspect do
     ~s(<tr><td>#{name}</td><td>Assosiasjonene er ikke hentet.</td></tr>)
   end
   defp do_inspect_assoc(name, %Ecto.Association.Has{}, []) do
-    ~s(<tr><td>#{name}</td><td>Ingen assosiasjoner.</td></tr>)
+    ~s(<tr><td>#{name}</td><td><em>Ingen assosiasjoner.</em></td></tr>)
   end
   defp do_inspect_assoc(_name, %Ecto.Association.Has{} = type, value) do
     rows = Enum.map(value, fn (row) -> ~s(<div class="assoc #{type.field}">#{type.assoc.__repr__(row)}</div>) end)

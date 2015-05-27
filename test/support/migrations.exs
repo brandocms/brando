@@ -79,6 +79,37 @@ defmodule Brando.Integration.Migration do
       add :approved,      :boolean, default: false
       add :deleted,       :boolean, default: false
     end
+
+    create table(:pages) do
+      add :key,               :text
+      add :language,          :text
+      add :title,             :text
+      add :slug,              :text
+      add :data,              :json
+      add :html,              :text
+      add :status,            :integer
+      add :parent_id,         references(:pages), default: nil
+      add :creator_id,        references(:users)
+      add :meta_description,  :text
+      add :meta_keywords,     :text
+      timestamps
+    end
+    create index(:pages, [:language])
+    create index(:pages, [:slug])
+    create index(:pages, [:key])
+    create index(:pages, [:parent_id])
+    create index(:pages, [:status])
+
+    create table(:pagefragments) do
+      add :key,               :text
+      add :language,          :text
+      add :data,              :json
+      add :html,              :text
+      add :creator_id,        references(:users)
+      timestamps
+    end
+    create index(:pagefragments, [:language])
+    create index(:pagefragments, [:key])
   end
 
   def down do
@@ -89,6 +120,7 @@ defmodule Brando.Integration.Migration do
     drop table(:posts)
     drop index(:posts, [:language])
     drop index(:posts, [:slug])
+    drop index(:posts, [:key])
     drop index(:posts, [:status])
 
     drop table(:imagecategories)
@@ -101,5 +133,9 @@ defmodule Brando.Integration.Migration do
     drop table(:images)
 
     drop table(:instagramimages)
+
+    drop table(:pagefragments)
+    drop index(:pagefragments, [:language])
+    drop index(:pagefragments, [:key])
   end
 end
