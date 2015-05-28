@@ -8,12 +8,13 @@ defmodule Brando.InstagramImage do
   use Brando.Web, :model
   require Logger
   import Ecto.Query, only: [from: 2]
+  alias Brando.Instagram
 
   @cfg Application.get_env(:brando, Brando.Instagram)
 
   @required_fields ~w(instagram_id caption link url_original username
                       url_thumbnail created_time type approved deleted)
-  @optional_fields ~w()
+  @optional_fields ~w(image)
 
   schema "instagramimages" do
     field :instagram_id, :string
@@ -23,6 +24,7 @@ defmodule Brando.InstagramImage do
     field :username, :string
     field :url_original, :string
     field :url_thumbnail, :string
+    field :image, Brando.Type.Image
     field :created_time, :string
     field :approved, :boolean, default: false
     field :deleted, :boolean, default: false
@@ -98,7 +100,52 @@ defmodule Brando.InstagramImage do
                    "caption" => (if caption, do: caption["text"], else: ""),
                    "url_thumbnail" => thumb, "url_original" => org})
     |> Map.drop(["images", "id"])
+    |> download_image
+    |> create_image_sizes
     |> create
+  end
+
+  defp download_image(image) do
+    image_field = %Brando.Type.Image{}
+    url = Map.get(image, "url_original")
+    case HTTPoison.get(url) do
+      {:ok, %HTTPoison.Response{body: body}} ->
+        media_path = Brando.config(:media_path)
+        instagram_path = Instagram.config(:upload_path)
+        path = Path.join([media_path, instagram_path])
+        case File.mkdir_p(path) do
+          :ok ->
+            file = Path.join([path, Path.basename(url)])
+            File.write!(file, body)
+            image_field = Map.put(image_field, :path, Path.join([instagram_path, Path.basename(url)]))
+            Map.put(image, "image", image_field)
+          {:error, reason} ->
+            raise UploadError, message: "Kunne ikke lage filbane -> #{inspect(reason)}"
+        end
+      {:error, err} ->
+        {:error, err}
+    end
+  end
+
+  defp create_image_sizes(image_model) do
+    sizes_cfg = Brando.Instagram.config(:sizes)
+    image_field = image_model["image"]
+    media_path = Brando.config(:media_path)
+    full_path = Path.join([media_path, image_field.path])
+    {file_path, filename} = Brando.Utils.split_path(full_path)
+
+    sizes = for {size_name, size_cfg} <- sizes_cfg do
+      size_dir = Path.join([file_path, to_string(size_name)])
+      File.mkdir_p(size_dir)
+      sized_image = Path.join([size_dir, filename])
+      Brando.Images.Utils.create_image_size(full_path, sized_image, size_cfg)
+      sized_path = Path.join([Brando.Instagram.config(:upload_path), to_string(size_name), filename])
+      {size_name, sized_path}
+    end
+
+    sizes = Enum.into(sizes, %{})
+    image_field = image_field |> Map.put(:sizes, sizes)
+    Map.put(image_model, "image", image_field)
   end
 
   @doc """

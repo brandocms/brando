@@ -50,6 +50,8 @@ config :brando, :status_choices, [[value: "0", text: "Kladd"],
 config :brando, Brando.Instagram,
   client_id: "CLIENT_ID",
   interval: 1_000 * 60 * 60,
+  sizes: %{large:  %{size: "640", quality: 100},
+           thumb:  %{size: "150x150", quality: 100, crop: true}},
   auto_approve: true
 
 # Print only warnings and errors during test

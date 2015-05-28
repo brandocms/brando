@@ -5,7 +5,7 @@ defmodule Brando.Instagram do
   To use, first add the Instagram server worker to your application's
   supervisor in `lib/my_app.ex`:
 
-      worker(Brando.Instagram.Server, [Brando.Instagram.cfg(:server_name)])
+      worker(Brando.Instagram.Server, [Brando.Instagram.config(:server_name)])
 
   Be sure to give it a custom name in your_app's `config/brando.exs`.
 
@@ -24,7 +24,7 @@ defmodule Brando.Instagram do
   @doc """
   Grab `key` from config
   """
-  def cfg(key) do
+  def config(key) do
     Application.get_env(:brando, Brando.Instagram) |> Keyword.get(key)
   end
 end

@@ -67,7 +67,7 @@ defmodule Brando.Images.Utils do
       size_dir = Path.join([file_path, to_string(size_name)])
       File.mkdir_p(size_dir)
       sized_image = Path.join([size_dir, filename])
-      do_create_image_size(file, sized_image, size_cfg)
+      create_image_size(file, sized_image, size_cfg)
       sized_path = Path.join([Map.get(cfg, :upload_path), to_string(size_name), filename])
       {size_name, sized_path}
     end
@@ -77,7 +77,8 @@ defmodule Brando.Images.Utils do
     |> Map.put(:path, Path.join([Map.get(cfg, :upload_path), filename]))}
   end
 
-  defp do_create_image_size(file, sized_image, size_cfg) do
+
+  def create_image_size(file, sized_image, size_cfg) do
     if size_cfg[:crop] do
       Mogrify.open(file)
       |> Mogrify.copy
