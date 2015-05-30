@@ -62,6 +62,7 @@ defmodule Brando.User do
     |> validate_exclusion(:username, ~w(admin superadmin superuser editor
                                         root create edit delete update ny
                                         endre slett profil))
+    |> validate_confirmation(:password, message: "Passord matcher ikke")
     |> validate_length(:password, min: 6, too_short: "Passord må være > 6 tegn")
   end
 
@@ -85,6 +86,7 @@ defmodule Brando.User do
     |> validate_exclusion(:username, ~w(admin superadmin superuser editor
                                         root create edit delete update ny
                                         endre slett profil))
+    |> validate_confirmation(:password, message: "Passord matcher ikke")
     |> validate_length(:password, min: 6, too_short: "Passord må være > 6 tegn")
   end
 
@@ -205,7 +207,7 @@ defmodule Brando.User do
   """
   @spec gen_password(String.t) :: String.t
   def gen_password(password), do:
-    Comeonin.Bcrypt.hashpwsalt(password, 12)
+    Comeonin.Bcrypt.hashpwsalt(password)
 
   @doc """
   Checks if `user` has `role`.
