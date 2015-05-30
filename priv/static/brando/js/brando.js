@@ -359,7 +359,6 @@ var Instagram = (function () {
         value: function changeStatusSuccess(data) {
             var new_status = "";
             if (data.status == 200) {
-                console.log(data);
                 switch (data.new_status) {
                     case "0":
                         new_status = "deleted";break;
@@ -368,11 +367,9 @@ var Instagram = (function () {
                     case "2":
                         new_status = "approved";break;
                 }
-                console.log(new_status);
                 for (var i = 0; i < data.ids.length; i++) {
                     $(".image-selection-pool img[data-id=" + data.ids[i] + "]").fadeOut(500, function () {
-                        $(this).detach().appendTo("." + new_status);
-                        $(this).fadeIn();
+                        $(this).detach().appendTo("." + new_status).fadeIn().attr("data-status", new_status);
                     });
                 }
                 imagePool = [];
