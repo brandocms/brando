@@ -128,7 +128,8 @@ config :my_app, MyApp.Endpoint,
 
 Default login/pass is `admin@twined.net/admin`
 
-## Sequence
+Sequence
+--------
 
 Implements model sequencing.
 
@@ -183,12 +184,32 @@ Template (`sequence.html.eex`):
 </a>
 ```
 
-## Instagram
+Instagram
+---------
 
 Add to your app's supervision tree:
 
 ```elixir
 worker(Brando.Instagram.Server, [Brando.Instagram.cfg(:server_name)])
+```
+
+Add Instagram to your menu modules in `config/brando.exs`:
+
+```elixir
+config :brando, Brando.Menu,
+  modules: [Admin, Users, News, Pages, Images, Instagram]
+```
+
+Add routes to your app's `web/router.ex` under the `admin` scope:
+
+```elixir
+import Brando.Routes.Admin.Instagram
+
+scope "/admin", as: :admin do
+  pipe_through :admin
+  # ...
+  instagram_routes "/instagram"
+end
 ```
 
 Config is found in your app's `config/brando.exs`.
@@ -200,6 +221,38 @@ Config is found in your app's `config/brando.exs`.
   * `fetch`: What to fetch.
     * `{:user, "your_name"}`
     * `{:tags, ["tag1", "tag2"]}`
+
+Villain
+-------
+
+To use villain outside the built-in `pages` and `news` modules add to your app's `web/router.ex`:
+
+```elixir
+import Brando.Routes.Admin.Villain
+
+scope "/admin", as: :admin do
+  pipe_through :admin
+  # ...
+  villain_routes "/whatever/has/villain"
+end
+
+```
+
+Include js in `whatever/_scripts.<action>.html.eex`:
+
+```html
+<script type="text/javascript" src="/static/brando/js/to-markdown.js" charset="utf-8"></script>
+<script type="text/javascript" src="/static/brando/js/markdown.min.js" charset="utf-8"></script>
+<script type="text/javascript" src="/static/brando/js/libs/backbone/underscore.js" charset="utf-8"></script>
+<script type="text/javascript" src="/static/brando/js/libs/backbone/backbone.js" charset="utf-8"></script>
+<script type="text/javascript" src="/static/villain/villain.js" charset="utf-8"></script>
+```
+
+Include css in `whatever/_stylesheets.<action>.html.eex`:
+
+```html
+<link rel="stylesheet" href="/static/villain/villain.css">
+```
 
 ## Optimizing images (not implemented yet)
 

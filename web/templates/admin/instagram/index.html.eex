@@ -1,0 +1,4 @@
+<h1>Instagram | oversikt</h1>
+<div class="image-serie">
+  <%= show_grouped_images(@images) %>
+</div>

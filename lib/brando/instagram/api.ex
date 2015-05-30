@@ -17,7 +17,7 @@ defmodule Brando.Instagram.API do
   Checks if we want `:user` or `:tags`
   """
   def fetch(filter) do
-    case Instagram.cfg(:fetch) do
+    case Instagram.config(:fetch) do
       {:user, username} ->
         if filter == :blank, do: filter = InstagramImage.get_last_created_time
         images_for_user(username, min_timestamp: filter)
@@ -35,7 +35,7 @@ defmodule Brando.Instagram.API do
   def images_for_user(username, min_timestamp: last_created_time) do
     case get_user_id(username) do
       {:ok, user_id} ->
-        case get("users/#{user_id}/media/recent/?client_id=#{Instagram.cfg(:client_id)}&min_timestamp=#{last_created_time}") do
+        case get("users/#{user_id}/media/recent/?client_id=#{Instagram.config(:client_id)}&min_timestamp=#{last_created_time}") do
           {:ok, %Response{body: body, status_code: 200}} -> parse_images_for_user(body, username)
           {:error, %HTTPoison.Error{reason: reason}}     -> {:error, "Nettfeil fra HTTPoison: #{inspect(reason)}"}
         end
@@ -49,7 +49,7 @@ defmodule Brando.Instagram.API do
   """
   def images_for_user(username, max_id: max_id) do
     {:ok, user_id} = get_user_id(username)
-    case get("users/#{user_id}/media/recent/?client_id=#{Instagram.cfg(:client_id)}&max_id=#{max_id}") do
+    case get("users/#{user_id}/media/recent/?client_id=#{Instagram.config(:client_id)}&max_id=#{max_id}") do
       {:ok, %Response{body: body, status_code: 200}} -> parse_images_for_user(body, username)
       {:error, %HTTPoison.Error{reason: reason}}     -> {:error, "Nettfeil fra HTTPoison: #{inspect(reason)}"}
     end
@@ -61,7 +61,7 @@ defmodule Brando.Instagram.API do
   """
   def images_for_tags(tags, min_id: min_id) do
     Enum.each tags, fn(tag) ->
-      case get("tags/#{tag}/media/recent?client_id=#{Instagram.cfg(:client_id)}&min_tag_id=#{min_id}") do
+      case get("tags/#{tag}/media/recent?client_id=#{Instagram.config(:client_id)}&min_tag_id=#{min_id}") do
         {:ok, %Response{body: body, status_code: 200}} -> parse_images_for_tag(body)
         {:error, %HTTPoison.Error{reason: reason}}     -> {:error, "Nettfeil fra HTTPoison: #{inspect(reason)}"}
       end
@@ -76,6 +76,8 @@ defmodule Brando.Instagram.API do
   def parse_images_for_tag([data: data, meta: _meta, pagination: _pagination]) do
     Enum.each data, fn(image) ->
       InstagramImage.store_image(image)
+      # lets be nice and wait between each image stored.
+      :timer.sleep(Brando.Instagram.config(:sleep))
     end
     SystemChannel.log(:info, "InstagramServer: Lagret #{Enum.count(data)} bilder")
   end
@@ -86,10 +88,12 @@ defmodule Brando.Instagram.API do
   def parse_images_for_user([data: data, meta: _meta, pagination: pagination], username) do
     Enum.each data, fn(image) ->
       InstagramImage.store_image(image)
+      # lets be nice and wait 5 seconds between storing images
+      :timer.sleep(Brando.Instagram.config(:sleep))
     end
     SystemChannel.log(:info, "InstagramServer: Lagret #{Enum.count(data)} bilder")
     if map_size(pagination) != 0 do
-      :timer.sleep(5000)
+      :timer.sleep(Brando.Instagram.config(:sleep))
       images_for_user(username, max_id: Map.get(pagination, "next_max_id"))
     end
   end
@@ -98,7 +102,7 @@ defmodule Brando.Instagram.API do
   Get Instagram's user ID for `username`
   """
   def get_user_id(username) do
-    case get "users/search?q=#{username}&client_id=#{Instagram.cfg(:client_id)}" do
+    case get "users/search?q=#{username}&client_id=#{Instagram.config(:client_id)}" do
       {:ok, %Response{body: [{:data, [%{"id" => id}]} | _]}} -> {:ok, id}
       {:ok, %Response{body: [data: [], meta: %{}]}}          -> {:error, "Fant ikke bruker: #{username}"}
       {:ok, %Response{body: {:error, error}}}                -> {:error, "API feil fra Instagram: #{inspect(error)}"}

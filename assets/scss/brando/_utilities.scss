@@ -277,3 +277,11 @@
   border: 1px solid #ccc;
   margin-right: 5px;
 }
+
+h1.negative, h2.negative, h3.negative, h4.negative {
+  background-color: #333;
+  color: #fff;
+  font-weight: bold;
+  padding: 2px 10px;
+  display: table;
+}

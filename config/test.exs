@@ -50,6 +50,8 @@ config :brando, :status_choices, [[value: "0", text: "Kladd"],
 config :brando, Brando.Instagram,
   client_id: "CLIENT_ID",
   interval: 1_000 * 60 * 60,
+  upload_path: Path.join("images", "insta"),
+  sleep: 0,
   auto_approve: true
 
 # Print only warnings and errors during test

@@ -38,6 +38,7 @@ config :brando, Brando.Type.Role,
 config :brando, Brando.Instagram,
   client_id: "",
   auto_approve: true,
+  upload_path: Path.join("images", "instagram"),
   interval: 1_000 * 60 * 60
 
 config :brando, Brando.Menu,

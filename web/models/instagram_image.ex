@@ -8,12 +8,13 @@ defmodule Brando.InstagramImage do
   use Brando.Web, :model
   require Logger
   import Ecto.Query, only: [from: 2]
+  alias Brando.Instagram
 
   @cfg Application.get_env(:brando, Brando.Instagram)
 
   @required_fields ~w(instagram_id caption link url_original username
-                      url_thumbnail created_time type approved deleted)
-  @optional_fields ~w()
+                      url_thumbnail created_time type status)
+  @optional_fields ~w(image)
 
   schema "instagramimages" do
     field :instagram_id, :string
@@ -23,9 +24,9 @@ defmodule Brando.InstagramImage do
     field :username, :string
     field :url_original, :string
     field :url_thumbnail, :string
+    field :image, Brando.Type.Image
     field :created_time, :string
-    field :approved, :boolean, default: false
-    field :deleted, :boolean, default: false
+    field :status, Brando.Type.InstagramStatus, default: :rejected
   end
 
   @doc """
@@ -39,10 +40,11 @@ defmodule Brando.InstagramImage do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :create, params) do
+    status = if @cfg[:auto_approve], do: :approved, else: :rejected
     model
     |> cast(params, @required_fields, @optional_fields)
     |> validate_unique(:instagram_id, on: Brando.repo)
-    |> put_change(:approved, @cfg[:auto_approve])
+    |> put_change(:status, status)
   end
 
   @doc """
@@ -98,7 +100,57 @@ defmodule Brando.InstagramImage do
                    "caption" => (if caption, do: caption["text"], else: ""),
                    "url_thumbnail" => thumb, "url_original" => org})
     |> Map.drop(["images", "id"])
+    |> download_image
+    |> create_image_sizes
     |> create
+  end
+
+  defp download_image(image) do
+    image_field = %Brando.Type.Image{}
+    url = Map.get(image, "url_original")
+    case HTTPoison.get(url) do
+      {:ok, %HTTPoison.Response{body: body}} ->
+        media_path = Brando.config(:media_path)
+        instagram_path = Instagram.config(:upload_path)
+        path = Path.join([media_path, instagram_path])
+        case File.mkdir_p(path) do
+          :ok ->
+            file = Path.join([path, Path.basename(url)])
+            File.write!(file, body)
+            image_field = Map.put(image_field, :path, Path.join([instagram_path, Path.basename(url)]))
+            Map.put(image, "image", image_field)
+          {:error, reason} ->
+            raise UploadError, message: "Kunne ikke lage filbane -> #{inspect(reason)}"
+        end
+      {:error, err} ->
+        {:error, err}
+    end
+  end
+
+  defp create_image_sizes(image_model) do
+    sizes_cfg = Brando.Instagram.config(:sizes)
+    if sizes_cfg != nil do
+      image_field = image_model["image"]
+      media_path = Brando.config(:media_path)
+      full_path = Path.join([media_path, image_field.path])
+      {file_path, filename} = Brando.Utils.split_path(full_path)
+
+      sizes = for {size_name, size_cfg} <- sizes_cfg do
+        size_dir = Path.join([file_path, to_string(size_name)])
+        File.mkdir_p(size_dir)
+        sized_image = Path.join([size_dir, filename])
+        Brando.Images.Utils.create_image_size(full_path, sized_image, size_cfg)
+        sized_path = Path.join([Brando.Instagram.config(:upload_path), to_string(size_name), filename])
+        {size_name, sized_path}
+      end
+
+      sizes = Enum.into(sizes, %{})
+      image_field = image_field |> Map.put(:sizes, sizes)
+      Map.put(image_model, "image", image_field)
+    else
+      image_model
+    end
+
   end
 
   @doc """
@@ -158,6 +210,26 @@ defmodule Brando.InstagramImage do
     from(m in __MODULE__, order_by: m.instagram_id)
     |> Brando.repo.all
   end
+
+  def all_grouped do
+    from(m in __MODULE__,
+        order_by: [desc: m.status, asc: m.instagram_id])
+    |> Brando.repo.all
+  end
+
+  @doc false
+  defmacro update_all(queryable, values, opts \\ []) do
+    Ecto.Repo.Queryable.update_all(Brando.repo, Ecto.Adapters.Postgres, queryable, values, opts)
+  end
+
+  def change_status_for(ids, status)
+      when is_list(ids)
+      and status in ["0", "1", "2"] do
+    ids = ids |> Enum.map(fn(id) -> String.to_integer(id) end)
+    q = from(m in __MODULE__, where: m.id in ^ids)
+    update_all(q, status: ^status)
+  end
+
   @doc """
   Delete `record` from database
 
@@ -192,7 +264,6 @@ defmodule Brando.InstagramImage do
               url_original: "Bilde-URL",
               url_thumbnail: "Miniatyrbilde-URL",
               created_time: "Opprettet",
-              approved: "Godkjent til bruk",
-              deleted: "Merket som slettet"]]
+              status: "Status"]]
 
 end

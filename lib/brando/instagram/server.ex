@@ -16,10 +16,9 @@ defmodule Brando.Instagram.Server do
 
   @doc false
   def init(_) do
-    Process.flag(:trap_exit, true)
     :timer.send_after(5000, :poll)
     send(self(), :poll)
-    {:ok, timer} = :timer.send_interval(Instagram.cfg(:interval), :poll)
+    {:ok, timer} = :timer.send_interval(Instagram.config(:interval), :poll)
     {:ok, {timer, :blank}}
   end
 
