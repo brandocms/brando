@@ -115,7 +115,8 @@ defmodule Brando.Form do
         if values == nil, do: values = []
         if errors == nil, do: errors = []
         Enum.reduce(form_fields, [], fn ({name, opts}, acc) ->
-          acc = [render_field(form_type, "#{form_source}[#{name}]", opts[:type],
+          opts = opts |> Keyword.put(:form_source, form_source)
+          acc = [render_field(form_type, name, opts[:type],
                               opts, get_value(values, name),
                               get_errors(errors, name))|acc]
         end)
@@ -141,6 +142,7 @@ defmodule Brando.Form do
           Automatically slugs with `:name` as source.
         * `help_text` - "Help text for field"
         * `placeholder` - "Placeholder for field"
+        * `confirm` - true. Inserts a confirmation field.
         * `default` - Default value. Can also be a function like
                       `&__MODULE__.default_func/0`
 

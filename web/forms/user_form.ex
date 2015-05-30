@@ -40,6 +40,7 @@ defmodule Brando.UserForm do
        placeholder: "E-post"]
     field :password, :password,
       [required: true,
+       confirm: true,
        label: "Passord",
        placeholder: "Passord"]
 
