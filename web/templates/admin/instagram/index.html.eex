@@ -1,6 +1,4 @@
 <h1>Instagram | oversikt</h1>
-<div>
-<%= for img <- @images do %>
-  <img src="<%= media_url(img(img.image, :thumb)) %>" />
-<% end %>
+<div class="image-serie">
+  <%= show_grouped_images(@images) %>
 </div>

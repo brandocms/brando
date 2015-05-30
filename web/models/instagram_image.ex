@@ -13,7 +13,7 @@ defmodule Brando.InstagramImage do
   @cfg Application.get_env(:brando, Brando.Instagram)
 
   @required_fields ~w(instagram_id caption link url_original username
-                      url_thumbnail created_time type approved deleted)
+                      url_thumbnail created_time type status)
   @optional_fields ~w(image)
 
   schema "instagramimages" do
@@ -26,8 +26,7 @@ defmodule Brando.InstagramImage do
     field :url_thumbnail, :string
     field :image, Brando.Type.Image
     field :created_time, :string
-    field :approved, :boolean, default: false
-    field :deleted, :boolean, default: false
+    field :status, Brando.Type.InstagramStatus, default: :rejected
   end
 
   @doc """
@@ -41,10 +40,11 @@ defmodule Brando.InstagramImage do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :create, params) do
+    status = if @cfg[:auto_approve], do: :approved, else: :rejected
     model
     |> cast(params, @required_fields, @optional_fields)
     |> validate_unique(:instagram_id, on: Brando.repo)
-    |> put_change(:approved, @cfg[:auto_approve])
+    |> put_change(:status, status)
   end
 
   @doc """
@@ -205,6 +205,26 @@ defmodule Brando.InstagramImage do
     from(m in __MODULE__, order_by: m.instagram_id)
     |> Brando.repo.all
   end
+
+  def all_grouped do
+    from(m in __MODULE__,
+        order_by: [desc: m.status, asc: m.instagram_id])
+    |> Brando.repo.all
+  end
+
+  @doc false
+  defmacro update_all(queryable, values, opts \\ []) do
+    Ecto.Repo.Queryable.update_all(Brando.repo, Ecto.Adapters.Postgres, queryable, values, opts)
+  end
+
+  def change_status_for(ids, status)
+      when is_list(ids)
+      and status in ["0", "1", "2"] do
+    ids = ids |> Enum.map(fn(id) -> String.to_integer(id) end)
+    q = from(m in __MODULE__, where: m.id in ^ids)
+    update_all(q, status: ^status)
+  end
+
   @doc """
   Delete `record` from database
 
@@ -239,7 +259,6 @@ defmodule Brando.InstagramImage do
               url_original: "Bilde-URL",
               url_thumbnail: "Miniatyrbilde-URL",
               created_time: "Opprettet",
-              approved: "Godkjent til bruk",
-              deleted: "Merket som slettet"]]
+              status: "Status"]]
 
 end

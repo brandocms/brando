@@ -15,8 +15,14 @@ defmodule Brando.Admin.InstagramController do
   """
   def index(conn, _params) do
     conn
-    |> assign(:images, InstagramImage.all)
+    |> assign(:images, InstagramImage.all_grouped)
     |> render
+  end
+
+  def change_status(conn, %{"ids" => ids, "status" => status}) do
+    InstagramImage.change_status_for(ids, status)
+    conn
+    |> json(%{status: "200", ids: ids, new_status: status})
   end
 end
 

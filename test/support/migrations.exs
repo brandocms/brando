@@ -77,8 +77,7 @@ defmodule Brando.Integration.Migration do
       add :url_thumbnail, :text
       add :image,         :text
       add :created_time,  :text
-      add :approved,      :boolean, default: false
-      add :deleted,       :boolean, default: false
+      add :status,        :integer, default: 1
     end
 
     create table(:pages) do
