@@ -76,8 +76,8 @@ defmodule Brando.Instagram.API do
   def parse_images_for_tag([data: data, meta: _meta, pagination: _pagination]) do
     Enum.each data, fn(image) ->
       InstagramImage.store_image(image)
-      # lets be nice and wait 5 seconds between storing images
-      :timer.sleep(5000)
+      # lets be nice and wait between each image stored.
+      :timer.sleep(Brando.Instagram.config(:sleep))
     end
     SystemChannel.log(:info, "InstagramServer: Lagret #{Enum.count(data)} bilder")
   end
@@ -89,11 +89,11 @@ defmodule Brando.Instagram.API do
     Enum.each data, fn(image) ->
       InstagramImage.store_image(image)
       # lets be nice and wait 5 seconds between storing images
-      :timer.sleep(5000)
+      :timer.sleep(Brando.Instagram.config(:sleep))
     end
     SystemChannel.log(:info, "InstagramServer: Lagret #{Enum.count(data)} bilder")
     if map_size(pagination) != 0 do
-      :timer.sleep(5000)
+      :timer.sleep(Brando.Instagram.config(:sleep))
       images_for_user(username, max_id: Map.get(pagination, "next_max_id"))
     end
   end
