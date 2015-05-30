@@ -9,9 +9,6 @@ defmodule Brando.Admin.InstagramView do
     approved_header = "<h3 class=\"negative\">Godkjente bilder</h3><div class=\"image-selection-pool approved\">"
     rejected_header = "<h3 class=\"negative\">Avviste bilder</h3><div class=\"image-selection-pool rejected\">"
     deleted_header  = "<h3 class=\"negative\">Slettede bilder</h3><div class=\"image-selection-pool deleted\">"
-    buttons         = ~s(<button class="approve-selected-images btn btn-default m-t-md">Merk som godkjent</button>
-                         <button class="reject-selected-images btn btn-default m-t-md">Merk som avvist</button>
-                         <button class="delete-selected-images btn btn-default m-t-md">Merk som slettet</button>)
     div_close       = "</div>"
 
     {_, {approved, rejected, deleted}} = Enum.map_reduce images, {"", "", ""}, fn(img, {approved, rejected, deleted}) ->
@@ -26,6 +23,6 @@ defmodule Brando.Admin.InstagramView do
       {img, {approved, rejected, deleted}}
     end
     html = Enum.join([approved_header, approved, div_close, rejected_header, rejected, div_close, deleted_header, deleted, div_close])
-    Phoenix.HTML.raw([buttons|html])
+    Phoenix.HTML.raw(html)
   end
 end
