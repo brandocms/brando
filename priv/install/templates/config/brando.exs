@@ -37,6 +37,7 @@ config :brando, Brando.Instagram,
   client_id: "",
   auto_approve: true,
   interval: 1_000 * 60 * 60,
+  sleep: 5000,
   sizes: %{large:  %{size: "640", quality: 100},
            thumb:  %{size: "150x150", quality: 100, crop: true}},
   upload_path: Path.join("images", "instagram")

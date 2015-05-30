@@ -27,5 +27,41 @@
       "status_code": 200,
       "type": "ok"
     }
+  },
+
+  {
+    "request": {
+      "body": "",
+      "headers": [],
+      "method": "get",
+      "options": {
+        "connect_timeout": 5000
+      },
+      "url": "https://scontent.cdninstagram.com/hphotos-xap1/t51.2885-15/e15/11190180_464905646995552_1163060820_n.jpg"
+    },
+    "response": {
+      "body": "",
+      "headers": {
+        "x-amz-id-2": "z41fiJm2zUes5pd0EXTRVnYYJM7pj8uV8G/NZC02YS3rQeqTQvM7C7T2r0vtJXlF",
+        "x-amz-request-id": "B34B82F4D4F968F7",
+        "Last-Modified": "Wed, 28 Aug 2013 21:54:57 GMT",
+        "ETag": "\"29ec166edb475a468b7295c2143f49d1\"",
+        "Accept-Ranges": "bytes",
+        "Content-Type": "image/jpeg",
+        "Server": "AmazonS3",
+        "Via": "HTTP/1.1 54.231.0.137:443 (fwdproxy2/57 173.252.108.117)",
+        "X-Connected-To": "54.231.0.137",
+        "X-FB-IP-Type": "allowed",
+        "Timing-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": "*",
+        "Expires": "Sat, 13 Jun 2015 11:31:20 GMT",
+        "Cache-Control": "max-age=1209600, no-transform",
+        "Date": "Sat, 30 May 2015 11:31:20 GMT",
+        "Connection": "keep-alive",
+        "Content-Length": "135776"
+      },
+      "status_code": 200,
+      "type": "ok"
+    }
   }
 ]
