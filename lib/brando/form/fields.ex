@@ -191,6 +191,7 @@ defmodule Brando.Form.Fields do
       "must be unique"     -> "Feltet må være unikt. Verdien finnes allerede i databasen."
       "has invalid format" -> "Feltet har feil format."
       "is invalid"         -> "Feltet er ugyldig."
+      "is reserved"        -> "Verdien er reservert."
       {"should be at least %{count} characters", length} -> "Feltets verdi er for kort. Må være > #{length} tegn."
       err                  -> inspect(err)
     end
