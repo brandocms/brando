@@ -210,7 +210,7 @@ defmodule Brando.Form.Fields do
       "is invalid"         -> "Feltet er ugyldig."
       "is reserved"        -> "Verdien er reservert."
       {"should be at least %{count} characters", length} -> "Feltets verdi er for kort. Må være > #{length} tegn."
-      err                  -> inspect(err)
+      err                  -> if is_binary(err), do: err, else: inspect(err)
     end
   end
 
