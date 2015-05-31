@@ -142,7 +142,9 @@ defmodule Brando.Form do
           Automatically slugs with `:name` as source.
         * `help_text` - "Help text for field"
         * `placeholder` - "Placeholder for field"
-        * `confirm` - true. Inserts a confirmation field.
+        * `confirm` - true. Inserts a confirmation field. You would then add
+                      `validate_confirmation(:password, message: "No match")`
+                      to your models changeset functions.
         * `default` - Default value. Can also be a function like
                       `&__MODULE__.default_func/0`
 
@@ -253,9 +255,8 @@ defmodule Brando.Form do
   longer :in_fieldset.
   """
   def fieldset_close(mod) do
-    name = String.to_atom("fs" <> to_string(:erlang.phash2(:os.timestamp)))
     fields = Module.get_attribute(mod, :form_fields)
-    Module.put_attribute(mod, :form_fields, [{name, [type: :fieldset_close]}|fields])
+    Module.put_attribute(mod, :form_fields, [{:"fs", [type: :fieldset_close]}|fields])
     Module.put_attribute(mod, :in_fieldset, nil)
   end
 
