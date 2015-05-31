@@ -37,6 +37,9 @@
     text-decoration: none;
     display: inline-block;
     border-top: 0;
+    text-transform: uppercase;
+    font-size: 15px;
+    padding: 10px 30px;
 
     &:hover {
       color: $base-link-color;
