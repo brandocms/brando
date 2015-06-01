@@ -25,10 +25,13 @@ $(() => {
     switch ($('body').attr('data-script')) {
         case "images-index":
             Images.setup();
+            break;
         case "dashboard-system_info":
             Stats.setup();
+            break;
         case "instagram-index":
             Instagram.setup();
+            break;
     }
     /* set up ws */
     WS.setup();

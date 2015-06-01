@@ -59,10 +59,13 @@ $(function () {
     switch ($("body").attr("data-script")) {
         case "images-index":
             _Images2["default"].setup();
+            break;
         case "dashboard-system_info":
             _Stats2["default"].setup();
+            break;
         case "instagram-index":
             _Instagram2["default"].setup();
+            break;
     }
     /* set up ws */
     _WS2["default"].setup();
