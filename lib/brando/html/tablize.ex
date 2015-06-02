@@ -5,7 +5,6 @@ defmodule Brando.HTML.Tablize do
 
   import Brando.HTML, only: [check_or_x: 1, zero_pad: 1]
   import Brando.HTML.Inspect, only: [inspect_field: 3, translate_field: 2]
-  import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2]
 
   @narrow_fields [:language, :id, :status]
   @narrow_types [:integer, :boolean]
@@ -47,9 +46,12 @@ defmodule Brando.HTML.Tablize do
     else
       render_colgroup(:auto, module, opts)
     end
+    filter_attr = if opts[:filter], do: ~s( data-filter-table="true"), else: ""
     table_header = render_thead(module.__fields__, module, opts)
     table_body = render_tbody(module.__fields__, records, module, conn, dropdowns, opts)
-    content_tag :table, {:safe, "#{colgroup}#{table_header}#{table_body}"}, class: "table table-striped"
+    table = ~s(<table class="table table-striped"#{filter_attr}>#{colgroup}#{table_header}#{table_body}</table>)
+    filter = if opts[:filter], do: ~s(<div class="filter-input-wrapper pull-right"><i class="fa fa-fw fa-search m-r-sm"></i><input type="text" placeholder="Filtrer tabell" id="filter-input" /></div>), else: ""
+    Phoenix.HTML.raw([filter|table])
   end
 
   defp render_colgroup(:auto, module, opts) do

@@ -1,6 +1,6 @@
 .status-indicators {
   font-size: 15px;
-  margin-bottom: 25px;
+  margin-bottom: 10px;
   > span {
     padding-right: 10px;
   }
@@ -324,4 +324,16 @@ tr.child td:first-child::before {
   content: "↘";
   font-size: 13px;
   font-weight: bold;
+}
+
+.filter-input-wrapper {
+  border: 1px solid #ddd;
+  padding: 1px 5px;
+  margin-bottom: 8px;
+}
+
+input#filter-input {
+  padding: 7px;
+  border: 0;
+  outline: none;
 }

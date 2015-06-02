@@ -2,6 +2,7 @@
 
 import Autoslug from "./autoslug.js";
 import Flash from "./flash.js";
+import FilterTable from "./filter_table.js";
 import Slideout from "./slideout.js";
 import Utils from "./utils.js";
 import Vex from "./vex.js";
@@ -18,6 +19,7 @@ $(() => {
     /* set up automated vendored js stuff */
     Vex.setup();
     Autoslug.setup();
+    FilterTable.setup();
     Flash.setup();
     Slideout.setup();
     Sequence.setup();
