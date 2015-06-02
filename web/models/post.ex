@@ -202,6 +202,7 @@ defmodule Brando.Post do
         meta_keywords: "META nøkkelord",
         published: "Publisert",
         publish_at: "Publiseringstidspunkt",
+        tags: "Tags",
         inserted_at: "Opprettet",
         updated_at: "Oppdatert"]]
 end
