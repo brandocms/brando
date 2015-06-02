@@ -9,6 +9,7 @@ import Images from "./images.js";
 import Instagram from "./instagram.js";
 import Sequence from "./sequence.js";
 import Stats from "./stats.js";
+import Tags from "./tags.js";
 import Toolbar from "./toolbar.js";
 import WS from "./ws.js";
 
@@ -21,6 +22,7 @@ $(() => {
     Slideout.setup();
     Sequence.setup();
     Toolbar.setup();
+    Tags.setup();
 
     switch ($('body').attr('data-script')) {
         case "images-index":

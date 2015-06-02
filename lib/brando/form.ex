@@ -142,6 +142,8 @@ defmodule Brando.Form do
           Automatically slugs with `:name` as source.
         * `help_text` - "Help text for field"
         * `placeholder` - "Placeholder for field"
+        * `tags` - true. If true, binds tags javascript listener to field
+                   which splits tags by comma.
         * `confirm` - true. Inserts a confirmation field. You would then add
                       `validate_confirmation(:password, message: "No match")`
                       to your models changeset functions.

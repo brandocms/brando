@@ -433,7 +433,7 @@ defmodule Brando.Form.Fields do
   end
 
   def input(input_type, _form_type, name, value, _errors, opts) do
-    "<input name=\"#{name}\" type=\"#{input_type}\"#{get_slug_from(name, opts)}#{get_val(value, opts[:default])}#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])} />"
+    "<input name=\"#{name}\" type=\"#{input_type}\"#{get_slug_from(name, opts)}#{get_val(value, opts[:default])}#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])}#{get_tags_input(opts[:tags])} />"
   end
 
   def tag(tag, name, contents, class) do
@@ -491,7 +491,9 @@ defmodule Brando.Form.Fields do
   """
   def get_val([]), do: ""
   def get_val(nil), do: ""
+  def get_val(value) when is_list(value), do: ~s( value="#{Enum.join(value, ",")}")
   def get_val(value), do: ~s( value="#{value}")
+
   @doc """
   If `value` is not nil, returns `value`. Else returns `default`
   """
@@ -523,6 +525,9 @@ defmodule Brando.Form.Fields do
   Evals the quoted choices function and returns the result
   """
   def get_choices(fun), do: apply(fun, [])
+
+  defp get_tags_input(true), do: " data-tags-input=\"true\""
+  defp get_tags_input(nil), do: ""
 
   defp format_name(name, form_source) do
     "#{form_source}[#{name}]"

@@ -6,6 +6,7 @@ defmodule Brando.Post do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
+  use Brando.Tag, :model
   use Brando.Field.ImageField
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
@@ -14,7 +15,7 @@ defmodule Brando.Post do
   alias Brando.User
 
   @required_fields ~w(status header data lead creator_id language featured)
-  @optional_fields ~w(publish_at)
+  @optional_fields ~w(publish_at tags)
 
   schema "posts" do
     field :language, :string
@@ -32,6 +33,7 @@ defmodule Brando.Post do
     field :published, :boolean
     field :publish_at, Ecto.DateTime
     timestamps
+    tags
   end
 
   before_insert :generate_html
@@ -77,6 +79,7 @@ defmodule Brando.Post do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :create, params) do
+    params = params |> Brando.Tag.split_tags
     model
     |> cast(params, @required_fields, @optional_fields)
   end
@@ -92,6 +95,7 @@ defmodule Brando.Post do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
+    params = params |> Brando.Tag.split_tags
     model
     |> cast(params, [], @required_fields ++ @optional_fields)
   end

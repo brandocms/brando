@@ -55,10 +55,6 @@ defmodule Brando.PostForm do
         default: false,
         help_text: "Posten vektes uavhengig av opprettelses- og publiseringsdato"]
     end
-    field :publish_at, :text,
-      [required: true,
-       label: "Publiseringstidspunkt",
-       default: &__MODULE__.get_now/0]
     fieldset do
       field :header, :text,
         [required: true,
@@ -74,6 +70,13 @@ defmodule Brando.PostForm do
       [label: "Ingress"]
     field :data, :textarea,
       [label: "Innhold"]
+    field :publish_at, :text,
+      [required: true,
+       label: "Publiseringstidspunkt",
+       default: &__MODULE__.get_now/0]
+    field :tags, :text,
+      [label: "Tags",
+       tags: true]
     submit "Lagre",
       [class: "btn btn-success"]
   end

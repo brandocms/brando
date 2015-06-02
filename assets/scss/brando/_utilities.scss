@@ -285,3 +285,12 @@ h1.negative, h2.negative, h3.negative, h4.negative {
   padding: 2px 10px;
   display: table;
 }
+
+.noselect {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}

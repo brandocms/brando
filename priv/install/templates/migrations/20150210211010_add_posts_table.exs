@@ -1,5 +1,6 @@
 defmodule <%= application_module %>.Repo.Migrations.AddPostsTable do
   use Ecto.Migration
+  use Brando.Tag, :migration
 
   def up do
     create table(:posts) do
@@ -17,11 +18,13 @@ defmodule <%= application_module %>.Repo.Migrations.AddPostsTable do
       add :featured,          :boolean
       add :published,         :boolean
       add :publish_at,        :datetime
+      tags
       timestamps
     end
     create index(:posts, [:language])
     create index(:posts, [:slug])
     create index(:posts, [:status])
+    create index(:posts, [:tags])
   end
 
   def down do
