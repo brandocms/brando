@@ -33,5 +33,10 @@ defmodule Brando.HTML.TablizeTest do
     assert ret =~ "/admin/brukere/#{post.id}"
     assert ret =~ "/admin/brukere/#{post.id}/endre"
     assert ret =~ "/admin/brukere/#{post.id}/slett"
+
+    {:safe, ret} = tablize(@conn, [post], helpers, filter: true)
+
+    ret = ret |> IO.iodata_to_binary
+    assert ret =~ ~s(<div class=\"filter-input-wrapper pull-right\"><i class=\"fa fa-fw fa-search m-r-sm\"></i><input type=\"text\" placeholder=\"Filtrer tabell\" id=\"filter-input\" /></div>)
   end
 end

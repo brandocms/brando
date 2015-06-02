@@ -114,8 +114,8 @@ defmodule Brando.HTML.Tablize do
   end
 
   defp do_td(field, record, type, opts) do
-    unless field in opts[:hide] do
-      if field in opts[:check_or_x] do
+    unless field in Keyword.get(opts, :hide, []) do
+      if field in Keyword.get(opts, :check_or_x, []) do
         ~s(<td class="text-center">#{check_or_x(Map.get(record, field))}</td>)
       else
         ~s(<td>#{inspect_field(field, type, Map.get(record, field))}</td>)
@@ -134,6 +134,9 @@ defmodule Brando.HTML.Tablize do
     ~s(<th class="text-center">&#8470;</th>)
   end
 
+  defp do_th(field, module, nil) do
+    ~s(<th>#{translate_field(module, field)}</th>)
+  end
   defp do_th(field, module, hidden_fields) do
     unless field in hidden_fields do
       ~s(<th>#{translate_field(module, field)}</th>)

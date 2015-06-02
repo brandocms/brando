@@ -12,6 +12,8 @@ defmodule Brando.FormTest do
            label: "Fullt navn",
            placeholder: "Fullt navn",
            help_text: "Skriv inn ditt fødselsnavn - fornavn og etternavn"]
+        field :tags, :text,
+          [tags: true]
         field :username, :text,
           [required: true,
            label: "Brukernavn",
