@@ -1,6 +1,8 @@
 defmodule Brando.Integration.Migration do
   use Ecto.Migration
   use Brando.Sequence, :migration
+  use Brando.Tag, :migration
+
   def up do
     create table(:users) do
       add :username,      :text
@@ -32,11 +34,13 @@ defmodule Brando.Integration.Migration do
       add :published,         :boolean
       add :publish_at,        :datetime
       timestamps
+      tags
     end
 
     create index(:posts, [:language])
     create index(:posts, [:slug])
     create index(:posts, [:status])
+    create index(:posts, [:tags])
 
     create table(:imagecategories) do
       add :name,              :text
