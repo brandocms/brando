@@ -33,6 +33,7 @@ defmodule Brando.HTML.Tablize do
     * `check_or_x` - Provide a list of fields that should be presented
                      with an X or a checkmark.
     * `hide` - List of fields that should not be rendered.
+    * `filter` - Boolean. Implements a filtering input box above table.
     * `colgroup` - Column widths if you need to override.
                    Supply as list `[100, nil, nil, 200, nil, 200]`
 
