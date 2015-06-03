@@ -93,18 +93,23 @@ defmodule Brando.Images.Utils do
   end
 
   @doc """
-  Goes through `images`, which is a map of sizes from an imagefield
+  Goes through `image`, which is a model with a :sizes field
   then passing to `delete_media/2` for removal
 
   ## Example:
 
-      delete_connected_images(record.cover.sizes)
+      delete_original_and_sized_images(record.cover)
 
   """
-  def delete_connected_images(images) do
-    for {_size, file} <- images do
+  def delete_original_and_sized_images(nil) do
+    nil
+  end
+  def delete_original_and_sized_images(image) do
+    sizes = Map.get(image, :sizes)
+    for {_size, file} <- sizes do
       delete_media(file)
     end
+    delete_media(Map.get(image, :path))
   end
 
   @doc """

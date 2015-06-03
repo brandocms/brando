@@ -158,10 +158,7 @@ defmodule Brando.Post do
   including all generated sizes.
   """
   def delete(record) when is_map(record) do
-    if record.cover do
-      delete_media(record.cover.path)
-      delete_connected_images(record.cover.sizes)
-    end
+    record.cover |> delete_original_and_sized_images
     Brando.repo.delete(record)
   end
   def delete(id) do

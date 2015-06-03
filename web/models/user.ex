@@ -165,10 +165,7 @@ defmodule Brando.User do
   including all generated sizes.
   """
   def delete(record) when is_map(record) do
-    if record.avatar do
-      delete_media(record.avatar.path)
-      delete_connected_images(record.avatar.sizes)
-    end
+    record.avatar |> delete_original_and_sized_images
     Brando.repo.delete(record)
   end
   def delete(id) do
