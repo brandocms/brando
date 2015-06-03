@@ -223,7 +223,7 @@ defmodule Brando.HTML do
     "      id=\"brando-dropzone\"></form>" <>
     "<script type=\"text/javascript\">" <>
     "  Dropzone.options.brandoDropzone = {" <>
-    "    paramName: \"image\", // The name that will be used to transfer the file" <>
+    "    paramName: \"image\"," <>
     "    maxFilesize: 10," <>
     "    thumbnailHeight: 150," <>
     "    thumbnailWidth: 150," <>
