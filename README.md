@@ -63,6 +63,8 @@ defmodule MyApp.Router do
   import Brando.Routes.Admin.News
   import Brando.Routes.Admin.Dashboard
   import Brando.Routes.Admin.Images
+  # import Brando.Routes.Admin.Pages
+  # import Brando.Routes.Admin.Instagram
 
   alias Brando.Plug.Authenticate
 
@@ -87,10 +89,12 @@ defmodule MyApp.Router do
 
   scope "/admin", as: :admin do
     pipe_through :admin
-    dashboard_routes "/"
-    user_routes      "/brukere"
-    post_routes      "/nyheter"
-    image_routes     "/bilder"
+    dashboard_routes   "/"
+    user_routes        "/brukere"
+    post_routes        "/nyheter"
+    image_routes       "/bilder"
+    # instagram_routes "/instagram" 
+    # page_routes      "/sider"
   end
 
   socket "/admin/ws", Brando do
