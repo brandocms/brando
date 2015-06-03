@@ -6,8 +6,9 @@
 
 *EXPERIMENTAL, DO NOT USE*
 
-Install:
---------
+
+## Install
+
 Add Brando to your `deps` and `applications` in your project's `mix.exs`:
 
 ```elixir
@@ -124,12 +125,13 @@ config :my_app, MyApp.Endpoint,
   render_errors: [view: Brando.ErrorView, format: "html"]
 ```
 
+
 ## Default admin credentials
 
 Default login/pass is `admin@twined.net/admin`
 
-Sequence
---------
+
+## Sequence
 
 Implements model sequencing.
 
@@ -184,8 +186,39 @@ Template (`sequence.html.eex`):
 </a>
 ```
 
-Instagram
----------
+
+## Tags
+
+Implements tagging in your model.
+
+Add to 
+
+Model:
+
+```elixir
+  use Brando.Tag, :model
+
+  schema "model" do
+    # ...
+    tags
+  end
+```
+
+Migration:
+
+```elixir
+  use Brando.Tag, :migration
+
+  def up do
+    create table(:model) do
+      # ...
+      tags
+    end
+  end
+```
+
+
+## Instagram
 
 Add to your app's supervision tree:
 
@@ -222,8 +255,8 @@ Config is found in your app's `config/brando.exs`.
     * `{:user, "your_name"}`
     * `{:tags, ["tag1", "tag2"]}`
 
-Villain
--------
+
+## Villain
 
 To use villain outside the built-in `pages` and `news` modules add to your app's `web/router.ex`:
 
@@ -253,6 +286,7 @@ Include css in `whatever/_stylesheets.<action>.html.eex`:
 ```html
 <link rel="stylesheet" href="/static/villain/villain.css">
 ```
+
 
 ## Optimizing images (not implemented yet)
 
