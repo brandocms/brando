@@ -133,8 +133,16 @@ defmodule Brando.Image do
   Also deletes all dependent image sizes.
   """
   def delete(ids) when is_list(ids) do
-    for id <- ids, do:
-      delete(id)
+    ids = ids |> Enum.map(fn(id) -> String.to_integer(id) end)
+    q = from(m in __MODULE__, where: m.id in ^ids)
+    records = q |> Brando.repo.all
+    for record <- records do
+      if record.image do
+        delete_media(record.image.path)
+        delete_connected_images(record.image.sizes)
+      end
+    end
+    q |> Brando.repo.delete_all
   end
 
   def delete(record) when is_map(record) do
