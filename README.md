@@ -227,7 +227,7 @@ Migration:
 Add to your app's supervision tree:
 
 ```elixir
-worker(Brando.Instagram.Server, [Brando.Instagram.cfg(:server_name)])
+worker(Brando.Instagram, [])
 ```
 
 Add Instagram to your menu modules in `config/brando.exs`:
