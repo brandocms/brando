@@ -102,15 +102,15 @@ defmodule RouterHelper do
 
     scope "/" do
       pipe_through :browser
-      get "/login", Brando.AuthController, :login,
+      get "/login", Brando.SessionController, :login,
         private: %{model: Brando.User,
-                   layout: {Brando.Auth.LayoutView, "auth.html"}}
-      post "/login", Brando.AuthController, :login,
+                   layout: {Brando.Session.LayoutView, "auth.html"}}
+      post "/login", Brando.SessionController, :login,
         private: %{model: Brando.User,
-                   layout: {Brando.Auth.LayoutView, "auth.html"}}
-      get "/logout", Brando.AuthController, :logout,
+                   layout: {Brando.Session.LayoutView, "auth.html"}}
+      get "/logout", Brando.SessionController, :logout,
         private: %{model: Brando.User,
-                   layout: {Brando.Auth.LayoutView, "auth.html"}}
+                   layout: {Brando.Session.LayoutView, "auth.html"}}
     end
   end
 end

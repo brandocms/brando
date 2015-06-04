@@ -19,7 +19,7 @@ defmodule Brando.Plug.Authorize do
   defp no_access(conn) do
     conn
     |> put_status(:forbidden)
-    |> put_view(Brando.AuthView)
+    |> put_view(Brando.SessionView)
     |> render("no_access.html")
     |> halt
   end

@@ -1,4 +1,4 @@
-defmodule Brando.AuthController do
+defmodule Brando.SessionController do
   @moduledoc """
   Controller for authentication actions.
   """
@@ -33,7 +33,7 @@ defmodule Brando.AuthController do
   @doc false
   def login(conn, _params) do
     conn
-    |> put_layout({Brando.Auth.LayoutView, "auth.html"})
+    |> put_layout({Brando.Session.LayoutView, "auth.html"})
     |> render(:login)
   end
 
@@ -42,7 +42,7 @@ defmodule Brando.AuthController do
     if user = Brando.HTML.current_user(conn), do:
       SystemChannel.log(:logged_out, user)
     conn
-    |> put_layout({Brando.Auth.LayoutView, "auth.html"})
+    |> put_layout({Brando.Session.LayoutView, "auth.html"})
     |> delete_session(:current_user)
     |> render(:logout)
   end

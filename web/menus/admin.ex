@@ -9,6 +9,6 @@ defmodule Brando.Menu.Admin do
     %{name: "Admin", anchor: "admin", icon: "fa fa-dashboard icon",
       submenu: [%{name: "Dashboard", url: {:admin_dashboard_path, :dashboard}},
                 %{name: "Systeminfo", url: {:admin_dashboard_path, :system_info}, role: :superuser},
-                %{name: "Logg ut", url: {:auth_path, :logout}}]}
+                %{name: "Logg ut", url: {:session_path, :logout}}]}
 
 end
