@@ -3,7 +3,11 @@
 }
 
 .text-center {
-    text-align: center !important;
+  text-align: center !important;
+}
+
+.text-upper {
+  text-transform: uppercase;
 }
 
 .status-published {
@@ -261,6 +265,9 @@
 .text-muted {
   color: #979797;
 }
+.text-muted-more {
+  color: #C2C2C2;
+}
 
 .close {
   float: right;
@@ -293,4 +300,13 @@ h1.negative, h2.negative, h3.negative, h4.negative {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+}
+
+/* \f142 is ellipsis-v */
+/* \202F is thin unbreakable space */
+.fa.fa-grip:before {
+    content: "\f142 \202F \f142 \202F \f142";
+}
+.fa.fa-grip-large:before {
+    content: "\f142 \202F \f142 \202F \f142 \202F \f142 \202F \f142 \202F \f142 \202F \f142";
 }
