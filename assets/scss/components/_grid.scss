@@ -43,6 +43,7 @@ $block-grid-max-size: 6 !default;
   }
   @else if ($size == shrink) {
     flex: 0 0 auto;
+    overflow: visible;
   }
   @else if ($size == expand) {
     flex: 1 1 auto;
@@ -190,8 +191,6 @@ $block-grid-max-size: 6 !default;
   }
 }
 
-
-
 /*
   Frames are containers that stretch to the full dimmensions of the browser window.
 */
@@ -257,6 +256,7 @@ $block-grid-max-size: 6 !default;
   > li, > div, > section {
     padding: 0 1rem 1rem;
     flex: 0 0 percentage(1 / $up);
+    max-width: percentage(1 / $up);
   }
 }
 
@@ -290,7 +290,7 @@ $block-grid-max-size: 6 !default;
   &.shrink { @include grid-size(shrink); }
 
   // Prevent an element from scrolling
-  &.noscroll { overflow: hidden; }
+  &.noscroll { overflow: visible; }
 }
 
 @include exports(grid) {
