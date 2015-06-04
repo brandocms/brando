@@ -169,7 +169,7 @@ defmodule Brando.ImageSeries do
               name: "Navn",
               slug: "URL-tamp",
               credits: "Kreditering",
-              order: "Rekkefølge",
+              sequence: "Rekkefølge",
               creator: "Opprettet av",
               images: "Bilder",
               image_category: "Bildekategori",
