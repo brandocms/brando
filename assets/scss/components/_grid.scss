@@ -1,5 +1,3 @@
-@import "panel";
-
 /*
   THE GRID
   --------
@@ -192,26 +190,7 @@ $block-grid-max-size: 6 !default;
   }
 }
 
-/*
-  Resets styles set by panels. Use this when a panel transforms into a block on larger screens.
 
-  @group grid
-
-  @output Resets to transform, position, and a few visual styles.
-*/
-@mixin grid-panel-reset() {
-  transform: none;
-  position: relative;
-  width: auto;
-  height: auto;
-  z-index: auto;
-  box-shadow: none;
-  background: transparent;
-  top: auto;
-  right: auto;
-  bottom: auto;
-  left: auto;
-}
 
 /*
   Frames are containers that stretch to the full dimmensions of the browser window.
@@ -369,9 +348,6 @@ $block-grid-max-size: 6 !default;
 
       @include breakpoint($size) {
         @include grid-block;
-
-        // Override panel styles
-        &.panel { @include grid-panel-reset; }
       }
     }
     .#{$size}-grid-content {
@@ -379,9 +355,6 @@ $block-grid-max-size: 6 !default;
 
       @include breakpoint($size) {
         @include grid-content;
-
-        // Override panel styles
-        &.panel { @include grid-panel-reset; }
       }
     }
   }
