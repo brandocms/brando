@@ -55,13 +55,12 @@ defmodule Brando.Integration.Migration do
       add :name,              :text
       add :slug,              :text
       add :credits,           :text
-      add :order,             :integer
       add :creator_id,        references(:users)
       add :image_category_id, references(:imagecategories)
+      sequenced
       timestamps
     end
     create index(:imageseries, [:slug])
-    create index(:imageseries, [:order])
 
     create table(:images) do
       add :image,             :text
@@ -132,7 +131,6 @@ defmodule Brando.Integration.Migration do
 
     drop table(:imageseries)
     drop index(:imageseries, [:slug])
-    drop index(:imageseries, [:order])
 
     drop table(:images)
 
