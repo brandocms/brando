@@ -1,0 +1,23 @@
+<h1>Sortering</h1>
+<p>
+  Sortér bildeserier i kategori <span class="label m-l-sm"><%= Brando.ImageCategory.get_slug(id: @filter) %></span>
+</p>
+<ul id="sequence" class="clearfix">
+<%= for i <- @items do %>
+  <li style="width: 100%" data-id="<%= i.id %>">
+    <h3 class="negative m-t-xs"><%= i.name %></h3>
+    <%= if i.images != [] do %>
+      <%= for img <- i.images do %>
+        <img src="<%= media_url(img(img.image, :thumb)) %>" />
+      <% end %>
+    <% else %>
+      <em>Ingen bilder i serien.</em>
+    <% end %>
+  </li>
+<% end %>
+</ul>
+<hr>
+<div class="buttons m-t-md">
+  <a id="sort-post" href="<%= Helpers.admin_image_category_path(@conn, :sequence_post, @filter) %>" class="btn btn-default">Lagre rekkefølge</a>
+  <a href="<%= Helpers.admin_image_path(@conn, :index) %>" class="btn btn-default">Tilbake til oversikten</a>
+</div>

@@ -3,6 +3,7 @@ defmodule Brando.Admin.ImageCategoryController do
   Controller for the Brando ImageCategory module.
   """
   use Brando.Web, :controller
+  use Brando.Sequence, [:controller, [model: Brando.ImageSeries, filter: &Brando.ImageSeries.get_by_category_id/1]]
   import Brando.Plug.Section
   import Brando.HTML.Inspect, only: [model_name: 2]
 

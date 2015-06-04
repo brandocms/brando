@@ -6,6 +6,7 @@ defmodule Brando.ImageSeries do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
+  use Brando.Sequence, :model
   import Ecto.Query, only: [from: 2]
   import Brando.Utils.Model, only: [put_creator: 2]
   alias Brando.User
@@ -13,16 +14,16 @@ defmodule Brando.ImageSeries do
   alias Brando.ImageCategory
 
   @required_fields ~w(name slug image_category_id creator_id)
-  @optional_fields ~w(credits order)
+  @optional_fields ~w(credits sequence)
 
   schema "imageseries" do
     field :name, :string
     field :slug, :string
     field :credits, :string
-    field :order, :integer
     belongs_to :creator, User
     belongs_to :image_category, ImageCategory
     has_many :images, Image
+    sequenced
     timestamps
   end
 
@@ -111,6 +112,17 @@ defmodule Brando.ImageSeries do
       order_by: i.sequence,
       preload: [:creator, :image_category, images: i]))
       |> Brando.repo.one
+  end
+
+  @doc """
+  Get all imageseries in category `id`.
+  """
+  def get_by_category_id(id) do
+    from(m in __MODULE__,
+         where: m.image_category_id == ^id,
+         order_by: m.sequence,
+         preload: [:images])
+    |> Brando.repo.all
   end
 
   @doc """

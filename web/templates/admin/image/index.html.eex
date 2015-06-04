@@ -6,6 +6,21 @@
       <%= String.capitalize(category.name) %>
     </a>
     <div class="tab-content">
+      <a href="<%= Helpers.admin_image_series_path(@conn, :new, category.id) %>" class="btn btn-primary m-b-sm">
+        <i class="fa fa-plus"></i> Ny bildeserie
+      </a>
+      <a href="<%= Helpers.admin_image_category_path(@conn, :sequence, category.id) %>" class="btn btn-default m-b-sm">
+        <i class="fa fa-sort"></i> Sortér bildeserier
+      </a>
+      <a href="<%= Helpers.admin_image_category_path(@conn, :edit, category.id) %>" class="btn btn-default m-b-sm">
+        <i class="fa fa-edit"></i> Endre kategori
+      </a>
+      <a href="<%= Helpers.admin_image_category_path(@conn, :configure, category.id) %>" class="btn btn-default m-b-sm">
+        <i class="fa fa-cogs"></i> Konfigurér kategori
+      </a>
+      <a href="<%= Helpers.admin_image_category_path(@conn, :delete_confirm, category.id) %>" class="btn btn-danger m-b-sm">
+        <i class="fa fa-trash"></i> Slett kategori
+      </a>
     <%= if category.image_series != [] do %>
       <%= for serie <- category.image_series do %>
         <div class="image-serie image-selection-pool">
@@ -32,24 +47,9 @@
     <% else %>
       <p>Ingen bildeserier i denne kategorien</p>
     <% end %>
-      <a href="<%= Helpers.admin_image_series_path(@conn, :new, category.id) %>" class="btn btn-primary m-t-sm">
-        <i class="fa fa-plus"></i> Ny bildeserie
-      </a>
-      <a href="<%= Helpers.admin_image_series_path(@conn, :new, category.id) %>" class="btn btn-default m-t-sm">
-        <i class="fa fa-sort"></i> Sortér bildeserier
-      </a>
-      <a href="<%= Helpers.admin_image_category_path(@conn, :edit, category.id) %>" class="btn btn-default m-t-sm">
-        <i class="fa fa-edit"></i> Endre kategori
-      </a>
-      <a href="<%= Helpers.admin_image_category_path(@conn, :configure, category.id) %>" class="btn btn-default m-t-sm">
-        <i class="fa fa-cogs"></i> Konfigurér kategori
-      </a>
-      <a href="<%= Helpers.admin_image_category_path(@conn, :delete_confirm, category.id) %>" class="btn btn-danger m-t-sm">
-        <i class="fa fa-trash"></i> Slett kategori
-      </a>
     </div>
   </li>
   <% end %>
-  <a href="<%= Helpers.admin_image_category_path(@conn, :new) %>" class="btn btn-xs btn-default"><i class="fa fa-plus"></i> Ny kategori</a>
+  <a href="<%= Helpers.admin_image_category_path(@conn, :new) %>" class="btn btn-xs btn-default m-l-md"><i class="fa fa-plus"></i> Ny kategori</a>
 </ul>
 <hr>

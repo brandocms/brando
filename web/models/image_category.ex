@@ -104,13 +104,23 @@ defmodule Brando.ImageCategory do
   end
 
   @doc """
+  Returns the model's slug
+  """
+  def get_slug(id: id) do
+    from(m in __MODULE__,
+      select: m.slug,
+      where: m.id == ^id)
+      |> Brando.repo.one!
+  end
+
+  @doc """
   Get all records. Ordered by `id`.
   """
   def all do
     (from m in __MODULE__,
       left_join: is in assoc(m, :image_series),
       left_join: i in assoc(is, :images),
-      order_by: [asc: m.name, asc: is.name, asc: i.sequence],
+      order_by: [asc: m.name, asc: is.sequence, asc: i.sequence],
       preload: [image_series: {is, images: i}])
       |> Brando.repo.all
   end

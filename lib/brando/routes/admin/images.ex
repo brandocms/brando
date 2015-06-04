@@ -55,6 +55,8 @@ defmodule Brando.Routes.Admin.Images do
 
       get    "#{path}/kategorier",                categories_ctrl, :index,           Keyword.put(opts, :as, "image_category")
       get    "#{path}/kategorier/ny",             categories_ctrl, :new,             Keyword.put(opts, :as, "image_category")
+      get    "#{path}/kategorier/:filter/sorter", categories_ctrl, :sequence,        Keyword.put(opts, :as, "image_category")
+      post   "#{path}/kategorier/:filter/sorter", categories_ctrl, :sequence_post,   Keyword.put(opts, :as, "image_category")
       get    "#{path}/kategorier/:id/endre",      categories_ctrl, :edit,            Keyword.put(opts, :as, "image_category")
       get    "#{path}/kategorier/:id/konfigurer", categories_ctrl, :configure,       Keyword.put(opts, :as, "image_category")
       patch  "#{path}/kategorier/:id/konfigurer", categories_ctrl, :configure_patch, Keyword.put(opts, :as, "image_category")
