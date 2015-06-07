@@ -13,6 +13,5 @@ priv/static/brando/old_js
 brando.sublime-project
 docs
 excoveralls.post.json
-priv/static/villain
 coveralls.json
 doc
