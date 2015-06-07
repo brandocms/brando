@@ -333,6 +333,7 @@ var Instagram = (function () {
     _createClass(Instagram, null, [{
         key: "setup",
         value: function setup() {
+            this.checkButtonEnable();
             this.changeStatusListener();
             this.imageSelectionListener();
         }

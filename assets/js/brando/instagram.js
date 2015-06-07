@@ -4,6 +4,7 @@ import Utils from "./utils.js";
 var imagePool = [];
 class Instagram {
     static setup() {
+        this.checkButtonEnable();
         this.changeStatusListener();
         this.imageSelectionListener();
     }
