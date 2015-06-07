@@ -70,6 +70,7 @@ defmodule RouterHelper do
     import Brando.Routes.Admin.News
     import Brando.Routes.Admin.Images
     import Brando.Routes.Admin.Pages
+    import Brando.Routes.Admin.Instagram
 
     pipeline :admin do
       plug :accepts, ~w(html json)
@@ -93,6 +94,7 @@ defmodule RouterHelper do
       post_routes "/nyheter"
       page_routes "/sider"
       image_routes "/bilder"
+      instagram_routes "/instagram"
       dashboard_routes "/"
     end
 
