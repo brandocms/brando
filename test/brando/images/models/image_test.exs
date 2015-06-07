@@ -78,6 +78,23 @@ defmodule Brando.Integration.ImageTest do
     assert errors == [sequence: "is invalid"]
   end
 
+  test "update_image_meta/3", %{user: user, series: series} do
+    assert {:ok, image} =
+      @params
+      |> Map.put(:creator_id, user.id)
+      |> Map.put(:image_series_id, series.id)
+      |> Image.create(user)
+
+    assert image.image.title == "Title"
+    assert image.image.credits == "credits"
+
+    assert {:ok, new_image} = Image.update_image_meta(image, "new title", "new credits")
+
+    refute new_image.image == image.image
+    assert new_image.image.title == "new title"
+    assert new_image.image.credits == "new credits"
+  end
+
   test "get/1", %{user: user, series: series} do
     assert {:ok, image} =
       @params
