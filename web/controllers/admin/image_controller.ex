@@ -12,8 +12,13 @@ defmodule Brando.Admin.ImageController do
   def index(conn, _params) do
     # show images by tabbed category, then series.
     category_model = conn.private[:category_model]
+    categories =
+      category_model
+      |> category_model.with_image_series_and_images
+      |> Brando.repo.all
+
     conn
-    |> assign(:categories, category_model.all)
+    |> assign(:categories, categories)
     |> render(:index)
   end
 

@@ -9,7 +9,7 @@ defmodule Brando.SessionController do
   @doc false
   def login(conn, %{"user" => %{"email" => email, "password" => password}}) do
     model = conn.private[:model]
-    user = model.get(email: email)
+    user = Brando.repo.get_by(model, email: email)
     case model.auth?(user, password) do
       true ->
         user = user

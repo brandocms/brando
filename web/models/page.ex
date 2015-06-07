@@ -114,46 +114,6 @@ defmodule Brando.Page do
   end
 
   @doc """
-  Get model by `val` or raise `Ecto.NoResultsError`.
-  """
-  def get!(val), do:
-    get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
-
-  @doc """
-  Get model from DB by `key`
-  """
-  def get(key: key) do
-    from(m in __MODULE__,
-         where: m.key == ^key)
-    |> Brando.repo.one
-  end
-
-  @doc """
-  Get model from DB by `id`
-  """
-  def get(id: id) do
-    from(m in __MODULE__,
-         where: m.id == ^id,
-         preload: :creator)
-    |> Brando.repo.one
-  end
-
-  @doc """
-  Get model with children from DB by `id`
-  """
-  def get_with_children!(id: id) do
-    (from m in __MODULE__,
-          left_join: c in assoc(m, :children),
-          left_join: p in assoc(m, :parent),
-          left_join: cu in assoc(c, :creator),
-          join: u in assoc(m, :creator),
-          where: m.id == ^id,
-          preload: [children: {c, creator: cu}, creator: u, parent: p],
-          select: m)
-    |> Brando.repo.one!
-  end
-
-  @doc """
   Delete `id` from database. Also deletes any connected image fields,
   including all generated sizes.
   """
@@ -161,37 +121,56 @@ defmodule Brando.Page do
     Brando.repo.delete(record)
   end
   def delete(id) do
-    record = get!(id: id)
+    record = Brando.repo.get_by!(__MODULE__, id: id)
     delete(record)
   end
 
   @doc """
-  Get all records. Ordered by `id`. Preload :creator.
+  Order by status and insertion
   """
-  def all do
-    (from m in __MODULE__,
-          order_by: [asc: m.status, desc: m.inserted_at],
-          preload: [:creator])
-    |> Brando.repo.all
+  def order(query) do
+    from m in query, order_by: [asc: m.status, desc: m.inserted_at]
   end
 
-  def all_parents do
-    (from m in __MODULE__,
-          where: is_nil(m.parent_id),
-          order_by: [asc: m.status, desc: m.inserted_at])
-    |> Brando.repo.all
+  @doc """
+  Only gets models that are parents
+  """
+  def with_parents(query) do
+    from m in query,
+         where: is_nil(m.parent_id)
   end
 
-  def all_parents_and_children do
-    (from m in __MODULE__,
-          left_join: c in assoc(m, :children),
-          left_join: cu in assoc(c, :creator),
-          join: u in assoc(m, :creator),
-          where: is_nil(m.parent_id),
-          preload: [children: {c, creator: cu}, creator: u],
-          order_by: [asc: m.status, desc: m.inserted_at],
-          select: m)
-    |> Brando.repo.all
+  @doc """
+  Get model with children from DB by `id`
+  """
+  def with_children(query) do
+    from m in query,
+         left_join: c in assoc(m, :children),
+         left_join: p in assoc(m, :parent),
+         left_join: cu in assoc(c, :creator),
+         join: u in assoc(m, :creator),
+         preload: [children: {c, creator: cu}, creator: u, parent: p],
+         select: m
+  end
+
+  @doc """
+  Gets model with parents and children
+  """
+  def with_parents_and_children(query) do
+    from m in query,
+         left_join: c in assoc(m, :children),
+         left_join: cu in assoc(c, :creator),
+         join: u in assoc(m, :creator),
+         where: is_nil(m.parent_id),
+         preload: [children: {c, creator: cu}, creator: u],
+         select: m
+  end
+
+  @doc """
+  Preloads :creator field
+  """
+  def preload_creator(query) do
+    from m in query, preload: [:creator]
   end
 
 

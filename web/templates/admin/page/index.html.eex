@@ -1,4 +1,8 @@
     <h1>Sideoversikt</h1>
+    <div class="grid-block">
+    <div class="medium-4 grid-block">test side</div>
+    <div class="medium-8 grid-block">test main</div>
+    </div>
 <%= if @pages != [] do %>
     <div class="status-indicators">
       <span class="m-r-sm"><span class="status-published"><i class="fa fa-circle m-r-sm"> </i> </span> Publisert</span>

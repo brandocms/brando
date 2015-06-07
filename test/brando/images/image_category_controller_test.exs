@@ -41,12 +41,11 @@ defmodule Brando.ImageCategory.ControllerTest do
 
     assert html_response(conn, 200) =~ "Endre bildekategori"
 
-    conn =
+    assert_raise Plug.Conn.WrapperError, fn ->
       call(:get, "/admin/bilder/kategorier/1234/endre")
       |> with_user
       |> send_request
-
-    assert html_response(conn, 404)
+    end
   end
 
   test "create (post) w/params" do
@@ -98,12 +97,11 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert html_response(conn, 200) =~ "Konfigurér bildekategori"
     assert html_response(conn, 200) =~ "imagecategoryconfig[cfg]"
 
-    conn =
+    assert_raise Plug.Conn.WrapperError, fn ->
       call(:get, "/admin/bilder/kategorier/1234/konfigurer")
       |> with_user
       |> send_request
-
-    assert html_response(conn, 404)
+    end
   end
 
   test "config (post) w/params" do

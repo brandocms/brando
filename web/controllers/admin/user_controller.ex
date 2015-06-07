@@ -18,7 +18,7 @@ defmodule Brando.Admin.UserController do
   def index(conn, _params) do
     model = conn.private[:model]
     conn
-    |> assign(:users, model.all)
+    |> assign(:users, model |> model.order_by_id |> Brando.repo.all)
     |> assign(:page_title, "Brukeroversikt")
     |> render("index.html")
   end
@@ -27,7 +27,7 @@ defmodule Brando.Admin.UserController do
   def show(conn, %{"id" => user_id}) do
     model = conn.private[:model]
     conn
-    |> assign(:user, model.get!(id: user_id))
+    |> assign(:user, Brando.repo.get_by!(model, id: user_id))
     |> assign(:page_title, "Vis bruker")
     |> render("show.html")
   end
@@ -44,7 +44,7 @@ defmodule Brando.Admin.UserController do
   def profile_edit(conn, _params) do
     model = conn.private[:model]
     user_id = current_user(conn).id
-    form_data = model.get(id: user_id)
+    form_data = Brando.repo.get_by!(model, id: user_id)
     conn
     |> assign(:user, form_data)
     |> assign(:id, user_id)
@@ -56,7 +56,7 @@ defmodule Brando.Admin.UserController do
   def profile_update(conn, %{"user" => form_data}) do
     model = conn.private[:model]
     user_id = current_user(conn).id
-    user = model.get(id: user_id)
+    user = Brando.repo.get_by!(model, id: user_id)
 
     case model.update(user, form_data) do
       {:ok, updated_user} ->
@@ -119,7 +119,7 @@ defmodule Brando.Admin.UserController do
   @doc false
   def edit(conn, %{"id" => user_id}) do
     model = conn.private[:model]
-    form_data = model.get(id: String.to_integer(user_id))
+    form_data = Brando.repo.get_by!(model, id: user_id)
     conn
     |> assign(:user, form_data)
     |> assign(:id, user_id)
@@ -130,7 +130,7 @@ defmodule Brando.Admin.UserController do
   @doc false
   def update(conn, %{"user" => form_data, "id" => user_id}) do
     model = conn.private[:model]
-    user = model.get(id: String.to_integer(user_id))
+    user = Brando.repo.get_by!(model, id: user_id)
 
     case model.update(user, form_data) do
       {:ok, updated_user} ->
@@ -160,9 +160,9 @@ defmodule Brando.Admin.UserController do
   end
 
   @doc false
-  def delete_confirm(conn, %{"id" => id}) do
+  def delete_confirm(conn, %{"id" => user_id}) do
     model = conn.private[:model]
-    record = model.get!(id: id)
+    record = Brando.repo.get_by!(model, id: user_id)
     conn
     |> assign(:record, record)
     |> assign(:page_title, "Bekreft sletting")
@@ -170,9 +170,9 @@ defmodule Brando.Admin.UserController do
   end
 
   @doc false
-  def delete(conn, %{"id" => id}) do
+  def delete(conn, %{"id" => user_id}) do
     model = conn.private[:model]
-    record = model.get!(id: id)
+    record = Brando.repo.get_by!(model, id: user_id)
     model.delete(record)
     conn
     |> put_flash(:notice, "#{model_name(record, :singular)} #{model.__repr__(record)} slettet.")

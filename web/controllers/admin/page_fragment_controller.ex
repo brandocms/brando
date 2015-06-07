@@ -9,6 +9,7 @@ defmodule Brando.Admin.PageFragmentController do
 
   import Brando.Plug.Section
   import Brando.HTML.Inspect, only: [model_name: 2]
+  import Ecto.Query
 
   plug :put_section, "page_fragments"
   plug :scrub_params, "page_fragment" when action in [:create, :update]
@@ -25,8 +26,12 @@ defmodule Brando.Admin.PageFragmentController do
   @doc false
   def show(conn, %{"id" => id}) do
     model = conn.private[:fragment_model]
+    page =
+      model
+      |> preload(:creator)
+      |> Brando.repo.get_by!(id: id)
     conn
-    |> assign(:page_fragment, model.get!(id: id))
+    |> assign(:page_fragment, page)
     |> render(:show)
   end
 
@@ -56,22 +61,22 @@ defmodule Brando.Admin.PageFragmentController do
   @doc false
   def edit(conn, %{"id" => id}) do
     model = conn.private[:fragment_model]
-    if page_fragment = model.get(id: id) do
-      page_fragment = page_fragment
+    page_fragment =
+      model
+      |> Brando.repo.get_by!(id: id)
       |> model.encode_data
-      conn
-      |> assign(:page_fragment, page_fragment)
-      |> assign(:id, id)
-      |> render(:edit)
-    else
-      conn |> put_status(:not_found) |> render(:not_found)
-    end
+
+    conn
+    |> assign(:page_fragment, page_fragment)
+    |> assign(:id, id)
+    |> render(:edit)
+
   end
 
   @doc false
   def update(conn, %{"page_fragment" => form_data, "id" => id}) do
     model = conn.private[:fragment_model]
-    page_fragment = model.get(id: String.to_integer(id))
+    page_fragment = model |> Brando.repo.get_by!(id: id)
     case model.update(page_fragment, form_data) do
       {:ok, _updated_page_fragment} ->
         conn
@@ -90,7 +95,11 @@ defmodule Brando.Admin.PageFragmentController do
   @doc false
   def delete_confirm(conn, %{"id" => id}) do
     model = conn.private[:fragment_model]
-    record = model.get!(id: id)
+    record =
+      model
+      |> preload(:creator)
+      |> Brando.repo.get_by!(id: id)
+
     conn
     |> assign(:record, record)
     |> render(:delete_confirm)
@@ -99,7 +108,7 @@ defmodule Brando.Admin.PageFragmentController do
   @doc false
   def delete(conn, %{"id" => id}) do
     model = conn.private[:fragment_model]
-    record = model.get!(id: id)
+    record = model |> Brando.repo.get_by!(id: id)
     model.delete(record)
     conn
     |> put_flash(:notice, "#{model_name(record, :singular)} #{model.__repr__(record)} slettet.")

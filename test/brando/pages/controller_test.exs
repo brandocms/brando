@@ -76,12 +76,11 @@ defmodule Brando.Pages.ControllerTest do
 
     assert html_response(conn, 200) =~ "Endre side"
 
-    conn =
+    assert_raise Plug.Conn.WrapperError, fn ->
       call(:get, "/admin/sider/1234/endre")
       |> with_user
       |> send_request
-
-    assert html_response(conn, 404)
+    end
   end
 
   test "create (page) w/params" do

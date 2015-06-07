@@ -129,6 +129,20 @@ config :my_app, MyApp.Endpoint,
   render_errors: [view: Brando.ErrorView, format: "html"]
 ```
 
+## Pagination
+
+For pagination, add to your app's `repo.ex`:
+
+```elixir
+
+defmodule MyApp.Repo do
+  use Ecto.Repo,
+    otp_app: :my_app
+  use Scrivener
+end
+```
+
+See Scrivener's docs for usage: https://hexdocs.pm/scrivener/
 
 ## Default admin credentials
 

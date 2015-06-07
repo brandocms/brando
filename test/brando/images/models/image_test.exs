@@ -84,9 +84,12 @@ defmodule Brando.Integration.ImageTest do
       |> Map.put(:creator_id, user.id)
       |> Map.put(:image_series_id, series.id)
       |> Image.create(user)
-    assert Image.get(id: image.id).id == image.id
-    assert Image.get(id: image.id).creator_id == image.creator_id
-    assert Image.get(id: 2000) == nil
+
+    assert (Image |> Brando.repo.get_by!(id: image.id)).id == image.id
+    assert (Image |> Brando.repo.get_by!(id: image.id)).creator_id == image.creator_id
+    assert_raise Ecto.NoResultsError, fn ->
+     Image |> Brando.repo.get_by!(id: 1234)
+    end
   end
 
   test "get!/1", %{user: user, series: series} do
@@ -95,9 +98,9 @@ defmodule Brando.Integration.ImageTest do
       |> Map.put(:creator_id, user.id)
       |> Map.put(:image_series_id, series.id)
       |> Image.create(user)
-    assert Image.get!(id: image.id).id == image.id
+    assert (Image |> Brando.repo.get_by!(id: image.id)).id == image.id
     assert_raise Ecto.NoResultsError, fn ->
-      Image.get!(id: 2000)
+      Image |> Brando.repo.get_by!(id: 1234)
     end
   end
 
@@ -118,8 +121,8 @@ defmodule Brando.Integration.ImageTest do
 
     assert {:ok, _} = Image.sequence([to_string(image1.id), to_string(image2.id)], [1, 0])
 
-    image1 = Image.get!(id: image1.id)
-    image2 = Image.get!(id: image2.id)
+    image1 = Image |> Brando.repo.get_by!(id: image1.id)
+    image2 = Image |> Brando.repo.get_by!(id: image2.id)
     assert image1.sequence == 1
     assert image2.sequence == 0
   end
@@ -130,18 +133,22 @@ defmodule Brando.Integration.ImageTest do
       |> Map.put(:creator_id, user.id)
       |> Map.put(:image_series_id, series.id)
       |> Image.create(user)
-    assert Image.get!(id: image.id).id == image.id
+    assert (Image |> Brando.repo.get_by!(id: image.id)).id == image.id
     assert Image.delete(image)
-    refute Image.get(id: image.id)
+    assert_raise Ecto.NoResultsError, fn ->
+      Image |> Brando.repo.get_by!(id: image.id)
+    end
 
     assert {:ok, image} =
       @params
       |> Map.put(:creator_id, user.id)
       |> Map.put(:image_series_id, series.id)
       |> Image.create(user)
-    assert Image.get!(id: image.id).id == image.id
+    assert (Image |> Brando.repo.get_by!(id: image.id)).id == image.id
     assert Image.delete(image.id)
-    refute Image.get(id: image.id)
+    assert_raise Ecto.NoResultsError, fn ->
+      Image |> Brando.repo.get_by!(id: image.id)
+    end
 
     assert {:ok, image1} =
       @params
@@ -153,11 +160,15 @@ defmodule Brando.Integration.ImageTest do
       |> Map.put(:creator_id, user.id)
       |> Map.put(:image_series_id, series.id)
       |> Image.create(user)
-    assert Image.get!(id: image1.id).id == image1.id
-    assert Image.get!(id: image2.id).id == image2.id
+    assert (Image |> Brando.repo.get_by!(id: image1.id)).id == image1.id
+    assert (Image |> Brando.repo.get_by!(id: image2.id)).id == image2.id
     assert Image.delete([image1.id, image2.id])
-    refute Image.get(id: image1.id)
-    refute Image.get(id: image2.id)
+    assert_raise Ecto.NoResultsError, fn ->
+      Image |> Brando.repo.get_by!(id: image1.id)
+    end
+    assert_raise Ecto.NoResultsError, fn ->
+      Image |> Brando.repo.get_by!(id: image2.id)
+    end
   end
 
   test "delete_dependent_images/1", %{user: user, series: series} do
@@ -166,107 +177,30 @@ defmodule Brando.Integration.ImageTest do
       |> Map.put(:creator_id, user.id)
       |> Map.put(:image_series_id, series.id)
       |> Image.create(user)
-    assert Image.get!(id: image.id).id == image.id
+    assert (Image |> Brando.repo.get_by!(id: image.id)).id == image.id
 
     assert {:ok, image} =
       @params
       |> Map.put(:creator_id, user.id)
       |> Map.put(:image_series_id, series.id)
       |> Image.create(user)
-    assert Image.get!(id: image.id).id == image.id
+    assert (Image |> Brando.repo.get_by!(id: image.id)).id == image.id
 
     series =
-      [id: series.id]
-      |> ImageSeries.get!
+      ImageSeries
+      |> Ecto.Query.preload([:images])
+      |> Brando.repo.get_by!(id: series.id)
       |> Brando.repo.preload(:images)
 
     assert Enum.count(series.images) == 2
     Image.delete_dependent_images(series.id)
 
     series =
-      [id: series.id]
-      |> ImageSeries.get!
+      ImageSeries
+      |> Ecto.Query.preload([:images])
+      |> Brando.repo.get_by!(id: series.id)
       |> Brando.repo.preload(:images)
 
     assert Enum.count(series.images) == 0
   end
-
-  # test "all/0" do
-  #   assert Image.all == []
-  #   assert {:ok, _user} = Image.create(@params)
-  #   refute Image.all == []
-  # end
-
-  # test "auth?/2" do
-  #   assert {:ok, user} = Image.create(@params)
-  #   assert Image.auth?(user, "finimeze")
-  #   refute Image.auth?(user, "finimeze123")
-  # end
-
-  # test "set_last_login/1" do
-  #   assert {:ok, user} = Image.create(@params)
-  #   new_user = Image.set_last_login(user)
-  #   refute user.last_login == new_user.last_login
-  # end
-
-  # test "has_role?/1" do
-  #   assert {:ok, user} = Image.create(@params)
-  #   assert Image.has_role?(user, :superuser)
-  #   assert Image.has_role?(user, :admin)
-  #   refute Image.has_role?(user, :staff)
-  # end
-
-  # test "check_for_uploads/2 success" do
-  #   assert {:ok, user} = Image.create(@params)
-  #   up_plug =
-  #     %Plug.Upload{content_type: "image/png",
-  #                  filename: "sample.png",
-  #                  path: "#{Path.expand("../../../", __DIR__)}/fixtures/sample.png"}
-  #   up_params = Dict.put(%{}, "avatar", up_plug)
-  #   assert {:ok, dict} = Image.check_for_uploads(user, up_params)
-  #   user = Image.get(email: "fanogigyni@gmail.com")
-  #   assert user.avatar == dict.avatar
-  #   assert File.exists?(Path.join([Brando.config(:media_path), dict.avatar.path]))
-  #   Image.delete(user)
-  #   refute File.exists?(Path.join([Brando.config(:media_path), dict.avatar.path]))
-  # end
-
-  # test "check_for_uploads/2 error" do
-  #   assert {:ok, user} = Image.create(@params)
-  #   up_plug =
-  #     %Plug.Upload{content_type: "image/png",
-  #                  filename: "",
-  #                  path: "#{Path.expand("../../../", __DIR__)}/fixtures/sample.png"}
-  #   up_params = Dict.put(@params, "avatar", up_plug)
-  #   assert_raise Brando.Exception.UploadError, "Blankt filnavn!", fn ->
-  #     Image.check_for_uploads(user, up_params)
-  #   end
-  # end
-
-  # test "check_for_uploads/2 format error" do
-  #   assert {:ok, user} = Image.create(@params)
-  #   up_plug =
-  #     %Plug.Upload{content_type: "image/gif",
-  #                  filename: "sample.gif",
-  #                  path: "#{Path.expand("../../../", __DIR__)}/fixtures/sample.png"}
-  #   up_params = Dict.put(@params, "avatar", up_plug)
-  #   assert_raise Brando.Exception.UploadError, fn -> Image.check_for_uploads(user, up_params) end
-  # end
-
-  # test "check_for_uploads/2 copy error" do
-  #   assert {:ok, user} = Image.create(@params)
-  #   up_plug =
-  #     %Plug.Upload{content_type: "image/png",
-  #                  filename: "sample.png",
-  #                  path: "#{Path.expand("../../../", __DIR__)}/fixtures/non_existant.png"}
-  #   up_params = Dict.put(@params, "avatar", up_plug)
-  #   assert_raise Brando.Exception.UploadError, "Feil under kopiering -> enoent", fn ->
-  #     Image.check_for_uploads(user, up_params)
-  #   end
-  # end
-
-  # test "check_for_uploads/2 noupload" do
-  #   assert {:ok, user} = Image.create(@params)
-  #   assert [] = Image.check_for_uploads(user, @params)
-  # end
 end

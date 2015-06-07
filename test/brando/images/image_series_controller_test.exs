@@ -44,12 +44,14 @@ defmodule Brando.ImageSeries.ControllerTest do
       call(:get, "/admin/bilder/serier/#{series.id}/endre")
       |> with_user
       |> send_request
+
     assert html_response(conn, 200) =~ "Endre bildeserie"
-    conn =
+
+    assert_raise Plug.Conn.WrapperError, fn ->
       call(:get, "/admin/bilder/serier/1234/endre")
       |> with_user
       |> send_request
-    assert html_response(conn, 404)
+    end
   end
 
   test "create (post) w/params" do
@@ -182,8 +184,10 @@ defmodule Brando.ImageSeries.ControllerTest do
     assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "sorter"]
     assert json_response(conn, 200) == %{"status" => "200"}
 
-    series = ImageSeries.get(id: series.id)
-    series = Brando.repo.preload(series, :images)
+    series =
+      ImageSeries
+      |> Ecto.Query.preload([:images])
+      |> Brando.repo.get_by!(id: series.id)
 
     [img1, img2] = series.images
     case img1.image.path do

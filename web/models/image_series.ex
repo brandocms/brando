@@ -94,26 +94,6 @@ defmodule Brando.ImageSeries do
       |> Brando.repo.one!
   end
 
-  def get(slug: slug) do
-    from(m in __MODULE__,
-         where: m.slug == ^slug,
-         preload: [:images, :image_category],
-         limit: 1)
-    |> Brando.repo.one!
-  end
-
-  @doc """
-  Get model from DB by `id`
-  """
-  def get(id: id) do
-    (from(m in __MODULE__,
-      left_join: i in assoc(m, :images),
-      where: m.id == ^id,
-      order_by: i.sequence,
-      preload: [:creator, :image_category, images: i]))
-      |> Brando.repo.one
-  end
-
   @doc """
   Get all imageseries in category `id`.
   """
@@ -123,13 +103,6 @@ defmodule Brando.ImageSeries do
          order_by: m.sequence,
          preload: [:images])
     |> Brando.repo.all
-  end
-
-  @doc """
-  Get model by `val` or raise `Ecto.NoResultsError`.
-  """
-  def get!(val) do
-    get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
   end
 
   @doc """

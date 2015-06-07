@@ -17,16 +17,27 @@ defmodule Brando.Admin.PostController do
   @doc false
   def index(conn, _params) do
     model = conn.private[:model]
+    posts =
+      model
+      |> model.order
+      |> model.preload_creator
+      |> Brando.repo.all
+
     conn
-    |> assign(:posts, model.all)
+    |> assign(:posts, posts)
     |> render(:index)
   end
 
   @doc false
   def show(conn, %{"id" => id}) do
     model = conn.private[:model]
+    post =
+      model
+      |> model.preload_creator
+      |> Brando.repo.get_by!(id: id)
+
     conn
-    |> assign(:post, model.get(id: id))
+    |> assign(:post, post)
     |> render(:show)
   end
 
@@ -56,22 +67,20 @@ defmodule Brando.Admin.PostController do
   @doc false
   def edit(conn, %{"id" => id}) do
     model = conn.private[:model]
-    if post = model.get(id: id) do
-      post = post
+    post =
+      Brando.repo.get_by!(model, id: id)
       |> model.encode_data
-      conn
-      |> assign(:post, post)
-      |> assign(:id, id)
-      |> render(:edit)
-    else
-      conn |> put_status(:not_found) |> render(:not_found)
-    end
+
+    conn
+    |> assign(:post, post)
+    |> assign(:id, id)
+    |> render(:edit)
   end
 
   @doc false
   def update(conn, %{"post" => form_data, "id" => id}) do
     model = conn.private[:model]
-    post = model.get(id: String.to_integer(id))
+    post = Brando.repo.get_by!(model, id: id)
     case model.update(post, form_data) do
       {:ok, _updated_post} ->
         conn
@@ -90,7 +99,8 @@ defmodule Brando.Admin.PostController do
   @doc false
   def delete_confirm(conn, %{"id" => id}) do
     model = conn.private[:model]
-    record = model.get!(id: id)
+    record = Brando.repo.get_by!(model |> model.preload_creator, id: id)
+
     conn
     |> assign(:record, record)
     |> render(:delete_confirm)
@@ -99,8 +109,9 @@ defmodule Brando.Admin.PostController do
   @doc false
   def delete(conn, %{"id" => id}) do
     model = conn.private[:model]
-    record = model.get!(id: id)
+    record = Brando.repo.get_by!(model, id: id)
     model.delete(record)
+
     conn
     |> put_flash(:notice, "#{model_name(record, :singular)} #{model.__repr__(record)} slettet.")
     |> redirect(to: router_module(conn).__helpers__.admin_post_path(conn, :index))

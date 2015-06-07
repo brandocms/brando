@@ -17,16 +17,26 @@ defmodule Brando.Admin.PageController do
   @doc false
   def index(conn, _params) do
     model = conn.private[:model]
+    pages =
+      model
+      |> model.with_parents_and_children
+      |> model.order
+      |> Brando.repo.all
     conn
-    |> assign(:pages, model.all_parents_and_children)
+    |> assign(:pages, pages)
     |> render(:index)
   end
 
   @doc false
   def show(conn, %{"id" => id}) do
     model = conn.private[:model]
+    page =
+      model
+      |> model.with_children
+      |> Brando.repo.get_by(id: id)
+
     conn
-    |> assign(:page, model.get_with_children!(id: id))
+    |> assign(:page, page)
     |> render(:show)
   end
 
@@ -56,22 +66,20 @@ defmodule Brando.Admin.PageController do
   @doc false
   def edit(conn, %{"id" => id}) do
     model = conn.private[:model]
-    if page = model.get(id: id) do
-      page = page
+    page =
+      Brando.repo.get_by!(model, id: id)
       |> model.encode_data
+
       conn
       |> assign(:page, page)
       |> assign(:id, id)
       |> render(:edit)
-    else
-      conn |> put_status(:not_found) |> render(:not_found)
-    end
   end
 
   @doc false
   def update(conn, %{"page" => form_data, "id" => id}) do
     model = conn.private[:model]
-    page = model.get(id: String.to_integer(id))
+    page = Brando.repo.get_by!(model, id: id)
     case model.update(page, form_data) do
       {:ok, _updated_page} ->
         conn
@@ -90,7 +98,11 @@ defmodule Brando.Admin.PageController do
   @doc false
   def delete_confirm(conn, %{"id" => id}) do
     model = conn.private[:model]
-    record = model.get_with_children!(id: id)
+    record =
+      model
+      |> model.with_children
+      |> Brando.repo.get_by(id: id)
+
     conn
     |> assign(:record, record)
     |> render(:delete_confirm)
@@ -99,7 +111,7 @@ defmodule Brando.Admin.PageController do
   @doc false
   def delete(conn, %{"id" => id}) do
     model = conn.private[:model]
-    record = model.get!(id: id)
+    record = Brando.repo.get_by!(model, id: id)
     model.delete(record)
     conn
     |> put_flash(:notice, "#{model_name(record, :singular)} #{model.__repr__(record)} slettet.")

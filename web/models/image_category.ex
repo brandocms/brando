@@ -86,24 +86,6 @@ defmodule Brando.ImageCategory do
   end
 
   @doc """
-  Get model from DB by `id`
-  """
-  def get(id: id) do
-    from(m in __MODULE__,
-         where: m.id == ^id,
-         preload: [:creator, :image_series],
-         limit: 1)
-    |> Brando.repo.one
-  end
-
-  @doc """
-  Get model by `val` or raise `Ecto.NoResultsError`.
-  """
-  def get!(val) do
-    get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
-  end
-
-  @doc """
   Returns the model's slug
   """
   def get_slug(id: id) do
@@ -116,13 +98,12 @@ defmodule Brando.ImageCategory do
   @doc """
   Get all records. Ordered by `id`.
   """
-  def all do
-    (from m in __MODULE__,
-      left_join: is in assoc(m, :image_series),
-      left_join: i in assoc(is, :images),
-      order_by: [asc: m.name, asc: is.sequence, asc: i.sequence],
-      preload: [image_series: {is, images: i}])
-      |> Brando.repo.all
+  def with_image_series_and_images(query) do
+    from m in query,
+         left_join: is in assoc(m, :image_series),
+         left_join: i in assoc(is, :images),
+         order_by: [asc: m.name, asc: is.sequence, asc: i.sequence],
+         preload: [image_series: {is, images: i}]
   end
 
   @doc """

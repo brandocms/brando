@@ -5,6 +5,7 @@ defmodule Brando.Admin.InstagramController do
 
   use Brando.Web, :controller
   import Brando.Plug.Section
+  import Ecto.Query
   alias Brando.InstagramImage
 
   plug :put_section, "instagram"
@@ -14,8 +15,12 @@ defmodule Brando.Admin.InstagramController do
   Renders the main index.
   """
   def index(conn, _params) do
+    images =
+      InstagramImage
+      |> order_by([m], [desc: m.status, asc: m.instagram_id])
+      |> Brando.repo.all
     conn
-    |> assign(:images, InstagramImage.all_grouped)
+    |> assign(:images, images)
     |> render
   end
 

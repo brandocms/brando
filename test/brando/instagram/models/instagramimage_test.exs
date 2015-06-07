@@ -26,21 +26,16 @@ defmodule Brando.Integration.InstagramImageTest do
 
   test "get/1" do
     assert {:ok, img} = InstagramImage.create(@params)
-    assert InstagramImage.get(id: img.id) == img
-  end
-
-  test "get!/1" do
-    assert {:ok, img} = InstagramImage.create(@params)
-    assert InstagramImage.get!(id: img.id) == img
+    assert Brando.repo.get_by!(InstagramImage, id: img.id) == img
   end
 
   test "delete/1" do
     assert {:ok, img} = InstagramImage.create(@params)
     InstagramImage.delete(img)
-    assert InstagramImage.get(id: img.id) == nil
+    assert Brando.repo.get_by(InstagramImage, id: img.id) == nil
 
     assert {:ok, img} = InstagramImage.create(@params)
     InstagramImage.delete(img.id)
-    assert InstagramImage.get(id: img.id) == nil
+    assert Brando.repo.get_by(InstagramImage, id: img.id) == nil
   end
 end

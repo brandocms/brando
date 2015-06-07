@@ -127,40 +127,6 @@ defmodule Brando.User do
   end
 
   @doc """
-  Get user from DB by `username`
-  """
-  def get(username: username) do
-    from(u in __MODULE__,
-         where: fragment("lower(?) = lower(?)", u.username, ^username))
-    |> Brando.repo.one
-  end
-
-  @doc """
-  Get user from DB by `email`
-  """
-  def get(email: email) do
-    from(u in __MODULE__,
-         where: fragment("? = lower(?)", u.email, ^email))
-    |> Brando.repo.one
-  end
-
-  @doc """
-  Get model from DB by `id`
-  """
-  def get(id: id) do
-    from(u in __MODULE__,
-         where: u.id == ^id)
-    |> Brando.repo.one
-  end
-
-  @doc """
-  Get model by `val` or raise `Ecto.NoResultsError`.
-  """
-  def get!(val) do
-    get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
-  end
-
-  @doc """
   Delete `id` from database. Also deletes any connected image fields,
   including all generated sizes.
   """
@@ -169,18 +135,16 @@ defmodule Brando.User do
     Brando.repo.delete(record)
   end
   def delete(id) do
-    record = get!(id: id)
+    record = Brando.repo.get_by!(__MODULE__, id: id)
     delete(record)
   end
 
 
   @doc """
-  Get all users. Ordered by `id`
+  Orders by ID
   """
-  def all do
-    q = from u in __MODULE__,
-        order_by: u.id
-    Brando.repo.all(q)
+  def order_by_id(query) do
+    from m in query, order_by: m.id
   end
 
   @doc """

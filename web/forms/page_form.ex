@@ -19,7 +19,7 @@ defmodule Brando.PageForm do
   @doc false
   def get_parent_choices do
     no_value = [value: "", text: "Ingen tilhørighet"]
-    if parents = Page.all_parents() do
+    if parents = Page |> Page.with_parents |> Brando.repo.all do
       parents
       |> Enum.reverse
       |> Enum.reduce([no_value], fn (parent, acc) ->

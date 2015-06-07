@@ -110,7 +110,7 @@ defmodule Brando.HTML.Tablize do
   end
 
   defp do_td(:id, record, _type, _opts) do
-    ~s(<td class="text-center text-mono text-muted"><small>##{zero_pad(Map.get(record, :id))}</small></td>)
+    ~s(<td class="text-center text-mono text-muted">##{zero_pad(Map.get(record, :id))}</td>)
   end
 
   defp do_td(field, record, type, opts) do

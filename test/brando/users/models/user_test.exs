@@ -36,24 +36,24 @@ defmodule Brando.Integration.UserTest do
 
   test "get/1" do
     assert {:ok, user} = User.create(@params)
-    refute User.get(username: "zabuzasixu") == nil
-    assert User.get(username: "elvis") == nil
-    refute User.get(email: "fanogigyni@gmail.com") == nil
-    assert User.get(email: "elvis@hotmail.com") == nil
-    assert User.get(id: user.id) == user
+    refute Brando.repo.get_by(User, username: "zabuzasixu") == nil
+    assert Brando.repo.get_by(User, username: "elvis") == nil
+    refute Brando.repo.get_by(User, email: "fanogigyni@gmail.com") == nil
+    assert Brando.repo.get_by(User, email: "elvis@hotmail.com") == nil
+    assert Brando.repo.get_by(User, id: user.id) == user
   end
 
   test "delete/1" do
     assert {:ok, user} = User.create(@params)
     User.delete(user)
-    assert User.get(username: "zabuzasixu") == nil
-    assert User.get(email: "fanogigyni@gmail.com") == nil
+    assert Brando.repo.get_by(User, username: "zabuzasixu") == nil
+    assert Brando.repo.get_by(User, email: "fanogigyni@gmail.com") == nil
   end
 
   test "all/0" do
-    assert User.all == []
+    assert Brando.repo.all(User) == []
     assert {:ok, _user} = User.create(@params)
-    refute User.all == []
+    refute Brando.repo.all(User) == []
   end
 
   test "auth?/2" do
@@ -82,7 +82,7 @@ defmodule Brando.Integration.UserTest do
                    path: Path.expand("../../../", __DIR__) <> "/fixtures/sample.png"}
     up_params = Dict.put(%{}, "avatar", up_plug)
     assert {:ok, dict} = User.check_for_uploads(user, up_params)
-    user = User.get(email: "fanogigyni@gmail.com")
+    user = Brando.repo.get_by!(User, email: "fanogigyni@gmail.com")
     assert user.avatar == dict.avatar
     assert File.exists?(Path.join([Brando.config(:media_path), dict.avatar.path]))
     User.delete(user)

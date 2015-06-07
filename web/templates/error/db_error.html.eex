@@ -8,7 +8,7 @@
     <meta name="author" content="">
 
     <title><%= app_name %> | autorisering</title>
-    <link rel="stylesheet" href="/static/brando/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/static/brando/css/brando.vendor.css">
     <link rel="stylesheet" href="/static/brando/css/brando.css">
     <%= if Mix.env(:dev) do %>
     <script src="/static/brando/js/brando.auth.js" type="text/javascript" charset="utf-8"></script>

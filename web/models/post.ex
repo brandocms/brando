@@ -138,22 +138,6 @@ defmodule Brando.Post do
   end
 
   @doc """
-  Get model by `val` or raise `Ecto.NoResultsError`.
-  """
-  def get!(val), do:
-    get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
-
-  @doc """
-  Get model from DB by `id`
-  """
-  def get(id: id) do
-    from(m in __MODULE__,
-         where: m.id == ^id,
-         preload: [:creator])
-    |> Brando.repo.one
-  end
-
-  @doc """
   Delete `id` from database. Also deletes any connected image fields,
   including all generated sizes.
   """
@@ -162,19 +146,25 @@ defmodule Brando.Post do
     Brando.repo.delete(record)
   end
   def delete(id) do
-    record = get!(id: id)
+    record = Brando.repo.get_by!(__MODULE__, id: id)
     delete(record)
   end
 
   @doc """
-  Get all posts. Ordered by `id`. Preload :creator.
+  Order posts and preload creator
   """
-  def all do
-    (from m in __MODULE__,
-        order_by: [asc: m.status, desc: m.featured, desc: m.inserted_at],
-        preload: [:creator])
-    |> Brando.repo.all
+  def order(query) do
+    from m in query,
+        order_by: [asc: m.status, desc: m.featured, desc: m.inserted_at]
   end
+
+  @doc """
+  Preloads :creator field
+  """
+  def preload_creator(query) do
+    from m in query, preload: [:creator]
+  end
+
 
   #
   # Meta

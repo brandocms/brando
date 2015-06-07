@@ -106,31 +106,6 @@ defmodule Brando.PageFragment do
   end
 
   @doc """
-  Get model by `val` or raise `Ecto.NoResultsError`.
-  """
-  def get!(val), do:
-    get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
-
-  @doc """
-  Get model from DB by `key`
-  """
-  def get(key: key) do
-    from(m in __MODULE__,
-         where: m.key == ^key)
-    |> Brando.repo.one
-  end
-
-  @doc """
-  Get model from DB by `id`
-  """
-  def get(id: id) do
-    from(m in __MODULE__,
-         where: m.id == ^id,
-         preload: :creator)
-    |> Brando.repo.one
-  end
-
-  @doc """
   Delete `id` from database. Also deletes any connected image fields,
   including all generated sizes.
   """
@@ -138,7 +113,7 @@ defmodule Brando.PageFragment do
     Brando.repo.delete(record)
   end
   def delete(id) do
-    record = get!(id: id)
+    record = Brando.repo.get_by(__MODULE__, id: id)
     delete(record)
   end
 

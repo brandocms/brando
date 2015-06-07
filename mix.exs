@@ -35,20 +35,24 @@ defmodule Brando.Mixfile do
       {:phoenix_ecto, "~> 0.4"},
       {:phoenix_html, "~> 1.0"},
 
-      {:postgrex, ">= 0.0.0"},
-      {:earmark, "~> 0.1"},
-      {:linguist, "~> 0.1"},
-      {:slugger, "~> 0.0.1"},
-      {:poison, "~> 1.3"},
-      {:httpoison, "~> 0.6"},
-      {:mogrify, github: "twined/mogrify"},
       {:comeonin, "~> 0.8"},
+      {:earmark, "~> 0.1"},
+      {:httpoison, "~> 0.6"},
+      {:linguist, "~> 0.1"},
+      {:mogrify, github: "twined/mogrify"},
+      {:poison, "~> 1.3"},
+      {:postgrex, ">= 0.0.0"},
+      {:scrivener, "~> 0.6.0"},
+      {:slugger, "~> 0.0.1"},
+
+      # Dev dependencies
       {:dialyze, "~> 0.1.3", only: :dev},
 
       # Test dependencies
       {:excoveralls, "~> 0.3", only: :test},
       {:blacksmith, "~> 0.1.2", only: :test},
       {:exvcr, "~> 0.4.0", only: :test},
+      {:ecto, "~> 0.11", only: :test, override: true},
 
       # Documentation dependencies
       {:ex_doc, "~> 0.6", only: :docs},

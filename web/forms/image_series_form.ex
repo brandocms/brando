@@ -8,7 +8,8 @@ defmodule Brando.ImageSeriesForm do
 
   @doc false
   def get_categories do
-    for cat <- ImageCategory.all, do: [value: cat.id, text: cat.name]
+    cats = ImageCategory |> ImageCategory.with_image_series_and_images |> Brando.repo.all
+    for cat <- cats, do: [value: cat.id, text: cat.name]
   end
 
   form "imageseries", [helper: :admin_image_series_path, class: "grid-form"] do

@@ -132,6 +132,7 @@ defmodule Brando.InstagramImage do
     if sizes_cfg != nil do
       image_field = image_model["image"]
       media_path = Brando.config(:media_path)
+
       full_path = Path.join([media_path, image_field.path])
       {file_path, filename} = Brando.Utils.split_path(full_path)
 
@@ -143,9 +144,7 @@ defmodule Brando.InstagramImage do
         sized_path = Path.join([Brando.Instagram.config(:upload_path), to_string(size_name), filename])
         {size_name, sized_path}
       end
-
-      sizes = Enum.into(sizes, %{})
-      image_field = image_field |> Map.put(:sizes, sizes)
+      image_field = image_field |> Map.put(:sizes, Enum.into(sizes, %{}))
       Map.put(image_model, "image", image_field)
     else
       image_model
@@ -188,35 +187,6 @@ defmodule Brando.InstagramImage do
     end
   end
 
-  @doc """
-  Get model by `val` or raise `Ecto.NoResultsError`.
-  """
-  def get!(val) do
-    get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
-  end
-
-  @doc """
-  Get model by `id: id`.
-  """
-  def get(id: id) do
-    from(m in __MODULE__, where: m.id == ^id)
-    |> Brando.repo.one
-  end
-
-  @doc """
-  Get all results
-  """
-  def all do
-    from(m in __MODULE__, order_by: m.instagram_id)
-    |> Brando.repo.all
-  end
-
-  def all_grouped do
-    from(m in __MODULE__,
-        order_by: [desc: m.status, asc: m.instagram_id])
-    |> Brando.repo.all
-  end
-
   @doc false
   defmacro update_all(queryable, values, opts \\ []) do
     Ecto.Repo.Queryable.update_all(Brando.repo, Ecto.Adapters.Postgres, queryable, values, opts)
@@ -245,7 +215,7 @@ defmodule Brando.InstagramImage do
   end
 
   def delete(id) do
-    record = get!(id: id)
+    record = Brando.repo.get_by!(__MODULE__, id: id)
     delete(record)
   end
 

@@ -7,6 +7,7 @@ defmodule Brando.Admin.ImageSeriesController do
 
   import Brando.Plug.Section
   import Brando.HTML.Inspect, only: [model_name: 2]
+  import Ecto.Query
 
   plug :put_section, "images"
   plug :action
@@ -39,21 +40,19 @@ defmodule Brando.Admin.ImageSeriesController do
   @doc false
   def edit(conn, %{"id" => id}) do
     model = conn.private[:series_model]
-    if data = model.get(id: String.to_integer(id)) do
-      conn
-      |> assign(:image_series, data)
-      |> assign(:id, id)
-      |> render(:edit)
-    else
-      conn |> put_status(:not_found) |> render(:not_found)
-    end
+    data = model |> Brando.repo.get_by!(id: id)
+
+    conn
+    |> assign(:image_series, data)
+    |> assign(:id, id)
+    |> render(:edit)
   end
 
   @doc false
   def update(conn, %{"imageseries" => form_data, "id" => id}) do
-    model = conn.private[:series_model]
-    record = model.get(id: String.to_integer(id))
-    case model.update(record, form_data) do
+    series_model = conn.private[:series_model]
+    record = series_model |> Brando.repo.get_by!(id: id)
+    case series_model.update(record, form_data) do
       {:ok, _updated_record} ->
         conn
         |> put_flash(:notice, "Serie oppdatert.")
@@ -70,8 +69,12 @@ defmodule Brando.Admin.ImageSeriesController do
 
   @doc false
   def upload(conn, %{"id" => id}) do
-    model = conn.private[:series_model]
-    series = model.get!(id: id)
+    series_model = conn.private[:series_model]
+    series =
+      series_model
+      |> preload([:image_category, :images])
+      |> Brando.repo.get_by!(id: id)
+
     conn
     |> assign(:series, series)
     |> render(:upload)
@@ -81,7 +84,10 @@ defmodule Brando.Admin.ImageSeriesController do
   def upload_post(conn, %{"id" => id} = params) do
     series_model = conn.private[:series_model]
     image_model = conn.private[:image_model]
-    series = series_model.get!(id: id)
+    series =
+      series_model
+      |> preload([:image_category, :images])
+      |> Brando.repo.get_by!(id: id)
     opts = Map.put(%{}, "image_series_id", series.id)
     cfg = series.image_category.cfg || Brando.config(Brando.Images)[:default_config]
     {:ok, image} = image_model.check_for_uploads(params, Brando.HTML.current_user(conn), cfg, opts)
@@ -91,8 +97,12 @@ defmodule Brando.Admin.ImageSeriesController do
 
   @doc false
   def delete_confirm(conn, %{"id" => id}) do
-    model = conn.private[:series_model]
-    record = model.get!(id: id)
+    series_model = conn.private[:series_model]
+    record =
+      series_model
+      |> preload([:image_category, :images, :creator])
+      |> Brando.repo.get_by!(id: id)
+
     conn
     |> assign(:record, record)
     |> render(:delete_confirm)
@@ -100,11 +110,11 @@ defmodule Brando.Admin.ImageSeriesController do
 
   @doc false
   def delete(conn, %{"id" => id}) do
-    model = conn.private[:series_model]
-    record = model.get!(id: id)
-    model.delete(record)
+    series_model = conn.private[:series_model]
+    record = series_model |> Brando.repo.get_by!(id: id)
+    series_model.delete(record)
     conn
-    |> put_flash(:notice, "#{model_name(record, :singular)} #{model.__repr__(record)} slettet.")
+    |> put_flash(:notice, "#{model_name(record, :singular)} #{series_model.__repr__(record)} slettet.")
     |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
   end
 end
