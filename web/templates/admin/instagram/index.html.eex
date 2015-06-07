@@ -2,8 +2,8 @@
 <p>
   Oversikt over Instagram-bilder. Kun bildene i "Godkjente bilder"-raden vil
   vises på nettsiden.<br/>
-  For å utføre handlinger på bilder, klikk bildene du vil
-  velge og deretter på knappen med ønsket handling.
+  For å utføre handlinger, velg bilder og klikk deretter på
+  knappen med ønsket handling.
 </p>
 <div class="button-header">
   <button class="approve-selected-images btn btn-default">
