@@ -102,21 +102,6 @@ defmodule Brando.Image do
     end
   end
 
-  # @doc """
-  # Get model by `val` or raise `Ecto.NoResultsError`.
-  # """
-  # def get!(val) do
-  #   get(val) || raise Ecto.NoResultsError, queryable: __MODULE__
-  # end
-
-  # @doc """
-  # Get model by `id: id`.
-  # """
-  # def get(id: id) do
-  #   from(m in __MODULE__, where: m.id == ^id)
-  #   |> Brando.repo.one
-  # end
-
   @doc """
   Get all images in series `id`.
   """
