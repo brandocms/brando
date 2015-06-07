@@ -22,49 +22,49 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "install/templates/migrations/20150520221010_add_pagefragments_table.exs",    "priv/repo/migrations/20150520221010_add_pagefragments_table.exs"}
   ]
 
-  # @static [
-  #   {:text, "static/brando/css/brando.css", "priv/static/brando/css/brando.css"},
-  #   {:text, "static/brando/css/brando-min.css", "priv/static/brando/css/brando-min.css"},
-  #   {:text, "static/brando/css/brando.vendor.css", "priv/static/brando/css/brando.vendor.css"},
-  #   {:text, "static/brando/css/brando.vendor-min.css", "priv/static/brando/css/brando.vendor-min.css"},
+  @static [
+    {:copy, "static/brando/css/brando.css", "priv/static/brando/css/brando.css"},
+    {:copy, "static/brando/css/brando-min.css", "priv/static/brando/css/brando-min.css"},
+    {:copy, "static/brando/css/brando.vendor.css", "priv/static/brando/css/brando.vendor.css"},
+    {:copy, "static/brando/css/brando.vendor-min.css", "priv/static/brando/css/brando.vendor-min.css"},
 
-  #   {:text, "static/brando/js/brando-min.js", "priv/static/brando/js/brando-min.js"},
-  #   {:text, "static/brando/js/brando-min.js.map", "priv/static/brando/js/brando-min.js.map"},
-  #   {:text, "static/brando/js/brando.auth-min.js", "priv/static/brando/js/brando.auth-min.js"},
-  #   {:text, "static/brando/js/brando.auth.js", "priv/static/brando/js/brando.auth.js"},
-  #   {:text, "static/brando/js/brando.js", "priv/static/brando/js/brando.js"},
-  #   {:text, "static/brando/js/brando.vendor-min.js", "priv/static/brando/js/brando.vendor-min.js"},
-  #   {:text, "static/brando/js/brando.vendor.js", "priv/static/brando/js/brando.vendor.js"},
+    {:copy, "static/brando/js/brando-min.js", "priv/static/brando/js/brando-min.js"},
+    {:copy, "static/brando/js/brando-min.js.map", "priv/static/brando/js/brando-min.js.map"},
+    {:copy, "static/brando/js/brando.auth-min.js", "priv/static/brando/js/brando.auth-min.js"},
+    {:copy, "static/brando/js/brando.auth.js", "priv/static/brando/js/brando.auth.js"},
+    {:copy, "static/brando/js/brando.js", "priv/static/brando/js/brando.js"},
+    {:copy, "static/brando/js/brando.vendor-min.js", "priv/static/brando/js/brando.vendor-min.js"},
+    {:copy, "static/brando/js/brando.vendor.js", "priv/static/brando/js/brando.vendor.js"},
 
-  #   {:text, "static/brando/js/markdown.min.js", "priv/static/brando/js/markdown.min.js"},
-  #   {:text, "static/brando/js/to-markdown.js", "priv/static/brando/js/to-markdown.js"},
-  #   {:text, "static/brando/js/libs/backbone/backbone.js", "priv/static/brando/js/libs/backbone/backbone.js"},
-  #   {:text, "static/brando/js/libs/backbone/underscore.js", "priv/static/brando/js/libs/backbone/underscore.js"},
+    {:copy, "static/brando/js/markdown.min.js", "priv/static/brando/js/markdown.min.js"},
+    {:copy, "static/brando/js/to-markdown.js", "priv/static/brando/js/to-markdown.js"},
+    {:copy, "static/brando/js/libs/backbone/backbone.js", "priv/static/brando/js/libs/backbone/backbone.js"},
+    {:copy, "static/brando/js/libs/backbone/underscore.js", "priv/static/brando/js/libs/backbone/underscore.js"},
 
-  #   {:text, "static/brando/fonts/fontawesome-webfont.eot", "priv/static/brando/fonts/fontawesome-webfont.eot"},
-  #   {:text, "static/brando/fonts/fontawesome-webfont.svg", "priv/static/brando/fonts/fontawesome-webfont.svg"},
-  #   {:text, "static/brando/fonts/fontawesome-webfont.ttf", "priv/static/brando/fonts/fontawesome-webfont.ttf"},
-  #   {:text, "static/brando/fonts/fontawesome-webfont.woff", "priv/static/brando/fonts/fontawesome-webfont.woff"},
-  #   {:text, "static/brando/fonts/fontawesome-webfont.woff2", "priv/static/brando/fonts/fontawesome-webfont.woff2"},
-  #   {:text, "static/brando/fonts/FontAwesome.otf", "priv/static/brando/fonts/FontAwesome.otf"},
+    {:copy, "static/brando/fonts/fontawesome-webfont.eot", "priv/static/brando/fonts/fontawesome-webfont.eot"},
+    {:copy, "static/brando/fonts/fontawesome-webfont.svg", "priv/static/brando/fonts/fontawesome-webfont.svg"},
+    {:copy, "static/brando/fonts/fontawesome-webfont.ttf", "priv/static/brando/fonts/fontawesome-webfont.ttf"},
+    {:copy, "static/brando/fonts/fontawesome-webfont.woff", "priv/static/brando/fonts/fontawesome-webfont.woff"},
+    {:copy, "static/brando/fonts/fontawesome-webfont.woff2", "priv/static/brando/fonts/fontawesome-webfont.woff2"},
+    {:copy, "static/brando/fonts/FontAwesome.otf", "priv/static/brando/fonts/FontAwesome.otf"},
 
-  #   {:text, "static/brando/img/blank.gif", "priv/static/brando/img/blank.gif"},
-  #   {:text, "static/brando/img/flags.png", "priv/static/brando/img/flags.png"},
-  #   {:text, "static/brando/img/brando-big.png", "priv/static/brando/img/brando-big.png"},
+    {:copy, "static/brando/img/blank.gif", "priv/static/brando/img/blank.gif"},
+    {:copy, "static/brando/img/flags.png", "priv/static/brando/img/flags.png"},
+    {:copy, "static/brando/img/brando-big.png", "priv/static/brando/img/brando-big.png"},
 
-  #   {:text, "static/villain/villain-min.css", "priv/static/villain/villain-min.css"},
-  #   {:text, "static/villain/villain-min.js", "priv/static/villain/villain-min.js"},
-  #   {:text, "static/villain/villain.css", "priv/static/villain/villain.css"},
-  #   {:text, "static/villain/villain.css.map", "priv/static/villain/villain.css.map"},
-  #   {:text, "static/villain/villain.js", "priv/static/villain/villain.js"}
-  # ]
+    {:copy, "static/villain/villain-min.css", "priv/static/villain/villain-min.css"},
+    {:copy, "static/villain/villain-min.js", "priv/static/villain/villain-min.js"},
+    {:copy, "static/villain/villain.css", "priv/static/villain/villain.css"},
+    {:copy, "static/villain/villain.css.map", "priv/static/villain/villain.css.map"},
+    {:copy, "static/villain/villain.js", "priv/static/villain/villain.js"}
+  ]
 
-  root = Path.expand("../../../priv", __DIR__)
+  @root Path.expand("../../../priv", __DIR__)
 
-  for {format, source, _} <- @new do
-    unless format == :keep do
-      @external_resource Path.join(root, source)
-      def render(unquote(source)), do: unquote(File.read!(Path.join(root, source)))
+  for {format, source, _} <- @new ++ @static do
+    unless format in [:keep, :copy] do
+      @external_resource Path.join(@root, source)
+      def render(unquote(source)), do: unquote(File.read!(Path.join(@root, source)))
     end
   end
 
@@ -83,7 +83,7 @@ defmodule Mix.Tasks.Brando.Install do
                application_name: Atom.to_string(app)]
 
     copy_from "./", binding, @new
-    # copy_from "./", binding, @static
+    copy_from "./", binding, @static
 
     Mix.shell.info """
     ------------------------------------------------------------------
@@ -96,10 +96,11 @@ defmodule Mix.Tasks.Brando.Install do
     application_name = Keyword.fetch!(binding, :application_name)
     for {format, source, target_path} <- mapping do
       target = Path.join(target_dir, String.replace(target_path, "application_name", application_name))
-
       case format do
         :keep -> File.mkdir_p!(target)
         :text -> create_file(target, render(source))
+        :copy -> File.mkdir_p!(Path.dirname(target))
+                 File.copy!(Path.join(@root, source), target)
         :eex  -> contents = EEx.eval_string(render(source), binding, file: source)
                  create_file(target, contents)
       end
