@@ -2,20 +2,35 @@ var gulp = require('gulp');
 var sass = require('gulp-ruby-sass');
 var watch = require('gulp-watch');
 var concat = require('gulp-concat');
+var minify = require('gulp-minify-css');
 var rename = require('gulp-rename');
 var uglify = require('gulp-uglify');
 var babel = require("gulp-babel");
 var sourcemaps = require("gulp-sourcemaps");
 var autoprefixer = require('gulp-autoprefixer');
 
-gulp.task('sass', function () {
+gulp.task('css', function () {
     return sass('scss/brando.scss', {sourcemap: true})
         .on('error', function (err) { console.log(err.message); })
         .pipe(autoprefixer({
           browsers: ['last 2 versions']
         }))
         .pipe(sourcemaps.write())
-        .pipe(gulp.dest('../priv/static/brando/css'));
+        .pipe(gulp.dest('../priv/static/brando/css'))
+        .pipe(minify())
+        .pipe(rename('brando-min.css'))
+        .pipe(gulp.dest('../priv/static/brando/css'))
+});
+
+gulp.task('css-vendor', function () {
+  return gulp.src(['./css/font-awesome.min.css', './css/dropzone.css'])
+      .on('error', function (err) { console.log(err.message); })
+      .pipe(concat('brando.vendor.css'))
+      .pipe(gulp.dest('../priv/static/brando/css'))
+      .pipe(minify())
+      .pipe(rename('brando.vendor-min.css'))
+      .pipe(gulp.dest('../priv/static/brando/css'))
+
 });
 
 var browserify = require('browserify');
@@ -58,6 +73,7 @@ gulp.task('scripts-vendor', function () {
     return gulp.src([
                      'js/vendor/jquery.min.js',
                      'js/vendor/accordion.js',
+                     'js/vendor/dropzone.js',
                      'js/vendor/dropdown.js',
                      'js/vendor/sortable.js',
                      'js/vendor/slideout.js',
@@ -78,11 +94,19 @@ gulp.task('scripts-vendor', function () {
 
 gulp.task('default', function() {
   // place code for your default task here
+  gulp.start('css');
+  gulp.start('css-vendor');
+  gulp.start('scripts-vendor');
+  gulp.start('scripts-auth');
+  gulp.start('scripts-brando');
 });
 
 gulp.task('watch', function () {
     watch('scss/**/*.scss', function () {
-        gulp.start('sass');
+        gulp.start('css');
+    });
+    watch('css/**/*.css', function () {
+        gulp.start('css-vendor');
     });
     watch('js/vendor/**/*.js', function () {
         gulp.start('scripts-vendor');

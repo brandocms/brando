@@ -39,7 +39,7 @@ th {
 .table > thead > tr > td,
 .table > tbody > tr > td,
 .table > tfoot > tr > td {
-  padding: 8px;
+  padding: 12px 8px;
   vertical-align: middle;
   border-top: 1px solid #ddd;
   font-size: 1rem;
@@ -50,6 +50,7 @@ th {
   color: #fff;
   border-top: none;
   font-size: 1rem;
+  padding: 8px;
 }
 .table > caption + thead > tr:first-child > th,
 .table > colgroup + thead > tr:first-child > th,

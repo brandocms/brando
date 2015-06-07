@@ -5,14 +5,12 @@
   Global styles and settings for Foundation for Apps are stored here. This file must always
   be imported, no matter what.
 
-  Includes:
-   -
 */
 
 /// @Foundation.settings
 // Global Styles
 // This sets 1rem to be 16px
-$rem-base: 16px;
+$rem-base: 15px;
 
 // The default font-size is set to 100% of the browser style sheet (usually 16px)
 // for compatibility with browser-based text zoom or user-set defaults.
@@ -20,7 +18,7 @@ $rem-base: 16px;
 // Since the typical default browser font-size is 16px, that makes the calculation for grid size.
 // If you want your base font-size to be different and not have it affect the grid breakpoints,
 // set $rem-base to $base-font-size and make sure $base-font-size is a px value.
-$base-font-size: 100% !default;
+$base-font-size: 15px;
 
 // $base-line-height is 24px while $base-font-size is 16px
 $base-line-height: 1.5 !default;
@@ -35,7 +33,7 @@ $font-weight-bold: bold !default;
 // We use these to control various global styles
 $body-background: #fff !default;
 $body-font-color: #222 !default;
-$body-font-family: "n-regular", "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif !default;
+$body-font-family: "a-regular", "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif !default;
 $body-font-weight: $font-weight-normal !default;
 $body-font-style: normal !default;
 $body-line-height: $base-line-height;

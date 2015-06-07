@@ -32,13 +32,13 @@
     border-top: $tab-border;
     color: $tab-link-color;
     display: block;
-    font-weight: 400;
+    font-weight: bold;
     padding: ($base-spacing / 2) $gutter;
     text-decoration: none;
     display: inline-block;
     border-top: 0;
     text-transform: uppercase;
-    font-size: 15px;
+    font-size: 14px;
     padding: 10px 30px;
 
     &:hover {

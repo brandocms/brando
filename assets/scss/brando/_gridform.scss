@@ -55,7 +55,7 @@
 
 $legend-border-color: #E0E0E0;
 
-@mixin grid-form($max-columns: 12, $font-size-large: 18px, $legend-color: lighten(#333, 5%),
+@mixin grid-form($max-columns: 12, $font-size-large: 1.0rem, $legend-color: lighten(#333, 5%),
     $field-padding: 8px, $label-font-size: 0.8rem, $grid-border-color: #333,
     $label-color: #333, $field-focus-color: darken(#FFFDED, 5%)) {
 
@@ -120,7 +120,7 @@ $legend-border-color: #E0E0E0;
             fieldset legend {
                 border-bottom: 1px solid $legend-border-color;
                 font-weight: normal;
-                font-size: $font-size-large - 3px;
+                font-size: $font-size-large - 0.2rem;
             }
         }
     }
@@ -169,7 +169,7 @@ $legend-border-color: #E0E0E0;
                 padding-top: 4px;
                 border-bottom: 3px solid #8B3131;
                 margin-top: 6px;
-                font-size: 0.9rem;
+                font-size: 0.8rem;
                 color: #fff;
                 background-color: #C04040;
                 font-weight: bold;
