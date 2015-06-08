@@ -1,5 +1,1 @@
-    <script type="text/javascript" src="/static/brando/js/to-markdown.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/brando/js/markdown.min.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/brando/js/libs/backbone/underscore.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/brando/js/libs/backbone/backbone.js" charset="utf-8"></script>
-    <script type="text/javascript" src="/static/villain/villain.js" charset="utf-8"></script>
+<script type="text/javascript" src="/static/villain/villain.all-min.js" charset="utf-8"></script>
