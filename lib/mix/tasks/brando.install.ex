@@ -26,6 +26,8 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "install/bower.json", "bower.json"},
     {:copy, "install/brunch-config.json", "brunch-config.json"},
 
+    {:copy, "install/templates/web/static/js/cookie_law.js", "web/static/vendor/cookie_law.js"},
+
     {:copy, "static/brando/css/brando.css", "priv/static/brando/css/brando.css"},
     {:copy, "static/brando/css/brando-min.css", "priv/static/brando/css/brando-min.css"},
     {:copy, "static/brando/css/brando.vendor.css", "priv/static/brando/css/brando.vendor.css"},
