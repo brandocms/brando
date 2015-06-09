@@ -267,4 +267,14 @@ defmodule Brando.HTML do
   def img(image_field, size, _default) when is_atom(size) do
     image_field.sizes[size]
   end
+
+  @doc """
+  Displays a banner informing about cookie laws
+  """
+  def cookie_law(conn, text) do
+    if Map.get(conn.cookies, "cookielaw_accepted") != "1" do
+      ~s(<div class="cookie-law">#{text}<br /><a href="javascript:Cookielaw.createCookielawCookie\(\);" class="dismiss-cookielaw">OK</a></div>)
+      |> Phoenix.HTML.raw
+    end
+  end
 end
