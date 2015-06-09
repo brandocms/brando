@@ -35,7 +35,7 @@ defmodule Brando.ConnCase do
 
   setup tags do
     unless tags[:async] do
-      Ecto.Adapters.SQL.restart_test_transaction(Brando.Integration.TestRepo, [])
+      Ecto.Adapters.SQL.restart_test_transaction(Brando.repo, [])
     end
 
     :ok

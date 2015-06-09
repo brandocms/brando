@@ -1,6 +1,7 @@
 defmodule Brando.Instagram.APITest do
   use ExUnit.Case, async: false
   use ExVCR.Mock, adapter: ExVCR.Adapter.Hackney
+  use Brando.ConnCase
   alias Brando.Instagram.API
   alias Brando.InstagramImage
 
