@@ -310,10 +310,11 @@ Include css in `whatever/_stylesheets.<action>.html.eex`:
 
 Currently these packages are auto-installed:
 
-* jQuery
-* owl.carousel
-* salvattore
-* responsive-nav
+* jQuery - https://github.com/jquery/jquery
+* owl.carousel - https://github.com/smashingboxes/OwlCarousel2
+* salvattore - https://github.com/rnmp/salvattore
+* responsive-nav - https://github.com/viljamis/responsive-nav.js
+* jscroll - https://github.com/pklauzinski/jscroll/
 
 Add more packages to your bower.json, and brunch will automatically include them.
 

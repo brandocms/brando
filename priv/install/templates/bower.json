@@ -3,6 +3,7 @@
   "dependencies": {
     "owl.carousel": "*",
     "responsive-nav": "~1.0.39",
-    "salvattore": "~1.0.7"
+    "salvattore": "~1.0.7",
+    "jscroll": "~2.3.4"
   }
 }
