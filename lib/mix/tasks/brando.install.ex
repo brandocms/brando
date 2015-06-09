@@ -23,6 +23,9 @@ defmodule Mix.Tasks.Brando.Install do
   ]
 
   @static [
+    {:copy, "install/bower.json", "bower.json"},
+    {:copy, "install/brunch-config.json", "brunch-config.json"},
+
     {:copy, "static/brando/css/brando.css", "priv/static/brando/css/brando.css"},
     {:copy, "static/brando/css/brando-min.css", "priv/static/brando/css/brando-min.css"},
     {:copy, "static/brando/css/brando.vendor.css", "priv/static/brando/css/brando.vendor.css"},

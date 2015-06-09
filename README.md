@@ -306,6 +306,20 @@ Include css in `whatever/_stylesheets.<action>.html.eex`:
 ```
 
 
+## Bower/Brunch
+
+Currently these packages are auto-installed:
+
+* jQuery
+* owl.carousel
+* salvattore
+* responsive-nav
+
+Add more packages to your bower.json, and brunch will automatically include them.
+
+Build for prod with `brunch build`.
+
+
 ## Optimizing images (not implemented yet)
 
 ```elixir

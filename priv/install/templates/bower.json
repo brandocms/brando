@@ -1,0 +1,8 @@
+{
+  "name": "my_app",
+  "dependencies": {
+    "owl.carousel": "*",
+    "responsive-nav": "~1.0.39",
+    "salvattore": "~1.0.7"
+  }
+}
