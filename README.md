@@ -1,4 +1,4 @@
-![Brando logo](https://raw.githubusercontent.com/twined/brando/master/priv/static/brando/img/brando-big.png)
+![Brando logo](https://raw.githubusercontent.com/twined/brando/develop/priv/install/templates/static/brando/images/brando-big.png)
 
 [![Build Status](https://travis-ci.org/twined/brando.png?branch=master)](https://travis-ci.org/twined/brando)
 [![Coverage Status](https://coveralls.io/repos/twined/brando/badge.png?branch=master)](https://coveralls.io/r/twined/brando?branch=master)
@@ -112,11 +112,12 @@ end
 
 ```
 
-Static config in `endpoint.ex`:
+Static config in `endpoint.ex`. (Make sure you add `images` to the `only` key):
 
 ```elixir
 plug Plug.Static,
-  at: "/static", from: :brando
+  at: "/", from: :my_app, gzip: false,
+  only: ~w(css images js fonts favicon.ico robots.txt)
 
 plug Plug.Static,
   at: "/media", from: "priv/media"
@@ -292,17 +293,13 @@ end
 Include js in `whatever/_scripts.<action>.html.eex`:
 
 ```html
-<script type="text/javascript" src="/static/brando/js/to-markdown.js" charset="utf-8"></script>
-<script type="text/javascript" src="/static/brando/js/markdown.min.js" charset="utf-8"></script>
-<script type="text/javascript" src="/static/brando/js/libs/backbone/underscore.js" charset="utf-8"></script>
-<script type="text/javascript" src="/static/brando/js/libs/backbone/backbone.js" charset="utf-8"></script>
-<script type="text/javascript" src="/static/villain/villain.js" charset="utf-8"></script>
+<script type="text/javascript" src="<% Helpers.static_path(@conn, "/js/villain.all-min.js") %>" charset="utf-8"></script>
 ```
 
 Include css in `whatever/_stylesheets.<action>.html.eex`:
 
 ```html
-<link rel="stylesheet" href="/static/villain/villain.css">
+<link rel="stylesheet" href="<% Helpers.static_path(@conn, "/css/villain.css") %>">
 ```
 
 

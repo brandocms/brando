@@ -130,11 +130,11 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_field(:language, :string, "no") do
-    ~s(<div class="text-center"><img src="/static/brando/img/blank.gif" class="flag flag-nb" alt="norsk" /></div>)
+    ~s(<div class="text-center"><img src="#{Brando.helpers.static_path(Brando.get_endpoint, "/images/brando/blank.gif")}" class="flag flag-nb" alt="norsk" /></div>)
   end
 
   defp do_inspect_field(:language, :string, "en") do
-    ~s(<div class="text-center"><img src="/static/brando/img/blank.gif" class="flag flag-en" alt="english" /></div>)
+    ~s(<div class="text-center"><img src="#{Brando.helpers.static_path(Brando.get_endpoint, "/images/brando/blank.gif")}" class="flag flag-en" alt="english" /></div>)
   end
 
   defp do_inspect_field(:key, :string, val) do

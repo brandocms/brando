@@ -16,20 +16,20 @@ gulp.task('css', function () {
           browsers: ['last 2 versions']
         }))
         .pipe(sourcemaps.write())
-        .pipe(gulp.dest('../priv/static/brando/css'))
+        .pipe(gulp.dest('../priv/install/templates/static/brando/css'))
         .pipe(minify())
         .pipe(rename('brando-min.css'))
-        .pipe(gulp.dest('../priv/static/brando/css'))
+        .pipe(gulp.dest('../priv/install/templates/static/brando/css'))
 });
 
 gulp.task('css-vendor', function () {
   return gulp.src(['./css/font-awesome.min.css', './css/dropzone.css'])
       .on('error', function (err) { console.log(err.message); })
       .pipe(concat('brando.vendor.css'))
-      .pipe(gulp.dest('../priv/static/brando/css'))
+      .pipe(gulp.dest('../priv/install/templates/static/brando/css'))
       .pipe(minify())
       .pipe(rename('brando.vendor-min.css'))
-      .pipe(gulp.dest('../priv/static/brando/css'))
+      .pipe(gulp.dest('../priv/install/templates/static/brando/css'))
 
 });
 
@@ -49,11 +49,11 @@ gulp.task('scripts-brando', function() {
   .pipe(source('brando.js'))
   .pipe(buffer())
   .pipe(sourcemaps.init({loadMaps: true}))
-  .pipe(gulp.dest('../priv/static/brando/js'))
+  .pipe(gulp.dest('../priv/install/templates/static/brando/js'))
   .pipe(rename('brando-min.js'))
   .pipe(uglify({ mangle: false }))
   .pipe(sourcemaps.write('./'))
-  .pipe(gulp.dest('../priv/static/brando/js'));
+  .pipe(gulp.dest('../priv/install/templates/static/brando/js'));
 });
 
 gulp.task('scripts-auth', function () {
@@ -63,10 +63,10 @@ gulp.task('scripts-auth', function () {
                      'js/vendor/fittext.js',
                     ])
         .pipe(concat('brando.auth.js'))
-        .pipe(gulp.dest('../priv/static/brando/js'))
+        .pipe(gulp.dest('../priv/install/templates/static/brando/js'))
         .pipe(rename('brando.auth-min.js'))
         .pipe(uglify()).on('error', errorHandler)
-        .pipe(gulp.dest('../priv/static/brando/js'));
+        .pipe(gulp.dest('../priv/install/templates/static/brando/js'));
 });
 
 gulp.task('scripts-vendor', function () {
@@ -86,10 +86,10 @@ gulp.task('scripts-vendor', function () {
                     ])
         .pipe(babel()).on('error', errorHandler)
         .pipe(concat('brando.vendor.js'))
-        .pipe(gulp.dest('../priv/static/brando/js'))
+        .pipe(gulp.dest('../priv/install/templates/static/brando/js'))
         .pipe(rename('brando.vendor-min.js'))
         .pipe(uglify()).on('error', errorHandler)
-        .pipe(gulp.dest('../priv/static/brando/js'));
+        .pipe(gulp.dest('../priv/install/templates/static/brando/js'));
 });
 
 gulp.task('default', function() {
