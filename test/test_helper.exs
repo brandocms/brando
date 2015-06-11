@@ -23,6 +23,12 @@ defmodule Brando.Integration.Endpoint do
     key: "_test",
     signing_salt: "signingsalt",
     encryption_salt: "encsalt"
+
+  plug Plug.Static,
+    at: "/", from: :brando, gzip: false,
+    only: ~w(css images js fonts favicon.ico robots.txt),
+    cache_control_for_vsn_requests: nil,
+    cache_control_for_etags: nil
 end
 
 defmodule Brando.Integration.TestCase do
@@ -80,3 +86,4 @@ _   = Ecto.Storage.down(Repo)
 :ok = Ecto.Migrator.up(Repo, 0, Brando.Integration.Migration, log: false)
 
 Ecto.Adapters.SQL.begin_test_transaction(Brando.repo)
+Brando.get_endpoint.start_link

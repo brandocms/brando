@@ -57,6 +57,7 @@ defmodule RouterHelper do
 
   def send_request(conn) do
     conn
+    |> put_private(:phoenix_endpoint, Brando.get_endpoint)
     |> put_private(:plug_skip_csrf_protection, true)
     |> fetch_query_params
     |> Brando.get_router.call(Brando.get_router.init([]))
