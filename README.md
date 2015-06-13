@@ -48,6 +48,10 @@ config :my_app, Repo,
   extensions: [{Brando.Postgrex.Extension.JSON, library: Poison}]
 ```
 
+Install bower frontend dependencies:
+
+    $ bower install
+
 Create the database:
 
     $ mix ecto.create
