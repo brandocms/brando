@@ -13,8 +13,6 @@ defmodule Brando.User do
   @required_fields ~w(username full_name email password)
   @optional_fields ~w(role avatar)
 
-  @roles Application.get_env(:brando, Brando.Type.Role) |> Keyword.get(:roles)
-
   schema "users" do
     field :username, :string
     field :email, :string
