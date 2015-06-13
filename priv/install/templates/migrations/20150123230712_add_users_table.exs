@@ -14,6 +14,15 @@ defmodule <%= application_module %>.Repo.Migrations.AddUsersTable do
     end
     create index(:users, [:username], unique: true)
     create index(:users, [:email], unique: true)
+
+    password = Brando.User.gen_password("admin")
+    execute """
+      INSERT INTO
+        users
+        ("username", "full_name", "email", "password", "avatar", "role", "last_login", "inserted_at", "updated_at")
+      VALUES
+        ('admin', 'Twined Admin', 'admin@twined.net', '#{password}', NULL, 5, NOW(), NOW(), NOW());
+    """
   end
 
   def down do
