@@ -30,6 +30,8 @@ defmodule Mix.Tasks.Brando.Install do
 
     {:copy, "install/templates/web/static/js/cookie_law.js", "web/static/vendor/cookie_law.js"},
 
+    {:copy, "install/templates/web/static/css/app.scss",     "web/static/css/app.scss"},
+
     {:copy, "install/templates/static/brando/css/brando.css",                  "priv/static/css/brando.css"},
     {:copy, "install/templates/static/brando/css/brando-min.css",              "priv/static/css/brando-min.css"},
     {:copy, "install/templates/static/brando/css/brando.vendor.css",           "priv/static/css/brando.vendor.css"},

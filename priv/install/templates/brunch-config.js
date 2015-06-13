@@ -4,14 +4,14 @@ exports.config = {
     javascripts: {
       joinTo: {
         'js/app.js': /^(web\/static\/js)/,
+        'js/jquery.js': 'bower_components/jquery/dist/jquery.js',
         'js/vendor.js': [
-          /^(web\/static\/vendor)/,
-          'bower_components/jquery/dist/jquery.js',
           'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
           'bower_components/jscroll/jquery.jscroll.js',
           'bower_components/responsive-nav/responsive-nav.js',
           'bower_components/salvattore/dist/salvattore.min.js',
-          'bower_components/owl.carousel/dist/owl.carousel.js'
+          'bower_components/flexslider/jquery.flexslider.js',
+          /^(web\/static\/vendor)/
         ],
       },
       // order: {
@@ -27,8 +27,7 @@ exports.config = {
           /^(web\/static\/css)/,
           'bower_components/bootstrap-sass/assets/stylesheets/_bootstrap.scss',
           'bower_components/responsive-nav/responsive-nav.css',
-          'bower_components/owl.carousel/dist/assets/owl.carousel.css',
-          'bower_components/owl.carousel/dist/assets/owl.theme.default.css'
+          'bower_components/flexslider/flexslider.css'
         ]
       }
     },
@@ -55,11 +54,7 @@ exports.config = {
     // will be copied to `paths.public`, which is "priv/static" by default.
     assets: /^(web\/static\/assets)/,
     ignored: [
-      'bower_components/owl.carousel/dist/owl.carousel.min.js',
-      'bower_components/owl.carousel/dist/assets/owl.carousel.min.css',
-      'bower_components/owl.carousel/dist/assets/owl.theme.default.min.css',
-      'bower_components/owl.carousel/dist/assets/owl.theme.green.min.css',
-      'bower_components/owl.carousel/dist/assets/owl.theme.green.css'
+
     ]
   },
 
