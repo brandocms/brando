@@ -58,10 +58,10 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "install/templates/static/brando/images/flags.png",                "priv/static/images/brando/flags.png"},
     {:copy, "install/templates/static/brando/images/brando-big.png",           "priv/static/images/brando/brando-big.png"},
 
-    {:copy, "install/templates/static/villain/villain-min.css",                "priv/static/js/villain-min.css"},
     {:copy, "install/templates/static/villain/villain.all-min.js",             "priv/static/js/villain.all-min.js"},
-    {:copy, "install/templates/static/villain/villain.css",                    "priv/static/js/villain.css"},
-    {:copy, "install/templates/static/villain/villain.css.map",                "priv/static/js/villain.css.map"},
+    {:copy, "install/templates/static/villain/villain.css",                    "priv/static/css/villain.css"},
+    {:copy, "install/templates/static/villain/villain-min.css",                "priv/static/css/villain-min.css"},
+    {:copy, "install/templates/static/villain/villain.css.map",                "priv/static/css/villain.css.map"},
   ]
 
   @root Path.expand("../../../priv", __DIR__)

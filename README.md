@@ -23,6 +23,14 @@ defp deps do
 end
 ```
 
+Install your deps:
+
+    $ mix deps.get
+
+Install Brando:
+
+    $ mix brando.install
+
 Add to your `config/config.exs` right before the env-specific import:
 
 ```elixir
@@ -39,10 +47,6 @@ config :my_app, Repo,
   # ...
   extensions: [{Brando.Postgrex.Extension.JSON, library: Poison}]
 ```
-
-Install Brando:
-
-    $ mix brando.install
 
 Create the database:
 

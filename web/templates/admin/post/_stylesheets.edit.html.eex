@@ -1,1 +1,1 @@
-  <link rel="stylesheet" href="/static/villain/villain.css">
+  <link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/villain.css") %>">
