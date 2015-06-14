@@ -20,6 +20,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "install/templates/migrations/20150215090307_add_images_table.exs",           "priv/repo/migrations/20150215090307_add_images_table.exs"},
     {:eex,  "install/templates/migrations/20150520211010_add_pages_table.exs",            "priv/repo/migrations/20150520211010_add_pages_table.exs"},
     {:eex,  "install/templates/migrations/20150520221010_add_pagefragments_table.exs",    "priv/repo/migrations/20150520221010_add_pagefragments_table.exs"},
+    {:eex,  "install/templates/migrations/20150505122654_add_instagramimages_table.exs",  "priv/repo/migrations/20150505122654_add_instagramimages_table.exs"},
 
     {:text, "install/templates/web/templates/layout/application.html.eex",                "web/templates/layout/application.html.eex"}
   ]
