@@ -1,1 +1,3 @@
-<script type="text/javascript" src="<%= Helpers.static_path(@conn, "/js/villain.all-min.js") %>" charset="utf-8"></script>
+<script type="text/javascript" src="<%= Helpers.static_path(@conn, "/js/villain.vendor.js") %>" charset="utf-8"></script>
+<script type="text/javascript" src="<%= Helpers.static_path(@conn, "/js/villain.js") %>" charset="utf-8"></script>
+<!-- <script type="text/javascript" src="<%= Helpers.static_path(@conn, "/js/villain.all-min.js") %>" charset="utf-8"></script> -->

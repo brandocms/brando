@@ -48,7 +48,7 @@ defmodule Brando.Routes.Admin.News do
       post   "#{path}/villain/bildedata/:id",      ctrl, :image_info,     opts
       post   "#{path}/:id/villain/last-opp/:slug", ctrl, :upload_image,   opts
       get    "#{path}/:id/villain/bla/:slug",      ctrl, :browse_images,  opts
-      post   "#{path}/:id/villain/bildedata/:id",  ctrl, :image_info,     opts
+      post   "#{path}/:_x/villain/bildedata/:id",  ctrl, :image_info,     opts
       get    "#{path}/ny",                         ctrl, :new,            opts
       get    "#{path}/:id",                        ctrl, :show,           opts
       get    "#{path}/:id/endre",                  ctrl, :edit,           opts
