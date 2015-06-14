@@ -1,7 +1,5 @@
     <h1>Sideoversikt</h1>
     <div class="grid-block">
-    <div class="medium-4 grid-block">test side</div>
-    <div class="medium-8 grid-block">test main</div>
     </div>
 <%= if @pages != [] do %>
     <div class="status-indicators">
@@ -15,6 +13,7 @@
                  {"Endre side", "fa-edit", :admin_page_path, :edit, :id, :superuser},
                  {"Slett side", "fa-trash", :admin_page_path, :delete_confirm, :id, :superuser}],
                  children: :children,
+                 filter: true,
                  check_or_x: [], hide: [:slug, :data, :html, :parent, :children, :meta_description, :meta_keywords, :inserted_at]) %>
 
 <% else %>
