@@ -21,7 +21,7 @@ defmodule <%= application_module %>.Repo.Migrations.AddUsersTable do
         users
         ("username", "full_name", "email", "password", "avatar", "role", "last_login", "inserted_at", "updated_at")
       VALUES
-        ('admin', 'Twined Admin', 'admin@twined.net', '#{password}', NULL, 5, NOW(), NOW(), NOW());
+        ('admin', 'Twined Admin', 'admin@twined.net', '#{password}', NULL, 7, NOW(), NOW(), NOW());
     """
   end
 
