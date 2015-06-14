@@ -3,8 +3,8 @@
     <script type="text/javascript">
       $(document).ready(function() {
         v = new Villain.Editor({
-          browseURL: 'villain/bla/',
-          uploadURL: 'villain/last-opp/',
+          browseURL: 'villain/bla/page',
+          uploadURL: 'villain/last-opp/page',
           textArea: 'textarea[name="page_fragment[data]"]'
         });
       });
