@@ -35,8 +35,8 @@ defmodule <%= application_module %>.Villain.Parser do
   @doc """
   Convert image to html, with caption and credits
   """
-  def image(%{url: url, caption: caption, credits: credits}) do
-    ~s(<img src="#{url}" alt="#{caption} / #{credits}" class="img-responsive" />)
+  def image(%{url: url, title: title, credits: credits}) do
+    ~s(<img src="#{url}" alt="#{title} / #{credits}" class="img-responsive" />)
   end
 
   @doc """
