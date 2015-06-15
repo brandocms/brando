@@ -11,6 +11,8 @@ defmodule Brando.Routes.Admin.News do
         post_routes "/news", model: Brando.Post
 
   """
+  import Brando.Routes.Admin.Villain
+
   alias Brando.Admin.PostController
   alias Brando.Post
 
@@ -42,21 +44,17 @@ defmodule Brando.Routes.Admin.News do
       ctrl = unquote(controller)
       opts = unquote(options)
 
-      get    "#{path}",                            ctrl, :index,          opts
-      post   "#{path}/villain/last-opp/:slug",     ctrl, :upload_image,   opts
-      get    "#{path}/villain/bla/:slug",          ctrl, :browse_images,  opts
-      post   "#{path}/villain/bildedata/:id",      ctrl, :image_info,     opts
-      post   "#{path}/:id/villain/last-opp/:slug", ctrl, :upload_image,   opts
-      get    "#{path}/:id/villain/bla/:slug",      ctrl, :browse_images,  opts
-      post   "#{path}/:_x/villain/bildedata/:id",  ctrl, :image_info,     opts
-      get    "#{path}/ny",                         ctrl, :new,            opts
-      get    "#{path}/:id",                        ctrl, :show,           opts
-      get    "#{path}/:id/endre",                  ctrl, :edit,           opts
-      get    "#{path}/:id/slett",                  ctrl, :delete_confirm, opts
-      post   "#{path}",                            ctrl, :create,         opts
-      delete "#{path}/:id",                        ctrl, :delete,         opts
-      patch  "#{path}/:id",                        ctrl, :update,         opts
-      put    "#{path}/:id",                        ctrl, :update,         Keyword.put(opts, :as, nil)
+      villain_routes path, ctrl
+
+      get    "#{path}",                                 ctrl, :index,          opts
+      get    "#{path}/ny",                              ctrl, :new,            opts
+      get    "#{path}/:id",                             ctrl, :show,           opts
+      get    "#{path}/:id/endre",                       ctrl, :edit,           opts
+      get    "#{path}/:id/slett",                       ctrl, :delete_confirm, opts
+      post   "#{path}",                                 ctrl, :create,         opts
+      delete "#{path}/:id",                             ctrl, :delete,         opts
+      patch  "#{path}/:id",                             ctrl, :update,         opts
+      put    "#{path}/:id",                             ctrl, :update,         Keyword.put(opts, :as, nil)
     end
   end
 end

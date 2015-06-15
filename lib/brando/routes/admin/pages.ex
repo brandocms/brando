@@ -11,6 +11,8 @@ defmodule Brando.Routes.Admin.Pages do
         page_routes "/pages", model: Brando.Page
 
   """
+  import Brando.Routes.Admin.Villain
+
   alias Brando.Admin.PageController
   alias Brando.Admin.PageFragmentController
   alias Brando.Page
@@ -47,29 +49,27 @@ defmodule Brando.Routes.Admin.Pages do
       opts = unquote(options)
       fctrl = PageFragmentController
 
-      get    "#{path}/fragmenter",                            fctrl, :index,          opts
-      get    "#{path}/fragmenter/ny",                         fctrl, :new,            opts
-      get    "#{path}/fragmenter/:id",                        fctrl, :show,           opts
-      get    "#{path}/fragmenter/:id/endre",                  fctrl, :edit,           opts
-      get    "#{path}/fragmenter/:id/slett",                  fctrl, :delete_confirm, opts
-      post   "#{path}/fragmenter",                            fctrl, :create,         opts
-      delete "#{path}/fragmenter/:id",                        fctrl, :delete,         opts
-      patch  "#{path}/fragmenter/:id",                        fctrl, :update,         opts
-      put    "#{path}/fragmenter/:id",                        fctrl, :update,         Keyword.put(opts, :as, nil)
+      get    "#{path}/fragmenter",           fctrl, :index,          opts
+      get    "#{path}/fragmenter/ny",        fctrl, :new,            opts
+      get    "#{path}/fragmenter/:id",       fctrl, :show,           opts
+      get    "#{path}/fragmenter/:id/endre", fctrl, :edit,           opts
+      get    "#{path}/fragmenter/:id/slett", fctrl, :delete_confirm, opts
+      post   "#{path}/fragmenter",           fctrl, :create,         opts
+      delete "#{path}/fragmenter/:id",       fctrl, :delete,         opts
+      patch  "#{path}/fragmenter/:id",       fctrl, :update,         opts
+      put    "#{path}/fragmenter/:id",       fctrl, :update,         Keyword.put(opts, :as, nil)
 
-      get    "#{path}",                            ctrl, :index,          opts
-      post   "#{path}/villain/last-opp/:slug",     ctrl, :upload_image,   opts
-      get    "#{path}/villain/bla/:slug",          ctrl, :browse_images,  opts
-      post   "#{path}/villain/bildedata/:id",      ctrl, :image_info,     opts
-      post   "#{path}/:page_id/villain/bildedata/:id",      ctrl, :image_info,     opts
-      get    "#{path}/ny",                         ctrl, :new,            opts
-      get    "#{path}/:id",                        ctrl, :show,           opts
-      get    "#{path}/:id/endre",                  ctrl, :edit,           opts
-      get    "#{path}/:id/slett",                  ctrl, :delete_confirm, opts
-      post   "#{path}",                            ctrl, :create,         opts
-      delete "#{path}/:id",                        ctrl, :delete,         opts
-      patch  "#{path}/:id",                        ctrl, :update,         opts
-      put    "#{path}/:id",                        ctrl, :update,         Keyword.put(opts, :as, nil)
+      villain_routes path, ctrl
+
+      get    "#{path}",                                 ctrl, :index,          opts
+      get    "#{path}/ny",                              ctrl, :new,            opts
+      get    "#{path}/:id",                             ctrl, :show,           opts
+      get    "#{path}/:id/endre",                       ctrl, :edit,           opts
+      get    "#{path}/:id/slett",                       ctrl, :delete_confirm, opts
+      post   "#{path}",                                 ctrl, :create,         opts
+      delete "#{path}/:id",                             ctrl, :delete,         opts
+      patch  "#{path}/:id",                             ctrl, :update,         opts
+      put    "#{path}/:id",                             ctrl, :update,         Keyword.put(opts, :as, nil)
     end
   end
 end
