@@ -17,7 +17,7 @@ defmodule Brando.Admin.InstagramController do
   def index(conn, _params) do
     images =
       InstagramImage
-      |> order_by([m], [desc: m.status, asc: m.instagram_id])
+      |> order_by([m], [desc: m.status, desc: m.created_time])
       |> Brando.repo.all
     conn
     |> assign(:images, images)
