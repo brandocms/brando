@@ -2,9 +2,17 @@ defmodule Brando.StatsChannel do
   @moduledoc """
   Channel for system information.
   """
-  @interval 1000
+  @interval 5000
 
   use Phoenix.Channel
+
+  @info_memory [
+    :total,
+    :processes,
+    :atom,
+    :binary,
+    :code,
+    :ets]
 
   def join("stats", _auth_msg, socket) do
     send self, :update
@@ -12,10 +20,12 @@ defmodule Brando.StatsChannel do
   end
 
   def handle_info(:update, socket) do
-    :random.seed(:erlang.now)
-    random_number = :random.uniform(10)
+    mem_list =
+      :erlang.memory(@info_memory)
+      |> Keyword.values
     :erlang.send_after(@interval, self, :update)
-    push socket, "update", %{memory: random_number}
+    push socket, "update", %{total_memory: Enum.at(mem_list, 0),
+                             atom_memory: Enum.at(mem_list, 2)}
     {:noreply, socket}
   end
 end

@@ -560,12 +560,13 @@ var Stats = (function () {
             var _this2 = this;
 
             var _this = this;
-            this.memoryPoints = [];
+            this.totalMemoryPoints = [];
+            this.atomMemoryPoints = [];
             this.opts = {
                 lineWidth: 2,
                 type: 'line',
-                width: '80px',
-                height: '35px',
+                width: '110px',
+                height: '50px',
                 lineColor: '#6cc7d9',
                 fillColor: '#e2f4f7',
                 spotColor: false,
@@ -573,6 +574,7 @@ var Stats = (function () {
                 highlightLineColor: 'rgba(0,0,0,0.1)',
                 highlightSpotColor: '#6cc7d9',
                 spotRadius: 3,
+                chartRangeMin: 0,
                 maxSpotColor: false
             };
             var socket = new _Socket.Socket('/admin/ws');
@@ -591,12 +593,34 @@ var Stats = (function () {
         key: 'update',
         value: function update(payload) {
             // update memory
-            this.memoryPoints.push(payload.memory);
-            if (this.memoryPoints.length > MAX_POINTS) {
-                this.memoryPoints.splice(0, 1);
+            this.totalMemoryPoints.push(payload.total_memory);
+            if (this.totalMemoryPoints.length > MAX_POINTS) {
+                this.totalMemoryPoints.splice(0, 1);
             }
-            $('#memory .sparkline').sparkline(this.memoryPoints, this.opts);
-            $('#memory .text').html(payload.memory + ' mb');
+            $('#total-memory .sparkline').sparkline(this.totalMemoryPoints, this.opts);
+            $('#total-memory .text').html(this.humanFileSize(parseInt(payload.total_memory), false));
+
+            this.atomMemoryPoints.push(payload.atom_memory);
+            if (this.atomMemoryPoints.length > MAX_POINTS) {
+                this.atomMemoryPoints.splice(0, 1);
+            }
+            $('#atom-memory .sparkline').sparkline(this.atomMemoryPoints, this.opts);
+            $('#atom-memory .text').html(this.humanFileSize(parseInt(payload.atom_memory), false));
+        }
+    }, {
+        key: 'humanFileSize',
+        value: function humanFileSize(bytes, si) {
+            var thresh = si ? 1000 : 1024;
+            if (Math.abs(bytes) < thresh) {
+                return bytes + ' B';
+            }
+            var units = si ? ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'] : ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+            var u = -1;
+            do {
+                bytes /= thresh;
+                ++u;
+            } while (Math.abs(bytes) >= thresh && u < units.length - 1);
+            return bytes.toFixed(1) + ' ' + units[u];
         }
     }]);
 

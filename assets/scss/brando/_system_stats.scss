@@ -1,0 +1,20 @@
+.card {
+  background-color: #fafafa;
+  padding: 15px 15px;
+  box-shadow: 3px 3px #eee;
+  width: 150px;
+  float: left;
+  margin-right: 10px;
+  text-align: center;
+
+  .text {
+    font-size: 12px;
+    margin-top: 5px;
+  }
+  h4 {
+    margin: 0 0 9px;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+}
