@@ -13,8 +13,8 @@ class Stats {
         this.opts = {
             lineWidth: 2,
             type: 'line',
-            width: '80px',
-            height: '35px',
+            width: '110px',
+            height: '50px',
             lineColor: '#6cc7d9',
             fillColor: '#e2f4f7',
             spotColor: false,
