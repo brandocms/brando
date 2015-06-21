@@ -65,8 +65,8 @@ defmodule Brando.Instagram.Server do
     Brando.SystemChannel.log(:error, "InstagramServer: Postgres server nede.")
     :ok
   end
-  # @doc false
-  # def terminate(_reason, _state) do
-  #   :ok
-  # end
+  @doc false
+  def terminate(_reason, _state) do
+    :ok
+  end
 end
