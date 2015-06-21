@@ -16,7 +16,6 @@ defmodule Brando.Plug.Authenticate do
   alias Brando.User
 
   @behaviour Plug
-  @login_url Application.get_env(:brando, :login_url, "/login")
 
   def init(options), do: options
 
@@ -35,7 +34,7 @@ defmodule Brando.Plug.Authenticate do
     conn
     |> delete_session(:current_user)
     |> put_flash(:error, "Ingen tilgang.")
-    |> redirect(to: @login_url)
+    |> redirect(to: Brando.get_helpers.session_path(conn, :login))
     |> halt
   end
 end
