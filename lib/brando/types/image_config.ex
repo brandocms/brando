@@ -8,12 +8,7 @@ defmodule Brando.Type.ImageConfig do
             upload_path: Path.join("images", "default"),
             random_filename: false,
             size_limit: 10_240_000,
-            sizes: %{small:  %{size: "300", quality: 100},
-                     medium: %{size: "500", quality: 100},
-                     large:  %{size: "700", quality: 100},
-                     xlarge: %{size: "900", quality: 100},
-                     thumb:  %{size: "150x150", quality: 100, crop: true},
-                     micro:  %{size: "25x25", quality: 100, crop: true}}
+            sizes: %{}
 
   @behaviour Ecto.Type
 
@@ -26,7 +21,7 @@ defmodule Brando.Type.ImageConfig do
   Cast should return OUR type no matter what the input.
   """
   def cast(val) when is_binary(val) do
-    val = Poison.decode!(val, as: Brando.Type.ImageConfig, keys: :atoms!)
+    val = Poison.decode!(val, keys: :atoms)
     {:ok, val}
   end
   def cast(val) when is_map(val) do
@@ -44,7 +39,7 @@ defmodule Brando.Type.ImageConfig do
   just return it to be stored in the model struct.
   """
   def load(val) when is_binary(val) do
-    val = Poison.decode!(val, as: Brando.Type.ImageConfig, keys: :atoms!)
+    val = Poison.decode!(val, keys: :atoms)
     if val == nil, do: val = %Brando.Type.ImageConfig{}
     {:ok, val}
   end
