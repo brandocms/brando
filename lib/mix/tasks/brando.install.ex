@@ -9,10 +9,18 @@ defmodule Mix.Tasks.Brando.Install do
   @shortdoc "Generates files for Brando."
 
   @new [
+    {:eex,  "install/templates/web/router.ex",                                            "web/router.ex"},
+    {:eex,  "install/templates/web/controllers/lockdown_controller.ex",                   "web/controllers/lockdown_controller.ex"},
+    {:eex,  "install/templates/web/templates/layout/lockdown.html.eex",                   "web/templates/layout/lockdown.html.eex"},
+    {:eex,  "install/templates/web/templates/lockdown/index.html.eex",                    "web/templates/lockdown/index.html.eex"},
+    {:eex,  "install/templates/web/views/lockdown_view.ex",                               "web/views/lockdown_view.ex"},
+
     {:eex,  "install/templates/web/villain/parser.ex",                                    "web/villain/parser.ex"},
     {:eex,  "install/templates/config/brando.exs",                                        "config/brando.exs"},
+
     {:text, "install/templates/media/defaults/thumb/avatar_default.jpg",                  "priv/media/defaults/thumb/avatar_default.jpg"},
     {:text, "install/templates/media/defaults/micro/avatar_default.jpg",                  "priv/media/defaults/micro/avatar_default.jpg"},
+
     {:eex,  "install/templates/migrations/20150123230712_add_users_table.exs",            "priv/repo/migrations/20150123230712_add_users_table.exs"},
     {:eex,  "install/templates/migrations/20150210211010_add_posts_table.exs",            "priv/repo/migrations/20150210211010_add_posts_table.exs"},
     {:eex,  "install/templates/migrations/20150212162739_add_postimages_table.exs",       "priv/repo/migrations/20150212162739_add_postimages_table.exs"},
