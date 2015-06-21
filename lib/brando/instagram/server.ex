@@ -6,16 +6,18 @@ defmodule Brando.Instagram.Server do
   """
 
   use GenServer
+  require Logger
   alias Brando.Instagram
   alias Brando.Instagram.API
 
   @doc false
   def start_link(server_name) do
-    :gen_server.start_link({:local, server_name}, __MODULE__, [], [])
+    :gen_server.start({:local, server_name}, __MODULE__, [], [])
   end
 
   @doc false
   def init(_) do
+    Process.flag(:trap_exit, true)
     :timer.send_after(5000, :poll)
     send(self(), :poll)
     {:ok, timer} = :timer.send_interval(Instagram.config(:interval), :poll)
@@ -24,7 +26,13 @@ defmodule Brando.Instagram.Server do
 
   @doc false
   def handle_info(:poll, {timer, filter}) do
-    {:ok, filter} = API.fetch(filter)
+    try do
+      {:ok, filter} = API.fetch(filter)
+    catch
+      :exit, err ->
+        Logger.error(inspect(err))
+        Brando.SystemChannel.log(:error, "InstagramServer: Fanget :exit -> #{inspect(err)}")
+    end
     {:noreply, {timer, filter}}
   end
 
@@ -53,7 +61,12 @@ defmodule Brando.Instagram.Server do
   end
 
   @doc false
-  def terminate(_reason, _state) do
+  def terminate({%Postgrex.Error{message: "tcp connect: econnrefused", postgres: nil}, _}, _) do
+    Brando.SystemChannel.log(:error, "InstagramServer: Postgres server nede.")
     :ok
   end
+  # @doc false
+  # def terminate(_reason, _state) do
+  #   :ok
+  # end
 end
