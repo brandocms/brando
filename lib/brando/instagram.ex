@@ -30,7 +30,6 @@ defmodule Brando.Instagram do
     children = [
       worker(Brando.Instagram.Server, [Brando.Instagram.config(:server_name)])
     ]
-
     supervise(children, strategy: :one_for_one)
   end
 
