@@ -53,7 +53,8 @@
     text-align: center;
 
     .avatar img {
-      border-radius: 500px;
+      border-radius: 50%;
+      box-shadow: 3px 3px #eee;
     }
     .name {
       font-size: 1.2rem;
