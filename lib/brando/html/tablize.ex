@@ -103,7 +103,7 @@ defmodule Brando.HTML.Tablize do
             fields
             |> Enum.map(&(do_td(&1, child, module.__schema__(:field, &1), opts)))
             |> Enum.join
-          ~s(<tr class="child">#{tr_content}#{render_dropdowns(conn, dropdowns, record)}</tr>)
+          ~s(<tr class="child">#{tr_content}#{render_dropdowns(conn, dropdowns, child)}</tr>)
         end
         row <> Enum.join(child_rows)
     end
