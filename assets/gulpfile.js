@@ -10,7 +10,7 @@ var sourcemaps = require("gulp-sourcemaps");
 var autoprefixer = require('gulp-autoprefixer');
 
 gulp.task('css', function () {
-    return sass('scss/brando.scss', {sourcemap: true})
+    return sass('./scss/brando.scss', {sourcemap: true})
         .on('error', function (err) { console.log(err.message); })
         .pipe(autoprefixer({
           browsers: ['last 2 versions']
@@ -102,17 +102,17 @@ gulp.task('default', function() {
 });
 
 gulp.task('watch', function () {
-    watch('scss/**/*.scss', function () {
+    watch('./scss/**/*.scss', function () {
         gulp.start('css');
     });
-    watch('css/**/*.css', function () {
+    watch('./css/**/*.css', function () {
         gulp.start('css-vendor');
     });
-    watch('js/vendor/**/*.js', function () {
+    watch('./js/vendor/**/*.js', function () {
         gulp.start('scripts-vendor');
         gulp.start('scripts-auth');
     });
-    watch('js/brando/**/*.js', function () {
+    watch('./js/brando/**/*.js', function () {
         gulp.start('scripts-brando');
     });
 });
