@@ -32,7 +32,7 @@ defmodule Brando.Mixfile do
   defp deps do
     [
       {:phoenix, "~> 0.13"},
-      {:phoenix_ecto, "~> 0.4"},
+      {:phoenix_ecto, "~> 0.5"},
       {:phoenix_html, "~> 1.0"},
 
       {:comeonin, "~> 0.8"},
@@ -52,7 +52,7 @@ defmodule Brando.Mixfile do
       {:excoveralls, "~> 0.3", only: :test},
       {:blacksmith, "~> 0.1.2", only: :test},
       {:exvcr, "~> 0.4.0", only: :test},
-      {:ecto, "~> 0.11", only: :test, override: true},
+      {:ecto, "~> 0.12", only: :test, override: true},
 
       # Documentation dependencies
       {:ex_doc, "~> 0.6", only: :docs},
