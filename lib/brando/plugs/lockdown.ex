@@ -12,6 +12,7 @@ defmodule Brando.Plug.Lockdown do
   """
 
   import Phoenix.Controller, only: [put_flash: 3, redirect: 2, put_layout: 2, put_view: 2]
+  import Plug.Conn, only: [halt: 1]
   alias Brando.User
 
   @behaviour Plug
@@ -38,5 +39,6 @@ defmodule Brando.Plug.Lockdown do
   defp lockdown(conn) do
     conn
     |> redirect(to: Brando.get_helpers.lockdown_path(conn, :index))
+    |> halt
   end
 end
