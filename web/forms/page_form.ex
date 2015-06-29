@@ -31,12 +31,22 @@ defmodule Brando.PageForm do
   end
 
   @doc false
+  @spec is_parent_selected?(String.t, Integer.t) :: boolean
+  def is_parent_selected?(form_value, model_value) do
+    cond do
+      form_value == ""                             -> false
+      String.to_integer(form_value) == model_value -> true
+      true                                         -> false
+    end
+  end
+
+  @doc false
   def get_now do
     Ecto.DateTime.to_string(Ecto.DateTime.local)
   end
 
   @doc """
-  Check is status' choice is selected.
+  Check if status' choice is selected.
   Translates the `model_value` from an atom to an int as string
   through `Brando.Type.Status.dump/1`.
   Returns boolean.
@@ -54,7 +64,8 @@ defmodule Brando.PageForm do
       label: "Hører til",
       help_text: "Hvis siden du oppretter skal være en underside, " <>
                  "velg tilhørende side her. Hvis ikke, velg <em>Ingen tilhørighet</em>",
-      choices: &__MODULE__.get_parent_choices/0]
+      choices: &__MODULE__.get_parent_choices/0,
+      is_selected: &__MODULE__.is_parent_selected?/2]
     field :key, :text,
         [required: true,
          label: "Identifikasjonsnøkkel",
