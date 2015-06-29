@@ -283,6 +283,7 @@
      */
     
     Villain.BlockStore = [];
+    Villain.BlockStore.stores = [];
     Villain.BlockStore.count = 1;
     
     // Don't need storeName here, since we never want two equal ids
@@ -314,7 +315,7 @@
     
     Villain.BlockStore.del = function(store, id) {
         Villain.BlockStore[store] = _.filter(Villain.BlockStore[store], function(block) {
-             return block.id !== id;
+            return parseInt(block.id) !== parseInt(id);
         });
     };
     
@@ -324,10 +325,20 @@
             element.object.destroy();
         });
         Villain.BlockStore[store] = [];
+        var index = Villain.BlockStore.stores.indexOf(store);
+        Villain.BlockStore.stores.splice(index, 1);
     };
     
     Villain.BlockStore.create = function(name) {
         Villain.BlockStore[name] = [];
+        Villain.BlockStore.stores.push(name);
+    };
+    
+    Villain.BlockStore.listAll = function() {
+        for (var i = 0; i < Villain.BlockStore.stores.length; i++) {
+            console.log(Villain.BlockStore.stores[i]);
+            console.log(Villain.BlockStore[Villain.BlockStore.stores[i]]);
+        }
     };
     Villain.Block = Backbone.View.extend({
         tagName: 'div',
@@ -360,6 +371,7 @@
     
         events: {
             'dragstart .villain-action-button-move': 'onDragStart',
+            'click .villain-action-button-move': 'onClickMove',
             'click .villain-action-button-del': 'onClickDelete',
             'mouseover .villain-block-inner': 'onMouseOver',
             'mouseout .villain-block-inner': 'onMouseOut',
@@ -367,6 +379,35 @@
             'mouseup .villain-text-block': 'onMouseUp',
             'click .villain-text-block': 'onClick',
             'click .villain-action-button-setup': 'onSetupClick'
+        },
+    
+        initialize: function(json, store) {
+            this.data = json || null;
+            this.dataId = this.getIdFromBlockStore();
+            this.$el.attr('data-block-id', this.dataId);
+            this.$el.attr('data-block-type', this.type);
+            this.$el.attr('id', 'villain-block-' + this.dataId);
+            if (store) {
+                this.store = store;
+            }
+            this.$el.attr('data-blockstore', this.store);
+            this.id = 'villain-block-' + this.dataId;
+            this.addToBlockStore(store);
+            this.render();
+        },
+    
+        render: function() {
+            if (this.hasData()) {
+                // we got passed data. render editorhtm
+                html = this.renderEditorHtml();
+            } else {
+                // no data, probably want a blank block
+                html = this.renderEmpty();
+            }
+            this.el.innerHTML = html;
+            this.setSections();
+            this.addSetup();
+            return this;
         },
     
         onClick: function(e) {
@@ -377,6 +418,7 @@
         },
     
         onSetupClick: function(e) {
+            e.stopPropagation();
             // is it active now?
             $button = this.$('.villain-action-button-setup');
             if ($button.hasClass('active')) {
@@ -426,6 +468,16 @@
             this.$el.loadingOverlay('remove');
         },
     
+        addToPathName: function(relativeUrl) {
+            if (relativeUrl.charAt(0) === "/") {
+                return relativeUrl;
+            } else {
+                var divider = (window.location.pathname.slice(-1) == "/") ? "" : "/";
+                var fullPath = window.location.pathname + divider + relativeUrl;
+            }
+            return fullPath;
+        },
+    
         destroy: function() {
             // delete the plus after
             this.$el.next('.villain-add-block').remove();
@@ -443,12 +495,18 @@
             e.stopPropagation();
         },
     
+        onClickMove: function(e) {
+            e.stopPropagation();
+        },
+    
         onDragStart: function(e) {
             e.originalEvent.dataTransfer.setDragImage(this.$el.get(0), this.$el.width(), this.$el.height());
             e.originalEvent.dataTransfer.setData('Text', this.dataId);
             e.stopPropagation();
         },
+    
         onMouseOver: function(e) {
+            event.stopPropagation();
             this.$inner.addClass('hover');
             this.$inner.children('.villain-actions').visible();
         },
@@ -502,21 +560,6 @@
             return Villain.BlockStore.getId();
         },
     
-        initialize: function(json, store) {
-            this.data = json || null;
-            this.dataId = this.getIdFromBlockStore();
-            this.$el.attr('data-block-id', this.dataId);
-            this.$el.attr('data-block-type', this.type);
-            this.$el.attr('id', 'villain-block-' + this.dataId);
-            if (store) {
-                this.store = store;
-            }
-            this.$el.attr('data-blockstore', this.store);
-            this.id = 'villain-block-' + this.dataId;
-            this.addToBlockStore(store);
-            this.render();
-        },
-    
         doRenderCallback: function() {
     
         },
@@ -564,29 +607,35 @@
             return this.data;
         },
     
+        setDataProperty: function(prop, value) {
+            data = this.getData();
+            data[prop] = value;
+            this.setData(data);
+        },
+    
         hasData: function() {
-            return this.data ? true : false;
+            return this.data ? !_.isEmpty(this.data) : false;
         },
     
         refreshBlock: function() {
             html = this.renderEditorHtml();
             this.el.innerHTML = html;
-            this.$inner = this.$('.villain-block-inner');
+            this.addSetup();
             return this;
         },
     
-        render: function() {
-            if (this.data) {
-                // we got passed data. render editorhtm
-                html = this.renderEditorHtml();
-            } else {
-                // no data, probably want a blank block
-                html = this.renderEmpty();
-            }
-            this.el.innerHTML = html;
+        refreshContentBlock: function(hidden) {
+            block = this.renderContentBlockHtml();
+            this.$content.html($(block).html());
+            return this.$content;
+        },
+    
+        setSections: function() {
             this.$inner = this.$('.villain-block-inner');
             this.$content = this.$('.villain-content');
+        },
     
+        addSetup: function() {
             if (this.setup) {
                 // the block has a setup method - add the setupTemplate
                 // and call setup()
@@ -598,7 +647,10 @@
             } else {
                 this.$('.villain-action-button-setup').hide();
             }
-            return this;
+        },
+    
+        clearSetup: function() {
+            this.$setup.empty();
         },
     
         getTextBlock: function() {
@@ -627,14 +679,19 @@
         },
     
         showSetup: function() {
+            innerHeight = this.$inner.height();
             this.$content.hide();
             $button = this.$('.villain-action-button-setup');
             $button.addClass('active');
             this.$setup.show();
+            if (this.$setup.height() < innerHeight) {
+                this.$setup.height(innerHeight);
+            }
         },
     
         hideSetup: function() {
             this.$setup.hide();
+            this.$setup.height("");
             $button = this.$('.villain-action-button-setup');
             $button.removeClass('active');
             this.$content.show();
@@ -732,16 +789,20 @@
     Villain.Blocks.Header = Villain.Block.extend({
         type: 'header',
         template: _.template([
-            '<div class="villain-text-block villain-text-block-header villain-content" contenteditable="true">',
+            '<div class="villain-text-block villain-text-block-header villain-content" data-header-level="<%= level %>" contenteditable="true">',
               '<%= content %>',
             '</div>'
         ].join('\n')),
     
         renderEditorHtml: function() {
-            blockTemplate = this.template({content: this.data.text});
+            blockTemplate = this.renderContentBlockHtml();
             actionsTemplate = this.actionsTemplate();
             wrapperTemplate = this.wrapperTemplate({content: blockTemplate, actions: actionsTemplate});
             return wrapperTemplate;
+        },
+    
+        renderContentBlockHtml: function() {
+            return this.template({content: this.data.text, level: this.data.level});
         },
     
         renderEmpty: function() {
@@ -751,14 +812,49 @@
             return wrapperTemplate;
         },
     
+        setup: function() {
+            // if (this.hasData()) {
+                data = this.getData();
+                if (!data.hasOwnProperty('level')) {
+                    this.setDataProperty('level', 1);
+                }
+                level = data['level'];
+                this.$setup.hide();
+                var radios = "";
+                levels = [1, 2, 3, 4, 5];
+                for (i in levels) {
+                    selected = "";
+                    if (parseInt(level) === parseInt(levels[i])) {
+                        selected = ' checked="checked"';
+                    }
+                    radios += '<label><input type="radio" name="header-size" value="' + levels[i] + '"' + selected + '>H' + levels[i] + '</label>';
+                }
+                this.$setup.append($([
+                    '<label>Størrelse</label>',
+                    radios
+                ].join('\n')));
+    
+                this.$setup.find('input[type=radio]').on('change', $.proxy(function(e) {
+                    this.setDataProperty('level', $(e.target).val());
+                    this.refreshContentBlock();
+                    this.$content.attr('data-header-level', $(e.target).val());
+                }, this));
+            // }
+    
+        },
+    
+        getData: function() {
+            data = this.data;
+            data.text = Villain.toMD(this.getTextBlock().html()).trim();
+            return data;
+        },
+    
         getJSON: function() {
-            textNode = Villain.toMD(this.getTextBlock().html()).trim();
+            //textNode = Villain.toMD(this.getTextBlock().html()).trim();
             // strip newlines
             json = {
                 type: this.type,
-                data: {
-                    text: textNode
-                }
+                data: this.getData()
             };
             return json;
         },
@@ -872,18 +968,35 @@
             _.extend(this.events, Villain.Block.prototype.events);
         },
     
+        renderEditorHtml: function() {
+            blockTemplate = this.renderContentBlockHtml();
+            actionsTemplate = this.actionsTemplate();
+            wrapperTemplate = this.wrapperTemplate({content: blockTemplate, actions: actionsTemplate});
+            return wrapperTemplate;
+        },
+    
+        renderContentBlockHtml: function() {
+            return this.template({url: this.data.url});
+        },
+    
+        renderEmpty: function() {
+            blockTemplate = this.template({url: 'http://placehold.it/1150x400'});
+            actionsTemplate = this.actionsTemplate();
+            wrapperTemplate = this.wrapperTemplate({content: blockTemplate, actions: actionsTemplate});
+            return wrapperTemplate;
+        },
+    
         onUploadClickAfterDrop: function(e) {
+            var uid  = [this.dataId, (new Date()).getTime(), 'raw'].join('-');
+            var data = new FormData();
+    
             e.preventDefault();
             this.loading();
-            var uid  = [this.dataId, (new Date()).getTime(), 'raw'].join('-');
             img = this.$setup.find('.villain-image-dropper img');
             if (!this.file) {
                 this.done();
                 return false;
             }
-    
-            var data = new FormData();
-    
             data.append('name', this.file.name);
             data.append('image', this.file);
             data.append('uid', uid);
@@ -896,16 +1009,11 @@
                 accepts: {
                     json: 'text/json'
                 },
-                url: Villain.options['uploadURL'],
+                url: this.addToPathName(Villain.options['uploadURL']),
                 data: data,
                 cache: false,
                 contentType: false,
                 processData: false,
-                //crossDomain: this.options.crossDomain,
-                //xhrFields: {
-                //    withCredentials: this.options.withCredentials
-                //},
-                //headers: this.options.headers,
                 // Custom XMLHttpRequest
                 xhr: function() {
                     var customXhr = $.ajaxSettings.xhr();
@@ -931,7 +1039,8 @@
     
                         // set the image src as data
                         json = {
-                            url: imageData.src
+                            url: imageData.src,
+                            sizes: imageData.sizes
                         };
                         this.setData(json);
                     }
@@ -969,7 +1078,7 @@
                         ].join('\n'));
                         form = formTemplate({
                             method: data.form.method,
-                            action: data.form.action,
+                            action: that.addToPathName(data.form.action),
                             name: data.form.name,
                             inputs: inputsHtml
                         });
@@ -986,7 +1095,7 @@
     
                             $.ajax({
                                 type: 'post',
-                                url: data.form.action,
+                                url: that.addToPathName(data.form.action),
                                 data: imagedata,
                                 cache: false,
                                 contentType: false,
@@ -999,7 +1108,9 @@
                                     json.title = data.title;
                                     json.credits = data.credits;
                                     that.setData(json);
-                                    that.refreshBlock();
+                                    that.refreshContentBlock();
+                                    that.hideSetup();
+                                    that.setup();
                                 }
                             }, this));
                         });
@@ -1067,37 +1178,28 @@
             }
         },
     
-        renderEditorHtml: function() {
-            blockTemplate = this.template({url: this.data.url});
-            actionsTemplate = this.actionsTemplate();
-            wrapperTemplate = this.wrapperTemplate({content: blockTemplate, actions: actionsTemplate});
-            return wrapperTemplate;
-        },
-    
-        renderEmpty: function() {
-            blockTemplate = this.template({url: 'http://placehold.it/1150x400'});
-            actionsTemplate = this.actionsTemplate();
-            wrapperTemplate = this.wrapperTemplate({content: blockTemplate, actions: actionsTemplate});
-            return wrapperTemplate;
-        },
         getJSON: function() {
+            data = this.getData();
             json = {
                 type: this.type,
                 data: {
-                    url: this.data.url,
-                    title: this.data.title || "",
-                    credits: this.data.credits || ""
+                    url: data.url,
+                    sizes: data.sizes,
+                    title: data.title || "",
+                    credits: data.credits || ""
                 }
             };
             return json;
         },
+    
         getHTML: function() {
             url = this.$('img').attr('src');
             return this.template({url: url});
         },
+    
         setup: function() {
-            // check if this block has data
-            // if not, show the setup div
+            // check if this block has data. if not, show the setup div
+            that = this;
             if (!this.hasData()) {
                 this.$('.villain-image-block').hide();
                 $imageDropper = $([
@@ -1106,21 +1208,53 @@
                         '<div><hr></div>',
                         '<div>',
                             '<button class="villain-image-browse-button">Hent bilde fra server</button>',
-                            //'<button class="villain-image-upload-button">Last opp bilder</button>',
-                            //'<input class="hidden" type="file" id="files" value="Last opp bilder" name="files[]" multiple />',
                         '</div>',
                     '</div>'
                 ].join('\n'));
                 $imageDropper.find('.villain-image-browse-button').on('click', $.proxy(this.onImageBrowseButton, this));
-                /*
-                $imageDropper.find('input[type=file]').on('change', $.proxy(this.onUploadImagesButton, this));
-                $imageDropper.find('.villain-image-upload-button').on('click', function(e) {
-                    $imageDropper.find('input[type=file]').click();
-                });
-                */
                 this.$setup.append($imageDropper);
                 this.$setup.show();
+            } else {
+                this.clearSetup();
+                data = this.getData();
+                $titleAndCredits = $([
+                    '<label for="title">Tittel</label><input value="' + data.title + '" type="text" name="title" />',
+                    '<label for="credits">Kreditering</label><input value="' + data.credits + '" type="text" name="credits" />'
+                ].join('\n'));
+                this.$setup.append($titleAndCredits);
+                this.$setup.find('input[name="title"]').on('keyup', _.debounce(function (e) {
+                    that.setDataProperty('title', $(this).val());
+                }, 700, false));
+                this.$setup.find('input[name="credits"]').on('keyup', _.debounce(function (e) {
+                    that.setDataProperty('credits', $(this).val());
+                }, 700, false));
+    
+                this.$setup.append($('<label>Størrelse</label>'));
+    
+                /* create sizes overview */
+                for (var key in data.sizes) {
+                    if (data.sizes.hasOwnProperty(key)) {
+                        checked = '';
+                        if (data.sizes[key] == data.url) {
+                            checked = ' checked="checked"';
+                        }
+                        $radio = $('<label for="' + key +'">'
+                               + '<input type="radio" name="' + 'imagesize'
+                               + '" value="' + data.sizes[key] + '"'
+                               + checked + ' />' + key + '</label>');
+                        this.$setup.append($radio);
+                    }
+                }
+                this.$setup.find('input[type=radio]').on('change', $.proxy(function(e) {
+                    this.setUrl($(e.target).val());
+                }, this));
+                this.hideSetup();
             }
+        },
+    
+        setUrl: function(url) {
+            this.setDataProperty('url', url);
+            this.refreshContentBlock();
         },
     
         onImageBrowseButton: function(e) {
@@ -1128,14 +1262,13 @@
             this.loading();
             $.ajax({
                 type: 'get',
-                url: Villain.options['browseURL'],
+                url: this.addToPathName(Villain.options['browseURL']),
                 cache: false,
                 contentType: false,
                 processData: false,
                 dataType: 'json'
             }).done($.proxy(function(data) {
                 if (data.status != 200) {
-    
                     return false;
                 }
                 if (!data.hasOwnProperty('images')) {
@@ -1144,21 +1277,31 @@
                 $images = $('<div />');
                 for (var i = 0; i < data.images.length; i++) {
                     img = data.images[i];
-                    $images.append('<img src="' + img.thumb + '" data-large="' + img.src + '" />');
+                    $store_img = $('<img src="' + img.thumb + '" />');
+                    $store_img.data('sizes', img.sizes)
+                              .data('large', img.src)
+                              .data('title', img.title)
+                              .data('credits', img.credits);
+                    $images.append($store_img);
                 }
                 $images.on('click', 'img', $.proxy(function(e) {
                     this.setData({
-                        url: $(e.target).data('large')
+                        url: $(e.target).data('large'),
+                        title: $(e.target).data('title'),
+                        credits: $(e.target).data('credits'),
+                        sizes: $(e.target).data('sizes')
                     });
-                    this.refreshBlock();
+                    data = this.getData();
+                    this.refreshContentBlock();
+                    this.hideSetup();
+                    this.setup();
                 }, this));
+    
                 this.$setup.html('');
                 this.$setup.append('<div class="villain-message success">Klikk på bildet du vil sette inn</div>');
                 this.$setup.append($images);
                 this.done();
-    
             }, this));
-    
         },
     
         onUploadImagesButton: function(e) {
@@ -1393,6 +1536,8 @@
             this.el.innerHTML = wrapperTemplate;
     
             this.$inner = this.$('.villain-block-inner');
+            this.$content = this.$('.row');
+    
             if (this.data) {
                 // we got passed data. render editorhtml
                 this.renderEditorHtml();
@@ -1417,7 +1562,6 @@
             blockTemplate = this.template({content: this.data});
             actionsTemplate = this.actionsTemplate();
             wrapperTemplate = this.wrapperTemplate({content: blockTemplate, actions: actionsTemplate});
-            //TODO: add plus
             return this;
         },
     
@@ -1425,7 +1569,6 @@
             blockTemplate = this.template({content: this.data});
             actionsTemplate = this.actionsTemplate();
             wrapperTemplate = this.wrapperTemplate({content: blockTemplate, actions: actionsTemplate});
-            //TODO: add plus
             return this;
         },
     
@@ -1496,6 +1639,8 @@
                 ].join('\n'));
                 this.$setup.show();
                 this.$('.villain-columns-number').attr('autofocus', 'autofocus');
+            } else {
+                this.$setup.hide();
             }
         },
     
@@ -1512,6 +1657,7 @@
             }
             columnCountWrapper.append('<button class="villain-columns-apply">Sett opp kolonner</button>');
             this.$setup.append(columnCountWrapper);
+    
         },
     
         _applyColumnCount: function(e) {
@@ -1528,6 +1674,21 @@
             // show the row
             this.getRow().show();
         },
+    
+        onSetupClick: function(e) {
+            e.stopPropagation();
+            // is it active now?
+            $button = this.$('.villain-action-button-setup');
+            if ($button.hasClass('active')) {
+                // hide the setup
+                $button.removeClass('active');
+                this.hideSetup();
+            } else {
+                $button.addClass('active');
+                this.showSetup();
+            }
+        },
+    
         renderPlus: function() {
             addblock = new Villain.Plus('main');
             return addblock;
@@ -1562,6 +1723,60 @@
             'dragleave .villain-droppable': 'onDragLeaveDroppable',
             'drop .villain-droppable': 'onDropDroppable',
             'drop .villain-text-block': 'onDropTextblock'
+        },
+    
+        initialize: function(options) {
+            _this = this;
+            this.$textArea = $(options.textArea) || this.textArea;
+            $('<div id="villain"></div>').insertAfter(this.$textArea);
+            this.el = "#villain";
+            this.$el = $(this.el);
+    
+            this.$textArea.hide();
+            this.isDirty = false;
+            try {
+                this.data = JSON.parse(this.$textArea.val());
+            } catch (e) {
+                console.log('editor/init: No usable JSON found in textarea.');
+                this.data = null;
+            }
+            // inject json to textarea before submitting.
+            $('form').submit(function( event ) {
+                _this.$textArea.val(_this.getJSON());
+            });
+            // create a blockstore
+            Villain.BlockStore.create('main');
+            Villain.setOptions(options);
+            this.render();
+        },
+    
+        render: function() {
+            // add + block
+            addblock = new Villain.Plus('main');
+            this.$el.append(addblock.$el);
+            // add format popup
+            formatPopUp = new Villain.FormatPopUp();
+            this.$el.append(formatPopUp.$el);
+            // parse json
+            if (!this.data) {
+                return false;
+            }
+            for (var i = 0; i <= this.data.length - 1; i++) {
+                blockJson = this.data[i];
+                if ((BlockClass = Villain.BlockRegistry.getBlockClassByType(blockJson.type)) !== false) {
+                    block = new BlockClass(blockJson.data);
+                    this.$el.append(block.$el);
+                    this.$el.append(block.renderPlus().$el);
+                } else {
+                    console.error('Villain: No class found for type: ' + blockJson.type);
+                }
+            }
+        },
+    
+        organizeMode: function() {
+            $('.villain-block-wrapper').toggleClass('organize');
+            $('.villain-block-wrapper[data-block-type="columns"]').removeClass('organize');
+            $('.organize .villain-content').hide();
         },
     
         getJSON: function() {
@@ -1666,54 +1881,6 @@
         markDirty: function() {
             this.isDirty = true;
         },
-    
-        initialize: function(options) {
-            that = this;
-            this.$textArea = $(options.textArea) || this.textArea;
-            $('<div id="villain"></div>').insertAfter(this.$textArea);
-            this.el = "#villain";
-            this.$el = $(this.el);
-    
-            this.$textArea.hide();
-            this.isDirty = false;
-            try {
-                this.data = JSON.parse(this.$textArea.val());
-            } catch (e) {
-                console.log('editor/init: No usable JSON found in textarea.');
-                this.data = null;
-            }
-            // inject json to textarea before submitting.
-            $('form').submit(function( event ) {
-                that.$textArea.val(that.getJSON());
-            });
-            // create a blockstore
-            Villain.BlockStore.create('main');
-            Villain.setOptions(options);
-            this.render();
-        },
-    
-        render: function() {
-            // add + block
-            addblock = new Villain.Plus('main');
-            this.$el.append(addblock.$el);
-            // add format popup
-            formatPopUp = new Villain.FormatPopUp();
-            this.$el.append(formatPopUp.$el);
-            // parse json
-            if (!this.data) {
-                return false;
-            }
-            for (var i = 0; i <= this.data.length - 1; i++) {
-                blockJson = this.data[i];
-                if ((BlockClass = Villain.BlockRegistry.getBlockClassByType(blockJson.type)) !== false) {
-                    block = new BlockClass(blockJson.data);
-                    this.$el.append(block.$el);
-                    this.$el.append(block.renderPlus().$el);
-                } else {
-                    console.error('Villain: No class found for type: ' + blockJson.type);
-                }
-            }
-        }
     });
 
     Villain.FormatPopUp = Backbone.View.extend({
