@@ -1,7 +1,7 @@
-import Brando.HTML, only: [media_url: 1, img: 3]
+import Brando.HTML, only: [media_url: 0, img: 3]
 
 defimpl Brando.Render, for: Brando.User do
   def r(data) do
-    ~s(<img class="micro-avatar" src="#{media_url(img(data.avatar, :micro, "defaults/avatar_default.jpg"))}" /> #{data.username})
+    ~s(<img class="micro-avatar" src="#{img(data.avatar, :micro, [default: Brando.get_helpers.static_path(Brando.get_endpoint, "/images/brando/defaults/avatar_default.jpg"), prefix: media_url()])}" /> #{data.username})
   end
 end
