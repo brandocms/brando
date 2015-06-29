@@ -44,6 +44,7 @@ defmodule Brando.Mixfile do
       {:postgrex, ">= 0.0.0"},
       {:scrivener, "~> 0.6.0"},
       {:slugger, "~> 0.0.1"},
+      {:logger_file_backend, ">= 0.0.0"},
 
       # Dev dependencies
       {:dialyze, "~> 0.1.3", only: :dev},

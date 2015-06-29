@@ -2,6 +2,17 @@
 
 use Mix.Config
 
+config :logger,
+  backends: [{LoggerFileBackend, :error_log}, :console]
+
+config :logger, :error_log,
+  path: "logs/app_error.log",
+  level: :error
+
+config :logger, :console,
+  format: "$time $metadata[$level] $message\n",
+  metadata: [:request_id]
+
 config :brando,
   app_name: "<%= application_module %>",
   endpoint: <%= application_module %>.Endpoint,
