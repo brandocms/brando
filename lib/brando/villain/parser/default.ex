@@ -5,8 +5,13 @@ defmodule Brando.Villain.Parser.Default do
   @behaviour Brando.Villain.Parser
 
   @doc """
-  Convert header (h1) to HTML
+  Convert header to HTML
   """
+  def header(%{text: text, level: level}) do
+    header_size = "h#{level}"
+    "<#{header_size}>" <> text <> "</#{header_size}>"
+  end
+
   def header(%{text: text}) do
     "<h1>" <> text <> "</h1>"
   end
