@@ -3,3 +3,17 @@
 .navbar-toggle .icon-bar {
   background-color: #333;
 }
+
+/* cookielaw */
+
+.cookie-law {
+  font-size: 16px;
+  margin-top: 10px;
+
+  a.dismiss-cookielaw {
+    display: inline-block;
+    border: 2px solid;
+    color: #333;
+    padding: 10px;
+  }
+}

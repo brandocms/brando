@@ -51,6 +51,13 @@ class Stats {
         }
         $('#atom-memory .sparkline').sparkline(this.atomMemoryPoints, this.opts);
         $('#atom-memory .text').html(this.humanFileSize(parseInt(payload.atom_memory), false));
+
+        /* instagram status */
+        if (payload.instagram_status) {
+            $('#instagram-status .status').html('<i class="fa fa-check fa-4x"></i>')
+        } else {
+            $('#instagram-status .status').html('<i class="fa fa-times fa-4x"></i>')
+        }
     }
 
     static humanFileSize(bytes, si) {
