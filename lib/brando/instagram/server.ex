@@ -37,6 +37,11 @@ defmodule Brando.Instagram.Server do
   end
 
   @doc false
+  def handle_info({:EXIT, _, :normal}, state) do
+    {:noreply, state}
+  end
+
+  @doc false
   def terminate(:shutdown, {timer, _}) do
     :timer.cancel(timer)
     :ok
