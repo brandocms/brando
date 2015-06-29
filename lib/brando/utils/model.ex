@@ -14,7 +14,7 @@ defmodule Brando.Utils.Model do
   """
   def update_field(model, coll) do
     changeset = Ecto.Changeset.change(model, coll)
-    {:ok, Brando.repo.update(changeset)}
+    {:ok, Brando.repo.update!(changeset)}
   end
 
   @doc """
