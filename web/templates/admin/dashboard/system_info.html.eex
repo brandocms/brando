@@ -11,4 +11,8 @@
     <div class="sparkline"></div>
     <div class="text">0 mb</div>
   </div>
+  <div class="card" id="instagram-status">
+    <h4>Instagram // server</h4>
+    <div class="status"></div>
+  </div>
 </div>
