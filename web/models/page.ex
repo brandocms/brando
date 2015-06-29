@@ -5,9 +5,9 @@ defmodule Brando.Page do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
+  use Brando.Villain.Model
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
-  alias Brando.Type.Json
   alias Brando.Type.Status
   alias Brando.User
 
@@ -19,8 +19,7 @@ defmodule Brando.Page do
     field :language, :string
     field :title, :string
     field :slug, :string
-    field :data, Json
-    field :html, :string
+    villain
     field :status, Status
     belongs_to :creator, User
     belongs_to :parent, __MODULE__
@@ -28,22 +27,6 @@ defmodule Brando.Page do
     field :meta_description, :string
     field :meta_keywords, :string
     timestamps
-  end
-
-  before_insert :generate_html
-  before_update :generate_html
-
-  @doc """
-  Callback from before_insert/before_update to generate HTML.
-  Takes the model's `json` field and transforms to `html`.
-  """
-
-  def generate_html(changeset) do
-    if get_change(changeset, :data) do
-      changeset |> put_change(:html, Brando.Villain.parse(changeset.changes.data))
-    else
-      changeset
-    end
   end
 
   @doc """
@@ -87,7 +70,7 @@ defmodule Brando.Page do
       |> put_creator(current_user)
       |> changeset(:create, params)
     case model_changeset.valid? do
-      true  -> {:ok, Brando.repo.insert(model_changeset)}
+      true  -> {:ok, Brando.repo.insert!(model_changeset)}
       false -> {:error, model_changeset.errors}
     end
   end
@@ -101,7 +84,7 @@ defmodule Brando.Page do
   def update(model, params) do
     model_changeset = model |> changeset(:update, params)
     case model_changeset.valid? do
-      true  -> {:ok, Brando.repo.update(model_changeset)}
+      true  -> {:ok, Brando.repo.update!(model_changeset)}
       false -> {:error, model_changeset.errors}
     end
   end
@@ -118,7 +101,7 @@ defmodule Brando.Page do
   including all generated sizes.
   """
   def delete(record) when is_map(record) do
-    Brando.repo.delete(record)
+    Brando.repo.delete!(record)
   end
   def delete(id) do
     record = Brando.repo.get_by!(__MODULE__, id: id)

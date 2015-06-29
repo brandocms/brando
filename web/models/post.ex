@@ -7,10 +7,10 @@ defmodule Brando.Post do
 
   use Brando.Web, :model
   use Brando.Tag, :model
+  use Brando.Villain.Model
   use Brando.Field.ImageField
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
-  alias Brando.Type.Json
   alias Brando.Type.Status
   alias Brando.User
 
@@ -22,8 +22,7 @@ defmodule Brando.Post do
     field :header, :string
     field :slug, :string
     field :lead, :string
-    field :data, Json
-    field :html, :string
+    villain
     field :cover, Brando.Type.Image
     field :status, Status
     belongs_to :creator, User
@@ -35,9 +34,6 @@ defmodule Brando.Post do
     timestamps
     tags
   end
-
-  before_insert :generate_html
-  before_update :generate_html
 
   has_image_field :cover,
     [allowed_mimetypes: ["image/jpeg", "image/png"],
@@ -54,19 +50,6 @@ defmodule Brando.Post do
        micro:  [size: "25x25", quality: 100, crop: true]
     ]
   ]
-
-  @doc """
-  Callback from before_insert/before_update to generate HTML.
-  Takes the model's `json` field and transforms to `html`.
-  """
-
-  def generate_html(changeset) do
-    if get_change(changeset, :data) do
-      changeset |> put_change(:html, Brando.Villain.parse(changeset.changes.data))
-    else
-      changeset
-    end
-  end
 
   @doc """
   Casts and validates `params` against `model` to create a valid
@@ -111,7 +94,7 @@ defmodule Brando.Post do
       |> put_creator(current_user)
       |> changeset(:create, params)
     case model_changeset.valid? do
-      true  -> {:ok, Brando.repo.insert(model_changeset)}
+      true  -> {:ok, Brando.repo.insert!(model_changeset)}
       false -> {:error, model_changeset.errors}
     end
   end
@@ -125,7 +108,7 @@ defmodule Brando.Post do
   def update(model, params) do
     model_changeset = model |> changeset(:update, params)
     case model_changeset.valid? do
-      true  -> {:ok, Brando.repo.update(model_changeset)}
+      true  -> {:ok, Brando.repo.update!(model_changeset)}
       false -> {:error, model_changeset.errors}
     end
   end
@@ -143,7 +126,7 @@ defmodule Brando.Post do
   """
   def delete(record) when is_map(record) do
     record.cover |> delete_original_and_sized_images
-    Brando.repo.delete(record)
+    Brando.repo.delete!(record)
   end
   def delete(id) do
     record = Brando.repo.get_by!(__MODULE__, id: id)

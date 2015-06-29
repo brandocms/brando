@@ -66,7 +66,7 @@ defmodule Brando.Image do
       |> put_creator(current_user)
       |> changeset(:create, params)
     case model_changeset.valid? do
-      true  -> {:ok, Brando.repo.insert(model_changeset)}
+      true  -> {:ok, Brando.repo.insert!(model_changeset)}
       false -> {:error, model_changeset.errors}
     end
   end
@@ -81,7 +81,7 @@ defmodule Brando.Image do
   def update(model, params) do
     model_changeset = model |> changeset(:update, params)
     case model_changeset.valid? do
-      true ->  {:ok, Brando.repo.update(model_changeset)}
+      true ->  {:ok, Brando.repo.update!(model_changeset)}
       false -> {:error, model_changeset.errors}
     end
   end
@@ -97,7 +97,7 @@ defmodule Brando.Image do
 
     model_changeset = model |> changeset(:update, %{"image" => image})
     case model_changeset.valid? do
-      true ->  {:ok, Brando.repo.update(model_changeset)}
+      true ->  {:ok, Brando.repo.update!(model_changeset)}
       false -> {:error, model_changeset.errors}
     end
   end
@@ -128,7 +128,7 @@ defmodule Brando.Image do
 
   def delete(record) when is_map(record) do
     record.image |> delete_original_and_sized_images
-    Brando.repo.delete(record)
+    Brando.repo.delete!(record)
   end
 
   def delete(id) do

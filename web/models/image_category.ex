@@ -66,7 +66,7 @@ defmodule Brando.ImageCategory do
       |> put_change(:cfg, Brando.config(Brando.Images)[:default_config])
 
     case model_changeset.valid? do
-      true ->  {:ok, Brando.repo.insert(model_changeset)}
+      true ->  {:ok, Brando.repo.insert!(model_changeset)}
       false -> {:error, model_changeset.errors}
     end
   end
@@ -80,7 +80,7 @@ defmodule Brando.ImageCategory do
   def update(model, params) do
     model_changeset = model |> changeset(:update, params)
     case model_changeset.valid? do
-      true ->  {:ok, Brando.repo.update(model_changeset)}
+      true ->  {:ok, Brando.repo.update!(model_changeset)}
       false -> {:error, model_changeset.errors}
     end
   end
@@ -114,7 +114,7 @@ defmodule Brando.ImageCategory do
   """
   def delete(record) do
     Brando.ImageSeries.delete_dependent_image_series(record.id)
-    Brando.repo.delete(record)
+    Brando.repo.delete!(record)
   end
 
   #

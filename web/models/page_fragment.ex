@@ -79,7 +79,7 @@ defmodule Brando.PageFragment do
       |> put_creator(current_user)
       |> changeset(:create, params)
     case model_changeset.valid? do
-      true  -> {:ok, Brando.repo.insert(model_changeset)}
+      true  -> {:ok, Brando.repo.insert!(model_changeset)}
       false -> {:error, model_changeset.errors}
     end
   end
@@ -93,7 +93,7 @@ defmodule Brando.PageFragment do
   def update(model, params) do
     model_changeset = model |> changeset(:update, params)
     case model_changeset.valid? do
-      true  -> {:ok, Brando.repo.update(model_changeset)}
+      true  -> {:ok, Brando.repo.update!(model_changeset)}
       false -> {:error, model_changeset.errors}
     end
   end
@@ -110,7 +110,7 @@ defmodule Brando.PageFragment do
   including all generated sizes.
   """
   def delete(record) when is_map(record) do
-    Brando.repo.delete(record)
+    Brando.repo.delete!(record)
   end
   def delete(id) do
     record = Brando.repo.get_by(__MODULE__, id: id)

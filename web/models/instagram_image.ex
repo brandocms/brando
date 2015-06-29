@@ -70,7 +70,7 @@ defmodule Brando.InstagramImage do
   def create(params) do
     model_changeset = %__MODULE__{} |> changeset(:create, params)
     case model_changeset.valid? do
-      true ->  {:ok, Brando.repo.insert(model_changeset)}
+      true ->  {:ok, Brando.repo.insert!(model_changeset)}
       false -> {:error, model_changeset.errors}
     end
   end
@@ -84,7 +84,7 @@ defmodule Brando.InstagramImage do
   def update(model, params) do
     model_changeset = model |> changeset(:update, params)
     case model_changeset.valid? do
-      true ->  {:ok, Brando.repo.update(model_changeset)}
+      true ->  {:ok, Brando.repo.update!(model_changeset)}
       false -> {:error, model_changeset.errors}
     end
   end
@@ -211,7 +211,7 @@ defmodule Brando.InstagramImage do
   end
 
   def delete(record) when is_map(record) do
-    Brando.repo.delete(record)
+    Brando.repo.delete!(record)
   end
 
   def delete(id) do

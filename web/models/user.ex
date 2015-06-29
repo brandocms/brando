@@ -98,7 +98,7 @@ defmodule Brando.User do
     case cs.valid? do
       true ->
         cs = put_change(cs, :password, gen_password(cs.changes[:password]))
-        inserted_user = Brando.repo.insert(cs)
+        inserted_user = Brando.repo.insert!(cs)
         {:ok, inserted_user}
       false ->
         {:error, cs.errors}
@@ -118,7 +118,7 @@ defmodule Brando.User do
         if password = get_change(cs, :password) do
           cs = put_change(cs, :password, gen_password(password))
         end
-        {:ok, Brando.repo.update(cs)}
+        {:ok, Brando.repo.update!(cs)}
       false ->
         {:error, cs.errors}
     end
@@ -130,7 +130,7 @@ defmodule Brando.User do
   """
   def delete(record) when is_map(record) do
     record.avatar |> delete_original_and_sized_images
-    Brando.repo.delete(record)
+    Brando.repo.delete!(record)
   end
   def delete(id) do
     record = Brando.repo.get_by!(__MODULE__, id: id)
