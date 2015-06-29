@@ -181,6 +181,9 @@ defmodule Brando.HTML do
   Return joined path of `file` and the :media_url config option
   as set in your app's config.exs.
   """
+  def media_url() do
+    Brando.config(:media_url)
+  end
   def media_url(nil) do
     Brando.config(:media_url)
   end
@@ -257,23 +260,30 @@ defmodule Brando.HTML do
   If default is passed, return size_dir of `default`.
   Returns path to image.
   """
-  def img(image_field, size, default \\ nil)
-  def img(nil, size, default) do
-    size_dir(default, size)
+  def img(image_field, size, opts \\ [])
+  def img(nil, size, opts) do
+    if default = Keyword.get(opts, :default, nil) do
+      size_dir(default, size)
+    else
+      ""
+    end
   end
-  def img(image_field, size, _default) when is_binary(size) do
-    image_field.sizes[String.to_atom(size)]
-  end
-  def img(image_field, size, _default) when is_atom(size) do
-    image_field.sizes[size]
+
+  def img(image_field, size, opts) do
+    size = if is_atom(size), do: size, else: String.to_atom(size)
+    if prefix = Keyword.get(opts, :prefix, nil) do
+      Path.join([prefix, image_field.sizes[size]])
+    else
+      image_field.sizes[size]
+    end
   end
 
   @doc """
   Displays a banner informing about cookie laws
   """
-  def cookie_law(conn, text) do
+  def cookie_law(conn, text, button_text \\ "OK") do
     if Map.get(conn.cookies, "cookielaw_accepted") != "1" do
-      ~s(<div class="cookie-law">#{text}<br /><a href="javascript:Cookielaw.createCookielawCookie\(\);" class="dismiss-cookielaw">OK</a></div>)
+      ~s(<div class="cookie-law"><p>#{text}</p><a href="javascript:Cookielaw.createCookielawCookie\(\);" class="dismiss-cookielaw">#{button_text}</a></div>)
       |> Phoenix.HTML.raw
     end
   end
