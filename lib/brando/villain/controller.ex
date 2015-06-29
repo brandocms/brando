@@ -14,9 +14,7 @@ defmodule Brando.Villain.Controller do
 
       villain_routes MyController
 
-
   """
-
 
   defmacro __using__(options) do
     image_model = Keyword.fetch!(options, :image_model)
@@ -30,8 +28,15 @@ defmodule Brando.Villain.Controller do
         |> Brando.repo.get_by(slug: series_slug)
 
         image_list = Enum.map(image_series.images, fn image ->
+          sizes =
+            Enum.map(image.image.sizes, fn({k, v}) ->
+              {k, Brando.HTML.media_url(v)}
+            end)
+            |> Enum.into(%{})
           %{src: Brando.HTML.media_url(image.image.path),
-            thumb: Brando.HTML.media_url(Brando.HTML.img(image.image, :thumb))}
+            thumb: Brando.HTML.media_url(Brando.HTML.img(image.image, :thumb)),
+            sizes: sizes,
+            title: image.image.title, credits: image.image.credits}
         end)
         json(conn, %{status: "200", images: image_list})
       end
@@ -44,10 +49,17 @@ defmodule Brando.Villain.Controller do
         cfg = series.image_category.cfg || Brando.config(Brando.Images)[:default_config]
         opts = Map.put(%{}, "image_series_id", series.id)
         {:ok, image} = unquote(image_model).check_for_uploads(params, Brando.HTML.current_user(conn), cfg, opts)
+        sizes =
+          Enum.map(image.image.sizes, fn({k, v}) ->
+            {k, Brando.HTML.media_url(v)}
+          end)
+          |> Enum.into(%{})
         json conn,
           %{status: "200",
             uid: uid,
-            image: %{id: image.id, src: Brando.HTML.media_url(image.image.path)},
+            image: %{id: image.id,
+                     sizes: sizes,
+                     src: Brando.HTML.media_url(image.image.path)},
             form: %{
               method: "post",
               action: "villain/bildedata/#{image.id}",
@@ -60,8 +72,7 @@ defmodule Brando.Villain.Controller do
                 %{name: "credits",
                   type: "text",
                   label: "Krediteringer",
-                  value: ""
-                }
+                  value: ""}
               ]
             }
           }

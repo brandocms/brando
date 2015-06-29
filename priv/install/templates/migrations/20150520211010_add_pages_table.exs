@@ -1,5 +1,6 @@
 defmodule <%= application_module %>.Repo.Migrations.AddPagesTable do
   use Ecto.Migration
+  use Brando.Villain.Migration
 
   def up do
     create table(:pages) do
@@ -7,8 +8,7 @@ defmodule <%= application_module %>.Repo.Migrations.AddPagesTable do
       add :language,          :text
       add :title,             :text
       add :slug,              :text
-      add :data,              :json
-      add :html,              :text
+      villain
       add :status,            :integer
       add :parent_id,         references(:pages), default: nil
       add :creator_id,        references(:users)

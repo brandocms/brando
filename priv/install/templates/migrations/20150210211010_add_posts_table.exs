@@ -1,6 +1,7 @@
 defmodule <%= application_module %>.Repo.Migrations.AddPostsTable do
   use Ecto.Migration
   use Brando.Tag, :migration
+  use Brando.Villain.Migration
 
   def up do
     create table(:posts) do
@@ -8,8 +9,7 @@ defmodule <%= application_module %>.Repo.Migrations.AddPostsTable do
       add :header,            :text
       add :slug,              :text
       add :lead,              :text
-      add :data,              :json
-      add :html,              :text
+      villain
       add :cover,             :text
       add :status,            :integer
       add :creator_id,        references(:users)
