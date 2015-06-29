@@ -9,6 +9,15 @@ defmodule Mix.Tasks.Brando.Install do
   @shortdoc "Generates files for Brando."
 
   @new [
+    {:keep, "install/templates/logs", "logs"},
+    {:eex,  "install/templates/etc/logrotate/prod.conf",                                  "etc/logrotate/prod.conf"},
+    {:eex,  "install/templates/etc/logrotate/staging.conf",                               "etc/logrotate/staging.conf"},
+    {:eex,  "install/templates/etc/nginx/prod.conf",                                      "etc/nginx/prod.conf"},
+    {:eex,  "install/templates/etc/nginx/staging.conf",                                   "etc/nginx/staging.conf"},
+    {:eex,  "install/templates/etc/supervisord/prod.conf",                                "etc/supervisord/prod.conf"},
+    {:eex,  "install/templates/etc/supervisord/staging.conf",                             "etc/supervisord/staging.conf"},
+    {:eex,  "install/templates/etc/supervisord/local.conf",                               "etc/supervisord/local.conf"},
+
     {:eex,  "install/templates/web/router.ex",                                            "web/router.ex"},
     {:eex,  "install/templates/web/controllers/lockdown_controller.ex",                   "web/controllers/lockdown_controller.ex"},
     {:eex,  "install/templates/web/templates/layout/lockdown.html.eex",                   "web/templates/layout/lockdown.html.eex"},
@@ -17,9 +26,6 @@ defmodule Mix.Tasks.Brando.Install do
 
     {:eex,  "install/templates/web/villain/parser.ex",                                    "web/villain/parser.ex"},
     {:eex,  "install/templates/config/brando.exs",                                        "config/brando.exs"},
-
-    {:text, "install/templates/media/defaults/thumb/avatar_default.jpg",                  "priv/media/defaults/thumb/avatar_default.jpg"},
-    {:text, "install/templates/media/defaults/micro/avatar_default.jpg",                  "priv/media/defaults/micro/avatar_default.jpg"},
 
     {:eex,  "install/templates/migrations/20150123230712_add_users_table.exs",            "priv/repo/migrations/20150123230712_add_users_table.exs"},
     {:eex,  "install/templates/migrations/20150210211010_add_posts_table.exs",            "priv/repo/migrations/20150210211010_add_posts_table.exs"},
@@ -69,6 +75,9 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "install/templates/static/brando/images/blank.gif",                "priv/static/images/brando/blank.gif"},
     {:copy, "install/templates/static/brando/images/flags.png",                "priv/static/images/brando/flags.png"},
     {:copy, "install/templates/static/brando/images/brando-big.png",           "priv/static/images/brando/brando-big.png"},
+
+    {:copy, "install/templates/static/brando/images/defaults/thumb/avatar_default.jpg",   "priv/static/images/brando/defaults/thumb/avatar_default.jpg"},
+    {:copy, "install/templates/static/brando/images/defaults/micro/avatar_default.jpg",   "priv/static/images/brando/defaults/micro/avatar_default.jpg"},
 
     {:copy, "install/templates/static/villain/villain.all-min.js",             "priv/static/js/villain.all-min.js"},
     {:copy, "install/templates/static/villain/villain.css",                    "priv/static/css/villain.css"},
