@@ -16,7 +16,6 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "install/templates/etc/nginx/staging.conf",                                   "etc/nginx/staging.conf"},
     {:eex,  "install/templates/etc/supervisord/prod.conf",                                "etc/supervisord/prod.conf"},
     {:eex,  "install/templates/etc/supervisord/staging.conf",                             "etc/supervisord/staging.conf"},
-    {:eex,  "install/templates/etc/supervisord/local.conf",                               "etc/supervisord/local.conf"},
 
     {:eex,  "install/templates/web/router.ex",                                            "web/router.ex"},
     {:eex,  "install/templates/web/controllers/lockdown_controller.ex",                   "web/controllers/lockdown_controller.ex"},
@@ -37,52 +36,52 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "install/templates/migrations/20150520221010_add_pagefragments_table.exs",    "priv/repo/migrations/20150520221010_add_pagefragments_table.exs"},
     {:eex,  "install/templates/migrations/20150505122654_add_instagramimages_table.exs",  "priv/repo/migrations/20150505122654_add_instagramimages_table.exs"},
 
-    {:text, "install/templates/web/templates/layout/application.html.eex",                "web/templates/layout/application.html.eex"}
+    {:text, "install/templates/web/templates/layout/app.html.eex",                        "web/templates/layout/app.html.eex"}
   ]
 
   @static [
-    {:copy, "install/templates/bower.json",                  "bower.json"},
-    {:copy, "install/templates/brunch-config.js",            "brunch-config.js"},
+    {:copy, "install/templates/bower.json",                                             "bower.json"},
+    {:copy, "install/templates/brunch-config.js",                                       "brunch-config.js"},
 
-    {:copy, "install/templates/web/static/js/cookie_law.js", "web/static/vendor/cookie_law.js"},
+    {:copy, "install/templates/web/static/js/cookie_law.js",                            "web/static/vendor/cookie_law.js"},
 
-    {:copy, "install/templates/web/static/css/app.scss",     "web/static/css/app.scss"},
+    {:copy, "install/templates/web/static/css/app.scss",                                "web/static/css/app.scss"},
 
-    {:copy, "install/templates/static/brando/css/brando.css",                  "priv/static/css/brando.css"},
-    {:copy, "install/templates/static/brando/css/brando-min.css",              "priv/static/css/brando-min.css"},
-    {:copy, "install/templates/static/brando/css/brando.vendor.css",           "priv/static/css/brando.vendor.css"},
-    {:copy, "install/templates/static/brando/css/brando.vendor-min.css",       "priv/static/css/brando.vendor-min.css"},
+    {:copy, "install/templates/static/brando/css/brando.css",                           "priv/static/css/brando.css"},
+    {:copy, "install/templates/static/brando/css/brando-min.css",                       "priv/static/css/brando-min.css"},
+    {:copy, "install/templates/static/brando/css/brando.vendor.css",                    "priv/static/css/brando.vendor.css"},
+    {:copy, "install/templates/static/brando/css/brando.vendor-min.css",                "priv/static/css/brando.vendor-min.css"},
 
-    {:copy, "install/templates/static/brando/js/brando-min.js",                "priv/static/js/brando-min.js"},
-    {:copy, "install/templates/static/brando/js/brando-min.js.map",            "priv/static/js/brando-min.js.map"},
-    {:copy, "install/templates/static/brando/js/brando.auth-min.js",           "priv/static/js/brando.auth-min.js"},
-    {:copy, "install/templates/static/brando/js/brando.auth.js",               "priv/static/js/brando.auth.js"},
-    {:copy, "install/templates/static/brando/js/brando.js",                    "priv/static/js/brando.js"},
-    {:copy, "install/templates/static/brando/js/brando.vendor-min.js",         "priv/static/js/brando.vendor-min.js"},
-    {:copy, "install/templates/static/brando/js/brando.vendor.js",             "priv/static/js/brando.vendor.js"},
+    {:copy, "install/templates/static/brando/js/brando-min.js",                         "priv/static/js/brando-min.js"},
+    {:copy, "install/templates/static/brando/js/brando-min.js.map",                     "priv/static/js/brando-min.js.map"},
+    {:copy, "install/templates/static/brando/js/brando.auth-min.js",                    "priv/static/js/brando.auth-min.js"},
+    {:copy, "install/templates/static/brando/js/brando.auth.js",                        "priv/static/js/brando.auth.js"},
+    {:copy, "install/templates/static/brando/js/brando.js",                             "priv/static/js/brando.js"},
+    {:copy, "install/templates/static/brando/js/brando.vendor-min.js",                  "priv/static/js/brando.vendor-min.js"},
+    {:copy, "install/templates/static/brando/js/brando.vendor.js",                      "priv/static/js/brando.vendor.js"},
 
-    {:copy, "install/templates/static/brando/fonts/fontawesome-webfont.eot",   "priv/static/fonts/fontawesome-webfont.eot"},
-    {:copy, "install/templates/static/brando/fonts/fontawesome-webfont.svg",   "priv/static/fonts/fontawesome-webfont.svg"},
-    {:copy, "install/templates/static/brando/fonts/fontawesome-webfont.ttf",   "priv/static/fonts/fontawesome-webfont.ttf"},
-    {:copy, "install/templates/static/brando/fonts/fontawesome-webfont.woff",  "priv/static/fonts/fontawesome-webfont.woff"},
-    {:copy, "install/templates/static/brando/fonts/fontawesome-webfont.woff2", "priv/static/fonts/fontawesome-webfont.woff2"},
-    {:copy, "install/templates/static/brando/fonts/FontAwesome.otf",           "priv/static/fonts/FontAwesome.otf"},
+    {:copy, "install/templates/static/brando/fonts/fontawesome-webfont.eot",            "priv/static/fonts/fontawesome-webfont.eot"},
+    {:copy, "install/templates/static/brando/fonts/fontawesome-webfont.svg",            "priv/static/fonts/fontawesome-webfont.svg"},
+    {:copy, "install/templates/static/brando/fonts/fontawesome-webfont.ttf",            "priv/static/fonts/fontawesome-webfont.ttf"},
+    {:copy, "install/templates/static/brando/fonts/fontawesome-webfont.woff",           "priv/static/fonts/fontawesome-webfont.woff"},
+    {:copy, "install/templates/static/brando/fonts/fontawesome-webfont.woff2",          "priv/static/fonts/fontawesome-webfont.woff2"},
+    {:copy, "install/templates/static/brando/fonts/FontAwesome.otf",                    "priv/static/fonts/FontAwesome.otf"},
 
-    {:copy, "install/templates/static/brando/fonts/ab.woff",                   "priv/static/fonts/ab.woff"},
-    {:copy, "install/templates/static/brando/fonts/am.woff",                   "priv/static/fonts/am.woff"},
-    {:copy, "install/templates/static/brando/fonts/ar.woff",                   "priv/static/fonts/ar.woff"},
+    {:copy, "install/templates/static/brando/fonts/ab.woff",                            "priv/static/fonts/ab.woff"},
+    {:copy, "install/templates/static/brando/fonts/am.woff",                            "priv/static/fonts/am.woff"},
+    {:copy, "install/templates/static/brando/fonts/ar.woff",                            "priv/static/fonts/ar.woff"},
 
-    {:copy, "install/templates/static/brando/images/blank.gif",                "priv/static/images/brando/blank.gif"},
-    {:copy, "install/templates/static/brando/images/flags.png",                "priv/static/images/brando/flags.png"},
-    {:copy, "install/templates/static/brando/images/brando-big.png",           "priv/static/images/brando/brando-big.png"},
+    {:copy, "install/templates/static/brando/images/blank.gif",                         "priv/static/images/brando/blank.gif"},
+    {:copy, "install/templates/static/brando/images/flags.png",                         "priv/static/images/brando/flags.png"},
+    {:copy, "install/templates/static/brando/images/brando-big.png",                    "priv/static/images/brando/brando-big.png"},
 
-    {:copy, "install/templates/static/brando/images/defaults/thumb/avatar_default.jpg",   "priv/static/images/brando/defaults/thumb/avatar_default.jpg"},
-    {:copy, "install/templates/static/brando/images/defaults/micro/avatar_default.jpg",   "priv/static/images/brando/defaults/micro/avatar_default.jpg"},
+    {:copy, "install/templates/static/brando/images/defaults/thumb/avatar_default.jpg", "priv/static/images/brando/defaults/thumb/avatar_default.jpg"},
+    {:copy, "install/templates/static/brando/images/defaults/micro/avatar_default.jpg", "priv/static/images/brando/defaults/micro/avatar_default.jpg"},
 
-    {:copy, "install/templates/static/villain/villain.all-min.js",             "priv/static/js/villain.all-min.js"},
-    {:copy, "install/templates/static/villain/villain.css",                    "priv/static/css/villain.css"},
-    {:copy, "install/templates/static/villain/villain-min.css",                "priv/static/css/villain-min.css"},
-    {:copy, "install/templates/static/villain/villain.css.map",                "priv/static/css/villain.css.map"},
+    {:copy, "install/templates/static/villain/villain.all-min.js",                      "priv/static/js/villain.all-min.js"},
+    {:copy, "install/templates/static/villain/villain.css",                             "priv/static/css/villain.css"},
+    {:copy, "install/templates/static/villain/villain-min.css",                         "priv/static/css/villain-min.css"},
+    {:copy, "install/templates/static/villain/villain.css.map",                         "priv/static/css/villain.css.map"},
   ]
 
   @root Path.expand("../../../priv", __DIR__)
