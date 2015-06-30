@@ -197,7 +197,7 @@ defmodule Brando.InstagramImage do
       and status in ["0", "1", "2"] do
     ids = ids |> Enum.map(fn(id) -> String.to_integer(id) end)
     q = from(m in __MODULE__, where: m.id in ^ids)
-    update_all(q, status: ^status)
+    Brando.repo.update_all(q, set: [status: status])
   end
 
   @doc """
