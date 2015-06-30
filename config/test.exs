@@ -10,6 +10,7 @@ config :brando, Brando.Integration.TestRepo,
   url: "ecto://postgres:postgres@localhost/brando_test",
   adapter: Ecto.Adapters.Postgres,
   extensions: [{Brando.Postgrex.Extension.JSON, library: Poison}],
+  pool: Ecto.Adapters.SQL.Sandbox,
   size: 1,
   max_overflow: 0
 
