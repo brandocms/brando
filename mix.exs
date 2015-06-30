@@ -31,18 +31,18 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "~> 0.13"},
+      {:phoenix, "~> 0.14"},
       {:phoenix_ecto, "~> 0.5"},
-      {:phoenix_html, "~> 1.0"},
+      {:phoenix_html, "~> 1.1"},
 
-      {:comeonin, "~> 0.8"},
+      {:comeonin, "~> 1.0"},
       {:earmark, "~> 0.1"},
       {:httpoison, "~> 0.6"},
       {:linguist, "~> 0.1"},
       {:mogrify, github: "twined/mogrify"},
       {:poison, "~> 1.3"},
       {:postgrex, ">= 0.0.0"},
-      {:scrivener, "~> 0.6.0"},
+      {:scrivener, "~> 0.8"},
       {:slugger, "~> 0.0.1"},
       {:logger_file_backend, ">= 0.0.0"},
 
@@ -53,11 +53,11 @@ defmodule Brando.Mixfile do
       {:excoveralls, "~> 0.3", only: :test},
       {:blacksmith, "~> 0.1.2", only: :test},
       {:exvcr, "~> 0.4.0", only: :test},
-      {:ecto, "~> 0.12", only: :test, override: true},
+      {:ecto, "~> 0.13", only: :test, override: true},
 
       # Documentation dependencies
       {:ex_doc, "~> 0.6", only: :docs},
-      {:inch_ex, "~> 0.2", only: :docs}
+      {:inch_ex, "~> 0.3", only: :docs}
     ]
   end
 
