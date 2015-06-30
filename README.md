@@ -75,7 +75,7 @@ To use Brando's error view, add to your Endpoint's config:
 
 ```elixir
 config :my_app, MyApp.Endpoint,
-  render_errors: [view: Brando.ErrorView, format: "html"]
+  render_errors: [view: Brando.ErrorView, default_format: "html"]
 ```
 
 ## Pagination
