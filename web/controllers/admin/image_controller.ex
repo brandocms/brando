@@ -6,7 +6,6 @@ defmodule Brando.Admin.ImageController do
   import Brando.Plug.Section
 
   plug :put_section, "images"
-  plug :action
 
   @doc false
   def index(conn, _params) do

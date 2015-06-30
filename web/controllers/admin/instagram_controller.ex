@@ -9,7 +9,6 @@ defmodule Brando.Admin.InstagramController do
   alias Brando.InstagramImage
 
   plug :put_section, "instagram"
-  plug :action
 
   @doc """
   Renders the main index.
@@ -17,6 +16,7 @@ defmodule Brando.Admin.InstagramController do
   def index(conn, _params) do
     images =
       InstagramImage
+      |> select([m], %{id: m.id, status: m.status, image: m.image, created_time: m.created_time})
       |> order_by([m], [desc: m.status, desc: m.created_time])
       |> Brando.repo.all
     conn

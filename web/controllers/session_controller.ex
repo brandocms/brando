@@ -4,7 +4,6 @@ defmodule Brando.SessionController do
   """
   use Brando.Web, :controller
   alias Brando.SystemChannel
-  plug :action
 
   @doc false
   def login(conn, %{"user" => %{"email" => email, "password" => password}}) do

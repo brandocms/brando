@@ -10,7 +10,6 @@ defmodule Brando.Admin.ImageCategoryController do
 
   plug :put_section, "images"
   plug :scrub_params, "imagecategory" when action in [:create, :update]
-  plug :action
 
   @doc false
   def new(conn, _params) do

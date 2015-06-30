@@ -13,7 +13,6 @@ defmodule Brando.Admin.PageFragmentController do
 
   plug :put_section, "page_fragments"
   plug :scrub_params, "page_fragment" when action in [:create, :update]
-  plug :action
 
   @doc false
   def index(conn, _params) do

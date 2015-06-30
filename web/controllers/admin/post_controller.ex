@@ -12,7 +12,6 @@ defmodule Brando.Admin.PostController do
 
   plug :put_section, "news"
   plug :scrub_params, "post" when action in [:create, :update]
-  plug :action
 
   @doc false
   def index(conn, _params) do

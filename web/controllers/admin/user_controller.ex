@@ -12,7 +12,6 @@ defmodule Brando.Admin.UserController do
   plug :put_section, "users"
   plug :scrub_params, "user" when action in [:create, :update]
   plug :authorize, :superuser when action in [:new, :create, :delete, :edit, :update]
-  plug :action
 
   @doc false
   def index(conn, _params) do

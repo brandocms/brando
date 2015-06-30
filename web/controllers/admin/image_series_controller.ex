@@ -10,7 +10,6 @@ defmodule Brando.Admin.ImageSeriesController do
   import Ecto.Query
 
   plug :put_section, "images"
-  plug :action
 
   @doc false
   def new(conn, %{"id" => category_id}) do

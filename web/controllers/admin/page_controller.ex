@@ -12,7 +12,6 @@ defmodule Brando.Admin.PageController do
 
   plug :put_section, "pages"
   plug :scrub_params, "page" when action in [:create, :update]
-  plug :action
 
   @doc false
   def index(conn, _params) do

@@ -7,7 +7,6 @@ defmodule Brando.Admin.DashboardController do
   import Brando.Plug.Section
 
   plug :put_section, "dashboard"
-  plug :action
 
   @doc """
   Renders the main dashboard for the admin area.
