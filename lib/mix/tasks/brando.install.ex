@@ -46,6 +46,12 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "install/templates/web/static/js/cookie_law.js",                            "web/static/vendor/cookie_law.js"},
 
     {:copy, "install/templates/web/static/css/app.scss",                                "web/static/css/app.scss"},
+    {:copy, "install/templates/web/static/css/includes/_colorbox.scss",                 "web/static/css/includes/_colorbox.scss"},
+    {:copy, "install/templates/web/static/css/includes/_cookielaw.scss",                "web/static/css/includes/_cookielaw.scss"},
+    {:copy, "install/templates/web/static/css/includes/_dropdown.scss",                 "web/static/css/includes/_dropdown.scss"},
+    {:copy, "install/templates/web/static/css/includes/_instagram.scss",                "web/static/css/includes/_instagram.scss"},
+    {:copy, "install/templates/web/static/css/includes/_nav.scss",                      "web/static/css/includes/_nav.scss"},
+    {:copy, "install/templates/web/static/css/includes/_pages.scss",                    "web/static/css/includes/_pages.scss"},
 
     {:copy, "install/templates/static/brando/css/brando.css",                           "priv/static/css/brando.css"},
     {:copy, "install/templates/static/brando/css/brando-min.css",                       "priv/static/css/brando-min.css"},

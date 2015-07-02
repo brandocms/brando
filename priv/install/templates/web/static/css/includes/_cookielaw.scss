@@ -1,0 +1,22 @@
+/**
+ * Cookielaw
+ * (c) twined 2015
+ */
+
+.cookie-law {
+  font-size: 16px;
+  margin-top: 10px;
+  position: fixed;
+  background-color: #fff;
+  bottom: 0;
+  padding-top: 15px;
+  width: 100%;
+
+  a.dismiss-cookielaw {
+    display: inline-block;
+    border: 2px solid;
+    color: #333;
+    padding: 10px;
+    margin-top: 10px;
+  }
+}

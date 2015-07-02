@@ -19,7 +19,7 @@ def application do
 end
 
 defp deps do
-  [{:brando, github: "twined/brando"]}
+  [{:brando, github: "twined/brando"}]
 end
 ```
 

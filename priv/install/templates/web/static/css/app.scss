@@ -1,19 +1,38 @@
-/* app-specific css */
+/**
+ * Application-specific SCSS.
+ * (c) twined 2015
+ */
 
-.navbar-toggle .icon-bar {
-  background-color: #333;
+body {
+
 }
 
-/* cookielaw */
-
-.cookie-law {
+p {
   font-size: 16px;
-  margin-top: 10px;
-
-  a.dismiss-cookielaw {
-    display: inline-block;
-    border: 2px solid;
-    color: #333;
-    padding: 10px;
-  }
 }
+
+header#top {
+  margin-top: 20px;
+}
+
+a.block-link {
+  display: inline-block;
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 1px;
+  width: 100%;
+  text-align: center;
+  border: 1px solid #D2D2D2;
+  padding: 22px 0;
+  margin: 20px 0;
+  color: #222;
+}
+
+@import
+  "includes/admin",
+  "includes/colorbox",
+  "includes/cookielaw",
+  "includes/dropdown",
+  "includes/instagram",
+  "includes/nav",
+  "includes/pages";
