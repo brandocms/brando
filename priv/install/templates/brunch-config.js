@@ -24,10 +24,10 @@ exports.config = {
     stylesheets: {
       joinTo: {
         'css/app.css': [
-          /^(web\/static\/css)/,
           'bower_components/bootstrap-sass/assets/stylesheets/_bootstrap.scss',
           'bower_components/responsive-nav/responsive-nav.css',
-          'bower_components/flexslider/flexslider.css'
+          'bower_components/flexslider/flexslider.css',
+          'web/static/css/app.scss',
         ]
       }
     },

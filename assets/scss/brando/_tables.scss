@@ -318,13 +318,15 @@ tr.child td.child-wrapper {
 .table-child tr td {
   border: 0 !important;
 }
-tr.child td:first-child {
-  font-size: 0;
-}
-tr.child td:first-child::before {
+
+tr.child td[data-field="id"]:before {
   content: "↘";
   font-size: 13px;
   font-weight: bold;
+}
+
+tr.child td[data-field="id"] {
+  font-size: 0;
 }
 
 .filter-input-wrapper {
@@ -337,4 +339,16 @@ input#filter-input {
   padding: 7px 0;
   border: 0;
   outline: none;
+}
+
+tr.child.hidden {
+  display: none !important;
+}
+
+a.expand-page-children {
+  color: #666;
+}
+
+table tr.child td {
+  background-color: #F4F4F4 !important;
 }

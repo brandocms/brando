@@ -8,6 +8,7 @@ import Utils from "./utils.js";
 import Vex from "./vex.js";
 import Images from "./images.js";
 import Instagram from "./instagram.js";
+import Pages from "./pages.js";
 import Sequence from "./sequence.js";
 import Stats from "./stats.js";
 import Tags from "./tags.js";
@@ -35,6 +36,9 @@ $(() => {
             break;
         case "instagram-index":
             Instagram.setup();
+            break;
+        case "pages-index":
+            Pages.setup();
             break;
     }
     /* set up ws */

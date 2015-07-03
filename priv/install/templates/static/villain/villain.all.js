@@ -4029,6 +4029,7 @@ if (typeof exports === 'object') {
         showSetup: function() {
             innerHeight = this.$inner.height();
             this.$content.hide();
+    
             $button = this.$('.villain-action-button-setup');
             $button.addClass('active');
             this.$setup.show();
@@ -4576,6 +4577,8 @@ if (typeof exports === 'object') {
                 this.$setup.find('input[name="credits"]').on('keyup', _.debounce(function (e) {
                     that.setDataProperty('credits', $(this).val());
                 }, 700, false));
+    
+                this.$setup.append($('<label>Størrelse</label>'));
     
                 /* create sizes overview */
                 for (var key in data.sizes) {
