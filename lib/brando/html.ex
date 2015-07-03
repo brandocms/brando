@@ -307,4 +307,31 @@ defmodule Brando.HTML do
     "</script>"
     |> Phoenix.HTML.raw
   end
+
+  @doc """
+  Output frontend admin menu if user is logged in and admin
+  """
+  def frontend_admin_menu(conn) do
+    if current_user(conn) do
+      """
+        <div class="admin-menu">
+          <ul class="nav navbar-nav">
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+                <img class="micro-avatar" src="#{img(current_user(conn).avatar, :micro, [default: Brando.get_helpers.static_path(conn, "/images/brando/defaults/avatar_default.jpg"), prefix: media_url()])}" />
+              </a>
+              <ul class="dropdown-menu dropdown-menu-right" role="menu">
+                <li><a href="#{Brando.get_helpers.admin_dashboard_path(conn, :dashboard)}">Admin</a></li>
+                <li><a href="#{Brando.get_helpers.session_path(conn, :logout)}">Logg ut</a></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      """
+      |> Phoenix.HTML.raw
+    else
+      ""
+    end
+  end
+
 end
