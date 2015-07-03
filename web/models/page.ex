@@ -112,7 +112,8 @@ defmodule Brando.Page do
   Order by status and insertion
   """
   def order(query) do
-    from m in query, order_by: [asc: m.status, desc: m.inserted_at]
+    from m in query,
+         order_by: [asc: m.language, asc: m.status, desc: m.inserted_at]
   end
 
   @doc """
@@ -154,6 +155,23 @@ defmodule Brando.Page do
   """
   def preload_creator(query) do
     from m in query, preload: [:creator]
+  end
+
+  @doc """
+  Splits records by language. Works on a fetched query.
+  """
+  def split_by_language(pages) do
+    {_, split_pages} = Enum.map_reduce pages, %{}, fn(page, agg) ->
+      insert =
+        if agg[page.language] do
+          [page|agg[page.language]]
+        else
+          [page]
+        end
+      agg = Map.put(agg, page.language, insert)
+      {page, agg}
+    end
+    split_pages
   end
 
 
