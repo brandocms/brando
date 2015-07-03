@@ -129,12 +129,8 @@ defmodule Brando.HTML.Inspect do
     ~s(<em>** sensurert **</em>)
   end
 
-  defp do_inspect_field(:language, :string, "no") do
-    ~s(<div class="text-center"><img src="#{Brando.get_helpers.static_path(Brando.get_endpoint, "/images/brando/blank.gif")}" class="flag flag-nb" alt="norsk" /></div>)
-  end
-
-  defp do_inspect_field(:language, :string, "en") do
-    ~s(<div class="text-center"><img src="#{Brando.get_helpers.static_path(Brando.get_endpoint, "/images/brando/blank.gif")}" class="flag flag-en" alt="english" /></div>)
+  defp do_inspect_field(:language, :string, language_code) do
+    ~s(<div class="text-center"><img src="#{Brando.get_helpers.static_path(Brando.get_endpoint, "/images/brando/blank.gif")}" class="flag flag-#{language_code}" alt="#{language_code}" /></div>)
   end
 
   defp do_inspect_field(:key, :string, val) do

@@ -50,7 +50,7 @@ defmodule Brando.HTML.Tablize do
     filter_attr = if opts[:filter], do: ~s( data-filter-table="true"), else: ""
     table_header = render_thead(module.__fields__, module, opts)
     table_body = render_tbody(module.__fields__, records, module, conn, dropdowns, opts)
-    table = ~s(<table class="table table-striped"#{filter_attr}>#{colgroup}#{table_header}#{table_body}</table>)
+    table = ~s(<table class="table"#{filter_attr}>#{colgroup}#{table_header}#{table_body}</table>)
     filter = if opts[:filter], do: ~s(<div class="filter-input-wrapper pull-right"><i class="fa fa-fw fa-search m-r-sm"></i><input type="text" placeholder="Filtrer tabell" id="filter-input" /></div>), else: ""
     Phoenix.HTML.raw([filter|table])
   end
@@ -68,6 +68,8 @@ defmodule Brando.HTML.Tablize do
         true                   -> "<col>"
       end
     end
+    # add expander
+    colgroups = ["<col style=\"width: 10px;\">"|colgroups]
     # add menu col
     colgroups = colgroups ++ "<col style=\"width: 80px;\">"
     "<colgroup>" <> IO.iodata_to_binary(colgroups) <> "</colgroup>"
@@ -93,32 +95,43 @@ defmodule Brando.HTML.Tablize do
     tr_content = fields
       |> Enum.map(&(do_td(&1, record, module.__schema__(:field, &1), opts)))
       |> Enum.join
-    row = "<tr>#{tr_content}#{render_dropdowns(conn, dropdowns, record)}</tr>"
-    case Map.get(record, opts[:children]) do
-      nil -> row
-      [] -> row
+    children = case Map.get(record, opts[:children]) do
+      nil -> nil
+      [] -> nil
       children ->
         child_rows = for child <- children do
           tr_content =
             fields
             |> Enum.map(&(do_td(&1, child, module.__schema__(:field, &1), opts)))
             |> Enum.join
-          ~s(<tr class="child">#{tr_content}#{render_dropdowns(conn, dropdowns, child)}</tr>)
+          ~s(<tr data-parent-id="#{record.id}" class="child hidden"><td></td>#{tr_content}#{render_dropdowns(conn, dropdowns, child)}</tr>)
         end
-        row <> Enum.join(child_rows)
+        Enum.join(child_rows)
+    end
+    expander =
+      if children do
+        "<td><a href=\"\" class=\"expand-page-children\" data-id=\"#{record.id}\"><i class=\"fa fa-plus\"></i></td>"
+      else
+        "<td></td>"
+      end
+    row = "<tr>#{expander}#{tr_content}#{render_dropdowns(conn, dropdowns, record)}</tr>"
+    if children do
+      row <> children
+    else
+      row
     end
   end
 
   defp do_td(:id, record, _type, _opts) do
-    ~s(<td class="text-center text-mono text-muted">##{zero_pad(Map.get(record, :id))}</td>)
+    ~s(<td data-field="id" class="text-small text-center text-mono text-muted">##{zero_pad(Map.get(record, :id))}</td>)
   end
 
   defp do_td(field, record, type, opts) do
     unless field in Keyword.get(opts, :hide, []) do
       if field in Keyword.get(opts, :check_or_x, []) do
-        ~s(<td class="text-center">#{check_or_x(Map.get(record, field))}</td>)
+        ~s(<td data-field="#{field}" class="text-center">#{check_or_x(Map.get(record, field))}</td>)
       else
-        ~s(<td>#{inspect_field(field, type, Map.get(record, field))}</td>)
+        ~s(<td data-field="#{field}">#{inspect_field(field, type, Map.get(record, field))}</td>)
       end
     end
   end
@@ -127,7 +140,7 @@ defmodule Brando.HTML.Tablize do
     rendered_ths = fields
       |> Enum.map(&(do_th(&1, module, opts[:hide])))
       |> Enum.join
-    ~s(<thead><tr>#{rendered_ths}<th class="text-center">Meny</th></tr></thead>)
+    ~s(<thead><tr><th></th>#{rendered_ths}<th class="text-center">Meny</th></tr></thead>)
   end
 
   defp do_th(:id, _module, _hidden_fields) do
