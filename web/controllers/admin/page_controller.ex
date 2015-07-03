@@ -21,6 +21,7 @@ defmodule Brando.Admin.PageController do
       |> model.with_parents_and_children
       |> model.order
       |> Brando.repo.all
+
     conn
     |> assign(:pages, pages)
     |> render(:index)
