@@ -11,6 +11,7 @@ exports.config = {
           'bower_components/responsive-nav/responsive-nav.js',
           'bower_components/salvattore/dist/salvattore.min.js',
           'bower_components/flexslider/jquery.flexslider.js',
+          'bower_components/colorbox/jquery.colorbox.js',
           /^(web\/static\/vendor)/
         ],
       },
@@ -29,7 +30,7 @@ exports.config = {
           'bower_components/flexslider/flexslider.css',
           'web/static/css/app.scss',
         ]
-      }
+      },
     },
     templates: {
       joinTo: 'js/app.js'
@@ -52,9 +53,11 @@ exports.config = {
     // This option sets where we should place non-css and non-js assets in.
     // By default, we set this to '/web/static/assets'. Files in this directory
     // will be copied to `paths.public`, which is "priv/static" by default.
-    assets: /^(web\/static\/assets)/,
+    assets: [
+      /^(web\/static\/assets)/,
+    ],
     ignored: [
-
+      'web/static/css/includes'
     ]
   },
 
