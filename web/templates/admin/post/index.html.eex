@@ -7,9 +7,9 @@
       <span class="m-r-sm"><span class="status-deleted"><i class="fa fa-circle m-r-sm"> </i> </span> Slettet</span>
     </div>
     <%= Brando.HTML.Tablize.tablize(@conn, @posts,
-                [{"Vis side", "fa-search", :admin_post_path, :show, :id},
-                 {"Endre side", "fa-edit", :admin_post_path, :edit, :id, :superuser},
-                 {"Slett side", "fa-trash", :admin_post_path, :delete_confirm, :id, :superuser}],
+                [{"Vis post", "fa-search", :admin_post_path, :show, :id},
+                 {"Endre post", "fa-edit", :admin_post_path, :edit, :id, :superuser},
+                 {"Slett post", "fa-trash", :admin_post_path, :delete_confirm, :id, :superuser}],
                 check_or_x: [:cover], filter: true,
                 hide: [:tags, :lead, :slug, :data, :html, :meta_description,
                        :meta_keywords, :inserted_at, :publish_at]) %>
