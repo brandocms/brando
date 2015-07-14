@@ -19,7 +19,10 @@ defmodule <%= application_module %>.Villain.Parser do
   @doc """
   Convert text to HTML through Markdown
   """
-  def text(%{text: text}) do
+  def text(%{text: text, type: type}) do
+    if type == "lead" do
+      text = text <> "\n{: .lead}"
+    end
     Earmark.to_html(text)
   end
 
@@ -62,11 +65,15 @@ defmodule <%= application_module %>.Villain.Parser do
   Convert columns to html. Recursive parsing.
   """
   def columns(cols) do
-    for col <- cols do
+    col_html = for col <- cols do
       c = Enum.reduce(col[:data], [], fn(d, acc) ->
         [apply(__MODULE__, String.to_atom(d[:type]), [d[:data]])|acc]
       end)
-      ~s(<div class="#{col[:class]}">#{Enum.reverse(c)}</div>)
+      class = case col[:class] do
+        "six" -> "col-md-6"
+      end
+      ~s(<div class="#{class}">#{Enum.reverse(c)}</div>)
     end
+    ~s(<div class="row">#{col_html}</div>)
   end
 end

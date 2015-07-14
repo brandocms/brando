@@ -654,24 +654,23 @@
         },
     
         getTextBlock: function() {
-          if (_.isUndefined(this.textBlock)) {
-            this.textBlock = this.$('.villain-text-block');
-          }
-          return this.textBlock;
+            this.$textBlock = this.$('.villain-text-block');
+            return this.$textBlock;
+        },
+    
+        getTextBlockInner: function() {
+            tb = this.getTextBlock();
+            return tb.html();
         },
     
         clearInsertedStyles: function(e) {
-          var target = e.target;
-          target.removeAttribute('style'); // Hacky fix for Chrome.
+            var target = e.target;
+            target.removeAttribute('style'); // Hacky fix for Chrome.
         },
     
-        renderEditorHtml: function() {
+        renderEditorHtml: function() {},
     
-        },
-    
-        renderEmpty: function() {
-    
-        },
+        renderEmpty: function() {},
     
         renderPlus: function() {
             addblock = new Villain.Plus(this.store);
@@ -702,35 +701,76 @@
     Villain.Blocks.Text = Villain.Block.extend({
         type: 'text',
         template: _.template(
-            '<div class="villain-text-block villain-content" contenteditable="true"><%= content %></div>'
+            '<div class="villain-text-block villain-content" contenteditable="true" data-text-type="<%= type %>"><%= content %></div>'
         ),
     
         renderEditorHtml: function() {
-            blockTemplate = this.template({content: Villain.toHTML(this.data.text)});
+            blockTemplate = this.renderContentBlockHtml();
             actionsTemplate = this.actionsTemplate();
             wrapperTemplate = this.wrapperTemplate({content: blockTemplate, actions: actionsTemplate});
             return wrapperTemplate;
         },
+    
+        renderContentBlockHtml: function() {
+            text = this.getTextBlockInner() ? this.getTextBlockInner() : this.data.text;
+            return this.template({content: Villain.toHTML(text), type: this.data.type});
+        },
+    
         renderEmpty: function() {
-            blockTemplate = this.template({content: ''});
+            blockTemplate = this.template({content: '', type: "paragraph"});
             actionsTemplate = this.actionsTemplate();
             wrapperTemplate = this.wrapperTemplate({content: blockTemplate, actions: actionsTemplate});
             return wrapperTemplate;
         },
+    
         getJSON: function() {
-            textNode = Villain.toMD(this.getTextBlock().html());
+            text = this.getTextBlockInner();
+            textNode = Villain.toMD(text);
+            data = this.getData();
             json = {
                 type: this.type,
                 data: {
-                    text: textNode
+                    text: textNode,
+                    type: data.type
                 }
             };
             return json;
         },
+    
         getHTML: function() {
             textNode = this.getTextBlock().html();
             return markdown.toHTML(textNode);
-        }
+        },
+    
+        setup: function() {
+            data = this.getData();
+            if (!data.hasOwnProperty('type')) {
+                this.setDataProperty('type', 'paragraph');
+            }
+            type = this.data.type;
+            this.$setup.hide();
+            var radios = "";
+            types = ['paragraph', 'lead'];
+            for (i in types) {
+                selected = "";
+                if (type === types[i]) {
+                    selected = ' checked="checked"';
+                }
+                radios += '<label><input type="radio" name="text-type" value="'
+                        + types[i] + '"' + selected + '>' + types[i] + '</label>';
+            }
+    
+            this.$setup.append($([
+                '<label>Type</label>',
+                radios
+            ].join('\n')));
+    
+            this.$setup.find('input[type=radio]').on('change', $.proxy(function(e) {
+                this.setDataProperty('type', $(e.target).val());
+                this.refreshContentBlock();
+                this.$content.attr('data-text-type', $(e.target).val());
+            }, this));
+        },
     },
     {
         /* static methods */
@@ -806,41 +846,38 @@
         },
     
         renderEmpty: function() {
-            blockTemplate = this.template({content: ''});
+            blockTemplate = this.template({content: '', level: 1});
             actionsTemplate = this.actionsTemplate();
             wrapperTemplate = this.wrapperTemplate({content: blockTemplate, actions: actionsTemplate});
             return wrapperTemplate;
         },
     
         setup: function() {
-            // if (this.hasData()) {
-                data = this.getData();
-                if (!data.hasOwnProperty('level')) {
-                    this.setDataProperty('level', 1);
+            data = this.getData();
+            if (!data.hasOwnProperty('level')) {
+                this.setDataProperty('level', 1);
+            }
+            level = data['level'];
+            this.$setup.hide();
+            var radios = "";
+            levels = [1, 2, 3, 4, 5];
+            for (i in levels) {
+                selected = "";
+                if (parseInt(level) === parseInt(levels[i])) {
+                    selected = ' checked="checked"';
                 }
-                level = data['level'];
-                this.$setup.hide();
-                var radios = "";
-                levels = [1, 2, 3, 4, 5];
-                for (i in levels) {
-                    selected = "";
-                    if (parseInt(level) === parseInt(levels[i])) {
-                        selected = ' checked="checked"';
-                    }
-                    radios += '<label><input type="radio" name="header-size" value="' + levels[i] + '"' + selected + '>H' + levels[i] + '</label>';
-                }
-                this.$setup.append($([
-                    '<label>Størrelse</label>',
-                    radios
-                ].join('\n')));
+                radios += '<label><input type="radio" name="header-size" value="' + levels[i] + '"' + selected + '>H' + levels[i] + '</label>';
+            }
+            this.$setup.append($([
+                '<label>Størrelse</label>',
+                radios
+            ].join('\n')));
     
-                this.$setup.find('input[type=radio]').on('change', $.proxy(function(e) {
-                    this.setDataProperty('level', $(e.target).val());
-                    this.refreshContentBlock();
-                    this.$content.attr('data-header-level', $(e.target).val());
-                }, this));
-            // }
-    
+            this.$setup.find('input[type=radio]').on('change', $.proxy(function(e) {
+                this.setDataProperty('level', $(e.target).val());
+                this.refreshContentBlock();
+                this.$content.attr('data-header-level', $(e.target).val());
+            }, this));
         },
     
         getData: function() {
@@ -2033,6 +2070,9 @@
     };
 
     Villain.toHTML = function(markdown, type) {
+
+      console.log(markdown);
+
 
       // MD -> HTML
       type = _.classify(type);

@@ -279,6 +279,8 @@ html {
   .villain-block-inner .villain-text-block {
     /* make space for the action buttons */
     padding-right: 30px; }
+  .villain-block-inner .villain-text-block[data-text-type="lead"] {
+    font-size: 2rem; }
   .villain-block-inner .row {
     max-width: 68em;
     margin-left: auto;
