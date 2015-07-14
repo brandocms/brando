@@ -105,7 +105,7 @@ defmodule Brando.Image do
   @doc """
   Get all images in series `id`.
   """
-  def get_by_series_id(id) do
+  def for_series_id(id) do
     from(m in __MODULE__,
          where: m.image_series_id == ^id,
          order_by: m.sequence)

@@ -11,7 +11,7 @@ defmodule Brando.Sequence do
 
       use Brando.Sequence,
         [:controller, [model: Brando.Image,
-                       filter: &Brando.Image.get_by_series_id/1]]
+                       filter: &Brando.Image.for_series_id/1]]
 
   View:
 
