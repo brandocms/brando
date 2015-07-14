@@ -27,7 +27,11 @@ defmodule Brando.Mixfile do
   end
 
   defp applications(:test), do: applications(:all) ++ [:blacksmith]
-  defp applications(_all), do: [:comeonin, :httpoison]
+  defp applications(_all), do: [
+    :comeonin, :httpoison, :phoenix, :phoenix_ecto, :phoenix_html,
+    :earmark, :linguist, :mogrify, :poison, :postgrex, :scrivener,
+    :slugger, :logger_file_backend
+  ]
 
   defp deps do
     [
