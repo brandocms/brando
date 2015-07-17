@@ -11,15 +11,31 @@ defmodule Brando.Images.Utils do
   Checks `plug` for filename, checks mimetype, creates upload path,
   copies files and creates all sizes of image according to `cfg`
   """
+  def do_upload(plug, %Brando.Type.ImageConfig{} = cfg) do
+    process_upload({plug, cfg})
+  end
   def do_upload(plug, cfg) when is_map(cfg) do
-    {plug, cfg}
+    cfg_struct =
+      if is_atom(List.first(Map.keys(cfg))) do
+        struct(Brando.Type.ImageConfig, cfg)
+      else
+        stringy_struct(Brando.Type.ImageConfig, cfg)
+      end
+    process_upload({plug, cfg_struct})
+  end
+  def do_upload(_plug, cfg) when is_list(cfg) do
+    raise "do_upload with cfg as list. Fix it!"
+    # do_upload(plug, Enum.into(cfg, %{}))
+  end
+
+  defp process_upload(upload) do
+    upload
     |> get_valid_filename
     |> check_mimetype
     |> create_upload_path
     |> copy_uploaded_file
     |> create_image_sizes
   end
-  def do_upload(plug, cfg) when is_list(cfg), do: do_upload(plug, Enum.into(cfg, %{}))
 
   defp get_valid_filename({%{filename: ""}, _cfg}) do
     raise UploadError, message: "Blankt filnavn gitt under opplasting. Pass på at du har et gyldig filnavn."
@@ -62,32 +78,33 @@ defmodule Brando.Images.Utils do
   defp create_image_sizes({%{uploaded_file: file}, cfg}) do
     sizes = %{}
     {file_path, filename} = split_path(file)
+    upload_path = Map.get(cfg, :upload_path)
 
     sizes = for {size_name, size_cfg} <- Map.get(cfg, :sizes) do
       size_dir = Path.join([file_path, to_string(size_name)])
       File.mkdir_p(size_dir)
       sized_image = Path.join([size_dir, filename])
       create_image_size(file, sized_image, size_cfg)
-      sized_path = Path.join([Map.get(cfg, :upload_path), to_string(size_name), filename])
+      sized_path = Path.join([upload_path, to_string(size_name), filename])
       {size_name, sized_path}
     end
 
     {:ok, %Brando.Type.Image{}
     |> Map.put(:sizes, Enum.into(sizes, %{}))
-    |> Map.put(:path, Path.join([Map.get(cfg, :upload_path), filename]))}
+    |> Map.put(:path, Path.join([upload_path, filename]))}
   end
 
 
   def create_image_size(file, sized_image, size_cfg) do
-    if size_cfg[:crop] do
+    if size_cfg["crop"] do
       Mogrify.open(file)
       |> Mogrify.copy
-      |> Mogrify.thumbnail("#{size_cfg[:size]}^ -gravity center -extent #{size_cfg[:size]}")
+      |> Mogrify.thumbnail("#{size_cfg["size"]}^ -gravity center -extent #{size_cfg["size"]}")
       |> Mogrify.save(sized_image)
     else
       Mogrify.open(file)
       |> Mogrify.copy
-      |> Mogrify.resize(size_cfg[:size])
+      |> Mogrify.resize(size_cfg["size"])
       |> Mogrify.save(sized_image)
     end
   end

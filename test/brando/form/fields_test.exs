@@ -160,7 +160,7 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "file/4" do
-    assert F.file(:update, "user[avatar]", %{sizes: %{thumb: "images/default/thumb/0.jpeg"}},
+    assert F.file(:update, "user[avatar]", %{sizes: %{"thumb" => "images/default/thumb/0.jpeg"}},
                       [], [type: :file, label: "Bilde"]) == "<div class=\"image-preview\"><img src=\"/media/images/default/thumb/0.jpeg\" /></div><input name=\"user[avatar]\" type=\"file\" />"
   end
 

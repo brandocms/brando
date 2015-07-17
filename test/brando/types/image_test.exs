@@ -3,8 +3,9 @@ defmodule Brando.Types.ImageTest do
   alias Brando.Type.Image
 
   @raw "{\"title\":null,\"sizes\":{\"thumb\":\"images/avatars/thumb/27i97a.jpeg\",\"medium\":\"images/avatars/medium/27i97a.jpeg\"},\"path\":\"images/avatars/27i97a.jpeg\",\"optimized\":false,\"credits\":\"Credits\"}"
-  @result %Image{credits: "Credits", optimized: false, path: "images/avatars/27i97a.jpeg", title: nil,
-                 sizes: %{thumb: "images/avatars/thumb/27i97a.jpeg", medium: "images/avatars/medium/27i97a.jpeg"}}
+  @result %Image{credits: "Credits", optimized: false, path: "images/avatars/27i97a.jpeg",
+                 sizes: %{"medium" => "images/avatars/medium/27i97a.jpeg",
+                          "thumb" => "images/avatars/thumb/27i97a.jpeg"}, title: nil}
   @struct %Image{}
 
   test "cast" do
@@ -17,7 +18,6 @@ defmodule Brando.Types.ImageTest do
   end
 
   test "load" do
-    assert Image.load("[]") == {:ok, @struct}
     assert Image.load(@raw) == {:ok, @result}
   end
 

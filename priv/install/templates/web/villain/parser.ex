@@ -7,19 +7,19 @@ defmodule <%= application_module %>.Villain.Parser do
   @doc """
   Convert header to HTML
   """
-  def header(%{text: text, level: level}) do
+  def header(%{"text" => text, "level" => level}) do
     header_size = "h#{level}"
     "<#{header_size}>" <> text <> "</#{header_size}>"
   end
 
-  def header(%{text: text}) do
+  def header(%{"text" => text}) do
     "<h1>" <> text <> "</h1>"
   end
 
   @doc """
   Convert text to HTML through Markdown
   """
-  def text(%{text: text, type: type}) do
+  def text(%{"text" => text, "type" => type}) do
     if type == "lead" do
       text = text <> "\n{: .lead}"
     end
@@ -29,22 +29,34 @@ defmodule <%= application_module %>.Villain.Parser do
   @doc """
   Convert YouTube video to iframe html
   """
-  def video(%{remote_id: remote_id, source: "youtube"}) do
+  def video(%{"remote_id" => remote_id, "source" => "youtube"}) do
     ~s(<iframe width="420" height="315" src="//www.youtube.com/embed/#{remote_id}" frameborder="0" allowfullscreen></iframe>)
   end
 
   @doc """
   Convert Vimeo video to iframe html
   """
-  def video(%{remote_id: remote_id, source: "vimeo"}) do
+  def video(%{"remote_id" => remote_id, "source" => "vimeo"}) do
     ~s(<iframe src="//player.vimeo.com/video/#{remote_id}" width="500" height="281" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>)
   end
 
   @doc """
   Convert image to html, with caption and credits
   """
-  def image(%{url: url, title: title, credits: credits}) do
-    ~s(<img src="#{url}" alt="#{title} / #{credits}" class="img-responsive" />)
+  def image(%{"url" => url, "title" => title, "credits" => credits}) do
+    """
+    <div class="img-wrapper">
+      <img src="#{url}" alt="#{title}/#{credits}" class="img-responsive" />
+      <div class="image-info-wrapper">
+        <div class="image-title">
+          #{title}
+        </div>
+        <div class="image-credits">
+          #{credits}
+        </div>
+      </div>
+    </div>
+    """
   end
 
   @doc """
@@ -57,7 +69,7 @@ defmodule <%= application_module %>.Villain.Parser do
   @doc """
   Convert list to html through Markdown
   """
-  def list(%{text: list}) do
+  def list(%{"text" => list}) do
     Earmark.to_html(list)
   end
 
@@ -66,10 +78,10 @@ defmodule <%= application_module %>.Villain.Parser do
   """
   def columns(cols) do
     col_html = for col <- cols do
-      c = Enum.reduce(col[:data], [], fn(d, acc) ->
-        [apply(__MODULE__, String.to_atom(d[:type]), [d[:data]])|acc]
+      c = Enum.reduce(col["data"], [], fn(d, acc) ->
+        [apply(__MODULE__, String.to_atom(d["type"]), [d["data"]])|acc]
       end)
-      class = case col[:class] do
+      class = case col["class"] do
         "six" -> "col-md-6"
       end
       ~s(<div class="#{class}">#{Enum.reverse(c)}</div>)

@@ -10,9 +10,10 @@ defmodule Brando.ImageSeries.ControllerTest do
   alias Brando.ImageCategory
   alias Brando.Type.ImageConfig
 
+  @cfg Map.from_struct(%ImageConfig{})
   @series_params %{"name" => "Series name", "slug" => "series-name", "credits" => "Credits", "order" => 0}
-  @category_params %{"cfg" => %ImageConfig{}, "name" => "Test Category", "slug" => "test-category"}
-  @broken_params %{"cfg" => %ImageConfig{}, }
+  @category_params %{"cfg" => @cfg, "name" => "Test Category", "slug" => "test-category"}
+  @broken_params %{"cfg" => @cfg}
   @up_params %Plug.Upload{content_type: "image/png", filename: "sample.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"}
   @up_params2 %Plug.Upload{content_type: "image/png", filename: "sample2.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample2.png"}
 

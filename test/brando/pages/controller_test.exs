@@ -12,7 +12,7 @@ defmodule Brando.Pages.ControllerTest do
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
 
-  @page_params %{"data" => "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\"}}]",
+  @page_params %{"data" => "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]",
                  "title" => "Header",
                  "key" => "testpage",
                  "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
@@ -110,7 +110,7 @@ defmodule Brando.Pages.ControllerTest do
 
     assert {:ok, page} = Page.create(page_params, user)
 
-    page_params = Map.put(page_params, "data", "[{\"type\":\"text\",\"data\":{\"text\":\"asdf\"}}]")
+    page_params = Map.put(page_params, "data", "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]")
 
     conn =
       call(:patch, "/admin/sider/#{page.id}", %{"page" => page_params})

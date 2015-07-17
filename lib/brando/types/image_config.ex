@@ -3,6 +3,8 @@ defmodule Brando.Type.ImageConfig do
   Defines a type for an image configuration field.
   """
 
+  import Brando.Utils, only: [stringy_struct: 2]
+
   defstruct allowed_mimetypes: ["image/jpeg", "image/png"],
             default_size: :medium,
             upload_path: Path.join("images", "default"),
@@ -21,7 +23,7 @@ defmodule Brando.Type.ImageConfig do
   Cast should return OUR type no matter what the input.
   """
   def cast(val) when is_binary(val) do
-    val = Poison.decode!(val, keys: :atoms)
+    val = Poison.decode!(val, as: Brando.Type.ImageConfig)
     {:ok, val}
   end
   def cast(val) when is_map(val) do
@@ -34,18 +36,11 @@ defmodule Brando.Type.ImageConfig do
   def blank?(_), do: %Brando.Type.ImageConfig{}
 
   @doc """
-  When loading `roles` from the database, we are guaranteed to
-  receive an integer (as database are stricts) and we will
-  just return it to be stored in the model struct.
+  Load from database. We receive it as a map since Postgrex does the conversion.
   """
-  def load(val) when is_binary(val) do
-    val = Poison.decode!(val, keys: :atoms)
-    if val == nil, do: val = %Brando.Type.ImageConfig{}
-    {:ok, val}
-  end
-
   def load(val) when is_map(val) do
-    {:ok, val}
+    struct = stringy_struct(Brando.Type.ImageConfig, val)
+    {:ok, struct}
   end
 
   @doc """

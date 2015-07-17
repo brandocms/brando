@@ -20,7 +20,7 @@ defmodule Brando.Type.Image do
   Cast should return OUR type no matter what the input.
   """
   def cast(val) when is_binary(val) do
-    val = Poison.decode!(val, as: Brando.Type.Image, keys: :atoms)
+    val = Poison.decode!(val, as: Brando.Type.Image)
     {:ok, val}
   end
   def cast(val) when is_map(val) do
@@ -33,12 +33,10 @@ defmodule Brando.Type.Image do
   def blank?(_), do: %Brando.Type.Image{}
 
   @doc """
-  When loading `roles` from the database, we are guaranteed to
-  receive an integer (as database are stricts) and we will
-  just return it to be stored in the model struct.
+  Load
   """
   def load(val) do
-    val = Poison.decode!(val, as: Brando.Type.Image, keys: :atoms)
+    val = Poison.decode!(val, as: Brando.Type.Image)
     if val == nil, do: val = %Brando.Type.Image{}
     {:ok, val}
   end

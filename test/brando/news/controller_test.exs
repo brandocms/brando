@@ -14,7 +14,7 @@ defmodule Brando.News.ControllerTest do
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
 
-  @post_params %{"data" => "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\"}}]",
+  @post_params %{"data" => "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]",
                  "featured" => true, "header" => "Header",
                  "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
                  "language" => "no", "lead" => "Asdf",
@@ -112,7 +112,7 @@ defmodule Brando.News.ControllerTest do
 
     assert {:ok, post} = Post.create(post_params, user)
 
-    post_params = Map.put(post_params, "data", "[{\"type\":\"text\",\"data\":{\"text\":\"asdf\"}}]")
+    post_params = Map.put(post_params, "data", "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]")
 
     conn =
       call(:patch, "/admin/nyheter/#{post.id}", %{"post" => post_params})

@@ -270,7 +270,7 @@ defmodule Brando.HTML do
   end
 
   def img(image_field, size, opts) do
-    size = if is_atom(size), do: size, else: String.to_atom(size)
+    size = if is_atom(size), do: Atom.to_string(size), else: size
     if prefix = Keyword.get(opts, :prefix, nil) do
       Path.join([prefix, image_field.sizes[size]])
     else

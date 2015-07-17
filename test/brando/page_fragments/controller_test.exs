@@ -12,7 +12,7 @@ defmodule Brando.PageFragments.ControllerTest do
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
 
-  @page_params %{"data" => "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\"}}]",
+  @page_params %{"data" => "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]",
                  "key" => "testpage",
                  "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
                  "language" => "no"}
@@ -105,7 +105,7 @@ defmodule Brando.PageFragments.ControllerTest do
 
     assert {:ok, page} = PageFragment.create(page_params, user)
 
-    page_params = Map.put(page_params, "data", "[{\"type\":\"text\",\"data\":{\"text\":\"asdf\"}}]")
+    page_params = Map.put(page_params, "data", "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]")
 
     conn =
       call(:patch, "/admin/sider/fragmenter/#{page.id}", %{"page_fragment" => page_params})

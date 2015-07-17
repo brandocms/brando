@@ -38,12 +38,12 @@ config :brando, Brando.Images,
                     upload_path: Path.join("images", "default"),
                     random_filename: true,
                     size_limit: 10240000,
-                    sizes: %{small:  %{size: "300", quality: 100},
-                             medium: %{size: "500", quality: 100},
-                             large:  %{size: "700", quality: 100},
-                             xlarge: %{size: "900", quality: 100},
-                             thumb:  %{size: "150x150", quality: 100, crop: true},
-                             micro:  %{size: "25x25", quality: 100, crop: true}}
+                    sizes: %{"small" =>  %{"size" => "300", "quality" => 100},
+                             "medium" => %{"size" => "500", "quality" => 100},
+                             "large" =>  %{"size" => "700", "quality" => 100},
+                             "xlarge" => %{"size" => "900", "quality" => 100},
+                             "thumb" =>  %{"size" => "150x150", "quality" => 100, "crop" => true},
+                             "micro" =>  %{"size" => "25x25", "quality" => 100, "crop" => true}}
   }
 
 config :brando, Brando.Instagram,
@@ -52,8 +52,8 @@ config :brando, Brando.Instagram,
   auto_approve: true,
   interval: 1_000 * 60 * 60,
   sleep: 5000,
-  sizes: %{large:  %{size: "640", quality: 100},
-           thumb:  %{size: "150x150", quality: 100, crop: true}},
+  sizes: %{"large" =>  %{"size" => "640", "quality" => 100},
+           "thumb" =>  %{"size" => "150x150", "quality" => 100, "crop" => true}},
   upload_path: Path.join("images", "instagram")
 
 config :brando, Brando.Type.Role,

@@ -10,17 +10,17 @@ defmodule Brando.Field.ImageField do
   In your `my_model.ex`:
 
       has_image_field :avatar,
-        [allowed_exts: ["jpg", "jpeg", "png"],
+        %{allowed_exts: ["jpg", "jpeg", "png"],
          default_size: :medium,
          random_filename: true,
          upload_path: Path.join("images", "default"),
          size_limit: 10240000,
-         sizes: [
-           thumb:  [size: "150x150", quality: 100, crop: true],
-           small:  [size: "300x",    quality: 100],
-           large:  [size: "700x",    quality: 100]
-        ]
-      ]
+         sizes: %{
+           "thumb" =>  %{"size" => "150x150", "quality" => 100, "crop" => true},
+           "small" =>  %{"size" => "300x",    "quality" => 100},
+           "large" =>  %{"size" => "700x",    "quality" => 10},
+        }
+      }
   """
   import Brando.Images.Utils
   require Logger
@@ -64,12 +64,13 @@ defmodule Brando.Field.ImageField do
   end
 
   defp defcfg(name, contents) do
+    escaped_contents = Macro.escape(contents)
     quote do
       @doc """
       Get `field_name`'s image field configuration
       """
       def get_image_cfg(field_name) when field_name == unquote(name), do:
-        unquote(contents)
+        unquote(escaped_contents)
     end
   end
 
