@@ -15,7 +15,7 @@ defmodule Brando.Type.Json do
   """
   def cast(json) when is_map(json), do: {:ok, json}
   def cast(json) when is_list(json), do: {:ok, json}
-  def cast(json) when is_binary(json), do: {:ok, Poison.decode!(json, keys: :atoms!)}
+  def cast(json) when is_binary(json), do: {:ok, Poison.decode!(json)}
 
   @doc """
   Integers are never considered blank
@@ -34,5 +34,5 @@ defmodule Brando.Type.Json do
   """
   def dump(json) when is_map(json), do: {:ok, json}
   def dump(json) when is_list(json), do: {:ok, json}
-  def dump(json) when is_binary(json), do: {:ok, Poison.decode!(json, keys: :atoms!)}
+  def dump(json) when is_binary(json), do: {:ok, Poison.decode!(json)}
 end
