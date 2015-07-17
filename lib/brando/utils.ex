@@ -129,4 +129,21 @@ defmodule Brando.Utils do
     :io_lib.format("~4..0B-~2..0B-~2..0BT~2..0B:~2..0B:~2..0BZ", list)
     |> IO.iodata_to_binary
   end
+
+  @doc """
+  Convert string map to struct
+  """
+  def stringy_struct(struct, params) when is_map(params) do
+    keys =
+      struct(struct, [])
+      |> Map.from_struct
+      |> Map.keys
+      |> Enum.map(&Atom.to_string/1)
+
+    params =
+      Map.take(params, keys)
+      |> Enum.map(fn {key, value} -> {String.to_atom(key), value} end)
+
+    struct(struct, params)
+  end
 end
