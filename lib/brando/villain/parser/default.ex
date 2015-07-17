@@ -7,41 +7,56 @@ defmodule Brando.Villain.Parser.Default do
   @doc """
   Convert header to HTML
   """
-  def header(%{text: text, level: level}) do
+  def header(%{"text" => text, "level" => level}) do
     header_size = "h#{level}"
     "<#{header_size}>" <> text <> "</#{header_size}>"
   end
 
-  def header(%{text: text}) do
+  def header(%{"text" => text}) do
     "<h1>" <> text <> "</h1>"
   end
 
   @doc """
   Convert text to HTML through Markdown
   """
-  def text(%{text: text}) do
+  def text(%{"text" => text, "type" => type}) do
+    if type == "lead" do
+      text = text <> "\n{: .lead}"
+    end
     Earmark.to_html(text)
   end
 
   @doc """
   Convert YouTube video to iframe html
   """
-  def video(%{remote_id: remote_id, source: "youtube"}) do
+  def video(%{"remote_id" => remote_id, "source" => "youtube"}) do
     ~s(<iframe width="420" height="315" src="//www.youtube.com/embed/#{remote_id}" frameborder="0" allowfullscreen></iframe>)
   end
 
   @doc """
   Convert Vimeo video to iframe html
   """
-  def video(%{remote_id: remote_id, source: "vimeo"}) do
+  def video(%{"remote_id" => remote_id, "source" => "vimeo"}) do
     ~s(<iframe src="//player.vimeo.com/video/#{remote_id}" width="500" height="281" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>)
   end
 
   @doc """
   Convert image to html, with caption and credits
   """
-  def image(%{url: url, caption: caption, credits: credits}) do
-    ~s(<img src="#{url}" alt="#{caption} / #{credits}" class="img-responsive" />)
+  def image(%{"url" => url, "title" => title, "credits" => credits}) do
+    """
+    <div class="img-wrapper">
+      <img src="#{url}" alt="#{title}/#{credits}" class="img-responsive" />
+      <div class="image-info-wrapper">
+        <div class="image-title">
+          #{title}
+        </div>
+        <div class="image-credits">
+          #{credits}
+        </div>
+      </div>
+    </div>
+    """
   end
 
   @doc """
@@ -54,7 +69,7 @@ defmodule Brando.Villain.Parser.Default do
   @doc """
   Convert list to html through Markdown
   """
-  def list(%{text: list}) do
+  def list(%{"text" => list}) do
     Earmark.to_html(list)
   end
 
@@ -62,11 +77,15 @@ defmodule Brando.Villain.Parser.Default do
   Convert columns to html. Recursive parsing.
   """
   def columns(cols) do
-    for col <- cols do
-      c = Enum.reduce(col[:data], [], fn(d, acc) ->
-        [apply(__MODULE__, String.to_atom(d[:type]), [d[:data]])|acc]
+    col_html = for col <- cols do
+      c = Enum.reduce(col["data"], [], fn(d, acc) ->
+        [apply(__MODULE__, String.to_atom(d["type"]), [d["data"]])|acc]
       end)
-      ~s(<div class="#{col[:class]}">#{Enum.reverse(c)}</div>)
+      class = case col["class"] do
+        "six" -> "col-md-6"
+      end
+      ~s(<div class="#{class}">#{Enum.reverse(c)}</div>)
     end
+    ~s(<div class="row">#{col_html}</div>)
   end
 end
