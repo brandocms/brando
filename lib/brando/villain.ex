@@ -14,13 +14,13 @@ defmodule Brando.Villain do
   def parse(""), do: ""
   def parse(nil), do: ""
   def parse(json) when is_binary(json), do:
-    do_parse(Poison.decode!(json, keys: :atoms!))
+    do_parse(Poison.decode!(json))
   def parse(json) when is_list(json), do: do_parse(json)
 
   defp do_parse(data) do
     parser_module = Brando.config(Brando.Villain)[:parser]
     html = Enum.reduce(data, [], fn(d, acc) ->
-      [apply(parser_module, String.to_atom(d[:type]), [d[:data]])|acc]
+      [apply(parser_module, String.to_atom(d["type"]), [d["data"]])|acc]
     end)
     html |> Enum.reverse |> Enum.join
   end
