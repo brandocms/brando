@@ -56,7 +56,7 @@ defmodule Brando.Instagram.APITest do
     # install fake image in db
     {:ok, _} = InstagramImage.create(@instaimage)
     use_cassette "instagram_get_user_images", custom: true do
-      assert API.fetch(:blank) == {:ok, "1426980420"}
+      assert API.fetch(:blank) == {:ok, "1412585305"}
       assert API.fetch("1412585305") == {:ok, "1426980420"}
     end
   end
@@ -70,7 +70,7 @@ defmodule Brando.Instagram.APITest do
     # install fake image in db
     {:ok, _} = InstagramImage.create(@instaimage)
     use_cassette "instagram_get_tag_images", custom: true do
-      assert API.fetch(:blank) == {:ok, "970249962242331087"}
+      assert API.fetch(:blank) == {:ok, "968134024444958851"}
       assert API.fetch("968134024444958851") == {:ok, "970249962242331087"}
     end
   end
