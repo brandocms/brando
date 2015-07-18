@@ -38,8 +38,8 @@ defmodule Brando.HTML.Tablize do
                    Supply as list `[100, nil, nil, 200, nil, 200]`
 
   """
-  def tablize(_, [], _, _), do: "Empty"
-  def tablize(_, nil, _, _), do: "Nil"
+  def tablize(_, [], _, _), do: "<p>Ingen objekter</p>" |> Phoenix.HTML.raw
+  def tablize(_, nil, _, _), do: "<p>Ingen objekter</p>" |> Phoenix.HTML.raw
   def tablize(conn, records, dropdowns, opts) do
     module = List.first(records).__struct__
     colgroup = if opts[:colgroup] do
