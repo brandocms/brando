@@ -22,21 +22,15 @@ defmodule Brando do
   @doc """
   Gets the parent app's repo, as set in config.exs
   """
-  def repo do
-    config(:repo)
-  end
+  def repo, do: config(:repo)
 
   @doc """
   Gets the parent app's helpers, as set in config.exs
   """
-  def get_helpers do
-    config(:helpers)
-  end
+  def get_helpers, do: config(:helpers)
 
   @doc """
   Get Brando version
   """
-  def version do
-    Keyword.get(Brando.Mixfile.project, :version)
-  end
+  def version, do: Keyword.get(Brando.Mixfile.project, :version)
 end

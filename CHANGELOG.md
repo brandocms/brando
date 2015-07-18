@@ -1,3 +1,3 @@
-# v0.1.0pre (yyyy-mm-dd)
+## v0.1.0pre (2015-mm-dd)
 
-First release.
+* Initial release.
