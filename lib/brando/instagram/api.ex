@@ -19,13 +19,23 @@ defmodule Brando.Instagram.API do
   def fetch(filter) do
     case Instagram.config(:fetch) do
       {:user, username} ->
-        if filter == :blank, do: filter = InstagramImage.get_last_created_time
-        images_for_user(username, min_timestamp: filter)
-        {:ok, InstagramImage.get_last_created_time}
+        if filter == :blank do
+          filter = InstagramImage.get_last_created_time
+          images_for_user(username, min_timestamp: filter)
+          {:ok, filter}
+        else
+          images_for_user(username, min_timestamp: filter)
+          {:ok, InstagramImage.get_last_created_time}
+        end
       {:tags, tags} ->
-        if filter == :blank, do: filter = InstagramImage.get_min_id
-        images_for_tags(tags, min_id: filter)
-        {:ok, InstagramImage.get_min_id}
+        if filter == :blank do
+          filter = InstagramImage.get_min_id
+          images_for_tags(tags, min_id: filter)
+          {:ok, filter}
+        else
+          images_for_tags(tags, min_id: filter)
+          {:ok, InstagramImage.get_min_id}
+        end
     end
   end
 
