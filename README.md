@@ -223,6 +223,48 @@ Config is found in your app's `config/brando.exs`.
     * `{:tags, ["tag1", "tag2"]}`
 
 
+## Imagefield
+
+A built in method for adding images to your model is supplied for you.
+
+In your model:
+
+```elixir
+
+use Brando.Field.ImageField
+
+schema "user" do
+  field :username, :string
+  field :avatar, Brando.Type.Image
+end
+
+has_image_field :avatar,
+  %{allowed_mimetypes: ["image/jpeg", "image/png"],
+    default_size: :medium,
+    upload_path: Path.join("images", "avatars"),
+    random_filename: true,
+    size_limit: 10240000,
+    sizes: %{
+      "micro"  => %{"size" => "25x25", "quality" => 100, "crop" => true},
+      "thumb"  => %{"size" => "150x150", "quality" => 100, "crop" => true},
+      "small"  => %{"size" => "300", "quality" => 100},
+      "medium" => %{"size" => "500", "quality" => 100},
+      "large"  => %{"size" => "700", "quality" => 100},
+      "xlarge" => %{"size" => "900", "quality" => 100}
+    }
+  }
+```
+
+The migration's field should be `:text`, not `:string`.
+
+In your controller:
+
+```elixir
+import Brando.Plug.Uploads
+plug :check_for_uploads, {"user", Brando.User}
+     when action in [:create, :profile_update, :update]
+```
+
 ## Villain
 
 To use villain outside the built-in `pages` and `news` modules add to your app's `web/router.ex`:

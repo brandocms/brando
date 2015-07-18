@@ -21,6 +21,7 @@ defmodule Brando.Field.ImageField do
            "large" =>  %{"size" => "700x",    "quality" => 10},
         }
       }
+
   """
   import Brando.Images.Utils
   require Logger
@@ -40,8 +41,7 @@ defmodule Brando.Field.ImageField do
         params
         |> filter_plugs
         |> Enum.reduce([], fn (plug, acc) ->
-            handle_upload(plug, acc, model, __MODULE__,
-                          &__MODULE__.get_image_cfg/1)
+            handle_upload_and_defer(plug, &__MODULE__.get_image_cfg/1)
             end)
       end
     end
@@ -124,13 +124,8 @@ defmodule Brando.Field.ImageField do
     * `cfg`: the field's cfg from has_image_field
 
   """
-  def handle_upload({name, plug}, _acc, %{id: _id} = model, module, cfg_fun) do
+  def handle_upload_and_defer({name, plug}, cfg_fun) do
     {:ok, image_field} = do_upload(plug, cfg_fun.(String.to_atom(name)))
-    apply(module, :update, [model, Map.put(%{}, name, image_field)])
-  end
-
-  def handle_upload({name, plug}, _acc, _model, module, cfg_fun) do
-    {:ok, image_field} = do_upload(plug, cfg_fun.(String.to_atom(name)))
-    apply(module, :create, [Map.put(%{}, name, image_field)])
+    {:ok, name, image_field}
   end
 end

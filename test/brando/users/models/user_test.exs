@@ -75,20 +75,6 @@ defmodule Brando.Integration.UserTest do
     refute User.has_role?(user, :staff)
   end
 
-  test "check_for_uploads/2 success" do
-    assert {:ok, user} = User.create(@params)
-    up_plug =
-      %Plug.Upload{content_type: "image/png", filename: "sample.png",
-                   path: Path.expand("../../../", __DIR__) <> "/fixtures/sample.png"}
-    up_params = Dict.put(%{}, "avatar", up_plug)
-    assert {:ok, dict} = User.check_for_uploads(user, up_params)
-    user = Brando.repo.get_by!(User, email: "fanogigyni@gmail.com")
-    assert user.avatar == dict.avatar
-    assert File.exists?(Path.join([Brando.config(:media_path), dict.avatar.path]))
-    User.delete(user)
-    refute File.exists?(Path.join([Brando.config(:media_path), dict.avatar.path]))
-  end
-
   test "check_for_uploads/2 error" do
     assert {:ok, user} = User.create(@params)
     up_plug =

@@ -6,11 +6,13 @@ defmodule Brando.Admin.UserController do
   use Brando.Web, :controller
   import Brando.Plug.Authorize
   import Brando.Plug.Section
+  import Brando.Plug.Uploads
   import Brando.HTML.Inspect, only: [model_name: 2]
   import Brando.HTML, only: [current_user: 1]
 
   plug :put_section, "users"
   plug :scrub_params, "user" when action in [:create, :update]
+  plug :check_for_uploads, {"user", Brando.User} when action in [:create, :profile_update, :update]
   plug :authorize, :superuser when action in [:new, :create, :delete, :edit, :update]
 
   @doc false
@@ -59,17 +61,9 @@ defmodule Brando.Admin.UserController do
 
     case model.update(user, form_data) do
       {:ok, updated_user} ->
-        case model.check_for_uploads(updated_user, form_data) do
-          {:ok, val} ->
-            updated_user = val
-            conn = conn |> put_flash(:notice, "Bilde lastet opp.")
-          {:errors, _errors} -> nil
-          [] -> nil
-        end
         if current_user(conn).id == user_id do
           conn = conn |> put_session(:current_user, Map.drop(updated_user, [:password]))
         end
-
         conn
         |> put_flash(:notice, "Profil oppdatert.")
         |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn, :profile))
@@ -96,12 +90,7 @@ defmodule Brando.Admin.UserController do
     model = conn.private[:model]
     created_user = model.create(form_data)
     case created_user do
-      {:ok, created_user} ->
-        case model.check_for_uploads(created_user, form_data) do
-          {:ok, _val} -> conn |> put_flash(:notice, "Bilde lastet opp.")
-          {:errors, _errors} -> nil
-          [] -> nil
-        end
+      {:ok, _} ->
         conn
         |> put_flash(:notice, "Bruker opprettet.")
         |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn, :index))
@@ -133,13 +122,6 @@ defmodule Brando.Admin.UserController do
 
     case model.update(user, form_data) do
       {:ok, updated_user} ->
-        case model.check_for_uploads(updated_user, form_data) do
-          {:ok, val} ->
-            updated_user = val
-            conn = conn |> put_flash(:notice, "Bilde lastet opp.")
-          {:errors, _errors} -> nil
-          [] -> nil
-        end
         if Brando.HTML.current_user(conn).id == String.to_integer(user_id) do
           conn = put_session(conn, :current_user, Map.drop(updated_user, [:password]))
         end
