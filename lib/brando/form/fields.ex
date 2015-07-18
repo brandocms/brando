@@ -284,13 +284,13 @@ defmodule Brando.Form.Fields do
   """
   def textarea(_form_type, name, [], _errors, opts) do
     default = if opts[:default], do: opts[:default], else: ""
-    ~s(<textarea name="#{name}"#{get_class(opts[:class])}>#{default}</textarea>)
+    ~s(<textarea name="#{name}"#{get_rows(opts[:rows])}#{get_class(opts[:class])}>#{default}</textarea>)
   end
   def textarea(_form_type, name, value, _errors, opts) when is_map(value) do
-    ~s(<textarea name="#{name}"#{get_class(opts[:class])}>#{Poison.encode!(value)}</textarea>)
+    ~s(<textarea name="#{name}"#{get_rows(opts[:rows])}#{get_class(opts[:class])}>#{Poison.encode!(value)}</textarea>)
   end
   def textarea(_form_type, name, value, _errors, opts) do
-    ~s(<textarea name="#{name}"#{get_class(opts[:class])}>#{value}</textarea>)
+    ~s(<textarea name="#{name}"#{get_rows(opts[:rows])}#{get_class(opts[:class])}>#{value}</textarea>)
   end
 
   @doc """
@@ -485,6 +485,12 @@ defmodule Brando.Form.Fields do
   """
   def get_class(nil), do: ""
   def get_class(class), do: " " <> "class=\"#{class}\""
+
+  @doc """
+  If `rows` is not nil, returns rows
+  """
+  def get_rows(nil), do: ""
+  def get_rows(rows), do: " " <> "rows=\"#{rows}\""
 
   @doc """
   If `value` is not nil, returns value.

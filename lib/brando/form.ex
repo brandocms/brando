@@ -150,6 +150,17 @@ defmodule Brando.Form do
         * `default` - Default value. Can also be a function like
                       `&__MODULE__.default_func/0`
 
+      * `textarea` - Standard textarea
+
+        # Options
+        * `rows` - How many rows to display in the textarea.
+        * `required` - true
+        * `label` - "Label for field"
+        * `help_text` - "Help text for field"
+        * `placeholder` - "Placeholder for field"
+        * `default` - Default value. Can also be a function like
+                      `&__MODULE__.default_func/0`
+
       * `checkbox` - Standard checkbox
 
         # Options
