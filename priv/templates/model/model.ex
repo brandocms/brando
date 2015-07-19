@@ -52,6 +52,7 @@ defmodule <%= module %> do
      plural: "<%= plural %>",
      repr: &("#{&1.<%= Dict.keys(attrs) |> List.first %>}"),
      fields: [
+       id: "Id",
 <%= for {k, _} <- attrs do %>       <%= k %>: "<%= k %>",
 <% end %>       inserted_at: "Opprettet",
        updated_at: "Oppdatert"],
