@@ -146,4 +146,9 @@ defmodule Brando.Utils do
 
     struct(struct, params)
   end
+
+  @doc false
+  def get_now do
+    Ecto.DateTime.to_string(Ecto.DateTime.local)
+  end
 end
