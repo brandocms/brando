@@ -96,10 +96,20 @@ defmodule Brando.Images.Utils do
 
 
   def create_image_size(file, sized_image, size_cfg) do
+    modifier = if String.ends_with?(size_cfg["size"], ["<", ">", "^", "%", "!", "@"]) do
+      ""
+    else
+      "^"
+    end
+    fill = if size_cfg["fill"] do
+      "-background #{size_cfg["fill"]} "
+    else
+      ""
+    end
     if size_cfg["crop"] do
       Mogrify.open(file)
       |> Mogrify.copy
-      |> Mogrify.thumbnail("#{size_cfg["size"]}^ -gravity center -extent #{size_cfg["size"]}")
+      |> Mogrify.thumbnail("#{size_cfg["size"]}#{modifier} #{fill}-gravity center -extent #{size_cfg["size"]}")
       |> Mogrify.save(sized_image)
     else
       Mogrify.open(file)
