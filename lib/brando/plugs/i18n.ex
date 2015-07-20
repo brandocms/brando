@@ -8,12 +8,15 @@ defmodule Brando.Plug.I18n do
 
   def set_locale(%{private: %{plug_session: %{"language" => language}}} = conn, _) do
     language = check_path(conn) || language
-    conn |> assign(:language, language)
+    conn
+    |> assign_language(language)
   end
 
   def set_locale(conn, _) do
     language = check_path(conn) || Brando.config(:default_language)
-    conn |> put_language(language)
+    conn
+    |> put_language(language)
+    |> assign_language(language)
   end
 
   def check_path(conn) do
