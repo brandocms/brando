@@ -68,7 +68,7 @@ plug Plug.Static,
   only: ~w(css images js fonts favicon.ico robots.txt)
 
 plug Plug.Static,
-  at: "/media", from: "priv/media"
+  at: "/media", from: {:my_app, "priv/media"}
 ```
 
 To use Brando's error view, add to your Endpoint's config:
