@@ -30,14 +30,14 @@ defmodule Brando.Villain.Parser.Default do
   Convert YouTube video to iframe html
   """
   def video(%{"remote_id" => remote_id, "source" => "youtube"}) do
-    ~s(<iframe width="420" height="315" src="//www.youtube.com/embed/#{remote_id}" frameborder="0" allowfullscreen></iframe>)
+    ~s(<div class="video-wrapper"><iframe width="420" height="315" src="//www.youtube.com/embed/#{remote_id}?autoplay=1&controls=0&showinfo=0&rel=0" frameborder="0" allowfullscreen></iframe></div>)
   end
 
   @doc """
   Convert Vimeo video to iframe html
   """
   def video(%{"remote_id" => remote_id, "source" => "vimeo"}) do
-    ~s(<iframe src="//player.vimeo.com/video/#{remote_id}" width="500" height="281" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>)
+    ~s(<div class="video-wrapper"><iframe src="//player.vimeo.com/video/#{remote_id}" width="500" height="281" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe></div>)
   end
 
   @doc """
@@ -71,6 +71,17 @@ defmodule Brando.Villain.Parser.Default do
   """
   def list(%{"text" => list}) do
     Earmark.to_html(list)
+  end
+
+  @doc """
+  Converts quote to html.
+  """
+  def blockquote(%{"text" => blockquote, "cite" => cite}) do
+    html = blockquote <> "\n>\n> -- <cite>#{cite}</cite>"
+    Earmark.to_html(html)
+  end
+  def blockquote(%{"text" => blockquote}) do
+    Earmark.to_html(blockquote)
   end
 
   @doc """

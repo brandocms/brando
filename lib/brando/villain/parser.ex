@@ -22,6 +22,9 @@ defmodule Brando.Villain.Parser do
   @doc "Parses list"
   defcallback list(String.t) :: String.t
 
+  @doc "Parses blockquote"
+  defcallback blockquote(String.t) :: String.t
+
   @doc "Parses columns"
   defcallback columns(String.t) :: String.t
 end

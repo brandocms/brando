@@ -3347,22 +3347,22 @@ if (typeof exports === 'object') {
 
 !function(a){function b(){return"Markdown.mk_block( "+uneval(this.toString())+", "+uneval(this.trailing)+", "+uneval(this.lineNumber)+" )"}function c(){var a=require("util");return"Markdown.mk_block( "+a.inspect(this.toString())+", "+a.inspect(this.trailing)+", "+a.inspect(this.lineNumber)+" )"}function d(a){for(var b=0,c=-1;-1!==(c=a.indexOf("\n",c+1));)b++;return b}function e(a){return a.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}function f(a){if("string"==typeof a)return e(a);var b=a.shift(),c={},d=[];for(!a.length||"object"!=typeof a[0]||a[0]instanceof Array||(c=a.shift());a.length;)d.push(f(a.shift()));var g="";for(var h in c)g+=" "+h+'="'+e(c[h])+'"';return"img"===b||"br"===b||"hr"===b?"<"+b+g+"/>":"<"+b+g+">"+d.join("")+"</"+b+">"}function g(a,b,c){var d;c=c||{};var e=a.slice(0);"function"==typeof c.preprocessTreeNode&&(e=c.preprocessTreeNode(e,b));var f=o(e);if(f){e[1]={};for(d in f)e[1][d]=f[d];f=e[1]}if("string"==typeof e)return e;switch(e[0]){case"header":e[0]="h"+e[1].level,delete e[1].level;break;case"bulletlist":e[0]="ul";break;case"numberlist":e[0]="ol";break;case"listitem":e[0]="li";break;case"para":e[0]="p";break;case"markdown":e[0]="html",f&&delete f.references;break;case"code_block":e[0]="pre",d=f?2:1;var h=["code"];h.push.apply(h,e.splice(d,e.length-d)),e[d]=h;break;case"inlinecode":e[0]="code";break;case"img":e[1].src=e[1].href,delete e[1].href;break;case"linebreak":e[0]="br";break;case"link":e[0]="a";break;case"link_ref":e[0]="a";var i=b[f.ref];if(!i)return f.original;delete f.ref,f.href=i.href,i.title&&(f.title=i.title),delete f.original;break;case"img_ref":e[0]="img";var i=b[f.ref];if(!i)return f.original;delete f.ref,f.src=i.href,i.title&&(f.title=i.title),delete f.original}if(d=1,f){for(var j in e[1]){d=2;break}1===d&&e.splice(d,1)}for(;d<e.length;++d)e[d]=g(e[d],b,c);return e}function h(a){for(var b=o(a)?2:1;b<a.length;)"string"==typeof a[b]?b+1<a.length&&"string"==typeof a[b+1]?a[b]+=a.splice(b+1,1)[0]:++b:(h(a[b]),++b)}function i(a,b){function c(a){this.len_after=a,this.name="close_"+b}var d=a+"_state",e="strong"===a?"em_state":"strong_state";return function(f){if(this[d][0]===b)return this[d].shift(),[f.length,new c(f.length-b.length)];var g=this[e].slice(),h=this[d].slice();this[d].unshift(b);var i=this.processInline(f.substr(b.length)),j=i[i.length-1];if(this[d].shift(),j instanceof c){i.pop();var k=f.length-j.len_after;return[k,[a].concat(i)]}return this[e]=g,this[d]=h,[b.length,b]}}function j(a){for(var b=a.split(""),c=[""],d=!1;b.length;){var e=b.shift();switch(e){case" ":d?c[c.length-1]+=e:c.push("");break;case"'":case'"':d=!d;break;case"\\":e=b.shift();default:c[c.length-1]+=e}}return c}var k={};k.mk_block=function(a,d,e){1===arguments.length&&(d="\n\n");var f=new String(a);return f.trailing=d,f.inspect=c,f.toSource=b,void 0!==e&&(f.lineNumber=e),f};var l=k.isArray=Array.isArray||function(a){return"[object Array]"===Object.prototype.toString.call(a)};k.forEach=Array.prototype.forEach?function(a,b,c){return a.forEach(b,c)}:function(a,b,c){for(var d=0;d<a.length;d++)b.call(c||a,a[d],d,a)},k.isEmpty=function(a){for(var b in a)if(hasOwnProperty.call(a,b))return!1;return!0},k.extract_attr=function(a){return l(a)&&a.length>1&&"object"==typeof a[1]&&!l(a[1])?a[1]:void 0};var m=function(a){switch(typeof a){case"undefined":this.dialect=m.dialects.Gruber;break;case"object":this.dialect=a;break;default:if(!(a in m.dialects))throw new Error("Unknown Markdown dialect '"+String(a)+"'");this.dialect=m.dialects[a]}this.em_state=[],this.strong_state=[],this.debug_indent=""};m.dialects={};var n=m.mk_block=k.mk_block,l=k.isArray;m.parse=function(a,b){var c=new m(b);return c.toTree(a)},m.prototype.split_blocks=function(a){a=a.replace(/(\r\n|\n|\r)/g,"\n");var b,c=/([\s\S]+?)($|\n#|\n(?:\s*\n|$)+)/g,e=[],f=1;for(null!==(b=/^(\s*\n)/.exec(a))&&(f+=d(b[0]),c.lastIndex=b[0].length);null!==(b=c.exec(a));)"\n#"===b[2]&&(b[2]="\n",c.lastIndex--),e.push(n(b[1],b[2],f)),f+=d(b[0]);return e},m.prototype.processBlock=function(a,b){var c=this.dialect.block,d=c.__order__;if("__call__"in c)return c.__call__.call(this,a,b);for(var e=0;e<d.length;e++){var f=c[d[e]].call(this,a,b);if(f)return(!l(f)||f.length>0&&!l(f[0]))&&this.debug(d[e],"didn't return a proper array"),f}return[]},m.prototype.processInline=function(a){return this.dialect.inline.__call__.call(this,String(a))},m.prototype.toTree=function(a,b){var c=a instanceof Array?a:this.split_blocks(a),d=this.tree;try{for(this.tree=b||this.tree||["markdown"];c.length;){var e=this.processBlock(c.shift(),c);e.length&&this.tree.push.apply(this.tree,e)}return this.tree}finally{b&&(this.tree=d)}},m.prototype.debug=function(){var a=Array.prototype.slice.call(arguments);a.unshift(this.debug_indent),"undefined"!=typeof print&&print.apply(print,a),"undefined"!=typeof console&&"undefined"!=typeof console.log&&console.log.apply(null,a)},m.prototype.loop_re_over_block=function(a,b,c){for(var d,e=b.valueOf();e.length&&null!==(d=a.exec(e));)e=e.substr(d[0].length),c.call(this,d);return e},m.buildBlockOrder=function(a){var b=[];for(var c in a)"__order__"!==c&&"__call__"!==c&&b.push(c);a.__order__=b},m.buildInlinePatterns=function(a){var b=[];for(var c in a)if(!c.match(/^__.*__$/)){var d=c.replace(/([\\.*+?|()\[\]{}])/g,"\\$1").replace(/\n/,"\\n");b.push(1===c.length?d:"(?:"+d+")")}b=b.join("|"),a.__patterns__=b;var e=a.__call__;a.__call__=function(a,c){return void 0!==c?e.call(this,a,c):e.call(this,a,b)}};var o=k.extract_attr;m.renderJsonML=function(a,b){b=b||{},b.root=b.root||!1;var c=[];if(b.root)c.push(f(a));else for(a.shift(),!a.length||"object"!=typeof a[0]||a[0]instanceof Array||a.shift();a.length;)c.push(f(a.shift()));return c.join("\n\n")},m.toHTMLTree=function(a,b,c){"string"==typeof a&&(a=this.parse(a,b));var d=o(a),e={};d&&d.references&&(e=d.references);var f=g(a,e,c);return h(f),f},m.toHTML=function(a,b,c){var d=this.toHTMLTree(a,b,c);return this.renderJsonML(d)};var p={};p.inline_until_char=function(a,b){for(var c=0,d=[];;){if(a.charAt(c)===b)return c++,[c,d];if(c>=a.length)return null;var e=this.dialect.inline.__oneElement__.call(this,a.substr(c));c+=e[0],d.push.apply(d,e.slice(1))}},p.subclassDialect=function(a){function b(){}function c(){}return b.prototype=a.block,c.prototype=a.inline,{block:new b,inline:new c}};var q=k.forEach,o=k.extract_attr,n=k.mk_block,r=k.isEmpty,s=p.inline_until_char,t={block:{atxHeader:function(a,b){var c=a.match(/^(#{1,6})\s*(.*?)\s*#*\s*(?:\n|$)/);if(!c)return void 0;var d=["header",{level:c[1].length}];return Array.prototype.push.apply(d,this.processInline(c[2])),c[0].length<a.length&&b.unshift(n(a.substr(c[0].length),a.trailing,a.lineNumber+2)),[d]},setextHeader:function(a,b){var c=a.match(/^(.*)\n([-=])\2\2+(?:\n|$)/);if(!c)return void 0;var d="="===c[2]?1:2,e=["header",{level:d},c[1]];return c[0].length<a.length&&b.unshift(n(a.substr(c[0].length),a.trailing,a.lineNumber+2)),[e]},code:function(a,b){var c=[],d=/^(?: {0,3}\t| {4})(.*)\n?/;if(!a.match(d))return void 0;a:for(;;){var e=this.loop_re_over_block(d,a.valueOf(),function(a){c.push(a[1])});if(e.length){b.unshift(n(e,a.trailing));break a}if(!b.length)break a;if(!b[0].match(d))break a;c.push(a.trailing.replace(/[^\n]/g,"").substring(2)),a=b.shift()}return[["code_block",c.join("\n")]]},horizRule:function(a,b){var c=a.match(/^(?:([\s\S]*?)\n)?[ \t]*([-_*])(?:[ \t]*\2){2,}[ \t]*(?:\n([\s\S]*))?$/);if(!c)return void 0;var d=[["hr"]];if(c[1]){var e=n(c[1],"",a.lineNumber);d.unshift.apply(d,this.toTree(e,[]))}return c[3]&&b.unshift(n(c[3],a.trailing,a.lineNumber+1)),d},lists:function(){function a(a){return new RegExp("(?:^("+i+"{0,"+a+"} {0,3})("+f+")\\s+)|"+"(^"+i+"{0,"+(a-1)+"}[ ]{0,4})")}function b(a){return a.replace(/ {0,3}\t/g,"    ")}function c(a,b,c,d){if(b)return a.push(["para"].concat(c)),void 0;var e=a[a.length-1]instanceof Array&&"para"===a[a.length-1][0]?a[a.length-1]:a;d&&a.length>1&&c.unshift(d);for(var f=0;f<c.length;f++){var g=c[f],h="string"==typeof g;h&&e.length>1&&"string"==typeof e[e.length-1]?e[e.length-1]+=g:e.push(g)}}function d(a,b){for(var c=new RegExp("^("+i+"{"+a+"}.*?\\n?)*$"),d=new RegExp("^"+i+"{"+a+"}","gm"),e=[];b.length>0&&c.exec(b[0]);){var f=b.shift(),g=f.replace(d,"");e.push(n(g,f.trailing,f.lineNumber))}return e}function e(a,b,c){var d=a.list,e=d[d.length-1];if(!(e[1]instanceof Array&&"para"===e[1][0]))if(b+1===c.length)e.push(["para"].concat(e.splice(1,e.length-1)));else{var f=e.pop();e.push(["para"].concat(e.splice(1,e.length-1)),f)}}var f="[*+-]|\\d+\\.",g=/[*+-]/,h=new RegExp("^( {0,3})("+f+")[ 	]+"),i="(?: {0,3}\\t| {4})";return function(f,i){function j(a){var b=g.exec(a[2])?["bulletlist"]:["numberlist"];return n.push({list:b,indent:a[1]}),b}var k=f.match(h);if(!k)return void 0;for(var l,m,n=[],o=j(k),p=!1,r=[n[0].list];;){for(var s=f.split(/(?=\n)/),t="",u="",v=0;v<s.length;v++){u="";var w=s[v].replace(/^\n/,function(a){return u=a,""}),x=a(n.length);if(k=w.match(x),void 0!==k[1]){t.length&&(c(l,p,this.processInline(t),u),p=!1,t=""),k[1]=b(k[1]);var y=Math.floor(k[1].length/4)+1;if(y>n.length)o=j(k),l.push(o),l=o[1]=["listitem"];else{var z=!1;for(m=0;m<n.length;m++)if(n[m].indent===k[1]){o=n[m].list,n.splice(m+1,n.length-(m+1)),z=!0;break}z||(y++,y<=n.length?(n.splice(y,n.length-y),o=n[y-1].list):(o=j(k),l.push(o))),l=["listitem"],o.push(l)}u=""}w.length>k[0].length&&(t+=u+w.substr(k[0].length))}t.length&&(c(l,p,this.processInline(t),u),p=!1,t="");var A=d(n.length,i);A.length>0&&(q(n,e,this),l.push.apply(l,this.toTree(A,[])));var B=i[0]&&i[0].valueOf()||"";if(!B.match(h)&&!B.match(/^ /))break;f=i.shift();var C=this.dialect.block.horizRule(f,i);if(C){r.push.apply(r,C);break}q(n,e,this),p=!0}return r}}(),blockquote:function(a,b){if(!a.match(/^>/m))return void 0;var c=[];if(">"!==a[0]){for(var d=a.split(/\n/),e=[],f=a.lineNumber;d.length&&">"!==d[0][0];)e.push(d.shift()),f++;var g=n(e.join("\n"),"\n",a.lineNumber);c.push.apply(c,this.processBlock(g,[])),a=n(d.join("\n"),a.trailing,f)}for(;b.length&&">"===b[0][0];){var h=b.shift();a=n(a+a.trailing+h,h.trailing,a.lineNumber)}var i=a.replace(/^> ?/gm,""),j=(this.tree,this.toTree(i,["blockquote"])),k=o(j);return k&&k.references&&(delete k.references,r(k)&&j.splice(1,1)),c.push(j),c},referenceDefn:function(a,b){var c=/^\s*\[(.*?)\]:\s*(\S+)(?:\s+(?:(['"])(.*?)\3|\((.*?)\)))?\n?/;if(!a.match(c))return void 0;o(this.tree)||this.tree.splice(1,0,{});var d=o(this.tree);void 0===d.references&&(d.references={});var e=this.loop_re_over_block(c,a,function(a){a[2]&&"<"===a[2][0]&&">"===a[2][a[2].length-1]&&(a[2]=a[2].substring(1,a[2].length-1));var b=d.references[a[1].toLowerCase()]={href:a[2]};void 0!==a[4]?b.title=a[4]:void 0!==a[5]&&(b.title=a[5])});return e.length&&b.unshift(n(e,a.trailing)),[]},para:function(a){return[["para"].concat(this.processInline(a))]}},inline:{__oneElement__:function(a,b,c){var d,e;b=b||this.dialect.inline.__patterns__;var f=new RegExp("([\\s\\S]*?)("+(b.source||b)+")");if(d=f.exec(a),!d)return[a.length,a];if(d[1])return[d[1].length,d[1]];var e;return d[2]in this.dialect.inline&&(e=this.dialect.inline[d[2]].call(this,a.substr(d.index),d,c||[])),e=e||[d[2].length,d[2]]},__call__:function(a,b){function c(a){"string"==typeof a&&"string"==typeof e[e.length-1]?e[e.length-1]+=a:e.push(a)}for(var d,e=[];a.length>0;)d=this.dialect.inline.__oneElement__.call(this,a,b,e),a=a.substr(d.shift()),q(d,c);return e},"]":function(){},"}":function(){},__escape__:/^\\[\\`\*_{}\[\]()#\+.!\-]/,"\\":function(a){return this.dialect.inline.__escape__.exec(a)?[2,a.charAt(1)]:[1,"\\"]},"![":function(a){var b=a.match(/^!\[(.*?)\][ \t]*\([ \t]*([^")]*?)(?:[ \t]+(["'])(.*?)\3)?[ \t]*\)/);if(b){b[2]&&"<"===b[2][0]&&">"===b[2][b[2].length-1]&&(b[2]=b[2].substring(1,b[2].length-1)),b[2]=this.dialect.inline.__call__.call(this,b[2],/\\/)[0];var c={alt:b[1],href:b[2]||""};return void 0!==b[4]&&(c.title=b[4]),[b[0].length,["img",c]]}return b=a.match(/^!\[(.*?)\][ \t]*\[(.*?)\]/),b?[b[0].length,["img_ref",{alt:b[1],ref:b[2].toLowerCase(),original:b[0]}]]:[2,"!["]},"[":function v(a){var b=String(a),c=s.call(this,a.substr(1),"]");if(!c)return[1,"["];var v,d,e=1+c[0],f=c[1];a=a.substr(e);var g=a.match(/^\s*\([ \t]*([^"']*)(?:[ \t]+(["'])(.*?)\2)?[ \t]*\)/);if(g){var h=g[1];if(e+=g[0].length,h&&"<"===h[0]&&">"===h[h.length-1]&&(h=h.substring(1,h.length-1)),!g[3])for(var i=1,j=0;j<h.length;j++)switch(h[j]){case"(":i++;break;case")":0===--i&&(e-=h.length-j,h=h.substring(0,j))}return h=this.dialect.inline.__call__.call(this,h,/\\/)[0],d={href:h||""},void 0!==g[3]&&(d.title=g[3]),v=["link",d].concat(f),[e,v]}return g=a.match(/^\s*\[(.*?)\]/),g?(e+=g[0].length,d={ref:(g[1]||String(f)).toLowerCase(),original:b.substr(0,e)},v=["link_ref",d].concat(f),[e,v]):1===f.length&&"string"==typeof f[0]?(d={ref:f[0].toLowerCase(),original:b.substr(0,e)},v=["link_ref",d,f[0]],[e,v]):[1,"["]},"<":function(a){var b;return null!==(b=a.match(/^<(?:((https?|ftp|mailto):[^>]+)|(.*?@.*?\.[a-zA-Z]+))>/))?b[3]?[b[0].length,["link",{href:"mailto:"+b[3]},b[3]]]:"mailto"===b[2]?[b[0].length,["link",{href:b[1]},b[1].substr("mailto:".length)]]:[b[0].length,["link",{href:b[1]},b[1]]]:[1,"<"]},"`":function(a){var b=a.match(/(`+)(([\s\S]*?)\1)/);return b&&b[2]?[b[1].length+b[2].length,["inlinecode",b[3]]]:[1,"`"]},"  \n":function(){return[3,["linebreak"]]}}};t.inline["**"]=i("strong","**"),t.inline.__=i("strong","__"),t.inline["*"]=i("em","*"),t.inline._=i("em","_"),m.dialects.Gruber=t,m.buildBlockOrder(m.dialects.Gruber.block),m.buildInlinePatterns(m.dialects.Gruber.inline);var u=p.subclassDialect(t),o=k.extract_attr,q=k.forEach;u.processMetaHash=function(a){for(var b=j(a),c={},d=0;d<b.length;++d)if(/^#/.test(b[d]))c.id=b[d].substring(1);else if(/^\./.test(b[d]))c["class"]=c["class"]?c["class"]+b[d].replace(/./," "):b[d].substring(1);else if(/\=/.test(b[d])){var e=b[d].split(/\=/);c[e[0]]=e[1]}return c},u.block.document_meta=function(a){if(a.lineNumber>1)return void 0;if(!a.match(/^(?:\w+:.*\n)*\w+:.*$/))return void 0;o(this.tree)||this.tree.splice(1,0,{});var b=a.split(/\n/);for(var c in b){var d=b[c].match(/(\w+):\s*(.*)$/),e=d[1].toLowerCase(),f=d[2];this.tree[1][e]=f}return[]},u.block.block_meta=function(a){var b=a.match(/(^|\n) {0,3}\{:\s*((?:\\\}|[^\}])*)\s*\}$/);if(!b)return void 0;var c,d=this.dialect.processMetaHash(b[2]);if(""===b[1]){var e=this.tree[this.tree.length-1];if(c=o(e),"string"==typeof e)return void 0;c||(c={},e.splice(1,0,c));for(var f in d)c[f]=d[f];return[]}var g=a.replace(/\n.*$/,""),h=this.processBlock(g,[]);c=o(h[0]),c||(c={},h[0].splice(1,0,c));for(var f in d)c[f]=d[f];return h},u.block.definition_list=function(a,b){var c,d,e=/^((?:[^\s:].*\n)+):\s+([\s\S]+)$/,f=["dl"];if(!(d=a.match(e)))return void 0;for(var g=[a];b.length&&e.exec(b[0]);)g.push(b.shift());for(var h=0;h<g.length;++h){var d=g[h].match(e),i=d[1].replace(/\n$/,"").split(/\n/),j=d[2].split(/\n:\s+/);for(c=0;c<i.length;++c)f.push(["dt",i[c]]);for(c=0;c<j.length;++c)f.push(["dd"].concat(this.processInline(j[c].replace(/(\n)\s+/,"$1"))))}return[f]},u.block.table=function w(a){var b,c,d=function(a,b){b=b||"\\s",b.match(/^[\\|\[\]{}?*.+^$]$/)&&(b="\\"+b);for(var c,d=[],e=new RegExp("^((?:\\\\.|[^\\\\"+b+"])*)"+b+"(.*)");c=a.match(e);)d.push(c[1]),a=c[2];return d.push(a),d},e=/^ {0,3}\|(.+)\n {0,3}\|\s*([\-:]+[\-| :]*)\n((?:\s*\|.*(?:\n|$))*)(?=\n|$)/,f=/^ {0,3}(\S(?:\\.|[^\\|])*\|.*)\n {0,3}([\-:]+\s*\|[\-| :]*)\n((?:(?:\\.|[^\\|])*\|.*(?:\n|$))*)(?=\n|$)/;if(c=a.match(e))c[3]=c[3].replace(/^\s*\|/gm,"");else if(!(c=a.match(f)))return void 0;var w=["table",["thead",["tr"]],["tbody"]];c[2]=c[2].replace(/\|\s*$/,"").split("|");var g=[];for(q(c[2],function(a){a.match(/^\s*-+:\s*$/)?g.push({align:"right"}):a.match(/^\s*:-+\s*$/)?g.push({align:"left"}):a.match(/^\s*:-+:\s*$/)?g.push({align:"center"}):g.push({})}),c[1]=d(c[1].replace(/\|\s*$/,""),"|"),b=0;b<c[1].length;b++)w[1][1].push(["th",g[b]||{}].concat(this.processInline(c[1][b].trim())));return q(c[3].replace(/\|\s*$/gm,"").split("\n"),function(a){var c=["tr"];for(a=d(a,"|"),b=0;b<a.length;b++)c.push(["td",g[b]||{}].concat(this.processInline(a[b].trim())));w[2].push(c)},this),[w]},u.inline["{:"]=function(a,b,c){if(!c.length)return[2,"{:"];var d=c[c.length-1];if("string"==typeof d)return[2,"{:"];var e=a.match(/^\{:\s*((?:\\\}|[^\}])*)\s*\}/);if(!e)return[2,"{:"];var f=this.dialect.processMetaHash(e[1]),g=o(d);g||(g={},d.splice(1,0,g));for(var h in f)g[h]=f[h];return[e[0].length,""]},m.dialects.Maruku=u,m.dialects.Maruku.inline.__escape__=/^\\[\\`\*_{}\[\]()#\+.!\-|:]/,m.buildBlockOrder(m.dialects.Maruku.block),m.buildInlinePatterns(m.dialects.Maruku.inline),a.Markdown=m,a.parse=m.parse,a.toHTML=m.toHTML,a.toHTMLTree=m.toHTMLTree,a.renderJsonML=m.renderJsonML}(function(){return window.markdown={},window.markdown}());
 (function($, _) {
-    var root = this,
-        Villain;
-    Villain = root.Villain = {};
+    var that = this,
+            Villain;
+    Villain = that.Villain = {};
     Villain.EventBus = Villain.EventBus || _.extend({}, Backbone.Events);
     Villain.Blocks = Villain.Blocks || {};
     Villain.Editor = Villain.Editor || {};
     Villain.options = Villain.options || [];
 
     Villain.defaults = {
-        browseURL: 'browse/',
-        textArea: '#textarea',
-        uploadURL: '/upload/post'
+            browseURL: 'browse/',
+            textArea: '#textarea',
+            uploadURL: '/upload/post'
     };
 
     function $element(el) {
-        return el instanceof $ ? el : $(el);
+            return el instanceof $ ? el : $(el);
     }
 
     /* Mixins */
@@ -4072,9 +4072,7 @@ if (typeof exports === 'object') {
         },
     
         getJSON: function() {
-            text = this.getTextBlockInner();
-            console.log(this.getTextBlockInner());
-            textNode = Villain.toMD(text);
+            textNode = Villain.toMD(this.getTextBlockInner());
             data = this.getData();
             json = {
                 type: this.type,
@@ -4097,7 +4095,6 @@ if (typeof exports === 'object') {
                 this.setDataProperty('type', 'paragraph');
             }
             type = this.data.type;
-            console.log(type);
             this.$setup.hide();
             var radios = "";
             types = ['paragraph', 'lead'];
@@ -4119,17 +4116,72 @@ if (typeof exports === 'object') {
                 this.setDataProperty('type', $(e.target).val());
                 this.refreshContentBlock();
                 this.$content.attr('data-text-type', $(e.target).val());
-                console.log(this.data.type);
             }, this));
         },
     },
     {
         /* static methods */
         getButton: function(afterId) {
-            blockType = 'text';
+            var blockType = 'text';
             t = _.template([
                 '<button class="villain-block-button" data-type="<%= type %>" data-after-block-id="<%= id %>">',
                 '<i class="fa fa-paragraph"></i>',
+                '</button>'].join('\n'));
+            return t({id: afterId, type: blockType});
+        }
+    });
+    Villain.Blocks.Blockquote = Villain.Block.extend({
+        type: 'blockquote',
+        template: _.template(
+            '<div class="villain-quote-block villain-content"><blockquote contenteditable="true"><%= content %></blockquote><cite contenteditable="true"><%= cite %></cite></div>'
+        ),
+    
+        renderEditorHtml: function() {
+            blockTemplate = this.renderContentBlockHtml();
+            actionsTemplate = this.actionsTemplate();
+            wrapperTemplate = this.wrapperTemplate({content: blockTemplate, actions: actionsTemplate});
+            return wrapperTemplate;
+        },
+    
+        renderContentBlockHtml: function() {
+            text = this.getTextBlockInner() ? this.getTextBlockInner() : this.data.text;
+            return this.template({content: Villain.toHTML(text), cite: this.data.cite});
+        },
+    
+        renderEmpty: function() {
+            blockTemplate = this.template({content: 'quote', cite: 'author'});
+            actionsTemplate = this.actionsTemplate();
+            wrapperTemplate = this.wrapperTemplate({content: blockTemplate, actions: actionsTemplate});
+            return wrapperTemplate;
+        },
+    
+        getJSON: function() {
+            quote = this.$content.find('blockquote')[0].outerHTML;
+            cite = $('cite', this.$content).html();
+            textNode = Villain.toMD(quote);
+            data = this.getData();
+            json = {
+                type: this.type,
+                data: {
+                    text: textNode,
+                    cite: cite
+                }
+            };
+            return json;
+        },
+    
+        getHTML: function() {
+            textNode = this.getTextBlock().html();
+            return markdown.toHTML(textNode);
+        }
+    },
+    {
+        /* static methods */
+        getButton: function(afterId) {
+            var blockType = 'blockquote';
+            t = _.template([
+                '<button class="villain-block-button" data-type="<%= type %>" data-after-block-id="<%= id %>">',
+                '<i class="fa fa-quote-right"></i>',
                 '</button>'].join('\n'));
             return t({id: afterId, type: blockType});
         }
@@ -4169,7 +4221,7 @@ if (typeof exports === 'object') {
     }, {
         /* static methods */
         getButton: function(afterId) {
-            blockType = 'divider';
+            var blockType = 'divider';
             t = _.template([
                 '<button class="villain-block-button" data-type="<%= type %>" data-after-block-id="<%= id %>">',
                 '<i class="fa fa-minus"></i>',
@@ -4255,7 +4307,7 @@ if (typeof exports === 'object') {
     {
         /* static methods */
         getButton: function(afterId) {
-            blockType = 'header';
+            var blockType = 'header';
             t = _.template([
                 '<button class="villain-block-button" data-type="<%= type %>" data-after-block-id="<%= id %>">',
                 '<i class="fa fa-header"></i>',
@@ -4310,7 +4362,7 @@ if (typeof exports === 'object') {
           return markdown.replace(/<\/li>/mg,'\n')
                          .replace(/<\/?[^>]+(>|$)/g, '')
                          .replace(/^(.+)$/mg,' - $1');
-        },
+        }
         /*
         onBlockRender: function() {
           this.checkForList = _.bind(this.checkForList, this);
@@ -4322,7 +4374,7 @@ if (typeof exports === 'object') {
     {
         /* static methods */
         getButton: function(afterId) {
-            blockType = 'list';
+            var blockType = 'list';
             t = _.template([
                 '<button class="villain-block-button" ',
                 '        data-type="<%= type %>" ',
@@ -4410,8 +4462,7 @@ if (typeof exports === 'object') {
                         customXhr.upload.addEventListener('progress', that.progressHandlingFunction, false);
                     }
                     return customXhr;
-                },
-                dataType: 'json'
+                }
             }).done($.proxy(function(data) {
                 if (data.status == '200') {
                     // image uploaded successfully
@@ -4720,7 +4771,7 @@ if (typeof exports === 'object') {
     {
         /* static methods */
         getButton: function(afterId) {
-            blockType = 'image';
+            var blockType = 'image';
             t = _.template([
                 '<button class="villain-block-button" data-type="<%= type %>" data-after-block-id="<%= id %>">',
                 '<i class="fa fa-file-image-o"></i>',
@@ -4859,7 +4910,7 @@ if (typeof exports === 'object') {
     {
         /* static methods */
         getButton: function(afterId) {
-            blockType = 'video';
+            var blockType = 'video';
             t = _.template([
                 '<button class="villain-block-button" data-type="<%= type %>" data-after-block-id="<%= id %>">',
                 '<i class="fa fa-video-camera"></i>',
@@ -5001,7 +5052,7 @@ if (typeof exports === 'object') {
         getJSON: function() {
             var json = {
                 type: this.type,
-                data: [],
+                data: []
             };
             this.getColumns().each(function(i) {
                 var blocksData = [];
@@ -5085,7 +5136,7 @@ if (typeof exports === 'object') {
     {
         /* Static methods */
         getButton: function(afterId) {
-            blockType = 'columns';
+            var blockType = 'columns';
             t = _.template([
                 '<button class="villain-block-button" data-type="<%= type %>" data-after-block-id="<%= id %>">',
                 '<i class="fa fa-columns"></i>',
@@ -5125,7 +5176,6 @@ if (typeof exports === 'object') {
             try {
                 this.data = JSON.parse(this.$textArea.val());
             } catch (e) {
-                console.log('editor/init: No usable JSON found in textarea.');
                 this.data = null;
             }
             // inject json to textarea before submitting.
@@ -5279,7 +5329,7 @@ if (typeof exports === 'object') {
             'click .villain-format-bold': 'onClickBold',
             'click .villain-format-italic': 'onClickItalic',
             'click .villain-format-link': 'onClickLink',
-            'click .villain-format-unlink': 'onClickUnlink',
+            'click .villain-format-unlink': 'onClickUnlink'
         },
     
         onClickBold: function(e) {
@@ -5390,24 +5440,24 @@ if (typeof exports === 'object') {
     Villain.Editor.HTML = Villain.Editor.HTML || {};
     Villain.Editor.EditorHTML = Villain.Editor.EditorHTML || {};
 
-    Villain.toMD = function(html) {
-        html = toMarkdown(html);
+    Villain.toMD = function toMD(html) {
+        var html = toMarkdown(html);
         html = html.replace(/&nbsp;/g,' ');
         // Divitis style line breaks (handle the first line)
         html = html.replace(/([^<>]+)(<div>)/g,'$1\n$2')
                     // (double opening divs with one close from Chrome)
-                   .replace(/<div><div>/g,'\n<div>')
-                   .replace(/<div><br \/><\/div>/g, '\n\n')
-                   .replace(/(?:<div>)([^<>]+)(?:<div>)/g,'$1\n')
-                   // ^ (handle nested divs that start with content)
-                   .replace(/(?:<div>)(?:<br>)?([^<>]+)(?:<br>)?(?:<\/div>)/g,'$1\n')
-                   // ^ (handle content inside divs)
-                   .replace(/<\/p>/g,'\n\n')
-                   // P tags as line breaks
-                   .replace(/<(.)?br(.)?>/g,'\n')
-                   // Convert normal line breaks
-                   .replace(/&lt;/g,'<').replace(/&gt;/g,'>');
-                   // Encoding
+                    .replace(/<div><div>/g,'\n<div>')
+                    .replace(/<div><br \/><\/div>/g, '\n\n')
+                    .replace(/(?:<div>)([^<>]+)(?:<div>)/g,'$1\n')
+                    // ^ (handle nested divs that start with content)
+                    .replace(/(?:<div>)(?:<br>)?([^<>]+)(?:<br>)?(?:<\/div>)/g,'$1\n')
+                    // ^ (handle content inside divs)
+                    .replace(/<\/p>/g,'\n\n')
+                    // P tags as line breaks
+                    .replace(/<(.)?br(.)?>/g,'\n')
+                    // Convert normal line breaks
+                    .replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+                    // Encoding
 
         // strip whatever might be left.
         aggressiveStrip = true;
@@ -5420,103 +5470,88 @@ if (typeof exports === 'object') {
         return html;
     };
 
-    Villain.toHTML = function(markdown, type) {
+    Villain.toHTML = function toHTML(markdown, type) {
+        // MD -> HTML
+        type = _.classify(type);
 
-      console.log(markdown);
+        var html = markdown,
+            shouldWrap = type === 'Text';
 
+        if (_.isUndefined(shouldWrap)) { shouldWrap = false; }
 
-      // MD -> HTML
-      type = _.classify(type);
-
-      var html = markdown,
-          shouldWrap = type === 'Text';
-
-      if (_.isUndefined(shouldWrap)) { shouldWrap = false; }
-
-      if (shouldWrap) {
-        html = '<div>' + html;
-      }
-
-      html = html.replace(/\[([^\]]+)\]\(([^\)]+)\)/gm,function(match, p1, p2) {
-        return '<a href="' + p2 + '">' + p1.replace(/\r?\n/g, '') + '</a>';
-      });
-
-      // This may seem crazy, but because JS doesn't have a look behind,
-      // we reverse the string to regex out the italic items (and bold)
-      // and look for something that doesn't start (or end in the reversed strings case)
-      // with a slash.
-      html = _.reverse(
-               _.reverse(html)
-               .replace(/_(?!\\)((_\\|[^_])*)_(?=$|[^\\])/gm, function(match, p1) {
-                  return '>i/<' + p1.replace(/\r?\n/g, '').replace(/[\s]+$/,'') + '>i<';
-               })
-               .replace(/\*\*(?!\\)((\*\*\\|[^\*\*])*)\*\*(?=$|[^\\])/gm, function(match, p1) {
-                  return '>b/<' + p1.replace(/\r?\n/g, '').replace(/[\s]+$/,'') + '>b<';
-               })
-              );
-
-      html =  html.replace(/^\> (.+)$/mg,'$1');
-
-      // Use custom formatters toHTML functions (if any exist)
-      var formatName, format;
-      for (formatName in Villain.Formatters) {
-        if (Villain.Formatters.hasOwnProperty(formatName)) {
-          format = Villain.Formatters[formatName];
-          // Do we have a toHTML function?
-          if (!_.isUndefined(format.toHTML) && _.isFunction(format.toHTML)) {
-            html = format.toHTML(html);
-          }
+        if (shouldWrap) {
+            html = '<div>' + html;
         }
-      }
 
-      // Use custom block toHTML functions (if any exist)
-      /*
-      var block;
-      if (Villain.Blocks.hasOwnProperty(type)) {
-        block = Villain.Blocks[type];
-        // Do we have a toHTML function?
-        if (!_.isUndefined(block.prototype.toHTML) && _.isFunction(block.prototype.toHTML)) {
-          html = block.prototype.toHTML(html);
+        html = html.replace(/\[([^\]]+)\]\(([^\)]+)\)/gm, function(match, p1, p2) {
+            return '<a href="' + p2 + '">' + p1.replace(/\r?\n/g, '') + '</a>';
+        });
+
+        // This may seem crazy, but because JS doesn't have a look behind,
+        // we reverse the string to regex out the italic items (and bold)
+        // and look for something that doesn't start (or end in the reversed strings case)
+        // with a slash.
+        html = _.reverse(
+            _.reverse(html)
+            .replace(/_(?!\\)((_\\|[^_])*)_(?=$|[^\\])/gm, function(match, p1) {
+                return '>i/<' + p1.replace(/\r?\n/g, '').replace(/[\s]+$/,'') + '>i<';
+            })
+            .replace(/\*\*(?!\\)((\*\*\\|[^\*\*])*)\*\*(?=$|[^\\])/gm, function(match, p1) {
+                return '>b/<' + p1.replace(/\r?\n/g, '').replace(/[\s]+$/,'') + '>b<';
+            })
+        );
+
+        html =  html.replace(/^\> (.+)$/mg,'$1');
+
+        // Use custom formatters toHTML functions (if any exist)
+        var formatName, format;
+        for (formatName in Villain.Formatters) {
+            if (Villain.Formatters.hasOwnProperty(formatName)) {
+                format = Villain.Formatters[formatName];
+                // Do we have a toHTML function?
+                if (!_.isUndefined(format.toHTML) && _.isFunction(format.toHTML)) {
+                    html = format.toHTML(html);
+                }
+            }
         }
-      }
-      */
-      if (shouldWrap) {
-        html = html.replace(/\r?\n\r?\n/gm, '</div><div><br></div><div>');
-        html = html.replace(/\r?\n/gm, '</div><div>');
-      }
 
-      html = html.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
-                 .replace(/\r?\n/g, '<br>')
-                 .replace(/\*\*/, '')
-                 .replace(/__/, '');  // Cleanup any markdown characters left
+        if (shouldWrap) {
+            html = html.replace(/\r?\n\r?\n/gm, '</div><div><br></div><div>')
+                       .replace(/\r?\n/gm, '</div><div>');
+        }
 
-      // Replace escaped
-      html = html.replace(/\\\*/g, '*')
-                 .replace(/\\\[/g, '[')
-                 .replace(/\\\]/g, ']')
-                 .replace(/\\\_/g, '_')
-                 .replace(/\\\(/g, '(')
-                 .replace(/\\\)/g, ')')
-                 .replace(/\\\-/g, '-');
+        html = html.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
+                   .replace(/\r?\n/g, '<br>')
+                   .replace(/\*\*/, '')
+                   .replace(/__/, '');  // Cleanup any markdown characters left
 
-      if (shouldWrap) {
-        html += '</div>';
-      }
+        // Replace escaped
+        html = html.replace(/\\\*/g, '*')
+                   .replace(/\\\[/g, '[')
+                   .replace(/\\\]/g, ']')
+                   .replace(/\\\_/g, '_')
+                   .replace(/\\\(/g, '(')
+                   .replace(/\\\)/g, ')')
+                   .replace(/\\\-/g, '-');
 
-      return html;
+        if (shouldWrap) {
+            html += '</div>';
+        }
+
+        return html;
     };
 
-    Villain.setOptions = function(options) {
+    Villain.setOptions = function setOptions(options) {
         Villain.options = $.extend({}, Villain.defaults, options);
     };
 
-    Villain.browser = function() {
-      var browser = {};
+    Villain.browser = function browser() {
+        var browser = {};
 
-      if (this.getIEversion() > 0) {
-        browser.msie = true;
-      } else {
-        var ua = navigator.userAgent.toLowerCase(),
+        if (this.getIEversion() > 0) {
+            browser.msie = true;
+        } else {
+            var ua = navigator.userAgent.toLowerCase(),
             match = /(chrome)[ \/]([\w.]+)/.exec(ua) ||
                     /(webkit)[ \/]([\w.]+)/.exec(ua) ||
                     /(opera)(?:.*version|)[ \/]([\w.]+)/.exec(ua) ||
@@ -5529,112 +5564,113 @@ if (typeof exports === 'object') {
                 version: match[2] || '0'
             };
 
-        if (match[1]) {
-            browser[matched.browser] = true;
-        }
-        if (parseInt(matched.version, 10) < 9 && browser.msie) {
-            browser.oldMsie = true;
-        }
+            if (match[1]) {
+                browser[matched.browser] = true;
+            }
+            if (parseInt(matched.version, 10) < 9 && browser.msie) {
+                browser.oldMsie = true;
+            }
 
-        // Chrome is Webkit, but Webkit is also Safari.
-        if (browser.chrome) {
-          browser.webkit = true;
-        } else if (browser.webkit) {
-          browser.safari = true;
+            // Chrome is Webkit, but Webkit is also Safari.
+            if (browser.chrome) {
+                browser.webkit = true;
+            } else if (browser.webkit) {
+                browser.safari = true;
+            }
         }
-      }
-      return browser;
+        return browser;
     };
 
-    Villain.Editor.processPaste = function(pastedFrag) {
+    Villain.Editor.processPaste = function processPaste(pastedFrag) {
+        var cleanHtml;
         if (pastedFrag.match(/(class=\"?Mso|style=\"[^\"]*\bmso\-|w:WordDocument)/gi)) {
-            clean_html = Villain.Editor.wordClean(pastedFrag);
-            clean_html = Villain.Editor.clean($('<div>').append(clean_html).html(), false, true);
-            clean_html = Villain.Editor.removeEmptyTags(clean_html);
+            cleanHtml = Villain.Editor.wordClean(pastedFrag);
+            cleanHtml = Villain.Editor.clean($('<div>').append(cleanHtml).html(), false, true);
+            cleanHtml = Villain.Editor.removeEmptyTags(cleanHtml);
         } else {
             // Paste.
-            clean_html = Villain.Editor.clean(pastedFrag, false, true);
-            clean_html = Villain.Editor.removeEmptyTags(clean_html);
+            cleanHtml = Villain.Editor.clean(pastedFrag, false, true);
+            cleanHtml = Villain.Editor.removeEmptyTags(cleanHtml);
         }
 
-        clean_html = Villain.Editor.plainPasteClean(clean_html);
+        cleanHtml = Villain.Editor.plainPasteClean(cleanHtml);
 
         // Check if there is anything to clean.
-        if (clean_html !== '') {
+        if (cleanHtml !== '') {
             // Insert HTML.
-             return clean_html;
+            return cleanHtml;
         }
     };
 
-    Villain.Editor.wordClean = function(html) {
-      // Keep only body.
-      if (html.indexOf('<body') >= 0) {
-        html = html.replace(/[.\s\S\w\W<>]*<body[^>]*>([.\s\S\w\W<>]*)<\/body>[.\s\S\w\W<>]*/g, '$1');
-      }
+    Villain.Editor.wordClean = function wordClean(html) {
+        // Keep only body.
+        if (html.indexOf('<body') >= 0) {
+            html = html.replace(/[.\s\S\w\W<>]*<body[^>]*>([.\s\S\w\W<>]*)<\/body>[.\s\S\w\W<>]*/g, '$1');
+        }
 
-      // Single item list.
-      html = html.replace(
-        /<p(.*?)class="?'?MsoListParagraph"?'?([\s\S]*?)>([\s\S]*?)<\/p>/gi,
-        '<ul><li><p>$3</p></li></ul>'
-      );
+        // Single item list.
+        html = html.replace(
+            /<p(.*?)class="?'?MsoListParagraph"?'?([\s\S]*?)>([\s\S]*?)<\/p>/gi,
+            '<ul><li><p>$3</p></li></ul>'
+        );
 
-      // List start.
-      html = html.replace(
-        /<p(.*?)class="?'?MsoListParagraphCxSpFirst"?'?([\s\S]*?)>([\s\S]*?)<\/p>/gi,
-        '<ul><li><p>$3</p></li>'
-      );
+        // List start.
+        html = html.replace(
+            /<p(.*?)class="?'?MsoListParagraphCxSpFirst"?'?([\s\S]*?)>([\s\S]*?)<\/p>/gi,
+            '<ul><li><p>$3</p></li>'
+        );
 
-      // List middle.
-      html = html.replace(
-        /<p(.*?)class="?'?MsoListParagraphCxSpMiddle"?'?([\s\S]*?)>([\s\S]*?)<\/p>/gi,
-        '<li><p>$3</p></li>'
-      );
+        // List middle.
+        html = html.replace(
+            /<p(.*?)class="?'?MsoListParagraphCxSpMiddle"?'?([\s\S]*?)>([\s\S]*?)<\/p>/gi,
+            '<li><p>$3</p></li>'
+        );
 
-      // List end.
-      html = html.replace(/<p(.*?)class="?'?MsoListParagraphCxSpLast"?'?([\s\S]*?)>([\s\S]*?)<\/p>/gi,
-          '<li><p>$3</p></li></ul>');
+        // List end.
+        html = html.replace(/<p(.*?)class="?'?MsoListParagraphCxSpLast"?'?([\s\S]*?)>([\s\S]*?)<\/p>/gi,
+                '<li><p>$3</p></li></ul>');
 
-      // Clean list bullets.
-      html = html.replace(/<span([^<]*?)style="?'?mso-list:Ignore"?'?([\s\S]*?)>([\s\S]*?)<span/gi, '<span><span');
+        // Clean list bullets.
+        html = html.replace(/<span([^<]*?)style="?'?mso-list:Ignore"?'?([\s\S]*?)>([\s\S]*?)<span/gi, '<span><span');
 
-      // Webkit clean list bullets.
-      html = html.replace(/<!--\[if \!supportLists\]-->([\s\S]*?)<!--\[endif\]-->/gi, '');
+        // Webkit clean list bullets.
+        html = html.replace(/<!--\[if \!supportLists\]-->([\s\S]*?)<!--\[endif\]-->/gi, '');
 
-      // Remove mso classes.
-      html = html.replace(/(\n|\r| class=(")?Mso[a-zA-Z]+(")?)/gi, ' ');
+        // Remove mso classes.
+        html = html.replace(/(\n|\r| class=(")?Mso[a-zA-Z]+(")?)/gi, ' ');
 
-      // Remove comments.
-      html = html.replace(/<!--[\s\S]*?-->/gi, '');
+        // Remove comments.
+        html = html.replace(/<!--[\s\S]*?-->/gi, '');
 
-      // Remove tags but keep content.
-      html = html.replace(/<(\/)*(meta|link|span|\\?xml:|st1:|o:|font)(.*?)>/gi, '');
+        // Remove tags but keep content.
+        html = html.replace(/<(\/)*(meta|link|span|\\?xml:|st1:|o:|font)(.*?)>/gi, '');
 
-      // Remove no needed tags.
-      var word_tags = ['style', 'script', 'applet', 'embed', 'noframes', 'noscript'];
-      for (var i = 0; i < word_tags.length; i++) {
-        var regex = new RegExp('<' + word_tags[i] + '.*?' + word_tags[i] + '(.*?)>', 'gi');
-        html = html.replace(regex, '');
-      }
+        // Remove no needed tags.
+        var word_tags = ['style', 'script', 'applet', 'embed', 'noframes', 'noscript'];
+        for (var i = 0; i < word_tags.length; i++) {
+            var regex = new RegExp('<' + word_tags[i] + '.*?' + word_tags[i] + '(.*?)>', 'gi');
+            html = html.replace(regex, '');
+        }
 
-      // Remove attributes.
-      html = html.replace(/([\w\-]*)=("[^<>"]*"|'[^<>']*'|\w+)/gi, '');
+        // Remove attributes.
+        html = html.replace(/([\w\-]*)=("[^<>"]*"|'[^<>']*'|\w+)/gi, '');
 
-      // Remove spaces.
-      html = html.replace(/&nbsp;/gi, '');
+        // Remove spaces.
+        html = html.replace(/&nbsp;/gi, '');
 
-      // Remove empty tags.
-      var oldHTML;
-      do {
-        oldHTML = html;
-        html = html.replace(/<[^\/>][^>]*><\/[^>]+>/gi, '');
-      } while (html != oldHTML);
+        // Remove empty tags.
+        var oldHTML;
+        do {
+            oldHTML = html;
+            html = html.replace(/<[^\/>][^>]*><\/[^>]+>/gi, '');
+        } while (html != oldHTML);
 
-      html = Villain.Editor.clean(html);
+        html = Villain.Editor.clean(html);
 
-      return html;
+        return html;
     };
 
-    Villain.Editor.clean = function(html, allow_id, clean_style, allowed_tags, allowed_attrs) {
+    Villain.Editor.clean = function clean(html, allow_id, clean_style, allowed_tags, allowed_attrs) {
         // List of allowed attributes.
         allowed_attrs = [
             'accept', 'accept-charset', 'accesskey', 'action', 'align',
@@ -5701,7 +5737,7 @@ if (typeof exports === 'object') {
 
         // Remove the class.
         var $div = $('<div>').append(html);
-        $div.find('[class]:not([class^="fr-"])').each (function(index, el) {
+        $div.find('[class]:not([class^="fr-"])').each(function(index, el) {
             $(el).removeAttr('class');
         });
 
@@ -5710,60 +5746,59 @@ if (typeof exports === 'object') {
         return html;
     };
 
-    Villain.Editor.plainPasteClean = function(html) {
-      var $div = $('<div>').html(html);
+    Villain.Editor.plainPasteClean = function plainPasteClean(html) {
+        var $div = $('<div>').html(html);
 
-      $div.find('h1, h2, h3, h4, h5, h6, pre, blockquote').each (function(i, el) {
-        $(el).replaceWith('<p>' + $(el).html() + '</p>');
-      });
+        $div.find('h1, h2, h3, h4, h5, h6, pre, blockquote').each(function(i, el) {
+            $(el).replaceWith('<p>' + $(el).html() + '</p>');
+        });
 
-      var replacePlain = function(i, el) {
-        $(el).replaceWith($(el).html());
-      };
+        var replacePlain = function(i, el) {
+            $(el).replaceWith($(el).html());
+        };
 
-      while ($div.find('strong, em, strike, b, u, i, sup, sub, span, a').length) {
-        $div.find('strong, em, strike, b, u, i, sup, sub, span, a').each (replacePlain);
-      }
-
-      return $div.html();
-    };
-
-    Villain.Editor.removeEmptyTags = function(html) {
-      var i,
-          $div = $('<div>').html(html),
-          // Clean empty tags.
-          empty_tags = $div.find('*:empty:not(br, img, td, th)');
-
-      while (empty_tags.length) {
-        for (i = 0; i < empty_tags.length; i++) {
-          $(empty_tags[i]).remove();
+        while ($div.find('strong, em, strike, b, u, i, sup, sub, span, a').length) {
+            $div.find('strong, em, strike, b, u, i, sup, sub, span, a').each (replacePlain);
         }
 
-        empty_tags = $div.find('*:empty:not(br, img, td, th)');
-      }
-
-      // Workaround for Notepad paste.
-      $div.find('> div').each(function(i, div) {
-        $(div).replaceWith($(div).html() + '<br/>');
-      });
-
-      // Remove divs.
-      var divs = $div.find('div');
-      while (divs.length) {
-        for (i = 0; i < divs.length; i++) {
-          var $el = $(divs[i]),
-              text = $el.html().replace(/\u0009/gi, '').trim();
-
-          $el.replaceWith(text);
-        }
-
-        divs = $div.find('div');
-      }
-
-      return $div.html();
+        return $div.html();
     };
 
-    Villain.Editor.pasteHtmlAtCaret = function(html) {
+    Villain.Editor.removeEmptyTags = function removeEmptyTags(html) {
+        var i,
+            $div = $('<div>').html(html),
+            empty_tags = $div.find('*:empty:not(br, img, td, th)');
+
+        while (empty_tags.length) {
+            for (i = 0; i < empty_tags.length; i++) {
+                $(empty_tags[i]).remove();
+            }
+
+            empty_tags = $div.find('*:empty:not(br, img, td, th)');
+        }
+
+        // Workaround for Notepad paste.
+        $div.find('> div').each(function(i, div) {
+            $(div).replaceWith($(div).html() + '<br/>');
+        });
+
+        // Remove divs.
+        var divs = $div.find('div');
+        while (divs.length) {
+            for (i = 0; i < divs.length; i++) {
+                var $el = $(divs[i]),
+                    text = $el.html().replace(/\u0009/gi, '').trim();
+
+                $el.replaceWith(text);
+            }
+
+            divs = $div.find('div');
+        }
+
+        return $div.html();
+    };
+
+    Villain.Editor.pasteHtmlAtCaret = function pasteHtmlAtCaret(html) {
         var sel, range;
         if (window.getSelection) {
             // IE9 and non-IE
@@ -5778,7 +5813,7 @@ if (typeof exports === 'object') {
                 var el = document.createElement('div');
                 el.innerHTML = html;
                 var frag = document.createDocumentFragment(), node, lastNode;
-                while ((node = el.firstChild)) {
+                while (node = el.firstChild) {
                     lastNode = frag.appendChild(node);
                 }
                 range.insertNode(frag);
@@ -5805,11 +5840,12 @@ if (typeof exports === 'object') {
     Villain.BlockRegistry.Map = {
         text: Villain.Blocks.Text,
         header: Villain.Blocks.Header,
+        blockquote: Villain.Blocks.Blockquote,
         list: Villain.Blocks.List,
         image: Villain.Blocks.Image,
         video: Villain.Blocks.Video,
         divider: Villain.Blocks.Divider,
-        columns: Villain.Blocks.Columns,
+        columns: Villain.Blocks.Columns
     };
     
     Villain.BlockRegistry.getBlockClassByType = function(type) {
