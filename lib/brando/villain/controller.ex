@@ -27,18 +27,22 @@ defmodule Brando.Villain.Controller do
         |> preload([:image_category, :images])
         |> Brando.repo.get_by(slug: series_slug)
 
-        image_list = Enum.map(image_series.images, fn image ->
-          sizes =
-            Enum.map(image.image.sizes, fn({k, v}) ->
-              {k, Brando.HTML.media_url(v)}
-            end)
-            |> Enum.into(%{})
-          %{src: Brando.HTML.media_url(image.image.path),
-            thumb: Brando.HTML.media_url(Brando.HTML.img(image.image, :thumb)),
-            sizes: sizes,
-            title: image.image.title, credits: image.image.credits}
-        end)
-        json(conn, %{status: "200", images: image_list})
+        if image_series do
+          image_list = Enum.map(image_series.images, fn image ->
+            sizes =
+              Enum.map(image.image.sizes, fn({k, v}) ->
+                {k, Brando.HTML.media_url(v)}
+              end)
+              |> Enum.into(%{})
+            %{src: Brando.HTML.media_url(image.image.path),
+              thumb: Brando.HTML.media_url(Brando.HTML.img(image.image, :thumb)),
+              sizes: sizes,
+              title: image.image.title, credits: image.image.credits}
+          end)
+          json(conn, %{status: "200", images: image_list})
+        else
+          json(conn, %{status: "204", images: []})
+        end
       end
 
       @doc false
