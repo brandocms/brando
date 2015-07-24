@@ -1,5 +1,5 @@
 <h1>Ny <%= singular %></h1>
-<%= "<%=" %> <%= alias %>Form.get_form(type: :create, action: :create, params: [], values: assigns[:<%= singular %>], errors: assigns[:errors]) <%= "%\>" %>
+<%= "<%=" %> <%= alias %>Form.get_form(type: :create, action: :create, params: [], values: @changeset.params, errors: @changeset.errors) <%= "%\>" %>
 <div class="form-actions">
   <a href="<%= "<%=" %> Helpers.<%= admin_path %>_path(@conn, :index) <%= "%\>" %>" class="btn btn-default">
     <i class="fa fa-list fa-fw m-r-sm"></i> Tilbake til oversikten
