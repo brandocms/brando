@@ -13,12 +13,12 @@ defmodule Brando.Villain.ParserTest do
 
   test "video/1 youtube" do
     assert video(%{"remote_id" => "asdf1234", "source" => "youtube"}) ==
-      ~s(<iframe width="420" height="315" src="//www.youtube.com/embed/asdf1234" frameborder="0" allowfullscreen></iframe>)
+      "<div class=\"video-wrapper\"><iframe width=\"420\" height=\"315\" src=\"//www.youtube.com/embed/asdf1234?autoplay=1&controls=0&showinfo=0&rel=0\" frameborder=\"0\" allowfullscreen></iframe></div>"
   end
 
   test "video/1 vimeo" do
     assert video(%{"remote_id" => "asdf1234", "source" => "vimeo"}) ==
-      "<iframe src=\"//player.vimeo.com/video/asdf1234\" width=\"500\" height=\"281\" frameborder=\"0\" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>"
+      "<div class=\"video-wrapper\"><iframe src=\"//player.vimeo.com/video/asdf1234\" width=\"500\" height=\"281\" frameborder=\"0\" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe></div>"
   end
 
   test "image/1" do
