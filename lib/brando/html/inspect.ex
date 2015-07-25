@@ -111,7 +111,7 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_field(_name, Brando.Type.Image, value) do
-    ~s(<div class="imageserie m-b-md"><img src="#{media_url(img(value, :micro))}" style="padding-bottom: 3px;" /></div>)
+    ~s(<div class="imageserie m-b-md"><img src="#{media_url(img(value, :thumb))}" style="padding-bottom: 3px;" /></div>)
   end
 
   defp do_inspect_field(_name, Brando.Type.Status, value) do

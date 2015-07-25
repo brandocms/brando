@@ -208,7 +208,7 @@ defmodule Brando.Form.FieldsTest do
     assert F.parse_error("must be unique") == "Feltet må være unikt. Verdien finnes allerede i databasen."
     assert F.parse_error("has invalid format") == "Feltet har feil format."
     assert F.parse_error("is reserved") == "Verdien er reservert."
-    assert F.parse_error({"should be at least %{count} characters", 10}) == "Feltets verdi er for kort. Må være > 10 tegn."
+    assert F.parse_error({"should be at least %{count} characters", count: 10}) == "Feltets verdi er for kort. Må være > 10 tegn."
   end
 
   test "render_help_text/1" do
