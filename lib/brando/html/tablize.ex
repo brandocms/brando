@@ -59,7 +59,7 @@ defmodule Brando.HTML.Tablize do
     fields = if opts[:hide], do: module.__fields__ -- opts[:hide], else: module.__fields__
     narrow_fields = if opts[:check_or_x], do: @narrow_fields ++ opts[:check_or_x], else: @narrow_fields
     colgroups = for f <- fields do
-      type = module.__schema__(:field, f)
+      type = module.__schema__(:type, f)
       cond do
         type in @narrow_types  -> "<col style=\"width: 10px;\">"
         f in narrow_fields     -> "<col style=\"width: 10px;\">"
@@ -93,7 +93,7 @@ defmodule Brando.HTML.Tablize do
 
   defp do_tr(fields, record, module, conn, dropdowns, opts) do
     tr_content = fields
-      |> Enum.map(&(do_td(&1, record, module.__schema__(:field, &1), opts)))
+      |> Enum.map(&(do_td(&1, record, module.__schema__(:type, &1), opts)))
       |> Enum.join
     children = case Map.get(record, opts[:children]) do
       nil -> nil
@@ -102,7 +102,7 @@ defmodule Brando.HTML.Tablize do
         child_rows = for child <- children do
           tr_content =
             fields
-            |> Enum.map(&(do_td(&1, child, module.__schema__(:field, &1), opts)))
+            |> Enum.map(&(do_td(&1, child, module.__schema__(:type, &1), opts)))
             |> Enum.join
           ~s(<tr data-parent-id="#{record.id}" class="child hidden"><td></td>#{tr_content}#{render_dropdowns(conn, dropdowns, child)}</tr>)
         end

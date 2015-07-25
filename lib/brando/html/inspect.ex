@@ -46,7 +46,7 @@ defmodule Brando.HTML.Inspect do
     assocs = module.__schema__(:associations)
 
     rendered_fields = fields
-    |> Enum.map(&(render_inspect_field(&1, module, module.__schema__(:field, &1), Map.get(model, &1))))
+    |> Enum.map(&(render_inspect_field(&1, module, module.__schema__(:type, &1), Map.get(model, &1))))
     |> Enum.join
 
     rendered_assocs = assocs
@@ -111,16 +111,16 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_field(_name, Brando.Type.Image, value) do
-    ~s(<div class="imageserie m-b-md"><img src="#{media_url(img(value, :thumb))}" style="padding-bottom: 3px;" /></div>)
+    ~s(<div class="imageserie m-b-md"><img src="#{media_url(img(value, :micro))}" style="padding-bottom: 3px;" /></div>)
   end
 
   defp do_inspect_field(_name, Brando.Type.Status, value) do
     status =
       case value do
         :published -> "publisert"
-        :pending -> "venter"
-        :draft -> "utkast"
-        :deleted -> "slettet"
+        :pending   -> "venter"
+        :draft     -> "utkast"
+        :deleted   -> "slettet"
       end
     ~s(<span class="label label-#{value}">#{status}</span>)
   end
@@ -168,6 +168,10 @@ defmodule Brando.HTML.Inspect do
 
   defp do_inspect_field(_name, _type, %Brando.User{} = user) do
     r(user)
+  end
+
+  defp do_inspect_field(_name, nil, %{__struct__: _struct} = value) when is_map(value) do
+    model_repr(value)
   end
 
   defp do_inspect_field(_name, _type, value) do
