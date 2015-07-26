@@ -15,11 +15,12 @@ defmodule Brando.HTML.Tablize do
 
   ## Example
 
-      tablize(@conn, @users,
-              [{"Vis bruker", "fa-search", :admin_user_path, :show, :id},
-               {"Endre bruker", "fa-edit", :admin_user_path, :edit, :id},
-               {"Slett bruker", "fa-trash", :admin_user_path, :delete_confirm, :id}],
-               check_or_x: [:avatar], hide: [:password, :last_login, :inserted_at])
+      tablize(@conn, @users, [
+        {"Vis bruker", "fa-search", :admin_user_path, :show, :id},
+        {"Endre bruker", "fa-edit", :admin_user_path, :edit, :id},
+        {"Slett bruker", "fa-trash", :admin_user_path, :delete_confirm, :id},
+        {"Vis profiler", "fa-trash", :admin_user_path, :show_profiles, [:group_id, :id]}
+      ], check_or_x: [:avatar], hide: [:password, :last_login, :inserted_at])
 
   ## Arguments
 
@@ -27,6 +28,7 @@ defmodule Brando.HTML.Tablize do
     * `records` - List of records to render
     * `dropdowns` - List of dropdowns in format:
                     {display_name, icon, helper_path, action, identifier or nil, role or nil}
+                    `identifier` is either a field on the record, or a list of fields.
 
   ## Options
 
@@ -162,8 +164,16 @@ defmodule Brando.HTML.Tablize do
         5 -> {desc, icon, helper, action, param} = dropdown
         6 -> {desc, icon, helper, action, param, role} = dropdown
       end
-      params = if param != nil, do: [Brando.get_endpoint, action, record], else: [Brando.get_endpoint, action]
-      url = apply(Brando.get_helpers, helper, params)
+      fun_params = case param do
+        nil -> [Brando.get_endpoint, action]
+        param when is_list(param) ->
+          params = Enum.map(param, fn(p) -> Map.get(record, p) end)
+          [Brando.get_endpoint, action, params] |> List.flatten
+        param ->
+          [Brando.get_endpoint, action, Map.get(record, param)]
+      end
+
+      url = apply(Brando.get_helpers, helper, fun_params)
       if Brando.HTML.can_render?(conn, %{role: role}) do
         "<li>" <>
         "  <a href=\"" <> url <> "\">" <>
