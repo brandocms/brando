@@ -25,7 +25,7 @@ end
 
 Install your deps:
 
-    $ mix deps.get
+    $ mix do deps.get, deps.compile
 
 Install Brando:
 

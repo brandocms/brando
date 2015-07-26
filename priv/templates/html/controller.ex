@@ -7,7 +7,7 @@ defmodule <%= module %>Controller do
 
     conn
     |> assign(:<%= plural %>, <%= plural %>)
-    |> assign(:page_title, "<%= plural %>")
+    |> assign(:page_title, "<%= no_plural %>")
     |> render("index.html")
   end
 end

@@ -1,9 +1,10 @@
 defmodule <%= module %> do
   use <%= base %>.Web, :model
+<%= if villain_fields != [] do %>  use Brando.Villain.Model<% end %>
 <%= if img_fields != [] do %>  use Brando.Field.ImageField
 <% end %>
   schema <%= inspect plural %> do
-<%= for {k, _} <- attrs do %>    field <%= inspect k %>, <%= inspect types[k] %><%= defaults[k] %>
+<%= for model_field <- model_fields do %>    <%= model_field %>
 <% end %><%= for {k, _, m} <- assocs do %>    belongs_to <%= inspect k %>, <%= m %>
 <% end %>
     timestamps
@@ -12,7 +13,7 @@ defmodule <%= module %> do
   has_image_field <%= inspect k %>,
     %{allowed_mimetypes: ["image/jpeg", "image/png"],
       default_size: :medium,
-      upload_path: Path.join("images", "<%= Atom.to_string(k) %>"),
+      upload_path: Path.join("images", "<%= singular %>"),
       random_filename: true,
       size_limit: 10240000,
       sizes: %{
@@ -48,8 +49,8 @@ defmodule <%= module %> do
   # Meta
 
   use Brando.Meta,
-    [singular: "<%= singular %>",
-     plural: "<%= plural %>",
+    [singular: "<%= no_singular %>",
+     plural: "<%= no_plural %>",
      repr: &("#{&1.<%= Dict.keys(attrs) |> List.first %>}"),
      fields: [
        id: "Id",

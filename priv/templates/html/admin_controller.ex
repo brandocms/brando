@@ -1,5 +1,8 @@
 defmodule <%= admin_module %>Controller do
   use <%= base %>.Web, :controller
+  <%= if villain do %>  use Brando.Villain.Controller,
+    image_model: Brando.Image,
+    series_model: Brando.ImageSeries<% end %>
   <%= if image_field do %>  import Brando.Plug.Uploads<% end %>
   alias <%= module %>
 
@@ -23,7 +26,7 @@ defmodule <%= admin_module %>Controller do
       Repo.insert!(changeset)
 
       conn
-      |> put_flash(:info, "<%= alias %> opprettet.")
+      |> put_flash(:info, "<%= no_singular %> opprettet.")
       |> redirect(to: <%= admin_path %>_path(conn, :index))
     else
       render(conn, "new.html", changeset: changeset)
@@ -49,7 +52,7 @@ defmodule <%= admin_module %>Controller do
       Repo.update!(changeset)
 
       conn
-      |> put_flash(:info, "<%= alias %> ble oppdatert.")
+      |> put_flash(:info, "<%= no_singular %> ble oppdatert.")
       |> redirect(to: <%= admin_path %>_path(conn, :index))
     else
       render(conn, "edit.html", <%= singular %>: <%= singular %>, changeset: changeset)
@@ -61,7 +64,7 @@ defmodule <%= admin_module %>Controller do
     <%= alias %>.delete(<%= singular %>)
 
     conn
-    |> put_flash(:info, "<%= alias %> ble slettet")
+    |> put_flash(:info, "<%= no_singular %> ble slettet")
     |> redirect(to: <%= admin_path %>_path(conn, :index))
   end
 

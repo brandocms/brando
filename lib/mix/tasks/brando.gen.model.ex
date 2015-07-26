@@ -47,8 +47,10 @@ defmodule Mix.Tasks.Brando.Gen.Model do
 
   """
   def run(args) do
-    {_opts, parsed, _} = OptionParser.parse(args, switches: [])
+    {opts, parsed, _} = OptionParser.parse(args, switches: [])
     [singular, plural | attrs] = validate_args!(parsed)
+    no_singular = opts[:nosingular] || Mix.Shell.IO.prompt("Singular (no): ") |> String.strip
+    no_plural = opts[:noplural] || Mix.Shell.IO.prompt("Plural (no): ") |> String.strip
 
     attrs      = Mix.Phoenix.attrs(attrs)
     binding    = Mix.Phoenix.inflect(singular)
@@ -60,16 +62,43 @@ defmodule Mix.Tasks.Brando.Gen.Model do
       |> Enum.map(fn({k, v}) -> {v, k} end)
       |> Enum.filter(fn({k, _}) -> k == :image end)
 
+    villain_fields =
+      attrs
+      |> Enum.map(fn({k, v}) -> {v, k} end)
+      |> Enum.filter(fn({k, _}) -> k == :villain end)
+
     Mix.Phoenix.check_module_name_availability!(binding[:module])
 
     {assocs, attrs} = partition_attrs_and_assocs(attrs)
 
     mig_types = Enum.map(attrs, &migration_type/1)
+    types = types(attrs)
+    defs = defaults(attrs)
+
+    migrations =
+      attrs
+      |> Enum.map(fn ({k, v}) ->
+        case v do
+          :villain -> "villain"
+          _        -> "add #{inspect k}, #{inspect(mig_types[k])}#{defs[k]}"
+        end
+      end)
+
+    model_fields =
+      attrs
+      |> Enum.map(fn ({k, v}) ->
+        case v do
+          :villain -> "villain"
+          _        -> "field #{inspect k}, #{inspect types[k]}#{defs[k]}"
+        end
+      end)
 
     binding = binding ++
-              [attrs: attrs, img_fields: img_fields, plural: plural, types: types(attrs),
-               mig_types: mig_types, assocs: assocs(assocs), indexes: indexes(plural, assocs),
-               defaults: defaults(attrs), params: params]
+              [attrs: attrs, img_fields: img_fields, plural: plural, types: types,
+               no_singular: no_singular, no_plural: no_plural,
+               villain_fields: villain_fields, migrations: migrations, model_fields: model_fields,
+               assocs: assocs(assocs), indexes: indexes(plural, assocs),
+               defaults: defs, params: params]
 
     Mix.Phoenix.copy_from source_dir, "", binding, [
       {:eex, "migration.exs",  "priv/repo/migrations/#{timestamp()}_create_#{migration}.exs"},
@@ -157,6 +186,7 @@ defmodule Mix.Tasks.Brando.Gen.Model do
   defp value_to_type(:datetime), do: Ecto.DateTime
   defp value_to_type(:status), do: Brando.Type.Status
   defp value_to_type(:image), do: Brando.Type.Image
+  defp value_to_type(:villain), do: :villain
   defp value_to_type(v) do
     if Code.ensure_loaded?(Ecto.Type) and not Ecto.Type.primitive?(v) do
       Mix.raise "Unknown type `#{v}` given to generator"

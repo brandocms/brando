@@ -1,7 +1,19 @@
-<h1>Endre</h1>
+<h1>Endre <%= no_singular %></h1>
 <%= "<%=" %> <%= alias %>Form.get_form(type: :update, action: :update, params: to_string(@<%= singular %>.id), values: @<%= singular %>, errors: @changeset.errors) <%= "%\>" %>
 <div class="form-actions">
   <a href="<%= "<%=" %> Helpers.<%= admin_path %>_path(@conn, :index) <%= "%\>" %>" class="btn btn-default">
     <i class="fa fa-list fa-fw m-r-sm"></i> Tilbake til oversikten
   </a>
 </div>
+
+<%= if villain do %>
+<script type="text/javascript">
+  $(document).ready(function() {
+    v = new Villain.Editor({
+      browseURL: '/admin/<%= no_plural %>/villain/bla/<%= singular %>/',
+      uploadURL: '/admin/<%= no_plural %>/villain/last-opp/<%= singular %>/',
+      textArea: 'textarea[name="<%= singular %>[data]"]'
+    });
+  });
+</script>
+<% end %>
