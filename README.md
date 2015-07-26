@@ -106,8 +106,21 @@ Controller:
 
 ```elixir
   use Brando.Sequence,
-    [:controller, [model: Brando.Image,
-                   filter: &Brando.Image.get_by_series_id/1]]
+    [:controller, [model: MyApp.Model,
+                   filter: &MyApp.Model.get_by_collection_id/1]]
+```
+
+The filter should return items by the :filter param in your routes.ex.
+
+Example of a filter
+
+```elixir
+def get_by_collection_id(id) do
+  __MODULE__
+  |> where([c], collection.id == ^id)
+  |> order_by([c], c.sequence)
+  |> Brando.repo.all
+end
 ```
 
 View:
@@ -153,6 +166,26 @@ Template (`sequence.html.eex`):
 </a>
 ```
 
+Add a link to the sequencer from your main template:
+
+```html
+<a href="<%= Helpers.admin_your_path(@conn, :sequence, filter_id) %>" class="btn btn-default m-b-sm">
+  <i class="fa fa-sort"></i> Sort
+</a>
+```
+
+or add to tablize:
+
+```elixir
+{"Sort this category", "fa-sort", :admin_your_path, :sequence, :id}
+```
+
+Finally, add to your routes (`web/router.ex`):
+
+```elixir
+  get    "/route/:filter/sorter", YourController, :sequence
+  post   "/route/:filter/sorter", YourController, :sequence_post
+```
 
 ## Tags
 
