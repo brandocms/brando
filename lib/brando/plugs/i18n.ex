@@ -1,9 +1,7 @@
-# Accept-Language
 defmodule Brando.Plug.I18n do
   @moduledoc """
   A plug for checking i18n
   """
-  import Plug.Conn
   import Brando.I18n
 
   def set_locale(%{private: %{plug_session: %{"language" => language}}} = conn, _) do
