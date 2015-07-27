@@ -48,7 +48,7 @@ defmodule RouterHelper do
 
   def as_json(conn) do
     conn
-    |> put_req_header("accept", "application/json")
+    |> Plug.Conn.put_req_header("accept", "application/json")
   end
 
   def call(verb, path, params \\ nil, headers \\ []) do
@@ -97,10 +97,6 @@ defmodule RouterHelper do
       image_routes "/bilder"
       instagram_routes "/instagram"
       dashboard_routes "/"
-    end
-
-    socket "/admin/ws", Brando do
-      channel "system:*", Brando.SystemChannel
     end
 
     scope "/" do

@@ -24,10 +24,6 @@ defmodule Brando.TestRouter do
     plug :accepts, ~w(json)
   end
 
-  socket "/admin/ws", Brando do
-    channel "system:*", Brando.SystemChannel
-  end
-
   scope "/admin", as: :admin do
     pipe_through :admin
     user_routes "/brukere", Brando.Admin.UserController,

@@ -2,9 +2,11 @@ defmodule Brando.SystemChannel do
   @moduledoc """
   Channel for system information.
   """
-  @interval 1000
-
   use Phoenix.Channel
+
+  intercept ["log_msg"]
+
+  @interval 1000
 
   def join("system:stream", _auth_msg, socket) do
     {:ok, socket}
