@@ -42,7 +42,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     files = [
       {:eex, "admin_controller.ex",       "web/controllers/admin/#{path}_controller.ex"},
       {:eex, "controller.ex",             "web/controllers/#{path}_controller.ex"},
-      {:eex, "menu.ex",                   "web/menus/admin/#{path}.ex"},
+      {:eex, "menu.ex",                   "web/menus/admin/#{path}_menu.ex"},
       {:eex, "form.ex",                   "web/forms/admin/#{path}_form.ex"},
       {:eex, "edit.html.eex",             "web/templates/admin/#{path}/edit.html.eex"},
       {:eex, "admin_index.html.eex",      "web/templates/admin/#{path}/index.html.eex"},

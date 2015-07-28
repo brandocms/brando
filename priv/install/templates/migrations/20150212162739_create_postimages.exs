@@ -1,4 +1,4 @@
-defmodule <%= application_module %>.Repo.Migrations.AddPostimagesTable do
+defmodule <%= application_module %>.Repo.Migrations.CreatePostimages do
   use Ecto.Migration
 
   def up do

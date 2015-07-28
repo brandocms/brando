@@ -1,4 +1,4 @@
-defmodule <%= application_module %>.Repo.Migrations.AddImageseriesTable do
+defmodule <%= application_module %>.Repo.Migrations.CreateImageseries do
   use Ecto.Migration
   use Brando.Sequence, :migration
 

@@ -1,4 +1,4 @@
-defmodule <%= application_module %>.Repo.Migrations.AddUsersTable do
+defmodule <%= application_module %>.Repo.Migrations.CreateUsers do
   use Ecto.Migration
 
   def up do
@@ -8,6 +8,7 @@ defmodule <%= application_module %>.Repo.Migrations.AddUsersTable do
       add :email,         :text
       add :password,      :text
       add :avatar,        :text
+      add :language,      :text,    default: "no"
       add :role,          :integer
       add :last_login,    :datetime
       timestamps
@@ -19,9 +20,9 @@ defmodule <%= application_module %>.Repo.Migrations.AddUsersTable do
     execute """
       INSERT INTO
         users
-        ("username", "full_name", "email", "password", "avatar", "role", "last_login", "inserted_at", "updated_at")
+        ("username", "full_name", "email", "password", "avatar", "role", "language", "last_login", "inserted_at", "updated_at")
       VALUES
-        ('admin', 'Twined Admin', 'admin@twined.net', '#{password}', NULL, 7, NOW(), NOW(), NOW());
+        ('admin', 'Twined Admin', 'admin@twined.net', '#{password}', NULL, 7, "no", NOW(), NOW(), NOW());
     """
   end
 

@@ -1,4 +1,4 @@
-defmodule <%= application_module %>.Repo.Migrations.AddPagesTable do
+defmodule <%= application_module %>.Repo.Migrations.CreatePages do
   use Ecto.Migration
   use Brando.Villain.Migration
 

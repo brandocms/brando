@@ -1,4 +1,4 @@
-defmodule <%= application_module %>.Repo.Migrations.AddInstagramimagesTable do
+defmodule <%= application_module %>.Repo.Migrations.CreateInstagramimages do
   use Ecto.Migration
 
   def up do

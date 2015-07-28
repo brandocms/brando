@@ -1,4 +1,4 @@
-defmodule <%= application_module %>.Repo.Migrations.AddPostsTable do
+defmodule <%= application_module %>.Repo.Migrations.CreatePosts do
   use Ecto.Migration
   use Brando.Tag, :migration
   use Brando.Villain.Migration

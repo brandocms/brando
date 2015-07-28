@@ -26,15 +26,15 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "install/templates/web/villain/parser.ex",                                    "web/villain/parser.ex"},
     {:eex,  "install/templates/config/brando.exs",                                        "config/brando.exs"},
 
-    {:eex,  "install/templates/migrations/20150123230712_add_users_table.exs",            "priv/repo/migrations/20150123230712_add_users_table.exs"},
-    {:eex,  "install/templates/migrations/20150210211010_add_posts_table.exs",            "priv/repo/migrations/20150210211010_add_posts_table.exs"},
-    {:eex,  "install/templates/migrations/20150212162739_add_postimages_table.exs",       "priv/repo/migrations/20150212162739_add_postimages_table.exs"},
-    {:eex,  "install/templates/migrations/20150215090305_add_imagecategories_table.exs",  "priv/repo/migrations/20150215090305_add_imagecategories_table.exs"},
-    {:eex,  "install/templates/migrations/20150215090306_add_imageseries_table.exs",      "priv/repo/migrations/20150215090306_add_imageseries_table.exs"},
-    {:eex,  "install/templates/migrations/20150215090307_add_images_table.exs",           "priv/repo/migrations/20150215090307_add_images_table.exs"},
-    {:eex,  "install/templates/migrations/20150520211010_add_pages_table.exs",            "priv/repo/migrations/20150520211010_add_pages_table.exs"},
-    {:eex,  "install/templates/migrations/20150520221010_add_pagefragments_table.exs",    "priv/repo/migrations/20150520221010_add_pagefragments_table.exs"},
-    {:eex,  "install/templates/migrations/20150505122654_add_instagramimages_table.exs",  "priv/repo/migrations/20150505122654_add_instagramimages_table.exs"},
+    {:eex,  "install/templates/migrations/20150123230712_create_users.exs",            "priv/repo/migrations/20150123230712_create_users.exs"},
+    {:eex,  "install/templates/migrations/20150210211010_create_posts.exs",            "priv/repo/migrations/20150210211010_create_posts.exs"},
+    {:eex,  "install/templates/migrations/20150212162739_create_postimages.exs",       "priv/repo/migrations/20150212162739_create_postimages.exs"},
+    {:eex,  "install/templates/migrations/20150215090305_create_imagecategories.exs",  "priv/repo/migrations/20150215090305_create_imagecategories.exs"},
+    {:eex,  "install/templates/migrations/20150215090306_create_imageseries.exs",      "priv/repo/migrations/20150215090306_create_imageseries.exs"},
+    {:eex,  "install/templates/migrations/20150215090307_create_images.exs",           "priv/repo/migrations/20150215090307_create_images.exs"},
+    {:eex,  "install/templates/migrations/20150520211010_create_pages.exs",            "priv/repo/migrations/20150520211010_create_pages.exs"},
+    {:eex,  "install/templates/migrations/20150520221010_create_pagefragments.exs",    "priv/repo/migrations/20150520221010_create_pagefragments.exs"},
+    {:eex,  "install/templates/migrations/20150505122654_create_instagramimages.exs",  "priv/repo/migrations/20150505122654_create_instagramimages.exs"},
 
     {:text, "install/templates/web/templates/layout/app.html.eex",                        "web/templates/layout/app.html.eex"}
   ]

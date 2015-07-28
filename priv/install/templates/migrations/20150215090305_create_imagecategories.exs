@@ -1,4 +1,4 @@
-defmodule <%= application_module %>.Repo.Migrations.AddImagecategoriesTable do
+defmodule <%= application_module %>.Repo.Migrations.CreateImagecategories do
   use Ecto.Migration
   def up do
     create table(:imagecategories) do
