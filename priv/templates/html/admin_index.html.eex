@@ -1,4 +1,4 @@
-<h1><%= "<%=" %> t!(@language, "actions.index") <%= "%\>" %></h1>
+<h1><%%= t!(@language, "actions.index") %></h1>
 <%= "<%=" %> Brando.HTML.Tablize.tablize(@conn, @<%= plural %>,
             [{t!(@language, "actions.show"), "fa-search", :<%= admin_path %>_path, :show, :id},
              {t!(@language, "actions.edit"), "fa-edit", :<%= admin_path %>_path, :edit, :id, :admin},

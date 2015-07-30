@@ -1,12 +1,12 @@
   <div class="data-table">
-    <h1>Vis</h1>
-    <%= "<%=" %> Brando.HTML.Inspect.model(@<%= singular %>) <%= "%\>" %>
+    <h1><%%= t!(@language, "actions.show") %></h1>
+    <%= "<%=" %> Brando.HTML.Inspect.model(@language, @<%= singular %>) <%= "%\>" %>
     <div class="form-actions">
       <a href="<%= "<%=" %> Helpers.<%= admin_path %>_path(@conn, :index) <%= "%\>" %>" class="btn btn-default">
         <i class="fa fa-list fa-fw m-r-sm"></i> <%= "<%=" %> Brando.Admin.LayoutView.t!(@language, "global.back_to_index") <%= "%\>" %>
       </a>
       <%= "<%=" %> auth_link @conn, Helpers.<%= admin_path %>_path(@conn, :edit, @<%= singular %>.id), :admin do <%= "%\>" %>
-        <i class="fa fa-edit fa-fw m-r-sm"></i> Endre
+        <i class="fa fa-edit fa-fw m-r-sm"></i> <%%= t!(@language, "actions.edit") %>
       <%= "<%" %> end <%= "%\>" %>
     </div>
   </div>

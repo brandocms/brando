@@ -1,8 +1,8 @@
-<h1>Ny <%= no_singular %></h1>
+<h1><%%= t!(@language, "actions.new") %></h1>
 <%= "<%=" %> <%= alias %>Form.get_form(@language, type: :create, action: :create, params: [], values: @changeset.params, errors: @changeset.errors) <%= "%\>" %>
 <div class="form-actions">
   <a href="<%= "<%=" %> Helpers.<%= admin_path %>_path(@conn, :index) <%= "%\>" %>" class="btn btn-default">
-    <i class="fa fa-list fa-fw m-r-sm"></i> <%= Brando.Admin.LayoutView.t!(@language, "global.back_to_index") %>
+    <i class="fa fa-list fa-fw m-r-sm"></i> <%%= Brando.Admin.LayoutView.t!(@language, "global.back_to_index") %>
   </a>
 </div>
 
