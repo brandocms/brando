@@ -20,11 +20,11 @@ defmodule Mix.Tasks.Brando.Gen.Html do
   information on attributes and namespaced resources.
   """
   def run(args) do
-    {_opts, parsed, _} = OptionParser.parse(args, switches: [model: :boolean])
+    {opts, parsed, _} = OptionParser.parse(args, switches: [model: :boolean])
     [singular, plural | attrs] = validate_args!(parsed)
 
-    no_singular  = Mix.Shell.IO.prompt("Singular (no): ") |> String.strip
-    no_plural    = Mix.Shell.IO.prompt("Plural (no): ") |> String.strip
+    no_singular  = opts[:nosingular] || Mix.Shell.IO.prompt("Singular (no): ") |> String.strip
+    no_plural    = opts[:noplural] || Mix.Shell.IO.prompt("Plural (no): ") |> String.strip
 
     attrs        = Mix.Phoenix.attrs(attrs)
     villain?     = :villain in Dict.values(attrs)
