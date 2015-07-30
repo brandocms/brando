@@ -4,7 +4,6 @@ defmodule Mix.Tasks.Brando.GenerateTest do
   use ExUnit.Case, async: true
 
   import MixHelper
-  import ExUnit.CaptureIO
 
   @app_name  "photo_blog"
   @tmp_path  tmp_path()
@@ -32,7 +31,7 @@ defmodule Mix.Tasks.Brando.GenerateTest do
 
   test "brando.install" do
     Mix.Tasks.Brando.Install.run(["--static"])
-    assert_received {:mix_shell, :info, ["\nBrando finished copying." <> _ = message]}
+    assert_received {:mix_shell, :info, ["\nBrando finished copying."]}
     assert File.exists?("web/villain")
     assert_file "web/villain/parser.ex"
   end
