@@ -119,11 +119,7 @@ defmodule Mix.Tasks.Brando.Install do
       copy_from "./", binding, @static
     end
 
-    Mix.shell.info """
-    ------------------------------------------------------------------
-    Brando finished copying.
-    ------------------------------------------------------------------
-    """
+    Mix.shell.info "\nBrando finished copying."
   end
 
   defp copy_from(target_dir, binding, mapping) when is_list(mapping) do
