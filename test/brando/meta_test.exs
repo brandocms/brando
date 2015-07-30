@@ -6,23 +6,33 @@ defmodule Brando.MetaTest do
 
   defmodule Meta do
     @moduledoc false
-    use Brando.Meta,
-      [singular: "post",
-       plural: "poster",
-       repr: fn (model) -> "#{model.test}" end,
-       hidden_fields: [:id],
-       fields: [
-          id: "ID",
-          language: "Språk"]]
+    use Brando.Meta, [
+      no:
+        [singular: "post",
+         plural: "poster",
+         repr: fn (model) -> "#{model.test}" end,
+         hidden_fields: [:id],
+         fields: [
+           id: "ID",
+           language: "Språk"]],
+      en:
+        [singular: "post",
+         plural: "posts",
+         repr: fn (model) -> "#{model.test}" end,
+         hidden_fields: [:id],
+         fields: [
+           id: "ID",
+           language: "Language"]]]
+
   end
 
   test "__name__" do
-    assert Meta.__name__(:singular) == "post"
-    assert Meta.__name__(:plural) == "poster"
+    assert Meta.__name__("no", :singular) == "post"
+    assert Meta.__name__("no", :plural) == "poster"
   end
 
   test "__repr__" do
-    assert Meta.__repr__(@model) == "test"
+    assert Meta.__repr__("no", @model) == "test"
   end
 
   test "__fields__" do

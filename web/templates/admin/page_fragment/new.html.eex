@@ -1,5 +1,5 @@
-    <h1>Nytt sidefragment</h1>
-    <%= PageFragmentForm.get_form(type: :create, action: :create, params: [], values: assigns[:page_fragment], errors: assigns[:errors]) %>
+    <h1><%= t!(@language, "actions.new") %></h1>
+    <%= PageFragmentForm.get_form(@language, type: :create, action: :create, params: [], values: assigns[:page_fragment], errors: assigns[:errors]) %>
      <script type="text/javascript">
         $(document).ready(function() {
           v = new Villain.Editor({

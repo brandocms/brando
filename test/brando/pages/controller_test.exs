@@ -7,7 +7,7 @@ defmodule Brando.Pages.ControllerTest do
   alias Brando.Page
   alias Brando.User
 
-  @user_params %{"avatar" => nil, "role" => ["2", "4"],
+  @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "no",
                  "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
@@ -91,7 +91,7 @@ defmodule Brando.Pages.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/sider"
-    assert get_flash(conn, :notice) == "Side opprettet."
+    assert get_flash(conn, :notice) == "Side opprettet"
   end
 
   test "create (page) w/erroneus params" do
@@ -118,7 +118,7 @@ defmodule Brando.Pages.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/sider"
-    assert get_flash(conn, :notice) == "Side oppdatert."
+    assert get_flash(conn, :notice) == "Side oppdatert"
   end
 
   test "delete_confirm" do

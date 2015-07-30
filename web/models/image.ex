@@ -152,16 +152,28 @@ defmodule Brando.Image do
   #
   # Meta
 
-  use Brando.Meta,
-    [singular: "bilde",
-     plural: "bilder",
-     repr: &("#{&1.id} | #{&1.image.path}"),
-     fields: [id: "ID",
-              image: "Bilde",
-              order: "Rekkefølge",
-              creator: "Opprettet av",
-              image_series: "Bildeserie",
-              inserted_at: "Opprettet",
-              updated_at: "Oppdatert"]]
+  use Brando.Meta, [
+    no: [
+      singular: "bilde",
+      plural: "bilder",
+      repr: &("#{&1.id} | #{&1.image.path}"),
+      fields: [id: "ID",
+               image: "Bilde",
+               sequence: "Rekkefølge",
+               creator: "Opprettet av",
+               image_series: "Bildeserie",
+               inserted_at: "Opprettet",
+               updated_at: "Oppdatert"]],
+    en: [
+      singular: "image",
+      plural: "images",
+      repr: &("#{&1.id} | #{&1.image.path}"),
+      fields: [id: "ID",
+               image: "Image",
+               sequence: "Sequence",
+               creator: "Creator",
+               image_series: "Image series",
+               inserted_at: "Inserted",
+               updated_at: "Updated"]]]
 
 end

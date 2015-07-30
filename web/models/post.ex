@@ -153,9 +153,12 @@ defmodule Brando.Post do
   # Meta
 
   use Brando.Meta,
-    [singular: "post",
+    [no: [singular: "post",
      plural: "poster",
      repr: &("#{&1.header}"),
+     help: [
+       featured: "Posten vektes uavhengig av opprettelses- og publiseringsdato"
+     ],
      fields: [
         id: "№",
         status: "Status",
@@ -174,5 +177,31 @@ defmodule Brando.Post do
         publish_at: "Publiseringstidspunkt",
         tags: "Tags",
         inserted_at: "Opprettet",
-        updated_at: "Oppdatert"]]
+        updated_at: "Oppdatert"]],
+
+    en: [singular: "post",
+         plural: "posts",
+         repr: &("#{&1.header}"),
+         help: [
+           featured: "The post is prioritized, taking precedence over publishing date"
+         ],
+         fields: [
+            id: "№",
+            status: "Status",
+            featured: "Featured",
+            language: "Language",
+            cover: "Cover",
+            header: "Header",
+            slug: "Slug",
+            lead: "Lead",
+            data: "Data",
+            html: "HTML",
+            creator: "Creator",
+            meta_description: "META description",
+            meta_keywords: "META keywords",
+            published: "Published",
+            publish_at: "Publish at",
+            tags: "Tags",
+            inserted_at: "Inserted at",
+            updated_at: "Updated at"]]]
 end

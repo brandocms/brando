@@ -1,7 +1,4 @@
-<h1>Bildesortéring</h1>
-<p>
-  Sortér bilder i serie <span class="label m-l-sm"><%= Brando.ImageSeries.get_slug(id: @filter) %></span>
-</p>
+<h1><%= t!(@language, "actions.sort") %> &raquo; <strong><%= Brando.ImageSeries.get_slug(id: @filter) %></strong></h1>
 <ul id="sequence" class="clearfix">
 <%= for i <- @items do %>
   <li data-id="<%= i.id %>">
@@ -11,7 +8,7 @@
 </ul>
 <hr>
 <div class="buttons m-t-md">
-  <a id="sort-post" href="<%= Helpers.admin_image_series_path(@conn, :sequence_post, @filter) %>" class="btn btn-default">Lagre rekkefølge</a>
-  <a href="<%= Helpers.admin_image_series_path(@conn, :edit, @filter) %>" class="btn btn-default">Endre bildeserie</a>
-  <a href="<%= Helpers.admin_image_path(@conn, :index) %>" class="btn btn-default">Tilbake til oversikten</a>
+  <a id="sort-post" href="<%= Helpers.admin_image_series_path(@conn, :sequence_post, @filter) %>" class="btn btn-default"><%= t!(@language, "actions.store_sort") %></a>
+  <a href="<%= Helpers.admin_image_series_path(@conn, :edit, @filter) %>" class="btn btn-default"><%= t!(@language, "actions.edit") %></a>
+  <a href="<%= Helpers.admin_image_path(@conn, :index) %>" class="btn btn-default"><%= Brando.Admin.LayoutView.t!(@language, "global.back_to_index") %></a>
 </div>

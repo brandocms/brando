@@ -7,7 +7,12 @@ defmodule Brando.UserForm do
   use Brando.Form
 
   @doc false
-  def get_role_choices do
+  def get_language_choices(_) do
+    Brando.config(:admin_languages)
+  end
+
+  @doc false
+  def get_role_choices(_) do
     [[value: "1", text: "Staff"],
      [value: "2", text: "Admin"],
      [value: "4", text: "Superuser"]]
@@ -20,39 +25,33 @@ defmodule Brando.UserForm do
     (role_int &&& choice_int) == choice_int
   end
 
-  form "user", [helper: :admin_user_path, class: "grid-form"] do
-    fieldset "Brukerinfo" do
+  form "user", [model: Brando.User, helper: :admin_user_path, class: "grid-form"] do
+    fieldset {:i18n, "fieldset.user_info"} do
       field :full_name, :text,
-        [required: true,
-         label: "Fullt navn",
-         placeholder: "Fullt navn"]
+        [required: true]
       field :username, :text,
-        [required: true,
-         label: "Brukernavn",
-         placeholder: "Brukernavn"]
+        [required: true]
     end
 
-    field :email, :email,
-      [required: true,
-       label: "E-post",
-       placeholder: "E-post"]
-    field :password, :password,
-      [required: true,
-       confirm: true,
-       label: "Passord",
-       placeholder: "Passord"]
+    field :email, :email, [required: true]
+    field :password, :password, [required: true, confirm: true]
 
-    fieldset "Rettigheter" do
+    fieldset {:i18n, "fieldset.rights"} do
       field :role, :checkbox,
-        [choices: &__MODULE__.get_role_choices/0,
+        [choices: &__MODULE__.get_role_choices/1,
          is_selected: &__MODULE__.role_selected?/2,
-         empty_value: 0,
-         label: "Rolle", multiple: true]
+         empty_value: 0, multiple: true]
     end
 
-    field :avatar, :file,
-      [label: "Bilde"]
-    submit "Lagre",
+    fieldset do
+      field :language, :select,
+        [required: true,
+        default: "no",
+        choices: &__MODULE__.get_language_choices/1]
+    end
+
+    field :avatar, :file
+    submit :save,
       [class: "btn btn-success"]
   end
 end

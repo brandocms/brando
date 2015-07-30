@@ -5,12 +5,13 @@ defmodule Brando.Meta do
   ## Usage:
 
       use Brando.Meta,
-        [singular: "post",
-         plural: "poster",
-         repr: fn (model) -> "interpolate from model" end,
-         fields: [
-            id: "ID",
-            language: "Språk"]]
+        [no:
+          [singular: "post",
+           plural: "poster",
+           repr: fn (model) -> "interpolate from model" end,
+           fields: [
+              id: "ID",
+              language: "Språk"]]]
 
   ## Options:
 
@@ -22,18 +23,35 @@ defmodule Brando.Meta do
   """
   @doc false
   defmacro __using__(opts) do
+    shared = define_shared_functions(opts)
+    metas = for {language, lang_opts} <- opts do
+      define_meta_functions(Atom.to_string(language), lang_opts)
+    end
+    [shared|metas]
+  end
+
+  def define_shared_functions(opts) do
+    {_, opts} = List.first(opts)
     quote do
-      def __name__(:singular), do: unquote(opts[:singular])
-      def __name__(:plural), do: unquote(opts[:plural])
-      def __repr__(model), do: unquote(opts[:repr]).(model)
+      use Linguist.Vocabulary
       def __fields__ do
         Keyword.keys(unquote(opts[:fields]))
       end
       def __hidden_fields__ do
         unquote(opts[:hidden_fields] || [])
       end
-      use Linguist.Vocabulary
-      locale "no", [model: unquote(opts[:fields])]
+    end
+  end
+
+  def define_meta_functions(language, opts) do
+    params = [] |> Keyword.put(:model, opts[:fields])
+    params = if opts[:help], do: params |> Keyword.put(:help, opts[:help]), else: params
+    params = if opts[:fieldset], do: params |> Keyword.put(:fieldset, opts[:fieldset]), else: params
+    quote do
+      def __name__(unquote(language), :singular), do: unquote(opts[:singular])
+      def __name__(unquote(language), :plural), do: unquote(opts[:plural])
+      def __repr__(unquote(language), model), do: unquote(opts[:repr]).(model)
+      locale unquote(language), unquote(params)
     end
   end
 end

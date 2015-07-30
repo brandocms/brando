@@ -1,11 +1,11 @@
-<h1>Oversikt - <%= no_plural %></h1>
+<h1><%= "<%=" %> t!(@language, "actions.index") <%= "%\>" %></h1>
 <%= "<%=" %> Brando.HTML.Tablize.tablize(@conn, @<%= plural %>,
-            [{"Vis <%= no_singular %>", "fa-search", :<%= admin_path %>_path, :show, :id},
-             {"Endre <%= no_singular %>", "fa-edit", :<%= admin_path %>_path, :edit, :id, :admin},
-             {"Slett <%= no_singular %>", "fa-trash", :<%= admin_path %>_path, :delete_confirm, :id, :admin}],
+            [{t!(@language, "actions.show"), "fa-search", :<%= admin_path %>_path, :show, :id},
+             {t!(@language, "actions.edit"), "fa-edit", :<%= admin_path %>_path, :edit, :id, :admin},
+             {t!(@language, "actions.delete"), "fa-trash", :<%= admin_path %>_path, :delete_confirm, :id, :admin}],
             check_or_x: [], hide: [:updated_at, :inserted_at]) <%= "%\>" %>
 <div class="form-actions">
   <%= "<%=" %> auth_link_primary @conn, Helpers.<%= admin_path %>_path(@conn, :new), :admin do <%= "%\>" %>
-    <i class="fa fa-plus m-r-xs"></i> Ny <%= no_singular %>
+    <i class="fa fa-plus m-r-xs"></i><%= "<%=" %> t!(@language, "actions.delete") <%= "%\>" %>
   <%= "<%" %> end <%= "%\>" %>
 </div>

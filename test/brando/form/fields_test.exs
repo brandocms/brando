@@ -7,13 +7,13 @@ defmodule Brando.Form.FieldsTest do
   defmodule UserForm do
     use Brando.Form
 
-    def get_role_choices do
+    def get_role_choices(_) do
       [[value: "1", text: "Staff"],
        [value: "2", text: "Admin"],
        [value: "4", text: "Superuser"]]
     end
 
-    def get_status_choices do
+    def get_status_choices(_) do
       [[value: "1", text: "Valg 1"],
        [value: "2", text: "Valg 2"]]
     end
@@ -57,21 +57,21 @@ defmodule Brando.Form.FieldsTest do
          class: "form-control",
          wrapper_class: ""]
       field :role, :select,
-        [choices: &__MODULE__.get_role_choices/0,
+        [choices: &__MODULE__.get_role_choices/1,
          multiple: true,
          label: "Role",
          label_class: "control-label",
          class: "form-control",
          wrapper_class: ""]
       field :status2, :select,
-        [choices: &__MODULE__.get_status_choices/0,
+        [choices: &__MODULE__.get_status_choices/1,
          default: "1",
          label: "Status",
          label_class: "control-label",
          class: "form-control",
          wrapper_class: ""]
       field :role2, :radio,
-        [choices: &__MODULE__.get_role_choices/0,
+        [choices: &__MODULE__.get_role_choices/1,
         label: "Rolle 2"]
       field :avatar, :file,
         [label: "Avatar",
@@ -84,7 +84,7 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "render_options/4" do
-    assert F.render_options(:create, [choices: &UserForm.get_status_choices/0],
+    assert F.render_options(:create, %{choices: &UserForm.get_status_choices/1, language: "en"},
                           "val", nil) == ["<option value=\"1\">Valg 1</option>",
                                           "<option value=\"2\">Valg 2</option>"]
   end
@@ -101,7 +101,8 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "get_choices/1" do
-    assert F.get_choices(&UserForm.get_status_choices/0) == [[value: "1", text: "Valg 1"], [value: "2", text: "Valg 2"]]
+    opts = %{language: "en", choices: &UserForm.get_status_choices/1}
+    assert F.get_choices(opts) == [[value: "1", text: "Valg 1"], [value: "2", text: "Valg 2"]]
   end
 
   test "concat_fields/2" do
@@ -116,9 +117,8 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "form_group/4" do
-    assert F.form_group("1234", "name", [], []) ==
-      "<div class=\"form-group\">1234</div>"
-    opts = [required: true]
+    assert F.form_group("1234", "name", [], []) == "<div class=\"form-group\">1234</div>"
+    opts = %{required: true}
     fg = F.form_group("1234", "name", opts, ["can't be blank"])
     assert fg =~ "required"
     assert fg =~ "has-error"
@@ -132,7 +132,7 @@ defmodule Brando.Form.FieldsTest do
     refute fg =~ "required"
     refute fg =~ "has-error"
 
-    opts = [required: false]
+    opts = %{required: false}
     fg = F.form_group("1234", "name", opts, [])
     refute fg =~ "required"
     refute fg =~ "has-error"
@@ -152,16 +152,17 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "textarea/5" do
-    assert F.textarea(:create, "name", [], nil, []) == ~s(<textarea name="name"></textarea>)
-    assert F.textarea(:update, "name", "blah", nil, []) == ~s(<textarea name="name">blah</textarea>)
-    assert F.textarea(:update, "name", "blah", nil, [default: "default"]) == ~s(<textarea name="name">blah</textarea>)
-    assert F.textarea(:update, "name", [], nil, [default: "default"]) == ~s(<textarea name="name">default</textarea>)
-    assert F.textarea(:update, "name", [], nil, [default: "default", class: "class"]) == ~s(<textarea name="name" class="class">default</textarea>)
+    assert F.textarea(:create, "name", [], nil, %{}) == ~s(<textarea name="name"></textarea>)
+    assert F.textarea(:update, "name", "blah", nil, %{}) == ~s(<textarea name="name">blah</textarea>)
+    assert F.textarea(:update, "name", "blah", nil, %{default: "default"}) == ~s(<textarea name="name">blah</textarea>)
+    assert F.textarea(:update, "name", [], nil, %{default: "default"}) == ~s(<textarea name="name"></textarea>)
+    assert F.textarea(:create, "name", [], nil, %{default: "default"}) == ~s(<textarea name="name">default</textarea>)
+    assert F.textarea(:update, "name", [], nil, %{default: "default", class: "class"}) == ~s(<textarea name="name" class="class"></textarea>)
   end
 
   test "file/4" do
     assert F.file(:update, "user[avatar]", %{sizes: %{"thumb" => "images/default/thumb/0.jpeg"}},
-                      [], [type: :file, label: "Bilde"]) == "<div class=\"image-preview\"><img src=\"/media/images/default/thumb/0.jpeg\" /></div><input name=\"user[avatar]\" type=\"file\" />"
+                  [], %{type: :file, label: "Bilde"}) == "<div class=\"image-preview\"><img src=\"/media/images/default/thumb/0.jpeg\" /></div><input name=\"user[avatar]\" type=\"file\" />"
   end
 
   test "get_form_group_class/1" do
@@ -171,7 +172,7 @@ defmodule Brando.Form.FieldsTest do
 
   test "get_slug_from/2" do
     assert F.get_slug_from("testform[title]", []) == ""
-    assert F.get_slug_from("testform[title]", [slug_from: :name]) ==
+    assert F.get_slug_from("testform[title]", %{slug_from: :name}) ==
       ~s( data-slug-from="testform[name]")
   end
 
@@ -212,10 +213,10 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "render_help_text/1" do
-    help_text = "Help text"
+    opts = %{help_text: "Help text"}
     assert F.render_help_text(nil) == ""
-    assert F.render_help_text("Help text") ==
-      "<div class=\"help\"><i class=\"fa fa-fw fa-question-circle\"> </i><span>#{help_text}</span></div>"
+    assert F.render_help_text(opts) ==
+      "<div class=\"help\"><i class=\"fa fa-fw fa-question-circle\"> </i><span>Help text</span></div>"
   end
 
   test "label/3" do
@@ -224,9 +225,9 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "select/6" do
-    assert F.select(:create, "name", "choices", [], [], []) ==
+    assert F.select(:create, "name", "choices", %{}, [], []) ==
       "<select name=\"name\" class=\"\">choices</select>"
-    assert F.select(:create, "name", "choices", [multiple: true], [], []) ==
+    assert F.select(:create, "name", "choices", %{multiple: true}, [], []) ==
       "<select name=\"name[]\" multiple>choices</select>"
   end
 

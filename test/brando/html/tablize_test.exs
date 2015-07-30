@@ -3,12 +3,11 @@ defmodule Brando.HTML.TablizeTest do
   use Brando.ConnCase
   use Brando.Integration.TestCase
   import Brando.HTML.Tablize
-  alias Brando.User
+  import Brando.I18n
   alias Brando.Post
 
-  @user_params %{"avatar" => nil, "role" => ["2", "4"], "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond", "password" => "finimeze", "username" => "zabuzasixu"}
   @image_map %Brando.Type.Image{credits: nil, optimized: false, path: "images/avatars/27i97a.jpeg", title: nil, sizes: %{thumb: "images/avatars/thumb/27i97a.jpeg", medium: "images/avatars/medium/27i97a.jpeg"}}
-  @conn %Plug.Conn{private: %{plug_session: %{"current_user" => %{role: [:superuser]}}}}
+  @conn %Plug.Conn{private: %{plug_session: %{"current_user" => %{role: [:superuser]}}}} |> assign_language("no")
   @post_params %{"avatar" => @image_map,
                  "data" => "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]",
                  "featured" => true, "header" => "Header",
@@ -19,7 +18,7 @@ defmodule Brando.HTML.TablizeTest do
                  "slug" => "header", "status" => :published}
 
   test "tablize/4" do
-    assert {:ok, user} = User.create(@user_params)
+    user = Forge.saved_user(TestRepo)
     assert {:ok, post} = Post.create(@post_params, user)
 
     post = post |> Brando.repo.preload(:creator)
@@ -37,6 +36,6 @@ defmodule Brando.HTML.TablizeTest do
     {:safe, ret} = tablize(@conn, [post], helpers, filter: true)
 
     ret = ret |> IO.iodata_to_binary
-    assert ret =~ ~s(<div class=\"filter-input-wrapper pull-right\"><i class=\"fa fa-fw fa-search m-r-sm\"></i><input type=\"text\" placeholder=\"Filtrer tabell\" id=\"filter-input\" /></div>)
+    assert ret =~ ~s(<div class=\"filter-input-wrapper pull-right\"><i class=\"fa fa-fw fa-search m-r-sm m-l-xs\"></i><input type=\"text\" placeholder=\"Filter\" id=\"filter-input\" /></div>)
   end
 end

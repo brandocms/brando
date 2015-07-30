@@ -9,8 +9,8 @@ defmodule Brando.HTML do
   defmacro __using__(_) do
     quote do
       import Brando.HTML
-      import Brando.HTML.Inspect
-      import Brando.HTML.Tablize
+      import Brando.HTML.Inspect, except: [t!: 2, t: 3]
+      import Brando.HTML.Tablize, except: [t!: 2, t: 3]
     end
   end
 
@@ -32,7 +32,7 @@ defmodule Brando.HTML do
   Renders a menu item.
   Also calls to render submenu items, if `current_user` has required role
   """
-  def render_menu_item(conn, {color, menu}) do
+  def render_menu_item(conn, {color, {name, menu}}) do
     submenu_items =
       for item <- menu.submenu, do:
         render_submenu_item(conn, item)
@@ -47,7 +47,7 @@ defmodule Brando.HTML do
     "        <i class=\"fa fa-angle-down text\"></i>" <>
     "        <i class=\"fa fa-angle-up text-active\"></i>" <>
     "      </span>" <>
-    "      <span>" <> menu.name <> "</span>" <>
+    "      <span>" <> name <> "</span>" <>
     "    </a>" <>
     "    <ul class=\"nav lt\">" <>
     "      " <> Enum.join(submenu_items) <>
@@ -195,14 +195,14 @@ defmodule Brando.HTML do
   Renders a delete button wrapped in a POST form.
   Pass `record` instance of model, and `helper` path.
   """
-  def delete_form_button(record, helper) do
+  def delete_form_button(language, record, helper) do
     action = Brando.Form.get_action(helper, :delete, record)
 
     "<form method=\"POST\" action=\"" <> action <> "\">" <>
     "  <input type=\"hidden\" name=\"_method\" value=\"delete\" />" <>
     "  <button class=\"btn btn-danger\">" <>
     "    <i class=\"fa fa-trash-o m-r-sm\"> </i>" <>
-    "    Slett" <>
+    "    #{Brando.Admin.LayoutView.t!(language, "global.delete")}" <>
     "  </button>" <>
     "</form>"
     |> Phoenix.HTML.raw
@@ -334,4 +334,18 @@ defmodule Brando.HTML do
     end
   end
 
+  @doc """
+  Render status indicators
+  """
+  def status_indicators(language) do
+    """
+    <div class="status-indicators">
+      <span class="m-r-sm"><span class="status-published"><i class="fa fa-circle m-r-sm"> </i> </span> #{Brando.Admin.LayoutView.t!(language, "status.published")}</span>
+      <span class="m-r-sm"><span class="status-pending"><i class="fa fa-circle m-r-sm"> </i> </span> #{Brando.Admin.LayoutView.t!(language, "status.pending")}</span>
+      <span class="m-r-sm"><span class="status-draft"><i class="fa fa-circle m-r-sm"> </i> </span> #{Brando.Admin.LayoutView.t!(language, "status.draft")}</span>
+      <span class="m-r-sm"><span class="status-deleted"><i class="fa fa-circle m-r-sm"> </i> </span> #{Brando.Admin.LayoutView.t!(language, "status.deleted")}</span>
+    </div>
+    """
+    |> Phoenix.HTML.raw
+  end
 end

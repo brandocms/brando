@@ -1,7 +1,7 @@
-  <h1>Konfigurér <%= model_name(@image_category, :singular) %></h1>
-  <%= ImageCategoryConfigForm.get_form(type: :update, action: :configure_patch, params: to_string(@id), values: assigns[:image_category], errors: assigns[:errors]) %>
+  <h1><%= Brando.Admin.LayoutView.t!(@language, "global.configure") %> <%= model_name(@language, @image_category, :singular) %></h1>
+  <%= ImageCategoryConfigForm.get_form(@language, type: :update, action: :configure_patch, params: to_string(@id), values: assigns[:image_category], errors: assigns[:errors]) %>
   <div class="buttons m-t-md">
     <a href="<%= Helpers.admin_image_path(@conn, :index) %>" class="btn btn-default">
-      <i class="fa fa-list fa-fw m-r-sm"></i> Tilbake til oversikten
+      <i class="fa fa-list fa-fw m-r-sm"></i> <%= Brando.Admin.LayoutView.t!(@language, "global.back_to_index") %>
     </a>
   </div>

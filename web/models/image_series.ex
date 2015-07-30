@@ -130,22 +130,45 @@ defmodule Brando.ImageSeries do
   #
   # Meta
 
-  use Brando.Meta,
-    [singular: "bildeserie",
-     plural: "bildeserier",
-     repr: fn (model) ->
+  use Brando.Meta, [
+    no: [
+      singular: "bildeserie",
+      plural: "bildeserier",
+      repr: fn (model) ->
         model = Brando.repo.preload(model, :images)
         image_count = Enum.count(model.images)
         "#{model.name} – #{image_count} bilde(r)."
-     end,
-     fields: [id: "ID",
-              name: "Navn",
-              slug: "URL-tamp",
-              credits: "Kreditering",
-              sequence: "Rekkefølge",
-              creator: "Opprettet av",
-              images: "Bilder",
-              image_category: "Bildekategori",
-              inserted_at: "Opprettet",
-              updated_at: "Oppdatert"]]
+      end,
+      fields: [id: "ID",
+               name: "Navn",
+               slug: "URL-tamp",
+               credits: "Kreditering",
+               sequence: "Rekkefølge",
+               creator: "Opprettet av",
+               images: "Bilder",
+               image_category: "Bildekategori",
+               image_category_id: "Bildekategori",
+               inserted_at: "Opprettet",
+               updated_at: "Oppdatert"],
+      hidden_fields: []],
+    en: [
+      singular: "imageserie",
+      plural: "imageseries",
+      repr: fn (model) ->
+         model = Brando.repo.preload(model, :images)
+         image_count = Enum.count(model.images)
+         "#{model.name} – #{image_count} image(s)."
+      end,
+      fields: [id: "ID",
+               name: "Name",
+               slug: "Slug",
+               credits: "Credits",
+               sequence: "Sequence",
+               creator: "Creator",
+               images: "Images",
+               image_category: "Image category",
+               image_category_id: "Image category",
+               inserted_at: "Inserted at",
+               updated_at: "Updated at"],
+      hidden_fields: []]]
 end

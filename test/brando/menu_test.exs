@@ -9,13 +9,13 @@ defmodule Brando.MenuTest do
     """
     use Brando.Menu
 
-    menu "Test",
-      %{name: "Test", anchor: "test", bgcolor: "#fffffff", icon: "icon",
+    menu "no", "Test",
+      %{anchor: "test", bgcolor: "#fffffff", icon: "icon",
         submenu: [%{name: "Name", url: "/url"}]}
   end
 
   test "menu" do
-    assert Menu.get_menu ==
-      %{anchor: "test", bgcolor: "#fffffff", icon: "icon", name: "Test", submenu: [%{name: "Name", url: "/url"}]}
+    assert Menu.get_menu("no") ==
+      {"Test", %{anchor: "test", bgcolor: "#fffffff", icon: "icon", submenu: [%{name: "Name", url: "/url"}]}}
   end
 end

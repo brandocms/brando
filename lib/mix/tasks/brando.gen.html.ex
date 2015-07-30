@@ -131,21 +131,21 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       {k, {:array, _}} ->
         {k, nil, nil}
       {k, :boolean}    ->
-        {k, ~s(field #{inspect(k)}, :checkbox, [required: true, label: "#{String.capitalize(Atom.to_string(k))}"])}
+        {k, ~s(field #{inspect(k)}, :checkbox, [required: true])}
       {k, :text}       ->
-        {k, ~s(field #{inspect(k)}, :textarea, [required: true, label: "#{String.capitalize(Atom.to_string(k))}", rows: 4])}
+        {k, ~s(field #{inspect(k)}, :textarea, [required: true, rows: 4])}
       {k, :date}       ->
-        {k, ~s(field #{inspect(k)}, :text, [required: true, label: "#{String.capitalize(Atom.to_string(k))}", default: &Brando.Utils.get_now/0])}
+        {k, ~s(field #{inspect(k)}, :text, [required: true, default: &Brando.Utils.get_now/0])}
       {k, :time}       ->
-        {k, ~s(field #{inspect(k)}, :text, [required: true, label: "#{String.capitalize(Atom.to_string(k))}", default: &Brando.Utils.get_now/0])}
+        {k, ~s(field #{inspect(k)}, :text, [required: true, default: &Brando.Utils.get_now/0])}
       {k, :datetime}   ->
-        {k, ~s(field #{inspect(k)}, :text, [required: true, label: "#{String.capitalize(Atom.to_string(k))}", default: &Brando.Utils.get_now/0])}
+        {k, ~s(field #{inspect(k)}, :text, [required: true, default: &Brando.Utils.get_now/0])}
       {k, :image}      ->
-        {k, ~s(field #{inspect(k)}, :file, [label: "#{String.capitalize(Atom.to_string(k))}"])}
+        {k, ~s(field #{inspect(k)}, :file)}
       {k, :villain}      ->
-        {k, ~s(field #{inspect(k)}, :textarea, [label: "#{String.capitalize(Atom.to_string(k))}"])}
+        {k, ~s(field #{inspect(k)}, :textarea)}
       {k, _}           ->
-        {k, ~s(field #{inspect(k)}, :text, [required: true, label: "#{String.capitalize(Atom.to_string(k))}"])}
+        {k, ~s(field #{inspect(k)}, :text, [required: true])}
     end
   end
 

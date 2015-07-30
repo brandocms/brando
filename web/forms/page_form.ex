@@ -7,18 +7,18 @@ defmodule Brando.PageForm do
   alias Brando.Page
 
   @doc false
-  def get_language_choices do
+  def get_language_choices(_) do
     Brando.config(:languages)
   end
 
   @doc false
-  def get_status_choices do
-    Brando.config(:status_choices)
+  def get_status_choices(language) do
+    Keyword.get(Brando.config(:status_choices), String.to_atom(language))
   end
 
   @doc false
-  def get_parent_choices do
-    no_value = [value: "", text: "Ingen tilhørighet"]
+  def get_parent_choices(_) do
+    no_value = [value: "", text: "–"]
     if parents = Page |> Page.with_parents |> Brando.repo.all do
       parents
       |> Enum.reverse
@@ -58,47 +58,36 @@ defmodule Brando.PageForm do
     form_value == to_string(status_int)
   end
 
-  form "page", [helper: :admin_page_path, class: "grid-form"] do
+  form "page", [model: Brando.Page, helper: :admin_page_path, class: "grid-form"] do
     field :parent_id, :select,
       [required: true,
-      label: "Hører til",
       help_text: "Hvis siden du oppretter skal være en underside, " <>
                  "velg tilhørende side her. Hvis ikke, velg <em>Ingen tilhørighet</em>",
-      choices: &__MODULE__.get_parent_choices/0,
+      choices: &__MODULE__.get_parent_choices/1,
       is_selected: &__MODULE__.is_parent_selected?/2]
     field :key, :text,
-        [required: true,
-         label: "Identifikasjonsnøkkel",
-         placeholder: "Identifikasjonsnøkkel"]
+        [required: true]
     fieldset do
       field :language, :select,
         [required: true,
-        label: "Språk",
         default: "no",
-        choices: &__MODULE__.get_language_choices/0]
+        choices: &__MODULE__.get_language_choices/1]
     end
     fieldset do
       field :status, :radio,
         [required: true,
-        label: "Status",
         default: "2",
-        choices: &__MODULE__.get_status_choices/0,
+        choices: &__MODULE__.get_status_choices/1,
         is_selected: &__MODULE__.is_status_selected?/2]
     end
     fieldset do
       field :title, :text,
-        [required: true,
-         label: "Tittel",
-         placeholder: "Tittel"]
+        [required: true]
       field :slug, :text,
         [required: true,
-         label: "URL-tamp",
-         placeholder: "URL-tamp",
          slug_from: :title]
     end
-    field :data, :textarea,
-      [label: "Innhold"]
-    submit "Lagre",
-      [class: "btn btn-success"]
+    field :data, :textarea
+    submit :save, [class: "btn btn-success"]
   end
 end

@@ -6,13 +6,13 @@ defmodule Brando.PageFragmentForm do
   use Brando.Form
 
   @doc false
-  def get_language_choices do
+  def get_language_choices(_) do
     Brando.config(:languages)
   end
 
   @doc false
-  def get_status_choices do
-    Brando.config(:status_choices)
+  def get_status_choices(language) do
+    Keyword.get(Brando.config(:status_choices), String.to_atom(language))
   end
 
   @doc false
@@ -33,21 +33,16 @@ defmodule Brando.PageFragmentForm do
     form_value == to_string(status_int)
   end
 
-  form "page_fragment", [helper: :admin_page_fragment_path, class: "grid-form"] do
+  form "page_fragment", [model: Brando.PageFragment, helper: :admin_page_fragment_path, class: "grid-form"] do
     field :key, :text,
-        [required: true,
-         label: "Identifikasjonsnøkkel",
-         placeholder: "Identifikasjonsnøkkel"]
+        [required: true]
     fieldset do
       field :language, :select,
         [required: true,
-        label: "Språk",
         default: "no",
-        choices: &__MODULE__.get_language_choices/0]
+        choices: &__MODULE__.get_language_choices/1]
     end
-    field :data, :textarea,
-      [label: "Innhold"]
-    submit "Lagre",
-      [class: "btn btn-success"]
+    field :data, :textarea
+    submit :save, [class: "btn btn-success"]
   end
 end

@@ -10,8 +10,7 @@ defmodule Brando.FormTest do
         field :full_name, :text,
           [required: true,
            label: "Fullt navn",
-           placeholder: "Fullt navn",
-           help_text: "Skriv inn ditt fødselsnavn - fornavn og etternavn"]
+           placeholder: "Fullt navn"]
         field :tags, :text,
           [tags: true]
         field :username, :text,
@@ -26,13 +25,13 @@ defmodule Brando.FormTest do
   defmodule UserForm do
     use Brando.Form
 
-    def get_role_choices do
+    def get_role_choices(_) do
       [[value: "1", text: "Staff"],
        [value: "2", text: "Admin"],
        [value: "4", text: "Superuser"]]
     end
 
-    def get_status_choices do
+    def get_status_choices(_) do
       [[value: "1", text: "Valg 1"],
        [value: "2", text: "Valg 2"]]
     end
@@ -68,21 +67,21 @@ defmodule Brando.FormTest do
          class: "form-control",
          wrapper_class: ""]
       field :role, :select,
-        [choices: &__MODULE__.get_role_choices/0,
+        [choices: &__MODULE__.get_role_choices/1,
          multiple: true,
          label: "Role",
          label_class: "control-label",
          class: "form-control",
          wrapper_class: ""]
       field :status2, :select,
-        [choices: &__MODULE__.get_status_choices/0,
+        [choices: &__MODULE__.get_status_choices/1,
          default: "1",
          label: "Status",
          label_class: "control-label",
          class: "form-control",
          wrapper_class: ""]
       field :role2, :radio,
-        [choices: &__MODULE__.get_role_choices/0,
+        [choices: &__MODULE__.get_role_choices/1,
         label: "Rolle 2"]
       field :avatar, :file,
         [label: "Avatar",
@@ -102,18 +101,18 @@ defmodule Brando.FormTest do
        editor: [type: :checkbox, in_fieldset: 2, label: "Editor", default: true],
        administrator: [type: :checkbox, in_fieldset: 2, label: "Administrator", default: false],
        fs34070328: [type: :fieldset, legend: "Permissions", row_span: 2],
-       status: [type: :select, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
-       status2: [type: :select, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
-       status3: [type: :radio, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
-       status4: [type: :checkbox, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
+       status: [type: :select, choices: &UserForm.get_status_choices/1, default: "1", label: "Status"],
+       status2: [type: :select, multiple: true, choices: &UserForm.get_status_choices/1, default: "1", label: "Status"],
+       status3: [type: :radio, choices: &UserForm.get_status_choices/1, default: "1", label: "Status"],
+       status4: [type: :checkbox, multiple: true, choices: &UserForm.get_status_choices/1, default: "1", label: "Status"],
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"],
        username: [type: :text, required: true, label: "Username", placeholder: "Username"]
      ]
     errors = [username: "has invalid format", email: "has invalid format", password: "can't be blank", email: "can't be blank", full_name: "can't be blank", username: "can't be blank"]
-    f = Enum.join(UserForm.render_fields("user", form_fields, :create, [], nil, errors), "")
+    f = Enum.join(UserForm.render_fields("no", "user", form_fields, Brando.User, :create, [], nil, errors), "")
     assert f =~ ~s("form-group required has-error")
     assert f =~ "user[username]"
-    assert f =~ ~s(placeholder="Username")
+    assert f =~ ~s(placeholder="Brukernavn")
     assert f =~ "<legend><br>Permissions</legend>"
     assert f =~ ~s(type="submit")
     assert f =~ ~s(Feltet er påkrevet.)
@@ -128,24 +127,24 @@ defmodule Brando.FormTest do
        editor: [type: :checkbox, in_fieldset: 2, label: "Editor", default: true],
        administrator: [type: :checkbox, in_fieldset: 2, label: "Administrator", default: false],
        fs34070328: [type: :fieldset, row_span: 2],
-       status: [type: :select, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
-       status2: [type: :checkbox, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
-       status3: [type: :radio, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
+       status: [type: :select, choices: &UserForm.get_status_choices/1, default: "1", label: "Status"],
+       status2: [type: :checkbox, multiple: true, choices: &UserForm.get_status_choices/1, default: "1", label: "Status"],
+       status3: [type: :radio, choices: &UserForm.get_status_choices/1, default: "1", label: "Status"],
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"]]
     values = %Brando.User{avatar: nil,
-                                      email: "test@email.com",
-                                      role: 4,
-                                      full_name: "Test Name", id: 1,
-                                      inserted_at: %Ecto.DateTime{day: 7, hour: 4, min: 36, month: 12, sec: 26, year: 2014},
-                                      last_login: %Ecto.DateTime{day: 9, hour: 5, min: 2, month: 12, sec: 36, year: 2014},
-                                      password: "$2a$12$abcdefghijklmnopqrstuvwxyz",
-                                      updated_at: %Ecto.DateTime{day: 14, hour: 21, min: 36, month: 1, sec: 53, year: 2015},
-                                      username: "test"}
-    f = Enum.join(UserForm.render_fields("user", form_fields, :update, [], values, nil), "")
+                          email: "test@email.com",
+                          role: 4,
+                          full_name: "Test Name", id: 1,
+                          inserted_at: %Ecto.DateTime{day: 7, hour: 4, min: 36, month: 12, sec: 26, year: 2014},
+                          last_login: %Ecto.DateTime{day: 9, hour: 5, min: 2, month: 12, sec: 36, year: 2014},
+                          password: "$2a$12$abcdefghijklmnopqrstuvwxyz",
+                          updated_at: %Ecto.DateTime{day: 14, hour: 21, min: 36, month: 1, sec: 53, year: 2015},
+                          username: "test"}
+    f = Enum.join(UserForm.render_fields("no", "user", form_fields, Brando.User, :update, [], values, nil), "")
     assert f =~ "form-group required"
     assert f =~ "user[email]"
     assert f =~ ~s(value="test@email.com")
-    assert f =~ ~s(placeholder="E-mail")
+    assert f =~ ~s(placeholder="Epost")
     assert f =~ ~s(type="submit")
     assert f =~ ~s(type="file")
   end

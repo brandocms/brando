@@ -18,7 +18,7 @@ defmodule RouterHelper do
       last_login: %Ecto.DateTime{day: 9, hour: 5, min: 2, month: 12, sec: 36, year: 2014},
       role: [:superuser, :staff, :admin],
       updated_at: %Ecto.DateTime{day: 14, hour: 21, min: 36, month: 1, sec: 53, year: 2015},
-      username: "iggypop"}
+      username: "iggypop", language: "no"}
 
   defmacro __using__(_) do
     quote do
@@ -72,11 +72,13 @@ defmodule RouterHelper do
     import Brando.Routes.Admin.Images
     import Brando.Routes.Admin.Pages
     import Brando.Routes.Admin.Instagram
+    import Brando.Plug.I18n
 
     pipeline :admin do
       plug :accepts, ~w(html json)
       plug :fetch_session
       plug :fetch_flash
+      plug :put_admin_locale
       plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
       plug Authenticate, login_url: "/login"
     end

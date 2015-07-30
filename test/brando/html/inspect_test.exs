@@ -6,7 +6,7 @@ defmodule Brando.HTML.InspectTest do
   alias Brando.User
   alias Brando.Post
 
-  @user_params %{"avatar" => nil, "role" => ["2", "4"],
+  @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "no",
             "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
             "password" => "finimeze", "username" => "zabuzasixu"}
 
@@ -27,7 +27,7 @@ defmodule Brando.HTML.InspectTest do
   test "model/1" do
     assert {:ok, user} = User.create(@user_params)
 
-    {:safe, ret} = model(user)
+    {:safe, ret} = model("no", user)
     ret = ret |> IO.iodata_to_binary
 
     assert ret =~ "zabuzasixu"
@@ -36,7 +36,7 @@ defmodule Brando.HTML.InspectTest do
     assert {:ok, post} = Post.create(@post_params, user)
 
     post = post |> Brando.repo.preload(:creator)
-    {:safe, ret} = model(post)
+    {:safe, ret} = model("no", post)
     ret = ret |> IO.iodata_to_binary
 
     assert ret =~ "<i class=\"fa fa-times text-danger\">"
@@ -50,26 +50,26 @@ defmodule Brando.HTML.InspectTest do
     assert inspect_field("name", Brando.Type.Image, @image_map) =~
       "/media/images/avatars/thumb/27i97a.jpeg"
     assert inspect_field(:password, :string, "passord") =~ "sensurert"
-    assert inspect_field("name", :string, "") =~ "Ingen verdi"
+    assert inspect_field("name", :string, "") =~ "ingen verdi"
   end
 
   test "inspect_assoc/3" do
-    assert inspect_assoc("name", %Ecto.Association.Has{}, %Ecto.Association.NotLoaded{}) =~
+    assert inspect_assoc("no", "name", %Ecto.Association.Has{}, %Ecto.Association.NotLoaded{}) =~
       "Assosiasjonene er ikke hentet."
-    assert inspect_assoc("name", %Ecto.Association.Has{}, []) =~
-      "Ingen assosiasjoner."
-    assert inspect_assoc("name", @association_has, @association_val) =~
+    assert inspect_assoc("no", "name", %Ecto.Association.Has{}, []) =~
+      "ingen assosiasjoner"
+    assert inspect_assoc("no", "name", @association_has, @association_val) =~
       "74 | images/default/2ambet.jpg"
   end
 
   test "model_repr/1" do
     assert {:ok, user} = User.create(@user_params)
-    assert model_repr(user) == "Nita Bond (zabuzasixu)"
+    assert model_repr("no", user) == "Nita Bond (zabuzasixu)"
   end
 
   test "model_name/2" do
     assert {:ok, user} = User.create(@user_params)
-    assert model_name(user, :singular) == "bruker"
-    assert model_name(user, :plural) == "brukere"
+    assert model_name("no", user, :singular) == "bruker"
+    assert model_name("no", user, :plural) == "brukere"
   end
 end

@@ -10,7 +10,7 @@ defmodule Brando.User do
   import Ecto.Query, only: [from: 2]
   alias Brando.Utils
 
-  @required_fields ~w(username full_name email password)
+  @required_fields ~w(username full_name email password language)
   @optional_fields ~w(role avatar)
 
   schema "users" do
@@ -20,6 +20,7 @@ defmodule Brando.User do
     field :password, :string
     field :avatar, Brando.Type.Image
     field :role, Brando.Type.Role
+    field :language, :string
     field :last_login, Ecto.DateTime
     timestamps
   end
@@ -188,18 +189,42 @@ defmodule Brando.User do
   # Meta
 
   use Brando.Meta,
-    [singular: "bruker",
-     plural: "brukere",
-     repr: &("#{&1.full_name} (#{&1.username})"),
-     fields: [id: "ID",
-              username: "Brukernavn",
-              email: "Epost",
-              full_name: "Navn",
-              password: "Passord",
-              role: "Roller",
-              last_login: "Siste innlogging",
-              inserted_at: "Opprettet",
-              updated_at: "Oppdatert",
-              avatar: "Avatar"],
-     hidden_fields: [:password, :creator]]
+    [no: [singular: "bruker",
+          plural: "brukere",
+          repr: &("#{&1.full_name} (#{&1.username})"),
+          fieldset: [
+            user_info: "Brukerinformasjon",
+            rights: "Rettigheter"
+          ],
+          fields: [id: "ID",
+                   username: "Brukernavn",
+                   email: "Epost",
+                   full_name: "Navn",
+                   password: "Passord",
+                   role: "Roller",
+                   language: "Språk",
+                   last_login: "Siste innlogging",
+                   inserted_at: "Opprettet",
+                   updated_at: "Oppdatert",
+                   avatar: "Avatar"],
+          hidden_fields: [:password, :creator]],
+    en: [singular: "user",
+         plural: "users",
+         repr: &("#{&1.full_name} (#{&1.username})"),
+         fieldset: [
+           user_info: "User information",
+           rights: "Rights"
+         ],
+         fields: [id: "ID",
+                  username: "Username",
+                  email: "Email",
+                  full_name: "Full name",
+                  password: "Password",
+                  role: "Roles",
+                  language: "Language",
+                  last_login: "Last login",
+                  inserted_at: "Inserted at",
+                  updated_at: "Updated at",
+                  avatar: "Avatar"],
+         hidden_fields: [:password, :creator]]]
 end

@@ -6,8 +6,8 @@ defmodule Brando.Plug.Lockdown do
 
   ## Example
 
-      plug Brando.Plug.Lockdown, [layout: {Neva.LockdownLayoutView, "lockdown.html"},
-                                  view: {Neva.LockdownView, "lockdown.html"}]
+      plug Brando.Plug.Lockdown, [layout: {MyApp.LockdownLayoutView, "lockdown.html"},
+                                  view: {MyApp.LockdownView, "lockdown.html"}]
 
   """
 

@@ -223,7 +223,7 @@ defmodule Brando.InstagramImage do
   # Meta
 
   use Brando.Meta,
-    [singular: "instagrambilde",
+    [no: [singular: "instagrambilde",
      plural: "instagrambilder",
      repr: &("#{&1.id} | #{&1.caption}"),
      fields: [id: "ID",
@@ -234,6 +234,6 @@ defmodule Brando.InstagramImage do
               url_original: "Bilde-URL",
               url_thumbnail: "Miniatyrbilde-URL",
               created_time: "Opprettet",
-              status: "Status"]]
+              status: "Status"]]]
 
 end

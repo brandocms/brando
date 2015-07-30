@@ -67,7 +67,7 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> with_user(user)
       |> send_request
     assert redirected_to(conn, 302) =~ "/admin/bilder"
-    assert get_flash(conn, :notice) == "Bildeserie opprettet."
+    assert get_flash(conn, :notice) == "Bildeserie opprettet"
   end
 
   test "create (post) w/erroneus params" do
@@ -94,7 +94,7 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> with_user
       |> send_request
     assert redirected_to(conn, 302) =~ "/admin/bilder"
-    assert get_flash(conn, :notice) == "Serie oppdatert."
+    assert get_flash(conn, :notice) == "Bildeserie oppdatert"
   end
 
   test "delete_confirm" do
@@ -113,7 +113,7 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> with_user
       |> send_request
     assert redirected_to(conn, 302) =~ "/admin/bilder"
-    assert get_flash(conn, :notice) == "bildeserie Series name – 0 bilde(r). slettet."
+    assert get_flash(conn, :notice) == "Bildeserie slettet"
   end
 
   test "upload" do

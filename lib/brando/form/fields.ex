@@ -12,7 +12,7 @@ defmodule Brando.Form.Fields do
   """
   def render_field(form_type, name, :file, opts, value, errors) do
     file(form_type, format_name(name, opts[:form_source]), value, errors, opts)
-    |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], opts[:label]))
+    |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], get_label(opts)))
     |> form_group(format_name(name, opts[:form_source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
   end
@@ -23,8 +23,8 @@ defmodule Brando.Form.Fields do
   """
   def render_field(form_type, name, :textarea, opts, value, errors) do
     textarea(form_type, format_name(name, opts[:form_source]), value, errors,
-             Keyword.put(opts, :form_group_class, "no-height"))
-    |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], opts[:label]))
+             Map.put(opts, :form_group_class, "no-height"))
+    |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], get_label(opts)))
     |> form_group(format_name(name, opts[:form_source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
   end
@@ -35,7 +35,7 @@ defmodule Brando.Form.Fields do
   def render_field(form_type, name, :radio, opts, value, errors) do
     render_radios(form_type, format_name(name, opts[:form_source]), opts, value, errors)
     |> Enum.join("")
-    |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], opts[:label]))
+    |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], get_label(opts)))
     |> form_group(format_name(name, opts[:form_source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
   end
@@ -46,13 +46,13 @@ defmodule Brando.Form.Fields do
   def render_field(form_type, name, :checkbox, opts, value, errors) do
     if opts[:multiple] do
       render_checks(form_type, format_name(name, opts[:form_source]), opts, value, errors)
-      |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], opts[:label]))
+      |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], get_label(opts)))
       |> form_group(format_name(name, opts[:form_source]), opts, errors)
       |> div_form_row(opts[:in_fieldset])
     else
       concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class],
                           input(:checkbox, form_type, format_name(name, opts[:form_source]), value, errors, opts) <>
-                          opts[:label]), label(format_name(name, opts[:form_source]), "", ""))
+                          get_label(opts)), label(format_name(name, opts[:form_source]), "", ""))
       |> div_tag("checkbox")
       |> form_group(format_name(name, opts[:form_source]), opts, errors)
       |> div_form_row(opts[:in_fieldset])
@@ -65,7 +65,7 @@ defmodule Brando.Form.Fields do
   def render_field(form_type, name, :select, opts, value, errors) do
     choices = render_options(form_type, opts, value, errors)
     select(form_type, format_name(name, opts[:form_source]), choices, opts, value, errors)
-    |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], opts[:label]))
+    |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], get_label(opts)))
     |> form_group(format_name(name, opts[:form_source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
   end
@@ -74,7 +74,11 @@ defmodule Brando.Form.Fields do
   Render submit button
   """
   def render_field(form_type, name, :submit, opts, _value, errors) do
-    input(:submit, form_type, format_name(name, opts[:form_source]), opts[:text], errors, opts)
+    text = case opts[:text] do
+      :save -> Brando.Form.t!(opts[:language], "form.save")
+      text -> text
+    end
+    input(:submit, form_type, format_name(name, opts[:form_source]), text, errors, opts)
     |> form_group(format_name(name, opts[:form_source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
   end
@@ -82,8 +86,14 @@ defmodule Brando.Form.Fields do
   @doc """
   Render fieldset open
   """
-  def render_field(_, _, :fieldset, opts, _, _), do:
-    fieldset_open_tag(opts[:legend], opts[:row_span])
+  def render_field(_, _, :fieldset, opts, _, _) do
+    legend =
+      case opts[:legend] do
+        {:i18n, key} -> opts[:model].t!(opts[:language], key)
+        legend -> legend
+      end
+    fieldset_open_tag(legend, opts[:row_span])
+  end
 
   @doc """
   Render fieldset close
@@ -95,11 +105,12 @@ defmodule Brando.Form.Fields do
   Render text/password/email (catchall)
   """
   def render_field(form_type, name, input_type, opts, value, errors) do
+    confirm_i18n = if opts[:language] == "no", do: "Bekreft", else: "Confirm"
     confirm = if opts[:confirm] do
       confirm_opts =
         opts
-        |> Keyword.put(:label, "Bekreft #{opts[:label]}")
-        |> Keyword.put(:placeholder, "Bekreft #{opts[:placeholder]}")
+        |> Map.put(:label, "#{confirm_i18n} #{get_label(opts)}")
+        |> Map.put(:placeholder, "#{confirm_i18n} #{get_label(opts)}")
 
       input(input_type, form_type, format_name("#{name}_confirmation", opts[:form_source]), value, errors, confirm_opts)
       |> concat_fields(label(format_name("#{name}_confirmation", opts[:form_source]), confirm_opts[:label_class], confirm_opts[:label]))
@@ -110,7 +121,7 @@ defmodule Brando.Form.Fields do
 
     field =
       input(input_type, form_type, format_name(name, opts[:form_source]), value, errors, opts)
-      |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], opts[:label]))
+      |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], get_label(opts)))
       |> form_group(format_name(name, opts[:form_source]), opts, errors)
 
     confirm
@@ -122,7 +133,7 @@ defmodule Brando.Form.Fields do
   Iterates through `opts` :choices key, rendering options for the select
   """
   def render_options(form_type, opts, value, _errors) do
-    for choice <- get_choices(opts[:choices]) do
+    for choice <- get_choices(opts) do
       option(form_type, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
     end
   end
@@ -131,7 +142,7 @@ defmodule Brando.Form.Fields do
   Iterates through `opts` :choices key, rendering input type="radio"s
   """
   def render_radios(form_type, name, opts, value, _errors) do
-    for choice <- get_choices(opts[:choices]) do
+    for choice <- get_choices(opts) do
       radio(form_type, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
     end
   end
@@ -140,7 +151,7 @@ defmodule Brando.Form.Fields do
   Iterates through `opts` :choices key, rendering input type="checkbox"s
   """
   def render_checks(form_type, name, opts, value, _errors) do
-    checks = for choice <- get_choices(opts[:choices]) do
+    checks = for choice <- get_choices(opts) do
       checkbox(form_type, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
     end
     empty_value =
@@ -167,7 +178,7 @@ defmodule Brando.Form.Fields do
     get_has_error(errors) <> "\">" <>
     contents <>
     render_errors(errors) <>
-    render_help_text(opts[:help_text]) <>
+    render_help_text(opts) <>
     "</div>"
   end
 
@@ -176,11 +187,26 @@ defmodule Brando.Form.Fields do
   """
   @spec render_help_text(String.t | nil) :: String.t
   def render_help_text(nil), do: ""
-  def render_help_text(help_text) do
+  def render_help_text([]), do: ""
+  def render_help_text(%{help_text: help_text}) do
     "<div class=\"help\">" <>
     "<i class=\"fa fa-fw fa-question-circle\"> </i>" <>
     "<span>" <> help_text <> "</span>" <>
     "</div>"
+  end
+  def render_help_text(%{name: name, model: model, language: language}) do
+    case model.t(language, "help.#{name}") do
+      {:ok, translation} ->
+        "<div class=\"help\">" <>
+        "<i class=\"fa fa-fw fa-question-circle\"> </i>" <>
+        "<span>" <> translation <> "</span>" <>
+        "</div>"
+      {:error, _} ->
+        ""
+    end
+  end
+  def render_help_text(_) do
+    ""
   end
 
   @doc """
@@ -242,6 +268,7 @@ defmodule Brando.Form.Fields do
   label's content.
   """
   @spec label(String.t, String.t, String.t) :: String.t
+  def label(_, _, false), do: ""
   def label(name, class, text), do:
     "<label for=\"#{name}\" class=\"#{class}\">#{text}</label>"
 
@@ -251,23 +278,15 @@ defmodule Brando.Form.Fields do
   """
   @spec file(atom, String.t, String.t, Options.t | Keyword.t, Options.t | Keyword.t) :: String.t
   def file(:update, name, value, _errors, opts) do
-    opts = List.delete(opts, :default)
-    img =
-      if value do
-        "<div class=\"image-preview\">" <>
-        "<img src=\"" <> media_url(img(value, :thumb)) <> "\" />" <>
-        "</div>"
-      else
-        ""
-      end
-   img <> file(:create, name, value, _errors, opts)
+    opts = Map.delete(opts, :default)
+    get_img_preview(value) <> file(:create, name, value, _errors, opts)
   end
 
   @doc """
   Render a file field for :create.
   """
   def file(:create, name, _value, _errors, opts) do
-    "<input name=\"#{name}\" type=\"file\"#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])} />"
+    "<input name=\"#{name}\" type=\"file\"#{get_placeholder(opts)}#{get_class(opts[:class])} />"
   end
 
   @doc """
@@ -275,7 +294,7 @@ defmodule Brando.Form.Fields do
   """
   @spec textarea(atom, String.t, String.t, Options.t | Keyword.t, Options.t | Keyword.t) :: String.t
   def textarea(:update, name, value, _errors, opts) do
-    opts = List.delete(opts, :default)
+    opts = Map.delete(opts, :default)
     textarea(:create, name, value, _errors, opts)
   end
 
@@ -305,7 +324,7 @@ defmodule Brando.Form.Fields do
     * `_errors`: empty
   """
   def select(_, name, choices, opts, _value, _errors) do
-    opts = List.delete(opts, :default)
+    opts = Map.delete(opts, :default)
     case opts[:multiple] do
       nil  -> tag("select", name, choices, opts[:class])
       true -> ~s(<select name="#{name}[]" multiple>#{choices}</select>)
@@ -422,18 +441,18 @@ defmodule Brando.Form.Fields do
       end
     "<input name=\"" <> name <> "\" type=\"hidden\" value=\"false\">" <>
     "<input name=\"" <> name <> "\" value=\"true\" type=\"checkbox\"" <>
-    get_placeholder(opts[:placeholder]) <>
+    get_placeholder(opts) <>
     get_class(opts[:class]) <>
     checked <> " />"
   end
 
   def input(input_type, :update, name, value, _errors, opts) do
-    opts = List.delete(opts, :default)
+    opts = Map.delete(opts, :default)
     input(input_type, :create, name, value, _errors, opts)
   end
 
   def input(input_type, _form_type, name, value, _errors, opts) do
-    "<input name=\"#{name}\" type=\"#{input_type}\"#{get_slug_from(name, opts)}#{get_val(value, opts[:default])}#{get_placeholder(opts[:placeholder])}#{get_class(opts[:class])}#{get_tags_input(opts[:tags])} />"
+    "<input name=\"#{name}\" type=\"#{input_type}\"#{get_slug_from(name, opts)}#{get_val(value, opts[:default])}#{get_placeholder(opts)}#{get_class(opts[:class])}#{get_tags_input(opts[:tags])} />"
   end
 
   def tag(tag, name, contents, class) do
@@ -478,7 +497,41 @@ defmodule Brando.Form.Fields do
   If `placeholder` is not nil, returns placeholder
   """
   def get_placeholder(nil), do: ""
-  def get_placeholder(placeholder), do: " " <> "placeholder=\"#{placeholder}\""
+  def get_placeholder(%{type: :submit}) do
+    ""
+  end
+  def get_placeholder(%{name: name, language: language, model: model}) do
+    placeholder = case model.t(language, "model.#{name}") do
+      {:ok, translation} -> translation
+      {:error, _} -> Atom.to_string(name)
+    end
+    " " <> "placeholder=\"#{placeholder}\""
+  end
+  def get_placeholder(%{placeholder: nil}) do
+    ""
+  end
+  def get_placeholder(%{placeholder: placeholder}) do
+    " " <> "placeholder=\"#{placeholder}\""
+  end
+  def get_placeholder(_) do
+    ""
+  end
+
+  @doc """
+  Parse and return `opts` looking for label
+  """
+  def get_label(%{language: language, label: {:i18n, module, field}}) do
+    module.t!(language, "model.#{field}")
+  end
+  def get_label(%{name: name, language: language, label: {:i18n, module}}) do
+    module.t!(language, "model.#{name}")
+  end
+  def get_label(%{label: label}) do
+    label
+  end
+  def get_label(%{name: name, model: model, language: language}) do
+    model.t!(language, "model.#{name}")
+  end
 
   @doc """
   If `class` is not nil, returns class
@@ -530,10 +583,22 @@ defmodule Brando.Form.Fields do
   @doc """
   Evals the quoted choices function and returns the result
   """
-  def get_choices(fun), do: apply(fun, [])
+  def get_choices(%{choices: fun, language: language}) do
+    apply(fun, [language])
+  end
+  def get_choices(_) do
+    nil
+  end
 
   defp get_tags_input(true), do: " data-tags-input=\"true\""
   defp get_tags_input(nil), do: ""
+
+  defp get_img_preview(nil), do: ""
+  defp get_img_preview(value) do
+    "<div class=\"image-preview\">" <>
+    "<img src=\"" <> media_url(img(value, :thumb)) <> "\" />" <>
+    "</div>"
+  end
 
   defp format_name(name, form_source) do
     "#{form_source}[#{name}]"

@@ -121,15 +121,28 @@ defmodule Brando.ImageCategory do
   # Meta
 
   use Brando.Meta,
-    [singular: "bildekategori",
-     plural: "bildekategorier",
-     repr: &("#{&1.name}"),
-     fields: [id: "ID",
-              name: "Navn",
-              slug: "URL-tamp",
-              cfg: "Konfigurasjon",
-              creator: "Opprettet av",
-              image_series: "Bildeserie",
-              inserted_at: "Opprettet",
-              updated_at: "Oppdatert"]]
+    [no:
+      [singular: "bildekategori",
+       plural: "bildekategorier",
+       repr: &("#{&1.name}"),
+       fields: [id: "ID",
+                name: "Navn",
+                slug: "URL-tamp",
+                cfg: "Konfigurasjon",
+                creator: "Opprettet av",
+                image_series: "Bildeserie",
+                inserted_at: "Opprettet",
+                updated_at: "Oppdatert"]],
+    en:
+      [singular: "image category",
+       plural: "image categories",
+       repr: &("#{&1.name}"),
+       fields: [id: "ID",
+                name: "Name",
+                slug: "Slug",
+                cfg: "Config",
+                creator: "Creator",
+                image_series: "Image series",
+                inserted_at: "Inserted at",
+                updated_at: "Updated at"]]]
 end

@@ -10,7 +10,7 @@ defmodule Brando.ImageCategory.ControllerTest do
   alias Brando.User
   alias Brando.Type.ImageConfig
 
-  @user_params %{"avatar" => nil, "role" => ["2", "4"],
+  @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "no",
                  "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
@@ -56,7 +56,7 @@ defmodule Brando.ImageCategory.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/bilder"
-    assert get_flash(conn, :notice) == "Kategori opprettet."
+    assert get_flash(conn, :notice) == "Bildekategori opprettet"
   end
 
   test "create (post) w/erroneus params" do
@@ -81,7 +81,7 @@ defmodule Brando.ImageCategory.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/bilder"
-    assert get_flash(conn, :notice) == "Kategori oppdatert."
+    assert get_flash(conn, :notice) == "Bildekategori oppdatert"
   end
 
   test "config (get)" do
@@ -116,7 +116,7 @@ defmodule Brando.ImageCategory.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/bilder"
-    assert get_flash(conn, :notice) == "Kategori konfigurert."
+    assert get_flash(conn, :notice) == "Bildekategori konfigurert"
   end
 
   test "delete_confirm" do
@@ -141,6 +141,6 @@ defmodule Brando.ImageCategory.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/bilder"
-    assert get_flash(conn, :notice) == "bildekategori Test Category slettet."
+    assert get_flash(conn, :notice) == "Bildekategori slettet"
   end
 end

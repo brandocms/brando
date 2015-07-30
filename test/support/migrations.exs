@@ -11,6 +11,7 @@ defmodule Brando.Integration.Migration do
       add :password,      :text
       add :avatar,        :text
       add :role,          :integer
+      add :language,      :text,    default: "no"
       add :last_login,    :datetime
       timestamps
     end

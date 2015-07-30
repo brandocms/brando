@@ -6,13 +6,13 @@ defmodule Brando.PostForm do
   use Brando.Form
 
   @doc false
-  def get_language_choices do
+  def get_language_choices(_) do
     Brando.config(:languages)
   end
 
   @doc false
-  def get_status_choices do
-    Brando.config(:status_choices)
+  def get_status_choices(language) do
+    Keyword.get(Brando.config(:status_choices), String.to_atom(language))
   end
 
   @doc """
@@ -28,51 +28,31 @@ defmodule Brando.PostForm do
     form_value == to_string(status_int)
   end
 
-  form "post", [helper: :admin_post_path, class: "grid-form"] do
+  form "post", [model: Brando.Post, helper: :admin_post_path, class: "grid-form"] do
     fieldset do
       field :language, :select,
         [required: true,
-        label: "Språk",
         default: "no",
-        choices: &__MODULE__.get_language_choices/0]
+        choices: &__MODULE__.get_language_choices/1]
     end
     fieldset do
       field :status, :radio,
         [required: true,
-        label: "Status",
         default: "2",
-        choices: &__MODULE__.get_status_choices/0,
+        choices: &__MODULE__.get_status_choices/1,
         is_selected: &__MODULE__.is_status_selected?/2]
     end
     fieldset do
-      field :featured, :checkbox,
-        [label: "Vektet post",
-        default: false,
-        help_text: "Posten vektes uavhengig av opprettelses- og publiseringsdato"]
+      field :featured, :checkbox, [default: false]
     end
     fieldset do
-      field :header, :text,
-        [required: true,
-         label: "Overskrift",
-         placeholder: "Overskrift"]
-      field :slug, :text,
-        [required: true,
-         label: "URL-tamp",
-         placeholder: "URL-tamp",
-         slug_from: :header]
+      field :header, :text, [required: true]
+      field :slug, :text, [required: true, slug_from: :header]
     end
-    field :lead, :textarea,
-      [label: "Ingress"]
-    field :data, :textarea,
-      [label: "Innhold"]
-    field :publish_at, :text,
-      [required: true,
-       label: "Publiseringstidspunkt",
-       default: &Brando.Utils.get_now/0]
-    field :tags, :text,
-      [label: "Tags",
-       tags: true]
-    submit "Lagre",
-      [class: "btn btn-success"]
+    field :lead, :textarea
+    field :data, :textarea
+    field :publish_at, :text, [required: true, default: &Brando.Utils.get_now/0]
+    field :tags, :text, [tags: true]
+    submit :save, [class: "btn btn-success"]
   end
 end

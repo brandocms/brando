@@ -2,6 +2,7 @@ defmodule Brando.Admin.ImageController do
   @moduledoc """
   Controller for the Brando ImageCategory module.
   """
+  use Linguist.Vocabulary
   use Brando.Web, :controller
   import Brando.Plug.Section
 
@@ -9,6 +10,7 @@ defmodule Brando.Admin.ImageController do
 
   @doc false
   def index(conn, _params) do
+    language = Brando.I18n.get_language(conn)
     # show images by tabbed category, then series.
     category_model = conn.private[:category_model]
     categories =
@@ -17,6 +19,7 @@ defmodule Brando.Admin.ImageController do
       |> Brando.repo.all
 
     conn
+    |> assign(:page_title, t!(language, "title.index"))
     |> assign(:categories, categories)
     |> render(:index)
   end
@@ -27,4 +30,16 @@ defmodule Brando.Admin.ImageController do
     model.delete(ids)
     conn |> render(:delete_selected, ids: ids)
   end
+
+  locale "no", [
+    title: [
+      index: "Bildeoversikt",
+    ]
+  ]
+
+  locale "en", [
+    title: [
+      index: "Index – Images",
+    ]
+  ]
 end

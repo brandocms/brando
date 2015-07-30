@@ -19,4 +19,12 @@ defmodule Brando.I18n do
     conn
     |> assign(:language, language)
   end
+
+  @doc """
+  Get `language` from assigns.
+  """
+  def get_language(conn) do
+    conn.assigns
+    |> Map.get(:language, Brando.config(:default_admin_language))
+  end
 end

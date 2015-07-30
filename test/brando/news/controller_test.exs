@@ -9,7 +9,7 @@ defmodule Brando.News.ControllerTest do
   alias Brando.Post
   alias Brando.User
 
-  @user_params %{"avatar" => nil, "role" => ["2", "4"],
+  @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "no",
                  "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
@@ -41,7 +41,7 @@ defmodule Brando.News.ControllerTest do
       |> send_request
 
     assert response_content_type(conn, :html) =~ "charset=utf-8"
-    assert html_response(conn, 200) =~ "Postoversikt"
+    assert html_response(conn, 200) =~ "Oversikt - poster"
   end
 
   test "show" do
@@ -63,7 +63,7 @@ defmodule Brando.News.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Ny post"
+    assert html_response(conn, 200) =~ "Opprett post"
   end
 
   test "edit" do
@@ -93,7 +93,7 @@ defmodule Brando.News.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/nyheter"
-    assert get_flash(conn, :notice) == "Post opprettet."
+    assert get_flash(conn, :notice) == "Post opprettet"
   end
 
   test "create (post) w/erroneus params" do
@@ -102,7 +102,7 @@ defmodule Brando.News.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Ny post"
+    assert html_response(conn, 200) =~ "Opprett post"
     assert get_flash(conn, :error) == "Feil i skjema"
   end
 
@@ -120,7 +120,7 @@ defmodule Brando.News.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/nyheter"
-    assert get_flash(conn, :notice) == "Post oppdatert."
+    assert get_flash(conn, :notice) == "Post oppdatert"
   end
 
   test "delete_confirm" do

@@ -2,19 +2,20 @@ defmodule Brando.Admin.PageController do
   @moduledoc """
   Controller for the Brando Pages module.
   """
+  use Linguist.Vocabulary
   use Brando.Web, :controller
   use Brando.Villain.Controller,
     image_model: Brando.Image,
     series_model: Brando.ImageSeries
 
   import Brando.Plug.Section
-  import Brando.HTML.Inspect, only: [model_name: 2]
 
   plug :put_section, "pages"
   plug :scrub_params, "page" when action in [:create, :update]
 
   @doc false
   def index(conn, _params) do
+    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     pages =
       model
@@ -23,12 +24,14 @@ defmodule Brando.Admin.PageController do
       |> Brando.repo.all
 
     conn
+    |> assign(:page_title, t!(language, "title.index"))
     |> assign(:pages, pages)
     |> render(:index)
   end
 
   @doc false
   def show(conn, %{"id" => id}) do
+    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     page =
       model
@@ -36,41 +39,48 @@ defmodule Brando.Admin.PageController do
       |> Brando.repo.get_by(id: id)
 
     conn
+    |> assign(:page_title, t!(language, "title.show"))
     |> assign(:page, page)
     |> render(:show)
   end
 
   @doc false
   def new(conn, _params) do
+    language = Brando.I18n.get_language(conn)
     conn
+    |> assign(:page_title, t!(language, "title.new"))
     |> render(:new)
   end
 
   @doc false
   def create(conn, %{"page" => page}) do
+    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     case model.create(page, Brando.HTML.current_user(conn)) do
       {:ok, _} ->
         conn
-        |> put_flash(:notice, "Side opprettet.")
+        |> put_flash(:notice, t!(language, "flash.created"))
         |> redirect(to: router_module(conn).__helpers__.admin_page_path(conn, :index))
       {:error, errors} ->
         conn
+        |> assign(:page_title, t!(language, "title.new"))
         |> assign(:page, page)
         |> assign(:errors, errors)
-        |> put_flash(:error, "Feil i skjema")
+        |> put_flash(:error, t!(language, "flash.form_error"))
         |> render(:new)
     end
   end
 
   @doc false
   def edit(conn, %{"id" => id}) do
+    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     page =
       Brando.repo.get_by!(model, id: id)
       |> model.encode_data
 
       conn
+      |> assign(:page_title, t!(language, "title.edit"))
       |> assign(:page, page)
       |> assign(:id, id)
       |> render(:edit)
@@ -78,25 +88,28 @@ defmodule Brando.Admin.PageController do
 
   @doc false
   def update(conn, %{"page" => form_data, "id" => id}) do
+    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     page = Brando.repo.get_by!(model, id: id)
     case model.update(page, form_data) do
       {:ok, _updated_page} ->
         conn
-        |> put_flash(:notice, "Side oppdatert.")
+        |> put_flash(:notice, t!(language, "flash.updated"))
         |> redirect(to: router_module(conn).__helpers__.admin_page_path(conn, :index))
       {:error, errors} ->
         conn
+        |> assign(:page_title, t!(language, "title.edit"))
         |> assign(:page, form_data)
         |> assign(:errors, errors)
         |> assign(:id, id)
-        |> put_flash(:error, "Feil i skjema")
+        |> put_flash(:error, t!(language, "flash.form_error"))
         |> render(:edit)
     end
   end
 
   @doc false
   def delete_confirm(conn, %{"id" => id}) do
+    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     record =
       model
@@ -104,17 +117,51 @@ defmodule Brando.Admin.PageController do
       |> Brando.repo.get_by(id: id)
 
     conn
+    |> assign(:page_title, t!(language, "title.delete_confirm"))
     |> assign(:record, record)
     |> render(:delete_confirm)
   end
 
   @doc false
   def delete(conn, %{"id" => id}) do
+    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     record = Brando.repo.get_by!(model, id: id)
     model.delete(record)
     conn
-    |> put_flash(:notice, "#{model_name(record, :singular)} #{model.__repr__(record)} slettet.")
+    |> put_flash(:notice, t!(language, "flash.deleted"))
     |> redirect(to: router_module(conn).__helpers__.admin_page_path(conn, :index))
   end
+
+  locale "no", [
+    title: [
+      index: "Sideoversikt",
+      show: "Vis side",
+      new: "Ny side",
+      edit: "Endre side",
+      delete_confirm: "Bekreft sletting av side",
+    ],
+    flash: [
+      form_error: "Feil i skjema",
+      updated: "Side oppdatert",
+      created: "Side opprettet",
+      deleted: "Side slettet"
+    ]
+  ]
+
+  locale "en", [
+    title: [
+      index: "Index – Pages",
+      show: "Show page",
+      new: "New page",
+      edit: "Edit page",
+      delete_confirm: "Confirm page deletion",
+    ],
+    flash: [
+      form_error: "Error(s) in form",
+      updated: "Page updated",
+      created: "Page created",
+      deleted: "Page deleted"
+    ]
+  ]
 end

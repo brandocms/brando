@@ -96,7 +96,8 @@ defmodule Forge do
     password: "hunter2hunter2",
     username: "jamesw",
     avatar: nil,
-    role: ["2", "4"]
+    role: ["2", "4"],
+    language: "no"
 
   register :user_w_hashed_pass,
     __struct__: Brando.User,
@@ -105,7 +106,8 @@ defmodule Forge do
     password: "$2b$12$VD9opg289oNQAHii8VVpoOIOe.y4kx7.lGb9SYRwscByP.tRtJTsa",
     username: "jamesw",
     avatar: nil,
-    role: ["2", "4"]
+    role: ["2", "4"],
+    language: "no"
 end
 
 defmodule Blacksmith.Config do

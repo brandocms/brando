@@ -5,17 +5,9 @@ defmodule Brando.ImageCategoryForm do
   """
   use Brando.Form
 
-  form "imagecategory", [helper: :admin_image_category_path, class: "grid-form"] do
-    field :name, :text,
-      [required: true,
-       label: "Navn",
-       placeholder: "Navn"]
-    field :slug, :text,
-      [required: true,
-       label: "URL-tamp",
-       placeholder: "URL-tamp",
-       slug_from: :name]
-    submit "Lagre",
-      [class: "btn btn-success"]
+  form "imagecategory", [model: Brando.ImageCategory, helper: :admin_image_category_path, class: "grid-form"] do
+    field :name, :text, [required: true]
+    field :slug, :text, [required: true, slug_from: :name]
+    submit :save, [class: "btn btn-success"]
   end
 end

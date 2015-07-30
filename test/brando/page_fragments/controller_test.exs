@@ -7,7 +7,7 @@ defmodule Brando.PageFragments.ControllerTest do
   alias Brando.PageFragment
   alias Brando.User
 
-  @user_params %{"avatar" => nil, "role" => ["2", "4"],
+  @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "no",
                  "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
@@ -56,7 +56,7 @@ defmodule Brando.PageFragments.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Nytt sidefragment"
+    assert html_response(conn, 200) =~ "Opprett sidefragment"
   end
 
   test "edit" do
@@ -86,7 +86,7 @@ defmodule Brando.PageFragments.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/sider/fragmenter"
-    assert get_flash(conn, :notice) == "Sidefragment opprettet."
+    assert get_flash(conn, :notice) == "Sidefragment opprettet"
   end
 
   test "create (page) w/erroneus params" do
@@ -95,7 +95,7 @@ defmodule Brando.PageFragments.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Nytt sidefragment"
+    assert html_response(conn, 200) =~ "Opprett sidefragment"
     assert get_flash(conn, :error) == "Feil i skjema"
   end
 
@@ -113,7 +113,7 @@ defmodule Brando.PageFragments.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/sider/fragmenter"
-    assert get_flash(conn, :notice) == "Sidefragment oppdatert."
+    assert get_flash(conn, :notice) == "Sidefragment oppdatert"
   end
 
   test "delete_confirm" do

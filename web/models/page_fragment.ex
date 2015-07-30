@@ -132,16 +132,30 @@ defmodule Brando.PageFragment do
   # Meta
 
   use Brando.Meta, [
-    singular: "sidefragment",
-    plural: "sidefragmenter",
-    repr: &("#{&1.key}"),
-    fields: [
-       id: "№",
-       language: "Språk",
-       key: "Id-nøkkel",
-       data: "Data",
-       html: "HTML",
-       creator: "Opprettet av",
-       inserted_at: "Opprettet",
-       updated_at: "Oppdatert"]]
+    no: [
+      singular: "sidefragment",
+      plural: "sidefragmenter",
+      repr: &("#{&1.key}"),
+      fields: [
+         id: "№",
+         language: "Språk",
+         key: "Id-nøkkel",
+         data: "Data",
+         html: "HTML",
+         creator: "Opprettet av",
+         inserted_at: "Opprettet",
+         updated_at: "Oppdatert"]],
+    en: [
+      singular: "page fragment",
+      plural: "page fragments",
+      repr: &("#{&1.key}"),
+      fields: [
+         id: "№",
+         language: "Language",
+         key: "Key",
+         data: "Data",
+         html: "HTML",
+         creator: "Creator",
+         inserted_at: "Inserted",
+         updated_at: "Updated"]]]
 end

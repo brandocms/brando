@@ -1,21 +1,19 @@
-<h1>Instagram | oversikt</h1>
+<h1><%= t!(@language, "actions.index") %></h1>
 <p>
-  Oversikt over Instagram-bilder. Kun bildene i "Godkjente bilder"-raden vil
-  vises på nettsiden.<br/>
-  For å utføre handlinger, velg bilder og klikk deretter på
-  knappen med ønsket handling.
+  <%= t!(@language, "content.help1") %><br />
+  <%= t!(@language, "content.help2") %>
 </p>
 <div class="button-header">
   <button class="approve-selected-images btn btn-default">
-    <i class="fa fa-fw fa-thumbs-o-up m-r-sm"></i>Merk som godkjent
+    <i class="fa fa-fw fa-thumbs-o-up m-r-sm"></i><%= t!(@language, "actions.mark_as") %> <%= t!(@language, "actions.approved") %>
   </button>
   <button class="reject-selected-images btn btn-default">
-    <i class="fa fa-fw fa-thumbs-o-down m-r-sm"></i>Merk som avvist
+    <i class="fa fa-fw fa-thumbs-o-down m-r-sm"></i><%= t!(@language, "actions.mark_as") %> <%= t!(@language, "actions.rejected") %>
   </button>
   <button class="delete-selected-images btn btn-default">
-    <i class="fa fa-fw fa-trash-o m-r-sm"></i>Merk som slettet
+    <i class="fa fa-fw fa-trash-o m-r-sm"></i><%= t!(@language, "actions.mark_as") %> <%= t!(@language, "actions.deleted") %>
   </button>
 </div>
 <div class="image-serie">
-  <%= show_grouped_images(@images) %>
+  <%= show_grouped_images(@language, @images) %>
 </div>

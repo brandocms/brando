@@ -35,7 +35,7 @@ defmodule Brando.Image.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Bildeoversikt"
+    assert html_response(conn, 200) =~ "Oversikt"
     assert html_response(conn, 200) =~ "Test category"
     assert html_response(conn, 200) =~ "Series name"
   end

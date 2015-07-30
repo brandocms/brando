@@ -34,9 +34,13 @@ defmodule Brando.Menu do
           submenu: [%{name: "Dashboard", url: admin_dashboard_path(:dashboard)}]}
 
   """
-  defmacro menu(name, contents) do
-    quote bind_quoted: [name: name, contents: Macro.escape(contents)] do
-      @menus {name, contents}
+  defmacro menu(_, _) do
+    raise "menu/2 is deprecated. Use menu/3 with added :language as first parameter\n\n#{Exception.format_stacktrace(System.stacktrace)}"
+  end
+
+  defmacro menu(language, name, contents) do
+    quote bind_quoted: [language: language, name: name, contents: Macro.escape(contents)] do
+      @menus {language, name, contents}
     end
   end
 
@@ -45,8 +49,8 @@ defmodule Brando.Menu do
   """
   def compile(menus) do
     menus =
-      for {_name, contents} <- menus do
-        defmenu(contents)
+      for {language, name, contents} <- menus do
+        defmenu(language, name, contents)
       end
 
     quote do
@@ -54,13 +58,13 @@ defmodule Brando.Menu do
     end
   end
 
-  defp defmenu(contents) do
+  defp defmenu(language, name, contents) do
     quote do
       @doc """
       Get the menu for the module `menu/2` was called from.
       """
-      def get_menu do
-        unquote(contents)
+      def get_menu(unquote(language)) do
+        {unquote(name), unquote(contents)}
       end
     end
   end

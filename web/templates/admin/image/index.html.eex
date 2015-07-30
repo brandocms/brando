@@ -1,4 +1,4 @@
-<h1>Bildeoversikt</h1>
+<h1><%= Brando.Admin.ImageView.t!(@language, "actions.index") %></h1>
 <ul class="accordion-tabs-minimal">
   <%= for category <- @categories do %>
   <li class="tab-header-and-content">
@@ -7,27 +7,34 @@
     </a>
     <div class="tab-content">
       <a href="<%= Helpers.admin_image_series_path(@conn, :new, category.id) %>" class="btn btn-primary m-b-sm">
-        <i class="fa fa-plus"></i> Ny bildeserie
+        <i class="fa fa-plus"></i> <%= Brando.Admin.ImageSeriesView.t!(@language, "actions.new") %>
       </a>
       <a href="<%= Helpers.admin_image_category_path(@conn, :sequence, category.id) %>" class="btn btn-default m-b-sm">
-        <i class="fa fa-sort"></i> Sortér bildeserier
+        <i class="fa fa-sort"></i> <%= Brando.Admin.ImageSeriesView.t!(@language, "actions.sort") %>
       </a>
       <a href="<%= Helpers.admin_image_category_path(@conn, :edit, category.id) %>" class="btn btn-default m-b-sm">
-        <i class="fa fa-edit"></i> Endre kategori
+        <i class="fa fa-edit"></i> <%= Brando.Admin.ImageCategoryView.t!(@language, "actions.edit") %>
       </a>
       <a href="<%= Helpers.admin_image_category_path(@conn, :configure, category.id) %>" class="btn btn-default m-b-sm">
-        <i class="fa fa-cogs"></i> Konfigurér kategori
+        <i class="fa fa-cogs"></i> <%= Brando.Admin.ImageCategoryView.t!(@language, "actions.configure") %>
       </a>
       <a href="<%= Helpers.admin_image_category_path(@conn, :delete_confirm, category.id) %>" class="btn btn-danger m-b-sm">
-        <i class="fa fa-trash"></i> Slett kategori
+        <i class="fa fa-trash"></i> <%= Brando.Admin.ImageCategoryView.t!(@language, "actions.delete") %>
       </a>
     <%= if category.image_series != [] do %>
       <%= for serie <- category.image_series do %>
         <div class="image-serie image-selection-pool">
-        <h2 class="m-b-sm"><span class="text-muted">Serie:</span> <%= String.capitalize(serie.name) %></h2>
+        <h2 class="m-b-sm">
+          <span class="text-muted">
+            <%= String.capitalize(Brando.ImageSeries.__name__(@language, :singular)) %>:
+          </span>
+          <%= String.capitalize(serie.name) %>
+          </h2>
           <!-- imagetoolbar -->
           <div class="image-toolbar">
-            <button disabled class="delete-selected-images btn btn-danger m-b-sm">Slett valgte bilder</button>
+            <button disabled class="delete-selected-images btn btn-danger m-b-sm">
+              <%= Brando.Admin.ImageView.t!(@language, "actions.delete_plural") %>
+            </button>
           </div>
           <!-- /imagetoolbar -->
           <%= if serie.images != [] do %>
@@ -35,21 +42,21 @@
             <img data-id="<%= image.id %>" src="<%= media_url(img(image.image, :thumb)) %>" />
             <% end %>
           <% else %>
-            <p>Ingen bilder i denne serien.</p>
+            <p><%= Brando.Admin.ImageView.t!(@language, "actions.empty") %></p>
           <% end %>
           <hr>
-          <a href="<%= Helpers.admin_image_series_path(@conn, :upload, serie.id) %>" class="btn btn-default"><i class="fa fa-cloud"> </i>Last opp bilder</a>
-          <a href="<%= Helpers.admin_image_series_path(@conn, :edit, serie.id) %>" class="btn btn-default"><i class="fa fa-edit"> </i>Editer bildeserie</a>
-          <a href="<%= Helpers.admin_image_series_path(@conn, :sequence, serie.id) %>" class="btn btn-default"><i class="fa fa-sort"> </i>Sortér bilder</a>
-          <a href="<%= Helpers.admin_image_series_path(@conn, :delete_confirm, serie.id) %>" class="btn btn-danger"><i class="fa fa-trash"> </i>Slett bildeserie</a>
+          <a href="<%= Helpers.admin_image_series_path(@conn, :upload, serie.id) %>" class="btn btn-default"><i class="fa fa-cloud"> </i><%= Brando.Admin.ImageView.t!(@language, "actions.upload") %></a>
+          <a href="<%= Helpers.admin_image_series_path(@conn, :edit, serie.id) %>" class="btn btn-default"><i class="fa fa-edit"> </i><%= Brando.Admin.ImageSeriesView.t!(@language, "actions.edit") %></a>
+          <a href="<%= Helpers.admin_image_series_path(@conn, :sequence, serie.id) %>" class="btn btn-default"><i class="fa fa-sort"> </i><%= Brando.Admin.ImageView.t!(@language, "actions.sort") %></a>
+          <a href="<%= Helpers.admin_image_series_path(@conn, :delete_confirm, serie.id) %>" class="btn btn-danger"><i class="fa fa-trash"> </i><%= Brando.Admin.ImageSeriesView.t!(@language, "actions.delete") %></a>
         </div>
       <% end %>
     <% else %>
-      <p>Ingen bildeserier i denne kategorien</p>
+      <p><%= Brando.Admin.ImageSeriesView.t!(@language, "actions.empty") %></p>
     <% end %>
     </div>
   </li>
   <% end %>
-  <a href="<%= Helpers.admin_image_category_path(@conn, :new) %>" class="btn btn-xs btn-default m-l-md"><i class="fa fa-plus"></i> Ny kategori</a>
+  <a href="<%= Helpers.admin_image_category_path(@conn, :new) %>" class="btn btn-xs btn-default m-l-md"><i class="fa fa-plus"></i> <%= Brando.Admin.ImageCategoryView.t!(@language, "actions.new") %></a>
 </ul>
 <hr>

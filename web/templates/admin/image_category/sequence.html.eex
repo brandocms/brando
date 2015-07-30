@@ -1,7 +1,4 @@
-<h1>Sortering</h1>
-<p>
-  Sortér bildeserier i kategori <span class="label m-l-sm"><%= Brando.ImageCategory.get_slug(id: @filter) %></span>
-</p>
+<h1><%= t!(@language, "actions.sort") %> &raquo; <strong><%= Brando.ImageCategory.get_slug(id: @filter) %></strong></h1>
 <ul id="sequence" class="clearfix">
 <%= for i <- @items do %>
   <li style="width: 100%; padding: 10px 13px;" data-id="<%= i.id %>">
@@ -14,13 +11,13 @@
         <img src="<%= media_url(img(img.image, :micro)) %>" />
       <% end %>
     <% else %>
-      <em>Ingen bilder i serien.</em>
+      <em><%= t!(@language, "actions.empty") %></em>
     <% end %>
   </li>
 <% end %>
 </ul>
 <hr>
 <div class="buttons m-t-md">
-  <a id="sort-post" href="<%= Helpers.admin_image_category_path(@conn, :sequence_post, @filter) %>" class="btn btn-default">Lagre rekkefølge</a>
-  <a href="<%= Helpers.admin_image_path(@conn, :index) %>" class="btn btn-default">Tilbake til oversikten</a>
+  <a id="sort-post" href="<%= Helpers.admin_image_category_path(@conn, :sequence_post, @filter) %>" class="btn btn-default"><%= t!(@language, "actions.store_sort") %></a>
+  <a href="<%= Helpers.admin_image_path(@conn, :index) %>" class="btn btn-default"><%= Brando.Admin.LayoutView.t!(@language, "global.back_to_index") %></a>
 </div>

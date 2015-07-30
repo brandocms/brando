@@ -1,23 +1,18 @@
-    <h1>Postoversikt</h1>
+    <h1><%= t!(@language, "actions.index") %></h1>
 <%= if @posts != [] do %>
-    <div class="status-indicators">
-      <span class="m-r-sm"><span class="status-published"><i class="fa fa-circle m-r-sm"> </i> </span> Publisert</span>
-      <span class="m-r-sm"><span class="status-pending"><i class="fa fa-circle m-r-sm"> </i> </span> Venter</span>
-      <span class="m-r-sm"><span class="status-draft"><i class="fa fa-circle m-r-sm"> </i> </span> Utkast</span>
-      <span class="m-r-sm"><span class="status-deleted"><i class="fa fa-circle m-r-sm"> </i> </span> Slettet</span>
-    </div>
-    <%= Brando.HTML.Tablize.tablize(@conn, @posts,
-                [{"Vis post", "fa-search", :admin_post_path, :show, :id},
-                 {"Endre post", "fa-edit", :admin_post_path, :edit, :id, :superuser},
-                 {"Slett post", "fa-trash", :admin_post_path, :delete_confirm, :id, :superuser}],
-                check_or_x: [:cover], filter: true,
-                hide: [:tags, :lead, :slug, :data, :html, :meta_description,
-                       :meta_keywords, :inserted_at, :publish_at]) %>
+    <%= Brando.HTML.status_indicators(@language) %>
+    <%= Brando.HTML.Tablize.tablize(@conn, @posts, [
+          {t!(@language, "actions.show"), "fa-search", :admin_post_path, :show, :id},
+          {t!(@language, "actions.edit"), "fa-edit", :admin_post_path, :edit, :id, :superuser},
+          {t!(@language, "actions.delete"), "fa-trash", :admin_post_path, :delete_confirm, :id, :superuser}],
+          check_or_x: [:cover], filter: true,
+          hide: [:tags, :lead, :slug, :data, :html, :meta_description,
+                 :meta_keywords, :inserted_at, :publish_at]) %>
 <% else %>
-    <p>Ingen poster</p>
+    <p><%= t!(@language, "actions.empty") %></p>
 <% end %>
     <div class="form-actions">
       <a href="<%= Helpers.admin_post_path @conn, :new %>" class="btn btn-primary">
-        <i class="fa fa-plus m-r-xs"></i> Ny post
+        <i class="fa fa-plus m-r-xs"></i> <%= t!(@language, "actions.new") %>
       </a>
     </div>

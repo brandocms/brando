@@ -49,13 +49,27 @@ defmodule <%= module %> do
   # Meta
 
   use Brando.Meta,
-    [singular: "<%= no_singular %>",
-     plural: "<%= no_plural %>",
-     repr: &("#{&1.<%= Dict.keys(attrs) |> List.first %>}"),
-     fields: [
-       id: "Id",
-<%= for {k, _} <- attrs do %>       <%= k %>: "<%= k %>",
-<% end %>       inserted_at: "Opprettet",
-       updated_at: "Oppdatert"],
-     hidden_fields: []]
+    [en:
+      [singular: "<%= singular %>",
+       plural: "<%= plural %>",
+       repr: &("#{&1.<%= Dict.keys(attrs) |> List.first %>}"),
+       fields: [
+         id: "Id",
+<%= for {k, _} <- attrs do %>         <%= k %>: "<%= String.capitalize(Atom.to_string(k)) %>",
+<% end %><%= if villain_fields != [] do %>         html: "HTML",<% end %>
+         inserted_at: "Inserted at",
+         updated_at: "Updated at"],
+       hidden_fields: []],
+     no:
+      [singular: "<%= no_singular %>",
+       plural: "<%= no_plural %>",
+       repr: &("#{&1.<%= Dict.keys(attrs) |> List.first %>}"),
+       fields: [
+         id: "Id",
+<%= for {k, _} <- attrs do %>         <%= k %>: "<%= String.capitalize(Atom.to_string(k)) %>",
+<% end %><%= if villain_fields != [] do %>         html: "HTML",<% end %>
+         inserted_at: "Opprettet",
+         updated_at: "Oppdatert"],
+       hidden_fields: []],
+    ]
 end

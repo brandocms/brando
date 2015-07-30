@@ -5,8 +5,8 @@ defmodule <%= admin_module %>Form do
   """
   use Brando.Form
 
-  form "<%= singular %>", [helper: :<%= admin_path %>_path, class: "grid-form"] do
+  form "<%= singular %>", [model: <%= module %>, helper: :<%= admin_path %>_path, class: "grid-form"] do
 <%= for {_k, input} <- inputs, input do %>    <%= input %>
-<% end %>    submit "Lagre", [class: "btn btn-success"]
+<% end %>    submit :save, [class: "btn btn-success"]
   end
 end
