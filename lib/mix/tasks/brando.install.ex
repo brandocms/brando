@@ -103,19 +103,18 @@ defmodule Mix.Tasks.Brando.Install do
   Copies Brando files from template and static directories to OTP app.
   """
   def run(args) do
-    run(args, nil)
-  end
-  @doc """
-  Copies Brando files from template and static directories to OTP app.
-  """
-  def run(_, _opts) do
+    {opts, _, _} = OptionParser.parse(args, switches: [static: :boolean])
     app = Mix.Project.config()[:app]
     binding = [application_module: Phoenix.Naming.camelize(Atom.to_string(app)),
                application_name: Atom.to_string(app)]
 
     copy_from "./", binding, @new
 
-    static? = Mix.shell.yes?("\nInstall static files?")
+    static? = if opts[:static] == true do
+      true
+    else
+      Mix.shell.yes?("\nInstall static files?")
+    end
     if static? do
       copy_from "./", binding, @static
     end

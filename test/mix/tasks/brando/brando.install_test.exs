@@ -31,7 +31,8 @@ defmodule Mix.Tasks.Brando.GenerateTest do
   end
 
   test "brando.install" do
-    assert String.contains?(capture_io(fn -> Mix.Tasks.Brando.Install.run([]) end), "Brando finished copying.")
+    Mix.Tasks.Brando.Install.run(["--static"])
+    assert_received {:mix_shell, :info, ["\nBrando finished copying." <> _ = message]}
     assert File.exists?("web/villain")
     assert_file "web/villain/parser.ex"
   end
