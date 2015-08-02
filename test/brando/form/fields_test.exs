@@ -112,32 +112,33 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "div_tag/2" do
-    assert F.div_tag("contents", "class") == "<div class=\"class\">contents</div>"
-    assert F.div_tag("<b>contents</b>", "class class2") == "<div class=\"class class2\"><b>contents</b></div>"
+    assert F.div_tag("contents", "class") == ["<div class=\"class\">", "contents", "</div>"]
+    assert F.div_tag("<b>contents</b>", "class class2") == ["<div class=\"class class2\">", "<b>contents</b>", "</div>"]
   end
 
   test "form_group/4" do
-    assert F.form_group("1234", "name", [], []) == "<div class=\"form-group required\">1234</div>"
+    assert F.form_group("1234", "name", [], [])
+           == ["<div class=\"form-group required\">", ["1234", "", ""], "</div>"]
     opts = %{required: false}
-    fg = F.form_group("1234", "name", opts, ["can't be blank"])
+    fg = F.form_group("1234", "name", opts, ["can't be blank"]) |> Enum.join
     refute fg =~ "required"
     assert fg =~ "has-error"
     assert fg =~ "fa-exclamation-circle"
 
-    fg = F.form_group("1234", "name", opts, [])
+    fg = F.form_group("1234", "name", opts, []) |> Enum.join
     refute fg =~ "required"
     refute fg =~ "has-error"
 
-    fg = F.form_group("1234", "name", [], [])
+    fg = F.form_group("1234", "name", [], []) |> Enum.join
     assert fg =~ "required"
     refute fg =~ "has-error"
 
     opts = %{required: false}
-    fg = F.form_group("1234", "name", opts, [])
+    fg = F.form_group("1234", "name", opts, []) |> Enum.join
     refute fg =~ "required"
     refute fg =~ "has-error"
 
-    fg = assert F.form_group("1234", "name", opts, ["must be unique"])
+    fg = assert F.form_group("1234", "name", opts, ["must be unique"]) |> Enum.join
     assert fg =~ "has-error"
     assert fg =~ "fa-exclamation-circle"
   end
@@ -148,7 +149,8 @@ defmodule Brando.Form.FieldsTest do
 
   test "wrap/2" do
     assert F.wrap("test", nil) == "test"
-    assert F.wrap("test", "wrapper_class") == "<div class=\"wrapper_class\">test</div>"
+    assert F.wrap("test", "wrapper_class")
+           == ["<div class=\"wrapper_class\">", "test", "</div>"]
   end
 
   test "textarea/5" do
@@ -200,8 +202,10 @@ defmodule Brando.Form.FieldsTest do
 
   test "render_errors/1" do
     assert F.render_errors([]) == ""
-    assert F.render_errors(["can't be blank", "must be unique"]) =~ "Feltet er påkrevet."
-    assert F.render_errors(["can't be blank", "must be unique"]) =~ "Feltet må være unikt. Verdien finnes allerede i databasen."
+    assert F.render_errors(["can't be blank", "must be unique"]) |> Enum.join
+           =~ "Feltet er påkrevet."
+    assert F.render_errors(["can't be blank", "must be unique"]) |> Enum.join
+           =~ "Feltet må være unikt. Verdien finnes allerede i databasen."
   end
 
   test "parse_error/1" do
@@ -215,13 +219,13 @@ defmodule Brando.Form.FieldsTest do
   test "render_help_text/1" do
     opts = %{help_text: "Help text"}
     assert F.render_help_text(nil) == ""
-    assert F.render_help_text(opts) ==
-      "<div class=\"help\"><i class=\"fa fa-fw fa-question-circle\"> </i><span>Help text</span></div>"
+    assert F.render_help_text(opts)
+           == ["<div class=\"help\">", [["<i class=\"fa fa-fw fa-question-circle\">", " ", "</i>"], ["<span>", "Help text", "</span>"]], "</div>"]
   end
 
   test "label/3" do
-    assert F.label("name", "class", "text") ==
-      ~s(<label for="name" class="class">text</label>)
+    assert F.label("name", "class", "text")
+           == ["<label class=\"class\">", "text", "</label>"]
   end
 
   test "select/6" do

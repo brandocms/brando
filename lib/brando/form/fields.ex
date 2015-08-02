@@ -199,6 +199,12 @@ defmodule Brando.Form.Fields do
   defp get_group_classes(%{form_group_class: class}, _) do
     "form-group required #{class} has-error"
   end
+  defp get_group_classes(%{required: false}, []) do
+    "form-group"
+  end
+  defp get_group_classes(%{required: false}, _) do
+    "form-group has-error"
+  end
   defp get_group_classes(_, []) do
     "form-group required"
   end
