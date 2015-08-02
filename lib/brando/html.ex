@@ -196,7 +196,7 @@ defmodule Brando.HTML do
   Pass `record` instance of model, and `helper` path.
   """
   def delete_form_button(language, record, helper) do
-    action = Brando.Form.get_action(helper, :delete, record)
+    action = Brando.Form.apply_action(helper, :delete, record)
 
     "<form method=\"POST\" action=\"" <> action <> "\">" <>
     "  <input type=\"hidden\" name=\"_method\" value=\"delete\" />" <>
@@ -219,7 +219,7 @@ defmodule Brando.HTML do
   """
   def dropzone_form(helper, id, cfg \\ nil) do
     _cfg = cfg || Brando.config(Brando.Images)[:default_config]
-    path = Brando.Form.get_action(helper, :upload_post, id)
+    path = Brando.Form.apply_action(helper, :upload_post, id)
 
     "<form action=\"" <> path <> "\"" <>
     "      class=\"dropzone\"" <>

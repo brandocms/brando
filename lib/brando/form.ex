@@ -11,8 +11,7 @@ defmodule Brando.Form do
         submit :save, [class: "btn btn-success"]
       end
 
-  Set field labels and placeholders by using your `model`'s meta `fields`.
-  Set help text by using your `model`'s meta `help`.
+  Set field labels, placeholders and help_text by using your `model`'s meta.
 
   ## Example model meta
 
@@ -41,6 +40,7 @@ defmodule Brando.Form do
   """
   use Linguist.Vocabulary
   alias Brando.Utils
+  alias Brando.Form.Fields
 
   @type form_opts :: [{:helper, atom} | {:class, String.t}]
 
@@ -79,11 +79,9 @@ defmodule Brando.Form do
   defmacro form(source, opts, [do: block]) do
     quote do
       @form_fields    []
-      @form_model     unquote(opts[:model])
-      @form_source    unquote(source)
-      @form_helper    unquote(opts[:helper])
-      @form_class     unquote(opts[:class] || "")
-      @form_multipart false
+      @form_opts %{model: unquote(opts[:model]), source: unquote(source),
+                   helper: unquote(opts[:helper]), class: unquote(opts[:class] || ""),
+                   multipart: false}
 
       def __model__ do
         unquote(source)
@@ -112,49 +110,54 @@ defmodule Brando.Form do
 
       """
       def get_form(language, type: form_type, action: action, params: params, values: values, errors: errors) do
-        form = [helper: @form_helper, source: @form_source,
-                multipart: @form_multipart, class: @form_class, model: @form_model]
-        render_fields(language, @form_source, @form_fields, @form_model, form_type, params, values, errors)
-        |> Enum.join("\n")
-        |> render_form(form_type, @form_helper, action, params, form)
+        render_fields(language, form_type, @form_fields, values, errors, @form_opts)
+        |> render_form(form_type, action, params, @form_opts)
         |> raw
       end
-
-      defp render_form(fields, form_type, action_fun, action, params, form) do
-        csrf_tag = get_csrf(form_type)
-        method = get_method(form_type)
-        method_tag = method_override(form_type)
-        action = " " <> "action=\"#{get_action(action_fun, action, params)}\""
-        class  = " " <> "class=\"#{form[:class]}\""
-        role   = " " <> "role=\"form\""
-        multipart =
-          if form[:multipart], do: ~s( enctype="multipart/form-data"), else: ""
-        ~s(<form#{class}#{role}#{action}#{method}#{multipart}>#{csrf_tag}#{method_tag}#{fields}</form>)
-      end
-
-      @doc """
-      Reduces all form_fields and returns a list of each individual
-      field as HTML. Builds the correct name for the field by joining
-      `@form_source` with `name`. Gets any value or errors for the field.
-      """
-      def render_fields(language, form_source, form_fields, form_model, form_type, params, values, errors) do
-        values = Utils.to_string_map(values)
-        if values == nil, do: values = []
-        if errors == nil, do: errors = []
-        Enum.reduce(form_fields, [], fn ({name, opts}, acc) ->
-          opts =
-            opts
-            |> Keyword.put(:form_source, form_source)
-            |> Keyword.put(:language, language)
-            |> Keyword.put(:name, name)
-            |> Keyword.put(:model, form_model)
-            |> Enum.into(%{})
-          acc = [render_field(form_type, name, opts[:type],
-                              opts, get_value(values, name),
-                              get_errors(errors, name))|acc]
-        end)
-      end
     end
+  end
+
+  @doc """
+  Performs rendering of form.
+
+  ## Options
+
+    * `fields`: The rendered form fields we will wrap this form around.
+    * `form_type`: :create, :update
+    * `action`: The action atom passed to `helper`, e.g.: `:create`
+    * `params`: Parameters passed to `helper`, e.g.: `to_string(@user.id)`
+    * `opts`:
+      * `class`: Optional class to set on form.
+      * `multipart`: Automatically set if we have file fields.
+  """
+  @spec render_form(String.t, [:create | :update], atom, Keyword.t, Keyword.t) :: String.t
+  def render_form(fields, form_type, action, params, opts) do
+    csrf_tag   = get_csrf(form_type)
+    method     = get_method(form_type)
+    class      = get_form_class(opts[:class])
+    method_tag = get_method_override(form_type)
+    multipart  =
+      if opts[:multipart], do: ~s( enctype="multipart/form-data"), else: ""
+    ~s(<form role="form" action="#{apply_action(opts[:helper], action, params)}"#{class}#{method}#{multipart}>#{csrf_tag}#{method_tag}#{fields}</form>)
+  end
+
+  @doc """
+  Reduces all `fields` and returns a list of each individual
+  field as HTML. Gets any values or errors for the field.
+  """
+  def render_fields(language, form_type, fields, values, errors, %{source: source, model: model}) do
+    values = Utils.to_string_map(values)
+    if values == nil, do: values = []
+    if errors == nil, do: errors = []
+    Enum.reduce(fields, [], fn ({name, f_opts}, acc) ->
+      f_opts =
+        f_opts
+        |> Keyword.merge(source: source, language: language, name: name, model: model)
+        |> Enum.into(%{})
+      [Fields.render_field(form_type, name, f_opts[:type],
+                           f_opts, get_value(values, name),
+                           get_errors(errors, name))|acc]
+    end)
   end
 
   @doc """
@@ -162,88 +165,94 @@ defmodule Brando.Form do
 
   ## Parameters
 
-    * `name`: The field name. Used in HTML attribute. Must be unique
-              per form.
-
+    * `name`: The field name. Used in HTML attribute. Must be unique per form.
     * `type`: The type of the field.
-      * `:text`, `:email`, `:password` -
 
-        # Options
-        * `required` - true
-        * `label` - "Label for field". Can also be `{:i18n, Brando.User}`.
-                    Brando will then look for a Linguist `locale` in Brando.User,
-                    with the field name as key.
-        * `slug_from` - :name
-          Automatically slugs with `:name` as source.
-        * `help_text` - "Help text for field". If not supplied, Brando will
-                        look at the form's `model` parameters supplied with
-                        the form for Linguist translation. Set it in the model's
-                        meta with key `help`.
-        * `placeholder` - "Placeholder for field"
-        * `tags` - true. If true, binds tags javascript listener to field
-                   which splits tags by comma.
-        * `confirm` - true. Inserts a confirmation field. You would then add
-                      `validate_confirmation(:password, message: "No match")`
-                      to your models changeset functions.
-        * `default` - Default value. Can also be a function like
-                      `&__MODULE__.default_func/0`
+  ## Types
 
-      * `textarea` - Standard textarea
+  `:text`, `:email`, `:password`
 
-        # Options
-        * `rows` - How many rows to display in the textarea.
-        * `required` - true
-        * `label` - "Label for field"
-        * `help_text` - "Help text for field"
-        * `placeholder` - "Placeholder for field"
-        * `default` - Default value. Can also be a function like
-                      `&__MODULE__.default_func/0`
+  Options:
 
-      * `checkbox` - Standard checkbox
+    * `required` - true
+    * `label` - If this isn't supplied, Brando will look for a Linguist
+      `locale` in the form's `:model` property with the field name as key.
+    * `slug_from` - :name
+      Automatically slugs with `:name` as source.
+    * `help_text` - "Help text for field". If not supplied, Brando will
+      look at the form's `:model` parameters supplied with
+      the form for Linguist translation. Set it in the model's
+      meta with key `help`.
+    * `placeholder` - "Placeholder for field"
+    * `tags` - true. If true, binds tags javascript listener to field
+      which splits tags by comma.
+    * `confirm` - true. Inserts a confirmation field. You would then add
+      `validate_confirmation(:password, message: "No match")`
+      to your models changeset functions.
+    * `default` - Default value. Can also be a function like
+      `&__MODULE__.default_func/0`
 
-        # Options
-        * `multiple` - Multiple checkboxes.
-                       Gets labels/values from `choices` option
-        * `choices` - &__MODULE__.get_status_choices/1. Argument passed is
-                      current language.
-        * `is_selected` - Pass a function that checks if `value` is selected.
-                          The function gets passed the checkbox's value, and
-                          the model's value.
-                          &__MODULE__.status_is_selected/2
-        * `label`: "Label for field"
-        * `empty_value`: Value to set if none of the boxes are checked.
-        * `default`: true/false. Set as a value when using `multiple`.
-          - ex: "2"
+  `:textarea` - Standard textarea
 
-      * `select` - Select with options through `choices`.
+  Options
 
-        # Options
-        * `multiple` - The select returns multiple options, if true.
-        * `choices` - &__MODULE__.get_status_choices/1
-                     Points to `get_status_choices/1` function
-                     in the module the form was defined, where `arg`
-                     is current language.
-        * `is_selected` - Pass a function that checks if `value` is selected.
-                          The function gets passed the option's value, and
-                          the model's value.
-                          &__MODULE__.status_is_selected/2
-        * `default` - "1"
-        * `label` - "Label for the select"
+    * `rows` - How many rows to display in the textarea.
+    * `required` - true
+    * `label` - "Label for field"
+    * `help_text` - "Help text for field"
+    * `placeholder` - "Placeholder for field"
+    * `default` - Default value. Can also be a function like
+      `&__MODULE__.default_func/0`
 
-      * `file` - Attach a file to the form. Sets the form to multipart.
+  `:checkbox` - Standard checkbox
 
-        # Options
-        * `label` - "Label for file field"
+  Options
 
-      * `radio` - A group of radio buttons through `choices`
+    * `multiple` - Multiple checkboxes.
+      Gets labels/values from `choices` option
+    * `choices` - &__MODULE__.get_status_choices/1. Argument passed is
+      current language.
+    * `is_selected` - Pass a function that checks if `value` is selected.
+      The function gets passed the checkbox's value, and
+      the model's value.
+      &__MODULE__.status_is_selected/2
+    * `label`: "Label for field"
+    * `empty_value`: Value to set if none of the boxes are checked.
+    * `default`: true/false. Set as a value when using `multiple`.
+      - ex: "2"
 
-        # Options
-        * `choices` - &__MODULE__.get_status_choices/1
-        * `label` - Label for the entire group. Each individual radio
-                    gets its label from the `choices` function.
-        * `label_class` - Label class for the main label.
+  `:select` - Select with options through `choices`.
+
+  Options
+
+    * `multiple` - The select returns multiple options, if true.
+    * `choices` - &__MODULE__.get_status_choices/1
+      Points to `get_status_choices/1` function
+      in the module the form was defined, where `arg`
+      is current language.
+    * `is_selected` - Pass a function that checks if `value` is selected.
+      The function gets passed the option's value, and
+      the model's value.
+      &__MODULE__.status_is_selected/2
+    * `default` - "1"
+    * `label` - "Label for the select"
+
+  `:file` - Attach a file to the form. Sets the form to multipart.
+
+  Options
+
+    * `label` - "Label for file field"
+
+  `:radio` - A group of radio buttons through `choices`
+
+  Options
+
+    * `choices` - &__MODULE__.get_status_choices/1
+    * `label` - Label for the entire group. Each individual radio
+      gets its label from the `choices` function.
+    * `label_class` - Label class for the main label.
   """
-  defmacro field(name, type \\ :text, opts \\ []) do
+  defmacro field(name, type, opts \\ []) do
     quote do
       Brando.Form.__field__(__MODULE__, unquote(name), unquote(type), unquote(opts))
     end
@@ -252,12 +261,12 @@ defmodule Brando.Form do
   @doc """
   Marks the field as a field of some `type`. See docs for `field/3` macro.
   """
-  def __field__(mod, name, type, opts) do
+  def __field__(module, name, type, opts) do
     check_type!(type)
-    fields = Module.get_attribute(mod, :form_fields)
+    fields = Module.get_attribute(module, :form_fields)
 
-    if Module.get_attribute(mod, :in_fieldset) do
-      opts = [in_fieldset: Module.get_attribute(mod, :in_fieldset)] ++ opts
+    if Module.get_attribute(module, :in_fieldset) do
+      opts = [in_fieldset: Module.get_attribute(module, :in_fieldset)] ++ opts
     end
 
     clash = Enum.any?(fields, fn {prev, _} -> name == prev end)
@@ -265,9 +274,9 @@ defmodule Brando.Form do
       raise ArgumentError, message: "field `#{name}` was already set on schema"
     end
 
-    Module.put_attribute(mod, :form_fields, [{name, [type: type] ++ opts}|fields])
+    Module.put_attribute(module, :form_fields, [{name, [type: type] ++ opts}|fields])
 
-    if type == :file, do: Module.put_attribute(mod, :form_multipart, true)
+    if type == :file, do: Module.put_attribute(module, :form_multipart, true)
   end
 
   @doc """
@@ -346,69 +355,56 @@ defmodule Brando.Form do
     Module.put_attribute(mod, :form_fields, [{name, [type: :submit, text: text] ++ opts}|fields])
   end
 
+  @doc """
+  Evals the quoted action function, normally a path helper,
+  and returns the result
+  """
+  def apply_action(fun, action, params \\ nil) do
+    apply(Brando.get_helpers, fun, [Brando.get_endpoint(), action, params])
+  end
+
   defp check_type!(type) when type in [:text, :password, :select, :email,
                                        :checkbox, :file, :radio, :textarea], do: :ok
 
   defp check_type!(type), do:
     raise(ArgumentError, message: "`#{Macro.to_string(type)}` is not a valid field type")
 
-  @doc """
-  Evals the quoted action function, normally a path helper,
-  and returns the result
-  """
-  def get_action(fun, action, params \\ nil) do
-    apply(Brando.get_helpers, fun, [Brando.get_endpoint(), action, params])
-  end
-
-  @doc """
-  Returns a HTML input for our method override for `action`
-  """
-  def method_override(action)
-  def method_override(:update), do:
+  defp get_method_override(action)
+  defp get_method_override(:update), do:
     ~s(<input name="_method" type="hidden" value="patch" />)
-  def method_override(:delete), do:
+  defp get_method_override(:delete), do:
     ~s(<input name="_method" type="hidden" value="delete" />)
-  def method_override(_), do: ""
+  defp get_method_override(_), do: ""
 
-  @doc """
-  Returns the correct method for our form's action. This is necessary
-  for proper method overriding.
-  """
-  def get_method(:update), do: " " <> ~s(method="POST")
-  def get_method(:delete), do: " " <> ~s(method="POST")
-  def get_method(:create), do: " " <> ~s(method="POST")
-  def get_method(_), do: " " <> ~s(method="GET")
+  defp get_form_class(nil), do: ""
+  defp get_form_class(class), do: ~s( class="#{class}")
 
-  @doc """
-  Returns a csrf input tag
-  """
-  def get_csrf(form_type) when form_type in [:update, :delete, :create], do:
+  defp get_method(:update), do: " " <> ~s(method="POST")
+  defp get_method(:delete), do: " " <> ~s(method="POST")
+  defp get_method(:create), do: " " <> ~s(method="POST")
+  defp get_method(_), do: " " <> ~s(method="GET")
+
+  defp get_csrf(form_type) when form_type in [:update, :delete, :create], do:
     ~s(<input name="_csrf_token" type="hidden" value="#{Phoenix.Controller.get_csrf_token()}">)
-  def get_csrf(_), do: ""
+  defp get_csrf(_), do: ""
 
-  @doc """
-  Checks `values` for name and returns value if found.
-  If not it returns an empty list
-  """
-  def get_value([], _), do: []
-  def get_value(values, name) do
+  defp get_value([], _), do: []
+  defp get_value(values, name) do
     case Map.fetch(values, Atom.to_string(name)) do
       {:ok, val} -> val
       :error     -> []
     end
   end
 
-  @doc """
-  Checks `errors` for name and returns the error if found.
-  If not it returns an empty list.
-  """
-  def get_errors([], _), do: []
-  def get_errors(errors, name) do
+  defp get_errors([], _), do: []
+  defp get_errors(errors, name) do
     case Keyword.get_values(errors, name) do
       []     -> []
       values -> values
     end
   end
+
+  # Translations for this module.
 
   locale "en", [
     form: [

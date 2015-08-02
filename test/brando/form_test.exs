@@ -109,7 +109,7 @@ defmodule Brando.FormTest do
        username: [type: :text, required: true, label: "Username", placeholder: "Username"]
      ]
     errors = [username: "has invalid format", email: "has invalid format", password: "can't be blank", email: "can't be blank", full_name: "can't be blank", username: "can't be blank"]
-    f = Enum.join(UserForm.render_fields("no", "user", form_fields, Brando.User, :create, [], nil, errors), "")
+    f = Enum.join(render_fields("no", :create, form_fields, nil, errors, %{source: "user", model: Brando.User}), "")
     assert f =~ ~s("form-group required has-error")
     assert f =~ "user[username]"
     assert f =~ ~s(placeholder="Brukernavn")
@@ -140,39 +140,13 @@ defmodule Brando.FormTest do
                           password: "$2a$12$abcdefghijklmnopqrstuvwxyz",
                           updated_at: %Ecto.DateTime{day: 14, hour: 21, min: 36, month: 1, sec: 53, year: 2015},
                           username: "test"}
-    f = Enum.join(UserForm.render_fields("no", "user", form_fields, Brando.User, :update, [], values, nil), "")
+    f = Enum.join(render_fields("no", :update, form_fields, values, nil, %{source: "user", model: Brando.User}), "")
     assert f =~ "form-group required"
     assert f =~ "user[email]"
     assert f =~ ~s(value="test@email.com")
     assert f =~ ~s(placeholder="Epost")
     assert f =~ ~s(type="submit")
     assert f =~ ~s(type="file")
-  end
-
-  test "get_value/2" do
-    values = %{"a" => "a val", "b" => "b val"}
-    assert get_value(values, :a) == "a val"
-    assert get_value(values, :c) == []
-    assert get_value([], :c) == []
-  end
-
-  test "get_errors/2" do
-    errors = [a: "error a", b: "error b"]
-    assert get_errors(errors, :a) == ["error a"]
-    errors = [a: "error a", b: "error b", a: "another error a"]
-    assert get_errors(errors, :a) == ["error a", "another error a"]
-  end
-
-  test "method_override/1" do
-    assert method_override(:update) == "<input name=\"_method\" type=\"hidden\" value=\"patch\" />"
-    assert method_override(:delete) == "<input name=\"_method\" type=\"hidden\" value=\"delete\" />"
-    assert method_override(:what) == ""
-  end
-
-  test "get_method/1" do
-    assert get_method(:update) == " method=\"POST\""
-    assert get_method(:delete) == " method=\"POST\""
-    assert get_method(:what) == " method=\"GET\""
   end
 
   test "field name clash" do

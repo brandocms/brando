@@ -11,9 +11,9 @@ defmodule Brando.Form.Fields do
   Renders file field. Wraps the field with a label and row span
   """
   def render_field(form_type, name, :file, opts, value, errors) do
-    file(form_type, format_name(name, opts[:form_source]), value, errors, opts)
-    |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], get_label(opts)))
-    |> form_group(format_name(name, opts[:form_source]), opts, errors)
+    file(form_type, format_name(name, opts[:source]), value, errors, opts)
+    |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
+    |> form_group(format_name(name, opts[:source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
   end
 
@@ -22,10 +22,10 @@ defmodule Brando.Form.Fields do
   Pass a form_group_class to ensure we don't set height on wrapper.
   """
   def render_field(form_type, name, :textarea, opts, value, errors) do
-    textarea(form_type, format_name(name, opts[:form_source]), value, errors,
+    textarea(form_type, format_name(name, opts[:source]), value, errors,
              Map.put(opts, :form_group_class, "no-height"))
-    |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], get_label(opts)))
-    |> form_group(format_name(name, opts[:form_source]), opts, errors)
+    |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
+    |> form_group(format_name(name, opts[:source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
   end
 
@@ -33,10 +33,10 @@ defmodule Brando.Form.Fields do
   Render group of radio buttons.
   """
   def render_field(form_type, name, :radio, opts, value, errors) do
-    render_radios(form_type, format_name(name, opts[:form_source]), opts, value, errors)
+    render_radios(form_type, format_name(name, opts[:source]), opts, value, errors)
     |> Enum.join("")
-    |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], get_label(opts)))
-    |> form_group(format_name(name, opts[:form_source]), opts, errors)
+    |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
+    |> form_group(format_name(name, opts[:source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
   end
 
@@ -45,16 +45,16 @@ defmodule Brando.Form.Fields do
   """
   def render_field(form_type, name, :checkbox, opts, value, errors) do
     if opts[:multiple] do
-      render_checks(form_type, format_name(name, opts[:form_source]), opts, value, errors)
-      |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], get_label(opts)))
-      |> form_group(format_name(name, opts[:form_source]), opts, errors)
+      render_checks(form_type, format_name(name, opts[:source]), opts, value, errors)
+      |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
+      |> form_group(format_name(name, opts[:source]), opts, errors)
       |> div_form_row(opts[:in_fieldset])
     else
-      concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class],
-                          input(:checkbox, form_type, format_name(name, opts[:form_source]), value, errors, opts) <>
-                          get_label(opts)), label(format_name(name, opts[:form_source]), "", ""))
+      concat_fields(label(format_name(name, opts[:source]), opts[:label_class],
+                          input(:checkbox, form_type, format_name(name, opts[:source]), value, errors, opts) <>
+                          get_label(opts)), label(format_name(name, opts[:source]), "", ""))
       |> div_tag("checkbox")
-      |> form_group(format_name(name, opts[:form_source]), opts, errors)
+      |> form_group(format_name(name, opts[:source]), opts, errors)
       |> div_form_row(opts[:in_fieldset])
     end
   end
@@ -64,9 +64,9 @@ defmodule Brando.Form.Fields do
   """
   def render_field(form_type, name, :select, opts, value, errors) do
     choices = render_options(form_type, opts, value, errors)
-    select(form_type, format_name(name, opts[:form_source]), choices, opts, value, errors)
-    |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], get_label(opts)))
-    |> form_group(format_name(name, opts[:form_source]), opts, errors)
+    select(form_type, format_name(name, opts[:source]), choices, opts, value, errors)
+    |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
+    |> form_group(format_name(name, opts[:source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
   end
 
@@ -78,8 +78,8 @@ defmodule Brando.Form.Fields do
       :save -> Brando.Form.t!(opts[:language], "form.save")
       text -> text
     end
-    input(:submit, form_type, format_name(name, opts[:form_source]), text, errors, opts)
-    |> form_group(format_name(name, opts[:form_source]), opts, errors)
+    input(:submit, form_type, format_name(name, opts[:source]), text, errors, opts)
+    |> form_group(format_name(name, opts[:source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
   end
 
@@ -112,17 +112,17 @@ defmodule Brando.Form.Fields do
         |> Map.put(:label, "#{confirm_i18n} #{get_label(opts)}")
         |> Map.put(:placeholder, "#{confirm_i18n} #{get_label(opts)}")
 
-      input(input_type, form_type, format_name("#{name}_confirmation", opts[:form_source]), value, errors, confirm_opts)
-      |> concat_fields(label(format_name("#{name}_confirmation", opts[:form_source]), confirm_opts[:label_class], confirm_opts[:label]))
-      |> form_group(format_name("#{name}_confirmation", opts[:form_source]), confirm_opts, errors)
+      input(input_type, form_type, format_name("#{name}_confirmation", opts[:source]), value, errors, confirm_opts)
+      |> concat_fields(label(format_name("#{name}_confirmation", opts[:source]), confirm_opts[:label_class], confirm_opts[:label]))
+      |> form_group(format_name("#{name}_confirmation", opts[:source]), confirm_opts, errors)
     else
       ""
     end
 
     field =
-      input(input_type, form_type, format_name(name, opts[:form_source]), value, errors, opts)
-      |> concat_fields(label(format_name(name, opts[:form_source]), opts[:label_class], get_label(opts)))
-      |> form_group(format_name(name, opts[:form_source]), opts, errors)
+      input(input_type, form_type, format_name(name, opts[:source]), value, errors, opts)
+      |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
+      |> form_group(format_name(name, opts[:source]), opts, errors)
 
     confirm
     |> concat_fields(field)
