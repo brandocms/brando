@@ -131,21 +131,21 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       {k, {:array, _}} ->
         {k, nil, nil}
       {k, :boolean}    ->
-        {k, ~s(field #{inspect(k)}, :checkbox, [required: true])}
+        {k, ~s(field #{inspect(k)}, :checkbox)}
       {k, :text}       ->
-        {k, ~s(field #{inspect(k)}, :textarea, [required: true, rows: 4])}
+        {k, ~s(field #{inspect(k)}, :textarea, [rows: 4])}
       {k, :date}       ->
-        {k, ~s(field #{inspect(k)}, :text, [required: true, default: &Brando.Utils.get_now/0])}
+        {k, ~s(field #{inspect(k)}, :text, [default: &Brando.Utils.get_now/0])}
       {k, :time}       ->
-        {k, ~s(field #{inspect(k)}, :text, [required: true, default: &Brando.Utils.get_now/0])}
+        {k, ~s(field #{inspect(k)}, :text, [default: &Brando.Utils.get_now/0])}
       {k, :datetime}   ->
-        {k, ~s(field #{inspect(k)}, :text, [required: true, default: &Brando.Utils.get_now/0])}
+        {k, ~s(field #{inspect(k)}, :text, [default: &Brando.Utils.get_now/0])}
       {k, :image}      ->
-        {k, ~s(field #{inspect(k)}, :file)}
+        {k, ~s(field #{inspect(k)}, :file, [required: false])}
       {k, :villain}      ->
         {k, ~s(field #{inspect(k)}, :textarea)}
       {k, _}           ->
-        {k, ~s(field #{inspect(k)}, :text, [required: true])}
+        {k, ~s(field #{inspect(k)}, :text)}
     end
   end
 
