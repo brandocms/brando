@@ -7,7 +7,7 @@ defmodule Brando.Form do
       use Brando.Form
 
       form "user", [model: Brando.User, action: :admin_user_path, class: "grid-form"] do
-        field :full_name, :text, [required: true]
+        field :full_name, :text, [required: false]
         submit :save, [class: "btn btn-success"]
       end
 
@@ -59,11 +59,8 @@ defmodule Brando.Form do
   ## Usage
 
       form "user", [action: :admin_user_path, class: "grid-form"] do
-        field :full_name, :text,
-          [required: true,
-           label: "Full name",
-        submit :save,
-          [class: "btn btn-success"]
+        field :full_name, :text, [required: false]
+        submit :save, [class: "btn btn-success"]
       end
 
   ## Options
@@ -174,7 +171,7 @@ defmodule Brando.Form do
 
   Options:
 
-    * `required` - true
+    * `required` - true as default
     * `label` - If this isn't supplied, Brando will look for a Linguist
       `locale` in the form's `:model` property with the field name as key.
     * `slug_from` - :name
@@ -197,7 +194,7 @@ defmodule Brando.Form do
   Options
 
     * `rows` - How many rows to display in the textarea.
-    * `required` - true
+    * `required` - true as default
     * `label` - "Label for field"
     * `help_text` - "Help text for field"
     * `placeholder` - "Placeholder for field"

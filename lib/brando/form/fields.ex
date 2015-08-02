@@ -483,8 +483,8 @@ defmodule Brando.Form.Fields do
   If `true`, returns required
   """
   def get_required(true), do: " " <> "required"
+  def get_required(nil), do: " " <> "required"
   def get_required(false), do: ""
-  def get_required(nil), do: ""
 
   @doc """
   If whatever is passed to `get_has_error/1` isn't an empty list,

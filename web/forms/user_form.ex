@@ -27,10 +27,8 @@ defmodule Brando.UserForm do
 
   form "user", [model: Brando.User, helper: :admin_user_path, class: "grid-form"] do
     fieldset {:i18n, "fieldset.user_info"} do
-      field :full_name, :text,
-        [required: true]
-      field :username, :text,
-        [required: true]
+      field :full_name, :text, [required: true]
+      field :username, :text, [required: true]
     end
 
     field :email, :email, [required: true]
