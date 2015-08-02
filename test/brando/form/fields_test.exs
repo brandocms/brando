@@ -90,9 +90,9 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "get_required/1" do
-    assert F.get_required(nil) == ""
-    assert F.get_required(false) == ""
+    assert F.get_required(nil) == " required"
     assert F.get_required(true) == " required"
+    assert F.get_required(false) == ""
   end
 
   test "get_has_error/1" do
@@ -117,19 +117,19 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "form_group/4" do
-    assert F.form_group("1234", "name", [], []) == "<div class=\"form-group\">1234</div>"
-    opts = %{required: true}
+    assert F.form_group("1234", "name", [], []) == "<div class=\"form-group required\">1234</div>"
+    opts = %{required: false}
     fg = F.form_group("1234", "name", opts, ["can't be blank"])
-    assert fg =~ "required"
+    refute fg =~ "required"
     assert fg =~ "has-error"
     assert fg =~ "fa-exclamation-circle"
 
     fg = F.form_group("1234", "name", opts, [])
-    assert fg =~ "required"
+    refute fg =~ "required"
     refute fg =~ "has-error"
 
     fg = F.form_group("1234", "name", [], [])
-    refute fg =~ "required"
+    assert fg =~ "required"
     refute fg =~ "has-error"
 
     opts = %{required: false}
