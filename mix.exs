@@ -30,7 +30,7 @@ defmodule Brando.Mixfile do
   defp applications(_all), do: [
     :comeonin, :httpoison, :phoenix, :phoenix_ecto, :phoenix_html,
     :earmark, :linguist, :mogrify, :poison, :postgrex, :scrivener,
-    :slugger, :logger_file_backend
+    :slugger
   ]
 
   defp deps do
@@ -48,7 +48,6 @@ defmodule Brando.Mixfile do
       {:postgrex, ">= 0.0.0"},
       {:scrivener, "~> 0.11"},
       {:slugger, "~> 0.0.1"},
-      {:logger_file_backend, ">= 0.0.0"},
 
       # Dev dependencies
       {:dialyze, "~> 0.2", only: :dev},
