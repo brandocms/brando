@@ -27,13 +27,15 @@ defmodule Brando.Instagram.Server do
   @doc false
   def handle_info(:poll, {timer, filter}) do
     try do
-      {:ok, filter} = API.fetch(filter)
+      {:ok, new_filter} = API.fetch(filter)
+      {:noreply, {timer, new_filter}}
     catch
       :exit, err ->
         Logger.error(inspect(err))
         Brando.SystemChannel.log(:error, "InstagramServer: Fanget :exit -> #{inspect(err)}")
+        {:noreply, {timer, filter}}
     end
-    {:noreply, {timer, filter}}
+
   end
 
   @doc false

@@ -37,11 +37,11 @@ defmodule Brando.Utils do
   def random_filename(filename) do
     ext = Path.extname(filename)
     rnd_basename =
-      ({filename, :erlang.now}
+      ({filename, :os.timestamp}
       |> :erlang.phash2
       |> Integer.to_string(32)
       |> String.downcase) <>
-      ({:erlang.now, filename}
+      ({:os.timestamp, filename}
       |> :erlang.phash2
       |> Integer.to_string(32)
       |> String.downcase)
@@ -55,7 +55,7 @@ defmodule Brando.Utils do
     ext = Path.extname(filename)
     base = String.replace(filename, ext, "")
     rnd_basename =
-      {filename, :erlang.now}
+      {filename, :os.timestamp}
       |> :erlang.phash2
       |> Integer.to_string(32)
       |> String.downcase

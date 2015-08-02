@@ -76,7 +76,6 @@ defmodule Brando.Images.Utils do
   end
 
   defp create_image_sizes({%{uploaded_file: file}, cfg}) do
-    sizes = %{}
     {file_path, filename} = split_path(file)
     upload_path = Map.get(cfg, :upload_path)
 

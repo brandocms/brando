@@ -10,7 +10,7 @@ defmodule Brando.Form.Fields do
   @doc """
   Renders file field. Wraps the field with a label and row span
   """
-  def render_field(form_type, name, :file, opts, value, errors) do
+  def render_field(form_type, %{name: name, type: :file} = opts, value, errors) do
     file(form_type, format_name(name, opts[:source]), value, errors, opts)
     |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
     |> form_group(format_name(name, opts[:source]), opts, errors)
@@ -21,7 +21,7 @@ defmodule Brando.Form.Fields do
   Render textarea.
   Pass a form_group_class to ensure we don't set height on wrapper.
   """
-  def render_field(form_type, name, :textarea, opts, value, errors) do
+  def render_field(form_type, %{name: name, type: :textarea} = opts, value, errors) do
     textarea(form_type, format_name(name, opts[:source]), value, errors,
              Map.put(opts, :form_group_class, "no-height"))
     |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
@@ -32,7 +32,7 @@ defmodule Brando.Form.Fields do
   @doc """
   Render group of radio buttons.
   """
-  def render_field(form_type, name, :radio, opts, value, errors) do
+  def render_field(form_type, %{name: name, type: :radio} = opts, value, errors) do
     render_radios(form_type, format_name(name, opts[:source]), opts, value, errors)
     |> Enum.join("")
     |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
@@ -43,7 +43,7 @@ defmodule Brando.Form.Fields do
   @doc """
   Render checkboxes. Both groups and singles.
   """
-  def render_field(form_type, name, :checkbox, opts, value, errors) do
+  def render_field(form_type, %{name: name, type: :checkbox} = opts, value, errors) do
     if opts[:multiple] do
       render_checks(form_type, format_name(name, opts[:source]), opts, value, errors)
       |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
@@ -62,7 +62,7 @@ defmodule Brando.Form.Fields do
   @doc """
   Render select. Calls `render_options`
   """
-  def render_field(form_type, name, :select, opts, value, errors) do
+  def render_field(form_type, %{name: name, type: :select} = opts, value, errors) do
     choices = render_options(form_type, opts, value, errors)
     select(form_type, format_name(name, opts[:source]), choices, opts, value, errors)
     |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
@@ -73,7 +73,7 @@ defmodule Brando.Form.Fields do
   @doc """
   Render submit button
   """
-  def render_field(form_type, name, :submit, opts, _value, errors) do
+  def render_field(form_type, %{name: name, type: :submit} = opts, _value, errors) do
     text = case opts[:text] do
       :save -> Brando.Form.t!(opts[:language], "form.save")
       text -> text
@@ -86,7 +86,7 @@ defmodule Brando.Form.Fields do
   @doc """
   Render fieldset open
   """
-  def render_field(_, _, :fieldset, opts, _, _) do
+  def render_field(_, %{type: :fieldset} = opts, _, _) do
     legend =
       case opts[:legend] do
         {:i18n, key} -> opts[:model].t!(opts[:language], key)
@@ -98,13 +98,13 @@ defmodule Brando.Form.Fields do
   @doc """
   Render fieldset close
   """
-  def render_field(_, _, :fieldset_close, _, _, _), do:
+  def render_field(_, %{type: :fieldset_close}, _, _), do:
     fieldset_close_tag()
 
   @doc """
   Render text/password/email (catchall)
   """
-  def render_field(form_type, name, input_type, opts, value, errors) do
+  def render_field(form_type, %{name: name, type: input_type} = opts, value, errors) do
     confirm_i18n = if opts[:language] == "no", do: "Bekreft", else: "Confirm"
     confirm = if opts[:confirm] do
       confirm_opts =

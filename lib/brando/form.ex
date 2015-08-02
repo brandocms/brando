@@ -41,6 +41,8 @@ defmodule Brando.Form do
   use Linguist.Vocabulary
   alias Brando.Utils
   alias Brando.Form.Fields
+  import Phoenix.HTML.Tag, only: [form_tag: 3]
+  import Phoenix.HTML, only: [raw: 1]
 
   @type form_opts :: [{:helper, atom} | {:class, String.t}]
 
@@ -127,15 +129,33 @@ defmodule Brando.Form do
       * `class`: Optional class to set on form.
       * `multipart`: Automatically set if we have file fields.
   """
-  @spec render_form(String.t, [:create | :update], atom, Keyword.t, Keyword.t) :: String.t
+  @spec render_form(iodata, :create | :update, atom, Keyword.t | nil, Keyword.t) :: String.t
   def render_form(fields, form_type, action, params, opts) do
-    csrf_tag   = get_csrf(form_type)
-    method     = get_method(form_type)
-    class      = get_form_class(opts[:class])
-    method_tag = get_method_override(form_type)
-    multipart  =
-      if opts[:multipart], do: ~s( enctype="multipart/form-data"), else: ""
-    ~s(<form role="form" action="#{apply_action(opts[:helper], action, params)}"#{class}#{method}#{multipart}>#{csrf_tag}#{method_tag}#{fields}</form>)
+    url = apply_action(opts[:helper], action, params)
+
+    opts =
+      opts
+      |> Keyword.new
+      |> Keyword.drop([:model, :helper, :source])
+      |> Keyword.put(:method, get_method(form_type))
+      |> Keyword.put(:enforce_utf8, true)
+      |> Keyword.put(:role, "form")
+
+    opts =
+      case Keyword.pop(opts, :multipart, false) do
+        {false, opts} -> opts
+        {true, opts}  -> Keyword.put(opts, :multipart, true)
+      end
+
+    opts =
+      case Keyword.pop(opts, :class, false) do
+        {false, opts} -> opts
+        {class, opts} -> Keyword.put(opts, :class, class)
+      end
+
+    form_tag(url, opts) do
+      raw(fields)
+    end
   end
 
   @doc """
@@ -146,15 +166,14 @@ defmodule Brando.Form do
     values = Utils.to_string_map(values)
     if values == nil, do: values = []
     if errors == nil, do: errors = []
-    Enum.reduce(fields, [], fn ({name, f_opts}, acc) ->
+    Enum.reduce fields, [], fn ({name, f_opts}, acc) ->
       f_opts =
         f_opts
         |> Keyword.merge(source: source, language: language, name: name, model: model)
         |> Enum.into(%{})
-      [Fields.render_field(form_type, name, f_opts[:type],
-                           f_opts, get_value(values, name),
-                           get_errors(errors, name))|acc]
-    end)
+
+      [Fields.render_field(form_type, f_opts, get_value(values, name), get_errors(errors, name))|acc]
+    end
   end
 
   @doc """
@@ -366,24 +385,11 @@ defmodule Brando.Form do
   defp check_type!(type), do:
     raise(ArgumentError, message: "`#{Macro.to_string(type)}` is not a valid field type")
 
-  defp get_method_override(action)
-  defp get_method_override(:update), do:
-    ~s(<input name="_method" type="hidden" value="patch" />)
-  defp get_method_override(:delete), do:
-    ~s(<input name="_method" type="hidden" value="delete" />)
-  defp get_method_override(_), do: ""
-
-  defp get_form_class(nil), do: ""
-  defp get_form_class(class), do: ~s( class="#{class}")
-
-  defp get_method(:update), do: " " <> ~s(method="POST")
-  defp get_method(:delete), do: " " <> ~s(method="POST")
-  defp get_method(:create), do: " " <> ~s(method="POST")
-  defp get_method(_), do: " " <> ~s(method="GET")
-
-  defp get_csrf(form_type) when form_type in [:update, :delete, :create], do:
-    ~s(<input name="_csrf_token" type="hidden" value="#{Phoenix.Controller.get_csrf_token()}">)
-  defp get_csrf(_), do: ""
+  defp get_method(action)
+  defp get_method(:create), do: "post"
+  defp get_method(:update), do: "patch"
+  defp get_method(:delete), do: "delete"
+  defp get_method(_), do: "get"
 
   defp get_value([], _), do: []
   defp get_value(values, name) do
