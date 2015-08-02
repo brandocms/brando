@@ -72,12 +72,17 @@ defmodule Brando.Sequence do
   def controller(model, filter \\ nil) do
     quote do
       if unquote(filter) do
+        @doc """
+        Filters the results through `filter`.
+        """
         def filter_function(filter_param) do
           {:filter, fun} = unquote(filter)
           fun.(filter_param)
         end
       end
-      @doc false
+      @doc """
+      Render the :sequence view.
+      """
       def sequence(conn) do
         {:model, model} = unquote(model)
         conn
@@ -85,6 +90,9 @@ defmodule Brando.Sequence do
         |> render(:sequence)
       end
       if unquote(filter) do
+        @doc """
+        Render the :sequence view with `filter`
+        """
         def sequence(conn, %{"filter" => filter}) do
           {:model, model} = unquote(model)
           items = filter_function(filter)
@@ -94,7 +102,9 @@ defmodule Brando.Sequence do
           |> render(:sequence)
         end
       end
-      @doc false
+      @doc """
+      Sequence model and render :sequence post
+      """
       def sequence_post(conn, %{"order" => ids}) do
         {:model, model} = unquote(model)
         model.sequence(ids, Range.new(0, length(ids)))
