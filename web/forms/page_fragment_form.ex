@@ -34,15 +34,13 @@ defmodule Brando.PageFragmentForm do
   end
 
   form "page_fragment", [model: Brando.PageFragment, helper: :admin_page_fragment_path, class: "grid-form"] do
-    field :key, :text,
-        [required: true]
+    field :key, :text
     fieldset do
       field :language, :select,
-        [required: true,
-        default: "no",
+        [default: "no",
         choices: &__MODULE__.get_language_choices/1]
     end
-    field :data, :textarea
+    field :data, :textarea, [required: false]
     submit :save, [class: "btn btn-success"]
   end
 end

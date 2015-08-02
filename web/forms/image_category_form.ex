@@ -6,8 +6,8 @@ defmodule Brando.ImageCategoryForm do
   use Brando.Form
 
   form "imagecategory", [model: Brando.ImageCategory, helper: :admin_image_category_path, class: "grid-form"] do
-    field :name, :text, [required: true]
-    field :slug, :text, [required: true, slug_from: :name]
+    field :name, :text
+    field :slug, :text, [slug_from: :name]
     submit :save, [class: "btn btn-success"]
   end
 end

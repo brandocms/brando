@@ -14,10 +14,10 @@ defmodule Brando.ImageSeriesForm do
 
   form "imageseries", [model: Brando.ImageSeries, helper: :admin_image_series_path, class: "grid-form"] do
     fieldset do
-      field :image_category_id, :radio, [required: true, choices: &__MODULE__.get_categories/1]
+      field :image_category_id, :radio, [choices: &__MODULE__.get_categories/1]
     end
-    field :name, :text, [required: true]
-    field :slug, :text, [required: true, slug_from: :name]
+    field :name, :text
+    field :slug, :text, [slug_from: :name]
     field :credits, :text, [required: false]
     submit :save, [class: "btn btn-success"]
   end

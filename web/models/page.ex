@@ -183,6 +183,10 @@ defmodule Brando.Page do
       singular: "side",
       plural: "sider",
       repr: &("#{&1.title}"),
+      help: [
+        parent_id: "Hvis siden du oppretter skal være en underside, " <>
+                   "velg tilhørende side her. Hvis ikke, velg <em>–</em>"
+      ],
       fields: [
          id: "№",
          status: "Status",
@@ -204,6 +208,10 @@ defmodule Brando.Page do
       singular: "page",
       plural: "pages",
       repr: &("#{&1.title}"),
+      help: [
+        parent_id: "If this page should belong to another, " <>
+                   "select parent page here. If not, select <em>–</em>"
+      ],
       fields: [
          id: "№",
          status: "Status",

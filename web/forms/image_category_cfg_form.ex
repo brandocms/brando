@@ -6,7 +6,7 @@ defmodule Brando.ImageCategoryConfigForm do
   use Brando.Form
 
   form "imagecategoryconfig", [model: Brando.ImageCategory, helper: :admin_image_category_path, class: "grid-form"] do
-    field :cfg, :textarea, [required: true]
+    field :cfg, :textarea
     submit :save, [class: "btn btn-success"]
   end
 end

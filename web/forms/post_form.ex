@@ -31,14 +31,12 @@ defmodule Brando.PostForm do
   form "post", [model: Brando.Post, helper: :admin_post_path, class: "grid-form"] do
     fieldset do
       field :language, :select,
-        [required: true,
-        default: "no",
+        [default: "no",
         choices: &__MODULE__.get_language_choices/1]
     end
     fieldset do
       field :status, :radio,
-        [required: true,
-        default: "2",
+        [default: "2",
         choices: &__MODULE__.get_status_choices/1,
         is_selected: &__MODULE__.is_status_selected?/2]
     end
@@ -46,13 +44,13 @@ defmodule Brando.PostForm do
       field :featured, :checkbox, [default: false]
     end
     fieldset do
-      field :header, :text, [required: true]
-      field :slug, :text, [required: true, slug_from: :header]
+      field :header, :text
+      field :slug, :text, [slug_from: :header]
     end
-    field :lead, :textarea
-    field :data, :textarea
-    field :publish_at, :text, [required: true, default: &Brando.Utils.get_now/0]
-    field :tags, :text, [tags: true]
+    field :lead, :textarea, [required: false]
+    field :data, :textarea, [required: false]
+    field :publish_at, :text, [default: &Brando.Utils.get_now/0]
+    field :tags, :text, [tags: true, required: false]
     submit :save, [class: "btn btn-success"]
   end
 end

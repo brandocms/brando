@@ -59,35 +59,26 @@ defmodule Brando.PageForm do
   end
 
   form "page", [model: Brando.Page, helper: :admin_page_path, class: "grid-form"] do
-    field :parent_id, :select,
-      [required: true,
-      help_text: "Hvis siden du oppretter skal være en underside, " <>
-                 "velg tilhørende side her. Hvis ikke, velg <em>Ingen tilhørighet</em>",
+    field :parent_id, :select, [
       choices: &__MODULE__.get_parent_choices/1,
       is_selected: &__MODULE__.is_parent_selected?/2]
-    field :key, :text,
-        [required: true]
+    field :key, :text
     fieldset do
       field :language, :select,
-        [required: true,
-        default: "no",
+        [default: "no",
         choices: &__MODULE__.get_language_choices/1]
     end
     fieldset do
       field :status, :radio,
-        [required: true,
-        default: "2",
+        [default: "2",
         choices: &__MODULE__.get_status_choices/1,
         is_selected: &__MODULE__.is_status_selected?/2]
     end
     fieldset do
-      field :title, :text,
-        [required: true]
-      field :slug, :text,
-        [required: true,
-         slug_from: :title]
+      field :title, :text
+      field :slug, :text, [slug_from: :title]
     end
-    field :data, :textarea
+    field :data, :textarea, [required: false]
     submit :save, [class: "btn btn-success"]
   end
 end

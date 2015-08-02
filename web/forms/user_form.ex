@@ -27,12 +27,12 @@ defmodule Brando.UserForm do
 
   form "user", [model: Brando.User, helper: :admin_user_path, class: "grid-form"] do
     fieldset {:i18n, "fieldset.user_info"} do
-      field :full_name, :text, [required: true]
-      field :username, :text, [required: true]
+      field :full_name, :text
+      field :username, :text
     end
 
-    field :email, :email, [required: true]
-    field :password, :password, [required: true, confirm: true]
+    field :email, :email
+    field :password, :password, [confirm: true]
 
     fieldset {:i18n, "fieldset.rights"} do
       field :role, :checkbox,
@@ -43,13 +43,11 @@ defmodule Brando.UserForm do
 
     fieldset do
       field :language, :select,
-        [required: true,
-        default: "no",
+        [default: "no",
         choices: &__MODULE__.get_language_choices/1]
     end
 
-    field :avatar, :file
-    submit :save,
-      [class: "btn btn-success"]
+    field :avatar, :file, [required: false]
+    submit :save, [class: "btn btn-success"]
   end
 end
