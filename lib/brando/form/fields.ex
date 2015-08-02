@@ -6,6 +6,8 @@ defmodule Brando.Form.Fields do
   """
 
   import Brando.HTML, only: [media_url: 1, img: 2]
+  import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2]
+  import Phoenix.HTML, only: [raw: 1]
 
   @doc """
   Renders file field. Wraps the field with a label and row span
@@ -172,14 +174,36 @@ defmodule Brando.Form.Fields do
   """
   @spec form_group(String.t, String.t, Keyword.t, Keyword.t) :: String.t
   def form_group(contents, _name, opts, errors) do
-    "<div class=\"form-group" <>
-    get_form_group_class(opts[:form_group_class]) <>
-    get_required(opts[:required]) <>
-    get_has_error(errors) <> "\">" <>
-    contents <>
-    render_errors(errors) <>
-    render_help_text(opts) <>
-    "</div>"
+    classes = [class: get_group_classes(opts, errors)]
+    {:safe, html} = content_tag(:div, classes) do
+      [contents, render_errors(errors), render_help_text(opts)] |> raw
+    end
+    html
+  end
+
+  defp get_group_classes(%{form_group_class: class, required: false}, []) do
+    "form-group #{class}"
+  end
+  defp get_group_classes(%{form_group_class: class, required: false}, _) do
+    "form-group #{class} has-error"
+  end
+  defp get_group_classes(%{form_group_class: class, required: true}, []) do
+    "form-group #{class} required has-error"
+  end
+  defp get_group_classes(%{form_group_class: class, required: true}, _) do
+    "form-group #{class} required has-error"
+  end
+  defp get_group_classes(%{form_group_class: class}, []) do
+    "form-group required #{class}"
+  end
+  defp get_group_classes(%{form_group_class: class}, _) do
+    "form-group required #{class} has-error"
+  end
+  defp get_group_classes(_, []) do
+    "form-group required"
+  end
+  defp get_group_classes(_, _) do
+    "form-group required has-error"
   end
 
   @doc """
@@ -189,18 +213,20 @@ defmodule Brando.Form.Fields do
   def render_help_text(nil), do: ""
   def render_help_text([]), do: ""
   def render_help_text(%{help_text: help_text}) do
-    "<div class=\"help\">" <>
-    "<i class=\"fa fa-fw fa-question-circle\"> </i>" <>
-    "<span>" <> help_text <> "</span>" <>
-    "</div>"
+    {:safe, html} = content_tag(:div, class: "help") do
+      [content_tag(:i, " ", class: "fa fa-fw fa-question-circle"),
+       content_tag(:span, help_text)]
+    end
+    html
   end
   def render_help_text(%{name: name, model: model, language: language}) do
     case model.t(language, "help.#{name}") do
       {:ok, translation} ->
-        "<div class=\"help\">" <>
-        "<i class=\"fa fa-fw fa-question-circle\"> </i>" <>
-        "<span>" <> translation <> "</span>" <>
-        "</div>"
+        {:safe, html} = content_tag(:div, class: "help") do
+          [content_tag(:i, " ", class: "fa fa-fw fa-question-circle"),
+           content_tag(:span, translation)]
+        end
+        html
       {:error, _} ->
         ""
     end
@@ -216,12 +242,13 @@ defmodule Brando.Form.Fields do
   @spec render_errors(Options.t | Keyword.t) :: String.t
   def render_errors([]), do: ""
   def render_errors(errors) when is_list(errors) do
-    errors = for error <- errors do
-      "<div class=\"error\">" <>
-      "<i class=\"fa fa-exclamation-circle\"> </i> " <>
-      parse_error(error) <> "</div>"
+    for error <- errors do
+      {:safe, html} = content_tag(:div, class: "error") do
+        [content_tag(:i, " ", class: "fa fa-exclamation-circle"),
+         parse_error(error)]
+      end
+      html
     end
-    Enum.join(errors)
   end
 
   @doc """
@@ -246,22 +273,30 @@ defmodule Brando.Form.Fields do
   """
   @spec concat_fields(String.t, String.t) :: String.t
   def concat_fields(wrapped_field, label), do:
-    label <> wrapped_field
+    Enum.join([label, wrapped_field])
 
   @doc """
   Returns a div with class=`class` and `content`
   """
   @spec div_tag(String.t, String.t) :: String.t
-  def div_tag(contents, class), do:
-    "<div class=\"#{class}\">#{contents}</div>"
+  def div_tag(content, class) do
+    {:safe, html} = content_tag(:div, class: class) do
+      content |> raw
+    end
+    html
+  end
 
   @doc """
   Wraps `field` in a div with `wrapper_class` as class.
   """
   @spec wrap(String.t, String.t | nil) :: String.t
   def wrap(field, nil), do: field
-  def wrap(field, wrapper_class), do:
-    "<div class=\"#{wrapper_class}\">#{field}</div>"
+  def wrap(field, class) do
+    {:safe, html} = content_tag(:div, class: class) do
+      field |> raw
+    end
+    html
+  end
 
   @doc """
   Renders a label for `name`, with `class` and `text` as the
@@ -269,8 +304,12 @@ defmodule Brando.Form.Fields do
   """
   @spec label(String.t, String.t, String.t) :: String.t
   def label(_, _, false), do: ""
-  def label(name, class, text), do:
-    "<label for=\"#{name}\" class=\"#{class}\">#{text}</label>"
+  def label(name, class, text) do
+    {:safe, html} = content_tag(:label, class: class) do
+      text |> raw
+    end
+    html
+  end
 
   @doc """
   Render a file field for :update. If we have `value`, try to render
@@ -423,8 +462,13 @@ defmodule Brando.Form.Fields do
   def fieldset_close_tag(), do:
     ~s(</div></fieldset>)
 
-  def div_form_row(content, nil), do:
-    ~s(<div class="form-row">#{content}</div>)
+  def div_form_row(content, nil) do
+    {:safe, html} = content_tag(:div, class: "form-row") do
+      content |> raw
+    end
+    html
+  end
+
   def div_form_row(content, _span), do: content
 
   def input(:checkbox, _form_type, name, value, _errors, opts) do

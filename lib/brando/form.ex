@@ -77,10 +77,10 @@ defmodule Brando.Form do
   defmacro form(source, opts \\ [], block)
   defmacro form(source, opts, [do: block]) do
     quote do
-      @form_fields    []
       @form_opts %{model: unquote(opts[:model]), source: unquote(source),
                    helper: unquote(opts[:helper]), class: unquote(opts[:class] || ""),
                    multipart: false}
+      @form_fields []
 
       def __model__ do
         unquote(source)
@@ -154,7 +154,7 @@ defmodule Brando.Form do
       end
 
     form_tag(url, opts) do
-      raw(fields)
+      fields |> raw
     end
   end
 
