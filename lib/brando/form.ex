@@ -292,7 +292,12 @@ defmodule Brando.Form do
 
     Module.put_attribute(module, :form_fields, [{name, [type: type] ++ opts}|fields])
 
-    if type == :file, do: Module.put_attribute(module, :form_multipart, true)
+    if type == :file do
+      form_opts =
+        Module.get_attribute(module, :form_opts)
+        |> Map.put(:multipart, true)
+      Module.put_attribute(module, :form_opts, form_opts)
+    end
   end
 
   @doc """
