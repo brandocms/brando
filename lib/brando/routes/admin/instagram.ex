@@ -22,8 +22,8 @@ defmodule Brando.Routes.Admin.Instagram do
       path = unquote(path)
       opts = unquote(opts)
 
-      get  "#{path}",              ctrl, :index,   opts
-      post "#{path}/endre-status", ctrl, :change_status, opts
+      get  "#{path}",               ctrl, :index,   opts
+      post "#{path}/change-status", ctrl, :change_status, opts
     end
   end
 end

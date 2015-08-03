@@ -34,7 +34,7 @@ defmodule Brando.Pages.ControllerTest do
 
   test "index" do
     conn =
-      call(:get, "/admin/sider")
+      call(:get, "/admin/pages")
       |> with_user
       |> send_request
 
@@ -48,7 +48,7 @@ defmodule Brando.Pages.ControllerTest do
     assert {:ok, page} = Page.create(@page_params, user)
 
     conn =
-      call(:get, "/admin/sider/#{page.id}")
+      call(:get, "/admin/pages/#{page.id}")
       |> with_user
       |> send_request
 
@@ -57,7 +57,7 @@ defmodule Brando.Pages.ControllerTest do
 
   test "new" do
     conn =
-      call(:get, "/admin/sider/ny")
+      call(:get, "/admin/pages/new")
       |> with_user
       |> send_request
 
@@ -70,14 +70,14 @@ defmodule Brando.Pages.ControllerTest do
     assert {:ok, page} = Page.create(@page_params, user)
 
     conn =
-      call(:get, "/admin/sider/#{page.id}/endre")
+      call(:get, "/admin/pages/#{page.id}/edit")
       |> with_user
       |> send_request
 
     assert html_response(conn, 200) =~ "Endre side"
 
     assert_raise Plug.Conn.WrapperError, fn ->
-      call(:get, "/admin/sider/1234/endre")
+      call(:get, "/admin/pages/1234/edit")
       |> with_user
       |> send_request
     end
@@ -86,17 +86,17 @@ defmodule Brando.Pages.ControllerTest do
   test "create (page) w/params" do
     user = create_user
     conn =
-      call(:post, "/admin/sider/", %{"page" => Map.put(@page_params, "creator_id", user.id)})
+      call(:post, "/admin/pages/", %{"page" => Map.put(@page_params, "creator_id", user.id)})
       |> with_user(user)
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/sider"
+    assert redirected_to(conn, 302) =~ "/admin/pages"
     assert get_flash(conn, :notice) == "Side opprettet"
   end
 
   test "create (page) w/erroneus params" do
     conn =
-      call(:post, "/admin/sider/", %{"page" => @broken_page_params})
+      call(:post, "/admin/pages/", %{"page" => @broken_page_params})
       |> with_user
       |> send_request
 
@@ -113,11 +113,11 @@ defmodule Brando.Pages.ControllerTest do
     page_params = Map.put(page_params, "data", "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]")
 
     conn =
-      call(:patch, "/admin/sider/#{page.id}", %{"page" => page_params})
+      call(:patch, "/admin/pages/#{page.id}", %{"page" => page_params})
       |> with_user(user)
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/sider"
+    assert redirected_to(conn, 302) =~ "/admin/pages"
     assert get_flash(conn, :notice) == "Side oppdatert"
   end
 
@@ -127,7 +127,7 @@ defmodule Brando.Pages.ControllerTest do
     assert {:ok, page} = Page.create(@page_params, user)
 
     conn =
-      call(:get, "/admin/sider/#{page.id}/slett")
+      call(:get, "/admin/pages/#{page.id}/delete")
       |> with_user
       |> send_request
 
@@ -140,11 +140,11 @@ defmodule Brando.Pages.ControllerTest do
     assert {:ok, page} = Page.create(@page_params, user)
 
     conn =
-      call(:delete, "/admin/sider/#{page.id}")
+      call(:delete, "/admin/pages/#{page.id}")
       |> with_user
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/sider"
+    assert redirected_to(conn, 302) =~ "/admin/pages"
   end
 
   test "uses villain" do

@@ -35,13 +35,13 @@ defmodule Brando.HTMLTest do
 
   test "delete_form_button/2" do
     {:safe, ret} = delete_form_button("no", %{__struct__: :user, id: 1}, :admin_user_path)
-    assert ret =~ "/admin/brukere/1"
+    assert ret =~ "/admin/users/1"
     assert ret =~ "value=\"delete\""
   end
 
   test "dropzone_form/3" do
     {:safe, form} = dropzone_form(:admin_image_series_path, 1, nil)
-    assert form =~ "/admin/bilder/serier/1/last-opp"
+    assert form =~ "/admin/images/series/1/upload"
     assert form =~ "dropzone"
   end
 
@@ -52,7 +52,7 @@ defmodule Brando.HTMLTest do
   end
 
   test "auth_links" do
-    conn = call(:get, "/admin/brukere") |> with_user
+    conn = call(:get, "/admin/users") |> with_user
 
     assert auth_link(conn, "test", :admin, do: {:safe, "link text"}) ==
            {:safe, "<a href=\"test\" class=\"btn btn-default\">  link text</a>"}

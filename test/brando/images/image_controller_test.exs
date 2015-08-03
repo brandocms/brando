@@ -31,7 +31,7 @@ defmodule Brando.Image.ControllerTest do
   test "index" do
     create_series
     conn =
-      call(:get, "/admin/bilder/")
+      call(:get, "/admin/images/")
       |> with_user
       |> send_request
 
@@ -50,7 +50,7 @@ defmodule Brando.Image.ControllerTest do
       |> Map.put("image_category_id", category.id)
     {:ok, series} = ImageSeries.create(series_params, user)
     conn =
-      call(:post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params})
+      call(:post, "/admin/images/series/#{series.id}/upload", %{"id" => series.id, "image" => @up_params})
       |> with_user(user)
       |> as_json
       |> send_request
@@ -63,7 +63,7 @@ defmodule Brando.Image.ControllerTest do
              order_by: m.sequence)
     images = q |> Brando.repo.all
     conn =
-      call(:post, "/admin/bilder/slett-valgte-bilder", %{"ids" => images})
+      call(:post, "/admin/images/delete-selected-images", %{"ids" => images})
       |> with_user(user)
       |> as_json
       |> send_request

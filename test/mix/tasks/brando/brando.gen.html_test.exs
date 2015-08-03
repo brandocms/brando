@@ -53,7 +53,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       assert_file "web/templates/admin/minion/edit.html.eex", fn file ->
         assert file =~ "<%= t!(@language, \"actions.edit\") %>"
         assert file =~ "v = new Villain.Editor"
-        assert file =~ "uploadURL: '/admin/minjongere/villain/last-opp/minion/'"
+        assert file =~ "uploadURL: '/admin/minions/villain/upload/minion/'"
       end
 
       assert_file "web/templates/admin/minion/index.html.eex", fn file ->
@@ -65,7 +65,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "<%= t!(@language, \"actions.new\") %>"
         assert file =~ "<%= MinionForm.get_form(@language, type: :create, action: :create, params: [], values: @changeset.params, errors: @changeset.errors) %>"
         assert file =~ "v = new Villain.Editor"
-        assert file =~ "uploadURL: '/admin/minjongere/villain/last-opp/minion/'"
+        assert file =~ "uploadURL: '/admin/minions/villain/upload/minion/'"
       end
 
       assert_file "web/templates/admin/minion/delete_confirm.html.eex", fn file ->

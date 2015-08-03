@@ -24,7 +24,7 @@ defmodule Brando.ImageCategory.ControllerTest do
 
   test "new" do
     conn =
-      call(:get, "/admin/bilder/kategorier/ny")
+      call(:get, "/admin/images/categories/new")
       |> with_user
       |> send_request
 
@@ -35,14 +35,14 @@ defmodule Brando.ImageCategory.ControllerTest do
     user = create_user
     assert {:ok, category} = ImageCategory.create(@params, user)
     conn =
-      call(:get, "/admin/bilder/kategorier/#{category.id}/endre")
+      call(:get, "/admin/images/categories/#{category.id}/edit")
       |> with_user
       |> send_request
 
     assert html_response(conn, 200) =~ "Endre bildekategori"
 
     assert_raise Plug.Conn.WrapperError, fn ->
-      call(:get, "/admin/bilder/kategorier/1234/endre")
+      call(:get, "/admin/images/categories/1234/edit")
       |> with_user
       |> send_request
     end
@@ -51,17 +51,17 @@ defmodule Brando.ImageCategory.ControllerTest do
   test "create (post) w/params" do
     user = create_user
     conn =
-      call(:post, "/admin/bilder/kategorier/", %{"imagecategory" => Map.put(@params, "creator_id", user.id)})
+      call(:post, "/admin/images/categories/", %{"imagecategory" => Map.put(@params, "creator_id", user.id)})
       |> with_user
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/bilder"
+    assert redirected_to(conn, 302) =~ "/admin/images"
     assert get_flash(conn, :notice) == "Bildekategori opprettet"
   end
 
   test "create (post) w/erroneus params" do
     conn =
-      call(:post, "/admin/bilder/kategorier/", %{"imagecategory" => @broken_params})
+      call(:post, "/admin/images/categories/", %{"imagecategory" => @broken_params})
       |> with_user
       |> send_request
 
@@ -76,11 +76,11 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert {:ok, category} = ImageCategory.create(params, user)
 
     conn =
-      call(:patch, "/admin/bilder/kategorier/#{category.id}", %{"imagecategory" => params})
+      call(:patch, "/admin/images/categories/#{category.id}", %{"imagecategory" => params})
       |> with_user
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/bilder"
+    assert redirected_to(conn, 302) =~ "/admin/images"
     assert get_flash(conn, :notice) == "Bildekategori oppdatert"
   end
 
@@ -90,7 +90,7 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert {:ok, category} = ImageCategory.create(@params, user)
 
     conn =
-      call(:get, "/admin/bilder/kategorier/#{category.id}/konfigurer")
+      call(:get, "/admin/images/categories/#{category.id}/configure")
       |> with_user
       |> send_request
 
@@ -98,7 +98,7 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert html_response(conn, 200) =~ "imagecategoryconfig[cfg]"
 
     assert_raise Plug.Conn.WrapperError, fn ->
-      call(:get, "/admin/bilder/kategorier/1234/konfigurer")
+      call(:get, "/admin/images/categories/1234/configure")
       |> with_user
       |> send_request
     end
@@ -111,11 +111,11 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert {:ok, category} = ImageCategory.create(params, user)
 
     conn =
-      call(:patch, "/admin/bilder/kategorier/#{category.id}/konfigurer", %{"imagecategoryconfig" => params})
+      call(:patch, "/admin/images/categories/#{category.id}/configure", %{"imagecategoryconfig" => params})
       |> with_user
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/bilder"
+    assert redirected_to(conn, 302) =~ "/admin/images"
     assert get_flash(conn, :notice) == "Bildekategori konfigurert"
   end
 
@@ -125,7 +125,7 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert {:ok, category} = ImageCategory.create(@params, user)
 
     conn =
-      call(:get, "/admin/bilder/kategorier/#{category.id}/slett")
+      call(:get, "/admin/images/categories/#{category.id}/delete")
       |> with_user
       |> send_request
 
@@ -136,11 +136,11 @@ defmodule Brando.ImageCategory.ControllerTest do
     user = create_user
     assert {:ok, category} = ImageCategory.create(@params, user)
     conn =
-      call(:delete, "/admin/bilder/kategorier/#{category.id}")
+      call(:delete, "/admin/images/categories/#{category.id}")
       |> with_user
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/bilder"
+    assert redirected_to(conn, 302) =~ "/admin/images"
     assert get_flash(conn, :notice) == "Bildekategori slettet"
   end
 end

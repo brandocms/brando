@@ -83,15 +83,15 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     Mix.shell.info """
     Add the resource to your browser scope in web/router.ex:
 
-        get    "/#{route}",           #{binding[:scoped]}Controller, :index
-        get    "/#{route}/ny",        #{binding[:scoped]}Controller, :new
-        get    "/#{route}/:id/endre", #{binding[:scoped]}Controller, :edit
-        get    "/#{route}/:id/slett", #{binding[:scoped]}Controller, :delete_confirm
-        get    "/#{route}/:id",       #{binding[:scoped]}Controller, :show
-        post   "/#{route}",           #{binding[:scoped]}Controller, :create
-        delete "/#{route}/:id",       #{binding[:scoped]}Controller, :delete
-        patch  "/#{route}/:id",       #{binding[:scoped]}Controller, :update
-        put    "/#{route}/:id",       #{binding[:scoped]}Controller, :update
+        get    "/#{route}",            #{binding[:scoped]}Controller, :index
+        get    "/#{route}/new",        #{binding[:scoped]}Controller, :new
+        get    "/#{route}/:id/edit",   #{binding[:scoped]}Controller, :edit
+        get    "/#{route}/:id/delete", #{binding[:scoped]}Controller, :delete_confirm
+        get    "/#{route}/:id",        #{binding[:scoped]}Controller, :show
+        post   "/#{route}",            #{binding[:scoped]}Controller, :create
+        delete "/#{route}/:id",        #{binding[:scoped]}Controller, :delete
+        patch  "/#{route}/:id",        #{binding[:scoped]}Controller, :update
+        put    "/#{route}/:id",        #{binding[:scoped]}Controller, :update
     """ <> villain_info <>
     """
 

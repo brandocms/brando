@@ -10,8 +10,8 @@
 <script type="text/javascript">
   $(document).ready(function() {
     v = new Villain.Editor({
-      browseURL: '/admin/<%= no_plural %>/villain/bla/<%= singular %>/',
-      uploadURL: '/admin/<%= no_plural %>/villain/last-opp/<%= singular %>/',
+      browseURL: '/admin/<%= plural %>/villain/browse/<%= singular %>/',
+      uploadURL: '/admin/<%= plural %>/villain/upload/<%= singular %>/',
       textArea: 'textarea[name="<%= singular %>[data]"]'
     });
   });

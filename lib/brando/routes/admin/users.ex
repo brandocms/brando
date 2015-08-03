@@ -13,6 +13,7 @@ defmodule Brando.Routes.Admin.Users do
   """
   alias Brando.Admin.UserController
   alias Brando.User
+  require Phoenix.Router
 
   @doc """
   Defines "RESTful" endpoints for the users resource.
@@ -39,19 +40,11 @@ defmodule Brando.Routes.Admin.Users do
       opts = unquote(options)
       ctrl = unquote(controller)
       path = unquote(path)
-
-      get    "#{path}",              ctrl, :index,          opts
-      get    "#{path}/profil",       ctrl, :profile,        opts
-      get    "#{path}/profil/endre", ctrl, :profile_edit,   opts
-      patch  "#{path}/profil/endre", ctrl, :profile_update, opts
-      get    "#{path}/ny",           ctrl, :new,            opts
-      get    "#{path}/:id/endre",    ctrl, :edit,           opts
-      get    "#{path}/:id/slett",    ctrl, :delete_confirm, opts
-      get    "#{path}/:id",          ctrl, :show,           opts
-      post   "#{path}",              ctrl, :create,         opts
-      delete "#{path}/:id",          ctrl, :delete,         opts
-      patch  "#{path}/:id",          ctrl, :update,         opts
-      put    "#{path}/:id",          ctrl, :update,         Keyword.put(opts, :as, nil)
+      get   "#{path}/profile",      ctrl, :profile, opts
+      get   "#{path}/profile/edit", ctrl, :profile_edit, opts
+      patch "#{path}/profile/edit", ctrl, :profile_update, opts
+      get   "#{path}/:id/delete",   ctrl, :delete_confirm, opts
+      Phoenix.Router.resources path, ctrl, opts
     end
   end
 end

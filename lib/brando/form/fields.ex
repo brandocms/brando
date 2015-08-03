@@ -521,11 +521,16 @@ defmodule Brando.Form.Fields do
     wrap_html
   end
 
+  @doc """
+  Renders a checkbox.
+
+  This is for multiple checkboxes. Single checks are handled through `input(:checkbox, ...)`
+  """
   def checkbox(form_type, name, choice_value, choice_text, value, default, is_checked_fun \\ nil)
   def checkbox(:create, name, choice_value, choice_text, [], default, _) do
     tag_opts =
       Keyword.new
-      |> put_name(name <> "[]")
+      |> put_name("#{name}[]")
       |> put_type(:checkbox)
       |> put_value(choice_value)
       |> put_checked_match(get_checked(choice_value, default))
@@ -550,7 +555,7 @@ defmodule Brando.Form.Fields do
   def checkbox(_, name, choice_value, choice_text, value, _default, nil) do
     tag_opts =
       Keyword.new
-      |> put_name(name)
+      |> put_name("#{name}[]")
       |> put_type(:checkbox)
       |> put_value(choice_value)
       |> put_checked_match(get_checked(choice_value, value))
@@ -575,7 +580,7 @@ defmodule Brando.Form.Fields do
   def checkbox(_, name, choice_value, choice_text, value, _default, is_checked_fun) do
     tag_opts =
       Keyword.new
-      |> put_name(name)
+      |> put_name("#{name}[]")
       |> put_type(:checkbox)
       |> put_value(choice_value)
       |> put_is_checked_fun(is_checked_fun, choice_value, value)
@@ -731,7 +736,7 @@ defmodule Brando.Form.Fields do
 
   defp put_is_checked_fun(tag_opts, is_checked_fun, choice_value, value) do
     case is_checked_fun.(choice_value, value) do
-      true  -> Keyword.put(tag_opts, :selected, true)
+      true  -> Keyword.put(tag_opts, :checked, true)
       false -> tag_opts
     end
   end

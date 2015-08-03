@@ -36,7 +36,7 @@ defmodule Brando.News.ControllerTest do
 
   test "index" do
     conn =
-      call(:get, "/admin/nyheter")
+      call(:get, "/admin/news")
       |> with_user
       |> send_request
 
@@ -50,7 +50,7 @@ defmodule Brando.News.ControllerTest do
     assert {:ok, post} = Post.create(@post_params, user)
 
     conn =
-      call(:get, "/admin/nyheter/#{post.id}")
+      call(:get, "/admin/news/#{post.id}")
       |> with_user
       |> send_request
 
@@ -59,7 +59,7 @@ defmodule Brando.News.ControllerTest do
 
   test "new" do
     conn =
-      call(:get, "/admin/nyheter/ny")
+      call(:get, "/admin/news/new")
       |> with_user
       |> send_request
 
@@ -72,14 +72,14 @@ defmodule Brando.News.ControllerTest do
     assert {:ok, post} = Post.create(@post_params, user)
 
     conn =
-      call(:get, "/admin/nyheter/#{post.id}/endre")
+      call(:get, "/admin/news/#{post.id}/edit")
       |> with_user
       |> send_request
 
     assert html_response(conn, 200) =~ "Endre post"
 
     assert_raise Plug.Conn.WrapperError, fn ->
-      call(:get, "/admin/nyheter/1234/endre")
+      call(:get, "/admin/news/1234/edit")
       |> with_user
       |> send_request
     end
@@ -88,17 +88,17 @@ defmodule Brando.News.ControllerTest do
   test "create (post) w/params" do
     user = create_user
     conn =
-      call(:post, "/admin/nyheter/", %{"post" => Map.put(@post_params, "creator_id", user.id)})
+      call(:post, "/admin/news/", %{"post" => Map.put(@post_params, "creator_id", user.id)})
       |> with_user(user)
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/nyheter"
+    assert redirected_to(conn, 302) =~ "/admin/news"
     assert get_flash(conn, :notice) == "Post opprettet"
   end
 
   test "create (post) w/erroneus params" do
     conn =
-      call(:post, "/admin/nyheter/", %{"post" => @broken_post_params})
+      call(:post, "/admin/news/", %{"post" => @broken_post_params})
       |> with_user
       |> send_request
 
@@ -115,11 +115,11 @@ defmodule Brando.News.ControllerTest do
     post_params = Map.put(post_params, "data", "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]")
 
     conn =
-      call(:patch, "/admin/nyheter/#{post.id}", %{"post" => post_params})
+      call(:patch, "/admin/news/#{post.id}", %{"post" => post_params})
       |> with_user(user)
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/nyheter"
+    assert redirected_to(conn, 302) =~ "/admin/news"
     assert get_flash(conn, :notice) == "Post oppdatert"
   end
 
@@ -129,7 +129,7 @@ defmodule Brando.News.ControllerTest do
     assert {:ok, post} = Post.create(@post_params, user)
 
     conn =
-      call(:get, "/admin/nyheter/#{post.id}/slett")
+      call(:get, "/admin/news/#{post.id}/delete")
       |> with_user
       |> send_request
 
@@ -142,11 +142,11 @@ defmodule Brando.News.ControllerTest do
     assert {:ok, post} = Post.create(@post_params, user)
 
     conn =
-      call(:delete, "/admin/nyheter/#{post.id}")
+      call(:delete, "/admin/news/#{post.id}")
       |> with_user
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/nyheter"
+    assert redirected_to(conn, 302) =~ "/admin/news"
   end
 
   test "uses villain" do

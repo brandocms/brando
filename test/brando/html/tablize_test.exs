@@ -29,9 +29,9 @@ defmodule Brando.HTML.TablizeTest do
 
     ret = ret |> IO.iodata_to_binary
     assert ret =~ "<i class=\"fa fa-times text-danger\">"
-    assert ret =~ "/admin/brukere/#{post.id}"
-    assert ret =~ "/admin/brukere/#{post.id}/endre"
-    assert ret =~ "/admin/brukere/#{post.id}/slett"
+    assert ret =~ "/admin/users/#{post.id}"
+    assert ret =~ "/admin/users/#{post.id}/edit"
+    assert ret =~ "/admin/users/#{post.id}/delete"
 
     {:safe, ret} = tablize(@conn, [post], helpers, filter: true)
 

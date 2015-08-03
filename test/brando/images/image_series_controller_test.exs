@@ -33,7 +33,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   test "new" do
     category = create_category(Forge.saved_user(TestRepo))
     conn =
-      call(:get, "/admin/bilder/serier/ny/#{category.id}")
+      call(:get, "/admin/images/series/new/#{category.id}")
       |> with_user
       |> send_request
     assert html_response(conn, 200) =~ "Ny bildeserie"
@@ -42,14 +42,14 @@ defmodule Brando.ImageSeries.ControllerTest do
   test "edit" do
     series = create_series
     conn =
-      call(:get, "/admin/bilder/serier/#{series.id}/endre")
+      call(:get, "/admin/images/series/#{series.id}/edit")
       |> with_user
       |> send_request
 
     assert html_response(conn, 200) =~ "Endre bildeserie"
 
     assert_raise Plug.Conn.WrapperError, fn ->
-      call(:get, "/admin/bilder/serier/1234/endre")
+      call(:get, "/admin/images/series/1234/edit")
       |> with_user
       |> send_request
     end
@@ -63,10 +63,10 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> Map.put("creator_id", user.id)
       |> Map.put("image_category_id", category.id)
     conn =
-      call(:post, "/admin/bilder/serier/", %{"imageseries" => series_params})
+      call(:post, "/admin/images/series/", %{"imageseries" => series_params})
       |> with_user(user)
       |> send_request
-    assert redirected_to(conn, 302) =~ "/admin/bilder"
+    assert redirected_to(conn, 302) =~ "/admin/images"
     assert get_flash(conn, :notice) == "Bildeserie opprettet"
   end
 
@@ -74,7 +74,7 @@ defmodule Brando.ImageSeries.ControllerTest do
     user = Forge.saved_user(TestRepo)
     series_params = Map.put(@series_params, "creator_id", user.id)
     conn =
-      call(:post, "/admin/bilder/serier/", %{"imageseries" => series_params})
+      call(:post, "/admin/images/series/", %{"imageseries" => series_params})
       |> with_user
       |> send_request
     assert html_response(conn, 200) =~ "Ny bildeserie"
@@ -90,17 +90,17 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> Map.put("image_category_id", category.id)
     {:ok, series} = ImageSeries.create(series_params, user)
     conn =
-      call(:patch, "/admin/bilder/serier/#{series.id}", %{"imageseries" => series_params})
+      call(:patch, "/admin/images/series/#{series.id}", %{"imageseries" => series_params})
       |> with_user
       |> send_request
-    assert redirected_to(conn, 302) =~ "/admin/bilder"
+    assert redirected_to(conn, 302) =~ "/admin/images"
     assert get_flash(conn, :notice) == "Bildeserie oppdatert"
   end
 
   test "delete_confirm" do
     series = create_series
     conn =
-      call(:get, "/admin/bilder/serier/#{series.id}/slett")
+      call(:get, "/admin/images/series/#{series.id}/delete")
       |> with_user
       |> send_request
     assert html_response(conn, 200) =~ "Slett bildeserie: Series name"
@@ -109,17 +109,17 @@ defmodule Brando.ImageSeries.ControllerTest do
   test "delete" do
     series = create_series
     conn =
-      call(:delete, "/admin/bilder/serier/#{series.id}")
+      call(:delete, "/admin/images/series/#{series.id}")
       |> with_user
       |> send_request
-    assert redirected_to(conn, 302) =~ "/admin/bilder"
+    assert redirected_to(conn, 302) =~ "/admin/images"
     assert get_flash(conn, :notice) == "Bildeserie slettet"
   end
 
   test "upload" do
     series = create_series
     conn =
-      call(:get, "/admin/bilder/serier/#{series.id}/last-opp")
+      call(:get, "/admin/images/series/#{series.id}/upload")
       |> with_user
       |> send_request
     assert html_response(conn, 200) =~ "Last opp"
@@ -134,7 +134,7 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> Map.put("image_category_id", category.id)
     {:ok, series} = ImageSeries.create(series_params, user)
     conn =
-      call(:post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params})
+      call(:post, "/admin/images/series/#{series.id}/upload", %{"id" => series.id, "image" => @up_params})
       |> with_user(user)
       |> as_json
       |> send_request
@@ -153,21 +153,21 @@ defmodule Brando.ImageSeries.ControllerTest do
     {:ok, series} = ImageSeries.create(series_params, user)
 
     conn =
-      call(:post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params})
+      call(:post, "/admin/images/series/#{series.id}/upload", %{"id" => series.id, "image" => @up_params})
       |> with_user(user)
       |> as_json
       |> send_request
 
     assert conn.status == 200
     conn =
-      call(:post, "/admin/bilder/serier/#{series.id}/last-opp", %{"id" => series.id, "image" => @up_params2}, user: user)
+      call(:post, "/admin/images/series/#{series.id}/upload", %{"id" => series.id, "image" => @up_params2}, user: user)
       |> with_user(user)
       |> as_json
       |> send_request
     assert conn.status == 200
 
     conn =
-      call(:get, "/admin/bilder/serier/#{series.id}/sorter")
+      call(:get, "/admin/images/series/#{series.id}/sort")
       |> with_user
       |> send_request
     assert conn.status == 200
@@ -177,12 +177,12 @@ defmodule Brando.ImageSeries.ControllerTest do
     [img1, img2] = series.images
 
     conn =
-      call(:post, "/admin/bilder/serier/#{series.id}/sorter", %{"order" => [to_string(img2.id), to_string(img1.id)]})
+      call(:post, "/admin/images/series/#{series.id}/sort", %{"order" => [to_string(img2.id), to_string(img1.id)]})
       |> with_user(user)
       |> as_json
       |> send_request
     assert conn.status == 200
-    assert conn.path_info == ["admin", "bilder", "serier", "#{series.id}", "sorter"]
+    assert conn.path_info == ["admin", "images", "series", "#{series.id}", "sort"]
     assert json_response(conn, 200) == %{"status" => "200"}
 
     series =

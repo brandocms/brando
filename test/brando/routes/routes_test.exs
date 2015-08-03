@@ -26,16 +26,16 @@ defmodule Brando.TestRouter do
 
   scope "/admin", as: :admin do
     pipe_through :admin
-    user_routes "/brukere", Brando.Admin.UserController,
+    user_routes "/users", Brando.Admin.UserController,
                                private: %{model: Brando.User}
-    user_routes "/brukere2", private: %{model: Brando.User}
-    user_routes "/brukere3"
-    post_routes "/nyheter"
-    post_routes "/nyheter2", [model: Brando.User]
-    post_routes "/nyheter3", Brando.Admin.PostController,
+    user_routes "/users2", private: %{model: Brando.User}
+    user_routes "/users3"
+    post_routes "/news"
+    post_routes "/news2", [model: Brando.User]
+    post_routes "/news3", Brando.Admin.PostController,
                                 [model: Brando.User]
-    image_routes "/bilder"
-    image_routes "/bilder2", [image_model: Brando.Image,
+    image_routes "/images"
+    image_routes "/images2", [image_model: Brando.Image,
                                  series_model: Brando.ImageSeries,
                                  category_model: Brando.ImageCategory]
     scope "villain" do
@@ -73,28 +73,28 @@ defmodule Brando.RoutesTest do
   end
 
   test "user_routes", %{routes: routes} do
-    assert routes =~ "/admin/brukere/ny"
-    assert routes =~ "/admin/brukere/:id/endre"
+    assert routes =~ "/admin/users/new"
+    assert routes =~ "/admin/users/:id/edit"
   end
 
   test "news_resources", %{routes: routes} do
-    assert routes =~ "/admin/nyheter/ny"
-    assert routes =~ "/admin/nyheter/:id/endre"
+    assert routes =~ "/admin/news/new"
+    assert routes =~ "/admin/news/:id/edit"
   end
 
   test "image_routes", %{routes: routes} do
-    assert routes =~ "/admin/bilder/kategorier"
-    assert routes =~ "/admin/bilder/kategorier/:id/endre"
+    assert routes =~ "/admin/images/categories"
+    assert routes =~ "/admin/images/categories/:id/edit"
   end
 
   test "villain_routes", %{routes: routes} do
-    assert routes =~ "/admin/villain/villain/last-opp"
-    assert routes =~ "/admin/villain/villain/bla"
-    assert routes =~ "/admin/villain/villain/bildedata"
+    assert routes =~ "/admin/villain/villain/upload"
+    assert routes =~ "/admin/villain/villain/browse"
+    assert routes =~ "/admin/villain/villain/imagedata"
 
-    assert routes =~ "/admin/villain2/2/villain/last-opp"
-    assert routes =~ "/admin/villain2/2/villain/bla"
-    assert routes =~ "/admin/villain2/2/villain/bildedata"
+    assert routes =~ "/admin/villain2/2/villain/upload"
+    assert routes =~ "/admin/villain2/2/villain/browse"
+    assert routes =~ "/admin/villain2/2/villain/imagedata"
   end
 
 end

@@ -49,27 +49,27 @@ defmodule Brando.Routes.Admin.Pages do
       opts = unquote(options)
       fctrl = PageFragmentController
 
-      get    "#{path}/fragmenter",           fctrl, :index,          opts
-      get    "#{path}/fragmenter/ny",        fctrl, :new,            opts
-      get    "#{path}/fragmenter/:id",       fctrl, :show,           opts
-      get    "#{path}/fragmenter/:id/endre", fctrl, :edit,           opts
-      get    "#{path}/fragmenter/:id/slett", fctrl, :delete_confirm, opts
-      post   "#{path}/fragmenter",           fctrl, :create,         opts
-      delete "#{path}/fragmenter/:id",       fctrl, :delete,         opts
-      patch  "#{path}/fragmenter/:id",       fctrl, :update,         opts
-      put    "#{path}/fragmenter/:id",       fctrl, :update,         Keyword.put(opts, :as, nil)
+      get    "#{path}/fragments",            fctrl, :index,          opts
+      get    "#{path}/fragments/new",        fctrl, :new,            opts
+      get    "#{path}/fragments/:id",        fctrl, :show,           opts
+      get    "#{path}/fragments/:id/edit",   fctrl, :edit,           opts
+      get    "#{path}/fragments/:id/delete", fctrl, :delete_confirm, opts
+      post   "#{path}/fragments",            fctrl, :create,         opts
+      delete "#{path}/fragments/:id",        fctrl, :delete,         opts
+      patch  "#{path}/fragments/:id",        fctrl, :update,         opts
+      put    "#{path}/fragments/:id",        fctrl, :update,         Keyword.put(opts, :as, nil)
 
       villain_routes path, ctrl
 
-      get    "#{path}",                                 ctrl, :index,          opts
-      get    "#{path}/ny",                              ctrl, :new,            opts
-      get    "#{path}/:id",                             ctrl, :show,           opts
-      get    "#{path}/:id/endre",                       ctrl, :edit,           opts
-      get    "#{path}/:id/slett",                       ctrl, :delete_confirm, opts
-      post   "#{path}",                                 ctrl, :create,         opts
-      delete "#{path}/:id",                             ctrl, :delete,         opts
-      patch  "#{path}/:id",                             ctrl, :update,         opts
-      put    "#{path}/:id",                             ctrl, :update,         Keyword.put(opts, :as, nil)
+      get    "#{path}",            ctrl, :index,          opts
+      get    "#{path}/new",        ctrl, :new,            opts
+      get    "#{path}/:id",        ctrl, :show,           opts
+      get    "#{path}/:id/edit",   ctrl, :edit,           opts
+      get    "#{path}/:id/delete", ctrl, :delete_confirm, opts
+      post   "#{path}",            ctrl, :create,         opts
+      delete "#{path}/:id",        ctrl, :delete,         opts
+      patch  "#{path}/:id",        ctrl, :update,         opts
+      put    "#{path}/:id",        ctrl, :update,         Keyword.put(opts, :as, nil)
     end
   end
 end

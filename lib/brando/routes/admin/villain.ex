@@ -35,11 +35,11 @@ defmodule Brando.Routes.Admin.Villain do
       ctrl = unquote(controller)
       opts = []
 
-      post "#{path}/villain/last-opp/:slug",          ctrl, :upload_image,  opts
-      get  "#{path}/villain/bla/:slug",               ctrl, :browse_images, opts
-      post "#{path}/villain/bildedata/:id",           ctrl, :image_info,    opts
-      post "#{path}/:_x/villain/bildedata/:id",       ctrl, :image_info,    opts
-      post "#{path}/:_x/endre/villain/bildedata/:id", ctrl, :image_info,    opts
+      post "#{path}/villain/upload/:slug",           ctrl, :upload_image,  opts
+      get  "#{path}/villain/browse/:slug",           ctrl, :browse_images, opts
+      post "#{path}/villain/imagedata/:id",          ctrl, :image_info,    opts
+      post "#{path}/:_x/villain/imagedata/:id",      ctrl, :image_info,    opts
+      post "#{path}/:_x/edit/villain/imagedata/:id", ctrl, :image_info,    opts
     end
   end
 end

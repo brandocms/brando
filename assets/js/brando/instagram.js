@@ -63,7 +63,7 @@ class Instagram {
         $.ajax({
             headers: {Accept : "application/json; charset=utf-8"},
             type: "POST",
-            url: Utils.addToPathName('endre-status'),
+            url: Utils.addToPathName('change-status'),
             data: {ids: images, status: status},
             success: that.changeStatusSuccess,
         });

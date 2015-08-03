@@ -284,7 +284,7 @@ var Images = (function () {
                             $.ajax({
                                 headers: { Accept: "application/json; charset=utf-8" },
                                 type: "POST",
-                                url: _Utils2["default"].addToPathName("slett-valgte-bilder"),
+                                url: _Utils2["default"].addToPathName("delete-selected-images"),
                                 data: { ids: imagePool },
                                 success: that.deleteSuccess });
                         }
@@ -404,7 +404,7 @@ var Instagram = (function () {
             $.ajax({
                 headers: { Accept: "application/json; charset=utf-8" },
                 type: "POST",
-                url: _Utils2["default"].addToPathName("endre-status"),
+                url: _Utils2["default"].addToPathName("change-status"),
                 data: { ids: images, status: status },
                 success: that.changeStatusSuccess });
         }

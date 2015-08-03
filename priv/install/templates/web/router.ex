@@ -44,11 +44,11 @@ defmodule <%= application_module %>.Router do
   scope "/admin", as: :admin do
     pipe_through :admin
     dashboard_routes   "/"
-    user_routes        "/brukere"
-    post_routes        "/nyheter"
-    image_routes       "/bilder"
+    user_routes        "/users"
+    post_routes        "/news"
+    image_routes       "/images"
     instagram_routes   "/instagram"
-    page_routes        "/sider"
+    page_routes        "/pages"
   end
 
   scope "/coming-soon" do

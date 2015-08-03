@@ -61,7 +61,7 @@ class Images {
                         $.ajax({
                             headers: {Accept : "application/json; charset=utf-8"},
                             type: "POST",
-                            url: Utils.addToPathName('slett-valgte-bilder'),
+                            url: Utils.addToPathName('delete-selected-images'),
                             data: {ids: imagePool},
                             success: that.deleteSuccess,
                         });

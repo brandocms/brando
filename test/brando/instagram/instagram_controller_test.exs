@@ -35,7 +35,7 @@ defmodule Brando.Instagram.ControllerTest do
       |> Brando.repo.all
       |> Enum.map(&Integer.to_string/1)
 
-    call(:post, "/admin/instagram/endre-status", %{ids: ids, status: "0"})
+    call(:post, "/admin/instagram/change-status", %{ids: ids, status: "0"})
     |> with_user
     |> send_request
 
@@ -48,7 +48,7 @@ defmodule Brando.Instagram.ControllerTest do
     assert html_response(conn, 200) =~ "data-status=\"deleted\" src=\"/media/images/instagram/thumb/dummy_2.jpg\""
     assert html_response(conn, 200) =~ "data-status=\"deleted\" src=\"/media/images/instagram/thumb/dummy_3.jpg\""
 
-    call(:post, "/admin/instagram/endre-status", %{ids: ids, status: "1"})
+    call(:post, "/admin/instagram/change-status", %{ids: ids, status: "1"})
     |> with_user
     |> send_request
 
@@ -61,7 +61,7 @@ defmodule Brando.Instagram.ControllerTest do
     assert html_response(conn, 200) =~ "data-status=\"rejected\" src=\"/media/images/instagram/thumb/dummy_2.jpg\""
     assert html_response(conn, 200) =~ "data-status=\"rejected\" src=\"/media/images/instagram/thumb/dummy_3.jpg\""
 
-    call(:post, "/admin/instagram/endre-status", %{ids: ids, status: "2"})
+    call(:post, "/admin/instagram/change-status", %{ids: ids, status: "2"})
     |> with_user
     |> send_request
 

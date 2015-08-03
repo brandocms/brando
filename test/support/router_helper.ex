@@ -91,12 +91,12 @@ defmodule RouterHelper do
 
     scope "/admin", as: :admin do
       pipe_through :admin
-      user_routes "/brukere", Brando.Admin.UserController, private: %{model: Brando.User}
-      user_routes "/brukere2", private: %{model: Brando.User}
-      user_routes "/brukere3"
-      post_routes "/nyheter"
-      page_routes "/sider"
-      image_routes "/bilder"
+      user_routes "/users", Brando.Admin.UserController, private: %{model: Brando.User}
+      user_routes "/users2", private: %{model: Brando.User}
+      user_routes "/users3"
+      post_routes "/news"
+      page_routes "/pages"
+      image_routes "/images"
       instagram_routes "/instagram"
       dashboard_routes "/"
     end

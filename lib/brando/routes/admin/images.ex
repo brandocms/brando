@@ -38,32 +38,32 @@ defmodule Brando.Routes.Admin.Images do
       opts = unquote(options)
       is_opts = Keyword.put(opts, :as, "image_series")
 
-      get    "#{path}",                           image_ctrl,      :index,           opts
-      post   "#{path}/slett-valgte-bilder",       image_ctrl,      :delete_selected, opts
-      get    "#{path}/serier",                    series_ctrl,     :index,           is_opts
-      get    "#{path}/serier/ny/:id",             series_ctrl,     :new,             is_opts
-      get    "#{path}/serier/:id/endre",          series_ctrl,     :edit,            is_opts
-      get    "#{path}/serier/:id/slett",          series_ctrl,     :delete_confirm,  is_opts
-      get    "#{path}/serier/:id/last-opp",       series_ctrl,     :upload,          is_opts
-      post   "#{path}/serier/:id/last-opp",       series_ctrl,     :upload_post,     is_opts
-      get    "#{path}/serier/:filter/sorter",     series_ctrl,     :sequence,        is_opts
-      post   "#{path}/serier/:filter/sorter",     series_ctrl,     :sequence_post,   is_opts
-      patch  "#{path}/serier/:id",                series_ctrl,     :update,          is_opts
-      put    "#{path}/serier/:id",                series_ctrl,     :update,          Keyword.put(opts, :as, nil)
-      delete "#{path}/serier/:id",                series_ctrl,     :delete,          is_opts
-      post   "#{path}/serier",                    series_ctrl,     :create,          is_opts
+      get    "#{path}",                        image_ctrl,  :index,           opts
+      post   "#{path}/delete-selected-images", image_ctrl,  :delete_selected, opts
+      get    "#{path}/series",                 series_ctrl, :index,           is_opts
+      get    "#{path}/series/new/:id",         series_ctrl, :new,             is_opts
+      get    "#{path}/series/:id/edit",        series_ctrl, :edit,            is_opts
+      get    "#{path}/series/:id/delete",      series_ctrl, :delete_confirm,  is_opts
+      get    "#{path}/series/:id/upload",      series_ctrl, :upload,          is_opts
+      post   "#{path}/series/:id/upload",      series_ctrl, :upload_post,     is_opts
+      get    "#{path}/series/:filter/sort",    series_ctrl, :sequence,        is_opts
+      post   "#{path}/series/:filter/sort",    series_ctrl, :sequence_post,   is_opts
+      patch  "#{path}/series/:id",             series_ctrl, :update,          is_opts
+      put    "#{path}/series/:id",             series_ctrl, :update,          Keyword.put(opts, :as, nil)
+      delete "#{path}/series/:id",             series_ctrl, :delete,          is_opts
+      post   "#{path}/series",                 series_ctrl, :create,          is_opts
 
-      get    "#{path}/kategorier",                categories_ctrl, :index,           Keyword.put(opts, :as, "image_category")
-      get    "#{path}/kategorier/ny",             categories_ctrl, :new,             Keyword.put(opts, :as, "image_category")
-      get    "#{path}/kategorier/:filter/sorter", categories_ctrl, :sequence,        Keyword.put(opts, :as, "image_category")
-      post   "#{path}/kategorier/:filter/sorter", categories_ctrl, :sequence_post,   Keyword.put(opts, :as, "image_category")
-      get    "#{path}/kategorier/:id/endre",      categories_ctrl, :edit,            Keyword.put(opts, :as, "image_category")
-      get    "#{path}/kategorier/:id/konfigurer", categories_ctrl, :configure,       Keyword.put(opts, :as, "image_category")
-      patch  "#{path}/kategorier/:id/konfigurer", categories_ctrl, :configure_patch, Keyword.put(opts, :as, "image_category")
-      get    "#{path}/kategorier/:id/slett",      categories_ctrl, :delete_confirm,  Keyword.put(opts, :as, "image_category")
-      patch  "#{path}/kategorier/:id",            categories_ctrl, :update,          Keyword.put(opts, :as, "image_category")
-      delete "#{path}/kategorier/:id",            categories_ctrl, :delete,          Keyword.put(opts, :as, "image_category")
-      post   "#{path}/kategorier",                categories_ctrl, :create,          Keyword.put(opts, :as, "image_category")
+      get    "#{path}/categories",               categories_ctrl, :index,           Keyword.put(opts, :as, "image_category")
+      get    "#{path}/categories/new",           categories_ctrl, :new,             Keyword.put(opts, :as, "image_category")
+      get    "#{path}/categories/:filter/sort",  categories_ctrl, :sequence,        Keyword.put(opts, :as, "image_category")
+      post   "#{path}/categories/:filter/sort",  categories_ctrl, :sequence_post,   Keyword.put(opts, :as, "image_category")
+      get    "#{path}/categories/:id/edit",      categories_ctrl, :edit,            Keyword.put(opts, :as, "image_category")
+      get    "#{path}/categories/:id/configure", categories_ctrl, :configure,       Keyword.put(opts, :as, "image_category")
+      patch  "#{path}/categories/:id/configure", categories_ctrl, :configure_patch, Keyword.put(opts, :as, "image_category")
+      get    "#{path}/categories/:id/delete",    categories_ctrl, :delete_confirm,  Keyword.put(opts, :as, "image_category")
+      patch  "#{path}/categories/:id",           categories_ctrl, :update,          Keyword.put(opts, :as, "image_category")
+      delete "#{path}/categories/:id",           categories_ctrl, :delete,          Keyword.put(opts, :as, "image_category")
+      post   "#{path}/categories",               categories_ctrl, :create,          Keyword.put(opts, :as, "image_category")
     end
   end
 end

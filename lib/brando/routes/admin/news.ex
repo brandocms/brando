@@ -47,10 +47,10 @@ defmodule Brando.Routes.Admin.News do
       villain_routes path, ctrl
 
       get    "#{path}",                                 ctrl, :index,          opts
-      get    "#{path}/ny",                              ctrl, :new,            opts
+      get    "#{path}/new",                              ctrl, :new,            opts
       get    "#{path}/:id",                             ctrl, :show,           opts
-      get    "#{path}/:id/endre",                       ctrl, :edit,           opts
-      get    "#{path}/:id/slett",                       ctrl, :delete_confirm, opts
+      get    "#{path}/:id/edit",                       ctrl, :edit,           opts
+      get    "#{path}/:id/delete",                       ctrl, :delete_confirm, opts
       post   "#{path}",                                 ctrl, :create,         opts
       delete "#{path}/:id",                             ctrl, :delete,         opts
       patch  "#{path}/:id",                             ctrl, :update,         opts

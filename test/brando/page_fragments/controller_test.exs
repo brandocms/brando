@@ -29,7 +29,7 @@ defmodule Brando.PageFragments.ControllerTest do
 
   test "index" do
     conn =
-      call(:get, "/admin/sider/fragmenter")
+      call(:get, "/admin/pages/fragments")
       |> with_user
       |> send_request
 
@@ -43,7 +43,7 @@ defmodule Brando.PageFragments.ControllerTest do
     assert {:ok, page} = PageFragment.create(@page_params, user)
 
     conn =
-      call(:get, "/admin/sider/fragmenter/#{page.id}")
+      call(:get, "/admin/pages/fragments/#{page.id}")
       |> with_user
       |> send_request
 
@@ -52,7 +52,7 @@ defmodule Brando.PageFragments.ControllerTest do
 
   test "new" do
     conn =
-      call(:get, "/admin/sider/fragmenter/ny")
+      call(:get, "/admin/pages/fragments/new")
       |> with_user
       |> send_request
 
@@ -65,14 +65,14 @@ defmodule Brando.PageFragments.ControllerTest do
     assert {:ok, page} = PageFragment.create(@page_params, user)
 
     conn =
-      call(:get, "/admin/sider/fragmenter/#{page.id}/endre")
+      call(:get, "/admin/pages/fragments/#{page.id}/edit")
       |> with_user
       |> send_request
 
     assert html_response(conn, 200) =~ "Endre sidefragment"
 
     assert_raise Plug.Conn.WrapperError, fn ->
-      call(:get, "/admin/sider/fragmenter/1234/endre")
+      call(:get, "/admin/pages/fragments/1234/edit")
       |> with_user
       |> send_request
     end
@@ -81,17 +81,17 @@ defmodule Brando.PageFragments.ControllerTest do
   test "create (page) w/params" do
     user = create_user
     conn =
-      call(:post, "/admin/sider/fragmenter/", %{"page_fragment" => Map.put(@page_params, "creator_id", user.id)})
+      call(:post, "/admin/pages/fragments/", %{"page_fragment" => Map.put(@page_params, "creator_id", user.id)})
       |> with_user(user)
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/sider/fragmenter"
+    assert redirected_to(conn, 302) =~ "/admin/pages/fragments"
     assert get_flash(conn, :notice) == "Sidefragment opprettet"
   end
 
   test "create (page) w/erroneus params" do
     conn =
-      call(:post, "/admin/sider/fragmenter/", %{"page_fragment" => @broken_page_params})
+      call(:post, "/admin/pages/fragments/", %{"page_fragment" => @broken_page_params})
       |> with_user
       |> send_request
 
@@ -108,11 +108,11 @@ defmodule Brando.PageFragments.ControllerTest do
     page_params = Map.put(page_params, "data", "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]")
 
     conn =
-      call(:patch, "/admin/sider/fragmenter/#{page.id}", %{"page_fragment" => page_params})
+      call(:patch, "/admin/pages/fragments/#{page.id}", %{"page_fragment" => page_params})
       |> with_user(user)
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/sider/fragmenter"
+    assert redirected_to(conn, 302) =~ "/admin/pages/fragments"
     assert get_flash(conn, :notice) == "Sidefragment oppdatert"
   end
 
@@ -122,7 +122,7 @@ defmodule Brando.PageFragments.ControllerTest do
     assert {:ok, page} = PageFragment.create(@page_params, user)
 
     conn =
-      call(:get, "/admin/sider/fragmenter/#{page.id}/slett")
+      call(:get, "/admin/pages/fragments/#{page.id}/delete")
       |> with_user
       |> send_request
 
@@ -135,11 +135,11 @@ defmodule Brando.PageFragments.ControllerTest do
     assert {:ok, page} = PageFragment.create(@page_params, user)
 
     conn =
-      call(:delete, "/admin/sider/fragmenter/#{page.id}")
+      call(:delete, "/admin/pages/fragments/#{page.id}")
       |> with_user
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/sider/fragmenter"
+    assert redirected_to(conn, 302) =~ "/admin/pages/fragments"
   end
 
   test "uses villain" do

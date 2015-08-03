@@ -9,7 +9,7 @@ defmodule Brando.Users.ControllerTest do
 
   test "index redirects to /login when no :current_user" do
     conn =
-      call(:get, "/admin/brukere")
+      call(:get, "/admin/users")
       |> with_session
       |> send_request
     assert redirected_to(conn, 302) =~ "/login"
@@ -17,7 +17,7 @@ defmodule Brando.Users.ControllerTest do
 
   test "index with logged in user" do
     conn =
-      call(:get, "/admin/brukere")
+      call(:get, "/admin/users")
       |> with_user
       |> send_request
 
@@ -27,7 +27,7 @@ defmodule Brando.Users.ControllerTest do
   test "show" do
     user = Forge.saved_user(TestRepo)
     conn =
-      call(:get, "/admin/brukere/#{user.id}")
+      call(:get, "/admin/users/#{user.id}")
       |> with_user
       |> send_request
 
@@ -37,7 +37,7 @@ defmodule Brando.Users.ControllerTest do
   test "profile" do
     Forge.saved_user(TestRepo)
     conn =
-      call(:get, "/admin/brukere/profil")
+      call(:get, "/admin/users/profile")
       |> with_user
       |> send_request
 
@@ -46,7 +46,7 @@ defmodule Brando.Users.ControllerTest do
 
   test "new" do
     conn =
-      call(:get, "/admin/brukere/ny")
+      call(:get, "/admin/users/new")
       |> with_user
       |> send_request
 
@@ -56,7 +56,7 @@ defmodule Brando.Users.ControllerTest do
   test "edit" do
     user = Forge.saved_user(TestRepo)
     conn =
-      call(:get, "/admin/brukere/#{user.id}/endre")
+      call(:get, "/admin/users/#{user.id}/edit")
       |> with_user
       |> send_request
 
@@ -66,7 +66,7 @@ defmodule Brando.Users.ControllerTest do
   test "edit profile" do
     user = Forge.saved_user(TestRepo)
     conn =
-      call(:get, "/admin/brukere/profil/endre")
+      call(:get, "/admin/users/profile/edit")
       |> with_user(user)
       |> send_request
 
@@ -76,18 +76,18 @@ defmodule Brando.Users.ControllerTest do
   test "create (post) w/params" do
     user = Forge.user
     conn =
-      call(:post, "/admin/brukere/", %{"user" => Map.delete(user, :__struct__)})
+      call(:post, "/admin/users/", %{"user" => Map.delete(user, :__struct__)})
       |> with_user
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/brukere"
+    assert redirected_to(conn, 302) =~ "/admin/users"
     assert get_flash(conn, :notice) == "Bruker opprettet"
   end
 
   test "create (post) w/erroneus params" do
     user = Forge.saved_user(TestRepo)
     conn =
-      call(:post, "/admin/brukere/", %{"user" => Map.delete(user, :__struct__)})
+      call(:post, "/admin/users/", %{"user" => Map.delete(user, :__struct__)})
       |> with_user
       |> send_request
 
@@ -98,11 +98,11 @@ defmodule Brando.Users.ControllerTest do
   test "update (post) w/params" do
     user = Forge.saved_user(TestRepo)
     conn =
-      call(:patch, "/admin/brukere/#{user.id}", %{"user" => Map.delete(user, :__struct__)})
+      call(:patch, "/admin/users/#{user.id}", %{"user" => Map.delete(user, :__struct__)})
       |> with_user
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/brukere"
+    assert redirected_to(conn, 302) =~ "/admin/users"
     assert get_flash(conn, :notice) == "Bruker oppdatert"
   end
 
@@ -112,7 +112,7 @@ defmodule Brando.Users.ControllerTest do
       |> Map.delete(:__struct__)
       |> Map.put(:password, "1")
     conn =
-      call(:patch, "/admin/brukere/#{user.id}", %{"user" => user})
+      call(:patch, "/admin/users/#{user.id}", %{"user" => user})
       |> with_user
       |> send_request
 
@@ -123,11 +123,11 @@ defmodule Brando.Users.ControllerTest do
   test "update profile" do
     user = Forge.saved_user(TestRepo)
     conn =
-      call(:patch, "/admin/brukere/profil/endre", %{"user" => Map.delete(user, :__struct__)})
+      call(:patch, "/admin/users/profile/edit", %{"user" => Map.delete(user, :__struct__)})
       |> with_user(user)
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/brukere/profil"
+    assert redirected_to(conn, 302) =~ "/admin/users/profile"
     assert get_flash(conn, :notice) == "Bruker oppdatert"
   end
 
@@ -137,7 +137,7 @@ defmodule Brando.Users.ControllerTest do
       |> Map.delete(:__struct__)
       |> Map.put(:password, "1")
     conn =
-      call(:patch, "/admin/brukere/profil/endre", %{"user" => user})
+      call(:patch, "/admin/users/profile/edit", %{"user" => user})
       |> with_user(user)
       |> send_request
 
@@ -148,7 +148,7 @@ defmodule Brando.Users.ControllerTest do
   test "delete_confirm" do
     user = Forge.saved_user(TestRepo)
     conn =
-      call(:get, "/admin/brukere/#{user.id}/slett")
+      call(:get, "/admin/users/#{user.id}/delete")
       |> with_user
       |> send_request
 
@@ -158,11 +158,11 @@ defmodule Brando.Users.ControllerTest do
   test "delete" do
     user = Forge.saved_user(TestRepo)
     conn =
-      call(:delete, "/admin/brukere/#{user.id}")
+      call(:delete, "/admin/users/#{user.id}")
       |> with_user
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/brukere"
+    assert redirected_to(conn, 302) =~ "/admin/users"
     assert get_flash(conn, :notice) =~ "slettet"
   end
 end
