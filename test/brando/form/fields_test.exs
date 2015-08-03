@@ -84,20 +84,8 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "render_options/4" do
-    assert F.render_options(:create, %{choices: &UserForm.get_status_choices/1, language: "en"},
-                          "val", nil) == ["<option value=\"1\">Valg 1</option>",
-                                          "<option value=\"2\">Valg 2</option>"]
-  end
-
-  test "get_required/1" do
-    assert F.get_required(nil) == " required"
-    assert F.get_required(true) == " required"
-    assert F.get_required(false) == ""
-  end
-
-  test "get_has_error/1" do
-    assert F.get_has_error([]) == ""
-    assert F.get_has_error(["1", "2"]) == " has-error"
+    assert F.render_options(:create, %{choices: &UserForm.get_status_choices/1, language: "en"}, "val", nil)
+           == [["<option value=\"1\">", "Valg 1", "</option>"], ["<option value=\"2\">", "Valg 2", "</option>"]]
   end
 
   test "get_choices/1" do
@@ -108,7 +96,8 @@ defmodule Brando.Form.FieldsTest do
   test "concat_fields/2" do
     label = "<label>Label</label>"
     wrapped_field = "<div><input /></div>"
-    assert F.concat_fields(wrapped_field, label) == label <> wrapped_field
+    assert F.concat_fields(wrapped_field, label)
+           == ["<label>Label</label>", "<div><input /></div>"]
   end
 
   test "div_tag/2" do
@@ -143,10 +132,6 @@ defmodule Brando.Form.FieldsTest do
     assert fg =~ "fa-exclamation-circle"
   end
 
-  test "tag/4" do
-    assert F.tag("select", "name", "test", "class") == "<select name=\"name\" class=\"class\">test</select>"
-  end
-
   test "wrap/2" do
     assert F.wrap("test", nil) == "test"
     assert F.wrap("test", "wrapper_class")
@@ -154,50 +139,48 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "textarea/5" do
-    assert F.textarea(:create, "name", [], nil, %{}) == ~s(<textarea name="name"></textarea>)
-    assert F.textarea(:update, "name", "blah", nil, %{}) == ~s(<textarea name="name">blah</textarea>)
-    assert F.textarea(:update, "name", "blah", nil, %{default: "default"}) == ~s(<textarea name="name">blah</textarea>)
-    assert F.textarea(:update, "name", [], nil, %{default: "default"}) == ~s(<textarea name="name"></textarea>)
-    assert F.textarea(:create, "name", [], nil, %{default: "default"}) == ~s(<textarea name="name">default</textarea>)
-    assert F.textarea(:update, "name", [], nil, %{default: "default", class: "class"}) == ~s(<textarea name="name" class="class"></textarea>)
+    assert F.textarea(:create, "name", [], nil, %{})
+           == ["<textarea name=\"name\">", "", "</textarea>"]
+    assert F.textarea(:update, "name", "blah", nil, %{})
+           == ["<textarea name=\"name\">", "blah", "</textarea>"]
+    assert F.textarea(:update, "name", %{test: "testing"}, nil, %{})
+           == ["<textarea name=\"name\">", "{&quot;test&quot;:&quot;testing&quot;}", "</textarea>"]
+    assert F.textarea(:update, "name", "blah", nil, %{default: "default"})
+           == ["<textarea name=\"name\">", "blah", "</textarea>"]
+    assert F.textarea(:update, "name", [], nil, %{default: "default"})
+           == ["<textarea name=\"name\">", "", "</textarea>"]
+    assert F.textarea(:create, "name", [], nil, %{default: "default"})
+           == ["<textarea name=\"name\">", "default", "</textarea>"]
+    assert F.textarea(:update, "name", [], nil, %{default: "default", class: "class"})
+           == ["<textarea class=\"class\" name=\"name\">", "", "</textarea>"]
   end
 
   test "file/4" do
-    assert F.file(:update, "user[avatar]", %{sizes: %{"thumb" => "images/default/thumb/0.jpeg"}},
-                  [], %{type: :file, label: "Bilde"}) == "<div class=\"image-preview\"><img src=\"/media/images/default/thumb/0.jpeg\" /></div><input name=\"user[avatar]\" type=\"file\" />"
-  end
-
-  test "get_form_group_class/1" do
-    assert F.get_form_group_class(nil) == ""
-    assert F.get_form_group_class("test") == " test"
-  end
-
-  test "get_slug_from/2" do
-    assert F.get_slug_from("testform[title]", []) == ""
-    assert F.get_slug_from("testform[title]", %{slug_from: :name}) ==
-      ~s( data-slug-from="testform[name]")
+    assert F.file(:update, "user[avatar]", %{sizes: %{"thumb" => "images/default/thumb/0.jpeg"}}, [], %{type: :file, label: "Bilde"})
+           == [["<div class=\"image-preview\">", "<img src=\"/media/images/default/thumb/0.jpeg\">", "</div>"], "<input name=\"user[avatar]\" type=\"file\">"]
   end
 
   test "get_val/2" do
     assert F.get_val([]) == ""
     assert F.get_val(nil) == ""
-    assert F.get_val("test") == " value=\"test\""
-    assert F.get_val("test", nil) == " value=\"test\""
-    assert F.get_val("test", "default") == " value=\"test\""
-    assert F.get_val([], "default") == " value=\"default\""
+    assert F.get_val("test") == "test"
+    assert F.get_val("test", nil) == "test"
+    assert F.get_val(["test", "ing"], nil) == "test,ing"
+    assert F.get_val("test", "default") == "test"
+    assert F.get_val([], "default") == "default"
   end
 
   test "input checkbox" do
     assert F.input(:checkbox, :create, "name", [], [], []) ==
-      "<input name=\"name\" type=\"hidden\" value=\"false\"><input name=\"name\" value=\"true\" type=\"checkbox\" />"
+      ["<input name=\"name\" type=\"hidden\" value=\"false\">", "<input name=\"name\" type=\"checkbox\" value=\"true\">"]
     assert F.input(:checkbox, :create, "name", false, [], []) ==
-      "<input name=\"name\" type=\"hidden\" value=\"false\"><input name=\"name\" value=\"true\" type=\"checkbox\" />"
+      ["<input name=\"name\" type=\"hidden\" value=\"false\">", "<input name=\"name\" type=\"checkbox\" value=\"true\">"]
     assert F.input(:checkbox, :create, "name", nil, [], []) ==
-      "<input name=\"name\" type=\"hidden\" value=\"false\"><input name=\"name\" value=\"true\" type=\"checkbox\" />"
+      ["<input name=\"name\" type=\"hidden\" value=\"false\">", "<input name=\"name\" type=\"checkbox\" value=\"true\">"]
     assert F.input(:checkbox, :create, "name", true, [], []) ==
-      "<input name=\"name\" type=\"hidden\" value=\"false\"><input name=\"name\" value=\"true\" type=\"checkbox\" checked=\"checked\" />"
+      ["<input name=\"name\" type=\"hidden\" value=\"false\">", "<input checked=\"checked\" name=\"name\" type=\"checkbox\" value=\"true\">"]
     assert F.input(:checkbox, :create, "name", "on", [], []) ==
-      "<input name=\"name\" type=\"hidden\" value=\"false\"><input name=\"name\" value=\"true\" type=\"checkbox\" checked=\"checked\" />"
+      ["<input name=\"name\" type=\"hidden\" value=\"false\">", "<input checked=\"checked\" name=\"name\" type=\"checkbox\" value=\"true\">"]
   end
 
   test "render_errors/1" do
@@ -225,44 +208,44 @@ defmodule Brando.Form.FieldsTest do
 
   test "label/3" do
     assert F.label("name", "class", "text")
-           == ["<label class=\"class\">", "text", "</label>"]
+           == ["<label class=\"class\" for=\"name\">", "text", "</label>"]
   end
 
   test "select/6" do
-    assert F.select(:create, "name", "choices", %{}, [], []) ==
-      "<select name=\"name\" class=\"\">choices</select>"
-    assert F.select(:create, "name", "choices", %{multiple: true}, [], []) ==
-      "<select name=\"name[]\" multiple>choices</select>"
+    assert F.select(:create, "name", "choices", %{}, [], [])
+           == ["<select name=\"name\">", "choices", "</select>"]
+    assert F.select(:create, "name", "choices", %{multiple: true}, [], [])
+           == ["<select multiple=\"multiple\" name=\"name[]\">", "choices", "</select>"]
   end
 
   test "option/6" do
-    assert F.option(:create, "choice_val", "choice_text", [], nil, nil) ==
-      "<option value=\"choice_val\">choice_text</option>"
-    assert F.option(:create, "choice_val", "choice_text", [], "choice_val", nil) ==
-      "<option value=\"choice_val\" selected>choice_text</option>"
-    assert F.option(:create, "choice_val", "choice_text", "choice_wrong", "choice_val", nil) ==
-      "<option value=\"choice_val\">choice_text</option>"
-    assert F.option(:create, "choice_val", "choice_text", "choice_val", "choice_val", nil) ==
-      "<option value=\"choice_val\" selected>choice_text</option>"
-    assert F.option(:update, "choice_val", "choice_text", "choice_val", "choice_val", &__MODULE__.UserForm.selected_fun_true/2) ==
-      "<option value=\"choice_val\" selected>choice_text</option>"
-    assert F.option(:update, "choice_val", "choice_text", "choice_val", "choice_val", &__MODULE__.UserForm.selected_fun_false/2) ==
-      "<option value=\"choice_val\">choice_text</option>"
+    assert F.option(:create, "choice_val", "choice_text", [], nil, nil)
+           == ["<option value=\"choice_val\">", "choice_text", "</option>"]
+    assert F.option(:create, "choice_val", "choice_text", [], "choice_val", nil)
+           == ["<option selected=\"selected\" value=\"choice_val\">", "choice_text", "</option>"]
+    assert F.option(:create, "choice_val", "choice_text", "choice_wrong", "choice_val", nil)
+           == ["<option value=\"choice_val\">", "choice_text", "</option>"]
+    assert F.option(:create, "choice_val", "choice_text", "choice_val", "choice_val", nil)
+           == ["<option selected=\"selected\" value=\"choice_val\">", "choice_text", "</option>"]
+    assert F.option(:update, "choice_val", "choice_text", "choice_val", "choice_val", &__MODULE__.UserForm.selected_fun_true/2)
+           == ["<option selected=\"selected\" value=\"choice_val\">", "choice_text", "</option>"]
+    assert F.option(:update, "choice_val", "choice_text", "choice_val", "choice_val", &__MODULE__.UserForm.selected_fun_false/2)
+           == ["<option value=\"choice_val\">", "choice_text", "</option>"]
   end
 
   test "radio/7" do
-    assert F.radio(:create, "choice_name", "choice_val", "choice_text", [], nil, nil) ==
-      "<div class=\"radio\"><label for=\"choice_name\"></label><label for=\"choice_name\"><input name=\"choice_name\" type=\"radio\" value=\"choice_val\" />choice_text</label></div>"
-    assert F.radio(:create, "choice_name", "choice_val", "choice_text", [], "choice_val", nil) ==
-      "<div class=\"radio\"><label for=\"choice_name\"></label><label for=\"choice_name\"><input name=\"choice_name\" type=\"radio\" value=\"choice_val\" checked />choice_text</label></div>"
-    assert F.radio(:create, "choice_name", "choice_val", "choice_text", "choice_wrong", "choice_val", nil) ==
-      "<div class=\"radio\"><label for=\"choice_name\"></label><label for=\"choice_name\"><input name=\"choice_name\" type=\"radio\" value=\"choice_val\" />choice_text</label></div>"
-    assert F.radio(:create, "choice_name", "choice_val", "choice_text", "choice_val", "choice_val", nil) ==
-      "<div class=\"radio\"><label for=\"choice_name\"></label><label for=\"choice_name\"><input name=\"choice_name\" type=\"radio\" value=\"choice_val\" checked />choice_text</label></div>"
+    assert F.radio(:create, "choice_name", "choice_val", "choice_text", [], nil, nil)
+           == ["<div>", [["<label for=\"choice_name\">", "", "</label>"], ["<label for=\"choice_name\">", ["<input name=\"choice_name\" type=\"radio\" value=\"choice_val\">", "choice_text"], "</label>"]], "</div>"]
+    assert F.radio(:create, "choice_name", "choice_val", "choice_text", [], "choice_val", nil)
+           == ["<div>", [["<label for=\"choice_name\">", "", "</label>"], ["<label for=\"choice_name\">", ["<input checked=\"checked\" name=\"choice_name\" type=\"radio\" value=\"choice_val\">", "choice_text"], "</label>"]], "</div>"]
+    assert F.radio(:create, "choice_name", "choice_val", "choice_text", "choice_wrong", "choice_val", nil)
+           == ["<div>", [["<label for=\"choice_name\">", "", "</label>"], ["<label for=\"choice_name\">", ["<input name=\"choice_name\" type=\"radio\" value=\"choice_val\">", "choice_text"], "</label>"]], "</div>"]
+    assert F.radio(:create, "choice_name", "choice_val", "choice_text", "choice_val", "choice_val", nil)
+           == ["<div>", [["<label for=\"choice_name\">", "", "</label>"], ["<label for=\"choice_name\">", ["<input checked=\"checked\" name=\"choice_name\" type=\"radio\" value=\"choice_val\">", "choice_text"], "</label>"]], "</div>"]
 
-    assert F.radio(:create, "choice_name", "choice_val", "choice_text", "choice_val", "choice_val", &__MODULE__.UserForm.selected_fun_true/2) ==
-      "<div class=\"radio\"><label for=\"choice_name\"></label><label for=\"choice_name\"><input name=\"choice_name\" type=\"radio\" value=\"choice_val\" checked />choice_text</label></div>"
-    assert F.radio(:create, "choice_name", "choice_val", "choice_text", "choice_val", "choice_val", &__MODULE__.UserForm.selected_fun_false/2) ==
-      "<div class=\"radio\"><label for=\"choice_name\"></label><label for=\"choice_name\"><input name=\"choice_name\" type=\"radio\" value=\"choice_val\" />choice_text</label></div>"
+    assert F.radio(:create, "choice_name", "choice_val", "choice_text", "choice_val", "choice_val", &__MODULE__.UserForm.selected_fun_true/2)
+           == ["<div>", [["<label for=\"choice_name\">", "", "</label>"], ["<label for=\"choice_name\">", ["<input name=\"choice_name\" selected=\"selected\" type=\"radio\" value=\"choice_val\">", "choice_text"], "</label>"]], "</div>"]
+    assert F.radio(:create, "choice_name", "choice_val", "choice_text", "choice_val", "choice_val", &__MODULE__.UserForm.selected_fun_false/2)
+           == ["<div>", [["<label for=\"choice_name\">", "", "</label>"], ["<label for=\"choice_name\">", ["<input name=\"choice_name\" type=\"radio\" value=\"choice_val\">", "choice_text"], "</label>"]], "</div>"]
   end
 end
