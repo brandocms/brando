@@ -20,7 +20,7 @@ defmodule Brando.Villain.Parser.Default do
   Convert text to HTML through Markdown
   """
   def text(%{"text" => text, "type" => type}) do
-    if type == "lead" do
+    if type == "lead" and byte_size(text) > 0 do
       text = text <> "\n{: .lead}"
     end
     Earmark.to_html(text)
