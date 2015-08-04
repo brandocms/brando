@@ -54,8 +54,10 @@
         </nav>
         <!-- / nav -->
         <script>
-          // open the submenu.
-          $('.menuitem.active').parent().parent().addClass('active');
+          $(function () {
+            // open the submenu.
+            $('.menuitem.active').parent().parent().addClass('active');
+          });
         </script>
       <!-- /#menu -->
       </div>
