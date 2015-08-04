@@ -4708,6 +4708,8 @@ if (typeof exports === 'object') {
                 dataType: 'json'
             }).done($.proxy(function(data) {
                 if (data.status != 200) {
+                    alert('Ingen bilder fantes.');
+                    this.done();
                     return false;
                 }
                 if (!data.hasOwnProperty('images')) {

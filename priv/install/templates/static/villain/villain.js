@@ -717,6 +717,7 @@
         },
     
         renderEmpty: function() {
+    
             blockTemplate = this.template({content: '', type: "paragraph"});
             actionsTemplate = this.actionsTemplate();
             wrapperTemplate = this.wrapperTemplate({content: blockTemplate, actions: actionsTemplate});
@@ -811,7 +812,6 @@
             quote = this.$content.find('blockquote')[0].outerHTML;
             cite = $('cite', this.$content).html();
             textNode = Villain.toMD(quote);
-    
             data = this.getData();
             json = {
                 type: this.type,
@@ -1361,6 +1361,8 @@
                 dataType: 'json'
             }).done($.proxy(function(data) {
                 if (data.status != 200) {
+                    alert('Ingen bilder fantes.');
+                    this.done();
                     return false;
                 }
                 if (!data.hasOwnProperty('images')) {
