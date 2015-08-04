@@ -81,7 +81,12 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       end
 
     Mix.shell.info """
-    Add the resource to your browser scope in web/router.ex:
+    Add the resource to your browser scope in web/router.ex by either
+
+        import Brando.Routes.Admin
+        admin_routes "#{route}", #{binding[:scoped]}Controller
+
+    or for more fine grained control:
 
         get    "/#{route}",            #{binding[:scoped]}Controller, :index
         get    "/#{route}/new",        #{binding[:scoped]}Controller, :new
@@ -92,6 +97,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         delete "/#{route}/:id",        #{binding[:scoped]}Controller, :delete
         patch  "/#{route}/:id",        #{binding[:scoped]}Controller, :update
         put    "/#{route}/:id",        #{binding[:scoped]}Controller, :update
+
     """ <> villain_info <>
     """
 
