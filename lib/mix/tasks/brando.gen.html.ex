@@ -107,7 +107,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     Install menu by adding to your `config/brando.exs`
 
         config :brando, Brando.Menu,
-          modules: [<%= String.capitalize(plural) %>, ...]
+          modules: [#{String.capitalize(plural)}, ...]
 
     """
   end
