@@ -13,7 +13,7 @@ defmodule <%= module %> do
   has_image_field <%= inspect k %>,
     %{allowed_mimetypes: ["image/jpeg", "image/png"],
       default_size: :medium,
-      upload_path: Path.join("images", "<%= singular %>"),
+      upload_path: Path.join("images", "<%= k %>"),
       random_filename: true,
       size_limit: 10240000,
       sizes: %{

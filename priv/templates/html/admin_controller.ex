@@ -1,5 +1,6 @@
 defmodule <%= admin_module %>Controller do
   use <%= base %>.Web, :controller
+  use Linguist.Vocabulary
 <%= if villain do %>  use Brando.Villain.Controller,
     image_model: Brando.Image,
     series_model: Brando.ImageSeries<% end %>
@@ -9,7 +10,7 @@ defmodule <%= admin_module %>Controller do
   plug :scrub_params, <%= inspect singular %> when action in [:create, :update]
   <%= if image_field do %>plug :check_for_uploads, {<%= inspect singular %>, <%= module %>} when action in [:create, :update]<% end %>
 
-  def index(conn, params) do
+  def index(conn, _params) do
     language = Brando.I18n.get_language(conn)
     <%= plural %> = Repo.all(<%= alias %>)
     conn
@@ -123,7 +124,7 @@ defmodule <%= admin_module %>Controller do
     flash: [
       form_error: "Error(s) in form",
       updated: "<%= String.capitalize(singular) %> updated",
-      created: "<%= String.capitalize(singular) %> created"
+      created: "<%= String.capitalize(singular) %> created",
       deleted: "<%= String.capitalize(singular) %> deleted"
     ]
   ]
