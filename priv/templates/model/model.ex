@@ -50,12 +50,12 @@ defmodule <%= module %> do
 
   use Brando.Meta,
     [en:
-      [singular: "<%= singular %>",
-       plural: "<%= plural %>",
+      [singular: "<%= Phoenix.Naming.humanize(singular) |> String.downcase %>",
+       plural: "<%= Phoenix.Naming.humanize(plural) |> String.downcase %>",
        repr: &("#{&1.<%= Dict.keys(attrs) |> List.first %>}"),
        fields: [
          id: "Id",
-<%= for {k, _} <- attrs do %>         <%= k %>: "<%= String.capitalize(Atom.to_string(k)) %>",
+<%= for {k, _} <- attrs do %>         <%= k %>: "<%= Phoenix.Naming.humanize(k) %>",
 <% end %><%= if villain_fields != [] do %>         html: "HTML",<% end %>
          inserted_at: "Inserted at",
          updated_at: "Updated at"],
@@ -66,7 +66,7 @@ defmodule <%= module %> do
        repr: &("#{&1.<%= Dict.keys(attrs) |> List.first %>}"),
        fields: [
          id: "Id",
-<%= for {k, _} <- attrs do %>         <%= k %>: "<%= String.capitalize(Atom.to_string(k)) %>",
+<%= for {k, _} <- attrs do %>         <%= k %>: "<%= Phoenix.Naming.humanize(k) %>",
 <% end %><%= if villain_fields != [] do %>         html: "HTML",<% end %>
          inserted_at: "Opprettet",
          updated_at: "Oppdatert"],

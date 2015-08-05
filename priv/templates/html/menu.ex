@@ -1,12 +1,12 @@
-defmodule Brando.Menu.<%= String.capitalize(plural) %> do
+defmodule Brando.Menu.<%= scoped %>s do
   @moduledoc """
-  Menu definitions for the <%= String.capitalize(plural) %> Menu.
+  Menu definitions for the <%= scoped %>s Menu.
 
   See `Brando.Menu` docs for more information.
   Install menu by adding to your `config/brando.exs`
 
       config :brando, Brando.Menu,
-        modules: [<%= String.capitalize(plural) %>, ...]
+        modules: [<%= scoped %>s, ...]
 
   """
   use Brando.Menu
@@ -16,7 +16,7 @@ defmodule Brando.Menu.<%= String.capitalize(plural) %> do
       submenu: [%{name: "Oversikt", url: {:<%= admin_path %>_path, :index}},
                 %{name: "Legg til", url: {:<%= admin_path %>_path, :new}, role: :admin}]}
 
-  menu "en", "<%= String.capitalize(plural) %>",
+  menu "en", "<%= scoped %>s",
     %{anchor: "<%= plural %>", icon: "fa fa-anchor icon",
       submenu: [%{name: "Index", url: {:<%= admin_path %>_path, :index}},
                 %{name: "Add", url: {:<%= admin_path %>_path, :new}, role: :admin}]}

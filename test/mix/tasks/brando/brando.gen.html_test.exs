@@ -17,92 +17,89 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
   test "generates html resource" do
     in_tmp "generates html resource", fn ->
-      Mix.Tasks.Brando.Gen.Html.run ["minion", "minions", "name", "age:integer", "height:decimal",
+      Mix.Tasks.Brando.Gen.Html.run ["MinionFace", "minion_faces", "name", "age:integer", "height:decimal",
                                       "nicks:array:text", "famous:boolean", "born_at:datetime",
                                       "secret:uuid", "photo:image", "data:villain", "first_login:date",
                                       "alarm:time", "address:references"]
-                                      ++ ["--nosingular", "minjong", "--noplural", "minjongere"]
+                                      ++ ["--nosingular", "minjongtryne", "--noplural", "minjongtryner"]
 
-      assert_file "web/models/minion.ex"
-      assert_file "test/models/minion_test.exs"
-      assert [_] = Path.wildcard("priv/repo/migrations/*_create_minion.exs")
+      assert_file "web/models/minion_face.ex", fn file ->
+        assert file =~ "defmodule Brando.MinionFace do"
+        assert file =~ "schema \"minion_faces\" do"
+        assert file =~ "field :photo, Brando.Type.Image"
+        assert file =~ "singular: \"minion face\""
+        assert file =~ "plural: \"minion faces\""
+        assert file =~ "born_at: \"Born at\""
+        assert file =~ "singular: \"minjongtryne\""
+        assert file =~ "plural: \"minjongtryner\""
+      end
 
-      assert_file "web/controllers/minion_controller.ex", fn file ->
-        assert file =~ "defmodule Brando.MinionController"
+      assert_file "test/models/minion_face_test.exs"
+      assert [_] = Path.wildcard("priv/repo/migrations/*_create_minion_face.exs")
+
+      assert_file "web/controllers/minion_face_controller.ex", fn file ->
+        assert file =~ "defmodule Brando.MinionFaceController"
         assert file =~ "use Brando.Web, :controller"
         assert file =~ "repo.all"
       end
 
-      assert_file "web/controllers/admin/minion_controller.ex", fn file ->
-        assert file =~ "defmodule Brando.Admin.MinionController"
+      assert_file "web/controllers/admin/minion_face_controller.ex", fn file ->
+        assert file =~ "defmodule Brando.Admin.MinionFaceController"
         assert file =~ "use Brando.Web, :controller"
         assert file =~ "Repo.get!"
         assert file =~ "use Brando.Villain.Controller"
       end
 
-      assert_file "web/views/minion_view.ex", fn file ->
-        assert file =~ "defmodule Brando.MinionView do"
+      assert_file "web/views/minion_face_view.ex", fn file ->
+        assert file =~ "defmodule Brando.MinionFaceView do"
         assert file =~ "use Brando.Web, :view"
       end
 
-      assert_file "web/views/admin/minion_view.ex", fn file ->
-        assert file =~ "defmodule Brando.Admin.MinionView do"
+      assert_file "web/menus/admin/minion_face_menu.ex", fn file ->
+        assert file =~ "defmodule Brando.Menu.MinionFaces do"
+        assert file =~ "modules: [MinionFaces, ...]"
+      end
+
+      assert_file "web/views/admin/minion_face_view.ex", fn file ->
+        assert file =~ "defmodule Brando.Admin.MinionFaceView do"
         assert file =~ "use Brando.Web, :view"
       end
 
-      assert_file "web/templates/admin/minion/edit.html.eex", fn file ->
+      assert_file "web/templates/admin/minion_face/edit.html.eex", fn file ->
         assert file =~ "<%= t!(@language, \"actions.edit\") %>"
         assert file =~ "v = new Villain.Editor"
-        assert file =~ "uploadURL: '/admin/minions/villain/upload/minion/'"
+        assert file =~ "uploadURL: '/admin/minion_faces/villain/upload/minion_face/'"
       end
 
-      assert_file "web/templates/admin/minion/index.html.eex", fn file ->
+      assert_file "web/templates/admin/minion_face/index.html.eex", fn file ->
         assert file =~ "<%= t!(@language, \"actions.index\") %>"
-        assert file =~ "Brando.HTML.Tablize.tablize(@conn, @minions"
+        assert file =~ "Brando.HTML.Tablize.tablize(@conn, @minion_faces"
       end
 
-      assert_file "web/templates/admin/minion/new.html.eex", fn file ->
+      assert_file "web/templates/admin/minion_face/new.html.eex", fn file ->
         assert file =~ "<%= t!(@language, \"actions.new\") %>"
-        assert file =~ "<%= MinionForm.get_form(@language, type: :create, action: :create, params: [], values: @changeset.params, errors: @changeset.errors) %>"
+        assert file =~ "<%= MinionFaceForm.get_form(@language, type: :create, action: :create, params: [], values: @changeset.params, errors: @changeset.errors) %>"
         assert file =~ "v = new Villain.Editor"
-        assert file =~ "uploadURL: '/admin/minions/villain/upload/minion/'"
+        assert file =~ "uploadURL: '/admin/minion_faces/villain/upload/minion_face/'"
       end
 
-      assert_file "web/templates/admin/minion/delete_confirm.html.eex", fn file ->
+      assert_file "web/templates/admin/minion_face/delete_confirm.html.eex", fn file ->
         assert file =~ "<%= t!(@language, \"actions.delete\") %>"
         assert file =~ "<%= Brando.HTML.Inspect.model_repr(@language, @record) %>"
-        assert file =~ "<%= Brando.HTML.delete_form_button(@language, @record, :admin_minion_path) %>"
+        assert file =~ "<%= Brando.HTML.delete_form_button(@language, @record, :admin_minion_face_path) %>"
       end
 
-      assert_file "web/templates/admin/minion/show.html.eex", fn file ->
+      assert_file "web/templates/admin/minion_face/show.html.eex", fn file ->
         assert file =~ "<%= t!(@language, \"actions.show\") %>"
-        assert file =~ "<%= Brando.HTML.Inspect.model(@language, @minion) %>"
+        assert file =~ "<%= Brando.HTML.Inspect.model(@language, @minion_face) %>"
       end
     end
   end
 
-  # test "generates html resource without model" do
-  #   in_tmp "generates html resource without model", fn ->
-  #     Mix.Tasks.Phoenix.Gen.Html.run ["Admin.User", "users", "--no-model", "name:string"]
-
-  #     refute File.exists? "web/models/admin/user.ex"
-  #     assert [] = Path.wildcard("priv/repo/migrations/*_create_admin_user.exs")
-
-  #     assert_file "web/templates/admin/user/form.html.eex", fn file ->
-  #       refute file =~ ~s(--no-model)
-  #     end
-  #   end
-  # end
-
-  # test "plural can't contain a colon" do
-  #   assert_raise Mix.Error, fn ->
-  #     Mix.Tasks.Phoenix.Gen.Html.run ["Admin.User", "name:string", "foo:string"]
-  #   end
-  # end
-
-  # test "name is already defined" do
-  #   assert_raise Mix.Error, fn ->
-  #     Mix.Tasks.Phoenix.Gen.Html.run ["DupHTML", "duphtmls"]
-  #   end
-  # end
+  test "plural can't contain a colon" do
+    assert_raise Mix.Error, fn ->
+      Mix.Tasks.Brando.Gen.Html.run ["Admin.User", "name:string", "foo:string"]
+                                    ++ ["--nosingular", "minjongtryne", "--noplural", "minjongtryner"]
+    end
+  end
 end
