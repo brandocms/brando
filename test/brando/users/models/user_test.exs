@@ -111,6 +111,6 @@ defmodule Brando.Integration.UserTest do
 
   test "check_for_uploads/2 noupload" do
     assert {:ok, user} = User.create(@params)
-    assert [] = User.check_for_uploads(user, @params)
+    assert {:ok, []} = User.check_for_uploads(user, @params)
   end
 end
