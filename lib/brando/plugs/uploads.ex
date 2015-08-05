@@ -14,8 +14,8 @@ defmodule Brando.Plug.Uploads do
   def check_for_uploads(conn, {required_key, module}) when is_binary(required_key) do
     param = Map.get(conn.params, required_key)
     case module.check_for_uploads(module, param) do
-      {:ok, name, image_field} ->
-        param = Map.put(param, name, image_field)
+      {:ok, image_fields} ->
+        param = handle_image_fields(param, image_fields)
         conn = conn |> Phoenix.Controller.put_flash(:notice, "Bilde lastet opp.")
       {:error, _errors} ->
         Logger.error(inspect(_errors))
@@ -24,5 +24,11 @@ defmodule Brando.Plug.Uploads do
     end
     params = Map.put(conn.params, required_key, param)
     %{conn | params: params}
+  end
+
+  defp handle_image_fields(param, image_fields) do
+    Enum.reduce image_fields, param, fn ({name, image_field}, acc) ->
+      Map.put(acc, name, image_field)
+    end
   end
 end
