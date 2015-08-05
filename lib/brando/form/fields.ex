@@ -42,22 +42,25 @@ defmodule Brando.Form.Fields do
   end
 
   @doc """
-  Render checkboxes. Both groups and singles.
+  Render checkbox group.
+  """
+  def render_field(form_type, %{name: name, type: :checkbox, multiple: _} = opts, value, errors) do
+    render_checks(form_type, format_name(name, opts[:source]), opts, value, errors)
+    |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
+    |> form_group(format_name(name, opts[:source]), opts, errors)
+    |> div_form_row(opts[:in_fieldset])
+  end
+
+  @doc """
+  Render checkbox single
   """
   def render_field(form_type, %{name: name, type: :checkbox} = opts, value, errors) do
-    if opts[:multiple] do
-      render_checks(form_type, format_name(name, opts[:source]), opts, value, errors)
-      |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
-      |> form_group(format_name(name, opts[:source]), opts, errors)
-      |> div_form_row(opts[:in_fieldset])
-    else
-      concat_fields(label(format_name(name, opts[:source]), opts[:label_class],
-                          [input(:checkbox, form_type, format_name(name, opts[:source]), value, errors, opts),
-                          get_label(opts)]), label(format_name(name, opts[:source]), "", ""))
-      |> div_tag("checkbox")
-      |> form_group(format_name(name, opts[:source]), opts, errors)
-      |> div_form_row(opts[:in_fieldset])
-    end
+    concat_fields(label(format_name(name, opts[:source]), opts[:label_class],
+                        [input(:checkbox, form_type, format_name(name, opts[:source]), value, errors, opts),
+                        get_label(opts)]), label(format_name(name, opts[:source]), "", ""))
+    |> div_tag("checkbox")
+    |> form_group(format_name(name, opts[:source]), opts, errors)
+    |> div_form_row(opts[:in_fieldset])
   end
 
   @doc """
@@ -656,13 +659,6 @@ defmodule Brando.Form.Fields do
     html
   end
 
-  defp put_checked(tag_opts, value, opts) do
-    case is_checked?(value, opts) do
-      false -> tag_opts
-      true -> Keyword.put(tag_opts, :checked, "checked")
-    end
-  end
-
   defp put_slug_from(tag_opts, name, opts) do
     case opts[:slug_from] do
       nil -> tag_opts
@@ -738,6 +734,13 @@ defmodule Brando.Form.Fields do
     case is_checked_fun.(choice_value, value) do
       true  -> Keyword.put(tag_opts, :checked, true)
       false -> tag_opts
+    end
+  end
+
+  defp put_checked(tag_opts, value, opts) do
+    case is_checked?(value, opts) do
+      false -> tag_opts
+      true -> Keyword.put(tag_opts, :checked, "checked")
     end
   end
 
