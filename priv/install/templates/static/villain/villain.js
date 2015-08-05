@@ -717,8 +717,7 @@
         },
     
         renderEmpty: function() {
-    
-            blockTemplate = this.template({content: '', type: "paragraph"});
+            blockTemplate = this.template({content: 'Text', type: "paragraph"});
             actionsTemplate = this.actionsTemplate();
             wrapperTemplate = this.wrapperTemplate({content: blockTemplate, actions: actionsTemplate});
             return wrapperTemplate;
@@ -902,7 +901,7 @@
         },
     
         renderEmpty: function() {
-            blockTemplate = this.template({content: '', level: 1});
+            blockTemplate = this.template({content: 'Header', level: 1});
             actionsTemplate = this.actionsTemplate();
             wrapperTemplate = this.wrapperTemplate({content: blockTemplate, actions: actionsTemplate});
             return wrapperTemplate;
@@ -2127,6 +2126,8 @@
 
     Villain.toHTML = function toHTML(markdown, type) {
         // MD -> HTML
+        console.log(markdown);
+
         type = _.classify(type);
 
         var html = markdown,

@@ -136,7 +136,7 @@ html {
   #villain label abbr {
     display: none; }
 #villain [contenteditable] {
-  min-height: 1em; }
+  min-height: 1rem; }
 #villain textarea,
 #villain input[type="email"], #villain input[type="number"], #villain input[type="password"], #villain input[type="search"], #villain input[type="tel"], #villain input[type="text"], #villain input[type="url"], #villain input[type="color"], #villain input[type="date"], #villain input[type="datetime"], #villain input[type="datetime-local"], #villain input[type="month"], #villain input[type="time"], #villain input[type="week"],
 #villain select[multiple=multiple] {
