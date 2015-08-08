@@ -2,14 +2,6 @@ defmodule Brando.Social.Twitter do
   @moduledoc """
   Tools for Twitter.
   """
-  @doc """
-  Creates a link to twitter's link sharer.
-
-  ## Example
-
-      share_url(@conn, "this is my description")
-
-  """
   import Phoenix.HTML.Tag, only: [content_tag: 3]
 
   defp share_url(conn, text) do

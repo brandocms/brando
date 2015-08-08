@@ -2,16 +2,6 @@ defmodule Brando.Social.Facebook do
   @moduledoc """
   Tools for Facebook.
   """
-  @doc """
-  Creates a link to facebook's link sharer.
-
-  You need to have your page's META in order for this to work properly.
-
-  ## Example
-
-      share_url(@conn)
-
-  """
   import Phoenix.HTML.Tag, only: [content_tag: 3]
 
   defp share_url(conn) do

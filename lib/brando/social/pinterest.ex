@@ -2,15 +2,6 @@ defmodule Brando.Social.Pinterest do
   @moduledoc """
   Tools for Pinterest.
   """
-  @doc ~S"""
-  Creates a link to pinterest's link sharer.
-
-  ## Example
-
-      share_url(@conn, img(@product.photo, :xlarge, [prefix: media_url()]),
-                "#{@product.collection.name}")
-
-  """
   import Phoenix.HTML.Tag, only: [content_tag: 3]
 
   defp share_url(conn, media, text) do
