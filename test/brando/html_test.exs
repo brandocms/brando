@@ -19,8 +19,8 @@ defmodule Brando.HTMLTest do
 
   test "active_path/2" do
     conn = conn(:get, "/some/link")
-    assert active_path(conn, "/some/link") == "active"
-    assert active_path(conn, "/some/other/link") == ""
+    assert active_path(conn, "/some/link") == true
+    assert active_path(conn, "/some/other/link") == false
   end
 
   test "format_date/1" do

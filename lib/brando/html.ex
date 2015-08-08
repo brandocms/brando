@@ -4,6 +4,7 @@ defmodule Brando.HTML do
   """
 
   import Brando.Images.Utils, only: [size_dir: 2]
+  import Phoenix.HTML.Tag, only: [content_tag: 2, content_tag: 3]
 
   @doc false
   defmacro __using__(_) do
@@ -65,12 +66,15 @@ defmodule Brando.HTML do
     if can_render?(conn, item) do
       url = apply(helpers(conn), fun, [conn, action])
       active = active_path(conn, url)
-      "<li class=\"menuitem " <> active <> "\">" <>
-      "  <a href=\"" <> url <> "\" class=\"" <> active <> "\">" <>
-      "    <i class=\"fa fa-angle-right\"></i>" <>
-      "    <span>" <> item.name <> "</span>" <>
-      "  </a>" <>
-      "</li>"
+      li_classes = active && "menuitem active" || "menuitem"
+      a_class = active && "active" || ""
+      {:safe, html} = content_tag :li, [class: li_classes] do
+        content_tag :a, [href: url, class: a_class] do
+          [content_tag(:i, "", [class: "fa fa-angle-right"]),
+           content_tag(:span, item.name)]
+        end
+      end
+      html
     else
       ""
     end
@@ -128,7 +132,7 @@ defmodule Brando.HTML do
   Returns "active", or "".
   """
   def active_path(conn, url_to_match) do
-    conn.request_path == url_to_match && "active" || ""
+    conn.request_path == url_to_match
   end
 
   @doc """
@@ -314,19 +318,19 @@ defmodule Brando.HTML do
   def frontend_admin_menu(conn) do
     if current_user(conn) do
       """
-        <div class="admin-menu">
-          <ul class="nav navbar-nav">
-            <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-                <img class="micro-avatar" src="#{img(current_user(conn).avatar, :micro, [default: Brando.get_helpers.static_path(conn, "/images/brando/defaults/avatar_default.jpg"), prefix: media_url()])}" />
-              </a>
-              <ul class="dropdown-menu dropdown-menu-right" role="menu">
-                <li><a href="#{Brando.get_helpers.admin_dashboard_path(conn, :dashboard)}">Admin</a></li>
-                <li><a href="#{Brando.get_helpers.session_path(conn, :logout)}">Logg ut</a></li>
-              </ul>
-            </li>
-          </ul>
-        </div>
+      <div class="admin-menu">
+        <ul class="nav navbar-nav">
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+              <img class="micro-avatar" src="#{img(current_user(conn).avatar, :micro, [default: Brando.get_helpers.static_path(conn, "/images/brando/defaults/avatar_default.jpg"), prefix: media_url()])}" />
+            </a>
+            <ul class="dropdown-menu dropdown-menu-right" role="menu">
+              <li><a href="#{Brando.get_helpers.admin_dashboard_path(conn, :dashboard)}">Admin</a></li>
+              <li><a href="#{Brando.get_helpers.session_path(conn, :logout)}">Logg ut</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
       """
       |> Phoenix.HTML.raw
     else
