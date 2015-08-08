@@ -7,13 +7,14 @@ defmodule Brando.HTML.InspectTest do
   alias Brando.Post
 
   @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "no",
-            "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
-            "password" => "finimeze", "username" => "zabuzasixu"}
+                 "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
+                 "password" => "finimeze", "username" => "zabuzasixu"}
 
   @image_map %Brando.Type.Image{credits: nil, optimized: false, path: "images/avatars/27i97a.jpeg", title: nil,
                                 sizes: %{"thumb" => "images/avatars/thumb/27i97a.jpeg", "medium" => "images/avatars/medium/27i97a.jpeg"}}
 
-  @post_params %{"avatar" => @image_map, "data" => "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]",
+  @post_params %{"avatar" => @image_map,
+                 "data" => "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]",
                  "featured" => true, "header" => "Header",
                  "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
                  "language" => "no", "lead" => "Asdf",
