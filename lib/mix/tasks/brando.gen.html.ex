@@ -1,20 +1,22 @@
 defmodule Mix.Tasks.Brando.Gen.Html do
   use Mix.Task
-
-  @shortdoc "Generates controller, model and views for an HTML-based resource"
-
   @moduledoc """
   Generates a Brando resource.
+
       mix brando.gen.html User users name:string age:integer
+
   The first argument is the module name followed by
   its plural name (used for resources and schema).
+
   The generated resource will contain:
+
     * a model in web/models
     * a view in web/views
     * a controller in web/controllers
     * a migration file for the repository
     * default CRUD templates in web/templates
     * test files for generated model and controller
+
   The generated model can be skipped with `--no-model`.
   Read the documentation for `phoenix.gen.model` for more
   information on attributes and namespaced resources.
@@ -71,7 +73,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     Mix.Task.run "brando.gen.model", args ++ ["--nosingular", no_singular, "--noplural", no_plural]
 
-    Mix.Phoenix.copy_from source_dir, "", binding, files
+    Mix.Phoenix.copy_from apps(), "priv/templates/brando.gen.html", "", binding, files
 
     villain_info =
       if villain? do
@@ -155,7 +157,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     end
   end
 
-  defp source_dir do
-    Application.app_dir(:brando, "priv/templates/html")
+  defp apps do
+    [Mix.Project.config[:app], :brando]
   end
 end

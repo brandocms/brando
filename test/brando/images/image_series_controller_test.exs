@@ -160,7 +160,7 @@ defmodule Brando.ImageSeries.ControllerTest do
 
     assert conn.status == 200
     conn =
-      call(:post, "/admin/images/series/#{series.id}/upload", %{"id" => series.id, "image" => @up_params2}, user: user)
+      call(:post, "/admin/images/series/#{series.id}/upload", %{"id" => series.id, "image" => @up_params2})
       |> with_user(user)
       |> as_json
       |> send_request

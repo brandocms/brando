@@ -27,7 +27,7 @@ class Stats {
         }
         let socket = new Socket("/admin/ws");
         socket.connect();
-        let chan = socket.chan("stats", {});
+        let chan = socket.channel("stats", {});
         chan.join().receive("ok", ({messages}) => {
             console.log(">> System statistics channel ready");
         });

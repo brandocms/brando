@@ -7,7 +7,7 @@ class WS {
         var _this = this;
         let socket = new Socket("/admin/ws");
         socket.connect();
-        let chan = socket.chan("system:stream", {});
+        let chan = socket.channel("system:stream", {});
         chan.join().receive("ok", ({messages}) => {
             console.log(">> System channel ready");
         });

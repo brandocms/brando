@@ -19,6 +19,7 @@ defmodule <%= application_module %>.Router do
     plug :put_admin_locale
     plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
     plug Authenticate
+    plug :put_secure_browser_headers
   end
 
   pipeline :browser do
@@ -28,6 +29,7 @@ defmodule <%= application_module %>.Router do
     plug Lockdown, [layout: {<%= application_module %>.LockdownLayoutView, "lockdown.html"}, view: {<%= application_module %>.LockdownView, "lockdown.html"}]
     plug :put_locale
     plug :protect_from_forgery
+    plug :put_secure_browser_headers
   end
 
   pipeline :auth do
@@ -35,6 +37,7 @@ defmodule <%= application_module %>.Router do
     plug :fetch_session
     plug :fetch_flash
     plug :protect_from_forgery
+    plug :put_secure_browser_headers
   end
 
   pipeline :api do

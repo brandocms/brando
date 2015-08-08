@@ -11,7 +11,7 @@ config :brando, Brando.Integration.TestRepo,
   adapter: Ecto.Adapters.Postgres,
   extensions: [{Postgrex.Extensions.JSON, library: Poison}],
   pool: Ecto.Adapters.SQL.Sandbox,
-  size: 1,
+  pool_size: 1,
   max_overflow: 0
 
 config :brando, Brando.Menu, [

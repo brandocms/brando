@@ -51,8 +51,8 @@ defmodule RouterHelper do
     |> Plug.Conn.put_req_header("accept", "application/json")
   end
 
-  def call(verb, path, params \\ nil, headers \\ []) do
-    conn(verb, path, params, headers)
+  def call(verb, path, params \\ nil) do
+    conn(verb, path, params)
   end
 
   def send_request(conn) do

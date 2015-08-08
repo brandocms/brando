@@ -10,11 +10,11 @@
     <title><%= app_name %> | <%= assigns[:page_title] || "Administrasjon" %></title>
     <link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/brando.css") %>">
     <link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/brando.vendor.css") %>">
-    <%= render_existing Phoenix.Controller.view_module(@conn), "_stylesheets." <> Phoenix.Controller.controller_template(@conn), assigns %>
+    <%= render_existing Phoenix.Controller.view_module(@conn), "_stylesheets." <> Phoenix.Controller.view_template(@conn), assigns %>
 
     <script type="text/javascript" src="<%= Helpers.static_path(@conn, "/js/brando.vendor.js") %>" charset="utf-8"></script>
     <script type="text/javascript" src="<%= Helpers.static_path(@conn, "/js/brando.js") %>" charset="utf-8"></script>
-    <%= render_existing Phoenix.Controller.view_module(@conn), "_scripts." <> Phoenix.Controller.controller_template(@conn), assigns %>
+    <%= render_existing Phoenix.Controller.view_module(@conn), "_scripts." <> Phoenix.Controller.view_template(@conn), assigns %>
   </head>
 
   <body<%= if @conn.private[:brando_section_name] do %> id="<%= @conn.private[:brando_section_name] %>" data-script="<%= @conn.private[:brando_section_name] %>-<%= @conn.private[:phoenix_action] %>"<% end %>>

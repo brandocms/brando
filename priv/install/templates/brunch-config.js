@@ -6,6 +6,8 @@ exports.config = {
         'js/app.js': /^(web\/static\/js)/,
         'js/jquery.js': 'bower_components/jquery/dist/jquery.js',
         'js/vendor.js': [
+          'deps/phoenix/web/static/js/phoenix.js',
+          'deps/phoenix_html/web/static/js/phoenix_html.js',
           'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
           'bower_components/jscroll/jquery.jscroll.js',
           'bower_components/responsive-nav/responsive-nav.js',
@@ -41,8 +43,9 @@ exports.config = {
   paths: {
     // Which directories to watch
     watched: [
-      "web/static",
-      "test/static"
+      "deps/phoenix/web/static",
+      "deps/phoenix_html/web/static",
+      "web/static", "test/static"
     ],
 
     // Where to compile files to
@@ -67,5 +70,11 @@ exports.config = {
       // Do not use ES6 compiler in vendor code
       ignore: [/^(web\/static\/vendor)/, /^bower_components/]
     }
-  }
+  },
+
+  modules: {
+    autoRequire: {
+      'js/app.js': ['web/static/js/app']
+    }
+  },
 };

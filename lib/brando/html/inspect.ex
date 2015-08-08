@@ -6,7 +6,7 @@ defmodule Brando.HTML.Inspect do
 
   import Brando.HTML
   import Brando.Render, only: [r: 1]
-  import Ecto.DateTime.Util, only: [zero_pad: 2]
+  import Ecto.DateTime.Utils, only: [zero_pad: 2]
   import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2]
 
   @doc """
@@ -206,7 +206,7 @@ defmodule Brando.HTML.Inspect do
     ~s(<tr><td>#{name}</td><td><em>#{t!(language, "empty_assoc")}</em></td></tr>)
   end
   defp do_inspect_assoc(language, name, %Ecto.Association.BelongsTo{} = type, value) do
-    ~s(<tr><td>#{name}</td><td>#{type.assoc.__repr__(language, value)}</td></tr>)
+    ~s(<tr><td>#{name}</td><td>#{type.related.__repr__(language, value)}</td></tr>)
   end
   defp do_inspect_assoc(language, name, %Ecto.Association.Has{}, %Ecto.Association.NotLoaded{}) do
     ~s(<tr><td>#{name}</td><td>#{t!(language, "assoc_not_fetched")}</td></tr>)
@@ -215,8 +215,8 @@ defmodule Brando.HTML.Inspect do
     ~s(<tr><td>#{name}</td><td><em>#{t!(language, "empty_assoc")}</em></td></tr>)
   end
   defp do_inspect_assoc(language, _name, %Ecto.Association.Has{} = type, value) do
-    rows = Enum.map(value, fn (row) -> ~s(<div class="assoc #{type.field}">#{type.assoc.__repr__(language, row)}</div>) end)
-    ~s(<tr><td><i class='fa fa-link'></i> #{t!(language, "connected")} #{type.assoc.__name__(language, :plural)}</td><td>#{rows}</td></tr>)
+    rows = Enum.map(value, fn (row) -> ~s(<div class="assoc #{type.field}">#{type.related.__repr__(language, row)}</div>) end)
+    ~s(<tr><td><i class='fa fa-link'></i> #{t!(language, "connected")} #{type.related.__name__(language, :plural)}</td><td>#{rows}</td></tr>)
   end
 
   locale "en", [
