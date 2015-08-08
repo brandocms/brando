@@ -1,6 +1,8 @@
     <h1><%= t!(@language, "actions.index") %></h1>
 <%= if @posts != [] do %>
-    <%= Brando.HTML.status_indicators(@language) %>
+    <div>
+      <%= Brando.HTML.status_indicators(@language) %>
+    </div>
     <%= Brando.HTML.Tablize.tablize(@conn, @posts, [
           {t!(@language, "actions.show"), "fa-search", :admin_post_path, :show, :id},
           {t!(@language, "actions.edit"), "fa-edit", :admin_post_path, :edit, :id, :superuser},

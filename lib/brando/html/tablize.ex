@@ -60,8 +60,10 @@ defmodule Brando.HTML.Tablize do
   end
 
   defp render_colgroup(:auto, module, opts) do
-    fields = if opts[:hide], do: module.__fields__ -- opts[:hide], else: module.__fields__
-    narrow_fields = if opts[:check_or_x], do: @narrow_fields ++ opts[:check_or_x], else: @narrow_fields
+    fields =
+      opts[:hide] && module.__fields__ -- opts[:hide] || module.__fields__
+    narrow_fields =
+      opts[:check_or_x] && @narrow_fields ++ opts[:check_or_x] || @narrow_fields
     colgroups = for f <- fields do
       type = module.__schema__(:type, f)
       cond do
@@ -81,13 +83,24 @@ defmodule Brando.HTML.Tablize do
 
   defp render_colgroup(:manual, list) do
     colgroups = for col <- list do
-      if col, do: "<col style=\"width: #{col}px;\">", else: "<col>"
+      col && "<col style=\"width: #{col}px;\">" || "<col>"
     end
     colgroups = colgroups ++ "<col style=\"width: 80px;\">"
     "<colgroup>" <> IO.iodata_to_binary(colgroups) <> "</colgroup>"
   end
 
   defp render_tbody(fields, records, module, conn, dropdowns, opts) do
+    if split_by = opts[:split_by] do
+      tbodies = for {_, split_recs} <- records |> Brando.Utils.split_by(split_by) do
+        do_render_tbody(fields, split_recs, module, conn, dropdowns, opts)
+      end
+      tbodies |> Enum.join("<tr class=\"splitter\"><td></td></tr>")
+    else
+      do_render_tbody(fields, records, module, conn, dropdowns, opts)
+    end
+  end
+
+  defp do_render_tbody(fields, records, module, conn, dropdowns, opts) do
     rendered_trs =
       records
       |> Enum.map(&(do_tr(fields, &1, module, conn, dropdowns, opts)))

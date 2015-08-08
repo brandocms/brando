@@ -66,7 +66,7 @@ defmodule Brando.Villain.Controller do
                      src: Brando.HTML.media_url(image.image.path)},
             form: %{
               method: "post",
-              action: "villain/bildedata/#{image.id}",
+              action: "villain/imagedata/#{image.id}",
               name: "villain-imagedata",
               fields: [
                 %{name: "title",

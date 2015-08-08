@@ -174,7 +174,7 @@ defmodule Brando.User do
   """
   @spec has_role?(t, atom) :: boolean
   def has_role?(user, role) when is_atom(role) do
-    if role in user.role, do: true, else: false
+    role in user.role && true || false
   end
 
   @doc """
@@ -182,7 +182,7 @@ defmodule Brando.User do
   """
   @spec can_login?(t) :: boolean
   def can_login?(user) do
-    if user.role > 0, do: true, else: false
+    user.role > 0 && true || false
   end
 
   #

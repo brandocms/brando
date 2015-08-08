@@ -168,8 +168,7 @@ defmodule Brando.Page do
         else
           [page]
         end
-      agg = Map.put(agg, page.language, insert)
-      {page, agg}
+      {page, Map.put(agg, page.language, insert)}
     end
     split_pages
   end

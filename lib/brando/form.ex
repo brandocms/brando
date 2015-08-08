@@ -368,7 +368,7 @@ defmodule Brando.Form do
   Marks the field as a submit button.
   """
   def __submit__(mod, text, opts) do
-    name = if opts[:name], do: opts[:name], else: :submit
+    name = opts[:name] || :submit
     fields = Module.get_attribute(mod, :form_fields)
     clash = Enum.any?(fields, fn {prev, _} -> name == prev end)
     if clash, do:

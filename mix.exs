@@ -35,9 +35,9 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "~> 0.15"},
-      {:phoenix_ecto, "~> 0.8"},
-      {:phoenix_html, "~> 1.4"},
+      {:phoenix, "~> 0.16"},
+      {:phoenix_ecto, "~> 1.0"},
+      {:phoenix_html, "~> 2.1"},
 
       {:comeonin, "~> 1.0"},
       {:earmark, "~> 0.1"},
@@ -59,7 +59,9 @@ defmodule Brando.Mixfile do
 
       # Documentation dependencies
       {:ex_doc, "~> 0.6", only: :docs},
-      {:inch_ex, "~> 0.3", only: :docs}
+      {:inch_ex, "~> 0.3", only: :docs},
+
+      {:ecto, "~> 0.15", override: true}
     ]
   end
 

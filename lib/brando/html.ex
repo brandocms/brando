@@ -128,7 +128,7 @@ defmodule Brando.HTML do
   Returns "active", or "".
   """
   def active_path(conn, url_to_match) do
-    if Plug.Conn.full_path(conn) == url_to_match, do: "active", else: ""
+    conn.request_path == url_to_match && "active" || ""
   end
 
   @doc """
@@ -270,7 +270,7 @@ defmodule Brando.HTML do
   end
 
   def img(image_field, size, opts) do
-    size = if is_atom(size), do: Atom.to_string(size), else: size
+    size = is_atom(size) && Atom.to_string(size) || size
     if prefix = Keyword.get(opts, :prefix, nil) do
       Path.join([prefix, image_field.sizes[size]])
     else
@@ -339,7 +339,7 @@ defmodule Brando.HTML do
   """
   def status_indicators(language) do
     """
-    <div class="status-indicators">
+    <div class="status-indicators pull-left">
       <span class="m-r-sm"><span class="status-published"><i class="fa fa-circle m-r-sm"> </i> </span> #{Brando.Admin.LayoutView.t!(language, "status.published")}</span>
       <span class="m-r-sm"><span class="status-pending"><i class="fa fa-circle m-r-sm"> </i> </span> #{Brando.Admin.LayoutView.t!(language, "status.pending")}</span>
       <span class="m-r-sm"><span class="status-draft"><i class="fa fa-circle m-r-sm"> </i> </span> #{Brando.Admin.LayoutView.t!(language, "status.draft")}</span>

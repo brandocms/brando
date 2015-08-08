@@ -44,14 +44,25 @@ defmodule Brando.Meta do
   end
 
   def define_meta_functions(language, opts) do
-    params = [] |> Keyword.put(:model, opts[:fields])
-    params = if opts[:help], do: params |> Keyword.put(:help, opts[:help]), else: params
-    params = if opts[:fieldset], do: params |> Keyword.put(:fieldset, opts[:fieldset]), else: params
+    params =
+      Keyword.new
+      |> Keyword.put(:model, opts[:fields])
+      |> put_help(opts)
+      |> put_fieldset(opts)
+
     quote do
       def __name__(unquote(language), :singular), do: unquote(opts[:singular])
       def __name__(unquote(language), :plural), do: unquote(opts[:plural])
       def __repr__(unquote(language), model), do: unquote(opts[:repr]).(model)
       locale unquote(language), unquote(params)
     end
+  end
+
+  defp put_help(params, opts) do
+    if opts[:help], do: params |> Keyword.put(:help, opts[:help]), else: params
+  end
+
+  defp put_fieldset(params, opts) do
+    if opts[:fieldset], do: params |> Keyword.put(:fieldset, opts[:fieldset]), else: params
   end
 end

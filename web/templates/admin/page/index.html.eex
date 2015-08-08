@@ -1,14 +1,15 @@
     <h1><%= t!(@language, "actions.index") %></h1>
-    <div class="grid-block">
-    </div>
 <%= if @pages != [] do %>
-    <%= Brando.HTML.status_indicators(@language) %>
+    <div>
+      <%= Brando.HTML.status_indicators(@language) %>
+    </div>
     <%= Brando.HTML.Tablize.tablize(@conn, @pages,
           [{t!(@language, "actions.show"), "fa-search", :admin_page_path, :show, :id},
            {t!(@language, "actions.edit"), "fa-edit", :admin_page_path, :edit, :id, :superuser},
            {t!(@language, "actions.delete"), "fa-trash", :admin_page_path, :delete_confirm, :id, :superuser}],
            children: :children,
            filter: true,
+           split_by: :language,
            check_or_x: [], hide: [:slug, :data, :html, :parent, :children, :meta_description, :meta_keywords, :inserted_at]) %>
 
 <% else %>

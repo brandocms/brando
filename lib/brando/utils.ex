@@ -151,4 +151,41 @@ defmodule Brando.Utils do
   def get_now do
     Ecto.DateTime.to_string(Ecto.DateTime.local)
   end
+
+  @doc """
+  Split `records` by `attr`.
+
+  Creates a new map with `attr`'s values as keys
+  """
+  def split_by(records, attr) do
+    {_, split_records} = Enum.map_reduce records, %{}, fn(record, agg) ->
+      insert =
+        if agg[Map.get(record, attr)] do
+          [record|agg[Map.get(record, attr)]]
+        else
+          [record]
+        end
+      {record, Map.put(agg, Map.get(record, attr), insert)}
+    end
+    split_records
+  end
+
+  @doc """
+  Returns URI encoded www form of current url
+  """
+  def escape_current_url(conn) do
+    port = conn.port == 80 && "" || ":#{conn.port}"
+    "#{conn.scheme}://#{conn.host}#{port}#{conn.request_path}"
+    |> URI.encode_www_form
+  end
+
+  @doc """
+  Prefix `media` with scheme / host and port from `conn`.
+  Returns URI encoded www form.
+  """
+  def escape_and_prefix_host(conn, media) do
+    port = conn.port == 80 && "" || ":#{conn.port}"
+    "#{conn.scheme}://#{conn.host}#{port}#{media}"
+    |> URI.encode_www_form
+  end
 end

@@ -40,11 +40,10 @@ defmodule Brando.InstagramImage do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :create, params) do
-    status = if @cfg[:auto_approve], do: :approved, else: :rejected
     model
     |> cast(params, @required_fields, @optional_fields)
     |> validate_unique(:instagram_id, on: Brando.repo)
-    |> put_change(:status, status)
+    |> put_change(:status, @cfg[:auto_approve] && :approved || :rejected)
   end
 
   @doc """
@@ -97,7 +96,7 @@ defmodule Brando.InstagramImage do
                     "images" => %{"thumbnail" => %{"url" => thumb}, "standard_resolution" => %{"url" => org}}} = image) do
     image
     |> Map.merge(%{"username" => user["username"], "instagram_id" => instagram_id,
-                   "caption" => (if caption, do: caption["text"], else: ""),
+                   "caption" => caption && caption["text"] || "",
                    "url_thumbnail" => thumb, "url_original" => org})
     |> Map.drop(["images", "id"])
     |> download_image

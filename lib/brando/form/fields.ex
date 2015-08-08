@@ -109,7 +109,7 @@ defmodule Brando.Form.Fields do
   Render text/password/email (catchall)
   """
   def render_field(form_type, %{name: name, type: input_type} = opts, value, errors) do
-    confirm_i18n = if opts[:language] == "no", do: "Bekreft", else: "Confirm"
+    confirm_i18n = opts[:language] == "no" && "Bekreft" || "Confirm"
     confirm = if opts[:confirm] do
       confirm_opts =
         opts
@@ -242,7 +242,7 @@ defmodule Brando.Form.Fields do
       "is invalid"         -> "Feltet er ugyldig."
       "is reserved"        -> "Verdien er reservert."
       {"should be at least %{count} characters", count: length} -> "Feltets verdi er for kort. Må være > #{length} tegn."
-      err                  -> if is_binary(err), do: err, else: inspect(err)
+      err                  -> is_binary(err) && err || inspect(err)
     end
   end
 
@@ -328,8 +328,6 @@ defmodule Brando.Form.Fields do
   Render a textarea field for :create.
   """
   def textarea(_form_type, name, [], _errors, opts) do
-    default = if opts[:default], do: opts[:default], else: ""
-
     tag_opts =
       Keyword.new
       |> put_name(name)
@@ -337,7 +335,7 @@ defmodule Brando.Form.Fields do
       |> put_rows(opts)
 
     {:safe, html} = content_tag(:textarea, tag_opts) do
-      default
+      opts[:default] || ""
     end
     html
   end
