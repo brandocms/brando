@@ -46,21 +46,21 @@ defmodule Brando.HTML.InspectTest do
   end
 
   test "inspect_field/3" do
-    assert inspect_field("name", Brando.Type.ImageConfig, "value") ==
-      ~s(<em>Konfigurasjonsdata</em>)
-    assert inspect_field("name", Brando.Type.Image, @image_map) =~
-      "/media/images/avatars/thumb/27i97a.jpeg"
+    assert inspect_field("name", Brando.Type.ImageConfig, "value")
+           == ~s(<em>Konfigurasjonsdata</em>)
+    assert inspect_field("name", Brando.Type.Image, @image_map)
+           =~ "/media/images/avatars/thumb/27i97a.jpeg"
     assert inspect_field(:password, :string, "passord") =~ "sensurert"
     assert inspect_field("name", :string, "") =~ "ingen verdi"
   end
 
   test "inspect_assoc/3" do
-    assert inspect_assoc("no", "name", %Ecto.Association.Has{}, %Ecto.Association.NotLoaded{}) =~
-      "Assosiasjonene er ikke hentet."
-    assert inspect_assoc("no", "name", %Ecto.Association.Has{}, []) =~
-      "ingen assosiasjoner"
-    assert inspect_assoc("no", "name", @association_has, @association_val) =~
-      "74 | images/default/2ambet.jpg"
+    assert inspect_assoc("no", "name", %Ecto.Association.Has{}, %Ecto.Association.NotLoaded{})
+           =~ "Assosiasjonene er ikke hentet."
+    assert inspect_assoc("no", "name", %Ecto.Association.Has{}, [])
+           =~ "ingen assosiasjoner"
+    assert inspect_assoc("no", "name", @association_has, @association_val)
+           =~ "74 | images/default/2ambet.jpg"
   end
 
   test "model_repr/1" do
