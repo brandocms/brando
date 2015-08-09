@@ -316,13 +316,23 @@ end
 Include js in `whatever/_scripts.<action>.html.eex`:
 
 ```html
-<script type="text/javascript" src="<% Helpers.static_path(@conn, "/js/villain.all-min.js") %>" charset="utf-8"></script>
+<%= Brando.Villain.HTML.include_scripts %>
 ```
 
 Include css in `whatever/_stylesheets.<action>.html.eex`:
 
 ```html
 <link rel="stylesheet" href="<% Helpers.static_path(@conn, "/css/villain.css") %>">
+```
+
+Initialize Villain in your template:
+
+```html
+<%= Brando.Villain.HTML.initialize(
+      browse_url: "/admin/news/villain/browse/post",
+      upload_url: "/admin/news/villain/upload/post",
+      extra_blocks: ["Test", "Test2", "Test3"],
+      source:     "textarea[name=\"post[data]\"]") %>
 ```
 
 

@@ -23,6 +23,33 @@ defmodule Brando.Villain.HTML do
     [main|extras] |> raw
   end
 
+  def initialize(opts) do
+    browse_url   = Keyword.fetch!(opts, :browse_url)
+    upload_url   = Keyword.fetch!(opts, :upload_url)
+    source       = Keyword.fetch!(opts, :source)
+    extra_blocks = Keyword.get(opts, :extra_blocks)
+
+    extra_blocks =
+      if extra_blocks do
+        "extraBlocks: #{inspect(extra_blocks)}"
+      else
+        "// extraBlocks: []"
+      end
+
+    """
+    <script type="text/javascript">
+       $(document).ready(function() {
+         v = new Villain.Editor({
+           #{extra_blocks},
+           browseURL: '#{browse_url}',
+           uploadURL: '#{upload_url}',
+           textArea: '#{source}'
+         });
+       });
+    </script>
+    """ |> raw
+  end
+
   defp script_tag(src) do
     {:safe, html} = content_tag :script, "", [type: "text/javascript", charset: "utf-8",
                                               src: Brando.get_helpers.static_path(Brando.get_endpoint, src)]

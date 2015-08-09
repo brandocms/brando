@@ -1,11 +1,6 @@
     <h1><%= t!(@language, "actions.new") %></h1>
     <%= PageFragmentForm.get_form(@language, type: :create, action: :create, params: [], values: assigns[:page_fragment], errors: assigns[:errors]) %>
-     <script type="text/javascript">
-        $(document).ready(function() {
-          v = new Villain.Editor({
-            browseURL: '/admin/pages/villain/browse/page',
-            uploadURL: '/admin/pages/villain/upload/page',
-            textArea: 'textarea[name="page_fragment[data]"]'
-          });
-        });
-     </script>
+    <%= Brando.Villain.HTML.initialize(
+          browse_url: "/admin/pages/villain/browse/page",
+          upload_url: "/admin/pages/villain/upload/page",
+          source:     "textarea[name=\"page_fragment[data]\"]") %>

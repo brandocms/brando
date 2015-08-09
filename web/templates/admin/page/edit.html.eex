@@ -1,11 +1,6 @@
     <h1><%= t!(@language, "actions.edit") %></h1>
     <%= PageForm.get_form(@language, type: :update, action: :update, params: to_string(@id), values: assigns[:page], errors: assigns[:errors]) %>
-    <script type="text/javascript">
-      $(document).ready(function() {
-        v = new Villain.Editor({
-          browseURL: '/admin/pages/villain/browse/page',
-          uploadURL: '/admin/pages/villain/upload/page',
-          textArea: 'textarea[name="page[data]"]'
-        });
-      });
-     </script>
+    <%= Brando.Villain.HTML.initialize(
+          browse_url: "/admin/pages/villain/browse/page",
+          upload_url: "/admin/pages/villain/upload/page",
+          source:     "textarea[name=\"page[data]\"]") %>
