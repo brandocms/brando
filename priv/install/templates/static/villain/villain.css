@@ -212,6 +212,31 @@ html {
   #villain .villain-message.error {
     background-color: #FFB0B0;
     border-bottom: 4px solid #DF9898; }
+#villain .villain-block-button {
+  background-color: #ef4f4f;
+  color: #fff;
+  border: 0;
+  height: 70px;
+  width: 73px;
+  margin: 0 5px;
+  font-size: 10px;
+  text-transform: uppercase;
+  -webkit-animation-fill-mode: both;
+  -moz-animation-fill-mode: both;
+  animation-fill-mode: both;
+  -webkit-animation-duration: 0.5s;
+  -moz-animation-duration: 0.5s;
+  animation-duration: 0.5s;
+  -webkit-animation-name: fadeInDown;
+  -moz-animation-name: fadeInDown;
+  animation-name: fadeInDown; }
+  #villain .villain-block-button:hover {
+    background-color: #faacac; }
+  #villain .villain-block-button i {
+    font-size: 40px; }
+  #villain .villain-block-button p {
+    margin: 0;
+    padding-top: 5px; }
 
 .villain-setup-block {
   background-color: #F1F7EE;
@@ -427,29 +452,6 @@ html {
     -o-transform: translateY(0);
     transform: translateY(0);
     opacity: 1; } }
-.villain-block-button {
-  background-color: #ef4f4f;
-  color: #fff;
-  border: 0;
-  height: 70px;
-  width: 73px;
-  margin: 0 5px;
-  font-size: 10px;
-  text-transform: uppercase;
-  -webkit-animation-fill-mode: both;
-  -moz-animation-fill-mode: both;
-  animation-fill-mode: both;
-  -webkit-animation-duration: 0.5s;
-  -moz-animation-duration: 0.5s;
-  animation-duration: 0.5s;
-  -webkit-animation-name: fadeInDown;
-  -moz-animation-name: fadeInDown;
-  animation-name: fadeInDown; }
-  .villain-block-button:hover {
-    background-color: #faacac; }
-  .villain-block-button i {
-    font-size: 40px; }
-
 .villain-text-block-header {
   font-size: 32px; }
 

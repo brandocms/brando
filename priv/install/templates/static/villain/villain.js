@@ -197,7 +197,6 @@
         textClass: 'loading-text',        // Class added to loading overlay spinner
         loadingText: ''            // Text within loading overlay
       };
-    
     }(jQuery));
 
     /* Plus */
@@ -264,10 +263,17 @@
             // iterate through block types in the block registry
             // and get buttons for each type.
             html = '';
-            for (var blockName in Villain.BlockRegistry.Map) {
+            for (i = 0; i < Villain.BlockRegistry.Map.length; ++i) {
+                blockName = Villain.BlockRegistry.Map[i];
                 b = Villain.BlockRegistry.getBlockClassByType(blockName);
+                if (_.isUndefined(b)) {
+                    console.error("Villain: Undefined block ", blockName);
+                    continue;
+                }
                 if (b.hasOwnProperty('getButton')) {
                     html += b.getButton(id);
+                } else {
+                    console.log("// No button found for " + blockName);
                 }
             }
             return html;
@@ -778,6 +784,7 @@
             t = _.template([
                 '<button class="villain-block-button" data-type="<%= type %>" data-after-block-id="<%= id %>">',
                 '<i class="fa fa-paragraph"></i>',
+                '<p>text</p>',
                 '</button>'].join('\n'));
             return t({id: afterId, type: blockType});
         }
@@ -834,6 +841,7 @@
             t = _.template([
                 '<button class="villain-block-button" data-type="<%= type %>" data-after-block-id="<%= id %>">',
                 '<i class="fa fa-quote-right"></i>',
+                '<p>quote</p>',
                 '</button>'].join('\n'));
             return t({id: afterId, type: blockType});
         }
@@ -877,6 +885,7 @@
             t = _.template([
                 '<button class="villain-block-button" data-type="<%= type %>" data-after-block-id="<%= id %>">',
                 '<i class="fa fa-minus"></i>',
+                '<p>hr</p>',
                 '</button>'].join('\n'));
             return t({id: afterId, type: blockType});
         }
@@ -942,7 +951,6 @@
         },
     
         getJSON: function() {
-            //textNode = Villain.toMD(this.getTextBlock().html()).trim();
             // strip newlines
             json = {
                 type: this.type,
@@ -963,6 +971,7 @@
             t = _.template([
                 '<button class="villain-block-button" data-type="<%= type %>" data-after-block-id="<%= id %>">',
                 '<i class="fa fa-header"></i>',
+                '<p>h1-6</p>',
                 '</button>'].join('\n'));
             return t({
                 id: afterId,
@@ -978,6 +987,18 @@
             '</div>'].join('\n')
         ),
     
+        events: {
+            'keyup .villain-content': 'onKeyUp'
+        },
+    
+        onKeyUp: function(e) {
+            console.log(e.currentTarget.innerHTML);
+            if (e.currentTarget.innerText == "" || e.currentTarget.innerText == "\n") {
+                console.log("empty!");
+                e.currentTarget.innerHTML = "<ul><li><br></li></ul>";
+            }
+        },
+    
         renderEditorHtml: function() {
             blockTemplate = this.template({content: markdown.toHTML(this.data.text)});
             actionsTemplate = this.actionsTemplate();
@@ -986,7 +1007,7 @@
         },
     
         renderEmpty: function() {
-            blockTemplate = this.template({content: 'Liste'});
+            blockTemplate = this.template({content: '<ul><li>list</li></ul>'});
             actionsTemplate = this.actionsTemplate();
             wrapperTemplate = this.wrapperTemplate({content: blockTemplate, actions: actionsTemplate});
             return wrapperTemplate;
@@ -1033,6 +1054,7 @@
                 '        data-after-block-id="<%= id %>"',
                 '>',
                 '   <i class="fa fa-list-ul"></i>',
+                '<p>list</p>',
                 '</button>'].join('\n'));
             return t({
                 id: afterId,
@@ -1429,6 +1451,7 @@
             t = _.template([
                 '<button class="villain-block-button" data-type="<%= type %>" data-after-block-id="<%= id %>">',
                 '<i class="fa fa-file-image-o"></i>',
+                '<p>img</p>',
                 '</button>'].join('\n'));
             return t({id: afterId, type: blockType});
         }
@@ -1568,6 +1591,7 @@
             t = _.template([
                 '<button class="villain-block-button" data-type="<%= type %>" data-after-block-id="<%= id %>">',
                 '<i class="fa fa-video-camera"></i>',
+                '<p>video</p>',
                 '</button>'].join('\n'));
             return t({
                 id: afterId,
@@ -1794,6 +1818,7 @@
             t = _.template([
                 '<button class="villain-block-button" data-type="<%= type %>" data-after-block-id="<%= id %>">',
                 '<i class="fa fa-columns"></i>',
+                '<p>cols</p>',
                 '</button>'
             ].join('\n'));
     
@@ -1839,6 +1864,8 @@
             // create a blockstore
             Villain.BlockStore.create('main');
             Villain.setOptions(options);
+            // initialize registry with optional extra blocks
+            Villain.BlockRegistry.initialize(options.extraBlocks);
             this.render();
         },
     
@@ -2126,7 +2153,9 @@
 
     Villain.toHTML = function toHTML(markdown, type) {
         // MD -> HTML
-        console.log(markdown);
+        if (_.isUndefined(markdown)) {
+            return "";
+        }
 
         type = _.classify(type);
 
@@ -2493,20 +2522,44 @@
     
     Villain.BlockRegistry = {};
     
-    Villain.BlockRegistry.Map = {
-        text: Villain.Blocks.Text,
-        header: Villain.Blocks.Header,
-        blockquote: Villain.Blocks.Blockquote,
-        list: Villain.Blocks.List,
-        image: Villain.Blocks.Image,
-        video: Villain.Blocks.Video,
-        divider: Villain.Blocks.Divider,
-        columns: Villain.Blocks.Columns
+    Villain.BlockRegistry.initialize = function (extraBlocks) {
+        // add defaults
+        Villain.BlockRegistry.Map = [
+            "Text",
+            "Header",
+            "Blockquote",
+            "List",
+            "Image",
+            "Video",
+            "Divider",
+            "Columns",
+        ];
+        if (!_.isUndefined(extraBlocks)) {
+            Villain.BlockRegistry.addExtraBlocks(extraBlocks);
+        }
+        Villain.BlockRegistry.checkBlocks();
+    };
+    
+    Villain.BlockRegistry.addExtraBlocks = function(extraBlocks) {
+        Villain.BlockRegistry.Map = Villain.BlockRegistry.Map.concat(extraBlocks);
+    };
+    
+    Villain.BlockRegistry.add = function(block) {
+        Villain.BlockRegistry.Map.push(block);
+    };
+    
+    Villain.BlockRegistry.checkBlocks = function() {
+        for (i = 0; i < Villain.BlockRegistry.Map.length; ++i) {
+            type = Villain.BlockRegistry.Map[i];
+            if (_.isUndefined(Villain.Blocks[_(type).capitalize()])) {
+                console.error("Villain: Missing block source for " + type + "! Please ensure it is included.");
+            }
+        }
     };
     
     Villain.BlockRegistry.getBlockClassByType = function(type) {
-        if (Villain.BlockRegistry.Map.hasOwnProperty(type)) {
-            return Villain.BlockRegistry.Map[type];
+        if (Villain.BlockRegistry.Map.indexOf(_(type).capitalize()) !== -1) {
+            return Villain.Blocks[_(type).capitalize()];
         }
         return false;
     };

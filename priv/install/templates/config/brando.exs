@@ -74,4 +74,5 @@ config :brando, Brando.Menu,
   modules: [Admin, Users, News, Pages, Images]
 
 config :brando, Brando.Villain,
-  parser: <%= application_module %>.Villain.Parser
+  parser: <%= application_module %>.Villain.Parser,
+  extra_blocks: []
