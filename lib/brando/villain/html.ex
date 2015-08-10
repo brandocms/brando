@@ -52,7 +52,7 @@ defmodule Brando.Villain.HTML do
 
   defp script_tag(src) do
     {:safe, html} = content_tag :script, "", [type: "text/javascript", charset: "utf-8",
-                                              src: Brando.get_helpers.static_path(Brando.get_endpoint, src)]
+                                              src: Brando.helpers.static_path(Brando.endpoint, src)]
     html
   end
 end

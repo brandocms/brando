@@ -140,7 +140,7 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_field(_language, :language, :string, language_code) do
-    ~s(<div class="text-center"><img src="#{Brando.get_helpers.static_path(Brando.get_endpoint, "/images/brando/blank.gif")}" class="flag flag-#{language_code}" alt="#{language_code}" /></div>)
+    ~s(<div class="text-center"><img src="#{Brando.helpers.static_path(Brando.endpoint, "/images/brando/blank.gif")}" class="flag flag-#{language_code}" alt="#{language_code}" /></div>)
   end
 
   defp do_inspect_field(_language, :key, :string, val) do

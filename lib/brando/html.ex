@@ -322,11 +322,11 @@ defmodule Brando.HTML do
         <ul class="nav navbar-nav">
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-              <img class="micro-avatar" src="#{img(current_user(conn).avatar, :micro, [default: Brando.get_helpers.static_path(conn, "/images/brando/defaults/avatar_default.jpg"), prefix: media_url()])}" />
+              <img class="micro-avatar" src="#{img(current_user(conn).avatar, :micro, [default: Brando.helpers.static_path(conn, "/images/brando/defaults/avatar_default.jpg"), prefix: media_url()])}" />
             </a>
             <ul class="dropdown-menu dropdown-menu-right" role="menu">
-              <li><a href="#{Brando.get_helpers.admin_dashboard_path(conn, :dashboard)}">Admin</a></li>
-              <li><a href="#{Brando.get_helpers.session_path(conn, :logout)}">Logg ut</a></li>
+              <li><a href="#{Brando.helpers.admin_dashboard_path(conn, :dashboard)}">Admin</a></li>
+              <li><a href="#{Brando.helpers.session_path(conn, :logout)}">Logg ut</a></li>
             </ul>
           </li>
         </ul>

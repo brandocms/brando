@@ -180,15 +180,15 @@ defmodule Brando.HTML.Tablize do
         6 -> {desc, icon, helper, action, param, role} = dropdown
       end
       fun_params = case param do
-        nil -> [Brando.get_endpoint, action]
+        nil -> [Brando.endpoint, action]
         param when is_list(param) ->
           params = Enum.map(param, fn(p) -> Map.get(record, p) end)
-          [Brando.get_endpoint, action, params] |> List.flatten
+          [Brando.endpoint, action, params] |> List.flatten
         param ->
-          [Brando.get_endpoint, action, Map.get(record, param)]
+          [Brando.endpoint, action, Map.get(record, param)]
       end
 
-      url = apply(Brando.get_helpers, helper, fun_params)
+      url = apply(Brando.helpers, helper, fun_params)
       if Brando.HTML.can_render?(conn, %{role: role}) do
         "<li>" <>
         "  <a href=\"" <> url <> "\">" <>

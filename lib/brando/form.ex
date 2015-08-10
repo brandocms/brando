@@ -382,10 +382,10 @@ defmodule Brando.Form do
   """
   def apply_action(fun, action, params \\ nil)
   def apply_action(fun, action, params) when is_list(params) do
-    apply(Brando.get_helpers, fun, [Brando.get_endpoint(), action] ++ params)
+    apply(Brando.helpers, fun, [Brando.endpoint(), action] ++ params)
   end
   def apply_action(fun, action, params) do
-    apply(Brando.get_helpers, fun, [Brando.get_endpoint(), action, params])
+    apply(Brando.helpers, fun, [Brando.endpoint(), action, params])
   end
 
   defp check_type!(type) when type in [:text, :password, :select, :email,

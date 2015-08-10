@@ -34,7 +34,7 @@ defmodule Brando.Plug.Authenticate do
     conn
     |> delete_session(:current_user)
     |> put_flash(:error, "Ingen tilgang.")
-    |> redirect(to: Brando.get_helpers.session_path(conn, :login))
+    |> redirect(to: Brando.helpers.session_path(conn, :login))
     |> halt
   end
 end

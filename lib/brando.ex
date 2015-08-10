@@ -12,12 +12,12 @@ defmodule Brando do
   @doc """
   Gets the parent app's router, as set in config.exs
   """
-  def get_router, do: config(:router)
+  def router, do: config(:router)
 
   @doc """
   Gets the parent app's endpoint, as set in config.exs
   """
-  def get_endpoint, do: config(:endpoint)
+  def endpoint, do: config(:endpoint)
 
   @doc """
   Gets the parent app's repo, as set in config.exs
@@ -27,7 +27,7 @@ defmodule Brando do
   @doc """
   Gets the parent app's helpers, as set in config.exs
   """
-  def get_helpers, do: config(:helpers)
+  def helpers, do: config(:helpers)
 
   @doc """
   Get Brando version

@@ -52,7 +52,7 @@ defmodule Brando.SystemChannel do
 
   defp do_log(level, icon, body) do
     unless Brando.config(:logging)[:disable_logging] do
-      Brando.get_endpoint.broadcast!("system:stream", "log_msg",
+      Brando.endpoint.broadcast!("system:stream", "log_msg",
                                     %{level: level, icon: icon, body: body})
     end
   end

@@ -38,7 +38,7 @@ defmodule Brando.Plug.Lockdown do
 
   defp lockdown(conn) do
     conn
-    |> redirect(to: Brando.get_helpers.lockdown_path(conn, :index))
+    |> redirect(to: Brando.helpers.lockdown_path(conn, :index))
     |> halt
   end
 end

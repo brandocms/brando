@@ -13,7 +13,7 @@ defmodule Brando.Web do
   """
 
   def view do
-    helpers = Brando.get_helpers()
+    helpers = Brando.helpers()
     quote do
       use Phoenix.View, root: "web/templates"
 
@@ -32,7 +32,7 @@ defmodule Brando.Web do
   end
 
   def controller do
-    helpers = Brando.get_helpers()
+    helpers = Brando.helpers()
     repo = Brando.repo
     quote do
       use Phoenix.Controller
