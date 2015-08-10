@@ -23,18 +23,23 @@ defmodule Brando.Villain.HTML do
     [main|extras] |> raw
   end
 
+  @doc """
+  Renders javascript initialization for Villain.
+
+  ## Options
+
+    * `browse_url`: url to image browser
+    * `upload_url`: url for image POST'ing
+    * `source`: selector for the textarea source
+
+  """
   def initialize(opts) do
     browse_url   = Keyword.fetch!(opts, :browse_url)
     upload_url   = Keyword.fetch!(opts, :upload_url)
     source       = Keyword.fetch!(opts, :source)
-    extra_blocks = Keyword.get(opts, :extra_blocks)
+    extra_blocks = Keyword.get(Brando.config(Brando.Villain), :extra_blocks, [])
 
-    extra_blocks =
-      if extra_blocks do
-        "extraBlocks: #{inspect(extra_blocks)}"
-      else
-        "// extraBlocks: []"
-      end
+    extra_blocks = extra_blocks == [] && "// extraBlocks: []" || "extraBlocks: #{inspect(extra_blocks)}"
 
     """
     <script type="text/javascript">

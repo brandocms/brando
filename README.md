@@ -331,10 +331,15 @@ Initialize Villain in your template:
 <%= Brando.Villain.HTML.initialize(
       browse_url: "/admin/news/villain/browse/post",
       upload_url: "/admin/news/villain/upload/post",
-      extra_blocks: ["Test", "Test2", "Test3"],
       source:     "textarea[name=\"post[data]\"]") %>
 ```
 
+If you have custom blocks, add them in your `config/brando.exs`:
+
+```elixir
+config :brando, Brando.Villain,
+  extra_blocks: ["MyBlock", "AnotherBlock"]
+```
 
 ## Bower/Brunch
 
