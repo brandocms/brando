@@ -118,7 +118,7 @@ defmodule Brando.Form.FieldsTest do
   test "form_group/4" do
     assert F.form_group("1234", "name", [], [])
            == ["<div class=\"form-group required\">", ["1234", "", ""], "</div>"]
-    opts = %{required: false}
+    opts = %{required: false, language: "no"}
     fg = F.form_group("1234", "name", opts, ["can't be blank"]) |> Enum.join
     refute fg =~ "required"
     assert fg =~ "has-error"
@@ -132,7 +132,7 @@ defmodule Brando.Form.FieldsTest do
     assert fg =~ "required"
     refute fg =~ "has-error"
 
-    opts = %{required: false}
+    opts = %{required: false, language: "no"}
     fg = F.form_group("1234", "name", opts, []) |> Enum.join
     refute fg =~ "required"
     refute fg =~ "has-error"
@@ -194,19 +194,25 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "render_errors/1" do
-    assert F.render_errors([]) == ""
-    assert F.render_errors(["can't be blank", "must be unique"]) |> Enum.join
+    assert F.render_errors([], []) == ""
+    assert F.render_errors(["can't be blank", "must be unique"], [language: "no"]) |> Enum.join
            =~ "Feltet er påkrevet."
-    assert F.render_errors(["can't be blank", "must be unique"]) |> Enum.join
+    assert F.render_errors(["can't be blank", "must be unique"], [language: "no"]) |> Enum.join
            =~ "Feltet må være unikt. Verdien finnes allerede i databasen."
   end
 
   test "parse_error/1" do
-    assert F.parse_error("can't be blank") == "Feltet er påkrevet."
-    assert F.parse_error("must be unique") == "Feltet må være unikt. Verdien finnes allerede i databasen."
-    assert F.parse_error("has invalid format") == "Feltet har feil format."
-    assert F.parse_error("is reserved") == "Verdien er reservert."
-    assert F.parse_error({"should be at least %{count} characters", count: 10}) == "Feltets verdi er for kort. Må være > 10 tegn."
+    opts = [language: "no"]
+    assert F.parse_error("can't be blank", opts)
+           == "Feltet er påkrevet."
+    assert F.parse_error("must be unique", opts)
+           == "Feltet må være unikt. Verdien finnes allerede i databasen."
+    assert F.parse_error("has invalid format", opts)
+           == "Feltet har feil format."
+    assert F.parse_error("is reserved", opts)
+           == "Verdien er reservert."
+    assert F.parse_error({"should be at least %{count} characters", count: 10}, opts)
+           == "Feltets verdi er for kort. Må være > 10 tegn."
   end
 
   test "render_help_text/1" do

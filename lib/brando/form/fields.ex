@@ -4,6 +4,7 @@ defmodule Brando.Form.Fields do
   These are all called from the `Brando.Form` module, and handled
   through `Brando.Form.get_form/4`
   """
+  use Linguist.Vocabulary
 
   import Brando.HTML, only: [media_url: 1, img: 2]
   import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2, tag: 2]
@@ -180,7 +181,7 @@ defmodule Brando.Form.Fields do
   def form_group(contents, _name, opts, errors) do
     classes = [class: get_group_classes(opts, errors)]
     {:safe, html} = content_tag(:div, classes) do
-      [contents, render_errors(errors), render_help_text(opts)] |> raw
+      [contents, render_errors(errors, opts), render_help_text(opts)] |> raw
     end
     html
   end
@@ -218,13 +219,13 @@ defmodule Brando.Form.Fields do
   Renders `errors` in a nicely formatted div by calling parse_error/1
   on each error in the `errors` list.
   """
-  @spec render_errors(Options.t | Keyword.t) :: String.t
-  def render_errors([]), do: ""
-  def render_errors(errors) when is_list(errors) do
+  @spec render_errors(Options.t | Keyword.t, Keyword.t) :: String.t
+  def render_errors([], _opts), do: ""
+  def render_errors(errors, opts) when is_list(errors) do
     for error <- errors do
       {:safe, html} = content_tag(:div, class: "error") do
         [content_tag(:i, " ", class: "fa fa-exclamation-circle"),
-         parse_error(error)]
+         parse_error(error, opts)]
       end
       html
     end
@@ -233,15 +234,15 @@ defmodule Brando.Form.Fields do
   @doc """
   Translate errors
   """
-  @spec parse_error(String.t | {String.t, integer}) :: String.t
-  def parse_error(error) do
+  @spec parse_error(String.t | {String.t, integer}, Keyword.t) :: String.t
+  def parse_error(error, opts) do
     case error do
-      "can't be blank"     -> "Feltet er påkrevet."
-      "must be unique"     -> "Feltet må være unikt. Verdien finnes allerede i databasen."
-      "has invalid format" -> "Feltet har feil format."
-      "is invalid"         -> "Feltet er ugyldig."
-      "is reserved"        -> "Verdien er reservert."
-      {"should be at least %{count} characters", count: length} -> "Feltets verdi er for kort. Må være > #{length} tegn."
+      "can't be blank"     -> t!(opts[:language], "error.required")
+      "must be unique"     -> t!(opts[:language], "error.unique")
+      "has invalid format" -> t!(opts[:language], "error.format")
+      "is invalid"         -> t!(opts[:language], "error.invalid")
+      "is reserved"        -> t!(opts[:language], "error.reserved")
+      {"should be at least %{count} characters", count: length} -> t!(opts[:language], "error.length", length: length)
       err                  -> is_binary(err) && err || inspect(err)
     end
   end
@@ -891,4 +892,26 @@ defmodule Brando.Form.Fields do
   defp format_name(name, form_source) do
     "#{form_source}[#{name}]"
   end
+
+  locale "no", [
+    error: [
+      required: "Feltet er påkrevet.",
+      unique: "Feltet må være unikt. Verdien finnes allerede i databasen.",
+      format: "Feltet har feil format.",
+      invalid: "Feltet er ugyldig.",
+      reserved: "Verdien er reservert.",
+      length: "Feltets verdi er for kort. Må være > %{length} tegn."
+    ]
+  ]
+
+  locale "en", [
+    error: [
+      required: "Field is required.",
+      unique: "Field must be unique. Already exists in database.",
+      format: "Field has invalid format.",
+      invalid: "Field has invalid value.",
+      reserved: "This value is reserved.",
+      length: "Field too short. Should be at least > %{length} characters."
+    ]
+  ]
 end
