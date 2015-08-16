@@ -39,7 +39,6 @@ defmodule Brando.Form do
   See this module's `Brando.Form.form` and `Brando.Form.field` docs for more.
   """
   use Linguist.Vocabulary
-  alias Brando.Utils
   alias Brando.Form.Fields
   import Phoenix.HTML.Tag, only: [form_tag: 3]
   import Phoenix.HTML, only: [raw: 1]
@@ -93,23 +92,27 @@ defmodule Brando.Form do
 
       ## Options:
 
-        * `type`   - The form type
+        * `language` - The language the form should display in.
+        * `type` - The form type
           Example: `type: :create` or `type: :update`
         * `action` - Action the form is performing.
           Example: `action: :create` or `action: :update_all`
         * `params` - Any parameters to the :action function helper.
           Example: `params: to_string(@id)`
-        * `values` - Pass @values through the form builder
-          Example: `values: @user`
-        * `errors` - Pass @errors through the form builder
+        * `changeset`: Model/param changeset.
 
       ## Example:
 
-          <%= get_form(@language, type: :create, action: :create, params: [], values: @user, errors: @errors) %>
+          <%= get_form(@language, type: :create, action: :create, params: [], changeset: @changeset) %>
 
       """
-      def get_form(language, type: form_type, action: action, params: params, values: values, errors: errors) do
-        render_fields(language, form_type, @form_fields, values, errors, @form_opts)
+      def get_form(language, opts) do
+        form_type = Keyword.fetch!(opts, :type)
+        action = Keyword.fetch!(opts, :action)
+        params = Keyword.get(opts, :params, [])
+        changeset = Keyword.fetch!(opts, :changeset)
+
+        render_fields(language, form_type, @form_fields, changeset, @form_opts)
         |> render_form(form_type, action, params, @form_opts)
         |> raw
       end
@@ -162,17 +165,14 @@ defmodule Brando.Form do
   Reduces all `fields` and returns a list of each individual
   field as HTML. Gets any values or errors for the field.
   """
-  def render_fields(language, form_type, fields, values, errors, %{source: source, model: model}) do
-    values = Utils.to_string_map(values)
-    if values == nil, do: values = []
-    if errors == nil, do: errors = []
+  def render_fields(language, form_type, fields, changeset, %{source: source, model: model}) do
     Enum.reduce fields, [], fn ({name, f_opts}, acc) ->
       f_opts =
         f_opts
         |> Keyword.merge(source: source, language: language, name: name, model: model)
         |> Enum.into(%{})
 
-      [Fields.render_field(form_type, f_opts, get_value(values, name), get_errors(errors, name))|acc]
+      [Fields.render_field(form_type, f_opts, get_value(changeset, name), get_errors(changeset, name))|acc]
     end
   end
 
@@ -400,18 +400,26 @@ defmodule Brando.Form do
   defp get_method(:delete), do: "delete"
   defp get_method(_), do: "get"
 
-  defp get_value([], _), do: []
-  defp get_value(values, name) do
-    case Map.fetch(values, Atom.to_string(name)) do
+  defp get_value(nil, _), do: nil
+  defp get_value(%{model: model, action: action, params: params}, name) do
+    if !action do
+      # action is nil, this means we have no params - only a model.
+      fetch_from = model || %{}
+    else
+      fetch_from = params || %{}
+      name = Atom.to_string(name)
+    end
+    case Map.fetch(fetch_from, name) do
       {:ok, val} -> val
-      :error     -> []
+      :error     -> nil
     end
   end
 
-  defp get_errors([], _), do: []
-  defp get_errors(errors, name) do
-    case Keyword.get_values(errors, name) do
-      []     -> []
+  defp get_errors([], _), do: nil
+  defp get_errors(changeset, name) do
+    case Keyword.get_values(changeset.errors, name) do
+      []     -> nil
+      nil    -> nil
       values -> values
     end
   end

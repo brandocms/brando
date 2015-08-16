@@ -50,9 +50,11 @@ defmodule Brando.Admin.UserController do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     user_id = current_user(conn).id
-    form_data = Brando.repo.get_by!(model, id: user_id)
+    changeset =
+      Brando.repo.get!(model, user_id)
+      |> model.changeset(:update)
     conn
-    |> assign(:user, form_data)
+    |> assign(:changeset, changeset)
     |> assign(:id, user_id)
     |> assign(:page_title, t!(language, "title.edit"))
     |> render(:profile_edit)
@@ -73,10 +75,10 @@ defmodule Brando.Admin.UserController do
         conn
         |> put_flash(:notice, t!(language, "flash.updated"))
         |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn, :profile))
-      {:error, errors} ->
+      {:error, changeset} ->
         conn
         |> assign(:user, form_data)
-        |> assign(:errors, errors)
+        |> assign(:changeset, changeset)
         |> assign(:id, user_id)
         |> assign(:page_title, t!(language, "title.edit"))
         |> put_flash(:error, t!(language, "flash.form_error"))
@@ -87,7 +89,10 @@ defmodule Brando.Admin.UserController do
   @doc false
   def new(conn, _params) do
     language = Brando.I18n.get_language(conn)
+    model = conn.private[:model]
+    changeset = model.changeset(model.__struct__, :create)
     conn
+    |> assign(:changeset, changeset)
     |> assign(:page_title, t!(language, "title.new"))
     |> render("new.html")
   end
@@ -96,16 +101,14 @@ defmodule Brando.Admin.UserController do
   def create(conn, %{"user" => form_data}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
-    created_user = model.create(form_data)
-    case created_user do
+    case model.create(form_data) do
       {:ok, _} ->
         conn
         |> put_flash(:notice, t!(language, "flash.created"))
         |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn, :index))
-      {:error, errors} ->
+      {:error, changeset} ->
         conn
-        |> assign(:user, form_data)
-        |> assign(:errors, errors)
+        |> assign(:changeset, changeset)
         |> assign(:page_title, t!(language, "title.new"))
         |> put_flash(:error, t!(language, "flash.form_error"))
         |> render(:new)
@@ -116,9 +119,12 @@ defmodule Brando.Admin.UserController do
   def edit(conn, %{"id" => user_id}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
-    form_data = Brando.repo.get_by!(model, id: user_id)
+    changeset =
+      Brando.repo.get!(model, user_id)
+      |> model.changeset(:update)
+
     conn
-    |> assign(:user, form_data)
+    |> assign(:changeset, changeset)
     |> assign(:id, user_id)
     |> assign(:page_title, t!(language, "title.edit"))
     |> render(:edit)
@@ -139,10 +145,9 @@ defmodule Brando.Admin.UserController do
         conn
         |> put_flash(:notice, t!(language, "flash.updated"))
         |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn, :index))
-      {:error, errors} ->
+      {:error, changeset} ->
         conn
-        |> assign(:user, form_data)
-        |> assign(:errors, errors)
+        |> assign(:changeset, changeset)
         |> assign(:id, user_id)
         |> assign(:page_title, t!(language, "title.edit"))
         |> put_flash(:error, t!(language, "flash.form_error"))

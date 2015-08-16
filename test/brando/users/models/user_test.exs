@@ -23,15 +23,15 @@ defmodule Brando.Integration.UserTest do
 
   test "create/1 errors" do
     {_v, params} = Dict.pop @params, "email"
-    assert {:error, err} = User.create(params)
-    assert err == [email: "can't be blank"]
+    assert {:error, changeset} = User.create(params)
+    assert changeset.errors == [email: "can't be blank"]
   end
 
   test "update/1 errors" do
     assert {:ok, user} = User.create(@params)
     params = Dict.put @params, "email", "asdf"
-    assert {:error, err} = User.update(user, params)
-    assert err == [email: "has invalid format"]
+    assert {:error, changeset} = User.update(user, params)
+    assert changeset.errors == [email: "has invalid format"]
   end
 
   test "get/1" do

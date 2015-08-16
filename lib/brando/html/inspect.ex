@@ -143,6 +143,9 @@ defmodule Brando.HTML.Inspect do
     ~s(<div class="text-center"><img src="#{Brando.helpers.static_path(Brando.endpoint, "/images/brando/blank.gif")}" class="flag flag-#{language_code}" alt="#{language_code}" /></div>)
   end
 
+  defp do_inspect_field(_language, :key, :string, nil) do
+    ""
+  end
   defp do_inspect_field(_language, :key, :string, val) do
     split = String.split(val, "/", parts: 2)
     if Enum.count(split) == 1 do

@@ -24,7 +24,6 @@ defmodule Brando.Field.ImageField do
 
   """
   import Brando.Images.Utils
-  require Logger
 
   defmacro __using__(_) do
     quote do

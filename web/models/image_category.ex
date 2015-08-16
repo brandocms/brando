@@ -33,6 +33,7 @@ defmodule Brando.ImageCategory do
 
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
+  def changeset(model, action, params \\ :empty)
   def changeset(model, :create, params) do
     model
     |> cast(params, @required_fields, @optional_fields)
@@ -50,7 +51,7 @@ defmodule Brando.ImageCategory do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
     model
-    |> cast(params, [], @required_fields ++ @optional_fields)
+    |> cast(params, @required_fields, @optional_fields)
   end
 
   @doc """
@@ -59,16 +60,11 @@ defmodule Brando.ImageCategory do
   If not valid, return errors from changeset
   """
   def create(params, current_user) do
-    model_changeset =
-      %__MODULE__{}
-      |> put_creator(current_user)
-      |> changeset(:create, params)
-      |> put_change(:cfg, Brando.config(Brando.Images)[:default_config])
-
-    case model_changeset.valid? do
-      true ->  {:ok, Brando.repo.insert!(model_changeset)}
-      false -> {:error, model_changeset.errors}
-    end
+    %__MODULE__{}
+    |> put_creator(current_user)
+    |> changeset(:create, params)
+    |> put_change(:cfg, Brando.config(Brando.Images)[:default_config])
+    |> Brando.repo.insert
   end
 
   @doc """
@@ -78,11 +74,9 @@ defmodule Brando.ImageCategory do
   If not valid, return errors from changeset
   """
   def update(model, params) do
-    model_changeset = model |> changeset(:update, params)
-    case model_changeset.valid? do
-      true ->  {:ok, Brando.repo.update!(model_changeset)}
-      false -> {:error, model_changeset.errors}
-    end
+    model
+    |> changeset(:update, params)
+    |> Brando.repo.update
   end
 
   @doc """

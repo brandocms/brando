@@ -108,8 +108,8 @@ defmodule Brando.FormTest do
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"],
        username: [type: :text, required: true, label: "Username", placeholder: "Username"]
      ]
-    errors = [username: "has invalid format", email: "has invalid format", password: "can't be blank", email: "can't be blank", full_name: "can't be blank", username: "can't be blank"]
-    f = Enum.join(render_fields("no", :create, form_fields, nil, errors, %{source: "user", model: Brando.User}), "")
+    cs = %{action: nil, model: nil, params: [], errors: [username: "has invalid format", email: "has invalid format", password: "can't be blank", email: "can't be blank", full_name: "can't be blank", username: "can't be blank"]}
+    f = Enum.join(render_fields("no", :create, form_fields, cs, %{source: "user", model: Brando.User}), "")
     assert f =~ ~s("form-group required has-error")
     assert f =~ "user[username]"
     assert f =~ ~s(placeholder="Brukernavn")
@@ -131,16 +131,17 @@ defmodule Brando.FormTest do
        status2: [type: :checkbox, multiple: true, choices: &UserForm.get_status_choices/1, default: "1", label: "Status"],
        status3: [type: :radio, choices: &UserForm.get_status_choices/1, default: "1", label: "Status"],
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"]]
-    values = %Brando.User{avatar: nil,
-                          email: "test@email.com",
-                          role: 4,
-                          full_name: "Test Name", id: 1,
-                          inserted_at: %Ecto.DateTime{day: 7, hour: 4, min: 36, month: 12, sec: 26, year: 2014},
-                          last_login: %Ecto.DateTime{day: 9, hour: 5, min: 2, month: 12, sec: 36, year: 2014},
-                          password: "$2a$12$abcdefghijklmnopqrstuvwxyz",
-                          updated_at: %Ecto.DateTime{day: 14, hour: 21, min: 36, month: 1, sec: 53, year: 2015},
-                          username: "test"}
-    f = Enum.join(render_fields("no", :update, form_fields, values, nil, %{source: "user", model: Brando.User}), "")
+    params = %{"avatar" => nil,
+               "email" => "test@email.com",
+               "role" => 4,
+               "full_name" => "Test Name", "id" => 1,
+               "inserted_at" => %Ecto.DateTime{day: 7, hour: 4, min: 36, month: 12, sec: 26, year: 2014},
+               "last_login" => %Ecto.DateTime{day: 9, hour: 5, min: 2, month: 12, sec: 36, year: 2014},
+               "password" => "$2a$12$abcdefghijklmnopqrstuvwxyz",
+               "updated_at" => %Ecto.DateTime{day: 14, hour: 21, min: 36, month: 1, sec: 53, year: 2015},
+               "username" => "test"}
+    cs = %{action: :insert, params: params, model: nil, errors: []}
+    f = Enum.join(render_fields("no", :update, form_fields, cs, %{source: "user", model: Brando.User}), "")
     assert f =~ "form-group required"
     assert f =~ "user[email]"
     assert f =~ ~s(value="test@email.com")

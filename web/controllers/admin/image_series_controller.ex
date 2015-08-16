@@ -14,10 +14,12 @@ defmodule Brando.Admin.ImageSeriesController do
   @doc false
   def new(conn, %{"id" => category_id}) do
     language = Brando.I18n.get_language(conn)
-    image_series = %{"image_category_id" => String.to_integer(category_id)}
+    model = conn.private[:series_model]
+    changeset = model.changeset(Map.put(model.__struct__, :image_category_id, String.to_integer(category_id)), :create)
     conn
     |> assign(:page_title, t!(language, "title.new"))
-    |> assign(:image_series, image_series)
+    |> assign(:changeset, changeset)
+    # |> assign(:image_series, image_series)
     |> render(:new)
   end
 
@@ -30,11 +32,11 @@ defmodule Brando.Admin.ImageSeriesController do
         conn
         |> put_flash(:notice, t!(language, "flash.created"))
         |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
-      {:error, errors} ->
+      {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.new"))
         |> assign(:image_series, image_series)
-        |> assign(:errors, errors)
+        |> assign(:changeset, changeset)
         |> put_flash(:error, t!(language, "flash.form_error"))
         |> render(:new)
     end
@@ -44,11 +46,14 @@ defmodule Brando.Admin.ImageSeriesController do
   def edit(conn, %{"id" => id}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:series_model]
-    data = model |> Brando.repo.get_by!(id: id)
+    changeset =
+      model
+      |> Brando.repo.get_by!(id: id)
+      |> model.changeset(:update)
 
     conn
     |> assign(:page_title, t!(language, "title.edit"))
-    |> assign(:image_series, data)
+    |> assign(:changeset, changeset)
     |> assign(:id, id)
     |> render(:edit)
   end
@@ -63,11 +68,11 @@ defmodule Brando.Admin.ImageSeriesController do
         conn
         |> put_flash(:notice, t!(language, "flash.updated"))
         |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
-      {:error, errors} ->
+      {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.edit"))
         |> assign(:image_series, form_data)
-        |> assign(:errors, errors)
+        |> assign(:changeset, changeset)
         |> assign(:id, id)
         |> put_flash(:error, t!(language, "flash.form_error"))
         |> render(:edit)

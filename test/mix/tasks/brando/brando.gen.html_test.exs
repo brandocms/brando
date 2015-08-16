@@ -78,7 +78,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
       assert_file "web/templates/admin/minion_face/new.html.eex", fn file ->
         assert file =~ "<%= t!(@language, \"actions.new\") %>"
-        assert file =~ "<%= MinionFaceForm.get_form(@language, type: :create, action: :create, params: [], values: @changeset.params, errors: @changeset.errors) %>"
+        assert file =~ "<%= MinionFaceForm.get_form(@language, type: :create, action: :create, params: [], changeset: @changeset) %>"
         assert file =~ "v = new Villain.Editor"
         assert file =~ "uploadURL: '/admin/minion_faces/villain/upload/minion_face/'"
       end

@@ -14,8 +14,11 @@ defmodule Brando.Admin.ImageCategoryController do
   @doc false
   def new(conn, _params) do
     language = Brando.I18n.get_language(conn)
+    model = conn.private[:category_model]
+    changeset = model.changeset(model.__struct__, :create)
     conn
     |> assign(:page_title, t!(language, "title.new"))
+    |> assign(:changeset, changeset)
     |> render(:new)
   end
 
@@ -28,11 +31,11 @@ defmodule Brando.Admin.ImageCategoryController do
         conn
         |> put_flash(:notice, t!(language, "flash.created"))
         |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
-      {:error, errors} ->
+      {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.new"))
         |> assign(:imagecategory, imagecategory)
-        |> assign(:errors, errors)
+        |> assign(:changeset, changeset)
         |> put_flash(:error, t!(language, "flash.form_error"))
         |> render(:new)
     end
@@ -42,11 +45,13 @@ defmodule Brando.Admin.ImageCategoryController do
   def edit(conn, %{"id" => id}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:category_model]
-    data = Brando.repo.get_by!(model, id: id)
+    changeset =
+      Brando.repo.get_by!(model, id: id)
+      |> model.changeset(:update)
 
     conn
     |> assign(:page_title, t!(language, "title.edit"))
-    |> assign(:image_category, data)
+    |> assign(:changeset, changeset)
     |> assign(:id, id)
     |> render(:edit)
   end
@@ -61,11 +66,11 @@ defmodule Brando.Admin.ImageCategoryController do
         conn
         |> put_flash(:notice, t!(language, "flash.updated"))
         |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
-      {:error, errors} ->
+      {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.edit"))
         |> assign(:image_category, form_data)
-        |> assign(:errors, errors)
+        |> assign(:changeset, changeset)
         |> assign(:id, id)
         |> put_flash(:error, t!(language, "flash.form_error"))
         |> render(:edit)
@@ -78,11 +83,13 @@ defmodule Brando.Admin.ImageCategoryController do
     model = conn.private[:category_model]
     data = Brando.repo.get_by!(model, id: category_id)
     {:ok, cfg} = Brando.Type.ImageConfig.dump(data.cfg)
-    data = Map.put(data, :cfg, cfg)
+    changeset =
+      Map.put(data, :cfg, cfg)
+      |> model.changeset(:update)
 
     conn
     |> assign(:page_title, t!(language, "title.configure"))
-    |> assign(:image_category, data)
+    |> assign(:changeset, changeset)
     |> assign(:id, category_id)
     |> render(:configure)
   end
@@ -97,11 +104,11 @@ defmodule Brando.Admin.ImageCategoryController do
         conn
         |> put_flash(:notice, t!(language, "flash.configured"))
         |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
-      {:error, errors} ->
+      {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.configure"))
         |> assign(:image_category, form_data)
-        |> assign(:errors, errors)
+        |> assign(:changeset, changeset)
         |> assign(:id, id)
         |> put_flash(:error, t!(language, "flash.form_error"))
         |> render(:edit)

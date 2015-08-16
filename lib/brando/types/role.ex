@@ -44,6 +44,13 @@ defmodule Brando.Type.Role do
   end
 
   @doc """
+  Nil returns empty list
+  """
+  def cast(nil) do
+    {:ok, []}
+  end
+
+  @doc """
   Cast anything else is a failure
   """
   def cast(_), do: :error
@@ -84,5 +91,6 @@ defmodule Brando.Type.Role do
     end
     {:ok, acc}
   end
+  def dump(nil), do: {:ok, 0}
   def dump(_), do: :error
 end

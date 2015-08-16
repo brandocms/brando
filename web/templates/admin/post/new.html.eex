@@ -1,5 +1,5 @@
     <h1><%= t!(@language, "actions.new") %></h1>
-    <%= PostForm.get_form(@language, type: :create, action: :create, params: [], values: assigns[:post], errors: assigns[:errors]) %>
+    <%= PostForm.get_form(@language, type: :create, action: :create, params: [], changeset: @changeset) %>
     <%= Brando.Villain.HTML.initialize(
           browse_url: "/admin/news/villain/browse/post",
           upload_url: "/admin/news/villain/upload/post",

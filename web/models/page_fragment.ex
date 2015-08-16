@@ -47,7 +47,8 @@ defmodule Brando.PageFragment do
       model_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, atom, Keyword.t | Options.t) :: t
+  @spec changeset(t, atom, Keyword.t | Options.t | :empty) :: t
+  def changeset(model, action, params \\ :empty)
   def changeset(model, :create, params) do
     model
     |> cast(params, @required_fields, @optional_fields)
@@ -74,14 +75,10 @@ defmodule Brando.PageFragment do
   If not valid, return errors from changeset
   """
   def create(params, current_user) do
-    model_changeset =
-      %__MODULE__{}
-      |> put_creator(current_user)
-      |> changeset(:create, params)
-    case model_changeset.valid? do
-      true  -> {:ok, Brando.repo.insert!(model_changeset)}
-      false -> {:error, model_changeset.errors}
-    end
+    %__MODULE__{}
+    |> put_creator(current_user)
+    |> changeset(:create, params)
+    |> Brando.repo.insert
   end
 
   @doc """
@@ -91,11 +88,9 @@ defmodule Brando.PageFragment do
   If not valid, return errors from changeset
   """
   def update(model, params) do
-    model_changeset = model |> changeset(:update, params)
-    case model_changeset.valid? do
-      true  -> {:ok, Brando.repo.update!(model_changeset)}
-      false -> {:error, model_changeset.errors}
-    end
+    model
+    |> changeset(:update, params)
+    |> Brando.repo.update
   end
 
   def encode_data(params) do

@@ -3,8 +3,6 @@ defmodule Brando.Utils do
   Assorted utility functions.
   """
 
-  require Logger
-
   @doc """
   Converts `string` to an ascii slug. Removes all unicode, spaces,
   extraneous dashes and punctuation and downcases the slug

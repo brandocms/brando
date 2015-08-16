@@ -220,7 +220,7 @@ defmodule Brando.Form.Fields do
   on each error in the `errors` list.
   """
   @spec render_errors(Options.t | Keyword.t, Keyword.t) :: String.t
-  def render_errors([], _opts), do: ""
+  def render_errors(nil, _opts), do: ""
   def render_errors(errors, opts) when is_list(errors) do
     for error <- errors do
       {:safe, html} = content_tag(:div, class: "error") do
@@ -328,7 +328,7 @@ defmodule Brando.Form.Fields do
   @doc """
   Render a textarea field for :create.
   """
-  def textarea(_form_type, name, [], _errors, opts) do
+  def textarea(_form_type, name, nil, _errors, opts) do
     tag_opts =
       Keyword.new
       |> put_name(name)
@@ -423,7 +423,7 @@ defmodule Brando.Form.Fields do
   end
 
   # no `value` - :create - match `choice_value` to `default`
-  def option(:create, choice_value, choice_text, [], default, _) do
+  def option(:create, choice_value, choice_text, nil, default, _) do
     tag_opts =
       Keyword.new
       |> put_value(choice_value)
@@ -448,7 +448,7 @@ defmodule Brando.Form.Fields do
   end
 
   def radio(form_type, name, choice_value, choice_text, value, default, is_checked_fun \\ nil)
-  def radio(:create, name, choice_value, choice_text, [], default, _) do
+  def radio(:create, name, choice_value, choice_text, nil, default, _) do
     tag_opts =
       Keyword.new
       |> put_name(name)
@@ -529,7 +529,7 @@ defmodule Brando.Form.Fields do
   This is for multiple checkboxes. Single checks are handled through `input(:checkbox, ...)`
   """
   def checkbox(form_type, name, choice_value, choice_text, value, default, is_checked_fun \\ nil)
-  def checkbox(:create, name, choice_value, choice_text, [], default, _) do
+  def checkbox(:create, name, choice_value, choice_text, nil, default, _) do
     tag_opts =
       Keyword.new
       |> put_name("#{name}[]")
@@ -761,7 +761,7 @@ defmodule Brando.Form.Fields do
   def get_selected(_, _), do: nil
 
   @doc """
-  Matches `cv` to `v`. If true then return "checked" to be used in
+  Matches `cv` to `v`. If true then return true to be used in
   input type radio and checkbox
   """
   def get_checked(cv, v) when cv == v, do: true
@@ -815,7 +815,6 @@ defmodule Brando.Form.Fields do
   @doc """
   If `value` is not nil, returns value.
   """
-  def get_val([]), do: ""
   def get_val(nil), do: ""
   def get_val(value) when is_list(value), do: Enum.join(value, ",")
   def get_val(value), do: value
@@ -824,8 +823,8 @@ defmodule Brando.Form.Fields do
   If `value` is not nil, returns `value`. Else returns `default`
   """
   def get_val(value, nil), do: get_val(value)
-  def get_val([], default) when is_function(default), do: get_val(default.())
-  def get_val([], default), do: get_val(default)
+  def get_val(nil, default) when is_function(default), do: get_val(default.())
+  def get_val(nil, default), do: get_val(default)
   def get_val(value, _), do: get_val(value)
 
   defp is_checked?(value, opts) do
@@ -840,31 +839,31 @@ defmodule Brando.Form.Fields do
     end
   end
 
-  defp get_group_classes(%{form_group_class: class, required: false}, []) do
+  defp get_group_classes(%{form_group_class: class, required: false}, nil) do
     "form-group #{class}"
   end
   defp get_group_classes(%{form_group_class: class, required: false}, _) do
     "form-group #{class} has-error"
   end
-  defp get_group_classes(%{form_group_class: class, required: true}, []) do
+  defp get_group_classes(%{form_group_class: class, required: true}, nil) do
     "form-group #{class} required has-error"
   end
   defp get_group_classes(%{form_group_class: class, required: true}, _) do
     "form-group #{class} required has-error"
   end
-  defp get_group_classes(%{form_group_class: class}, []) do
+  defp get_group_classes(%{form_group_class: class}, nil) do
     "form-group required #{class}"
   end
   defp get_group_classes(%{form_group_class: class}, _) do
     "form-group required #{class} has-error"
   end
-  defp get_group_classes(%{required: false}, []) do
+  defp get_group_classes(%{required: false}, nil) do
     "form-group"
   end
   defp get_group_classes(%{required: false}, _) do
     "form-group has-error"
   end
-  defp get_group_classes(_, []) do
+  defp get_group_classes(_, nil) do
     "form-group required"
   end
   defp get_group_classes(_, _) do

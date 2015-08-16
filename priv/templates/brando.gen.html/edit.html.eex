@@ -1,5 +1,5 @@
 <h1><%%= t!(@language, "actions.edit") %></h1>
-<%= "<%=" %> <%= alias %>Form.get_form(@language, type: :update, action: :update, params: to_string(@<%= singular %>.id), values: @<%= singular %>, errors: @changeset.errors) <%= "%\>" %>
+<%= "<%=" %> <%= alias %>Form.get_form(@language, type: :update, action: :update, params: to_string(@<%= singular %>.id), changeset: @changeset) <%= "%\>" %>
 <div class="form-actions">
   <a href="<%= "<%=" %> Helpers.<%= admin_path %>_path(@conn, :index) <%= "%\>" %>" class="btn btn-default">
     <i class="fa fa-list fa-fw m-r-sm"></i> <%%= Brando.Admin.LayoutView.t!(@language, "global.back_to_index") %>

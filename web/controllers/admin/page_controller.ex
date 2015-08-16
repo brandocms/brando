@@ -47,7 +47,10 @@ defmodule Brando.Admin.PageController do
   @doc false
   def new(conn, _params) do
     language = Brando.I18n.get_language(conn)
+    model = conn.private[:model]
+    changeset = model.changeset(model.__struct__, :create)
     conn
+    |> assign(:changeset, changeset)
     |> assign(:page_title, t!(language, "title.new"))
     |> render(:new)
   end
@@ -61,11 +64,11 @@ defmodule Brando.Admin.PageController do
         conn
         |> put_flash(:notice, t!(language, "flash.created"))
         |> redirect(to: router_module(conn).__helpers__.admin_page_path(conn, :index))
-      {:error, errors} ->
+      {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.new"))
         |> assign(:page, page)
-        |> assign(:errors, errors)
+        |> assign(:changeset, changeset)
         |> put_flash(:error, t!(language, "flash.form_error"))
         |> render(:new)
     end
@@ -75,13 +78,14 @@ defmodule Brando.Admin.PageController do
   def edit(conn, %{"id" => id}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
-    page =
+    changeset =
       Brando.repo.get_by!(model, id: id)
       |> model.encode_data
+      |> model.changeset(:update)
 
       conn
       |> assign(:page_title, t!(language, "title.edit"))
-      |> assign(:page, page)
+      |> assign(:changeset, changeset)
       |> assign(:id, id)
       |> render(:edit)
   end
@@ -96,11 +100,11 @@ defmodule Brando.Admin.PageController do
         conn
         |> put_flash(:notice, t!(language, "flash.updated"))
         |> redirect(to: router_module(conn).__helpers__.admin_page_path(conn, :index))
-      {:error, errors} ->
+      {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.edit"))
         |> assign(:page, form_data)
-        |> assign(:errors, errors)
+        |> assign(:changeset, changeset)
         |> assign(:id, id)
         |> put_flash(:error, t!(language, "flash.form_error"))
         |> render(:edit)

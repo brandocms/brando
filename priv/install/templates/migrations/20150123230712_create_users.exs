@@ -13,8 +13,8 @@ defmodule <%= application_module %>.Repo.Migrations.CreateUsers do
       add :last_login,    :datetime
       timestamps
     end
-    create index(:users, [:username], unique: true)
-    create index(:users, [:email], unique: true)
+    create unique_index(:users, [:email])
+    create unique_index(:users, [:username])
 
     password = Brando.User.gen_password("admin")
     execute """
@@ -28,7 +28,7 @@ defmodule <%= application_module %>.Repo.Migrations.CreateUsers do
 
   def down do
     drop table(:users)
-    drop index(:users, [:username], unique: true)
-    drop index(:users, [:email], unique: true)
+    drop unique_index(:users, [:email])
+    drop unique_index(:users, [:username])
   end
 end

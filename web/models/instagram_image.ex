@@ -6,7 +6,6 @@ defmodule Brando.InstagramImage do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
-  require Logger
   import Ecto.Query, only: [from: 2]
   alias Brando.Instagram
 
@@ -42,7 +41,7 @@ defmodule Brando.InstagramImage do
   def changeset(model, :create, params) do
     model
     |> cast(params, @required_fields, @optional_fields)
-    |> validate_unique(:instagram_id, on: Brando.repo)
+    |> unique_constraint(:instagram_id)
     |> put_change(:status, @cfg[:auto_approve] && :approved || :rejected)
   end
 

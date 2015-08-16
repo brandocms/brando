@@ -4,10 +4,10 @@ defmodule <%= application_module %>.Repo.Migrations.CreatePages do
 
   def up do
     create table(:pages) do
-      add :key,               :text
-      add :language,          :text
-      add :title,             :text
-      add :slug,              :text
+      add :key,               :text, null: false
+      add :language,          :text, null: false
+      add :title,             :text, null: false
+      add :slug,              :text, null: false
       villain
       add :status,            :integer
       add :parent_id,         references(:pages), default: nil

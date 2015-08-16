@@ -47,7 +47,11 @@ defmodule Brando.Admin.PostController do
   @doc false
   def new(conn, _params) do
     language = Brando.I18n.get_language(conn)
+    model = conn.private[:model]
+    changeset = model.changeset(model.__struct__, :create, :empty)
+
     conn
+    |> assign(:changeset, changeset)
     |> assign(:page_title, t!(language, "title.new"))
     |> render(:new)
   end
@@ -61,11 +65,11 @@ defmodule Brando.Admin.PostController do
         conn
         |> put_flash(:notice, t!(language, "flash.created"))
         |> redirect(to: router_module(conn).__helpers__.admin_post_path(conn, :index))
-      {:error, errors} ->
+      {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.new"))
         |> assign(:post, post)
-        |> assign(:errors, errors)
+        |> assign(:changeset, changeset)
         |> put_flash(:error, t!(language, "flash.form_error"))
         |> render(:new)
     end
@@ -75,13 +79,14 @@ defmodule Brando.Admin.PostController do
   def edit(conn, %{"id" => id}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
-    post =
+    changeset =
       Brando.repo.get_by!(model, id: id)
       |> model.encode_data
+      |> model.changeset(:update)
 
     conn
     |> assign(:page_title, t!(language, "title.edit"))
-    |> assign(:post, post)
+    |> assign(:changeset, changeset)
     |> assign(:id, id)
     |> render(:edit)
   end
@@ -92,15 +97,15 @@ defmodule Brando.Admin.PostController do
     model = conn.private[:model]
     post = Brando.repo.get_by!(model, id: id)
     case model.update(post, form_data) do
-      {:ok, _updated_post} ->
+      {:ok, _} ->
         conn
         |> put_flash(:notice, t!(language, "flash.updated"))
         |> redirect(to: router_module(conn).__helpers__.admin_post_path(conn, :index))
-      {:error, errors} ->
+      {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.edit"))
         |> assign(:post, form_data)
-        |> assign(:errors, errors)
+        |> assign(:changeset, changeset)
         |> assign(:id, id)
         |> put_flash(:error, t!(language, "flash.form_error"))
         |> render(:edit)

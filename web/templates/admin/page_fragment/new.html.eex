@@ -1,5 +1,5 @@
     <h1><%= t!(@language, "actions.new") %></h1>
-    <%= PageFragmentForm.get_form(@language, type: :create, action: :create, params: [], values: assigns[:page_fragment], errors: assigns[:errors]) %>
+    <%= PageFragmentForm.get_form(@language, type: :create, action: :create, params: [], changeset: @changeset) %>
     <%= Brando.Villain.HTML.initialize(
           browse_url: "/admin/pages/villain/browse/page",
           upload_url: "/admin/pages/villain/upload/page",

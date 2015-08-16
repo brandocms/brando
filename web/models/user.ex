@@ -50,13 +50,14 @@ defmodule Brando.User do
       model_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, atom, Keyword.t | Options.t) :: t
-  def changeset(model, action, params \\ nil)
+  @spec changeset(t, atom, Keyword.t | Options.t | :empty) :: t
+  def changeset(model, action, params \\ :empty)
   def changeset(model, :create, params) do
     model
     |> cast(params, @required_fields, @optional_fields)
     |> validate_format(:email, ~r/@/)
-    |> validate_unique(:email, on: Brando.repo)
+    |> unique_constraint(:email)
+    |> unique_constraint(:username)
     |> validate_format(:username, ~r/^[a-z0-9_\-\.!~\*'\(\)]+$/)
     |> validate_exclusion(:username, ~w(admin superadmin superuser editor
                                         root create edit delete update ny
@@ -77,10 +78,11 @@ defmodule Brando.User do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
     model
-    |> cast(params, [], @required_fields ++ @optional_fields)
+    |> cast(params, @required_fields, @optional_fields)
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
-    |> validate_unique(:email, on: Brando.repo)
+    |> unique_constraint(:email)
+    |> unique_constraint(:username)
     |> validate_format(:username, ~r/^[a-z0-9_\-\.!~\*'\(\)]+$/)
     |> validate_exclusion(:username, ~w(admin superadmin superuser editor
                                         root create edit delete update ny
@@ -96,14 +98,9 @@ defmodule Brando.User do
   """
   def create(params) do
     cs = changeset(%__MODULE__{}, :create, params)
-    case cs.valid? do
-      true ->
-        cs = put_change(cs, :password, gen_password(cs.changes[:password]))
-        inserted_user = Brando.repo.insert!(cs)
-        {:ok, inserted_user}
-      false ->
-        {:error, cs.errors}
-    end
+    cs = cs.changes[:password] && put_change(cs, :password, gen_password(cs.changes[:password])) || cs
+
+    Brando.repo.insert(cs)
   end
 
   @doc """
@@ -114,15 +111,10 @@ defmodule Brando.User do
   """
   def update(user, params) do
     cs = changeset(user, :update, params)
-    case cs.valid? do
-      true ->
-        if password = get_change(cs, :password) do
-          cs = put_change(cs, :password, gen_password(password))
-        end
-        {:ok, Brando.repo.update!(cs)}
-      false ->
-        {:error, cs.errors}
+    if password = get_change(cs, :password) do
+      cs = put_change(cs, :password, gen_password(password))
     end
+    Brando.repo.update(cs)
   end
 
   @doc """

@@ -116,7 +116,7 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "form_group/4" do
-    assert F.form_group("1234", "name", [], [])
+    assert F.form_group("1234", "name", [], nil)
            == ["<div class=\"form-group required\">", ["1234", "", ""], "</div>"]
     opts = %{required: false, language: "no"}
     fg = F.form_group("1234", "name", opts, ["can't be blank"]) |> Enum.join
@@ -124,16 +124,16 @@ defmodule Brando.Form.FieldsTest do
     assert fg =~ "has-error"
     assert fg =~ "fa-exclamation-circle"
 
-    fg = F.form_group("1234", "name", opts, []) |> Enum.join
+    fg = F.form_group("1234", "name", opts, nil) |> Enum.join
     refute fg =~ "required"
     refute fg =~ "has-error"
 
-    fg = F.form_group("1234", "name", [], []) |> Enum.join
+    fg = F.form_group("1234", "name", [], nil) |> Enum.join
     assert fg =~ "required"
     refute fg =~ "has-error"
 
     opts = %{required: false, language: "no"}
-    fg = F.form_group("1234", "name", opts, []) |> Enum.join
+    fg = F.form_group("1234", "name", opts, nil) |> Enum.join
     refute fg =~ "required"
     refute fg =~ "has-error"
 
@@ -149,7 +149,7 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "textarea/5" do
-    assert F.textarea(:create, "name", [], nil, %{})
+    assert F.textarea(:create, "name", nil, nil, %{})
            == ["<textarea name=\"name\">", "", "</textarea>"]
     assert F.textarea(:update, "name", "blah", nil, %{})
            == ["<textarea name=\"name\">", "blah", "</textarea>"]
@@ -157,11 +157,11 @@ defmodule Brando.Form.FieldsTest do
            == ["<textarea name=\"name\">", "{&quot;test&quot;:&quot;testing&quot;}", "</textarea>"]
     assert F.textarea(:update, "name", "blah", nil, %{default: "default"})
            == ["<textarea name=\"name\">", "blah", "</textarea>"]
-    assert F.textarea(:update, "name", [], nil, %{default: "default"})
+    assert F.textarea(:update, "name", nil, nil, %{default: "default"})
            == ["<textarea name=\"name\">", "", "</textarea>"]
-    assert F.textarea(:create, "name", [], nil, %{default: "default"})
+    assert F.textarea(:create, "name", nil, nil, %{default: "default"})
            == ["<textarea name=\"name\">", "default", "</textarea>"]
-    assert F.textarea(:update, "name", [], nil, %{default: "default", class: "class"})
+    assert F.textarea(:update, "name", nil, nil, %{default: "default", class: "class"})
            == ["<textarea class=\"class\" name=\"name\">", "", "</textarea>"]
   end
 
@@ -177,7 +177,7 @@ defmodule Brando.Form.FieldsTest do
     assert F.get_val("test", nil) == "test"
     assert F.get_val(["test", "ing"], nil) == "test,ing"
     assert F.get_val("test", "default") == "test"
-    assert F.get_val([], "default") == "default"
+    assert F.get_val(nil, "default") == "default"
   end
 
   test "input checkbox" do
@@ -194,7 +194,7 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "render_errors/1" do
-    assert F.render_errors([], []) == ""
+    assert F.render_errors([], []) == []
     assert F.render_errors(["can't be blank", "must be unique"], [language: "no"]) |> Enum.join
            =~ "Feltet er påkrevet."
     assert F.render_errors(["can't be blank", "must be unique"], [language: "no"]) |> Enum.join
@@ -235,9 +235,9 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "option/6" do
-    assert F.option(:create, "choice_val", "choice_text", [], nil, nil)
+    assert F.option(:create, "choice_val", "choice_text", nil, nil, nil)
            == ["<option value=\"choice_val\">", "choice_text", "</option>"]
-    assert F.option(:create, "choice_val", "choice_text", [], "choice_val", nil)
+    assert F.option(:create, "choice_val", "choice_text", nil, "choice_val", nil)
            == ["<option selected=\"selected\" value=\"choice_val\">", "choice_text", "</option>"]
     assert F.option(:create, "choice_val", "choice_text", "choice_wrong", "choice_val", nil)
            == ["<option value=\"choice_val\">", "choice_text", "</option>"]
@@ -250,9 +250,9 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "radio/7" do
-    assert F.radio(:create, "choice_name", "choice_val", "choice_text", [], nil, nil)
+    assert F.radio(:create, "choice_name", "choice_val", "choice_text", nil, nil, nil)
            == ["<div>", [["<label for=\"choice_name\">", "", "</label>"], ["<label for=\"choice_name\">", ["<input name=\"choice_name\" type=\"radio\" value=\"choice_val\">", "choice_text"], "</label>"]], "</div>"]
-    assert F.radio(:create, "choice_name", "choice_val", "choice_text", [], "choice_val", nil)
+    assert F.radio(:create, "choice_name", "choice_val", "choice_text", nil, "choice_val", nil)
            == ["<div>", [["<label for=\"choice_name\">", "", "</label>"], ["<label for=\"choice_name\">", ["<input checked=\"checked\" name=\"choice_name\" type=\"radio\" value=\"choice_val\">", "choice_text"], "</label>"]], "</div>"]
     assert F.radio(:create, "choice_name", "choice_val", "choice_text", "choice_wrong", "choice_val", nil)
            == ["<div>", [["<label for=\"choice_name\">", "", "</label>"], ["<label for=\"choice_name\">", ["<input name=\"choice_name\" type=\"radio\" value=\"choice_val\">", "choice_text"], "</label>"]], "</div>"]
@@ -270,7 +270,7 @@ defmodule Brando.Form.FieldsTest do
              is_selected: &Brando.Form.FieldsTest.UserForm.role_selected?/2,
              label: "Role", language: "en", label_class: "control-label",
              class: "form-control", wrapper_class: "", multiple: true}
-    assert F.render_checks(:create, :checks_test, opts, [], [])
+    assert F.render_checks(:create, :checks_test, opts, nil, [])
            == ["",
             [["<div>",
               [["<label for=\"checks_test\">", "", "</label>"],
@@ -281,7 +281,7 @@ defmodule Brando.Form.FieldsTest do
              ["<div>",
               [["<label for=\"checks_test\">", "", "</label>"],
                ["<label for=\"checks_test\">", ["<input name=\"checks_test[]\" type=\"checkbox\" value=\"4\">", "Superuser"], "</label>"]], "</div>"]]]
-    assert F.render_checks(:create, :checks_test, Map.put(opts, :default, "2"), [], [])
+    assert F.render_checks(:create, :checks_test, Map.put(opts, :default, "2"), nil, [])
            == ["",
             [["<div>",
               [["<label for=\"checks_test\">", "", "</label>"],
@@ -293,7 +293,7 @@ defmodule Brando.Form.FieldsTest do
              ["<div>",
               [["<label for=\"checks_test\">", "", "</label>"],
                ["<label for=\"checks_test\">", ["<input name=\"checks_test[]\" type=\"checkbox\" value=\"4\">", "Superuser"], "</label>"]], "</div>"]]]
-    assert F.render_checks(:update, :checks_test, Map.put(opts, :default, "2"), [], [])
+    assert F.render_checks(:update, :checks_test, Map.put(opts, :default, "2"), nil, [])
            == ["",
             [["<div>",
               [["<label for=\"checks_test\">", "", "</label>"],
