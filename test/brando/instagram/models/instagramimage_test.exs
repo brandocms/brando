@@ -20,8 +20,8 @@ defmodule Brando.Integration.InstagramImageTest do
 
   test "create/1 errors" do
     {_v, params} = Dict.pop @params, "caption"
-    assert {:error, err} = InstagramImage.create(params)
-    assert err == [caption: "can't be blank"]
+    assert {:error, changeset} = InstagramImage.create(params)
+    assert changeset.errors == [caption: "can't be blank"]
   end
 
   test "get/1" do

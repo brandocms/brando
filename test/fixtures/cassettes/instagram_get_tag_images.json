@@ -37,6 +37,66 @@
       "options": {
         "connect_timeout": 5000
       },
+      "url": "https://api.instagram.com/v1/tags/haraball/media/recent?client_id=CLIENT_ID&min_tag_id=970249962242331087"
+    },
+    "response": {
+      "body": "{\"pagination\":{\"next_min_id\":\"974770073844008277\",\"deprecation_warning\":\"next_max_id and min_id are deprecated for this endpoint; use min_tag_id and max_tag_id instead\",\"min_tag_id\":\"974770073844008277\"},\"meta\":{\"code\":200},\"data\":[{\"attribution\":null,\"tags\":[\"bloodsuckers\",\"akersmek\",\"akerselva\",\"oslo\",\"jenkemwarriors\",\"haraball\",\"dawnofhumans\"],\"location\":null,\"comments\":{\"count\":0,\"data\":[]},\"filter\":\"Normal\",\"created_time\":\"1429882830\",\"link\":\"https:\\/\\/instagram.com\\/p\\/13BTM2ylHP\\/\",\"likes\":{\"count\":27,\"data\":[{\"username\":\"exemplarymanners\",\"profile_picture\":\"https:\\/\\/instagramimages-a.akamaihd.net\\/profiles\\/profile_303690506_75sq_1360364435.jpg\",\"id\":\"303690506\",\"full_name\":\"\"},{\"username\":\"es79_\",\"profile_picture\":\"https:\\/\\/instagramimages-a.akamaihd.net\\/profiles\\/profile_544819050_75sq_1399480652.jpg\",\"id\":\"544819050\",\"full_name\":\"Erik S\\u00e6ther\"},{\"username\":\"nordreskogen\",\"profile_picture\":\"https:\\/\\/instagramimages-a.akamaihd.net\\/profiles\\/profile_434543726_75sq_1372170547.jpg\",\"id\":\"434543726\",\"full_name\":\"Vebj\\u00f8rn\"},{\"username\":\"brujabasura\",\"profile_picture\":\"https:\\/\\/igcdn-photos-d-a.akamaihd.net\\/hphotos-ak-xtp1\\/t51.2885-19\\/11192923_1572221073039907_2096622253_a.jpg\",\"id\":\"441244578\",\"full_name\":\"\\ud83d\\udc79gayxdog\"}]},\"images\":{\"low_resolution\":{\"url\":\"https:\\/\\/scontent.cdninstagram.com\\/hphotos-xap1\\/t51.2885-15\\/s306x306\\/e15\\/11190180_464905646995552_1163060820_n.jpg\",\"width\":306,\"height\":306},\"thumbnail\":{\"url\":\"https:\\/\\/scontent.cdninstagram.com\\/hphotos-xap1\\/t51.2885-15\\/s150x150\\/e15\\/11190180_464905646995552_1163060820_n.jpg\",\"width\":150,\"height\":150},\"standard_resolution\":{\"url\":\"https:\\/\\/scontent.cdninstagram.com\\/hphotos-xap1\\/t51.2885-15\\/e15\\/11190180_464905646995552_1163060820_n.jpg\",\"width\":640,\"height\":640}},\"users_in_photo\":[],\"caption\":{\"created_time\":\"1429882830\",\"text\":\"Konsert p\\u00e5 #akersmek i mai! #dawnofhumans #bloodsuckers #haraball #jenkemwarriors #oslo #akerselva\",\"from\":{\"username\":\"haraball_\",\"profile_picture\":\"https:\\/\\/igcdn-photos-e-a.akamaihd.net\\/hphotos-ak-xft1\\/t51.2885-19\\/10665643_652107438236772_1525229153_a.jpg\",\"id\":\"1492879755\",\"full_name\":\"HARABALL\"},\"id\":\"970249963802612652\"},\"type\":\"image\",\"id\":\"970249962242331087_1492879755\",\"user\":{\"username\":\"haraball_\",\"profile_picture\":\"https:\\/\\/igcdn-photos-e-a.akamaihd.net\\/hphotos-ak-xft1\\/t51.2885-19\\/10665643_652107438236772_1525229153_a.jpg\",\"id\":\"1492879755\",\"full_name\":\"HARABALL\"}}]}",
+      "headers": {
+        "X-Ratelimit-Remaining": "4942",
+        "Content-Language": "en",
+        "Expires": "Sat, 01 Jan 2000 00:00:00 GMT",
+        "Vary": "Cookie, Accept-Language, Accept-Encoding",
+        "X-Ratelimit-Limit": "5000",
+        "Pragma": "no-cache",
+        "Cache-Control": "private, no-cache, no-store, must-revalidate",
+        "Date": "Fri, 08 May 2015 10:13:20 GMT",
+        "Content-Type": "application/json; charset=utf-8",
+        "Connection": "keep-alive",
+        "Content-Length": "2456"
+      },
+      "status_code": 200,
+      "type": "ok"
+    }
+  },
+
+  {
+    "request": {
+      "body": "",
+      "headers": [],
+      "method": "get",
+      "options": {
+        "connect_timeout": 5000
+      },
+      "url": "https://api.instagram.com/v1/media/968134024444958851_000000?client_id=CLIENT_ID"
+    },
+    "response": {
+      "body": "{\"meta\":{\"code\":200},\"data\":{\"attribution\":null,\"tags\":[\"bloodsuckers\",\"akersmek\",\"akerselva\",\"oslo\",\"jenkemwarriors\",\"haraball\",\"dawnofhumans\"],\"location\":null,\"comments\":{\"count\":0,\"data\":[]},\"filter\":\"Normal\",\"created_time\":\"1429882830\",\"link\":\"https:\\/\\/instagram.com\\/p\\/13BTM2ylHP\\/\",\"likes\":{\"count\":27,\"data\":[{\"username\":\"exemplarymanners\",\"profile_picture\":\"https:\\/\\/instagramimages-a.akamaihd.net\\/profiles\\/profile_303690506_75sq_1360364435.jpg\",\"id\":\"303690506\",\"full_name\":\"\"},{\"username\":\"es79_\",\"profile_picture\":\"https:\\/\\/instagramimages-a.akamaihd.net\\/profiles\\/profile_544819050_75sq_1399480652.jpg\",\"id\":\"544819050\",\"full_name\":\"Erik S\\u00e6ther\"},{\"username\":\"nordreskogen\",\"profile_picture\":\"https:\\/\\/instagramimages-a.akamaihd.net\\/profiles\\/profile_434543726_75sq_1372170547.jpg\",\"id\":\"434543726\",\"full_name\":\"Vebj\\u00f8rn\"},{\"username\":\"brujabasura\",\"profile_picture\":\"https:\\/\\/igcdn-photos-d-a.akamaihd.net\\/hphotos-ak-xtp1\\/t51.2885-19\\/11192923_1572221073039907_2096622253_a.jpg\",\"id\":\"441244578\",\"full_name\":\"\\ud83d\\udc79gayxdog\"}]},\"images\":{\"low_resolution\":{\"url\":\"https:\\/\\/scontent.cdninstagram.com\\/hphotos-xap1\\/t51.2885-15\\/s306x306\\/e15\\/11190180_464905646995552_1163060820_n.jpg\",\"width\":306,\"height\":306},\"thumbnail\":{\"url\":\"https:\\/\\/scontent.cdninstagram.com\\/hphotos-xap1\\/t51.2885-15\\/s150x150\\/e15\\/11190180_464905646995552_1163060820_n.jpg\",\"width\":150,\"height\":150},\"standard_resolution\":{\"url\":\"https:\\/\\/scontent.cdninstagram.com\\/hphotos-xap1\\/t51.2885-15\\/e15\\/11190180_464905646995552_1163060820_n.jpg\",\"width\":640,\"height\":640}},\"users_in_photo\":[],\"caption\":{\"created_time\":\"1429882830\",\"text\":\"Konsert p\\u00e5 #akersmek i mai! #dawnofhumans #bloodsuckers #haraball #jenkemwarriors #oslo #akerselva\",\"from\":{\"username\":\"haraball_\",\"profile_picture\":\"https:\\/\\/igcdn-photos-e-a.akamaihd.net\\/hphotos-ak-xft1\\/t51.2885-19\\/10665643_652107438236772_1525229153_a.jpg\",\"id\":\"1492879755\",\"full_name\":\"HARABALL\"},\"id\":\"970249963802612652\"},\"type\":\"image\",\"id\":\"970249962242331087_1492879755\",\"user\":{\"username\":\"haraball_\",\"profile_picture\":\"https:\\/\\/igcdn-photos-e-a.akamaihd.net\\/hphotos-ak-xft1\\/t51.2885-19\\/10665643_652107438236772_1525229153_a.jpg\",\"id\":\"1492879755\",\"full_name\":\"HARABALL\"}}}",
+      "headers": {
+        "X-Ratelimit-Remaining": "4942",
+        "Content-Language": "en",
+        "Expires": "Sat, 01 Jan 2000 00:00:00 GMT",
+        "Vary": "Cookie, Accept-Language, Accept-Encoding",
+        "X-Ratelimit-Limit": "5000",
+        "Pragma": "no-cache",
+        "Cache-Control": "private, no-cache, no-store, must-revalidate",
+        "Date": "Fri, 08 May 2015 10:13:20 GMT",
+        "Content-Type": "application/json; charset=utf-8",
+        "Connection": "keep-alive",
+        "Content-Length": "2456"
+      },
+      "status_code": 200,
+      "type": "ok"
+    }
+  },
+
+  {
+    "request": {
+      "body": "",
+      "headers": [],
+      "method": "get",
+      "options": {
+        "connect_timeout": 5000
+      },
       "url": "https://scontent.cdninstagram.com/hphotos-xap1/t51.2885-15/e15/11190180_464905646995552_1163060820_n.jpg"
     },
     "response": {
