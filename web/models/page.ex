@@ -152,22 +152,6 @@ defmodule Brando.Page do
     from m in query, preload: [:creator]
   end
 
-  @doc """
-  Splits records by language. Works on a fetched query.
-  """
-  def split_by_language(pages) do
-    {_, split_pages} = Enum.map_reduce pages, %{}, fn(page, agg) ->
-      insert =
-        if agg[page.language] do
-          [page|agg[page.language]]
-        else
-          [page]
-        end
-      {page, Map.put(agg, page.language, insert)}
-    end
-    split_pages
-  end
-
 
   #
   # Meta
