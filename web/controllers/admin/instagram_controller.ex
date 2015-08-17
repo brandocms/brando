@@ -40,7 +40,7 @@ defmodule Brando.Admin.InstagramController do
 
   locale "no", [
     title: [
-      index: "Index – Instagram",
+      index: "Oversikt – Instagram",
     ]
   ]
 end
