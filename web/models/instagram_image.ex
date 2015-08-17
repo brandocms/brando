@@ -7,7 +7,9 @@ defmodule Brando.InstagramImage do
 
   use Brando.Web, :model
   import Ecto.Query, only: [from: 2]
+  require Logger
   alias Brando.Instagram
+  alias Brando.Exception.UploadError
 
   @cfg Application.get_env(:brando, Brando.Instagram)
 
@@ -39,10 +41,15 @@ defmodule Brando.InstagramImage do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :create, params) do
+    status =
+      case params["image"] do
+        nil -> :download_failed
+        _   -> @cfg[:auto_approve] && :approved || :rejected
+      end
     model
     |> cast(params, @required_fields, @optional_fields)
     |> unique_constraint(:instagram_id)
-    |> put_change(:status, @cfg[:auto_approve] && :approved || :rejected)
+    |> put_change(:status, status)
   end
 
   @doc """
@@ -66,10 +73,10 @@ defmodule Brando.InstagramImage do
   """
   @spec create(%{binary => term} | %{atom => term}) :: {:ok, t} | {:error, Keyword.t}
   def create(params) do
-    model_changeset = %__MODULE__{} |> changeset(:create, params)
-    case model_changeset.valid? do
-      true ->  {:ok, Brando.repo.insert!(model_changeset)}
-      false -> {:error, model_changeset.errors}
+    if image = Brando.repo.get_by(__MODULE__, instagram_id: params["instagram_id"]) do
+      image |> changeset(:update, params) |> Brando.repo.update
+    else
+      %__MODULE__{} |> changeset(:create, params) |> Brando.repo.insert
     end
   end
 
@@ -107,7 +114,11 @@ defmodule Brando.InstagramImage do
     image_field = %Brando.Type.Image{}
     url = Map.get(image, "url_original")
     case HTTPoison.get(url) do
-      {:ok, %HTTPoison.Response{body: body}} ->
+      {:ok, %HTTPoison.Response{body: _, status_code: 404}} ->
+        Logger.error("Instagram: Feil fra Instagram API. Kunne ikke laste ned bilde.\nURL: #{url}")
+        Map.put(image, "image", nil)
+        |> Map.put("status", :download_failed)
+      {:ok, %HTTPoison.Response{body: body, status_code: 200}} ->
         media_path = Brando.config(:media_path)
         instagram_path = Instagram.config(:upload_path)
         path = Path.join([media_path, instagram_path])
@@ -125,6 +136,9 @@ defmodule Brando.InstagramImage do
     end
   end
 
+  defp create_image_sizes(%{"image" => nil} = image_model) do
+    image_model
+  end
   defp create_image_sizes(image_model) do
     sizes_cfg = Brando.Instagram.config(:sizes)
     if sizes_cfg != nil do
@@ -147,7 +161,6 @@ defmodule Brando.InstagramImage do
     else
       image_model
     end
-
   end
 
   @doc """
@@ -167,6 +180,12 @@ defmodule Brando.InstagramImage do
              |> Kernel.+(1)
              |> Integer.to_string
     end
+  end
+
+  def get_failed_downloads do
+    from(m in __MODULE__,
+         where: m.status == 3)
+    |> Brando.repo.all
   end
 
   @doc """

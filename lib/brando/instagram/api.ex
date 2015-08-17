@@ -17,6 +17,7 @@ defmodule Brando.Instagram.API do
   Checks if we want `:user` or `:tags`
   """
   def fetch(filter) do
+    check_for_failed_downloads()
     case Instagram.config(:fetch) do
       {:user, username} ->
         if filter == :blank do
@@ -79,6 +80,20 @@ defmodule Brando.Instagram.API do
     :ok
   end
 
+  defp get_media(media_id) do
+    case get("media/#{media_id}?client_id=#{Instagram.config(:client_id)}") do
+      {:ok, %Response{body: body, status_code: 200}} ->
+        parse_media(body)
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        {:error, "Nettfeil fra HTTPoison: #{inspect(reason)}"}
+    end
+  end
+
+  defp parse_media([data: data, meta: _meta]) do
+    InstagramImage.store_image(data)
+    :timer.sleep(Brando.Instagram.config(:sleep))
+  end
+
   @doc """
   Store each image in `data` when we have tags. Ignore pagination (we
   could go on for years...)
@@ -113,15 +128,21 @@ defmodule Brando.Instagram.API do
   """
   def get_user_id(username) do
     case get "users/search?q=#{username}&client_id=#{Instagram.config(:client_id)}" do
-      {:ok, %Response{body: [{:data, [%{"id" => id}]} | _]}} -> {:ok, id}
-      {:ok, %Response{body: [data: [], meta: %{}]}}          -> {:error, "Fant ikke bruker: #{username}"}
-      {:ok, %Response{body: {:error, error}}}                -> {:error, "API feil fra Instagram: #{inspect(error)}"}
-      {:ok, %Response{body: [meta: meta], status_code: 400}} -> {:error, "API feil 400 fra Instagram: #{inspect(meta["error_message"])}"}
-      {:ok, %Response{body: [{:data, multiple} | _]}}        -> ret = for user <- multiple do
-                                                                  Map.get(user, "username") == username && Map.get(user, "id") || ""
-                                                                end
-                                                                {:ok, Enum.join(ret)}
-      {:error, %HTTPoison.Error{reason: reason}}             -> {:error, "Nettfeil fra HTTPoison: #{inspect(reason)}"}
+      {:ok, %Response{body: [{:data, [%{"id" => id}]} | _]}} ->
+        {:ok, id}
+      {:ok, %Response{body: [data: [], meta: %{}]}} ->
+        {:error, "Fant ikke bruker: #{username}"}
+      {:ok, %Response{body: {:error, error}}} ->
+        {:error, "API feil fra Instagram: #{inspect(error)}"}
+      {:ok, %Response{body: [meta: meta], status_code: 400}} ->
+        {:error, "API feil 400 fra Instagram: #{inspect(meta["error_message"])}"}
+      {:ok, %Response{body: [{:data, multiple} | _]}} ->
+        ret = for user <- multiple do
+          Map.get(user, "username") == username && Map.get(user, "id") || ""
+        end
+        {:ok, Enum.join(ret)}
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        {:error, "Nettfeil fra HTTPoison: #{inspect(reason)}"}
     end
   end
 
@@ -132,6 +153,12 @@ defmodule Brando.Instagram.API do
     case body |> Poison.decode do
       {:ok, result}   -> result |> Enum.map(fn({k, v}) -> {String.to_atom(k), v} end)
       {:error, error} -> {:error, error}
+    end
+  end
+
+  defp check_for_failed_downloads do
+    for failed <- InstagramImage.get_failed_downloads do
+      get_media(failed.instagram_id)
     end
   end
 end

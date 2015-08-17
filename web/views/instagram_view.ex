@@ -9,10 +9,11 @@ defmodule Brando.Admin.InstagramView do
     approved_header = "<h3 class=\"negative\">#{t!(language, "actions.approved")}</h3><div class=\"image-selection-pool approved\">"
     rejected_header = "<h3 class=\"negative\">#{t!(language, "actions.rejected")}</h3><div class=\"image-selection-pool rejected\">"
     deleted_header  = "<h3 class=\"negative\">#{t!(language, "actions.deleted")}</h3><div class=\"image-selection-pool deleted\">"
+    failed_header   = "<h3 class=\"negative\">#{t!(language, "actions.failed")}</h3><div class=\"image-selection-pool failed\">"
     div_close       = "</div>"
     prefix          = media_url()
 
-    {_, {approved, rejected, deleted}} = Enum.map_reduce images, {"", "", ""}, fn(img, {approved, rejected, deleted}) ->
+    {_, {approved, rejected, deleted, failed}} = Enum.map_reduce images, {"", "", "", 0}, fn(img, {approved, rejected, deleted, failed}) ->
       case img.status do
         :approved ->
           approved = approved <> "<img data-id=\"#{img.id}\" data-status=\"#{img.status}\" src=\"#{img(img.image, :thumb, prefix: prefix)}\" />"
@@ -20,10 +21,13 @@ defmodule Brando.Admin.InstagramView do
           rejected = rejected <> "<img data-id=\"#{img.id}\" data-status=\"#{img.status}\" src=\"#{img(img.image, :thumb, prefix: prefix)}\" />"
         :deleted ->
           deleted = deleted <> "<img data-id=\"#{img.id}\" data-status=\"#{img.status}\" src=\"#{img(img.image, :thumb, prefix: prefix)}\" />"
+        :download_failed ->
+          failed = failed + 1
       end
-      {img, {approved, rejected, deleted}}
+      {img, {approved, rejected, deleted, failed}}
     end
-    Enum.join([approved_header, approved, div_close, rejected_header, rejected, div_close, deleted_header, deleted, div_close])
+    failed = "#{failed} #{t!(language, "actions.failed")}"
+    Enum.join([approved_header, approved, div_close, rejected_header, rejected, div_close, deleted_header, deleted, div_close, failed_header, failed, div_close])
     |> Phoenix.HTML.raw
   end
 
@@ -39,6 +43,7 @@ defmodule Brando.Admin.InstagramView do
       approved: "Approved",
       rejected: "Rejected",
       deleted: "Deleted",
+      failed: "Download failed",
 
       mark_as: "Mark as"
     ],
@@ -61,6 +66,7 @@ defmodule Brando.Admin.InstagramView do
       approved: "Godkjent",
       rejected: "Avvist",
       deleted: "Slettet",
+      failed: "Nedlasting feilet",
 
       mark_as: "Merk som"
     ],

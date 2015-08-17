@@ -4,7 +4,7 @@ defmodule Brando.Type.InstagramStatus do
   """
 
   @behaviour Ecto.Type
-  @status_codes [deleted: 0, rejected: 1, approved: 2]
+  @status_codes [deleted: 0, rejected: 1, approved: 2, download_failed: 3]
 
   @doc """
   Returns the internal type representation of our `Role` type for pg
@@ -24,6 +24,7 @@ defmodule Brando.Type.InstagramStatus do
       0 -> {:ok, :deleted}
       1 -> {:ok, :rejected}
       2 -> {:ok, :approved}
+      3 -> {:ok, :download_failed}
     end
   end
 
@@ -47,6 +48,7 @@ defmodule Brando.Type.InstagramStatus do
       0 -> {:ok, :deleted}
       1 -> {:ok, :rejected}
       2 -> {:ok, :approved}
+      3 -> {:ok, :download_failed}
     end
   end
 
