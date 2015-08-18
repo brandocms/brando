@@ -1,7 +1,5 @@
 defmodule Brando do
-  @moduledoc """
-  Brando is a set of helping hands for building Twined applications.
-  """
+  @moduledoc File.read!("README.md")
 
   @doc """
   Gets the configuration for `module` under :brando,
