@@ -63,8 +63,15 @@ defmodule Brando.InstagramImage do
   """
   @spec changeset(t, atom, %{binary => term} | %{atom => term}) :: t
   def changeset(model, :update, params) do
+    status =
+      if model.status == :download_failed && params["image"] do
+        @cfg[:auto_approve] && :approved || :rejected
+      else
+        model.status
+      end
     model
     |> cast(params, [], @required_fields ++ @optional_fields)
+    |> put_change(:status, status)
   end
 
   @doc """
