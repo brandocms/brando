@@ -10,7 +10,7 @@
            children: :children,
            filter: true,
            split_by: :language,
-           check_or_x: [], hide: [:slug, :data, :html, :parent, :children, :meta_description, :meta_keywords, :inserted_at]) %>
+           check_or_x: [], hide: [:slug, :data, :html, :parent, :parent_id, :children, :meta_description, :meta_keywords, :inserted_at]) %>
 
 <% else %>
     <p>Ingen sider</p>
