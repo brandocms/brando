@@ -35,12 +35,21 @@ defmodule Brando.Instagram.Server do
         Brando.SystemChannel.log(:error, "InstagramServer: Fanget :exit -> #{inspect(err)}")
         {:noreply, {timer, filter}}
     end
-
   end
 
   @doc false
   def handle_info({:EXIT, _, :normal}, state) do
     {:noreply, state}
+  end
+
+  @doc false
+  def stop(server) do
+    GenServer.call(server, :stop)
+  end
+
+  @doc false
+  def handle_call(:stop, _from, state) do
+    {:stop, :normal, :ok, state}
   end
 
   @doc false
