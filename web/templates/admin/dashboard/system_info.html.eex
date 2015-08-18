@@ -14,5 +14,6 @@
   <div class="card" id="instagram-status">
     <h4>Instagram // server</h4>
     <div class="status"></div>
+    <a href="<%= Helpers.admin_dashboard_path(@conn, :instagram_start) %>">Start</a>
   </div>
 </div>

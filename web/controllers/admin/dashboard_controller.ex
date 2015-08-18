@@ -22,5 +22,9 @@ defmodule Brando.Admin.DashboardController do
     conn |> render
   end
 
+  def instagram_start(conn, _) do
+    Brando.Instagram.Server.start_link(Brando.Instagram.config(:server_name))
+    conn |> redirect(to: Brando.helpers.admin_dashboard_path(conn, :system_info))
+  end
 end
 
