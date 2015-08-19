@@ -108,7 +108,7 @@ defmodule Brando.Images.Utils do
     if size_cfg["crop"] do
       Mogrify.open(file)
       |> Mogrify.copy
-      |> Mogrify.thumbnail("#{size_cfg["size"]}#{modifier} #{fill}-gravity center -extent #{size_cfg["size"]}")
+      |> Mogrify.resize("#{size_cfg["size"]}#{modifier} #{fill}-gravity center -extent #{size_cfg["size"]}")
       |> Mogrify.save(sized_image)
     else
       Mogrify.open(file)
