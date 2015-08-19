@@ -35,7 +35,7 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "~> 0.16"},
+      {:phoenix, "~> 0.17"},
       {:phoenix_ecto, "~> 1.1"},
       {:phoenix_html, "~> 2.1"},
 
