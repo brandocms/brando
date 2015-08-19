@@ -86,7 +86,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       assert_file "web/templates/admin/minion_face/delete_confirm.html.eex", fn file ->
         assert file =~ "<%= t!(@language, \"actions.delete\") %>"
         assert file =~ "<%= Brando.HTML.Inspect.model_repr(@language, @record) %>"
-        assert file =~ "<%= Brando.HTML.delete_form_button(@language, @record, :admin_minion_face_path) %>"
+        assert file =~ "<%= Brando.HTML.delete_form_button(@language, :admin_minion_face_path, @record) %>"
       end
 
       assert_file "web/templates/admin/minion_face/show.html.eex", fn file ->

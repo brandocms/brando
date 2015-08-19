@@ -34,7 +34,7 @@ defmodule Brando.HTMLTest do
   end
 
   test "delete_form_button/2" do
-    {:safe, ret} = delete_form_button("no", %{__struct__: :user, id: 1}, :admin_user_path)
+    {:safe, ret} = delete_form_button("no", :admin_user_path, %{__struct__: :user, id: 1})
     assert ret =~ "/admin/users/1"
     assert ret =~ "value=\"delete\""
   end

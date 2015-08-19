@@ -12,5 +12,5 @@
     </strong>
   </p>
   <%= Brando.HTML.Inspect.model(@language, @record) %>
-  <%= Brando.HTML.delete_form_button(@language, @record, :admin_post_path) %>
+  <%= Brando.HTML.delete_form_button(@language, :admin_post_path, @record) %>
 </div>

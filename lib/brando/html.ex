@@ -197,10 +197,12 @@ defmodule Brando.HTML do
 
   @doc """
   Renders a delete button wrapped in a POST form.
-  Pass `record` instance of model, and `helper` path.
+  Pass `params` instance of model (if one param), or a list of multiple
+  params, and `helper` path.
   """
-  def delete_form_button(language, record, helper) do
-    action = Brando.Form.apply_action(helper, :delete, record)
+  @spec delete_form_button(String.t, atom, Keyword.t | %{atom => any}) :: String.t
+  def delete_form_button(language, helper, params) do
+    action = Brando.Form.apply_action(helper, :delete, params)
 
     "<form method=\"POST\" action=\"" <> action <> "\">" <>
     "  <input type=\"hidden\" name=\"_method\" value=\"delete\" />" <>
