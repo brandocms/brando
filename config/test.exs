@@ -2,9 +2,10 @@ use Mix.Config
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
-config :brando, Brando.Endpoint,
+config :brando, Brando.Integration.Endpoint,
   http: [port: 4001],
-  server: false
+  server: false,
+  secret_key_base: "verysecret"
 
 config :brando, Brando.Integration.TestRepo,
   url: "ecto://postgres:postgres@localhost/brando_test",
