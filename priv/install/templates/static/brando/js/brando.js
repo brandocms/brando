@@ -590,7 +590,7 @@ Object.defineProperty(exports, '__esModule', {
     value: true
 });
 
-var _Socket = require('../vendor/phoenix');
+var _Socket = require('../../../deps/phoenix/web/static/js/phoenix.js');
 
 'use strict';
 
@@ -684,7 +684,7 @@ var Stats = (function () {
 exports['default'] = Stats;
 module.exports = exports['default'];
 
-},{"../vendor/phoenix":16}],11:[function(require,module,exports){
+},{"../../../deps/phoenix/web/static/js/phoenix.js":16}],11:[function(require,module,exports){
 "use strict";
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } };
@@ -836,7 +836,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _Socket = require("../vendor/phoenix");
+var _Socket = require("../../../deps/phoenix/web/static/js/phoenix.js");
 
 "use strict";
 
@@ -875,7 +875,7 @@ var WS = (function () {
 exports["default"] = WS;
 module.exports = exports["default"];
 
-},{"../vendor/phoenix":16}],16:[function(require,module,exports){
+},{"../../../deps/phoenix/web/static/js/phoenix.js":16}],16:[function(require,module,exports){
 "use strict";
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } };
@@ -972,6 +972,7 @@ Object.defineProperty(exports, "__esModule", {
 // `channel.leave()`
 //
 
+var VSN = "1.0.0";
 var SOCKET_STATES = { connecting: 0, open: 1, closing: 2, closed: 3 };
 var CHANNEL_STATES = {
   closed: "closed",
@@ -1343,7 +1344,7 @@ var Socket = (function () {
   }, {
     key: "endPointURL",
     value: function endPointURL() {
-      var uri = Ajax.appendParams(this.endPoint, this.params);
+      var uri = Ajax.appendParams(Ajax.appendParams(this.endPoint, this.params), { vsn: VSN });
       if (uri.charAt(0) !== "/") {
         return uri;
       }
@@ -1617,10 +1618,7 @@ var LongPoll = (function () {
   }, {
     key: "endpointURL",
     value: function endpointURL() {
-      return Ajax.appendParams(this.pollEndpoint, {
-        token: this.token,
-        format: "json"
-      });
+      return Ajax.appendParams(this.pollEndpoint, { token: this.token });
     }
   }, {
     key: "closeAndRetry",

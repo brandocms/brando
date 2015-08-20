@@ -1,6 +1,6 @@
 "use strict";
 
-import {Socket} from '../vendor/phoenix'
+import {Socket} from '../../../deps/phoenix/web/static/js/phoenix.js'
 
 const MAX_POINTS = 30;
 

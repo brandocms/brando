@@ -1,6 +1,6 @@
 "use strict";
 
-import {Socket} from '../vendor/phoenix'
+import {Socket} from '../../../deps/phoenix/web/static/js/phoenix.js'
 
 class WS {
     static setup() {
