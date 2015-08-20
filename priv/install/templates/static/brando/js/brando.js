@@ -625,7 +625,8 @@ var Stats = (function () {
                 maxSpotColor: false
             };
             var socket = new _Socket.Socket('/admin/ws');
-            socket.connect();
+            var user_token = document.querySelector('meta[name="channel_token"]').getAttribute('content');
+            socket.connect({ token: user_token });
             var chan = socket.channel('stats', {});
             chan.join().receive('ok', function (_ref) {
                 var messages = _ref.messages;
@@ -850,7 +851,8 @@ var WS = (function () {
         value: function setup() {
             var _this = this;
             var socket = new _Socket.Socket("/admin/ws");
-            socket.connect();
+            var user_token = document.querySelector("meta[name=\"channel_token\"]").getAttribute("content");
+            socket.connect({ token: user_token });
             var chan = socket.channel("system:stream", {});
             chan.join().receive("ok", function (_ref) {
                 var messages = _ref.messages;

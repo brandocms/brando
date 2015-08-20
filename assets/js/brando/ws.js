@@ -6,7 +6,8 @@ class WS {
     static setup() {
         var _this = this;
         let socket = new Socket("/admin/ws");
-        socket.connect();
+        let user_token = document.querySelector("meta[name=\"channel_token\"]").getAttribute("content");
+        socket.connect({token: user_token});
         let chan = socket.channel("system:stream", {});
         chan.join().receive("ok", ({messages}) => {
             console.log(">> System channel ready");

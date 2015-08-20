@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="">
     <meta name="author" content="">
+    <%= Phoenix.HTML.Tag.tag :meta, name: "channel_token",
+               content: Phoenix.Token.sign(@conn, "user", current_user(@conn).id) %>
 
     <title><%= app_name %> | <%= assigns[:page_title] || "Administrasjon" %></title>
     <link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/brando.css") %>">
