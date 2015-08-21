@@ -83,6 +83,11 @@ defmodule Brando.Tag do
   def model do
     quote do
       import Brando.Tag.Model, only: [tags: 0]
+      import Brando.Utils, only: [search_model_by_tag: 2]
+
+      def by_tag(tag) do
+        search_model_by_tag(__MODULE__, tag)
+      end
     end
   end
 

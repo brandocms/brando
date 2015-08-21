@@ -2,6 +2,7 @@ defmodule Brando.Utils do
   @moduledoc """
   Assorted utility functions.
   """
+  import Ecto.Query
 
   @doc """
   Converts `string` to an ascii slug. Removes all unicode, spaces,
@@ -166,6 +167,13 @@ defmodule Brando.Utils do
       {record, Map.put(agg, Map.get(record, attr), insert)}
     end
     split_records
+  end
+
+  @doc """
+  Search `model`'s tags field for `tags`
+  """
+  def search_model_by_tag(model, tag) do
+    model |> where([m], ^tag in m.tags)
   end
 
   @doc """
