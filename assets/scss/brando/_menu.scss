@@ -41,10 +41,28 @@
     font-weight: 900;
   }
 }
+@include breakpoint(small only) {
+  header {
+    position: fixed;
+    display: block;
+    width: 100%;
+    z-index: 10;
+    padding: 10px 8px;
+
+    button {
+      background: none;
+      border: 0;
+      float: right;
+    }
+  }
+  #content-wrapper {
+    margin-top: 46px;
+  }
+}
 
 #menu {
   @include breakpoint(small only) {
-    background-color: #f00;
+    display: none;
   }
   border-top: 3px solid #ff0000;
   border-right: 1px solid #cfcfcf;

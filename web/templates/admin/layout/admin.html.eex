@@ -22,7 +22,7 @@
   <body<%= if @conn.private[:brando_section_name] do %> id="<%= @conn.private[:brando_section_name] %>" data-script="<%= @conn.private[:brando_section_name] %>-<%= @conn.private[:phoenix_action] %>"<% end %>>
     <main id="burger" class="show-for-small-only">
       <header>
-        <button>☰</button>
+        <button id="mobile-nav">☰</button>
       </header>
     </main>
 <!-- top menu -->

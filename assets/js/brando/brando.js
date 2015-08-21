@@ -3,7 +3,7 @@
 import Autoslug from "./autoslug.js";
 import Flash from "./flash.js";
 import FilterTable from "./filter_table.js";
-import Slideout from "./slideout.js";
+import Mobile from "./mobile.js";
 import Utils from "./utils.js";
 import Vex from "./vex.js";
 import Images from "./images.js";
@@ -22,7 +22,7 @@ $(() => {
     Autoslug.setup();
     FilterTable.setup();
     Flash.setup();
-    Slideout.setup();
+    Mobile.setup();
     Sequence.setup();
     Toolbar.setup();
     Tags.setup();

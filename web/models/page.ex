@@ -7,7 +7,7 @@ defmodule Brando.Page do
   use Brando.Web, :model
   use Brando.Villain.Model
   import Brando.Utils.Model, only: [put_creator: 2]
-  import Ecto.Query, only: [from: 2]
+  import Ecto.Query
   alias Brando.Type.Status
   alias Brando.User
 
@@ -152,6 +152,15 @@ defmodule Brando.Page do
     from m in query, preload: [:creator]
   end
 
+  @doc """
+  Search pages for `q`
+  """
+  def search(language, q) do
+    __MODULE__
+    |> where([p], p.language == ^language)
+    |> where([p], ilike(p.html, "%#{q}%"))
+    |> Brando.repo.all
+  end
 
   #
   # Meta

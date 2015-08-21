@@ -354,4 +354,10 @@ defmodule Brando.HTML do
     """
     |> Phoenix.HTML.raw
   end
+  @doc """
+  Truncate `text` to `length`
+  """
+  def truncate(text, length) do
+    String.length(text) <= length && text || String.slice(text, 0..length) <> "..."
+  end
 end

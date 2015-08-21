@@ -15,9 +15,9 @@ var _FilterTable = require("./filter_table.js");
 
 var _FilterTable2 = _interopRequireWildcard(_FilterTable);
 
-var _Slideout = require("./slideout.js");
+var _Mobile = require("./mobile.js");
 
-var _Slideout2 = _interopRequireWildcard(_Slideout);
+var _Mobile2 = _interopRequireWildcard(_Mobile);
 
 var _Utils = require("./utils.js");
 
@@ -65,7 +65,7 @@ $(function () {
     _Autoslug2["default"].setup();
     _FilterTable2["default"].setup();
     _Flash2["default"].setup();
-    _Slideout2["default"].setup();
+    _Mobile2["default"].setup();
     _Sequence2["default"].setup();
     _Toolbar2["default"].setup();
     _Tags2["default"].setup();
@@ -88,7 +88,7 @@ $(function () {
     _WS2["default"].setup();
 });
 
-},{"./autoslug.js":2,"./filter_table.js":3,"./flash.js":4,"./images.js":5,"./instagram.js":6,"./pages.js":7,"./sequence.js":8,"./slideout.js":9,"./stats.js":10,"./tags.js":11,"./toolbar.js":12,"./utils.js":13,"./vex.js":14,"./ws.js":15}],2:[function(require,module,exports){
+},{"./autoslug.js":2,"./filter_table.js":3,"./flash.js":4,"./images.js":5,"./instagram.js":6,"./mobile.js":7,"./pages.js":8,"./sequence.js":9,"./stats.js":10,"./tags.js":11,"./toolbar.js":12,"./utils.js":13,"./vex.js":14,"./ws.js":15}],2:[function(require,module,exports){
 'use strict';
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
@@ -439,6 +439,41 @@ exports["default"] = Instagram;
 module.exports = exports["default"];
 
 },{"./utils.js":13}],7:[function(require,module,exports){
+"use strict";
+
+var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } };
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+"use strict";
+
+var Mobile = (function () {
+    function Mobile() {
+        _classCallCheck(this, Mobile);
+    }
+
+    _createClass(Mobile, null, [{
+        key: "setup",
+        value: function setup() {
+            // set up mobile menu
+            console.log("setup mobile");
+            $(document).on("click", "#mobile-nav", function (e) {
+                console.log("toggle!");
+                $("#menu").toggle();
+            });
+        }
+    }]);
+
+    return Mobile;
+})();
+
+exports["default"] = Mobile;
+module.exports = exports["default"];
+
+},{}],8:[function(require,module,exports){
 'use strict';
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
@@ -478,7 +513,7 @@ var Pages = (function () {
 exports['default'] = Pages;
 module.exports = exports['default'];
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 'use strict';
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
@@ -537,46 +572,6 @@ var Sequence = (function () {
 })();
 
 exports['default'] = Sequence;
-module.exports = exports['default'];
-
-},{}],9:[function(require,module,exports){
-'use strict';
-
-var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, '__esModule', {
-    value: true
-});
-'use strict';
-
-var Slideout = (function () {
-    function Slideout() {
-        _classCallCheck(this, Slideout);
-    }
-
-    _createClass(Slideout, null, [{
-        key: 'setup',
-        value: function setup() {
-            // set up mobile slide menu
-            var slideout = new Slideout({
-                panel: document.getElementById('burger'),
-                menu: document.getElementById('menu'),
-                padding: 0,
-                tolerance: 70
-            });
-            document.querySelector('#burger button').addEventListener('click', function (e) {
-                e.preventDefault();
-                slideout.toggle();
-            });
-        }
-    }]);
-
-    return Slideout;
-})();
-
-exports['default'] = Slideout;
 module.exports = exports['default'];
 
 },{}],10:[function(require,module,exports){
