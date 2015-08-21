@@ -354,10 +354,21 @@ defmodule Brando.HTML do
     """
     |> Phoenix.HTML.raw
   end
+
   @doc """
   Truncate `text` to `length`
   """
   def truncate(text, length) do
     String.length(text) <= length && text || String.slice(text, 0..length) <> "..."
+  end
+
+  @doc """
+  Renders a <meta> tag
+  """
+  def meta_tag(name, content) do
+    Phoenix.HTML.Tag.tag(:meta, name: name, content: content)
+  end
+  def meta_tag(attrs) when is_list(attrs) do
+    Phoenix.HTML.Tag.tag(:meta, attrs)
   end
 end

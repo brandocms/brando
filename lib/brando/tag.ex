@@ -24,6 +24,9 @@ defmodule Brando.Tag do
         tags
       end
 
+  You will find a function in your model called `by_tag/1` which returns
+  an Ecto Queryable of all records in your model matching `tag`.
+
   Also remember to add
 
       params = params |> Brando.Tag.split_tags
