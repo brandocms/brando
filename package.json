@@ -4,6 +4,7 @@
   "description": "Brando node deps",
   "main": "index.js",
   "directories": {
+    "doc": "doc",
     "test": "test"
   },
   "dependencies": {
@@ -34,7 +35,7 @@
     "url": "https://github.com/twined/brando.git"
   },
   "author": "",
-  "license": "",
+  "license": ".",
   "bugs": {
     "url": "https://github.com/twined/brando/issues"
   },

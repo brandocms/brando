@@ -58,13 +58,19 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "install/templates/static/brando/css/brando.vendor.css",                    "priv/static/css/brando.vendor.css"},
     {:copy, "install/templates/static/brando/css/brando.vendor-min.css",                "priv/static/css/brando.vendor-min.css"},
 
+    {:copy, "install/templates/static/brando/css/maps/brando-min.css.map",              "priv/static/css/maps/brando-min.css.map"},
+    {:copy, "install/templates/static/brando/css/maps/brando.css.map",                  "priv/static/css/maps/brando.css.map"},
+
     {:copy, "install/templates/static/brando/js/brando-min.js",                         "priv/static/js/brando-min.js"},
-    {:copy, "install/templates/static/brando/js/brando-min.js.map",                     "priv/static/js/brando-min.js.map"},
     {:copy, "install/templates/static/brando/js/brando.auth-min.js",                    "priv/static/js/brando.auth-min.js"},
     {:copy, "install/templates/static/brando/js/brando.auth.js",                        "priv/static/js/brando.auth.js"},
     {:copy, "install/templates/static/brando/js/brando.js",                             "priv/static/js/brando.js"},
     {:copy, "install/templates/static/brando/js/brando.vendor-min.js",                  "priv/static/js/brando.vendor-min.js"},
     {:copy, "install/templates/static/brando/js/brando.vendor.js",                      "priv/static/js/brando.vendor.js"},
+
+    {:copy, "install/templates/static/brando/js/maps/brando-min.js.map",                "priv/static/js/maps/brando-min.js.map"},
+    {:copy, "install/templates/static/brando/js/maps/brando.auth-min.js.map",           "priv/static/js/maps/brando.auth-min.js.map"},
+    {:copy, "install/templates/static/brando/js/maps/brando.vendor-min.js.map",         "priv/static/js/maps/brando.vendor-min.js.map"},
 
     {:copy, "install/templates/static/brando/fonts/fontawesome-webfont.eot",            "priv/static/fonts/fontawesome-webfont.eot"},
     {:copy, "install/templates/static/brando/fonts/fontawesome-webfont.svg",            "priv/static/fonts/fontawesome-webfont.svg"},
