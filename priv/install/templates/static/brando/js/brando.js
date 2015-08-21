@@ -439,16 +439,16 @@ exports["default"] = Instagram;
 module.exports = exports["default"];
 
 },{"./utils.js":13}],7:[function(require,module,exports){
-"use strict";
+'use strict';
 
-var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } };
+var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-Object.defineProperty(exports, "__esModule", {
+Object.defineProperty(exports, '__esModule', {
     value: true
 });
-"use strict";
+'use strict';
 
 var Mobile = (function () {
     function Mobile() {
@@ -456,13 +456,11 @@ var Mobile = (function () {
     }
 
     _createClass(Mobile, null, [{
-        key: "setup",
+        key: 'setup',
         value: function setup() {
             // set up mobile menu
-            console.log("setup mobile");
-            $(document).on("click", "#mobile-nav", function (e) {
-                console.log("toggle!");
-                $("#menu").toggle();
+            $(document).on('click', '#mobile-nav', function (e) {
+                $('#menu').toggle();
             });
         }
     }]);
@@ -470,8 +468,8 @@ var Mobile = (function () {
     return Mobile;
 })();
 
-exports["default"] = Mobile;
-module.exports = exports["default"];
+exports['default'] = Mobile;
+module.exports = exports['default'];
 
 },{}],8:[function(require,module,exports){
 'use strict';

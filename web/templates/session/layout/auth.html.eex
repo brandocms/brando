@@ -8,13 +8,9 @@
     <meta name="author" content="">
 
     <title><%= app_name %> | autorisering</title>
-    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.vendor.css") %>">
-    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.css") %>">
-    <%= if Mix.env(:dev) do %>
-    <script src="<%= Brando.helpers.static_path(@conn, "/js/brando.auth.js") %>" type="text/javascript" charset="utf-8"></script>
-    <% else %>
+    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.vendor-min.css") %>">
+    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando-min.css") %>">
     <script src="<%= Brando.helpers.static_path(@conn, "/js/brando.auth-min.js") %>" type="text/javascript" charset="utf-8"></script>
-    <% end %>
   </head>
 
   <body class="auth">
