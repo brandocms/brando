@@ -55,7 +55,7 @@ defmodule Brando.Mixfile do
       # Test dependencies
       {:excoveralls, "~> 0.3", only: :test},
       {:blacksmith, "~> 0.1.2", only: :test},
-      {:exvcr, "~> 0.4.0", only: :test},
+      {:exvcr, "~> 0.5.0", only: :test},
 
       # Documentation dependencies
       {:ex_doc, "~> 0.6", only: :docs},
