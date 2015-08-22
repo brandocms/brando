@@ -13,7 +13,7 @@ defmodule Brando.SessionController do
       true ->
         user = user
         |> model.set_last_login
-        |> Map.delete(:password)
+        |> sanitize_user
 
         SystemChannel.log(:logged_in, user)
 
@@ -44,5 +44,9 @@ defmodule Brando.SessionController do
     |> put_layout({Brando.Session.LayoutView, "auth.html"})
     |> delete_session(:current_user)
     |> render(:logout)
+  end
+
+  defp sanitize_user(user) do
+    Map.drop(user, [:password, :__meta__, :__struct__])
   end
 end
