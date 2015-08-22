@@ -106,7 +106,8 @@ defmodule Brando.InstagramImage do
   use to store in the DB.
   """
   def store_image(%{"id" => instagram_id, "caption" => caption, "user" => user,
-                    "images" => %{"thumbnail" => %{"url" => thumb}, "standard_resolution" => %{"url" => org}}} = image) do
+                    "images" => %{"thumbnail" => %{"url" => thumb},
+                    "standard_resolution" => %{"url" => org}}} = image) do
     image
     |> Map.merge(%{"username" => user["username"], "instagram_id" => instagram_id,
                    "caption" => caption && caption["text"] || "",
@@ -181,7 +182,7 @@ defmodule Brando.InstagramImage do
            limit: 1)
       |> Brando.repo.one
     case max do
-      nil -> ""
+      nil -> :blank
       max -> max
              |> String.to_integer
              |> Kernel.+(1)
@@ -206,7 +207,7 @@ defmodule Brando.InstagramImage do
            limit: 1)
       |> Brando.repo.one
     case id do
-      nil -> ""
+      nil -> :blank
       id -> Enum.at(String.split(id, "_"), 0)
     end
   end

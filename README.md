@@ -223,7 +223,7 @@ Migration:
 Add to your app's supervision tree:
 
 ```elixir
-worker(Brando.Instagram, [])
+supervisor(Brando.Instagram, [MyApp.Instagram])
 ```
 
 Add Instagram to your menu modules in `config/brando.exs`:
@@ -247,7 +247,7 @@ end
 
 Config is found in your app's `config/brando.exs`.
 
-  * `server_name`: An atom naming your server - i.e.: `:myapp_instagram`.
+  * `server_name`: A name for your server, e.g. `MyApp.Instagram.Server`
   * `client_id`: Your instagram client id. Find this in the developer section.
   * `interval`: How often we poll for new images
   * `auto_approve`: Set `approved` to `true` on grabbed images

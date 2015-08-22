@@ -16,28 +16,29 @@ defmodule Brando.Instagram.API do
   Main entry from genserver's `:poll`.
   Checks if we want `:user` or `:tags`
   """
-  def fetch(filter) do
+  def fetch(filter, cfg) do
     check_for_failed_downloads()
-    case Instagram.config(:fetch) do
-      {:user, username} ->
-        if filter == :blank do
-          filter = InstagramImage.get_last_created_time
-          images_for_user(username, min_timestamp: filter)
-          {:ok, filter}
-        else
-          images_for_user(username, min_timestamp: filter)
-          {:ok, InstagramImage.get_last_created_time}
-        end
-      {:tags, tags} ->
-        if filter == :blank do
-          filter = InstagramImage.get_min_id
-          images_for_tags(tags, min_id: filter)
-          {:ok, filter}
-        else
-          images_for_tags(tags, min_id: filter)
-          {:ok, InstagramImage.get_min_id}
-        end
-    end
+    do_fetch(filter, cfg)
+  end
+
+  defp do_fetch(:blank, {:user, username}) do
+    images_for_user(username, min_timestamp: 0)
+    {:ok, InstagramImage.get_last_created_time}
+  end
+
+  defp do_fetch(filter, {:user, username}) do
+    images_for_user(username, min_timestamp: filter)
+    {:ok, InstagramImage.get_last_created_time}
+  end
+
+  defp do_fetch(:blank, {:tags, tags}) do
+    images_for_tags(tags, min_id: 0)
+    {:ok, InstagramImage.get_min_id}
+  end
+
+  defp do_fetch(filter, {:tags, tags}) do
+    images_for_tags(tags, min_id: filter)
+    {:ok, InstagramImage.get_min_id}
   end
 
   @doc """

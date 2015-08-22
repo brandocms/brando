@@ -54,7 +54,7 @@ config :brando, Brando.Images,
   }
 
 config :brando, Brando.Instagram,
-  server_name: :myapp_instagram,
+  server_name: <%= application_module %>.Instagram.Server,
   client_id: "",
   auto_approve: true,
   interval: 1_000 * 60 * 60,
