@@ -36,7 +36,9 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "install/templates/migrations/20150520221010_create_pagefragments.exs",    "priv/repo/migrations/20150520221010_create_pagefragments.exs"},
     {:eex,  "install/templates/migrations/20150505122654_create_instagramimages.exs",  "priv/repo/migrations/20150505122654_create_instagramimages.exs"},
 
-    {:text, "install/templates/web/templates/layout/app.html.eex",                        "web/templates/layout/app.html.eex"}
+    {:eex,  "install/templates/repo/seeds.exs",                                        "priv/repo/seeds.exs"},
+
+    {:text, "install/templates/web/templates/layout/app.html.eex",                     "web/templates/layout/app.html.eex"}
   ]
 
   @static [

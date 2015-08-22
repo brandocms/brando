@@ -13,20 +13,6 @@ defmodule <%= application_module %>.Repo.Migrations.CreateImageseries do
       timestamps
     end
     create index(:imageseries, [:slug])
-    execute """
-      INSERT INTO
-        imageseries
-        ("name", "slug", "credits", "sequence", "creator_id", "image_category_id", "inserted_at", "updated_at")
-      VALUES
-        ('post', 'post', NULL, 0, 1, 1, NOW(), NOW());
-    """
-    execute """
-      INSERT INTO
-        imageseries
-        ("name", "slug", "credits", "sequence", "creator_id", "image_category_id", "inserted_at", "updated_at")
-      VALUES
-        ('page', 'page', NULL, 0, 1, 2, NOW(), NOW());
-    """
   end
 
   def down do

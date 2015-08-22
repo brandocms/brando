@@ -60,6 +60,10 @@ Run migrations:
 
     $ mix ecto.migrate
 
+Run seeds to add default image categories/series and admin user:
+
+    $ mix run priv/repo/seeds.exs
+
 Static config in `endpoint.ex`. (Make sure you add `images` to the `only` key):
 
 ```elixir
