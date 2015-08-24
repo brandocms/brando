@@ -83,7 +83,8 @@ defmodule Brando.Form.Fields do
       :save -> Brando.Form.t!(opts[:language], "form.save")
       text -> text
     end
-    input(:submit, form_type, format_name(name, opts[:source]), text, errors, opts)
+    input(:submit, form_type, format_name(name, opts[:source]),
+          text, errors, opts)
     |> form_group(format_name(name, opts[:source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
   end
@@ -125,8 +126,10 @@ defmodule Brando.Form.Fields do
     end
 
     field =
-      input(input_type, form_type, format_name(name, opts[:source]), value, errors, opts)
-      |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
+      input(input_type, form_type, format_name(name, opts[:source]),
+            value, errors, opts)
+      |> concat_fields(label(format_name(name, opts[:source]),
+                       opts[:label_class], get_label(opts)))
       |> form_group(format_name(name, opts[:source]), opts, errors)
 
     confirm
@@ -139,7 +142,8 @@ defmodule Brando.Form.Fields do
   """
   def render_options(form_type, opts, value, _errors) do
     for choice <- get_choices(opts) do
-      option(form_type, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
+      option(form_type, choice[:value], choice[:text],
+             value, opts[:default], opts[:is_selected])
     end
   end
 
@@ -148,7 +152,8 @@ defmodule Brando.Form.Fields do
   """
   def render_radios(form_type, name, opts, value, _errors) do
     for choice <- get_choices(opts) do
-      radio(form_type, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
+      radio(form_type, name, choice[:value], choice[:text],
+            value, opts[:default], opts[:is_selected])
     end
   end
 
@@ -157,7 +162,8 @@ defmodule Brando.Form.Fields do
   """
   def render_checks(form_type, name, opts, value, _errors) do
     checks = for choice <- get_choices(opts) do
-      checkbox(form_type, name, choice[:value], choice[:text], value, opts[:default], opts[:is_selected])
+      checkbox(form_type, name, choice[:value], choice[:text],
+               value, opts[:default], opts[:is_selected])
     end
     empty_value =
       case opts[:empty_value] do
@@ -237,13 +243,20 @@ defmodule Brando.Form.Fields do
   @spec parse_error(String.t | {String.t, integer}, Keyword.t) :: String.t
   def parse_error(error, opts) do
     case error do
-      "can't be blank"     -> t!(opts[:language], "error.required")
-      "must be unique"     -> t!(opts[:language], "error.unique")
-      "has invalid format" -> t!(opts[:language], "error.format")
-      "is invalid"         -> t!(opts[:language], "error.invalid")
-      "is reserved"        -> t!(opts[:language], "error.reserved")
-      {"should be at least %{count} characters", count: length} -> t!(opts[:language], "error.length", length: length)
-      err                  -> is_binary(err) && err || inspect(err)
+      "can't be blank"     ->
+        t!(opts[:language], "error.required")
+      "must be unique"     ->
+        t!(opts[:language], "error.unique")
+      "has invalid format" ->
+        t!(opts[:language], "error.format")
+      "is invalid"         ->
+        t!(opts[:language], "error.invalid")
+      "is reserved"        ->
+        t!(opts[:language], "error.reserved")
+      {"should be at least %{count} characters", count: length} ->
+        t!(opts[:language], "error.length", length: length)
+      err                  ->
+        is_binary(err) && err || inspect(err)
     end
   end
 
@@ -295,7 +308,8 @@ defmodule Brando.Form.Fields do
   Render a file field for :update. If we have `value`, try to render
   an img element with a thumbnail.
   """
-  @spec file(atom, String.t, String.t, Options.t | Keyword.t, Options.t | Keyword.t) :: String.t
+  @spec file(atom, String.t, String.t, Options.t | Keyword.t,
+             Options.t | Keyword.t) :: String.t
   def file(:update, name, value, _errors, opts) do
     opts = Map.delete(opts, :default)
     [get_img_preview(value), file(:create, name, value, _errors, opts)]
@@ -319,7 +333,8 @@ defmodule Brando.Form.Fields do
   @doc """
   Render a textarea field for :update.
   """
-  @spec textarea(atom, String.t, String.t, Options.t | Keyword.t, Options.t | Keyword.t) :: String.t
+  @spec textarea(atom, String.t, String.t, Options.t | Keyword.t,
+                 Options.t | Keyword.t) :: String.t
   def textarea(:update, name, value, _errors, opts) do
     opts = Map.delete(opts, :default)
     textarea(:create, name, value, _errors, opts)
@@ -340,7 +355,8 @@ defmodule Brando.Form.Fields do
     end
     html
   end
-  def textarea(_form_type, name, value, _errors, opts) when is_map(value) or is_list(value) do
+  def textarea(_form_type, name, value, _errors, opts)
+      when is_map(value) or is_list(value) do
     tag_opts =
       Keyword.new
       |> put_name(name)
@@ -526,9 +542,11 @@ defmodule Brando.Form.Fields do
   @doc """
   Renders a checkbox.
 
-  This is for multiple checkboxes. Single checks are handled through `input(:checkbox, ...)`
+  This is for multiple checkboxes. Single checks are
+  handled through `input(:checkbox, ...)`
   """
-  def checkbox(form_type, name, choice_value, choice_text, value, default, is_checked_fun \\ nil)
+  def checkbox(form_type, name, choice_value, choice_text,
+               value, default, is_checked_fun \\ nil)
   def checkbox(:create, name, choice_value, choice_text, nil, default, _) do
     tag_opts =
       Keyword.new
@@ -554,7 +572,7 @@ defmodule Brando.Form.Fields do
     wrap_html
   end
 
-  def checkbox(_, name, choice_value, choice_text, value, _default, nil) do
+  def checkbox(_, name, choice_value, choice_text, value, _, nil) do
     tag_opts =
       Keyword.new
       |> put_name("#{name}[]")
@@ -579,7 +597,7 @@ defmodule Brando.Form.Fields do
     wrap_html
   end
 
-  def checkbox(_, name, choice_value, choice_text, value, _default, is_checked_fun) do
+  def checkbox(_, name, choice_value, choice_text, value, _, is_checked_fun) do
     tag_opts =
       Keyword.new
       |> put_name("#{name}[]")
@@ -632,7 +650,8 @@ defmodule Brando.Form.Fields do
       |> put_class(opts)
       |> put_checked(value, opts)
 
-    {:safe, hidden_tag} = tag(:input, [name: name, type: :hidden, value: "false"])
+    {:safe, hidden_tag} = tag(:input, [name: name, type: :hidden,
+                                       value: "false"])
     {:safe, input_tag}  = tag(:input, tag_opts)
 
     [hidden_tag, input_tag]
@@ -663,7 +682,8 @@ defmodule Brando.Form.Fields do
       nil -> tag_opts
       slug_from ->
          caps = Regex.named_captures(~r/(?<form_name>\w*)\[(\w*)\]/, name)
-         Keyword.put(tag_opts, :data_slug_from, "#{caps["form_name"]}[#{slug_from}]")
+         Keyword.put(tag_opts, :data_slug_from,
+                     "#{caps["form_name"]}[#{slug_from}]")
     end
   end
 
@@ -737,7 +757,7 @@ defmodule Brando.Form.Fields do
   end
 
   defp put_checked(tag_opts, value, opts) do
-    case is_checked?(value, opts) do
+    case checked?(value, opts) do
       false -> tag_opts
       true -> Keyword.put(tag_opts, :checked, "checked")
     end
@@ -827,7 +847,7 @@ defmodule Brando.Form.Fields do
   def get_val(nil, default), do: get_val(default)
   def get_val(value, _), do: get_val(value)
 
-  defp is_checked?(value, opts) do
+  defp checked?(value, opts) do
     case value do
       v when v in ["on", true, "true"]  -> true
       v when v in [false, nil, "false"] -> false

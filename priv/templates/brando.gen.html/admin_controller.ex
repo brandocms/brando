@@ -57,7 +57,8 @@ defmodule <%= admin_module %>Controller do
     changeset = <%= alias %>.changeset(<%= singular %>)
     conn
     |> assign(:page_title, t!(language, "title.edit"))
-    |> render("edit.html", <%= singular %>: <%= singular %>, changeset: changeset)
+    |> render("edit.html", <%= singular %>: <%= singular %>,
+                           changeset: changeset)
   end
 
   def update(conn, %{"id" => id, <%= inspect singular %> => <%= singular %>_params}) do
@@ -74,7 +75,8 @@ defmodule <%= admin_module %>Controller do
     else
       conn
       |> assign(:page_title, t!(language, "title.edit"))
-      |> render("edit.html", <%= singular %>: <%= singular %>, changeset: changeset)
+      |> render("edit.html", <%= singular %>: <%= singular %>,
+                             changeset: changeset)
     end
   end
 

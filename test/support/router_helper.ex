@@ -7,17 +7,23 @@ defmodule RouterHelper do
   """
 
   import Plug.Test
-  import Plug.Conn, only: [fetch_query_params: 1, fetch_session: 1, put_session: 3, put_private: 3]
+  import Plug.Conn, only: [fetch_query_params: 1, fetch_session: 1,
+                           put_session: 3, put_private: 3]
   alias Plug.Session
 
-  @session Plug.Session.init(store: :cookie, key: "_app", encryption_salt: "yadayada", signing_salt: "yadayada")
+  @session Plug.Session.init(store: :cookie, key: "_app",
+                             encryption_salt: "yadayada",
+                             signing_salt: "yadayada")
 
   @current_user %{__struct__: Brando.User,
       avatar: nil, email: "test@test.com", full_name: "Iggy Pop", id: 1,
-      inserted_at: %Ecto.DateTime{day: 7, hour: 4, min: 36, month: 12, sec: 26, year: 2014},
-      last_login: %Ecto.DateTime{day: 9, hour: 5, min: 2, month: 12, sec: 36, year: 2014},
+      inserted_at: %Ecto.DateTime{day: 7, hour: 4, min: 36, month: 12,
+                                  sec: 26, year: 2014},
+      last_login: %Ecto.DateTime{day: 9, hour: 5, min: 2, month: 12,
+                                 sec: 36, year: 2014},
       role: [:superuser, :staff, :admin],
-      updated_at: %Ecto.DateTime{day: 14, hour: 21, min: 36, month: 1, sec: 53, year: 2015},
+      updated_at: %Ecto.DateTime{day: 14, hour: 21, min: 36, month: 1,
+                                 sec: 53, year: 2015},
       username: "iggypop", language: "no"}
 
   defmacro __using__(_) do
@@ -91,7 +97,8 @@ defmodule RouterHelper do
 
     scope "/admin", as: :admin do
       pipe_through :admin
-      user_routes "/users", Brando.Admin.UserController, private: %{model: Brando.User}
+      user_routes "/users", Brando.Admin.UserController,
+                            private: %{model: Brando.User}
       user_routes "/users2", private: %{model: Brando.User}
       user_routes "/users3"
       post_routes "/news"

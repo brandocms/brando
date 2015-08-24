@@ -59,7 +59,8 @@ defmodule Brando.Image do
   If valid, generate a hashed password and insert model to Brando.repo.
   If not valid, return errors from changeset
   """
-  @spec update(%{binary => term} | %{atom => term}, User.t) :: {:ok, t} | {:error, Keyword.t}
+  @spec update(%{binary => term} | %{atom => term}, User.t)
+        :: {:ok, t} | {:error, Keyword.t}
   def create(params, current_user) do
     model_changeset =
       %__MODULE__{}
@@ -77,7 +78,8 @@ defmodule Brando.Image do
   If valid, update model in Brando.repo.
   If not valid, return errors from changeset
   """
-  @spec update(t, %{binary => term} | %{atom => term}) :: {:ok, t} | {:error, Keyword.t}
+  @spec update(t, %{binary => term} | %{atom => term})
+        :: {:ok, t} | {:error, Keyword.t}
   def update(model, params) do
     model_changeset = model |> changeset(:update, params)
     case model_changeset.valid? do
@@ -175,5 +177,4 @@ defmodule Brando.Image do
                image_series: "Image series",
                inserted_at: "Inserted",
                updated_at: "Updated"]]]
-
 end

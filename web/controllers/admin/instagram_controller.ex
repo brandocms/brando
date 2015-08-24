@@ -17,7 +17,8 @@ defmodule Brando.Admin.InstagramController do
     language = Brando.I18n.get_language(conn)
     images =
       InstagramImage
-      |> select([m], %{id: m.id, status: m.status, image: m.image, created_time: m.created_time})
+      |> select([m], %{id: m.id, status: m.status, image: m.image,
+                       created_time: m.created_time})
       |> order_by([m], [desc: m.status, desc: m.created_time])
       |> Brando.repo.all
     conn
@@ -44,4 +45,3 @@ defmodule Brando.Admin.InstagramController do
     ]
   ]
 end
-

@@ -5,14 +5,20 @@ defmodule Brando.ImageSeriesForm do
   """
   use Brando.Form
   alias Brando.ImageCategory
+  alias Brando.ImageSeries
 
   @doc false
   def get_categories(_) do
-    cats = ImageCategory |> ImageCategory.with_image_series_and_images |> Brando.repo.all
-    for cat <- cats, do: [value: cat.id, text: cat.name]
+    categories =
+      ImageCategory
+      |> ImageCategory.with_image_series_and_images
+      |> Brando.repo.all
+
+    for cat <- categories, do: [value: cat.id, text: cat.name]
   end
 
-  form "imageseries", [model: Brando.ImageSeries, helper: :admin_image_series_path, class: "grid-form"] do
+  form "imageseries", [model: ImageSeries, helper: :admin_image_series_path,
+                       class: "grid-form"] do
     fieldset do
       field :image_category_id, :radio, [choices: &__MODULE__.get_categories/1]
     end

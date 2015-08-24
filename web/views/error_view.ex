@@ -14,11 +14,11 @@ defmodule Brando.ErrorView do
     render("not_found.html", assigns)
   end
 
-  def render("500.html", %{conn: %Plug.Conn{path_info: ["admin" | _rest]}} = assigns) do
-    render("admin_500.html", assigns)
+  def render("500.html", %{conn: %Plug.Conn{path_info: ["admin" | _]}} = asn) do
+    render("admin_500.html", asn)
   end
 
-  def render("500.html", %{conn: %Plug.Conn{path_info: [_rest]}} = assigns) do
+  def render("500.html", %{conn: %Plug.Conn{path_info: [_]}} = assigns) do
     render("app_error.html", assigns)
   end
 

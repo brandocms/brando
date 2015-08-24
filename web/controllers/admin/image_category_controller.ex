@@ -4,7 +4,9 @@ defmodule Brando.Admin.ImageCategoryController do
   """
   use Linguist.Vocabulary
   use Brando.Web, :controller
-  use Brando.Sequence, [:controller, [model: Brando.ImageSeries, filter: &Brando.ImageSeries.get_by_category_id/1]]
+  use Brando.Sequence,
+    [:controller, [model: Brando.ImageSeries,
+                   filter: &Brando.ImageSeries.get_by_category_id/1]]
   import Brando.Plug.Section
   import Ecto.Query
 
@@ -30,7 +32,7 @@ defmodule Brando.Admin.ImageCategoryController do
       {:ok, _} ->
         conn
         |> put_flash(:notice, t!(language, "flash.created"))
-        |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
+        |> redirect(to: get_helpers(conn).admin_image_path(conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.new"))
@@ -65,7 +67,7 @@ defmodule Brando.Admin.ImageCategoryController do
       {:ok, _updated_record} ->
         conn
         |> put_flash(:notice, t!(language, "flash.updated"))
-        |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
+        |> redirect(to: get_helpers(conn).admin_image_path(conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.edit"))
@@ -95,7 +97,8 @@ defmodule Brando.Admin.ImageCategoryController do
   end
 
   @doc false
-  def configure_patch(conn, %{"imagecategoryconfig" => form_data, "id" => id}) do
+  def configure_patch(conn, %{"imagecategoryconfig" => form_data,
+                              "id" => id}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:category_model]
     record = Brando.repo.get_by!(model, id: id)
@@ -103,7 +106,7 @@ defmodule Brando.Admin.ImageCategoryController do
       {:ok, _updated_record} ->
         conn
         |> put_flash(:notice, t!(language, "flash.configured"))
-        |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
+        |> redirect(to: get_helpers(conn).admin_image_path(conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.configure"))
@@ -137,7 +140,11 @@ defmodule Brando.Admin.ImageCategoryController do
     model.delete(record)
     conn
     |> put_flash(:notice, t!(language, "flash.deleted"))
-    |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
+    |> redirect(to: get_helpers(conn).admin_image_path(conn, :index))
+  end
+
+  defp get_helpers(conn) do
+    router_module(conn).__helpers__
   end
 
   locale "no", [

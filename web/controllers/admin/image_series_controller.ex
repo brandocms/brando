@@ -4,7 +4,8 @@ defmodule Brando.Admin.ImageSeriesController do
   """
   use Linguist.Vocabulary
   use Brando.Web, :controller
-  use Brando.Sequence, [:controller, [model: Brando.Image, filter: &Brando.Image.for_series_id/1]]
+  use Brando.Sequence,
+    [:controller, [model: Brando.Image, filter: &Brando.Image.for_series_id/1]]
 
   import Brando.Plug.Section
   import Ecto.Query
@@ -15,11 +16,13 @@ defmodule Brando.Admin.ImageSeriesController do
   def new(conn, %{"id" => category_id}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:series_model]
-    changeset = model.changeset(Map.put(model.__struct__, :image_category_id, String.to_integer(category_id)), :create)
+    changeset = model.changeset(Map.put(model.__struct__,
+                                        :image_category_id,
+                                        String.to_integer(category_id)),
+                                        :create)
     conn
     |> assign(:page_title, t!(language, "title.new"))
     |> assign(:changeset, changeset)
-    # |> assign(:image_series, image_series)
     |> render(:new)
   end
 
@@ -31,7 +34,7 @@ defmodule Brando.Admin.ImageSeriesController do
       {:ok, _} ->
         conn
         |> put_flash(:notice, t!(language, "flash.created"))
-        |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
+        |> redirect(to: get_helpers(conn).admin_image_path(conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.new"))
@@ -67,7 +70,7 @@ defmodule Brando.Admin.ImageSeriesController do
       {:ok, _updated_record} ->
         conn
         |> put_flash(:notice, t!(language, "flash.updated"))
-        |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
+        |> redirect(to: get_helpers(conn).admin_image_path(conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.edit"))
@@ -102,9 +105,13 @@ defmodule Brando.Admin.ImageSeriesController do
       series_model
       |> preload([:image_category, :images])
       |> Brando.repo.get_by!(id: id)
+
     opts = Map.put(%{}, "image_series_id", series.id)
-    cfg = series.image_category.cfg || Brando.config(Brando.Images)[:default_config]
-    {:ok, image} = image_model.check_for_uploads(params, Brando.HTML.current_user(conn), cfg, opts)
+    cfg = series.image_category.cfg
+          || Brando.config(Brando.Images)[:default_config]
+    {:ok, image} =
+      image_model.check_for_uploads(params, Brando.HTML.current_user(conn),
+                                    cfg, opts)
     conn
     |> render(:upload_post, image: image)
   end
@@ -132,7 +139,11 @@ defmodule Brando.Admin.ImageSeriesController do
     series_model.delete(record)
     conn
     |> put_flash(:notice, t!(language, "flash.deleted"))
-    |> redirect(to: router_module(conn).__helpers__.admin_image_path(conn, :index))
+    |> redirect(to: get_helpers(conn).admin_image_path(conn, :index))
+  end
+
+  defp get_helpers(conn) do
+    router_module(conn).__helpers__
   end
 
   locale "no", [

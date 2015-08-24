@@ -64,6 +64,10 @@ Run seeds to add default image categories/series and admin user:
 
     $ mix run priv/repo/seeds.exs
 
+Go through `config/brando.exs`.
+
+Make sure you set `:brando, :media_path` to your `media` folder. This must be an absolute path! 
+
 Static config in `endpoint.ex`. (Make sure you add `images` to the `only` key):
 
 ```elixir
@@ -72,7 +76,7 @@ plug Plug.Static,
   only: ~w(css images js fonts favicon.ico robots.txt)
 
 plug Plug.Static,
-  at: "/media", from: {:my_app, "priv/media"}
+  at: "/media", from: Brando.config(:media_path)
 ```
 
 To use Brando's error view, add to your Endpoint's config:

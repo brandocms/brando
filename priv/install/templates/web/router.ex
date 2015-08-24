@@ -26,7 +26,9 @@ defmodule <%= application_module %>.Router do
     plug :accepts, ["html"]
     plug :fetch_session
     plug :fetch_flash
-    plug Lockdown, [layout: {<%= application_module %>.LockdownLayoutView, "lockdown.html"}, view: {<%= application_module %>.LockdownView, "lockdown.html"}]
+    plug Lockdown, [
+      layout: {<%= application_module %>.LockdownLayoutView, "lockdown.html"},
+      view: {<%= application_module %>.LockdownView, "lockdown.html"}]
     plug :put_locale
     plug :protect_from_forgery
     plug :put_secure_browser_headers
@@ -60,9 +62,12 @@ defmodule <%= application_module %>.Router do
 
   scope "/auth" do
     pipe_through :auth
-    get  "/login", Brando.SessionController, :login, private: %{model: Brando.User}
-    post "/login", Brando.SessionController, :login, private: %{model: Brando.User}
-    get  "/logout", Brando.SessionController, :logout, private: %{model: Brando.User}
+    get  "/login", Brando.SessionController, :login,
+                   private: %{model: Brando.User}
+    post "/login", Brando.SessionController, :login,
+                   private: %{model: Brando.User}
+    get  "/logout", Brando.SessionController, :logout,
+                   private: %{model: Brando.User}
   end
 
   scope "/" do

@@ -12,5 +12,4 @@ defmodule Brando.Menu.Instagram do
   menu "en", "Instagram",
     %{anchor: "instagram", icon: "fa fa-instagram icon",
       submenu: [%{name: "Index", url: {:admin_instagram_path, :index}}]}
-
 end

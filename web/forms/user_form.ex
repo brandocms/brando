@@ -5,6 +5,7 @@ defmodule Brando.UserForm do
   """
   use Bitwise, only_operators: true
   use Brando.Form
+  alias Brando.User
 
   @doc false
   def get_language_choices(_) do
@@ -25,7 +26,7 @@ defmodule Brando.UserForm do
     (role_int &&& choice_int) == choice_int
   end
 
-  form "user", [model: Brando.User, helper: :admin_user_path, class: "grid-form"] do
+  form "user", [model: User, helper: :admin_user_path, class: "grid-form"] do
     fieldset {:i18n, "fieldset.user_info"} do
       field :full_name, :text
       field :username, :text

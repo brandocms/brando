@@ -64,7 +64,8 @@ defmodule Brando.Admin.PostController do
       {:ok, _} ->
         conn
         |> put_flash(:notice, t!(language, "flash.created"))
-        |> redirect(to: router_module(conn).__helpers__.admin_post_path(conn, :index))
+        |> redirect(to: router_module(conn).__helpers__.admin_post_path(conn,
+                                                                        :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.new"))
@@ -100,7 +101,8 @@ defmodule Brando.Admin.PostController do
       {:ok, _} ->
         conn
         |> put_flash(:notice, t!(language, "flash.updated"))
-        |> redirect(to: router_module(conn).__helpers__.admin_post_path(conn, :index))
+        |> redirect(to: router_module(conn).__helpers__.admin_post_path(
+                        conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.edit"))
@@ -133,7 +135,8 @@ defmodule Brando.Admin.PostController do
 
     conn
     |> put_flash(:notice, t!(language, "flash.deleted"))
-    |> redirect(to: router_module(conn).__helpers__.admin_post_path(conn, :index))
+    |> redirect(to: router_module(conn).__helpers__.admin_post_path(
+                    conn, :index))
   end
 
   locale "no", [

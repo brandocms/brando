@@ -23,7 +23,8 @@ defmodule Brando.PageForm do
       parents
       |> Enum.reverse
       |> Enum.reduce([no_value], fn (parent, acc) ->
-           acc ++ [[value: Integer.to_string(parent.id), text: "#{parent.slug} (#{parent.language})"]]
+           acc ++ [[value: Integer.to_string(parent.id),
+                    text: "#{parent.slug} (#{parent.language})"]]
          end)
     else
       [no_value]
@@ -31,8 +32,8 @@ defmodule Brando.PageForm do
   end
 
   @doc false
-  @spec is_parent_selected?(String.t, Integer.t) :: boolean
-  def is_parent_selected?(form_value, model_value) do
+  @spec parent_selected?(String.t, Integer.t) :: boolean
+  def parent_selected?(form_value, model_value) do
     cond do
       form_value == ""                             -> false
       String.to_integer(form_value) == model_value -> true
@@ -51,17 +52,17 @@ defmodule Brando.PageForm do
   through `Brando.Type.Status.dump/1`.
   Returns boolean.
   """
-  @spec is_status_selected?(String.t, atom) :: boolean
-  def is_status_selected?(form_value, model_value) do
+  @spec status_selected?(String.t, atom) :: boolean
+  def status_selected?(form_value, model_value) do
     # translate value from atom to corresponding int as string
     {:ok, status_int} = Brando.Type.Status.dump(model_value)
     form_value == to_string(status_int)
   end
 
-  form "page", [model: Brando.Page, helper: :admin_page_path, class: "grid-form"] do
+  form "page", [model: Page, helper: :admin_page_path, class: "grid-form"] do
     field :parent_id, :select, [
       choices: &__MODULE__.get_parent_choices/1,
-      is_selected: &__MODULE__.is_parent_selected?/2]
+      is_selected: &__MODULE__.parent_selected?/2]
     field :key, :text
     fieldset do
       field :language, :select,
@@ -72,7 +73,7 @@ defmodule Brando.PageForm do
       field :status, :radio,
         [default: "2",
         choices: &__MODULE__.get_status_choices/1,
-        is_selected: &__MODULE__.is_status_selected?/2]
+        is_selected: &__MODULE__.status_selected?/2]
     end
     fieldset do
       field :title, :text

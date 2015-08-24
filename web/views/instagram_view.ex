@@ -6,28 +6,43 @@ defmodule Brando.Admin.InstagramView do
   use Brando.Web, :view
 
   def show_grouped_images(language, images) do
-    approved_header = "<h3 class=\"negative\">#{t!(language, "actions.approved")}</h3><div class=\"image-selection-pool approved\">"
-    rejected_header = "<h3 class=\"negative\">#{t!(language, "actions.rejected")}</h3><div class=\"image-selection-pool rejected\">"
-    deleted_header  = "<h3 class=\"negative\">#{t!(language, "actions.deleted")}</h3><div class=\"image-selection-pool deleted\">"
-    failed_header   = "<h3 class=\"negative\">#{t!(language, "actions.failed")}</h3><div class=\"image-selection-pool failed\">"
-    div_close       = "</div>"
-    prefix          = media_url()
+    approved_header =
+      ~s(<h3 class="negative">#{t!(language, "actions.approved")}</h3>) <>
+      ~s(<div class="image-selection-pool approved">)
+    rejected_header =
+      ~s(<h3 class="negative">#{t!(language, "actions.rejected")}</h3>) <>
+      ~s(<div class="image-selection-pool rejected">)
+    deleted_header =
+      ~s(<h3 class="negative">#{t!(language, "actions.deleted")}</h3>) <>
+      ~s(<div class="image-selection-pool deleted">)
+    failed_header =
+      ~s(<h3 class="negative">#{t!(language, "actions.failed")}</h3>) <>
+      ~s(<div class="image-selection-pool failed">)
+    div_close =
+      ~s(</div>)
+    prefix = media_url()
 
-    {_, {approved, rejected, deleted, failed}} = Enum.map_reduce images, {"", "", "", 0}, fn(img, {approved, rejected, deleted, failed}) ->
-      case img.status do
+    {_, {approved, rejected, deleted, failed}} =
+      Enum.map_reduce images, {"", "", "", 0}, fn(i, {a, r, d, f}) ->
+      case i.status do
         :approved ->
-          approved = approved <> "<img data-id=\"#{img.id}\" data-status=\"#{img.status}\" src=\"#{img(img.image, :thumb, prefix: prefix)}\" />"
+          a = a <> ~s(<img data-id="#{i.id}" data-status="#{i.status}" ) <>
+                   ~s(src="#{img(i.image, :thumb, prefix: prefix)}" />)
         :rejected ->
-          rejected = rejected <> "<img data-id=\"#{img.id}\" data-status=\"#{img.status}\" src=\"#{img(img.image, :thumb, prefix: prefix)}\" />"
+          r = r <> ~s(<img data-id="#{i.id}" data-status="#{i.status}" ) <>
+                   ~s(src="#{img(i.image, :thumb, prefix: prefix)}" />)
         :deleted ->
-          deleted = deleted <> "<img data-id=\"#{img.id}\" data-status=\"#{img.status}\" src=\"#{img(img.image, :thumb, prefix: prefix)}\" />"
+          d = d <> ~s(<img data-id="#{i.id}" data-status="#{i.status}" ) <>
+                   ~s(src="#{img(i.image, :thumb, prefix: prefix)}" />)
         :download_failed ->
-          failed = failed + 1
+          f = f + 1
       end
-      {img, {approved, rejected, deleted, failed}}
+      {i, {a, r, d, f}}
     end
-    failed = "#{failed} #{t!(language, "actions.failed")}"
-    Enum.join([approved_header, approved, div_close, rejected_header, rejected, div_close, deleted_header, deleted, div_close, failed_header, failed, div_close])
+    failed = ~s(#{failed} #{t!(language, "actions.failed")})
+    Enum.join([approved_header, approved, div_close, rejected_header, rejected,
+               div_close, deleted_header, deleted, div_close, failed_header,
+               failed, div_close])
     |> Phoenix.HTML.raw
   end
 
@@ -48,8 +63,8 @@ defmodule Brando.Admin.InstagramView do
       mark_as: "Mark as"
     ],
     content: [
-      help1: "Index of instagram images. Only photos in the \"approved\"-" <>
-             "row will be displayed on the webpage.",
+      help1: ~s(Index of instagram images. Only photos in the "approved"-) <>
+             ~s(row will be displayed on the webpage.),
       help2: "Select photos, and click on your wanted action."
     ]
   ]
@@ -71,8 +86,8 @@ defmodule Brando.Admin.InstagramView do
       mark_as: "Merk som"
     ],
     content: [
-      help1: "Oversikt over Instagram-bilder. Kun bilder i \"godkjent\"-" <>
-             "raden vil vises på nettsiden.",
+      help1: ~s(Oversikt over Instagram-bilder. Kun bilder i "godkjent"-) <>
+             ~s(raden vil vises på nettsiden.),
       help2: "For å utføre handlinger, velg bilder og klikk deretter på " <>
              "knappen med ønsket handling."
     ]

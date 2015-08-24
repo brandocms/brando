@@ -86,8 +86,10 @@ defmodule Brando.Page do
 
   def encode_data(params) do
     cond do
-      is_list(params.data)   -> Map.put(params, :data, Poison.encode!(params.data))
-      is_binary(params.data) -> params
+      is_list(params.data)   ->
+        Map.put(params, :data, Poison.encode!(params.data))
+      is_binary(params.data) ->
+        params
     end
   end
 

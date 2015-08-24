@@ -32,7 +32,8 @@ defmodule Brando.PageFragment do
 
   def generate_html(changeset) do
     if get_change(changeset, :data) do
-      changeset |> put_change(:html, Brando.Villain.parse(changeset.changes.data))
+      changeset
+      |> put_change(:html, Brando.Villain.parse(changeset.changes.data))
     else
       changeset
     end
@@ -95,8 +96,10 @@ defmodule Brando.PageFragment do
 
   def encode_data(params) do
     cond do
-      is_list(params.data)   -> Map.put(params, :data, Poison.encode!(params.data))
-      is_binary(params.data) -> params
+      is_list(params.data)   ->
+        Map.put(params, :data, Poison.encode!(params.data))
+      is_binary(params.data) ->
+        params
     end
   end
 

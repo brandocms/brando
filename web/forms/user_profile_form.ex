@@ -1,16 +1,17 @@
 defmodule Brando.UserProfileForm do
   @moduledoc """
-  A form for the current user's profile. See the `Brando.Form` module for more
-  documentation
+  A form for the current user's profile. See the `Brando.Form`
+  module for more documentation
   """
   use Brando.Form
+  alias Brando.User
 
   @doc false
   def get_language_choices(_) do
     Brando.config(:admin_languages)
   end
 
-  form "user", [model: Brando.User, helper: :admin_user_path, class: "grid-form"] do
+  form "user", [model: User, helper: :admin_user_path, class: "grid-form"] do
     fieldset {:i18n, "fieldset.user_info"} do
       field :full_name, :text
       field :username, :text

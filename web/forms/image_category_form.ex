@@ -4,8 +4,11 @@ defmodule Brando.ImageCategoryForm do
   documentation
   """
   use Brando.Form
+  alias Brando.ImageCategory
 
-  form "imagecategory", [model: Brando.ImageCategory, helper: :admin_image_category_path, class: "grid-form"] do
+  form "imagecategory", [model: ImageCategory,
+                         helper: :admin_image_category_path,
+                         class: "grid-form"] do
     field :name, :text
     field :slug, :text, [slug_from: :name]
     submit :save, [class: "btn btn-success"]

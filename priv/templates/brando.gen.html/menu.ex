@@ -14,10 +14,12 @@ defmodule Brando.Menu.<%= scoped %>s do
   menu "no", "<%= String.capitalize(no_plural) %>",
     %{anchor: "<%= plural %>", icon: "fa fa-anchor icon",
       submenu: [%{name: "Oversikt", url: {:<%= admin_path %>_path, :index}},
-                %{name: "Legg til", url: {:<%= admin_path %>_path, :new}, role: :admin}]}
+                %{name: "Legg til", url: {:<%= admin_path %>_path, :new},
+                  role: :admin}]}
 
   menu "en", "<%= scoped %>s",
     %{anchor: "<%= plural %>", icon: "fa fa-anchor icon",
       submenu: [%{name: "Index", url: {:<%= admin_path %>_path, :index}},
-                %{name: "Add", url: {:<%= admin_path %>_path, :new}, role: :admin}]}
+                %{name: "Add", url: {:<%= admin_path %>_path, :new},
+                  role: :admin}]}
 end

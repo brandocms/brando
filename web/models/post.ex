@@ -110,8 +110,10 @@ defmodule Brando.Post do
 
   def encode_data(params) do
     cond do
-      is_list(params.data)   -> Map.put(params, :data, Poison.encode!(params.data))
-      is_binary(params.data) -> params
+      is_list(params.data)   ->
+        Map.put(params, :data, Poison.encode!(params.data))
+      is_binary(params.data) ->
+        params
     end
   end
 
@@ -178,7 +180,7 @@ defmodule Brando.Post do
          plural: "posts",
          repr: &("#{&1.header}"),
          help: [
-           featured: "The post is prioritized, taking precedence over publishing date"
+           featured: "The post is prioritized, taking precedence over pub. date"
          ],
          fields: [
             id: "№",

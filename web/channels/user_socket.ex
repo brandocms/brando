@@ -1,4 +1,7 @@
 defmodule Brando.UserSocket do
+  @moduledoc """
+  Socket specs for System and Stats channels.
+  """
   use Phoenix.Socket
 
   ## Channels
@@ -27,7 +30,8 @@ defmodule Brando.UserSocket do
     end
   end
 
-  # Socket id's are topics that allow you to identify all sockets for a given user:
+  # Socket id's are topics that allow you to identify all sockets
+  # for a given user:
   #
   #     def id(socket), do: "users_socket:#{socket.assigns.user_id}"
   #

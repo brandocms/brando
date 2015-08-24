@@ -6,7 +6,9 @@ defmodule Brando.Form do
 
       use Brando.Form
 
-      form "user", [model: Brando.User, action: :admin_user_path, class: "grid-form"] do
+      form "user", [model: Brando.User,
+                    action: :admin_user_path,
+                    class: "grid-form"] do
         field :full_name, :text, [required: false]
         submit :save, [class: "btn btn-success"]
       end
@@ -76,8 +78,10 @@ defmodule Brando.Form do
   defmacro form(source, opts \\ [], block)
   defmacro form(source, opts, [do: block]) do
     quote do
-      @form_opts %{model: unquote(opts[:model]), source: unquote(source),
-                   helper: unquote(opts[:helper]), class: unquote(opts[:class] || ""),
+      @form_opts %{model: unquote(opts[:model]),
+                   source: unquote(source),
+                   helper: unquote(opts[:helper]),
+                   class: unquote(opts[:class] || ""),
                    multipart: false}
       @form_fields []
 
@@ -103,7 +107,8 @@ defmodule Brando.Form do
 
       ## Example:
 
-          <%= get_form(@language, type: :create, action: :create, params: [], changeset: @changeset) %>
+          <%= get_form(@language, type: :create, action: :create,
+                       params: [], changeset: @changeset) %>
 
       """
       def get_form(language, opts) do
@@ -132,7 +137,8 @@ defmodule Brando.Form do
       * `class`: Optional class to set on form.
       * `multipart`: Automatically set if we have file fields.
   """
-  @spec render_form(iodata, :create | :update, atom, Keyword.t | nil, Keyword.t) :: String.t
+  @spec render_form(iodata, :create | :update, atom, Keyword.t | nil, Keyword.t)
+        :: String.t
   def render_form(fields, form_type, action, params, opts) do
     url = apply_action(opts[:helper], action, params)
 
@@ -169,10 +175,12 @@ defmodule Brando.Form do
     Enum.reduce fields, [], fn ({name, f_opts}, acc) ->
       f_opts =
         f_opts
-        |> Keyword.merge(source: source, language: language, name: name, model: model)
+        |> Keyword.merge(source: source, language: language,
+                         name: name, model: model)
         |> Enum.into(%{})
 
-      [Fields.render_field(form_type, f_opts, get_value(changeset, name), get_errors(changeset, name))|acc]
+      [Fields.render_field(form_type, f_opts, get_value(changeset, name),
+                           get_errors(changeset, name))|acc]
     end
   end
 
@@ -270,7 +278,8 @@ defmodule Brando.Form do
   """
   defmacro field(name, type, opts \\ []) do
     quote do
-      Brando.Form.__field__(__MODULE__, unquote(name), unquote(type), unquote(opts))
+      Brando.Form.__field__(__MODULE__, unquote(name),
+                            unquote(type), unquote(opts))
     end
   end
 
@@ -290,7 +299,8 @@ defmodule Brando.Form do
       raise ArgumentError, message: "field `#{name}` was already set on schema"
     end
 
-    Module.put_attribute(module, :form_fields, [{name, [type: type] ++ opts}|fields])
+    Module.put_attribute(module, :form_fields,
+                         [{name, [type: type] ++ opts}|fields])
 
     if type == :file do
       form_opts =
@@ -337,7 +347,8 @@ defmodule Brando.Form do
   def fieldset_open(mod, legend) do
     fields = Module.get_attribute(mod, :form_fields)
     Module.put_attribute(mod, :in_fieldset, true)
-    Module.put_attribute(mod, :form_fields, [{:"fs", [type: :fieldset] ++ [legend: legend]}|fields])
+    Module.put_attribute(mod, :form_fields,
+      [{:"fs", [type: :fieldset] ++ [legend: legend]}|fields])
   end
 
   @doc false
@@ -353,7 +364,8 @@ defmodule Brando.Form do
   """
   def fieldset_close(mod) do
     fields = Module.get_attribute(mod, :form_fields)
-    Module.put_attribute(mod, :form_fields, [{:"fs", [type: :fieldset_close]}|fields])
+    Module.put_attribute(mod, :form_fields,
+                         [{:"fs", [type: :fieldset_close]}|fields])
     Module.put_attribute(mod, :in_fieldset, nil)
   end
 
@@ -371,9 +383,12 @@ defmodule Brando.Form do
     name = opts[:name] || :submit
     fields = Module.get_attribute(mod, :form_fields)
     clash = Enum.any?(fields, fn {prev, _} -> name == prev end)
-    if clash, do:
-      raise(ArgumentError, message: "submit field `#{name}` was already set on schema")
-    Module.put_attribute(mod, :form_fields, [{name, [type: :submit, text: text] ++ opts}|fields])
+    if clash do
+      raise ArgumentError,
+            message: "submit field `#{name}` was already set on schema"
+    end
+    Module.put_attribute(mod, :form_fields,
+                         [{name, [type: :submit, text: text] ++ opts}|fields])
   end
 
   @doc """
@@ -389,10 +404,13 @@ defmodule Brando.Form do
   end
 
   defp check_type!(type) when type in [:text, :password, :select, :email,
-                                       :checkbox, :file, :radio, :textarea], do: :ok
+                                       :checkbox, :file, :radio, :textarea], do:
+    :ok
 
-  defp check_type!(type), do:
-    raise(ArgumentError, message: "`#{Macro.to_string(type)}` is not a valid field type")
+  defp check_type!(type) do
+    raise ArgumentError,
+          message: "`#{Macro.to_string(type)}` is not a valid field type"
+  end
 
   defp get_method(action)
   defp get_method(:create), do: "post"
@@ -402,12 +420,12 @@ defmodule Brando.Form do
 
   defp get_value(nil, _), do: nil
   defp get_value(%{model: model, action: action, params: params}, name) do
-    if !action do
-      # action is nil, this means we have no params - only a model.
-      fetch_from = model || %{}
-    else
+    if action do
       fetch_from = params || %{}
       name = Atom.to_string(name)
+    else
+      # action is nil, this means we have no params - only a model.
+      fetch_from = model || %{}
     end
     case Map.fetch(fetch_from, name) do
       {:ok, val} -> val

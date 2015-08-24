@@ -55,7 +55,8 @@ defmodule Brando.Admin.LayoutView do
     ],
     message: [
       confirm_delete: "Du er i ferd med å slette dette objektet. " <>
-                      "Vennligst se over og merk at du også sletter avhengige objekter.",
+                      "Vennligst se over og merk at du også sletter " <>
+                      "avhengige objekter.",
       no_restore: "Objektet kan ikke gjenopprettes!"
     ],
     status: [

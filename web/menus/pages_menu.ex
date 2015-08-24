@@ -7,13 +7,15 @@ defmodule Brando.Menu.Pages do
 
   menu "no", "Sider",
     %{anchor: "pages", icon: "fa fa-paper-plane icon",
-      submenu: [%{name: "Oversikt", url: {:admin_page_path, :index}},
-                %{name: "Legg til", url: {:admin_page_path, :new}},
-                %{name: "Fragmenter", url: {:admin_page_fragment_path, :index}}]}
+      submenu: [
+        %{name: "Oversikt", url: {:admin_page_path, :index}},
+        %{name: "Legg til", url: {:admin_page_path, :new}},
+        %{name: "Fragmenter", url: {:admin_page_fragment_path, :index}}]}
 
   menu "en", "Pages",
     %{anchor: "pages", icon: "fa fa-paper-plane icon",
-      submenu: [%{name: "Index", url: {:admin_page_path, :index}},
-                %{name: "Add new", url: {:admin_page_path, :new}},
-                %{name: "Fragments", url: {:admin_page_fragment_path, :index}}]}
+      submenu: [
+        %{name: "Index", url: {:admin_page_path, :index}},
+        %{name: "Add new", url: {:admin_page_path, :new}},
+        %{name: "Fragments", url: {:admin_page_fragment_path, :index}}]}
 end

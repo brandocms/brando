@@ -57,7 +57,8 @@ defmodule Brando.Admin.PageFragmentController do
       {:ok, _} ->
         conn
         |> put_flash(:notice, t!(language, "flash.created"))
-        |> redirect(to: router_module(conn).__helpers__.admin_page_fragment_path(conn, :index))
+        |> redirect(to: get_helpers(conn).admin_page_fragment_path(
+                        conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.new"))
@@ -95,7 +96,8 @@ defmodule Brando.Admin.PageFragmentController do
       {:ok, _updated_page_fragment} ->
         conn
         |> put_flash(:notice, t!(language, "flash.updated"))
-        |> redirect(to: router_module(conn).__helpers__.admin_page_fragment_path(conn, :index))
+        |> redirect(to: get_helpers(conn).admin_page_fragment_path(
+                        conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.edit"))
@@ -130,7 +132,12 @@ defmodule Brando.Admin.PageFragmentController do
     model.delete(record)
     conn
     |> put_flash(:notice, t!(language, "flash.deleted"))
-    |> redirect(to: router_module(conn).__helpers__.admin_page_fragment_path(conn, :index))
+    |> redirect(to: get_helpers(conn).admin_page_fragment_path(
+                    conn, :index))
+  end
+
+  defp get_helpers(conn) do
+    router_module(conn).__helpers__
   end
 
   locale "no", [

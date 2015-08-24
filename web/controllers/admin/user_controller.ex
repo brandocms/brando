@@ -13,8 +13,10 @@ defmodule Brando.Admin.UserController do
 
   plug :put_section, "users"
   plug :scrub_params, "user" when action in [:create, :update]
-  plug :check_for_uploads, {"user", Brando.User} when action in [:create, :profile_update, :update]
-  plug :authorize, :superuser when action in [:new, :create, :delete, :edit, :update]
+  plug :check_for_uploads,
+       {"user", Brando.User} when action in [:create, :profile_update, :update]
+  plug :authorize,
+       :superuser when action in [:new, :create, :delete, :edit, :update]
 
   @doc false
   def index(conn, _params) do
@@ -70,11 +72,15 @@ defmodule Brando.Admin.UserController do
     case model.update(user, form_data) do
       {:ok, updated_user} ->
         if current_user(conn).id == user_id do
-          conn = conn |> put_session(:current_user, Map.drop(updated_user, [:password]))
+          conn =
+            conn
+            |> put_session(:current_user, Map.drop(updated_user, [:password]))
         end
         conn
         |> put_flash(:notice, t!(language, "flash.updated"))
-        |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn, :profile))
+        |> redirect(
+             to: router_module(conn).__helpers__.admin_user_path(conn, :profile)
+           )
       {:error, changeset} ->
         conn
         |> assign(:user, form_data)
@@ -105,7 +111,8 @@ defmodule Brando.Admin.UserController do
       {:ok, _} ->
         conn
         |> put_flash(:notice, t!(language, "flash.created"))
-        |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn, :index))
+        |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn,
+                                                                        :index))
       {:error, changeset} ->
         conn
         |> assign(:changeset, changeset)
@@ -139,12 +146,14 @@ defmodule Brando.Admin.UserController do
     case model.update(user, form_data) do
       {:ok, updated_user} ->
         if Brando.HTML.current_user(conn).id == String.to_integer(user_id) do
-          conn = put_session(conn, :current_user, Map.drop(updated_user, [:password]))
+          conn = put_session(conn, :current_user, Map.drop(updated_user,
+                                                           [:password]))
         end
 
         conn
         |> put_flash(:notice, t!(language, "flash.updated"))
-        |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn, :index))
+        |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn,
+                                                                        :index))
       {:error, changeset} ->
         conn
         |> assign(:changeset, changeset)
@@ -172,9 +181,12 @@ defmodule Brando.Admin.UserController do
     model = conn.private[:model]
     record = Brando.repo.get_by!(model, id: user_id)
     model.delete(record)
+
     conn
-    |> put_flash(:notice, "#{model_name(language, record, :singular)} #{model.__repr__(language, record)} slettet.")
-    |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn, :index))
+    |> put_flash(:notice, "#{model_name(language, record, :singular)} " <>
+                          "#{model.__repr__(language, record)} slettet.")
+    |> redirect(to: router_module(conn).__helpers__.admin_user_path(conn,
+                                                                    :index))
   end
 
   locale "no", [

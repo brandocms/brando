@@ -98,7 +98,9 @@ defmodule Brando.User do
   """
   def create(params) do
     cs = changeset(%__MODULE__{}, :create, params)
-    cs = cs.changes[:password] && put_change(cs, :password, gen_password(cs.changes[:password])) || cs
+    cs = cs.changes[:password]
+         && put_change(cs, :password, gen_password(cs.changes[:password]))
+         || cs
 
     Brando.repo.insert(cs)
   end
@@ -143,7 +145,8 @@ defmodule Brando.User do
   """
   @spec set_last_login(t) :: t
   def set_last_login(user) do
-    {:ok, user} = Utils.Model.update_field(user, [last_login: Ecto.DateTime.local])
+    {:ok, user} =
+      Utils.Model.update_field(user, [last_login: Ecto.DateTime.local])
     user
   end
 

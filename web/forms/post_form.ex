@@ -4,6 +4,7 @@ defmodule Brando.PostForm do
   documentation
   """
   use Brando.Form
+  alias Brando.Post
 
   @doc false
   def get_language_choices(_) do
@@ -21,14 +22,14 @@ defmodule Brando.PostForm do
   through `Brando.Type.Status.dump/1`.
   Returns boolean.
   """
-  @spec is_status_selected?(String.t, atom) :: boolean
-  def is_status_selected?(form_value, model_value) do
+  @spec status_selected?(String.t, atom) :: boolean
+  def status_selected?(form_value, model_value) do
     # translate value from atom to corresponding int as string
     {:ok, status_int} = Brando.Type.Status.dump(model_value)
     form_value == to_string(status_int)
   end
 
-  form "post", [model: Brando.Post, helper: :admin_post_path, class: "grid-form"] do
+  form "post", [model: Post, helper: :admin_post_path, class: "grid-form"] do
     fieldset do
       field :language, :select,
         [default: "no",
@@ -38,7 +39,7 @@ defmodule Brando.PostForm do
       field :status, :radio,
         [default: "2",
         choices: &__MODULE__.get_status_choices/1,
-        is_selected: &__MODULE__.is_status_selected?/2]
+        is_selected: &__MODULE__.status_selected?/2]
     end
     fieldset do
       field :featured, :checkbox, [default: false]

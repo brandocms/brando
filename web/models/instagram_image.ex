@@ -78,12 +78,18 @@ defmodule Brando.InstagramImage do
   Create a changeset for the model by passing `params`.
   If not valid, return errors from changeset
   """
-  @spec create(%{binary => term} | %{atom => term}) :: {:ok, t} | {:error, Keyword.t}
+  @spec create(%{binary => term} | %{atom => term})
+        :: {:ok, t} | {:error, Keyword.t}
   def create(params) do
-    if image = Brando.repo.get_by(__MODULE__, instagram_id: params["instagram_id"]) do
-      image |> changeset(:update, params) |> Brando.repo.update
+    if image = Brando.repo.get_by(__MODULE__,
+                                  instagram_id: params["instagram_id"]) do
+      image
+      |> changeset(:update, params)
+      |> Brando.repo.update
     else
-      %__MODULE__{} |> changeset(:create, params) |> Brando.repo.insert
+      %__MODULE__{}
+      |> changeset(:create, params)
+      |> Brando.repo.insert
     end
   end
 
@@ -92,7 +98,8 @@ defmodule Brando.InstagramImage do
   If valid, update model in Brando.repo.
   If not valid, return errors from changeset
   """
-  @spec update(t, %{binary => term} | %{atom => term}) :: {:ok, t} | {:error, Keyword.t}
+  @spec update(t, %{binary => term} | %{atom => term})
+        :: {:ok, t} | {:error, Keyword.t}
   def update(model, params) do
     model_changeset = model |> changeset(:update, params)
     case model_changeset.valid? do
@@ -109,7 +116,8 @@ defmodule Brando.InstagramImage do
                     "images" => %{"thumbnail" => %{"url" => thumb},
                     "standard_resolution" => %{"url" => org}}} = image) do
     image
-    |> Map.merge(%{"username" => user["username"], "instagram_id" => instagram_id,
+    |> Map.merge(%{"username" => user["username"],
+                   "instagram_id" => instagram_id,
                    "caption" => caption && caption["text"] || "",
                    "url_thumbnail" => thumb, "url_original" => org})
     |> Map.drop(["images", "id"])
@@ -123,7 +131,8 @@ defmodule Brando.InstagramImage do
     url = Map.get(image, "url_original")
     case HTTPoison.get(url) do
       {:ok, %HTTPoison.Response{body: _, status_code: 404}} ->
-        Logger.error("Instagram: Feil fra Instagram API. Kunne ikke laste ned bilde.\nURL: #{url}")
+        Logger.error("Instagram: Feil fra Instagram API. " <>
+                     "Kunne ikke laste ned bilde.\nURL: #{url}")
         Map.put(image, "image", nil)
         |> Map.put("status", :download_failed)
       {:ok, %HTTPoison.Response{body: body, status_code: 200}} ->
@@ -134,10 +143,13 @@ defmodule Brando.InstagramImage do
           :ok ->
             file = Path.join([path, Path.basename(url)])
             File.write!(file, body)
-            image_field = Map.put(image_field, :path, Path.join([instagram_path, Path.basename(url)]))
+            image_field = Map.put(image_field,
+                                  :path, Path.join([instagram_path,
+                                                    Path.basename(url)]))
             Map.put(image, "image", image_field)
           {:error, reason} ->
-            raise UploadError, message: "Kunne ikke lage filbane -> #{inspect(reason)}"
+            raise UploadError,
+                  message: "Kunne ikke lage filbane -> #{inspect(reason)}"
         end
       {:error, err} ->
         {:error, err}
@@ -161,7 +173,8 @@ defmodule Brando.InstagramImage do
         File.mkdir_p(size_dir)
         sized_image = Path.join([size_dir, filename])
         Brando.Images.Utils.create_image_size(full_path, sized_image, size_cfg)
-        sized_path = Path.join([Brando.Instagram.config(:upload_path), to_string(size_name), filename])
+        sized_path = Path.join([Brando.Instagram.config(:upload_path),
+                                to_string(size_name), filename])
         {size_name, sized_path}
       end
       image_field = image_field |> Map.put(:sizes, Enum.into(sizes, %{}))
@@ -214,7 +227,8 @@ defmodule Brando.InstagramImage do
 
   @doc false
   defmacro update_all(queryable, values, opts \\ []) do
-    Ecto.Repo.Queryable.update_all(Brando.repo, Ecto.Adapters.Postgres, queryable, values, opts)
+    Ecto.Repo.Queryable.update_all(Brando.repo, Ecto.Adapters.Postgres,
+                                   queryable, values, opts)
   end
 
   def change_status_for(ids, status)

@@ -38,7 +38,9 @@ defmodule Brando.Images.Utils do
   end
 
   defp get_valid_filename({%{filename: ""}, _cfg}) do
-    raise UploadError, message: "Blankt filnavn gitt under opplasting. Pass på at du har et gyldig filnavn."
+    raise UploadError,
+          message: "Blankt filnavn gitt under opplasting. " <>
+                   "Pass på at du har et gyldig filnavn."
   end
 
   defp get_valid_filename({%{filename: filename} = plug, cfg}) do
@@ -69,6 +71,9 @@ defmodule Brando.Images.Utils do
     if File.exists?(new_file) do
       new_file = Path.join(upload_path, unique_filename(filename))
     end
+    require Logger
+    Logger.debug("--- Brando.Images.Utils.copy_uploaded_file ---\n" <>
+                 "Copying to #{inspect(new_file)}...")
     case File.cp(temp_path, new_file, fn _, _ -> false end) do
       :ok -> {Map.put(plug, :uploaded_file, new_file), cfg}
       {:error, reason} -> raise UploadError, message: "Feil under kopiering -> #{inspect(reason)}"
