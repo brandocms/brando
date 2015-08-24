@@ -13,6 +13,7 @@ defmodule Brando.Admin.PageView do
       new: "New page",
       show: "Show page",
       edit: "Edit page",
+      duplicate: "Duplicate page",
       delete: "Delete page"
     ]
   ]
@@ -23,6 +24,7 @@ defmodule Brando.Admin.PageView do
       new: "Opprett side",
       show: "Vis side",
       edit: "Endre side",
+      duplicate: "Duplisér side",
       delete: "Slett side"
     ]
   ]

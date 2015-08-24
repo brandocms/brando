@@ -84,6 +84,17 @@ defmodule Brando.Page do
     |> Brando.repo.update
   end
 
+  @doc """
+  Duplicates `model`
+  """
+  def duplicate(model) do
+    %__MODULE__{}
+    |> changeset(:create, model |> Map.drop([:__struct__, :__meta__, :id,
+                                             :children, :creator, :parent,
+                                             :updated_at, :inserted_at]))
+    |> Brando.repo.insert
+  end
+
   def encode_data(params) do
     cond do
       is_list(params.data)   ->

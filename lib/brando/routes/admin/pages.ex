@@ -61,15 +61,16 @@ defmodule Brando.Routes.Admin.Pages do
 
       villain_routes path, ctrl
 
-      get    "#{path}",            ctrl, :index,          opts
-      get    "#{path}/new",        ctrl, :new,            opts
-      get    "#{path}/:id",        ctrl, :show,           opts
-      get    "#{path}/:id/edit",   ctrl, :edit,           opts
-      get    "#{path}/:id/delete", ctrl, :delete_confirm, opts
-      post   "#{path}",            ctrl, :create,         opts
-      delete "#{path}/:id",        ctrl, :delete,         opts
-      patch  "#{path}/:id",        ctrl, :update,         opts
-      put    "#{path}/:id",        ctrl, :update,         Keyword.put(opts, :as, nil)
+      get    "#{path}",               ctrl, :index,          opts
+      get    "#{path}/new",           ctrl, :new,            opts
+      get    "#{path}/:id",           ctrl, :show,           opts
+      get    "#{path}/:id/duplicate", ctrl, :duplicate,      opts
+      get    "#{path}/:id/edit",      ctrl, :edit,           opts
+      get    "#{path}/:id/delete",    ctrl, :delete_confirm, opts
+      post   "#{path}",               ctrl, :create,         opts
+      delete "#{path}/:id",           ctrl, :delete,         opts
+      patch  "#{path}/:id",           ctrl, :update,         opts
+      put    "#{path}/:id",           ctrl, :update,         Keyword.put(opts, :as, nil)
     end
   end
 end

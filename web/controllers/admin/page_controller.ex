@@ -75,6 +75,19 @@ defmodule Brando.Admin.PageController do
   end
 
   @doc false
+  def duplicate(conn, %{"id" => id}) do
+    model = conn.private[:model]
+    page =
+      model
+      |> Brando.repo.get_by(id: id)
+    {:ok, duplicated_page} = model.duplicate(page)
+
+    conn
+    |> redirect(to: get_helpers(conn).admin_page_path(conn, :edit,
+                                                      duplicated_page.id))
+  end
+
+  @doc false
   def edit(conn, %{"id" => id}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
