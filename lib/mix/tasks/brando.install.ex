@@ -25,6 +25,7 @@ defmodule Mix.Tasks.Brando.Install do
 
     {:eex,  "install/templates/web/villain/parser.ex",                                    "web/villain/parser.ex"},
     {:eex,  "install/templates/config/brando.exs",                                        "config/brando.exs"},
+    {:eex,  "install/templates/config/prod.exs",                                          "config/prod.exs"},
 
     {:eex,  "install/templates/migrations/20150123230712_create_users.exs",            "priv/repo/migrations/20150123230712_create_users.exs"},
     {:eex,  "install/templates/migrations/20150210211010_create_posts.exs",            "priv/repo/migrations/20150210211010_create_posts.exs"},
