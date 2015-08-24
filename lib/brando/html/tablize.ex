@@ -17,10 +17,14 @@ defmodule Brando.HTML.Tablize do
   ## Example
 
       tablize(@conn, @users, [
-        {t!(@language, "dropdowns.show"), "fa-search", :admin_user_path, :show, :id},
-        {t!(@language, "dropdowns.edit"), "fa-edit", :admin_user_path, :edit, :id},
-        {t!(@language, "dropdowns.delete"), "fa-trash", :admin_user_path, :delete_confirm, :id},
-        {t!(@language, "dropdowns.profiles"), "fa-trash", :admin_user_path, :show_profiles, [:group_id, :id]}
+        {t!(@language, "dropdowns.show"),
+         "fa-search", :admin_user_path, :show, :id},
+        {t!(@language, "dropdowns.edit"),
+         "fa-edit", :admin_user_path, :edit, :id},
+        {t!(@language, "dropdowns.delete"),
+         "fa-trash", :admin_user_path, :delete_confirm, :id},
+        {t!(@language, "dropdowns.profiles"),
+         "fa-trash", :admin_user_path, :show_profiles, [:group_id, :id]}
       ], check_or_x: [:avatar], hide: [:password, :last_login, :inserted_at])
 
   ## Arguments
@@ -28,8 +32,10 @@ defmodule Brando.HTML.Tablize do
     * `conn` - a Plug.Conn struct
     * `records` - List of records to render
     * `dropdowns` - List of dropdowns in format:
-                    {display_name, icon, helper_path, action, identifier or nil, role or nil}
-                    `identifier` is either a field on the record, or a list of fields.
+                    {display_name, icon, helper_path, action,
+                     identifier or nil, role or nil}
+                    `identifier` is either a field on the record,
+                    or a list of fields.
 
   ## Options
 
