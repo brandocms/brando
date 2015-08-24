@@ -98,24 +98,24 @@ defmodule Brando.HTML do
   Shows link if current_user is authorized for it
   """
   def auth_link(conn, link, role, do: {:safe, block}) do
-    do_auth_link("btn-default", conn, link, role, block)
+    do_auth_link({"btn-default", conn, link, role}, block)
   end
   def auth_link_primary(conn, link, role, do: {:safe, block}) do
-    do_auth_link("btn-primary", conn, link, role, block)
+    do_auth_link({"btn-primary", conn, link, role}, block)
   end
   def auth_link_info(conn, link, role, do: {:safe, block}) do
-    do_auth_link("btn-info", conn, link, role, block)
+    do_auth_link({"btn-info", conn, link, role}, block)
   end
   def auth_link_success(conn, link, role, do: {:safe, block}) do
-    do_auth_link("btn-success", conn, link, role, block)
+    do_auth_link({"btn-success", conn, link, role}, block)
   end
   def auth_link_warning(conn, link, role, do: {:safe, block}) do
-    do_auth_link("btn-warning", conn, link, role, block)
+    do_auth_link({"btn-warning", conn, link, role}, block)
   end
   def auth_link_danger(conn, link, role, do: {:safe, block}) do
-    do_auth_link("btn-danger", conn, link, role, block)
+    do_auth_link({"btn-danger", conn, link, role}, block)
   end
-  defp do_auth_link(class, conn, link, role, block) do
+  defp do_auth_link({class, conn, link, role}, block) do
     case can_render?(conn, %{role: role}) do
       true ->
         "<a href=\"" <> link <> "\" class=\"btn #{class}\">" <>
@@ -268,20 +268,16 @@ defmodule Brando.HTML do
   """
   def img(image_field, size, opts \\ [])
   def img(nil, size, opts) do
-    if default = Keyword.get(opts, :default, nil) do
-      size_dir(default, size)
-    else
-      ""
-    end
+    default = Keyword.get(opts, :default, nil)
+    default && size_dir(default, size)
+            || ""
   end
 
   def img(image_field, size, opts) do
     size = is_atom(size) && Atom.to_string(size) || size
-    if prefix = Keyword.get(opts, :prefix, nil) do
-      Path.join([prefix, image_field.sizes[size]])
-    else
-      image_field.sizes[size]
-    end
+    prefix = Keyword.get(opts, :prefix, nil)
+    prefix && Path.join([prefix, image_field.sizes[size]])
+           || image_field.sizes[size]
   end
 
   @doc """
@@ -289,7 +285,14 @@ defmodule Brando.HTML do
   """
   def cookie_law(conn, text, button_text \\ "OK") do
     if Map.get(conn.cookies, "cookielaw_accepted") != "1" do
-      ~s(<div class="cookie-law"><p>#{text}</p><a href="javascript:Cookielaw.createCookielawCookie\(\);" class="dismiss-cookielaw">#{button_text}</a></div>)
+      ~s(
+         <div class="cookie-law">
+           <p>#{text}</p>
+           <a href="javascript:Cookielaw.createCookielawCookie\(\);"
+              class="dismiss-cookielaw">
+             #{button_text}
+           </a>
+         </div>)
       |> Phoenix.HTML.raw
     end
   end
@@ -319,7 +322,7 @@ defmodule Brando.HTML do
   """
   def frontend_admin_menu(conn) do
     if current_user(conn) do
-      """
+      ~s(
       <div class="admin-menu">
         <ul class="nav navbar-nav">
           <li class="dropdown">
@@ -332,8 +335,7 @@ defmodule Brando.HTML do
             </ul>
           </li>
         </ul>
-      </div>
-      """
+      </div>)
       |> Phoenix.HTML.raw
     else
       ""
@@ -344,14 +346,33 @@ defmodule Brando.HTML do
   Render status indicators
   """
   def status_indicators(language) do
-    """
+    ~s(
     <div class="status-indicators pull-left">
-      <span class="m-r-sm"><span class="status-published"><i class="fa fa-circle m-r-sm"> </i> </span> #{Brando.Admin.LayoutView.t!(language, "status.published")}</span>
-      <span class="m-r-sm"><span class="status-pending"><i class="fa fa-circle m-r-sm"> </i> </span> #{Brando.Admin.LayoutView.t!(language, "status.pending")}</span>
-      <span class="m-r-sm"><span class="status-draft"><i class="fa fa-circle m-r-sm"> </i> </span> #{Brando.Admin.LayoutView.t!(language, "status.draft")}</span>
-      <span class="m-r-sm"><span class="status-deleted"><i class="fa fa-circle m-r-sm"> </i> </span> #{Brando.Admin.LayoutView.t!(language, "status.deleted")}</span>
-    </div>
-    """
+      <span class="m-r-sm">
+        <span class="status-published">
+          <i class="fa fa-circle m-r-sm"> </i>
+        </span>
+        #{Brando.Admin.LayoutView.t!(language, "status.published")}
+      </span>
+      <span class="m-r-sm">
+        <span class="status-pending">
+          <i class="fa fa-circle m-r-sm"> </i>
+        </span>
+        #{Brando.Admin.LayoutView.t!(language, "status.pending")}
+      </span>
+      <span class="m-r-sm">
+        <span class="status-draft">
+          <i class="fa fa-circle m-r-sm"> </i>
+        </span>
+        #{Brando.Admin.LayoutView.t!(language, "status.draft")}
+      </span>
+      <span class="m-r-sm">
+        <span class="status-deleted">
+          <i class="fa fa-circle m-r-sm"> </i>
+        </span>
+        #{Brando.Admin.LayoutView.t!(language, "status.deleted")}
+      </span>
+    </div>)
     |> Phoenix.HTML.raw
   end
 
@@ -359,7 +380,8 @@ defmodule Brando.HTML do
   Truncate `text` to `length`
   """
   def truncate(text, length) do
-    String.length(text) <= length && text || String.slice(text, 0..length) <> "..."
+    String.length(text) <= length && text
+    || String.slice(text, 0..length) <> "..."
   end
 
   @doc """

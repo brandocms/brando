@@ -56,7 +56,8 @@ config :brando, media_path: ""
 # Alternatively, you can configure exactly which server to
 # start per endpoint:
 #
-#     config :<%= application_name %>, <%= application_module %>.Endpoint, server: true
+#     config :<%= application_name %>, <%= application_module %>.Endpoint,
+#       server: true
 #
 
 # Finally import the config/prod.secret.exs
