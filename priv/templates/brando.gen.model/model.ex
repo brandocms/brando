@@ -26,7 +26,7 @@ defmodule <%= module %> do
       }
     }
 <% end %>
-  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields)), " ", &elem(&1, 0)) %>)
+  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields)), " ", &elem(&1, 0)) %><%= if assocs do %> <% end %><%= Enum.map_join(assocs, " ", &elem(&1, 1)) %>)
   @optional_fields ~w(<%= Enum.map_join(img_fields, " ", &elem(&1, 1)) %>)
 
   @doc """

@@ -20,7 +20,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       Mix.Tasks.Brando.Gen.Html.run ["MinionFace", "minion_faces", "name", "age:integer", "height:decimal",
                                       "nicks:array:text", "famous:boolean", "born_at:datetime",
                                       "secret:uuid", "photo:image", "data:villain", "first_login:date",
-                                      "alarm:time", "address:references"]
+                                      "alarm:time", "address:references", "creator:references"]
                                       ++ ["--nosingular", "minjongtryne", "--noplural", "minjongtryner"]
 
       assert_file "web/models/minion_face.ex", fn file ->
@@ -32,6 +32,11 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "born_at: \"Born at\""
         assert file =~ "singular: \"minjongtryne\""
         assert file =~ "plural: \"minjongtryner\""
+        assert file =~ "@required_fields ~w(name age height nicks famous " <>
+                       "born_at secret data first_login " <>
+                       "alarm creator_id address_id)"
+        assert file =~ "@optional_fields ~w(photo)"
+
       end
 
       assert_file "test/models/minion_face_test.exs"
