@@ -9,7 +9,7 @@ defmodule Brando.Types.StatusTest do
   end
 
   test "blank?" do
-    assert Status.blank?(:atom) == false
+    refute Status.blank?(:atom)
   end
 
   test "load" do

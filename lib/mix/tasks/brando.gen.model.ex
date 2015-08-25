@@ -49,8 +49,10 @@ defmodule Mix.Tasks.Brando.Gen.Model do
   def run(args) do
     {opts, parsed, _} = OptionParser.parse(args, switches: [])
     [singular, plural | attrs] = validate_args!(parsed)
-    no_singular = opts[:nosingular] || Mix.Shell.IO.prompt("Singular (no): ") |> String.strip
-    no_plural = opts[:noplural] || Mix.Shell.IO.prompt("Plural (no): ") |> String.strip
+    no_singular = opts[:nosingular]
+                  || Mix.Shell.IO.prompt("Singular (no): ") |> String.strip
+    no_plural = opts[:noplural]
+                || Mix.Shell.IO.prompt("Plural (no): ") |> String.strip
 
     attrs      = Mix.Phoenix.attrs(attrs)
     binding    = Mix.Phoenix.inflect(singular)
@@ -94,14 +96,16 @@ defmodule Mix.Tasks.Brando.Gen.Model do
       end)
 
     binding = binding ++
-              [attrs: attrs, img_fields: img_fields, plural: plural, types: types,
-               no_singular: no_singular, no_plural: no_plural,
-               villain_fields: villain_fields, migrations: migrations, model_fields: model_fields,
-               assocs: assocs(assocs), indexes: indexes(plural, assocs),
-               defaults: defs, params: params]
+              [attrs: attrs, img_fields: img_fields, plural: plural,
+               types: types, no_singular: no_singular, no_plural: no_plural,
+               villain_fields: villain_fields, migrations: migrations,
+               model_fields: model_fields, assocs: assocs(assocs),
+               indexes: indexes(plural, assocs), defaults: defs, params: params]
 
-    Mix.Phoenix.copy_from apps(), "priv/templates/brando.gen.model", "", binding, [
-      {:eex, "migration.exs",  "priv/repo/migrations/#{timestamp()}_create_#{migration}.exs"},
+    Mix.Phoenix.copy_from apps(), "priv/templates/brando.gen.model",
+                          "", binding, [
+      {:eex, "migration.exs",  "priv/repo/migrations/" <>
+                               "#{timestamp()}_create_#{migration}.exs"},
       {:eex, "model.ex",       "web/models/#{path}.ex"},
       {:eex, "model_test.exs", "test/models/#{path}_test.exs"},
     ]

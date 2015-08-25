@@ -119,7 +119,7 @@ defmodule Mix.Tasks.Brando.Install do
 
     copy_from "./", binding, @new
 
-    static? = if opts[:static] == true do
+    static? = if opts[:static] do
       true
     else
       Mix.shell.yes?("\nInstall static files?")

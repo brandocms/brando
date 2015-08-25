@@ -11,7 +11,7 @@ defmodule Brando.Types.RoleTest do
   end
 
   test "blank?" do
-    assert Role.blank?([2, 4]) == false
+    refute Role.blank?([2, 4])
   end
 
   test "load" do

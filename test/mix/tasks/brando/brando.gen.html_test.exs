@@ -17,11 +17,12 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
   test "generates html resource" do
     in_tmp "generates html resource", fn ->
-      Mix.Tasks.Brando.Gen.Html.run ["MinionFace", "minion_faces", "name", "age:integer", "height:decimal",
-                                      "nicks:array:text", "famous:boolean", "born_at:datetime",
-                                      "secret:uuid", "photo:image", "data:villain", "first_login:date",
-                                      "alarm:time", "address:references", "creator:references"]
-                                      ++ ["--nosingular", "minjongtryne", "--noplural", "minjongtryner"]
+      Mix.Tasks.Brando.Gen.Html.run [
+        "MinionFace", "minion_faces", "name", "age:integer", "height:decimal",
+        "nicks:array:text", "famous:boolean", "born_at:datetime",
+        "secret:uuid", "photo:image", "data:villain", "first_login:date",
+        "alarm:time", "address:references", "creator:references"]
+        ++ ["--nosingular", "minjongtryne", "--noplural", "minjongtryner"]
 
       assert_file "web/models/minion_face.ex", fn file ->
         assert file =~ "defmodule Brando.MinionFace do"

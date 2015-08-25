@@ -70,6 +70,7 @@ defmodule RouterHelper do
   end
 
   defmodule TestRouter do
+    @moduledoc false
     use Phoenix.Router
     alias Brando.Plug.Authenticate
     import Brando.Routes.Admin.Dashboard
