@@ -35,8 +35,8 @@ config :brando, Brando.Images, [
                       thumb:  %{size: "150x150", quality: 100, crop: true}}},
   optimize: [
     png: [
-      bin: "/usr/local/bin/pngquant",
-      args: "--speed 1 --force --output %{new_filename} -- %{filename}"]
+      bin: "cp",
+      args: "%{filename} %{new_filename}"]
     ]]
 
 config :brando, :router, RouterHelper.TestRouter
