@@ -365,6 +365,8 @@ Build for prod with `brunch build`.
 
 ## Optimizing images
 
+This requires you to have `pngquant` installed.
+
 ```elixir
 config :brando, Brando.Images,
   optimize: [
