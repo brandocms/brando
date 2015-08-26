@@ -1,5 +1,3 @@
-#Code.require_file("router_helper.exs", Path.join([__DIR__, "..", ".."]))
-
 defmodule Brando.Image.ControllerTest do
   use ExUnit.Case
   use Brando.ConnCase
