@@ -3,7 +3,7 @@ defmodule Brando.HTML do
   Helper and convenience functions.
   """
 
-  import Brando.Images.Utils, only: [size_dir: 2]
+  import Brando.Images.Utils, only: [size_dir: 2, optimized_filename: 1]
   import Phoenix.HTML.Tag, only: [content_tag: 2, content_tag: 3]
 
   @doc false
@@ -276,8 +276,11 @@ defmodule Brando.HTML do
   def img(image_field, size, opts) do
     size = is_atom(size) && Atom.to_string(size) || size
     prefix = Keyword.get(opts, :prefix, nil)
-    prefix && Path.join([prefix, image_field.sizes[size]])
-           || image_field.sizes[size]
+    img_url =
+      prefix && Path.join([prefix, image_field.sizes[size]])
+             || image_field.sizes[size]
+    Map.get(image_field, :optimized) && optimized_filename(img_url)
+                                         || img_url
   end
 
   @doc """

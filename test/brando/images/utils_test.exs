@@ -26,7 +26,7 @@ defmodule Brando.Images.UtilsTest do
                "xlarge" => "images/default/xlarge/sample.png"}, title: nil}
 
   test "do_upload/2" do
-    assert do_upload(@upload, @cfg) == {:ok, @image}
+    assert do_upload(@upload, @cfg) == {:ok, Map.put(@image, :optimized, true)}
     refute do_upload(@upload, @cfg) == {:ok, @image}
     {:ok, image} = do_upload(@slug_upload, @cfg)
     assert image.path == "images/default/file-with-spaces.png"

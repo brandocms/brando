@@ -4,6 +4,7 @@ defmodule Brando.Images.Utils do
   """
 
   import Brando.Utils
+  import Brando.Images.Optimize, only: [optimize: 1]
   alias Brando.Exception.UploadError
 
   @doc """
@@ -25,7 +26,6 @@ defmodule Brando.Images.Utils do
   end
   def do_upload(_plug, cfg) when is_list(cfg) do
     raise "do_upload with cfg as list. Fix it!"
-    # do_upload(plug, Enum.into(cfg, %{}))
   end
 
   defp process_upload(upload) do
@@ -35,6 +35,7 @@ defmodule Brando.Images.Utils do
     |> create_upload_path
     |> copy_uploaded_file
     |> create_image_sizes
+    |> optimize
   end
 
   defp get_valid_filename({%{filename: ""}, _cfg}) do
@@ -71,12 +72,11 @@ defmodule Brando.Images.Utils do
     if File.exists?(new_file) do
       new_file = Path.join(upload_path, unique_filename(filename))
     end
-    require Logger
-    Logger.debug("--- Brando.Images.Utils.copy_uploaded_file ---\n" <>
-                 "Copying to #{inspect(new_file)}...")
     case File.cp(temp_path, new_file, fn _, _ -> false end) do
-      :ok -> {Map.put(plug, :uploaded_file, new_file), cfg}
-      {:error, reason} -> raise UploadError, message: "Feil under kopiering -> #{inspect(reason)}"
+      :ok ->
+        {Map.put(plug, :uploaded_file, new_file), cfg}
+      {:error, reason} ->
+        raise UploadError, message: "Feil under kopiering -> #{inspect(reason)}"
     end
   end
 
@@ -183,5 +183,40 @@ defmodule Brando.Images.Utils do
   def size_dir(file, size) when is_atom(size) do
     {path, filename} = split_path(file)
     Path.join([path, Atom.to_string(size), filename])
+  end
+
+  @doc """
+  Returns image type atom.
+  """
+  def image_type(%Brando.Type.Image{path: filename}) do
+    case String.downcase(Path.extname(filename)) do
+      ".jpg" -> :jpeg
+      ".jpeg" -> :jpeg
+      ".png" -> :png
+      ".gif" -> :gif
+    end
+  end
+
+  @doc """
+  Return joined path of `file` and the :media_path config option
+  as set in your app's config.exs.
+  """
+  def media_path() do
+    Brando.config(:media_path)
+  end
+  def media_path(nil) do
+    Brando.config(:media_path)
+  end
+  def media_path(file) do
+    Path.join([Brando.config(:media_path), file])
+  end
+
+  @doc """
+  Add `-optimized` between basename and ext of `file`.
+  """
+  def optimized_filename(file) do
+    {path, filename} = split_path(file)
+    {basename, ext} = split_filename(filename)
+    Path.join([path, "#{basename}-optimized#{ext}"])
   end
 end

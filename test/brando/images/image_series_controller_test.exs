@@ -171,7 +171,7 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> with_user
       |> send_request
     assert conn.status == 200
-    assert html_response(conn, 200) =~ "<img src=\"/media/images/default/thumb/sample.png\" />"
+    assert html_response(conn, 200) =~ "<img src=\"/media/images/default/thumb/sample-optimized.png\" />"
 
     series = Brando.repo.preload(series, :images)
     [img1, img2] = series.images

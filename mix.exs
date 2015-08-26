@@ -46,7 +46,7 @@ defmodule Brando.Mixfile do
       {:mogrify, github: "twined/mogrify"},
       {:poison, "~> 1.3"},
       {:postgrex, ">= 0.0.0"},
-      {:scrivener, "~> 0.11"},
+      {:scrivener, "~> 1.0"},
       {:slugger, "~> 0.0.1"},
 
       # Dev dependencies
@@ -61,8 +61,6 @@ defmodule Brando.Mixfile do
       # Documentation dependencies
       {:ex_doc, "~> 0.6", only: :docs},
       {:inch_ex, "~> 0.3", only: :docs},
-
-      {:ecto, "~> 0.16", override: true}
     ]
   end
 

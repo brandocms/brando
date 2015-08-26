@@ -363,14 +363,18 @@ Add more packages to your bower.json, and brunch will automatically include them
 Build for prod with `brunch build`.
 
 
-## Optimizing images (not implemented yet)
+## Optimizing images
 
 ```elixir
-config :brando, :images, :optimize
-  png: [enabled: true,
-        bin: "/usr/local/bin/pngquant",
-        params: "--speed 1 --force --output \"#{new_filename}\" -- \"#{filename}\""],
-  jpeg: [enabled: true,
-         bin: "/usr/local/bin/jpegoptim",
-         params: "#{filename}"]
+config :brando, Brando.Images,
+  optimize: [
+    png: [bin: "/usr/local/bin/pngquant",
+          args: "--speed 1 --force --output %{new_filename} -- #{filename}"]]
+```
+
+or
+
+```elixir
+config :brando, Brando.Images,
+  optimize: false
 ```

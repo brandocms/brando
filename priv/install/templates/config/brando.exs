@@ -53,7 +53,12 @@ config :brando, Brando.Images,
       "xlarge" => %{"size" => "900", "quality" => 100},
       "thumb" =>  %{"size" => "150x150", "quality" => 100, "crop" => true},
       "micro" =>  %{"size" => "25x25", "quality" => 100, "crop" => true}}
-  }
+  },
+  optimize: [
+    png: [
+      bin: "/usr/local/bin/pngquant",
+      args: "--speed 1 --force --output %{new_filename} -- %{filename}"]]
+
 
 config :brando, Brando.Instagram,
   server_name: <%= application_module %>.Instagram.Server,

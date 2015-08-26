@@ -32,7 +32,12 @@ config :brando, Brando.Images, [
                       large:  %{size: "700", quality: 100},
                       xlarge: %{size: "900", quality: 100},
                       micro:  %{size: "25x25", quality: 100, crop: true},
-                      thumb:  %{size: "150x150", quality: 100, crop: true}}}]
+                      thumb:  %{size: "150x150", quality: 100, crop: true}}},
+  optimize: [
+    png: [
+      bin: "/usr/local/bin/pngquant",
+      args: "--speed 1 --force --output %{new_filename} -- %{filename}"]
+    ]]
 
 config :brando, :router, RouterHelper.TestRouter
 config :brando, :endpoint, Brando.Integration.Endpoint
