@@ -44,6 +44,23 @@ page_category = %Brando.ImageCategory{
     upload_path: "images/pages"}}
 page_category = <%= application_module %>.Repo.insert!(page_category)
 
+ss_category = %Brando.ImageCategory{
+  cfg: %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"],
+    default_size: "medium", random_filename: true, size_limit: 10240000,
+    sizes: %{"cropxlarge" => %{"crop" => true, "quality" => 100,
+        "size" => "1140x600"}, "large" => %{"quality" => 100, "size" => "700"},
+        "medium" => %{"quality" => 100, "size" => "500"},
+        "micro" => %{"crop" => true, "quality" => 100, "size" => "25x25"},
+        "small" => %{"quality" => 100, "size" => "300"},
+        "test" => %{"quality" => 100, "size" => "900"},
+        "thumb" => %{"crop" => true, "quality" => 100, "size" => "150x150"},
+        "xlarge" => %{"quality" => 100, "size" => "2550"}},
+    upload_path: "images/slideshows"},
+  creator_id: user.id,
+  name: "Slideshows", slug: "slideshows"}
+
+<%= application_module %>.Repo.insert!(ss_category)
+
 post_series = %Brando.ImageSeries{
   creator_id: user.id, credits: nil,
   image_category_id: post_category.id,

@@ -83,13 +83,39 @@ defmodule Brando.Villain.Controller do
       end
 
       @doc false
+      def imageseries(conn, %{"series" => series_slug}) do
+        series = Brando.repo.one from is in unquote(series_model),
+                   join: c in assoc(is, :image_category),
+                   join: i in assoc(is, :images),
+                   where: c.slug == "slideshows" and is.slug == ^series_slug,
+                   preload: [image_category: c, images: i]
+
+        sizes = Enum.map(series.image_category.cfg.sizes, &elem(&1, 0))
+        images = Enum.map(series.images, &(&1.image))
+        json conn, %{status: 200, series: series_slug, images: images,
+                     sizes: sizes, media_url: Brando.config(:media_url)}
+      end
+
+      @doc false
+      def imageseries(conn, _) do
+        series = Brando.repo.all from is in unquote(series_model),
+                   join: c in assoc(is, :image_category),
+                   where: c.slug == "slideshows",
+                   preload: [image_category: c]
+        series = Enum.map(series, &(&1.slug))
+
+        json conn, %{status: 200, series: series}
+      end
+
+      @doc false
       def image_info(conn, %{"form" => form, "id" => id, "uid" => uid}) do
         form = URI.decode_query(form)
         image = unquote(image_model)
         |> Brando.repo.get_by(id: id)
         {:ok, image} = unquote(image_model).update_image_meta(image, form["title"], form["credits"])
         json conn, %{status: 200, id: id, uid: uid,
-                     title: image.image.title, credits: image.image.credits}
+                     title: image.image.title, credits: image.image.credits,
+                     link: form["link"]}
       end
     end
   end

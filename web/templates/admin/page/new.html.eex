@@ -1,6 +1,6 @@
     <h1><%= t!(@language, "actions.new") %></h1>
     <%= PageForm.get_form(@language, type: :create, action: :create, params: [], changeset: @changeset) %>
     <%= Brando.Villain.HTML.initialize(
-          browse_url: "/admin/pages/villain/browse/page",
-          upload_url: "/admin/pages/villain/upload/page",
+          base_url:     "/admin/pages/",
+          image_series: "page",
           source:     "textarea[name=\"page[data]\"]") %>

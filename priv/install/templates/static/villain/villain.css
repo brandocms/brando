@@ -305,6 +305,8 @@ html {
       left: 0;
       top: 0;
       position: absolute; }
+  .villain-block-inner .villain-slideshow-block h4 {
+    margin-bottom: 15px; }
   .villain-block-inner .villain-text-block {
     /* make space for the action buttons */
     padding-right: 30px; }
@@ -611,14 +613,5 @@ html {
   border-right: 0.625em solid transparent;
   border-top: 0.625em solid #4d5358;
   margin-left: -0.625em; }
-
-/*
-@import "inputs.scss";
-
-@import "modal.scss";
-@import "tooltip.scss";
-
-@import "errors.scss";
-*/
 
 /*# sourceMappingURL=villain.css.map */

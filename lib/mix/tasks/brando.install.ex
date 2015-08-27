@@ -48,6 +48,9 @@ defmodule Mix.Tasks.Brando.Install do
 
     {:copy, "install/templates/web/static/js/cookie_law.js",                            "web/static/vendor/cookie_law.js"},
 
+    {:copy, "install/templates/web/static/js/app/app.js",                               "web/static/js/app.js"},
+    {:copy, "install/templates/web/static/js/app/flexslider.js",                        "web/static/js/flexslider.js"},
+
     {:copy, "install/templates/web/static/css/app.scss",                                "web/static/css/app.scss"},
     {:copy, "install/templates/web/static/css/includes/_colorbox.scss",                 "web/static/css/includes/_colorbox.scss"},
     {:copy, "install/templates/web/static/css/includes/_cookielaw.scss",                "web/static/css/includes/_cookielaw.scss"},

@@ -34,20 +34,26 @@ defmodule Brando.Villain.HTML do
 
   """
   def initialize(opts) do
-    browse_url   = Keyword.fetch!(opts, :browse_url)
-    upload_url   = Keyword.fetch!(opts, :upload_url)
-    source       = Keyword.fetch!(opts, :source)
-    extra_blocks = Keyword.get(Brando.config(Brando.Villain), :extra_blocks, [])
+    base_url        = Keyword.fetch!(opts, :base_url)
+    image_series    = Keyword.fetch!(opts, :image_series)
+    browse_url      = "#{base_url}villain/browse/#{image_series}"
+    upload_url      = "#{base_url}villain/upload/#{image_series}"
+    imageseries_url = "#{base_url}villain/imageseries"
+    source          = Keyword.fetch!(opts, :source)
+    extra_blocks    = Keyword.get(Brando.config(Brando.Villain),
+                                  :extra_blocks, [])
 
-    extra_blocks = extra_blocks == [] && "// extraBlocks: []" || "extraBlocks: #{inspect(extra_blocks)}"
+    extra_blocks =
+      extra_blocks == [] && "// extraBlocks: []"
+                         || "extraBlocks: #{inspect(extra_blocks)}"
 
     """
     <script type="text/javascript">
        $(document).ready(function() {
          v = new Villain.Editor({
            #{extra_blocks},
-           browseURL: '#{browse_url}',
-           uploadURL: '#{upload_url}',
+           baseURL: '#{base_url}',
+           imageSeries: '#{image_series}',
            textArea: '#{source}'
          });
        });

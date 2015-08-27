@@ -41,12 +41,17 @@ defmodule Brando.Villain.Parser.Default do
   end
 
   @doc """
-  Convert image to html, with caption and credits
+  Convert image to html, with caption and credits and optional link
   """
-  def image(%{"url" => url, "title" => title, "credits" => credits}) do
+  def image(%{"url" => url, "title" => title, "credits" => credits} = data) do
+    {link_open, link_close} = if Map.get(data, "link", "") != "" do
+      {~s(<a href="#{data["link"]}" title="#{title}">), ~s(</a>)}
+    else
+      {"", ""}
+    end
     """
     <div class="img-wrapper">
-      <img src="#{url}" alt="#{title}/#{credits}" class="img-responsive" />
+      #{link_open}<img src="#{url}" alt="#{title}/#{credits}" class="img-responsive" />#{link_close}
       <div class="image-info-wrapper">
         <div class="image-title">
           #{title}

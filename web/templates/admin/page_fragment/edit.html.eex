@@ -1,6 +1,6 @@
     <h1><%= t!(@language, "actions.edit") %></h1>
     <%= PageFragmentForm.get_form(@language, type: :update, action: :update, params: to_string(@id), changeset: @changeset) %>
     <%= Brando.Villain.HTML.initialize(
-          browse_url: "/admin/pages/villain/browse/page",
-          upload_url: "/admin/pages/villain/upload/page",
-          source:     "textarea[name=\"page_fragment[data]\"]") %>
+          base_url:     "/admin/pages/",
+          image_series: "page",
+          source:       "textarea[name=\"page_fragment[data]\"]") %>
