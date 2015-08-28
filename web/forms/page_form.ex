@@ -79,6 +79,10 @@ defmodule Brando.PageForm do
       field :title, :text
       field :slug, :text, [slug_from: :title]
     end
+    fieldset do
+      field :meta_description, :text
+      field :meta_keywords, :text
+    end
     field :data, :textarea, [required: false]
     submit :save, [class: "btn btn-success"]
   end

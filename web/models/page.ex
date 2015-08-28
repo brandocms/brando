@@ -12,7 +12,7 @@ defmodule Brando.Page do
   alias Brando.User
 
   @required_fields ~w(key language title slug data status creator_id)
-  @optional_fields ~w(parent_id)
+  @optional_fields ~w(parent_id meta_description meta_keywords)
 
   schema "pages" do
     field :key, :string
