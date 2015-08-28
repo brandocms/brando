@@ -84,11 +84,14 @@ defmodule Brando.Villain.Controller do
 
       @doc false
       def imageseries(conn, %{"series" => series_slug}) do
-        series = Brando.repo.one from is in unquote(series_model),
+        series =
+          (from is in unquote(series_model),
                    join: c in assoc(is, :image_category),
                    join: i in assoc(is, :images),
                    where: c.slug == "slideshows" and is.slug == ^series_slug,
-                   preload: [image_category: c, images: i]
+                   order_by: i.sequence,
+                   preload: [image_category: c, images: i])
+          |> Brando.repo.one
 
         sizes = Enum.map(series.image_category.cfg.sizes, &elem(&1, 0))
         images = Enum.map(series.images, &(&1.image))
@@ -98,10 +101,14 @@ defmodule Brando.Villain.Controller do
 
       @doc false
       def imageseries(conn, _) do
-        series = Brando.repo.all from is in unquote(series_model),
+        series =
+          (from is in unquote(series_model),
                    join: c in assoc(is, :image_category),
                    where: c.slug == "slideshows",
-                   preload: [image_category: c]
+                   order_by: is.slug,
+                   preload: [image_category: c])
+          |> Brando.repo.all
+
         series = Enum.map(series, &(&1.slug))
 
         json conn, %{status: 200, series: series}

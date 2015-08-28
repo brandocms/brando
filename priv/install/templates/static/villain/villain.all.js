@@ -4938,9 +4938,10 @@ if (typeof exports === 'object') {
                     $sizeSelect.append(that.buildOptions(data.sizes, true));
                     if (!_.isUndefined(that.data.size)) {
                         $sizeSelect.val(that.data.size).change();
+                        json.size = that.data.size;
                     }
                     $sizeSelect.on('change', function(e) {
-                        that.setDataProperty('size', $(this).val());
+                        json.size = $(this).val();
                         that.hideSetup();
                     });
                     that.setData(json);
