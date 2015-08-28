@@ -45,6 +45,7 @@ defmodule Mix.Tasks.Brando.Install do
   @static [
     {:copy, "install/templates/bower.json",                                             "bower.json"},
     {:copy, "install/templates/brunch-config.js",                                       "brunch-config.js"},
+    {:copy, "install/templates/fabfile.py",                                             "fabfile.py"},
 
     {:copy, "install/templates/web/static/js/cookie_law.js",                            "web/static/vendor/cookie_law.js"},
 

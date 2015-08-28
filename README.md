@@ -380,3 +380,14 @@ or
 config :brando, Brando.Images,
   optimize: false
 ```
+
+## Deployment
+
+Requires fabric.
+
+Configure `./fabfile.py` with your own values.
+
+Run
+
+    $ fab prod bootstrap
+
