@@ -18,13 +18,13 @@ defmodule Brando.Villain.HTMLTest do
                                           image_series: "page",
                                           source:       "textarea[name=\"page[data]\"]")
 
-           == {:safe, "<script type=\"text/javascript\">\n   $(document).ready(function() {\n     v = new Villain.Editor({\n       // extraBlocks: [],\n       browseURL: '/admin/pages/villain/browse/page',\n       uploadURL: '/admin/pages/villain/upload/page',\n       imageSeriesURL: '/admin/pages/villain/imageseries',\n       textArea: 'textarea[name=\"page[data]\"]'\n     });\n   });\n</script>\n"}
+           == {:safe, "<script type=\"text/javascript\">\n   $(document).ready(function() {\n     v = new Villain.Editor({\n       // extraBlocks: [],\n       baseURL: '/admin/pages/',\n       imageSeries: 'page',\n       textArea: 'textarea[name=\"page[data]\"]'\n     });\n   });\n</script>\n"}
 
     add_extra_blocks()
     assert Brando.Villain.HTML.initialize(base_url:     "/admin/pages/",
                                           image_series: "page",
                                           source:       "textarea[name=\"page[data]\"]")
-           == {:safe, "<script type=\"text/javascript\">\n   $(document).ready(function() {\n     v = new Villain.Editor({\n       extraBlocks: [\"Test1\", \"Test2\"],\n       browseURL: '/admin/pages/villain/browse/page',\n       uploadURL: '/admin/pages/villain/upload/page',\n       imageSeriesURL: '/admin/pages/villain/imageseries',\n       textArea: 'textarea[name=\"page[data]\"]'\n     });\n   });\n</script>\n"}
+           == {:safe, "<script type=\"text/javascript\">\n   $(document).ready(function() {\n     v = new Villain.Editor({\n       extraBlocks: [\"Test1\", \"Test2\"],\n       baseURL: '/admin/pages/',\n       imageSeries: 'page',\n       textArea: 'textarea[name=\"page[data]\"]'\n     });\n   });\n</script>\n"}
     remove_extra_blocks()
   end
 
