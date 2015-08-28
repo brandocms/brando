@@ -36,9 +36,6 @@ defmodule Brando.Villain.HTML do
   def initialize(opts) do
     base_url        = Keyword.fetch!(opts, :base_url)
     image_series    = Keyword.fetch!(opts, :image_series)
-    browse_url      = "#{base_url}villain/browse/#{image_series}"
-    upload_url      = "#{base_url}villain/upload/#{image_series}"
-    imageseries_url = "#{base_url}villain/imageseries"
     source          = Keyword.fetch!(opts, :source)
     extra_blocks    = Keyword.get(Brando.config(Brando.Villain),
                                   :extra_blocks, [])
