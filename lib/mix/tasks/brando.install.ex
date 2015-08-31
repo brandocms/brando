@@ -60,6 +60,8 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "install/templates/web/static/css/includes/_nav.scss",                      "web/static/css/includes/_nav.scss"},
     {:copy, "install/templates/web/static/css/includes/_pages.scss",                    "web/static/css/includes/_pages.scss"},
 
+    {:copy, "install/templates/static/brando/favicon.ico",                              "priv/static/favicon.ico"},
+
     {:copy, "install/templates/static/brando/css/brando.css",                           "priv/static/css/brando.css"},
     {:copy, "install/templates/static/brando/css/brando-min.css",                       "priv/static/css/brando-min.css"},
     {:copy, "install/templates/static/brando/css/brando.vendor.css",                    "priv/static/css/brando.vendor.css"},
