@@ -149,7 +149,7 @@ defmodule Brando.Post do
   #
   # Meta
 
-  use Brando.Meta,
+  use Brando.Meta.Model,
     [no: [singular: "post",
      plural: "poster",
      repr: &("#{&1.header}"),

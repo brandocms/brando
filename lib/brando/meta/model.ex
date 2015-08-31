@@ -1,10 +1,10 @@
-defmodule Brando.Meta do
+defmodule Brando.Meta.Model do
   @moduledoc """
   Meta functions for Brando models
 
   ## Usage:
 
-      use Brando.Meta,
+      use Brando.Meta.Model,
         [no:
           [singular: "post",
            plural: "poster",

@@ -183,7 +183,7 @@ defmodule Brando.User do
   #
   # Meta
 
-  use Brando.Meta,
+  use Brando.Meta.Model,
     [no: [singular: "bruker",
           plural: "brukere",
           repr: &("#{&1.full_name} (#{&1.username})"),

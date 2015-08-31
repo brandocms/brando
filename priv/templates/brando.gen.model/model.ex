@@ -48,7 +48,7 @@ defmodule <%= module %> do
   #
   # Meta
 
-  use Brando.Meta,
+  use Brando.Meta.Model,
     [en:
       [singular: "<%= Phoenix.Naming.humanize(singular) |> String.downcase %>",
        plural: "<%= Phoenix.Naming.humanize(plural) |> String.downcase %>",

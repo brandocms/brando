@@ -129,7 +129,7 @@ defmodule Brando.PageFragment do
   #
   # Meta
 
-  use Brando.Meta, [
+  use Brando.Meta.Model, [
     no: [
       singular: "sidefragment",
       plural: "sidefragmenter",

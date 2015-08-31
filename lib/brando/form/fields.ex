@@ -6,7 +6,8 @@ defmodule Brando.Form.Fields do
   """
   use Linguist.Vocabulary
 
-  import Brando.HTML, only: [media_url: 1, img: 2]
+  import Brando.Utils, only: [media_url: 1]
+  import Brando.HTML, only: [img: 2]
   import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2, tag: 2]
   import Phoenix.HTML, only: [raw: 1]
 

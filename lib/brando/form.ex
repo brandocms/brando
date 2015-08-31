@@ -17,7 +17,7 @@ defmodule Brando.Form do
 
   ## Example model meta
 
-      use Brando.Meta,
+      use Brando.Meta.Model,
         no: [singular: "bruker",
              plural: "brukere",
              repr: &("#{&1.id} (#{&1.username})"),

@@ -24,6 +24,7 @@ defmodule Brando.Web do
       alias unquote(helpers)
 
       import Plug.Conn, only: [get_session: 2]
+      import Brando.Utils, only: [media_url: 0, media_url: 1]
 
       # Import all HTML functions (forms, tags, etc)
       use Phoenix.HTML
@@ -36,6 +37,7 @@ defmodule Brando.Web do
     repo = Brando.repo
     quote do
       use Phoenix.Controller
+      import Brando.Meta.Controller
 
       # Alias the data repository as a convenience
       alias unquote(repo)

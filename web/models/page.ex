@@ -178,7 +178,7 @@ defmodule Brando.Page do
   #
   # Meta
 
-  use Brando.Meta, [
+  use Brando.Meta.Model, [
     no: [
       singular: "side",
       plural: "sider",

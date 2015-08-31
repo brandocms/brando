@@ -28,11 +28,6 @@ defmodule Brando.HTMLTest do
     assert format_date(date) == "1/1/2015"
   end
 
-  test "media_url/1" do
-    assert media_url("test") == "/media/test"
-    assert media_url(nil) == "/media"
-  end
-
   test "delete_form_button/2" do
     {:safe, ret} = delete_form_button("no", :admin_user_path, %{__struct__: :user, id: 1})
     assert ret =~ "/admin/users/1"

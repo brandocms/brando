@@ -261,7 +261,7 @@ defmodule Brando.InstagramImage do
   #
   # Meta
 
-  use Brando.Meta,
+  use Brando.Meta.Model,
     [no: [singular: "instagrambilde",
      plural: "instagrambilder",
      repr: &("#{&1.id} | #{&1.caption}"),

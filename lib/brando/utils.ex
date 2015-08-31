@@ -177,11 +177,28 @@ defmodule Brando.Utils do
   end
 
   @doc """
+  Returns scheme, host and port (if non-standard)
+  """
+  @spec hostname(Plug.Conn.t) :: String.t
+  def hostname(conn) do
+    port = conn.port == 80 && "" || ":#{conn.port}"
+    "#{conn.scheme}://#{conn.host}#{port}"
+  end
+
+  @doc """
+  Returns full url path with scheme and host.
+  """
+  @spec current_url(Plug.Conn.t) :: String.t
+  def current_url(conn) do
+    "#{hostname(conn)}#{conn.request_path}"
+  end
+
+  @doc """
   Returns URI encoded www form of current url
   """
+  @spec escape_current_url(Plug.Conn.t) :: String.t
   def escape_current_url(conn) do
-    port = conn.port == 80 && "" || ":#{conn.port}"
-    "#{conn.scheme}://#{conn.host}#{port}#{conn.request_path}"
+    current_url(conn)
     |> URI.encode_www_form
   end
 
@@ -189,10 +206,46 @@ defmodule Brando.Utils do
   Prefix `media` with scheme / host and port from `conn`.
   Returns URI encoded www form.
   """
+  @spec escape_and_prefix_host(Plug.Conn.t, String.t) :: String.t
   def escape_and_prefix_host(conn, media) do
     port = conn.port == 80 && "" || ":#{conn.port}"
     "#{conn.scheme}://#{conn.host}#{port}#{media}"
     |> URI.encode_www_form
+  end
+
+  @doc """
+  Return joined path of `file` and the :media_url config option
+  as set in your app's config.exs.
+  """
+  def media_url() do
+    Brando.config(:media_url)
+  end
+  def media_url(nil) do
+    Brando.config(:media_url)
+  end
+  def media_url(file) do
+    Path.join([Brando.config(:media_url), file])
+  end
+
+  @doc """
+  Get title assign from `conn`
+  """
+  def get_page_title(%{assigns: %{page_title: title}} = conn) when is_map(title) do
+    Brando.config(:app_name) <> " | " <> Map.get(title, conn.assigns[:language], "")
+  end
+  def get_page_title(%{assigns: %{page_title: title}}) do
+    Brando.config(:app_name) <> " | " <> title
+  end
+  def get_page_title(_) do
+    Brando.config(:app_name)
+  end
+
+  @doc """
+  Returns hostname and media directory.
+  """
+  @spec host_and_media_url(Plug.Conn.t) :: String.t
+  def host_and_media_url(conn) do
+    "#{hostname(conn)}#{Brando.config(:media_url)}"
   end
 
   @doc """

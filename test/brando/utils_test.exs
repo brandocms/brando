@@ -86,4 +86,9 @@ defmodule Brando.UtilsTest do
                         hour: 12, min: 0, sec: 0}
     assert to_iso8601(dt) == "2014-01-01T12:00:00Z"
   end
+
+  test "media_url/1" do
+    assert media_url("test") == "/media/test"
+    assert media_url(nil) == "/media"
+  end
 end

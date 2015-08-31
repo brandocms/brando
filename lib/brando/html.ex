@@ -3,7 +3,9 @@ defmodule Brando.HTML do
   Helper and convenience functions.
   """
 
+  import Brando.Utils, only: [media_url: 0]
   import Brando.Images.Utils, only: [size_dir: 2, optimized_filename: 1]
+  import Brando.Meta.Controller, only: [put_meta: 3, get_meta: 1]
   import Phoenix.HTML.Tag, only: [content_tag: 2, content_tag: 3]
 
   @doc false
@@ -182,20 +184,6 @@ defmodule Brando.HTML do
   end
 
   @doc """
-  Return joined path of `file` and the :media_url config option
-  as set in your app's config.exs.
-  """
-  def media_url() do
-    Brando.config(:media_url)
-  end
-  def media_url(nil) do
-    Brando.config(:media_url)
-  end
-  def media_url(file) do
-    Path.join([Brando.config(:media_url), file])
-  end
-
-  @doc """
   Renders a delete button wrapped in a POST form.
   Pass `params` instance of model (if one param), or a list of multiple
   params, and `helper` path.
@@ -286,7 +274,13 @@ defmodule Brando.HTML do
   @doc """
   Displays a banner informing about cookie laws
   """
-  def cookie_law(conn, text, button_text \\ "OK") do
+  def cookie_law(conn, text, button_text \\ "OK", opts \\ nil) do
+    hr =
+      case Keyword.get(opts, :hr, false) do
+        true -> ~s(<hr class="mobile-hide" />)
+        false -> ""
+      end
+
     if Map.get(conn.cookies, "cookielaw_accepted") != "1" do
       ~s(
          <div class="cookie-law">
@@ -295,6 +289,7 @@ defmodule Brando.HTML do
               class="dismiss-cookielaw">
              #{button_text}
            </a>
+           #{hr}
          </div>)
       |> Phoenix.HTML.raw
     end
@@ -391,9 +386,29 @@ defmodule Brando.HTML do
   Renders a <meta> tag
   """
   def meta_tag(name, content) do
-    Phoenix.HTML.Tag.tag(:meta, name: name, content: content)
+    Phoenix.HTML.Tag.tag(:meta, content: content, name: name)
+  end
+  def meta_tag({name, content}) do
+    Phoenix.HTML.Tag.tag(:meta, content: content, name: name)
   end
   def meta_tag(attrs) when is_list(attrs) do
     Phoenix.HTML.Tag.tag(:meta, attrs)
+  end
+
+  @doc """
+  Renders all meta/opengraph
+  """
+  def render_meta(conn) do
+    app_name = Brando.config(:app_name)
+    title = Brando.Utils.get_page_title(conn)
+    conn =
+      conn
+      |> put_meta("og:title", "#{app_name} | #{title}")
+      |> put_meta("og:site_name", app_name)
+      |> put_meta("og:type", "article")
+      |> put_meta("og:url", Brando.Utils.current_url(conn))
+
+    Enum.map_join(get_meta(conn), "\n    ", &(elem(meta_tag(&1), 1)))
+    |> Phoenix.HTML.raw
   end
 end

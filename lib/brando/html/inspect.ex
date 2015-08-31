@@ -5,6 +5,7 @@ defmodule Brando.HTML.Inspect do
   use Linguist.Vocabulary
 
   import Brando.HTML
+  import Brando.Utils, only: [media_url: 1]
   import Brando.Render, only: [r: 1]
   import Ecto.DateTime.Utils, only: [zero_pad: 2]
   import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2]

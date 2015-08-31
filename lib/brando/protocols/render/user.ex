@@ -1,4 +1,5 @@
-import Brando.HTML, only: [media_url: 0, img: 3]
+import Brando.Utils, only: [media_url: 0]
+import Brando.HTML, only: [img: 3]
 
 defimpl Brando.Render, for: Brando.User do
   def r(data) do

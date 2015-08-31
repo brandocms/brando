@@ -125,7 +125,7 @@ defmodule Brando.ImageSeries do
   #
   # Meta
 
-  use Brando.Meta, [
+  use Brando.Meta.Model, [
     no: [
       singular: "bildeserie",
       plural: "bildeserier",

@@ -114,7 +114,7 @@ defmodule Brando.ImageCategory do
   #
   # Meta
 
-  use Brando.Meta,
+  use Brando.Meta.Model,
     [no:
       [singular: "bildekategori",
        plural: "bildekategorier",

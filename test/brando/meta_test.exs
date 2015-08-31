@@ -1,4 +1,4 @@
-defmodule Brando.MetaTest do
+defmodule Brando.Meta.ModelTest do
   use ExUnit.Case, async: true
   use Plug.Test
 
@@ -6,7 +6,7 @@ defmodule Brando.MetaTest do
 
   defmodule Meta do
     @moduledoc false
-    use Brando.Meta, [
+    use Brando.Meta.Model, [
       no:
         [singular: "post",
          plural: "poster",

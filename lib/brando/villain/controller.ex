@@ -31,11 +31,11 @@ defmodule Brando.Villain.Controller do
           image_list = Enum.map(image_series.images, fn image ->
             sizes =
               Enum.map(image.image.sizes, fn({k, v}) ->
-                {k, Brando.HTML.media_url(v)}
+                {k, Brando.Utils.media_url(v)}
               end)
               |> Enum.into(%{})
-            %{src: Brando.HTML.media_url(image.image.path),
-              thumb: Brando.HTML.media_url(Brando.HTML.img(image.image, :thumb)),
+            %{src: Brando.Utils.media_url(image.image.path),
+              thumb: Brando.Utils.media_url(Brando.HTML.img(image.image, :thumb)),
               sizes: sizes,
               title: image.image.title, credits: image.image.credits}
           end)
@@ -55,7 +55,7 @@ defmodule Brando.Villain.Controller do
         {:ok, image} = unquote(image_model).check_for_uploads(params, Brando.HTML.current_user(conn), cfg, opts)
         sizes =
           Enum.map(image.image.sizes, fn({k, v}) ->
-            {k, Brando.HTML.media_url(v)}
+            {k, Brando.Utils.media_url(v)}
           end)
           |> Enum.into(%{})
         json conn,
@@ -63,7 +63,7 @@ defmodule Brando.Villain.Controller do
             uid: uid,
             image: %{id: image.id,
                      sizes: sizes,
-                     src: Brando.HTML.media_url(image.image.path)},
+                     src: Brando.Utils.media_url(image.image.path)},
             form: %{
               method: "post",
               action: "villain/imagedata/#{image.id}",

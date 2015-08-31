@@ -1,8 +1,11 @@
 defmodule Brando.SocialTest do
   use ExUnit.Case, async: true
   use Plug.Test
+
+  import Brando.Utils, only: [media_url: 0]
+  import Brando.HTML, only: [img: 3]
+
   alias Brando.Social
-  import Brando.HTML, only: [media_url: 0, img: 3]
 
   test "Facebook.link" do
     conn = conn(:get, "/awesome/link", [])

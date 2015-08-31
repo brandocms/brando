@@ -154,7 +154,7 @@ defmodule Brando.Image do
   #
   # Meta
 
-  use Brando.Meta, [
+  use Brando.Meta.Model, [
     no: [
       singular: "bilde",
       plural: "bilder",
