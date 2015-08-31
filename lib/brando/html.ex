@@ -274,13 +274,7 @@ defmodule Brando.HTML do
   @doc """
   Displays a banner informing about cookie laws
   """
-  def cookie_law(conn, text, button_text \\ "OK", opts \\ nil) do
-    hr =
-      case Keyword.get(opts, :hr, false) do
-        true -> ~s(<hr class="mobile-hide" />)
-        false -> ""
-      end
-
+  def cookie_law(conn, text, button_text \\ "OK") do
     if Map.get(conn.cookies, "cookielaw_accepted") != "1" do
       ~s(
          <div class="cookie-law">
@@ -289,7 +283,6 @@ defmodule Brando.HTML do
               class="dismiss-cookielaw">
              #{button_text}
            </a>
-           #{hr}
          </div>)
       |> Phoenix.HTML.raw
     end
