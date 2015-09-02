@@ -1,22 +1,40 @@
 /**
  * Cookielaw
- * (c) twined 2015
  */
+
+.cookie-container {
+  position: relative;
+  z-index: 9999;
+  background-color: #fff;
+
+  hr {
+    margin-top: 5px;
+    margin-bottom: 0;
+  }
+}
 
 .cookie-law {
   font-size: 16px;
-  margin-top: 10px;
-  position: fixed;
   background-color: #fff;
-  bottom: 0;
-  padding-top: 15px;
+  padding-top: 5px;
   width: 100%;
+
+  p {
+    max-width: 100% !important;
+    font-size: 12px !important;
+    display: inline !important;
+    color: #777 !important;
+  }
 
   a.dismiss-cookielaw {
     display: inline-block;
     border: 2px solid;
     color: #333;
-    padding: 10px;
-    margin-top: 10px;
+    padding: 0 11px;
+    margin-top: 0px;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: bold;
+    float: right;
   }
 }
