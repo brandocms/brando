@@ -81,7 +81,7 @@ defmodule Brando.Image do
   @spec update(t, %{binary => term} | %{atom => term})
         :: {:ok, t} | {:error, Keyword.t}
   def update(model, params) do
-    model_changeset = model |> changeset(:update, params)
+    model_changeset = changeset(model, :update, params)
     case model_changeset.valid? do
       true ->  {:ok, Brando.repo.update!(model_changeset)}
       false -> {:error, model_changeset.errors}
@@ -108,10 +108,10 @@ defmodule Brando.Image do
   Get all images in series `id`.
   """
   def for_series_id(id) do
-    from(m in __MODULE__,
-         where: m.image_series_id == ^id,
-         order_by: m.sequence)
-    |> Brando.repo.all
+    q = from m in __MODULE__,
+             where: m.image_series_id == ^id,
+             order_by: m.sequence
+    Brando.repo.all(q)
   end
 
   @doc """
@@ -120,16 +120,17 @@ defmodule Brando.Image do
   Also deletes all dependent image sizes.
   """
   def delete(ids) when is_list(ids) do
-    q = from(m in __MODULE__, where: m.id in ^ids)
-    records = q |> Brando.repo.all
+    q = from m in __MODULE__,
+             where: m.id in ^ids
+    records = Brando.repo.all(q)
     for record <- records do
-      record.image |> delete_original_and_sized_images
+      delete_original_and_sized_images(record.image)
     end
-    q |> Brando.repo.delete_all
+    Brando.repo.delete_all(q)
   end
 
   def delete(record) when is_map(record) do
-    record.image |> delete_original_and_sized_images
+    delete_original_and_sized_images(record.image)
     Brando.repo.delete!(record)
   end
 
@@ -142,9 +143,9 @@ defmodule Brando.Image do
   Delete all images depending on imageserie `series_id`
   """
   def delete_dependent_images(series_id) do
-    images =
-      from(m in __MODULE__, where: m.image_series_id == ^series_id)
-      |> Brando.repo.all
+    q = from m in __MODULE__,
+             where: m.image_series_id == ^series_id
+    images = Brando.repo.all(q)
 
     for img <- images do
       delete(img)

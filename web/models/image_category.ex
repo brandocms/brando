@@ -83,10 +83,10 @@ defmodule Brando.ImageCategory do
   Returns the model's slug
   """
   def get_slug(id: id) do
-    from(m in __MODULE__,
-      select: m.slug,
-      where: m.id == ^id)
-      |> Brando.repo.one!
+    q = from m in __MODULE__,
+             select: m.slug,
+             where: m.id == ^id
+    Brando.repo.one!(q)
   end
 
   @doc """

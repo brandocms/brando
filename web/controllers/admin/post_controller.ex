@@ -81,7 +81,8 @@ defmodule Brando.Admin.PostController do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     changeset =
-      Brando.repo.get_by!(model, id: id)
+      model
+      |> Brando.repo.get!(id)
       |> model.encode_data
       |> model.changeset(:update)
 

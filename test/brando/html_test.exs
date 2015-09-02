@@ -18,7 +18,8 @@ defmodule Brando.HTMLTest do
   end
 
   test "delete_form_button/2" do
-    {:safe, ret} = delete_form_button("no", :admin_user_path, %{__struct__: :user, id: 1})
+    {:safe, ret} = delete_form_button("no", :admin_user_path,
+                                      %{__struct__: :user, id: 1})
     assert ret =~ "/admin/users/1"
     assert ret =~ "value=\"delete\""
   end
@@ -38,17 +39,17 @@ defmodule Brando.HTMLTest do
   test "auth_links" do
     conn = call(:get, "/admin/users") |> with_user
 
-    assert auth_link(conn, "test", :admin, do: {:safe, "link text"}) ==
-           {:safe, "<a href=\"test\" class=\"btn btn-default\">  link text</a>"}
-    assert auth_link(:primary, conn, "test", :admin, do: {:safe, "link text"}) ==
-           {:safe, "<a href=\"test\" class=\"btn btn-primary\">  link text</a>"}
-    assert auth_link(:info, conn, "test", :admin, do: {:safe, "link text"}) ==
-           {:safe, "<a href=\"test\" class=\"btn btn-info\">  link text</a>"}
-    assert auth_link(:success, conn, "test", :admin, do: {:safe, "link text"}) ==
-           {:safe, "<a href=\"test\" class=\"btn btn-success\">  link text</a>"}
-    assert auth_link(:warning, conn, "test", :admin, do: {:safe, "link text"}) ==
-           {:safe, "<a href=\"test\" class=\"btn btn-warning\">  link text</a>"}
-    assert auth_link(:danger, conn, "test", :admin, do: {:safe, "link text"}) ==
-           {:safe, "<a href=\"test\" class=\"btn btn-danger\">  link text</a>"}
+    assert auth_link(conn, "test", :admin, do: {:safe, "text"})
+           == {:safe, "<a href=\"test\" class=\"btn btn-default\"> text</a>"}
+    assert auth_link(:primary, conn, "test", :admin, do: {:safe, "text"})
+           == {:safe, "<a href=\"test\" class=\"btn btn-primary\"> text</a>"}
+    assert auth_link(:info, conn, "test", :admin, do: {:safe, "text"})
+           == {:safe, "<a href=\"test\" class=\"btn btn-info\"> text</a>"}
+    assert auth_link(:success, conn, "test", :admin, do: {:safe, "text"})
+           == {:safe, "<a href=\"test\" class=\"btn btn-success\"> text</a>"}
+    assert auth_link(:warning, conn, "test", :admin, do: {:safe, "text"})
+           == {:safe, "<a href=\"test\" class=\"btn btn-warning\"> text</a>"}
+    assert auth_link(:danger, conn, "test", :admin, do: {:safe, "text"})
+           == {:safe, "<a href=\"test\" class=\"btn btn-danger\"> text</a>"}
   end
 end

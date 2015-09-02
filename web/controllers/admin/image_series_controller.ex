@@ -8,6 +8,7 @@ defmodule Brando.Admin.ImageSeriesController do
     [:controller, [model: Brando.Image, filter: &Brando.Image.for_series_id/1]]
 
   import Brando.Plug.Section
+  import Brando.Utils, only: [helpers: 1]
   import Ecto.Query
 
   plug :put_section, "images"
@@ -34,7 +35,7 @@ defmodule Brando.Admin.ImageSeriesController do
       {:ok, _} ->
         conn
         |> put_flash(:notice, t!(language, "flash.created"))
-        |> redirect(to: get_helpers(conn).admin_image_path(conn, :index))
+        |> redirect(to: helpers(conn).admin_image_path(conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.new"))
@@ -70,7 +71,7 @@ defmodule Brando.Admin.ImageSeriesController do
       {:ok, _updated_record} ->
         conn
         |> put_flash(:notice, t!(language, "flash.updated"))
-        |> redirect(to: get_helpers(conn).admin_image_path(conn, :index))
+        |> redirect(to: helpers(conn).admin_image_path(conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.edit"))
@@ -139,11 +140,7 @@ defmodule Brando.Admin.ImageSeriesController do
     series_model.delete(record)
     conn
     |> put_flash(:notice, t!(language, "flash.deleted"))
-    |> redirect(to: get_helpers(conn).admin_image_path(conn, :index))
-  end
-
-  defp get_helpers(conn) do
-    router_module(conn).__helpers__
+    |> redirect(to: helpers(conn).admin_image_path(conn, :index))
   end
 
   locale "no", [

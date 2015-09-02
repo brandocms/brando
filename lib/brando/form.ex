@@ -114,10 +114,12 @@ defmodule Brando.Form do
       def get_form(language, opts) do
         form_type = Keyword.fetch!(opts, :type)
         action = Keyword.fetch!(opts, :action)
-        params = Keyword.get(opts, :params, [])
         changeset = Keyword.fetch!(opts, :changeset)
+        params = Keyword.get(opts, :params, [])
+        opts = Keyword.put(opts, :language, language)
 
-        render_fields(language, form_type, @form_fields, changeset, @form_opts)
+        @form_fields
+        |> render_fields(changeset, opts, @form_opts)
         |> render_form(form_type, action, params, @form_opts)
         |> raw
       end
@@ -136,6 +138,7 @@ defmodule Brando.Form do
     * `opts`:
       * `class`: Optional class to set on form.
       * `multipart`: Automatically set if we have file fields.
+      * `helper`: Helper set in form definition.
   """
   @spec render_form(iodata, :create | :update, atom, Keyword.t | nil, Keyword.t)
         :: String.t
@@ -171,15 +174,15 @@ defmodule Brando.Form do
   Reduces all `fields` and returns a list of each individual
   field as HTML. Gets any values or errors for the field.
   """
-  def render_fields(language, form_type, fields, changeset, %{source: source, model: model}) do
+  def render_fields(fields, changeset, opts, %{source: source, model: model}) do
     Enum.reduce fields, [], fn ({name, f_opts}, acc) ->
       f_opts =
         f_opts
-        |> Keyword.merge(source: source, language: language,
+        |> Keyword.merge(source: source, language: opts[:language],
                          name: name, model: model)
         |> Enum.into(%{})
 
-      [Fields.render_field(form_type, f_opts, get_value(changeset, name),
+      [Fields.render_field(opts[:type], f_opts, get_value(changeset, name),
                            get_errors(changeset, name))|acc]
     end
   end
@@ -304,7 +307,8 @@ defmodule Brando.Form do
 
     if type == :file do
       form_opts =
-        Module.get_attribute(module, :form_opts)
+        module
+        |> Module.get_attribute(:form_opts)
         |> Map.put(:multipart, true)
       Module.put_attribute(module, :form_opts, form_opts)
     end

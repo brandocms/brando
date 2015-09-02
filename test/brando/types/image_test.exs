@@ -2,10 +2,14 @@ defmodule Brando.Types.ImageTest do
   use ExUnit.Case
   alias Brando.Type.Image
 
-  @raw "{\"title\":null,\"sizes\":{\"thumb\":\"images/avatars/thumb/27i97a.jpeg\",\"medium\":\"images/avatars/medium/27i97a.jpeg\"},\"path\":\"images/avatars/27i97a.jpeg\",\"optimized\":false,\"credits\":\"Credits\"}"
-  @result %Image{credits: "Credits", optimized: false, path: "images/avatars/27i97a.jpeg",
+  @raw ~s({"title":null,"sizes":{"thumb":"images/avatars/thumb/27i97a.) <>
+       ~s(jpeg","medium":"images/avatars/medium/27i97a.jpeg"},"path":") <>
+       ~s(images/avatars/27i97a.jpeg","optimized":false,"credits":"Credits"})
+
+  @result %Image{credits: "Credits", optimized: false,
+                 path: "images/avatars/27i97a.jpeg", title: nil,
                  sizes: %{"medium" => "images/avatars/medium/27i97a.jpeg",
-                          "thumb" => "images/avatars/thumb/27i97a.jpeg"}, title: nil}
+                          "thumb" => "images/avatars/thumb/27i97a.jpeg"}}
   @struct %Image{}
 
   test "cast" do

@@ -7,15 +7,19 @@ defmodule Brando.Admin.ImageCategoryController do
   use Brando.Sequence,
     [:controller, [model: Brando.ImageSeries,
                    filter: &Brando.ImageSeries.get_by_category_id/1]]
+
   import Brando.Plug.Section
+  import Brando.Utils, only: [helpers: 1, current_user: 1]
   import Ecto.Query
+
+  alias Brando.I18n
 
   plug :put_section, "images"
   plug :scrub_params, "imagecategory" when action in [:create, :update]
 
   @doc false
   def new(conn, _params) do
-    language = Brando.I18n.get_language(conn)
+    language = I18n.get_language(conn)
     model = conn.private[:category_model]
     changeset = model.changeset(model.__struct__, :create)
     conn
@@ -26,13 +30,13 @@ defmodule Brando.Admin.ImageCategoryController do
 
   @doc false
   def create(conn, %{"imagecategory" => imagecategory}) do
-    language = Brando.I18n.get_language(conn)
+    language = I18n.get_language(conn)
     model = conn.private[:category_model]
-    case model.create(imagecategory, Brando.Utils.current_user(conn)) do
+    case model.create(imagecategory, current_user(conn)) do
       {:ok, _} ->
         conn
         |> put_flash(:notice, t!(language, "flash.created"))
-        |> redirect(to: get_helpers(conn).admin_image_path(conn, :index))
+        |> redirect(to: helpers(conn).admin_image_path(conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.new"))
@@ -45,10 +49,11 @@ defmodule Brando.Admin.ImageCategoryController do
 
   @doc false
   def edit(conn, %{"id" => id}) do
-    language = Brando.I18n.get_language(conn)
+    language = I18n.get_language(conn)
     model = conn.private[:category_model]
     changeset =
-      Brando.repo.get_by!(model, id: id)
+      model
+      |> Brando.repo.get!(id)
       |> model.changeset(:update)
 
     conn
@@ -60,14 +65,14 @@ defmodule Brando.Admin.ImageCategoryController do
 
   @doc false
   def update(conn, %{"imagecategory" => form_data, "id" => id}) do
-    language = Brando.I18n.get_language(conn)
+    language = I18n.get_language(conn)
     model = conn.private[:category_model]
     record = Brando.repo.get_by!(model, id: id)
     case model.update(record, form_data) do
       {:ok, _updated_record} ->
         conn
         |> put_flash(:notice, t!(language, "flash.updated"))
-        |> redirect(to: get_helpers(conn).admin_image_path(conn, :index))
+        |> redirect(to: helpers(conn).admin_image_path(conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.edit"))
@@ -81,12 +86,13 @@ defmodule Brando.Admin.ImageCategoryController do
 
   @doc false
   def configure(conn, %{"id" => category_id}) do
-    language = Brando.I18n.get_language(conn)
+    language = I18n.get_language(conn)
     model = conn.private[:category_model]
     data = Brando.repo.get_by!(model, id: category_id)
     {:ok, cfg} = Brando.Type.ImageConfig.dump(data.cfg)
     changeset =
-      Map.put(data, :cfg, cfg)
+      data
+      |> Map.put(:cfg, cfg)
       |> model.changeset(:update)
 
     conn
@@ -99,14 +105,14 @@ defmodule Brando.Admin.ImageCategoryController do
   @doc false
   def configure_patch(conn, %{"imagecategoryconfig" => form_data,
                               "id" => id}) do
-    language = Brando.I18n.get_language(conn)
+    language = I18n.get_language(conn)
     model = conn.private[:category_model]
     record = Brando.repo.get_by!(model, id: id)
     case model.update(record, form_data) do
       {:ok, _updated_record} ->
         conn
         |> put_flash(:notice, t!(language, "flash.configured"))
-        |> redirect(to: get_helpers(conn).admin_image_path(conn, :index))
+        |> redirect(to: helpers(conn).admin_image_path(conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.configure"))
@@ -120,7 +126,7 @@ defmodule Brando.Admin.ImageCategoryController do
 
   @doc false
   def delete_confirm(conn, %{"id" => id}) do
-    language = Brando.I18n.get_language(conn)
+    language = I18n.get_language(conn)
     model = conn.private[:category_model]
     record =
       model
@@ -134,17 +140,13 @@ defmodule Brando.Admin.ImageCategoryController do
 
   @doc false
   def delete(conn, %{"id" => id}) do
-    language = Brando.I18n.get_language(conn)
+    language = I18n.get_language(conn)
     model = conn.private[:category_model]
     record = model |> Brando.repo.get_by!(id: id)
     model.delete(record)
     conn
     |> put_flash(:notice, t!(language, "flash.deleted"))
-    |> redirect(to: get_helpers(conn).admin_image_path(conn, :index))
-  end
-
-  defp get_helpers(conn) do
-    router_module(conn).__helpers__
+    |> redirect(to: helpers(conn).admin_image_path(conn, :index))
   end
 
   locale "no", [

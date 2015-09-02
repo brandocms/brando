@@ -119,10 +119,10 @@ defmodule Brando.PageFragment do
   Get all records. Ordered by `id`. Preload :creator.
   """
   def all do
-    (from m in __MODULE__,
+    q = from m in __MODULE__,
           order_by: [desc: m.inserted_at],
-          preload: [:creator])
-    |> Brando.repo.all
+          preload: [:creator]
+    q |> Brando.repo.all
   end
 
 

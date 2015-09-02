@@ -46,6 +46,7 @@ defmodule Brando.InstagramImage do
         nil -> :download_failed
         _   -> @cfg[:auto_approve] && :approved || :rejected
       end
+
     model
     |> cast(params, @required_fields, @optional_fields)
     |> unique_constraint(:instagram_id)
@@ -69,6 +70,7 @@ defmodule Brando.InstagramImage do
       else
         model.status
       end
+
     model
     |> cast(params, [], @required_fields ++ @optional_fields)
     |> put_change(:status, status)
@@ -101,7 +103,7 @@ defmodule Brando.InstagramImage do
   @spec update(t, %{binary => term} | %{atom => term})
         :: {:ok, t} | {:error, Keyword.t}
   def update(model, params) do
-    model_changeset = model |> changeset(:update, params)
+    model_changeset = changeset(model, :update, params)
     case model_changeset.valid? do
       true ->  {:ok, Brando.repo.update!(model_changeset)}
       false -> {:error, model_changeset.errors}
@@ -129,11 +131,13 @@ defmodule Brando.InstagramImage do
   defp download_image(image) do
     image_field = %Brando.Type.Image{}
     url = Map.get(image, "url_original")
+
     case HTTPoison.get(url) do
       {:ok, %HTTPoison.Response{body: _, status_code: 404}} ->
         Logger.error("Instagram: Feil fra Instagram API. " <>
                      "Kunne ikke laste ned bilde.\nURL: #{url}")
-        Map.put(image, "image", nil)
+        image
+        |> Map.put("image", nil)
         |> Map.put("status", :download_failed)
       {:ok, %HTTPoison.Response{body: body, status_code: 200}} ->
         media_path = Brando.config(:media_path)
@@ -143,9 +147,8 @@ defmodule Brando.InstagramImage do
           :ok ->
             file = Path.join([path, Path.basename(url)])
             File.write!(file, body)
-            image_field = Map.put(image_field,
-                                  :path, Path.join([instagram_path,
-                                                    Path.basename(url)]))
+            image_field = Map.put(image_field, :path, Path.join([instagram_path,
+                                                      Path.basename(url)]))
             Map.put(image, "image", image_field)
           {:error, reason} ->
             raise UploadError,
@@ -177,7 +180,7 @@ defmodule Brando.InstagramImage do
                                 to_string(size_name), filename])
         {size_name, sized_path}
       end
-      image_field = image_field |> Map.put(:sizes, Enum.into(sizes, %{}))
+      image_field = Map.put(image_field, :sizes, Enum.into(sizes, %{}))
       Map.put(image_model, "image", image_field)
     else
       image_model
@@ -188,12 +191,12 @@ defmodule Brando.InstagramImage do
   Get timestamp from where we search for new images
   """
   def get_last_created_time do
-    max =
-      from(m in __MODULE__,
-           select: m.created_time,
-           order_by: [desc: m.created_time],
-           limit: 1)
-      |> Brando.repo.one
+    q = from m in __MODULE__,
+             select: m.created_time,
+             order_by: [desc: m.created_time],
+             limit: 1
+      max = Brando.repo.one(q)
+
     case max do
       nil -> :blank
       max -> max
@@ -204,21 +207,21 @@ defmodule Brando.InstagramImage do
   end
 
   def get_failed_downloads do
-    from(m in __MODULE__,
-         where: m.status == 3)
-    |> Brando.repo.all
+    q = from m in __MODULE__,
+             where: m.status == 3
+    Brando.repo.all(q)
   end
 
   @doc """
   Get min_id from where we search for new images
   """
   def get_min_id do
-    id =
-      from(m in __MODULE__,
-           select: m.instagram_id,
-           order_by: [desc: m.instagram_id],
-           limit: 1)
-      |> Brando.repo.one
+    q = from m in __MODULE__,
+             select: m.instagram_id,
+             order_by: [desc: m.instagram_id],
+             limit: 1
+      id = Brando.repo.one(q)
+
     case id do
       nil -> :blank
       id -> Enum.at(String.split(id, "_"), 0)
@@ -231,11 +234,12 @@ defmodule Brando.InstagramImage do
                                    queryable, values, opts)
   end
 
-  def change_status_for(ids, status)
-      when is_list(ids)
-      and status in ["0", "1", "2"] do
-    ids = ids |> Enum.map(fn(id) -> String.to_integer(id) end)
-    q = from(m in __MODULE__, where: m.id in ^ids)
+  def change_status_for(ids, status) when is_list(ids)
+                                     and status in ["0", "1", "2"] do
+    ids = Enum.map(ids, fn(id) -> String.to_integer(id) end)
+    q = from m in __MODULE__,
+             where: m.id in ^ids
+
     Brando.repo.update_all(q, set: [status: status])
   end
 

@@ -26,7 +26,8 @@ defmodule Brando.HTML do
       menu.submenu
       |> Enum.map_join("\n", &render_submenu_item(conn, &1))
 
-    Phoenix.HTML.raw """
+    html =
+    """
     <!-- menu item -->
       <li class="menuparent">
         <a href="##{menu.anchor}">
@@ -45,6 +46,7 @@ defmodule Brando.HTML do
       </li>
     <!-- /menu item -->
     """
+    html |> Phoenix.HTML.raw
   end
 
   @doc """
@@ -101,15 +103,13 @@ defmodule Brando.HTML do
     do_auth_link({"btn-#{type}", conn, link, role}, block)
   end
   defp do_auth_link({class, conn, link, role}, block) do
-    case can_render?(conn, %{role: role}) do
+    html = case can_render?(conn, %{role: role}) do
       true ->
-        "<a href=\"" <> link <> "\" class=\"btn #{class}\">" <>
-        "  " <> to_string(block) <>
-        "</a>"
+        ~s(<a href="#{link}" class="btn #{class}"> #{to_string(block)}</a>)
       false ->
         ""
     end
-    |> Phoenix.HTML.raw
+    Phoenix.HTML.raw(html)
   end
 
   @doc """
@@ -142,18 +142,21 @@ defmodule Brando.HTML do
   Pass `params` instance of model (if one param), or a list of multiple
   params, and `helper` path.
   """
-  @spec delete_form_button(String.t, atom, Keyword.t | %{atom => any}) :: String.t
+  @spec delete_form_button(String.t, atom, Keyword.t | %{atom => any})
+        :: String.t
   def delete_form_button(language, helper, params) do
     action = Brando.Form.apply_action(helper, :delete, params)
-
-    "<form method=\"POST\" action=\"" <> action <> "\">" <>
-    "  <input type=\"hidden\" name=\"_method\" value=\"delete\" />" <>
-    "  <button class=\"btn btn-danger\">" <>
-    "    <i class=\"fa fa-trash-o m-r-sm\"> </i>" <>
-    "    #{Brando.Admin.LayoutView.t!(language, "global.delete")}" <>
-    "  </button>" <>
-    "</form>"
-    |> Phoenix.HTML.raw
+    html =
+    """
+    <form method="POST" action="#{action}">
+      <input type="hidden" name="_method" value="delete" />
+      <button class="btn btn-danger">
+        <i class="fa fa-trash-o m-r-sm"> </i>
+        #{Brando.Admin.LayoutView.t!(language, "global.delete")}
+      </button>
+    </form>
+    """
+    Phoenix.HTML.raw(html)
   end
 
   @doc """
@@ -168,20 +171,21 @@ defmodule Brando.HTML do
   def dropzone_form(helper, id, cfg \\ nil) do
     _cfg = cfg || Brando.config(Brando.Images)[:default_config]
     path = Brando.Form.apply_action(helper, :upload_post, id)
-
-    "<form action=\"" <> path <> "\"" <>
-    "      class=\"dropzone\"" <>
-    "      id=\"brando-dropzone\"></form>" <>
-    "<script type=\"text/javascript\">" <>
-    "  Dropzone.options.brandoDropzone = {" <>
-    "    paramName: \"image\"," <>
-    "    maxFilesize: 10," <>
-    "    thumbnailHeight: 150," <>
-    "    thumbnailWidth: 150," <>
-    "    dictDefaultMessage: '<i class=\"fa fa-upload fa-4x\"></i><br>Trykk eller slipp bilder her for å laste opp'" <>
-    "  };" <>
-    "</script>"
-    |> Phoenix.HTML.raw
+    html =
+    """
+    <form action="#{path}" class="dropzone" id="brando-dropzone"></form>
+    <script type="text/javascript">
+      Dropzone.options.brandoDropzone = {
+        paramName: "image",
+        maxFilesize: 10,
+        thumbnailHeight: 150,
+        thumbnailWidth: 150,
+        dictDefaultMessage: '<i class="fa fa-upload fa-4x"></i><br>' +
+                            'Trykk eller slipp bilder her for å laste opp'
+      };
+    </script>
+    """
+    Phoenix.HTML.raw(html)
   end
 
   @doc """
@@ -208,15 +212,17 @@ defmodule Brando.HTML do
   """
   def cookie_law(conn, text, button_text \\ "OK") do
     if Map.get(conn.cookies, "cookielaw_accepted") != "1" do
-      ~s(
-         <div class="cookie-law">
-           <p>#{text}</p>
-           <a href="javascript:Cookielaw.createCookielawCookie\(\);"
-              class="dismiss-cookielaw">
-             #{button_text}
-           </a>
-         </div>)
-      |> Phoenix.HTML.raw
+      html =
+      """
+      <div class="cookie-law">
+        <p>#{text}</p>
+        <a href="javascript:Cookielaw.createCookielawCookie();"
+           class="dismiss-cookielaw">
+          #{button_text}
+        </a>
+      </div>
+      """
+      Phoenix.HTML.raw(html)
     end
   end
 
@@ -229,15 +235,18 @@ defmodule Brando.HTML do
 
   """
   def google_analytics(code) do
-    "<script>" <>
-    "(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=" <>
-    "function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;" <>
-    "e=o.createElement(i);r=o.getElementsByTagName(i)[0];" <>
-    "e.src='//www.google-analytics.com/analytics.js';" <>
-    "r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));" <>
-    "ga('create','#{code}','auto');ga('send','pageview');" <>
-    "</script>"
-    |> Phoenix.HTML.raw
+    html =
+    """
+    <script>
+    (function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=
+    function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;
+    e=o.createElement(i);r=o.getElementsByTagName(i)[0];
+    e.src='//www.google-analytics.com/analytics.js';
+    r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));
+    ga('create','#{code}','auto');ga('send','pageview');
+    </script>
+    """
+    html |> Phoenix.HTML.raw
   end
 
   @doc """
@@ -245,7 +254,8 @@ defmodule Brando.HTML do
   """
   def frontend_admin_menu(conn) do
     if current_user(conn) do
-      ~s(
+      html =
+      """
       <div class="admin-menu">
         <ul class="nav navbar-nav">
           <li class="dropdown">
@@ -258,8 +268,9 @@ defmodule Brando.HTML do
             </ul>
           </li>
         </ul>
-      </div>)
-      |> Phoenix.HTML.raw
+      </div>
+      """
+      html |> Phoenix.HTML.raw
     else
       ""
     end
@@ -269,7 +280,8 @@ defmodule Brando.HTML do
   Render status indicators
   """
   def status_indicators(language) do
-    ~s(
+    html =
+    """
     <div class="status-indicators pull-left">
       <span class="m-r-sm">
         <span class="status-published">
@@ -295,8 +307,9 @@ defmodule Brando.HTML do
         </span>
         #{Brando.Admin.LayoutView.t!(language, "status.deleted")}
       </span>
-    </div>)
-    |> Phoenix.HTML.raw
+    </div>
+    """
+    html |> Phoenix.HTML.raw
   end
 
   @doc """

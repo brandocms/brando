@@ -9,6 +9,7 @@ defmodule Brando.Admin.PageController do
     series_model: Brando.ImageSeries
 
   import Brando.Plug.Section
+  import Brando.Utils, only: [helpers: 1]
 
   plug :put_section, "pages"
   plug :scrub_params, "page" when action in [:create, :update]
@@ -63,7 +64,7 @@ defmodule Brando.Admin.PageController do
       {:ok, _} ->
         conn
         |> put_flash(:notice, t!(language, "flash.created"))
-        |> redirect(to: get_helpers(conn).admin_page_path(conn, :index))
+        |> redirect(to: helpers(conn).admin_page_path(conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.new"))
@@ -83,8 +84,8 @@ defmodule Brando.Admin.PageController do
     {:ok, duplicated_page} = model.duplicate(page)
 
     conn
-    |> redirect(to: get_helpers(conn).admin_page_path(conn, :edit,
-                                                      duplicated_page.id))
+    |> redirect(to: helpers(conn).admin_page_path(conn, :edit,
+                                                  duplicated_page.id))
   end
 
   @doc false
@@ -92,7 +93,8 @@ defmodule Brando.Admin.PageController do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     changeset =
-      Brando.repo.get_by!(model, id: id)
+      model
+      |> Brando.repo.get!(id)
       |> model.encode_data
       |> model.changeset(:update)
 
@@ -112,7 +114,7 @@ defmodule Brando.Admin.PageController do
       {:ok, _updated_page} ->
         conn
         |> put_flash(:notice, t!(language, "flash.updated"))
-        |> redirect(to: get_helpers(conn).admin_page_path(conn, :index))
+        |> redirect(to: helpers(conn).admin_page_path(conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, t!(language, "title.edit"))
@@ -147,11 +149,7 @@ defmodule Brando.Admin.PageController do
     model.delete(record)
     conn
     |> put_flash(:notice, t!(language, "flash.deleted"))
-    |> redirect(to: get_helpers(conn).admin_page_path(conn, :index))
-  end
-
-  defp get_helpers(conn) do
-    router_module(conn).__helpers__
+    |> redirect(to: helpers(conn).admin_page_path(conn, :index))
   end
 
   locale "no", [

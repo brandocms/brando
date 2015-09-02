@@ -22,15 +22,19 @@ defmodule Brando.StatsChannel do
   def handle_info(:update, socket) do
     instagram_status =
       try do
-        Keyword.get(Brando.config(Brando.Instagram), :server_name)
+        Brando.Instagram
+        |> Brando.config
+        |> Keyword.get(:server_name)
         |> Process.whereis
         |> Process.alive?
       rescue
         _ -> false
       end
     mem_list =
-      :erlang.memory(@info_memory)
+      @info_memory
+      |> :erlang.memory
       |> Keyword.values
+
     :erlang.send_after(@interval, self, :update)
     push socket, "update", %{total_memory: Enum.at(mem_list, 0),
                              atom_memory: Enum.at(mem_list, 2),

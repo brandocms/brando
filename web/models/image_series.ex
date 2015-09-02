@@ -83,21 +83,21 @@ defmodule Brando.ImageSeries do
   end
 
   def get_slug(id: id) do
-    from(m in __MODULE__,
-      select: m.slug,
-      where: m.id == ^id)
-      |> Brando.repo.one!
+    q = from m in __MODULE__,
+             select: m.slug,
+             where: m.id == ^id
+    Brando.repo.one!(q)
   end
 
   @doc """
   Get all imageseries in category `id`.
   """
   def get_by_category_id(id) do
-    from(m in __MODULE__,
-         where: m.image_category_id == ^id,
-         order_by: m.sequence,
-         preload: [:images])
-    |> Brando.repo.all
+    q = from m in __MODULE__,
+             where: m.image_category_id == ^id,
+             order_by: m.sequence,
+             preload: [:images]
+    Brando.repo.all(q)
   end
 
   @doc """
@@ -114,9 +114,9 @@ defmodule Brando.ImageSeries do
   Delete all imageseries dependant on `category_id`
   """
   def delete_dependent_image_series(category_id) do
-    image_series =
-      from(m in __MODULE__, where: m.image_category_id == ^category_id)
-      |> Brando.repo.all
+    q = from m in __MODULE__,
+             where: m.image_category_id == ^category_id
+    image_series = Brando.repo.all(q)
 
     for is <- image_series, do:
       delete(is)

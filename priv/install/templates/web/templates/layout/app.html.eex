@@ -14,7 +14,8 @@
   <!--
     <section class="container">
       <%= Brando.HTML.cookie_law @conn,
-        "This webpage uses cookies for responsive design and analytics. You can turn these off in your browser.",
+        "This webpage uses cookies for responsive design and analytics. " <>
+        "You can turn these off in your browser.",
         "Accept & dismiss" %>
       <hr class="mobile-hide">
     </section>
