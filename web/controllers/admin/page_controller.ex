@@ -59,7 +59,7 @@ defmodule Brando.Admin.PageController do
   def create(conn, %{"page" => page}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
-    case model.create(page, Brando.HTML.current_user(conn)) do
+    case model.create(page, Brando.Utils.current_user(conn)) do
       {:ok, _} ->
         conn
         |> put_flash(:notice, t!(language, "flash.created"))

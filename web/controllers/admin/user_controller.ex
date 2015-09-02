@@ -9,7 +9,6 @@ defmodule Brando.Admin.UserController do
   import Brando.Plug.Section
   import Brando.Plug.Uploads
   import Brando.HTML.Inspect, only: [model_name: 3]
-  import Brando.HTML, only: [current_user: 1]
 
   plug :put_section, "users"
   plug :scrub_params, "user" when action in [:create, :update]
@@ -145,7 +144,7 @@ defmodule Brando.Admin.UserController do
 
     case model.update(user, form_data) do
       {:ok, updated_user} ->
-        if Brando.HTML.current_user(conn).id == String.to_integer(user_id) do
+        if Brando.Utils.current_user(conn).id == String.to_integer(user_id) do
           conn = put_session(conn, :current_user, Map.drop(updated_user,
                                                            [:password]))
         end

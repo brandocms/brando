@@ -60,7 +60,7 @@ defmodule Brando.Admin.PostController do
   def create(conn, %{"post" => post}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
-    case model.create(post, Brando.HTML.current_user(conn)) do
+    case model.create(post, Brando.Utils.current_user(conn)) do
       {:ok, _} ->
         conn
         |> put_flash(:notice, t!(language, "flash.created"))

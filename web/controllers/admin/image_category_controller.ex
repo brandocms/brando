@@ -28,7 +28,7 @@ defmodule Brando.Admin.ImageCategoryController do
   def create(conn, %{"imagecategory" => imagecategory}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:category_model]
-    case model.create(imagecategory, Brando.HTML.current_user(conn)) do
+    case model.create(imagecategory, Brando.Utils.current_user(conn)) do
       {:ok, _} ->
         conn
         |> put_flash(:notice, t!(language, "flash.created"))

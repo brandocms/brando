@@ -267,4 +267,57 @@ defmodule Brando.Utils do
         end
     end
   end
+
+  @doc """
+  Returns the Helpers module from the router.
+  """
+  def helpers(conn) do
+    Phoenix.Controller.router_module(conn).__helpers__
+  end
+
+  @doc """
+  Return the current user set in session.
+  """
+  def current_user(conn) do
+    Plug.Conn.get_session(conn, :current_user)
+  end
+
+  @doc """
+  Checks if `conn`'s `full_path` matches `current_path`.
+  """
+  @spec active_path(Plug.Conn.t, String.t) :: boolean
+  def active_path(conn, url_to_match) do
+    conn.request_path == url_to_match
+  end
+
+  @doc """
+  Returns the application name set in config.exs
+  """
+  def app_name do
+    Brando.config(:app_name)
+  end
+
+  @doc """
+  Grabs `size` from the `image_field` json struct.
+  If default is passed, return size_dir of `default`.
+  Returns path to image.
+  """
+  def img_url(image_field, size, opts \\ [])
+  def img_url(nil, size, opts) do
+    default = Keyword.get(opts, :default, nil)
+    default && Brando.Images.Utils.size_dir(default, size)
+            || ""
+  end
+
+  def img_url(image_field, size, opts) do
+    size = is_atom(size) && Atom.to_string(size) || size
+    prefix = Keyword.get(opts, :prefix, nil)
+    url = prefix && Path.join([prefix, image_field.sizes[size]])
+                 || image_field.sizes[size]
+    case Map.get(image_field, :optimized) do
+      true  -> Brando.Images.Utils.optimized_filename(url)
+      false -> url
+      nil   -> url
+    end
+  end
 end

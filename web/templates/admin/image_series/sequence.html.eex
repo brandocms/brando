@@ -2,7 +2,7 @@
 <ul id="sequence" class="clearfix">
 <%= for i <- @items do %>
   <li data-id="<%= i.id %>">
-    <img src="<%= media_url(img(i.image, :thumb)) %>" />
+    <img src="<%= img_url(i.image, :thumb, prefix: media_url()) %>" />
   </li>
 <% end %>
 </ul>

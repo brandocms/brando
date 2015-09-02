@@ -59,7 +59,7 @@ defmodule Brando.Mixfile do
       {:exvcr, "~> 0.5.0", only: :test},
 
       # Documentation dependencies
-      {:ex_doc, "~> 0.6", only: :docs},
+      {:ex_doc, github: "elixir-lang/ex_doc", branch: "new_design", only: :docs},
       {:inch_ex, "~> 0.3", only: :docs},
     ]
   end

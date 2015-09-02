@@ -8,6 +8,6 @@
 <div class="image-serie m-t-md">
   <h2><%= t!(@language, "actions.existing") %></h2>
 <%= for i <- @series.images do %>
-  <img src="<%= media_url(img(i.image, :thumb)) %>" />
+  <img src="<%= img_url(i.image, :thumb, prefix: media_url()) %>" />
 <% end %>
 </div>

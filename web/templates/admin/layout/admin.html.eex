@@ -36,7 +36,7 @@
         <div class="menu-profile">
           <!-- menu top with avatar & info -->
           <div class="avatar">
-            <img src="<%= img(current_user(@conn).avatar, :thumb, [default: Helpers.static_path(@conn, "/images/brando/defaults/avatar_default.jpg"), prefix: media_url()]) %>" />
+            <img src="<%= img_url(current_user(@conn).avatar, :thumb, [default: Helpers.static_path(@conn, "/images/brando/defaults/avatar_default.jpg"), prefix: media_url()]) %>" />
           </div>
           <div class="name">
             <%= current_user(@conn).full_name %>

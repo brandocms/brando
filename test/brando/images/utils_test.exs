@@ -1,6 +1,7 @@
 defmodule Brando.Images.UtilsTest do
   use ExUnit.Case, async: true
   import Brando.Images.Utils
+  alias Brando.Images.Upload
 
   @cfg %{allowed_mimetypes: ["image/jpeg", "image/png"],
          default_size: :medium,
@@ -26,14 +27,14 @@ defmodule Brando.Images.UtilsTest do
                "xlarge" => "images/default/xlarge/sample.png"}, title: nil}
 
   test "do_upload/2" do
-    assert do_upload(@upload, @cfg) == {:ok, Map.put(@image, :optimized, true)}
-    refute do_upload(@upload, @cfg) == {:ok, @image}
-    {:ok, image} = do_upload(@slug_upload, @cfg)
+    assert Upload.do_upload(@upload, @cfg) == {:ok, Map.put(@image, :optimized, true)}
+    refute Upload.do_upload(@upload, @cfg) == {:ok, @image}
+    {:ok, image} = Upload.do_upload(@slug_upload, @cfg)
     assert image.path == "images/default/file-with-spaces.png"
-    {:ok, image} = do_upload(@slug_upload, @random_filename_cfg)
+    {:ok, image} = Upload.do_upload(@slug_upload, @random_filename_cfg)
     refute image.path == "images/default/file-with-spaces.png"
-    assert_raise Brando.Exception.UploadError, fn -> do_upload(@slug_upload, @broken_cfg) end
-    assert_raise Brando.Exception.UploadError, fn -> do_upload(@blank_upload, @cfg) end
+    assert_raise Brando.Exception.UploadError, fn -> Upload.do_upload(@slug_upload, @broken_cfg) end
+    assert_raise Brando.Exception.UploadError, fn -> Upload.do_upload(@blank_upload, @cfg) end
   end
 
   test "size_dir/2 binary" do

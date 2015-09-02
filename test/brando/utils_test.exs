@@ -91,4 +91,20 @@ defmodule Brando.UtilsTest do
     assert media_url("test") == "/media/test"
     assert media_url(nil) == "/media"
   end
+
+  test "active_path/2" do
+    conn = conn(:get, "/some/link")
+    assert active_path(conn, "/some/link")
+    refute active_path(conn, "/some/other/link")
+  end
+
+  test "img/2" do
+    img = %{sizes: %{"thumb" => "images/thumb/file.jpg"}}
+    assert img_url(img, :thumb) == "images/thumb/file.jpg"
+    assert img_url(nil, :thumb, [default: "default.jpg", prefix: "prefix"]) == "thumb/default.jpg"
+    assert img_url(nil, :thumb, [default: "default.jpg"]) == "thumb/default.jpg"
+    assert img_url(img, :thumb, [default: "default.jpg", prefix: "prefix"]) == "prefix/images/thumb/file.jpg"
+    assert img_url(img, :thumb, [default: "default.jpg"]) == "images/thumb/file.jpg"
+    assert img_url(img, "thumb", [default: "default.jpg"]) == "images/thumb/file.jpg"
+  end
 end

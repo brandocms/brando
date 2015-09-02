@@ -39,7 +39,7 @@
           <!-- /imagetoolbar -->
           <%= if serie.images != [] do %>
             <%= for image <- serie.images do %>
-            <img data-id="<%= image.id %>" src="<%= media_url(img(image.image, :thumb)) %>" />
+            <img data-id="<%= image.id %>" src="<%= img_url(image.image, :thumb, prefix: media_url()) %>" />
             <% end %>
           <% else %>
             <p><%= Brando.Admin.ImageView.t!(@language, "actions.empty") %></p>

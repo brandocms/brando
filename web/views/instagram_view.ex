@@ -27,13 +27,13 @@ defmodule Brando.Admin.InstagramView do
       case i.status do
         :approved ->
           a = a <> ~s(<img data-id="#{i.id}" data-status="#{i.status}" ) <>
-                   ~s(src="#{img(i.image, :thumb, prefix: prefix)}" />)
+                   ~s(src="#{img_url(i.image, :thumb, prefix: prefix)}" />)
         :rejected ->
           r = r <> ~s(<img data-id="#{i.id}" data-status="#{i.status}" ) <>
-                   ~s(src="#{img(i.image, :thumb, prefix: prefix)}" />)
+                   ~s(src="#{img_url(i.image, :thumb, prefix: prefix)}" />)
         :deleted ->
           d = d <> ~s(<img data-id="#{i.id}" data-status="#{i.status}" ) <>
-                   ~s(src="#{img(i.image, :thumb, prefix: prefix)}" />)
+                   ~s(src="#{img_url(i.image, :thumb, prefix: prefix)}" />)
         :download_failed ->
           f = f + 1
       end

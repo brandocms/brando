@@ -17,17 +17,6 @@ defmodule Brando.HTMLTest do
     assert zero_pad("1") == "001"
   end
 
-  test "active_path/2" do
-    conn = conn(:get, "/some/link")
-    assert active_path(conn, "/some/link")
-    refute active_path(conn, "/some/other/link")
-  end
-
-  test "format_date/1" do
-    date = %Ecto.DateTime{year: 2015, month: 1, day: 1}
-    assert format_date(date) == "1/1/2015"
-  end
-
   test "delete_form_button/2" do
     {:safe, ret} = delete_form_button("no", :admin_user_path, %{__struct__: :user, id: 1})
     assert ret =~ "/admin/users/1"
@@ -51,25 +40,15 @@ defmodule Brando.HTMLTest do
 
     assert auth_link(conn, "test", :admin, do: {:safe, "link text"}) ==
            {:safe, "<a href=\"test\" class=\"btn btn-default\">  link text</a>"}
-    assert auth_link_primary(conn, "test", :admin, do: {:safe, "link text"}) ==
+    assert auth_link(:primary, conn, "test", :admin, do: {:safe, "link text"}) ==
            {:safe, "<a href=\"test\" class=\"btn btn-primary\">  link text</a>"}
-    assert auth_link_info(conn, "test", :admin, do: {:safe, "link text"}) ==
+    assert auth_link(:info, conn, "test", :admin, do: {:safe, "link text"}) ==
            {:safe, "<a href=\"test\" class=\"btn btn-info\">  link text</a>"}
-    assert auth_link_success(conn, "test", :admin, do: {:safe, "link text"}) ==
+    assert auth_link(:success, conn, "test", :admin, do: {:safe, "link text"}) ==
            {:safe, "<a href=\"test\" class=\"btn btn-success\">  link text</a>"}
-    assert auth_link_warning(conn, "test", :admin, do: {:safe, "link text"}) ==
+    assert auth_link(:warning, conn, "test", :admin, do: {:safe, "link text"}) ==
            {:safe, "<a href=\"test\" class=\"btn btn-warning\">  link text</a>"}
-    assert auth_link_danger(conn, "test", :admin, do: {:safe, "link text"}) ==
+    assert auth_link(:danger, conn, "test", :admin, do: {:safe, "link text"}) ==
            {:safe, "<a href=\"test\" class=\"btn btn-danger\">  link text</a>"}
-  end
-
-  test "img/2" do
-    img = %{sizes: %{"thumb" => "images/thumb/file.jpg"}}
-    assert img(img, :thumb) == "images/thumb/file.jpg"
-    assert img(nil, :thumb, [default: "default.jpg", prefix: "prefix"]) == "thumb/default.jpg"
-    assert img(nil, :thumb, [default: "default.jpg"]) == "thumb/default.jpg"
-    assert img(img, :thumb, [default: "default.jpg", prefix: "prefix"]) == "prefix/images/thumb/file.jpg"
-    assert img(img, :thumb, [default: "default.jpg"]) == "images/thumb/file.jpg"
-    assert img(img, "thumb", [default: "default.jpg"]) == "images/thumb/file.jpg"
   end
 end

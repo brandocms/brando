@@ -172,7 +172,7 @@ defmodule Brando.InstagramImage do
         size_dir = Path.join([file_path, to_string(size_name)])
         File.mkdir_p(size_dir)
         sized_image = Path.join([size_dir, filename])
-        Brando.Images.Utils.create_image_size(full_path, sized_image, size_cfg)
+        Brando.Images.Upload.create_image_size(full_path, sized_image, size_cfg)
         sized_path = Path.join([Brando.Instagram.config(:upload_path),
                                 to_string(size_name), filename])
         {size_name, sized_path}

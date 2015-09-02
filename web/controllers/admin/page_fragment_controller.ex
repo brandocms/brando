@@ -53,7 +53,7 @@ defmodule Brando.Admin.PageFragmentController do
   def create(conn, %{"page_fragment" => page_fragment}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:fragment_model]
-    case model.create(page_fragment, Brando.HTML.current_user(conn)) do
+    case model.create(page_fragment, Brando.Utils.current_user(conn)) do
       {:ok, _} ->
         conn
         |> put_flash(:notice, t!(language, "flash.created"))

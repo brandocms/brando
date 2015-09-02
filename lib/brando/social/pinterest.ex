@@ -16,7 +16,7 @@ defmodule Brando.Social.Pinterest do
 
   ## Example
 
-      <%= Brando.Social.Pinterest.link @conn, img(@product.photo, :xlarge, [prefix: media_url()]), "#{@product.name}") do %>
+      <%= Brando.Social.Pinterest.link @conn, img_url(@product.photo, :xlarge, [prefix: media_url()]), "#{@product.name}") do %>
         my link text here
       <% end %>
 

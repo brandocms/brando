@@ -35,7 +35,7 @@ defmodule Brando.Villain.Controller do
               end)
               |> Enum.into(%{})
             %{src: Brando.Utils.media_url(image.image.path),
-              thumb: Brando.Utils.media_url(Brando.HTML.img(image.image, :thumb)),
+              thumb: Brando.Utils.media_url(Brando.Utils.img_url(image.image, :thumb)),
               sizes: sizes,
               title: image.image.title, credits: image.image.credits}
           end)
@@ -52,7 +52,7 @@ defmodule Brando.Villain.Controller do
         |> Brando.repo.get_by(slug: series_slug)
         cfg = series.image_category.cfg || Brando.config(Brando.Images)[:default_config]
         opts = Map.put(%{}, "image_series_id", series.id)
-        {:ok, image} = unquote(image_model).check_for_uploads(params, Brando.HTML.current_user(conn), cfg, opts)
+        {:ok, image} = unquote(image_model).check_for_uploads(params, Brando.Utils.current_user(conn), cfg, opts)
         sizes =
           Enum.map(image.image.sizes, fn({k, v}) ->
             {k, Brando.Utils.media_url(v)}

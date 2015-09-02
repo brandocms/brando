@@ -8,7 +8,7 @@
   <hr class="m-t-xs m-b-sm">
     <%= if i.images != [] do %>
       <%= for img <- i.images do %>
-        <img src="<%= media_url(img(img.image, :micro)) %>" />
+        <img src="<%= img_url(img.image, :micro, prefix: media_url()) %>" />
       <% end %>
     <% else %>
       <em><%= t!(@language, "actions.empty") %></em>

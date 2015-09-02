@@ -3,8 +3,8 @@ defmodule Brando.HTML do
   Helper and convenience functions.
   """
 
-  import Brando.Utils, only: [media_url: 0]
-  import Brando.Images.Utils, only: [size_dir: 2, optimized_filename: 1]
+  import Brando.Utils, only: [media_url: 0, current_user: 1,
+                              active_path: 2, img_url: 3]
   import Brando.Meta.Controller, only: [put_meta: 3, get_meta: 1]
   import Phoenix.HTML.Tag, only: [content_tag: 2, content_tag: 3]
 
@@ -18,45 +18,33 @@ defmodule Brando.HTML do
   end
 
   @doc """
-  Returns the application name set in config.exs
-  """
-  def app_name do
-    Brando.config(:app_name)
-  end
-
-  @doc """
-  Returns the Helpers module from the router.
-  """
-  def helpers(conn) do
-    Phoenix.Controller.router_module(conn).__helpers__
-  end
-
-  @doc """
   Renders a menu item.
   Also calls to render submenu items, if `current_user` has required role
   """
   def render_menu_item(conn, {color, {name, menu}}) do
     submenu_items =
-      for item <- menu.submenu, do:
-        render_submenu_item(conn, item)
-    Phoenix.HTML.raw "" <>
-    "<!-- menu item -->" <>
-    "  <li class=\"menuparent\">" <>
-    "    <a href=\"#" <> menu.anchor <> "\">" <>
-    "      <i class=\"" <> menu.icon <> "\">" <>
-    "        <b style=\"background-color: " <> color <> "\"></b>" <>
-    "      </i>" <>
-    "      <span class=\"pull-right\">" <>
-    "        <i class=\"fa fa-angle-down text\"></i>" <>
-    "        <i class=\"fa fa-angle-up text-active\"></i>" <>
-    "      </span>" <>
-    "      <span>" <> name <> "</span>" <>
-    "    </a>" <>
-    "    <ul class=\"nav lt\">" <>
-    "      " <> Enum.join(submenu_items) <>
-    "    </ul>" <>
-    "  </li>" <>
-    "<!-- /menu item -->"
+      menu.submenu
+      |> Enum.map_join("\n", &render_submenu_item(conn, &1))
+
+    Phoenix.HTML.raw """
+    <!-- menu item -->
+      <li class="menuparent">
+        <a href="##{menu.anchor}">
+          <i class="#{menu.icon}">
+            <b style="background-color: #{color}"></b>
+          </i>
+          <span class="pull-right">
+            <i class="fa fa-angle-down text"></i>
+            <i class="fa fa-angle-up text-active"></i>
+          </span>
+          <span>#{name}</span>
+        </a>
+        <ul class="nav lt">
+          #{submenu_items}
+        </ul>
+      </li>
+    <!-- /menu item -->
+    """
   end
 
   @doc """
@@ -66,7 +54,7 @@ defmodule Brando.HTML do
   def render_submenu_item(conn, item) do
     {fun, action} = item.url
     if can_render?(conn, item) do
-      url = apply(helpers(conn), fun, [conn, action])
+      url = apply(Brando.Utils.helpers(conn), fun, [conn, action])
       active = active_path(conn, url)
       li_classes = active && "menuitem active" || "menuitem"
       a_class = active && "active" || ""
@@ -85,6 +73,7 @@ defmodule Brando.HTML do
   @doc """
   Checks if current_user in conn has `role`
   """
+  @spec can_render?(Plug.Conn.t, Map.t) :: boolean
   def can_render?(_, %{role: nil}) do
     true
   end
@@ -97,25 +86,19 @@ defmodule Brando.HTML do
   end
 
   @doc """
-  Shows link if current_user is authorized for it
+  Shows `link` if `current_user` has `role` that allows it.
   """
+  @spec auth_link(Plug.Conn.t, String.t, atom, {:safe, String.t}) :: String.t
   def auth_link(conn, link, role, do: {:safe, block}) do
     do_auth_link({"btn-default", conn, link, role}, block)
   end
-  def auth_link_primary(conn, link, role, do: {:safe, block}) do
-    do_auth_link({"btn-primary", conn, link, role}, block)
-  end
-  def auth_link_info(conn, link, role, do: {:safe, block}) do
-    do_auth_link({"btn-info", conn, link, role}, block)
-  end
-  def auth_link_success(conn, link, role, do: {:safe, block}) do
-    do_auth_link({"btn-success", conn, link, role}, block)
-  end
-  def auth_link_warning(conn, link, role, do: {:safe, block}) do
-    do_auth_link({"btn-warning", conn, link, role}, block)
-  end
-  def auth_link_danger(conn, link, role, do: {:safe, block}) do
-    do_auth_link({"btn-danger", conn, link, role}, block)
+  @doc """
+  Shows `link` with `type` if `current_user` has `role` that allows it.
+  """
+  @spec auth_link(:default | :primary | :info | :success | :warning | :danger,
+                  Plug.Conn.t, String.t, atom, {:safe, String.t}) :: String.t
+  def auth_link(type, conn, link, role, do: {:safe, block}) do
+    do_auth_link({"btn-#{type}", conn, link, role}, block)
   end
   defp do_auth_link({class, conn, link, role}, block) do
     case can_render?(conn, %{role: role}) do
@@ -127,28 +110,6 @@ defmodule Brando.HTML do
         ""
     end
     |> Phoenix.HTML.raw
-  end
-
-  @doc """
-  Checks if `conn`'s `full_path` matches `current_path`.
-  Returns "active", or "".
-  """
-  def active_path(conn, url_to_match) do
-    conn.request_path == url_to_match
-  end
-
-  @doc """
-  Formats `arg1` (Ecto.DateTime) as a binary.
-  """
-  def format_date(%Ecto.DateTime{year: year, month: month, day: day}) do
-    "#{day}/#{month}/#{year}"
-  end
-
-  @doc """
-  Return DATE ERROR if `_erroneus_date` is not an Ecto.DateTime
-  """
-  def format_date(_erroneus_date) do
-    ">>DATE ERROR<<"
   end
 
   @doc """
@@ -174,13 +135,6 @@ defmodule Brando.HTML do
     full_name
     |> String.split
     |> hd
-  end
-
-  @doc """
-  Return the current user set in session.
-  """
-  def current_user(conn) do
-    Plug.Conn.get_session(conn, :current_user)
   end
 
   @doc """
@@ -250,28 +204,6 @@ defmodule Brando.HTML do
   end
 
   @doc """
-  Grabs `size` from the `image_field` json struct.
-  If default is passed, return size_dir of `default`.
-  Returns path to image.
-  """
-  def img(image_field, size, opts \\ [])
-  def img(nil, size, opts) do
-    default = Keyword.get(opts, :default, nil)
-    default && size_dir(default, size)
-            || ""
-  end
-
-  def img(image_field, size, opts) do
-    size = is_atom(size) && Atom.to_string(size) || size
-    prefix = Keyword.get(opts, :prefix, nil)
-    img_url =
-      prefix && Path.join([prefix, image_field.sizes[size]])
-             || image_field.sizes[size]
-    Map.get(image_field, :optimized) && optimized_filename(img_url)
-                                         || img_url
-  end
-
-  @doc """
   Displays a banner informing about cookie laws
   """
   def cookie_law(conn, text, button_text \\ "OK") do
@@ -293,10 +225,10 @@ defmodule Brando.HTML do
 
   ## Example
 
-      analytics("UA-XXXXX-X")
+      google_analytics("UA-XXXXX-X")
 
   """
-  def analytics(code) do
+  def google_analytics(code) do
     "<script>" <>
     "(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=" <>
     "function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;" <>
@@ -318,7 +250,7 @@ defmodule Brando.HTML do
         <ul class="nav navbar-nav">
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-              <img class="micro-avatar" src="#{img(current_user(conn).avatar, :micro, [default: Brando.helpers.static_path(conn, "/images/brando/defaults/avatar_default.jpg"), prefix: media_url()])}" />
+              <img class="micro-avatar" src="#{img_url(current_user(conn).avatar, :micro, [default: Brando.helpers.static_path(conn, "/images/brando/defaults/avatar_default.jpg"), prefix: media_url()])}" />
             </a>
             <ul class="dropdown-menu dropdown-menu-right" role="menu">
               <li><a href="#{Brando.helpers.admin_dashboard_path(conn, :dashboard)}">Admin</a></li>

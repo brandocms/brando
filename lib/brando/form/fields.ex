@@ -6,8 +6,7 @@ defmodule Brando.Form.Fields do
   """
   use Linguist.Vocabulary
 
-  import Brando.Utils, only: [media_url: 1]
-  import Brando.HTML, only: [img: 2]
+  import Brando.Utils, only: [media_url: 0, img_url: 3]
   import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2, tag: 2]
   import Phoenix.HTML, only: [raw: 1]
 
@@ -904,7 +903,7 @@ defmodule Brando.Form.Fields do
   defp get_img_preview(nil), do: ""
   defp get_img_preview(value) do
     {:safe, html} = content_tag(:div, class: "image-preview") do
-      tag(:img, [src: media_url(img(value, :thumb))]) |> raw
+      tag(:img, [src: img_url(value, :thumb, prefix: media_url())]) |> raw
     end
     html
   end

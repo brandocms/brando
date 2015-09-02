@@ -30,7 +30,7 @@ defmodule Brando.Admin.ImageSeriesController do
   def create(conn, %{"imageseries" => image_series}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:series_model]
-    case model.create(image_series, Brando.HTML.current_user(conn)) do
+    case model.create(image_series, Brando.Utils.current_user(conn)) do
       {:ok, _} ->
         conn
         |> put_flash(:notice, t!(language, "flash.created"))
@@ -110,7 +110,7 @@ defmodule Brando.Admin.ImageSeriesController do
     cfg = series.image_category.cfg
           || Brando.config(Brando.Images)[:default_config]
     {:ok, image} =
-      image_model.check_for_uploads(params, Brando.HTML.current_user(conn),
+      image_model.check_for_uploads(params, Brando.Utils.current_user(conn),
                                     cfg, opts)
     conn
     |> render(:upload_post, image: image)

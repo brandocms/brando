@@ -23,11 +23,12 @@ defmodule Brando.Field.ImageField do
       }
 
   """
-  import Brando.Images.Utils
+  import Brando.Images.Upload
 
   defmacro __using__(_) do
     quote do
       Module.register_attribute(__MODULE__, :imagefields, accumulate: true)
+      import Brando.Images.Upload
       import Brando.Images.Utils
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)

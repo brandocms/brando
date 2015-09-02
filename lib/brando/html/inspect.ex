@@ -4,9 +4,8 @@ defmodule Brando.HTML.Inspect do
   """
   use Linguist.Vocabulary
 
-  import Brando.HTML
-  import Brando.Utils, only: [media_url: 1]
   import Brando.Render, only: [r: 1]
+  import Brando.Utils, only: [media_url: 0, img_url: 3]
   import Ecto.DateTime.Utils, only: [zero_pad: 2]
   import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2]
 
@@ -122,7 +121,7 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_field(_language, _name, Brando.Type.Image, value) do
-    ~s(<div class="imageserie m-b-md"><img src="#{media_url(img(value, :thumb))}" style="padding-bottom: 3px;" /></div>)
+    ~s(<div class="imageserie m-b-md"><img src="#{img_url(value, :thumb, prefix: media_url())}" style="padding-bottom: 3px;" /></div>)
   end
 
   defp do_inspect_field(language, _name, Brando.Type.Status, value) do

@@ -2,8 +2,7 @@ defmodule Brando.SocialTest do
   use ExUnit.Case, async: true
   use Plug.Test
 
-  import Brando.Utils, only: [media_url: 0]
-  import Brando.HTML, only: [img: 3]
+  import Brando.Utils, only: [media_url: 0, img_url: 3]
 
   alias Brando.Social
 
@@ -22,7 +21,7 @@ defmodule Brando.SocialTest do
   test "Pinterest.link" do
     image = %{sizes: %{"xlarge" => "images/xlarge/file.jpg"}}
     conn = conn(:get, "/awesome/link", [])
-    assert Social.Pinterest.link(conn, img(image, :xlarge, [prefix: media_url()]), "Pinterest text", do: {:safe, "pinterest"})
+    assert Social.Pinterest.link(conn, img_url(image, :xlarge, [prefix: media_url()]), "Pinterest text", do: {:safe, "pinterest"})
            == {:safe, ["<a href=\"https://pinterest.com/pin/create/button/?url=http%3A%2F%2Fwww.example.com%2Fawesome%2Flink&amp;media=http%3A%2F%2Fwww.example.com%2Fmedia%2Fimages%2Fxlarge%2Ffile.jpg&amp;description=Pinterest+text&quot;\" title=\"pinterest\">", "pinterest", "</a>"]}
   end
 end

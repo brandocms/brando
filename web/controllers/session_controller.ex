@@ -38,7 +38,7 @@ defmodule Brando.SessionController do
 
   @doc false
   def logout(conn, _params) do
-    if user = Brando.HTML.current_user(conn), do:
+    if user = Brando.Utils.current_user(conn), do:
       SystemChannel.log(:logged_out, user)
     conn
     |> put_layout({Brando.Session.LayoutView, "auth.html"})

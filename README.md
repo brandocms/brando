@@ -1,3 +1,5 @@
+A helping hand.
+
 ![Brando logo](https://raw.githubusercontent.com/twined/brando/develop/priv/install/templates/static/brando/images/brando-big.png)
 
 [![Build Status](https://travis-ci.org/twined/brando.png?branch=master)](https://travis-ci.org/twined/brando)
