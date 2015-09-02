@@ -17,7 +17,8 @@ defmodule Brando.Type.Role do
   Ex: ["1", "2", "4"]
   """
   def cast(list) when is_list(list) do
-    set_roles = Application.get_env(:brando, Brando.Type.Role) |> Keyword.get(:roles)
+    cfg = Application.get_env(:brando, Brando.Type.Role)
+    set_roles = Keyword.get(cfg, :roles)
     # first turn the list of binaries into a sum
     roles = Enum.reduce(list, 0, fn (role, acc) ->
       cond do
@@ -66,7 +67,9 @@ defmodule Brando.Type.Role do
   just return it to be stored in the model struct.
   """
   def load(roles) when is_integer(roles) do
-    set_roles = Application.get_env(:brando, Brando.Type.Role) |> Keyword.get(:roles)
+    cfg = Application.get_env(:brando, Brando.Type.Role)
+    set_roles = Keyword.get(cfg, :roles)
+
     acc = Enum.reduce(set_roles, [], fn ({role_k, role_v}, acc) ->
       case (roles &&& role_v) == role_v do
         true -> [role_k|acc]
@@ -83,11 +86,15 @@ defmodule Brando.Type.Role do
   def dump(integer) when is_integer(integer), do: {:ok, integer}
   def dump(string) when is_binary(string), do: {:ok, String.to_integer(string)}
   def dump(list) when is_list(list) do
-    set_roles = Application.get_env(:brando, Brando.Type.Role) |> Keyword.get(:roles)
+    cfg = Application.get_env(:brando, Brando.Type.Role)
+    set_roles = Keyword.get(cfg, :roles)
     cond do
-      is_atom(List.first(list))    -> acc = Enum.reduce(list, 0, &(&2 + set_roles[&1]))
-      is_binary(List.first(list))  -> acc = Enum.reduce(list, 0, &(&2 + String.to_integer(&1)))
-      is_integer(List.first(list)) -> acc = Enum.reduce(list, 0, &(&2 + &1))
+      is_atom(List.first(list))    ->
+        acc = Enum.reduce(list, 0, &(&2 + set_roles[&1]))
+      is_binary(List.first(list))  ->
+        acc = Enum.reduce(list, 0, &(&2 + String.to_integer(&1)))
+      is_integer(List.first(list)) ->
+        acc = Enum.reduce(list, 0, &(&2 + &1))
     end
     {:ok, acc}
   end

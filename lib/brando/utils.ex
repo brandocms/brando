@@ -198,7 +198,8 @@ defmodule Brando.Utils do
   """
   @spec escape_current_url(Plug.Conn.t) :: String.t
   def escape_current_url(conn) do
-    current_url(conn)
+    conn
+    |> current_url
     |> URI.encode_www_form
   end
 
@@ -231,7 +232,8 @@ defmodule Brando.Utils do
   Get title assign from `conn`
   """
   def get_page_title(%{assigns: %{page_title: title}} = conn) when is_map(title) do
-    Brando.config(:app_name) <> " | " <> Map.get(title, conn.assigns[:language], "")
+    "#{Brando.config(:app_name)} | " <>
+    "#{Map.get(title, conn.assigns[:language], "")}"
   end
   def get_page_title(%{assigns: %{page_title: title}}) do
     Brando.config(:app_name) <> " | " <> title
@@ -255,8 +257,9 @@ defmodule Brando.Utils do
     case Brando.config(:media_path) do
       "" ->
         raise Brando.Exception.ConfigError,
-              message: "config :brando, :media_path must be an absolute path " <>
-                       "to your media/ directory, e.g. /sites/prod/my_app/media"
+              message: "config :brando, :media_path must be an absolute " <>
+                       "path to your media/ directory, e.g. " <>
+                       "/sites/prod/my_app/media"
       nil ->
         raise Brando.Exception.ConfigError,
               message: "config :brando, :media_path must be set!"

@@ -10,11 +10,11 @@ defmodule Brando.Meta.Controller do
   """
   def put_meta(conn, key, value) do
     meta =
-      get_meta(conn)
+      conn
+      |> get_meta
       |> Map.put(key, value)
 
-    conn
-    |> put_private(:brando_meta, meta)
+    put_private(conn, :brando_meta, meta)
   end
 
   @doc """

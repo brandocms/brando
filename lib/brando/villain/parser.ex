@@ -16,6 +16,9 @@ defmodule Brando.Villain.Parser do
   @doc "Parses image"
   defcallback image(%{String.t => any}) :: String.t
 
+  @doc "Parses slideshow"
+  defcallback slideshow(%{String.t => any}) :: String.t
+
   @doc "Parses divider"
   defcallback divider(%{String.t => any}) :: String.t
 

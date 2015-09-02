@@ -39,14 +39,17 @@ defmodule Brando.Routes.Admin.Pages do
     add_page_routes(path, PageController, [])
 
   defp add_page_routes(path, controller, opts) do
-    map = %{}
-          |> Map.put(:model, Keyword.get(opts, :model, Page))
-          |> Map.put(:fragment_model, Keyword.get(opts, :fragment_model, PageFragment))
+    map =
+      %{}
+      |> Map.put(:model, Keyword.get(opts, :model, Page))
+      |> Map.put(:fragment_model, Keyword.get(opts, :fragment_model,
+                                              PageFragment))
     options = Keyword.put([], :private, Macro.escape(map))
     quote do
       path = unquote(path)
       ctrl = unquote(controller)
       opts = unquote(options)
+      nil_opts = Keyword.put(opts, :as, nil)
       fctrl = PageFragmentController
 
       get    "#{path}/fragments",            fctrl, :index,          opts
@@ -57,7 +60,7 @@ defmodule Brando.Routes.Admin.Pages do
       post   "#{path}/fragments",            fctrl, :create,         opts
       delete "#{path}/fragments/:id",        fctrl, :delete,         opts
       patch  "#{path}/fragments/:id",        fctrl, :update,         opts
-      put    "#{path}/fragments/:id",        fctrl, :update,         Keyword.put(opts, :as, nil)
+      put    "#{path}/fragments/:id",        fctrl, :update,         nil_opts
 
       villain_routes path, ctrl
 
@@ -70,7 +73,7 @@ defmodule Brando.Routes.Admin.Pages do
       post   "#{path}",               ctrl, :create,         opts
       delete "#{path}/:id",           ctrl, :delete,         opts
       patch  "#{path}/:id",           ctrl, :update,         opts
-      put    "#{path}/:id",           ctrl, :update,         Keyword.put(opts, :as, nil)
+      put    "#{path}/:id",           ctrl, :update,         nil_opts
     end
   end
 end

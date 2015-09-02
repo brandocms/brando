@@ -16,7 +16,9 @@ defmodule Brando.Plug.Uploads do
     case module.check_for_uploads(module, param) do
       {:ok, image_fields} ->
         param = handle_image_fields(param, image_fields)
-        conn = conn |> Phoenix.Controller.put_flash(:notice, "Bilde lastet opp.")
+        conn =
+          conn
+          |> Phoenix.Controller.put_flash(:notice, "Bilde lastet opp.")
       {:error, _errors} ->
         Logger.error(inspect(_errors))
         nil

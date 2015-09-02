@@ -23,9 +23,10 @@ defmodule Brando.Villain.Controller do
       import Ecto.Query
       @doc false
       def browse_images(conn, %{"slug" => series_slug} = params) do
-        image_series = unquote(series_model)
-        |> preload([:image_category, :images])
-        |> Brando.repo.get_by(slug: series_slug)
+        image_series =
+          unquote(series_model)
+          |> preload([:image_category, :images])
+          |> Brando.repo.get_by(slug: series_slug)
 
         if image_series do
           image_list = Enum.map(image_series.images, fn image ->
@@ -33,7 +34,8 @@ defmodule Brando.Villain.Controller do
               Enum.map(image.image.sizes, fn({k, v}) ->
                 {k, Brando.Utils.media_url(v)}
               end)
-              |> Enum.into(%{})
+            sizes = Enum.into(sizes, %{})
+
             %{src: Brando.Utils.media_url(image.image.path),
               thumb: Brando.Utils.media_url(Brando.Utils.img_url(image.image, :thumb)),
               sizes: sizes,
@@ -50,14 +52,18 @@ defmodule Brando.Villain.Controller do
         series = unquote(series_model)
         |> preload(:image_category)
         |> Brando.repo.get_by(slug: series_slug)
-        cfg = series.image_category.cfg || Brando.config(Brando.Images)[:default_config]
+
+        cfg = series.image_category.cfg ||
+              Brando.config(Brando.Images)[:default_config]
         opts = Map.put(%{}, "image_series_id", series.id)
-        {:ok, image} = unquote(image_model).check_for_uploads(params, Brando.Utils.current_user(conn), cfg, opts)
+        {:ok, image} =
+          unquote(image_model).check_for_uploads(params, Brando.Utils.current_user(conn), cfg, opts)
         sizes =
-          Enum.map(image.image.sizes, fn({k, v}) ->
+          Enum.map image.image.sizes, fn({k, v}) ->
             {k, Brando.Utils.media_url(v)}
-          end)
-          |> Enum.into(%{})
+          end
+        sizes = Enum.into(sizes, %{})
+
         json conn,
           %{status: "200",
             uid: uid,
@@ -101,15 +107,15 @@ defmodule Brando.Villain.Controller do
 
       @doc false
       def imageseries(conn, _) do
+        q = from is in unquote(series_model),
+                    join: c in assoc(is, :image_category),
+                    where: c.slug == "slideshows",
+                    order_by: is.slug,
+                    preload: [image_category: c]
         series =
-          (from is in unquote(series_model),
-                   join: c in assoc(is, :image_category),
-                   where: c.slug == "slideshows",
-                   order_by: is.slug,
-                   preload: [image_category: c])
+          q
           |> Brando.repo.all
-
-        series = Enum.map(series, &(&1.slug))
+          |> Enum.map(&(&1.slug))
 
         json conn, %{status: 200, series: series}
       end
@@ -117,9 +123,12 @@ defmodule Brando.Villain.Controller do
       @doc false
       def image_info(conn, %{"form" => form, "id" => id, "uid" => uid}) do
         form = URI.decode_query(form)
-        image = unquote(image_model)
-        |> Brando.repo.get_by(id: id)
-        {:ok, image} = unquote(image_model).update_image_meta(image, form["title"], form["credits"])
+        image =
+          unquote(image_model)
+          |> Brando.repo.get(id)
+        {:ok, image} =
+          unquote(image_model).update_image_meta(image, form["title"],
+                                                 form["credits"])
         json conn, %{status: 200, id: id, uid: uid,
                      title: image.image.title, credits: image.image.credits,
                      link: form["link"]}

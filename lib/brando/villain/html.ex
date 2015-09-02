@@ -16,10 +16,13 @@ defmodule Brando.Villain.HTML do
 
   """
   def include_scripts do
-    main = Mix.env == :dev && script_tag("/js/villain.all.js") || script_tag("/js/villain.all-min.js")
-    extras = for extra <- Keyword.get(Brando.config(Brando.Villain), :extra_blocks, []) do
-      script_tag("/js/blocks.#{String.downcase(extra)}.js")
-    end
+    main = Mix.env == :dev && script_tag("/js/villain.all.js")
+                           || script_tag("/js/villain.all-min.js")
+    extra_blocks = Keyword.get(Brando.config(Brando.Villain), :extra_blocks, [])
+    extras =
+      for extra <- extra_blocks do
+        script_tag("/js/blocks.#{String.downcase(extra)}.js")
+      end
     [main|extras] |> raw
   end
 
@@ -44,6 +47,7 @@ defmodule Brando.Villain.HTML do
       extra_blocks == [] && "// extraBlocks: []"
                          || "extraBlocks: #{inspect(extra_blocks)}"
 
+    html =
     """
     <script type="text/javascript">
        $(document).ready(function() {
@@ -55,12 +59,15 @@ defmodule Brando.Villain.HTML do
          });
        });
     </script>
-    """ |> raw
+    """
+    html |> raw
   end
 
   defp script_tag(src) do
-    {:safe, html} = content_tag :script, "", [type: "text/javascript", charset: "utf-8",
-                                              src: Brando.helpers.static_path(Brando.endpoint, src)]
+    {:safe, html} =
+      content_tag :script, "",
+        [type: "text/javascript", charset: "utf-8",
+         src: Brando.helpers.static_path(Brando.endpoint, src)]
     html
   end
 end

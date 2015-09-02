@@ -18,9 +18,9 @@ defmodule Brando.Images.Upload do
       Returns {:ok, model} or raises
       """
       def check_for_uploads(params, current_user, cfg, put_fields \\ nil) do
-        params = params
-        |> filter_plugs
-        |> Enum.reduce([], fn (plug, acc) -> handle_upload(plug, acc, current_user, put_fields, __MODULE__, cfg) end)
+        Enum.reduce filter_plugs(params), [], fn (plug, acc) ->
+          handle_upload(plug, acc, current_user, put_fields, __MODULE__, cfg)
+        end
       end
     end
   end
@@ -28,7 +28,7 @@ defmodule Brando.Images.Upload do
   @doc """
   Handles Plug.Upload for our modules.
   """
-  def handle_upload({name, plug}, _acc, current_user, put_fields, module, cfg) do
+  def handle_upload({name, plug}, _, current_user, put_fields, module, cfg) do
     {:ok, file} = do_upload(plug, cfg)
     params = Map.put(put_fields, name, file)
     apply(module, :create, [params, current_user])
@@ -89,12 +89,16 @@ defmodule Brando.Images.Upload do
   defp create_upload_path({plug, cfg}) do
     upload_path = Path.join(Brando.config(:media_path), Map.get(cfg, :upload_path))
     case File.mkdir_p(upload_path) do
-      :ok -> {Map.put(plug, :upload_path, upload_path), cfg}
-      {:error, reason} -> raise UploadError, message: "Kunne ikke lage filbane -> #{inspect(reason)}"
+      :ok ->
+        {Map.put(plug, :upload_path, upload_path), cfg}
+      {:error, reason} ->
+        raise UploadError,
+              message: "Kunne ikke lage filbane -> #{inspect(reason)}"
     end
   end
 
-  defp copy_uploaded_file({%{filename: filename, path: temp_path, upload_path: upload_path} = plug, cfg}) do
+  defp copy_uploaded_file({%{filename: filename, path: temp_path,
+                          upload_path: upload_path} = plug, cfg}) do
     new_file = Path.join(upload_path, filename)
     if File.exists?(new_file) do
       new_file = Path.join(upload_path, unique_filename(filename))
@@ -137,7 +141,8 @@ defmodule Brando.Images.Upload do
     if size_cfg["crop"] do
       Mogrify.open(file)
       |> Mogrify.copy
-      |> Mogrify.resize("#{size_cfg["size"]}#{modifier} #{fill}-gravity center -extent #{size_cfg["size"]}")
+      |> Mogrify.resize("#{size_cfg["size"]}#{modifier} " <>
+                        "#{fill}-gravity center -extent #{size_cfg["size"]}")
       |> Mogrify.save(sized_image)
     else
       Mogrify.open(file)

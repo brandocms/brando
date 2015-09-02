@@ -8,7 +8,8 @@ defmodule Brando.Social.Pinterest do
     url = Brando.Utils.escape_current_url(conn)
     media = Brando.Utils.escape_and_prefix_host(conn, media)
     text = URI.encode_www_form(text)
-    ~s(https://pinterest.com/pin/create/button/?url=#{url}&media=#{media}&description=#{text}")
+    ~s(https://pinterest.com/pin/create/button/?url=) <>
+    ~s(#{url}&media=#{media}&description=#{text}")
   end
 
   @doc ~S"""
@@ -16,12 +17,15 @@ defmodule Brando.Social.Pinterest do
 
   ## Example
 
-      <%= Brando.Social.Pinterest.link @conn, img_url(@product.photo, :xlarge, [prefix: media_url()]), "#{@product.name}") do %>
+      <%= Brando.Social.Pinterest.link @conn,
+          img_url(@p.photo, :xlarge, [prefix: media_url()]), "#{@p.name}") do %>
         my link text here
       <% end %>
 
   """
   def link(conn, media, pinterest_text, do: {:safe, link_contents}) do
-    content_tag :a, link_contents, [href: share_url(conn, media, pinterest_text), title: link_contents |> to_string]
+    content_tag :a, link_contents,
+      [href: share_url(conn, media, pinterest_text),
+       title: to_string(link_contents)]
   end
 end

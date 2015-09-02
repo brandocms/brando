@@ -37,6 +37,7 @@ defmodule Brando.Instagram do
   Grab `key` from config
   """
   def config(key) do
-    Application.get_env(:brando, Brando.Instagram) |> Keyword.get(key)
+    cfg = Application.get_env(:brando, Brando.Instagram)
+    Keyword.get(cfg, key)
   end
 end

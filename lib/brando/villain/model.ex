@@ -28,7 +28,8 @@ defmodule Brando.Villain.Model do
       """
       def generate_html(changeset) do
         if Ecto.Changeset.get_change(changeset, :data) do
-          changeset |> Ecto.Changeset.put_change(:html, Brando.Villain.parse(changeset.changes.data))
+          parsed_data = Brando.Villain.parse(changeset.changes.data)
+          Ecto.Changeset.put_change(changeset, :html, parsed_data)
         else
           changeset
         end
@@ -56,13 +57,10 @@ defmodule Brando.Villain.Model do
           post.data
           |> Enum.filter(fn(block) -> block["type"] == "image" end)
 
-        Enum.reduce image_blocks, [], fn(image_block, acc) ->
+        Enum.reduce image_blocks, [], fn(block, acc) ->
           reduced_block =
-            Enum.reduce image_block["data"]["sizes"], [], fn({_size, path}, acc) ->
-              case File.exists?(Path.join(["priv", path])) do
-                true  -> acc
-                false -> {:missing, post, path}
-              end
+            Enum.reduce block["data"]["sizes"], [], fn({_size, path}, acc) ->
+              File.exists?(Path.join(["priv", path])) && acc || {:missing, post, path}
             end
           case reduced_block do
             []  -> acc

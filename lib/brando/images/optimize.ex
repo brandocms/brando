@@ -37,7 +37,8 @@ defmodule Brando.Images.Optimize do
 
   defp run_optimization(%Brando.Type.Image{} = img, type) do
     cfg =
-      Brando.config(Brando.Images)
+      Brando.Images
+      |> Brando.config
       |> Keyword.get(:optimize, [])
       |> Keyword.get(type)
 

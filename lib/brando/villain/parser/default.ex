@@ -4,6 +4,8 @@ defmodule Brando.Villain.Parser.Default do
   """
   @behaviour Brando.Villain.Parser
 
+  import Ecto.Query
+
   @doc """
   Convert header to HTML
   """
@@ -60,6 +62,33 @@ defmodule Brando.Villain.Parser.Default do
           #{credits}
         </div>
       </div>
+    </div>
+    """
+  end
+
+  @doc """
+  Slideshow
+  """
+  def slideshow(%{"imageseries" => series_slug, "size" => size}) do
+    series =
+      (from is in Brando.ImageSeries,
+        join: c in assoc(is, :image_category),
+        join: i in assoc(is, :images),
+        where: c.slug == "slideshows" and is.slug == ^series_slug,
+        order_by: i.sequence,
+        preload: [image_category: c, images: i])
+      |> Brando.repo.one
+
+    images = Enum.map_join series.images, "\n", fn(img) ->
+      src = Brando.Utils.img_url(img.image, String.to_atom(size),
+                           [prefix: Brando.Utils.media_url()])
+      ~s(<li><img src="#{src}" /></li>)
+    end
+    """
+    <div class="flexslider flex-viewport">
+      <ul class="slides">
+        #{images}
+      </ul>
     </div>
     """
   end

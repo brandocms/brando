@@ -16,6 +16,7 @@ defmodule Brando.Plug.Section do
   @doc """
   Add `name` to body #id
   """
-  def put_section(conn, name), do:
+  def put_section(conn, name) do
     conn |> put_private(:brando_section_name, name)
+  end
 end

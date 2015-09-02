@@ -107,8 +107,8 @@ defmodule Brando.Tag do
   defmacro __using__(which) when is_atom(which) do
     apply(__MODULE__, which, [])
   end
-  defmacro __using__([:controller, controller_opts] = opts) when is_list(opts) do
-    apply(__MODULE__, :controller, controller_opts)
+  defmacro __using__([:controller, ctrl_opts] = opts) when is_list(opts) do
+    apply(__MODULE__, :controller, ctrl_opts)
   end
 
   @doc """

@@ -8,23 +8,20 @@ defmodule Brando.I18n do
   Put `language` in session.
   """
   def put_language(conn, language) do
-    conn
-    |> put_session(:language, language)
+    put_session(conn, :language, language)
   end
 
   @doc """
   Put `language` in assigns.
   """
   def assign_language(conn, language) do
-    conn
-    |> assign(:language, language)
+    assign(conn, :language, language)
   end
 
   @doc """
   Get `language` from assigns.
   """
   def get_language(conn) do
-    conn.assigns
-    |> Map.get(:language, Brando.config(:default_admin_language))
+    Map.get(conn.assigns,:language, Brando.config(:default_admin_language))
   end
 end

@@ -18,8 +18,8 @@
           "This webpage uses cookies for responsive design and analytics. " <>
           "You can turn these off in your browser.",
           "Accept & dismiss" %>
-        <hr class="mobile-hide">
       </section>
+      <hr class="mobile-hide">
     </section>
   -->
   <%= if Brando.Utils.current_user(@conn) do %>

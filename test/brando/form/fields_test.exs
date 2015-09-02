@@ -94,13 +94,16 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "render_options/4" do
-    assert F.render_options(:create, %{choices: &UserForm.get_status_choices/1, language: "en"}, "val", nil)
-           == [["<option value=\"1\">", "Valg 1", "</option>"], ["<option value=\"2\">", "Valg 2", "</option>"]]
+    assert F.render_options(:create, %{choices: &UserForm.get_status_choices/1,
+                            language: "en"}, "val", nil)
+           == [["<option value=\"1\">", "Valg 1", "</option>"],
+               ["<option value=\"2\">", "Valg 2", "</option>"]]
   end
 
   test "get_choices/1" do
     opts = %{language: "en", choices: &UserForm.get_status_choices/1}
-    assert F.get_choices(opts) == [[value: "1", text: "Valg 1"], [value: "2", text: "Valg 2"]]
+    assert F.get_choices(opts) == [[value: "1", text: "Valg 1"],
+                                   [value: "2", text: "Valg 2"]]
   end
 
   test "concat_fields/2" do
@@ -111,13 +114,16 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "div_tag/2" do
-    assert F.div_tag("contents", "class") == ["<div class=\"class\">", "contents", "</div>"]
-    assert F.div_tag("<b>contents</b>", "class class2") == ["<div class=\"class class2\">", "<b>contents</b>", "</div>"]
+    assert F.div_tag("contents", "class")
+           == ["<div class=\"class\">", "contents", "</div>"]
+    assert F.div_tag("<b>contents</b>", "class class2")
+           == ["<div class=\"class class2\">", "<b>contents</b>", "</div>"]
   end
 
   test "form_group/4" do
     assert F.form_group("1234", "name", [], nil)
-           == ["<div class=\"form-group required\">", ["1234", "", ""], "</div>"]
+           == ["<div class=\"form-group required\">",
+               ["1234", "", ""], "</div>"]
     opts = %{required: false, language: "no"}
     fg = F.form_group("1234", "name", opts, ["can't be blank"]) |> Enum.join
     refute fg =~ "required"
@@ -137,7 +143,8 @@ defmodule Brando.Form.FieldsTest do
     refute fg =~ "required"
     refute fg =~ "has-error"
 
-    fg = assert F.form_group("1234", "name", opts, ["must be unique"]) |> Enum.join
+    fg =
+      assert F.form_group("1234", "name", opts, ["must be unique"]) |> Enum.join
     assert fg =~ "has-error"
     assert fg =~ "fa-exclamation-circle"
   end
@@ -154,14 +161,16 @@ defmodule Brando.Form.FieldsTest do
     assert F.textarea(:update, "name", "blah", nil, %{})
            == ["<textarea name=\"name\">", "blah", "</textarea>"]
     assert F.textarea(:update, "name", %{test: "testing"}, nil, %{})
-           == ["<textarea name=\"name\">", "{&quot;test&quot;:&quot;testing&quot;}", "</textarea>"]
+           == ["<textarea name=\"name\">",
+               "{&quot;test&quot;:&quot;testing&quot;}", "</textarea>"]
     assert F.textarea(:update, "name", "blah", nil, %{default: "default"})
            == ["<textarea name=\"name\">", "blah", "</textarea>"]
     assert F.textarea(:update, "name", nil, nil, %{default: "default"})
            == ["<textarea name=\"name\">", "", "</textarea>"]
     assert F.textarea(:create, "name", nil, nil, %{default: "default"})
            == ["<textarea name=\"name\">", "default", "</textarea>"]
-    assert F.textarea(:update, "name", nil, nil, %{default: "default", class: "class"})
+    assert F.textarea(:update, "name", nil, nil,
+                      %{default: "default", class: "class"})
            == ["<textarea class=\"class\" name=\"name\">", "", "</textarea>"]
   end
 
@@ -250,7 +259,8 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "radio/7" do
-    assert F.radio(:create, "choice_name", "choice_val", "choice_text", nil, nil, nil)
+    assert F.radio(:create, "choice_name", "choice_val",
+                   "choice_text", nil, nil, nil)
            == ["<div>", [["<label for=\"choice_name\">", "", "</label>"], ["<label for=\"choice_name\">", ["<input name=\"choice_name\" type=\"radio\" value=\"choice_val\">", "choice_text"], "</label>"]], "</div>"]
     assert F.radio(:create, "choice_name", "choice_val", "choice_text", nil, "choice_val", nil)
            == ["<div>", [["<label for=\"choice_name\">", "", "</label>"], ["<label for=\"choice_name\">", ["<input checked=\"checked\" name=\"choice_name\" type=\"radio\" value=\"choice_val\">", "choice_text"], "</label>"]], "</div>"]

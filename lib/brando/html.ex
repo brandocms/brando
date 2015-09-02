@@ -346,7 +346,7 @@ defmodule Brando.HTML do
       |> put_meta("og:type", "article")
       |> put_meta("og:url", Brando.Utils.current_url(conn))
 
-    Enum.map_join(get_meta(conn), "\n    ", &(elem(meta_tag(&1), 1)))
-    |> Phoenix.HTML.raw
+    html = Enum.map_join(get_meta(conn), "\n    ", &(elem(meta_tag(&1), 1)))
+    Phoenix.HTML.raw(html)
   end
 end

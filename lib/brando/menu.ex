@@ -6,8 +6,9 @@ defmodule Brando.Menu do
 
       use Brando.Menu
       menu "Admin",
-        %{name: "Admin", anchor: "admin", bgcolor: "#ffaaff", icon: "fa fa-dashboard icon",
-          submenu: [%{name: "Dashboard", url: admin_dashboard_path(:dashboard)}]}
+        %{name: "Admin", anchor: "admin", bgcolor: "#ffaaff",
+          icon: "fa fa-dashboard icon",
+          submenu: [%{name: "Dash", url: admin_dashboard_path(:dashboard)}]}
 
   """
 
@@ -30,16 +31,19 @@ defmodule Brando.Menu do
   ## Usage
 
       menu "Admin",
-        %{name: "Admin", anchor: "admin", bgcolor: "#ffaaff", icon: "fa fa-dashboard icon",
-          submenu: [%{name: "Dashboard", url: admin_dashboard_path(:dashboard)}]}
+        %{name: "Admin", anchor: "admin", bgcolor: "#ffaaff",
+          icon: "fa fa-dashboard icon",
+          submenu: [%{name: "Dash", url: admin_dashboard_path(:dashboard)}]}
 
   """
   defmacro menu(_, _) do
-    raise "menu/2 is deprecated. Use menu/3 with added :language as first parameter\n\n#{Exception.format_stacktrace(System.stacktrace)}"
+    raise "menu/2 is deprecated. Use menu/3 with added :language as first " <>
+          "parameter\n\n#{Exception.format_stacktrace(System.stacktrace)}"
   end
 
   defmacro menu(language, name, contents) do
-    quote bind_quoted: [language: language, name: name, contents: Macro.escape(contents)] do
+    quote bind_quoted: [language: language, name: name,
+                        contents: Macro.escape(contents)] do
       @menus {language, name, contents}
     end
   end

@@ -63,6 +63,7 @@ defmodule Brando.Meta.Model do
   end
 
   defp put_fieldset(params, opts) do
-    if opts[:fieldset], do: params |> Keyword.put(:fieldset, opts[:fieldset]), else: params
+    opts[:fieldset] && Keyword.put(params, :fieldset, opts[:fieldset])
+                    || params
   end
 end

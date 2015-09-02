@@ -43,6 +43,7 @@ defmodule Brando.Routes.Admin.News do
       path = unquote(path)
       ctrl = unquote(controller)
       opts = unquote(options)
+      nil_opts = Keyword.put(opts, :as, nil)
 
       villain_routes path, ctrl
 
@@ -54,7 +55,7 @@ defmodule Brando.Routes.Admin.News do
       post   "#{path}",            ctrl, :create,         opts
       delete "#{path}/:id",        ctrl, :delete,         opts
       patch  "#{path}/:id",        ctrl, :update,         opts
-      put    "#{path}/:id",        ctrl, :update,         Keyword.put(opts, :as, nil)
+      put    "#{path}/:id",        ctrl, :update,         nil_opts
     end
   end
 end
