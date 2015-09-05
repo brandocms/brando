@@ -12,8 +12,11 @@ defmodule Brando.Utils.ModelTest do
             "submit" => "Submit", "username" => "zabuzasixu"}
 
   test "update_field/2" do
-    assert {:ok, user} = User.create(@params)
-    assert {:ok, model} = Utils.Model.update_field(user, [full_name: "James Bond"])
-    assert model.full_name == "James Bond"
+    assert {:ok, user}
+           = User.create(@params)
+    assert {:ok, model}
+           = Utils.Model.update_field(user, [full_name: "James Bond"])
+    assert model.full_name
+           == "James Bond"
   end
 end

@@ -13,9 +13,12 @@ defmodule Brando.Integration.InstagramImageTest do
             "username" => "dummyuser"}
 
   test "create/1 and update/1" do
-    assert {:ok, img} = InstagramImage.create(@params)
-    assert {:ok, updated_img} = InstagramImage.update(img, %{"caption" => "New caption"})
-    assert updated_img.caption == "New caption"
+    assert {:ok, img}
+           = InstagramImage.create(@params)
+    assert {:ok, updated_img}
+           = InstagramImage.update(img, %{"caption" => "New caption"})
+    assert updated_img.caption
+           == "New caption"
   end
 
   test "create/1 errors" do

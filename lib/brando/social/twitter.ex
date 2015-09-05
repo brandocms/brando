@@ -10,13 +10,12 @@ defmodule Brando.Social.Twitter do
     ~s(https://twitter.com/intent/tweet?url=#{url}&text=#{text})
   end
 
-
   @doc ~S"""
   Create a twitter link.
 
   ## Example
 
-      <%= Brando.Social.Pinterest.link @conn, "Check out #{@product.name}") do %>
+      <%= Brando.Social.Pinterest.link @conn, "#{@product.name}") do %>
         This links to twitter!
       <% end %>
 

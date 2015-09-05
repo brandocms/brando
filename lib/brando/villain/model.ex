@@ -60,7 +60,8 @@ defmodule Brando.Villain.Model do
         Enum.reduce image_blocks, [], fn(block, acc) ->
           reduced_block =
             Enum.reduce block["data"]["sizes"], [], fn({_size, path}, acc) ->
-              File.exists?(Path.join(["priv", path])) && acc || {:missing, post, path}
+              File.exists?(Path.join(["priv", path])) && acc
+                                                      || {:missing, post, path}
             end
           case reduced_block do
             []  -> acc

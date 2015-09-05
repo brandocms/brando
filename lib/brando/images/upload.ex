@@ -87,7 +87,9 @@ defmodule Brando.Images.Upload do
   end
 
   defp create_upload_path({plug, cfg}) do
-    upload_path = Path.join(Brando.config(:media_path), Map.get(cfg, :upload_path))
+    upload_path =
+      Path.join(Brando.config(:media_path), Map.get(cfg, :upload_path))
+
     case File.mkdir_p(upload_path) do
       :ok ->
         {Map.put(plug, :upload_path, upload_path), cfg}
@@ -100,9 +102,11 @@ defmodule Brando.Images.Upload do
   defp copy_uploaded_file({%{filename: filename, path: temp_path,
                           upload_path: upload_path} = plug, cfg}) do
     new_file = Path.join(upload_path, filename)
+
     if File.exists?(new_file) do
       new_file = Path.join(upload_path, unique_filename(filename))
     end
+
     case File.cp(temp_path, new_file, fn _, _ -> false end) do
       :ok ->
         {Map.put(plug, :uploaded_file, new_file), cfg}
@@ -117,35 +121,40 @@ defmodule Brando.Images.Upload do
 
     sizes = for {size_name, size_cfg} <- Map.get(cfg, :sizes) do
       size_dir = Path.join([file_path, to_string(size_name)])
-      File.mkdir_p(size_dir)
       sized_image = Path.join([size_dir, filename])
-      create_image_size(file, sized_image, size_cfg)
       sized_path = Path.join([upload_path, to_string(size_name), filename])
+
+      File.mkdir_p(size_dir)
+      create_image_size(file, sized_image, size_cfg)
       {size_name, sized_path}
     end
 
-    {:ok, %Brando.Type.Image{}
-    |> Map.put(:sizes, Enum.into(sizes, %{}))
-    |> Map.put(:path, Path.join([upload_path, filename]))}
+    size_struct =
+      %Brando.Type.Image{}
+      |> Map.put(:sizes, Enum.into(sizes, %{}))
+      |> Map.put(:path, Path.join([upload_path, filename]))
+
+    {:ok, size_struct}
   end
 
   @doc """
   Creates a sized version of `file`.
   """
   def create_image_size(file, sized_image, size_cfg) do
-    modifier =
-      String.ends_with?(size_cfg["size"],
-                        ["<", ">", "^", "%", "!", "@"]) && "" || "^"
+    modifier = String.ends_with?(size_cfg["size"], ~w(< > ^ % ! @)) && "" || "^"
     fill = size_cfg["fill"] && "-background #{size_cfg["fill"]} " || ""
+    crop_string = "#{size_cfg["size"]}#{modifier} " <>
+                  "#{fill}-gravity center -extent #{size_cfg["size"]}"
 
     if size_cfg["crop"] do
-      Mogrify.open(file)
+      file
+      |> Mogrify.open
       |> Mogrify.copy
-      |> Mogrify.resize("#{size_cfg["size"]}#{modifier} " <>
-                        "#{fill}-gravity center -extent #{size_cfg["size"]}")
+      |> Mogrify.resize(crop_string)
       |> Mogrify.save(sized_image)
     else
-      Mogrify.open(file)
+      file
+      |> Mogrify.open
       |> Mogrify.copy
       |> Mogrify.resize(size_cfg["size"])
       |> Mogrify.save(sized_image)

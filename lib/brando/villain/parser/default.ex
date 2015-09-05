@@ -4,6 +4,7 @@ defmodule Brando.Villain.Parser.Default do
   """
   @behaviour Brando.Villain.Parser
 
+  import Brando.Utils, only: [img_url: 3, media_url: 0]
   import Ecto.Query
 
   @doc """
@@ -70,18 +71,16 @@ defmodule Brando.Villain.Parser.Default do
   Slideshow
   """
   def slideshow(%{"imageseries" => series_slug, "size" => size}) do
-    series =
-      (from is in Brando.ImageSeries,
-        join: c in assoc(is, :image_category),
-        join: i in assoc(is, :images),
-        where: c.slug == "slideshows" and is.slug == ^series_slug,
-        order_by: i.sequence,
-        preload: [image_category: c, images: i])
-      |> Brando.repo.one
+    q = from is in Brando.ImageSeries,
+             join: c in assoc(is, :image_category),
+             join: i in assoc(is, :images),
+             where: c.slug == "slideshows" and is.slug == ^series_slug,
+             order_by: i.sequence,
+             preload: [image_category: c, images: i]
+    series = Brando.repo.one(q)
 
     images = Enum.map_join series.images, "\n", fn(img) ->
-      src = Brando.Utils.img_url(img.image, String.to_atom(size),
-                           [prefix: Brando.Utils.media_url()])
+      src = img_url(img.image, String.to_atom(size), [prefix: media_url()])
       ~s(<li><img src="#{src}" /></li>)
     end
     """

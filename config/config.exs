@@ -5,6 +5,12 @@
 # is restricted to this project.
 use Mix.Config
 
+config :dogma,
+  exclude: [
+    ~r(\A_build/),
+    ~r(\Apriv/),
+  ]
+
 config :brando,
   app_name: "MyApp",
   endpoint: Brando.Endpoint,

@@ -9,9 +9,9 @@ defmodule Brando.Plug.I18n do
 
   Here it already is in `conn`, so we only add to `conn.assigns`
   """
-  def put_locale(%{private: %{plug_session: %{"language" => lang}}} = conn, _) do
-    lang = check_path(conn) || lang
-    assign_language(conn, lang)
+  def put_locale(%{private: %{plug_session: %{"language" => l}}} = conn, _) do
+    l = check_path(conn) || l
+    assign_language(conn, l)
   end
 
   @doc """
@@ -32,7 +32,8 @@ defmodule Brando.Plug.I18n do
   This is separated from `put_locale` since we can have different
   languages on the frontend and on the backend.
   """
-  def put_admin_locale(%{private: %{plug_session: %{"current_user" => current_user}}} = conn, _) do
+  def put_admin_locale(%{private: %{plug_session:
+                       %{"current_user" => current_user}}} = conn, _) do
     default_language = Brando.config(:default_admin_language)
     assign_language(conn, Map.get(current_user, :language, default_language))
   end
@@ -41,14 +42,14 @@ defmodule Brando.Plug.I18n do
   Add default language to `conn`'s assigns.
   """
   def put_admin_locale(conn, _) do
-    conn
-    |> assign_language(Brando.config(:default_admin_language))
+    assign_language(conn, Brando.config(:default_admin_language))
   end
 
   defp check_path(conn) do
     if lang = List.first(conn.path_info) do
       langs =
-        Brando.config(:languages)
+        :languages
+        |> Brando.config
         |> List.flatten
         |> Keyword.get_values(:value)
 

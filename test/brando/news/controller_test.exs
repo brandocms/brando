@@ -14,7 +14,8 @@ defmodule Brando.News.ControllerTest do
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
 
-  @post_params %{"data" => "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]",
+  @post_params %{"data" => "[{\"type\":\"text\",\"data\":" <>
+                 "{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]",
                  "featured" => true, "header" => "Header",
                  "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
                  "language" => "no", "lead" => "Asdf",
@@ -36,7 +37,8 @@ defmodule Brando.News.ControllerTest do
 
   test "index" do
     conn =
-      call(:get, "/admin/news")
+      :get
+      |> call("/admin/news")
       |> with_user
       |> send_request
 
@@ -50,7 +52,8 @@ defmodule Brando.News.ControllerTest do
     assert {:ok, post} = Post.create(@post_params, user)
 
     conn =
-      call(:get, "/admin/news/#{post.id}")
+      :get
+      |> call("/admin/news/#{post.id}")
       |> with_user
       |> send_request
 
@@ -59,7 +62,8 @@ defmodule Brando.News.ControllerTest do
 
   test "new" do
     conn =
-      call(:get, "/admin/news/new")
+      :get
+      |> call("/admin/news/new")
       |> with_user
       |> send_request
 
@@ -72,14 +76,16 @@ defmodule Brando.News.ControllerTest do
     assert {:ok, post} = Post.create(@post_params, user)
 
     conn =
-      call(:get, "/admin/news/#{post.id}/edit")
+      :get
+      |> call("/admin/news/#{post.id}/edit")
       |> with_user
       |> send_request
 
     assert html_response(conn, 200) =~ "Endre post"
 
     assert_raise Plug.Conn.WrapperError, fn ->
-      call(:get, "/admin/news/1234/edit")
+      :get
+      |> call("/admin/news/1234/edit")
       |> with_user
       |> send_request
     end
@@ -88,7 +94,9 @@ defmodule Brando.News.ControllerTest do
   test "create (post) w/params" do
     user = create_user
     conn =
-      call(:post, "/admin/news/", %{"post" => Map.put(@post_params, "creator_id", user.id)})
+      :post
+      |> call("/admin/news/", %{"post" => Map.put(@post_params, "creator_id",
+                                                  user.id)})
       |> with_user(user)
       |> send_request
 
@@ -98,7 +106,8 @@ defmodule Brando.News.ControllerTest do
 
   test "create (post) w/erroneus params" do
     conn =
-      call(:post, "/admin/news/", %{"post" => @broken_post_params})
+      :post
+      |> call("/admin/news/", %{"post" => @broken_post_params})
       |> with_user
       |> send_request
 
@@ -112,10 +121,13 @@ defmodule Brando.News.ControllerTest do
 
     assert {:ok, post} = Post.create(post_params, user)
 
-    post_params = Map.put(post_params, "data", "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]")
+    post_params =
+      Map.put(post_params, "data", "[{\"type\":\"text\",\"data\":" <>
+              "{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]")
 
     conn =
-      call(:patch, "/admin/news/#{post.id}", %{"post" => post_params})
+      :patch
+      |> call("/admin/news/#{post.id}", %{"post" => post_params})
       |> with_user(user)
       |> send_request
 
@@ -129,7 +141,8 @@ defmodule Brando.News.ControllerTest do
     assert {:ok, post} = Post.create(@post_params, user)
 
     conn =
-      call(:get, "/admin/news/#{post.id}/delete")
+      :get
+      |> call("/admin/news/#{post.id}/delete")
       |> with_user
       |> send_request
 
@@ -142,7 +155,8 @@ defmodule Brando.News.ControllerTest do
     assert {:ok, post} = Post.create(@post_params, user)
 
     conn =
-      call(:delete, "/admin/news/#{post.id}")
+      :delete
+      |> call("/admin/news/#{post.id}")
       |> with_user
       |> send_request
 
@@ -150,7 +164,10 @@ defmodule Brando.News.ControllerTest do
   end
 
   test "uses villain" do
-    funcs = Brando.Admin.PostController.__info__(:functions) |> Keyword.keys
+    funcs = Brando.Admin.PostController.__info__(:functions)
+    funcs =
+      funcs
+      |> Keyword.keys
 
     assert :browse_images in funcs
     assert :upload_image in funcs

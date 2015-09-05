@@ -1,5 +1,3 @@
-#Code.require_file("router_helper.exs", Path.join([__DIR__, "..", ".."]))
-
 defmodule Brando.Dashboard.ControllerTest do
   use ExUnit.Case
   use Brando.ConnCase
@@ -9,7 +7,8 @@ defmodule Brando.Dashboard.ControllerTest do
 
   test "index" do
     conn =
-      call(:get, "/admin/")
+      :get
+      |> call("/admin/")
       |> with_user
       |> send_request
     assert html_response(conn, 200) =~ "Ahoy, Iggy!"

@@ -16,6 +16,7 @@ defmodule Brando.MenuTest do
 
   test "menu" do
     assert Menu.get_menu("no") ==
-      {"Test", %{anchor: "test", bgcolor: "#fffffff", icon: "icon", submenu: [%{name: "Name", url: "/url"}]}}
+      {"Test", %{anchor: "test", bgcolor: "#fffffff", icon: "icon",
+                 submenu: [%{name: "Name", url: "/url"}]}}
   end
 end

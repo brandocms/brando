@@ -5,15 +5,24 @@ defmodule Brando.Image.OptimizeTest do
   use Plug.Test
   use RouterHelper
   import Brando.Images.Optimize
+  import Brando.Images.Utils, only: [media_path: 1]
   alias Brando.Image
   alias Brando.ImageSeries
   alias Brando.ImageCategory
   alias Brando.Type.ImageConfig
+  alias Plug.Upload
 
-  @series_params %{"name" => "Series name", "slug" => "series-name", "credits" => "Credits", "order" => 0}
-  @category_params %{"cfg" => %ImageConfig{}, "name" => "Test Category", "slug" => "test-category"}
-  @up_params %Plug.Upload{content_type: "image/png", filename: "sample.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"}
-  @up_params2 %Plug.Upload{content_type: "image/jpeg", filename: "sample.jpg", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample.jpg"}
+  @path1 "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"
+  @path2 "#{Path.expand("../../", __DIR__)}/fixtures/sample.jpg"
+
+  @series_params %{"name" => "Series name", "slug" => "series-name",
+                   "credits" => "Credits", "order" => 0}
+  @category_params %{"cfg" => %ImageConfig{}, "name" => "Test Category",
+                     "slug" => "test-category"}
+  @up_params %Upload{content_type: "image/png", filename: "sample.png",
+                     path: @path1}
+  @up_params2 %Upload{content_type: "image/jpeg", filename: "sample.jpg",
+                      path: @path2}
 
   def create_category(user) do
     {:ok, category} = ImageCategory.create(@category_params, user)
@@ -32,36 +41,50 @@ defmodule Brando.Image.OptimizeTest do
     # upload first
     user = Forge.saved_user(TestRepo)
     category = create_category(user)
+
     series_params =
       @series_params
       |> Map.put("creator_id", user.id)
       |> Map.put("image_category_id", category.id)
+
     {:ok, series} = ImageSeries.create(series_params, user)
 
-    call(:post, "/admin/images/series/#{series.id}/upload", %{"id" => series.id, "image" => @up_params})
+    :post
+    |> call("/admin/images/series/#{series.id}/upload",
+            %{"id" => series.id, "image" => @up_params})
     |> with_user(user)
     |> as_json
     |> send_request
 
-    image = Brando.repo.all(Image) |> List.first
+    image =
+      Image
+      |> Brando.repo.all
+      |> List.first
+
     {:ok, optimized_image} = optimize({:ok, image.image})
 
     assert optimized_image.optimized
-    assert File.exists?(Brando.Images.Utils.media_path("images/default/large/sample.png"))
-    assert File.exists?(Brando.Images.Utils.media_path("images/default/large/sample-optimized.png"))
+    assert File.exists?(media_path("images/default/large/sample.png"))
+    assert File.exists?(media_path("images/default/large/sample-optimized.png"))
 
     Brando.repo.delete(image)
 
-    call(:post, "/admin/images/series/#{series.id}/upload", %{"id" => series.id, "image" => @up_params2})
+    :post
+    |> call("/admin/images/series/#{series.id}/upload",
+            %{"id" => series.id, "image" => @up_params2})
     |> with_user(user)
     |> as_json
     |> send_request
 
-    image = Brando.repo.all(Image) |> List.first
+    image =
+      Image
+      |> Brando.repo.all
+      |> List.first
+
     {:ok, optimized_image} = optimize({:ok, image.image})
 
     refute optimized_image.optimized
-    assert File.exists?(Brando.Images.Utils.media_path("images/default/large/sample.jpg"))
-    refute File.exists?(Brando.Images.Utils.media_path("images/default/large/sample-optimized.jpg"))
+    assert File.exists?(media_path("images/default/large/sample.jpg"))
+    refute File.exists?(media_path("images/default/large/sample-optimized.jpg"))
   end
 end

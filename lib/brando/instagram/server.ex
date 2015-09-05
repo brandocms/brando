@@ -4,9 +4,9 @@ defmodule Brando.Instagram.Server do
 
   See Brando.Instagram for instructions
   """
-
   use GenServer
   require Logger
+
   alias Brando.Instagram
   alias Brando.Instagram.API
   alias Brando.InstagramImage
@@ -37,7 +37,8 @@ defmodule Brando.Instagram.Server do
     catch
       :exit, err ->
         Logger.error(inspect(err))
-        Brando.SystemChannel.log(:error, "InstagramServer: Fanget :exit -> #{inspect(err)}")
+        Brando.SystemChannel.log(:error, "InstagramServer: Fanget :exit -> " <>
+                                         inspect(err))
         {:noreply, {timer, filter, cfg}}
     end
   end
@@ -60,24 +61,28 @@ defmodule Brando.Instagram.Server do
 
   @doc false
   def terminate({%HTTPoison.Error{reason: :connect_timeout}, [_|_]}, {_, _}) do
-    Brando.SystemChannel.log(:error, "InstagramServer: Tilkoblingen brukte for lang tid.")
+    Brando.SystemChannel.log(:error, "InstagramServer: " <>
+                                     "Tilkoblingen brukte for lang tid.")
     :ok
   end
 
   @doc false
   def terminate({%HTTPoison.Error{reason: :econnrefused}, [_|_]}, {_, _}) do
-    Brando.SystemChannel.log(:error, "InstagramServer: Tilkoblingen ble nektet fra server.")
+    Brando.SystemChannel.log(:error, "InstagramServer: " <>
+                                     "Tilkoblingen ble nektet fra server.")
     :ok
   end
 
   @doc false
   def terminate({%HTTPoison.Error{reason: :nxdomain}, [_|_]}, {_, _}) do
-    Brando.SystemChannel.log(:error, "InstagramServer: Kunne ikke koble til pga DNS problemer.")
+    Brando.SystemChannel.log(:error, "InstagramServer: " <>
+                                     "Kunne ikke koble til pga DNS problemer.")
     :ok
   end
 
   @doc false
-  def terminate({%Postgrex.Error{message: "tcp connect: econnrefused", postgres: nil}, _}, _) do
+  def terminate({%Postgrex.Error{message: "tcp connect: econnrefused",
+                                 postgres: nil}, _}, _) do
     Brando.SystemChannel.log(:error, "InstagramServer: Postgres server nede.")
     :ok
   end

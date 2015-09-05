@@ -14,7 +14,8 @@ defmodule Brando.ImageCategory.ControllerTest do
                  "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
-  @params %{"cfg" => %ImageConfig{}, "name" => "Test Category", "slug" => "test-category"}
+  @params %{"cfg" => %ImageConfig{}, "name" => "Test Category",
+            "slug" => "test-category"}
   @broken_params %{"cfg" => %ImageConfig{}}
 
   def create_user do
@@ -24,7 +25,8 @@ defmodule Brando.ImageCategory.ControllerTest do
 
   test "new" do
     conn =
-      call(:get, "/admin/images/categories/new")
+      :get
+      |> call("/admin/images/categories/new")
       |> with_user
       |> send_request
 
@@ -35,14 +37,16 @@ defmodule Brando.ImageCategory.ControllerTest do
     user = create_user
     assert {:ok, category} = ImageCategory.create(@params, user)
     conn =
-      call(:get, "/admin/images/categories/#{category.id}/edit")
+      :get
+      |> call("/admin/images/categories/#{category.id}/edit")
       |> with_user
       |> send_request
 
     assert html_response(conn, 200) =~ "Endre bildekategori"
 
     assert_raise Plug.Conn.WrapperError, fn ->
-      call(:get, "/admin/images/categories/1234/edit")
+      :get
+      |> call("/admin/images/categories/1234/edit")
       |> with_user
       |> send_request
     end
@@ -51,7 +55,9 @@ defmodule Brando.ImageCategory.ControllerTest do
   test "create (post) w/params" do
     user = create_user
     conn =
-      call(:post, "/admin/images/categories/", %{"imagecategory" => Map.put(@params, "creator_id", user.id)})
+      :post
+      |> call("/admin/images/categories/",
+              %{"imagecategory" => Map.put(@params, "creator_id", user.id)})
       |> with_user
       |> send_request
 
@@ -61,7 +67,9 @@ defmodule Brando.ImageCategory.ControllerTest do
 
   test "create (post) w/erroneus params" do
     conn =
-      call(:post, "/admin/images/categories/", %{"imagecategory" => @broken_params})
+      :post
+      |> call("/admin/images/categories/",
+              %{"imagecategory" => @broken_params})
       |> with_user
       |> send_request
 
@@ -76,7 +84,9 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert {:ok, category} = ImageCategory.create(params, user)
 
     conn =
-      call(:patch, "/admin/images/categories/#{category.id}", %{"imagecategory" => params})
+      :patch
+      |> call("/admin/images/categories/#{category.id}",
+              %{"imagecategory" => params})
       |> with_user
       |> send_request
 
@@ -90,7 +100,8 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert {:ok, category} = ImageCategory.create(@params, user)
 
     conn =
-      call(:get, "/admin/images/categories/#{category.id}/configure")
+      :get
+      |> call("/admin/images/categories/#{category.id}/configure")
       |> with_user
       |> send_request
 
@@ -98,7 +109,8 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert html_response(conn, 200) =~ "imagecategoryconfig[cfg]"
 
     assert_raise Plug.Conn.WrapperError, fn ->
-      call(:get, "/admin/images/categories/1234/configure")
+      :get
+      |> call("/admin/images/categories/1234/configure")
       |> with_user
       |> send_request
     end
@@ -111,7 +123,9 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert {:ok, category} = ImageCategory.create(params, user)
 
     conn =
-      call(:patch, "/admin/images/categories/#{category.id}/configure", %{"imagecategoryconfig" => params})
+      :patch
+      |> call("/admin/images/categories/#{category.id}/configure",
+              %{"imagecategoryconfig" => params})
       |> with_user
       |> send_request
 
@@ -125,7 +139,8 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert {:ok, category} = ImageCategory.create(@params, user)
 
     conn =
-      call(:get, "/admin/images/categories/#{category.id}/delete")
+      :get
+      |> call("/admin/images/categories/#{category.id}/delete")
       |> with_user
       |> send_request
 
@@ -136,7 +151,8 @@ defmodule Brando.ImageCategory.ControllerTest do
     user = create_user
     assert {:ok, category} = ImageCategory.create(@params, user)
     conn =
-      call(:delete, "/admin/images/categories/#{category.id}")
+      :delete
+      |> call("/admin/images/categories/#{category.id}")
       |> with_user
       |> send_request
 

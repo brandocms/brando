@@ -25,8 +25,10 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     {opts, parsed, _} = OptionParser.parse(args, switches: [model: :boolean])
     [singular, plural | attrs] = validate_args!(parsed)
 
-    no_singular  = opts[:nosingular] || Mix.Shell.IO.prompt("Singular (no): ") |> String.strip
-    no_plural    = opts[:noplural] || Mix.Shell.IO.prompt("Plural (no): ") |> String.strip
+    no_singular  = opts[:nosingular] || Mix.Shell.IO.prompt("Singular (no): ")
+    no_singular  = String.strip(no_singular)
+    no_plural    = opts[:noplural] || Mix.Shell.IO.prompt("Plural (no): ")
+    no_plural    = String.strip(no_plural)
 
     attrs        = Mix.Phoenix.attrs(attrs)
     villain?     = :villain in Dict.values(attrs)
@@ -34,7 +36,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     binding      = Mix.Phoenix.inflect(singular)
     admin_path   = Enum.join(["admin", binding[:path]], "_")
     path         = binding[:path]
-    route        = String.split(path, "/") |> Enum.drop(-1) |> Kernel.++([no_plural]) |> Enum.join("/")
+    route        = path
+                   |> String.split("/") |> Enum.drop(-1)
+                   |> Kernel.++([no_plural]) |> Enum.join("/")
     admin_module = Enum.join([binding[:base], "Admin", binding[:scoped]], ".")
     binding      = binding ++ [plural: plural, route: route, no_plural: no_plural, no_singular: no_singular,
                                image_field: image_field?, villain: villain?,
@@ -42,38 +46,61 @@ defmodule Mix.Tasks.Brando.Gen.Html do
                                inputs: inputs(attrs), params: Mix.Phoenix.params(attrs)]
 
     files = [
-      {:eex, "admin_controller.ex",       "web/controllers/admin/#{path}_controller.ex"},
-      {:eex, "controller.ex",             "web/controllers/#{path}_controller.ex"},
-      {:eex, "menu.ex",                   "web/menus/admin/#{path}_menu.ex"},
-      {:eex, "form.ex",                   "web/forms/admin/#{path}_form.ex"},
-      {:eex, "edit.html.eex",             "web/templates/admin/#{path}/edit.html.eex"},
-      {:eex, "admin_index.html.eex",      "web/templates/admin/#{path}/index.html.eex"},
-      {:eex, "index.html.eex",            "web/templates/#{path}/index.html.eex"},
-      {:eex, "new.html.eex",              "web/templates/admin/#{path}/new.html.eex"},
-      {:eex, "show.html.eex",             "web/templates/admin/#{path}/show.html.eex"},
-      {:eex, "delete_confirm.html.eex",   "web/templates/admin/#{path}/delete_confirm.html.eex"},
-      {:eex, "admin_view.ex",             "web/views/admin/#{path}_view.ex"},
-      {:eex, "view.ex",                   "web/views/#{path}_view.ex"},
-      {:eex, "admin_controller_test.exs", "test/controllers/admin/#{path}_controller_test.exs"},
+      {:eex, "admin_controller.ex",
+             "web/controllers/admin/#{path}_controller.ex"},
+      {:eex, "controller.ex",
+             "web/controllers/#{path}_controller.ex"},
+      {:eex, "menu.ex",
+             "web/menus/admin/#{path}_menu.ex"},
+      {:eex, "form.ex",
+             "web/forms/admin/#{path}_form.ex"},
+      {:eex, "edit.html.eex",
+             "web/templates/admin/#{path}/edit.html.eex"},
+      {:eex, "admin_index.html.eex",
+             "web/templates/admin/#{path}/index.html.eex"},
+      {:eex, "index.html.eex",
+             "web/templates/#{path}/index.html.eex"},
+      {:eex, "new.html.eex",
+             "web/templates/admin/#{path}/new.html.eex"},
+      {:eex, "show.html.eex",
+             "web/templates/admin/#{path}/show.html.eex"},
+      {:eex, "delete_confirm.html.eex",
+             "web/templates/admin/#{path}/delete_confirm.html.eex"},
+      {:eex, "admin_view.ex",
+             "web/views/admin/#{path}_view.ex"},
+      {:eex, "view.ex",
+             "web/views/#{path}_view.ex"},
+      {:eex, "admin_controller_test.exs",
+             "test/controllers/admin/#{path}_controller_test.exs"},
     ]
 
     if villain? do
       files = files ++ [
-        {:eex, "_scripts.html.eex",     "web/templates/admin/#{path}/_scripts.new.html.eex"},
-        {:eex, "_scripts.html.eex",     "web/templates/admin/#{path}/_scripts.edit.html.eex"},
-        {:eex, "_stylesheets.html.eex", "web/templates/admin/#{path}/_stylesheets.new.html.eex"},
-        {:eex, "_stylesheets.html.eex", "web/templates/admin/#{path}/_stylesheets.edit.html.eex"},
+        {:eex, "_scripts.html.eex",
+               "web/templates/admin/#{path}/_scripts.new.html.eex"},
+        {:eex, "_scripts.html.eex",
+               "web/templates/admin/#{path}/_scripts.edit.html.eex"},
+        {:eex, "_stylesheets.html.eex",
+               "web/templates/admin/#{path}/_stylesheets.new.html.eex"},
+        {:eex, "_stylesheets.html.eex",
+               "web/templates/admin/#{path}/_stylesheets.edit.html.eex"},
       ]
     end
 
-    Mix.Phoenix.check_module_name_availability!(binding[:module] <> "Controller")
-    Mix.Phoenix.check_module_name_availability!(binding[:module] <> "View")
-    Mix.Phoenix.check_module_name_availability!(binding[:admin_module] <> "Controller")
-    Mix.Phoenix.check_module_name_availability!(binding[:admin_module] <> "View")
+    Mix.Phoenix.check_module_name_availability!(binding[:module] <>
+                                                "Controller")
+    Mix.Phoenix.check_module_name_availability!(binding[:module] <>
+                                                "View")
+    Mix.Phoenix.check_module_name_availability!(binding[:admin_module] <>
+                                                "Controller")
+    Mix.Phoenix.check_module_name_availability!(binding[:admin_module] <>
+                                                "View")
 
-    Mix.Task.run "brando.gen.model", args ++ ["--nosingular", no_singular, "--noplural", no_plural]
+    Mix.Task.run "brando.gen.model", args ++ ["--nosingular", no_singular,
+                                              "--noplural", no_plural]
 
-    Mix.Phoenix.copy_from apps(), "priv/templates/brando.gen.html", "", binding, files
+    Mix.Phoenix.copy_from(apps(), "priv/templates/brando.gen.html",
+                          "", binding, files)
 
     villain_info =
       if villain? do

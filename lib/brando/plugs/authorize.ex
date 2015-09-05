@@ -10,12 +10,15 @@ defmodule Brando.Plug.Authorize do
   Check `conn` for current_user's `role`.
   Halts on failure.
   """
-  def authorize(%{private: %{plug_session: %{"current_user" => current_user}}} = conn, role) do
-    User.has_role?(current_user, role) && conn || conn |> no_access
+  def authorize(%{private: %{plug_session:
+                %{"current_user" => current_user}}} = conn, role) do
+    User.has_role?(current_user, role) && conn || no_access(conn)
   end
+
   def authorize(conn, _) do
-    conn |> no_access
+    no_access(conn)
   end
+
   defp no_access(conn) do
     conn
     |> put_status(:forbidden)

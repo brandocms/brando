@@ -8,13 +8,17 @@ defmodule Brando.Integration.ImageTest do
   alias Brando.Type.ImageConfig
 
   @params %{sequence: 0, image: %{title: "Title", credits: "credits",
-                                  path: "/tmp/path/to/fake/image.jpg",
-                                  sizes: %{small: "/tmp/path/to/fake/image.jpg", thumb: "/tmp/path/to/fake/thumb.jpg"}}}
+            path: "/tmp/path/to/fake/image.jpg",
+            sizes: %{small: "/tmp/path/to/fake/image.jpg",
+            thumb: "/tmp/path/to/fake/thumb.jpg"}}}
   @params2 %{sequence: 1, image: %{title: "Title2", credits: "credits2",
-                                   path: "/tmp/path/to/fake/image2.jpg",
-                                   sizes: %{small: "/tmp/path/to/fake/image2.jpg", thumb: "/tmp/path/to/fake/thumb2.jpg"}}}
-  @series_params %{name: "Series name", slug: "series-name", credits: "Credits", sequence: 0, creator_id: 1}
-  @category_params %{cfg: %ImageConfig{}, creator_id: 1, name: "Test Category", slug: "test-category"}
+             path: "/tmp/path/to/fake/image2.jpg",
+             sizes: %{small: "/tmp/path/to/fake/image2.jpg",
+             thumb: "/tmp/path/to/fake/thumb2.jpg"}}}
+  @series_params %{name: "Series name", slug: "series-name",
+                   credits: "Credits", sequence: 0, creator_id: 1}
+  @category_params %{cfg: %ImageConfig{}, creator_id: 1,
+                     name: "Test Category", slug: "test-category"}
 
   setup do
     user = Forge.saved_user(TestRepo)
@@ -88,7 +92,8 @@ defmodule Brando.Integration.ImageTest do
     assert image.image.title == "Title"
     assert image.image.credits == "credits"
 
-    assert {:ok, new_image} = Image.update_image_meta(image, "new title", "new credits")
+    assert {:ok, new_image} =
+      Image.update_image_meta(image, "new title", "new credits")
 
     refute new_image.image == image.image
     assert new_image.image.title == "new title"
@@ -102,10 +107,12 @@ defmodule Brando.Integration.ImageTest do
       |> Map.put(:image_series_id, series.id)
       |> Image.create(user)
 
-    assert (Image |> Brando.repo.get_by!(id: image.id)).id == image.id
-    assert (Image |> Brando.repo.get_by!(id: image.id)).creator_id == image.creator_id
+    assert (Image |> Brando.repo.get_by!(id: image.id)).id
+           == image.id
+    assert (Image |> Brando.repo.get_by!(id: image.id)).creator_id
+           == image.creator_id
     assert_raise Ecto.NoResultsError, fn ->
-     Image |> Brando.repo.get_by!(id: 1234)
+      Image |> Brando.repo.get_by!(id: 1234)
     end
   end
 
@@ -115,7 +122,8 @@ defmodule Brando.Integration.ImageTest do
       |> Map.put(:creator_id, user.id)
       |> Map.put(:image_series_id, series.id)
       |> Image.create(user)
-    assert (Image |> Brando.repo.get_by!(id: image.id)).id == image.id
+    assert (Image |> Brando.repo.get_by!(id: image.id)).id
+           == image.id
     assert_raise Ecto.NoResultsError, fn ->
       Image |> Brando.repo.get_by!(id: 1234)
     end
@@ -136,7 +144,8 @@ defmodule Brando.Integration.ImageTest do
     assert image1.sequence == 0
     assert image2.sequence == 1
 
-    assert {:ok, _} = Image.sequence([to_string(image1.id), to_string(image2.id)], [1, 0])
+    assert {:ok, _} = Image.sequence([to_string(image1.id),
+                                     to_string(image2.id)], [1, 0])
 
     image1 = Image |> Brando.repo.get_by!(id: image1.id)
     image2 = Image |> Brando.repo.get_by!(id: image2.id)

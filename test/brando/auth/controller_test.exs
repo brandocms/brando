@@ -10,7 +10,8 @@ defmodule Brando.Auth.ControllerTest do
 
   test "login get" do
     conn =
-      call(:get, "/login")
+      :get
+      |> call("/login")
       |> with_session
       |> send_request
     assert html_response(conn, 200) =~ "Passord"
@@ -19,7 +20,8 @@ defmodule Brando.Auth.ControllerTest do
   test "login post ok" do
     Forge.saved_user_w_hashed_pass(TestRepo)
     conn =
-      call(:post, "/login", %{"user" => @login})
+      :post
+      |> call("/login", %{"user" => @login})
       |> with_session
       |> send_request
     assert redirected_to(conn, 302) =~ "/admin"
@@ -30,7 +32,8 @@ defmodule Brando.Auth.ControllerTest do
   test "login post failed" do
     Forge.saved_user_w_hashed_pass(TestRepo)
     conn =
-      call(:post, "/login", %{"user" => @bad_login})
+      :post
+      |> call("/login", %{"user" => @bad_login})
       |> with_session
       |> send_request
     assert redirected_to(conn, 302) =~ "/login"
@@ -40,9 +43,11 @@ defmodule Brando.Auth.ControllerTest do
   test "logout" do
     user = Forge.saved_user_w_hashed_pass(TestRepo)
     conn =
-      call(:get, "/logout")
+      :get
+      |> call("/logout")
       |> with_user(user)
       |> send_request
-    assert html_response(conn, 200) =~ "Du er logget ut av administrasjonsområdet"
+    assert html_response(conn, 200)
+           =~ "Du er logget ut av administrasjonsområdet"
   end
 end

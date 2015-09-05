@@ -6,8 +6,9 @@ defmodule Brando.Plug.Lockdown do
 
   ## Example
 
-      plug Brando.Plug.Lockdown, [layout: {MyApp.LockdownLayoutView, "lockdown.html"},
-                                  view: {MyApp.LockdownView, "lockdown.html"}]
+      plug Brando.Plug.Lockdown,
+           [layout: {MyApp.LockdownLayoutView, "lockdown.html"},
+            view: {MyApp.LockdownView, "lockdown.html"}]
 
   """
 
@@ -28,8 +29,8 @@ defmodule Brando.Plug.Lockdown do
     end
   end
 
-  defp allowed?(%{private: %{plug_session: %{"current_user" => current_user}}} = conn) do
-    case User.can_login?(current_user) do
+  defp allowed?(%{private: %{plug_session: %{"current_user" => cu}}} = conn) do
+    case User.can_login?(cu) do
       true  -> conn
       false -> conn |> lockdown
     end

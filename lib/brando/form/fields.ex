@@ -14,7 +14,8 @@ defmodule Brando.Form.Fields do
   Renders file field. Wraps the field with a label and row span
   """
   def render_field(form_type, %{name: name, type: :file} = opts, value, errors) do
-    file(form_type, format_name(name, opts[:source]), value, errors, opts)
+    i = file(form_type, format_name(name, opts[:source]), value, errors, opts)
+    i
     |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
     |> form_group(format_name(name, opts[:source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
@@ -25,8 +26,9 @@ defmodule Brando.Form.Fields do
   Pass a form_group_class to ensure we don't set height on wrapper.
   """
   def render_field(form_type, %{name: name, type: :textarea} = opts, value, errors) do
-    textarea(form_type, format_name(name, opts[:source]), value, errors,
-             Map.put(opts, :form_group_class, "no-height"))
+    i = textarea(form_type, format_name(name, opts[:source]), value, errors,
+                 Map.put(opts, :form_group_class, "no-height"))
+    i
     |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
     |> form_group(format_name(name, opts[:source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
@@ -36,7 +38,8 @@ defmodule Brando.Form.Fields do
   Render group of radio buttons.
   """
   def render_field(form_type, %{name: name, type: :radio} = opts, value, errors) do
-    render_radios(form_type, format_name(name, opts[:source]), opts, value, errors)
+    i = render_radios(form_type, format_name(name, opts[:source]), opts, value, errors)
+    i
     |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
     |> form_group(format_name(name, opts[:source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
@@ -46,8 +49,15 @@ defmodule Brando.Form.Fields do
   Render checkbox group.
   """
   def render_field(form_type, %{name: name, type: :checkbox, multiple: _} = opts, value, errors) do
-    render_checks(form_type, format_name(name, opts[:source]), opts, value, errors)
-    |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
+    i = render_checks(form_type, format_name(name, opts[:source]),
+                      opts, value, errors)
+    l =
+      name
+      |> format_name(opts[:source])
+      |> label(opts[:label_class], get_label(opts))
+
+    i
+    |> concat_fields(l)
     |> form_group(format_name(name, opts[:source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
   end
@@ -56,9 +66,13 @@ defmodule Brando.Form.Fields do
   Render checkbox single
   """
   def render_field(form_type, %{name: name, type: :checkbox} = opts, value, errors) do
-    concat_fields(label(format_name(name, opts[:source]), opts[:label_class],
-                        [input(:checkbox, form_type, format_name(name, opts[:source]), value, errors, opts),
-                        get_label(opts)]), label(format_name(name, opts[:source]), "", ""))
+    label_content =
+      [input(:checkbox, form_type, format_name(name, opts[:source]),
+             value, errors, opts), get_label(opts)]
+    name
+    |> format_name(opts[:source])
+    |> label(opts[:label_class], label_content)
+    |> concat_fields(label(format_name(name, opts[:source]), "", ""))
     |> div_tag("checkbox")
     |> form_group(format_name(name, opts[:source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
@@ -69,8 +83,15 @@ defmodule Brando.Form.Fields do
   """
   def render_field(form_type, %{name: name, type: :select} = opts, value, errors) do
     choices = render_options(form_type, opts, value, errors)
-    select(form_type, format_name(name, opts[:source]), choices, opts, value, errors)
-    |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
+    i = select(form_type, format_name(name, opts[:source]),
+               choices, opts, value, errors)
+    l =
+      name
+      |> format_name(opts[:source])
+      |> label(opts[:label_class], get_label(opts))
+
+    i
+    |> concat_fields(l)
     |> form_group(format_name(name, opts[:source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
   end
@@ -83,8 +104,9 @@ defmodule Brando.Form.Fields do
       :save -> Brando.Form.t!(opts[:language], "form.save")
       text -> text
     end
-    input(:submit, form_type, format_name(name, opts[:source]),
-          text, errors, opts)
+    i = input(:submit, form_type, format_name(name, opts[:source]),
+              text, errors, opts)
+    i
     |> form_group(format_name(name, opts[:source]), opts, errors)
     |> div_form_row(opts[:in_fieldset])
   end
@@ -117,19 +139,31 @@ defmodule Brando.Form.Fields do
         opts
         |> Map.put(:label, "#{confirm_i18n} #{get_label(opts)}")
         |> Map.put(:placeholder, "#{confirm_i18n} #{get_label(opts)}")
+      conf_name = format_name("#{name}_confirmation", opts[:source])
 
-      input(input_type, form_type, format_name("#{name}_confirmation", opts[:source]), value, errors, confirm_opts)
-      |> concat_fields(label(format_name("#{name}_confirmation", opts[:source]), confirm_opts[:label_class], confirm_opts[:label]))
-      |> form_group(format_name("#{name}_confirmation", opts[:source]), confirm_opts, errors)
+      l =
+        conf_name
+        |> label(confirm_opts[:label_class], confirm_opts[:label])
+
+      i = input(input_type, form_type, conf_name, value, errors, confirm_opts)
+
+      i
+      |> concat_fields(l)
+      |> form_group(conf_name, confirm_opts, errors)
     else
       ""
     end
 
+    i = input(input_type, form_type, format_name(name, opts[:source]),
+              value, errors, opts)
+    l =
+      name
+      |> format_name(opts[:source])
+      |> label(opts[:label_class], get_label(opts))
+
     field =
-      input(input_type, form_type, format_name(name, opts[:source]),
-            value, errors, opts)
-      |> concat_fields(label(format_name(name, opts[:source]),
-                       opts[:label_class], get_label(opts)))
+      i
+      |> concat_fields(l)
       |> form_group(format_name(name, opts[:source]), opts, errors)
 
     confirm
@@ -413,7 +447,8 @@ defmodule Brando.Form.Fields do
     end
   end
 
-  def option(form_type, choice_value, choice_text, value, default, is_selected_fun \\ nil)
+  def option(form_type, choice_value, choice_text, value, default,
+             is_selected_fun \\ nil)
   def option(:update, choice_value, choice_text, value, _default, nil) do
     tag_opts =
       Keyword.new
@@ -903,7 +938,7 @@ defmodule Brando.Form.Fields do
   defp get_img_preview(nil), do: ""
   defp get_img_preview(value) do
     {:safe, html} = content_tag(:div, class: "image-preview") do
-      tag(:img, [src: img_url(value, :thumb, prefix: media_url())]) |> raw
+      raw(tag(:img, [src: img_url(value, :thumb, prefix: media_url())]))
     end
     html
   end

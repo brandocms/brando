@@ -20,7 +20,8 @@ defmodule Brando.Plug.AuthenticateTest do
       login_url: "/login"
 
     def put_secret_key_base(conn, _) do
-      put_in conn.secret_key_base, "C590A24F0CCB864E01DD077CFF144EFEAAAB7835775438E414E9847A4EE8035D"
+      put_in conn.secret_key_base,
+        "C590A24F0CCB864E01DD077CFF144EFEAAAB7835775438E414E9847A4EE8035D"
     end
   end
 
@@ -43,11 +44,12 @@ defmodule Brando.Plug.AuthenticateTest do
       login_url: "/login"
 
     def put_secret_key_base(conn, _) do
-      put_in conn.secret_key_base, "C590A24F0CCB864E01DD077CFF144EFEAAAB7835775438E414E9847A4EE8035D"
+      put_in conn.secret_key_base,
+        "C590A24F0CCB864E01DD077CFF144EFEAAAB7835775438E414E9847A4EE8035D"
     end
 
     def put_current_user(conn, _) do
-      conn |> put_session(:current_user, %{role: 0})
+       put_session(conn, :current_user, %{role: 0})
     end
   end
 
@@ -70,38 +72,46 @@ defmodule Brando.Plug.AuthenticateTest do
       login_url: "/login"
 
     def put_secret_key_base(conn, _) do
-      put_in conn.secret_key_base, "C590A24F0CCB864E01DD077CFF144EFEAAAB7835775438E414E9847A4EE8035D"
+      put_in conn.secret_key_base,
+        "C590A24F0CCB864E01DD077CFF144EFEAAAB7835775438E414E9847A4EE8035D"
     end
 
     def put_current_user(conn, _) do
-      conn |> put_session(:current_user, %{role: 7})
+      put_session(conn, :current_user, %{role: 7})
     end
   end
 
   test "auth fails" do
-    conn = conn(:get, "/", [])
-    |> assign(:secret_key_base, "asdf")
-    |> AuthPlugFail.call([])
+    conn =
+      :get
+      |> conn("/", [])
+      |> assign(:secret_key_base, "asdf")
+      |> AuthPlugFail.call([])
+
     assert conn.status == 302
     %{phoenix_flash: errors} = conn.private
     assert errors == %{"error" => "Ingen tilgang."}
   end
 
   test "auth succeeds" do
-    conn = conn(:get, "/", [])
-    |> assign(:secret_key_base, "asdf")
-    |> AuthPlugSucceeds.call([])
+    conn =
+      :get
+      |> conn("/", [])
+      |> assign(:secret_key_base, "asdf")
+      |> AuthPlugSucceeds.call([])
+
     %{phoenix_flash: errors} = conn.private
     assert errors == %{}
   end
 
   test "auth fails perms" do
-    conn = conn(:get, "/", [])
-    |> assign(:secret_key_base, "asdf")
-    |> AuthPlugFailsPerms.call([])
+    conn =
+      :get
+      |> conn("/", [])
+      |> assign(:secret_key_base, "asdf")
+      |> AuthPlugFailsPerms.call([])
     assert conn.status == 302
     %{phoenix_flash: errors} = conn.private
     assert errors == %{"error" => "Ingen tilgang."}
   end
-
 end

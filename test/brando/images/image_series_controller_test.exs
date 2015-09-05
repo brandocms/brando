@@ -10,12 +10,18 @@ defmodule Brando.ImageSeries.ControllerTest do
   alias Brando.ImageCategory
   alias Brando.Type.ImageConfig
 
+  @path1 "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"
+  @path2 "#{Path.expand("../../", __DIR__)}/fixtures/sample2.png"
   @cfg Map.from_struct(%ImageConfig{})
-  @series_params %{"name" => "Series name", "slug" => "series-name", "credits" => "Credits", "order" => 0}
-  @category_params %{"cfg" => @cfg, "name" => "Test Category", "slug" => "test-category"}
+  @series_params %{"name" => "Series name", "slug" => "series-name",
+                   "credits" => "Credits", "order" => 0}
+  @category_params %{"cfg" => @cfg, "name" => "Test Category",
+                     "slug" => "test-category"}
   @broken_params %{"cfg" => @cfg}
-  @up_params %Plug.Upload{content_type: "image/png", filename: "sample.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"}
-  @up_params2 %Plug.Upload{content_type: "image/png", filename: "sample2.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample2.png"}
+  @up_params %Plug.Upload{content_type: "image/png",
+                          filename: "sample.png", path: @path1}
+  @up_params2 %Plug.Upload{content_type: "image/png",
+                           filename: "sample2.png", path: @path2}
 
   def create_category(user) do
     {:ok, category} = ImageCategory.create(@category_params, user)
@@ -33,7 +39,8 @@ defmodule Brando.ImageSeries.ControllerTest do
   test "new" do
     category = create_category(Forge.saved_user(TestRepo))
     conn =
-      call(:get, "/admin/images/series/new/#{category.id}")
+      :get
+      |> call("/admin/images/series/new/#{category.id}")
       |> with_user
       |> send_request
     assert html_response(conn, 200) =~ "Ny bildeserie"
@@ -42,14 +49,16 @@ defmodule Brando.ImageSeries.ControllerTest do
   test "edit" do
     series = create_series
     conn =
-      call(:get, "/admin/images/series/#{series.id}/edit")
+      :get
+      |> call("/admin/images/series/#{series.id}/edit")
       |> with_user
       |> send_request
 
     assert html_response(conn, 200) =~ "Endre bildeserie"
 
     assert_raise Plug.Conn.WrapperError, fn ->
-      call(:get, "/admin/images/series/1234/edit")
+      :get
+      |> call("/admin/images/series/1234/edit")
       |> with_user
       |> send_request
     end
@@ -63,7 +72,8 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> Map.put("creator_id", user.id)
       |> Map.put("image_category_id", category.id)
     conn =
-      call(:post, "/admin/images/series/", %{"imageseries" => series_params})
+      :post
+      |> call("/admin/images/series/", %{"imageseries" => series_params})
       |> with_user(user)
       |> send_request
     assert redirected_to(conn, 302) =~ "/admin/images"
@@ -74,7 +84,8 @@ defmodule Brando.ImageSeries.ControllerTest do
     user = Forge.saved_user(TestRepo)
     series_params = Map.put(@series_params, "creator_id", user.id)
     conn =
-      call(:post, "/admin/images/series/", %{"imageseries" => series_params})
+      :post
+      |> call("/admin/images/series/", %{"imageseries" => series_params})
       |> with_user
       |> send_request
     assert html_response(conn, 200) =~ "Ny bildeserie"
@@ -90,7 +101,9 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> Map.put("image_category_id", category.id)
     {:ok, series} = ImageSeries.create(series_params, user)
     conn =
-      call(:patch, "/admin/images/series/#{series.id}", %{"imageseries" => series_params})
+      :patch
+      |> call("/admin/images/series/#{series.id}",
+              %{"imageseries" => series_params})
       |> with_user
       |> send_request
     assert redirected_to(conn, 302) =~ "/admin/images"
@@ -100,7 +113,8 @@ defmodule Brando.ImageSeries.ControllerTest do
   test "delete_confirm" do
     series = create_series
     conn =
-      call(:get, "/admin/images/series/#{series.id}/delete")
+      :get
+      |> call("/admin/images/series/#{series.id}/delete")
       |> with_user
       |> send_request
     assert html_response(conn, 200) =~ "Slett bildeserie: Series name"
@@ -109,7 +123,8 @@ defmodule Brando.ImageSeries.ControllerTest do
   test "delete" do
     series = create_series
     conn =
-      call(:delete, "/admin/images/series/#{series.id}")
+      :delete
+      |> call("/admin/images/series/#{series.id}")
       |> with_user
       |> send_request
     assert redirected_to(conn, 302) =~ "/admin/images"
@@ -119,7 +134,8 @@ defmodule Brando.ImageSeries.ControllerTest do
   test "upload" do
     series = create_series
     conn =
-      call(:get, "/admin/images/series/#{series.id}/upload")
+      :get
+      |> call("/admin/images/series/#{series.id}/upload")
       |> with_user
       |> send_request
     assert html_response(conn, 200) =~ "Last opp"
@@ -134,7 +150,9 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> Map.put("image_category_id", category.id)
     {:ok, series} = ImageSeries.create(series_params, user)
     conn =
-      call(:post, "/admin/images/series/#{series.id}/upload", %{"id" => series.id, "image" => @up_params})
+      :post
+      |> call("/admin/images/series/#{series.id}/upload",
+              %{"id" => series.id, "image" => @up_params})
       |> with_user(user)
       |> as_json
       |> send_request
@@ -153,37 +171,49 @@ defmodule Brando.ImageSeries.ControllerTest do
     {:ok, series} = ImageSeries.create(series_params, user)
 
     conn =
-      call(:post, "/admin/images/series/#{series.id}/upload", %{"id" => series.id, "image" => @up_params})
+      :post
+      |> call("/admin/images/series/#{series.id}/upload",
+              %{"id" => series.id, "image" => @up_params})
       |> with_user(user)
       |> as_json
       |> send_request
 
     assert conn.status == 200
     conn =
-      call(:post, "/admin/images/series/#{series.id}/upload", %{"id" => series.id, "image" => @up_params2})
+      :post
+      |> call("/admin/images/series/#{series.id}/upload",
+              %{"id" => series.id, "image" => @up_params2})
       |> with_user(user)
       |> as_json
       |> send_request
     assert conn.status == 200
 
     conn =
-      call(:get, "/admin/images/series/#{series.id}/sort")
+      :get
+      |> call("/admin/images/series/#{series.id}/sort")
       |> with_user
       |> send_request
     assert conn.status == 200
-    assert html_response(conn, 200) =~ "<img src=\"/media/images/default/thumb/sample-optimized.png\" />"
+    assert html_response(conn, 200)
+           =~ "<img src=\"/media/images/default/thumb/sample-optimized.png\" />"
 
     series = Brando.repo.preload(series, :images)
     [img1, img2] = series.images
 
     conn =
-      call(:post, "/admin/images/series/#{series.id}/sort", %{"order" => [to_string(img2.id), to_string(img1.id)]})
+      :post
+      |> call("/admin/images/series/#{series.id}/sort",
+              %{"order" => [to_string(img2.id), to_string(img1.id)]})
       |> with_user(user)
       |> as_json
       |> send_request
-    assert conn.status == 200
-    assert conn.path_info == ["admin", "images", "series", "#{series.id}", "sort"]
-    assert json_response(conn, 200) == %{"status" => "200"}
+
+    assert conn.status
+           == 200
+    assert conn.path_info
+           == ["admin", "images", "series", "#{series.id}", "sort"]
+    assert json_response(conn, 200)
+           == %{"status" => "200"}
 
     series =
       ImageSeries

@@ -37,7 +37,7 @@ defmodule Brando.HTMLTest do
   end
 
   test "auth_links" do
-    conn = call(:get, "/admin/users") |> with_user
+    conn = :get |> call("/admin/users") |> with_user
 
     assert auth_link(conn, "test", :admin, do: {:safe, "text"})
            == {:safe, "<a href=\"test\" class=\"btn btn-default\"> text</a>"}

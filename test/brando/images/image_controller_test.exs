@@ -9,9 +9,13 @@ defmodule Brando.Image.ControllerTest do
   alias Brando.ImageCategory
   alias Brando.Type.ImageConfig
 
-  @series_params %{"name" => "Series name", "slug" => "series-name", "credits" => "Credits", "order" => 0}
-  @category_params %{"cfg" => %ImageConfig{}, "name" => "Test Category", "slug" => "test-category"}
-  @up_params %Plug.Upload{content_type: "image/png", filename: "sample.png", path: "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"}
+  @path "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"
+  @series_params %{"name" => "Series name", "slug" => "series-name",
+                   "credits" => "Credits", "order" => 0}
+  @category_params %{"cfg" => %ImageConfig{}, "name" => "Test Category",
+                     "slug" => "test-category"}
+  @up_params %Plug.Upload{content_type: "image/png",
+                          filename: "sample.png", path: @path}
 
   def create_category(user) do
     {:ok, category} = ImageCategory.create(@category_params, user)
@@ -29,7 +33,8 @@ defmodule Brando.Image.ControllerTest do
   test "index" do
     create_series
     conn =
-      call(:get, "/admin/images/")
+      :get
+      |> call("/admin/images/")
       |> with_user
       |> send_request
 
@@ -42,13 +47,17 @@ defmodule Brando.Image.ControllerTest do
     # upload first
     user = Forge.saved_user(TestRepo)
     category = create_category(user)
+
     series_params =
       @series_params
       |> Map.put("creator_id", user.id)
       |> Map.put("image_category_id", category.id)
     {:ok, series} = ImageSeries.create(series_params, user)
+
     conn =
-      call(:post, "/admin/images/series/#{series.id}/upload", %{"id" => series.id, "image" => @up_params})
+      :post
+      |> call("/admin/images/series/#{series.id}/upload",
+              %{"id" => series.id, "image" => @up_params})
       |> with_user(user)
       |> as_json
       |> send_request
@@ -60,8 +69,10 @@ defmodule Brando.Image.ControllerTest do
              where: m.image_series_id == ^series.id,
              order_by: m.sequence)
     images = q |> Brando.repo.all
+
     conn =
-      call(:post, "/admin/images/delete-selected-images", %{"ids" => images})
+      :post
+      |> call("/admin/images/delete-selected-images", %{"ids" => images})
       |> with_user(user)
       |> as_json
       |> send_request

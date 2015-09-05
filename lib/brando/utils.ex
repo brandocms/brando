@@ -73,10 +73,15 @@ defmodule Brando.Utils do
   def split_path(file) do
     case String.contains?(file, "/") do
       true ->
-        filename = Path.split(file) |> List.last
-        path = Path.split(file)
-        |> List.delete_at(-1)
-        |> Path.join
+        filename =
+          file
+          |> Path.split
+          |> List.last
+        path =
+          file
+          |> Path.split()
+          |> List.delete_at(-1)
+          |> Path.join
         {path, filename}
       false ->
         {"", file}
@@ -105,7 +110,8 @@ defmodule Brando.Utils do
   def to_string_map(coll) do
     case Map.has_key?(coll, :__struct__) do
       true ->
-        Map.delete(coll, :__struct__)
+        coll
+        |> Map.delete(:__struct__)
         |> Enum.map(fn({k, v}) -> {Atom.to_string(k), v} end)
         |> Enum.into(%{})
       false -> coll
@@ -125,7 +131,8 @@ defmodule Brando.Utils do
   @spec to_iso8601(Ecto.DateTime.t) :: String.t
   def to_iso8601(dt) do
     list = [dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec]
-    :io_lib.format("~4..0B-~2..0B-~2..0BT~2..0B:~2..0B:~2..0BZ", list)
+    "~4..0B-~2..0B-~2..0BT~2..0B:~2..0B:~2..0BZ"
+    |> :io_lib.format(list)
     |> IO.iodata_to_binary
   end
 
@@ -134,13 +141,15 @@ defmodule Brando.Utils do
   """
   def stringy_struct(struct, params) when is_map(params) do
     keys =
-      struct(struct, [])
+      struct
+      |> struct([])
       |> Map.from_struct
       |> Map.keys
       |> Enum.map(&Atom.to_string/1)
 
     params =
-      Map.take(params, keys)
+      params
+      |> Map.take(keys)
       |> Enum.map(fn {key, value} -> {String.to_atom(key), value} end)
 
     struct(struct, params)
@@ -231,7 +240,8 @@ defmodule Brando.Utils do
   @doc """
   Get title assign from `conn`
   """
-  def get_page_title(%{assigns: %{page_title: title}} = conn) when is_map(title) do
+  def get_page_title(%{assigns: %{page_title: title}} = conn)
+      when is_map(title) do
     "#{Brando.config(:app_name)} | " <>
     "#{Map.get(title, conn.assigns[:language], "")}"
   end

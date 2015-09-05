@@ -10,22 +10,22 @@ defmodule Mix.Tasks.Brando.Install do
 
   @new [
     {:keep, "install/templates/logs", "logs"},
-    {:eex,  "install/templates/etc/logrotate/prod.conf",                                  "etc/logrotate/prod.conf"},
-    {:eex,  "install/templates/etc/logrotate/staging.conf",                               "etc/logrotate/staging.conf"},
-    {:eex,  "install/templates/etc/nginx/prod.conf",                                      "etc/nginx/prod.conf"},
-    {:eex,  "install/templates/etc/nginx/staging.conf",                                   "etc/nginx/staging.conf"},
-    {:eex,  "install/templates/etc/supervisord/prod.conf",                                "etc/supervisord/prod.conf"},
-    {:eex,  "install/templates/etc/supervisord/staging.conf",                             "etc/supervisord/staging.conf"},
+    {:eex,  "install/templates/etc/logrotate/prod.conf",                               "etc/logrotate/prod.conf"},
+    {:eex,  "install/templates/etc/logrotate/staging.conf",                            "etc/logrotate/staging.conf"},
+    {:eex,  "install/templates/etc/nginx/prod.conf",                                   "etc/nginx/prod.conf"},
+    {:eex,  "install/templates/etc/nginx/staging.conf",                                "etc/nginx/staging.conf"},
+    {:eex,  "install/templates/etc/supervisord/prod.conf",                             "etc/supervisord/prod.conf"},
+    {:eex,  "install/templates/etc/supervisord/staging.conf",                          "etc/supervisord/staging.conf"},
 
-    {:eex,  "install/templates/web/router.ex",                                            "web/router.ex"},
-    {:eex,  "install/templates/web/controllers/lockdown_controller.ex",                   "web/controllers/lockdown_controller.ex"},
-    {:eex,  "install/templates/web/templates/layout/lockdown.html.eex",                   "web/templates/layout/lockdown.html.eex"},
-    {:eex,  "install/templates/web/templates/lockdown/index.html.eex",                    "web/templates/lockdown/index.html.eex"},
-    {:eex,  "install/templates/web/views/lockdown_view.ex",                               "web/views/lockdown_view.ex"},
+    {:eex,  "install/templates/web/router.ex",                                         "web/router.ex"},
+    {:eex,  "install/templates/web/controllers/lockdown_controller.ex",                "web/controllers/lockdown_controller.ex"},
+    {:eex,  "install/templates/web/templates/layout/lockdown.html.eex",                "web/templates/layout/lockdown.html.eex"},
+    {:eex,  "install/templates/web/templates/lockdown/index.html.eex",                 "web/templates/lockdown/index.html.eex"},
+    {:eex,  "install/templates/web/views/lockdown_view.ex",                            "web/views/lockdown_view.ex"},
 
-    {:eex,  "install/templates/web/villain/parser.ex",                                    "web/villain/parser.ex"},
-    {:eex,  "install/templates/config/brando.exs",                                        "config/brando.exs"},
-    {:eex,  "install/templates/config/prod.exs",                                          "config/prod.exs"},
+    {:eex,  "install/templates/web/villain/parser.ex",                                 "web/villain/parser.ex"},
+    {:eex,  "install/templates/config/brando.exs",                                     "config/brando.exs"},
+    {:eex,  "install/templates/config/prod.exs",                                       "config/prod.exs"},
 
     {:eex,  "install/templates/migrations/20150123230712_create_users.exs",            "priv/repo/migrations/20150123230712_create_users.exs"},
     {:eex,  "install/templates/migrations/20150210211010_create_posts.exs",            "priv/repo/migrations/20150210211010_create_posts.exs"},
@@ -140,13 +140,15 @@ defmodule Mix.Tasks.Brando.Install do
   defp copy_from(target_dir, binding, mapping) when is_list(mapping) do
     application_name = Keyword.fetch!(binding, :application_name)
     for {format, source, target_path} <- mapping do
-      target = Path.join(target_dir, String.replace(target_path, "application_name", application_name))
+      target = Path.join(target_dir, String.replace(target_path,
+                         "application_name", application_name))
       case format do
         :keep -> File.mkdir_p!(target)
         :text -> create_file(target, render(source))
         :copy -> File.mkdir_p!(Path.dirname(target))
                  File.copy!(Path.join(@root, source), target)
-        :eex  -> contents = EEx.eval_string(render(source), binding, file: source)
+        :eex  -> contents = EEx.eval_string(render(source),
+                                            binding, file: source)
                  create_file(target, contents)
       end
     end

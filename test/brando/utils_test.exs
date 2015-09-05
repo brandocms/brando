@@ -9,45 +9,53 @@ defmodule Brando.UtilsTest do
   end
 
   test "slugify basic stripping/no ending dash" do
-    assert(slugify("This is basic functionality!!!    ") == "this-is-basic-functionality")
+    assert slugify("This is basic functionality!!!    ")
+           == "this-is-basic-functionality"
   end
 
   test "slugify no starting dash" do
-    assert(slugify("-This is basic functionality!!!    ") == "this-is-basic-functionality")
+    assert slugify("-This is basic functionality!!!    ")
+           == "this-is-basic-functionality"
   end
 
   test "slugify straße" do
-    assert slugify("straße") == "strasse"
+    assert slugify("straße")
+           == "strasse"
   end
 
   test "slugify strips symbols" do
-    assert slugify("Is ♬ ♫ ♪ ♩ a melody or just noise?") == "is-a-melody-or-just-noise"
+    assert slugify("Is ♬ ♫ ♪ ♩ a melody or just noise?")
+           == "is-a-melody-or-just-noise"
   end
 
   test "slugify strips accents" do
-    assert slugify("Àddîñg áçćèńtš tô Éñgłïśh íš śīłłÿ!") == "adding-accents-to-english-is-silly"
+    assert slugify("Àddîñg áçćèńtš tô Éñgłïśh íš śīłłÿ!")
+           == "adding-accents-to-english-is-silly"
   end
 
   test "slugify special characters" do
-    assert(slugify("special characters (#?@$%^*) are also ASCII") == "special-characters-at-are-also-ascii")
+    assert slugify("special characters (#?@$%^*) are also ASCII")
+           == "special-characters-at-are-also-ascii"
   end
 
   test "slugify & -> and" do
-    assert(slugify("tom & jerry") == "tom-jerry")
+    assert slugify("tom & jerry") == "tom-jerry"
   end
 
   test "slugify strip extraneous dashes" do
-    assert(slugify("so - just one then?") == "so-just-one-then")
+    assert slugify("so - just one then?") == "so-just-one-then"
   end
 
   test "slugify_filename/1" do
-    assert(slugify_filename("testing with spaces.jpeg") == "testing-with-spaces.jpeg")
-    assert(slugify_filename("-start æøå-.jpeg") == "start-aeoa.jpeg")
+    assert slugify_filename("testing with spaces.jpeg")
+           == "testing-with-spaces.jpeg"
+    assert slugify_filename("-start æøå-.jpeg")
+           == "start-aeoa.jpeg"
   end
 
   test "random_filename/1" do
     f = random_filename("original-filename.jpg")
-    refute(f == "original-filename.jpg")
+    refute f == "original-filename.jpg"
     assert f =~ ".jpg"
   end
 
@@ -100,11 +108,17 @@ defmodule Brando.UtilsTest do
 
   test "img/2" do
     img = %{sizes: %{"thumb" => "images/thumb/file.jpg"}}
-    assert img_url(img, :thumb) == "images/thumb/file.jpg"
-    assert img_url(nil, :thumb, [default: "default.jpg", prefix: "prefix"]) == "thumb/default.jpg"
-    assert img_url(nil, :thumb, [default: "default.jpg"]) == "thumb/default.jpg"
-    assert img_url(img, :thumb, [default: "default.jpg", prefix: "prefix"]) == "prefix/images/thumb/file.jpg"
-    assert img_url(img, :thumb, [default: "default.jpg"]) == "images/thumb/file.jpg"
-    assert img_url(img, "thumb", [default: "default.jpg"]) == "images/thumb/file.jpg"
+    assert img_url(img, :thumb)
+           == "images/thumb/file.jpg"
+    assert img_url(nil, :thumb, [default: "default.jpg", prefix: "prefix"])
+           == "thumb/default.jpg"
+    assert img_url(nil, :thumb, [default: "default.jpg"])
+           == "thumb/default.jpg"
+    assert img_url(img, :thumb, [default: "default.jpg", prefix: "prefix"])
+           == "prefix/images/thumb/file.jpg"
+    assert img_url(img, :thumb, [default: "default.jpg"])
+           == "images/thumb/file.jpg"
+    assert img_url(img, "thumb", [default: "default.jpg"])
+           == "images/thumb/file.jpg"
   end
 end

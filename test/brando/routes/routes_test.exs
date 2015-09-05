@@ -96,5 +96,4 @@ defmodule Brando.RoutesTest do
     assert routes =~ "/admin/villain2/2/villain/browse"
     assert routes =~ "/admin/villain2/2/villain/imagedata"
   end
-
 end

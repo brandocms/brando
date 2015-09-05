@@ -44,7 +44,9 @@ defmodule Brando.Sequence do
         <li data-id="<%= i.id %>"><%= i.name %></li>
       <% end %>
       </ul>
-      <a id="sort-post" href="<%= Helpers.your_path(@conn, :sequence_post, @filter) %>" class="btn btn-default">
+      <a id="sort-post"
+         href="<%= Helpers.your_path(@conn, :sequence_post, @filter) %>"
+         class="btn btn-default">
         Lagre rekkefølge
       </a>
   """

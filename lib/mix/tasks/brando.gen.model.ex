@@ -49,10 +49,11 @@ defmodule Mix.Tasks.Brando.Gen.Model do
   def run(args) do
     {opts, parsed, _} = OptionParser.parse(args, switches: [])
     [singular, plural | attrs] = validate_args!(parsed)
-    no_singular = opts[:nosingular]
-                  || Mix.Shell.IO.prompt("Singular (no): ") |> String.strip
-    no_plural = opts[:noplural]
-                || Mix.Shell.IO.prompt("Plural (no): ") |> String.strip
+
+    no_singular = opts[:nosingular] || Mix.Shell.IO.prompt("Singular (no): ")
+    no_singular = String.strip(no_singular)
+    no_plural   = opts[:noplural] || Mix.Shell.IO.prompt("Plural (no): ")
+    no_plural   = String.strip(no_plural)
 
     attrs      = Mix.Phoenix.attrs(attrs)
     binding    = Mix.Phoenix.inflect(singular)
@@ -102,13 +103,13 @@ defmodule Mix.Tasks.Brando.Gen.Model do
                model_fields: model_fields, assocs: assocs(assocs),
                indexes: indexes(plural, assocs), defaults: defs, params: params]
 
-    Mix.Phoenix.copy_from apps(), "priv/templates/brando.gen.model",
-                          "", binding, [
+    Mix.Phoenix.copy_from(apps(), "priv/templates/brando.gen.model", "",
+                          binding, [
       {:eex, "migration.exs",  "priv/repo/migrations/" <>
                                "#{timestamp()}_create_#{migration}.exs"},
       {:eex, "model.ex",       "web/models/#{path}.ex"},
       {:eex, "model_test.exs", "test/models/#{path}_test.exs"},
-    ]
+    ])
   end
 
   def migration_type({k, :image}) do

@@ -12,7 +12,8 @@ defmodule Brando.Pages.ControllerTest do
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
 
-  @page_params %{"data" => "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]",
+  @page_params %{"data" => "[{\"type\":\"text\",\"data\":" <>
+                           "{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]",
                  "title" => "Header",
                  "key" => "testpage",
                  "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
@@ -34,7 +35,8 @@ defmodule Brando.Pages.ControllerTest do
 
   test "index" do
     conn =
-      call(:get, "/admin/pages")
+      :get
+      |> call("/admin/pages")
       |> with_user
       |> send_request
 
@@ -48,7 +50,8 @@ defmodule Brando.Pages.ControllerTest do
     assert {:ok, page} = Page.create(@page_params, user)
 
     conn =
-      call(:get, "/admin/pages/#{page.id}")
+      :get
+      |> call("/admin/pages/#{page.id}")
       |> with_user
       |> send_request
 
@@ -57,7 +60,8 @@ defmodule Brando.Pages.ControllerTest do
 
   test "new" do
     conn =
-      call(:get, "/admin/pages/new")
+      :get
+      |> call("/admin/pages/new")
       |> with_user
       |> send_request
 
@@ -70,14 +74,16 @@ defmodule Brando.Pages.ControllerTest do
     assert {:ok, page} = Page.create(@page_params, user)
 
     conn =
-      call(:get, "/admin/pages/#{page.id}/edit")
+      :get
+      |> call("/admin/pages/#{page.id}/edit")
       |> with_user
       |> send_request
 
     assert html_response(conn, 200) =~ "Endre side"
 
     assert_raise Plug.Conn.WrapperError, fn ->
-      call(:get, "/admin/pages/1234/edit")
+      :get
+      |> call("/admin/pages/1234/edit")
       |> with_user
       |> send_request
     end
@@ -86,7 +92,9 @@ defmodule Brando.Pages.ControllerTest do
   test "create (page) w/params" do
     user = create_user
     conn =
-      call(:post, "/admin/pages/", %{"page" => Map.put(@page_params, "creator_id", user.id)})
+      :post
+      |> call("/admin/pages/",
+              %{"page" => Map.put(@page_params, "creator_id", user.id)})
       |> with_user(user)
       |> send_request
 
@@ -96,7 +104,8 @@ defmodule Brando.Pages.ControllerTest do
 
   test "create (page) w/erroneus params" do
     conn =
-      call(:post, "/admin/pages/", %{"page" => @broken_page_params})
+      :post
+      |> call("/admin/pages/", %{"page" => @broken_page_params})
       |> with_user
       |> send_request
 
@@ -110,10 +119,13 @@ defmodule Brando.Pages.ControllerTest do
 
     assert {:ok, page} = Page.create(page_params, user)
 
-    page_params = Map.put(page_params, "data", "[{\"type\":\"text\",\"data\":{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]")
+    page_params = Map.put(page_params, "data",
+                          "[{\"type\":\"text\",\"data\":" <>
+                          "{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]")
 
     conn =
-      call(:patch, "/admin/pages/#{page.id}", %{"page" => page_params})
+      :patch
+      |> call("/admin/pages/#{page.id}", %{"page" => page_params})
       |> with_user(user)
       |> send_request
 
@@ -127,7 +139,8 @@ defmodule Brando.Pages.ControllerTest do
     assert {:ok, page} = Page.create(@page_params, user)
 
     conn =
-      call(:get, "/admin/pages/#{page.id}/delete")
+      :get
+      |> call("/admin/pages/#{page.id}/delete")
       |> with_user
       |> send_request
 
@@ -140,7 +153,8 @@ defmodule Brando.Pages.ControllerTest do
     assert {:ok, page} = Page.create(@page_params, user)
 
     conn =
-      call(:delete, "/admin/pages/#{page.id}")
+      :delete
+      |> call("/admin/pages/#{page.id}")
       |> with_user
       |> send_request
 
@@ -148,7 +162,8 @@ defmodule Brando.Pages.ControllerTest do
   end
 
   test "uses villain" do
-    funcs = Brando.Admin.PageController.__info__(:functions) |> Keyword.keys
+    funcs = Brando.Admin.PageController.__info__(:functions)
+    funcs = Keyword.keys(funcs)
 
     assert :browse_images in funcs
     assert :upload_image in funcs

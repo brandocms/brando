@@ -165,7 +165,8 @@ defmodule Brando.HTML do
 
   ## Example
 
-      dropzone_form(:admin_image_series_path, @series.id, @series.image_category.cfg)
+      dropzone_form(:admin_image_series_path, @series.id,
+                    @series.image_category.cfg)
 
   """
   def dropzone_form(helper, id, cfg \\ nil) do
@@ -254,17 +255,24 @@ defmodule Brando.HTML do
   """
   def frontend_admin_menu(conn) do
     if current_user(conn) do
+      default_img    = "/images/brando/defaults/avatar_default.jpg"
+      dashboard_path = Brando.helpers.admin_dashboard_path(conn, :dashboard)
+      logout_path    = Brando.helpers.session_path(conn, :logout)
+      avatar         = img_url(current_user(conn).avatar, :micro,
+                       [default: Brando.helpers.static_path(conn, default_img),
+                        prefix: media_url()])
       html =
       """
       <div class="admin-menu">
         <ul class="nav navbar-nav">
           <li class="dropdown">
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-              <img class="micro-avatar" src="#{img_url(current_user(conn).avatar, :micro, [default: Brando.helpers.static_path(conn, "/images/brando/defaults/avatar_default.jpg"), prefix: media_url()])}" />
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown"
+               role="button" aria-expanded="false">
+              <img class="micro-avatar" src="#{avatar}" />
             </a>
             <ul class="dropdown-menu dropdown-menu-right" role="menu">
-              <li><a href="#{Brando.helpers.admin_dashboard_path(conn, :dashboard)}">Admin</a></li>
-              <li><a href="#{Brando.helpers.session_path(conn, :logout)}">Logg ut</a></li>
+              <li><a href="#{dashboard_path}">Admin</a></li>
+              <li><a href="#{logout_path}">Logg ut</a></li>
             </ul>
           </li>
         </ul>

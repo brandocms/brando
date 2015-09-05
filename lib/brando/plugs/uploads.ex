@@ -11,7 +11,8 @@ defmodule Brando.Plug.Uploads do
 
   require Logger
 
-  def check_for_uploads(conn, {required_key, module}) when is_binary(required_key) do
+  def check_for_uploads(conn, {required_key, module})
+      when is_binary(required_key) do
     param = Map.get(conn.params, required_key)
     case module.check_for_uploads(module, param) do
       {:ok, image_fields} ->
