@@ -216,7 +216,7 @@ defmodule Brando.HTML do
       html =
       """
       <section class="cookie-container">
-        <section class="container-fluid max-width">
+        <section class="cookie-container-inner">
           <div class="cookie-law">
             <p>#{text}</p>
             <a href="javascript:Cookielaw.createCookielawCookie();"
