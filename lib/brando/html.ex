@@ -215,13 +215,18 @@ defmodule Brando.HTML do
     if Map.get(conn.cookies, "cookielaw_accepted") != "1" do
       html =
       """
-      <div class="cookie-law">
-        <p>#{text}</p>
-        <a href="javascript:Cookielaw.createCookielawCookie();"
-           class="dismiss-cookielaw">
-          #{button_text}
-        </a>
-      </div>
+      <section class="cookie-container">
+        <section class="container-fluid max-width">
+          <div class="cookie-law">
+            <p>#{text}</p>
+            <a href="javascript:Cookielaw.createCookielawCookie();"
+               class="dismiss-cookielaw">
+              #{button_text}
+            </a>
+          </div>
+        </section>
+        <hr class="mobile-hide" />
+      </section>
       """
       Phoenix.HTML.raw(html)
     end
