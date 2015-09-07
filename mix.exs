@@ -51,7 +51,6 @@ defmodule Brando.Mixfile do
 
       # Dev dependencies
       {:dialyze, "~> 0.2", only: :dev},
-      {:dogma, github: "lpil/dogma"},
 
       # Test dependencies
       {:excoveralls, "~> 0.3", only: :test},
