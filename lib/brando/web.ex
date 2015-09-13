@@ -24,6 +24,7 @@ defmodule Brando.Web do
       alias unquote(helpers)
 
       import Plug.Conn, only: [get_session: 2]
+      import Brando.Gettext
       import Brando.Utils, only: [media_url: 0, media_url: 1,
                                   current_user: 1, app_name: 0, img_url: 3]
 
