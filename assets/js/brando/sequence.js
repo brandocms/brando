@@ -20,7 +20,7 @@ class Sequence {
 
     static sortSuccess(data) {
         if (data.status == 200) {
-            $("#sort-post").removeClass("btn-warning").addClass("btn-success").html("Lagret rekkefølge!");
+            $("#sort-post").removeClass("btn-warning").addClass("btn-success").html("OK!");
         }
     }
 
