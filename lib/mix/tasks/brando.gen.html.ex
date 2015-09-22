@@ -1,9 +1,12 @@
 defmodule Mix.Tasks.Brando.Gen.Html do
   use Mix.Task
+
+  @shortdoc "Generates a Brando-styled model"
+
   @moduledoc """
   Generates a Brando resource.
 
-      mix brando.gen.html User users name:string age:integer
+      mix brando.gen.html User users name:string avatar:image data:villain
 
   The first argument is the module name followed by
   its plural name (used for resources and schema).
@@ -38,7 +41,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     path         = binding[:path]
     route        = path
                    |> String.split("/") |> Enum.drop(-1)
-                   |> Kernel.++([no_plural]) |> Enum.join("/")
+                   |> Kernel.++([plural]) |> Enum.join("/")
     admin_module = Enum.join([binding[:base], "Admin", binding[:scoped]], ".")
     binding      = binding ++ [plural: plural, route: route, no_plural: no_plural, no_singular: no_singular,
                                image_field: image_field?, villain: villain?,
