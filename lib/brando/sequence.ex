@@ -88,7 +88,7 @@ defmodule Brando.Sequence do
       def sequence(conn) do
         {:model, model} = unquote(model)
         conn
-        |> assign(:items, model.all)
+        |> assign(:items, Brando.repo.all(model))
         |> render(:sequence)
       end
       if unquote(filter) do
@@ -104,6 +104,13 @@ defmodule Brando.Sequence do
           |> render(:sequence)
         end
       end
+      def sequence(conn, %{}) do
+        {:model, model} = unquote(model)
+        conn
+        |> assign(:items, Brando.repo.all(model))
+        |> render(:sequence)
+      end
+
       @doc """
       Sequence model and render :sequence post
       """
