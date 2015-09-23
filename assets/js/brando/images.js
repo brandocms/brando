@@ -7,6 +7,7 @@ class Images {
         this.getHash();
         this.deleteListener();
         this.imageSelectionListener();
+        this.imagePropertiesListener();
     }
     static getHash() {
         let hash = document.location.hash
@@ -38,6 +39,87 @@ class Images {
           $(this).toggleClass('selected');
           that.checkButtonEnable();
         });
+    }
+
+    static imagePropertiesListener() {
+        var that = this;
+
+        $(document).on({
+            mouseenter: function(){
+                $(this).find('.overlay').css('visibility', 'visible');
+            },
+            mouseleave: function(){
+                $(this).find('.overlay').css('visibility', 'hidden');
+            }
+        }, '.image-wrapper');
+
+        $(document).on('click', '.edit-properties', function(e) {
+            e.preventDefault();
+
+            var attrs;
+            var $content = $('<div>');
+            var $form;
+            var $img = $(this).parent().parent().find('img').clone();
+
+            vex.dialog.open({
+                message: '',
+                input: function() {
+                    attrs = that._buildAttrs($img.data());
+                    $content.append($img).append(attrs);
+                    return $content;
+                },
+                callback: function(form) {
+                    if (form === false) {
+                      return console.log('Cancelled');
+                    }
+                    var id = form.id;
+                    delete form.id;
+                    var data = {
+                        form: form,
+                        id: id
+                    }
+                    that._submitProperties(data);
+                }
+            });
+        });
+    }
+
+    static _submitProperties(data) {
+        $.ajax({
+            headers: {Accept : "application/json; charset=utf-8"},
+            type: "POST",
+            data: data,
+            url: Utils.addToPathName('set-properties'),
+        }).done($.proxy(function(data) {
+            /**
+             * Callback after confirming.
+             */
+            if (data.status == '200') {
+                // success
+                var $img = $('.image-serie img[data-id=' + data.id + ']');
+                $.each(data.attrs, function(attr, val) {
+                    $img.attr('data-' + attr, val);
+                });
+            }
+        }));
+    }
+
+    static _buildAttrs(data) {
+        var that = this;
+        var ret = '';
+        $.each(data, function(attr, val) {
+            if (attr == 'id') {
+                ret += '<input name="id" type="hidden" value="' + val + '" />';
+            } else {
+                ret += '<div><label>' + that._capitalize(attr) + '</label>' +
+                       '<input name="' + attr + '" type="text" value="' + val + '" /></div>'
+            }
+        });
+        return ret;
+    }
+
+    static _capitalize(word) {
+       return $.camelCase("-" + word);
     }
 
     static checkButtonEnable() {

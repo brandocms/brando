@@ -5,6 +5,7 @@ defmodule Brando.Admin.ImageController do
   use Linguist.Vocabulary
   use Brando.Web, :controller
   import Brando.Plug.Section
+  alias Brando.Image
 
   plug :put_section, "images"
 
@@ -29,6 +30,22 @@ defmodule Brando.Admin.ImageController do
     model = conn.private[:image_model]
     model.delete(ids)
     conn |> render(:delete_selected, ids: ids)
+  end
+
+  @doc false
+  def set_properties(conn, %{"id" => id, "form" => form}) do
+    image = Image |> Brando.repo.get!(id)
+    image_data = image.image
+
+    new_data =
+      Enum.reduce form, image_data, fn({attr, val}, acc) ->
+        Map.put(acc, String.to_atom(attr), val)
+      end
+
+    image = Map.put(image, :image, new_data)
+    Brando.repo.update!(image)
+
+    conn |> render(:set_properties, id: id, attrs: form)
   end
 
   locale "no", [

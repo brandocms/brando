@@ -8,6 +8,10 @@ defmodule Brando.Admin.ImageView do
     %{status: "200", ids: assigns[:ids]}
   end
 
+  def render("set_properties.json", assigns) do
+    %{status: "200", id: assigns[:id], attrs: assigns[:attrs]}
+  end
+
   use Linguist.Vocabulary
 
   locale "en", [

@@ -42,6 +42,8 @@ defmodule Brando.Routes.Admin.Images do
 
       get    "#{path}",                        image_ctrl,
              :index,                           opts
+      post   "#{path}/set-properties",         image_ctrl,
+             :set_properties,                  opts
       post   "#{path}/delete-selected-images", image_ctrl,
              :delete_selected,                 opts
       get    "#{path}/series",                 series_ctrl,

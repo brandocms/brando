@@ -9,6 +9,23 @@
     padding-top: 10px;
   }
 
+  .image-wrapper {
+    display: inline-block;
+    position: relative;
+
+    .overlay {
+      position: absolute;
+      top: 11px;
+      right: 11px;
+      background-color: #fff;
+      visibility: hidden;
+    }
+  }
+
+  .form-actions {
+
+  }
+
   img {
     background-color: #ffffff;
     border: 1px solid #d7d7d7;
@@ -19,5 +36,23 @@
     opacity: 0.5;
     border: 3px solid #fb6b5b;
     margin: 3px 3px 3px 3px;
+  }
+}
+
+.properties-popup {
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: bold;
+    margin-top: 10px;
+  }
+
+  input[type=text] {
+    width: 100%;
+    padding: 5px 7px;
+  }
+
+  button {
+    margin-top: 15px;
   }
 }
