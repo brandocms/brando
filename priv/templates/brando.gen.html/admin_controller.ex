@@ -30,16 +30,16 @@ defmodule <%= admin_module %>Controller do
     language = Brando.I18n.get_language(conn)
     changeset = <%= alias %>.changeset(%<%= alias %>{}, <%= singular %>_params)
 
-    if changeset.valid? do
-      Repo.insert!(changeset)
-
-      conn
-      |> put_flash(:info, t!(language, "flash.created"))
-      |> redirect(to: <%= admin_path %>_path(conn, :index))
-    else
-      conn
-      |> assign(:page_title, t!(language, "title.new"))
-      |> render("new.html", changeset: changeset)
+    case Repo.insert(changeset) do
+      {:ok, _} ->
+        conn
+        |> put_flash(:info, t!(language, "flash.created"))
+        |> redirect(to: <%= admin_path %>_path(conn, :index))
+      {:error, changeset} ->
+        conn
+        |> put_flash(:error, t!(language, "flash.form_error"))
+        |> assign(:page_title, t!(language, "title.new"))
+        |> render("new.html", changeset: changeset)
     end
   end
 
@@ -66,17 +66,17 @@ defmodule <%= admin_module %>Controller do
     <%= singular %> = Repo.get!(<%= alias %>, id)
     changeset = <%= alias %>.changeset(<%= singular %>, <%= singular %>_params)
 
-    if changeset.valid? do
-      Repo.update!(changeset)
-
-      conn
-      |> put_flash(:info, t!(language, "flash.updated"))
-      |> redirect(to: <%= admin_path %>_path(conn, :index))
-    else
-      conn
-      |> assign(:page_title, t!(language, "title.edit"))
-      |> render("edit.html", <%= singular %>: <%= singular %>,
-                             changeset: changeset)
+    case Repo.insert(changeset) do
+      {:ok, _} ->
+        conn
+        |> put_flash(:info, t!(language, "flash.updated"))
+        |> redirect(to: <%= admin_path %>_path(conn, :index))
+      {:error, changeset} ->
+        conn
+        |> put_flash(:error, t!(language, "flash.form_error"))
+        |> assign(:page_title, t!(language, "title.edit"))
+        |> render("edit.html", <%= singular %>: <%= singular %>,
+                               changeset: changeset)
     end
   end
 
