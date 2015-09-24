@@ -79,7 +79,8 @@ config :brando, Brando.Menu,
            "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
            "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
            "#870B46;", "#D0201A;", "#FF641A;"],
-  modules: [Admin, Users, News, Pages, Images]
+  modules: [Brando.Menu.Admin, Brando.Menu.Users, Brando.Menu.News,
+            Brando.Menu.Pages, Brando.Menu.Images]
 
 config :brando, Brando.Villain,
   parser: <%= application_module %>.Villain.Parser,
