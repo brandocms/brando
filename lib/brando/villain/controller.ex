@@ -60,7 +60,7 @@ defmodule Brando.Villain.Controller do
           |> preload(:image_category)
           |> Brando.repo.get_by(slug: series_slug)
 
-        cfg = series.image_category.cfg ||
+        cfg = series.cfg ||
               Brando.config(Brando.Images)[:default_config]
         opts = Map.put(%{}, "image_series_id", series.id)
         {:ok, image} =
@@ -107,7 +107,7 @@ defmodule Brando.Villain.Controller do
 
         series = Brando.repo.one(q)
 
-        sizes = Enum.map(series.image_category.cfg.sizes, &elem(&1, 0))
+        sizes = Enum.map(series.cfg.sizes, &elem(&1, 0))
         images = Enum.map(series.images, &(&1.image))
         json conn, %{status: 200, series: series_slug, images: images,
                      sizes: sizes, media_url: Brando.config(:media_url)}

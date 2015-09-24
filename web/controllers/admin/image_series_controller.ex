@@ -148,7 +148,7 @@ defmodule Brando.Admin.ImageSeriesController do
       |> Brando.repo.get_by!(id: id)
 
     opts = Map.put(%{}, "image_series_id", series.id)
-    cfg = series.image_category.cfg
+    cfg = series.cfg
           || Brando.config(Brando.Images)[:default_config]
     {:ok, image} =
       image_model.check_for_uploads(params, Brando.Utils.current_user(conn),

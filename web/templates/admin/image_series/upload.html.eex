@@ -1,5 +1,5 @@
 <h1><%= t!(@language, "actions.upload") %> &raquo; <strong><%= @series.name %></strong></h1>
-<%= dropzone_form(:admin_image_series_path, @series.id, @series.cfg) %>
+<%= dropzone_form(:admin_image_series_path, @series.id) %>
 <div class="buttons m-t-md">
   <a href="<%= Helpers.admin_image_series_path(@conn, :edit, @series.id) %>" class="btn btn-default"><%= t!(@language, "actions.edit") %></a>
   <a class="btn btn-default"><%= t!(@language, "actions.sort") %></a>
