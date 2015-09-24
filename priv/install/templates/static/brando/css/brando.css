@@ -3323,6 +3323,10 @@ fieldset[disabled] .btn-gplus.active {
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
   padding: 0 2rem 2rem 2rem; }
 
+.btn-dropdown {
+  padding: 8px 8px 9px;
+  margin-top: 1px; }
+
 .dropdown {
   position: relative;
   cursor: pointer;
@@ -3332,6 +3336,10 @@ fieldset[disabled] .btn-gplus.active {
 
 .dropdown-toggle:focus {
   outline: 0; }
+
+.btn-dropdown .dropdown-menu {
+  margin-right: -9px;
+  margin-top: 16px; }
 
 .dropdown-menu {
   position: absolute;

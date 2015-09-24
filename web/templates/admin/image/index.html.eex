@@ -9,18 +9,38 @@
       <a href="<%= Helpers.admin_image_series_path(@conn, :new, category.id) %>" class="btn btn-primary m-b-sm">
         <i class="fa fa-plus"></i> <%= Brando.Admin.ImageSeriesView.t!(@language, "actions.new") %>
       </a>
-      <a href="<%= Helpers.admin_image_category_path(@conn, :sequence, category.id) %>" class="btn btn-default m-b-sm">
-        <i class="fa fa-sort"></i> <%= Brando.Admin.ImageSeriesView.t!(@language, "actions.sort") %>
-      </a>
-      <a href="<%= Helpers.admin_image_category_path(@conn, :edit, category.id) %>" class="btn btn-default m-b-sm">
-        <i class="fa fa-edit"></i> <%= Brando.Admin.ImageCategoryView.t!(@language, "actions.edit") %>
-      </a>
-      <a href="<%= Helpers.admin_image_category_path(@conn, :configure, category.id) %>" class="btn btn-default m-b-sm">
-        <i class="fa fa-cogs"></i> <%= Brando.Admin.ImageCategoryView.t!(@language, "actions.configure") %>
-      </a>
-      <a href="<%= Helpers.admin_image_category_path(@conn, :delete_confirm, category.id) %>" class="btn btn-danger m-b-sm">
-        <i class="fa fa-trash"></i> <%= Brando.Admin.ImageCategoryView.t!(@language, "actions.delete") %>
-      </a>
+      <button class="btn btn-default btn-dropdown m-b-sm">
+        <div class="dropdown">
+          <label class="dropdown-toggle" data-toggle="dropdown">
+            <input type="checkbox" class="o-c bars">
+          </label>
+          <ul class="dropdown-menu" style="right: 0; left: auto;">
+            <li>
+              <a href="<%= Helpers.admin_image_category_path(@conn, :sequence, category.id) %>">
+                <i class="fa fa-sort"></i> <%= Brando.Admin.ImageSeriesView.t!(@language, "actions.sort") %>
+              </a>
+            </li>
+
+            <li>
+              <a href="<%= Helpers.admin_image_category_path(@conn, :edit, category.id) %>">
+                <i class="fa fa-edit"></i> <%= Brando.Admin.ImageCategoryView.t!(@language, "actions.edit") %>
+              </a>
+            </li>
+
+            <li>
+              <a href="<%= Helpers.admin_image_category_path(@conn, :configure, category.id) %>">
+                <i class="fa fa-cogs"></i> <%= Brando.Admin.ImageCategoryView.t!(@language, "actions.configure") %>
+              </a>
+            </li>
+
+            <li>
+              <a href="<%= Helpers.admin_image_category_path(@conn, :delete_confirm, category.id) %>">
+                <i class="fa fa-trash"></i> <%= Brando.Admin.ImageCategoryView.t!(@language, "actions.delete") %>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </button>
     <%= if category.image_series != [] do %>
       <%= for serie <- category.image_series do %>
         <div class="image-serie image-selection-pool clearfix">
@@ -57,10 +77,36 @@
           <hr>
           <div class="form-actions clearfix">
             <a href="<%= Helpers.admin_image_series_path(@conn, :upload, serie.id) %>" class="btn btn-default"><i class="fa fa-cloud"> </i><%= Brando.Admin.ImageView.t!(@language, "actions.upload") %></a>
-            <a href="<%= Helpers.admin_image_series_path(@conn, :edit, serie.id) %>" class="btn btn-default"><i class="fa fa-edit"> </i><%= Brando.Admin.ImageSeriesView.t!(@language, "actions.edit") %></a>
-            <a href="<%= Helpers.admin_image_series_path(@conn, :sequence, serie.id) %>" class="btn btn-default"><i class="fa fa-sort"> </i><%= Brando.Admin.ImageView.t!(@language, "actions.sort") %></a>
-            <a href="<%= Helpers.admin_image_series_path(@conn, :configure, serie.id) %>" class="btn btn-default"><i class="fa fa-cogs"> </i><%= Brando.Admin.ImageView.t!(@language, "actions.configure") %></a>
-            <a href="<%= Helpers.admin_image_series_path(@conn, :delete_confirm, serie.id) %>" class="btn btn-danger"><i class="fa fa-trash"> </i><%= Brando.Admin.ImageSeriesView.t!(@language, "actions.delete") %></a>
+
+            <button class="btn btn-default btn-dropdown">
+              <div class="dropdown">
+                <label class="dropdown-toggle" data-toggle="dropdown">
+                  <input type="checkbox" class="o-c bars">
+                </label>
+                <ul class="dropdown-menu" style="right: 0; left: auto;">
+                 <li>
+                   <a href="<%= Helpers.admin_image_series_path(@conn, :edit, serie.id) %>">
+                     <i class="fa fa-edit"> </i><%= Brando.Admin.ImageSeriesView.t!(@language, "actions.edit") %>
+                   </a>
+                  </li>
+                  <li>
+                    <a href="<%= Helpers.admin_image_series_path(@conn, :sequence, serie.id) %>">
+                      <i class="fa fa-sort"> </i><%= Brando.Admin.ImageView.t!(@language, "actions.sort") %>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="<%= Helpers.admin_image_series_path(@conn, :configure, serie.id) %>">
+                      <i class="fa fa-cogs"> </i><%= Brando.Admin.ImageView.t!(@language, "actions.configure") %>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="<%= Helpers.admin_image_series_path(@conn, :delete_confirm, serie.id) %>">
+                      <i class="fa fa-trash"> </i><%= Brando.Admin.ImageSeriesView.t!(@language, "actions.delete") %>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </button>
           </div>
         </div>
       <% end %>

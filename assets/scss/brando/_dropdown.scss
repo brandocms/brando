@@ -1,3 +1,8 @@
+.btn-dropdown {
+  padding: 8px 8px 9px;
+  margin-top: 1px;
+}
+
 .dropdown {
   position: relative;
   cursor: pointer;
@@ -8,6 +13,12 @@
 .dropdown-toggle:focus {
   outline: 0;
 }
+
+.btn-dropdown .dropdown-menu {
+  margin-right: -9px;
+  margin-top: 16px;
+}
+
 .dropdown-menu {
   position: absolute;
   top: 100%;

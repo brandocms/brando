@@ -1904,7 +1904,7 @@ $(document).ready(function () {
     $(this).children('li').first().children('a').addClass('is-active').next().addClass('is-open').show();
   });
 
-  $('.accordion-tabs-minimal').on('click', 'li > a', function (event) {
+  $('.accordion-tabs-minimal').on('click', '.tab-link', function (event) {
     event.preventDefault();
     activate_tab(this);
   });
