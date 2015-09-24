@@ -160,6 +160,11 @@ defmodule Brando.Utils do
     Ecto.DateTime.to_string(Ecto.DateTime.local)
   end
 
+  @doc false
+  def get_date_now do
+    Ecto.Date.to_string(Ecto.Date.local)
+  end
+
   @doc """
   Split `records` by `attr`.
 
