@@ -95,6 +95,14 @@ defmodule Brando.HTML.Inspect do
     ~s(#{value.day}/#{value.month}/#{value.year} #{zero_pad(value.hour, 2)}:#{zero_pad(value.min, 2)})
   end
 
+  defp do_inspect_field(language, _name, Ecto.Date, nil) do
+    ~s(<em>#{t!(language, "no_value")}<em>)
+  end
+
+  defp do_inspect_field(_language, _name, Ecto.Date, value) do
+    ~s(#{value.day}/#{value.month}/#{value.year})
+  end
+
   defp do_inspect_field(_language, _name, Brando.Type.Role, roles) do
     roles = Enum.map roles, fn (role) ->
       role_name =
