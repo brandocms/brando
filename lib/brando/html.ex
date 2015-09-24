@@ -165,8 +165,7 @@ defmodule Brando.HTML do
 
   ## Example
 
-      dropzone_form(:admin_image_series_path, @series.id,
-                    @series.image_category.cfg)
+      dropzone_form(:admin_image_series_path, @series.id, @series.cfg)
 
   """
   def dropzone_form(helper, id, cfg \\ nil) do
