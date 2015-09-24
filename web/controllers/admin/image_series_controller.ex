@@ -84,6 +84,46 @@ defmodule Brando.Admin.ImageSeriesController do
   end
 
   @doc false
+  def configure(conn, %{"id" => series_id}) do
+    language = Brando.I18n.get_language(conn)
+    model = conn.private[:series_model]
+    data = Brando.repo.get_by!(model, id: series_id)
+    {:ok, cfg} = Brando.Type.ImageConfig.dump(data.cfg)
+    changeset =
+      data
+      |> Map.put(:cfg, cfg)
+      |> model.changeset(:update)
+
+    conn
+    |> assign(:page_title, t!(language, "title.configure"))
+    |> assign(:changeset, changeset)
+    |> assign(:id, series_id)
+    |> render(:configure)
+  end
+
+  @doc false
+  def configure_patch(conn, %{"imageseriesconfig" => form_data,
+                              "id" => id}) do
+    language = Brando.I18n.get_language(conn)
+    model = conn.private[:series_model]
+    record = Brando.repo.get_by!(model, id: id)
+    case model.update(record, form_data) do
+      {:ok, _updated_record} ->
+        conn
+        |> put_flash(:notice, t!(language, "flash.configured"))
+        |> redirect(to: helpers(conn).admin_image_path(conn, :index))
+      {:error, changeset} ->
+        conn
+        |> assign(:page_title, t!(language, "title.configure"))
+        |> assign(:image_series, form_data)
+        |> assign(:changeset, changeset)
+        |> assign(:id, id)
+        |> put_flash(:error, t!(language, "flash.form_error"))
+        |> render(:edit)
+    end
+  end
+
+  @doc false
   def upload(conn, %{"id" => id}) do
     language = Brando.I18n.get_language(conn)
     series_model = conn.private[:series_model]
@@ -147,6 +187,7 @@ defmodule Brando.Admin.ImageSeriesController do
     title: [
       index: "Bildeserieoversikt",
       upload: "Last opp til bildeserie",
+      configure: "Konfigurér bildeserie",
       new: "Ny bildeserie",
       edit: "Endre bildeserie",
       delete_confirm: "Bekreft sletting av bildeserie",
@@ -155,7 +196,8 @@ defmodule Brando.Admin.ImageSeriesController do
       form_error: "Feil i skjema",
       updated: "Bildeserie oppdatert",
       created: "Bildeserie opprettet",
-      deleted: "Bildeserie slettet"
+      deleted: "Bildeserie slettet",
+      configured: "Bildeserie konfigurert"
     ]
   ]
 
@@ -163,6 +205,7 @@ defmodule Brando.Admin.ImageSeriesController do
     title: [
       index: "Index – Image series",
       upload: "Upload to image serie",
+      configure: "Configure image series",
       new: "New image serie",
       edit: "Edit image serie",
       delete_confirm: "Confirm image serie deletion",
@@ -171,7 +214,8 @@ defmodule Brando.Admin.ImageSeriesController do
       form_error: "Error(s) in form",
       updated: "Image serie updated",
       created: "Image serie created",
-      deleted: "Image serie deleted"
+      deleted: "Image serie deleted",
+      configured: "Image series configured"
     ]
   ]
 end

@@ -14,12 +14,15 @@ defmodule Brando.ImageSeries do
   alias Brando.ImageCategory
 
   @required_fields ~w(name slug image_category_id creator_id)
-  @optional_fields ~w(credits sequence)
+  @optional_fields ~w(credits sequence cfg)
+
+  before_insert __MODULE__, :inherit_configuration
 
   schema "imageseries" do
     field :name, :string
     field :slug, :string
     field :credits, :string
+    field :cfg, Brando.Type.ImageConfig
     belongs_to :creator, User
     belongs_to :image_category, ImageCategory
     has_many :images, Image
@@ -90,6 +93,17 @@ defmodule Brando.ImageSeries do
   end
 
   @doc """
+  Before insert callback. Copies the series' category config.
+  """
+  def inherit_configuration(changeset) do
+    category =
+      ImageCategory
+      |> Brando.repo.get(changeset.changes.image_category_id)
+
+    put_change(changeset, :cfg, category.cfg)
+  end
+
+  @doc """
   Get all imageseries in category `id`.
   """
   def get_by_category_id(id) do
@@ -139,6 +153,7 @@ defmodule Brando.ImageSeries do
                slug: "URL-tamp",
                credits: "Kreditering",
                sequence: "Rekkefølge",
+               cfg: "Konfigurasjon",
                creator: "Opprettet av",
                images: "Bilder",
                image_category: "Bildekategori",
@@ -157,6 +172,7 @@ defmodule Brando.ImageSeries do
       fields: [id: "ID",
                name: "Name",
                slug: "Slug",
+               cfg: "Configuration",
                credits: "Credits",
                sequence: "Sequence",
                creator: "Creator",

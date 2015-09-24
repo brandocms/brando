@@ -6,6 +6,7 @@ defmodule <%= application_module %>.Repo.Migrations.CreateImageseries do
     create table(:imageseries) do
       add :name,              :text
       add :slug,              :text
+      add :cfg,               :json
       add :credits,           :text
       add :creator_id,        references(:users)
       add :image_category_id, references(:imagecategories)
