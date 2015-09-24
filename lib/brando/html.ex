@@ -165,12 +165,10 @@ defmodule Brando.HTML do
 
   ## Example
 
-      dropzone_form(:admin_image_series_path, @series.id,
-                    @series.image_category.cfg)
+      dropzone_form(:admin_image_series_path, @series.id)
 
   """
-  def dropzone_form(helper, id, cfg \\ nil) do
-    _cfg = cfg || Brando.config(Brando.Images)[:default_config]
+  def dropzone_form(helper, id) do
     path = Brando.Form.apply_action(helper, :upload_post, id)
     html =
     """

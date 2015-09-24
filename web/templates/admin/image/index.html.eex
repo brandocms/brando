@@ -59,6 +59,7 @@
             <a href="<%= Helpers.admin_image_series_path(@conn, :upload, serie.id) %>" class="btn btn-default"><i class="fa fa-cloud"> </i><%= Brando.Admin.ImageView.t!(@language, "actions.upload") %></a>
             <a href="<%= Helpers.admin_image_series_path(@conn, :edit, serie.id) %>" class="btn btn-default"><i class="fa fa-edit"> </i><%= Brando.Admin.ImageSeriesView.t!(@language, "actions.edit") %></a>
             <a href="<%= Helpers.admin_image_series_path(@conn, :sequence, serie.id) %>" class="btn btn-default"><i class="fa fa-sort"> </i><%= Brando.Admin.ImageView.t!(@language, "actions.sort") %></a>
+            <a href="<%= Helpers.admin_image_series_path(@conn, :configure, serie.id) %>" class="btn btn-default"><i class="fa fa-cogs"> </i><%= Brando.Admin.ImageView.t!(@language, "actions.configure") %></a>
             <a href="<%= Helpers.admin_image_series_path(@conn, :delete_confirm, serie.id) %>" class="btn btn-danger"><i class="fa fa-trash"> </i><%= Brando.Admin.ImageSeriesView.t!(@language, "actions.delete") %></a>
           </div>
         </div>

@@ -56,6 +56,7 @@ defmodule Brando.Integration.Migration do
       add :name,              :text
       add :slug,              :text
       add :credits,           :text
+      add :cfg,               :json
       add :creator_id,        references(:users)
       add :image_category_id, references(:imagecategories)
       sequenced

@@ -1,7 +1,7 @@
 defmodule Brando.Images.Upload do
   @moduledoc """
   Same principle as ImageField, only this one has its own table.
-  We get the config from `image.series.category.cfg`
+  We get the config from `image.series.cfg`
   """
 
   import Brando.Utils

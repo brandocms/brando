@@ -3,6 +3,7 @@ defmodule Brando.Admin.ImageSeriesView do
   View for the Brando Images module.
   """
   alias Brando.ImageSeriesForm
+  alias Brando.ImageSeriesConfigForm
   use Brando.Web, :view
   use Brando.Sequence, :view
 

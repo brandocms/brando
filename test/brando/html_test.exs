@@ -25,7 +25,7 @@ defmodule Brando.HTMLTest do
   end
 
   test "dropzone_form/3" do
-    {:safe, form} = dropzone_form(:admin_image_series_path, 1, nil)
+    {:safe, form} = dropzone_form(:admin_image_series_path, 1)
     assert form =~ "/admin/images/series/1/upload"
     assert form =~ "dropzone"
   end

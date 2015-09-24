@@ -52,6 +52,10 @@ defmodule Brando.Routes.Admin.Images do
              :new,                             series_opts
       get    "#{path}/series/:id/edit",        series_ctrl,
              :edit,                            series_opts
+      get    "#{path}/series/:id/configure",   series_ctrl,
+             :configure,                       series_opts
+      patch  "#{path}/series/:id/configure",   series_ctrl,
+             :configure_patch,                 series_opts
       get    "#{path}/series/:id/delete",      series_ctrl,
              :delete_confirm,                  series_opts
       get    "#{path}/series/:id/upload",      series_ctrl,

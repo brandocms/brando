@@ -179,7 +179,7 @@ defmodule Brando.Admin.ImageCategoryController do
       updated: "Image category updated",
       created: "Image category created",
       deleted: "Image category deleted",
-      configured: "Image category konfigurert"
+      configured: "Image category configured"
     ]
   ]
 end
