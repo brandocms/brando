@@ -102,8 +102,7 @@ defmodule Brando.Admin.ImageSeriesController do
   end
 
   @doc false
-  def configure_patch(conn, %{"imageseriesconfig" => form_data,
-                              "id" => id}) do
+  def configure_patch(conn, %{"imageseriesconfig" => form_data, "id" => id}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:series_model]
     record = Brando.repo.get_by!(model, id: id)
