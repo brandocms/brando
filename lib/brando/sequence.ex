@@ -81,16 +81,13 @@ defmodule Brando.Sequence do
           {:filter, fun} = unquote(filter)
           fun.(filter_param)
         end
+
+        def filter_function() do
+          {:filter, fun} = unquote(filter)
+          fun.()
+        end
       end
-      @doc """
-      Render the :sequence view.
-      """
-      def sequence(conn) do
-        {:model, model} = unquote(model)
-        conn
-        |> assign(:items, Brando.repo.all(model))
-        |> render(:sequence)
-      end
+
       if unquote(filter) do
         @doc """
         Render the :sequence view with `filter`
@@ -103,12 +100,24 @@ defmodule Brando.Sequence do
           |> assign(:filter, filter)
           |> render(:sequence)
         end
-      end
-      def sequence(conn, %{}) do
-        {:model, model} = unquote(model)
-        conn
-        |> assign(:items, Brando.repo.all(model))
-        |> render(:sequence)
+
+        @doc """
+        Render the :sequence view.
+        """
+        def sequence(conn, _) do
+          {:model, model} = unquote(model)
+
+          conn
+          |> assign(:items, filter_function())
+          |> render(:sequence)
+        end
+      else
+        def sequence(conn, _) do
+          {:model, model} = unquote(model)
+          conn
+          |> assign(:items, Brando.repo.all(model))
+          |> render(:sequence)
+        end
       end
 
       @doc """

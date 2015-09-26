@@ -39,8 +39,8 @@ defmodule Brando.Routes.Admin.Villain do
       get  "#{path}/villain/browse/:slug",           ctrl, :browse_images, opts
       get  "#{path}/villain/imageseries",            ctrl, :imageseries,   opts
       post "#{path}/villain/imagedata/:id",          ctrl, :image_info,    opts
-      post "#{path}/:_x/villain/imagedata/:id",      ctrl, :image_info,    opts
-      post "#{path}/:_x/edit/villain/imagedata/:id", ctrl, :image_info,    opts
+      post "#{path}/:x/villain/imagedata/:id",      ctrl, :image_info,    opts
+      post "#{path}/:x/edit/villain/imagedata/:id", ctrl, :image_info,    opts
     end
   end
 end
