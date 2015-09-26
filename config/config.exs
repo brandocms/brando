@@ -5,11 +5,13 @@
 # is restricted to this project.
 use Mix.Config
 
-config :dogma,
-  exclude: [
-    ~r(\A_build/),
-    ~r(\Apriv/),
-  ]
+# Removed until dogma fixes its bugs
+
+# config :dogma,
+#   exclude: [
+#     ~r(\A_build/),
+#     ~r(\Apriv/),
+#   ]
 
 config :brando,
   app_name: "MyApp",

@@ -344,9 +344,9 @@ defmodule Brando.Form.Fields do
   """
   @spec file(atom, String.t, String.t, Options.t | Keyword.t,
              Options.t | Keyword.t) :: String.t
-  def file(:update, name, value, _errors, opts) do
+  def file(:update, name, value, errors, opts) do
     opts = Map.delete(opts, :default)
-    [get_img_preview(value), file(:create, name, value, _errors, opts)]
+    [get_img_preview(value), file(:create, name, value, errors, opts)]
   end
 
   @doc """
@@ -369,9 +369,9 @@ defmodule Brando.Form.Fields do
   """
   @spec textarea(atom, String.t, String.t, Options.t | Keyword.t,
                  Options.t | Keyword.t) :: String.t
-  def textarea(:update, name, value, _errors, opts) do
+  def textarea(:update, name, value, errors, opts) do
     opts = Map.delete(opts, :default)
-    textarea(:create, name, value, _errors, opts)
+    textarea(:create, name, value, errors, opts)
   end
 
   @doc """
@@ -692,9 +692,9 @@ defmodule Brando.Form.Fields do
     [hidden_tag, input_tag]
   end
 
-  def input(input_type, :update, name, value, _errors, opts) do
+  def input(input_type, :update, name, value, errors, opts) do
     opts = Map.delete(opts, :default)
-    input(input_type, :create, name, value, _errors, opts)
+    input(input_type, :create, name, value, errors, opts)
   end
 
   def input(input_type, _form_type, name, value, _errors, opts) do

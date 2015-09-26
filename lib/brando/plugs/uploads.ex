@@ -20,8 +20,8 @@ defmodule Brando.Plug.Uploads do
         conn =
           conn
           |> Phoenix.Controller.put_flash(:notice, "Bilde lastet opp.")
-      {:error, _errors} ->
-        Logger.error(inspect(_errors))
+      {:error, errors} ->
+        Logger.error(inspect(errors))
         nil
       [] -> nil
     end
