@@ -3,6 +3,7 @@ defmodule Brando.Admin.DashboardView do
   View for the Brando Dashboard module.
   """
   use Brando.Web, :view
+  import Brando.Gettext
   use Linguist.Vocabulary
 
   locale "en", [
