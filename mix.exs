@@ -10,7 +10,7 @@ defmodule Brando.Mixfile do
       version: @version,
       elixir: "~> 1.0",
       deps: deps,
-      compilers: [:phoenix] ++ Mix.compilers,
+      compilers: [:gettext, :phoenix] ++ Mix.compilers,
       elixirc_paths: elixirc_paths(Mix.env),
       test_coverage: [tool: ExCoveralls],
       package: package,
@@ -28,7 +28,7 @@ defmodule Brando.Mixfile do
 
   defp applications(:test), do: applications(:all) ++ [:blacksmith]
   defp applications(_all), do: [
-    :comeonin, :httpoison, :phoenix, :phoenix_ecto, :phoenix_html,
+    :gettext, :comeonin, :httpoison, :phoenix, :phoenix_ecto, :phoenix_html,
     :earmark, :linguist, :mogrify, :poison, :postgrex, :scrivener,
     :slugger
   ]
@@ -48,6 +48,7 @@ defmodule Brando.Mixfile do
       {:postgrex, ">= 0.0.0"},
       {:scrivener, "~> 1.0"},
       {:slugger, "~> 0.0.1"},
+      {:gettext, "~> 0.6"},
 
       # Dev dependencies
       {:dialyze, "~> 0.2", only: :dev},
