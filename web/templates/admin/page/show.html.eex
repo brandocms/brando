@@ -1,0 +1,12 @@
+  <div class="data-table">
+    <h1><%= t!(@language, "actions.show") %></h1>
+    <%= Brando.HTML.Inspect.model(@language, @page) %>
+    <div class="form-actions">
+      <a href="<%= Helpers.admin_page_path(@conn, :index) %>" class="btn btn-default">
+        <i class="fa fa-list fa-fw m-r-sm"></i> <%= Brando.Admin.LayoutView.t!(@language, "global.back_to_index") %>
+      </a>
+      <a href="<%= Helpers.admin_page_path(@conn, :edit, @page.id) %>" class="btn btn-default">
+        <i class="fa fa-edit fa-fw m-r-sm"></i> <%= t!(@language, "actions.edit") %>
+      </a>
+    </div>
+  </div>

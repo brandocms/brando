@@ -1,0 +1,7 @@
+  <h1><%= t!(@language, "actions.edit") %></h1>
+  <%= UserForm.get_form(@language, type: :update, action: :update, params: to_string(@id), changeset: assigns[:changeset]) %>
+  <div class="form-actions">
+  <a href="<%= Helpers.admin_user_path(@conn, :index) %>" class="btn btn-default">
+    <i class="fa fa-list fa-fw m-r-sm"></i> <%= Brando.Admin.LayoutView.t!(@language, "global.back_to_index") %>
+  </a>
+  </div>

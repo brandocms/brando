@@ -1,0 +1,19 @@
+    <h1><%= t!(@language, "actions.index") %></h1>
+<%= if @page_fragments != [] do %>
+    <div>
+        <%= Brando.HTML.status_indicators(@language) %>
+    </div>
+    <%= Brando.HTML.Tablize.tablize(@conn, @page_fragments,
+                [{t!(@language, "actions.show"), "fa-search", :admin_page_fragment_path, :show, :id},
+                 {t!(@language, "actions.edit"), "fa-edit", :admin_page_fragment_path, :edit, :id, :superuser},
+                 {t!(@language, "actions.delete"), "fa-trash", :admin_page_fragment_path, :delete_confirm, :id, :superuser}],
+                 check_or_x: [], hide: [:data, :html, :inserted_at]) %>
+
+<% else %>
+    <p><%= t!(@language, "actions.empty") %></p>
+<% end %>
+    <div class="form-actions">
+      <a href="<%= Helpers.admin_page_fragment_path @conn, :new %>" class="btn btn-primary">
+        <i class="fa fa-plus m-r-xs"></i> <%= t!(@language, "actions.new") %>
+      </a>
+    </div>

@@ -1,0 +1,2 @@
+    <h1><%= t!(@language, "actions.new") %></h1>
+    <%= ImageSeriesForm.get_form(@language, type: :create, action: :create, params: [], changeset: @changeset) %>

@@ -1,0 +1,23 @@
+    <h1><%= t!(@language, "actions.index") %></h1>
+<%= if @pages != [] do %>
+    <div>
+      <%= Brando.HTML.status_indicators(@language) %>
+    </div>
+    <%= Brando.HTML.Tablize.tablize(@conn, @pages,
+          [{t!(@language, "actions.show"), "fa-search", :admin_page_path, :show, :id},
+           {t!(@language, "actions.edit"), "fa-edit", :admin_page_path, :edit, :id, :superuser},
+           {t!(@language, "actions.duplicate"), "fa-files-o", :admin_page_path, :duplicate, :id, :superuser},
+           {t!(@language, "actions.delete"), "fa-trash", :admin_page_path, :delete_confirm, :id, :superuser}],
+           children: :children,
+           filter: true,
+           split_by: :language,
+           check_or_x: [], hide: [:slug, :data, :html, :parent, :parent_id, :children, :meta_description, :meta_keywords, :inserted_at]) %>
+
+<% else %>
+    <p>Ingen sider</p>
+<% end %>
+    <div class="form-actions">
+      <a href="<%= Helpers.admin_page_path @conn, :new %>" class="btn btn-primary">
+        <i class="fa fa-plus m-r-xs"></i> <%= t!(@language, "actions.new") %>
+      </a>
+    </div>

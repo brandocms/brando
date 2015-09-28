@@ -1,0 +1,24 @@
+<h1><%= t!(@language, "actions.sort") %> &raquo; <strong><%= Brando.ImageCategory.get_slug(id: @filter) %></strong></h1>
+<ul id="sequence" class="clearfix">
+<%= for i <- @items do %>
+  <li style="width: 100%; padding: 10px 13px;" data-id="<%= i.id %>">
+    <div>
+      <i class="fa fa-grip fa-fw m-r-sm text-muted-more"></i>
+      <span class="text-upper"><strong><%= i.name %></strong></span>
+    </div>
+    <hr class="m-t-xs m-b-sm">
+    <%= if i.images != [] do %>
+      <%= for img <- i.images do %>
+        <img src="<%= img_url(img.image, :micro, prefix: media_url()) %>" />
+      <% end %>
+    <% else %>
+      <em><%= t!(@language, "actions.empty") %></em>
+    <% end %>
+  </li>
+<% end %>
+</ul>
+<hr>
+<div class="buttons m-t-md">
+  <a id="sort-post" href="<%= Helpers.admin_image_category_path(@conn, :sequence_post, @filter) %>" class="btn btn-default"><%= t!(@language, "actions.store_sort") %></a>
+  <a href="<%= Helpers.admin_image_path(@conn, :index) %>" class="btn btn-default"><%= Brando.Admin.LayoutView.t!(@language, "global.back_to_index") %></a>
+</div>

@@ -1,0 +1,13 @@
+<h1><%= t!(@language, "actions.upload") %> &raquo; <strong><%= @series.name %></strong></h1>
+<%= dropzone_form(:admin_image_series_path, @series.id) %>
+<div class="buttons m-t-md">
+  <a href="<%= Helpers.admin_image_series_path(@conn, :edit, @series.id) %>" class="btn btn-default"><%= t!(@language, "actions.edit") %></a>
+  <a class="btn btn-default"><%= t!(@language, "actions.sort") %></a>
+  <a href="<%= Helpers.admin_image_path(@conn, :index) %>" class="btn btn-default"><%= Brando.Admin.LayoutView.t!(@language, "global.back_to_index") %></a>
+</div>
+<div class="image-serie m-t-md">
+  <h2><%= t!(@language, "actions.existing") %></h2>
+<%= for i <- @series.images do %>
+  <img src="<%= img_url(i.image, :thumb, prefix: media_url()) %>" />
+<% end %>
+</div>

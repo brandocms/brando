@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title><%= app_name %> | autorisering</title>
+    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.vendor-min.css") %>">
+    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando-min.css") %>">
+    <script src="<%= Brando.helpers.static_path(@conn, "/js/brando.auth-min.js") %>" type="text/javascript" charset="utf-8"></script>
+  </head>
+
+  <body class="auth">
+      <div class="grid-frame">
+        <div class="grid-container v-align">
+          <div class="grid-block">
+            <div class="grid-content">
+              <div class="toolbar"></div>
+              <div class="box">
+                <h1 id="app-name"><%= app_name %> admin</h1>
+              <%= if get_flash(@conn, :error) do %>
+                <div class="alert alert-block alert-danger">
+                  <a class="close" data-dismiss="alert" href="#">×</a>
+                  <%= get_flash(@conn, :error) %>
+                </div>
+              <% end %>
+
+              <%= if get_flash(@conn, :notice) do %>
+                <div class="alert alert-block alert-info">
+                  <a class="close" data-dismiss="alert" href="#">×</a>
+                  <%= get_flash(@conn, :notice) %>
+                </div>
+              <% end %>
+              <%= @inner %>
+              <span class="version">&beta; <%= Brando.version %></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    <script>
+        var pattern = Trianglify({
+            width: window.innerWidth,
+            height: window.innerHeight,
+            cell_size: 210,
+            stroke_width: 500
+        });
+        svg = pattern.svg();
+        svg.setAttribute("id", "triangles");
+        document.body.appendChild(svg);
+        $(document).ready(function() {
+          textFit(document.getElementById("app-name"), {widthOnly: true});
+        });
+    </script>
+  </body>
+</html>

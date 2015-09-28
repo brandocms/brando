@@ -1,0 +1,6 @@
+    <h1><%= t!(@language, "actions.new") %></h1>
+    <%= PostForm.get_form(@language, type: :create, action: :create, params: [], changeset: @changeset) %>
+    <%= Brando.Villain.HTML.initialize(
+          base_url:     "/admin/news/",
+          image_series: "post",
+          source:       "textarea[name=\"post[data]\"]") %>

@@ -1,0 +1,19 @@
+<h1>Systeminformasjon</h1>
+
+<div id="systeminfo">
+  <div class="card" id="total-memory">
+    <h4>Minne // totalt</h4>
+    <div class="sparkline"></div>
+    <div class="text">0 mb</div>
+  </div>
+  <div class="card" id="atom-memory">
+    <h4>Minne // atomer</h4>
+    <div class="sparkline"></div>
+    <div class="text">0 mb</div>
+  </div>
+  <div class="card" id="instagram-status">
+    <h4>Instagram // server</h4>
+    <div class="status"></div>
+    <a href="<%= Helpers.admin_dashboard_path(@conn, :instagram_start) %>">Start</a>
+  </div>
+</div>

@@ -1,0 +1,11 @@
+    <h1><%= t!(@language, "actions.index") %></h1>
+    <%= Brando.HTML.Tablize.tablize(@conn, @users, [
+          {t!(@language, "actions.show"), "fa-search", :admin_user_path, :show, :id},
+          {t!(@language, "actions.edit"), "fa-edit", :admin_user_path, :edit, :id, :superuser},
+          {t!(@language, "actions.delete"), "fa-trash", :admin_user_path, :delete_confirm, :id, :superuser}],
+          check_or_x: [:avatar], hide: [:password, :updated_at, :inserted_at]) %>
+    <div class="form-actions">
+      <%= auth_link :primary, @conn, Helpers.admin_user_path(@conn, :new), :superuser do %>
+        <i class="fa fa-plus m-r-xs"></i> <%= t!(@language, "actions.new") %>
+      <% end %>
+    </div>

@@ -1,0 +1,13 @@
+<!-- For CSRF protection see https://github.com/phoenixframework/phoenix/issues/305 -->
+    <form accept-charset="UTF-8" action="" class="form-horizontal" id="new_session" method="post">
+      <input type="hidden" name="_csrf_token" value="<%= Phoenix.Controller.get_csrf_token %>" />
+      <div class="form-group"><label for="user_email">Epost</label>
+        <input autofocus="autofocus" class="form-control" id="user_email" name="user[email]" type="email" value="" />
+      </div>
+      <div class="form-group"><label for="user_password">Passord</label>
+        <input class="form-control" id="user_password" name="user[password]" type="password" />
+      </div>
+      <div class="form-group">
+        <input class="btn btn-primary btn-block btn-lg m-t-md" name="commit" type="submit" value="Logg inn" />
+      </div>
+    </form>

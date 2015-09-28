@@ -1,0 +1,19 @@
+<h1><%= t!(@language, "actions.index") %></h1>
+<p>
+  <%= t!(@language, "content.help1") %><br />
+  <%= t!(@language, "content.help2") %>
+</p>
+<div class="button-header">
+  <button class="approve-selected-images btn btn-default">
+    <i class="fa fa-fw fa-thumbs-o-up m-r-sm"></i><%= t!(@language, "actions.mark_as") %> <%= t!(@language, "actions.approved") %>
+  </button>
+  <button class="reject-selected-images btn btn-default">
+    <i class="fa fa-fw fa-thumbs-o-down m-r-sm"></i><%= t!(@language, "actions.mark_as") %> <%= t!(@language, "actions.rejected") %>
+  </button>
+  <button class="delete-selected-images btn btn-default">
+    <i class="fa fa-fw fa-trash-o m-r-sm"></i><%= t!(@language, "actions.mark_as") %> <%= t!(@language, "actions.deleted") %>
+  </button>
+</div>
+<div class="image-serie">
+  <%= show_grouped_images(@language, @images) %>
+</div>

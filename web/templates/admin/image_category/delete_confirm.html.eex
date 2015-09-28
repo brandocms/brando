@@ -1,0 +1,17 @@
+<div class="data-table">
+  <h1>
+    <%= t!(@language, "actions.delete") %>: <%= Brando.HTML.Inspect.model_repr(@language, @record) %>
+  </h1>
+  <p>
+    <%= Brando.Admin.LayoutView.t!(@language, "message.confirm_delete") %>
+  </p>
+  <p class="m-b-md">
+    <i class="fa fa-exclamation-triangle text-danger m-r-sm"> </i>
+    <strong class="text-upper">
+      <%= Brando.Admin.LayoutView.t!(@language, "message.no_restore") %>
+    </strong>
+  </p>
+  <%= Brando.HTML.Inspect.model(@language, @record) %>
+
+  <%= Brando.HTML.delete_form_button(@language, :admin_image_category_path, @record) %>
+</div>

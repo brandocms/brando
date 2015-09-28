@@ -1,0 +1,15 @@
+#sequence {
+  list-style-type: none;
+  padding: 0;
+
+  li {
+    float: left;
+    margin: 5px;
+    padding: 5px;
+    border: 1px solid #ddd;
+  }
+}
+
+.sequence-ghost {
+  opacity: 0.5;
+}
