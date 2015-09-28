@@ -53,6 +53,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "install/templates/web/static/js/app/flexslider.js",                        "web/static/js/flexslider.js"},
 
     {:copy, "install/templates/web/static/css/app.scss",                                "web/static/css/app.scss"},
+    {:copy, "install/templates/web/static/css/brando.custom.scss",                      "web/static/css/brando.custom.scss"},
     {:copy, "install/templates/web/static/css/includes/_colorbox.scss",                 "web/static/css/includes/_colorbox.scss"},
     {:copy, "install/templates/web/static/css/includes/_cookielaw.scss",                "web/static/css/includes/_cookielaw.scss"},
     {:copy, "install/templates/web/static/css/includes/_dropdown.scss",                 "web/static/css/includes/_dropdown.scss"},

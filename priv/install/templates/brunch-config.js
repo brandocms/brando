@@ -31,6 +31,9 @@ exports.config = {
           'bower_components/responsive-nav/responsive-nav.css',
           'bower_components/flexslider/flexslider.css',
           'web/static/css/app.scss',
+        ],
+        'css/brando.custom.css': [
+          'web/static/css/brando.custom.scss'
         ]
       },
     },
