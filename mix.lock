@@ -5,7 +5,7 @@
   "cowlib": {:hex, :cowlib, "1.0.1"},
   "decimal": {:hex, :decimal, "1.1.0"},
   "dialyze": {:hex, :dialyze, "0.2.0"},
-  "dogma": {:git, "git://github.com/lpil/dogma.git", "4e772589b599db38b4294b80078fb01c44bfef8e", []},
+  "dogma": {:git, "https://github.com/lpil/dogma.git", "96f976d8b2297222cd8a31e1cccb8f509272e07f", []},
   "earmark": {:hex, :earmark, "0.1.17"},
   "ecto": {:hex, :ecto, "1.0.2"},
   "ex_doc": {:hex, :ex_doc, "0.10.0"},

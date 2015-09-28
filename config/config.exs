@@ -7,11 +7,12 @@ use Mix.Config
 
 # Removed until dogma fixes its bugs
 
-# config :dogma,
-#   exclude: [
-#     ~r(\A_build/),
-#     ~r(\Apriv/),
-#   ]
+config :dogma,
+  exclude: [
+    ~r(\A_build/),
+    ~r(\Apriv/),
+    ~r(\Atest/)
+  ]
 
 config :brando,
   app_name: "MyApp",
