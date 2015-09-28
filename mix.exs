@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.1.0-dev"
+  @version "0.1.0"
   @description "Boilerplate for Twined applications. Experimental, do not use."
 
   def project do
@@ -65,8 +65,8 @@ defmodule Brando.Mixfile do
   end
 
   defp package do
-    [contributors: ["Trond Mjøen"],
-     licenses: ["MIT"],
+    [maintainers: ["Trond Mjøen"],
+     licenses: [""],
      files: ["assets", "config", "lib", "priv", "test", "web",
              "mix.exs", "README.md", ".travis.yml", "CHANGELOG.md"],
      links: %{github: "https://github.com/twined/brando"}]
