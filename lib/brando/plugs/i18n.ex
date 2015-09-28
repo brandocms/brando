@@ -10,7 +10,7 @@ defmodule Brando.Plug.I18n do
   Here it already is in `conn`, so we only add to `conn.assigns`
   """
   def put_locale(%{private: %{plug_session: %{"language" => l}}} = conn, _) do
-    l = check_path(conn) || l
+    l = extract_language_from_path(conn) || l
     assign_language(conn, l)
   end
 
@@ -20,7 +20,8 @@ defmodule Brando.Plug.I18n do
   Adds to session and assigns
   """
   def put_locale(conn, _) do
-    language = check_path(conn) || Brando.config(:default_language)
+    language = extract_language_from_path(conn)
+               || Brando.config(:default_language)
     conn
     |> put_language(language)
     |> assign_language(language)
@@ -45,8 +46,9 @@ defmodule Brando.Plug.I18n do
     assign_language(conn, Brando.config(:default_admin_language))
   end
 
-  defp check_path(conn) do
-    if lang = List.first(conn.path_info) do
+  defp extract_language_from_path(conn) do
+    lang = List.first(conn.path_info)
+    if lang do
       langs =
         :languages
         |> Brando.config

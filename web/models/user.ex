@@ -113,9 +113,11 @@ defmodule Brando.User do
   """
   def update(user, params) do
     cs = changeset(user, :update, params)
-    if password = get_change(cs, :password) do
-      cs = put_change(cs, :password, gen_password(password))
-    end
+    cs =
+      case get_change(cs, :password) do
+        nil      -> cs
+        password -> put_change(cs, :password, gen_password(password))
+      end
     Brando.repo.update(cs)
   end
 
