@@ -88,6 +88,11 @@ config :my_app, MyApp.Endpoint,
   render_errors: [view: Brando.ErrorView, default_format: "html"]
 ```
 
+## Additional admin CSS/styling
+
+For modules added through your OTP app, you can style its backend by editing 
+`web/static/css/brando.custom.scss`.
+
 ## Pagination
 
 For pagination, add to your app's `repo.ex`:
