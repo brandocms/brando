@@ -150,8 +150,8 @@ defmodule Brando.Sequence do
         table = __MODULE__.__schema__(:source)
         Brando.repo.transaction(fn -> Enum.map(order, fn ({val, id}) ->
           Ecto.Adapters.SQL.query(
-            Brando.repo, "UPDATE #{table} SET \"sequence\" = $1 " <>
-                         "WHERE \"id\" = $2",
+            Brando.repo,
+            ~s(UPDATE #{table} SET "sequence" = $1 WHERE "id" = $2),
             [val, String.to_integer(id)])
         end) end)
       end
