@@ -151,9 +151,11 @@ defmodule Brando.Instagram.API do
   Poison's callback for processing the json into a map
   """
   def process_response_body(body) do
-    case body |> Poison.decode do
-      {:ok, result}   -> result |> Enum.map(fn({k, v}) -> {String.to_atom(k), v} end)
-      {:error, error} -> {:error, error}
+    case Poison.decode(body) do
+      {:ok, result}   ->
+        Enum.map(result, fn({k, v}) -> {String.to_atom(k), v} end)
+      {:error, error} ->
+        {:error, error}
     end
   end
 
