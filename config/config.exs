@@ -11,7 +11,8 @@ config :dogma,
   exclude: [
     ~r(\A_build/),
     ~r(\Apriv/),
-    ~r(\Atest/)
+    ~r(\Atest/),
+    ~r(\Atmp/)
   ]
 
 config :brando,
