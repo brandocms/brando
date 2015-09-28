@@ -15,3 +15,4 @@
   11. Bump version in CHANGELOG + -dev
   12. Bump version in mix.exs + -dev
   13. Commit `develop` with `Start X.X.X development`. Push
+  14. Push `X.X.X` tag to `origin`
