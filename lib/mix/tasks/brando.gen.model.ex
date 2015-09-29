@@ -55,9 +55,9 @@ defmodule Mix.Tasks.Brando.Gen.Model do
     no_plural   = opts[:noplural] || Mix.Shell.IO.prompt("Plural (no): ")
     no_plural   = String.strip(no_plural)
 
-    attrs      = Mix.Phoenix.attrs(attrs)
-    binding    = Mix.Phoenix.inflect(singular)
-    params     = Mix.Phoenix.params(attrs)
+    attrs      = Mix.Brando.attrs(attrs)
+    binding    = Mix.Brando.inflect(singular)
+    params     = Mix.Brando.params(attrs)
     path       = binding[:path]
     migration  = String.replace(path, "/", "_")
     img_fields =
@@ -70,7 +70,7 @@ defmodule Mix.Tasks.Brando.Gen.Model do
       |> Enum.map(fn({k, v}) -> {v, k} end)
       |> Enum.filter(fn({k, _}) -> k == :villain end)
 
-    Mix.Phoenix.check_module_name_availability!(binding[:module])
+    Mix.Brando.check_module_name_availability!(binding[:module])
 
     {assocs, attrs} = partition_attrs_and_assocs(attrs)
 
@@ -103,7 +103,7 @@ defmodule Mix.Tasks.Brando.Gen.Model do
                model_fields: model_fields, assocs: assocs(assocs),
                indexes: indexes(plural, assocs), defaults: defs, params: params]
 
-    Mix.Phoenix.copy_from(apps(), "priv/templates/brando.gen.model", "",
+    Mix.Brando.copy_from(apps(), "priv/templates/brando.gen.model", "",
                           binding, [
       {:eex, "migration.exs",  "priv/repo/migrations/" <>
                                "#{timestamp()}_create_#{migration}.exs"},
@@ -151,7 +151,7 @@ defmodule Mix.Tasks.Brando.Gen.Model do
 
   defp assocs(assocs) do
     Enum.reduce assocs, [], fn {key, _}, acc ->
-      assoc = Mix.Phoenix.inflect Atom.to_string(key)
+      assoc = Mix.Brando.inflect Atom.to_string(key)
       [{key, :"#{key}_id", assoc[:module]} | acc]
     end
   end

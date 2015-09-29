@@ -33,10 +33,10 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     no_plural    = opts[:noplural] || Mix.Shell.IO.prompt("Plural (no): ")
     no_plural    = String.strip(no_plural)
 
-    attrs        = Mix.Phoenix.attrs(attrs)
+    attrs        = Mix.Brando.attrs(attrs)
     villain?     = :villain in Dict.values(attrs)
     image_field? = :image in Dict.values(attrs)
-    binding      = Mix.Phoenix.inflect(singular)
+    binding      = Mix.Brando.inflect(singular)
     admin_path   = Enum.join(["admin", binding[:path]], "_")
     path         = binding[:path]
     route        = path
@@ -46,7 +46,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     binding      = binding ++ [plural: plural, route: route, no_plural: no_plural, no_singular: no_singular,
                                image_field: image_field?, villain: villain?,
                                admin_module: admin_module, admin_path: admin_path,
-                               inputs: inputs(attrs), params: Mix.Phoenix.params(attrs)]
+                               inputs: inputs(attrs), params: Mix.Brando.params(attrs)]
 
     files = [
       {:eex, "admin_controller.ex",
@@ -90,19 +90,19 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       ]
     end
 
-    Mix.Phoenix.check_module_name_availability!(binding[:module] <>
+    Mix.Brando.check_module_name_availability!(binding[:module] <>
                                                 "Controller")
-    Mix.Phoenix.check_module_name_availability!(binding[:module] <>
+    Mix.Brando.check_module_name_availability!(binding[:module] <>
                                                 "View")
-    Mix.Phoenix.check_module_name_availability!(binding[:admin_module] <>
+    Mix.Brando.check_module_name_availability!(binding[:admin_module] <>
                                                 "Controller")
-    Mix.Phoenix.check_module_name_availability!(binding[:admin_module] <>
+    Mix.Brando.check_module_name_availability!(binding[:admin_module] <>
                                                 "View")
 
     Mix.Task.run "brando.gen.model", args ++ ["--nosingular", no_singular,
                                               "--noplural", no_plural]
 
-    Mix.Phoenix.copy_from(apps(), "priv/templates/brando.gen.html",
+    Mix.Brando.copy_from(apps(), "priv/templates/brando.gen.html",
                           "", binding, files)
 
     villain_info =
