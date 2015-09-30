@@ -2,6 +2,8 @@
 * Enhancements
   * Additional custom stylesheet for admin. 
     SCSS for this is stored in `web/static/css/brando.custom.scss`.
+  * Optional `admin_hostname` plug to check `conn.host` has `admin` prefix. 
+    This is to make sure the admin area is only accessed from `admin.myapp.com`
 
 ## v0.1.0 (2015-09-28)
 
