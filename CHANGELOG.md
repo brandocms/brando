@@ -5,6 +5,9 @@
   * Optional `admin_hostname` plug to check `conn.host` has `admin` prefix. 
     This is to make sure the admin area is only accessed from `admin.myapp.com`
 
+* Bug fixes
+  * Fixed css bugs on system info page.
+
 ## v0.1.0 (2015-09-28)
 
 * Initial release.
