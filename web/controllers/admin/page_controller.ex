@@ -77,13 +77,13 @@ defmodule Brando.Admin.PageController do
 
   @doc false
   def duplicate(conn, %{"id" => id}) do
+    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
-    page =
-      model
-      |> Brando.repo.get_by(id: id)
+    page = model |> Brando.repo.get_by(id: id)
     {:ok, duplicated_page} = model.duplicate(page)
 
     conn
+    |> put_flash(:notice, t!(language, "flash.duplicated"))
     |> redirect(to: helpers(conn).admin_page_path(conn, :edit,
                                                   duplicated_page.id))
   end
@@ -164,6 +164,7 @@ defmodule Brando.Admin.PageController do
       form_error: "Feil i skjema",
       updated: "Side oppdatert",
       created: "Side opprettet",
+      duplicated: "Side duplisert",
       deleted: "Side slettet"
     ]
   ]
@@ -180,6 +181,7 @@ defmodule Brando.Admin.PageController do
       form_error: "Error(s) in form",
       updated: "Page updated",
       created: "Page created",
+      duplicated: "Page duplicated",
       deleted: "Page deleted"
     ]
   ]
