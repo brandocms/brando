@@ -11,7 +11,7 @@ defmodule Brando.PageFragment do
   alias Brando.User
 
   @required_fields ~w(key language data creator_id)
-  @optional_fields ~w()
+  @optional_fields ~w(html)
 
   schema "pagefragments" do
     field :key, :string

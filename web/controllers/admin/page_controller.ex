@@ -31,6 +31,23 @@ defmodule Brando.Admin.PageController do
   end
 
   @doc false
+  def rerender(conn, _params) do
+    language = Brando.I18n.get_language(conn)
+    model = conn.private[:model]
+    pages =
+      model
+      |> Brando.repo.all
+
+    for page <- pages do
+      model.rerender_html(model.changeset(page, :update, %{}))
+    end
+
+    conn
+    |> put_flash(:notice, t!(language, "flash.rerendered"))
+    |> redirect(to: helpers(conn).admin_page_path(conn, :index))
+  end
+
+  @doc false
   def show(conn, %{"id" => id}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
@@ -165,7 +182,8 @@ defmodule Brando.Admin.PageController do
       updated: "Side oppdatert",
       created: "Side opprettet",
       duplicated: "Side duplisert",
-      deleted: "Side slettet"
+      deleted: "Side slettet",
+      rerendered: "Sider rendret på nytt"
     ]
   ]
 
@@ -182,7 +200,8 @@ defmodule Brando.Admin.PageController do
       updated: "Page updated",
       created: "Page created",
       duplicated: "Page duplicated",
-      deleted: "Page deleted"
+      deleted: "Page deleted",
+      rerendered: "Pages re-rendered"
     ]
   ]
 end
