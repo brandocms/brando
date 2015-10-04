@@ -1,4 +1,4 @@
-## v0.2.0-dev (2015-XX-XX)
+## v0.2.0 (2015-10-04)
 * Enhancements
   * Additional custom stylesheet option for admin. 
     SCSS for this is stored in `web/static/css/brando.custom.scss`, and compiled to `priv/static/css/brando.custom.css`.
