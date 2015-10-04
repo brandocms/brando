@@ -1,3 +1,5 @@
+## v0.3.0-dev (2015-XX-XX)
+
 ## v0.2.0 (2015-10-04)
 * Enhancements
   * Additional custom stylesheet option for admin. 

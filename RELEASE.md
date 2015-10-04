@@ -9,6 +9,7 @@
   6. Run tests
   7. Commit with `Prepare X.X.X release`
   8. git-flow: finish release. Tag without "v", e.g. 0.1.0 - NOT v0.1.0!
+     - tag message: Release vX.X.X
   9. Switch to master. Push.
   9. (Push package and docs to hex)
   10. Switch to develop-branch.
