@@ -89,6 +89,28 @@ defmodule Brando.Pages.ControllerTest do
     end
   end
 
+  test "duplicate" do
+    user = create_user
+
+    assert {:ok, page} = Page.create(@page_params, user)
+
+    conn =
+      :get
+      |> call("/admin/pages/#{page.id}/duplicate")
+      |> with_user
+      |> send_request
+
+    assert redirected_to(conn, 302) =~ "/admin/pages"
+    assert get_flash(conn, :notice) == "Side duplisert"
+  end
+
+  test "encode_data" do
+    assert Brando.Page.encode_data(%{data: "test"})
+           == %{data: "test"}
+    assert Brando.Page.encode_data(%{data: ["test", "test2"]})
+           == %{data: ~s(["test","test2"])}
+  end
+
   test "create (page) w/params" do
     user = create_user
     conn =

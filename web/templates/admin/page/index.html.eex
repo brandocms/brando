@@ -20,4 +20,18 @@
       <a href="<%= Helpers.admin_page_path @conn, :new %>" class="btn btn-primary">
         <i class="fa fa-plus m-r-xs"></i> <%= t!(@language, "actions.new") %>
       </a>
+      <button class="btn btn-default btn-dropdown m-l-xs">
+        <div class="dropdown">
+          <label class="dropdown-toggle" data-toggle="dropdown">
+            <input type="checkbox" class="o-c bars">
+          </label>
+          <ul class="dropdown-menu" style="right: 0; left: auto;">
+            <li>
+              <a href="<%= Helpers.admin_page_path(@conn, :rerender) %>">
+                <i class="fa fa-fw fa-edit"></i> <%= t!(@language, "actions.rerender") %>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </button>
     </div>

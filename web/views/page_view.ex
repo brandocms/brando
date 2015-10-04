@@ -14,7 +14,8 @@ defmodule Brando.Admin.PageView do
       show: "Show page",
       edit: "Edit page",
       duplicate: "Duplicate page",
-      delete: "Delete page"
+      delete: "Delete page",
+      rerender: "Re-render pages"
     ]
   ]
 
@@ -25,7 +26,8 @@ defmodule Brando.Admin.PageView do
       show: "Vis side",
       edit: "Endre side",
       duplicate: "Duplisér side",
-      delete: "Slett side"
+      delete: "Slett side",
+      rerender: "Omrendre sider"
     ]
   ]
 end

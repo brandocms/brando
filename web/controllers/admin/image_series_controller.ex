@@ -31,6 +31,7 @@ defmodule Brando.Admin.ImageSeriesController do
   def create(conn, %{"imageseries" => image_series}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:series_model]
+
     case model.create(image_series, Brando.Utils.current_user(conn)) do
       {:ok, _} ->
         conn
@@ -67,6 +68,7 @@ defmodule Brando.Admin.ImageSeriesController do
     language = Brando.I18n.get_language(conn)
     series_model = conn.private[:series_model]
     record = series_model |> Brando.repo.get_by!(id: id)
+
     case series_model.update(record, form_data) do
       {:ok, _updated_record} ->
         conn
@@ -106,6 +108,7 @@ defmodule Brando.Admin.ImageSeriesController do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:series_model]
     record = Brando.repo.get_by!(model, id: id)
+
     case model.update(record, form_data) do
       {:ok, _updated_record} ->
         conn
@@ -177,6 +180,7 @@ defmodule Brando.Admin.ImageSeriesController do
     series_model = conn.private[:series_model]
     record = series_model |> Brando.repo.get_by!(id: id)
     series_model.delete(record)
+
     conn
     |> put_flash(:notice, t!(language, "flash.deleted"))
     |> redirect(to: helpers(conn).admin_image_path(conn, :index))

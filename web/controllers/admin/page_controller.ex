@@ -31,6 +31,23 @@ defmodule Brando.Admin.PageController do
   end
 
   @doc false
+  def rerender(conn, _params) do
+    language = Brando.I18n.get_language(conn)
+    model = conn.private[:model]
+    pages =
+      model
+      |> Brando.repo.all
+
+    for page <- pages do
+      model.rerender_html(model.changeset(page, :update, %{}))
+    end
+
+    conn
+    |> put_flash(:notice, t!(language, "flash.rerendered"))
+    |> redirect(to: helpers(conn).admin_page_path(conn, :index))
+  end
+
+  @doc false
   def show(conn, %{"id" => id}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
@@ -77,13 +94,13 @@ defmodule Brando.Admin.PageController do
 
   @doc false
   def duplicate(conn, %{"id" => id}) do
+    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
-    page =
-      model
-      |> Brando.repo.get_by(id: id)
+    page = model |> Brando.repo.get_by(id: id)
     {:ok, duplicated_page} = model.duplicate(page)
 
     conn
+    |> put_flash(:notice, t!(language, "flash.duplicated"))
     |> redirect(to: helpers(conn).admin_page_path(conn, :edit,
                                                   duplicated_page.id))
   end
@@ -164,7 +181,9 @@ defmodule Brando.Admin.PageController do
       form_error: "Feil i skjema",
       updated: "Side oppdatert",
       created: "Side opprettet",
-      deleted: "Side slettet"
+      duplicated: "Side duplisert",
+      deleted: "Side slettet",
+      rerendered: "Sider rendret på nytt"
     ]
   ]
 
@@ -180,7 +199,9 @@ defmodule Brando.Admin.PageController do
       form_error: "Error(s) in form",
       updated: "Page updated",
       created: "Page created",
-      deleted: "Page deleted"
+      duplicated: "Page duplicated",
+      deleted: "Page deleted",
+      rerendered: "Pages re-rendered"
     ]
   ]
 end

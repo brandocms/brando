@@ -29,7 +29,7 @@ defmodule Brando.Admin.ImageController do
   def delete_selected(conn, %{"ids" => ids}) do
     model = conn.private[:image_model]
     model.delete(ids)
-    conn |> render(:delete_selected, ids: ids)
+    render(conn, :delete_selected, ids: ids)
   end
 
   @doc false
@@ -42,10 +42,9 @@ defmodule Brando.Admin.ImageController do
         Map.put(acc, String.to_atom(attr), val)
       end
 
-    image = Map.put(image, :image, new_data)
-    Brando.repo.update!(image)
+    Brando.repo.update!(Map.put(image, :image, new_data))
 
-    conn |> render(:set_properties, id: id, attrs: form)
+    render(conn, :set_properties, id: id, attrs: form)
   end
 
   locale "no", [

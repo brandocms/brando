@@ -36,6 +36,16 @@ defmodule Brando.Villain.Model do
       end
 
       @doc """
+      Rerender page HTML from data.
+      """
+      def rerender_html(changeset) do
+        data = Ecto.Changeset.get_field(changeset, :data)
+        changeset
+        |> Ecto.Changeset.put_change(:html, Brando.Villain.parse(data))
+        |> Brando.repo.update!
+      end
+
+      @doc """
       Check all posts for missing images
       """
       def check_posts_for_missing_images do
