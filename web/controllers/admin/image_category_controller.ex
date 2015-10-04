@@ -22,6 +22,7 @@ defmodule Brando.Admin.ImageCategoryController do
     language = I18n.get_language(conn)
     model = conn.private[:category_model]
     changeset = model.changeset(model.__struct__, :create)
+
     conn
     |> assign(:page_title, t!(language, "title.new"))
     |> assign(:changeset, changeset)
@@ -32,6 +33,7 @@ defmodule Brando.Admin.ImageCategoryController do
   def create(conn, %{"imagecategory" => imagecategory}) do
     language = I18n.get_language(conn)
     model = conn.private[:category_model]
+
     case model.create(imagecategory, current_user(conn)) do
       {:ok, _} ->
         conn
@@ -68,6 +70,7 @@ defmodule Brando.Admin.ImageCategoryController do
     language = I18n.get_language(conn)
     model = conn.private[:category_model]
     record = Brando.repo.get_by!(model, id: id)
+
     case model.update(record, form_data) do
       {:ok, _updated_record} ->
         conn
@@ -108,6 +111,7 @@ defmodule Brando.Admin.ImageCategoryController do
     language = I18n.get_language(conn)
     model = conn.private[:category_model]
     record = Brando.repo.get_by!(model, id: id)
+
     case model.update(record, form_data) do
       {:ok, _updated_record} ->
         conn
@@ -132,6 +136,7 @@ defmodule Brando.Admin.ImageCategoryController do
       model
       |> preload([:creator, :image_series])
       |> Brando.repo.get_by!(id: id)
+
     conn
     |> assign(:page_title, t!(language, "title.delete_confirm"))
     |> assign(:record, record)
@@ -144,6 +149,7 @@ defmodule Brando.Admin.ImageCategoryController do
     model = conn.private[:category_model]
     record = model |> Brando.repo.get_by!(id: id)
     model.delete(record)
+
     conn
     |> put_flash(:notice, t!(language, "flash.deleted"))
     |> redirect(to: helpers(conn).admin_image_path(conn, :index))

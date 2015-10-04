@@ -11,9 +11,10 @@ defmodule Brando.SessionController do
     user = Brando.repo.get_by(model, email: email)
     case model.auth?(user, password) do
       true ->
-        user = user
-        |> model.set_last_login
-        |> sanitize_user
+        user =
+          user
+          |> model.set_last_login
+          |> sanitize_user
 
         SystemChannel.log(:logged_in, user)
 
