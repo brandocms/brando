@@ -1,4 +1,6 @@
 ## v0.3.0-dev (2015-XX-XX)
+* Bug fixes
+  * Fixed logrotate permissions bug in fabfile.
 
 ## v0.2.0 (2015-10-04)
 * Enhancements
