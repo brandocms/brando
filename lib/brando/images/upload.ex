@@ -138,26 +138,26 @@ defmodule Brando.Images.Upload do
   end
 
   @doc """
-  Creates a sized version of `file`.
+  Creates a sized version of `image_src`.
   """
-  def create_image_size(file, sized_image, size_cfg) do
+  def create_image_size(image_src, image_dest, size_cfg) do
     modifier = String.ends_with?(size_cfg["size"], ~w(< > ^ % ! @)) && "" || "^"
     fill = size_cfg["fill"] && "-background #{size_cfg["fill"]} " || ""
     crop_string = "#{size_cfg["size"]}#{modifier} " <>
                   "#{fill}-gravity center -extent #{size_cfg["size"]}"
 
     if size_cfg["crop"] do
-      file
+      image_src
       |> Mogrify.open
       |> Mogrify.copy
       |> Mogrify.resize(crop_string)
-      |> Mogrify.save(sized_image)
+      |> Mogrify.save(image_dest)
     else
-      file
+      image_src
       |> Mogrify.open
       |> Mogrify.copy
       |> Mogrify.resize(size_cfg["size"])
-      |> Mogrify.save(sized_image)
+      |> Mogrify.save(image_dest)
     end
   end
 
