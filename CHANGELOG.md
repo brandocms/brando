@@ -1,8 +1,13 @@
 ## v0.3.0-dev (2015-XX-XX)
+
+* Enhancements
+  * Add last lines of supervisor log to system info pane. Only shows for superusers.
+
 * Bug fixes
   * Fixed logrotate permissions bug in fabfile.
 
 ## v0.2.0 (2015-10-04)
+
 * Enhancements
   * Additional custom stylesheet option for admin. 
     SCSS for this is stored in `web/static/css/brando.custom.scss`, and compiled to `priv/static/css/brando.custom.css`.

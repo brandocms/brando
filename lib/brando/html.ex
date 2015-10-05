@@ -88,6 +88,19 @@ defmodule Brando.HTML do
   end
 
   @doc """
+  Shows `content` if `current_user` has `role` that allows it.
+  """
+  def auth_content(conn, role, do: {:safe, block}) do
+    html = case can_render?(conn, %{role: role}) do
+      true ->
+        block
+      false ->
+        ""
+    end
+    Phoenix.HTML.raw(html)
+  end
+
+  @doc """
   Shows `link` if `current_user` has `role` that allows it.
   """
   @spec auth_link(Plug.Conn.t, String.t, atom, {:safe, String.t}) :: String.t
