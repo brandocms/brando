@@ -63,13 +63,6 @@ defmodule Mix.Tasks.Brando.Install do
 
     {:copy, "install/templates/static/brando/favicon.ico",                              "priv/static/favicon.ico"},
 
-    {:copy, "install/templates/static/brando/css/brando.css",                           "priv/static/css/brando.css"},
-    {:copy, "install/templates/static/brando/css/brando.vendor.css",                    "priv/static/css/brando.vendor.css"},
-
-    {:copy, "install/templates/static/brando/js/brando.auth.js",                        "priv/static/js/brando.auth.js"},
-    {:copy, "install/templates/static/brando/js/brando.js",                             "priv/static/js/brando.js"},
-    {:copy, "install/templates/static/brando/js/brando.vendor.js",                      "priv/static/js/brando.vendor.js"},
-
     {:copy, "install/templates/static/brando/fonts/fontawesome-webfont.eot",            "priv/static/fonts/fontawesome-webfont.eot"},
     {:copy, "install/templates/static/brando/fonts/fontawesome-webfont.svg",            "priv/static/fonts/fontawesome-webfont.svg"},
     {:copy, "install/templates/static/brando/fonts/fontawesome-webfont.ttf",            "priv/static/fonts/fontawesome-webfont.ttf"},
@@ -87,11 +80,6 @@ defmodule Mix.Tasks.Brando.Install do
 
     {:copy, "install/templates/static/brando/images/defaults/thumb/avatar_default.jpg", "priv/static/images/brando/defaults/thumb/avatar_default.jpg"},
     {:copy, "install/templates/static/brando/images/defaults/micro/avatar_default.jpg", "priv/static/images/brando/defaults/micro/avatar_default.jpg"},
-
-    {:copy, "install/templates/static/villain/villain.all-min.js",                      "priv/static/js/villain.all-min.js"},
-    {:copy, "install/templates/static/villain/villain.css",                             "priv/static/css/villain.css"},
-    {:copy, "install/templates/static/villain/villain-min.css",                         "priv/static/css/villain-min.css"},
-    {:copy, "install/templates/static/villain/villain.css.map",                         "priv/static/css/villain.css.map"},
   ]
 
   @root Path.expand("../../../priv", __DIR__)
