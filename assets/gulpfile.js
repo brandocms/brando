@@ -26,18 +26,16 @@ gulp.task('css-vendor', function () {
 var browserify = require('browserify');
 var babelify = require('babelify');
 var util = require('gulp-util');
-var buffer = require('vinyl-buffer');
 var source = require('vinyl-source-stream');
 
 
 gulp.task('scripts-brando', function() {
-  browserify('./js/brando/brando.js', { debug: true })
+  browserify('./js/brando/brando.js', { debug: false })
   .add(require.resolve('babel/polyfill'))
   .transform(babelify)
   .bundle()
   .on('error', util.log.bind(util, 'Browserify Error'))
   .pipe(source('brando.js'))
-  .pipe(buffer())
   .pipe(gulp.dest('../priv/static/brando/js'))
 });
 
