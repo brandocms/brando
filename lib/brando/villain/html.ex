@@ -16,14 +16,12 @@ defmodule Brando.Villain.HTML do
 
   """
   def include_scripts do
-    main = Mix.env == :dev && script_tag("/js/villain.all.js")
-                           || script_tag("/js/villain.all-min.js")
     extra_blocks = Keyword.get(Brando.config(Brando.Villain), :extra_blocks, [])
     extras =
       for extra <- extra_blocks do
         script_tag("/js/blocks.#{String.downcase(extra)}.js")
       end
-    [main|extras] |> raw
+    [script_tag("/js/villain.all.js")|extras] |> raw
   end
 
   @doc """
