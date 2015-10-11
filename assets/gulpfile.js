@@ -13,14 +13,14 @@ gulp.task('css', function () {
     return sass('./scss/brando.scss', {sourcemap: true})
         .on('error', function (err) { console.log(err.message); })
         .pipe(autoprefixer({browsers: ['last 2 versions']}))
-        .pipe(gulp.dest('../priv/static/brando/css'))
+        .pipe(gulp.dest('../priv/static/vendor/css'))
 });
 
 gulp.task('css-vendor', function () {
   return gulp.src(['./css/font-awesome.min.css', './css/dropzone.css'])
       .on('error', function (err) { console.log(err.message); })
       .pipe(concat('brando.vendor.css'))
-      .pipe(gulp.dest('../priv/static/brando/css'))
+      .pipe(gulp.dest('../priv/static/vendor/css'))
 });
 
 var browserify = require('browserify');
@@ -36,7 +36,7 @@ gulp.task('scripts-brando', function() {
   .bundle()
   .on('error', util.log.bind(util, 'Browserify Error'))
   .pipe(source('brando.js'))
-  .pipe(gulp.dest('../priv/static/brando/js'))
+  .pipe(gulp.dest('../priv/static/vendor/js'))
 });
 
 gulp.task('scripts-auth', function () {
@@ -44,7 +44,7 @@ gulp.task('scripts-auth', function () {
                      'js/vendor/jquery.min.js',
                      'js/vendor/fittext.js'])
         .pipe(concat('brando.auth.js'))
-        .pipe(gulp.dest('../priv/static/brando/js'))
+        .pipe(gulp.dest('../priv/static/vendor/js'))
 });
 
 gulp.task('scripts-vendor', function () {
@@ -62,7 +62,7 @@ gulp.task('scripts-vendor', function () {
                      'js/vendor/vex.dialog.js'])
         .pipe(babel()).on('error', errorHandler)
         .pipe(concat('brando.vendor.js'))
-        .pipe(gulp.dest('../priv/static/brando/js'))
+        .pipe(gulp.dest('../priv/static/vendor/js'))
 });
 
 gulp.task('default', function() {
