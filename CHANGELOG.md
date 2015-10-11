@@ -2,6 +2,7 @@
 
 * Enhancements
   * Add last lines of supervisor log to system info pane. Only shows for superusers.
+  * Automatically update brando/villain static through brunch. See our updated `brunch-config.js`.
 
 * Bug fixes
   * Fixed logrotate permissions bug in fabfile.
