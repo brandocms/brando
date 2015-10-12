@@ -13,54 +13,30 @@ gulp.task('css', function () {
     return sass('./scss/brando.scss', {sourcemap: true})
         .on('error', function (err) { console.log(err.message); })
         .pipe(autoprefixer({browsers: ['last 2 versions']}))
-        .pipe(sourcemaps.write('maps', {
-                includeContent: false,
-                sourceRoot: '/priv/static/css'
-        }))
-        .pipe(gulp.dest('../priv/install/templates/static/brando/css'))
-        .pipe(minify())
-        .pipe(rename('brando-min.css'))
-        .pipe(sourcemaps.write('maps', {
-                includeContent: false,
-                sourceRoot: '/priv/static/css'
-        }))
-        .pipe(gulp.dest('../priv/install/templates/static/brando/css'))
+        .pipe(gulp.dest('../priv/static/vendor/css'))
 });
 
 gulp.task('css-vendor', function () {
   return gulp.src(['./css/font-awesome.min.css', './css/dropzone.css'])
       .on('error', function (err) { console.log(err.message); })
       .pipe(concat('brando.vendor.css'))
-      .pipe(gulp.dest('../priv/install/templates/static/brando/css'))
-      .pipe(minify())
-      .pipe(rename('brando.vendor-min.css'))
-      .pipe(gulp.dest('../priv/install/templates/static/brando/css'))
+      .pipe(gulp.dest('../priv/static/vendor/css'))
 });
 
 var browserify = require('browserify');
-var babelify= require('babelify');
+var babelify = require('babelify');
 var util = require('gulp-util');
-var buffer = require('vinyl-buffer');
 var source = require('vinyl-source-stream');
 
 
 gulp.task('scripts-brando', function() {
-  browserify('./js/brando/brando.js', { debug: true })
+  browserify('./js/brando/brando.js', { debug: false })
   .add(require.resolve('babel/polyfill'))
   .transform(babelify)
   .bundle()
   .on('error', util.log.bind(util, 'Browserify Error'))
   .pipe(source('brando.js'))
-  .pipe(buffer())
-  .pipe(sourcemaps.init())
-  .pipe(gulp.dest('../priv/install/templates/static/brando/js'))
-  .pipe(rename('brando-min.js'))
-  .pipe(uglify({ mangle: false }))
-  .pipe(sourcemaps.write('maps', {
-              includeContent: false,
-              sourceRoot: '/priv/static/js'
-  }))
-  .pipe(gulp.dest('../priv/install/templates/static/brando/js'));
+  .pipe(gulp.dest('../priv/static/vendor/js'))
 });
 
 gulp.task('scripts-auth', function () {
@@ -68,15 +44,7 @@ gulp.task('scripts-auth', function () {
                      'js/vendor/jquery.min.js',
                      'js/vendor/fittext.js'])
         .pipe(concat('brando.auth.js'))
-        .pipe(sourcemaps.init())
-        .pipe(gulp.dest('../priv/install/templates/static/brando/js'))
-        .pipe(rename('brando.auth-min.js'))
-        .pipe(uglify()).on('error', errorHandler)
-        .pipe(sourcemaps.write('maps', {
-                    includeContent: false,
-                    sourceRoot: '/priv/static/js'
-        }))
-        .pipe(gulp.dest('../priv/install/templates/static/brando/js'));
+        .pipe(gulp.dest('../priv/static/vendor/js'))
 });
 
 gulp.task('scripts-vendor', function () {
@@ -94,15 +62,7 @@ gulp.task('scripts-vendor', function () {
                      'js/vendor/vex.dialog.js'])
         .pipe(babel()).on('error', errorHandler)
         .pipe(concat('brando.vendor.js'))
-        .pipe(sourcemaps.init())
-        .pipe(gulp.dest('../priv/install/templates/static/brando/js'))
-        .pipe(rename('brando.vendor-min.js'))
-        .pipe(uglify()).on('error', errorHandler)
-        .pipe(sourcemaps.write('maps', {
-                    includeContent: false,
-                    sourceRoot: '/priv/static/js'
-        }))
-        .pipe(gulp.dest('../priv/install/templates/static/brando/js'));
+        .pipe(gulp.dest('../priv/static/vendor/js'))
 });
 
 gulp.task('default', function() {

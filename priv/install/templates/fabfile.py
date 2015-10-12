@@ -451,11 +451,20 @@ def logrotatecfg():
     Links our logrotate config file to the config.d dir
     """
     require('hosts')
+    logrotate_src = "%s/etc/logrotate/%s.conf" % (env.path, env.flavor)
     print(cyan('-- logrotateconf // linking config file to conf.d/'))
     if not _exists('/etc/logrotate.d/%s.conf' % (env.procname)):
-        sudo('ln -s %s/etc/logrotate/%s.conf /etc/logrotate.d/%s.conf' % (env.path, env.flavor, env.procname))
+        sudo('ln -s %s /etc/logrotate.d/%s.conf' % (logrotate_src, env.procname))
     else:
         print(yellow('-- logrotateconf // %s.conf already exists!' % (env.procname)))
+
+    # set permission to 644
+    print(cyan('-- setperms // setting logrotate conf to 644'))
+    sudo('chmod %s "%s"' % (perms, logrotate_src))
+
+    # set owner to root
+    print(cyan('-- setowner // setting logrotate owner to root'))
+    sudo('chown root:wheel "%s"' % logrotate_src)
 
 
 def createuser():

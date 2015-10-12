@@ -36,3 +36,10 @@
   -moz-box-sizing: content-box;
   box-sizing: content-box;
 }
+
+#logs {
+  pre {
+    background-color: #ffe;
+    padding: 25px;
+  }
+}

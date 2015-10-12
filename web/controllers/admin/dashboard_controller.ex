@@ -19,7 +19,29 @@ defmodule Brando.Admin.DashboardController do
   Renders system info page.
   """
   def system_info(conn, _params) do
-    conn |> render
+    log_file = "#{Path.expand("./logs")}/supervisord.log"
+    case File.stat(log_file) do
+      {:ok, stat} ->
+        log_last_updated =
+          stat.mtime
+          |> Ecto.DateTime.from_erl
+          |> Ecto.DateTime.to_string
+
+        log_last_lines =
+          log_file
+          |> File.stream!
+          |> Enum.reverse
+          |> Enum.take(30)
+          |> Enum.reverse
+      {:error, _} ->
+        log_last_updated = ""
+        log_last_lines = "FILE NOT FOUND."
+    end
+
+    conn
+    |> assign(:log_last_lines, log_last_lines)
+    |> assign(:log_last_updated, log_last_updated)
+    |> render
   end
 
   def instagram_start(conn, _) do

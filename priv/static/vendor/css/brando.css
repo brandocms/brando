@@ -5157,6 +5157,10 @@ form label {
 .jqstooltip {
   box-sizing: content-box; }
 
+#logs pre {
+  background-color: #ffe;
+  padding: 25px; }
+
 .status-indicators {
   font-size: 15px;
   margin-bottom: 10px; }
@@ -6176,5 +6180,3 @@ body.vex-open {
   width: 2.5em; }
 
 
-
-/*# sourceMappingURL=maps/brando.css.map */

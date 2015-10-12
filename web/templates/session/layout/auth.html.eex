@@ -8,9 +8,9 @@
     <meta name="author" content="">
 
     <title><%= app_name %> | autorisering</title>
-    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.vendor-min.css") %>">
-    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando-min.css") %>">
-    <script src="<%= Brando.helpers.static_path(@conn, "/js/brando.auth-min.js") %>" type="text/javascript" charset="utf-8"></script>
+    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.vendor.css") %>">
+    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.css") %>">
+    <script src="<%= Brando.helpers.static_path(@conn, "/js/brando.auth.js") %>" type="text/javascript" charset="utf-8"></script>
   </head>
 
   <body class="auth">
@@ -45,8 +45,8 @@
         var pattern = Trianglify({
             width: window.innerWidth,
             height: window.innerHeight,
-            cell_size: 210,
-            stroke_width: 500
+            cell_size: 50,
+            stroke_width: 100
         });
         svg = pattern.svg();
         svg.setAttribute("id", "triangles");

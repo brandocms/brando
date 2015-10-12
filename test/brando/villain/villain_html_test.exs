@@ -4,13 +4,13 @@ defmodule Brando.Villain.HTMLTest do
   test "include_scripts" do
     assert Brando.Villain.HTML.include_scripts
            == {:safe, [["<script charset=\"utf-8\" src=\"/js/villain." <>
-                        "all-min.js\" type=\"text/javascript\">",
+                        "all.js\" type=\"text/javascript\">",
                         "", "</script>"]]}
 
     add_extra_blocks()
     assert Brando.Villain.HTML.include_scripts
            == {:safe, [["<script charset=\"utf-8\" src=\"/js/villain." <>
-                        "all-min.js\" type=\"text/javascript\">",
+                        "all.js\" type=\"text/javascript\">",
                         "", "</script>"],
                        ["<script charset=\"utf-8\" src=\"/js/blocks." <>
                         "test1.js\" type=\"text/javascript\">",

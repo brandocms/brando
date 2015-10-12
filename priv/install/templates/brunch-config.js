@@ -16,6 +16,10 @@ exports.config = {
           'bower_components/colorbox/jquery.colorbox.js',
           /^(web\/static\/vendor)/
         ],
+        'js/brando.js': 'deps/brando/priv/static/vendor/js/brando.js',
+        'js/brando.auth.js': 'deps/brando/priv/static/vendor/js/brando.auth.js',
+        'js/brando.vendor.js': 'deps/brando/priv/static/vendor/js/brando.vendor.js',
+        'js/villain.all.js': 'deps/brando/priv/static/vendor/js/villain.all.js',
       },
       // order: {
       //   before: [
@@ -26,6 +30,10 @@ exports.config = {
     },
     stylesheets: {
       joinTo: {
+        'css/brando.css': ['deps/brando/priv/static/vendor/css/brando.css'],
+        'css/brando.vendor.css': ['deps/brando/priv/static/vendor/css/brando.vendor.css'],
+        'css/villain.css': ['deps/brando/priv/static/vendor/css/villain.css'],
+
         'css/app.css': [
           'bower_components/bootstrap-sass/assets/stylesheets/_bootstrap.scss',
           'bower_components/responsive-nav/responsive-nav.css',
@@ -46,6 +54,8 @@ exports.config = {
   paths: {
     // Which directories to watch
     watched: [
+      "deps/brando/priv/static",
+      "deps/brando/priv/static",
       "deps/phoenix/web/static",
       "deps/phoenix_html/web/static",
       "web/static", "test/static"
@@ -64,14 +74,23 @@ exports.config = {
     ],
     ignored: [
       'web/static/css/includes'
-    ]
+    ],
   },
 
   // Configure your plugins
   plugins: {
     ES6to5: {
       // Do not use ES6 compiler in vendor code
-      ignore: [/^(web\/static\/vendor)/, /^bower_components/]
+      ignore: [
+        /^(web\/static\/vendor)/,
+        /^bower_components/,
+        "deps/brando/priv/static/vendor/js/*.js",
+      ]
+    },
+    postcss: {
+      processors: [
+        require('autoprefixer')(['last 2 versions'])
+      ]
     }
   },
 
