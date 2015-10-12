@@ -110,7 +110,10 @@ defmodule Brando.Admin.ImageSeriesController do
     record = Brando.repo.get_by!(model, id: id)
 
     case model.update(record, form_data) do
-      {:ok, _updated_record} ->
+      {:ok, updated_record} ->
+        # recreate image sizes
+        Brando.ImageSeries.recreate_sizes(updated_record.id)
+
         conn
         |> put_flash(:notice, t!(language, "flash.configured"))
         |> redirect(to: helpers(conn).admin_image_path(conn, :index))
