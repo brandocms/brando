@@ -6,6 +6,7 @@ defmodule Brando.Images.Upload do
 
   import Brando.Utils
   import Brando.Images.Optimize, only: [optimize: 1]
+  import Brando.Images.Utils
   alias Brando.Exception.UploadError
 
   defmacro __using__(_) do
@@ -40,7 +41,7 @@ defmodule Brando.Images.Upload do
   copies files and creates all sizes of image according to `cfg`
   """
   def do_upload(plug, %Brando.Type.ImageConfig{} = cfg) do
-    process_upload({plug, cfg})
+    process_upload(plug, cfg)
   end
   def do_upload(plug, cfg) when is_map(cfg) do
     cfg_struct =
@@ -49,14 +50,14 @@ defmodule Brando.Images.Upload do
       else
         stringy_struct(Brando.Type.ImageConfig, cfg)
       end
-    process_upload({plug, cfg_struct})
+    process_upload(plug, cfg_struct)
   end
   def do_upload(_plug, cfg) when is_list(cfg) do
     raise "do_upload with cfg as list. Fix it!"
   end
 
-  defp process_upload(upload) do
-    upload
+  defp process_upload(plug, cfg_struct) do
+    {plug, cfg_struct}
     |> get_valid_filename
     |> check_mimetype
     |> create_upload_path
@@ -112,52 +113,6 @@ defmodule Brando.Images.Upload do
         {Map.put(plug, :uploaded_file, new_file), cfg}
       {:error, reason} ->
         raise UploadError, message: "Feil under kopiering -> #{inspect(reason)}"
-    end
-  end
-
-  defp create_image_sizes({%{uploaded_file: file}, cfg}) do
-    {file_path, filename} = split_path(file)
-    upload_path = Map.get(cfg, :upload_path)
-
-    sizes = for {size_name, size_cfg} <- Map.get(cfg, :sizes) do
-      size_dir = Path.join([file_path, to_string(size_name)])
-      sized_image = Path.join([size_dir, filename])
-      sized_path = Path.join([upload_path, to_string(size_name), filename])
-
-      File.mkdir_p(size_dir)
-      create_image_size(file, sized_image, size_cfg)
-      {size_name, sized_path}
-    end
-
-    size_struct =
-      %Brando.Type.Image{}
-      |> Map.put(:sizes, Enum.into(sizes, %{}))
-      |> Map.put(:path, Path.join([upload_path, filename]))
-
-    {:ok, size_struct}
-  end
-
-  @doc """
-  Creates a sized version of `image_src`.
-  """
-  def create_image_size(image_src, image_dest, size_cfg) do
-    modifier = String.ends_with?(size_cfg["size"], ~w(< > ^ % ! @)) && "" || "^"
-    fill = size_cfg["fill"] && "-background #{size_cfg["fill"]} " || ""
-    crop_string = "#{size_cfg["size"]}#{modifier} " <>
-                  "#{fill}-gravity center -extent #{size_cfg["size"]}"
-
-    if size_cfg["crop"] do
-      image_src
-      |> Mogrify.open
-      |> Mogrify.copy
-      |> Mogrify.resize(crop_string)
-      |> Mogrify.save(image_dest)
-    else
-      image_src
-      |> Mogrify.open
-      |> Mogrify.copy
-      |> Mogrify.resize(size_cfg["size"])
-      |> Mogrify.save(image_dest)
     end
   end
 

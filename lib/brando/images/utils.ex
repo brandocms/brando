@@ -18,11 +18,21 @@ defmodule Brando.Images.Utils do
     nil
   end
   def delete_original_and_sized_images(image) do
+    delete_sized_images(image)
+    delete_media(Map.get(image, :path))
+  end
+
+  @doc """
+  Delete sizes associated with `image`, but keep original.
+  """
+  def delete_sized_images(nil) do
+    nil
+  end
+  def delete_sized_images(image) do
     sizes = Map.get(image, :sizes)
     for {_size, file} <- sizes do
       delete_media(file)
     end
-    delete_media(Map.get(image, :path))
   end
 
   @doc """
@@ -88,5 +98,54 @@ defmodule Brando.Images.Utils do
     {path, filename} = split_path(file)
     {basename, ext} = split_filename(filename)
     Path.join([path, "#{basename}-optimized#{ext}"])
+  end
+
+  @doc """
+  Creates sized images.
+  """
+  def create_image_sizes({%{uploaded_file: file}, cfg}) do
+    {file_path, filename} = split_path(file)
+    upload_path = Map.get(cfg, :upload_path)
+
+    sizes = for {size_name, size_cfg} <- Map.get(cfg, :sizes) do
+      size_dir = Path.join([file_path, to_string(size_name)])
+      sized_image = Path.join([size_dir, filename])
+      sized_path = Path.join([upload_path, to_string(size_name), filename])
+
+      File.mkdir_p(size_dir)
+      create_image_size(file, sized_image, size_cfg)
+      {size_name, sized_path}
+    end
+
+    size_struct =
+      %Brando.Type.Image{}
+      |> Map.put(:sizes, Enum.into(sizes, %{}))
+      |> Map.put(:path, Path.join([upload_path, filename]))
+
+    {:ok, size_struct}
+  end
+
+  @doc """
+  Creates a sized version of `image_src`.
+  """
+  def create_image_size(image_src, image_dest, size_cfg) do
+    modifier = String.ends_with?(size_cfg["size"], ~w(< > ^ % ! @)) && "" || "^"
+    fill = size_cfg["fill"] && "-background #{size_cfg["fill"]} " || ""
+    crop_string = "#{size_cfg["size"]}#{modifier} " <>
+                  "#{fill}-gravity center -extent #{size_cfg["size"]}"
+
+    if size_cfg["crop"] do
+      image_src
+      |> Mogrify.open
+      |> Mogrify.copy
+      |> Mogrify.resize(crop_string)
+      |> Mogrify.save(image_dest)
+    else
+      image_src
+      |> Mogrify.open
+      |> Mogrify.copy
+      |> Mogrify.resize(size_cfg["size"])
+      |> Mogrify.save(image_dest)
+    end
   end
 end
