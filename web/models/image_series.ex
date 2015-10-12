@@ -96,10 +96,7 @@ defmodule Brando.ImageSeries do
   Before insert callback. Copies the series' category config.
   """
   def inherit_configuration(changeset) do
-    category =
-      ImageCategory
-      |> Brando.repo.get(changeset.changes.image_category_id)
-
+    category = Brando.repo.get(ImageCategory, changeset.changes.image_category_id)
     put_change(changeset, :cfg, category.cfg)
   end
 
@@ -122,6 +119,19 @@ defmodule Brando.ImageSeries do
   def delete(record) do
     Brando.Image.delete_dependent_images(record.id)
     Brando.repo.delete!(record)
+  end
+
+  @doc """
+  Recreates all image sizes in imageseries.
+  """
+  def recreate_sizes(image_series_id) do
+    q = from m in __MODULE__,
+             preload: :images,
+             where: m.id == ^image_series_id
+    image_series = Brando.repo.one!(q)
+    for image <- image_series.images do
+      Brando.Image.recreate_sizes(image)
+    end
   end
 
   @doc """
