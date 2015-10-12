@@ -73,11 +73,11 @@ defmodule Brando.Integration.UserTest do
     refute user.last_login == new_user.last_login
   end
 
-  test "has_role?/1" do
+  test "role?/1" do
     assert {:ok, user} = User.create(@params)
-    assert User.has_role?(user, :superuser)
-    assert User.has_role?(user, :admin)
-    refute User.has_role?(user, :staff)
+    assert User.role?(user, :superuser)
+    assert User.role?(user, :admin)
+    refute User.role?(user, :staff)
   end
 
   test "check_for_uploads/2 error" do

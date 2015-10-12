@@ -1,5 +1,8 @@
 ## v0.4.0-dev (2015-XX-XX)
 
+* Backwards incompatible changes
+  * Renamed `User.has_role?/2` to `User.role?/2`
+
 ## v0.3.0 (2015-10-12)
 
 * Enhancements

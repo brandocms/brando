@@ -12,7 +12,7 @@ defmodule Brando.Plug.Authorize do
   """
   def authorize(%{private: %{plug_session:
                 %{"current_user" => current_user}}} = conn, role) do
-    User.has_role?(current_user, role) && conn || no_access(conn)
+    User.role?(current_user, role) && conn || no_access(conn)
   end
 
   def authorize(conn, _) do
