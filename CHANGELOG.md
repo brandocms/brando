@@ -1,5 +1,8 @@
 ## v0.4.0-dev (2015-XX-XX)
 
+* Enhancements
+  * Add a delay to login attempts to stifle brute force attempts *some*.
+
 * Backwards incompatible changes
   * Renamed `User.has_role?/2` to `User.role?/2`
 

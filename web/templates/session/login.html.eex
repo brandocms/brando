@@ -1,4 +1,3 @@
-<!-- For CSRF protection see https://github.com/phoenixframework/phoenix/issues/305 -->
     <form accept-charset="UTF-8" action="" class="form-horizontal" id="new_session" method="post">
       <input type="hidden" name="_csrf_token" value="<%= Phoenix.Controller.get_csrf_token %>" />
       <div class="form-group"><label for="user_email">Epost</label>

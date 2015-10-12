@@ -8,6 +8,26 @@ body.auth {
   min-width: 400px;
   width: 400px;
   border: 15px solid #000;
+  position: relative;
+
+  .spinner {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+    top: 0;
+    left: 0;
+    display: none;
+
+    i {
+      font-size: 80px;
+      margin: 0 auto;
+      text-align: center;
+      display: inherit;
+      top: 38%;
+      position: relative;
+    }
+  }
 
   span.version {
     float: right;
