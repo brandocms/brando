@@ -2,6 +2,7 @@
 
 * Enhancements
   * Add a delay to login attempts to stifle brute force attempts *some*.
+  * Recreate images when an image series cfg changes.
 
 * Backwards incompatible changes
   * Renamed `User.has_role?/2` to `User.role?/2`
