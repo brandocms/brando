@@ -260,7 +260,9 @@ def update():
     require('hosts')
     with cd(env.path):
         print(cyan('-- git // git pull, to make sure we are still at HEAD'))
-        sudo('git pull && MIX_ENV=%s mix deps.get && MIX_ENV=%s mix compile' % env.flavor, user=env.project_user)
+        sudo('git pull', user=env.project_user)
+        sudo('MIX_ENV=%s mix deps.get' % env.flavor, user=env.project_user)
+        sudo('MIX_ENV=%s mix compile' % env.flavor, user=env.project_user)
         fixprojectperms()
         _set_logrotate_perms()
         restart()
