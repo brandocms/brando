@@ -25,8 +25,9 @@ class Stats {
             chartRangeMin: 0,
             maxSpotColor: false
         }
-        let socket = new Socket("/admin/ws", {params: {token: user_token}});
+
         let user_token = document.querySelector("meta[name=\"channel_token\"]").getAttribute("content");
+        let socket = new Socket("/admin/ws", {params: {token: user_token}});
         socket.connect();
         let chan = socket.channel("stats", {});
         chan.join().receive("ok", ({messages}) => {

@@ -701,8 +701,9 @@ var Stats = (function () {
                 chartRangeMin: 0,
                 maxSpotColor: false
             };
-            var socket = new _Socket.Socket('/admin/ws', { params: { token: user_token } });
+
             var user_token = document.querySelector('meta[name="channel_token"]').getAttribute('content');
+            var socket = new _Socket.Socket('/admin/ws', { params: { token: user_token } });
             socket.connect();
             var chan = socket.channel('stats', {});
             chan.join().receive('ok', function (_ref) {
@@ -927,8 +928,8 @@ var WS = (function () {
         key: "setup",
         value: function setup() {
             var _this = this;
-            var socket = new _Socket.Socket("/admin/ws", { params: { token: user_token } });
             var user_token = document.querySelector("meta[name=\"channel_token\"]").getAttribute("content");
+            var socket = new _Socket.Socket("/admin/ws", { params: { token: user_token } });
             socket.connect();
             var chan = socket.channel("system:stream", {});
             chan.join().receive("ok", function (_ref) {
