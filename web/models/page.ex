@@ -122,7 +122,8 @@ defmodule Brando.Page do
   """
   def order(query) do
     from m in query,
-         order_by: [asc: m.language, asc: m.status, desc: m.key, desc: m.inserted_at]
+         order_by: [asc: m.language, asc: m.status, desc: m.key,
+                    desc: m.inserted_at]
   end
 
   @doc """
