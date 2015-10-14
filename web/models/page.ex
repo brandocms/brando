@@ -90,6 +90,7 @@ defmodule Brando.Page do
   def duplicate(model) do
     %__MODULE__{}
     |> changeset(:create, model |> Map.drop([:__struct__, :__meta__, :id,
+                                             :key, :slug, :title,
                                              :children, :creator, :parent,
                                              :updated_at, :inserted_at]))
     |> Brando.repo.insert
