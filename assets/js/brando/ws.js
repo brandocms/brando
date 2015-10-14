@@ -5,9 +5,9 @@ import {Socket} from '../../../deps/phoenix/web/static/js/phoenix.js'
 class WS {
     static setup() {
         var _this = this;
-        let socket = new Socket("/admin/ws");
         let user_token = document.querySelector("meta[name=\"channel_token\"]").getAttribute("content");
-        socket.connect({token: user_token});
+        let socket = new Socket("/admin/ws", {params: {token: user_token}});
+        socket.connect();
         let chan = socket.channel("system:stream", {});
         chan.join().receive("ok", ({messages}) => {
             console.log(">> System channel ready");

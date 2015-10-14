@@ -188,6 +188,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
   end
 
   defp apps do
-    [Mix.Project.config[:app], :brando]
+    [".", :brando]
   end
 end

@@ -96,13 +96,22 @@ defmodule Brando.Admin.PageController do
   def duplicate(conn, %{"id" => id}) do
     language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
-    page = model |> Brando.repo.get_by(id: id)
-    {:ok, duplicated_page} = model.duplicate(page)
+    page =
+      model
+      |> Brando.repo.get_by(id: id)
+      |> Map.drop([:__struct__, :__meta__, :id,
+                   :key, :slug, :title,
+                   :children, :creator, :parent,
+                   :updated_at, :inserted_at])
+
+    changeset = model.changeset(%Brando.Page{}, :create, page)
 
     conn
     |> put_flash(:notice, t!(language, "flash.duplicated"))
-    |> redirect(to: helpers(conn).admin_page_path(conn, :edit,
-                                                  duplicated_page.id))
+    |> assign(:page_title, t!(language, "title.new"))
+    |> assign(:page, page)
+    |> assign(:changeset, changeset)
+    |> render(:new)
   end
 
   @doc false

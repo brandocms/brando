@@ -2281,7 +2281,23 @@ body.auth {
   background-color: #fff;
   min-width: 400px;
   width: 400px;
-  border: 15px solid #000; }
+  border: 15px solid #000;
+  position: relative; }
+  .auth .box .spinner {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+    top: 0;
+    left: 0;
+    display: none; }
+    .auth .box .spinner i {
+      font-size: 80px;
+      margin: 0 auto;
+      text-align: center;
+      display: inherit;
+      top: 38%;
+      position: relative; }
   .auth .box span.version {
     float: right;
     font-weight: bold;
@@ -2331,7 +2347,7 @@ svg#triangles {
   text-align: center;
   padding-bottom: 5px;
   display: block;
-  font-size: 30px;
+  font-size: 8px;
   margin-bottom: 25px;
   text-transform: uppercase; }
 

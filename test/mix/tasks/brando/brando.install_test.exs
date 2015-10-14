@@ -36,5 +36,6 @@ defmodule Mix.Tasks.Brando.GenerateTest do
     assert_received {:mix_shell, :info, ["\nBrando finished copying."]}
     assert File.exists?("web/villain")
     assert_file "web/villain/parser.ex"
+    refute File.exists?("web/static/css/app.css")
   end
 end

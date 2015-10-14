@@ -47,12 +47,16 @@ Add to your relevant `config/%{env}.exs` Repo config:
 ```elixir
 config :my_app, Repo,
   # ...
-  extensions: [{Postgrex.Extensions.JSON library: Poison}]
+  extensions: [{Postgrex.Extensions.JSON, library: Poison}]
 ```
 
 Install bower frontend dependencies:
 
     $ bower install
+
+Add NPM packages used with brunch:
+
+    $ npm install --save sass-brunch postcss-brunch autoprefixer
 
 Create the database:
 
@@ -79,6 +83,12 @@ plug Plug.Static,
 
 plug Plug.Static,
   at: "/media", from: Brando.config(:media_path)
+```
+
+Also switch out the socket config in `endpoint.ex`:
+
+```elixir
+socket "/admin/ws", Brando.UserSocket
 ```
 
 To use Brando's error view, add to your Endpoint's config:

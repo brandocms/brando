@@ -22,21 +22,6 @@
       <hr class="mobile-hide">
     </section>
   -->
-  <%= if Brando.Utils.current_user(@conn) do %>
-    <div class="admin-menu">
-      <ul class="nav navbar-nav">
-        <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-            <img class="micro-avatar" src="<%= Brando.Utils.img_url(Brando.Utils.current_user(@conn).avatar, :micro, [default: Brando.helpers.static_path(@conn, "/images/brando/defaults/avatar_default.jpg"), prefix: Brando.Utils.media_url()]) %>" />
-          </a>
-          <ul class="dropdown-menu dropdown-menu-right" role="menu">
-            <li><a href="<%= admin_dashboard_path(@conn, :dashboard) %>">Admin</a></li>
-            <li><a href="<%= session_path(@conn, :logout) %>">Logg ut</a></li>
-          </ul>
-        </li>
-      </ul>
-    </div>
-  <% end %>
 
 <!-- :header - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
     <header class="navbar navbar-static-top" id="top" role="banner">
@@ -81,7 +66,6 @@
 
     <script src="<%= static_path(@conn, "/js/vendor.js") %>"></script>
     <script src="<%= static_path(@conn, "/js/app.js") %>"></script>
-    <script>require("web/static/js/app")</script>
-    <%= Brando.HTML.analytics("UA-XXXXX-X") %>
+    <%= Brando.HTML.google_analytics("UA-XXXXX-X") %>
   </body>
 </html>

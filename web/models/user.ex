@@ -169,8 +169,8 @@ defmodule Brando.User do
   @doc """
   Checks if `user` has `role`.
   """
-  @spec has_role?(t, atom) :: boolean
-  def has_role?(user, role) when is_atom(role) do
+  @spec role?(t, atom) :: boolean
+  def role?(user, role) when is_atom(role) do
     role in user.role && true || false
   end
 

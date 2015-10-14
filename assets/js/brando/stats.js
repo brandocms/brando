@@ -25,9 +25,10 @@ class Stats {
             chartRangeMin: 0,
             maxSpotColor: false
         }
-        let socket = new Socket("/admin/ws");
+
         let user_token = document.querySelector("meta[name=\"channel_token\"]").getAttribute("content");
-        socket.connect({ token: user_token });
+        let socket = new Socket("/admin/ws", {params: {token: user_token}});
+        socket.connect();
         let chan = socket.channel("stats", {});
         chan.join().receive("ok", ({messages}) => {
             console.log(">> System statistics channel ready");
@@ -76,7 +77,6 @@ class Stats {
         } while (Math.abs(bytes) >= thresh && u < units.length - 1);
         return bytes.toFixed(1) + ' ' + units[u];
     }
-
 }
 
 export default Stats;

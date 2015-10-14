@@ -12,14 +12,12 @@ defmodule Brando.Plug.Uploads do
   require Logger
 
   def check_for_uploads(conn, {required_key, module})
-      when is_binary(required_key) do
+  when is_binary(required_key) do
     param = Map.get(conn.params, required_key)
     case module.check_for_uploads(module, param) do
       {:ok, image_fields} ->
         param = handle_image_fields(param, image_fields)
-        conn =
-          conn
-          |> Phoenix.Controller.put_flash(:notice, "Bilde lastet opp.")
+        conn = Phoenix.Controller.put_flash(conn, :notice, "Bilde lastet opp.")
       {:error, errors} ->
         Logger.error(inspect(errors))
         nil

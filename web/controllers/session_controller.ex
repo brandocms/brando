@@ -19,14 +19,16 @@ defmodule Brando.SessionController do
         SystemChannel.log(:logged_in, user)
 
         conn
+        |> sleep
         |> fetch_session
         |> put_session(:current_user, user)
         |> put_flash(:notice, "Innloggingen var vellykket")
         |> redirect(to: "/admin")
       false ->
         conn
+        |> sleep
         |> put_flash(:error, "Innloggingen feilet")
-        |> redirect(to: "/login")
+        |> redirect(to: "/auth/login")
     end
   end
 
@@ -52,5 +54,10 @@ defmodule Brando.SessionController do
 
   defp sanitize_user(user) do
     Map.drop(user, [:password, :__meta__, :__struct__])
+  end
+
+  defp sleep(conn) do
+    :timer.sleep(2_000)
+    conn
   end
 end

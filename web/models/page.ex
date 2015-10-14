@@ -90,6 +90,7 @@ defmodule Brando.Page do
   def duplicate(model) do
     %__MODULE__{}
     |> changeset(:create, model |> Map.drop([:__struct__, :__meta__, :id,
+                                             :key, :slug, :title,
                                              :children, :creator, :parent,
                                              :updated_at, :inserted_at]))
     |> Brando.repo.insert
@@ -117,11 +118,12 @@ defmodule Brando.Page do
   end
 
   @doc """
-  Order by status and insertion
+  Order by language, status, key and insertion
   """
   def order(query) do
     from m in query,
-         order_by: [asc: m.language, asc: m.status, desc: m.inserted_at]
+         order_by: [asc: m.language, asc: m.status, desc: m.key,
+                    desc: m.inserted_at]
   end
 
   @doc """
@@ -149,12 +151,16 @@ defmodule Brando.Page do
   Gets model with parents and children
   """
   def with_parents_and_children(query) do
+    children_query =
+      from c in query,
+        order_by: [asc: c.status, asc: c.key, desc: c.updated_at],
+        preload: [:creator]
     from m in query,
          left_join: c in assoc(m, :children),
          left_join: cu in assoc(c, :creator),
          join: u in assoc(m, :creator),
          where: is_nil(m.parent_id),
-         preload: [children: {c, creator: cu}, creator: u],
+         preload: [children: ^children_query, creator: u],
          select: m
   end
 

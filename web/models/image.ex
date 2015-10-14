@@ -140,6 +140,29 @@ defmodule Brando.Image do
   end
 
   @doc """
+  Deletes all image's sizes and recreates them.
+  """
+  def recreate_sizes(record) do
+    record = Brando.repo.preload(record, :image_series)
+    delete_sized_images(record.image)
+
+    full_path = media_path(record.image.path)
+
+    {:ok, new_image} =
+      create_image_sizes({%{uploaded_file: full_path}, record.image_series.cfg})
+
+    new_sizes = new_image.sizes
+
+    image =
+      record.image
+      |> Map.put(:sizes, new_sizes)
+
+    record
+    |> Map.put(:image, image)
+    |> Brando.repo.update!
+  end
+
+  @doc """
   Delete all images depending on imageserie `series_id`
   """
   def delete_dependent_images(series_id) do
