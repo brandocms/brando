@@ -201,6 +201,6 @@ defmodule Mix.Tasks.Brando.Gen.Model do
   end
 
   defp apps do
-    [Mix.Project.config[:app], :brando]
+    [".", :brando]
   end
 end
