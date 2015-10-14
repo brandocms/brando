@@ -47,7 +47,7 @@ Add to your relevant `config/%{env}.exs` Repo config:
 ```elixir
 config :my_app, Repo,
   # ...
-  extensions: [{Postgrex.Extensions.JSON library: Poison}]
+  extensions: [{Postgrex.Extensions.JSON, library: Poison}]
 ```
 
 Install bower frontend dependencies:
