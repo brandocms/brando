@@ -150,12 +150,16 @@ defmodule Brando.Page do
   Gets model with parents and children
   """
   def with_parents_and_children(query) do
+    children_query =
+      from c in query,
+        order_by: [asc: c.status, asc: c.key, desc: c.updated_at],
+        preload: [:creator]
     from m in query,
          left_join: c in assoc(m, :children),
          left_join: cu in assoc(c, :creator),
          join: u in assoc(m, :creator),
          where: is_nil(m.parent_id),
-         preload: [children: {c, creator: cu}, creator: u],
+         preload: [children: ^children_query, creator: u],
          select: m
   end
 
