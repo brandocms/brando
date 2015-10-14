@@ -118,11 +118,11 @@ defmodule Brando.Page do
   end
 
   @doc """
-  Order by status and insertion
+  Order by language, status, key and insertion
   """
   def order(query) do
     from m in query,
-         order_by: [asc: m.language, asc: m.status, desc: m.inserted_at]
+         order_by: [asc: m.language, asc: m.status, asc: m.key, desc: m.inserted_at]
   end
 
   @doc """
