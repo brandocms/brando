@@ -85,6 +85,12 @@ plug Plug.Static,
   at: "/media", from: Brando.config(:media_path)
 ```
 
+Also switch out the socket config in `endpoint.ex`:
+
+```elixir
+socket "/admin/ws", Brando.UserSocket
+```
+
 To use Brando's error view, add to your Endpoint's config:
 
 ```elixir
