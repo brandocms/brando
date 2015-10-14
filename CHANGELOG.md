@@ -1,4 +1,4 @@
-## v0.4.0-dev (2015-XX-XX)
+## v0.4.0 (2015-10-15)
 
 * Enhancements
   * Add a delay to login attempts to stifle brute force attempts *some*.
