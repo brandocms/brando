@@ -428,8 +428,12 @@ defmodule Brando.Form do
       fetch_from = params || %{}
       name = Atom.to_string(name)
     else
-      # action is nil, this means we have no params - only a model.
-      fetch_from = model || %{}
+      if params do
+        name = Atom.to_string(name)
+        fetch_from = params
+      else
+        fetch_from = model || %{}
+      end
     end
     case Map.fetch(fetch_from, name) do
       {:ok, val} -> val
