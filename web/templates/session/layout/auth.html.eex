@@ -55,7 +55,7 @@
         svg.setAttribute("id", "triangles");
         document.body.appendChild(svg);
         $(document).ready(function() {
-          textFit(document.getElementById("app-name"), {widthOnly: true, maxFontSize: 80});
+          textFit(document.getElementById("app-name"), {alignHoriz: true, maxFontSize: 80});
           $('input[type=submit]').click(function(e) {
             $('.spinner').fadeIn();
           });
