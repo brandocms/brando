@@ -259,8 +259,10 @@ def update():
     """
     require('hosts')
     with cd(env.path):
-        gitpull()
-        collectstatic()
+        print(cyan('-- git // git pull, to make sure we are still at HEAD'))
+        sudo('git pull && MIX_ENV=%s mix deps.get && MIX_ENV=%s mix compile' % env.flavor, user=env.project_user)
+        fixprojectperms()
+        _set_logrotate_perms()
         restart()
 
 
@@ -458,9 +460,14 @@ def logrotatecfg():
     else:
         print(yellow('-- logrotateconf // %s.conf already exists!' % (env.procname)))
 
+    _set_logrotate_perms()
+
+
+def _set_logrotate_perms():
+    logrotate_src = "%s/etc/logrotate/%s.conf" % (env.path, env.flavor)
     # set permission to 644
     print(cyan('-- setperms // setting logrotate conf to 644'))
-    sudo('chmod %s "%s"' % (perms, logrotate_src))
+    sudo('chmod 644 "%s"' % logrotate_src)
 
     # set owner to root
     print(cyan('-- setowner // setting logrotate owner to root'))
