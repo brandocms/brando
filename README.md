@@ -54,6 +54,10 @@ Install bower frontend dependencies:
 
     $ bower install
 
+Add NPM packages used with brunch:
+
+    $ npm install --save sass-brunch postcss-brunch autoprefixer
+
 Create the database:
 
     $ mix ecto.create
