@@ -100,7 +100,7 @@ defmodule Brando.Pages.ControllerTest do
       |> with_user
       |> send_request
 
-    assert redirected_to(conn, 302) =~ "/admin/pages"
+    assert html_response(conn, 200) =~ "zcxvxcv"
     assert get_flash(conn, :notice) == "Side duplisert"
   end
 
