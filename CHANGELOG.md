@@ -3,6 +3,10 @@
 * Enhancements
   * Add a delay to login attempts to stifle brute force attempts *some*.
   * Recreate images when an image series cfg changes.
+  * Page cloning: remove key/name/slug to prevent accidental dupes. Also doesn't automatically store new page, but presents an editing form instead.
+
+* Bug fixes
+  * Fixed generators erroring out on "unknown application".
 
 * Backwards incompatible changes
   * Renamed `User.has_role?/2` to `User.role?/2`
