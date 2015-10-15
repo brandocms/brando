@@ -66,7 +66,7 @@ defmodule <%= admin_module %>Controller do
     <%= singular %> = Repo.get!(<%= alias %>, id)
     changeset = <%= alias %>.changeset(<%= singular %>, <%= singular %>_params)
 
-    case Repo.insert(changeset) do
+    case Repo.update(changeset) do
       {:ok, _} ->
         conn
         |> put_flash(:info, t!(language, "flash.updated"))
