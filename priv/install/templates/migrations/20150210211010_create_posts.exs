@@ -15,6 +15,7 @@ defmodule <%= application_module %>.Repo.Migrations.CreatePosts do
       add :creator_id,        references(:users)
       add :meta_description,  :text
       add :meta_keywords,     :text
+      add :css_classes,       :text
       add :featured,          :boolean
       add :published,         :boolean
       add :publish_at,        :datetime

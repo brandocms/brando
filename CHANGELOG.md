@@ -1,5 +1,11 @@
 ## v0.5.0-dev (2015-XX-XX)
 
+* Enhancements
+  * Added `put_css_classes/2` to `Brando.Plug.HTML`. Adds classes to your body tag.
+
+* Backwards incompatible changes
+  * Moved `put_section/2` from `Brando.Plug.Section` to `Brando.Plug.HTML`. Fix imports accordingly.
+
 ## v0.4.0 (2015-10-15)
 
 * Enhancements

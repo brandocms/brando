@@ -6,7 +6,7 @@ defmodule Brando.Admin.UserController do
   use Brando.Web, :controller
   use Linguist.Vocabulary
   import Brando.Plug.Authorize
-  import Brando.Plug.Section
+  import Brando.Plug.HTML
   import Brando.Plug.Uploads
   import Brando.HTML.Inspect, only: [model_name: 3]
   import Brando.Utils, only: [helpers: 1, current_user: 1]

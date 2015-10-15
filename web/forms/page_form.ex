@@ -84,6 +84,7 @@ defmodule Brando.PageForm do
       field :meta_keywords, :text
     end
     field :data, :textarea, [required: false]
+    field :css_classes, :text, [required: false]
     submit :save, [class: "btn btn-success"]
   end
 end

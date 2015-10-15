@@ -12,7 +12,7 @@ defmodule Brando.Page do
   alias Brando.User
 
   @required_fields ~w(key language title slug data status creator_id)
-  @optional_fields ~w(parent_id meta_description meta_keywords html)
+  @optional_fields ~w(parent_id meta_description meta_keywords html css_classes)
 
   schema "pages" do
     field :key, :string
@@ -21,6 +21,7 @@ defmodule Brando.Page do
     field :slug, :string
     villain
     field :status, Status
+    field :css_classes, :string
     belongs_to :creator, User
     belongs_to :parent, __MODULE__
     has_many :children, __MODULE__, foreign_key: :parent_id
@@ -206,6 +207,7 @@ defmodule Brando.Page do
          parent_id: "Tilhørende side",
          children: "Undersider",
          creator: "Opprettet av",
+         css_classes: "Ekstra CSS klasser",
          meta_description: "META beskrivelse",
          meta_keywords: "META nøkkelord",
          inserted_at: "Opprettet",
@@ -231,6 +233,7 @@ defmodule Brando.Page do
          parent_id: "Belongs to",
          children: "Sub pages",
          creator: "Creator",
+         css_classes: "Extra CSS classes",
          meta_description: "META description",
          meta_keywords: "META keywords",
          inserted_at: "Inserted",

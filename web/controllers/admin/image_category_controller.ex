@@ -8,7 +8,7 @@ defmodule Brando.Admin.ImageCategoryController do
     [:controller, [model: Brando.ImageSeries,
                    filter: &Brando.ImageSeries.get_by_category_id/1]]
 
-  import Brando.Plug.Section
+  import Brando.Plug.HTML
   import Brando.Utils, only: [helpers: 1, current_user: 1]
   import Ecto.Query
 

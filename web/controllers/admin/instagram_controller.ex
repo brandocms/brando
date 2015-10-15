@@ -4,7 +4,7 @@ defmodule Brando.Admin.InstagramController do
   """
   use Linguist.Vocabulary
   use Brando.Web, :controller
-  import Brando.Plug.Section
+  import Brando.Plug.HTML
   import Ecto.Query
   alias Brando.InstagramImage
 

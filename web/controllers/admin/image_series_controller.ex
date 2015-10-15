@@ -7,7 +7,7 @@ defmodule Brando.Admin.ImageSeriesController do
   use Brando.Sequence,
     [:controller, [model: Brando.Image, filter: &Brando.Image.for_series_id/1]]
 
-  import Brando.Plug.Section
+  import Brando.Plug.HTML
   import Brando.Utils, only: [helpers: 1]
   import Ecto.Query
 

@@ -4,7 +4,7 @@ defmodule Brando.Admin.ImageController do
   """
   use Linguist.Vocabulary
   use Brando.Web, :controller
-  import Brando.Plug.Section
+  import Brando.Plug.HTML
   alias Brando.Image
 
   plug :put_section, "images"

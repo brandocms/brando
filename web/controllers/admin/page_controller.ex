@@ -8,7 +8,7 @@ defmodule Brando.Admin.PageController do
     image_model: Brando.Image,
     series_model: Brando.ImageSeries
 
-  import Brando.Plug.Section
+  import Brando.Plug.HTML
   import Brando.Utils, only: [helpers: 1]
 
   plug :put_section, "pages"

@@ -52,4 +52,14 @@ defmodule Brando.HTMLTest do
     assert auth_link(:danger, conn, "test", :admin, do: {:safe, "text"})
            == {:safe, "<a href=\"test\" class=\"btn btn-danger\"> text</a>"}
   end
+
+  test "body_tag" do
+    mock_conn = %{private: %{brando_css_classes: "one two three"}}
+    assert body_tag(mock_conn)
+           == {:safe, ~s(<body class="one two three">)}
+
+    mock_conn = %{private: %{brando_css_classes: "one two three", brando_section_name: "some-section"}}
+    assert body_tag(mock_conn)
+           == {:safe, ~s(<body id="some-section" data-script="some-section" class="one two three">)}
+  end
 end

@@ -4,7 +4,7 @@ defmodule Brando.Admin.DashboardController do
   """
 
   use Brando.Web, :controller
-  import Brando.Plug.Section
+  import Brando.Plug.HTML
 
   plug :put_section, "dashboard"
 
@@ -12,7 +12,7 @@ defmodule Brando.Admin.DashboardController do
   Renders the main dashboard for the admin area.
   """
   def dashboard(conn, _params) do
-    conn |> render
+    render(conn)
   end
 
   @doc """

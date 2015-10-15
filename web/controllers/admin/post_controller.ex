@@ -8,7 +8,7 @@ defmodule Brando.Admin.PostController do
     image_model: Brando.Image,
     series_model: Brando.ImageSeries
 
-  import Brando.Plug.Section
+  import Brando.Plug.HTML
 
   plug :put_section, "news"
   plug :scrub_params, "post" when action in [:create, :update]

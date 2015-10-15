@@ -373,4 +373,28 @@ defmodule Brando.HTML do
     html = Enum.map_join(get_meta(conn), "\n    ", &(elem(meta_tag(&1), 1)))
     Phoenix.HTML.raw(html)
   end
+
+  @doc """
+  Renders opening body tag.
+
+  Checks conn.private for various settings
+  """
+  def body_tag(conn) do
+    id = conn.private[:brando_section_name]
+    data_script = conn.private[:brando_section_name]
+    classes = conn.private[:brando_css_classes]
+
+    body = "<body"
+
+    if id, do:
+      body = body <> ~s( id="#{id}")
+
+    if data_script, do:
+      body = body <> ~s( data-script="#{data_script}")
+
+    if classes, do:
+      body = body <> ~s( class="#{classes}")
+
+    Phoenix.HTML.raw(body <> ">")
+  end
 end

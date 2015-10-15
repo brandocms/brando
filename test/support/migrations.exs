@@ -95,6 +95,7 @@ defmodule Brando.Integration.Migration do
       add :status,            :integer
       add :parent_id,         references(:pages), default: nil
       add :creator_id,        references(:users)
+      add :css_classes,       :text
       add :meta_description,  :text
       add :meta_keywords,     :text
       timestamps
