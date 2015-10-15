@@ -3,6 +3,9 @@
 * Enhancements
   * Added `put_css_classes/2` to `Brando.Plug.HTML`. Adds classes to your body tag.
 
+* Bug fixes
+  * Fixes bug in `brando.gen.html` where admin's update action would be broken.
+
 * Backwards incompatible changes
   * Moved `put_section/2` from `Brando.Plug.Section` to `Brando.Plug.HTML`. Fix imports accordingly.
 
