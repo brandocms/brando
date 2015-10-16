@@ -8,7 +8,8 @@ defmodule Brando.Admin.UserController do
   import Brando.Plug.Authorize
   import Brando.Plug.HTML
   import Brando.Plug.Uploads
-  import Brando.HTML.Inspect, only: [model_name: 3]
+  import Brando.Gettext
+  import Brando.HTML.Inspect, only: [model_name: 2]
   import Brando.Utils, only: [helpers: 1, current_user: 1]
 
   plug :put_section, "users"
@@ -20,36 +21,33 @@ defmodule Brando.Admin.UserController do
 
   @doc false
   def index(conn, _params) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
+    users = model |> model.order_by_id |> Brando.repo.all
     conn
-    |> assign(:users, model |> model.order_by_id |> Brando.repo.all)
-    |> assign(:page_title, t!(language, "title.index"))
+    |> assign(:users, users)
+    |> assign(:page_title, gettext("Index - users"))
     |> render("index.html")
   end
 
   @doc false
   def show(conn, %{"id" => user_id}) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     conn
     |> assign(:user, Brando.repo.get_by!(model, id: user_id))
-    |> assign(:page_title, t!(language, "title.show"))
+    |> assign(:page_title, gettext("Show user"))
     |> render("show.html")
   end
 
   @doc false
   def profile(conn, _params) do
-    language = Brando.I18n.get_language(conn)
     conn
     |> assign(:user, get_session(conn, :current_user))
-    |> assign(:page_title, t!(language, "title.profile"))
+    |> assign(:page_title, gettext("Profile"))
     |> render("show.html")
   end
 
   @doc false
   def profile_edit(conn, _params) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     user_id = current_user(conn).id
     changeset =
@@ -60,13 +58,12 @@ defmodule Brando.Admin.UserController do
     conn
     |> assign(:changeset, changeset)
     |> assign(:id, user_id)
-    |> assign(:page_title, t!(language, "title.edit"))
+    |> assign(:page_title, gettext("Edit profile"))
     |> render(:profile_edit)
   end
 
   @doc false
   def profile_update(conn, %{"user" => form_data}) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     user_id = current_user(conn).id
     user = Brando.repo.get!(model, user_id)
@@ -79,51 +76,48 @@ defmodule Brando.Admin.UserController do
           false -> conn
         end
         conn
-        |> put_flash(:notice, t!(language, "flash.updated"))
+        |> put_flash(:notice, gettext("Profile updated"))
         |> redirect(to: helpers(conn).admin_user_path(conn, :profile))
       {:error, changeset} ->
         conn
         |> assign(:user, form_data)
         |> assign(:changeset, changeset)
         |> assign(:id, user_id)
-        |> assign(:page_title, t!(language, "title.edit"))
-        |> put_flash(:error, t!(language, "flash.form_error"))
+        |> assign(:page_title, gettext("Edit profile"))
+        |> put_flash(:error, gettext("Errors in form"))
         |> render(:profile_edit)
     end
   end
 
   @doc false
   def new(conn, _params) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     changeset = model.changeset(model.__struct__, :create)
     conn
     |> assign(:changeset, changeset)
-    |> assign(:page_title, t!(language, "title.new"))
+    |> assign(:page_title, gettext("New user"))
     |> render("new.html")
   end
 
   @doc false
   def create(conn, %{"user" => form_data}) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     case model.create(form_data) do
       {:ok, _} ->
         conn
-        |> put_flash(:notice, t!(language, "flash.created"))
+        |> put_flash(:notice, gettext("User created"))
         |> redirect(to: helpers(conn).admin_user_path(conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:changeset, changeset)
-        |> assign(:page_title, t!(language, "title.new"))
-        |> put_flash(:error, t!(language, "flash.form_error"))
+        |> assign(:page_title, gettext("New user"))
+        |> put_flash(:error, gettext("Errors in form"))
         |> render(:new)
     end
   end
 
   @doc false
   def edit(conn, %{"id" => user_id}) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     changeset =
       model
@@ -133,13 +127,12 @@ defmodule Brando.Admin.UserController do
     conn
     |> assign(:changeset, changeset)
     |> assign(:id, user_id)
-    |> assign(:page_title, t!(language, "title.edit"))
+    |> assign(:page_title, gettext("Edit user"))
     |> render(:edit)
   end
 
   @doc false
   def update(conn, %{"user" => form_data, "id" => user_id}) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     user = Brando.repo.get_by!(model, id: user_id)
 
@@ -152,72 +145,38 @@ defmodule Brando.Admin.UserController do
         end
 
         conn
-        |> put_flash(:notice, t!(language, "flash.updated"))
+        |> put_flash(:notice, gettext("User updated"))
         |> redirect(to: helpers(conn).admin_user_path(conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:changeset, changeset)
         |> assign(:id, user_id)
-        |> assign(:page_title, t!(language, "title.edit"))
-        |> put_flash(:error, t!(language, "flash.form_error"))
+        |> assign(:page_title, gettext("Edit user"))
+        |> put_flash(:error, gettext("Errors in form"))
         |> render(:edit)
     end
   end
 
   @doc false
   def delete_confirm(conn, %{"id" => user_id}) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     record = Brando.repo.get!(model, user_id)
     conn
     |> assign(:record, record)
-    |> assign(:page_title, t!(language, "title.delete_confirm"))
+    |> assign(:page_title, gettext("Confirm deletion"))
     |> render(:delete_confirm)
   end
 
   @doc false
   def delete(conn, %{"id" => user_id}) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     record = Brando.repo.get!(model, user_id)
 
     model.delete(record)
 
     conn
-    |> put_flash(:notice, "#{model_name(language, record, :singular)} " <>
-                          "#{model.__repr__(language, record)} slettet.")
+    |> put_flash(:notice, "#{model_name(record, :singular)} " <>
+                          "#{model.__repr__(record)} #{gettext("deleted")}")
     |> redirect(to: helpers(conn).admin_user_path(conn, :index))
   end
-
-  locale "no", [
-    title: [
-      index: "Brukeroversikt",
-      show: "Vis bruker",
-      new: "Ny bruker",
-      edit: "Endre bruker",
-      profile: "Profil",
-      delete_confirm: "Bekreft sletting av bruker",
-    ],
-    flash: [
-      form_error: "Feil i skjema",
-      updated: "Bruker oppdatert",
-      created: "Bruker opprettet"
-    ]
-  ]
-
-  locale "en", [
-    title: [
-      index: "Index – Users",
-      show: "Show user",
-      new: "New user",
-      edit: "Edit user",
-      profile: "Profile",
-      delete_confirm: "Confirm user deletion",
-    ],
-    flash: [
-      form_error: "Error(s) in form",
-      updated: "User updated",
-      created: "User created"
-    ]
-  ]
 end

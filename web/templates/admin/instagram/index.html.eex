@@ -1,19 +1,20 @@
-<h1><%= t!(@language, "actions.index") %></h1>
+<h1><%= gettext("Index - Instagram images") %></h1>
 <p>
-  <%= t!(@language, "content.help1") %><br />
-  <%= t!(@language, "content.help2") %>
+  <%= gettext("Index of instagram images. Only photos in the \"approved\"-row will be displayed on the webpage.") %>
+  <br />
+  <%= gettext("Select photos, and click on your wanted action.") %>
 </p>
 <div class="button-header">
   <button class="approve-selected-images btn btn-default">
-    <i class="fa fa-fw fa-thumbs-o-up m-r-sm"></i><%= t!(@language, "actions.mark_as") %> <%= t!(@language, "actions.approved") %>
+    <i class="fa fa-fw fa-thumbs-o-up m-r-sm"></i><%= gettext("Mark as") %> <%= gettext("Approved") %>
   </button>
   <button class="reject-selected-images btn btn-default">
-    <i class="fa fa-fw fa-thumbs-o-down m-r-sm"></i><%= t!(@language, "actions.mark_as") %> <%= t!(@language, "actions.rejected") %>
+    <i class="fa fa-fw fa-thumbs-o-down m-r-sm"></i><%= gettext("Mark as") %> <%= gettext("Rejected") %>
   </button>
   <button class="delete-selected-images btn btn-default">
-    <i class="fa fa-fw fa-trash-o m-r-sm"></i><%= t!(@language, "actions.mark_as") %> <%= t!(@language, "actions.deleted") %>
+    <i class="fa fa-fw fa-trash-o m-r-sm"></i><%= gettext("Mark as") %> <%= gettext("Deleted") %>
   </button>
 </div>
 <div class="image-serie">
-  <%= show_grouped_images(@language, @images) %>
+  <%= show_grouped_images(@images) %>
 </div>

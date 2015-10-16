@@ -7,7 +7,7 @@ defmodule Brando.PageFragments.ControllerTest do
   alias Brando.PageFragment
   alias Brando.User
 
-  @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "no",
+  @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "nb",
                  "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
@@ -16,12 +16,12 @@ defmodule Brando.PageFragments.ControllerTest do
                  "{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]",
                  "key" => "testpage",
                  "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
-                 "language" => "no"}
+                 "language" => "nb"}
 
   @broken_page_params %{"data" => "", "featured" => true, "title" => "",
                         "key" => "testpage",
                         "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
-                        "language" => "no"}
+                        "language" => "nb"}
 
   def create_user do
     {:ok, user} = User.create(@user_params)
@@ -36,7 +36,7 @@ defmodule Brando.PageFragments.ControllerTest do
       |> send_request
 
     assert response_content_type(conn, :html) =~ "charset=utf-8"
-    assert html_response(conn, 200) =~ "Sidefragmentoversikt"
+    assert html_response(conn, 200) =~ "Index - page fragments"
   end
 
   test "show" do
@@ -60,7 +60,7 @@ defmodule Brando.PageFragments.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Opprett sidefragment"
+    assert html_response(conn, 200) =~ "New page fragment"
   end
 
   test "edit" do
@@ -74,7 +74,7 @@ defmodule Brando.PageFragments.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Endre sidefragment"
+    assert html_response(conn, 200) =~ "Edit page fragment"
 
     assert_raise Plug.Conn.WrapperError, fn ->
       :get
@@ -95,7 +95,6 @@ defmodule Brando.PageFragments.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/pages/fragments"
-    assert get_flash(conn, :notice) == "Sidefragment opprettet"
   end
 
   test "create (page) w/erroneus params" do
@@ -106,8 +105,8 @@ defmodule Brando.PageFragments.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Opprett sidefragment"
-    assert get_flash(conn, :error) == "Feil i skjema"
+    assert html_response(conn, 200) =~ "New page fragment"
+    assert get_flash(conn, :error) == "Errors in form"
   end
 
   test "update (page) w/params" do
@@ -128,7 +127,6 @@ defmodule Brando.PageFragments.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/pages/fragments"
-    assert get_flash(conn, :notice) == "Sidefragment oppdatert"
   end
 
   test "delete_confirm" do
@@ -142,7 +140,7 @@ defmodule Brando.PageFragments.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Slett sidefragment: testpage"
+    assert html_response(conn, 200) =~ "Delete page fragment: testpage"
   end
 
   test "delete" do

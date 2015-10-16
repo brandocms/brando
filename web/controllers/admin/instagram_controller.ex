@@ -4,6 +4,7 @@ defmodule Brando.Admin.InstagramController do
   """
   use Linguist.Vocabulary
   use Brando.Web, :controller
+  import Brando.Gettext
   import Brando.Plug.HTML
   import Ecto.Query
   alias Brando.InstagramImage
@@ -14,8 +15,6 @@ defmodule Brando.Admin.InstagramController do
   Renders the main index.
   """
   def index(conn, _params) do
-    language = Brando.I18n.get_language(conn)
-
     images = Brando.repo.all(
       from i in InstagramImage,
         select: %{id: i.id, status: i.status, image: i.image,
@@ -24,7 +23,7 @@ defmodule Brando.Admin.InstagramController do
     )
 
     conn
-    |> assign(:page_title, t!(language, "title.index"))
+    |> assign(:page_title, gettext("Index - Instagram"))
     |> assign(:images, images)
     |> render
   end
@@ -33,16 +32,4 @@ defmodule Brando.Admin.InstagramController do
     InstagramImage.change_status_for(ids, status)
     json(conn, %{status: "200", ids: ids, new_status: status})
   end
-
-  locale "en", [
-    title: [
-      index: "Index – Instagram",
-    ]
-  ]
-
-  locale "no", [
-    title: [
-      index: "Oversikt – Instagram",
-    ]
-  ]
 end

@@ -49,7 +49,7 @@
         <!-- nav -->
         <nav class="nav-primary hidden-xs">
           <ul class="nav">
-            <%= for menu <- get_menus(@language) do %>
+            <%= for menu <- get_menus() do %>
               <%= render_menu_item(@conn, menu) %>
             <% end %>
           </ul>

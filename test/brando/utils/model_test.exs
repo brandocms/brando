@@ -6,7 +6,7 @@ defmodule Brando.Utils.ModelTest do
   alias Brando.Utils
   alias Brando.User
 
-  @params %{"avatar" => nil, "role" => ["2", "4"], "language" => "no",
+  @params %{"avatar" => nil, "role" => ["2", "4"], "language" => "nb",
             "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
             "password" => "finimeze", "status" => "1",
             "submit" => "Submit", "username" => "zabuzasixu"}

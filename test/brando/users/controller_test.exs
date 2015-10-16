@@ -23,7 +23,7 @@ defmodule Brando.Users.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Brukeroversikt"
+    assert html_response(conn, 200) =~ "Index - users"
   end
 
   test "show" do
@@ -55,7 +55,7 @@ defmodule Brando.Users.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Ny bruker"
+    assert html_response(conn, 200) =~ "New user"
   end
 
   test "edit" do
@@ -66,7 +66,7 @@ defmodule Brando.Users.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Endre bruker"
+    assert html_response(conn, 200) =~ "Edit user"
   end
 
   test "edit profile" do
@@ -77,7 +77,7 @@ defmodule Brando.Users.ControllerTest do
       |> with_user(user)
       |> send_request
 
-    assert html_response(conn, 200) =~ "Endre bruker"
+    assert html_response(conn, 200) =~ "Edit profile"
   end
 
   test "create (post) w/params" do
@@ -89,7 +89,7 @@ defmodule Brando.Users.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/users"
-    assert get_flash(conn, :notice) == "Bruker opprettet"
+    assert get_flash(conn, :notice) == "User created"
   end
 
   test "create (post) w/erroneus params" do
@@ -100,8 +100,8 @@ defmodule Brando.Users.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Ny bruker"
-    assert get_flash(conn, :error) == "Feil i skjema"
+    assert html_response(conn, 200) =~ "New user"
+    assert get_flash(conn, :error) == "Errors in form"
   end
 
   test "update (post) w/params" do
@@ -114,7 +114,7 @@ defmodule Brando.Users.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/users"
-    assert get_flash(conn, :notice) == "Bruker oppdatert"
+    assert get_flash(conn, :notice) == "User updated"
   end
 
   test "update (post) w/broken params" do
@@ -129,8 +129,8 @@ defmodule Brando.Users.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Endre bruker"
-    assert get_flash(conn, :error) == "Feil i skjema"
+    assert html_response(conn, 200) =~ "Edit user"
+    assert get_flash(conn, :error) == "Errors in form"
   end
 
   test "update profile" do
@@ -145,7 +145,7 @@ defmodule Brando.Users.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/users/profile"
-    assert get_flash(conn, :notice) == "Bruker oppdatert"
+    assert get_flash(conn, :notice) == "Profile updated"
   end
 
   test "update profile w/broken params" do
@@ -160,8 +160,8 @@ defmodule Brando.Users.ControllerTest do
       |> with_user(user)
       |> send_request
 
-    assert html_response(conn, 200) =~ "Endre bruker"
-    assert get_flash(conn, :error) == "Feil i skjema"
+    assert html_response(conn, 200) =~ "Edit profile"
+    assert get_flash(conn, :error) == "Errors in form"
   end
 
   test "delete_confirm" do
@@ -174,7 +174,7 @@ defmodule Brando.Users.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Slett bruker: James Williamson"
+    assert html_response(conn, 200) =~ "Delete user: James Williamson"
   end
 
   test "delete" do
@@ -188,6 +188,6 @@ defmodule Brando.Users.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/users"
-    assert get_flash(conn, :notice) =~ "slettet"
+    assert get_flash(conn, :notice) =~ "deleted"
   end
 end

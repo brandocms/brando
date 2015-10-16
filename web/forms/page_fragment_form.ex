@@ -7,13 +7,8 @@ defmodule Brando.PageFragmentForm do
   alias Brando.PageFragment
 
   @doc false
-  def get_language_choices(_) do
+  def get_language_choices() do
     Brando.config(:languages)
-  end
-
-  @doc false
-  def get_status_choices(language) do
-    Keyword.get(Brando.config(:status_choices), String.to_atom(language))
   end
 
   @doc false
@@ -39,8 +34,8 @@ defmodule Brando.PageFragmentForm do
     field :key, :text
     fieldset do
       field :language, :select,
-        [default: "no",
-        choices: &__MODULE__.get_language_choices/1]
+        [default: "nb",
+        choices: &__MODULE__.get_language_choices/0]
     end
     field :data, :textarea, [required: false]
     submit :save, [class: "btn btn-success"]

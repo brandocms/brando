@@ -3,6 +3,7 @@ defmodule <%= module %> do
 <%= if villain_fields != [] do %>  use Brando.Villain.Model<% end %>
 <%= if img_fields != [] do %>  use Brando.Field.ImageField
 <% end %>
+  import <%= base %>.Gettext
   schema <%= inspect plural %> do
 <%= for model_field <- model_fields do %>    <%= model_field %>
 <% end %><%= for {k, _, m} <- assocs do %>    belongs_to <%= inspect k %>, <%= m %>
@@ -48,28 +49,16 @@ defmodule <%= module %> do
   #
   # Meta
 
-  use Brando.Meta.Model,
-    [en:
-      [singular: "<%= Phoenix.Naming.humanize(singular) |> String.downcase %>",
-       plural: "<%= Phoenix.Naming.humanize(plural) |> String.downcase %>",
-       repr: &("#{&1.<%= Dict.keys(attrs) |> List.first %>}"),
-       fields: [
-         id: "Id",
-<%= for {k, _} <- attrs do %>         <%= k %>: "<%= Phoenix.Naming.humanize(k) %>",
-<% end %><%= if villain_fields != [] do %>         html: "HTML",<% end %>
-         inserted_at: "Inserted at",
-         updated_at: "Updated at"],
-       hidden_fields: []],
-     no:
-      [singular: "<%= no_singular %>",
-       plural: "<%= no_plural %>",
-       repr: &("#{&1.<%= Dict.keys(attrs) |> List.first %>}"),
-       fields: [
-         id: "Id",
-<%= for {k, _} <- attrs do %>         <%= k %>: "<%= Phoenix.Naming.humanize(k) %>",
-<% end %><%= if villain_fields != [] do %>         html: "HTML",<% end %>
-         inserted_at: "Opprettet",
-         updated_at: "Oppdatert"],
-       hidden_fields: []],
-    ]
+  use Brando.Meta.Model, [
+    singular: "<%= Phoenix.Naming.humanize(singular) |> String.downcase %>",
+    plural: "<%= Phoenix.Naming.humanize(plural) |> String.downcase %>",
+    repr: &("#{&1.<%= Dict.keys(attrs) |> List.first %>}"),
+    fields: [
+      id: gettext("Id"),
+<%= for {k, _} <- attrs do %>      <%= k %>: gettext("<%= Phoenix.Naming.humanize(k) %>"),
+<% end %><%= if villain_fields != [] do %>      html: gettext("HTML"),<% end %>
+      inserted_at: gettext("Inserted at"),
+      updated_at: gettext("Updated at")],
+    hidden_fields: []
+  ]
 end

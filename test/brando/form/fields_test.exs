@@ -8,7 +8,7 @@ defmodule Brando.Form.FieldsTest do
     use Bitwise, only_operators: true
     use Brando.Form
 
-    def get_role_choices(_) do
+    def get_role_choices() do
       [[value: "1", text: "Staff"],
        [value: "2", text: "Admin"],
        [value: "4", text: "Superuser"]]
@@ -20,7 +20,7 @@ defmodule Brando.Form.FieldsTest do
       (role_int &&& choice_int) == choice_int
     end
 
-    def get_status_choices(_) do
+    def get_status_choices() do
       [[value: "1", text: "Valg 1"],
        [value: "2", text: "Valg 2"]]
     end
@@ -64,7 +64,7 @@ defmodule Brando.Form.FieldsTest do
          class: "form-control",
          wrapper_class: ""]
       field :role, :select,
-        [choices: &__MODULE__.get_role_choices/1,
+        [choices: &__MODULE__.get_role_choices/0,
          multiple: true,
          label: "Role",
          language: "en",
@@ -72,7 +72,7 @@ defmodule Brando.Form.FieldsTest do
          class: "form-control",
          wrapper_class: ""]
       field :status2, :select,
-        [choices: &__MODULE__.get_status_choices/1,
+        [choices: &__MODULE__.get_status_choices/0,
          default: "1",
          label: "Status",
          language: "en",
@@ -80,7 +80,7 @@ defmodule Brando.Form.FieldsTest do
          class: "form-control",
          wrapper_class: ""]
       field :role2, :radio,
-        [choices: &__MODULE__.get_role_choices/1,
+        [choices: &__MODULE__.get_role_choices/0,
          language: "en",
          label: "Rolle 2"]
       field :avatar, :file,
@@ -94,14 +94,14 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "render_options/4" do
-    assert F.render_options(:create, %{choices: &UserForm.get_status_choices/1,
+    assert F.render_options(:create, %{choices: &UserForm.get_status_choices/0,
                             language: "en"}, "val", nil)
            == [["<option value=\"1\">", "Valg 1", "</option>"],
                ["<option value=\"2\">", "Valg 2", "</option>"]]
   end
 
   test "get_choices/1" do
-    opts = %{language: "en", choices: &UserForm.get_status_choices/1}
+    opts = %{language: "en", choices: &UserForm.get_status_choices/0}
     assert F.get_choices(opts) == [[value: "1", text: "Valg 1"],
                                    [value: "2", text: "Valg 2"]]
   end
@@ -124,7 +124,7 @@ defmodule Brando.Form.FieldsTest do
     assert F.form_group("1234", "name", [], nil)
            == ["<div class=\"form-group required\">",
                ["1234", "", ""], "</div>"]
-    opts = %{required: false, language: "no"}
+    opts = %{required: false, language: "nb"}
     fg = F.form_group("1234", "name", opts, ["can't be blank"])
     fg = fg |> Enum.join
     refute fg =~ "required"
@@ -141,7 +141,7 @@ defmodule Brando.Form.FieldsTest do
     assert fg =~ "required"
     refute fg =~ "has-error"
 
-    opts = %{required: false, language: "no"}
+    opts = %{required: false, language: "nb"}
     fg = F.form_group("1234", "name", opts, nil)
     fg = fg |> Enum.join
     refute fg =~ "required"
@@ -219,27 +219,25 @@ defmodule Brando.Form.FieldsTest do
 
   test "render_errors/1" do
     assert F.render_errors([], []) == []
-    assert Enum.join(F.render_errors(["can't be blank", "must be unique"],
-                                     [language: "no"]))
-           =~ "Feltet er påkrevet."
-    assert Enum.join(F.render_errors(["can't be blank", "must be unique"],
-                                     [language: "no"]))
-           =~ "Feltet må være unikt. Verdien finnes allerede i databasen."
+    assert Enum.join(F.render_errors(["can't be blank", "must be unique"], []))
+           =~ "can&#39;t be blank"
+    assert Enum.join(F.render_errors(["can't be blank", "must be unique"], []))
+           =~ "must be unique"
   end
 
   test "parse_error/1" do
-    opts = [language: "no"]
+    opts = []
     assert F.parse_error("can't be blank", opts)
-           == "Feltet er påkrevet."
+           == "can't be blank"
     assert F.parse_error("must be unique", opts)
-           == "Feltet må være unikt. Verdien finnes allerede i databasen."
+           == "must be unique"
     assert F.parse_error("has invalid format", opts)
-           == "Feltet har feil format."
+           == "has invalid format"
     assert F.parse_error("is reserved", opts)
-           == "Verdien er reservert."
+           == "is reserved"
     assert F.parse_error({"should be at least %{count} characters", count: 10},
                          opts)
-           == "Feltets verdi er for kort. Må være > 10 tegn."
+           == "should be at least 10 characters"
   end
 
   test "render_help_text/1" do
@@ -333,7 +331,7 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "render_checks/5" do
-    opts = %{choices: &Brando.Form.FieldsTest.UserForm.get_role_choices/1,
+    opts = %{choices: &Brando.Form.FieldsTest.UserForm.get_role_choices/0,
              is_selected: &Brando.Form.FieldsTest.UserForm.role_selected?/2,
              label: "Role", language: "en", label_class: "control-label",
              class: "form-control", wrapper_class: "", multiple: true}

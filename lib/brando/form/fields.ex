@@ -6,6 +6,7 @@ defmodule Brando.Form.Fields do
   """
   use Linguist.Vocabulary
 
+  import Brando.Gettext
   import Brando.Utils, only: [media_url: 0, img_url: 3]
   import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2, tag: 2]
   import Phoenix.HTML, only: [raw: 1]
@@ -101,7 +102,7 @@ defmodule Brando.Form.Fields do
   """
   def render_field(form_type, %{name: name, type: :submit} = opts, _value, errors) do
     text = case opts[:text] do
-      :save -> Brando.Form.t!(opts[:language], "form.save")
+      :save -> gettext("Save")
       text -> text
     end
     i = input(:submit, form_type, format_name(name, opts[:source]),
@@ -115,12 +116,7 @@ defmodule Brando.Form.Fields do
   Render fieldset open
   """
   def render_field(_, %{type: :fieldset} = opts, _, _) do
-    legend =
-      case opts[:legend] do
-        {:i18n, key} -> opts[:model].t!(opts[:language], key)
-        legend -> legend
-      end
-    fieldset_open_tag(legend, opts[:row_span])
+    fieldset_open_tag(opts[:legend], opts[:row_span])
   end
 
   @doc """
@@ -133,7 +129,7 @@ defmodule Brando.Form.Fields do
   Render text/password/email (catchall)
   """
   def render_field(form_type, %{name: name, type: input_type} = opts, value, errors) do
-    confirm_i18n = opts[:language] == "no" && "Bekreft" || "Confirm"
+    confirm_i18n = gettext("Confirm")
     confirm = if opts[:confirm] do
       confirm_opts =
         opts
@@ -239,18 +235,7 @@ defmodule Brando.Form.Fields do
     end
     html
   end
-  def render_help_text(%{name: name, model: model, language: language}) do
-    case model.t(language, "help.#{name}") do
-      {:ok, translation} ->
-        {:safe, html} = content_tag(:div, class: "help") do
-          [content_tag(:i, " ", class: "fa fa-fw fa-question-circle"),
-           content_tag(:span, translation)]
-        end
-        html
-      {:error, _} ->
-        ""
-    end
-  end
+
   def render_help_text(_) do
     ""
   end
@@ -275,20 +260,20 @@ defmodule Brando.Form.Fields do
   Translate errors
   """
   @spec parse_error(String.t | {String.t, integer}, Keyword.t) :: String.t
-  def parse_error(error, opts) do
+  def parse_error(error, _) do
     case error do
       "can't be blank"     ->
-        t!(opts[:language], "error.required")
+        gettext("can't be blank")
       "must be unique"     ->
-        t!(opts[:language], "error.unique")
+        gettext("must be unique")
       "has invalid format" ->
-        t!(opts[:language], "error.format")
+        gettext("has invalid format")
       "is invalid"         ->
-        t!(opts[:language], "error.invalid")
+        gettext("is invalid")
       "is reserved"        ->
-        t!(opts[:language], "error.reserved")
+        gettext("is reserved")
       {"should be at least %{count} characters", count: length} ->
-        t!(opts[:language], "error.length", length: length)
+        gettext("should be at least %{count} characters", count: length)
       err                  ->
         is_binary(err) && err || inspect(err)
     end
@@ -835,11 +820,8 @@ defmodule Brando.Form.Fields do
   def get_placeholder(%{type: :file}) do
     nil
   end
-  def get_placeholder(%{name: name, language: language, model: model}) do
-    case model.t(language, "model.#{name}") do
-      {:ok, translation} -> translation
-      {:error, _} -> Atom.to_string(name)
-    end
+  def get_placeholder(%{name: name, model: model}) do
+    model.__field__(name)
   end
   def get_placeholder(%{placeholder: nil}) do
     nil
@@ -854,17 +836,11 @@ defmodule Brando.Form.Fields do
   @doc """
   Parse and return `opts` looking for label
   """
-  def get_label(%{language: language, label: {:i18n, module, field}}) do
-    module.t!(language, "model.#{field}")
-  end
-  def get_label(%{name: name, language: language, label: {:i18n, module}}) do
-    module.t!(language, "model.#{name}")
-  end
   def get_label(%{label: label}) do
     label
   end
-  def get_label(%{name: name, model: model, language: language}) do
-    model.t!(language, "model.#{name}")
+  def get_label(%{name: name, model: model}) do
+    model.__field__(name)
   end
 
   @doc """
@@ -928,8 +904,8 @@ defmodule Brando.Form.Fields do
   @doc """
   Evals the quoted choices function and returns the result
   """
-  def get_choices(%{choices: fun, language: language}) do
-    apply(fun, [language])
+  def get_choices(%{choices: fun}) do
+    apply(fun, [])
   end
   def get_choices(_) do
     nil
@@ -947,7 +923,7 @@ defmodule Brando.Form.Fields do
     "#{form_source}[#{name}]"
   end
 
-  locale "no", [
+  locale "nb", [
     error: [
       required: "Feltet er påkrevet.",
       unique: "Feltet må være unikt. Verdien finnes allerede i databasen.",

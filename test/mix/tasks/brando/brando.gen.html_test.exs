@@ -30,9 +30,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "field :photo, Brando.Type.Image"
         assert file =~ "singular: \"minion face\""
         assert file =~ "plural: \"minion faces\""
-        assert file =~ "born_at: \"Born at\""
-        assert file =~ "singular: \"minjongtryne\""
-        assert file =~ "plural: \"minjongtryner\""
+        assert file =~ "born_at: gettext(\"Born at\")"
         assert file =~ "@required_fields ~w(name age height nicks famous " <>
                        "born_at secret data first_login " <>
                        "alarm creator_id address_id)"
@@ -54,16 +52,18 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "use Brando.Web, :controller"
         assert file =~ "Repo.get!"
         assert file =~ "use Brando.Villain.Controller"
+        assert file =~ "import Brando.Gettext"
       end
 
       assert_file "web/views/minion_face_view.ex", fn file ->
         assert file =~ "defmodule Brando.MinionFaceView do"
         assert file =~ "use Brando.Web, :view"
+        assert file =~ "import Brando.Gettext"
       end
 
       assert_file "web/menus/admin/minion_face_menu.ex", fn file ->
         assert file =~ "defmodule Brando.Menu.MinionFaces do"
-        assert file =~ "modules: [MinionFaces, ...]"
+        assert file =~ "modules: [Brando.Menu.MinionFaces, ...]"
       end
 
       assert_file "web/views/admin/minion_face_view.ex", fn file ->
@@ -72,32 +72,30 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       end
 
       assert_file "web/templates/admin/minion_face/edit.html.eex", fn file ->
-        assert file =~ "<%= t!(@language, \"actions.edit\") %>"
-        assert file =~ "v = new Villain.Editor"
-        assert file =~ "uploadURL: '/admin/minion_faces/villain/upload/minion_face/'"
+        assert file =~ "<%= gettext(\"Edit minion_face\") %>"
+        assert file =~ "\"/admin/minion_faces/\""
       end
 
       assert_file "web/templates/admin/minion_face/index.html.eex", fn file ->
-        assert file =~ "<%= t!(@language, \"actions.index\") %>"
+        assert file =~ "<%= gettext(\"Index - minion_faces\") %>"
         assert file =~ "Brando.HTML.Tablize.tablize(@conn, @minion_faces"
       end
 
       assert_file "web/templates/admin/minion_face/new.html.eex", fn file ->
-        assert file =~ "<%= t!(@language, \"actions.new\") %>"
-        assert file =~ "<%= MinionFaceForm.get_form(@language, type: :create, action: :create, params: [], changeset: @changeset) %>"
-        assert file =~ "v = new Villain.Editor"
-        assert file =~ "uploadURL: '/admin/minion_faces/villain/upload/minion_face/'"
+        assert file =~ "<%= gettext(\"New minion_face\") %>"
+        assert file =~ "<%= MinionFaceForm.get_form(type: :create, action: :create, params: [], changeset: @changeset) %>"
+        assert file =~ "\"/admin/minion_faces/\""
       end
 
       assert_file "web/templates/admin/minion_face/delete_confirm.html.eex", fn file ->
-        assert file =~ "<%= t!(@language, \"actions.delete\") %>"
-        assert file =~ "<%= Brando.HTML.Inspect.model_repr(@language, @record) %>"
-        assert file =~ "<%= Brando.HTML.delete_form_button(@language, :admin_minion_face_path, @record) %>"
+        assert file =~ "<%= gettext(\"Delete minion_face\") %>"
+        assert file =~ "<%= Brando.HTML.Inspect.model_repr(@record) %>"
+        assert file =~ "<%= Brando.HTML.delete_form_button(:admin_minion_face_path, @record) %>"
       end
 
       assert_file "web/templates/admin/minion_face/show.html.eex", fn file ->
-        assert file =~ "<%= t!(@language, \"actions.show\") %>"
-        assert file =~ "<%= Brando.HTML.Inspect.model(@language, @minion_face) %>"
+        assert file =~ "<%= gettext(\"Show minion_face\") %>"
+        assert file =~ "<%= Brando.HTML.Inspect.model(@minion_face) %>"
       end
     end
   end

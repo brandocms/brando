@@ -15,28 +15,7 @@ defmodule Brando.Form do
 
   Set field labels, placeholders and help_text by using your `model`'s meta.
 
-  ## Example model meta
-
-      use Brando.Meta.Model,
-        no: [singular: "bruker",
-             plural: "brukere",
-             repr: &("#{&1.id} (#{&1.username})"),
-             help: [
-               username: "Hjelp for username"
-             ],
-             fields: [id: "ID",
-                      username: "Brukernavn"],
-             hidden_fields: []],
-        en: [singular: "user",
-             plural: "users",
-             repr: &("#{&1.id} (#{&1.username})"),
-             help: [
-               username: "Help text for username"
-             ],
-             fields: [id: "ID",
-                      username: "Username"],
-             hidden_fields: []]]
-      ]
+  See `Brando.Meta.Model` for more info about meta.
 
   See this module's `Brando.Form.form` and `Brando.Form.field` docs for more.
   """
@@ -96,7 +75,6 @@ defmodule Brando.Form do
 
       ## Options:
 
-        * `language` - The language the form should display in.
         * `type` - The form type
           Example: `type: :create` or `type: :update`
         * `action` - Action the form is performing.
@@ -107,16 +85,15 @@ defmodule Brando.Form do
 
       ## Example:
 
-          <%= get_form(@language, type: :create, action: :create,
+          <%= get_form(type: :create, action: :create,
                        params: [], changeset: @changeset) %>
 
       """
-      def get_form(language, opts) do
+      def get_form(opts) do
         form_type = Keyword.fetch!(opts, :type)
         action = Keyword.fetch!(opts, :action)
         changeset = Keyword.fetch!(opts, :changeset)
         params = Keyword.get(opts, :params, [])
-        opts = Keyword.put(opts, :language, language)
 
         @form_fields
         |> render_fields(changeset, opts, @form_opts)
@@ -166,7 +143,7 @@ defmodule Brando.Form do
       end
 
     form_tag(url, opts) do
-      fields |> raw
+      raw(fields)
     end
   end
 
@@ -178,8 +155,7 @@ defmodule Brando.Form do
     Enum.reduce fields, [], fn ({name, f_opts}, acc) ->
       f_opts =
         f_opts
-        |> Keyword.merge(source: source, language: opts[:language],
-                         name: name, model: model)
+        |> Keyword.merge(source: source, name: name, model: model)
         |> Enum.into(%{})
 
       [Fields.render_field(opts[:type], f_opts, get_value(changeset, name),
@@ -237,8 +213,7 @@ defmodule Brando.Form do
 
     * `multiple` - Multiple checkboxes.
       Gets labels/values from `choices` option
-    * `choices` - &__MODULE__.get_status_choices/1. Argument passed is
-      current language.
+    * `choices` - &__MODULE__.get_status_choices/0.
     * `is_selected` - Pass a function that checks if `value` is selected.
       The function gets passed the checkbox's value, and
       the model's value.
@@ -253,10 +228,9 @@ defmodule Brando.Form do
   Options
 
     * `multiple` - The select returns multiple options, if true.
-    * `choices` - &__MODULE__.get_status_choices/1
+    * `choices` - &__MODULE__.get_status_choices/0
       Points to `get_status_choices/1` function
-      in the module the form was defined, where `arg`
-      is current language.
+      in the module the form was defined.
     * `is_selected` - Pass a function that checks if `value` is selected.
       The function gets passed the option's value, and
       the model's value.
@@ -274,7 +248,7 @@ defmodule Brando.Form do
 
   Options
 
-    * `choices` - &__MODULE__.get_status_choices/1
+    * `choices` - &__MODULE__.get_status_choices/0
     * `label` - Label for the entire group. Each individual radio
       gets its label from the `choices` function.
     * `label_class` - Label class for the main label.
@@ -320,12 +294,11 @@ defmodule Brando.Form do
   ## Options
 
     * `legend`
-      - Set to a string, or use `{:i18n, "fieldset.your_key"} to point
-        to a Linguist translation. Relies on `model` being set in your form.
+      - Set to a string, or use `gettext("string")` for i18n.
 
   ## Example
 
-      fieldset {:i18n, "fieldset.user_info"} do
+      fieldset gettext("Header") do
         field :...
       end
   """
@@ -407,9 +380,10 @@ defmodule Brando.Form do
     apply(Brando.helpers, fun, [Brando.endpoint(), action, params])
   end
 
-  defp check_type!(type) when type in [:text, :password, :select, :email,
-                                       :checkbox, :file, :radio, :textarea], do:
+  defp check_type!(type)
+  when type in [:text, :password, :select, :email, :checkbox, :file, :radio, :textarea] do
     :ok
+  end
 
   defp check_type!(type) do
     raise ArgumentError,
@@ -448,19 +422,4 @@ defmodule Brando.Form do
       values -> values
     end
   end
-
-  # Translations for this module.
-
-  locale "en", [
-    form: [
-      save: "Save"
-    ]
-  ]
-
-  locale "no", [
-    form: [
-      save: "Lagre"
-    ]
-  ]
-
 end

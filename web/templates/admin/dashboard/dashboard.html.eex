@@ -1,7 +1,5 @@
 <h1>Ahoy, <%= first_name(current_user(@conn).full_name) %>!</h1>
 <p>
-  <a class="btn btn-success" href="/"><%= t!(@language, "go_to_frontend") %></a>
-  Testing gettext.
-
-  <%= dgettext("errors", "This is an error in english") %>
+  <%= Gettext.locale() %>
+  <a class="btn btn-success" href="/"><%= gettext("Go to frontend website") %></a>
 </p>

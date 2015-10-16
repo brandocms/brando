@@ -4,14 +4,10 @@ defmodule Brando.Menu.News do
   more information
   """
   use Brando.Menu
+  import Brando.Gettext
 
-  menu "no", "Nyheter",
+  menu gettext("News"),
     %{anchor: "news", icon: "fa fa-newspaper-o icon",
-      submenu: [%{name: "Oversikt", url: {:admin_post_path, :index}},
-                %{name: "Legg til", url: {:admin_post_path, :new}}]}
-
-  menu "en", "News",
-    %{anchor: "news", icon: "fa fa-newspaper-o icon",
-      submenu: [%{name: "Index", url: {:admin_post_path, :index}},
-                %{name: "Add new", url: {:admin_post_path, :new}}]}
+      submenu: [%{name: gettext("Index"), url: {:admin_post_path, :index}},
+                %{name: gettext("Add new"), url: {:admin_post_path, :new}}]}
 end

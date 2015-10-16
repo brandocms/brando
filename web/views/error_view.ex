@@ -3,6 +3,7 @@ defimpl Plug.Exception, for: Postgrex.Error do
 end
 
 defmodule Brando.ErrorView do
+  import Brando.Gettext
   @moduledoc """
   Error views for Brando.
 

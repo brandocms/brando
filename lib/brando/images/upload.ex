@@ -6,12 +6,11 @@ defmodule Brando.Images.Upload do
 
   import Brando.Utils
   import Brando.Images.Optimize, only: [optimize: 1]
-  import Brando.Images.Utils
+  import Brando.Images.Utils, only: [create_image_sizes: 1]
   alias Brando.Exception.UploadError
 
   defmacro __using__(_) do
     quote do
-      import Brando.Images.Utils
       import unquote(__MODULE__)
       @doc """
       Checks `params` for Plug.Upload fields and passes them on.

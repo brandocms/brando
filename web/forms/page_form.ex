@@ -4,20 +4,24 @@ defmodule Brando.PageForm do
   documentation
   """
   use Brando.Form
+  import Brando.Gettext
   alias Brando.Page
 
   @doc false
-  def get_language_choices(_) do
+  def get_language_choices() do
     Brando.config(:languages)
   end
 
   @doc false
-  def get_status_choices(language) do
-    Keyword.get(Brando.config(:status_choices), String.to_atom(language))
+  def get_status_choices() do
+    [[value: "0", text: gettext("Draft")],
+     [value: "1", text: gettext("Published")],
+     [value: "2", text: gettext("Pending")],
+     [value: "3", text: gettext("Deleted")]]
   end
 
   @doc false
-  def get_parent_choices(_) do
+  def get_parent_choices() do
     no_value = [value: "", text: "–"]
     if parents = Page |> Page.with_parents |> Brando.repo.all do
       parents
@@ -42,7 +46,7 @@ defmodule Brando.PageForm do
   end
 
   @doc false
-  def get_now do
+  def get_now() do
     Ecto.DateTime.to_string(Ecto.DateTime.local)
   end
 
@@ -61,18 +65,19 @@ defmodule Brando.PageForm do
 
   form "page", [model: Page, helper: :admin_page_path, class: "grid-form"] do
     field :parent_id, :select, [
-      choices: &__MODULE__.get_parent_choices/1,
+      help_text: gettext("If this page should belong to another, select parent page here. If not, select –"),
+      choices: &__MODULE__.get_parent_choices/0,
       is_selected: &__MODULE__.parent_selected?/2]
     field :key, :text
     fieldset do
       field :language, :select,
-        [default: "no",
-        choices: &__MODULE__.get_language_choices/1]
+        [default: "nb",
+        choices: &__MODULE__.get_language_choices/0]
     end
     fieldset do
       field :status, :radio,
         [default: "2",
-        choices: &__MODULE__.get_status_choices/1,
+        choices: &__MODULE__.get_status_choices/0,
         is_selected: &__MODULE__.status_selected?/2]
     end
     fieldset do

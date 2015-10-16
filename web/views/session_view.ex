@@ -3,4 +3,5 @@ defmodule Brando.SessionView do
   View for login/logout auth.
   """
   use Brando.Web, :view
+  import Brando.Gettext
 end

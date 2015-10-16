@@ -3,6 +3,7 @@ defmodule Brando.SessionController do
   Controller for authentication actions.
   """
   use Brando.Web, :controller
+  import Brando.Gettext
   alias Brando.SystemChannel
 
   @doc false
@@ -22,12 +23,12 @@ defmodule Brando.SessionController do
         |> sleep
         |> fetch_session
         |> put_session(:current_user, user)
-        |> put_flash(:notice, "Innloggingen var vellykket")
+        |> put_flash(:notice, gettext("Authorization successful"))
         |> redirect(to: "/admin")
       false ->
         conn
         |> sleep
-        |> put_flash(:error, "Innloggingen feilet")
+        |> put_flash(:error, gettext("Authorization failed"))
         |> redirect(to: "/auth/login")
     end
   end

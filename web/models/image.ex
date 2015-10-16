@@ -8,8 +8,10 @@ defmodule Brando.Image do
   use Brando.Web, :model
   use Brando.Images.Upload
   use Brando.Sequence, :model
+  import Brando.Gettext
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
+  import Brando.Images.Utils
   alias Brando.User
   alias Brando.ImageSeries
 
@@ -179,26 +181,17 @@ defmodule Brando.Image do
   # Meta
 
   use Brando.Meta.Model, [
-    no: [
-      singular: "bilde",
-      plural: "bilder",
-      repr: &("#{&1.id} | #{&1.image.path}"),
-      fields: [id: "ID",
-               image: "Bilde",
-               sequence: "Rekkefølge",
-               creator: "Opprettet av",
-               image_series: "Bildeserie",
-               inserted_at: "Opprettet",
-               updated_at: "Oppdatert"]],
-    en: [
-      singular: "image",
-      plural: "images",
-      repr: &("#{&1.id} | #{&1.image.path}"),
-      fields: [id: "ID",
-               image: "Image",
-               sequence: "Sequence",
-               creator: "Creator",
-               image_series: "Image series",
-               inserted_at: "Inserted",
-               updated_at: "Updated"]]]
+    singular: gettext("image"),
+    plural: gettext("images"),
+    repr: &("#{&1.id} | #{&1.image.path}"),
+    fields: [
+      id: gettext("ID"),
+      image: gettext("Image"),
+      sequence: gettext("Sequence"),
+      creator: gettext("Creator"),
+      image_series: gettext("Image series"),
+      inserted_at: gettext("Inserted at"),
+      updated_at: gettext("Updated at")
+    ],
+  ]
 end

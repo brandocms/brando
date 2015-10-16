@@ -4,18 +4,12 @@ defmodule Brando.Menu.Users do
   more information
   """
   use Brando.Menu
+  import Brando.Gettext
 
-  menu "no", "Brukere",
+  menu gettext("Users"),
     %{anchor: "users", icon: "fa fa-users icon",
-      submenu: [%{name: "Oversikt", url: {:admin_user_path, :index}},
-                %{name: "Profil", url: {:admin_user_path, :profile}},
-                %{name: "Legg til", url: {:admin_user_path, :new},
-                  role: :superuser}]}
-
-  menu "en", "Users",
-    %{anchor: "users", icon: "fa fa-users icon",
-      submenu: [%{name: "Index", url: {:admin_user_path, :index}},
-                %{name: "Profile", url: {:admin_user_path, :profile}},
-                %{name: "Add new", url: {:admin_user_path, :new},
+      submenu: [%{name: gettext("Index"), url: {:admin_user_path, :index}},
+                %{name: gettext("Profile"), url: {:admin_user_path, :profile}},
+                %{name: gettext("Add new"), url: {:admin_user_path, :new},
                   role: :superuser}]}
 end

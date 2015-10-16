@@ -3,6 +3,7 @@ defmodule Brando.HTML do
   Helper and convenience functions.
   """
 
+  import Brando.Gettext
   import Brando.Utils, only: [media_url: 0, current_user: 1,
                               active_path: 2, img_url: 3]
   import Brando.Meta.Controller, only: [put_meta: 3, get_meta: 1]
@@ -155,9 +156,8 @@ defmodule Brando.HTML do
   Pass `params` instance of model (if one param), or a list of multiple
   params, and `helper` path.
   """
-  @spec delete_form_button(String.t, atom, Keyword.t | %{atom => any})
-        :: String.t
-  def delete_form_button(language, helper, params) do
+  @spec delete_form_button(atom, Keyword.t | %{atom => any}) :: String.t
+  def delete_form_button(helper, params) do
     action = Brando.Form.apply_action(helper, :delete, params)
     html =
     """
@@ -165,7 +165,7 @@ defmodule Brando.HTML do
       <input type="hidden" name="_method" value="delete" />
       <button class="btn btn-danger">
         <i class="fa fa-trash-o m-r-sm"> </i>
-        #{Brando.Admin.LayoutView.t!(language, "global.delete")}
+        #{gettext("Delete")}
       </button>
     </form>
     """
@@ -303,7 +303,7 @@ defmodule Brando.HTML do
   @doc """
   Render status indicators
   """
-  def status_indicators(language) do
+  def status_indicators() do
     html =
     """
     <div class="status-indicators pull-left">
@@ -311,29 +311,29 @@ defmodule Brando.HTML do
         <span class="status-published">
           <i class="fa fa-circle m-r-sm"> </i>
         </span>
-        #{Brando.Admin.LayoutView.t!(language, "status.published")}
+        #{gettext("Published")}
       </span>
       <span class="m-r-sm">
         <span class="status-pending">
           <i class="fa fa-circle m-r-sm"> </i>
         </span>
-        #{Brando.Admin.LayoutView.t!(language, "status.pending")}
+        #{gettext("Pending")}
       </span>
       <span class="m-r-sm">
         <span class="status-draft">
           <i class="fa fa-circle m-r-sm"> </i>
         </span>
-        #{Brando.Admin.LayoutView.t!(language, "status.draft")}
+        #{gettext("Draft")}
       </span>
       <span class="m-r-sm">
         <span class="status-deleted">
           <i class="fa fa-circle m-r-sm"> </i>
         </span>
-        #{Brando.Admin.LayoutView.t!(language, "status.deleted")}
+        #{gettext("Deleted")}
       </span>
     </div>
     """
-    html |> Phoenix.HTML.raw
+    Phoenix.HTML.raw(html)
   end
 
   @doc """

@@ -95,7 +95,7 @@ defmodule Forge do
     username: "jamesw",
     avatar: nil,
     role: ["2", "4"],
-    language: "no"
+    language: "en"
 
   register :user_w_hashed_pass,
     __struct__: Brando.User,
@@ -105,7 +105,7 @@ defmodule Forge do
     username: "jamesw",
     avatar: nil,
     role: ["2", "4"],
-    language: "no"
+    language: "en"
 end
 
 defmodule Blacksmith.Config do

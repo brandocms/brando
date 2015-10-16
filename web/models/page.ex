@@ -6,6 +6,7 @@ defmodule Brando.Page do
 
   use Brando.Web, :model
   use Brando.Villain.Model
+  import Brando.Gettext
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query
   alias Brando.Type.Status
@@ -186,56 +187,27 @@ defmodule Brando.Page do
   # Meta
 
   use Brando.Meta.Model, [
-    no: [
-      singular: "side",
-      plural: "sider",
-      repr: &("#{&1.title}"),
-      help: [
-        parent_id: "Hvis siden du oppretter skal være en underside, " <>
-                   "velg tilhørende side her. Hvis ikke, velg –"
-      ],
-      fields: [
-         id: "№",
-         status: "Status",
-         language: "Språk",
-         key: "Id-nøkkel",
-         title: "Tittel",
-         slug: "URL-tamp",
-         data: "Data",
-         html: "HTML",
-         parent: "Tilhører",
-         parent_id: "Tilhørende side",
-         children: "Undersider",
-         creator: "Opprettet av",
-         css_classes: "Ekstra CSS klasser",
-         meta_description: "META beskrivelse",
-         meta_keywords: "META nøkkelord",
-         inserted_at: "Opprettet",
-         updated_at: "Oppdatert"]],
-    en: [
-      singular: "page",
-      plural: "pages",
-      repr: &("#{&1.title}"),
-      help: [
-        parent_id: "If this page should belong to another, " <>
-                   "select parent page here. If not, select –"
-      ],
-      fields: [
-         id: "№",
-         status: "Status",
-         language: "Language",
-         key: "Key",
-         title: "Title",
-         slug: "Slug",
-         data: "Data",
-         html: "HTML",
-         parent: "Belongs to",
-         parent_id: "Belongs to",
-         children: "Sub pages",
-         creator: "Creator",
-         css_classes: "Extra CSS classes",
-         meta_description: "META description",
-         meta_keywords: "META keywords",
-         inserted_at: "Inserted",
-         updated_at: "Updated"]]]
+    singular: gettext("page"),
+    plural: gettext("pages"),
+    repr: &("#{&1.title}"),
+    fields: [
+      id: "№",
+      status: gettext("Status"),
+      language: gettext("Language"),
+      key: gettext("Key"),
+      title: gettext("Title"),
+      slug: gettext("Slug"),
+      data: gettext("Data"),
+      html: gettext("HTML"),
+      parent: gettext("Belongs to"),
+      parent_id: gettext("Belongs to"),
+      children: gettext("Sub pages"),
+      creator: gettext("Creator"),
+      css_classes: gettext("Extra CSS classes"),
+      meta_description: gettext("META description"),
+      meta_keywords: gettext("META keywords"),
+      inserted_at: gettext("Inserted"),
+      updated_at: gettext("Updated"),
+    ]
+  ]
 end

@@ -1,5 +1,5 @@
-    <h1><%= t!(@language, "actions.edit") %></h1>
-    <%= PageFragmentForm.get_form(@language, type: :update, action: :update, params: to_string(@id), changeset: @changeset) %>
+    <h1><%= gettext("Edit page fragment") %></h1>
+    <%= PageFragmentForm.get_form(type: :update, action: :update, params: to_string(@id), changeset: @changeset) %>
     <%= Brando.Villain.HTML.initialize(
           base_url:     "/admin/pages/",
           image_series: "page",

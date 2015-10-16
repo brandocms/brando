@@ -3,11 +3,11 @@ defmodule <%= module %>Controller do
   alias <%= module %>
 
   def index(conn, _params) do
-    <%= plural %> = <%= alias %> |> Brando.repo.all
+    <%= plural %> = Brando.repo.all(<%= alias %>)
 
     conn
     |> assign(:<%= plural %>, <%= plural %>)
-    |> assign(:page_title, "<%= no_plural %>")
+    |> assign(:page_title, "<%= plural %>")
     |> render("index.html")
   end
 end

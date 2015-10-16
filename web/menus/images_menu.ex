@@ -4,12 +4,9 @@ defmodule Brando.Menu.Images do
   more information
   """
   use Brando.Menu
+  import Brando.Gettext
 
-  menu "no", "Bilder",
+  menu gettext("Images"),
     %{anchor: "images", icon: "fa fa-picture-o icon",
-      submenu: [%{name: "Oversikt", url: {:admin_image_path, :index}}]}
-
-  menu "en", "Images",
-    %{anchor: "images", icon: "fa fa-picture-o icon",
-      submenu: [%{name: "Index", url: {:admin_image_path, :index}}]}
+      submenu: [%{name: gettext("Index"), url: {:admin_image_path, :index}}]}
 end

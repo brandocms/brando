@@ -5,15 +5,16 @@ defmodule Brando.UserForm do
   """
   use Bitwise, only_operators: true
   use Brando.Form
+  import Brando.Gettext
   alias Brando.User
 
   @doc false
-  def get_language_choices(_) do
+  def get_language_choices() do
     Brando.config(:admin_languages)
   end
 
   @doc false
-  def get_role_choices(_) do
+  def get_role_choices() do
     [[value: "1", text: "Staff"],
      [value: "2", text: "Admin"],
      [value: "4", text: "Superuser"]]
@@ -27,7 +28,7 @@ defmodule Brando.UserForm do
   end
 
   form "user", [model: User, helper: :admin_user_path, class: "grid-form"] do
-    fieldset {:i18n, "fieldset.user_info"} do
+    fieldset gettext("User information") do
       field :full_name, :text
       field :username, :text
     end
@@ -35,17 +36,17 @@ defmodule Brando.UserForm do
     field :email, :email
     field :password, :password, [confirm: true]
 
-    fieldset {:i18n, "fieldset.rights"} do
+    fieldset gettext("Rights") do
       field :role, :checkbox,
-        [choices: &__MODULE__.get_role_choices/1,
+        [choices: &__MODULE__.get_role_choices/0,
          is_selected: &__MODULE__.role_selected?/2,
          empty_value: 0, multiple: true]
     end
 
     fieldset do
       field :language, :select,
-        [default: "no",
-        choices: &__MODULE__.get_language_choices/1]
+        [default: "nb",
+        choices: &__MODULE__.get_language_choices/0]
     end
 
     field :avatar, :file, [required: false]

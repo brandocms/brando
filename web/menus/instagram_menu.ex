@@ -4,12 +4,9 @@ defmodule Brando.Menu.Instagram do
   more information
   """
   use Brando.Menu
+  import Brando.Gettext
 
-  menu "no", "Instagram",
+  menu "Instagram",
     %{anchor: "instagram", icon: "fa fa-instagram icon",
-      submenu: [%{name: "Oversikt", url: {:admin_instagram_path, :index}}]}
-
-  menu "en", "Instagram",
-    %{anchor: "instagram", icon: "fa fa-instagram icon",
-      submenu: [%{name: "Index", url: {:admin_instagram_path, :index}}]}
+      submenu: [%{name: gettext("Index"), url: {:admin_instagram_path, :index}}]}
 end

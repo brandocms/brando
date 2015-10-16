@@ -4,20 +4,13 @@ defmodule Brando.Menu.Admin do
   more information
   """
   use Brando.Menu
+  import Brando.Gettext
 
-  menu "no", "Admin",
+  menu gettext("Admin"),
     %{anchor: "admin", icon: "fa fa-dashboard icon",
       submenu: [
-        %{name: "Dashboard", url: {:admin_dashboard_path, :dashboard}},
-        %{name: "Systeminfo", url: {:admin_dashboard_path, :system_info},
+        %{name: gettext("Dashboard"), url: {:admin_dashboard_path, :dashboard}},
+        %{name: gettext("System info"), url: {:admin_dashboard_path, :system_info},
           role: :superuser},
-        %{name: "Logg ut", url: {:session_path, :logout}}]}
-
-  menu "en", "Admin",
-    %{anchor: "admin", icon: "fa fa-dashboard icon",
-      submenu: [
-        %{name: "Dashboard", url: {:admin_dashboard_path, :dashboard}},
-        %{name: "Systeminfo", url: {:admin_dashboard_path, :system_info},
-          role: :superuser},
-        %{name: "Log out", url: {:session_path, :logout}}]}
+        %{name: gettext("Log out"), url: {:session_path, :logout}}]}
 end

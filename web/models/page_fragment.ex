@@ -5,6 +5,7 @@ defmodule Brando.PageFragment do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
+  import Brando.Gettext
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
   alias Brando.Type.Json
@@ -130,30 +131,18 @@ defmodule Brando.PageFragment do
   # Meta
 
   use Brando.Meta.Model, [
-    no: [
-      singular: "sidefragment",
-      plural: "sidefragmenter",
-      repr: &("#{&1.key}"),
-      fields: [
-         id: "№",
-         language: "Språk",
-         key: "Id-nøkkel",
-         data: "Data",
-         html: "HTML",
-         creator: "Opprettet av",
-         inserted_at: "Opprettet",
-         updated_at: "Oppdatert"]],
-    en: [
-      singular: "page fragment",
-      plural: "page fragments",
-      repr: &("#{&1.key}"),
-      fields: [
-         id: "№",
-         language: "Language",
-         key: "Key",
-         data: "Data",
-         html: "HTML",
-         creator: "Creator",
-         inserted_at: "Inserted",
-         updated_at: "Updated"]]]
+    singular: gettext("page fragment"),
+    plural: gettext("page fragments"),
+    repr: &("#{&1.key}"),
+    fields: [
+      id: "№",
+      language: gettext("Language"),
+      key: gettext("Key"),
+      data: gettext("Data"),
+      html: gettext("HTML"),
+      creator: gettext("Creator"),
+      inserted_at: gettext("Inserted"),
+      updated_at: gettext("Updated")
+    ]
+  ]
 end

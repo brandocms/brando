@@ -1,4 +1,4 @@
-<h1><%= t!(@language, "actions.sort") %> &raquo; <strong><%= Brando.ImageSeries.get_slug(id: @filter) %></strong></h1>
+<h1><%= gettext("Sort image series") %> &raquo; <strong><%= Brando.ImageSeries.get_slug(id: @filter) %></strong></h1>
 <ul id="sequence" class="clearfix">
 <%= for i <- @items do %>
   <li data-id="<%= i.id %>">
@@ -8,7 +8,13 @@
 </ul>
 <hr>
 <div class="buttons m-t-md">
-  <a id="sort-post" href="<%= Helpers.admin_image_series_path(@conn, :sequence_post, @filter) %>" class="btn btn-default"><%= t!(@language, "actions.store_sort") %></a>
-  <a href="<%= Helpers.admin_image_series_path(@conn, :edit, @filter) %>" class="btn btn-default"><%= t!(@language, "actions.edit") %></a>
-  <a href="<%= Helpers.admin_image_path(@conn, :index) %>" class="btn btn-default"><%= Brando.Admin.LayoutView.t!(@language, "global.back_to_index") %></a>
+  <a id="sort-post" href="<%= Helpers.admin_image_series_path(@conn, :sequence_post, @filter) %>" class="btn btn-default">
+    <%= gettext("Save sorted series") %>
+  </a>
+  <a href="<%= Helpers.admin_image_series_path(@conn, :edit, @filter) %>" class="btn btn-default">
+    <%= gettext("Edit image series") %>
+  </a>
+  <a href="<%= Helpers.admin_image_path(@conn, :index) %>" class="btn btn-default">
+    <%= gettext("Back to index") %>
+  </a>
 </div>
