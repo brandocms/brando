@@ -98,6 +98,10 @@ config :my_app, MyApp.Endpoint,
   render_errors: [view: Brando.ErrorView, default_format: "html"]
 ```
 
+Brando uses Gettext for i18n. To extract your frontend translations:
+
+    $ mix gettext.extract
+
 ## Additional admin CSS/styling
 
 For modules added through your OTP app, you can style its backend by editing 

@@ -4,7 +4,7 @@ defmodule <%= admin_module %>Controller do
     image_model: Brando.Image,
     series_model: Brando.ImageSeries<% end %>
 <%= if image_field do %>  import Brando.Plug.Uploads<% end %>
-  import <%= base %>.Gettext
+  import <%= base %>.Backend.Gettext
   alias <%= module %>
 
   plug :scrub_params, <%= inspect singular %> when action in [:create, :update]

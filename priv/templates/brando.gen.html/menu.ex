@@ -10,7 +10,7 @@ defmodule <%= base %>.Menu.<%= scoped %>s do
 
   """
   use Brando.Menu
-  import <%= base %>.Gettext
+  import <%= base %>.Backend.Gettext
 
   menu gettext("<%= scoped %>s"),
     %{anchor: "<%= plural %>", icon: "fa fa-anchor icon",
