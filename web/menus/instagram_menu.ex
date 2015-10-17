@@ -6,7 +6,7 @@ defmodule Brando.Menu.Instagram do
   use Brando.Menu
   import Brando.Gettext
 
-  menu "Instagram",
-    %{anchor: "instagram", icon: "fa fa-instagram icon",
+  menu %{
+    name: gettext("Instagram"), anchor: "instagram", icon: "fa fa-instagram icon",
       submenu: [%{name: gettext("Index"), url: {:admin_instagram_path, :index}}]}
 end

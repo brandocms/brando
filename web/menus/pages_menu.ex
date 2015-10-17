@@ -6,8 +6,8 @@ defmodule Brando.Menu.Pages do
   use Brando.Menu
   import Brando.Gettext
 
-  menu gettext("Pages"),
-    %{anchor: "pages", icon: "fa fa-paper-plane icon",
+  menu %{
+    name: gettext("Pages"), anchor: "pages", icon: "fa fa-paper-plane icon",
       submenu: [
         %{name: gettext("Index"), url: {:admin_page_path, :index}},
         %{name: gettext("Add new"), url: {:admin_page_path, :new}},

@@ -1,4 +1,4 @@
-#: web/views/dashboard_view.ex:4
+#: web/views/dashboard_view.ex:3
 msgid "Go to frontend website"
 msgstr ""
 
@@ -6,8 +6,7 @@ msgstr ""
 msgid "System information"
 msgstr ""
 
-#: web/views/dashboard_view.ex:5
-#: web/views/dashboard_view.ex:10
+#: web/views/dashboard_view.ex:5 web/views/dashboard_view.ex:10
 #: web/views/dashboard_view.ex:20
 msgid "Memory"
 msgstr ""
@@ -32,8 +31,7 @@ msgstr ""
 msgid "Admin"
 msgstr ""
 
-#: web/views/instagram_view.ex:9
-#: web/views/instagram_view.ex:10
+#: web/views/instagram_view.ex:9 web/views/instagram_view.ex:10
 msgid "Approved"
 msgstr ""
 
@@ -45,25 +43,16 @@ msgstr ""
 msgid "Authorization failed"
 msgstr ""
 
-#: web/views/image_category_view.ex:5
-#: web/views/image_category_view.ex:5
-#: web/views/image_category_view.ex:26
-#: web/views/image_series_view.ex:5
-#: web/views/image_series_view.ex:5
-#: web/views/image_series_view.ex:11
-#: web/views/image_series_view.ex:18
-#: web/views/page_fragment_view.ex:6
-#: web/views/page_view.ex:6
-#: web/views/post_view.ex:6
-#: web/views/user_view.ex:5
-#: web/views/user_view.ex:5
-#: web/views/user_view.ex:5
-#: web/views/user_view.ex:6
+#: web/views/image_category_view.ex:5 web/views/image_category_view.ex:5
+#: web/views/image_category_view.ex:26 web/views/image_series_view.ex:5
+#: web/views/image_series_view.ex:5 web/views/image_series_view.ex:11
+#: web/views/image_series_view.ex:18 web/views/page_fragment_view.ex:6
+#: web/views/page_view.ex:6 web/views/post_view.ex:6 web/views/user_view.ex:5
+#: web/views/user_view.ex:5 web/views/user_view.ex:5 web/views/user_view.ex:6
 msgid "Back to index"
 msgstr ""
 
-#: web/views/image_category_view.ex:1
-#: web/views/image_series_view.ex:1
+#: web/views/image_category_view.ex:1 web/views/image_series_view.ex:1
 msgid "Configure"
 msgstr ""
 
@@ -107,8 +96,7 @@ msgstr ""
 msgid "Delete image category"
 msgstr ""
 
-#: web/views/image_series_view.ex:3
-#: web/views/image_view.ex:104
+#: web/views/image_series_view.ex:3 web/views/image_view.ex:104
 msgid "Delete image series"
 msgstr ""
 
@@ -116,37 +104,29 @@ msgstr ""
 msgid "Delete images"
 msgstr ""
 
-#: web/views/page_view.ex:3
-#: web/views/page_view.ex:10
+#: web/views/page_view.ex:3 web/views/page_view.ex:10
 msgid "Delete page"
 msgstr ""
 
-#: web/views/page_fragment_view.ex:3
-#: web/views/page_fragment_view.ex:9
+#: web/views/page_fragment_view.ex:3 web/views/page_fragment_view.ex:9
 msgid "Delete page fragment"
 msgstr ""
 
-#: web/views/post_view.ex:3
-#: web/views/post_view.ex:9
+#: web/views/post_view.ex:3 web/views/post_view.ex:9
 msgid "Delete post"
 msgstr ""
 
-#: web/views/user_view.ex:3
-#: web/views/user_view.ex:5
+#: web/views/user_view.ex:3 web/views/user_view.ex:5
 msgid "Delete user"
 msgstr ""
 
-#: lib/brando/html.ex:332
-#: lib/brando/html/inspect.ex:128
-#: web/forms/page_form.ex:20
-#: web/forms/post_form.ex:20
-#: web/views/instagram_view.ex:15
-#: web/views/instagram_view.ex:16
+#: lib/brando/html.ex:332 lib/brando/html/inspect.ex:128
+#: web/forms/page_form.ex:20 web/forms/post_form.ex:20
+#: web/views/instagram_view.ex:15 web/views/instagram_view.ex:16
 msgid "Deleted"
 msgstr ""
 
-#: web/views/instagram_view.ex:19
-#: web/views/instagram_view.ex:42
+#: web/views/instagram_view.ex:19 web/views/instagram_view.ex:42
 msgid "Download failed"
 msgstr ""
 
@@ -166,68 +146,52 @@ msgstr ""
 
 #: web/controllers/admin/image_series_controller.ex:58
 #: web/controllers/admin/image_series_controller.ex:76
-#: web/views/image_series_view.ex:1
-#: web/views/image_series_view.ex:5
-#: web/views/image_series_view.ex:15
-#: web/views/image_view.ex:89
+#: web/views/image_series_view.ex:1 web/views/image_series_view.ex:5
+#: web/views/image_series_view.ex:15 web/views/image_view.ex:89
 msgid "Edit image series"
 msgstr ""
 
 #: web/controllers/admin/page_controller.ex:122
-#: web/controllers/admin/page_controller.ex:139
-#: web/views/page_view.ex:1
-#: web/views/page_view.ex:8
-#: web/views/page_view.ex:9
+#: web/controllers/admin/page_controller.ex:139 web/views/page_view.ex:1
+#: web/views/page_view.ex:8 web/views/page_view.ex:9
 msgid "Edit page"
 msgstr ""
 
 #: web/controllers/admin/page_fragment_controller.ex:79
 #: web/controllers/admin/page_fragment_controller.ex:97
-#: web/views/page_fragment_view.ex:1
-#: web/views/page_fragment_view.ex:8
+#: web/views/page_fragment_view.ex:1 web/views/page_fragment_view.ex:8
 #: web/views/page_fragment_view.ex:9
 msgid "Edit page fragment"
 msgstr ""
 
 #: web/controllers/admin/post_controller.ex:86
-#: web/controllers/admin/post_controller.ex:104
-#: web/views/post_view.ex:1
-#: web/views/post_view.ex:8
-#: web/views/post_view.ex:9
+#: web/controllers/admin/post_controller.ex:104 web/views/post_view.ex:1
+#: web/views/post_view.ex:8 web/views/post_view.ex:9
 msgid "Edit post"
 msgstr ""
 
 #: web/controllers/admin/user_controller.ex:61
-#: web/controllers/admin/user_controller.ex:86
-#: web/views/user_view.ex:1
+#: web/controllers/admin/user_controller.ex:86 web/views/user_view.ex:1
 msgid "Edit profile"
 msgstr ""
 
 #: web/controllers/admin/user_controller.ex:130
-#: web/controllers/admin/user_controller.ex:154
-#: web/views/user_view.ex:1
-#: web/views/user_view.ex:4
-#: web/views/user_view.ex:8
-#: web/views/user_view.ex:9
+#: web/controllers/admin/user_controller.ex:154 web/views/user_view.ex:1
+#: web/views/user_view.ex:4 web/views/user_view.ex:8 web/views/user_view.ex:9
 msgid "Edit user"
 msgstr ""
 
-#: web/models/user.ex:200
-#: web/views/session_view.ex:3
+#: web/models/user.ex:200 web/views/session_view.ex:3
 msgid "Email"
 msgstr ""
 
-#: web/views/image_category_view.ex:1
-#: web/views/image_series_view.ex:1
-#: web/views/image_view.ex:1
-#: web/views/page_fragment_view.ex:1
-#: web/views/page_view.ex:1
-#: web/views/post_view.ex:1
+#: web/views/image_category_view.ex:1 web/views/image_series_view.ex:1
+#: web/views/image_view.ex:1 web/views/page_fragment_view.ex:1
+#: web/views/page_view.ex:1 web/views/post_view.ex:1
 msgid "Entry not found"
 msgstr ""
 
-#: web/views/error_view.ex:10
-#: web/views/error_view.ex:10
+#: web/views/error_view.ex:10 web/views/error_view.ex:10
 #: web/views/error_view.ex:27
 msgid "Error"
 msgstr ""
@@ -301,8 +265,7 @@ msgstr ""
 msgid "Index - Instagram images"
 msgstr ""
 
-#: web/controllers/admin/image_controller.ex:23
-#: web/views/image_view.ex:1
+#: web/controllers/admin/image_controller.ex:23 web/views/image_view.ex:1
 msgid "Index - images"
 msgstr ""
 
@@ -311,18 +274,15 @@ msgstr ""
 msgid "Index - page fragments"
 msgstr ""
 
-#: web/controllers/admin/page_controller.ex:28
-#: web/views/page_view.ex:1
+#: web/controllers/admin/page_controller.ex:28 web/views/page_view.ex:1
 msgid "Index - pages"
 msgstr ""
 
-#: web/controllers/admin/post_controller.ex:27
-#: web/views/post_view.ex:1
+#: web/controllers/admin/post_controller.ex:27 web/views/post_view.ex:1
 msgid "Index - posts"
 msgstr ""
 
-#: web/controllers/admin/user_controller.ex:28
-#: web/views/user_view.ex:1
+#: web/controllers/admin/user_controller.ex:28 web/views/user_view.ex:1
 msgid "Index - users"
 msgstr ""
 
@@ -338,8 +298,7 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: web/views/instagram_view.ex:9
-#: web/views/instagram_view.ex:12
+#: web/views/instagram_view.ex:9 web/views/instagram_view.ex:12
 #: web/views/instagram_view.ex:15
 msgid "Mark as"
 msgstr ""
@@ -350,8 +309,7 @@ msgstr ""
 
 #: web/controllers/admin/image_category_controller.ex:25
 #: web/controllers/admin/image_category_controller.ex:41
-#: web/views/image_category_view.ex:1
-#: web/views/image_view.ex:119
+#: web/views/image_category_view.ex:1 web/views/image_view.ex:119
 msgid "New image category"
 msgstr ""
 
@@ -363,29 +321,25 @@ msgstr ""
 
 #: web/controllers/admin/page_controller.ex:69
 #: web/controllers/admin/page_controller.ex:84
-#: web/controllers/admin/page_controller.ex:106
-#: web/views/page_view.ex:1
+#: web/controllers/admin/page_controller.ex:106 web/views/page_view.ex:1
 #: web/views/page_view.ex:23
 msgid "New page"
 msgstr ""
 
 #: web/controllers/admin/page_fragment_controller.ex:47
 #: web/controllers/admin/page_fragment_controller.ex:61
-#: web/views/page_fragment_view.ex:1
-#: web/views/page_fragment_view.ex:17
+#: web/views/page_fragment_view.ex:1 web/views/page_fragment_view.ex:17
 msgid "New page fragment"
 msgstr ""
 
 #: web/controllers/admin/post_controller.ex:53
-#: web/controllers/admin/post_controller.ex:68
-#: web/views/post_view.ex:1
+#: web/controllers/admin/post_controller.ex:68 web/views/post_view.ex:1
 #: web/views/post_view.ex:18
 msgid "New post"
 msgstr ""
 
 #: web/controllers/admin/user_controller.ex:98
-#: web/controllers/admin/user_controller.ex:113
-#: web/views/user_view.ex:1
+#: web/controllers/admin/user_controller.ex:113 web/views/user_view.ex:1
 #: web/views/user_view.ex:9
 msgid "New user"
 msgstr ""
@@ -394,8 +348,7 @@ msgstr ""
 msgid "No image series"
 msgstr ""
 
-#: web/views/image_category_view.ex:15
-#: web/views/image_view.ex:72
+#: web/views/image_category_view.ex:15 web/views/image_view.ex:72
 msgid "No images"
 msgstr ""
 
@@ -443,8 +396,7 @@ msgstr ""
 msgid "Pages re-rendered"
 msgstr ""
 
-#: web/models/user.ex:202
-#: web/views/session_view.ex:6
+#: web/models/user.ex:202 web/views/session_view.ex:6
 msgid "Password"
 msgstr ""
 
@@ -464,8 +416,7 @@ msgstr ""
 msgid "Post updated"
 msgstr ""
 
-#: web/controllers/admin/user_controller.ex:45
-#: web/menus/users_menu.ex:12
+#: web/controllers/admin/user_controller.ex:45 web/menus/users_menu.ex:12
 msgid "Profile"
 msgstr ""
 
@@ -477,8 +428,7 @@ msgstr ""
 msgid "Re-render pages"
 msgstr ""
 
-#: web/views/instagram_view.ex:12
-#: web/views/instagram_view.ex:13
+#: web/views/instagram_view.ex:12 web/views/instagram_view.ex:13
 msgid "Rejected"
 msgstr ""
 
@@ -498,26 +448,22 @@ msgstr ""
 msgid "Server error"
 msgstr ""
 
-#: web/controllers/admin/page_controller.ex:58
-#: web/views/page_view.ex:2
+#: web/controllers/admin/page_controller.ex:58 web/views/page_view.ex:2
 #: web/views/page_view.ex:7
 msgid "Show page"
 msgstr ""
 
 #: web/controllers/admin/page_fragment_controller.ex:37
-#: web/views/page_fragment_view.ex:2
-#: web/views/page_fragment_view.ex:7
+#: web/views/page_fragment_view.ex:2 web/views/page_fragment_view.ex:7
 msgid "Show page fragment"
 msgstr ""
 
-#: web/controllers/admin/post_controller.ex:41
-#: web/views/post_view.ex:2
+#: web/controllers/admin/post_controller.ex:41 web/views/post_view.ex:2
 #: web/views/post_view.ex:7
 msgid "Show post"
 msgstr ""
 
-#: web/controllers/admin/user_controller.ex:37
-#: web/views/user_view.ex:2
+#: web/controllers/admin/user_controller.ex:37 web/views/user_view.ex:2
 #: web/views/user_view.ex:3
 msgid "Show user"
 msgstr ""
@@ -526,8 +472,7 @@ msgstr ""
 msgid "Sort image category"
 msgstr ""
 
-#: web/views/image_series_view.ex:1
-#: web/views/image_series_view.ex:8
+#: web/views/image_series_view.ex:1 web/views/image_series_view.ex:8
 #: web/views/image_view.ex:94
 msgid "Sort image series"
 msgstr ""
@@ -540,12 +485,9 @@ msgstr ""
 msgid "System info"
 msgstr ""
 
-#: web/views/image_category_view.ex:11
-#: web/views/image_series_view.ex:11
-#: web/views/page_fragment_view.ex:11
-#: web/views/page_view.ex:11
-#: web/views/post_view.ex:11
-#: web/views/user_view.ex:11
+#: web/views/image_category_view.ex:11 web/views/image_series_view.ex:11
+#: web/views/page_fragment_view.ex:11 web/views/page_view.ex:11
+#: web/views/post_view.ex:11 web/views/user_view.ex:11
 msgid "This object cannot be restored!"
 msgstr ""
 
@@ -566,12 +508,9 @@ msgstr ""
 msgid "User updated"
 msgstr ""
 
-#: web/views/image_category_view.ex:6
-#: web/views/image_series_view.ex:6
-#: web/views/page_fragment_view.ex:6
-#: web/views/page_view.ex:6
-#: web/views/post_view.ex:6
-#: web/views/user_view.ex:6
+#: web/views/image_category_view.ex:6 web/views/image_series_view.ex:6
+#: web/views/page_fragment_view.ex:6 web/views/page_view.ex:6
+#: web/views/post_view.ex:6 web/views/user_view.ex:6
 msgid "You are about to delete this object. Please check carefully, and note that any dependent objects will also be removed."
 msgstr ""
 
@@ -587,8 +526,7 @@ msgstr ""
 msgid "deleted"
 msgstr ""
 
-#: web/menus/news_menu.ex:12
-#: web/menus/pages_menu.ex:13
+#: web/menus/news_menu.ex:12 web/menus/pages_menu.ex:13
 #: web/menus/users_menu.ex:13
 msgid "Add new"
 msgstr ""
@@ -597,15 +535,12 @@ msgstr ""
 msgid "Fragments"
 msgstr ""
 
-#: web/menus/images_menu.ex:9
-#: web/models/image_series.ex:169
+#: web/menus/images_menu.ex:9 web/models/image_series.ex:169
 msgid "Images"
 msgstr ""
 
-#: web/menus/images_menu.ex:11
-#: web/menus/instagram_menu.ex:11
-#: web/menus/news_menu.ex:11
-#: web/menus/pages_menu.ex:12
+#: web/menus/images_menu.ex:11 web/menus/instagram_menu.ex:11
+#: web/menus/news_menu.ex:11 web/menus/pages_menu.ex:12
 #: web/menus/users_menu.ex:11
 msgid "Index"
 msgstr ""
@@ -634,8 +569,7 @@ msgstr ""
 msgid "Avatar"
 msgstr ""
 
-#: web/models/page.ex:202
-#: web/models/page.ex:203
+#: web/models/page.ex:202 web/models/page.ex:203
 msgid "Belongs to"
 msgstr ""
 
@@ -671,12 +605,9 @@ msgstr ""
 msgid "Created"
 msgstr ""
 
-#: web/models/image.ex:191
-#: web/models/image_category.ex:127
-#: web/models/image_series.ex:168
-#: web/models/page.ex:205
-#: web/models/page_fragment.ex:143
-#: web/models/post.ex:168
+#: web/models/image.ex:191 web/models/image_category.ex:127
+#: web/models/image_series.ex:168 web/models/page.ex:205
+#: web/models/page_fragment.ex:143 web/models/post.ex:168
 msgid "Creator"
 msgstr ""
 
@@ -684,26 +615,20 @@ msgstr ""
 msgid "Credits"
 msgstr ""
 
-#: web/models/page.ex:200
-#: web/models/page_fragment.ex:141
-#: web/models/post.ex:166
+#: web/models/page.ex:200 web/models/page_fragment.ex:141 web/models/post.ex:166
 msgid "Data"
 msgstr ""
 
-#: lib/brando/html.ex:326
-#: lib/brando/html/inspect.ex:127
-#: web/forms/page_form.ex:17
-#: web/forms/post_form.ex:17
+#: lib/brando/html.ex:326 lib/brando/html/inspect.ex:127
+#: web/forms/page_form.ex:17 web/forms/post_form.ex:17
 msgid "Draft"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:207
-#: lib/brando/html/inspect.ex:216
+#: lib/brando/html/inspect.ex:207 lib/brando/html/inspect.ex:216
 msgid "Empty association"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:105
-#: lib/brando/html/inspect.ex:157
+#: lib/brando/html/inspect.ex:105 lib/brando/html/inspect.ex:157
 msgid "Encoded value"
 msgstr ""
 
@@ -719,9 +644,7 @@ msgstr ""
 msgid "Full name"
 msgstr ""
 
-#: web/models/page.ex:201
-#: web/models/page_fragment.ex:142
-#: web/models/post.ex:167
+#: web/models/page.ex:201 web/models/page_fragment.ex:142 web/models/post.ex:167
 msgid "HTML"
 msgstr ""
 
@@ -729,10 +652,8 @@ msgstr ""
 msgid "Header"
 msgstr ""
 
-#: web/models/image.ex:188
-#: web/models/image_category.ex:123
-#: web/models/image_series.ex:162
-#: web/models/instagram_image.ex:274
+#: web/models/image.ex:188 web/models/image_category.ex:123
+#: web/models/image_series.ex:162 web/models/instagram_image.ex:274
 #: web/models/user.ex:198
 msgid "ID"
 msgstr ""
@@ -749,26 +670,20 @@ msgstr ""
 msgid "Image URL"
 msgstr ""
 
-#: web/models/image_series.ex:170
-#: web/models/image_series.ex:171
+#: web/models/image_series.ex:170 web/models/image_series.ex:171
 msgid "Image category"
 msgstr ""
 
-#: web/models/image.ex:192
-#: web/models/image_category.ex:128
+#: web/models/image.ex:192 web/models/image_category.ex:128
 msgid "Image series"
 msgstr ""
 
-#: web/models/page.ex:209
-#: web/models/page_fragment.ex:144
+#: web/models/page.ex:209 web/models/page_fragment.ex:144
 msgid "Inserted"
 msgstr ""
 
-#: web/models/image.ex:193
-#: web/models/image_category.ex:129
-#: web/models/image_series.ex:172
-#: web/models/post.ex:174
-#: web/models/user.ex:206
+#: web/models/image.ex:193 web/models/image_category.ex:129
+#: web/models/image_series.ex:172 web/models/post.ex:174 web/models/user.ex:206
 msgid "Inserted at"
 msgstr ""
 
@@ -776,14 +691,11 @@ msgstr ""
 msgid "Instagram ID"
 msgstr ""
 
-#: web/models/page.ex:197
-#: web/models/page_fragment.ex:140
+#: web/models/page.ex:197 web/models/page_fragment.ex:140
 msgid "Key"
 msgstr ""
 
-#: web/models/page.ex:196
-#: web/models/page_fragment.ex:139
-#: web/models/post.ex:161
+#: web/models/page.ex:196 web/models/page_fragment.ex:139 web/models/post.ex:161
 #: web/models/user.ex:204
 msgid "Language"
 msgstr ""
@@ -800,18 +712,15 @@ msgstr ""
 msgid "Link"
 msgstr ""
 
-#: web/models/page.ex:207
-#: web/models/post.ex:169
+#: web/models/page.ex:207 web/models/post.ex:169
 msgid "META description"
 msgstr ""
 
-#: web/models/page.ex:208
-#: web/models/post.ex:170
+#: web/models/page.ex:208 web/models/post.ex:170
 msgid "META keywords"
 msgstr ""
 
-#: web/models/image_category.ex:124
-#: web/models/image_series.ex:163
+#: web/models/image_category.ex:124 web/models/image_series.ex:163
 msgid "Name"
 msgstr ""
 
@@ -819,21 +728,17 @@ msgstr ""
 msgid "No connected image"
 msgstr ""
 
-#: lib/brando/html/tablize.ex:51
-#: lib/brando/html/tablize.ex:52
+#: lib/brando/html/tablize.ex:51 lib/brando/html/tablize.ex:52
 msgid "No results"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:76
-#: lib/brando/html/inspect.ex:84
+#: lib/brando/html/inspect.ex:76 lib/brando/html/inspect.ex:84
 #: lib/brando/html/inspect.ex:161
 msgid "No value"
 msgstr ""
 
-#: lib/brando/html.ex:320
-#: lib/brando/html/inspect.ex:126
-#: web/forms/page_form.ex:19
-#: web/forms/post_form.ex:19
+#: lib/brando/html.ex:320 lib/brando/html/inspect.ex:126
+#: web/forms/page_form.ex:19 web/forms/post_form.ex:19
 msgid "Pending"
 msgstr ""
 
@@ -841,11 +746,8 @@ msgstr ""
 msgid "Publish at"
 msgstr ""
 
-#: lib/brando/html.ex:314
-#: lib/brando/html/inspect.ex:125
-#: web/forms/page_form.ex:18
-#: web/forms/post_form.ex:18
-#: web/models/post.ex:171
+#: lib/brando/html.ex:314 lib/brando/html/inspect.ex:125
+#: web/forms/page_form.ex:18 web/forms/post_form.ex:18 web/models/post.ex:171
 msgid "Published"
 msgstr ""
 
@@ -861,20 +763,16 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
-#: web/models/image.ex:190
-#: web/models/image_series.ex:167
+#: web/models/image.ex:190 web/models/image_series.ex:167
 msgid "Sequence"
 msgstr ""
 
-#: web/models/image_category.ex:125
-#: web/models/image_series.ex:164
-#: web/models/page.ex:199
-#: web/models/post.ex:164
+#: web/models/image_category.ex:125 web/models/image_series.ex:164
+#: web/models/page.ex:199 web/models/post.ex:164
 msgid "Slug"
 msgstr ""
 
-#: web/models/instagram_image.ex:282
-#: web/models/page.ex:195
+#: web/models/instagram_image.ex:282 web/models/page.ex:195
 #: web/models/post.ex:159
 msgid "Status"
 msgstr ""
@@ -899,21 +797,16 @@ msgstr ""
 msgid "Type"
 msgstr ""
 
-#: web/models/page.ex:210
-#: web/models/page_fragment.ex:145
+#: web/models/page.ex:210 web/models/page_fragment.ex:145
 msgid "Updated"
 msgstr ""
 
-#: web/models/image.ex:194
-#: web/models/image_category.ex:130
-#: web/models/image_series.ex:173
-#: web/models/post.ex:175
-#: web/models/user.ex:207
+#: web/models/image.ex:194 web/models/image_category.ex:130
+#: web/models/image_series.ex:173 web/models/post.ex:175 web/models/user.ex:207
 msgid "Updated at"
 msgstr ""
 
-#: web/forms/user_form.ex:31
-#: web/forms/user_profile_form.ex:16
+#: web/forms/user_form.ex:31 web/forms/user_profile_form.ex:16
 msgid "User information"
 msgstr ""
 

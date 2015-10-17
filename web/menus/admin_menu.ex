@@ -6,8 +6,8 @@ defmodule Brando.Menu.Admin do
   use Brando.Menu
   import Brando.Gettext
 
-  menu gettext("Admin"),
-    %{anchor: "admin", icon: "fa fa-dashboard icon",
+  menu %{
+    name: gettext("Admin"), anchor: "admin", icon: "fa fa-dashboard icon",
       submenu: [
         %{name: gettext("Dashboard"), url: {:admin_dashboard_path, :dashboard}},
         %{name: gettext("System info"), url: {:admin_dashboard_path, :system_info},

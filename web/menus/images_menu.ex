@@ -6,7 +6,7 @@ defmodule Brando.Menu.Images do
   use Brando.Menu
   import Brando.Gettext
 
-  menu gettext("Images"),
-    %{anchor: "images", icon: "fa fa-picture-o icon",
+  menu %{
+    name: gettext("Images"), anchor: "images", icon: "fa fa-picture-o icon",
       submenu: [%{name: gettext("Index"), url: {:admin_image_path, :index}}]}
 end

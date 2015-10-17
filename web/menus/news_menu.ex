@@ -6,8 +6,8 @@ defmodule Brando.Menu.News do
   use Brando.Menu
   import Brando.Gettext
 
-  menu gettext("News"),
-    %{anchor: "news", icon: "fa fa-newspaper-o icon",
+  menu %{
+    name: gettext("News"), anchor: "news", icon: "fa fa-newspaper-o icon",
       submenu: [%{name: gettext("Index"), url: {:admin_post_path, :index}},
                 %{name: gettext("Add new"), url: {:admin_post_path, :new}}]}
 end

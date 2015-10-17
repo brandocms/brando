@@ -22,7 +22,7 @@ defmodule Brando.HTML do
   Renders a menu item.
   Also calls to render submenu items, if `current_user` has required role
   """
-  def render_menu_item(conn, {color, {name, menu}}) do
+  def render_menu_item(conn, {color, menu}) do
     submenu_items =
       menu.submenu
       |> Enum.map_join("\n", &render_submenu_item(conn, &1))
@@ -39,7 +39,7 @@ defmodule Brando.HTML do
             <i class="fa fa-angle-down text"></i>
             <i class="fa fa-angle-up text-active"></i>
           </span>
-          <span>#{name}</span>
+          <span>#{menu.name}</span>
         </a>
         <ul class="nav lt">
           #{submenu_items}

@@ -5,8 +5,8 @@ defmodule Brando.Menu do
   ## Example
 
       use Brando.Menu
-      menu "Admin",
-        %{name: "Admin", anchor: "admin", bgcolor: "#ffaaff",
+      menu %{
+        name: "Admin", anchor: "admin", bgcolor: "#ffaaff",
           icon: "fa fa-dashboard icon",
           submenu: [%{name: "Dash", url: admin_dashboard_path(:dashboard)}]}
 
@@ -30,20 +30,20 @@ defmodule Brando.Menu do
 
   ## Usage
 
-      menu "Admin",
-        %{name: "Admin", anchor: "admin", bgcolor: "#ffaaff",
+      menu %{
+        name: "Admin", anchor: "admin", bgcolor: "#ffaaff",
           icon: "fa fa-dashboard icon",
           submenu: [%{name: "Dash", url: admin_dashboard_path(:dashboard)}]}
 
   """
-  defmacro menu(name, contents) do
-    quote bind_quoted: [name: name, contents: Macro.escape(contents)] do
-      @menus {name, contents}
+  defmacro menu(contents) do
+    quote bind_quoted: [contents: Macro.escape(contents)] do
+      @menus contents
     end
   end
 
   defmacro menu(_, _, _) do
-    raise "menu/3 is deprecated. Use menu/2 with gettext.\n\n" <>
+    raise "menu/3 is deprecated. Use menu/1 with gettext.\n\n" <>
           Exception.format_stacktrace(System.stacktrace)
   end
 
@@ -52,8 +52,8 @@ defmodule Brando.Menu do
   """
   def compile(menus) do
     menus =
-      for {name, contents} <- menus do
-        defmenu(name, contents)
+      for contents <- menus do
+        defmenu(contents)
       end
 
     quote do
@@ -61,13 +61,13 @@ defmodule Brando.Menu do
     end
   end
 
-  defp defmenu(name, contents) do
+  defp defmenu(contents) do
     quote do
       @doc """
       Get the menu for the module `menu/2` was called from.
       """
       def get_menu() do
-        {unquote(name), unquote(contents)}
+        unquote(contents)
       end
     end
   end

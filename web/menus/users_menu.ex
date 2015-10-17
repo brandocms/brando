@@ -6,8 +6,8 @@ defmodule Brando.Menu.Users do
   use Brando.Menu
   import Brando.Gettext
 
-  menu gettext("Users"),
-    %{anchor: "users", icon: "fa fa-users icon",
+  menu %{
+    name: gettext("Users"), anchor: "users", icon: "fa fa-users icon",
       submenu: [%{name: gettext("Index"), url: {:admin_user_path, :index}},
                 %{name: gettext("Profile"), url: {:admin_user_path, :profile}},
                 %{name: gettext("Add new"), url: {:admin_user_path, :new},

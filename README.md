@@ -17,7 +17,7 @@ Add Brando to your `deps` and `applications` in your project's `mix.exs`:
 def application do
   [mod: {MyApp, []},
    applications: [:phoenix, :cowboy, :logger, :postgrex,
-                  :ecto, :brando]]
+                  :ecto, :gettext, :brando]]
 end
 
 defp deps do
@@ -98,9 +98,32 @@ config :my_app, MyApp.Endpoint,
   render_errors: [view: Brando.ErrorView, default_format: "html"]
 ```
 
-Brando uses Gettext for i18n. To extract your frontend translations:
+Brando uses Gettext for i18n. 
+
+Add to your `mix.exs`
+
+```elixir
+def project do
+  [compilers: [:gettext] ++ Mix.compilers]
+end
+```
+
+To extract your frontend translations:
 
     $ mix gettext.extract
+
+Create your frontend translation directories: (for norwegian)
+
+    $ mkdir -p priv/gettext/frontend/nb/LC_MESSAGES
+
+Merge frontend translations
+
+    $ mix gettext.merge priv/gettext/frontend
+
+And backend
+
+    $ mix gettext.merge priv/gettext/backend
+
 
 ## Additional admin CSS/styling
 
