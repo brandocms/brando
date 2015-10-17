@@ -42,7 +42,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:text, "templates/brando.install/web/templates/layout/app.html.eex",                     "web/templates/layout/app.html.eex"},
 
     {:keep, "templates/brando.install/logs", "priv/static/gettext/backend/nb/LC_MESSAGES"},
-    {:keep, "templates/brando.install/logs", "priv/static/gettext/frontend/nb/LC_MESSAGES"},
+    {:keep, "templates/brando.install/logs", "priv/static/gettext/frontend"},
     {:eex,  "templates/brando.install/lib/gettext.ex", "lib/application_name/gettext.ex"},
   ]
 
