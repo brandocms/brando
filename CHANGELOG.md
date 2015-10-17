@@ -1,13 +1,17 @@
 ## v0.5.0-dev (2015-XX-XX)
 
 * Enhancements
-  * Added `put_css_classes/2` to `Brando.Plug.HTML`. Adds classes to your body tag.
+  * Moved to gettext. Adds norwegian translations.
+  * Added `put_css_classes/2` to `Brando.Plug.HTML`. Adds classes to your body tag. `mix ecto.migrate` to add field to `pages` table.
 
 * Bug fixes
   * Fixes bug in `brando.gen.html` where admin's update action would be broken.
+  * Fixes a ton of small snags in `brando.gen.html`.
 
 * Backwards incompatible changes
   * Moved `put_section/2` from `Brando.Plug.Section` to `Brando.Plug.HTML`. Fix imports accordingly.
+  * Changed `menu` format. Now, you must set `:name` in the map instead of its own argument. `menu %{name: "blah"}`
+  * Norwegian language is now `nb` instead of `no`. Update your `brando.exs` and your `users` table in your database.
 
 ## v0.4.0 (2015-10-15)
 
