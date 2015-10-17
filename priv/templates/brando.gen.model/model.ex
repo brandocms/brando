@@ -3,7 +3,7 @@ defmodule <%= module %> do
 <%= if villain_fields != [] do %>  use Brando.Villain.Model<% end %>
 <%= if img_fields != [] do %>  use Brando.Field.ImageField
 <% end %>
-  import <%= base %>.Gettext
+  import <%= base %>.Backend.Gettext
   schema <%= inspect plural %> do
 <%= for model_field <- model_fields do %>    <%= model_field %>
 <% end %><%= for {k, _, m} <- assocs do %>    belongs_to <%= inspect k %>, <%= m %>

@@ -1,4 +1,4 @@
-defmodule <%= base %>.Frontend.Gettext do
+defmodule <%= base %>.Gettext do
   use Gettext, otp_app: :<%= application_name %>, priv: "priv/gettext/frontend"
 end
 
