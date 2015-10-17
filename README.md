@@ -104,7 +104,7 @@ Add to your `mix.exs`
 
 ```elixir
 def project do
-  [compilers: [:gettext] ++ Mix.compilers]
+  [compilers: [:phoenix, :gettext] ++ Mix.compilers]
 end
 ```
 
