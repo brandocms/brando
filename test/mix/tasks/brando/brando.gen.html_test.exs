@@ -52,7 +52,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "use Brando.Web, :controller"
         assert file =~ "Repo.get!"
         assert file =~ "use Brando.Villain.Controller"
-        assert file =~ "import Brando.Gettext"
+        assert file =~ "import Brando.Backend.Gettext"
       end
 
       assert_file "web/views/minion_face_view.ex", fn file ->
