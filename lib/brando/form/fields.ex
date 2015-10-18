@@ -4,8 +4,6 @@ defmodule Brando.Form.Fields do
   These are all called from the `Brando.Form` module, and handled
   through `Brando.Form.get_form/4`
   """
-  use Linguist.Vocabulary
-
   import Brando.Gettext
   import Brando.Utils, only: [media_url: 0, img_url: 3]
   import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2, tag: 2]
@@ -922,26 +920,4 @@ defmodule Brando.Form.Fields do
   defp format_name(name, form_source) do
     "#{form_source}[#{name}]"
   end
-
-  locale "nb", [
-    error: [
-      required: "Feltet er påkrevet.",
-      unique: "Feltet må være unikt. Verdien finnes allerede i databasen.",
-      format: "Feltet har feil format.",
-      invalid: "Feltet er ugyldig.",
-      reserved: "Verdien er reservert.",
-      length: "Feltets verdi er for kort. Må være > %{length} tegn."
-    ]
-  ]
-
-  locale "en", [
-    error: [
-      required: "Field is required.",
-      unique: "Field must be unique. Already exists in database.",
-      format: "Field has invalid format.",
-      invalid: "Field has invalid value.",
-      reserved: "This value is reserved.",
-      length: "Field too short. Should be at least > %{length} characters."
-    ]
-  ]
 end
