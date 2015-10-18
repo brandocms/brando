@@ -397,4 +397,13 @@ defmodule Brando.HTML do
 
     Phoenix.HTML.raw(body <> ">")
   end
+
+  @doc """
+  Formats and shows roles
+  """
+  def display_roles(roles) do
+    roles
+    |> List.first
+    |> Atom.to_string
+  end
 end
