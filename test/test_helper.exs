@@ -1,4 +1,3 @@
-#Logger.configure(level: :info)
 :erlang.system_flag(:backtrace_depth, 1000)
 ExUnit.start
 
@@ -94,7 +93,7 @@ defmodule Forge do
     password: "hunter2hunter2",
     username: "jamesw",
     avatar: nil,
-    role: ["2", "4"],
+    role: [:admin, :superuser],
     language: "en"
 
   register :user_w_hashed_pass,
@@ -104,7 +103,7 @@ defmodule Forge do
     password: "$2b$12$VD9opg289oNQAHii8VVpoOIOe.y4kx7.lGb9SYRwscByP.tRtJTsa",
     username: "jamesw",
     avatar: nil,
-    role: ["2", "4"],
+    role: [:admin, :superuser],
     language: "en"
 end
 
@@ -125,5 +124,8 @@ _   = Ecto.Storage.down(Repo)
 {:ok, _pid} = Repo.start_link
 :ok = Ecto.Migrator.up(Repo, 0, Brando.Integration.Migration, log: false)
 
-Ecto.Adapters.SQL.begin_test_transaction(Repo)
+# Mix.Task.run "ecto.create", ["--quiet", "--repo", "Brando.Integration.TestRepo"]
+# Mix.Task.run "ecto.migrate", ["--quiet", "--repo", "Brando.Integration.TestRepo"]
+
+Ecto.Adapters.SQL.begin_test_transaction(Brando.Integration.TestRepo)
 Brando.endpoint.start_link
