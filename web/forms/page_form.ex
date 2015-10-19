@@ -3,9 +3,10 @@ defmodule Brando.PageForm do
   A form for the Page model. See the `Brando.Form` module for more
   documentation
   """
+
   use Brando.Form
-  import Brando.Gettext
   alias Brando.Page
+  import Brando.Gettext
 
   @doc false
   def get_language_choices() do

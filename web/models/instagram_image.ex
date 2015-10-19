@@ -3,17 +3,20 @@ defmodule Brando.InstagramImage do
   Ecto schema for the InstagramImage model
   and helper functions for dealing with the model.
   """
+
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
-  import Brando.Gettext
-  import Ecto.Query, only: [from: 2]
+
   require Logger
+
   alias Brando.Instagram
   alias Brando.Exception.UploadError
 
-  @cfg Application.get_env(:brando, Brando.Instagram)
+  import Brando.Gettext
+  import Ecto.Query, only: [from: 2]
 
+  @cfg Application.get_env(:brando, Brando.Instagram)
   @required_fields ~w(instagram_id caption link url_original username
                       url_thumbnail created_time type status)
   @optional_fields ~w(image)

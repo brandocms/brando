@@ -4,8 +4,8 @@ defmodule Brando.UserProfileForm do
   module for more documentation
   """
   use Brando.Form
-  import Brando.Gettext
   alias Brando.User
+  import Brando.Gettext
 
   @doc false
   def get_language_choices() do

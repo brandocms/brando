@@ -2,6 +2,7 @@ defmodule Brando.Admin.PostController do
   @moduledoc """
   Controller for the Brando News module.
   """
+
   use Linguist.Vocabulary
   use Brando.Web, :controller
   use Brando.Villain, [:controller, [

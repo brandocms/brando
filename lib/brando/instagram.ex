@@ -20,6 +20,7 @@ defmodule Brando.Instagram do
       * `{:user, "your_name"} - polls for `your_name`'s images.
       * `{:tags, ["tag1", "tag2"]} - polls `tag1` and `tag2`
   """
+
   use Supervisor
   require Logger
 

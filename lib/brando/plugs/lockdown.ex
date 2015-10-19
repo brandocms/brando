@@ -11,11 +11,10 @@ defmodule Brando.Plug.Lockdown do
             view: {MyApp.LockdownView, "lockdown.html"}]
 
   """
-
+  alias Brando.User
   import Phoenix.Controller, only: [put_flash: 3, redirect: 2,
                                     put_layout: 2, put_view: 2]
   import Plug.Conn, only: [halt: 1]
-  alias Brando.User
 
   @behaviour Plug
 

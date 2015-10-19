@@ -2,6 +2,7 @@ defmodule Brando.Villain.Parser.Default do
   @moduledoc """
   Default parser for Villain.
   """
+
   @behaviour Brando.Villain.Parser
 
   import Brando.Utils, only: [img_url: 3, media_url: 0]

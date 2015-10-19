@@ -19,12 +19,13 @@ defmodule Brando.Form do
 
   See this module's `Brando.Form.form` and `Brando.Form.field` docs for more.
   """
+
+  @type form_opts :: [{:helper, atom} | {:class, String.t}]
+
   use Linguist.Vocabulary
   alias Brando.Form.Fields
   import Phoenix.HTML.Tag, only: [form_tag: 3]
   import Phoenix.HTML, only: [raw: 1]
-
-  @type form_opts :: [{:helper, atom} | {:class, String.t}]
 
   defmacro __using__(_) do
     quote do

@@ -49,6 +49,7 @@ defmodule Brando.Tag do
       TODO: show example
 
   """
+
   defmodule Model do
     @moduledoc false
     @doc false

@@ -10,12 +10,11 @@ defmodule Brando.Plug.Authenticate do
       plug Brando.Plug.Authenticate
 
   """
+  @behaviour Plug
 
+  alias Brando.User
   import Plug.Conn
   import Phoenix.Controller, only: [put_flash: 3, redirect: 2]
-  alias Brando.User
-
-  @behaviour Plug
 
   def init(options), do: options
 

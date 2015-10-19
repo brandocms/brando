@@ -3,17 +3,20 @@ defmodule Brando.Image do
   Ecto schema for the Image model
   and helper functions for dealing with the model.
   """
+
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
   use Brando.Images.Upload
   use Brando.Sequence, :model
+
+  alias Brando.User
+  alias Brando.ImageSeries
+
   import Brando.Gettext
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
   import Brando.Images.Utils
-  alias Brando.User
-  alias Brando.ImageSeries
 
   @required_fields ~w(image image_series_id)
   @optional_fields ~w(sequence creator_id)

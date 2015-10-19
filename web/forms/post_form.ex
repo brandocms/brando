@@ -3,9 +3,10 @@ defmodule Brando.PostForm do
   A form for the Post model. See the `Brando.Form` module for more
   documentation
   """
+
   use Brando.Form
-  import Brando.Gettext
   alias Brando.Post
+  import Brando.Gettext
 
   @doc false
   def get_language_choices() do

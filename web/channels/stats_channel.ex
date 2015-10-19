@@ -3,9 +3,6 @@ defmodule Brando.StatsChannel do
   Channel for system information.
   """
   @interval 5000
-
-  use Phoenix.Channel
-
   @info_memory [
     :total,
     :processes,
@@ -13,6 +10,8 @@ defmodule Brando.StatsChannel do
     :binary,
     :code,
     :ets]
+
+  use Phoenix.Channel
 
   def join("stats", _auth_msg, socket) do
     send self, :update

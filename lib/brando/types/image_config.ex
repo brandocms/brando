@@ -3,6 +3,8 @@ defmodule Brando.Type.ImageConfig do
   Defines a type for an image configuration field.
   """
 
+  @behaviour Ecto.Type
+
   import Brando.Utils, only: [stringy_struct: 2]
 
   defstruct allowed_mimetypes: ["image/jpeg", "image/png"],
@@ -12,7 +14,7 @@ defmodule Brando.Type.ImageConfig do
             size_limit: 10_240_000,
             sizes: %{}
 
-  @behaviour Ecto.Type
+
 
   @doc """
   Returns the internal type representation of our `Role` type for pg

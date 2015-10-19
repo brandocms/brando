@@ -3,9 +3,10 @@ defmodule <%= admin_module %>Controller do
 <%= if villain do %>  use Brando.Villain, [:controller, [
     image_model: Brando.Image,
     series_model: Brando.ImageSeries]]<% end %>
+  alias <%= module %>
 <%= if image_field do %>  import Brando.Plug.Uploads<% end %>
   import <%= base %>.Backend.Gettext
-  alias <%= module %>
+
 
   plug :scrub_params, <%= inspect singular %> when action in [:create, :update]
   <%= if image_field do %>plug :check_for_uploads, {<%= inspect singular %>, <%= module %>} when action in [:create, :update]<% end %>

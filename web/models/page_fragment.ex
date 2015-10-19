@@ -2,14 +2,17 @@ defmodule Brando.PageFragment do
   @moduledoc """
   Ecto schema for the PageFragment model.
   """
+
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
+
+  alias Brando.Type.Json
+  alias Brando.User
+
   import Brando.Gettext
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
-  alias Brando.Type.Json
-  alias Brando.User
 
   @required_fields ~w(key language data creator_id)
   @optional_fields ~w(html)

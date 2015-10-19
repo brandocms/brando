@@ -2,9 +2,10 @@ defmodule Brando.Type.Role do
   @moduledoc """
   Defines a type for managing roles in user models.
   """
-  use Bitwise, only_operators: true
 
   @behaviour Ecto.Type
+
+  use Bitwise, only_operators: true
 
   @doc """
   Returns the internal type representation of our `Role` type for pg

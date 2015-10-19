@@ -11,12 +11,11 @@ defmodule Brando.Routes.Admin.Pages do
         page_routes "/pages", model: Brando.Page
 
   """
-  import Brando.Routes.Admin.Villain
-
   alias Brando.Admin.PageController
   alias Brando.Admin.PageFragmentController
   alias Brando.Page
   alias Brando.PageFragment
+  import Brando.Routes.Admin.Villain
 
   @doc """
   Defines "RESTful" endpoints for the pages resource.

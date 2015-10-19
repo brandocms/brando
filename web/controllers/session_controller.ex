@@ -2,9 +2,10 @@ defmodule Brando.SessionController do
   @moduledoc """
   Controller for authentication actions.
   """
+
   use Brando.Web, :controller
-  import Brando.Gettext
   alias Brando.SystemChannel
+  import Brando.Gettext
 
   @doc false
   def login(conn, %{"user" => %{"email" => email, "password" => password}}) do

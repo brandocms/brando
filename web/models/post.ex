@@ -3,17 +3,20 @@ defmodule Brando.Post do
   Ecto schema for the Post model, as well as image field definitions
   and helper functions for dealing with the post model.
   """
+
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
   use Brando.Tag, :model
   use Brando.Villain, :model
   use Brando.Field.ImageField
+
+  alias Brando.Type.Status
+  alias Brando.User
+
   import Brando.Gettext
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
-  alias Brando.Type.Status
-  alias Brando.User
 
   @required_fields ~w(status header data lead creator_id language featured slug)
   @optional_fields ~w(publish_at tags html)

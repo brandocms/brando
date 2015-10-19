@@ -2,6 +2,7 @@ defmodule Brando.Admin.PageController do
   @moduledoc """
   Controller for the Brando Pages module.
   """
+
   use Linguist.Vocabulary
   use Brando.Web, :controller
   use Brando.Villain, [:controller, [

@@ -2,11 +2,12 @@ defmodule Brando.Admin.ImageController do
   @moduledoc """
   Controller for the Brando ImageCategory module.
   """
+
   use Linguist.Vocabulary
   use Brando.Web, :controller
+  alias Brando.Image
   import Brando.Plug.HTML
   import Brando.Gettext
-  alias Brando.Image
 
   plug :put_section, "images"
 

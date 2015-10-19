@@ -1,6 +1,9 @@
 defmodule <%= application_module %>.Router do
   use <%= application_module %>.Web, :router
 
+  alias Brando.Plug.Authenticate
+  alias Brando.Plug.Lockdown
+
   import Brando.Routes.Admin.Users
   import Brando.Routes.Admin.News
   import Brando.Routes.Admin.Dashboard
@@ -8,9 +11,6 @@ defmodule <%= application_module %>.Router do
   import Brando.Routes.Admin.Pages
   import Brando.Routes.Admin.Instagram
   import Brando.Plug.I18n
-
-  alias Brando.Plug.Authenticate
-  alias Brando.Plug.Lockdown
 
   pipeline :admin do
     plug :accepts, ~w(html json)

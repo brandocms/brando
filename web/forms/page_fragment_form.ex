@@ -3,6 +3,7 @@ defmodule Brando.PageFragmentForm do
   A form for the PageFragment model. See the `Brando.Form` module for more
   documentation
   """
+
   use Brando.Form
   alias Brando.PageFragment
 

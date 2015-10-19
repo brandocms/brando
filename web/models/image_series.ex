@@ -3,16 +3,19 @@ defmodule Brando.ImageSeries do
   Ecto schema for the Image Series model
   and helper functions for dealing with the model.
   """
+
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
   use Brando.Sequence, :model
-  import Brando.Gettext
-  import Ecto.Query, only: [from: 2]
-  import Brando.Utils.Model, only: [put_creator: 2]
+
   alias Brando.User
   alias Brando.Image
   alias Brando.ImageCategory
+
+  import Brando.Gettext
+  import Ecto.Query, only: [from: 2]
+  import Brando.Utils.Model, only: [put_creator: 2]
 
   @required_fields ~w(name slug image_category_id creator_id)
   @optional_fields ~w(credits sequence cfg)

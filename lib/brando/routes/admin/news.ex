@@ -11,10 +11,9 @@ defmodule Brando.Routes.Admin.News do
         post_routes "/news", model: Brando.Post
 
   """
-  import Brando.Routes.Admin.Villain
-
   alias Brando.Admin.PostController
   alias Brando.Post
+  import Brando.Routes.Admin.Villain
 
   @doc """
   Defines "RESTful" endpoints for the news resource.

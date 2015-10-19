@@ -2,6 +2,7 @@ defmodule Brando.Admin.ImageSeriesController do
   @moduledoc """
   Controller for the Brando ImageSeries module.
   """
+
   use Linguist.Vocabulary
   use Brando.Web, :controller
   use Brando.Sequence,

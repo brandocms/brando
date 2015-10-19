@@ -2,15 +2,18 @@ defmodule Brando.Page do
   @moduledoc """
   Ecto schema for the Page model.
   """
+
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
   use Brando.Villain, :model
+
+  alias Brando.Type.Status
+  alias Brando.User
+
   import Brando.Gettext
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query
-  alias Brando.Type.Status
-  alias Brando.User
 
   @required_fields ~w(key language title slug data status creator_id)
   @optional_fields ~w(parent_id meta_description meta_keywords html css_classes)

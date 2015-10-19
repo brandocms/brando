@@ -4,6 +4,7 @@ defmodule Brando.Instagram.API do
   """
   use HTTPoison.Base
   require Logger
+
   alias HTTPoison.Response
   alias Brando.SystemChannel
   alias Brando.Instagram

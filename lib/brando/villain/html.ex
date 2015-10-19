@@ -2,6 +2,7 @@ defmodule Brando.Villain.HTML do
   @moduledoc """
   HTML-helpers for Villain
   """
+
   import Phoenix.HTML.Tag, only: [content_tag: 3]
   import Phoenix.HTML, only: [raw: 1]
 

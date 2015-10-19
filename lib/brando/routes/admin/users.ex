@@ -11,9 +11,9 @@ defmodule Brando.Routes.Admin.Users do
         user_routes "/brukere", model: Brando.User
 
   """
+  require Phoenix.Router
   alias Brando.Admin.UserController
   alias Brando.User
-  require Phoenix.Router
 
   @doc """
   Defines "RESTful" endpoints for the users resource.

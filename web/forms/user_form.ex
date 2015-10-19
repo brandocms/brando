@@ -5,8 +5,8 @@ defmodule Brando.UserForm do
   """
   use Bitwise, only_operators: true
   use Brando.Form
-  import Brando.Gettext
   alias Brando.User
+  import Brando.Gettext
 
   @doc false
   def get_language_choices() do

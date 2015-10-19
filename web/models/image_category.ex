@@ -3,14 +3,17 @@ defmodule Brando.ImageCategory do
   Ecto schema for the Image Category model
   and helper functions for dealing with the model.
   """
+
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
+
+  alias Brando.User
+  alias Brando.ImageSeries
+
   import Brando.Gettext
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
-  alias Brando.User
-  alias Brando.ImageSeries
 
   @required_fields ~w(name slug creator_id)
   @optional_fields ~w(cfg)

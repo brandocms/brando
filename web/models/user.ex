@@ -3,13 +3,16 @@ defmodule Brando.User do
   Ecto schema for the User model, as well as image field definitions
   and helper functions for dealing with the user model.
   """
+
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
   use Brando.Field.ImageField
+
+  alias Brando.Utils
+
   import Brando.Gettext
   import Ecto.Query, only: [from: 2]
-  alias Brando.Utils
 
   @required_fields ~w(username full_name email password language)
   @optional_fields ~w(role avatar)
