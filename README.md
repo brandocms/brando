@@ -393,6 +393,8 @@ config :brando, Brando.Villain,
   extra_blocks: ["MyBlock", "AnotherBlock"]
 ```
 
+See `Brando.Villain` help for more information on how to use in your project.
+
 ## Bower/Brunch
 
 Currently these packages are auto-installed:

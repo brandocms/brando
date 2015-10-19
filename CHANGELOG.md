@@ -12,6 +12,9 @@
   * Moved `put_section/2` from `Brando.Plug.Section` to `Brando.Plug.HTML`. Fix imports accordingly.
   * Changed `menu` format. Now, you must set `:name` in the map instead of its own argument. `menu %{name: "blah"}`
   * Norwegian language is now `nb` instead of `no`. Update your `brando.exs` and your `users` table in your database.
+  * `use Brando.Villain.Model` -> `use Brando.Villain, :model`
+  * `use Brando.Villain.Migration` -> `use Brando.Villain, :migration`
+  * `use Brando.Villain.Controller` -> `use Brando.Villain, [:controller, [.]]`
 
 ## v0.4.0 (2015-10-15)
 
