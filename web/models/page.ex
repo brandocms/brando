@@ -5,7 +5,7 @@ defmodule Brando.Page do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
-  use Brando.Villain.Model
+  use Brando.Villain, :model
   import Brando.Gettext
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query

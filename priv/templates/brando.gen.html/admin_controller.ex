@@ -1,8 +1,8 @@
 defmodule <%= admin_module %>Controller do
   use <%= base %>.Web, :controller
-<%= if villain do %>  use Brando.Villain.Controller,
+<%= if villain do %>  use Brando.Villain, [:controller, [
     image_model: Brando.Image,
-    series_model: Brando.ImageSeries<% end %>
+    series_model: Brando.ImageSeries]]<% end %>
 <%= if image_field do %>  import Brando.Plug.Uploads<% end %>
   import <%= base %>.Backend.Gettext
   alias <%= module %>

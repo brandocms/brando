@@ -1,6 +1,6 @@
 defmodule <%= module %> do
   use <%= base %>.Web, :model
-<%= if villain_fields != [] do %>  use Brando.Villain.Model<% end %>
+<%= if villain_fields != [] do %>  use Brando.Villain, :model<% end %>
 <%= if img_fields != [] do %>  use Brando.Field.ImageField
 <% end %>
   import <%= base %>.Backend.Gettext

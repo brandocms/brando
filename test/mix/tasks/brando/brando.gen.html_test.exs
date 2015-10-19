@@ -39,7 +39,13 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       end
 
       assert_file "test/models/minion_face_test.exs"
-      assert [_] = Path.wildcard("priv/repo/migrations/*_create_minion_face.exs")
+      assert [migration_file] =
+        Path.wildcard("priv/repo/migrations/*_create_minion_face.exs")
+
+      assert_file migration_file, fn file ->
+        assert file =~ "use Brando.Villain, :migration"
+        assert file =~ "villain"
+      end
 
       assert_file "web/controllers/minion_face_controller.ex", fn file ->
         assert file =~ "defmodule Brando.MinionFaceController"
@@ -51,7 +57,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "defmodule Brando.Admin.MinionFaceController"
         assert file =~ "use Brando.Web, :controller"
         assert file =~ "Repo.get!"
-        assert file =~ "use Brando.Villain.Controller"
+        assert file =~ "use Brando.Villain, [:controller"
         assert file =~ "import Brando.Backend.Gettext"
       end
 

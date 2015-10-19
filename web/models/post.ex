@@ -7,7 +7,7 @@ defmodule Brando.Post do
 
   use Brando.Web, :model
   use Brando.Tag, :model
-  use Brando.Villain.Model
+  use Brando.Villain, :model
   use Brando.Field.ImageField
   import Brando.Gettext
   import Brando.Utils.Model, only: [put_creator: 2]

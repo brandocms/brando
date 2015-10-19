@@ -48,7 +48,7 @@ defmodule Brando.Mixfile do
       {:postgrex, ">= 0.0.0"},
       {:scrivener, "~> 1.0"},
       {:slugger, "~> 0.0.1"},
-      {:gettext, "~> 0.6"},
+      {:gettext, github: "tmjoen/gettext"},
 
       # Dev dependencies
       {:dialyze, "~> 0.2", only: :dev},

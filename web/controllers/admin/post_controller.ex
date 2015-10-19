@@ -4,9 +4,9 @@ defmodule Brando.Admin.PostController do
   """
   use Linguist.Vocabulary
   use Brando.Web, :controller
-  use Brando.Villain.Controller,
+  use Brando.Villain, [:controller, [
     image_model: Brando.Image,
-    series_model: Brando.ImageSeries
+    series_model: Brando.ImageSeries]]
 
   import Brando.Gettext
   import Brando.Plug.HTML
