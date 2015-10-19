@@ -50,11 +50,11 @@ config :brando, Brando.Villain, parser: Brando.Villain.Parser.Default
 config :brando, Brando.Villain, extra_blocks: []
 config :brando, :logging, disable_logging: true
 config :brando, :login_url, "/login"
-config :brando, :default_language, "no"
-config :brando, :admin_default_language, "no"
-config :brando, :languages, [[value: "no", text: "Norsk"],
+config :brando, :default_language, "nb"
+config :brando, :admin_default_language, "nb"
+config :brando, :languages, [[value: "nb", text: "Norsk"],
                              [value: "en", text: "English"]]
-config :brando, :admin_languages, [[value: "no", text: "Norsk"],
+config :brando, :admin_languages, [[value: "nb", text: "Norsk"],
                                    [value: "en", text: "English"]]
 config :brando, :status_choices, [
           no: [[value: "0", text: "Kladd"],

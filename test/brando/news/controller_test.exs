@@ -9,7 +9,7 @@ defmodule Brando.News.ControllerTest do
   alias Brando.Post
   alias Brando.User
 
-  @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "no",
+  @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "nb",
                  "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
@@ -18,14 +18,14 @@ defmodule Brando.News.ControllerTest do
                  "{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]",
                  "featured" => true, "header" => "Header",
                  "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
-                 "language" => "no", "lead" => "Asdf",
+                 "language" => "nb", "lead" => "Asdf",
                  "meta_description" => nil, "meta_keywords" => nil,
                  "publish_at" => nil, "published" => false,
                  "slug" => "header", "status" => :published}
 
   @broken_post_params %{"data" => "", "featured" => true, "header" => "",
                         "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
-                        "language" => "no", "lead" => "Asdf",
+                        "language" => "nb", "lead" => "Asdf",
                         "meta_description" => nil, "meta_keywords" => nil,
                         "publish_at" => "1", "published" => false,
                         "slug" => "header", "status" => :published}
@@ -43,7 +43,7 @@ defmodule Brando.News.ControllerTest do
       |> send_request
 
     assert response_content_type(conn, :html) =~ "charset=utf-8"
-    assert html_response(conn, 200) =~ "Oversikt - poster"
+    assert html_response(conn, 200) =~ "Index - posts"
   end
 
   test "show" do
@@ -67,7 +67,7 @@ defmodule Brando.News.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Opprett post"
+    assert html_response(conn, 200) =~ "New post"
   end
 
   test "edit" do
@@ -81,7 +81,7 @@ defmodule Brando.News.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Endre post"
+    assert html_response(conn, 200) =~ "Edit post"
 
     assert_raise Plug.Conn.WrapperError, fn ->
       :get
@@ -101,7 +101,6 @@ defmodule Brando.News.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/news"
-    assert get_flash(conn, :notice) == "Post opprettet"
   end
 
   test "create (post) w/erroneus params" do
@@ -111,8 +110,8 @@ defmodule Brando.News.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Opprett post"
-    assert get_flash(conn, :error) == "Feil i skjema"
+    assert html_response(conn, 200) =~ "New post"
+    assert get_flash(conn, :error) == "Errors in form"
   end
 
   test "update (post) w/params" do
@@ -132,7 +131,6 @@ defmodule Brando.News.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/news"
-    assert get_flash(conn, :notice) == "Post oppdatert"
   end
 
   test "delete_confirm" do
@@ -146,7 +144,7 @@ defmodule Brando.News.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Slett post: Header"
+    assert html_response(conn, 200) =~ "Delete post: Header"
   end
 
   test "delete" do

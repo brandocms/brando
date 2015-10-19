@@ -1,6 +1,6 @@
 defmodule <%= application_module %>.Repo.Migrations.CreatePages do
   use Ecto.Migration
-  use Brando.Villain.Migration
+  use Brando.Villain, :migration
 
   def up do
     create table(:pages) do

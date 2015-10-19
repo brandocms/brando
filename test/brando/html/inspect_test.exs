@@ -7,7 +7,7 @@ defmodule Brando.HTML.InspectTest do
   alias Brando.Post
   alias Brando.Type.Image
 
-  @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "no",
+  @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "nb",
                  "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
                  "password" => "finimeze", "username" => "zabuzasixu"}
 
@@ -22,7 +22,7 @@ defmodule Brando.HTML.InspectTest do
                            "\"zcxvxcv\",\"type\":\"paragraph\"}}]",
                  "featured" => true, "header" => "Header",
                  "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
-                 "language" => "no", "lead" => "Asdf",
+                 "language" => "nb", "lead" => "Asdf",
                  "meta_description" => nil, "meta_keywords" => nil,
                  "publish_at" => nil, "published" => false,
                  "slug" => "header", "status" => :published}
@@ -70,7 +70,7 @@ defmodule Brando.HTML.InspectTest do
   test "model/1" do
     assert {:ok, user} = User.create(@user_params)
 
-    {:safe, ret} = model("no", user)
+    {:safe, ret} = model(user)
     ret = ret |> IO.iodata_to_binary
 
     assert ret =~ "zabuzasixu"
@@ -79,7 +79,7 @@ defmodule Brando.HTML.InspectTest do
     assert {:ok, post} = Post.create(@post_params, user)
 
     post = post |> Brando.repo.preload(:creator)
-    {:safe, ret} = model("no", post)
+    {:safe, ret} = model(post)
     ret = ret |> IO.iodata_to_binary
 
     assert ret =~ "<i class=\"fa fa-times text-danger\">"
@@ -89,31 +89,31 @@ defmodule Brando.HTML.InspectTest do
 
   test "inspect_field/3" do
     assert inspect_field("name", Brando.Type.ImageConfig, "value")
-           == ~s(<em>Konfigurasjonsdata</em>)
+           == ~s(<em>Configuration data</em>)
     assert inspect_field("name", Brando.Type.Image, @image_map)
            =~ "/media/images/avatars/thumb/27i97a.jpeg"
-    assert inspect_field(:password, :string, "passord") =~ "sensurert"
-    assert inspect_field("name", :string, "") =~ "ingen verdi"
+    assert inspect_field(:password, :string, "passord") =~ "censored"
+    assert inspect_field("name", :string, "") =~ "No value"
   end
 
   test "inspect_assoc/3" do
-    assert inspect_assoc("no", "name", %Ecto.Association.Has{},
+    assert inspect_assoc("name", %Ecto.Association.Has{},
                          %Ecto.Association.NotLoaded{})
-           =~ "Assosiasjonene er ikke hentet."
-    assert inspect_assoc("no", "name", %Ecto.Association.Has{}, [])
-           =~ "ingen assosiasjoner"
-    assert inspect_assoc("no", "name", @association_has, @association_val)
+           =~ "Association not fetched"
+    assert inspect_assoc("name", %Ecto.Association.Has{}, [])
+           =~ "Empty association"
+    assert inspect_assoc("name", @association_has, @association_val)
            =~ "74 | images/default/2ambet.jpg"
   end
 
   test "model_repr/1" do
     assert {:ok, user} = User.create(@user_params)
-    assert model_repr("no", user) == "Nita Bond (zabuzasixu)"
+    assert model_repr(user) == "Nita Bond (zabuzasixu)"
   end
 
   test "model_name/2" do
     assert {:ok, user} = User.create(@user_params)
-    assert model_name("no", user, :singular) == "bruker"
-    assert model_name("no", user, :plural) == "brukere"
+    assert model_name(user, :singular) == "user"
+    assert model_name(user, :plural) == "users"
   end
 end

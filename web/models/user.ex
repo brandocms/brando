@@ -7,6 +7,7 @@ defmodule Brando.User do
 
   use Brando.Web, :model
   use Brando.Field.ImageField
+  import Brando.Gettext
   import Ecto.Query, only: [from: 2]
   alias Brando.Utils
 
@@ -185,43 +186,26 @@ defmodule Brando.User do
   #
   # Meta
 
-  use Brando.Meta.Model,
-    [no: [singular: "bruker",
-          plural: "brukere",
-          repr: &("#{&1.full_name} (#{&1.username})"),
-          fieldset: [
-            user_info: "Brukerinformasjon",
-            rights: "Rettigheter"
-          ],
-          fields: [id: "ID",
-                   username: "Brukernavn",
-                   email: "Epost",
-                   full_name: "Navn",
-                   password: "Passord",
-                   role: "Roller",
-                   language: "Språk",
-                   last_login: "Siste innlogging",
-                   inserted_at: "Opprettet",
-                   updated_at: "Oppdatert",
-                   avatar: "Avatar"],
-          hidden_fields: [:password, :creator]],
-    en: [singular: "user",
-         plural: "users",
-         repr: &("#{&1.full_name} (#{&1.username})"),
-         fieldset: [
-           user_info: "User information",
-           rights: "Rights"
-         ],
-         fields: [id: "ID",
-                  username: "Username",
-                  email: "Email",
-                  full_name: "Full name",
-                  password: "Password",
-                  role: "Roles",
-                  language: "Language",
-                  last_login: "Last login",
-                  inserted_at: "Inserted at",
-                  updated_at: "Updated at",
-                  avatar: "Avatar"],
-         hidden_fields: [:password, :creator]]]
+  use Brando.Meta.Model, [
+    singular: gettext("user"),
+    plural: gettext("users"),
+    repr: &("#{&1.full_name} (#{&1.username})"),
+    fieldset: [
+      user_info: "User information",
+      rights: "Rights"
+    ],
+    fields: [
+      id: gettext("ID"),
+      username: gettext("Username"),
+      email: gettext("Email"),
+      full_name: gettext("Full name"),
+      password: gettext("Password"),
+      role: gettext("Roles"),
+      language: gettext("Language"),
+      last_login: gettext("Last login"),
+      inserted_at: gettext("Inserted at"),
+      updated_at: gettext("Updated at"),
+      avatar: gettext("Avatar")],
+    hidden_fields: [:password, :creator]
+  ]
 end

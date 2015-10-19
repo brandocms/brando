@@ -14,6 +14,7 @@
   "exjsx": {:hex, :exjsx, "3.2.0"},
   "exvcr": {:hex, :exvcr, "0.5.0"},
   "faker": {:hex, :faker, "0.5.1"},
+  "gettext": {:git, "https://github.com/tmjoen/gettext.git", "c937153ce455ca9bc6e145126b1889d9b7bafde8", []},
   "hackney": {:hex, :hackney, "1.3.2"},
   "httpoison": {:hex, :httpoison, "0.7.4"},
   "idna": {:hex, :idna, "1.0.2"},

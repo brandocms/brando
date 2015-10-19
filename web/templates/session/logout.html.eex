@@ -1,2 +1,2 @@
 <div class="text-center"><i class="fa fa-check-circle-o fa-5x m-t-md"></i></div>
-<p>Du er logget ut av administrasjonsområdet.</p>
+<p><%= gettext("You have been logged out of the admin area.") %></p>

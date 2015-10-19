@@ -6,6 +6,7 @@ defmodule Brando.InstagramImage do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
+  import Brando.Gettext
   import Ecto.Query, only: [from: 2]
   require Logger
   alias Brando.Instagram
@@ -265,18 +266,21 @@ defmodule Brando.InstagramImage do
   #
   # Meta
 
-  use Brando.Meta.Model,
-    [no: [singular: "instagrambilde",
-     plural: "instagrambilder",
-     repr: &("#{&1.id} | #{&1.caption}"),
-     fields: [id: "ID",
-              instagram_id: "Instagram ID",
-              type: "Type",
-              caption: "Tittel",
-              link: "Link",
-              url_original: "Bilde-URL",
-              url_thumbnail: "Miniatyrbilde-URL",
-              created_time: "Opprettet",
-              status: "Status"]]]
+  use Brando.Meta.Model, [
+    singular: gettext("instagram image"),
+    plural: gettext("instagram images"),
+    repr: &("#{&1.id} | #{&1.caption}"),
+    fields: [
+      id: gettext("ID"),
+      instagram_id: gettext("Instagram ID"),
+      type: gettext("Type"),
+      caption: gettext("Caption"),
+      link: gettext("Link"),
+      url_original: gettext("Image URL"),
+      url_thumbnail: gettext("Thumbnail URL"),
+      created_time: gettext("Created"),
+      status: gettext("Status"),
+    ]
+  ]
 
 end

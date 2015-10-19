@@ -24,7 +24,7 @@ defmodule RouterHelper do
       role: [:superuser, :staff, :admin],
       updated_at: %Ecto.DateTime{day: 14, hour: 21, min: 36, month: 1,
                                  sec: 53, year: 2015},
-      username: "iggypop", language: "no"}
+      username: "iggypop", language: "en"}
 
   defmacro __using__(_) do
     quote do

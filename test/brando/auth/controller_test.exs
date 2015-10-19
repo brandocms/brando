@@ -14,7 +14,7 @@ defmodule Brando.Auth.ControllerTest do
       |> call("/login")
       |> with_session
       |> send_request
-    assert html_response(conn, 200) =~ "Passord"
+    assert html_response(conn, 200) =~ "Password"
   end
 
   test "login post ok" do
@@ -25,7 +25,7 @@ defmodule Brando.Auth.ControllerTest do
       |> with_session
       |> send_request
     assert redirected_to(conn, 302) =~ "/admin"
-    assert get_flash(conn, :notice) == "Innloggingen var vellykket"
+    assert get_flash(conn, :notice) == "Authorization successful"
 
   end
 
@@ -37,7 +37,7 @@ defmodule Brando.Auth.ControllerTest do
       |> with_session
       |> send_request
     assert redirected_to(conn, 302) =~ "/login"
-    assert get_flash(conn, :error) == "Innloggingen feilet"
+    assert get_flash(conn, :error) == "Authorization failed"
   end
 
   test "logout" do
@@ -48,6 +48,6 @@ defmodule Brando.Auth.ControllerTest do
       |> with_user(user)
       |> send_request
     assert html_response(conn, 200)
-           =~ "Du er logget ut av administrasjonsområdet"
+           =~ "You have been logged out of the admin area"
   end
 end

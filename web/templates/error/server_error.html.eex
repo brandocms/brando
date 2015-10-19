@@ -7,7 +7,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title><%= app_name %> | autorisering</title>
+    <title><%= app_name %> | 500</title>
     <link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/brando.vendor.css") %>">
     <link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/brando.css") %>">
     <%= if Mix.env(:dev) do %>
@@ -25,7 +25,7 @@
               <div class="toolbar"></div>
               <div class="box">
                 <h1 id="app-name">500</h1>
-                <p>ukjent feil.</p>
+                <p><%= gettext("Server error") %></p>
                 <span class="version">&beta; <%= Brando.version %></span>
               </div>
             </div>

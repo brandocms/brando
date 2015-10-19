@@ -32,6 +32,9 @@ defmodule Brando.Field.ImageField do
       import Brando.Images.Utils
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
+
+      before_update __MODULE__, :cleanup_old_images
+
       @doc """
       Checks `params` for Plug.Upload fields and passes them on to
       `handle_upload` to check if we have a handler for the field.
@@ -45,22 +48,39 @@ defmodule Brando.Field.ImageField do
           end)
         {:ok, uploads}
       end
+
+      @doc """
+      Cleans up old images on update
+      """
+      def cleanup_old_images(changeset) do
+        imagefield_keys = Keyword.keys(__imagefields__())
+        for key <- Map.keys(changeset.changes) do
+          if key in imagefield_keys do
+            image = Map.get(changeset.model, key)
+            Brando.Images.Utils.delete_original_and_sized_images(image)
+          end
+        end
+        changeset
+      end
     end
   end
 
   @doc false
   defmacro __before_compile__(env) do
-    env.module
-    |> Module.get_attribute(:imagefields)
-    |> compile
+    imagefields = Module.get_attribute(env.module, :imagefields)
+    compile(imagefields)
   end
 
   @doc false
   def compile(imagefields) do
-    imagefields =
+    imagefields_src =
       for {name, contents} <- imagefields, do: defcfg(name, contents)
     quote do
-      unquote(imagefields)
+      def __imagefields__() do
+        unquote(Macro.escape(imagefields))
+      end
+
+      unquote(imagefields_src)
     end
   end
 

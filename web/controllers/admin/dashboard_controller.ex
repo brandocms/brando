@@ -5,6 +5,7 @@ defmodule Brando.Admin.DashboardController do
 
   use Brando.Web, :controller
   import Brando.Plug.HTML
+  import Brando.Gettext
 
   plug :put_section, "dashboard"
 
@@ -35,7 +36,7 @@ defmodule Brando.Admin.DashboardController do
           |> Enum.reverse
       {:error, _} ->
         log_last_updated = ""
-        log_last_lines = "FILE NOT FOUND."
+        log_last_lines = gettext("File not found")
     end
 
     conn

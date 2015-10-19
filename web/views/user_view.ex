@@ -5,28 +5,5 @@ defmodule Brando.Admin.UserView do
   use Brando.Web, :view
   alias Brando.UserForm
   alias Brando.UserProfileForm
-
-  use Linguist.Vocabulary
-
-  locale "en", [
-    actions: [
-      index: "Index - users",
-      new: "New user",
-      show: "Show user",
-      edit: "Edit user",
-      profile: "Profile",
-      delete: "Delete user"
-    ]
-  ]
-
-  locale "no", [
-    actions: [
-      index: "Oversikt - brukere",
-      new: "Opprett bruker",
-      show: "Vis bruker",
-      edit: "Endre bruker",
-      profile: "Brukerprofil",
-      delete: "Slett bruker"
-    ]
-  ]
+  import Brando.Gettext
 end

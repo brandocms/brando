@@ -4,10 +4,11 @@ defmodule Brando.Admin.PageController do
   """
   use Linguist.Vocabulary
   use Brando.Web, :controller
-  use Brando.Villain.Controller,
+  use Brando.Villain, [:controller, [
     image_model: Brando.Image,
-    series_model: Brando.ImageSeries
+    series_model: Brando.ImageSeries]]
 
+  import Brando.Gettext
   import Brando.Plug.HTML
   import Brando.Utils, only: [helpers: 1]
 
@@ -16,7 +17,6 @@ defmodule Brando.Admin.PageController do
 
   @doc false
   def index(conn, _params) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     pages =
       model
@@ -25,14 +25,13 @@ defmodule Brando.Admin.PageController do
       |> Brando.repo.all
 
     conn
-    |> assign(:page_title, t!(language, "title.index"))
+    |> assign(:page_title, gettext("Index - pages"))
     |> assign(:pages, pages)
     |> render(:index)
   end
 
   @doc false
   def rerender(conn, _params) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     pages =
       model
@@ -43,13 +42,12 @@ defmodule Brando.Admin.PageController do
     end
 
     conn
-    |> put_flash(:notice, t!(language, "flash.rerendered"))
+    |> put_flash(:notice, gettext("Pages re-rendered"))
     |> redirect(to: helpers(conn).admin_page_path(conn, :index))
   end
 
   @doc false
   def show(conn, %{"id" => id}) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     page =
       model
@@ -57,44 +55,41 @@ defmodule Brando.Admin.PageController do
       |> Brando.repo.get_by(id: id)
 
     conn
-    |> assign(:page_title, t!(language, "title.show"))
+    |> assign(:page_title, gettext("Show page"))
     |> assign(:page, page)
     |> render(:show)
   end
 
   @doc false
   def new(conn, _params) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     changeset = model.changeset(model.__struct__, :create)
     conn
     |> assign(:changeset, changeset)
-    |> assign(:page_title, t!(language, "title.new"))
+    |> assign(:page_title, gettext("New page"))
     |> render(:new)
   end
 
   @doc false
   def create(conn, %{"page" => page}) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     case model.create(page, Brando.Utils.current_user(conn)) do
       {:ok, _} ->
         conn
-        |> put_flash(:notice, t!(language, "flash.created"))
+        |> put_flash(:notice, gettext("Page created"))
         |> redirect(to: helpers(conn).admin_page_path(conn, :index))
       {:error, changeset} ->
         conn
-        |> assign(:page_title, t!(language, "title.new"))
+        |> put_flash(:error, gettext("Errors in form"))
+        |> assign(:page_title, gettext("New page"))
         |> assign(:page, page)
         |> assign(:changeset, changeset)
-        |> put_flash(:error, t!(language, "flash.form_error"))
         |> render(:new)
     end
   end
 
   @doc false
   def duplicate(conn, %{"id" => id}) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     page =
       model
@@ -107,8 +102,8 @@ defmodule Brando.Admin.PageController do
     changeset = model.changeset(%Brando.Page{}, :create, page)
 
     conn
-    |> put_flash(:notice, t!(language, "flash.duplicated"))
-    |> assign(:page_title, t!(language, "title.new"))
+    |> put_flash(:notice, gettext("Page duplicated"))
+    |> assign(:page_title, gettext("New page"))
     |> assign(:page, page)
     |> assign(:changeset, changeset)
     |> render(:new)
@@ -116,7 +111,6 @@ defmodule Brando.Admin.PageController do
 
   @doc false
   def edit(conn, %{"id" => id}) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     changeset =
       model
@@ -125,7 +119,7 @@ defmodule Brando.Admin.PageController do
       |> model.changeset(:update)
 
       conn
-      |> assign(:page_title, t!(language, "title.edit"))
+      |> assign(:page_title, gettext("Edit page"))
       |> assign(:changeset, changeset)
       |> assign(:id, id)
       |> render(:edit)
@@ -133,28 +127,26 @@ defmodule Brando.Admin.PageController do
 
   @doc false
   def update(conn, %{"page" => form_data, "id" => id}) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     page = Brando.repo.get_by!(model, id: id)
     case model.update(page, form_data) do
       {:ok, _updated_page} ->
         conn
-        |> put_flash(:notice, t!(language, "flash.updated"))
+        |> put_flash(:notice, gettext("Page updated"))
         |> redirect(to: helpers(conn).admin_page_path(conn, :index))
       {:error, changeset} ->
         conn
-        |> assign(:page_title, t!(language, "title.edit"))
+        |> assign(:page_title, gettext("Edit page"))
         |> assign(:page, form_data)
         |> assign(:changeset, changeset)
         |> assign(:id, id)
-        |> put_flash(:error, t!(language, "flash.form_error"))
+        |> put_flash(:error, gettext("Errors in form"))
         |> render(:edit)
     end
   end
 
   @doc false
   def delete_confirm(conn, %{"id" => id}) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     record =
       model
@@ -162,55 +154,18 @@ defmodule Brando.Admin.PageController do
       |> Brando.repo.get_by(id: id)
 
     conn
-    |> assign(:page_title, t!(language, "title.delete_confirm"))
+    |> assign(:page_title, gettext("Confirm deletion"))
     |> assign(:record, record)
     |> render(:delete_confirm)
   end
 
   @doc false
   def delete(conn, %{"id" => id}) do
-    language = Brando.I18n.get_language(conn)
     model = conn.private[:model]
     record = Brando.repo.get_by!(model, id: id)
     model.delete(record)
     conn
-    |> put_flash(:notice, t!(language, "flash.deleted"))
+    |> put_flash(:notice, gettext("Page deleted"))
     |> redirect(to: helpers(conn).admin_page_path(conn, :index))
   end
-
-  locale "no", [
-    title: [
-      index: "Sideoversikt",
-      show: "Vis side",
-      new: "Ny side",
-      edit: "Endre side",
-      delete_confirm: "Bekreft sletting av side",
-    ],
-    flash: [
-      form_error: "Feil i skjema",
-      updated: "Side oppdatert",
-      created: "Side opprettet",
-      duplicated: "Side duplisert",
-      deleted: "Side slettet",
-      rerendered: "Sider rendret på nytt"
-    ]
-  ]
-
-  locale "en", [
-    title: [
-      index: "Index – Pages",
-      show: "Show page",
-      new: "New page",
-      edit: "Edit page",
-      delete_confirm: "Confirm page deletion",
-    ],
-    flash: [
-      form_error: "Error(s) in form",
-      updated: "Page updated",
-      created: "Page created",
-      duplicated: "Page duplicated",
-      deleted: "Page deleted",
-      rerendered: "Pages re-rendered"
-    ]
-  ]
 end

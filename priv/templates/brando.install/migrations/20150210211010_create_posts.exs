@@ -1,7 +1,7 @@
 defmodule <%= application_module %>.Repo.Migrations.CreatePosts do
   use Ecto.Migration
   use Brando.Tag, :migration
-  use Brando.Villain.Migration
+  use Brando.Villain, :migration
 
   def up do
     create table(:posts) do

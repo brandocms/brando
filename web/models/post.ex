@@ -7,8 +7,9 @@ defmodule Brando.Post do
 
   use Brando.Web, :model
   use Brando.Tag, :model
-  use Brando.Villain.Model
+  use Brando.Villain, :model
   use Brando.Field.ImageField
+  import Brando.Gettext
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
   alias Brando.Type.Status
@@ -149,56 +150,29 @@ defmodule Brando.Post do
   #
   # Meta
 
-  use Brando.Meta.Model,
-    [no: [singular: "post",
-     plural: "poster",
-     repr: &("#{&1.header}"),
-     help: [
-       featured: "Posten vektes uavhengig av opprettelses- og publiseringsdato"
-     ],
-     fields: [
-        id: "№",
-        status: "Status",
-        featured: "Vektet",
-        language: "Språk",
-        cover: "Cover",
-        header: "Overskrift",
-        slug: "URL-tamp",
-        lead: "Ingress",
-        data: "Data",
-        html: "HTML",
-        creator: "Bruker",
-        meta_description: "META beskrivelse",
-        meta_keywords: "META nøkkelord",
-        published: "Publisert",
-        publish_at: "Publiseringstidspunkt",
-        tags: "Tags",
-        inserted_at: "Opprettet",
-        updated_at: "Oppdatert"]],
-
-    en: [singular: "post",
-         plural: "posts",
-         repr: &("#{&1.header}"),
-         help: [
-           featured: "The post is prioritized, taking precedence over pub. date"
-         ],
-         fields: [
-            id: "№",
-            status: "Status",
-            featured: "Featured",
-            language: "Language",
-            cover: "Cover",
-            header: "Header",
-            slug: "Slug",
-            lead: "Lead",
-            data: "Data",
-            html: "HTML",
-            creator: "Creator",
-            meta_description: "META description",
-            meta_keywords: "META keywords",
-            published: "Published",
-            publish_at: "Publish at",
-            tags: "Tags",
-            inserted_at: "Inserted at",
-            updated_at: "Updated at"]]]
+  use Brando.Meta.Model, [
+    singular: gettext("post"),
+    plural: gettext("posts"),
+    repr: &("#{&1.header}"),
+    fields: [
+      id: "№",
+      status: gettext("Status"),
+      featured: gettext("Featured"),
+      language: gettext("Language"),
+      cover: gettext("Cover"),
+      header: gettext("Header"),
+      slug: gettext("Slug"),
+      lead: gettext("Lead"),
+      data: gettext("Data"),
+      html: gettext("HTML"),
+      creator: gettext("Creator"),
+      meta_description: gettext("META description"),
+      meta_keywords: gettext("META keywords"),
+      published: gettext("Published"),
+      publish_at: gettext("Publish at"),
+      tags: gettext("Tags"),
+      inserted_at: gettext("Inserted at"),
+      updated_at: gettext("Updated at"),
+    ]
+  ]
 end

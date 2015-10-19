@@ -8,7 +8,7 @@ defmodule Brando.ImageSeriesForm do
   alias Brando.ImageSeries
 
   @doc false
-  def get_categories(_) do
+  def get_categories() do
     categories =
       ImageCategory
       |> ImageCategory.with_image_series_and_images
@@ -20,7 +20,7 @@ defmodule Brando.ImageSeriesForm do
   form "imageseries", [model: ImageSeries, helper: :admin_image_series_path,
                        class: "grid-form"] do
     fieldset do
-      field :image_category_id, :radio, [choices: &__MODULE__.get_categories/1]
+      field :image_category_id, :radio, [choices: &__MODULE__.get_categories/0]
     end
     field :name, :text
     field :slug, :text, [slug_from: :name]

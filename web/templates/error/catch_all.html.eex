@@ -7,7 +7,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title><%= app_name %> | autorisering</title>
+    <title><%= app_name %> | <%= gettext("Error") %></title>
     <link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/brando.vendor.css") %>">
     <link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/brando.css") %>">
     <%= if Mix.env(:dev) do %>
@@ -24,7 +24,7 @@
             <div class="grid-content">
               <div class="toolbar"></div>
               <div class="box">
-                <h1 id="app-name">FEIL</h1>
+                <h1 id="app-name"><%= gettext("Error") %></h1>
                 <code><%= inspect(@reason) %></code>
                 <span class="version">&beta; <%= Brando.version %></span>
               </div>

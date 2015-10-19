@@ -1,12 +1,12 @@
   <div class="data-table">
-    <h1><%= t!(@language, "actions.show") %></h1>
-    <%= Brando.HTML.Inspect.model(@language, @post) %>
+    <h1><%= gettext("Show post") %></h1>
+    <%= Brando.HTML.Inspect.model(@post) %>
     <div class="form-actions">
       <a href="<%= Helpers.admin_post_path(@conn, :index) %>" class="btn btn-default">
-        <i class="fa fa-list fa-fw m-r-sm"></i> <%= Brando.Admin.LayoutView.t!(@language, "global.back_to_index") %>
+        <i class="fa fa-list fa-fw m-r-sm"></i> <%= gettext("Back to index") %>
       </a>
       <a href="<%= Helpers.admin_post_path(@conn, :edit, @post.id) %>" class="btn btn-default">
-        <i class="fa fa-edit fa-fw m-r-sm"></i> <%= t!(@language, "actions.edit") %>
+        <i class="fa fa-edit fa-fw m-r-sm"></i> <%= gettext("Edit post") %>
       </a>
     </div>
   </div>
