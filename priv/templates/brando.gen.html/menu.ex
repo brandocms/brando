@@ -1,4 +1,4 @@
-defmodule Brando.Menu.<%= scoped %>s do
+defmodule <%= base %>.Menu.<%= scoped %>s do
   @moduledoc """
   Menu definitions for the <%= scoped %>s Menu.
 
@@ -6,20 +6,15 @@ defmodule Brando.Menu.<%= scoped %>s do
   Install menu by adding to your `config/brando.exs`
 
       config :brando, Brando.Menu,
-        modules: [<%= scoped %>s, ...]
+        modules: [<%= base %>.Menu.<%= scoped %>s, ...]
 
   """
   use Brando.Menu
+  import <%= base %>.Backend.Gettext
 
-  menu "no", "<%= String.capitalize(no_plural) %>",
+  menu gettext("<%= scoped %>s"),
     %{anchor: "<%= plural %>", icon: "fa fa-anchor icon",
-      submenu: [%{name: "Oversikt", url: {:<%= admin_path %>_path, :index}},
-                %{name: "Legg til", url: {:<%= admin_path %>_path, :new},
-                  role: :admin}]}
-
-  menu "en", "<%= scoped %>s",
-    %{anchor: "<%= plural %>", icon: "fa fa-anchor icon",
-      submenu: [%{name: "Index", url: {:<%= admin_path %>_path, :index}},
-                %{name: "Add", url: {:<%= admin_path %>_path, :new},
+      submenu: [%{name: gettext("Index"), url: {:<%= admin_path %>_path, :index}},
+                %{name: gettext("Add"), url: {:<%= admin_path %>_path, :new},
                   role: :admin}]}
 end

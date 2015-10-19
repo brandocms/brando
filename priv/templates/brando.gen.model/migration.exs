@@ -1,6 +1,6 @@
 defmodule <%= base %>.Repo.Migrations.Create<%= scoped %> do
   use Ecto.Migration
-<%= if villain_fields != [] do %>  use Brando.Villain.Migration<% end %>
+<%= if villain_fields != [] do %>  use Brando.Villain, :migration<% end %>
 
   def change do
     create table(:<%= plural %>) do

@@ -7,40 +7,43 @@ defmodule Brando.Plug.I18n do
   @doc """
   Assign current language.
 
-  Here it already is in `conn`, so we only add to `conn.assigns`
+  Here it already is in `conn`'s session, so we set it through Gettext as
+  well as assigning.
   """
-  def put_locale(%{private: %{plug_session: %{"language" => l}}} = conn, _) do
-    l = extract_language_from_path(conn) || l
-    assign_language(conn, l)
+  def put_locale(%{private: %{plug_session: %{"language" => language}}} = conn, _) do
+    language = extract_language_from_path(conn) || language
+    Gettext.locale(language)
+    assign_language(conn, language)
   end
 
   @doc """
   Add current language to `conn`.
 
-  Adds to session and assigns
+  Adds to session and assigns, and sets it through gettext
   """
   def put_locale(conn, _) do
     language = extract_language_from_path(conn)
                || Brando.config(:default_language)
+    Gettext.locale(language)
+
     conn
     |> put_language(language)
     |> assign_language(language)
   end
 
   @doc """
-  Add language from current_user to `conn`'s assigns.
-
-  This is separated from `put_locale` since we can have different
-  languages on the frontend and on the backend.
+  Set locale to current_user's language
   """
   def put_admin_locale(%{private: %{plug_session:
                        %{"current_user" => current_user}}} = conn, _) do
     default_language = Brando.config(:default_admin_language)
-    assign_language(conn, Map.get(current_user, :language, default_language))
+    language = Map.get(current_user, :language, default_language)
+    Gettext.locale(language)
+    conn
   end
 
   @doc """
-  Add default language to `conn`'s assigns.
+  Set default language
   """
   def put_admin_locale(conn, _) do
     assign_language(conn, Brando.config(:default_admin_language))

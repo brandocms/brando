@@ -2,6 +2,7 @@ defmodule Brando.I18nController do
   @moduledoc """
   Controller for i18n actions.
   """
+
   use Brando.Web, :controller
   import Brando.I18n
 

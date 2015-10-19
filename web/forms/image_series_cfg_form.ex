@@ -3,6 +3,7 @@ defmodule Brando.ImageSeriesConfigForm do
   A form for the ImageSeries configuration model. See the `Brando.Form`
   module for more documentation
   """
+
   use Brando.Form
   alias Brando.ImageSeries
 

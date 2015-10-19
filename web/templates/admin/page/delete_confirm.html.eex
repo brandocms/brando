@@ -1,16 +1,16 @@
 <div class="data-table">
   <h1>
-    <%= t!(@language, "actions.delete") %>: <%= Brando.HTML.Inspect.model_repr(@language, @record) %>
+    <%= gettext("Delete page") %>: <%= Brando.HTML.Inspect.model_repr(@record) %>
   </h1>
   <p>
-    <%= Brando.Admin.LayoutView.t!(@language, "message.confirm_delete") %>
+    <%= gettext("You are about to delete this object. Please check carefully, and note that any dependent objects will also be removed.") %>
   </p>
   <p class="m-b-md">
     <i class="fa fa-exclamation-triangle text-danger m-r-sm"> </i>
     <strong class="text-upper">
-      <%= Brando.Admin.LayoutView.t!(@language, "message.no_restore") %>
+      <%= gettext("This object cannot be restored!") %>
     </strong>
   </p>
-  <%= Brando.HTML.Inspect.model(@language, @record) %>
-  <%= Brando.HTML.delete_form_button(@language, :admin_page_path, @record) %>
+  <%= Brando.HTML.Inspect.model(@record) %>
+  <%= Brando.HTML.delete_form_button(:admin_page_path, @record) %>
 </div>

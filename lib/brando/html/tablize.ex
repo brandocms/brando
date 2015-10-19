@@ -4,8 +4,9 @@ defmodule Brando.HTML.Tablize do
   """
   use Linguist.Vocabulary
 
+  import Brando.Gettext
   import Brando.HTML, only: [check_or_x: 1, zero_pad: 1]
-  import Brando.HTML.Inspect, only: [inspect_field: 3, translate_field: 3]
+  import Brando.HTML.Inspect, only: [inspect_field: 3]
 
   @narrow_fields [:language, :id, :status]
   @narrow_types [:integer, :boolean]
@@ -17,14 +18,14 @@ defmodule Brando.HTML.Tablize do
   ## Example
 
       tablize(@conn, @users, [
-        {t!(@language, "dropdowns.show"),
+        {gettext("Show"),
          "fa-search", :admin_user_path, :show, :id},
-        {t!(@language, "dropdowns.edit"),
+        {gettext("Edit"),
          "fa-edit", :admin_user_path, :edit, :id},
-        {t!(@language, "dropdowns.delete"),
+        {gettext("Delete"),
          "fa-trash", :admin_user_path, :delete_confirm, :id},
-        {t!(@language, "dropdowns.profiles"),
-         "fa-trash", :admin_user_path, :show_profiles, [:group_id, :id]}
+        {gettext("Show profiles")),
+         "fa-search", :admin_user_path, :show_profiles, [:group_id, :id]}
       ], check_or_x: [:avatar], hide: [:password, :last_login, :inserted_at])
 
   ## Arguments
@@ -47,27 +48,38 @@ defmodule Brando.HTML.Tablize do
                    Supply as list `[100, nil, nil, 200, nil, 200]`
 
   """
-  def tablize(conn, [], _, _), do: "<p>#{t!(Brando.I18n.get_language(conn), "no_results")}</p>" |> Phoenix.HTML.raw
-  def tablize(conn, nil, _, _), do: "<p>#{t!(Brando.I18n.get_language(conn), "no_results")}</p>" |> Phoenix.HTML.raw
+  def tablize(_, [], _, _), do: "<p>#{gettext("No results")}</p>" |> Phoenix.HTML.raw
+  def tablize(_, nil, _, _), do: "<p>#{gettext("No results")}</p>" |> Phoenix.HTML.raw
   def tablize(conn, records, dropdowns, opts) do
-    language = Brando.I18n.get_language(conn)
     module = List.first(records).__struct__
     colgroup = if opts[:colgroup] do
       render_colgroup(:manual, opts[:colgroup])
     else
       render_colgroup(:auto, module, opts)
     end
-    filter_attr = if opts[:filter], do: ~s( data-filter-table="true"), else: ""
-    table_header = render_thead(module.__fields__, module, language, opts)
-    table_body = render_tbody(module.__fields__, records, module, conn, dropdowns, opts)
+    filter_attr =
+      if opts[:filter], do:
+        ~s( data-filter-table="true"),
+      else: ""
+
+    table_header = render_thead(module.__keys__, module, opts)
+    table_body = render_tbody(module.__keys__, records, module, conn, dropdowns, opts)
     table = ~s(<table class="table"#{filter_attr}>#{colgroup}#{table_header}#{table_body}</table>)
-    filter = if opts[:filter], do: ~s(<div class="filter-input-wrapper pull-right"><i class="fa fa-fw fa-search m-r-sm m-l-xs"></i><input type="text" placeholder="Filter" id="filter-input" /></div>), else: ""
+    filter =
+      if opts[:filter] do
+        ~s(<div class="filter-input-wrapper pull-right">
+             <i class="fa fa-fw fa-search m-r-sm m-l-xs"></i>
+             <input type="text" placeholder="Filter" id="filter-input" />
+           </div>)
+      else
+        ""
+      end
     Phoenix.HTML.raw([filter|table])
   end
 
   defp render_colgroup(:auto, module, opts) do
     fields =
-      opts[:hide] && module.__fields__ -- opts[:hide] || module.__fields__
+      opts[:hide] && module.__keys__ -- opts[:hide] || module.__keys__
     narrow_fields =
       opts[:check_or_x] && @narrow_fields ++ opts[:check_or_x] || @narrow_fields
     colgroups = for f <- fields do
@@ -159,23 +171,24 @@ defmodule Brando.HTML.Tablize do
     end
   end
 
-  defp render_thead(fields, module, language, opts) do
+  defp render_thead(fields, module, opts) do
     rendered_ths = fields
-      |> Enum.map(&(do_th(&1, module, language, opts[:hide])))
+      |> Enum.map(&(do_th(&1, module, opts[:hide])))
       |> Enum.join
     ~s(<thead><tr><th></th>#{rendered_ths}<th class="text-center">☰</th></tr></thead>)
   end
 
-  defp do_th(:id, _module, _language, _hidden_fields) do
+  defp do_th(:id, _module, _hidden_fields) do
     ~s(<th class="text-center">&#8470;</th>)
   end
 
-  defp do_th(field, module, language, nil) do
-    ~s(<th>#{translate_field(language, module, field)}</th>)
+  defp do_th(field, module, nil) do
+    ~s(<th>#{module.__field__(field)}</th>)
   end
-  defp do_th(field, module, language, hidden_fields) do
+
+  defp do_th(field, module, hidden_fields) do
     unless field in hidden_fields do
-      ~s(<th>#{translate_field(language, module, field)}</th>)
+      ~s(<th>#{module.__field__(field)}</th>)
     end
   end
 
@@ -218,12 +231,4 @@ defmodule Brando.HTML.Tablize do
     "  </div>" <>
     "</td>"
   end
-
-  locale "en", [
-    no_results: "No results"
-  ]
-
-  locale "no", [
-    no_results: "Ingen objekter"
-  ]
 end

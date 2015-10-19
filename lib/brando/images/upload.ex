@@ -3,15 +3,13 @@ defmodule Brando.Images.Upload do
   Same principle as ImageField, only this one has its own table.
   We get the config from `image.series.cfg`
   """
-
+  alias Brando.Exception.UploadError
   import Brando.Utils
   import Brando.Images.Optimize, only: [optimize: 1]
-  import Brando.Images.Utils
-  alias Brando.Exception.UploadError
+  import Brando.Images.Utils, only: [create_image_sizes: 1]
 
   defmacro __using__(_) do
     quote do
-      import Brando.Images.Utils
       import unquote(__MODULE__)
       @doc """
       Checks `params` for Plug.Upload fields and passes them on.

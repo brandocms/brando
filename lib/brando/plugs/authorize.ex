@@ -2,9 +2,9 @@ defmodule Brando.Plug.Authorize do
   @moduledoc """
   A plug for checking roles on user.
   """
+  alias Brando.User
   import Plug.Conn
   import Phoenix.Controller, only: [render: 2, put_view: 2]
-  alias Brando.User
 
   @doc """
   Check `conn` for current_user's `role`.

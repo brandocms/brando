@@ -50,6 +50,7 @@ defmodule Brando.Sequence do
         Lagre rekkefølge
       </a>
   """
+
   defmodule Model do
     @moduledoc false
     @doc false

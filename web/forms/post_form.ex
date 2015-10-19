@@ -3,17 +3,22 @@ defmodule Brando.PostForm do
   A form for the Post model. See the `Brando.Form` module for more
   documentation
   """
+
   use Brando.Form
   alias Brando.Post
+  import Brando.Gettext
 
   @doc false
-  def get_language_choices(_) do
+  def get_language_choices() do
     Brando.config(:languages)
   end
 
   @doc false
-  def get_status_choices(language) do
-    Keyword.get(Brando.config(:status_choices), String.to_atom(language))
+  def get_status_choices() do
+   [[value: "0", text: gettext("Draft")],
+    [value: "1", text: gettext("Published")],
+    [value: "2", text: gettext("Pending")],
+    [value: "3", text: gettext("Deleted")]]
   end
 
   @doc """
@@ -32,17 +37,19 @@ defmodule Brando.PostForm do
   form "post", [model: Post, helper: :admin_post_path, class: "grid-form"] do
     fieldset do
       field :language, :select,
-        [default: "no",
-        choices: &__MODULE__.get_language_choices/1]
+        [default: "nb",
+        choices: &__MODULE__.get_language_choices/0]
     end
     fieldset do
       field :status, :radio,
         [default: "2",
-        choices: &__MODULE__.get_status_choices/1,
-        is_selected: &__MODULE__.status_selected?/2]
+         choices: &__MODULE__.get_status_choices/0,
+         is_selected: &__MODULE__.status_selected?/2]
     end
     fieldset do
-      field :featured, :checkbox, [default: false]
+      field :featured, :checkbox,
+        [default: false,
+         help_text: "The post is prioritized, taking precedence over pub. date"]
     end
     fieldset do
       field :header, :text

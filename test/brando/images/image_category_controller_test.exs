@@ -10,7 +10,7 @@ defmodule Brando.ImageCategory.ControllerTest do
   alias Brando.User
   alias Brando.Type.ImageConfig
 
-  @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "no",
+  @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "nb",
                  "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
@@ -30,7 +30,7 @@ defmodule Brando.ImageCategory.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Ny bildekategori"
+    assert html_response(conn, 200) =~ "New image category"
   end
 
   test "edit" do
@@ -42,7 +42,7 @@ defmodule Brando.ImageCategory.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Endre bildekategori"
+    assert html_response(conn, 200) =~ "Edit image category"
 
     assert_raise Plug.Conn.WrapperError, fn ->
       :get
@@ -62,7 +62,7 @@ defmodule Brando.ImageCategory.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/images"
-    assert get_flash(conn, :notice) == "Bildekategori opprettet"
+    assert get_flash(conn, :notice) == "Image category created"
   end
 
   test "create (post) w/erroneus params" do
@@ -73,8 +73,8 @@ defmodule Brando.ImageCategory.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Ny bildekategori"
-    assert get_flash(conn, :error) == "Feil i skjema"
+    assert html_response(conn, 200) =~ "New image category"
+    assert get_flash(conn, :error) == "Errors in form"
   end
 
   test "update (post) w/params" do
@@ -91,7 +91,7 @@ defmodule Brando.ImageCategory.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/images"
-    assert get_flash(conn, :notice) == "Bildekategori oppdatert"
+    assert get_flash(conn, :notice) == "Image category updated"
   end
 
   test "config (get)" do
@@ -105,7 +105,7 @@ defmodule Brando.ImageCategory.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Konfigurér bildekategori"
+    assert html_response(conn, 200) =~ "Configure image category"
     assert html_response(conn, 200) =~ "imagecategoryconfig[cfg]"
 
     assert_raise Plug.Conn.WrapperError, fn ->
@@ -130,7 +130,7 @@ defmodule Brando.ImageCategory.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/images"
-    assert get_flash(conn, :notice) == "Bildekategori konfigurert"
+    assert get_flash(conn, :notice) == "Image category configured"
   end
 
   test "delete_confirm" do
@@ -144,7 +144,7 @@ defmodule Brando.ImageCategory.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Slett bildekategori: Test Category"
+    assert html_response(conn, 200) =~ "Delete image category: Test Category"
   end
 
   test "delete" do
@@ -157,6 +157,6 @@ defmodule Brando.ImageCategory.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/images"
-    assert get_flash(conn, :notice) == "Bildekategori slettet"
+    assert get_flash(conn, :notice) == "Image category deleted"
   end
 end

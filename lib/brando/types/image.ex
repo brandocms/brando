@@ -3,13 +3,13 @@ defmodule Brando.Type.Image do
   Defines a type for an image field.
   """
 
+  @behaviour Ecto.Type
+
   defstruct title: nil,
             credits: nil,
             path: nil,
             sizes: %{},
             optimized: false
-
-  @behaviour Ecto.Type
 
   @doc """
   Returns the internal type representation of our `Role` type for pg

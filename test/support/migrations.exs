@@ -11,7 +11,7 @@ defmodule Brando.Integration.Migration do
       add :password,      :text
       add :avatar,        :text
       add :role,          :integer
-      add :language,      :text,    default: "no"
+      add :language,      :text,    default: "nb"
       add :last_login,    :datetime
       timestamps
     end
@@ -95,6 +95,7 @@ defmodule Brando.Integration.Migration do
       add :status,            :integer
       add :parent_id,         references(:pages), default: nil
       add :creator_id,        references(:users)
+      add :css_classes,       :text
       add :meta_description,  :text
       add :meta_keywords,     :text
       timestamps

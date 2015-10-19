@@ -3,6 +3,7 @@ defmodule Brando.ImageCategoryForm do
   A form for the ImageCategory model. See the `Brando.Form` module for more
   documentation
   """
+
   use Brando.Form
   alias Brando.ImageCategory
 

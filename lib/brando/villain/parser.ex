@@ -2,6 +2,7 @@ defmodule Brando.Villain.Parser do
   @moduledoc """
   Defines callbacks for the Villain.Parser behaviour.
   """
+
   use Behaviour
 
   @doc "Parses a header"

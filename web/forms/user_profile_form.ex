@@ -5,14 +5,15 @@ defmodule Brando.UserProfileForm do
   """
   use Brando.Form
   alias Brando.User
+  import Brando.Gettext
 
   @doc false
-  def get_language_choices(_) do
+  def get_language_choices() do
     Brando.config(:admin_languages)
   end
 
   form "user", [model: User, helper: :admin_user_path, class: "grid-form"] do
-    fieldset {:i18n, "fieldset.user_info"} do
+    fieldset gettext("User information") do
       field :full_name, :text
       field :username, :text
     end
@@ -22,8 +23,8 @@ defmodule Brando.UserProfileForm do
 
     fieldset do
       field :language, :select,
-        [default: "no",
-        choices: &__MODULE__.get_language_choices/1]
+        [default: "nb",
+        choices: &__MODULE__.get_language_choices/0]
     end
 
     field :avatar, :file, [required: false]

@@ -7,7 +7,7 @@ defmodule Brando.Pages.ControllerTest do
   alias Brando.Page
   alias Brando.User
 
-  @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "no",
+  @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "nb",
                  "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
                  "password" => "finimeze", "status" => "1",
                  "submit" => "Submit", "username" => "zabuzasixu"}
@@ -17,14 +17,14 @@ defmodule Brando.Pages.ControllerTest do
                  "title" => "Header",
                  "key" => "testpage",
                  "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
-                 "language" => "no",
+                 "language" => "nb",
                  "meta_description" => nil, "meta_keywords" => nil,
                  "slug" => "header", "status" => :published}
 
   @broken_page_params %{"data" => "", "featured" => true, "title" => "",
                         "key" => "testpage",
                         "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
-                        "language" => "no",
+                        "language" => "nb",
                         "meta_description" => nil, "meta_keywords" => nil,
                         "slug" => "header", "status" => :published}
 
@@ -41,7 +41,7 @@ defmodule Brando.Pages.ControllerTest do
       |> send_request
 
     assert response_content_type(conn, :html) =~ "charset=utf-8"
-    assert html_response(conn, 200) =~ "Sideoversikt"
+    assert html_response(conn, 200) =~ "Index - pages"
   end
 
   test "show" do
@@ -65,7 +65,7 @@ defmodule Brando.Pages.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Ny side"
+    assert html_response(conn, 200) =~ "New page"
   end
 
   test "edit" do
@@ -79,7 +79,7 @@ defmodule Brando.Pages.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Endre side"
+    assert html_response(conn, 200) =~ "Edit page"
 
     assert_raise Plug.Conn.WrapperError, fn ->
       :get
@@ -101,7 +101,7 @@ defmodule Brando.Pages.ControllerTest do
       |> send_request
 
     assert html_response(conn, 200) =~ "zcxvxcv"
-    assert get_flash(conn, :notice) == "Side duplisert"
+    assert get_flash(conn, :notice) == "Page duplicated"
   end
 
   test "encode_data" do
@@ -121,7 +121,6 @@ defmodule Brando.Pages.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/pages"
-    assert get_flash(conn, :notice) == "Side opprettet"
   end
 
   test "create (page) w/erroneus params" do
@@ -131,8 +130,8 @@ defmodule Brando.Pages.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Ny side"
-    assert get_flash(conn, :error) == "Feil i skjema"
+    assert html_response(conn, 200) =~ "New page"
+    assert get_flash(conn, :error) == "Errors in form"
   end
 
   test "update (page) w/params" do
@@ -152,7 +151,6 @@ defmodule Brando.Pages.ControllerTest do
       |> send_request
 
     assert redirected_to(conn, 302) =~ "/admin/pages"
-    assert get_flash(conn, :notice) == "Side oppdatert"
   end
 
   test "delete_confirm" do
@@ -166,7 +164,7 @@ defmodule Brando.Pages.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200) =~ "Slett side: Header"
+    assert html_response(conn, 200) =~ "Delete page: Header"
   end
 
   test "delete" do

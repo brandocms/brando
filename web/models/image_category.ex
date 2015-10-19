@@ -3,13 +3,17 @@ defmodule Brando.ImageCategory do
   Ecto schema for the Image Category model
   and helper functions for dealing with the model.
   """
+
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
-  import Brando.Utils.Model, only: [put_creator: 2]
-  import Ecto.Query, only: [from: 2]
+
   alias Brando.User
   alias Brando.ImageSeries
+
+  import Brando.Gettext
+  import Brando.Utils.Model, only: [put_creator: 2]
+  import Ecto.Query, only: [from: 2]
 
   @required_fields ~w(name slug creator_id)
   @optional_fields ~w(cfg)
@@ -114,29 +118,19 @@ defmodule Brando.ImageCategory do
   #
   # Meta
 
-  use Brando.Meta.Model,
-    [no:
-      [singular: "bildekategori",
-       plural: "bildekategorier",
-       repr: &("#{&1.name}"),
-       fields: [id: "ID",
-                name: "Navn",
-                slug: "URL-tamp",
-                cfg: "Konfigurasjon",
-                creator: "Opprettet av",
-                image_series: "Bildeserie",
-                inserted_at: "Opprettet",
-                updated_at: "Oppdatert"]],
-    en:
-      [singular: "image category",
-       plural: "image categories",
-       repr: &("#{&1.name}"),
-       fields: [id: "ID",
-                name: "Name",
-                slug: "Slug",
-                cfg: "Config",
-                creator: "Creator",
-                image_series: "Image series",
-                inserted_at: "Inserted at",
-                updated_at: "Updated at"]]]
+  use Brando.Meta.Model, [
+    singular: gettext("image category"),
+    plural: gettext("image categories"),
+    repr: &("#{&1.name}"),
+    fields: [
+      id: gettext("ID"),
+      name: gettext("Name"),
+      slug: gettext("Slug"),
+      cfg: gettext("Config"),
+      creator: gettext("Creator"),
+      image_series: gettext("Image series"),
+      inserted_at: gettext("Inserted at"),
+      updated_at: gettext("Updated at")
+    ]
+  ]
 end

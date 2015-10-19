@@ -4,18 +4,12 @@ defmodule Brando.Menu.Pages do
   more information
   """
   use Brando.Menu
+  import Brando.Gettext
 
-  menu "no", "Sider",
-    %{anchor: "pages", icon: "fa fa-paper-plane icon",
+  menu %{
+    name: gettext("Pages"), anchor: "pages", icon: "fa fa-paper-plane icon",
       submenu: [
-        %{name: "Oversikt", url: {:admin_page_path, :index}},
-        %{name: "Legg til", url: {:admin_page_path, :new}},
-        %{name: "Fragmenter", url: {:admin_page_fragment_path, :index}}]}
-
-  menu "en", "Pages",
-    %{anchor: "pages", icon: "fa fa-paper-plane icon",
-      submenu: [
-        %{name: "Index", url: {:admin_page_path, :index}},
-        %{name: "Add new", url: {:admin_page_path, :new}},
-        %{name: "Fragments", url: {:admin_page_fragment_path, :index}}]}
+        %{name: gettext("Index"), url: {:admin_page_path, :index}},
+        %{name: gettext("Add new"), url: {:admin_page_path, :new}},
+        %{name: gettext("Fragments"), url: {:admin_page_fragment_path, :index}}]}
 end

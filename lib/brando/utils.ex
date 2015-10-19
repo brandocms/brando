@@ -2,6 +2,7 @@ defmodule Brando.Utils do
   @moduledoc """
   Assorted utility functions.
   """
+
   import Ecto.Query
 
   @doc """

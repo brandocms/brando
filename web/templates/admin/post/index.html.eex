@@ -1,20 +1,20 @@
-    <h1><%= t!(@language, "actions.index") %></h1>
+    <h1><%= gettext("Index - posts") %></h1>
 <%= if @posts != [] do %>
     <div>
-      <%= Brando.HTML.status_indicators(@language) %>
+      <%= Brando.HTML.status_indicators() %>
     </div>
     <%= Brando.HTML.Tablize.tablize(@conn, @posts, [
-          {t!(@language, "actions.show"), "fa-search", :admin_post_path, :show, :id},
-          {t!(@language, "actions.edit"), "fa-edit", :admin_post_path, :edit, :id, :superuser},
-          {t!(@language, "actions.delete"), "fa-trash", :admin_post_path, :delete_confirm, :id, :superuser}],
+          {gettext("Show post"), "fa-search", :admin_post_path, :show, :id},
+          {gettext("Edit post"), "fa-edit", :admin_post_path, :edit, :id, :superuser},
+          {gettext("Delete post"), "fa-trash", :admin_post_path, :delete_confirm, :id, :superuser}],
           check_or_x: [:cover], filter: true,
           hide: [:tags, :lead, :slug, :data, :html, :meta_description,
                  :meta_keywords, :inserted_at, :publish_at]) %>
 <% else %>
-    <p><%= t!(@language, "actions.empty") %></p>
+    <p><%= gettext("No posts") %></p>
 <% end %>
     <div class="form-actions">
       <a href="<%= Helpers.admin_post_path @conn, :new %>" class="btn btn-primary">
-        <i class="fa fa-plus m-r-xs"></i> <%= t!(@language, "actions.new") %>
+        <i class="fa fa-plus m-r-xs"></i> <%= gettext("New post") %>
       </a>
     </div>

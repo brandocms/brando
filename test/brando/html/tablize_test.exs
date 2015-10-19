@@ -12,13 +12,13 @@ defmodule Brando.HTML.TablizeTest do
                                   thumb: "images/avatars/thumb/27i97a.jpeg",
                                   medium: "images/avatars/medium/27i97a.jpeg"}}
   @conn %Plug.Conn{private: %{plug_session: %{"current_user" =>
-                  %{role: [:superuser]}}}} |> assign_language("no")
+                  %{role: [:superuser]}}}} |> assign_language("nb")
   @post_params %{"avatar" => @image_map,
                  "data" => "[{\"type\":\"text\",\"data\":" <>
                  "{\"text\":\"zcxvxcv\",\"type\":\"paragraph\"}}]",
                  "featured" => true, "header" => "Header",
                  "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
-                 "language" => "no", "lead" => "Asdf",
+                 "language" => "nb", "lead" => "Asdf",
                  "meta_description" => nil, "meta_keywords" => nil,
                  "publish_at" => nil, "published" => false,
                  "slug" => "header", "status" => :published}
@@ -28,9 +28,9 @@ defmodule Brando.HTML.TablizeTest do
     assert {:ok, post} = Post.create(@post_params, user)
 
     post = post |> Brando.repo.preload(:creator)
-    helpers = [{"Vis bruker", "fa-search", :admin_user_path, :show, :id},
-               {"Endre bruker", "fa-edit", :admin_user_path, :edit, :id},
-               {"Slett bruker", "fa-trash",
+    helpers = [{"Show user", "fa-search", :admin_user_path, :show, :id},
+               {"Edit user", "fa-edit", :admin_user_path, :edit, :id},
+               {"Delete user", "fa-trash",
                 :admin_user_path, :delete_confirm, :id}]
     {:safe, ret} = tablize(@conn, [post], helpers, check_or_x: [:meta_keywords],
                            hide: [:updated_at, :inserted_at])
@@ -45,9 +45,6 @@ defmodule Brando.HTML.TablizeTest do
 
     ret = ret |> IO.iodata_to_binary
     assert ret
-           =~ ~s(<div class=\"filter-input-wrapper pull-right\">) <>
-              ~s(<i class=\"fa fa-fw fa-search m-r-sm m-l-xs\"></i>) <>
-              ~s(<input type=\"text\" placeholder=\"Filter\" ) <>
-              ~s(id=\"filter-input\" /></div>)
+           =~ ~s(<input type="text" placeholder="Filter" id="filter-input" />)
   end
 end

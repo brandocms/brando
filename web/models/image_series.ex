@@ -3,15 +3,19 @@ defmodule Brando.ImageSeries do
   Ecto schema for the Image Series model
   and helper functions for dealing with the model.
   """
+
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
   use Brando.Sequence, :model
-  import Ecto.Query, only: [from: 2]
-  import Brando.Utils.Model, only: [put_creator: 2]
+
   alias Brando.User
   alias Brando.Image
   alias Brando.ImageCategory
+
+  import Brando.Gettext
+  import Ecto.Query, only: [from: 2]
+  import Brando.Utils.Model, only: [put_creator: 2]
 
   @required_fields ~w(name slug image_category_id creator_id)
   @optional_fields ~w(credits sequence cfg)
@@ -150,46 +154,27 @@ defmodule Brando.ImageSeries do
   # Meta
 
   use Brando.Meta.Model, [
-    no: [
-      singular: "bildeserie",
-      plural: "bildeserier",
-      repr: fn (model) ->
-        model = Brando.repo.preload(model, :images)
-        image_count = Enum.count(model.images)
-        "#{model.name} – #{image_count} bilde(r)."
-      end,
-      fields: [id: "ID",
-               name: "Navn",
-               slug: "URL-tamp",
-               credits: "Kreditering",
-               sequence: "Rekkefølge",
-               cfg: "Konfigurasjon",
-               creator: "Opprettet av",
-               images: "Bilder",
-               image_category: "Bildekategori",
-               image_category_id: "Bildekategori",
-               inserted_at: "Opprettet",
-               updated_at: "Oppdatert"],
-      hidden_fields: []],
-    en: [
-      singular: "imageserie",
-      plural: "imageseries",
-      repr: fn (model) ->
-         model = Brando.repo.preload(model, :images)
-         image_count = Enum.count(model.images)
-         "#{model.name} – #{image_count} image(s)."
-      end,
-      fields: [id: "ID",
-               name: "Name",
-               slug: "Slug",
-               cfg: "Configuration",
-               credits: "Credits",
-               sequence: "Sequence",
-               creator: "Creator",
-               images: "Images",
-               image_category: "Image category",
-               image_category_id: "Image category",
-               inserted_at: "Inserted at",
-               updated_at: "Updated at"],
-      hidden_fields: []]]
+    singular: gettext("imageserie"),
+    plural: gettext("imageseries"),
+    repr: fn (model) ->
+       model = Brando.repo.preload(model, :images)
+       image_count = Enum.count(model.images)
+       "#{model.name} – #{image_count} #{gettext("image(s)")}."
+    end,
+    fields: [
+      id: gettext("ID"),
+      name: gettext("Name"),
+      slug: gettext("Slug"),
+      cfg: gettext("Configuration"),
+      credits: gettext("Credits"),
+      sequence: gettext("Sequence"),
+      creator: gettext("Creator"),
+      images: gettext("Images"),
+      image_category: gettext("Image category"),
+      image_category_id: gettext("Image category"),
+      inserted_at: gettext("Inserted at"),
+      updated_at: gettext("Updated at")
+    ],
+    hidden_fields: []
+  ]
 end

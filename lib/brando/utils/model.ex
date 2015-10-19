@@ -12,6 +12,7 @@ defmodule Brando.Utils.Model do
       {:ok, model} = update_field(model, [field_name: "value"])
 
   """
+
   def update_field(model, coll) do
     changeset = Ecto.Changeset.change(model, coll)
     {:ok, Brando.repo.update!(changeset)}

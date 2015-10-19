@@ -2,17 +2,21 @@ defmodule Brando.Page do
   @moduledoc """
   Ecto schema for the Page model.
   """
+
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
-  use Brando.Villain.Model
-  import Brando.Utils.Model, only: [put_creator: 2]
-  import Ecto.Query
+  use Brando.Villain, :model
+
   alias Brando.Type.Status
   alias Brando.User
 
+  import Brando.Gettext
+  import Brando.Utils.Model, only: [put_creator: 2]
+  import Ecto.Query
+
   @required_fields ~w(key language title slug data status creator_id)
-  @optional_fields ~w(parent_id meta_description meta_keywords html)
+  @optional_fields ~w(parent_id meta_description meta_keywords html css_classes)
 
   schema "pages" do
     field :key, :string
@@ -21,6 +25,7 @@ defmodule Brando.Page do
     field :slug, :string
     villain
     field :status, Status
+    field :css_classes, :string
     belongs_to :creator, User
     belongs_to :parent, __MODULE__
     has_many :children, __MODULE__, foreign_key: :parent_id
@@ -185,54 +190,27 @@ defmodule Brando.Page do
   # Meta
 
   use Brando.Meta.Model, [
-    no: [
-      singular: "side",
-      plural: "sider",
-      repr: &("#{&1.title}"),
-      help: [
-        parent_id: "Hvis siden du oppretter skal være en underside, " <>
-                   "velg tilhørende side her. Hvis ikke, velg –"
-      ],
-      fields: [
-         id: "№",
-         status: "Status",
-         language: "Språk",
-         key: "Id-nøkkel",
-         title: "Tittel",
-         slug: "URL-tamp",
-         data: "Data",
-         html: "HTML",
-         parent: "Tilhører",
-         parent_id: "Tilhørende side",
-         children: "Undersider",
-         creator: "Opprettet av",
-         meta_description: "META beskrivelse",
-         meta_keywords: "META nøkkelord",
-         inserted_at: "Opprettet",
-         updated_at: "Oppdatert"]],
-    en: [
-      singular: "page",
-      plural: "pages",
-      repr: &("#{&1.title}"),
-      help: [
-        parent_id: "If this page should belong to another, " <>
-                   "select parent page here. If not, select –"
-      ],
-      fields: [
-         id: "№",
-         status: "Status",
-         language: "Language",
-         key: "Key",
-         title: "Title",
-         slug: "Slug",
-         data: "Data",
-         html: "HTML",
-         parent: "Belongs to",
-         parent_id: "Belongs to",
-         children: "Sub pages",
-         creator: "Creator",
-         meta_description: "META description",
-         meta_keywords: "META keywords",
-         inserted_at: "Inserted",
-         updated_at: "Updated"]]]
+    singular: gettext("page"),
+    plural: gettext("pages"),
+    repr: &("#{&1.title}"),
+    fields: [
+      id: "№",
+      status: gettext("Status"),
+      language: gettext("Language"),
+      key: gettext("Key"),
+      title: gettext("Title"),
+      slug: gettext("Slug"),
+      data: gettext("Data"),
+      html: gettext("HTML"),
+      parent: gettext("Belongs to"),
+      parent_id: gettext("Belongs to"),
+      children: gettext("Sub pages"),
+      creator: gettext("Creator"),
+      css_classes: gettext("Extra CSS classes"),
+      meta_description: gettext("META description"),
+      meta_keywords: gettext("META keywords"),
+      inserted_at: gettext("Inserted"),
+      updated_at: gettext("Updated"),
+    ]
+  ]
 end
