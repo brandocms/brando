@@ -84,7 +84,7 @@ defmodule Brando.HTML.InspectTest do
 
     assert ret =~ "<i class=\"fa fa-times text-danger\">"
     assert ret =~ "Nita Bond"
-    assert ret =~ "<p>zcxvxcv</p>"
+    assert ret =~ "<h1>Header</h1>"
   end
 
   test "inspect_field/3" do

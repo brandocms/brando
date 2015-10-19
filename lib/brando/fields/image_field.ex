@@ -32,8 +32,9 @@ defmodule Brando.Field.ImageField do
       import Brando.Images.Utils
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
+      use Ecto.Model.Callbacks
 
-      Ecto.Model.Callbacks.before_update __MODULE__, :cleanup_old_images
+      before_update __MODULE__, :cleanup_old_images
 
       @doc """
       Checks `params` for Plug.Upload fields and passes them on to
