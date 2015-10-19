@@ -58,11 +58,13 @@ defmodule Brando.Form do
   defmacro form(source, opts \\ [], block)
   defmacro form(source, opts, [do: block]) do
     quote do
-      @form_opts %{model: unquote(opts[:model]),
-                   source: unquote(source),
-                   helper: unquote(opts[:helper]),
-                   class: unquote(opts[:class] || ""),
-                   multipart: false}
+      @form_opts %{
+        class: unquote(opts[:class] || ""),
+        helper: unquote(opts[:helper]),
+        model: unquote(opts[:model]),
+        multipart: false,
+        source: unquote(source)
+      }
       @form_fields []
 
       def __model__ do
@@ -98,7 +100,7 @@ defmodule Brando.Form do
 
         @form_fields
         |> render_fields(changeset, opts, @form_opts)
-        |> render_form(form_type, action, params, @form_opts)
+        |> render_form(opts, @form_opts)
         |> raw
       end
     end
@@ -110,42 +112,43 @@ defmodule Brando.Form do
   ## Options
 
     * `fields`: The rendered form fields we will wrap this form around.
-    * `form_type`: :create, :update
-    * `action`: The action atom passed to `helper`, e.g.: `:create`
-    * `params`: Parameters passed to `helper`, e.g.: `to_string(@user.id)`
     * `opts`:
+      * `form_type`: :create, :update
+      * `action`: The action atom passed to `helper`, e.g.: `:create`
+      * `params`: Parameters passed to `helper`, e.g.: `to_string(@user.id)`
+    * `form_opts`:
       * `class`: Optional class to set on form.
       * `multipart`: Automatically set if we have file fields.
       * `helper`: Helper set in form definition.
   """
-  @spec render_form(iodata, :create | :update, atom, Keyword.t | nil, Keyword.t)
-        :: String.t
-  def render_form(fields, form_type, action, params, opts) do
-    url = apply_action(opts[:helper], action, params)
+  @spec render_form(iodata, Keyword.t | nil, Keyword.t) :: String.t
+  def render_form(fields, opts, form_opts) do
+    form_type = Keyword.fetch!(opts, :type)
+    action = Keyword.fetch!(opts, :action)
+    params = Keyword.get(opts, :params, [])
+    url = apply_action(form_opts[:helper], action, params)
 
-    opts =
-      opts
+    form_opts =
+      form_opts
       |> Keyword.new
       |> Keyword.drop([:model, :helper, :source])
-      |> Keyword.put(:method, get_method(form_type))
       |> Keyword.put(:enforce_utf8, true)
+      |> Keyword.put(:method, get_method(form_type))
       |> Keyword.put(:role, "form")
 
-    opts =
-      case Keyword.pop(opts, :multipart, false) do
-        {false, opts} -> opts
-        {true, opts}  -> Keyword.put(opts, :multipart, true)
+    form_opts =
+      case Keyword.pop(form_opts, :multipart, false) do
+        {false, form_opts} -> form_opts
+        {true, form_opts}  -> Keyword.put(form_opts, :multipart, true)
       end
 
-    opts =
-      case Keyword.pop(opts, :class, false) do
-        {false, opts} -> opts
-        {class, opts} -> Keyword.put(opts, :class, class)
+    form_opts =
+      case Keyword.pop(form_opts, :class, false) do
+        {false, form_opts} -> form_opts
+        {class, form_opts} -> Keyword.put(form_opts, :class, class)
       end
 
-    form_tag(url, opts) do
-      raw(fields)
-    end
+    form_tag url, form_opts, do: raw(fields)
   end
 
   @doc """
@@ -153,14 +156,16 @@ defmodule Brando.Form do
   field as HTML. Gets any values or errors for the field.
   """
   def render_fields(fields, changeset, opts, %{source: source, model: model}) do
-    Enum.reduce fields, [], fn ({name, f_opts}, acc) ->
-      f_opts =
-        f_opts
+    Enum.reduce fields, [], fn ({name, form_opts}, acc) ->
+      form_opts =
+        form_opts
         |> Keyword.merge(source: source, name: name, model: model)
         |> Enum.into(%{})
 
-      [Fields.render_field(opts[:type], f_opts, get_value(changeset, name),
-                           get_errors(changeset, name))|acc]
+      value = get_value(changeset, name)
+      errors = get_errors(changeset, name)
+
+      [Fields.render_field(opts[:type], form_opts, value, errors)|acc]
     end
   end
 
@@ -277,14 +282,14 @@ defmodule Brando.Form do
       raise ArgumentError, message: "field `#{name}` was already set on schema"
     end
 
-    Module.put_attribute(module, :form_fields,
-                         [{name, [type: type] ++ opts}|fields])
+    Module.put_attribute(module, :form_fields, [{name, [type: type] ++ opts}|fields])
 
     if type == :file do
       form_opts =
         module
         |> Module.get_attribute(:form_opts)
         |> Map.put(:multipart, true)
+
       Module.put_attribute(module, :form_opts, form_opts)
     end
   end
@@ -324,9 +329,9 @@ defmodule Brando.Form do
   """
   def fieldset_open(mod, legend) do
     fields = Module.get_attribute(mod, :form_fields)
+    fields = [{:"fs", [type: :fieldset] ++ [legend: legend]}|fields]
     Module.put_attribute(mod, :in_fieldset, true)
-    Module.put_attribute(mod, :form_fields,
-      [{:"fs", [type: :fieldset] ++ [legend: legend]}|fields])
+    Module.put_attribute(mod, :form_fields, fields)
   end
 
   @doc false
@@ -342,9 +347,9 @@ defmodule Brando.Form do
   """
   def fieldset_close(mod) do
     fields = Module.get_attribute(mod, :form_fields)
-    Module.put_attribute(mod, :form_fields,
-                         [{:"fs", [type: :fieldset_close]}|fields])
+    fields = [{:"fs", [type: :fieldset_close]}|fields]
     Module.put_attribute(mod, :in_fieldset, nil)
+    Module.put_attribute(mod, :form_fields, fields)
   end
 
   @doc false
@@ -365,8 +370,8 @@ defmodule Brando.Form do
       raise ArgumentError,
             message: "submit field `#{name}` was already set on schema"
     end
-    Module.put_attribute(mod, :form_fields,
-                         [{name, [type: :submit, text: text] ++ opts}|fields])
+    fields = [{name, [type: :submit, text: text] ++ opts}|fields]
+    Module.put_attribute(mod, :form_fields, fields)
   end
 
   @doc """
