@@ -3,6 +3,7 @@
 * Enhancements
   * Moved to gettext. Adds norwegian translations.
   * Added `put_css_classes/2` to `Brando.Plug.HTML`. Adds classes to your body tag. `mix ecto.migrate` to add field to `pages` table.
+  * Clean out old image and sizes when uploading a new image w/Imagefield
 
 * Bug fixes
   * Fixes bug in `brando.gen.html` where admin's update action would be broken.
