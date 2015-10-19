@@ -1,4 +1,4 @@
-## v0.5.0-dev (2015-XX-XX)
+## v0.5.0 (2015-10-19)
 
 * Enhancements
   * Moved to gettext. Adds norwegian translations.
