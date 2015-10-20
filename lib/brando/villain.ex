@@ -143,7 +143,7 @@ defmodule Brando.Villain do
   end
 
   @doc false
-  def controller(image_model, series_model) do
+  def controller({:image_model, image_model}, {:series_model, series_model}) do
     quote do
       import Ecto.Query
       @doc false
