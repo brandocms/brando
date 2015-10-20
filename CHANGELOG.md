@@ -1,5 +1,12 @@
 ## v0.6.0-dev (2015-XX-XX)
 
+* Enhancements
+  * Adds `Brando.Pages.Utils.render_fragment/1`
+
+* Bug fixes
+  * Fix villain upload bug
+  * Fix translation error in image index
+
 ## v0.5.0 (2015-10-19)
 
 * Enhancements
