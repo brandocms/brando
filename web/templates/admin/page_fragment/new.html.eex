@@ -1,4 +1,4 @@
-    <h1><%= gettext("New page fragment") %>/h1>
+    <h1><%= gettext("New page fragment") %></h1>
     <%= PageFragmentForm.get_form(type: :create, action: :create, params: [], changeset: @changeset) %>
     <%= Brando.Villain.HTML.initialize(
           base_url:     "/admin/pages/",
