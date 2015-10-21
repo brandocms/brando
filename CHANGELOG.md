@@ -1,4 +1,4 @@
-## v0.6.0-dev (2015-XX-XX)
+## v0.6.0 (2015-10-21)
 
 * Enhancements
   * Adds `Brando.Pages.Utils.render_fragment/1`
