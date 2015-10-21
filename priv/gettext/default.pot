@@ -925,3 +925,19 @@ msgstr ""
 #: web/menus/instagram_menu.ex:10
 msgid "Instagram"
 msgstr ""
+
+#: lib/brando/images/upload.ex:70
+msgid "Empty filename given. Make sure you have a valid filename."
+msgstr ""
+
+#: lib/brando/images/upload.ex:115
+msgid "Error while copying"
+msgstr ""
+
+#: lib/brando/images/upload.ex:85
+msgid "File type not allowed"
+msgstr ""
+
+#: lib/brando/images/upload.ex:98
+msgid "Path creation failed"
+msgstr ""

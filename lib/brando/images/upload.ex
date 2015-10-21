@@ -4,6 +4,7 @@ defmodule Brando.Images.Upload do
   We get the config from `image.series.cfg`
   """
   alias Brando.Exception.UploadError
+  import Brando.Gettext
   import Brando.Utils
   import Brando.Images.Optimize, only: [optimize: 1]
   import Brando.Images.Utils, only: [create_image_sizes: 1]
@@ -66,8 +67,7 @@ defmodule Brando.Images.Upload do
 
   defp get_valid_filename({%{filename: ""}, _cfg}) do
     raise UploadError,
-          message: "Blankt filnavn gitt under opplasting. " <>
-                   "Pass på at du har et gyldig filnavn."
+          message: gettext("Empty filename given. Make sure you have a valid filename.")
   end
 
   defp get_valid_filename({%{filename: filename} = plug, cfg}) do
@@ -81,7 +81,8 @@ defmodule Brando.Images.Upload do
     if content_type in Map.get(cfg, :allowed_mimetypes) do
       {plug, cfg}
     else
-      raise UploadError, message: "Ikke tillatt filtype -> #{content_type}"
+      raise UploadError,
+            message: gettext("File type not allowed") <> " -> #{content_type}"
     end
   end
 
@@ -94,7 +95,7 @@ defmodule Brando.Images.Upload do
         {Map.put(plug, :upload_path, upload_path), cfg}
       {:error, reason} ->
         raise UploadError,
-              message: "Kunne ikke lage filbane -> #{inspect(reason)}"
+              message: gettext("Path creation failed") <> " -> #{inspect(reason)}"
     end
   end
 
@@ -110,7 +111,8 @@ defmodule Brando.Images.Upload do
       :ok ->
         {Map.put(plug, :uploaded_file, new_file), cfg}
       {:error, reason} ->
-        raise UploadError, message: "Feil under kopiering -> #{inspect(reason)}"
+        raise UploadError,
+              message: gettext("Error while copying") <> " -> #{inspect(reason)}"
     end
   end
 

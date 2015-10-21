@@ -939,3 +939,19 @@ msgstr "Slett"
 #: web/menus/instagram_menu.ex:10
 msgid "Instagram"
 msgstr "Instagram"
+
+#: lib/brando/images/upload.ex:70
+msgid "Empty filename given. Make sure you have a valid filename."
+msgstr "Tomt filnavn gitt. Kontroller at du har et gyldig filnavn."
+
+#: lib/brando/images/upload.ex:115
+msgid "Error while copying"
+msgstr "Feil under kopiering"
+
+#: lib/brando/images/upload.ex:85
+msgid "File type not allowed"
+msgstr "Filtypen ikke tillatt"
+
+#: lib/brando/images/upload.ex:98
+msgid "Path creation failed"
+msgstr "Feil under oppretting av filbane"
