@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 1.8.5\n"
+"X-Generator: Poedit 1.8.6\n"
 "X-Poedit-SourceCharset: UTF-8\n"
 
 #: web/views/dashboard_view.ex:3
@@ -41,7 +41,7 @@ msgstr "totalt"
 msgid "Access denied"
 msgstr "Adgang nektet"
 
-#: web/menus/admin_menu.ex:9
+#: web/menus/admin_menu.ex:10
 msgid "Admin"
 msgstr "Admin"
 
@@ -53,7 +53,7 @@ msgstr "Godkjent"
 msgid "Authorization"
 msgstr "Autorisasjon"
 
-#: web/controllers/session_controller.ex:31
+#: web/controllers/session_controller.ex:32
 msgid "Authorization failed"
 msgstr "Autorisasjon feilet"
 
@@ -73,22 +73,22 @@ msgstr "Konfigurer"
 msgid "Configure category"
 msgstr "Konfigurer kategori"
 
-#: web/controllers/admin/image_category_controller.ex:96
-#: web/controllers/admin/image_category_controller.ex:115
+#: web/controllers/admin/image_category_controller.ex:97
+#: web/controllers/admin/image_category_controller.ex:116
 msgid "Configure image category"
 msgstr "Konfigurer bildekategori"
 
-#: web/controllers/admin/image_series_controller.ex:96
-#: web/controllers/admin/image_series_controller.ex:117
+#: web/controllers/admin/image_series_controller.ex:97
+#: web/controllers/admin/image_series_controller.ex:118
 #: web/views/image_view.ex:99
 msgid "Configure image series"
 msgstr "Konfigurer bildeserie"
 
-#: web/controllers/admin/image_category_controller.ex:133
-#: web/controllers/admin/image_series_controller.ex:168
-#: web/controllers/admin/page_controller.ex:157
+#: web/controllers/admin/image_category_controller.ex:134
+#: web/controllers/admin/image_series_controller.ex:169
+#: web/controllers/admin/page_controller.ex:158
 #: web/controllers/admin/page_fragment_controller.ex:115
-#: web/controllers/admin/post_controller.ex:119
+#: web/controllers/admin/post_controller.ex:120
 #: web/controllers/admin/user_controller.ex:166
 msgid "Confirm deletion"
 msgstr "Bekreft sletting"
@@ -134,7 +134,7 @@ msgid "Delete user"
 msgstr "Slett bruker"
 
 #: lib/brando/html.ex:332 lib/brando/html/inspect.ex:128
-#: web/forms/page_form.ex:20 web/forms/post_form.ex:20
+#: web/forms/page_form.ex:21 web/forms/post_form.ex:21
 #: web/views/instagram_view.ex:15 web/views/instagram_view.ex:16
 msgid "Deleted"
 msgstr "Slettet"
@@ -151,21 +151,21 @@ msgstr "Dupliser side"
 msgid "Edit image"
 msgstr "Rediger bilde"
 
-#: web/controllers/admin/image_category_controller.ex:58
-#: web/controllers/admin/image_category_controller.ex:76
+#: web/controllers/admin/image_category_controller.ex:59
+#: web/controllers/admin/image_category_controller.ex:77
 #: web/views/image_category_view.ex:1
 msgid "Edit image category"
 msgstr "Rediger bildekategori"
 
-#: web/controllers/admin/image_series_controller.ex:58
-#: web/controllers/admin/image_series_controller.ex:76
+#: web/controllers/admin/image_series_controller.ex:59
+#: web/controllers/admin/image_series_controller.ex:77
 #: web/views/image_series_view.ex:1 web/views/image_series_view.ex:5
 #: web/views/image_series_view.ex:15 web/views/image_view.ex:89
 msgid "Edit image series"
 msgstr "Rediger bildeserie"
 
-#: web/controllers/admin/page_controller.ex:122
-#: web/controllers/admin/page_controller.ex:139 web/views/page_view.ex:1
+#: web/controllers/admin/page_controller.ex:123
+#: web/controllers/admin/page_controller.ex:140 web/views/page_view.ex:1
 #: web/views/page_view.ex:8 web/views/page_view.ex:9
 msgid "Edit page"
 msgstr "Rediger side"
@@ -177,8 +177,8 @@ msgstr "Rediger side"
 msgid "Edit page fragment"
 msgstr "Rediger sidefragment"
 
-#: web/controllers/admin/post_controller.ex:86
-#: web/controllers/admin/post_controller.ex:104 web/views/post_view.ex:1
+#: web/controllers/admin/post_controller.ex:87
+#: web/controllers/admin/post_controller.ex:105 web/views/post_view.ex:1
 #: web/views/post_view.ex:8 web/views/post_view.ex:9
 msgid "Edit post"
 msgstr "Rediger post"
@@ -194,7 +194,7 @@ msgstr "Rediger profil"
 msgid "Edit user"
 msgstr "Rediger bruker"
 
-#: web/models/user.ex:200 web/views/session_view.ex:3
+#: web/models/user.ex:203 web/views/session_view.ex:3
 msgid "Email"
 msgstr "E-post"
 
@@ -208,17 +208,17 @@ msgstr "Oppføring fantes ikke"
 msgid "Error"
 msgstr "Feil"
 
-#: web/controllers/admin/image_category_controller.ex:44
-#: web/controllers/admin/image_category_controller.ex:80
-#: web/controllers/admin/image_category_controller.ex:119
-#: web/controllers/admin/image_series_controller.ex:44
-#: web/controllers/admin/image_series_controller.ex:80
-#: web/controllers/admin/image_series_controller.ex:121
-#: web/controllers/admin/page_controller.ex:83
-#: web/controllers/admin/page_controller.ex:143
+#: web/controllers/admin/image_category_controller.ex:45
+#: web/controllers/admin/image_category_controller.ex:81
+#: web/controllers/admin/image_category_controller.ex:120
+#: web/controllers/admin/image_series_controller.ex:45
+#: web/controllers/admin/image_series_controller.ex:81
+#: web/controllers/admin/image_series_controller.ex:122
+#: web/controllers/admin/page_controller.ex:84
+#: web/controllers/admin/page_controller.ex:144
 #: web/controllers/admin/page_fragment_controller.ex:64
-#: web/controllers/admin/post_controller.ex:71
-#: web/controllers/admin/post_controller.ex:108
+#: web/controllers/admin/post_controller.ex:72
+#: web/controllers/admin/post_controller.ex:109
 #: web/controllers/admin/user_controller.ex:87
 #: web/controllers/admin/user_controller.ex:114
 #: web/controllers/admin/user_controller.ex:155
@@ -237,39 +237,39 @@ msgstr "Fil ikke funnet"
 msgid "Go back"
 msgstr "Gå tilbake"
 
-#: web/controllers/admin/image_category_controller.ex:111
+#: web/controllers/admin/image_category_controller.ex:112
 msgid "Image category configured"
 msgstr "Bildekategori konfigurert"
 
-#: web/controllers/admin/image_category_controller.ex:37
+#: web/controllers/admin/image_category_controller.ex:38
 msgid "Image category created"
 msgstr "Bildekategori opprettet"
 
-#: web/controllers/admin/image_category_controller.ex:145
+#: web/controllers/admin/image_category_controller.ex:146
 msgid "Image category deleted"
 msgstr "Bildekategori slettet"
 
-#: web/controllers/admin/image_category_controller.ex:72
+#: web/controllers/admin/image_category_controller.ex:73
 msgid "Image category updated"
 msgstr "Bildekategori oppdatert"
 
-#: web/controllers/admin/image_series_controller.ex:113
+#: web/controllers/admin/image_series_controller.ex:114
 msgid "Image series configured"
 msgstr "Bildeserie konfigurert"
 
-#: web/controllers/admin/image_series_controller.ex:37
+#: web/controllers/admin/image_series_controller.ex:38
 msgid "Image series created"
 msgstr "Bildeserie opprettet"
 
-#: web/controllers/admin/image_series_controller.ex:180
+#: web/controllers/admin/image_series_controller.ex:181
 msgid "Image series deleted"
 msgstr "Bildeserie slettet"
 
-#: web/controllers/admin/image_series_controller.ex:72
+#: web/controllers/admin/image_series_controller.ex:73
 msgid "Image series updated"
 msgstr "Bildeserie oppdatert"
 
-#: web/controllers/admin/instagram_controller.ex:26
+#: web/controllers/admin/instagram_controller.ex:27
 msgid "Index - Instagram"
 msgstr "Oversikt - Instagram"
 
@@ -277,7 +277,7 @@ msgstr "Oversikt - Instagram"
 msgid "Index - Instagram images"
 msgstr "Oversikt - Instagrambilder"
 
-#: web/controllers/admin/image_controller.ex:23 web/views/image_view.ex:1
+#: web/controllers/admin/image_controller.ex:24 web/views/image_view.ex:1
 msgid "Index - images"
 msgstr "Oversikt - bilder"
 
@@ -286,11 +286,11 @@ msgstr "Oversikt - bilder"
 msgid "Index - page fragments"
 msgstr "Oversikt - sidefragmenter"
 
-#: web/controllers/admin/page_controller.ex:28 web/views/page_view.ex:1
+#: web/controllers/admin/page_controller.ex:29 web/views/page_view.ex:1
 msgid "Index - pages"
 msgstr "Oversikt - sider"
 
-#: web/controllers/admin/post_controller.ex:27 web/views/post_view.ex:1
+#: web/controllers/admin/post_controller.ex:28 web/views/post_view.ex:1
 msgid "Index - posts"
 msgstr "Oversikt - poster"
 
@@ -315,25 +315,21 @@ msgstr "Pålogging"
 msgid "Mark as"
 msgstr "Marker som"
 
-#: web/views/image_view.ex:10
-msgid "New image"
-msgstr "Nytt bilde"
-
-#: web/controllers/admin/image_category_controller.ex:25
-#: web/controllers/admin/image_category_controller.ex:41
+#: web/controllers/admin/image_category_controller.ex:26
+#: web/controllers/admin/image_category_controller.ex:42
 #: web/views/image_category_view.ex:1 web/views/image_view.ex:119
 msgid "New image category"
 msgstr "Ny bildekategori"
 
-#: web/controllers/admin/image_series_controller.ex:25
-#: web/controllers/admin/image_series_controller.ex:41
-#: web/views/image_series_view.ex:1
+#: web/controllers/admin/image_series_controller.ex:26
+#: web/controllers/admin/image_series_controller.ex:42
+#: web/views/image_series_view.ex:1 web/views/image_view.ex:10
 msgid "New image series"
 msgstr "Ny bildeserie"
 
-#: web/controllers/admin/page_controller.ex:69
-#: web/controllers/admin/page_controller.ex:84
-#: web/controllers/admin/page_controller.ex:106 web/views/page_view.ex:1
+#: web/controllers/admin/page_controller.ex:70
+#: web/controllers/admin/page_controller.ex:85
+#: web/controllers/admin/page_controller.ex:107 web/views/page_view.ex:1
 #: web/views/page_view.ex:23
 msgid "New page"
 msgstr "Ny side"
@@ -344,8 +340,8 @@ msgstr "Ny side"
 msgid "New page fragment"
 msgstr "Nytt sidefragment"
 
-#: web/controllers/admin/post_controller.ex:53
-#: web/controllers/admin/post_controller.ex:68 web/views/post_view.ex:1
+#: web/controllers/admin/post_controller.ex:54
+#: web/controllers/admin/post_controller.ex:69 web/views/post_view.ex:1
 #: web/views/post_view.ex:18
 msgid "New post"
 msgstr "Ny post"
@@ -372,15 +368,15 @@ msgstr "Ingen sidefragmenter"
 msgid "No posts"
 msgstr "Ingen poster"
 
-#: web/controllers/admin/page_controller.ex:79
+#: web/controllers/admin/page_controller.ex:80
 msgid "Page created"
 msgstr "Side opprettet"
 
-#: web/controllers/admin/page_controller.ex:168
+#: web/controllers/admin/page_controller.ex:169
 msgid "Page deleted"
 msgstr "Siden ble slettet"
 
-#: web/controllers/admin/page_controller.ex:105
+#: web/controllers/admin/page_controller.ex:106
 msgid "Page duplicated"
 msgstr "Side duplisert"
 
@@ -400,15 +396,15 @@ msgstr "Sidefragment oppdatert"
 msgid "Page not found"
 msgstr "Side ikke funnet."
 
-#: web/controllers/admin/page_controller.ex:135
+#: web/controllers/admin/page_controller.ex:136
 msgid "Page updated"
 msgstr "Siden oppdatert"
 
-#: web/controllers/admin/page_controller.ex:45
+#: web/controllers/admin/page_controller.ex:46
 msgid "Pages re-rendered"
 msgstr "Sider gjengitt på nytt"
 
-#: web/models/user.ex:202 web/views/session_view.ex:6
+#: web/models/user.ex:205 web/views/session_view.ex:6
 msgid "Password"
 msgstr "Passord"
 
@@ -416,15 +412,15 @@ msgstr "Passord"
 msgid "Please contact an administrator."
 msgstr "Vennligst kontakt administrator."
 
-#: web/controllers/admin/post_controller.ex:63
+#: web/controllers/admin/post_controller.ex:64
 msgid "Post created"
 msgstr "Post opprettet"
 
-#: web/controllers/admin/post_controller.ex:131
+#: web/controllers/admin/post_controller.ex:132
 msgid "Post deleted"
 msgstr "Post slettet"
 
-#: web/controllers/admin/post_controller.ex:99
+#: web/controllers/admin/post_controller.ex:100
 msgid "Post updated"
 msgstr "Post oppdatert"
 
@@ -460,7 +456,7 @@ msgstr "Velg bilder, og klikk på den ønskede handlingen."
 msgid "Server error"
 msgstr "Serverfeil"
 
-#: web/controllers/admin/page_controller.ex:58 web/views/page_view.ex:2
+#: web/controllers/admin/page_controller.ex:59 web/views/page_view.ex:2
 #: web/views/page_view.ex:7
 msgid "Show page"
 msgstr "Vis side"
@@ -470,7 +466,7 @@ msgstr "Vis side"
 msgid "Show page fragment"
 msgstr "Vis sidefragment"
 
-#: web/controllers/admin/post_controller.ex:41 web/views/post_view.ex:2
+#: web/controllers/admin/post_controller.ex:42 web/views/post_view.ex:2
 #: web/views/post_view.ex:7
 msgid "Show post"
 msgstr "Vis post"
@@ -503,7 +499,7 @@ msgstr "Systeminfo"
 msgid "This object cannot be restored!"
 msgstr "Dette objektet kan ikke gjenopprettes!"
 
-#: web/controllers/admin/image_series_controller.ex:135
+#: web/controllers/admin/image_series_controller.ex:136
 #: web/views/image_view.ex:78
 msgid "Upload images"
 msgstr "Last opp bilder"
@@ -547,7 +543,7 @@ msgstr "Legg til"
 msgid "Fragments"
 msgstr "Fragmenter"
 
-#: web/menus/images_menu.ex:9 web/models/image_series.ex:169
+#: web/menus/images_menu.ex:10 web/models/image_series.ex:172
 msgid "Images"
 msgstr "Bilder"
 
@@ -557,15 +553,15 @@ msgstr "Bilder"
 msgid "Index"
 msgstr "Oversikt"
 
-#: web/menus/news_menu.ex:9
+#: web/menus/news_menu.ex:10
 msgid "News"
 msgstr "Nyheter"
 
-#: web/menus/pages_menu.ex:9
+#: web/menus/pages_menu.ex:10
 msgid "Pages"
 msgstr "Sider"
 
-#: web/menus/users_menu.ex:9
+#: web/menus/users_menu.ex:10
 msgid "Users"
 msgstr "Brukere"
 
@@ -577,23 +573,23 @@ msgstr "** sensurert **"
 msgid "Association not fetched"
 msgstr "Forbindelse ikke hentet"
 
-#: web/models/user.ex:208
+#: web/models/user.ex:211
 msgid "Avatar"
 msgstr "Profilbilde"
 
-#: web/models/page.ex:202 web/models/page.ex:203
+#: web/models/page.ex:205 web/models/page.ex:206
 msgid "Belongs to"
 msgstr "Tilhører"
 
-#: web/models/instagram_image.ex:277
+#: web/models/instagram_image.ex:280
 msgid "Caption"
 msgstr "Overskrift"
 
-#: web/models/image_category.ex:126
+#: web/models/image_category.ex:129
 msgid "Config"
 msgstr "Konfigurer"
 
-#: web/models/image_series.ex:165
+#: web/models/image_series.ex:168
 msgid "Configuration"
 msgstr "Konfigurasjon"
 
@@ -601,7 +597,7 @@ msgstr "Konfigurasjon"
 msgid "Configuration data"
 msgstr "Konfigurasjonsdata"
 
-#: lib/brando/form/fields.ex:132
+#: lib/brando/form/fields.ex:130
 msgid "Confirm"
 msgstr "Bekreft"
 
@@ -609,31 +605,31 @@ msgstr "Bekreft"
 msgid "Connected"
 msgstr "Tilkoblet"
 
-#: web/models/post.ex:162
+#: web/models/post.ex:165
 msgid "Cover"
 msgstr "Omslag"
 
-#: web/models/instagram_image.ex:281
+#: web/models/instagram_image.ex:284
 msgid "Created"
 msgstr "Opprettet"
 
-#: web/models/image.ex:191 web/models/image_category.ex:127
-#: web/models/image_series.ex:168 web/models/page.ex:205
-#: web/models/page_fragment.ex:143 web/models/post.ex:168
+#: web/models/image.ex:194 web/models/image_category.ex:130
+#: web/models/image_series.ex:171 web/models/page.ex:208
+#: web/models/page_fragment.ex:146 web/models/post.ex:171
 msgid "Creator"
 msgstr "Skaper"
 
-#: web/models/image_series.ex:166
+#: web/models/image_series.ex:169
 msgid "Credits"
 msgstr "Krediteringer"
 
-#: web/models/page.ex:200 web/models/page_fragment.ex:141
-#: web/models/post.ex:166
+#: web/models/page.ex:203 web/models/page_fragment.ex:144
+#: web/models/post.ex:169
 msgid "Data"
 msgstr "Data"
 
 #: lib/brando/html.ex:326 lib/brando/html/inspect.ex:127
-#: web/forms/page_form.ex:17 web/forms/post_form.ex:17
+#: web/forms/page_form.ex:18 web/forms/post_form.ex:18
 msgid "Draft"
 msgstr "Kladd"
 
@@ -645,96 +641,96 @@ msgstr "Tom forbindelse"
 msgid "Encoded value"
 msgstr "Kodet verdi"
 
-#: web/models/page.ex:206
+#: web/models/page.ex:209
 msgid "Extra CSS classes"
 msgstr "Ekstra CSS klasser"
 
-#: web/models/post.ex:160
+#: web/models/post.ex:163
 msgid "Featured"
 msgstr "Fremhevet"
 
-#: web/models/user.ex:201
+#: web/models/user.ex:204
 msgid "Full name"
 msgstr "Fullt navn"
 
-#: web/models/page.ex:201 web/models/page_fragment.ex:142
-#: web/models/post.ex:167
+#: web/models/page.ex:204 web/models/page_fragment.ex:145
+#: web/models/post.ex:170
 msgid "HTML"
 msgstr "HTML"
 
-#: web/models/post.ex:163
+#: web/models/post.ex:166
 msgid "Header"
 msgstr "Overskrift"
 
-#: web/models/image.ex:188 web/models/image_category.ex:123
-#: web/models/image_series.ex:162 web/models/instagram_image.ex:274
-#: web/models/user.ex:198
+#: web/models/image.ex:191 web/models/image_category.ex:126
+#: web/models/image_series.ex:165 web/models/instagram_image.ex:277
+#: web/models/user.ex:201
 msgid "ID"
 msgstr "ID"
 
-#: web/forms/page_form.ex:68
+#: web/forms/page_form.ex:69
 msgid "If this page should belong to another, select parent page here. If not, select –"
 msgstr "Hvis denne siden tilhører en annen, velg overordnet side her. Hvis ikke, velger du -"
 
-#: web/models/image.ex:189
+#: web/models/image.ex:192
 msgid "Image"
 msgstr "Bilde"
 
-#: web/models/instagram_image.ex:279
+#: web/models/instagram_image.ex:282
 msgid "Image URL"
 msgstr "Bilde-URL"
 
-#: web/models/image_series.ex:170 web/models/image_series.ex:171
+#: web/models/image_series.ex:173 web/models/image_series.ex:174
 msgid "Image category"
 msgstr "Bildekategori"
 
-#: web/models/image.ex:192 web/models/image_category.ex:128
+#: web/models/image.ex:195 web/models/image_category.ex:131
 msgid "Image series"
 msgstr "Bildeserie"
 
-#: web/models/page.ex:209 web/models/page_fragment.ex:144
+#: web/models/page.ex:212 web/models/page_fragment.ex:147
 msgid "Inserted"
 msgstr "Satt inn"
 
-#: web/models/image.ex:193 web/models/image_category.ex:129
-#: web/models/image_series.ex:172 web/models/post.ex:174 web/models/user.ex:206
+#: web/models/image.ex:196 web/models/image_category.ex:132
+#: web/models/image_series.ex:175 web/models/post.ex:177 web/models/user.ex:209
 msgid "Inserted at"
 msgstr "Lagt til"
 
-#: web/models/instagram_image.ex:275
+#: web/models/instagram_image.ex:278
 msgid "Instagram ID"
 msgstr "Instagram-ID"
 
-#: web/models/page.ex:197 web/models/page_fragment.ex:140
+#: web/models/page.ex:200 web/models/page_fragment.ex:143
 msgid "Key"
 msgstr "Nøkkel"
 
-#: web/models/page.ex:196 web/models/page_fragment.ex:139
-#: web/models/post.ex:161 web/models/user.ex:204
+#: web/models/page.ex:199 web/models/page_fragment.ex:142
+#: web/models/post.ex:164 web/models/user.ex:207
 msgid "Language"
 msgstr "Språk"
 
-#: web/models/user.ex:205
+#: web/models/user.ex:208
 msgid "Last login"
 msgstr "Forrige innlogging"
 
-#: web/models/post.ex:165
+#: web/models/post.ex:168
 msgid "Lead"
 msgstr "Ingress"
 
-#: web/models/instagram_image.ex:278
+#: web/models/instagram_image.ex:281
 msgid "Link"
 msgstr "Lenke"
 
-#: web/models/page.ex:207 web/models/post.ex:169
+#: web/models/page.ex:210 web/models/post.ex:172
 msgid "META description"
 msgstr "META-beskrivelse"
 
-#: web/models/page.ex:208 web/models/post.ex:170
+#: web/models/page.ex:211 web/models/post.ex:173
 msgid "META keywords"
 msgstr "META-nøkkelord"
 
-#: web/models/image_category.ex:124 web/models/image_series.ex:163
+#: web/models/image_category.ex:127 web/models/image_series.ex:166
 msgid "Name"
 msgstr "Navn"
 
@@ -752,16 +748,16 @@ msgid "No value"
 msgstr "Ingen verdi"
 
 #: lib/brando/html.ex:320 lib/brando/html/inspect.ex:126
-#: web/forms/page_form.ex:19 web/forms/post_form.ex:19
+#: web/forms/page_form.ex:20 web/forms/post_form.ex:20
 msgid "Pending"
 msgstr "Venter"
 
-#: web/models/post.ex:172
+#: web/models/post.ex:175
 msgid "Publish at"
 msgstr "Publiseringstidspunkt"
 
 #: lib/brando/html.ex:314 lib/brando/html/inspect.ex:125
-#: web/forms/page_form.ex:18 web/forms/post_form.ex:18 web/models/post.ex:171
+#: web/forms/page_form.ex:19 web/forms/post_form.ex:19 web/models/post.ex:174
 msgid "Published"
 msgstr "Publisert"
 
@@ -769,54 +765,54 @@ msgstr "Publisert"
 msgid "Rights"
 msgstr "Rettigheter"
 
-#: web/models/user.ex:203
+#: web/models/user.ex:206
 msgid "Roles"
 msgstr "Roller"
 
-#: lib/brando/form/fields.ex:105
+#: lib/brando/form/fields.ex:103
 msgid "Save"
 msgstr "Lagre"
 
-#: web/models/image.ex:190 web/models/image_series.ex:167
+#: web/models/image.ex:193 web/models/image_series.ex:170
 msgid "Sequence"
 msgstr "Sekvens"
 
-#: web/models/image_category.ex:125 web/models/image_series.ex:164
-#: web/models/page.ex:199 web/models/post.ex:164
+#: web/models/image_category.ex:128 web/models/image_series.ex:167
+#: web/models/page.ex:202 web/models/post.ex:167
 msgid "Slug"
 msgstr "URL-tamp"
 
-#: web/models/instagram_image.ex:282 web/models/page.ex:195
-#: web/models/post.ex:159
+#: web/models/instagram_image.ex:285 web/models/page.ex:198
+#: web/models/post.ex:162
 msgid "Status"
 msgstr "Status"
 
-#: web/models/page.ex:204
+#: web/models/page.ex:207
 msgid "Sub pages"
 msgstr "Under-sider"
 
-#: web/models/post.ex:173
+#: web/models/post.ex:176
 msgid "Tags"
 msgstr "Merkelapper"
 
-#: web/models/instagram_image.ex:280
+#: web/models/instagram_image.ex:283
 msgid "Thumbnail URL"
 msgstr "Miniatyrbilde-URL"
 
-#: web/models/page.ex:198
+#: web/models/page.ex:201
 msgid "Title"
 msgstr "Tittel"
 
-#: web/models/instagram_image.ex:276
+#: web/models/instagram_image.ex:279
 msgid "Type"
 msgstr "Type"
 
-#: web/models/page.ex:210 web/models/page_fragment.ex:145
+#: web/models/page.ex:213 web/models/page_fragment.ex:148
 msgid "Updated"
 msgstr "Oppdatert"
 
-#: web/models/image.ex:194 web/models/image_category.ex:130
-#: web/models/image_series.ex:173 web/models/post.ex:175 web/models/user.ex:207
+#: web/models/image.ex:197 web/models/image_category.ex:133
+#: web/models/image_series.ex:176 web/models/post.ex:178 web/models/user.ex:210
 msgid "Updated at"
 msgstr "Sist oppdatert"
 
@@ -824,7 +820,7 @@ msgstr "Sist oppdatert"
 msgid "User information"
 msgstr "Brukerinformasjon"
 
-#: web/models/user.ex:199
+#: web/models/user.ex:202
 msgid "Username"
 msgstr "Brukernavn"
 
@@ -832,87 +828,87 @@ msgstr "Brukernavn"
 msgid "admin"
 msgstr "admin"
 
-#: lib/brando/form/fields.ex:266
+#: lib/brando/form/fields.ex:264
 msgid "can't be blank"
 msgstr "kan ikke være tomt"
 
-#: lib/brando/form/fields.ex:270
+#: lib/brando/form/fields.ex:268
 msgid "has invalid format"
 msgstr "har ugyldig format"
 
-#: web/models/image.ex:184
+#: web/models/image.ex:187
 msgid "image"
 msgstr "bilde"
 
-#: web/models/image_category.ex:120
+#: web/models/image_category.ex:123
 msgid "image categories"
 msgstr "bildekategorier"
 
-#: web/models/image_category.ex:119
+#: web/models/image_category.ex:122
 msgid "image category"
 msgstr "bildekategori"
 
-#: web/models/image_series.ex:159
+#: web/models/image_series.ex:162
 msgid "image(s)"
 msgstr "bilde(r)"
 
-#: web/models/image.ex:185
+#: web/models/image.ex:188
 msgid "images"
 msgstr "bilder"
 
-#: web/models/image_series.ex:154
+#: web/models/image_series.ex:157
 msgid "imageserie"
 msgstr "bildeserie"
 
-#: web/models/image_series.ex:155
+#: web/models/image_series.ex:158
 msgid "imageseries"
 msgstr "bildeserier"
 
-#: web/models/instagram_image.ex:270
+#: web/models/instagram_image.ex:273
 msgid "instagram image"
 msgstr "instagram-bilde"
 
-#: web/models/instagram_image.ex:271
+#: web/models/instagram_image.ex:274
 msgid "instagram images"
 msgstr "instagram-bilder"
 
-#: lib/brando/form/fields.ex:272
+#: lib/brando/form/fields.ex:270
 msgid "is invalid"
 msgstr "er ugyldig"
 
-#: lib/brando/form/fields.ex:274
+#: lib/brando/form/fields.ex:272
 msgid "is reserved"
 msgstr "er reservert"
 
-#: lib/brando/form/fields.ex:268
+#: lib/brando/form/fields.ex:266
 msgid "must be unique"
 msgstr "må være unikt"
 
-#: web/models/page.ex:190
+#: web/models/page.ex:193
 msgid "page"
 msgstr "side"
 
-#: web/models/page_fragment.ex:134
+#: web/models/page_fragment.ex:137
 msgid "page fragment"
 msgstr "sidefragment"
 
-#: web/models/page_fragment.ex:135
+#: web/models/page_fragment.ex:138
 msgid "page fragments"
 msgstr "sidefragmenter"
 
-#: web/models/page.ex:191
+#: web/models/page.ex:194
 msgid "pages"
 msgstr "sider"
 
-#: web/models/post.ex:154
+#: web/models/post.ex:157
 msgid "post"
 msgstr "post"
 
-#: web/models/post.ex:155
+#: web/models/post.ex:158
 msgid "posts"
 msgstr "poster"
 
-#: lib/brando/form/fields.ex:276
+#: lib/brando/form/fields.ex:274
 msgid "should be at least %{count} characters"
 msgstr "må være minst %{count} tegn"
 
@@ -924,18 +920,38 @@ msgstr "personale"
 msgid "superuser"
 msgstr "superbruker"
 
-#: web/models/user.ex:190
+#: web/models/user.ex:193
 msgid "user"
 msgstr "bruker"
 
-#: web/models/user.ex:191
+#: web/models/user.ex:194
 msgid "users"
 msgstr "brukere"
 
-#: web/controllers/session_controller.ex:26
+#: web/controllers/session_controller.ex:27
 msgid "Authorization successful"
 msgstr "Autorisasjon vellykket"
 
 #: lib/brando/html.ex:168
 msgid "Delete"
 msgstr "Slett"
+
+#: web/menus/instagram_menu.ex:10
+msgid "Instagram"
+msgstr "Instagram"
+
+#: lib/brando/images/upload.ex:70
+msgid "Empty filename given. Make sure you have a valid filename."
+msgstr "Tomt filnavn gitt. Kontroller at du har et gyldig filnavn."
+
+#: lib/brando/images/upload.ex:115
+msgid "Error while copying"
+msgstr "Feil under kopiering"
+
+#: lib/brando/images/upload.ex:85
+msgid "File type not allowed"
+msgstr "Filtypen ikke tillatt"
+
+#: lib/brando/images/upload.ex:98
+msgid "Path creation failed"
+msgstr "Feil under oppretting av filbane"

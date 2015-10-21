@@ -7,7 +7,7 @@
     </a>
     <div class="tab-content">
       <a href="<%= Helpers.admin_image_series_path(@conn, :new, category.id) %>" class="btn btn-primary m-b-sm">
-        <i class="fa fa-fw fa-plus"></i> <%= gettext("New image") %>
+        <i class="fa fa-fw fa-plus"></i> <%= gettext("New image series") %>
       </a>
       <button class="btn btn-default btn-dropdown m-b-sm">
         <div class="dropdown">

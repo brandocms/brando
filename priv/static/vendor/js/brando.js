@@ -512,6 +512,7 @@ var Instagram = (function () {
                 }
                 imagePool = [];
                 $(".image-selection-pool img").removeClass("selected");
+                vex.dialog.alert("Status successfully changed.");
             }
         }
     }]);
@@ -585,6 +586,7 @@ var Pages = (function () {
         value: function onClickExpandButton(e, elem) {
             e.preventDefault();
             $(elem).toggleClass('active');
+            $(elem).find('i').toggleClass('fa-plus').toggleClass('fa-times');
             $('tr.child[data-parent-id=' + $(elem).attr('data-id') + ']').toggleClass('hidden');
         }
     }]);

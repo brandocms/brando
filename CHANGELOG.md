@@ -1,3 +1,14 @@
+## v0.6.0 (2015-10-21)
+
+* Enhancements
+  * Adds `Brando.Pages.Utils.render_fragment/1`
+  * Add alert when status change is successful on instagram admin.
+  * Add translations for upload errors
+
+* Bug fixes
+  * Fix villain upload bug
+  * Fix translation error in image index
+
 ## v0.5.0 (2015-10-19)
 
 * Enhancements

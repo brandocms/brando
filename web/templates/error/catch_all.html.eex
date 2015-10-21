@@ -25,7 +25,7 @@
               <div class="toolbar"></div>
               <div class="box">
                 <h1 id="app-name"><%= gettext("Error") %></h1>
-                <code><%= inspect(@reason) %></code>
+                <code style="display: block; padding: 10px 0 30px;"><%= @reason.message %></code>
                 <span class="version">&beta; <%= Brando.version %></span>
               </div>
             </div>

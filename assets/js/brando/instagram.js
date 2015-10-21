@@ -88,6 +88,7 @@ class Instagram {
             }
             imagePool = [];
             $('.image-selection-pool img').removeClass('selected');
+            vex.dialog.alert("Status successfully changed.");
         }
     }
 }
