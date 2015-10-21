@@ -88,8 +88,7 @@ defmodule Brando.Integration.UserTest do
                          "/fixtures/sample.png"}
     up_params = Dict.put(@params, "avatar", up_plug)
     assert_raise Brando.Exception.UploadError,
-                 "Blankt filnavn gitt under opplasting. " <>
-                 "Pass på at du har et gyldig filnavn.",
+                 "Empty filename given. Make sure you have a valid filename.",
                  fn -> User.check_for_uploads(user, up_params)
     end
   end
@@ -113,7 +112,7 @@ defmodule Brando.Integration.UserTest do
                          "/fixtures/non_existant.png"}
     up_params = Dict.put(@params, "avatar", up_plug)
     assert_raise Brando.Exception.UploadError,
-                 "Feil under kopiering -> :enoent",
+                 "Error while copying -> :enoent",
                  fn -> User.check_for_uploads(user, up_params)
     end
   end
