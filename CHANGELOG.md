@@ -1,5 +1,8 @@
 ## v0.7.0-dev (2015-XX-XX)
 
+* Bug fixes
+  * Supervisord prod config: now autostarts on boot.
+
 ## v0.6.0 (2015-10-21)
 
 * Enhancements
