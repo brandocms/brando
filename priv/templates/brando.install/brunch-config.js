@@ -55,7 +55,6 @@ exports.config = {
     // Which directories to watch
     watched: [
       "deps/brando/priv/static",
-      "deps/brando/priv/static",
       "deps/phoenix/web/static",
       "deps/phoenix_html/web/static",
       "web/static", "test/static"

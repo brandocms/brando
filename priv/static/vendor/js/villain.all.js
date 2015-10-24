@@ -4375,12 +4375,17 @@ if (typeof exports === 'object') {
     
         showSetup: function() {
             innerHeight = this.$inner.height();
+            innerWidth = this.$inner.width();
             this.$content.hide();
             $button = this.$('.villain-action-button-setup');
             $button.addClass('active');
             this.$setup.show();
+            console.log(innerWidth);
             if (this.$setup.height() < innerHeight) {
                 this.$setup.height(innerHeight);
+            }
+            if (innerWidth < 300) {
+                this.$el.width(300);
             }
         },
     
@@ -5007,7 +5012,6 @@ if (typeof exports === 'object') {
     
         setup: function() {
             // check if this block has data. if not, show the setup div
-            that = this;
             if (!this.hasData()) {
                 this.$('.villain-image-block').hide();
                 $imageDropper = $([
@@ -5025,23 +5029,14 @@ if (typeof exports === 'object') {
             } else {
                 this.clearSetup();
                 data = this.getData();
+                $form = $('<form name="image-meta-' + this.dataId + '">');
                 $meta = $([
                     '<label for="title">Tittel</label><input value="' + data.title + '" type="text" name="title" />',
                     '<label for="credits">Kreditering</label><input value="' + data.credits + '" type="text" name="credits" />',
                     '<label for="link">URL</label><input value="' + data.link + '" type="text" name="link" />'
                 ].join('\n'));
-                this.$setup.append($meta);
-                this.$setup.find('input[name="title"]').on('keyup', _.debounce(function (e) {
-                    that.setDataProperty('title', $(this).val());
-                }, 700, false));
-                this.$setup.find('input[name="credits"]').on('keyup', _.debounce(function (e) {
-                    that.setDataProperty('credits', $(this).val());
-                }, 700, false));
-                this.$setup.find('input[name="link"]').on('keyup', _.debounce(function (e) {
-                    that.setDataProperty('link', $(this).val());
-                }, 700, false));
-    
-                this.$setup.append($('<label>Størrelse</label>'));
+                $form.append($meta);
+                $form.append($('<label>Størrelse</label>'));
     
                 /* create sizes overview */
                 for (var key in data.sizes) {
@@ -5051,12 +5046,23 @@ if (typeof exports === 'object') {
                             checked = ' checked="checked"';
                         }
                         $radio = $('<label for="' + key +'">'
-                               + '<input type="radio" name="' + 'imagesize'
-                               + '" value="' + data.sizes[key] + '"'
+                               + '<input type="radio" name="imagesize" '
+                               + 'value="' + data.sizes[key] + '"'
                                + checked + ' />' + key + '</label>');
-                        this.$setup.append($radio);
+                        $form.append($radio);
                     }
                 }
+    
+                this.$setup.append($form);
+                this.$setup.find('input[name="title"]').on('keyup', _.debounce($.proxy(function (e) {
+                    this.setDataProperty('title', $(e.target).val());
+                }, this), 700, false));
+                this.$setup.find('input[name="credits"]').on('keyup', _.debounce($.proxy(function (e) {
+                    this.setDataProperty('credits', $(e.target).val());
+                }, this), 700, false));
+                this.$setup.find('input[name="link"]').on('keyup', _.debounce($.proxy(function (e) {
+                    this.setDataProperty('link', $(e.target).val());
+                }, this), 700, false));
                 this.$setup.find('input[type=radio]').on('change', $.proxy(function(e) {
                     this.setUrl($(e.target).val());
                 }, this));
@@ -5948,16 +5954,12 @@ if (typeof exports === 'object') {
     
         onClickLink: function(e) {
             e.preventDefault();
-            var link = prompt('Sett inn link:'),
-                link_regex = /((ftp|http|https):\/\/.)|mailto(?=\:[-\.\w]+@)/;
+            var link = prompt('Insert link:');
     
             if (link && link.length > 0) {
-                if (!link_regex.test(link)) {
-                    link = 'http://' + link;
-                }
                 document.execCommand('CreateLink', false, link);
+                this.activateButton('.villain-format-link');
             }
-            this.activateButton('.villain-format-link');
         },
     
         onClickUnlink: function(e) {
