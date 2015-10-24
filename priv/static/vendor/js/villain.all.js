@@ -4375,12 +4375,17 @@ if (typeof exports === 'object') {
     
         showSetup: function() {
             innerHeight = this.$inner.height();
+            innerWidth = this.$inner.width();
             this.$content.hide();
             $button = this.$('.villain-action-button-setup');
             $button.addClass('active');
             this.$setup.show();
+            console.log(innerWidth);
             if (this.$setup.height() < innerHeight) {
                 this.$setup.height(innerHeight);
+            }
+            if (innerWidth < 300) {
+                this.$el.width(300);
             }
         },
     
@@ -5953,8 +5958,8 @@ if (typeof exports === 'object') {
     
             if (link && link.length > 0) {
                 document.execCommand('CreateLink', false, link);
+                this.activateButton('.villain-format-link');
             }
-            this.activateButton('.villain-format-link');
         },
     
         onClickUnlink: function(e) {

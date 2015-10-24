@@ -1,4 +1,4 @@
-## v0.7.0-dev (2015-XX-XX)
+## v0.7.0 (2015-10-24)
 
 * Enhancements
   * When installing, copy static to `web/static/assets` and let brunch copy files for us. This allows us to just nuke the `priv/static` directory and `brunch build --production`. We can also remove it from git.
