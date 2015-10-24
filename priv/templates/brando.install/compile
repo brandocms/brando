@@ -1,0 +1,7 @@
+# compile
+
+git pull
+MIX_ENV=prod mix deps.get
+MIX_ENV=prod mix deps.update brando
+MIX_ENV=prod mix compile
+node_modules/brunch/bin/brunch build --production
