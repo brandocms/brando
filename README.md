@@ -124,6 +124,9 @@ And backend
 
     $ mix gettext.merge priv/gettext/backend
 
+## Production
+
+Run `compile` in your OTP app's dir to `git pull` latest, get latest hex deps, compile and build production assets.
 
 ## Additional admin CSS/styling
 
