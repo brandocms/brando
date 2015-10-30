@@ -1,5 +1,8 @@
 ## v0.8.0-dev (2015-XX-XX)
 
+* Bug fixes
+  * Remove `Mix.env` calls to make Brando work in releases.
+
 ## v0.7.0 (2015-10-24)
 
 * Enhancements
