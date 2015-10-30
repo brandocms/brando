@@ -10,7 +10,7 @@
 # We recommend using the bang functions (`insert!`, `update!`
 # and so on) as they will fail if something goes wrong.
 
-post_cfg %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"],
+post_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"],
     default_size: "medium", random_filename: true, size_limit: 10240000,
     sizes: %{"large" => %{"quality" => 100, "size" => "700"},
       "medium" => %{"quality" => 100, "size" => "500"},
@@ -20,7 +20,7 @@ post_cfg %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"]
       "xlarge" => %{"quality" => 100, "size" => "900"}},
     upload_path: "images/posts"}
 
-page_cfg %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"],
+page_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"],
     default_size: "medium", random_filename: true, size_limit: 10240000,
     sizes: %{"large" => %{"quality" => 100, "size" => "700"},
       "medium" => %{"quality" => 100, "size" => "500"},
@@ -30,7 +30,7 @@ page_cfg %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"]
       "xlarge" => %{"quality" => 100, "size" => "900"}},
     upload_path: "images/pages"}
 
-ss_cfg %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"],
+ss_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"],
     default_size: "medium", random_filename: true, size_limit: 10240000,
     sizes: %{"cropxlarge" => %{"crop" => true, "quality" => 100,
         "size" => "1140x600"}, "large" => %{"quality" => 100, "size" => "700"},
@@ -68,7 +68,6 @@ ss_category = %Brando.ImageCategory{
 <%= application_module %>.Repo.insert!(ss_category)
 
 post_series = %Brando.ImageSeries{
-  cfg: post_cfg,
   creator_id: user.id, credits: nil,
   image_category_id: post_category.id,
   name: "post", sequence: 0, slug: "post"}
@@ -76,7 +75,6 @@ post_series = %Brando.ImageSeries{
 <%= application_module %>.Repo.insert!(post_series)
 
 page_series = %Brando.ImageSeries{
-  cfg: page_cfg,
   creator_id: user.id, credits: nil,
   image_category_id: page_category.id,
   name: "page", sequence: 0, slug: "page"}
