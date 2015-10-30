@@ -2,6 +2,7 @@
 
 * Bug fixes
   * Remove `Mix.env` calls to make Brando work in releases.
+  * Make `Brando.version` not depend on Mix
 
 ## v0.7.0 (2015-10-24)
 
