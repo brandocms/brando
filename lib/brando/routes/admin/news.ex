@@ -48,6 +48,7 @@ defmodule Brando.Routes.Admin.News do
 
       get    "#{path}",            ctrl, :index,          opts
       get    "#{path}/new",        ctrl, :new,            opts
+      get    "#{path}/rerender",   ctrl, :rerender,       opts
       get    "#{path}/:id",        ctrl, :show,           opts
       get    "#{path}/:id/edit",   ctrl, :edit,           opts
       get    "#{path}/:id/delete", ctrl, :delete_confirm, opts
