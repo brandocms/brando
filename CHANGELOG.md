@@ -1,4 +1,4 @@
-## v0.8.0-dev (2015-XX-XX)
+## v0.8.0 (2015-11-02)
 
 * Enhancements
   * Add forced Villain re-rendering for news posts.
