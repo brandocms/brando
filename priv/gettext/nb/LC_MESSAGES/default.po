@@ -57,11 +57,12 @@ msgstr "Autorisasjon"
 msgid "Authorization failed"
 msgstr "Autorisasjon feilet"
 
-#: web/views/image_category_view.ex:5 web/views/image_category_view.ex:26
+#: web/views/image_category_view.ex:5 web/views/image_category_view.ex:5
+#: web/views/image_category_view.ex:26 web/views/image_series_view.ex:5
 #: web/views/image_series_view.ex:5 web/views/image_series_view.ex:11
 #: web/views/image_series_view.ex:18 web/views/page_fragment_view.ex:6
 #: web/views/page_view.ex:6 web/views/post_view.ex:6 web/views/user_view.ex:5
-#: web/views/user_view.ex:6
+#: web/views/user_view.ex:5 web/views/user_view.ex:5 web/views/user_view.ex:6
 msgid "Back to index"
 msgstr "Tilbake til oversikten"
 
@@ -88,7 +89,7 @@ msgstr "Konfigurer bildeserie"
 #: web/controllers/admin/image_series_controller.ex:169
 #: web/controllers/admin/page_controller.ex:158
 #: web/controllers/admin/page_fragment_controller.ex:115
-#: web/controllers/admin/post_controller.ex:120
+#: web/controllers/admin/post_controller.ex:137
 #: web/controllers/admin/user_controller.ex:166
 msgid "Confirm deletion"
 msgstr "Bekreft sletting"
@@ -97,7 +98,7 @@ msgstr "Bekreft sletting"
 msgid "Dashboard"
 msgstr "Kontrollpanel"
 
-#: web/views/error_view.ex:28
+#: web/views/error_view.ex:24
 msgid "Database error"
 msgstr "Databasefeil"
 
@@ -177,8 +178,8 @@ msgstr "Rediger side"
 msgid "Edit page fragment"
 msgstr "Rediger sidefragment"
 
-#: web/controllers/admin/post_controller.ex:87
-#: web/controllers/admin/post_controller.ex:105 web/views/post_view.ex:1
+#: web/controllers/admin/post_controller.ex:104
+#: web/controllers/admin/post_controller.ex:122 web/views/post_view.ex:1
 #: web/views/post_view.ex:8 web/views/post_view.ex:9
 msgid "Edit post"
 msgstr "Rediger post"
@@ -204,7 +205,8 @@ msgstr "E-post"
 msgid "Entry not found"
 msgstr "Oppføring fantes ikke"
 
-#: web/views/error_view.ex:10 web/views/error_view.ex:27
+#: web/views/error_view.ex:10 web/views/error_view.ex:10
+#: web/views/error_view.ex:23
 msgid "Error"
 msgstr "Feil"
 
@@ -217,8 +219,8 @@ msgstr "Feil"
 #: web/controllers/admin/page_controller.ex:84
 #: web/controllers/admin/page_controller.ex:144
 #: web/controllers/admin/page_fragment_controller.ex:64
-#: web/controllers/admin/post_controller.ex:72
-#: web/controllers/admin/post_controller.ex:109
+#: web/controllers/admin/post_controller.ex:89
+#: web/controllers/admin/post_controller.ex:126
 #: web/controllers/admin/user_controller.ex:87
 #: web/controllers/admin/user_controller.ex:114
 #: web/controllers/admin/user_controller.ex:155
@@ -290,7 +292,7 @@ msgstr "Oversikt - sidefragmenter"
 msgid "Index - pages"
 msgstr "Oversikt - sider"
 
-#: web/controllers/admin/post_controller.ex:28 web/views/post_view.ex:1
+#: web/controllers/admin/post_controller.ex:29 web/views/post_view.ex:1
 msgid "Index - posts"
 msgstr "Oversikt - poster"
 
@@ -340,8 +342,8 @@ msgstr "Ny side"
 msgid "New page fragment"
 msgstr "Nytt sidefragment"
 
-#: web/controllers/admin/post_controller.ex:54
-#: web/controllers/admin/post_controller.ex:69 web/views/post_view.ex:1
+#: web/controllers/admin/post_controller.ex:71
+#: web/controllers/admin/post_controller.ex:86 web/views/post_view.ex:1
 #: web/views/post_view.ex:18
 msgid "New post"
 msgstr "Ny post"
@@ -392,7 +394,7 @@ msgstr "Sidefragment slettet"
 msgid "Page fragment updated"
 msgstr "Sidefragment oppdatert"
 
-#: web/views/error_view.ex:28
+#: web/views/error_view.ex:24
 msgid "Page not found"
 msgstr "Side ikke funnet."
 
@@ -401,6 +403,7 @@ msgid "Page updated"
 msgstr "Siden oppdatert"
 
 #: web/controllers/admin/page_controller.ex:46
+#: web/controllers/admin/post_controller.ex:46
 msgid "Pages re-rendered"
 msgstr "Sider gjengitt på nytt"
 
@@ -412,15 +415,15 @@ msgstr "Passord"
 msgid "Please contact an administrator."
 msgstr "Vennligst kontakt administrator."
 
-#: web/controllers/admin/post_controller.ex:64
+#: web/controllers/admin/post_controller.ex:81
 msgid "Post created"
 msgstr "Post opprettet"
 
-#: web/controllers/admin/post_controller.ex:132
+#: web/controllers/admin/post_controller.ex:149
 msgid "Post deleted"
 msgstr "Post slettet"
 
-#: web/controllers/admin/post_controller.ex:100
+#: web/controllers/admin/post_controller.ex:117
 msgid "Post updated"
 msgstr "Post oppdatert"
 
@@ -452,7 +455,7 @@ msgstr "Lagre sortert serie"
 msgid "Select photos, and click on your wanted action."
 msgstr "Velg bilder, og klikk på den ønskede handlingen."
 
-#: web/views/error_view.ex:28
+#: web/views/error_view.ex:24
 msgid "Server error"
 msgstr "Serverfeil"
 
@@ -466,7 +469,7 @@ msgstr "Vis side"
 msgid "Show page fragment"
 msgstr "Vis sidefragment"
 
-#: web/controllers/admin/post_controller.ex:42 web/views/post_view.ex:2
+#: web/controllers/admin/post_controller.ex:59 web/views/post_view.ex:2
 #: web/views/post_view.ex:7
 msgid "Show post"
 msgstr "Vis post"
@@ -623,8 +626,7 @@ msgstr "Skaper"
 msgid "Credits"
 msgstr "Krediteringer"
 
-#: web/models/page.ex:203 web/models/page_fragment.ex:144
-#: web/models/post.ex:169
+#: web/models/page.ex:203 web/models/page_fragment.ex:144 web/models/post.ex:169
 msgid "Data"
 msgstr "Data"
 
@@ -653,8 +655,7 @@ msgstr "Fremhevet"
 msgid "Full name"
 msgstr "Fullt navn"
 
-#: web/models/page.ex:204 web/models/page_fragment.ex:145
-#: web/models/post.ex:170
+#: web/models/page.ex:204 web/models/page_fragment.ex:145 web/models/post.ex:170
 msgid "HTML"
 msgstr "HTML"
 
@@ -705,8 +706,8 @@ msgstr "Instagram-ID"
 msgid "Key"
 msgstr "Nøkkel"
 
-#: web/models/page.ex:199 web/models/page_fragment.ex:142
-#: web/models/post.ex:164 web/models/user.ex:207
+#: web/models/page.ex:199 web/models/page_fragment.ex:142 web/models/post.ex:164
+#: web/models/user.ex:207
 msgid "Language"
 msgstr "Språk"
 
@@ -955,3 +956,11 @@ msgstr "Filtypen ikke tillatt"
 #: lib/brando/images/upload.ex:98
 msgid "Path creation failed"
 msgstr "Feil under oppretting av filbane"
+
+#: web/views/post_view.ex:28
+msgid "Re-render posts"
+msgstr "Gjengi poster på nytt"
+
+#: web/forms/post_form.ex:52
+msgid "The post is prioritized, taking precedence over pub. date"
+msgstr "Denne posten er prioritert og vektes før publiseringsdatoer"

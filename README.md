@@ -140,8 +140,7 @@ For pagination, add to your app's `repo.ex`:
 ```elixir
 
 defmodule MyApp.Repo do
-  use Ecto.Repo,
-    otp_app: :my_app
+  use Ecto.Repo, otp_app: :my_app
   use Scrivener
 end
 ```
