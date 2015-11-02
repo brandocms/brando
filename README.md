@@ -58,17 +58,9 @@ Add NPM packages used with brunch:
 
     $ npm install --save sass-brunch postcss-brunch autoprefixer
 
-Create the database:
+Set up database, and seed:
 
-    $ mix ecto.create
-
-Run migrations:
-
-    $ mix ecto.migrate
-
-Run seeds to add default image categories/series and admin user:
-
-    $ mix run priv/repo/seeds.exs
+    $ mix ecto.setup
 
 Go through `config/brando.exs`.
 
