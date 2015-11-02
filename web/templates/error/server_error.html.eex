@@ -10,11 +10,7 @@
     <title><%= app_name %> | 500</title>
     <link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/brando.vendor.css") %>">
     <link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/brando.css") %>">
-    <%= if Mix.env(:dev) do %>
     <script src="<%= Helpers.static_path(@conn, "/js/brando.auth.js") %>" type="text/javascript" charset="utf-8"></script>
-    <% else %>
-    <script src="<%= Helpers.static_path(@conn, "/js/brando.auth-min.js") %>" type="text/javascript" charset="utf-8"></script>
-    <% end %>
   </head>
 
   <body class="auth">

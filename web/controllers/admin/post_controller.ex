@@ -11,6 +11,7 @@ defmodule Brando.Admin.PostController do
 
   import Brando.Gettext
   import Brando.Plug.HTML
+  import Brando.Utils, only: [helpers: 1]
 
   plug :put_section, "news"
   plug :scrub_params, "post" when action in [:create, :update]
@@ -28,6 +29,22 @@ defmodule Brando.Admin.PostController do
     |> assign(:page_title, gettext("Index - posts"))
     |> assign(:posts, posts)
     |> render(:index)
+  end
+
+  @doc false
+  def rerender(conn, _params) do
+    model = conn.private[:model]
+    posts =
+      model
+      |> Brando.repo.all
+
+    for post <- posts do
+      model.rerender_html(model.changeset(post, :update, %{}))
+    end
+
+    conn
+    |> put_flash(:notice, gettext("Pages re-rendered"))
+    |> redirect(to: helpers(conn).admin_post_path(conn, :index))
   end
 
   @doc false

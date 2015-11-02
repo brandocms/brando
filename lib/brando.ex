@@ -1,5 +1,6 @@
 defmodule Brando do
   @moduledoc File.read!("README.md")
+  @version Mix.Project.config[:version]
 
   @doc """
   Gets the configuration for `module` under :brando,
@@ -30,5 +31,5 @@ defmodule Brando do
   @doc """
   Get Brando version
   """
-  def version, do: Keyword.get(Brando.Mixfile.project, :version)
+  def version, do: @version
 end

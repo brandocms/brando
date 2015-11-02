@@ -8,9 +8,21 @@ File.mkdir_p!(Path.join([Mix.Project.app_path, "tmp", "media"]))
 # Basic test repo
 alias Brando.Integration.TestRepo, as: Repo
 
+defmodule Brando.Integration.Repo do
+  defmacro __using__(opts) do
+    quote do
+      use Ecto.Repo, unquote(opts)
+      def log(cmd) do
+        super(cmd)
+        on_log = Process.delete(:on_log) || fn -> :ok end
+        on_log.()
+      end
+    end
+  end
+end
+
 defmodule Brando.Integration.TestRepo do
-  use Ecto.Repo,
-    otp_app: :brando
+  use Brando.Integration.Repo, otp_app: :brando
 end
 
 defmodule Brando.Integration.Endpoint do
@@ -123,9 +135,6 @@ _   = Ecto.Storage.down(Repo)
 :ok = Ecto.Storage.up(Repo)
 {:ok, _pid} = Repo.start_link
 :ok = Ecto.Migrator.up(Repo, 0, Brando.Integration.Migration, log: false)
-
-# Mix.Task.run "ecto.create", ["--quiet", "--repo", "Brando.Integration.TestRepo"]
-# Mix.Task.run "ecto.migrate", ["--quiet", "--repo", "Brando.Integration.TestRepo"]
 
 Ecto.Adapters.SQL.begin_test_transaction(Brando.Integration.TestRepo)
 Brando.endpoint.start_link

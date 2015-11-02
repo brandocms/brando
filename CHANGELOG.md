@@ -1,3 +1,13 @@
+## v0.8.0 (2015-11-02)
+
+* Enhancements
+  * Add forced Villain re-rendering for news posts.
+
+* Bug fixes
+  * Remove `Mix.env` calls to make Brando work in releases.
+  * Make `Brando.version` not depend on Mix
+  * Add `css_classes` field to page migrations
+
 ## v0.7.0 (2015-10-24)
 
 * Enhancements
