@@ -9,7 +9,7 @@
   "dogma": {:git, "https://github.com/lpil/dogma.git", "96f976d8b2297222cd8a31e1cccb8f509272e07f", []},
   "earmark": {:hex, :earmark, "0.1.19"},
   "ecto": {:hex, :ecto, "1.0.2"},
-  "eightyfour": {:git, "https://github.com/twined/eightyfour.git", "41d4b3f3eee6702287ace7ec300e9f2ef42e4291", []},
+  "eightyfour": {:git, "https://github.com/twined/eightyfour.git", "abc88a12efe4dc784de91c411a32d7d29af4f4e1", []},
   "ex_doc": {:hex, :ex_doc, "0.10.0"},
   "exactor": {:hex, :exactor, "2.2.0"},
   "excoveralls": {:hex, :excoveralls, "0.4.1"},
