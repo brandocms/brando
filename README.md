@@ -301,6 +301,26 @@ Config is found in your app's `config/brando.exs`.
     * `{:user, "your_name"}`
     * `{:tags, ["tag1", "tag2"]}`
 
+## Analytics
+
+Analytics is provided through [Eightyfour](http://github.com/twined/eightyfour). Follow instructions there, and add to your `config/brando.exs`
+
+```elixir
+config :brando, Brando.Menu,
+  modules: [..., Brando.Menu.Analytics]
+```
+
+Finally add to your `router.ex`:
+
+```elixir
+import Brando.Routes.Admin.Analytics
+# ...
+scope "/admin", as: :admin do
+  pipe_through :admin
+  # ...
+  analytics_routes   "/analytics"
+end
+```
 
 ## Imagefield
 

@@ -57,12 +57,11 @@ msgstr "Autorisasjon"
 msgid "Authorization failed"
 msgstr "Autorisasjon feilet"
 
-#: web/views/image_category_view.ex:5 web/views/image_category_view.ex:5
-#: web/views/image_category_view.ex:26 web/views/image_series_view.ex:5
+#: web/views/image_category_view.ex:5 web/views/image_category_view.ex:26
 #: web/views/image_series_view.ex:5 web/views/image_series_view.ex:11
 #: web/views/image_series_view.ex:18 web/views/page_fragment_view.ex:6
 #: web/views/page_view.ex:6 web/views/post_view.ex:6 web/views/user_view.ex:5
-#: web/views/user_view.ex:5 web/views/user_view.ex:5 web/views/user_view.ex:6
+#: web/views/user_view.ex:6
 msgid "Back to index"
 msgstr "Tilbake til oversikten"
 
@@ -205,8 +204,7 @@ msgstr "E-post"
 msgid "Entry not found"
 msgstr "Oppføring fantes ikke"
 
-#: web/views/error_view.ex:10 web/views/error_view.ex:10
-#: web/views/error_view.ex:23
+#: web/views/error_view.ex:10 web/views/error_view.ex:23
 msgid "Error"
 msgstr "Feil"
 
@@ -626,7 +624,8 @@ msgstr "Skaper"
 msgid "Credits"
 msgstr "Krediteringer"
 
-#: web/models/page.ex:203 web/models/page_fragment.ex:144 web/models/post.ex:169
+#: web/models/page.ex:203 web/models/page_fragment.ex:144
+#: web/models/post.ex:169
 msgid "Data"
 msgstr "Data"
 
@@ -655,7 +654,8 @@ msgstr "Fremhevet"
 msgid "Full name"
 msgstr "Fullt navn"
 
-#: web/models/page.ex:204 web/models/page_fragment.ex:145 web/models/post.ex:170
+#: web/models/page.ex:204 web/models/page_fragment.ex:145
+#: web/models/post.ex:170
 msgid "HTML"
 msgstr "HTML"
 
@@ -706,8 +706,8 @@ msgstr "Instagram-ID"
 msgid "Key"
 msgstr "Nøkkel"
 
-#: web/models/page.ex:199 web/models/page_fragment.ex:142 web/models/post.ex:164
-#: web/models/user.ex:207
+#: web/models/page.ex:199 web/models/page_fragment.ex:142
+#: web/models/post.ex:164 web/models/user.ex:207
 msgid "Language"
 msgstr "Språk"
 
@@ -964,3 +964,80 @@ msgstr "Gjengi poster på nytt"
 #: web/forms/post_form.ex:52
 msgid "The post is prioritized, taking precedence over pub. date"
 msgstr "Denne posten er prioritert og vektes før publiseringsdatoer"
+
+#: web/views/analytics_view.ex:35
+msgid "All-time"
+msgstr "Siden starten"
+
+#: web/menus/analytics_menu.ex:9 web/views/analytics_view.ex:1
+msgid "Analytics"
+msgstr "Statistikk"
+
+#: web/views/analytics_view.ex:9
+msgid "Exits"
+msgstr "Forlatt"
+
+#: web/views/analytics_view.ex:14
+msgid "Last week"
+msgstr "Sist uke"
+
+#: web/menus/analytics_menu.ex:12 web/views/analytics_view.ex:1
+msgid "Referrals"
+msgstr "Henvisninger"
+
+#: web/views/analytics_view.ex:6
+msgid "Source"
+msgstr "Kilde"
+
+#: web/views/analytics_view.ex:8
+msgid "Time"
+msgstr "Tid"
+
+#: web/views/analytics_view.ex:26
+msgid "Total"
+msgstr "Total"
+
+#: web/menus/analytics_menu.ex:11 web/views/analytics_view.ex:1
+#: web/views/analytics_view.ex:7
+msgid "Views"
+msgstr "Visninger"
+
+#: web/views/analytics_view.ex:29
+msgid "Yesterday"
+msgstr "I går"
+
+#: web/views/analytics_view.ex:9
+msgid "friday"
+msgstr "fredag"
+
+#: web/views/analytics_view.ex:5
+msgid "monday"
+msgstr "mandag"
+
+#: web/views/analytics_view.ex:10
+msgid "saturday"
+msgstr "lørdag"
+
+#: web/views/analytics_view.ex:4
+msgid "sunday"
+msgstr "søndag"
+
+#: web/views/analytics_view.ex:8
+msgid "thursday"
+msgstr "torsdag"
+
+#: web/views/analytics_view.ex:6
+msgid "tuesday"
+msgstr "tirsdag"
+
+#: web/views/analytics_view.ex:7
+msgid "wednesday"
+msgstr "onsdag"
+
+#: web/controllers/admin/analytics_controller.ex:35
+msgid "Analytics - referrals"
+msgstr "Statistikk - henvisninger"
+
+#: web/controllers/admin/analytics_controller.ex:21
+msgid "Analytics - views"
+msgstr "Statistikk - visninger"

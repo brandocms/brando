@@ -30,7 +30,7 @@ defmodule Brando.Mixfile do
   defp applications(_all), do: [
     :gettext, :comeonin, :httpoison, :phoenix, :phoenix_ecto, :phoenix_html,
     :earmark, :linguist, :mogrify, :poison, :postgrex, :scrivener,
-    :slugger
+    :slugger, :eightyfour
   ]
 
   defp deps do
@@ -49,6 +49,7 @@ defmodule Brando.Mixfile do
       {:scrivener, "~> 1.0"},
       {:slugger, "~> 0.0.1"},
       {:gettext, github: "tmjoen/gettext"},
+      {:eightyfour, github: "twined/eightyfour"},
 
       # Dev dependencies
       {:dialyze, "~> 0.2", only: :dev},

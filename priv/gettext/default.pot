@@ -950,3 +950,81 @@ msgstr ""
 #: web/forms/post_form.ex:52
 msgid "The post is prioritized, taking precedence over pub. date"
 msgstr ""
+
+#: web/views/analytics_view.ex:35
+msgid "All-time"
+msgstr ""
+
+#: web/menus/analytics_menu.ex:9 web/views/analytics_view.ex:1
+#: web/views/analytics_view.ex:1
+msgid "Analytics"
+msgstr ""
+
+#: web/views/analytics_view.ex:9
+msgid "Exits"
+msgstr ""
+
+#: web/views/analytics_view.ex:14
+msgid "Last week"
+msgstr ""
+
+#: web/menus/analytics_menu.ex:12 web/views/analytics_view.ex:1
+msgid "Referrals"
+msgstr ""
+
+#: web/views/analytics_view.ex:6
+msgid "Source"
+msgstr ""
+
+#: web/views/analytics_view.ex:8
+msgid "Time"
+msgstr ""
+
+#: web/views/analytics_view.ex:26
+msgid "Total"
+msgstr ""
+
+#: web/menus/analytics_menu.ex:11 web/views/analytics_view.ex:1
+#: web/views/analytics_view.ex:7
+msgid "Views"
+msgstr ""
+
+#: web/views/analytics_view.ex:29
+msgid "Yesterday"
+msgstr ""
+
+#: web/views/analytics_view.ex:9
+msgid "friday"
+msgstr ""
+
+#: web/views/analytics_view.ex:5
+msgid "monday"
+msgstr ""
+
+#: web/views/analytics_view.ex:10
+msgid "saturday"
+msgstr ""
+
+#: web/views/analytics_view.ex:4
+msgid "sunday"
+msgstr ""
+
+#: web/views/analytics_view.ex:8
+msgid "thursday"
+msgstr ""
+
+#: web/views/analytics_view.ex:6
+msgid "tuesday"
+msgstr ""
+
+#: web/views/analytics_view.ex:7
+msgid "wednesday"
+msgstr ""
+
+#: web/controllers/admin/analytics_controller.ex:35
+msgid "Analytics - referrals"
+msgstr ""
+
+#: web/controllers/admin/analytics_controller.ex:21
+msgid "Analytics - views"
+msgstr ""
