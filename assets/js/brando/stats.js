@@ -5,7 +5,6 @@ import {Socket} from '../../../deps/phoenix/web/static/js/phoenix.js'
 const MAX_POINTS = 30;
 
 class Stats {
-
     static setup() {
         var _this = this;
         this.totalMemoryPoints = [];
