@@ -2,7 +2,6 @@ defmodule Brando.HTML.Tablize do
   @moduledoc """
   Displays model data as a table.
   """
-  use Linguist.Vocabulary
 
   import Brando.Gettext
   import Brando.HTML, only: [check_or_x: 1, zero_pad: 1]

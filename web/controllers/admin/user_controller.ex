@@ -4,7 +4,6 @@ defmodule Brando.Admin.UserController do
   """
 
   use Brando.Web, :controller
-  use Linguist.Vocabulary
   import Brando.Plug.Authorize
   import Brando.Plug.HTML
   import Brando.Plug.Uploads

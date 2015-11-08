@@ -2,7 +2,6 @@ defmodule Brando.Admin.PageFragmentController do
   @moduledoc """
   Controller for the Brando PageFragment module.
   """
-  use Linguist.Vocabulary
   use Brando.Web, :controller
   use Brando.Villain, [:controller, [
     image_model: Brando.Image,

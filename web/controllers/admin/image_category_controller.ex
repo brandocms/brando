@@ -3,7 +3,6 @@ defmodule Brando.Admin.ImageCategoryController do
   Controller for the Brando ImageCategory module.
   """
 
-  use Linguist.Vocabulary
   use Brando.Web, :controller
   use Brando.Sequence,
     [:controller, [model: Brando.ImageSeries,
