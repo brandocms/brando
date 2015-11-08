@@ -2260,6 +2260,26 @@ hr {
   border: 0;
   height: 1px; }
 
+#analytics .table {
+  max-width: 1000px; }
+  #analytics .table a i {
+    color: #ccc; }
+#analytics .views-box {
+  background-color: #fafafa;
+  padding: 15px;
+  display: inline-block; }
+#analytics dt {
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: bold;
+  text-align: center;
+  padding-bottom: 10px; }
+#analytics dd {
+  padding: 0;
+  margin: 0;
+  font-family: "a-mono";
+  font-size: 34px; }
+
 .alert {
   font-size: 1.1rem;
   font-weight: bold;
@@ -5608,7 +5628,10 @@ div.tagsinput div {
   color: #90111A !important; }
 
 .text-mono {
-  font-family: "a-mono", "Monaco", "Courier New" !important; }
+  font-family: "a-mono", "Monaco", "Inconsolata", "Courier New" !important; }
+  .text-mono strong {
+    color: #000;
+    font-weight: normal; }
 
 .text-center {
   text-align: center !important; }

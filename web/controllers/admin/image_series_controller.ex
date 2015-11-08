@@ -3,7 +3,6 @@ defmodule Brando.Admin.ImageSeriesController do
   Controller for the Brando ImageSeries module.
   """
 
-  use Linguist.Vocabulary
   use Brando.Web, :controller
   use Brando.Sequence,
     [:controller, [model: Brando.Image, filter: &Brando.Image.for_series_id/1]]

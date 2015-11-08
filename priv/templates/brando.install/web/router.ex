@@ -4,12 +4,13 @@ defmodule <%= application_module %>.Router do
   alias Brando.Plug.Authenticate
   alias Brando.Plug.Lockdown
 
-  import Brando.Routes.Admin.Users
-  import Brando.Routes.Admin.News
+  import Brando.Routes.Admin.Analytics
   import Brando.Routes.Admin.Dashboard
   import Brando.Routes.Admin.Images
-  import Brando.Routes.Admin.Pages
   import Brando.Routes.Admin.Instagram
+  import Brando.Routes.Admin.News
+  import Brando.Routes.Admin.Pages
+  import Brando.Routes.Admin.Users
   import Brando.Plug.I18n
 
   pipeline :admin do
@@ -54,6 +55,7 @@ defmodule <%= application_module %>.Router do
     image_routes       "/images"
     instagram_routes   "/instagram"
     page_routes        "/pages"
+    analytics_routes   "/analytics"
   end
 
   scope "/coming-soon" do

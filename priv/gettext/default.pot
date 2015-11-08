@@ -75,7 +75,7 @@ msgstr ""
 #: web/controllers/admin/image_series_controller.ex:169
 #: web/controllers/admin/page_controller.ex:158
 #: web/controllers/admin/page_fragment_controller.ex:115
-#: web/controllers/admin/post_controller.ex:120
+#: web/controllers/admin/post_controller.ex:137
 #: web/controllers/admin/user_controller.ex:166
 msgid "Confirm deletion"
 msgstr ""
@@ -84,7 +84,7 @@ msgstr ""
 msgid "Dashboard"
 msgstr ""
 
-#: web/views/error_view.ex:28
+#: web/views/error_view.ex:24
 msgid "Database error"
 msgstr ""
 
@@ -164,8 +164,8 @@ msgstr ""
 msgid "Edit page fragment"
 msgstr ""
 
-#: web/controllers/admin/post_controller.ex:87
-#: web/controllers/admin/post_controller.ex:105 web/views/post_view.ex:1
+#: web/controllers/admin/post_controller.ex:104
+#: web/controllers/admin/post_controller.ex:122 web/views/post_view.ex:1
 #: web/views/post_view.ex:8 web/views/post_view.ex:9
 msgid "Edit post"
 msgstr ""
@@ -192,7 +192,7 @@ msgid "Entry not found"
 msgstr ""
 
 #: web/views/error_view.ex:10 web/views/error_view.ex:10
-#: web/views/error_view.ex:27
+#: web/views/error_view.ex:23
 msgid "Error"
 msgstr ""
 
@@ -205,8 +205,8 @@ msgstr ""
 #: web/controllers/admin/page_controller.ex:84
 #: web/controllers/admin/page_controller.ex:144
 #: web/controllers/admin/page_fragment_controller.ex:64
-#: web/controllers/admin/post_controller.ex:72
-#: web/controllers/admin/post_controller.ex:109
+#: web/controllers/admin/post_controller.ex:89
+#: web/controllers/admin/post_controller.ex:126
 #: web/controllers/admin/user_controller.ex:87
 #: web/controllers/admin/user_controller.ex:114
 #: web/controllers/admin/user_controller.ex:155
@@ -278,7 +278,7 @@ msgstr ""
 msgid "Index - pages"
 msgstr ""
 
-#: web/controllers/admin/post_controller.ex:28 web/views/post_view.ex:1
+#: web/controllers/admin/post_controller.ex:29 web/views/post_view.ex:1
 msgid "Index - posts"
 msgstr ""
 
@@ -328,8 +328,8 @@ msgstr ""
 msgid "New page fragment"
 msgstr ""
 
-#: web/controllers/admin/post_controller.ex:54
-#: web/controllers/admin/post_controller.ex:69 web/views/post_view.ex:1
+#: web/controllers/admin/post_controller.ex:71
+#: web/controllers/admin/post_controller.ex:86 web/views/post_view.ex:1
 #: web/views/post_view.ex:18
 msgid "New post"
 msgstr ""
@@ -380,7 +380,7 @@ msgstr ""
 msgid "Page fragment updated"
 msgstr ""
 
-#: web/views/error_view.ex:28
+#: web/views/error_view.ex:24
 msgid "Page not found"
 msgstr ""
 
@@ -389,6 +389,7 @@ msgid "Page updated"
 msgstr ""
 
 #: web/controllers/admin/page_controller.ex:46
+#: web/controllers/admin/post_controller.ex:46
 msgid "Pages re-rendered"
 msgstr ""
 
@@ -400,15 +401,15 @@ msgstr ""
 msgid "Please contact an administrator."
 msgstr ""
 
-#: web/controllers/admin/post_controller.ex:64
+#: web/controllers/admin/post_controller.ex:81
 msgid "Post created"
 msgstr ""
 
-#: web/controllers/admin/post_controller.ex:132
+#: web/controllers/admin/post_controller.ex:149
 msgid "Post deleted"
 msgstr ""
 
-#: web/controllers/admin/post_controller.ex:100
+#: web/controllers/admin/post_controller.ex:117
 msgid "Post updated"
 msgstr ""
 
@@ -440,7 +441,7 @@ msgstr ""
 msgid "Select photos, and click on your wanted action."
 msgstr ""
 
-#: web/views/error_view.ex:28
+#: web/views/error_view.ex:24
 msgid "Server error"
 msgstr ""
 
@@ -454,7 +455,7 @@ msgstr ""
 msgid "Show page fragment"
 msgstr ""
 
-#: web/controllers/admin/post_controller.ex:42 web/views/post_view.ex:2
+#: web/controllers/admin/post_controller.ex:59 web/views/post_view.ex:2
 #: web/views/post_view.ex:7
 msgid "Show post"
 msgstr ""
@@ -940,4 +941,90 @@ msgstr ""
 
 #: lib/brando/images/upload.ex:98
 msgid "Path creation failed"
+msgstr ""
+
+#: web/views/post_view.ex:28
+msgid "Re-render posts"
+msgstr ""
+
+#: web/forms/post_form.ex:52
+msgid "The post is prioritized, taking precedence over pub. date"
+msgstr ""
+
+#: web/views/analytics_view.ex:35
+msgid "All-time"
+msgstr ""
+
+#: web/menus/analytics_menu.ex:9 web/views/analytics_view.ex:1
+#: web/views/analytics_view.ex:1
+msgid "Analytics"
+msgstr ""
+
+#: web/views/analytics_view.ex:9
+msgid "Exits"
+msgstr ""
+
+#: web/views/analytics_view.ex:14
+msgid "Last week"
+msgstr ""
+
+#: web/menus/analytics_menu.ex:12 web/views/analytics_view.ex:1
+msgid "Referrals"
+msgstr ""
+
+#: web/views/analytics_view.ex:6
+msgid "Source"
+msgstr ""
+
+#: web/views/analytics_view.ex:8
+msgid "Time"
+msgstr ""
+
+#: web/views/analytics_view.ex:26
+msgid "Total"
+msgstr ""
+
+#: web/menus/analytics_menu.ex:11 web/views/analytics_view.ex:1
+#: web/views/analytics_view.ex:7
+msgid "Views"
+msgstr ""
+
+#: web/views/analytics_view.ex:29
+msgid "Yesterday"
+msgstr ""
+
+#: web/views/analytics_view.ex:9
+msgid "friday"
+msgstr ""
+
+#: web/views/analytics_view.ex:5
+msgid "monday"
+msgstr ""
+
+#: web/views/analytics_view.ex:10
+msgid "saturday"
+msgstr ""
+
+#: web/views/analytics_view.ex:4
+msgid "sunday"
+msgstr ""
+
+#: web/views/analytics_view.ex:8
+msgid "thursday"
+msgstr ""
+
+#: web/views/analytics_view.ex:6
+msgid "tuesday"
+msgstr ""
+
+#: web/views/analytics_view.ex:7
+msgid "wednesday"
+msgstr ""
+
+#: web/controllers/admin/analytics_controller.ex:35
+msgid "Analytics - referrals"
+msgstr ""
+
+#: web/controllers/admin/analytics_controller.ex:21
+msgid "Analytics - views"
 msgstr ""

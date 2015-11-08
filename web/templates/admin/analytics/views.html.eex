@@ -1,0 +1,39 @@
+<h1><%= gettext("Analytics") %> | <%= gettext("Views") %></h1>
+<%
+  weekdays = %{
+    "0" => gettext("sunday"),
+    "1" => gettext("monday"),
+    "2" => gettext("tuesday"),
+    "3" => gettext("wednesday"),
+    "4" => gettext("thursday"),
+    "5" => gettext("friday"),
+    "6" => gettext("saturday"),
+  }
+%>
+<div class="last-week">
+  <h4><%= gettext("Last week") %></h4>
+  <%= for [dimension: dimension, pageviews: pageviews, visitors: _] <- @views_last_week do %>
+    <div class="views-box">
+      <dl>
+        <dt><%= Map.get(weekdays, dimension) %></dt>
+        <dd><%= pageviews %></dd>
+      </dl>
+    </div>
+  <% end %>
+</div>
+
+<div class="other">
+  <h4><%= gettext("Total") %></h4>
+  <div class="views-box">
+    <dl>
+      <dt><%= gettext("Yesterday") %></dt>
+      <dd><%= @views_yesterday %></dd>
+    </dl>
+  </div>
+  <div class="views-box">
+    <dl>
+      <dt><%= gettext("All-time") %></dt>
+      <dd><%= @views_total %></dd>
+    </dl>
+  </div>
+</div>

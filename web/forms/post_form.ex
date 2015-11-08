@@ -49,7 +49,7 @@ defmodule Brando.PostForm do
     fieldset do
       field :featured, :checkbox,
         [default: false,
-         help_text: "The post is prioritized, taking precedence over pub. date"]
+         help_text: gettext("The post is prioritized, taking precedence over pub. date")]
     end
     fieldset do
       field :header, :text

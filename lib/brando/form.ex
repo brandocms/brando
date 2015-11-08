@@ -22,7 +22,6 @@ defmodule Brando.Form do
 
   @type form_opts :: [{:helper, atom} | {:class, String.t}]
 
-  use Linguist.Vocabulary
   alias Brando.Form.Fields
   import Phoenix.HTML.Tag, only: [form_tag: 3]
   import Phoenix.HTML, only: [raw: 1]

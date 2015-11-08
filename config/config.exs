@@ -5,16 +5,6 @@
 # is restricted to this project.
 use Mix.Config
 
-# Removed until dogma fixes its bugs
-
-config :dogma,
-  exclude: [
-    ~r(\A_build/),
-    ~r(\Apriv/),
-    ~r(\Atest/),
-    ~r(\Atmp/)
-  ]
-
 config :brando,
   app_name: "MyApp",
   endpoint: Brando.Endpoint,

@@ -45,7 +45,7 @@ defmodule Brando.UserForm do
 
     fieldset do
       field :language, :select,
-        [default: "nb",
+        [default: "en",
         choices: &__MODULE__.get_language_choices/0]
     end
 

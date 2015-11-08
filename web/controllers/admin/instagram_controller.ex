@@ -3,7 +3,6 @@ defmodule Brando.Admin.InstagramController do
   Controller for the Instagram module.
   """
 
-  use Linguist.Vocabulary
   use Brando.Web, :controller
   alias Brando.InstagramImage
   import Brando.Gettext

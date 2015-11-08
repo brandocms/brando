@@ -1,3 +1,11 @@
+## v0.9.0 (2015-11-08)
+
+* Enhancements
+  * Adds analytics through `Eightyfour`. See `Brando.Analytics` docs for more information.
+
+* Backwards incompatible changes
+  * Changed how Brando.Instagram is started. Should now be added as a `worker` to your OTP app's supervision tree: `worker(Brando.Instagram, [])`. You can also remove the naming from brando.exs, since it is no longer used. See `Brando.Instagram` docs for more information.
+
 ## v0.8.0 (2015-11-02)
 
 * Enhancements

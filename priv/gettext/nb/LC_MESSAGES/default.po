@@ -88,7 +88,7 @@ msgstr "Konfigurer bildeserie"
 #: web/controllers/admin/image_series_controller.ex:169
 #: web/controllers/admin/page_controller.ex:158
 #: web/controllers/admin/page_fragment_controller.ex:115
-#: web/controllers/admin/post_controller.ex:120
+#: web/controllers/admin/post_controller.ex:137
 #: web/controllers/admin/user_controller.ex:166
 msgid "Confirm deletion"
 msgstr "Bekreft sletting"
@@ -97,7 +97,7 @@ msgstr "Bekreft sletting"
 msgid "Dashboard"
 msgstr "Kontrollpanel"
 
-#: web/views/error_view.ex:28
+#: web/views/error_view.ex:24
 msgid "Database error"
 msgstr "Databasefeil"
 
@@ -177,8 +177,8 @@ msgstr "Rediger side"
 msgid "Edit page fragment"
 msgstr "Rediger sidefragment"
 
-#: web/controllers/admin/post_controller.ex:87
-#: web/controllers/admin/post_controller.ex:105 web/views/post_view.ex:1
+#: web/controllers/admin/post_controller.ex:104
+#: web/controllers/admin/post_controller.ex:122 web/views/post_view.ex:1
 #: web/views/post_view.ex:8 web/views/post_view.ex:9
 msgid "Edit post"
 msgstr "Rediger post"
@@ -204,7 +204,7 @@ msgstr "E-post"
 msgid "Entry not found"
 msgstr "Oppføring fantes ikke"
 
-#: web/views/error_view.ex:10 web/views/error_view.ex:27
+#: web/views/error_view.ex:10 web/views/error_view.ex:23
 msgid "Error"
 msgstr "Feil"
 
@@ -217,8 +217,8 @@ msgstr "Feil"
 #: web/controllers/admin/page_controller.ex:84
 #: web/controllers/admin/page_controller.ex:144
 #: web/controllers/admin/page_fragment_controller.ex:64
-#: web/controllers/admin/post_controller.ex:72
-#: web/controllers/admin/post_controller.ex:109
+#: web/controllers/admin/post_controller.ex:89
+#: web/controllers/admin/post_controller.ex:126
 #: web/controllers/admin/user_controller.ex:87
 #: web/controllers/admin/user_controller.ex:114
 #: web/controllers/admin/user_controller.ex:155
@@ -290,7 +290,7 @@ msgstr "Oversikt - sidefragmenter"
 msgid "Index - pages"
 msgstr "Oversikt - sider"
 
-#: web/controllers/admin/post_controller.ex:28 web/views/post_view.ex:1
+#: web/controllers/admin/post_controller.ex:29 web/views/post_view.ex:1
 msgid "Index - posts"
 msgstr "Oversikt - poster"
 
@@ -340,8 +340,8 @@ msgstr "Ny side"
 msgid "New page fragment"
 msgstr "Nytt sidefragment"
 
-#: web/controllers/admin/post_controller.ex:54
-#: web/controllers/admin/post_controller.ex:69 web/views/post_view.ex:1
+#: web/controllers/admin/post_controller.ex:71
+#: web/controllers/admin/post_controller.ex:86 web/views/post_view.ex:1
 #: web/views/post_view.ex:18
 msgid "New post"
 msgstr "Ny post"
@@ -392,7 +392,7 @@ msgstr "Sidefragment slettet"
 msgid "Page fragment updated"
 msgstr "Sidefragment oppdatert"
 
-#: web/views/error_view.ex:28
+#: web/views/error_view.ex:24
 msgid "Page not found"
 msgstr "Side ikke funnet."
 
@@ -401,6 +401,7 @@ msgid "Page updated"
 msgstr "Siden oppdatert"
 
 #: web/controllers/admin/page_controller.ex:46
+#: web/controllers/admin/post_controller.ex:46
 msgid "Pages re-rendered"
 msgstr "Sider gjengitt på nytt"
 
@@ -412,15 +413,15 @@ msgstr "Passord"
 msgid "Please contact an administrator."
 msgstr "Vennligst kontakt administrator."
 
-#: web/controllers/admin/post_controller.ex:64
+#: web/controllers/admin/post_controller.ex:81
 msgid "Post created"
 msgstr "Post opprettet"
 
-#: web/controllers/admin/post_controller.ex:132
+#: web/controllers/admin/post_controller.ex:149
 msgid "Post deleted"
 msgstr "Post slettet"
 
-#: web/controllers/admin/post_controller.ex:100
+#: web/controllers/admin/post_controller.ex:117
 msgid "Post updated"
 msgstr "Post oppdatert"
 
@@ -452,7 +453,7 @@ msgstr "Lagre sortert serie"
 msgid "Select photos, and click on your wanted action."
 msgstr "Velg bilder, og klikk på den ønskede handlingen."
 
-#: web/views/error_view.ex:28
+#: web/views/error_view.ex:24
 msgid "Server error"
 msgstr "Serverfeil"
 
@@ -466,7 +467,7 @@ msgstr "Vis side"
 msgid "Show page fragment"
 msgstr "Vis sidefragment"
 
-#: web/controllers/admin/post_controller.ex:42 web/views/post_view.ex:2
+#: web/controllers/admin/post_controller.ex:59 web/views/post_view.ex:2
 #: web/views/post_view.ex:7
 msgid "Show post"
 msgstr "Vis post"
@@ -955,3 +956,88 @@ msgstr "Filtypen ikke tillatt"
 #: lib/brando/images/upload.ex:98
 msgid "Path creation failed"
 msgstr "Feil under oppretting av filbane"
+
+#: web/views/post_view.ex:28
+msgid "Re-render posts"
+msgstr "Gjengi poster på nytt"
+
+#: web/forms/post_form.ex:52
+msgid "The post is prioritized, taking precedence over pub. date"
+msgstr "Denne posten er prioritert og vektes før publiseringsdatoer"
+
+#: web/views/analytics_view.ex:35
+msgid "All-time"
+msgstr "Siden starten"
+
+#: web/menus/analytics_menu.ex:9 web/views/analytics_view.ex:1
+msgid "Analytics"
+msgstr "Statistikk"
+
+#: web/views/analytics_view.ex:9
+msgid "Exits"
+msgstr "Forlatt"
+
+#: web/views/analytics_view.ex:14
+msgid "Last week"
+msgstr "Sist uke"
+
+#: web/menus/analytics_menu.ex:12 web/views/analytics_view.ex:1
+msgid "Referrals"
+msgstr "Henvisninger"
+
+#: web/views/analytics_view.ex:6
+msgid "Source"
+msgstr "Kilde"
+
+#: web/views/analytics_view.ex:8
+msgid "Time"
+msgstr "Tid"
+
+#: web/views/analytics_view.ex:26
+msgid "Total"
+msgstr "Total"
+
+#: web/menus/analytics_menu.ex:11 web/views/analytics_view.ex:1
+#: web/views/analytics_view.ex:7
+msgid "Views"
+msgstr "Visninger"
+
+#: web/views/analytics_view.ex:29
+msgid "Yesterday"
+msgstr "I går"
+
+#: web/views/analytics_view.ex:9
+msgid "friday"
+msgstr "fredag"
+
+#: web/views/analytics_view.ex:5
+msgid "monday"
+msgstr "mandag"
+
+#: web/views/analytics_view.ex:10
+msgid "saturday"
+msgstr "lørdag"
+
+#: web/views/analytics_view.ex:4
+msgid "sunday"
+msgstr "søndag"
+
+#: web/views/analytics_view.ex:8
+msgid "thursday"
+msgstr "torsdag"
+
+#: web/views/analytics_view.ex:6
+msgid "tuesday"
+msgstr "tirsdag"
+
+#: web/views/analytics_view.ex:7
+msgid "wednesday"
+msgstr "onsdag"
+
+#: web/controllers/admin/analytics_controller.ex:35
+msgid "Analytics - referrals"
+msgstr "Statistikk - henvisninger"
+
+#: web/controllers/admin/analytics_controller.ex:21
+msgid "Analytics - views"
+msgstr "Statistikk - visninger"

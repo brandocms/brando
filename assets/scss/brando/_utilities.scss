@@ -1,5 +1,9 @@
 .text-mono {
-  font-family: "a-mono", "Monaco", "Courier New" !important;
+  font-family: "a-mono", "Monaco", "Inconsolata", "Courier New" !important;
+  strong {
+    color: #000;
+    font-weight: normal;
+  }
 }
 
 .text-center {

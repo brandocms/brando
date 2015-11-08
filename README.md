@@ -58,17 +58,9 @@ Add NPM packages used with brunch:
 
     $ npm install --save sass-brunch postcss-brunch autoprefixer
 
-Create the database:
+Set up database, and seed:
 
-    $ mix ecto.create
-
-Run migrations:
-
-    $ mix ecto.migrate
-
-Run seeds to add default image categories/series and admin user:
-
-    $ mix run priv/repo/seeds.exs
+    $ mix ecto.setup
 
 Go through `config/brando.exs`.
 
@@ -140,8 +132,7 @@ For pagination, add to your app's `repo.ex`:
 ```elixir
 
 defmodule MyApp.Repo do
-  use Ecto.Repo,
-    otp_app: :my_app
+  use Ecto.Repo, otp_app: :my_app
   use Scrivener
 end
 ```
@@ -278,7 +269,7 @@ Migration:
 Add to your app's supervision tree:
 
 ```elixir
-supervisor(Brando.Instagram, [MyApp.Instagram])
+worker(Brando.Instagram, [])
 ```
 
 Add Instagram to your menu modules in `config/brando.exs`:
@@ -302,7 +293,6 @@ end
 
 Config is found in your app's `config/brando.exs`.
 
-  * `server_name`: A name for your server, e.g. `MyApp.Instagram.Server`
   * `client_id`: Your instagram client id. Find this in the developer section.
   * `interval`: How often we poll for new images
   * `auto_approve`: Set `approved` to `true` on grabbed images
@@ -310,6 +300,34 @@ Config is found in your app's `config/brando.exs`.
     * `{:user, "your_name"}`
     * `{:tags, ["tag1", "tag2"]}`
 
+## Analytics
+
+Analytics is provided through [Eightyfour](http://github.com/twined/eightyfour).
+
+Add to your app's supervision tree:
+
+```elixir
+worker(Brando.Eightyfour, [])
+```
+
+Add to your `config/brando.exs`
+
+```elixir
+config :brando, Brando.Menu,
+  modules: [..., Brando.Menu.Analytics]
+```
+
+Finally add to your `router.ex`:
+
+```elixir
+import Brando.Routes.Admin.Analytics
+# ...
+scope "/admin", as: :admin do
+  pipe_through :admin
+  # ...
+  analytics_routes   "/analytics"
+end
+```
 
 ## Imagefield
 
