@@ -1,4 +1,4 @@
-## v0.9.0-dev (2015-XX-XX)
+## v0.9.0 (2015-11-08)
 
 * Enhancements
   * Adds analytics through `Eightyfour`. See `Brando.Analytics` docs for more information.
