@@ -28,36 +28,34 @@ defmodule Brando.Mixfile do
 
   defp applications(:test), do: applications(:all) ++ [:blacksmith]
   defp applications(_all), do: [
-    :gettext, :comeonin, :httpoison, :phoenix, :phoenix_ecto, :phoenix_html,
-    :earmark, :linguist, :mogrify, :poison, :postgrex, :scrivener,
+    :gettext, :comeonin, :httpoison, :earmark, :mogrify, :poison, :scrivener,
     :slugger, :eightyfour
   ]
 
   defp deps do
     [
-      {:phoenix, "~> 1.0"},
-      {:phoenix_ecto, "~> 1.1"},
-      {:phoenix_html, "~> 2.1"},
-
       {:comeonin, "~> 1.0"},
       {:earmark, "~> 0.1"},
+      {:eightyfour, github: "twined/eightyfour"},
+      {:gettext, github: "tmjoen/gettext"},
       {:httpoison, "~> 0.6"},
-      {:linguist, "~> 0.1"},
       {:mogrify, github: "twined/mogrify"},
       {:poison, "~> 1.3"},
-      {:postgrex, ">= 0.0.0"},
       {:scrivener, "~> 1.0"},
       {:slugger, "~> 0.0.1"},
-      {:gettext, github: "tmjoen/gettext"},
-      {:eightyfour, github: "twined/eightyfour"},
 
       # Dev dependencies
       {:dialyze, "~> 0.2", only: :dev},
       {:dogma, github: "lpil/dogma", only: :dev},
 
       # Test dependencies
-      {:excoveralls, "~> 0.3", only: :test},
+      {:phoenix, "~> 1.0", only: :test},
+      {:phoenix_ecto, "~> 1.1", only: :test},
+      {:phoenix_html, "~> 2.1", only: :test},
+      {:postgrex, ">= 0.0.0", only: :test},
+
       {:blacksmith, "~> 0.1.2", only: :test},
+      {:excoveralls, "~> 0.3", only: :test},
       {:exvcr, "~> 0.5.0", only: :test},
 
       # Documentation dependencies
