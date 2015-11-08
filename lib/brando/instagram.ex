@@ -2,12 +2,10 @@ defmodule Brando.Instagram do
   @moduledoc """
   Brando's interface to Instagram's API.
 
-  To use, first add the Instagram supervisor to your application's
-  supervisor in `lib/my_app.ex`:
+  To use, first add as a worker to your application's
+  supervision tree in `lib/my_app.ex`:
 
-      supervisor(Brando.Instagram, [MyApp.Instagram]),
-
-  Be sure to also give it a custom name in your_app's `config/brando.exs`.
+      worker(Brando.Instagram, []),
 
   ## Options
 
@@ -21,19 +19,17 @@ defmodule Brando.Instagram do
       * `{:tags, ["tag1", "tag2"]} - polls `tag1` and `tag2`
   """
 
-  use Supervisor
-  require Logger
+  def start_link do
+    import Supervisor.Spec, warn: false
 
-  def start_link(supervisor_name) do
-    Supervisor.start_link(__MODULE__, :ok, [name: supervisor_name])
-  end
-
-  def init(_) do
     children = [
-      worker(Brando.Instagram.Server, [Brando.Instagram.config(:server_name)])
+      worker(Brando.Instagram.Server, [])
     ]
-    supervise(children, strategy: :one_for_one)
+
+    opts = [strategy: :one_for_one, name: Brando.Instagram.Supervisor]
+    {:ok, _pid} =  Supervisor.start_link(children, opts)
   end
+
   @doc """
   Grab `key` from config
   """
