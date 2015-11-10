@@ -1,5 +1,8 @@
 ## v0.10.0-dev (2015-XX-XX)
 
+* Enhancements
+  * Cleaned up assets. Ditched gulp and moved to brunch.
+
 ## v0.9.0 (2015-11-08)
 
 * Enhancements

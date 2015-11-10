@@ -8,25 +8,16 @@
     "test": "test"
   },
   "dependencies": {
-    "babelify": "^6.0.2",
-    "browserify": "^9.0.8",
-    "babel": "^5.0.12",
-    "gulp-autoprefixer": "^2.1.0",
-    "gulp-babel": "^5.0.0",
-    "gulp": "^3.8.10",
-    "gulp-minify-css": "^1.1.6",
-    "gulp-concat": "^2.5.0",
-    "gulp-sass": "^1.2.4",
-    "gulp-rename": "^1.2.0",
-    "gulp-ruby-sass": "^1.0.0-alpha",
-    "gulp-sourcemaps": "^1.5.1",
-    "gulp-uglify": "^1.1.0",
-    "gulp-watch": "^3.0.0",
-    "vinyl-source-stream": "^1.1.0",
-    "gulp-util": "^3.0.4",
-    "vinyl-buffer": "^1.0.0"
+    "autoprefixer": "^6.0.2",
+    "babel-brunch": "^5.1.1",
+    "brunch": "^1.8.5",
+    "clean-css-brunch": ">= 1.0 < 1.8",
+    "css-brunch": ">= 1.0 < 1.8",
+    "javascript-brunch": ">= 1.0 < 1.8",
+    "postcss-brunch": "^0.5.0",
+    "sass-brunch": "^1.8.10",
+    "uglify-js-brunch": ">= 1.0 < 1.8"
   },
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

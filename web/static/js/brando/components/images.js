@@ -1,5 +1,5 @@
 "use strict";
-import Utils from "./utils.js";
+import Utils from "./utils";
 
 var imagePool = [];
 class Images {

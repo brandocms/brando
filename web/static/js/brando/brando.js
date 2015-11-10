@@ -1,19 +1,19 @@
 "use strict";
 
-import Autoslug from "./autoslug.js";
-import Flash from "./flash.js";
-import FilterTable from "./filter_table.js";
-import Mobile from "./mobile.js";
-import Utils from "./utils.js";
-import Vex from "./vex.js";
-import Images from "./images.js";
-import Instagram from "./instagram.js";
-import Pages from "./pages.js";
-import Sequence from "./sequence.js";
-import Stats from "./stats.js";
-import Tags from "./tags.js";
-import Toolbar from "./toolbar.js";
-import WS from "./ws.js";
+import Autoslug from "./components/autoslug";
+import Flash from "./components/flash";
+import FilterTable from "./components/filter_table";
+import Mobile from "./components/mobile";
+import Utils from "./components/utils";
+import Vex from "./components/vex";
+import Images from "./components/images";
+import Instagram from "./components/instagram";
+import Pages from "./components/pages";
+import Sequence from "./components/sequence";
+import Stats from "./components/stats";
+import Tags from "./components/tags";
+import Toolbar from "./components/toolbar";
+import WS from "./components/ws";
 
 
 $(() => {
