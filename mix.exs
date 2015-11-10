@@ -37,7 +37,7 @@ defmodule Brando.Mixfile do
       {:comeonin, "~> 1.0"},
       {:earmark, "~> 0.1"},
       {:eightyfour, github: "twined/eightyfour"},
-      {:gettext, github: "tmjoen/gettext"},
+      {:gettext, "~> 0.7.0"},
       {:httpoison, "~> 0.6"},
       {:mogrify, github: "twined/mogrify"},
       {:poison, "~> 1.3"},

@@ -10,9 +10,9 @@ defmodule Brando.Plug.I18n do
   Here it already is in `conn`'s session, so we set it through Gettext as
   well as assigning.
   """
-  def put_locale(%{private: %{plug_session: %{"language" => language}}} = conn, _) do
+  def put_locale(%{private: %{plug_session: %{"language" => language}}} = conn, backend) do
     language = extract_language_from_path(conn) || language
-    Gettext.locale(language)
+    Gettext.put_locale(backend, language)
     assign_language(conn, language)
   end
 
@@ -21,10 +21,10 @@ defmodule Brando.Plug.I18n do
 
   Adds to session and assigns, and sets it through gettext
   """
-  def put_locale(conn, _) do
+  def put_locale(conn, backend) do
     language = extract_language_from_path(conn)
                || Brando.config(:default_language)
-    Gettext.locale(language)
+    Gettext.put_locale(backend, language)
 
     conn
     |> put_language(language)
@@ -38,7 +38,7 @@ defmodule Brando.Plug.I18n do
                        %{"current_user" => current_user}}} = conn, _) do
     default_language = Brando.config(:default_admin_language)
     language = Map.get(current_user, :language, default_language)
-    Gettext.locale(language)
+    Gettext.put_locale(Brando.Gettext, language)
     conn
   end
 
@@ -58,9 +58,7 @@ defmodule Brando.Plug.I18n do
         |> List.flatten
         |> Keyword.get_values(:value)
 
-      if lang in langs do
-        lang
-      end
+      if lang in langs, do: lang
     end
   end
 end

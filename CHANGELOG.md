@@ -3,6 +3,9 @@
 * Enhancements
   * Cleaned up assets. Ditched gulp and moved to brunch.
 
+* Backwards incompatible changes
+  * Updated for Gettext 0.7.0. Check that your `router.ex`'s `put_locale` plug receives your Gettext module. I.e: `plug put_locale, MyApp.Gettext`
+
 ## v0.9.0 (2015-11-08)
 
 * Enhancements
