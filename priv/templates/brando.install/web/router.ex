@@ -30,7 +30,7 @@ defmodule <%= application_module %>.Router do
     plug Lockdown, [
       layout: {<%= application_module %>.LockdownLayoutView, "lockdown.html"},
       view: {<%= application_module %>.LockdownView, "lockdown.html"}]
-    plug :put_locale
+    plug :put_locale, <%= application_module %>.Gettext
     plug :protect_from_forgery
     plug :put_secure_browser_headers
   end
