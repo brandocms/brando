@@ -246,11 +246,6 @@ defmodule Brando.Utils do
   @doc """
   Get title assign from `conn`
   """
-  def get_page_title(%{assigns: %{page_title: title}} = conn)
-      when is_map(title) do
-    "#{Brando.config(:app_name)} | " <>
-    "#{Map.get(title, conn.assigns[:language], "")}"
-  end
   def get_page_title(%{assigns: %{page_title: title}}) do
     Brando.config(:app_name) <> " | " <> title
   end

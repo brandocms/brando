@@ -7,6 +7,7 @@
 
 * Backwards incompatible changes
   * Updated for Gettext 0.7.0. Check that your `router.ex`'s `put_locale` plug receives your Gettext module. I.e: `plug put_locale, MyApp.Gettext`
+  * Deprecated `Brando.Utils.get_page_title` when `title` is a map. Use Gettext instead.
 
 ## v0.9.0 (2015-11-08)
 
