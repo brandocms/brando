@@ -24,7 +24,6 @@ defmodule Brando.SessionController do
         |> sleep
         |> fetch_session
         |> put_session(:current_user, user)
-        |> put_flash(:notice, gettext("Authorization successful"))
         |> redirect(to: "/admin")
       false ->
         conn
