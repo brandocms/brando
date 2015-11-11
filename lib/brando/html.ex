@@ -263,7 +263,7 @@ defmodule Brando.HTML do
     ga('create','#{code}','auto');ga('send','pageview');
     </script>
     """
-    html |> Phoenix.HTML.raw
+    Phoenix.HTML.raw(html)
   end
 
   @doc """
