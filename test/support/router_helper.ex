@@ -109,6 +109,10 @@ defmodule RouterHelper do
       dashboard_routes "/"
     end
 
+    scope "/coming-soon" do
+      get "/", Brando.Integration.LockdownController, :index
+    end
+
     scope "/" do
       pipe_through :browser
       get "/login", Brando.SessionController, :login,
