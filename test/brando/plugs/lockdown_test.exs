@@ -2,7 +2,6 @@ defmodule Brando.Plug.LockdownTest do
   use ExUnit.Case, async: true
   use Plug.Test
   use RouterHelper
-  import Brando.Plug.Authorize
 
   defmodule LockdownPlug do
     import Plug.Conn
