@@ -14,6 +14,7 @@ defmodule Brando.Plug.Authenticate do
 
   alias Brando.User
   import Plug.Conn
+  import Brando.Gettext
   import Phoenix.Controller, only: [put_flash: 3, redirect: 2]
 
   def init(options), do: options
@@ -33,7 +34,7 @@ defmodule Brando.Plug.Authenticate do
   defp auth_failed(conn) do
     conn
     |> delete_session(:current_user)
-    |> put_flash(:error, "Ingen tilgang.")
+    |> put_flash(:error, gettext("Access denied."))
     |> redirect(to: Brando.helpers.session_path(conn, :login))
     |> halt
   end
