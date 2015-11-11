@@ -41,4 +41,13 @@ defmodule Brando.Integration.InstagramImageTest do
     InstagramImage.delete(img.id)
     assert Brando.repo.get_by(InstagramImage, id: img.id) == nil
   end
+
+  test "changeset" do
+    cs = InstagramImage.changeset(%InstagramImage{status: :download_failed},
+                                  :update, %{"image" => %{}})
+    assert Map.get(cs.changes, :status) == :approved
+    cs = InstagramImage.changeset(%InstagramImage{status: :download_failed},
+                                  :update, %{"image" => nil})
+    assert Map.get(cs.changes, :status) == nil
+  end
 end

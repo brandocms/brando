@@ -166,6 +166,7 @@ defmodule Brando.InstagramImage do
   defp create_image_sizes(%{"image" => nil} = image_model) do
     image_model
   end
+
   defp create_image_sizes(image_model) do
     sizes_cfg = Brando.Instagram.config(:sizes)
     if sizes_cfg != nil do

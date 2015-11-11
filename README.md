@@ -296,6 +296,7 @@ Config is found in your app's `config/brando.exs`.
   * `client_id`: Your instagram client id. Find this in the developer section.
   * `interval`: How often we poll for new images
   * `auto_approve`: Set `approved` to `true` on grabbed images
+  * `sizes`: A map of sizes to create on download.
   * `fetch`: What to fetch.
     * `{:user, "your_name"}`
     * `{:tags, ["tag1", "tag2"]}`
