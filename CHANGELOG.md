@@ -5,6 +5,9 @@
 * Enhancements
   * Cleaned up assets. Ditched gulp and moved to brunch.
 
+* Bug fixes
+  * Fix `can_login?`. Now dumps value properly before checking.
+
 * Backwards incompatible changes
   * Updated for Gettext 0.7.0. Check that your `router.ex`'s `put_locale` plug receives your Gettext module. I.e: `plug put_locale, MyApp.Gettext`
   * Deprecated `Brando.Utils.get_page_title` when `title` is a map. Use Gettext instead.
