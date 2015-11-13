@@ -50,4 +50,18 @@ defmodule Brando.Integration.InstagramImageTest do
                                   :update, %{"image" => nil})
     assert Map.get(cs.changes, :status) == nil
   end
+
+  test "update" do
+    result = InstagramImage.update(%InstagramImage{status: :download_failed}, %{"created_time" => 1})
+    assert result == {:error, [created_time: "is invalid"]}
+  end
+
+  test "meta" do
+    assert InstagramImage.__repr__(%{id: 5, caption: "Caption"})
+           == "5 | Caption"
+    assert Brando.InstagramImage.__name__(:singular)
+           == "instagram image"
+    assert Brando.InstagramImage.__name__(:plural)
+           == "instagram images"
+  end
 end
