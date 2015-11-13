@@ -11,7 +11,6 @@ defmodule Brando.InstagramImage do
   require Logger
 
   alias Brando.Instagram
-  alias Brando.Exception.UploadError
 
   import Brando.Gettext
   import Ecto.Query, only: [from: 2]
@@ -147,17 +146,12 @@ defmodule Brando.InstagramImage do
         media_path = Brando.config(:media_path)
         instagram_path = Instagram.config(:upload_path)
         path = Path.join([media_path, instagram_path])
-        case File.mkdir_p(path) do
-          :ok ->
-            file = Path.join([path, Path.basename(url)])
-            File.write!(file, body)
-            image_field = Map.put(image_field, :path, Path.join([instagram_path,
-                                                      Path.basename(url)]))
-            Map.put(image, "image", image_field)
-          {:error, reason} ->
-            raise UploadError,
-                  message: "Kunne ikke lage filbane -> #{inspect(reason)}"
-        end
+        File.mkdir_p!(path)
+        file = Path.join([path, Path.basename(url)])
+        File.write!(file, body)
+        image_field = Map.put(image_field, :path, Path.join([instagram_path,
+                                                  Path.basename(url)]))
+        Map.put(image, "image", image_field)
       {:error, err} ->
         {:error, err}
     end
@@ -231,12 +225,6 @@ defmodule Brando.InstagramImage do
       nil -> :blank
       id -> Enum.at(String.split(id, "_"), 0)
     end
-  end
-
-  @doc false
-  defmacro update_all(queryable, values, opts \\ []) do
-    Ecto.Repo.Queryable.update_all(Brando.repo, Ecto.Adapters.Postgres,
-                                   queryable, values, opts)
   end
 
   def change_status_for(ids, status) when is_list(ids)
