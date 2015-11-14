@@ -64,9 +64,9 @@ config :brando, Brando.Images,
 
 
 config :brando, Brando.Instagram,
-  server_name: <%= application_module %>.Instagram.Server,
   client_id: "",
   auto_approve: true,
+  http_lib: HTTPoison,
   interval: 1_000 * 60 * 60,
   sleep: 5000,
   sizes: %{"large" =>  %{"size" => "640", "quality" => 100},

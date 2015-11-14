@@ -80,6 +80,14 @@ defmodule Brando.Integration.UserSocket do
   def id(_socket), do: nil
 end
 
+defmodule Brando.Integration.Instagram do
+  @img_fixture "#{Path.expand(__DIR__)}/fixtures/sample.jpg"
+  def get(url) do
+    body = File.read!(@img_fixture)
+    {:ok, %{body: body, status_code: 200}}
+  end
+end
+
 defmodule Brando.Integration.TestCase do
   use ExUnit.CaseTemplate
 
