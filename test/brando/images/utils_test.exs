@@ -1,5 +1,5 @@
 defmodule Brando.Images.UtilsTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   import Brando.Images.Utils
   alias Brando.Images.Upload
 
@@ -41,6 +41,12 @@ defmodule Brando.Images.UtilsTest do
                       "thumb" => "images/default/thumb/sample.png",
                       "xlarge" => "images/default/xlarge/sample.png"},
              title: nil}
+
+  setup do
+    File.rm_rf!(Brando.config(:media_path))
+    File.mkdir_p!(Brando.config(:media_path))
+    :ok
+  end
 
   test "do_upload/2" do
     assert Upload.do_upload(@upload, @cfg)

@@ -79,4 +79,11 @@ defmodule Brando.Instagram.APITest do
     assert API.get_user_id("djasf98293h8a9283fh9a238fh")
            == {:error, "User not found: djasf98293h8a9283fh9a238fh"}
   end
+
+  test "process_response_body" do
+    assert API.process_response_body(~s({"test": "one", "test": "two"}))
+           == [test: "one"]
+    assert API.process_response_body(<<132,142>>)
+           == <<132,142>>
+  end
 end
