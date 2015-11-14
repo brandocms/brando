@@ -40,9 +40,7 @@ defmodule Brando.Integration.Endpoint do
     cache_control_for_vsn_requests: nil,
     cache_control_for_etags: nil
 
-
   socket "/admin/ws", Brando.Integration.UserSocket
-
 end
 
 defmodule Brando.Integration.UserSocket do
@@ -80,13 +78,7 @@ defmodule Brando.Integration.UserSocket do
   def id(_socket), do: nil
 end
 
-defmodule Brando.Integration.Instagram do
-  @img_fixture "#{Path.expand(__DIR__)}/fixtures/sample.jpg"
-  def get(url) do
-    body = File.read!(@img_fixture)
-    {:ok, %{body: body, status_code: 200}}
-  end
-end
+Code.require_file "support/instagram_helper.exs", __DIR__
 
 defmodule Brando.Integration.TestCase do
   use ExUnit.CaseTemplate
