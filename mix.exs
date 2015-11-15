@@ -53,7 +53,6 @@ defmodule Brando.Mixfile do
       {:phoenix_ecto, "~> 1.1", only: :test},
       {:phoenix_html, "~> 2.1", only: :test},
       {:postgrex, ">= 0.0.0", only: :test},
-
       {:blacksmith, "~> 0.1.2", only: :test},
       {:excoveralls, "~> 0.3", only: :test},
 
