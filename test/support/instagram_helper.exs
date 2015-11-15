@@ -164,7 +164,7 @@ defmodule Brando.Integration.Instagram do
     }
   end
 
-  def get("https://api.instagram.com/v1/users/0123456/media/recent/?client_id=CLIENT_ID&min_timestamp=1412585305") do
+  def get("https://api.instagram.com/v1/users/0123456/media/recent/?client_id=CLIENT_ID&min_timestamp=" <> _ts) do
     {
       :ok,
       %{
