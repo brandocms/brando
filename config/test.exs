@@ -75,6 +75,7 @@ config :brando, Brando.Instagram,
            "thumb" =>  %{"size" => "150x150", "quality" => 100,
                          "crop" => true}},
   upload_path: Path.join("images", "insta"),
+  fetch: {:user, "dummy_user"},
   sleep: 0,
   auto_approve: true
 
