@@ -53,6 +53,9 @@ defmodule Brando.Integration.UserTest do
     User.delete(user)
     assert Brando.repo.get_by(User, username: "zabuzasixu") == nil
     assert Brando.repo.get_by(User, email: "fanogigyni@gmail.com") == nil
+    assert {:ok, user} = User.create(@params)
+    User.delete(user.id)
+    assert Brando.repo.get_by(User, username: "zabuzasixu") == nil
   end
 
   test "all/0" do
