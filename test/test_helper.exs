@@ -128,6 +128,15 @@ defmodule Forge do
     html: ~s(<p>Text in p.</p>),
     status: :published,
     css_classes: "extra-class"
+
+  register :post,
+    __struct__: Brando.Post,
+    language: "en",
+    header: "Post title",
+    slug: "post-title",
+    data: ~s([{"type":"text","data":{"text":"Text in p.","type":"paragraph"}}]),
+    html: ~s(<p>Text in p.</p>),
+    status: :published
 end
 
 defmodule Blacksmith.Config do
