@@ -13,6 +13,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   @path1 "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"
   @path2 "#{Path.expand("../../", __DIR__)}/fixtures/sample2.png"
   @cfg Map.from_struct(%ImageConfig{})
+  @cfg_changed Map.put(@cfg, :random_filename, true)
   @series_params %{"name" => "Series name", "slug" => "series-name",
                    "credits" => "Credits", "order" => 0}
   @category_params %{"cfg" => @cfg, "name" => "Test Category",
@@ -227,5 +228,28 @@ defmodule Brando.ImageSeries.ControllerTest do
       "images/default/sample.png" -> assert img1.sequence > img2.sequence
       "images/default/sample2.png" -> assert img1.sequence < img2.sequence
     end
+  end
+
+  test "configure get" do
+    series = create_series()
+    conn =
+      :get
+      |> call("/admin/images/series/#{series.id}/configure")
+      |> with_user
+      |> send_request
+    assert html_response(conn, 200) =~ "Configure image series"
+  end
+
+  test "configure patch" do
+    series = create_series()
+    conn =
+      :patch
+      |> call("/admin/images/series/#{series.id}/configure",
+              %{"id" => series.id, "imageseriesconfig" => @cfg_changed})
+      |> with_user
+      |> send_request
+
+    assert redirected_to(conn, 302) =~ "/admin/images"
+    assert get_flash(conn, :notice) == "Image series configured"
   end
 end
