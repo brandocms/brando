@@ -9,6 +9,7 @@
   * Fix `can_login?`. Now dumps value properly before checking.
 
 * Backwards incompatible changes
+  * Removed `Brando.Page.duplicate/2`. We duplicate through the controller instead.
   * Added `config/brando.exs`: `Brando.Instagram` - `http_lib` for testing purposes. You need to provide this. Default should be `Brando.Instagram.API`.
   * Changed `Brando.Pages.Utils.get_fragment`. Now must have language passed to it: `get_fragment("my/fragment", Gettext.get_locale(MyApp.Gettext))` or `get_fragment("my/fragment", "en")`. If no language is passed, "en" will be used as default
   * Updated for Gettext 0.7.0. Check that your `router.ex`'s `put_locale` plug receives your Gettext module. I.e: `plug put_locale, MyApp.Gettext`

@@ -1,4 +1,4 @@
-:erlang.system_flag(:backtrace_depth, 1000)
+# :erlang.system_flag(:backtrace_depth, 1000)
 ExUnit.start
 
 # Clear tmp dir
@@ -117,6 +117,17 @@ defmodule Forge do
     avatar: nil,
     role: [:admin, :superuser],
     language: "en"
+
+  register :page,
+    __struct__: Brando.Page,
+    key: "key/path",
+    language: "en",
+    title: "Page title",
+    slug: "page-title",
+    data: ~s([{"type":"text","data":{"text":"Text in p.","type":"paragraph"}}]),
+    html: ~s(<p>Text in p.</p>),
+    status: :published,
+    css_classes: "extra-class"
 end
 
 defmodule Blacksmith.Config do
