@@ -18,6 +18,7 @@ defmodule Brando.Integration.Instagram do
       }
     }
   end
+
   def get("https://api.instagram.com/v1/users/search?q=djasf98293h8a9283fh9a238fh&client_id=CLIENT_ID") do
     {
       :ok,
@@ -32,6 +33,7 @@ defmodule Brando.Integration.Instagram do
         status_code: 200}
     }
   end
+
   def get("https://api.instagram.com/v1/users/search?q=dummy_user&client_id=CLIENT_ID") do
     {
       :ok,
@@ -348,7 +350,7 @@ defmodule Brando.Integration.Instagram do
     }
   end
 
-  def get("https://api.instagram.com/v1/tags/haraball/media/recent?client_id=CLIENT_ID&min_tag_id=968134024444958851") do
+  def get("https://api.instagram.com/v1/tags/haraball/media/recent?client_id=CLIENT_ID&min_tag_id=" <> _) do
     {
       :ok,
       %{
