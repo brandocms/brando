@@ -6,14 +6,6 @@ defmodule Brando.Integration.ImageSeriesTest do
   alias Brando.ImageCategory
   alias Brando.Type.ImageConfig
 
-  @params %{sequence: 0, image: %{title: "Title", credits: "credits",
-            path: "/tmp/path/to/fake/image.jpg",
-            sizes: %{small: "/tmp/path/to/fake/image.jpg",
-            thumb: "/tmp/path/to/fake/thumb.jpg"}}}
-  @params2 %{sequence: 1, image: %{title: "Title2", credits: "credits2",
-             path: "/tmp/path/to/fake/image2.jpg",
-             sizes: %{small: "/tmp/path/to/fake/image2.jpg",
-             thumb: "/tmp/path/to/fake/thumb2.jpg"}}}
   @series_params %{name: "Series name", slug: "series-name",
                    credits: "Credits", sequence: 0, creator_id: 1}
   @category_params %{cfg: %ImageConfig{}, creator_id: 1,
