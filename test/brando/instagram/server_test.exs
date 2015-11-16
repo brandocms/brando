@@ -2,7 +2,10 @@ defmodule Brando.InstagramServerTest do
   use ExUnit.Case, async: false
 
   setup do
-    {:ok, server} = Brando.Instagram.Server.start_link
+    server = case Brando.Instagram.Server.start_link do
+      {:ok, server} -> server
+      {:error, {:already_started, server}} -> server
+    end
     {:ok, server: server}
   end
 
