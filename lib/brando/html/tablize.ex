@@ -43,6 +43,7 @@ defmodule Brando.HTML.Tablize do
                      with an X or a checkmark.
     * `hide` - List of fields that should not be rendered.
     * `filter` - Boolean. Implements a filtering input box above table.
+    * `split_by` - Split table by field. `split_by: :language`.
     * `colgroup` - Column widths if you need to override.
                    Supply as list `[100, nil, nil, 200, nil, 200]`
 

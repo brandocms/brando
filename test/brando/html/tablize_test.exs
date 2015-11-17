@@ -26,12 +26,15 @@ defmodule Brando.HTML.TablizeTest do
   test "tablize/4" do
     user = Forge.saved_user(TestRepo)
     assert {:ok, post} = Post.create(@post_params, user)
-
     post = post |> Brando.repo.preload(:creator)
+
+    assert {:ok, post2} = Post.create(Map.put(@post_params, "language", "nb"), user)
+    post2 = post2 |> Brando.repo.preload(:creator)
+
     helpers = [{"Show user", "fa-search", :admin_user_path, :show, :id},
                {"Edit user", "fa-edit", :admin_user_path, :edit, :id},
                {"Delete user", "fa-trash",
-                :admin_user_path, :delete_confirm, :id}]
+                :admin_user_path, :delete_confirm, :id, :superuser}]
     {:safe, ret} = tablize(@conn, [post], helpers, check_or_x: [:meta_keywords],
                            hide: [:updated_at, :inserted_at])
 
@@ -41,10 +44,24 @@ defmodule Brando.HTML.TablizeTest do
     assert ret =~ "/admin/users/#{post.id}/edit"
     assert ret =~ "/admin/users/#{post.id}/delete"
 
+    {:safe, ret} = tablize(@conn, [post], helpers, check_or_x: [:meta_keywords],
+                           hide: [:updated_at, :inserted_at], colgroup: [100, 100])
+    ret = ret |> IO.iodata_to_binary
+    assert ret =~ "colgroup"
+    assert ret =~ "width: 100px"
+
     {:safe, ret} = tablize(@conn, [post], helpers, filter: true)
 
     ret = ret |> IO.iodata_to_binary
     assert ret
            =~ ~s(<input type="text" placeholder="Filter" id="filter-input" />)
+
+    {:safe, ret} = tablize(@conn, [post, post2], helpers, split_by: :language)
+    ret = ret |> IO.iodata_to_binary
+    assert ret =~ "nb"
+    assert ret =~ "en"
+
+    {:safe, ret} = tablize(nil, nil, nil, nil)
+    assert ret == "<p>No results</p>"
   end
 end
