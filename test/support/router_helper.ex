@@ -115,6 +115,7 @@ defmodule RouterHelper do
 
     scope "/" do
       pipe_through :browser
+      get "/test123/:id/:language", Brando.TestController, :test
       get "/login", Brando.SessionController, :login,
         private: %{model: Brando.User,
                    layout: {Brando.Session.LayoutView, "auth.html"}}

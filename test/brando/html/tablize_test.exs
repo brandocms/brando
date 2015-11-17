@@ -34,7 +34,9 @@ defmodule Brando.HTML.TablizeTest do
     helpers = [{"Show user", "fa-search", :admin_user_path, :show, :id},
                {"Edit user", "fa-edit", :admin_user_path, :edit, :id},
                {"Delete user", "fa-trash",
-                :admin_user_path, :delete_confirm, :id, :superuser}]
+                :admin_user_path, :delete_confirm, :id, :superuser},
+               {"List test", "fa-trash",
+                :test_path, :test, [:id, :language], :superuser}]
     {:safe, ret} = tablize(@conn, [post], helpers, check_or_x: [:meta_keywords],
                            hide: [:updated_at, :inserted_at])
 
@@ -43,6 +45,7 @@ defmodule Brando.HTML.TablizeTest do
     assert ret =~ "/admin/users/#{post.id}"
     assert ret =~ "/admin/users/#{post.id}/edit"
     assert ret =~ "/admin/users/#{post.id}/delete"
+    assert ret =~ "/test123/#{post.id}/#{post.language}"
 
     {:safe, ret} = tablize(@conn, [post], helpers, check_or_x: [:meta_keywords],
                            hide: [:updated_at, :inserted_at], colgroup: [100, 100])
