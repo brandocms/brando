@@ -3,9 +3,10 @@ defmodule Brando.InstagramServerTest do
 
   test "init" do
     {:ok, server} = Brando.Instagram.Server.start_link
-    {:ok, {{:interval, pid}, _, {:user, "dummy_user"}}} = Brando.Instagram.Server.init(server)
+    {:ok, {{:interval, pid}, _, fetch}} = Brando.Instagram.Server.init(server)
     assert is_reference(pid)
     assert_receive :poll
+    assert fetch in [{:user, "dummy_user"}, {:tags, ["haraball"]}]
     Brando.Instagram.Server.stop(server)
   end
 
