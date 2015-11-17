@@ -20,7 +20,7 @@ defmodule Brando.Admin.DashboardController do
   Renders system info page.
   """
   def system_info(conn, _params) do
-    log_file = "#{Path.expand("./logs")}/supervisord.log"
+    log_file = Path.join([Brando.config(:log_dir), "supervisord.log"])
     case File.stat(log_file) do
       {:ok, stat} ->
         log_last_updated =
