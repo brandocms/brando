@@ -24,7 +24,6 @@ defmodule Brando.Routes.Admin.Dashboard do
 
       get "#{path}",                 ctrl, :dashboard,       opts
       get "#{path}/systeminfo",      ctrl, :system_info,     opts
-      get "#{path}/instagram/start", ctrl, :instagram_start, opts
     end
   end
 end

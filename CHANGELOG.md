@@ -4,6 +4,7 @@
   * Fix `can_login?`. Now dumps value properly before checking.
 
 * Backwards incompatible changes
+  * Removed `:instagram_start` from system info page and controller.
   * Added `log_dir` to brando.exs. Default is `Path.Expand('./logs)`
   * Removed `Brando.Page.duplicate/2`. We duplicate through the controller instead.
   * Added `config/brando.exs`: `Brando.Instagram` - `http_lib` for testing purposes. You need to provide this. Default should be `Brando.Instagram.API`.

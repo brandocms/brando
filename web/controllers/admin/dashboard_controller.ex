@@ -44,9 +44,4 @@ defmodule Brando.Admin.DashboardController do
     |> assign(:log_last_updated, log_last_updated)
     |> render
   end
-
-  def instagram_start(conn, _) do
-    Brando.Instagram.Server.start_link()
-    redirect(conn, to: Brando.helpers.admin_dashboard_path(conn, :system_info))
-  end
 end
