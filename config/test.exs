@@ -48,6 +48,7 @@ config :brando, :media_url, "/media"
 config :brando, :media_path, Path.join([Mix.Project.app_path, "tmp", "media"])
 config :brando, Brando.Villain, parser: Brando.Villain.Parser.Default
 config :brando, Brando.Villain, extra_blocks: []
+config :brando, :log_dir, Path.expand("./tmp/logs")
 config :brando, :logging, disable_logging: true
 config :brando, :login_url, "/login"
 config :brando, :default_language, "nb"
