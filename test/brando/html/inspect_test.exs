@@ -90,10 +90,40 @@ defmodule Brando.HTML.InspectTest do
   test "inspect_field/3" do
     assert inspect_field("name", Brando.Type.ImageConfig, "value")
            == ~s(<em>Configuration data</em>)
+
     assert inspect_field("name", Brando.Type.Image, @image_map)
            =~ "/media/images/avatars/thumb/27i97a.jpeg"
+
     assert inspect_field(:password, :string, "passord") =~ "censored"
+
     assert inspect_field("name", :string, "") =~ "No value"
+
+    date = nil
+    assert inspect_field("date", Ecto.Date, date) =~ "No value"
+
+    date = %Ecto.Date{year: 2015, month: 12, day: 1}
+    assert inspect_field("date", Ecto.Date, date) =~ "1/12/2015"
+
+    assert inspect_field("status", Brando.Type.Status, :published)
+           =~ "Published"
+    assert inspect_field("status", Brando.Type.Status, :pending)
+           =~ "Pending"
+    assert inspect_field("status", Brando.Type.Status, :draft)
+           =~ "Draft"
+    assert inspect_field("status", Brando.Type.Status, :deleted)
+           =~ "Deleted"
+
+    assert inspect_field(:key, :string, "test/path")
+           == "<strong>test</strong>/path"
+    assert inspect_field(:key, :string, "test")
+           == "<strong>test</strong>"
+
+    assert inspect_field("name", :boolean, :true) =~ "fa-check"
+    assert inspect_field("name", :boolean, nil) =~ "fa-times"
+    assert inspect_field("name", :boolean, :false) =~ "fa-times"
+
+    assert inspect_field("name", nil, %Brando.User{username: "Test"})
+           =~ "micro-avatar"
   end
 
   test "inspect_assoc/3" do
