@@ -1,4 +1,4 @@
-## v0.11.0 (2015-XX-XX)
+## v0.11.0 (2015-11-17)
 
 * Bug fixes
   * Fix `can_login?`. Now dumps value properly before checking.
