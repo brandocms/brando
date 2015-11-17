@@ -7,7 +7,7 @@ defmodule Brando.Instagram do
 
       worker(Brando.Instagram, []),
 
-  ## Options
+  ## Configuration options
 
   These are the options for `config :brando, Brando.Instagram`:
 
@@ -19,6 +19,7 @@ defmodule Brando.Instagram do
       * `{:tags, ["tag1", "tag2"]} - polls `tag1` and `tag2`
   """
 
+  @doc false
   def start_link do
     import Supervisor.Spec, warn: false
 

@@ -11,6 +11,7 @@ defmodule Brando.Instagram.Server do
   alias Brando.Instagram.API
   alias Brando.InstagramImage
 
+  # Public
   @doc false
   def start_link do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
