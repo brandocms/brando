@@ -20,7 +20,7 @@ defmodule Brando.Admin.DashboardController do
   Renders system info page.
   """
   def system_info(conn, _params) do
-    log_file = "#{Path.expand("./logs")}/supervisord.log"
+    log_file = Path.join([Brando.config(:log_dir), "supervisord.log"])
     case File.stat(log_file) do
       {:ok, stat} ->
         log_last_updated =
@@ -43,10 +43,5 @@ defmodule Brando.Admin.DashboardController do
     |> assign(:log_last_lines, log_last_lines)
     |> assign(:log_last_updated, log_last_updated)
     |> render
-  end
-
-  def instagram_start(conn, _) do
-    Brando.Instagram.Server.start_link(Brando.Instagram.config(:server_name))
-    redirect(conn, to: Brando.helpers.admin_dashboard_path(conn, :system_info))
   end
 end

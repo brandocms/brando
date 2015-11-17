@@ -1,9 +1,9 @@
-defmodule Brando.Plug.AuthenticateTest do
+defmodule Brando.Plug.LockdownTest do
   use ExUnit.Case, async: true
   use Plug.Test
-  alias Brando.Plug.Authenticate
+  use RouterHelper
 
-  defmodule AuthPlugFail do
+  defmodule LockdownPlug do
     import Plug.Conn
     import Phoenix.Controller
     use Plug.Builder
@@ -16,8 +16,9 @@ defmodule Brando.Plug.AuthenticateTest do
     plug :fetch_session
     plug :fetch_flash
     plug :put_secret_key_base
-    plug Authenticate,
-      login_url: "/login"
+    plug Brando.Plug.Lockdown, [
+           layout: {MyApp.LockdownLayoutView, "lockdown.html"},
+           view: {MyApp.LockdownView, "lockdown.html"}]
 
     def put_secret_key_base(conn, _) do
       put_in conn.secret_key_base,
@@ -25,35 +26,7 @@ defmodule Brando.Plug.AuthenticateTest do
     end
   end
 
-  defmodule AuthPlugFailsPerms do
-    import Plug.Conn
-    import Phoenix.Controller
-    use Plug.Builder
-
-    plug Plug.Session,
-      store: :cookie,
-      key: "_test",
-      signing_salt: "signingsalt",
-      encryption_salt: "encsalt"
-    plug :fetch_session
-    plug :fetch_flash
-    plug :put_secret_key_base
-    plug :put_current_user
-
-    plug Authenticate,
-      login_url: "/login"
-
-    def put_secret_key_base(conn, _) do
-      put_in conn.secret_key_base,
-        "C590A24F0CCB864E01DD077CFF144EFEAAAB7835775438E414E9847A4EE8035D"
-    end
-
-    def put_current_user(conn, _) do
-       put_session(conn, :current_user, %{role: 0})
-    end
-  end
-
-  defmodule AuthPlugSucceeds do
+  defmodule LockdownPlugAuth do
     import Plug.Conn
     import Phoenix.Controller
     use Plug.Builder
@@ -67,9 +40,9 @@ defmodule Brando.Plug.AuthenticateTest do
     plug :fetch_flash
     plug :put_secret_key_base
     plug :put_current_user
-
-    plug Authenticate,
-      login_url: "/login"
+    plug Brando.Plug.Lockdown, [
+           layout: {MyApp.LockdownLayoutView, "lockdown.html"},
+           view: {MyApp.LockdownView, "lockdown.html"}]
 
     def put_secret_key_base(conn, _) do
       put_in conn.secret_key_base,
@@ -77,41 +50,77 @@ defmodule Brando.Plug.AuthenticateTest do
     end
 
     def put_current_user(conn, _) do
-      put_session(conn, :current_user, %{role: 7})
+      conn |> put_session(:current_user, %{role: [:admin, :superuser]})
     end
   end
 
-  test "auth fails" do
-    conn =
-      :get
-      |> conn("/", [])
-      |> assign(:secret_key_base, "asdf")
-      |> AuthPlugFail.call([])
+  defmodule LockdownPlugAuthFail do
+    import Plug.Conn
+    import Phoenix.Controller
+    use Plug.Builder
 
-    assert conn.status == 302
-    %{phoenix_flash: errors} = conn.private
-    assert errors == %{"error" => "Access denied."}
+    plug Plug.Session,
+      store: :cookie,
+      key: "_test",
+      signing_salt: "signingsalt",
+      encryption_salt: "encsalt"
+    plug :fetch_session
+    plug :fetch_flash
+    plug :put_secret_key_base
+    plug :put_current_user
+    plug Brando.Plug.Lockdown, [
+           layout: {MyApp.LockdownLayoutView, "lockdown.html"},
+           view: {MyApp.LockdownView, "lockdown.html"}]
+
+    def put_secret_key_base(conn, _) do
+      put_in conn.secret_key_base,
+        "C590A24F0CCB864E01DD077CFF144EFEAAAB7835775438E414E9847A4EE8035D"
+    end
+
+    def put_current_user(conn, _) do
+      conn |> put_session(:current_user, %{role: []})
+    end
   end
 
-  test "auth succeeds" do
+  test "lockdown" do
+    Application.put_env(:brando, :lockdown, true)
+
     conn =
       :get
-      |> conn("/", [])
-      |> assign(:secret_key_base, "asdf")
-      |> AuthPlugSucceeds.call([])
+      |> call("/")
+      |> LockdownPlug.call([])
 
-    %{phoenix_flash: errors} = conn.private
-    assert errors == %{}
+    assert conn.status == 302
+    assert conn.resp_headers["location"] == "/coming-soon"
+
+    Application.put_env(:brando, :lockdown, false)
+
+    conn =
+      :get
+      |> call("/")
+      |> LockdownPlug.call([])
+
+    assert conn.status == nil
   end
 
-  test "auth fails perms" do
+  test "lockdown with auth" do
+    Application.put_env(:brando, :lockdown, true)
+
     conn =
       :get
-      |> conn("/", [])
-      |> assign(:secret_key_base, "asdf")
-      |> AuthPlugFailsPerms.call([])
+      |> call("/")
+      |> LockdownPlugAuth.call([])
+
+    assert conn.status == nil
+
+    conn =
+      :get
+      |> call("/")
+      |> LockdownPlugAuthFail.call([])
+
     assert conn.status == 302
-    %{phoenix_flash: errors} = conn.private
-    assert errors == %{"error" => "Access denied."}
+    assert conn.resp_headers["location"] == "/coming-soon"
+
+    Application.put_env(:brando, :lockdown, false)
   end
 end

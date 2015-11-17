@@ -7,12 +7,8 @@ defmodule Brando.InstagramImage do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
-
   require Logger
-
   alias Brando.Instagram
-  alias Brando.Exception.UploadError
-
   import Brando.Gettext
   import Ecto.Query, only: [from: 2]
 
@@ -135,29 +131,25 @@ defmodule Brando.InstagramImage do
   defp download_image(image) do
     image_field = %Brando.Type.Image{}
     url = Map.get(image, "url_original")
+    http_lib = @cfg[:http_lib]
 
-    case HTTPoison.get(url) do
-      {:ok, %HTTPoison.Response{body: _, status_code: 404}} ->
+    case http_lib.get(url) do
+      {:ok, %{body: _, status_code: 404}} ->
         Logger.error("Instagram: Feil fra Instagram API. " <>
                      "Kunne ikke laste ned bilde.\nURL: #{url}")
         image
         |> Map.put("image", nil)
         |> Map.put("status", :download_failed)
-      {:ok, %HTTPoison.Response{body: body, status_code: 200}} ->
+      {:ok, %{body: body, status_code: 200}} ->
         media_path = Brando.config(:media_path)
         instagram_path = Instagram.config(:upload_path)
         path = Path.join([media_path, instagram_path])
-        case File.mkdir_p(path) do
-          :ok ->
-            file = Path.join([path, Path.basename(url)])
-            File.write!(file, body)
-            image_field = Map.put(image_field, :path, Path.join([instagram_path,
-                                                      Path.basename(url)]))
-            Map.put(image, "image", image_field)
-          {:error, reason} ->
-            raise UploadError,
-                  message: "Kunne ikke lage filbane -> #{inspect(reason)}"
-        end
+        File.mkdir_p!(path)
+        file = Path.join([path, Path.basename(url)])
+        File.write!(file, body)
+        image_field = Map.put(image_field, :path, Path.join([instagram_path,
+                                                  Path.basename(url)]))
+        Map.put(image, "image", image_field)
       {:error, err} ->
         {:error, err}
     end
@@ -166,6 +158,7 @@ defmodule Brando.InstagramImage do
   defp create_image_sizes(%{"image" => nil} = image_model) do
     image_model
   end
+
   defp create_image_sizes(image_model) do
     sizes_cfg = Brando.Instagram.config(:sizes)
     if sizes_cfg != nil do
@@ -230,12 +223,6 @@ defmodule Brando.InstagramImage do
       nil -> :blank
       id -> Enum.at(String.split(id, "_"), 0)
     end
-  end
-
-  @doc false
-  defmacro update_all(queryable, values, opts \\ []) do
-    Ecto.Repo.Queryable.update_all(Brando.repo, Ecto.Adapters.Postgres,
-                                   queryable, values, opts)
   end
 
   def change_status_for(ids, status) when is_list(ids)

@@ -1,4 +1,3 @@
-:erlang.system_flag(:backtrace_depth, 1000)
 ExUnit.start
 
 # Clear tmp dir
@@ -40,44 +39,7 @@ defmodule Brando.Integration.Endpoint do
     cache_control_for_vsn_requests: nil,
     cache_control_for_etags: nil
 
-
   socket "/admin/ws", Brando.Integration.UserSocket
-
-end
-
-defmodule Brando.Integration.UserSocket do
-  use Phoenix.Socket
-
-  ## Channels
-  channel "system:*", Brando.SystemChannel
-  channel "stats", Brando.StatsChannel
-
-  ## Transports
-  transport :websocket, Phoenix.Transports.WebSocket
-  transport :longpoll, Phoenix.Transports.LongPoll
-
-  # Socket params are passed from the client and can
-  # be used to verify and authenticate a user. After
-  # verification, you can put default assigns into
-  # the socket that will be set for all channels, ie
-  #
-  #     {:ok, assign(socket, :user_id, verified_user_id)}
-  #
-  #  To deny connection, return `:error`.
-  def connect(%{"token" => token}, socket) do
-    case Phoenix.Token.verify(socket, "user", token, max_age: 1209600) do
-      {:ok, user_id} ->
-        {:ok, assign(socket, :user, user_id)}
-      {:error, _} ->
-        :error
-    end
-  end
-
-  def connect(_params, socket) do
-    {:ok, socket}
-  end
-
-  def id(_socket), do: nil
 end
 
 defmodule Brando.Integration.TestCase do
@@ -92,43 +54,9 @@ defmodule Brando.Integration.TestCase do
   end
 end
 
-defmodule Forge do
-  use Blacksmith
-
-  @save_one_function &Blacksmith.Config.save/2
-  @save_all_function &Blacksmith.Config.save_all/2
-
-  register :user,
-    __struct__: Brando.User,
-    full_name: "James Williamson",
-    email: "james@thestooges.com",
-    password: "hunter2hunter2",
-    username: "jamesw",
-    avatar: nil,
-    role: [:admin, :superuser],
-    language: "en"
-
-  register :user_w_hashed_pass,
-    __struct__: Brando.User,
-    full_name: "James Williamson",
-    email: "james@thestooges.com",
-    password: "$2b$12$VD9opg289oNQAHii8VVpoOIOe.y4kx7.lGb9SYRwscByP.tRtJTsa",
-    username: "jamesw",
-    avatar: nil,
-    role: [:admin, :superuser],
-    language: "en"
-end
-
-defmodule Blacksmith.Config do
-  def save(repo, map) do
-    repo.insert!(map)
-  end
-
-  def save_all(repo, list) do
-    Enum.map(list, &repo.insert!/1)
-  end
-end
-
+Code.require_file "support/user_socket.exs", __DIR__
+Code.require_file "support/instagram_helper.exs", __DIR__
+Code.require_file "support/fixtures.exs", __DIR__
 Code.require_file "support/migrations.exs", __DIR__
 
 _   = Ecto.Storage.down(Repo)

@@ -19,7 +19,8 @@ defmodule Brando.Pages.ControllerTest do
                  "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
                  "language" => "nb",
                  "meta_description" => nil, "meta_keywords" => nil,
-                 "slug" => "header", "status" => :published}
+                 "slug" => "header", "status" => :published,
+                 "css_classes" => "extra-class"}
 
   @broken_page_params %{"data" => "", "featured" => true, "title" => "",
                         "key" => "testpage",

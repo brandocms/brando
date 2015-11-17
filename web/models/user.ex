@@ -183,7 +183,8 @@ defmodule Brando.User do
   """
   @spec can_login?(t) :: boolean
   def can_login?(user) do
-    user.role > 0 && true || false
+    {:ok, role} = Brando.Type.Role.dump(user.role)
+    role > 0 && true || false
   end
 
   #

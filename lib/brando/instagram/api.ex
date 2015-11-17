@@ -5,13 +5,11 @@ defmodule Brando.Instagram.API do
   use HTTPoison.Base
   require Logger
 
-  alias HTTPoison.Response
   alias Brando.SystemChannel
   alias Brando.Instagram
   alias Brando.InstagramImage
 
-  defp process_url(url), do:
-    "https://api.instagram.com/v1/" <> url
+  @http_lib Brando.Instagram.config(:http_lib)
 
   @doc """
   Main entry from genserver's `:poll`.
@@ -48,11 +46,19 @@ defmodule Brando.Instagram.API do
   def images_for_user(username, min_timestamp: last_created_time) do
     case get_user_id(username) do
       {:ok, user_id} ->
-        case get("users/#{user_id}/media/recent/?client_id=#{Instagram.config(:client_id)}&min_timestamp=#{last_created_time}") do
-          {:ok, %Response{body: body, status_code: 200}} -> parse_images_for_user(body, username)
-          {:error, %HTTPoison.Error{reason: reason}}     -> {:error, "Nettfeil fra HTTPoison: #{inspect(reason)}"}
+        response = @http_lib.get(
+          "https://api.instagram.com/v1/users/#{user_id}/media/recent/" <>
+          "?client_id=#{Instagram.config(:client_id)}" <>
+          "&min_timestamp=#{last_created_time}"
+        )
+        case response do
+          {:ok, %{body: body, status_code: 200}} ->
+            parse_images_for_user(body, username)
+          {:error, %{reason: reason}} ->
+            {:error, "Error from HTTPoison: #{inspect(reason)}"}
         end
-      {:error, errors} -> Logger.error("Instagram/images_for_user: #{inspect(errors)}")
+      {:error, errors} ->
+        Logger.error("Instagram/images_for_user: #{inspect(errors)}")
     end
     :ok
   end
@@ -62,9 +68,16 @@ defmodule Brando.Instagram.API do
   """
   def images_for_user(username, max_id: max_id) do
     {:ok, user_id} = get_user_id(username)
-    case get("users/#{user_id}/media/recent/?client_id=#{Instagram.config(:client_id)}&max_id=#{max_id}") do
-      {:ok, %Response{body: body, status_code: 200}} -> parse_images_for_user(body, username)
-      {:error, %HTTPoison.Error{reason: reason}}     -> {:error, "Nettfeil fra HTTPoison: #{inspect(reason)}"}
+    response = @http_lib.get(
+      "https://api.instagram.com/v1/users/" <>
+      "#{user_id}/media/recent/?client_id=#{Instagram.config(:client_id)}" <>
+      "&max_id=#{max_id}"
+    )
+    case response do
+      {:ok, %{body: body, status_code: 200}} ->
+        parse_images_for_user(body, username)
+      {:error, %{reason: reason}} ->
+        {:error, "Error from HTTPoison: #{inspect(reason)}"}
     end
     :ok
   end
@@ -74,20 +87,56 @@ defmodule Brando.Instagram.API do
   """
   def images_for_tags(tags, min_id: min_id) do
     Enum.each tags, fn(tag) ->
-      case get("tags/#{tag}/media/recent?client_id=#{Instagram.config(:client_id)}&min_tag_id=#{min_id}") do
-        {:ok, %Response{body: body, status_code: 200}} -> parse_images_for_tag(body)
-        {:error, %HTTPoison.Error{reason: reason}}     -> {:error, "Nettfeil fra HTTPoison: #{inspect(reason)}"}
+      response = @http_lib.get(
+        "https://api.instagram.com/v1/tags/#{tag}/media/recent" <>
+        "?client_id=#{Instagram.config(:client_id)}&min_tag_id=#{min_id}"
+      )
+      case response do
+        {:ok, %{body: body, status_code: 200}} ->
+          parse_images_for_tag(body)
+        {:error, %{reason: reason}} ->
+          {:error, "Error from HTTPoison: #{inspect(reason)}"}
       end
     end
     :ok
   end
 
   defp get_media(media_id) do
-    case get("media/#{media_id}?client_id=#{Instagram.config(:client_id)}") do
-      {:ok, %Response{body: body, status_code: 200}} ->
+    response = @http_lib.get(
+      "https://api.instagram.com/v1/media/" <>
+      "#{media_id}?client_id=#{Instagram.config(:client_id)}")
+    case response do
+      {:ok, %{body: body, status_code: 200}} ->
         parse_media(body)
-      {:error, %HTTPoison.Error{reason: reason}} ->
-        {:error, "Nettfeil fra HTTPoison: #{inspect(reason)}"}
+      {:error, %{reason: reason}} ->
+        {:error, "Error from HTTPoison: #{inspect(reason)}"}
+    end
+  end
+
+  @doc """
+  Get Instagram's user ID for `username`
+  """
+  def get_user_id(username) do
+    response = @http_lib.get(
+      "https://api.instagram.com/v1/users/search?q=#{username}" <>
+      "&client_id=#{Instagram.config(:client_id)}"
+    )
+    case response do
+      {:ok, %{body: [{:data, [%{"id" => id}]} | _]}} ->
+        {:ok, id}
+      {:ok, %{body: [data: [], meta: %{}]}} ->
+        {:error, "User not found: #{username}"}
+      {:ok, %{body: {:error, error}}} ->
+        {:error, "Instagram API error: #{inspect(error)}"}
+      {:ok, %{body: [meta: meta], status_code: 400}} ->
+        {:error, "Instagram API 400 error: #{inspect(meta["error_message"])}"}
+      {:ok, %{body: [{:data, multiple} | _]}} ->
+        ret = for user <- multiple do
+          Map.get(user, "username") == username && Map.get(user, "id") || ""
+        end
+        {:ok, Enum.join(ret)}
+      {:error, %{reason: reason}} ->
+        {:error, "Error from HTTPoison: #{inspect(reason)}"}
     end
   end
 
@@ -126,42 +175,21 @@ defmodule Brando.Instagram.API do
   end
 
   @doc """
-  Get Instagram's user ID for `username`
-  """
-  def get_user_id(username) do
-    case get "users/search?q=#{username}&client_id=#{Instagram.config(:client_id)}" do
-      {:ok, %Response{body: [{:data, [%{"id" => id}]} | _]}} ->
-        {:ok, id}
-      {:ok, %Response{body: [data: [], meta: %{}]}} ->
-        {:error, "Fant ikke bruker: #{username}"}
-      {:ok, %Response{body: {:error, error}}} ->
-        {:error, "API feil fra Instagram: #{inspect(error)}"}
-      {:ok, %Response{body: [meta: meta], status_code: 400}} ->
-        {:error, "API feil 400 fra Instagram: #{inspect(meta["error_message"])}"}
-      {:ok, %Response{body: [{:data, multiple} | _]}} ->
-        ret = for user <- multiple do
-          Map.get(user, "username") == username && Map.get(user, "id") || ""
-        end
-        {:ok, Enum.join(ret)}
-      {:error, %HTTPoison.Error{reason: reason}} ->
-        {:error, "Nettfeil fra HTTPoison: #{inspect(reason)}"}
-    end
-  end
-
-  @doc """
   Poison's callback for processing the json into a map
   """
   def process_response_body(body) do
     case Poison.decode(body) do
       {:ok, result}   ->
         Enum.map(result, fn({k, v}) -> {String.to_atom(k), v} end)
-      {:error, error} ->
-        {:error, error}
+      {:error, :invalid} ->
+        body
+      {:error, errors} ->
+        {:error, errors}
     end
   end
 
   defp check_for_failed_downloads do
-    for failed <- InstagramImage.get_failed_downloads do
+    for failed <- InstagramImage.get_failed_downloads() do
       get_media(failed.instagram_id)
     end
   end

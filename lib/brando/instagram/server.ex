@@ -11,6 +11,7 @@ defmodule Brando.Instagram.Server do
   alias Brando.Instagram.API
   alias Brando.InstagramImage
 
+  # Public
   @doc false
   def start_link do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
@@ -29,6 +30,7 @@ defmodule Brando.Instagram.Server do
     GenServer.call(server, :stop)
   end
 
+  # Private
   @doc false
   def handle_info(:poll, {timer, filter, cfg}) do
     try do
@@ -37,7 +39,7 @@ defmodule Brando.Instagram.Server do
     catch
       :exit, err ->
         Logger.error(inspect(err))
-        Brando.SystemChannel.log(:error, "InstagramServer: Fanget :exit -> " <>
+        Brando.SystemChannel.log(:error, "InstagramServer: Trapped :exit -> " <>
                                          inspect(err))
         {:noreply, {timer, filter, cfg}}
     end
@@ -62,28 +64,28 @@ defmodule Brando.Instagram.Server do
   @doc false
   def terminate({%HTTPoison.Error{reason: :connect_timeout}, [_|_]}, {_, _}) do
     Brando.SystemChannel.log(:error, "InstagramServer: " <>
-                                     "Tilkoblingen brukte for lang tid.")
+                                     "connection timed out.")
     :ok
   end
 
   @doc false
   def terminate({%HTTPoison.Error{reason: :econnrefused}, [_|_]}, {_, _}) do
     Brando.SystemChannel.log(:error, "InstagramServer: " <>
-                                     "Tilkoblingen ble nektet fra server.")
+                                     "connection refused.")
     :ok
   end
 
   @doc false
   def terminate({%HTTPoison.Error{reason: :nxdomain}, [_|_]}, {_, _}) do
     Brando.SystemChannel.log(:error, "InstagramServer: " <>
-                                     "Kunne ikke koble til pga DNS problemer.")
+                                     "dns error, not found")
     :ok
   end
 
   @doc false
   def terminate({%Postgrex.Error{message: "tcp connect: econnrefused",
                                  postgres: nil}, _}, _) do
-    Brando.SystemChannel.log(:error, "InstagramServer: Postgres server nede.")
+    Brando.SystemChannel.log(:error, "InstagramServer: postgrex connection refused")
     :ok
   end
   @doc false

@@ -12,11 +12,6 @@ defmodule Brando.PageFragmentForm do
     Brando.config(:languages)
   end
 
-  @doc false
-  def get_now do
-    Ecto.DateTime.to_string(Ecto.DateTime.local)
-  end
-
   @doc """
   Check is status' choice is selected.
   Translates the `model_value` from an atom to an int as string

@@ -4,11 +4,14 @@ defmodule Brando.Villain.ParserTest do
 
   test "header/1" do
     assert header(%{"text" => "Header"}) == ~s(<h1>Header</h1>)
+    assert header(%{"text" => "Header", "level" => "5"}) == ~s(<h5>Header</h5>)
   end
 
   test "text/1" do
     assert text(%{"text" => "**Some** text here.", "type" => "paragraph"}) ==
       ~s(<p><strong>Some</strong> text here.</p>\n)
+    assert text(%{"text" => "**Some** text here.", "type" => "lead"}) ==
+      ~s(<p class="lead"><strong>Some</strong> text here.</p>\n)
   end
 
   test "video/1 youtube" do
@@ -24,6 +27,9 @@ defmodule Brando.Villain.ParserTest do
   test "image/1" do
     assert image(%{"url" => "http://vg.no", "title" => "Caption", "credits" => "Credits"}) ==
       ~s(<div class=\"img-wrapper\">\n  <img src=\"http://vg.no\" alt=\"Caption/Credits\" class=\"img-responsive\" />\n  <div class=\"image-info-wrapper\">\n    <div class=\"image-title\">\n      Caption\n    </div>\n    <div class=\"image-credits\">\n      Credits\n    </div>\n  </div>\n</div>\n)
+    assert image(%{"url" => "http://vg.no", "title" => "Caption", "credits" => "Credits", "link" => "http://db.no"}) ==
+      ~s(<div class="img-wrapper">\n  <a href="http://db.no" title="Caption"><img src="http://vg.no" alt="Caption/Credits" class="img-responsive" /></a>\n  <div class="image-info-wrapper">\n    <div class="image-title">\n      Caption\n    </div>\n    <div class="image-credits">\n      Credits\n    </div>\n  </div>\n</div>\n)
+
   end
 
   test "divider/1" do
@@ -39,5 +45,12 @@ defmodule Brando.Villain.ParserTest do
     assert columns([%{"class" => "six", "data" => [%{"data" => %{"text" => "Header 1"}, "type" => "header"}, %{"data" => %{"text" => "Paragraph 1", "type" => "paragraph"}, "type" => "text"}]},
                     %{"class" => "six", "data" => [%{"data" => %{"text" => "Header 2"}, "type" => "header"}, %{"data" => %{"text" => "Paragraph 2", "type" => "paragraph"}, "type" => "text"}]}]) ==
       "<div class=\"row\"><div class=\"col-md-6\"><h1>Header 1</h1><p>Paragraph 1</p>\n</div><div class=\"col-md-6\"><h1>Header 2</h1><p>Paragraph 2</p>\n</div></div>"
+  end
+
+  test "blockquote/1" do
+    assert blockquote(%{"text" => "> Some text", "cite" => "J. Williamson"})
+           == "<blockquote><p>Some text</p>\n<p>— <cite>J. Williamson</cite></p>\n</blockquote>\n"
+    assert blockquote(%{"text" => "> Some text", "cite" => ""})
+           == "<blockquote><p>Some text</p>\n</blockquote>\n"
   end
 end

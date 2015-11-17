@@ -121,4 +121,54 @@ defmodule Brando.UtilsTest do
     assert img_url(img, "thumb", [default: "default.jpg"])
            == "images/thumb/file.jpg"
   end
+
+  test "get_now" do
+    now = get_now()
+    assert is_bitstring(now)
+    assert String.length(now) == 19
+  end
+
+  test "get_date_now" do
+    now = get_date_now()
+    assert is_bitstring(now)
+    assert String.length(now) == 10
+  end
+
+  test "split_by" do
+    records = [
+      %{name: "John", gender: :male},
+      %{name: "Alice", gender: :female},
+      %{name: "Liza", gender: :female},
+      %{name: "Karen", gender: :female}
+    ]
+    result = split_by(records, :gender)
+    assert length(result[:male]) == 1
+    assert length(result[:female]) == 3
+  end
+
+  test "get_page_title" do
+    assert get_page_title(%{assigns: %{page_title: "Test"}})
+           == "MyApp | Test"
+    assert get_page_title(%{})
+           == "MyApp"
+  end
+
+  test "host_and_media_url" do
+    mock_conn = %{port: 80, scheme: "http", host: "brando.com"}
+    assert host_and_media_url(mock_conn) == "http://brando.com/media"
+    mock_conn = %{port: 8000, scheme: "https", host: "brando.com"}
+    assert host_and_media_url(mock_conn) == "https://brando.com:8000/media"
+  end
+
+  test "run_checks" do
+    assert run_checks() == nil
+    media_path = Application.get_env(:brando, :media_path)
+    Application.put_env(:brando, :media_path, "")
+    assert_raise Brando.Exception.ConfigError, &run_checks/0
+    Application.put_env(:brando, :media_path, "relative/path")
+    assert_raise Brando.Exception.ConfigError, &run_checks/0
+    Application.put_env(:brando, :media_path, nil)
+    assert_raise Brando.Exception.ConfigError, &run_checks/0
+    Application.put_env(:brando, :media_path, media_path)
+  end
 end

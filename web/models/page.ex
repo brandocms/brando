@@ -90,17 +90,8 @@ defmodule Brando.Page do
   end
 
   @doc """
-  Duplicates `model`
+  Encodes `data` in `params` if not a binary.
   """
-  def duplicate(model) do
-    %__MODULE__{}
-    |> changeset(:create, model |> Map.drop([:__struct__, :__meta__, :id,
-                                             :key, :slug, :title,
-                                             :children, :creator, :parent,
-                                             :updated_at, :inserted_at]))
-    |> Brando.repo.insert
-  end
-
   def encode_data(params) do
     cond do
       is_list(params.data)   ->

@@ -5,6 +5,9 @@ defmodule Brando.TestRouter do
   import Brando.Routes.Admin.News
   import Brando.Routes.Admin.Images
   import Brando.Routes.Admin.Villain
+  import Brando.Routes.Admin.Analytics
+  import Brando.Routes.Admin.Dashboard
+  import Brando.Routes.Admin.Instagram
 
   pipeline :admin do
     plug :accepts, ~w(html json)
@@ -26,6 +29,7 @@ defmodule Brando.TestRouter do
 
   scope "/admin", as: :admin do
     pipe_through :admin
+    dashboard_routes "/"
     user_routes "/users", Brando.Admin.UserController,
                                private: %{model: Brando.User}
     user_routes "/users2", private: %{model: Brando.User}
@@ -38,6 +42,9 @@ defmodule Brando.TestRouter do
     image_routes "/images2", [image_model: Brando.Image,
                                  series_model: Brando.ImageSeries,
                                  category_model: Brando.ImageCategory]
+    analytics_routes "/analytics"
+    instagram_routes "/instagram"
+
     scope "villain" do
       villain_routes Brando.Admin.PostController
     end
@@ -95,5 +102,19 @@ defmodule Brando.RoutesTest do
     assert routes =~ "/admin/villain2/2/villain/upload"
     assert routes =~ "/admin/villain2/2/villain/browse"
     assert routes =~ "/admin/villain2/2/villain/imagedata"
+  end
+
+  test "analytics_routes", %{routes: routes} do
+    assert routes =~ "/admin/analytics/views"
+    assert routes =~ "/admin/analytics/referrals"
+  end
+
+  test "dashboard_routes", %{routes: routes} do
+    assert routes =~ "/admin/systeminfo"
+  end
+
+  test "instagram_routes", %{routes: routes} do
+    assert routes =~ "/admin/instagram"
+    assert routes =~ "/admin/instagram/change-status"
   end
 end

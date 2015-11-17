@@ -21,9 +21,7 @@ defmodule Brando.StatsChannel do
   def handle_info(:update, socket) do
     instagram_status =
       try do
-        Brando.Instagram
-        |> Brando.config
-        |> Keyword.get(:server_name)
+        Brando.Instagram.Server
         |> Process.whereis
         |> Process.alive?
       rescue
