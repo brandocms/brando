@@ -39,13 +39,13 @@ defmodule Brando.HTML.Tablize do
 
   ## Options
 
-    * `check_or_x` - Provide a list of fields that should be presented
-                     with an X or a checkmark.
+    * `check_or_x` - List of fields displayed as X or checkmark.
+    * `children` - Name of field that holds child elements.
     * `hide` - List of fields that should not be rendered.
     * `filter` - Boolean. Implements a filtering input box above table.
-    * `split_by` - Split table by field. `split_by: :language`.
+    * `split_by` - Split table by field: `split_by: :language`.
     * `colgroup` - Column widths if you need to override.
-                   Supply as list `[100, nil, nil, 200, nil, 200]`
+                   Supply as list: `[100, nil, nil, 200, nil, 200]`
 
   """
   def tablize(_, [], _, _), do: "<p>#{gettext("No results")}</p>" |> Phoenix.HTML.raw
