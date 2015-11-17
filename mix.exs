@@ -1,8 +1,8 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.11.0-dev"
-  @description "Boilerplate for Twined applications. Experimental, do not use."
+  @version "0.11.0"
+  @description "Boilerplate for Twined applications."
 
   def project do
     [
@@ -40,6 +40,8 @@ defmodule Brando.Mixfile do
       {:gettext, "~> 0.7.0"},
       {:httpoison, "~> 0.6"},
       {:mogrify, github: "twined/mogrify"},
+      {:phoenix, "~> 1.0"},
+      {:phoenix_html, "~> 2.1"},
       {:poison, "~> 1.3"},
       {:postgrex, "~> 0.9"},
       {:scrivener, "~> 1.1"},
@@ -50,9 +52,7 @@ defmodule Brando.Mixfile do
       {:dogma, github: "lpil/dogma", only: :dev},
 
       # Test dependencies
-      {:phoenix, "~> 1.0", only: :test},
       {:phoenix_ecto, "~> 1.1", only: :test},
-      {:phoenix_html, "~> 2.1", only: :test},
       {:blacksmith, "~> 0.1.2", only: :test},
       {:excoveralls, "~> 0.4", only: :test},
 
