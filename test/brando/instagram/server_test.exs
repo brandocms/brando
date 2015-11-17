@@ -1,22 +1,16 @@
 defmodule Brando.InstagramServerTest do
   use ExUnit.Case, async: false
 
-  setup do
-    server = case Brando.Instagram.Server.start_link do
-      {:ok, server} -> server
-      {:error, {:already_started, server}} -> server
-    end
-    {:ok, server: server}
-  end
-
-  test "init", %{server: server} do
-    {:ok, {{:interval, pid}, _, fetch}} = Brando.Instagram.Server.init(server)
+  test "init" do
+    {:ok, server} = Brando.Instagram.Server.start_link
+    {:ok, {{:interval, pid}, _, {:user, "dummy_user"}}} = Brando.Instagram.Server.init(server)
     assert is_reference(pid)
-    assert fetch in [{:user, "dummy_user"}, {:tags, ["haraball"]}]
     assert_receive :poll
+    Brando.Instagram.Server.stop(server)
   end
 
-  test "stop", %{server: server} do
+  test "stop" do
+    {:ok, server} = Brando.Instagram.Server.start_link
     assert Brando.Instagram.Server.stop(server) == :ok
   end
 end
