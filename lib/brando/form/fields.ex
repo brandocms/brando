@@ -270,8 +270,8 @@ defmodule Brando.Form.Fields do
         gettext("is invalid")
       "is reserved"        ->
         gettext("is reserved")
-      {"should be at least %{count} characters", count: length} ->
-        gettext("should be at least %{count} characters", count: length)
+      {"should be at least %{count} characters", count: len} ->
+        gettext("should be at least %{count} characters", count: len)
       err                  ->
         is_binary(err) && err || inspect(err)
     end
@@ -282,8 +282,8 @@ defmodule Brando.Form.Fields do
   the first
   """
   @spec concat_fields(String.t, String.t) :: String.t
-  def concat_fields(wrapped_field, label), do:
-    [label, wrapped_field]
+  def concat_fields(wrapped_field, label_field), do:
+    [label_field, wrapped_field]
 
   @doc """
   Returns a div with class=`class` and `content`
@@ -834,8 +834,8 @@ defmodule Brando.Form.Fields do
   @doc """
   Parse and return `opts` looking for label
   """
-  def get_label(%{label: label}) do
-    label
+  def get_label(%{label: label_text}) do
+    label_text
   end
   def get_label(%{name: name, model: model}) do
     model.__field__(name)

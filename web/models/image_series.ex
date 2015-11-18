@@ -99,9 +99,9 @@ defmodule Brando.ImageSeries do
   @doc """
   Before insert callback. Copies the series' category config.
   """
-  def inherit_configuration(changeset) do
-    category = Brando.repo.get(ImageCategory, changeset.changes.image_category_id)
-    put_change(changeset, :cfg, category.cfg)
+  def inherit_configuration(cs) do
+    category = Brando.repo.get(ImageCategory, cs.changes.image_category_id)
+    put_change(cs, :cfg, category.cfg)
   end
 
   @doc """

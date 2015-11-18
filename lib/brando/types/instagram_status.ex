@@ -4,7 +4,7 @@ defmodule Brando.Type.InstagramStatus do
   """
 
   @behaviour Ecto.Type
-  @status_codes [deleted: 0, rejected: 1, approved: 2, download_failed: 3]
+  @ig_status_codes [deleted: 0, rejected: 1, approved: 2, download_failed: 3]
 
   @doc """
   Returns the internal type representation of our `Role` type for pg
@@ -16,7 +16,7 @@ defmodule Brando.Type.InstagramStatus do
   """
   def cast(atom) when is_atom(atom), do: {:ok, atom}
   def cast(binary) when is_binary(binary) do
-    [atom] = for {k, v} <- @status_codes, v == String.to_integer(binary), do: k
+    [atom] = for {k, v} <- @ig_status_codes, v == String.to_integer(binary), do: k
     {:ok, atom}
   end
   def cast(status) when is_integer(status) do
@@ -56,7 +56,7 @@ defmodule Brando.Type.InstagramStatus do
   When dumping data to the database we expect a `list`, but check for
   other options as well.
   """
-  def dump(atom) when is_atom(atom), do: {:ok, @status_codes[atom]}
+  def dump(atom) when is_atom(atom), do: {:ok, @ig_status_codes[atom]}
   def dump(binary) when is_binary(binary), do: {:ok, String.to_integer(binary)}
   def dump(integer) when is_integer(integer), do: {:ok, integer}
   def dump(_) do

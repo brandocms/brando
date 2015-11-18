@@ -140,9 +140,9 @@ defmodule Brando.Utils do
   @doc """
   Convert string map to struct
   """
-  def stringy_struct(struct, params) when is_map(params) do
+  def stringy_struct(string_struct, params) when is_map(params) do
     keys =
-      struct
+      string_struct
       |> struct([])
       |> Map.from_struct
       |> Map.keys
@@ -153,7 +153,7 @@ defmodule Brando.Utils do
       |> Map.take(keys)
       |> Enum.map(fn {key, value} -> {String.to_atom(key), value} end)
 
-    struct(struct, params)
+    struct(string_struct, params)
   end
 
   @doc false
