@@ -67,10 +67,12 @@ defmodule Brando.HTML.Tablize do
     table = ~s(<table class="table"#{filter_attr}>#{colgroup}#{table_header}#{table_body}</table>)
     filter =
       if opts[:filter] do
-        ~s(<div class="filter-input-wrapper pull-right">
-             <i class="fa fa-fw fa-search m-r-sm m-l-xs"></i>
-             <input type="text" placeholder="Filter" id="filter-input" />
-           </div>)
+        """
+        <div class="filter-input-wrapper pull-right">
+          <i class="fa fa-fw fa-search m-r-sm m-l-xs"></i>
+          <input type="text" placeholder="Filter" id="filter-input" />
+        </div>
+        """
       else
         ""
       end
