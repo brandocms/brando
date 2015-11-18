@@ -106,7 +106,7 @@ defmodule Brando.UtilsTest do
     refute active_path(conn, "/some/other/link")
   end
 
-  test "img/2" do
+  test "img_url/2" do
     img = %{sizes: %{"thumb" => "images/thumb/file.jpg"}}
     assert img_url(img, :thumb)
            == "images/thumb/file.jpg"
@@ -120,6 +120,9 @@ defmodule Brando.UtilsTest do
            == "images/thumb/file.jpg"
     assert img_url(img, "thumb", [default: "default.jpg"])
            == "images/thumb/file.jpg"
+    assert_raise ArgumentError, fn ->
+      img_url(img, :notasize, [default: "default.jpg"])
+    end
   end
 
   test "get_now" do
