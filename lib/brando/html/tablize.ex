@@ -4,7 +4,7 @@ defmodule Brando.HTML.Tablize do
   """
 
   import Brando.Gettext
-  import Brando.HTML, only: [check_or_x: 1, zero_pad: 1]
+  import Brando.HTML, only: [check_or_x: 1, zero_pad: 1, can_render?: 2]
   import Brando.HTML.Inspect, only: [inspect_field: 3]
 
   @narrow_fields [:language, :id, :status]
@@ -139,43 +139,74 @@ defmodule Brando.HTML.Tablize do
             fields
             |> Enum.map(&(do_td(&1, child, module.__schema__(:type, &1), opts)))
             |> Enum.join
-          ~s(<tr data-parent-id="#{record.id}" class="child hidden"><td></td>#{tr_content}#{render_dropdowns(conn, dropdowns, child)}</tr>)
+
+          """
+          <tr data-parent-id="#{record.id}" class="child hidden">
+            <td></td>
+            #{tr_content}
+            #{render_dropdowns(conn, dropdowns, child)}
+          </tr>
+          """
         end
         Enum.join(child_rows)
     end
     expander =
       if children do
-        "<td><a href=\"\" class=\"expand-page-children\" data-id=\"#{record.id}\"><i class=\"fa fa-plus\"></i></td>"
+        """
+        <td>
+          <a href=" class="expand-page-children" data-id="#{record.id}">
+            <i class="fa fa-plus"></i>
+          </a>
+        </td>
+        """
       else
         "<td></td>"
       end
     row = "<tr>#{expander}#{tr_content}#{render_dropdowns(conn, dropdowns, record)}</tr>"
-    if children do
-      row <> children
-    else
-      row
-    end
+    children && row <> children || row
   end
 
   defp do_td(:id, record, _type, _opts) do
-    ~s(<td data-field="id" class="text-small text-center text-mono text-muted">##{zero_pad(Map.get(record, :id))}</td>)
+    """
+    <td data-field="id" class="text-small text-center text-mono text-muted">
+      ##{zero_pad(Map.get(record, :id))}
+    </td>
+    """
   end
 
   defp do_td(field, record, type, opts) do
     unless field in Keyword.get(opts, :hide, []) do
       if field in Keyword.get(opts, :check_or_x, []) do
-        ~s(<td data-field="#{field}" class="text-center">#{check_or_x(Map.get(record, field))}</td>)
+        """
+        <td data-field="#{field}" class="text-center">
+          #{check_or_x(Map.get(record, field))}
+        </td>
+        """
       else
-        ~s(<td data-field="#{field}">#{inspect_field(field, type, Map.get(record, field))}</td>)
+        """
+        <td data-field="#{field}">
+          #{inspect_field(field, type, Map.get(record, field))}
+        </td>
+        """
       end
     end
   end
 
   defp render_thead(fields, module, opts) do
-    rendered_ths = fields
+    rendered_ths =
+      fields
       |> Enum.map(&(do_th(&1, module, opts[:hide])))
       |> Enum.join
-    ~s(<thead><tr><th></th>#{rendered_ths}<th class="text-center">☰</th></tr></thead>)
+
+    """
+    <thead>
+      <tr>
+        <th></th>
+        #{rendered_ths}
+        <th class="text-center">☰</th>
+      </tr>
+    </thead>
+    """
   end
 
   defp do_th(:id, _module, _hidden_fields) do
@@ -193,42 +224,54 @@ defmodule Brando.HTML.Tablize do
   end
 
   defp render_dropdowns(conn, dropdowns, record) do
-    dropdowns = for dropdown <- dropdowns do
+    dropdowns = render_dropdowns_content(conn, dropdowns, record)
+    """
+    <td class="text-center">
+      <div class="dropdown">
+        <label class="dropdown-toggle" data-toggle="dropdown">
+          <input type="checkbox" class="o-c bars">
+        </label>
+        <ul class="dropdown-menu" style="right: 0; left: auto;">
+          #{Enum.join(dropdowns)}
+        </ul>
+      </div>
+    </td>
+    """
+  end
+
+  defp render_dropdowns_content(conn, dropdowns, record) do
+    for dropdown <- dropdowns do
       case tuple_size(dropdown) do
         5 -> {desc, icon, helper, action, param} = dropdown
         6 -> {desc, icon, helper, action, param, role} = dropdown
       end
-      fun_params = case param do
-        nil -> [Brando.endpoint, action]
-        param when is_list(param) ->
-          params = Enum.map(param, fn(p) -> Map.get(record, p) end)
-          [Brando.endpoint, action, params] |> List.flatten
-        param ->
-          [Brando.endpoint, action, Map.get(record, param)]
-      end
 
+      fun_params = get_function_params(param, record, action)
       url = apply(Brando.helpers, helper, fun_params)
-      if Brando.HTML.can_render?(conn, %{role: role}) do
-        "<li>" <>
-        "  <a href=\"" <> url <> "\">" <>
-        "    <i class=\"fa " <> icon <> " fa-fw m-r-sm\"> </i>" <>
-             desc <>
-        "  </a>" <>
-        "</li>"
+
+      if can_render?(conn, %{role: role}) do
+        """
+        <li>
+          <a href="#{url}>
+            <i class="fa #{icon} fa-fw m-r-sm"> </i>
+             #{desc}
+          </a>
+        </li>
+        """
       else
         ""
       end
     end
+  end
 
-    "<td class=\"text-center\">" <>
-    "  <div class=\"dropdown\">" <>
-    "    <label class=\"dropdown-toggle\" data-toggle=\"dropdown\">" <>
-    "      <input type=\"checkbox\" class=\"o-c bars\">" <>
-    "    </label>" <>
-    "    <ul class=\"dropdown-menu\" style=\"right: 0; left: auto;\">" <>
-          Enum.join(dropdowns) <>
-    "    </ul>" <>
-    "  </div>" <>
-    "</td>"
+  defp get_function_params(param, record, action) do
+    case param do
+      nil -> [Brando.endpoint, action]
+      param when is_list(param) ->
+        params = Enum.map(param, &Map.get(record, &1))
+        [Brando.endpoint, action, params] |> List.flatten
+      param ->
+        [Brando.endpoint, action, Map.get(record, param)]
+    end
   end
 end

@@ -108,11 +108,11 @@ defmodule Brando.Images.Utils do
     upload_path = Map.get(cfg, :upload_path)
 
     sizes = for {size_name, size_cfg} <- Map.get(cfg, :sizes) do
-      size_dir = Path.join([file_path, to_string(size_name)])
-      sized_image = Path.join([size_dir, filename])
+      postfixed_size_dir = Path.join([file_path, to_string(size_name)])
+      sized_image = Path.join([postfixed_size_dir, filename])
       sized_path = Path.join([upload_path, to_string(size_name), filename])
 
-      File.mkdir_p(size_dir)
+      File.mkdir_p(postfixed_size_dir)
       create_image_size(file, sized_image, size_cfg)
       {size_name, sized_path}
     end

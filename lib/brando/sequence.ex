@@ -72,7 +72,7 @@ defmodule Brando.Sequence do
   end
 
   @doc false
-  def controller(model, filter \\ nil) do
+  def controller(model_module, filter \\ nil) do
     quote do
       if unquote(filter) do
         @doc """
@@ -94,7 +94,7 @@ defmodule Brando.Sequence do
         Render the :sequence view with `filter`
         """
         def sequence(conn, %{"filter" => filter}) do
-          {:model, model} = unquote(model)
+          {:model, model_module} = unquote(model_module)
           items = filter_function(filter)
           conn
           |> assign(:items, items)
@@ -106,7 +106,7 @@ defmodule Brando.Sequence do
         Render the :sequence view.
         """
         def sequence(conn, _) do
-          {:model, model} = unquote(model)
+          {:model, model_module} = unquote(model_module)
 
           conn
           |> assign(:items, filter_function())
@@ -114,9 +114,9 @@ defmodule Brando.Sequence do
         end
       else
         def sequence(conn, _) do
-          {:model, model} = unquote(model)
+          {:model, model_module} = unquote(model_module)
           conn
-          |> assign(:items, Brando.repo.all(model))
+          |> assign(:items, Brando.repo.all(model_module))
           |> render(:sequence)
         end
       end
@@ -125,8 +125,8 @@ defmodule Brando.Sequence do
       Sequence model and render :sequence post
       """
       def sequence_post(conn, %{"order" => ids}) do
-        {:model, model} = unquote(model)
-        model.sequence(ids, Range.new(0, length(ids)))
+        {:model, model_module} = unquote(model_module)
+        model_module.sequence(ids, Range.new(0, length(ids)))
         conn
         |> render(:sequence_post)
       end

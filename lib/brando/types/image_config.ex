@@ -41,8 +41,8 @@ defmodule Brando.Type.ImageConfig do
   Load from database. We receive it as a map since Postgrex does the conversion.
   """
   def load(val) when is_map(val) do
-    struct = stringy_struct(Brando.Type.ImageConfig, val)
-    {:ok, struct}
+    string_struct = stringy_struct(Brando.Type.ImageConfig, val)
+    {:ok, string_struct}
   end
 
   @doc """
