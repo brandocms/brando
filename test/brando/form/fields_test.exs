@@ -177,6 +177,19 @@ defmodule Brando.Form.FieldsTest do
     assert fg =~ "has-error"
     assert fg =~ "fa-exclamation-circle"
     assert fg =~ "my-class"
+
+    opts = %{language: "nb", form_group_class: "my-class"}
+    fg = F.form_group("1234", "name", opts, nil)
+    fg = fg |> Enum.join
+    assert fg =~ "required"
+    refute fg =~ "has-error"
+    assert fg =~ "my-class"
+
+    fg = F.form_group("1234", "name", opts, ["must be unique"])
+    fg = fg |> Enum.join
+    assert fg =~ "has-error"
+    assert fg =~ "fa-exclamation-circle"
+    assert fg =~ "my-class"
   end
 
   test "wrap/2" do
