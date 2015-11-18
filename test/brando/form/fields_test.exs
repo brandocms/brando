@@ -151,6 +151,32 @@ defmodule Brando.Form.FieldsTest do
     fg = fg |> Enum.join
     assert fg =~ "has-error"
     assert fg =~ "fa-exclamation-circle"
+
+    opts = %{required: false, language: "nb", form_group_class: "my-class"}
+    fg = F.form_group("1234", "name", opts, nil)
+    fg = fg |> Enum.join
+    refute fg =~ "required"
+    refute fg =~ "has-error"
+    assert fg =~ "my-class"
+
+    fg = F.form_group("1234", "name", opts, ["must be unique"])
+    fg = fg |> Enum.join
+    assert fg =~ "has-error"
+    assert fg =~ "fa-exclamation-circle"
+    assert fg =~ "my-class"
+
+    opts = %{required: true, language: "nb", form_group_class: "my-class"}
+    fg = F.form_group("1234", "name", opts, nil)
+    fg = fg |> Enum.join
+    assert fg =~ "required"
+    assert fg =~ "has-error"
+    assert fg =~ "my-class"
+
+    fg = F.form_group("1234", "name", opts, ["must be unique"])
+    fg = fg |> Enum.join
+    assert fg =~ "has-error"
+    assert fg =~ "fa-exclamation-circle"
+    assert fg =~ "my-class"
   end
 
   test "wrap/2" do
@@ -429,5 +455,23 @@ defmodule Brando.Form.FieldsTest do
               ["<input checked=\"checked\" name=\"checks_test[]\" " <>
               "type=\"checkbox\" value=\"4\">", "Superuser"], "</label>"]],
               "</div>"]]]
+  end
+
+  test "get_selected" do
+    assert F.get_selected("a", "a")
+    assert F.get_selected("a", ["a", "b"])
+    refute F.get_selected("c", ["a", "b"])
+  end
+
+  test "get_checked" do
+    assert F.get_checked("a", "a")
+    assert F.get_checked("a", ["a", "b"])
+    refute F.get_checked("c", ["a", "b"])
+  end
+
+  test "get_placeholder" do
+    assert F.get_placeholder(%{placeholder: "test"}) == "test"
+    assert F.get_placeholder(%{placeholder: nil}) == nil
+    assert F.get_placeholder(%{name: :email, model: Brando.User}) == "Email"
   end
 end
