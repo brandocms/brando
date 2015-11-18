@@ -59,6 +59,21 @@ defmodule Brando.Pages.ControllerTest do
     assert html_response(conn, 200) =~ "Header"
   end
 
+  test "rerender" do
+    user = create_user
+
+    Page.create(@page_params, user)
+
+    conn =
+      :get
+      |> call("/admin/pages/rerender")
+      |> with_user
+      |> send_request
+
+    assert redirected_to(conn, 302) =~ "/admin/pages"
+    assert get_flash(conn, :notice) == "Pages re-rendered"
+  end
+
   test "new" do
     conn =
       :get
