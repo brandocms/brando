@@ -319,15 +319,22 @@ defmodule Brando.Utils do
   def img_url(image_field, size, opts \\ [])
   def img_url(nil, size, opts) do
     default = Keyword.get(opts, :default, nil)
-    default && Brando.Images.Utils.size_dir(default, size)
-            || ""
+    default && Brando.Images.Utils.size_dir(default, size) || ""
   end
 
   def img_url(image_field, size, opts) do
     size = is_atom(size) && Atom.to_string(size) || size
     prefix = Keyword.get(opts, :prefix, nil)
+    if not Map.has_key?(image_field.sizes, size) do
+      raise ArgumentError, message: ~s(
+        Wrong argument for img_url. Size `#{size}` does not exist for
+        #{inspect(image_field)}.
+      )
+    end
+
     url = prefix && Path.join([prefix, image_field.sizes[size]])
                  || image_field.sizes[size]
+
     case Map.get(image_field, :optimized) do
       true  -> Brando.Images.Utils.optimized_filename(url)
       false -> url
