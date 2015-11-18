@@ -42,7 +42,7 @@ defmodule Brando.Admin.PostController do
     end
 
     conn
-    |> put_flash(:notice, gettext("Pages re-rendered"))
+    |> put_flash(:notice, gettext("Posts re-rendered"))
     |> redirect(to: helpers(conn).admin_post_path(conn, :index))
   end
 
