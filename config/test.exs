@@ -80,5 +80,7 @@ config :brando, Brando.Instagram,
   sleep: 0,
   auto_approve: true
 
+config :comeonin, :bcrypt_log_rounds, 4
+config :comeonin, :pbkdf2_rounds, 1
 # Print only warnings and errors during test
 config :logger, level: :warn
