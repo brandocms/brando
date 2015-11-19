@@ -25,7 +25,6 @@ defmodule Brando.Auth.ControllerTest do
       |> with_session
       |> send_request
     assert redirected_to(conn, 302) =~ "/admin"
-
   end
 
   test "login post failed" do
