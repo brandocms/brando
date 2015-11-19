@@ -58,7 +58,7 @@ defmodule Brando.SessionController do
   end
 
   defp sleep(conn) do
-    :timer.sleep(2_000)
+    :timer.sleep(Brando.config(:auth_sleep_duration))
     conn
   end
 end
