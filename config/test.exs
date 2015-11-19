@@ -40,6 +40,8 @@ config :brando, Brando.Images, [
       args: "%{filename} %{new_filename}"]
     ]]
 
+config :brando, :app_name, "MyApp"
+config :brando, :auth_sleep_duration, 0
 config :brando, :router, RouterHelper.TestRouter
 config :brando, :endpoint, Brando.Integration.Endpoint
 config :brando, :repo, Brando.Integration.TestRepo
@@ -80,7 +82,11 @@ config :brando, Brando.Instagram,
   sleep: 0,
   auto_approve: true
 
+config :brando, Brando.Type.Role,
+  roles: %{staff: 1, admin: 2, superuser: 4}
+
 config :comeonin, :bcrypt_log_rounds, 4
 config :comeonin, :pbkdf2_rounds, 1
+
 # Print only warnings and errors during test
 config :logger, level: :warn
