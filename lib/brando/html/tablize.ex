@@ -11,6 +11,12 @@ defmodule Brando.HTML.Tablize do
   @narrow_types [:integer, :boolean]
   @date_fields [:inserted_at, :updated_at, :published_at, :deleted_at]
 
+  defstruct records: nil,
+            module: nil,
+            conn: nil,
+            dropdowns: nil,
+            opts: nil
+
   @doc """
   Converts `records` into a formatted table with dropdown menus.
 
@@ -51,19 +57,26 @@ defmodule Brando.HTML.Tablize do
   def tablize(_, [], _, _), do: "<p>#{gettext("No results")}</p>" |> Phoenix.HTML.raw
   def tablize(_, nil, _, _), do: "<p>#{gettext("No results")}</p>" |> Phoenix.HTML.raw
   def tablize(conn, records, dropdowns, opts) do
-    module = List.first(records).__struct__
+    tablize_opts = %Brando.HTML.Tablize{
+      module: List.first(records).__struct__,
+      dropdowns: dropdowns,
+      records: records,
+      conn: conn,
+      opts: opts
+    }
+
     colgroup = if opts[:colgroup] do
       render_colgroup(:manual, opts[:colgroup])
     else
-      render_colgroup(:auto, module, opts)
+      render_colgroup(:auto, tablize_opts)
     end
     filter_attr =
       if opts[:filter], do:
         ~s( data-filter-table="true"),
       else: ""
 
-    table_header = render_thead(module.__keys__, module, opts)
-    table_body = render_tbody(module.__keys__, records, module, conn, dropdowns, opts)
+    table_header = render_thead(tablize_opts)
+    table_body = render_tbody(tablize_opts)
     table = ~s(<table class="table"#{filter_attr}>#{colgroup}#{table_header}#{table_body}</table>)
     filter =
       if opts[:filter] do
@@ -79,7 +92,7 @@ defmodule Brando.HTML.Tablize do
     Phoenix.HTML.raw([filter|table])
   end
 
-  defp render_colgroup(:auto, module, opts) do
+  defp render_colgroup(:auto, %{module: module, opts: opts}) do
     fields =
       opts[:hide] && module.__keys__ -- opts[:hide] || module.__keys__
     narrow_fields =
@@ -109,62 +122,70 @@ defmodule Brando.HTML.Tablize do
     "<colgroup>" <> IO.iodata_to_binary(colgroups) <> "</colgroup>"
   end
 
-  defp render_tbody(fields, records, module, conn, dropdowns, opts) do
+  defp render_tbody(%{records: records, opts: opts} = tablize_opts) do
     if split_by = opts[:split_by] do
-      tbodies = for {_, split_recs} <- records |> Brando.Utils.split_by(split_by) do
-        do_render_tbody(fields, split_recs, module, conn, dropdowns, opts)
+      tbodies = for {_, split_recs} <- Brando.Utils.split_by(records, split_by) do
+        do_render_tbody(split_recs, tablize_opts)
       end
-      tbodies |> Enum.join("<tr class=\"splitter\"><td></td></tr>")
+      Enum.join(tbodies, "<tr class=\"splitter\"><td></td></tr>")
     else
-      do_render_tbody(fields, records, module, conn, dropdowns, opts)
+      do_render_tbody(records, tablize_opts)
     end
   end
 
-  defp do_render_tbody(fields, records, module, conn, dropdowns, opts) do
-    rendered_trs =
-      records
-      |> Enum.map(&(do_tr(fields, &1, module, conn, dropdowns, opts)))
-      |> Enum.join
-    "<tbody>#{rendered_trs}</tbody>"
+  defp do_render_tbody(records, tablize_opts) do
+    records
+    |> Enum.map(&(do_tr(&1, tablize_opts)))
+    |> Enum.join
+    |> wrap_with("<tbody>", "</tbody>")
   end
 
-  defp do_tr(fields, record, module, conn, dropdowns, opts) do
-    tr_content = fields
-      |> Enum.map(&(do_td(&1, record, module.__schema__(:type, &1), opts)))
-      |> Enum.join
-    children = case Map.get(record, opts[:children]) do
+  defp wrap_with(content, pre, post) do
+    "#{pre}#{content}#{post}"
+  end
+
+  defp render_tr_content(record, %{module: module, opts: opts}) do
+    module.__keys__
+    |> Enum.map(&(do_td(&1, record, module.__schema__(:type, &1), opts)))
+    |> Enum.join
+  end
+
+  defp render_child_rows(children, parent, tablize_opts) do
+    for child <- children do
+      tr_content = render_tr_content(child, tablize_opts)
+      """
+      <tr data-parent-id="#{parent.id}" class="child hidden">
+        <td></td>
+        #{tr_content}
+        #{render_dropdowns(child, tablize_opts)}
+      </tr>
+      """
+    end
+  end
+
+  defp render_children(record, %{opts: opts} = tablize_opts) do
+    case Map.get(record, opts[:children]) do
       nil -> nil
       [] -> nil
       children ->
-        child_rows = for child <- children do
-          tr_content =
-            fields
-            |> Enum.map(&(do_td(&1, child, module.__schema__(:type, &1), opts)))
-            |> Enum.join
-
-          """
-          <tr data-parent-id="#{record.id}" class="child hidden">
-            <td></td>
-            #{tr_content}
-            #{render_dropdowns(conn, dropdowns, child)}
-          </tr>
-          """
-        end
-        Enum.join(child_rows)
+        children
+        |> render_child_rows(record, tablize_opts)
+        |> Enum.join
     end
-    expander =
-      if children do
-        """
-        <td>
-          <a href=" class="expand-page-children" data-id="#{record.id}">
-            <i class="fa fa-plus"></i>
-          </a>
-        </td>
-        """
-      else
-        "<td></td>"
-      end
-    row = "<tr>#{expander}#{tr_content}#{render_dropdowns(conn, dropdowns, record)}</tr>"
+  end
+
+  defp do_tr(record, tablize_opts) do
+    tr_content = render_tr_content(record, tablize_opts)
+    children   = render_children(record, tablize_opts)
+    expander   = render_expander(record, children)
+    dropdowns  = render_dropdowns(record, tablize_opts)
+    row = """
+    <tr>
+      #{expander}
+      #{tr_content}
+      #{dropdowns}
+    </tr>
+    """
     children && row <> children || row
   end
 
@@ -194,7 +215,22 @@ defmodule Brando.HTML.Tablize do
     end
   end
 
-  defp render_thead(fields, module, opts) do
+  defp render_expander(_, nil) do
+    "<td></td>"
+  end
+
+  defp render_expander(record, _) do
+    """
+    <td>
+      <a href=" class="expand-page-children" data-id="#{record.id}">
+        <i class="fa fa-plus"></i>
+      </a>
+    </td>
+    """
+  end
+
+  defp render_thead(%{module: module, opts: opts}) do
+    fields = module.__keys__
     rendered_ths =
       fields
       |> Enum.map(&(do_th(&1, module, opts[:hide])))
@@ -225,8 +261,8 @@ defmodule Brando.HTML.Tablize do
     end
   end
 
-  defp render_dropdowns(conn, dropdowns, record) do
-    dropdowns = render_dropdowns_content(conn, dropdowns, record)
+  defp render_dropdowns(record, tablize_opts) do
+    dropdowns = render_dropdowns_content(record, tablize_opts)
     """
     <td class="text-center">
       <div class="dropdown">
@@ -241,7 +277,7 @@ defmodule Brando.HTML.Tablize do
     """
   end
 
-  defp render_dropdowns_content(conn, dropdowns, record) do
+  defp render_dropdowns_content(record, %{conn: conn, dropdowns: dropdowns}) do
     for dropdown <- dropdowns do
       case tuple_size(dropdown) do
         5 -> {desc, icon, helper, action, param} = dropdown
