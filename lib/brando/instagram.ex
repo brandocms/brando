@@ -12,6 +12,9 @@ defmodule Brando.Instagram do
   These are the options for `config :brando, Brando.Instagram`:
 
     * `client_id`: Your instagram client id. Find this in the developer section.
+    * `username`: Your instagram username. Needed for auth_token retrieval.
+    * `password`: Your instagram password. Needed for auth_token retrieval.
+    * `token_file`: Where to store your auth_token.
     * `interval`: How often we poll for new images
     * `auto_approve`: Set `approved` to `true` on grabbed images.
     * `fetch`: What to fetch.
