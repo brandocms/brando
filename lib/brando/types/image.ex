@@ -3,6 +3,8 @@ defmodule Brando.Type.Image do
   Defines a type for an image field.
   """
 
+  @type t :: %__MODULE__{}
+
   @behaviour Ecto.Type
 
   defstruct title: nil,

@@ -3,6 +3,8 @@ defmodule Brando.HTML.Tablize do
   Displays model data as a table.
   """
 
+  @type dropdown :: {String.t, String.t, atom, atom, atom | [atom]}
+
   import Brando.Gettext
   import Brando.HTML, only: [check_or_x: 1, zero_pad: 1, can_render?: 2]
   import Brando.HTML.Inspect, only: [inspect_field: 3]
@@ -54,6 +56,7 @@ defmodule Brando.HTML.Tablize do
                    Supply as list: `[100, nil, nil, 200, nil, 200]`
 
   """
+  @spec tablize(Plug.Conn.t, [Type] | [] | nil, dropdown, Keyword.t) :: {:safe, iodata}
   def tablize(_, [], _, _), do: "<p>#{gettext("No results")}</p>" |> Phoenix.HTML.raw
   def tablize(_, nil, _, _), do: "<p>#{gettext("No results")}</p>" |> Phoenix.HTML.raw
   def tablize(conn, records, dropdowns, opts) do
@@ -65,11 +68,13 @@ defmodule Brando.HTML.Tablize do
       opts: opts
     }
 
-    colgroup = if opts[:colgroup] do
-      render_colgroup(:manual, opts[:colgroup])
-    else
-      render_colgroup(:auto, tablize_opts)
-    end
+    colgroup =
+      if opts[:colgroup] do
+        render_colgroup(:manual, opts[:colgroup])
+      else
+        render_colgroup(:auto, tablize_opts)
+      end
+
     filter_attr =
       if opts[:filter], do:
         ~s( data-filter-table="true"),
@@ -77,7 +82,14 @@ defmodule Brando.HTML.Tablize do
 
     table_header = render_thead(tablize_opts)
     table_body = render_tbody(tablize_opts)
-    table = ~s(<table class="table"#{filter_attr}>#{colgroup}#{table_header}#{table_body}</table>)
+    table = """
+      <table class="table"#{filter_attr}>
+        #{colgroup}
+        #{table_header}
+        #{table_body}
+      </table>
+      """
+
     filter =
       if opts[:filter] do
         """
@@ -95,39 +107,42 @@ defmodule Brando.HTML.Tablize do
   defp render_colgroup(:auto, %{module: module, opts: opts}) do
     fields =
       opts[:hide] && module.__keys__ -- opts[:hide] || module.__keys__
+
     narrow_fields =
       opts[:check_or_x] && @narrow_fields ++ opts[:check_or_x] || @narrow_fields
+
     colgroups = for f <- fields do
       type = module.__schema__(:type, f)
       cond do
-        type in @narrow_types  -> "<col style=\"width: 10px;\">"
-        f in narrow_fields     -> "<col style=\"width: 10px;\">"
-        f in @date_fields      -> "<col style=\"width: 140px;\">"
-        f == :creator          -> "<col style=\"width: 180px;\">"
-        true                   -> "<col>"
+        type in @narrow_types  -> ~s(<col style="width: 10px;">)
+        f in narrow_fields     -> ~s(<col style="width: 10px;">)
+        f in @date_fields      -> ~s(<col style="width: 140px;">)
+        f == :creator          -> ~s(<col style="width: 180px;">)
+        true                   -> ~s(<col>)
       end
     end
     # add expander
-    colgroups = ["<col style=\"width: 10px;\">"|colgroups]
+    colgroups = [~s(<col style="width: 10px;">)|colgroups]
     # add menu col
-    colgroups = colgroups ++ "<col style=\"width: 80px;\">"
-    "<colgroup>" <> IO.iodata_to_binary(colgroups) <> "</colgroup>"
+    colgroups = colgroups ++ ~s(<col style="width: 80px;">)
+    "<colgroup>#{IO.iodata_to_binary(colgroups)}</colgroup>"
   end
 
   defp render_colgroup(:manual, list) do
     colgroups = for col <- list do
-      col && "<col style=\"width: #{col}px;\">" || "<col>"
+      col && ~s(<col style="width: #{col}px;">) || "<col>"
     end
-    colgroups = colgroups ++ "<col style=\"width: 80px;\">"
-    "<colgroup>" <> IO.iodata_to_binary(colgroups) <> "</colgroup>"
+    colgroups = colgroups ++ ~s(<col style="width: 80px;">)
+    "<colgroup>#{IO.iodata_to_binary(colgroups)}</colgroup>"
   end
 
   defp render_tbody(%{records: records, opts: opts} = tablize_opts) do
     if split_by = opts[:split_by] do
-      tbodies = for {_, split_recs} <- Brando.Utils.split_by(records, split_by) do
-        do_render_tbody(split_recs, tablize_opts)
-      end
-      Enum.join(tbodies, "<tr class=\"splitter\"><td></td></tr>")
+      tbodies =
+        for {_, split_recs} <- Brando.Utils.split_by(records, split_by) do
+          do_render_tbody(split_recs, tablize_opts)
+        end
+      Enum.join(tbodies, ~s(<tr class="splitter"><td></td></tr>))
     else
       do_render_tbody(records, tablize_opts)
     end

@@ -24,6 +24,7 @@ defmodule Brando.Utils do
         "test-with-spaces.jpeg"
 
   """
+  @spec slugify_filename(String.t) :: String.t
   def slugify_filename(filename) do
     {basename, ext} = split_filename(filename)
     slugged_filename = slugify(basename)
@@ -34,23 +35,26 @@ defmodule Brando.Utils do
   Generates a random basename for `filename`.
   Keeps the original extension.
   """
+  @spec random_filename(String.t) :: String.t
   def random_filename(filename) do
     ext = Path.extname(filename)
-    rnd_basename =
-      ({filename, :os.timestamp}
+    rnd_basename_1 =
+      {filename, :os.timestamp}
       |> :erlang.phash2
       |> Integer.to_string(32)
-      |> String.downcase) <>
-      ({:os.timestamp, filename}
+      |> String.downcase
+    rnd_basename_2 =
+      {:os.timestamp, filename}
       |> :erlang.phash2
       |> Integer.to_string(32)
-      |> String.downcase)
-    "#{rnd_basename}#{ext}"
+      |> String.downcase
+    "#{rnd_basename_1}#{rnd_basename_2}#{ext}"
   end
 
   @doc """
   Adds an unique postfix to `filename`
   """
+  @spec unique_filename(String.t) :: String.t
   def unique_filename(filename) do
     ext = Path.extname(filename)
     base = String.replace(filename, ext, "")
@@ -59,7 +63,7 @@ defmodule Brando.Utils do
       |> :erlang.phash2
       |> Integer.to_string(32)
       |> String.downcase
-    base <> "-" <> rnd_basename <> ext
+    "#{base}-#{rnd_basename}#{ext}"
   end
 
   @doc """
@@ -71,6 +75,7 @@ defmodule Brando.Utils do
       iex> split_path("test/dir/filename.jpg")
       {"test/dir", "filename.jpg"}
   """
+  @spec split_path(String.t) :: {String.t, String.t}
   def split_path(file) do
     case String.contains?(file, "/") do
       true ->
@@ -80,7 +85,7 @@ defmodule Brando.Utils do
           |> List.last
         path =
           file
-          |> Path.split()
+          |> Path.split
           |> List.delete_at(-1)
           |> Path.join
         {path, filename}
@@ -98,6 +103,7 @@ defmodule Brando.Utils do
       iex> split_filename("filename.jpg")
       {"filename", ".jpg"}
   """
+  @spec split_filename(String.t) :: {String.t, String.t}
   def split_filename(filename) do
     ext = Path.extname(filename)
     basename = Path.basename(filename, ext)
@@ -156,19 +162,24 @@ defmodule Brando.Utils do
     struct(string_struct, params)
   end
 
-  @doc false
+  @doc """
+  Returns current date & time
+  """
+  @spec get_now :: String.t
   def get_now do
     Ecto.DateTime.to_string(Ecto.DateTime.local)
   end
 
-  @doc false
+  @doc """
+  Returns current date
+  """
+  @spec get_date_now :: String.t
   def get_date_now do
     Ecto.Date.to_string(Ecto.Date.local)
   end
 
   @doc """
   Split `records` by `attr`.
-
   Creates a new map with `attr`'s values as keys
   """
   def split_by(records, attr) do
@@ -225,20 +236,23 @@ defmodule Brando.Utils do
   @spec escape_and_prefix_host(Plug.Conn.t, String.t) :: String.t
   def escape_and_prefix_host(conn, media) do
     port = conn.port == 80 && "" || ":#{conn.port}"
-    "#{conn.scheme}://#{conn.host}#{port}#{media}"
-    |> URI.encode_www_form
+    url = "#{conn.scheme}://#{conn.host}#{port}#{media}"
+    URI.encode_www_form(url)
   end
 
   @doc """
   Return joined path of `file` and the :media_url config option
   as set in your app's config.exs.
   """
-  def media_url() do
+  @spec media_url :: String.t
+  def media_url do
     Brando.config(:media_url)
   end
+  @spec media_url(nil) :: String.t
   def media_url(nil) do
     Brando.config(:media_url)
   end
+  @spec media_url(String.t) :: String.t
   def media_url(file) do
     Path.join([Brando.config(:media_url), file])
   end
@@ -246,6 +260,7 @@ defmodule Brando.Utils do
   @doc """
   Get title assign from `conn`
   """
+  @spec get_page_title(Plug.Conn.t) :: String.t
   def get_page_title(%{assigns: %{page_title: title}}) do
     Brando.config(:app_name) <> " | " <> title
   end

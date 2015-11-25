@@ -15,14 +15,24 @@ defmodule Brando.Image.OptimizeTest do
   @path1 "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"
   @path2 "#{Path.expand("../../", __DIR__)}/fixtures/sample.jpg"
 
-  @series_params %{"name" => "Series name", "slug" => "series-name",
-                   "credits" => "Credits", "order" => 0}
-  @category_params %{"cfg" => %ImageConfig{}, "name" => "Test Category",
-                     "slug" => "test-category"}
-  @up_params %Upload{content_type: "image/png", filename: "sample.png",
-                     path: @path1}
-  @up_params2 %Upload{content_type: "image/jpeg", filename: "sample.jpg",
-                      path: @path2}
+  @series_params %{
+    "name" => "Series name", "slug" => "series-name",
+    "credits" => "Credits", "order" => 0}
+  @category_params %{
+    "cfg" => %ImageConfig{},
+    "name" => "Test Category",
+    "slug" => "test-category"
+  }
+  @up_params %Upload{
+    content_type: "image/png",
+    filename: "sample.png",
+    path: @path1
+  }
+  @up_params2 %Upload{
+    content_type: "image/jpeg",
+    filename: "sample.jpg",
+    path: @path2
+  }
 
   def create_category(user) do
     {:ok, category} = ImageCategory.create(@category_params, user)
