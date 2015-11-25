@@ -131,7 +131,7 @@ defmodule Brando.InstagramImage do
   defp download_image(image) do
     image_field = %Brando.Type.Image{}
     url = Map.get(image, "url_original")
-    http_lib = @cfg[:http_lib]
+    http_lib = @cfg[:api_http_lib]
 
     case http_lib.get(url) do
       {:ok, %{body: _, status_code: 404}} ->
