@@ -56,6 +56,7 @@ config :brando, :media_path, Path.join([Mix.Project.app_path, "tmp", "media"])
 config :brando, :log_dir, Path.expand("./tmp/logs")
 config :brando, :logging, disable_logging: true
 config :brando, :login_url, "/login"
+config :brando, :otp_app, :brando
 config :brando, :default_language, "nb"
 config :brando, :admin_default_language, "nb"
 config :brando, :languages, [
@@ -87,6 +88,8 @@ config :brando, Brando.Villain, extra_blocks: []
 config :brando, Brando.Instagram,
   auto_approve: true,
   client_id: "CLIENT_ID",
+  username: "username",
+  password: "password",
   http_lib: Brando.Integration.Instagram,
   interval: 1_000 * 60 * 60,
   sizes: %{
