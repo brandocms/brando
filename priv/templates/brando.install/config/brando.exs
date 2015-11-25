@@ -7,8 +7,8 @@ config :logger, :console,
   metadata: [:request_id]
 
 config :eightyfour,
-  credentials: "priv/google_token/token.json",
-  private_key: "priv/google_token/token.key.pem",
+  credentials: "priv/tokens/google/token.json",
+  private_key: "priv/tokens/google/token.key.pem",
   # find your view_id in your analytics url:
   # https://www.google.com/analytics/web/#management/Settings/a000w000pVIEW_ID/
   google_view_id: "XXXXXX",
@@ -19,6 +19,7 @@ config :eightyfour,
 config :brando,
   app_name: "<%= application_module %>",
   endpoint: <%= application_module %>.Endpoint,
+  otp_app: :<%= application_name %>,
   log_dir: Path.Expand("./logs"),
   default_language: "en",
   languages: [
@@ -78,6 +79,9 @@ config :brando, Brando.Images,
 config :brando, Brando.Instagram,
   auto_approve: true,
   client_id: "",
+  username: "",
+  password: "",
+  token_path: Path.join([~w(priv tokens instagram)]),
   http_lib: Brando.Instagram.API,
   interval: 1_000 * 60 * 60,
   sleep: 5000,
@@ -105,4 +109,3 @@ config :brando, Brando.Menu,
 config :brando, Brando.Villain,
   extra_blocks: [],
   parser: <%= application_module %>.Villain.Parser
-
