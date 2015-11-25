@@ -9,7 +9,7 @@ defmodule Brando.Instagram.API do
   alias Brando.Instagram
   alias Brando.InstagramImage
 
-  @http_lib Brando.Instagram.config(:http_lib)
+  @http_lib Brando.Instagram.config(:api_http_lib)
 
   @doc """
   Main entry from genserver's `:poll`.
@@ -128,8 +128,10 @@ defmodule Brando.Instagram.API do
         {:error, "User not found: #{username}"}
       {:ok, %{body: {:error, error}}} ->
         {:error, "Instagram API error: #{inspect(error)}"}
-      {:ok, %{body: [meta: meta], status_code: 400}} ->
-        {:error, "Instagram API 400 error: #{inspect(meta["error_message"])}"}
+      {:ok, %{body: [meta: %{"error_message" => _, "error_type" => "OAuthAccessTokenException"}], status_code: 400}} ->
+        {:error, "Instagram access_token not valid. Refreshing..."}
+      {:ok, %{body: [meta: %{"error_message" => error_message}], status_code: 400}} ->
+        {:error, "Instagram API 400 error: #{inspect(error_message)}"}
       {:ok, %{body: [{:data, multiple} | _]}} ->
         ret = for user <- multiple do
           Map.get(user, "username") == username && Map.get(user, "id") || ""
