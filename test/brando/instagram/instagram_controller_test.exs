@@ -55,7 +55,7 @@ defmodule Brando.Instagram.ControllerTest do
   end
 
   test "index" do
-    create_images
+    create_images()
     conn =
       :get
       |> call("/admin/instagram/")
