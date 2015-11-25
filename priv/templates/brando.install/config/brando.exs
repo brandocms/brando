@@ -82,8 +82,6 @@ config :brando, Brando.Instagram,
   username: "",
   password: "",
   token_path: Path.join([~w(priv tokens instagram)]),
-  api_http_lib: Brando.Instagram.API,
-  token_http_lib: HTTPoison,
   interval: 1_000 * 60 * 60,
   sleep: 5000,
   sizes: %{
