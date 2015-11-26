@@ -1,13 +1,13 @@
 defmodule Brando.Instagram.AuthToken do
   @moduledoc """
-  Fetches our user's auth_token from Instagram.
+  Fetches our user's access_token from Instagram.
 
   Since the API changes in November 2015, Instagram's API now requires you to
-  supply each API call with an `auth_token`.
+  supply each API call with an `access_token`.
   """
 
   @token_filename "token.json"
-  @http_lib Brando.Instagram.config(:token_http_lib)
+  @http_lib Brando.Instagram.config(:token_http_lib) || HTTPoison
 
   import Brando.Instagram, only: [config: 1]
 
@@ -111,7 +111,17 @@ defmodule Brando.Instagram.AuthToken do
     @http_lib.post!(location, body, headers)
   end
 
+  defp extract_token(%{body: body, status_code: 400}) do
+    raise "Could not extract token. Wrong redirect URL in app?\n\n#{body}"
+  end
+
+  defp extract_token(%{body: body, status_code: 403}) do
+    raise "Could not extract token. No access.\n\n#{body}"
+  end
+
   defp extract_token(response) do
+    require Logger
+    Logger.error(inspect(response))
     response
     |> Map.get(:headers)
     |> Enum.into(%{})
@@ -127,7 +137,7 @@ defmodule Brando.Instagram.AuthToken do
     token
   end
 
-  defp return_token(%{"auth_token" => auth_token}), do: auth_token
+  defp return_token(%{"access_token" => access_token}), do: access_token
 
   defp token_path, do:
     Application.app_dir(Brando.config(:otp_app), config(:token_path))
