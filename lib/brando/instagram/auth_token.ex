@@ -120,8 +120,6 @@ defmodule Brando.Instagram.AuthToken do
   end
 
   defp extract_token(response) do
-    require Logger
-    Logger.error(inspect(response))
     response
     |> Map.get(:headers)
     |> Enum.into(%{})
