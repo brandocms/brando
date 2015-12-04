@@ -1,4 +1,4 @@
-defmodule Brando.Instagram.AuthToken do
+defmodule Brando.Instagram.AccessToken do
   @moduledoc """
   Fetches our user's access_token from Instagram.
 
@@ -6,10 +6,10 @@ defmodule Brando.Instagram.AuthToken do
   supply each API call with an `access_token`.
   """
 
+  import Brando.Instagram, only: [config: 1]
+
   @token_filename "token.json"
   @http_lib Brando.Instagram.config(:token_http_lib) || HTTPoison
-
-  import Brando.Instagram, only: [config: 1]
 
   @doc """
   Retrieves token from Instagram.
