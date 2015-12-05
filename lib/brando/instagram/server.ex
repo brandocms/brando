@@ -8,9 +8,11 @@ defmodule Brando.Instagram.Server do
   require Logger
 
   alias Brando.Instagram
+  alias Brando.Instagram.AccessToken
   alias Brando.Instagram.API
   alias Brando.Instagram.Server.State
   alias Brando.InstagramImage
+
 
   # Public
   @doc false
@@ -20,16 +22,19 @@ defmodule Brando.Instagram.Server do
 
   @doc false
   def init(_) do
-    token = Instagram.config(:use_token) && Instagram.AuthToken.load_token() || nil
+    token = if Instagram.config(:use_token), do: AccessToken.load_token()
     filter = InstagramImage.get_last_created_time()
+
     send(self(), :poll)
     {:ok, timer} = :timer.send_interval(Instagram.config(:interval), :poll)
+
     state =
       %State{}
       |> Map.put(:timer, timer)
       |> Map.put(:filter, filter)
       |> Map.put(:access_token, token)
-      |> Map.put(:query, Instagram.config(:fetch))
+      |> Map.put(:query, Instagram.config(:query))
+
     {:ok, state}
   end
 
@@ -52,7 +57,7 @@ defmodule Brando.Instagram.Server do
   @doc false
   def handle_info(:poll, %State{} = state) do
     try do
-      {:ok, new_filter} = API.fetch(state.filter, state.query)
+      {:ok, new_filter} = API.query(state.filter, state.query)
       state = Map.put(state, :filter, new_filter)
       {:noreply, state}
     catch
@@ -109,6 +114,7 @@ defmodule Brando.Instagram.Server do
                                  postgres: nil}, _}, _) do
     Logger.error("InstagramServer: postgrex connection refused")
   end
+
   @doc false
   def terminate(_reason, _state) do
     :ok

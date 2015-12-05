@@ -297,7 +297,7 @@ Config is found in your app's `config/brando.exs`.
   * `interval`: How often we poll for new images
   * `auto_approve`: Set `approved` to `true` on grabbed images
   * `sizes`: A map of sizes to create on download.
-  * `fetch`: What to fetch.
+  * `query`: What to query.
     * `{:user, "your_name"}`
     * `{:tags, ["tag1", "tag2"]}`
 

@@ -41,30 +41,30 @@ defmodule Brando.Instagram.APITest do
       assert length(Brando.repo.all(InstagramImage)) == 1
   end
 
-  test "fetch user" do
+  test "query user" do
     # dump images
     Brando.repo.delete_all(InstagramImage)
     cfg = Application.get_env(:brando, Brando.Instagram)
-    cfg = Keyword.put(cfg, :fetch, {:user, "dummy_user"})
+    cfg = Keyword.put(cfg, :query, {:user, "dummy_user"})
     Application.put_env(:brando, Brando.Instagram, cfg)
     # install fake image in db
     {:ok, _} = InstagramImage.create(@instaimage)
 
-    assert API.fetch(:blank, cfg[:fetch]) == {:ok, "1429882831"}
-    assert API.fetch("1412585305", cfg[:fetch]) == {:ok, "1429882831"}
+    assert API.query(:blank, cfg[:query]) == {:ok, "1429882831"}
+    assert API.query("1412585305", cfg[:query]) == {:ok, "1429882831"}
   end
 
-  test "fetch tag" do
+  test "query tag" do
     # dump images
     Brando.repo.delete_all(InstagramImage)
     cfg = Application.get_env(:brando, Brando.Instagram)
-    cfg = Keyword.put(cfg, :fetch, {:tags, ["haraball"]})
+    cfg = Keyword.put(cfg, :query, {:tags, ["haraball"]})
     Application.put_env(:brando, Brando.Instagram, cfg)
     # install fake image in db
     {:ok, _} = InstagramImage.create(@instaimage)
-    assert API.fetch(:blank, cfg[:fetch])
+    assert API.query(:blank, cfg[:query])
            == {:ok, "970249962242331087"}
-    assert API.fetch("968134024444958851", cfg[:fetch])
+    assert API.query("968134024444958851", cfg[:query])
            == {:ok, "970249962242331087"}
   end
 

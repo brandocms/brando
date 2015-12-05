@@ -99,7 +99,7 @@ config :brando, Brando.Instagram,
     "thumb" =>  %{"size" => "150x150", "quality" => 100, "crop" => true}
   },
   sleep: 0,
-  fetch: {:user, "dummy_user"},
+  query: {:user, "dummy_user"},
   upload_path: Path.join("images", "insta")
 
 config :brando, Brando.Type.Role,
