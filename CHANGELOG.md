@@ -1,4 +1,4 @@
-## v0.12.0 (2015-XX-XX)
+## v0.12.0 (2015-12-06)
 
 * Enhancements
   * Removed `:http_lib` configs, and use sane defaults instead. It's only changed for testing purposes anyway.
