@@ -13,6 +13,7 @@ defmodule Brando.InstagramImage do
   import Ecto.Query, only: [from: 2]
 
   @cfg Application.get_env(:brando, Brando.Instagram)
+  @http_lib Instagram.config(:api_http_lib) || Instagram.API
   @required_fields ~w(instagram_id caption link url_original username
                       url_thumbnail created_time type status)
   @optional_fields ~w(image)
@@ -131,9 +132,8 @@ defmodule Brando.InstagramImage do
   defp download_image(image) do
     image_field = %Brando.Type.Image{}
     url = Map.get(image, "url_original")
-    http_lib = @cfg[:http_lib]
 
-    case http_lib.get(url) do
+    case @http_lib.get(url) do
       {:ok, %{body: _, status_code: 404}} ->
         Logger.error("Instagram: Feil fra Instagram API. " <>
                      "Kunne ikke laste ned bilde.\nURL: #{url}")

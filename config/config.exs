@@ -8,7 +8,8 @@ use Mix.Config
 # These are defaults for internals, mostly overridden for testing
 # purposes. We put them here to not pollute the brando.exs file.
 config :brando,
-  auth_sleep_duration: 2_000
+  auth_sleep_duration: 2_000,
+  otp_app: :brando
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
