@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.11.0"
+  @version "0.12.0"
   @description "Boilerplate for Twined applications."
 
   def project do
@@ -49,7 +49,7 @@ defmodule Brando.Mixfile do
 
       # Dev dependencies
       {:dialyze, "~> 0.2", only: :dev},
-      {:dogma, github: "lpil/dogma", only: :dev},
+      {:credo, "~> 0.1.6", only: [:dev, :test]},
 
       # Test dependencies
       {:phoenix_ecto, "~> 1.1", only: :test},

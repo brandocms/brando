@@ -5,52 +5,11 @@
 # is restricted to this project.
 use Mix.Config
 
+# These are defaults for internals, mostly overridden for testing
+# purposes. We put them here to not pollute the brando.exs file.
 config :brando,
-  app_name: "MyApp",
-  endpoint: Brando.Endpoint,
-  languages: [[value: "nb", text: "Norsk"],
-              [value: "en", text: "English"]],
-  status_choices: [[value: "0", text: "Kladd"],
-                   [value: "1", text: "Publisert"],
-                   [value: "2", text: "Venter"],
-                   [value: "3", text: "Slettet"]],
-  repo: Brando.Repo,
-  router: Brando.Router,
-  helpers: Brando.Router.Helpers,
-  media_url: "/media",
-  media_path: ""
-
-config :brando, Brando.Images,
-  default_config: %{allowed_mimetypes: ["image/jpeg", "image/png"],
-                    default_size: :medium, random_filename: true,
-                    upload_path: Path.join("images", "default"),
-                    size_limit: 10240000,
-                    sizes: %{
-                      small:  %{size: "300", quality: 100},
-                      medium: %{size: "500", quality: 100},
-                      large:  %{size: "700", quality: 100},
-                      xlarge: %{size: "900", quality: 100},
-                      thumb:  %{size: "150x150", quality: 100, crop: true},
-                      micro:  %{size: "25x25", quality: 100, crop: true}}}
-
-config :brando, Brando.Type.Role,
-  roles: %{staff: 1, admin: 2, superuser: 4}
-
-config :brando, Brando.Instagram,
-  client_id: "",
-  auto_approve: true,
-  upload_path: Path.join("images", "instagram"),
-  interval: 1_000 * 60 * 60
-
-config :brando, Brando.Menu,
-  colors: ["#FBA026;", "#F87117;", "#CF3510;", "#890606;", "#FF1B79;",
-           "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
-           "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
-           "#870B46;", "#D0201A;", "#FF641A;"],
-  modules: [Admin, Users, News, Images]
-
-config :brando, Brando.Villain,
-  parser: Brando.Villain.Parser.Default
+  auth_sleep_duration: 2_000,
+  otp_app: :brando
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

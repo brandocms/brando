@@ -33,19 +33,19 @@ defmodule Brando.HTML.Inspect do
   end
 
   @doc """
-  Inspects and displays `model`
+  Inspects and displays `model_struct`
   """
-  def model(model) do
-    module = model.__struct__
+  def model(model_struct) do
+    module = model_struct.__struct__
     fields = module.__schema__(:fields)
     assocs = module.__schema__(:associations)
 
     rendered_fields = fields
-    |> Enum.map(&(render_inspect_field(&1, module, module.__schema__(:type, &1), Map.get(model, &1))))
+    |> Enum.map(&(render_inspect_field(&1, module, module.__schema__(:type, &1), Map.get(model_struct, &1))))
     |> Enum.join
 
     rendered_assocs = assocs
-    |> Enum.map(&(render_inspect_assoc(&1, module, module.__schema__(:association, &1), Map.get(model, &1))))
+    |> Enum.map(&(render_inspect_assoc(&1, module, module.__schema__(:association, &1), Map.get(model_struct, &1))))
     |> Enum.join
 
     content_tag :table, class: "table data-table" do

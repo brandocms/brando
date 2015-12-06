@@ -110,12 +110,12 @@ defmodule Brando.Villain.Parser.Default do
   @doc """
   Converts quote to html.
   """
-  def blockquote(%{"text" => blockquote, "cite" => cite}) when byte_size(cite) > 0 do
-    html = "#{blockquote}\n>\n> -- <cite>#{cite}</cite>"
+  def blockquote(%{"text" => bq, "cite" => cite}) when byte_size(cite) > 0 do
+    html = "#{bq}\n>\n> -- <cite>#{cite}</cite>"
     Earmark.to_html(html)
   end
-  def blockquote(%{"text" => blockquote}) do
-    Earmark.to_html(blockquote)
+  def blockquote(%{"text" => bq}) do
+    Earmark.to_html(bq)
   end
 
   @doc """

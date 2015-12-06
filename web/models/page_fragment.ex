@@ -34,12 +34,11 @@ defmodule Brando.PageFragment do
   Takes the model's `json` field and transforms to `html`.
   """
 
-  def generate_html(changeset) do
-    if get_change(changeset, :data) do
-      changeset
-      |> put_change(:html, Brando.Villain.parse(changeset.changes.data))
+  def generate_html(cs) do
+    if get_change(cs, :data) do
+      put_change(cs, :html, Brando.Villain.parse(cs.changes.data))
     else
-      changeset
+      cs
     end
   end
 

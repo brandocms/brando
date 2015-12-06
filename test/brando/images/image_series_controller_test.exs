@@ -1,5 +1,3 @@
-#Code.require_file("router_helper.exs", Path.join([__DIR__, "..", ".."]))
-
 defmodule Brando.ImageSeries.ControllerTest do
   use ExUnit.Case
   use Brando.ConnCase
@@ -14,15 +12,23 @@ defmodule Brando.ImageSeries.ControllerTest do
   @path2 "#{Path.expand("../../", __DIR__)}/fixtures/sample2.png"
   @cfg Map.from_struct(%ImageConfig{})
   @cfg_changed Map.put(@cfg, :random_filename, true)
-  @series_params %{"name" => "Series name", "slug" => "series-name",
-                   "credits" => "Credits", "order" => 0}
-  @category_params %{"cfg" => @cfg, "name" => "Test Category",
-                     "slug" => "test-category"}
+  @series_params %{
+    "name" => "Series name", "slug" => "series-name",
+    "credits" => "Credits", "order" => 0
+  }
+  @category_params %{
+    "cfg" => @cfg, "name" => "Test Category",
+    "slug" => "test-category"
+  }
   @broken_params %{"cfg" => @cfg}
-  @up_params %Plug.Upload{content_type: "image/png",
-                          filename: "sample.png", path: @path1}
-  @up_params2 %Plug.Upload{content_type: "image/png",
-                           filename: "sample2.png", path: @path2}
+  @up_params %Plug.Upload{
+    content_type: "image/png",
+    filename: "sample.png", path: @path1
+  }
+  @up_params2 %Plug.Upload{
+    content_type: "image/png",
+    filename: "sample2.png", path: @path2
+  }
 
   def create_category(user) do
     {:ok, category} = ImageCategory.create(@category_params, user)

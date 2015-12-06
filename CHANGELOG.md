@@ -1,3 +1,13 @@
+## v0.12.0 (2015-12-06)
+
+* Enhancements
+  * Removed `:http_lib` configs, and use sane defaults instead. It's only changed for testing purposes anyway.
+  * Add `:use_token` to Instagram. Retrieves an access token from Instagram's API. This is needed for API clients registered after November 2015. This option requires you set a `:username` and `:password` as well.
+
+* Backwards incompatible changes
+  * Add `:otp_app` config option to brando.exs. This is required for accessing the otp app's priv dir. `config :brando, otp_app: :my_app`
+  * Renamed `Brando.Instagram`'s `fetch` to `query`. Both function and configuration keyword.
+
 ## v0.11.0 (2015-11-17)
 
 * Bug fixes

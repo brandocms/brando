@@ -60,6 +60,21 @@ defmodule Brando.News.ControllerTest do
     assert html_response(conn, 200) =~ "Header"
   end
 
+  test "rerender" do
+    user = create_user
+
+    Post.create(@post_params, user)
+
+    conn =
+      :get
+      |> call("/admin/news/rerender")
+      |> with_user
+      |> send_request
+
+    assert redirected_to(conn, 302) =~ "/admin/news"
+    assert get_flash(conn, :notice) == "Posts re-rendered"
+  end
+
   test "new" do
     conn =
       :get

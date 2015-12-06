@@ -1,6 +1,17 @@
 defmodule Brando.Villain.ParserTest do
   use ExUnit.Case
+  use Brando.Integration.TestCase
+  use Brando.ConnCase
+  alias Brando.ImageCategory
+  alias Brando.ImageSeries
+  alias Brando.Image
+  alias Brando.Type.ImageConfig
   import Brando.Villain.Parser.Default
+
+  @series_params %{name: "My slides", slug: "my-slides",
+                   credits: "Credits", sequence: 0, creator_id: 1}
+  @category_params %{cfg: %ImageConfig{}, creator_id: 1,
+                     name: "Slideshows", slug: "slideshows"}
 
   test "header/1" do
     assert header(%{"text" => "Header"}) == ~s(<h1>Header</h1>)
@@ -29,7 +40,6 @@ defmodule Brando.Villain.ParserTest do
       ~s(<div class=\"img-wrapper\">\n  <img src=\"http://vg.no\" alt=\"Caption/Credits\" class=\"img-responsive\" />\n  <div class=\"image-info-wrapper\">\n    <div class=\"image-title\">\n      Caption\n    </div>\n    <div class=\"image-credits\">\n      Credits\n    </div>\n  </div>\n</div>\n)
     assert image(%{"url" => "http://vg.no", "title" => "Caption", "credits" => "Credits", "link" => "http://db.no"}) ==
       ~s(<div class="img-wrapper">\n  <a href="http://db.no" title="Caption"><img src="http://vg.no" alt="Caption/Credits" class="img-responsive" /></a>\n  <div class="image-info-wrapper">\n    <div class="image-title">\n      Caption\n    </div>\n    <div class="image-credits">\n      Credits\n    </div>\n  </div>\n</div>\n)
-
   end
 
   test "divider/1" do
@@ -52,5 +62,49 @@ defmodule Brando.Villain.ParserTest do
            == "<blockquote><p>Some text</p>\n<p>— <cite>J. Williamson</cite></p>\n</blockquote>\n"
     assert blockquote(%{"text" => "> Some text", "cite" => ""})
            == "<blockquote><p>Some text</p>\n</blockquote>\n"
+  end
+
+  test "slideshow/1" do
+    setup_images()
+
+    ret = slideshow(%{"imageseries" => "my-slides", "size" => "small"})
+    assert ret =~ "/media/tmp/path/to/fake/image.jpg"
+    assert ret =~ "/media/tmp/path/to/fake/image2.jpg"
+  end
+
+  defp setup_images do
+    img1 = %{
+      sequence: 0, image: %{title: "Title", credits: "credits",
+      path: "/tmp/path/to/fake/image.jpg",
+      sizes: %{small: "/tmp/path/to/fake/image.jpg",
+      thumb: "/tmp/path/to/fake/thumb.jpg"}}
+    }
+    img2 = %{
+      sequence: 1, image: %{title: "Title2", credits: "credits2",
+      path: "/tmp/path/to/fake/image2.jpg",
+      sizes: %{small: "/tmp/path/to/fake/image2.jpg",
+      thumb: "/tmp/path/to/fake/thumb2.jpg"}}
+    }
+
+    user = Forge.saved_user(TestRepo)
+    {:ok, category} =
+      @category_params
+      |> Map.put(:creator_id, user.id)
+      |> ImageCategory.create(user)
+    {:ok, series} =
+      @series_params
+      |> Map.put(:creator_id, user.id)
+      |> Map.put(:image_category_id, category.id)
+      |> ImageSeries.create(user)
+
+    img1
+    |> Map.put(:creator_id, user.id)
+    |> Map.put(:image_series_id, series.id)
+    |> Image.create(user)
+
+    img2
+    |> Map.put(:creator_id, user.id)
+    |> Map.put(:image_series_id, series.id)
+    |> Image.create(user)
   end
 end

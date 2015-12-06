@@ -3,13 +3,21 @@ defmodule Brando.HTML.Tablize do
   Displays model data as a table.
   """
 
+  @type dropdown :: {String.t, String.t, atom, atom, atom | [atom]}
+
   import Brando.Gettext
-  import Brando.HTML, only: [check_or_x: 1, zero_pad: 1]
+  import Brando.HTML, only: [check_or_x: 1, zero_pad: 1, can_render?: 2]
   import Brando.HTML.Inspect, only: [inspect_field: 3]
 
   @narrow_fields [:language, :id, :status]
   @narrow_types [:integer, :boolean]
   @date_fields [:inserted_at, :updated_at, :published_at, :deleted_at]
+
+  defstruct records: nil,
+            module: nil,
+            conn: nil,
+            dropdowns: nil,
+            opts: nil
 
   @doc """
   Converts `records` into a formatted table with dropdown menus.
@@ -48,134 +56,210 @@ defmodule Brando.HTML.Tablize do
                    Supply as list: `[100, nil, nil, 200, nil, 200]`
 
   """
+  @spec tablize(Plug.Conn.t, [Type] | [] | nil, dropdown, Keyword.t) :: {:safe, iodata}
   def tablize(_, [], _, _), do: "<p>#{gettext("No results")}</p>" |> Phoenix.HTML.raw
   def tablize(_, nil, _, _), do: "<p>#{gettext("No results")}</p>" |> Phoenix.HTML.raw
   def tablize(conn, records, dropdowns, opts) do
-    module = List.first(records).__struct__
-    colgroup = if opts[:colgroup] do
-      render_colgroup(:manual, opts[:colgroup])
-    else
-      render_colgroup(:auto, module, opts)
-    end
+    tablize_opts = %Brando.HTML.Tablize{
+      module: List.first(records).__struct__,
+      dropdowns: dropdowns,
+      records: records,
+      conn: conn,
+      opts: opts
+    }
+
+    colgroup =
+      if opts[:colgroup] do
+        render_colgroup(:manual, opts[:colgroup])
+      else
+        render_colgroup(:auto, tablize_opts)
+      end
+
     filter_attr =
       if opts[:filter], do:
         ~s( data-filter-table="true"),
       else: ""
 
-    table_header = render_thead(module.__keys__, module, opts)
-    table_body = render_tbody(module.__keys__, records, module, conn, dropdowns, opts)
-    table = ~s(<table class="table"#{filter_attr}>#{colgroup}#{table_header}#{table_body}</table>)
+    table_header = render_thead(tablize_opts)
+    table_body = render_tbody(tablize_opts)
+    table = """
+      <table class="table"#{filter_attr}>
+        #{colgroup}
+        #{table_header}
+        #{table_body}
+      </table>
+      """
+
     filter =
       if opts[:filter] do
-        ~s(<div class="filter-input-wrapper pull-right">
-             <i class="fa fa-fw fa-search m-r-sm m-l-xs"></i>
-             <input type="text" placeholder="Filter" id="filter-input" />
-           </div>)
+        """
+        <div class="filter-input-wrapper pull-right">
+          <i class="fa fa-fw fa-search m-r-sm m-l-xs"></i>
+          <input type="text" placeholder="Filter" id="filter-input" />
+        </div>
+        """
       else
         ""
       end
     Phoenix.HTML.raw([filter|table])
   end
 
-  defp render_colgroup(:auto, module, opts) do
+  defp render_colgroup(:auto, %{module: module, opts: opts}) do
     fields =
       opts[:hide] && module.__keys__ -- opts[:hide] || module.__keys__
+
     narrow_fields =
       opts[:check_or_x] && @narrow_fields ++ opts[:check_or_x] || @narrow_fields
+
     colgroups = for f <- fields do
       type = module.__schema__(:type, f)
       cond do
-        type in @narrow_types  -> "<col style=\"width: 10px;\">"
-        f in narrow_fields     -> "<col style=\"width: 10px;\">"
-        f in @date_fields      -> "<col style=\"width: 140px;\">"
-        f == :creator          -> "<col style=\"width: 180px;\">"
-        true                   -> "<col>"
+        type in @narrow_types  -> ~s(<col style="width: 10px;">)
+        f in narrow_fields     -> ~s(<col style="width: 10px;">)
+        f in @date_fields      -> ~s(<col style="width: 140px;">)
+        f == :creator          -> ~s(<col style="width: 180px;">)
+        true                   -> ~s(<col>)
       end
     end
     # add expander
-    colgroups = ["<col style=\"width: 10px;\">"|colgroups]
+    colgroups = [~s(<col style="width: 10px;">)|colgroups]
     # add menu col
-    colgroups = colgroups ++ "<col style=\"width: 80px;\">"
-    "<colgroup>" <> IO.iodata_to_binary(colgroups) <> "</colgroup>"
+    colgroups = colgroups ++ ~s(<col style="width: 80px;">)
+    "<colgroup>#{IO.iodata_to_binary(colgroups)}</colgroup>"
   end
 
   defp render_colgroup(:manual, list) do
     colgroups = for col <- list do
-      col && "<col style=\"width: #{col}px;\">" || "<col>"
+      col && ~s(<col style="width: #{col}px;">) || "<col>"
     end
-    colgroups = colgroups ++ "<col style=\"width: 80px;\">"
-    "<colgroup>" <> IO.iodata_to_binary(colgroups) <> "</colgroup>"
+    colgroups = colgroups ++ ~s(<col style="width: 80px;">)
+    "<colgroup>#{IO.iodata_to_binary(colgroups)}</colgroup>"
   end
 
-  defp render_tbody(fields, records, module, conn, dropdowns, opts) do
+  defp render_tbody(%{records: records, opts: opts} = tablize_opts) do
     if split_by = opts[:split_by] do
-      tbodies = for {_, split_recs} <- records |> Brando.Utils.split_by(split_by) do
-        do_render_tbody(fields, split_recs, module, conn, dropdowns, opts)
-      end
-      tbodies |> Enum.join("<tr class=\"splitter\"><td></td></tr>")
+      tbodies =
+        for {_, split_recs} <- Brando.Utils.split_by(records, split_by) do
+          do_render_tbody(split_recs, tablize_opts)
+        end
+      Enum.join(tbodies, ~s(<tr class="splitter"><td></td></tr>))
     else
-      do_render_tbody(fields, records, module, conn, dropdowns, opts)
+      do_render_tbody(records, tablize_opts)
     end
   end
 
-  defp do_render_tbody(fields, records, module, conn, dropdowns, opts) do
-    rendered_trs =
-      records
-      |> Enum.map(&(do_tr(fields, &1, module, conn, dropdowns, opts)))
-      |> Enum.join
-    "<tbody>#{rendered_trs}</tbody>"
+  defp do_render_tbody(records, tablize_opts) do
+    records
+    |> Enum.map(&(do_tr(&1, tablize_opts)))
+    |> Enum.join
+    |> wrap_with("<tbody>", "</tbody>")
   end
 
-  defp do_tr(fields, record, module, conn, dropdowns, opts) do
-    tr_content = fields
-      |> Enum.map(&(do_td(&1, record, module.__schema__(:type, &1), opts)))
-      |> Enum.join
-    children = case Map.get(record, opts[:children]) do
+  defp wrap_with(content, pre, post) do
+    "#{pre}#{content}#{post}"
+  end
+
+  defp render_tr_content(record, %{module: module, opts: opts}) do
+    module.__keys__
+    |> Enum.map(&(do_td(&1, record, module.__schema__(:type, &1), opts)))
+    |> Enum.join
+  end
+
+  defp render_child_rows(children, parent, tablize_opts) do
+    for child <- children do
+      tr_content = render_tr_content(child, tablize_opts)
+      """
+      <tr data-parent-id="#{parent.id}" class="child hidden">
+        <td></td>
+        #{tr_content}
+        #{render_dropdowns(child, tablize_opts)}
+      </tr>
+      """
+    end
+  end
+
+  defp render_children(record, %{opts: opts} = tablize_opts) do
+    case Map.get(record, opts[:children]) do
       nil -> nil
       [] -> nil
       children ->
-        child_rows = for child <- children do
-          tr_content =
-            fields
-            |> Enum.map(&(do_td(&1, child, module.__schema__(:type, &1), opts)))
-            |> Enum.join
-          ~s(<tr data-parent-id="#{record.id}" class="child hidden"><td></td>#{tr_content}#{render_dropdowns(conn, dropdowns, child)}</tr>)
-        end
-        Enum.join(child_rows)
-    end
-    expander =
-      if children do
-        "<td><a href=\"\" class=\"expand-page-children\" data-id=\"#{record.id}\"><i class=\"fa fa-plus\"></i></td>"
-      else
-        "<td></td>"
-      end
-    row = "<tr>#{expander}#{tr_content}#{render_dropdowns(conn, dropdowns, record)}</tr>"
-    if children do
-      row <> children
-    else
-      row
+        children
+        |> render_child_rows(record, tablize_opts)
+        |> Enum.join
     end
   end
 
+  defp do_tr(record, tablize_opts) do
+    tr_content = render_tr_content(record, tablize_opts)
+    children   = render_children(record, tablize_opts)
+    expander   = render_expander(record, children)
+    dropdowns  = render_dropdowns(record, tablize_opts)
+    row = """
+    <tr>
+      #{expander}
+      #{tr_content}
+      #{dropdowns}
+    </tr>
+    """
+    children && row <> children || row
+  end
+
   defp do_td(:id, record, _type, _opts) do
-    ~s(<td data-field="id" class="text-small text-center text-mono text-muted">##{zero_pad(Map.get(record, :id))}</td>)
+    """
+    <td data-field="id" class="text-small text-center text-mono text-muted">
+      ##{zero_pad(Map.get(record, :id))}
+    </td>
+    """
   end
 
   defp do_td(field, record, type, opts) do
     unless field in Keyword.get(opts, :hide, []) do
       if field in Keyword.get(opts, :check_or_x, []) do
-        ~s(<td data-field="#{field}" class="text-center">#{check_or_x(Map.get(record, field))}</td>)
+        """
+        <td data-field="#{field}" class="text-center">
+          #{check_or_x(Map.get(record, field))}
+        </td>
+        """
       else
-        ~s(<td data-field="#{field}">#{inspect_field(field, type, Map.get(record, field))}</td>)
+        """
+        <td data-field="#{field}">
+          #{inspect_field(field, type, Map.get(record, field))}
+        </td>
+        """
       end
     end
   end
 
-  defp render_thead(fields, module, opts) do
-    rendered_ths = fields
+  defp render_expander(_, nil) do
+    "<td></td>"
+  end
+
+  defp render_expander(record, _) do
+    """
+    <td>
+      <a href=" class="expand-page-children" data-id="#{record.id}">
+        <i class="fa fa-plus"></i>
+      </a>
+    </td>
+    """
+  end
+
+  defp render_thead(%{module: module, opts: opts}) do
+    fields = module.__keys__
+    rendered_ths =
+      fields
       |> Enum.map(&(do_th(&1, module, opts[:hide])))
       |> Enum.join
-    ~s(<thead><tr><th></th>#{rendered_ths}<th class="text-center">☰</th></tr></thead>)
+
+    """
+    <thead>
+      <tr>
+        <th></th>
+        #{rendered_ths}
+        <th class="text-center">☰</th>
+      </tr>
+    </thead>
+    """
   end
 
   defp do_th(:id, _module, _hidden_fields) do
@@ -192,43 +276,55 @@ defmodule Brando.HTML.Tablize do
     end
   end
 
-  defp render_dropdowns(conn, dropdowns, record) do
-    dropdowns = for dropdown <- dropdowns do
+  defp render_dropdowns(record, tablize_opts) do
+    dropdowns = render_dropdowns_content(record, tablize_opts)
+    """
+    <td class="text-center">
+      <div class="dropdown">
+        <label class="dropdown-toggle" data-toggle="dropdown">
+          <input type="checkbox" class="o-c bars">
+        </label>
+        <ul class="dropdown-menu" style="right: 0; left: auto;">
+          #{Enum.join(dropdowns)}
+        </ul>
+      </div>
+    </td>
+    """
+  end
+
+  defp render_dropdowns_content(record, %{conn: conn, dropdowns: dropdowns}) do
+    for dropdown <- dropdowns do
       case tuple_size(dropdown) do
         5 -> {desc, icon, helper, action, param} = dropdown
         6 -> {desc, icon, helper, action, param, role} = dropdown
       end
-      fun_params = case param do
-        nil -> [Brando.endpoint, action]
-        param when is_list(param) ->
-          params = Enum.map(param, fn(p) -> Map.get(record, p) end)
-          [Brando.endpoint, action, params] |> List.flatten
-        param ->
-          [Brando.endpoint, action, Map.get(record, param)]
-      end
 
+      fun_params = get_function_params(param, record, action)
       url = apply(Brando.helpers, helper, fun_params)
-      if Brando.HTML.can_render?(conn, %{role: role}) do
-        "<li>" <>
-        "  <a href=\"" <> url <> "\">" <>
-        "    <i class=\"fa " <> icon <> " fa-fw m-r-sm\"> </i>" <>
-             desc <>
-        "  </a>" <>
-        "</li>"
+
+      if can_render?(conn, %{role: role}) do
+        """
+        <li>
+          <a href="#{url}>
+            <i class="fa #{icon} fa-fw m-r-sm"> </i>
+             #{desc}
+          </a>
+        </li>
+        """
       else
         ""
       end
     end
+  end
 
-    "<td class=\"text-center\">" <>
-    "  <div class=\"dropdown\">" <>
-    "    <label class=\"dropdown-toggle\" data-toggle=\"dropdown\">" <>
-    "      <input type=\"checkbox\" class=\"o-c bars\">" <>
-    "    </label>" <>
-    "    <ul class=\"dropdown-menu\" style=\"right: 0; left: auto;\">" <>
-          Enum.join(dropdowns) <>
-    "    </ul>" <>
-    "  </div>" <>
-    "</td>"
+  defp get_function_params(param, record, action) do
+    case param do
+      nil -> [Brando.endpoint, action]
+      param when is_list(param) ->
+        params = Enum.map(param, &Map.get(record, &1))
+        [Brando.endpoint, action, params] |> List.flatten
+      param ->
+        [Brando.endpoint, action, Map.get(record, param)]
+    end
   end
 end

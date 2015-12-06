@@ -55,20 +55,21 @@ defmodule Brando.Instagram.ControllerTest do
   end
 
   test "index" do
-    create_images
+    create_images()
     conn =
       :get
       |> call("/admin/instagram/")
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200)
+    response = html_response(conn, 200)
+    assert response
            =~ "data-status=\"approved\" " <>
               "src=\"/media/images/instagram/thumb/dummy_1.jpg\""
-    assert html_response(conn, 200)
+    assert response
            =~ "data-status=\"approved\" " <>
               "src=\"/media/images/instagram/thumb/dummy_2.jpg\""
-    assert html_response(conn, 200)
+    assert response
            =~ "data-status=\"approved\" " <>
               "src=\"/media/images/instagram/thumb/dummy_3.jpg\""
 
@@ -89,13 +90,14 @@ defmodule Brando.Instagram.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200)
+    response = html_response(conn, 200)
+    assert response
            =~ "data-status=\"deleted\" " <>
               "src=\"/media/images/instagram/thumb/dummy_1.jpg\""
-    assert html_response(conn, 200)
+    assert response
            =~ "data-status=\"deleted\" " <>
               "src=\"/media/images/instagram/thumb/dummy_2.jpg\""
-    assert html_response(conn, 200)
+    assert response
            =~ "data-status=\"deleted\" " <>
               "src=\"/media/images/instagram/thumb/dummy_3.jpg\""
 
@@ -110,13 +112,14 @@ defmodule Brando.Instagram.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200)
+    response = html_response(conn, 200)
+    assert response
            =~ "data-status=\"rejected\" " <>
                "src=\"/media/images/instagram/thumb/dummy_1.jpg\""
-    assert html_response(conn, 200)
+    assert response
            =~ "data-status=\"rejected\" " <>
                "src=\"/media/images/instagram/thumb/dummy_2.jpg\""
-    assert html_response(conn, 200)
+    assert response
            =~ "data-status=\"rejected\" " <>
                "src=\"/media/images/instagram/thumb/dummy_3.jpg\""
 
@@ -131,13 +134,14 @@ defmodule Brando.Instagram.ControllerTest do
       |> with_user
       |> send_request
 
-    assert html_response(conn, 200)
+    response = html_response(conn, 200)
+    assert response
            =~ "data-status=\"approved\" " <>
               "src=\"/media/images/instagram/thumb/dummy_1.jpg\""
-    assert html_response(conn, 200)
+    assert response
            =~ "data-status=\"approved\" " <>
               "src=\"/media/images/instagram/thumb/dummy_2.jpg\""
-    assert html_response(conn, 200)
+    assert response
            =~ "data-status=\"approved\" " <>
               "src=\"/media/images/instagram/thumb/dummy_3.jpg\""
   end

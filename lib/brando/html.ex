@@ -339,9 +339,8 @@ defmodule Brando.HTML do
   @doc """
   Truncate `text` to `length`
   """
-  def truncate(text, length) do
-    String.length(text) <= length && text
-    || String.slice(text, 0..length) <> "..."
+  def truncate(text, len) do
+    String.length(text) <= len && text || String.slice(text, 0..len) <> "..."
   end
 
   @doc """

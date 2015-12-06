@@ -29,13 +29,7 @@ defmodule Brando.Type.Role do
       end
     end)
 
-    acc = Enum.reduce(set_roles, [], fn ({role_k, role_v}, acc) ->
-      case (roles &&& role_v) == role_v do
-        true -> [role_k|acc]
-        false -> acc
-      end
-    end)
-    {:ok, acc}
+    {:ok, reduce_roles(set_roles, roles)}
   end
 
   @doc """
@@ -71,13 +65,7 @@ defmodule Brando.Type.Role do
     cfg = Application.get_env(:brando, Brando.Type.Role)
     set_roles = Keyword.get(cfg, :roles)
 
-    acc = Enum.reduce(set_roles, [], fn ({role_k, role_v}, acc) ->
-      case (roles &&& role_v) == role_v do
-        true -> [role_k|acc]
-        false -> acc
-      end
-    end)
-    {:ok, acc}
+    {:ok, reduce_roles(set_roles, roles)}
   end
 
   @doc """
@@ -101,4 +89,13 @@ defmodule Brando.Type.Role do
   end
   def dump(nil), do: {:ok, 0}
   def dump(_), do: :error
+
+  defp reduce_roles(set_roles, roles) do
+    Enum.reduce(set_roles, [], fn ({role_k, role_v}, acc) ->
+      case (roles &&& role_v) == role_v do
+        true -> [role_k|acc]
+        false -> acc
+      end
+    end)
+  end
 end

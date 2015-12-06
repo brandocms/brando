@@ -134,9 +134,7 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "update profile" do
-    user =
-      TestRepo
-      |> Forge.saved_user
+    user = Forge.saved_user(TestRepo)
     conn =
       :patch
       |> call("/admin/users/profile/edit",
@@ -165,9 +163,7 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "delete_confirm" do
-    user =
-      TestRepo
-      |> Forge.saved_user
+    user = Forge.saved_user(TestRepo)
     conn =
       :get
       |> call("/admin/users/#{user.id}/delete")
@@ -178,9 +174,7 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "delete" do
-    user =
-      TestRepo
-      |> Forge.saved_user
+    user = Forge.saved_user(TestRepo)
     conn =
       :delete
       |> call("/admin/users/#{user.id}")
