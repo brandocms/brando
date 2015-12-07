@@ -82,7 +82,7 @@ config :brando, Brando.Instagram,
   username: "",
   password: "",
   query: {:user, "dummy_username"},
-  token_path: Path.join([~w(priv tokens instagram)]),
+  token_path: Path.join(~w(priv tokens instagram)),
   interval: 1_000 * 60 * 60,
   sleep: 5000,
   sizes: %{
