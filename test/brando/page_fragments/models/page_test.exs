@@ -25,7 +25,7 @@ defmodule Brando.Pages.PageFragmentTest do
     assert Brando.repo.all(PageFragment) == []
   end
 
-  test "encode data", %{page: page} do
+  test "encode data" do
     assert Brando.PageFragment.encode_data(%{data: "test"})
            == %{data: "test"}
     assert Brando.PageFragment.encode_data(%{data: [%{data: "test"}]})
