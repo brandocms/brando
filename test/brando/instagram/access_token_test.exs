@@ -3,8 +3,11 @@ defmodule Brando.Instagram.AccessTokenTest do
   use Brando.ConnCase
   alias Brando.Instagram.AccessToken
 
+  @token_path Path.join([Mix.Project.app_path, "tmp", "priv",
+                        "tokens", "instagram", "token.json"])
+
   setup do
-    File.rm_rf!(Path.join([Mix.Project.app_path, "tmp"]))
+    File.rm_rf!(@token_path)
     :ok
   end
 

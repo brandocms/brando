@@ -38,7 +38,7 @@ defmodule Brando.Instagram.AccessToken do
   """
   def load_token do
     case File.read(token_file()) do
-      {:ok, contents} -> contents |> Poison.decode! |> Map.get("access_token")
+      {:ok, contents}   -> contents |> Poison.decode! |> Map.get("access_token")
       {:error, :enoent} -> retrieve_token()
     end
   end
