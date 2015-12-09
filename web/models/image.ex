@@ -102,11 +102,7 @@ defmodule Brando.Image do
       |> Map.put(:title, title)
       |> Map.put(:credits, credits)
 
-    model_changeset = model |> changeset(:update, %{"image" => image})
-    case model_changeset.valid? do
-      true ->  {:ok, Brando.repo.update!(model_changeset)}
-      false -> {:error, model_changeset.errors}
-    end
+    update(model, %{"image" => image})
   end
 
   @doc """
