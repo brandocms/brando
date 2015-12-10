@@ -7,6 +7,8 @@ defmodule Brando.Admin.DashboardController do
   import Brando.Plug.HTML
   import Brando.Gettext
 
+  @log_filename "supervisord.log"
+
   plug :put_section, "dashboard"
 
   @doc """
@@ -20,7 +22,7 @@ defmodule Brando.Admin.DashboardController do
   Renders system info page.
   """
   def system_info(conn, _params) do
-    log_file = Path.join([Brando.config(:log_dir), "supervisord.log"])
+    log_file = Path.join([Brando.config(:log_dir), @log_filename])
     {log_last_updated, log_last_lines} =
       case File.stat(log_file) do
         {:ok, stat} ->
