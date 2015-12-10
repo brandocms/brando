@@ -13,7 +13,7 @@ defmodule Mix.BrandoTest do
 
   test "modules" do
     modules = Mix.Brando.modules()
-    if modules do
+    if modules != [] do
       assert Brando.Image in Mix.Brando.modules()
     end
   end
