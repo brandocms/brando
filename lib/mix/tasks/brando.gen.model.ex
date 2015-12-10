@@ -47,13 +47,8 @@ defmodule Mix.Tasks.Brando.Gen.Model do
 
   """
   def run(args) do
-    {opts, parsed, _} = OptionParser.parse(args, switches: [])
+    {_, parsed, _} = OptionParser.parse(args, switches: [])
     [singular, plural | attrs] = validate_args!(parsed)
-
-    no_singular = opts[:nosingular] || Mix.Shell.IO.prompt("Singular (no): ")
-    no_singular = String.strip(no_singular)
-    no_plural   = opts[:noplural] || Mix.Shell.IO.prompt("Plural (no): ")
-    no_plural   = String.strip(no_plural)
 
     attrs      = Mix.Brando.attrs(attrs)
     binding    = Mix.Brando.inflect(singular)
@@ -98,18 +93,22 @@ defmodule Mix.Tasks.Brando.Gen.Model do
 
     binding = binding ++
               [attrs: attrs, img_fields: img_fields, plural: plural,
-               types: types, no_singular: no_singular, no_plural: no_plural,
-               villain_fields: villain_fields, migrations: migrations,
-               model_fields: model_fields, assocs: assocs(assocs),
-               indexes: indexes(plural, assocs), defaults: defs, params: params]
+               types: types, villain_fields: villain_fields,
+               migrations: migrations, model_fields: model_fields,
+               assocs: assocs(assocs), indexes: indexes(plural, assocs),
+               defaults: defs, params: params]
 
-    Mix.Brando.copy_from(apps(), "priv/templates/brando.gen.model", "",
-                          binding, [
-      {:eex, "migration.exs",  "priv/repo/migrations/" <>
-                               "#{timestamp()}_create_#{migration}.exs"},
-      {:eex, "model.ex",       "web/models/#{path}.ex"},
-      {:eex, "model_test.exs", "test/models/#{path}_test.exs"},
-    ])
+    Mix.Brando.copy_from(
+      apps(),
+      "priv/templates/brando.gen.model",
+      "",
+      binding, [
+        {:eex, "migration.exs",  "priv/repo/migrations/" <>
+                                 "#{timestamp()}_create_#{migration}.exs"},
+        {:eex, "model.ex",       "web/models/#{path}.ex"},
+        {:eex, "model_test.exs", "test/models/#{path}_test.exs"},
+      ]
+    )
   end
 
   def migration_type({k, :image}) do

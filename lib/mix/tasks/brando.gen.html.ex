@@ -25,13 +25,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
   information on attributes and namespaced resources.
   """
   def run(args) do
-    {opts, parsed, _} = OptionParser.parse(args, switches: [model: :boolean])
+    {_, parsed, _} = OptionParser.parse(args, switches: [model: :boolean])
     [singular, plural | attrs] = validate_args!(parsed)
-
-    no_singular  = opts[:nosingular] || Mix.Shell.IO.prompt("Singular (no): ")
-    no_singular  = String.strip(no_singular)
-    no_plural    = opts[:noplural] || Mix.Shell.IO.prompt("Plural (no): ")
-    no_plural    = String.strip(no_plural)
 
     attrs        = Mix.Brando.attrs(attrs)
     villain?     = :villain in Dict.values(attrs)
@@ -43,7 +38,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
                    |> String.split("/") |> Enum.drop(-1)
                    |> Kernel.++([plural]) |> Enum.join("/")
     admin_module = Enum.join([binding[:base], "Admin", binding[:scoped]], ".")
-    binding      = binding ++ [plural: plural, route: route, no_plural: no_plural, no_singular: no_singular,
+    binding      = binding ++ [plural: plural, route: route,
                                image_field: image_field?, villain: villain?,
                                admin_module: admin_module, admin_path: admin_path,
                                inputs: inputs(attrs), params: Mix.Brando.params(attrs)]
@@ -99,8 +94,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     Mix.Brando.check_module_name_availability!(binding[:admin_module] <>
                                                 "View")
 
-    Mix.Task.run "brando.gen.model", args ++ ["--nosingular", no_singular,
-                                              "--noplural", no_plural]
+    Mix.Task.run "brando.gen.model", args
 
     Mix.Brando.copy_from(apps(), "priv/templates/brando.gen.html",
                           "", binding, files)
