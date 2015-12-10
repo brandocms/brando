@@ -21,23 +21,25 @@ defmodule Brando.Admin.DashboardController do
   """
   def system_info(conn, _params) do
     log_file = Path.join([Brando.config(:log_dir), "supervisord.log"])
-    case File.stat(log_file) do
-      {:ok, stat} ->
-        log_last_updated =
-          stat.mtime
-          |> Ecto.DateTime.from_erl
-          |> Ecto.DateTime.to_string
+    {log_last_updated, log_last_lines} =
+      case File.stat(log_file) do
+        {:ok, stat} ->
+          last_updated =
+            stat.mtime
+            |> Ecto.DateTime.from_erl
+            |> Ecto.DateTime.to_string
 
-        log_last_lines =
-          log_file
-          |> File.stream!
-          |> Enum.reverse
-          |> Enum.take(30)
-          |> Enum.reverse
-      {:error, _} ->
-        log_last_updated = ""
-        log_last_lines = gettext("File not found")
-    end
+          last_lines =
+            log_file
+            |> File.stream!
+            |> Enum.reverse
+            |> Enum.take(30)
+            |> Enum.reverse
+
+          {last_updated, last_lines}
+        {:error, _} ->
+          {"", gettext("File not found")}
+      end
 
     conn
     |> assign(:log_last_lines, log_last_lines)

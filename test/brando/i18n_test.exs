@@ -3,8 +3,8 @@ defmodule Brando.I18nTest do
 
   test "get_language" do
     mock_conn = %{assigns: %{}}
-    Brando.I18n.get_language(mock_conn) == "nb"
+    assert Brando.I18n.get_language(mock_conn) == nil
     mock_conn = %{assigns: %{language: "en"}}
-    Brando.I18n.get_language(mock_conn) == "en"
+    assert Brando.I18n.get_language(mock_conn) == "en"
   end
 end
