@@ -60,7 +60,7 @@
 
 <!-- :content - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
     <section class="container">
-      <%= @inner %>
+      <%= render @view_module, @view_template, assigns %>
     </section>
 <!-- /content - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
 
