@@ -28,7 +28,7 @@ defmodule Brando.HTML.TablizeTest do
   test "tablize/4" do
     user = Forge.saved_user(TestRepo)
     assert {:ok, page} = Page.create(@page_params, user)
-    page = page |> Brando.repo.preload([:creator, :parent, :children])
+    page = Brando.repo.preload(page, [:creator, :parent, :children])
 
     assert {:ok, page2} = Page.create(Map.put(@page_params, "language", "nb"), user)
     child_params =
@@ -53,11 +53,11 @@ defmodule Brando.HTML.TablizeTest do
                            hide: [:updated_at, :inserted_at, :parent])
 
     ret = ret |> IO.iodata_to_binary
-    assert ret =~ "<i class=\"fa fa-times text-danger\">"
-    assert ret =~ "/admin/users/#{page.id}"
-    assert ret =~ "/admin/users/#{page.id}/edit"
-    assert ret =~ "/admin/users/#{page.id}/delete"
-    assert ret =~ "/test123/#{page.id}/#{page.language}"
+    assert ret =~ ~s(<i class="fa fa-times text-danger">)
+    assert ret =~ ~s(href="/admin/users/#{page.id}")
+    assert ret =~ ~s(href="/admin/users/#{page.id}/edit")
+    assert ret =~ ~s(href="/admin/users/#{page.id}/delete")
+    assert ret =~ ~s(href="/test123/#{page.id}/#{page.language}")
 
     {:safe, ret} = tablize(@conn, [page], helpers,
                            check_or_x: [:meta_keywords],
