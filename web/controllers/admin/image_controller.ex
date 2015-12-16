@@ -34,15 +34,16 @@ defmodule Brando.Admin.ImageController do
 
   @doc false
   def set_properties(conn, %{"id" => id, "form" => form}) do
-    image = Image |> Brando.repo.get!(id)
-    image_data = image.image
+    image = Brando.repo.get!(Image, id)
 
     new_data =
-      Enum.reduce form, image_data, fn({attr, val}, acc) ->
+      Enum.reduce form, image.image, fn({attr, val}, acc) ->
         Map.put(acc, String.to_atom(attr), val)
       end
 
-    Brando.repo.update!(Map.put(image, :image, new_data))
+    image
+    |> Image.changeset(:update, %{"image" => new_data})
+    |> Brando.repo.update!
 
     render(conn, :set_properties, id: id, attrs: form)
   end

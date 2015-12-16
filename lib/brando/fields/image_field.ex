@@ -28,13 +28,10 @@ defmodule Brando.Field.ImageField do
   defmacro __using__(_) do
     quote do
       Module.register_attribute(__MODULE__, :imagefields, accumulate: true)
-      use Ecto.Model.Callbacks
       import Brando.Images.Upload
       import Brando.Images.Utils
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
-
-      before_update __MODULE__, :cleanup_old_images
 
       @doc """
       Checks `params` for Plug.Upload fields and passes them on to

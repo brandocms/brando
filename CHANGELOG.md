@@ -1,6 +1,12 @@
 ## v0.13.0-dev (2015-XX-XX)
 
+* Bug fixes
+  * Fixed bug in `tablize` where the dropdown links were broken.
+
 * Backwards incompatible changes
+  * Ecto 1.1 removes callbacks: This means that every model that uses `Brando.Villain, :model` needs to implement `generate_html/1` in its `changeset` functions. This function is provided by the use macro.
+  * Ecto 1.1 removes callbacks: This means that every model that uses `Brando.Field.ImageField` needs to implement `cleanup_old_images/1` in its `changeset` functions. This function is provided by the use macro.
+  * Ecto 1.1 deprecates `Ecto.Model`. Use `Ecto.Schema` instead.
   * Removed localization prompts from `brando.gen.html`. Handle the model translations through gettext instead.
 
 ## v0.12.0 (2015-12-06)

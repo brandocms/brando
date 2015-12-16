@@ -16,7 +16,6 @@ defmodule Brando.Post do
 
   import Brando.Gettext
   import Brando.Utils.Model, only: [put_creator: 2]
-  import Ecto.Query, only: [from: 2]
 
   @required_fields ~w(status header data lead creator_id language featured slug)
   @optional_fields ~w(publish_at tags html)
@@ -68,8 +67,10 @@ defmodule Brando.Post do
   def changeset(model, action, params \\ :empty)
   def changeset(model, :create, params) do
     params = params |> Brando.Tag.split_tags
+
     model
     |> cast(params, @required_fields, @optional_fields)
+    |> generate_html()
   end
 
   @doc """
@@ -84,8 +85,11 @@ defmodule Brando.Post do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
     params = params |> Brando.Tag.split_tags
+
     model
     |> cast(params, @required_fields, @optional_fields)
+    |> generate_html()
+    |> cleanup_old_images()
   end
 
   @doc """
@@ -126,7 +130,7 @@ defmodule Brando.Post do
   including all generated sizes.
   """
   def delete(record) when is_map(record) do
-    record.cover |> delete_original_and_sized_images
+    delete_original_and_sized_images(record.cover)
     Brando.repo.delete!(record)
   end
   def delete(id) do
@@ -148,7 +152,6 @@ defmodule Brando.Post do
   def preload_creator(query) do
     from m in query, preload: [:creator]
   end
-
 
   #
   # Meta
