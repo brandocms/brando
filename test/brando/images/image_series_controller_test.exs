@@ -87,32 +87,23 @@ defmodule Brando.ImageSeries.ControllerTest do
     assert get_flash(conn, :notice) == "Image series created"
   end
 
-  test "create (post) w/erroneus params" do
-    user = Forge.saved_user(TestRepo)
-    series_params = Map.put(@series_params, "creator_id", user.id)
-    conn =
-      :post
-      |> call("/admin/images/series/", %{"imageseries" => series_params})
-      |> with_user
-      |> send_request
-    assert html_response(conn, 200) =~ "New image series"
-    assert get_flash(conn, :error) == "Errors in form"
-  end
-
   test "update (post) w/params" do
     user = Forge.saved_user(TestRepo)
     category = create_category(user)
+
     series_params =
       @series_params
       |> Map.put("creator_id", user.id)
       |> Map.put("image_category_id", category.id)
     {:ok, series} = ImageSeries.create(series_params, user)
+
     conn =
       :patch
       |> call("/admin/images/series/#{series.id}",
               %{"imageseries" => series_params})
       |> with_user
       |> send_request
+
     assert redirected_to(conn, 302) =~ "/admin/images"
     assert get_flash(conn, :notice) == "Image series updated"
   end
