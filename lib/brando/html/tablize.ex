@@ -302,7 +302,7 @@ defmodule Brando.HTML.Tablize do
       if can_render?(conn, %{role: role}) do
         """
         <li>
-          <a href="#{url}>
+          <a href="#{url}">
             <i class="fa #{icon} fa-fw m-r-sm"> </i>
              #{desc}
           </a>
