@@ -17,9 +17,10 @@ defmodule Brando.HTML.InspectTest do
                       "thumb" => "images/avatars/thumb/27i97a.jpeg",
                       "medium" => "images/avatars/medium/27i97a.jpeg"}}
 
-  @post_params %{"avatar" => @image_map,
-                 "data" => "[{\"type\":\"text\",\"data\":{\"text\":" <>
-                           "\"zcxvxcv\",\"type\":\"paragraph\"}}]",
+  @post_params %{
+    "avatar" => @image_map,
+    "data" => ~s([{"type":"header","data":{"text":"Header","level":"1"}},) <>
+              ~s({"type":"text","data":{"text":"zcxvxcv","type":"paragraph"}}]),
                  "featured" => true, "header" => "Header",
                  "html" => "<h1>Header</h1><p>Asdf\nAsdf\nAsdf</p>\n",
                  "language" => "nb", "lead" => "Asdf",
