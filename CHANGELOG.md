@@ -1,5 +1,8 @@
 ## v0.13.0-dev (2015-XX-XX)
 
+* Backwards incompatible changes
+  * Removed localization prompts from `brando.gen.html`. Handle the model translations through gettext instead.
+
 ## v0.12.0 (2015-12-06)
 
 * Enhancements
