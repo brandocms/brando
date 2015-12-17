@@ -9,7 +9,7 @@ defmodule Brando.Instagram.API do
   alias Brando.Instagram
   alias Brando.InstagramImage
 
-  @http_lib Instagram.config(:api_http_lib) || Instagram.API
+  @http_lib Keyword.get(Application.get_env(:brando, Brando.Instagram, []), :api_http_lib, Instagram.API)
   @url_base "https://api.instagram.com/v1"
 
   @doc """

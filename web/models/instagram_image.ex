@@ -12,8 +12,8 @@ defmodule Brando.InstagramImage do
   import Brando.Gettext
   import Ecto.Query, only: [from: 2]
 
-  @cfg Application.get_env(:brando, Brando.Instagram)
-  @http_lib Instagram.config(:api_http_lib) || Instagram.API
+  @cfg Application.get_env(:brando, Brando.Instagram, [])
+  @http_lib Keyword.get(@cfg, :api_http_lib, Instagram.API)
   @required_fields ~w(instagram_id caption link url_original username
                       url_thumbnail created_time type status)
   @optional_fields ~w(image)
