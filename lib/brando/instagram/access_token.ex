@@ -9,7 +9,7 @@ defmodule Brando.Instagram.AccessToken do
   import Brando.Instagram, only: [config: 1]
 
   @token_filename "token.json"
-  @http_lib Brando.Instagram.config(:token_http_lib) || HTTPoison
+  @http_lib Keyword.get(Application.get_env(:brando, Brando.Instagram, []), :token_http_lib, HTTPoison)
 
   @doc """
   Retrieves token from Instagram.
