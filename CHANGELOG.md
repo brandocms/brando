@@ -1,4 +1,4 @@
-## v0.13.0-dev (2015-XX-XX)
+## v0.13.0 (2015-12-17)
 
 * Bug fixes
   * Fixed bug in `tablize` where the dropdown links were broken.
