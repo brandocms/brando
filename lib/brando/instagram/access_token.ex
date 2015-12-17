@@ -9,7 +9,7 @@ defmodule Brando.Instagram.AccessToken do
   import Brando.Instagram, only: [config: 1]
 
   @token_filename "token.json"
-  @http_lib Brando.Instagram.config(:token_http_lib) || HTTPoison
+  @http_lib Keyword.get(Application.get_env(:brando, Brando.Instagram, []), :token_http_lib, HTTPoison)
 
   @doc """
   Retrieves token from Instagram.
@@ -38,7 +38,7 @@ defmodule Brando.Instagram.AccessToken do
   """
   def load_token do
     case File.read(token_file()) do
-      {:ok, contents} -> Poison.decode!(contents)
+      {:ok, contents}   -> contents |> Poison.decode! |> Map.get("access_token")
       {:error, :enoent} -> retrieve_token()
     end
   end
@@ -165,17 +165,15 @@ defmodule Brando.Instagram.AccessToken do
   end
 
   defp default_headers() do
-    [
-      {"accept", "text/html,application/xml;q=0.9,image/webp,*/*;q=0.8"},
-      {"accept-encoding", "gzip, deflate"},
-      {"accept-language", "en-US,en;q=0.8,nb;q=0.6,sv;q=0.4"},
-      {"cache-control", "no-cache"},
-      {"content-type", "application/x-www-form-urlencoded"},
-      {"origin", host()},
-      {"pragma", "no-cache"},
-      {"upgrade-insecure-requests", "1"},
-      {"user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) " <>
-       "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.86 Safari/537.36"},
-    ]
+    [{"accept", "text/html,application/xml;q=0.9,image/webp,*/*;q=0.8"},
+     {"accept-encoding", "gzip, deflate"},
+     {"accept-language", "en-US,en;q=0.8,nb;q=0.6,sv;q=0.4"},
+     {"cache-control", "no-cache"},
+     {"content-type", "application/x-www-form-urlencoded"},
+     {"origin", host()},
+     {"pragma", "no-cache"},
+     {"upgrade-insecure-requests", "1"},
+     {"user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) " <>
+      "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.86 Safari/537.36"}]
   end
 end

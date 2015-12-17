@@ -13,7 +13,6 @@ defmodule Brando.Page do
 
   import Brando.Gettext
   import Brando.Utils.Model, only: [put_creator: 2]
-  import Ecto.Query
 
   @required_fields ~w(key language title slug data status creator_id)
   @optional_fields ~w(parent_id meta_description meta_keywords html css_classes)
@@ -48,6 +47,7 @@ defmodule Brando.Page do
   def changeset(model, :create, params) do
     model
     |> cast(params, @required_fields, @optional_fields)
+    |> generate_html()
   end
 
   @doc """
@@ -63,6 +63,7 @@ defmodule Brando.Page do
   def changeset(model, :update, params) do
     model
     |> cast(params, @required_fields, @optional_fields)
+    |> generate_html()
   end
 
   @doc """
@@ -118,8 +119,8 @@ defmodule Brando.Page do
   """
   def order(query) do
     from m in query,
-         order_by: [asc: m.language, asc: m.status, desc: m.key,
-                    desc: m.inserted_at]
+      order_by: [asc: m.language, asc: m.status,
+                 desc: m.key, desc: m.inserted_at]
   end
 
   @doc """
@@ -127,7 +128,7 @@ defmodule Brando.Page do
   """
   def with_parents(query) do
     from m in query,
-         where: is_nil(m.parent_id)
+      where: is_nil(m.parent_id)
   end
 
   @doc """
@@ -135,12 +136,12 @@ defmodule Brando.Page do
   """
   def with_children(query) do
     from m in query,
-         left_join: c in assoc(m, :children),
-         left_join: p in assoc(m, :parent),
-         left_join: cu in assoc(c, :creator),
-         join: u in assoc(m, :creator),
-         preload: [children: {c, creator: cu}, creator: u, parent: p],
-         select: m
+      left_join: c in assoc(m, :children),
+      left_join: p in assoc(m, :parent),
+      left_join: cu in assoc(c, :creator),
+      join: u in assoc(m, :creator),
+      preload: [children: {c, creator: cu}, creator: u, parent: p],
+      select: m
   end
 
   @doc """
@@ -151,13 +152,14 @@ defmodule Brando.Page do
       from c in query,
         order_by: [asc: c.status, asc: c.key, desc: c.updated_at],
         preload: [:creator]
+
     from m in query,
-         left_join: c in assoc(m, :children),
-         left_join: cu in assoc(c, :creator),
-         join: u in assoc(m, :creator),
-         where: is_nil(m.parent_id),
-         preload: [children: ^children_query, creator: u],
-         select: m
+      left_join: c in assoc(m, :children),
+      left_join: cu in assoc(c, :creator),
+      join: u in assoc(m, :creator),
+      where: is_nil(m.parent_id),
+      preload: [children: ^children_query, creator: u],
+      select: m
   end
 
   @doc """
@@ -170,11 +172,12 @@ defmodule Brando.Page do
   @doc """
   Search pages for `q`
   """
-  def search(language, q) do
-    __MODULE__
-    |> where([p], p.language == ^language)
-    |> where([p], ilike(p.html, "%#{q}%"))
-    |> Brando.repo.all
+  def search(language, query) do
+    Brando.repo.all(
+      from p in __MODULE__,
+        where: p.language == ^language,
+        where: ilike(p.html, ^"%#{query}%")
+    )
   end
 
   #

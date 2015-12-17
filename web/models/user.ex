@@ -12,7 +12,6 @@ defmodule Brando.User do
   alias Brando.Utils
 
   import Brando.Gettext
-  import Ecto.Query, only: [from: 2]
 
   @required_fields ~w(username full_name email password language)
   @optional_fields ~w(role avatar)
@@ -83,6 +82,7 @@ defmodule Brando.User do
   def changeset(model, :update, params) do
     model
     |> cast(params, @required_fields, @optional_fields)
+    |> cleanup_old_images()
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
     |> unique_constraint(:email)
@@ -152,7 +152,7 @@ defmodule Brando.User do
   @spec set_last_login(t) :: t
   def set_last_login(user) do
     {:ok, user} =
-      Utils.Model.update_field(user, [last_login: Ecto.DateTime.local])
+      Utils.Model.update_field(user, [last_login: Ecto.DateTime.utc])
     user
   end
 

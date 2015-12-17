@@ -404,4 +404,19 @@ defmodule Brando.Integration.Instagram do
     body = File.read!(@img_fixture)
     {:ok, %{body: body, status_code: 200}}
   end
+
+  # Access Token
+  def get!("https://www.instagram.com/accounts/login/?force_classic_login=&next=/oauth/authorize/%3Fclient_id%3DCLIENT_ID%26redirect_uri%3Dhttp%3A//localhost%26response_type%3Dtoken", _) do
+    %{headers: [{"Set-Cookie", "csrftoken=abcdefghijklmnopqrstuvwxyz0123456789; mid=this_is_the_mid_cookie"}]}
+  end
+
+  def post!("https://www.instagram.com/accounts/login/?force_classic_login=&next=/oauth/authorize/%3Fclient_id%3DCLIENT_ID%26redirect_uri%3Dhttp%3A//localhost%26response_type%3Dtoken", _data, _headers) do
+    %{headers: [{"Set-Cookie", "csrftoken=abcdefghijklmnopqrstuvwxyz0123456789; mid=this_is_the_mid_cookie; sessionid=sessioncookie"},
+                {"Location", "http://test.authurl.instagram.com/#access_token=abcd123"}]}
+  end
+
+  def post!("http://test.authurl.instagram.com/#access_token=abcd123", _data, _headers) do
+    %{headers: [{"Set-Cookie", "csrftoken=abcdefghijklmnopqrstuvwxyz0123456789; mid=this_is_the_mid_cookie; sessionid=sessioncookie"},
+                {"Location", "http://test.authurl.instagram.com/#access_token=abcd123"}]}
+  end
 end

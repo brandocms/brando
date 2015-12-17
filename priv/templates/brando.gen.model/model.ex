@@ -38,7 +38,9 @@ defmodule <%= module %> do
   """
   def changeset(model, params \\ :empty) do
     model
-    |> cast(params, @required_fields, @optional_fields)
+    |> cast(params, @required_fields, @optional_fields)<%= if villain_fields != [] do %>
+    |> generate_html()<% end %><%= if img_fields != [] do %>
+    |> cleanup_old_images()<% end %>
   end
 
   def delete(record) do

@@ -7,6 +7,8 @@ defmodule Brando.Admin.DashboardController do
   import Brando.Plug.HTML
   import Brando.Gettext
 
+  @log_filename "supervisord.log"
+
   plug :put_section, "dashboard"
 
   @doc """
@@ -20,28 +22,34 @@ defmodule Brando.Admin.DashboardController do
   Renders system info page.
   """
   def system_info(conn, _params) do
-    log_file = Path.join([Brando.config(:log_dir), "supervisord.log"])
-    case File.stat(log_file) do
-      {:ok, stat} ->
-        log_last_updated =
-          stat.mtime
-          |> Ecto.DateTime.from_erl
-          |> Ecto.DateTime.to_string
-
-        log_last_lines =
-          log_file
-          |> File.stream!
-          |> Enum.reverse
-          |> Enum.take(30)
-          |> Enum.reverse
-      {:error, _} ->
-        log_last_updated = ""
-        log_last_lines = gettext("File not found")
-    end
+    log_file = Path.join([Brando.config(:log_dir), @log_filename])
+    {log_last_updated, log_last_lines} =
+      get_log_info(log_file)
 
     conn
     |> assign(:log_last_lines, log_last_lines)
     |> assign(:log_last_updated, log_last_updated)
     |> render
+  end
+
+  defp get_log_info(log_file) do
+    case File.stat(log_file) do
+      {:ok, stat} ->
+        last_updated =
+          stat.mtime
+          |> Ecto.DateTime.from_erl
+          |> Ecto.DateTime.to_string
+
+        last_lines =
+          log_file
+          |> File.stream!
+          |> Enum.reverse
+          |> Enum.take(30)
+          |> Enum.reverse
+
+        {last_updated, last_lines}
+      {:error, _} ->
+        {"", gettext("File not found")}
+    end
   end
 end

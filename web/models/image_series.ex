@@ -20,8 +20,6 @@ defmodule Brando.ImageSeries do
   @required_fields ~w(name slug image_category_id creator_id)
   @optional_fields ~w(credits sequence cfg)
 
-  before_insert __MODULE__, :inherit_configuration
-
   schema "imageseries" do
     field :name, :string
     field :slug, :string
@@ -48,6 +46,7 @@ defmodule Brando.ImageSeries do
   def changeset(model, :create, params) do
     model
     |> cast(params, @required_fields, @optional_fields)
+    |> inherit_configuration()
   end
 
   @doc """

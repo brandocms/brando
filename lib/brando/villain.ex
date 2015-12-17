@@ -18,6 +18,15 @@ defmodule Brando.Villain do
         villain
       end
 
+  As Ecto 1.1 removed callbacks, we must manually call for HTML generation.
+  In your model's `changeset` functions:
+
+      def changeset(model, :create, params) do
+        model
+        |> cast(params, @required_fields, @optional_fields)
+        |> Brando.Villain.HTML.generate_html()
+      end
+
   # Migration
 
   Migration utilities
@@ -54,12 +63,16 @@ defmodule Brando.Villain do
     quote do
       import Brando.Villain.Model, only: [villain: 0]
 
-      before_insert :generate_html
-      before_update :generate_html
-
       @doc """
-      Callback from before_insert/before_update to generate HTML.
       Takes the model's `json` field and transforms to `html`.
+
+      This is usually called from your model's `changeset` functions:
+
+          def changeset(model, :create, params) do
+            model
+            |> cast(params, @required_fields, @optional_fields)
+            |> generate_html()
+          end
       """
       def generate_html(changeset) do
         if Ecto.Changeset.get_change(changeset, :data) do

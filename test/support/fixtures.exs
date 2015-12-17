@@ -35,6 +35,16 @@ defmodule Forge do
     status: :published,
     css_classes: "extra-class"
 
+  register :page_fragment,
+    __struct__: Brando.PageFragment,
+    key: "key/path",
+    language: "en",
+    title: "Page title",
+    slug: "page-title",
+    data: ~s([{"type":"text","data":{"text":"Text in p.","type":"paragraph"}}]),
+    html: ~s(<p>Text in p.</p>),
+    status: :published
+
   register :post,
     __struct__: Brando.Post,
     language: "en",

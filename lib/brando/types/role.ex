@@ -77,13 +77,13 @@ defmodule Brando.Type.Role do
   def dump(list) when is_list(list) do
     cfg = Application.get_env(:brando, Brando.Type.Role)
     set_roles = Keyword.get(cfg, :roles)
-    cond do
+    acc = cond do
       is_atom(List.first(list))    ->
-        acc = Enum.reduce(list, 0, &(&2 + set_roles[&1]))
+        Enum.reduce(list, 0, &(&2 + set_roles[&1]))
       is_binary(List.first(list))  ->
-        acc = Enum.reduce(list, 0, &(&2 + String.to_integer(&1)))
+        Enum.reduce(list, 0, &(&2 + String.to_integer(&1)))
       is_integer(List.first(list)) ->
-        acc = Enum.reduce(list, 0, &(&2 + &1))
+        Enum.reduce(list, 0, &(&2 + &1))
     end
     {:ok, acc}
   end

@@ -38,6 +38,10 @@ defmodule Brando.Web do
     repo = Brando.repo
     quote do
       use Phoenix.Controller
+
+      import Ecto
+      import Ecto.Query, only: [from: 1, from: 2]
+
       import Brando.Meta.Controller
       import Brando.Utils, only: [current_user: 1]
 
@@ -52,7 +56,11 @@ defmodule Brando.Web do
   def model do
     repo = Brando.repo
     quote do
-      use Ecto.Model
+      use Ecto.Schema
+
+      import Ecto
+      import Ecto.Changeset
+      import Ecto.Query, only: [from: 1, from: 2]
 
       # Alias the data repository as a convenience
       alias unquote(repo)

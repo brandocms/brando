@@ -84,7 +84,7 @@
             <%= get_flash(@conn, :notice) %>
           </div>
         <% end %>
-        <%= @inner %>
+        <%= render @view_module, @view_template, assigns %>
         </div>
       </div>
       <div class="grid-block noscroll" id="log-wrapper">

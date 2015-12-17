@@ -37,7 +37,7 @@
                   <%= get_flash(@conn, :notice) %>
                 </div>
               <% end %>
-              <%= @inner %>
+              <%= render @view_module, @view_template, assigns %>
               <span class="version">&beta; <%= Brando.version %></span>
               </div>
             </div>

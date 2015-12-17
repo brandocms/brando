@@ -294,18 +294,15 @@ defmodule Brando.HTML.Tablize do
 
   defp render_dropdowns_content(record, %{conn: conn, dropdowns: dropdowns}) do
     for dropdown <- dropdowns do
-      case tuple_size(dropdown) do
-        5 -> {desc, icon, helper, action, param} = dropdown
-        6 -> {desc, icon, helper, action, param, role} = dropdown
-      end
-
+      dropdown = tuple_size(dropdown) < 6 && Tuple.append(dropdown, nil) || dropdown
+      {desc, icon, helper, action, param, role} = dropdown
       fun_params = get_function_params(param, record, action)
       url = apply(Brando.helpers, helper, fun_params)
 
       if can_render?(conn, %{role: role}) do
         """
         <li>
-          <a href="#{url}>
+          <a href="#{url}">
             <i class="fa #{icon} fa-fw m-r-sm"> </i>
              #{desc}
           </a>

@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.12.0"
+  @version "0.13.0"
   @description "Boilerplate for Twined applications."
 
   def project do
@@ -34,16 +34,16 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:comeonin, "~> 1.5"},
+      {:comeonin, "~> 2.0"},
       {:earmark, "~> 0.1"},
       {:eightyfour, github: "twined/eightyfour"},
-      {:gettext, "~> 0.7.0"},
-      {:httpoison, "~> 0.6"},
+      {:gettext, "~> 0.9.0"},
+      {:httpoison, "~> 0.8"},
       {:mogrify, github: "twined/mogrify"},
-      {:phoenix, "~> 1.0"},
-      {:phoenix_html, "~> 2.1"},
+      {:phoenix, "~> 1.1"},
+      {:phoenix_html, "~> 2.3"},
       {:poison, "~> 1.3"},
-      {:postgrex, "~> 0.9"},
+      {:postgrex, "~> 0.10"},
       {:scrivener, "~> 1.1"},
       {:slugger, "~> 0.0.1"},
 
@@ -52,7 +52,7 @@ defmodule Brando.Mixfile do
       {:credo, "~> 0.1.6", only: [:dev, :test]},
 
       # Test dependencies
-      {:phoenix_ecto, "~> 1.1", only: :test},
+      {:phoenix_ecto, "~> 2.0", only: :test},
       {:blacksmith, "~> 0.1.2", only: :test},
       {:excoveralls, "~> 0.4", only: :test},
 

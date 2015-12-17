@@ -6,13 +6,13 @@ defmodule Brando.PageFragment do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :model
+  use Brando.Villain, :model
 
   alias Brando.Type.Json
   alias Brando.User
 
   import Brando.Gettext
   import Brando.Utils.Model, only: [put_creator: 2]
-  import Ecto.Query, only: [from: 2]
 
   @required_fields ~w(key language data creator_id)
   @optional_fields ~w(html)
@@ -24,22 +24,6 @@ defmodule Brando.PageFragment do
     field :html, :string
     belongs_to :creator, User
     timestamps
-  end
-
-  before_insert :generate_html
-  before_update :generate_html
-
-  @doc """
-  Callback from before_insert/before_update to generate HTML.
-  Takes the model's `json` field and transforms to `html`.
-  """
-
-  def generate_html(cs) do
-    if get_change(cs, :data) do
-      put_change(cs, :html, Brando.Villain.parse(cs.changes.data))
-    else
-      cs
-    end
   end
 
   @doc """
@@ -56,6 +40,7 @@ defmodule Brando.PageFragment do
   def changeset(model, :create, params) do
     model
     |> cast(params, @required_fields, @optional_fields)
+    |> generate_html()
   end
 
   @doc """
@@ -71,6 +56,7 @@ defmodule Brando.PageFragment do
   def changeset(model, :update, params) do
     model
     |> cast(params, [], @required_fields ++ @optional_fields)
+    |> generate_html()
   end
 
   @doc """
