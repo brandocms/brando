@@ -1,5 +1,8 @@
 ## v0.14.0-dev (2015-XX-XX)
 
+* Bug fixes
+  * Fix `compile` script to compile after building production assets. Previously, the assets were not copied to `_build` directory due to compiling project before the new assets were built.
+
 ## v0.13.0 (2015-12-17)
 
 * Bug fixes
