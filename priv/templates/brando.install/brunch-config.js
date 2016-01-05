@@ -11,7 +11,7 @@ exports.config = {
           'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
           'bower_components/jscroll/jquery.jscroll.js',
           'bower_components/responsive-nav/responsive-nav.js',
-          'bower_components/salvattore/dist/salvattore.min.js',
+          'bower_components/salvattore/dist/salvattore.js',
           'bower_components/flexslider/jquery.flexslider.js',
           'bower_components/colorbox/jquery.colorbox.js',
           /^(web\/static\/vendor)/
