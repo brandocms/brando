@@ -1,7 +1,12 @@
 ## v0.14.0-dev (2015-XX-XX)
 
+* Enhancements
+  * Fixed some access bugs for Elixir v1.2.
+
 * Bug fixes
-  * Fix `compile` script to compile after building production assets. Previously, the assets were not copied to `_build` directory due to compiling project before the new assets were built.
+  * Changed `gettext` config location to `web/gettext.ex` so that we overwrite Phoenix's default file.
+  * Fixed `compile` script to compile after building production assets. Previously, the assets were not copied to `_build` directory due to compiling project before the new assets were built.
+  * Fixed typo in `brando.exs` config
 
 ## v0.13.0 (2015-12-17)
 

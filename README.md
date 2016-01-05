@@ -66,13 +66,9 @@ Go through `config/brando.exs`.
 
 Make sure you set `:brando, :media_path` to your `media` folder. This must be an absolute path! 
 
-Static config in `endpoint.ex`. (Make sure you add `images` to the `only` key):
+Static media config in `endpoint.ex`. (Make sure you add `images` to the `only` key):
 
 ```elixir
-plug Plug.Static,
-  at: "/", from: :my_app, gzip: false,
-  only: ~w(css images js fonts favicon.ico robots.txt)
-
 plug Plug.Static,
   at: "/media", from: Brando.config(:media_path)
 ```
@@ -92,14 +88,6 @@ config :my_app, MyApp.Endpoint,
 
 Brando uses Gettext for i18n. 
 
-Add to your `mix.exs`
-
-```elixir
-def project do
-  [compilers: [:phoenix, :gettext] ++ Mix.compilers]
-end
-```
-
 To extract your frontend translations:
 
     $ mix gettext.extract
@@ -118,7 +106,7 @@ And backend
 
 ## Production
 
-Run `compile` in your OTP app's dir to `git pull` latest, get latest hex deps, compile and build production assets.
+Run the `compile` script in your OTP app's dir to `git pull` latest, get latest hex deps, compile and build production assets.
 
 ## Additional admin CSS/styling
 
