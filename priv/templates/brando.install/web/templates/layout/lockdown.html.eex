@@ -13,7 +13,7 @@
   </head>
   <body id="lockdown">
     <section class="container">
-      <%%= @inner %>
+      <%%= render @view_module, @view_template, assigns %>
     </section>
 
     <script src="<%%= static_path(@conn, "/js/vendor.js") %>"></script>
