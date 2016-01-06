@@ -21,12 +21,6 @@ exports.config = {
         'js/brando.vendor.js': 'deps/brando/priv/static/vendor/js/brando.vendor.js',
         'js/villain.all.js': 'deps/brando/priv/static/vendor/js/villain.all.js',
       },
-      // order: {
-      //   before: [
-      //     /^bower_components/,
-      //     /^web\/static\/vendor/
-      //   ]
-      // }
     },
     stylesheets: {
       joinTo: {
@@ -72,7 +66,7 @@ exports.config = {
       /^(web\/static\/assets)/,
     ],
     ignored: [
-      'web/static/css/includes'
+      'web/static/css/includes/*'
     ],
   },
 
