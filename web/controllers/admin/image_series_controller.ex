@@ -17,8 +17,13 @@ defmodule Brando.Admin.ImageSeriesController do
   @doc false
   def new(conn, %{"id" => category_id}) do
     model = conn.private[:series_model]
-    params = %{"image_category_id" => String.to_integer(category_id)}
-    changeset = model.changeset(model.__struct__, :create, params)
+
+    series =
+      model
+      |> struct
+      |> Map.put(:image_category_id, String.to_integer(category_id))
+
+    changeset = model.changeset(series, :create)
 
     conn
     |> assign(:page_title, gettext("New image series"))
