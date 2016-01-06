@@ -106,8 +106,7 @@ defmodule Brando.Users.ControllerTest do
     user = Forge.saved_user(TestRepo)
     conn =
       :patch
-      |> call("/admin/users/#{user.id}",
-              %{"user" => Map.delete(user, :__struct__)})
+      |> call("/admin/users/#{user.id}", %{"user" => Map.delete(user, :__struct__)})
       |> with_user
       |> send_request
 
@@ -135,8 +134,7 @@ defmodule Brando.Users.ControllerTest do
     user = Forge.saved_user(TestRepo)
     conn =
       :patch
-      |> call("/admin/users/profile/edit",
-              %{"user" => Map.delete(user, :__struct__)})
+      |> call("/admin/users/profile/edit", %{"user" => Map.delete(user, :__struct__)})
       |> with_user(user)
       |> send_request
 
