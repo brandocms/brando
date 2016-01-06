@@ -39,8 +39,10 @@ defmodule Brando.Admin.UserController do
 
   @doc false
   def profile(conn, _params) do
+    session_user = get_session(conn, :current_user)
+    model = conn.private[:model]
     conn
-    |> assign(:user, get_session(conn, :current_user))
+    |> assign(:user, Brando.repo.get_by!(model, id: session_user.id))
     |> assign(:page_title, gettext("Profile"))
     |> render("show.html")
   end
