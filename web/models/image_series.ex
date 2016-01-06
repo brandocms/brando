@@ -60,8 +60,7 @@ defmodule Brando.ImageSeries do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
-    model
-    |> cast(params, @required_fields, @optional_fields)
+    cast(model, params, @required_fields, @optional_fields)
   end
 
   @doc """
@@ -93,22 +92,6 @@ defmodule Brando.ImageSeries do
              select: m.slug,
              where: m.id == ^id
     Brando.repo.one!(q)
-  end
-
-  @doc """
-  Before insert callback. Copies the series' category config.
-  """
-  def inherit_configuration(%{changes: %{image_category_id: cat_id}} = cs) do
-    do_inherit_configuration(cs, cat_id)
-  end
-
-  def inherit_configuration(%{model: %{image_category_id: cat_id}} = cs) do
-    do_inherit_configuration(cs, cat_id)
-  end
-
-  defp do_inherit_configuration(cs, cat_id) do
-    category = Brando.repo.get(ImageCategory, cat_id)
-    put_change(cs, :cfg, category.cfg)
   end
 
   @doc """
@@ -155,6 +138,22 @@ defmodule Brando.ImageSeries do
 
     for is <- image_series, do:
       delete(is)
+  end
+
+  @doc """
+  Before inserting changeset. Copies the series' category config.
+  """
+  def inherit_configuration(%{changes: %{image_category_id: cat_id}} = cs) do
+    do_inherit_configuration(cs, cat_id)
+  end
+
+  def inherit_configuration(%{model: %{image_category_id: cat_id}} = cs) do
+    do_inherit_configuration(cs, cat_id)
+  end
+
+  defp do_inherit_configuration(cs, cat_id) do
+    category = Brando.repo.get(ImageCategory, cat_id)
+    put_change(cs, :cfg, category.cfg)
   end
 
   #
