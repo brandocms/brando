@@ -55,6 +55,9 @@ defmodule Mix.Tasks.Brando.Install do
     {:keep, "templates/brando.install/logs", "priv/static/gettext/backend/nb/LC_MESSAGES"},
     {:keep, "templates/brando.install/logs", "priv/static/gettext/frontend"},
     {:eex,  "templates/brando.install/web/gettext.ex", "web/gettext.ex"},
+
+    # Admin web.ex
+    {:eex, "templates/brando.install/web/admin_web.ex", "web/admin_web.ex"}
   ]
 
   @static [
