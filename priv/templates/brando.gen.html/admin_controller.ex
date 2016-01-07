@@ -66,7 +66,7 @@ defmodule <%= admin_module %>Controller do
         |> redirect(to: <%= admin_path %>_path(conn, :index))
       {:error, changeset} ->
         conn
-        |> put_flash(:error, t!(language, "flash.form_error"))
+        |> put_flash(:error, gettext("Errors in form"))
         |> assign(:page_title, gettext("Edit <%= singular %>"))
         |> render("edit.html", <%= singular %>: <%= singular %>,
                                changeset: changeset)
