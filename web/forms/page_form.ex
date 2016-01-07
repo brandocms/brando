@@ -61,7 +61,7 @@ defmodule Brando.PageForm do
 
   form "page", [model: Page, helper: :admin_page_path, class: "grid-form"] do
     field :parent_id, :select, [
-      help_text: gettext("If this page should belong to another, select parent page here. If not, select –"),
+      help_text: gettext("If this page should belong to another, select parent page here."),
       choices: &__MODULE__.get_parent_choices/0,
       is_selected: &__MODULE__.parent_selected?/2]
     field :key, :text
