@@ -85,14 +85,10 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       ]
     end
 
-    Mix.Brando.check_module_name_availability!(binding[:module] <>
-                                                "Controller")
-    Mix.Brando.check_module_name_availability!(binding[:module] <>
-                                                "View")
-    Mix.Brando.check_module_name_availability!(binding[:admin_module] <>
-                                                "Controller")
-    Mix.Brando.check_module_name_availability!(binding[:admin_module] <>
-                                                "View")
+    Mix.Brando.check_module_name_availability!(binding[:module] <> "Controller")
+    Mix.Brando.check_module_name_availability!(binding[:module] <> "View")
+    Mix.Brando.check_module_name_availability!(binding[:admin_module] <> "Controller")
+    Mix.Brando.check_module_name_availability!(binding[:admin_module] <> "View")
 
     Mix.Task.run "brando.gen.model", args
 
