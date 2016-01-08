@@ -35,7 +35,7 @@ exports.config = {
           'web/static/css/app.scss',
         ],
         'css/brando.custom.css': [
-          'web/static/css/brando.custom.scss'
+          'web/static/css/custom/*.scss'
         ]
       },
     },

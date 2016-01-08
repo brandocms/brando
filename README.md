@@ -111,7 +111,7 @@ Run the `compile` script in your OTP app's dir to `git pull` latest, get latest 
 ## Additional admin CSS/styling
 
 For modules added through your OTP app, you can style its backend by editing 
-`web/static/css/brando.custom.scss`.
+`web/static/css/custom/brando.custom.scss`, or adding your own files to `web/static/css/custom/`
 
 ## Pagination
 
