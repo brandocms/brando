@@ -43,8 +43,8 @@ Add to your `config/config.exs` right before the env-specific import:
 Add to your relevant `config/%{env}.exs` Repo config:
 
 ```diff
-config :my_app, Repo,
-+ extensions: [{Postgrex.Extensions.JSON, library: Poison}]
+  config :my_app, Repo,
++   extensions: [{Postgrex.Extensions.JSON, library: Poison}]
 ```
 
 Install bower frontend dependencies:
@@ -116,11 +116,10 @@ For modules added through your OTP app, you can style its backend by editing
 For pagination, add to your app's `repo.ex`:
 
 ```diff
-
-defmodule MyApp.Repo do
-  use Ecto.Repo, otp_app: :my_app
-+ use Scrivener
-end
+  defmodule MyApp.Repo do
+    use Ecto.Repo, otp_app: :my_app
++   use Scrivener
+  end
 ```
 
 See Scrivener's docs for usage: https://hexdocs.pm/scrivener/
@@ -231,7 +230,6 @@ Model:
 + use Brando.Tag, :model
 
   schema "model" do
-    # ...
 +   tags
   end
 ```
@@ -243,7 +241,6 @@ Migration:
 
   def up do
     create table(:model) do
-      # ...
 +     tags
     end
   end
@@ -255,21 +252,21 @@ Migration:
 Add to your app's supervision tree:
 
 ```diff
-children = [
-  # Start the endpoint when the application starts
-  supervisor(MyApp.Endpoint, []),
-  # Start the Ecto repository
-  supervisor(MyApp.Repo, []),
-+ worker(Brando.Instagram, [])
-]
+  children = [
+    # Start the endpoint when the application starts
+    supervisor(MyApp.Endpoint, []),
+    # Start the Ecto repository
+    supervisor(MyApp.Repo, []),
++   worker(Brando.Instagram, [])
+  ]
 ```
 
 Add Instagram to your menu modules in `config/brando.exs`:
 
 ```diff
-config :brando, Brando.Menu,
-  modules: [Admin, Users, News, Pages, Images, 
-+           Instagram]
+  config :brando, Brando.Menu,
+    modules: [Admin, Users, News, Pages, Images, 
++             Instagram]
 ```
 
 Add routes to your app's `web/router.ex` under the `admin` scope:
@@ -300,13 +297,13 @@ Analytics is provided through [Eightyfour](http://github.com/twined/eightyfour).
 Add to your app's supervision tree:
 
 ```diff
-children = [
-  # Start the endpoint when the application starts
-  supervisor(MyApp.Endpoint, []),
-  # Start the Ecto repository
-  supervisor(MyApp.Repo, []),
-+ worker(Brando.Eightyfour, [])
-]
+  children = [
+    # Start the endpoint when the application starts
+    supervisor(MyApp.Endpoint, []),
+    # Start the Ecto repository
+    supervisor(MyApp.Repo, []),
++   worker(Brando.Eightyfour, [])
+  ]
 ```
 
 Add to your `config/brando.exs`
@@ -373,7 +370,7 @@ plug :check_for_uploads, {"user", Brando.User}
 
 To use villain outside the built-in `pages` and `news` modules add to your app's `web/router.ex`:
 
-```elixir
+```diff
 + import Brando.Routes.Admin.Villain
 
   scope "/admin", as: :admin do
@@ -432,17 +429,17 @@ Build for prod with `brunch build`.
 This requires you to have `pngquant` installed.
 
 ```diff
-config :brando, Brando.Images,
-+ optimize: [
-+   png: [bin: "/usr/local/bin/pngquant",
-+         args: "--speed 1 --force --output %{new_filename} -- #{filename}"]]
+  config :brando, Brando.Images,
++   optimize: [
++     png: [bin: "/usr/local/bin/pngquant",
++           args: "--speed 1 --force --output %{new_filename} -- #{filename}"]]
 ```
 
 or
 
 ```diff
-config :brando, Brando.Images,
-+ optimize: false
+  config :brando, Brando.Images,
++   optimize: false
 ```
 
 ## Deployment
