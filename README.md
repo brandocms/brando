@@ -94,11 +94,15 @@ Create your frontend translation directories: (for norwegian)
 
     $ mkdir -p priv/gettext/frontend/nb/LC_MESSAGES
 
+And backend:
+
+    $ mkdir -p priv/gettext/backend/nb/LC_MESSAGES
+
 Merge frontend translations
 
     $ mix gettext.merge priv/gettext/frontend
 
-And backend
+And backend:
 
     $ mix gettext.merge priv/gettext/backend
 

@@ -1,9 +1,8 @@
 ## v0.14.0-dev (2015-XX-XX)
 
-* Enhancements
-  * Fixed some access bugs for Elixir v1.2.
-
 * Bug fixes
+  * Fixed not setting otp app's backend translation language. Add `plug :put_admin_locale, MyApp.Backend.Gettext` to your `admin` pipeline in `router.ex`.
+  * Fixed some access bugs for Elixir v1.2.
   * Fixed default errors on "new" image_serie form.
   * Fixed brunch compilation warnings on a new brando installation.
   * Changed `gettext` config location to `web/gettext.ex` so that we overwrite Phoenix's default file.
