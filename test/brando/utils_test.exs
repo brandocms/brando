@@ -35,11 +35,11 @@ defmodule Brando.UtilsTest do
 
   test "slugify special characters" do
     assert slugify("special characters (#?@$%^*) are also ASCII")
-           == "special-characters-at-are-also-ascii"
+           == "special-characters-atdollar-are-also-ascii"
   end
 
   test "slugify & -> and" do
-    assert slugify("tom & jerry") == "tom-jerry"
+    assert slugify("tom & jerry") == "tom-and-jerry"
   end
 
   test "slugify strip extraneous dashes" do
@@ -50,7 +50,7 @@ defmodule Brando.UtilsTest do
     assert slugify_filename("testing with spaces.jpeg")
            == "testing-with-spaces.jpeg"
     assert slugify_filename("-start æøå-.jpeg")
-           == "start-aeoa.jpeg"
+           == "start-aeoeaa.jpeg"
   end
 
   test "random_filename/1" do

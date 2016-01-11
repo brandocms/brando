@@ -45,7 +45,7 @@ defmodule Brando.Mixfile do
       {:poison, "~> 1.3"},
       {:postgrex, "~> 0.10"},
       {:scrivener, "~> 1.1"},
-      {:slugger, "~> 0.0.1"},
+      {:slugger, "~> 0.1.0"},
 
       # Dev dependencies
       {:dialyze, "~> 0.2", only: :dev},
