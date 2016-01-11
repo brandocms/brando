@@ -1,9 +1,10 @@
 # Release Instructions
 
   1. git-flow: Start release. Tag without "v", e.g. 0.1.0 - NOT v0.1.0!
-  2. Bump version in CHANGELOG
-  3. Bump version in mix.exs
-  4. Bump version in README.md installation instructions (if we add to hex)
+  2. Bump version in `CHANGELOG`
+  3. Bump version in `mix.exs`
+  4. Bump version in `package.json`
+  4. Bump version in `README.md` installation instructions (if we add to hex)
   5. Update translations:
      `$ mix gettext.extract && mix gettext.merge priv/gettext`
   6. Copy updated villain/ dist files
