@@ -143,17 +143,23 @@ defmodule Brando.ImageSeries do
   @doc """
   Before inserting changeset. Copies the series' category config.
   """
-  def inherit_configuration(%{changes: %{image_category_id: cat_id}} = cs) do
-    do_inherit_configuration(cs, cat_id)
+  def inherit_configuration(%{changes: %{image_category_id: cat_id, slug: slug}} = cs) do
+    do_inherit_configuration(cs, cat_id, slug)
   end
 
-  def inherit_configuration(%{model: %{image_category_id: cat_id}} = cs) do
-    do_inherit_configuration(cs, cat_id)
+  def inherit_configuration(%{model: %{image_category_id: cat_id, slug: slug}} = cs) do
+    do_inherit_configuration(cs, cat_id, slug)
   end
 
-  defp do_inherit_configuration(cs, cat_id) do
+  defp do_inherit_configuration(cs, cat_id, slug) do
     category = Brando.repo.get(ImageCategory, cat_id)
-    put_change(cs, :cfg, category.cfg)
+    cfg =
+      if slug do
+        Map.put(category.cfg, :upload_path, Path.join(Map.get(category.cfg, :upload_path), slug))
+      else
+        category.cfg
+      end
+    put_change(cs, :cfg, cfg)
   end
 
   #

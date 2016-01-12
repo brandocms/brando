@@ -74,8 +74,8 @@ defmodule Brando.Image.OptimizeTest do
     {:ok, optimized_image} = optimize({:ok, image.image})
 
     assert optimized_image.optimized
-    assert File.exists?(media_path("images/test-category/large/sample.png"))
-    assert File.exists?(media_path("images/test-category/large/sample-optimized.png"))
+    assert File.exists?(media_path("images/test-category/series-name/large/sample.png"))
+    assert File.exists?(media_path("images/test-category/series-name/large/sample-optimized.png"))
 
     Brando.repo.delete(image)
 
@@ -94,7 +94,7 @@ defmodule Brando.Image.OptimizeTest do
     {:ok, optimized_image} = optimize({:ok, image.image})
 
     refute optimized_image.optimized
-    assert File.exists?(media_path("images/test-category/large/sample.jpg"))
-    refute File.exists?(media_path("images/test-category/large/sample-optimized.jpg"))
+    assert File.exists?(media_path("images/test-category/series-name/large/sample.jpg"))
+    refute File.exists?(media_path("images/test-category/series-name/large/sample-optimized.jpg"))
   end
 end
