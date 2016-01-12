@@ -195,7 +195,7 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> send_request
     assert conn.status == 200
     assert html_response(conn, 200)
-           =~ "<img src=\"/media/images/default/thumb/sample-optimized.png\" />"
+           =~ "<img src=\"/media/images/test-category/thumb/sample-optimized.png\" />"
 
     series = Brando.repo.preload(series, :images)
     [img1, img2] = series.images
@@ -222,8 +222,8 @@ defmodule Brando.ImageSeries.ControllerTest do
 
     [img1, img2] = series.images
     case img1.image.path do
-      "images/default/sample.png" -> assert img1.sequence > img2.sequence
-      "images/default/sample2.png" -> assert img1.sequence < img2.sequence
+      "images/test-category/sample.png" -> assert img1.sequence > img2.sequence
+      "images/test-category/sample2.png" -> assert img1.sequence < img2.sequence
     end
   end
 
