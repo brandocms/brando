@@ -74,6 +74,17 @@ defmodule Brando.HTML do
   end
 
   @doc """
+  Returns `active` if `conn`'s `full_path` matches `current_path`.
+  """
+  @spec active(Plug.Conn.t, String.t) :: String.t
+  def active(conn, url_to_match) do
+    case active_path(conn, url_to_match) do
+      true -> "active"
+      false -> ""
+    end
+  end
+
+  @doc """
   Checks if current_user in conn has `role`
   """
   @spec can_render?(Plug.Conn.t, Map.t) :: boolean
