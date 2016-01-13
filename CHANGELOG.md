@@ -1,4 +1,4 @@
-## v0.14.0-dev (2016-XX-XX)
+## v0.14.0 (2016-01-13)
 
 * Enhancements
   * Added `Brando.HTML.active(@conn, path)`. Returns `active` if `@conn`'s full path matches `path`.
