@@ -1,4 +1,8 @@
-## v0.14.0-dev (2015-XX-XX)
+## v0.14.0-dev (2016-XX-XX)
+
+* Enhancements
+  * Added `Brando.HTML.active(@conn, path)`. Returns `active` if `@conn`'s full path matches `path`.
+  * Added ability to pass `:original` to `Brando.Utils.img_url` to retrieve the image's original path.
 
 * Bug fixes
   * Fixed not setting otp app's backend translation language. Add `plug :put_admin_locale, MyApp.Backend.Gettext` to your `admin` pipeline in `router.ex`.
