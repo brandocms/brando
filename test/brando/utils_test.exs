@@ -107,7 +107,10 @@ defmodule Brando.UtilsTest do
   end
 
   test "img_url/2" do
-    img = %{sizes: %{"thumb" => "images/thumb/file.jpg"}}
+    img = %{
+      path: "original/path/file.jpg",
+      sizes: %{"thumb" => "images/thumb/file.jpg"}
+    }
     assert img_url(img, :thumb)
            == "images/thumb/file.jpg"
     assert img_url(nil, :thumb, [default: "default.jpg", prefix: "prefix"])
@@ -120,6 +123,12 @@ defmodule Brando.UtilsTest do
            == "images/thumb/file.jpg"
     assert img_url(img, "thumb", [default: "default.jpg"])
            == "images/thumb/file.jpg"
+    assert img_url(img, :original)
+           == "original/path/file.jpg"
+    assert img_url(img, :original, prefix: "prefix")
+           == "prefix/original/path/file.jpg"
+
+
     assert_raise ArgumentError, fn ->
       img_url(img, :notasize, [default: "default.jpg"])
     end

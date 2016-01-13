@@ -133,4 +133,10 @@ defmodule Brando.HTMLTest do
     assert html =~ ~s(<meta content="MyApp | MyApp" name="og:title">)
     assert html =~ ~s(<meta content="http://www.example.com:0" name="og:url">)
   end
+
+  test "active/2" do
+    conn = conn(:get, "/some/link")
+    assert active(conn, "/some/link") == "active"
+    assert active(conn, "/some/other/link") == ""
+  end
 end
