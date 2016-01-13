@@ -82,7 +82,7 @@ msgid "Configure image series"
 msgstr ""
 
 #: web/controllers/admin/image_category_controller.ex:133
-#: web/controllers/admin/image_series_controller.ex:172
+#: web/controllers/admin/image_series_controller.ex:171
 #: web/controllers/admin/page_controller.ex:157
 #: web/controllers/admin/page_fragment_controller.ex:114
 #: web/controllers/admin/post_controller.ex:136
@@ -135,7 +135,7 @@ msgstr ""
 msgid "Delete user"
 msgstr ""
 
-#: lib/brando/html.ex:332 lib/brando/html/inspect.ex:128
+#: lib/brando/html.ex:343 lib/brando/html/inspect.ex:128
 #: web/forms/page_form.ex:21 web/forms/post_form.ex:21
 #: web/templates/admin/instagram/index.html.eex:15
 #: web/views/instagram_view.ex:16
@@ -280,7 +280,7 @@ msgstr ""
 msgid "Image series created"
 msgstr ""
 
-#: web/controllers/admin/image_series_controller.ex:184
+#: web/controllers/admin/image_series_controller.ex:183
 msgid "Image series deleted"
 msgstr ""
 
@@ -586,7 +586,7 @@ msgstr ""
 msgid "Fragments"
 msgstr ""
 
-#: web/menus/images_menu.ex:10 web/models/image_series.ex:178
+#: web/menus/images_menu.ex:10 web/models/image_series.ex:184
 msgid "Images"
 msgstr ""
 
@@ -628,11 +628,11 @@ msgstr ""
 msgid "Caption"
 msgstr ""
 
-#: web/models/image_category.ex:129
+#: web/models/image_category.ex:136
 msgid "Config"
 msgstr ""
 
-#: web/models/image_series.ex:174
+#: web/models/image_series.ex:180
 msgid "Configuration"
 msgstr ""
 
@@ -656,13 +656,13 @@ msgstr ""
 msgid "Created"
 msgstr ""
 
-#: web/models/image.ex:190 web/models/image_category.ex:130
-#: web/models/image_series.ex:177 web/models/page.ex:202
+#: web/models/image.ex:190 web/models/image_category.ex:137
+#: web/models/image_series.ex:183 web/models/page.ex:202
 #: web/models/page_fragment.ex:131 web/models/post.ex:174
 msgid "Creator"
 msgstr ""
 
-#: web/models/image_series.ex:175
+#: web/models/image_series.ex:181
 msgid "Credits"
 msgstr ""
 
@@ -670,7 +670,7 @@ msgstr ""
 msgid "Data"
 msgstr ""
 
-#: lib/brando/html.ex:326 lib/brando/html/inspect.ex:127
+#: lib/brando/html.ex:337 lib/brando/html/inspect.ex:127
 #: web/forms/page_form.ex:18 web/forms/post_form.ex:18
 msgid "Draft"
 msgstr ""
@@ -703,8 +703,8 @@ msgstr ""
 msgid "Header"
 msgstr ""
 
-#: web/models/image.ex:187 web/models/image_category.ex:126
-#: web/models/image_series.ex:171 web/models/instagram_image.ex:264
+#: web/models/image.ex:187 web/models/image_category.ex:133
+#: web/models/image_series.ex:177 web/models/instagram_image.ex:264
 #: web/models/user.ex:202
 msgid "ID"
 msgstr ""
@@ -717,11 +717,11 @@ msgstr ""
 msgid "Image URL"
 msgstr ""
 
-#: web/models/image_series.ex:179 web/models/image_series.ex:180
+#: web/models/image_series.ex:185 web/models/image_series.ex:186
 msgid "Image category"
 msgstr ""
 
-#: web/models/image.ex:191 web/models/image_category.ex:131
+#: web/models/image.ex:191 web/models/image_category.ex:138
 msgid "Image series"
 msgstr ""
 
@@ -729,8 +729,8 @@ msgstr ""
 msgid "Inserted"
 msgstr ""
 
-#: web/models/image.ex:192 web/models/image_category.ex:132
-#: web/models/image_series.ex:181 web/models/post.ex:180 web/models/user.ex:210
+#: web/models/image.ex:192 web/models/image_category.ex:139
+#: web/models/image_series.ex:187 web/models/post.ex:180 web/models/user.ex:210
 msgid "Inserted at"
 msgstr ""
 
@@ -767,7 +767,7 @@ msgstr ""
 msgid "META keywords"
 msgstr ""
 
-#: web/models/image_category.ex:127 web/models/image_series.ex:172
+#: web/models/image_category.ex:134 web/models/image_series.ex:178
 msgid "Name"
 msgstr ""
 
@@ -784,7 +784,7 @@ msgstr ""
 msgid "No value"
 msgstr ""
 
-#: lib/brando/html.ex:320 lib/brando/html/inspect.ex:126
+#: lib/brando/html.ex:331 lib/brando/html/inspect.ex:126
 #: web/forms/page_form.ex:20 web/forms/post_form.ex:20
 msgid "Pending"
 msgstr ""
@@ -793,7 +793,7 @@ msgstr ""
 msgid "Publish at"
 msgstr ""
 
-#: lib/brando/html.ex:314 lib/brando/html/inspect.ex:125
+#: lib/brando/html.ex:325 lib/brando/html/inspect.ex:125
 #: web/forms/page_form.ex:19 web/forms/post_form.ex:19 web/models/post.ex:177
 msgid "Published"
 msgstr ""
@@ -810,11 +810,11 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
-#: web/models/image.ex:189 web/models/image_series.ex:176
+#: web/models/image.ex:189 web/models/image_series.ex:182
 msgid "Sequence"
 msgstr ""
 
-#: web/models/image_category.ex:128 web/models/image_series.ex:173
+#: web/models/image_category.ex:135 web/models/image_series.ex:179
 #: web/models/page.ex:196 web/models/post.ex:170
 msgid "Slug"
 msgstr ""
@@ -848,8 +848,8 @@ msgstr ""
 msgid "Updated"
 msgstr ""
 
-#: web/models/image.ex:193 web/models/image_category.ex:133
-#: web/models/image_series.ex:182 web/models/post.ex:181 web/models/user.ex:211
+#: web/models/image.ex:193 web/models/image_category.ex:140
+#: web/models/image_series.ex:188 web/models/post.ex:181 web/models/user.ex:211
 msgid "Updated at"
 msgstr ""
 
@@ -877,15 +877,15 @@ msgstr ""
 msgid "image"
 msgstr ""
 
-#: web/models/image_category.ex:123
+#: web/models/image_category.ex:130
 msgid "image categories"
 msgstr ""
 
-#: web/models/image_category.ex:122
+#: web/models/image_category.ex:129
 msgid "image category"
 msgstr ""
 
-#: web/models/image_series.ex:168
+#: web/models/image_series.ex:174
 msgid "image(s)"
 msgstr ""
 
@@ -893,11 +893,11 @@ msgstr ""
 msgid "images"
 msgstr ""
 
-#: web/models/image_series.ex:163
+#: web/models/image_series.ex:169
 msgid "imageserie"
 msgstr ""
 
-#: web/models/image_series.ex:164
+#: web/models/image_series.ex:170
 msgid "imageseries"
 msgstr ""
 
@@ -965,7 +965,7 @@ msgstr ""
 msgid "users"
 msgstr ""
 
-#: lib/brando/html.ex:168
+#: lib/brando/html.ex:179
 msgid "Delete"
 msgstr ""
 

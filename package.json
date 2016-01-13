@@ -1,6 +1,6 @@
 {
   "name": "brando",
-  "version": "0.14.0-dev",
+  "version": "0.14.0",
   "description": "Brando node deps",
   "main": "./priv/static/vendor/brando.js",
   "dependencies": {
@@ -18,11 +18,13 @@
     "type": "git",
     "url": "https://github.com/twined/brando.git"
   },
-  "files": ["LICENSE.md", "package.json",
-            "priv/static/vendor/brando.js"
-            "priv/static/vendor/brando.auth.js",
-            "priv/static/vendor/brando.vendor.js",
-            "priv/static/vendor/villain.all.js"],
+  "files": [
+    "LICENSE.md", "package.json",
+    "priv/static/vendor/brando.js",
+    "priv/static/vendor/brando.auth.js",
+    "priv/static/vendor/brando.vendor.js",
+    "priv/static/vendor/villain.all.js"
+  ],
   "author": "Twined Networks",
   "license": "MIT",
   "bugs": {
