@@ -138,7 +138,7 @@ defmodule Brando.Admin.ImageCategoryController do
   @doc false
   def delete(conn, %{"id" => id}) do
     model = conn.private[:category_model]
-    record = model |> Brando.repo.get_by!(id: id)
+    record = Brando.repo.get_by!(model, id: id)
     model.delete(record)
 
     conn

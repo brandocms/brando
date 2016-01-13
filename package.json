@@ -1,12 +1,8 @@
 {
   "name": "brando",
-  "version": "0.1.0",
+  "version": "0.14.0",
   "description": "Brando node deps",
-  "main": "index.js",
-  "directories": {
-    "doc": "doc",
-    "test": "test"
-  },
+  "main": "./priv/static/vendor/brando.js",
   "dependencies": {
     "autoprefixer": "^6.0.2",
     "babel-brunch": "^5.1.1",
@@ -18,15 +14,19 @@
     "sass-brunch": "^1.9.1",
     "uglify-js-brunch": ">= 1.0 < 1.8"
   },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/twined/brando.git"
   },
-  "author": "",
-  "license": ".",
+  "files": [
+    "LICENSE.md", "package.json",
+    "priv/static/vendor/brando.js",
+    "priv/static/vendor/brando.auth.js",
+    "priv/static/vendor/brando.vendor.js",
+    "priv/static/vendor/villain.all.js"
+  ],
+  "author": "Twined Networks",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/twined/brando/issues"
   },

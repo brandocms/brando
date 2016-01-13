@@ -54,7 +54,10 @@ defmodule Mix.Tasks.Brando.Install do
     # Gettext templates
     {:keep, "templates/brando.install/logs", "priv/static/gettext/backend/nb/LC_MESSAGES"},
     {:keep, "templates/brando.install/logs", "priv/static/gettext/frontend"},
-    {:eex,  "templates/brando.install/lib/gettext.ex", "lib/application_name/gettext.ex"},
+    {:eex,  "templates/brando.install/web/gettext.ex", "web/gettext.ex"},
+
+    # Admin web.ex
+    {:eex, "templates/brando.install/web/admin_web.ex", "web/admin_web.ex"}
   ]
 
   @static [
@@ -71,7 +74,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/web/static/js/app/flexslider.js", "web/static/js/flexslider.js"},
 
     {:copy, "templates/brando.install/web/static/css/app.scss", "web/static/css/app.scss"},
-    {:copy, "templates/brando.install/web/static/css/brando.custom.scss", "web/static/css/brando.custom.scss"},
+    {:copy, "templates/brando.install/web/static/css/custom/brando.custom.scss", "web/static/css/custom/brando.custom.scss"},
     {:copy, "templates/brando.install/web/static/css/includes/_colorbox.scss", "web/static/css/includes/_colorbox.scss"},
     {:copy, "templates/brando.install/web/static/css/includes/_cookielaw.scss", "web/static/css/includes/_cookielaw.scss"},
     {:copy, "templates/brando.install/web/static/css/includes/_dropdown.scss", "web/static/css/includes/_dropdown.scss"},

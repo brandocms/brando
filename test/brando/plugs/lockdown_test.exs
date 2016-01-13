@@ -91,7 +91,8 @@ defmodule Brando.Plug.LockdownTest do
       |> LockdownPlug.call([])
 
     assert conn.status == 302
-    assert conn.resp_headers["location"] == "/coming-soon"
+    assert List.keyfind(conn.resp_headers, "location", 0)
+           == {"location", "/coming-soon"}
 
     Application.put_env(:brando, :lockdown, false)
 
@@ -119,7 +120,9 @@ defmodule Brando.Plug.LockdownTest do
       |> LockdownPlugAuthFail.call([])
 
     assert conn.status == 302
-    assert conn.resp_headers["location"] == "/coming-soon"
+
+    assert List.keyfind(conn.resp_headers, "location", 0)
+           == {"location", "/coming-soon"}
 
     Application.put_env(:brando, :lockdown, false)
   end

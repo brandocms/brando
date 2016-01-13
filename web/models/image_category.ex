@@ -64,10 +64,17 @@ defmodule Brando.ImageCategory do
   If not valid, return errors from changeset
   """
   def create(params, current_user) do
+    path = Map.get(params, "slug", "default")
+    default_config =
+      Brando.Images
+      |> Brando.config
+      |> Keyword.get(:default_config)
+      |> Map.put(:upload_path, Path.join("images", path))
+
     %__MODULE__{}
     |> put_creator(current_user)
     |> changeset(:create, params)
-    |> put_change(:cfg, Brando.config(Brando.Images)[:default_config])
+    |> put_change(:cfg, default_config)
     |> Brando.repo.insert
   end
 

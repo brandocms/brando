@@ -11,7 +11,7 @@ exports.config = {
           'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
           'bower_components/jscroll/jquery.jscroll.js',
           'bower_components/responsive-nav/responsive-nav.js',
-          'bower_components/salvattore/dist/salvattore.min.js',
+          'bower_components/salvattore/dist/salvattore.js',
           'bower_components/flexslider/jquery.flexslider.js',
           'bower_components/colorbox/jquery.colorbox.js',
           /^(web\/static\/vendor)/
@@ -21,12 +21,6 @@ exports.config = {
         'js/brando.vendor.js': 'deps/brando/priv/static/vendor/js/brando.vendor.js',
         'js/villain.all.js': 'deps/brando/priv/static/vendor/js/villain.all.js',
       },
-      // order: {
-      //   before: [
-      //     /^bower_components/,
-      //     /^web\/static\/vendor/
-      //   ]
-      // }
     },
     stylesheets: {
       joinTo: {
@@ -41,7 +35,7 @@ exports.config = {
           'web/static/css/app.scss',
         ],
         'css/brando.custom.css': [
-          'web/static/css/brando.custom.scss'
+          'web/static/css/custom/*.scss'
         ]
       },
     },
@@ -72,7 +66,7 @@ exports.config = {
       /^(web\/static\/assets)/,
     ],
     ignored: [
-      'web/static/css/includes'
+      'web/static/css/includes/*'
     ],
   },
 

@@ -12,9 +12,13 @@ defmodule <%= base %>.Menu.<%= scoped %>s do
   use Brando.Menu
   import <%= base %>.Backend.Gettext
 
-  menu gettext("<%= scoped %>s"),
-    %{anchor: "<%= plural %>", icon: "fa fa-anchor icon",
-      submenu: [%{name: gettext("Index"), url: {:<%= admin_path %>_path, :index}},
-                %{name: gettext("Add"), url: {:<%= admin_path %>_path, :new},
-                  role: :admin}]}
+  menu %{
+    name: gettext("<%= scoped %>s"),
+    anchor: "<%= plural %>",
+    icon: "fa fa-anchor icon",
+    submenu: [
+      %{name: gettext("Index"), url: {:<%= admin_path %>_path, :index}},
+      %{name: gettext("Add"), url: {:<%= admin_path %>_path, :new}, role: :admin}
+    ]
+  }
 end

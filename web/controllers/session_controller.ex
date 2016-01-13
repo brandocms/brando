@@ -54,7 +54,7 @@ defmodule Brando.SessionController do
   end
 
   defp sanitize_user(user) do
-    Map.drop(user, [:password, :__meta__, :__struct__])
+    Map.drop(user, [:password, :__meta__])
   end
 
   defp sleep(conn) do

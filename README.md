@@ -35,19 +35,16 @@ Install Brando:
 
 Add to your `config/config.exs` right before the env-specific import:
 
-```elixir
-# insert -- begin
-import_config "brando.exs"
-# insert -- end
-import_config "#{Mix.env}.exs"
+```diff
++ import_config "brando.exs"
+  import_config "#{Mix.env}.exs"
 ```
 
 Add to your relevant `config/%{env}.exs` Repo config:
 
-```elixir
-config :my_app, Repo,
-  # ...
-  extensions: [{Postgrex.Extensions.JSON, library: Poison}]
+```diff
+  config :my_app, Repo,
++   extensions: [{Postgrex.Extensions.JSON, library: Poison}]
 ```
 
 Install bower frontend dependencies:
@@ -66,21 +63,18 @@ Go through `config/brando.exs`.
 
 Make sure you set `:brando, :media_path` to your `media` folder. This must be an absolute path! 
 
-Static config in `endpoint.ex`. (Make sure you add `images` to the `only` key):
+Static media config in `endpoint.ex`. 
 
-```elixir
-plug Plug.Static,
-  at: "/", from: :my_app, gzip: false,
-  only: ~w(css images js fonts favicon.ico robots.txt)
-
-plug Plug.Static,
-  at: "/media", from: Brando.config(:media_path)
+```diff
++ plug Plug.Static,
++  at: "/media", from: Brando.config(:media_path)
 ```
 
-Also switch out the socket config in `endpoint.ex`:
+Also switch out (or add to it, if you use sockets in the frontend as well) the socket config in `endpoint.ex`:
 
-```elixir
-socket "/admin/ws", Brando.UserSocket
+```diff
+- socket "/socket", MyApp.UserSocket
++ socket "/admin/ws", Brando.UserSocket
 ```
 
 To use Brando's error view, add to your Endpoint's config:
@@ -92,14 +86,6 @@ config :my_app, MyApp.Endpoint,
 
 Brando uses Gettext for i18n. 
 
-Add to your `mix.exs`
-
-```elixir
-def project do
-  [compilers: [:phoenix, :gettext] ++ Mix.compilers]
-end
-```
-
 To extract your frontend translations:
 
     $ mix gettext.extract
@@ -108,33 +94,36 @@ Create your frontend translation directories: (for norwegian)
 
     $ mkdir -p priv/gettext/frontend/nb/LC_MESSAGES
 
+And backend:
+
+    $ mkdir -p priv/gettext/backend/nb/LC_MESSAGES
+
 Merge frontend translations
 
     $ mix gettext.merge priv/gettext/frontend
 
-And backend
+And backend:
 
     $ mix gettext.merge priv/gettext/backend
 
 ## Production
 
-Run `compile` in your OTP app's dir to `git pull` latest, get latest hex deps, compile and build production assets.
+Run the `compile` script in your OTP app's dir to `git pull` latest, get latest hex deps, compile and build production assets.
 
 ## Additional admin CSS/styling
 
 For modules added through your OTP app, you can style its backend by editing 
-`web/static/css/brando.custom.scss`.
+`web/static/css/custom/brando.custom.scss`, or adding your own files to `web/static/css/custom/`
 
 ## Pagination
 
 For pagination, add to your app's `repo.ex`:
 
-```elixir
-
-defmodule MyApp.Repo do
-  use Ecto.Repo, otp_app: :my_app
-  use Scrivener
-end
+```diff
+  defmodule MyApp.Repo do
+    use Ecto.Repo, otp_app: :my_app
++   use Scrivener
+  end
 ```
 
 See Scrivener's docs for usage: https://hexdocs.pm/scrivener/
@@ -177,24 +166,24 @@ View:
 
 Model:
 
-```elixir
-  use Brando.Sequence, :model
+```diff
++ use Brando.Sequence, :model
 
   schema "model" do
     # ...
-    sequenced
++   sequenced
   end
 ```
 
 Migration:
 
-```elixir
-  use Brando.Sequence, :migration
+```diff
++ use Brando.Sequence, :migration
 
   def up do
     create table(:model) do
       # ...
-      sequenced
++     sequenced
     end
   end
 ```
@@ -241,24 +230,22 @@ Add to
 
 Model:
 
-```elixir
-  use Brando.Tag, :model
+```diff
++ use Brando.Tag, :model
 
   schema "model" do
-    # ...
-    tags
++   tags
   end
 ```
 
 Migration:
 
 ```elixir
-  use Brando.Tag, :migration
++ use Brando.Tag, :migration
 
   def up do
     create table(:model) do
-      # ...
-      tags
++     tags
     end
   end
 ```
@@ -268,27 +255,33 @@ Migration:
 
 Add to your app's supervision tree:
 
-```elixir
-worker(Brando.Instagram, [])
+```diff
+  children = [
+    # Start the endpoint when the application starts
+    supervisor(MyApp.Endpoint, []),
+    # Start the Ecto repository
+    supervisor(MyApp.Repo, []),
++   worker(Brando.Instagram, [])
+  ]
 ```
 
 Add Instagram to your menu modules in `config/brando.exs`:
 
-```elixir
-config :brando, Brando.Menu,
-  modules: [Admin, Users, News, Pages, Images, Instagram]
+```diff
+  config :brando, Brando.Menu,
+    modules: [Admin, Users, News, Pages, Images, 
++             Instagram]
 ```
 
 Add routes to your app's `web/router.ex` under the `admin` scope:
 
-```elixir
-import Brando.Routes.Admin.Instagram
+```diff
++ import Brando.Routes.Admin.Instagram
 
-scope "/admin", as: :admin do
-  pipe_through :admin
-  # ...
-  instagram_routes "/instagram"
-end
+  scope "/admin", as: :admin do
+    pipe_through :admin
++   instagram_routes "/instagram"
+  end
 ```
 
 Config is found in your app's `config/brando.exs`.
@@ -307,8 +300,14 @@ Analytics is provided through [Eightyfour](http://github.com/twined/eightyfour).
 
 Add to your app's supervision tree:
 
-```elixir
-worker(Brando.Eightyfour, [])
+```diff
+  children = [
+    # Start the endpoint when the application starts
+    supervisor(MyApp.Endpoint, []),
+    # Start the Ecto repository
+    supervisor(MyApp.Repo, []),
++   worker(Brando.Eightyfour, [])
+  ]
 ```
 
 Add to your `config/brando.exs`
@@ -320,14 +319,13 @@ config :brando, Brando.Menu,
 
 Finally add to your `router.ex`:
 
-```elixir
-import Brando.Routes.Admin.Analytics
-# ...
-scope "/admin", as: :admin do
-  pipe_through :admin
-  # ...
-  analytics_routes   "/analytics"
-end
+```diff
++ import Brando.Routes.Admin.Analytics
+
+  scope "/admin", as: :admin do
+    pipe_through :admin
++   analytics_routes   "/analytics"
+  end
 ```
 
 ## Imagefield
@@ -336,30 +334,30 @@ A built in method for adding images to your model is supplied for you.
 
 In your model:
 
-```elixir
+```diff
 
-use Brando.Field.ImageField
-
-schema "user" do
-  field :username, :string
-  field :avatar, Brando.Type.Image
-end
-
-has_image_field :avatar,
-  %{allowed_mimetypes: ["image/jpeg", "image/png"],
-    default_size: :medium,
-    upload_path: Path.join("images", "avatars"),
-    random_filename: true,
-    size_limit: 10240000,
-    sizes: %{
-      "micro"  => %{"size" => "25x25>", "quality" => 100, "crop" => true},
-      "thumb"  => %{"size" => "150x150>", "quality" => 100, "crop" => true},
-      "small"  => %{"size" => "300", "quality" => 100},
-      "medium" => %{"size" => "500", "quality" => 100},
-      "large"  => %{"size" => "700", "quality" => 100},
-      "xlarge" => %{"size" => "900", "quality" => 100}
-    }
-  }
++ use Brando.Field.ImageField
+  
+  schema "user" do
+    field :username, :string
++   field :avatar, Brando.Type.Image
+  end
+  
++ has_image_field :avatar,
++   %{allowed_mimetypes: ["image/jpeg", "image/png"],
++     default_size: :medium,
++     upload_path: Path.join("images", "avatars"),
++     random_filename: true,
++     size_limit: 10240000,
++     sizes: %{
++       "micro"  => %{"size" => "25x25>", "quality" => 100, "crop" => true},
++       "thumb"  => %{"size" => "150x150>", "quality" => 100, "crop" => true},
++       "small"  => %{"size" => "300", "quality" => 100},
++       "medium" => %{"size" => "500", "quality" => 100},
++       "large"  => %{"size" => "700", "quality" => 100},
++       "xlarge" => %{"size" => "900", "quality" => 100}
++     }
++   }
 ```
 
 The migration's field should be `:text`, not `:string`.
@@ -376,14 +374,13 @@ plug :check_for_uploads, {"user", Brando.User}
 
 To use villain outside the built-in `pages` and `news` modules add to your app's `web/router.ex`:
 
-```elixir
-import Brando.Routes.Admin.Villain
+```diff
++ import Brando.Routes.Admin.Villain
 
-scope "/admin", as: :admin do
-  pipe_through :admin
-  # ...
-  villain_routes "/whatever/has/villain"
-end
+  scope "/admin", as: :admin do
+    pipe_through :admin
++   villain_routes "/whatever/has/villain"
+  end
 
 ```
 
@@ -435,18 +432,18 @@ Build for prod with `brunch build`.
 
 This requires you to have `pngquant` installed.
 
-```elixir
-config :brando, Brando.Images,
-  optimize: [
-    png: [bin: "/usr/local/bin/pngquant",
-          args: "--speed 1 --force --output %{new_filename} -- #{filename}"]]
+```diff
+  config :brando, Brando.Images,
++   optimize: [
++     png: [bin: "/usr/local/bin/pngquant",
++           args: "--speed 1 --force --output %{new_filename} -- #{filename}"]]
 ```
 
 or
 
-```elixir
-config :brando, Brando.Images,
-  optimize: false
+```diff
+  config :brando, Brando.Images,
++   optimize: false
 ```
 
 ## Deployment

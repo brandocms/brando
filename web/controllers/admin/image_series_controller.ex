@@ -17,8 +17,13 @@ defmodule Brando.Admin.ImageSeriesController do
   @doc false
   def new(conn, %{"id" => category_id}) do
     model = conn.private[:series_model]
-    params = %{"image_category_id" => String.to_integer(category_id)}
-    changeset = model.changeset(model.__struct__, :create, params)
+
+    series =
+      model
+      |> struct
+      |> Map.put(:image_category_id, String.to_integer(category_id))
+
+    changeset = model.changeset(series, :create)
 
     conn
     |> assign(:page_title, gettext("New image series"))
@@ -63,7 +68,7 @@ defmodule Brando.Admin.ImageSeriesController do
   @doc false
   def update(conn, %{"imageseries" => form_data, "id" => id}) do
     series_model = conn.private[:series_model]
-    record = series_model |> Brando.repo.get_by!(id: id)
+    record = Brando.repo.get_by!(series_model, id: id)
 
     case series_model.update(record, form_data) do
       {:ok, _updated_record} ->
@@ -146,13 +151,12 @@ defmodule Brando.Admin.ImageSeriesController do
       |> Brando.repo.get_by!(id: id)
 
     opts = Map.put(%{}, "image_series_id", series.id)
-    cfg = series.cfg
-          || Brando.config(Brando.Images)[:default_config]
+    cfg = series.cfg || Brando.config(Brando.Images)[:default_config]
     {:ok, image} =
       image_model.check_for_uploads(params, Brando.Utils.current_user(conn),
                                     cfg, opts)
-    conn
-    |> render(:upload_post, image: image)
+
+    render(conn, :upload_post, image: image)
   end
 
   @doc false
@@ -172,7 +176,7 @@ defmodule Brando.Admin.ImageSeriesController do
   @doc false
   def delete(conn, %{"id" => id}) do
     series_model = conn.private[:series_model]
-    record = series_model |> Brando.repo.get_by!(id: id)
+    record = Brando.repo.get_by!(series_model, id: id)
     series_model.delete(record)
 
     conn

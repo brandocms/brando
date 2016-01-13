@@ -1,4 +1,4 @@
 defmodule <%= module %>View do
-  use Brando.Web, :view
+  use <%= base %>.Web, :view
   import <%= base %>.Gettext
 end

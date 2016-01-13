@@ -50,8 +50,8 @@ defmodule Brando.Instagram.AccessToken do
 
   defp post_login(response) do
     cookies = get_cookies(response.headers)
-    csrf_token = cookies["csrftoken"]
-    mid_token = cookies["mid"]
+    {_, csrf_token} = List.keyfind(cookies, "csrftoken", 0, {nil, nil})
+    {_, mid_token} = List.keyfind(cookies, "mid", 0, {nil, nil})
     url = host() <> action()
 
     headers = default_headers() ++ [
@@ -70,8 +70,8 @@ defmodule Brando.Instagram.AccessToken do
 
   defp post_authorize(response) do
     cookies = get_cookies(response.headers)
-    csrf_token = cookies["csrftoken"]
-    mid_token = cookies["mid"]
+    {_, csrf_token} = List.keyfind(cookies, "csrftoken", 0, {nil, nil})
+    {_, mid_token} = List.keyfind(cookies, "mid", 0, {nil, nil})
     url = host() <> action
 
     headers = default_headers() ++ [
@@ -89,8 +89,13 @@ defmodule Brando.Instagram.AccessToken do
   end
 
   defp post_callback(response) do
-    location = response.headers["Location"]
-    cookies = get_cookies(response.headers)
+    {_, location} = List.keyfind(response.headers, "Location", 0, {nil, nil})
+
+    cookies =
+      response.headers
+      |> get_cookies
+      |> Enum.into(%{})
+
     csrf_token = cookies["csrftoken"]
     mid_token = cookies["mid"]
     session_token = cookies["sessionid"]

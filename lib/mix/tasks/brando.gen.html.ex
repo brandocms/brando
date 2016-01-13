@@ -85,14 +85,10 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       ]
     end
 
-    Mix.Brando.check_module_name_availability!(binding[:module] <>
-                                                "Controller")
-    Mix.Brando.check_module_name_availability!(binding[:module] <>
-                                                "View")
-    Mix.Brando.check_module_name_availability!(binding[:admin_module] <>
-                                                "Controller")
-    Mix.Brando.check_module_name_availability!(binding[:admin_module] <>
-                                                "View")
+    Mix.Brando.check_module_name_availability!(binding[:module] <> "Controller")
+    Mix.Brando.check_module_name_availability!(binding[:module] <> "View")
+    Mix.Brando.check_module_name_availability!(binding[:admin_module] <> "Controller")
+    Mix.Brando.check_module_name_availability!(binding[:admin_module] <> "View")
 
     Mix.Task.run "brando.gen.model", args
 
@@ -110,6 +106,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     Add the resource to your browser scope in web/router.ex by either
 
         import Brando.Routes.Admin
+        alias #{binding[:base]}.Admin.#{binding[:scoped]}Controller
         admin_routes "#{route}", #{binding[:scoped]}Controller
 
     or for more fine grained control:
@@ -133,7 +130,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     Install menu by adding to your `config/brando.exs`
 
         config :brando, Brando.Menu,
-          modules: [#{String.capitalize(plural)}, ...]
+          modules: [#{binding[:base]}.Menu.#{Phoenix.Naming.camelize(plural)}, ...]
 
     """
   end

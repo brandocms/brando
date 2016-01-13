@@ -1,3 +1,18 @@
+## v0.14.0 (2016-01-13)
+
+* Enhancements
+  * Added `Brando.HTML.active(@conn, path)`. Returns `active` if `@conn`'s full path matches `path`.
+  * Added ability to pass `:original` to `Brando.Utils.img_url` to retrieve the image's original path.
+
+* Bug fixes
+  * Fixed not setting otp app's backend translation language. Add `plug :put_admin_locale, MyApp.Backend.Gettext` to your `admin` pipeline in `router.ex`.
+  * Fixed some access bugs for Elixir v1.2.
+  * Fixed default errors on "new" image_serie form.
+  * Fixed brunch compilation warnings on a new brando installation.
+  * Changed `gettext` config location to `web/gettext.ex` so that we overwrite Phoenix's default file.
+  * Fixed `compile` script to compile after building production assets. Previously, the assets were not copied to `_build` directory due to compiling project before the new assets were built.
+  * Fixed typo in `brando.exs` config
+
 ## v0.13.0 (2015-12-17)
 
 * Bug fixes

@@ -17,7 +17,7 @@ defmodule <%= application_module %>.Router do
     plug :accepts, ~w(html json)
     plug :fetch_session
     plug :fetch_flash
-    plug :put_admin_locale
+    plug :put_admin_locale, <%= application_module %>.Backend.Gettext
     plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
     plug Authenticate
     plug :put_secure_browser_headers

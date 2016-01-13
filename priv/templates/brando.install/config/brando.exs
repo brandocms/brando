@@ -18,9 +18,10 @@ config :eightyfour,
 
 config :brando,
   app_name: "<%= application_module %>",
+  auth_sleep_duration: 5000,
   endpoint: <%= application_module %>.Endpoint,
   otp_app: :<%= application_name %>,
-  log_dir: Path.Expand("./logs"),
+  log_dir: Path.expand("./logs"),
   default_language: "en",
   languages: [
     [value: "nb", text: "Norsk"],

@@ -1,5 +1,3 @@
-#Code.require_file("router_helper.exs", Path.join([__DIR__, "..", ".."]))
-
 defmodule Brando.Users.ControllerTest do
   use ExUnit.Case
   use Brando.ConnCase
@@ -38,14 +36,14 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "profile" do
-    Forge.saved_user(TestRepo)
+    user = Forge.saved_user(TestRepo)
     conn =
       :get
       |> call("/admin/users/profile")
-      |> with_user
+      |> with_user(user)
       |> send_request
 
-    assert html_response(conn, 200) =~ "iggypop"
+    assert html_response(conn, 200) =~ "jamesw"
   end
 
   test "new" do
@@ -108,8 +106,7 @@ defmodule Brando.Users.ControllerTest do
     user = Forge.saved_user(TestRepo)
     conn =
       :patch
-      |> call("/admin/users/#{user.id}",
-              %{"user" => Map.delete(user, :__struct__)})
+      |> call("/admin/users/#{user.id}", %{"user" => Map.delete(user, :__struct__)})
       |> with_user
       |> send_request
 
@@ -137,8 +134,7 @@ defmodule Brando.Users.ControllerTest do
     user = Forge.saved_user(TestRepo)
     conn =
       :patch
-      |> call("/admin/users/profile/edit",
-              %{"user" => Map.delete(user, :__struct__)})
+      |> call("/admin/users/profile/edit", %{"user" => Map.delete(user, :__struct__)})
       |> with_user(user)
       |> send_request
 

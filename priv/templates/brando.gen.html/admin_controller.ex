@@ -1,12 +1,10 @@
 defmodule <%= admin_module %>Controller do
-  use <%= base %>.Web, :controller
+  use <%= base %>.Admin.Web, :controller
 <%= if villain do %>  use Brando.Villain, [:controller, [
     image_model: Brando.Image,
     series_model: Brando.ImageSeries]]<% end %>
   alias <%= module %>
 <%= if image_field do %>  import Brando.Plug.Uploads<% end %>
-  import <%= base %>.Backend.Gettext
-
 
   plug :scrub_params, <%= inspect singular %> when action in [:create, :update]
   <%= if image_field do %>plug :check_for_uploads, {<%= inspect singular %>, <%= module %>} when action in [:create, :update]<% end %>
@@ -68,7 +66,7 @@ defmodule <%= admin_module %>Controller do
         |> redirect(to: <%= admin_path %>_path(conn, :index))
       {:error, changeset} ->
         conn
-        |> put_flash(:error, t!(language, "flash.form_error"))
+        |> put_flash(:error, gettext("Errors in form"))
         |> assign(:page_title, gettext("Edit <%= singular %>"))
         |> render("edit.html", <%= singular %>: <%= singular %>,
                                changeset: changeset)
