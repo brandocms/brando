@@ -11,10 +11,11 @@ defmodule Brando.Pages.Utils do
       render_fragment("my/fragment", Gettext.get_locale(MyApp.Gettext)
       render_fragment("my/fragment", "en")
 
-  If no language is passed, "en" will be used as default.
+  If no language is passed, default language set in `brando.exs` will be used.
   If the fragment isn't found, it will render an error box.
   """
-  def render_fragment(key, language \\ "en") do
+  def render_fragment(key, language \\ nil) do
+    language = language && language || Brando.config(:default_language)
     fragment = Brando.repo.one(
       from p in PageFragment,
         where: p.key == ^key and
