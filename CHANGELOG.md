@@ -1,5 +1,9 @@
 ## v0.15.0-dev (2016-XX-XX)
 
+* Enhancements
+  * Improve default Villain parser for text blocks.
+  * Use `default_language` config with `render_fragment` instead of hardcoded english.
+
 ## v0.14.0 (2016-01-13)
 
 * Enhancements
