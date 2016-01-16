@@ -7,6 +7,8 @@ defmodule Brando.SessionController do
   alias Brando.SystemChannel
   import Brando.Gettext
 
+  @default_auth_sleep_duration 2500
+
   @doc false
   def login(conn, %{"user" => %{"email" => email, "password" => password}}) do
     model = conn.private[:model]
@@ -58,7 +60,7 @@ defmodule Brando.SessionController do
   end
 
   defp sleep(conn) do
-    :timer.sleep(Brando.config(:auth_sleep_duration))
+    :timer.sleep(Brando.config(:auth_sleep_duration) || @default_auth_sleep_duration)
     conn
   end
 end
