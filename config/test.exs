@@ -67,20 +67,6 @@ config :brando, :admin_languages, [
   [value: "nb", text: "Norsk"],
   [value: "en", text: "English"]
 ]
-config :brando, :status_choices, [
-  no: [
-    [value: "0", text: "Kladd"],
-    [value: "1", text: "Publisert"],
-    [value: "2", text: "Venter"],
-    [value: "3", text: "Slettet"]
-  ],
-  en: [
-    [value: "0", text: "Draft"],
-    [value: "1", text: "Published"],
-    [value: "2", text: "Pending"],
-    [value: "3", text: "Deleted"]
-  ]
-]
 
 config :brando, Brando.Villain, parser: Brando.Villain.Parser.Default
 config :brando, Brando.Villain, extra_blocks: []
