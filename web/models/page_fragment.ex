@@ -100,18 +100,20 @@ defmodule Brando.PageFragment do
     Brando.repo.delete!(record)
   end
   def delete(id) do
-    record = Brando.repo.get_by(__MODULE__, id: id)
-    delete(record)
+    __MODULE__
+    |> Brando.repo.get_by!(id: id)
+    |> delete
   end
 
   @doc """
   Get all records. Ordered by `id`. Preload :creator.
   """
   def all do
-    q = from m in __MODULE__,
-          order_by: [desc: m.inserted_at],
-          preload: [:creator]
-    q |> Brando.repo.all
+    Brando.repo.all(
+      from m in __MODULE__,
+        order_by: [desc: m.inserted_at],
+        preload: [:creator]
+    )
   end
 
 

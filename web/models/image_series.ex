@@ -88,21 +88,23 @@ defmodule Brando.ImageSeries do
   end
 
   def get_slug(id: id) do
-    q = from m in __MODULE__,
-             select: m.slug,
-             where: m.id == ^id
-    Brando.repo.one!(q)
+    Brando.repo.one!(
+      from m in __MODULE__,
+        select: m.slug,
+        where: m.id == ^id
+    )
   end
 
   @doc """
   Get all imageseries in category `id`.
   """
   def get_by_category_id(id) do
-    q = from m in __MODULE__,
-             where: m.image_category_id == ^id,
-             order_by: m.sequence,
-             preload: [:images]
-    Brando.repo.all(q)
+    Brando.repo.all(
+      from m in __MODULE__,
+        where: m.image_category_id == ^id,
+        order_by: m.sequence,
+        preload: [:images]
+    )
   end
 
   @doc """
@@ -119,10 +121,11 @@ defmodule Brando.ImageSeries do
   Recreates all image sizes in imageseries.
   """
   def recreate_sizes(image_series_id) do
-    q = from m in __MODULE__,
-             preload: :images,
-             where: m.id == ^image_series_id
-    image_series = Brando.repo.one!(q)
+    image_series = Brando.repo.one!(
+      from m in __MODULE__,
+        preload: :images,
+        where: m.id == ^image_series_id
+    )
     for image <- image_series.images do
       Brando.Image.recreate_sizes(image)
     end
@@ -132,9 +135,10 @@ defmodule Brando.ImageSeries do
   Delete all imageseries dependant on `category_id`
   """
   def delete_dependent_image_series(category_id) do
-    q = from m in __MODULE__,
-             where: m.image_category_id == ^category_id
-    image_series = Brando.repo.all(q)
+    image_series = Brando.repo.all(
+      from m in __MODULE__,
+        where: m.image_category_id == ^category_id
+    )
 
     for is <- image_series, do:
       delete(is)

@@ -17,6 +17,7 @@ defmodule Brando.Admin.LayoutView do
   def get_menus() do
     modules = Brando.config(Brando.Menu)[:modules]
     colors = Brando.config(Brando.Menu)[:colors]
+
     for {mod, color} <- Enum.zip(modules, colors) do
       {color, mod.get_menu()}
     end

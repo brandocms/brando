@@ -64,6 +64,7 @@ defmodule Brando.Admin.PageController do
   def new(conn, _params) do
     model = conn.private[:model]
     changeset = model.changeset(model.__struct__, :create)
+
     conn
     |> assign(:changeset, changeset)
     |> assign(:page_title, gettext("New page"))
@@ -94,10 +95,8 @@ defmodule Brando.Admin.PageController do
     page =
       model
       |> Brando.repo.get_by(id: id)
-      |> Map.drop([:__struct__, :__meta__, :id,
-                   :key, :slug, :title,
-                   :children, :creator, :parent,
-                   :updated_at, :inserted_at])
+      |> Map.drop([:__struct__, :__meta__, :id, :key, :slug, :title,
+                   :children, :creator, :parent, :updated_at, :inserted_at])
 
     changeset = model.changeset(%Brando.Page{}, :create, page)
 

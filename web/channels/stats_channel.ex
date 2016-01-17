@@ -9,7 +9,8 @@ defmodule Brando.StatsChannel do
     :atom,
     :binary,
     :code,
-    :ets]
+    :ets
+  ]
 
   use Phoenix.Channel
 
@@ -27,15 +28,20 @@ defmodule Brando.StatsChannel do
       rescue
         _ -> false
       end
+
     mem_list =
       @info_memory
       |> :erlang.memory
       |> Keyword.values
 
     :erlang.send_after(@interval, self, :update)
-    push socket, "update", %{total_memory: Enum.at(mem_list, 0),
-                             atom_memory: Enum.at(mem_list, 2),
-                             instagram_status: instagram_status}
+
+    push socket, "update", %{
+      total_memory: Enum.at(mem_list, 0),
+      atom_memory: Enum.at(mem_list, 2),
+      instagram_status: instagram_status
+    }
+
     {:noreply, socket}
   end
 end

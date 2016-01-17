@@ -40,9 +40,11 @@ defmodule Brando.Admin.InstagramView do
       {i, {a, r, d, f}}
     end
     failed = ~s(#{failed} #{gettext("Download failed")})
-    html = Enum.join([approved_header, approved, div_close, rejected_header,
-                     rejected, div_close, deleted_header, deleted, div_close,
-                     failed_header, failed, div_close])
-    html |> raw
+
+    Enum.join([
+      approved_header, approved, div_close, rejected_header,
+      rejected, div_close, deleted_header, deleted, div_close,
+      failed_header, failed, div_close]
+    ) |> raw
   end
 end

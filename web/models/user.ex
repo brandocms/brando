@@ -91,8 +91,8 @@ defmodule Brando.User do
     |> validate_exclusion(:username, ~w(admin superadmin superuser editor
                                         root create edit delete update ny
                                         endre slett profil))
-    |> validate_confirmation(:password, message: "Passord matcher ikke")
-    |> validate_length(:password, min: 6, too_short: "Passord må være > 6 tegn")
+    |> validate_confirmation(:password, message: gettext("Passwords must match"))
+    |> validate_length(:password, min: 6, too_short: "Password must be at least 6 characters")
   end
 
   @doc """
@@ -134,8 +134,9 @@ defmodule Brando.User do
     Brando.repo.delete!(record)
   end
   def delete(id) do
-    record = Brando.repo.get_by!(__MODULE__, id: id)
-    delete(record)
+    __MODULE__
+    |> Brando.repo.get_by!(id: id)
+    |> delete
   end
 
 
@@ -194,10 +195,6 @@ defmodule Brando.User do
     singular: gettext("user"),
     plural: gettext("users"),
     repr: &("#{&1.full_name} (#{&1.username})"),
-    fieldset: [
-      user_info: "User information",
-      rights: "Rights"
-    ],
     fields: [
       id: gettext("ID"),
       username: gettext("Username"),

@@ -39,8 +39,7 @@ defmodule Brando.ImageCategory do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, action, params \\ :empty)
   def changeset(model, :create, params) do
-    model
-    |> cast(params, @required_fields, @optional_fields)
+    cast(model, params, @required_fields, @optional_fields)
   end
 
   @doc """
@@ -54,8 +53,7 @@ defmodule Brando.ImageCategory do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
-    model
-    |> cast(params, @required_fields, @optional_fields)
+    cast(model, params, @required_fields, @optional_fields)
   end
 
   @doc """
@@ -65,6 +63,7 @@ defmodule Brando.ImageCategory do
   """
   def create(params, current_user) do
     path = Map.get(params, "slug", "default")
+
     default_config =
       Brando.Images
       |> Brando.config
@@ -94,10 +93,11 @@ defmodule Brando.ImageCategory do
   Returns the model's slug
   """
   def get_slug(id: id) do
-    q = from m in __MODULE__,
-             select: m.slug,
-             where: m.id == ^id
-    Brando.repo.one!(q)
+    Brando.repo.one!(
+      from m in __MODULE__,
+        select: m.slug,
+        where: m.id == ^id
+    )
   end
 
   @doc """
@@ -105,10 +105,10 @@ defmodule Brando.ImageCategory do
   """
   def with_image_series_and_images(query) do
     from m in query,
-         left_join: is in assoc(m, :image_series),
-         left_join: i in assoc(is, :images),
-         order_by: [asc: m.name, asc: is.sequence, asc: i.sequence],
-         preload: [image_series: {is, images: i}]
+      left_join: is in assoc(m, :image_series),
+      left_join: i in assoc(is, :images),
+      order_by: [asc: m.name, asc: is.sequence, asc: i.sequence],
+      preload: [image_series: {is, images: i}]
   end
 
   @doc """
