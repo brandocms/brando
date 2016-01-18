@@ -14,7 +14,7 @@ defmodule Brando.Social.Facebook do
 
   ## Example
 
-      <%= Brando.Social.Pinterest.link @conn do %>
+      <%= Brando.Social.Facebook.link @conn do %>
         This links to facebook!
       <% end %>
 
