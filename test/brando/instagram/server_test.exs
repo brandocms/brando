@@ -11,7 +11,11 @@ defmodule Brando.InstagramServerTest do
   end
 
   test "stop" do
-    {:ok, server} = Brando.Instagram.Server.start_link
+    server = case Brando.Instagram.Server.start_link do
+      {:ok, pid} -> pid
+      {:error, {_, pid}} -> pid
+    end
+
     assert Brando.Instagram.Server.stop(server) == :ok
   end
 end
