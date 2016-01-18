@@ -38,4 +38,11 @@ defmodule Brando.SocialTest do
                 "ge%2Ffile.jpg&amp;description=Pinterest+text&quot;\" " <>
                 "title=\"pinterest\">", "pinterest", "</a>"]}
   end
+
+  test "Email.link" do
+    conn = conn(:get, "/awesome/link", [])
+    assert Social.Email.link(conn, "Subject", do: {:safe, "email"})
+           == {:safe,
+               ["<a href=\"mailto:?subject=Subject&amp;body=http://www.example.com/awesome/link\" title=\"email\">", "email", "</a>"]}
+  end
 end
