@@ -1,4 +1,4 @@
-## v0.15.0-dev (2016-XX-XX)
+## v0.15.0 (2016-01-18)
 
 * Enhancements
   * Added `Brando.Social.Email` for sharing current page URL through email.
