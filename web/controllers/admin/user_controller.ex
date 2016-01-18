@@ -72,8 +72,7 @@ defmodule Brando.Admin.UserController do
     case model.update(user, form_data) do
       {:ok, updated_user} ->
         conn = case current_user(conn).id == user_id do
-          true  -> put_session(conn, :current_user,
-                               Map.drop(updated_user, [:password]))
+          true  -> put_session(conn, :current_user, Map.drop(updated_user, [:password]))
           false -> conn
         end
         conn
@@ -140,8 +139,7 @@ defmodule Brando.Admin.UserController do
     case model.update(user, form_data) do
       {:ok, updated_user} ->
         conn = case current_user(conn).id == String.to_integer(user_id) do
-          true -> put_session(conn, :current_user, Map.drop(updated_user,
-                                                            [:password]))
+          true -> put_session(conn, :current_user, Map.drop(updated_user, [:password]))
           false -> conn
         end
 
@@ -176,8 +174,7 @@ defmodule Brando.Admin.UserController do
     model.delete(record)
 
     conn
-    |> put_flash(:notice, "#{model_name(record, :singular)} " <>
-                          "#{model.__repr__(record)} #{gettext("deleted")}")
+    |> put_flash(:notice, "#{model_name(record, :singular)} #{model.__repr__(record)} #{gettext("deleted")}")
     |> redirect(to: helpers(conn).admin_user_path(conn, :index))
   end
 end

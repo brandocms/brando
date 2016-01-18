@@ -1,3 +1,11 @@
+## v0.15.0 (2016-01-18)
+
+* Enhancements
+  * Added `Brando.Social.Email` for sharing current page URL through email.
+  * Improve default Villain parser for text blocks.
+  * Use `default_language` config with `render_fragment` instead of hardcoded english.
+  * Set `auth_sleep_duration` config setting fallback to 2500 ms, and remove from default `brando.exs`.
+
 ## v0.14.0 (2016-01-13)
 
 * Enhancements

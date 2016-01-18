@@ -97,7 +97,7 @@ defmodule Brando.Admin.PageFragmentController do
         |> assign(:page_fragment, form_data)
         |> assign(:changeset, changeset)
         |> assign(:id, id)
-        |> put_flash(:error, "Feil i skjema")
+        |> put_flash(:error, gettext("Errors in form"))
         |> render(:edit)
     end
   end

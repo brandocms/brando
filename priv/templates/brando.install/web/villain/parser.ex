@@ -22,11 +22,17 @@ defmodule <%= application_module %>.Villain.Parser do
   @doc """
   Convert text to HTML through Markdown
   """
-  def text(%{"text" => text, "type" => type}) do
-    if type == "lead" and byte_size(text) > 0 do
-      text = text <> "\n{: .lead}"
-    end
-    Earmark.to_html(text)
+  def text(%{"text" => text} = params) do
+    text =
+      case Map.get(params, "type") do
+        nil  ->
+          text
+        "lead" ->
+          byte_size(text) > 0 && text <> "\n{: .lead}" || text
+        _ ->
+          text
+      end
+    Earmark.to_html(text, %Earmark.Options{breaks: true})
   end
 
   @doc """

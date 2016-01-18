@@ -17,7 +17,10 @@ import WS from "./components/ws";
 
 
 $(() => {
-    /* set up automated vendored js stuff */
+    /**
+     * Setup vendored modules.
+     */
+
     Vex.setup();
     Autoslug.setup();
     FilterTable.setup();
@@ -26,6 +29,10 @@ $(() => {
     Sequence.setup();
     Toolbar.setup();
     Tags.setup();
+
+    /**
+     * Section-specific setup
+     */
 
     switch ($('body').attr('data-script')) {
         case "images-index":
@@ -41,6 +48,10 @@ $(() => {
             Pages.setup();
             break;
     }
-    /* set up ws */
+
+    /**
+     * Global setup
+     */
+
     WS.setup();
 });

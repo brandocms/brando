@@ -24,7 +24,7 @@ defmodule Brando.UserProfileForm do
     fieldset do
       field :language, :select,
         [default: "nb",
-        choices: &__MODULE__.get_language_choices/0]
+         choices: &__MODULE__.get_language_choices/0]
     end
 
     field :avatar, :file, [required: false]

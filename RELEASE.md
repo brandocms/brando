@@ -20,5 +20,6 @@
   14. Switch to develop-branch.
   15. Bump version in CHANGELOG + -dev
   16. Bump version in mix.exs + -dev
-  17. Commit `develop` with `Start X.X.X development`. Push
-  18. Push `X.X.X` tag to `origin`
+  17. Bump version in package.json + -dev  
+  18. Commit `develop` with `Start X.X.X development`. Push
+  19. Push `X.X.X` tag to `origin`

@@ -18,7 +18,6 @@ config :eightyfour,
 
 config :brando,
   app_name: "<%= application_module %>",
-  auth_sleep_duration: 5000,
   endpoint: <%= application_module %>.Endpoint,
   otp_app: :<%= application_name %>,
   log_dir: Path.expand("./logs"),
@@ -31,19 +30,6 @@ config :brando,
   admin_languages: [
     [value: "nb", text: "Norsk"],
     [value: "en", text: "English"]
-  ],
-  status_choices: [
-    no: [
-      [value: "0", text: "Kladd"],
-      [value: "1", text: "Publisert"],
-      [value: "2", text: "Venter"],
-      [value: "3", text: "Slettet"]],
-    en: [
-      [value: "0", text: "Draft"],
-      [value: "1", text: "Published"],
-      [value: "2", text: "Pending"],
-      [value: "3", text: "Deleted"]
-    ]
   ],
   lockdown: true,
   mailgun_domain: "https://api.mailgun.net/v3/mydomain.com",

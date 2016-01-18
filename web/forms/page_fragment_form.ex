@@ -25,13 +25,14 @@ defmodule Brando.PageFragmentForm do
     form_value == to_string(status_int)
   end
 
-  form "page_fragment", [model: PageFragment, helper: :admin_page_fragment_path,
+  form "page_fragment", [model: PageFragment,
+                         helper: :admin_page_fragment_path,
                          class: "grid-form"] do
     field :key, :text
     fieldset do
       field :language, :select,
         [default: "nb",
-        choices: &__MODULE__.get_language_choices/0]
+         choices: &__MODULE__.get_language_choices/0]
     end
     field :data, :textarea, [required: false]
     submit :save, [class: "btn btn-success"]

@@ -234,7 +234,7 @@ defmodule Brando.Form do
 
     * `multiple` - The select returns multiple options, if true.
     * `choices` - &__MODULE__.get_status_choices/0
-      Points to `get_status_choices/1` function
+      Points to `get_status_choices/0` function
       in the module the form was defined.
     * `is_selected` - Pass a function that checks if `value` is selected.
       The function gets passed the option's value, and

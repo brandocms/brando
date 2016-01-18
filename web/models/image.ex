@@ -40,8 +40,7 @@ defmodule Brando.Image do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :create, params) do
-    model
-    |> cast(params, @required_fields, @optional_fields)
+    cast(model, params, @required_fields, @optional_fields)
   end
 
   @doc """
@@ -55,8 +54,7 @@ defmodule Brando.Image do
   """
   @spec changeset(t, atom, %{binary => term} | %{atom => term}) :: t
   def changeset(model, :update, params) do
-    model
-    |> cast(params, [], @required_fields ++ @optional_fields)
+    cast(model, params, [], @required_fields ++ @optional_fields)
   end
 
   @doc """
@@ -64,8 +62,7 @@ defmodule Brando.Image do
   If valid, generate a hashed password and insert model to Brando.repo.
   If not valid, return errors from changeset
   """
-  @spec update(%{binary => term} | %{atom => term}, User.t)
-        :: {:ok, t} | {:error, Keyword.t}
+  @spec update(%{binary => term} | %{atom => term}, User.t) :: {:ok, t} | {:error, Keyword.t}
   def create(params, current_user) do
     model_changeset =
       %__MODULE__{}
@@ -83,12 +80,11 @@ defmodule Brando.Image do
   If valid, update model in Brando.repo.
   If not valid, return errors from changeset
   """
-  @spec update(t, %{binary => term} | %{atom => term})
-        :: {:ok, t} | {:error, Keyword.t}
+  @spec update(t, %{binary => term} | %{atom => term}) :: {:ok, t} | {:error, Keyword.t}
   def update(model, params) do
     model_changeset = changeset(model, :update, params)
     case model_changeset.valid? do
-      true ->  {:ok, Brando.repo.update!(model_changeset)}
+      true  -> {:ok, Brando.repo.update!(model_changeset)}
       false -> {:error, model_changeset.errors}
     end
   end
@@ -109,10 +105,11 @@ defmodule Brando.Image do
   Get all images in series `id`.
   """
   def for_series_id(id) do
-    q = from m in __MODULE__,
-             where: m.image_series_id == ^id,
-             order_by: m.sequence
-    Brando.repo.all(q)
+    Brando.repo.all(
+      from m in __MODULE__,
+        where: m.image_series_id == ^id,
+        order_by: m.sequence
+    )
   end
 
   @doc """
@@ -121,8 +118,7 @@ defmodule Brando.Image do
   Also deletes all dependent image sizes.
   """
   def delete(ids) when is_list(ids) do
-    q = from m in __MODULE__,
-             where: m.id in ^ids
+    q = from m in __MODULE__, where: m.id in ^ids
     records = Brando.repo.all(q)
     for record <- records do
       delete_original_and_sized_images(record.image)
@@ -154,9 +150,7 @@ defmodule Brando.Image do
 
     new_sizes = new_image.sizes
 
-    image =
-      record.image
-      |> Map.put(:sizes, new_sizes)
+    image = Map.put(record.image, :sizes, new_sizes)
 
     record
     |> Map.put(:image, image)
@@ -167,9 +161,10 @@ defmodule Brando.Image do
   Delete all images depending on imageserie `series_id`
   """
   def delete_dependent_images(series_id) do
-    q = from m in __MODULE__,
-             where: m.image_series_id == ^series_id
-    images = Brando.repo.all(q)
+    images = Brando.repo.all(
+      from m in __MODULE__,
+        where: m.image_series_id == ^series_id
+    )
 
     for img <- images do
       delete(img)

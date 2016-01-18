@@ -28,8 +28,7 @@ defmodule Brando.PageForm do
       parents
       |> Enum.reverse
       |> Enum.reduce([no_value], fn (parent, acc) ->
-           acc ++ [[value: Integer.to_string(parent.id),
-                    text: "#{parent.slug} (#{parent.language})"]]
+           acc ++ [[value: Integer.to_string(parent.id), text: "#{parent.slug} (#{parent.language})"]]
          end)
     else
       [no_value]
@@ -68,13 +67,13 @@ defmodule Brando.PageForm do
     fieldset do
       field :language, :select,
         [default: "nb",
-        choices: &__MODULE__.get_language_choices/0]
+         choices: &__MODULE__.get_language_choices/0]
     end
     fieldset do
       field :status, :radio,
         [default: "2",
-        choices: &__MODULE__.get_status_choices/0,
-        is_selected: &__MODULE__.status_selected?/2]
+         choices: &__MODULE__.get_status_choices/0,
+         is_selected: &__MODULE__.status_selected?/2]
     end
     fieldset do
       field :title, :text

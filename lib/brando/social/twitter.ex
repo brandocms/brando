@@ -15,7 +15,7 @@ defmodule Brando.Social.Twitter do
 
   ## Example
 
-      <%= Brando.Social.Pinterest.link @conn, "#{@product.name}") do %>
+      <%= Brando.Social.Twitter.link @conn, "#{@product.name}") do %>
         This links to twitter!
       <% end %>
 

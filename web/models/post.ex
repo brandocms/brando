@@ -134,8 +134,9 @@ defmodule Brando.Post do
     Brando.repo.delete!(record)
   end
   def delete(id) do
-    record = Brando.repo.get_by!(__MODULE__, id: id)
-    delete(record)
+    __MODULE__
+    |> Brando.repo.get_by!(id: id)
+    |> delete
   end
 
   @doc """
@@ -143,7 +144,7 @@ defmodule Brando.Post do
   """
   def order(query) do
     from m in query,
-        order_by: [asc: m.status, desc: m.featured, desc: m.inserted_at]
+      order_by: [asc: m.status, desc: m.featured, desc: m.inserted_at]
   end
 
   @doc """
