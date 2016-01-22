@@ -19,6 +19,7 @@ exports.config = {
         'js/brando.js': 'deps/brando/priv/static/vendor/js/brando.js',
         'js/brando.auth.js': 'deps/brando/priv/static/vendor/js/brando.auth.js',
         'js/brando.vendor.js': 'deps/brando/priv/static/vendor/js/brando.vendor.js',
+        'js/brando.custom.js': 'web/static/js/admin/*.js',
         'js/villain.all.js': 'deps/brando/priv/static/vendor/js/villain.all.js',
       },
     },
