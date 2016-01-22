@@ -41,9 +41,9 @@ defmodule Brando.Mixfile do
       {:httpoison, "~> 0.8"},
       {:mogrify, github: "twined/mogrify"},
       {:phoenix, "~> 1.1"},
-      {:phoenix_html, "~> 2.3"},
+      {:phoenix_html, "~> 2.4"},
       {:poison, "~> 1.3"},
-      {:postgrex, "~> 0.10"},
+      {:postgrex, "~> 0.11"},
       {:scrivener, "~> 1.1"},
       {:slugger, "~> 0.1.0"},
 
