@@ -25,13 +25,9 @@ defp deps do
 end
 ```
 
-Install your deps:
+Fetch and compile dependencies. Install Brando:
 
-    $ mix do deps.get, deps.compile
-
-Install Brando:
-
-    $ mix brando.install
+    $ mix do deps.get, deps.compile, brando.install
 
 Add to your `config/config.exs` right before the env-specific import:
 
@@ -64,11 +60,6 @@ Add NPM dependencies to your project's `package.json`:
       "css-brunch": "~1.7.0",
       "javascript-brunch": "~1.8.0",
       "uglify-js-brunch": "~1.7.0",
-+ 
-+     "bootstrap-sass": "~3.3.6",
-+     "flexslider": "*",
-+     "salvattore": "*",
-+     "jscroll": "*",
 +     
 +     "sass-brunch": "*",
 +     "postcss-brunch": "*",
