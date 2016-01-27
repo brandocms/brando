@@ -2,7 +2,7 @@
   "name": "brando",
   "version": "0.16.0-dev",
   "description": "Brando node deps",
-  "main": "./priv/static/vendor/brando.js",
+  "main": "./priv/static/vendor/js/brando.js",
   "dependencies": {
     "autoprefixer": "^6.3.1",
     "babel-brunch": "^6.0.0",
@@ -22,10 +22,18 @@
   },
   "files": [
     "LICENSE.md", "package.json",
-    "priv/static/vendor/brando.js",
-    "priv/static/vendor/brando.auth.js",
-    "priv/static/vendor/brando.vendor.js",
-    "priv/static/vendor/villain.all.js"
+    "priv/static/vendor/js/brando.js",
+    "priv/static/vendor/js/brando.auth.js",
+    "priv/static/vendor/js/brando.vendor.js",
+    "priv/static/vendor/js/villain.all.js",
+    "priv/static/vendor/js/brando.js.map",
+    "priv/static/vendor/js/brando.auth.js.map",
+    "priv/static/vendor/js/brando.vendor.js.map",
+    "priv/static/vendor/css/brando.css",
+    "priv/static/vendor/css/brando.css.map",
+    "priv/static/vendor/css/brando.vendor.css",
+    "priv/static/vendor/css/brando.vendor.css.map",
+    "priv/static/vendor/css/villain.css"
   ],
   "author": "Twined Networks",
   "license": "MIT",
