@@ -75,6 +75,10 @@ Install NPM packages:
 
     $ npm install
 
+Install Bower packages:
+
+    $ bower install
+
 Set up database, and seed:
 
     $ mix ecto.setup
