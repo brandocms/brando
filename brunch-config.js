@@ -4,7 +4,7 @@ exports.config = {
     javascripts: {
       joinTo: {
         'js/brando.js': [
-          'deps/phoenix/web/static/js/phoenix.js',
+          'node_modules/phoenix/priv/static/phoenix.js',
           /^(web\/static\/js\/brando)/
         ],
         'js/brando.auth.js': [
@@ -40,10 +40,9 @@ exports.config = {
     // Which directories to watch
     watched: [
       'web/static',
-      'deps/phoenix/web/static/js/phoenix.js',
     ],
     // Where to compile files to
-    public: "priv/static/vendor"
+    public: 'priv/static/vendor'
   },
 
   conventions: {
@@ -78,4 +77,8 @@ exports.config = {
       'js/brando.js': ['web/static/js/brando/brando']
     }
   },
+
+  npm: {
+    enabled: true,
+  }
 };

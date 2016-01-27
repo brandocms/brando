@@ -109,7 +109,34 @@
   require._cache = cache;
   globals.require = require;
 })();
-require.register("deps/phoenix/web/static/js/phoenix", function(exports, require, module) {
+(function() {
+    var global = window;
+    var __shims = {assert: ({}),buffer: ({}),child_process: ({}),cluster: ({}),crypto: ({}),dgram: ({}),dns: ({}),domain: ({}),events: ({}),fs: ({}),http: ({}),https: ({}),net: ({}),os: ({}),path: ({}),punycode: ({}),querystring: ({}),readline: ({}),repl: ({}),string_decoder: ({}),tls: ({}),tty: ({}),url: ({}),util: ({}),vm: ({}),zlib: ({}),process: ({"env":{}})};
+    var process = __shims.process;
+
+    var __makeRequire = function(r, __brmap) {
+      return function(name) {
+        if (__brmap[name] !== undefined) name = __brmap[name];
+        name = name.replace(".js", "");
+        return ["assert","buffer","child_process","cluster","crypto","dgram","dns","domain","events","fs","http","https","net","os","path","punycode","querystring","readline","repl","string_decoder","tls","tty","url","util","vm","zlib","process"].indexOf(name) === -1 ? r(name) : __shims[name];
+      }
+    };
+  require.register('phoenix', function(exports,req,module){
+    var require = __makeRequire((function(n) { return req(n.replace('./', 'phoenix//priv/static/')); }), {});
+    (function(exports,require,module) {
+      (function(exports){
+"use strict";
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 // Phoenix Channels JavaScript client
 //
 // ## Socket Connection
@@ -151,8 +178,9 @@ require.register("deps/phoenix/web/static/js/phoenix", function(exports, require
 //
 // ## Joining
 //
-// Joining a channel with `channel.join(topic, params)`, binds the params to
-// `channel.params`. Subsequent rejoins will send up the modified params for
+// Creating a channel with `socket.channel(topic, params)`, binds the params to
+// `channel.params`, which are sent up on `channel.join()`.
+// Subsequent rejoins will send up the modified params for
 // updating authorization params, or passing up last_message_id information.
 // Successful joins receive an "ok" status, while unsuccessful joins
 // receive "error".
@@ -164,7 +192,7 @@ require.register("deps/phoenix/web/static/js/phoenix", function(exports, require
 // can be done with `channel.push(eventName, payload)` and we can optionally
 // receive responses from the push. Additionally, we can use
 // `receive("timeout", callback)` to abort waiting for our other `receive` hooks
-//  and take action after some period of waiting.
+//  and take action after some period of waiting. The default timeout is 5000ms.
 //
 //
 // ## Socket Hooks
@@ -197,16 +225,6 @@ require.register("deps/phoenix/web/static/js/phoenix", function(exports, require
 // `channel.leave()`
 //
 
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
 var VSN = "1.0.0";
 var SOCKET_STATES = { connecting: 0, open: 1, closing: 2, closed: 3 };
 var DEFAULT_TIMEOUT = 10000;
@@ -228,7 +246,7 @@ var TRANSPORTS = {
   websocket: "websocket"
 };
 
-var Push = (function () {
+var Push = function () {
 
   // Initializes the Push
   //
@@ -352,9 +370,9 @@ var Push = (function () {
   }]);
 
   return Push;
-})();
+}();
 
-var Channel = (function () {
+var Channel = exports.Channel = function () {
   function Channel(topic, params, socket) {
     var _this2 = this;
 
@@ -388,7 +406,7 @@ var Channel = (function () {
     this.onError(function (reason) {
       _this2.socket.log("channel", "error " + _this2.topic, reason);
       _this2.state = CHANNEL_STATES.errored;
-      _this2.rejoinTimer.setTimeout();
+      _this2.rejoinTimer.scheduleTimeout();
     });
     this.joinPush.receive("timeout", function () {
       if (_this2.state !== CHANNEL_STATES.joining) {
@@ -397,7 +415,7 @@ var Channel = (function () {
 
       _this2.socket.log("channel", "timeout " + _this2.topic, _this2.joinPush.timeout);
       _this2.state = CHANNEL_STATES.errored;
-      _this2.rejoinTimer.setTimeout();
+      _this2.rejoinTimer.scheduleTimeout();
     });
     this.on(CHANNEL_EVENTS.reply, function (payload, ref) {
       _this2.trigger(_this2.replyEventName(ref), payload);
@@ -407,7 +425,7 @@ var Channel = (function () {
   _createClass(Channel, [{
     key: "rejoinUntilConnected",
     value: function rejoinUntilConnected() {
-      this.rejoinTimer.setTimeout();
+      this.rejoinTimer.scheduleTimeout();
       if (this.socket.isConnected()) {
         this.rejoin();
       }
@@ -485,6 +503,7 @@ var Channel = (function () {
     //
     //     channel.leave().receive("ok", () => alert("left!") )
     //
+
   }, {
     key: "leave",
     value: function leave() {
@@ -513,6 +532,7 @@ var Channel = (function () {
     // Overridable message hook
     //
     // Receives all events for specialized message handling
+
   }, {
     key: "onMessage",
     value: function onMessage(event, payload, ref) {}
@@ -554,11 +574,9 @@ var Channel = (function () {
   }]);
 
   return Channel;
-})();
+}();
 
-exports.Channel = Channel;
-
-var Socket = (function () {
+var Socket = exports.Socket = function () {
 
   // Initializes the Socket
   //
@@ -651,6 +669,7 @@ var Socket = (function () {
     }
 
     // params - The params to send when connecting, for example `{user_id: userToken}`
+
   }, {
     key: "connect",
     value: function connect(params) {
@@ -681,6 +700,7 @@ var Socket = (function () {
     }
 
     // Logs the message. Override `this.logger` for specialized logging. noops by default
+
   }, {
     key: "log",
     value: function log(kind, msg, data) {
@@ -693,6 +713,7 @@ var Socket = (function () {
     //
     //    socket.onError(function(error){ alert("An error occurred") })
     //
+
   }, {
     key: "onOpen",
     value: function onOpen(callback) {
@@ -737,7 +758,7 @@ var Socket = (function () {
       this.log("transport", "close", event);
       this.triggerChanError();
       clearInterval(this.heartbeatTimer);
-      this.reconnectTimer.setTimeout();
+      this.reconnectTimer.scheduleTimeout();
       this.stateChangeCallbacks.close.forEach(function (callback) {
         return callback(event);
       });
@@ -815,6 +836,7 @@ var Socket = (function () {
     }
 
     // Return the next message ref, accounting for overflows
+
   }, {
     key: "makeRef",
     value: function makeRef() {
@@ -867,11 +889,9 @@ var Socket = (function () {
   }]);
 
   return Socket;
-})();
+}();
 
-exports.Socket = Socket;
-
-var LongPoll = (function () {
+var LongPoll = exports.LongPoll = function () {
   function LongPoll(endPoint) {
     _classCallCheck(this, LongPoll);
 
@@ -976,11 +996,9 @@ var LongPoll = (function () {
   }]);
 
   return LongPoll;
-})();
+}();
 
-exports.LongPoll = LongPoll;
-
-var Ajax = (function () {
+var Ajax = exports.Ajax = function () {
   function Ajax() {
     _classCallCheck(this, Ajax);
   }
@@ -1055,7 +1073,7 @@ var Ajax = (function () {
         }
         var paramKey = parentKey ? parentKey + "[" + key + "]" : key;
         var paramVal = obj[key];
-        if (typeof paramVal === "object") {
+        if ((typeof paramVal === "undefined" ? "undefined" : _typeof(paramVal)) === "object") {
           queryStr.push(this.serialize(paramVal, paramKey));
         } else {
           queryStr.push(encodeURIComponent(paramKey) + "=" + encodeURIComponent(paramVal));
@@ -1076,9 +1094,7 @@ var Ajax = (function () {
   }]);
 
   return Ajax;
-})();
-
-exports.Ajax = Ajax;
+}();
 
 Ajax.states = { complete: 4 };
 
@@ -1090,13 +1106,13 @@ Ajax.states = { complete: 4 };
 //    let reconnectTimer = new Timer(() => this.connect(), function(tries){
 //      return [1000, 5000, 10000][tries - 1] || 10000
 //    })
-//    reconnectTimer.setTimeout() // fires after 1000
-//    reconnectTimer.setTimeout() // fires after 5000
+//    reconnectTimer.scheduleTimeout() // fires after 1000
+//    reconnectTimer.scheduleTimeout() // fires after 5000
 //    reconnectTimer.reset()
-//    reconnectTimer.setTimeout() // fires after 1000
+//    reconnectTimer.scheduleTimeout() // fires after 1000
 //
 
-var Timer = (function () {
+var Timer = function () {
   function Timer(callback, timerCalc) {
     _classCallCheck(this, Timer);
 
@@ -1113,20 +1129,11 @@ var Timer = (function () {
       clearTimeout(this.timer);
     }
 
-    // Cancels any previous setTimeout and schedules callback
+    // Cancels any previous scheduleTimeout and schedules callback
+
   }, {
-    key: "setTimeout",
-    value: (function (_setTimeout) {
-      function setTimeout() {
-        return _setTimeout.apply(this, arguments);
-      }
-
-      setTimeout.toString = function () {
-        return _setTimeout.toString();
-      };
-
-      return setTimeout;
-    })(function () {
+    key: "scheduleTimeout",
+    value: function scheduleTimeout() {
       var _this12 = this;
 
       clearTimeout(this.timer);
@@ -1135,116 +1142,131 @@ var Timer = (function () {
         _this12.tries = _this12.tries + 1;
         _this12.callback();
       }, this.timerCalc(this.tries + 1));
-    })
+    }
   }]);
 
   return Timer;
-})();
-});
+}();
 
-;require.register("web/static/js/brando/brando", function(exports, require, module) {
+
+})(typeof(exports) === "undefined" ? window.Phoenix = window.Phoenix || {} : exports);
+
+    })(exports,require,module);
+  });
+})();require.register("web/static/js/brando/brando", function(exports, require, module) {
 "use strict";
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+var _autoslug = require("./components/autoslug");
 
-var _componentsAutoslug = require("./components/autoslug");
+var _autoslug2 = _interopRequireDefault(_autoslug);
 
-var _componentsAutoslug2 = _interopRequireDefault(_componentsAutoslug);
+var _flash = require("./components/flash");
 
-var _componentsFlash = require("./components/flash");
+var _flash2 = _interopRequireDefault(_flash);
 
-var _componentsFlash2 = _interopRequireDefault(_componentsFlash);
+var _filter_table = require("./components/filter_table");
 
-var _componentsFilter_table = require("./components/filter_table");
+var _filter_table2 = _interopRequireDefault(_filter_table);
 
-var _componentsFilter_table2 = _interopRequireDefault(_componentsFilter_table);
+var _mobile = require("./components/mobile");
 
-var _componentsMobile = require("./components/mobile");
+var _mobile2 = _interopRequireDefault(_mobile);
 
-var _componentsMobile2 = _interopRequireDefault(_componentsMobile);
+var _utils = require("./components/utils");
 
-var _componentsUtils = require("./components/utils");
+var _utils2 = _interopRequireDefault(_utils);
 
-var _componentsUtils2 = _interopRequireDefault(_componentsUtils);
+var _vex = require("./components/vex");
 
-var _componentsVex = require("./components/vex");
+var _vex2 = _interopRequireDefault(_vex);
 
-var _componentsVex2 = _interopRequireDefault(_componentsVex);
+var _images = require("./components/images");
 
-var _componentsImages = require("./components/images");
+var _images2 = _interopRequireDefault(_images);
 
-var _componentsImages2 = _interopRequireDefault(_componentsImages);
+var _instagram = require("./components/instagram");
 
-var _componentsInstagram = require("./components/instagram");
+var _instagram2 = _interopRequireDefault(_instagram);
 
-var _componentsInstagram2 = _interopRequireDefault(_componentsInstagram);
+var _pages = require("./components/pages");
 
-var _componentsPages = require("./components/pages");
+var _pages2 = _interopRequireDefault(_pages);
 
-var _componentsPages2 = _interopRequireDefault(_componentsPages);
+var _sequence = require("./components/sequence");
 
-var _componentsSequence = require("./components/sequence");
+var _sequence2 = _interopRequireDefault(_sequence);
 
-var _componentsSequence2 = _interopRequireDefault(_componentsSequence);
+var _stats = require("./components/stats");
 
-var _componentsStats = require("./components/stats");
+var _stats2 = _interopRequireDefault(_stats);
 
-var _componentsStats2 = _interopRequireDefault(_componentsStats);
+var _tags = require("./components/tags");
 
-var _componentsTags = require("./components/tags");
+var _tags2 = _interopRequireDefault(_tags);
 
-var _componentsTags2 = _interopRequireDefault(_componentsTags);
+var _toolbar = require("./components/toolbar");
 
-var _componentsToolbar = require("./components/toolbar");
+var _toolbar2 = _interopRequireDefault(_toolbar);
 
-var _componentsToolbar2 = _interopRequireDefault(_componentsToolbar);
+var _ws = require("./components/ws");
 
-var _componentsWs = require("./components/ws");
+var _ws2 = _interopRequireDefault(_ws);
 
-var _componentsWs2 = _interopRequireDefault(_componentsWs);
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 $(function () {
-    /* set up automated vendored js stuff */
-    _componentsVex2["default"].setup();
-    _componentsAutoslug2["default"].setup();
-    _componentsFilter_table2["default"].setup();
-    _componentsFlash2["default"].setup();
-    _componentsMobile2["default"].setup();
-    _componentsSequence2["default"].setup();
-    _componentsToolbar2["default"].setup();
-    _componentsTags2["default"].setup();
+    /**
+     * Setup vendored modules.
+     */
+
+    _vex2.default.setup();
+    _autoslug2.default.setup();
+    _filter_table2.default.setup();
+    _flash2.default.setup();
+    _mobile2.default.setup();
+    _sequence2.default.setup();
+    _toolbar2.default.setup();
+    _tags2.default.setup();
+
+    /**
+     * Section-specific setup
+     */
 
     switch ($('body').attr('data-script')) {
         case "images-index":
-            _componentsImages2["default"].setup();
+            _images2.default.setup();
             break;
         case "dashboard-system_info":
-            _componentsStats2["default"].setup();
+            _stats2.default.setup();
             break;
         case "instagram-index":
-            _componentsInstagram2["default"].setup();
+            _instagram2.default.setup();
             break;
         case "pages-index":
-            _componentsPages2["default"].setup();
+            _pages2.default.setup();
             break;
     }
-    /* set up ws */
-    _componentsWs2["default"].setup();
+
+    /**
+     * Global setup
+     */
+
+    _ws2.default.setup();
 });
 });
 
 require.register("web/static/js/brando/components/autoslug", function(exports, require, module) {
 "use strict";
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-var Autoslug = (function () {
+var Autoslug = function () {
     function Autoslug() {
         _classCallCheck(this, Autoslug);
     }
@@ -1263,24 +1285,23 @@ var Autoslug = (function () {
     }]);
 
     return Autoslug;
-})();
+}();
 
-exports['default'] = Autoslug;
-module.exports = exports['default'];
+exports.default = Autoslug;
 });
 
 require.register("web/static/js/brando/components/filter_table", function(exports, require, module) {
 "use strict";
 
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var FilterTable = (function () {
+var FilterTable = function () {
     function FilterTable() {
         _classCallCheck(this, FilterTable);
     }
@@ -1296,24 +1317,23 @@ var FilterTable = (function () {
     }]);
 
     return FilterTable;
-})();
+}();
 
-exports["default"] = FilterTable;
-module.exports = exports["default"];
+exports.default = FilterTable;
 });
 
 require.register("web/static/js/brando/components/flash", function(exports, require, module) {
 "use strict";
 
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Flash = (function () {
+var Flash = function () {
     function Flash() {
         _classCallCheck(this, Flash);
     }
@@ -1332,31 +1352,31 @@ var Flash = (function () {
     }]);
 
     return Flash;
-})();
+}();
 
-exports["default"] = Flash;
-module.exports = exports["default"];
+exports.default = Flash;
 });
 
 require.register("web/static/js/brando/components/images", function(exports, require, module) {
 "use strict";
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var _utils = require("./utils");
 
 var _utils2 = _interopRequireDefault(_utils);
 
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 var imagePool = [];
 
-var Images = (function () {
+var Images = function () {
     function Images() {
         _classCallCheck(this, Images);
     }
@@ -1455,7 +1475,7 @@ var Images = (function () {
                 headers: { Accept: "application/json; charset=utf-8" },
                 type: "POST",
                 data: data,
-                url: _utils2["default"].addToPathName('set-properties')
+                url: _utils2.default.addToPathName('set-properties')
             }).done($.proxy(function (data) {
                 /**
                  * Callback after confirming.
@@ -1512,7 +1532,7 @@ var Images = (function () {
                             $.ajax({
                                 headers: { Accept: "application/json; charset=utf-8" },
                                 type: "POST",
-                                url: _utils2["default"].addToPathName('delete-selected-images'),
+                                url: _utils2.default.addToPathName('delete-selected-images'),
                                 data: { ids: imagePool },
                                 success: that.deleteSuccess
                             });
@@ -1535,31 +1555,31 @@ var Images = (function () {
     }]);
 
     return Images;
-})();
+}();
 
-exports["default"] = Images;
-module.exports = exports["default"];
+exports.default = Images;
 });
 
 require.register("web/static/js/brando/components/instagram", function(exports, require, module) {
 "use strict";
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var _utils = require("./utils");
 
 var _utils2 = _interopRequireDefault(_utils);
 
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 var imagePool = [];
 
-var Instagram = (function () {
+var Instagram = function () {
     function Instagram() {
         _classCallCheck(this, Instagram);
     }
@@ -1631,7 +1651,7 @@ var Instagram = (function () {
             $.ajax({
                 headers: { Accept: "application/json; charset=utf-8" },
                 type: "POST",
-                url: _utils2["default"].addToPathName('change-status'),
+                url: _utils2.default.addToPathName('change-status'),
                 data: { ids: images, status: status },
                 success: that.changeStatusSuccess
             });
@@ -1662,24 +1682,23 @@ var Instagram = (function () {
     }]);
 
     return Instagram;
-})();
+}();
 
-exports["default"] = Instagram;
-module.exports = exports["default"];
+exports.default = Instagram;
 });
 
 require.register("web/static/js/brando/components/mobile", function(exports, require, module) {
 "use strict";
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-var Mobile = (function () {
+var Mobile = function () {
     function Mobile() {
         _classCallCheck(this, Mobile);
     }
@@ -1695,24 +1714,23 @@ var Mobile = (function () {
     }]);
 
     return Mobile;
-})();
+}();
 
-exports['default'] = Mobile;
-module.exports = exports['default'];
+exports.default = Mobile;
 });
 
 require.register("web/static/js/brando/components/pages", function(exports, require, module) {
 "use strict";
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-var Pages = (function () {
+var Pages = function () {
     function Pages() {
         _classCallCheck(this, Pages);
     }
@@ -1736,24 +1754,23 @@ var Pages = (function () {
     }]);
 
     return Pages;
-})();
+}();
 
-exports['default'] = Pages;
-module.exports = exports['default'];
+exports.default = Pages;
 });
 
 require.register("web/static/js/brando/components/sequence", function(exports, require, module) {
 "use strict";
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-var Sequence = (function () {
+var Sequence = function () {
     function Sequence() {
         _classCallCheck(this, Sequence);
     }
@@ -1799,28 +1816,27 @@ var Sequence = (function () {
     }]);
 
     return Sequence;
-})();
+}();
 
-exports['default'] = Sequence;
-module.exports = exports['default'];
+exports.default = Sequence;
 });
 
 require.register("web/static/js/brando/components/stats", function(exports, require, module) {
 "use strict";
 
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+var _phoenix = require("phoenix");
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var _depsPhoenixWebStaticJsPhoenix = require("deps/phoenix/web/static/js/phoenix");
-
 var MAX_POINTS = 30;
 
-var Stats = (function () {
+var Stats = function () {
     function Stats() {
         _classCallCheck(this, Stats);
     }
@@ -1850,7 +1866,7 @@ var Stats = (function () {
             };
 
             var user_token = document.querySelector("meta[name=\"channel_token\"]").getAttribute("content");
-            var socket = new _depsPhoenixWebStaticJsPhoenix.Socket("/admin/ws", { params: { token: user_token } });
+            var socket = new _phoenix.Socket("/admin/ws", { params: { token: user_token } });
             socket.connect();
             var chan = socket.channel("stats", {});
             chan.join().receive("ok", function (_ref) {
@@ -1905,24 +1921,23 @@ var Stats = (function () {
     }]);
 
     return Stats;
-})();
+}();
 
-exports["default"] = Stats;
-module.exports = exports["default"];
+exports.default = Stats;
 });
 
 require.register("web/static/js/brando/components/tags", function(exports, require, module) {
 "use strict";
 
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Tags = (function () {
+var Tags = function () {
     function Tags() {
         _classCallCheck(this, Tags);
     }
@@ -1938,24 +1953,23 @@ var Tags = (function () {
     }]);
 
     return Tags;
-})();
+}();
 
-exports["default"] = Tags;
-module.exports = exports["default"];
+exports.default = Tags;
 });
 
 require.register("web/static/js/brando/components/toolbar", function(exports, require, module) {
 "use strict";
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-var Toolbar = (function () {
+var Toolbar = function () {
     function Toolbar() {
         _classCallCheck(this, Toolbar);
     }
@@ -1977,24 +1991,23 @@ var Toolbar = (function () {
     }]);
 
     return Toolbar;
-})();
+}();
 
-exports['default'] = Toolbar;
-module.exports = exports['default'];
+exports.default = Toolbar;
 });
 
 require.register("web/static/js/brando/components/utils", function(exports, require, module) {
 "use strict";
 
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Utils = (function () {
+var Utils = function () {
     function Utils() {
         _classCallCheck(this, Utils);
     }
@@ -2013,24 +2026,23 @@ var Utils = (function () {
     }]);
 
     return Utils;
-})();
+}();
 
-exports["default"] = Utils;
-module.exports = exports["default"];
+exports.default = Utils;
 });
 
 require.register("web/static/js/brando/components/vex", function(exports, require, module) {
 "use strict";
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-var Vex = (function () {
+var Vex = function () {
     function Vex() {
         _classCallCheck(this, Vex);
     }
@@ -2046,26 +2058,25 @@ var Vex = (function () {
     }]);
 
     return Vex;
-})();
+}();
 
-exports['default'] = Vex;
-module.exports = exports['default'];
+exports.default = Vex;
 });
 
 require.register("web/static/js/brando/components/ws", function(exports, require, module) {
 "use strict";
 
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+var _phoenix = require("phoenix");
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var _depsPhoenixWebStaticJsPhoenix = require("deps/phoenix/web/static/js/phoenix");
-
-var WS = (function () {
+var WS = function () {
     function WS() {
         _classCallCheck(this, WS);
     }
@@ -2075,7 +2086,7 @@ var WS = (function () {
         value: function setup() {
             var _this = this;
             var user_token = document.querySelector("meta[name=\"channel_token\"]").getAttribute("content");
-            var socket = new _depsPhoenixWebStaticJsPhoenix.Socket("/admin/ws", { params: { token: user_token } });
+            var socket = new _phoenix.Socket("/admin/ws", { params: { token: user_token } });
             socket.connect();
             var chan = socket.channel("system:stream", {});
             chan.join().receive("ok", function (_ref) {
@@ -2096,10 +2107,9 @@ var WS = (function () {
     }]);
 
     return WS;
-})();
+}();
 
-exports["default"] = WS;
-module.exports = exports["default"];
+exports.default = WS;
 });
 
 require('web/static/js/brando/brando');

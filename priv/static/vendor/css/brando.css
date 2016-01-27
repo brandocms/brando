@@ -583,6 +583,7 @@ img {
           flex-flow: column nowrap;
   -webkit-align-items: stretch;
       -ms-flex-align: stretch;
+              -ms-grid-row-align: stretch;
           align-items: stretch; }
 
 /* line 272, /Users/trond/dev/elixir/brando/web/static/scss/components/_grid.scss */
@@ -592,6 +593,7 @@ img {
           flex-flow: column nowrap;
   -webkit-align-items: stretch;
       -ms-flex-align: stretch;
+              -ms-grid-row-align: stretch;
           align-items: stretch; }
 
 /* line 273, /Users/trond/dev/elixir/brando/web/static/scss/components/_grid.scss */
@@ -608,6 +610,7 @@ img {
             flex-flow: column nowrap;
     -webkit-align-items: stretch;
         -ms-flex-align: stretch;
+                -ms-grid-row-align: stretch;
             align-items: stretch; }
   /* line 273, /Users/trond/dev/elixir/brando/web/static/scss/components/_grid.scss */
   .medium-horizontal.grid-frame, .medium-horizontal.grid-block, .medium-horizontal.small-grid-block, .medium-horizontal.medium-grid-block, .medium-horizontal.large-grid-block {
@@ -623,6 +626,7 @@ img {
             flex-flow: column nowrap;
     -webkit-align-items: stretch;
         -ms-flex-align: stretch;
+                -ms-grid-row-align: stretch;
             align-items: stretch; }
   /* line 273, /Users/trond/dev/elixir/brando/web/static/scss/components/_grid.scss */
   .large-horizontal.grid-frame, .large-horizontal.grid-block, .large-horizontal.small-grid-block, .large-horizontal.medium-grid-block, .large-horizontal.large-grid-block {
@@ -661,6 +665,7 @@ img {
           flex-wrap: wrap;
   -webkit-align-items: flex-start;
       -ms-flex-align: start;
+              -ms-grid-row-align: flex-start;
           align-items: flex-start; }
 
 /* line 290, /Users/trond/dev/elixir/brando/web/static/scss/components/_grid.scss */
@@ -766,6 +771,7 @@ img {
               flex-wrap: nowrap;
       -webkit-align-items: stretch;
           -ms-flex-align: stretch;
+                  -ms-grid-row-align: stretch;
               align-items: stretch; }
     /* line 333, /Users/trond/dev/elixir/brando/web/static/scss/components/_grid.scss */
     .grid-content .grid-block .grid-content {
@@ -2669,11 +2675,11 @@ hr {
   margin-top: 15px;
   padding: 12px 10px 10px 15px;
   color: #fff; }
-  /* line 7, /Users/trond/dev/elixir/brando/web/static/scss/brando/_alerts.scss */
+  /* line 8, /Users/trond/dev/elixir/brando/web/static/scss/brando/_alerts.scss */
   .alert.alert-info {
     background-color: #4AAE66;
     border-bottom: 4px solid #299848; }
-  /* line 11, /Users/trond/dev/elixir/brando/web/static/scss/brando/_alerts.scss */
+  /* line 13, /Users/trond/dev/elixir/brando/web/static/scss/brando/_alerts.scss */
   .alert.alert-danger {
     background-color: #C04040;
     border-bottom: 4px solid #9D2828; }

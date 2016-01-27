@@ -36,7 +36,11 @@ Install Brando:
 Add to your `config/config.exs` right before the env-specific import:
 
 ```diff
++ # Import Brando specific config.
 + import_config "brando.exs"
++
+  # Import environment specific config. This must remain at the bottom
+  # of this file so it overrides the configuration defined above.
   import_config "#{Mix.env}.exs"
 ```
 
@@ -47,13 +51,38 @@ Add to your relevant `config/%{env}.exs` Repo config:
 +   extensions: [{Postgrex.Extensions.JSON, library: Poison}]
 ```
 
-Install bower frontend dependencies:
+Add NPM dependencies to your project's `package.json`:
 
-    $ bower install
+```diff
+  {
+    "repository": {
+    },
+    "dependencies": {
+      "babel-brunch": "~6.0.0",
+      "brunch": "~2.1.3",
+      "clean-css-brunch": "~1.8.0",
+      "css-brunch": "~1.7.0",
+      "javascript-brunch": "~1.8.0",
+      "uglify-js-brunch": "~1.7.0",
++ 
++     "bootstrap-sass": "~3.3.6",
++     "flexslider": "*",
++     "salvattore": "*",
++     "jscroll": "*",
++     
++     "sass-brunch": "*",
++     "postcss-brunch": "*",
++     "autoprefixer": "*",
++     
+      "phoenix": "file:deps/phoenix",
+      "phoenix_html": "file:deps/phoenix_html"
+    }
+  }
+```
 
-Add NPM packages used with brunch:
+Install NPM packages:
 
-    $ npm install --save sass-brunch postcss-brunch autoprefixer
+    $ npm install
 
 Set up database, and seed:
 
