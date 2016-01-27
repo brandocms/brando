@@ -8,13 +8,13 @@
 </ul>
 <hr>
 <div class="buttons m-t-md">
-  <a id="sort-post" href="<%= Helpers.admin_image_series_path(@conn, :sequence_post, @filter) %>" class="btn btn-default">
+  <a id="sort-post" href="<%= Brando.helpers.admin_image_series_path(@conn, :sequence_post, @filter) %>" class="btn btn-default">
     <%= gettext("Save sorted series") %>
   </a>
-  <a href="<%= Helpers.admin_image_series_path(@conn, :edit, @filter) %>" class="btn btn-default">
+  <a href="<%= Brando.helpers.admin_image_series_path(@conn, :edit, @filter) %>" class="btn btn-default">
     <%= gettext("Edit image series") %>
   </a>
-  <a href="<%= Helpers.admin_image_path(@conn, :index) %>" class="btn btn-default">
+  <a href="<%= Brando.helpers.admin_image_path(@conn, :index) %>" class="btn btn-default">
     <%= gettext("Back to index") %>
   </a>
 </div>

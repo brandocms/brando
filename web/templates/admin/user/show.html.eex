@@ -2,10 +2,10 @@
     <h1><%= gettext("Show user") %></h1>
     <%= Brando.HTML.Inspect.model(@user) %>
     <div class="form-actions">
-      <a href="<%= Helpers.admin_user_path(@conn, :index) %>" class="btn btn-default">
+      <a href="<%= Brando.helpers.admin_user_path(@conn, :index) %>" class="btn btn-default">
         <i class="fa fa-list fa-fw m-r-sm"></i> <%= gettext("Back to index") %>
       </a>
-      <%= auth_link @conn, Helpers.admin_user_path(@conn, :profile_edit), :admin do %>
+      <%= auth_link @conn, Brando.helpers.admin_user_path(@conn, :profile_edit), :admin do %>
         <i class="fa fa-edit fa-fw m-r-sm"></i> <%= gettext("Edit user") %>
       <% end %>
     </div>

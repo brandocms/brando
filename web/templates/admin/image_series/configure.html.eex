@@ -1,7 +1,7 @@
   <h1><%= gettext("Configure") %> <%= model_name(@changeset.model, :singular) %></h1>
   <%= ImageSeriesConfigForm.get_form(type: :update, action: :configure_patch, params: to_string(@id), changeset: @changeset) %>
   <div class="buttons m-t-md">
-    <a href="<%= Helpers.admin_image_path(@conn, :index) %>" class="btn btn-default">
+    <a href="<%= Brando.helpers.admin_image_path(@conn, :index) %>" class="btn btn-default">
       <i class="fa fa-list fa-fw m-r-sm"></i> <%= gettext("Back to index") %>
     </a>
   </div>

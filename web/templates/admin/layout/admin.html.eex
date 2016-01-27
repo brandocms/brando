@@ -11,15 +11,15 @@
     <title><%= app_name %> | <%= assigns[:page_title] || "Administrasjon" %></title>
 
     <!-- stylesheets -->
-    <link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/brando.css") %>">
-    <link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/brando.vendor.css") %>">
-    <link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/brando.custom.css") %>">
+    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.css") %>">
+    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.vendor.css") %>">
+    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.custom.css") %>">
     <%= render_existing Phoenix.Controller.view_module(@conn), "_stylesheets." <> Phoenix.Controller.view_template(@conn), assigns %>
 
     <!-- javascripts -->
-    <script type="text/javascript" src="<%= Helpers.static_path(@conn, "/js/brando.vendor.js") %>" charset="utf-8"></script>
-    <script type="text/javascript" src="<%= Helpers.static_path(@conn, "/js/brando.js") %>" charset="utf-8"></script>
-    <script type="text/javascript" src="<%= Helpers.static_path(@conn, "/js/brando.custom.js") %>" charset="utf-8"></script>
+    <script type="text/javascript" src="<%= Brando.helpers.static_path(@conn, "/js/brando.vendor.js") %>" charset="utf-8"></script>
+    <script type="text/javascript" src="<%= Brando.helpers.static_path(@conn, "/js/brando.js") %>" charset="utf-8"></script>
+    <script type="text/javascript" src="<%= Brando.helpers.static_path(@conn, "/js/brando.custom.js") %>" charset="utf-8"></script>
     <%= render_existing Phoenix.Controller.view_module(@conn), "_scripts." <> Phoenix.Controller.view_template(@conn), assigns %>
   </head>
 
@@ -41,7 +41,7 @@
         <div class="menu-profile">
           <!-- menu top with avatar & info -->
           <div class="avatar">
-            <img src="<%= img_url(current_user(@conn).avatar, :thumb, [default: Helpers.static_path(@conn, "/images/brando/defaults/avatar_default.jpg"), prefix: media_url()]) %>" />
+            <img src="<%= img_url(current_user(@conn).avatar, :thumb, [default: Brando.helpers.static_path(@conn, "/images/brando/defaults/avatar_default.jpg"), prefix: media_url()]) %>" />
           </div>
           <div class="name">
             <%= current_user(@conn).full_name %>

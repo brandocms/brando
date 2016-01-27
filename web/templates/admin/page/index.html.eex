@@ -19,7 +19,7 @@
     <p>Ingen sider</p>
 <% end %>
     <div class="form-actions">
-      <a href="<%= Helpers.admin_page_path @conn, :new %>" class="btn btn-primary">
+      <a href="<%= Brando.helpers.admin_page_path @conn, :new %>" class="btn btn-primary">
         <i class="fa fa-plus m-r-xs"></i> <%= gettext("New page") %>
       </a>
       <button class="btn btn-default btn-dropdown m-l-xs">
@@ -29,7 +29,7 @@
           </label>
           <ul class="dropdown-menu" style="right: 0; left: auto;">
             <li>
-              <a href="<%= Helpers.admin_page_path(@conn, :rerender) %>">
+              <a href="<%= Brando.helpers.admin_page_path(@conn, :rerender) %>">
                 <i class="fa fa-fw fa-edit"></i> <%= gettext("Re-render pages") %>
               </a>
             </li>

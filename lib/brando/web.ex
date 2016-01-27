@@ -13,15 +13,11 @@ defmodule Brando.Web do
   """
 
   def view do
-    helpers = Brando.helpers()
     quote do
       use Phoenix.View, root: "web/templates"
 
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_flash: 2]
-
-      # Alias URL helpers from the router as Helpers
-      alias unquote(helpers)
 
       import Plug.Conn, only: [get_session: 2]
       import Brando.Utils, only: [media_url: 0, media_url: 1,

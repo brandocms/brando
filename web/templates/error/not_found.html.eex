@@ -8,9 +8,9 @@
     <meta name="author" content="">
 
     <title><%= app_name %> | 404</title>
-    <link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/brando.vendor.css") %>">
-    <link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/brando.css") %>">
-    <script src="<%= Helpers.static_path(@conn, "/js/brando.auth.js") %>" type="text/javascript" charset="utf-8"></script>
+    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.vendor.css") %>">
+    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.css") %>">
+    <script src="<%= Brando.helpers.static_path(@conn, "/js/brando.auth.js") %>" type="text/javascript" charset="utf-8"></script>
   </head>
 
   <body class="auth">

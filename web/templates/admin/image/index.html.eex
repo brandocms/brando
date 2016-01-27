@@ -6,7 +6,7 @@
       <%= String.capitalize(category.name) %>
     </a>
     <div class="tab-content">
-      <a href="<%= Helpers.admin_image_series_path(@conn, :new, category.id) %>" class="btn btn-primary m-b-sm">
+      <a href="<%= Brando.helpers.admin_image_series_path(@conn, :new, category.id) %>" class="btn btn-primary m-b-sm">
         <i class="fa fa-fw fa-plus"></i> <%= gettext("New image series") %>
       </a>
       <button class="btn btn-default btn-dropdown m-b-sm">
@@ -16,22 +16,22 @@
           </label>
           <ul class="dropdown-menu" style="right: 0; left: auto;">
             <li>
-              <a href="<%= Helpers.admin_image_category_path(@conn, :edit, category.id) %>">
+              <a href="<%= Brando.helpers.admin_image_category_path(@conn, :edit, category.id) %>">
                 <i class="fa fa-fw fa-edit"></i> <%= gettext("Edit image") %>
               </a>
             </li>
             <li>
-              <a href="<%= Helpers.admin_image_category_path(@conn, :sequence, category.id) %>">
+              <a href="<%= Brando.helpers.admin_image_category_path(@conn, :sequence, category.id) %>">
                 <i class="fa fa-fw fa-sort"></i> <%= gettext("Sort images") %>
               </a>
             </li>
             <li>
-              <a href="<%= Helpers.admin_image_category_path(@conn, :configure, category.id) %>">
+              <a href="<%= Brando.helpers.admin_image_category_path(@conn, :configure, category.id) %>">
                 <i class="fa fa-fw fa-cogs"></i> <%= gettext("Configure category") %>
               </a>
             </li>
             <li>
-              <a href="<%= Helpers.admin_image_category_path(@conn, :delete_confirm, category.id) %>">
+              <a href="<%= Brando.helpers.admin_image_category_path(@conn, :delete_confirm, category.id) %>">
                 <i class="fa fa-fw fa-trash"></i> <%= gettext("Delete category") %>
               </a>
             </li>
@@ -73,7 +73,7 @@
           <% end %>
           <hr>
           <div class="form-actions clearfix">
-            <a href="<%= Helpers.admin_image_series_path(@conn, :upload, serie.id) %>" class="btn btn-default">
+            <a href="<%= Brando.helpers.admin_image_series_path(@conn, :upload, serie.id) %>" class="btn btn-default">
               <i class="fa fa-fw fa-cloud"> </i>
               <%= gettext("Upload images") %>
             </a>
@@ -85,22 +85,22 @@
                 </label>
                 <ul class="dropdown-menu" style="right: 0; left: auto;">
                  <li>
-                   <a href="<%= Helpers.admin_image_series_path(@conn, :edit, serie.id) %>">
+                   <a href="<%= Brando.helpers.admin_image_series_path(@conn, :edit, serie.id) %>">
                      <i class="fa fa-fw fa-edit"> </i><%= gettext("Edit image series") %>
                    </a>
                   </li>
                   <li>
-                    <a href="<%= Helpers.admin_image_series_path(@conn, :sequence, serie.id) %>">
+                    <a href="<%= Brando.helpers.admin_image_series_path(@conn, :sequence, serie.id) %>">
                       <i class="fa fa-fw fa-sort"> </i><%= gettext("Sort image series") %>
                     </a>
                   </li>
                   <li>
-                    <a href="<%= Helpers.admin_image_series_path(@conn, :configure, serie.id) %>">
+                    <a href="<%= Brando.helpers.admin_image_series_path(@conn, :configure, serie.id) %>">
                       <i class="fa fa-fw fa-cogs"> </i><%= gettext("Configure image series") %>
                     </a>
                   </li>
                   <li>
-                    <a href="<%= Helpers.admin_image_series_path(@conn, :delete_confirm, serie.id) %>">
+                    <a href="<%= Brando.helpers.admin_image_series_path(@conn, :delete_confirm, serie.id) %>">
                       <i class="fa fa-fw fa-trash"> </i><%= gettext("Delete image series") %>
                     </a>
                   </li>
@@ -116,6 +116,6 @@
     </div>
   </li>
   <% end %>
-  <a href="<%= Helpers.admin_image_category_path(@conn, :new) %>" class="btn btn-xs btn-default m-l-md"><i class="fa fa-fw fa-plus"></i> <%= gettext("New image category") %></a>
+  <a href="<%= Brando.helpers.admin_image_category_path(@conn, :new) %>" class="btn btn-xs btn-default m-l-md"><i class="fa fa-fw fa-plus"></i> <%= gettext("New image category") %></a>
 </ul>
 <hr>

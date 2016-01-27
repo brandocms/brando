@@ -13,7 +13,7 @@
     <p><%= gettext("No page fragments") %></p>
 <% end %>
     <div class="form-actions">
-      <a href="<%= Helpers.admin_page_fragment_path @conn, :new %>" class="btn btn-primary">
+      <a href="<%= Brando.helpers.admin_page_fragment_path @conn, :new %>" class="btn btn-primary">
         <i class="fa fa-plus m-r-xs"></i> <%= gettext("New page fragment") %>
       </a>
     </div>
