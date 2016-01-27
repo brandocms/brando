@@ -20,7 +20,7 @@ defmodule <%= application_module %>.Gettext do
 
   See the [Gettext Docs](http://hexdocs.pm/gettext) for detailed usage.
   """
-  use Gettext, otp_app: :<%= application_name %> priv: "priv/gettext/frontend"
+  use Gettext, otp_app: :<%= application_name %>, priv: "priv/gettext/frontend"
 end
 
 defmodule <%= application_module %>.Backend.Gettext do
@@ -45,5 +45,5 @@ defmodule <%= application_module %>.Backend.Gettext do
 
   See the [Gettext Docs](http://hexdocs.pm/gettext) for detailed usage.
   """
-  use Gettext, otp_app: :<%= application_name %> priv: "priv/gettext/backend"
+  use Gettext, otp_app: :<%= application_name %>, priv: "priv/gettext/backend"
 end
