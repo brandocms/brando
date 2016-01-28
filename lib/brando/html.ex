@@ -5,7 +5,7 @@ defmodule Brando.HTML do
 
   import Brando.Gettext
   import Brando.Utils, only: [media_url: 0, current_user: 1,
-                              active_path: 2, img_url: 3]
+                              active_path?: 2, img_url: 3]
   import Brando.Meta.Controller, only: [put_meta: 3, get_meta: 1]
   import Phoenix.HTML.Tag, only: [content_tag: 2, content_tag: 3]
 
@@ -58,9 +58,9 @@ defmodule Brando.HTML do
     {fun, action} = item.url
     if can_render?(conn, item) do
       url = apply(Brando.Utils.helpers(conn), fun, [conn, action])
-      active = active_path(conn, url)
-      li_classes = active && "menuitem active" || "menuitem"
-      a_class = active && "active" || ""
+      active? = active_path?(conn, url)
+      li_classes = active? && "menuitem active" || "menuitem"
+      a_class = active? && "active" || ""
       {:safe, html} = content_tag :li, [class: li_classes] do
         content_tag :a, [href: url, class: a_class] do
           [content_tag(:i, "", [class: "fa fa-angle-right"]),
@@ -78,9 +78,10 @@ defmodule Brando.HTML do
   """
   @spec active(Plug.Conn.t, String.t) :: String.t
   def active(conn, url_to_match) do
-    case active_path(conn, url_to_match) do
-      true -> "active"
-      false -> ""
+    if active_path?(conn, url_to_match) do
+      "active"
+    else
+      ""
     end
   end
 
@@ -92,8 +93,7 @@ defmodule Brando.HTML do
     true
   end
   def can_render?(conn, %{role: role}) do
-    if role in current_user(conn).role,
-    do: true, else: false
+    role in current_user(conn).role && true || false
   end
   def can_render?(_, _) do
     true
@@ -103,12 +103,7 @@ defmodule Brando.HTML do
   Shows `content` if `current_user` has `role` that allows it.
   """
   def auth_content(conn, role, do: {:safe, block}) do
-    html = case can_render?(conn, %{role: role}) do
-      true ->
-        block
-      false ->
-        ""
-    end
+    html = can_render?(conn, %{role: role}) && block || ""
     Phoenix.HTML.raw(html)
   end
 
@@ -128,12 +123,12 @@ defmodule Brando.HTML do
     do_auth_link({"btn-#{type}", conn, link, role}, block)
   end
   defp do_auth_link({class, conn, link, role}, block) do
-    html = case can_render?(conn, %{role: role}) do
-      true ->
+    html =
+      if can_render?(conn, %{role: role}) do
         ~s(<a href="#{link}" class="btn #{class}"> #{to_string(block)}</a>)
-      false ->
+      else
         ""
-    end
+      end
     Phoenix.HTML.raw(html)
   end
 

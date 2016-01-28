@@ -1,5 +1,7 @@
 defmodule Brando.Pages.Utils do
-
+  @moduledoc """
+  Brando page utilities.
+  """
   import Ecto.Query
   alias Brando.PageFragment
 

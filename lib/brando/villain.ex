@@ -129,6 +129,9 @@ defmodule Brando.Villain do
   end
 
   defmodule Model do
+    @moduledoc """
+    Macro for villain model fields.
+    """
     defmacro villain do
       quote do
         Ecto.Schema.field(:data, Brando.Type.Json)
@@ -145,6 +148,9 @@ defmodule Brando.Villain do
   end
 
   defmodule Migration do
+    @moduledoc """
+    Macro for villain migrations.
+    """
     defmacro villain do
       quote do
         Ecto.Migration.add(:data, :json)

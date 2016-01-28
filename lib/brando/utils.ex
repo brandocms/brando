@@ -314,8 +314,8 @@ defmodule Brando.Utils do
   @doc """
   Checks if `conn`'s `full_path` matches `current_path`.
   """
-  @spec active_path(Plug.Conn.t, String.t) :: boolean
-  def active_path(conn, url_to_match) do
+  @spec active_path?(Plug.Conn.t, String.t) :: boolean
+  def active_path?(conn, url_to_match) do
     conn.request_path == url_to_match
   end
 

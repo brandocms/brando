@@ -68,9 +68,11 @@ defmodule Brando.Image do
       %__MODULE__{}
       |> put_creator(current_user)
       |> changeset(:create, params)
-    case model_changeset.valid? do
-      true  -> {:ok, Brando.repo.insert!(model_changeset)}
-      false -> {:error, model_changeset.errors}
+
+    if model_changeset.valid? do
+      {:ok, Brando.repo.insert!(model_changeset)}
+    else
+      {:error, model_changeset.errors}
     end
   end
 
