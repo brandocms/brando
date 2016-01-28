@@ -112,20 +112,18 @@ defmodule Brando.Villain do
       """
       def check_post_for_missing_images(post) do
         image_blocks =
-          post.data
-          |> Enum.filter(fn(block) -> block["type"] == "image" end)
+          Enum.filter(post.data, fn(block) -> block["type"] == "image" end)
 
-        Enum.reduce image_blocks, [], fn(block, acc) ->
+        Enum.reduce(image_blocks, [], fn(block, acc) ->
           reduced_block =
-            Enum.reduce block["data"]["sizes"], [], fn({_size, path}, acc) ->
-              File.exists?(Path.join(["priv", path])) && acc
-                                                      || {:missing, post, path}
-            end
+            Enum.reduce(block["data"]["sizes"], [], fn({_size, path}, acc) ->
+              File.exists?(Path.join(["priv", path])) && acc || {:missing, post, path}
+            end)
           case reduced_block do
             []  -> acc
             res -> [res|acc]
           end
-        end
+        end)
       end
     end
   end
