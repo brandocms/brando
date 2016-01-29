@@ -418,7 +418,7 @@ To use villain outside the built-in `pages` and `news` modules add to your app's
 
   scope "/admin", as: :admin do
     pipe_through :admin
-+   villain_routes "/whatever/has/villain"
++   villain_routes "/whatever/has/villain", YourController
   end
 
 ```
@@ -432,16 +432,16 @@ Include js in `whatever/_scripts.<action>.html.eex`:
 Include css in `whatever/_stylesheets.<action>.html.eex`:
 
 ```html
-<link rel="stylesheet" href="<% Helpers.static_path(@conn, "/css/villain.css") %>">
+<link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/villain.css") %>">
 ```
 
 Initialize Villain in your template:
 
 ```html
 <%= Brando.Villain.HTML.initialize(
-      browse_url: "/admin/news/villain/browse/post",
-      upload_url: "/admin/news/villain/upload/post",
-      source:     "textarea[name=\"post[data]\"]") %>
+      base_url:     "/admin/news/",
+      image_series: "news",
+      source:       "textarea[name=\"post[data]\"]") %>
 ```
 
 If you have custom blocks, add them in your `config/brando.exs`:
