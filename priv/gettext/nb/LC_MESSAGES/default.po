@@ -46,7 +46,7 @@ msgstr "Adgang nektet"
 msgid "Admin"
 msgstr "Admin"
 
-#: web/templates/admin/instagram/index.html.eex:9 web/views/instagram_view.ex:10
+#: web/templates/admin/instagram/index.html.eex:9 web/views/instagram_view.ex:8
 msgid "Approved"
 msgstr "Godkjent"
 
@@ -149,14 +149,14 @@ msgstr "Slett post"
 msgid "Delete user"
 msgstr "Slett bruker"
 
-#: lib/brando/html.ex:343 lib/brando/html/inspect.ex:128
+#: lib/brando/html.ex:338 lib/brando/html/inspect.ex:128
 #: web/forms/page_form.ex:21 web/forms/post_form.ex:21
 #: web/templates/admin/instagram/index.html.eex:15
-#: web/views/instagram_view.ex:16
+#: web/views/instagram_view.ex:12
 msgid "Deleted"
 msgstr "Slettet"
 
-#: web/views/instagram_view.ex:19 web/views/instagram_view.ex:42
+#: web/views/instagram_view.ex:14 web/views/instagram_view.ex:23
 msgid "Download failed"
 msgstr "Nedlasting mislyktes"
 
@@ -483,7 +483,7 @@ msgid "Re-render pages"
 msgstr "Gjengi sider på nytt"
 
 #: web/templates/admin/instagram/index.html.eex:12
-#: web/views/instagram_view.ex:13
+#: web/views/instagram_view.ex:10
 msgid "Rejected"
 msgstr "Avvist"
 
@@ -635,7 +635,7 @@ msgstr "Forbindelse ikke hentet"
 msgid "Avatar"
 msgstr "Profilbilde"
 
-#: web/models/page.ex:204 web/models/page.ex:205
+#: web/models/page.ex:203 web/models/page.ex:204
 msgid "Belongs to"
 msgstr "Tilhører"
 
@@ -663,7 +663,7 @@ msgstr "Bekreft"
 msgid "Connected"
 msgstr "Tilkoblet"
 
-#: web/models/post.ex:169
+#: web/models/post.ex:168
 msgid "Cover"
 msgstr "Omslag"
 
@@ -671,9 +671,9 @@ msgstr "Omslag"
 msgid "Created"
 msgstr "Opprettet"
 
-#: web/models/image.ex:185 web/models/image_category.ex:137
-#: web/models/image_series.ex:187 web/models/page.ex:207
-#: web/models/page_fragment.ex:133 web/models/post.ex:175
+#: web/models/image.ex:187 web/models/image_category.ex:137
+#: web/models/image_series.ex:187 web/models/page.ex:206
+#: web/models/page_fragment.ex:132 web/models/post.ex:174
 msgid "Creator"
 msgstr "Skaper"
 
@@ -681,11 +681,11 @@ msgstr "Skaper"
 msgid "Credits"
 msgstr "Krediteringer"
 
-#: web/models/page.ex:202 web/models/page_fragment.ex:131 web/models/post.ex:173
+#: web/models/page.ex:201 web/models/page_fragment.ex:130 web/models/post.ex:172
 msgid "Data"
 msgstr "Data"
 
-#: lib/brando/html.ex:337 lib/brando/html/inspect.ex:127
+#: lib/brando/html.ex:332 lib/brando/html/inspect.ex:127
 #: web/forms/page_form.ex:18 web/forms/post_form.ex:18
 msgid "Draft"
 msgstr "Kladd"
@@ -698,11 +698,11 @@ msgstr "Tom forbindelse"
 msgid "Encoded value"
 msgstr "Kodet verdi"
 
-#: web/models/page.ex:208
+#: web/models/page.ex:207
 msgid "Extra CSS classes"
 msgstr "Ekstra CSS klasser"
 
-#: web/models/post.ex:167
+#: web/models/post.ex:166
 msgid "Featured"
 msgstr "Fremhevet"
 
@@ -710,21 +710,21 @@ msgstr "Fremhevet"
 msgid "Full name"
 msgstr "Fullt navn"
 
-#: web/models/page.ex:203 web/models/page_fragment.ex:132 web/models/post.ex:174
+#: web/models/page.ex:202 web/models/page_fragment.ex:131 web/models/post.ex:173
 msgid "HTML"
 msgstr "HTML"
 
-#: web/models/post.ex:170
+#: web/models/post.ex:169
 msgid "Header"
 msgstr "Overskrift"
 
-#: web/models/image.ex:182 web/models/image_category.ex:133
+#: web/models/image.ex:184 web/models/image_category.ex:133
 #: web/models/image_series.ex:181 web/models/instagram_image.ex:269
 #: web/models/user.ex:199
 msgid "ID"
 msgstr "ID"
 
-#: web/models/image.ex:183
+#: web/models/image.ex:185
 msgid "Image"
 msgstr "Bilde"
 
@@ -736,16 +736,16 @@ msgstr "Bilde-URL"
 msgid "Image category"
 msgstr "Bildekategori"
 
-#: web/models/image.ex:186 web/models/image_category.ex:138
+#: web/models/image.ex:188 web/models/image_category.ex:138
 msgid "Image series"
 msgstr "Bildeserie"
 
-#: web/models/page.ex:211 web/models/page_fragment.ex:134
+#: web/models/page.ex:210 web/models/page_fragment.ex:133
 msgid "Inserted"
 msgstr "Satt inn"
 
-#: web/models/image.ex:187 web/models/image_category.ex:139
-#: web/models/image_series.ex:191 web/models/post.ex:181 web/models/user.ex:207
+#: web/models/image.ex:189 web/models/image_category.ex:139
+#: web/models/image_series.ex:191 web/models/post.ex:180 web/models/user.ex:207
 msgid "Inserted at"
 msgstr "Lagt til"
 
@@ -753,11 +753,11 @@ msgstr "Lagt til"
 msgid "Instagram ID"
 msgstr "Instagram-ID"
 
-#: web/models/page.ex:199 web/models/page_fragment.ex:130
+#: web/models/page.ex:198 web/models/page_fragment.ex:129
 msgid "Key"
 msgstr "Nøkkel"
 
-#: web/models/page.ex:198 web/models/page_fragment.ex:129 web/models/post.ex:168
+#: web/models/page.ex:197 web/models/page_fragment.ex:128 web/models/post.ex:167
 #: web/models/user.ex:205
 msgid "Language"
 msgstr "Språk"
@@ -766,7 +766,7 @@ msgstr "Språk"
 msgid "Last login"
 msgstr "Forrige innlogging"
 
-#: web/models/post.ex:172
+#: web/models/post.ex:171
 msgid "Lead"
 msgstr "Ingress"
 
@@ -774,11 +774,11 @@ msgstr "Ingress"
 msgid "Link"
 msgstr "Lenke"
 
-#: web/models/page.ex:209 web/models/post.ex:176
+#: web/models/page.ex:208 web/models/post.ex:175
 msgid "META description"
 msgstr "META-beskrivelse"
 
-#: web/models/page.ex:210 web/models/post.ex:177
+#: web/models/page.ex:209 web/models/post.ex:176
 msgid "META keywords"
 msgstr "META-nøkkelord"
 
@@ -799,17 +799,17 @@ msgstr "Ingen resultater"
 msgid "No value"
 msgstr "Ingen verdi"
 
-#: lib/brando/html.ex:331 lib/brando/html/inspect.ex:126
+#: lib/brando/html.ex:326 lib/brando/html/inspect.ex:126
 #: web/forms/page_form.ex:20 web/forms/post_form.ex:20
 msgid "Pending"
 msgstr "Venter"
 
-#: web/models/post.ex:179
+#: web/models/post.ex:178
 msgid "Publish at"
 msgstr "Publiseringstidspunkt"
 
-#: lib/brando/html.ex:325 lib/brando/html/inspect.ex:125
-#: web/forms/page_form.ex:19 web/forms/post_form.ex:19 web/models/post.ex:178
+#: lib/brando/html.ex:320 lib/brando/html/inspect.ex:125
+#: web/forms/page_form.ex:19 web/forms/post_form.ex:19 web/models/post.ex:177
 msgid "Published"
 msgstr "Publisert"
 
@@ -825,25 +825,25 @@ msgstr "Roller"
 msgid "Save"
 msgstr "Lagre"
 
-#: web/models/image.ex:184 web/models/image_series.ex:186
+#: web/models/image.ex:186 web/models/image_series.ex:186
 msgid "Sequence"
 msgstr "Sekvens"
 
 #: web/models/image_category.ex:135 web/models/image_series.ex:183
-#: web/models/page.ex:201 web/models/post.ex:171
+#: web/models/page.ex:200 web/models/post.ex:170
 msgid "Slug"
 msgstr "URL-tamp"
 
-#: web/models/instagram_image.ex:277 web/models/page.ex:197
-#: web/models/post.ex:166
+#: web/models/instagram_image.ex:277 web/models/page.ex:196
+#: web/models/post.ex:165
 msgid "Status"
 msgstr "Status"
 
-#: web/models/page.ex:206
+#: web/models/page.ex:205
 msgid "Sub pages"
 msgstr "Under-sider"
 
-#: web/models/post.ex:180
+#: web/models/post.ex:179
 msgid "Tags"
 msgstr "Merkelapper"
 
@@ -851,7 +851,7 @@ msgstr "Merkelapper"
 msgid "Thumbnail URL"
 msgstr "Miniatyrbilde-URL"
 
-#: web/models/page.ex:200
+#: web/models/page.ex:199
 msgid "Title"
 msgstr "Tittel"
 
@@ -859,12 +859,12 @@ msgstr "Tittel"
 msgid "Type"
 msgstr "Type"
 
-#: web/models/page.ex:212 web/models/page_fragment.ex:135
+#: web/models/page.ex:211 web/models/page_fragment.ex:134
 msgid "Updated"
 msgstr "Oppdatert"
 
-#: web/models/image.ex:188 web/models/image_category.ex:140
-#: web/models/image_series.ex:192 web/models/post.ex:182 web/models/user.ex:208
+#: web/models/image.ex:190 web/models/image_category.ex:140
+#: web/models/image_series.ex:192 web/models/post.ex:181 web/models/user.ex:208
 msgid "Updated at"
 msgstr "Sist oppdatert"
 
@@ -888,7 +888,7 @@ msgstr "kan ikke være tomt"
 msgid "has invalid format"
 msgstr "har ugyldig format"
 
-#: web/models/image.ex:178
+#: web/models/image.ex:180
 msgid "image"
 msgstr "bilde"
 
@@ -904,7 +904,7 @@ msgstr "bildekategori"
 msgid "image(s)"
 msgstr "bilde(r)"
 
-#: web/models/image.ex:179
+#: web/models/image.ex:181
 msgid "images"
 msgstr "bilder"
 
@@ -936,27 +936,27 @@ msgstr "er reservert"
 msgid "must be unique"
 msgstr "må være unikt"
 
-#: web/models/page.ex:192
+#: web/models/page.ex:191
 msgid "page"
 msgstr "side"
 
-#: web/models/page_fragment.ex:124
+#: web/models/page_fragment.ex:123
 msgid "page fragment"
 msgstr "sidefragment"
 
-#: web/models/page_fragment.ex:125
+#: web/models/page_fragment.ex:124
 msgid "page fragments"
 msgstr "sidefragmenter"
 
-#: web/models/page.ex:193
+#: web/models/page.ex:192
 msgid "pages"
 msgstr "sider"
 
-#: web/models/post.ex:161
+#: web/models/post.ex:160
 msgid "post"
 msgstr "post"
 
-#: web/models/post.ex:162
+#: web/models/post.ex:161
 msgid "posts"
 msgstr "poster"
 
@@ -980,7 +980,7 @@ msgstr "bruker"
 msgid "users"
 msgstr "brukere"
 
-#: lib/brando/html.ex:179
+#: lib/brando/html.ex:174
 msgid "Delete"
 msgstr "Slett"
 
