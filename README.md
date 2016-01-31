@@ -25,18 +25,18 @@ defp deps do
 end
 ```
 
-Install your deps:
+Fetch and compile dependencies. Install Brando:
 
-    $ mix do deps.get, deps.compile
-
-Install Brando:
-
-    $ mix brando.install
+    $ mix do deps.get, deps.compile, brando.install
 
 Add to your `config/config.exs` right before the env-specific import:
 
 ```diff
++ # Import Brando specific config.
 + import_config "brando.exs"
++
+  # Import environment specific config. This must remain at the bottom
+  # of this file so it overrides the configuration defined above.
   import_config "#{Mix.env}.exs"
 ```
 
@@ -47,13 +47,37 @@ Add to your relevant `config/%{env}.exs` Repo config:
 +   extensions: [{Postgrex.Extensions.JSON, library: Poison}]
 ```
 
-Install bower frontend dependencies:
+Add NPM dependencies to your project's `package.json`:
+
+```diff
+  {
+    "repository": {
+    },
+    "dependencies": {
+      "babel-brunch": "~6.0.0",
+      "brunch": "~2.1.3",
+      "clean-css-brunch": "~1.8.0",
+      "css-brunch": "~1.7.0",
+      "javascript-brunch": "~1.8.0",
+      "uglify-js-brunch": "~1.7.0",
++     
++     "sass-brunch": "*",
++     "postcss-brunch": "*",
++     "autoprefixer": "*",
++     
+      "phoenix": "file:deps/phoenix",
+      "phoenix_html": "file:deps/phoenix_html"
+    }
+  }
+```
+
+Install NPM packages:
+
+    $ npm install
+
+Install Bower packages:
 
     $ bower install
-
-Add NPM packages used with brunch:
-
-    $ npm install --save sass-brunch postcss-brunch autoprefixer
 
 Set up database, and seed:
 
@@ -394,7 +418,7 @@ To use villain outside the built-in `pages` and `news` modules add to your app's
 
   scope "/admin", as: :admin do
     pipe_through :admin
-+   villain_routes "/whatever/has/villain"
++   villain_routes "/whatever/has/villain", YourController
   end
 
 ```
@@ -408,16 +432,16 @@ Include js in `whatever/_scripts.<action>.html.eex`:
 Include css in `whatever/_stylesheets.<action>.html.eex`:
 
 ```html
-<link rel="stylesheet" href="<% Helpers.static_path(@conn, "/css/villain.css") %>">
+<link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/villain.css") %>">
 ```
 
 Initialize Villain in your template:
 
 ```html
 <%= Brando.Villain.HTML.initialize(
-      browse_url: "/admin/news/villain/browse/post",
-      upload_url: "/admin/news/villain/upload/post",
-      source:     "textarea[name=\"post[data]\"]") %>
+      base_url:     "/admin/news/",
+      image_series: "news",
+      source:       "textarea[name=\"post[data]\"]") %>
 ```
 
 If you have custom blocks, add them in your `config/brando.exs`:

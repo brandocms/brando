@@ -6,19 +6,18 @@ exports.config = {
         'js/app.js': /^(web\/static\/js)/,
         'js/jquery.js': 'bower_components/jquery/dist/jquery.js',
         'js/vendor.js': [
-          'deps/phoenix/web/static/js/phoenix.js',
-          'deps/phoenix_html/web/static/js/phoenix_html.js',
+          'node_modules/phoenix/priv/static/phoenix.js',
+          'node_modules/phoenix_html/priv/static/phoenix_html.js',
           'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
           'bower_components/jscroll/jquery.jscroll.js',
-          'bower_components/responsive-nav/responsive-nav.js',
           'bower_components/salvattore/dist/salvattore.js',
           'bower_components/flexslider/jquery.flexslider.js',
-          'bower_components/colorbox/jquery.colorbox.js',
           /^(web\/static\/vendor)/
         ],
         'js/brando.js': 'deps/brando/priv/static/vendor/js/brando.js',
         'js/brando.auth.js': 'deps/brando/priv/static/vendor/js/brando.auth.js',
         'js/brando.vendor.js': 'deps/brando/priv/static/vendor/js/brando.vendor.js',
+        'js/brando.custom.js': 'web/static/js/admin/*.js',
         'js/villain.all.js': 'deps/brando/priv/static/vendor/js/villain.all.js',
       },
     },
@@ -49,8 +48,6 @@ exports.config = {
     // Which directories to watch
     watched: [
       "deps/brando/priv/static",
-      "deps/phoenix/web/static",
-      "deps/phoenix_html/web/static",
       "web/static", "test/static"
     ],
 
@@ -92,4 +89,11 @@ exports.config = {
       'js/app.js': ['web/static/js/app']
     }
   },
+
+  npm: {
+    enabled: true,
+    // Whitelist the npm deps to be pulled in as front-end assets.
+    // All other deps in package.json will be excluded from the bundle.
+    whitelist: ["phoenix", "phoenix_html"]
+  }
 };

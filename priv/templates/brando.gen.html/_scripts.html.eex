@@ -1,1 +1,1 @@
-  <script type="text/javascript" src="<%%= Helpers.static_path(@conn, "/js/villain.all.js") %>" charset="utf-8"></script>
+  <script type="text/javascript" src="<%%= Brando.helpers.static_path(@conn, "/js/villain.all.js") %>" charset="utf-8"></script>

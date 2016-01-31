@@ -761,30 +761,34 @@ defmodule Brando.Form.Fields do
   end
 
   defp put_is_selected_fun(tag_opts, is_selected_fun, choice_value, value) do
-    case is_selected_fun.(choice_value, value) do
-      true  -> Keyword.put(tag_opts, :selected, true)
-      false -> tag_opts
+    if is_selected_fun.(choice_value, value) do
+      Keyword.put(tag_opts, :selected, true)
+    else
+      tag_opts
     end
   end
 
   defp put_is_checked_fun(tag_opts, is_checked_fun, choice_value, value) do
-    case is_checked_fun.(choice_value, value) do
-      true  -> Keyword.put(tag_opts, :checked, true)
-      false -> tag_opts
+    if is_checked_fun.(choice_value, value) do
+      Keyword.put(tag_opts, :checked, true)
+    else
+      tag_opts
     end
   end
 
   defp put_checked(tag_opts, value, opts) do
-    case checked?(value, opts) do
-      false -> tag_opts
-      true -> Keyword.put(tag_opts, :checked, "checked")
+    if checked?(value, opts) do
+      Keyword.put(tag_opts, :checked, "checked")
+    else
+      tag_opts
     end
   end
 
   defp put_checked_match(tag_opts, match) do
-    case match do
-      true -> Keyword.put(tag_opts, :checked, true)
-      nil  -> tag_opts
+    if match do
+      Keyword.put(tag_opts, :checked, true)
+    else
+      tag_opts
     end
   end
 

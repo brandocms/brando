@@ -81,11 +81,10 @@ defmodule Brando.InstagramImage do
   Create a changeset for the model by passing `params`.
   If not valid, return errors from changeset
   """
-  @spec create(%{binary => term} | %{atom => term})
-        :: {:ok, t} | {:error, Keyword.t}
+  @spec create(%{binary => term} | %{atom => term}) :: {:ok, t} | {:error, Keyword.t}
   def create(params) do
-    if image = Brando.repo.get_by(__MODULE__,
-                                  instagram_id: params["instagram_id"]) do
+    image = Brando.repo.get_by(__MODULE__, instagram_id: params["instagram_id"])
+    if image do
       image
       |> changeset(:update, params)
       |> Brando.repo.update
@@ -105,9 +104,10 @@ defmodule Brando.InstagramImage do
         :: {:ok, t} | {:error, Keyword.t}
   def update(model, params) do
     model_changeset = changeset(model, :update, params)
-    case model_changeset.valid? do
-      true ->  {:ok, Brando.repo.update!(model_changeset)}
-      false -> {:error, model_changeset.errors}
+    if model_changeset.valid? do
+      {:ok, Brando.repo.update!(model_changeset)}
+    else
+      {:error, model_changeset.errors}
     end
   end
 
@@ -189,18 +189,18 @@ defmodule Brando.InstagramImage do
   Get timestamp from where we search for new images
   """
   def get_last_created_time do
-    max = Brando.repo.one(
+    max_ts = Brando.repo.one(
       from m in __MODULE__,
         select: m.created_time,
         order_by: [desc: m.created_time],
         limit: 1
     )
 
-    case max do
+    case max_ts do
       nil ->
         :blank
-      max ->
-        max
+      max_ts ->
+        max_ts
         |> String.to_integer
         |> Kernel.+(1)
         |> Integer.to_string

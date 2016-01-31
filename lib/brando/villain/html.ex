@@ -43,8 +43,11 @@ defmodule Brando.Villain.HTML do
                                   :extra_blocks, [])
 
     extra_blocks =
-      extra_blocks == [] && "// extraBlocks: []"
-                         || "extraBlocks: #{inspect(extra_blocks)}"
+      if extra_blocks == [] do
+        "// extraBlocks: []"
+      else
+        "extraBlocks: #{inspect(extra_blocks)}"
+      end
 
     html =
     """
@@ -59,7 +62,7 @@ defmodule Brando.Villain.HTML do
        });
     </script>
     """
-    html |> raw
+    raw(html)
   end
 
   defp script_tag(src) do

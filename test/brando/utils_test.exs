@@ -100,10 +100,10 @@ defmodule Brando.UtilsTest do
     assert media_url(nil) == "/media"
   end
 
-  test "active_path/2" do
+  test "active_path?/2" do
     conn = conn(:get, "/some/link")
-    assert active_path(conn, "/some/link")
-    refute active_path(conn, "/some/other/link")
+    assert active_path?(conn, "/some/link")
+    refute active_path?(conn, "/some/other/link")
   end
 
   test "img_url/2" do
