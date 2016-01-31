@@ -1,4 +1,4 @@
-## v0.16.0-dev (2016-XX-XX)
+## v0.16.0 (2016-01-31)
 
 * Enhancements
   * Moved to brunch's new NPM system in app templates. This means you have to change your `brunch-config.js` paths to `'node_modules/phoenix/priv/static/phoenix.js'`. You also have to change `app.js` imports to `import {Socket} from "phoenix"` and `import "phoenix_html"`. Add to `package.json` under `dependencies`: `"phoenix": "file:deps/phoenix"` and `"phoenix_html": "file:deps/phoenix_html"`.
