@@ -1,6 +1,6 @@
 {
   "name": "brando",
-  "version": "0.16.0",
+  "version": "0.17.0-dev",
   "description": "Brando node deps",
   "main": "./priv/static/vendor/js/brando.js",
   "dependencies": {
