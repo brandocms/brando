@@ -37,7 +37,7 @@ class Images {
             imagePool.push($(this).attr('data-id'));
           }
           $(this).toggleClass('selected');
-          that.checkButtonEnable();
+          that.checkButtonEnable(this);
         });
     }
 
@@ -122,8 +122,9 @@ class Images {
        return $.camelCase("-" + word);
     }
 
-    static checkButtonEnable() {
-        let $btn = $('.delete-selected-images');
+    static checkButtonEnable(scope) {
+        let $scope = $(scope).parent().parent();
+        let $btn = $('.delete-selected-images', $scope);
         if (imagePool.length > 0) {
             $btn.removeAttr('disabled');
         } else {
