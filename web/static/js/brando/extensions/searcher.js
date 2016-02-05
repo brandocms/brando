@@ -1,7 +1,10 @@
-/*! jQuery Searcher Plugin - v0.1.0 - 2014-08-18
+/*! $ Searcher Plugin - v0.1.0 - 2014-08-18
  * https://github.com/lloiser/jquery-searcher/
- * Copyright (c) 2014 Lukas Beranek; Licensed MIT 
+ * Copyright (c) 2014 Lukas Beranek; Licensed MIT
 */
+
+import $ from "jquery";
+
 (function IIFE() {
 
 "use strict";
@@ -119,15 +122,11 @@ function factory($)
 	};
 
 }
-
-// AMD style (register as an anonymous module)
-if (typeof(define) === "function" && define.amd)
-	define(["jquery"], factory);
 // node/CommonJS style (for Browserify)
-else if (typeof(exports) === "object")
+if (typeof(exports) === "object")
 	module.exports = factory;
 // browser
 else
-	factory(jQuery);
+	factory($);
 
 }).call(this);

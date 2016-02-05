@@ -1,4 +1,8 @@
 "use strict";
+
+import $ from "jquery";
+
+import {vex} from "./vex_brando";
 import Utils from "./utils";
 
 var imagePool = [];
@@ -10,7 +14,7 @@ class Instagram {
     }
     static imageSelectionListener() {
         var that = this;
-        $('.image-selection-pool img').click(function(e) {
+        $('.image-selection-pool img').click(function() {
           if ($(this).hasClass('selected')) {
             // remove from selected pool
             var pos;
@@ -65,7 +69,7 @@ class Instagram {
             type: "POST",
             url: Utils.addToPathName('change-status'),
             data: {ids: images, status: status},
-            success: that.changeStatusSuccess,
+            success: that.changeStatusSuccess
         });
     }
 

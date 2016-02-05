@@ -2686,17 +2686,18 @@ hr {
 
 /* line 1, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
 body.auth {
-  color: #333; }
+  color: #333;
+  background-color: #E8E8E8; }
 
-/* line 5, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
+/* line 6, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
 .auth .box {
-  padding: 1em 3em 2em 3em;
+  padding: 2em 3em 2em 3em;
   background-color: #fff;
   min-width: 400px;
   width: 400px;
-  border: 15px solid #000;
+  border: 1px solid #EAEAEA;
   position: relative; }
-  /* line 13, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
+  /* line 14, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
   .auth .box .spinner {
     position: absolute;
     width: 100%;
@@ -2705,7 +2706,7 @@ body.auth {
     top: 0;
     left: 0;
     display: none; }
-    /* line 22, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
+    /* line 23, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
     .auth .box .spinner i {
       font-size: 80px;
       margin: 0 auto;
@@ -2713,13 +2714,13 @@ body.auth {
       display: inherit;
       top: 38%;
       position: relative; }
-  /* line 32, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
+  /* line 33, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
   .auth .box span.version {
     float: right;
     font-weight: bold;
     font-size: 12px;
     color: #aaa; }
-  /* line 39, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
+  /* line 40, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
   .auth .box p {
     text-align: center;
     font-weight: bold;
@@ -2727,7 +2728,7 @@ body.auth {
     padding-top: 20px;
     padding-bottom: 15px; }
 
-/* line 48, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
+/* line 49, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
 svg#triangles {
   height: 100%;
   width: 100%;
@@ -2736,25 +2737,25 @@ svg#triangles {
   left: 0;
   z-index: 1; }
 
-/* line 57, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
+/* line 58, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
 .auth .grid-frame {
   z-index: 9999; }
 
-/* line 65, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
+/* line 66, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
 .auth .grid-block {
   background-color: transparent; }
 
-/* line 69, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
+/* line 70, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
 .auth form label {
   display: block;
   text-transform: uppercase;
   font-weight: bold;
   padding-bottom: 5px; }
 
-/* line 76, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
+/* line 77, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
 .auth form .form-group {
   margin: 15px 0; }
-  /* line 79, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
+  /* line 80, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
   .auth form .form-group input[type="email"],
   .auth form .form-group input[type="password"] {
     padding: 0 12px;
@@ -2764,7 +2765,7 @@ svg#triangles {
     height: 50px;
     font-size: 20px; }
 
-/* line 90, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
+/* line 91, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
 .auth h1 {
   border-bottom: 5px solid #E5E5E5;
   margin: 0;
@@ -2773,9 +2774,10 @@ svg#triangles {
   display: block;
   font-size: 8px;
   margin-bottom: 25px;
-  text-transform: uppercase; }
+  text-transform: uppercase;
+  color: #C10404; }
 
-/* line 101, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
+/* line 103, /Users/trond/dev/elixir/brando/web/static/scss/brando/_auth.scss */
 .auth .btn-primary {
   background-color: #fff;
   border: 2px solid #ddd;
@@ -4228,7 +4230,7 @@ fieldset[disabled] .btn-gplus.active {
 .flag {
   width: 16px;
   height: 11px;
-  background: url(../images/brando/flags.png) no-repeat; }
+  background: url(/images/brando/flags.png) no-repeat; }
 
 /* line 7, /Users/trond/dev/elixir/brando/web/static/scss/brando/_flags.scss */
 .flag.flag-ad {
@@ -6110,19 +6112,19 @@ form label {
   font-family: "a-regular";
   font-style: normal;
   font-weight: normal;
-  src: url("../fonts/ar.woff"); }
+  src: url("/fonts/ar.woff"); }
 
 @font-face {
   font-family: "a-regular";
   font-style: normal;
   font-weight: bold;
-  src: url("../fonts/ab.woff"); }
+  src: url("/fonts/ab.woff"); }
 
 @font-face {
   font-family: "a-mono";
   font-style: normal;
   font-weight: bold;
-  src: url("../fonts/am.woff"); }
+  src: url("/fonts/am.woff"); }
 
 /* line 1, /Users/trond/dev/elixir/brando/web/static/scss/brando/_sortable.scss */
 #sequence {

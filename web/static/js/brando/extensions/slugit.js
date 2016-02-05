@@ -1,5 +1,5 @@
 /*
- * jQuery slugIt plug-in 1.0
+ * $ slugIt plug-in 1.0
  *
  * Copyright (c) 2010 Diego Kuperman
  *
@@ -9,7 +9,9 @@
  *      http://www.opensource.org/licenses/bsd-license.php
  */
 
-jQuery.fn.slugIt = function(options) {
+import $ from "jquery";
+
+$.fn.slugIt = function(options) {
     var defaults = {
         events: 'keypress keyup',
         output: '#slug',
@@ -19,28 +21,28 @@ jQuery.fn.slugIt = function(options) {
         after: false
     };
 
-    var opts  = jQuery.extend(defaults, options);
+    var opts  = $.extend(defaults, options);
 
     var chars = latin_map();
-        chars = jQuery.extend(chars, greek_map());
-        chars = jQuery.extend(chars, turkish_map());
-        chars = jQuery.extend(chars, russian_map());
-        chars = jQuery.extend(chars, ukranian_map());
-        chars = jQuery.extend(chars, czech_map());
-        chars = jQuery.extend(chars, latvian_map());
-        chars = jQuery.extend(chars, polish_map());
-        chars = jQuery.extend(chars, symbols_map());
-        chars = jQuery.extend(chars, currency_map());
+        chars = $.extend(chars, greek_map());
+        chars = $.extend(chars, turkish_map());
+        chars = $.extend(chars, russian_map());
+        chars = $.extend(chars, ukranian_map());
+        chars = $.extend(chars, czech_map());
+        chars = $.extend(chars, latvian_map());
+        chars = $.extend(chars, polish_map());
+        chars = $.extend(chars, symbols_map());
+        chars = $.extend(chars, currency_map());
 
     if ( opts.map ) {
-        chars = jQuery.extend(chars, opts.map);
+        chars = $.extend(chars, opts.map);
     }
 
-    jQuery(this).bind(defaults.events, function() {
-        var text = jQuery(this).val();
+    $(this).bind(defaults.events, function() {
+        var text = $(this).val();
 
         if ( opts.before ) text = opts.before(text);
-        text = jQuery.trim(text.toString());
+        text = $.trim(text.toString());
 
         var slug = new String();
         for (var i = 0; i < text.length; i++) {
@@ -63,8 +65,8 @@ jQuery.fn.slugIt = function(options) {
         if ( typeof opts.output == "function" ) {
           opts.output(slug)
         } else {
-          jQuery(opts.output).val(slug);         // input or textarea
-          jQuery(opts.output).html(slug);        // other dom elements
+          $(opts.output).val(slug);         // input or textarea
+          $(opts.output).html(slug);        // other dom elements
         }
 
         return this;

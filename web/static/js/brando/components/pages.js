@@ -1,5 +1,7 @@
 "use strict";
 
+import $ from "jquery";
+
 class Pages {
     static setup() {
         var _this = this;

@@ -16,9 +16,11 @@ exports.config = {
         ],
         'js/brando.js': 'deps/brando/priv/static/vendor/js/brando.js',
         'js/brando.auth.js': 'deps/brando/priv/static/vendor/js/brando.auth.js',
-        'js/brando.vendor.js': 'deps/brando/priv/static/vendor/js/brando.vendor.js',
         'js/brando.custom.js': 'web/static/js/admin/*.js',
-        'js/villain.all.js': 'deps/brando/priv/static/vendor/js/villain.all.js',
+        'js/villain.all.js': [
+          'bower_components/jquery/dist/jquery.js',
+          'deps/brando/priv/static/vendor/js/villain.all.js'
+        ]
       },
     },
     stylesheets: {
@@ -28,7 +30,7 @@ exports.config = {
         'css/villain.css': ['deps/brando/priv/static/vendor/css/villain.css'],
 
         'css/app.css': [
-          'bower_components/bootstrap-sass/assets/stylesheets/_bootstrap.scss',
+          'node_modules/bootstrap-sass/assets/stylesheets/_bootstrap.scss',
           'bower_components/responsive-nav/responsive-nav.css',
           'bower_components/flexslider/flexslider.css',
           'web/static/css/app.scss',
@@ -63,7 +65,8 @@ exports.config = {
       /^(web\/static\/assets)/,
     ],
     ignored: [
-      'web/static/css/includes/*'
+      'web/static/css/includes/*',
+      'web/static/css/custom/includes/*'
     ],
   },
 

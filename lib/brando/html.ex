@@ -180,7 +180,7 @@ defmodule Brando.HTML do
 
   @doc """
   Renders a dropzone form.
-  Pass in a `helper`, the `id` we are uploading to and an optional `cfg`.
+  Pass in a `helper` and the `id` we are uploading to.
 
   ## Example
 

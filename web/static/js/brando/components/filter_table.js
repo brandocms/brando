@@ -1,5 +1,7 @@
 "use strict";
 
+import $ from "jquery";
+
 class FilterTable {
     static setup() {
         // set up table filtering

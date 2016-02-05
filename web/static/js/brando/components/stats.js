@@ -1,12 +1,13 @@
 "use strict";
 
+import $ from "jquery";
+
 import {Socket} from "phoenix"
 
 const MAX_POINTS = 30;
 
 class Stats {
     static setup() {
-        var _this = this;
         this.totalMemoryPoints = [];
         this.atomMemoryPoints = [];
         this.opts = {
@@ -25,10 +26,11 @@ class Stats {
             maxSpotColor: false
         }
 
-        let user_token = document.querySelector("meta[name=\"channel_token\"]").getAttribute("content");
-        let socket = new Socket("/admin/ws", {params: {token: user_token}});
+        let user_token = document.querySelector("meta[name=\"channel_token\"]").getAttribute("content"),
+            socket = new Socket("/admin/ws", {params: {token: user_token}}),
+            chan = socket.channel("stats", {});
+
         socket.connect();
-        let chan = socket.channel("stats", {});
         chan.join().receive("ok", ({messages}) => {
             console.log(">> System statistics channel ready");
         });

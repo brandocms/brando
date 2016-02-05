@@ -2,38 +2,34 @@
   "name": "brando",
   "version": "0.17.0-dev",
   "description": "Brando node deps",
-  "main": "./priv/static/vendor/js/brando.js",
+  "main": "./priv/static/js/brando.js",
   "dependencies": {
     "autoprefixer": "^6.3.1",
     "babel-brunch": "^6.0.0",
     "brunch": "^2.2.1",
     "clean-css-brunch": ">= 1.0 < 1.8",
     "css-brunch": ">= 1.0 < 1.8",
+    "dropzone": "^4.2.0",
     "javascript-brunch": ">= 1.0 < 1.8",
+    "jquery": "^2.2.0",
+    "phoenix": "file:deps/phoenix",
     "postcss-brunch": "^0.5.0",
     "sass-brunch": "^1.9.2",
+    "textfit": "^2.2.2",
     "uglify-js-brunch": ">= 1.0 < 1.8",
-
-    "phoenix": "file:deps/phoenix"
+    "vex-js": "^2.3.4"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/twined/brando.git"
   },
   "files": [
-    "LICENSE.md", "package.json",
-    "priv/static/vendor/js/brando.js",
-    "priv/static/vendor/js/brando.auth.js",
-    "priv/static/vendor/js/brando.vendor.js",
-    "priv/static/vendor/js/villain.all.js",
-    "priv/static/vendor/js/brando.js.map",
-    "priv/static/vendor/js/brando.auth.js.map",
-    "priv/static/vendor/js/brando.vendor.js.map",
-    "priv/static/vendor/css/brando.css",
-    "priv/static/vendor/css/brando.css.map",
-    "priv/static/vendor/css/brando.vendor.css",
-    "priv/static/vendor/css/brando.vendor.css.map",
-    "priv/static/vendor/css/villain.css"
+    "LICENSE.md",
+    "package.json",
+    "priv/static/js/brando.js",
+    "priv/static/js/brando.auth.js",
+    "priv/static/css/brando.css",
+    "priv/static/css/brando.vendor.css"
   ],
   "author": "Twined Networks",
   "license": "MIT",

@@ -1,27 +1,36 @@
 "use strict";
+import $ from "jquery";
+import Dropzone from "dropzone";
 
+import Accordion from "./components/accordion";
 import Autoslug from "./components/autoslug";
 import Flash from "./components/flash";
 import FilterTable from "./components/filter_table";
 import Mobile from "./components/mobile";
-import Utils from "./components/utils";
-import Vex from "./components/vex";
+import {VexBrando} from "./components/vex_brando";
 import Images from "./components/images";
 import Instagram from "./components/instagram";
+import Menu from "./components/menu";
 import Pages from "./components/pages";
 import Sequence from "./components/sequence";
 import Stats from "./components/stats";
 import Tags from "./components/tags";
 import Toolbar from "./components/toolbar";
+import Utils from "./components/utils";
 import WS from "./components/ws";
 
+import "./extensions/dropdown";
+import "./extensions/searcher";
+import "./extensions/slugit";
+import "./extensions/sparkline";
+import "./extensions/tags_input";
 
 $(() => {
     /**
      * Setup vendored modules.
      */
 
-    Vex.setup();
+    VexBrando.setup();
     Autoslug.setup();
     FilterTable.setup();
     Flash.setup();
@@ -54,4 +63,6 @@ $(() => {
      */
 
     WS.setup();
+    Accordion.setup();
+    Menu.setup();
 });

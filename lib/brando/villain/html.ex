@@ -52,14 +52,15 @@ defmodule Brando.Villain.HTML do
     html =
     """
     <script type="text/javascript">
-       $(document).ready(function() {
-         v = new Villain.Editor({
-           #{extra_blocks},
-           baseURL: '#{base_url}',
-           imageSeries: '#{image_series}',
-           textArea: '#{source}'
-         });
-       });
+      $ = require('jquery');
+      $(document).ready(function() {
+        v = new Villain.Editor({
+          #{extra_blocks},
+          baseURL: '#{base_url}',
+          imageSeries: '#{image_series}',
+          textArea: '#{source}'
+        });
+      });
     </script>
     """
     raw(html)

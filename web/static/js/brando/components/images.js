@@ -1,7 +1,13 @@
 "use strict";
+
+import $ from "jquery";
+
+import Accordion from "./accordion";
 import Utils from "./utils";
+import {vex} from "./vex_brando";
 
 var imagePool = [];
+
 class Images {
     static setup() {
         this.getHash();
@@ -13,12 +19,12 @@ class Images {
         let hash = document.location.hash
         if (hash) {
             // show the tab
-            activate_tab("#tab-" + hash.slice(1));
+            Accordion.activateTab("#tab-" + hash.slice(1));
         }
     }
     static imageSelectionListener() {
         var that = this;
-        $('.image-selection-pool img').click(function(e) {
+        $('.image-selection-pool img').click(function() {
           if ($(this).hasClass('selected')) {
             // remove from selected pool
             var pos;
@@ -56,10 +62,9 @@ class Images {
         $(document).on('click', '.edit-properties', function(e) {
             e.preventDefault();
 
-            var attrs;
-            var $content = $('<div>');
-            var $form;
-            var $img = $(this).parent().parent().find('img').clone();
+            var attrs,
+                $content = $('<div>'),
+                $img = $(this).parent().parent().find('img').clone();
 
             vex.dialog.open({
                 message: '',
@@ -69,16 +74,15 @@ class Images {
                     return $content;
                 },
                 callback: function(form) {
-                    if (form === false) {
-                      return console.log('Cancelled');
+                    if (form !== false) {
+                        var id = form.id;
+                        delete form.id;
+                        var data = {
+                            form: form,
+                            id: id
+                        }
+                        that._submitProperties(data);
                     }
-                    var id = form.id;
-                    delete form.id;
-                    var data = {
-                        form: form,
-                        id: id
-                    }
-                    that._submitProperties(data);
                 }
             });
         });
@@ -89,7 +93,7 @@ class Images {
             headers: {Accept : "application/json; charset=utf-8"},
             type: "POST",
             data: data,
-            url: Utils.addToPathName('set-properties'),
+            url: Utils.addToPathName('set-properties')
         }).done($.proxy(function(data) {
             /**
              * Callback after confirming.
@@ -146,7 +150,7 @@ class Images {
                             type: "POST",
                             url: Utils.addToPathName('delete-selected-images'),
                             data: {ids: imagePool},
-                            success: that.deleteSuccess,
+                            success: that.deleteSuccess
                         });
                     }
                 }

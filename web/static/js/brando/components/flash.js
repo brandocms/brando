@@ -1,5 +1,7 @@
 "use strict";
 
+import $ from "jquery";
+
 class Flash {
     static setup() {
         // set up dismissal of flash alerts

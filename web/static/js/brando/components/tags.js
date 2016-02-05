@@ -1,5 +1,7 @@
 "use strict";
 
+import $ from "jquery";
+
 class Tags {
     static setup() {
         // set up tags

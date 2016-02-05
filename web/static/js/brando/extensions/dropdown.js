@@ -6,6 +6,7 @@
  * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
  * ======================================================================== */
 
+import $ from "jquery";
 
 +function ($) {
   'use strict';
@@ -21,12 +22,12 @@
 
   Dropdown.VERSION = '3.2.0'
 
-  Dropdown.prototype.mouseenter = function (e) {
+  Dropdown.prototype.mouseenter = function () {
     var $icon = $(this).find('input')
     $icon.addClass('hover')
   }
 
-  Dropdown.prototype.mouseleave = function (e) {
+  Dropdown.prototype.mouseleave = function () {
     var $icon = $(this).find('input')
     $icon.removeClass('hover')
   }
@@ -166,16 +167,20 @@
     .on('mouseleave.bs.dropdown.data-api', toggle, Dropdown.prototype.mouseleave)
     .on('keydown.bs.dropdown.data-api', toggle + ', [role="menu"], [role="listbox"]', Dropdown.prototype.keydown)
 
-}(jQuery);
+}($);
 
 // dropdown menu
-$.fn.dropdown.Constructor.prototype.change = function(e){
+$.fn.dropdown.Constructor.prototype.change = function(e) {
   e.preventDefault();
-  var $item = $(e.target), $select, $checked = false, $menu, $label;
+  var $item = $(e.target),
+      $select,
+      $checked = false,
+      $menu,
+      $label;
+
   !$item.is('a') && ($item = $item.closest('a'));
   $menu = $item.closest('.dropdown-menu');
   $label = $menu.parent().find('.dropdown-label');
-  $labelHolder = $label.text();
   $select = $item.find('input');
   $checked = $select.is(':checked');
   if($select.is(':disabled')) return;
@@ -185,9 +190,9 @@ $.fn.dropdown.Constructor.prototype.change = function(e){
   !$checked && $item.parent().addClass('active');
   $select.prop("checked", !$select.prop("checked"));
 
-  $items = $menu.find('li > a > input:checked');
+  let $items = $menu.find('li > a > input:checked');
   if ($items.length) {
-      $text = [];
+      let $text = [];
       $items.each(function () {
           var $str = $(this).parent().text();
           $str && $text.push($.trim($str));
@@ -195,10 +200,11 @@ $.fn.dropdown.Constructor.prototype.change = function(e){
 
       $text = $text.length < 4 ? $text.join(', ') : $text.length + ' selected';
       $label.html($text);
-  }else{
+  } else {
     $label.html($label.data('placeholder'));
   }
 }
+
 $(document).on('click.dropdown-menu', '.dropdown-select > li > a', $.fn.dropdown.Constructor.prototype.change);
 
 // collapse nav

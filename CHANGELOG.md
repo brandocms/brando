@@ -1,5 +1,13 @@
 ## v0.17.0-dev (2016-XX-XX)
 
+* Enhancements/backwards incompatible changes
+  * Changed javascript packing. Now everything in the backend is bundled through `brando.js`. This means existing projects need to change some stuff in the `brunch-config.js` file. The `villain.all.js` needs to be:
+  
+      'js/villain.all.js': [
+        'node_modules/jquery/dist/jquery.js',
+        'deps/brando/priv/static/vendor/js/villain.all.js'
+      ]
+
 ## v0.16.0 (2016-01-31)
 
 * Enhancements
@@ -8,7 +16,6 @@
 
 * Bug fixes
   * Fix outdated Villain instructions.
-
 
 ## v0.15.0 (2016-01-18)
 

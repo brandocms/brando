@@ -1,5 +1,7 @@
 "use strict";
 
+import $ from "jquery";
+
 class Toolbar {
     static setup() {
         var _this = this;
