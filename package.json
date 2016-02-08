@@ -36,5 +36,12 @@
   "bugs": {
     "url": "https://github.com/twined/brando/issues"
   },
-  "homepage": "https://github.com/twined/brando"
+  "homepage": "https://github.com/twined/brando",
+  "devDependencies": {
+    "babel-eslint": "^4.1.8",
+    "eslint": "^1.10.3"
+  },
+  "scripts": {
+    "lint": "eslint web/static/js/brando"
+  }
 }
