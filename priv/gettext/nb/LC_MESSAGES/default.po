@@ -149,7 +149,7 @@ msgstr "Slett post"
 msgid "Delete user"
 msgstr "Slett bruker"
 
-#: lib/brando/html.ex:338 lib/brando/html/inspect.ex:128
+#: lib/brando/html.ex:339 lib/brando/html/inspect.ex:128
 #: web/forms/page_form.ex:21 web/forms/post_form.ex:21
 #: web/templates/admin/instagram/index.html.eex:15
 #: web/views/instagram_view.ex:12
@@ -685,7 +685,7 @@ msgstr "Krediteringer"
 msgid "Data"
 msgstr "Data"
 
-#: lib/brando/html.ex:332 lib/brando/html/inspect.ex:127
+#: lib/brando/html.ex:333 lib/brando/html/inspect.ex:127
 #: web/forms/page_form.ex:18 web/forms/post_form.ex:18
 msgid "Draft"
 msgstr "Kladd"
@@ -799,7 +799,7 @@ msgstr "Ingen resultater"
 msgid "No value"
 msgstr "Ingen verdi"
 
-#: lib/brando/html.ex:326 lib/brando/html/inspect.ex:126
+#: lib/brando/html.ex:327 lib/brando/html/inspect.ex:126
 #: web/forms/page_form.ex:20 web/forms/post_form.ex:20
 msgid "Pending"
 msgstr "Venter"
@@ -808,7 +808,7 @@ msgstr "Venter"
 msgid "Publish at"
 msgstr "Publiseringstidspunkt"
 
-#: lib/brando/html.ex:320 lib/brando/html/inspect.ex:125
+#: lib/brando/html.ex:321 lib/brando/html/inspect.ex:125
 #: web/forms/page_form.ex:19 web/forms/post_form.ex:19 web/models/post.ex:177
 msgid "Published"
 msgstr "Publisert"

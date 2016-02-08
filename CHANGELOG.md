@@ -1,4 +1,4 @@
-## v0.17.0-dev (2016-XX-XX)
+## v0.17.0 (2016-02-08)
 
 * Enhancements/backwards incompatible changes
   * Changed javascript packing. See Brando's `priv/templates/brando.install/brunch_config.js` on github for new format.
