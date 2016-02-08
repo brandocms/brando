@@ -1,13 +1,14 @@
 body.auth {
   color: #333;
+  background-color: #E8E8E8;
 }
 
 .auth .box {
-  padding: 1em 3em 2em 3em;
+  padding: 2em 3em 2em 3em;
   background-color: #fff;
   min-width: 400px;
   width: 400px;
-  border: 15px solid #000;
+  border: 1px solid #EAEAEA;
   position: relative;
 
   .spinner {
@@ -96,6 +97,7 @@ svg#triangles {
   font-size: 8px;
   margin-bottom: 25px;
   text-transform: uppercase;
+  color: #C10404;
 }
 
 .auth .btn-primary {

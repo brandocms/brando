@@ -1,38 +1,52 @@
 exports.config = {
   // See http://brunch.io/#documentation for docs.
+
   files: {
     javascripts: {
       joinTo: {
+        /* Frontend JS application */
         'js/app.js': /^(web\/static\/js)/,
-        'js/jquery.js': 'bower_components/jquery/dist/jquery.js',
+
+        /* JQuery module */
+        'js/jquery.js': 'node_modules/jquery/dist/jquery.js',
+
+        /* Frontend vendors */
         'js/vendor.js': [
           'node_modules/phoenix/priv/static/phoenix.js',
           'node_modules/phoenix_html/priv/static/phoenix_html.js',
-          'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
-          'bower_components/jscroll/jquery.jscroll.js',
-          'bower_components/salvattore/dist/salvattore.js',
-          'bower_components/flexslider/jquery.flexslider.js',
+          'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
           /^(web\/static\/vendor)/
         ],
-        'js/brando.js': 'deps/brando/priv/static/vendor/js/brando.js',
-        'js/brando.auth.js': 'deps/brando/priv/static/vendor/js/brando.auth.js',
-        'js/brando.vendor.js': 'deps/brando/priv/static/vendor/js/brando.vendor.js',
-        'js/brando.custom.js': 'web/static/js/admin/*.js',
-        'js/villain.all.js': 'deps/brando/priv/static/vendor/js/villain.all.js',
-      },
+
+        /* Copy brando main JS */
+        'js/brando.js': 'node_modules/brando/priv/static/js/brando.js',
+
+        /* Custom backend JS */
+        'js/brando.custom.js': /^(web\/static\/js\/admin)/,
+
+        /* Brando authentication bundle */
+        'js/brando.auth.js': 'node_modules/brando/priv/static/js/brando.auth.js',
+
+        /* Copy Villain lib */
+        'js/villain.all.js': [
+          'node_modules/brando_villain/priv/static/js/villain.all.js'
+        ]
+      }
     },
     stylesheets: {
       joinTo: {
-        'css/brando.css': ['deps/brando/priv/static/vendor/css/brando.css'],
-        'css/brando.vendor.css': ['deps/brando/priv/static/vendor/css/brando.vendor.css'],
-        'css/villain.css': ['deps/brando/priv/static/vendor/css/villain.css'],
-
+        /* Frontend application-specific CSS/SCSS */
         'css/app.css': [
-          'bower_components/bootstrap-sass/assets/stylesheets/_bootstrap.scss',
-          'bower_components/responsive-nav/responsive-nav.css',
-          'bower_components/flexslider/flexslider.css',
+          'node_modules/bootstrap-sass/assets/stylesheets/_bootstrap.scss',
           'web/static/css/app.scss',
         ],
+
+        /* Backend stylesheets */
+        'css/brando.css': ['node_modules/brando/priv/static/css/brando.css'],
+        'css/brando.vendor.css': ['node_modules/brando/priv/static/css/brando.vendor.css'],
+        'css/villain.css': ['node_modules/brando_villain/priv/static/css/villain.css'],
+
+        /* Custom stylesheets for backend, loaded after brando.css */
         'css/brando.custom.css': [
           'web/static/css/custom/*.scss'
         ]
@@ -47,12 +61,14 @@ exports.config = {
   paths: {
     // Which directories to watch
     watched: [
-      "deps/brando/priv/static",
-      "web/static", "test/static"
+      'node_modules/brando_villain',
+      'node_modules/brando',
+      'web/static',
+      'test/static'
     ],
 
     // Where to compile files to
-    public: "priv/static"
+    public: 'priv/static'
   },
 
   conventions: {
@@ -62,9 +78,7 @@ exports.config = {
     assets: [
       /^(web\/static\/assets)/,
     ],
-    ignored: [
-      'web/static/css/includes/*'
-    ],
+    vendor: /(^bower_components|node_modules|vendor)[\\/]/
   },
 
   // Configure your plugins
@@ -72,28 +86,36 @@ exports.config = {
     babel: {
       // Do not use ES6 compiler in vendor code
       ignore: [
-        /^(web\/static\/vendor)/,
-        /^bower_components/,
-        "deps/brando/priv/static/vendor/js/*.js",
+        /^(web\/static\/vendor|bower_components|node_modules)/,
       ]
     },
     postcss: {
       processors: [
         require('autoprefixer')(['last 2 versions'])
       ]
+    },
+    sass: {
+      options: {
+        includePaths: [
+          "node_modules/bootstrap-sass/assets/stylesheets"
+        ]
+      }
     }
   },
 
   modules: {
     autoRequire: {
-      'js/app.js': ['web/static/js/app']
-    }
+      'js/app.js': ['app']
+    },
+    nameCleaner: function(path) { return path.replace(/^web\/static\/js\//, ''); }
   },
 
   npm: {
     enabled: true,
-    // Whitelist the npm deps to be pulled in as front-end assets.
-    // All other deps in package.json will be excluded from the bundle.
-    whitelist: ["phoenix", "phoenix_html"]
+    static: [
+      'node_modules/brando/priv/static/js/brando.js',
+      'node_modules/brando/priv/static/js/brando.auth.js',
+      'node_modules/brando_villain/priv/static/js/villain.all.js'
+    ]
   }
 };

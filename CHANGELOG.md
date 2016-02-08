@@ -1,5 +1,24 @@
 ## v0.17.0-dev (2016-XX-XX)
 
+* Enhancements/backwards incompatible changes
+  * Changed javascript packing. See Brando's `priv/templates/brando.install/brunch_config.js` on github for new format.
+  * Pull in brando scripts and brando_villain through NPM. 
+  * Add to your `package.json`'s dependencies:
+    
+      "brando": "file:deps/brando",
+      "brando_villain": "file:deps/brando_villain"
+
+  * Add to your `mix.exs`:
+      
+      {:brando_villain, github: "twined/brando_villain"}
+
+* Bug fixes
+  * Fixed Dropzone not being included in JS bundle
+
+* Enhancements
+  * Pull in bootstrap-sass to `app.scss`.
+  * Cleaned up brunch-config
+
 ## v0.16.0 (2016-01-31)
 
 * Enhancements
@@ -8,7 +27,6 @@
 
 * Bug fixes
   * Fix outdated Villain instructions.
-
 
 ## v0.15.0 (2016-01-18)
 

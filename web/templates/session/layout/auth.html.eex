@@ -44,22 +44,5 @@
           </div>
         </div>
       </div>
-    <script>
-        var pattern = Trianglify({
-            width: window.innerWidth,
-            height: window.innerHeight,
-            cell_size: 50,
-            stroke_width: 100
-        });
-        svg = pattern.svg();
-        svg.setAttribute("id", "triangles");
-        document.body.appendChild(svg);
-        $(document).ready(function() {
-          textFit(document.getElementById("app-name"), {widthOnly: true, maxFontSize: 80});
-          $('input[type=submit]').click(function(e) {
-            $('.spinner').fadeIn();
-          });
-        });
-    </script>
   </body>
 </html>
