@@ -52,8 +52,7 @@ defmodule Brando.Villain.HTML do
     html =
     """
     <script type="text/javascript">
-      $ = require('jquery');
-      $(document).ready(function() {
+      document.addEventListener('DOMContentLoaded', function() {
         v = new Villain.Editor({
           #{extra_blocks},
           baseURL: '#{base_url}',
