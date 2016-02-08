@@ -17,8 +17,9 @@
     <%= render_existing Phoenix.Controller.view_module(@conn), "_stylesheets." <> Phoenix.Controller.view_template(@conn), assigns %>
 
     <!-- javascripts -->
-    <script type="text/javascript" src="<%= Brando.helpers.static_path(@conn, "/js/admin.js") %>" charset="utf-8"></script>
-    <!-- <script type="text/javascript" src="<%= Brando.helpers.static_path(@conn, "/js/brando.custom.js") %>" charset="utf-8"></script> -->
+    <script charset="utf-8" src="<%= Brando.helpers.static_path(@conn, "/js/brando.js") %>" type="text/javascript"></script>
+    <script charset="utf-8" src="<%= Brando.helpers.static_path(@conn, "/js/brando.custom.js") %>" type="text/javascript"></script>
+
     <%= render_existing Phoenix.Controller.view_module(@conn), "_scripts." <> Phoenix.Controller.view_template(@conn), assigns %>
   </head>
 
