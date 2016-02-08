@@ -1,5 +1,8 @@
 ## v0.18.0-dev (2016-XX-XX)
 
+* Bug fixes
+  * Fix accordion bug where opening a page with a hash would not work.
+
 ## v0.17.0 (2016-02-08)
 
 * Enhancements/backwards incompatible changes
