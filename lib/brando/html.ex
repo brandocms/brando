@@ -193,6 +193,7 @@ defmodule Brando.HTML do
     """
     <form action="#{path}" class="dropzone" id="brando-dropzone"></form>
     <script type="text/javascript">
+      Dropzone = require('dropzone');
       Dropzone.options.brandoDropzone = {
         paramName: "image",
         maxFilesize: 10,
