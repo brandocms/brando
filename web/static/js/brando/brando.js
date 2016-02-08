@@ -2,28 +2,28 @@
 import $ from "jquery";
 import Dropzone from "dropzone";
 
-import Accordion from "./components/accordion";
-import Autoslug from "./components/autoslug";
-import Flash from "./components/flash";
-import FilterTable from "./components/filter_table";
-import Mobile from "./components/mobile";
-import {VexBrando} from "./components/vex_brando";
-import Images from "./components/images";
-import Instagram from "./components/instagram";
-import Menu from "./components/menu";
-import Pages from "./components/pages";
-import Sequence from "./components/sequence";
-import Stats from "./components/stats";
-import Tags from "./components/tags";
-import Toolbar from "./components/toolbar";
-import Utils from "./components/utils";
-import WS from "./components/ws";
+import {Accordion} from "./brando/components/accordion";
+import Autoslug from "./brando/components/autoslug";
+import Flash from "./brando/components/flash";
+import FilterTable from "./brando/components/filter_table";
+import Mobile from "./brando/components/mobile";
+import {VexBrando, vex} from "./brando/components/vex_brando";
+import Images from "./brando/components/images";
+import Instagram from "./brando/components/instagram";
+import Menu from "./brando/components/menu";
+import Pages from "./brando/components/pages";
+import Sequence from "./brando/components/sequence";
+import Stats from "./brando/components/stats";
+import Tags from "./brando/components/tags";
+import Toolbar from "./brando/components/toolbar";
+import {Utils} from "./brando/components/utils";
+import WS from "./brando/components/ws";
 
-import "./extensions/dropdown";
-import "./extensions/searcher";
-import "./extensions/slugit";
-import "./extensions/sparkline";
-import "./extensions/tags_input";
+import "./brando/extensions/dropdown";
+import "./brando/extensions/searcher";
+import "./brando/extensions/slugit";
+import "./brando/extensions/sparkline";
+import "./brando/extensions/tags_input";
 
 $(() => {
     /**
@@ -66,3 +66,10 @@ $(() => {
     Accordion.setup();
     Menu.setup();
 });
+
+export {
+    Accordion,
+    Utils,
+    vex,
+    Dropzone
+};

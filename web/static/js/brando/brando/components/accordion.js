@@ -33,4 +33,4 @@ class Accordion {
   }
 }
 
-export default Accordion;
+export {Accordion};

@@ -1,115 +1,4 @@
 (function() {
-  'use strict';
-
-  var globals = typeof window === 'undefined' ? global : window;
-  if (typeof globals.require === 'function') return;
-
-  var modules = {};
-  var cache = {};
-  var aliases = {};
-  var has = ({}).hasOwnProperty;
-
-  var endsWith = function(str, suffix) {
-    return str.indexOf(suffix, str.length - suffix.length) !== -1;
-  };
-
-  var _cmp = 'components/';
-  var unalias = function(alias, loaderPath) {
-    var start = 0;
-    if (loaderPath) {
-      if (loaderPath.indexOf(_cmp) === 0) {
-        start = _cmp.length;
-      }
-      if (loaderPath.indexOf('/', start) > 0) {
-        loaderPath = loaderPath.substring(start, loaderPath.indexOf('/', start));
-      }
-    }
-    var result = aliases[alias + '/index.js'] || aliases[loaderPath + '/deps/' + alias + '/index.js'];
-    if (result) {
-      return _cmp + result.substring(0, result.length - '.js'.length);
-    }
-    return alias;
-  };
-
-  var _reg = /^\.\.?(\/|$)/;
-  var expand = function(root, name) {
-    var results = [], part;
-    var parts = (_reg.test(name) ? root + '/' + name : name).split('/');
-    for (var i = 0, length = parts.length; i < length; i++) {
-      part = parts[i];
-      if (part === '..') {
-        results.pop();
-      } else if (part !== '.' && part !== '') {
-        results.push(part);
-      }
-    }
-    return results.join('/');
-  };
-
-  var dirname = function(path) {
-    return path.split('/').slice(0, -1).join('/');
-  };
-
-  var localRequire = function(path) {
-    return function expanded(name) {
-      var absolute = expand(dirname(path), name);
-      return globals.require(absolute, path);
-    };
-  };
-
-  var initModule = function(name, definition) {
-    var module = {id: name, exports: {}};
-    cache[name] = module;
-    definition(module.exports, localRequire(name), module);
-    return module.exports;
-  };
-
-  var require = function(name, loaderPath) {
-    var path = expand(name, '.');
-    if (loaderPath == null) loaderPath = '/';
-    path = unalias(name, loaderPath);
-
-    if (has.call(cache, path)) return cache[path].exports;
-    if (has.call(modules, path)) return initModule(path, modules[path]);
-
-    var dirIndex = expand(path, './index');
-    if (has.call(cache, dirIndex)) return cache[dirIndex].exports;
-    if (has.call(modules, dirIndex)) return initModule(dirIndex, modules[dirIndex]);
-
-    throw new Error('Cannot find module "' + name + '" from '+ '"' + loaderPath + '"');
-  };
-
-  require.alias = function(from, to) {
-    aliases[to] = from;
-  };
-
-  require.register = require.define = function(bundle, fn) {
-    if (typeof bundle === 'object') {
-      for (var key in bundle) {
-        if (has.call(bundle, key)) {
-          modules[key] = bundle[key];
-        }
-      }
-    } else {
-      modules[bundle] = fn;
-    }
-  };
-
-  require.list = function() {
-    var result = [];
-    for (var item in modules) {
-      if (has.call(modules, item)) {
-        result.push(item);
-      }
-    }
-    return result;
-  };
-
-  require.brunch = true;
-  require._cache = cache;
-  globals.require = require;
-})();
-(function() {
     var global = window;
     
 
@@ -12949,8 +12838,13 @@ require.register('dropzone', function(exports,req,module){
 
     })(exports,require,module);
   });
-})();require.register("brando/brando", function(exports, require, module) {
+})();require.register("brando", function(exports, require, module) {
 "use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.Dropzone = exports.vex = exports.Utils = exports.Accordion = undefined;
 
 var _jquery = require("jquery");
 
@@ -12960,77 +12854,73 @@ var _dropzone = require("dropzone");
 
 var _dropzone2 = _interopRequireDefault(_dropzone);
 
-var _accordion = require("./components/accordion");
+var _accordion = require("./brando/components/accordion");
 
-var _accordion2 = _interopRequireDefault(_accordion);
-
-var _autoslug = require("./components/autoslug");
+var _autoslug = require("./brando/components/autoslug");
 
 var _autoslug2 = _interopRequireDefault(_autoslug);
 
-var _flash = require("./components/flash");
+var _flash = require("./brando/components/flash");
 
 var _flash2 = _interopRequireDefault(_flash);
 
-var _filter_table = require("./components/filter_table");
+var _filter_table = require("./brando/components/filter_table");
 
 var _filter_table2 = _interopRequireDefault(_filter_table);
 
-var _mobile = require("./components/mobile");
+var _mobile = require("./brando/components/mobile");
 
 var _mobile2 = _interopRequireDefault(_mobile);
 
-var _vex_brando = require("./components/vex_brando");
+var _vex_brando = require("./brando/components/vex_brando");
 
-var _images = require("./components/images");
+var _images = require("./brando/components/images");
 
 var _images2 = _interopRequireDefault(_images);
 
-var _instagram = require("./components/instagram");
+var _instagram = require("./brando/components/instagram");
 
 var _instagram2 = _interopRequireDefault(_instagram);
 
-var _menu = require("./components/menu");
+var _menu = require("./brando/components/menu");
 
 var _menu2 = _interopRequireDefault(_menu);
 
-var _pages = require("./components/pages");
+var _pages = require("./brando/components/pages");
 
 var _pages2 = _interopRequireDefault(_pages);
 
-var _sequence = require("./components/sequence");
+var _sequence = require("./brando/components/sequence");
 
 var _sequence2 = _interopRequireDefault(_sequence);
 
-var _stats = require("./components/stats");
+var _stats = require("./brando/components/stats");
 
 var _stats2 = _interopRequireDefault(_stats);
 
-var _tags = require("./components/tags");
+var _tags = require("./brando/components/tags");
 
 var _tags2 = _interopRequireDefault(_tags);
 
-var _toolbar = require("./components/toolbar");
+var _toolbar = require("./brando/components/toolbar");
 
 var _toolbar2 = _interopRequireDefault(_toolbar);
 
-var _utils = require("./components/utils");
+var _utils = require("./brando/components/utils");
 
-var _utils2 = _interopRequireDefault(_utils);
-
-var _ws = require("./components/ws");
+var _ws = require("./brando/components/ws");
 
 var _ws2 = _interopRequireDefault(_ws);
 
-require("./extensions/dropdown");
+require("./brando/extensions/dropdown");
 
-require("./extensions/searcher");
+require("./brando/extensions/searcher");
 
-require("./extensions/slugit");
+require("./brando/extensions/slugit");
 
-require("./extensions/sparkline");
+require("./brando/extensions/sparkline");
 
-require("./extensions/tags_input");
+require("./brando/extensions/tags_input");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -13072,9 +12962,14 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
      */
 
     _ws2.default.setup();
-    _accordion2.default.setup();
+    _accordion.Accordion.setup();
     _menu2.default.setup();
 });
+
+exports.Accordion = _accordion.Accordion;
+exports.Utils = _utils.Utils;
+exports.vex = _vex_brando.vex;
+exports.Dropzone = _dropzone2.default;
 });
 
 require.register("brando/components/accordion", function(exports, require, module) {
@@ -13085,6 +12980,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.Accordion = undefined;
 
 var _jquery = require("jquery");
 
@@ -13135,7 +13031,7 @@ var Accordion = function () {
   return Accordion;
 }();
 
-exports.default = Accordion;
+exports.Accordion = Accordion;
 });
 
 require.register("brando/components/autoslug", function(exports, require, module) {
@@ -14927,36 +14823,29 @@ require.register("brando/components/utils", function(exports, require, module) {
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+  value: true
 });
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Utils = function () {
-    function Utils() {
-        _classCallCheck(this, Utils);
+var Utils = exports.Utils = function () {
+  function Utils() {
+    _classCallCheck(this, Utils);
+  }
+
+  _createClass(Utils, null, [{
+    key: "addToPathName",
+    value: function addToPathName(relativeUrl) {
+      var divider = window.location.pathname.slice(-1) == "/" ? "" : "/";
+      return window.location.pathname + divider + relativeUrl;
     }
+  }]);
 
-    _createClass(Utils, null, [{
-        key: "addToPathName",
-        value: function addToPathName(relativeUrl) {
-            var divider = window.location.pathname.slice(-1) == "/" ? "" : "/";
-            return window.location.pathname + divider + relativeUrl;
-        }
-    }, {
-        key: "test",
-        value: function test() {
-            console.log("testing");
-        }
-    }]);
-
-    return Utils;
+  return Utils;
 }();
-
-exports.default = Utils;
 });
 
-require.register("brando/components/vex_brando", function(exports, require, module) {
+;require.register("brando/components/vex_brando", function(exports, require, module) {
 "use strict";
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -16264,7 +16153,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
                       */
 });
 
-require.register("brando_auth/brando_auth", function(exports, require, module) {
+require.register("web/static/js/brando_auth/brando_auth", function(exports, require, module) {
 "use strict";
 
 var _jquery = require("jquery");
@@ -16292,5 +16181,5 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 });
 });
 
-require('brando/brando');
+require('brando');require('jquery');
 //# sourceMappingURL=brando.js.map
