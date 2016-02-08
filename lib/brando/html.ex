@@ -180,7 +180,7 @@ defmodule Brando.HTML do
 
   @doc """
   Renders a dropzone form.
-  Pass in a `helper`, the `id` we are uploading to and an optional `cfg`.
+  Pass in a `helper` and the `id` we are uploading to.
 
   ## Example
 
@@ -193,6 +193,7 @@ defmodule Brando.HTML do
     """
     <form action="#{path}" class="dropzone" id="brando-dropzone"></form>
     <script type="text/javascript">
+      Dropzone = require('dropzone');
       Dropzone.options.brandoDropzone = {
         paramName: "image",
         maxFilesize: 10,

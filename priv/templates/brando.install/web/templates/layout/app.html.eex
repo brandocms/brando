@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="<%= static_path(@conn, "/css/app.css") %>">
     <script src="<%= static_path(@conn, "/js/jquery.js") %>"></script>
   </head>
-  <body>
+  <%= Brando.HTML.body_tag(@conn) %>
   <!--
     <section class="cookie-container">
       <section class="container">

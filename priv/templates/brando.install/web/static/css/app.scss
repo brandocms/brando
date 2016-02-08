@@ -1,7 +1,11 @@
 /**
  * Application-specific SCSS.
- * (c) twined 2015
+ * (c) twined 2016
  */
+
+@import "bootstrap-sprockets";
+@import "bootstrap";
+
 
 body {
 

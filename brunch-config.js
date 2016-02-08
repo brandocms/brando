@@ -5,14 +5,17 @@ exports.config = {
       joinTo: {
         'js/brando.js': [
           'node_modules/phoenix/priv/static/phoenix.js',
+          'node_modules/jquery/dist/jquery.js',
+          'node_modules/vex-js/js/vex.js',
+          'node_modules/dropzone/dist/dropzone.js',
           /^(web\/static\/js\/brando)/
         ],
+
         'js/brando.auth.js': [
-          'web/static/js/vendor/trianglify.min.js',
-          'web/static/js/vendor/jquery.min.js',
-          'web/static/js/vendor/fittext.js'
-        ],
-        'js/brando.vendor.js': /^(web\/static\/js\/vendor)/,
+          'node_modules/jquery/dist/jquery.js',
+          'node_modules/textfit/textFit.js',
+          /^(web\/static\/js\/brando_auth)/
+        ]
       },
       order: {
         before: [
@@ -42,7 +45,7 @@ exports.config = {
       'web/static',
     ],
     // Where to compile files to
-    public: 'priv/static/vendor'
+    public: 'priv/static'
   },
 
   conventions: {
@@ -74,8 +77,11 @@ exports.config = {
 
   modules: {
     autoRequire: {
-      'js/brando.js': ['web/static/js/brando/brando']
-    }
+      'js/brando.js': ['brando', 'jquery'],
+      'js/brando.auth.js': ['brando_auth/brando_auth']
+    },
+    definition: false,
+    nameCleaner: function(path) { return path.replace(/^web\/static\/js\/brando\//, ''); }
   },
 
   npm: {

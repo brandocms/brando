@@ -52,14 +52,14 @@ defmodule Brando.Villain.HTML do
     html =
     """
     <script type="text/javascript">
-       $(document).ready(function() {
-         v = new Villain.Editor({
-           #{extra_blocks},
-           baseURL: '#{base_url}',
-           imageSeries: '#{image_series}',
-           textArea: '#{source}'
-         });
-       });
+      document.addEventListener('DOMContentLoaded', function() {
+        v = new Villain.Editor({
+          #{extra_blocks},
+          baseURL: '#{base_url}',
+          imageSeries: '#{image_series}',
+          textArea: '#{source}'
+        });
+      });
     </script>
     """
     raw(html)
@@ -68,7 +68,7 @@ defmodule Brando.Villain.HTML do
   defp script_tag(src) do
     {:safe, html} =
       content_tag :script, "",
-        [type: "text/javascript", charset: "utf-8",
+        [charset: "utf-8", type: "text/javascript",
          src: Brando.helpers.static_path(Brando.endpoint, src)]
     html
   end

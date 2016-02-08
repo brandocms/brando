@@ -11,7 +11,7 @@ A helping hand.
 
 ## Install
 
-Add Brando to your `deps` and `applications` in your project's `mix.exs`:
+Add Brando to your `deps` and `applications` in your project's `mix.exs`. Also add `brando_villain` to your `deps`:
 
 ```elixir
 def application do
@@ -21,7 +21,8 @@ def application do
 end
 
 defp deps do
-  [{:brando, github: "twined/brando"}]
+  [{:brando, github: "twined/brando"},
+   {:brando_villain, github: "twined/brando_villain"}]
 end
 ```
 
@@ -65,6 +66,8 @@ Add NPM dependencies to your project's `package.json`:
 +     "postcss-brunch": "*",
 +     "autoprefixer": "*",
 +     
++     "brando": "file:deps/brando",
++     "brando_villain": "file:deps/brando_villain",
       "phoenix": "file:deps/phoenix",
       "phoenix_html": "file:deps/phoenix_html"
     }
@@ -138,6 +141,10 @@ Run the `compile` script in your OTP app's dir to `git pull` latest, get latest 
 
 For modules added through your OTP app, you can style its backend by editing 
 `web/static/css/custom/brando.custom.scss`, or adding your own files to `web/static/css/custom/`
+
+## Additional admin Javascript
+
+Add files to your `web/static/js/admin` folder. These are compiled down to `priv/static/js/brando.custom.js`. This file is included in the admin section's base template.
 
 ## Pagination
 

@@ -7,9 +7,7 @@
   5. Bump version in `README.md` installation instructions (if we add to hex)
   6. Update translations:
      `$ mix gettext.extract && mix gettext.merge priv/gettext`
-  7. Copy updated villain/ dist files
-     `$ cp ~/dev/js/villain/dist/villain.all.js priv/static/vendor/js`
-     `$ cp ~/dev/js/villain/dist/villain.css priv/static/vendor/css`
+  7. Update villain_brando if neccessary.
   8. `$ brunch build`
   9. `$ mix test`
   10. Commit with `Prepare X.X.X release`
