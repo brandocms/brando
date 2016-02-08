@@ -14,10 +14,10 @@
   11. git-flow: finish release. Tag without "v", e.g. 0.1.0 - NOT v0.1.0!
      - tag message: Release vX.X.X
   12. Switch to master. Push.
-  13. (Push package and docs to hex)
-  14. Switch to develop-branch.
-  15. Bump version in CHANGELOG + -dev
-  16. Bump version in mix.exs + -dev
-  17. Bump version in package.json + -dev  
-  18. Commit `develop` with `Start X.X.X development`. Push
-  19. Push `X.X.X` tag to `origin`
+  13. Push `X.X.X` tag to `origin`
+  14. (Push package and docs to hex)
+  15. Switch to develop-branch.
+  16. Bump version in CHANGELOG + -dev
+  17. Bump version in mix.exs + -dev
+  18. Bump version in package.json + -dev  
+  19. Commit `develop` with `Start X.X.X development`. Push
