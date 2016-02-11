@@ -502,3 +502,8 @@ Run
 
     $ fab prod bootstrap
 
+to deploy on your production box.
+
+To seed your DB:
+
+    $ fab prod seed

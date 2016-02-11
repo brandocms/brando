@@ -3,6 +3,9 @@
 * Bug fixes
   * Fix accordion bug where opening a page with a hash would not work.
 
+* Enhancements
+  * Add seed task to default fabric deployment script.
+
 ## v0.17.0 (2016-02-08)
 
 * Enhancements/backwards incompatible changes
