@@ -1,4 +1,4 @@
-defmodule Brando.Routes.Admin.Analytics do
+defmodule Brando.Analytics.Routes.Admin do
   @moduledoc """
   Routes for Brando's analytics
 

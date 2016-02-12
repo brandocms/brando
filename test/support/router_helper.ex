@@ -73,12 +73,11 @@ defmodule RouterHelper do
     @moduledoc false
     use Phoenix.Router
     alias Brando.Plug.Authenticate
-    import Brando.Routes.Admin.Dashboard
-    import Brando.Routes.Admin.Users
-    import Brando.Routes.Admin.News
-    import Brando.Routes.Admin.Images
-    import Brando.Routes.Admin.Pages
-    import Brando.Routes.Admin.Instagram
+    import Brando.Dashboard.Routes.Admin
+    import Brando.Users.Routes.Admin
+    import Brando.Images.Routes.Admin
+    import Brando.Pages.Routes.Admin
+    import Brando.Instagram.Routes.Admin
     import Brando.Plug.I18n
 
     pipeline :admin do
@@ -102,7 +101,6 @@ defmodule RouterHelper do
                             private: %{model: Brando.User}
       user_routes "/users2", private: %{model: Brando.User}
       user_routes "/users3"
-      post_routes "/news"
       page_routes "/pages"
       image_routes "/images"
       instagram_routes "/instagram"

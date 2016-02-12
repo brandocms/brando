@@ -1,4 +1,4 @@
-defmodule Brando.Routes.Admin.Villain do
+defmodule Brando.Villain.Routes.Admin do
   @moduledoc """
   Routes for Brando.Villain
 

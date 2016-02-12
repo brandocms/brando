@@ -1,4 +1,4 @@
-defmodule Brando.Routes.Admin.Users do
+defmodule Brando.Users.Routes.Admin do
   @moduledoc """
   Routes for Brando.Users
 

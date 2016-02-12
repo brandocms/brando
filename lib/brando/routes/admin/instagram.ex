@@ -1,4 +1,4 @@
-defmodule Brando.Routes.Admin.Instagram do
+defmodule Brando.Instagram.Routes.Admin do
   @moduledoc """
   Routes for Brando's Instagram module
 

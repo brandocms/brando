@@ -1,4 +1,4 @@
-defmodule Brando.Routes.Admin do
+defmodule Brando.Admin.Routes do
   @moduledoc """
   Routes for admin apps
 

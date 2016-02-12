@@ -1,4 +1,4 @@
-defmodule Brando.Routes.Admin.Dashboard do
+defmodule Brando.Dashboard.Routes.Admin do
   @moduledoc """
   Routes for Brando's dashboard
 
