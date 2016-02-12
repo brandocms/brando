@@ -123,13 +123,13 @@ defmodule Brando.Image do
     q = from m in __MODULE__, where: m.id in ^ids
     records = Brando.repo.all(q)
     for record <- records do
-      delete_original_and_sized_images(record.image)
+      delete_original_and_sized_images(record, :image)
     end
     Brando.repo.delete_all(q)
   end
 
   def delete(record) when is_map(record) do
-    delete_original_and_sized_images(record.image)
+    delete_original_and_sized_images(record, :image)
     Brando.repo.delete!(record)
   end
 

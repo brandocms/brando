@@ -44,7 +44,7 @@ defmodule <%= module %> do
   end
 
   def delete(record) do
-<%= for {v, k} <- img_fields do %>    record.<%= k %> |> delete_original_and_sized_images
+<%= for {v, k} <- img_fields do %>    record |> delete_original_and_sized_images(<%= inspect k %>)
 <% end %>    Brando.repo.delete!(record)
   end
 
