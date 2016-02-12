@@ -1,1 +1,0 @@
-<link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/villain.css") %>">

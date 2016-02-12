@@ -1,6 +1,0 @@
-    <h1><%= gettext("Edit post") %></h1>
-    <%= PostForm.get_form(type: :update, action: :update, params: to_string(@id), changeset: @changeset) %>
-    <%= Brando.Villain.HTML.initialize(
-          base_url:     "/admin/news/",
-          image_series: "post",
-          source:     "textarea[name=\"post[data]\"]") %>
