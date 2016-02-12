@@ -1,6 +1,7 @@
 ## v0.18.0-dev (2016-XX-XX)
 
 * Backwards incompatible changes
+  * Extracted News to its own application -> http://github.com/twined/brando_news
   * `delete_original_and_sized_images` now takes two arguments. The model, and an :atom representation of the field. Instead of `delete_original_and_sized_images(post.cover)` you do `delete_original_and_sized_images(post, :cover)`.
   * Renamed route imports:
         
