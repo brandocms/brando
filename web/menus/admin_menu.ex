@@ -1,4 +1,4 @@
-defmodule Brando.Menu.Admin do
+defmodule Brando.Admin.Menu do
   @moduledoc """
   Menu definitions for the Admin/dashboard Menu. See `Brando.Menu` docs for
   more information

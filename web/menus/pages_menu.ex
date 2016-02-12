@@ -1,4 +1,4 @@
-defmodule Brando.Menu.Pages do
+defmodule Brando.Pages.Menu do
   @moduledoc """
   Menu definitions for the Pages Menu. See `Brando.Menu` docs for
   more information

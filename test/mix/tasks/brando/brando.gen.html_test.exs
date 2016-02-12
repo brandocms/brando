@@ -68,8 +68,8 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       end
 
       assert_file "web/menus/admin/minion_face_menu.ex", fn file ->
-        assert file =~ "defmodule Brando.Menu.MinionFaces do"
-        assert file =~ "modules: [Brando.Menu.MinionFaces, ...]"
+        assert file =~ "defmodule Brando.MinionFaces.Menu do"
+        assert file =~ "modules: [Brando.MinionFaces.Menu, ...]"
       end
 
       assert_file "web/views/admin/minion_face_view.ex", fn file ->

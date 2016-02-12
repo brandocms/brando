@@ -1,4 +1,4 @@
-defmodule Brando.Menu.Analytics do
+defmodule Brando.Analytics.Menu do
   @moduledoc """
   Menu definitions for the analytics menu.
   """

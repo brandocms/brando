@@ -89,8 +89,8 @@ config :brando, Brando.Menu,
     "#870B46;", "#D0201A;", "#FF641A;"
   ],
   modules: [
-    Brando.Menu.Admin, Brando.Menu.Users, Brando.Menu.News,
-    Brando.Menu.Pages, Brando.Menu.Images
+    Brando.Admin.Menu, Brando.Users.Menu, Brando.News.Menu,
+    Brando.Pages.Menu, Brando.Images.Menu
   ]
 
 config :brando, Brando.Villain,
