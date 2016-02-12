@@ -47,7 +47,7 @@ defmodule Brando.Mixfile do
 
      # Dev dependencies
      {:dialyze, "~> 0.2", only: :dev},
-     {:credo, "~> 0.2", only: [:dev, :test]},
+     {:credo, "~> 0.2", only: :dev},
 
      # Test dependencies
      {:phoenix_ecto, "~> 2.0", only: :test},
