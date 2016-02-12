@@ -1,4 +1,4 @@
-defmodule <%= base %>.Menu.<%= scoped %>s do
+defmodule <%= base %>.<%= scoped %>s.Menu do
   @moduledoc """
   Menu definitions for the <%= scoped %>s Menu.
 
@@ -6,7 +6,7 @@ defmodule <%= base %>.Menu.<%= scoped %>s do
   Install menu by adding to your `config/brando.exs`
 
       config :brando, Brando.Menu,
-        modules: [<%= base %>.Menu.<%= scoped %>s, ...]
+        modules: [<%= base %>.<%= scoped %>s.Menu, ...]
 
   """
   use Brando.Menu

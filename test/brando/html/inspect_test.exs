@@ -4,7 +4,6 @@ defmodule Brando.HTML.InspectTest do
   use Brando.Integration.TestCase
   import Brando.HTML.Inspect
   alias Brando.User
-  alias Brando.Post
   alias Brando.Type.Image
 
   @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "nb",
@@ -76,16 +75,6 @@ defmodule Brando.HTML.InspectTest do
 
     assert ret =~ "zabuzasixu"
     assert ret =~ "Nita Bond"
-
-    assert {:ok, post} = Post.create(@post_params, user)
-
-    post = post |> Brando.repo.preload(:creator)
-    {:safe, ret} = model(post)
-    ret = ret |> IO.iodata_to_binary
-
-    assert ret =~ "<i class=\"fa fa-times text-danger\">"
-    assert ret =~ "Nita Bond"
-    assert ret =~ "<h1>Header</h1>"
   end
 
   test "inspect_field/3" do

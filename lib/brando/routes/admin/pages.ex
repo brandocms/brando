@@ -1,4 +1,4 @@
-defmodule Brando.Routes.Admin.Pages do
+defmodule Brando.Pages.Routes.Admin do
   @moduledoc """
   Routes for Brando.Pages
 
@@ -15,7 +15,7 @@ defmodule Brando.Routes.Admin.Pages do
   alias Brando.Admin.PageFragmentController
   alias Brando.Page
   alias Brando.PageFragment
-  import Brando.Routes.Admin.Villain
+  import Brando.Villain.Routes.Admin
 
   @doc """
   Defines "RESTful" endpoints for the pages resource.

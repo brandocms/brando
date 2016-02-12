@@ -2,7 +2,7 @@
 
 import $ from "jquery";
 
-import Accordion from "./accordion";
+import {Accordion} from "./accordion";
 import Utils from "./utils";
 import {vex} from "./vex_brando";
 
@@ -18,7 +18,6 @@ class Images {
     static getHash() {
         let hash = document.location.hash
         if (hash) {
-            // show the tab
             Accordion.activateTab("#tab-" + hash.slice(1));
         }
     }

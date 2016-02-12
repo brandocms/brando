@@ -1,4 +1,4 @@
-defmodule Brando.Menu.Images do
+defmodule Brando.Images.Menu do
   @moduledoc """
   Menu definitions for the Images Menu. See `Brando.Menu` docs for
   more information

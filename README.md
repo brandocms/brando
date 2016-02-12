@@ -307,7 +307,7 @@ Add Instagram to your menu modules in `config/brando.exs`:
 Add routes to your app's `web/router.ex` under the `admin` scope:
 
 ```diff
-+ import Brando.Routes.Admin.Instagram
++ import Brando.Instagram.Routes.Admin
 
   scope "/admin", as: :admin do
     pipe_through :admin
@@ -351,7 +351,7 @@ config :brando, Brando.Menu,
 Finally add to your `router.ex`:
 
 ```diff
-+ import Brando.Routes.Admin.Analytics
++ import Brando.Analytics.Routes.Admin
 
   scope "/admin", as: :admin do
     pipe_through :admin
@@ -421,7 +421,7 @@ plug :check_for_uploads, {"user", Brando.User}
 To use villain outside the built-in `pages` and `news` modules add to your app's `web/router.ex`:
 
 ```diff
-+ import Brando.Routes.Admin.Villain
++ import Brando.Villain.Routes.Admin
 
   scope "/admin", as: :admin do
     pipe_through :admin
@@ -502,3 +502,8 @@ Run
 
     $ fab prod bootstrap
 
+to deploy on your production box.
+
+To seed your DB:
+
+    $ fab prod seed

@@ -13000,9 +13000,16 @@ var Accordion = function () {
     value: function setup() {
       var that = this;
       (0, _jquery2.default)(document).ready(function () {
+        var hash = document.location.hash;
         (0, _jquery2.default)('.accordion-tabs-minimal').each(function () {
-          if (!document.location.hash) {
-            (0, _jquery2.default)(this).children('li').first().children('a').addClass('is-active').next().addClass('is-open').show();
+          if (!hash) {
+            var $link = (0, _jquery2.default)(this).children('li').first().children('a');
+            var $linkSibling = $link.next();
+            $link.addClass('is-active');
+            $linkSibling.addClass('is-open').show();
+          } else {
+            var $link = (0, _jquery2.default)('#tab-' + hash.replace('#', ''));
+            that.activateTab($link);
           }
         });
 
@@ -13015,16 +13022,20 @@ var Accordion = function () {
   }, {
     key: "activateTab",
     value: function activateTab(obj) {
-      if (!(0, _jquery2.default)(obj).hasClass('is-active')) {
-        // remove `tab-` from obj id
-        document.location.hash = (0, _jquery2.default)(obj).attr('id').replace('tab-', '');
-        var accordionTabs = (0, _jquery2.default)(obj).closest('.accordion-tabs-minimal');
-        accordionTabs.find('.is-open').removeClass('is-open').hide();
+      var $obj = (0, _jquery2.default)(obj),
+          $accordionTabs = $obj.closest('.accordion-tabs-minimal'),
+          $openTabs = $accordionTabs.find('.is-open'),
+          $activeTabs = $accordionTabs.find('.is-active'),
+          $tabContent = $obj.next();
 
-        (0, _jquery2.default)(obj).next().toggleClass('is-open').toggle();
-        accordionTabs.find('.is-active').removeClass('is-active');
-        (0, _jquery2.default)(obj).addClass('is-active');
+      if (!$obj.hasClass('is-active')) {
+        document.location.hash = $obj.attr('id').replace('tab-', '');
       }
+
+      $openTabs.removeClass('is-open').hide();
+      $tabContent.toggleClass('is-open').toggle();
+      $activeTabs.removeClass('is-active');
+      $obj.addClass('is-active');
     }
   }]);
 
@@ -13169,8 +13180,6 @@ var _jquery2 = _interopRequireDefault(_jquery);
 
 var _accordion = require("./accordion");
 
-var _accordion2 = _interopRequireDefault(_accordion);
-
 var _utils = require("./utils");
 
 var _utils2 = _interopRequireDefault(_utils);
@@ -13201,8 +13210,7 @@ var Images = function () {
         value: function getHash() {
             var hash = document.location.hash;
             if (hash) {
-                // show the tab
-                _accordion2.default.activateTab("#tab-" + hash.slice(1));
+                _accordion.Accordion.activateTab("#tab-" + hash.slice(1));
             }
         }
     }, {

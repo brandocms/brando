@@ -53,7 +53,6 @@ msgstr ""
 #: web/templates/admin/image_series/upload.html.eex:11
 #: web/templates/admin/page/show.html.eex:6
 #: web/templates/admin/page_fragment/show.html.eex:6
-#: web/templates/admin/post/show.html.eex:6
 #: web/templates/admin/user/edit.html.eex:5
 #: web/templates/admin/user/new.html.eex:5
 #: web/templates/admin/user/profile_edit.html.eex:5
@@ -85,7 +84,6 @@ msgstr ""
 #: web/controllers/admin/image_series_controller.ex:171
 #: web/controllers/admin/page_controller.ex:156
 #: web/controllers/admin/page_fragment_controller.ex:114
-#: web/controllers/admin/post_controller.ex:136
 #: web/controllers/admin/user_controller.ex:165
 msgid "Confirm deletion"
 msgstr ""
@@ -125,19 +123,13 @@ msgstr ""
 msgid "Delete page fragment"
 msgstr ""
 
-#: web/templates/admin/post/delete_confirm.html.eex:3
-#: web/templates/admin/post/index.html.eex:9
-msgid "Delete post"
-msgstr ""
-
 #: web/templates/admin/user/delete_confirm.html.eex:3
 #: web/templates/admin/user/index.html.eex:5
 msgid "Delete user"
 msgstr ""
 
 #: lib/brando/html.ex:339 lib/brando/html/inspect.ex:128
-#: web/forms/page_form.ex:21 web/forms/post_form.ex:21
-#: web/templates/admin/instagram/index.html.eex:15
+#: web/forms/page_form.ex:21 web/templates/admin/instagram/index.html.eex:15
 #: web/views/instagram_view.ex:12
 msgid "Deleted"
 msgstr ""
@@ -185,14 +177,6 @@ msgstr ""
 msgid "Edit page fragment"
 msgstr ""
 
-#: web/controllers/admin/post_controller.ex:103
-#: web/controllers/admin/post_controller.ex:121
-#: web/templates/admin/post/edit.html.eex:1
-#: web/templates/admin/post/index.html.eex:8
-#: web/templates/admin/post/show.html.eex:9
-msgid "Edit post"
-msgstr ""
-
 #: web/controllers/admin/user_controller.ex:62
 #: web/controllers/admin/user_controller.ex:86
 #: web/templates/admin/user/profile_edit.html.eex:1
@@ -217,7 +201,6 @@ msgstr ""
 #: web/templates/admin/image_series/not_found.html.eex:1
 #: web/templates/admin/page/not_found.html.eex:1
 #: web/templates/admin/page_fragment/not_found.html.eex:1
-#: web/templates/admin/post/not_found.html.eex:1
 msgid "Entry not found"
 msgstr ""
 
@@ -237,8 +220,6 @@ msgstr ""
 #: web/controllers/admin/page_controller.ex:142
 #: web/controllers/admin/page_fragment_controller.ex:63
 #: web/controllers/admin/page_fragment_controller.ex:100
-#: web/controllers/admin/post_controller.ex:88
-#: web/controllers/admin/post_controller.ex:125
 #: web/controllers/admin/user_controller.ex:87
 #: web/controllers/admin/user_controller.ex:114
 #: web/controllers/admin/user_controller.ex:154
@@ -312,11 +293,6 @@ msgstr ""
 msgid "Index - pages"
 msgstr ""
 
-#: web/controllers/admin/post_controller.ex:28
-#: web/templates/admin/post/index.html.eex:1
-msgid "Index - posts"
-msgstr ""
-
 #: web/controllers/admin/user_controller.ex:27
 #: web/templates/admin/user/index.html.eex:1
 msgid "Index - users"
@@ -369,13 +345,6 @@ msgstr ""
 msgid "New page fragment"
 msgstr ""
 
-#: web/controllers/admin/post_controller.ex:70
-#: web/controllers/admin/post_controller.ex:85
-#: web/templates/admin/post/index.html.eex:18
-#: web/templates/admin/post/new.html.eex:1
-msgid "New post"
-msgstr ""
-
 #: web/controllers/admin/user_controller.ex:98
 #: web/controllers/admin/user_controller.ex:113
 #: web/templates/admin/user/index.html.eex:9
@@ -394,10 +363,6 @@ msgstr ""
 
 #: web/templates/admin/page_fragment/index.html.eex:13
 msgid "No page fragments"
-msgstr ""
-
-#: web/templates/admin/post/index.html.eex:14
-msgid "No posts"
 msgstr ""
 
 #: web/controllers/admin/page_controller.ex:80
@@ -442,18 +407,6 @@ msgstr ""
 
 #: web/templates/session/no_access.html.eex:3
 msgid "Please contact an administrator."
-msgstr ""
-
-#: web/controllers/admin/post_controller.ex:80
-msgid "Post created"
-msgstr ""
-
-#: web/controllers/admin/post_controller.ex:148
-msgid "Post deleted"
-msgstr ""
-
-#: web/controllers/admin/post_controller.ex:116
-msgid "Post updated"
 msgstr ""
 
 #: web/controllers/admin/user_controller.ex:46 web/menus/users_menu.ex:12
@@ -501,12 +454,6 @@ msgstr ""
 msgid "Show page fragment"
 msgstr ""
 
-#: web/controllers/admin/post_controller.ex:58
-#: web/templates/admin/post/index.html.eex:7
-#: web/templates/admin/post/show.html.eex:2
-msgid "Show post"
-msgstr ""
-
 #: web/controllers/admin/user_controller.ex:36
 #: web/templates/admin/user/index.html.eex:3
 #: web/templates/admin/user/show.html.eex:2
@@ -535,7 +482,6 @@ msgstr ""
 #: web/templates/admin/image_series/delete_confirm.html.eex:11
 #: web/templates/admin/page/delete_confirm.html.eex:11
 #: web/templates/admin/page_fragment/delete_confirm.html.eex:11
-#: web/templates/admin/post/delete_confirm.html.eex:11
 #: web/templates/admin/user/delete_confirm.html.eex:11
 msgid "This object cannot be restored!"
 msgstr ""
@@ -561,7 +507,6 @@ msgstr ""
 #: web/templates/admin/image_series/delete_confirm.html.eex:6
 #: web/templates/admin/page/delete_confirm.html.eex:6
 #: web/templates/admin/page_fragment/delete_confirm.html.eex:6
-#: web/templates/admin/post/delete_confirm.html.eex:6
 #: web/templates/admin/user/delete_confirm.html.eex:6
 msgid "You are about to delete this object. Please check carefully, and note that any dependent objects will also be removed."
 msgstr ""
@@ -578,8 +523,7 @@ msgstr ""
 msgid "deleted"
 msgstr ""
 
-#: web/menus/news_menu.ex:12 web/menus/pages_menu.ex:13
-#: web/menus/users_menu.ex:13
+#: web/menus/pages_menu.ex:13 web/menus/users_menu.ex:13
 msgid "Add new"
 msgstr ""
 
@@ -592,13 +536,8 @@ msgid "Images"
 msgstr ""
 
 #: web/menus/images_menu.ex:11 web/menus/instagram_menu.ex:11
-#: web/menus/news_menu.ex:11 web/menus/pages_menu.ex:12
-#: web/menus/users_menu.ex:11
+#: web/menus/pages_menu.ex:12 web/menus/users_menu.ex:11
 msgid "Index"
-msgstr ""
-
-#: web/menus/news_menu.ex:10
-msgid "News"
 msgstr ""
 
 #: web/menus/pages_menu.ex:10
@@ -649,17 +588,13 @@ msgstr ""
 msgid "Connected"
 msgstr ""
 
-#: web/models/post.ex:168
-msgid "Cover"
-msgstr ""
-
 #: web/models/instagram_image.ex:276
 msgid "Created"
 msgstr ""
 
 #: web/models/image.ex:187 web/models/image_category.ex:137
 #: web/models/image_series.ex:187 web/models/page.ex:206
-#: web/models/page_fragment.ex:132 web/models/post.ex:174
+#: web/models/page_fragment.ex:132
 msgid "Creator"
 msgstr ""
 
@@ -667,12 +602,12 @@ msgstr ""
 msgid "Credits"
 msgstr ""
 
-#: web/models/page.ex:201 web/models/page_fragment.ex:130 web/models/post.ex:172
+#: web/models/page.ex:201 web/models/page_fragment.ex:130
 msgid "Data"
 msgstr ""
 
 #: lib/brando/html.ex:333 lib/brando/html/inspect.ex:127
-#: web/forms/page_form.ex:18 web/forms/post_form.ex:18
+#: web/forms/page_form.ex:18
 msgid "Draft"
 msgstr ""
 
@@ -688,20 +623,12 @@ msgstr ""
 msgid "Extra CSS classes"
 msgstr ""
 
-#: web/models/post.ex:166
-msgid "Featured"
-msgstr ""
-
 #: web/models/user.ex:202
 msgid "Full name"
 msgstr ""
 
-#: web/models/page.ex:202 web/models/page_fragment.ex:131 web/models/post.ex:173
+#: web/models/page.ex:202 web/models/page_fragment.ex:131
 msgid "HTML"
-msgstr ""
-
-#: web/models/post.ex:169
-msgid "Header"
 msgstr ""
 
 #: web/models/image.ex:184 web/models/image_category.ex:133
@@ -731,7 +658,7 @@ msgid "Inserted"
 msgstr ""
 
 #: web/models/image.ex:189 web/models/image_category.ex:139
-#: web/models/image_series.ex:191 web/models/post.ex:180 web/models/user.ex:207
+#: web/models/image_series.ex:191 web/models/user.ex:207
 msgid "Inserted at"
 msgstr ""
 
@@ -743,8 +670,7 @@ msgstr ""
 msgid "Key"
 msgstr ""
 
-#: web/models/page.ex:197 web/models/page_fragment.ex:128 web/models/post.ex:167
-#: web/models/user.ex:205
+#: web/models/page.ex:197 web/models/page_fragment.ex:128 web/models/user.ex:205
 msgid "Language"
 msgstr ""
 
@@ -752,19 +678,15 @@ msgstr ""
 msgid "Last login"
 msgstr ""
 
-#: web/models/post.ex:171
-msgid "Lead"
-msgstr ""
-
 #: web/models/instagram_image.ex:273
 msgid "Link"
 msgstr ""
 
-#: web/models/page.ex:208 web/models/post.ex:175
+#: web/models/page.ex:208
 msgid "META description"
 msgstr ""
 
-#: web/models/page.ex:209 web/models/post.ex:176
+#: web/models/page.ex:209
 msgid "META keywords"
 msgstr ""
 
@@ -786,16 +708,12 @@ msgid "No value"
 msgstr ""
 
 #: lib/brando/html.ex:327 lib/brando/html/inspect.ex:126
-#: web/forms/page_form.ex:20 web/forms/post_form.ex:20
+#: web/forms/page_form.ex:20
 msgid "Pending"
 msgstr ""
 
-#: web/models/post.ex:178
-msgid "Publish at"
-msgstr ""
-
 #: lib/brando/html.ex:321 lib/brando/html/inspect.ex:125
-#: web/forms/page_form.ex:19 web/forms/post_form.ex:19 web/models/post.ex:177
+#: web/forms/page_form.ex:19
 msgid "Published"
 msgstr ""
 
@@ -816,21 +734,16 @@ msgid "Sequence"
 msgstr ""
 
 #: web/models/image_category.ex:135 web/models/image_series.ex:183
-#: web/models/page.ex:200 web/models/post.ex:170
+#: web/models/page.ex:200
 msgid "Slug"
 msgstr ""
 
 #: web/models/instagram_image.ex:277 web/models/page.ex:196
-#: web/models/post.ex:165
 msgid "Status"
 msgstr ""
 
 #: web/models/page.ex:205
 msgid "Sub pages"
-msgstr ""
-
-#: web/models/post.ex:179
-msgid "Tags"
 msgstr ""
 
 #: web/models/instagram_image.ex:275
@@ -850,7 +763,7 @@ msgid "Updated"
 msgstr ""
 
 #: web/models/image.ex:190 web/models/image_category.ex:140
-#: web/models/image_series.ex:192 web/models/post.ex:181 web/models/user.ex:208
+#: web/models/image_series.ex:192 web/models/user.ex:208
 msgid "Updated at"
 msgstr ""
 
@@ -938,14 +851,6 @@ msgstr ""
 msgid "pages"
 msgstr ""
 
-#: web/models/post.ex:160
-msgid "post"
-msgstr ""
-
-#: web/models/post.ex:161
-msgid "posts"
-msgstr ""
-
 #: lib/brando/form/fields.ex:274
 msgid "should be at least %{count} characters"
 msgstr ""
@@ -988,14 +893,6 @@ msgstr ""
 
 #: lib/brando/images/upload.ex:98
 msgid "Path creation failed"
-msgstr ""
-
-#: web/templates/admin/post/index.html.eex:28
-msgid "Re-render posts"
-msgstr ""
-
-#: web/forms/post_form.ex:52
-msgid "The post is prioritized, taking precedence over pub. date"
 msgstr ""
 
 #: web/templates/admin/analytics/views.html.eex:35
@@ -1081,10 +978,6 @@ msgstr ""
 
 #: lib/brando/plugs/authenticate.ex:37
 msgid "Access denied."
-msgstr ""
-
-#: web/controllers/admin/post_controller.ex:45
-msgid "Posts re-rendered"
 msgstr ""
 
 #: web/forms/page_form.ex:63

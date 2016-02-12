@@ -118,7 +118,7 @@ defmodule Brando.Tag do
   def split_tags(:empty), do: :empty
   def split_tags(params) do
     if params["tags"] do
-      params |> Map.put("tags", String.split(params["tags"], ","))
+      Map.put(params, "tags", String.split(params["tags"], ","))
     else
       params
     end

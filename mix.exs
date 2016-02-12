@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.17.0"
+  @version "0.18.0"
   @description "Boilerplate for Twined applications."
 
   def project do
@@ -47,7 +47,7 @@ defmodule Brando.Mixfile do
 
      # Dev dependencies
      {:dialyze, "~> 0.2", only: :dev},
-     {:credo, "~> 0.2", only: [:dev, :test]},
+     {:credo, "~> 0.2", only: :dev},
 
      # Test dependencies
      {:phoenix_ecto, "~> 2.0", only: :test},

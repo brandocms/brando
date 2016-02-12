@@ -228,6 +228,19 @@ def migrate():
              user=env.project_user)
 
 
+def seed():
+    """
+    Run database seeding
+    """
+    require('hosts')
+    print(cyan('-- seed // seeding db'))
+    with cd(env.path), shell_env(MIX_ENV='%s' % env.flavor,
+                                 HOME='/home/%s' % env.project_user,
+                                 LC_ALL='nb_NO.UTF-8'):
+        sudo('mix run priv/repo/seeds.exs' % (env.flavor),
+             user=env.project_user)
+
+
 def upload_media():
     """
     Uploads media
