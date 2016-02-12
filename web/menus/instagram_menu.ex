@@ -1,4 +1,4 @@
-defmodule Brando.Menu.Instagram do
+defmodule Brando.Instagram.Menu do
   @moduledoc """
   Menu definitions for the Instagram Menu. See `Brando.Menu` docs for
   more information

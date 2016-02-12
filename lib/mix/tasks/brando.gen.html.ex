@@ -105,7 +105,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     Mix.shell.info """
     Add the resource to your browser scope in web/router.ex by either
 
-        import Brando.Routes.Admin
+        import Brando.Admin.Routes
         alias #{binding[:base]}.Admin.#{binding[:scoped]}Controller
         admin_routes "#{route}", #{binding[:scoped]}Controller
 

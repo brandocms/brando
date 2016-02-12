@@ -1,13 +1,12 @@
 defmodule Brando.TestRouter do
   use Phoenix.Router
   alias Brando.Plug.Authenticate
-  import Brando.Routes.Admin.Users
-  import Brando.Routes.Admin.News
-  import Brando.Routes.Admin.Images
-  import Brando.Routes.Admin.Villain
-  import Brando.Routes.Admin.Analytics
-  import Brando.Routes.Admin.Dashboard
-  import Brando.Routes.Admin.Instagram
+  import Brando.Users.Routes.Admin
+  import Brando.Images.Routes.Admin
+  import Brando.Villain.Routes.Admin
+  import Brando.Analytics.Routes.Admin
+  import Brando.Dashboard.Routes.Admin
+  import Brando.Instagram.Routes.Admin
 
   pipeline :admin do
     plug :accepts, ~w(html json)
@@ -34,10 +33,6 @@ defmodule Brando.TestRouter do
                                private: %{model: Brando.User}
     user_routes "/users2", private: %{model: Brando.User}
     user_routes "/users3"
-    post_routes "/news"
-    post_routes "/news2", [model: Brando.User]
-    post_routes "/news3", Brando.Admin.PostController,
-                                [model: Brando.User]
     image_routes "/images"
     image_routes "/images2", [image_model: Brando.Image,
                                  series_model: Brando.ImageSeries,
@@ -82,11 +77,6 @@ defmodule Brando.RoutesTest do
   test "user_routes", %{routes: routes} do
     assert routes =~ "/admin/users/new"
     assert routes =~ "/admin/users/:id/edit"
-  end
-
-  test "news_resources", %{routes: routes} do
-    assert routes =~ "/admin/news/new"
-    assert routes =~ "/admin/news/:id/edit"
   end
 
   test "image_routes", %{routes: routes} do

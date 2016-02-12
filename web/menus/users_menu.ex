@@ -1,4 +1,4 @@
-defmodule Brando.Menu.Users do
+defmodule Brando.Users.Menu do
   @moduledoc """
   Menu definitions for the Users Menu. See `Brando.Menu` docs for
   more information

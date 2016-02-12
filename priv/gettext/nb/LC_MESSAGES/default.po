@@ -67,7 +67,6 @@ msgstr "Autorisasjon feilet"
 #: web/templates/admin/image_series/upload.html.eex:11
 #: web/templates/admin/page/show.html.eex:6
 #: web/templates/admin/page_fragment/show.html.eex:6
-#: web/templates/admin/post/show.html.eex:6
 #: web/templates/admin/user/edit.html.eex:5
 #: web/templates/admin/user/new.html.eex:5
 #: web/templates/admin/user/profile_edit.html.eex:5
@@ -99,7 +98,6 @@ msgstr "Konfigurer bildeserie"
 #: web/controllers/admin/image_series_controller.ex:171
 #: web/controllers/admin/page_controller.ex:156
 #: web/controllers/admin/page_fragment_controller.ex:114
-#: web/controllers/admin/post_controller.ex:136
 #: web/controllers/admin/user_controller.ex:165
 msgid "Confirm deletion"
 msgstr "Bekreft sletting"
@@ -139,19 +137,13 @@ msgstr "Slett siden"
 msgid "Delete page fragment"
 msgstr "Slett sidefragment"
 
-#: web/templates/admin/post/delete_confirm.html.eex:3
-#: web/templates/admin/post/index.html.eex:9
-msgid "Delete post"
-msgstr "Slett post"
-
 #: web/templates/admin/user/delete_confirm.html.eex:3
 #: web/templates/admin/user/index.html.eex:5
 msgid "Delete user"
 msgstr "Slett bruker"
 
 #: lib/brando/html.ex:339 lib/brando/html/inspect.ex:128
-#: web/forms/page_form.ex:21 web/forms/post_form.ex:21
-#: web/templates/admin/instagram/index.html.eex:15
+#: web/forms/page_form.ex:21 web/templates/admin/instagram/index.html.eex:15
 #: web/views/instagram_view.ex:12
 msgid "Deleted"
 msgstr "Slettet"
@@ -199,14 +191,6 @@ msgstr "Rediger side"
 msgid "Edit page fragment"
 msgstr "Rediger sidefragment"
 
-#: web/controllers/admin/post_controller.ex:103
-#: web/controllers/admin/post_controller.ex:121
-#: web/templates/admin/post/edit.html.eex:1
-#: web/templates/admin/post/index.html.eex:8
-#: web/templates/admin/post/show.html.eex:9
-msgid "Edit post"
-msgstr "Rediger post"
-
 #: web/controllers/admin/user_controller.ex:62
 #: web/controllers/admin/user_controller.ex:86
 #: web/templates/admin/user/profile_edit.html.eex:1
@@ -231,7 +215,6 @@ msgstr "E-post"
 #: web/templates/admin/image_series/not_found.html.eex:1
 #: web/templates/admin/page/not_found.html.eex:1
 #: web/templates/admin/page_fragment/not_found.html.eex:1
-#: web/templates/admin/post/not_found.html.eex:1
 msgid "Entry not found"
 msgstr "Oppføring fantes ikke"
 
@@ -251,8 +234,6 @@ msgstr "Feil"
 #: web/controllers/admin/page_controller.ex:142
 #: web/controllers/admin/page_fragment_controller.ex:63
 #: web/controllers/admin/page_fragment_controller.ex:100
-#: web/controllers/admin/post_controller.ex:88
-#: web/controllers/admin/post_controller.ex:125
 #: web/controllers/admin/user_controller.ex:87
 #: web/controllers/admin/user_controller.ex:114
 #: web/controllers/admin/user_controller.ex:154
@@ -326,11 +307,6 @@ msgstr "Oversikt - sidefragmenter"
 msgid "Index - pages"
 msgstr "Oversikt - sider"
 
-#: web/controllers/admin/post_controller.ex:28
-#: web/templates/admin/post/index.html.eex:1
-msgid "Index - posts"
-msgstr "Oversikt - poster"
-
 #: web/controllers/admin/user_controller.ex:27
 #: web/templates/admin/user/index.html.eex:1
 msgid "Index - users"
@@ -383,13 +359,6 @@ msgstr "Ny side"
 msgid "New page fragment"
 msgstr "Nytt sidefragment"
 
-#: web/controllers/admin/post_controller.ex:70
-#: web/controllers/admin/post_controller.ex:85
-#: web/templates/admin/post/index.html.eex:18
-#: web/templates/admin/post/new.html.eex:1
-msgid "New post"
-msgstr "Ny post"
-
 #: web/controllers/admin/user_controller.ex:98
 #: web/controllers/admin/user_controller.ex:113
 #: web/templates/admin/user/index.html.eex:9
@@ -409,10 +378,6 @@ msgstr "Ingen bilder"
 #: web/templates/admin/page_fragment/index.html.eex:13
 msgid "No page fragments"
 msgstr "Ingen sidefragmenter"
-
-#: web/templates/admin/post/index.html.eex:14
-msgid "No posts"
-msgstr "Ingen poster"
 
 #: web/controllers/admin/page_controller.ex:80
 msgid "Page created"
@@ -457,18 +422,6 @@ msgstr "Passord"
 #: web/templates/session/no_access.html.eex:3
 msgid "Please contact an administrator."
 msgstr "Vennligst kontakt administrator."
-
-#: web/controllers/admin/post_controller.ex:80
-msgid "Post created"
-msgstr "Post opprettet"
-
-#: web/controllers/admin/post_controller.ex:148
-msgid "Post deleted"
-msgstr "Post slettet"
-
-#: web/controllers/admin/post_controller.ex:116
-msgid "Post updated"
-msgstr "Post oppdatert"
 
 #: web/controllers/admin/user_controller.ex:46 web/menus/users_menu.ex:12
 msgid "Profile"
@@ -515,12 +468,6 @@ msgstr "Vis side"
 msgid "Show page fragment"
 msgstr "Vis sidefragment"
 
-#: web/controllers/admin/post_controller.ex:58
-#: web/templates/admin/post/index.html.eex:7
-#: web/templates/admin/post/show.html.eex:2
-msgid "Show post"
-msgstr "Vis post"
-
 #: web/controllers/admin/user_controller.ex:36
 #: web/templates/admin/user/index.html.eex:3
 #: web/templates/admin/user/show.html.eex:2
@@ -549,7 +496,6 @@ msgstr "Systeminfo"
 #: web/templates/admin/image_series/delete_confirm.html.eex:11
 #: web/templates/admin/page/delete_confirm.html.eex:11
 #: web/templates/admin/page_fragment/delete_confirm.html.eex:11
-#: web/templates/admin/post/delete_confirm.html.eex:11
 #: web/templates/admin/user/delete_confirm.html.eex:11
 msgid "This object cannot be restored!"
 msgstr "Dette objektet kan ikke gjenopprettes!"
@@ -575,7 +521,6 @@ msgstr "Bruker oppdatert"
 #: web/templates/admin/image_series/delete_confirm.html.eex:6
 #: web/templates/admin/page/delete_confirm.html.eex:6
 #: web/templates/admin/page_fragment/delete_confirm.html.eex:6
-#: web/templates/admin/post/delete_confirm.html.eex:6
 #: web/templates/admin/user/delete_confirm.html.eex:6
 msgid "You are about to delete this object. Please check carefully, and note that any dependent objects will also be removed."
 msgstr "Du er ferd med å slette dette objektet. Kontroller nøye, og legg merke til at alle avhengige objekter også vil bli fjernet."
@@ -592,8 +537,7 @@ msgstr "Du har nå logget ut av admin-området."
 msgid "deleted"
 msgstr "slettet"
 
-#: web/menus/news_menu.ex:12 web/menus/pages_menu.ex:13
-#: web/menus/users_menu.ex:13
+#: web/menus/pages_menu.ex:13 web/menus/users_menu.ex:13
 msgid "Add new"
 msgstr "Legg til"
 
@@ -606,14 +550,9 @@ msgid "Images"
 msgstr "Bilder"
 
 #: web/menus/images_menu.ex:11 web/menus/instagram_menu.ex:11
-#: web/menus/news_menu.ex:11 web/menus/pages_menu.ex:12
-#: web/menus/users_menu.ex:11
+#: web/menus/pages_menu.ex:12 web/menus/users_menu.ex:11
 msgid "Index"
 msgstr "Oversikt"
-
-#: web/menus/news_menu.ex:10
-msgid "News"
-msgstr "Nyheter"
 
 #: web/menus/pages_menu.ex:10
 msgid "Pages"
@@ -663,17 +602,13 @@ msgstr "Bekreft"
 msgid "Connected"
 msgstr "Tilkoblet"
 
-#: web/models/post.ex:168
-msgid "Cover"
-msgstr "Omslag"
-
 #: web/models/instagram_image.ex:276
 msgid "Created"
 msgstr "Opprettet"
 
 #: web/models/image.ex:187 web/models/image_category.ex:137
 #: web/models/image_series.ex:187 web/models/page.ex:206
-#: web/models/page_fragment.ex:132 web/models/post.ex:174
+#: web/models/page_fragment.ex:132
 msgid "Creator"
 msgstr "Skaper"
 
@@ -681,12 +616,12 @@ msgstr "Skaper"
 msgid "Credits"
 msgstr "Krediteringer"
 
-#: web/models/page.ex:201 web/models/page_fragment.ex:130 web/models/post.ex:172
+#: web/models/page.ex:201 web/models/page_fragment.ex:130
 msgid "Data"
 msgstr "Data"
 
 #: lib/brando/html.ex:333 lib/brando/html/inspect.ex:127
-#: web/forms/page_form.ex:18 web/forms/post_form.ex:18
+#: web/forms/page_form.ex:18
 msgid "Draft"
 msgstr "Kladd"
 
@@ -702,21 +637,13 @@ msgstr "Kodet verdi"
 msgid "Extra CSS classes"
 msgstr "Ekstra CSS klasser"
 
-#: web/models/post.ex:166
-msgid "Featured"
-msgstr "Fremhevet"
-
 #: web/models/user.ex:202
 msgid "Full name"
 msgstr "Fullt navn"
 
-#: web/models/page.ex:202 web/models/page_fragment.ex:131 web/models/post.ex:173
+#: web/models/page.ex:202 web/models/page_fragment.ex:131
 msgid "HTML"
 msgstr "HTML"
-
-#: web/models/post.ex:169
-msgid "Header"
-msgstr "Overskrift"
 
 #: web/models/image.ex:184 web/models/image_category.ex:133
 #: web/models/image_series.ex:181 web/models/instagram_image.ex:269
@@ -745,7 +672,7 @@ msgid "Inserted"
 msgstr "Satt inn"
 
 #: web/models/image.ex:189 web/models/image_category.ex:139
-#: web/models/image_series.ex:191 web/models/post.ex:180 web/models/user.ex:207
+#: web/models/image_series.ex:191 web/models/user.ex:207
 msgid "Inserted at"
 msgstr "Lagt til"
 
@@ -757,8 +684,7 @@ msgstr "Instagram-ID"
 msgid "Key"
 msgstr "Nøkkel"
 
-#: web/models/page.ex:197 web/models/page_fragment.ex:128 web/models/post.ex:167
-#: web/models/user.ex:205
+#: web/models/page.ex:197 web/models/page_fragment.ex:128 web/models/user.ex:205
 msgid "Language"
 msgstr "Språk"
 
@@ -766,19 +692,15 @@ msgstr "Språk"
 msgid "Last login"
 msgstr "Forrige innlogging"
 
-#: web/models/post.ex:171
-msgid "Lead"
-msgstr "Ingress"
-
 #: web/models/instagram_image.ex:273
 msgid "Link"
 msgstr "Lenke"
 
-#: web/models/page.ex:208 web/models/post.ex:175
+#: web/models/page.ex:208
 msgid "META description"
 msgstr "META-beskrivelse"
 
-#: web/models/page.ex:209 web/models/post.ex:176
+#: web/models/page.ex:209
 msgid "META keywords"
 msgstr "META-nøkkelord"
 
@@ -800,16 +722,12 @@ msgid "No value"
 msgstr "Ingen verdi"
 
 #: lib/brando/html.ex:327 lib/brando/html/inspect.ex:126
-#: web/forms/page_form.ex:20 web/forms/post_form.ex:20
+#: web/forms/page_form.ex:20
 msgid "Pending"
 msgstr "Venter"
 
-#: web/models/post.ex:178
-msgid "Publish at"
-msgstr "Publiseringstidspunkt"
-
 #: lib/brando/html.ex:321 lib/brando/html/inspect.ex:125
-#: web/forms/page_form.ex:19 web/forms/post_form.ex:19 web/models/post.ex:177
+#: web/forms/page_form.ex:19
 msgid "Published"
 msgstr "Publisert"
 
@@ -830,22 +748,17 @@ msgid "Sequence"
 msgstr "Sekvens"
 
 #: web/models/image_category.ex:135 web/models/image_series.ex:183
-#: web/models/page.ex:200 web/models/post.ex:170
+#: web/models/page.ex:200
 msgid "Slug"
 msgstr "URL-tamp"
 
 #: web/models/instagram_image.ex:277 web/models/page.ex:196
-#: web/models/post.ex:165
 msgid "Status"
 msgstr "Status"
 
 #: web/models/page.ex:205
 msgid "Sub pages"
 msgstr "Under-sider"
-
-#: web/models/post.ex:179
-msgid "Tags"
-msgstr "Merkelapper"
 
 #: web/models/instagram_image.ex:275
 msgid "Thumbnail URL"
@@ -864,7 +777,7 @@ msgid "Updated"
 msgstr "Oppdatert"
 
 #: web/models/image.ex:190 web/models/image_category.ex:140
-#: web/models/image_series.ex:192 web/models/post.ex:181 web/models/user.ex:208
+#: web/models/image_series.ex:192 web/models/user.ex:208
 msgid "Updated at"
 msgstr "Sist oppdatert"
 
@@ -952,14 +865,6 @@ msgstr "sidefragmenter"
 msgid "pages"
 msgstr "sider"
 
-#: web/models/post.ex:160
-msgid "post"
-msgstr "post"
-
-#: web/models/post.ex:161
-msgid "posts"
-msgstr "poster"
-
 #: lib/brando/form/fields.ex:274
 msgid "should be at least %{count} characters"
 msgstr "må være minst %{count} tegn"
@@ -1003,14 +908,6 @@ msgstr "Filtypen ikke tillatt"
 #: lib/brando/images/upload.ex:98
 msgid "Path creation failed"
 msgstr "Feil under oppretting av filbane"
-
-#: web/templates/admin/post/index.html.eex:28
-msgid "Re-render posts"
-msgstr "Gjengi poster på nytt"
-
-#: web/forms/post_form.ex:52
-msgid "The post is prioritized, taking precedence over pub. date"
-msgstr "Denne posten er prioritert og vektes før publiseringsdatoer"
 
 #: web/templates/admin/analytics/views.html.eex:35
 msgid "All-time"
@@ -1096,10 +993,6 @@ msgstr "Statistikk - visninger"
 #: lib/brando/plugs/authenticate.ex:37
 msgid "Access denied."
 msgstr "Adgang nektet."
-
-#: web/controllers/admin/post_controller.ex:45
-msgid "Posts re-rendered"
-msgstr "Postene ble omskapt."
 
 #: web/forms/page_form.ex:63
 msgid "If this page should belong to another, select parent page here."

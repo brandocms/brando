@@ -5,6 +5,8 @@ defmodule Brando.Type.Role do
 
   @behaviour Ecto.Type
 
+  @default_role_cfg roles: %{staff: 1, admin: 2, superuser: 4}
+
   use Bitwise, only_operators: true
 
   @doc """
@@ -18,8 +20,7 @@ defmodule Brando.Type.Role do
   Ex: ["1", "2", "4"]
   """
   def cast(list) when is_list(list) do
-    cfg = Application.get_env(:brando, Brando.Type.Role)
-    set_roles = Keyword.get(cfg, :roles)
+    set_roles = Keyword.get(get_config, :roles)
     # first turn the list of binaries into a sum
     roles = Enum.reduce(list, 0, fn (role, acc) ->
       cond do
@@ -62,8 +63,7 @@ defmodule Brando.Type.Role do
   just return it to be stored in the model struct.
   """
   def load(roles) when is_integer(roles) do
-    cfg = Application.get_env(:brando, Brando.Type.Role)
-    set_roles = Keyword.get(cfg, :roles)
+    set_roles = Keyword.get(get_config(), :roles)
 
     {:ok, reduce_roles(set_roles, roles)}
   end
@@ -75,8 +75,7 @@ defmodule Brando.Type.Role do
   def dump(integer) when is_integer(integer), do: {:ok, integer}
   def dump(string) when is_binary(string), do: {:ok, String.to_integer(string)}
   def dump(list) when is_list(list) do
-    cfg = Application.get_env(:brando, Brando.Type.Role)
-    set_roles = Keyword.get(cfg, :roles)
+    set_roles = Keyword.get(get_config(), :roles)
     acc = cond do
       is_atom(List.first(list))    ->
         Enum.reduce(list, 0, &(&2 + set_roles[&1]))
@@ -97,5 +96,9 @@ defmodule Brando.Type.Role do
         false -> acc
       end
     end)
+  end
+
+  defp get_config() do
+    Application.get_env(:brando, Brando.Type.Role) || @default_role_cfg
   end
 end

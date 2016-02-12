@@ -1,5 +1,28 @@
 ## v0.18.0-dev (2016-XX-XX)
 
+* Backwards incompatible changes
+  * Extracted News to its own application -> http://github.com/twined/brando_news
+  * `delete_original_and_sized_images` now takes two arguments. The model, and an :atom representation of the field. Instead of `delete_original_and_sized_images(post.cover)` you do `delete_original_and_sized_images(post, :cover)`.
+  * Renamed route imports:
+        
+        Brando.Routes.Admin.Analytics -> Brando.Analytics.Routes.Admin
+        Brando.Routes.Admin.Dashboard -> Brando.Dashboard.Routes.Admin
+        Brando.Routes.Admin.Images    -> Brando.Images.Routes.Admin
+        Brando.Routes.Admin.Instagram -> Brando.Instagram.Routes.Admin
+        Brando.Routes.Admin.News      -> Brando.News.Routes.Admin
+        Brando.Routes.Admin.Pages     -> Brando.Pages.Routes.Admin
+        Brando.Routes.Admin.Users     -> Brando.Users.Routes.Admin
+   
+   * Renamed menus:
+   
+        Brando.Menu.Admin     -> Brando.Admin.Menu
+        Brando.Menu.Analytics -> Brando.Analytics.Menu
+        Brando.Menu.Images    -> Brando.Images.Menu
+        Brando.Menu.Instagram -> Brando.Instagram.Menu
+        Brando.Menu.News      -> Brando.News.Menu
+        Brando.Menu.Pages     -> Brando.Pages.Menu
+        Brando.Menu.Users     -> Brando.Users.Menu
+
 * Bug fixes
   * Fix accordion bug where opening a page with a hash would not work.
 

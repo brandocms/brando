@@ -1,4 +1,4 @@
-defmodule Brando.Routes.Admin.Images do
+defmodule Brando.Images.Routes.Admin do
   @moduledoc """
   Routes for Brando.Images
 

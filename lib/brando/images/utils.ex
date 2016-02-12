@@ -17,9 +17,18 @@ defmodule Brando.Images.Utils do
   def delete_original_and_sized_images(nil) do
     nil
   end
-  def delete_original_and_sized_images(image) do
-    delete_sized_images(image)
-    delete_media(Map.get(image, :path))
+  def delete_original_and_sized_images(_) do
+    # DEPRECATE
+    raise "delete_original_and_sized_images/1 is deprecated, " <>
+          "use delete_original_and_sized_images/2 instead"
+  end
+  def delete_original_and_sized_images(image, key) do
+    img = Map.get(image, key)
+    if img do
+      delete_sized_images(img)
+      delete_media(Map.get(img, :path))
+    end
+    image
   end
 
   @doc """
