@@ -70,11 +70,12 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/fabfile.py", "fabfile.py"},
     {:copy, "templates/brando.install/compile", "compile"},
 
+    # Frontend JS
     {:copy, "templates/brando.install/web/static/js/app/app.js", "web/static/js/app.js"},
     {:copy, "templates/brando.install/web/static/js/app/flexslider.js", "web/static/js/flexslider.js"},
-
     {:copy, "templates/brando.install/web/static/js/admin/custom.js", "web/static/js/admin/custom.js"},
 
+    # Frontend SCSS
     {:copy, "templates/brando.install/web/static/css/app.scss", "web/static/css/app.scss"},
     {:copy, "templates/brando.install/web/static/css/custom/brando.custom.scss", "web/static/css/custom/brando.custom.scss"},
     {:copy, "templates/brando.install/web/static/css/includes/_colorbox.scss", "web/static/css/includes/_colorbox.scss"},
@@ -84,8 +85,10 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/web/static/css/includes/_nav.scss", "web/static/css/includes/_nav.scss"},
     {:copy, "templates/brando.install/web/static/css/includes/_pages.scss", "web/static/css/includes/_pages.scss"},
 
+    # Icons
     {:copy, "templates/brando.install/static/brando/favicon.ico", "web/static/assets/favicon.ico"},
 
+    # Webfonts - icons
     {:copy, "templates/brando.install/static/brando/fonts/fontawesome-webfont.eot", "web/static/assets/fonts/fontawesome-webfont.eot"},
     {:copy, "templates/brando.install/static/brando/fonts/fontawesome-webfont.svg", "web/static/assets/fonts/fontawesome-webfont.svg"},
     {:copy, "templates/brando.install/static/brando/fonts/fontawesome-webfont.ttf", "web/static/assets/fonts/fontawesome-webfont.ttf"},
@@ -93,10 +96,12 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/static/brando/fonts/fontawesome-webfont.woff2", "web/static/assets/fonts/fontawesome-webfont.woff2"},
     {:copy, "templates/brando.install/static/brando/fonts/FontAwesome.otf", "web/static/assets/fonts/FontAwesome.otf"},
 
+    # Webfonts - backend
     {:copy, "templates/brando.install/static/brando/fonts/ab.woff", "web/static/assets/fonts/ab.woff"},
     {:copy, "templates/brando.install/static/brando/fonts/am.woff", "web/static/assets/fonts/am.woff"},
     {:copy, "templates/brando.install/static/brando/fonts/ar.woff", "web/static/assets/fonts/ar.woff"},
 
+    # Images
     {:copy, "templates/brando.install/static/brando/images/blank.gif", "web/static/assets/images/brando/blank.gif"},
     {:copy, "templates/brando.install/static/brando/images/flags.png", "web/static/assets/images/brando/flags.png"},
     {:copy, "templates/brando.install/static/brando/images/brando-big.png", "web/static/assets/images/brando/brando-big.png"},
