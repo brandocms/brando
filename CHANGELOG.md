@@ -1,4 +1,4 @@
-## v0.18.0-dev (2016-XX-XX)
+## v0.18.0 (2016-02-12)
 
 * Backwards incompatible changes
   * Extracted News to its own application -> http://github.com/twined/brando_news
