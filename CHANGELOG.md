@@ -1,4 +1,4 @@
-## v0.19.0-dev (2016-XX-XX)
+## v0.19.0 (2016-02-13)
 
 * Backwards incompatible changes
   * Extracted Pages to its own application -> http://www.github.com/twined/brando_pages

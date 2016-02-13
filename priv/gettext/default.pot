@@ -51,8 +51,6 @@ msgstr ""
 #: web/templates/admin/image_series/edit.html.eex:5
 #: web/templates/admin/image_series/sequence.html.eex:18
 #: web/templates/admin/image_series/upload.html.eex:11
-#: web/templates/admin/page/show.html.eex:6
-#: web/templates/admin/page_fragment/show.html.eex:6
 #: web/templates/admin/user/edit.html.eex:5
 #: web/templates/admin/user/new.html.eex:5
 #: web/templates/admin/user/profile_edit.html.eex:5
@@ -82,8 +80,6 @@ msgstr ""
 
 #: web/controllers/admin/image_category_controller.ex:133
 #: web/controllers/admin/image_series_controller.ex:171
-#: web/controllers/admin/page_controller.ex:156
-#: web/controllers/admin/page_fragment_controller.ex:114
 #: web/controllers/admin/user_controller.ex:165
 msgid "Confirm deletion"
 msgstr ""
@@ -113,33 +109,19 @@ msgstr ""
 msgid "Delete images"
 msgstr ""
 
-#: web/templates/admin/page/delete_confirm.html.eex:3
-#: web/templates/admin/page/index.html.eex:10
-msgid "Delete page"
-msgstr ""
-
-#: web/templates/admin/page_fragment/delete_confirm.html.eex:3
-#: web/templates/admin/page_fragment/index.html.eex:9
-msgid "Delete page fragment"
-msgstr ""
-
 #: web/templates/admin/user/delete_confirm.html.eex:3
 #: web/templates/admin/user/index.html.eex:5
 msgid "Delete user"
 msgstr ""
 
 #: lib/brando/html.ex:339 lib/brando/html/inspect.ex:128
-#: web/forms/page_form.ex:21 web/templates/admin/instagram/index.html.eex:15
+#: web/templates/admin/instagram/index.html.eex:15
 #: web/views/instagram_view.ex:12
 msgid "Deleted"
 msgstr ""
 
 #: web/views/instagram_view.ex:14 web/views/instagram_view.ex:23
 msgid "Download failed"
-msgstr ""
-
-#: web/templates/admin/page/index.html.eex:9
-msgid "Duplicate page"
 msgstr ""
 
 #: web/templates/admin/image/index.html.eex:20
@@ -159,22 +141,6 @@ msgstr ""
 #: web/templates/admin/image_series/sequence.html.eex:15
 #: web/templates/admin/image_series/upload.html.eex:5
 msgid "Edit image series"
-msgstr ""
-
-#: web/controllers/admin/page_controller.ex:121
-#: web/controllers/admin/page_controller.ex:138
-#: web/templates/admin/page/edit.html.eex:1
-#: web/templates/admin/page/index.html.eex:8
-#: web/templates/admin/page/show.html.eex:9
-msgid "Edit page"
-msgstr ""
-
-#: web/controllers/admin/page_fragment_controller.ex:78
-#: web/controllers/admin/page_fragment_controller.ex:96
-#: web/templates/admin/page_fragment/edit.html.eex:1
-#: web/templates/admin/page_fragment/index.html.eex:8
-#: web/templates/admin/page_fragment/show.html.eex:9
-msgid "Edit page fragment"
 msgstr ""
 
 #: web/controllers/admin/user_controller.ex:62
@@ -199,8 +165,6 @@ msgstr ""
 #: web/templates/admin/image/not_found.html.eex:1
 #: web/templates/admin/image_category/not_found.html.eex:1
 #: web/templates/admin/image_series/not_found.html.eex:1
-#: web/templates/admin/page/not_found.html.eex:1
-#: web/templates/admin/page_fragment/not_found.html.eex:1
 msgid "Entry not found"
 msgstr ""
 
@@ -216,10 +180,6 @@ msgstr ""
 #: web/controllers/admin/image_series_controller.ex:48
 #: web/controllers/admin/image_series_controller.ex:84
 #: web/controllers/admin/image_series_controller.ex:125
-#: web/controllers/admin/page_controller.ex:84
-#: web/controllers/admin/page_controller.ex:142
-#: web/controllers/admin/page_fragment_controller.ex:63
-#: web/controllers/admin/page_fragment_controller.ex:100
 #: web/controllers/admin/user_controller.ex:87
 #: web/controllers/admin/user_controller.ex:114
 #: web/controllers/admin/user_controller.ex:154
@@ -283,16 +243,6 @@ msgstr ""
 msgid "Index - images"
 msgstr ""
 
-#: web/controllers/admin/page_fragment_controller.ex:23
-#: web/templates/admin/page_fragment/index.html.eex:1
-msgid "Index - page fragments"
-msgstr ""
-
-#: web/controllers/admin/page_controller.ex:28
-#: web/templates/admin/page/index.html.eex:1
-msgid "Index - pages"
-msgstr ""
-
 #: web/controllers/admin/user_controller.ex:27
 #: web/templates/admin/user/index.html.eex:1
 msgid "Index - users"
@@ -330,21 +280,6 @@ msgstr ""
 msgid "New image series"
 msgstr ""
 
-#: web/controllers/admin/page_controller.ex:70
-#: web/controllers/admin/page_controller.ex:85
-#: web/controllers/admin/page_controller.ex:105
-#: web/templates/admin/page/index.html.eex:23
-#: web/templates/admin/page/new.html.eex:1
-msgid "New page"
-msgstr ""
-
-#: web/controllers/admin/page_fragment_controller.ex:46
-#: web/controllers/admin/page_fragment_controller.ex:60
-#: web/templates/admin/page_fragment/index.html.eex:17
-#: web/templates/admin/page_fragment/new.html.eex:1
-msgid "New page fragment"
-msgstr ""
-
 #: web/controllers/admin/user_controller.ex:98
 #: web/controllers/admin/user_controller.ex:113
 #: web/templates/admin/user/index.html.eex:9
@@ -361,44 +296,8 @@ msgstr ""
 msgid "No images"
 msgstr ""
 
-#: web/templates/admin/page_fragment/index.html.eex:13
-msgid "No page fragments"
-msgstr ""
-
-#: web/controllers/admin/page_controller.ex:80
-msgid "Page created"
-msgstr ""
-
-#: web/controllers/admin/page_controller.ex:167
-msgid "Page deleted"
-msgstr ""
-
-#: web/controllers/admin/page_controller.ex:104
-msgid "Page duplicated"
-msgstr ""
-
-#: web/controllers/admin/page_fragment_controller.ex:56
-msgid "Page fragment created"
-msgstr ""
-
-#: web/controllers/admin/page_fragment_controller.ex:125
-msgid "Page fragment deleted"
-msgstr ""
-
-#: web/controllers/admin/page_fragment_controller.ex:92
-msgid "Page fragment updated"
-msgstr ""
-
 #: web/templates/error/not_found.html.eex:24
 msgid "Page not found"
-msgstr ""
-
-#: web/controllers/admin/page_controller.ex:134
-msgid "Page updated"
-msgstr ""
-
-#: web/controllers/admin/page_controller.ex:45
-msgid "Pages re-rendered"
 msgstr ""
 
 #: web/models/user.ex:203 web/templates/session/login.html.eex:6
@@ -415,10 +314,6 @@ msgstr ""
 
 #: web/controllers/admin/user_controller.ex:79
 msgid "Profile updated"
-msgstr ""
-
-#: web/templates/admin/page/index.html.eex:33
-msgid "Re-render pages"
 msgstr ""
 
 #: web/templates/admin/instagram/index.html.eex:12
@@ -440,18 +335,6 @@ msgstr ""
 
 #: web/templates/error/server_error.html.eex:24
 msgid "Server error"
-msgstr ""
-
-#: web/controllers/admin/page_controller.ex:58
-#: web/templates/admin/page/index.html.eex:7
-#: web/templates/admin/page/show.html.eex:2
-msgid "Show page"
-msgstr ""
-
-#: web/controllers/admin/page_fragment_controller.ex:36
-#: web/templates/admin/page_fragment/index.html.eex:7
-#: web/templates/admin/page_fragment/show.html.eex:2
-msgid "Show page fragment"
 msgstr ""
 
 #: web/controllers/admin/user_controller.ex:36
@@ -480,8 +363,6 @@ msgstr ""
 
 #: web/templates/admin/image_category/delete_confirm.html.eex:11
 #: web/templates/admin/image_series/delete_confirm.html.eex:11
-#: web/templates/admin/page/delete_confirm.html.eex:11
-#: web/templates/admin/page_fragment/delete_confirm.html.eex:11
 #: web/templates/admin/user/delete_confirm.html.eex:11
 msgid "This object cannot be restored!"
 msgstr ""
@@ -505,8 +386,6 @@ msgstr ""
 
 #: web/templates/admin/image_category/delete_confirm.html.eex:6
 #: web/templates/admin/image_series/delete_confirm.html.eex:6
-#: web/templates/admin/page/delete_confirm.html.eex:6
-#: web/templates/admin/page_fragment/delete_confirm.html.eex:6
 #: web/templates/admin/user/delete_confirm.html.eex:6
 msgid "You are about to delete this object. Please check carefully, and note that any dependent objects will also be removed."
 msgstr ""
@@ -523,12 +402,8 @@ msgstr ""
 msgid "deleted"
 msgstr ""
 
-#: web/menus/pages_menu.ex:13 web/menus/users_menu.ex:13
+#: web/menus/users_menu.ex:13
 msgid "Add new"
-msgstr ""
-
-#: web/menus/pages_menu.ex:14
-msgid "Fragments"
 msgstr ""
 
 #: web/menus/images_menu.ex:10 web/models/image_series.ex:188
@@ -536,12 +411,8 @@ msgid "Images"
 msgstr ""
 
 #: web/menus/images_menu.ex:11 web/menus/instagram_menu.ex:11
-#: web/menus/pages_menu.ex:12 web/menus/users_menu.ex:11
+#: web/menus/users_menu.ex:11
 msgid "Index"
-msgstr ""
-
-#: web/menus/pages_menu.ex:10
-msgid "Pages"
 msgstr ""
 
 #: web/menus/users_menu.ex:10
@@ -558,10 +429,6 @@ msgstr ""
 
 #: web/models/user.ex:209
 msgid "Avatar"
-msgstr ""
-
-#: web/models/page.ex:203 web/models/page.ex:204
-msgid "Belongs to"
 msgstr ""
 
 #: web/models/instagram_image.ex:272
@@ -593,8 +460,7 @@ msgid "Created"
 msgstr ""
 
 #: web/models/image.ex:187 web/models/image_category.ex:137
-#: web/models/image_series.ex:187 web/models/page.ex:206
-#: web/models/page_fragment.ex:132
+#: web/models/image_series.ex:187
 msgid "Creator"
 msgstr ""
 
@@ -602,12 +468,7 @@ msgstr ""
 msgid "Credits"
 msgstr ""
 
-#: web/models/page.ex:201 web/models/page_fragment.ex:130
-msgid "Data"
-msgstr ""
-
 #: lib/brando/html.ex:333 lib/brando/html/inspect.ex:127
-#: web/forms/page_form.ex:18
 msgid "Draft"
 msgstr ""
 
@@ -619,16 +480,8 @@ msgstr ""
 msgid "Encoded value"
 msgstr ""
 
-#: web/models/page.ex:207
-msgid "Extra CSS classes"
-msgstr ""
-
 #: web/models/user.ex:202
 msgid "Full name"
-msgstr ""
-
-#: web/models/page.ex:202 web/models/page_fragment.ex:131
-msgid "HTML"
 msgstr ""
 
 #: web/models/image.ex:184 web/models/image_category.ex:133
@@ -653,10 +506,6 @@ msgstr ""
 msgid "Image series"
 msgstr ""
 
-#: web/models/page.ex:210 web/models/page_fragment.ex:133
-msgid "Inserted"
-msgstr ""
-
 #: web/models/image.ex:189 web/models/image_category.ex:139
 #: web/models/image_series.ex:191 web/models/user.ex:207
 msgid "Inserted at"
@@ -666,11 +515,7 @@ msgstr ""
 msgid "Instagram ID"
 msgstr ""
 
-#: web/models/page.ex:198 web/models/page_fragment.ex:129
-msgid "Key"
-msgstr ""
-
-#: web/models/page.ex:197 web/models/page_fragment.ex:128 web/models/user.ex:205
+#: web/models/user.ex:205
 msgid "Language"
 msgstr ""
 
@@ -680,14 +525,6 @@ msgstr ""
 
 #: web/models/instagram_image.ex:273
 msgid "Link"
-msgstr ""
-
-#: web/models/page.ex:208
-msgid "META description"
-msgstr ""
-
-#: web/models/page.ex:209
-msgid "META keywords"
 msgstr ""
 
 #: web/models/image_category.ex:134 web/models/image_series.ex:182
@@ -708,12 +545,10 @@ msgid "No value"
 msgstr ""
 
 #: lib/brando/html.ex:327 lib/brando/html/inspect.ex:126
-#: web/forms/page_form.ex:20
 msgid "Pending"
 msgstr ""
 
 #: lib/brando/html.ex:321 lib/brando/html/inspect.ex:125
-#: web/forms/page_form.ex:19
 msgid "Published"
 msgstr ""
 
@@ -734,32 +569,19 @@ msgid "Sequence"
 msgstr ""
 
 #: web/models/image_category.ex:135 web/models/image_series.ex:183
-#: web/models/page.ex:200
 msgid "Slug"
 msgstr ""
 
-#: web/models/instagram_image.ex:277 web/models/page.ex:196
+#: web/models/instagram_image.ex:277
 msgid "Status"
-msgstr ""
-
-#: web/models/page.ex:205
-msgid "Sub pages"
 msgstr ""
 
 #: web/models/instagram_image.ex:275
 msgid "Thumbnail URL"
 msgstr ""
 
-#: web/models/page.ex:199
-msgid "Title"
-msgstr ""
-
 #: web/models/instagram_image.ex:271
 msgid "Type"
-msgstr ""
-
-#: web/models/page.ex:211 web/models/page_fragment.ex:134
-msgid "Updated"
 msgstr ""
 
 #: web/models/image.ex:190 web/models/image_category.ex:140
@@ -833,22 +655,6 @@ msgstr ""
 
 #: lib/brando/form/fields.ex:266
 msgid "must be unique"
-msgstr ""
-
-#: web/models/page.ex:191
-msgid "page"
-msgstr ""
-
-#: web/models/page_fragment.ex:123
-msgid "page fragment"
-msgstr ""
-
-#: web/models/page_fragment.ex:124
-msgid "page fragments"
-msgstr ""
-
-#: web/models/page.ex:192
-msgid "pages"
 msgstr ""
 
 #: lib/brando/form/fields.ex:274
@@ -978,10 +784,6 @@ msgstr ""
 
 #: lib/brando/plugs/authenticate.ex:37
 msgid "Access denied."
-msgstr ""
-
-#: web/forms/page_form.ex:63
-msgid "If this page should belong to another, select parent page here."
 msgstr ""
 
 #: web/models/instagram_image.ex:138
