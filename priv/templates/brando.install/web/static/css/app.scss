@@ -6,7 +6,6 @@
 @import "bootstrap-sprockets";
 @import "bootstrap";
 
-
 body {
 
 }
@@ -32,18 +31,9 @@ a.block-link {
   color: #222;
 }
 
-.page-fragment-missing {
-  background-color: #FF6464;
-  padding: 5px 10px;
-  font-family: monospace;
-  font-size: 11px;
-  line-height: 15px;
-}
-
 @import
   "includes/colorbox",
   "includes/cookielaw",
   "includes/dropdown",
   "includes/instagram",
-  "includes/nav",
-  "includes/pages";
+  "includes/nav";

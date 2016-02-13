@@ -4,7 +4,6 @@ defmodule Brando.HTML.TablizeTest do
   use Brando.Integration.TestCase
   import Brando.HTML.Tablize
   import Brando.I18n
-  alias Brando.Page
 
   @image_map %Brando.Type.Image{credits: nil, optimized: false,
                                 path: "images/avatars/27i97a.jpeg", title: nil,
@@ -27,20 +26,8 @@ defmodule Brando.HTML.TablizeTest do
 
   test "tablize/4" do
     user = Forge.saved_user(TestRepo)
-    assert {:ok, page} = Page.create(@page_params, user)
-    page = Brando.repo.preload(page, [:creator, :parent, :children])
 
-    assert {:ok, page2} = Page.create(Map.put(@page_params, "language", "nb"), user)
-    child_params =
-      @page_params
-      |> Map.put("parent_id", page2.id)
-      |> Map.put("title", "Child title")
-    assert {:ok, _} = Page.create(child_params, user)
-
-    pages =
-      Brando.Page
-      |> Brando.Page.with_parents_and_children
-      |> Brando.repo.all
+    users = Brando.repo.all(Brando.User)
 
     helpers = [{"Show user", "fa-search", :admin_user_path, :show, :id},
                {"Edit user", "fa-edit", :admin_user_path, :edit, :id},
@@ -49,44 +36,36 @@ defmodule Brando.HTML.TablizeTest do
                {"List test", "fa-trash",
                 :test_path, :test, [:id, :language], :superuser}]
 
-    {:safe, ret} = tablize(@conn, pages, helpers, check_or_x: [:meta_keywords],
+    {:safe, ret} = tablize(@conn, users, helpers, check_or_x: [:meta_keywords],
                            hide: [:updated_at, :inserted_at, :parent])
 
-    ret = ret |> IO.iodata_to_binary
-    assert ret =~ ~s(<i class="fa fa-times text-danger">)
-    assert ret =~ ~s(href="/admin/users/#{page.id}")
-    assert ret =~ ~s(href="/admin/users/#{page.id}/edit")
-    assert ret =~ ~s(href="/admin/users/#{page.id}/delete")
-    assert ret =~ ~s(href="/test123/#{page.id}/#{page.language}")
+    ret = IO.iodata_to_binary(ret)
+    assert ret =~ ~s(No connected image)
+    assert ret =~ ~s(href="/admin/users/#{user.id}")
+    assert ret =~ ~s(href="/admin/users/#{user.id}/edit")
+    assert ret =~ ~s(href="/admin/users/#{user.id}/delete")
 
-    {:safe, ret} = tablize(@conn, [page], helpers,
+    {:safe, ret} = tablize(@conn, [user], helpers,
                            check_or_x: [:meta_keywords],
                            hide: [:updated_at, :inserted_at, :parent],
                            colgroup: [100, 100])
-    ret = ret |> IO.iodata_to_binary
+    ret = IO.iodata_to_binary(ret)
     assert ret =~ "colgroup"
     assert ret =~ "width: 100px"
 
-    {:safe, ret} = tablize(@conn, [page], helpers, filter: true, hide: [:parent])
+    {:safe, ret} = tablize(@conn, [user], helpers, filter: true, hide: [:parent])
 
-    ret = ret |> IO.iodata_to_binary
+    ret = IO.iodata_to_binary(ret)
     assert ret
            =~ ~s(<input type="text" placeholder="Filter" id="filter-input" />)
 
-    pages =
-      Brando.Page
-      |> Brando.Page.with_parents_and_children
-      |> Brando.repo.all
-
-    {:safe, ret} = tablize(@conn, pages, helpers,
+    {:safe, ret} = tablize(@conn, users, helpers,
                            split_by: :language,
                            children: :children,
                            hide: [:parent, :children])
 
-    ret = ret |> IO.iodata_to_binary
-    assert ret =~ "nb"
-    assert ret =~ "en"
-    assert ret =~ "Child title"
+    ret = IO.iodata_to_binary(ret)
+    assert ret =~ "flag-en"
 
     {:safe, ret} = tablize(nil, nil, nil, nil)
     assert ret == "<p>No results</p>"
