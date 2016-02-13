@@ -83,7 +83,6 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/web/static/css/includes/_dropdown.scss", "web/static/css/includes/_dropdown.scss"},
     {:copy, "templates/brando.install/web/static/css/includes/_instagram.scss", "web/static/css/includes/_instagram.scss"},
     {:copy, "templates/brando.install/web/static/css/includes/_nav.scss", "web/static/css/includes/_nav.scss"},
-    {:copy, "templates/brando.install/web/static/css/includes/_pages.scss", "web/static/css/includes/_pages.scss"},
 
     # Icons
     {:copy, "templates/brando.install/static/brando/favicon.ico", "web/static/assets/favicon.ico"},
