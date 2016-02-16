@@ -81,18 +81,6 @@ config :brando, Brando.Instagram,
 config :brando, Brando.Type.Role,
   roles: %{staff: 1, admin: 2, superuser: 4}
 
-config :brando, Brando.Menu,
-  colors: [
-    "#FBA026;", "#F87117;", "#CF3510;", "#890606;", "#FF1B79;",
-    "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
-    "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
-    "#870B46;", "#D0201A;", "#FF641A;"
-  ],
-  modules: [
-    Brando.Admin.Menu, Brando.Users.Menu, Brando.News.Menu,
-    Brando.Pages.Menu, Brando.Images.Menu
-  ]
-
 config :brando, Brando.Villain,
   extra_blocks: [],
   parser: <%= application_module %>.Villain.Parser

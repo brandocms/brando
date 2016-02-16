@@ -1,5 +1,9 @@
 ## v0.20.0-dev (2016-XX-XX)
 
+* Enhancements/backwards incompatible changes
+  * Extra modules now have to register through `Brando.Registry.register(MyApp.Module)`. You can supply what you wish to register as options. `[:menu, :gettext]` are the defaults.
+  * This means you can remove the `Brando.Menu` config in `brando.exs`
+
 * Enhancements
   * Sequence's filter functions now accepts Ecto Queryables.
 

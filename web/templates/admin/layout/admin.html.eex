@@ -53,7 +53,7 @@
         <!-- nav -->
         <nav class="nav-primary hidden-xs">
           <ul class="nav">
-            <%= for menu <- get_menus() do %>
+            <%= for menu <- Brando.Menu.get_menus() do %>
               <%= render_menu_item(@conn, menu) %>
             <% end %>
           </ul>

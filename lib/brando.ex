@@ -1,6 +1,13 @@
 defmodule Brando do
+  use Application
+  require Logger
+
   @moduledoc File.read!("README.md")
   @version Mix.Project.config[:version]
+
+  def start(_type, _args) do
+    Brando.Supervisor.start_link
+  end
 
   @doc """
   Gets the configuration for `module` under :brando,

@@ -12,6 +12,13 @@ defmodule Brando.Menu do
 
   """
 
+  @default_colors [
+    "#FBA026;", "#F87117;", "#CF3510;", "#890606;", "#FF1B79;",
+    "#520E24;", "#8F2041;", "#DC554F;", "#FF905E;", "#FAC51C;",
+    "#D6145F;", "#AA0D43;", "#7A0623;", "#430202;", "#500422;",
+    "#870B46;", "#D0201A;", "#FF641A;"
+  ]
+
   defmacro __using__(_) do
     quote do
       Module.register_attribute(__MODULE__, :menus, accumulate: true)
@@ -59,6 +66,17 @@ defmodule Brando.Menu do
     quote do
       unquote(menus)
     end
+  end
+
+  def get_menus do
+    modules = Enum.sort(Brando.Registry.menu_modules)
+    for {mod, color} <- Enum.zip(modules, colors()) do
+      {color, mod.get_menu()}
+    end
+  end
+
+  defp colors do
+    @default_colors
   end
 
   defp defmenu(contents) do

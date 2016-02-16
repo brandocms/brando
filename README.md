@@ -16,8 +16,8 @@ Add Brando to your `deps` and `applications` in your project's `mix.exs`. Also a
 ```elixir
 def application do
   [mod: {MyApp, []},
-   applications: [:phoenix, :cowboy, :logger, :postgrex,
-                  :ecto, :gettext, :brando]]
+   applications: [:brando, :phoenix, :cowboy, :logger, :postgrex,
+                  :ecto, :gettext]]
 end
 
 defp deps do
@@ -145,6 +145,10 @@ For modules added through your OTP app, you can style its backend by editing
 ## Additional admin Javascript
 
 Add files to your `web/static/js/admin` folder. These are compiled down to `priv/static/js/brando.custom.js`. This file is included in the admin section's base template.
+
+## App specific modules
+
+TODO:
 
 ## Pagination
 

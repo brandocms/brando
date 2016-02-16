@@ -22,7 +22,8 @@ defmodule Brando.Mixfile do
   end
 
   def application do
-    [applications: applications(Mix.env)]
+    [mod: {Brando, []},
+     applications: applications(Mix.env)]
   end
 
   defp applications(:test), do: applications(:all) ++ [:blacksmith, :ecto]
