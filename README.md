@@ -137,18 +137,40 @@ And backend:
 
 Run the `compile` script in your OTP app's dir to `git pull` latest, get latest hex deps, compile and build production assets.
 
-## Additional admin CSS/styling
-
-For modules added through your OTP app, you can style its backend by editing 
-`web/static/css/custom/brando.custom.scss`, or adding your own files to `web/static/css/custom/`
-
-## Additional admin Javascript
-
-Add files to your `web/static/js/admin` folder. These are compiled down to `priv/static/js/brando.custom.js`. This file is included in the admin section's base template.
-
 ## App specific modules
 
-TODO:
+Generate templates:
+
+    $ mix brando.gen.html Task tasks name:string avatar:image data:villain
+
+Copy outputted routes and add to `web/router.ex`
+
+Register your module in `lib/my_app.ex`:
+
+```diff
+    def start(_type, _args) do
+      import Supervisor.Spec, warn: false
+
+      children = [
+        # Start the endpoint when the application starts
+        supervisor(MyApp.Endpoint, []),
+        # Start the Ecto repository
+        supervisor(MyApp.Repo, []),
+        # Here you could define other workers and supervisors as children
+        # worker(MyApp.Worker, [arg1, arg2, arg3]),
+      ]
+
++     Brando.Registry.register(Brando.Portfolio)
+```
+
+### Additional admin CSS/styling
+
+For modules added through your OTP app, you can style its backend by editing 
+`web/static/css/custom/brando.custom.scss`, or adding your own files to `web/static/css/custom/`. Remember to include these from `brando.custom.scss`.
+
+### Additional admin Javascript
+
+Add files to your `web/static/js/admin` folder. These are compiled down to `priv/static/js/brando.custom.js`. This file is included in the admin section's base template.
 
 ## Pagination
 
