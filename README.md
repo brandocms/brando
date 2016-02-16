@@ -173,7 +173,7 @@ Controller:
 ```elixir
   use Brando.Sequence,
     [:controller, [model: MyApp.Model,
-                   filter: &MyApp.Model.get_by_collection_id/1]]
+                   filter: &MyApp.Model.by_collection_id/1]]
 ```
 
 The filter should return items by the :filter param in your routes.ex.
@@ -181,11 +181,10 @@ The filter should return items by the :filter param in your routes.ex.
 Example of a filter
 
 ```elixir
-def get_by_collection_id(id) do
+def by_collection_id(id) do
   __MODULE__
   |> where([c], collection.id == ^id)
   |> order_by([c], c.sequence)
-  |> Brando.repo.all
 end
 ```
 

@@ -7,6 +7,9 @@ defmodule Brando.Sequence do
 
   ## Example/Usage
 
+  The `filter` function can return an Ecto queryable (recommended), or a
+  list of results.
+
   Controller:
 
       use Brando.Sequence,
@@ -80,12 +83,18 @@ defmodule Brando.Sequence do
         """
         def filter_function(filter_param) do
           {:filter, fun} = unquote(filter)
-          fun.(filter_param)
+          case fun.(filter_param) do
+            res when is_list(res) -> res
+            res -> Brando.repo.all(res)
+          end
         end
 
         def filter_function() do
           {:filter, fun} = unquote(filter)
-          fun.()
+          case fun.() do
+            res when is_list(res) -> res
+            res -> Brando.repo.all(res)
+          end
         end
       end
 

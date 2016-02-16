@@ -1,5 +1,8 @@
 ## v0.20.0-dev (2016-XX-XX)
 
+* Enhancements
+  * Sequence's filter functions now accepts Ecto Queryables.
+
 ## v0.19.0 (2016-02-13)
 
 * Backwards incompatible changes
