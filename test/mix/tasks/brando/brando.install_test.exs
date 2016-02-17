@@ -5,8 +5,8 @@ defmodule Mix.Tasks.Brando.GenerateTest do
 
   import MixHelper
 
-  @app_name  "photo_blog"
-  @tmp_path  tmp_path()
+  @app_name "photo_blog"
+  @tmp_path tmp_path()
   @project_path Path.join(@tmp_path, @app_name)
 
   setup_all do
@@ -38,6 +38,9 @@ defmodule Mix.Tasks.Brando.GenerateTest do
     assert_file "web/villain/parser.ex"
     assert_file "web/admin_web.ex", fn file ->
       assert file =~ "Brando.Backend.Gettext"
+    end
+    assert_file "mix.exs", fn file ->
+      assert file =~ "defmodule Brando.Mixfile do"
     end
     refute File.exists?("web/static/css/app.css")
   end

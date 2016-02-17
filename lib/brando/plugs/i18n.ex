@@ -33,13 +33,26 @@ defmodule Brando.Plug.I18n do
 
   @doc """
   Set locale to current_user's language
+
+  This sets both Brando.Gettext (the default gettext we use in the backend),
+  as well as `otp_backend` which will mostly be extra gettext from the otp
+  app's backend.
   """
   def put_admin_locale(conn, otp_backend \\ nil)
   def put_admin_locale(%{private: %{plug_session:
                        %{"current_user" => current_user}}} = conn, otp_backend) do
-    default_language = Brando.config(:default_admin_language)
-    language = Map.get(current_user, :language, default_language)
+    language = Map.get(current_user, :language, Brando.config(:default_admin_language))
+
+    # set for default brando backend
     Gettext.put_locale(Brando.Gettext, language)
+
+    # set locale for all registered modules
+    modules = Brando.Registry.gettext_modules()
+    for module <- modules do
+      Gettext.put_locale(module, language)
+    end
+
+    # set for otp app's backend
     if otp_backend, do:
       Gettext.put_locale(otp_backend, language)
     conn

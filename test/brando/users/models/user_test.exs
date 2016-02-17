@@ -115,7 +115,7 @@ defmodule Brando.Integration.UserTest do
                          "/fixtures/non_existant.png"}
     up_params = Dict.put(@params, "avatar", up_plug)
     assert_raise Brando.Exception.UploadError,
-                 "Error while copying -> :enoent",
+                 ~r/Error while copying -> :enoent/,
                  fn -> User.check_for_uploads(user, up_params)
     end
   end

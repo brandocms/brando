@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.19.0"
+  @version "0.20.0"
   @description "Boilerplate for Twined applications."
 
   def project do
@@ -22,7 +22,8 @@ defmodule Brando.Mixfile do
   end
 
   def application do
-    [applications: applications(Mix.env)]
+    [mod: {Brando, []},
+     applications: applications(Mix.env)]
   end
 
   defp applications(:test), do: applications(:all) ++ [:blacksmith, :ecto]

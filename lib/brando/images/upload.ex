@@ -112,7 +112,10 @@ defmodule Brando.Images.Upload do
         {Map.put(plug, :uploaded_file, new_file), cfg}
       {:error, reason} ->
         raise UploadError,
-              message: gettext("Error while copying") <> " -> #{inspect(reason)}"
+              message: gettext("Error while copying") <>
+                       " -> #{inspect(reason)}\n" <>
+                       "src: #{temp_path}\n" <>
+                       "dest: #{new_file}"
     end
   end
 

@@ -9,6 +9,9 @@ defmodule Mix.Tasks.Brando.Install do
   @shortdoc "Generates files for Brando."
 
   @new [
+    # Mix template
+    {:eex,  "templates/brando.install/mix.exs", "mix.exs"},
+
     # Etc. Various OS config files and log directory.
     {:keep, "templates/brando.install/logs", "logs"},
     {:eex,  "templates/brando.install/etc/logrotate/prod.conf", "etc/logrotate/prod.conf"},
