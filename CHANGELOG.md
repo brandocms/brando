@@ -5,6 +5,9 @@
   * This means you can remove the `Brando.Menu` config in `brando.exs`
 
 * Enhancements
+  * Added `Brando.Registry.wipe` to clear out registry for use in testing.
+
+* Enhancements
   * Sequence's filter functions now accepts Ecto Queryables.
 
 ## v0.19.0 (2016-02-13)
