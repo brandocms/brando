@@ -56,10 +56,19 @@ defmodule Brando.Registry do
     Map.get(state(), :menu_modules)
   end
 
+  def wipe do
+    GenServer.call(__MODULE__, :wipe)
+  end
+
   # Private
   @doc false
   def handle_call(:state, _from, state) do
     {:reply, state, state}
+  end
+
+  @doc false
+  def handle_call(:wipe, _, _) do
+    {:reply, %State{}, %State{}}
   end
 
   @doc false
