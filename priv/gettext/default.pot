@@ -793,3 +793,7 @@ msgstr ""
 #: web/models/user.ex:94
 msgid "Passwords must match"
 msgstr ""
+
+#: lib/brando/plugs/uploads.ex:20
+msgid "Image uploaded"
+msgstr ""
