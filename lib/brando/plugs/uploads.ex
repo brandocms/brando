@@ -9,7 +9,6 @@ defmodule Brando.Plug.Uploads do
            when action in [:create, :profile_update, :update]
   """
   require Logger
-  import Brando.Gettext
 
   def check_for_uploads(conn, {required_key, module})
   when is_binary(required_key) do
@@ -17,7 +16,6 @@ defmodule Brando.Plug.Uploads do
     case module.check_for_uploads(module, param) do
       {:ok, image_fields} ->
         param = handle_image_fields(param, image_fields)
-        conn = Phoenix.Controller.put_flash(conn, :notice, gettext("Image uploaded"))
       {:error, errors} ->
         Logger.error(inspect(errors))
         nil
