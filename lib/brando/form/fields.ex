@@ -822,8 +822,8 @@ defmodule Brando.Form.Fields do
   def get_placeholder(%{type: :file}) do
     nil
   end
-  def get_placeholder(%{name: name, model: model}) do
-    model.__field__(name)
+  def get_placeholder(%{name: name, schema: schema}) do
+    schema.__field__(name)
   end
   def get_placeholder(%{placeholder: nil}) do
     nil
@@ -841,8 +841,8 @@ defmodule Brando.Form.Fields do
   def get_label(%{label: label_text}) do
     label_text
   end
-  def get_label(%{name: name, model: model}) do
-    model.__field__(name)
+  def get_label(%{name: name, schema: schema}) do
+    schema.__field__(name)
   end
 
   @doc """

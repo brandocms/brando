@@ -485,6 +485,6 @@ defmodule Brando.Form.FieldsTest do
   test "get_placeholder" do
     assert F.get_placeholder(%{placeholder: "test"}) == "test"
     assert F.get_placeholder(%{placeholder: nil}) == nil
-    assert F.get_placeholder(%{name: :email, model: Brando.User}) == "Email"
+    assert F.get_placeholder(%{name: :email, schema: Brando.User}) == "Email"
   end
 end

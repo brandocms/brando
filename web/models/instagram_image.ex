@@ -189,7 +189,7 @@ defmodule Brando.InstagramImage do
   Get timestamp from where we search for new images
   """
   def get_last_created_time do
-    max_ts = Brando.repo.one(
+    max_ts = Brando.repo.first!(
       from m in __MODULE__,
         select: m.created_time,
         order_by: [desc: m.created_time],
@@ -218,7 +218,7 @@ defmodule Brando.InstagramImage do
   Get min_id from where we search for new images
   """
   def get_min_id do
-    id = Brando.repo.one(
+    id = Brando.repo.first!(
       from m in __MODULE__,
         select: m.instagram_id,
         order_by: [desc: m.instagram_id],

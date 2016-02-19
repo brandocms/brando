@@ -12,7 +12,7 @@ defmodule Brando.UserProfileForm do
     Brando.config(:admin_languages)
   end
 
-  form "user", [model: User, helper: :admin_user_path, class: "grid-form"] do
+  form "user", [schema: User, helper: :admin_user_path, class: "grid-form"] do
     fieldset gettext("User information") do
       field :full_name, :text
       field :username, :text

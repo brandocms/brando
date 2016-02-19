@@ -68,6 +68,7 @@ defmodule Brando.Villain.ParserTest do
     setup_images()
 
     ret = slideshow(%{"imageseries" => "my-slides", "size" => "small"})
+
     assert ret =~ "/media/tmp/path/to/fake/image.jpg"
     assert ret =~ "/media/tmp/path/to/fake/image2.jpg"
   end

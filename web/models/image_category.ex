@@ -37,7 +37,7 @@ defmodule Brando.ImageCategory do
 
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
-  def changeset(model, action, params \\ :empty)
+  def changeset(model, action, params \\ :invalid)
   def changeset(model, :create, params) do
     cast(model, params, @required_fields, @optional_fields)
   end
@@ -93,7 +93,7 @@ defmodule Brando.ImageCategory do
   Returns the model's slug
   """
   def get_slug(id: id) do
-    Brando.repo.one!(
+    Brando.repo.first!(
       from m in __MODULE__,
         select: m.slug,
         where: m.id == ^id

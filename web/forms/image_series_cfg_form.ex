@@ -7,7 +7,7 @@ defmodule Brando.ImageSeriesConfigForm do
   use Brando.Form
   alias Brando.ImageSeries
 
-  form "imageseriesconfig", [model: ImageSeries,
+  form "imageseriesconfig", [schema: ImageSeries,
                              helper: :admin_image_series_path,
                              class: "grid-form"] do
     field :cfg, :textarea

@@ -1,4 +1,4 @@
-  <h1><%= gettext("Configure") %> <%= model_name(@changeset.model, :singular) %></h1>
+  <h1><%= gettext("Configure") %> <%= schema_name(@changeset.data, :singular) %></h1>
   <%= ImageCategoryConfigForm.get_form(type: :update, action: :configure_patch, params: to_string(@id), changeset: @changeset) %>
   <div class="buttons m-t-md">
     <a href="<%= Brando.helpers.admin_image_path(@conn, :index) %>" class="btn btn-default">

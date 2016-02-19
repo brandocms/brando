@@ -128,12 +128,12 @@ defmodule Brando.HTML.InspectTest do
 
   test "model_repr/1" do
     assert {:ok, user} = User.create(@user_params)
-    assert model_repr(user) == "Nita Bond (zabuzasixu)"
+    assert schema_repr(user) == "Nita Bond (zabuzasixu)"
   end
 
   test "model_name/2" do
     assert {:ok, user} = User.create(@user_params)
-    assert model_name(user, :singular) == "user"
-    assert model_name(user, :plural) == "users"
+    assert schema_name(user, :singular) == "user"
+    assert schema_name(user, :plural) == "users"
   end
 end

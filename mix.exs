@@ -26,7 +26,7 @@ defmodule Brando.Mixfile do
      applications: applications(Mix.env)]
   end
 
-  defp applications(:test), do: applications(:all) ++ [:blacksmith, :ecto]
+  defp applications(:test), do: applications(:all) ++ [:blacksmith, :ecto, :postgrex]
   defp applications(_all) do
     [:gettext, :comeonin, :httpoison, :earmark, :mogrify,
      :poison, :scrivener, :slugger, :eightyfour]
@@ -51,9 +51,13 @@ defmodule Brando.Mixfile do
      {:credo, "~> 0.2", only: :dev},
 
      # Test dependencies
-     {:phoenix_ecto, "~> 2.0", only: :test},
+     {:phoenix_ecto, "~> 3.0.0-beta", only: :test},
+     #{:phoenix_ecto, "~> 2.0", only: :test},
      {:blacksmith, "~> 0.1.2", only: :test},
      {:excoveralls, "~> 0.4", only: :test},
+
+     # Temporary until scrivener updates
+     {:ecto, "~> 2.0-beta", override: true},
 
      # Documentation dependencies
      {:ex_doc, "~> 0.11", only: :docs},
