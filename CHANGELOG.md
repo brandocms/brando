@@ -1,6 +1,7 @@
 ## v0.21.0 (2016-XX-XX)
 
 * Backwards incompatible changes
+  * Extracted Instagram to its own application -> http://www.github.com/twined/brando_instagram
   * form/4 expects `schema` keyword instead of `model`
   * model_name renamed to schema_name
   * model_repr renamed to schema_repr
