@@ -72,23 +72,6 @@ config :brando, :admin_languages, [
 config :brando, Brando.Villain, parser: Brando.Villain.Parser.Default
 config :brando, Brando.Villain, extra_blocks: []
 
-config :brando, Brando.Instagram,
-  auto_approve: true,
-  client_id: "CLIENT_ID",
-  username: "username",
-  password: "password",
-  token_path: Path.join(~w(tmp priv tokens instagram)),
-  api_http_lib: Brando.Integration.Instagram,
-  token_http_lib: Brando.Integration.Instagram,
-  interval: 1_000 * 60 * 60,
-  sizes: %{
-    "large" =>  %{"size" => "640", "quality" => 100},
-    "thumb" =>  %{"size" => "150x150", "quality" => 100, "crop" => true}
-  },
-  sleep: 0,
-  query: {:user, "dummy_user"},
-  upload_path: Path.join("images", "insta")
-
 config :brando, Brando.Type.Role,
   roles: %{staff: 1, admin: 2, superuser: 4}
 

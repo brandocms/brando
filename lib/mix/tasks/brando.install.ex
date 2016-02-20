@@ -46,7 +46,6 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "templates/brando.install/migrations/20150215090307_create_images.exs", "priv/repo/migrations/20150215090307_create_images.exs"},
     {:eex,  "templates/brando.install/migrations/20150520211010_create_pages.exs", "priv/repo/migrations/20150520211010_create_pages.exs"},
     {:eex,  "templates/brando.install/migrations/20150520221010_create_pagefragments.exs", "priv/repo/migrations/20150520221010_create_pagefragments.exs"},
-    {:eex,  "templates/brando.install/migrations/20150505122654_create_instagramimages.exs", "priv/repo/migrations/20150505122654_create_instagramimages.exs"},
 
     # Repo seeds
     {:eex,  "templates/brando.install/repo/seeds.exs", "priv/repo/seeds.exs"},

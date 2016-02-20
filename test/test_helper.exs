@@ -43,7 +43,6 @@ defmodule Brando.Integration.TestCase do
 end
 
 Code.require_file "support/user_socket.exs", __DIR__
-Code.require_file "support/instagram_helper.exs", __DIR__
 Code.require_file "support/fixtures.exs", __DIR__
 
 _ = Ecto.Storage.down(Repo)
@@ -55,5 +54,4 @@ Mix.Task.run "ecto.migrate", ["-r", Repo, "--quiet"]
 Repo.start_link
 
 Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)
-# Ecto.Adapters.SQL.begin_test_transaction(Brando.Integration.TestRepo)
 Brando.endpoint.start_link

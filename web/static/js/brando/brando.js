@@ -9,7 +9,6 @@ import FilterTable from "./brando/components/filter_table";
 import Mobile from "./brando/components/mobile";
 import {VexBrando, vex} from "./brando/components/vex_brando";
 import Images from "./brando/components/images";
-import Instagram from "./brando/components/instagram";
 import Menu from "./brando/components/menu";
 import Pages from "./brando/components/pages";
 import Sequence from "./brando/components/sequence";
@@ -49,9 +48,6 @@ $(() => {
             break;
         case "dashboard-system_info":
             Stats.setup();
-            break;
-        case "instagram-index":
-            Instagram.setup();
             break;
         case "pages-index":
             Pages.setup();
