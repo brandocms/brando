@@ -8,7 +8,7 @@ defmodule Brando.Admin.UserController do
   import Brando.Plug.HTML
   import Brando.Plug.Uploads
   import Brando.Gettext
-  import Brando.HTML.Inspect, only: [model_name: 2]
+  import Brando.HTML.Inspect, only: [schema_name: 2, schema_repr: 1]
   import Brando.Utils, only: [helpers: 1, current_user: 1]
 
   plug :put_section, "users"
@@ -174,7 +174,7 @@ defmodule Brando.Admin.UserController do
     model.delete(record)
 
     conn
-    |> put_flash(:notice, "#{model_name(record, :singular)} #{model.__repr__(record)} #{gettext("deleted")}")
+    |> put_flash(:notice, "#{schema_name(record, :singular)} #{schema_repr(record)} #{gettext("deleted")}")
     |> redirect(to: helpers(conn).admin_user_path(conn, :index))
   end
 end

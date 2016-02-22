@@ -6,14 +6,14 @@ defmodule Brando.Form do
 
       use Brando.Form
 
-      form "user", [model: Brando.User,
+      form "user", [schema: Brando.User,
                     action: :admin_user_path,
                     class: "grid-form"] do
         field :full_name, :text, [required: false]
         submit :save, [class: "btn btn-success"]
       end
 
-  Set field labels, placeholders and help_text by using your `model`'s meta.
+  Set field labels, placeholders and help_text by using your `schema`'s meta.
 
   See `Brando.Meta.Model` for more info about meta.
 
@@ -56,11 +56,14 @@ defmodule Brando.Form do
   @spec form(String.t, form_opts, [do: Macro.t]) :: Macro.t
   defmacro form(source, opts \\ [], block)
   defmacro form(source, opts, [do: block]) do
+    if Keyword.get(opts, :model) do
+      raise "form/3 :model keyword is deprecated. use :schema instead"
+    end
     quote do
       @form_opts %{
         class: unquote(opts[:class] || ""),
         helper: unquote(opts[:helper]),
-        model: unquote(opts[:model]),
+        schema: unquote(opts[:schema]),
         multipart: false,
         source: unquote(source)
       }
@@ -154,11 +157,11 @@ defmodule Brando.Form do
   Reduces all `fields` and returns a list of each individual
   field as HTML. Gets any values or errors for the field.
   """
-  def render_fields(fields, changeset, opts, %{source: source, model: model}) do
+  def render_fields(fields, changeset, opts, %{source: source, schema: schema}) do
     Enum.reduce fields, [], fn ({name, form_opts}, acc) ->
       form_opts =
         form_opts
-        |> Keyword.merge(source: source, name: name, model: model)
+        |> Keyword.merge(source: source, name: name, schema: schema)
         |> Enum.into(%{})
 
       value = get_value(changeset, name)
@@ -402,13 +405,13 @@ defmodule Brando.Form do
   defp get_method(_), do: "get"
 
   defp get_value(nil, _), do: nil
-  defp get_value(%{model: model, action: nil, params: nil}, name) do
+  defp get_value(%{data: model, action: nil, params: nil}, name) do
     do_get_value(model || %{}, name)
   end
-  defp get_value(%{model: _, action: nil, params: params}, name) do
+  defp get_value(%{data: _, action: nil, params: params}, name) do
     do_get_value(params, Atom.to_string(name))
   end
-  defp get_value(%{model: _, action: _, params: params}, name) do
+  defp get_value(%{data: _, action: _, params: params}, name) do
     do_get_value(params || %{}, Atom.to_string(name))
   end
 

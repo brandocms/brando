@@ -100,7 +100,7 @@ defmodule <%= application_module %>.Villain.Parser do
              where: c.slug == "slideshows" and is.slug == ^series_slug,
              order_by: i.sequence,
              preload: [image_category: c, images: i]
-    series = Brando.repo.one(q)
+    series = Brando.repo.first!(q)
 
     images = Enum.map_join series.images, "\n", fn(img) ->
       src = img_url(img.image, String.to_atom(size), [prefix: media_url()])

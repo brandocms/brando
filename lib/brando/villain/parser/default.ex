@@ -72,14 +72,14 @@ defmodule Brando.Villain.Parser.Default do
   Slideshow
   """
   def slideshow(%{"imageseries" => series_slug, "size" => size}) do
-    series = Brando.repo.one(
+    series = Brando.repo.all(
       from is in Brando.ImageSeries,
         join: c in assoc(is, :image_category),
         join: i in assoc(is, :images),
         where: c.slug == "slideshows" and is.slug == ^series_slug,
         order_by: i.sequence,
         preload: [image_category: c, images: i]
-    )
+    ) |> List.first
 
     images = Enum.map_join(series.images, "\n", fn(img) ->
       src = img_url(img.image, String.to_atom(size), [prefix: media_url()])

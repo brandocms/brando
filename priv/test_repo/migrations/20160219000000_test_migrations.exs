@@ -1,4 +1,4 @@
-defmodule Brando.Integration.Migration do
+defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
   use Ecto.Migration
   use Brando.Sequence, :migration
   use Brando.Tag, :migration

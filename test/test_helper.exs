@@ -1,3 +1,4 @@
+Logger.configure(level: :info)
 ExUnit.start
 
 # Clear tmp dir
@@ -7,21 +8,8 @@ File.mkdir_p!(Path.join([Mix.Project.app_path, "tmp", "media"]))
 # Basic test repo
 alias Brando.Integration.TestRepo, as: Repo
 
-defmodule Brando.Integration.Repo do
-  defmacro __using__(opts) do
-    quote do
-      use Ecto.Repo, unquote(opts)
-      def log(cmd) do
-        super(cmd)
-        on_log = Process.delete(:on_log) || fn -> :ok end
-        on_log.()
-      end
-    end
-  end
-end
-
 defmodule Brando.Integration.TestRepo do
-  use Brando.Integration.Repo, otp_app: :brando
+  use Ecto.Repo, otp_app: :brando
 end
 
 defmodule Brando.Integration.Endpoint do
@@ -55,14 +43,15 @@ defmodule Brando.Integration.TestCase do
 end
 
 Code.require_file "support/user_socket.exs", __DIR__
-Code.require_file "support/instagram_helper.exs", __DIR__
 Code.require_file "support/fixtures.exs", __DIR__
-Code.require_file "support/migrations.exs", __DIR__
 
-_   = Ecto.Storage.down(Repo)
-:ok = Ecto.Storage.up(Repo)
-{:ok, _pid} = Repo.start_link
-:ok = Ecto.Migrator.up(Repo, 0, Brando.Integration.Migration, log: false)
+_ = Ecto.Storage.down(Repo)
+_ = Ecto.Storage.up(Repo)
 
-Ecto.Adapters.SQL.begin_test_transaction(Brando.Integration.TestRepo)
+Mix.Task.run "ecto.create", ["-r", Repo, "--quiet"]
+Mix.Task.run "ecto.migrate", ["-r", Repo, "--quiet"]
+
+Repo.start_link
+
+Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)
 Brando.endpoint.start_link
