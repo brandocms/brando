@@ -88,9 +88,9 @@ Set up database, and seed:
 
 Go through `config/brando.exs`.
 
-Make sure you set `:brando, :media_path` to your `media` folder. This must be an absolute path! 
+Make sure you set `:brando, :media_path` to your `media` folder. This must be an absolute path!
 
-Static media config in `endpoint.ex`. 
+Static media config in `endpoint.ex`.
 
 ```diff
 + plug Plug.Static,
@@ -111,7 +111,7 @@ config :my_app, MyApp.Endpoint,
   render_errors: [view: Brando.ErrorView, default_format: "html"]
 ```
 
-Brando uses Gettext for i18n. 
+Brando uses Gettext for i18n.
 
 To extract your frontend translations:
 
@@ -133,9 +133,12 @@ And backend:
 
     $ mix gettext.merge priv/gettext/backend
 
-## Production
+## Extra modules
 
-Run the `compile` script in your OTP app's dir to `git pull` latest, get latest hex deps, compile and build production assets.
+  * [brando_pages](http://github.com/twined/brando_pages)
+  * [brando_news](http://github.com/twined/brando_news)
+  * [brando_portfolio](http://github.com/twined/brando_portfolio)
+  * [brando_instagram](http://github.com/twined/brando_portfolio)
 
 ## App specific modules
 
@@ -163,9 +166,14 @@ Register your module in `lib/my_app.ex`:
 +     Brando.Registry.register(Brando.Portfolio)
 ```
 
+## Production
+
+Run the `compile` script in your OTP app's dir to `git pull` latest, get latest hex deps,
+compile and build production assets.
+
 ### Additional admin CSS/styling
 
-For modules added through your OTP app, you can style its backend by editing 
+For modules added through your OTP app, you can style its backend by editing
 `web/static/css/custom/brando.custom.scss`, or adding your own files to `web/static/css/custom/`. Remember to include these from `brando.custom.scss`.
 
 ### Additional admin Javascript
@@ -282,7 +290,7 @@ Finally, add to your routes (`web/router.ex`):
 
 Implements tagging in your model.
 
-Add to 
+Add to
 
 Model:
 
@@ -325,7 +333,7 @@ Add Instagram to your menu modules in `config/brando.exs`:
 
 ```diff
   config :brando, Brando.Menu,
-    modules: [Admin, Users, News, Pages, Images, 
+    modules: [Admin, Users, News, Pages, Images,
 +             Instagram]
 ```
 
@@ -408,12 +416,12 @@ In your model:
 ```diff
 
 + use Brando.Field.ImageField
-  
+
   schema "user" do
     field :username, :string
 +   field :avatar, Brando.Type.Image
   end
-  
+
 + has_image_field :avatar,
 +   %{allowed_mimetypes: ["image/jpeg", "image/png"],
 +     default_size: :medium,
