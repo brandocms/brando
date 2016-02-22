@@ -2,6 +2,7 @@
 
 * Backwards incompatible changes
   * Extracted Instagram to its own application -> http://www.github.com/twined/brando_instagram
+  * Updated to run on Ecto v2.0.
   * form/4 expects `schema` keyword instead of `model`
   * model_name renamed to schema_name
   * model_repr renamed to schema_repr
