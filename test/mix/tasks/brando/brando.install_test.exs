@@ -8,6 +8,7 @@ defmodule Mix.Tasks.Brando.GenerateTest do
   @app_name "photo_blog"
   @tmp_path tmp_path()
   @project_path Path.join(@tmp_path, @app_name)
+  @root_path Path.expand(".")
 
   setup_all do
     templates_path = Path.join([@project_path, "deps", "brando",
@@ -29,6 +30,10 @@ defmodule Mix.Tasks.Brando.GenerateTest do
 
     # Move into the project directory to run the generator
     File.cd! @project_path
+
+    on_exit fn ->
+      File.cd! @root_path
+    end
   end
 
   test "brando.install" do

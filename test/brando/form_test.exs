@@ -145,7 +145,7 @@ defmodule Brando.FormTest do
     assert f =~ "form-group required"
     assert f =~ "user[email]"
     assert f =~ ~s(value="test@email.com")
-    assert f =~ ~s(placeholder="Email")
+    assert f =~ ~s(placeholder="E-mail")
     assert f =~ ~s(type="submit")
     assert f =~ ~s(type="file")
   end

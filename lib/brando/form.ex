@@ -22,6 +22,7 @@ defmodule Brando.Form do
 
   @type form_opts :: [{:helper, atom} | {:class, String.t}]
 
+  alias Brando.Form.Field
   alias Brando.Form.Fields
   import Phoenix.HTML.Tag, only: [form_tag: 3]
   import Phoenix.HTML, only: [raw: 1]
@@ -150,24 +151,27 @@ defmodule Brando.Form do
         {class, form_opts} -> Keyword.put(form_opts, :class, class)
       end
 
-    form_tag url, form_opts, do: raw(fields)
+    form_tag(url, form_opts, do: raw(fields))
   end
 
   @doc """
   Reduces all `fields` and returns a list of each individual
   field as HTML. Gets any values or errors for the field.
   """
-  def render_fields(fields, changeset, opts, %{source: source, schema: schema}) do
-    Enum.reduce fields, [], fn ({name, form_opts}, acc) ->
-      form_opts =
-        form_opts
-        |> Keyword.merge(source: source, name: name, schema: schema)
-        |> Enum.into(%{})
-
-      value = get_value(changeset, name)
-      errors = get_errors(changeset, name)
-
-      [Fields.render_field(opts[:type], form_opts, value, errors)|acc]
+  def render_fields(fields, changeset, form_opts, %{source: source, schema: schema}) do
+    Enum.reduce fields, [], fn ({name, field_opts}, acc) ->
+      field = %Field{
+        form_type: form_opts[:type],
+        source: source,
+        name: name,
+        schema: schema,
+        value: get_value(changeset, name),
+        errors: get_errors(changeset, name),
+        type: field_opts[:type],
+        opts: Enum.into(field_opts, %{})
+      } |> Fields.render_field
+      
+      [field.html|acc]
     end
   end
 
@@ -257,6 +261,10 @@ defmodule Brando.Form do
   Options
 
     * `choices` - &__MODULE__.get_status_choices/0
+    * `is_selected` - Pass a function that checks if `value` is selected.
+      The function gets passed the checkbox's value, and
+      the model's value.
+      &__MODULE__.status_is_selected/2
     * `label` - Label for the entire group. Each individual radio
       gets its label from the `choices` function.
     * `label_class` - Label class for the main label.
