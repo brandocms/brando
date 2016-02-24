@@ -4,203 +4,594 @@ defmodule Brando.Form.Fields do
   These are all called from the `Brando.Form` module, and handled
   through `Brando.Form.get_form/4`
   """
+  import Brando.Form.Fields.Utils
   import Brando.Gettext
   import Brando.Utils, only: [media_url: 0, img_url: 3]
   import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2, tag: 2]
   import Phoenix.HTML, only: [raw: 1]
 
+  alias Brando.Form.Field
+
   @doc """
   Renders file field. Wraps the field with a label and row span
   """
-  def render_field(form_type, %{name: name, type: :file} = opts, value, errors) do
-    i = file(form_type, format_name(name, opts[:source]), value, errors, opts)
-    i
-    |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
-    |> form_group(format_name(name, opts[:source]), opts, errors)
-    |> div_form_row(opts[:in_fieldset])
+  @spec render_field(Field.t) :: Field.t
+  def render_field(%Field{type: :file} = field) do
+    field
+    |> file
+    |> add_label
+    |> wrap_in_form_group
+    |> wrap_in_div
   end
 
   @doc """
   Render textarea.
   Pass a form_group_class to ensure we don't set height on wrapper.
   """
-  def render_field(form_type, %{name: name, type: :textarea} = opts, value, errors) do
-    i = textarea(form_type, format_name(name, opts[:source]), value, errors,
-                 Map.put(opts, :form_group_class, "no-height"))
-    i
-    |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
-    |> form_group(format_name(name, opts[:source]), opts, errors)
-    |> div_form_row(opts[:in_fieldset])
+  def render_field(%Field{type: :textarea} = field) do
+    field
+    |> put_in_opts(:form_group_class, "no-height")
+    |> textarea
+    |> add_label
+    |> wrap_in_form_group
+    |> wrap_in_div
   end
 
   @doc """
   Render group of radio buttons.
   """
-  def render_field(form_type, %{name: name, type: :radio} = opts, value, errors) do
-    i = render_radios(form_type, format_name(name, opts[:source]), opts, value, errors)
-    i
-    |> concat_fields(label(format_name(name, opts[:source]), opts[:label_class], get_label(opts)))
-    |> form_group(format_name(name, opts[:source]), opts, errors)
-    |> div_form_row(opts[:in_fieldset])
+  def render_field(%Field{type: :radio} = field) do
+    field
+    |> radios
+    |> add_label
+    |> wrap_in_form_group
+    |> wrap_in_div
   end
 
   @doc """
   Render checkbox group.
   """
-  def render_field(form_type, %{name: name, type: :checkbox, multiple: _} = opts, value, errors) do
-    i = render_checks(form_type, format_name(name, opts[:source]),
-                      opts, value, errors)
-    l =
-      name
-      |> format_name(opts[:source])
-      |> label(opts[:label_class], get_label(opts))
-
-    i
-    |> concat_fields(l)
-    |> form_group(format_name(name, opts[:source]), opts, errors)
-    |> div_form_row(opts[:in_fieldset])
+  def render_field(%Field{type: :checkbox, opts: %{multiple: _}} = field) do
+    field
+    |> checkboxes
+    |> add_label
+    |> wrap_in_form_group
+    |> wrap_in_div
   end
 
   @doc """
   Render checkbox single
   """
-  def render_field(form_type, %{name: name, type: :checkbox} = opts, value, errors) do
-    label_content =
-      [input(:checkbox, form_type, format_name(name, opts[:source]),
-             value, errors, opts), get_label(opts)]
-    name
-    |> format_name(opts[:source])
-    |> label(opts[:label_class], label_content)
-    |> concat_fields(label(format_name(name, opts[:source]), "", ""))
-    |> div_tag("checkbox")
-    |> form_group(format_name(name, opts[:source]), opts, errors)
-    |> div_form_row(opts[:in_fieldset])
+  def render_field(%Field{type: :checkbox} = field) do
+    field
+    |> put_in_opts(:multiple, false)
+    |> input
+    |> add_label
+    |> wrap_in_form_group
+    |> wrap_in_div
   end
 
   @doc """
-  Render select. Calls `render_options`
+  Render select. Calls `options`
   """
-  def render_field(form_type, %{name: name, type: :select} = opts, value, errors) do
-    choices = render_options(form_type, opts, value, errors)
-    i = select(form_type, format_name(name, opts[:source]),
-               choices, opts, value, errors)
-    l =
-      name
-      |> format_name(opts[:source])
-      |> label(opts[:label_class], get_label(opts))
-
-    i
-    |> concat_fields(l)
-    |> form_group(format_name(name, opts[:source]), opts, errors)
-    |> div_form_row(opts[:in_fieldset])
+  def render_field(%Field{type: :select} = field) do
+    field
+    |> options
+    |> select
+    |> add_label
+    |> wrap_in_form_group
+    |> wrap_in_div
   end
 
   @doc """
   Render submit button
   """
-  def render_field(form_type, %{name: name, type: :submit} = opts, _value, errors) do
-    text = case opts[:text] do
-      :save -> gettext("Save")
-      text -> text
+  def render_field(%Field{type: :submit} = field) do
+    text = if field.opts[:text] == :save do
+      gettext("Save")
+    else
+      field.opts[:text]
     end
-    i = input(:submit, form_type, format_name(name, opts[:source]),
-              text, errors, opts)
-    i
-    |> form_group(format_name(name, opts[:source]), opts, errors)
-    |> div_form_row(opts[:in_fieldset])
+
+    field
+    |> put_in_field(:value, text)
+    |> input
+    |> wrap_in_form_group
+    |> wrap_in_div
   end
 
   @doc """
   Render fieldset open
   """
-  def render_field(_, %{type: :fieldset} = opts, _, _) do
-    fieldset_open_tag(opts[:legend], opts[:row_span])
+  def render_field(%Field{type: :fieldset} = field) do
+    prepend_html(field, fieldset_open_tag(field.opts[:legend], field.opts[:row_span]))
   end
 
   @doc """
   Render fieldset close
   """
-  def render_field(_, %{type: :fieldset_close}, _, _), do:
-    fieldset_close_tag()
-
-  @doc """
-  Render text/password/email (catchall)
-  """
-  def render_field(form_type, %{name: name, type: input_type} = opts, value, errors) do
-    confirm_i18n = gettext("Confirm")
-    confirm = if opts[:confirm] do
-      confirm_opts =
-        opts
-        |> Map.put(:label, "#{confirm_i18n} #{get_label(opts)}")
-        |> Map.put(:placeholder, "#{confirm_i18n} #{get_label(opts)}")
-      conf_name = format_name("#{name}_confirmation", opts[:source])
-
-      l =
-        conf_name
-        |> label(confirm_opts[:label_class], confirm_opts[:label])
-
-      i = input(input_type, form_type, conf_name, value, errors, confirm_opts)
-
-      i
-      |> concat_fields(l)
-      |> form_group(conf_name, confirm_opts, errors)
-    else
-      ""
-    end
-
-    i = input(input_type, form_type, format_name(name, opts[:source]),
-              value, errors, opts)
-    l =
-      name
-      |> format_name(opts[:source])
-      |> label(opts[:label_class], get_label(opts))
-
-    field =
-      i
-      |> concat_fields(l)
-      |> form_group(format_name(name, opts[:source]), opts, errors)
-
-    confirm
-    |> concat_fields(field)
-    |> div_form_row(opts[:in_fieldset])
+  def render_field(%Field{type: :fieldset_close} = field) do
+    append_html(field, fieldset_close_tag())
   end
 
   @doc """
-  Iterates through `opts` :choices key, rendering options for the select
+  Render text/password/email (catch-all)
   """
-  def render_options(form_type, opts, value, _errors) do
-    for choice <- get_choices(opts) do
-      option(form_type, choice[:value], choice[:text],
-             value, opts[:default], opts[:is_selected])
+  def render_field(field) do
+    field
+    |> input
+    |> add_label
+    |> wrap_in_form_group
+    |> add_confirm
+    |> wrap_in_div
+  end
+
+  @doc """
+  Render a file field for :update. If we have `value`, try to render
+  an img element with a thumbnail.
+  """
+  def file(%Field{form_type: :update} = field) do
+    field =
+      field
+      |> delete_in_field(:default)
+      |> put_in_field(:form_type, :create)
+
+    prepend_html(field, [get_img_preview(field.value), file(field).html])
+  end
+
+  @doc """
+  Render a file field for :create.
+  """
+  def file(%Field{form_type: :create} = field) do
+    tag_opts =
+      Keyword.new
+      |> put_name(format_name(field.name, field.source))
+      |> put_type(field.type)
+      |> put_class(field.opts)
+      |> put_placeholder(field.opts)
+
+    {:safe, html} = tag(:input, tag_opts)
+    prepend_html(field, html)
+  end
+
+  @doc """
+  Render a textarea field for :update.
+  """
+  @spec textarea(Field.t) :: Field.t
+  def textarea(%Field{form_type: :update} = field) do
+    field
+    |> delete_in_opts(:default)
+    |> put_in_field(:form_type, :create)
+    |> textarea
+  end
+
+  @doc """
+  Render a textarea field for :create.
+  """
+  def textarea(%Field{value: nil} = field) do
+    tag_opts =
+      Keyword.new
+      |> put_name(format_name(field.name, field.source))
+      |> put_class(field.opts)
+      |> put_rows(field.opts)
+
+    {:safe, html} = content_tag(:textarea, tag_opts) do
+      field.opts[:default] || ""
     end
+
+    prepend_html(field, html)
+  end
+
+  def textarea(%Field{value: value} = field)
+      when is_map(value) or is_list(value) do
+    tag_opts =
+      Keyword.new
+      |> put_name(format_name(field.name, field.source))
+      |> put_class(field.opts)
+      |> put_rows(field.opts)
+
+    {:safe, html} = content_tag(:textarea, tag_opts) do
+      Poison.encode!(value)
+    end
+    prepend_html(field, html)
+  end
+
+  def textarea(%Field{value: value} = field) do
+    tag_opts =
+      Keyword.new
+      |> put_name(format_name(field.name, field.source))
+      |> put_class(field.opts)
+      |> put_rows(field.opts)
+
+    {:safe, html} = content_tag(:textarea, tag_opts) do
+      value || ""
+    end
+    prepend_html(field, html)
   end
 
   @doc """
   Iterates through `opts` :choices key, rendering input type="radio"s
   """
-  def render_radios(form_type, name, opts, value, _errors) do
-    for choice <- get_choices(opts) do
-      radio(form_type, name, choice[:value], choice[:text],
-            value, opts[:default], opts[:is_selected])
+  def radios(field) do
+    Enum.reduce(get_choices(field), field, fn(choice, acc) ->
+      radio(acc, choice)
+    end)
+  end
+
+  def radio(%Field{form_type: :create, value: nil} = field, choice) do
+    name = format_name(field.name, field.source)
+
+    tag_opts =
+      Keyword.new
+      |> put_name(name)
+      |> put_type(:radio)
+      |> put_value(choice[:value])
+      |> put_checked_match(get_checked(choice[:value], field.opts[:default]))
+
+    {:safe, input_html} = tag(:input, tag_opts)
+
+    {:safe, dummy_label_html} = content_tag(:label, for: name) do
+      ""
     end
+
+    {:safe, main_label_html} = content_tag(:label, for: name) do
+      [input_html, choice[:text]] |> raw
+    end
+
+    {:safe, wrap_html} = content_tag(:div, []) do
+      [dummy_label_html, main_label_html] |> raw
+    end
+
+    append_html(field, wrap_html)
+  end
+
+  def radio(%Field{opts: %{is_selected: is_checked_fun}} = field, choice) do
+    name = format_name(field.name, field.source)
+
+    tag_opts =
+      Keyword.new
+      |> put_name(name)
+      |> put_type(:radio)
+      |> put_value(choice[:value])
+      |> put_is_checked_fun(is_checked_fun, choice[:value], field.value)
+
+    {:safe, input_html} = tag(:input, tag_opts)
+
+    {:safe, dummy_label_html} = content_tag(:label, for: name) do
+      ""
+    end
+
+    {:safe, main_label_html} = content_tag(:label, for: name) do
+      [input_html, choice[:text]] |> raw
+    end
+
+    {:safe, wrap_html} = content_tag(:div, []) do
+      [dummy_label_html, main_label_html] |> raw
+    end
+
+    append_html(field, wrap_html)
+  end
+
+  def radio(%Field{} = field, choice) do
+    name = format_name(field.name, field.source)
+
+    tag_opts =
+      Keyword.new
+      |> put_name(name)
+      |> put_type(:radio)
+      |> put_value(choice[:value])
+      |> put_checked_match(get_checked(choice[:value], field.value))
+
+    {:safe, input_html} = tag(:input, tag_opts)
+
+    {:safe, dummy_label_html} = content_tag(:label, for: name) do
+      ""
+    end
+
+    {:safe, main_label_html} = content_tag(:label, for: name) do
+      [input_html, choice[:text]] |> raw
+    end
+
+    {:safe, wrap_html} = content_tag(:div, []) do
+      [dummy_label_html, main_label_html] |> raw
+    end
+
+    append_html(field, wrap_html)
   end
 
   @doc """
   Iterates through `opts` :choices key, rendering input type="checkbox"s
   """
-  def render_checks(form_type, name, opts, value, _errors) do
-    checks = for choice <- get_choices(opts) do
-      checkbox(form_type, name, choice[:value], choice[:text],
-               value, opts[:default], opts[:is_selected])
-    end
+  def checkboxes(%Field{} = field) do
+    name = format_name(field.name, field.source)
+
     empty_value =
-      case opts[:empty_value] do
+      case field.opts[:empty_value] do
         nil -> ""
         val ->
           {:safe, html} = tag(:input, [type: :hidden, value: val, name: name])
           html
       end
-    [empty_value, checks]
+
+    field = prepend_html(field, empty_value)
+
+    Enum.reduce(get_choices(field), field, fn(choice, acc) ->
+      checkbox(acc, choice)
+    end)
+  end
+
+  @doc """
+  Renders a checkbox.
+
+  This is for multiple checkboxes. Single checks are
+  handled through `input(:checkbox, ...)`
+  """
+  #def checkbox(form_type, name, choice_value, choice_text,
+  #             value, default, is_checked_fun \\ nil)
+  #def checkbox(:create, name, choice_value, choice_text, nil, default, _) do
+  def checkbox(%Field{form_type: :create, value: nil} = field, choice) do
+    name = format_name(field.name, field.source)
+
+    tag_opts =
+      Keyword.new
+      |> put_name("#{name}[]")
+      |> put_type(:checkbox)
+      |> put_value(choice[:value])
+      |> put_checked_match(get_checked(choice[:value], field.opts[:default]))
+
+    {:safe, input_html} = tag(:input, tag_opts)
+
+    {:safe, dummy_label_html} = content_tag(:label, for: name) do
+      ""
+    end
+
+    {:safe, main_label_html} = content_tag(:label, for: name) do
+      [input_html, choice[:text]] |> raw
+    end
+
+    {:safe, wrap_html} = content_tag(:div, []) do
+      [dummy_label_html, main_label_html] |> raw
+    end
+
+    append_html(field, wrap_html)
+  end
+
+  def checkbox(%Field{opts: %{is_selected: is_checked_fun}} = field, choice) do
+    name = format_name(field.name, field.source)
+
+    tag_opts =
+      Keyword.new
+      |> put_name("#{name}[]")
+      |> put_type(:checkbox)
+      |> put_value(choice[:value])
+      |> put_is_checked_fun(is_checked_fun, choice[:value], field.value)
+
+    {:safe, input_html} = tag(:input, tag_opts)
+
+    {:safe, dummy_label_html} = content_tag(:label, for: name) do
+      ""
+    end
+
+    {:safe, main_label_html} = content_tag(:label, for: name) do
+      [input_html, choice[:text]] |> raw
+    end
+
+    {:safe, wrap_html} = content_tag(:div, []) do
+      [dummy_label_html, main_label_html] |> raw
+    end
+
+    append_html(field, wrap_html)
+  end
+
+  def checkbox(%Field{} = field, choice) do
+    name = format_name(field.name, field.source)
+
+    tag_opts =
+      Keyword.new
+      |> put_name("#{name}[]")
+      |> put_type(:checkbox)
+      |> put_value(choice[:value])
+      |> put_checked_match(get_checked(choice[:value], field.value))
+
+    {:safe, input_html} = tag(:input, tag_opts)
+
+    {:safe, dummy_label_html} = content_tag(:label, for: name) do
+      ""
+    end
+
+    {:safe, main_label_html} = content_tag(:label, for: name) do
+      [input_html, choice[:text]] |> raw
+    end
+
+    {:safe, wrap_html} = content_tag(:div, []) do
+      [dummy_label_html, main_label_html] |> raw
+    end
+
+    append_html(field, wrap_html)
+  end
+
+  @doc """
+  Iterates through `opts` :choices key, rendering options for the select
+  """
+  def options(%Field{} = field) do
+    Enum.reduce(get_choices(field), field, fn(choice, acc) ->
+      option(acc, choice)
+    end)
+  end
+
+  def option(%Field{form_type: :update, opts: %{is_selected: is_selected_fun}} = field, choice) do
+    tag_opts =
+      Keyword.new
+      |> put_value(choice[:value])
+      |> put_is_selected_fun(is_selected_fun, choice[:value], field.value)
+
+    {:safe, html} = content_tag(:option, tag_opts) do
+      choice[:text] |> raw
+    end
+    append_html(field, html)
+  end
+
+  def option(%Field{form_type: :update} = field, choice) do
+    tag_opts =
+      Keyword.new
+      |> put_value(choice[:value])
+      |> put_selected(get_selected(choice[:value], field.value))
+
+    {:safe, html} = content_tag(:option, tag_opts) do
+      choice[:text] |> raw
+    end
+    append_html(field, html)
+  end
+
+  # no `value` - :create - match `choice_value` to `default`
+  def option(%Field{form_type: :create, value: nil} = field, choice) do
+    tag_opts =
+      Keyword.new
+      |> put_value(choice[:value])
+      |> put_selected(get_selected(choice[:value], field.opts[:default]))
+
+    {:safe, html} = content_tag(:option, tag_opts) do
+      choice[:text] |> raw
+    end
+    append_html(field, html)
+  end
+
+  def option(%Field{form_type: :create} = field, choice) do
+    tag_opts =
+      Keyword.new
+      |> put_value(choice[:value])
+      |> put_selected(get_selected(choice[:value], field.value))
+
+    {:safe, html} = content_tag(:option, tag_opts) do
+      choice[:text] |> raw
+    end
+    append_html(field, html)
+  end
+
+  @doc """
+  Renders a select tag. Passes `choices` to tag/4
+
+  ## Parameters:
+
+    * `name`: name of field
+    * `choices`: list of choices to be iterated as options
+    * `opts`: list with options for the field
+    * `_value`: empty
+    * `_errors`: empty
+  """
+  def select(%Field{} = field) do
+    name = format_name(field.name, field.source)
+    opts = Map.delete(field.opts, :default)
+    tag_opts =
+      Keyword.new
+      |> put_name(name)
+      |> put_class(opts)
+
+    case opts[:multiple] do
+      nil  ->
+        {:safe, html} = content_tag(:select, tag_opts) do
+          field.html |> raw
+        end
+        set_html(field, html)
+      true ->
+        {:safe, html} = content_tag(:select, [name: "#{name}[]", multiple: true]) do
+          field.html |> raw
+        end
+        set_html(field, html)
+    end
+  end
+
+  @doc """
+  Single checkbox
+  """
+  def input(%Field{type: :checkbox} = field) do
+    name = format_name(field.name, field.source)
+    tag_opts =
+      Keyword.new
+      |> put_name(name)
+      |> put_value("true")
+      |> put_type(:checkbox)
+      |> put_placeholder(field.opts)
+      |> put_class(field.opts)
+      |> put_checked(field.value, field.opts)
+
+    {:safe, hidden_tag} = tag(:input, [name: name, type: :hidden, value: "false"])
+    {:safe, input_tag}  = tag(:input, tag_opts)
+
+    prepend_html(field, [hidden_tag, input_tag])
+  end
+
+  def input(%Field{form_type: :update} = field) do
+    field
+    |> delete_in_opts(:default)
+    |> put_in_field(:form_type, :create)
+    |> input
+  end
+
+  def input(field) do
+    name = format_name(field.name, field.source)
+    tag_opts =
+      Keyword.new
+      |> put_name(name)
+      |> put_type(field.type)
+      |> put_value(field.value, field.opts)
+      |> put_slug_from(name, field.opts)
+      |> put_placeholder(field.opts)
+      |> put_class(field.opts)
+      |> put_tags(field.opts)
+
+    {:safe, html} = tag(:input, tag_opts)
+    prepend_html(field, html)
+  end
+
+  @doc """
+  Renders a label for `name`, with `class` and `text` as the
+  label's content.
+  """
+  @spec add_label(Field.t) :: String.t
+  def add_label(%Field{type: :checkbox, opts: %{multiple: false}} = field) do
+    name = format_name(field.name, field.source)
+    text = field.html <> get_label(field)
+    {:safe, html} = content_tag(:label, for: name, class: field.opts[:label_class]) do
+      text |> raw
+    end
+    set_html(field, html)
+  end
+
+  def add_label(%Field{} = field) do
+    name = format_name(field.name, field.source)
+    text = get_label(field)
+    if text do
+      {:safe, html} = content_tag(:label, for: name, class: field.opts[:label_class]) do
+        text |> raw
+      end
+      prepend_html(field, html)
+    else
+      field
+    end
+  end
+
+  @doc """
+  Add a confirm field if `opts.confirm` is true.
+  """
+  def add_confirm(%Field{opts: %{confirm: true}} = field) do
+    confirm_i18n = gettext("Confirm")
+
+    confirm_field =
+      field
+      |> put_in_field(:html, nil)
+      |> put_in_opts(:label, "#{confirm_i18n} #{get_label(field)}")
+      |> put_in_opts(:placeholder, "#{confirm_i18n} #{get_label(field)}")
+      |> put_in_field(:name, "#{field.name}_confirmation")
+      |> input
+      |> add_label
+      |> wrap_in_form_group
+
+    append_html(field, confirm_field.html)
+  end
+
+  def add_confirm(field) do
+    field
   end
 
   @doc """
@@ -211,22 +602,32 @@ defmodule Brando.Form.Fields do
     * `required` -- if the wrapped field is marked such
     * `has-error` -- if the field is found in `errors`
   """
-  @spec form_group(String.t, String.t, Keyword.t, Keyword.t) :: String.t
-  def form_group(contents, _name, opts, errors) do
-    classes = [class: get_group_classes(opts, errors)]
+  @spec wrap_in_form_group(Field.t) :: Field.t
+  def wrap_in_form_group(field) do
+    classes = [class: get_group_classes(field.opts, field.errors)]
     {:safe, html} = content_tag(:div, classes) do
-      [contents, render_errors(errors, opts), render_help_text(opts)] |> raw
+      [field.html, render_errors(field.errors, field.opts), render_help_text(field)] |> raw
     end
-    html
+    set_html(field, html)
+  end
+
+  def wrap_in_div(field, class \\ "form-row") do
+    if field.opts[:in_fieldset] do
+      field
+    else
+      {:safe, html} = content_tag(:div, class: class) do
+        raw(field.html)
+      end
+      set_html(field, html)
+    end
   end
 
   @doc """
   Renders `help_text` in a nicely formatted div.
   """
-  @spec render_help_text(String.t | nil) :: String.t
-  def render_help_text(nil), do: ""
-  def render_help_text([]), do: ""
-  def render_help_text(%{help_text: help_text}) do
+  @spec render_help_text(Field.t) :: String.t
+  def render_help_text(%Field{opts: []}), do: ""
+  def render_help_text(%Field{opts: %{help_text: help_text}}) do
     {:safe, html} = content_tag(:div, class: "help") do
       [content_tag(:i, " ", class: "fa fa-fw fa-question-circle"),
        content_tag(:span, help_text)]
@@ -277,369 +678,6 @@ defmodule Brando.Form.Fields do
     end
   end
 
-  @doc """
-  Concats `wrapped_field` and `label`, with `label` being
-  the first
-  """
-  @spec concat_fields(String.t, String.t) :: String.t
-  def concat_fields(wrapped_field, label_field), do:
-    [label_field, wrapped_field]
-
-  @doc """
-  Returns a div with class=`class` and `content`
-  """
-  @spec div_tag(String.t, String.t) :: String.t
-  def div_tag(content, class) do
-    {:safe, html} = content_tag(:div, class: class) do
-      content |> raw
-    end
-    html
-  end
-
-  @doc """
-  Wraps `field` in a div with `wrapper_class` as class.
-  """
-  @spec wrap(String.t, String.t | nil) :: String.t
-  def wrap(field, nil), do: field
-  def wrap(field, class) do
-    {:safe, html} = content_tag(:div, class: class) do
-      field |> raw
-    end
-    html
-  end
-
-  @doc """
-  Renders a label for `name`, with `class` and `text` as the
-  label's content.
-  """
-  @spec label(String.t, String.t, String.t) :: String.t
-  def label(_, _, false), do: ""
-  def label(name, class, text) do
-    {:safe, html} = content_tag(:label, for: name, class: class) do
-      text |> raw
-    end
-    html
-  end
-
-  @doc """
-  Render a file field for :update. If we have `value`, try to render
-  an img element with a thumbnail.
-  """
-  @spec file(atom, String.t, String.t, Options.t | Keyword.t,
-             Options.t | Keyword.t) :: String.t
-  def file(:update, name, value, errors, opts) do
-    opts = Map.delete(opts, :default)
-    [get_img_preview(value), file(:create, name, value, errors, opts)]
-  end
-
-  @doc """
-  Render a file field for :create.
-  """
-  def file(:create, name, _value, _errors, opts) do
-    tag_opts =
-      Keyword.new
-      |> put_name(name)
-      |> put_type(:file)
-      |> put_class(opts)
-      |> put_placeholder(opts)
-
-    {:safe, html} = tag(:input, tag_opts)
-    html
-  end
-
-  @doc """
-  Render a textarea field for :update.
-  """
-  @spec textarea(atom, String.t, String.t, Options.t | Keyword.t,
-                 Options.t | Keyword.t) :: String.t
-  def textarea(:update, name, value, errors, opts) do
-    opts = Map.delete(opts, :default)
-    textarea(:create, name, value, errors, opts)
-  end
-
-  @doc """
-  Render a textarea field for :create.
-  """
-  def textarea(_form_type, name, nil, _errors, opts) do
-    tag_opts =
-      Keyword.new
-      |> put_name(name)
-      |> put_class(opts)
-      |> put_rows(opts)
-
-    {:safe, html} = content_tag(:textarea, tag_opts) do
-      opts[:default] || ""
-    end
-    html
-  end
-  def textarea(_form_type, name, value, _errors, opts)
-      when is_map(value) or is_list(value) do
-    tag_opts =
-      Keyword.new
-      |> put_name(name)
-      |> put_rows(opts)
-      |> put_class(opts)
-
-    {:safe, html} = content_tag(:textarea, tag_opts) do
-      Poison.encode!(value)
-    end
-    html
-  end
-  def textarea(_form_type, name, value, _errors, opts) do
-    tag_opts =
-      Keyword.new
-      |> put_name(name)
-      |> put_rows(opts)
-      |> put_class(opts)
-
-    {:safe, html} = content_tag(:textarea, tag_opts) do
-      value || ""
-    end
-    html
-  end
-
-  @doc """
-  Renders a select tag. Passes `choices` to tag/4
-
-  ## Parameters:
-
-    * `name`: name of field
-    * `choices`: list of choices to be iterated as options
-    * `opts`: list with options for the field
-    * `_value`: empty
-    * `_errors`: empty
-  """
-  def select(_, name, choices, opts, _value, _errors) do
-    opts = Map.delete(opts, :default)
-    tag_opts =
-      Keyword.new
-      |> put_name(name)
-      |> put_class(opts)
-
-    case opts[:multiple] do
-      nil  ->
-        {:safe, html} = content_tag(:select, tag_opts) do
-          choices |> raw
-        end
-        html
-      true ->
-        {:safe, html} = content_tag(:select, [name: "#{name}[]", multiple: true]) do
-          choices |> raw
-        end
-        html
-    end
-  end
-
-  def option(form_type, choice_value, choice_text, value, default,
-             is_selected_fun \\ nil)
-  def option(:update, choice_value, choice_text, value, _default, nil) do
-    tag_opts =
-      Keyword.new
-      |> put_value(choice_value)
-      |> put_selected(get_selected(choice_value, value))
-
-    {:safe, html} = content_tag(:option, tag_opts) do
-      choice_text |> raw
-    end
-    html
-  end
-
-  def option(:update, choice_value, choice_text, value, _default, is_selected_fun) do
-    tag_opts =
-      Keyword.new
-      |> put_value(choice_value)
-      |> put_is_selected_fun(is_selected_fun, choice_value, value)
-
-    {:safe, html} = content_tag(:option, tag_opts) do
-      choice_text |> raw
-    end
-    html
-  end
-
-  # no `value` - :create - match `choice_value` to `default`
-  def option(:create, choice_value, choice_text, nil, default, _) do
-    tag_opts =
-      Keyword.new
-      |> put_value(choice_value)
-      |> put_selected(get_selected(choice_value, default))
-
-    {:safe, html} = content_tag(:option, tag_opts) do
-      choice_text |> raw
-    end
-    html
-  end
-
-  def option(:create, choice_value, choice_text, value, _default, _) do
-    tag_opts =
-      Keyword.new
-      |> put_value(choice_value)
-      |> put_selected(get_selected(choice_value, value))
-
-    {:safe, html} = content_tag(:option, tag_opts) do
-      choice_text |> raw
-    end
-    html
-  end
-
-  def radio(form_type, name, choice_value, choice_text, value, default, is_checked_fun \\ nil)
-  def radio(:create, name, choice_value, choice_text, nil, default, _) do
-    tag_opts =
-      Keyword.new
-      |> put_name(name)
-      |> put_type(:radio)
-      |> put_value(choice_value)
-      |> put_checked_match(get_checked(choice_value, default))
-
-    {:safe, input_html} = tag(:input, tag_opts)
-
-    {:safe, dummy_label_html} = content_tag(:label, for: name) do
-      ""
-    end
-
-    {:safe, main_label_html} = content_tag(:label, for: name) do
-      [input_html, choice_text] |> raw
-    end
-
-    {:safe, wrap_html} = content_tag(:div, []) do
-      [dummy_label_html, main_label_html] |> raw
-    end
-
-    wrap_html
-  end
-
-  def radio(_, name, choice_value, choice_text, value, _default, nil) do
-    tag_opts =
-      Keyword.new
-      |> put_name(name)
-      |> put_type(:radio)
-      |> put_value(choice_value)
-      |> put_checked_match(get_checked(choice_value, value))
-
-    {:safe, input_html} = tag(:input, tag_opts)
-
-    {:safe, dummy_label_html} = content_tag(:label, for: name) do
-      ""
-    end
-
-    {:safe, main_label_html} = content_tag(:label, for: name) do
-      [input_html, choice_text] |> raw
-    end
-
-    {:safe, wrap_html} = content_tag(:div, []) do
-      [dummy_label_html, main_label_html] |> raw
-    end
-
-    wrap_html
-  end
-
-  def radio(_, name, choice_value, choice_text, value, _default, is_checked_fun) do
-    tag_opts =
-      Keyword.new
-      |> put_name(name)
-      |> put_type(:radio)
-      |> put_value(choice_value)
-      |> put_is_checked_fun(is_checked_fun, choice_value, value)
-
-    {:safe, input_html} = tag(:input, tag_opts)
-
-    {:safe, dummy_label_html} = content_tag(:label, for: name) do
-      ""
-    end
-
-    {:safe, main_label_html} = content_tag(:label, for: name) do
-      [input_html, choice_text] |> raw
-    end
-
-    {:safe, wrap_html} = content_tag(:div, []) do
-      [dummy_label_html, main_label_html] |> raw
-    end
-
-    wrap_html
-  end
-
-  @doc """
-  Renders a checkbox.
-
-  This is for multiple checkboxes. Single checks are
-  handled through `input(:checkbox, ...)`
-  """
-  def checkbox(form_type, name, choice_value, choice_text,
-               value, default, is_checked_fun \\ nil)
-  def checkbox(:create, name, choice_value, choice_text, nil, default, _) do
-    tag_opts =
-      Keyword.new
-      |> put_name("#{name}[]")
-      |> put_type(:checkbox)
-      |> put_value(choice_value)
-      |> put_checked_match(get_checked(choice_value, default))
-
-    {:safe, input_html} = tag(:input, tag_opts)
-
-    {:safe, dummy_label_html} = content_tag(:label, for: name) do
-      ""
-    end
-
-    {:safe, main_label_html} = content_tag(:label, for: name) do
-      [input_html, choice_text] |> raw
-    end
-
-    {:safe, wrap_html} = content_tag(:div, []) do
-      [dummy_label_html, main_label_html] |> raw
-    end
-
-    wrap_html
-  end
-
-  def checkbox(_, name, choice_value, choice_text, value, _, nil) do
-    tag_opts =
-      Keyword.new
-      |> put_name("#{name}[]")
-      |> put_type(:checkbox)
-      |> put_value(choice_value)
-      |> put_checked_match(get_checked(choice_value, value))
-
-    {:safe, input_html} = tag(:input, tag_opts)
-
-    {:safe, dummy_label_html} = content_tag(:label, for: name) do
-      ""
-    end
-
-    {:safe, main_label_html} = content_tag(:label, for: name) do
-      [input_html, choice_text] |> raw
-    end
-
-    {:safe, wrap_html} = content_tag(:div, []) do
-      [dummy_label_html, main_label_html] |> raw
-    end
-
-    wrap_html
-  end
-
-  def checkbox(_, name, choice_value, choice_text, value, _, is_checked_fun) do
-    tag_opts =
-      Keyword.new
-      |> put_name("#{name}[]")
-      |> put_type(:checkbox)
-      |> put_value(choice_value)
-      |> put_is_checked_fun(is_checked_fun, choice_value, value)
-
-    {:safe, input_html} = tag(:input, tag_opts)
-
-    {:safe, dummy_label_html} = content_tag(:label, for: name) do
-      ""
-    end
-
-    {:safe, main_label_html} = content_tag(:label, for: name) do
-      [input_html, choice_text] |> raw
-    end
-
-    {:safe, wrap_html} = content_tag(:div, []) do
-      [dummy_label_html, main_label_html] |> raw
-    end
-
-    wrap_html
-  end
-
   def fieldset_open_tag(nil, _in_fieldset), do:
     ~s(<fieldset><div class="form-row">)
 
@@ -648,52 +686,6 @@ defmodule Brando.Form.Fields do
 
   def fieldset_close_tag(), do:
     ~s(</div></fieldset>)
-
-  def div_form_row(content, nil) do
-    {:safe, html} = content_tag(:div, class: "form-row") do
-      content |> raw
-    end
-    html
-  end
-
-  def div_form_row(content, _span), do: content
-
-  def input(:checkbox, _form_type, name, value, _errors, opts) do
-    tag_opts =
-      Keyword.new
-      |> put_name(name)
-      |> put_value("true")
-      |> put_type(:checkbox)
-      |> put_placeholder(opts)
-      |> put_class(opts)
-      |> put_checked(value, opts)
-
-    {:safe, hidden_tag} = tag(:input, [name: name, type: :hidden,
-                                       value: "false"])
-    {:safe, input_tag}  = tag(:input, tag_opts)
-
-    [hidden_tag, input_tag]
-  end
-
-  def input(input_type, :update, name, value, errors, opts) do
-    opts = Map.delete(opts, :default)
-    input(input_type, :create, name, value, errors, opts)
-  end
-
-  def input(input_type, _form_type, name, value, _errors, opts) do
-    tag_opts =
-      Keyword.new
-      |> put_name(name)
-      |> put_type(input_type)
-      |> put_value(value, opts)
-      |> put_slug_from(name, opts)
-      |> put_placeholder(opts)
-      |> put_class(opts)
-      |> put_tags(opts)
-
-    {:safe, html} = tag(:input, tag_opts)
-    html
-  end
 
   defp put_slug_from(tag_opts, name, opts) do
     case opts[:slug_from] do
@@ -838,10 +830,13 @@ defmodule Brando.Form.Fields do
   @doc """
   Parse and return `opts` looking for label
   """
-  def get_label(%{label: label_text}) do
+  def get_label(%Field{opts: %{label: label_text}}) do
     label_text
   end
-  def get_label(%{name: name, schema: schema}) do
+  def get_label(%Field{name: nil, schema: nil}) do
+    nil
+  end
+  def get_label(%Field{name: name, schema: schema}) do
     schema.__field__(name)
   end
 
@@ -906,7 +901,7 @@ defmodule Brando.Form.Fields do
   @doc """
   Evals the quoted choices function and returns the result
   """
-  def get_choices(%{choices: fun}) do
+  def get_choices(%Field{opts: %{choices: fun}}) do
     apply(fun, [])
   end
   def get_choices(_) do
