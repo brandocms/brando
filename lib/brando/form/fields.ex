@@ -704,7 +704,7 @@ defmodule Brando.Form.Fields do
     end
   end
 
-  defp put_class(tag_opts, []) do
+  defp put_class(tag_opts, nil) do
     tag_opts
   end
   defp put_class(tag_opts, opts) do
