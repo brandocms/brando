@@ -32,10 +32,6 @@ msgstr ""
 msgid "Admin"
 msgstr ""
 
-#: web/templates/admin/instagram/index.html.eex:9 web/views/instagram_view.ex:8
-msgid "Approved"
-msgstr ""
-
 #: web/templates/session/layout/auth.html.eex:10
 msgid "Authorization"
 msgstr ""
@@ -114,14 +110,8 @@ msgstr ""
 msgid "Delete user"
 msgstr ""
 
-#: lib/brando/html.ex:339 lib/brando/html/inspect.ex:128
-#: web/templates/admin/instagram/index.html.eex:15
-#: web/views/instagram_view.ex:12
+#: lib/brando/html.ex:339 lib/brando/html/inspect.ex:145
 msgid "Deleted"
-msgstr ""
-
-#: web/views/instagram_view.ex:14 web/views/instagram_view.ex:23
-msgid "Download failed"
 msgstr ""
 
 #: web/templates/admin/image/index.html.eex:20
@@ -230,14 +220,6 @@ msgstr ""
 msgid "Image series updated"
 msgstr ""
 
-#: web/controllers/admin/instagram_controller.ex:26
-msgid "Index - Instagram"
-msgstr ""
-
-#: web/templates/admin/instagram/index.html.eex:1
-msgid "Index - Instagram images"
-msgstr ""
-
 #: web/controllers/admin/image_controller.ex:23
 #: web/templates/admin/image/index.html.eex:1
 msgid "Index - images"
@@ -248,22 +230,12 @@ msgstr ""
 msgid "Index - users"
 msgstr ""
 
-#: web/templates/admin/instagram/index.html.eex:3
-msgid "Index of instagram images. Only photos in the \"approved\"-row will be displayed on the webpage."
-msgstr ""
-
 #: web/menus/admin_menu.ex:14
 msgid "Log out"
 msgstr ""
 
 #: web/templates/session/login.html.eex:10
 msgid "Login"
-msgstr ""
-
-#: web/templates/admin/instagram/index.html.eex:9
-#: web/templates/admin/instagram/index.html.eex:12
-#: web/templates/admin/instagram/index.html.eex:15
-msgid "Mark as"
 msgstr ""
 
 #: web/controllers/admin/image_category_controller.ex:25
@@ -316,21 +288,12 @@ msgstr ""
 msgid "Profile updated"
 msgstr ""
 
-#: web/templates/admin/instagram/index.html.eex:12
-#: web/views/instagram_view.ex:10
-msgid "Rejected"
-msgstr ""
-
 #: web/templates/admin/image_category/sequence.html.eex:23
 msgid "Save sorted category"
 msgstr ""
 
 #: web/templates/admin/image_series/sequence.html.eex:12
 msgid "Save sorted series"
-msgstr ""
-
-#: web/templates/admin/instagram/index.html.eex:5
-msgid "Select photos, and click on your wanted action."
 msgstr ""
 
 #: web/templates/error/server_error.html.eex:24
@@ -410,8 +373,7 @@ msgstr ""
 msgid "Images"
 msgstr ""
 
-#: web/menus/images_menu.ex:11 web/menus/instagram_menu.ex:11
-#: web/menus/users_menu.ex:11
+#: web/menus/images_menu.ex:11 web/menus/users_menu.ex:11
 msgid "Index"
 msgstr ""
 
@@ -419,20 +381,16 @@ msgstr ""
 msgid "Users"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:134
+#: lib/brando/html/inspect.ex:151
 msgid "** censored **"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:213
+#: lib/brando/html/inspect.ex:230
 msgid "Association not fetched"
 msgstr ""
 
 #: web/models/user.ex:209
 msgid "Avatar"
-msgstr ""
-
-#: web/models/instagram_image.ex:272
-msgid "Caption"
 msgstr ""
 
 #: web/models/image_category.ex:136
@@ -443,20 +401,16 @@ msgstr ""
 msgid "Configuration"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:113
+#: lib/brando/html/inspect.ex:130
 msgid "Configuration data"
 msgstr ""
 
-#: lib/brando/form/fields.ex:130
+#: lib/brando/form/fields.ex:578
 msgid "Confirm"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:220
+#: lib/brando/html/inspect.ex:237
 msgid "Connected"
-msgstr ""
-
-#: web/models/instagram_image.ex:276
-msgid "Created"
 msgstr ""
 
 #: web/models/image.ex:187 web/models/image_category.ex:137
@@ -468,15 +422,15 @@ msgstr ""
 msgid "Credits"
 msgstr ""
 
-#: lib/brando/html.ex:333 lib/brando/html/inspect.ex:127
+#: lib/brando/html.ex:333 lib/brando/html/inspect.ex:144
 msgid "Draft"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:207 lib/brando/html/inspect.ex:216
+#: lib/brando/html/inspect.ex:224 lib/brando/html/inspect.ex:233
 msgid "Empty association"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:105 lib/brando/html/inspect.ex:157
+#: lib/brando/html/inspect.ex:122 lib/brando/html/inspect.ex:174
 msgid "Encoded value"
 msgstr ""
 
@@ -485,17 +439,12 @@ msgid "Full name"
 msgstr ""
 
 #: web/models/image.ex:184 web/models/image_category.ex:133
-#: web/models/image_series.ex:181 web/models/instagram_image.ex:269
-#: web/models/user.ex:199
+#: web/models/image_series.ex:181 web/models/user.ex:199
 msgid "ID"
 msgstr ""
 
 #: web/models/image.ex:185
 msgid "Image"
-msgstr ""
-
-#: web/models/instagram_image.ex:274
-msgid "Image URL"
 msgstr ""
 
 #: web/models/image_series.ex:189 web/models/image_series.ex:190
@@ -511,10 +460,6 @@ msgstr ""
 msgid "Inserted at"
 msgstr ""
 
-#: web/models/instagram_image.ex:270
-msgid "Instagram ID"
-msgstr ""
-
 #: web/models/user.ex:205
 msgid "Language"
 msgstr ""
@@ -523,15 +468,11 @@ msgstr ""
 msgid "Last login"
 msgstr ""
 
-#: web/models/instagram_image.ex:273
-msgid "Link"
-msgstr ""
-
 #: web/models/image_category.ex:134 web/models/image_series.ex:182
 msgid "Name"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:109
+#: lib/brando/html/inspect.ex:126
 msgid "No connected image"
 msgstr ""
 
@@ -539,16 +480,16 @@ msgstr ""
 msgid "No results"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:76 lib/brando/html/inspect.ex:84
-#: lib/brando/html/inspect.ex:161
+#: lib/brando/html/inspect.ex:93 lib/brando/html/inspect.ex:101
+#: lib/brando/html/inspect.ex:178
 msgid "No value"
 msgstr ""
 
-#: lib/brando/html.ex:327 lib/brando/html/inspect.ex:126
+#: lib/brando/html.ex:327 lib/brando/html/inspect.ex:143
 msgid "Pending"
 msgstr ""
 
-#: lib/brando/html.ex:321 lib/brando/html/inspect.ex:125
+#: lib/brando/html.ex:321 lib/brando/html/inspect.ex:142
 msgid "Published"
 msgstr ""
 
@@ -560,7 +501,7 @@ msgstr ""
 msgid "Roles"
 msgstr ""
 
-#: lib/brando/form/fields.ex:103
+#: lib/brando/form/fields.ex:91
 msgid "Save"
 msgstr ""
 
@@ -570,18 +511,6 @@ msgstr ""
 
 #: web/models/image_category.ex:135 web/models/image_series.ex:183
 msgid "Slug"
-msgstr ""
-
-#: web/models/instagram_image.ex:277
-msgid "Status"
-msgstr ""
-
-#: web/models/instagram_image.ex:275
-msgid "Thumbnail URL"
-msgstr ""
-
-#: web/models/instagram_image.ex:271
-msgid "Type"
 msgstr ""
 
 #: web/models/image.ex:190 web/models/image_category.ex:140
@@ -597,15 +526,15 @@ msgstr ""
 msgid "Username"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:96
+#: lib/brando/html/inspect.ex:113
 msgid "admin"
 msgstr ""
 
-#: lib/brando/form/fields.ex:264
+#: lib/brando/form/fields.ex:665
 msgid "can't be blank"
 msgstr ""
 
-#: lib/brando/form/fields.ex:268
+#: lib/brando/form/fields.ex:669
 msgid "has invalid format"
 msgstr ""
 
@@ -637,35 +566,27 @@ msgstr ""
 msgid "imageseries"
 msgstr ""
 
-#: web/models/instagram_image.ex:265
-msgid "instagram image"
-msgstr ""
-
-#: web/models/instagram_image.ex:266
-msgid "instagram images"
-msgstr ""
-
-#: lib/brando/form/fields.ex:270
+#: lib/brando/form/fields.ex:671
 msgid "is invalid"
 msgstr ""
 
-#: lib/brando/form/fields.ex:272
+#: lib/brando/form/fields.ex:673
 msgid "is reserved"
 msgstr ""
 
-#: lib/brando/form/fields.ex:266
+#: lib/brando/form/fields.ex:667
 msgid "must be unique"
 msgstr ""
 
-#: lib/brando/form/fields.ex:274
+#: lib/brando/form/fields.ex:675
 msgid "should be at least %{count} characters"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:97
+#: lib/brando/html/inspect.ex:114
 msgid "staff"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:95
+#: lib/brando/html/inspect.ex:112
 msgid "superuser"
 msgstr ""
 
@@ -679,10 +600,6 @@ msgstr ""
 
 #: lib/brando/html.ex:174
 msgid "Delete"
-msgstr ""
-
-#: web/menus/instagram_menu.ex:10
-msgid "Instagram"
 msgstr ""
 
 #: lib/brando/images/upload.ex:70
@@ -784,10 +701,6 @@ msgstr ""
 
 #: lib/brando/plugs/authenticate.ex:37
 msgid "Access denied."
-msgstr ""
-
-#: web/models/instagram_image.ex:138
-msgid "Instagram: Instagram API error. Download failed.\nURL: %{url}"
 msgstr ""
 
 #: web/models/user.ex:94

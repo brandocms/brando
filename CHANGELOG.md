@@ -1,4 +1,4 @@
-## v0.21.0 (2016-XX-XX)
+## v0.21.0 (2016-02-25)
 
 * Backwards incompatible changes
   * Extracted Instagram to its own application -> http://www.github.com/twined/brando_instagram

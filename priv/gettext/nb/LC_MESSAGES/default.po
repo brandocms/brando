@@ -46,10 +46,6 @@ msgstr "Adgang nektet"
 msgid "Admin"
 msgstr "Admin"
 
-#: web/templates/admin/instagram/index.html.eex:9 web/views/instagram_view.ex:8
-msgid "Approved"
-msgstr "Godkjent"
-
 #: web/templates/session/layout/auth.html.eex:10
 msgid "Authorization"
 msgstr "Autorisasjon"
@@ -128,15 +124,9 @@ msgstr "Slett bilder"
 msgid "Delete user"
 msgstr "Slett bruker"
 
-#: lib/brando/html.ex:339 lib/brando/html/inspect.ex:128
-#: web/templates/admin/instagram/index.html.eex:15
-#: web/views/instagram_view.ex:12
+#: lib/brando/html.ex:339 lib/brando/html/inspect.ex:145
 msgid "Deleted"
 msgstr "Slettet"
-
-#: web/views/instagram_view.ex:14 web/views/instagram_view.ex:23
-msgid "Download failed"
-msgstr "Nedlasting mislyktes"
 
 #: web/templates/admin/image/index.html.eex:20
 msgid "Edit image"
@@ -244,14 +234,6 @@ msgstr "Bildeserie slettet"
 msgid "Image series updated"
 msgstr "Bildeserie oppdatert"
 
-#: web/controllers/admin/instagram_controller.ex:26
-msgid "Index - Instagram"
-msgstr "Oversikt - Instagram"
-
-#: web/templates/admin/instagram/index.html.eex:1
-msgid "Index - Instagram images"
-msgstr "Oversikt - Instagrambilder"
-
 #: web/controllers/admin/image_controller.ex:23
 #: web/templates/admin/image/index.html.eex:1
 msgid "Index - images"
@@ -262,10 +244,6 @@ msgstr "Oversikt - bilder"
 msgid "Index - users"
 msgstr "Oversikt - brukere"
 
-#: web/templates/admin/instagram/index.html.eex:3
-msgid "Index of instagram images. Only photos in the \"approved\"-row will be displayed on the webpage."
-msgstr "Indeks for Instagram-bilder. Kun bilder i “godkjent”-raden vises på websiden."
-
 #: web/menus/admin_menu.ex:14
 msgid "Log out"
 msgstr "Logg ut"
@@ -273,12 +251,6 @@ msgstr "Logg ut"
 #: web/templates/session/login.html.eex:10
 msgid "Login"
 msgstr "Pålogging"
-
-#: web/templates/admin/instagram/index.html.eex:9
-#: web/templates/admin/instagram/index.html.eex:12
-#: web/templates/admin/instagram/index.html.eex:15
-msgid "Mark as"
-msgstr "Marker som"
 
 #: web/controllers/admin/image_category_controller.ex:25
 #: web/controllers/admin/image_category_controller.ex:41
@@ -330,11 +302,6 @@ msgstr "Profil"
 msgid "Profile updated"
 msgstr "Profil oppdatert"
 
-#: web/templates/admin/instagram/index.html.eex:12
-#: web/views/instagram_view.ex:10
-msgid "Rejected"
-msgstr "Avvist"
-
 #: web/templates/admin/image_category/sequence.html.eex:23
 msgid "Save sorted category"
 msgstr "Lagre sortert kategori"
@@ -342,10 +309,6 @@ msgstr "Lagre sortert kategori"
 #: web/templates/admin/image_series/sequence.html.eex:12
 msgid "Save sorted series"
 msgstr "Lagre sortert serie"
-
-#: web/templates/admin/instagram/index.html.eex:5
-msgid "Select photos, and click on your wanted action."
-msgstr "Velg bilder, og klikk på den ønskede handlingen."
 
 #: web/templates/error/server_error.html.eex:24
 msgid "Server error"
@@ -424,8 +387,7 @@ msgstr "Legg til"
 msgid "Images"
 msgstr "Bilder"
 
-#: web/menus/images_menu.ex:11 web/menus/instagram_menu.ex:11
-#: web/menus/users_menu.ex:11
+#: web/menus/images_menu.ex:11 web/menus/users_menu.ex:11
 msgid "Index"
 msgstr "Oversikt"
 
@@ -433,21 +395,17 @@ msgstr "Oversikt"
 msgid "Users"
 msgstr "Brukere"
 
-#: lib/brando/html/inspect.ex:134
+#: lib/brando/html/inspect.ex:151
 msgid "** censored **"
 msgstr "** sensurert **"
 
-#: lib/brando/html/inspect.ex:213
+#: lib/brando/html/inspect.ex:230
 msgid "Association not fetched"
 msgstr "Forbindelse ikke hentet"
 
 #: web/models/user.ex:209
 msgid "Avatar"
 msgstr "Profilbilde"
-
-#: web/models/instagram_image.ex:272
-msgid "Caption"
-msgstr "Overskrift"
 
 #: web/models/image_category.ex:136
 msgid "Config"
@@ -457,21 +415,17 @@ msgstr "Konfigurer"
 msgid "Configuration"
 msgstr "Konfigurasjon"
 
-#: lib/brando/html/inspect.ex:113
+#: lib/brando/html/inspect.ex:130
 msgid "Configuration data"
 msgstr "Konfigurasjonsdata"
 
-#: lib/brando/form/fields.ex:130
+#: lib/brando/form/fields.ex:578
 msgid "Confirm"
 msgstr "Bekreft"
 
-#: lib/brando/html/inspect.ex:220
+#: lib/brando/html/inspect.ex:237
 msgid "Connected"
 msgstr "Tilkoblet"
-
-#: web/models/instagram_image.ex:276
-msgid "Created"
-msgstr "Opprettet"
 
 #: web/models/image.ex:187 web/models/image_category.ex:137
 #: web/models/image_series.ex:187
@@ -482,15 +436,15 @@ msgstr "Skaper"
 msgid "Credits"
 msgstr "Krediteringer"
 
-#: lib/brando/html.ex:333 lib/brando/html/inspect.ex:127
+#: lib/brando/html.ex:333 lib/brando/html/inspect.ex:144
 msgid "Draft"
 msgstr "Kladd"
 
-#: lib/brando/html/inspect.ex:207 lib/brando/html/inspect.ex:216
+#: lib/brando/html/inspect.ex:224 lib/brando/html/inspect.ex:233
 msgid "Empty association"
 msgstr "Tom forbindelse"
 
-#: lib/brando/html/inspect.ex:105 lib/brando/html/inspect.ex:157
+#: lib/brando/html/inspect.ex:122 lib/brando/html/inspect.ex:174
 msgid "Encoded value"
 msgstr "Kodet verdi"
 
@@ -499,18 +453,13 @@ msgid "Full name"
 msgstr "Fullt navn"
 
 #: web/models/image.ex:184 web/models/image_category.ex:133
-#: web/models/image_series.ex:181 web/models/instagram_image.ex:269
-#: web/models/user.ex:199
+#: web/models/image_series.ex:181 web/models/user.ex:199
 msgid "ID"
 msgstr "ID"
 
 #: web/models/image.ex:185
 msgid "Image"
 msgstr "Bilde"
-
-#: web/models/instagram_image.ex:274
-msgid "Image URL"
-msgstr "Bilde-URL"
 
 #: web/models/image_series.ex:189 web/models/image_series.ex:190
 msgid "Image category"
@@ -525,10 +474,6 @@ msgstr "Bildeserie"
 msgid "Inserted at"
 msgstr "Lagt til"
 
-#: web/models/instagram_image.ex:270
-msgid "Instagram ID"
-msgstr "Instagram-ID"
-
 #: web/models/user.ex:205
 msgid "Language"
 msgstr "Språk"
@@ -537,15 +482,11 @@ msgstr "Språk"
 msgid "Last login"
 msgstr "Forrige innlogging"
 
-#: web/models/instagram_image.ex:273
-msgid "Link"
-msgstr "Lenke"
-
 #: web/models/image_category.ex:134 web/models/image_series.ex:182
 msgid "Name"
 msgstr "Navn"
 
-#: lib/brando/html/inspect.ex:109
+#: lib/brando/html/inspect.ex:126
 msgid "No connected image"
 msgstr "Inget tilknyttet bilde"
 
@@ -553,16 +494,16 @@ msgstr "Inget tilknyttet bilde"
 msgid "No results"
 msgstr "Ingen resultater"
 
-#: lib/brando/html/inspect.ex:76 lib/brando/html/inspect.ex:84
-#: lib/brando/html/inspect.ex:161
+#: lib/brando/html/inspect.ex:93 lib/brando/html/inspect.ex:101
+#: lib/brando/html/inspect.ex:178
 msgid "No value"
 msgstr "Ingen verdi"
 
-#: lib/brando/html.ex:327 lib/brando/html/inspect.ex:126
+#: lib/brando/html.ex:327 lib/brando/html/inspect.ex:143
 msgid "Pending"
 msgstr "Venter"
 
-#: lib/brando/html.ex:321 lib/brando/html/inspect.ex:125
+#: lib/brando/html.ex:321 lib/brando/html/inspect.ex:142
 msgid "Published"
 msgstr "Publisert"
 
@@ -574,7 +515,7 @@ msgstr "Rettigheter"
 msgid "Roles"
 msgstr "Roller"
 
-#: lib/brando/form/fields.ex:103
+#: lib/brando/form/fields.ex:91
 msgid "Save"
 msgstr "Lagre"
 
@@ -585,18 +526,6 @@ msgstr "Sekvens"
 #: web/models/image_category.ex:135 web/models/image_series.ex:183
 msgid "Slug"
 msgstr "URL-tamp"
-
-#: web/models/instagram_image.ex:277
-msgid "Status"
-msgstr "Status"
-
-#: web/models/instagram_image.ex:275
-msgid "Thumbnail URL"
-msgstr "Miniatyrbilde-URL"
-
-#: web/models/instagram_image.ex:271
-msgid "Type"
-msgstr "Type"
 
 #: web/models/image.ex:190 web/models/image_category.ex:140
 #: web/models/image_series.ex:192 web/models/user.ex:208
@@ -611,15 +540,15 @@ msgstr "Brukerinformasjon"
 msgid "Username"
 msgstr "Brukernavn"
 
-#: lib/brando/html/inspect.ex:96
+#: lib/brando/html/inspect.ex:113
 msgid "admin"
 msgstr "admin"
 
-#: lib/brando/form/fields.ex:264
+#: lib/brando/form/fields.ex:665
 msgid "can't be blank"
 msgstr "kan ikke være tomt"
 
-#: lib/brando/form/fields.ex:268
+#: lib/brando/form/fields.ex:669
 msgid "has invalid format"
 msgstr "har ugyldig format"
 
@@ -651,35 +580,27 @@ msgstr "bildeserie"
 msgid "imageseries"
 msgstr "bildeserier"
 
-#: web/models/instagram_image.ex:265
-msgid "instagram image"
-msgstr "instagram-bilde"
-
-#: web/models/instagram_image.ex:266
-msgid "instagram images"
-msgstr "instagram-bilder"
-
-#: lib/brando/form/fields.ex:270
+#: lib/brando/form/fields.ex:671
 msgid "is invalid"
 msgstr "er ugyldig"
 
-#: lib/brando/form/fields.ex:272
+#: lib/brando/form/fields.ex:673
 msgid "is reserved"
 msgstr "er reservert"
 
-#: lib/brando/form/fields.ex:266
+#: lib/brando/form/fields.ex:667
 msgid "must be unique"
 msgstr "må være unikt"
 
-#: lib/brando/form/fields.ex:274
+#: lib/brando/form/fields.ex:675
 msgid "should be at least %{count} characters"
 msgstr "må være minst %{count} tegn"
 
-#: lib/brando/html/inspect.ex:97
+#: lib/brando/html/inspect.ex:114
 msgid "staff"
 msgstr "personale"
 
-#: lib/brando/html/inspect.ex:95
+#: lib/brando/html/inspect.ex:112
 msgid "superuser"
 msgstr "superbruker"
 
@@ -694,10 +615,6 @@ msgstr "brukere"
 #: lib/brando/html.ex:174
 msgid "Delete"
 msgstr "Slett"
-
-#: web/menus/instagram_menu.ex:10
-msgid "Instagram"
-msgstr "Instagram"
 
 #: lib/brando/images/upload.ex:70
 msgid "Empty filename given. Make sure you have a valid filename."
@@ -799,10 +716,6 @@ msgstr "Statistikk - visninger"
 #: lib/brando/plugs/authenticate.ex:37
 msgid "Access denied."
 msgstr "Adgang nektet."
-
-#: web/models/instagram_image.ex:138
-msgid "Instagram: Instagram API error. Download failed.\nURL: %{url}"
-msgstr "Instagram: Instagram API feil. Nedlastingen var mislykket.\nURL: %{url}"
 
 #: web/models/user.ex:94
 msgid "Passwords must match"

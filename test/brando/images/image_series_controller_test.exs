@@ -4,6 +4,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   use Brando.Integration.TestCase
   use Plug.Test
   use RouterHelper
+  alias Brando.Image
   alias Brando.ImageSeries
   alias Brando.ImageCategory
   alias Brando.Type.ImageConfig
@@ -197,7 +198,14 @@ defmodule Brando.ImageSeries.ControllerTest do
     assert html_response(conn, 200)
            =~ "<img src=\"/media/images/test-category/series-name/thumb/sample-optimized.png\" />"
 
-    series = Brando.repo.preload(series, :images)
+    q = from(i in Image, order_by: i.id)
+
+    series = Brando.repo.all(
+      from is in ImageSeries,
+        where: is.id == ^series.id,
+        preload: [images: ^q]
+    ) |> List.first
+
     [img1, img2] = series.images
 
     conn =
@@ -208,19 +216,18 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> as_json
       |> send_request
 
-    assert conn.status
-           == 200
-    assert conn.path_info
-           == ["admin", "images", "series", "#{series.id}", "sort"]
-    assert json_response(conn, 200)
-           == %{"status" => "200"}
+    assert conn.status == 200
+    assert conn.path_info == ["admin", "images", "series", "#{series.id}", "sort"]
+    assert json_response(conn, 200) == %{"status" => "200"}
 
-    series =
-      ImageSeries
-      |> Ecto.Query.preload([:images])
-      |> Brando.repo.get_by!(id: series.id)
+    series = Brando.repo.all(
+      from is in ImageSeries,
+        where: is.id == ^series.id,
+        preload: [images: ^q]
+    ) |> List.first
 
     [img1, img2] = series.images
+
     case img1.image.path do
       "images/test-category/series-name/sample.png" -> assert img1.sequence > img2.sequence
       "images/test-category/series-name/sample2.png" -> assert img1.sequence < img2.sequence
