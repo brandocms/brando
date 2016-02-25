@@ -1,3 +1,13 @@
+## v0.21.0 (2016-02-25)
+
+* Backwards incompatible changes
+  * Extracted Instagram to its own application -> http://www.github.com/twined/brando_instagram
+  * Updated to run on Ecto v2.0. Your otp app needs
+    `{:phoenix_ecto, "~> 3.0.0-beta"}` in mix.exs deps (or 3.0.0 when it's out.)
+  * form/4 expects `schema` keyword instead of `model`
+  * model_name renamed to schema_name
+  * model_repr renamed to schema_repr
+
 ## v0.20.0 (2016-02-17)
 
 * Enhancements/backwards incompatible changes
@@ -21,7 +31,7 @@
   * Extracted News to its own application -> http://github.com/twined/brando_news
   * `delete_original_and_sized_images` now takes two arguments. The model, and an :atom representation of the field. Instead of `delete_original_and_sized_images(post.cover)` you do `delete_original_and_sized_images(post, :cover)`.
   * Renamed route imports:
-        
+
         Brando.Routes.Admin.Analytics -> Brando.Analytics.Routes.Admin
         Brando.Routes.Admin.Dashboard -> Brando.Dashboard.Routes.Admin
         Brando.Routes.Admin.Images    -> Brando.Images.Routes.Admin
@@ -29,9 +39,9 @@
         Brando.Routes.Admin.News      -> Brando.News.Routes.Admin
         Brando.Routes.Admin.Pages     -> Brando.Pages.Routes.Admin
         Brando.Routes.Admin.Users     -> Brando.Users.Routes.Admin
-   
+
    * Renamed menus:
-   
+
         Brando.Menu.Admin     -> Brando.Admin.Menu
         Brando.Menu.Analytics -> Brando.Analytics.Menu
         Brando.Menu.Images    -> Brando.Images.Menu
@@ -50,14 +60,14 @@
 
 * Enhancements/backwards incompatible changes
   * Changed javascript packing. See Brando's `priv/templates/brando.install/brunch_config.js` on github for new format.
-  * Pull in brando scripts and brando_villain through NPM. 
+  * Pull in brando scripts and brando_villain through NPM.
   * Add to your `package.json`'s dependencies:
-    
+
       "brando": "file:deps/brando",
       "brando_villain": "file:deps/brando_villain"
 
   * Add to your `mix.exs`:
-      
+
       {:brando_villain, github: "twined/brando_villain"}
 
 * Bug fixes
@@ -140,7 +150,7 @@
 
 * Backwards incompatible changes
   * Updated for Gettext 0.7.0. Check that your `router.ex`'s `put_locale` plug receives your Gettext module. I.e: `plug put_locale, MyApp.Gettext`
- 
+
 
 ## v0.9.0 (2015-11-08)
 
@@ -217,7 +227,7 @@
 
 * Enhancements
   * Add last lines of supervisor log to system info pane. Only shows for superusers.
-  * Automatically update brando/villain static through brunch. 
+  * Automatically update brando/villain static through brunch.
     See our updated `brunch-config.js`.
 
 * Bug fixes
@@ -226,9 +236,9 @@
 ## v0.2.0 (2015-10-04)
 
 * Enhancements
-  * Additional custom stylesheet option for admin. 
+  * Additional custom stylesheet option for admin.
     SCSS for this is stored in `web/static/css/brando.custom.scss`, and compiled to `priv/static/css/brando.custom.css`.
-  * Optional `admin_hostname` plug to check `conn.host` has `admin` prefix. 
+  * Optional `admin_hostname` plug to check `conn.host` has `admin` prefix.
     This is to make sure the admin area is only accessed from `admin.myapp.com`
   * Added forced re-rendering of all pages through Villain parser.
 

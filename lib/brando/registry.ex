@@ -13,7 +13,7 @@ defmodule Brando.Registry do
   use GenServer
   require Logger
 
-  @default_modules [Brando.Images, Brando.Admin, Brando.Users]
+  @default_modules [Brando.Images, Brando.Users, Brando.Admin]
 
   # Public
   @doc false
@@ -49,11 +49,11 @@ defmodule Brando.Registry do
   end
 
   def gettext_modules do
-    Map.get(state(), :gettext_modules)
+    Map.get(state(), :gettext_modules) |> Enum.reverse
   end
 
   def menu_modules do
-    Map.get(state(), :menu_modules)
+    Map.get(state(), :menu_modules) |> Enum.reverse
   end
 
   def wipe do

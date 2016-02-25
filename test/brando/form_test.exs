@@ -108,8 +108,8 @@ defmodule Brando.FormTest do
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"],
        username: [type: :text, required: true, label: "Username", placeholder: "Username"]
      ]
-    cs = %{action: nil, model: nil, params: nil, errors: [username: "has invalid format", email: "has invalid format", password: "can't be blank", email: "can't be blank", full_name: "can't be blank", username: "can't be blank"]}
-    f = Enum.join(render_fields(form_fields, cs, [type: :create], %{source: "user", model: Brando.User}), "")
+    cs = %{action: nil, data: nil, params: nil, errors: [username: "has invalid format", email: "has invalid format", password: "can't be blank", email: "can't be blank", full_name: "can't be blank", username: "can't be blank"]}
+    f = Enum.join(render_fields(form_fields, cs, [type: :create], %{source: "user", schema: Brando.User}), "")
     assert f =~ ~s("form-group required has-error")
     assert f =~ "user[username]"
     assert f =~ ~s(placeholder="Username")
@@ -140,12 +140,12 @@ defmodule Brando.FormTest do
                "password" => "$2a$12$abcdefghijklmnopqrstuvwxyz",
                "updated_at" => %Ecto.DateTime{day: 14, hour: 21, min: 36, month: 1, sec: 53, year: 2015},
                "username" => "test"}
-    cs = %{action: :insert, params: params, model: nil, errors: []}
-    f = Enum.join(render_fields(form_fields, cs, [language: "nb", type: :update], %{source: "user", model: Brando.User}), "")
+    cs = %{action: :insert, params: params, data: nil, errors: []}
+    f = Enum.join(render_fields(form_fields, cs, [language: "nb", type: :update], %{source: "user", schema: Brando.User}), "")
     assert f =~ "form-group required"
     assert f =~ "user[email]"
     assert f =~ ~s(value="test@email.com")
-    assert f =~ ~s(placeholder="Email")
+    assert f =~ ~s(placeholder="E-mail")
     assert f =~ ~s(type="submit")
     assert f =~ ~s(type="file")
   end

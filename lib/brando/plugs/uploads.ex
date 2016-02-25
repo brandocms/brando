@@ -8,7 +8,6 @@ defmodule Brando.Plug.Uploads do
       plug :check_for_uploads, {"user", Brando.User}
            when action in [:create, :profile_update, :update]
   """
-
   require Logger
 
   def check_for_uploads(conn, {required_key, module})
@@ -17,7 +16,6 @@ defmodule Brando.Plug.Uploads do
     case module.check_for_uploads(module, param) do
       {:ok, image_fields} ->
         param = handle_image_fields(param, image_fields)
-        conn = Phoenix.Controller.put_flash(conn, :notice, "Bilde lastet opp.")
       {:error, errors} ->
         Logger.error(inspect(errors))
         nil

@@ -1,6 +1,6 @@
 <div class="data-table">
   <h1>
-    <%= gettext("Delete user") %>: <%= Brando.HTML.Inspect.model_repr(@record) %>
+    <%= gettext("Delete user") %>: <%= Brando.HTML.Inspect.schema_repr(@record) %>
   </h1>
   <p>
     <%= gettext("You are about to delete this object. Please check carefully, and note that any dependent objects will also be removed.") %>

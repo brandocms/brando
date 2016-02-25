@@ -241,7 +241,7 @@ defmodule Brando.Villain do
 
       @doc false
       def imageseries(conn, %{"series" => series_slug}) do
-        series = Brando.repo.one(
+        series = Brando.repo.first!(
           from is in unquote(series_model),
             join: c in assoc(is, :image_category),
             join: i in assoc(is, :images),

@@ -42,7 +42,7 @@ defmodule Brando.ImageSeries do
 
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
-  def changeset(model, action, params \\ :empty)
+  def changeset(model, action, params \\ :invalid)
   def changeset(model, :create, params) do
     model
     |> cast(params, @required_fields, @optional_fields)
@@ -88,7 +88,7 @@ defmodule Brando.ImageSeries do
   end
 
   def get_slug(id: id) do
-    Brando.repo.one!(
+    Brando.repo.first!(
       from m in __MODULE__,
         select: m.slug,
         where: m.id == ^id
@@ -121,7 +121,7 @@ defmodule Brando.ImageSeries do
   Recreates all image sizes in imageseries.
   """
   def recreate_sizes(image_series_id) do
-    image_series = Brando.repo.one!(
+    image_series = Brando.repo.first!(
       from m in __MODULE__,
         preload: :images,
         where: m.id == ^image_series_id
@@ -151,7 +151,7 @@ defmodule Brando.ImageSeries do
     do_inherit_configuration(cs, cat_id, slug)
   end
 
-  def inherit_configuration(%{model: %{image_category_id: cat_id, slug: slug}} = cs) do
+  def inherit_configuration(%{data: %{image_category_id: cat_id, slug: slug}} = cs) do
     do_inherit_configuration(cs, cat_id, slug)
   end
 

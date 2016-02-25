@@ -54,7 +54,7 @@ defmodule Brando.User do
 
   """
   @spec changeset(t, atom, Keyword.t | Options.t | :empty) :: t
-  def changeset(model, action, params \\ :empty)
+  def changeset(model, action, params \\ :invalid)
   def changeset(model, :create, params) do
     model
     |> cast(params, @required_fields, @optional_fields)

@@ -69,7 +69,7 @@ defmodule Brando.Menu do
   end
 
   def get_menus do
-    modules = Enum.sort(Brando.Registry.menu_modules)
+    modules = Brando.Registry.menu_modules()
     for {mod, color} <- Enum.zip(modules, colors()) do
       {color, mod.get_menu()}
     end

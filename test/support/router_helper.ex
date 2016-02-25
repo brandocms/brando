@@ -76,7 +76,6 @@ defmodule RouterHelper do
     import Brando.Dashboard.Routes.Admin
     import Brando.Users.Routes.Admin
     import Brando.Images.Routes.Admin
-    import Brando.Instagram.Routes.Admin
     import Brando.Plug.I18n
 
     pipeline :admin do
@@ -101,7 +100,6 @@ defmodule RouterHelper do
       user_routes "/users2", private: %{model: Brando.User}
       user_routes "/users3"
       image_routes "/images"
-      instagram_routes "/instagram"
       dashboard_routes "/"
     end
 

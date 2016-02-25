@@ -1,6 +1,8 @@
 defmodule Brando.Form.FieldsTest do
   use ExUnit.Case, async: true
   require Brando.Form.Fields, as: F
+  import Brando.Form.Fields.Utils
+  alias Brando.Form.Field
 
   @opts [context: Brando.Form.Fields]
 
@@ -23,6 +25,16 @@ defmodule Brando.Form.FieldsTest do
     def get_status_choices() do
       [[value: "1", text: "Valg 1"],
        [value: "2", text: "Valg 2"]]
+    end
+
+    def get_skills_choices() do
+      [[value: "1", text: "Skill 1"],
+       [value: "2", text: "Skill 2"],
+       [value: "3", text: "Skill 3"]]
+    end
+
+    def skills_selected?(choice_value, values) do
+      choice_value in values
     end
 
     def selected_fun_true(_form_value, _model_value) do
@@ -83,6 +95,12 @@ defmodule Brando.Form.FieldsTest do
         [choices: &__MODULE__.get_role_choices/0,
          language: "en",
          label: "Rolle 2"]
+      field :skills, :checkbox,
+        [choices: &__MODULE__.get_skills_choices/0,
+         multiple: true,
+         label: "Skills"]
+      field :skills2, :checkbox,
+        [label: "Skills single"]
       field :avatar, :file,
         [label: "Avatar",
          label_class: "control-label",
@@ -93,137 +111,12 @@ defmodule Brando.Form.FieldsTest do
     end
   end
 
-  test "render_options/4" do
-    assert F.render_options(:create, %{choices: &UserForm.get_status_choices/0,
-                            language: "en"}, "val", nil)
-           == [["<option value=\"1\">", "Valg 1", "</option>"],
-               ["<option value=\"2\">", "Valg 2", "</option>"]]
-  end
-
   test "get_choices/1" do
-    opts = %{language: "en", choices: &UserForm.get_status_choices/0}
-    assert F.get_choices(opts) == [[value: "1", text: "Valg 1"],
+    field = %Field{
+      opts: %{language: "en", choices: &UserForm.get_status_choices/0}
+    }
+    assert F.get_choices(field) == [[value: "1", text: "Valg 1"],
                                    [value: "2", text: "Valg 2"]]
-  end
-
-  test "concat_fields/2" do
-    label = "<label>Label</label>"
-    wrapped_field = "<div><input /></div>"
-    assert F.concat_fields(wrapped_field, label)
-           == ["<label>Label</label>", "<div><input /></div>"]
-  end
-
-  test "div_tag/2" do
-    assert F.div_tag("contents", "class")
-           == ["<div class=\"class\">", "contents", "</div>"]
-    assert F.div_tag("<b>contents</b>", "class class2")
-           == ["<div class=\"class class2\">", "<b>contents</b>", "</div>"]
-  end
-
-  test "form_group/4" do
-    assert F.form_group("1234", "name", [], nil)
-           == ["<div class=\"form-group required\">",
-               ["1234", "", ""], "</div>"]
-    opts = %{required: false, language: "nb"}
-    fg = F.form_group("1234", "name", opts, ["can't be blank"])
-    fg = fg |> Enum.join
-    refute fg =~ "required"
-    assert fg =~ "has-error"
-    assert fg =~ "fa-exclamation-circle"
-
-    fg = F.form_group("1234", "name", opts, nil)
-    fg = fg |> Enum.join
-    refute fg =~ "required"
-    refute fg =~ "has-error"
-
-    fg = F.form_group("1234", "name", [], nil)
-    fg = fg |> Enum.join
-    assert fg =~ "required"
-    refute fg =~ "has-error"
-
-    opts = %{required: false, language: "nb"}
-    fg = F.form_group("1234", "name", opts, nil)
-    fg = fg |> Enum.join
-    refute fg =~ "required"
-    refute fg =~ "has-error"
-
-    fg = F.form_group("1234", "name", opts, ["must be unique"])
-    fg = fg |> Enum.join
-    assert fg =~ "has-error"
-    assert fg =~ "fa-exclamation-circle"
-
-    opts = %{required: false, language: "nb", form_group_class: "my-class"}
-    fg = F.form_group("1234", "name", opts, nil)
-    fg = fg |> Enum.join
-    refute fg =~ "required"
-    refute fg =~ "has-error"
-    assert fg =~ "my-class"
-
-    fg = F.form_group("1234", "name", opts, ["must be unique"])
-    fg = fg |> Enum.join
-    assert fg =~ "has-error"
-    assert fg =~ "fa-exclamation-circle"
-    assert fg =~ "my-class"
-
-    opts = %{required: true, language: "nb", form_group_class: "my-class"}
-    fg = F.form_group("1234", "name", opts, nil)
-    fg = fg |> Enum.join
-    assert fg =~ "required"
-    assert fg =~ "has-error"
-    assert fg =~ "my-class"
-
-    fg = F.form_group("1234", "name", opts, ["must be unique"])
-    fg = fg |> Enum.join
-    assert fg =~ "has-error"
-    assert fg =~ "fa-exclamation-circle"
-    assert fg =~ "my-class"
-
-    opts = %{language: "nb", form_group_class: "my-class"}
-    fg = F.form_group("1234", "name", opts, nil)
-    fg = fg |> Enum.join
-    assert fg =~ "required"
-    refute fg =~ "has-error"
-    assert fg =~ "my-class"
-
-    fg = F.form_group("1234", "name", opts, ["must be unique"])
-    fg = fg |> Enum.join
-    assert fg =~ "has-error"
-    assert fg =~ "fa-exclamation-circle"
-    assert fg =~ "my-class"
-  end
-
-  test "wrap/2" do
-    assert F.wrap("test", nil) == "test"
-    assert F.wrap("test", "wrapper_class")
-           == ["<div class=\"wrapper_class\">", "test", "</div>"]
-  end
-
-  test "textarea/5" do
-    assert F.textarea(:create, "name", nil, nil, %{})
-           == ["<textarea name=\"name\">", "", "</textarea>"]
-    assert F.textarea(:update, "name", "blah", nil, %{})
-           == ["<textarea name=\"name\">", "blah", "</textarea>"]
-    assert F.textarea(:update, "name", %{test: "testing"}, nil, %{})
-           == ["<textarea name=\"name\">",
-               "{&quot;test&quot;:&quot;testing&quot;}", "</textarea>"]
-    assert F.textarea(:update, "name", "blah", nil, %{default: "default"})
-           == ["<textarea name=\"name\">", "blah", "</textarea>"]
-    assert F.textarea(:update, "name", nil, nil, %{default: "default"})
-           == ["<textarea name=\"name\">", "", "</textarea>"]
-    assert F.textarea(:create, "name", nil, nil, %{default: "default"})
-           == ["<textarea name=\"name\">", "default", "</textarea>"]
-    assert F.textarea(:update, "name", nil, nil,
-                      %{default: "default", class: "class"})
-           == ["<textarea class=\"class\" name=\"name\">", "", "</textarea>"]
-  end
-
-  test "file/4" do
-    assert F.file(:update, "user[avatar]",
-                  %{sizes: %{"thumb" => "images/default/thumb/0.jpeg"}},
-                  [], %{type: :file, label: "Bilde"})
-           == [["<div class=\"image-preview\">",
-                "<img src=\"/media/images/default/thumb/0.jpeg\">", "</div>"],
-                "<input name=\"user[avatar]\" type=\"file\">"]
   end
 
   test "get_val/2" do
@@ -234,26 +127,6 @@ defmodule Brando.Form.FieldsTest do
     assert F.get_val(["test", "ing"], nil) == "test,ing"
     assert F.get_val("test", "default") == "test"
     assert F.get_val(nil, "default") == "default"
-  end
-
-  test "input checkbox" do
-    assert F.input(:checkbox, :create, "name", [], [], []) ==
-      ["<input name=\"name\" type=\"hidden\" value=\"false\">",
-       "<input name=\"name\" type=\"checkbox\" value=\"true\">"]
-    assert F.input(:checkbox, :create, "name", false, [], []) ==
-      ["<input name=\"name\" type=\"hidden\" value=\"false\">",
-       "<input name=\"name\" type=\"checkbox\" value=\"true\">"]
-    assert F.input(:checkbox, :create, "name", nil, [], []) ==
-      ["<input name=\"name\" type=\"hidden\" value=\"false\">",
-       "<input name=\"name\" type=\"checkbox\" value=\"true\">"]
-    assert F.input(:checkbox, :create, "name", true, [], []) ==
-      ["<input name=\"name\" type=\"hidden\" value=\"false\">",
-       "<input checked=\"checked\" name=\"name\" " <>
-       "type=\"checkbox\" value=\"true\">"]
-    assert F.input(:checkbox, :create, "name", "on", [], []) ==
-      ["<input name=\"name\" type=\"hidden\" value=\"false\">",
-       "<input checked=\"checked\" name=\"name\" " <>
-       "type=\"checkbox\" value=\"true\">"]
   end
 
   test "render_errors/1" do
@@ -280,194 +153,14 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "render_help_text/1" do
-    opts = %{help_text: "Help text"}
-    assert F.render_help_text(nil) == ""
-    assert F.render_help_text(opts)
+    field = %Field{opts: %{help_text: "Help text"}}
+    assert F.render_help_text(field)
            == ["<div class=\"help\">",
                [["<i class=\"fa fa-fw fa-question-circle\">", " ", "</i>"],
                 ["<span>", "Help text", "</span>"]], "</div>"]
-  end
 
-  test "label/3" do
-    assert F.label("name", "class", "text")
-           == ["<label class=\"class\" for=\"name\">", "text", "</label>"]
-  end
-
-  test "select/6" do
-    assert F.select(:create, "name", "choices", %{}, [], [])
-           == ["<select name=\"name\">", "choices", "</select>"]
-    assert F.select(:create, "name", "choices", %{multiple: true}, [], [])
-           == ["<select multiple=\"multiple\" name=\"name[]\">",
-               "choices", "</select>"]
-  end
-
-  test "option/6" do
-    assert F.option(:create, "choice_val", "choice_text", nil, nil, nil)
-           == ["<option value=\"choice_val\">", "choice_text", "</option>"]
-    assert F.option(:create, "choice_val", "choice_text",
-                    nil, "choice_val", nil)
-           == ["<option selected=\"selected\" value=\"choice_val\">",
-               "choice_text", "</option>"]
-    assert F.option(:create, "choice_val", "choice_text", "choice_wrong",
-                    "choice_val", nil)
-           == ["<option value=\"choice_val\">", "choice_text", "</option>"]
-    assert F.option(:create, "choice_val", "choice_text", "choice_val",
-                    "choice_val", nil)
-           == ["<option selected=\"selected\" value=\"choice_val\">",
-               "choice_text", "</option>"]
-    assert F.option(:update, "choice_val", "choice_text", "choice_val",
-                    "choice_val", &__MODULE__.UserForm.selected_fun_true/2)
-           == ["<option selected=\"selected\" value=\"choice_val\">",
-               "choice_text", "</option>"]
-    assert F.option(:update, "choice_val", "choice_text", "choice_val",
-                    "choice_val", &__MODULE__.UserForm.selected_fun_false/2)
-           == ["<option value=\"choice_val\">", "choice_text", "</option>"]
-  end
-
-  test "radio/7" do
-    assert F.radio(:create, "choice_name", "choice_val",
-                   "choice_text", nil, nil, nil)
-           == ["<div>", [["<label for=\"choice_name\">", "", "</label>"],
-              ["<label for=\"choice_name\">",
-              ["<input name=\"choice_name\" type=\"radio\" " <>
-               "value=\"choice_val\">", "choice_text"], "</label>"]], "</div>"]
-    assert F.radio(:create, "choice_name", "choice_val", "choice_text",
-                   nil, "choice_val", nil)
-           == ["<div>", [["<label for=\"choice_name\">", "", "</label>"],
-              ["<label for=\"choice_name\">",
-              ["<input checked=\"checked\" name=\"choice_name\" " <>
-               "type=\"radio\" value=\"choice_val\">", "choice_text"],
-               "</label>"]], "</div>"]
-    assert F.radio(:create, "choice_name", "choice_val", "choice_text",
-                   "choice_wrong", "choice_val", nil)
-           == ["<div>", [["<label for=\"choice_name\">", "", "</label>"],
-              ["<label for=\"choice_name\">",
-              ["<input name=\"choice_name\" type=\"radio\" " <>
-               "value=\"choice_val\">", "choice_text"], "</label>"]], "</div>"]
-    assert F.radio(:create, "choice_name", "choice_val", "choice_text",
-                   "choice_val", "choice_val", nil)
-           == ["<div>", [["<label for=\"choice_name\">", "", "</label>"],
-              ["<label for=\"choice_name\">",
-              ["<input checked=\"checked\" name=\"choice_name\" " <>
-               "type=\"radio\" value=\"choice_val\">", "choice_text"],
-               "</label>"]], "</div>"]
-
-    assert F.radio(:create, "choice_name", "choice_val",
-                   "choice_text", "choice_val", "choice_val",
-                   &__MODULE__.UserForm.selected_fun_true/2)
-           == ["<div>", [["<label for=\"choice_name\">", "", "</label>"],
-              ["<label for=\"choice_name\">",
-              ["<input checked=\"checked\" name=\"choice_name\" " <>
-               "type=\"radio\" value=\"choice_val\">", "choice_text"],
-               "</label>"]], "</div>"]
-    assert F.radio(:create, "choice_name", "choice_val",
-                   "choice_text", "choice_val", "choice_val",
-                   &__MODULE__.UserForm.selected_fun_false/2)
-           == ["<div>", [["<label for=\"choice_name\">", "", "</label>"],
-              ["<label for=\"choice_name\">",
-              ["<input name=\"choice_name\" type=\"radio\" " <>
-               "value=\"choice_val\">", "choice_text"], "</label>"]], "</div>"]
-  end
-
-  test "render_checks/5" do
-    opts = %{choices: &Brando.Form.FieldsTest.UserForm.get_role_choices/0,
-             is_selected: &Brando.Form.FieldsTest.UserForm.role_selected?/2,
-             label: "Role", language: "en", label_class: "control-label",
-             class: "form-control", wrapper_class: "", multiple: true}
-    assert F.render_checks(:create, :checks_test, opts, nil, [])
-           == ["",
-            [["<div>",
-              [["<label for=\"checks_test\">", "", "</label>"],
-               ["<label for=\"checks_test\">",
-               ["<input name=\"checks_test[]\" type=\"checkbox\" " <>
-               "value=\"1\">", "Staff"], "</label>"]], "</div>"],
-             ["<div>",
-              [["<label for=\"checks_test\">", "", "</label>"],
-               ["<label for=\"checks_test\">",
-               ["<input name=\"checks_test[]\" type=\"checkbox\" " <>
-               "value=\"2\">", "Admin"], "</label>"]], "</div>"],
-             ["<div>",
-              [["<label for=\"checks_test\">", "", "</label>"],
-               ["<label for=\"checks_test\">",
-               ["<input name=\"checks_test[]\" type=\"checkbox\" " <>
-               "value=\"4\">", "Superuser"], "</label>"]], "</div>"]]]
-    assert F.render_checks(:create, :checks_test,
-                           Map.put(opts, :default, "2"), nil, [])
-           == ["",
-            [["<div>",
-              [["<label for=\"checks_test\">", "", "</label>"],
-               ["<label for=\"checks_test\">",
-               ["<input name=\"checks_test[]\" type=\"checkbox\" " <>
-                "value=\"1\">", "Staff"], "</label>"]], "</div>"],
-             ["<div>",
-              [["<label for=\"checks_test\">", "", "</label>"],
-               ["<label for=\"checks_test\">",
-               ["<input checked=\"checked\" name=\"checks_test[]\" " <>
-                "type=\"checkbox\" value=\"2\">", "Admin"], "</label>"]],
-              "</div>"],
-             ["<div>",
-              [["<label for=\"checks_test\">", "", "</label>"],
-               ["<label for=\"checks_test\">",
-               ["<input name=\"checks_test[]\" type=\"checkbox\" " <>
-                "value=\"4\">", "Superuser"], "</label>"]], "</div>"]]]
-    assert F.render_checks(:update, :checks_test,
-                           Map.put(opts, :default, "2"), nil, [])
-           == ["",
-            [["<div>",
-              [["<label for=\"checks_test\">", "", "</label>"],
-               ["<label for=\"checks_test\">",
-               ["<input name=\"checks_test[]\" type=\"checkbox\" " <>
-                "value=\"1\">", "Staff"], "</label>"]], "</div>"],
-             ["<div>",
-              [["<label for=\"checks_test\">", "", "</label>"],
-               ["<label for=\"checks_test\">",
-               ["<input name=\"checks_test[]\" type=\"checkbox\" " <>
-                "value=\"2\">", "Admin"], "</label>"]], "</div>"],
-             ["<div>",
-              [["<label for=\"checks_test\">", "", "</label>"],
-               ["<label for=\"checks_test\">",
-               ["<input name=\"checks_test[]\" type=\"checkbox\" " <>
-                "value=\"4\">", "Superuser"], "</label>"]], "</div>"]]]
-    assert F.render_checks(:update, :checks_test,
-                           Map.put(opts, :default, "2"), [:admin], [])
-           == ["",
-            [["<div>",
-              [["<label for=\"checks_test\">", "", "</label>"],
-               ["<label for=\"checks_test\">",
-               ["<input name=\"checks_test[]\" type=\"checkbox\" " <>
-                "value=\"1\">", "Staff"], "</label>"]], "</div>"],
-             ["<div>",
-              [["<label for=\"checks_test\">", "", "</label>"],
-               ["<label for=\"checks_test\">",
-               ["<input checked=\"checked\" name=\"checks_test[]\" " <>
-                "type=\"checkbox\" value=\"2\">", "Admin"], "</label>"]],
-              "</div>"],
-             ["<div>",
-              [["<label for=\"checks_test\">", "", "</label>"],
-               ["<label for=\"checks_test\">",
-               ["<input name=\"checks_test[]\" type=\"checkbox\" " <>
-                "value=\"4\">", "Superuser"], "</label>"]], "</div>"]]]
-    assert F.render_checks(:update, :checks_test,
-                           Map.put(opts, :default, "2"),
-                           [:admin, :superuser], [])
-           == ["",
-            [["<div>",
-              [["<label for=\"checks_test\">", "", "</label>"],
-               ["<label for=\"checks_test\">",
-              ["<input name=\"checks_test[]\" type=\"checkbox\" " <>
-              "value=\"1\">", "Staff"], "</label>"]], "</div>"],
-             ["<div>",
-              [["<label for=\"checks_test\">", "", "</label>"],
-               ["<label for=\"checks_test\">",
-              ["<input checked=\"checked\" name=\"checks_test[]\" " <>
-              "type=\"checkbox\" value=\"2\">", "Admin"], "</label>"]],
-              "</div>"],
-             ["<div>",
-              [["<label for=\"checks_test\">", "", "</label>"],
-               ["<label for=\"checks_test\">",
-              ["<input checked=\"checked\" name=\"checks_test[]\" " <>
-              "type=\"checkbox\" value=\"4\">", "Superuser"], "</label>"]],
-              "</div>"]]]
+    field = %Field{}
+    assert F.render_help_text(field) == ""
   end
 
   test "get_selected" do
@@ -485,6 +178,205 @@ defmodule Brando.Form.FieldsTest do
   test "get_placeholder" do
     assert F.get_placeholder(%{placeholder: "test"}) == "test"
     assert F.get_placeholder(%{placeholder: nil}) == nil
-    assert F.get_placeholder(%{name: :email, model: Brando.User}) == "Email"
+    assert F.get_placeholder(%{name: :email, schema: Brando.User}) == "Email"
+  end
+
+  #
+  # add_label
+
+  test "add_label() without label data" do
+    field = %Brando.Form.Field{}
+
+    assert field == F.add_label(field)
+  end
+
+  #
+  # Field rendering
+
+  test "render_field :text" do
+    field = %Brando.Form.Field{
+      errors: nil,
+      form_type: :update,
+      html: nil,
+      name: :name,
+      opts: %{
+        action: :update,
+        changeset: nil,
+        params: "26",
+        type: :update
+      },
+      schema: Brando.ImageSeries,
+      source: "imageseries",
+      type: :text,
+      value: "Series name"
+    }
+
+    assert F.render_field(field).html
+           == ~s(<div class="form-row"><div class="form-group required">) <>
+              ~s(<label for="imageseries[name]">Name</label>) <>
+              ~s(<input name="imageseries[name]" type="text" value="Series name"></div></div>)
+
+    field =
+      field
+      |> Map.put(:html, nil)
+      |> put_in_opts(:confirm, true)
+
+    assert F.render_field(field).html
+           == ~s(<div class="form-row"><div class="form-group required">) <>
+              ~s(<label for="imageseries[name]">Name</label>) <>
+              ~s(<input name="imageseries[name]" type="text" value="Series name"></div>) <>
+              ~s(<div class="form-group required"><label for="imageseries[name_confirmation]">) <>
+              ~s(Confirm Name</label><input name="imageseries[name_confirmation]" ) <>
+              ~s(placeholder="Confirm Name" type="text" value="Series name"></div></div>)
+  end
+
+  test "render_field :password" do
+    field = %Brando.Form.Field{
+      errors: nil,
+      form_type: :update,
+      html: nil,
+      name: :password,
+      opts: %{
+        action: :update,
+        changeset: nil,
+        params: "26",
+        type: :update
+      },
+      schema: Brando.User,
+      source: "user",
+      type: :password,
+      value: "abcdefg"
+    }
+
+    assert F.render_field(field).html
+           == ~s(<div class="form-row"><div class="form-group required">) <>
+              ~s(<label for="user[password]">Password</label>) <>
+              ~s(<input name="user[password]" type="password" value="abcdefg"></div></div>)
+
+    field = %Brando.Form.Field{
+      errors: nil,
+      form_type: :update,
+      html: nil,
+      name: :password,
+      opts: %{
+        action: :update,
+        changeset: nil,
+        params: "26",
+        type: :update,
+        confirm: true
+      },
+      schema: Brando.User,
+      source: "user",
+      type: :password,
+      value: "abcdefg"
+    }
+
+    assert F.render_field(field).html
+           == ~s(<div class="form-row"><div class="form-group required">) <>
+              ~s(<label for="user[password]">Password</label>) <>
+              ~s(<input name="user[password]" type="password" value="abcdefg"></div>) <>
+              ~s(<div class="form-group required"><label for="user[password_confirmation]">) <>
+              ~s(Confirm Password</label><input name="user[password_confirmation]" ) <>
+              ~s(placeholder="Confirm Password" type="password" value="abcdefg"></div></div>)
+  end
+
+  test "render_field :textarea" do
+    field = %Brando.Form.Field{
+      errors: nil,
+      form_type: :update,
+      html: nil,
+      name: :description,
+      opts: %{
+        action: :update,
+        changeset: nil,
+        params: "26",
+        type: :update,
+        label: "Description"
+      },
+      schema: Brando.User,
+      source: "user",
+      type: :textarea,
+      value: "text"
+    }
+
+    assert F.render_field(field).html
+           == ~s(<div class="form-row"><div class="form-group required no-height">) <>
+              ~s(<label for="user[description]">Description</label>) <>
+              ~s(<textarea name="user[description]">text</textarea></div></div>)
+
+    field =
+      field
+      |> put_in_field(:html, nil)
+      |> put_in_field(:form_type, :create)
+      |> put_in_field(:value, nil)
+      |> put_in_opts(:default, "default")
+
+    assert F.render_field(field).html
+           == ~s(<div class="form-row"><div class="form-group required no-height">) <>
+              ~s(<label for="user[description]">Description</label>) <>
+              ~s(<textarea name="user[description]">default</textarea></div></div>)
+  end
+
+  test "render_field :radio" do
+    field = %Brando.Form.Field{
+      errors: nil,
+      form_type: :update,
+      html: nil,
+      name: :description,
+      opts: %{
+        choices: &UserForm.get_skills_choices/0,
+        is_selected: &UserForm.skills_selected?/2,
+        action: :update,
+        changeset: nil,
+        params: "26",
+        type: :update,
+        label: "Description"
+      },
+      schema: Brando.User,
+      source: "user",
+      type: :radio,
+      value: ["1", "2"]
+    }
+
+    assert F.render_field(field).html
+           == "<div class=\"form-row\"><div class=\"form-group required\">" <>
+           "<label for=\"user[description]\">Description</label><div>" <>
+           "<label for=\"user[description]\"></label><label for=\"user[description]\">" <>
+           "<input checked=\"checked\" name=\"user[description]\" type=\"radio\" value=\"1\">" <>
+           "Skill 1</label></div><div><label for=\"user[description]\"></label>" <>
+           "<label for=\"user[description]\"><input checked=\"checked\" " <>
+           "name=\"user[description]\" type=\"radio\" value=\"2\">Skill 2</label></div><div>" <>
+           "<label for=\"user[description]\"></label><label for=\"user[description]\">" <>
+           "<input name=\"user[description]\" type=\"radio\" value=\"3\">Skill 3" <>
+           "</label></div></div></div>"
+  end
+
+  test "render_field :select" do
+    field = %Brando.Form.Field{
+      errors: nil,
+      form_type: :update,
+      html: nil,
+      name: :description,
+      opts: %{
+        choices: &UserForm.get_skills_choices/0,
+        is_selected: &UserForm.skills_selected?/2,
+        action: :update,
+        changeset: nil,
+        params: "26",
+        type: :update,
+        label: "Description"
+      },
+      schema: Brando.User,
+      source: "user",
+      type: :select,
+      value: ["1"]
+    }
+
+    assert F.render_field(field).html
+           == "<div class=\"form-row\"><div class=\"form-group required\">" <>
+           "<label for=\"user[description]\">Description</label>" <>
+           "<select name=\"user[description]\"><option selected=\"selected\" value=\"1\">" <>
+           "Skill 1</option><option value=\"2\">Skill 2</option><option value=\"3\">Skill 3" <>
+           "</option></select></div></div>"
   end
 end

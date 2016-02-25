@@ -12878,10 +12878,6 @@ var _images = require("./brando/components/images");
 
 var _images2 = _interopRequireDefault(_images);
 
-var _instagram = require("./brando/components/instagram");
-
-var _instagram2 = _interopRequireDefault(_instagram);
-
 var _menu = require("./brando/components/menu");
 
 var _menu2 = _interopRequireDefault(_menu);
@@ -12948,9 +12944,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
             break;
         case "dashboard-system_info":
             _stats2.default.setup();
-            break;
-        case "instagram-index":
-            _instagram2.default.setup();
             break;
         case "pages-index":
             _pages2.default.setup();
@@ -13372,139 +13365,6 @@ var Images = function () {
 }();
 
 exports.default = Images;
-});
-
-require.register("brando/components/instagram", function(exports, require, module) {
-"use strict";
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _jquery = require("jquery");
-
-var _jquery2 = _interopRequireDefault(_jquery);
-
-var _vex_brando = require("./vex_brando");
-
-var _utils = require("./utils");
-
-var _utils2 = _interopRequireDefault(_utils);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var imagePool = [];
-
-var Instagram = function () {
-    function Instagram() {
-        _classCallCheck(this, Instagram);
-    }
-
-    _createClass(Instagram, null, [{
-        key: "setup",
-        value: function setup() {
-            this.checkButtonEnable();
-            this.changeStatusListener();
-            this.imageSelectionListener();
-        }
-    }, {
-        key: "imageSelectionListener",
-        value: function imageSelectionListener() {
-            var that = this;
-            (0, _jquery2.default)('.image-selection-pool img').click(function () {
-                if ((0, _jquery2.default)(this).hasClass('selected')) {
-                    // remove from selected pool
-                    var pos;
-                    for (var i = 0; i < imagePool.length; i++) {
-                        if (imagePool[i] == (0, _jquery2.default)(this).attr('data-id')) {
-                            pos = i;
-                            break;
-                        }
-                    }
-                    imagePool.splice(pos, 1);
-                } else {
-                    // add to selected pool
-                    if (!imagePool) {
-                        imagePool = new Array();
-                    }
-                    imagePool.push((0, _jquery2.default)(this).attr('data-id'));
-                }
-                (0, _jquery2.default)(this).toggleClass('selected');
-                that.checkButtonEnable();
-            });
-        }
-    }, {
-        key: "checkButtonEnable",
-        value: function checkButtonEnable() {
-            var $btn = (0, _jquery2.default)('.delete-selected-images, .approve-selected-images, .reject-selected-images');
-            if (imagePool.length > 0) {
-                $btn.removeAttr('disabled');
-            } else {
-                $btn.attr('disabled', 'disabled');
-            }
-        }
-    }, {
-        key: "changeStatusListener",
-        value: function changeStatusListener() {
-            var that = this;
-            (0, _jquery2.default)('.delete-selected-images').click(function (e) {
-                e.preventDefault();
-                that.changeStatus(0, imagePool);
-            });
-            (0, _jquery2.default)('.reject-selected-images').click(function (e) {
-                e.preventDefault();
-                that.changeStatus(1, imagePool);
-            });
-            (0, _jquery2.default)('.approve-selected-images').click(function (e) {
-                e.preventDefault();
-                that.changeStatus(2, imagePool);
-            });
-        }
-    }, {
-        key: "changeStatus",
-        value: function changeStatus(status, images) {
-            var that = this;
-            _jquery2.default.ajax({
-                headers: { Accept: "application/json; charset=utf-8" },
-                type: "POST",
-                url: _utils2.default.addToPathName('change-status'),
-                data: { ids: images, status: status },
-                success: that.changeStatusSuccess
-            });
-        }
-    }, {
-        key: "changeStatusSuccess",
-        value: function changeStatusSuccess(data) {
-            var new_status = "";
-            if (data.status == 200) {
-                switch (data.new_status) {
-                    case "0":
-                        new_status = "deleted";break;
-                    case "1":
-                        new_status = "rejected";break;
-                    case "2":
-                        new_status = "approved";break;
-                }
-                for (var i = 0; i < data.ids.length; i++) {
-                    (0, _jquery2.default)('.image-selection-pool img[data-id=' + data.ids[i] + ']').fadeOut(500, function () {
-                        (0, _jquery2.default)(this).detach().appendTo('.' + new_status).fadeIn().attr('data-status', new_status);
-                    });
-                }
-                imagePool = [];
-                (0, _jquery2.default)('.image-selection-pool img').removeClass('selected');
-                _vex_brando.vex.dialog.alert("Status successfully changed.");
-            }
-        }
-    }]);
-
-    return Instagram;
-}();
-
-exports.default = Instagram;
 });
 
 require.register("brando/components/menu", function(exports, require, module) {
