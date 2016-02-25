@@ -54,7 +54,7 @@ defmodule Brando.Field.ImageField do
         imagefield_keys = Keyword.keys(__imagefields__())
         for key <- Map.keys(changeset.changes) do
           if key in imagefield_keys do
-            Brando.Images.Utils.delete_original_and_sized_images(changeset.model, key)
+            Brando.Images.Utils.delete_original_and_sized_images(changeset.data, key)
           end
         end
         changeset
