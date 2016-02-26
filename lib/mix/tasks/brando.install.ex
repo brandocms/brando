@@ -39,13 +39,9 @@ defmodule Mix.Tasks.Brando.Install do
 
     # Migration files
     {:eex,  "templates/brando.install/migrations/20150123230712_create_users.exs", "priv/repo/migrations/20150123230712_create_users.exs"},
-    {:eex,  "templates/brando.install/migrations/20150210211010_create_posts.exs", "priv/repo/migrations/20150210211010_create_posts.exs"},
-    {:eex,  "templates/brando.install/migrations/20150212162739_create_postimages.exs", "priv/repo/migrations/20150212162739_create_postimages.exs"},
     {:eex,  "templates/brando.install/migrations/20150215090305_create_imagecategories.exs", "priv/repo/migrations/20150215090305_create_imagecategories.exs"},
     {:eex,  "templates/brando.install/migrations/20150215090306_create_imageseries.exs", "priv/repo/migrations/20150215090306_create_imageseries.exs"},
     {:eex,  "templates/brando.install/migrations/20150215090307_create_images.exs", "priv/repo/migrations/20150215090307_create_images.exs"},
-    {:eex,  "templates/brando.install/migrations/20150520211010_create_pages.exs", "priv/repo/migrations/20150520211010_create_pages.exs"},
-    {:eex,  "templates/brando.install/migrations/20150520221010_create_pagefragments.exs", "priv/repo/migrations/20150520221010_create_pagefragments.exs"},
 
     # Repo seeds
     {:eex,  "templates/brando.install/repo/seeds.exs", "priv/repo/seeds.exs"},

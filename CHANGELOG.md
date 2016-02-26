@@ -1,3 +1,10 @@
+## v0.22.0 (2016-02-26)
+
+* Bug fixes
+  * Fixed bug with Ecto 2.0 tags. Now accepts :invalid, :empty and empty map.
+  * Fixed bug where all errors are shown on new form.
+  * Update model template to Ecto 2.0
+
 ## v0.21.0 (2016-02-25)
 
 * Backwards incompatible changes

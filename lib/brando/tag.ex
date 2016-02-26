@@ -115,7 +115,9 @@ defmodule Brando.Tag do
   @doc """
   Splits the "tags" field in `params` to an array and returns `params`
   """
+  def split_tags(:invalid), do: :invalid
   def split_tags(:empty), do: :empty
+  def split_tags(params) when params == %{}, do: %{}
   def split_tags(params) do
     if params["tags"] do
       Map.put(params, "tags", String.split(params["tags"], ","))

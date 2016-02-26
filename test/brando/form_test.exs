@@ -110,6 +110,15 @@ defmodule Brando.FormTest do
      ]
     cs = %{action: nil, data: nil, params: nil, errors: [username: "has invalid format", email: "has invalid format", password: "can't be blank", email: "can't be blank", full_name: "can't be blank", username: "can't be blank"]}
     f = Enum.join(render_fields(form_fields, cs, [type: :create], %{source: "user", schema: Brando.User}), "")
+    assert f =~ ~s("form-group required")
+    assert f =~ "user[username]"
+    assert f =~ ~s(placeholder="Username")
+    assert f =~ "<legend><br>Permissions</legend>"
+    assert f =~ ~s(type="submit")
+    assert f =~ ~s(type="file")
+
+    cs = %{action: :insert, data: nil, params: nil, errors: [username: "has invalid format", email: "has invalid format", password: "can't be blank", email: "can't be blank", full_name: "can't be blank", username: "can't be blank"]}
+    f = Enum.join(render_fields(form_fields, cs, [type: :create], %{source: "user", schema: Brando.User}), "")
     assert f =~ ~s("form-group required has-error")
     assert f =~ "user[username]"
     assert f =~ ~s(placeholder="Username")
