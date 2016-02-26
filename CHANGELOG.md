@@ -1,4 +1,4 @@
-## v0.22.0-dev (2016-XX-XX)
+## v0.22.0 (2016-02-26)
 
 * Bug fixes
   * Fixed bug with Ecto 2.0 tags. Now accepts :invalid, :empty and empty map.
