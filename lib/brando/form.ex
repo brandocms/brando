@@ -170,7 +170,7 @@ defmodule Brando.Form do
         type: field_opts[:type],
         opts: Enum.into(field_opts, %{})
       } |> Fields.render_field
-      
+
       [field.html|acc]
     end
   end
@@ -431,6 +431,9 @@ defmodule Brando.Form do
   end
 
   defp get_errors([], _), do: nil
+  defp get_errors(%{action: nil}, _) do
+    nil
+  end
   defp get_errors(changeset, name) do
     case Keyword.get_values(changeset.errors, name) do
       []     -> nil

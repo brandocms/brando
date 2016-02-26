@@ -117,7 +117,7 @@ defmodule Brando.Tag do
   """
   def split_tags(:invalid), do: :invalid
   def split_tags(:empty), do: :empty
-  def split_tags(%{}), do: %{}
+  def split_tags(params) when params == %{}, do: %{}
   def split_tags(params) do
     if params["tags"] do
       Map.put(params, "tags", String.split(params["tags"], ","))

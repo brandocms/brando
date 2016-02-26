@@ -27,8 +27,8 @@ defmodule <%= module %> do
       }
     }
 <% end %>
-  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields)), " ", &elem(&1, 0)) %><%= if assocs do %> <% end %><%= Enum.map_join(assocs, " ", &elem(&1, 1)) %>)
-  @optional_fields ~w(<%= Enum.map_join(img_fields, " ", &elem(&1, 1)) %>)
+  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields)), " ", &elem(&1, 0)) %><%= if assocs do %> <% end %><%= Enum.map_join(assocs, " ", &elem(&1, 1)) %>)a
+  @optional_fields ~w(<%= Enum.map_join(img_fields, " ", &elem(&1, 1)) %>)a
 
   @doc """
   Creates a changeset based on the `model` and `params`.
@@ -38,7 +38,8 @@ defmodule <%= module %> do
   """
   def changeset(model, params \\ :invalid) do
     model
-    |> cast(params, @required_fields, @optional_fields)<%= if villain_fields != [] do %>
+    |> cast(params, @required_fields ++ @optional_fields)
+    |> validate_required(@required_fields)<%= if villain_fields != [] do %>
     |> generate_html()<% end %><%= if img_fields != [] do %>
     |> cleanup_old_images()<% end %>
   end
