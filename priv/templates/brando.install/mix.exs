@@ -1,9 +1,11 @@
 defmodule <%= application_module %>.Mixfile do
   use Mix.Project
 
+  @version "0.0.1"
+
   def project do
     [app: :<%= application_name %>,
-     version: "0.0.1"
+     version: @version,
      elixir: "~> 1.2",
      elixirc_paths: elixirc_paths(Mix.env),
      compilers: [:phoenix, :gettext] ++ Mix.compilers,
@@ -18,7 +20,7 @@ defmodule <%= application_module %>.Mixfile do
   # Type `mix help compile.app` for more information.
   def application do
     [mod: {<%= application_module %>, []},
-     applications: [:phoenix, :phoenix_html, :cowboy, :logger, :gettext,
+     applications: [:brando, :phoenix, :phoenix_html, :cowboy, :logger, :gettext,
                     :phoenix_ecto, :postgrex, :brando]]
   end
 
@@ -31,12 +33,15 @@ defmodule <%= application_module %>.Mixfile do
   # Type `mix help deps` for examples and options.
   defp deps do
     [{:phoenix, "~> 1.1"},
-     {:phoenix_ecto, "~> 2.0"},
+     {:phoenix_ecto, "~> 3.0.0"},
      {:postgrex, ">= 0.0.0"},
-     {:phoenix_html, "~> 2.3"},
+     {:phoenix_html, "~> 2.4"},
      {:phoenix_live_reload, "~> 1.0", only: :dev},
-     {:gettext, "~> 0.9"},
+     {:gettext, "~> 0.10"},
      {:cowboy, "~> 1.0"},
+
+     # brando
+     {:brando, github: "twined/brando"},
 
      # optional brando modules
      {:brando_news, github: "twined/brando_news"},

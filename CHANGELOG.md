@@ -1,4 +1,10 @@
-## v0.23.0-dev (2016-XX-XX)
+## v0.22.1 (2016-02-27)
+
+* Enhancements
+  * Updated gettext req to 0.10 and relaxed requirement.
+  * Fix mix.exs template typo.
+  * Add missing deps to mix.exs template
+  
 
 ## v0.22.0 (2016-02-26)
 
