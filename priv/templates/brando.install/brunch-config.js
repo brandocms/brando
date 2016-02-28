@@ -65,6 +65,9 @@ exports.config = {
       'node_modules/brando/priv/static/js/brando.js',
       'node_modules/brando/priv/static/js/brando.auth.js',
       'node_modules/brando_villain/priv/static/js/villain.all.js',
+      'node_modules/brando/priv/static/css/brando.css',
+      'node_modules/brando/priv/static/css/brando.vendor.css',
+      'node_modules/brando_villain/priv/static/css/villain.css',
       // phoenix
       'node_modules/phoenix/priv/static/phoenix.js',
       'node_modules/phoenix_html/priv/static/phoenix_html.js',

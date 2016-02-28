@@ -1,5 +1,10 @@
 ## v0.23.0-dev (2016-02-27)
 
+* Bug fixes
+  * Fixed fabfile deployment bugs
+  * Fixed brunch template not compiling css
+  * Fixed supervisord templates
+
 ## v0.22.1 (2016-02-27)
 
 * Enhancements
@@ -7,7 +12,6 @@
   * Fix mix.exs template typo.
   * Add missing deps to mix.exs template
   * Install pre-made package.json to otp project.
-
 
 ## v0.22.0 (2016-02-26)
 
