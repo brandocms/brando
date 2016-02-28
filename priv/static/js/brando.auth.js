@@ -10104,5 +10104,5 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 });
 });
 
-require('brando_auth/brando_auth');
+require('brando_auth');
 //# sourceMappingURL=brando.auth.js.map
