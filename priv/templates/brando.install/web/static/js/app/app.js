@@ -1,6 +1,7 @@
-import {Socket} from "phoenix"
-import {Flexslider} from "./flexslider"
-import "phoenix_html"
+import $ from "jquery";
+import {Socket} from "phoenix";
+import {Flexslider} from "./flexslider";
+import "phoenix_html";
 
 
 $(() => {
@@ -20,4 +21,4 @@ $(() => {
 let App = {
 }
 
-export default App
+export default App;
