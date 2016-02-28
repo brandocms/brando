@@ -10076,7 +10076,7 @@ require.register('textfit', function(exports,req,module){
 
     })(exports,require,module);
   });
-})();require.register("web/static/js/brando_auth/brando_auth", function(exports, require, module) {
+})();require.register("brando_auth", function(exports, require, module) {
 "use strict";
 
 var _jquery = require("jquery");

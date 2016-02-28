@@ -63,6 +63,7 @@ exports.config = {
     watched: [
       // brando
       'node_modules/brando/priv/static/js/brando.js',
+      'node_modules/brando/priv/static/js/brando.auth.js',
       'node_modules/brando_villain/priv/static/js/villain.all.js',
       // phoenix
       'node_modules/phoenix/priv/static/phoenix.js',
