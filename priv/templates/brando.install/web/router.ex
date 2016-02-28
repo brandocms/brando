@@ -4,14 +4,17 @@ defmodule <%= application_module %>.Router do
   alias Brando.Plug.Authenticate
   alias Brando.Plug.Lockdown
 
+  import Brando.Plug.I18n
+
   import Brando.Analytics.Routes.Admin
   import Brando.Dashboard.Routes.Admin
   import Brando.Images.Routes.Admin
-  import Brando.Instagram.Routes.Admin
-  import Brando.News.Routes.Admin
-  import Brando.Pages.Routes.Admin
   import Brando.Users.Routes.Admin
-  import Brando.Plug.I18n
+
+  # additional optional modules
+  # import Brando.Instagram.Routes.Admin
+  # import Brando.News.Routes.Admin
+  # import Brando.Pages.Routes.Admin
 
   pipeline :admin do
     plug :accepts, ~w(html json)
@@ -49,13 +52,15 @@ defmodule <%= application_module %>.Router do
 
   scope "/admin", as: :admin do
     pipe_through :admin
-    dashboard_routes   "/"
-    user_routes        "/users"
-    post_routes        "/news"
-    image_routes       "/images"
-    instagram_routes   "/instagram"
-    page_routes        "/pages"
-    analytics_routes   "/analytics"
+    dashboard_routes "/"
+    user_routes      "/users"
+    image_routes     "/images"
+    analytics_routes "/analytics"
+
+    # additional optional routes
+    # instagram_routes "/instagram"
+    # page_routes      "/pages"
+    # post_routes      "/news"
   end
 
   scope "/coming-soon" do
@@ -64,12 +69,9 @@ defmodule <%= application_module %>.Router do
 
   scope "/auth" do
     pipe_through :auth
-    get  "/login", Brando.SessionController, :login,
-                   private: %{model: Brando.User}
-    post "/login", Brando.SessionController, :login,
-                   private: %{model: Brando.User}
-    get  "/logout", Brando.SessionController, :logout,
-                   private: %{model: Brando.User}
+    get  "/login", Brando.SessionController, :login, private: %{model: Brando.User}
+    post "/login", Brando.SessionController, :login, private: %{model: Brando.User}
+    get  "/logout", Brando.SessionController, :logout, private: %{model: Brando.User}
   end
 
   scope "/" do

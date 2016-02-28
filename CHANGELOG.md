@@ -6,6 +6,7 @@
   * Updated gettext req to 0.10 and relaxed requirement.
   * Fix mix.exs template typo.
   * Add missing deps to mix.exs template
+  * Install pre-made package.json to otp project.
 
 
 ## v0.22.0 (2016-02-26)

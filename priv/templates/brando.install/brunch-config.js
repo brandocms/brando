@@ -63,6 +63,8 @@ exports.config = {
     watched: [
       'node_modules/brando_villain',
       'node_modules/brando',
+      'node_modules/phoenix',
+      'node_modules/phoenix_html',
       'web/static',
       'test/static'
     ],
@@ -113,9 +115,14 @@ exports.config = {
   npm: {
     enabled: true,
     static: [
+      'node_modules/phoenix/priv/static/phoenix.js',
+      'node_modules/phoenix_html/priv/static/phoenix_html.js',
+
       'node_modules/brando/priv/static/js/brando.js',
       'node_modules/brando/priv/static/js/brando.auth.js',
-      'node_modules/brando_villain/priv/static/js/villain.all.js'
+      'node_modules/brando_villain/priv/static/js/villain.all.js',
+      'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
+      'node_modules/jquery/dist/jquery.js'
     ]
   }
 };
