@@ -78,7 +78,7 @@ exports.config = {
   modules: {
     autoRequire: {
       'js/brando.js': ['brando', 'jquery'],
-      'js/brando.auth.js': ['brando_auth/brando_auth']
+      'js/brando.auth.js': ['brando_auth']
     },
     definition: false,
     nameCleaner: function(path) {
