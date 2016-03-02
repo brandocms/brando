@@ -62,8 +62,6 @@ Set up database, and seed:
 
 Go through `config/brando.exs`.
 
-Make sure you set `:brando, :media_path` to your `media` folder. This must be an absolute path!
-
 Static media config in `endpoint.ex`.
 
 ```diff

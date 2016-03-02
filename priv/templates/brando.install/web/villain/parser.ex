@@ -36,6 +36,20 @@ defmodule <%= application_module %>.Villain.Parser do
   end
 
   @doc """
+  Html -> html. Easy as pie.
+  """
+  def html(%{"text" => html}) do
+    html
+  end
+
+  @doc """
+  Markdown -> html
+  """
+  def markdown(%{"text" => markdown}) do
+    Earmark.to_html(markdown, %Earmark.Options{breaks: true})
+  end
+
+  @doc """
   Convert YouTube video to iframe html
   """
   def video(%{"remote_id" => remote_id, "source" => "youtube"}) do

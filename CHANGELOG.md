@@ -1,4 +1,8 @@
-## v0.23.0-dev (2016-02-27)
+## v0.23.0-dev (2016-XX-XX)
+
+* Enhancements
+  * Villain: add html and markdown blocks. Add these to your parser if you want to use them,
+    look at Brando's default parser for an example implementation.
 
 * Bug fixes
   * Fixed fabfile deployment bugs
