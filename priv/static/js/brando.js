@@ -13175,8 +13175,6 @@ var _accordion = require("./accordion");
 
 var _utils = require("./utils");
 
-var _utils2 = _interopRequireDefault(_utils);
-
 var _vex_brando = require("./vex_brando");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -13281,7 +13279,7 @@ var Images = function () {
                 headers: { Accept: "application/json; charset=utf-8" },
                 type: "POST",
                 data: data,
-                url: _utils2.default.addToPathName('set-properties')
+                url: _utils.Utils.addToPathName('set-properties')
             }).done(_jquery2.default.proxy(function (data) {
                 /**
                  * Callback after confirming.
@@ -13339,7 +13337,7 @@ var Images = function () {
                             _jquery2.default.ajax({
                                 headers: { Accept: "application/json; charset=utf-8" },
                                 type: "POST",
-                                url: _utils2.default.addToPathName('delete-selected-images'),
+                                url: _utils.Utils.addToPathName('delete-selected-images'),
                                 data: { ids: imagePool },
                                 success: that.deleteSuccess
                             });
