@@ -2,6 +2,12 @@
 import $ from "jquery";
 import Dropzone from "dropzone";
 
+import "./brando/extensions/dropdown";
+import "./brando/extensions/searcher";
+import "./brando/extensions/slugit";
+import "./brando/extensions/sparkline";
+import "./brando/extensions/tags_input";
+
 import {Accordion} from "./brando/components/accordion";
 import Autoslug from "./brando/components/autoslug";
 import Flash from "./brando/components/flash";
@@ -17,12 +23,6 @@ import Tags from "./brando/components/tags";
 import Toolbar from "./brando/components/toolbar";
 import {Utils} from "./brando/components/utils";
 import WS from "./brando/components/ws";
-
-import "./brando/extensions/dropdown";
-import "./brando/extensions/searcher";
-import "./brando/extensions/slugit";
-import "./brando/extensions/sparkline";
-import "./brando/extensions/tags_input";
 
 $(() => {
     /**

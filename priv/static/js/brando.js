@@ -12854,6 +12854,16 @@ var _dropzone = require("dropzone");
 
 var _dropzone2 = _interopRequireDefault(_dropzone);
 
+require("./brando/extensions/dropdown");
+
+require("./brando/extensions/searcher");
+
+require("./brando/extensions/slugit");
+
+require("./brando/extensions/sparkline");
+
+require("./brando/extensions/tags_input");
+
 var _accordion = require("./brando/components/accordion");
 
 var _autoslug = require("./brando/components/autoslug");
@@ -12907,16 +12917,6 @@ var _utils = require("./brando/components/utils");
 var _ws = require("./brando/components/ws");
 
 var _ws2 = _interopRequireDefault(_ws);
-
-require("./brando/extensions/dropdown");
-
-require("./brando/extensions/searcher");
-
-require("./brando/extensions/slugit");
-
-require("./brando/extensions/sparkline");
-
-require("./brando/extensions/tags_input");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
