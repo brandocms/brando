@@ -15191,9 +15191,9 @@ _jquery2.default.fn.dropdown.Constructor.prototype.change = function (e) {
 require.register("brando/extensions/searcher", function(exports, require, module) {
 "use strict";
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; }; /*! $ Searcher Plugin - v0.1.0 - 2014-08-18
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; }; /*! jQuery Searcher Plugin - v0.3.0 - 2016-01-29
                                                                                                                                                                                                                                                    * https://github.com/lloiser/jquery-searcher/
-                                                                                                                                                                                                                                                   * Copyright (c) 2014 Lukas Beranek; Licensed MIT
+                                                                                                                                                                                                                                                   * Copyright (c) 2016 Lukas Beranek; Licensed MIT
                                                                                                                                                                                                                                                   */
 
 var _jquery = require("jquery");
@@ -15243,6 +15243,30 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 					toggle(this, true);
 				});
 			},
+			filter: function filter(value) {
+				this._lastValue = value;
+
+				var options = this.options,
+				    textSelector = options.textSelector,
+				    toggle = options.toggle || defaults.toggle;
+
+				// build the regular expression for searching
+				var flags = "gm" + (!options.caseSensitive ? "i" : "");
+				var regex = new RegExp("(" + escapeRegExp(value) + ")", flags);
+
+				this._$element.find(options.itemSelector).each(function eachItem() {
+					var $item = $(this),
+					    $textElements = textSelector ? $item.find(textSelector) : $item,
+					    itemContainsText = false;
+
+					$textElements = $textElements.each(function eachTextElement() {
+						itemContainsText = itemContainsText || !!$(this).text().match(regex);
+						return !itemContainsText; // stop if at least one text element contains the text
+					});
+
+					toggle(this, itemContainsText);
+				});
+			},
 			_create: function _create() {
 				var options = this.options;
 
@@ -15254,7 +15278,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 				this._$input = $(options.inputSelector).bind(eventNames, this._fn);
 
 				// remember the last entered value
-				this._lastValue = "";
+				this._lastValue = null;
 
 				// call the toggle with true for all items on startup
 				var toggle = options.toggle || defaults.toggle;
@@ -15263,30 +15287,10 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 				});
 			},
 			_onValueChange: function _onValueChange() {
-				var options = this.options,
-				    textSelector = options.textSelector,
-				    toggle = options.toggle || defaults.toggle;
+				var value = this._$input.val();
+				if (value === this._lastValue) return; // nothing has changed
 
-				// build the regular expression for searching
-				var flags = "gm" + (!options.caseSensitive ? "i" : "");
-				var value = new RegExp("(" + escapeRegExp(this._$input.val()) + ")", flags);
-
-				if (value.toString() === this._lastValue) return; // nothing has changed
-
-				this._lastValue = value.toString();
-
-				this._$element.find(options.itemSelector).each(function eachItem() {
-					var $item = $(this),
-					    $textElements = textSelector ? $item.find(textSelector) : $item,
-					    itemContainsText = false;
-
-					$textElements = $textElements.each(function eachTextElement() {
-						itemContainsText = itemContainsText || !!$(this).text().match(value);
-						return !itemContainsText; // stop if at least one text element contains the text
-					});
-
-					toggle(this, itemContainsText);
-				});
+				this.filter(value);
 			}
 		};
 
@@ -15296,23 +15300,25 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 		}
 
 		$.fn[pluginName] = function pluginHandler(options) {
+			var args = Array.prototype.slice.call(arguments, 1);
 			return this.each(function () {
 				var searcher = $.data(this, dataKey);
-				if (searcher && options === "dispose") {
-					searcher.dispose();
-					$.removeData(this, dataKey);
+				var t = typeof options === "undefined" ? "undefined" : _typeof(options);
+				if (t === "string" && searcher) {
+					searcher[options].apply(searcher, args);
+					if (options === "dispose") $.removeData(this, dataKey);
+				} else if (t === "object") {
+					if (!searcher)
+						// create a new searcher
+						$.data(this, dataKey, new Searcher(this, options));else
+						// update the options of the existing
+						$.extend(searcher.options, options);
 				}
-				// update the options of the existing
-				else if (searcher) $.extend(searcher.options, options);
-					// create a new searcher
-					else if ((typeof options === "undefined" ? "undefined" : _typeof(options)) === "object") $.data(this, dataKey, new Searcher(this, options));
 			});
 		};
 	}
-	// node/CommonJS style (for Browserify)
-	if ((typeof exports === "undefined" ? "undefined" : _typeof(exports)) === "object") module.exports = factory;
-	// browser
-	else factory(_jquery2.default);
+
+	factory(_jquery2.default);
 }).call(undefined);
 });
 
