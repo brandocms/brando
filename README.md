@@ -135,7 +135,7 @@ Register your module in `lib/my_app.ex`:
         # worker(MyApp.Worker, [arg1, arg2, arg3]),
       ]
 
-+     Brando.Registry.register(Brando.Portfolio)
++     Brando.Registry.register(MyApp.MyModule, [:menu])
 ```
 
 ## Production
