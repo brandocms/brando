@@ -6,7 +6,7 @@ defmodule <%= admin_module %>Form do
   use Brando.Form
 
   form "<%= singular %>", [
-    model: <%= module %>,
+    schema: <%= module %>,
     helper: :<%= admin_path %>_path,
     class: "grid-form"] do
 <%= for {_k, input} <- inputs, input do %>    <%= input %>
