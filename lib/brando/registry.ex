@@ -76,8 +76,11 @@ defmodule Brando.Registry do
     state = if :menu in opts, do:
       %State{state | menu_modules: [Module.concat(module, "Menu")|state.menu_modules]}
 
-    state = if :gettext in opts, do:
+    state = if :gettext in opts do
       %State{state | gettext_modules: [Module.concat(module, "Gettext")|state.gettext_modules]}
+    else
+      state
+    end
 
     {:reply, state, state}
   end
