@@ -3,7 +3,7 @@
 import $ from "jquery";
 
 import {Accordion} from "./accordion";
-import Utils from "./utils";
+import {Utils} from "./utils";
 import {vex} from "./vex_brando";
 
 var imagePool = [];

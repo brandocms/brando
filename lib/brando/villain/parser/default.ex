@@ -27,7 +27,7 @@ defmodule Brando.Villain.Parser.Default do
     if type == "lead" and byte_size(text) > 0 do
       text = text <> "\n{: .lead}"
     end
-    Earmark.to_html(text)
+    Earmark.to_html(text, %Earmark.Options{breaks: true})
   end
 
   @doc """
@@ -110,6 +110,20 @@ defmodule Brando.Villain.Parser.Default do
   end
 
   @doc """
+  Html -> html. Easy as pie.
+  """
+  def html(%{"text" => html}) do
+    html
+  end
+
+  @doc """
+  Markdown -> html
+  """
+  def markdown(%{"text" => markdown}) do
+    Earmark.to_html(markdown, %Earmark.Options{breaks: true})
+  end
+
+  @doc """
   Converts quote to html.
   """
   def blockquote(%{"text" => bq, "cite" => cite}) when byte_size(cite) > 0 do
@@ -130,6 +144,7 @@ defmodule Brando.Villain.Parser.Default do
       end)
       class = case col["class"] do
         "six" -> "col-md-6"
+        class -> class
       end
       ~s(<div class="#{class}">#{Enum.reverse(c)}</div>)
     end

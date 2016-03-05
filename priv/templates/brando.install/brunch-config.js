@@ -61,8 +61,21 @@ exports.config = {
   paths: {
     // Which directories to watch
     watched: [
-      'node_modules/brando_villain',
-      'node_modules/brando',
+      // brando
+      'node_modules/brando/priv/static/js/brando.js',
+      'node_modules/brando/priv/static/js/brando.auth.js',
+      'node_modules/brando_villain/priv/static/js/villain.all.js',
+      'node_modules/brando/priv/static/css/brando.css',
+      'node_modules/brando/priv/static/css/brando.vendor.css',
+      'node_modules/brando_villain/priv/static/css/villain.css',
+      // phoenix
+      'node_modules/phoenix/priv/static/phoenix.js',
+      'node_modules/phoenix_html/priv/static/phoenix_html.js',
+      // jquery
+      'node_modules/jquery/dist/jquery.js',
+      // bootstrap
+      'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
+      // static
       'web/static',
       'test/static'
     ],
@@ -115,7 +128,8 @@ exports.config = {
     static: [
       'node_modules/brando/priv/static/js/brando.js',
       'node_modules/brando/priv/static/js/brando.auth.js',
-      'node_modules/brando_villain/priv/static/js/villain.all.js'
+      'node_modules/brando_villain/priv/static/js/villain.all.js',
+      'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js'
     ]
   }
 };

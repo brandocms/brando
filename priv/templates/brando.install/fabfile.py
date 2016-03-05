@@ -9,7 +9,7 @@ from fabric.colors import red, green, yellow, cyan, blue
 from fabric.operations import prompt
 from fabric.utils import abort
 
-VERSION_NUMBER = '1.1.0'
+VERSION_NUMBER = '1.2.0'
 
 #
 # Project-specific setup.
@@ -178,8 +178,10 @@ def bootstrap():
     nginxcfg()
     logrotatecfg()
     migrate()
-    collectstatic()
     gitpull()
+    compile()
+    npm_install()
+    build_static()
     restart()
     _success()
 
@@ -215,6 +217,19 @@ def showconfig():
     pp.pprint(env)
 
 
+def compile():
+    """
+    Run database migrations
+    """
+    require('hosts')
+    print(cyan('-- compile // compiling project'))
+    with cd(env.path), shell_env(MIX_ENV='%s' % env.flavor,
+                                 HOME='/home/%s' % env.project_user,
+                                 LC_ALL='nb_NO.UTF-8'):
+        sudo('mix compile',
+             user=env.project_user)
+
+
 def migrate():
     """
     Run database migrations
@@ -224,7 +239,7 @@ def migrate():
     with cd(env.path), shell_env(MIX_ENV='%s' % env.flavor,
                                  HOME='/home/%s' % env.project_user,
                                  LC_ALL='nb_NO.UTF-8'):
-        sudo('mix ecto.migrate' % (env.flavor),
+        sudo('mix ecto.migrate',
              user=env.project_user)
 
 
@@ -237,7 +252,33 @@ def seed():
     with cd(env.path), shell_env(MIX_ENV='%s' % env.flavor,
                                  HOME='/home/%s' % env.project_user,
                                  LC_ALL='nb_NO.UTF-8'):
-        sudo('mix run priv/repo/seeds.exs' % (env.flavor),
+        sudo('mix run priv/repo/seeds.exs',
+             user=env.project_user)
+
+
+def npm_install():
+    """
+    Install npm packages
+    """
+    require('hosts')
+    print(cyan('-- npm // installing deps'))
+    with cd(env.path), shell_env(MIX_ENV='%s' % env.flavor,
+                                 HOME='/home/%s' % env.project_user,
+                                 LC_ALL='nb_NO.UTF-8'):
+        sudo('npm install',
+             user=env.project_user)
+
+
+def build_static():
+    """
+    Build static
+    """
+    require('hosts')
+    print(cyan('-- npm // building static'))
+    with cd(env.path), shell_env(MIX_ENV='%s' % env.flavor,
+                                 HOME='/home/%s' % env.project_user,
+                                 LC_ALL='nb_NO.UTF-8'):
+        sudo('node_modules/brunch/bin/brunch build -p',
              user=env.project_user)
 
 
@@ -252,18 +293,6 @@ def upload_media():
         _setowner(os.path.join(env.path, 'media'))
         print(cyan('-- upload_media // chmoding'))
         _setperms('755', os.path.join(env.path, 'media'))
-
-
-def collectstatic():
-    """
-    Collect static for django application.
-    """
-    require('hosts')
-    if env.flavor in ('prod', 'staging',):
-        with cd(env.path):
-            print '-- collectstatic // collecting static files for app'
-            sudo('FLAVOR=%s %s/bin/python manage.py collectstatic --noinput' % (
-                env.flavor, env.venv_path), user=env.project_user)
 
 
 def update():

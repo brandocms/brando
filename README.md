@@ -48,32 +48,6 @@ Add to your relevant `config/%{env}.exs` Repo config:
 +   extensions: [{Postgrex.Extensions.JSON, library: Poison}]
 ```
 
-Add NPM dependencies to your project's `package.json`:
-
-```diff
-  {
-    "repository": {
-    },
-    "dependencies": {
-      "babel-brunch": "~6.0.0",
-      "brunch": "~2.1.3",
-      "clean-css-brunch": "~1.8.0",
-      "css-brunch": "~1.7.0",
-      "javascript-brunch": "~1.8.0",
-      "uglify-js-brunch": "~1.7.0",
-+     
-+     "sass-brunch": "*",
-+     "postcss-brunch": "*",
-+     "autoprefixer": "*",
-+     
-+     "brando": "file:deps/brando",
-+     "brando_villain": "file:deps/brando_villain",
-      "phoenix": "file:deps/phoenix",
-      "phoenix_html": "file:deps/phoenix_html"
-    }
-  }
-```
-
 Install NPM packages:
 
     $ npm install
@@ -87,8 +61,6 @@ Set up database, and seed:
     $ mix ecto.setup
 
 Go through `config/brando.exs`.
-
-Make sure you set `:brando, :media_path` to your `media` folder. This must be an absolute path!
 
 Static media config in `endpoint.ex`.
 
@@ -104,11 +76,11 @@ Also switch out (or add to it, if you use sockets in the frontend as well) the s
 + socket "/admin/ws", Brando.UserSocket
 ```
 
-To use Brando's error view, add to your Endpoint's config:
+To use Brando's error view, add to your Endpoint's config (in prod.exs):
 
 ```elixir
 config :my_app, MyApp.Endpoint,
-  render_errors: [view: Brando.ErrorView, default_format: "html"]
+  render_errors: [accepts: ~w(html json), view: Brando.ErrorView, default_format: "html"],
 ```
 
 Brando uses Gettext for i18n.
@@ -163,7 +135,7 @@ Register your module in `lib/my_app.ex`:
         # worker(MyApp.Worker, [arg1, arg2, arg3]),
       ]
 
-+     Brando.Registry.register(Brando.Portfolio)
++     Brando.Registry.register(MyApp.MyModule, [:menu])
 ```
 
 ## Production

@@ -42,6 +42,7 @@ defmodule <%= application_module %>.Mixfile do
 
      # brando
      {:brando, github: "twined/brando"},
+     {:brando_villain, github: "twined/brando_villain"},
 
      # optional brando modules
      {:brando_news, github: "twined/brando_news"},

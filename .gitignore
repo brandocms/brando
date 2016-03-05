@@ -13,3 +13,4 @@ excoveralls.post.json
 coveralls.json
 doc
 cover
+npm-debug.log

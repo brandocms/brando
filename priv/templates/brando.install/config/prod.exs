@@ -20,7 +20,7 @@ config :<%= application_name %>, <%= application_module %>.Endpoint,
 config :logger, level: :info
 
 # Absolute path to your media directory.
-config :brando, media_path: ""
+config :brando, media_path: Path.expand("media")
 
 # ## SSL Support
 #

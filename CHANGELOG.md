@@ -1,10 +1,22 @@
+## v0.23.0 (2016-03-05)
+
+* Enhancements
+  * Villain: add html and markdown blocks. Add these to your parser if you want to use them,
+    look at Brando's default parser for an example implementation.
+
+* Bug fixes
+  * Fixed searcher.js init bug
+  * Fixed fabfile deployment bugs
+  * Fixed brunch template not compiling css
+  * Fixed supervisord templates
+
 ## v0.22.1 (2016-02-27)
 
 * Enhancements
   * Updated gettext req to 0.10 and relaxed requirement.
   * Fix mix.exs template typo.
   * Add missing deps to mix.exs template
-  
+  * Install pre-made package.json to otp project.
 
 ## v0.22.0 (2016-02-26)
 

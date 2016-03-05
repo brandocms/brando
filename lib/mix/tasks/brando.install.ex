@@ -60,6 +60,7 @@ defmodule Mix.Tasks.Brando.Install do
 
   @static [
     # Javascript assets
+    {:copy, "templates/brando.install/package.json", "package.json"},
     {:copy, "templates/brando.install/bower.json", "bower.json"},
     {:copy, "templates/brando.install/brunch-config.js", "brunch-config.js"},
     {:copy, "templates/brando.install/web/static/js/cookie_law.js", "web/static/vendor/cookie_law.js"},
