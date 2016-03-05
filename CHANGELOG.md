@@ -1,4 +1,4 @@
-## v0.23.0-dev (2016-XX-XX)
+## v0.23.0 (2016-03-05)
 
 * Enhancements
   * Villain: add html and markdown blocks. Add these to your parser if you want to use them,
