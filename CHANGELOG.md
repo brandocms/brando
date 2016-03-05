@@ -5,6 +5,7 @@
     look at Brando's default parser for an example implementation.
 
 * Bug fixes
+  * Fixed searcher.js init bug
   * Fixed fabfile deployment bugs
   * Fixed brunch template not compiling css
   * Fixed supervisord templates
