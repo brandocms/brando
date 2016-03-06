@@ -1,5 +1,8 @@
 ## v0.24.0-dev (2016-XX-XX)
 
+* Enhancements
+  * Added password protection to lockdown. Set with `:lockdown_password` in `config/brando.exs`.
+
 ## v0.23.0 (2016-03-05)
 
 * Enhancements

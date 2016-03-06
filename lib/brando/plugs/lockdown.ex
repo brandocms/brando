@@ -22,20 +22,24 @@ defmodule Brando.Plug.Lockdown do
 
   def call(conn, _) do
     if Brando.config(:lockdown) do
-      conn |> allowed?
+      allowed?(conn)
     else
       conn
     end
   end
 
-  defp allowed?(%{private: %{plug_session: %{"current_user" => cu}}} = conn) do
-    case User.can_login?(cu) do
+  defp allowed?(%{private: %{plug_session: %{"current_user" => user}}} = conn) do
+    case User.can_login?(user) do
       true  -> conn
-      false -> conn |> lockdown
+      false -> lockdown(conn)
     end
   end
 
-  defp allowed?(conn), do: conn |> lockdown
+  defp allowed?(%{private: %{plug_session: %{"lockdown_authorized" => true}}} = conn) do
+    conn
+  end
+
+  defp allowed?(conn), do: lockdown(conn)
 
   defp lockdown(conn) do
     conn

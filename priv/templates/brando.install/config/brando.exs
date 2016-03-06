@@ -32,6 +32,7 @@ config :brando,
     [value: "en", text: "English"]
   ],
   lockdown: true,
+  lockdown_password: "<%= :os.timestamp |> :erlang.phash2 |> Integer.to_string(32) |> String.downcase %>",
   mailgun_domain: "https://api.mailgun.net/v3/mydomain.com",
   mailgun_key: "key-##############",
   media_path: Path.expand("./media"),
