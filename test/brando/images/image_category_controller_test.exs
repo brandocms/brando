@@ -5,7 +5,6 @@ defmodule Brando.ImageCategory.ControllerTest do
   use Plug.Test
   use RouterHelper
   alias Brando.ImageCategory
-  alias Brando.User
   alias Brando.Type.ImageConfig
 
   @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "nb",
@@ -17,7 +16,7 @@ defmodule Brando.ImageCategory.ControllerTest do
   @broken_params %{"cfg" => %ImageConfig{}}
 
   def create_user do
-    {:ok, user} = User.create(@user_params)
+    {:ok, user} = create_user(@user_params)
     user
   end
 

@@ -3,7 +3,6 @@ defmodule Brando.HTML.InspectTest do
   use Brando.ConnCase
   use Brando.Integration.TestCase
   import Brando.HTML.Inspect
-  alias Brando.User
   alias Brando.Type.Image
 
   @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "nb",
@@ -68,7 +67,7 @@ defmodule Brando.HTML.InspectTest do
               sec: 58, usec: 0, year: 2015}}]
 
   test "model/1" do
-    assert {:ok, user} = User.create(@user_params)
+    assert {:ok, user} = create_user(@user_params)
 
     {:safe, ret} = model(user)
     ret = ret |> IO.iodata_to_binary
@@ -127,12 +126,12 @@ defmodule Brando.HTML.InspectTest do
   end
 
   test "model_repr/1" do
-    assert {:ok, user} = User.create(@user_params)
+    assert {:ok, user} = create_user(@user_params)
     assert schema_repr(user) == "Nita Bond (zabuzasixu)"
   end
 
   test "model_name/2" do
-    assert {:ok, user} = User.create(@user_params)
+    assert {:ok, user} = create_user(@user_params)
     assert schema_name(user, :singular) == "user"
     assert schema_name(user, :plural) == "users"
   end

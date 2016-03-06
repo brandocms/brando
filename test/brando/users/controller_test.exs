@@ -104,9 +104,14 @@ defmodule Brando.Users.ControllerTest do
 
   test "update (post) w/params" do
     user = Forge.saved_user(TestRepo)
+    user_params =
+      user
+      |> Map.delete(:__struct__)
+      |> Map.delete(:id)
+
     conn =
       :patch
-      |> call("/admin/users/#{user.id}", %{"user" => Map.delete(user, :__struct__)})
+      |> call("/admin/users/#{user.id}", %{"user" => user_params})
       |> with_user
       |> send_request
 

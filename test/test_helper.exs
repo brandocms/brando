@@ -38,6 +38,12 @@ defmodule Brando.Integration.TestCase do
       require Repo
       import Ecto.Query
       alias Ecto.Integration.TestRepo, as: Repo
+
+      def create_user(params) do
+        params
+        |> Brando.User.create
+        |> Brando.repo.insert
+      end
     end
   end
 end
