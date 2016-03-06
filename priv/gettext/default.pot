@@ -76,7 +76,7 @@ msgstr ""
 
 #: web/controllers/admin/image_category_controller.ex:133
 #: web/controllers/admin/image_series_controller.ex:171
-#: web/controllers/admin/user_controller.ex:165
+#: web/controllers/admin/user_controller.ex:166
 msgid "Confirm deletion"
 msgstr ""
 
@@ -133,14 +133,14 @@ msgstr ""
 msgid "Edit image series"
 msgstr ""
 
-#: web/controllers/admin/user_controller.ex:62
-#: web/controllers/admin/user_controller.ex:86
+#: web/controllers/admin/user_controller.ex:63
+#: web/controllers/admin/user_controller.ex:87
 #: web/templates/admin/user/profile_edit.html.eex:1
 msgid "Edit profile"
 msgstr ""
 
-#: web/controllers/admin/user_controller.ex:130
-#: web/controllers/admin/user_controller.ex:153
+#: web/controllers/admin/user_controller.ex:131
+#: web/controllers/admin/user_controller.ex:154
 #: web/templates/admin/user/edit.html.eex:1
 #: web/templates/admin/user/index.html.eex:4
 #: web/templates/admin/user/new.html.eex:8
@@ -148,7 +148,7 @@ msgstr ""
 msgid "Edit user"
 msgstr ""
 
-#: web/models/user.ex:201 web/templates/session/login.html.eex:3
+#: web/models/user.ex:188 web/templates/session/login.html.eex:3
 msgid "Email"
 msgstr ""
 
@@ -170,9 +170,9 @@ msgstr ""
 #: web/controllers/admin/image_series_controller.ex:48
 #: web/controllers/admin/image_series_controller.ex:84
 #: web/controllers/admin/image_series_controller.ex:125
-#: web/controllers/admin/user_controller.ex:87
-#: web/controllers/admin/user_controller.ex:114
-#: web/controllers/admin/user_controller.ex:154
+#: web/controllers/admin/user_controller.ex:88
+#: web/controllers/admin/user_controller.ex:115
+#: web/controllers/admin/user_controller.ex:155
 msgid "Errors in form"
 msgstr ""
 
@@ -225,7 +225,7 @@ msgstr ""
 msgid "Index - images"
 msgstr ""
 
-#: web/controllers/admin/user_controller.ex:27
+#: web/controllers/admin/user_controller.ex:28
 #: web/templates/admin/user/index.html.eex:1
 msgid "Index - users"
 msgstr ""
@@ -252,8 +252,8 @@ msgstr ""
 msgid "New image series"
 msgstr ""
 
-#: web/controllers/admin/user_controller.ex:98
-#: web/controllers/admin/user_controller.ex:113
+#: web/controllers/admin/user_controller.ex:99
+#: web/controllers/admin/user_controller.ex:114
 #: web/templates/admin/user/index.html.eex:9
 #: web/templates/admin/user/new.html.eex:1
 msgid "New user"
@@ -272,7 +272,7 @@ msgstr ""
 msgid "Page not found"
 msgstr ""
 
-#: web/models/user.ex:203 web/templates/session/login.html.eex:6
+#: web/models/user.ex:190 web/templates/session/login.html.eex:6
 msgid "Password"
 msgstr ""
 
@@ -280,11 +280,11 @@ msgstr ""
 msgid "Please contact an administrator."
 msgstr ""
 
-#: web/controllers/admin/user_controller.ex:46 web/menus/users_menu.ex:12
+#: web/controllers/admin/user_controller.ex:47 web/menus/users_menu.ex:12
 msgid "Profile"
 msgstr ""
 
-#: web/controllers/admin/user_controller.ex:79
+#: web/controllers/admin/user_controller.ex:80
 msgid "Profile updated"
 msgstr ""
 
@@ -300,7 +300,7 @@ msgstr ""
 msgid "Server error"
 msgstr ""
 
-#: web/controllers/admin/user_controller.ex:36
+#: web/controllers/admin/user_controller.ex:37
 #: web/templates/admin/user/index.html.eex:3
 #: web/templates/admin/user/show.html.eex:2
 msgid "Show user"
@@ -339,11 +339,11 @@ msgstr ""
 msgid "Upload to this image series"
 msgstr ""
 
-#: web/controllers/admin/user_controller.ex:108
+#: web/controllers/admin/user_controller.ex:109
 msgid "User created"
 msgstr ""
 
-#: web/controllers/admin/user_controller.ex:147
+#: web/controllers/admin/user_controller.ex:148
 msgid "User updated"
 msgstr ""
 
@@ -361,7 +361,7 @@ msgstr ""
 msgid "You have been logged out of the admin area."
 msgstr ""
 
-#: web/controllers/admin/user_controller.ex:177
+#: web/controllers/admin/user_controller.ex:179
 msgid "deleted"
 msgstr ""
 
@@ -389,7 +389,7 @@ msgstr ""
 msgid "Association not fetched"
 msgstr ""
 
-#: web/models/user.ex:209
+#: web/models/user.ex:196
 msgid "Avatar"
 msgstr ""
 
@@ -434,12 +434,12 @@ msgstr ""
 msgid "Encoded value"
 msgstr ""
 
-#: web/models/user.ex:202
+#: web/models/user.ex:189
 msgid "Full name"
 msgstr ""
 
 #: web/models/image.ex:184 web/models/image_category.ex:133
-#: web/models/image_series.ex:181 web/models/user.ex:199
+#: web/models/image_series.ex:181 web/models/user.ex:186
 msgid "ID"
 msgstr ""
 
@@ -456,15 +456,15 @@ msgid "Image series"
 msgstr ""
 
 #: web/models/image.ex:189 web/models/image_category.ex:139
-#: web/models/image_series.ex:191 web/models/user.ex:207
+#: web/models/image_series.ex:191 web/models/user.ex:194
 msgid "Inserted at"
 msgstr ""
 
-#: web/models/user.ex:205
+#: web/models/user.ex:192
 msgid "Language"
 msgstr ""
 
-#: web/models/user.ex:206
+#: web/models/user.ex:193
 msgid "Last login"
 msgstr ""
 
@@ -497,7 +497,7 @@ msgstr ""
 msgid "Rights"
 msgstr ""
 
-#: web/models/user.ex:204
+#: web/models/user.ex:191
 msgid "Roles"
 msgstr ""
 
@@ -514,7 +514,7 @@ msgid "Slug"
 msgstr ""
 
 #: web/models/image.ex:190 web/models/image_category.ex:140
-#: web/models/image_series.ex:192 web/models/user.ex:208
+#: web/models/image_series.ex:192 web/models/user.ex:195
 msgid "Updated at"
 msgstr ""
 
@@ -522,7 +522,7 @@ msgstr ""
 msgid "User information"
 msgstr ""
 
-#: web/models/user.ex:200
+#: web/models/user.ex:187
 msgid "Username"
 msgstr ""
 
@@ -590,11 +590,11 @@ msgstr ""
 msgid "superuser"
 msgstr ""
 
-#: web/models/user.ex:195
+#: web/models/user.ex:182
 msgid "user"
 msgstr ""
 
-#: web/models/user.ex:196
+#: web/models/user.ex:183
 msgid "users"
 msgstr ""
 
@@ -703,6 +703,10 @@ msgstr ""
 msgid "Access denied."
 msgstr ""
 
-#: web/models/user.ex:94
+#: web/models/user.ex:71 web/models/user.ex:95
 msgid "Passwords must match"
+msgstr ""
+
+#: web/models/user.ex:72 web/models/user.ex:96
+msgid "Password must be at least 6 characters"
 msgstr ""

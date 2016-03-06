@@ -90,7 +90,7 @@ msgstr "Konfigurer bildeserie"
 
 #: web/controllers/admin/image_category_controller.ex:133
 #: web/controllers/admin/image_series_controller.ex:171
-#: web/controllers/admin/user_controller.ex:165
+#: web/controllers/admin/user_controller.ex:166
 msgid "Confirm deletion"
 msgstr "Bekreft sletting"
 
@@ -147,14 +147,14 @@ msgstr "Rediger bildekategori"
 msgid "Edit image series"
 msgstr "Rediger bildeserie"
 
-#: web/controllers/admin/user_controller.ex:62
-#: web/controllers/admin/user_controller.ex:86
+#: web/controllers/admin/user_controller.ex:63
+#: web/controllers/admin/user_controller.ex:87
 #: web/templates/admin/user/profile_edit.html.eex:1
 msgid "Edit profile"
 msgstr "Rediger profil"
 
-#: web/controllers/admin/user_controller.ex:130
-#: web/controllers/admin/user_controller.ex:153
+#: web/controllers/admin/user_controller.ex:131
+#: web/controllers/admin/user_controller.ex:154
 #: web/templates/admin/user/edit.html.eex:1
 #: web/templates/admin/user/index.html.eex:4
 #: web/templates/admin/user/new.html.eex:8
@@ -162,7 +162,7 @@ msgstr "Rediger profil"
 msgid "Edit user"
 msgstr "Rediger bruker"
 
-#: web/models/user.ex:201 web/templates/session/login.html.eex:3
+#: web/models/user.ex:188 web/templates/session/login.html.eex:3
 msgid "Email"
 msgstr "E-post"
 
@@ -184,9 +184,9 @@ msgstr "Feil"
 #: web/controllers/admin/image_series_controller.ex:48
 #: web/controllers/admin/image_series_controller.ex:84
 #: web/controllers/admin/image_series_controller.ex:125
-#: web/controllers/admin/user_controller.ex:87
-#: web/controllers/admin/user_controller.ex:114
-#: web/controllers/admin/user_controller.ex:154
+#: web/controllers/admin/user_controller.ex:88
+#: web/controllers/admin/user_controller.ex:115
+#: web/controllers/admin/user_controller.ex:155
 msgid "Errors in form"
 msgstr "Feil i skjemaet"
 
@@ -239,7 +239,7 @@ msgstr "Bildeserie oppdatert"
 msgid "Index - images"
 msgstr "Oversikt - bilder"
 
-#: web/controllers/admin/user_controller.ex:27
+#: web/controllers/admin/user_controller.ex:28
 #: web/templates/admin/user/index.html.eex:1
 msgid "Index - users"
 msgstr "Oversikt - brukere"
@@ -266,8 +266,8 @@ msgstr "Ny bildekategori"
 msgid "New image series"
 msgstr "Ny bildeserie"
 
-#: web/controllers/admin/user_controller.ex:98
-#: web/controllers/admin/user_controller.ex:113
+#: web/controllers/admin/user_controller.ex:99
+#: web/controllers/admin/user_controller.ex:114
 #: web/templates/admin/user/index.html.eex:9
 #: web/templates/admin/user/new.html.eex:1
 msgid "New user"
@@ -286,7 +286,7 @@ msgstr "Ingen bilder"
 msgid "Page not found"
 msgstr "Side ikke funnet."
 
-#: web/models/user.ex:203 web/templates/session/login.html.eex:6
+#: web/models/user.ex:190 web/templates/session/login.html.eex:6
 msgid "Password"
 msgstr "Passord"
 
@@ -294,11 +294,11 @@ msgstr "Passord"
 msgid "Please contact an administrator."
 msgstr "Vennligst kontakt administrator."
 
-#: web/controllers/admin/user_controller.ex:46 web/menus/users_menu.ex:12
+#: web/controllers/admin/user_controller.ex:47 web/menus/users_menu.ex:12
 msgid "Profile"
 msgstr "Profil"
 
-#: web/controllers/admin/user_controller.ex:79
+#: web/controllers/admin/user_controller.ex:80
 msgid "Profile updated"
 msgstr "Profil oppdatert"
 
@@ -314,7 +314,7 @@ msgstr "Lagre sortert serie"
 msgid "Server error"
 msgstr "Serverfeil"
 
-#: web/controllers/admin/user_controller.ex:36
+#: web/controllers/admin/user_controller.ex:37
 #: web/templates/admin/user/index.html.eex:3
 #: web/templates/admin/user/show.html.eex:2
 msgid "Show user"
@@ -353,11 +353,11 @@ msgstr "Last opp bilder"
 msgid "Upload to this image series"
 msgstr "Last opp til denne bildeserien"
 
-#: web/controllers/admin/user_controller.ex:108
+#: web/controllers/admin/user_controller.ex:109
 msgid "User created"
 msgstr "Bruker opprettet"
 
-#: web/controllers/admin/user_controller.ex:147
+#: web/controllers/admin/user_controller.ex:148
 msgid "User updated"
 msgstr "Bruker oppdatert"
 
@@ -375,7 +375,7 @@ msgstr "Du har ikke sikkerhetstilgang for dette området."
 msgid "You have been logged out of the admin area."
 msgstr "Du har nå logget ut av admin-området."
 
-#: web/controllers/admin/user_controller.ex:177
+#: web/controllers/admin/user_controller.ex:179
 msgid "deleted"
 msgstr "slettet"
 
@@ -403,7 +403,7 @@ msgstr "** sensurert **"
 msgid "Association not fetched"
 msgstr "Forbindelse ikke hentet"
 
-#: web/models/user.ex:209
+#: web/models/user.ex:196
 msgid "Avatar"
 msgstr "Profilbilde"
 
@@ -448,12 +448,12 @@ msgstr "Tom forbindelse"
 msgid "Encoded value"
 msgstr "Kodet verdi"
 
-#: web/models/user.ex:202
+#: web/models/user.ex:189
 msgid "Full name"
 msgstr "Fullt navn"
 
 #: web/models/image.ex:184 web/models/image_category.ex:133
-#: web/models/image_series.ex:181 web/models/user.ex:199
+#: web/models/image_series.ex:181 web/models/user.ex:186
 msgid "ID"
 msgstr "ID"
 
@@ -470,15 +470,15 @@ msgid "Image series"
 msgstr "Bildeserie"
 
 #: web/models/image.ex:189 web/models/image_category.ex:139
-#: web/models/image_series.ex:191 web/models/user.ex:207
+#: web/models/image_series.ex:191 web/models/user.ex:194
 msgid "Inserted at"
 msgstr "Lagt til"
 
-#: web/models/user.ex:205
+#: web/models/user.ex:192
 msgid "Language"
 msgstr "Språk"
 
-#: web/models/user.ex:206
+#: web/models/user.ex:193
 msgid "Last login"
 msgstr "Forrige innlogging"
 
@@ -511,7 +511,7 @@ msgstr "Publisert"
 msgid "Rights"
 msgstr "Rettigheter"
 
-#: web/models/user.ex:204
+#: web/models/user.ex:191
 msgid "Roles"
 msgstr "Roller"
 
@@ -528,7 +528,7 @@ msgid "Slug"
 msgstr "URL-tamp"
 
 #: web/models/image.ex:190 web/models/image_category.ex:140
-#: web/models/image_series.ex:192 web/models/user.ex:208
+#: web/models/image_series.ex:192 web/models/user.ex:195
 msgid "Updated at"
 msgstr "Sist oppdatert"
 
@@ -536,7 +536,7 @@ msgstr "Sist oppdatert"
 msgid "User information"
 msgstr "Brukerinformasjon"
 
-#: web/models/user.ex:200
+#: web/models/user.ex:187
 msgid "Username"
 msgstr "Brukernavn"
 
@@ -604,11 +604,11 @@ msgstr "personale"
 msgid "superuser"
 msgstr "superbruker"
 
-#: web/models/user.ex:195
+#: web/models/user.ex:182
 msgid "user"
 msgstr "bruker"
 
-#: web/models/user.ex:196
+#: web/models/user.ex:183
 msgid "users"
 msgstr "brukere"
 
@@ -717,6 +717,10 @@ msgstr "Statistikk - visninger"
 msgid "Access denied."
 msgstr "Adgang nektet."
 
-#: web/models/user.ex:94
+#: web/models/user.ex:71 web/models/user.ex:95
 msgid "Passwords must match"
 msgstr "Passord må matche"
+
+#: web/models/user.ex:72 web/models/user.ex:96
+msgid "Password must be at least 6 characters"
+msgstr "Passord må være minst 6 tegn"
