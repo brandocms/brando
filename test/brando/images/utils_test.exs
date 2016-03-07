@@ -1,5 +1,5 @@
 defmodule Brando.Images.UtilsTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case
   import Brando.Images.Utils
   alias Brando.Images.Upload
 
