@@ -15,16 +15,40 @@ defmodule RouterHelper do
                              encryption_salt: "yadayada",
                              signing_salt: "yadayada")
 
-  @current_user %{__struct__: Brando.User,
-      avatar: nil, email: "test@test.com", full_name: "Iggy Pop", id: 1,
-      inserted_at: %Ecto.DateTime{day: 7, hour: 4, min: 36, month: 12,
-                                  sec: 26, year: 2014},
-      last_login: %Ecto.DateTime{day: 9, hour: 5, min: 2, month: 12,
-                                 sec: 36, year: 2014},
-      role: [:superuser, :staff, :admin],
-      updated_at: %Ecto.DateTime{day: 14, hour: 21, min: 36, month: 1,
-                                 sec: 53, year: 2015},
-      username: "iggypop", language: "en"}
+  @current_user %{
+    __struct__: Brando.User,
+    id: 1,
+    avatar: nil,
+    email: "test@test.com",
+    full_name: "Iggy Pop",
+    inserted_at: %Ecto.DateTime{
+      day: 7,
+      hour: 4,
+      min: 36,
+      month: 12,
+      sec: 26,
+      year: 2014
+    },
+    last_login: %Ecto.DateTime{
+      day: 9,
+      hour: 5,
+      min: 2,
+      month: 12,
+      sec: 36,
+      year: 2014
+    },
+    updated_at: %Ecto.DateTime{
+      day: 14,
+      hour: 21,
+      min: 36,
+      month: 1,
+      sec: 53,
+      year: 2015
+    },
+    role: [:superuser, :staff, :admin],
+    username: "iggypop",
+    language: "en"
+  }
 
   defmacro __using__(_) do
     quote do

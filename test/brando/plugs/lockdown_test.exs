@@ -50,7 +50,7 @@ defmodule Brando.Plug.LockdownTest do
     end
 
     def put_current_user(conn, _) do
-      conn |> put_session(:current_user, %{role: [:admin, :superuser]})
+      put_session(conn, :current_user, %{role: [:admin, :superuser]})
     end
   end
 
@@ -78,7 +78,7 @@ defmodule Brando.Plug.LockdownTest do
     end
 
     def put_current_user(conn, _) do
-      conn |> put_session(:current_user, %{role: []})
+      put_session(conn, :current_user, %{role: []})
     end
   end
 
@@ -121,8 +121,7 @@ defmodule Brando.Plug.LockdownTest do
 
     assert conn.status == 302
 
-    assert List.keyfind(conn.resp_headers, "location", 0)
-           == {"location", "/coming-soon"}
+    assert List.keyfind(conn.resp_headers, "location", 0) == {"location", "/coming-soon"}
 
     Application.put_env(:brando, :lockdown, false)
   end

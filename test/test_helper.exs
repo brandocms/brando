@@ -1,4 +1,7 @@
 Logger.configure(level: :info)
+
+{:ok, _} = Application.ensure_all_started(:ex_machina)
+
 ExUnit.start
 
 # Clear tmp dir
@@ -38,18 +41,11 @@ defmodule Brando.Integration.TestCase do
       require Repo
       import Ecto.Query
       alias Ecto.Integration.TestRepo, as: Repo
-
-      def create_user(params) do
-        params
-        |> Brando.User.create
-        |> Brando.repo.insert
-      end
     end
   end
 end
 
 Code.require_file "support/user_socket.exs", __DIR__
-Code.require_file "support/fixtures.exs", __DIR__
 
 _ = Ecto.Storage.down(Repo)
 _ = Ecto.Storage.up(Repo)

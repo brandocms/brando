@@ -28,14 +28,13 @@ defmodule Brando.TestRouter do
   scope "/admin", as: :admin do
     pipe_through :admin
     dashboard_routes "/"
-    user_routes "/users", Brando.Admin.UserController,
-                               private: %{model: Brando.User}
+    user_routes "/users", Brando.Admin.UserController, private: %{model: Brando.User}
     user_routes "/users2", private: %{model: Brando.User}
     user_routes "/users3"
     image_routes "/images"
     image_routes "/images2", [image_model: Brando.Image,
-                                 series_model: Brando.ImageSeries,
-                                 category_model: Brando.ImageCategory]
+                              series_model: Brando.ImageSeries,
+                              category_model: Brando.ImageCategory]
     analytics_routes "/analytics"
 
     scope "villain" do
