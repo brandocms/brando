@@ -53,6 +53,7 @@ defmodule Brando.Mixfile do
      # Test dependencies
      {:phoenix_ecto, "~> 3.0.0-beta", only: :test},
      {:blacksmith, "~> 0.1.2", only: :test},
+     {:ex_machina, "~> 0.6.1", only: :test},
      {:excoveralls, "~> 0.5.1", only: :test},
 
      # Temporary until scrivener updates

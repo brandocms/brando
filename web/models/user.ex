@@ -57,8 +57,8 @@ defmodule Brando.User do
       model_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, atom, Keyword.t | Options.t | :empty) :: t
-  def changeset(model, action, params \\ :invalid)
+  @spec changeset(t, atom, %{binary => term} | %{atom => term}) :: t
+  def changeset(model, action, params \\ %{})
   def changeset(model, :create, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
@@ -81,7 +81,7 @@ defmodule Brando.User do
       model_changeset = changeset(%__MODULE__{}, :update, params)
 
   """
-  @spec changeset(t, atom, Keyword.t | Options.t) :: t
+  @spec changeset(t, atom, %{binary => term} | %{atom => term}) :: t
   def changeset(model, :update, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
