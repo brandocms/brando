@@ -11,6 +11,7 @@ defmodule Brando.Dashboard.ControllerTest do
       |> call("/admin/")
       |> with_user
       |> send_request
+      
     assert html_response(conn, 200) =~ "Ahoy, Iggy!"
   end
 
@@ -23,6 +24,7 @@ defmodule Brando.Dashboard.ControllerTest do
       |> call("/admin/systeminfo")
       |> with_user
       |> send_request
+
     resp = html_response(conn, 200)
 
     assert resp =~ "System information"
@@ -35,6 +37,7 @@ defmodule Brando.Dashboard.ControllerTest do
       |> call("/admin/systeminfo")
       |> with_user
       |> send_request
+
     resp = html_response(conn, 200)
 
     assert resp =~ "System information"

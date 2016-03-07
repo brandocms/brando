@@ -3,22 +3,12 @@ defmodule Brando.Utils.ModelTest do
   use Brando.ConnCase
   use Brando.Integration.TestCase
   use Plug.Test
+  
   alias Brando.Utils
-
-  @params %{
-    "avatar" => nil,
-    "role" => ["2", "4"],
-    "language" => "nb",
-    "email" => "fanogigyni@gmail.com",
-    "full_name" => "Nita Bond",
-    "password" => "finimeze",
-    "status" => "1",
-    "submit" => "Submit",
-    "username" => "zabuzasixu"
-  }
+  alias Brando.Factory
 
   test "update_field/2" do
-    assert {:ok, user} = create_user(@params)
+    user = Factory.create(:user)
     assert {:ok, model} = Utils.Model.update_field(user, [full_name: "James Bond"])
     assert model.full_name == "James Bond"
   end

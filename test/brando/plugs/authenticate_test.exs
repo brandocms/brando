@@ -110,6 +110,7 @@ defmodule Brando.Plug.AuthenticateTest do
       |> conn("/", [])
       |> assign(:secret_key_base, "asdf")
       |> AuthPlugFailsPerms.call([])
+      
     assert conn.status == 302
     %{phoenix_flash: errors} = conn.private
     assert errors == %{"error" => "Access denied."}

@@ -6,10 +6,15 @@ defmodule Brando.Types.ImageTest do
        ~s(jpeg","medium":"images/avatars/medium/27i97a.jpeg"},"path":") <>
        ~s(images/avatars/27i97a.jpeg","optimized":false,"credits":"Credits"})
 
-  @result %Image{credits: "Credits", optimized: false,
-                 path: "images/avatars/27i97a.jpeg", title: nil,
-                 sizes: %{"medium" => "images/avatars/medium/27i97a.jpeg",
-                          "thumb" => "images/avatars/thumb/27i97a.jpeg"}}
+  @result %Image{
+    credits: "Credits", optimized: false,
+    path: "images/avatars/27i97a.jpeg", title: nil,
+    sizes: %{
+      "medium" => "images/avatars/medium/27i97a.jpeg",
+      "thumb" => "images/avatars/thumb/27i97a.jpeg"
+    }
+  }
+
   @struct %Image{}
 
   test "cast" do
