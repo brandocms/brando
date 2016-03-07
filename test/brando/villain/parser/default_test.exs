@@ -2,16 +2,11 @@ defmodule Brando.Villain.ParserTest do
   use ExUnit.Case
   use Brando.Integration.TestCase
   use Brando.ConnCase
-  alias Brando.ImageCategory
-  alias Brando.ImageSeries
-  alias Brando.Image
-  alias Brando.Type.ImageConfig
-  import Brando.Villain.Parser.Default
 
-  @series_params %{name: "My slides", slug: "my-slides",
-                   credits: "Credits", sequence: 0, creator_id: 1}
-  @category_params %{cfg: %ImageConfig{}, creator_id: 1,
-                     name: "Slideshows", slug: "slideshows"}
+  alias Brando.Image
+  alias Brando.Factory
+
+  import Brando.Villain.Parser.Default
 
   test "header/1" do
     assert header(%{"text" => "Header"}) == ~s(<h1>Header</h1>)
@@ -87,16 +82,9 @@ defmodule Brando.Villain.ParserTest do
       thumb: "/tmp/path/to/fake/thumb2.jpg"}}
     }
 
-    user = Forge.saved_user(TestRepo)
-    {:ok, category} =
-      @category_params
-      |> Map.put(:creator_id, user.id)
-      |> ImageCategory.create(user)
-    {:ok, series} =
-      @series_params
-      |> Map.put(:creator_id, user.id)
-      |> Map.put(:image_category_id, category.id)
-      |> ImageSeries.create(user)
+    user = Factory.create(:user)
+    category = Factory.create(:image_category, creator: user, name: "Slideshows", slug: "slideshows")
+    series = Factory.create(:image_series, creator: user, image_category: category, name: "My Slides", slug: "my-slides")
 
     img1
     |> Map.put(:creator_id, user.id)

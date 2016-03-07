@@ -4,34 +4,25 @@ defmodule Brando.Image.ControllerTest do
   use Brando.Integration.TestCase
   use Plug.Test
   use RouterHelper
+
   alias Brando.Image
-  alias Brando.ImageSeries
-  alias Brando.ImageCategory
   alias Brando.Type.ImageConfig
+  alias Brando.Factory
 
   @path "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"
   @series_params %{"name" => "Series name", "slug" => "series-name",
                    "credits" => "Credits", "order" => 0}
   @category_params %{"cfg" => %ImageConfig{}, "name" => "Test Category",
                      "slug" => "test-category"}
-  @up_params %Plug.Upload{content_type: "image/png",
-                          filename: "sample.png", path: @path}
 
-  def create_category(user) do
-    {:ok, category} = ImageCategory.create(@category_params, user)
-    category
-  end
-
-  def create_series do
-    user = Forge.saved_user(TestRepo)
-    category = create_category(user)
-    series_params = Map.put(@series_params, "image_category_id", category.id)
-    {:ok, series} = ImageSeries.create(series_params, user)
-    series
+  setup do
+    user = Factory.create(:user)
+    category = Factory.create(:image_category, creator: user)
+    series = Factory.create(:image_series, creator: user, image_category: category)
+    {:ok, %{user: user, category: category, series: series}}
   end
 
   test "index" do
-    create_series
     conn =
       :get
       |> call("/admin/images/")
@@ -43,21 +34,12 @@ defmodule Brando.Image.ControllerTest do
     assert html_response(conn, 200) =~ "Series name"
   end
 
-  test "set_properties" do
-    # upload first
-    user = Forge.saved_user(TestRepo)
-    category = create_category(user)
-
-    series_params =
-      @series_params
-      |> Map.put("creator_id", user.id)
-      |> Map.put("image_category_id", category.id)
-    {:ok, series} = ImageSeries.create(series_params, user)
+  test "set_properties", %{user: user, series: series} do
+    up_params = Factory.build(:plug_upload)
 
     conn =
       :post
-      |> call("/admin/images/series/#{series.id}/upload",
-              %{"id" => series.id, "image" => @up_params})
+      |> call("/admin/images/series/#{series.id}/upload", %{"id" => series.id, "image" => up_params})
       |> with_user(user)
       |> as_json
       |> send_request
@@ -65,8 +47,10 @@ defmodule Brando.Image.ControllerTest do
     assert json_response(conn, 200) == %{"status" => "200"}
 
     q = from(m in Image,
-             where: m.image_series_id == ^series.id,
-             order_by: m.sequence)
+          where: m.image_series_id == ^series.id,
+          order_by: m.sequence
+        )
+
     image = q |> Brando.repo.all |> List.first
 
     refute image.image.credits
@@ -82,46 +66,23 @@ defmodule Brando.Image.ControllerTest do
 
     response = json_response(conn, 200)
 
-    assert Map.get(response, "attrs")
-           == %{"credits" => "credits", "title" => "title"}
-    assert Map.get(response, "status")
-           == "200"
+    assert Map.get(response, "attrs") == %{"credits" => "credits", "title" => "title"}
+    assert Map.get(response, "status") == "200"
 
-    q = from(m in Image,
-             where: m.image_series_id == ^series.id,
-             order_by: m.sequence)
     image = q |> Brando.repo.all |> List.first
 
     assert image.image.credits == "credits"
     assert image.image.title   == "title"
   end
 
-  test "delete_selected" do
-    # upload first
-    user = Forge.saved_user(TestRepo)
-    category = create_category(user)
-
-    series_params =
-      @series_params
-      |> Map.put("creator_id", user.id)
-      |> Map.put("image_category_id", category.id)
-    {:ok, series} = ImageSeries.create(series_params, user)
-
-    conn =
-      :post
-      |> call("/admin/images/series/#{series.id}/upload",
-              %{"id" => series.id, "image" => @up_params})
-      |> with_user(user)
-      |> as_json
-      |> send_request
-
-    assert json_response(conn, 200) == %{"status" => "200"}
-
+  test "delete_selected", %{series: series, user: user} do
     q = from(m in Image,
-             select: m.id,
-             where: m.image_series_id == ^series.id,
-             order_by: m.sequence)
-    images = q |> Brando.repo.all
+      select: m.id,
+      where: m.image_series_id == ^series.id,
+      order_by: m.sequence
+    )
+
+    images = Brando.repo.all(q)
 
     conn =
       :post
@@ -132,7 +93,7 @@ defmodule Brando.Image.ControllerTest do
 
     assert json_response(conn, 200) == %{"status" => "200", "ids" => images}
 
-    images = q |> Brando.repo.all
+    images = Brando.repo.all(q)
 
     assert images == []
   end

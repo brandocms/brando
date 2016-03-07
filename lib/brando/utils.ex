@@ -126,13 +126,6 @@ defmodule Brando.Utils do
   end
 
   @doc """
-  Maybe implementation. If `arg1` is nil, do nothing.
-  Else, invoke `fun` on `item`.
-  """
-  def maybe(nil, _fun), do: nil
-  def maybe(item, fun), do: fun.(item)
-
-  @doc """
   Converts an ecto datetime record to ISO 8601 format.
   """
   @spec to_iso8601(Ecto.DateTime.t) :: String.t

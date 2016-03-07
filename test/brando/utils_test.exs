@@ -79,19 +79,13 @@ defmodule Brando.UtilsTest do
     assert split_filename("test/filename.jpg") == {"filename", ".jpg"}
   end
 
-  test "maybe/2" do
-    assert maybe(nil, &String.upcase/1) == nil
-    assert maybe("hello", &String.upcase/1) == "HELLO"
-  end
-
   test "unique_filename/1" do
     filename = "testing.jpg"
     refute unique_filename(filename) == filename
   end
 
   test "to_iso8601/1" do
-    dt = %Ecto.DateTime{year: 2014, month: 1, day: 1,
-                        hour: 12, min: 0, sec: 0}
+    dt = %Ecto.DateTime{year: 2014, month: 1, day: 1, hour: 12, min: 0, sec: 0}
     assert to_iso8601(dt) == "2014-01-01T12:00:00Z"
   end
 
@@ -159,10 +153,8 @@ defmodule Brando.UtilsTest do
   end
 
   test "get_page_title" do
-    assert get_page_title(%{assigns: %{page_title: "Test"}})
-           == "MyApp | Test"
-    assert get_page_title(%{})
-           == "MyApp"
+    assert get_page_title(%{assigns: %{page_title: "Test"}}) == "MyApp | Test"
+    assert get_page_title(%{}) == "MyApp"
   end
 
   test "host_and_media_url" do

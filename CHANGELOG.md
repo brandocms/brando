@@ -1,3 +1,14 @@
+## v0.24.0 (2016-03-07)
+
+* Backwards incompatible changes
+  * Ecto 2 now expects `%{}` instead of `:invalid` in `cast`.
+
+* Enhancements
+  * Added password protection to lockdown. Set with `:lockdown_password` in `config/brando.exs`.
+  * Updated for Ecto v2.0.0-beta2
+  * Moved from blacksmith to ex_machina
+  * Cleaned up tests
+
 ## v0.23.0 (2016-03-05)
 
 * Enhancements

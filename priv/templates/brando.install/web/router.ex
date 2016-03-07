@@ -64,7 +64,8 @@ defmodule <%= application_module %>.Router do
   end
 
   scope "/coming-soon" do
-    get "/", <%= application_module %>.LockdownController, :index
+    get "/",  <%= application_module %>.LockdownController, :index
+    post "/", <%= application_module %>.LockdownController, :post_password
   end
 
   scope "/auth" do

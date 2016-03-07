@@ -2,26 +2,14 @@ defmodule Brando.Integration.ImageSeriesTest do
   use ExUnit.Case
   use Brando.ConnCase
   use Brando.Integration.TestCase
-  alias Brando.ImageSeries
-  alias Brando.ImageCategory
-  alias Brando.Type.ImageConfig
 
-  @series_params %{name: "Series name", slug: "series-name",
-                   credits: "Credits", sequence: 0, creator_id: 1}
-  @category_params %{cfg: %ImageConfig{}, creator_id: 1,
-                     name: "Test Category", slug: "test-category"}
+  alias Brando.ImageSeries
+  alias Brando.Factory
 
   setup do
-    user = Forge.saved_user(TestRepo)
-    {:ok, category} =
-      @category_params
-      |> Map.put(:creator_id, user.id)
-      |> ImageCategory.create(user)
-    {:ok, series} =
-      @series_params
-      |> Map.put(:creator_id, user.id)
-      |> Map.put(:image_category_id, category.id)
-      |> ImageSeries.create(user)
+    user = Factory.create(:user)
+    category = Factory.create(:image_category, creator: user)
+    series = Factory.create(:image_series, creator: user, image_category: category)
     {:ok, %{user: user, category: category, series: series}}
   end
 

@@ -4,21 +4,14 @@ defmodule Brando.ImageCategory.ControllerTest do
   use Brando.Integration.TestCase
   use Plug.Test
   use RouterHelper
+
   alias Brando.ImageCategory
-  alias Brando.User
   alias Brando.Type.ImageConfig
+  alias Brando.Factory
 
-  @user_params %{"avatar" => nil, "role" => ["2", "4"], "language" => "nb",
-                 "email" => "fanogigyni@gmail.com", "full_name" => "Nita Bond",
-                 "password" => "finimeze", "status" => "1",
-                 "submit" => "Submit", "username" => "zabuzasixu"}
-  @params %{"cfg" => %ImageConfig{}, "name" => "Test Category",
-            "slug" => "test-category"}
-  @broken_params %{"cfg" => %ImageConfig{}}
-
-  def create_user do
-    {:ok, user} = User.create(@user_params)
-    user
+  setup do
+    user = Factory.create(:user)
+    {:ok, %{user: user}}
   end
 
   test "new" do
@@ -31,9 +24,9 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert html_response(conn, 200) =~ "New image category"
   end
 
-  test "edit" do
-    user = create_user
-    assert {:ok, category} = ImageCategory.create(@params, user)
+  test "edit", %{user: user} do
+    category = Factory.create(:image_category, creator: user)
+
     conn =
       :get
       |> call("/admin/images/categories/#{category.id}/edit")
@@ -50,12 +43,12 @@ defmodule Brando.ImageCategory.ControllerTest do
     end
   end
 
-  test "create (post) w/params" do
-    user = create_user
+  test "create (post) w/params", %{user: user} do
+    image_category_params = Factory.build(:image_category_params, %{"creator_id" => user.id})
+
     conn =
       :post
-      |> call("/admin/images/categories/",
-              %{"imagecategory" => Map.put(@params, "creator_id", user.id)})
+      |> call("/admin/images/categories/", %{"imagecategory" => image_category_params})
       |> with_user
       |> send_request
 
@@ -66,8 +59,7 @@ defmodule Brando.ImageCategory.ControllerTest do
   test "create (post) w/erroneus params" do
     conn =
       :post
-      |> call("/admin/images/categories/",
-              %{"imagecategory" => @broken_params})
+      |> call("/admin/images/categories/", %{"imagecategory" => %{"cfg" => %ImageConfig{}}})
       |> with_user
       |> send_request
 
@@ -75,16 +67,14 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert get_flash(conn, :error) == "Errors in form"
   end
 
-  test "update (post) w/params" do
-    user = create_user
-    params = Map.put(@params, "creator_id", user.id)
+  test "update (post) w/params", %{user: user} do
+    params = Factory.build(:image_category_params, %{"creator_id" => user.id})
 
     assert {:ok, category} = ImageCategory.create(params, user)
 
     conn =
       :patch
-      |> call("/admin/images/categories/#{category.id}",
-              %{"imagecategory" => params})
+      |> call("/admin/images/categories/#{category.id}", %{"imagecategory" => params})
       |> with_user
       |> send_request
 
@@ -92,10 +82,8 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert get_flash(conn, :notice) == "Image category updated"
   end
 
-  test "config (get)" do
-    user = create_user
-
-    assert {:ok, category} = ImageCategory.create(@params, user)
+  test "config (get)", %{user: user} do
+    category = Factory.create(:image_category, creator: user)
 
     conn =
       :get
@@ -114,16 +102,13 @@ defmodule Brando.ImageCategory.ControllerTest do
     end
   end
 
-  test "config (post) w/params" do
-    user = create_user
-    params = Map.put(@params, "creator_id", user.id)
-
-    assert {:ok, category} = ImageCategory.create(params, user)
+  test "config (post) w/params", %{user: user} do
+    category = Factory.create(:image_category, creator: user)
+    params = Factory.build(:image_category_params, %{"creator_id" => user.id})
 
     conn =
       :patch
-      |> call("/admin/images/categories/#{category.id}/configure",
-              %{"imagecategoryconfig" => params})
+      |> call("/admin/images/categories/#{category.id}/configure", %{"imagecategoryconfig" => params})
       |> with_user
       |> send_request
 
@@ -131,10 +116,8 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert get_flash(conn, :notice) == "Image category configured"
   end
 
-  test "delete_confirm" do
-    user = create_user
-
-    assert {:ok, category} = ImageCategory.create(@params, user)
+  test "delete_confirm", %{user: user} do
+    category = Factory.create(:image_category, creator: user)
 
     conn =
       :get
@@ -145,9 +128,8 @@ defmodule Brando.ImageCategory.ControllerTest do
     assert html_response(conn, 200) =~ "Delete image category: Test Category"
   end
 
-  test "delete" do
-    user = create_user
-    assert {:ok, category} = ImageCategory.create(@params, user)
+  test "delete", %{user: user} do
+    category = Factory.create(:image_category, creator: user)
     conn =
       :delete
       |> call("/admin/images/categories/#{category.id}")

@@ -13,8 +13,12 @@ defmodule Brando.User do
 
   import Brando.Gettext
 
-  @required_fields ~w(username full_name email password language)
-  @optional_fields ~w(role avatar)
+  @required_fields ~w(username full_name email password language)a
+  @optional_fields ~w(role avatar)a
+
+  @forbidden_usernames ~w(admin superadmin superuser editor
+                          root create edit delete update ny
+                          endre slett profil)
 
   schema "users" do
     field :username, :string
@@ -28,21 +32,21 @@ defmodule Brando.User do
     timestamps
   end
 
-  has_image_field :avatar,
-    %{allowed_mimetypes: ["image/jpeg", "image/png"],
-      default_size: :medium,
-      upload_path: Path.join("images", "avatars"),
-      random_filename: true,
-      size_limit: 10240000,
-      sizes: %{
-        "micro"  => %{"size" => "25x25", "quality" => 100, "crop" => true},
-        "thumb"  => %{"size" => "150x150", "quality" => 100, "crop" => true},
-        "small"  => %{"size" => "300", "quality" => 100},
-        "medium" => %{"size" => "500", "quality" => 100},
-        "large"  => %{"size" => "700", "quality" => 100},
-        "xlarge" => %{"size" => "900", "quality" => 100}
-      }
+  has_image_field :avatar, %{
+    allowed_mimetypes: ["image/jpeg", "image/png"],
+    default_size: :medium,
+    upload_path: Path.join("images", "avatars"),
+    random_filename: true,
+    size_limit: 10240000,
+    sizes: %{
+      "micro"  => %{"size" => "25x25", "quality" => 100, "crop" => true},
+      "thumb"  => %{"size" => "150x150", "quality" => 100, "crop" => true},
+      "small"  => %{"size" => "300", "quality" => 100},
+      "medium" => %{"size" => "500", "quality" => 100},
+      "large"  => %{"size" => "700", "quality" => 100},
+      "xlarge" => %{"size" => "900", "quality" => 100}
     }
+  }
 
   @doc """
   Casts and validates `params` against `model` to create a valid
@@ -53,20 +57,19 @@ defmodule Brando.User do
       model_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, atom, Keyword.t | Options.t | :empty) :: t
-  def changeset(model, action, params \\ :invalid)
+  @spec changeset(t, atom, %{binary => term} | %{atom => term}) :: t
+  def changeset(model, action, params \\ %{})
   def changeset(model, :create, params) do
     model
-    |> cast(params, @required_fields, @optional_fields)
+    |> cast(params, @required_fields ++ @optional_fields)
+    |> validate_required(@required_fields)
     |> validate_format(:email, ~r/@/)
     |> unique_constraint(:email)
     |> unique_constraint(:username)
     |> validate_format(:username, ~r/^[a-z0-9_\-\.!~\*'\(\)]+$/)
-    |> validate_exclusion(:username, ~w(admin superadmin superuser editor
-                                        root create edit delete update ny
-                                        endre slett profil))
-    |> validate_confirmation(:password, message: "Passord matcher ikke")
-    |> validate_length(:password, min: 6, too_short: "Passord må være > 6 tegn")
+    |> validate_exclusion(:username, @forbidden_usernames)
+    |> validate_confirmation(:password, message: gettext("Passwords must match"))
+    |> validate_length(:password, min: 6, too_short: gettext("Password must be at least 6 characters"))
   end
 
   @doc """
@@ -78,21 +81,19 @@ defmodule Brando.User do
       model_changeset = changeset(%__MODULE__{}, :update, params)
 
   """
-  @spec changeset(t, atom, Keyword.t | Options.t) :: t
+  @spec changeset(t, atom, %{binary => term} | %{atom => term}) :: t
   def changeset(model, :update, params) do
     model
-    |> cast(params, @required_fields, @optional_fields)
+    |> cast(params, @required_fields ++ @optional_fields)
     |> cleanup_old_images()
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
     |> unique_constraint(:email)
     |> unique_constraint(:username)
     |> validate_format(:username, ~r/^[a-z0-9_\-\.!~\*'\(\)]+$/)
-    |> validate_exclusion(:username, ~w(admin superadmin superuser editor
-                                        root create edit delete update ny
-                                        endre slett profil))
+    |> validate_exclusion(:username, @forbidden_usernames)
     |> validate_confirmation(:password, message: gettext("Passwords must match"))
-    |> validate_length(:password, min: 6, too_short: "Password must be at least 6 characters")
+    |> validate_length(:password, min: 6, too_short: gettext("Password must be at least 6 characters"))
   end
 
   @doc """
@@ -102,11 +103,12 @@ defmodule Brando.User do
   """
   def create(params) do
     cs = changeset(%__MODULE__{}, :create, params)
-    cs = cs.changes[:password]
-         && put_change(cs, :password, gen_password(cs.changes[:password]))
-         || cs
 
-    Brando.repo.insert(cs)
+    if get_change(cs, :password) do
+      put_change(cs, :password, gen_password(cs.changes[:password]))
+    else
+      cs
+    end
   end
 
   @doc """
@@ -117,28 +119,13 @@ defmodule Brando.User do
   """
   def update(user, params) do
     cs = changeset(user, :update, params)
-    cs =
-      case get_change(cs, :password) do
-        nil      -> cs
-        password -> put_change(cs, :password, gen_password(password))
-      end
-    Brando.repo.update(cs)
-  end
 
-  @doc """
-  Delete `id` from database. Also deletes any connected image fields,
-  including all generated sizes.
-  """
-  def delete(record) when is_map(record) do
-    delete_original_and_sized_images(record, :avatar)
-    Brando.repo.delete!(record)
+    if get_change(cs, :password) do
+      put_change(cs, :password, gen_password(cs.changes[:password]))
+    else
+      cs
+    end
   end
-  def delete(id) do
-    __MODULE__
-    |> Brando.repo.get_by!(id: id)
-    |> delete
-  end
-
 
   @doc """
   Orders by ID

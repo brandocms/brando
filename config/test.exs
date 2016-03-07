@@ -12,10 +12,8 @@ config :brando, Brando.Integration.TestRepo,
   adapter: Ecto.Adapters.Postgres,
   extensions: [{Postgrex.Extensions.JSON, library: Poison}],
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 1,
   ownership_pool: DBConnection.Poolboy,
   pool_overflow: 0
-  # max_overflow: 0
 
 config :brando, Brando.Menu, [
   modules: [Brando.Admin.Menu, Brando.Users.Menu, Brando.Images.Menu],

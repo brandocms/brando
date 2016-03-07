@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.23.0"
+  @version "0.24.0"
   @description "Boilerplate for Twined applications."
 
   def project do
@@ -26,7 +26,7 @@ defmodule Brando.Mixfile do
      applications: applications(Mix.env)]
   end
 
-  defp applications(:test), do: applications(:all) ++ [:blacksmith, :ecto, :postgrex]
+  defp applications(:test), do: applications(:all) ++ [:ecto, :postgrex]
   defp applications(_all) do
     [:gettext, :comeonin, :httpoison, :earmark, :mogrify,
      :poison, :scrivener, :slugger, :eightyfour]
@@ -52,7 +52,7 @@ defmodule Brando.Mixfile do
 
      # Test dependencies
      {:phoenix_ecto, "~> 3.0.0-beta", only: :test},
-     {:blacksmith, "~> 0.1.2", only: :test},
+     {:ex_machina, "~> 0.6.1", only: :test},
      {:excoveralls, "~> 0.5.1", only: :test},
 
      # Temporary until scrivener updates

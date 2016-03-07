@@ -47,7 +47,7 @@ defmodule Brando.Plug.AuthorizeTest do
     end
 
     def put_current_user(conn, _) do
-      conn |> put_session(:current_user, %{role: []})
+      put_session(conn, :current_user, %{role: []})
     end
   end
 
@@ -73,7 +73,7 @@ defmodule Brando.Plug.AuthorizeTest do
     end
 
     def put_current_user(conn, _) do
-      conn |> put_session(:current_user, %{role: [:admin, :superuser]})
+      put_session(conn, :current_user, %{role: [:admin, :superuser]})
     end
   end
 
@@ -83,6 +83,7 @@ defmodule Brando.Plug.AuthorizeTest do
       |> call("/")
       |> assign(:secret_key_base, "asdf")
       |> RolePlugFail.call([])
+
     assert conn.status == 403
   end
 
@@ -92,6 +93,7 @@ defmodule Brando.Plug.AuthorizeTest do
       |> call("/")
       |> assign(:secret_key_base, "asdf")
       |> RolePlugSucceeds.call([])
+
     assert conn.status == nil
   end
 
@@ -101,6 +103,7 @@ defmodule Brando.Plug.AuthorizeTest do
       |> call("/")
       |> assign(:secret_key_base, "asdf")
       |> RolePlugFailsPerms.call([])
+      
     assert conn.status == 403
   end
 end

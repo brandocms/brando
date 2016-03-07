@@ -10,6 +10,7 @@ defmodule Brando.Admin.UserController do
   import Brando.Gettext
   import Brando.HTML.Inspect, only: [schema_name: 2, schema_repr: 1]
   import Brando.Utils, only: [helpers: 1, current_user: 1]
+  import Brando.Images.Utils, only: [delete_original_and_sized_images: 2]
 
   plug :put_section, "users"
   plug :scrub_params, "user" when action in [:create, :update]
@@ -69,7 +70,7 @@ defmodule Brando.Admin.UserController do
     user_id = current_user(conn).id
     user = Brando.repo.get!(model, user_id)
 
-    case model.update(user, form_data) do
+    case Brando.repo.update(model.update(user, form_data)) do
       {:ok, updated_user} ->
         conn = case current_user(conn).id == user_id do
           true  -> put_session(conn, :current_user, Map.drop(updated_user, [:password]))
@@ -102,7 +103,7 @@ defmodule Brando.Admin.UserController do
   @doc false
   def create(conn, %{"user" => form_data}) do
     model = conn.private[:model]
-    case model.create(form_data) do
+    case Brando.repo.insert(model.create(form_data)) do
       {:ok, _} ->
         conn
         |> put_flash(:notice, gettext("User created"))
@@ -136,7 +137,7 @@ defmodule Brando.Admin.UserController do
     model = conn.private[:model]
     user = Brando.repo.get_by!(model, id: user_id)
 
-    case model.update(user, form_data) do
+    case Brando.repo.update(model.update(user, form_data)) do
       {:ok, updated_user} ->
         conn = case current_user(conn).id == String.to_integer(user_id) do
           true -> put_session(conn, :current_user, Map.drop(updated_user, [:password]))
@@ -171,7 +172,8 @@ defmodule Brando.Admin.UserController do
     model = conn.private[:model]
     record = Brando.repo.get!(model, user_id)
 
-    model.delete(record)
+    delete_original_and_sized_images(record, :avatar)
+    Brando.repo.delete!(record)
 
     conn
     |> put_flash(:notice, "#{schema_name(record, :singular)} #{schema_repr(record)} #{gettext("deleted")}")
