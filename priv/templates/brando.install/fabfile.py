@@ -207,6 +207,48 @@ def deploy():
         gitpull()
 
 
+def dump_localdb():
+    """
+    Dumps local _dev database
+    """
+    local('mkdir -p sql')
+    local('pg_dump --no-owner --no-acl %s_dev > sql/db_dump.sql' % PROJECT_NAME)
+
+
+def upload_db():
+    """
+    Uploads db
+    """
+    print(cyan('-- upload_db // uploading sql folder'))
+    put('sql', '%s' % env.path, use_sudo=True)
+    print(cyan('-- upload_db // chowning...'))
+    _setowner(os.path.join(env.path, 'sql'))
+    print(cyan('-- upload_db // chmoding'))
+    _setperms('660', os.path.join(env.path, 'media'))
+
+
+def load_db():
+    """
+    Loads db on remote
+    """
+    if _exists(os.path.join(env.path, 'sql')):
+        # psql dbname < infile
+        result = sudo('psql %s < sql/db_dump.sql' % (env.db_name), user='postgres')
+
+        if result.failed:
+            if 'already exists' in result:
+                print(yellow('-- load_db // database already exists'))
+
+
+def dump_and_load_db():
+    """
+    Dumps local _dev database, uploads to remote sql/db_dump.sql and loads data
+    """
+    dump_localdb()
+    upload_db()
+    load_db()
+
+
 def showconfig():
     """
     Prints out the config
