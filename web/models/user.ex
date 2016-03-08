@@ -139,8 +139,7 @@ defmodule Brando.User do
   """
   @spec set_last_login(t) :: t
   def set_last_login(user) do
-    {:ok, user} =
-      Utils.Model.update_field(user, [last_login: Ecto.DateTime.utc])
+    {:ok, user} = Utils.Model.update_field(user, [last_login: Ecto.DateTime.utc])
     user
   end
 

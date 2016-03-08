@@ -87,6 +87,7 @@ defmodule Brando.Admin.ImageCategoryController do
     model = conn.private[:category_model]
     data = Brando.repo.get_by!(model, id: category_id)
     {:ok, cfg} = Brando.Type.ImageConfig.dump(data.cfg)
+
     changeset =
       data
       |> Map.put(:cfg, cfg)
@@ -100,8 +101,7 @@ defmodule Brando.Admin.ImageCategoryController do
   end
 
   @doc false
-  def configure_patch(conn, %{"imagecategoryconfig" => form_data,
-                              "id" => id}) do
+  def configure_patch(conn, %{"imagecategoryconfig" => form_data, "id" => id}) do
     model = conn.private[:category_model]
     record = Brando.repo.get_by!(model, id: id)
 

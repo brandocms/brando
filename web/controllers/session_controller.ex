@@ -4,7 +4,6 @@ defmodule Brando.SessionController do
   """
 
   use Brando.Web, :controller
-  alias Brando.SystemChannel
   import Brando.Gettext
 
   @default_auth_sleep_duration 2500
@@ -13,14 +12,13 @@ defmodule Brando.SessionController do
   def login(conn, %{"user" => %{"email" => email, "password" => password}}) do
     model = conn.private[:model]
     user = Brando.repo.get_by(model, email: email)
+
     case model.auth?(user, password) do
       true ->
         user =
           user
           |> model.set_last_login
           |> sanitize_user
-
-        SystemChannel.log(:logged_in, user)
 
         conn
         |> sleep
@@ -44,11 +42,6 @@ defmodule Brando.SessionController do
 
   @doc false
   def logout(conn, _params) do
-    user = Brando.Utils.current_user(conn)
-    if user do
-      SystemChannel.log(:logged_out, user)
-    end
-
     conn
     |> put_layout({Brando.Session.LayoutView, "auth.html"})
     |> delete_session(:current_user)

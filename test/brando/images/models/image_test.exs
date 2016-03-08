@@ -52,8 +52,8 @@ defmodule Brando.Integration.ImageTest do
   end
 
   test "create/2 bad params", %{user: user} do
-    assert {:error, errors} = Image.create(@params, user)
-    assert errors == [image_series_id: "can't be blank"]
+    assert {:error, cs} = Image.create(@params, user)
+    assert cs.errors == [image_series_id: "can't be blank"]
   end
 
   test "update/2", %{user: user, series: series} do
@@ -82,8 +82,8 @@ defmodule Brando.Integration.ImageTest do
     assert image.image_series_id == series.id
     assert image.sequence == 0
 
-    assert {:error, errors} = Image.update(image, %{"sequence" => "string"})
-    assert errors == [sequence: "is invalid"]
+    assert {:error, cs} = Image.update(image, %{"sequence" => "string"})
+    assert cs.errors == [sequence: "is invalid"]
   end
 
   test "update_image_meta/3", %{user: user, series: series} do
@@ -213,7 +213,7 @@ defmodule Brando.Integration.ImageTest do
       |> Brando.repo.preload(:images)
 
     assert Enum.count(series.images) == 2
-    Image.delete_dependent_images(series.id)
+    Brando.Images.Utils.delete_images_for(series_id: series.id)
 
     series =
       ImageSeries

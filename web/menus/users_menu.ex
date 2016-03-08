@@ -8,7 +8,10 @@ defmodule Brando.Users.Menu do
 
   menu %{
     name: gettext("Users"), anchor: "users", icon: "fa fa-users icon",
-      submenu: [%{name: gettext("Index"), url: {:admin_user_path, :index}},
-                %{name: gettext("Profile"), url: {:admin_user_path, :profile}},
-                %{name: gettext("Add new"), url: {:admin_user_path, :new}, role: :superuser}]}
+    submenu: [
+      %{name: gettext("Index"), url: {:admin_user_path, :index}},
+      %{name: gettext("Profile"), url: {:admin_user_path, :profile}},
+      %{name: gettext("Add new"), url: {:admin_user_path, :new}, role: :superuser}
+    ]
+  }
 end

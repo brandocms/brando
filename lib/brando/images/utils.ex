@@ -4,6 +4,9 @@ defmodule Brando.Images.Utils do
   """
 
   import Brando.Utils
+  import Ecto.Query, only: [from: 2]
+
+  alias Brando.{Image, ImageSeries}
 
   @doc """
   Goes through `image`, which is a model with a :sizes field
@@ -155,6 +158,81 @@ defmodule Brando.Images.Utils do
       |> Mogrify.copy
       |> Mogrify.resize(size_cfg["size"])
       |> Mogrify.save(image_dest)
+    end
+  end
+
+  @doc """
+  Deletes all image's sizes and recreates them.
+  """
+  def recreate_sizes_for(image: image) do
+    image = Brando.repo.preload(image, :image_series)
+    delete_sized_images(image.image)
+
+    full_path = media_path(image.image.path)
+
+    {:ok, new_image} =
+      create_image_sizes({%{uploaded_file: full_path}, image.image_series.cfg})
+
+    new_sizes = new_image.sizes
+
+    image =
+      image.image
+      |> Map.put(:sizes, new_sizes)
+
+    image
+    |> Map.put(:image, image)
+    |> Brando.repo.update!
+  end
+
+  @doc """
+  Recreates all image sizes in imageseries.
+  """
+  def recreate_sizes_for(series_id: image_series_id) do
+    image_series = Brando.repo.one!(
+      from is in ImageSeries,
+        preload: :images,
+        where: is.id == ^image_series_id
+    )
+    for image <- image_series.images do
+      recreate_sizes_for(image: image)
+    end
+  end
+
+  @doc """
+  Put `size_cfg` as ̀size_key` in `image_series`
+  """
+  def put_size_cfg(image_series, size_key, size_cfg) do
+    image_series = put_in(image_series.cfg.sizes[size_key]["size"], size_cfg)
+    Brando.repo.update!(image_series)
+    recreate_sizes_for(series_id: image_series.id)
+  end
+
+  @doc """
+  Delete all images depending on imageserie `series_id`
+  """
+  def delete_images_for(series_id: series_id) do
+    images = Brando.repo.all(
+      from i in Image, where: i.image_series_id == ^series_id
+    )
+
+    for img <- images do
+      delete_original_and_sized_images(img, :image)
+      Brando.repo.delete!(img)
+    end
+  end
+
+  @doc """
+  Delete all imageseries dependant on `category_id`
+  """
+  def delete_series_for(category_id: category_id) do
+    image_series = Brando.repo.all(
+      from m in ImageSeries,
+        where: m.image_category_id == ^category_id
+    )
+
+    for is <- image_series do
+      delete_images_for(series_id: is.id)
+      Brando.repo.delete!(is)
     end
   end
 end

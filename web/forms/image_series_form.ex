@@ -18,8 +18,7 @@ defmodule Brando.ImageSeriesForm do
     for cat <- categories, do: [value: cat.id, text: cat.name]
   end
 
-  form "imageseries", [schema: ImageSeries, helper: :admin_image_series_path,
-                       class: "grid-form"] do
+  form "imageseries", [schema: ImageSeries, helper: :admin_image_series_path, class: "grid-form"] do
     fieldset do
       field :image_category_id, :radio, [choices: &__MODULE__.get_categories/0]
     end

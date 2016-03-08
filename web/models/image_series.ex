@@ -17,8 +17,8 @@ defmodule Brando.ImageSeries do
   import Ecto.Query, only: [from: 2]
   import Brando.Utils.Model, only: [put_creator: 2]
 
-  @required_fields ~w(name slug image_category_id creator_id)
-  @optional_fields ~w(credits sequence cfg)
+  @required_fields ~w(name slug image_category_id creator_id)a
+  @optional_fields ~w(credits sequence cfg)a
 
   schema "imageseries" do
     field :name, :string
@@ -45,7 +45,8 @@ defmodule Brando.ImageSeries do
   def changeset(model, action, params \\ %{})
   def changeset(model, :create, params) do
     model
-    |> cast(params, @required_fields, @optional_fields)
+    |> cast(params, @required_fields ++ @optional_fields)
+    |> validate_required(@required_fields)
     |> inherit_configuration()
   end
 
@@ -60,7 +61,7 @@ defmodule Brando.ImageSeries do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
-    cast(model, params, @required_fields, @optional_fields)
+    cast(model, params, @required_fields ++ @optional_fields)
   end
 
   @doc """
@@ -108,27 +109,13 @@ defmodule Brando.ImageSeries do
   end
 
   @doc """
-  Delete `record` from database
+  Delete `series` from database
 
   Also deletes all dependent images.
   """
-  def delete(record) do
-    Brando.Image.delete_dependent_images(record.id)
-    Brando.repo.delete!(record)
-  end
-
-  @doc """
-  Recreates all image sizes in imageseries.
-  """
-  def recreate_sizes(image_series_id) do
-    image_series = Brando.repo.one!(
-      from m in __MODULE__,
-        preload: :images,
-        where: m.id == ^image_series_id
-    )
-    for image <- image_series.images do
-      Brando.Image.recreate_sizes(image)
-    end
+  def delete(series) do
+    Brando.Images.Utils.delete_images_for(series_id: series.id)
+    Brando.repo.delete!(series)
   end
 
   @doc """
