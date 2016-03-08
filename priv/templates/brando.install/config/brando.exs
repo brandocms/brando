@@ -64,21 +64,6 @@ config :brando, Brando.Images,
     ]
   ]
 
-config :brando, Brando.Instagram,
-  auto_approve: true,
-  client_id: "",
-  username: "",
-  password: "",
-  query: {:user, "dummy_username"},
-  token_path: Path.join(~w(priv tokens instagram)),
-  interval: 1_000 * 60 * 60,
-  sleep: 5000,
-  sizes: %{
-    "large" =>  %{"size" => "640", "quality" => 100},
-    "thumb" =>  %{"size" => "150x150", "quality" => 100, "crop" => true}
-  },
-  upload_path: Path.join("images", "instagram")
-
 config :brando, Brando.Type.Role,
   roles: %{staff: 1, admin: 2, superuser: 4}
 
