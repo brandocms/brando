@@ -108,7 +108,7 @@ defmodule Brando.FormTest do
        email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"],
        username: [type: :text, required: true, label: "Username", placeholder: "Username"]
      ]
-    cs = %{action: nil, data: nil, params: nil, errors: [username: "has invalid format", email: "has invalid format", password: "can't be blank", email: "can't be blank", full_name: "can't be blank", username: "can't be blank"]}
+    cs = %{action: nil, data: nil, params: %{}, errors: [username: "has invalid format", email: "has invalid format", password: "can't be blank", email: "can't be blank", full_name: "can't be blank", username: "can't be blank"]}
     f = Enum.join(render_fields(form_fields, cs, [type: :create], %{source: "user", schema: Brando.User}), "")
     assert f =~ ~s("form-group required")
     assert f =~ "user[username]"
