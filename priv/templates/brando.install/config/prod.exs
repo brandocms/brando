@@ -14,13 +14,18 @@ use Mix.Config
 config :<%= application_name %>, <%= application_module %>.Endpoint,
   http: [port: {:system, "PORT"}],
   url: [host: "example.com", port: 80],
+  server: true,
+  root: ".",
   cache_static_manifest: "priv/static/manifest.json"
 
 # Do not print debug messages in production
 config :logger, level: :info
 
-# Absolute path to your media directory.
-config :brando, media_path: Path.expand("media")
+# Path to your media directory.
+config :brando, media_path: "./media"
+
+# Path to your log directory.
+config :brando, log_dir: "./logs"
 
 # ## SSL Support
 #
