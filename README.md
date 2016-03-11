@@ -505,7 +505,7 @@ Configure `./fabfile.py` with your own values.
 
 Run
 
-    $ fab prod bootstrap
+    $ fab prod bootstrap_release:0.1.0
 
 to deploy on your production box.
 
