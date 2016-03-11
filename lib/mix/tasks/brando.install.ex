@@ -19,11 +19,8 @@ defmodule Mix.Tasks.Brando.Install do
     # Etc. Various OS config files and log directory.
     {:keep, "templates/brando.install/logs", "logs"},
     {:eex,  "templates/brando.install/etc/logrotate/prod.conf", "etc/logrotate/prod.conf"},
-    {:eex,  "templates/brando.install/etc/logrotate/staging.conf", "etc/logrotate/staging.conf"},
     {:eex,  "templates/brando.install/etc/nginx/prod.conf", "etc/nginx/prod.conf"},
-    {:eex,  "templates/brando.install/etc/nginx/staging.conf", "etc/nginx/staging.conf"},
     {:eex,  "templates/brando.install/etc/supervisord/prod.conf", "etc/supervisord/prod.conf"},
-    {:eex,  "templates/brando.install/etc/supervisord/staging.conf", "etc/supervisord/staging.conf"},
 
     # Router template
     {:eex,  "templates/brando.install/web/router.ex", "web/router.ex"},
@@ -73,9 +70,8 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/gitignore", ".gitignore"},
     {:copy, "templates/brando.install/dockerignore", ".dockerignore"},
     {:copy, "templates/brando.install/Dockerfile", "Dockerfile"},
-    {:eex, "templates/brando.install/fabfile.py", "fabfile.py"},
+    {:eex,  "templates/brando.install/fabfile.py", "fabfile.py"},
     {:copy, "templates/brando.install/compile", "compile"},
-    {:copy, "templates/brando.install/rel/relx.config", "rel/relx.config"},
 
     # Frontend JS
     {:copy, "templates/brando.install/web/static/js/app/app.js", "web/static/js/app.js"},
