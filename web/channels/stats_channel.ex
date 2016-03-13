@@ -37,9 +37,14 @@ defmodule Brando.StatsChannel do
     :erlang.send_after(@interval, self, :update)
 
     push socket, "update", %{
-      total_memory: Enum.at(mem_list, 0),
-      atom_memory: Enum.at(mem_list, 2),
-      memory: mem_list,
+      memory: %{
+        total: Enum.at(mem_list, 0),
+        process: Enum.at(mem_list, 1),
+        atom: Enum.at(mem_list, 2),
+        binary: Enum.at(mem_list, 3),
+        code: Enum.at(mem_list, 4),
+        ets: Enum.at(mem_list, 5)
+      }
       instagram_status: instagram_status
     }
 

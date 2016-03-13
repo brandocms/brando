@@ -41,19 +41,19 @@ class Stats {
 
     static update(payload) {
         // update memory
-        this.totalMemoryPoints.push(payload.total_memory);
+        this.totalMemoryPoints.push(payload.memory.total);
         if (this.totalMemoryPoints.length > MAX_POINTS) {
             this.totalMemoryPoints.splice(0, 1);
         }
         $('#total-memory .sparkline').sparkline(this.totalMemoryPoints, this.opts);
-        $('#total-memory .text').html(this.humanFileSize(parseInt(payload.total_memory), false));
+        $('#total-memory .text').html(this.humanFileSize(parseInt(payload.memory.total), false));
 
-        this.atomMemoryPoints.push(payload.atom_memory);
+        this.atomMemoryPoints.push(payload.memory.atom);
         if (this.atomMemoryPoints.length > MAX_POINTS) {
             this.atomMemoryPoints.splice(0, 1);
         }
         $('#atom-memory .sparkline').sparkline(this.atomMemoryPoints, this.opts);
-        $('#atom-memory .text').html(this.humanFileSize(parseInt(payload.atom_memory), false));
+        $('#atom-memory .text').html(this.humanFileSize(parseInt(payload.memory.atom), false));
 
         /* instagram status */
         if (payload.instagram_status) {
@@ -62,7 +62,14 @@ class Stats {
             $('#instagram-status .status').html('<i class="fa fa-times fa-4x"></i>')
         }
 
-        $('#all-memory-data').html(payload.memory);
+        $('#all-memory-data').html(`
+            total..: ${payload.memory.total}
+            atom...: ${payload.memory.atom}
+            process: ${payload.memory.process}
+            binary.: ${payload.memory.binary}
+            code...: ${payload.memory.code}
+            ets....: ${payload.memory.ets}
+        `);
     }
 
     static humanFileSize(bytes, si) {
