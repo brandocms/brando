@@ -44,7 +44,7 @@ defmodule Brando.StatsChannel do
         binary: Enum.at(mem_list, 3),
         code: Enum.at(mem_list, 4),
         ets: Enum.at(mem_list, 5)
-      }
+      },
       instagram_status: instagram_status
     }
 
