@@ -39,6 +39,7 @@ defmodule Brando.StatsChannel do
     push socket, "update", %{
       total_memory: Enum.at(mem_list, 0),
       atom_memory: Enum.at(mem_list, 2),
+      memory: mem_list,
       instagram_status: instagram_status
     }
 

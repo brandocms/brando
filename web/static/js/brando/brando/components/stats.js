@@ -61,6 +61,8 @@ class Stats {
         } else {
             $('#instagram-status .status').html('<i class="fa fa-times fa-4x"></i>')
         }
+
+        $('#all-memory-data').html(payload.memory);
     }
 
     static humanFileSize(bytes, si) {

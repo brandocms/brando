@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import os
 import random
+import re
+
 from datetime import datetime
 from fabric.api import *
 from fabric.contrib.files import exists as _exists
@@ -18,9 +20,9 @@ PROJECT_NAME = '<%= application_name %>'
 DB_PASS = 'prod_database_password'
 
 SSH_USER = 'username'
+SSH_PASS = 'sudoer_pass'
 SSH_HOST = 'host.net'
 SSH_PORT = 30000
-SSH_PASS = 'sudoer_pass'
 
 #
 # General setup

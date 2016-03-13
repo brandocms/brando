@@ -32,4 +32,11 @@
     </pre>
   </code>
 </div>
+<div>
+  <code>
+    <pre id="memory">
+
+    </pre>
+  </code>
+</div>
 <% end %>
