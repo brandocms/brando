@@ -63,12 +63,12 @@ class Stats {
         }
 
         $('#all-memory-data').html(`
-            total..: ${payload.memory.total}
-            atom...: ${payload.memory.atom}
-            process: ${payload.memory.process}
-            binary.: ${payload.memory.binary}
-            code...: ${payload.memory.code}
-            ets....: ${payload.memory.ets}
+            total..: ${this.humanFileSize(parseInt(payload.memory.total))}
+            atom...: ${this.humanFileSize(parseInt(payload.memory.atom))}
+            process: ${this.humanFileSize(parseInt(payload.memory.process))}
+            binary.: ${this.humanFileSize(parseInt(payload.memory.binary))}
+            code...: ${this.humanFileSize(parseInt(payload.memory.code))}
+            ets....: ${this.humanFileSize(parseInt(payload.memory.ets))}
         `);
     }
 
