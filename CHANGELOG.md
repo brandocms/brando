@@ -1,4 +1,4 @@
-## v0.25.0-dev (2016-XX-XX)
+## v0.25.0 (2016-03-16)
 
 * Enhancements
   * Add docker building and deployment! Copy over the new `etc/` directory,
