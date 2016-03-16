@@ -15,8 +15,8 @@ defmodule Brando.ImageCategory do
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
 
-  @required_fields ~w(name slug creator_id)
-  @optional_fields ~w(cfg)
+  @required_fields ~w(name slug creator_id)a
+  @optional_fields ~w(cfg)a
 
   schema "imagecategories" do
     field :name, :string
@@ -39,7 +39,8 @@ defmodule Brando.ImageCategory do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, action, params \\ %{})
   def changeset(model, :create, params) do
-    cast(model, params, @required_fields, @optional_fields)
+    cast(model, params, @required_fields ++ @optional_fields)
+    |> validate_required(@required_fields)
   end
 
   @doc """
@@ -53,7 +54,7 @@ defmodule Brando.ImageCategory do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
-    cast(model, params, @required_fields, @optional_fields)
+    cast(model, params, @required_fields ++ @optional_fields)
   end
 
   @doc """
@@ -112,14 +113,14 @@ defmodule Brando.ImageCategory do
   end
 
   @doc """
-  Delete `record` from database
+  Delete `category` from database
 
   Also delete all dependent image_series which in part deletes all
   dependent images.
   """
-  def delete(record) do
-    Brando.ImageSeries.delete_dependent_image_series(record.id)
-    Brando.repo.delete!(record)
+  def delete(category) do
+    Brando.Images.Utils.delete_series_for(category_id: category.id)
+    Brando.repo.delete!(category)
   end
 
   #

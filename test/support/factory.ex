@@ -2,9 +2,7 @@ defmodule Brando.Factory do
   use ExMachina.Ecto, repo: Brando.repo
 
   alias Brando.Type.ImageConfig
-  alias Brando.{
-    Image, ImageCategory, ImageSeries, User
-  }
+  alias Brando.{ImageCategory, ImageSeries, User}
 
   @sizes %{
     "small" =>  %{"size" => "300", "quality" => 100},

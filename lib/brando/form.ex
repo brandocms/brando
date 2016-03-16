@@ -413,8 +413,8 @@ defmodule Brando.Form do
   defp get_method(_), do: "get"
 
   defp get_value(nil, _), do: nil
-  defp get_value(%{data: model, action: nil, params: nil}, name) do
-    do_get_value(model || %{}, name)
+  defp get_value(%{data: data, action: nil, params: %{}}, name) do
+    do_get_value(data || %{}, name)
   end
   defp get_value(%{data: _, action: nil, params: params}, name) do
     do_get_value(params, Atom.to_string(name))

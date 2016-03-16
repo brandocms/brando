@@ -32,4 +32,11 @@
     </pre>
   </code>
 </div>
+<div>
+  <code>
+    <pre id="all-memory-data">
+
+    </pre>
+  </code>
+</div>
 <% end %>

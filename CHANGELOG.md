@@ -1,3 +1,10 @@
+## v0.25.0 (2016-03-16)
+
+* Enhancements
+  * Add docker building and deployment! Copy over the new `etc/` directory,
+    `Dockerfile` and `.dockerignore`, the new `fabfile.py` + `lib/*` from
+    `templates/brando.install` to get started.
+
 ## v0.24.0 (2016-03-07)
 
 * Backwards incompatible changes

@@ -12,14 +12,15 @@ defmodule Mix.Tasks.Brando.Install do
     # Mix template
     {:eex,  "templates/brando.install/mix.exs", "mix.exs"},
 
+    # exrm plugin and release tasks (migrations)
+    {:eex,  "templates/brando.install/lib/exrm_plugin.ex", "lib/application_name/exrm_plugin.ex"},
+    {:eex,  "templates/brando.install/lib/release_tasks.ex", "lib/application_name/release_tasks.ex"},
+
     # Etc. Various OS config files and log directory.
     {:keep, "templates/brando.install/logs", "logs"},
     {:eex,  "templates/brando.install/etc/logrotate/prod.conf", "etc/logrotate/prod.conf"},
-    {:eex,  "templates/brando.install/etc/logrotate/staging.conf", "etc/logrotate/staging.conf"},
     {:eex,  "templates/brando.install/etc/nginx/prod.conf", "etc/nginx/prod.conf"},
-    {:eex,  "templates/brando.install/etc/nginx/staging.conf", "etc/nginx/staging.conf"},
     {:eex,  "templates/brando.install/etc/supervisord/prod.conf", "etc/supervisord/prod.conf"},
-    {:eex,  "templates/brando.install/etc/supervisord/staging.conf", "etc/supervisord/staging.conf"},
 
     # Router template
     {:eex,  "templates/brando.install/web/router.ex", "web/router.ex"},
@@ -65,8 +66,11 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/brunch-config.js", "brunch-config.js"},
     {:copy, "templates/brando.install/web/static/js/cookie_law.js", "web/static/vendor/cookie_law.js"},
 
-    # Deployment scripts
-    {:copy, "templates/brando.install/fabfile.py", "fabfile.py"},
+    # Deployment tools
+    {:copy, "templates/brando.install/gitignore", ".gitignore"},
+    {:copy, "templates/brando.install/dockerignore", ".dockerignore"},
+    {:copy, "templates/brando.install/Dockerfile", "Dockerfile"},
+    {:eex,  "templates/brando.install/fabfile.py", "fabfile.py"},
     {:copy, "templates/brando.install/compile", "compile"},
 
     # Frontend JS

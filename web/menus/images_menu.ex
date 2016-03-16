@@ -8,5 +8,6 @@ defmodule Brando.Images.Menu do
 
   menu %{
     name: gettext("Images"), anchor: "images", icon: "fa fa-picture-o icon",
-      submenu: [%{name: gettext("Index"), url: {:admin_image_path, :index}}]}
+    submenu: [%{name: gettext("Index"), url: {:admin_image_path, :index}}]
+  }
 end

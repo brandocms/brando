@@ -505,10 +505,30 @@ Configure `./fabfile.py` with your own values.
 
 Run
 
-    $ fab prod bootstrap
+    $ fab prod bootstrap_release:0.1.0
 
 to deploy on your production box.
 
 To seed your DB:
 
     $ fab prod seed
+
+To dump local db to .sql
+
+    $ fab dump_localdb
+
+To upload local db to remote
+
+    $ fab prod upload_db
+
+To load remote db
+
+    $ fab prod load_db
+
+To dump/upload/load local db to remote:
+
+    $ fab prod dump_and_load_db
+
+To upload your local `media/` folder (only runs if remote `media/` doesn't exists!)
+
+    $ fab prod upload_media

@@ -9,6 +9,7 @@ defmodule Brando.Admin.ImageSeriesController do
 
   import Brando.Gettext
   import Brando.Plug.HTML
+  import Brando.Images.Utils, only: [recreate_sizes_for: 1]
   import Brando.Utils, only: [helpers: 1]
   import Ecto.Query
 
@@ -34,8 +35,9 @@ defmodule Brando.Admin.ImageSeriesController do
   @doc false
   def create(conn, %{"imageseries" => image_series}) do
     model = conn.private[:series_model]
+    user = Brando.Utils.current_user(conn)
 
-    case model.create(image_series, Brando.Utils.current_user(conn)) do
+    case model.create(image_series, user) do
       {:ok, _} ->
         conn
         |> put_flash(:notice, gettext("Image series created"))
@@ -91,6 +93,7 @@ defmodule Brando.Admin.ImageSeriesController do
     model = conn.private[:series_model]
     data = Brando.repo.get_by!(model, id: series_id)
     {:ok, cfg} = Brando.Type.ImageConfig.dump(data.cfg)
+
     changeset =
       data
       |> Map.put(:cfg, cfg)
@@ -106,12 +109,11 @@ defmodule Brando.Admin.ImageSeriesController do
   @doc false
   def configure_patch(conn, %{"imageseriesconfig" => form_data, "id" => id}) do
     model = conn.private[:series_model]
-    record = Brando.repo.get_by!(model, id: id)
+    series = Brando.repo.get_by!(model, id: id)
 
-    case model.update(record, form_data) do
-      {:ok, updated_record} ->
-        # recreate image sizes
-        Brando.ImageSeries.recreate_sizes(updated_record.id)
+    case model.update(series, form_data) do
+      {:ok, updated_series} ->
+        recreate_sizes_for(series_id: updated_series.id)
 
         conn
         |> put_flash(:notice, gettext("Image series configured"))
@@ -145,6 +147,9 @@ defmodule Brando.Admin.ImageSeriesController do
   def upload_post(conn, %{"id" => id} = params) do
     series_model = conn.private[:series_model]
     image_model = conn.private[:image_model]
+
+    user = Brando.Utils.current_user(conn)
+
     series =
       series_model
       |> preload([:image_category, :images])
@@ -152,9 +157,7 @@ defmodule Brando.Admin.ImageSeriesController do
 
     opts = Map.put(%{}, "image_series_id", series.id)
     cfg = series.cfg || Brando.config(Brando.Images)[:default_config]
-    {:ok, image} =
-      image_model.check_for_uploads(params, Brando.Utils.current_user(conn),
-                                    cfg, opts)
+    {:ok, image} = image_model.check_for_uploads(params, user, cfg, opts)
 
     render(conn, :upload_post, image: image)
   end
