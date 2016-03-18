@@ -2,7 +2,7 @@ defmodule Brando.StatsChannel do
   @moduledoc """
   Channel for system information.
   """
-  @interval 5000
+  @default_interval 5000
   @info_memory [
     :total,
     :processes,
@@ -20,6 +20,8 @@ defmodule Brando.StatsChannel do
   end
 
   def handle_info(:update, socket) do
+    interval = Brando.config(:stats_polling_interval) || @default_interval
+
     instagram_status =
       try do
         Brando.Instagram.Server
@@ -34,7 +36,7 @@ defmodule Brando.StatsChannel do
       |> :erlang.memory
       |> Keyword.values
 
-    :erlang.send_after(@interval, self, :update)
+    :erlang.send_after(interval, self, :update)
 
     push socket, "update", %{
       memory: %{
