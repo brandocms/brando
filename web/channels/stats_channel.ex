@@ -5,6 +5,7 @@ defmodule Brando.StatsChannel do
   @default_interval 5000
   @info_memory [
     :total,
+    :system,
     :processes,
     :atom,
     :binary,
@@ -41,11 +42,12 @@ defmodule Brando.StatsChannel do
     push socket, "update", %{
       memory: %{
         total: Enum.at(mem_list, 0),
-        process: Enum.at(mem_list, 1),
-        atom: Enum.at(mem_list, 2),
-        binary: Enum.at(mem_list, 3),
-        code: Enum.at(mem_list, 4),
-        ets: Enum.at(mem_list, 5)
+        system: Enum.at(mem_list, 1),
+        process: Enum.at(mem_list, 2),
+        atom: Enum.at(mem_list, 3),
+        binary: Enum.at(mem_list, 4),
+        code: Enum.at(mem_list, 5),
+        ets: Enum.at(mem_list, 6)
       },
       instagram_status: instagram_status
     }

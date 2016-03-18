@@ -64,6 +64,7 @@ class Stats {
 
         $('#all-memory-data').html(`
             total..: ${this.humanFileSize(parseInt(payload.memory.total))}
+            system.: ${this.humanFileSize(parseInt(payload.memory.system))}
             atom...: ${this.humanFileSize(parseInt(payload.memory.atom))}
             process: ${this.humanFileSize(parseInt(payload.memory.process))}
             binary.: ${this.humanFileSize(parseInt(payload.memory.binary))}
