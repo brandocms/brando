@@ -37,7 +37,7 @@ defmodule Brando.Mixfile do
      {:earmark, "~> 0.2"},
      {:eightyfour, github: "twined/eightyfour"},
      {:gettext, "~> 0.10"},
-     {:httpoison, "~> 0.8.1"},
+     {:httpoison, "== 0.8.1"},
      {:mogrify, github: "twined/mogrify"},
      {:phoenix, "~> 1.1"},
      {:phoenix_html, "~> 2.4"},
