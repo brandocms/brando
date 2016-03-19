@@ -24,6 +24,21 @@ SSH_PASS = 'sudoer_pass'
 SSH_HOST = 'host.net'
 SSH_PORT = 30000
 
+VERSION_NUMBER = '2.0.0'
+
+#
+# Shhh, don't be so loud.
+
+# output['status'] = True
+# output['stdout'] = False
+# output['warnings'] = True
+# output['exceptions'] = False
+# output['running'] = False
+# output['user'] = True
+# output['stderr'] = True
+# output['aborts'] = True
+# output['debug'] = False
+
 #
 # General setup
 
@@ -61,10 +76,10 @@ GLUE_SETTINGS = {
 def _get_version():
     return VERSION_NUMBER
 
-print "-------------------------------------------------------------"
+print "--------------------------------------------------------------"
 print blue('& brando deployment script v%s | copyright twined 2010-%s'
            % (_get_version(), datetime.now().year))
-print "-------------------------------------------------------------"
+print "--------------------------------------------------------------"
 print ""
 
 
@@ -170,34 +185,6 @@ def staging():
     env.project_name = GLUE_SETTINGS['project_name']
 
 
-def bootstrap():
-    """
-    Bootstraps and provisions project on host
-    """
-    require('hosts')
-    _warn('''
-        This is a potientially dangerous operation. Make sure you have\r\n
-        all your ducks in a row, and that you have checked the configuration\r\n
-        files both in conf/ and in the fabfile.py itself!
-    ''')
-    _confirmtask()
-    createuser()
-    deploy()
-    upload_secrets()
-    installreqs()
-    createdb()
-    supervisorcfg()
-    nginxcfg()
-    logrotatecfg()
-    migrate()
-    gitpull()
-    compile()
-    npm_install()
-    build_static()
-    restart()
-    _success()
-
-
 def bootstrap_release(version):
     """
     Bootstraps and provisions project RELEASE on host
@@ -236,13 +223,13 @@ def bootstrap_release(version):
 
 def deploy_release(version):
     """
-    Build release with docker, copy release, upload release, unpack release and restart.
-    Ex: fab prod deploy_release:0.1.0
+    Build release on local Docker, upload and unpack to remote before restarting
     """
     build_release()
     copy_release_from_docker(version)
     upload_release(version)
     unpack_release(version)
+    ensure_log_directory_exists()
     restart()
 
 
@@ -262,36 +249,43 @@ def build_release():
     """
     Build release with docker
     """
+    print(yellow('==> building local release with docker...'))
     with prefix(_docker_env()):
         local('docker build -t twined/%s .' % env.project_name)
 
 
 def copy_release_from_docker(version):
-    local('mkdir -p prod_rel')
+    """
+    Copy release tarball out from Docker image
+    """
+    print(yellow('==> copying release archive from docker to release-archives/'))
+    local('mkdir -p release-archives')
     with prefix(_docker_env()):
-        local('docker run --rm --entrypoint cat twined/%s /app/rel/%s/releases/%s/%s.tar.gz > prod_rel/%s_%s.tar.gz' % (env.project_name, env.project_name, version, env.project_name, env.project_name, version))
+        local('docker run --rm --entrypoint cat twined/%s /app/rel/%s/releases/%s/%s.tar.gz > release-archives/%s_%s.tar.gz' % (env.project_name, env.project_name, version, env.project_name, env.project_name, version))
 
 
 def upload_release(version):
     """
     Upload release to target
     """
-    print(cyan('-- uploading release to target host'))
-    put('prod_rel/%s_%s.tar.gz' % (env.project_name, version), '%s' % env.path, use_sudo=True)
-    print(cyan('-- chowing archive'))
+    print(yellow('==> uploading release to target host'))
+    put('release-archives/%s_%s.tar.gz' % (env.project_name, version), '%s' % env.path, use_sudo=True)
+    print(yellow('==> chowning archive'))
     _setowner(os.path.join(env.path, '%s_%s.tar.gz' % (env.project_name, version)))
-    print(cyan('-- chmoding archive'))
+    print(yellow('==> chmoding archive'))
     _setperms('660', os.path.join(env.path, '%s_%s.tar.gz' % (env.project_name, version)))
 
 
 def unpack_release(version):
     """
-    Unpack release at target and delete archive
+    Unpack release at target, delete old stuff + archive
     """
     with cd(env.path), shell_env(HOME='/home/%s' % env.project_user):
-        print(cyan('-- unpacking release'))
+        # print(red('-- deleting old release folders'))
+        # sudo('rm -rf bin erts-7.2 lib log releases running-config sql', user=env.project_user)
+        print(yellow('==> unpacking release'))
         sudo('tar xvf %s_%s.tar.gz' % (env.project_name, version), user=env.project_user)
-        print(cyan('-- removing archive'))
+        print(yellow('==> removing archive'))
         sudo('rm %s_%s.tar.gz' % (env.project_name, version), user=env.project_user)
 
     fixprojectperms()
@@ -299,11 +293,11 @@ def unpack_release(version):
 
 def grant_db():
     """
-    Grant all privileges on remote database to project user
+    Grant privileges on remote database
     """
     require('hosts')
     with _settings(warn_only=True):
-        print(cyan('-- grant_db // granting privs to user %s' % env.db_user))
+        print(yellow('==> granting privileges on database %s to user %s' % (env.db_name, env.db_user)))
         sudo('psql -c "grant all privileges on database %s to %s;"' % (env.db_name, env.db_user), user='postgres')
         sudo('for tbl in `psql -qAt -c "select tablename from pg_tables where schemaname = \'public\';" %s` ; do  psql -c "alter table \"$tbl\" owner to %s" %s ; done' % (env.db_name, env.db_user, env.db_name), user='postgres')
         sudo('for tbl in `psql -qAt -c "select sequence_name from information_schema.sequences where sequence_schema = \'public\';" %s` ; do  psql -c "alter table \"$tbl\" owner to %s" %s ; done' % (env.db_name, env.db_user, env.db_name), user='postgres')
@@ -312,11 +306,12 @@ def grant_db():
 
 def ensure_log_directory_exists():
     """
-    Check and ensure log/ exists on remote
+    Ensure that remote log directory exists
     """
     require('hosts')
+    print(yellow('==> ensure log directory exists'))
     if not _exists(os.path.join(env.path, "log")):
-        print(cyan('-- creating %s/log as %s' % (env.path, env.project_user)))
+        print(yellow('==> creating %s/log as %s' % (env.path, env.project_user)))
         sudo('mkdir -p %s/log' % env.path, user=env.project_user)
 
     fixprojectperms()
@@ -324,16 +319,19 @@ def ensure_log_directory_exists():
 
 def create_path():
     """
-    Create deployment path on remote
+    Create remote project path
     """
     require('hosts')
     if not _exists(env.project_base):
+        print(yellow('==> create remote project base dir: %s' % env.project_base))
         sudo('mkdir -p %s' % env.project_base)
+        print(yellow('==> chown remote project base dir to %s:%s' % (SSH_USER, env.project_group)))
         sudo('chown %s:%s -R "%s"' % (SSH_USER, env.project_group, env.project_base))
+        print(yellow('==> set g+w on remote project base dir'))
         _setperms('g+w', env.project_base)
 
     if not _exists(env.path):
-        print(cyan('-- creating %s as %s' % (env.path, env.project_user)))
+        print(yellow('==> creating remote project dir: %s as %s' % (env.path, env.project_user)))
         sudo('mkdir -p %s' % env.path, user=env.project_user)
 
     fixprojectperms()
@@ -344,38 +342,18 @@ def migrate_release():
     Run database migrations for release
     """
     require('hosts')
-    print(cyan('-- migrate // running db migrations for release'))
+    print(yellow('==> running db migrations escript for remote release'))
     with cd(env.path), shell_env(MIX_ENV='%s' % env.flavor,
                                  HOME='/home/%s' % env.project_user):
         sudo('bin/%s escript bin/release_tasks.escript migrate' % env.project_name,
              user=env.project_user)
 
 
-def deploy():
-    """
-    Clone the git repository to the correct directory
-    """
-    require('hosts')
-    if not _exists(env.path):
-        print(cyan('-- creating %s as %s' % (env.path, env.project_user)))
-        sudo('mkdir -p %s' % env.path, user=env.project_user)
-        with cd(env.path):
-            if (getattr(env, 'branch', '') == ''):
-                print(cyan('-- git // cloning source code into %s' % env.path))
-                sudo('git clone file:///code/git/%s .' % env.repo, user=env.project_user)
-            else:
-                print(cyan('-- git // cloning source code branch %s into %s' % (env.branch, env.path)))
-                sudo('git clone file:///code/git/%s -b %s .' % (env.repo, env.branch), user=env.project_user)
-        fixprojectperms()
-    else:
-        print(cyan('-- directory %s exists, skipping git clone & updating instead' % env.path))
-        gitpull()
-
-
 def dump_localdb():
     """
     Dumps local _dev database
     """
+    print(yellow('==> dumping local database %s -> sql/db_dump.sql' % PROJECT_NAME))
     local('mkdir -p sql')
     local('pg_dump --no-owner --no-acl %s_dev > sql/db_dump.sql' % PROJECT_NAME)
 
@@ -384,11 +362,11 @@ def upload_db():
     """
     Uploads db
     """
-    print(cyan('-- upload_db // uploading sql folder'))
+    print(yellow('==> uploading sql folder to remote'))
     put('sql', '%s' % env.path, use_sudo=True)
-    print(cyan('-- upload_db // chowning...'))
+    print(yellow('==> chowning database folder'))
     _setowner(os.path.join(env.path, 'sql'))
-    print(cyan('-- upload_db // chmoding'))
+    print(yellow('==> chmoding database folder'))
     _setperms('775', os.path.join(env.path, 'sql'))
 
 
@@ -397,12 +375,12 @@ def load_db():
     Loads db on remote
     """
     if _exists(os.path.join(env.path, 'sql')):
-        # psql dbname < infile
+        print(yellow('==> loading database on remote'))
         result = sudo('psql %s < %s' % (env.db_name, os.path.join(env.path, 'sql/db_dump.sql')), user='postgres')
 
         if result.failed:
             if 'already exists' in result:
-                print(yellow('-- load_db // database already exists'))
+                print(red('==> error: database already exists'))
 
 
 def dump_and_load_db():
@@ -425,76 +403,16 @@ def showconfig():
     pp.pprint(env)
 
 
-def compile():
-    """
-    Compile project
-    """
-    require('hosts')
-    print(cyan('-- compile // compiling project'))
-    with cd(env.path), shell_env(MIX_ENV='%s' % env.flavor,
-                                 HOME='/home/%s' % env.project_user):
-        sudo('mix compile',
-             user=env.project_user)
-
-
-def migrate():
-    """
-    Run database migrations
-    """
-    require('hosts')
-    print(cyan('-- migrate // running db migrations'))
-    with cd(env.path), shell_env(MIX_ENV='%s' % env.flavor,
-                                 HOME='/home/%s' % env.project_user):
-        sudo('mix ecto.migrate',
-             user=env.project_user)
-
-
-def seed():
-    """
-    Run database seeding
-    """
-    require('hosts')
-    print(cyan('-- seed // seeding db'))
-    with cd(env.path), shell_env(MIX_ENV='%s' % env.flavor,
-                                 HOME='/home/%s' % env.project_user):
-        sudo('mix run priv/repo/seeds.exs',
-             user=env.project_user)
-
-
-def npm_install():
-    """
-    Install npm packages
-    """
-    require('hosts')
-    print(cyan('-- npm // installing deps'))
-    with cd(env.path), shell_env(MIX_ENV='%s' % env.flavor,
-                                 HOME='/home/%s' % env.project_user):
-        sudo('npm install',
-             user=env.project_user)
-
-
-def build_static():
-    """
-    Build static
-    """
-    require('hosts')
-    print(cyan('-- npm // building static'))
-    with cd(env.path), shell_env(MIX_ENV='%s' % env.flavor,
-                                 HOME='/home/%s' % env.project_user):
-        sudo('node_modules/brunch/bin/brunch build -p',
-             user=env.project_user)
-
-
 def upload_media():
     """
     Uploads media
     """
     if not _exists(os.path.join(env.path, 'media')):
-        print(cyan('-- upload_media // uploading media folder'))
+        print(yellow('==> uploading local media folder to remote'))
         put('media', '%s' % env.path, use_sudo=True)
-        print(cyan('-- upload_media // chowning...'))
+        print(yellow('==> chowning remote media folder'))
         _setowner(os.path.join(env.path, 'media'))
-        print(cyan('-- upload_media // chmoding'))
+        print(yellow('==> chmoding remote media folder'))
         _setperms('755', os.path.join(env.path, 'media'))
 
 
@@ -502,40 +420,12 @@ def upload_etc():
     """
     Uploads etc
     """
-    if not _exists(os.path.join(env.path, 'etc')):
-        print(cyan('-- upload_etc // uploading etc folder'))
-        put('etc', '%s' % env.path, use_sudo=True)
-        print(cyan('-- upload_etc // chowning...'))
-        _setowner(os.path.join(env.path, 'etc'))
-        print(cyan('-- upload_etc // chmoding'))
-        _setperms('755', os.path.join(env.path, 'etc'))
-
-
-def update():
-    """
-    Updates app with newest source code, clears caches, and restarts gunicorn
-    """
-    require('hosts')
-    with cd(env.path):
-        gitpull()
-        installreqs()
-        build_static()
-        compile()
-        fixprojectperms()
-        _set_logrotate_perms()
-        restart()
-
-
-def upload_secrets():
-    """
-    Uploads secrets.cfg
-    """
-    print(cyan('-- upload_secrets // uploading secrets.cfg...'))
-    put('config/prod.secret.exs', '%s/config/prod.secret.exs' % env.path, use_sudo=True)
-    print(cyan('-- upload_secrets // chowning...'))
-    _setowner(os.path.join(env.path, 'config/prod.secret.exs'))
-    print(cyan('-- upload_secrets // chmoding'))
-    _setperms('660', os.path.join(env.path, 'config/prod.secret.exs'))
+    print(yellow('==> uploading etc folder'))
+    put('etc', '%s' % env.path, use_sudo=True)
+    print(yellow('==> chowning etc folder'))
+    _setowner(os.path.join(env.path, 'etc'))
+    print(yellow('==> chmoding etc folder'))
+    _setperms('755', os.path.join(env.path, 'etc'))
 
 
 def _warn(str):
@@ -553,7 +443,7 @@ def restart():
     """
     require('hosts')
     with cd(env.path):
-        print(cyan('-- supervisor // restarting server process'))
+        print(yellow('==> restarting remote server process'))
         sudo('supervisorctl restart %s' % env.procname)
 
 
@@ -563,7 +453,7 @@ def stop():
     """
     require('hosts')
     with cd(env.path):
-        print(cyan('-- supervisor // stopping server process'))
+        print(yellow('==> stopping remote server process'))
         sudo('supervisorctl stop %s' % env.procname)
 
 
@@ -573,7 +463,7 @@ def start():
     """
     require('hosts')
     with cd(env.path):
-        print(cyan('-- supervisor // starting server process'))
+        print(yellow('==> starting remote server process'))
         sudo('supervisorctl start %s' % env.procname)
 
 
@@ -587,7 +477,7 @@ def _setperms(perms, path):
         abort('_setperms: not enough arguments. perms=%s, path=%s' % (perms, path))
 
     require('hosts')
-    print(cyan('-- setperms // setting %s on %s [recursively]' % (perms, path)))
+    print(yellow('==> setting %s on %s [recursively]' % (perms, path)))
     sudo('chmod -R %s "%s"' % (perms, path))
 
 
@@ -598,7 +488,7 @@ def _setowner(path=''):
     if not path:
         abort('_setowner: cannot be empty')
     require('hosts')
-    print(cyan('-- setowner // owning %s [recursively]' % path))
+    print(yellow('==> owning %s [recursively]' % path))
     sudo('chown %s:%s -R "%s"' % (env.project_user, env.project_group, path))
 
 
@@ -613,9 +503,9 @@ def nukemedia():
     print(red('command: rm -rf %s' % env.media_path))
     print(red('-- WARNING ---------------------------------------'))
     _confirmtask()
-    print(cyan('-- nukemedia // ok, deleting files.'))
+    print(yellow('==> ok, nuking files.'))
     sudo('rm -rf %s' % env.media_path)
-    print(cyan('-- nukemedia // recreating media directory'))
+    print(yellow('==> recreating media directory'))
     sudo('mkdir -p %s' % env.media_path, user=env.project_user)
     _setowner(env.media_path)
     _setperms('g+w', env.media_path)
@@ -645,18 +535,6 @@ def _confirmtask(msg=DEFAULT_MESSAGE, horror_rating=1):
         answer = prompt(p_msg, validate=r'^%s$' % word)
 
 
-def gitpull():
-    """
-    Pulls latest commit from git, and resets permissions/owners
-    """
-    require('hosts')
-    with cd(env.path):
-        print(cyan('-- git // git pull, to make sure we are still at HEAD'))
-        sudo('git pull', user=env.project_user)
-
-    fixprojectperms()
-
-
 def fixprojectperms():
     """
     Chowns the project directory to project_user:project_group
@@ -666,8 +544,7 @@ def fixprojectperms():
 
 
 def _success():
-    print(green('----------------------------------------------------'))
-    print(green('-- twined // All tasks finished!'))
+    print(green('==> all tasks successfully finished!'))
 
 
 def supervisorcfg():
@@ -675,17 +552,21 @@ def supervisorcfg():
     Links our supervisor config file to the config.d dir
     """
     require('hosts')
-    print(cyan('-- supervisorcfg // linking config file to conf.d/'))
+    print(yellow('==> linking supervisor config file to conf.d/'))
     if not _exists('/etc/supervisor/conf.d/%s.conf' % (env.procname)):
         sudo('ln -s %s/etc/supervisord/%s.conf /etc/supervisor/conf.d/%s.conf' % (env.path, env.flavor, env.procname))
     else:
-        print(yellow('-- supervisorcfg // %s.conf already exists!' % (env.procname)))
+        print(red('==> supervisorcfg %s.conf already exists' % (env.procname)))
 
+    print(yellow('==> rereading and updating through supervisorctl'))
     sudo('supervisorctl reread')
     sudo('supervisorctl update')
 
 
 def taillogs():
+    """
+    Show latest 100 lines of application log
+    """
     sudo('tail -n 100 %s' % (os.path.join(env.path, "log", "%s.log" % env.project_name)))
 
 
@@ -694,16 +575,16 @@ def nginxcfg():
     Links our nginx config to the sites-enabled dir
     """
     require('hosts')
-    print(cyan('-- nginxcfg // linking config file to conf.d/'))
+    print(yellow('==> linking nginx config file to conf.d/'))
     if not _exists('/etc/nginx/sites-enabled/%s' % (env.procname)):
         sudo('ln -s %s/etc/nginx/%s.conf /etc/nginx/sites-enabled/%s' % (env.path, env.flavor, env.procname))
     else:
-        print(yellow('-- nginxcfg // %s already exists!' % env.procname))
-    print(cyan('-- nginxcfg // make sure our log directories exist!'))
+        print(red('==> nginx config %s already exists' % env.procname))
+    print(yellow('==> make sure our nginx log directory exists!'))
     if not _exists('%s/log/nginx' % env.path):
         sudo('mkdir -p %s/log/nginx' % env.path, user=env.project_user)
     else:
-        print(yellow('-- nginxcfg // %s/log already exists!' % (env.path)))
+        print(red('==> %s/log/nginx already exists!' % (env.path)))
 
     nginxreload()
 
@@ -714,11 +595,11 @@ def logrotatecfg():
     """
     require('hosts')
     logrotate_src = "%s/etc/logrotate/%s.conf" % (env.path, env.flavor)
-    print(cyan('-- logrotateconf // linking config file to conf.d/'))
+    print(yellow('==> linking logrotate config file to /etc/logrotate.d/'))
     if not _exists('/etc/logrotate.d/%s.conf' % (env.procname)):
         sudo('ln -s %s /etc/logrotate.d/%s.conf' % (logrotate_src, env.procname))
     else:
-        print(yellow('-- logrotateconf // %s.conf already exists!' % (env.procname)))
+        print(red('==> logrotate %s.conf already exists!' % (env.procname)))
 
     _set_logrotate_perms()
 
@@ -726,11 +607,11 @@ def logrotatecfg():
 def _set_logrotate_perms():
     logrotate_src = "%s/etc/logrotate/%s.conf" % (env.path, env.flavor)
     # set permission to 644
-    print(cyan('-- setperms // setting logrotate conf to 644'))
+    print(yellow('==> chmoding logrotate conf to 644'))
     sudo('chmod 644 "%s"' % logrotate_src)
 
     # set owner to root
-    print(cyan('-- setowner // setting logrotate owner to root'))
+    print(yellow('==> chowning logrotate to root'))
     sudo('chown root:web "%s"' % logrotate_src)
 
 
@@ -740,6 +621,7 @@ def createuser():
     and adds is to configured group
     """
     require('hosts')
+    print(yellow('==> creating user %s on remote' % env.project_user))
     with _settings(warn_only=True):
         output = sudo('id %s' % env.project_user)
         if output.failed:
@@ -751,10 +633,10 @@ def createuser():
             sudo('usermod -a -G %s %s' % (env.project_group, env.project_user))
             output = sudo('id %s' % env.project_user)
             if output.failed:
-                abort('createuser: ERROR: could not create user!')
+                abort('==> error: could not create user!')
         else:
-            print(yellow('-- createuser // user %s already exists.' % env.project_user))
-        print(cyan('-- createuser // add to group'))
+            print(red('==> user %s already exists.' % env.project_user))
+        print(yellow('==> adding %s to group %s' % (env.project_user, env.project_group)))
         sudo('usermod -a -G %s %s' % (env.project_group, env.project_user))
 
 
@@ -764,41 +646,36 @@ def createdb():
     """
     require('hosts')
     with _settings(warn_only=True):
-        print(cyan('-- createdb // creating user %s' % env.db_user))
+        print(yellow('==> creating database user %s' % env.db_user))
         result = sudo('psql -c "CREATE USER %s WITH NOCREATEDB NOCREATEUSER ENCRYPTED PASSWORD \'%s\';"' % (env.db_user, env.db_pass), user='postgres')
         if result.failed:
             if 'already exists' in result:
-                print(yellow('-- createdb // user already exists'))
+                print(red('==> database user %s already exists' % env.db_user))
             else:
-                abort(red('-- createdb // error in user creation!'))
+                abort(red('==> error in database user creation!'))
 
-        print(cyan('-- createdb // creating db %s with owner %s' % (env.db_name, env.db_user)))
+        print(yellow('==> creating database %s with owner %s' % (env.db_name, env.db_user)))
         result = sudo('psql -c "CREATE DATABASE %s WITH OWNER %s ENCODING \'UTF-8\'";' % (
             env.db_name, env.db_user), user='postgres')
 
         if result.failed:
             if 'already exists' in result:
-                print(yellow('-- createdb // database already exists'))
+                print(red('==> database %s already exists' % env.db_name))
             else:
-                abort(red('-- createdb // error in db creation!'))
-
-
-def installreqs():
-    "Install required packages through hex"
-    require('hosts')
-
-    with cd(env.path), shell_env(MIX_ENV='%s' % env.flavor,
-                                 HOME='/home/%s' % env.project_user):
-        sudo('mix do deps.get, compile', user=env.project_user)
+                abort(red('==> error when creating database %s' % env.db_name))
 
 
 def nginxreload():
-    "Reloads nginxs configuration"
-    print(cyan('-- nginx // reloading'))
+    """
+    Reloads nginxs configuration
+    """
+    print(yellow('==> reloading nginx configuration'))
     sudo('/etc/init.d/nginx reload')
 
 
 def nginxrestart():
-    "Restarts nginxs configuration"
-    print(cyan('-- nginx // restarting'))
+    """
+    Restarts nginxs configuration
+    """
+    print(yellow('==> restarting nginx'))
     sudo('/etc/init.d/nginx restart')
