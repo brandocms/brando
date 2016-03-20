@@ -3,3 +3,5 @@ __design
 _build
 deps
 node_modules
+rel
+priv
