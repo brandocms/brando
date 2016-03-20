@@ -1,5 +1,23 @@
 ## v0.26.0-dev (2016-XX-XX)
 
+* Enhancements
+  * Clean up system info overview.
+
+* Bug fixes
+  * Add notice in README about socket_options. Add this to prod.secret.exs to prevent
+    memory usage ballooning:
+
+    ```diff
+      config :my_app, MyApp.Repo,
+        adapter: Ecto.Adapters.Postgres,
+        username: "my_app",
+        password: "my_password",
+        database: "my_app_prod",
+        extensions: [{Postgrex.Extensions.JSON, library: Poison}],
+    +   socket_options: [recbuf: 8192, sndbuf: 8192],
+        pool_size: 20
+    ```
+
 ## v0.25.0 (2016-03-16)
 
 * Enhancements

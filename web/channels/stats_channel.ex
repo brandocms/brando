@@ -23,14 +23,8 @@ defmodule Brando.StatsChannel do
   def handle_info(:update, socket) do
     interval = Brando.config(:stats_polling_interval) || @default_interval
 
-    instagram_status =
-      try do
-        Brando.Instagram.Server
-        |> Process.whereis
-        |> Process.alive?
-      rescue
-        _ -> false
-      end
+    instagram_status = is_alive?(Brando.Instagram.Server)
+    registry_status = is_alive?(Brando.Registry)
 
     mem_list =
       @info_memory
@@ -49,9 +43,22 @@ defmodule Brando.StatsChannel do
         code: Enum.at(mem_list, 5),
         ets: Enum.at(mem_list, 6)
       },
-      instagram_status: instagram_status
+      status: %{
+        instagram: instagram_status,
+        registry: registry_status
+      }
     }
 
     {:noreply, socket}
+  end
+
+  defp is_alive?(module) do
+    try do
+      module
+      |> Process.whereis
+      |> Process.alive?
+    rescue
+      _ -> false
+    end
   end
 end
