@@ -39,7 +39,12 @@
 
 #logs {
   pre {
-    background-color: #ffe;
+    background-color: #FFFFD0;
     padding: 25px;
+    font-family: "a-mono";
+    font-size: 13px;
+    color: #585858;
+    white-space: pre-wrap;
+    word-wrap: break-word;
   }
 }
