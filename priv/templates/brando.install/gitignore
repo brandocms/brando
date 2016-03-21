@@ -28,3 +28,5 @@ bower_components
 media
 sql
 prod_rel
+fabfile.py
+fabfile.pyc
