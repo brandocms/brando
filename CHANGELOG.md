@@ -17,6 +17,9 @@
     +   socket_options: [recbuf: 8192, sndbuf: 8192],
         pool_size: 20
     ```
+  * Fix EXRM defaults.
+  * Cookie law cleanup. Remove HR and extraneous wrapper. Clean up defaults.
+  * Move log directory to log/ from logs/
 
 ## v0.25.0 (2016-03-16)
 
