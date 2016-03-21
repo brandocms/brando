@@ -1,4 +1,4 @@
-## v0.26.0-dev (2016-XX-XX)
+## v0.26.0 (2016-03-22)
 
 * Enhancements
   * Clean up system info overview.
