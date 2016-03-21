@@ -1,10 +1,11 @@
 .card {
-  background-color: #fafafa;
-  padding: 15px 15px;
-  box-shadow: 3px 3px #eee;
+  background-color: #FFFFFF;
+  padding: 15px;
+  box-shadow: 3px 3px #E2F4F7;
   width: 150px;
   float: left;
   margin-right: 10px;
+  margin-bottom: 10px;
   text-align: center;
   height: 130px;
 
@@ -16,6 +17,7 @@
   .text {
     font-size: 12px;
     margin-top: 5px;
+    font-family: "a-mono";
   }
 
   .status {
@@ -28,6 +30,7 @@
     font-size: 11px;
     text-transform: uppercase;
     font-weight: bold;
+    font-family: "a-mono";
   }
 }
 
@@ -39,7 +42,29 @@
 
 #logs {
   pre {
-    background-color: #ffe;
+    background-color: #FFFFD0;
     padding: 25px;
+    font-family: "a-mono";
+    font-size: 13px;
+    color: #585858;
+    white-space: pre-wrap;
+    word-wrap: break-word;
   }
+}
+
+#memoryinfo, #processinfo {
+  padding: 15px;
+  margin-bottom: 10px;
+
+  h3 {
+    margin-top: 0;
+  }
+}
+
+#processinfo {
+  background-color: #E0FFD0;
+}
+
+#memoryinfo {
+  background-color: #E9F5F7;
 }

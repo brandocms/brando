@@ -25,7 +25,7 @@ config :logger, level: :info
 config :brando, media_path: "./media"
 
 # Path to your log directory.
-config :brando, log_dir: "./logs"
+config :brando, log_dir: "./log"
 
 # ## SSL Support
 #

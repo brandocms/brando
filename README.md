@@ -60,6 +60,20 @@ Set up database, and seed:
 
     $ mix ecto.setup
 
+Add to your `config/prod.secret.exs` (see https://github.com/elixir-lang/ecto/issues/1328)
+
+```diff
+  config :my_app, MyApp.Repo,
+    adapter: Ecto.Adapters.Postgres,
+    username: "my_app",
+    password: "my_password",
+    database: "my_app_prod",
+    extensions: [{Postgrex.Extensions.JSON, library: Poison}],
++   socket_options: [recbuf: 8192, sndbuf: 8192],
+    pool_size: 20
+```
+
+
 Go through `config/brando.exs`.
 
 Static media config in `endpoint.ex`.

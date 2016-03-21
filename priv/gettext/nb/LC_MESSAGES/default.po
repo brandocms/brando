@@ -20,21 +20,19 @@ msgstr "Gå til frontend-nettside"
 msgid "System information"
 msgstr "Systeminformasjon"
 
-#: web/templates/admin/dashboard/system_info.html.eex:5
-#: web/templates/admin/dashboard/system_info.html.eex:10
-#: web/templates/admin/dashboard/system_info.html.eex:19
+#: web/templates/admin/dashboard/system_info.html.eex:3
 msgid "Memory"
 msgstr "Minne"
 
-#: web/templates/admin/dashboard/system_info.html.eex:10
+#: web/templates/admin/dashboard/system_info.html.eex:16
 msgid "atoms"
 msgstr "atomer"
 
-#: web/templates/admin/dashboard/system_info.html.eex:26
+#: web/templates/admin/dashboard/system_info.html.eex:60
 msgid "last updated"
 msgstr "sist oppdatert"
 
-#: web/templates/admin/dashboard/system_info.html.eex:5
+#: web/templates/admin/dashboard/system_info.html.eex:6
 msgid "total"
 msgstr "totalt"
 
@@ -124,7 +122,7 @@ msgstr "Slett bilder"
 msgid "Delete user"
 msgstr "Slett bruker"
 
-#: lib/brando/html.ex:339 lib/brando/html/inspect.ex:145
+#: lib/brando/html.ex:338 lib/brando/html/inspect.ex:145
 msgid "Deleted"
 msgstr "Slettet"
 
@@ -194,7 +192,7 @@ msgstr "Feil i skjemaet"
 msgid "Existing images in this series"
 msgstr "Eksisterende bilder i denne serien"
 
-#: web/controllers/admin/dashboard_controller.ex:52
+#: web/controllers/admin/dashboard_controller.ex:50
 msgid "File not found"
 msgstr "Fil ikke funnet"
 
@@ -436,7 +434,7 @@ msgstr "Skaper"
 msgid "Credits"
 msgstr "Krediteringer"
 
-#: lib/brando/html.ex:333 lib/brando/html/inspect.ex:144
+#: lib/brando/html.ex:332 lib/brando/html/inspect.ex:144
 msgid "Draft"
 msgstr "Kladd"
 
@@ -499,11 +497,11 @@ msgstr "Ingen resultater"
 msgid "No value"
 msgstr "Ingen verdi"
 
-#: lib/brando/html.ex:327 lib/brando/html/inspect.ex:143
+#: lib/brando/html.ex:326 lib/brando/html/inspect.ex:143
 msgid "Pending"
 msgstr "Venter"
 
-#: lib/brando/html.ex:321 lib/brando/html/inspect.ex:142
+#: lib/brando/html.ex:320 lib/brando/html/inspect.ex:142
 msgid "Published"
 msgstr "Publisert"
 
@@ -724,3 +722,31 @@ msgstr "Passord må matche"
 #: web/models/user.ex:72 web/models/user.ex:96
 msgid "Password must be at least 6 characters"
 msgstr "Passord må være minst 6 tegn"
+
+#: web/templates/admin/dashboard/system_info.html.eex:54
+msgid "Log"
+msgstr "Log"
+
+#: web/templates/admin/dashboard/system_info.html.eex:42
+msgid "Servers"
+msgstr "Servere"
+
+#: web/templates/admin/dashboard/system_info.html.eex:21
+msgid "binary"
+msgstr "binærkode"
+
+#: web/templates/admin/dashboard/system_info.html.eex:31
+msgid "code"
+msgstr "kildekode"
+
+#: web/templates/admin/dashboard/system_info.html.eex:36
+msgid "ets"
+msgstr "ets"
+
+#: web/templates/admin/dashboard/system_info.html.eex:26
+msgid "process"
+msgstr "prosesser"
+
+#: web/templates/admin/dashboard/system_info.html.eex:11
+msgid "system"
+msgstr "system"

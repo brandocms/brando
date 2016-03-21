@@ -233,7 +233,7 @@ defmodule Brando.HTML do
     if Map.get(conn.cookies, "cookielaw_accepted") != "1" do
       html =
       """
-      <section class="cookie-container">
+      <section class="container cookie-container">
         <section class="cookie-container-inner">
           <div class="cookie-law">
             <p>#{text}</p>
@@ -243,7 +243,6 @@ defmodule Brando.HTML do
             </a>
           </div>
         </section>
-        <hr class="mobile-hide" />
       </section>
       """
       Phoenix.HTML.raw(html)

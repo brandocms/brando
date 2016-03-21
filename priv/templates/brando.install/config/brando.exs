@@ -20,7 +20,7 @@ config :brando,
   app_name: "<%= application_module %>",
   endpoint: <%= application_module %>.Endpoint,
   otp_app: :<%= application_name %>,
-  log_dir: Path.expand("./logs"),
+  log_dir: Path.expand("./log"),
   default_language: "en",
   languages: [
     [value: "nb", text: "Norsk"],
@@ -39,7 +39,8 @@ config :brando,
   media_url: "/media",
   repo: <%= application_module %>.Repo,
   router: <%= application_module %>.Router,
-  helpers: <%= application_module %>.Router.Helpers
+  helpers: <%= application_module %>.Router.Helpers,
+  stats_polling_interval: 5000
 
 config :brando, Brando.Images,
   default_config: %{
