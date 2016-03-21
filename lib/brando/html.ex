@@ -243,7 +243,6 @@ defmodule Brando.HTML do
             </a>
           </div>
         </section>
-        <hr class="mobile-hide" />
       </section>
       """
       Phoenix.HTML.raw(html)
