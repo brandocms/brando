@@ -108,7 +108,7 @@ msgstr ""
 msgid "Delete user"
 msgstr ""
 
-#: lib/brando/html.ex:339 lib/brando/html/inspect.ex:145
+#: lib/brando/html.ex:338 lib/brando/html/inspect.ex:145
 msgid "Deleted"
 msgstr ""
 
@@ -420,7 +420,7 @@ msgstr ""
 msgid "Credits"
 msgstr ""
 
-#: lib/brando/html.ex:333 lib/brando/html/inspect.ex:144
+#: lib/brando/html.ex:332 lib/brando/html/inspect.ex:144
 msgid "Draft"
 msgstr ""
 
@@ -483,11 +483,11 @@ msgstr ""
 msgid "No value"
 msgstr ""
 
-#: lib/brando/html.ex:327 lib/brando/html/inspect.ex:143
+#: lib/brando/html.ex:326 lib/brando/html/inspect.ex:143
 msgid "Pending"
 msgstr ""
 
-#: lib/brando/html.ex:321 lib/brando/html/inspect.ex:142
+#: lib/brando/html.ex:320 lib/brando/html/inspect.ex:142
 msgid "Published"
 msgstr ""
 
