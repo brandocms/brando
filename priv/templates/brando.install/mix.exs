@@ -20,9 +20,9 @@ defmodule <%= application_module %>.Mixfile do
   # Type `mix help compile.app` for more information.
   def application do
     [mod: {<%= application_module %>, []},
-     included_applications: [:brando_news, :brando_pages, :brando_villain],
+     included_applications: [:brando_news, :brando_pages, :brando_villain, :recon],
      applications: [:brando, :phoenix, :phoenix_html, :cowboy, :logger, :gettext,
-                    :phoenix_ecto, :postgrex]]
+                    :phoenix_ecto, :postgrex, :runtime_tools]]
   end
 
   # Specifies which paths to compile per environment.
@@ -41,8 +41,9 @@ defmodule <%= application_module %>.Mixfile do
      {:gettext, "~> 0.10"},
      {:cowboy, "~> 1.0"},
 
-     # release management
+     # release management and production tools
      {:exrm, "~> 1.0"},
+     {:recon, github: "ferd/recon"},
 
      # brando
      {:brando, github: "twined/brando"},

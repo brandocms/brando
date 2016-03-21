@@ -1,7 +1,8 @@
 .git
 __design
 _build
+media
 deps
 node_modules
 rel
-priv
+priv/static
