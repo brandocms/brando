@@ -1,3 +1,5 @@
+$ = require('jquery');
+
 var Cookielaw = {
     createCookie: function (name, value, days) {
         var date = new Date(),
@@ -14,6 +16,6 @@ var Cookielaw = {
     createCookielawCookie: function () {
         this.createCookie('cookielaw_accepted', '1', 10 * 365);
 
-        $('.cookie-law').slideUp();
+        $('.cookie-container').slideUp();
     }
 };
