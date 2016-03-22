@@ -517,6 +517,11 @@ Requires fabric.
 
 Configure `./fabfile.py` with your own values.
 
+Make sure your local Docker machine is running, and that the env has been prepared:
+
+    $ docker-machine start default
+    $ eval "$(docker-machine env default)"
+
 Run
 
     $ fab prod bootstrap_release:0.1.0
@@ -546,3 +551,7 @@ To dump/upload/load local db to remote:
 To upload your local `media/` folder (only runs if remote `media/` doesn't exists!)
 
     $ fab prod upload_media
+
+To upload your local `etc/` folder
+
+    $ fab prod upload_etc
