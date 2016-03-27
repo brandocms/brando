@@ -77,20 +77,19 @@ defmodule Brando.Utils do
   """
   @spec split_path(String.t) :: {String.t, String.t}
   def split_path(file) do
-    case String.contains?(file, "/") do
-      true ->
-        filename =
-          file
-          |> Path.split
-          |> List.last
-        path =
-          file
-          |> Path.split
-          |> List.delete_at(-1)
-          |> Path.join
-        {path, filename}
-      false ->
-        {"", file}
+    if String.contains?(file, "/") do
+      filename =
+        file
+        |> Path.split
+        |> List.last
+      path =
+        file
+        |> Path.split
+        |> List.delete_at(-1)
+        |> Path.join
+      {path, filename}
+    else
+      {"", file}
     end
   end
 
@@ -115,13 +114,13 @@ defmodule Brando.Utils do
   """
   def to_string_map(nil), do: nil
   def to_string_map(coll) do
-    case Map.has_key?(coll, :__struct__) do
-      true ->
-        coll
-        |> Map.delete(:__struct__)
-        |> Enum.map(fn({k, v}) -> {Atom.to_string(k), v} end)
-        |> Enum.into(%{})
-      false -> coll
+    if Map.has_key?(coll, :__struct__) do
+      coll
+      |> Map.delete(:__struct__)
+      |> Enum.map(fn({k, v}) -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{})
+    else
+      coll
     end
   end
 

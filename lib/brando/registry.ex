@@ -49,11 +49,11 @@ defmodule Brando.Registry do
   end
 
   def gettext_modules do
-    Map.get(state(), :gettext_modules) |> Enum.reverse
+    state() |> Map.get(:gettext_modules) |> Enum.reverse
   end
 
   def menu_modules do
-    Map.get(state(), :menu_modules) |> Enum.reverse
+    state() |> Map.get(:menu_modules) |> Enum.reverse
   end
 
   def wipe do

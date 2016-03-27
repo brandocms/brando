@@ -165,26 +165,22 @@ defmodule Brando.Villain do
       import Ecto.Query
       @doc false
       def browse_images(conn, %{"slug" => series_slug} = params) do
-        series_model = unquote(series_model)
-
         image_series =
-          series_model
+          unquote(series_model)
           |> preload([:image_category, :images])
           |> Brando.repo.get_by(slug: series_slug)
 
         if image_series do
           image_list = Enum.map(image_series.images, fn image ->
-            sizes =
-              Enum.map(image.image.sizes, fn({k, v}) ->
-                {k, Brando.Utils.media_url(v)}
-              end)
+            sizes = Enum.map(image.image.sizes, fn({k, v}) -> {k, Brando.Utils.media_url(v)} end)
             sizes = Enum.into(sizes, %{})
 
-            %{src: Brando.Utils.media_url(image.image.path),
-              thumb: Brando.Utils.media_url(Brando.Utils.img_url(image.image,
-                                                                 :thumb)),
+            %{
+              src: Brando.Utils.media_url(image.image.path),
+              thumb: Brando.Utils.media_url(Brando.Utils.img_url(image.image, :thumb)),
               sizes: sizes,
-              title: image.image.title, credits: image.image.credits}
+              title: image.image.title, credits: image.image.credits
+            }
           end)
           json(conn, %{status: "200", images: image_list})
         else
@@ -194,46 +190,47 @@ defmodule Brando.Villain do
 
       @doc false
       def upload_image(conn, %{"uid" => uid, "slug" => series_slug} = params) do
-        series_model = unquote(series_model)
         user = Brando.Utils.current_user(conn)
 
         series =
-          series_model
+          unquote(series_model)
           |> preload(:image_category)
           |> Brando.repo.get_by(slug: series_slug)
 
-        cfg = series.cfg ||
-              Brando.config(Brando.Images)[:default_config]
+        cfg = series.cfg || Brando.config(Brando.Images)[:default_config]
         opts = Map.put(%{}, "image_series_id", series.id)
 
-        {:ok, image} =
-          unquote(image_model).check_for_uploads(params, user, cfg, opts)
-        sizes =
-          Enum.map image.image.sizes, fn({k, v}) ->
-            {k, Brando.Utils.media_url(v)}
-          end
+        {:ok, image} = unquote(image_model).check_for_uploads(params, user, cfg, opts)
+
+        sizes = Enum.map(image.image.sizes, fn({k, v}) -> {k, Brando.Utils.media_url(v)} end)
         sizes_map = Enum.into(sizes, %{})
 
         json conn,
-          %{status: "200",
+          %{
+            status: "200",
             uid: uid,
             image: %{
               id: image.id,
               sizes: sizes_map,
-              src: Brando.Utils.media_url(image.image.path)},
+              src: Brando.Utils.media_url(image.image.path)
+            },
             form: %{
               method: "post",
               action: "villain/imagedata/#{image.id}",
               name: "villain-imagedata",
               fields: [
-                %{name: "title",
+                %{
+                  name: "title",
                   type: "text",
                   label: "Tittel",
-                  value: ""},
-                %{name: "credits",
+                  value: ""
+                },
+                %{
+                  name: "credits",
                   type: "text",
                   label: "Krediteringer",
-                  value: ""}
+                  value: ""
+                }
               ]
             }
           }
@@ -252,8 +249,13 @@ defmodule Brando.Villain do
 
         sizes = Enum.map(series.cfg.sizes, &elem(&1, 0))
         images = Enum.map(series.images, &(&1.image))
-        json conn, %{status: 200, series: series_slug, images: images,
-                     sizes: sizes, media_url: Brando.config(:media_url)}
+        json conn, %{
+          status: 200,
+          series: series_slug,
+          images: images,
+          sizes: sizes,
+          media_url: Brando.config(:media_url)
+        }
       end
 
       @doc false

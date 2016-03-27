@@ -72,13 +72,17 @@ defmodule Brando.Admin.UserController do
 
     case Brando.repo.update(model.update(user, form_data)) do
       {:ok, updated_user} ->
-        conn = case current_user(conn).id == user_id do
-          true  -> put_session(conn, :current_user, Map.drop(updated_user, [:password]))
-          false -> conn
-        end
+        conn =
+          if current_user(conn).id == user_id do
+            put_session(conn, :current_user, Map.drop(updated_user, [:password]))
+          else
+            conn
+          end
+
         conn
         |> put_flash(:notice, gettext("Profile updated"))
         |> redirect(to: helpers(conn).admin_user_path(conn, :profile))
+
       {:error, changeset} ->
         conn
         |> assign(:user, form_data)
@@ -94,6 +98,7 @@ defmodule Brando.Admin.UserController do
   def new(conn, _params) do
     model = conn.private[:model]
     changeset = model.changeset(model.__struct__, :create)
+
     conn
     |> assign(:changeset, changeset)
     |> assign(:page_title, gettext("New user"))
@@ -139,14 +144,17 @@ defmodule Brando.Admin.UserController do
 
     case Brando.repo.update(model.update(user, form_data)) do
       {:ok, updated_user} ->
-        conn = case current_user(conn).id == String.to_integer(user_id) do
-          true -> put_session(conn, :current_user, Map.drop(updated_user, [:password]))
-          false -> conn
-        end
+        conn =
+          if current_user(conn).id == String.to_integer(user_id) do
+            put_session(conn, :current_user, Map.drop(updated_user, [:password]))
+          else
+            conn
+          end
 
         conn
         |> put_flash(:notice, gettext("User updated"))
         |> redirect(to: helpers(conn).admin_user_path(conn, :index))
+
       {:error, changeset} ->
         conn
         |> assign(:changeset, changeset)
@@ -161,6 +169,7 @@ defmodule Brando.Admin.UserController do
   def delete_confirm(conn, %{"id" => user_id}) do
     model = conn.private[:model]
     record = Brando.repo.get!(model, user_id)
+
     conn
     |> assign(:record, record)
     |> assign(:page_title, gettext("Confirm deletion"))

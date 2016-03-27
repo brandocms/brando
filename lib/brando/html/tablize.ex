@@ -137,9 +137,9 @@ defmodule Brando.HTML.Tablize do
   end
 
   defp render_tbody(%{records: records, opts: opts} = tablize_opts) do
-    if split_by = opts[:split_by] do
+    if opts[:split_by] do
       tbodies =
-        for {_, split_recs} <- Brando.Utils.split_by(records, split_by) do
+        for {_, split_recs} <- Brando.Utils.split_by(records, opts[:split_by]) do
           do_render_tbody(split_recs, tablize_opts)
         end
       Enum.join(tbodies, ~s(<tr class="splitter"><td></td></tr>))
