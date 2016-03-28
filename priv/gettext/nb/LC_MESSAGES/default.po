@@ -48,7 +48,7 @@ msgstr "Admin"
 msgid "Authorization"
 msgstr "Autorisasjon"
 
-#: web/controllers/session_controller.ex:31
+#: web/controllers/session_controller.ex:30
 msgid "Authorization failed"
 msgstr "Autorisasjon feilet"
 
@@ -88,7 +88,7 @@ msgstr "Konfigurer bildeserie"
 
 #: web/controllers/admin/image_category_controller.ex:133
 #: web/controllers/admin/image_series_controller.ex:174
-#: web/controllers/admin/user_controller.ex:166
+#: web/controllers/admin/user_controller.ex:175
 msgid "Confirm deletion"
 msgstr "Bekreft sletting"
 
@@ -146,13 +146,13 @@ msgid "Edit image series"
 msgstr "Rediger bildeserie"
 
 #: web/controllers/admin/user_controller.ex:63
-#: web/controllers/admin/user_controller.ex:87
+#: web/controllers/admin/user_controller.ex:91
 #: web/templates/admin/user/profile_edit.html.eex:1
 msgid "Edit profile"
 msgstr "Rediger profil"
 
-#: web/controllers/admin/user_controller.ex:131
-#: web/controllers/admin/user_controller.ex:154
+#: web/controllers/admin/user_controller.ex:136
+#: web/controllers/admin/user_controller.ex:162
 #: web/templates/admin/user/edit.html.eex:1
 #: web/templates/admin/user/index.html.eex:4
 #: web/templates/admin/user/new.html.eex:8
@@ -182,9 +182,9 @@ msgstr "Feil"
 #: web/controllers/admin/image_series_controller.ex:50
 #: web/controllers/admin/image_series_controller.ex:86
 #: web/controllers/admin/image_series_controller.ex:127
-#: web/controllers/admin/user_controller.ex:88
-#: web/controllers/admin/user_controller.ex:115
-#: web/controllers/admin/user_controller.ex:155
+#: web/controllers/admin/user_controller.ex:92
+#: web/controllers/admin/user_controller.ex:120
+#: web/controllers/admin/user_controller.ex:163
 msgid "Errors in form"
 msgstr "Feil i skjemaet"
 
@@ -264,8 +264,8 @@ msgstr "Ny bildekategori"
 msgid "New image series"
 msgstr "Ny bildeserie"
 
-#: web/controllers/admin/user_controller.ex:99
-#: web/controllers/admin/user_controller.ex:114
+#: web/controllers/admin/user_controller.ex:104
+#: web/controllers/admin/user_controller.ex:119
 #: web/templates/admin/user/index.html.eex:9
 #: web/templates/admin/user/new.html.eex:1
 msgid "New user"
@@ -296,7 +296,7 @@ msgstr "Vennligst kontakt administrator."
 msgid "Profile"
 msgstr "Profil"
 
-#: web/controllers/admin/user_controller.ex:80
+#: web/controllers/admin/user_controller.ex:83
 msgid "Profile updated"
 msgstr "Profil oppdatert"
 
@@ -351,11 +351,11 @@ msgstr "Last opp bilder"
 msgid "Upload to this image series"
 msgstr "Last opp til denne bildeserien"
 
-#: web/controllers/admin/user_controller.ex:109
+#: web/controllers/admin/user_controller.ex:114
 msgid "User created"
 msgstr "Bruker opprettet"
 
-#: web/controllers/admin/user_controller.ex:148
+#: web/controllers/admin/user_controller.ex:155
 msgid "User updated"
 msgstr "Bruker oppdatert"
 
@@ -373,7 +373,7 @@ msgstr "Du har ikke sikkerhetstilgang for dette området."
 msgid "You have been logged out of the admin area."
 msgstr "Du har nå logget ut av admin-området."
 
-#: web/controllers/admin/user_controller.ex:179
+#: web/controllers/admin/user_controller.ex:188
 msgid "deleted"
 msgstr "slettet"
 
@@ -405,7 +405,7 @@ msgstr "Forbindelse ikke hentet"
 msgid "Avatar"
 msgstr "Profilbilde"
 
-#: web/models/image_category.ex:137
+#: web/models/image_category.ex:138
 msgid "Config"
 msgstr "Konfigurer"
 
@@ -425,7 +425,7 @@ msgstr "Bekreft"
 msgid "Connected"
 msgstr "Tilkoblet"
 
-#: web/models/image.ex:145 web/models/image_category.ex:138
+#: web/models/image.ex:146 web/models/image_category.ex:139
 #: web/models/image_series.ex:174
 msgid "Creator"
 msgstr "Skaper"
@@ -450,12 +450,12 @@ msgstr "Kodet verdi"
 msgid "Full name"
 msgstr "Fullt navn"
 
-#: web/models/image.ex:142 web/models/image_category.ex:134
+#: web/models/image.ex:143 web/models/image_category.ex:135
 #: web/models/image_series.ex:168 web/models/user.ex:185
 msgid "ID"
 msgstr "ID"
 
-#: web/models/image.ex:143
+#: web/models/image.ex:144
 msgid "Image"
 msgstr "Bilde"
 
@@ -463,11 +463,11 @@ msgstr "Bilde"
 msgid "Image category"
 msgstr "Bildekategori"
 
-#: web/models/image.ex:146 web/models/image_category.ex:139
+#: web/models/image.ex:147 web/models/image_category.ex:140
 msgid "Image series"
 msgstr "Bildeserie"
 
-#: web/models/image.ex:147 web/models/image_category.ex:140
+#: web/models/image.ex:148 web/models/image_category.ex:141
 #: web/models/image_series.ex:178 web/models/user.ex:193
 msgid "Inserted at"
 msgstr "Lagt til"
@@ -480,7 +480,7 @@ msgstr "Språk"
 msgid "Last login"
 msgstr "Forrige innlogging"
 
-#: web/models/image_category.ex:135 web/models/image_series.ex:169
+#: web/models/image_category.ex:136 web/models/image_series.ex:169
 msgid "Name"
 msgstr "Navn"
 
@@ -517,15 +517,15 @@ msgstr "Roller"
 msgid "Save"
 msgstr "Lagre"
 
-#: web/models/image.ex:144 web/models/image_series.ex:173
+#: web/models/image.ex:145 web/models/image_series.ex:173
 msgid "Sequence"
 msgstr "Sekvens"
 
-#: web/models/image_category.ex:136 web/models/image_series.ex:170
+#: web/models/image_category.ex:137 web/models/image_series.ex:170
 msgid "Slug"
 msgstr "URL-tamp"
 
-#: web/models/image.ex:148 web/models/image_category.ex:141
+#: web/models/image.ex:149 web/models/image_category.ex:142
 #: web/models/image_series.ex:179 web/models/user.ex:194
 msgid "Updated at"
 msgstr "Sist oppdatert"
@@ -550,15 +550,15 @@ msgstr "kan ikke være tomt"
 msgid "has invalid format"
 msgstr "har ugyldig format"
 
-#: web/models/image.ex:138
+#: web/models/image.ex:139
 msgid "image"
 msgstr "bilde"
 
-#: web/models/image_category.ex:131
+#: web/models/image_category.ex:132
 msgid "image categories"
 msgstr "bildekategorier"
 
-#: web/models/image_category.ex:130
+#: web/models/image_category.ex:131
 msgid "image category"
 msgstr "bildekategori"
 
@@ -566,7 +566,7 @@ msgstr "bildekategori"
 msgid "image(s)"
 msgstr "bilde(r)"
 
-#: web/models/image.ex:139
+#: web/models/image.ex:140
 msgid "images"
 msgstr "bilder"
 
