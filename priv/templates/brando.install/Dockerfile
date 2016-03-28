@@ -12,7 +12,7 @@ RUN mix deps.clean --all
 RUN mix deps.get
 RUN mix deps.compile
 
-RUN npm install
+RUN npm set progress=false && npm install
 RUN node_modules/.bin/brunch build -p
 
 RUN mix phoenix.digest
