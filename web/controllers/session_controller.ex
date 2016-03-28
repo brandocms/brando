@@ -13,23 +13,22 @@ defmodule Brando.SessionController do
     model = conn.private[:model]
     user = Brando.repo.get_by(model, email: email)
 
-    case model.auth?(user, password) do
-      true ->
-        user =
-          user
-          |> model.set_last_login
-          |> sanitize_user
+    if model.auth?(user, password) do
+      user =
+        user
+        |> model.set_last_login
+        |> sanitize_user
 
-        conn
-        |> sleep
-        |> fetch_session
-        |> put_session(:current_user, user)
-        |> redirect(to: "/admin")
-      false ->
-        conn
-        |> sleep
-        |> put_flash(:error, gettext("Authorization failed"))
-        |> redirect(to: "/auth/login")
+      conn
+      |> sleep
+      |> fetch_session
+      |> put_session(:current_user, user)
+      |> redirect(to: "/admin")
+    else
+      conn
+      |> sleep
+      |> put_flash(:error, gettext("Authorization failed"))
+      |> redirect(to: "/auth/login")
     end
   end
 

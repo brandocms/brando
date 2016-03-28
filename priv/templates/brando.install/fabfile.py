@@ -17,6 +17,7 @@ VERSION_NUMBER = '2.0.0'
 # Project-specific setup.
 
 PROJECT_NAME = '<%= application_name %>'
+PROD_URL = 'http://somesite.com'
 DB_PASS = 'prod_database_password'
 
 SSH_USER = 'username'
@@ -219,6 +220,7 @@ def bootstrap_release(version):
 
     restart()
     _success()
+    _notify_build_complete(version)
 
 
 def deploy_release(version):
@@ -231,6 +233,8 @@ def deploy_release(version):
     unpack_release(version)
     ensure_log_directory_exists()
     restart()
+    _success()
+    _notify_build_complete(version)
 
 
 def _docker_env():
@@ -679,3 +683,8 @@ def nginxrestart():
     """
     print(yellow('==> restarting nginx'))
     sudo('/etc/init.d/nginx restart')
+
+
+def _notify_build_complete(version):
+    local('terminal-notifier -message "Release process completed!" -title %s -subtitle v%s -sound default -group %s -open %s' % (
+        PROJECT_NAME, version, PROJECT_NAME, PROD_URL))

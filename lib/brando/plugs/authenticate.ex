@@ -21,11 +21,11 @@ defmodule Brando.Plug.Authenticate do
 
   def call(conn, _), do: allowed?(conn)
 
-  defp allowed?(%{private: %{plug_session:
-                %{"current_user" => current_user}}} = conn) do
-    case User.can_login?(current_user) do
-      true  -> assign(conn, :current_user, current_user)
-      false -> auth_failed(conn)
+  defp allowed?(%{private: %{plug_session: %{"current_user" => current_user}}} = conn) do
+    if User.can_login?(current_user) do
+      assign(conn, :current_user, current_user)
+    else
+      auth_failed(conn)
     end
   end
 

@@ -39,7 +39,8 @@ defmodule Brando.ImageCategory do
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, action, params \\ %{})
   def changeset(model, :create, params) do
-    cast(model, params, @required_fields ++ @optional_fields)
+    model
+    |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
   end
 

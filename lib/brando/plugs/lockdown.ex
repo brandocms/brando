@@ -29,9 +29,10 @@ defmodule Brando.Plug.Lockdown do
   end
 
   defp allowed?(%{private: %{plug_session: %{"current_user" => user}}} = conn) do
-    case User.can_login?(user) do
-      true  -> conn
-      false -> lockdown(conn)
+    if User.can_login?(user) do
+      conn
+    else
+      lockdown(conn)
     end
   end
 

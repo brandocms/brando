@@ -91,10 +91,7 @@ defmodule Brando.Type.Role do
 
   defp reduce_roles(set_roles, roles) do
     Enum.reduce(set_roles, [], fn ({role_k, role_v}, acc) ->
-      case (roles &&& role_v) == role_v do
-        true -> [role_k|acc]
-        false -> acc
-      end
+      (roles &&& role_v) == role_v && [role_k|acc] || acc
     end)
   end
 

@@ -176,7 +176,7 @@ defmodule Brando.Form.Fields do
       |> put_rows(field.opts)
 
     {:safe, html} = content_tag(:textarea, tag_opts) do
-      field.opts[:default] || ""
+      get_val(nil, field.opts[:default])
     end
 
     prepend_html(field, html)

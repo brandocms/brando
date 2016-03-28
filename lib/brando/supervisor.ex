@@ -1,4 +1,9 @@
 defmodule Brando.Supervisor do
+  @moduledoc """
+  Main Brando supervisor.
+
+  Looks after `Brando.Registry`.
+  """
   use Supervisor
 
   def start_link do

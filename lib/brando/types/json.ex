@@ -13,6 +13,8 @@ defmodule Brando.Type.Json do
   @doc """
   Cast should return OUR type no matter what the input.
   """
+  def cast(nil), do: {:ok, []}
+  def cast(""), do: {:ok, []}
   def cast(json) when is_map(json), do: {:ok, json}
   def cast(json) when is_list(json), do: {:ok, json}
   def cast(json) when is_binary(json), do: {:ok, Poison.decode!(json)}
@@ -32,6 +34,8 @@ defmodule Brando.Type.Json do
   When dumping data to the database we expect a `list`, but check for
   other options as well.
   """
+  def dump(""), do: {:ok, nil}
+  def dump(nil), do: {:ok, nil}
   def dump(json) when is_map(json), do: {:ok, json}
   def dump(json) when is_list(json), do: {:ok, json}
   def dump(json) when is_binary(json), do: {:ok, Poison.decode!(json)}
