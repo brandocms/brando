@@ -1,4 +1,4 @@
-## v0.27.0-dev (2016-XX-XX)
+## v0.26.1 (2016-03-28)
 
 * Enhancements
   * Add terminal notification at the end of fabric release build.
