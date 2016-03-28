@@ -1,5 +1,8 @@
 ## v0.27.0-dev (2016-XX-XX)
 
+* Enhancements
+  * Villain style overrides. Nicer font on markdown/html fields
+
 ## v0.26.1 (2016-03-28)
 
 * Enhancements
