@@ -1,3 +1,16 @@
+## v0.27.0 (2016-03-30)
+
+* Bug fixes
+  * Fix setting logrotate permissions in fabfile.
+  * Supervisord default config now sets PLUG_TMPDIR to `/tmp/<application_name>`.
+    This fixes a nasty upload bug where the first app to create the plug tmp directory
+    takes ownership and refuses to share with other applications. Add
+    `PLUG_TMPDIR="/tmp/your_app"` to your app's `etc/supervisor/prod.conf` under `environment`.
+
+* Enhancements
+  * Optional warning if trying to auth on :http. Set `config :brando, warn_on_http_auth: true`
+  * Villain style overrides. Nicer font on markdown/html fields
+
 ## v0.26.1 (2016-03-28)
 
 * Enhancements

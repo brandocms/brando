@@ -233,6 +233,14 @@ defmodule Brando.Utils do
   end
 
   @doc """
+  Return link with :https scheme
+  """
+  def https_url(conn) do
+    port = conn.port == 80 && "" || ":#{conn.port}"
+    "https://#{conn.host}#{port}#{conn.request_path}"
+  end
+
+  @doc """
   Return joined path of `file` and the :media_url config option
   as set in your app's config.exs.
   """

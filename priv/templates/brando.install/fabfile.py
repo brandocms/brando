@@ -430,6 +430,7 @@ def upload_etc():
     _setowner(os.path.join(env.path, 'etc'))
     print(yellow('==> chmoding etc folder'))
     _setperms('755', os.path.join(env.path, 'etc'))
+    _set_logrotate_perms()
 
 
 def _warn(str):
@@ -545,6 +546,9 @@ def fixprojectperms():
     """
     require('hosts')
     _setowner(env.path)
+    _set_logrotate_perms()
+    _set_logdir_perms()
+    _set_media_perms()
 
 
 def _success():
@@ -617,6 +621,16 @@ def _set_logrotate_perms():
     # set owner to root
     print(yellow('==> chowning logrotate to root'))
     sudo('chown root:web "%s"' % logrotate_src)
+
+
+def _set_logdir_perms():
+    print(yellow('==> chmoding log directory to 755'))
+    _setperms('755', os.path.join(env.path, 'log'))
+
+
+def _set_media_perms():
+    print(yellow('==> chmoding media directory to 755'))
+    _setperms('755', os.path.join(env.path, 'media'))
 
 
 def createuser():
