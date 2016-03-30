@@ -750,3 +750,7 @@ msgstr "prosesser"
 #: web/templates/admin/dashboard/system_info.html.eex:11
 msgid "system"
 msgstr "system"
+
+#: lib/brando/html.ex:422
+msgid "You are trying to authorize from an insecure URL. <a href=\"%{url}\">Please try again from this URL</a> or proceed at your own risk!"
+msgstr "Du prøver å logge inn fra en usikker adresse. <a href=\"%{url}\">Prøv fra denne adressen istedet</a> eller fortsett på eget ansvar!"
