@@ -736,3 +736,7 @@ msgstr ""
 #: web/templates/admin/dashboard/system_info.html.eex:11
 msgid "system"
 msgstr ""
+
+#: lib/brando/html.ex:422
+msgid "You are trying to authorize from an insecure URL. <a href=\"%{url}\">Please try again from this URL</a> or proceed at your own risk!"
+msgstr ""

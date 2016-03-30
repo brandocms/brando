@@ -1,4 +1,4 @@
-## v0.27.0-dev (2016-XX-XX)
+## v0.27.0 (2016-03-30)
 
 * Bug fixes
   * Fix setting logrotate permissions in fabfile.
