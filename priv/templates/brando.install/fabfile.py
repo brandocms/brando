@@ -547,6 +547,8 @@ def fixprojectperms():
     require('hosts')
     _setowner(env.path)
     _set_logrotate_perms()
+    _set_logdir_perms()
+    _set_media_perms()
 
 
 def _success():
@@ -621,6 +623,16 @@ def _set_logrotate_perms():
     sudo('chown root:web "%s"' % logrotate_src)
 
 
+def _set_logdir_perms():
+    print(yellow('==> chmoding log directory to 755'))
+    _setperms('755', os.path.join(env.path, 'log'))
+
+
+def _set_media_perms():
+    print(yellow('==> chmoding media directory to 755'))
+    _setperms('755', os.path.join(env.path, 'media'))
+
+
 def createuser():
     """
     Creates a linux user on host, if it doesn't already exists
@@ -690,4 +702,3 @@ def nginxrestart():
 def _notify_build_complete(version):
     local('terminal-notifier -message "Release process completed!" -title %s -subtitle v%s -sound default -group %s -open %s' % (
         PROJECT_NAME, version, PROJECT_NAME, PROD_URL))
-        
