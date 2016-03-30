@@ -5,6 +5,11 @@
   padding: 12px 10px 10px 15px;
   color: #fff;
 
+  a {
+    color: #fff;
+    text-decoration: underline;
+  }
+
   &.alert-info {
     background-color: #4AAE66;
     border-bottom: 4px solid #299848;

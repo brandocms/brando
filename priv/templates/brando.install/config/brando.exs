@@ -40,6 +40,7 @@ config :brando,
   repo: <%= application_module %>.Repo,
   router: <%= application_module %>.Router,
   helpers: <%= application_module %>.Router.Helpers,
+  warn_on_http_auth: false,
   stats_polling_interval: 5000
 
 config :brando, Brando.Images,

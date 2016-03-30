@@ -411,4 +411,19 @@ defmodule Brando.HTML do
     |> List.first
     |> Atom.to_string
   end
+
+  @doc """
+  Checks if conn.scheme is :https. If not, warn and provide link to secure login.
+  """
+  def insecure_login?(conn) do
+    if Brando.config(:warn_on_http_auth) do
+      if conn.scheme != :https do
+        ~s(<div class="text-center alert alert-block alert-danger">) <>
+        gettext("You are trying to authorize from an insecure URL. <a href=\"%{url}\">Please try again from this URL</a> or proceed at your own risk!", url: Brando.Utils.https_url(conn)) <>
+        ~s(</div>)
+        |> Phoenix.HTML.raw
+      end
+    end
+
+  end
 end
