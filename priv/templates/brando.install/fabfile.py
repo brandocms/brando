@@ -430,6 +430,7 @@ def upload_etc():
     _setowner(os.path.join(env.path, 'etc'))
     print(yellow('==> chmoding etc folder'))
     _setperms('755', os.path.join(env.path, 'etc'))
+    _set_logrotate_perms()
 
 
 def _warn(str):
@@ -545,6 +546,7 @@ def fixprojectperms():
     """
     require('hosts')
     _setowner(env.path)
+    _set_logrotate_perms()
 
 
 def _success():
@@ -688,3 +690,4 @@ def nginxrestart():
 def _notify_build_complete(version):
     local('terminal-notifier -message "Release process completed!" -title %s -subtitle v%s -sound default -group %s -open %s' % (
         PROJECT_NAME, version, PROJECT_NAME, PROD_URL))
+        
