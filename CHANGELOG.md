@@ -1,5 +1,8 @@
 ## v0.28.0-dev (2016-XX-XX)
 
+* Enhancements
+  * Fabfile now extracts version number from mix.exs.
+
 ## v0.27.0 (2016-03-30)
 
 * Bug fixes
