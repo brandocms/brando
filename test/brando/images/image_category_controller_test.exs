@@ -92,7 +92,8 @@ defmodule Brando.ImageCategory.ControllerTest do
       |> send_request
 
     assert html_response(conn, 200) =~ "Configure image category"
-    assert html_response(conn, 200) =~ "imagecategoryconfig[cfg]"
+    assert html_response(conn, 200) =~ "config"
+    assert html_response(conn, 200) =~ "sizes"
 
     assert_raise Plug.Conn.WrapperError, fn ->
       :get

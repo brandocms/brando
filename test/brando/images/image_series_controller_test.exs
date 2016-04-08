@@ -213,18 +213,4 @@ defmodule Brando.ImageSeries.ControllerTest do
 
     assert html_response(conn, 200) =~ "Configure image series"
   end
-
-  test "configure patch", %{user: user, category: category} do
-    series = Factory.create(:image_series, creator: user, image_category: category)
-
-    conn =
-      :patch
-      |> call("/admin/images/series/#{series.id}/configure",
-              %{"id" => series.id, "imageseriesconfig" => @cfg_changed})
-      |> with_user
-      |> send_request
-
-    assert redirected_to(conn, 302) =~ "/admin/images"
-    assert get_flash(conn, :notice) == "Image series configured"
-  end
 end
