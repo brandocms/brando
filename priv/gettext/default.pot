@@ -38,10 +38,10 @@ msgstr ""
 msgid "Authorization failed"
 msgstr ""
 
-#: web/templates/admin/image_category/configure.html.eex:5
+#: web/templates/admin/image_category/configure.html.eex:8
 #: web/templates/admin/image_category/edit.html.eex:5
 #: web/templates/admin/image_category/sequence.html.eex:26
-#: web/templates/admin/image_series/configure.html.eex:5
+#: web/templates/admin/image_series/configure.html.eex:8
 #: web/templates/admin/image_series/edit.html.eex:5
 #: web/templates/admin/image_series/sequence.html.eex:18
 #: web/templates/admin/image_series/upload.html.eex:11
@@ -61,19 +61,19 @@ msgstr ""
 msgid "Configure category"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:97
-#: web/controllers/admin/image_category_controller.ex:115
+#: web/controllers/admin/image_category_controller.ex:91
+#: web/controllers/admin/image_category_controller.ex:120
 msgid "Configure image category"
 msgstr ""
 
-#: web/controllers/admin/image_series_controller.ex:103
-#: web/controllers/admin/image_series_controller.ex:123
+#: web/controllers/admin/image_series_controller.ex:96
+#: web/controllers/admin/image_series_controller.ex:125
 #: web/templates/admin/image/index.html.eex:99
 msgid "Configure image series"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:133
-#: web/controllers/admin/image_series_controller.ex:174
+#: web/controllers/admin/image_category_controller.ex:167
+#: web/controllers/admin/image_series_controller.ex:186
 #: web/controllers/admin/user_controller.ex:175
 msgid "Confirm deletion"
 msgstr ""
@@ -116,8 +116,8 @@ msgstr ""
 msgid "Edit image"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:58
-#: web/controllers/admin/image_category_controller.ex:76
+#: web/controllers/admin/image_category_controller.ex:59
+#: web/controllers/admin/image_category_controller.ex:77
 #: web/templates/admin/image_category/edit.html.eex:1
 msgid "Edit image category"
 msgstr ""
@@ -162,12 +162,12 @@ msgstr ""
 msgid "Error"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:44
-#: web/controllers/admin/image_category_controller.ex:80
-#: web/controllers/admin/image_category_controller.ex:119
+#: web/controllers/admin/image_category_controller.ex:45
+#: web/controllers/admin/image_category_controller.ex:81
+#: web/controllers/admin/image_category_controller.ex:125
 #: web/controllers/admin/image_series_controller.ex:50
 #: web/controllers/admin/image_series_controller.ex:86
-#: web/controllers/admin/image_series_controller.ex:127
+#: web/controllers/admin/image_series_controller.ex:130
 #: web/controllers/admin/user_controller.ex:92
 #: web/controllers/admin/user_controller.ex:120
 #: web/controllers/admin/user_controller.ex:163
@@ -186,31 +186,23 @@ msgstr ""
 msgid "Go back"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:111
-msgid "Image category configured"
-msgstr ""
-
-#: web/controllers/admin/image_category_controller.ex:37
+#: web/controllers/admin/image_category_controller.ex:38
 msgid "Image category created"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:145
+#: web/controllers/admin/image_category_controller.ex:179
 msgid "Image category deleted"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:72
+#: web/controllers/admin/image_category_controller.ex:73
 msgid "Image category updated"
-msgstr ""
-
-#: web/controllers/admin/image_series_controller.ex:119
-msgid "Image series configured"
 msgstr ""
 
 #: web/controllers/admin/image_series_controller.ex:43
 msgid "Image series created"
 msgstr ""
 
-#: web/controllers/admin/image_series_controller.ex:186
+#: web/controllers/admin/image_series_controller.ex:198
 msgid "Image series deleted"
 msgstr ""
 
@@ -236,8 +228,8 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:25
-#: web/controllers/admin/image_category_controller.ex:41
+#: web/controllers/admin/image_category_controller.ex:26
+#: web/controllers/admin/image_category_controller.ex:42
 #: web/templates/admin/image/index.html.eex:119
 #: web/templates/admin/image_category/new.html.eex:1
 msgid "New image category"
@@ -328,7 +320,7 @@ msgstr ""
 msgid "This object cannot be restored!"
 msgstr ""
 
-#: web/controllers/admin/image_series_controller.ex:141
+#: web/controllers/admin/image_series_controller.ex:153
 #: web/templates/admin/image/index.html.eex:78
 msgid "Upload images"
 msgstr ""
@@ -739,4 +731,53 @@ msgstr ""
 
 #: lib/brando/html.ex:422
 msgid "You are trying to authorize from an insecure URL. <a href=\"%{url}\">Please try again from this URL</a> or proceed at your own risk!"
+msgstr ""
+
+#: lib/brando/images/utils.ex:264
+msgid "Allowed mimetypes"
+msgstr ""
+
+#: web/controllers/admin/image_category_controller.ex:154
+msgid "Category propagated"
+msgstr ""
+
+#: web/controllers/admin/image_category_controller.ex:116
+#: web/controllers/admin/image_series_controller.ex:121
+msgid "Configuration updated"
+msgstr ""
+
+#: lib/brando/images/utils.ex:268
+msgid "Default size"
+msgstr ""
+
+#: web/templates/admin/image_category/configure.html.eex:11
+msgid "Propagate configuration to dependent image series"
+msgstr ""
+
+#: lib/brando/images/utils.ex:272
+msgid "Random filename"
+msgstr ""
+
+#: web/templates/admin/image_series/configure.html.eex:11
+msgid "Recreate sizes for this series"
+msgstr ""
+
+#: web/controllers/admin/image_series_controller.ex:140
+msgid "Recreated sizes for image series"
+msgstr ""
+
+#: lib/brando/images/utils.ex:276
+msgid "Size limit"
+msgstr ""
+
+#: lib/brando/images/utils.ex:282
+msgid "Upload path"
+msgstr ""
+
+#: web/templates/admin/image_category/configure.html.eex:1
+msgid "category"
+msgstr ""
+
+#: web/templates/admin/image_series/configure.html.eex:1
+msgid "image series"
 msgstr ""
