@@ -103,20 +103,6 @@ defmodule Brando.ImageCategory.ControllerTest do
     end
   end
 
-  test "config (post) w/params", %{user: user} do
-    category = Factory.create(:image_category, creator: user)
-    params = Factory.build(:image_category_params, %{"creator_id" => user.id})
-
-    conn =
-      :patch
-      |> call("/admin/images/categories/#{category.id}/configure", %{"imagecategoryconfig" => params})
-      |> with_user
-      |> send_request
-
-    assert redirected_to(conn, 302) =~ "/admin/images"
-    assert get_flash(conn, :notice) == "Image category configured"
-  end
-
   test "delete_confirm", %{user: user} do
     category = Factory.create(:image_category, creator: user)
 
