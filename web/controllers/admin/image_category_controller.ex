@@ -142,9 +142,9 @@ defmodule Brando.Admin.ImageCategoryController do
       new_cfg =
         category.cfg
         |> Map.put(:upload_path, new_path)
-        
+
       s
-      |> Brando.ImageSeries.changeset(:update, %{cfg: category.cfg})
+      |> Brando.ImageSeries.changeset(:update, %{cfg: new_cfg})
       |> Brando.repo.update
 
       Brando.Images.Utils.recreate_sizes_for(series_id: s.id)
