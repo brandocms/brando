@@ -1,4 +1,4 @@
-## v0.28.0-dev (2016-XX-XX)
+## v0.28.0 (2016-04-08)
 
 * Enhancements
   * Fabfile now extracts version number from mix.exs.
