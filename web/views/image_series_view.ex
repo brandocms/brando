@@ -5,7 +5,6 @@ defmodule Brando.Admin.ImageSeriesView do
   use Brando.Web, :view
   use Brando.Sequence, :view
   alias Brando.ImageSeriesForm
-  alias Brando.ImageSeriesConfigForm
   import Brando.Gettext
 
   def render("upload_post.json", _assigns) do

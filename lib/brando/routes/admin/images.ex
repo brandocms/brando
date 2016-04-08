@@ -52,6 +52,8 @@ defmodule Brando.Images.Routes.Admin do
              :new,                             series_opts
       get    "#{path}/series/:id/edit",        series_ctrl,
              :edit,                            series_opts
+      get    "#{path}/series/:id/recreate",    series_ctrl,
+             :recreate_sizes,                  series_opts
       get    "#{path}/series/:id/configure",   series_ctrl,
              :configure,                       series_opts
       patch  "#{path}/series/:id/configure",   series_ctrl,
@@ -89,6 +91,8 @@ defmodule Brando.Images.Routes.Admin do
              :configure,                         categories_opts
       patch  "#{path}/categories/:id/configure", categories_ctrl,
              :configure_patch,                   categories_opts
+      get    "#{path}/categories/:id/propagate", categories_ctrl,
+             :propagate_configuration,           categories_opts
       get    "#{path}/categories/:id/delete",    categories_ctrl,
              :delete_confirm,                    categories_opts
       patch  "#{path}/categories/:id",           categories_ctrl,

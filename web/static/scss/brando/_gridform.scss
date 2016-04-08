@@ -113,9 +113,12 @@ $legend-border-color: #E0E0E0;
             width: 100%;
         }
         fieldset {
+          background-color: #F6FDF1;
+
             legend {
                 border-bottom: 2px solid $legend-border-color;
                 font-weight: normal;
+                background-color: #F6FDF1;
             }
             fieldset legend {
                 border-bottom: 1px solid $legend-border-color;
@@ -187,6 +190,16 @@ $legend-border-color: #E0E0E0;
                 border-bottom: 3px solid #3A6F73;
             }
         }
+    }
+
+    .delete-subkey:hover,
+    .delete-key:hover {
+        color: #f00;
+    }
+    .delete-subkey,
+    .delete-key {
+        font-size: 9px;
+        color: #aaa;
     }
 }
 
