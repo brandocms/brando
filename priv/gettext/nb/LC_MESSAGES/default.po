@@ -52,10 +52,10 @@ msgstr "Autorisasjon"
 msgid "Authorization failed"
 msgstr "Autorisasjon feilet"
 
-#: web/templates/admin/image_category/configure.html.eex:5
+#: web/templates/admin/image_category/configure.html.eex:8
 #: web/templates/admin/image_category/edit.html.eex:5
 #: web/templates/admin/image_category/sequence.html.eex:26
-#: web/templates/admin/image_series/configure.html.eex:5
+#: web/templates/admin/image_series/configure.html.eex:8
 #: web/templates/admin/image_series/edit.html.eex:5
 #: web/templates/admin/image_series/sequence.html.eex:18
 #: web/templates/admin/image_series/upload.html.eex:11
@@ -75,19 +75,19 @@ msgstr "Konfigurer"
 msgid "Configure category"
 msgstr "Konfigurer kategori"
 
-#: web/controllers/admin/image_category_controller.ex:97
-#: web/controllers/admin/image_category_controller.ex:115
+#: web/controllers/admin/image_category_controller.ex:91
+#: web/controllers/admin/image_category_controller.ex:120
 msgid "Configure image category"
 msgstr "Konfigurer bildekategori"
 
-#: web/controllers/admin/image_series_controller.ex:103
-#: web/controllers/admin/image_series_controller.ex:123
+#: web/controllers/admin/image_series_controller.ex:96
+#: web/controllers/admin/image_series_controller.ex:125
 #: web/templates/admin/image/index.html.eex:99
 msgid "Configure image series"
 msgstr "Konfigurer bildeserie"
 
-#: web/controllers/admin/image_category_controller.ex:133
-#: web/controllers/admin/image_series_controller.ex:174
+#: web/controllers/admin/image_category_controller.ex:167
+#: web/controllers/admin/image_series_controller.ex:186
 #: web/controllers/admin/user_controller.ex:175
 msgid "Confirm deletion"
 msgstr "Bekreft sletting"
@@ -130,8 +130,8 @@ msgstr "Slettet"
 msgid "Edit image"
 msgstr "Rediger bilde"
 
-#: web/controllers/admin/image_category_controller.ex:58
-#: web/controllers/admin/image_category_controller.ex:76
+#: web/controllers/admin/image_category_controller.ex:59
+#: web/controllers/admin/image_category_controller.ex:77
 #: web/templates/admin/image_category/edit.html.eex:1
 msgid "Edit image category"
 msgstr "Rediger bildekategori"
@@ -176,12 +176,12 @@ msgstr "Oppføring fantes ikke"
 msgid "Error"
 msgstr "Feil"
 
-#: web/controllers/admin/image_category_controller.ex:44
-#: web/controllers/admin/image_category_controller.ex:80
-#: web/controllers/admin/image_category_controller.ex:119
+#: web/controllers/admin/image_category_controller.ex:45
+#: web/controllers/admin/image_category_controller.ex:81
+#: web/controllers/admin/image_category_controller.ex:125
 #: web/controllers/admin/image_series_controller.ex:50
 #: web/controllers/admin/image_series_controller.ex:86
-#: web/controllers/admin/image_series_controller.ex:127
+#: web/controllers/admin/image_series_controller.ex:130
 #: web/controllers/admin/user_controller.ex:92
 #: web/controllers/admin/user_controller.ex:120
 #: web/controllers/admin/user_controller.ex:163
@@ -200,31 +200,23 @@ msgstr "Fil ikke funnet"
 msgid "Go back"
 msgstr "Gå tilbake"
 
-#: web/controllers/admin/image_category_controller.ex:111
-msgid "Image category configured"
-msgstr "Bildekategori konfigurert"
-
-#: web/controllers/admin/image_category_controller.ex:37
+#: web/controllers/admin/image_category_controller.ex:38
 msgid "Image category created"
 msgstr "Bildekategori opprettet"
 
-#: web/controllers/admin/image_category_controller.ex:145
+#: web/controllers/admin/image_category_controller.ex:179
 msgid "Image category deleted"
 msgstr "Bildekategori slettet"
 
-#: web/controllers/admin/image_category_controller.ex:72
+#: web/controllers/admin/image_category_controller.ex:73
 msgid "Image category updated"
 msgstr "Bildekategori oppdatert"
-
-#: web/controllers/admin/image_series_controller.ex:119
-msgid "Image series configured"
-msgstr "Bildeserie konfigurert"
 
 #: web/controllers/admin/image_series_controller.ex:43
 msgid "Image series created"
 msgstr "Bildeserie opprettet"
 
-#: web/controllers/admin/image_series_controller.ex:186
+#: web/controllers/admin/image_series_controller.ex:198
 msgid "Image series deleted"
 msgstr "Bildeserie slettet"
 
@@ -250,8 +242,8 @@ msgstr "Logg ut"
 msgid "Login"
 msgstr "Pålogging"
 
-#: web/controllers/admin/image_category_controller.ex:25
-#: web/controllers/admin/image_category_controller.ex:41
+#: web/controllers/admin/image_category_controller.ex:26
+#: web/controllers/admin/image_category_controller.ex:42
 #: web/templates/admin/image/index.html.eex:119
 #: web/templates/admin/image_category/new.html.eex:1
 msgid "New image category"
@@ -342,7 +334,7 @@ msgstr "Systeminfo"
 msgid "This object cannot be restored!"
 msgstr "Dette objektet kan ikke gjenopprettes!"
 
-#: web/controllers/admin/image_series_controller.ex:141
+#: web/controllers/admin/image_series_controller.ex:153
 #: web/templates/admin/image/index.html.eex:78
 msgid "Upload images"
 msgstr "Last opp bilder"
@@ -754,3 +746,52 @@ msgstr "system"
 #: lib/brando/html.ex:422
 msgid "You are trying to authorize from an insecure URL. <a href=\"%{url}\">Please try again from this URL</a> or proceed at your own risk!"
 msgstr "Du prøver å logge inn fra en usikker adresse. <a href=\"%{url}\">Prøv fra denne adressen istedet</a> eller fortsett på eget ansvar!"
+
+#: lib/brando/images/utils.ex:264
+msgid "Allowed mimetypes"
+msgstr "Tillatte mime-typer"
+
+#: web/controllers/admin/image_category_controller.ex:154
+msgid "Category propagated"
+msgstr "Kategorien er forplantet"
+
+#: web/controllers/admin/image_category_controller.ex:116
+#: web/controllers/admin/image_series_controller.ex:121
+msgid "Configuration updated"
+msgstr "Konfigurasjonen ble oppdatert"
+
+#: lib/brando/images/utils.ex:268
+msgid "Default size"
+msgstr "Standard størrelse"
+
+#: web/templates/admin/image_category/configure.html.eex:11
+msgid "Propagate configuration to dependent image series"
+msgstr "Forplant konfigurasjonen til underliggende bildeserier"
+
+#: lib/brando/images/utils.ex:272
+msgid "Random filename"
+msgstr "Vilkårlig filnavn"
+
+#: web/templates/admin/image_series/configure.html.eex:11
+msgid "Recreate sizes for this series"
+msgstr "Gjenskap størreleser for denne serien"
+
+#: web/controllers/admin/image_series_controller.ex:140
+msgid "Recreated sizes for image series"
+msgstr "Gjenskapte bildestørrelser for bildeserien"
+
+#: lib/brando/images/utils.ex:276
+msgid "Size limit"
+msgstr "Max størrelse"
+
+#: lib/brando/images/utils.ex:282
+msgid "Upload path"
+msgstr "Opplastningsfilbane"
+
+#: web/templates/admin/image_category/configure.html.eex:1
+msgid "category"
+msgstr "kategori"
+
+#: web/templates/admin/image_series/configure.html.eex:1
+msgid "image series"
+msgstr "bildeserie"

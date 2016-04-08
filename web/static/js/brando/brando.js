@@ -15,6 +15,7 @@ import FilterTable from "./brando/components/filter_table";
 import Mobile from "./brando/components/mobile";
 import {VexBrando, vex} from "./brando/components/vex_brando";
 import Images from "./brando/components/images";
+import ImageConfig from "./brando/components/image_config";
 import Menu from "./brando/components/menu";
 import Pages from "./brando/components/pages";
 import Sequence from "./brando/components/sequence";
@@ -45,6 +46,12 @@ $(() => {
     switch ($('body').attr('data-script')) {
         case "images-index":
             Images.setup();
+            break;
+        case "images-configure":
+            ImageConfig.setup();
+            break;
+        case "portfolio-configure":
+            ImageConfig.setup();
             break;
         case "dashboard-system_info":
             Stats.setup();

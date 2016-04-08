@@ -1,7 +1,13 @@
-  <h1><%= gettext("Configure") %> <%= schema_name(@changeset.data, :singular) %></h1>
-  <%= ImageCategoryConfigForm.get_form(type: :update, action: :configure_patch, params: to_string(@id), changeset: @changeset) %>
+  <h1><%= gettext("Configure") %> <%= gettext("category") %>: <%= @category.name %></h1>
+
+  <%= Brando.Images.Utils.make_form_from_image_config(@category.cfg) %>
+
+  <hr>
   <div class="buttons m-t-md">
     <a href="<%= Brando.helpers.admin_image_path(@conn, :index) %>" class="btn btn-default">
       <i class="fa fa-list fa-fw m-r-sm"></i> <%= gettext("Back to index") %>
+    </a>
+    <a href="<%= Brando.helpers.admin_image_category_path(@conn, :propagate_configuration, @category.id) %>" class="btn btn-default">
+      <i class="fa fa-list fa-fw m-r-sm"></i> <%= gettext("Propagate configuration to dependent image series") %>
     </a>
   </div>

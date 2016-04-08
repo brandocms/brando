@@ -6,6 +6,7 @@ import re
 from datetime import datetime
 from fabric.api import *
 from fabric.contrib.files import exists as _exists
+from fabric.contrib.console import confirm
 from fabric.context_managers import settings as _settings
 from fabric.colors import red, green, yellow, cyan, blue
 from fabric.operations import prompt
@@ -24,8 +25,6 @@ SSH_USER = 'username'
 SSH_PASS = 'sudoer_pass'
 SSH_HOST = 'host.net'
 SSH_PORT = 30000
-
-VERSION_NUMBER = '2.0.0'
 
 #
 # Shhh, don't be so loud.
@@ -74,12 +73,22 @@ GLUE_SETTINGS = {
 }
 
 
-def _get_version():
+def _get_project_version():
+    with open('mix.exs') as f:
+        contents = f.read()
+        r = re.compile('\@version \"(?P<version>.*)\"')
+        result = r.search(contents)
+        if result:
+            return result.group('version')
+        else:
+            raise RuntimeError("Version not found in mixfile. Make sure it is set as `@version \"0.1.0\"`")
+
+def _get_bds_version():
     return VERSION_NUMBER
 
 print "--------------------------------------------------------------"
 print blue('& brando deployment script v%s | copyright twined 2010-%s'
-           % (_get_version(), datetime.now().year))
+           % (_get_bds_version(), datetime.now().year))
 print "--------------------------------------------------------------"
 print ""
 
@@ -186,16 +195,20 @@ def staging():
     env.project_name = GLUE_SETTINGS['project_name']
 
 
-def bootstrap_release(version):
+def bootstrap_release():
     """
     Bootstraps and provisions project RELEASE on host
     """
     require('hosts')
+    version = _get_project_version()
+
     _warn('''
+        Deploying %s v%s.\r\n
         This is a potientially dangerous operation. Make sure you have\r\n
         all your ducks in a row, and that you have checked the configuration\r\n
-        files both in conf/ and in the fabfile.py itself!
-    ''')
+        files both in etc/ and in the fabfile.py itself!
+    ''' % (PROJECT_NAME, version))
+
     _confirmtask()
 
     createuser()
@@ -223,10 +236,15 @@ def bootstrap_release(version):
     _notify_build_complete(version)
 
 
-def deploy_release(version):
+def deploy_release():
     """
     Build release on local Docker, upload and unpack to remote before restarting
     """
+    version = _get_project_version()
+    print(yellow('==> deploy release %s v%s' % (PROJECT_NAME, version)))
+    if not confirm("Is the version correct?"):
+        abort("Aborting")
+
     build_release()
     copy_release_from_docker(version)
     upload_release(version)

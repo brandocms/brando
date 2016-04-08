@@ -5,6 +5,5 @@ defmodule Brando.Admin.ImageCategoryView do
   use Brando.Web, :view
   use Brando.Sequence, :view
   alias Brando.ImageCategoryForm
-  alias Brando.ImageCategoryConfigForm
   import Brando.Gettext
 end

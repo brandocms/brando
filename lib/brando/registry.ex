@@ -11,7 +11,6 @@ defmodule Brando.Registry do
   end
 
   use GenServer
-  require Logger
 
   @default_modules [Brando.Images, Brando.Users, Brando.Admin]
 

@@ -522,11 +522,17 @@ Make sure your local Docker machine is running, and that the env has been prepar
     $ docker-machine start default
     $ eval "$(docker-machine env default)"
 
+Ensure that `@version "0.X.0"` is set as module attribute in your `mix.exs` file.
+
 Run
 
-    $ fab prod bootstrap_release:0.1.0
+    $ fab prod bootstrap_release
 
 to deploy on your production box.
+
+To build a new release
+
+    $ fab prod deploy_release
 
 To seed your DB:
 

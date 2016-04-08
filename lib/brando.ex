@@ -1,6 +1,5 @@
 defmodule Brando do
   use Application
-  require Logger
 
   @moduledoc File.read!("README.md")
   @version Mix.Project.config[:version]

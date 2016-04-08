@@ -2,7 +2,6 @@ defmodule Brando.Images.Optimize do
   @moduledoc """
   Optimization helpers for Brando images.
   """
-  require Logger
 
   @doc """
   Optimize `img`
