@@ -285,8 +285,8 @@ defmodule Brando.Images.Utils do
       </div>
       #{size_rows}
       <div class="form-row">
-        <button class="m-t-sm m-b-sm btn btn-success add-masterkey-standard">Add master key (standard)</button>
-        <button class="m-t-sm m-b-sm m-l-sm btn btn-success add-masterkey-pl">Add master key (portrait/landscape)</button>
+        <button class="m-t-sm m-b-sm btn btn-default add-masterkey-standard">Add master key (standard)</button>
+        <button class="m-t-sm m-b-sm m-l-sm btn btn-default add-masterkey-pl">Add master key (portrait/landscape)</button>
       </div>
       <div class="form-row">
         <div class="form-group required">
