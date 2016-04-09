@@ -317,7 +317,7 @@ defmodule Brando.Images.Utils do
       if type == :standard do
         """
         <div class="form-row">
-          <button class="m-t-sm m-b-sm btn btn-xs btn-default btn-block add-key-standard"><i class="fa fa-plus-circle"></i></button>
+          <span class="m-t-sm m-b-sm btn btn-xs btn-block add-key-standard"><i class="fa fa-plus-circle"></i></span>
         </div>
         """
       else
@@ -361,7 +361,7 @@ defmodule Brando.Images.Utils do
       #{inputs}
 
       <div class="form-row">
-        <button data-orientation="#{orientation}" class="m-t-sm m-b-sm btn btn-xs btn-default btn-block add-key-recursive"><i class="fa fa-plus-circle"></i></button>
+        <span data-orientation="#{orientation}" class="m-t-sm m-b-sm btn btn-xs btn-block add-key-recursive"><i class="fa fa-plus-circle"></i></span>
       </div>
     </fieldset>
     """
