@@ -375,9 +375,19 @@ def dump_localdb():
     """
     Dumps local _dev database
     """
-    print(yellow('==> dumping local database %s -> sql/db_dump.sql' % PROJECT_NAME))
+    print(yellow('==> dumping local database %s -> sql/db_dump_local.sql' % PROJECT_NAME))
     local('mkdir -p sql')
-    local('pg_dump --no-owner --no-acl %s_dev > sql/db_dump.sql' % PROJECT_NAME)
+    local('pg_dump --no-owner --no-acl %s_dev > sql/db_dump_local.sql' % PROJECT_NAME)
+
+
+def dump_remotedb():
+    """
+    Dumps remote prod database
+    """
+    print(yellow('==> dumping remote database %s -> sql/db_dump_remote.sql' % PROJECT_NAME))
+    with cd(env.path):
+        sudo('mkdir -p sql', user=env.project_user)
+        sudo('pg_dump --no-owner --no-acl %s_prod > sql/db_dump_remote.sql' % PROJECT_NAME, user=env.project_user)
 
 
 def upload_db():
@@ -392,27 +402,81 @@ def upload_db():
     _setperms('775', os.path.join(env.path, 'sql'))
 
 
-def load_db():
+def download_db():
+    """
+    Downloads db
+    """
+    print(yellow('==> downloading sql file from remote'))
+    with cd(env.path):
+        get('sql/db_dump_remote.sql', 'sql/db_dump_remote.sql')
+
+
+def load_db_remote():
     """
     Loads db on remote
     """
     if _exists(os.path.join(env.path, 'sql')):
         print(yellow('==> loading database on remote'))
-        result = sudo('psql %s < %s' % (env.db_name, os.path.join(env.path, 'sql/db_dump.sql')), user='postgres')
+        result = sudo('psql %s < %s' % (env.db_name, os.path.join(env.path, 'sql/db_dump_local.sql')), user='postgres')
 
         if result.failed:
             if 'already exists' in result:
                 print(red('==> error: database already exists'))
 
 
-def dump_and_load_db():
+def load_db_local():
+    """
+    Loads remote db on local dev
+    """
+    if not confirm("This will drop the local dev database and import the remote database. Are you sure about this?"):
+        abort("Aborting")
+
+    print(yellow('==> dropping local db'))
+    with settings(warn_only=True):
+        result = local('dropdb %s_dev' % env.project_name)
+        if result.failed:
+            if 'does not exist':
+                print(yellow('==> already dropped'))
+            else:
+                print(red('==> error when dropping db'))
+                raise SystemExit()
+
+    print(yellow('==> creating new local dev database'))
+    local('psql -c "CREATE DATABASE %s_dev ENCODING \'UTF-8\';" -U postgres' % (env.project_name))
+
+    result = local('psql %s_dev < %s' % (env.project_name, 'sql/db_dump_remote.sql'))
+
+    if result.failed:
+        if 'already exists' in result:
+            print(red('==> error: database already exists'))
+
+
+def dump_and_load_db_remote():
     """
     Mirrors local dev db to target
     """
     dump_localdb()
     upload_db()
-    load_db()
+    load_db_remote()
     grant_db()
+
+
+def dump_and_load_db_local():
+    """
+    Mirrors remote db to local dev
+    """
+    dump_localdb()
+    upload_db()
+    load_db_remote()
+    grant_db()
+
+
+def mirror_prod():
+    """
+    Mirrors remote media/ and database to local
+    """
+    download_media()
+    dump_and_load_db_local()
 
 
 def showconfig():
@@ -436,6 +500,14 @@ def upload_media():
         _setowner(os.path.join(env.path, 'media'))
         print(yellow('==> chmoding remote media folder'))
         _setperms('755', os.path.join(env.path, 'media'))
+
+
+def download_media():
+    """
+    Download media/ from remote
+    """
+    print(yellow('==> downloading remote media folder'))
+    get(os.path.join(env.path, 'media'), '.')
 
 
 def upload_etc():
