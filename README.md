@@ -11,18 +11,15 @@ A helping hand.
 
 ## Install
 
-Add Brando to your `deps` and `applications` in your project's `mix.exs`. Also add `brando_villain` to your `deps`:
+Start by creating a new phoenix project:
+
+    $ mix phoenix.new my_project
+
+Add Brando to `deps` in your `mix.exs` file:
 
 ```elixir
-def application do
-  [mod: {MyApp, []},
-   applications: [:brando, :phoenix, :cowboy, :logger, :postgrex,
-                  :ecto, :gettext]]
-end
-
 defp deps do
-  [{:brando, github: "twined/brando"},
-   {:brando_villain, github: "twined/brando_villain"}]
+  [{:brando, github: "twined/brando"}]
 end
 ```
 
