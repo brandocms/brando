@@ -49,10 +49,6 @@ Install NPM packages:
 
     $ npm install
 
-Install Bower packages:
-
-    $ bower install
-
 Set up database, and seed:
 
     $ mix ecto.setup
@@ -476,18 +472,9 @@ config :brando, Brando.Villain,
 
 See `Brando.Villain` help for more information on how to use in your project.
 
-## Bower/Brunch
+## Brunch
 
-Currently these packages are auto-installed:
-
-* jQuery - https://github.com/jquery/jquery
-* flexslider - https://github.com/woothemes/FlexSlider
-* salvattore - https://github.com/rnmp/salvattore
-* jscroll - https://github.com/pklauzinski/jscroll/
-
-Add more packages to your bower.json, and brunch will automatically include them.
-
-Build for prod with `brunch build`.
+Build for prod with `brunch build --production`.
 
 
 ## Optimizing images
