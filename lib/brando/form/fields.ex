@@ -115,6 +115,19 @@ defmodule Brando.Form.Fields do
   end
 
   @doc """
+  Render datetime field
+  """
+  def render_field(%Field{type: :datetime} = field) do
+    field
+    |> put_in_opts(:class, "datetimepicker")
+    |> input
+    |> add_label
+    |> wrap_in_form_group
+    |> add_confirm
+    |> wrap_in_div
+  end
+
+  @doc """
   Render text/password/email (catch-all)
   """
   def render_field(field) do

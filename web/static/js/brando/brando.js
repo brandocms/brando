@@ -2,6 +2,7 @@
 import $ from "jquery";
 import Dropzone from "dropzone";
 
+import "./brando/extensions/datepicker";
 import "./brando/extensions/dropdown";
 import "./brando/extensions/searcher";
 import "./brando/extensions/slugit";
@@ -10,6 +11,7 @@ import "./brando/extensions/tags_input";
 
 import {Accordion} from "./brando/components/accordion";
 import Autoslug from "./brando/components/autoslug";
+import DatePicker from "./brando/components/datepicker";
 import Flash from "./brando/components/flash";
 import FilterTable from "./brando/components/filter_table";
 import Mobile from "./brando/components/mobile";
@@ -38,6 +40,7 @@ $(() => {
     Sequence.setup();
     Toolbar.setup();
     Tags.setup();
+    DatePicker.setup();
 
     /**
      * Section-specific setup

@@ -22,6 +22,18 @@ defmodule Brando.Form do
 
   @type form_opts :: [{:helper, atom} | {:class, String.t}]
 
+  @valid_field_types [
+    :text,
+    :password,
+    :select,
+    :email,
+    :checkbox,
+    :file,
+    :radio,
+    :textarea,
+    :datetime
+  ]
+
   alias Brando.Form.Field
   alias Brando.Form.Fields
   import Phoenix.HTML.Tag, only: [form_tag: 3]
@@ -268,6 +280,18 @@ defmodule Brando.Form do
     * `label` - Label for the entire group. Each individual radio
       gets its label from the `choices` function.
     * `label_class` - Label class for the main label.
+
+  `:datetime` - A datetime field with javascript picker
+
+  Options
+
+    * `required` - true as default
+    * `label` - "Label for field"
+    * `help_text` - "Help text for field"
+    * `placeholder` - "Placeholder for field"
+    * `default` - Default value. Can also be a function like
+      `&__MODULE__.default_func/0`
+
   """
   defmacro field(name, type, opts \\ []) do
     quote do
@@ -397,7 +421,7 @@ defmodule Brando.Form do
   end
 
   defp check_type!(type)
-  when type in [:text, :password, :select, :email, :checkbox, :file, :radio, :textarea] do
+  when type in @valid_field_types do
     :ok
   end
 
