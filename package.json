@@ -4,20 +4,6 @@
   "description": "Brando node deps",
   "main": "./priv/static/js/brando.js",
   "dependencies": {
-    "autoprefixer": "^6.3.1",
-    "babel-brunch": "^6.0.0",
-    "brunch": "^2.2.1",
-    "clean-css-brunch": ">= 1.0 < 1.8",
-    "css-brunch": ">= 1.0 < 1.8",
-    "dropzone": "^4.2.0",
-    "javascript-brunch": ">= 1.0 < 1.8",
-    "jquery": "^2.2.0",
-    "phoenix": "file:deps/phoenix",
-    "postcss-brunch": "^0.5.0",
-    "sass-brunch": "^1.9.2",
-    "textfit": "^2.2.2",
-    "uglify-js-brunch": ">= 1.0 < 1.8",
-    "vex-js": "^2.3.4"
   },
   "repository": {
     "type": "git",
@@ -39,7 +25,21 @@
   "homepage": "https://github.com/twined/brando",
   "devDependencies": {
     "babel-eslint": "^4.1.8",
-    "eslint": "^1.10.3"
+    "eslint": "^1.10.3",
+    "autoprefixer": "^6.3.1",
+    "babel-brunch": "^6.0.0",
+    "brunch": "^2.2.1",
+    "clean-css-brunch": ">= 1.0 < 1.8",
+    "css-brunch": ">= 1.0 < 1.8",
+    "dropzone": "^4.2.0",
+    "javascript-brunch": ">= 1.0 < 1.8",
+    "jquery": "^2.2.0",
+    "phoenix": "file:deps/phoenix",
+    "postcss-brunch": "^0.5.0",
+    "sass-brunch": "^1.9.2",
+    "textfit": "^2.2.2",
+    "uglify-js-brunch": ">= 1.0 < 1.8",
+    "vex-js": "^2.3.4"
   },
   "scripts": {
     "lint": "eslint web/static/js/brando"

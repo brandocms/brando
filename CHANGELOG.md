@@ -1,5 +1,14 @@
 ## v0.29.0-dev (2016-XX-XX)
 
+* Enhancements
+  * Add `mirror_prod` to fabfile. Copies remote `media` directory and mirrors remote db
+    to our local dev db.
+  * Add `$` and `jQuery` to javascript globals.
+  * Add `:datetime` form field.
+  * Add datetimepicker for `:datetime` form field types.
+  * Move `package.json` dependencies to `devDependencies` for faster installation.
+  * Remove `bower.json`
+
 ## v0.28.0 (2016-04-08)
 
 * Enhancements
