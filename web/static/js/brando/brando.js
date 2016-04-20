@@ -21,6 +21,7 @@ import ImageConfig from "./brando/components/image_config";
 import Menu from "./brando/components/menu";
 import Pages from "./brando/components/pages";
 import Sequence from "./brando/components/sequence";
+import Sortable from "./brando/components/sortable";
 import Stats from "./brando/components/stats";
 import Tags from "./brando/components/tags";
 import Toolbar from "./brando/components/toolbar";
@@ -75,7 +76,8 @@ $(() => {
 
 export {
     Accordion,
+    Dropzone,
+    Sortable,
     Utils,
-    vex,
-    Dropzone
+    vex
 };
