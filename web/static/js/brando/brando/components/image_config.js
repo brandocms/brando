@@ -19,6 +19,8 @@ class ImageConfig {
         return name.replace(/^sizes\[(\w+)?\]\[(\w+)?\]\[(\w+)?\]$/, 'sizes[' + newKey + '][$2][$3]');
     }
     static setup() {
+        console.log("Image config setting up...");
+        
         $(document).on('keyup', '.standard-key-input, .standard-val-input', function(e) {
             var $el = $(this);
             var $sumEl = $el.parent().parent().find('.actual-value:first');
@@ -199,10 +201,9 @@ class ImageConfig {
         });
 
         $(document).on('click', '.add-key-standard', function(e) {
+            e.preventDefault();
             // grab masterkey
             var masterkey = $(this).parent().parent().find('.standard-masterkey-input').val();
-
-            e.preventDefault();
 
             var $row = $([
                 '<div class="form-row">',
@@ -223,11 +224,10 @@ class ImageConfig {
         });
 
         $(document).on('click', '.add-key-recursive', function(e) {
+            e.preventDefault();
             // grab masterkey
             var masterkey = $(this).parent().parent().parent().find('.recursive-masterkey-input').val();
             var orientation = $(this).attr('data-orientation');
-
-            e.preventDefault();
 
             var $row = $([
                 '<div class="form-row">',
