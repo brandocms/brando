@@ -11,12 +11,18 @@ defmodule Brando.SystemChannel do
   def join("system:stream", _auth_msg, socket) do
     {:ok, socket}
   end
+
   def join("system:" <> _private_room_id, _auth_msg, _socket) do
     :ignore
   end
 
   def handle_out("log_msg", payload, socket) do
     push socket, "log_msg", payload
+    {:noreply, socket}
+  end
+
+  def handle_out("alert", payload, socket) do
+    push socket, "alert", payload
     {:noreply, socket}
   end
 
@@ -56,4 +62,8 @@ defmodule Brando.SystemChannel do
                                  %{level: level, icon: icon, body: body})
     end
   end
+
+  def alert(message) do
+    unless Brando.config(:logging)[:disable_logging] do
+      Brando.endpoint.broadcast!("system:stream", "alert", %{message: message})
 end

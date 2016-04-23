@@ -262,9 +262,8 @@ class ImageConfig {
                  * Callback after confirming.
                  */
 
-                $btn.removeClass('btn-warning').addClass('btn-default').html(prevCaption);
+                $btn.removeClass('btn-warning').addClass('btn-success').html(prevCaption);
 
-                console.log(data);
                 if (data.status == '200') {
                     console.log("success!");
                 }
