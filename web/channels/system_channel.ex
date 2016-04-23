@@ -6,7 +6,7 @@ defmodule Brando.SystemChannel do
 
   use Phoenix.Channel
 
-  intercept ["log_msg"]
+  intercept ["log_msg", "alert"]
 
   def join("system:stream", _auth_msg, socket) do
     {:ok, socket}
