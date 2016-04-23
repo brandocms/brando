@@ -72,7 +72,7 @@ msgstr ""
 msgid "Configure image series"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:212
+#: web/controllers/admin/image_category_controller.ex:216
 #: web/controllers/admin/image_series_controller.ex:195
 #: web/controllers/admin/user_controller.ex:175
 msgid "Confirm deletion"
@@ -190,7 +190,7 @@ msgstr ""
 msgid "Image category created"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:224
+#: web/controllers/admin/image_category_controller.ex:228
 msgid "Image category deleted"
 msgstr ""
 
@@ -737,7 +737,7 @@ msgstr ""
 msgid "Allowed mimetypes"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:161
+#: web/controllers/admin/image_category_controller.ex:162
 msgid "Category propagated"
 msgstr ""
 
@@ -782,7 +782,7 @@ msgstr ""
 msgid "image series"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:158
+#: web/controllers/admin/image_category_controller.ex:159
 msgid "Category propagated, but you have orphaned series. Click <a href=\"%{url}\">here</a> to verify and delete"
 msgstr ""
 
@@ -790,7 +790,7 @@ msgstr ""
 msgid "Delete orphans"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:174
+#: web/controllers/admin/image_category_controller.ex:178
 msgid "Handle orphaned image series"
 msgstr ""
 
@@ -798,7 +798,7 @@ msgstr ""
 msgid "Handle orphans for category "
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:190
+#: web/controllers/admin/image_category_controller.ex:194
 msgid "Orphans deleted"
 msgstr ""
 

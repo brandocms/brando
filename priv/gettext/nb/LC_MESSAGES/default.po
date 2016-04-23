@@ -86,7 +86,7 @@ msgstr "Konfigurer bildekategori"
 msgid "Configure image series"
 msgstr "Konfigurer bildeserie"
 
-#: web/controllers/admin/image_category_controller.ex:212
+#: web/controllers/admin/image_category_controller.ex:216
 #: web/controllers/admin/image_series_controller.ex:195
 #: web/controllers/admin/user_controller.ex:175
 msgid "Confirm deletion"
@@ -204,7 +204,7 @@ msgstr "Gå tilbake"
 msgid "Image category created"
 msgstr "Bildekategori opprettet"
 
-#: web/controllers/admin/image_category_controller.ex:224
+#: web/controllers/admin/image_category_controller.ex:228
 msgid "Image category deleted"
 msgstr "Bildekategori slettet"
 
@@ -751,7 +751,7 @@ msgstr "Du prøver å logge inn fra en usikker adresse. <a href=\"%{url}\">Prøv
 msgid "Allowed mimetypes"
 msgstr "Tillatte mime-typer"
 
-#: web/controllers/admin/image_category_controller.ex:161
+#: web/controllers/admin/image_category_controller.ex:162
 msgid "Category propagated"
 msgstr "Kategorien er forplantet"
 
@@ -796,7 +796,7 @@ msgstr "kategori"
 msgid "image series"
 msgstr "bildeserie"
 
-#: web/controllers/admin/image_category_controller.ex:158
+#: web/controllers/admin/image_category_controller.ex:159
 msgid "Category propagated, but you have orphaned series. Click <a href=\"%{url}\">here</a> to verify and delete"
 msgstr "Kategori forplantet, men du har løse bildeserier. Klikk <a href=\"%{url}\">her</a> for å verifisere og slette"
 
@@ -804,7 +804,7 @@ msgstr "Kategori forplantet, men du har løse bildeserier. Klikk <a href=\"%{url
 msgid "Delete orphans"
 msgstr "Slett løse bildeserier"
 
-#: web/controllers/admin/image_category_controller.ex:174
+#: web/controllers/admin/image_category_controller.ex:178
 msgid "Handle orphaned image series"
 msgstr "Håndter løse bildeserier"
 
@@ -812,7 +812,7 @@ msgstr "Håndter løse bildeserier"
 msgid "Handle orphans for category "
 msgstr "Håndter løse bildeserier for kategori"
 
-#: web/controllers/admin/image_category_controller.ex:190
+#: web/controllers/admin/image_category_controller.ex:194
 msgid "Orphans deleted"
 msgstr "Løse bildeserier slettet"
 
