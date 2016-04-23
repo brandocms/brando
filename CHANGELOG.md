@@ -10,6 +10,7 @@
   * Remove `bower.json`
   * Redirect back to image configuration on save
   * Add :warning flash. Redo alert styles.
+  * Check for orphaned image series when changing slug or propagating image series configs
 
 ## v0.28.0 (2016-04-08)
 
