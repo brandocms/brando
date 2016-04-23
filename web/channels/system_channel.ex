@@ -6,7 +6,7 @@ defmodule Brando.SystemChannel do
 
   use Phoenix.Channel
 
-  intercept ["log_msg", "alert"]
+  intercept ["log_msg", "alert", "progress"]
 
   def join("system:stream", _auth_msg, socket) do
     {:ok, socket}
@@ -23,6 +23,11 @@ defmodule Brando.SystemChannel do
 
   def handle_out("alert", payload, socket) do
     push socket, "alert", payload
+    {:noreply, socket}
+  end
+
+  def handle_out("progress", payload, socket) do
+    push socket, "progress", payload
     {:noreply, socket}
   end
 
@@ -67,5 +72,9 @@ defmodule Brando.SystemChannel do
     unless Brando.config(:logging)[:disable_logging] do
       Brando.endpoint.broadcast!("system:stream", "alert", %{message: message})
     end
+  end
+
+  def progress(value) do
+    Brando.endpoint.broadcast!("system:stream", "progress", %{value: value})
   end
 end

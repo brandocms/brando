@@ -8,6 +8,7 @@ exports.config = {
           'node_modules/jquery/dist/jquery.js',
           'node_modules/vex-js/js/vex.js',
           'node_modules/dropzone/dist/dropzone.js',
+          'node_modules/progressbar.js/dist/progressbar.js',
           /^(web\/static\/js\/brando)/
         ],
 
