@@ -179,6 +179,22 @@ defmodule Brando.HTML do
   end
 
   @doc """
+  Renders a post button
+  """
+  def post_form_button(text, helper, controller_action, params) do
+    action = Brando.Form.apply_action(helper, controller_action, params)
+    """
+    <form method="POST" action="#{action}">
+      <input type="hidden" name="_method" value="post" />
+      <button class="btn btn-danger">
+        <i class="fa fa-exclamation-circle m-r-sm"> </i>
+        #{text}
+      </button>
+    </form>
+    """ |> Phoenix.HTML.raw
+  end
+
+  @doc """
   Renders a dropzone form.
   Pass in a `helper` and the `id` we are uploading to.
 
