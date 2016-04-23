@@ -160,7 +160,7 @@ defmodule Brando.Images.Utils do
     fill = size_cfg["fill"] && "-background #{size_cfg["fill"]} " || ""
     crop_string = "#{size_cfg["size"]}#{modifier} #{fill}-gravity center -extent #{size_cfg["size"]}"
 
-    return = if size_cfg["crop"] do
+    if size_cfg["crop"] do
       image
       |> Mogrify.copy
       |> Mogrify.resize(crop_string)
@@ -171,12 +171,6 @@ defmodule Brando.Images.Utils do
       |> Mogrify.resize(size_cfg["size"])
       |> Mogrify.save(image_dest)
     end
-
-    require Logger
-    Logger.error("create_image_size: #{inspect(return)}")
-
-    return
-
   end
 
   @doc """
