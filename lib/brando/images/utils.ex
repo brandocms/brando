@@ -196,11 +196,19 @@ defmodule Brando.Images.Utils do
   Recreates all image sizes in imageseries.
   """
   def recreate_sizes_for(series_id: image_series_id) do
-    image_series = Brando.repo.one!(
-      from is in Brando.ImageSeries,
+    model = Image
+
+    q =
+      from is in ImageSeries,
         preload: :images,
         where: is.id == ^image_series_id
-    )
+
+    image_series = Brando.repo.one!(q)
+    check_image_paths(model, image_series)
+
+    # reload the series in case we changed the images!
+    image_series = Brando.repo.one!(q)
+
     for image <- image_series.images do
       recreate_sizes_for(image: image)
     end

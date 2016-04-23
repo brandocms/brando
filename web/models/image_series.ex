@@ -61,7 +61,9 @@ defmodule Brando.ImageSeries do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
-    cast(model, params, @required_fields ++ @optional_fields)
+    model
+    |> cast(params, @required_fields ++ @optional_fields)
+    |> validate_paths()
   end
 
   @doc """
@@ -151,6 +153,30 @@ defmodule Brando.ImageSeries do
         category.cfg
       end
     put_change(cs, :cfg, cfg)
+  end
+
+  @doc """
+  Checks if slug was changed in changeset.
+
+  If it is, move and fix paths/files + redo thumbs
+  """
+  def validate_paths(cs) do
+    slug = get_change(cs, :slug)
+    if slug do
+      cfg = cs.data.cfg
+      split_path = Path.split(cfg.upload_path)
+
+      new_path =
+        split_path
+        |> List.delete_at(Enum.count(split_path) - 1)
+        |> Path.join
+        |> Path.join(slug)
+
+      cfg = Map.put(cfg, :upload_path, new_path)
+      put_change(cs, :cfg, cfg)
+    else
+      cs
+    end
   end
 
   #

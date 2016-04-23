@@ -150,9 +150,54 @@ defmodule Brando.Admin.ImageCategoryController do
       Brando.Images.Utils.recreate_sizes_for(series_id: s.id)
     end
 
+    orphaned_series = Brando.Images.Utils.get_orphaned_series(series, starts_with: category.cfg.upload_path)
+
+    conn =
+      if orphaned_series != [] do
+        put_flash(conn, :warning,
+                  gettext("Category propagated, but you have orphaned series. Click <a href=\"%{url}\">here</a> to verify and delete",
+                  url: helpers(conn).admin_image_category_path(conn, :handle_orphans, id)))
+      else
+        put_flash(conn, :notice, gettext("Category propagated"))
+      end
+
     conn
-    |> put_flash(:notice, gettext("Category propagated"))
     |> redirect(to: helpers(conn).admin_image_category_path(conn, :configure, id))
+  end
+
+  @doc false
+  def handle_orphans(conn, %{"id" => id}) do
+    category = Brando.repo.get(ImageCategory, id)
+    orphaned_series = get_orphans(category)
+
+    conn
+    |> assign(:page_title, gettext("Handle orphaned image series"))
+    |> assign(:orphaned_series, orphaned_series)
+    |> assign(:category, category)
+    |> render(:handle_orphans)
+  end
+
+  @doc false
+  def handle_orphans_post(conn, %{"id" => id}) do
+    category = Brando.repo.get(ImageCategory, id)
+    orphaned_series = get_orphans(category)
+
+    for s <- orphaned_series do
+      File.rm_rf!(s)
+    end
+
+    conn
+    |> put_flash(:notice, gettext("Orphans deleted"))
+    |> redirect(to: helpers(conn).admin_image_path(conn, :index))
+  end
+
+  defp get_orphans(category) do
+    series = Brando.repo.all(
+      from is in ImageSeries,
+        where: is.image_category_id == ^category.id
+    )
+
+    Brando.Images.Utils.get_orphaned_series(series, starts_with: category.cfg.upload_path)
   end
 
   @doc false
