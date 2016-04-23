@@ -80,14 +80,14 @@ msgstr "Konfigurer kategori"
 msgid "Configure image category"
 msgstr "Konfigurer bildekategori"
 
-#: web/controllers/admin/image_series_controller.ex:96
-#: web/controllers/admin/image_series_controller.ex:125
+#: web/controllers/admin/image_series_controller.ex:105
+#: web/controllers/admin/image_series_controller.ex:134
 #: web/templates/admin/image/index.html.eex:99
 msgid "Configure image series"
 msgstr "Konfigurer bildeserie"
 
-#: web/controllers/admin/image_category_controller.ex:167
-#: web/controllers/admin/image_series_controller.ex:186
+#: web/controllers/admin/image_category_controller.ex:212
+#: web/controllers/admin/image_series_controller.ex:195
 #: web/controllers/admin/user_controller.ex:175
 msgid "Confirm deletion"
 msgstr "Bekreft sletting"
@@ -122,7 +122,7 @@ msgstr "Slett bilder"
 msgid "Delete user"
 msgstr "Slett bruker"
 
-#: lib/brando/html.ex:338 lib/brando/html/inspect.ex:145
+#: lib/brando/html.ex:354 lib/brando/html/inspect.ex:145
 msgid "Deleted"
 msgstr "Slettet"
 
@@ -137,7 +137,7 @@ msgid "Edit image category"
 msgstr "Rediger bildekategori"
 
 #: web/controllers/admin/image_series_controller.ex:64
-#: web/controllers/admin/image_series_controller.ex:82
+#: web/controllers/admin/image_series_controller.ex:91
 #: web/templates/admin/image/index.html.eex:89
 #: web/templates/admin/image_series/edit.html.eex:1
 #: web/templates/admin/image_series/sequence.html.eex:15
@@ -180,8 +180,8 @@ msgstr "Feil"
 #: web/controllers/admin/image_category_controller.ex:81
 #: web/controllers/admin/image_category_controller.ex:125
 #: web/controllers/admin/image_series_controller.ex:50
-#: web/controllers/admin/image_series_controller.ex:86
-#: web/controllers/admin/image_series_controller.ex:130
+#: web/controllers/admin/image_series_controller.ex:95
+#: web/controllers/admin/image_series_controller.ex:139
 #: web/controllers/admin/user_controller.ex:92
 #: web/controllers/admin/user_controller.ex:120
 #: web/controllers/admin/user_controller.ex:163
@@ -204,7 +204,7 @@ msgstr "Gå tilbake"
 msgid "Image category created"
 msgstr "Bildekategori opprettet"
 
-#: web/controllers/admin/image_category_controller.ex:179
+#: web/controllers/admin/image_category_controller.ex:224
 msgid "Image category deleted"
 msgstr "Bildekategori slettet"
 
@@ -216,11 +216,11 @@ msgstr "Bildekategori oppdatert"
 msgid "Image series created"
 msgstr "Bildeserie opprettet"
 
-#: web/controllers/admin/image_series_controller.ex:198
+#: web/controllers/admin/image_series_controller.ex:207
 msgid "Image series deleted"
 msgstr "Bildeserie slettet"
 
-#: web/controllers/admin/image_series_controller.ex:78
+#: web/controllers/admin/image_series_controller.ex:87
 msgid "Image series updated"
 msgstr "Bildeserie oppdatert"
 
@@ -334,7 +334,7 @@ msgstr "Systeminfo"
 msgid "This object cannot be restored!"
 msgstr "Dette objektet kan ikke gjenopprettes!"
 
-#: web/controllers/admin/image_series_controller.ex:153
+#: web/controllers/admin/image_series_controller.ex:162
 #: web/templates/admin/image/index.html.eex:78
 msgid "Upload images"
 msgstr "Last opp bilder"
@@ -373,7 +373,7 @@ msgstr "slettet"
 msgid "Add new"
 msgstr "Legg til"
 
-#: web/menus/images_menu.ex:10 web/models/image_series.ex:175
+#: web/menus/images_menu.ex:10 web/models/image_series.ex:201
 msgid "Images"
 msgstr "Bilder"
 
@@ -401,7 +401,7 @@ msgstr "Profilbilde"
 msgid "Config"
 msgstr "Konfigurer"
 
-#: web/models/image_series.ex:171
+#: web/models/image_series.ex:197
 msgid "Configuration"
 msgstr "Konfigurasjon"
 
@@ -409,7 +409,7 @@ msgstr "Konfigurasjon"
 msgid "Configuration data"
 msgstr "Konfigurasjonsdata"
 
-#: lib/brando/form/fields.ex:578
+#: lib/brando/form/fields.ex:591
 msgid "Confirm"
 msgstr "Bekreft"
 
@@ -418,15 +418,15 @@ msgid "Connected"
 msgstr "Tilkoblet"
 
 #: web/models/image.ex:146 web/models/image_category.ex:139
-#: web/models/image_series.ex:174
+#: web/models/image_series.ex:200
 msgid "Creator"
 msgstr "Skaper"
 
-#: web/models/image_series.ex:172
+#: web/models/image_series.ex:198
 msgid "Credits"
 msgstr "Krediteringer"
 
-#: lib/brando/html.ex:332 lib/brando/html/inspect.ex:144
+#: lib/brando/html.ex:348 lib/brando/html/inspect.ex:144
 msgid "Draft"
 msgstr "Kladd"
 
@@ -443,7 +443,7 @@ msgid "Full name"
 msgstr "Fullt navn"
 
 #: web/models/image.ex:143 web/models/image_category.ex:135
-#: web/models/image_series.ex:168 web/models/user.ex:185
+#: web/models/image_series.ex:194 web/models/user.ex:185
 msgid "ID"
 msgstr "ID"
 
@@ -451,7 +451,7 @@ msgstr "ID"
 msgid "Image"
 msgstr "Bilde"
 
-#: web/models/image_series.ex:176 web/models/image_series.ex:177
+#: web/models/image_series.ex:202 web/models/image_series.ex:203
 msgid "Image category"
 msgstr "Bildekategori"
 
@@ -460,7 +460,7 @@ msgid "Image series"
 msgstr "Bildeserie"
 
 #: web/models/image.ex:148 web/models/image_category.ex:141
-#: web/models/image_series.ex:178 web/models/user.ex:193
+#: web/models/image_series.ex:204 web/models/user.ex:193
 msgid "Inserted at"
 msgstr "Lagt til"
 
@@ -472,7 +472,7 @@ msgstr "Språk"
 msgid "Last login"
 msgstr "Forrige innlogging"
 
-#: web/models/image_category.ex:136 web/models/image_series.ex:169
+#: web/models/image_category.ex:136 web/models/image_series.ex:195
 msgid "Name"
 msgstr "Navn"
 
@@ -489,11 +489,11 @@ msgstr "Ingen resultater"
 msgid "No value"
 msgstr "Ingen verdi"
 
-#: lib/brando/html.ex:326 lib/brando/html/inspect.ex:143
+#: lib/brando/html.ex:342 lib/brando/html/inspect.ex:143
 msgid "Pending"
 msgstr "Venter"
 
-#: lib/brando/html.ex:320 lib/brando/html/inspect.ex:142
+#: lib/brando/html.ex:336 lib/brando/html/inspect.ex:142
 msgid "Published"
 msgstr "Publisert"
 
@@ -509,16 +509,16 @@ msgstr "Roller"
 msgid "Save"
 msgstr "Lagre"
 
-#: web/models/image.ex:145 web/models/image_series.ex:173
+#: web/models/image.ex:145 web/models/image_series.ex:199
 msgid "Sequence"
 msgstr "Sekvens"
 
-#: web/models/image_category.ex:137 web/models/image_series.ex:170
+#: web/models/image_category.ex:137 web/models/image_series.ex:196
 msgid "Slug"
 msgstr "URL-tamp"
 
 #: web/models/image.ex:149 web/models/image_category.ex:142
-#: web/models/image_series.ex:179 web/models/user.ex:194
+#: web/models/image_series.ex:205 web/models/user.ex:194
 msgid "Updated at"
 msgstr "Sist oppdatert"
 
@@ -534,11 +534,11 @@ msgstr "Brukernavn"
 msgid "admin"
 msgstr "admin"
 
-#: lib/brando/form/fields.ex:665
+#: lib/brando/form/fields.ex:678
 msgid "can't be blank"
 msgstr "kan ikke være tomt"
 
-#: lib/brando/form/fields.ex:669
+#: lib/brando/form/fields.ex:682
 msgid "has invalid format"
 msgstr "har ugyldig format"
 
@@ -554,7 +554,7 @@ msgstr "bildekategorier"
 msgid "image category"
 msgstr "bildekategori"
 
-#: web/models/image_series.ex:165
+#: web/models/image_series.ex:191
 msgid "image(s)"
 msgstr "bilde(r)"
 
@@ -562,27 +562,27 @@ msgstr "bilde(r)"
 msgid "images"
 msgstr "bilder"
 
-#: web/models/image_series.ex:160
+#: web/models/image_series.ex:186
 msgid "imageserie"
 msgstr "bildeserie"
 
-#: web/models/image_series.ex:161
+#: web/models/image_series.ex:187
 msgid "imageseries"
 msgstr "bildeserier"
 
-#: lib/brando/form/fields.ex:671
+#: lib/brando/form/fields.ex:684
 msgid "is invalid"
 msgstr "er ugyldig"
 
-#: lib/brando/form/fields.ex:673
+#: lib/brando/form/fields.ex:686
 msgid "is reserved"
 msgstr "er reservert"
 
-#: lib/brando/form/fields.ex:667
+#: lib/brando/form/fields.ex:680
 msgid "must be unique"
 msgstr "må være unikt"
 
-#: lib/brando/form/fields.ex:675
+#: lib/brando/form/fields.ex:688
 msgid "should be at least %{count} characters"
 msgstr "må være minst %{count} tegn"
 
@@ -743,24 +743,24 @@ msgstr "prosesser"
 msgid "system"
 msgstr "system"
 
-#: lib/brando/html.ex:422
+#: lib/brando/html.ex:438
 msgid "You are trying to authorize from an insecure URL. <a href=\"%{url}\">Please try again from this URL</a> or proceed at your own risk!"
 msgstr "Du prøver å logge inn fra en usikker adresse. <a href=\"%{url}\">Prøv fra denne adressen istedet</a> eller fortsett på eget ansvar!"
 
-#: lib/brando/images/utils.ex:264
+#: lib/brando/images/utils.ex:272
 msgid "Allowed mimetypes"
 msgstr "Tillatte mime-typer"
 
-#: web/controllers/admin/image_category_controller.ex:154
+#: web/controllers/admin/image_category_controller.ex:161
 msgid "Category propagated"
 msgstr "Kategorien er forplantet"
 
 #: web/controllers/admin/image_category_controller.ex:116
-#: web/controllers/admin/image_series_controller.ex:121
+#: web/controllers/admin/image_series_controller.ex:130
 msgid "Configuration updated"
 msgstr "Konfigurasjonen ble oppdatert"
 
-#: lib/brando/images/utils.ex:268
+#: lib/brando/images/utils.ex:276
 msgid "Default size"
 msgstr "Standard størrelse"
 
@@ -768,7 +768,7 @@ msgstr "Standard størrelse"
 msgid "Propagate configuration to dependent image series"
 msgstr "Forplant konfigurasjonen til underliggende bildeserier"
 
-#: lib/brando/images/utils.ex:272
+#: lib/brando/images/utils.ex:280
 msgid "Random filename"
 msgstr "Vilkårlig filnavn"
 
@@ -776,15 +776,15 @@ msgstr "Vilkårlig filnavn"
 msgid "Recreate sizes for this series"
 msgstr "Gjenskap størreleser for denne serien"
 
-#: web/controllers/admin/image_series_controller.ex:140
+#: web/controllers/admin/image_series_controller.ex:149
 msgid "Recreated sizes for image series"
 msgstr "Gjenskapte bildestørrelser for bildeserien"
 
-#: lib/brando/images/utils.ex:276
+#: lib/brando/images/utils.ex:284
 msgid "Size limit"
 msgstr "Max størrelse"
 
-#: lib/brando/images/utils.ex:282
+#: lib/brando/images/utils.ex:290
 msgid "Upload path"
 msgstr "Opplastningsfilbane"
 
@@ -795,3 +795,31 @@ msgstr "kategori"
 #: web/templates/admin/image_series/configure.html.eex:1
 msgid "image series"
 msgstr "bildeserie"
+
+#: web/controllers/admin/image_category_controller.ex:158
+msgid "Category propagated, but you have orphaned series. Click <a href=\"%{url}\">here</a> to verify and delete"
+msgstr "Kategori forplantet, men du har løse bildeserier. Klikk <a href=\"%{url}\">her</a> for å verifisere og slette"
+
+#: web/templates/admin/image_category/handle_orphans.html.eex:23
+msgid "Delete orphans"
+msgstr "Slett løse bildeserier"
+
+#: web/controllers/admin/image_category_controller.ex:174
+msgid "Handle orphaned image series"
+msgstr "Håndter løse bildeserier"
+
+#: web/templates/admin/image_category/handle_orphans.html.eex:2
+msgid "Handle orphans for category "
+msgstr "Håndter løse bildeserier for kategori"
+
+#: web/controllers/admin/image_category_controller.ex:190
+msgid "Orphans deleted"
+msgstr "Løse bildeserier slettet"
+
+#: web/templates/admin/image_category/handle_orphans.html.eex:10
+msgid "These folders cannot be restored!"
+msgstr "Disse mappene kan ikke gjenopprettes!"
+
+#: web/templates/admin/image_category/handle_orphans.html.eex:5
+msgid "You are about to delete these folders. Please check carefully before proceeding."
+msgstr "Du er i ferd med å slette disse mappene. Sjekk nøye før du fortsetter."

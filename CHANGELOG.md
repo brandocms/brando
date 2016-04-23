@@ -1,4 +1,4 @@
-## v0.29.0-dev (2016-XX-XX)
+## v0.29.0 (2016-04-23)
 
 * Enhancements
   * Add `mirror_prod` to fabfile. Copies remote `media` directory and mirrors remote db
