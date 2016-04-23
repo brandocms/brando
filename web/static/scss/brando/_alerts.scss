@@ -1,6 +1,7 @@
 .alert {
   font-size: 1.1rem;
   font-weight: bold;
+  text-shadow: 1px 1px 1px #555;
   margin-top: 15px;
   padding: 12px 10px 10px 15px;
   color: #fff;
@@ -18,5 +19,10 @@
   &.alert-danger {
     background-color: #C04040;
     border-bottom: 4px solid #9D2828;
+  }
+
+  &.alert-warning {
+    background-color: #F7D941;
+    border-bottom: 4px solid #C7AF31;
   }
 }

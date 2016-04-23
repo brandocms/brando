@@ -71,6 +71,13 @@
             <%= get_flash(@conn, :error) %>
           </div>
         <% end %>
+        <%= if get_flash(@conn, :warning) do %>
+          <div class="alert alert-block alert-warning">
+            <a class="close pull-right" data-dismiss="alert" href="#">×</a>
+            <i class="fa fa-exclamation-circle m-r-sm"> </i>
+            <%= get_flash(@conn, :warning) %>
+          </div>
+        <% end %>
 
         <%= if get_flash(@conn, :notice) do %>
           <div class="alert alert-block alert-info">
