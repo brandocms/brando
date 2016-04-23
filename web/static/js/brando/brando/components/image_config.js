@@ -247,7 +247,10 @@ class ImageConfig {
         });
 
         $(document).on('click', '.propagate-configuration', function(e) {
-            var url = $(this).attr('data-url');
+            var $btn = $(this);
+            var url = $btn.attr('data-url');
+            var prevCaption = $btn.html();
+            $btn.removeClass('btn-default').addClass('btn-warning').html('<i class="fa fa-cog fa-spin"></i>');
             e.preventDefault();
 
             $.ajax({
@@ -259,9 +262,15 @@ class ImageConfig {
                  * Callback after confirming.
                  */
 
+                $btn.removeClass('btn-warning').addClass('btn-default').html(prevCaption);
+
                 console.log(data);
                 if (data.status == '200') {
                     console.log("success!");
+                }
+
+                if (data.orphaned_series) {
+                    console.log("has orphaned series!");
                 }
             }));
         });
