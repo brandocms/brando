@@ -8,6 +8,7 @@
   * Add datetimepicker for `:datetime` form field types.
   * Move `package.json` dependencies to `devDependencies` for faster installation.
   * Remove `bower.json`
+  * Redirect back to image configuration on save
 
 ## v0.28.0 (2016-04-08)
 
