@@ -9,7 +9,11 @@ class Autoslug {
             var slugFrom = $(elem).attr('data-slug-from');
             $('[name="' + slugFrom + '"]').slugIt({
                 output: $(elem),
-                map: {'\'': ''}
+                map: { 'æ': 'ae', 'ø': 'oe', 'å': 'aa' },
+                space: '-',
+                after: function(slug) {
+                    return slug.replace(/'/g, '');
+                }
             });
         });
     }
