@@ -424,6 +424,22 @@ defmodule Brando.HTML do
         |> Phoenix.HTML.raw
       end
     end
+  end
 
+  @doc """
+  Displays all flash messages in conn
+  """
+  def display_flash(conn) do
+    flash = get_flash(conn)
+
+    for {type, message} <- flash do
+      """
+      <div class="alert alert-block alert-#{type}">
+        <a class="close pull-right" data-dismiss="alert" href="#">×</a>
+        <i class="fa fa-exclamation-circle m-r-sm"> </i>
+        #{Phoenix.HTML.raw(message)}
+      </div>
+      """
+    end
   end
 end
