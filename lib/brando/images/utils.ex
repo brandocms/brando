@@ -420,4 +420,64 @@ defmodule Brando.Images.Utils do
     end
     {key, val}
   end
+
+  @doc """
+  Checks that the existing images' path matches the config. these may differ
+  when series has been renamed!
+  """
+  def check_image_paths(model, image_series) do
+    upload_path = image_series.cfg.upload_path
+
+    for image <- image_series.images do
+      check_image_path(model, image, upload_path)
+    end
+  end
+
+  defp check_image_path(model, image, upload_dirname) do
+    image_path = image.image.path
+    image_dirname = Path.dirname(image.image.path)
+    image_basename = Path.basename(image.image.path)
+
+    img_struct = do_check_image_path(image, image_path, image_dirname, image_basename, upload_dirname)
+
+    if img_struct != nil do
+      # store new image
+      image
+      |> model.changeset(:update, %{image: img_struct})
+      |> Brando.repo.update!
+    end
+  end
+
+  defp do_check_image_path(_, _, ".", _, _) do
+    # something is wrong, just return nil and don't move anything
+    nil
+  end
+
+  defp do_check_image_path(image, image_path, image_dirname, image_basename, upload_dirname) do
+    if image_dirname != upload_dirname do
+      File.mkdir_p(Path.join(Brando.config(:media_path), upload_dirname))
+      File.cp(Path.join(Brando.config(:media_path), image_path),
+              Path.join([Brando.config(:media_path), upload_dirname, image_basename]))
+
+      Map.put(image.image, :path, Path.join(upload_dirname, image_basename))
+    else
+      nil
+    end
+  end
+
+  @doc """
+  Gets orphaned image_series.
+  """
+  def get_orphaned_series(image_series, starts_with: starts_with) do
+    # first grab all actual series upload paths
+    upload_paths =
+      for is <- image_series do
+        Path.join(Brando.config(:media_path), is.cfg.upload_path)
+      end
+
+    check_path = Path.join(Brando.config(:media_path), starts_with)
+    existing_paths = Path.wildcard(Path.join(check_path, "*"))
+
+    existing_paths -- upload_paths
+  end
 end
