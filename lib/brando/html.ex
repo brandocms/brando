@@ -430,7 +430,7 @@ defmodule Brando.HTML do
   Displays all flash messages in conn
   """
   def display_flash(conn) do
-    flash = get_flash(conn)
+    flash = Phoenix.Controller.get_flash(conn)
 
     for {type, message} <- flash do
       """
