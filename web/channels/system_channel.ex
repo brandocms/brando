@@ -66,4 +66,5 @@ defmodule Brando.SystemChannel do
   def alert(message) do
     unless Brando.config(:logging)[:disable_logging] do
       Brando.endpoint.broadcast!("system:stream", "alert", %{message: message})
+    end
 end
