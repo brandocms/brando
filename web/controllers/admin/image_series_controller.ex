@@ -73,7 +73,7 @@ defmodule Brando.Admin.ImageSeriesController do
     changeset =
       series_model
       |> Brando.repo.get_by!(id: id)
-      |> ImageSeries.changeset(:update, image_series)
+      |> Brando.ImageSeries.changeset(:update, image_series)
 
     case Brando.repo.update(changeset) do
       {:ok, _} ->
