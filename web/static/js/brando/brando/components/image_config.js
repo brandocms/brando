@@ -253,7 +253,6 @@ class ImageConfig {
             $.ajax({
                 headers: {Accept : "application/json; charset=utf-8"},
                 type: "GET",
-                data: data,
                 url: url
             }).done($.proxy(function(data) {
                 /**
