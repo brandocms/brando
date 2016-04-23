@@ -4,6 +4,7 @@ import Dropzone from "dropzone";
 
 import "./brando/extensions/datepicker";
 import "./brando/extensions/dropdown";
+import "./brando/extensions/progressbar";
 import "./brando/extensions/searcher";
 import "./brando/extensions/slugit";
 import "./brando/extensions/sparkline";

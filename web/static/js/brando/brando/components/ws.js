@@ -4,6 +4,7 @@ import $ from "jquery";
 
 import {Socket} from "phoenix"
 import {vex} from "./vex_brando";
+import ProgressBar from "../extensions/progressbar";
 
 class WS {
     static setup() {
@@ -11,15 +12,26 @@ class WS {
         let user_token = document.querySelector("meta[name=\"channel_token\"]").getAttribute("content");
         let socket = new Socket("/admin/ws", {params: {token: user_token}});
         socket.connect();
+
         let chan = socket.channel("system:stream", {});
         chan.join().receive("ok", ({messages}) => {
             console.log(">> System channel ready");
         });
+
         chan.on("log_msg", payload => {
             _this.log(payload.level, payload.icon, payload.body);
         });
+
         chan.on("alert", payload => {
             _this.alert(payload.message);
+        });
+
+        chan.on("set_progress", payload => {
+            _this.set_progress(payload.value);
+        });
+
+        chan.on("increase_progress", payload => {
+            _this.increase_progress(payload.value, payload.id);
         });
     }
 
@@ -31,6 +43,58 @@ class WS {
     static alert(message) {
         vex.dialog.alert(message);
     }
+
+    static createProgress() {
+        var $overlay = $('<div id="overlay">').appendTo('body');
+        var $container = $('<div id="progress-container">').appendTo('#overlay');
+
+        $overlay.css({
+            "position": "fixed",
+            "top": "0",
+            "left": "0",
+            "width": "100%",
+            "display": "none",
+            "height": "100%",
+            "background-color": "#fff",
+            "z-index": "99999",
+            "display": "flex",
+            "align-items": "center",
+            "justify-content": "center",
+        });
+        $overlay.fadeIn();
+        $('<div id="progressbar">').appendTo('#progress-container');
+        WS.progressbar = new ProgressBar.Circle('#progressbar', {
+            strokeWidth: 5,
+            color: "#c11"
+        });
+        WS.progressbar.setText('working, please wait!');
+    }
+
+    static increase_progress(value) {
+        if (WS.progressbar) {
+            var newValue = WS.progressbar.value() + value;
+        } else {
+            WS.createProgress();
+        }
+
+        WS.set_progress(newValue)
+    }
+
+    static set_progress(value) {
+        if (WS.progressbar) {
+            WS.progressbar.animate(value);
+        } else {
+            WS.createProgress();
+            WS.progressbar.animate(value);
+        }
+
+        if (value == 1) {
+            $('#overlay').remove();
+            WS.progressbar = null;
+        }
+    }
 }
+
+WS.progressbar = null;
 
 export default WS;
