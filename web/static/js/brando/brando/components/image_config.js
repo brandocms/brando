@@ -20,7 +20,7 @@ class ImageConfig {
     }
     static setup() {
         console.log("Image config setting up...");
-        
+
         $(document).on('keyup', '.standard-key-input, .standard-val-input', function(e) {
             var $el = $(this);
             var $sumEl = $el.parent().parent().find('.actual-value:first');
@@ -244,6 +244,27 @@ class ImageConfig {
             ].join(""));
 
             $row.insertBefore($(this).parent());
+        });
+
+        $(document).on('click', '.propagate-configuration', function(e) {
+            var url = $(this).attr('data-url');
+            e.preventDefault();
+
+            $.ajax({
+                headers: {Accept : "application/json; charset=utf-8"},
+                type: "GET",
+                data: data,
+                url: url
+            }).done($.proxy(function(data) {
+                /**
+                 * Callback after confirming.
+                 */
+
+                console.log(data);
+                if (data.status == '200') {
+                    console.log("success!");
+                }
+            }));
         });
     }
 }
