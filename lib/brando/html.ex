@@ -433,14 +433,13 @@ defmodule Brando.HTML do
     flash = Phoenix.Controller.get_flash(conn)
 
     for {type, msg} <- flash do
-      {:safe, safe_msg} = Phoenix.HTML.raw(msg)
       """
       <div class="alert alert-block alert-#{type}">
         <a class="close pull-right" data-dismiss="alert" href="#">×</a>
         <i class="fa fa-exclamation-circle m-r-sm"> </i>
-        #{safe_msg}
+        #{msg}
       </div>
-      """
+      """ |> Phoenix.HTML.raw
     end
   end
 end
