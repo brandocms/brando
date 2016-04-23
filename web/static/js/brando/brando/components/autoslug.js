@@ -8,7 +8,8 @@ class Autoslug {
         $('[data-slug-from]').each((index, elem) => {
             var slugFrom = $(elem).attr('data-slug-from');
             $('[name="' + slugFrom + '"]').slugIt({
-                output: $(elem)
+                output: $(elem),
+                map: {'\'': ''}
             });
         });
     }
