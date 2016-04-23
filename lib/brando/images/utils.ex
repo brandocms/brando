@@ -483,9 +483,13 @@ defmodule Brando.Images.Utils do
         Path.join(Brando.config(:media_path), is.cfg.upload_path)
       end
 
-    check_path = Path.join(Brando.config(:media_path), starts_with)
-    existing_paths = Path.wildcard(Path.join(check_path, "*"))
+    if upload_paths != [] do
+      check_path = Path.join(Brando.config(:media_path), starts_with)
+      existing_paths = Path.wildcard(Path.join(check_path, "*"))
 
-    existing_paths -- upload_paths
+      existing_paths -- upload_paths
+    else
+      []
+    end
   end
 end
