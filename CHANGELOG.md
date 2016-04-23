@@ -9,6 +9,7 @@
   * Move `package.json` dependencies to `devDependencies` for faster installation.
   * Remove `bower.json`
   * Redirect back to image configuration on save
+  * Add :warning flash. Redo alert styles.
 
 ## v0.28.0 (2016-04-08)
 
