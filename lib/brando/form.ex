@@ -416,6 +416,9 @@ defmodule Brando.Form do
   def apply_action(fun, action, params) when is_list(params) do
     apply(Brando.helpers, fun, [Brando.endpoint(), action] ++ params)
   end
+  def apply_action(fun, action, nil) do
+    apply(Brando.helpers, fun, [Brando.endpoint(), action])
+  end
   def apply_action(fun, action, params) do
     apply(Brando.helpers, fun, [Brando.endpoint(), action, params])
   end
