@@ -68,19 +68,28 @@ defmodule Brando.Admin.ImageSeriesController do
   end
 
   @doc false
-  def update(conn, %{"imageseries" => form_data, "id" => id}) do
+  def update(conn, %{"imageseries" => image_series, "id" => id}) do
     series_model = conn.private[:series_model]
-    record = Brando.repo.get_by!(series_model, id: id)
+    changeset =
+      series_model
+      |> Brando.repo.get_by!(id: id)
+      |> Brando.ImageSeries.changeset(:update, image_series)
 
-    case series_model.update(record, form_data) do
-      {:ok, _updated_record} ->
+    case Brando.repo.update(changeset) do
+      {:ok, _} ->
+        # We have to check this here, since the changes have not been stored in
+        # the ImageSeries.validate_paths() when we check.
+        if Ecto.Changeset.get_change(changeset, :slug) do
+          Brando.Images.Utils.recreate_sizes_for(series_id: changeset.data.id)
+        end
+
         conn
         |> put_flash(:notice, gettext("Image series updated"))
         |> redirect(to: helpers(conn).admin_image_path(conn, :index))
       {:error, changeset} ->
         conn
         |> assign(:page_title, gettext("Edit image series"))
-        |> assign(:image_series, form_data)
+        |> assign(:image_series, image_series)
         |> assign(:changeset, changeset)
         |> assign(:id, id)
         |> put_flash(:error, gettext("Errors in form"))
@@ -119,7 +128,7 @@ defmodule Brando.Admin.ImageSeriesController do
       {:ok, _} ->
         conn
         |> put_flash(:notice, gettext("Configuration updated"))
-        |> redirect(to: helpers(conn).admin_image_path(conn, :index))
+        |> redirect(to: helpers(conn).admin_image_series_path(conn, :configure, id))
       {:error, changeset} ->
         conn
         |> assign(:page_title, gettext("Configure image series"))

@@ -196,11 +196,19 @@ defmodule Brando.Images.Utils do
   Recreates all image sizes in imageseries.
   """
   def recreate_sizes_for(series_id: image_series_id) do
-    image_series = Brando.repo.one!(
-      from is in Brando.ImageSeries,
+    model = Image
+
+    q =
+      from is in ImageSeries,
         preload: :images,
         where: is.id == ^image_series_id
-    )
+
+    image_series = Brando.repo.one!(q)
+    check_image_paths(model, image_series)
+
+    # reload the series in case we changed the images!
+    image_series = Brando.repo.one!(q)
+
     for image <- image_series.images do
       recreate_sizes_for(image: image)
     end
@@ -285,8 +293,8 @@ defmodule Brando.Images.Utils do
       </div>
       #{size_rows}
       <div class="form-row">
-        <button class="m-t-sm m-b-sm btn btn-success add-masterkey-standard">Add master key (standard)</button>
-        <button class="m-t-sm m-b-sm m-l-sm btn btn-success add-masterkey-pl">Add master key (portrait/landscape)</button>
+        <button class="m-t-sm m-b-sm btn btn-default add-masterkey-standard">Add master key (standard)</button>
+        <button class="m-t-sm m-b-sm m-l-sm btn btn-default add-masterkey-pl">Add master key (portrait/landscape)</button>
       </div>
       <div class="form-row">
         <div class="form-group required">
@@ -317,7 +325,7 @@ defmodule Brando.Images.Utils do
       if type == :standard do
         """
         <div class="form-row">
-          <button class="m-t-sm m-b-sm btn btn-xs btn-default btn-block add-key-standard"><i class="fa fa-plus-circle"></i></button>
+          <span class="m-t-sm m-b-sm btn btn-xs btn-block add-key-standard"><i class="fa fa-plus-circle"></i></span>
         </div>
         """
       else
@@ -361,7 +369,7 @@ defmodule Brando.Images.Utils do
       #{inputs}
 
       <div class="form-row">
-        <button data-orientation="#{orientation}" class="m-t-sm m-b-sm btn btn-xs btn-default btn-block add-key-recursive"><i class="fa fa-plus-circle"></i></button>
+        <span data-orientation="#{orientation}" class="m-t-sm m-b-sm btn btn-xs btn-block add-key-recursive"><i class="fa fa-plus-circle"></i></span>
       </div>
     </fieldset>
     """
@@ -419,5 +427,69 @@ defmodule Brando.Images.Utils do
       _         -> val
     end
     {key, val}
+  end
+
+  @doc """
+  Checks that the existing images' path matches the config. these may differ
+  when series has been renamed!
+  """
+  def check_image_paths(model, image_series) do
+    upload_path = image_series.cfg.upload_path
+
+    for image <- image_series.images do
+      check_image_path(model, image, upload_path)
+    end
+  end
+
+  defp check_image_path(model, image, upload_dirname) do
+    image_path = image.image.path
+    image_dirname = Path.dirname(image.image.path)
+    image_basename = Path.basename(image.image.path)
+
+    img_struct = do_check_image_path(image, image_path, image_dirname, image_basename, upload_dirname)
+
+    if img_struct != nil do
+      # store new image
+      image
+      |> model.changeset(:update, %{image: img_struct})
+      |> Brando.repo.update!
+    end
+  end
+
+  defp do_check_image_path(_, _, ".", _, _) do
+    # something is wrong, just return nil and don't move anything
+    nil
+  end
+
+  defp do_check_image_path(image, image_path, image_dirname, image_basename, upload_dirname) do
+    if image_dirname != upload_dirname do
+      File.mkdir_p(Path.join(Brando.config(:media_path), upload_dirname))
+      File.cp(Path.join(Brando.config(:media_path), image_path),
+              Path.join([Brando.config(:media_path), upload_dirname, image_basename]))
+
+      Map.put(image.image, :path, Path.join(upload_dirname, image_basename))
+    else
+      nil
+    end
+  end
+
+  @doc """
+  Gets orphaned image_series.
+  """
+  def get_orphaned_series(image_series, starts_with: starts_with) do
+    # first grab all actual series upload paths
+    upload_paths =
+      for is <- image_series do
+        Path.join(Brando.config(:media_path), is.cfg.upload_path)
+      end
+
+    if upload_paths != [] do
+      check_path = Path.join(Brando.config(:media_path), starts_with)
+      existing_paths = Path.wildcard(Path.join(check_path, "*"))
+
+      existing_paths -- upload_paths
+    else
+      []
+    end
   end
 end

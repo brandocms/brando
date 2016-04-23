@@ -1,3 +1,17 @@
+## v0.29.0 (2016-04-23)
+
+* Enhancements
+  * Add `mirror_prod` to fabfile. Copies remote `media` directory and mirrors remote db
+    to our local dev db.
+  * Add `$` and `jQuery` to javascript globals.
+  * Add `:datetime` form field.
+  * Add datetimepicker for `:datetime` form field types.
+  * Move `package.json` dependencies to `devDependencies` for faster installation.
+  * Remove `bower.json`
+  * Redirect back to image configuration on save
+  * Add :warning flash. Redo alert styles.
+  * Check for orphaned image series when changing slug or propagating image series configs
+
 ## v0.28.0 (2016-04-08)
 
 * Enhancements

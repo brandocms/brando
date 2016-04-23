@@ -179,6 +179,22 @@ defmodule Brando.HTML do
   end
 
   @doc """
+  Renders a post button
+  """
+  def post_form_button(text, helper, controller_action, params \\ nil) do
+    action = Brando.Form.apply_action(helper, controller_action, params)
+    """
+    <form method="POST" action="#{action}">
+      <input type="hidden" name="_method" value="post" />
+      <button class="btn btn-danger">
+        <i class="fa fa-exclamation-circle m-r-sm"> </i>
+        #{text}
+      </button>
+    </form>
+    """ |> Phoenix.HTML.raw
+  end
+
+  @doc """
   Renders a dropzone form.
   Pass in a `helper` and the `id` we are uploading to.
 
@@ -424,6 +440,22 @@ defmodule Brando.HTML do
         |> Phoenix.HTML.raw
       end
     end
+  end
 
+  @doc """
+  Displays all flash messages in conn
+  """
+  def display_flash(conn) do
+    flash = Phoenix.Controller.get_flash(conn)
+
+    for {type, msg} <- flash do
+      """
+      <div class="alert alert-block alert-#{type}">
+        <a class="close pull-right" data-dismiss="alert" href="#">×</a>
+        <i class="fa fa-exclamation-circle m-r-sm"> </i>
+        #{msg}
+      </div>
+      """ |> Phoenix.HTML.raw
+    end
   end
 end

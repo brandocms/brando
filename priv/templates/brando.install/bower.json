@@ -1,9 +1,0 @@
-{
-  "name": "my_app",
-  "dependencies": {
-    "flexslider": "*",
-    "salvattore": "~1.0.7",
-    "jscroll": "~2.3.4",
-    "bootstrap-sass": "~3.3.4"
-  }
-}

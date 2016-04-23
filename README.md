@@ -11,18 +11,15 @@ A helping hand.
 
 ## Install
 
-Add Brando to your `deps` and `applications` in your project's `mix.exs`. Also add `brando_villain` to your `deps`:
+Start by creating a new phoenix project:
+
+    $ mix phoenix.new my_project
+
+Add Brando to `deps` in your `mix.exs` file:
 
 ```elixir
-def application do
-  [mod: {MyApp, []},
-   applications: [:brando, :phoenix, :cowboy, :logger, :postgrex,
-                  :ecto, :gettext]]
-end
-
 defp deps do
-  [{:brando, github: "twined/brando"},
-   {:brando_villain, github: "twined/brando_villain"}]
+  [{:brando, github: "twined/brando"}]
 end
 ```
 
@@ -51,10 +48,6 @@ Add to your relevant `config/%{env}.exs` Repo config:
 Install NPM packages:
 
     $ npm install
-
-Install Bower packages:
-
-    $ bower install
 
 Set up database, and seed:
 
@@ -479,18 +472,9 @@ config :brando, Brando.Villain,
 
 See `Brando.Villain` help for more information on how to use in your project.
 
-## Bower/Brunch
+## Brunch
 
-Currently these packages are auto-installed:
-
-* jQuery - https://github.com/jquery/jquery
-* flexslider - https://github.com/woothemes/FlexSlider
-* salvattore - https://github.com/rnmp/salvattore
-* jscroll - https://github.com/pklauzinski/jscroll/
-
-Add more packages to your bower.json, and brunch will automatically include them.
-
-Build for prod with `brunch build`.
+Build for prod with `brunch build --production`.
 
 
 ## Optimizing images

@@ -64,21 +64,7 @@
 
       <div id="content-wrapper" class="grid-block noscroll">
         <div id="content" class="grid-content">
-        <%= if get_flash(@conn, :error) do %>
-          <div class="alert alert-block alert-danger">
-            <a class="close pull-right" data-dismiss="alert" href="#">×</a>
-            <i class="fa fa-exclamation-circle m-r-sm"> </i>
-            <%= get_flash(@conn, :error) %>
-          </div>
-        <% end %>
-
-        <%= if get_flash(@conn, :notice) do %>
-          <div class="alert alert-block alert-info">
-            <a class="close pull-right" data-dismiss="alert" href="#">×</a>
-            <i class="fa fa-exclamation-circle m-r-sm"> </i>
-            <%= get_flash(@conn, :notice) %>
-          </div>
-        <% end %>
+        <%= Brando.HTML.display_flash(@conn) %>
         <%= render @view_module, @view_template, assigns %>
         </div>
       </div>
