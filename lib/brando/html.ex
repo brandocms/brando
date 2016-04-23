@@ -181,7 +181,7 @@ defmodule Brando.HTML do
   @doc """
   Renders a post button
   """
-  def post_form_button(text, helper, controller_action, params) do
+  def post_form_button(text, helper, controller_action, params \\ nil) do
     action = Brando.Form.apply_action(helper, controller_action, params)
     """
     <form method="POST" action="#{action}">
