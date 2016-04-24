@@ -6,7 +6,7 @@
     "bootstrap-sass": "^3.3.6",
     "brando": "file:deps/brando",
     "brando_villain": "file:deps/brando_villain",
-    "brunch": "^2.4.2",
+    "brunch": "2.6.6",
     "clean-css-brunch": "^2.0.0",
     "css-brunch": "^2.0.0",
     "javascript-brunch": "^2.0.0",
