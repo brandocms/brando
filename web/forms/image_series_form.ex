@@ -15,7 +15,7 @@ defmodule Brando.ImageSeriesForm do
       |> ImageCategory.with_image_series_and_images
       |> Brando.repo.all
 
-    for cat <- categories, do: [value: cat.id, text: cat.name]
+    for cat <- categories, do: [value: to_string(cat.id), text: cat.name]
   end
 
   form "imageseries", [schema: ImageSeries, helper: :admin_image_series_path, class: "grid-form"] do
