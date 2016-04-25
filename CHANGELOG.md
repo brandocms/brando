@@ -1,5 +1,13 @@
 ## v0.30.0-dev (2016-XX-XX)
 
+* Bug fixes
+  * Ensure that integer values sent to form are being handled as strings
+  * Fix bug in image orientation detection.
+
+* Enhancements
+  * Add slug collision avoidance `Brando.Utils.Model.avoid_slug_collision/1`. Use it in your
+    `changeset` function when you have unique slugs.
+
 ## v0.29.0 (2016-04-23)
 
 * Enhancements
