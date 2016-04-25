@@ -32,10 +32,11 @@ defmodule Brando.Utils.Model do
   Precheck :slug in `cs` to make sure we avoid collisions
   """
   def avoid_slug_collision(cs) do
+    module = cs.data.__struct__
     slug = Ecto.Changeset.get_change(cs, :slug)
     if slug do
       unique_slug =
-        case get_unique_slug(__MODULE__, slug, 0) do
+        case get_unique_slug(module, slug, 0) do
           {:ok, unique_slug} -> unique_slug
           {:error, :too_many_attempts} -> slug
         end
