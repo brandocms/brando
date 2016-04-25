@@ -229,7 +229,7 @@ def bootstrap_release():
     nginxcfg()
     logrotatecfg()
 
-    dump_and_load_db()
+    dump_and_load_db_remote()
 
     restart()
     _success()
@@ -636,9 +636,11 @@ def fixprojectperms():
     """
     require('hosts')
     _setowner(env.path)
-    _set_logrotate_perms()
-    _set_logdir_perms()
-    _set_media_perms()
+
+    with settings(warn_only=True):
+        _set_logrotate_perms()
+        _set_logdir_perms()
+        _set_media_perms()
 
 
 def _success():
