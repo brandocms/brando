@@ -452,7 +452,7 @@ defmodule Brando.Form do
 
   defp do_get_value(fetch_from, name) do
     case Map.fetch(fetch_from, name) do
-      {:ok, val} -> val
+      {:ok, val} -> if is_integer(val), do: to_string(val), else: val
       :error     -> nil
     end
   end
