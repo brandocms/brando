@@ -314,13 +314,13 @@ msgstr "Vis bruker"
 msgid "Sort image category"
 msgstr "Sorter bildekategori"
 
-#: web/templates/admin/image/index.html.eex:94
+#: web/templates/admin/image/index.html.eex:25
 #: web/templates/admin/image_series/sequence.html.eex:1
 #: web/templates/admin/image_series/upload.html.eex:8
 msgid "Sort image series"
 msgstr "Sorter bildeserie"
 
-#: web/templates/admin/image/index.html.eex:25
+#: web/templates/admin/image/index.html.eex:94
 msgid "Sort images"
 msgstr "Sorter bilder"
 
