@@ -4,7 +4,6 @@ import $ from "jquery";
 
 import {Socket} from "phoenix"
 import {vex} from "./vex_brando";
-import ProgressBar from "../extensions/progressbar";
 
 class WS {
     static setup() {

@@ -92,6 +92,9 @@ exports.config = {
     globals: {
         $: 'jquery',
         jQuery: 'jquery'
-    }
+    },
+    static: [
+        'node_modules/progressbar.js/dist/progressbar.js'
+    ]
   }
 };
