@@ -4,12 +4,7 @@ exports.config = {
     javascripts: {
       joinTo: {
         'js/brando.js': [
-          'node_modules/phoenix/priv/static/phoenix.js',
-          'node_modules/jquery/dist/jquery.js',
-          'node_modules/vex-js/js/vex.js',
-          'node_modules/dropzone/dist/dropzone.js',
-          'node_modules/progressbar.js/dist/progressbar.js',
-          /^(web\/static\/js\/brando)/
+          /^(node_modules|web\/static\/js\/brando)/
         ],
 
         'js/brando.auth.js': [
@@ -67,7 +62,8 @@ exports.config = {
       // Do not use ES6 compiler in vendor code
       ignore: [
         /^(web\/static\/js\/vendor)/,
-      ]
+      ],
+      presets: ['es2015']
     },
     postcss: {
       processors: [
