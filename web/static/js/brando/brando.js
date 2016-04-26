@@ -6,7 +6,6 @@ import "./brando/extensions/datepicker";
 import "./brando/extensions/dropdown";
 import "./brando/extensions/searcher";
 import "./brando/extensions/slugit";
-import "./brando/extensions/sparkline";
 import "./brando/extensions/tags_input";
 
 import {Accordion} from "./brando/components/accordion";

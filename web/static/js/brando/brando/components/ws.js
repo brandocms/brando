@@ -13,8 +13,8 @@ class WS {
         socket.connect();
 
         let chan = socket.channel("system:stream", {});
-        chan.join().receive("ok", ({messages}) => {
-            console.log(">> System channel ready");
+        chan.join().receive("ok", () => {
+            console.log("==> System channel ready");
         });
 
         chan.on("log_msg", payload => {
@@ -44,8 +44,11 @@ class WS {
     }
 
     static createProgress() {
-        var $overlay = $('<div id="overlay">').appendTo('body');
-        var $container = $('<div id="progress-container">').appendTo('#overlay');
+        var $overlay = $('<div id="overlay">');
+        var $container = $('<div id="progress-container">');
+
+        $overlay.appendTo('body');
+        $container.appendTo('#overlay');
 
         $overlay.css({
             "position": "fixed",
@@ -58,7 +61,7 @@ class WS {
             "z-index": "99999",
             "display": "flex",
             "align-items": "center",
-            "justify-content": "center",
+            "justify-content": "center"
         });
         $overlay.animate({opacity: 1}, 'slow');
         $('<div id="progressbar">').appendTo('#progress-container');

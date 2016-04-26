@@ -5,6 +5,8 @@
   * Fix bug in image orientation detection.
 
 * Enhancements
+  * Use charts.js instead of sparklines.
+  * Updated brunch.
   * Add slug collision avoidance `Brando.Utils.Model.avoid_slug_collision/1`. Use it in your
     `changeset` function when you have unique slugs.
 

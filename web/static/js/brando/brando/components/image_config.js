@@ -19,9 +19,7 @@ class ImageConfig {
         return name.replace(/^sizes\[(\w+)?\]\[(\w+)?\]\[(\w+)?\]$/, 'sizes[' + newKey + '][$2][$3]');
     }
     static setup() {
-        console.log("Image config setting up...");
-
-        $(document).on('keyup', '.standard-key-input, .standard-val-input', function(e) {
+        $(document).on('keyup', '.standard-key-input, .standard-val-input', function() {
             var $el = $(this);
             var $sumEl = $el.parent().parent().find('.actual-value:first');
             if ($el.hasClass('standard-key-input')) {
@@ -31,7 +29,7 @@ class ImageConfig {
             }
         });
 
-        $(document).on('keyup', '.recursive-key-input, .recursive-val-input', function(e) {
+        $(document).on('keyup', '.recursive-key-input, .recursive-val-input', function() {
             var $el = $(this);
             var $sumEl = $el.parent().parent().find('.actual-value:first');
             if ($el.hasClass('recursive-key-input')) {
@@ -41,7 +39,7 @@ class ImageConfig {
             }
         });
 
-        $(document).on('keyup', '.standard-masterkey-input', function(e) {
+        $(document).on('keyup', '.standard-masterkey-input', function() {
             var $el = $(this);
             var domain = $el.parent().parent().parent().find('.actual-value');
             $.each(domain, function(k, input) {
@@ -49,7 +47,7 @@ class ImageConfig {
             });
         });
 
-        $(document).on('keyup', '.recursive-masterkey-input', function(e) {
+        $(document).on('keyup', '.recursive-masterkey-input', function() {
             var $el = $(this);
             var domain = $el.parent().parent().parent().find('.actual-value');
             $.each(domain, function(k, input) {
@@ -57,12 +55,12 @@ class ImageConfig {
             });
         });
 
-        $(document).on('click', '.delete-subkey', function(e) {
+        $(document).on('click', '.delete-subkey', function() {
             // remove row
             $(this).parent().parent().parent().remove();
         });
 
-        $(document).on('click', '.delete-key', function(e) {
+        $(document).on('click', '.delete-key', function() {
             // remove fieldset
             $(this).parent().parent().remove();
         });
@@ -257,20 +255,12 @@ class ImageConfig {
                 headers: {Accept : "application/json; charset=utf-8"},
                 type: "GET",
                 url: url
-            }).done($.proxy(function(data) {
+            }).done($.proxy(function() {
                 /**
                  * Callback after confirming.
                  */
 
                 $btn.removeClass('btn-warning').addClass('btn-success').html(prevCaption);
-
-                if (data.status == '200') {
-                    console.log("success!");
-                }
-
-                if (data.orphaned_series) {
-                    console.log("has orphaned series!");
-                }
             }));
         });
     }
