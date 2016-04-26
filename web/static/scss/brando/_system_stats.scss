@@ -2,12 +2,25 @@
   background-color: #FFFFFF;
   padding: 15px;
   box-shadow: 3px 3px #E2F4F7;
-  width: 150px;
   float: left;
   margin-right: 10px;
   margin-bottom: 10px;
   text-align: center;
-  height: 130px;
+  width: 330px;
+  height: 235px;
+
+  .card-content-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 150px;
+    background-color: #fafafa;
+
+    .display {
+      font-family: "a-mono";
+      font-size: 30px;
+    }
+  }
 
   a {
     text-transform: uppercase;
