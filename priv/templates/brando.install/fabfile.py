@@ -255,25 +255,12 @@ def deploy_release():
     _notify_build_complete(version)
 
 
-def _docker_env():
-    """
-    Sets the environment to use default docker
-    """
-    _env = local('docker-machine env default', capture=True)
-    # Reorganize into a string that could be used with prefix().
-    _env = re.sub(r'^#.*$', '', _env, flags=re.MULTILINE)  # Remove comments
-    _env = re.sub(r'^export ', '', _env, flags=re.MULTILINE)  # Remove `export `
-    _env = re.sub(r'\n', ' ', _env, flags=re.MULTILINE)  # Merge to a single line
-    return _env
-
-
 def build_release():
     """
     Build release with docker
     """
     print(yellow('==> building local release with docker...'))
-    with prefix(_docker_env()):
-        local('docker build -t twined/%s .' % env.project_name)
+    local('docker build -t twined/%s .' % env.project_name)
 
 
 def copy_release_from_docker(version):
@@ -282,8 +269,7 @@ def copy_release_from_docker(version):
     """
     print(yellow('==> copying release archive from docker to release-archives/'))
     local('mkdir -p release-archives')
-    with prefix(_docker_env()):
-        local('docker run --rm --entrypoint cat twined/%s /app/rel/%s/releases/%s/%s.tar.gz > release-archives/%s_%s.tar.gz' % (env.project_name, env.project_name, version, env.project_name, env.project_name, version))
+    local('docker run --rm --entrypoint cat twined/%s /app/rel/%s/releases/%s/%s.tar.gz > release-archives/%s_%s.tar.gz' % (env.project_name, env.project_name, version, env.project_name, env.project_name, version))
 
 
 def upload_release(version):
