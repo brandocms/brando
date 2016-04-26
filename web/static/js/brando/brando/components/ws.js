@@ -52,7 +52,7 @@ class WS {
             "top": "0",
             "left": "0",
             "width": "100%",
-            "display": "none",
+            "opacity": "0",
             "height": "100%",
             "background-color": "#fff",
             "z-index": "99999",
@@ -60,7 +60,7 @@ class WS {
             "align-items": "center",
             "justify-content": "center",
         });
-        $overlay.fadeIn();
+        $overlay.animate({opacity: 1}, 'slow');
         $('<div id="progressbar">').appendTo('#progress-container');
         WS.progressbar = new ProgressBar.Circle('#progressbar', {
             strokeWidth: 5,
@@ -88,6 +88,7 @@ class WS {
         }
 
         if (value == 1) {
+            WS.progressbar.setText('done!');
             $('#overlay').remove();
             WS.progressbar = null;
         }
