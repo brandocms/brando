@@ -8,7 +8,7 @@ defmodule <%= application_module %>.Repo.Migrations.CreateImagecategories do
       add :creator_id,        references(:users)
       timestamps
     end
-    create index(:imagecategories, [:slug])
+    create unique_index(:imagecategories, [:slug])
   end
 
   def down do

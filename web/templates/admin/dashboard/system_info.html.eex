@@ -4,38 +4,44 @@
 <div id="memoryinfo" class="clearfix">
   <div class="card" id="total-memory">
     <h4><%= gettext("total") %></h4>
-    <div class="sparkline"></div>
+    <canvas id="total-memory-chart"></canvas>
     <div class="text">0 mb</div>
   </div>
   <div class="card" id="system-memory">
     <h4><%= gettext("system") %></h4>
-    <div class="sparkline"></div>
+    <canvas id="system-memory-chart"></canvas>
     <div class="text">0 mb</div>
   </div>
   <div class="card" id="atom-memory">
     <h4><%= gettext("atoms") %></h4>
-    <div class="sparkline"></div>
+    <canvas id="atom-memory-chart"></canvas>
     <div class="text">0 mb</div>
   </div>
   <div class="card" id="binary-memory">
     <h4><%= gettext("binary") %></h4>
-    <div class="sparkline"></div>
+    <canvas id="binary-memory-chart"></canvas>
     <div class="text">0 mb</div>
   </div>
   <div class="card" id="process-memory">
     <h4><%= gettext("process") %></h4>
-    <div class="sparkline"></div>
+    <canvas id="process-memory-chart"></canvas>
     <div class="text">0 mb</div>
   </div>
   <div class="card" id="code-memory">
     <h4><%= gettext("code") %></h4>
-    <div class="sparkline"></div>
+    <canvas id="code-memory-chart"></canvas>
     <div class="text">0 mb</div>
   </div>
   <div class="card" id="ets-memory">
     <h4><%= gettext("ets") %></h4>
-    <div class="sparkline"></div>
+    <canvas id="ets-memory-chart"></canvas>
     <div class="text">0 mb</div>
+  </div>
+  <div class="card" id="system-uptime">
+    <h4><%= gettext("system uptime") %></h4>
+    <div class="card-content-wrapper">
+      <div class="display">0 min</div>
+    </div>
   </div>
 </div>
 

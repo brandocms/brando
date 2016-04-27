@@ -22,7 +22,7 @@
             </li>
             <li>
               <a href="<%= Brando.helpers.admin_image_category_path(@conn, :sequence, category.id) %>">
-                <i class="fa fa-fw fa-sort"></i> <%= gettext("Sort images") %>
+                <i class="fa fa-fw fa-sort"></i> <%= gettext("Sort image series") %>
               </a>
             </li>
             <li>
@@ -91,7 +91,7 @@
                   </li>
                   <li>
                     <a href="<%= Brando.helpers.admin_image_series_path(@conn, :sequence, serie.id) %>">
-                      <i class="fa fa-fw fa-sort"> </i><%= gettext("Sort image series") %>
+                      <i class="fa fa-fw fa-sort"> </i><%= gettext("Sort images") %>
                     </a>
                   </li>
                   <li>

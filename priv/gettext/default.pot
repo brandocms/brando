@@ -14,7 +14,7 @@ msgstr ""
 msgid "atoms"
 msgstr ""
 
-#: web/templates/admin/dashboard/system_info.html.eex:60
+#: web/templates/admin/dashboard/system_info.html.eex:66
 msgid "last updated"
 msgstr ""
 
@@ -72,7 +72,7 @@ msgstr ""
 msgid "Configure image series"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:212
+#: web/controllers/admin/image_category_controller.ex:216
 #: web/controllers/admin/image_series_controller.ex:195
 #: web/controllers/admin/user_controller.ex:175
 msgid "Confirm deletion"
@@ -190,7 +190,7 @@ msgstr ""
 msgid "Image category created"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:224
+#: web/controllers/admin/image_category_controller.ex:228
 msgid "Image category deleted"
 msgstr ""
 
@@ -300,13 +300,13 @@ msgstr ""
 msgid "Sort image category"
 msgstr ""
 
-#: web/templates/admin/image/index.html.eex:94
+#: web/templates/admin/image/index.html.eex:25
 #: web/templates/admin/image_series/sequence.html.eex:1
 #: web/templates/admin/image_series/upload.html.eex:8
 msgid "Sort image series"
 msgstr ""
 
-#: web/templates/admin/image/index.html.eex:25
+#: web/templates/admin/image/index.html.eex:94
 msgid "Sort images"
 msgstr ""
 
@@ -359,7 +359,7 @@ msgstr ""
 msgid "Add new"
 msgstr ""
 
-#: web/menus/images_menu.ex:10 web/models/image_series.ex:201
+#: web/menus/images_menu.ex:10 web/models/image_series.ex:205
 msgid "Images"
 msgstr ""
 
@@ -387,7 +387,7 @@ msgstr ""
 msgid "Config"
 msgstr ""
 
-#: web/models/image_series.ex:197
+#: web/models/image_series.ex:201
 msgid "Configuration"
 msgstr ""
 
@@ -404,11 +404,11 @@ msgid "Connected"
 msgstr ""
 
 #: web/models/image.ex:146 web/models/image_category.ex:139
-#: web/models/image_series.ex:200
+#: web/models/image_series.ex:204
 msgid "Creator"
 msgstr ""
 
-#: web/models/image_series.ex:198
+#: web/models/image_series.ex:202
 msgid "Credits"
 msgstr ""
 
@@ -429,7 +429,7 @@ msgid "Full name"
 msgstr ""
 
 #: web/models/image.ex:143 web/models/image_category.ex:135
-#: web/models/image_series.ex:194 web/models/user.ex:185
+#: web/models/image_series.ex:198 web/models/user.ex:185
 msgid "ID"
 msgstr ""
 
@@ -437,7 +437,7 @@ msgstr ""
 msgid "Image"
 msgstr ""
 
-#: web/models/image_series.ex:202 web/models/image_series.ex:203
+#: web/models/image_series.ex:206 web/models/image_series.ex:207
 msgid "Image category"
 msgstr ""
 
@@ -446,7 +446,7 @@ msgid "Image series"
 msgstr ""
 
 #: web/models/image.ex:148 web/models/image_category.ex:141
-#: web/models/image_series.ex:204 web/models/user.ex:193
+#: web/models/image_series.ex:208 web/models/user.ex:193
 msgid "Inserted at"
 msgstr ""
 
@@ -458,7 +458,7 @@ msgstr ""
 msgid "Last login"
 msgstr ""
 
-#: web/models/image_category.ex:136 web/models/image_series.ex:195
+#: web/models/image_category.ex:136 web/models/image_series.ex:199
 msgid "Name"
 msgstr ""
 
@@ -495,16 +495,16 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
-#: web/models/image.ex:145 web/models/image_series.ex:199
+#: web/models/image.ex:145 web/models/image_series.ex:203
 msgid "Sequence"
 msgstr ""
 
-#: web/models/image_category.ex:137 web/models/image_series.ex:196
+#: web/models/image_category.ex:137 web/models/image_series.ex:200
 msgid "Slug"
 msgstr ""
 
 #: web/models/image.ex:149 web/models/image_category.ex:142
-#: web/models/image_series.ex:205 web/models/user.ex:194
+#: web/models/image_series.ex:209 web/models/user.ex:194
 msgid "Updated at"
 msgstr ""
 
@@ -540,7 +540,7 @@ msgstr ""
 msgid "image category"
 msgstr ""
 
-#: web/models/image_series.ex:191
+#: web/models/image_series.ex:195
 msgid "image(s)"
 msgstr ""
 
@@ -548,11 +548,11 @@ msgstr ""
 msgid "images"
 msgstr ""
 
-#: web/models/image_series.ex:186
+#: web/models/image_series.ex:190
 msgid "imageserie"
 msgstr ""
 
-#: web/models/image_series.ex:187
+#: web/models/image_series.ex:191
 msgid "imageseries"
 msgstr ""
 
@@ -568,7 +568,7 @@ msgstr ""
 msgid "must be unique"
 msgstr ""
 
-#: lib/brando/form/fields.ex:688
+#: lib/brando/form/fields.ex:690 lib/brando/form/fields.ex:692
 msgid "should be at least %{count} characters"
 msgstr ""
 
@@ -701,11 +701,11 @@ msgstr ""
 msgid "Password must be at least 6 characters"
 msgstr ""
 
-#: web/templates/admin/dashboard/system_info.html.eex:54
+#: web/templates/admin/dashboard/system_info.html.eex:60
 msgid "Log"
 msgstr ""
 
-#: web/templates/admin/dashboard/system_info.html.eex:42
+#: web/templates/admin/dashboard/system_info.html.eex:48
 msgid "Servers"
 msgstr ""
 
@@ -737,7 +737,7 @@ msgstr ""
 msgid "Allowed mimetypes"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:161
+#: web/controllers/admin/image_category_controller.ex:162
 msgid "Category propagated"
 msgstr ""
 
@@ -782,7 +782,7 @@ msgstr ""
 msgid "image series"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:158
+#: web/controllers/admin/image_category_controller.ex:159
 msgid "Category propagated, but you have orphaned series. Click <a href=\"%{url}\">here</a> to verify and delete"
 msgstr ""
 
@@ -790,7 +790,7 @@ msgstr ""
 msgid "Delete orphans"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:174
+#: web/controllers/admin/image_category_controller.ex:178
 msgid "Handle orphaned image series"
 msgstr ""
 
@@ -798,7 +798,7 @@ msgstr ""
 msgid "Handle orphans for category "
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:190
+#: web/controllers/admin/image_category_controller.ex:194
 msgid "Orphans deleted"
 msgstr ""
 
@@ -808,4 +808,12 @@ msgstr ""
 
 #: web/templates/admin/image_category/handle_orphans.html.eex:5
 msgid "You are about to delete these folders. Please check carefully before proceeding."
+msgstr ""
+
+#: lib/brando/form/fields.ex:688
+msgid "has already been taken"
+msgstr ""
+
+#: web/templates/admin/dashboard/system_info.html.eex:41
+msgid "system uptime"
 msgstr ""

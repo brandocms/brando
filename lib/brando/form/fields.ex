@@ -674,17 +674,21 @@ defmodule Brando.Form.Fields do
   @spec parse_error(String.t | {String.t, integer}, Keyword.t) :: String.t
   def parse_error(error, _) do
     case error do
-      "can't be blank"     ->
+      {"can't be blank", _}         ->
         gettext("can't be blank")
-      "must be unique"     ->
+      {"must be unique", _}         ->
         gettext("must be unique")
-      "has invalid format" ->
+      {"has invalid format", _}     ->
         gettext("has invalid format")
-      "is invalid"         ->
+      {"is invalid", _}             ->
         gettext("is invalid")
-      "is reserved"        ->
+      {"is reserved", _}            ->
         gettext("is reserved")
-      {"should be at least %{count} characters", count: len} ->
+      {"has already been taken", _} ->
+        gettext("has already been taken")
+      {"should be at least %{count} character(s)", [count: len]} ->
+        gettext("should be at least %{count} characters", count: len)
+      {"should be at least %{count} characters", [count: len]} ->
         gettext("should be at least %{count} characters", count: len)
       err                  ->
         is_binary(err) && err || inspect(err)

@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.29.0"
+  @version "0.30.0"
   @description "Boilerplate for Twined applications."
 
   def project do
@@ -14,6 +14,7 @@ defmodule Brando.Mixfile do
      test_coverage: [tool: ExCoveralls],
      package: package,
      description: @description,
+     aliases: aliases,
 
      # Docs
      name: "Brando",
@@ -36,12 +37,12 @@ defmodule Brando.Mixfile do
     [{:comeonin, "~> 2.1"},
      {:earmark, "~> 0.2"},
      {:eightyfour, github: "twined/eightyfour"},
-     {:gettext, "~> 0.10"},
-     {:httpoison, "== 0.8.1"},
+     {:gettext, "~> 0.11"},
+     {:httpoison, "~> 0.8"},
      {:mogrify, github: "twined/mogrify"},
      {:phoenix, "~> 1.1"},
-     {:phoenix_html, "~> 2.4"},
-     {:poison, "~> 1.3"},
+     {:phoenix_html, "~> 2.5"},
+     {:poison, "~> 2.0"}, # was 1.3
      {:postgrex, "~> 0.11"},
      {:scrivener, "~> 1.1"},
      {:slugger, "~> 0.1.0"},
@@ -51,7 +52,7 @@ defmodule Brando.Mixfile do
      {:dialyze, "~> 0.2", only: :dev},
 
      # Test dependencies
-     {:phoenix_ecto, "~> 3.0.0-beta", only: :test},
+     {:phoenix_ecto, "~> 3.0.0-rc", only: :test},
      {:ex_machina, "~> 0.6.1", only: :test},
      {:excoveralls, "~> 0.5.1", only: :test},
 
@@ -74,4 +75,15 @@ defmodule Brando.Mixfile do
   # Specifies which paths to compile per environment
   defp elixirc_paths(:test), do: ["lib", "web", "test/support"]
   defp elixirc_paths(_),     do: ["lib", "web"]
+
+  # Aliases are shortcut or tasks specific to the current project.
+  # For example, to create, migrate and run the seeds file at once:
+  #
+  #     $ mix ecto.setup
+  #
+  # See the documentation for `Mix` for more info on aliases.
+  defp aliases do
+    ["ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+     "ecto.reset": ["ecto.drop", "ecto.setup"]]
+  end
 end

@@ -13,7 +13,7 @@ defmodule <%= application_module %>.Repo.Migrations.CreateImageseries do
       sequenced
       timestamps
     end
-    create index(:imageseries, [:slug])
+    create unique_index(:imageseries, [:slug])
   end
 
   def down do

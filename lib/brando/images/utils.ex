@@ -147,7 +147,7 @@ defmodule Brando.Images.Utils do
     size_cfg =
       if Map.has_key?(size_cfg, "portrait") do
         image_info = Mogrify.verbose(image)
-        if image_info.height > image_info.width do
+        if String.to_integer(image_info.height) > String.to_integer(image_info.width) do
           size_cfg["portrait"]
         else
           size_cfg["landscape"]
@@ -462,10 +462,11 @@ defmodule Brando.Images.Utils do
   end
 
   defp do_check_image_path(image, image_path, image_dirname, image_basename, upload_dirname) do
+    media_path = Path.expand(Brando.config(:media_path))
     if image_dirname != upload_dirname do
-      File.mkdir_p(Path.join(Brando.config(:media_path), upload_dirname))
-      File.cp(Path.join(Brando.config(:media_path), image_path),
-              Path.join([Brando.config(:media_path), upload_dirname, image_basename]))
+      File.mkdir_p(Path.join(media_path, upload_dirname))
+      File.cp(Path.join(media_path, image_path),
+              Path.join([media_path, upload_dirname, image_basename]))
 
       Map.put(image.image, :path, Path.join(upload_dirname, image_basename))
     else
@@ -478,13 +479,15 @@ defmodule Brando.Images.Utils do
   """
   def get_orphaned_series(image_series, starts_with: starts_with) do
     # first grab all actual series upload paths
+    media_path = Path.expand(Brando.config(:media_path))
+
     upload_paths =
       for is <- image_series do
-        Path.join(Brando.config(:media_path), is.cfg.upload_path)
+        Path.join(media_path, is.cfg.upload_path)
       end
 
     if upload_paths != [] do
-      check_path = Path.join(Brando.config(:media_path), starts_with)
+      check_path = Path.join(media_path, starts_with)
       existing_paths = Path.wildcard(Path.join(check_path, "*"))
 
       existing_paths -- upload_paths

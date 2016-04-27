@@ -8,12 +8,12 @@ ExUnit.start
 File.rm_rf!(Path.join([Mix.Project.app_path, "tmp", "media"]))
 File.mkdir_p!(Path.join([Mix.Project.app_path, "tmp", "media"]))
 
-# Basic test repo
-alias Brando.Integration.TestRepo, as: Repo
-
 defmodule Brando.Integration.TestRepo do
   use Ecto.Repo, otp_app: :brando
 end
+
+# Basic test repo
+alias Brando.Integration.TestRepo, as: Repo
 
 defmodule Brando.Integration.Endpoint do
   use Phoenix.Endpoint,
@@ -46,9 +46,6 @@ defmodule Brando.Integration.TestCase do
 end
 
 Code.require_file "support/user_socket.exs", __DIR__
-
-_ = Ecto.Storage.down(Repo)
-_ = Ecto.Storage.up(Repo)
 
 Mix.Task.run "ecto.create", ["-r", Repo, "--quiet"]
 Mix.Task.run "ecto.migrate", ["-r", Repo, "--quiet"]

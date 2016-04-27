@@ -24,7 +24,7 @@
     border-bottom: 4px solid #299848;
   }
 
-  &.alert-danger {
+  &.alert-danger, &.alert-error {
     background-color: #C04040;
     border-bottom: 4px solid #9D2828;
   }

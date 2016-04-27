@@ -7,7 +7,7 @@
     <a href="<%= Brando.helpers.admin_image_path(@conn, :index) %>" class="btn btn-default">
       <i class="fa fa-list fa-fw m-r-sm"></i> <%= gettext("Back to index") %>
     </a>
-    <a href="<%= Brando.helpers.admin_image_category_path(@conn, :propagate_configuration, @category.id) %>" class="btn btn-default">
+    <a data-url="<%= Brando.helpers.admin_image_category_path(@conn, :propagate_configuration, @category.id) %>" href="<%= Brando.helpers.admin_image_category_path(@conn, :propagate_configuration, @category.id) %>" class="btn btn-default propagate-configuration">
       <i class="fa fa-list fa-fw m-r-sm"></i> <%= gettext("Propagate configuration to dependent image series") %>
     </a>
   </div>

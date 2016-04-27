@@ -45,8 +45,10 @@ defmodule Brando.StatsChannel do
       },
       status: %{
         instagram: instagram_status,
-        registry: registry_status
-      }
+        registry: registry_status,
+        uptime: system_uptime
+      },
+      interval: interval
     }
 
     {:noreply, socket}
@@ -60,5 +62,11 @@ defmodule Brando.StatsChannel do
     rescue
       _ -> false
     end
+  end
+
+  defp system_uptime do
+    :erlang.statistics(:wall_clock)
+    |> elem(0)
+    |> Brando.Utils.human_time
   end
 end
