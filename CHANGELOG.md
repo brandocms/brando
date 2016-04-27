@@ -9,6 +9,10 @@
   * Updated brunch.
   * Add slug collision avoidance `Brando.Utils.Model.avoid_slug_collision/1`. Use it in your
     `changeset` function when you have unique slugs.
+  * Updated deps. This must be reflected in your app's `mix.exs`:
+    * `{:phoenix_ecto, "~> 3.0.0-rc"}`
+    * `{:gettext, "~> 0.11"}`
+    * `mix deps.update phoenix_ecto gettext`
 
 ## v0.29.0 (2016-04-23)
 
