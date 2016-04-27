@@ -53,7 +53,7 @@ defmodule Brando.Integration.ImageTest do
 
   test "create/2 bad params", %{user: user} do
     assert {:error, cs} = Image.create(@params, user)
-    assert cs.errors == [image_series_id: "can't be blank"]
+    assert cs.errors == [image_series_id: {"can't be blank", []}]
   end
 
   test "update/2", %{user: user, series: series} do
@@ -83,7 +83,7 @@ defmodule Brando.Integration.ImageTest do
     assert image.sequence == 0
 
     assert {:error, cs} = Image.update(image, %{"sequence" => "string"})
-    assert cs.errors == [sequence: "is invalid"]
+    assert cs.errors == [sequence: {"is invalid", [type: :integer]}]
   end
 
   test "update_image_meta/3", %{user: user, series: series} do

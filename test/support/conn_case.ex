@@ -33,15 +33,13 @@ defmodule Brando.ConnCase do
     end
   end
 
-  setup do
+  setup tags do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Brando.Integration.TestRepo)
+
+    unless tags[:async] do
+      Ecto.Adapters.SQL.Sandbox.mode(Brando.Integration.TestRepo, {:shared, self()})
+    end
+
     :ok
   end
-
-  # setup tags do
-  #   unless tags[:async] do
-  #     Ecto.Adapters.SQL.restart_test_transaction(Brando.repo, [])
-  #   end
-  #   :ok
-  # end
 end

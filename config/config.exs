@@ -5,6 +5,7 @@
 # is restricted to this project.
 use Mix.Config
 
+config :brando, ecto_repos: [Brando.Integration.TestRepo]
 # These are defaults for internals, mostly overridden for testing
 # purposes. We put them here to not pollute the brando.exs file.
 config :brando,
