@@ -1,4 +1,4 @@
-## v0.30.0-dev (2016-XX-XX)
+## v0.30.0 (2016-04-27)
 
 * Bug fixes
   * Ensure that integer values sent to form are being handled as strings
