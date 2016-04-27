@@ -28,7 +28,7 @@ msgstr "Minne"
 msgid "atoms"
 msgstr "atomer"
 
-#: web/templates/admin/dashboard/system_info.html.eex:60
+#: web/templates/admin/dashboard/system_info.html.eex:66
 msgid "last updated"
 msgstr "sist oppdatert"
 
@@ -373,7 +373,7 @@ msgstr "slettet"
 msgid "Add new"
 msgstr "Legg til"
 
-#: web/menus/images_menu.ex:10 web/models/image_series.ex:201
+#: web/menus/images_menu.ex:10 web/models/image_series.ex:205
 msgid "Images"
 msgstr "Bilder"
 
@@ -401,7 +401,7 @@ msgstr "Profilbilde"
 msgid "Config"
 msgstr "Konfigurer"
 
-#: web/models/image_series.ex:197
+#: web/models/image_series.ex:201
 msgid "Configuration"
 msgstr "Konfigurasjon"
 
@@ -418,11 +418,11 @@ msgid "Connected"
 msgstr "Tilkoblet"
 
 #: web/models/image.ex:146 web/models/image_category.ex:139
-#: web/models/image_series.ex:200
+#: web/models/image_series.ex:204
 msgid "Creator"
 msgstr "Skaper"
 
-#: web/models/image_series.ex:198
+#: web/models/image_series.ex:202
 msgid "Credits"
 msgstr "Krediteringer"
 
@@ -443,7 +443,7 @@ msgid "Full name"
 msgstr "Fullt navn"
 
 #: web/models/image.ex:143 web/models/image_category.ex:135
-#: web/models/image_series.ex:194 web/models/user.ex:185
+#: web/models/image_series.ex:198 web/models/user.ex:185
 msgid "ID"
 msgstr "ID"
 
@@ -451,7 +451,7 @@ msgstr "ID"
 msgid "Image"
 msgstr "Bilde"
 
-#: web/models/image_series.ex:202 web/models/image_series.ex:203
+#: web/models/image_series.ex:206 web/models/image_series.ex:207
 msgid "Image category"
 msgstr "Bildekategori"
 
@@ -460,7 +460,7 @@ msgid "Image series"
 msgstr "Bildeserie"
 
 #: web/models/image.ex:148 web/models/image_category.ex:141
-#: web/models/image_series.ex:204 web/models/user.ex:193
+#: web/models/image_series.ex:208 web/models/user.ex:193
 msgid "Inserted at"
 msgstr "Lagt til"
 
@@ -472,7 +472,7 @@ msgstr "Språk"
 msgid "Last login"
 msgstr "Forrige innlogging"
 
-#: web/models/image_category.ex:136 web/models/image_series.ex:195
+#: web/models/image_category.ex:136 web/models/image_series.ex:199
 msgid "Name"
 msgstr "Navn"
 
@@ -509,16 +509,16 @@ msgstr "Roller"
 msgid "Save"
 msgstr "Lagre"
 
-#: web/models/image.ex:145 web/models/image_series.ex:199
+#: web/models/image.ex:145 web/models/image_series.ex:203
 msgid "Sequence"
 msgstr "Sekvens"
 
-#: web/models/image_category.ex:137 web/models/image_series.ex:196
+#: web/models/image_category.ex:137 web/models/image_series.ex:200
 msgid "Slug"
 msgstr "URL-tamp"
 
 #: web/models/image.ex:149 web/models/image_category.ex:142
-#: web/models/image_series.ex:205 web/models/user.ex:194
+#: web/models/image_series.ex:209 web/models/user.ex:194
 msgid "Updated at"
 msgstr "Sist oppdatert"
 
@@ -554,7 +554,7 @@ msgstr "bildekategorier"
 msgid "image category"
 msgstr "bildekategori"
 
-#: web/models/image_series.ex:191
+#: web/models/image_series.ex:195
 msgid "image(s)"
 msgstr "bilde(r)"
 
@@ -562,11 +562,11 @@ msgstr "bilde(r)"
 msgid "images"
 msgstr "bilder"
 
-#: web/models/image_series.ex:186
+#: web/models/image_series.ex:190
 msgid "imageserie"
 msgstr "bildeserie"
 
-#: web/models/image_series.ex:187
+#: web/models/image_series.ex:191
 msgid "imageseries"
 msgstr "bildeserier"
 
@@ -582,7 +582,7 @@ msgstr "er reservert"
 msgid "must be unique"
 msgstr "må være unikt"
 
-#: lib/brando/form/fields.ex:688
+#: lib/brando/form/fields.ex:690 lib/brando/form/fields.ex:692
 msgid "should be at least %{count} characters"
 msgstr "må være minst %{count} tegn"
 
@@ -715,11 +715,11 @@ msgstr "Passord må matche"
 msgid "Password must be at least 6 characters"
 msgstr "Passord må være minst 6 tegn"
 
-#: web/templates/admin/dashboard/system_info.html.eex:54
+#: web/templates/admin/dashboard/system_info.html.eex:60
 msgid "Log"
 msgstr "Log"
 
-#: web/templates/admin/dashboard/system_info.html.eex:42
+#: web/templates/admin/dashboard/system_info.html.eex:48
 msgid "Servers"
 msgstr "Servere"
 
@@ -823,3 +823,11 @@ msgstr "Disse mappene kan ikke gjenopprettes!"
 #: web/templates/admin/image_category/handle_orphans.html.eex:5
 msgid "You are about to delete these folders. Please check carefully before proceeding."
 msgstr "Du er i ferd med å slette disse mappene. Sjekk nøye før du fortsetter."
+
+#: lib/brando/form/fields.ex:688
+msgid "has already been taken"
+msgstr "er allerede i bruk"
+
+#: web/templates/admin/dashboard/system_info.html.eex:41
+msgid "system uptime"
+msgstr "system oppetid"
