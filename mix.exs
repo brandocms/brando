@@ -37,12 +37,12 @@ defmodule Brando.Mixfile do
     [{:comeonin, "~> 2.1"},
      {:earmark, "~> 0.2"},
      {:eightyfour, github: "twined/eightyfour"},
-     {:gettext, "~> 0.10"},
-     {:httpoison, "== 0.8.1"},
+     {:gettext, "~> 0.11"},
+     {:httpoison, "~> 0.8"},
      {:mogrify, github: "twined/mogrify"},
      {:phoenix, "~> 1.1"},
      {:phoenix_html, "~> 2.5"},
-     {:poison, "~> 1.3"},
+     {:poison, "~> 2.0"}, # was 1.3
      {:postgrex, "~> 0.11"},
      {:scrivener, "~> 1.1"},
      {:slugger, "~> 0.1.0"},
@@ -84,7 +84,6 @@ defmodule Brando.Mixfile do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     ["ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
-     "ecto.reset": ["ecto.drop", "ecto.setup"],
-     "test": ["ecto.create --quiet", "ecto.migrate", "test"]]
+     "ecto.reset": ["ecto.drop", "ecto.setup"]]
   end
 end

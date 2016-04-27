@@ -25,7 +25,7 @@ defmodule Brando.Type.ImageConfig do
   Cast should return OUR type no matter what the input.
   """
   def cast(val) when is_binary(val) do
-    val = Poison.decode!(val, as: Brando.Type.ImageConfig)
+    val = Poison.decode!(val, as: %Brando.Type.ImageConfig{})
     {:ok, val}
   end
   def cast(val) when is_map(val) do

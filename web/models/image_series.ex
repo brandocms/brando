@@ -47,6 +47,8 @@ defmodule Brando.ImageSeries do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
+    |> unique_constraint(:slug)
+    |> Brando.Utils.Model.avoid_slug_collision()
     |> inherit_configuration()
   end
 
@@ -63,6 +65,8 @@ defmodule Brando.ImageSeries do
   def changeset(model, :update, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
+    |> unique_constraint(:slug)
+    |> Brando.Utils.Model.avoid_slug_collision()
     |> validate_paths()
   end
 
