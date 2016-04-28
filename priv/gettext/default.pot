@@ -82,7 +82,7 @@ msgstr ""
 msgid "Dashboard"
 msgstr ""
 
-#: web/templates/error/db_error.html.eex:24
+#: web/templates/error/db_error.html.eex:3
 msgid "Database error"
 msgstr ""
 
@@ -156,9 +156,7 @@ msgstr ""
 msgid "Entry not found"
 msgstr ""
 
-#: web/templates/error/catch_all.html.eex:10
-#: web/templates/error/catch_all.html.eex:23
-#: web/templates/error/db_error.html.eex:10
+#: web/templates/error/catch_all.html.eex:2
 msgid "Error"
 msgstr ""
 
@@ -178,7 +176,7 @@ msgstr ""
 msgid "Existing images in this series"
 msgstr ""
 
-#: web/controllers/admin/dashboard_controller.ex:50
+#: web/controllers/admin/dashboard_controller.ex:57
 msgid "File not found"
 msgstr ""
 
@@ -258,7 +256,7 @@ msgstr ""
 msgid "No images"
 msgstr ""
 
-#: web/templates/error/not_found.html.eex:24
+#: web/templates/error/not_found.html.eex:3
 msgid "Page not found"
 msgstr ""
 
@@ -286,7 +284,7 @@ msgstr ""
 msgid "Save sorted series"
 msgstr ""
 
-#: web/templates/error/server_error.html.eex:24
+#: web/templates/error/server_error.html.eex:3
 msgid "Server error"
 msgstr ""
 
@@ -816,4 +814,20 @@ msgstr ""
 
 #: web/templates/admin/dashboard/system_info.html.eex:41
 msgid "system uptime"
+msgstr ""
+
+#: web/templates/error/_feedback.html.eex:4
+msgid "A short description of the events leading to the error"
+msgstr ""
+
+#: web/templates/error/500.html.eex:3 web/templates/error/admin_500.html.eex:3
+msgid "Application error"
+msgstr ""
+
+#: web/templates/error/_feedback.html.eex:3
+msgid "Developers have been notified about this error, but if you can provide extra information about the error, please do so in the textbox below. If not, that's OK too!"
+msgstr ""
+
+#: web/templates/error/_feedback.html.eex:17
+msgid "Thanks!"
 msgstr ""

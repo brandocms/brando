@@ -96,7 +96,7 @@ msgstr "Bekreft sletting"
 msgid "Dashboard"
 msgstr "Kontrollpanel"
 
-#: web/templates/error/db_error.html.eex:24
+#: web/templates/error/db_error.html.eex:3
 msgid "Database error"
 msgstr "Databasefeil"
 
@@ -170,9 +170,7 @@ msgstr "E-post"
 msgid "Entry not found"
 msgstr "Oppføring fantes ikke"
 
-#: web/templates/error/catch_all.html.eex:10
-#: web/templates/error/catch_all.html.eex:23
-#: web/templates/error/db_error.html.eex:10
+#: web/templates/error/catch_all.html.eex:2
 msgid "Error"
 msgstr "Feil"
 
@@ -192,7 +190,7 @@ msgstr "Feil i skjemaet"
 msgid "Existing images in this series"
 msgstr "Eksisterende bilder i denne serien"
 
-#: web/controllers/admin/dashboard_controller.ex:50
+#: web/controllers/admin/dashboard_controller.ex:57
 msgid "File not found"
 msgstr "Fil ikke funnet"
 
@@ -272,7 +270,7 @@ msgstr "Ingen bildeserier"
 msgid "No images"
 msgstr "Ingen bilder"
 
-#: web/templates/error/not_found.html.eex:24
+#: web/templates/error/not_found.html.eex:3
 msgid "Page not found"
 msgstr "Side ikke funnet."
 
@@ -300,7 +298,7 @@ msgstr "Lagre sortert kategori"
 msgid "Save sorted series"
 msgstr "Lagre sortert serie"
 
-#: web/templates/error/server_error.html.eex:24
+#: web/templates/error/server_error.html.eex:3
 msgid "Server error"
 msgstr "Serverfeil"
 
@@ -831,3 +829,19 @@ msgstr "er allerede i bruk"
 #: web/templates/admin/dashboard/system_info.html.eex:41
 msgid "system uptime"
 msgstr "system oppetid"
+
+#: web/templates/error/_feedback.html.eex:4
+msgid "A short description of the events leading to the error"
+msgstr "En kort beskrivelse av hendelsene som førte til feilen"
+
+#: web/templates/error/500.html.eex:3 web/templates/error/admin_500.html.eex:3
+msgid "Application error"
+msgstr "Applikasjonsfeil"
+
+#: web/templates/error/_feedback.html.eex:3
+msgid "Developers have been notified about this error, but if you can provide extra information about the error, please do so in the textbox below. If not, that's OK too!"
+msgstr "Feilen er logget og utvikler er varslet, men hvis du kan supplere med ekstra informasjon om feilen, vennligst fyll inn i tekstboksen under."
+
+#: web/templates/error/_feedback.html.eex:17
+msgid "Thanks!"
+msgstr "Takk!"
