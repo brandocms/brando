@@ -2,6 +2,7 @@
 
 * Enhancements
   * Error reporting integration if otp_app uses Hrafn.
+  * Add `dashboard/raise` url for testing 500 errors.
 
 ## v0.30.0 (2016-04-27)
 

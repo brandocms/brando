@@ -30,6 +30,13 @@ defmodule Brando.Admin.DashboardController do
     |> render
   end
 
+  @doc """
+  Dummy action for raising and testing 500 page + error handling.
+  """
+  def raise(_, _) do
+    raise "boom!"
+  end
+
   defp get_log_info(log_file) do
     case File.stat(log_file) do
       {:ok, stat} ->

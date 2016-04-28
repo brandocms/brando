@@ -24,6 +24,7 @@ defmodule Brando.Dashboard.Routes.Admin do
 
       get "#{path}",                 ctrl, :dashboard,       opts
       get "#{path}/systeminfo",      ctrl, :system_info,     opts
+      get "#{path}/raise",           ctrl, :raise,     opts
     end
   end
 end
