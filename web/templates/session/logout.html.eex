@@ -1,2 +1,2 @@
-<div class="text-center"><i class="fa fa-check-circle-o fa-5x m-t-md"></i></div>
+<div class="text-center"><i class="fa fa-hand-peace-o fa-5x m-t-md"></i></div>
 <p><%= gettext("You have been logged out of the admin area.") %></p>

@@ -15,8 +15,8 @@ defmodule Brando.ErrorView do
     render("not_found.html", assigns)
   end
 
-  def render("500.html", %{conn: %Plug.Conn{path_info: ["admin" | _]}} = asn) do
-    render("admin_500.html", asn)
+  def render("500.html", %{conn: %Plug.Conn{path_info: ["admin" | _]}} = assigns) do
+    render("admin_500.html", assigns)
   end
 
   def render("500.html", %{conn: %Plug.Conn{path_info: [_]}} = assigns) do
@@ -25,6 +25,28 @@ defmodule Brando.ErrorView do
 
   def render("504.html", assigns) do
     render("db_error.html", assigns)
+  end
+
+  def render("top.html", assigns) do
+    render("_top.html", assigns)
+  end
+
+  def render("bottom.html", assigns) do
+    render("_bottom.html", assigns)
+  end
+
+  def render("feedback.html", %{conn: conn} = assigns) do
+    current_user = Brando.Utils.current_user(conn)
+    event_id     = Map.get(conn.private, :hrafn_event_id, nil)
+    public_dsn   = Map.get(conn.private, :hrafn_public_dsn, nil)
+
+    assigns =
+      assigns
+      |> Map.put(:event_id, event_id)
+      |> Map.put(:public_dsn, public_dsn)
+      |> Map.put(:current_user, current_user)
+
+    render("_feedback.html", assigns)
   end
 
   # In case no render clause matches or no

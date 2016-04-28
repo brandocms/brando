@@ -24,7 +24,7 @@
                 <div class="spinner">
                   <i class="fa fa-refresh fa-spin"></i>
                 </div>
-                <h1 id="app-name"><%= app_name %> admin</h1>
+                <h1 id="app-name"><%= @type %></h1>
               <%= if get_flash(@conn, :error) do %>
                 <div class="alert alert-block alert-danger">
                   <a class="close" data-dismiss="alert" href="#">×</a>

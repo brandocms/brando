@@ -1,0 +1,14 @@
+                <span class="version">&beta; <%= Brando.version %></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    <script>
+        var textFit = require('textfit');
+        $(document).ready(function() {
+          textFit(document.getElementById("app-name"), {widthOnly: true});
+        });
+    </script>
+  </body>
+</html>

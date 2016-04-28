@@ -1,5 +1,8 @@
 ## v0.31.0-dev (2016-XX-XX)
 
+* Enhancements
+  * Error reporting integration if otp_app uses Hrafn.
+
 ## v0.30.0 (2016-04-27)
 
 * Bug fixes
