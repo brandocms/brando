@@ -1,6 +1,8 @@
 ## v0.31.0-dev (2016-XX-XX)
 
 * Enhancements
+  * Clean up orphan handling.
+  * Clean up image implementation.
   * Error reporting integration if otp_app uses Hrafn.
   * Add `dashboard/raise` url for testing 500 errors.
 
