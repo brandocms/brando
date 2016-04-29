@@ -489,7 +489,6 @@ defmodule Brando.Images.Utils do
     if upload_paths != [] do
       check_path = Path.join(media_path, starts_with)
       existing_paths = Path.wildcard(Path.join(check_path, "*"))
-
       existing_paths -- upload_paths
     else
       []
