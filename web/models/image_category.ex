@@ -12,7 +12,6 @@ defmodule Brando.ImageCategory do
   alias Brando.ImageSeries
 
   import Brando.Gettext
-  import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
 
   @required_fields ~w(name slug creator_id)a
