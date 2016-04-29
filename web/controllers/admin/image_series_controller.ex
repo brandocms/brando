@@ -120,7 +120,7 @@ defmodule Brando.Admin.ImageSeriesController do
     sizes = fix_size_cfg_vals(sizes)
 
     new_cfg =
-      record.cfg || %Brando.ImageConfig
+      Map.get(record, :cfg) || %Brando.Type.ImageConfig{}
       |> Map.put(:allowed_mimetypes, String.split(cfg["allowed_mimetypes"], ", "))
       |> Map.put(:default_size, cfg["default_size"])
       |> Map.put(:size_limit, String.to_integer(cfg["size_limit"]))
