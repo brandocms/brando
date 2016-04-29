@@ -152,7 +152,9 @@ defmodule Brando.Admin.ImageCategoryController do
         Brando.Images.Utils.recreate_sizes_for(series_id: s.id)
       end
 
-      orphaned_series = Brando.Images.Utils.get_orphaned_series(series, starts_with: category.cfg.upload_path)
+      # refetch category and series to reflect updates
+      category = Brando.repo.get(Brando.ImageCategory, id)
+      orphaned_series = get_orphans(category)
 
       msg =
         if orphaned_series != [] do
