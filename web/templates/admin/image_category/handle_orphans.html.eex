@@ -1,5 +1,5 @@
 <h1>
-  <%= gettext("Handle orphans for category ") %>: <%= @category.name %>
+  <%= gettext("Handle orphans") %>
 </h1>
 <p>
   <%= gettext("You are about to delete these folders. Please check carefully before proceeding.") %>
@@ -20,4 +20,4 @@
   <% end %>
 </table>
 
-<%= Brando.HTML.post_form_button(gettext("Delete orphans"), :admin_image_category_path, :handle_orphans_post, [@category.id]) %>
+<%= Brando.HTML.post_form_button(gettext("Delete orphans"), :admin_image_category_path, :handle_orphans_post) %>

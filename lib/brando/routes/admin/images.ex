@@ -85,9 +85,9 @@ defmodule Brando.Images.Routes.Admin do
              :sequence,                          categories_opts
       post   "#{path}/categories/:filter/sort",  categories_ctrl,
              :sequence_post,                     categories_opts
-      get    "#{path}/categories/:id/orphans",   categories_ctrl,
+      get    "#{path}/categories/orphans",       categories_ctrl,
              :handle_orphans,                    categories_opts
-      post   "#{path}/categories/:id/orphans",   categories_ctrl,
+      post   "#{path}/categories/orphans",       categories_ctrl,
              :handle_orphans_post,               categories_opts
       get    "#{path}/categories/:id/edit",      categories_ctrl,
              :edit,                              categories_opts

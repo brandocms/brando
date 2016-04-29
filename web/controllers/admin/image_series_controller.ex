@@ -11,20 +11,18 @@ defmodule Brando.Admin.ImageSeriesController do
   import Brando.Plug.HTML
   import Brando.Images.Utils, only: [recreate_sizes_for: 1, fix_size_cfg_vals: 1]
   import Brando.Utils, only: [helpers: 1]
+  import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query
+
+  alias Brando.Image
+  alias Brando.ImageSeries
 
   plug :put_section, "images"
 
   @doc false
   def new(conn, %{"id" => category_id}) do
-    model = conn.private[:series_model]
-
-    series =
-      model
-      |> struct
-      |> Map.put(:image_category_id, String.to_integer(category_id))
-
-    changeset = model.changeset(series, :create)
+    series = %ImageSeries{image_category_id: String.to_integer(category_id)}
+    changeset = ImageSeries.changeset(series, :create)
 
     conn
     |> assign(:page_title, gettext("New image series"))
@@ -34,10 +32,12 @@ defmodule Brando.Admin.ImageSeriesController do
 
   @doc false
   def create(conn, %{"imageseries" => image_series}) do
-    model = conn.private[:series_model]
-    user = Brando.Utils.current_user(conn)
+    changeset =
+      %ImageSeries{}
+      |> put_creator(Brando.Utils.current_user(conn))
+      |> ImageSeries.changeset(:create, image_series)
 
-    case model.create(image_series, user) do
+    case Brando.repo.insert(changeset) do
       {:ok, _} ->
         conn
         |> put_flash(:notice, gettext("Image series created"))
@@ -54,11 +54,10 @@ defmodule Brando.Admin.ImageSeriesController do
 
   @doc false
   def edit(conn, %{"id" => id}) do
-    model = conn.private[:series_model]
     changeset =
-      model
+      ImageSeries
       |> Brando.repo.get_by!(id: id)
-      |> model.changeset(:update)
+      |> ImageSeries.changeset(:update)
 
     conn
     |> assign(:page_title, gettext("Edit image series"))
@@ -69,11 +68,10 @@ defmodule Brando.Admin.ImageSeriesController do
 
   @doc false
   def update(conn, %{"imageseries" => image_series, "id" => id}) do
-    series_model = conn.private[:series_model]
     changeset =
-      series_model
+      ImageSeries
       |> Brando.repo.get_by!(id: id)
-      |> Brando.ImageSeries.changeset(:update, image_series)
+      |> ImageSeries.changeset(:update, image_series)
 
     case Brando.repo.update(changeset) do
       {:ok, _} ->
@@ -101,6 +99,14 @@ defmodule Brando.Admin.ImageSeriesController do
   def configure(conn, %{"id" => series_id}) do
     series = Brando.repo.get_by!(Brando.ImageSeries, id: series_id)
 
+    series =
+      if !series.cfg do
+        category = Brando.repo.get!(Brando.ImageCategory, series.image_category_id)
+        Map.put(series, :cfg, category.cfg)
+      else
+        series
+      end
+
     conn
     |> assign(:page_title, gettext("Configure image series"))
     |> assign(:series, series)
@@ -111,7 +117,6 @@ defmodule Brando.Admin.ImageSeriesController do
   @doc false
   def configure_patch(conn, %{"config" => cfg, "sizes" => sizes, "id" => id}) do
     record = Brando.repo.get_by!(Brando.ImageSeries, id: id)
-
     sizes = fix_size_cfg_vals(sizes)
 
     new_cfg =
@@ -152,9 +157,8 @@ defmodule Brando.Admin.ImageSeriesController do
 
   @doc false
   def upload(conn, %{"id" => id}) do
-    series_model = conn.private[:series_model]
     series =
-      series_model
+      ImageSeries
       |> preload([:image_category, :images])
       |> Brando.repo.get_by!(id: id)
 
@@ -166,28 +170,22 @@ defmodule Brando.Admin.ImageSeriesController do
 
   @doc false
   def upload_post(conn, %{"id" => id} = params) do
-    series_model = conn.private[:series_model]
-    image_model = conn.private[:image_model]
-
-    user = Brando.Utils.current_user(conn)
-
     series =
-      series_model
+      ImageSeries
       |> preload([:image_category, :images])
       |> Brando.repo.get_by!(id: id)
 
     opts = Map.put(%{}, "image_series_id", series.id)
     cfg = series.cfg || Brando.config(Brando.Images)[:default_config]
-    {:ok, image} = image_model.check_for_uploads(params, user, cfg, opts)
+    {:ok, image} = Image.check_for_uploads(params, Brando.Utils.current_user(conn), cfg, opts)
 
     render(conn, :upload_post, image: image)
   end
 
   @doc false
   def delete_confirm(conn, %{"id" => id}) do
-    series_model = conn.private[:series_model]
     record =
-      series_model
+      ImageSeries
       |> preload([:image_category, :images, :creator])
       |> Brando.repo.get_by!(id: id)
 
@@ -199,9 +197,9 @@ defmodule Brando.Admin.ImageSeriesController do
 
   @doc false
   def delete(conn, %{"id" => id}) do
-    series_model = conn.private[:series_model]
-    record = Brando.repo.get_by!(series_model, id: id)
-    series_model.delete(record)
+    series = Brando.repo.get_by!(ImageSeries, id: id)
+    Brando.Images.Utils.delete_images_for(series_id: series.id)
+    Brando.repo.delete!(series)
 
     conn
     |> put_flash(:notice, gettext("Image series deleted"))
