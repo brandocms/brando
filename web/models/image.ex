@@ -101,11 +101,9 @@ defmodule Brando.Image do
   Get all images in series `id`.
   """
   def for_series_id(id) do
-    Brando.repo.all(
-      from m in __MODULE__,
-        where: m.image_series_id == ^id,
-        order_by: m.sequence
-    )
+    from m in __MODULE__,
+      where: m.image_series_id == ^id,
+      order_by: m.sequence
   end
 
   @doc """
@@ -120,16 +118,6 @@ defmodule Brando.Image do
       delete_original_and_sized_images(record, :image)
     end
     Brando.repo.delete_all(q)
-  end
-
-  def delete(record) when is_map(record) do
-    delete_original_and_sized_images(record, :image)
-    Brando.repo.delete!(record)
-  end
-
-  def delete(id) do
-    record = Brando.repo.get_by!(__MODULE__, id: id)
-    delete(record)
   end
 
   #
