@@ -42,6 +42,8 @@ defmodule Brando.ImageCategory do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
+    |> unique_constraint(:slug)
+    |> put_default_config
   end
 
   @doc """
@@ -55,40 +57,22 @@ defmodule Brando.ImageCategory do
   """
   @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
-    cast(model, params, @required_fields ++ @optional_fields)
-  end
-
-  @doc """
-  Create a changeset for the model by passing `params`.
-  If valid, generate a hashed password and insert model to Brando.repo.
-  If not valid, return errors from changeset
-  """
-  def create(params, current_user) do
-    path = Map.get(params, "slug", "default")
-
-    default_config =
-      Brando.Images
-      |> Brando.config
-      |> Keyword.get(:default_config)
-      |> Map.put(:upload_path, Path.join("images", path))
-
-    %__MODULE__{}
-    |> put_creator(current_user)
-    |> changeset(:create, params)
-    |> put_change(:cfg, default_config)
-    |> Brando.repo.insert
-  end
-
-  @doc """
-  Create an `update` changeset for the model by passing `params`.
-  If password is in changeset, hash and insert in changeset.
-  If valid, update model in Brando.repo.
-  If not valid, return errors from changeset
-  """
-  def update(model, params) do
     model
-    |> changeset(:update, params)
-    |> Brando.repo.update
+    |> cast(params, @required_fields ++ @optional_fields)
+    |> unique_constraint(:slug)
+    |> validate_paths()
+  end
+
+  @doc """
+  Put default image config in changeset
+  """
+  def put_default_config(cs) do
+    path = Ecto.Changeset.get_change(cs, :slug, "default")
+    default_config =
+      Brando.config(Brando.Images)[:default_config]
+      |> Map.put(:upload_path, Path.join(["images", "site", path]))
+
+    put_change(cs, :cfg, default_config)
   end
 
   @doc """
@@ -114,14 +98,25 @@ defmodule Brando.ImageCategory do
   end
 
   @doc """
-  Delete `category` from database
-
-  Also delete all dependent image_series which in part deletes all
-  dependent images.
+  Validate `cs` cfg upload_path if slug is changed
   """
-  def delete(category) do
-    Brando.Images.Utils.delete_series_for(category_id: category.id)
-    Brando.repo.delete!(category)
+  def validate_paths(cs) do
+    slug = get_change(cs, :slug)
+    if slug do
+      cfg = cs.data.cfg
+      split_path = Path.split(cfg.upload_path)
+
+      new_path =
+        split_path
+        |> List.delete_at(Enum.count(split_path) - 1)
+        |> Path.join
+        |> Path.join(slug)
+
+      cfg = Map.put(cfg, :upload_path, new_path)
+      put_change(cs, :cfg, cfg)
+    else
+      cs
+    end
   end
 
   #
