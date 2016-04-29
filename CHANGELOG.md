@@ -1,5 +1,11 @@
 ## v0.31.0-dev (2016-XX-XX)
 
+* Bug fixes
+  * Now creates a blank image config for image series if you try to configure an image serie
+    with `nil` config.
+  * Go through your site image series, and change their upload_path to `images/site/{serie}`.
+    This is needed for handling global orphaned image series.
+
 * Enhancements
   * Clean up orphan handling.
   * Clean up image implementation.
