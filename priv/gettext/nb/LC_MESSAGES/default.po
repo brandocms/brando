@@ -53,7 +53,8 @@ msgid "Authorization failed"
 msgstr "Autorisasjon feilet"
 
 #: web/templates/admin/image_category/configure.html.eex:8
-#: web/templates/admin/image_category/edit.html.eex:5
+#: web/templates/admin/image_category/edit.html.eex:8
+#: web/templates/admin/image_category/propagate_configuration.html.eex:8
 #: web/templates/admin/image_category/sequence.html.eex:26
 #: web/templates/admin/image_series/configure.html.eex:8
 #: web/templates/admin/image_series/edit.html.eex:5
@@ -75,19 +76,19 @@ msgstr "Konfigurer"
 msgid "Configure category"
 msgstr "Konfigurer kategori"
 
-#: web/controllers/admin/image_category_controller.ex:91
-#: web/controllers/admin/image_category_controller.ex:120
+#: web/controllers/admin/image_category_controller.ex:106
+#: web/controllers/admin/image_category_controller.ex:134
 msgid "Configure image category"
 msgstr "Konfigurer bildekategori"
 
-#: web/controllers/admin/image_series_controller.ex:105
-#: web/controllers/admin/image_series_controller.ex:134
+#: web/controllers/admin/image_series_controller.ex:111
+#: web/controllers/admin/image_series_controller.ex:139
 #: web/templates/admin/image/index.html.eex:99
 msgid "Configure image series"
 msgstr "Konfigurer bildeserie"
 
-#: web/controllers/admin/image_category_controller.ex:216
-#: web/controllers/admin/image_series_controller.ex:195
+#: web/controllers/admin/image_category_controller.ex:228
+#: web/controllers/admin/image_series_controller.ex:193
 #: web/controllers/admin/user_controller.ex:175
 msgid "Confirm deletion"
 msgstr "Bekreft sletting"
@@ -126,18 +127,15 @@ msgstr "Slett bruker"
 msgid "Deleted"
 msgstr "Slettet"
 
+#: web/controllers/admin/image_category_controller.ex:63
+#: web/controllers/admin/image_category_controller.ex:92
 #: web/templates/admin/image/index.html.eex:20
-msgid "Edit image"
-msgstr "Rediger bilde"
-
-#: web/controllers/admin/image_category_controller.ex:59
-#: web/controllers/admin/image_category_controller.ex:77
 #: web/templates/admin/image_category/edit.html.eex:1
 msgid "Edit image category"
 msgstr "Rediger bildekategori"
 
-#: web/controllers/admin/image_series_controller.ex:64
-#: web/controllers/admin/image_series_controller.ex:91
+#: web/controllers/admin/image_series_controller.ex:63
+#: web/controllers/admin/image_series_controller.ex:89
 #: web/templates/admin/image/index.html.eex:89
 #: web/templates/admin/image_series/edit.html.eex:1
 #: web/templates/admin/image_series/sequence.html.eex:15
@@ -174,12 +172,12 @@ msgstr "Oppføring fantes ikke"
 msgid "Error"
 msgstr "Feil"
 
-#: web/controllers/admin/image_category_controller.ex:45
-#: web/controllers/admin/image_category_controller.ex:81
-#: web/controllers/admin/image_category_controller.ex:125
+#: web/controllers/admin/image_category_controller.ex:50
+#: web/controllers/admin/image_category_controller.ex:96
+#: web/controllers/admin/image_category_controller.ex:139
 #: web/controllers/admin/image_series_controller.ex:50
-#: web/controllers/admin/image_series_controller.ex:95
-#: web/controllers/admin/image_series_controller.ex:139
+#: web/controllers/admin/image_series_controller.ex:93
+#: web/controllers/admin/image_series_controller.ex:144
 #: web/controllers/admin/user_controller.ex:92
 #: web/controllers/admin/user_controller.ex:120
 #: web/controllers/admin/user_controller.ex:163
@@ -198,15 +196,15 @@ msgstr "Fil ikke funnet"
 msgid "Go back"
 msgstr "Gå tilbake"
 
-#: web/controllers/admin/image_category_controller.ex:38
+#: web/controllers/admin/image_category_controller.ex:43
 msgid "Image category created"
 msgstr "Bildekategori opprettet"
 
-#: web/controllers/admin/image_category_controller.ex:228
+#: web/controllers/admin/image_category_controller.ex:240
 msgid "Image category deleted"
 msgstr "Bildekategori slettet"
 
-#: web/controllers/admin/image_category_controller.ex:73
+#: web/controllers/admin/image_category_controller.ex:88
 msgid "Image category updated"
 msgstr "Bildekategori oppdatert"
 
@@ -214,15 +212,15 @@ msgstr "Bildekategori oppdatert"
 msgid "Image series created"
 msgstr "Bildeserie opprettet"
 
-#: web/controllers/admin/image_series_controller.ex:207
+#: web/controllers/admin/image_series_controller.ex:205
 msgid "Image series deleted"
 msgstr "Bildeserie slettet"
 
-#: web/controllers/admin/image_series_controller.ex:87
+#: web/controllers/admin/image_series_controller.ex:85
 msgid "Image series updated"
 msgstr "Bildeserie oppdatert"
 
-#: web/controllers/admin/image_controller.ex:23
+#: web/controllers/admin/image_controller.ex:25
 #: web/templates/admin/image/index.html.eex:1
 msgid "Index - images"
 msgstr "Oversikt - bilder"
@@ -240,14 +238,14 @@ msgstr "Logg ut"
 msgid "Login"
 msgstr "Pålogging"
 
-#: web/controllers/admin/image_category_controller.ex:26
-#: web/controllers/admin/image_category_controller.ex:42
+#: web/controllers/admin/image_category_controller.ex:28
+#: web/controllers/admin/image_category_controller.ex:47
 #: web/templates/admin/image/index.html.eex:119
 #: web/templates/admin/image_category/new.html.eex:1
 msgid "New image category"
 msgstr "Ny bildekategori"
 
-#: web/controllers/admin/image_series_controller.ex:30
+#: web/controllers/admin/image_series_controller.ex:28
 #: web/controllers/admin/image_series_controller.ex:47
 #: web/templates/admin/image/index.html.eex:10
 #: web/templates/admin/image_series/new.html.eex:1
@@ -332,7 +330,7 @@ msgstr "Systeminfo"
 msgid "This object cannot be restored!"
 msgstr "Dette objektet kan ikke gjenopprettes!"
 
-#: web/controllers/admin/image_series_controller.ex:162
+#: web/controllers/admin/image_series_controller.ex:166
 #: web/templates/admin/image/index.html.eex:78
 msgid "Upload images"
 msgstr "Last opp bilder"
@@ -371,7 +369,7 @@ msgstr "slettet"
 msgid "Add new"
 msgstr "Legg til"
 
-#: web/menus/images_menu.ex:10 web/models/image_series.ex:205
+#: web/menus/images_menu.ex:10 web/models/image_series.ex:158
 msgid "Images"
 msgstr "Bilder"
 
@@ -395,11 +393,11 @@ msgstr "Forbindelse ikke hentet"
 msgid "Avatar"
 msgstr "Profilbilde"
 
-#: web/models/image_category.ex:138
+#: web/models/image_category.ex:132
 msgid "Config"
 msgstr "Konfigurer"
 
-#: web/models/image_series.ex:201
+#: web/models/image_series.ex:154
 msgid "Configuration"
 msgstr "Konfigurasjon"
 
@@ -415,12 +413,12 @@ msgstr "Bekreft"
 msgid "Connected"
 msgstr "Tilkoblet"
 
-#: web/models/image.ex:146 web/models/image_category.ex:139
-#: web/models/image_series.ex:204
+#: web/models/image.ex:134 web/models/image_category.ex:133
+#: web/models/image_series.ex:157
 msgid "Creator"
 msgstr "Skaper"
 
-#: web/models/image_series.ex:202
+#: web/models/image_series.ex:155
 msgid "Credits"
 msgstr "Krediteringer"
 
@@ -440,25 +438,25 @@ msgstr "Kodet verdi"
 msgid "Full name"
 msgstr "Fullt navn"
 
-#: web/models/image.ex:143 web/models/image_category.ex:135
-#: web/models/image_series.ex:198 web/models/user.ex:185
+#: web/models/image.ex:131 web/models/image_category.ex:129
+#: web/models/image_series.ex:151 web/models/user.ex:185
 msgid "ID"
 msgstr "ID"
 
-#: web/models/image.ex:144
+#: web/models/image.ex:132
 msgid "Image"
 msgstr "Bilde"
 
-#: web/models/image_series.ex:206 web/models/image_series.ex:207
+#: web/models/image_series.ex:159 web/models/image_series.ex:160
 msgid "Image category"
 msgstr "Bildekategori"
 
-#: web/models/image.ex:147 web/models/image_category.ex:140
+#: web/models/image.ex:135 web/models/image_category.ex:134
 msgid "Image series"
 msgstr "Bildeserie"
 
-#: web/models/image.ex:148 web/models/image_category.ex:141
-#: web/models/image_series.ex:208 web/models/user.ex:193
+#: web/models/image.ex:136 web/models/image_category.ex:135
+#: web/models/image_series.ex:161 web/models/user.ex:193
 msgid "Inserted at"
 msgstr "Lagt til"
 
@@ -470,7 +468,7 @@ msgstr "Språk"
 msgid "Last login"
 msgstr "Forrige innlogging"
 
-#: web/models/image_category.ex:136 web/models/image_series.ex:199
+#: web/models/image_category.ex:130 web/models/image_series.ex:152
 msgid "Name"
 msgstr "Navn"
 
@@ -507,16 +505,16 @@ msgstr "Roller"
 msgid "Save"
 msgstr "Lagre"
 
-#: web/models/image.ex:145 web/models/image_series.ex:203
+#: web/models/image.ex:133 web/models/image_series.ex:156
 msgid "Sequence"
 msgstr "Sekvens"
 
-#: web/models/image_category.ex:137 web/models/image_series.ex:200
+#: web/models/image_category.ex:131 web/models/image_series.ex:153
 msgid "Slug"
 msgstr "URL-tamp"
 
-#: web/models/image.ex:149 web/models/image_category.ex:142
-#: web/models/image_series.ex:209 web/models/user.ex:194
+#: web/models/image.ex:137 web/models/image_category.ex:136
+#: web/models/image_series.ex:162 web/models/user.ex:194
 msgid "Updated at"
 msgstr "Sist oppdatert"
 
@@ -540,31 +538,31 @@ msgstr "kan ikke være tomt"
 msgid "has invalid format"
 msgstr "har ugyldig format"
 
-#: web/models/image.ex:139
+#: web/models/image.ex:127
 msgid "image"
 msgstr "bilde"
 
-#: web/models/image_category.ex:132
+#: web/models/image_category.ex:126
 msgid "image categories"
 msgstr "bildekategorier"
 
-#: web/models/image_category.ex:131
+#: web/models/image_category.ex:125
 msgid "image category"
 msgstr "bildekategori"
 
-#: web/models/image_series.ex:195
+#: web/models/image_series.ex:148
 msgid "image(s)"
 msgstr "bilde(r)"
 
-#: web/models/image.ex:140
+#: web/models/image.ex:128
 msgid "images"
 msgstr "bilder"
 
-#: web/models/image_series.ex:190
+#: web/models/image_series.ex:143
 msgid "imageserie"
 msgstr "bildeserie"
 
-#: web/models/image_series.ex:191
+#: web/models/image_series.ex:144
 msgid "imageseries"
 msgstr "bildeserier"
 
@@ -749,12 +747,12 @@ msgstr "Du prøver å logge inn fra en usikker adresse. <a href=\"%{url}\">Prøv
 msgid "Allowed mimetypes"
 msgstr "Tillatte mime-typer"
 
-#: web/controllers/admin/image_category_controller.ex:162
+#: web/controllers/admin/image_category_controller.ex:182
 msgid "Category propagated"
 msgstr "Kategorien er forplantet"
 
-#: web/controllers/admin/image_category_controller.ex:116
-#: web/controllers/admin/image_series_controller.ex:130
+#: web/controllers/admin/image_category_controller.ex:130
+#: web/controllers/admin/image_series_controller.ex:135
 msgid "Configuration updated"
 msgstr "Konfigurasjonen ble oppdatert"
 
@@ -774,7 +772,7 @@ msgstr "Vilkårlig filnavn"
 msgid "Recreate sizes for this series"
 msgstr "Gjenskap størreleser for denne serien"
 
-#: web/controllers/admin/image_series_controller.ex:149
+#: web/controllers/admin/image_series_controller.ex:154
 msgid "Recreated sizes for image series"
 msgstr "Gjenskapte bildestørrelser for bildeserien"
 
@@ -794,7 +792,7 @@ msgstr "kategori"
 msgid "image series"
 msgstr "bildeserie"
 
-#: web/controllers/admin/image_category_controller.ex:159
+#: web/controllers/admin/image_category_controller.ex:179
 msgid "Category propagated, but you have orphaned series. Click <a href=\"%{url}\">here</a> to verify and delete"
 msgstr "Kategori forplantet, men du har løse bildeserier. Klikk <a href=\"%{url}\">her</a> for å verifisere og slette"
 
@@ -802,15 +800,11 @@ msgstr "Kategori forplantet, men du har løse bildeserier. Klikk <a href=\"%{url
 msgid "Delete orphans"
 msgstr "Slett løse bildeserier"
 
-#: web/controllers/admin/image_category_controller.ex:178
+#: web/controllers/admin/image_category_controller.ex:197
 msgid "Handle orphaned image series"
 msgstr "Håndter løse bildeserier"
 
-#: web/templates/admin/image_category/handle_orphans.html.eex:2
-msgid "Handle orphans for category "
-msgstr "Håndter løse bildeserier for kategori"
-
-#: web/controllers/admin/image_category_controller.ex:194
+#: web/controllers/admin/image_category_controller.ex:210
 msgid "Orphans deleted"
 msgstr "Løse bildeserier slettet"
 
@@ -845,3 +839,19 @@ msgstr "Feilen er logget og utvikler er varslet, men hvis du kan supplere med ek
 #: web/templates/error/_feedback.html.eex:17
 msgid "Thanks!"
 msgstr "Takk!"
+
+#: web/templates/admin/image_category/edit.html.eex:3
+msgid "Changing the name of a category is a large operation which includes moving and recreating all dependent image series. This may take some time, so please be patient!"
+msgstr "OBS! Skifte kategorinavn er en omfattende operasjon som krever at vi flytter, sletter og gjenskaper alle underliggende bildeserier. Dette kan ta tid, så vennligst vær tolmodig!"
+
+#: web/templates/admin/image_category/handle_orphans.html.eex:2
+msgid "Handle orphans"
+msgstr "Håndter løse bildeserier"
+
+#: web/templates/admin/image_category/propagate_configuration.html.eex:3
+msgid "Please wait while we propagate the configuration to dependent image series"
+msgstr "Vennligst vent mens vi forplanter konfigurasjonen til underliggende bildeserier"
+
+#: web/templates/admin/image_category/propagate_configuration.html.eex:1
+msgid "Propagating configuration"
+msgstr ""
