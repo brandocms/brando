@@ -477,18 +477,33 @@ defmodule Brando.Images.Utils do
   @doc """
   Gets orphaned image_series.
   """
-  def get_orphaned_series(image_series, starts_with: starts_with) do
-    # first grab all actual series upload paths
+  def get_orphaned_series(categories, series, opts) do
+    starts_with = Keyword.fetch!(opts, :starts_with)
+    ignored_paths = Keyword.get(opts, :ignored_paths, [])
     media_path = Path.expand(Brando.config(:media_path))
 
-    upload_paths =
-      for is <- image_series do
-        Path.join(media_path, is.cfg.upload_path)
-      end
+    series_paths = Enum.map(series, &Path.join(media_path, &1.cfg.upload_path))
+    category_paths = Enum.map(categories, &Path.join(media_path, &1.cfg.upload_path))
+
+    upload_paths = series_paths ++ category_paths
 
     if upload_paths != [] do
-      check_path = Path.join(media_path, starts_with)
-      existing_paths = Path.wildcard(Path.join(check_path, "*"))
+      path_to_check = Path.join(media_path, starts_with)
+      full_ignored_paths = Enum.map(ignored_paths, &(Path.join(path_to_check, &1)))
+
+      existing_category_paths =
+        path_to_check
+        |> Path.join("*")
+        |> Path.wildcard
+        |> Enum.filter(&(!&1 in full_ignored_paths))
+
+      existing_series_paths =
+        existing_category_paths
+        |> Enum.map(&Path.wildcard(Path.join(&1, "*")))
+        |> List.flatten
+
+      existing_paths = existing_series_paths ++ existing_category_paths
+
       existing_paths -- upload_paths
     else
       []
