@@ -13,8 +13,9 @@ defmodule Brando.Integration.ImageSeriesTest do
     {:ok, %{user: user, category: category, series: series}}
   end
 
-  test "get_by_category_id", %{category: category} do
-    result = ImageSeries.get_by_category_id(category.id)
+  test "by_category_id", %{category: category} do
+    q = ImageSeries.by_category_id(category.id)
+    result = Brando.repo.all(q)
     assert length(result) == 1
     series = List.first(result)
     assert series.name == "Series name"
