@@ -229,7 +229,7 @@ def bootstrap_release():
     nginxcfg()
     logrotatecfg()
 
-    dump_and_load_db_remote()
+    dump_local_db_and_load_db_on_remote()
 
     restart()
     _success()
@@ -437,7 +437,7 @@ def load_db_local():
             print(red('==> error: database already exists'))
 
 
-def dump_and_load_db_remote():
+def dump_local_db_and_load_db_on_remote():
     """
     Mirrors local dev db to target
     """
@@ -447,14 +447,13 @@ def dump_and_load_db_remote():
     grant_db()
 
 
-def dump_and_load_db_local():
+def dump_remote_db_and_load_db_on_local():
     """
     Mirrors remote db to local dev
     """
-    dump_localdb()
-    upload_db()
-    load_db_remote()
-    grant_db()
+    dump_remotedb()
+    download_db()
+    load_db_local()
 
 
 def mirror_prod():
@@ -462,7 +461,7 @@ def mirror_prod():
     Mirrors remote media/ and database to local
     """
     download_media()
-    dump_and_load_db_local()
+    dump_remote_db_and_load_db_on_local()
 
 
 def showconfig():
@@ -780,3 +779,4 @@ def nginxrestart():
 def _notify_build_complete(version):
     local('terminal-notifier -message "Release process completed!" -title %s -subtitle v%s -sound default -group %s -open %s' % (
         PROJECT_NAME, version, PROJECT_NAME, PROD_URL))
+        
