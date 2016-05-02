@@ -12,8 +12,7 @@ defmodule Mix.Tasks.Brando.Install do
     # Mix template
     {:eex,  "templates/brando.install/mix.exs", "mix.exs"},
 
-    # exrm plugin and release tasks (migrations)
-    {:eex,  "templates/brando.install/lib/exrm_plugin.ex", "lib/application_name/exrm_plugin.ex"},
+    # EXRM release tasks (migrations)
     {:eex,  "templates/brando.install/lib/release_tasks.ex", "lib/application_name/release_tasks.ex"},
 
     # Etc. Various OS config files and log directory.
