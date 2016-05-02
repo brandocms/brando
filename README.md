@@ -74,6 +74,8 @@ Static media config in `endpoint.ex`.
 ```diff
 + plug Plug.Static,
 +  at: "/media", from: Brando.config(:media_path)
++  cache_control_for_etags: "public, max-age=31536000",
++  cache_control_for_vsn_requests: "public, max-age=31536000"
 ```
 
 Also switch out (or add to it, if you use sockets in the frontend as well) the socket config in `endpoint.ex`:

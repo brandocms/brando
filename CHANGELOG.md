@@ -7,6 +7,8 @@
     This is needed for handling global orphaned image series.
 
 * Enhancements
+  * Added caching options to installation instructions in `README.md`
+  * Clean up release tasks
   * Clean up orphan handling.
   * Clean up image implementation.
   * Error reporting integration if otp_app uses Hrafn.
