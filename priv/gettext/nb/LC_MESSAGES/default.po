@@ -501,7 +501,7 @@ msgstr "Rettigheter"
 msgid "Roles"
 msgstr "Roller"
 
-#: lib/brando/form/fields.ex:91
+#: lib/brando/form/fields.ex:91 lib/brando/images/utils.ex:301
 msgid "Save"
 msgstr "Lagre"
 
@@ -854,4 +854,24 @@ msgstr "Vennligst vent mens vi forplanter konfigurasjonen til underliggende bild
 
 #: web/templates/admin/image_category/propagate_configuration.html.eex:1
 msgid "Propagating configuration"
-msgstr ""
+msgstr "Forplanter konfigurasjonen"
+
+#: lib/brando/images/utils.ex:297
+msgid "Add master key (portrait/landscape)"
+msgstr "Legg til hovednøkkel (liggende/stående)"
+
+#: lib/brando/images/utils.ex:296
+msgid "Add master key (standard)"
+msgstr "Legg til hovednøkkel (standard)"
+
+#: lib/brando/images/utils.ex:365
+msgid "Orientation"
+msgstr "Bildeformat"
+
+#: lib/brando/images/utils.ex:339
+msgid "key"
+msgstr "nøkkel"
+
+#: lib/brando/images/utils.ex:343
+msgid "masterkey"
+msgstr "hovednøkkel"

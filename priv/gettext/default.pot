@@ -487,7 +487,7 @@ msgstr ""
 msgid "Roles"
 msgstr ""
 
-#: lib/brando/form/fields.ex:91
+#: lib/brando/form/fields.ex:91 lib/brando/images/utils.ex:301
 msgid "Save"
 msgstr ""
 
@@ -840,4 +840,24 @@ msgstr ""
 
 #: web/templates/admin/image_category/propagate_configuration.html.eex:1
 msgid "Propagating configuration"
+msgstr ""
+
+#: lib/brando/images/utils.ex:297
+msgid "Add master key (portrait/landscape)"
+msgstr ""
+
+#: lib/brando/images/utils.ex:296
+msgid "Add master key (standard)"
+msgstr ""
+
+#: lib/brando/images/utils.ex:365
+msgid "Orientation"
+msgstr ""
+
+#: lib/brando/images/utils.ex:339
+msgid "key"
+msgstr ""
+
+#: lib/brando/images/utils.ex:343
+msgid "masterkey"
 msgstr ""
