@@ -15,6 +15,7 @@ import Flash from "./brando/components/flash";
 import FilterTable from "./brando/components/filter_table";
 import Mobile from "./brando/components/mobile";
 import {VexBrando, vex} from "./brando/components/vex_brando";
+import {bI18n} from "./brando/components/i18n";
 import Images from "./brando/components/images";
 import ImageConfig from "./brando/components/image_config";
 import Menu from "./brando/components/menu";
@@ -78,5 +79,6 @@ export {
     Dropzone,
     Sortable,
     Utils,
+    bI18n,
     vex
 };

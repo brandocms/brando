@@ -1,7 +1,7 @@
 "use strict";
 
 import $ from "jquery";
-
+import {bI18n} from "./i18n";
 import Sortable from "./sortable";
 
 class Sequence {
@@ -14,7 +14,7 @@ class Sequence {
                 onUpdate: function () {
                     $('#sort-post').removeClass("btn-default", "btn-success")
                                    .addClass("btn-warning")
-                                   .html("Lagre ny rekkefølge");
+                                   .html(bI18n.t("sequence:store_new"));
                 }
             });
             this.sortListener();
@@ -24,7 +24,7 @@ class Sequence {
 
     static sortSuccess(data) {
         if (data.status == 200) {
-            $("#sort-post").removeClass("btn-warning").addClass("btn-success").html("OK!");
+            $("#sort-post").removeClass("btn-warning").addClass("btn-success").html(bI18n.t("sequence:stored"));
         }
     }
 
@@ -32,7 +32,7 @@ class Sequence {
         var _this = this;
         $('#sort-post').on('click', function(e) {
             e.preventDefault();
-            $(this).removeClass("btn-default").addClass("btn-warning").html("Lagrer ...");
+            $(this).removeClass("btn-default").addClass("btn-warning").html(bI18n.t("sequence:storing"));
             $.ajax({
                 headers: {Accept : "application/json; charset=utf-8"},
                 type: "POST",

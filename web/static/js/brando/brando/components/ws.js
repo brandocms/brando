@@ -3,6 +3,7 @@
 import $ from "jquery";
 
 import {Socket} from "phoenix"
+import {bI18n} from "./i18n";
 import {vex} from "./vex_brando";
 
 class WS {
@@ -69,7 +70,7 @@ class WS {
             strokeWidth: 5,
             color: "#c11"
         });
-        WS.progressbar.setText('working, please wait!');
+        WS.progressbar.setText(bI18n.t("ws:working"));
     }
 
     static increase_progress(value) {
