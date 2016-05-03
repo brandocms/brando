@@ -20,9 +20,24 @@ defmodule <%= application_module %>.Mixfile do
   # Type `mix help compile.app` for more information.
   def application do
     [mod: {<%= application_module %>, []},
-     included_applications: [:brando_news, :brando_pages, :brando_villain, :recon],
-     applications: [:brando, :phoenix, :phoenix_html, :cowboy, :logger, :gettext,
-                    :phoenix_ecto, :postgrex, :runtime_tools]]
+     included_applications: [
+       :brando_news,
+       :brando_pages,
+       :brando_villain,
+       :recon
+     ],
+     applications: [
+       :brando,
+       :cowboy,
+       :gettext,
+       :logger,
+       :phoenix,
+       :phoenix_ecto,
+       :phoenix_html,
+       :postgrex,
+       :runtime_tools
+     ]
+    ]
   end
 
   # Specifies which paths to compile per environment.
@@ -62,6 +77,7 @@ defmodule <%= application_module %>.Mixfile do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     ["ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
-     "ecto.reset": ["ecto.drop", "ecto.setup"]]
+     "ecto.reset": ["ecto.drop", "ecto.setup"]
+     "test": ["ecto.create --quiet", "ecto.migrate", "test"]]
   end
 end
