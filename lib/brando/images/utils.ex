@@ -293,12 +293,12 @@ defmodule Brando.Images.Utils do
       </div>
       #{size_rows}
       <div class="form-row">
-        <button class="m-t-sm m-b-sm btn btn-default add-masterkey-standard">Add master key (standard)</button>
-        <button class="m-t-sm m-b-sm m-l-sm btn btn-default add-masterkey-pl">Add master key (portrait/landscape)</button>
+        <button class="m-t-sm m-b-sm btn btn-default add-masterkey-standard">#{gettext("Add master key (standard)")}</button>
+        <button class="m-t-sm m-b-sm m-l-sm btn btn-default add-masterkey-pl">#{gettext("Add master key (portrait/landscape)")}</button>
       </div>
       <div class="form-row">
         <div class="form-group required">
-          <input class="btn btn-success" name="config[submit]" type="submit" value="Lagre">
+          <input class="btn btn-success" name="config[submit]" type="submit" value="#{gettext("Save")}">
         </div>
       </div>
     </form>
@@ -336,17 +336,16 @@ defmodule Brando.Images.Utils do
     <fieldset>
       <legend>
       <br />
-        Key <span class="btn btn-xs delete-key"><i class="fa fa-fw fa-ban"></i></span>
+        #{gettext("key")} <span class="btn btn-xs delete-key"><i class="fa fa-fw fa-ban"></i></span>
       </legend>
       <div class="form-row">
         <div class="form-group required no-height">
-          <label>Masterkey</label>
+          <label>#{gettext("masterkey")}</label>
           <input type="text" class="#{masterkey_type}" value="#{name}">
         </div>
       </div>
 
       #{inputs}
-
       #{add_button}
 
     </fieldset>
@@ -363,7 +362,7 @@ defmodule Brando.Images.Utils do
     <fieldset>
       <legend>
       <br />
-        Orientation: #{orientation}
+        #{gettext("Orientation")}: #{orientation}
       </legend>
 
       #{inputs}
