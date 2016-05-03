@@ -2,17 +2,18 @@
 
 * Bug fixes
   * Now creates a blank image config for image series if you try to configure an image serie
-    with `nil` config.
-  * Go through your site image series, and change their upload_path to `images/site/{serie}`.
-    This is needed for handling global orphaned image series.
+    with `nil` config
+  * Go through your site image series, and change their upload_path to `images/site/{serie}`
+    This is needed for handling global orphaned image series
 
 * Enhancements
+  * Added I18N to javascript backend
   * Added caching options to installation instructions in `README.md`
   * Clean up release tasks
-  * Clean up orphan handling.
-  * Clean up image implementation.
-  * Error reporting integration if otp_app uses Hrafn.
-  * Add `dashboard/raise` url for testing 500 errors.
+  * Clean up orphan handling
+  * Clean up image implementation
+  * Error reporting integration if otp_app uses Hrafn
+  * Add `dashboard/raise` url for testing 500 errors
 
 ## v0.30.0 (2016-04-27)
 
@@ -21,10 +22,10 @@
   * Fix bug in image orientation detection.
 
 * Enhancements
-  * Use charts.js instead of sparklines.
-  * Updated brunch.
+  * Use charts.js instead of sparklines
+  * Updated brunch
   * Add slug collision avoidance `Brando.Utils.Model.avoid_slug_collision/1`. Use it in your
-    `changeset` function when you have unique slugs.
+    `changeset` function when you have unique slugs
   * Updated deps. This must be reflected in your app's `mix.exs`:
     * `{:phoenix_ecto, "~> 3.0.0-rc"}`
     * `{:gettext, "~> 0.11"}`
@@ -52,11 +53,11 @@
 ## v0.27.0 (2016-03-30)
 
 * Bug fixes
-  * Fix setting logrotate permissions in fabfile.
-  * Supervisord default config now sets PLUG_TMPDIR to `/tmp/<application_name>`.
+  * Fix setting logrotate permissions in fabfile
+  * Supervisord default config now sets PLUG_TMPDIR to `/tmp/<application_name>`
     This fixes a nasty upload bug where the first app to create the plug tmp directory
     takes ownership and refuses to share with other applications. Add
-    `PLUG_TMPDIR="/tmp/your_app"` to your app's `etc/supervisor/prod.conf` under `environment`.
+    `PLUG_TMPDIR="/tmp/your_app"` to your app's `etc/supervisor/prod.conf` under `environment`
 
 * Enhancements
   * Optional warning if trying to auth on :http. Set `config :brando, warn_on_http_auth: true`
