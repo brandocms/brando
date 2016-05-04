@@ -163,16 +163,4 @@ defmodule Brando.UtilsTest do
     mock_conn = %{port: 8000, scheme: "https", host: "brando.com"}
     assert host_and_media_url(mock_conn) == "https://brando.com:8000/media"
   end
-
-  test "run_checks" do
-    assert run_checks() == nil
-    media_path = Application.get_env(:brando, :media_path)
-    Application.put_env(:brando, :media_path, "")
-    assert_raise Brando.Exception.ConfigError, &run_checks/0
-    Application.put_env(:brando, :media_path, "relative/path")
-    assert_raise Brando.Exception.ConfigError, &run_checks/0
-    Application.put_env(:brando, :media_path, nil)
-    assert_raise Brando.Exception.ConfigError, &run_checks/0
-    Application.put_env(:brando, :media_path, media_path)
-  end
 end

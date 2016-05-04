@@ -6,7 +6,13 @@ defmodule Brando.SystemChannel do
 
   use Phoenix.Channel
 
-  intercept ["log_msg", "alert", "set_progress", "increase_progress"]
+  intercept [
+    "log_msg",
+    "alert",
+    "set_progress",
+    "increase_progress",
+    "popup_form"
+  ]
 
   def join("system:stream", _auth_msg, socket) do
     {:ok, socket}
@@ -33,6 +39,11 @@ defmodule Brando.SystemChannel do
 
   def handle_out("increase_progress", payload, socket) do
     push socket, "increase_progress", payload
+    {:noreply, socket}
+  end
+
+  def handle_out("popup_form", payload, socket) do
+    push socket, "popup_form", payload
     {:noreply, socket}
   end
 
@@ -85,5 +96,11 @@ defmodule Brando.SystemChannel do
 
   def increase_progress(value) do
     Brando.endpoint.broadcast!("system:stream", "increase_progress", %{value: value})
+  end
+
+  def popup_form(header, form, opts) do
+    #form = form.get_popup_form(opts)
+    form = nil
+    Brando.endpoint.broadcast!("system:stream", "popup_form", %{form: form, header: header})
   end
 end

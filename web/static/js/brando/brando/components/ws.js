@@ -33,6 +33,10 @@ class WS {
         chan.on("increase_progress", payload => {
             _this.increase_progress(payload.value, payload.id);
         });
+
+        chan.on("popup_form", payload => {
+            _this.popupForm(payload);
+        });
     }
 
     static log(level, icon, body) {
@@ -96,6 +100,25 @@ class WS {
             $('#overlay').remove();
             WS.progressbar = null;
         }
+    }
+
+    static popupForm(payload) {
+        vex.dialog.open({
+            message: `<h3>${payload.header}</h3>${payload.form}`,
+            callback: function(data) {
+                if (data !== false) {
+                    console.log(data);
+                    $.ajax({
+                        headers: {Accept : "application/json; charset=utf-8"},
+                        type: "POST",
+                        url: payload.url,
+                        success: function(data) {
+                            alert('success!');
+                        }
+                    });
+                }
+            }
+        });
     }
 }
 

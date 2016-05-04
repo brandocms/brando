@@ -93,70 +93,128 @@ defmodule Brando.FormTest do
     end
   end
 
-  test "render_fields/6 :create" do
-    form_fields =
-      [submit: [type: :submit, text: "Save", class: "btn btn-default"],
-       avatar: [type: :file, label: "Avatar"],
-       fs123477010: [type: :fieldset_close],
-       editor: [type: :checkbox, in_fieldset: 2, label: "Editor", default: true],
-       administrator: [type: :checkbox, in_fieldset: 2, label: "Administrator", default: false],
-       fs34070328: [type: :fieldset, legend: "Permissions", row_span: 2],
-       status: [type: :select, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
-       status2: [type: :select, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
-       status3: [type: :radio, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
-       status4: [type: :checkbox, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
-       email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"],
-       username: [type: :text, required: true, label: "Username", placeholder: "Username"]
-     ]
-    cs = %{action: nil, data: nil, params: %{}, errors: [username: "has invalid format", email: "has invalid format", password: "can't be blank", email: "can't be blank", full_name: "can't be blank", username: "can't be blank"]}
-    f = Enum.join(render_fields(form_fields, cs, [type: :create], %{source: "user", schema: Brando.User}), "")
-    assert f =~ ~s("form-group required")
-    assert f =~ "user[username]"
-    assert f =~ ~s(placeholder="Username")
-    assert f =~ "<legend><br>Permissions</legend>"
-    assert f =~ ~s(type="submit")
-    assert f =~ ~s(type="file")
+  test "render_fields/1 :create" do
+    form_fields = [
+      submit: [type: :submit, text: "Save", class: "btn btn-default"],
+      avatar: [type: :file, label: "Avatar"],
+      fs123477010: [type: :fieldset_close],
+      editor: [type: :checkbox, in_fieldset: 2, label: "Editor", default: true],
+      administrator: [type: :checkbox, in_fieldset: 2, label: "Administrator", default: false],
+      fs34070328: [type: :fieldset, legend: "Permissions", row_span: 2],
+      status: [type: :select, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
+      status2: [type: :select, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
+      status3: [type: :radio, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
+      status4: [type: :checkbox, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
+      email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"],
+      username: [type: :text, required: true, label: "Username", placeholder: "Username"]
+    ]
 
-    cs = %{action: :insert, data: nil, params: nil, errors: [username: "has invalid format", email: "has invalid format", password: "can't be blank", email: "can't be blank", full_name: "can't be blank", username: "can't be blank"]}
-    f = Enum.join(render_fields(form_fields, cs, [type: :create], %{source: "user", schema: Brando.User}), "")
-    assert f =~ ~s("form-group required has-error")
-    assert f =~ "user[username]"
-    assert f =~ ~s(placeholder="Username")
-    assert f =~ "<legend><br>Permissions</legend>"
-    assert f =~ ~s(type="submit")
-    assert f =~ ~s(can&#39;t be blank)
-    assert f =~ ~s(type="file")
+    cs = %{
+      action: nil,
+      data: nil,
+      params: %{},
+      errors: [
+        username: "has invalid format",
+        email: "has invalid format",
+        password: "can't be blank",
+        email: "can't be blank",
+        full_name: "can't be blank",
+        username: "can't be blank"
+      ]
+    }
+
+    form =
+      %Brando.Form{
+        changeset: cs,
+        type: :create,
+        source: "user",
+        schema: Brando.User,
+        fields: form_fields
+      } |> render_fields
+
+    assert form.rendered_fields =~ ~s("form-group required")
+    assert form.rendered_fields =~ "user[username]"
+    assert form.rendered_fields =~ ~s(placeholder="Username")
+    assert form.rendered_fields =~ "<legend><br>Permissions</legend>"
+    assert form.rendered_fields =~ ~s(type="submit")
+    assert form.rendered_fields =~ ~s(type="file")
+
+    cs = %{
+      action: :insert,
+      data: nil,
+      params: nil,
+      errors: [
+        username: "has invalid format",
+        email: "has invalid format",
+        password: "can't be blank",
+        email: "can't be blank",
+        full_name: "can't be blank",
+        username: "can't be blank"
+      ]
+    }
+
+    form =
+      form
+      |> Map.put(:changeset, cs)
+      |> render_fields
+
+    assert form.rendered_fields =~ ~s("form-group required has-error")
+    assert form.rendered_fields =~ "user[username]"
+    assert form.rendered_fields =~ ~s(placeholder="Username")
+    assert form.rendered_fields =~ "<legend><br>Permissions</legend>"
+    assert form.rendered_fields =~ ~s(type="submit")
+    assert form.rendered_fields =~ ~s(can&#39;t be blank)
+    assert form.rendered_fields =~ ~s(type="file")
   end
 
-  test "render_fields/6 :update" do
-    form_fields =
-      [submit: [type: :submit, text: "Save", class: "btn btn-default"],
-       avatar: [type: :file, label: "Avatar"],
-       fs123477010: [type: :fieldset_close],
-       editor: [type: :checkbox, in_fieldset: 2, label: "Editor", default: true],
-       administrator: [type: :checkbox, in_fieldset: 2, label: "Administrator", default: false],
-       fs34070328: [type: :fieldset, row_span: 2],
-       status: [type: :select, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
-       status2: [type: :checkbox, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
-       status3: [type: :radio, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
-       email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"]]
-    params = %{"avatar" => nil,
-               "email" => "test@email.com",
-               "role" => 4,
-               "full_name" => "Test Name", "id" => 1,
-               "inserted_at" => %Ecto.DateTime{day: 7, hour: 4, min: 36, month: 12, sec: 26, year: 2014},
-               "last_login" => %Ecto.DateTime{day: 9, hour: 5, min: 2, month: 12, sec: 36, year: 2014},
-               "password" => "$2a$12$abcdefghijklmnopqrstuvwxyz",
-               "updated_at" => %Ecto.DateTime{day: 14, hour: 21, min: 36, month: 1, sec: 53, year: 2015},
-               "username" => "test"}
-    cs = %{action: :insert, params: params, data: nil, errors: []}
-    f = Enum.join(render_fields(form_fields, cs, [language: "nb", type: :update], %{source: "user", schema: Brando.User}), "")
-    assert f =~ "form-group required"
-    assert f =~ "user[email]"
-    assert f =~ ~s(value="test@email.com")
-    assert f =~ ~s(placeholder="E-mail")
-    assert f =~ ~s(type="submit")
-    assert f =~ ~s(type="file")
+  test "render_fields/1 :update" do
+    form_fields = [
+      submit: [type: :submit, text: "Save", class: "btn btn-default"],
+      avatar: [type: :file, label: "Avatar"],
+      fs123477010: [type: :fieldset_close],
+      editor: [type: :checkbox, in_fieldset: 2, label: "Editor", default: true],
+      administrator: [type: :checkbox, in_fieldset: 2, label: "Administrator", default: false],
+      fs34070328: [type: :fieldset, row_span: 2],
+      status: [type: :select, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
+      status2: [type: :checkbox, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
+      status3: [type: :radio, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
+      email: [type: :email, required: true, label: "E-mail", placeholder: "E-mail"]
+    ]
+
+    params = %{
+      "avatar" => nil,
+      "email" => "test@email.com",
+      "role" => 4,
+      "full_name" => "Test Name", "id" => 1,
+      "inserted_at" => %Ecto.DateTime{day: 7, hour: 4, min: 36, month: 12, sec: 26, year: 2014},
+      "last_login" => %Ecto.DateTime{day: 9, hour: 5, min: 2, month: 12, sec: 36, year: 2014},
+      "password" => "$2a$12$abcdefghijklmnopqrstuvwxyz",
+      "updated_at" => %Ecto.DateTime{day: 14, hour: 21, min: 36, month: 1, sec: 53, year: 2015},
+      "username" => "test"
+    }
+
+    cs = %{
+      action: :insert,
+      params: params,
+      data: nil,
+      errors: []
+    }
+
+    form =
+      %Brando.Form{
+        changeset: cs,
+        fields: form_fields,
+        type: :update,
+        source: "user",
+        schema: Brando.User
+      } |> render_fields
+
+    assert form.rendered_fields =~ "form-group required"
+    assert form.rendered_fields =~ "user[email]"
+    assert form.rendered_fields =~ ~s(value="test@email.com")
+    assert form.rendered_fields =~ ~s(placeholder="E-mail")
+    assert form.rendered_fields =~ ~s(type="submit")
+    assert form.rendered_fields =~ ~s(type="file")
   end
 
   test "field name clash" do

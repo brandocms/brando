@@ -289,21 +289,7 @@ defmodule Brando.Utils do
   Runs some config checks.
   """
   def run_checks do
-    case Brando.config(:media_path) do
-      "" ->
-        raise Brando.Exception.ConfigError,
-              message: "config :brando, :media_path must be an absolute " <>
-                       "path to your media/ directory, e.g. " <>
-                       "/sites/prod/my_app/media"
-      nil ->
-        raise Brando.Exception.ConfigError,
-              message: "config :brando, :media_path must be set!"
-      media_path ->
-        unless String.starts_with?(media_path, "/") do
-          raise Brando.Exception.ConfigError,
-                message: "config :brando, :media_path must be an absolute path."
-        end
-    end
+    # noop, deprecated
   end
 
   @doc """

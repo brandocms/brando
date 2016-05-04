@@ -335,9 +335,11 @@ body.vex-open {
 
 .vex.vex-theme-plain {
   padding-top: 160px;
-  padding-bottom: 160px; }
+  padding-bottom: 160px;
+
+}
+
   .vex.vex-theme-plain .vex-content {
-    font-family: "Helvetica Neue", sans-serif;
     background: #fff;
     color: #444;
     padding: 1em;
@@ -346,9 +348,18 @@ body.vex-open {
     max-width: 100%;
     width: 450px;
     font-size: 1.1em;
-    line-height: 1.5em; }
-    .vex.vex-theme-plain .vex-content h1, .vex.vex-theme-plain .vex-content h2, .vex.vex-theme-plain .vex-content h3, .vex.vex-theme-plain .vex-content h4, .vex.vex-theme-plain .vex-content h5, .vex.vex-theme-plain .vex-content h6, .vex.vex-theme-plain .vex-content p, .vex.vex-theme-plain .vex-content ul, .vex.vex-theme-plain .vex-content li {
-      color: inherit; }
+    line-height: 1.5em;
+  }
+
+  .vex.vex-theme-plain .vex-content h1, .vex.vex-theme-plain .vex-content h2, .vex.vex-theme-plain .vex-content h3, .vex.vex-theme-plain .vex-content h4, .vex.vex-theme-plain .vex-content h5, .vex.vex-theme-plain .vex-content h6, .vex.vex-theme-plain .vex-content p, .vex.vex-theme-plain .vex-content ul, .vex.vex-theme-plain .vex-content li {
+      color: inherit;
+  }
+
+  .vex.vex-theme-plain .vex-content h3 {
+    text-align: center;
+    border-bottom: 2px solid #e2e2e2;
+    padding-bottom: 25px;
+  }
   .vex.vex-theme-plain .vex-close {
     position: absolute;
     top: 0;
