@@ -875,3 +875,7 @@ msgstr "nøkkel"
 #: lib/brando/images/utils.ex:343
 msgid "masterkey"
 msgstr "hovednøkkel"
+
+#: web/channels/system_channel.ex:60
+msgid "Error retrieving form \"%{form}\""
+msgstr "Feil ved henting av skjema \"%{form}\""

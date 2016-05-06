@@ -861,3 +861,7 @@ msgstr ""
 #: lib/brando/images/utils.ex:343
 msgid "masterkey"
 msgstr ""
+
+#: web/channels/system_channel.ex:60
+msgid "Error retrieving form \"%{form}\""
+msgstr ""
