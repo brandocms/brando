@@ -5,13 +5,13 @@ defmodule Brando.SystemChannel do
   @interval 1000
 
   use Phoenix.Channel
+  import Brando.Gettext
 
   intercept [
     "log_msg",
     "alert",
     "set_progress",
-    "increase_progress",
-    "popup_form"
+    "increase_progress"
   ]
 
   def join("system:stream", _auth_msg, socket) do
@@ -42,8 +42,42 @@ defmodule Brando.SystemChannel do
     {:noreply, socket}
   end
 
-  def handle_out("popup_form", payload, socket) do
-    push socket, "popup_form", payload
+  def handle_in("popup_form:create", %{"name" => name, "language" => language}, socket) do
+    Gettext.put_locale(Brando.Gettext, language)
+    Brando.I18n.put_locale_for_all_modules(language)
+
+    {:ok, {_, header, _}} = Brando.PopupForm.Registry.get(name)
+
+    case Brando.PopupForm.create(name) do
+      %Brando.Form{} = form ->
+        push socket, "popup_form:reply", %{
+          rendered_form: Phoenix.HTML.safe_to_string(form.rendered_form),
+          url: form.url,
+          header: header
+        }
+      _ ->
+        push socket, "popup_form:error", %{
+          message: gettext("Error retrieving form \"%{form}\"", form: name)
+        }
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_in("popup_form:push_data", %{"name" => name, "data" => data}, socket) do
+    {:ok, {_, header, _}} = Brando.PopupForm.Registry.get(name)
+
+    case Brando.PopupForm.post(name, data) do
+      {:error, form} ->
+        push socket, "popup_form:reply_errors", %{
+          rendered_form: Phoenix.HTML.safe_to_string(form.rendered_form),
+          url: form.url,
+          header: header
+        }
+      {:ok, {inserted_record, wanted_fields}} ->
+        fields = Map.take(inserted_record, wanted_fields)
+        push socket, "popup_form:success", %{fields: fields}
+    end
     {:noreply, socket}
   end
 
@@ -99,8 +133,12 @@ defmodule Brando.SystemChannel do
   end
 
   def popup_form(header, form, opts) do
-    #form = form.get_popup_form(opts)
-    form = nil
-    Brando.endpoint.broadcast!("system:stream", "popup_form", %{form: form, header: header})
+    form = form.get_popup_form(opts)
+
+    Brando.endpoint.broadcast!("system:stream", "popup_form", %{
+      form: Phoenix.HTML.safe_to_string(form.rendered_form),
+      url: form.url,
+      header: header
+    })
   end
 end

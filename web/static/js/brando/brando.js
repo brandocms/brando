@@ -10,6 +10,7 @@ import "./brando/extensions/tags_input";
 
 import {Accordion} from "./brando/components/accordion";
 import Autoslug from "./brando/components/autoslug";
+import {brando} from "./brando/components/brando";
 import DatePicker from "./brando/components/datepicker";
 import Flash from "./brando/components/flash";
 import FilterTable from "./brando/components/filter_table";
@@ -20,6 +21,7 @@ import Images from "./brando/components/images";
 import ImageConfig from "./brando/components/image_config";
 import Menu from "./brando/components/menu";
 import Pages from "./brando/components/pages";
+import PopupForm from "./brando/components/popup_form";
 import Sequence from "./brando/components/sequence";
 import Sortable from "./brando/components/sortable";
 import Stats from "./brando/components/stats";
@@ -76,7 +78,9 @@ $(() => {
 
 export {
     Accordion,
+    brando,
     Dropzone,
+    PopupForm,
     Sortable,
     Utils,
     bI18n,

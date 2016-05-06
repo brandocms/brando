@@ -1,12 +1,17 @@
 ## v0.31.0-dev (2016-XX-XX)
 
 * Bug fixes
+  * Fixed bug in `Brando.Registry` where not including `:menu` would crash the registry.
   * Now creates a blank image config for image series if you try to configure an image serie
     with `nil` config
   * Go through your site image series, and change their upload_path to `images/site/{serie}`
     This is needed for handling global orphaned image series
 
 * Enhancements
+  * Added `Brando.PopupForm`.
+  * Removes the `:otp_app` configuration from `:put_admin_locale` & `:put_locale` plugs in
+    your router. Replace with `Brando.Registry.register(MyApp.Backend, [:gettext])` and
+    `Brando.Registry.register(MyApp, [:gettext])`.
   * Added I18N to javascript backend
   * Added caching options to installation instructions in `README.md`
   * Clean up release tasks

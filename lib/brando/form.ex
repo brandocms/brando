@@ -98,8 +98,8 @@ defmodule Brando.Form do
       }
       @form_fields []
 
-      def __model__ do
-        unquote(source)
+      def __schema__ do
+        unquote(opts[:schema])
       end
 
       unquote(block)
@@ -130,7 +130,7 @@ defmodule Brando.Form do
           class:     @form_opts.class,
           fields:    @form_fields,
           helper:    @form_opts.helper,
-          multipart: false,
+          multipart: @form_opts.multipart,
           params:    Keyword.get(opts, :params, []),
           schema:    @form_opts.schema,
           source:    @form_opts.source,
@@ -142,19 +142,25 @@ defmodule Brando.Form do
         |> render_form
       end
 
-      # def get_popup_form(opts) do
-      #   form_type = Keyword.fetch!(opts, :type)
-      #   action = Keyword.fetch!(opts, :action)
-      #   changeset = Keyword.fetch!(opts, :changeset)
-      #   params = Keyword.get(opts, :params, [])
-      #
-      #   @form_fields
-      #   |> Enum.filter(fn({_, field}) -> field[:type] != :submit end)
-      #   |> render_fields
-      #   |> render_form(opts, @form_opts)
-      #   |> raw
-      #   |> safe_to_string
-      # end
+      def get_popup_form(opts) do
+        form = %Brando.Form{
+          action:    Keyword.fetch!(opts, :action),
+          changeset: Keyword.fetch!(opts, :changeset),
+          class:     @form_opts.class,
+          fields:    Enum.filter(@form_fields, fn({_, f}) -> f[:type] != :submit end),
+          helper:    @form_opts.helper,
+          multipart: @form_opts.multipart,
+          params:    Keyword.get(opts, :params, []),
+          schema:    @form_opts.schema,
+          source:    @form_opts.source,
+          type:      Keyword.fetch!(opts, :type)
+        }
+
+        form
+        |> render_fields
+        |> render_form
+        |> Map.put(:url, "/admin/api/popup_forms/#{form.source}")
+      end
     end
   end
 
@@ -330,8 +336,7 @@ defmodule Brando.Form do
   """
   defmacro field(name, type, opts \\ []) do
     quote do
-      Brando.Form.__field__(__MODULE__, unquote(name),
-                            unquote(type), unquote(opts))
+      Brando.Form.__field__(__MODULE__, unquote(name), unquote(type), unquote(opts))
     end
   end
 

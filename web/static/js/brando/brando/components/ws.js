@@ -13,29 +13,25 @@ class WS {
         let socket = new Socket("/admin/ws", {params: {token: user_token}});
         socket.connect();
 
-        let chan = socket.channel("system:stream", {});
-        chan.join().receive("ok", () => {
+        WS.chan = socket.channel("system:stream", {});
+        WS.chan.join().receive("ok", () => {
             console.log("==> System channel ready");
         });
 
-        chan.on("log_msg", payload => {
+        WS.chan.on("log_msg", payload => {
             _this.log(payload.level, payload.icon, payload.body);
         });
 
-        chan.on("alert", payload => {
+        WS.chan.on("alert", payload => {
             _this.alert(payload.message);
         });
 
-        chan.on("set_progress", payload => {
+        WS.chan.on("set_progress", payload => {
             _this.set_progress(payload.value);
         });
 
-        chan.on("increase_progress", payload => {
+        WS.chan.on("increase_progress", payload => {
             _this.increase_progress(payload.value, payload.id);
-        });
-
-        chan.on("popup_form", payload => {
-            _this.popupForm(payload);
         });
     }
 
@@ -101,27 +97,9 @@ class WS {
             WS.progressbar = null;
         }
     }
-
-    static popupForm(payload) {
-        vex.dialog.open({
-            message: `<h3>${payload.header}</h3>${payload.form}`,
-            callback: function(data) {
-                if (data !== false) {
-                    console.log(data);
-                    $.ajax({
-                        headers: {Accept : "application/json; charset=utf-8"},
-                        type: "POST",
-                        url: payload.url,
-                        success: function(data) {
-                            alert('success!');
-                        }
-                    });
-                }
-            }
-        });
-    }
 }
 
 WS.progressbar = null;
+WS.chan = null;
 
 export default WS;

@@ -114,6 +114,12 @@ And backend:
 
     $ mix gettext.merge priv/gettext/backend
 
+Now we register our otp app's modules in Brando's registry to automatically set Gettext locales.
+Open up you application's `lib/my_app.ex` and add to `start/2`:
+
+    Brando.Registry.register(MyApp, [:gettext])
+    Brando.Registry.register(MyApp.Backend, [:gettext])
+
 ## Extra modules
 
   * [brando_pages](http://github.com/twined/brando_pages)
@@ -265,6 +271,27 @@ Finally, add to your routes (`web/router.ex`):
 ```elixir
   get    "/route/:filter/sorter", YourController, :sequence
   post   "/route/:filter/sorter", YourController, :sequence_post
+```
+
+## Popup forms
+
+First, register the form in your app's endpoint startup. The first argument is the
+name of the schema, second is the form module and third is a list of fields you want
+returned if repo insertion is successful:
+
+```elixir
+Brando.PopupForm.Registry.register("client", MyApp.ClientForm, gettext("Create client"), [:id, :name])
+```
+
+```javascript
+$('.avatar img').click((e) => {
+    let clientForm = new PopupForm("client", clientInsertionSuccess);
+});
+
+function clientInsertionSuccess(fields) {
+    // here you'd insert the returned fields into a select or something similar.
+    console.log(`${fields.id} --> ${fields.username}`);
+}
 ```
 
 ## Tags
