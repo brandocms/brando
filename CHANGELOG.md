@@ -13,7 +13,7 @@
     your router. Replace with `Brando.Registry.register(MyApp.Backend, [:gettext])` and
     `Brando.Registry.register(MyApp, [:gettext])`.
   * Added I18N to javascript backend
-  * Added caching options to installation instructions in `README.md`
+  * Added static/media caching options to installation instructions in `README.md`
   * Clean up release tasks
   * Clean up orphan handling
   * Clean up image implementation

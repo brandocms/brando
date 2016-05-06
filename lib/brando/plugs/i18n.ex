@@ -42,6 +42,7 @@ defmodule Brando.Plug.I18n do
 
     raise """
     put_locale/2 plug has been deprecated.
+
     Register the module through Brando.Registry in your application's startup function:
 
         Brando.Registry.register(#{inspect(use_module)}, [:gettext])
@@ -85,6 +86,7 @@ defmodule Brando.Plug.I18n do
 
     raise """
     put_admin_locale/2 plug has been deprecated.
+    
     Register the module through Brando.Registry in your application's startup function:
 
         Brando.Registry.register(#{inspect(use_module)}, [:gettext])
