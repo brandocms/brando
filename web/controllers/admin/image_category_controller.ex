@@ -176,7 +176,8 @@ defmodule Brando.Admin.ImageCategoryController do
 
       msg =
         if orphaned_series != [] do
-          gettext("Category propagated, but you have orphaned series. Click <a href=\"%{url}\">here</a> to verify and delete",
+          gettext("Category propagated, but you have orphaned series. " <>
+                  "Click <a href=\"%{url}\">here</a> to verify and delete",
                   url: Brando.helpers.admin_image_category_path(conn, :handle_orphans))
         else
           gettext("Category propagated")

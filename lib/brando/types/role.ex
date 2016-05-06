@@ -95,7 +95,7 @@ defmodule Brando.Type.Role do
     end)
   end
 
-  defp get_config() do
+  defp get_config do
     Application.get_env(:brando, Brando.Type.Role) || @default_role_cfg
   end
 end

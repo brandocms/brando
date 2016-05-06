@@ -100,11 +100,11 @@ defmodule Brando.Admin.ImageSeriesController do
     series = Brando.repo.get_by!(Brando.ImageSeries, id: series_id)
 
     series =
-      if !series.cfg do
+      if series.cfg do
+        series
+      else
         category = Brando.repo.get!(Brando.ImageCategory, series.image_category_id)
         Map.put(series, :cfg, category.cfg)
-      else
-        series
       end
 
     conn

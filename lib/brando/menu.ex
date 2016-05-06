@@ -84,7 +84,7 @@ defmodule Brando.Menu do
       @doc """
       Get the menu for the module `menu/2` was called from.
       """
-      def get_menu() do
+      def get_menu do
         unquote(contents)
       end
     end

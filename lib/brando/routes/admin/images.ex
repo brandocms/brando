@@ -40,7 +40,7 @@ defmodule Brando.Images.Routes.Admin do
       series_opts = Keyword.put(opts, :as, "image_series")
       categories_opts = Keyword.put(opts, :as, "image_category")
 
-      get    "#{path}",                        image_ctrl,
+      get    path,                             image_ctrl,
              :index,                           opts
       post   "#{path}/set-properties",         image_ctrl,
              :set_properties,                  opts

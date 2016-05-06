@@ -341,7 +341,7 @@ defmodule Brando.Utils do
   def img_url(image_field, size, opts) do
     size = is_atom(size) && Atom.to_string(size) || size
     prefix = Keyword.get(opts, :prefix, nil)
-    if not Map.has_key?(image_field.sizes, size) do
+    unless Map.has_key?(image_field.sizes, size) do
       raise ArgumentError, message: ~s(Wrong key for img_url. Size `#{size}` does not exist for #{inspect(image_field)})
     end
 

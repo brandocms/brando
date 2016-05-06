@@ -58,11 +58,13 @@ defmodule Brando.HTML.Inspect do
     assocs = module.__schema__(:associations)
 
     rendered_fields = fields
-    |> Enum.map(&(render_inspect_field(&1, module, module.__schema__(:type, &1), Map.get(model_struct, &1))))
+    |> Enum.map(&(render_inspect_field(&1, module, module.__schema__(:type, &1),
+                                       Map.get(model_struct, &1))))
     |> Enum.join
 
     rendered_assocs = assocs
-    |> Enum.map(&(render_inspect_assoc(&1, module, module.__schema__(:association, &1), Map.get(model_struct, &1))))
+    |> Enum.map(&(render_inspect_assoc(&1, module, module.__schema__(:association, &1),
+                                       Map.get(model_struct, &1))))
     |> Enum.join
 
     content_tag :table, class: "table data-table" do
@@ -106,7 +108,7 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_field(_name, Brando.Type.Role, roles) do
-    roles = Enum.map roles, fn (role) ->
+    Enum.map roles, fn (role) ->
       role_name =
         case role do
           :superuser -> gettext("superuser")
@@ -115,7 +117,6 @@ defmodule Brando.HTML.Inspect do
         end
       ~s(<span class="label label-#{role}">#{role_name}</span>)
     end
-    ~s(#{roles})
   end
 
   defp do_inspect_field(_name, Brando.Type.Json, _value) do
@@ -152,9 +153,12 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_field(:language, :string, language_code) do
-    ~s(<div class="text-center">
-         <img src="#{Brando.helpers.static_path(Brando.endpoint, "/images/brando/blank.gif")}" class="flag flag-#{language_code}" alt="#{language_code}" />
-       </div>)
+    """
+    <div class="text-center">
+      <img src="#{Brando.helpers.static_path(Brando.endpoint, "/images/brando/blank.gif")}"
+           class="flag flag-#{language_code}" alt="#{language_code}" />
+    </div>
+    """
   end
 
   defp do_inspect_field(:key, :string, nil) do
@@ -233,7 +237,24 @@ defmodule Brando.HTML.Inspect do
     ~s(<tr><td>#{name}</td><td><em>#{gettext("Empty association")}</em></td></tr>)
   end
   defp do_inspect_assoc(_name, %Ecto.Association.Has{} = type, value) do
-    rows = Enum.map(value, fn (row) -> ~s(<div class="assoc #{type.field}">#{type.related.__repr__(row)}</div>) end)
-    ~s(<tr><td><i class='fa fa-link'></i> #{gettext("Connected")} #{type.related.__name__(:plural)}</td><td>#{rows}</td></tr>)
+    rows =
+      Enum.map value, fn (row) ->
+        """
+        <div class="assoc #{type.field}">
+          #{type.related.__repr__(row)}
+        </div>
+        """
+      end
+    """
+    <tr>
+      <td>
+        <i class="fa fa-link"></i>
+        #{gettext("Connected")} #{type.related.__name__(:plural)}
+      </td>
+      <td>
+        #{rows}
+      </td>
+    </tr>
+    """
   end
 end

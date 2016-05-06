@@ -73,7 +73,7 @@ defmodule Brando.Field.ImageField do
     imagefields_src =
       for {name, contents} <- imagefields, do: defcfg(name, contents)
     quote do
-      def __imagefields__() do
+      def __imagefields__ do
         unquote(Macro.escape(imagefields))
       end
 

@@ -8,7 +8,7 @@ defmodule Brando.UserProfileForm do
   import Brando.Gettext
 
   @doc false
-  def get_language_choices() do
+  def get_language_choices do
     Brando.config(:admin_languages)
   end
 

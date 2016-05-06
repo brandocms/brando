@@ -56,7 +56,7 @@ defmodule Brando.Mixfile do
     {:slugger, "~> 0.1.0"},
 
     # Dev dependencies
-    {:credo, "~> 0.2", only: :dev},
+    {:dogma, "~> 0.1", only: :dev},
     {:dialyze, "~> 0.2", only: :dev},
 
     # Test dependencies

@@ -23,8 +23,8 @@ defmodule Brando.StatsChannel do
   def handle_info(:update, socket) do
     interval = Brando.config(:stats_polling_interval) || @default_interval
 
-    instagram_status = is_alive?(Brando.Instagram.Server)
-    registry_status = is_alive?(Brando.Registry)
+    instagram_status = alive?(Brando.Instagram.Server)
+    registry_status = alive?(Brando.Registry)
 
     mem_list =
       @info_memory
@@ -54,7 +54,7 @@ defmodule Brando.StatsChannel do
     {:noreply, socket}
   end
 
-  defp is_alive?(module) do
+  defp alive?(module) do
     try do
       module
       |> Process.whereis

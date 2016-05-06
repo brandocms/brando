@@ -124,7 +124,7 @@ defmodule Brando.ImageCategory do
   use Brando.Meta.Model, [
     singular: gettext("image category"),
     plural: gettext("image categories"),
-    repr: &("#{&1.name}"),
+    repr: &(&1.name),
     fields: [
       id: gettext("ID"),
       name: gettext("Name"),

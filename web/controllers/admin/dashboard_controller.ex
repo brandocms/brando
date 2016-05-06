@@ -33,7 +33,7 @@ defmodule Brando.Admin.DashboardController do
   @doc """
   Dummy action for raising and testing 500 page + error handling.
   """
-  def raise(_, _) do
+  def dummy_raise(_, _) do
     raise "boom!"
   end
 

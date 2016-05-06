@@ -325,7 +325,7 @@ defmodule Brando.HTML do
   @doc """
   Render status indicators
   """
-  def status_indicators() do
+  def status_indicators do
     html =
     """
     <div class="status-indicators pull-left">
@@ -435,7 +435,9 @@ defmodule Brando.HTML do
     if Brando.config(:warn_on_http_auth) do
       if conn.scheme != :https do
         ~s(<div class="text-center alert alert-block alert-danger">) <>
-        gettext("You are trying to authorize from an insecure URL. <a href=\"%{url}\">Please try again from this URL</a> or proceed at your own risk!", url: Brando.Utils.https_url(conn)) <>
+        gettext("You are trying to authorize from an insecure URL. " <>
+                "<a href=\"%{url}\">Please try again from this URL</a> " <>
+                "or proceed at your own risk!", url: Brando.Utils.https_url(conn)) <>
         ~s(</div>)
         |> Phoenix.HTML.raw
       end

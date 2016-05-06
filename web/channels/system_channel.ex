@@ -57,7 +57,7 @@ defmodule Brando.SystemChannel do
         }
       _ ->
         push socket, "popup_form:error", %{
-          message: gettext("Error retrieving form \"%{form}\"", form: name)
+          message: gettext(~s(Error retrieving form "%{form}"), form: name)
         }
     end
 
