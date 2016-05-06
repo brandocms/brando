@@ -9,12 +9,12 @@ defmodule Brando.UserForm do
   import Brando.Gettext
 
   @doc false
-  def get_language_choices() do
+  def get_language_choices do
     Brando.config(:admin_languages)
   end
 
   @doc false
-  def get_role_choices() do
+  def get_role_choices do
     [[value: "1", text: "Staff"],
      [value: "2", text: "Admin"],
      [value: "4", text: "Superuser"]]

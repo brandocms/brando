@@ -14,8 +14,6 @@ defmodule Brando.Type.ImageConfig do
             size_limit: 10_240_000,
             sizes: %{}
 
-
-
   @doc """
   Returns the internal type representation of our `Role` type for pg
   """

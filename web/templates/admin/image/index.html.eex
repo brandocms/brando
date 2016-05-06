@@ -17,7 +17,7 @@
           <ul class="dropdown-menu" style="right: 0; left: auto;">
             <li>
               <a href="<%= Brando.helpers.admin_image_category_path(@conn, :edit, category.id) %>">
-                <i class="fa fa-fw fa-edit"></i> <%= gettext("Edit image") %>
+                <i class="fa fa-fw fa-edit"></i> <%= gettext("Edit image category") %>
               </a>
             </li>
             <li>

@@ -5,7 +5,6 @@ defmodule Brando.ImageCategory.ControllerTest do
   use Plug.Test
   use RouterHelper
 
-  alias Brando.ImageCategory
   alias Brando.Type.ImageConfig
   alias Brando.Factory
 
@@ -69,8 +68,7 @@ defmodule Brando.ImageCategory.ControllerTest do
 
   test "update (post) w/params", %{user: user} do
     params = Factory.build(:image_category_params, %{"creator_id" => user.id})
-
-    assert {:ok, category} = ImageCategory.create(params, user)
+    category = Factory.create(:image_category, creator: user)
 
     conn =
       :patch

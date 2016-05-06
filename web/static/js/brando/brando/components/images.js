@@ -5,6 +5,7 @@ import $ from "jquery";
 import {Accordion} from "./accordion";
 import {Utils} from "./utils";
 import {vex} from "./vex_brando";
+import {bI18n} from "./i18n";
 
 var imagePool = [];
 
@@ -140,10 +141,10 @@ class Images {
         $('.delete-selected-images').click(function(e) {
             e.preventDefault();
             vex.dialog.confirm({
-                message: 'Er du sikker på at du vil slette disse bildene?',
+                message: bI18n.t("images:delete_confirm"),
                 callback: function(value) {
                     if (value) {
-                        $(this).removeClass("btn-danger").addClass("btn-warning").html("Lagrer ...");
+                        $(this).removeClass("btn-danger").addClass("btn-warning").html(bI18n.t("images:deleting"));
                         $.ajax({
                             headers: {Accept : "application/json; charset=utf-8"},
                             type: "POST",
@@ -158,7 +159,12 @@ class Images {
     }
     static deleteSuccess(data) {
         if (data.status == 200) {
-            $(".delete-selected-images").removeClass("btn-warning").addClass("btn-danger").html("Slett valgte bilder");
+            $(".delete-selected-images")
+                .removeClass("btn-warning")
+                .addClass("btn-danger")
+                .html(bI18n.t("images:delete_images"))
+                .attr('disabled', 'disabled');
+
             for (var i = 0; i < data.ids.length; i++) {
                 $('.image-selection-pool img[data-id=' + data.ids[i] + ']').fadeOut();
             }

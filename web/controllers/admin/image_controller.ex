@@ -4,7 +4,10 @@ defmodule Brando.Admin.ImageController do
   """
 
   use Brando.Web, :controller
+
   alias Brando.Image
+  alias Brando.ImageCategory
+
   import Brando.Plug.HTML
   import Brando.Gettext
 
@@ -13,10 +16,9 @@ defmodule Brando.Admin.ImageController do
   @doc false
   def index(conn, _params) do
     # show images by tabbed category, then series.
-    category_model = conn.private[:category_model]
     categories =
-      category_model
-      |> category_model.with_image_series_and_images
+      ImageCategory
+      |> ImageCategory.with_image_series_and_images
       |> Brando.repo.all
 
     conn
@@ -27,8 +29,7 @@ defmodule Brando.Admin.ImageController do
 
   @doc false
   def delete_selected(conn, %{"ids" => ids}) do
-    model = conn.private[:image_model]
-    model.delete(ids)
+    Image.delete(ids)
     render(conn, :delete_selected, ids: ids)
   end
 

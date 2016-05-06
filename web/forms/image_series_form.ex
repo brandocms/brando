@@ -9,7 +9,7 @@ defmodule Brando.ImageSeriesForm do
   alias Brando.ImageSeries
 
   @doc false
-  def get_categories() do
+  def get_categories do
     categories =
       ImageCategory
       |> ImageCategory.with_image_series_and_images

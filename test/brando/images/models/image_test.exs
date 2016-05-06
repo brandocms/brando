@@ -149,47 +149,7 @@ defmodule Brando.Integration.ImageTest do
     assert image2.sequence == 0
   end
 
-  test "delete/1", %{user: user, series: series} do
-    assert {:ok, image} =
-      @params
-      |> Map.put(:creator_id, user.id)
-      |> Map.put(:image_series_id, series.id)
-      |> Image.create(user)
-
-    assert (Brando.repo.get_by!(Image, id: image.id)).id == image.id
-    assert Image.delete(image)
-    assert_raise Ecto.NoResultsError, fn -> Brando.repo.get_by!(Image, id: image.id) end
-
-    assert {:ok, image} =
-      @params
-      |> Map.put(:creator_id, user.id)
-      |> Map.put(:image_series_id, series.id)
-      |> Image.create(user)
-
-    assert (Brando.repo.get_by!(Image, id: image.id)).id == image.id
-    assert Image.delete(image.id)
-    assert_raise Ecto.NoResultsError, fn -> Brando.repo.get_by!(Image, id: image.id) end
-
-    assert {:ok, image1} =
-      @params
-      |> Map.put(:creator_id, user.id)
-      |> Map.put(:image_series_id, series.id)
-      |> Image.create(user)
-
-    assert {:ok, image2} =
-      @params2
-      |> Map.put(:creator_id, user.id)
-      |> Map.put(:image_series_id, series.id)
-      |> Image.create(user)
-
-    assert (Brando.repo.get_by!(Image, id: image1.id)).id == image1.id
-    assert (Brando.repo.get_by!(Image, id: image2.id)).id == image2.id
-    assert Image.delete([image1.id, image2.id])
-    assert_raise Ecto.NoResultsError, fn -> Brando.repo.get_by!(Image, id: image1.id) end
-    assert_raise Ecto.NoResultsError, fn -> Brando.repo.get_by!(Image, id: image2.id) end
-  end
-
-  test "delete_dependent_images/1", %{user: user, series: series} do
+  test "delete_images_for/1", %{user: user, series: series} do
     assert {:ok, image} =
       @params
       |> Map.put(:creator_id, user.id)

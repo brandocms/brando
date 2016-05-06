@@ -1,30 +1,63 @@
 defmodule <%= application_module %>.ReleaseTasks do
   @moduledoc ~S"""
-  Mix is not available in a built release. Instead we define the tasks here and use a small escript
-  that delegates to `<%= application_module %>.ReleaseTasks.main`. See `ReleaseManager.Plugin.ReleaseTasks`.
-  In the release you can invoke tasks like this:
-      bin/marit_larsen escript bin/release_tasks.escript migrate
+  Mix is not available in a built release. Instead we define the tasks here,
+  and invoke it using the application script generated in the release:
+
+      bin/<%= application_name %> command Elixir.<%= application_module %>.ReleaseTasks create
+      bin/<%= application_name %> command Elixir.<%= application_module %>.ReleaseTasks migrate
+      bin/<%= application_name %> command Elixir.<%= application_module %>.ReleaseTasks seed
+      bin/<%= application_name %> command Elixir.<%= application_module %>.ReleaseTasks drop
   """
 
   @otp_app :<%= application_name %>
+  @repo <%= application_module %>.Repo
 
-  def main(args) do
-    start_applications([:elixir])
-    run_task(args)
+  def create do
+    load_app()
+    info "Creating database for #{inspect @repo}.."
+    case Ecto.Storage.up(@repo) do
+      :ok ->
+        info "The database for #{inspect @repo} has been created."
+      {:error, :already_up} ->
+        info "The database for #{inspect @repo} has already been created."
+      {:error, term} when is_binary(term) ->
+        fatal "The database for #{inspect @repo} couldn't be created, reason given: #{term}."
+      {:error, term} ->
+        fatal "The database for #{inspect @repo} couldn't be created, reason given: #{inspect term}."
+    end
+    System.halt(0)
   end
 
-  defp run_task(['migrate']), do: migrate()
-  defp run_task(['seed'|args]), do: seed(args)
+  def drop do
+    load_app()
+    info "Dropping database for #{inspect @repo}.."
+    case Ecto.Storage.down(@repo) do
+      :ok ->
+        info "The database for #{inspect @repo} has been dropped."
+      {:error, :already_down} ->
+        info "The database for #{inspect @repo} has already been dropped."
+      {:error, term} when is_binary(term) ->
+        fatal "The database for #{inspect @repo} couldn't be dropped, reason given: #{term}."
+      {:error, term} ->
+        fatal "The database for #{inspect @repo} couldn't be dropped, reason given: #{inspect term}."
+    end
+    System.halt(0)
+  end
 
   def migrate do
-    start_repo()
-    migrations_path = Application.app_dir(@otp_app, "priv/migrations")
-    Ecto.Migrator.run(<%= application_module %>.Repo, migrations_path, :up, all: true)
+    start_repo(@repo)
+    migrations_path = Application.app_dir(@otp_app, "priv/@repo/migrations")
+    info "Executing migrations for #{inspect @repo} in #{migrations_path}:"
+    migrations = Ecto.Migrator.run(@repo, migrations_path, :up, all: true)
+    info "Applied versions: #{inspect migrations}"
+    System.halt(0)
   end
 
-  defp seed(args) do
-    start_repo()
-    # <%= application_module %>.Repo.insert(...)
+  def seed do
+    start_repo(@repo)
+    info "Seeding data for #{inspect @repo}.."
+    # Put any needed seeding data here, or maybe run priv/repo/seeds.exs
+    System.halt(0)
   end
 
   defp start_applications(apps) do
@@ -33,10 +66,18 @@ defmodule <%= application_module %>.ReleaseTasks do
     end)
   end
 
-  defp start_repo do
+  defp start_repo(repo) do
+    load_app()
+    {:ok, _} = repo.start_link()
+  end
+
+  defp load_app do
     start_applications([:logger, :postgrex, :ecto])
     :ok = Application.load(@otp_app)
-    {:ok, _} = <%= application_module %>.Repo.start_link()
+  end
+
+  defp info(message) do
+    IO.puts(message)
   end
 
   defp fatal(message) do

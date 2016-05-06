@@ -15,7 +15,6 @@ defmodule Brando.ImageSeries do
 
   import Brando.Gettext
   import Ecto.Query, only: [from: 2]
-  import Brando.Utils.Model, only: [put_creator: 2]
 
   @required_fields ~w(name slug image_category_id creator_id)a
   @optional_fields ~w(credits sequence cfg)a
@@ -71,29 +70,8 @@ defmodule Brando.ImageSeries do
   end
 
   @doc """
-  Create a changeset for the model by passing `params`.
-  If valid, generate a hashed password and insert model to Brando.repo.
-  If not valid, return errors from changeset
+  Retrieve slug for `id`
   """
-  def create(params, current_user) do
-    %__MODULE__{}
-    |> put_creator(current_user)
-    |> changeset(:create, params)
-    |> Brando.repo.insert
-  end
-
-  @doc """
-  Create an `update` changeset for the model by passing `params`.
-  If password is in changeset, hash and insert in changeset.
-  If valid, update model in Brando.repo.
-  If not valid, return errors from changeset
-  """
-  def update(model, params) do
-    model
-    |> changeset(:update, params)
-    |> Brando.repo.update
-  end
-
   def get_slug(id: id) do
     Brando.repo.one!(
       from m in __MODULE__,
@@ -105,36 +83,11 @@ defmodule Brando.ImageSeries do
   @doc """
   Get all imageseries in category `id`.
   """
-  def get_by_category_id(id) do
-    Brando.repo.all(
-      from m in __MODULE__,
-        where: m.image_category_id == ^id,
-        order_by: m.sequence,
-        preload: [:images]
-    )
-  end
-
-  @doc """
-  Delete `series` from database
-
-  Also deletes all dependent images.
-  """
-  def delete(series) do
-    Brando.Images.Utils.delete_images_for(series_id: series.id)
-    Brando.repo.delete!(series)
-  end
-
-  @doc """
-  Delete all imageseries dependant on `category_id`
-  """
-  def delete_dependent_image_series(category_id) do
-    image_series = Brando.repo.all(
-      from m in __MODULE__,
-        where: m.image_category_id == ^category_id
-    )
-
-    for is <- image_series, do:
-      delete(is)
+  def by_category_id(id) do
+    from m in __MODULE__,
+      where: m.image_category_id == ^id,
+      order_by: m.sequence,
+      preload: [:images]
   end
 
   @doc """

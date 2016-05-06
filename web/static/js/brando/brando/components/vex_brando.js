@@ -2,6 +2,7 @@
 
 import $ from "jquery";
 import vex from "vex-js";
+import {bI18n} from "./i18n";
 
 if (typeof vex === 'undefined') {
   throw new Error('You must include vex to use vex.dialog');
@@ -154,7 +155,7 @@ class VexBrando {
         // set default theme for vex dialogs
         vex.defaultOptions.className = "vex-theme-plain";
         vex.dialog.buttons.YES.text = "OK";
-        vex.dialog.buttons.NO.text = "Angre";
+        vex.dialog.buttons.NO.text = bI18n.t("vex:cancel");
     }
 }
 

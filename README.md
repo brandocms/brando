@@ -74,6 +74,8 @@ Static media config in `endpoint.ex`.
 ```diff
 + plug Plug.Static,
 +  at: "/media", from: Brando.config(:media_path)
++  cache_control_for_etags: "public, max-age=31536000",
++  cache_control_for_vsn_requests: "public, max-age=31536000"
 ```
 
 Also switch out (or add to it, if you use sockets in the frontend as well) the socket config in `endpoint.ex`:
@@ -111,6 +113,12 @@ Merge frontend translations
 And backend:
 
     $ mix gettext.merge priv/gettext/backend
+
+Now we register our otp app's modules in Brando's registry to automatically set Gettext locales.
+Open up you application's `lib/my_app.ex` and add to `start/2`:
+
+    Brando.Registry.register(MyApp, [:gettext])
+    Brando.Registry.register(MyApp.Backend, [:gettext])
 
 ## Extra modules
 
@@ -263,6 +271,27 @@ Finally, add to your routes (`web/router.ex`):
 ```elixir
   get    "/route/:filter/sorter", YourController, :sequence
   post   "/route/:filter/sorter", YourController, :sequence_post
+```
+
+## Popup forms
+
+First, register the form in your app's endpoint startup. The first argument is the
+name of the schema, second is the form module and third is a list of fields you want
+returned if repo insertion is successful:
+
+```elixir
+Brando.PopupForm.Registry.register("client", MyApp.ClientForm, gettext("Create client"), [:id, :name])
+```
+
+```javascript
+$('.avatar img').click((e) => {
+    let clientForm = new PopupForm("client", clientInsertionSuccess);
+});
+
+function clientInsertionSuccess(fields) {
+    // here you'd insert the returned fields into a select or something similar.
+    console.log(`${fields.id} --> ${fields.username}`);
+}
 ```
 
 ## Tags

@@ -111,6 +111,7 @@ $legend-border-color: #E0E0E0;
             padding-left: 10px;
             position: static;
             width: 100%;
+            text-transform: capitalize;
         }
         fieldset {
           background-color: #F6FDF1;
@@ -119,6 +120,7 @@ $legend-border-color: #E0E0E0;
                 border-bottom: 2px solid $legend-border-color;
                 font-weight: normal;
                 background-color: #F6FDF1;
+                font-size: $font-size-large - 0.1rem;
             }
             fieldset legend {
                 border-bottom: 1px solid $legend-border-color;

@@ -2,6 +2,8 @@ defmodule Brando.Registry do
   @moduledoc """
   GenServer for registering extra modules
   """
+  require Logger
+
   defmodule State do
     @moduledoc """
     Struct for Registry server state.
@@ -24,6 +26,7 @@ defmodule Brando.Registry do
     modules = for m <- @default_modules do
       Module.concat(m, "Menu")
     end
+    Logger.info("==> Brando.Registry initialized")
     {:ok, %State{menu_modules: modules}}
   end
 
@@ -72,14 +75,15 @@ defmodule Brando.Registry do
 
   @doc false
   def handle_call({:register, module, opts}, _from, state) do
-    state = if :menu in opts, do:
-      %State{state | menu_modules: [Module.concat(module, "Menu")|state.menu_modules]}
+    state =
+      if :menu in opts, do:
+        %State{state | menu_modules: [Module.concat(module, "Menu")|state.menu_modules]},
+      else: state
 
-    state = if :gettext in opts do
-      %State{state | gettext_modules: [Module.concat(module, "Gettext")|state.gettext_modules]}
-    else
-      state
-    end
+    state =
+      if :gettext in opts, do:
+        %State{state | gettext_modules: [Module.concat(module, "Gettext")|state.gettext_modules]},
+      else: state
 
     {:reply, state, state}
   end

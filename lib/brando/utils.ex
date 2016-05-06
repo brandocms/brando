@@ -289,21 +289,7 @@ defmodule Brando.Utils do
   Runs some config checks.
   """
   def run_checks do
-    case Brando.config(:media_path) do
-      "" ->
-        raise Brando.Exception.ConfigError,
-              message: "config :brando, :media_path must be an absolute " <>
-                       "path to your media/ directory, e.g. " <>
-                       "/sites/prod/my_app/media"
-      nil ->
-        raise Brando.Exception.ConfigError,
-              message: "config :brando, :media_path must be set!"
-      media_path ->
-        unless String.starts_with?(media_path, "/") do
-          raise Brando.Exception.ConfigError,
-                message: "config :brando, :media_path must be an absolute path."
-        end
-    end
+    # noop, deprecated
   end
 
   @doc """
@@ -355,15 +341,11 @@ defmodule Brando.Utils do
   def img_url(image_field, size, opts) do
     size = is_atom(size) && Atom.to_string(size) || size
     prefix = Keyword.get(opts, :prefix, nil)
-    if not Map.has_key?(image_field.sizes, size) do
-      raise ArgumentError, message: ~s(
-        Wrong argument for img_url. Size `#{size}` does not exist for
-        #{inspect(image_field)}.
-      )
+    unless Map.has_key?(image_field.sizes, size) do
+      raise ArgumentError, message: ~s(Wrong key for img_url. Size `#{size}` does not exist for #{inspect(image_field)})
     end
 
-    url = prefix && Path.join([prefix, image_field.sizes[size]])
-                 || image_field.sizes[size]
+    url = prefix && Path.join([prefix, image_field.sizes[size]]) || image_field.sizes[size]
 
     case Map.get(image_field, :optimized) do
       true  -> Brando.Images.Utils.optimized_filename(url)

@@ -89,7 +89,7 @@ defmodule Brando.Sequence do
           end
         end
 
-        def filter_function() do
+        def filter_function do
           {:filter, fun} = unquote(filter)
           case fun.() do
             res when is_list(res) -> res

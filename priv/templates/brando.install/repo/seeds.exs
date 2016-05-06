@@ -18,7 +18,7 @@ post_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png
       "small" => %{"quality" => 100, "size" => "300"},
       "thumb" => %{"crop" => true, "quality" => 100, "size" => "150x150"},
       "xlarge" => %{"quality" => 100, "size" => "900"}},
-    upload_path: "images/posts"}
+    upload_path: "images/site/posts"}
 
 page_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"],
     default_size: "medium", random_filename: true, size_limit: 10240000,
@@ -28,7 +28,7 @@ page_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png
       "small" => %{"quality" => 100, "size" => "300"},
       "thumb" => %{"crop" => true, "quality" => 100, "size" => "150x150"},
       "xlarge" => %{"quality" => 100, "size" => "900"}},
-    upload_path: "images/pages"}
+    upload_path: "images/site/pages"}
 
 ss_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"],
     default_size: "medium", random_filename: true, size_limit: 10240000,
@@ -40,7 +40,7 @@ ss_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"]
         "test" => %{"quality" => 100, "size" => "900"},
         "thumb" => %{"crop" => true, "quality" => 100, "size" => "150x150"},
         "xlarge" => %{"quality" => 100, "size" => "2550"}},
-    upload_path: "images/slideshows"}
+    upload_path: "images/site/slideshows"}
 
 # insert admin user
 password = Brando.User.gen_password("admin")
@@ -69,6 +69,7 @@ ss_category = %Brando.ImageCategory{
 
 post_series = %Brando.ImageSeries{
   creator_id: user.id, credits: nil,
+  cfg: post_cfg,
   image_category_id: post_category.id,
   name: "post", sequence: 0, slug: "post"}
 
@@ -76,6 +77,7 @@ post_series = %Brando.ImageSeries{
 
 page_series = %Brando.ImageSeries{
   creator_id: user.id, credits: nil,
+  cfg: page_cfg,
   image_category_id: page_category.id,
   name: "page", sequence: 0, slug: "page"}
 

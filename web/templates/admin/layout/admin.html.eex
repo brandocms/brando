@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="app">
+<html lang="<%= current_user(@conn).language %>" class="app">
   <head>
     <%= meta_tag charset: "utf-8" %>
     <%= meta_tag http_equiv: "X-UA-Compatible", content: "IE=edge" %>

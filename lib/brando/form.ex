@@ -20,6 +20,22 @@ defmodule Brando.Form do
   See this module's `Brando.Form.form` and `Brando.Form.field` docs for more.
   """
 
+  defstruct class: false,
+            helper: nil,
+            schema: nil,
+            method: nil,
+            multipart: false,
+            source: nil,
+            type: nil,
+            action: nil,
+            fields: nil,
+            changeset: nil,
+            params: nil,
+            url: nil,
+            rendered_fields: nil,
+            rendered_form: nil
+
+  @type t         :: %__MODULE__{}
   @type form_opts :: [{:helper, atom} | {:class, String.t}]
 
   @valid_field_types [
@@ -43,7 +59,7 @@ defmodule Brando.Form do
     quote do
       import Brando.Form
       import Brando.Form.Fields
-      import Phoenix.HTML, only: [raw: 1]
+      import Phoenix.HTML, only: [raw: 1, safe_to_string: 1]
     end
   end
 
@@ -74,7 +90,7 @@ defmodule Brando.Form do
     end
     quote do
       @form_opts %{
-        class: unquote(opts[:class] || ""),
+        class: unquote(opts[:class] || false),
         helper: unquote(opts[:helper]),
         schema: unquote(opts[:schema]),
         multipart: false,
@@ -82,8 +98,8 @@ defmodule Brando.Form do
       }
       @form_fields []
 
-      def __model__ do
-        unquote(source)
+      def __schema__ do
+        unquote(opts[:schema])
       end
 
       unquote(block)
@@ -108,47 +124,62 @@ defmodule Brando.Form do
 
       """
       def get_form(opts) do
-        form_type = Keyword.fetch!(opts, :type)
-        action = Keyword.fetch!(opts, :action)
-        changeset = Keyword.fetch!(opts, :changeset)
-        params = Keyword.get(opts, :params, [])
+        form = %Brando.Form{
+          action:    Keyword.fetch!(opts, :action),
+          changeset: Keyword.fetch!(opts, :changeset),
+          class:     @form_opts.class,
+          fields:    @form_fields,
+          helper:    @form_opts.helper,
+          multipart: @form_opts.multipart,
+          params:    Keyword.get(opts, :params, []),
+          schema:    @form_opts.schema,
+          source:    @form_opts.source,
+          type:      Keyword.fetch!(opts, :type)
+        }
 
-        @form_fields
-        |> render_fields(changeset, opts, @form_opts)
-        |> render_form(opts, @form_opts)
-        |> raw
+        form
+        |> render_fields
+        |> render_form
+      end
+
+      def get_popup_form(opts) do
+        form = %Brando.Form{
+          action:    Keyword.fetch!(opts, :action),
+          changeset: Keyword.fetch!(opts, :changeset),
+          class:     @form_opts.class,
+          fields:    Enum.filter(@form_fields, fn({_, f}) -> f[:type] != :submit end),
+          helper:    @form_opts.helper,
+          multipart: @form_opts.multipart,
+          params:    Keyword.get(opts, :params, []),
+          schema:    @form_opts.schema,
+          source:    @form_opts.source,
+          type:      Keyword.fetch!(opts, :type)
+        }
+
+        form
+        |> render_fields
+        |> render_form
+        |> Map.put(:url, "/admin/api/popup_forms/#{form.source}")
       end
     end
   end
 
   @doc """
   Performs rendering of form.
-
-  ## Options
-
-    * `fields`: The rendered form fields we will wrap this form around.
-    * `opts`:
-      * `form_type`: :create, :update
-      * `action`: The action atom passed to `helper`, e.g.: `:create`
-      * `params`: Parameters passed to `helper`, e.g.: `to_string(@user.id)`
-    * `form_opts`:
-      * `class`: Optional class to set on form.
-      * `multipart`: Automatically set if we have file fields.
-      * `helper`: Helper set in form definition.
   """
-  @spec render_form(iodata, Keyword.t | nil, Keyword.t) :: String.t
-  def render_form(fields, opts, form_opts) do
-    form_type = Keyword.fetch!(opts, :type)
-    action = Keyword.fetch!(opts, :action)
-    params = Keyword.get(opts, :params, [])
-    url = apply_action(form_opts[:helper], action, params)
+  @spec render_form(t) :: t
+  def render_form(%Brando.Form{} = form) do
+    form =
+      form
+      |> Map.put(:url, apply_action(form.helper, form.action, form.params || []))
 
     form_opts =
-      form_opts
+      form
+      |> Map.delete(:__struct__)
       |> Keyword.new
-      |> Keyword.drop([:model, :helper, :source])
+      |> Keyword.take([:class, :multipart, :url])
       |> Keyword.put(:enforce_utf8, true)
-      |> Keyword.put(:method, get_method(form_type))
+      |> Keyword.put(:method, get_method(form.type))
       |> Keyword.put(:role, "form")
 
     form_opts =
@@ -163,28 +194,38 @@ defmodule Brando.Form do
         {class, form_opts} -> Keyword.put(form_opts, :class, class)
       end
 
-    form_tag(url, form_opts, do: raw(fields))
+    rendered_form =
+      form_tag(form.url, form_opts, do: raw(form.rendered_fields))
+
+    form
+    |> Map.put(:rendered_form, rendered_form)
+    |> Map.put(:method, form_opts[:method])
   end
 
   @doc """
   Reduces all `fields` and returns a list of each individual
   field as HTML. Gets any values or errors for the field.
   """
-  def render_fields(fields, changeset, form_opts, %{source: source, schema: schema}) do
-    Enum.reduce fields, [], fn ({name, field_opts}, acc) ->
-      field = %Field{
-        form_type: form_opts[:type],
-        source: source,
-        name: name,
-        schema: schema,
-        value: get_value(changeset, name),
-        errors: get_errors(changeset, name),
-        type: field_opts[:type],
-        opts: Enum.into(field_opts, %{})
-      } |> Fields.render_field
+  @spec render_fields(t) :: t
+  def render_fields(%Brando.Form{} = form) do
+    rendered_fields =
+      Enum.reduce form.fields, [], fn ({field_name, field_opts}, acc) ->
+        field = %Field{
+          form_type: form.type,
+          source: form.source,
+          name: field_name,
+          schema: form.schema,
+          value: get_value(form.changeset, field_name),
+          errors: get_errors(form.changeset, field_name),
+          type: field_opts[:type],
+          opts: Enum.into(field_opts, %{})
+        }
+        |> Fields.render_field
 
-      [field.html|acc]
+        [field.html|acc]
     end
+
+    form |> Map.put(:rendered_fields, Enum.join(rendered_fields))
   end
 
   @doc """
@@ -295,8 +336,7 @@ defmodule Brando.Form do
   """
   defmacro field(name, type, opts \\ []) do
     quote do
-      Brando.Form.__field__(__MODULE__, unquote(name),
-                            unquote(type), unquote(opts))
+      Brando.Form.__field__(__MODULE__, unquote(name), unquote(type), unquote(opts))
     end
   end
 
@@ -467,5 +507,13 @@ defmodule Brando.Form do
       nil    -> nil
       values -> values
     end
+  end
+end
+
+defimpl Phoenix.HTML.Safe, for: Brando.Form do
+  def to_iodata(data) do
+    data
+    |> Map.get(:rendered_form)
+    |> Phoenix.HTML.safe_to_string
   end
 end

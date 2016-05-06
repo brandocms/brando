@@ -35,6 +35,7 @@ defmodule Brando.SessionController do
   @doc false
   def login(conn, _params) do
     conn
+    |> assign(:type, "HELLO!")
     |> put_layout({Brando.Session.LayoutView, "auth.html"})
     |> render(:login)
   end
@@ -42,6 +43,7 @@ defmodule Brando.SessionController do
   @doc false
   def logout(conn, _params) do
     conn
+    |> assign(:type, "GOODBYE!")
     |> put_layout({Brando.Session.LayoutView, "auth.html"})
     |> delete_session(:current_user)
     |> render(:logout)

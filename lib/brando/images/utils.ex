@@ -94,7 +94,7 @@ defmodule Brando.Images.Utils do
   Return joined path of `file` and the :media_path config option
   as set in your app's config.exs.
   """
-  def media_path() do
+  def media_path do
     Brando.config(:media_path)
   end
   def media_path(nil) do
@@ -262,6 +262,7 @@ defmodule Brando.Images.Utils do
       end
 
     csrf_token = Phoenix.Controller.get_csrf_token()
+    allowed_mimetypes = Map.get(cfg, :allowed_mimetypes) |> Enum.join(", ")
     """
     <form accept-charset="UTF-8" class="grid-form" method="post" role="form">
       <input name="_method" type="hidden" value="patch">
@@ -270,7 +271,8 @@ defmodule Brando.Images.Utils do
       <div class="form-row">
         <div class="form-group required no-height">
           <label for="config[cfg]">#{gettext("Allowed mimetypes")}</label>
-          <input type="text" name="config[allowed_mimetypes]" value="#{Map.get(cfg, :allowed_mimetypes) |> Enum.join(", ")}">
+          <input type="text" name="config[allowed_mimetypes]"
+                 value="#{allowed_mimetypes}">
         </div>
         <div class="form-group required no-height">
           <label for="config[cfg]">#{gettext("Default size")}</label>
@@ -293,12 +295,19 @@ defmodule Brando.Images.Utils do
       </div>
       #{size_rows}
       <div class="form-row">
-        <button class="m-t-sm m-b-sm btn btn-default add-masterkey-standard">Add master key (standard)</button>
-        <button class="m-t-sm m-b-sm m-l-sm btn btn-default add-masterkey-pl">Add master key (portrait/landscape)</button>
+        <button class="m-t-sm m-b-sm btn btn-default add-masterkey-standard">
+          #{gettext("Add master key (standard)")}
+        </button>
+        <button class="m-t-sm m-b-sm m-l-sm btn btn-default add-masterkey-pl">
+          #{gettext("Add master key (portrait/landscape)")}
+        </button>
       </div>
       <div class="form-row">
         <div class="form-group required">
-          <input class="btn btn-success" name="config[submit]" type="submit" value="Lagre">
+          <input class="btn btn-success"
+                 name="config[submit]"
+                 type="submit"
+                 value="#{gettext("Save")}">
         </div>
       </div>
     </form>
@@ -314,7 +323,7 @@ defmodule Brando.Images.Utils do
         {:recursive, i}
       else
         i = for {k, v} <- cfg do
-          make_input_for(k, v, name, cfg, :standard)
+          make_input_for({k, v}, name, cfg, :standard)
         end
         {:standard, i}
       end
@@ -325,7 +334,9 @@ defmodule Brando.Images.Utils do
       if type == :standard do
         """
         <div class="form-row">
-          <span class="m-t-sm m-b-sm btn btn-xs btn-block add-key-standard"><i class="fa fa-plus-circle"></i></span>
+          <span class="m-t-sm m-b-sm btn btn-xs btn-block add-key-standard">
+            <i class="fa fa-plus-circle"></i>
+          </span>
         </div>
         """
       else
@@ -335,18 +346,20 @@ defmodule Brando.Images.Utils do
     """
     <fieldset>
       <legend>
-      <br />
-        Key <span class="btn btn-xs delete-key"><i class="fa fa-fw fa-ban"></i></span>
+        <br />
+        #{gettext("key")}
+        <span class="btn btn-xs delete-key">
+          <i class="fa fa-fw fa-ban"></i>
+        </span>
       </legend>
       <div class="form-row">
         <div class="form-group required no-height">
-          <label>Masterkey</label>
+          <label>#{gettext("masterkey")}</label>
           <input type="text" class="#{masterkey_type}" value="#{name}">
         </div>
       </div>
 
       #{inputs}
-
       #{add_button}
 
     </fieldset>
@@ -356,31 +369,44 @@ defmodule Brando.Images.Utils do
   defp make_recursive_input_for(orientation, cfg_map, name, _) do
     inputs =
       for {k, v} <- cfg_map do
-        make_input_for(k, v, name, cfg_map, orientation)
+        make_input_for({k, v}, name, cfg_map, orientation)
       end
 
     """
     <fieldset>
       <legend>
       <br />
-        Orientation: #{orientation}
+        #{gettext("Orientation")}: #{orientation}
       </legend>
 
       #{inputs}
 
       <div class="form-row">
-        <span data-orientation="#{orientation}" class="m-t-sm m-b-sm btn btn-xs btn-block add-key-recursive"><i class="fa fa-plus-circle"></i></span>
+        <span data-orientation="#{orientation}"
+              class="m-t-sm m-b-sm btn btn-xs btn-block add-key-recursive">
+          <i class="fa fa-plus-circle"></i>
+        </span>
       </div>
     </fieldset>
     """
   end
 
-  defp make_input_for(k, v, name, _, modifier) do
+  defp make_input_for({k, v}, name, _, modifier) do
     actual_value =
       if modifier == :standard do
-        ~s(<input type="hidden" class="actual-value" name="sizes[#{name}][#{k}]" value="#{v}">)
+        """
+        <input type="hidden"
+               class="actual-value"
+               name="sizes[#{name}][#{k}]"
+               value="#{v}">
+        """
       else
-        ~s(<input type="hidden" class="actual-value orientation-value" name="sizes[#{name}][#{modifier}][#{k}]" value="#{v}">)
+        """
+        <input type="hidden"
+               class="actual-value orientation-value"
+               name="sizes[#{name}][#{modifier}][#{k}]"
+               value="#{v}">
+        """
       end
 
     class_modifier =
@@ -393,7 +419,12 @@ defmodule Brando.Images.Utils do
     """
     <div class="form-row">
       <div class="form-group required no-height">
-        <label>Key <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
+        <label>
+          Key
+          <span class="btn btn-xs delete-subkey">
+            <i class="fa fa-fw fa-ban"></i>
+          </span>
+        </label>
         <input type="text" class="#{class_modifier}-key-input" value="#{k}">
       </div>
       <div class="form-group required no-height">
@@ -446,7 +477,8 @@ defmodule Brando.Images.Utils do
     image_dirname = Path.dirname(image.image.path)
     image_basename = Path.basename(image.image.path)
 
-    img_struct = do_check_image_path(image, image_path, image_dirname, image_basename, upload_dirname)
+    img_struct =
+      do_check_image_path(image, image_path, image_dirname, image_basename, upload_dirname)
 
     if img_struct != nil do
       # store new image
@@ -477,18 +509,32 @@ defmodule Brando.Images.Utils do
   @doc """
   Gets orphaned image_series.
   """
-  def get_orphaned_series(image_series, starts_with: starts_with) do
-    # first grab all actual series upload paths
+  def get_orphaned_series(categories, series, opts) do
+    starts_with = Keyword.fetch!(opts, :starts_with)
+    ignored_paths = Keyword.get(opts, :ignored_paths, [])
     media_path = Path.expand(Brando.config(:media_path))
 
-    upload_paths =
-      for is <- image_series do
-        Path.join(media_path, is.cfg.upload_path)
-      end
+    series_paths = Enum.map(series, &Path.join(media_path, &1.cfg.upload_path))
+    category_paths = Enum.map(categories, &Path.join(media_path, &1.cfg.upload_path))
+
+    upload_paths = series_paths ++ category_paths
 
     if upload_paths != [] do
-      check_path = Path.join(media_path, starts_with)
-      existing_paths = Path.wildcard(Path.join(check_path, "*"))
+      path_to_check = Path.join(media_path, starts_with)
+      full_ignored_paths = Enum.map(ignored_paths, &(Path.join(path_to_check, &1)))
+
+      existing_category_paths =
+        path_to_check
+        |> Path.join("*")
+        |> Path.wildcard
+        |> Enum.filter(&(!&1 in full_ignored_paths))
+
+      existing_series_paths =
+        existing_category_paths
+        |> Enum.map(&Path.wildcard(Path.join(&1, "*")))
+        |> List.flatten
+
+      existing_paths = existing_series_paths ++ existing_category_paths
 
       existing_paths -- upload_paths
     else

@@ -54,3 +54,5 @@ Repo.start_link
 
 Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)
 Brando.endpoint.start_link
+Brando.Registry.start_link
+Brando.Registry.register(Brando, [:gettext])

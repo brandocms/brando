@@ -1,0 +1,4 @@
+                <%= render(Brando.ErrorView, "top.html", assigns) %>
+                <h1 id="app-name">500</h1>
+                <p><%= gettext("Application error") %></p>
+                <%= render(Brando.ErrorView, "bottom.html", assigns) %>

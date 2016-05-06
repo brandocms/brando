@@ -701,7 +701,7 @@ defmodule Brando.Form.Fields do
   def fieldset_open_tag(legend, _in_fieldset), do:
     ~s(<fieldset><legend><br>#{legend}</legend><div class="form-row">)
 
-  def fieldset_close_tag(), do:
+  def fieldset_close_tag, do:
     ~s(</div></fieldset>)
 
   defp put_slug_from(tag_opts, name, opts) do

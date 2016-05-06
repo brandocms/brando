@@ -22,8 +22,9 @@ defmodule Brando.Dashboard.Routes.Admin do
       path = unquote(path)
       opts = unquote(opts)
 
-      get "#{path}",                 ctrl, :dashboard,       opts
+      get path,                      ctrl, :dashboard,       opts
       get "#{path}/systeminfo",      ctrl, :system_info,     opts
+      get "#{path}/raise",           ctrl, :dummy_raise,     opts
     end
   end
 end
