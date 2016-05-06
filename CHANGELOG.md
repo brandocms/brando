@@ -1,4 +1,4 @@
-## v0.31.0-dev (2016-XX-XX)
+## v0.31.0 (2016-05-07)
 
 * Bug fixes
   * Fixed bug in `Brando.Registry` where not including `:menu` would crash the registry.

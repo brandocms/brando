@@ -73,7 +73,7 @@ msgstr ""
 msgid "Configure image series"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:228
+#: web/controllers/admin/image_category_controller.ex:229
 #: web/controllers/admin/image_series_controller.ex:193
 #: web/controllers/admin/user_controller.ex:175
 msgid "Confirm deletion"
@@ -109,7 +109,7 @@ msgstr ""
 msgid "Delete user"
 msgstr ""
 
-#: lib/brando/html.ex:354 lib/brando/html/inspect.ex:145
+#: lib/brando/html.ex:354 lib/brando/html/inspect.ex:146
 msgid "Deleted"
 msgstr ""
 
@@ -186,7 +186,7 @@ msgstr ""
 msgid "Image category created"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:240
+#: web/controllers/admin/image_category_controller.ex:241
 msgid "Image category deleted"
 msgstr ""
 
@@ -367,11 +367,11 @@ msgstr ""
 msgid "Users"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:151
+#: lib/brando/html/inspect.ex:152
 msgid "** censored **"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:230
+#: lib/brando/html/inspect.ex:234
 msgid "Association not fetched"
 msgstr ""
 
@@ -387,7 +387,7 @@ msgstr ""
 msgid "Configuration"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:130
+#: lib/brando/html/inspect.ex:131
 msgid "Configuration data"
 msgstr ""
 
@@ -395,7 +395,7 @@ msgstr ""
 msgid "Confirm"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:237
+#: lib/brando/html/inspect.ex:252
 msgid "Connected"
 msgstr ""
 
@@ -408,15 +408,15 @@ msgstr ""
 msgid "Credits"
 msgstr ""
 
-#: lib/brando/html.ex:348 lib/brando/html/inspect.ex:144
+#: lib/brando/html.ex:348 lib/brando/html/inspect.ex:145
 msgid "Draft"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:224 lib/brando/html/inspect.ex:233
+#: lib/brando/html/inspect.ex:228 lib/brando/html/inspect.ex:237
 msgid "Empty association"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:122 lib/brando/html/inspect.ex:174
+#: lib/brando/html/inspect.ex:123 lib/brando/html/inspect.ex:178
 msgid "Encoded value"
 msgstr ""
 
@@ -458,7 +458,7 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:126
+#: lib/brando/html/inspect.ex:127
 msgid "No connected image"
 msgstr ""
 
@@ -466,16 +466,16 @@ msgstr ""
 msgid "No results"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:93 lib/brando/html/inspect.ex:101
-#: lib/brando/html/inspect.ex:178
+#: lib/brando/html/inspect.ex:95 lib/brando/html/inspect.ex:103
+#: lib/brando/html/inspect.ex:182
 msgid "No value"
 msgstr ""
 
-#: lib/brando/html.ex:342 lib/brando/html/inspect.ex:143
+#: lib/brando/html.ex:342 lib/brando/html/inspect.ex:144
 msgid "Pending"
 msgstr ""
 
-#: lib/brando/html.ex:336 lib/brando/html/inspect.ex:142
+#: lib/brando/html.ex:336 lib/brando/html/inspect.ex:143
 msgid "Published"
 msgstr ""
 
@@ -487,7 +487,7 @@ msgstr ""
 msgid "Roles"
 msgstr ""
 
-#: lib/brando/form/fields.ex:91 lib/brando/images/utils.ex:301
+#: lib/brando/form/fields.ex:91 lib/brando/images/utils.ex:310
 msgid "Save"
 msgstr ""
 
@@ -512,7 +512,7 @@ msgstr ""
 msgid "Username"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:113
+#: lib/brando/html/inspect.ex:115
 msgid "admin"
 msgstr ""
 
@@ -568,11 +568,11 @@ msgstr ""
 msgid "should be at least %{count} characters"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:114
+#: lib/brando/html/inspect.ex:116
 msgid "staff"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:112
+#: lib/brando/html/inspect.ex:114
 msgid "superuser"
 msgstr ""
 
@@ -729,11 +729,11 @@ msgstr ""
 msgid "You are trying to authorize from an insecure URL. <a href=\"%{url}\">Please try again from this URL</a> or proceed at your own risk!"
 msgstr ""
 
-#: lib/brando/images/utils.ex:272
+#: lib/brando/images/utils.ex:273
 msgid "Allowed mimetypes"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:182
+#: web/controllers/admin/image_category_controller.ex:183
 msgid "Category propagated"
 msgstr ""
 
@@ -742,7 +742,7 @@ msgstr ""
 msgid "Configuration updated"
 msgstr ""
 
-#: lib/brando/images/utils.ex:276
+#: lib/brando/images/utils.ex:278
 msgid "Default size"
 msgstr ""
 
@@ -750,7 +750,7 @@ msgstr ""
 msgid "Propagate configuration to dependent image series"
 msgstr ""
 
-#: lib/brando/images/utils.ex:280
+#: lib/brando/images/utils.ex:282
 msgid "Random filename"
 msgstr ""
 
@@ -762,11 +762,11 @@ msgstr ""
 msgid "Recreated sizes for image series"
 msgstr ""
 
-#: lib/brando/images/utils.ex:284
+#: lib/brando/images/utils.ex:286
 msgid "Size limit"
 msgstr ""
 
-#: lib/brando/images/utils.ex:290
+#: lib/brando/images/utils.ex:292
 msgid "Upload path"
 msgstr ""
 
@@ -786,11 +786,11 @@ msgstr ""
 msgid "Delete orphans"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:197
+#: web/controllers/admin/image_category_controller.ex:198
 msgid "Handle orphaned image series"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:210
+#: web/controllers/admin/image_category_controller.ex:211
 msgid "Orphans deleted"
 msgstr ""
 
@@ -842,23 +842,23 @@ msgstr ""
 msgid "Propagating configuration"
 msgstr ""
 
-#: lib/brando/images/utils.ex:297
+#: lib/brando/images/utils.ex:302
 msgid "Add master key (portrait/landscape)"
 msgstr ""
 
-#: lib/brando/images/utils.ex:296
+#: lib/brando/images/utils.ex:299
 msgid "Add master key (standard)"
 msgstr ""
 
-#: lib/brando/images/utils.ex:365
+#: lib/brando/images/utils.ex:379
 msgid "Orientation"
 msgstr ""
 
-#: lib/brando/images/utils.ex:339
+#: lib/brando/images/utils.ex:350
 msgid "key"
 msgstr ""
 
-#: lib/brando/images/utils.ex:343
+#: lib/brando/images/utils.ex:357
 msgid "masterkey"
 msgstr ""
 
