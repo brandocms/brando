@@ -289,12 +289,13 @@ def unpack_release(version):
     Unpack release at target, delete old stuff + archive
     """
     with cd(env.path), shell_env(HOME='/home/%s' % env.project_user):
-        # print(red('-- deleting old release folders'))
-        # sudo('rm -rf bin erts-7.2 lib log releases running-config sql', user=env.project_user)
+        print(red('==> deleting old release'))
+        sudo('rm -rf bin erts-7.2 lib releases running-config', user=env.project_user)
         print(yellow('==> unpacking release'))
         sudo('tar xvf %s_%s.tar.gz' % (env.project_name, version), user=env.project_user)
-        print(yellow('==> removing archive'))
-        sudo('rm %s_%s.tar.gz' % (env.project_name, version), user=env.project_user)
+        print(yellow('==> archiving release'))
+        sudo('mkdir -p release-archives', user=env.project_user)
+        sudo('mv %s_%s.tar.gz release-archives/%s_%s.tar.gz' % (env.project_name, version, env.project_name, version), user=env.project_user)
 
     fixprojectperms()
 
@@ -779,4 +780,3 @@ def nginxrestart():
 def _notify_build_complete(version):
     local('terminal-notifier -message "Release process completed!" -title %s -subtitle v%s -sound default -group %s -open %s' % (
         PROJECT_NAME, version, PROJECT_NAME, PROD_URL))
-        
