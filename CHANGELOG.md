@@ -1,4 +1,10 @@
 ## v0.32.0-dev (2016-XX-XX)
+* Bug fixes
+  * fabfile now deletes old release before unpacking new release. Also archives the tar.gz
+    in `release-archives`.
+
+* Enhancements
+  * Added errorview for `400` errors.
 
 ## v0.31.0 (2016-05-07)
 
