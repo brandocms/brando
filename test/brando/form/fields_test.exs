@@ -197,7 +197,6 @@ defmodule Brando.Form.FieldsTest do
     field = %Brando.Form.Field{
       errors: nil,
       form_type: :update,
-      html: nil,
       name: :name,
       opts: %{
         action: :update,
@@ -211,17 +210,17 @@ defmodule Brando.Form.FieldsTest do
       value: "Series name"
     }
 
-    assert F.render_field(field).html
+    assert F.render_field(field).html |> Enum.join
            == ~s(<div class="form-row"><div class="form-group required">) <>
               ~s(<label for="imageseries[name]">Name</label>) <>
               ~s(<input name="imageseries[name]" type="text" value="Series name"></div></div>)
 
     field =
       field
-      |> Map.put(:html, nil)
+      |> Map.put(:html, [])
       |> put_in_opts(:confirm, true)
 
-    assert F.render_field(field).html
+    assert F.render_field(field).html |> Enum.join
            == ~s(<div class="form-row"><div class="form-group required">) <>
               ~s(<label for="imageseries[name]">Name</label>) <>
               ~s(<input name="imageseries[name]" type="text" value="Series name"></div>) <>
@@ -234,7 +233,6 @@ defmodule Brando.Form.FieldsTest do
     field = %Brando.Form.Field{
       errors: nil,
       form_type: :update,
-      html: nil,
       name: :password,
       opts: %{
         action: :update,
@@ -248,7 +246,7 @@ defmodule Brando.Form.FieldsTest do
       value: "abcdefg"
     }
 
-    assert F.render_field(field).html
+    assert F.render_field(field).html |> Enum.join
            == ~s(<div class="form-row"><div class="form-group required">) <>
               ~s(<label for="user[password]">Password</label>) <>
               ~s(<input name="user[password]" type="password" value="abcdefg"></div></div>)
@@ -256,7 +254,6 @@ defmodule Brando.Form.FieldsTest do
     field = %Brando.Form.Field{
       errors: nil,
       form_type: :update,
-      html: nil,
       name: :password,
       opts: %{
         action: :update,
@@ -271,7 +268,7 @@ defmodule Brando.Form.FieldsTest do
       value: "abcdefg"
     }
 
-    assert F.render_field(field).html
+    assert F.render_field(field).html |> Enum.join
            == ~s(<div class="form-row"><div class="form-group required">) <>
               ~s(<label for="user[password]">Password</label>) <>
               ~s(<input name="user[password]" type="password" value="abcdefg"></div>) <>
@@ -284,7 +281,6 @@ defmodule Brando.Form.FieldsTest do
     field = %Brando.Form.Field{
       errors: nil,
       form_type: :update,
-      html: nil,
       name: :description,
       opts: %{
         action: :update,
@@ -299,19 +295,19 @@ defmodule Brando.Form.FieldsTest do
       value: "text"
     }
 
-    assert F.render_field(field).html
+    assert F.render_field(field).html |> Enum.join
            == ~s(<div class="form-row"><div class="form-group required no-height">) <>
               ~s(<label for="user[description]">Description</label>) <>
               ~s(<textarea name="user[description]">text</textarea></div></div>)
 
     field =
       field
-      |> put_in_field(:html, nil)
+      |> put_html(nil)
       |> put_in_field(:form_type, :create)
       |> put_in_field(:value, nil)
       |> put_in_opts(:default, "default")
 
-    assert F.render_field(field).html
+    assert F.render_field(field).html |> Enum.join
            == ~s(<div class="form-row"><div class="form-group required no-height">) <>
               ~s(<label for="user[description]">Description</label>) <>
               ~s(<textarea name="user[description]">default</textarea></div></div>)
@@ -321,7 +317,6 @@ defmodule Brando.Form.FieldsTest do
     field = %Brando.Form.Field{
       errors: nil,
       form_type: :update,
-      html: nil,
       name: :description,
       opts: %{
         choices: &UserForm.get_skills_choices/0,
@@ -338,7 +333,7 @@ defmodule Brando.Form.FieldsTest do
       value: ["1", "2"]
     }
 
-    assert F.render_field(field).html
+    assert F.render_field(field).html |> Enum.join("")
            == "<div class=\"form-row\"><div class=\"form-group required\">" <>
            "<label for=\"user[description]\">Description</label><div>" <>
            "<label for=\"user[description]\"></label><label for=\"user[description]\">" <>
@@ -355,7 +350,6 @@ defmodule Brando.Form.FieldsTest do
     field = %Brando.Form.Field{
       errors: nil,
       form_type: :update,
-      html: nil,
       name: :description,
       opts: %{
         choices: &UserForm.get_skills_choices/0,
@@ -372,7 +366,7 @@ defmodule Brando.Form.FieldsTest do
       value: ["1"]
     }
 
-    assert F.render_field(field).html
+    assert F.render_field(field).html |> Enum.join
            == "<div class=\"form-row\"><div class=\"form-group required\">" <>
            "<label for=\"user[description]\">Description</label>" <>
            "<select name=\"user[description]\"><option selected=\"selected\" value=\"1\">" <>

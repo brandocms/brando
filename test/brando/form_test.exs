@@ -132,12 +132,13 @@ defmodule Brando.FormTest do
         fields: form_fields
       } |> render_fields
 
-    assert form.rendered_fields =~ ~s("form-group required")
-    assert form.rendered_fields =~ "user[username]"
-    assert form.rendered_fields =~ ~s(placeholder="Username")
-    assert form.rendered_fields =~ "<legend><br>Permissions</legend>"
-    assert form.rendered_fields =~ ~s(type="submit")
-    assert form.rendered_fields =~ ~s(type="file")
+    html = form.rendered_fields |> Enum.join
+    assert html =~ ~s("form-group required")
+    assert html =~ "user[username]"
+    assert html =~ ~s(placeholder="Username")
+    assert html =~ "<legend><br>Permissions</legend>"
+    assert html =~ ~s(type="submit")
+    assert html =~ ~s(type="file")
 
     cs = %{
       action: :insert,
@@ -158,13 +159,14 @@ defmodule Brando.FormTest do
       |> Map.put(:changeset, cs)
       |> render_fields
 
-    assert form.rendered_fields =~ ~s("form-group required has-error")
-    assert form.rendered_fields =~ "user[username]"
-    assert form.rendered_fields =~ ~s(placeholder="Username")
-    assert form.rendered_fields =~ "<legend><br>Permissions</legend>"
-    assert form.rendered_fields =~ ~s(type="submit")
-    assert form.rendered_fields =~ ~s(can&#39;t be blank)
-    assert form.rendered_fields =~ ~s(type="file")
+    html = form.rendered_fields |> Enum.join
+    assert html =~ ~s("form-group required has-error")
+    assert html =~ "user[username]"
+    assert html =~ ~s(placeholder="Username")
+    assert html =~ "<legend><br>Permissions</legend>"
+    assert html =~ ~s(type="submit")
+    assert html =~ ~s(can&#39;t be blank)
+    assert html =~ ~s(type="file")
   end
 
   test "render_fields/1 :update" do
@@ -209,12 +211,13 @@ defmodule Brando.FormTest do
         schema: Brando.User
       } |> render_fields
 
-    assert form.rendered_fields =~ "form-group required"
-    assert form.rendered_fields =~ "user[email]"
-    assert form.rendered_fields =~ ~s(value="test@email.com")
-    assert form.rendered_fields =~ ~s(placeholder="E-mail")
-    assert form.rendered_fields =~ ~s(type="submit")
-    assert form.rendered_fields =~ ~s(type="file")
+    html = form.rendered_fields |> Enum.join
+    assert html =~ "form-group required"
+    assert html =~ "user[email]"
+    assert html =~ ~s(value="test@email.com")
+    assert html =~ ~s(placeholder="E-mail")
+    assert html =~ ~s(type="submit")
+    assert html =~ ~s(type="file")
   end
 
   test "field name clash" do

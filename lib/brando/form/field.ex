@@ -10,5 +10,5 @@ defmodule Brando.Form.Field do
             schema: nil,
             source: nil,
             opts: %{},
-            html: nil
+            html: []
 end

@@ -142,6 +142,10 @@ defmodule Brando.Form do
         |> render_form
       end
 
+      @doc """
+      Just like `get_form/1`, except removes all `:submit` fields and sets form's `:url`
+      to the popup forms api.
+      """
       def get_popup_form(opts) do
         form = %Brando.Form{
           action:    Keyword.fetch!(opts, :action),
@@ -220,12 +224,13 @@ defmodule Brando.Form do
           type: field_opts[:type],
           opts: Enum.into(field_opts, %{})
         }
-        |> Fields.render_field
+
+        field = Fields.render_field(field)
 
         [field.html|acc]
     end
 
-    form |> Map.put(:rendered_fields, Enum.join(rendered_fields))
+    Map.put(form, :rendered_fields, rendered_fields)
   end
 
   @doc """

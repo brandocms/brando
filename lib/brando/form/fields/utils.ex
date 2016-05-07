@@ -6,23 +6,25 @@ defmodule Brando.Form.Fields.Utils do
   Prepend `html` to `field`'s html
   """
   def prepend_html(field, html) do
-    html = is_list(html) && Enum.join(html, "") || html
-    Map.put(field, :html, Enum.join([html, field.html], ""))
+    Map.put(field, :html, [html, field.html])
   end
 
   @doc """
   Append `html` to `field`'s html
   """
   def append_html(field, html) do
-    html = is_list(html) && Enum.join(html, "") || html
-    Map.put(field, :html, Enum.join([field.html, html], ""))
+    Map.put(field, :html, [field.html, html])
   end
 
   @doc """
   Set `field`'s html to `html`
   """
-  def set_html(field, html) do
-    Map.put(field, :html, Enum.join(html, ""))
+  def put_html(field, nil) do
+    Map.put(field, :html, [])
+  end
+
+  def put_html(field, html) do
+    Map.put(field, :html, html)
   end
 
   @doc """

@@ -189,7 +189,7 @@ defmodule Brando.Form.Fields do
       |> put_rows(field.opts)
 
     {:safe, html} = content_tag(:textarea, tag_opts) do
-      get_val(nil, field.opts[:default])
+      get_val(nil, field.opts[:default] || [])
     end
 
     prepend_html(field, html)
@@ -206,6 +206,7 @@ defmodule Brando.Form.Fields do
     {:safe, html} = content_tag(:textarea, tag_opts) do
       Poison.encode!(value)
     end
+
     prepend_html(field, html)
   end
 
@@ -219,6 +220,7 @@ defmodule Brando.Form.Fields do
     {:safe, html} = content_tag(:textarea, tag_opts) do
       value || ""
     end
+
     prepend_html(field, html)
   end
 
@@ -339,9 +341,6 @@ defmodule Brando.Form.Fields do
   This is for multiple checkboxes. Single checks are
   handled through `input(:checkbox, ...)`
   """
-  #def checkbox(form_type, name, choice_value, choice_text,
-  #             value, default, is_checked_fun \\ nil)
-  #def checkbox(:create, name, choice_value, choice_text, nil, default, _) do
   def checkbox(%Field{form_type: :create, value: nil} = field, choice) do
     name = format_name(field.name, field.source)
 
@@ -505,12 +504,12 @@ defmodule Brando.Form.Fields do
         {:safe, html} = content_tag(:select, tag_opts) do
           field.html |> raw
         end
-        set_html(field, html)
+        put_html(field, html)
       true ->
         {:safe, html} = content_tag(:select, [name: "#{name}[]", multiple: true]) do
           field.html |> raw
         end
-        set_html(field, html)
+        put_html(field, html)
     end
   end
 
@@ -564,11 +563,11 @@ defmodule Brando.Form.Fields do
   @spec add_label(Field.t) :: String.t
   def add_label(%Field{type: :checkbox, opts: %{multiple: false}} = field) do
     name = format_name(field.name, field.source)
-    text = field.html <> get_label(field)
+    text = [field.html|get_label(field)]
     {:safe, html} = content_tag(:label, for: name, class: field.opts[:label_class]) do
       text |> raw
     end
-    set_html(field, html)
+    put_html(field, html)
   end
 
   def add_label(%Field{} = field) do
@@ -592,7 +591,7 @@ defmodule Brando.Form.Fields do
 
     confirm_field =
       field
-      |> put_in_field(:html, nil)
+      |> put_html(nil)
       |> put_in_opts(:label, "#{confirm_i18n} #{get_label(field)}")
       |> put_in_opts(:placeholder, "#{confirm_i18n} #{get_label(field)}")
       |> put_in_field(:name, "#{field.name}_confirmation")
@@ -621,7 +620,7 @@ defmodule Brando.Form.Fields do
     {:safe, html} = content_tag(:div, classes) do
       [field.html, render_errors(field.errors, field.opts), render_help_text(field)] |> raw
     end
-    set_html(field, html)
+    put_html(field, html)
   end
 
   def wrap_in_div(field, class \\ "form-row") do
@@ -631,7 +630,7 @@ defmodule Brando.Form.Fields do
       {:safe, html} = content_tag(:div, class: class) do
         raw(field.html)
       end
-      set_html(field, html)
+      put_html(field, html)
     end
   end
 
