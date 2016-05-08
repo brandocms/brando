@@ -122,4 +122,26 @@ $foundation-colors: (
   .padding {
     padding: $global-padding;
   }
+
+  @media (max-width: 425px) {
+    #content {
+      padding: 1rem !important;
+    }
+
+    .noscroll.grid-block,
+    .noscroll.grid-content,
+    .noscroll.small-grid-block,
+    .noscroll.small-grid-content,
+    .noscroll.medium-grid-block,
+    .noscroll.medium-grid-content,
+    .noscroll.large-grid-block,
+    .noscroll.large-grid-content {
+      overflow: auto !important;
+    }
+
+    .form-actions .btn {
+      display:block;
+      margin: 5px 0;
+    }
+  }
 }

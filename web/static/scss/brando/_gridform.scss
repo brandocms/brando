@@ -135,6 +135,8 @@ $legend-border-color: #E0E0E0;
         @include _clear;
         @include _breakpoints(0, 700px) {
             border-bottom: none;
+            flex-direction: column;
+            padding: 0;
         }
         .form-group {
             flex-grow: 1;
@@ -145,6 +147,11 @@ $legend-border-color: #E0E0E0;
                 border-right: 1px solid $grid-border-color;
                 display: block;
             }
+
+            @include _breakpoints(0, 700px) {
+                border-bottom: 1px solid #cdcdcd;
+            }
+
             label:first-child {
                 margin-top: 0;
                 text-transform: uppercase;
