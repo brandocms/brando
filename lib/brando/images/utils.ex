@@ -196,15 +196,13 @@ defmodule Brando.Images.Utils do
   Recreates all image sizes in imageseries.
   """
   def recreate_sizes_for(series_id: image_series_id) do
-    model = Image
-
     q =
       from is in ImageSeries,
         preload: :images,
         where: is.id == ^image_series_id
 
     image_series = Brando.repo.one!(q)
-    check_image_paths(model, image_series)
+    check_image_paths(Image, image_series)
 
     # reload the series in case we changed the images!
     image_series = Brando.repo.one!(q)
@@ -280,7 +278,8 @@ defmodule Brando.Images.Utils do
         </div>
         <div class="form-group required no-height">
           <label for="config[cfg]">#{gettext("Random filename")}</label>
-          <input type="checkbox" name="config[random_filename]" value="#{Map.get(cfg, :random_filename)}">
+          <input type="checkbox" name="config[random_filename]"
+                 value="#{Map.get(cfg, :random_filename)}">
         </div>
         <div class="form-group required no-height">
           <label for="config[cfg]">#{gettext("Size limit")}</label>
@@ -352,6 +351,7 @@ defmodule Brando.Images.Utils do
           <i class="fa fa-fw fa-ban"></i>
         </span>
       </legend>
+
       <div class="form-row">
         <div class="form-group required no-height">
           <label>#{gettext("masterkey")}</label>
@@ -361,7 +361,7 @@ defmodule Brando.Images.Utils do
 
       #{inputs}
       #{add_button}
-
+      
     </fieldset>
     """
   end

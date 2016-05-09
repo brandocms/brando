@@ -3,8 +3,6 @@ defmodule Brando.Utils do
   Assorted utility functions.
   """
 
-  import Ecto.Query
-
   @kb_size 1024
   @mb_size 1024 * @kb_size
   @gb_size 1024 * @mb_size
@@ -194,13 +192,6 @@ defmodule Brando.Utils do
       {record, Map.put(agg, Map.get(record, attr), insert)}
     end
     split_records
-  end
-
-  @doc """
-  Search `model`'s tags field for `tags`
-  """
-  def search_model_by_tag(model, tag) do
-    model |> where([m], ^tag in m.tags)
   end
 
   @doc """
@@ -396,7 +387,7 @@ defmodule Brando.Utils do
     string        = :erlang.binary_to_list(string)
     {first, rest} = Enum.split(string, split)
     rest          = Enum.chunk(rest, 3) |> Enum.map(&[" ", &1])
-    IO.iodata_to_binary([first, rest])
+    IO.iodata_to_binary([first, rest]) |> String.lstrip
   end
 
   def human_spaced_number(int) when is_integer(int) do

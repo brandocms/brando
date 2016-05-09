@@ -87,10 +87,12 @@ defmodule Brando.Tag do
   def model do
     quote do
       import Brando.Tag.Model, only: [tags: 0]
-      import Brando.Utils, only: [search_model_by_tag: 2]
 
+      @doc """
+      Search `model`'s tags field for `tags`
+      """
       def by_tag(tag) do
-        search_model_by_tag(__MODULE__, tag)
+        __MODULE__ |> where([m], ^tag in m.tags)
       end
     end
   end
