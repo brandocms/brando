@@ -143,6 +143,7 @@ defmodule Brando.Admin.ImageCategoryController do
 
   @doc false
   def propagate_configuration(conn, %{"id" => id}) do
+    current_user = Brando.Utils.current_user(conn)
     category = Brando.repo.get(Brando.ImageCategory, id)
 
     series = Brando.repo.all(
@@ -152,7 +153,7 @@ defmodule Brando.Admin.ImageCategoryController do
 
     # send this off for async processing
     Task.start_link(fn ->
-      Brando.SystemChannel.set_progress(0)
+      Brando.UserChannel.set_progress(current_user, 0)
 
       series_count = Enum.count(series)
       progress_step = (series_count > 0) && div(100, series_count) / 100 || 0
@@ -169,7 +170,7 @@ defmodule Brando.Admin.ImageCategoryController do
         |> Brando.repo.update
 
         Brando.Images.Utils.recreate_sizes_for(series_id: s.id)
-        Brando.SystemChannel.increase_progress(progress_step)
+        Brando.UserChannel.increase_progress(current_user, progress_step)
       end
 
       orphaned_series = get_orphans()
@@ -183,8 +184,8 @@ defmodule Brando.Admin.ImageCategoryController do
           gettext("Category propagated")
         end
 
-      Brando.SystemChannel.set_progress(1.0)
-      Brando.SystemChannel.alert(msg)
+      Brando.UserChannel.set_progress(current_user, 1.0)
+      Brando.UserChannel.alert(current_user, msg)
     end)
 
     render(conn, :propagate_configuration)
