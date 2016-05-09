@@ -361,7 +361,7 @@ defmodule Brando.Images.Utils do
 
       #{inputs}
       #{add_button}
-      
+
     </fieldset>
     """
   end
@@ -473,8 +473,8 @@ defmodule Brando.Images.Utils do
   end
 
   defp check_image_path(model, image, upload_dirname) do
-    image_path = image.image.path
-    image_dirname = Path.dirname(image.image.path)
+    image_path     = image.image.path
+    image_dirname  = Path.dirname(image.image.path)
     image_basename = Path.basename(image.image.path)
 
     img_struct =
@@ -495,14 +495,17 @@ defmodule Brando.Images.Utils do
 
   defp do_check_image_path(image, image_path, image_dirname, image_basename, upload_dirname) do
     media_path = Path.expand(Brando.config(:media_path))
-    if image_dirname != upload_dirname do
-      File.mkdir_p(Path.join(media_path, upload_dirname))
-      File.cp(Path.join(media_path, image_path),
-              Path.join([media_path, upload_dirname, image_basename]))
 
-      Map.put(image.image, :path, Path.join(upload_dirname, image_basename))
-    else
-      nil
+    if image_dirname != upload_dirname do
+      source_file    = Path.join(media_path, image_path)
+      upload_path    = Path.join(media_path, upload_dirname)
+      dest_file      = Path.join(upload_path, image_basename)
+      new_image_path = Path.join(upload_dirname, image_basename)
+
+      File.mkdir_p(upload_path)
+      File.cp(source_file, dest_file)
+
+      Map.put(image.image, :path, new_image_path)
     end
   end
 
