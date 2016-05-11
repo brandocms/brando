@@ -78,11 +78,12 @@ $(() => {
 
 export {
     Accordion,
-    brando,
     Dropzone,
     PopupForm,
     Sortable,
     Utils,
+    
+    brando,
     bI18n,
     vex
 };

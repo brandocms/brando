@@ -55,6 +55,8 @@ defmodule Brando.Images.Utils do
   def delete_media(""), do: nil
   def delete_media(file) do
     file = Path.join([Brando.config(:media_path), file])
+    optimized_file = Brando.Images.Utils.optimized_filename(file)
+    File.rm(optimized_file)
     File.rm(file)
   end
 
@@ -180,10 +182,13 @@ defmodule Brando.Images.Utils do
     img = Brando.repo.preload(img, :image_series)
     delete_sized_images(img.image)
 
+    img = put_in(img.image.optimized, false)
+
     full_path = media_path(img.image.path)
 
     {:ok, new_image} =
       create_image_sizes({%{uploaded_file: full_path}, img.image_series.cfg})
+      |> Brando.Images.Optimize.optimize
 
     image = Map.put(img.image, :sizes, new_image.sizes)
 

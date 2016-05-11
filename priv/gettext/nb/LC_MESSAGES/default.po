@@ -770,7 +770,7 @@ msgstr "Vilkårlig filnavn"
 
 #: web/templates/admin/image_series/configure.html.eex:11
 msgid "Recreate sizes for this series"
-msgstr "Gjenskap størreleser for denne serien"
+msgstr "Gjenskap størrelser for denne serien"
 
 #: web/controllers/admin/image_series_controller.ex:154
 msgid "Recreated sizes for image series"

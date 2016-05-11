@@ -39,7 +39,8 @@ defmodule Brando.Web do
       import Ecto.Query, only: [from: 1, from: 2]
 
       import Brando.Meta.Controller
-      import Brando.Utils, only: [current_user: 1]
+      import Brando.Utils, only: [current_user: 1, helpers: 1]
+      import Brando.Utils.Model, only: [put_creator: 2]
 
       # Alias the data repository as a convenience
       alias unquote(repo)
