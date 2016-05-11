@@ -2,6 +2,8 @@
 * Bug fixes
   * fabfile now deletes old release before unpacking new release. Also archives the tar.gz
     in `release-archives`.
+  * Fixes some translation errors
+  * Fixes recreated images not being optimized
 
 * Enhancements
   * Added errorview for `400` errors.
