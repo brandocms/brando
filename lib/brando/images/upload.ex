@@ -18,8 +18,8 @@ defmodule Brando.Images.Upload do
       Returns {:ok, model} or raises
       """
       def check_for_uploads(params, current_user, cfg, put_fields \\ nil) do
-        Enum.reduce filter_plugs(params), [], fn (plug, _) ->
-          handle_upload(plug, current_user, put_fields, __MODULE__, cfg)
+        Enum.reduce filter_plugs(params), [], fn (named_plug, _) ->
+          handle_upload(named_plug, current_user, put_fields, __MODULE__, cfg)
         end
       end
     end
