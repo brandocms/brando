@@ -235,7 +235,7 @@ defmodule Brando.Admin.ImageCategoryController do
   @doc false
   def delete(conn, %{"id" => id}) do
     category = Brando.repo.get_by!(ImageCategory, id: id)
-    Brando.Images.Utils.delete_series_for(category_id: category.id)
+    Brando.Images.Utils.delete_series_for(:image_category, category.id)
     Brando.repo.delete!(category)
 
     conn

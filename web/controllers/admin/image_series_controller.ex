@@ -9,7 +9,7 @@ defmodule Brando.Admin.ImageSeriesController do
 
   import Brando.Gettext
   import Brando.Plug.HTML
-  import Brando.Images.Utils, only: [recreate_sizes_for: 1, fix_size_cfg_vals: 1]
+  import Brando.Images.Utils, only: [recreate_sizes_for: 2, fix_size_cfg_vals: 1]
   import Brando.Utils, only: [helpers: 1]
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query
@@ -78,7 +78,7 @@ defmodule Brando.Admin.ImageSeriesController do
         # We have to check this here, since the changes have not been stored in
         # the ImageSeries.validate_paths() when we check.
         if Ecto.Changeset.get_change(changeset, :slug) do
-          Brando.Images.Utils.recreate_sizes_for(series_id: changeset.data.id)
+          Brando.Images.Utils.recreate_sizes_for(:image_series, changeset.data.id)
         end
 
         conn
@@ -148,7 +148,7 @@ defmodule Brando.Admin.ImageSeriesController do
 
   @doc false
   def recreate_sizes(conn, %{"id" => id}) do
-    Brando.Images.Utils.recreate_sizes_for(series_id: id)
+    Brando.Images.Utils.recreate_sizes_for(:image_series, id)
 
     conn
     |> put_flash(:notice, gettext("Recreated sizes for image series"))
@@ -198,7 +198,7 @@ defmodule Brando.Admin.ImageSeriesController do
   @doc false
   def delete(conn, %{"id" => id}) do
     series = Brando.repo.get_by!(ImageSeries, id: id)
-    Brando.Images.Utils.delete_images_for(series_id: series.id)
+    Brando.Images.Utils.delete_images_for(:image_series, series.id)
     Brando.repo.delete!(series)
 
     conn
