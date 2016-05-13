@@ -5,6 +5,9 @@ defmodule Brando.Images.Optimize do
 
   @doc """
   Optimize `img`
+
+  Checks image for `optimized` flag, gets the image type and sends off
+  to `do_optimize/2`.
   """
   def optimize({:ok, %Brando.Type.Image{optimized: false} = img}) do
     type = Brando.Images.Utils.image_type(img)
@@ -35,11 +38,10 @@ defmodule Brando.Images.Optimize do
   end
 
   defp run_optimization(%Brando.Type.Image{} = img, type) do
-    cfg =
-      Brando.Images
-      |> Brando.config
-      |> Keyword.get(:optimize, [])
-      |> Keyword.get(type)
+    cfg = Brando.Images
+          |> Brando.config
+          |> Keyword.get(:optimize, [])
+          |> Keyword.get(type)
 
     if cfg do
       for file <- Enum.map(img.sizes, &elem(&1, 1)) do
