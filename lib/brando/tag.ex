@@ -92,7 +92,8 @@ defmodule Brando.Tag do
       Search `model`'s tags field for `tags`
       """
       def by_tag(tag) do
-        __MODULE__ |> where([m], ^tag in m.tags)
+        from m in __MODULE__,
+          where: ^tag in m.tags
       end
     end
   end
