@@ -50,7 +50,7 @@ defmodule Brando.Mixfile do
     {:mogrify, github: "twined/mogrify"},
     {:phoenix, "~> 1.1"},
     {:phoenix_html, "~> 2.5"},
-    {:poison, "~> 2.0"}, 
+    {:poison, "~> 2.0"},
     {:postgrex, "~> 0.11"},
     {:scrivener, "~> 1.1"},
     {:slugger, "~> 0.1.0"},
