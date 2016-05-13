@@ -75,9 +75,19 @@ defmodule Brando.Mixfile do
   defp package do
     [maintainers: ["Twined Networks"],
      licenses: ["MIT"],
-     files: ["config", "lib", "priv", "test", "web", "mix.exs", "README.md",
-             "CHANGELOG.md", ".eslintrc", ".travis.yml", "brunch-config.js", "package.json"],
-     links: %{github: "https://github.com/twined/brando"}]
+     files: [
+       "config",
+       "lib",
+       "priv",
+       "test",
+       "web",
+       "mix.exs",
+       "README.md",
+       "CHANGELOG.md",
+       "brunch-config.js",
+       "package.json"
+      ]
+    ]
   end
 
   # Specifies which paths to compile per environment
