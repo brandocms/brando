@@ -72,6 +72,7 @@ defmodule Brando.Field.ImageField do
   def compile(imagefields) do
     imagefields_src =
       for {name, contents} <- imagefields, do: defcfg(name, contents)
+
     quote do
       def __imagefields__ do
         unquote(Macro.escape(imagefields))
@@ -81,8 +82,8 @@ defmodule Brando.Field.ImageField do
     end
   end
 
-  defp defcfg(name, contents) do
-    escaped_contents = Macro.escape(contents)
+  defp defcfg(name, cfg) do
+    escaped_contents = Macro.escape(cfg)
     quote do
       @doc """
       Get `field_name`'s image field configuration
@@ -94,7 +95,9 @@ defmodule Brando.Field.ImageField do
 
   @doc """
   Set the form's `field_name` as being an image_field, and store
-  it to the module's @imagefields
+  it to the module's @imagefields.
+
+  Converts the `opts` map to an ImageConfig struct.
 
   ## Options
 
@@ -126,8 +129,9 @@ defmodule Brando.Field.ImageField do
   defmacro has_image_field(field_name, opts) do
     quote do
       imagefields = Module.get_attribute(__MODULE__, :imagefields)
-      Module.put_attribute(__MODULE__, :imagefields,
-                           {unquote(field_name), unquote(opts)})
+      cfg_struct  = struct!(%Brando.Type.ImageConfig{}, unquote(opts))
+
+      Module.put_attribute(__MODULE__, :imagefields, {unquote(field_name), cfg_struct})
     end
   end
 
