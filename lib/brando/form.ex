@@ -509,7 +509,6 @@ defmodule Brando.Form do
   defp get_errors(changeset, name) do
     case Keyword.get_values(changeset.errors, name) do
       []     -> nil
-      nil    -> nil
       values -> values
     end
   end

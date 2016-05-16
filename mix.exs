@@ -9,6 +9,12 @@ defmodule Brando.Mixfile do
      version: @version,
      elixir: "~> 1.0",
      deps: deps,
+     dialyzer: [
+       plt_add_apps: [
+         :gettext, :comeonin, :mogrify, :slugger, :phoenix, :ecto, :phoenix_html
+       ],
+       flags: []
+     ],
      compilers: [:gettext, :phoenix] ++ Mix.compilers,
      elixirc_paths: elixirc_paths(Mix.env),
      test_coverage: [tool: ExCoveralls],
@@ -57,7 +63,7 @@ defmodule Brando.Mixfile do
 
     # Dev dependencies
     {:dogma, "~> 0.1", only: :dev},
-    {:dialyze, "~> 0.2", only: :dev},
+    {:dialyxir, "~> 0.3", only: :dev},
 
     # Test dependencies
     {:phoenix_ecto, "~> 3.0.0-rc", only: :test},

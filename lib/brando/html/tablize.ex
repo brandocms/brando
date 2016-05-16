@@ -56,7 +56,7 @@ defmodule Brando.HTML.Tablize do
                    Supply as list: `[100, nil, nil, 200, nil, 200]`
 
   """
-  @spec tablize(Plug.Conn.t, [Type] | [] | nil, dropdown, Keyword.t) :: {:safe, iodata}
+  @spec tablize(Plug.Conn.t, [Type] | [] | nil, [dropdown], Keyword.t) :: {:safe, iodata}
   def tablize(_, [], _, _), do: "<p>#{gettext("No results")}</p>" |> Phoenix.HTML.raw
   def tablize(_, nil, _, _), do: "<p>#{gettext("No results")}</p>" |> Phoenix.HTML.raw
   def tablize(conn, records, dropdowns, opts) do

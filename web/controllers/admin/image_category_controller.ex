@@ -152,7 +152,7 @@ defmodule Brando.Admin.ImageCategoryController do
     )
 
     # send this off for async processing
-    Task.start_link(fn ->
+    _ = Task.start_link(fn ->
       Brando.UserChannel.set_progress(current_user, 0)
 
       series_count = Enum.count(series)
@@ -169,7 +169,7 @@ defmodule Brando.Admin.ImageCategoryController do
         |> Brando.ImageSeries.changeset(:update, %{cfg: new_cfg})
         |> Brando.repo.update
 
-        Brando.Images.Utils.recreate_sizes_for(series_id: s.id)
+        :ok = Brando.Images.Utils.recreate_sizes_for(:image_series, s.id)
         Brando.UserChannel.increase_progress(current_user, progress_step)
       end
 

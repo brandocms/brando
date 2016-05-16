@@ -560,7 +560,7 @@ defmodule Brando.Form.Fields do
   Renders a label for `name`, with `class` and `text` as the
   label's content.
   """
-  @spec add_label(Field.t) :: String.t
+  @spec add_label(Field.t) :: Field.t
   def add_label(%Field{type: :checkbox, opts: %{multiple: false}} = field) do
     name = format_name(field.name, field.source)
     text = [field.html|get_label(field)]

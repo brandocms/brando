@@ -13,8 +13,9 @@ defmodule Brando.ImageSeries do
   alias Brando.Image
   alias Brando.ImageCategory
 
-  import Brando.Gettext
   import Ecto.Query, only: [from: 2]
+  import Brando.Utils.Model, only: [avoid_slug_collision: 1]
+  import Brando.Gettext
 
   @required_fields ~w(name slug image_category_id creator_id)a
   @optional_fields ~w(credits sequence cfg)a
@@ -40,15 +41,15 @@ defmodule Brando.ImageSeries do
       model_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, atom, Keyword.t | Options.t) :: t
+  @spec changeset(t, :create | :update, Keyword.t | Options.t) :: t
   def changeset(model, action, params \\ %{})
   def changeset(model, :create, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
     |> unique_constraint(:slug)
-    |> Brando.Utils.Model.avoid_slug_collision()
-    |> inherit_configuration()
+    |> avoid_slug_collision
+    |> inherit_configuration
   end
 
   @doc """
@@ -60,34 +61,23 @@ defmodule Brando.ImageSeries do
       model_changeset = changeset(%__MODULE__{}, :update, params)
 
   """
-  @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> unique_constraint(:slug)
-    |> Brando.Utils.Model.avoid_slug_collision()
-    |> validate_paths()
-  end
-
-  @doc """
-  Retrieve slug for `id`
-  """
-  def get_slug(id: id) do
-    Brando.repo.one!(
-      from m in __MODULE__,
-        select: m.slug,
-        where: m.id == ^id
-    )
+    |> avoid_slug_collision
+    |> validate_paths
   end
 
   @doc """
   Get all imageseries in category `id`.
   """
+  @spec by_category_id(Integer.t) :: Ecto.Queryable.t
   def by_category_id(id) do
     from m in __MODULE__,
-      where: m.image_category_id == ^id,
+         where: m.image_category_id == ^id,
       order_by: m.sequence,
-      preload: [:images]
+       preload: [:images]
   end
 
   @doc """
@@ -101,14 +91,18 @@ defmodule Brando.ImageSeries do
     do_inherit_configuration(cs, cat_id, slug)
   end
 
-  defp do_inherit_configuration(cs, cat_id, slug) do
+  defp do_inherit_configuration(cs, cat_id, nil) do
     category = Brando.repo.get(ImageCategory, cat_id)
-    cfg =
-      if slug do
-        Map.put(category.cfg, :upload_path, Path.join(Map.get(category.cfg, :upload_path), slug))
-      else
-        category.cfg
-      end
+    cfg      = category.cfg
+
+    put_change(cs, :cfg, cfg)
+  end
+
+  defp do_inherit_configuration(cs, cat_id, slug) do
+    category        = Brando.repo.get(ImageCategory, cat_id)
+    new_upload_path = Path.join(Map.get(category.cfg, :upload_path), slug)
+    cfg             = Map.put(category.cfg, :upload_path, new_upload_path)
+
     put_change(cs, :cfg, cfg)
   end
 

@@ -30,7 +30,7 @@ defmodule Brando.Images.Utils do
       delete_original_and_sized_images(record, :cover)
 
   """
-  @spec delete_original_and_sized_images(Image.t, atom) :: Image.t
+  @spec delete_original_and_sized_images(Image.t, atom) :: {:ok, Image.t}
   def delete_original_and_sized_images(image, key) do
     img = Map.get(image, key)
     if img do
@@ -91,7 +91,7 @@ defmodule Brando.Images.Utils do
   @doc """
   Returns image type atom.
   """
-  @spec image_type(Brando.Type.Image.t) :: String.t
+  @spec image_type(Brando.Type.Image.t) :: :jpeg | :png | :gif
   def image_type(%Brando.Type.Image{path: filename}) do
     case String.downcase(Path.extname(filename)) do
       ".jpg"  -> :jpeg
@@ -192,7 +192,7 @@ defmodule Brando.Images.Utils do
   @doc """
   Deletes all image's sizes and recreates them.
   """
-  @spec recreate_sizes_for(:image, Image.t) :: Image.t | no_return
+  @spec recreate_sizes_for(:image | :image_series, Image.t) :: :ok | no_return
   def recreate_sizes_for(:image, img) do
     img       = Brando.repo.preload(img, :image_series)
     img       = put_in(img.image.optimized, false)
@@ -209,12 +209,13 @@ defmodule Brando.Images.Utils do
     img
     |> Brando.Image.changeset(:update, %{image: image})
     |> Brando.repo.update!
+
+    :ok
   end
 
   @doc """
   Recreates all image sizes in imageseries.
   """
-  @spec recreate_sizes_for(:image_series, Image.t) :: [Image.t | no_return]
   def recreate_sizes_for(:image_series, image_series_id) do
     q =
       from is in ImageSeries,
@@ -232,12 +233,14 @@ defmodule Brando.Images.Utils do
 
     for image <- image_series.images, do:
       recreate_sizes_for(:image, image)
+
+    :ok
   end
 
   @doc """
   Put `size_cfg` as ̀size_key` in `image_series`
   """
-  @spec put_size_cfg(ImageSeries.t, String.t, Brando.Type.ImageConfig.t) :: [Image.t | no_return]
+  @spec put_size_cfg(ImageSeries.t, String.t, Brando.Type.ImageConfig.t) :: :ok
   def put_size_cfg(image_series, size_key, size_cfg) do
     image_series = put_in(image_series.cfg.sizes[size_key]["size"], size_cfg)
     Brando.repo.update!(image_series)
@@ -247,7 +250,7 @@ defmodule Brando.Images.Utils do
   @doc """
   Delete all images depending on imageserie `series_id`
   """
-  @spec delete_images_for(:image_series, Integer.t) :: [Image.t | no_return]
+  @spec delete_images_for(:image_series, Integer.t) :: :ok
   def delete_images_for(:image_series, series_id) do
     images = Brando.repo.all(
       from i in Image,
@@ -258,6 +261,8 @@ defmodule Brando.Images.Utils do
       delete_original_and_sized_images(img, :image)
       Brando.repo.delete!(img)
     end
+
+    :ok
   end
 
   @doc """
@@ -470,12 +475,11 @@ defmodule Brando.Images.Utils do
     end)
   end
 
-  @spec convert_value(String.t, Map.t) :: {String.t, Map.t}
+  @spec convert_value(String.t, String.t | Map.t) :: {String.t, String.t | Map.t}
   defp convert_value(key, val) when is_map(val) do
     {key, fix_size_cfg_vals(val)}
   end
 
-  @spec convert_value(String.t, String.t) :: {String.t, String.t}
   defp convert_value(key, val) do
     val = case key do
       "crop"    -> val == "true" && true || false
@@ -506,7 +510,7 @@ defmodule Brando.Images.Utils do
     end
   end
 
-  @spec check_image_path(Module.t, Map.t, String.t) :: Ecto.Schema.t | no_return
+  @spec check_image_path(Module.t, Map.t, String.t) :: Ecto.Schema.t | nil
   defp check_image_path(model, image, upload_dirname) do
     image_path     = image.image.path
     image_dirname  = Path.dirname(image.image.path)
@@ -529,7 +533,7 @@ defmodule Brando.Images.Utils do
   end
 
   @spec do_check_image_path(Ecto.Schema.t, String.t, String.t, String.t, String.t)
-                           :: Brando.Type.Image
+                           :: Brando.Type.Image.t
   defp do_check_image_path(image, image_path, image_dirname, image_basename, upload_dirname) do
     media_path = Path.expand(Brando.config(:media_path))
 

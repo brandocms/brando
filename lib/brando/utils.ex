@@ -244,15 +244,14 @@ defmodule Brando.Utils do
   Return joined path of `file` and the :media_url config option
   as set in your app's config.exs.
   """
-  @spec media_url :: String.t
+  @spec media_url :: String.t | nil
   def media_url do
     Brando.config(:media_url)
   end
-  @spec media_url(nil) :: String.t
+  @spec media_url(String.t | nil) :: String.t | nil
   def media_url(nil) do
     Brando.config(:media_url)
   end
-  @spec media_url(String.t) :: String.t
   def media_url(file) do
     Path.join([Brando.config(:media_url), file])
   end

@@ -23,35 +23,46 @@ defmodule Brando.PopupForm do
           console.log(`${fields.id} --> ${fields.username}`);
       }
   """
+
+  alias Brando.PopupForm.Registry
+
   @doc """
   Returns Brando.Form struct for registered popup form `name`
   """
+  @spec create(String.t, Keyword.t) :: Brando.Form.t | no_return
   def create(name, params \\ []) do
-    with {:ok, {form_module, _header, _wanted_fields}} <- Brando.PopupForm.Registry.get(name),
-         {:ok, changeset}                     <- get_changeset(form_module, %{}),
-      do: form_module.get_popup_form(type: :create, action: :create, params: params, changeset: changeset)
+    with {:ok, {form_module, _, _}} <- Registry.get(name),
+         {:ok, changeset}           <- get_changeset(form_module, %{}),
+      do: form_module.get_popup_form(
+        type:      :create,
+        action:    :create,
+        params:    params,
+        changeset: changeset
+      )
   end
 
   @doc """
   Posts popup form `data` to registered `name`
   """
+  @spec post(String.t, String.t) :: {:ok, {Ecto.Schema.t, [atom]}} | {:error, Brando.Form.t}
   def post(name, data) do
     params =
       data
       |> Plug.Conn.Query.decode
       |> Map.get(name)
 
-    {:ok, {form_module, _header, wanted_fields}} = Brando.PopupForm.Registry.get(name)
-    {:ok, changeset} = get_changeset(form_module, params)
+    {:ok, {mod, _, fields}} = Registry.get(name)
+    {:ok, changeset}        = get_changeset(mod, params)
 
     case Brando.repo.insert(changeset) do
       {:ok, inserted_model} ->
-        {:ok, {inserted_model, wanted_fields}}
+        {:ok, {inserted_model, fields}}
       {:error, changeset} ->
-        {:error, form_module.get_popup_form(type: :create, action: :create, params: [], changeset: changeset)}
+        {:error, mod.get_popup_form(type: :create, action: :create, params: [], changeset: changeset)}
     end
   end
 
+  @spec get_changeset(atom, %{binary => term} | %{atom => term}) :: {:ok, Ecto.Changeset.t}
   defp get_changeset(module, params) do
     schema_module = module.__schema__
     changeset = schema_module.changeset(schema_module.__struct__, :create, params)

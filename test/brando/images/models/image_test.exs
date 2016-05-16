@@ -173,7 +173,7 @@ defmodule Brando.Integration.ImageTest do
       |> Brando.repo.preload(:images)
 
     assert Enum.count(series.images) == 2
-    Brando.Images.Utils.delete_images_for(:image_series, series.id)
+    :ok = Brando.Images.Utils.delete_images_for(:image_series, series.id)
 
     series =
       ImageSeries

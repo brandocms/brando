@@ -4,8 +4,12 @@ defmodule Brando.Admin.ImageSeriesController do
   """
 
   use Brando.Web, :controller
-  use Brando.Sequence,
-    [:controller, [model: Brando.Image, filter: &Brando.Image.for_series_id/1]]
+  use Brando.Sequence, [
+    :controller, [
+      model: Brando.Image,
+      filter: &Brando.Image.for_series_id/1
+    ]
+  ]
 
   import Brando.Gettext
   import Brando.Plug.HTML
@@ -148,7 +152,7 @@ defmodule Brando.Admin.ImageSeriesController do
 
   @doc false
   def recreate_sizes(conn, %{"id" => id}) do
-    Brando.Images.Utils.recreate_sizes_for(:image_series, id)
+    :ok = Brando.Images.Utils.recreate_sizes_for(:image_series, id)
 
     conn
     |> put_flash(:notice, gettext("Recreated sizes for image series"))
@@ -198,7 +202,7 @@ defmodule Brando.Admin.ImageSeriesController do
   @doc false
   def delete(conn, %{"id" => id}) do
     series = Brando.repo.get_by!(ImageSeries, id: id)
-    Brando.Images.Utils.delete_images_for(:image_series, series.id)
+    :ok = Brando.Images.Utils.delete_images_for(:image_series, series.id)
     Brando.repo.delete!(series)
 
     conn

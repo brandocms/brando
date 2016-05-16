@@ -38,7 +38,7 @@ defmodule Brando.Image do
       model_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, atom, Keyword.t | Options.t) :: t
+  @spec changeset(t, :create | :update, Keyword.t | Options.t) :: t
   def changeset(model, :create, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
@@ -54,7 +54,6 @@ defmodule Brando.Image do
       model_changeset = changeset(%__MODULE__{}, :update, params)
 
   """
-  @spec changeset(t, atom, %{binary => term} | %{atom => term}) :: t
   def changeset(model, :update, params) do
     cast(model, params, [], @required_fields ++ @optional_fields)
   end
@@ -63,7 +62,7 @@ defmodule Brando.Image do
   Create a changeset for the model by passing `params`.
   If not valid, return errors from changeset
   """
-  @spec update(%{binary => term} | %{atom => term}, User.t) :: {:ok, t} | {:error, Keyword.t}
+  @spec create(%{binary => term} | %{atom => term}, User.t) :: {:ok, t} | {:error, Keyword.t}
   def create(params, user) do
     %__MODULE__{}
     |> put_creator(user)
@@ -112,11 +111,12 @@ defmodule Brando.Image do
   Also deletes all dependent image sizes.
   """
   def delete(ids) when is_list(ids) do
-    q = from m in __MODULE__, where: m.id in ^ids
+    q       = from m in __MODULE__, where: m.id in ^ids
     records = Brando.repo.all(q)
-    for record <- records do
-      delete_original_and_sized_images(record, :image)
-    end
+
+    for record <- records, do:
+      {:ok, _} = delete_original_and_sized_images(record, :image)
+
     Brando.repo.delete_all(q)
   end
 

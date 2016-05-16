@@ -3,6 +3,8 @@ defmodule Brando.HTML do
   Helper and convenience functions.
   """
 
+  @type alert_levels :: :default | :primary | :info | :success | :warning | :danger
+
   import Brando.Gettext
   import Brando.Utils, only: [media_url: 0, current_user: 1,
                               active_path?: 2, img_url: 3]
@@ -102,6 +104,7 @@ defmodule Brando.HTML do
   @doc """
   Shows `content` if `current_user` has `role` that allows it.
   """
+  @spec auth_content(Plug.Conn.t, atom, [{:do, term}]) :: {:safe, String.t}
   def auth_content(conn, role, do: {:safe, block}) do
     html = can_render?(conn, %{role: role}) && block || ""
     Phoenix.HTML.raw(html)
@@ -110,15 +113,14 @@ defmodule Brando.HTML do
   @doc """
   Shows `link` if `current_user` has `role` that allows it.
   """
-  @spec auth_link(Plug.Conn.t, String.t, atom, {:safe, String.t}) :: String.t
+  @spec auth_link(Plug.Conn.t, String.t, atom, [{:do, term}]) :: {:safe, String.t}
   def auth_link(conn, link, role, do: {:safe, block}) do
     do_auth_link({"btn-default", conn, link, role}, block)
   end
   @doc """
   Shows `link` with `type` if `current_user` has `role` that allows it.
   """
-  @spec auth_link(:default | :primary | :info | :success | :warning | :danger,
-                  Plug.Conn.t, String.t, atom, {:safe, String.t}) :: String.t
+  @spec auth_link(alert_levels, Plug.Conn.t, String.t, atom, [{:do, term}]) :: {:safe, String.t}
   def auth_link(type, conn, link, role, do: {:safe, block}) do
     do_auth_link({"btn-#{type}", conn, link, role}, block)
   end
@@ -162,7 +164,7 @@ defmodule Brando.HTML do
   Pass `params` instance of model (if one param), or a list of multiple
   params, and `helper` path.
   """
-  @spec delete_form_button(atom, Keyword.t | %{atom => any}) :: String.t
+  @spec delete_form_button(atom, Keyword.t | %{atom => any}) :: {:safe, String.t}
   def delete_form_button(helper, params) do
     action = Brando.Form.apply_action(helper, :delete, params)
     html =

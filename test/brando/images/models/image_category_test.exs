@@ -2,8 +2,9 @@ defmodule Brando.Integration.ImageCategoryTest do
   use ExUnit.Case
   use Brando.ConnCase
   use Brando.Integration.TestCase
-  
+
   alias Brando.ImageCategory
+  alias Brando.ImageCategoryService
   alias Brando.Factory
 
   setup do
@@ -14,7 +15,7 @@ defmodule Brando.Integration.ImageCategoryTest do
   end
 
   test "get_slug", %{category: category} do
-    assert ImageCategory.get_slug(id: category.id) == "test-category"
+    assert ImageCategoryService.get_slug_by(id: category.id) == "test-category"
   end
 
   test "meta", %{category: category} do

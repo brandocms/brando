@@ -32,6 +32,7 @@ defmodule Brando.PopupForm.Registry do
     GenServer.call(__MODULE__, {:register, name, form, header, wanted_fields})
   end
 
+  @spec get(String.t) :: {:ok, atom, String.t, [atom]} | {:error, :not_registered}
   def get(name) do
     {form_module, header, wanted_fields} = Map.get(state().forms, name)
     form_module && {:ok, {form_module, header, wanted_fields}} || {:error, :not_registered}
