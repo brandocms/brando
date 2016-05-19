@@ -42,15 +42,13 @@ defmodule Brando.Mixfile do
      :mogrify,
      :poison,
      :scrivener,
-     :slugger,
-     :eightyfour
+     :slugger
     ]
   end
 
   defp deps do [
     {:comeonin, "~> 2.1"},
     {:earmark, "~> 0.2"},
-    {:eightyfour, github: "twined/eightyfour"},
     {:gettext, "~> 0.11"},
     {:httpoison, "~> 0.8"},
     {:mogrify, github: "twined/mogrify"},
