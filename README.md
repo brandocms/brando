@@ -125,7 +125,8 @@ Open up you application's `lib/my_app.ex` and add to `start/2`:
   * [brando_pages](http://github.com/twined/brando_pages)
   * [brando_news](http://github.com/twined/brando_news)
   * [brando_portfolio](http://github.com/twined/brando_portfolio)
-  * [brando_instagram](http://github.com/twined/brando_portfolio)
+  * [brando_instagram](http://github.com/twined/brando_instagram)
+  * [brando_analytics](http://github.com/twined/brando_analytics)
 
 ## App specific modules
 
@@ -322,84 +323,6 @@ Migration:
   end
 ```
 
-
-## Instagram
-
-Add to your app's supervision tree:
-
-```diff
-  children = [
-    # Start the endpoint when the application starts
-    supervisor(MyApp.Endpoint, []),
-    # Start the Ecto repository
-    supervisor(MyApp.Repo, []),
-+   worker(Brando.Instagram, [])
-  ]
-```
-
-Add Instagram to your menu modules in `config/brando.exs`:
-
-```diff
-  config :brando, Brando.Menu,
-    modules: [Admin, Users, News, Pages, Images,
-+             Instagram]
-```
-
-Add routes to your app's `web/router.ex` under the `admin` scope:
-
-```diff
-+ import Brando.Instagram.Routes.Admin
-
-  scope "/admin", as: :admin do
-    pipe_through :admin
-+   instagram_routes "/instagram"
-  end
-```
-
-Config is found in your app's `config/brando.exs`.
-
-  * `client_id`: Your instagram client id. Find this in the developer section.
-  * `interval`: How often we poll for new images
-  * `auto_approve`: Set `approved` to `true` on grabbed images
-  * `sizes`: A map of sizes to create on download.
-  * `query`: What to query.
-    * `{:user, "your_name"}`
-    * `{:tags, ["tag1", "tag2"]}`
-
-## Analytics
-
-Analytics is provided through [Eightyfour](http://github.com/twined/eightyfour).
-
-Add to your app's supervision tree:
-
-```diff
-  children = [
-    # Start the endpoint when the application starts
-    supervisor(MyApp.Endpoint, []),
-    # Start the Ecto repository
-    supervisor(MyApp.Repo, []),
-+   worker(Brando.Eightyfour, [])
-  ]
-```
-
-Add to your `config/brando.exs`
-
-```elixir
-config :brando, Brando.Menu,
-  modules: [..., Brando.Menu.Analytics]
-```
-
-Finally add to your `router.ex`:
-
-```diff
-+ import Brando.Analytics.Routes.Admin
-
-  scope "/admin", as: :admin do
-    pipe_through :admin
-+   analytics_routes   "/analytics"
-  end
-```
-
 ## Page fragments
 
 ## Example:
@@ -430,21 +353,21 @@ In your model:
 +   field :avatar, Brando.Type.Image
   end
 
-+ has_image_field :avatar,
-+   %{allowed_mimetypes: ["image/jpeg", "image/png"],
-+     default_size: :medium,
-+     upload_path: Path.join("images", "avatars"),
-+     random_filename: true,
-+     size_limit: 10240000,
-+     sizes: %{
-+       "micro"  => %{"size" => "25x25>", "quality" => 100, "crop" => true},
-+       "thumb"  => %{"size" => "150x150>", "quality" => 100, "crop" => true},
-+       "small"  => %{"size" => "300", "quality" => 100},
-+       "medium" => %{"size" => "500", "quality" => 100},
-+       "large"  => %{"size" => "700", "quality" => 100},
-+       "xlarge" => %{"size" => "900", "quality" => 100}
-+     }
++ has_image_field :avatar, %{
++   allowed_mimetypes: ["image/jpeg", "image/png"],
++   default_size: :medium,
++   upload_path: Path.join("images", "avatars"),
++   random_filename: true,
++   size_limit: 10240000,
++   sizes: %{
++     "micro"  => %{"size" => "25x25>", "quality" => 100, "crop" => true},
++     "thumb"  => %{"size" => "150x150>", "quality" => 100, "crop" => true},
++     "small"  => %{"size" => "300", "quality" => 100},
++     "medium" => %{"size" => "500", "quality" => 100},
++     "large"  => %{"size" => "700", "quality" => 100},
++     "xlarge" => %{"size" => "900", "quality" => 100}
 +   }
++ }
 ```
 
 The migration's field should be `:text`, not `:string`.
@@ -459,7 +382,7 @@ plug :check_for_uploads, {"user", Brando.User}
 
 ## Villain
 
-To use villain outside the built-in `pages` and `news` modules add to your app's `web/router.ex`:
+To use villain outside `Brando.Pages` and `Brando.News`, add to your app's `web/router.ex`:
 
 ```diff
 + import Brando.Villain.Routes.Admin

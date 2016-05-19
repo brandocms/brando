@@ -4,7 +4,6 @@ defmodule Brando.TestRouter do
   import Brando.Users.Routes.Admin
   import Brando.Images.Routes.Admin
   import Brando.Villain.Routes.Admin
-  import Brando.Analytics.Routes.Admin
   import Brando.Dashboard.Routes.Admin
 
   pipeline :admin do
@@ -35,7 +34,6 @@ defmodule Brando.TestRouter do
     image_routes "/images2", [image_model: Brando.Image,
                               series_model: Brando.ImageSeries,
                               category_model: Brando.ImageCategory]
-    analytics_routes "/analytics"
 
     scope "villain" do
       villain_routes Brando.Admin.PostController
@@ -89,11 +87,6 @@ defmodule Brando.RoutesTest do
     assert routes =~ "/admin/villain2/2/villain/upload"
     assert routes =~ "/admin/villain2/2/villain/browse"
     assert routes =~ "/admin/villain2/2/villain/imagedata"
-  end
-
-  test "analytics_routes", %{routes: routes} do
-    assert routes =~ "/admin/analytics/views"
-    assert routes =~ "/admin/analytics/referrals"
   end
 
   test "dashboard_routes", %{routes: routes} do
