@@ -7,9 +7,10 @@ defmodule Brando.Integration.ImageSeriesTest do
   alias Brando.Factory
 
   setup do
-    user = Factory.create(:user)
+    user     = Factory.create(:user)
     category = Factory.create(:image_category, creator: user)
-    series = Factory.create(:image_series, creator: user, image_category: category)
+    series   = Factory.create(:image_series, creator: user, image_category: category)
+
     {:ok, %{user: user, category: category, series: series}}
   end
 
@@ -19,6 +20,13 @@ defmodule Brando.Integration.ImageSeriesTest do
     assert length(result) == 1
     series = List.first(result)
     assert series.name == "Series name"
+  end
+
+  test "validate_paths", %{series: series} do
+    cs = ImageSeries.changeset(series, :update, %{slug: "abracadabra"})
+    assert Ecto.Changeset.get_change(cs, :slug) == "abracadabra"
+    cs = ImageSeries.validate_paths(cs)
+    assert Ecto.Changeset.get_change(cs, :cfg).upload_path == "portfolio/test-category/abracadabra"
   end
 
   test "meta", %{series: series} do
