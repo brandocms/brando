@@ -1,6 +1,7 @@
 "use strict";
 import $ from "jquery";
 import Dropzone from "dropzone";
+import Chart from "chart.js";
 
 import "./brando/extensions/datepicker";
 import "./brando/extensions/dropdown";
@@ -78,11 +79,12 @@ $(() => {
 
 export {
     Accordion,
+    Chart,
     Dropzone,
     PopupForm,
     Sortable,
     Utils,
-    
+
     brando,
     bI18n,
     vex
