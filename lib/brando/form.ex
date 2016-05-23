@@ -172,18 +172,20 @@ defmodule Brando.Form do
   Performs rendering of form.
   """
   @spec render_form(t) :: t
-  def render_form(%Brando.Form{} = form) do
-    form =
-      form
-      |> Map.put(:url, apply_action(form.helper, form.action, form.params || []))
+  def render_form(%Brando.Form{} = form_struct) do
+    form_struct =
+      form_struct
+      |> Map.put(:url, apply_action(form_struct.helper,
+                                    form_struct.action,
+                                    form_struct.params || []))
 
     form_opts =
-      form
+      form_struct
       |> Map.delete(:__struct__)
       |> Keyword.new
       |> Keyword.take([:class, :multipart, :url])
       |> Keyword.put(:enforce_utf8, true)
-      |> Keyword.put(:method, get_method(form.type))
+      |> Keyword.put(:method, get_method(form_struct.type))
       |> Keyword.put(:role, "form")
 
     form_opts =
@@ -198,10 +200,9 @@ defmodule Brando.Form do
         {class, form_opts} -> Keyword.put(form_opts, :class, class)
       end
 
-    rendered_form =
-      form_tag(form.url, form_opts, do: raw(form.rendered_fields))
+    rendered_form = form_tag(form_struct.url, form_opts, do: raw(form_struct.rendered_fields))
 
-    form
+    form_struct
     |> Map.put(:rendered_form, rendered_form)
     |> Map.put(:method, form_opts[:method])
   end
@@ -211,26 +212,26 @@ defmodule Brando.Form do
   field as HTML. Gets any values or errors for the field.
   """
   @spec render_fields(t) :: t
-  def render_fields(%Brando.Form{} = form) do
+  def render_fields(%Brando.Form{} = form_struct) do
     rendered_fields =
-      Enum.reduce form.fields, [], fn ({field_name, field_opts}, acc) ->
-        field = %Field{
-          form_type: form.type,
-          source: form.source,
-          name: field_name,
-          schema: form.schema,
-          value: get_value(form.changeset, field_name),
-          errors: get_errors(form.changeset, field_name),
-          type: field_opts[:type],
-          opts: Enum.into(field_opts, %{})
+      Enum.reduce form_struct.fields, [], fn ({field_name, field_opts}, acc) ->
+        field_struct = %Field{
+          form_type: form_struct.type,
+          source:    form_struct.source,
+          name:      field_name,
+          schema:    form_struct.schema,
+          value:     get_value(form_struct.changeset, field_name),
+          errors:    get_errors(form_struct.changeset, field_name),
+          type:      field_opts[:type],
+          opts:      Enum.into(field_opts, %{})
         }
 
-        field = Fields.render_field(field)
+        field_struct = Fields.render_field(field_struct)
 
-        [field.html|acc]
+        [field_struct.html|acc]
     end
 
-    Map.put(form, :rendered_fields, rendered_fields)
+    Map.put(form_struct, :rendered_fields, rendered_fields)
   end
 
   @doc """

@@ -3,9 +3,9 @@ defmodule Brando.Utils do
   Assorted utility functions.
   """
 
-  @kb_size 1024
-  @mb_size 1024 * @kb_size
-  @gb_size 1024 * @mb_size
+  @kb_size   1024
+  @mb_size   1024 * @kb_size
+  @gb_size   1024 * @mb_size
 
   @sec_time  1000
   @min_time  60 * @sec_time

@@ -88,6 +88,7 @@ defmodule Brando.Villain do
       """
       def rerender_html(changeset) do
         data = Ecto.Changeset.get_field(changeset, :data)
+        
         changeset
         |> Ecto.Changeset.put_change(:html, Brando.Villain.parse(data))
         |> Brando.repo.update!
@@ -97,12 +98,13 @@ defmodule Brando.Villain do
       Check all posts for missing images
       """
       def check_posts_for_missing_images do
-        posts = __MODULE__ |> Brando.repo.all
+        posts = Brando.repo.all(__MODULE__)
         result = Enum.reduce posts, [], fn(post, acc) ->
           check_post_for_missing_images(post)
         end
+
         case result do
-          [] -> false
+          []     -> false
           result -> result
         end
       end
@@ -111,8 +113,7 @@ defmodule Brando.Villain do
       Check post's villain data field for missing images
       """
       def check_post_for_missing_images(post) do
-        image_blocks =
-          Enum.filter(post.data, fn(block) -> block["type"] == "image" end)
+        image_blocks = Enum.filter post.data, fn(block) -> block["type"] == "image" end
 
         Enum.reduce(image_blocks, [], fn(block, acc) ->
           reduced_block =
@@ -176,7 +177,7 @@ defmodule Brando.Villain do
             sizes = Enum.into(sizes, %{})
 
             %{
-              src: Brando.Utils.media_url(image.image.path),
+              src:   Brando.Utils.media_url(image.image.path),
               thumb: Brando.Utils.media_url(Brando.Utils.img_url(image.image, :thumb)),
               sizes: sizes,
               title: image.image.title, credits: image.image.credits
@@ -197,37 +198,37 @@ defmodule Brando.Villain do
           |> preload(:image_category)
           |> Brando.repo.get_by(slug: series_slug)
 
-        cfg = series.cfg || Brando.config(Brando.Images)[:default_config]
+        cfg  = series.cfg || Brando.config(Brando.Images)[:default_config]
         opts = Map.put(%{}, "image_series_id", series.id)
 
         {:ok, image} = unquote(image_model).check_for_uploads(params, user, cfg, opts)
 
-        sizes = Enum.map(image.image.sizes, fn({k, v}) -> {k, Brando.Utils.media_url(v)} end)
+        sizes     = Enum.map(image.image.sizes, fn({k, v}) -> {k, Brando.Utils.media_url(v)} end)
         sizes_map = Enum.into(sizes, %{})
 
         json conn,
           %{
             status: "200",
-            uid: uid,
+            uid:    uid,
             image: %{
-              id: image.id,
+              id:    image.id,
               sizes: sizes_map,
-              src: Brando.Utils.media_url(image.image.path)
+              src:   Brando.Utils.media_url(image.image.path)
             },
             form: %{
               method: "post",
               action: "villain/imagedata/#{image.id}",
-              name: "villain-imagedata",
+              name:   "villain-imagedata",
               fields: [
                 %{
-                  name: "title",
-                  type: "text",
+                  name:  "title",
+                  type:  "text",
                   label: "Tittel",
                   value: ""
                 },
                 %{
-                  name: "credits",
-                  type: "text",
+                  name:  "credits",
+                  type:  "text",
                   label: "Krediteringer",
                   value: ""
                 }
@@ -240,20 +241,21 @@ defmodule Brando.Villain do
       def imageseries(conn, %{"series" => series_slug}) do
         series = Brando.repo.first!(
           from is in unquote(series_model),
-            join: c in assoc(is, :image_category),
-            join: i in assoc(is, :images),
-            where: c.slug == "slideshows" and is.slug == ^series_slug,
+                join: c in assoc(is, :image_category),
+                join: i in assoc(is, :images),
+               where: c.slug == "slideshows" and is.slug == ^series_slug,
             order_by: i.sequence,
-            preload: [image_category: c, images: i]
+             preload: [image_category: c, images: i]
         )
 
-        sizes = Enum.map(series.cfg.sizes, &elem(&1, 0))
+        sizes  = Enum.map(series.cfg.sizes, &elem(&1, 0))
         images = Enum.map(series.images, &(&1.image))
+
         json conn, %{
-          status: 200,
-          series: series_slug,
-          images: images,
-          sizes: sizes,
+          status:    200,
+          series:    series_slug,
+          images:    images,
+          sizes:     sizes,
           media_url: Brando.config(:media_url)
         }
       end
@@ -262,10 +264,10 @@ defmodule Brando.Villain do
       def imageseries(conn, _) do
         series = Brando.repo.all(
           from is in unquote(series_model),
-            join: c in assoc(is, :image_category),
-            where: c.slug == "slideshows",
+                join: c in assoc(is, :image_category),
+               where: c.slug == "slideshows",
             order_by: is.slug,
-            preload: [image_category: c]
+             preload: [image_category: c]
         )
 
         series_slugs = Enum.map(series, &(&1.slug))
@@ -274,23 +276,23 @@ defmodule Brando.Villain do
 
       @doc false
       def image_info(conn, %{"form" => form, "id" => id, "uid" => uid}) do
-        form = URI.decode_query(form)
+        form        = URI.decode_query(form)
         image_model = unquote(image_model)
-        image = Brando.repo.get(image_model, id)
+        image       = Brando.repo.get(image_model, id)
 
         {:ok, image} =
           image_model.update_image_meta(image, form["title"], form["credits"])
 
-        image_info = %{
-          status: 200,
-          id: id,
-          uid: uid,
-          title: image.image.title,
+        info = %{
+          status:  200,
+          id:      id,
+          uid:     uid,
+          title:   image.image.title,
           credits: image.image.credits,
-          link: form["link"]
+          link:    form["link"]
         }
 
-        json conn, image_info
+        json conn, info
       end
     end
   end

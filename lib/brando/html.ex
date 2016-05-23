@@ -9,14 +9,13 @@ defmodule Brando.HTML do
   import Brando.Utils, only: [media_url: 0, current_user: 1,
                               active_path?: 2, img_url: 3]
   import Brando.Meta.Controller, only: [put_meta: 3, get_meta: 1]
-  import Phoenix.HTML.Tag, only: [content_tag: 2, content_tag: 3]
 
   @doc false
   defmacro __using__(_) do
     quote do
       import Brando.HTML
-      import Brando.HTML.Inspect, except: [t!: 2, t: 3]
-      import Brando.HTML.Tablize, except: [t!: 2, t: 3]
+      import Brando.HTML.Inspect
+      import Brando.HTML.Tablize
     end
   end
 
@@ -59,17 +58,19 @@ defmodule Brando.HTML do
   def render_submenu_item(conn, item) do
     {fun, action} = item.url
     if can_render?(conn, item) do
-      url = apply(Brando.Utils.helpers(conn), fun, [conn, action])
-      active? = active_path?(conn, url)
+      url        = apply(Brando.Utils.helpers(conn), fun, [conn, action])
+      active?    = active_path?(conn, url)
       li_classes = active? && "menuitem active" || "menuitem"
-      a_class = active? && "active" || ""
-      {:safe, html} = content_tag :li, [class: li_classes] do
-        content_tag :a, [href: url, class: a_class] do
-          [content_tag(:i, "", [class: "fa fa-angle-right"]),
-           content_tag(:span, item.name)]
-        end
-      end
-      html
+      a_class    = active? && "active" || ""
+
+      """
+      <li class="#{li_classes}">
+        <a href="#{url}" class="#{a_class}">
+          <i class="fa fa-angle-right"></i>
+          <span>#{item.name}</span>
+        </a>
+      </li>
+      """
     else
       ""
     end
