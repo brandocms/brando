@@ -237,7 +237,7 @@ defmodule Brando.HTML.Tablize do
   defp render_expander(record, _) do
     """
     <td>
-      <a href=" class="expand-page-children" data-id="#{record.id}">
+      <a href="" class="expand-page-children" data-id="#{record.id}">
         <i class="fa fa-plus"></i>
       </a>
     </td>
