@@ -44,18 +44,6 @@ defmodule Brando.Images.Upload do
     process_upload(plug, cfg)
   end
 
-  # don't deprecate this, since we need support for passing config as map
-  # for the `has_image_field` macro used in models
-  def do_upload(plug, cfg) when is_map(cfg) do
-    raise "do_upload with cfg as map is deprecated."
-    cfg_struct =
-      if is_atom(List.first(Map.keys(cfg))) do
-        struct(Brando.Type.ImageConfig, cfg)
-      else
-        stringy_struct(Brando.Type.ImageConfig, cfg)
-      end
-    process_upload(plug, cfg_struct)
-  end
   def do_upload(_plug, cfg) when is_list(cfg) do
     raise "do_upload with cfg as list is deprecated." <>
           "please supply a %Brando.Type.ImageConfig{} struct instead."
@@ -111,11 +99,10 @@ defmodule Brando.Images.Upload do
       :ok ->
         {Map.put(plug, :uploaded_file, new_file), cfg}
       {:error, reason} ->
-        raise UploadError,
-              message: gettext("Error while copying") <>
-                       " -> #{inspect(reason)}\n" <>
-                       "src: #{tmp_path}\n" <>
-                       "dest: #{new_file}"
+        raise UploadError, message: gettext("Error while copying") <>
+                                    " -> #{inspect(reason)}\n" <>
+                                    "src: #{tmp_path}\n" <>
+                                    "dest: #{new_file}"
     end
   end
 
