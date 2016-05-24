@@ -29,6 +29,7 @@ defmodule <%= application_module %>.Mixfile do
      applications: [
        :brando,
        :cowboy,
+       :hrafn,
        :gettext,
        :logger,
        :phoenix,
@@ -59,6 +60,7 @@ defmodule <%= application_module %>.Mixfile do
      # release management and production tools
      {:exrm, "~> 1.0"},
      {:recon, github: "ferd/recon"},
+     {:hrafn, github: "twined/hrafn"},
 
      # brando
      {:brando, github: "twined/brando"},
@@ -77,7 +79,7 @@ defmodule <%= application_module %>.Mixfile do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     ["ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
-     "ecto.reset": ["ecto.drop", "ecto.setup"]
+     "ecto.reset": ["ecto.drop", "ecto.setup"],
      "test": ["ecto.create --quiet", "ecto.migrate", "test"]]
   end
 end
