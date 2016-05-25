@@ -15,6 +15,7 @@ import {brando} from "./brando/components/brando";
 import DatePicker from "./brando/components/datepicker";
 import Flash from "./brando/components/flash";
 import FilterTable from "./brando/components/filter_table";
+import ImagePreview from "./brando/components/image_preview";
 import Mobile from "./brando/components/mobile";
 import {VexBrando, vex} from "./brando/components/vex_brando";
 import {bI18n} from "./brando/components/i18n";
@@ -45,6 +46,7 @@ $(() => {
     Toolbar.setup();
     Tags.setup();
     DatePicker.setup();
+    ImagePreview.setup();
 
     /**
      * Section-specific setup

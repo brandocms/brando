@@ -93,6 +93,10 @@ $legend-border-color: #E0E0E0;
             outline: none;
         }
     }
+    input[type="file"] {
+      font-family: "a-mono";
+      font-size: 13px;
+    }
     // Set select max-width
     select {
         max-width: 200px;

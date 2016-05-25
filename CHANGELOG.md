@@ -7,6 +7,9 @@
 
 * Enhancements
   * Added errorview for `400` errors.
+  * Add preview for file fields in forms
+  * Extracted analytics to `brando_analytics`
+  * Use iodata where possible when constructing form html
 
 ## v0.31.0 (2016-05-07)
 
