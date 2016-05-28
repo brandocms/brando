@@ -16,10 +16,9 @@ defmodule Brando.Admin.ImageController do
   @doc false
   def index(conn, _params) do
     # show images by tabbed category, then series.
-    categories =
-      ImageCategory
-      |> ImageCategory.with_image_series_and_images
-      |> Brando.repo.all
+    categories = ImageCategory
+                 |> ImageCategory.with_image_series_and_images
+                 |> Brando.repo.all
 
     conn
     |> assign(:page_title, gettext("Index - images"))
@@ -30,7 +29,7 @@ defmodule Brando.Admin.ImageController do
   @doc false
   def delete_selected(conn, %{"ids" => ids}) do
     Image.delete(ids)
-    render(conn, :delete_selected, ids: ids)
+    render conn, :delete_selected, ids: ids
   end
 
   @doc false
@@ -46,6 +45,6 @@ defmodule Brando.Admin.ImageController do
     |> Image.changeset(:update, %{"image" => new_data})
     |> Brando.repo.update!
 
-    render(conn, :set_properties, id: id, attrs: form)
+    render conn, :set_properties, id: id, attrs: form
   end
 end

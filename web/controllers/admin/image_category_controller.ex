@@ -38,10 +38,11 @@ defmodule Brando.Admin.ImageCategoryController do
       |> ImageCategory.changeset(:create, imagecategory)
 
     case Brando.repo.insert(changeset) do
-      {:ok, _} ->
+      {:ok, inserted_category} ->
         conn
         |> put_flash(:notice, gettext("Image category created"))
-        |> redirect(to: helpers(conn).admin_image_path(conn, :index))
+        |> redirect(to: helpers(conn).admin_image_path(conn, :index)
+                        <> "##{inserted_category.slug}")
       {:error, changeset} ->
         conn
         |> assign(:page_title, gettext("New image category"))
@@ -54,10 +55,9 @@ defmodule Brando.Admin.ImageCategoryController do
 
   @doc false
   def edit(conn, %{"id" => id}) do
-    changeset =
-      ImageCategory
-      |> Brando.repo.get!(id)
-      |> ImageCategory.changeset(:update)
+    changeset = ImageCategory
+                |> Brando.repo.get!(id)
+                |> ImageCategory.changeset(:update)
 
     conn
     |> assign(:page_title, gettext("Edit image category"))
@@ -74,14 +74,14 @@ defmodule Brando.Admin.ImageCategoryController do
       |> ImageCategory.changeset(:update, image_category)
 
     case Brando.repo.update(changeset) do
-      {:ok, updated_record} ->
+      {:ok, updated_category} ->
         # We have to check this here, since the changes have not been stored in
         # the validate_paths() when we check.
         redirection =
           if Ecto.Changeset.get_change(changeset, :slug) do
-            helpers(conn).admin_image_category_path(conn, :propagate_configuration, updated_record.id)
+            helpers(conn).admin_image_category_path(conn, :propagate_configuration, updated_category.id)
           else
-            helpers(conn).admin_image_path(conn, :index)
+            helpers(conn).admin_image_path(conn, :index) <> "##{updated_category.slug}"
         end
 
         conn
@@ -112,7 +112,7 @@ defmodule Brando.Admin.ImageCategoryController do
   @doc false
   def configure_patch(conn, %{"config" => cfg, "sizes" => sizes, "id" => id}) do
     record = Brando.repo.get_by!(Brando.ImageCategory, id: id)
-    sizes = fix_size_cfg_vals(sizes)
+    sizes  = fix_size_cfg_vals(sizes)
 
     new_cfg =
       record.cfg

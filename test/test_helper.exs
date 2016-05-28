@@ -2,6 +2,7 @@ Logger.configure(level: :info)
 
 {:ok, _} = Application.ensure_all_started(:ex_machina)
 
+#ExUnit.configure(max_cases: 16)
 ExUnit.start
 
 # Clear tmp dir
