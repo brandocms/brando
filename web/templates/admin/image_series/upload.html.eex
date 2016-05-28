@@ -4,7 +4,7 @@
   <a href="<%= Brando.helpers.admin_image_series_path(@conn, :edit, @series.id) %>" class="btn btn-default">
     <%= gettext("Edit image series") %>
   </a>
-  <a class="btn btn-default">
+  <a href="<%= Brando.helpers.admin_image_series_path(@conn, :sequence, @series.id) %>" class="btn btn-default">
     <%= gettext("Sort image series") %>
   </a>
   <a href="<%= Brando.helpers.admin_image_path(@conn, :index) %>" class="btn btn-default">
