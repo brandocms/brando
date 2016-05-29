@@ -6,14 +6,23 @@ defmodule Brando.Plug.Lockdown do
 
   ## Example
 
-      plug Brando.Plug.Lockdown,
-           [layout: {MyApp.LockdownLayoutView, "lockdown.html"},
-            view: {MyApp.LockdownView, "lockdown.html"}]
+      plug Brando.Plug.Lockdown, [
+        layout: {MyApp.LockdownLayoutView, "lockdown.html"},
+        view: {MyApp.LockdownView, "lockdown.html"}
+      ]
+
+  ## Configure
+
+      config :brando,
+        lockdown: true,
+        lockdown_password: "my_pass"
+
+  Password is optional. If no password configuration is found, you have to login
+  through the backend to see the frontend website.
 
   """
   alias Brando.User
-  import Phoenix.Controller, only: [put_flash: 3, redirect: 2,
-                                    put_layout: 2, put_view: 2]
+  import Phoenix.Controller, only: [put_flash: 3, redirect: 2, put_layout: 2, put_view: 2]
   import Plug.Conn, only: [halt: 1]
 
   @behaviour Plug
@@ -22,7 +31,8 @@ defmodule Brando.Plug.Lockdown do
 
   def call(conn, _) do
     if Brando.config(:lockdown) do
-      allowed?(conn)
+      conn
+      |> allowed?
     else
       conn
     end
@@ -36,10 +46,7 @@ defmodule Brando.Plug.Lockdown do
     end
   end
 
-  defp allowed?(%{private: %{plug_session: %{"lockdown_authorized" => true}}} = conn) do
-    conn
-  end
-
+  defp allowed?(%{private: %{plug_session: %{"lockdown_authorized" => true}}} = conn), do: conn
   defp allowed?(conn), do: lockdown(conn)
 
   defp lockdown(conn) do
