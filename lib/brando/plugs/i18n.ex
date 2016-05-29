@@ -5,11 +5,12 @@ defmodule Brando.Plug.I18n do
   import Brando.I18n
 
   @doc """
-  Assign current language.
+  Assign current locale.
 
-  Here it already is in `conn`'s session, so we set it through Gettext as
-  well as assigning.
+  The locale was already found in `conn`'s session, so we set it
+  through Gettext as well as assigning it to `conn`.
   """
+  @spec put_locale(Plug.Conn.t, Keyword.t) :: Plug.Conn.t
   def put_locale(%{private: %{plug_session: %{"language" => language}}} = conn, []) do
     language = extract_language_from_path(conn) || language
     Brando.I18n.put_locale_for_all_modules(language)
@@ -35,10 +36,9 @@ defmodule Brando.Plug.I18n do
   """
   def put_locale(_, otp_backend) do
     split_module = Module.split(otp_backend)
-    use_module =
-      split_module
-      |> List.delete_at(Enum.count(split_module) - 1)
-      |> Module.concat
+    use_module   = split_module
+                   |> List.delete_at(Enum.count(split_module) - 1)
+                   |> Module.concat
 
     raise """
     put_locale/2 plug has been deprecated.
@@ -54,11 +54,11 @@ defmodule Brando.Plug.I18n do
   Set locale to current_user's language
 
   This sets both Brando.Gettext (the default gettext we use in the backend),
-  as well as `otp_backend` which will mostly be extra gettext from the otp
-  app's backend.
+  as well as delegating to the I18n module for setting proper locale for all
+  registered gettext modules.
   """
-  def put_admin_locale(%{private: %{plug_session:
-                       %{"current_user" => current_user}}} = conn, []) do
+  @spec put_admin_locale(Plug.Conn.t, Keyword.t) :: Plug.Conn.t
+  def put_admin_locale(%{private: %{plug_session: %{"current_user" => current_user}}} = conn, []) do
     language = Map.get(current_user, :language, Brando.config(:default_admin_language))
 
     # set for default brando backend
@@ -79,14 +79,13 @@ defmodule Brando.Plug.I18n do
   """
   def put_admin_locale(_, otp_backend) do
     split_module = Module.split(otp_backend)
-    use_module =
-      split_module
-      |> List.delete_at(Enum.count(split_module) - 1)
-      |> Module.concat
+    use_module   = split_module
+                   |> List.delete_at(Enum.count(split_module) - 1)
+                   |> Module.concat
 
     raise """
     put_admin_locale/2 plug has been deprecated.
-    
+
     Register the module through Brando.Registry in your application's startup function:
 
         Brando.Registry.register(#{inspect(use_module)}, [:gettext])
@@ -94,6 +93,7 @@ defmodule Brando.Plug.I18n do
     """
   end
 
+  @spec extract_language_from_path(Plug.Conn.t) :: String.t | nil
   defp extract_language_from_path(conn) do
     lang = List.first(conn.path_info)
     if lang do

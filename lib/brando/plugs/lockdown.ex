@@ -27,8 +27,10 @@ defmodule Brando.Plug.Lockdown do
 
   @behaviour Plug
 
+  @spec init(Keyword.t) :: Keyword.t
   def init(options), do: options
 
+  @spec call(Plug.Conn.t, Keyword.t) :: Plug.Conn.t
   def call(conn, _) do
     if Brando.config(:lockdown) do
       conn
@@ -38,6 +40,7 @@ defmodule Brando.Plug.Lockdown do
     end
   end
 
+  @spec allowed?(Plug.Conn.t) :: Plug.Conn.t
   defp allowed?(%{private: %{plug_session: %{"current_user" => user}}} = conn) do
     if User.can_login?(user) do
       conn
@@ -49,6 +52,7 @@ defmodule Brando.Plug.Lockdown do
   defp allowed?(%{private: %{plug_session: %{"lockdown_authorized" => true}}} = conn), do: conn
   defp allowed?(conn), do: lockdown(conn)
 
+  @spec lockdown(Plug.Conn.t) :: Plug.Conn.t
   defp lockdown(conn) do
     conn
     |> redirect(to: Brando.helpers.lockdown_path(conn, :index))
