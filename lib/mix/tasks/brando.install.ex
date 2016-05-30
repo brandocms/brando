@@ -125,8 +125,10 @@ defmodule Mix.Tasks.Brando.Install do
   def run(args) do
     {opts, _, _} = OptionParser.parse(args, switches: [static: :boolean])
     app = Mix.Project.config()[:app]
-    binding = [application_module: Phoenix.Naming.camelize(Atom.to_string(app)),
-               application_name: Atom.to_string(app)]
+    binding = [
+      application_module: Phoenix.Naming.camelize(Atom.to_string(app)),
+      application_name: Atom.to_string(app)
+    ]
 
     copy_from "./", binding, @new
 

@@ -1,6 +1,7 @@
 defmodule <%= module %> do
   use <%= base %>.Web, :model
 <%= if villain_fields != [] do %>  use Brando.Villain, :model<% end %>
+<%= if sequenced do %>  use Brando.Sequence, :model<% end %>
 <%= if img_fields != [] do %>  use Brando.Field.ImageField
 <% end %>
   import <%= base %>.Backend.Gettext
@@ -8,6 +9,7 @@ defmodule <%= module %> do
 <%= for model_field <- model_fields do %>    <%= model_field %>
 <% end %><%= for {k, _, m} <- assocs do %>    belongs_to <%= inspect k %>, <%= m %>
 <% end %>
+<% if sequenced do %>    sequenced<% end %>
     timestamps
   end
 <%= for {v, k} <- img_fields do %>

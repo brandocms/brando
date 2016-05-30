@@ -6,6 +6,7 @@
   * Fixes recreated images not being optimized
 
 * Enhancements
+  * `brando.gen.html` now prompts you for `sequenced` schema.
   * Added errorview for `400` errors.
   * Add preview for file fields in forms
   * Extracted analytics to `brando_analytics`

@@ -5,9 +5,9 @@ defmodule <%= module %>Controller do
   def index(conn, _params) do
     <%= plural %> = Brando.repo.all(<%= alias %>)
 
-    conn
-    |> assign(:<%= plural %>, <%= plural %>)
-    |> assign(:page_title, "<%= plural %>")
-    |> render("index.html")
+    render conn, :index, [
+      <%= plural %>: <%= plural %>,
+      page_title: "<%= plural %>"
+    ]
   end
 end
