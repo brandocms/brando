@@ -431,13 +431,20 @@ Build for prod with `brunch build --production`.
 
 ## Optimizing images
 
-This requires you to have `pngquant` installed.
+This requires you to have `pngquant`/`cjpeg` installed:
 
 ```diff
   config :brando, Brando.Images,
 +   optimize: [
-+     png: [bin: "/usr/local/bin/pngquant",
-+           args: "--speed 1 --force --output %{new_filename} -- #{filename}"]]
++     png: [
++       bin: "/usr/local/bin/pngquant",
++       args: "--speed 1 --force --output %{new_filename} -- %{filename}"
++     ],
++     jpeg: [
++       bin: "/usr/local/bin/cjpeg",
++       args: "-quality 90 %{filename} > %{new_filename}"
++     ]
++   ]
 ```
 
 or
