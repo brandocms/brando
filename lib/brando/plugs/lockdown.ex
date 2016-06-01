@@ -22,7 +22,7 @@ defmodule Brando.Plug.Lockdown do
 
   """
   alias Brando.User
-  import Phoenix.Controller, only: [put_flash: 3, redirect: 2, put_layout: 2, put_view: 2]
+  import Phoenix.Controller, only: [redirect: 2]
   import Plug.Conn, only: [halt: 1]
 
   @behaviour Plug

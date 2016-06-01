@@ -39,7 +39,7 @@ defmodule Brando.Type.Image do
   """
   def load(val) do
     val = Poison.decode!(val, as: %Brando.Type.Image{})
-    if val == nil, do: val = %Brando.Type.Image{}
+    val = if val == nil, do: %Brando.Type.Image{}, else: val
     {:ok, val}
   end
 

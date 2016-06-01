@@ -80,26 +80,31 @@ defmodule Mix.Tasks.Brando.Gen.Html do
              "test/controllers/admin/#{path}_controller_test.exs"},
     ]
 
-    if villain? do
-      files = files ++ [
-        {:eex, "_scripts.html.eex",
-               "web/templates/admin/#{path}/_scripts.new.html.eex"},
-        {:eex, "_scripts.html.eex",
-               "web/templates/admin/#{path}/_scripts.edit.html.eex"},
-        {:eex, "_stylesheets.html.eex",
-               "web/templates/admin/#{path}/_stylesheets.new.html.eex"},
-        {:eex, "_stylesheets.html.eex",
-               "web/templates/admin/#{path}/_stylesheets.edit.html.eex"},
-      ]
-    end
+    files =
+      if villain? do
+        files ++ [
+          {:eex, "_scripts.html.eex",
+                 "web/templates/admin/#{path}/_scripts.new.html.eex"},
+          {:eex, "_scripts.html.eex",
+                 "web/templates/admin/#{path}/_scripts.edit.html.eex"},
+          {:eex, "_stylesheets.html.eex",
+                 "web/templates/admin/#{path}/_stylesheets.new.html.eex"},
+          {:eex, "_stylesheets.html.eex",
+                 "web/templates/admin/#{path}/_stylesheets.edit.html.eex"},
+        ]
+      else
+        files
+      end
 
-    if sequenced? do
-      files = files ++ [
-        {:eex, "sequence.html.eex",
-               "web/templates/admin/#{path}/sequence.html.eex"}
-      ]
-      args = args ++ ["--sequenced"]
-    end
+    {files, args} =
+      if sequenced? do
+        files = files ++ [
+          {:eex, "sequence.html.eex",
+                 "web/templates/admin/#{path}/sequence.html.eex"}]
+        {files, args ++ ["--sequenced"]}
+      else
+        {files, args}
+      end
 
     Mix.Brando.check_module_name_availability!(binding[:module] <> "Controller")
     Mix.Brando.check_module_name_availability!(binding[:module] <> "View")

@@ -353,9 +353,12 @@ defmodule Brando.Form do
     check_type!(type)
     fields = Module.get_attribute(module, :form_fields)
 
-    if Module.get_attribute(module, :in_fieldset) do
-      opts = [in_fieldset: Module.get_attribute(module, :in_fieldset)] ++ opts
-    end
+    opts =
+      if Module.get_attribute(module, :in_fieldset) do
+        [in_fieldset: Module.get_attribute(module, :in_fieldset)] ++ opts
+      else
+        opts
+      end
 
     clash = Enum.any?(fields, fn {prev, _} -> name == prev end)
     if clash do

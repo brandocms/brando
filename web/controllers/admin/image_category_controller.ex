@@ -9,7 +9,6 @@ defmodule Brando.Admin.ImageCategoryController do
                    filter: &Brando.ImageSeries.by_category_id/1]]
 
   import Brando.Plug.HTML
-  import Brando.Utils, only: [helpers: 1, current_user: 1]
   import Brando.Utils.Model, only: [put_creator: 2]
   import Brando.Images.Utils, only: [fix_size_cfg_vals: 1]
   import Brando.Gettext
@@ -34,7 +33,7 @@ defmodule Brando.Admin.ImageCategoryController do
   def create(conn, %{"imagecategory" => imagecategory}) do
     changeset =
       %ImageCategory{}
-      |> put_creator(Brando.Utils.current_user(conn))
+      |> put_creator(current_user(conn))
       |> ImageCategory.changeset(:create, imagecategory)
 
     case Brando.repo.insert(changeset) do
@@ -143,7 +142,7 @@ defmodule Brando.Admin.ImageCategoryController do
 
   @doc false
   def propagate_configuration(conn, %{"id" => id}) do
-    current_user = Brando.Utils.current_user(conn)
+    current_user = current_user(conn)
     category = Brando.repo.get(Brando.ImageCategory, id)
 
     series = Brando.repo.all(

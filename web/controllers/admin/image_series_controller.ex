@@ -84,7 +84,7 @@ defmodule Brando.Admin.ImageSeriesController do
         # We have to check this here, since the changes have not been stored in
         # the ImageSeries.validate_paths() when we check.
         if Ecto.Changeset.get_change(changeset, :slug) do
-          Brando.Images.Utils.recreate_sizes_for(:image_series, changeset.data.id)
+          recreate_sizes_for(:image_series, changeset.data.id)
         end
 
         inserted_image_series = Brando.repo.preload(inserted_image_series, :image_category)
@@ -159,7 +159,7 @@ defmodule Brando.Admin.ImageSeriesController do
 
   @doc false
   def recreate_sizes(conn, %{"id" => id}) do
-    :ok = Brando.Images.Utils.recreate_sizes_for(:image_series, id)
+    :ok = recreate_sizes_for(:image_series, id)
 
     conn
     |> put_flash(:notice, gettext("Recreated sizes for image series"))

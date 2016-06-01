@@ -91,9 +91,12 @@ defmodule Brando.Images.Upload do
   defp copy_uploaded_file({%{filename: fname, path: tmp_path, upload_path: ul_path} = plug, cfg}) do
     new_file = Path.join(ul_path, fname)
 
-    if File.exists?(new_file) do
-      new_file = Path.join(ul_path, unique_filename(fname))
-    end
+    new_file =
+      if File.exists?(new_file) do
+        Path.join(ul_path, unique_filename(fname))
+      else
+        new_file
+      end
 
     case File.cp(tmp_path, new_file, fn _, _ -> false end) do
       :ok ->

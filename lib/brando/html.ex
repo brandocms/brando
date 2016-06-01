@@ -410,14 +410,23 @@ defmodule Brando.HTML do
 
     body = "<body"
 
-    if id, do:
-      body = body <> ~s( id="#{id}")
+    body =
+      if id, do:
+        body <> ~s( id="#{id}"),
+      else:
+        body
 
-    if data_script, do:
-      body = body <> ~s( data-script="#{data_script}")
+    body =
+      if data_script, do:
+        body <> ~s( data-script="#{data_script}"),
+      else:
+        body
 
-    if classes, do:
-      body = body <> ~s( class="#{classes}")
+    body =
+      if classes, do:
+        body <> ~s( class="#{classes}"),
+      else:
+        body
 
     Phoenix.HTML.raw(body <> ">")
   end

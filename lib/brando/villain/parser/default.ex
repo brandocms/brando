@@ -24,9 +24,13 @@ defmodule Brando.Villain.Parser.Default do
   Convert text to HTML through Markdown
   """
   def text(%{"text" => markdown_data, "type" => type}) do
-    if type == "lead" and byte_size(markdown_data) > 0 do
-      markdown_data = markdown_data <> "\n{: .lead}"
-    end
+    markdown_data =
+      if type == "lead" and byte_size(markdown_data) > 0 do
+        markdown_data = markdown_data <> "\n{: .lead}"
+      else
+        markdown_data
+      end
+      
     Earmark.to_html(markdown_data, %Earmark.Options{breaks: true})
   end
 
