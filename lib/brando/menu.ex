@@ -6,9 +6,8 @@ defmodule Brando.Menu do
 
       use Brando.Menu
       menu %{
-        name: "Admin", anchor: "admin", bgcolor: "#ffaaff",
-          icon: "fa fa-dashboard icon",
-          submenu: [%{name: "Dash", url: admin_dashboard_path(:dashboard)}]}
+        name: "Admin", anchor: "admin", bgcolor: "#ffaaff", icon: "fa fa-dashboard icon",
+        submenu: [%{name: "Dash", url: admin_dashboard_path(:dashboard), role: :superuser}]}
 
   """
 
@@ -38,9 +37,8 @@ defmodule Brando.Menu do
   ## Usage
 
       menu %{
-        name: "Admin", anchor: "admin", bgcolor: "#ffaaff",
-          icon: "fa fa-dashboard icon",
-          submenu: [%{name: "Dash", url: admin_dashboard_path(:dashboard)}]}
+        name: "Admin", anchor: "admin", bgcolor: "#ffaaff", icon: "fa fa-dashboard icon",
+        submenu: [%{name: "Dash", url: admin_dashboard_path(:dashboard), role: :superuser}]}
 
   """
   defmacro menu(contents) do
