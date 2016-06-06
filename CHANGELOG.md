@@ -1,4 +1,4 @@
-## v0.32.0-dev (2016-XX-XX)
+## v0.32.0 (2016-06-06)
 * Bug fixes
   * fabfile now deletes old release before unpacking new release. Also archives the tar.gz
     in `release-archives`.

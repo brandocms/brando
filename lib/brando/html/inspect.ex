@@ -6,7 +6,7 @@ defmodule Brando.HTML.Inspect do
   import Brando.Render, only: [r: 1]
   import Brando.Utils, only: [media_url: 0, img_url: 3]
   import Ecto.DateTime.Utils, only: [zero_pad: 2]
-  import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2]
+  import Phoenix.HTML.Tag, only: [content_tag: 3]
 
   @doc """
   Returns the record's model name from __name__/1
