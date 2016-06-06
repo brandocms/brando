@@ -4,9 +4,12 @@ defmodule Brando.Admin.ImageCategoryController do
   """
 
   use Brando.Web, :controller
-  use Brando.Sequence,
-    [:controller, [model: Brando.ImageSeries,
-                   filter: &Brando.ImageSeries.by_category_id/1]]
+  use Brando.Sequence, [
+    :controller, [
+      model: Brando.ImageSeries,
+      filter: &Brando.ImageSeries.by_category_id/1
+    ]
+  ]
 
   import Brando.Plug.HTML
   import Brando.Utils.Model, only: [put_creator: 2]
@@ -31,10 +34,9 @@ defmodule Brando.Admin.ImageCategoryController do
 
   @doc false
   def create(conn, %{"imagecategory" => imagecategory}) do
-    changeset =
-      %ImageCategory{}
-      |> put_creator(current_user(conn))
-      |> ImageCategory.changeset(:create, imagecategory)
+    changeset = %ImageCategory{}
+                |> put_creator(current_user(conn))
+                |> ImageCategory.changeset(:create, imagecategory)
 
     case Brando.repo.insert(changeset) do
       {:ok, inserted_category} ->
