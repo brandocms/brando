@@ -19,17 +19,17 @@ let bI18n = i18n.use(LngDetector).init({
                 "masterkey": "masterkey",
                 "orientation_landscape": "orientation / landscape",
                 "orientation_portrait": "orientation / portrait",
-                "value": "value",
+                "value": "value"
             },
             images: {
                 "delete_confirm": "Are you sure you want to delete these images?",
                 "delete_images": "Delete images",
-                "deleting": 'Deleting...',
+                "deleting": 'Deleting...'
             },
             sequence: {
                 "store_new": "Store new sequence",
                 "stored": "Sequence stored!",
-                "storing": "Storing...",
+                "storing": "Storing..."
             },
             translation: {
                 "key": "hello world"
@@ -47,8 +47,7 @@ let bI18n = i18n.use(LngDetector).init({
                 "masterkey": "hovednøkkel",
                 "orientation_landscape": "bildeformat / liggende",
                 "orientation_portrait": "bildeformat / stående",
-                "value": "verdi",
-
+                "value": "verdi"
             },
             images: {
                 "delete_confirm": "Er du sikker på at du vil slette disse bildene?",

@@ -3,11 +3,9 @@ defmodule Brando.Utils do
   Assorted utility functions.
   """
 
-  import Ecto.Query
-
-  @kb_size 1024
-  @mb_size 1024 * @kb_size
-  @gb_size 1024 * @mb_size
+  @kb_size   1024
+  @mb_size   1024 * @kb_size
+  @gb_size   1024 * @mb_size
 
   @sec_time  1000
   @min_time  60 * @sec_time
@@ -197,13 +195,6 @@ defmodule Brando.Utils do
   end
 
   @doc """
-  Search `model`'s tags field for `tags`
-  """
-  def search_model_by_tag(model, tag) do
-    model |> where([m], ^tag in m.tags)
-  end
-
-  @doc """
   Returns scheme, host and port (if non-standard)
   """
   @spec hostname(Plug.Conn.t) :: String.t
@@ -253,15 +244,14 @@ defmodule Brando.Utils do
   Return joined path of `file` and the :media_url config option
   as set in your app's config.exs.
   """
-  @spec media_url :: String.t
+  @spec media_url :: String.t | nil
   def media_url do
     Brando.config(:media_url)
   end
-  @spec media_url(nil) :: String.t
+  @spec media_url(String.t | nil) :: String.t | nil
   def media_url(nil) do
     Brando.config(:media_url)
   end
-  @spec media_url(String.t) :: String.t
   def media_url(file) do
     Path.join([Brando.config(:media_url), file])
   end
@@ -396,7 +386,7 @@ defmodule Brando.Utils do
     string        = :erlang.binary_to_list(string)
     {first, rest} = Enum.split(string, split)
     rest          = Enum.chunk(rest, 3) |> Enum.map(&[" ", &1])
-    IO.iodata_to_binary([first, rest])
+    IO.iodata_to_binary([first, rest]) |> String.lstrip
   end
 
   def human_spaced_number(int) when is_integer(int) do

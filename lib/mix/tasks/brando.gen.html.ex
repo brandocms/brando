@@ -30,18 +30,26 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     attrs        = Mix.Brando.attrs(attrs)
     villain?     = :villain in Dict.values(attrs)
+    sequenced?   = Mix.shell.yes?("\nMake schema sequenceable?")
     image_field? = :image in Dict.values(attrs)
     binding      = Mix.Brando.inflect(singular)
     admin_path   = Enum.join(["admin", binding[:path]], "_")
     path         = binding[:path]
     route        = path
-                   |> String.split("/") |> Enum.drop(-1)
-                   |> Kernel.++([plural]) |> Enum.join("/")
+                   |> String.split("/")
+                   |> Enum.drop(-1)
+                   |> Kernel.++([plural])
+                   |> Enum.join("/")
     admin_module = Enum.join([binding[:base], "Admin", binding[:scoped]], ".")
-    binding      = binding ++ [plural: plural, route: route,
-                               image_field: image_field?, villain: villain?,
-                               admin_module: admin_module, admin_path: admin_path,
-                               inputs: inputs(attrs), params: Mix.Brando.params(attrs)]
+    binding      = binding ++ [plural: plural,
+                               route: route,
+                               image_field: image_field?,
+                               villain: villain?,
+                               sequenced: sequenced?,
+                               admin_module: admin_module,
+                               admin_path: admin_path,
+                               inputs: inputs(attrs),
+                               params: Mix.Brando.params(attrs)]
 
     files = [
       {:eex, "admin_controller.ex",
@@ -72,18 +80,31 @@ defmodule Mix.Tasks.Brando.Gen.Html do
              "test/controllers/admin/#{path}_controller_test.exs"},
     ]
 
-    if villain? do
-      files = files ++ [
-        {:eex, "_scripts.html.eex",
-               "web/templates/admin/#{path}/_scripts.new.html.eex"},
-        {:eex, "_scripts.html.eex",
-               "web/templates/admin/#{path}/_scripts.edit.html.eex"},
-        {:eex, "_stylesheets.html.eex",
-               "web/templates/admin/#{path}/_stylesheets.new.html.eex"},
-        {:eex, "_stylesheets.html.eex",
-               "web/templates/admin/#{path}/_stylesheets.edit.html.eex"},
-      ]
-    end
+    files =
+      if villain? do
+        files ++ [
+          {:eex, "_scripts.html.eex",
+                 "web/templates/admin/#{path}/_scripts.new.html.eex"},
+          {:eex, "_scripts.html.eex",
+                 "web/templates/admin/#{path}/_scripts.edit.html.eex"},
+          {:eex, "_stylesheets.html.eex",
+                 "web/templates/admin/#{path}/_stylesheets.new.html.eex"},
+          {:eex, "_stylesheets.html.eex",
+                 "web/templates/admin/#{path}/_stylesheets.edit.html.eex"},
+        ]
+      else
+        files
+      end
+
+    {files, args} =
+      if sequenced? do
+        files = files ++ [
+          {:eex, "sequence.html.eex",
+                 "web/templates/admin/#{path}/sequence.html.eex"}]
+        {files, args ++ ["--sequenced"]}
+      else
+        {files, args}
+      end
 
     Mix.Brando.check_module_name_availability!(binding[:module] <> "Controller")
     Mix.Brando.check_module_name_availability!(binding[:module] <> "View")
@@ -98,6 +119,16 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     villain_info =
       if villain? do
         ~s(    villain_routes "/#{route}",    #{binding[:scoped]}Controller)
+      else
+        ""
+      end
+
+    sequenced_info =
+      if sequenced? do
+        """
+            get    "/#{route}/sort", #{binding[:scoped]}Controller, :sequence
+            post   "/#{route}/sort", #{binding[:scoped]}Controller, :sequence_post
+        """
       else
         ""
       end
@@ -121,7 +152,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         patch  "/#{route}/:id",        #{binding[:scoped]}Controller, :update
         put    "/#{route}/:id",        #{binding[:scoped]}Controller, :update
 
-    """ <> villain_info <>
+    """ <> villain_info <> sequenced_info <>
     """
 
     and then update your repository by running migrations:

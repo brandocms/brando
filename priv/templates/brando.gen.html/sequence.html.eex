@@ -1,0 +1,8 @@
+<ul id="sequence" class="clearfix">
+<%%= for i <- @items do %>
+  <li data-id="<%%= i.id %>"><%%= i.name %></li>
+<%% end %>
+</ul>
+<a id="sort-post" href="<%= "<%=" %> Brando.helpers.<%= admin_path %>_path(@conn, :sequence_post) <%= "%\>" %>" class="btn btn-default">
+  <%= "<%=" %> gettext("Store sequence") <%= "%\>" %>
+</a>

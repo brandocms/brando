@@ -9,7 +9,6 @@ defmodule Brando.Admin.ImageCategoryController do
                    filter: &Brando.ImageSeries.by_category_id/1]]
 
   import Brando.Plug.HTML
-  import Brando.Utils, only: [helpers: 1, current_user: 1]
   import Brando.Utils.Model, only: [put_creator: 2]
   import Brando.Images.Utils, only: [fix_size_cfg_vals: 1]
   import Brando.Gettext
@@ -34,14 +33,15 @@ defmodule Brando.Admin.ImageCategoryController do
   def create(conn, %{"imagecategory" => imagecategory}) do
     changeset =
       %ImageCategory{}
-      |> put_creator(Brando.Utils.current_user(conn))
+      |> put_creator(current_user(conn))
       |> ImageCategory.changeset(:create, imagecategory)
 
     case Brando.repo.insert(changeset) do
-      {:ok, _} ->
+      {:ok, inserted_category} ->
         conn
         |> put_flash(:notice, gettext("Image category created"))
-        |> redirect(to: helpers(conn).admin_image_path(conn, :index))
+        |> redirect(to: helpers(conn).admin_image_path(conn, :index)
+                        <> "##{inserted_category.slug}")
       {:error, changeset} ->
         conn
         |> assign(:page_title, gettext("New image category"))
@@ -54,10 +54,9 @@ defmodule Brando.Admin.ImageCategoryController do
 
   @doc false
   def edit(conn, %{"id" => id}) do
-    changeset =
-      ImageCategory
-      |> Brando.repo.get!(id)
-      |> ImageCategory.changeset(:update)
+    changeset = ImageCategory
+                |> Brando.repo.get!(id)
+                |> ImageCategory.changeset(:update)
 
     conn
     |> assign(:page_title, gettext("Edit image category"))
@@ -74,14 +73,14 @@ defmodule Brando.Admin.ImageCategoryController do
       |> ImageCategory.changeset(:update, image_category)
 
     case Brando.repo.update(changeset) do
-      {:ok, updated_record} ->
+      {:ok, updated_category} ->
         # We have to check this here, since the changes have not been stored in
         # the validate_paths() when we check.
         redirection =
           if Ecto.Changeset.get_change(changeset, :slug) do
-            helpers(conn).admin_image_category_path(conn, :propagate_configuration, updated_record.id)
+            helpers(conn).admin_image_category_path(conn, :propagate_configuration, updated_category.id)
           else
-            helpers(conn).admin_image_path(conn, :index)
+            helpers(conn).admin_image_path(conn, :index) <> "##{updated_category.slug}"
         end
 
         conn
@@ -112,7 +111,7 @@ defmodule Brando.Admin.ImageCategoryController do
   @doc false
   def configure_patch(conn, %{"config" => cfg, "sizes" => sizes, "id" => id}) do
     record = Brando.repo.get_by!(Brando.ImageCategory, id: id)
-    sizes = fix_size_cfg_vals(sizes)
+    sizes  = fix_size_cfg_vals(sizes)
 
     new_cfg =
       record.cfg
@@ -143,6 +142,7 @@ defmodule Brando.Admin.ImageCategoryController do
 
   @doc false
   def propagate_configuration(conn, %{"id" => id}) do
+    current_user = current_user(conn)
     category = Brando.repo.get(Brando.ImageCategory, id)
 
     series = Brando.repo.all(
@@ -151,8 +151,8 @@ defmodule Brando.Admin.ImageCategoryController do
     )
 
     # send this off for async processing
-    Task.start_link(fn ->
-      Brando.SystemChannel.set_progress(0)
+    _ = Task.start_link(fn ->
+      Brando.UserChannel.set_progress(current_user, 0)
 
       series_count = Enum.count(series)
       progress_step = (series_count > 0) && div(100, series_count) / 100 || 0
@@ -168,8 +168,8 @@ defmodule Brando.Admin.ImageCategoryController do
         |> Brando.ImageSeries.changeset(:update, %{cfg: new_cfg})
         |> Brando.repo.update
 
-        Brando.Images.Utils.recreate_sizes_for(series_id: s.id)
-        Brando.SystemChannel.increase_progress(progress_step)
+        :ok = Brando.Images.Utils.recreate_sizes_for(:image_series, s.id)
+        Brando.UserChannel.increase_progress(current_user, progress_step)
       end
 
       orphaned_series = get_orphans()
@@ -183,8 +183,8 @@ defmodule Brando.Admin.ImageCategoryController do
           gettext("Category propagated")
         end
 
-      Brando.SystemChannel.set_progress(1.0)
-      Brando.SystemChannel.alert(msg)
+      Brando.UserChannel.set_progress(current_user, 1.0)
+      Brando.UserChannel.alert(current_user, msg)
     end)
 
     render(conn, :propagate_configuration)
@@ -234,7 +234,7 @@ defmodule Brando.Admin.ImageCategoryController do
   @doc false
   def delete(conn, %{"id" => id}) do
     category = Brando.repo.get_by!(ImageCategory, id: id)
-    Brando.Images.Utils.delete_series_for(category_id: category.id)
+    Brando.Images.Utils.delete_series_for(:image_category, category.id)
     Brando.repo.delete!(category)
 
     conn

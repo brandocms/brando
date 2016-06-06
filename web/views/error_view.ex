@@ -15,6 +15,10 @@ defmodule Brando.ErrorView do
     render("not_found.html", assigns)
   end
 
+  def render("400.html", assigns) do
+    render("bad_request.html", assigns)
+  end
+
   def render("500.html", %{conn: %Plug.Conn{path_info: ["admin" | _]}} = assigns) do
     render("admin_500.html", assigns)
   end

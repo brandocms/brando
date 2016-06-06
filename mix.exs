@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.31.0"
+  @version "0.32.0"
   @description "Boilerplate for Twined applications."
 
   def project do
@@ -9,6 +9,12 @@ defmodule Brando.Mixfile do
      version: @version,
      elixir: "~> 1.0",
      deps: deps,
+     dialyzer: [
+       plt_add_apps: [
+         :gettext, :comeonin, :mogrify, :slugger, :phoenix, :ecto, :phoenix_html
+       ],
+       flags: []
+     ],
      compilers: [:gettext, :phoenix] ++ Mix.compilers,
      elixirc_paths: elixirc_paths(Mix.env),
      test_coverage: [tool: ExCoveralls],
@@ -36,28 +42,26 @@ defmodule Brando.Mixfile do
      :mogrify,
      :poison,
      :scrivener,
-     :slugger,
-     :eightyfour
+     :slugger
     ]
   end
 
   defp deps do [
     {:comeonin, "~> 2.1"},
     {:earmark, "~> 0.2"},
-    {:eightyfour, github: "twined/eightyfour"},
     {:gettext, "~> 0.11"},
     {:httpoison, "~> 0.8"},
     {:mogrify, github: "twined/mogrify"},
     {:phoenix, "~> 1.1"},
     {:phoenix_html, "~> 2.5"},
-    {:poison, "~> 2.0"}, # was 1.3
+    {:poison, "~> 2.0"},
     {:postgrex, "~> 0.11"},
     {:scrivener, "~> 1.1"},
     {:slugger, "~> 0.1.0"},
 
     # Dev dependencies
-    {:dogma, "~> 0.1", only: :dev},
-    {:dialyze, "~> 0.2", only: :dev},
+    {:credo, ">= 0.0.0", only: :dev},
+    {:dialyxir, "~> 0.3", only: :dev},
 
     # Test dependencies
     {:phoenix_ecto, "~> 3.0.0-rc", only: :test},
@@ -75,9 +79,19 @@ defmodule Brando.Mixfile do
   defp package do
     [maintainers: ["Twined Networks"],
      licenses: ["MIT"],
-     files: ["config", "lib", "priv", "test", "web", "mix.exs", "README.md",
-             "CHANGELOG.md", ".eslintrc", ".travis.yml", "brunch-config.js", "package.json"],
-     links: %{github: "https://github.com/twined/brando"}]
+     files: [
+       "config",
+       "lib",
+       "priv",
+       "test",
+       "web",
+       "mix.exs",
+       "README.md",
+       "CHANGELOG.md",
+       "brunch-config.js",
+       "package.json"
+      ]
+    ]
   end
 
   # Specifies which paths to compile per environment

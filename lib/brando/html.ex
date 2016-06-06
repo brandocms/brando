@@ -3,18 +3,19 @@ defmodule Brando.HTML do
   Helper and convenience functions.
   """
 
+  @type alert_levels :: :default | :primary | :info | :success | :warning | :danger
+
   import Brando.Gettext
   import Brando.Utils, only: [media_url: 0, current_user: 1,
                               active_path?: 2, img_url: 3]
   import Brando.Meta.Controller, only: [put_meta: 3, get_meta: 1]
-  import Phoenix.HTML.Tag, only: [content_tag: 2, content_tag: 3]
 
   @doc false
   defmacro __using__(_) do
     quote do
       import Brando.HTML
-      import Brando.HTML.Inspect, except: [t!: 2, t: 3]
-      import Brando.HTML.Tablize, except: [t!: 2, t: 3]
+      import Brando.HTML.Inspect
+      import Brando.HTML.Tablize
     end
   end
 
@@ -57,17 +58,19 @@ defmodule Brando.HTML do
   def render_submenu_item(conn, item) do
     {fun, action} = item.url
     if can_render?(conn, item) do
-      url = apply(Brando.Utils.helpers(conn), fun, [conn, action])
-      active? = active_path?(conn, url)
+      url        = apply(Brando.Utils.helpers(conn), fun, [conn, action])
+      active?    = active_path?(conn, url)
       li_classes = active? && "menuitem active" || "menuitem"
-      a_class = active? && "active" || ""
-      {:safe, html} = content_tag :li, [class: li_classes] do
-        content_tag :a, [href: url, class: a_class] do
-          [content_tag(:i, "", [class: "fa fa-angle-right"]),
-           content_tag(:span, item.name)]
-        end
-      end
-      html
+      a_class    = active? && "active" || ""
+
+      """
+      <li class="#{li_classes}">
+        <a href="#{url}" class="#{a_class}">
+          <i class="fa fa-angle-right"></i>
+          <span>#{item.name}</span>
+        </a>
+      </li>
+      """
     else
       ""
     end
@@ -102,6 +105,7 @@ defmodule Brando.HTML do
   @doc """
   Shows `content` if `current_user` has `role` that allows it.
   """
+  @spec auth_content(Plug.Conn.t, atom, [{:do, term}]) :: {:safe, String.t}
   def auth_content(conn, role, do: {:safe, block}) do
     html = can_render?(conn, %{role: role}) && block || ""
     Phoenix.HTML.raw(html)
@@ -110,15 +114,14 @@ defmodule Brando.HTML do
   @doc """
   Shows `link` if `current_user` has `role` that allows it.
   """
-  @spec auth_link(Plug.Conn.t, String.t, atom, {:safe, String.t}) :: String.t
+  @spec auth_link(Plug.Conn.t, String.t, atom, [{:do, term}]) :: {:safe, String.t}
   def auth_link(conn, link, role, do: {:safe, block}) do
     do_auth_link({"btn-default", conn, link, role}, block)
   end
   @doc """
   Shows `link` with `type` if `current_user` has `role` that allows it.
   """
-  @spec auth_link(:default | :primary | :info | :success | :warning | :danger,
-                  Plug.Conn.t, String.t, atom, {:safe, String.t}) :: String.t
+  @spec auth_link(alert_levels, Plug.Conn.t, String.t, atom, [{:do, term}]) :: {:safe, String.t}
   def auth_link(type, conn, link, role, do: {:safe, block}) do
     do_auth_link({"btn-#{type}", conn, link, role}, block)
   end
@@ -162,7 +165,7 @@ defmodule Brando.HTML do
   Pass `params` instance of model (if one param), or a list of multiple
   params, and `helper` path.
   """
-  @spec delete_form_button(atom, Keyword.t | %{atom => any}) :: String.t
+  @spec delete_form_button(atom, Keyword.t | %{atom => any}) :: {:safe, String.t}
   def delete_form_button(helper, params) do
     action = Brando.Form.apply_action(helper, :delete, params)
     html =
@@ -407,14 +410,23 @@ defmodule Brando.HTML do
 
     body = "<body"
 
-    if id, do:
-      body = body <> ~s( id="#{id}")
+    body =
+      if id, do:
+        body <> ~s( id="#{id}"),
+      else:
+        body
 
-    if data_script, do:
-      body = body <> ~s( data-script="#{data_script}")
+    body =
+      if data_script, do:
+        body <> ~s( data-script="#{data_script}"),
+      else:
+        body
 
-    if classes, do:
-      body = body <> ~s( class="#{classes}")
+    body =
+      if classes, do:
+        body <> ~s( class="#{classes}"),
+      else:
+        body
 
     Phoenix.HTML.raw(body <> ">")
   end

@@ -10,18 +10,21 @@ defmodule Brando.Plug.Uploads do
   """
   require Logger
 
+  @spec check_for_uploads(Plug.Conn.t, {String.t, Module.t}) :: Plug.Conn.t
   def check_for_uploads(conn, {required_key, module}) when is_binary(required_key) do
     param = Map.get(conn.params, required_key)
+
     case module.check_for_uploads(module, param) do
       {:ok, image_fields} ->
-        param = handle_image_fields(param, image_fields)
+        param  = handle_image_fields(param, image_fields)
+        params = Map.put(conn.params, required_key, param)
+        %{conn | params: params}
       {:error, errors} ->
         Logger.error(inspect(errors))
-        nil
-      [] -> nil
+        conn
+      [] ->
+        conn
     end
-    params = Map.put(conn.params, required_key, param)
-    %{conn | params: params}
   end
 
   defp handle_image_fields(param, image_fields) do

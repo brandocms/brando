@@ -17,12 +17,12 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
   test "generates html resource" do
     in_tmp "generates html resource", fn ->
+      send self(), {:mix_shell_input, :yes?, true}
       Mix.Tasks.Brando.Gen.Html.run [
         "MinionFace", "minion_faces", "name", "age:integer", "height:decimal",
         "nicks:array:text", "famous:boolean", "born_at:datetime",
         "secret:uuid", "photo:image", "data:villain", "first_login:date",
         "alarm:time", "address:references", "creator:references"]
-        ++ ["--nosingular", "minjongtryne", "--noplural", "minjongtryner"]
 
       assert_file "web/models/minion_face.ex", fn file ->
         assert file =~ "defmodule Brando.MinionFace do"
@@ -109,7 +109,6 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
   test "plural can't contain a colon" do
     assert_raise Mix.Error, fn ->
       Mix.Tasks.Brando.Gen.Html.run ["Admin.User", "name:string", "foo:string"]
-                                    ++ ["--nosingular", "minjongtryne", "--noplural", "minjongtryner"]
     end
   end
 end

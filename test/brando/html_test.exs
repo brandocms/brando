@@ -139,4 +139,18 @@ defmodule Brando.HTMLTest do
     assert active(conn, "/some/link") == "active"
     assert active(conn, "/some/other/link") == ""
   end
+
+  test "post_form_button/4" do
+    html = post_form_button("Post", :admin_user_path, :new) |> Phoenix.HTML.safe_to_string
+    assert html =~ ~s(action="/admin/users/new")
+    assert html =~ "Post"
+  end
+
+  test "insecure_login?/1" do
+    conn = conn(:get, "/auth/login")
+    ret = insecure_login?(conn) |> Phoenix.HTML.safe_to_string
+    assert ret =~ "https://www.example.com/auth/login"
+    conn = conn |> Map.put(:scheme, :https)
+    assert insecure_login?(conn) == nil
+  end
 end

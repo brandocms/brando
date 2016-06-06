@@ -81,6 +81,7 @@ defmodule Brando.Sequence do
         @doc """
         Filters the results through `filter`.
         """
+        @spec filter_function(term) :: [term]
         def filter_function(filter_param) do
           {:filter, fun} = unquote(filter)
           case fun.(filter_param) do
@@ -89,6 +90,7 @@ defmodule Brando.Sequence do
           end
         end
 
+        @spec filter_function() :: [term]
         def filter_function do
           {:filter, fun} = unquote(filter)
           case fun.() do

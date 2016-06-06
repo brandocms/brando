@@ -1,3 +1,17 @@
+## v0.32.0 (2016-06-06)
+* Bug fixes
+  * fabfile now deletes old release before unpacking new release. Also archives the tar.gz
+    in `release-archives`.
+  * Fixes some translation errors
+  * Fixes recreated images not being optimized
+
+* Enhancements
+  * `brando.gen.html` now prompts you for `sequenced` schema.
+  * Added errorview for `400` errors.
+  * Add preview for file fields in forms
+  * Extracted analytics to `brando_analytics`
+  * Use iodata where possible when constructing form html
+
 ## v0.31.0 (2016-05-07)
 
 * Bug fixes

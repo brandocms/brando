@@ -181,7 +181,7 @@ defmodule Brando.Admin.UserController do
     model = conn.private[:model]
     record = Brando.repo.get!(model, user_id)
 
-    delete_original_and_sized_images(record, :avatar)
+    {:ok, _} = delete_original_and_sized_images(record, :avatar)
     Brando.repo.delete!(record)
 
     conn

@@ -1,5 +1,6 @@
 defmodule <%= admin_module %>Controller do
   use <%= base %>.Admin.Web, :controller
+<%= if sequenced do %>  use Brando.Sequence, [:controller, [model: <%= module %>]]<% end %>
 <%= if villain do %>  use Brando.Villain, [:controller, [
     image_model: Brando.Image,
     series_model: Brando.ImageSeries]]<% end %>
@@ -11,6 +12,7 @@ defmodule <%= admin_module %>Controller do
 
   def index(conn, _params) do
     <%= plural %> = Repo.all(<%= alias %>)
+
     conn
     |> assign(:page_title, gettext("Index - <%= plural %>"))
     |> render("index.html", <%= plural %>: <%= plural %>)
@@ -18,6 +20,7 @@ defmodule <%= admin_module %>Controller do
 
   def new(conn, _params) do
     changeset = <%= alias %>.changeset(%<%= alias %>{})
+
     conn
     |> assign(:page_title, gettext("New <%= singular %>"))
     |> render("new.html", changeset: changeset)
@@ -41,6 +44,7 @@ defmodule <%= admin_module %>Controller do
 
   def show(conn, %{"id" => id}) do
     <%= singular %> = Repo.get!(<%= alias %>, id)
+
     conn
     |> assign(:page_title, gettext("Show <%= singular %>"))
     |> render("show.html", <%= singular %>: <%= singular %>)
@@ -49,6 +53,7 @@ defmodule <%= admin_module %>Controller do
   def edit(conn, %{"id" => id}) do
     <%= singular %> = Repo.get!(<%= alias %>, id)
     changeset = <%= alias %>.changeset(<%= singular %>)
+
     conn
     |> assign(:page_title, gettext("Edit <%= singular %>"))
     |> render("edit.html", <%= singular %>: <%= singular %>,
@@ -84,6 +89,7 @@ defmodule <%= admin_module %>Controller do
 
   def delete_confirm(conn, %{"id" => id}) do
     record = Repo.get!(<%= alias %>, id)
+    
     conn
     |> assign(:record, record)
     |> assign(:page_title, gettext("Confirm deletion"))

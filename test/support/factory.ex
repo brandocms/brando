@@ -98,7 +98,7 @@ defmodule Brando.Factory do
   end
 
   def factory(:image_cfg_params) do
-    %{
+    %Brando.Type.ImageConfig{
       allowed_mimetypes: ["image/jpeg", "image/png"],
       default_size: :medium,
       upload_path: Path.join("images", "default"),

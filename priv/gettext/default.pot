@@ -62,19 +62,19 @@ msgstr ""
 msgid "Configure category"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:106
-#: web/controllers/admin/image_category_controller.ex:134
+#: web/controllers/admin/image_category_controller.ex:105
+#: web/controllers/admin/image_category_controller.ex:133
 msgid "Configure image category"
 msgstr ""
 
-#: web/controllers/admin/image_series_controller.ex:111
-#: web/controllers/admin/image_series_controller.ex:139
+#: web/controllers/admin/image_series_controller.ex:121
+#: web/controllers/admin/image_series_controller.ex:151
 #: web/templates/admin/image/index.html.eex:99
 msgid "Configure image series"
 msgstr ""
 
 #: web/controllers/admin/image_category_controller.ex:229
-#: web/controllers/admin/image_series_controller.ex:193
+#: web/controllers/admin/image_series_controller.ex:202
 #: web/controllers/admin/user_controller.ex:175
 msgid "Confirm deletion"
 msgstr ""
@@ -109,19 +109,19 @@ msgstr ""
 msgid "Delete user"
 msgstr ""
 
-#: lib/brando/html.ex:354 lib/brando/html/inspect.ex:146
+#: lib/brando/html.ex:357 lib/brando/html/inspect.ex:146
 msgid "Deleted"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:63
-#: web/controllers/admin/image_category_controller.ex:92
+#: web/controllers/admin/image_category_controller.ex:62
+#: web/controllers/admin/image_category_controller.ex:91
 #: web/templates/admin/image/index.html.eex:20
 #: web/templates/admin/image_category/edit.html.eex:1
 msgid "Edit image category"
 msgstr ""
 
-#: web/controllers/admin/image_series_controller.ex:63
-#: web/controllers/admin/image_series_controller.ex:89
+#: web/controllers/admin/image_series_controller.ex:70
+#: web/controllers/admin/image_series_controller.ex:100
 #: web/templates/admin/image/index.html.eex:89
 #: web/templates/admin/image_series/edit.html.eex:1
 #: web/templates/admin/image_series/sequence.html.eex:15
@@ -144,7 +144,7 @@ msgstr ""
 msgid "Edit user"
 msgstr ""
 
-#: web/models/user.ex:187 web/templates/session/login.html.eex:3
+#: web/models/user.ex:186 web/templates/session/login.html.eex:3
 msgid "Email"
 msgstr ""
 
@@ -159,11 +159,11 @@ msgid "Error"
 msgstr ""
 
 #: web/controllers/admin/image_category_controller.ex:50
-#: web/controllers/admin/image_category_controller.ex:96
-#: web/controllers/admin/image_category_controller.ex:139
-#: web/controllers/admin/image_series_controller.ex:50
-#: web/controllers/admin/image_series_controller.ex:93
-#: web/controllers/admin/image_series_controller.ex:144
+#: web/controllers/admin/image_category_controller.ex:95
+#: web/controllers/admin/image_category_controller.ex:138
+#: web/controllers/admin/image_series_controller.ex:52
+#: web/controllers/admin/image_series_controller.ex:97
+#: web/controllers/admin/image_series_controller.ex:148
 #: web/controllers/admin/user_controller.ex:92
 #: web/controllers/admin/user_controller.ex:120
 #: web/controllers/admin/user_controller.ex:163
@@ -182,7 +182,7 @@ msgstr ""
 msgid "Go back"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:43
+#: web/controllers/admin/image_category_controller.ex:42
 msgid "Image category created"
 msgstr ""
 
@@ -190,23 +190,23 @@ msgstr ""
 msgid "Image category deleted"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:88
+#: web/controllers/admin/image_category_controller.ex:87
 msgid "Image category updated"
 msgstr ""
 
-#: web/controllers/admin/image_series_controller.ex:43
+#: web/controllers/admin/image_series_controller.ex:49
 msgid "Image series created"
 msgstr ""
 
-#: web/controllers/admin/image_series_controller.ex:205
+#: web/controllers/admin/image_series_controller.ex:218
 msgid "Image series deleted"
 msgstr ""
 
-#: web/controllers/admin/image_series_controller.ex:85
+#: web/controllers/admin/image_series_controller.ex:94
 msgid "Image series updated"
 msgstr ""
 
-#: web/controllers/admin/image_controller.ex:25
+#: web/controllers/admin/image_controller.ex:24
 #: web/templates/admin/image/index.html.eex:1
 msgid "Index - images"
 msgstr ""
@@ -224,15 +224,15 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:28
+#: web/controllers/admin/image_category_controller.ex:27
 #: web/controllers/admin/image_category_controller.ex:47
 #: web/templates/admin/image/index.html.eex:119
 #: web/templates/admin/image_category/new.html.eex:1
 msgid "New image category"
 msgstr ""
 
-#: web/controllers/admin/image_series_controller.ex:28
-#: web/controllers/admin/image_series_controller.ex:47
+#: web/controllers/admin/image_series_controller.ex:32
+#: web/controllers/admin/image_series_controller.ex:55
 #: web/templates/admin/image/index.html.eex:10
 #: web/templates/admin/image_series/new.html.eex:1
 msgid "New image series"
@@ -258,7 +258,7 @@ msgstr ""
 msgid "Page not found"
 msgstr ""
 
-#: web/models/user.ex:189 web/templates/session/login.html.eex:6
+#: web/models/user.ex:188 web/templates/session/login.html.eex:6
 msgid "Password"
 msgstr ""
 
@@ -316,7 +316,7 @@ msgstr ""
 msgid "This object cannot be restored!"
 msgstr ""
 
-#: web/controllers/admin/image_series_controller.ex:166
+#: web/controllers/admin/image_series_controller.ex:176
 #: web/templates/admin/image/index.html.eex:78
 msgid "Upload images"
 msgstr ""
@@ -355,7 +355,7 @@ msgstr ""
 msgid "Add new"
 msgstr ""
 
-#: web/menus/images_menu.ex:10 web/models/image_series.ex:158
+#: web/menus/images_menu.ex:10 web/models/image_series.ex:152
 msgid "Images"
 msgstr ""
 
@@ -375,15 +375,15 @@ msgstr ""
 msgid "Association not fetched"
 msgstr ""
 
-#: web/models/user.ex:195
+#: web/models/user.ex:194
 msgid "Avatar"
 msgstr ""
 
-#: web/models/image_category.ex:132
+#: web/models/image_category.ex:123
 msgid "Config"
 msgstr ""
 
-#: web/models/image_series.ex:154
+#: web/models/image_series.ex:148
 msgid "Configuration"
 msgstr ""
 
@@ -391,7 +391,7 @@ msgstr ""
 msgid "Configuration data"
 msgstr ""
 
-#: lib/brando/form/fields.ex:591
+#: lib/brando/form/fields.ex:590
 msgid "Confirm"
 msgstr ""
 
@@ -399,16 +399,16 @@ msgstr ""
 msgid "Connected"
 msgstr ""
 
-#: web/models/image.ex:134 web/models/image_category.ex:133
-#: web/models/image_series.ex:157
+#: web/models/image.ex:134 web/models/image_category.ex:124
+#: web/models/image_series.ex:151
 msgid "Creator"
 msgstr ""
 
-#: web/models/image_series.ex:155
+#: web/models/image_series.ex:149
 msgid "Credits"
 msgstr ""
 
-#: lib/brando/html.ex:348 lib/brando/html/inspect.ex:145
+#: lib/brando/html.ex:351 lib/brando/html/inspect.ex:145
 msgid "Draft"
 msgstr ""
 
@@ -420,12 +420,12 @@ msgstr ""
 msgid "Encoded value"
 msgstr ""
 
-#: web/models/user.ex:188
+#: web/models/user.ex:187
 msgid "Full name"
 msgstr ""
 
-#: web/models/image.ex:131 web/models/image_category.ex:129
-#: web/models/image_series.ex:151 web/models/user.ex:185
+#: web/models/image.ex:131 web/models/image_category.ex:120
+#: web/models/image_series.ex:145 web/models/user.ex:184
 msgid "ID"
 msgstr ""
 
@@ -433,28 +433,28 @@ msgstr ""
 msgid "Image"
 msgstr ""
 
-#: web/models/image_series.ex:159 web/models/image_series.ex:160
+#: web/models/image_series.ex:153 web/models/image_series.ex:154
 msgid "Image category"
 msgstr ""
 
-#: web/models/image.ex:135 web/models/image_category.ex:134
+#: web/models/image.ex:135 web/models/image_category.ex:125
 msgid "Image series"
 msgstr ""
 
-#: web/models/image.ex:136 web/models/image_category.ex:135
-#: web/models/image_series.ex:161 web/models/user.ex:193
+#: web/models/image.ex:136 web/models/image_category.ex:126
+#: web/models/image_series.ex:155 web/models/user.ex:192
 msgid "Inserted at"
 msgstr ""
 
-#: web/models/user.ex:191
+#: web/models/user.ex:190
 msgid "Language"
 msgstr ""
 
-#: web/models/user.ex:192
+#: web/models/user.ex:191
 msgid "Last login"
 msgstr ""
 
-#: web/models/image_category.ex:130 web/models/image_series.ex:152
+#: web/models/image_category.ex:121 web/models/image_series.ex:146
 msgid "Name"
 msgstr ""
 
@@ -471,11 +471,11 @@ msgstr ""
 msgid "No value"
 msgstr ""
 
-#: lib/brando/html.ex:342 lib/brando/html/inspect.ex:144
+#: lib/brando/html.ex:345 lib/brando/html/inspect.ex:144
 msgid "Pending"
 msgstr ""
 
-#: lib/brando/html.ex:336 lib/brando/html/inspect.ex:143
+#: lib/brando/html.ex:339 lib/brando/html/inspect.ex:143
 msgid "Published"
 msgstr ""
 
@@ -483,24 +483,24 @@ msgstr ""
 msgid "Rights"
 msgstr ""
 
-#: web/models/user.ex:190
+#: web/models/user.ex:189
 msgid "Roles"
 msgstr ""
 
-#: lib/brando/form/fields.ex:91 lib/brando/images/utils.ex:310
+#: lib/brando/form/fields.ex:91 lib/brando/images/utils.ex:338
 msgid "Save"
 msgstr ""
 
-#: web/models/image.ex:133 web/models/image_series.ex:156
+#: web/models/image.ex:133 web/models/image_series.ex:150
 msgid "Sequence"
 msgstr ""
 
-#: web/models/image_category.ex:131 web/models/image_series.ex:153
+#: web/models/image_category.ex:122 web/models/image_series.ex:147
 msgid "Slug"
 msgstr ""
 
-#: web/models/image.ex:137 web/models/image_category.ex:136
-#: web/models/image_series.ex:162 web/models/user.ex:194
+#: web/models/image.ex:137 web/models/image_category.ex:127
+#: web/models/image_series.ex:156 web/models/user.ex:193
 msgid "Updated at"
 msgstr ""
 
@@ -508,7 +508,7 @@ msgstr ""
 msgid "User information"
 msgstr ""
 
-#: web/models/user.ex:186
+#: web/models/user.ex:185
 msgid "Username"
 msgstr ""
 
@@ -516,11 +516,11 @@ msgstr ""
 msgid "admin"
 msgstr ""
 
-#: lib/brando/form/fields.ex:678
+#: lib/brando/form/fields.ex:677
 msgid "can't be blank"
 msgstr ""
 
-#: lib/brando/form/fields.ex:682
+#: lib/brando/form/fields.ex:681
 msgid "has invalid format"
 msgstr ""
 
@@ -528,15 +528,15 @@ msgstr ""
 msgid "image"
 msgstr ""
 
-#: web/models/image_category.ex:126
+#: web/models/image_category.ex:117
 msgid "image categories"
 msgstr ""
 
-#: web/models/image_category.ex:125
+#: web/models/image_category.ex:116
 msgid "image category"
 msgstr ""
 
-#: web/models/image_series.ex:148
+#: web/models/image_series.ex:142
 msgid "image(s)"
 msgstr ""
 
@@ -544,27 +544,27 @@ msgstr ""
 msgid "images"
 msgstr ""
 
-#: web/models/image_series.ex:143
+#: web/models/image_series.ex:137
 msgid "imageserie"
 msgstr ""
 
-#: web/models/image_series.ex:144
+#: web/models/image_series.ex:138
 msgid "imageseries"
 msgstr ""
 
-#: lib/brando/form/fields.ex:684
+#: lib/brando/form/fields.ex:683
 msgid "is invalid"
 msgstr ""
 
-#: lib/brando/form/fields.ex:686
+#: lib/brando/form/fields.ex:685
 msgid "is reserved"
 msgstr ""
 
-#: lib/brando/form/fields.ex:680
+#: lib/brando/form/fields.ex:679
 msgid "must be unique"
 msgstr ""
 
-#: lib/brando/form/fields.ex:690 lib/brando/form/fields.ex:692
+#: lib/brando/form/fields.ex:689 lib/brando/form/fields.ex:691
 msgid "should be at least %{count} characters"
 msgstr ""
 
@@ -576,124 +576,43 @@ msgstr ""
 msgid "superuser"
 msgstr ""
 
-#: web/models/user.ex:181
+#: web/models/user.ex:180
 msgid "user"
 msgstr ""
 
-#: web/models/user.ex:182
+#: web/models/user.ex:181
 msgid "users"
 msgstr ""
 
-#: lib/brando/html.ex:174
+#: lib/brando/html.ex:177
 msgid "Delete"
 msgstr ""
 
-#: lib/brando/images/upload.ex:70
+#: lib/brando/images/upload.ex:64
 msgid "Empty filename given. Make sure you have a valid filename."
 msgstr ""
 
-#: lib/brando/images/upload.ex:115
+#: lib/brando/images/upload.ex:105
 msgid "Error while copying"
 msgstr ""
 
-#: lib/brando/images/upload.ex:85
+#: lib/brando/images/upload.ex:76
 msgid "File type not allowed"
 msgstr ""
 
-#: lib/brando/images/upload.ex:98
+#: lib/brando/images/upload.ex:87
 msgid "Path creation failed"
 msgstr ""
 
-#: web/templates/admin/analytics/views.html.eex:35
-msgid "All-time"
-msgstr ""
-
-#: web/menus/analytics_menu.ex:9
-#: web/templates/admin/analytics/referrals.html.eex:1
-#: web/templates/admin/analytics/views.html.eex:1
-msgid "Analytics"
-msgstr ""
-
-#: web/templates/admin/analytics/referrals.html.eex:9
-msgid "Exits"
-msgstr ""
-
-#: web/templates/admin/analytics/views.html.eex:14
-msgid "Last week"
-msgstr ""
-
-#: web/menus/analytics_menu.ex:12
-#: web/templates/admin/analytics/referrals.html.eex:1
-msgid "Referrals"
-msgstr ""
-
-#: web/templates/admin/analytics/referrals.html.eex:6
-msgid "Source"
-msgstr ""
-
-#: web/templates/admin/analytics/referrals.html.eex:8
-msgid "Time"
-msgstr ""
-
-#: web/templates/admin/analytics/views.html.eex:26
-msgid "Total"
-msgstr ""
-
-#: web/menus/analytics_menu.ex:11
-#: web/templates/admin/analytics/referrals.html.eex:7
-#: web/templates/admin/analytics/views.html.eex:1
-msgid "Views"
-msgstr ""
-
-#: web/templates/admin/analytics/views.html.eex:29
-msgid "Yesterday"
-msgstr ""
-
-#: web/templates/admin/analytics/views.html.eex:9
-msgid "friday"
-msgstr ""
-
-#: web/templates/admin/analytics/views.html.eex:5
-msgid "monday"
-msgstr ""
-
-#: web/templates/admin/analytics/views.html.eex:10
-msgid "saturday"
-msgstr ""
-
-#: web/templates/admin/analytics/views.html.eex:4
-msgid "sunday"
-msgstr ""
-
-#: web/templates/admin/analytics/views.html.eex:8
-msgid "thursday"
-msgstr ""
-
-#: web/templates/admin/analytics/views.html.eex:6
-msgid "tuesday"
-msgstr ""
-
-#: web/templates/admin/analytics/views.html.eex:7
-msgid "wednesday"
-msgstr ""
-
-#: web/controllers/admin/analytics_controller.ex:35
-msgid "Analytics - referrals"
-msgstr ""
-
-#: web/controllers/admin/analytics_controller.ex:21
-msgid "Analytics - views"
-msgstr ""
-
-#: lib/brando/plugs/authenticate.ex:37
+#: lib/brando/plugs/authenticate.ex:41
 msgid "Access denied."
 msgstr ""
 
-#: web/models/user.ex:71 web/models/user.ex:95
+#: web/models/user.ex:71 web/models/user.ex:94
 msgid "Passwords must match"
 msgstr ""
 
-#: web/models/user.ex:72 web/models/user.ex:96
+#: web/models/user.ex:72 web/models/user.ex:95
 msgid "Password must be at least 6 characters"
 msgstr ""
 
@@ -725,11 +644,11 @@ msgstr ""
 msgid "system"
 msgstr ""
 
-#: lib/brando/html.ex:438
+#: lib/brando/html.ex:450
 msgid "You are trying to authorize from an insecure URL. <a href=\"%{url}\">Please try again from this URL</a> or proceed at your own risk!"
 msgstr ""
 
-#: lib/brando/images/utils.ex:273
+#: lib/brando/images/utils.ex:300
 msgid "Allowed mimetypes"
 msgstr ""
 
@@ -737,12 +656,12 @@ msgstr ""
 msgid "Category propagated"
 msgstr ""
 
-#: web/controllers/admin/image_category_controller.ex:130
-#: web/controllers/admin/image_series_controller.ex:135
+#: web/controllers/admin/image_category_controller.ex:129
+#: web/controllers/admin/image_series_controller.ex:145
 msgid "Configuration updated"
 msgstr ""
 
-#: lib/brando/images/utils.ex:278
+#: lib/brando/images/utils.ex:305
 msgid "Default size"
 msgstr ""
 
@@ -750,7 +669,7 @@ msgstr ""
 msgid "Propagate configuration to dependent image series"
 msgstr ""
 
-#: lib/brando/images/utils.ex:282
+#: lib/brando/images/utils.ex:309
 msgid "Random filename"
 msgstr ""
 
@@ -758,15 +677,15 @@ msgstr ""
 msgid "Recreate sizes for this series"
 msgstr ""
 
-#: web/controllers/admin/image_series_controller.ex:154
+#: web/controllers/admin/image_series_controller.ex:165
 msgid "Recreated sizes for image series"
 msgstr ""
 
-#: lib/brando/images/utils.ex:286
+#: lib/brando/images/utils.ex:314
 msgid "Size limit"
 msgstr ""
 
-#: lib/brando/images/utils.ex:292
+#: lib/brando/images/utils.ex:320
 msgid "Upload path"
 msgstr ""
 
@@ -802,7 +721,7 @@ msgstr ""
 msgid "You are about to delete these folders. Please check carefully before proceeding."
 msgstr ""
 
-#: lib/brando/form/fields.ex:688
+#: lib/brando/form/fields.ex:687
 msgid "has already been taken"
 msgstr ""
 
@@ -842,26 +761,30 @@ msgstr ""
 msgid "Propagating configuration"
 msgstr ""
 
-#: lib/brando/images/utils.ex:302
+#: lib/brando/images/utils.ex:330
 msgid "Add master key (portrait/landscape)"
 msgstr ""
 
-#: lib/brando/images/utils.ex:299
+#: lib/brando/images/utils.ex:327
 msgid "Add master key (standard)"
 msgstr ""
 
-#: lib/brando/images/utils.ex:379
+#: lib/brando/images/utils.ex:403
 msgid "Orientation"
 msgstr ""
 
-#: lib/brando/images/utils.ex:350
+#: lib/brando/images/utils.ex:375
 msgid "key"
 msgstr ""
 
-#: lib/brando/images/utils.ex:357
+#: lib/brando/images/utils.ex:383
 msgid "masterkey"
 msgstr ""
 
 #: web/channels/system_channel.ex:60
 msgid "Error retrieving form \"%{form}\""
+msgstr ""
+
+#: web/templates/error/bad_request.html.eex:3
+msgid "Bad request"
 msgstr ""

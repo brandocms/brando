@@ -6,7 +6,6 @@ defmodule <%= application_module %>.Router do
 
   import Brando.Plug.I18n
 
-  import Brando.Analytics.Routes.Admin
   import Brando.Dashboard.Routes.Admin
   import Brando.Images.Routes.Admin
   import Brando.Users.Routes.Admin
@@ -15,6 +14,7 @@ defmodule <%= application_module %>.Router do
   # import Brando.Instagram.Routes.Admin
   # import Brando.News.Routes.Admin
   # import Brando.Pages.Routes.Admin
+  # import Brando.Analytics.Routes.Admin
 
   pipeline :admin do
     plug :accepts, ~w(html json)
@@ -55,12 +55,12 @@ defmodule <%= application_module %>.Router do
     dashboard_routes "/"
     user_routes      "/users"
     image_routes     "/images"
-    analytics_routes "/analytics"
 
     # additional optional routes
     # instagram_routes "/instagram"
     # page_routes      "/pages"
     # post_routes      "/news"
+    # analytics_routes "/analytics"
   end
 
   scope "/coming-soon" do

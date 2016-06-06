@@ -1,4 +1,4 @@
-<h1><%= gettext("Sort image category") %> &raquo; <strong><%= Brando.ImageCategory.get_slug(id: @filter) %></strong></h1>
+<h1><%= gettext("Sort image category") %> &raquo; <strong><%= Brando.ImageCategoryService.get_slug_by(id: @filter) %></strong></h1>
 <ul id="sequence" class="clearfix">
 <%= for i <- @items do %>
   <li style="width: 100%; padding: 10px 13px;" data-id="<%= i.id %>">

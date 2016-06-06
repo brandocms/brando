@@ -87,10 +87,13 @@ defmodule Brando.Tag do
   def model do
     quote do
       import Brando.Tag.Model, only: [tags: 0]
-      import Brando.Utils, only: [search_model_by_tag: 2]
 
+      @doc """
+      Search `model`'s tags field for `tags`
+      """
       def by_tag(tag) do
-        search_model_by_tag(__MODULE__, tag)
+        from m in __MODULE__,
+          where: ^tag in m.tags
       end
     end
   end
@@ -115,12 +118,14 @@ defmodule Brando.Tag do
   @doc """
   Splits the "tags" field in `params` to an array and returns `params`
   """
-  def split_tags(:invalid), do: :invalid
-  def split_tags(:empty), do: :empty
   def split_tags(params) when params == %{}, do: %{}
   def split_tags(params) do
     if params["tags"] do
-      Map.put(params, "tags", String.split(params["tags"], ","))
+      split_tags = params["tags"]
+                   |> String.split(",")
+                   |> Enum.map(&String.strip/1)
+
+      Map.put(params, "tags", split_tags)
     else
       params
     end

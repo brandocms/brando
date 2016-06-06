@@ -35,7 +35,7 @@ defmodule Brando.ImageCategory do
       model_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, atom, Keyword.t | Options.t) :: t
+  @spec changeset(t, :create | :update, Keyword.t | Options.t) :: t
   def changeset(model, action, params \\ %{})
   def changeset(model, :create, params) do
     model
@@ -54,68 +54,59 @@ defmodule Brando.ImageCategory do
       model_changeset = changeset(%__MODULE__{}, :update, params)
 
   """
-  @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(model, :update, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> unique_constraint(:slug)
-    |> validate_paths()
+    |> validate_paths
   end
 
   @doc """
   Put default image config in changeset
   """
+  @spec put_default_config(Ecto.Changeset.t) :: Ecto.Changeset.t
   def put_default_config(cs) do
-    path = Ecto.Changeset.get_change(cs, :slug, "default")
-    default_config =
-      Brando.config(Brando.Images)[:default_config]
-      |> Map.put(:upload_path, Path.join(["images", "site", path]))
+    path_from_slug = get_change(cs, :slug, "default")
+    upload_path    = Path.join(["images", "site", path_from_slug])
+    default_config = Brando.Images
+                     |> Brando.config
+                     |> Keyword.get(:default_config)
+                     |> Map.put(:upload_path, upload_path)
 
     put_change(cs, :cfg, default_config)
   end
 
   @doc """
-  Returns the model's slug
-  """
-  def get_slug(id: id) do
-    Brando.repo.one!(
-      from m in __MODULE__,
-        select: m.slug,
-        where: m.id == ^id
-    )
-  end
-
-  @doc """
   Get all records. Ordered by `id`.
   """
+  @spec with_image_series_and_images(Ecto.Queryable.t) :: Ecto.Queryable.t
   def with_image_series_and_images(query) do
     from m in query,
       left_join: is in assoc(m, :image_series),
       left_join: i in assoc(is, :images),
-      order_by: [asc: m.name, asc: is.sequence, asc: i.sequence],
-      preload: [image_series: {is, images: i}]
+       order_by: [asc: m.name, asc: is.sequence, asc: i.sequence],
+        preload: [image_series: {is, images: i}]
   end
 
   @doc """
   Validate `cs` cfg upload_path if slug is changed
   """
+  @spec validate_paths(Ecto.Changeset.t) :: Ecto.Changeset.t
+  def validate_paths(%Ecto.Changeset{changes: %{slug: slug}} = cs) do
+    old_cfg    = cs.data.cfg
+    split_path = Path.split(old_cfg.upload_path)
+    new_path   = split_path
+                 |> List.delete_at(Enum.count(split_path) - 1)
+                 |> Path.join
+                 |> Path.join(slug)
+
+    new_cfg    = Map.put(old_cfg, :upload_path, new_path)
+
+    put_change(cs, :cfg, new_cfg)
+  end
+
   def validate_paths(cs) do
-    slug = get_change(cs, :slug)
-    if slug do
-      cfg = cs.data.cfg
-      split_path = Path.split(cfg.upload_path)
-
-      new_path =
-        split_path
-        |> List.delete_at(Enum.count(split_path) - 1)
-        |> Path.join
-        |> Path.join(slug)
-
-      cfg = Map.put(cfg, :upload_path, new_path)
-      put_change(cs, :cfg, cfg)
-    else
-      cs
-    end
+    cs
   end
 
   #

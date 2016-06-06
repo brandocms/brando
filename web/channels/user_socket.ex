@@ -5,6 +5,7 @@ defmodule Brando.UserSocket do
   use Phoenix.Socket
 
   ## Channels
+  channel "user:*", Brando.UserChannel
   channel "system:*", Brando.SystemChannel
   channel "stats", Brando.StatsChannel
 
@@ -24,7 +25,7 @@ defmodule Brando.UserSocket do
   def connect(%{"token" => token}, socket) do
     case Phoenix.Token.verify(socket, "user", token, max_age: 1209600) do
       {:ok, user_id} ->
-        {:ok, assign(socket, :user, user_id)}
+        {:ok, assign(socket, :user_id, user_id)}
       {:error, _} ->
         :error
     end

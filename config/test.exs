@@ -56,6 +56,7 @@ config :brando, :log_dir, Path.expand("./tmp/logs")
 config :brando, :logging, disable_logging: true
 config :brando, :login_url, "/login"
 config :brando, :otp_app, :brando
+config :brando, :warn_on_http_auth, true
 config :brando, :default_language, "nb"
 config :brando, :admin_default_language, "nb"
 config :brando, :languages, [

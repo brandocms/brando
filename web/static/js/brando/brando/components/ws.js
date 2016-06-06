@@ -9,35 +9,49 @@ import {vex} from "./vex_brando";
 class WS {
     static setup() {
         var _this = this;
-        let user_token = document.querySelector("meta[name=\"channel_token\"]").getAttribute("content");
-        let socket = new Socket("/admin/ws", {params: {token: user_token}});
+        let userToken = document.querySelector("meta[name=\"channel_token\"]").getAttribute("content");
+        let socket = new Socket("/admin/ws", {params: {token: userToken}});
+
         socket.connect();
 
-        WS.chan = socket.channel("system:stream", {});
-        WS.chan.join().receive("ok", () => {
+        WS.lobbyChannel = socket.channel("user:lobby", {});
+        WS.lobbyChannel.join().receive("ok", (payload) => {
+            console.log("==> Lobby channel ready")
+            WS.userChannel = socket.channel(`user:${payload.user_id}`, {});
+            WS.userChannel.join().receive("ok", () => {
+                console.log("==> User channel ready")
+            });
+
+            WS.userChannel.on("alert", payload => {
+                _this.alert(payload.message);
+            });
+
+            WS.userChannel.on("set_progress", payload => {
+                _this.setProgress(payload.value);
+            });
+
+            WS.userChannel.on("increase_progress", payload => {
+                _this.increaseProgress(payload.value, payload.id);
+            });
+        });
+
+        WS.systemChannel = socket.channel("system:stream", {});
+        WS.systemChannel.join().receive("ok", () => {
             console.log("==> System channel ready");
         });
 
-        WS.chan.on("log_msg", payload => {
-            _this.log(payload.level, payload.icon, payload.body);
-        });
-
-        WS.chan.on("alert", payload => {
+        WS.systemChannel.on("alert", payload => {
             _this.alert(payload.message);
         });
 
-        WS.chan.on("set_progress", payload => {
-            _this.set_progress(payload.value);
+        WS.systemChannel.on("set_progress", payload => {
+            _this.setProgress(payload.value);
         });
 
-        WS.chan.on("increase_progress", payload => {
-            _this.increase_progress(payload.value, payload.id);
+        WS.systemChannel.on("increase_progress", payload => {
+            _this.increaseProgress(payload.value, payload.id);
         });
-    }
 
-    static log(level, icon, body) {
-        let date = new Date();
-        $(`<li><i class="fa fa-fw ${icon} m-l-sm m-r-sm"> </i> <span class="time p-r-sm">${date.getHours()}:${date.getMinutes()}</span>${body}</li>`).appendTo("#log-content");
     }
 
     static alert(message) {
@@ -73,17 +87,17 @@ class WS {
         WS.progressbar.setText(bI18n.t("ws:working"));
     }
 
-    static increase_progress(value) {
+    static increaseProgress(value) {
         if (WS.progressbar) {
             var newValue = WS.progressbar.value() + value;
         } else {
             WS.createProgress();
         }
 
-        WS.set_progress(newValue)
+        WS.setProgress(newValue)
     }
 
-    static set_progress(value) {
+    static setProgress(value) {
         if (WS.progressbar) {
             WS.progressbar.animate(value);
         } else {
@@ -100,6 +114,8 @@ class WS {
 }
 
 WS.progressbar = null;
-WS.chan = null;
+WS.systemChannel = null;
+WS.lobbyChannel = null;
+WS.userChannel = null;
 
 export default WS;

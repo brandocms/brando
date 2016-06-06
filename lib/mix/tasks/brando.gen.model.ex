@@ -47,23 +47,23 @@ defmodule Mix.Tasks.Brando.Gen.Model do
 
   """
   def run(args) do
-    {_, parsed, _} = OptionParser.parse(args, switches: [])
+    {opts, parsed, _} = OptionParser.parse(args, switches: [sequenced: :boolean])
     [singular, plural | attrs] = validate_args!(parsed)
+
+    sequenced? = if opts[:sequenced], do: true, else: false
 
     attrs      = Mix.Brando.attrs(attrs)
     binding    = Mix.Brando.inflect(singular)
     params     = Mix.Brando.params(attrs)
     path       = binding[:path]
     migration  = String.replace(path, "/", "_")
-    img_fields =
-      attrs
-      |> Enum.map(fn({k, v}) -> {v, k} end)
-      |> Enum.filter(fn({k, _}) -> k == :image end)
+    img_fields = attrs
+                 |> Enum.map(fn({k, v}) -> {v, k} end)
+                 |> Enum.filter(fn({k, _}) -> k == :image end)
 
-    villain_fields =
-      attrs
-      |> Enum.map(fn({k, v}) -> {v, k} end)
-      |> Enum.filter(fn({k, _}) -> k == :villain end)
+    villain_fields = attrs
+                     |> Enum.map(fn({k, v}) -> {v, k} end)
+                     |> Enum.filter(fn({k, _}) -> k == :villain end)
 
     Mix.Brando.check_module_name_availability!(binding[:module])
 
@@ -94,6 +94,7 @@ defmodule Mix.Tasks.Brando.Gen.Model do
     binding = binding ++
               [attrs: attrs, img_fields: img_fields, plural: plural,
                types: types, villain_fields: villain_fields,
+               sequenced: sequenced?,
                migrations: migrations, model_fields: model_fields,
                assocs: assocs(assocs), indexes: indexes(plural, assocs),
                defaults: defs, params: params]

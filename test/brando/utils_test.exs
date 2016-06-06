@@ -163,4 +163,33 @@ defmodule Brando.UtilsTest do
     mock_conn = %{port: 8000, scheme: "https", host: "brando.com"}
     assert host_and_media_url(mock_conn) == "https://brando.com:8000/media"
   end
+
+  test "https_url" do
+    mock_conn = %{port: 80, scheme: "http", host: "brando.com", request_path: "/hello"}
+    assert https_url(mock_conn) == "https://brando.com/hello"
+  end
+
+  test "human_spaced_number" do
+    assert human_spaced_number("10000000") == "10 000 000"
+    assert human_spaced_number(10000000) == "10 000 000"
+  end
+
+  test "human_time" do
+    assert human_time(1000000000) == "11 days"
+    assert human_time(10000000) == "2 hours"
+    assert human_time(100000) == "1 mins"
+    assert human_time(1000) == "1 secs"
+  end
+
+  test "human_size" do
+    assert human_size(100000000) == "95 MB"
+    assert human_size(1000000) == "976 kB"
+    assert human_size(10000) == "10 000 B"
+  end
+
+  test "helpers" do
+    mock_conn = %{private: %{phoenix_router: RouterHelper.TestRouter}}
+    assert helpers(mock_conn) == RouterHelper.TestRouter.Helpers
+  end
+
 end

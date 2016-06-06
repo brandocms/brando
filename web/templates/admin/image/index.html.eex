@@ -111,7 +111,7 @@
         </div>
       <% end %>
     <% else %>
-      <p><%= gettext("No image series") %></p>
+      <p class="text-mono"><%= gettext("No image series") %></p>
     <% end %>
     </div>
   </li>

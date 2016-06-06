@@ -18,8 +18,8 @@ defmodule Brando.Images.Upload do
       Returns {:ok, model} or raises
       """
       def check_for_uploads(params, current_user, cfg, put_fields \\ nil) do
-        Enum.reduce filter_plugs(params), [], fn (plug, _) ->
-          handle_upload(plug, current_user, put_fields, __MODULE__, cfg)
+        Enum.reduce filter_plugs(params), [], fn (named_plug, _) ->
+          handle_upload(named_plug, current_user, put_fields, __MODULE__, cfg)
         end
       end
     end
@@ -30,7 +30,8 @@ defmodule Brando.Images.Upload do
   """
   def handle_upload({name, plug}, current_user, put_fields, module, cfg) do
     {:ok, file} = do_upload(plug, cfg)
-    params = Map.put(put_fields, name, file)
+    params      = Map.put(put_fields, name, file)
+
     apply(module, :create, [params, current_user])
   end
 
@@ -42,17 +43,10 @@ defmodule Brando.Images.Upload do
   def do_upload(plug, %Brando.Type.ImageConfig{} = cfg) do
     process_upload(plug, cfg)
   end
-  def do_upload(plug, cfg) when is_map(cfg) do
-    cfg_struct =
-      if is_atom(List.first(Map.keys(cfg))) do
-        struct(Brando.Type.ImageConfig, cfg)
-      else
-        stringy_struct(Brando.Type.ImageConfig, cfg)
-      end
-    process_upload(plug, cfg_struct)
-  end
+
   def do_upload(_plug, cfg) when is_list(cfg) do
-    raise "do_upload with cfg as list. Fix it!"
+    raise "do_upload with cfg as list is deprecated." <>
+          "please supply a %Brando.Type.ImageConfig{} struct instead."
   end
 
   defp process_upload(plug, cfg_struct) do
@@ -78,44 +72,40 @@ defmodule Brando.Images.Upload do
   end
 
   defp check_mimetype({%{content_type: content_type} = plug, cfg}) do
-    if content_type in Map.get(cfg, :allowed_mimetypes) do
-      {plug, cfg}
-    else
-      raise UploadError,
-            message: gettext("File type not allowed") <> " -> #{content_type}"
+    unless content_type in Map.get(cfg, :allowed_mimetypes) do
+      raise UploadError, message: gettext("File type not allowed") <> " -> #{content_type}"
     end
+    {plug, cfg}
   end
 
   defp create_upload_path({plug, cfg}) do
-    upload_path =
-      Path.join(Brando.config(:media_path), Map.get(cfg, :upload_path))
+    upload_path = Path.join(Brando.config(:media_path), Map.get(cfg, :upload_path))
 
     case File.mkdir_p(upload_path) do
-      :ok ->
-        {Map.put(plug, :upload_path, upload_path), cfg}
-      {:error, reason} ->
-        raise UploadError,
-              message: gettext("Path creation failed") <> " -> #{inspect(reason)}"
+      :ok -> {Map.put(plug, :upload_path, upload_path), cfg}
+      {:error, r} -> raise UploadError,
+                           message: gettext("Path creation failed") <> " -> #{inspect(r)}"
     end
   end
 
-  defp copy_uploaded_file({%{filename: filename, path: temp_path,
-                          upload_path: upload_path} = plug, cfg}) do
-    new_file = Path.join(upload_path, filename)
+  defp copy_uploaded_file({%{filename: fname, path: tmp_path, upload_path: ul_path} = plug, cfg}) do
+    new_file = Path.join(ul_path, fname)
 
-    if File.exists?(new_file) do
-      new_file = Path.join(upload_path, unique_filename(filename))
-    end
+    new_file =
+      if File.exists?(new_file) do
+        Path.join(ul_path, unique_filename(fname))
+      else
+        new_file
+      end
 
-    case File.cp(temp_path, new_file, fn _, _ -> false end) do
+    case File.cp(tmp_path, new_file, fn _, _ -> false end) do
       :ok ->
         {Map.put(plug, :uploaded_file, new_file), cfg}
       {:error, reason} ->
-        raise UploadError,
-              message: gettext("Error while copying") <>
-                       " -> #{inspect(reason)}\n" <>
-                       "src: #{temp_path}\n" <>
-                       "dest: #{new_file}"
+        raise UploadError, message: gettext("Error while copying") <>
+                                    " -> #{inspect(reason)}\n" <>
+                                    "src: #{tmp_path}\n" <>
+                                    "dest: #{new_file}"
     end
   end
 
@@ -126,7 +116,7 @@ defmodule Brando.Images.Upload do
     Enum.filter(params, fn (param) ->
       case param do
         {_, %Plug.Upload{}} -> true
-        {_, _} -> false
+        {_, _}              -> false
       end
     end)
   end

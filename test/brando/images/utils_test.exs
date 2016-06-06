@@ -41,4 +41,10 @@ defmodule Brando.Images.UtilsTest do
   test "size_dir/2 atom" do
     assert size_dir("test/dir/filename.jpg", :thumb) == "test/dir/thumb/filename.jpg"
   end
+
+  test "media_path" do
+    assert media_path == Brando.config(:media_path)
+    assert media_path(nil) == Brando.config(:media_path)
+    assert media_path("images") == Path.join(Brando.config(:media_path), "images")
+  end
 end

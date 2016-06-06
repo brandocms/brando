@@ -1,10 +1,37 @@
 defmodule Brando.Images.Optimize do
   @moduledoc """
   Optimization helpers for Brando images.
+
+  ## Configuration
+
+  This requires you to have `pngquant`/`cjpeg` installed.
+
+  Usually you would want to add this to your `config/prod.exs`:
+
+      config :brando, Brando.Images,
+        optimize: [
+          png: [
+            bin: "/usr/local/bin/pngquant",
+            args: "--speed 1 --force --output %{new_filename} -- %{filename}"
+          ],
+          jpeg: [
+            bin: "/usr/local/bin/cjpeg",
+            args: "-quality 90 %{filename} > %{new_filename}"
+          ]
+        ]
+
+  or
+
+      config :brando, Brando.Images,
+        optimize: false
+
   """
 
   @doc """
   Optimize `img`
+
+  Checks image for `optimized` flag, gets the image type and sends off
+  to `do_optimize/2`.
   """
   def optimize({:ok, %Brando.Type.Image{optimized: false} = img}) do
     type = Brando.Images.Utils.image_type(img)
@@ -26,8 +53,7 @@ defmodule Brando.Images.Optimize do
 
   defp set_optimized_flag(input, value \\ true)
   defp set_optimized_flag({:ok, img}, value) do
-    img = img |> Map.put(:optimized, value)
-    {:ok, img}
+    {:ok, Map.put(img, :optimized, value)}
   end
 
   defp set_optimized_flag({:error, img}, _) do
@@ -35,11 +61,10 @@ defmodule Brando.Images.Optimize do
   end
 
   defp run_optimization(%Brando.Type.Image{} = img, type) do
-    cfg =
-      Brando.Images
-      |> Brando.config
-      |> Keyword.get(:optimize, [])
-      |> Keyword.get(type)
+    cfg = Brando.Images
+          |> Brando.config
+          |> Keyword.get(:optimize, [])
+          |> Keyword.get(type)
 
     if cfg do
       for file <- Enum.map(img.sizes, &elem(&1, 1)) do

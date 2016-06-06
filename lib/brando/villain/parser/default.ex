@@ -11,23 +11,27 @@ defmodule Brando.Villain.Parser.Default do
   @doc """
   Convert header to HTML
   """
-  def header(%{"text" => text, "level" => level}) do
+  def header(%{"text" => header_text, "level" => level}) do
     header_size = "h#{level}"
-    "<#{header_size}>" <> text <> "</#{header_size}>"
+    "<#{header_size}>" <> header_text <> "</#{header_size}>"
   end
 
-  def header(%{"text" => text}) do
-    "<h1>" <> text <> "</h1>"
+  def header(%{"text" => header_text}) do
+    "<h1>" <> header_text <> "</h1>"
   end
 
   @doc """
   Convert text to HTML through Markdown
   """
-  def text(%{"text" => text, "type" => type}) do
-    if type == "lead" and byte_size(text) > 0 do
-      text = text <> "\n{: .lead}"
-    end
-    Earmark.to_html(text, %Earmark.Options{breaks: true})
+  def text(%{"text" => markdown_data, "type" => type}) do
+    markdown_data =
+      if type == "lead" and byte_size(markdown_data) > 0 do
+        markdown_data = markdown_data <> "\n{: .lead}"
+      else
+        markdown_data
+      end
+      
+    Earmark.to_html(markdown_data, %Earmark.Options{breaks: true})
   end
 
   @doc """
@@ -94,11 +98,11 @@ defmodule Brando.Villain.Parser.Default do
   def slideshow(%{"imageseries" => series_slug, "size" => size}) do
     series = Brando.repo.all(
       from is in Brando.ImageSeries,
-        join: c in assoc(is, :image_category),
-        join: i in assoc(is, :images),
-        where: c.slug == "slideshows" and is.slug == ^series_slug,
+            join: c in assoc(is, :image_category),
+            join: i in assoc(is, :images),
+           where: c.slug == "slideshows" and is.slug == ^series_slug,
         order_by: i.sequence,
-        preload: [image_category: c, images: i]
+         preload: [image_category: c, images: i]
     ) |> List.first
 
     images = Enum.map_join(series.images, "\n", fn(img) ->
@@ -125,22 +129,22 @@ defmodule Brando.Villain.Parser.Default do
   @doc """
   Convert list to html through Markdown
   """
-  def list(%{"text" => list}) do
-    Earmark.to_html(list)
+  def list(%{"text" => markdown_data}) do
+    Earmark.to_html(markdown_data)
   end
 
   @doc """
   Html -> html. Easy as pie.
   """
-  def html(%{"text" => html}) do
-    html
+  def html(%{"text" => html_data}) do
+    html_data
   end
 
   @doc """
   Markdown -> html
   """
-  def markdown(%{"text" => markdown}) do
-    Earmark.to_html(markdown, %Earmark.Options{breaks: true})
+  def markdown(%{"text" => markdown_data}) do
+    Earmark.to_html(markdown_data, %Earmark.Options{breaks: true})
   end
 
   @doc """

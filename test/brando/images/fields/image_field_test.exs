@@ -23,7 +23,7 @@ defmodule Brando.Images.Field.ImageFieldTest do
 
     has_image_field :avatar, @cfg
 
-    def cfg, do: @cfg
+    def cfg, do: struct!(Brando.Type.ImageConfig, @cfg)
   end
 
   test "use works" do
