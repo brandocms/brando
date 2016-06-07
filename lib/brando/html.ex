@@ -24,9 +24,7 @@ defmodule Brando.HTML do
   Also calls to render submenu items, if `current_user` has required role
   """
   def render_menu_item(conn, {color, menu}) do
-    submenu_items =
-      menu.submenu
-      |> Enum.map_join("\n", &render_submenu_item(conn, &1))
+    submenu_items = Enum.map_join(menu.submenu, "\n", &render_submenu_item(conn, &1))
 
     html =
     """
@@ -48,7 +46,7 @@ defmodule Brando.HTML do
       </li>
     <!-- /menu item -->
     """
-    html |> Phoenix.HTML.raw
+    Phoenix.HTML.raw(html)
   end
 
   @doc """
@@ -57,6 +55,7 @@ defmodule Brando.HTML do
   """
   def render_submenu_item(conn, item) do
     {fun, action} = item.url
+
     if can_render?(conn, item) do
       url        = apply(Brando.Utils.helpers(conn), fun, [conn, action])
       active?    = active_path?(conn, url)
@@ -81,11 +80,8 @@ defmodule Brando.HTML do
   """
   @spec active(Plug.Conn.t, String.t) :: String.t
   def active(conn, url_to_match) do
-    if active_path?(conn, url_to_match) do
-      "active"
-    else
-      ""
-    end
+    active_path?(conn, url_to_match) && "active"
+                                     || ""
   end
 
   @doc """
