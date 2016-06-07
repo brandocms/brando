@@ -1,5 +1,8 @@
 ## v0.33.0-dev (2016-XX-XX)
 
+* Enchancements
+  * Adds tablesaw for displaying tables on smaller screens.
+
 ## v0.32.0 (2016-06-06)
 
 * Bug fixes
