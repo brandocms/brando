@@ -60,30 +60,26 @@ defmodule Brando.HTML.Tablize do
   def tablize(_, [], _, _), do: "<p>#{gettext("No results")}</p>" |> Phoenix.HTML.raw
   def tablize(_, nil, _, _), do: "<p>#{gettext("No results")}</p>" |> Phoenix.HTML.raw
   def tablize(conn, records, dropdowns, opts) do
-    tablize_opts = %Brando.HTML.Tablize{
-      module: List.first(records).__struct__,
-      dropdowns: dropdowns,
-      records: records,
-      conn: conn,
-      opts: opts
-    }
+    tablize_opts =
+      %Brando.HTML.Tablize{
+        conn:      conn,
+        module:    List.first(records).__struct__,
+        records:   records,
+        dropdowns: dropdowns,
+        opts:      opts
+      }
 
-    colgroup =
-      if opts[:colgroup] do
-        render_colgroup(:manual, opts[:colgroup])
-      else
-        render_colgroup(:auto, tablize_opts)
-      end
+    colgroup = opts[:colgroup] && render_colgroup(:manual, opts[:colgroup])
+                               || render_colgroup(:auto, tablize_opts)
 
-    filter_attr =
-      if opts[:filter], do:
-        ~s( data-filter-table="true"),
-      else: ""
+    filter_attr = opts[:filter] && ~s( data-filter-table="true")
+                                || ""
 
     table_header = render_thead(tablize_opts)
-    table_body = render_tbody(tablize_opts)
+    table_body   = render_tbody(tablize_opts)
+
     table = """
-      <table class="table"#{filter_attr}>
+      <table class="table tablesaw tablesaw-stack" data-tablesaw-mode="stack"#{filter_attr}>
         #{colgroup}
         #{table_header}
         #{table_body}
@@ -101,38 +97,48 @@ defmodule Brando.HTML.Tablize do
       else
         ""
       end
+
     Phoenix.HTML.raw([filter|table])
   end
 
   defp render_colgroup(:auto, %{module: module, opts: opts}) do
-    fields =
-      opts[:hide] && module.__keys__ -- opts[:hide] || module.__keys__
+    fields = opts[:hide] && module.__keys__ -- opts[:hide]
+                         || module.__keys__
 
-    narrow_fields =
-      opts[:check_or_x] && @narrow_fields ++ opts[:check_or_x] || @narrow_fields
+    narrow_fields = opts[:check_or_x] && @narrow_fields ++ opts[:check_or_x]
+                                      || @narrow_fields
 
-    colgroups = for f <- fields do
-      type = module.__schema__(:type, f)
-      cond do
-        type in @narrow_types  -> ~s(<col style="width: 10px;">)
-        f in narrow_fields     -> ~s(<col style="width: 10px;">)
-        f in @date_fields      -> ~s(<col style="width: 140px;">)
-        f == :creator          -> ~s(<col style="width: 180px;">)
-        true                   -> ~s(<col>)
+    colgroups =
+      for f <- fields do
+        type = module.__schema__(:type, f)
+        cond do
+          type in @narrow_types  -> ~s(<col style="width: 10px;">)
+          f in narrow_fields     -> ~s(<col style="width: 10px;">)
+          f in @date_fields      -> ~s(<col style="width: 140px;">)
+          f == :creator          -> ~s(<col style="width: 180px;">)
+          true                   -> ~s(<col>)
+        end
       end
-    end
+
     # add expander
-    colgroups = [~s(<col style="width: 10px;">)|colgroups]
+    expander  = ~s(<col style="width: 10px;">)
+    colgroups = [expander|colgroups]
+
     # add menu col
-    colgroups = colgroups ++ ~s(<col style="width: 80px;">)
+    menu_col  = ~s(<col style="width: 80px;">)
+    colgroups = colgroups ++ menu_col
+
     "<colgroup>#{IO.iodata_to_binary(colgroups)}</colgroup>"
   end
 
   defp render_colgroup(:manual, list) do
-    colgroups = for col <- list do
-      col && ~s(<col style="width: #{col}px;">) || "<col>"
-    end
-    colgroups = colgroups ++ ~s(<col style="width: 80px;">)
+    colgroups =
+      for col <- list, do:
+        col && ~s(<col style="width: #{col}px;">) || "<col>"
+
+    menu_col  = ~s(<col style="width: 80px;">)
+    colgroups = colgroups ++ menu_col
+
     "<colgroup>#{IO.iodata_to_binary(colgroups)}</colgroup>"
   end
 
@@ -180,12 +186,11 @@ defmodule Brando.HTML.Tablize do
 
   defp render_children(record, %{opts: opts} = tablize_opts) do
     case Map.get(record, opts[:children]) do
-      nil -> nil
-      [] -> nil
-      children ->
-        children
-        |> render_child_rows(record, tablize_opts)
-        |> Enum.join
+      nil      -> nil
+      []       -> nil
+      children -> children
+                  |> render_child_rows(record, tablize_opts)
+                  |> Enum.join
     end
   end
 
@@ -194,6 +199,7 @@ defmodule Brando.HTML.Tablize do
     children   = render_children(record, tablize_opts)
     expander   = render_expander(record, children)
     dropdowns  = render_dropdowns(record, tablize_opts)
+
     row = """
     <tr>
       #{expander}
@@ -201,6 +207,7 @@ defmodule Brando.HTML.Tablize do
       #{dropdowns}
     </tr>
     """
+
     children && row <> children || row
   end
 
@@ -245,11 +252,10 @@ defmodule Brando.HTML.Tablize do
   end
 
   defp render_thead(%{module: module, opts: opts}) do
-    fields = module.__keys__
-    rendered_ths =
-      fields
-      |> Enum.map(&(do_th(&1, module, opts[:hide])))
-      |> Enum.join
+    fields       = module.__keys__
+    rendered_ths = fields
+                   |> Enum.map(&(do_th(&1, module, opts[:hide])))
+                   |> Enum.join
 
     """
     <thead>

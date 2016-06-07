@@ -1,4 +1,5 @@
 "use strict";
+
 import $ from "jquery";
 import Dropzone from "dropzone";
 import Chart from "chart.js";
@@ -7,6 +8,7 @@ import "./brando/extensions/datepicker";
 import "./brando/extensions/dropdown";
 import "./brando/extensions/searcher";
 import "./brando/extensions/slugit";
+import "./brando/extensions/tablesaw";
 import "./brando/extensions/tags_input";
 
 import {Accordion} from "./brando/components/accordion";
@@ -77,6 +79,8 @@ $(() => {
     WS.setup();
     Accordion.setup();
     Menu.setup();
+
+    $(document).trigger("enhance.tablesaw");
 });
 
 export {
