@@ -21,8 +21,10 @@ defmodule Brando.Factory do
         path: "images/avatars/27i97a.jpeg",
         title: nil,
         sizes: %{
-          "thumb" => "images/avatars/thumb/27i97a.jpeg",
-          "medium" => "images/avatars/medium/27i97a.jpeg"
+          "thumb"  => "images/avatars/thumb/27i97a.jpeg",
+          "small"  => "images/avatars/small/27i97a.jpeg",
+          "medium" => "images/avatars/medium/27i97a.jpeg",
+          "large"  => "images/avatars/large/27i97a.jpeg"
         }
       },
       role: [:admin, :superuser],

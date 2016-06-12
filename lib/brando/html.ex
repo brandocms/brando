@@ -468,4 +468,45 @@ defmodule Brando.HTML do
       """ |> Phoenix.HTML.raw
     end
   end
+
+  @doc """
+  Outputs an `img` tag marked as safe html
+
+  ## Options:
+
+    * `prefix` - string to prefix to the image's url. I.e. `prefix: media_url()`
+    * `default` - default value if `image_field` is nil. Does not respect `prefix`, so use
+      full path.
+    * `srcset` - if you want to use the srcset attribute. Set in the form of `{module, field}`.
+      I.e `srcset: {Brando.User, :avatar}`
+
+  """
+  def img_tag(image_field, size, opts \\ []) do
+    srcset_attr = get_srcset(image_field, opts[:srcset], opts) || []
+    attrs =
+      Keyword.new
+      |> Keyword.put(:src, Brando.Utils.img_url(image_field, size, opts))
+      |> Keyword.merge(Keyword.drop(opts, [:prefix, :srcset, :default]) ++ srcset_attr)
+
+    Phoenix.HTML.Tag.tag(:img, attrs)
+  end
+
+  defp get_srcset(_, nil, _) do
+    nil
+  end
+
+  defp get_srcset(image_field, {mod, field}, opts) do
+    cfg = apply(mod, :get_image_cfg, [field])
+    if !cfg.srcset do
+      raise ArgumentError, message: "no `:srcset` key set in #{inspect mod}'s #{inspect field} image config"
+    end
+
+    srcset_values =
+      for {k, v} <- cfg.srcset do
+        path = Brando.Utils.img_url(image_field, k, opts)
+        "#{path} #{v}"
+      end
+
+    [srcset: Enum.join(srcset_values, ", ")]
+  end
 end
