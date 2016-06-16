@@ -38,7 +38,7 @@ defmodule Brando.Plug.HTML do
     put_private(conn, :brando_css_classes, Enum.join(classes, " "))
   end
 
-  def put_css_classes(conn, classes) do
+  def put_css_classes(conn, _) do
     conn
   end
 end
