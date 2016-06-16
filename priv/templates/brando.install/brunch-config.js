@@ -118,7 +118,8 @@ exports.config = {
 
   modules: {
     autoRequire: {
-      'js/app.js': ['app']
+      'js/app.js': ['app'],
+      'js/brando.custom.js': ['admin/custom.js']
     },
     nameCleaner: function(path) { return path.replace(/^web\/static\/js\//, ''); }
   },
