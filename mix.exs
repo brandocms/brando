@@ -47,7 +47,7 @@ defmodule Brando.Mixfile do
   end
 
   defp deps do [
-    {:comeonin, "~> 2.1"},
+    {:comeonin, "~> 2.5"},
     {:earmark, "~> 0.2"},
     {:gettext, "~> 0.11"},
     {:httpoison, "~> 0.8"},
@@ -56,7 +56,7 @@ defmodule Brando.Mixfile do
     {:phoenix_html, "~> 2.5"},
     {:poison, "~> 2.0"},
     {:postgrex, "~> 0.11"},
-    {:scrivener, "~> 1.1"},
+    {:scrivener, "~> 2.0"},
     {:slugger, "~> 0.1.0"},
 
     # Dev dependencies
@@ -64,12 +64,9 @@ defmodule Brando.Mixfile do
     {:dialyxir, "~> 0.3", only: :dev},
 
     # Test dependencies
-    {:phoenix_ecto, "~> 3.0.0-rc", only: :test},
+    {:phoenix_ecto, "~> 3.0.0", only: :test},
     {:ex_machina, "~> 0.6.1", only: :test},
     {:excoveralls, "~> 0.5.1", only: :test},
-
-    # Temporary until scrivener updates
-    {:ecto, "~> 2.0-beta", override: true},
 
     # Documentation dependencies
     {:ex_doc, "~> 0.11", only: :docs},
