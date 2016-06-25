@@ -3,7 +3,9 @@
 * Enchancements
   * Adds tablesaw for displaying tables on smaller screens.
   * Fixes for Elixir 1.3
-  * Uses Ecto v2
+  * Updates for ecto 2.0
+  * Updates for ex_machina 1.0
+  * Updates for phoenix 1.2
 
 ## v0.32.0 (2016-06-06)
 

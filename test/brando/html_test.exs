@@ -138,7 +138,7 @@ defmodule Brando.HTMLTest do
   end
 
   test "active/2" do
-    conn = conn(:get, "/some/link")
+    conn = build_conn(:get, "/some/link")
     assert active(conn, "/some/link") == "active"
     assert active(conn, "/some/other/link") == ""
   end
@@ -150,7 +150,7 @@ defmodule Brando.HTMLTest do
   end
 
   test "insecure_login?/1" do
-    conn = conn(:get, "/auth/login")
+    conn = build_conn(:get, "/auth/login")
     ret = insecure_login?(conn) |> Phoenix.HTML.safe_to_string
     assert ret =~ "https://www.example.com/auth/login"
     conn = conn |> Map.put(:scheme, :https)
