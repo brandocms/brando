@@ -4,8 +4,8 @@ defmodule Brando.HTML.Inspect do
   """
   import Brando.Gettext
   import Brando.Render, only: [r: 1]
+  import Brando.HTML, only: [zero_pad: 2]
   import Brando.Utils, only: [media_url: 0, img_url: 3]
-  import Ecto.DateTime.Utils, only: [zero_pad: 2]
   import Phoenix.HTML.Tag, only: [content_tag: 3]
 
   @doc """

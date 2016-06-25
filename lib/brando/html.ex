@@ -132,7 +132,7 @@ defmodule Brando.HTML do
   end
 
   @doc """
-  Zero pad `int` as a binary.
+  Zero pad `val` as a binary.
 
   ## Example
 
@@ -140,11 +140,12 @@ defmodule Brando.HTML do
       "005"
 
   """
-  def zero_pad(str) when is_binary(str) do
-    String.rjust(str, 3, ?0)
+  def zero_pad(str, count \\ 3)
+  def zero_pad(val, count) when is_binary(val) do
+    String.rjust(val, count, ?0)
   end
-  def zero_pad(int) do
-    String.rjust(Integer.to_string(int), 3, ?0)
+  def zero_pad(val, count) do
+    String.rjust(Integer.to_string(val), count, ?0)
   end
 
   @doc """
