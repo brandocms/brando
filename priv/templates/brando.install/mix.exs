@@ -54,7 +54,7 @@ defmodule <%= application_module %>.Mixfile do
      {:postgrex, ">= 0.0.0"},
      {:phoenix_html, "~> 2.4"},
      {:phoenix_live_reload, "~> 1.0", only: :dev},
-     {:gettext, "~> 0.10"},
+     {:gettext, "~> 0.11"},
      {:cowboy, "~> 1.0"},
 
      # release management and production tools

@@ -65,7 +65,7 @@ defmodule Brando.Mixfile do
 
     # Test dependencies
     {:phoenix_ecto, "~> 3.0.0", only: :test},
-    {:ex_machina, "~> 0.6.1", only: :test},
+    {:ex_machina, "~> 1.0", only: :test},
     {:excoveralls, "~> 0.5.1", only: :test},
 
     # Documentation dependencies

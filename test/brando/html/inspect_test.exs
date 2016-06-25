@@ -72,7 +72,7 @@ defmodule Brando.HTML.InspectTest do
     ]
 
   test "model/1" do
-    user = Factory.create(:user)
+    user = Factory.insert(:user)
     # assert {:ok, user} = create_user(@user_params)
 
     {:safe, ret} = model(user)
@@ -120,12 +120,12 @@ defmodule Brando.HTML.InspectTest do
   end
 
   test "model_repr/1" do
-    user = Factory.create(:user)
+    user = Factory.insert(:user)
     assert schema_repr(user) == "James Williamson (jamesw)"
   end
 
   test "model_name/2" do
-    user = Factory.create(:user)
+    user = Factory.insert(:user)
     assert schema_name(user, :singular) == "user"
     assert schema_name(user, :plural) == "users"
   end

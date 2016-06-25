@@ -28,7 +28,7 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "show" do
-    user = Factory.create(:user)
+    user = Factory.insert(:user)
 
     conn =
       :get
@@ -40,7 +40,7 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "profile" do
-    user = Factory.create(:user)
+    user = Factory.insert(:user)
 
     conn =
       :get
@@ -62,7 +62,7 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "edit" do
-    user = Factory.create(:user)
+    user = Factory.insert(:user)
 
     conn =
       :get
@@ -74,7 +74,7 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "edit profile" do
-    user = Factory.create(:user)
+    user = Factory.insert(:user)
 
     conn =
       :get
@@ -99,7 +99,7 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "create (post) w/erroneus params" do
-    user = Factory.create(:user)
+    user = Factory.insert(:user)
 
     conn =
       :post
@@ -112,7 +112,7 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "update (post) w/params" do
-    user = Factory.create(:user)
+    user = Factory.insert(:user)
 
     user_params =
       user
@@ -131,7 +131,7 @@ defmodule Brando.Users.ControllerTest do
 
   test "update (post) w/broken params" do
     user =
-      Factory.create(:user)
+      Factory.insert(:user)
       |> Map.delete(:__struct__)
       |> Map.put(:password, "1")
 
@@ -146,7 +146,7 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "update profile" do
-    user = Factory.create(:user)
+    user = Factory.insert(:user)
 
     conn =
       :patch
@@ -160,7 +160,7 @@ defmodule Brando.Users.ControllerTest do
 
   test "update profile w/broken params" do
     user =
-      Factory.create(:user)
+      Factory.insert(:user)
       |> Map.delete(:__struct__)
       |> Map.put(:password, "1")
 
@@ -175,7 +175,7 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "delete_confirm" do
-    user = Factory.create(:user)
+    user = Factory.insert(:user)
 
     conn =
       :get
@@ -187,7 +187,7 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "delete" do
-    user = Factory.create(:user)
+    user = Factory.insert(:user)
     
     conn =
       :delete

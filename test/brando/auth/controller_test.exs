@@ -27,7 +27,7 @@ defmodule Brando.Auth.ControllerTest do
   end
 
   test "login post ok" do
-    Factory.create(:user)
+    Factory.insert(:user)
 
     conn =
       :post
@@ -39,7 +39,7 @@ defmodule Brando.Auth.ControllerTest do
   end
 
   test "login post failed" do
-    Factory.create(:user)
+    Factory.insert(:user)
 
     conn =
       :post
@@ -52,7 +52,7 @@ defmodule Brando.Auth.ControllerTest do
   end
 
   test "logout" do
-    user = Factory.create(:user)
+    user = Factory.insert(:user)
 
     conn =
       :get
