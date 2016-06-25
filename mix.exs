@@ -42,6 +42,7 @@ defmodule Brando.Mixfile do
      :mogrify,
      :poison,
      :scrivener,
+     :scrivener_ecto,
      :slugger
     ]
   end
@@ -56,7 +57,7 @@ defmodule Brando.Mixfile do
     {:phoenix_html, "~> 2.5"},
     {:poison, "~> 2.0"},
     {:postgrex, "~> 0.11"},
-    {:scrivener, "~> 2.0"},
+    {:scrivener_ecto, "~> 1.0"},
     {:slugger, "~> 0.1.0"},
     {:phoenix_ecto, "~> 3.0.0"},
 
