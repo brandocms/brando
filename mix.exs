@@ -58,13 +58,13 @@ defmodule Brando.Mixfile do
     {:postgrex, "~> 0.11"},
     {:scrivener, "~> 2.0"},
     {:slugger, "~> 0.1.0"},
+    {:phoenix_ecto, "~> 3.0.0"},
 
     # Dev dependencies
     {:credo, ">= 0.0.0", only: :dev},
     {:dialyxir, "~> 0.3", only: :dev},
 
     # Test dependencies
-    {:phoenix_ecto, "~> 3.0.0", only: :test},
     {:ex_machina, "~> 1.0", only: :test},
     {:excoveralls, "~> 0.5.1", only: :test},
 
