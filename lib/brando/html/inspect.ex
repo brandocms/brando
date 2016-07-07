@@ -12,7 +12,7 @@ defmodule Brando.HTML.Inspect do
   Returns the record's model name from __name__/1
   `form` is `:singular` or `:plural`
   """
-  @spec model_name(Struct.t, :singular | :plural) :: String.t
+  @spec model_name(map, :singular | :plural) :: String.t
   def model_name(_, _) do
     raise "model_name/2 is deprecated. use schema_name/2 instead."
   end
@@ -21,7 +21,7 @@ defmodule Brando.HTML.Inspect do
   Returns the record's schema name from __name__/1
   `form` is `:singular` or `:plural`
   """
-  @spec schema_name(Struct.t, :singular | :plural) :: String.t
+  @spec schema_name(map, :singular | :plural) :: String.t
   def schema_name(record, form) do
     record.__struct__.__name__(form)
   end
@@ -29,7 +29,7 @@ defmodule Brando.HTML.Inspect do
   @doc """
   Returns the schema's representation from __repr__/0
   """
-  @spec schema_repr(Struct.t) :: String.t
+  @spec schema_repr(map) :: String.t
   def schema_repr(record) do
     record.__struct__.__repr__(record)
   end
@@ -37,7 +37,7 @@ defmodule Brando.HTML.Inspect do
   @doc """
   Returns the model's representation from __repr__/0
   """
-  @spec model_repr(Struct.t) :: String.t
+  @spec model_repr(map) :: String.t
   def model_repr(_) do
     raise "model_repr/1 is deprecated. use schema_repr/1 instead."
   end

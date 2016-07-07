@@ -38,7 +38,7 @@ defmodule Brando.Image do
       model_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, :create | :update, Keyword.t | Options.t) :: t
+  @spec changeset(t, :create | :update, Keyword.t) :: t
   def changeset(model, :create, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)

@@ -11,7 +11,7 @@ defmodule Brando.Mixfile do
      deps: deps,
      dialyzer: [
        plt_add_apps: [
-         :gettext, :comeonin, :mogrify, :slugger, :phoenix, :ecto, :phoenix_html
+         :gettext, :comeonin, :mogrify, :slugger, :phoenix, :phoenix_html, :phoenix_ecto
        ],
        flags: []
      ],
@@ -51,7 +51,7 @@ defmodule Brando.Mixfile do
     {:comeonin, "~> 2.5"},
     {:earmark, "~> 0.2"},
     {:gettext, "~> 0.11"},
-    {:httpoison, "~> 0.8"},
+    {:httpoison, "~> 0.9"},
     {:mogrify, github: "twined/mogrify"},
     {:phoenix, "~> 1.2.0"},
     {:phoenix_html, "~> 2.5"},

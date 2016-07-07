@@ -128,7 +128,7 @@ defmodule Brando.Images.Utils do
   @doc """
   Creates sized images.
   """
-  @spec create_image_sizes({Map.t | Plug.Upload.t, Brando.Type.ImageConfig.t})
+  @spec create_image_sizes({map | Plug.Upload.t, Brando.Type.ImageConfig.t})
                            :: {:ok, Brando.Type.Image.t}
   def create_image_sizes({%{uploaded_file: file}, cfg}) do
     {file_path, filename} = split_path(file)
@@ -250,7 +250,7 @@ defmodule Brando.Images.Utils do
   @doc """
   Delete all images depending on imageserie `series_id`
   """
-  @spec delete_images_for(:image_series, Integer.t) :: :ok
+  @spec delete_images_for(:image_series, integer) :: :ok
   def delete_images_for(:image_series, series_id) do
     images = Brando.repo.all(
       from i in Image,
@@ -268,7 +268,7 @@ defmodule Brando.Images.Utils do
   @doc """
   Delete all imageseries dependant on `category_id`
   """
-  @spec delete_series_for(:image_category, Integer.t) :: [ImageSeries.t | no_return]
+  @spec delete_series_for(:image_category, integer) :: [ImageSeries.t | no_return]
   def delete_series_for(:image_category, category_id) do
     image_series = Brando.repo.all(
       from m in ImageSeries,
@@ -467,7 +467,7 @@ defmodule Brando.Images.Utils do
   Converts some of the values to proper types.
   Textual representation of boolean -> bool, etc.
   """
-  @spec fix_size_cfg_vals(Map.t) :: Map.t
+  @spec fix_size_cfg_vals(map) :: map
   def fix_size_cfg_vals(sizes) do
     Enum.reduce(sizes, %{}, fn({key, val}, acc) ->
       {key, val} = convert_value(key, val)
@@ -475,7 +475,7 @@ defmodule Brando.Images.Utils do
     end)
   end
 
-  @spec convert_value(String.t, String.t | Map.t) :: {String.t, String.t | Map.t}
+  @spec convert_value(String.t, String.t | map) :: {String.t, String.t | map}
   defp convert_value(key, val) when is_map(val) do
     {key, fix_size_cfg_vals(val)}
   end
@@ -493,7 +493,7 @@ defmodule Brando.Images.Utils do
   Checks that the existing images' path matches the config. these may differ
   when series has been renamed!
   """
-  @spec check_image_paths(Module.t, Map.t) :: :unchanged | :changed
+  @spec check_image_paths(module, map) :: :unchanged | :changed
   def check_image_paths(model, image_series) do
     upload_path = image_series.cfg.upload_path
 
@@ -510,7 +510,7 @@ defmodule Brando.Images.Utils do
     end
   end
 
-  @spec check_image_path(Module.t, Map.t, String.t) :: Ecto.Schema.t | nil
+  @spec check_image_path(module, map, String.t) :: Ecto.Schema.t | nil
   defp check_image_path(model, image, upload_dirname) do
     image_path     = image.image.path
     image_dirname  = Path.dirname(image.image.path)

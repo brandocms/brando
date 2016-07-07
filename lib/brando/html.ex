@@ -87,7 +87,7 @@ defmodule Brando.HTML do
   @doc """
   Checks if current_user in conn has `role`
   """
-  @spec can_render?(Plug.Conn.t, Map.t) :: boolean
+  @spec can_render?(Plug.Conn.t, map) :: boolean
   def can_render?(_, %{role: nil}) do
     true
   end

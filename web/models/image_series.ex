@@ -41,7 +41,7 @@ defmodule Brando.ImageSeries do
       model_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, :create | :update, Keyword.t | Options.t) :: t
+  @spec changeset(t, :create | :update, Keyword.t) :: t
   def changeset(model, action, params \\ %{})
   def changeset(model, :create, params) do
     model
@@ -72,7 +72,7 @@ defmodule Brando.ImageSeries do
   @doc """
   Get all imageseries in category `id`.
   """
-  @spec by_category_id(Integer.t) :: Ecto.Queryable.t
+  @spec by_category_id(integer) :: Ecto.Queryable.t
   def by_category_id(id) do
     from m in __MODULE__,
          where: m.image_category_id == ^id,

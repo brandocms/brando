@@ -655,7 +655,7 @@ defmodule Brando.Form.Fields do
   Renders `errors` in a nicely formatted div by calling parse_error/1
   on each error in the `errors` list.
   """
-  @spec render_errors(Options.t | Keyword.t, Keyword.t) :: String.t
+  @spec render_errors(Keyword.t, Keyword.t) :: String.t
   def render_errors(nil, _opts), do: ""
   def render_errors(errors, opts) when is_list(errors) do
     for error <- errors do

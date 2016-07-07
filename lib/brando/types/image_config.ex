@@ -2,6 +2,7 @@ defmodule Brando.Type.ImageConfig do
   @moduledoc """
   Defines a type for an image configuration field.
   """
+  @type t :: %__MODULE__{}
 
   @behaviour Ecto.Type
 
