@@ -9,19 +9,15 @@ defmodule Brando.SocialTest do
   test "Facebook.link" do
     conn = conn(:get, "/awesome/link", [])
     assert Social.Facebook.link(conn, do: {:safe, "facebook"})
-           == {:safe,
-               ["<a href=\"https://www.facebook.com/sharer/sharer.php?" <>
-                "u=http%3A%2F%2Fwww.example.com%2Fawesome%2Flink\" " <>
-                "title=\"facebook\">", "facebook", "</a>"]}
+          |> Phoenix.HTML.safe_to_string
+           == "<a href=\"https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Fwww.example.com%2Fawesome%2Flink\" title=\"facebook\">facebook</a>"
   end
 
   test "Twitter.link" do
     conn = conn(:get, "/awesome/link", [])
     assert Social.Twitter.link(conn, "Twitter text", do: {:safe, "twitter"})
-           == {:safe,
-               ["<a href=\"https://twitter.com/intent/tweet?url=http%3" <>
-                "A%2F%2Fwww.example.com%2Fawesome%2Flink&amp;text=Twitte" <>
-                "r+text\" title=\"twitter\">", "twitter", "</a>"]}
+           |> Phoenix.HTML.safe_to_string
+           == "<a href=\"https://twitter.com/intent/tweet?url=http%3A%2F%2Fwww.example.com%2Fawesome%2Flink&amp;text=Twitter+text\" title=\"twitter\">twitter</a>"
   end
 
   test "Pinterest.link" do
@@ -30,19 +26,13 @@ defmodule Brando.SocialTest do
     link = Social.Pinterest.link(conn, img_url(image, :xlarge,
                                  [prefix: media_url()]), "Pinterest text",
                                  do: {:safe, "pinterest"})
-    assert link
-           == {:safe,
-               ["<a href=\"https://pinterest.com/pin/create/button/?ur" <>
-                "l=http%3A%2F%2Fwww.example.com%2Fawesome%2Flink&amp;med" <>
-                "ia=http%3A%2F%2Fwww.example.com%2Fmedia%2Fimages%2Fxlar" <>
-                "ge%2Ffile.jpg&amp;description=Pinterest+text&quot;\" " <>
-                "title=\"pinterest\">", "pinterest", "</a>"]}
+    assert link |> Phoenix.HTML.safe_to_string
+           == "<a href=\"https://pinterest.com/pin/create/button/?url=http%3A%2F%2Fwww.example.com%2Fawesome%2Flink&amp;media=http%3A%2F%2Fwww.example.com%2Fmedia%2Fimages%2Fxlarge%2Ffile.jpg&amp;description=Pinterest+text&quot;\" title=\"pinterest\">pinterest</a>"
   end
 
   test "Email.link" do
     conn = conn(:get, "/awesome/link", [])
-    assert Social.Email.link(conn, "Subject", do: {:safe, "email"})
-           == {:safe,
-               ["<a href=\"mailto:?subject=Subject&amp;body=http://www.example.com/awesome/link\" title=\"email\">", "email", "</a>"]}
+    assert Social.Email.link(conn, "Subject", do: {:safe, "email"}) |> Phoenix.HTML.safe_to_string
+           == "<a href=\"mailto:?subject=Subject&amp;body=http://www.example.com/awesome/link\" title=\"email\">email</a>"
   end
 end

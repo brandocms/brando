@@ -8,7 +8,7 @@ defmodule Brando.Form.Fields do
   import Brando.Gettext
   import Brando.Utils, only: [media_url: 0, img_url: 3]
   import Phoenix.HTML.Tag, only: [content_tag: 3, content_tag: 2, tag: 2]
-  import Phoenix.HTML, only: [raw: 1]
+  import Phoenix.HTML, only: [raw: 1, safe_to_string: 1]
 
   alias Brando.Form.Field
 
@@ -188,9 +188,9 @@ defmodule Brando.Form.Fields do
       |> put_class(field.opts)
       |> put_rows(field.opts)
 
-    {:safe, html} = content_tag(:textarea, tag_opts) do
+    html = content_tag(:textarea, tag_opts) do
       get_val(nil, field.opts[:default] || [])
-    end
+    end |> safe_to_string
 
     prepend_html(field, html)
   end
@@ -203,9 +203,9 @@ defmodule Brando.Form.Fields do
       |> put_class(field.opts)
       |> put_rows(field.opts)
 
-    {:safe, html} = content_tag(:textarea, tag_opts) do
+    html = content_tag(:textarea, tag_opts) do
       Poison.encode!(value)
-    end
+    end |> safe_to_string
 
     prepend_html(field, html)
   end
@@ -217,9 +217,9 @@ defmodule Brando.Form.Fields do
       |> put_class(field.opts)
       |> put_rows(field.opts)
 
-    {:safe, html} = content_tag(:textarea, tag_opts) do
+    html = content_tag(:textarea, tag_opts) do
       value || ""
-    end
+    end |> safe_to_string
 
     prepend_html(field, html)
   end
@@ -243,19 +243,19 @@ defmodule Brando.Form.Fields do
       |> put_value(choice[:value])
       |> put_checked_match(get_checked(choice[:value], field.opts[:default]))
 
-    {:safe, input_html} = tag(:input, tag_opts)
+    input_html = tag(:input, tag_opts) |> safe_to_string
 
-    {:safe, dummy_label_html} = content_tag(:label, for: name) do
+    dummy_label_html = content_tag(:label, for: name) do
       ""
-    end
+    end |> safe_to_string
 
-    {:safe, main_label_html} = content_tag(:label, for: name) do
+    main_label_html = content_tag(:label, for: name) do
       [input_html, choice[:text]] |> raw
-    end
+    end |> safe_to_string
 
-    {:safe, wrap_html} = content_tag(:div, []) do
+    wrap_html = content_tag(:div, []) do
       [dummy_label_html, main_label_html] |> raw
-    end
+    end |> safe_to_string
 
     append_html(field, wrap_html)
   end
@@ -270,19 +270,19 @@ defmodule Brando.Form.Fields do
       |> put_value(choice[:value])
       |> put_is_checked_fun(is_checked_fun, choice[:value], field.value)
 
-    {:safe, input_html} = tag(:input, tag_opts)
+    input_html = tag(:input, tag_opts) |> safe_to_string
 
-    {:safe, dummy_label_html} = content_tag(:label, for: name) do
+    dummy_label_html = content_tag(:label, for: name) do
       ""
-    end
+    end |> safe_to_string
 
-    {:safe, main_label_html} = content_tag(:label, for: name) do
+    main_label_html = content_tag(:label, for: name) do
       [input_html, choice[:text]] |> raw
-    end
+    end |> safe_to_string
 
-    {:safe, wrap_html} = content_tag(:div, []) do
+    wrap_html = content_tag(:div, []) do
       [dummy_label_html, main_label_html] |> raw
-    end
+    end |> safe_to_string
 
     append_html(field, wrap_html)
   end
@@ -297,19 +297,19 @@ defmodule Brando.Form.Fields do
       |> put_value(choice[:value])
       |> put_checked_match(get_checked(choice[:value], field.value))
 
-    {:safe, input_html} = tag(:input, tag_opts)
+    input_html = tag(:input, tag_opts) |> safe_to_string
 
-    {:safe, dummy_label_html} = content_tag(:label, for: name) do
+    dummy_label_html = content_tag(:label, for: name) do
       ""
-    end
+    end |> safe_to_string
 
-    {:safe, main_label_html} = content_tag(:label, for: name) do
+    main_label_html = content_tag(:label, for: name) do
       [input_html, choice[:text]] |> raw
-    end
+    end |> safe_to_string
 
-    {:safe, wrap_html} = content_tag(:div, []) do
+    wrap_html = content_tag(:div, []) do
       [dummy_label_html, main_label_html] |> raw
-    end
+    end |> safe_to_string
 
     append_html(field, wrap_html)
   end
@@ -323,9 +323,7 @@ defmodule Brando.Form.Fields do
     empty_value =
       case field.opts[:empty_value] do
         nil -> ""
-        val ->
-          {:safe, html} = tag(:input, [type: :hidden, value: val, name: name])
-          html
+        val -> tag(:input, [type: :hidden, value: val, name: name]) |> safe_to_string
       end
 
     field = prepend_html(field, empty_value)
@@ -351,19 +349,19 @@ defmodule Brando.Form.Fields do
       |> put_value(choice[:value])
       |> put_checked_match(get_checked(choice[:value], field.opts[:default]))
 
-    {:safe, input_html} = tag(:input, tag_opts)
+    input_html = tag(:input, tag_opts) |> safe_to_string
 
-    {:safe, dummy_label_html} = content_tag(:label, for: name) do
+    dummy_label_html = content_tag(:label, for: name) do
       ""
-    end
+    end |> safe_to_string
 
-    {:safe, main_label_html} = content_tag(:label, for: name) do
+    main_label_html = content_tag(:label, for: name) do
       [input_html, choice[:text]] |> raw
-    end
+    end |> safe_to_string
 
-    {:safe, wrap_html} = content_tag(:div, []) do
+    wrap_html = content_tag(:div, []) do
       [dummy_label_html, main_label_html] |> raw
-    end
+    end |> safe_to_string
 
     append_html(field, wrap_html)
   end
@@ -378,19 +376,19 @@ defmodule Brando.Form.Fields do
       |> put_value(choice[:value])
       |> put_is_checked_fun(is_checked_fun, choice[:value], field.value)
 
-    {:safe, input_html} = tag(:input, tag_opts)
+    input_html = tag(:input, tag_opts) |> safe_to_string
 
-    {:safe, dummy_label_html} = content_tag(:label, for: name) do
+    dummy_label_html = content_tag(:label, for: name) do
       ""
-    end
+    end |> safe_to_string
 
-    {:safe, main_label_html} = content_tag(:label, for: name) do
+    main_label_html = content_tag(:label, for: name) do
       [input_html, choice[:text]] |> raw
-    end
+    end |> safe_to_string
 
-    {:safe, wrap_html} = content_tag(:div, []) do
+    wrap_html = content_tag(:div, []) do
       [dummy_label_html, main_label_html] |> raw
-    end
+    end |> safe_to_string
 
     append_html(field, wrap_html)
   end
@@ -405,19 +403,19 @@ defmodule Brando.Form.Fields do
       |> put_value(choice[:value])
       |> put_checked_match(get_checked(choice[:value], field.value))
 
-    {:safe, input_html} = tag(:input, tag_opts)
+    input_html = tag(:input, tag_opts) |> safe_to_string
 
-    {:safe, dummy_label_html} = content_tag(:label, for: name) do
+    dummy_label_html = content_tag(:label, for: name) do
       ""
-    end
+    end |> safe_to_string
 
-    {:safe, main_label_html} = content_tag(:label, for: name) do
+    main_label_html = content_tag(:label, for: name) do
       [input_html, choice[:text]] |> raw
-    end
+    end |> safe_to_string
 
-    {:safe, wrap_html} = content_tag(:div, []) do
+    wrap_html = content_tag(:div, []) do
       [dummy_label_html, main_label_html] |> raw
-    end
+    end |> safe_to_string
 
     append_html(field, wrap_html)
   end
@@ -437,9 +435,10 @@ defmodule Brando.Form.Fields do
       |> put_value(choice[:value])
       |> put_is_selected_fun(is_selected_fun, choice[:value], field.value)
 
-    {:safe, html} = content_tag(:option, tag_opts) do
+    html = content_tag(:option, tag_opts) do
       choice[:text] |> raw
-    end
+    end |> safe_to_string
+
     append_html(field, html)
   end
 
@@ -449,9 +448,10 @@ defmodule Brando.Form.Fields do
       |> put_value(choice[:value])
       |> put_selected(get_selected(choice[:value], field.value))
 
-    {:safe, html} = content_tag(:option, tag_opts) do
+    html = content_tag(:option, tag_opts) do
       choice[:text] |> raw
-    end
+    end |> safe_to_string
+
     append_html(field, html)
   end
 
@@ -462,9 +462,10 @@ defmodule Brando.Form.Fields do
       |> put_value(choice[:value])
       |> put_selected(get_selected(choice[:value], field.opts[:default]))
 
-    {:safe, html} = content_tag(:option, tag_opts) do
+    html = content_tag(:option, tag_opts) do
       choice[:text] |> raw
-    end
+    end |> safe_to_string
+
     append_html(field, html)
   end
 
@@ -474,9 +475,10 @@ defmodule Brando.Form.Fields do
       |> put_value(choice[:value])
       |> put_selected(get_selected(choice[:value], field.value))
 
-    {:safe, html} = content_tag(:option, tag_opts) do
+    html = content_tag(:option, tag_opts) do
       choice[:text] |> raw
-    end
+    end |> safe_to_string
+
     append_html(field, html)
   end
 
@@ -501,14 +503,14 @@ defmodule Brando.Form.Fields do
 
     case opts[:multiple] do
       nil  ->
-        {:safe, html} = content_tag(:select, tag_opts) do
+        html = content_tag(:select, tag_opts) do
           field.html |> raw
-        end
+        end |> safe_to_string
         put_html(field, html)
       true ->
-        {:safe, html} = content_tag(:select, [name: "#{name}[]", multiple: true]) do
+        html = content_tag(:select, [name: "#{name}[]", multiple: true]) do
           field.html |> raw
-        end
+        end |> safe_to_string
         put_html(field, html)
     end
   end
@@ -527,8 +529,8 @@ defmodule Brando.Form.Fields do
       |> put_class(field.opts)
       |> put_checked(field.value, field.opts)
 
-    {:safe, hidden_tag} = tag(:input, [name: name, type: :hidden, value: "false"])
-    {:safe, input_tag}  = tag(:input, tag_opts)
+    hidden_tag = tag(:input, [name: name, type: :hidden, value: "false"]) |> safe_to_string
+    input_tag  = tag(:input, tag_opts) |> safe_to_string
 
     prepend_html(field, [hidden_tag, input_tag])
   end
@@ -552,7 +554,7 @@ defmodule Brando.Form.Fields do
       |> put_class(field.opts)
       |> put_tags(field.opts)
 
-    {:safe, html} = tag(:input, tag_opts)
+    html = tag(:input, tag_opts) |> safe_to_string
     prepend_html(field, html)
   end
 
@@ -564,9 +566,10 @@ defmodule Brando.Form.Fields do
   def add_label(%Field{type: :checkbox, opts: %{multiple: false}} = field) do
     name = format_name(field.name, field.source)
     text = [field.html|get_label(field)]
-    {:safe, html} = content_tag(:label, for: name, class: field.opts[:label_class]) do
+    html = content_tag(:label, for: name, class: field.opts[:label_class]) do
       text |> raw
-    end
+    end |> safe_to_string
+
     put_html(field, html)
   end
 
@@ -574,9 +577,9 @@ defmodule Brando.Form.Fields do
     name = format_name(field.name, field.source)
     text = get_label(field)
     if text do
-      {:safe, html} = content_tag(:label, for: name, class: field.opts[:label_class]) do
+      html = content_tag(:label, for: name, class: field.opts[:label_class]) do
         text |> raw
-      end
+      end |> safe_to_string
       prepend_html(field, html)
     else
       field
@@ -617,9 +620,11 @@ defmodule Brando.Form.Fields do
   @spec wrap_in_form_group(Field.t) :: Field.t
   def wrap_in_form_group(field) do
     classes = [class: get_group_classes(field.opts, field.errors)]
-    {:safe, html} = content_tag(:div, classes) do
+
+    html = content_tag(:div, classes) do
       [field.html, render_errors(field.errors, field.opts), render_help_text(field)] |> raw
-    end
+    end |> safe_to_string
+
     put_html(field, html)
   end
 
@@ -627,9 +632,10 @@ defmodule Brando.Form.Fields do
     if field.opts[:in_fieldset] do
       field
     else
-      {:safe, html} = content_tag(:div, class: class) do
+      html = content_tag(:div, class: class) do
         raw(field.html)
-      end
+      end |> safe_to_string
+
       put_html(field, html)
     end
   end
@@ -640,11 +646,10 @@ defmodule Brando.Form.Fields do
   @spec render_help_text(Field.t) :: String.t
   def render_help_text(%Field{opts: []}), do: ""
   def render_help_text(%Field{opts: %{help_text: help_text}}) do
-    {:safe, html} = content_tag(:div, class: "help") do
+    content_tag(:div, class: "help") do
       [content_tag(:i, " ", class: "fa fa-fw fa-question-circle"),
        content_tag(:span, help_text)]
-    end
-    html
+    end |> safe_to_string
   end
 
   def render_help_text(_) do
@@ -659,11 +664,10 @@ defmodule Brando.Form.Fields do
   def render_errors(nil, _opts), do: ""
   def render_errors(errors, opts) when is_list(errors) do
     for error <- errors do
-      {:safe, html} = content_tag(:div, class: "error") do
+      content_tag(:div, class: "error") do
         [content_tag(:i, " ", class: "fa fa-exclamation-circle"),
          parse_error(error, opts)]
-      end
-      html
+      end |> safe_to_string
     end
   end
 
@@ -926,10 +930,9 @@ defmodule Brando.Form.Fields do
 
   defp get_img_preview(nil), do: ""
   defp get_img_preview(value) do
-    {:safe, html} = content_tag(:div, class: "image-preview") do
+    content_tag(:div, class: "image-preview") do
       raw(tag(:img, [src: img_url(value, :thumb, prefix: media_url())]))
-    end
-    html
+    end |> safe_to_string
   end
 
   defp format_name(name, form_source) do

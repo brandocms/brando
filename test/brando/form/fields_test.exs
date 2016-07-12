@@ -155,9 +155,7 @@ defmodule Brando.Form.FieldsTest do
   test "render_help_text/1" do
     field = %Field{opts: %{help_text: "Help text"}}
     assert F.render_help_text(field)
-           == ["<div class=\"help\">",
-               [["<i class=\"fa fa-fw fa-question-circle\">", " ", "</i>"],
-                ["<span>", "Help text", "</span>"]], "</div>"]
+           == "<div class=\"help\"><i class=\"fa fa-fw fa-question-circle\"> </i><span>Help text</span></div>"
 
     field = %Field{}
     assert F.render_help_text(field) == ""
@@ -210,7 +208,7 @@ defmodule Brando.Form.FieldsTest do
       value: "Series name"
     }
 
-    assert F.render_field(field).html |> Enum.join
+    assert F.render_field(field).html
            == ~s(<div class="form-row"><div class="form-group required">) <>
               ~s(<label for="imageseries[name]">Name</label>) <>
               ~s(<input name="imageseries[name]" type="text" value="Series name"></div></div>)
@@ -220,7 +218,7 @@ defmodule Brando.Form.FieldsTest do
       |> Map.put(:html, [])
       |> put_in_opts(:confirm, true)
 
-    assert F.render_field(field).html |> Enum.join
+    assert F.render_field(field).html
            == ~s(<div class="form-row"><div class="form-group required">) <>
               ~s(<label for="imageseries[name]">Name</label>) <>
               ~s(<input name="imageseries[name]" type="text" value="Series name"></div>) <>
@@ -246,7 +244,7 @@ defmodule Brando.Form.FieldsTest do
       value: "abcdefg"
     }
 
-    assert F.render_field(field).html |> Enum.join
+    assert F.render_field(field).html
            == ~s(<div class="form-row"><div class="form-group required">) <>
               ~s(<label for="user[password]">Password</label>) <>
               ~s(<input name="user[password]" type="password" value="abcdefg"></div></div>)
@@ -268,7 +266,7 @@ defmodule Brando.Form.FieldsTest do
       value: "abcdefg"
     }
 
-    assert F.render_field(field).html |> Enum.join
+    assert F.render_field(field).html
            == ~s(<div class="form-row"><div class="form-group required">) <>
               ~s(<label for="user[password]">Password</label>) <>
               ~s(<input name="user[password]" type="password" value="abcdefg"></div>) <>
@@ -295,7 +293,7 @@ defmodule Brando.Form.FieldsTest do
       value: "text"
     }
 
-    assert F.render_field(field).html |> Enum.join
+    assert F.render_field(field).html
            == ~s(<div class="form-row"><div class="form-group required no-height">) <>
               ~s(<label for="user[description]">Description</label>) <>
               ~s(<textarea name="user[description]">text</textarea></div></div>)
@@ -307,7 +305,7 @@ defmodule Brando.Form.FieldsTest do
       |> put_in_field(:value, nil)
       |> put_in_opts(:default, "default")
 
-    assert F.render_field(field).html |> Enum.join
+    assert F.render_field(field).html
            == ~s(<div class="form-row"><div class="form-group required no-height">) <>
               ~s(<label for="user[description]">Description</label>) <>
               ~s(<textarea name="user[description]">default</textarea></div></div>)
@@ -333,7 +331,7 @@ defmodule Brando.Form.FieldsTest do
       value: ["1", "2"]
     }
 
-    assert F.render_field(field).html |> Enum.join("")
+    assert F.render_field(field).html
            == "<div class=\"form-row\"><div class=\"form-group required\">" <>
            "<label for=\"user[description]\">Description</label><div>" <>
            "<label for=\"user[description]\"></label><label for=\"user[description]\">" <>
@@ -366,7 +364,7 @@ defmodule Brando.Form.FieldsTest do
       value: ["1"]
     }
 
-    assert F.render_field(field).html |> Enum.join
+    assert F.render_field(field).html
            == "<div class=\"form-row\"><div class=\"form-group required\">" <>
            "<label for=\"user[description]\">Description</label>" <>
            "<select name=\"user[description]\"><option selected=\"selected\" value=\"1\">" <>
