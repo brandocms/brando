@@ -27,6 +27,10 @@ Fetch and compile dependencies. Install Brando:
 
     $ mix do deps.get, deps.compile, brando.install
 
+And then refetch new dependencies Brando has added to your `mix.exs`:
+
+    $ mix do deps.get, deps.compile
+
 Add to your `config/config.exs` right before the env-specific import:
 
 ```diff
