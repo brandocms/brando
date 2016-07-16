@@ -8,8 +8,8 @@
 <div class="form-actions">
   <%= "<%=" %> auth_link :primary, @conn, Brando.helpers.<%= admin_path %>_path(@conn, :new), :admin do <%= "%\>" %>
     <i class="fa fa-plus m-r-xs"></i><%= "<%=" %> gettext("New <%= singular %>") <%= "%\>" %>
-  <%= "<%" %> end <%= "%\>" %>
+  <%= "<%" %> end <%= "%\>" %><%= if sequenced do %>
   <%= "<%=" %> auth_link :default, @conn, Brando.helpers.<%= admin_path %>_path(@conn, :sequence), :admin do <%= "%\>" %>
     <i class="fa fa-sort m-r-xs"></i><%= "<%=" %> gettext("Sort <%= singular %>") <%= "%\>" %>
-  <%= "<%" %> end <%= "%\>" %>
+  <%= "<%" %> end <%= "%\>" %><% end %>
 </div>
