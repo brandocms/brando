@@ -6,6 +6,7 @@
   * Updates for ecto 2.0
   * Updates for ex_machina 1.0
   * Updates for phoenix 1.2
+  * Updated to brunch 1.8.2
 
 ## v0.32.0 (2016-06-06)
 

@@ -138,6 +138,8 @@ Generate templates:
 
     $ mix brando.gen.html Task tasks name:string avatar:image data:villain
 
+Also supports `user:references` to add a `belongs_to` assoc.
+
 Copy outputted routes and add to `web/router.ex`
 
 Register your module in `lib/my_app.ex`:
