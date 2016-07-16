@@ -158,10 +158,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     and then update your repository by running migrations:
         $ mix ecto.migrate
 
-    Install menu by adding to your `config/brando.exs`
+    Install menu by adding to your supervision tree:
 
-        config :brando, Brando.Menu,
-          modules: [#{binding[:base]}.Menu.#{Phoenix.Naming.camelize(plural)}, ...]
+        Brando.Registry.register(#{binding[:scoped]}, [:menu])
 
     """
   end
