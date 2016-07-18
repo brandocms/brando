@@ -142,6 +142,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     or for more fine grained control:
 
+        import Brando.Villain.Routes.Admin
+        alias #{binding[:base]}.Admin.#{binding[:scoped]}Controller
+
         get    "/#{route}",            #{binding[:scoped]}Controller, :index
         get    "/#{route}/new",        #{binding[:scoped]}Controller, :new
         get    "/#{route}/:id/edit",   #{binding[:scoped]}Controller, :edit
@@ -160,7 +163,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     Install menu by adding to your supervision tree:
 
-        Brando.Registry.register(#{binding[:scoped]}, [:menu])
+        Brando.Registry.register(#{binding[:base]}.#{binding[:scoped]}, [:menu])
 
     """
   end
