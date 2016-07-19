@@ -10,10 +10,9 @@ defmodule Brando.ImageSeriesForm do
 
   @doc false
   def get_categories do
-    categories =
-      ImageCategory
-      |> ImageCategory.with_image_series_and_images
-      |> Brando.repo.all
+    categories = ImageCategory
+                 |> ImageCategory.with_image_series_and_images
+                 |> Brando.repo.all
 
     for cat <- categories, do: [value: to_string(cat.id), text: cat.name]
   end

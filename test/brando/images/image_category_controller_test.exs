@@ -9,7 +9,7 @@ defmodule Brando.ImageCategory.ControllerTest do
   alias Brando.Factory
 
   setup do
-    user = Factory.create(:user)
+    user = Factory.insert(:user)
     {:ok, %{user: user}}
   end
 
@@ -24,7 +24,7 @@ defmodule Brando.ImageCategory.ControllerTest do
   end
 
   test "edit", %{user: user} do
-    category = Factory.create(:image_category, creator: user)
+    category = Factory.insert(:image_category, creator: user)
 
     conn =
       :get
@@ -43,7 +43,7 @@ defmodule Brando.ImageCategory.ControllerTest do
   end
 
   test "create (post) w/params", %{user: user} do
-    image_category_params = Factory.build(:image_category_params, %{"creator_id" => user.id})
+    image_category_params = Factory.params_for(:image_category, %{creator_id: user.id})
 
     conn =
       :post
@@ -67,8 +67,8 @@ defmodule Brando.ImageCategory.ControllerTest do
   end
 
   test "update (post) w/params", %{user: user} do
-    params = Factory.build(:image_category_params, %{"creator_id" => user.id})
-    category = Factory.create(:image_category, creator: user)
+    params = Factory.params_for(:image_category, %{creator_id: user.id})
+    category = Factory.insert(:image_category, creator: user)
 
     conn =
       :patch
@@ -81,7 +81,7 @@ defmodule Brando.ImageCategory.ControllerTest do
   end
 
   test "config (get)", %{user: user} do
-    category = Factory.create(:image_category, creator: user)
+    category = Factory.insert(:image_category, creator: user)
 
     conn =
       :get
@@ -102,7 +102,7 @@ defmodule Brando.ImageCategory.ControllerTest do
   end
 
   test "delete_confirm", %{user: user} do
-    category = Factory.create(:image_category, creator: user)
+    category = Factory.insert(:image_category, creator: user)
 
     conn =
       :get
@@ -114,7 +114,7 @@ defmodule Brando.ImageCategory.ControllerTest do
   end
 
   test "delete", %{user: user} do
-    category = Factory.create(:image_category, creator: user)
+    category = Factory.insert(:image_category, creator: user)
     conn =
       :delete
       |> call("/admin/images/categories/#{category.id}")

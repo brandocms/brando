@@ -1,8 +1,11 @@
 defmodule Brando.HTMLTest do
   use ExUnit.Case, async: true
-  use Plug.Test
+  use Brando.ConnCase
   use RouterHelper
   import Brando.HTML
+  import Brando.Utils, only: [media_url: 0]
+  import Phoenix.HTML, only: [safe_to_string: 1]
+  alias Brando.Factory
 
   test "first_name/1" do
     assert first_name("John Josephs") == "John"
@@ -135,7 +138,7 @@ defmodule Brando.HTMLTest do
   end
 
   test "active/2" do
-    conn = conn(:get, "/some/link")
+    conn = build_conn(:get, "/some/link")
     assert active(conn, "/some/link") == "active"
     assert active(conn, "/some/other/link") == ""
   end
@@ -147,10 +150,29 @@ defmodule Brando.HTMLTest do
   end
 
   test "insecure_login?/1" do
-    conn = conn(:get, "/auth/login")
+    conn = build_conn(:get, "/auth/login")
     ret = insecure_login?(conn) |> Phoenix.HTML.safe_to_string
     assert ret =~ "https://www.example.com/auth/login"
     conn = conn |> Map.put(:scheme, :https)
     assert insecure_login?(conn) == nil
+  end
+
+  test "img_tag" do
+    user = Factory.insert(:user)
+
+    assert img_tag(user.avatar, :medium) |> safe_to_string
+           == "<img src=\"images/avatars/medium/27i97a.jpeg\">"
+
+    assert img_tag(user.avatar, :medium, prefix: media_url) |> safe_to_string
+           == "<img src=\"/media/images/avatars/medium/27i97a.jpeg\">"
+
+    assert img_tag(nil, :medium, default: "test.jpg") |> safe_to_string
+           == "<img src=\"medium/test.jpg\">"
+
+    assert img_tag(user.avatar, :medium, prefix: media_url, srcset: {Brando.User, :avatar}) |> safe_to_string
+           == "<img src=\"/media/images/avatars/medium/27i97a.jpeg\" " <>
+              "srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, " <>
+              "/media/images/avatars/medium/27i97a.jpeg 500w, " <>
+              "/media/images/avatars/small/27i97a.jpeg 300w\">"
   end
 end

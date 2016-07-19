@@ -24,9 +24,7 @@ defmodule Brando.HTML do
   Also calls to render submenu items, if `current_user` has required role
   """
   def render_menu_item(conn, {color, menu}) do
-    submenu_items =
-      menu.submenu
-      |> Enum.map_join("\n", &render_submenu_item(conn, &1))
+    submenu_items = Enum.map_join(menu.submenu, "\n", &render_submenu_item(conn, &1))
 
     html =
     """
@@ -48,7 +46,7 @@ defmodule Brando.HTML do
       </li>
     <!-- /menu item -->
     """
-    html |> Phoenix.HTML.raw
+    Phoenix.HTML.raw(html)
   end
 
   @doc """
@@ -57,6 +55,7 @@ defmodule Brando.HTML do
   """
   def render_submenu_item(conn, item) do
     {fun, action} = item.url
+
     if can_render?(conn, item) do
       url        = apply(Brando.Utils.helpers(conn), fun, [conn, action])
       active?    = active_path?(conn, url)
@@ -81,17 +80,14 @@ defmodule Brando.HTML do
   """
   @spec active(Plug.Conn.t, String.t) :: String.t
   def active(conn, url_to_match) do
-    if active_path?(conn, url_to_match) do
-      "active"
-    else
-      ""
-    end
+    active_path?(conn, url_to_match) && "active"
+                                     || ""
   end
 
   @doc """
   Checks if current_user in conn has `role`
   """
-  @spec can_render?(Plug.Conn.t, Map.t) :: boolean
+  @spec can_render?(Plug.Conn.t, map) :: boolean
   def can_render?(_, %{role: nil}) do
     true
   end
@@ -136,7 +132,7 @@ defmodule Brando.HTML do
   end
 
   @doc """
-  Zero pad `int` as a binary.
+  Zero pad `val` as a binary.
 
   ## Example
 
@@ -144,11 +140,12 @@ defmodule Brando.HTML do
       "005"
 
   """
-  def zero_pad(str) when is_binary(str) do
-    String.rjust(str, 3, ?0)
+  def zero_pad(str, count \\ 3)
+  def zero_pad(val, count) when is_binary(val) do
+    String.rjust(val, count, ?0)
   end
-  def zero_pad(int) do
-    String.rjust(Integer.to_string(int), 3, ?0)
+  def zero_pad(val, count) do
+    String.rjust(Integer.to_string(val), count, ?0)
   end
 
   @doc """
@@ -471,5 +468,46 @@ defmodule Brando.HTML do
       </div>
       """ |> Phoenix.HTML.raw
     end
+  end
+
+  @doc """
+  Outputs an `img` tag marked as safe html
+
+  ## Options:
+
+    * `prefix` - string to prefix to the image's url. I.e. `prefix: media_url()`
+    * `default` - default value if `image_field` is nil. Does not respect `prefix`, so use
+      full path.
+    * `srcset` - if you want to use the srcset attribute. Set in the form of `{module, field}`.
+      I.e `srcset: {Brando.User, :avatar}`
+
+  """
+  def img_tag(image_field, size, opts \\ []) do
+    srcset_attr = get_srcset(image_field, opts[:srcset], opts) || []
+    attrs =
+      Keyword.new
+      |> Keyword.put(:src, Brando.Utils.img_url(image_field, size, opts))
+      |> Keyword.merge(Keyword.drop(opts, [:prefix, :srcset, :default]) ++ srcset_attr)
+
+    Phoenix.HTML.Tag.tag(:img, attrs)
+  end
+
+  defp get_srcset(_, nil, _) do
+    nil
+  end
+
+  defp get_srcset(image_field, {mod, field}, opts) do
+    cfg = apply(mod, :get_image_cfg, [field])
+    if !cfg.srcset do
+      raise ArgumentError, message: "no `:srcset` key set in #{inspect mod}'s #{inspect field} image config"
+    end
+
+    srcset_values =
+      for {k, v} <- cfg.srcset do
+        path = Brando.Utils.img_url(image_field, k, opts)
+        "#{path} #{v}"
+      end
+
+    [srcset: Enum.join(srcset_values, ", ")]
   end
 end

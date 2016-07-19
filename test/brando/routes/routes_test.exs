@@ -35,12 +35,12 @@ defmodule Brando.TestRouter do
                               series_model: Brando.ImageSeries,
                               category_model: Brando.ImageCategory]
 
-    scope "villain" do
+    scope "/villain" do
       villain_routes Brando.Admin.PostController
     end
 
-    scope "villain2" do
-      villain_routes "2", Brando.Admin.PostController
+    scope "/villain2" do
+      villain_routes "/2", Brando.Admin.PostController
     end
 
     get "/", Brando.Admin.DashboardController, :dashboard

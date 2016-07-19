@@ -14,10 +14,7 @@ exports.config = {
         ]
       },
       order: {
-        before: [
-          'web/static/js/vendor/jquery.min.js',
-          'web/static/js/vendor/vex.js',
-        ]
+        before: []
       }
     },
     stylesheets: {
@@ -25,7 +22,8 @@ exports.config = {
         'css/brando.css': ['web/static/scss/brando.scss'],
         'css/brando.vendor.css': [
           'web/static/css/font-awesome.min.css',
-          'web/static/css/dropzone.css'
+          'web/static/css/dropzone.css',
+          'web/static/css/tablesaw.stackonly.css'
         ],
       },
     },

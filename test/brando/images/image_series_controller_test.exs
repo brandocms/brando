@@ -14,8 +14,8 @@ defmodule Brando.ImageSeries.ControllerTest do
   @cfg_changed Map.put(@cfg, :random_filename, true)
 
   setup do
-    user = Factory.create(:user)
-    category = Factory.create(:image_category, creator: user)
+    user = Factory.insert(:user)
+    category = Factory.insert(:image_category, creator: user)
     {:ok, %{user: user, category: category}}
   end
 
@@ -30,7 +30,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "edit", %{user: user, category: category} do
-    series = Factory.create(:image_series, creator: user, image_category: category)
+    series = Factory.insert(:image_series, creator: user, image_category: category)
 
     conn =
       :get
@@ -49,8 +49,8 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "create (post) w/params", %{user: user, category: category} do
-    series_params = Factory.build(:image_series_params, %{"creator_id" => user.id,
-                                                          "image_category_id" => category.id})
+    series_params = Factory.params_for(:image_series, %{creator_id: user.id,
+                                                        image_category_id: category.id})
 
     conn =
       :post
@@ -63,9 +63,9 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "update (post) w/params", %{user: user, category: category} do
-    series = Factory.create(:image_series, creator: user, image_category: category)
-    series_params = Factory.build(:image_series_params, %{"creator_id" => user.id,
-                                                          "image_category_id" => category.id})
+    series = Factory.insert(:image_series, creator: user, image_category: category)
+    series_params = Factory.params_for(:image_series, %{creator_id: user.id,
+                                                        image_category_id: category.id})
     conn =
       :patch
       |> call("/admin/images/series/#{series.id}", %{"imageseries" => series_params})
@@ -77,7 +77,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "delete_confirm", %{user: user, category: category} do
-    series = Factory.create(:image_series, creator: user, image_category: category)
+    series = Factory.insert(:image_series, creator: user, image_category: category)
 
     conn =
       :get
@@ -89,7 +89,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "delete", %{user: user, category: category} do
-    series = Factory.create(:image_series, creator: user, image_category: category)
+    series = Factory.insert(:image_series, creator: user, image_category: category)
 
     conn =
       :delete
@@ -102,7 +102,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "upload", %{user: user, category: category} do
-    series = Factory.create(:image_series, creator: user, image_category: category)
+    series = Factory.insert(:image_series, creator: user, image_category: category)
 
     conn =
       :get
@@ -115,7 +115,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "upload_post", %{user: user, category: category} do
-    series = Factory.create(:image_series, creator: user, image_category: category)
+    series = Factory.insert(:image_series, creator: user, image_category: category)
     up_params = Factory.build(:plug_upload)
 
     conn =
@@ -129,7 +129,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "sort", %{user: user, category: category} do
-    series = Factory.create(:image_series, creator: user, image_category: category)
+    series = Factory.insert(:image_series, creator: user, image_category: category)
     up_params = Factory.build(:plug_upload)
     up_params_2 = Factory.build(:plug_upload_2)
 
@@ -203,7 +203,7 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "configure get", %{user: user, category: category} do
-    series = Factory.create(:image_series, creator: user, image_category: category)
+    series = Factory.insert(:image_series, creator: user, image_category: category)
 
     conn =
       :get

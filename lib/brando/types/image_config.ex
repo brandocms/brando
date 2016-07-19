@@ -2,6 +2,7 @@ defmodule Brando.Type.ImageConfig do
   @moduledoc """
   Defines a type for an image configuration field.
   """
+  @type t :: %__MODULE__{}
 
   @behaviour Ecto.Type
 
@@ -12,7 +13,8 @@ defmodule Brando.Type.ImageConfig do
             upload_path: Path.join("images", "default"),
             random_filename: false,
             size_limit: 10_240_000,
-            sizes: %{}
+            sizes: %{},
+            srcset: nil
 
   @doc """
   Returns the internal type representation of our `Role` type for pg

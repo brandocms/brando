@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.32.0"
+  @version "0.33.0"
   @description "Boilerplate for Twined applications."
 
   def project do
@@ -11,7 +11,7 @@ defmodule Brando.Mixfile do
      deps: deps,
      dialyzer: [
        plt_add_apps: [
-         :gettext, :comeonin, :mogrify, :slugger, :phoenix, :ecto, :phoenix_html
+         :gettext, :comeonin, :mogrify, :slugger, :phoenix, :phoenix_html, :phoenix_ecto
        ],
        flags: []
      ],
@@ -42,34 +42,32 @@ defmodule Brando.Mixfile do
      :mogrify,
      :poison,
      :scrivener,
+     :scrivener_ecto,
      :slugger
     ]
   end
 
   defp deps do [
-    {:comeonin, "~> 2.1"},
-    {:earmark, "~> 0.2"},
+    {:comeonin, "~> 2.5"},
+    {:earmark, "~> 1.0", override: true},
     {:gettext, "~> 0.11"},
-    {:httpoison, "~> 0.8"},
+    {:httpoison, "~> 0.9"},
     {:mogrify, github: "twined/mogrify"},
-    {:phoenix, "~> 1.1"},
+    {:phoenix, "~> 1.2.0"},
     {:phoenix_html, "~> 2.5"},
     {:poison, "~> 2.0"},
     {:postgrex, "~> 0.11"},
-    {:scrivener, "~> 1.1"},
+    {:scrivener_ecto, "~> 1.0"},
     {:slugger, "~> 0.1.0"},
+    {:phoenix_ecto, "~> 3.0.0"},
 
     # Dev dependencies
     {:credo, ">= 0.0.0", only: :dev},
     {:dialyxir, "~> 0.3", only: :dev},
 
     # Test dependencies
-    {:phoenix_ecto, "~> 3.0.0-rc", only: :test},
-    {:ex_machina, "~> 0.6.1", only: :test},
+    {:ex_machina, "~> 1.0", only: :test},
     {:excoveralls, "~> 0.5.1", only: :test},
-
-    # Temporary until scrivener updates
-    {:ecto, "~> 2.0-beta", override: true},
 
     # Documentation dependencies
     {:ex_doc, "~> 0.11", only: :docs},

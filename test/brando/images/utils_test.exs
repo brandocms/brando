@@ -11,7 +11,7 @@ defmodule Brando.Images.UtilsTest do
   end
 
   test "do_upload/2" do
-    cfg = Factory.build(:image_cfg_params)
+    cfg = Factory.build(:image_cfg)
     image = Factory.build(:image_type)
     upload = Factory.build(:plug_upload)
 

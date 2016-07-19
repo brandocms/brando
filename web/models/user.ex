@@ -45,6 +45,11 @@ defmodule Brando.User do
       "medium" => %{"size" => "500", "quality" => 100},
       "large"  => %{"size" => "700", "quality" => 100},
       "xlarge" => %{"size" => "900", "quality" => 100}
+    },
+    srcset: %{
+      "small" => "300w",
+      "medium" => "500w",
+      "large" => "700w"
     }
   }
 

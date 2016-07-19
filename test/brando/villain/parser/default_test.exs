@@ -102,9 +102,9 @@ defmodule Brando.Villain.ParserTest do
       thumb: "/tmp/path/to/fake/thumb2.jpg"}}
     }
 
-    user = Factory.create(:user)
-    category = Factory.create(:image_category, creator: user, name: "Slideshows", slug: "slideshows")
-    series = Factory.create(:image_series, creator: user, image_category: category, name: "My Slides", slug: "my-slides")
+    user = Factory.insert(:user)
+    category = Factory.insert(:image_category, creator: user, name: "Slideshows", slug: "slideshows")
+    series = Factory.insert(:image_series, creator: user, image_category: category, name: "My Slides", slug: "my-slides")
 
     img1
     |> Map.put(:creator_id, user.id)

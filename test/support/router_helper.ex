@@ -6,7 +6,6 @@ defmodule RouterHelper do
   skew endpoint tests.
   """
 
-  import Plug.Test
   import Plug.Conn, only: [fetch_query_params: 1, fetch_session: 1,
                            put_session: 3, put_private: 3]
   alias Plug.Session
@@ -52,7 +51,6 @@ defmodule RouterHelper do
 
   defmacro __using__(_) do
     quote do
-      use Plug.Test
       import RouterHelper
     end
   end
@@ -82,7 +80,7 @@ defmodule RouterHelper do
   end
 
   def call(verb, path, params \\ nil) do
-    conn(verb, path, params)
+    Plug.Test.conn(verb, path, params)
   end
 
   def send_request(conn) do

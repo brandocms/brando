@@ -27,6 +27,10 @@ Fetch and compile dependencies. Install Brando:
 
     $ mix do deps.get, deps.compile, brando.install
 
+And then refetch new dependencies Brando has added to your `mix.exs`:
+
+    $ mix do deps.get, deps.compile
+
 Add to your `config/config.exs` right before the env-specific import:
 
 ```diff
@@ -73,7 +77,7 @@ Static media config in `endpoint.ex`.
 
 ```diff
 + plug Plug.Static,
-+  at: "/media", from: Brando.config(:media_path)
++  at: "/media", from: Brando.config(:media_path),
 +  cache_control_for_etags: "public, max-age=31536000",
 +  cache_control_for_vsn_requests: "public, max-age=31536000"
 ```
@@ -133,6 +137,8 @@ Open up you application's `lib/my_app.ex` and add to `start/2`:
 Generate templates:
 
     $ mix brando.gen.html Task tasks name:string avatar:image data:villain
+
+Also supports `user:references` to add a `belongs_to` assoc.
 
 Copy outputted routes and add to `web/router.ex`
 

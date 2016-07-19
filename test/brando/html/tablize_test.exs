@@ -15,7 +15,7 @@ defmodule Brando.HTML.TablizeTest do
   } |> assign_language("nb")
 
   test "tablize/4" do
-    user = Factory.create(:user)
+    user = Factory.insert(:user)
 
     helpers = [
       {"Show user", "fa-search", :admin_user_path, :show, :id},

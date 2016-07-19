@@ -1,4 +1,15 @@
+## v0.33.0 (2016-07-18)
+
+* Enchancements
+  * Adds tablesaw for displaying tables on smaller screens.
+  * Fixes for Elixir 1.3
+  * Updates for ecto 2.0
+  * Updates for ex_machina 1.0
+  * Updates for phoenix 1.2
+  * Updated to brunch 1.8.2
+
 ## v0.32.0 (2016-06-06)
+
 * Bug fixes
   * fabfile now deletes old release before unpacking new release. Also archives the tar.gz
     in `release-archives`.

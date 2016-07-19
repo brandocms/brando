@@ -22,7 +22,7 @@ defmodule Brando.Admin.Routes do
   defp add_admin_routes(path, controller) do
     quote do
       ctrl = unquote(controller)
-      path = unquote(path)
+      path = "/" <> unquote(path)
       get   "#{path}/:id/delete",    ctrl, :delete_confirm
       Phoenix.Router.resources path, ctrl
     end

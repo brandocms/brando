@@ -142,6 +142,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     or for more fine grained control:
 
+        import Brando.Villain.Routes.Admin
+        alias #{binding[:base]}.Admin.#{binding[:scoped]}Controller
+
         get    "/#{route}",            #{binding[:scoped]}Controller, :index
         get    "/#{route}/new",        #{binding[:scoped]}Controller, :new
         get    "/#{route}/:id/edit",   #{binding[:scoped]}Controller, :edit
@@ -158,10 +161,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     and then update your repository by running migrations:
         $ mix ecto.migrate
 
-    Install menu by adding to your `config/brando.exs`
+    Install menu by adding to your supervision tree:
 
-        config :brando, Brando.Menu,
-          modules: [#{binding[:base]}.Menu.#{Phoenix.Naming.camelize(plural)}, ...]
+        Brando.Registry.register(#{binding[:base]}.#{binding[:scoped]}, [:menu])
 
     """
   end

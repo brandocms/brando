@@ -22,7 +22,7 @@ defmodule Brando.UserProfileForm do
     field :password, :password
 
     fieldset do
-      field :language, :select,
+      field :language, :radio,
         [default: "nb",
          choices: &__MODULE__.get_language_choices/0]
     end

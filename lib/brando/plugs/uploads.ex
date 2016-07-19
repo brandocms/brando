@@ -10,7 +10,7 @@ defmodule Brando.Plug.Uploads do
   """
   require Logger
 
-  @spec check_for_uploads(Plug.Conn.t, {String.t, Module.t}) :: Plug.Conn.t
+  @spec check_for_uploads(Plug.Conn.t, {String.t, module}) :: Plug.Conn.t
   def check_for_uploads(conn, {required_key, module}) when is_binary(required_key) do
     param = Map.get(conn.params, required_key)
 

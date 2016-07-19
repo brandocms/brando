@@ -4,7 +4,6 @@ import $ from "jquery";
 
 class ImagePreview {
     static setup() {
-        console.log("SETUP")
         $('.grid-form input[type=file]').on('change', function(e) {
             ImagePreview.previewImage(e.target, [150], 5);
         });

@@ -14,7 +14,6 @@ defmodule Brando.Admin.ImageSeriesController do
   import Brando.Gettext
   import Brando.Plug.HTML
   import Brando.Images.Utils, only: [recreate_sizes_for: 2, fix_size_cfg_vals: 1]
-  import Brando.Utils, only: [helpers: 1]
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query
 
@@ -159,11 +158,17 @@ defmodule Brando.Admin.ImageSeriesController do
 
   @doc false
   def recreate_sizes(conn, %{"id" => id}) do
-    :ok = recreate_sizes_for(:image_series, id)
+    user = current_user(conn)
 
-    conn
-    |> put_flash(:notice, gettext("Recreated sizes for image series"))
-    |> redirect(to: helpers(conn).admin_image_path(conn, :index))
+    # send this off for async processing
+    _ = Task.start_link(fn ->
+      Brando.UserChannel.set_progress(user, 0)
+      :ok = recreate_sizes_for(:image_series, id)
+      Brando.UserChannel.set_progress(user, 1)
+      Brando.UserChannel.alert(user, gettext("Recreated sizes for image series"))
+    end)
+
+    redirect(conn, to: helpers(conn).admin_image_path(conn, :index))
   end
 
   @doc false
