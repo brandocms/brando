@@ -88,7 +88,7 @@ defmodule Brando.Villain do
       """
       def rerender_html(changeset) do
         data = Ecto.Changeset.get_field(changeset, :data)
-        
+
         changeset
         |> Ecto.Changeset.put_change(:html, Brando.Villain.parse(data))
         |> Brando.repo.update!
@@ -197,6 +197,12 @@ defmodule Brando.Villain do
           unquote(series_model)
           |> preload(:image_category)
           |> Brando.repo.get_by(slug: series_slug)
+
+        if series == nil do
+          raise Brando.Exception.UploadError,
+                message: "villain could not find image series `#{series_slug}`." <>
+                         "Make sure it exists before using it as an upload target!"
+        end
 
         cfg  = series.cfg || Brando.config(Brando.Images)[:default_config]
         opts = Map.put(%{}, "image_series_id", series.id)
