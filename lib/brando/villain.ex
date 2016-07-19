@@ -201,7 +201,7 @@ defmodule Brando.Villain do
         if series == nil do
           raise Brando.Exception.UploadError,
                 "villain could not find image series `#{series_slug}`. \n\n" <>
-                "Make sure it exists before using it as an upload target!"
+                "Make sure it exists before using it as an upload target!\n"
         end
 
         cfg  = series.cfg || Brando.config(Brando.Images)[:default_config]
