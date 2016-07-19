@@ -428,6 +428,8 @@ config :brando, Brando.Villain,
   extra_blocks: ["MyBlock", "AnotherBlock"]
 ```
 
+Remember to add the `image_series` that Brando looks for.
+
 See `Brando.Villain` help for more information on how to use in your project.
 
 ## Brunch
