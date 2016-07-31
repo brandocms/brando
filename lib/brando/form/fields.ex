@@ -565,9 +565,17 @@ defmodule Brando.Form.Fields do
   @spec add_label(Field.t) :: Field.t
   def add_label(%Field{type: :checkbox, opts: %{multiple: false}} = field) do
     name = format_name(field.name, field.source)
-    text = [field.html|get_label(field)]
+    label_text = get_label(field)
+
+    text =
+      if label_text do
+        [field.html|label_text]
+      else
+        field.html
+      end
+
     html = content_tag(:label, for: name, class: field.opts[:label_class]) do
-      text |> raw
+      raw(text)
     end |> safe_to_string
 
     put_html(field, html)
@@ -576,6 +584,7 @@ defmodule Brando.Form.Fields do
   def add_label(%Field{} = field) do
     name = format_name(field.name, field.source)
     text = get_label(field)
+
     if text do
       html = content_tag(:label, for: name, class: field.opts[:label_class]) do
         text |> raw
