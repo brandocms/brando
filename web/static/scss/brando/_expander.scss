@@ -1,4 +1,12 @@
 .expander {
+  background-color: #f5f5f5;
+  margin: 10px 0;
+  padding: 20px;
+
+  .expander-content {
+    margin-left: 21px;
+  }
+
   .expander-hidden + .expander-content {
     display: none;
   }
@@ -8,7 +16,7 @@
 
     &:before {
       color: #bf0000;
-      content: "\25BC";
+      content: "\25BD";
       margin-right: 0.5em;
     }
 
@@ -18,14 +26,16 @@
     h4,
     h5,
     h6 {
+      border-bottom: 3px solid #ddd;
       display: inline-block;
+      margin: 0;
     }
   }
 
   .expander-trigger.expander-hidden {
     &:before {
       color: #bf0000;
-      content: "\25BA";
+      content: "\25B7";
     }
   }
 }
