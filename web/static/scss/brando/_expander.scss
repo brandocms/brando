@@ -1,0 +1,22 @@
+.expander {
+  width: 25em;
+
+  .expander-hidden {
+    &:before {
+      content: "\25BA";
+    }
+  }
+
+  .expander-hidden + .expander-content {
+    display: none;
+  }
+
+  .expander-trigger {
+    display: block;
+
+    &:before {
+      content: "\25BC";
+      margin-right: 0.5em;
+    }
+  }
+}

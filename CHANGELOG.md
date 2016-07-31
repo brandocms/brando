@@ -1,5 +1,9 @@
 ## v0.34.0-dev (2016-XX-XX)
 
+* Bug fixes
+  * Guard better vs empty label values in checkbox
+  * Add expander scss/js
+
 ## v0.33.0 (2016-07-18)
 
 * Enchancements

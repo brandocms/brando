@@ -80,7 +80,10 @@ $(() => {
     Accordion.setup();
     Menu.setup();
 
-    $(document).trigger("enhance.tablesaw");
+    $(document).trigger('enhance.tablesaw');
+    $('.expander-trigger').click(function() {
+        $(this).toggleClass('expander-hidden');
+    });
 });
 
 export {
