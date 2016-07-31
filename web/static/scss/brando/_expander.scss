@@ -16,7 +16,7 @@
 
     &:before {
       color: #bf0000;
-      content: "\25BD";
+      content: "\25BC";
       margin-right: 0.5em;
     }
 
@@ -27,6 +27,7 @@
     h5,
     h6 {
       border-bottom: 3px solid #ddd;
+      cursor: pointer;
       display: inline-block;
       margin: 0;
     }
@@ -35,7 +36,7 @@
   .expander-trigger.expander-hidden {
     &:before {
       color: #bf0000;
-      content: "\25B7";
+      content: "\25B6";
     }
   }
 }
