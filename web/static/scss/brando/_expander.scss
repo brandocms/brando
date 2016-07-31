@@ -7,13 +7,24 @@
     display: block;
 
     &:before {
+      color: #bf0000;
       content: "\25BC";
       margin-right: 0.5em;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      display: inline-block;
     }
   }
 
   .expander-trigger.expander-hidden {
     &:before {
+      color: #bf0000;
       content: "\25BA";
     }
   }

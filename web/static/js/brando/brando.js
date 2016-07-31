@@ -81,6 +81,7 @@ $(() => {
     Menu.setup();
 
     $(document).trigger('enhance.tablesaw');
+    
     $('.expander-trigger').click(function() {
         $(this).toggleClass('expander-hidden');
     });
