@@ -1,4 +1,4 @@
-defmodule Brando.LayoutView do
+defmodule Brando.Admin.LayoutView do
   @moduledoc """
   Main layout view for Brando admin.
   """

@@ -1,12 +1,15 @@
 ## v0.34.0-dev (2016-XX-XX)
 
+* Enhancements
+  * Add `lockdown_until` option to `Brando.Plug.Lockdown`.
+
 * Bug fixes
   * Guard better vs empty label values in checkbox
   * Add expander scss/js
 
 ## v0.33.0 (2016-07-18)
 
-* Enchancements
+* Enhancements
   * Adds tablesaw for displaying tables on smaller screens.
   * Fixes for Elixir 1.3
   * Updates for ecto 2.0

@@ -301,6 +301,36 @@ function clientInsertionSuccess(fields) {
 }
 ```
 
+## Lockdown
+
+If you want to limit the availability of your site while developing, you can use the
+`Brando.Plug.Lockdown` plug.
+
+If you are authenticated, the website loads normally.
+
+### Example
+
+```elixir
+    plug Brando.Plug.Lockdown, [
+      layout: {MyApp.LockdownLayoutView, "lockdown.html"},
+      view: {MyApp.LockdownView, "lockdown.html"}
+    ]
+```
+
+### Configure
+
+```elixir
+    config :brando,
+      lockdown: true,
+      lockdown_password: "my_pass",
+      lockdown_until: ~N[2016-08-02 19:00:00]
+```
+
+Password and time is optional.
+
+If no password configuration is found, you have to login
+through the backend to see the frontend website.
+
 ## HTML
 
 To insert an expander:
