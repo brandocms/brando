@@ -2,6 +2,7 @@
 
 * Enhancements
   * Add `lockdown_until` option to `Brando.Plug.Lockdown`.
+  * Set Brando.LockdownController as default in `router.ex`
 
 * Bug fixes
   * Guard better vs empty label values in checkbox
