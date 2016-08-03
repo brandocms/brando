@@ -1,7 +1,11 @@
 defmodule Brando.Images.UtilsTest do
   use ExUnit.Case
   use Brando.ConnCase
+  use Plug.Test
+  use RouterHelper
+
   import Brando.Images.Utils
+
   alias Brando.Images.Upload
   alias Brando.Factory
 
@@ -50,9 +54,17 @@ defmodule Brando.Images.UtilsTest do
   end
 
   test "put_size_cfg" do
-    user     = Factory.insert(:user)
-    category = Factory.insert(:image_category, creator: user)
-    series   = Factory.insert(:image_series, creator: user, image_category: category)
+    user      = Factory.insert(:user)
+    category  = Factory.insert(:image_category, creator: user)
+    series    = Factory.insert(:image_series, creator: user, image_category: category)
+
+    up_params = Factory.build(:plug_upload)
+
+    :post
+    |> call("/admin/images/series/#{series.id}/upload", %{"id" => series.id, "image" => up_params})
+    |> with_user(user)
+    |> as_json
+    |> send_request
 
     put_size_cfg(series, "medium", %{"portrait" => %{"size" => "500", "quality" => 1},
                                      "landscape" => %{"size" => "50", "quality" => 1}})
