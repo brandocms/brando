@@ -473,6 +473,20 @@ config :brando, Brando.Villain,
 
 Remember to add the `image_series` that Brando looks for.
 
+You also need to call for parsing by invoking `generate_html` in your schema's changeset:
+
+```elixir
+  def changeset(model, params \\ %{}) do
+    model
+    |> cast(params, @required_fields ++ @optional_fields)
+    |> validate_required(@required_fields)
+    |> generate_html()
+  end
+```
+
+You can add separate parsers by supplying the parser module as a parameter to the `generate_html`
+function. If not, it will use the parser module given in `config :brando, Brando.Villain, :parser`. 
+
 See `Brando.Villain` help for more information on how to use in your project.
 
 ## Brunch
