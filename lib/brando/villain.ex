@@ -28,9 +28,9 @@ defmodule Brando.Villain do
       end
 
   You can add separate parsers by supplying the parser module as a parameter to the `generate_html`
-  function. If not, it will use the parser module given in
+  function or `rerender_html` funtion. If not, it will use the parser module given in
 
-  `config :brando, Brando.Villain, :parser`.
+      config :brando, Brando.Villain, :parser
 
   # Migration
 
@@ -91,11 +91,11 @@ defmodule Brando.Villain do
       @doc """
       Rerender page HTML from data.
       """
-      def rerender_html(changeset) do
+      def rerender_html(changeset, parser_mod \\ Brando.config(Brando.Villain)[:parser]) do
         data = Ecto.Changeset.get_field(changeset, :data)
 
         changeset
-        |> Ecto.Changeset.put_change(:html, Brando.Villain.parse(data))
+        |> Ecto.Changeset.put_change(:html, Brando.Villain.parse(data, parser_mod))
         |> Brando.repo.update!
       end
 
