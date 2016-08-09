@@ -62,7 +62,7 @@ defmodule <%= application_module %>.Mixfile do
      {:cowboy, "~> 1.0"},
 
      # release management and production tools
-     {:exrm, "~> 1.0"},
+     {:distillery, "~> 0.9"},
      {:recon, github: "ferd/recon"},
      {:hrafn, github: "twined/hrafn"},
 

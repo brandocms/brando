@@ -160,10 +160,17 @@ Register your module in `lib/my_app.ex`:
 +     Brando.Registry.register(MyApp.MyModule, [:menu])
 ```
 
-## Production
+## Releases
 
-Run the `compile` script in your OTP app's dir to `git pull` latest, get latest hex deps,
-compile and build production assets.
+Brando uses distillery through Docker for release management.
+
+Start off by running
+
+    # mix release.init
+
+Then use the fabric script in `fabfile.py` for the rest.
+
+    # fab prod -l
 
 ### Additional admin CSS/styling
 
@@ -485,7 +492,7 @@ You also need to call for parsing by invoking `generate_html` in your schema's c
 ```
 
 You can add separate parsers by supplying the parser module as a parameter to the `generate_html`
-function. If not, it will use the parser module given in `config :brando, Brando.Villain, :parser`. 
+function. If not, it will use the parser module given in `config :brando, Brando.Villain, :parser`.
 
 See `Brando.Villain` help for more information on how to use in your project.
 
