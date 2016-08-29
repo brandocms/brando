@@ -4,5 +4,4 @@ _build
 media
 deps
 node_modules
-rel
 priv/static
