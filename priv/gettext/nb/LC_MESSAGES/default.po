@@ -405,7 +405,7 @@ msgstr "Konfigurasjon"
 msgid "Configuration data"
 msgstr "Konfigurasjonsdata"
 
-#: lib/brando/form/fields.ex:593
+#: lib/brando/form/fields.ex:602
 msgid "Confirm"
 msgstr "Bekreft"
 
@@ -501,7 +501,7 @@ msgstr "Rettigheter"
 msgid "Roles"
 msgstr "Roller"
 
-#: lib/brando/form/fields.ex:91 lib/brando/images/utils.ex:338
+#: lib/brando/form/fields.ex:91 lib/brando/images/utils.ex:355
 msgid "Save"
 msgstr "Lagre"
 
@@ -530,11 +530,11 @@ msgstr "Brukernavn"
 msgid "admin"
 msgstr "admin"
 
-#: lib/brando/form/fields.ex:681
+#: lib/brando/form/fields.ex:690
 msgid "can't be blank"
 msgstr "kan ikke være tomt"
 
-#: lib/brando/form/fields.ex:685
+#: lib/brando/form/fields.ex:694
 msgid "has invalid format"
 msgstr "har ugyldig format"
 
@@ -566,19 +566,19 @@ msgstr "bildeserie"
 msgid "imageseries"
 msgstr "bildeserier"
 
-#: lib/brando/form/fields.ex:687
+#: lib/brando/form/fields.ex:696
 msgid "is invalid"
 msgstr "er ugyldig"
 
-#: lib/brando/form/fields.ex:689
+#: lib/brando/form/fields.ex:698
 msgid "is reserved"
 msgstr "er reservert"
 
-#: lib/brando/form/fields.ex:683
+#: lib/brando/form/fields.ex:692
 msgid "must be unique"
 msgstr "må være unikt"
 
-#: lib/brando/form/fields.ex:693 lib/brando/form/fields.ex:695
+#: lib/brando/form/fields.ex:702 lib/brando/form/fields.ex:704
 msgid "should be at least %{count} characters"
 msgstr "må være minst %{count} tegn"
 
@@ -662,7 +662,7 @@ msgstr "system"
 msgid "You are trying to authorize from an insecure URL. <a href=\"%{url}\">Please try again from this URL</a> or proceed at your own risk!"
 msgstr "Du prøver å logge inn fra en usikker adresse. <a href=\"%{url}\">Prøv fra denne adressen istedet</a> eller fortsett på eget ansvar!"
 
-#: lib/brando/images/utils.ex:300
+#: lib/brando/images/utils.ex:317
 msgid "Allowed mimetypes"
 msgstr "Tillatte mime-typer"
 
@@ -675,7 +675,7 @@ msgstr "Kategorien er forplantet"
 msgid "Configuration updated"
 msgstr "Konfigurasjonen ble oppdatert"
 
-#: lib/brando/images/utils.ex:305
+#: lib/brando/images/utils.ex:322
 msgid "Default size"
 msgstr "Standard størrelse"
 
@@ -683,7 +683,7 @@ msgstr "Standard størrelse"
 msgid "Propagate configuration to dependent image series"
 msgstr "Forplant konfigurasjonen til underliggende bildeserier"
 
-#: lib/brando/images/utils.ex:309
+#: lib/brando/images/utils.ex:326
 msgid "Random filename"
 msgstr "Vilkårlig filnavn"
 
@@ -695,11 +695,11 @@ msgstr "Gjenskap størrelser for denne serien"
 msgid "Recreated sizes for image series"
 msgstr "Gjenskapte bildestørrelser for bildeserien"
 
-#: lib/brando/images/utils.ex:314
+#: lib/brando/images/utils.ex:331
 msgid "Size limit"
 msgstr "Max størrelse"
 
-#: lib/brando/images/utils.ex:320
+#: lib/brando/images/utils.ex:337
 msgid "Upload path"
 msgstr "Opplastningsfilbane"
 
@@ -735,7 +735,7 @@ msgstr "Disse mappene kan ikke gjenopprettes!"
 msgid "You are about to delete these folders. Please check carefully before proceeding."
 msgstr "Du er i ferd med å slette disse mappene. Sjekk nøye før du fortsetter."
 
-#: lib/brando/form/fields.ex:691
+#: lib/brando/form/fields.ex:700
 msgid "has already been taken"
 msgstr "er allerede i bruk"
 
@@ -775,23 +775,23 @@ msgstr "Vennligst vent mens vi forplanter konfigurasjonen til underliggende bild
 msgid "Propagating configuration"
 msgstr "Forplanter konfigurasjonen"
 
-#: lib/brando/images/utils.ex:330
+#: lib/brando/images/utils.ex:347
 msgid "Add master key (portrait/landscape)"
 msgstr "Legg til hovednøkkel (liggende/stående)"
 
-#: lib/brando/images/utils.ex:327
+#: lib/brando/images/utils.ex:344
 msgid "Add master key (standard)"
 msgstr "Legg til hovednøkkel (standard)"
 
-#: lib/brando/images/utils.ex:403
+#: lib/brando/images/utils.ex:420
 msgid "Orientation"
 msgstr "Bildeformat"
 
-#: lib/brando/images/utils.ex:375
+#: lib/brando/images/utils.ex:392
 msgid "key"
 msgstr "nøkkel"
 
-#: lib/brando/images/utils.ex:383
+#: lib/brando/images/utils.ex:400
 msgid "masterkey"
 msgstr "hovednøkkel"
 

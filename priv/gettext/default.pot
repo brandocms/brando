@@ -391,7 +391,7 @@ msgstr ""
 msgid "Configuration data"
 msgstr ""
 
-#: lib/brando/form/fields.ex:593
+#: lib/brando/form/fields.ex:602
 msgid "Confirm"
 msgstr ""
 
@@ -487,7 +487,7 @@ msgstr ""
 msgid "Roles"
 msgstr ""
 
-#: lib/brando/form/fields.ex:91 lib/brando/images/utils.ex:338
+#: lib/brando/form/fields.ex:91 lib/brando/images/utils.ex:355
 msgid "Save"
 msgstr ""
 
@@ -516,11 +516,11 @@ msgstr ""
 msgid "admin"
 msgstr ""
 
-#: lib/brando/form/fields.ex:681
+#: lib/brando/form/fields.ex:690
 msgid "can't be blank"
 msgstr ""
 
-#: lib/brando/form/fields.ex:685
+#: lib/brando/form/fields.ex:694
 msgid "has invalid format"
 msgstr ""
 
@@ -552,19 +552,19 @@ msgstr ""
 msgid "imageseries"
 msgstr ""
 
-#: lib/brando/form/fields.ex:687
+#: lib/brando/form/fields.ex:696
 msgid "is invalid"
 msgstr ""
 
-#: lib/brando/form/fields.ex:689
+#: lib/brando/form/fields.ex:698
 msgid "is reserved"
 msgstr ""
 
-#: lib/brando/form/fields.ex:683
+#: lib/brando/form/fields.ex:692
 msgid "must be unique"
 msgstr ""
 
-#: lib/brando/form/fields.ex:693 lib/brando/form/fields.ex:695
+#: lib/brando/form/fields.ex:702 lib/brando/form/fields.ex:704
 msgid "should be at least %{count} characters"
 msgstr ""
 
@@ -648,7 +648,7 @@ msgstr ""
 msgid "You are trying to authorize from an insecure URL. <a href=\"%{url}\">Please try again from this URL</a> or proceed at your own risk!"
 msgstr ""
 
-#: lib/brando/images/utils.ex:300
+#: lib/brando/images/utils.ex:317
 msgid "Allowed mimetypes"
 msgstr ""
 
@@ -661,7 +661,7 @@ msgstr ""
 msgid "Configuration updated"
 msgstr ""
 
-#: lib/brando/images/utils.ex:305
+#: lib/brando/images/utils.ex:322
 msgid "Default size"
 msgstr ""
 
@@ -669,7 +669,7 @@ msgstr ""
 msgid "Propagate configuration to dependent image series"
 msgstr ""
 
-#: lib/brando/images/utils.ex:309
+#: lib/brando/images/utils.ex:326
 msgid "Random filename"
 msgstr ""
 
@@ -681,11 +681,11 @@ msgstr ""
 msgid "Recreated sizes for image series"
 msgstr ""
 
-#: lib/brando/images/utils.ex:314
+#: lib/brando/images/utils.ex:331
 msgid "Size limit"
 msgstr ""
 
-#: lib/brando/images/utils.ex:320
+#: lib/brando/images/utils.ex:337
 msgid "Upload path"
 msgstr ""
 
@@ -721,7 +721,7 @@ msgstr ""
 msgid "You are about to delete these folders. Please check carefully before proceeding."
 msgstr ""
 
-#: lib/brando/form/fields.ex:691
+#: lib/brando/form/fields.ex:700
 msgid "has already been taken"
 msgstr ""
 
@@ -761,23 +761,23 @@ msgstr ""
 msgid "Propagating configuration"
 msgstr ""
 
-#: lib/brando/images/utils.ex:330
+#: lib/brando/images/utils.ex:347
 msgid "Add master key (portrait/landscape)"
 msgstr ""
 
-#: lib/brando/images/utils.ex:327
+#: lib/brando/images/utils.ex:344
 msgid "Add master key (standard)"
 msgstr ""
 
-#: lib/brando/images/utils.ex:403
+#: lib/brando/images/utils.ex:420
 msgid "Orientation"
 msgstr ""
 
-#: lib/brando/images/utils.ex:375
+#: lib/brando/images/utils.ex:392
 msgid "key"
 msgstr ""
 
-#: lib/brando/images/utils.ex:383
+#: lib/brando/images/utils.ex:400
 msgid "masterkey"
 msgstr ""
 
