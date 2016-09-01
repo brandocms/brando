@@ -96,6 +96,10 @@ config :my_app, MyApp.Endpoint,
   render_errors: [accepts: ~w(html json), view: Brando.ErrorView, default_format: "html"],
 ```
 
+*Remember to switch out your ports in `etc/supervisor/prod.conf` and `etc/nginx/prod.conf`*
+
+## I18n
+
 Brando uses Gettext for i18n.
 
 To extract your frontend translations:
@@ -160,10 +164,17 @@ Register your module in `lib/my_app.ex`:
 +     Brando.Registry.register(MyApp.MyModule, [:menu])
 ```
 
-## Production
+## Releases
 
-Run the `compile` script in your OTP app's dir to `git pull` latest, get latest hex deps,
-compile and build production assets.
+Brando uses distillery through Docker for release management.
+
+Start off by running
+
+    # mix release.init
+
+Then use the fabric script in `fabfile.py` for the rest.
+
+    # fab prod -l
 
 ### Additional admin CSS/styling
 
@@ -301,6 +312,49 @@ function clientInsertionSuccess(fields) {
 }
 ```
 
+## Lockdown
+
+If you want to limit the availability of your site while developing, you can use the
+`Brando.Plug.Lockdown` plug.
+
+If you are authenticated, the website loads normally.
+
+### Example
+
+```elixir
+    plug Brando.Plug.Lockdown, [
+      layout: {MyApp.LockdownLayoutView, "lockdown.html"},
+      view: {MyApp.LockdownView, "lockdown.html"}
+    ]
+```
+
+### Configure
+
+```elixir
+    config :brando,
+      lockdown: true,
+      lockdown_password: "my_pass",
+      lockdown_until: ~N[2016-08-02 19:00:00]
+```
+
+Password and time is optional.
+
+If no password configuration is found, you have to login
+through the backend to see the frontend website.
+
+## HTML
+
+To insert an expander:
+
+```html
+<div class="expander">
+  <a class="expander-trigger expander-hidden">Expandable section</a>
+  <div class="expander-content">
+    <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Distinctio mollitia fugiat facilis enim accusamus quisquam aut, repellendus incidunt quod optio facere labore illo numquam ipsum beatae vero debitis, fugit excepturi.</p>
+  </div>
+</div>
+```
+
 ## Tags
 
 Implements tagging in your model.
@@ -427,6 +481,22 @@ If you have custom blocks, add them in your `config/brando.exs`:
 config :brando, Brando.Villain,
   extra_blocks: ["MyBlock", "AnotherBlock"]
 ```
+
+Remember to add the `image_series` that Brando looks for.
+
+You also need to call for parsing by invoking `generate_html` in your schema's changeset:
+
+```elixir
+  def changeset(model, params \\ %{}) do
+    model
+    |> cast(params, @required_fields ++ @optional_fields)
+    |> validate_required(@required_fields)
+    |> generate_html()
+  end
+```
+
+You can add separate parsers by supplying the parser module as a parameter to the `generate_html`
+function. If not, it will use the parser module given in `config :brando, Brando.Villain, :parser`.
 
 See `Brando.Villain` help for more information on how to use in your project.
 

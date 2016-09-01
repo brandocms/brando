@@ -1,13 +1,13 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.33.0"
+  @version "0.34.0"
   @description "Boilerplate for Twined applications."
 
   def project do
     [app: :brando,
      version: @version,
-     elixir: "~> 1.0",
+     elixir: "~> 1.3",
      deps: deps,
      dialyzer: [
        plt_add_apps: [

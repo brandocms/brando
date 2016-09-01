@@ -238,12 +238,29 @@ defmodule Brando.Images.Utils do
   end
 
   @doc """
-  Put `size_cfg` as ̀size_key` in `image_series`
+  Put `size_cfg` as ̀size_key` in `image_series`.
   """
   @spec put_size_cfg(ImageSeries.t, String.t, Brando.Type.ImageConfig.t) :: :ok
   def put_size_cfg(image_series, size_key, size_cfg) do
-    image_series = put_in(image_series.cfg.sizes[size_key]["size"], size_cfg)
-    Brando.repo.update!(image_series)
+    size_key = is_atom(size_key) && Atom.to_string(size_key) || size_key
+
+    cfg = image_series.cfg
+
+    cfg =
+      if Map.has_key?(cfg.sizes[size_key], "portrait") do
+        put_in(cfg.sizes[size_key], size_cfg)
+      else
+        if Map.has_key?(size_cfg, "portrait") do
+          put_in(cfg.sizes[size_key], size_cfg)
+        else
+          put_in(cfg.sizes[size_key]["size"], size_cfg)
+        end
+      end
+
+    image_series
+    |> Brando.ImageSeries.changeset(:update, %{cfg: cfg})
+    |> Brando.repo.update!
+
     recreate_sizes_for(:image_series, image_series.id)
   end
 

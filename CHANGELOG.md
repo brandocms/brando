@@ -1,6 +1,17 @@
+## v0.34.0 (2016-09-01)
+
+* Enhancements
+  * Add `lockdown_until` option to `Brando.Plug.Lockdown`.
+  * Set Brando.LockdownController as default in `router.ex`
+  * Use distillery for releases instead of exrm.
+
+* Bug fixes
+  * Guard better vs empty label values in checkbox
+  * Add expander scss/js
+
 ## v0.33.0 (2016-07-18)
 
-* Enchancements
+* Enhancements
   * Adds tablesaw for displaying tables on smaller screens.
   * Fixes for Elixir 1.3
   * Updates for ecto 2.0

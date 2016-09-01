@@ -1,4 +1,4 @@
-FROM twined/fehn:1.0
+FROM twined/fehn:1.3
 
 MAINTAINER Twined Networks <mail@twined.net>
 

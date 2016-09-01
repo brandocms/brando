@@ -6,16 +6,23 @@ defmodule Brando.Plug.Lockdown do
 
   ## Example
 
-      plug Brando.Plug.Lockdown, [
-        layout: {MyApp.LockdownLayoutView, "lockdown.html"},
-        view: {MyApp.LockdownView, "lockdown.html"}
-      ]
+      plug Brando.Plug.Lockdown
+
+  The `Lockdown` plug looks for a `lockdown_path` in your `router.ex`.
+
+  ## Example
+
+      scope "/coming-soon" do
+        get "/", Brando.LockdownController, :index
+        post "/", Brando.LockdownController, :post_password
+      end
 
   ## Configure
 
       config :brando,
         lockdown: true,
-        lockdown_password: "my_pass"
+        lockdown_password: "my_pass",
+        lockdown_until: ~N[2015-01-13 13:00:07]
 
   Password is optional. If no password configuration is found, you have to login
   through the backend to see the frontend website.
@@ -54,8 +61,19 @@ defmodule Brando.Plug.Lockdown do
 
   @spec lockdown(Plug.Conn.t) :: Plug.Conn.t
   defp lockdown(conn) do
-    conn
-    |> redirect(to: Brando.helpers.lockdown_path(conn, :index))
-    |> halt
+    case Brando.config(:lockdown_until) do
+      nil ->
+        conn
+        |> redirect(to: Brando.helpers.lockdown_path(conn, :index))
+        |> halt
+      dt ->
+        if dt > NaiveDateTime.from_erl!(:calendar.local_time) do
+          conn
+          |> redirect(to: Brando.helpers.lockdown_path(conn, :index))
+          |> halt
+        else
+          conn
+        end
+    end
   end
 end

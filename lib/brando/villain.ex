@@ -27,6 +27,11 @@ defmodule Brando.Villain do
         |> Brando.Villain.HTML.generate_html()
       end
 
+  You can add separate parsers by supplying the parser module as a parameter to the `generate_html`
+  function or `rerender_html` funtion. If not, it will use the parser module given in
+
+      config :brando, Brando.Villain, :parser
+
   # Migration
 
   Migration utilities
@@ -74,9 +79,9 @@ defmodule Brando.Villain do
             |> generate_html()
           end
       """
-      def generate_html(changeset) do
+      def generate_html(changeset, parser_mod \\ Brando.config(Brando.Villain)[:parser]) do
         if Ecto.Changeset.get_change(changeset, :data) do
-          parsed_data = Brando.Villain.parse(changeset.changes.data)
+          parsed_data = Brando.Villain.parse(changeset.changes.data, parser_mod)
           Ecto.Changeset.put_change(changeset, :html, parsed_data)
         else
           changeset
@@ -86,11 +91,11 @@ defmodule Brando.Villain do
       @doc """
       Rerender page HTML from data.
       """
-      def rerender_html(changeset) do
+      def rerender_html(changeset, parser_mod \\ Brando.config(Brando.Villain)[:parser]) do
         data = Ecto.Changeset.get_field(changeset, :data)
-        
+
         changeset
-        |> Ecto.Changeset.put_change(:html, Brando.Villain.parse(data))
+        |> Ecto.Changeset.put_change(:html, Brando.Villain.parse(data, parser_mod))
         |> Brando.repo.update!
       end
 
@@ -197,6 +202,12 @@ defmodule Brando.Villain do
           unquote(series_model)
           |> preload(:image_category)
           |> Brando.repo.get_by(slug: series_slug)
+
+        if series == nil do
+          raise Brando.Exception.UploadError,
+                "villain could not find image series `#{series_slug}`. \n\n" <>
+                "Make sure it exists before using it as an upload target!\n"
+        end
 
         cfg  = series.cfg || Brando.config(Brando.Images)[:default_config]
         opts = Map.put(%{}, "image_series_id", series.id)
@@ -311,16 +322,15 @@ defmodule Brando.Villain do
   otp_app's config.exs.
   Returns HTML.
   """
-  @spec parse(String.t) :: String.t
-  def parse(""), do: ""
-  def parse(nil), do: ""
-  def parse(json) when is_binary(json), do:
-    do_parse(Poison.decode!(json))
-  def parse(json) when is_list(json), do: do_parse(json)
+  @spec parse(String.t, Module.t) :: String.t
+  def parse("", _), do: ""
+  def parse(nil, _), do: ""
+  def parse(json, parser_mod) when is_binary(json), do:
+    do_parse(Poison.decode!(json), parser_mod)
+  def parse(json,parser_mod) when is_list(json), do:
+    do_parse(json, parser_mod)
 
-  defp do_parse(data) do
-    parser_mod = Brando.config(Brando.Villain)[:parser]
-
+  defp do_parse(data, parser_mod) do
     html =
       Enum.reduce(data, [], fn(data_node, acc) ->
         type_atom = String.to_atom(data_node["type"])

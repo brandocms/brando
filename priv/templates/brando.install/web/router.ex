@@ -30,9 +30,7 @@ defmodule <%= application_module %>.Router do
     plug :accepts, ["html"]
     plug :fetch_session
     plug :fetch_flash
-    plug Lockdown, [
-      layout: {<%= application_module %>.LockdownLayoutView, "lockdown.html"},
-      view: {<%= application_module %>.LockdownView, "lockdown.html"}]
+    plug Lockdown
     plug :put_locale
     plug :protect_from_forgery
     plug :put_secure_browser_headers
@@ -64,8 +62,8 @@ defmodule <%= application_module %>.Router do
   end
 
   scope "/coming-soon" do
-    get "/",  <%= application_module %>.LockdownController, :index
-    post "/", <%= application_module %>.LockdownController, :post_password
+    get "/",  Brando.LockdownController, :index
+    post "/", Brando.LockdownController, :post_password
   end
 
   scope "/auth" do

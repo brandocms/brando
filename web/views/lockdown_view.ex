@@ -1,4 +1,4 @@
-defmodule Brando.LayoutView do
+defmodule Brando.LockdownView do
   @moduledoc """
   Main layout view for Brando admin.
   """
