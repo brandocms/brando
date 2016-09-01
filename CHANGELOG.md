@@ -1,4 +1,4 @@
-## v0.34.0-dev (2016-XX-XX)
+## v0.34.0 (2016-09-01)
 
 * Enhancements
   * Add `lockdown_until` option to `Brando.Plug.Lockdown`.
