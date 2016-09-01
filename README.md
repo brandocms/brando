@@ -96,6 +96,10 @@ config :my_app, MyApp.Endpoint,
   render_errors: [accepts: ~w(html json), view: Brando.ErrorView, default_format: "html"],
 ```
 
+*Remember to switch out your ports in `etc/supervisor/prod.conf` and `etc/nginx/prod.conf`*
+
+## I18n
+
 Brando uses Gettext for i18n.
 
 To extract your frontend translations:
