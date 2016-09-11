@@ -11,6 +11,11 @@ defmodule Brando.Villain.Parser.Default do
   @doc """
   Convert header to HTML
   """
+  def header(%{"text" => text, "level" => level, "anchor" => anchor}) do
+    h = header(%{"text" => text, "level" => level})
+    ~s(<a name="#{anchor}"></a>#{h})
+  end
+  
   def header(%{"text" => header_text, "level" => level}) do
     header_size = "h#{level}"
     "<#{header_size}>" <> header_text <> "</#{header_size}>"
@@ -30,8 +35,22 @@ defmodule Brando.Villain.Parser.Default do
       else
         markdown_data
       end
-      
+
     Earmark.to_html(markdown_data, %Earmark.Options{breaks: true})
+  end
+
+  @doc """
+  Convert GMaps url to iframe html
+  """
+  def map(%{"embed_url" => embed_url, "source" => "gmaps"}) do
+    ~s(<div class="map-wrapper">
+         <iframe width="420"
+                 height="315"
+                 src="#{embed_url}"
+                 frameborder="0"
+                 allowfullscreen>
+         </iframe>
+       </div>)
   end
 
   @doc """

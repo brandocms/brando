@@ -79,6 +79,7 @@ defmodule Mix.Tasks.Brando.Install do
     # Frontend SCSS
     {:copy, "templates/brando.install/web/static/css/app.scss", "web/static/css/app.scss"},
     {:copy, "templates/brando.install/web/static/css/custom/brando.custom.scss", "web/static/css/custom/brando.custom.scss"},
+    {:copy, "templates/brando.install/web/static/css/includes/_general.scss", "web/static/css/includes/_general.scss"},
     {:copy, "templates/brando.install/web/static/css/includes/_colorbox.scss", "web/static/css/includes/_colorbox.scss"},
     {:copy, "templates/brando.install/web/static/css/includes/_cookielaw.scss", "web/static/css/includes/_cookielaw.scss"},
     {:copy, "templates/brando.install/web/static/css/includes/_dropdown.scss", "web/static/css/includes/_dropdown.scss"},

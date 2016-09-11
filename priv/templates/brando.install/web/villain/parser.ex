@@ -10,6 +10,11 @@ defmodule <%= application_module %>.Villain.Parser do
   @doc """
   Convert header to HTML
   """
+  def header(%{"text" => text, "level" => level, "anchor" => anchor}) do
+    h = header(%{"text" => text, "level" => level})
+    ~s(<a name="#{anchor}"></a>#{h})
+  end
+  
   def header(%{"text" => text, "level" => level}) do
     header_size = "h#{level}"
     "<#{header_size}>" <> text <> "</#{header_size}>"
@@ -47,6 +52,20 @@ defmodule <%= application_module %>.Villain.Parser do
   """
   def markdown(%{"text" => markdown}) do
     Earmark.to_html(markdown, %Earmark.Options{breaks: true})
+  end
+
+  @doc """
+  Convert GMaps url to iframe html
+  """
+  def map(%{"embed_url" => embed_url, "source" => "gmaps"}) do
+    ~s(<div class="map-wrapper">
+         <iframe width="420"
+                 height="315"
+                 src="#{embed_url}"
+                 frameborder="0"
+                 allowfullscreen>
+         </iframe>
+       </div>)
   end
 
   @doc """
@@ -165,6 +184,7 @@ defmodule <%= application_module %>.Villain.Parser do
       end)
       class = case col["class"] do
         "six" -> "col-md-6"
+        other -> other
       end
       ~s(<div class="#{class}">#{Enum.reverse(c)}</div>)
     end
