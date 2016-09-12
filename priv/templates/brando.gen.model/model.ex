@@ -9,7 +9,7 @@ defmodule <%= module %> do
 <%= for model_field <- model_fields do %>    <%= model_field %>
 <% end %><%= for {k, _, m} <- assocs do %>    belongs_to <%= inspect k %>, <%= m %>
 <% end %>
-<% if sequenced do %>    sequenced<% end %>
+<%= if sequenced do %>    sequenced<% end %>
     timestamps
   end
 <%= for {v, k} <- img_fields do %>

@@ -6,6 +6,7 @@ defmodule Brando.VillainTest do
       "other parser"
     end
 
+    def map(_), do: nil
     def blockquote(_), do: nil
     def columns(_), do: nil
     def divider(_), do: nil

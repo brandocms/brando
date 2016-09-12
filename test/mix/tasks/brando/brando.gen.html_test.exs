@@ -35,7 +35,8 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
                        "born_at secret data first_login " <>
                        "alarm creator_id address_id)"
         assert file =~ "@optional_fields ~w(photo)"
-
+        assert file =~ "use Brando.Sequence, :model"
+        assert file =~ "sequenced"
       end
 
       assert_file "test/models/minion_face_test.exs"
@@ -45,6 +46,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       assert_file migration_file, fn file ->
         assert file =~ "use Brando.Villain, :migration"
         assert file =~ "villain"
+        assert file =~ "sequenced"
       end
 
       assert_file "web/controllers/minion_face_controller.ex", fn file ->
