@@ -3,8 +3,6 @@ defmodule Brando.Utils do
   Assorted utility functions.
   """
 
-  import Brando.Gettext
-
   @kb_size   1024
   @mb_size   1024 * @kb_size
   @gb_size   1024 * @mb_size
@@ -14,34 +12,6 @@ defmodule Brando.Utils do
   @hour_time 60 * @min_time
   @day_time  24 * @hour_time
 
-  @months %{
-    1  => gettext("January"),
-    2  => gettext("February"),
-    3  => gettext("March"),
-    4  => gettext("April"),
-    5  => gettext("May"),
-    6  => gettext("June"),
-    7  => gettext("July"),
-    8  => gettext("August"),
-    9  => gettext("September"),
-    10 => gettext("October"),
-    11 => gettext("November"),
-    12 => gettext("December"),
-  }
-
-  @doc """
-  Prettify ecto datetime struct and return date
-  """
-  def pretty_date(%Ecto.DateTime{} = datetime) do
-    "#{datetime.day}. #{@months[datetime.month]} #{datetime.year}"
-  end
-
-  @doc """
-  Prettify ecto datetime struct and return date + time
-  """
-  def pretty_datetime(%Ecto.DateTime{} = datetime) do
-    "#{datetime.day}. #{@months[datetime.month]} #{datetime.year} @ #{datetime.hour}:#{datetime.min}"
-  end
   @doc """
   Converts `string` to an ascii slug. Removes all unicode, spaces,
   extraneous dashes and punctuation and downcases the slug
