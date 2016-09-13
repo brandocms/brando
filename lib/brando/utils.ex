@@ -3,6 +3,8 @@ defmodule Brando.Utils do
   Assorted utility functions.
   """
 
+  import Brando.Gettext
+
   @kb_size   1024
   @mb_size   1024 * @kb_size
   @gb_size   1024 * @mb_size
