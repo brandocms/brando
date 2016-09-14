@@ -1,5 +1,14 @@
 ## v0.35.0-dev (2016-XX-XX)
 
+* Enhancements
+  * Add precooked `web.ex` to installer templates
+  * Add `DateTimeHelpers` to installer templates
+  * Add `put_title` to HTML plug
+  * Upgrade Villain
+
+* Bug fixes
+  * Fix `sequenced` installer templates
+
 ## v0.34.0 (2016-09-01)
 
 * Enhancements
