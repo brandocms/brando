@@ -20,205 +20,241 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 //
-
 @mixin _breakpoints($min, $max: false) {
-    @if $max == false {
-        @media only screen and (min-width: $min) {
-            @content;
-        }
-    } @else {
-        @media only screen and (min-width: $min) and (max-width: $max) {
-            @content;
-        }
+   @if $max == false{
+    @media only screen and (min-width: $min) {
+       @content;
     }
+  }
+  @else {
+     @media only screen and (min-width: $min) and (max-width: $max){
+      @content;
+    }
+  }
 }
-
 @mixin _placeholder {
-    &::-webkit-input-placeholder {
-        @content;
-    }
-    &:-moz-placeholder {
-        @content;
-    }
-}
+  &:-moz-placeholder {
+    @content;
+  }
 
+  &::-webkit-input-placeholder {
+    @content;
+  }
+}
 @mixin _clear {
-    zoom: 1;
-    &:before, &:after {
-        content: "";
-        display: table;
-    }
-    &:after {
-        clear: both;
-    }
+  zoom: 1;
+
+  &:after {
+    clear: both;
+  }
+
+  &:after,
+  &:before {
+    content: "";
+    display: table;
+  }
 }
 
 $legend-border-color: #E0E0E0;
+@mixin grid-form($max-columns: 12, $font-size-large: 1.0rem, $legend-color: lighten(#333, 5%), $field-padding: 8px, $label-font-size: 0.8rem, $grid-border-color: #333, $label-color: #333, $field-focus-color: darken(#FFFDED, 5%)) {
 
-@mixin grid-form($max-columns: 12, $font-size-large: 1.0rem, $legend-color: lighten(#333, 5%),
-    $field-padding: 8px, $label-font-size: 0.8rem, $grid-border-color: #333,
-    $label-color: #333, $field-focus-color: darken(#FFFDED, 5%)) {
+  // Sacrifice compatibility with IE7 and below to use the border-box model
+  *,
+  *:after,
+  *:before {
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+  }
 
-    // Sacrifice compatibility with IE7 and below to use the border-box model
-    *, *:before, *:after {
-        -webkit-box-sizing: border-box;
-        -moz-box-sizing: border-box;
-        box-sizing: border-box;
+  .delete-key,
+  .delete-subkey {
+    color: #aaa;
+    font-size: 9px;
+  }
+
+  .delete-key:hover,
+  .delete-subkey:hover {
+    color: #f00;
+  }
+
+  .form-row {
+    border-bottom: 1px solid $grid-border-color;
+    display: flex;
+    @include _breakpoints(0, 700px) {
+      border-bottom: none;
+      flex-direction: column;
+      padding: 0;
     }
-    // Fields cannot be spaced away from the grid (clear out margins/padding)
-    // Field font sizes need to be applied here
-    input[type="text"], input[type="email"], input[type="number"],
-    input[type="password"], input[type="search"], input[type="tel"],
-    input[type="url"], input[type="color"], input[type="date"],
-    input[type="datetime"], input[type="datetime-local"],
-    input[type="month"], input[type="time"], input[type="week"], textarea, select {
-        font-size: $font-size-large;
-        padding: 0;
-        margin: 0;
-        width: 100%;
-    }
-    // Remove backgrounds and borders from fields
-    input[type="text"], input[type="email"], input[type="number"],
-    input[type="password"], input[type="search"], input[type="tel"],
-    input[type="url"], input[type="color"], input[type="date"],
-    input[type="datetime"], input[type="datetime-local"],
-    input[type="month"], input[type="time"], input[type="week"], textarea {
-        border: 0;
-        background: transparent;
-        +_placeholder {
-            font-weight: 100;
-            color: lighten($label-color, 15%);
+    @include _clear;
+
+    .form-group {
+      flex-grow: 1;
+      float: left;
+      padding: $field-padding;
+      @include _breakpoints(0, 700px) {
+        border-bottom: 1px solid #cdcdcd;
+      }
+      @include _breakpoints(700px) {
+        border-right: 1px solid $grid-border-color;
+        display: block;
+      }
+
+      &.focus {
+        background: $field-focus-color;
+
+        label {
+          color: darken($label-color, 5%);
         }
-        &:focus {
-            outline: none;
+      }
+
+      &:hover {
+        cursor: text;
+      }
+
+      &:last-child {
+        border-right: none;
+      }
+
+      .error,
+      .help {
+        background-color: #C04040;
+        border-bottom: 3px solid #8B3131;
+        color: #fff;
+        display: inline-block;
+        font-size: 0.8rem;
+        font-weight: bold;
+        margin-top: 6px;
+        padding: 4px 10px 2px;
+
+        i {
+          margin-right: 5px;
         }
+      }
+
+      .help {
+        background-color: #47868B;
+        border-bottom: 3px solid #3A6F73;
+        display: table;
+        padding-top: 5px;
+      }
+
+      label:first-child {
+        color: $label-color;
+        display: block;
+        font-size: $label-font-size;
+        letter-spacing: 1px;
+        margin-bottom: 4px;
+        margin-top: 0;
+        text-transform: uppercase;
+
+        &:hover {
+          cursor: text;
+        }
+      }
     }
-    input[type="file"] {
-      font-family: "a-mono";
-      font-size: 13px;
-    }
-    // Set select max-width
-    select {
-        max-width: 200px;
-    }
+  }
+
+  fieldset {
+    border: none;
+    margin: 0;
+    padding: 0;
+
     fieldset {
-        border: none;
-        padding: 0;
-        margin: 0;
-        legend {
-            border: none;
-            border-bottom: 4px solid $legend-border-color;
-            color: $legend-color;
-            font-size: $font-size-large;
-            font-weight: bold;
-            padding-bottom: 5px;
-            padding-left: 10px;
-            position: static;
-            width: 100%;
-            text-transform: capitalize;
-        }
-        fieldset {
-          background-color: #F6FDF1;
+      background-color: #F6FDF1;
 
-            legend {
-                border-bottom: 2px solid $legend-border-color;
-                font-weight: normal;
-                background-color: #F6FDF1;
-                font-size: $font-size-large - 0.1rem;
-            }
-            fieldset legend {
-                border-bottom: 1px solid $legend-border-color;
-                font-weight: normal;
-                font-size: $font-size-large - 0.2rem;
-            }
-        }
-    }
-    .form-row {
-        display: flex;
-        border-bottom: 1px solid $grid-border-color;
-        @include _clear;
-        @include _breakpoints(0, 700px) {
-            border-bottom: none;
-            flex-direction: column;
-            padding: 0;
-        }
-        .form-group {
-            flex-grow: 1;
-            padding: $field-padding;
-            float: left;
+      fieldset legend {
+        border-bottom: 1px solid $legend-border-color;
+        font-size: $font-size-large - 0.2rem;
+        font-weight: normal;
+      }
 
-            @include _breakpoints(700px) {
-                border-right: 1px solid $grid-border-color;
-                display: block;
-            }
-
-            @include _breakpoints(0, 700px) {
-                border-bottom: 1px solid #cdcdcd;
-            }
-
-            label:first-child {
-                margin-top: 0;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                font-size: $label-font-size;
-                color: $label-color;
-                display: block;
-                margin-bottom: 4px;
-                &:hover {
-                    cursor: text;
-                }
-            }
-            &:last-child {
-                border-right: none;
-            }
-            &.focus {
-                background: $field-focus-color;
-                label {
-                    color: darken($label-color, 5%);
-                }
-            }
-            &:hover {
-                background: lighten($field-focus-color, 5%);
-                cursor: text;
-            }
-            .error, .help {
-                padding-top: 4px;
-                border-bottom: 3px solid #8B3131;
-                margin-top: 6px;
-                font-size: 0.8rem;
-                color: #fff;
-                background-color: #C04040;
-                font-weight: bold;
-                padding: 2px 10px;
-                display: inline-block;
-
-                i {
-                    margin-right: 5px;
-                }
-            }
-            .help {
-                display: table;
-                padding-top: 5px;
-                background-color: #47868B;
-                border-bottom: 3px solid #3A6F73;
-            }
-        }
+      legend {
+        background-color: #F6FDF1;
+        border-bottom: 2px solid $legend-border-color;
+        font-size: $font-size-large - 0.1rem;
+        font-weight: normal;
+      }
     }
 
-    .delete-subkey:hover,
-    .delete-key:hover {
-        color: #f00;
+    legend {
+      border: none;
+      border-bottom: 4px solid $legend-border-color;
+      color: $legend-color;
+      font-size: $font-size-large;
+      font-weight: bold;
+      padding-bottom: 5px;
+      padding-left: 10px;
+      position: static;
+      text-transform: capitalize;
+      width: 100%;
     }
-    .delete-subkey,
-    .delete-key {
-        font-size: 9px;
-        color: #aaa;
+  }
+  // Fields cannot be spaced away from the grid (clear out margins/padding)
+  // Field font sizes need to be applied here
+  input[type="color"],
+  input[type="date"],
+  input[type="datetime"],
+  input[type="datetime-local"],
+  input[type="email"],
+  input[type="month"],
+  input[type="number"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="text"],
+  input[type="time"],
+  input[type="url"],
+  input[type="week"],
+  select,
+  textarea {
+    font-size: $font-size-large;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+  }
+  // Remove backgrounds and borders from fields
+  input[type="color"],
+  input[type="date"],
+  input[type="datetime"],
+  input[type="datetime-local"],
+  input[type="email"],
+  input[type="month"],
+  input[type="number"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="text"],
+  input[type="time"],
+  input[type="url"],
+  input[type="week"],
+  textarea {
+    background: transparent;
+    border: 0;
+
+    &:focus {
+      outline: none;
     }
+
+    +_placeholder {
+      color: lighten($label-color, 15%);
+      font-weight: 100;
+    }
+  }
+
+  input[type="file"] {
+    font-family: "a-mono";
+    font-size: 13px;
+  }
+  // Set select max-width
+  select {
+    max-width: 200px;
+  }
 }
 
 // Create Grid Form
 .grid-form {
-   @include grid-form($field-padding: 12px, $label-font-size: 0.8rem, $grid-border-color: #cdcdcd);
+  @include grid-form($field-padding: 12px, $label-font-size: 0.8rem, $grid-border-color: #cdcdcd);
 }
 
 form.grid-form {
