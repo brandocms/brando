@@ -15,8 +15,9 @@ defmodule Brando.Plug.Uploads do
     param = Map.get(conn.params, required_key)
 
     case module.check_for_uploads(module, param) do
-      {:ok, image_fields} ->
-        param  = handle_image_fields(param, image_fields)
+      {:ok, fields} ->
+        Logger.debug(inspect fields)
+        param  = handle_fields(param, fields)
         params = Map.put(conn.params, required_key, param)
         %{conn | params: params}
       {:error, errors} ->
@@ -27,9 +28,9 @@ defmodule Brando.Plug.Uploads do
     end
   end
 
-  defp handle_image_fields(param, image_fields) do
-    Enum.reduce image_fields, param, fn ({name, image_field}, acc) ->
-      Map.put(acc, name, image_field)
+  defp handle_fields(param, fields) do
+    Enum.reduce fields, param, fn ({name, field}, acc) ->
+      Map.put(acc, name, field)
     end
   end
 end

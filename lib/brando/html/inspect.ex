@@ -137,6 +137,14 @@ defmodule Brando.HTML.Inspect do
        </div>)
   end
 
+  defp do_inspect_field(_name, Brando.Type.File, nil) do
+    ~s(<em>#{gettext("No connected file")}</em>)
+  end
+
+  defp do_inspect_field(_name, Brando.Type.File, value) do
+    ~s(<i class="fa fa-file m-r-sm"> </i> #{value.path})
+  end
+
   defp do_inspect_field(_name, Brando.Type.Status, value) do
     status =
       case value do

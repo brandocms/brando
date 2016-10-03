@@ -14,7 +14,7 @@ defmodule <%= application_module %>.Villain.Parser do
     h = header(%{"text" => text, "level" => level})
     ~s(<a name="#{anchor}"></a>#{h})
   end
-  
+
   def header(%{"text" => text, "level" => level}) do
     header_size = "h#{level}"
     "<#{header_size}>" <> text <> "</#{header_size}>"
@@ -34,9 +34,12 @@ defmodule <%= application_module %>.Villain.Parser do
           text
         "lead" ->
           byte_size(text) > 0 && text <> "\n{: .lead}" || text
-        _ ->
+        "paragraph" ->
           text
+        type ->
+          byte_size(text) > 0 && text <> "\n{: .#{type}}" || text
       end
+
     Earmark.to_html(text, %Earmark.Options{breaks: true})
   end
 
