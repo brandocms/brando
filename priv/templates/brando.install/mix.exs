@@ -65,7 +65,7 @@ defmodule <%= application_module %>.Mixfile do
      {:timex, "~> 3.0"},
 
      # release management and production tools
-     {:distillery, "~> 0.9"},
+     {:distillery, "~> 0.10"},
      {:recon, github: "ferd/recon"},
      {:hrafn, github: "twined/hrafn"},
 
