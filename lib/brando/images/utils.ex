@@ -171,21 +171,19 @@ defmodule Brando.Images.Utils do
         size_cfg
       end
 
-    modifier    = String.ends_with?(size_cfg["size"], ~w(< > ^ % ! @)) && "" || ">"
+    modifier    = String.ends_with?(size_cfg["size"], ~w(< > ^ % ! @)) && "" || "^"
     fill        = size_cfg["fill"] && "-background #{size_cfg["fill"]} " || ""
     crop_string = "#{size_cfg["size"]}#{modifier} " <>
                   "#{fill}-gravity center -extent #{size_cfg["size"]}"
 
     if size_cfg["crop"] do
       image
-      |> Mogrify.copy
       |> Mogrify.resize(crop_string)
-      |> Mogrify.save(image_dest)
+      |> Mogrify.save(path: image_dest)
     else
       image
-      |> Mogrify.copy
-      |> Mogrify.resize(size_cfg["size"])
-      |> Mogrify.save(image_dest)
+      |> Mogrify.resize_to_limit(size_cfg["size"])
+      |> Mogrify.save(path: image_dest)
     end
   end
 
