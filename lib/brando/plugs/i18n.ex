@@ -12,9 +12,6 @@ defmodule Brando.Plug.I18n do
   """
   @spec put_locale(Plug.Conn.t, Keyword.t) :: Plug.Conn.t
   def put_locale(%{private: %{plug_session: %{"language" => language}}} = conn, []) do
-    require Logger
-    Logger.error "put_locale w session"
-    Logger.error "language is #{language}"
     language = extract_language_from_path(conn) || language
     Brando.I18n.put_locale_for_all_modules(language)
     assign_language(conn, language)
