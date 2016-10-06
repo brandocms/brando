@@ -4,6 +4,7 @@
   * Add precooked `web.ex` to installer templates
   * Add `DateTimeHelpers` to installer templates
   * Add `put_title` to HTML plug
+  * Add Timex to installer template
   * Upgrade Villain
 
 * Bug fixes
