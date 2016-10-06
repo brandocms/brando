@@ -171,9 +171,8 @@ defmodule Brando.Images.Utils do
         size_cfg
       end
 
-    modifier    = String.ends_with?(size_cfg["size"], ~w(< > ^ % ! @)) && "" || "^"
     fill        = size_cfg["fill"] && "-background #{size_cfg["fill"]} " || ""
-    crop_string = "#{size_cfg["size"]}#{modifier} " <>
+    crop_string = "#{size_cfg["size"]} " <>
                   "#{fill}-gravity center -extent #{size_cfg["size"]}"
 
     if size_cfg["crop"] do
