@@ -26,10 +26,6 @@ defmodule Brando.Plug.I18n do
     language = extract_language_from_path(conn) || Brando.config(:default_language)
     Brando.I18n.put_locale_for_all_modules(language)
 
-    require Logger
-    Logger.error "put_locale []"
-    Logger.error "language is #{language}"
-
     conn
     |> put_language(language)
     |> assign_language(language)
