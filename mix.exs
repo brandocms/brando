@@ -52,7 +52,7 @@ defmodule Brando.Mixfile do
     {:earmark, "~> 1.0", override: true},
     {:gettext, "~> 0.11"},
     {:httpoison, "~> 0.9"},
-    {:mogrify, "~> 0.4"},
+    {:mogrify, github: "twined/mogrify"},
     {:phoenix, "~> 1.2.0"},
     {:phoenix_html, "~> 2.5"},
     {:poison, "~> 2.0"},
