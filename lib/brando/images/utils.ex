@@ -162,7 +162,7 @@ defmodule Brando.Images.Utils do
     size_cfg =
       if Map.has_key?(size_cfg, "portrait") do
         image_info = Mogrify.verbose(image)
-        if String.to_integer(image_info.height) > String.to_integer(image_info.width) do
+        if image_info.height > image_info.width do
           size_cfg["portrait"]
         else
           size_cfg["landscape"]
