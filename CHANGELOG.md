@@ -9,6 +9,7 @@
 
 * Bug fixes
   * Fix `sequenced` installer templates
+  * Fix image_series configuration not honoring new config.
 
 ## v0.34.0 (2016-09-01)
 
