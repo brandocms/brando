@@ -31,7 +31,7 @@ table {
   background-color: transparent;
 }
 
-th {
+.table > thead > tr > th {
   text-align: left;
 
   &.text-center {
