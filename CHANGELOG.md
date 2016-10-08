@@ -1,4 +1,4 @@
-## v0.35.0-dev (2016-XX-XX)
+## v0.35.0 (2016-10-08)
 
 * Enhancements
   * Add precooked `web.ex` to installer templates

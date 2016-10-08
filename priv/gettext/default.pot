@@ -109,7 +109,7 @@ msgstr ""
 msgid "Delete user"
 msgstr ""
 
-#: lib/brando/html.ex:354 lib/brando/html/inspect.ex:146
+#: lib/brando/html.ex:354 lib/brando/html/inspect.ex:154
 msgid "Deleted"
 msgstr ""
 
@@ -355,7 +355,7 @@ msgstr ""
 msgid "Add new"
 msgstr ""
 
-#: web/menus/images_menu.ex:10 web/models/image_series.ex:152
+#: web/menus/images_menu.ex:10 web/models/image_series.ex:150
 msgid "Images"
 msgstr ""
 
@@ -367,11 +367,11 @@ msgstr ""
 msgid "Users"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:152
+#: lib/brando/html/inspect.ex:160
 msgid "** censored **"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:234
+#: lib/brando/html/inspect.ex:242
 msgid "Association not fetched"
 msgstr ""
 
@@ -379,11 +379,11 @@ msgstr ""
 msgid "Avatar"
 msgstr ""
 
-#: web/models/image_category.ex:123
+#: web/models/image_category.ex:120
 msgid "Config"
 msgstr ""
 
-#: web/models/image_series.ex:148
+#: web/models/image_series.ex:146
 msgid "Configuration"
 msgstr ""
 
@@ -395,28 +395,28 @@ msgstr ""
 msgid "Confirm"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:252
+#: lib/brando/html/inspect.ex:260
 msgid "Connected"
 msgstr ""
 
-#: web/models/image.ex:134 web/models/image_category.ex:124
-#: web/models/image_series.ex:151
+#: web/models/image.ex:131 web/models/image_category.ex:121
+#: web/models/image_series.ex:149
 msgid "Creator"
 msgstr ""
 
-#: web/models/image_series.ex:149
+#: web/models/image_series.ex:147
 msgid "Credits"
 msgstr ""
 
-#: lib/brando/html.ex:348 lib/brando/html/inspect.ex:145
+#: lib/brando/html.ex:348 lib/brando/html/inspect.ex:153
 msgid "Draft"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:228 lib/brando/html/inspect.ex:237
+#: lib/brando/html/inspect.ex:236 lib/brando/html/inspect.ex:245
 msgid "Empty association"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:123 lib/brando/html/inspect.ex:178
+#: lib/brando/html/inspect.ex:123 lib/brando/html/inspect.ex:186
 msgid "Encoded value"
 msgstr ""
 
@@ -424,25 +424,25 @@ msgstr ""
 msgid "Full name"
 msgstr ""
 
-#: web/models/image.ex:131 web/models/image_category.ex:120
-#: web/models/image_series.ex:145 web/models/user.ex:189
+#: web/models/image.ex:128 web/models/image_category.ex:117
+#: web/models/image_series.ex:143 web/models/user.ex:189
 msgid "ID"
 msgstr ""
 
-#: web/models/image.ex:132
+#: web/models/image.ex:129
 msgid "Image"
 msgstr ""
 
-#: web/models/image_series.ex:153 web/models/image_series.ex:154
+#: web/models/image_series.ex:151 web/models/image_series.ex:152
 msgid "Image category"
 msgstr ""
 
-#: web/models/image.ex:135 web/models/image_category.ex:125
+#: web/models/image.ex:132 web/models/image_category.ex:122
 msgid "Image series"
 msgstr ""
 
-#: web/models/image.ex:136 web/models/image_category.ex:126
-#: web/models/image_series.ex:155 web/models/user.ex:197
+#: web/models/image.ex:133 web/models/image_category.ex:123
+#: web/models/image_series.ex:153 web/models/user.ex:197
 msgid "Inserted at"
 msgstr ""
 
@@ -454,7 +454,7 @@ msgstr ""
 msgid "Last login"
 msgstr ""
 
-#: web/models/image_category.ex:121 web/models/image_series.ex:146
+#: web/models/image_category.ex:118 web/models/image_series.ex:144
 msgid "Name"
 msgstr ""
 
@@ -467,15 +467,15 @@ msgid "No results"
 msgstr ""
 
 #: lib/brando/html/inspect.ex:95 lib/brando/html/inspect.ex:103
-#: lib/brando/html/inspect.ex:182
+#: lib/brando/html/inspect.ex:190
 msgid "No value"
 msgstr ""
 
-#: lib/brando/html.ex:342 lib/brando/html/inspect.ex:144
+#: lib/brando/html.ex:342 lib/brando/html/inspect.ex:152
 msgid "Pending"
 msgstr ""
 
-#: lib/brando/html.ex:336 lib/brando/html/inspect.ex:143
+#: lib/brando/html.ex:336 lib/brando/html/inspect.ex:151
 msgid "Published"
 msgstr ""
 
@@ -487,20 +487,20 @@ msgstr ""
 msgid "Roles"
 msgstr ""
 
-#: lib/brando/form/fields.ex:91 lib/brando/images/utils.ex:355
+#: lib/brando/form/fields.ex:91 lib/brando/images/utils.ex:353
 msgid "Save"
 msgstr ""
 
-#: web/models/image.ex:133 web/models/image_series.ex:150
+#: web/models/image.ex:130 web/models/image_series.ex:148
 msgid "Sequence"
 msgstr ""
 
-#: web/models/image_category.ex:122 web/models/image_series.ex:147
+#: web/models/image_category.ex:119 web/models/image_series.ex:145
 msgid "Slug"
 msgstr ""
 
-#: web/models/image.ex:137 web/models/image_category.ex:127
-#: web/models/image_series.ex:156 web/models/user.ex:198
+#: web/models/image.ex:134 web/models/image_category.ex:124
+#: web/models/image_series.ex:154 web/models/user.ex:198
 msgid "Updated at"
 msgstr ""
 
@@ -524,31 +524,31 @@ msgstr ""
 msgid "has invalid format"
 msgstr ""
 
-#: web/models/image.ex:127
+#: web/models/image.ex:124
 msgid "image"
 msgstr ""
 
-#: web/models/image_category.ex:117
+#: web/models/image_category.ex:114
 msgid "image categories"
 msgstr ""
 
-#: web/models/image_category.ex:116
+#: web/models/image_category.ex:113
 msgid "image category"
 msgstr ""
 
-#: web/models/image_series.ex:142
+#: web/models/image_series.ex:140
 msgid "image(s)"
 msgstr ""
 
-#: web/models/image.ex:128
+#: web/models/image.ex:125
 msgid "images"
 msgstr ""
 
-#: web/models/image_series.ex:137
+#: web/models/image_series.ex:135
 msgid "imageserie"
 msgstr ""
 
-#: web/models/image_series.ex:138
+#: web/models/image_series.ex:136
 msgid "imageseries"
 msgstr ""
 
@@ -588,19 +588,19 @@ msgstr ""
 msgid "Delete"
 msgstr ""
 
-#: lib/brando/images/upload.ex:64
+#: lib/brando/files/upload.ex:75 lib/brando/images/upload.ex:64
 msgid "Empty filename given. Make sure you have a valid filename."
 msgstr ""
 
-#: lib/brando/images/upload.ex:105
+#: lib/brando/files/upload.ex:116 lib/brando/images/upload.ex:105
 msgid "Error while copying"
 msgstr ""
 
-#: lib/brando/images/upload.ex:76
+#: lib/brando/files/upload.ex:87 lib/brando/images/upload.ex:76
 msgid "File type not allowed"
 msgstr ""
 
-#: lib/brando/images/upload.ex:87
+#: lib/brando/files/upload.ex:98 lib/brando/images/upload.ex:87
 msgid "Path creation failed"
 msgstr ""
 
@@ -648,7 +648,7 @@ msgstr ""
 msgid "You are trying to authorize from an insecure URL. <a href=\"%{url}\">Please try again from this URL</a> or proceed at your own risk!"
 msgstr ""
 
-#: lib/brando/images/utils.ex:317
+#: lib/brando/images/utils.ex:315
 msgid "Allowed mimetypes"
 msgstr ""
 
@@ -661,7 +661,7 @@ msgstr ""
 msgid "Configuration updated"
 msgstr ""
 
-#: lib/brando/images/utils.ex:322
+#: lib/brando/images/utils.ex:320
 msgid "Default size"
 msgstr ""
 
@@ -669,7 +669,7 @@ msgstr ""
 msgid "Propagate configuration to dependent image series"
 msgstr ""
 
-#: lib/brando/images/utils.ex:326
+#: lib/brando/images/utils.ex:324
 msgid "Random filename"
 msgstr ""
 
@@ -681,11 +681,11 @@ msgstr ""
 msgid "Recreated sizes for image series"
 msgstr ""
 
-#: lib/brando/images/utils.ex:331
+#: lib/brando/images/utils.ex:329
 msgid "Size limit"
 msgstr ""
 
-#: lib/brando/images/utils.ex:337
+#: lib/brando/images/utils.ex:335
 msgid "Upload path"
 msgstr ""
 
@@ -761,23 +761,23 @@ msgstr ""
 msgid "Propagating configuration"
 msgstr ""
 
-#: lib/brando/images/utils.ex:347
+#: lib/brando/images/utils.ex:345
 msgid "Add master key (portrait/landscape)"
 msgstr ""
 
-#: lib/brando/images/utils.ex:344
+#: lib/brando/images/utils.ex:342
 msgid "Add master key (standard)"
 msgstr ""
 
-#: lib/brando/images/utils.ex:420
+#: lib/brando/images/utils.ex:418
 msgid "Orientation"
 msgstr ""
 
-#: lib/brando/images/utils.ex:392
+#: lib/brando/images/utils.ex:390
 msgid "key"
 msgstr ""
 
-#: lib/brando/images/utils.ex:400
+#: lib/brando/images/utils.ex:398
 msgid "masterkey"
 msgstr ""
 
@@ -787,4 +787,8 @@ msgstr ""
 
 #: web/templates/error/bad_request.html.eex:3
 msgid "Bad request"
+msgstr ""
+
+#: lib/brando/html/inspect.ex:141
+msgid "No connected file"
 msgstr ""
