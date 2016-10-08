@@ -10,9 +10,6 @@ defmodule Brando.Image do
   use Brando.Images.Upload
   use Brando.Sequence, :model
 
-  alias Brando.User
-  alias Brando.ImageSeries
-
   import Brando.Gettext
   import Brando.Utils.Model, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
@@ -23,8 +20,8 @@ defmodule Brando.Image do
 
   schema "images" do
     field :image, Brando.Type.Image
-    belongs_to :creator, User
-    belongs_to :image_series, ImageSeries
+    belongs_to :creator, Brando.User
+    belongs_to :image_series, Brando.ImageSeries
     sequenced
     timestamps
   end
@@ -62,7 +59,7 @@ defmodule Brando.Image do
   Create a changeset for the model by passing `params`.
   If not valid, return errors from changeset
   """
-  @spec create(%{binary => term} | %{atom => term}, User.t) :: {:ok, t} | {:error, Keyword.t}
+  @spec create(%{binary => term} | %{atom => term}, Brando.User.t) :: {:ok, t} | {:error, Keyword.t}
   def create(params, user) do
     %__MODULE__{}
     |> put_creator(user)

@@ -9,8 +9,6 @@ defmodule Brando.ImageSeries do
   use Brando.Web, :model
   use Brando.Sequence, :model
 
-  alias Brando.User
-  alias Brando.Image
   alias Brando.ImageCategory
 
   import Ecto.Query, only: [from: 2]
@@ -25,9 +23,9 @@ defmodule Brando.ImageSeries do
     field :slug, :string
     field :credits, :string
     field :cfg, Brando.Type.ImageConfig
-    belongs_to :creator, User
-    belongs_to :image_category, ImageCategory
-    has_many :images, Image
+    belongs_to :creator, Brando.User
+    belongs_to :image_category, Brando.ImageCategory
+    has_many :images, Brando.Image
     sequenced
     timestamps
   end

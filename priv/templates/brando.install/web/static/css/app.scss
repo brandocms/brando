@@ -2,13 +2,10 @@
  * Application-specific SCSS.
  * (c) twined 2016
  */
-
 @import "bootstrap-sprockets";
 @import "bootstrap";
 
-body {
-
-}
+body {}
 
 p {
   font-size: 16px;
@@ -19,21 +16,24 @@ header#top {
 }
 
 a.block-link {
+  border: 1px solid #D2D2D2;
+  color: #222;
   display: inline-block;
-  text-transform: uppercase;
   font-weight: bold;
   letter-spacing: 1px;
-  width: 100%;
-  text-align: center;
-  border: 1px solid #D2D2D2;
-  padding: 22px 0;
   margin: 20px 0;
-  color: #222;
+  padding: 22px 0;
+  text-align: center;
+  text-transform: uppercase;
+  width: 100%;
 }
 
-@import
-  "includes/colorbox",
-  "includes/cookielaw",
-  "includes/dropdown",
-  "includes/instagram",
-  "includes/nav";
+/**
+ * Imports
+ */
+@import "includes/general";
+@import "includes/colorbox";
+@import "includes/cookielaw";
+@import "includes/dropdown";
+@import "includes/instagram";
+@import "includes/nav";

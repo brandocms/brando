@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.34.0"
+  @version "0.35.0"
   @description "Boilerplate for Twined applications."
 
   def project do
@@ -52,7 +52,7 @@ defmodule Brando.Mixfile do
     {:earmark, "~> 1.0", override: true},
     {:gettext, "~> 0.11"},
     {:httpoison, "~> 0.9"},
-    {:mogrify, github: "twined/mogrify"},
+    {:mogrify, "~> 0.4"},
     {:phoenix, "~> 1.2.0"},
     {:phoenix_html, "~> 2.5"},
     {:poison, "~> 2.0"},

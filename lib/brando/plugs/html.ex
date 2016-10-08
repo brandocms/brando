@@ -41,4 +41,11 @@ defmodule Brando.Plug.HTML do
   def put_css_classes(conn, _) do
     conn
   end
+
+  @doc """
+  Adds `title` to `conn`'s assigns as 'page_title`
+  """
+  def put_title(conn, title) do
+    assign(conn, :page_title, title)
+  end
 end

@@ -162,7 +162,7 @@ defmodule Brando.Images.Utils do
     size_cfg =
       if Map.has_key?(size_cfg, "portrait") do
         image_info = Mogrify.verbose(image)
-        if String.to_integer(image_info.height) > String.to_integer(image_info.width) do
+        if image_info.height > image_info.width do
           size_cfg["portrait"]
         else
           size_cfg["landscape"]
@@ -178,14 +178,12 @@ defmodule Brando.Images.Utils do
 
     if size_cfg["crop"] do
       image
-      |> Mogrify.copy
       |> Mogrify.resize(crop_string)
-      |> Mogrify.save(image_dest)
+      |> Mogrify.save(path: image_dest)
     else
       image
-      |> Mogrify.copy
-      |> Mogrify.resize(size_cfg["size"])
-      |> Mogrify.save(image_dest)
+      |> Mogrify.resize_to_limit(size_cfg["size"])
+      |> Mogrify.save(path: image_dest)
     end
   end
 

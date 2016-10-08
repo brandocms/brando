@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 1.8.6\n"
+"X-Generator: Poedit 1.8.8\n"
 "X-Poedit-SourceCharset: UTF-8\n"
 
 #: web/templates/admin/dashboard/dashboard.html.eex:3
@@ -123,7 +123,7 @@ msgstr "Slett bilder"
 msgid "Delete user"
 msgstr "Slett bruker"
 
-#: lib/brando/html.ex:354 lib/brando/html/inspect.ex:146
+#: lib/brando/html.ex:354 lib/brando/html/inspect.ex:154
 msgid "Deleted"
 msgstr "Slettet"
 
@@ -369,7 +369,7 @@ msgstr "slettet"
 msgid "Add new"
 msgstr "Legg til"
 
-#: web/menus/images_menu.ex:10 web/models/image_series.ex:152
+#: web/menus/images_menu.ex:10 web/models/image_series.ex:150
 msgid "Images"
 msgstr "Bilder"
 
@@ -381,11 +381,11 @@ msgstr "Oversikt"
 msgid "Users"
 msgstr "Brukere"
 
-#: lib/brando/html/inspect.ex:152
+#: lib/brando/html/inspect.ex:160
 msgid "** censored **"
 msgstr "** sensurert **"
 
-#: lib/brando/html/inspect.ex:234
+#: lib/brando/html/inspect.ex:242
 msgid "Association not fetched"
 msgstr "Forbindelse ikke hentet"
 
@@ -393,11 +393,11 @@ msgstr "Forbindelse ikke hentet"
 msgid "Avatar"
 msgstr "Profilbilde"
 
-#: web/models/image_category.ex:123
+#: web/models/image_category.ex:120
 msgid "Config"
 msgstr "Konfigurer"
 
-#: web/models/image_series.ex:148
+#: web/models/image_series.ex:146
 msgid "Configuration"
 msgstr "Konfigurasjon"
 
@@ -409,28 +409,28 @@ msgstr "Konfigurasjonsdata"
 msgid "Confirm"
 msgstr "Bekreft"
 
-#: lib/brando/html/inspect.ex:252
+#: lib/brando/html/inspect.ex:260
 msgid "Connected"
 msgstr "Tilkoblet"
 
-#: web/models/image.ex:134 web/models/image_category.ex:124
-#: web/models/image_series.ex:151
+#: web/models/image.ex:131 web/models/image_category.ex:121
+#: web/models/image_series.ex:149
 msgid "Creator"
 msgstr "Skaper"
 
-#: web/models/image_series.ex:149
+#: web/models/image_series.ex:147
 msgid "Credits"
 msgstr "Krediteringer"
 
-#: lib/brando/html.ex:348 lib/brando/html/inspect.ex:145
+#: lib/brando/html.ex:348 lib/brando/html/inspect.ex:153
 msgid "Draft"
 msgstr "Kladd"
 
-#: lib/brando/html/inspect.ex:228 lib/brando/html/inspect.ex:237
+#: lib/brando/html/inspect.ex:236 lib/brando/html/inspect.ex:245
 msgid "Empty association"
 msgstr "Tom forbindelse"
 
-#: lib/brando/html/inspect.ex:123 lib/brando/html/inspect.ex:178
+#: lib/brando/html/inspect.ex:123 lib/brando/html/inspect.ex:186
 msgid "Encoded value"
 msgstr "Kodet verdi"
 
@@ -438,25 +438,25 @@ msgstr "Kodet verdi"
 msgid "Full name"
 msgstr "Fullt navn"
 
-#: web/models/image.ex:131 web/models/image_category.ex:120
-#: web/models/image_series.ex:145 web/models/user.ex:189
+#: web/models/image.ex:128 web/models/image_category.ex:117
+#: web/models/image_series.ex:143 web/models/user.ex:189
 msgid "ID"
 msgstr "ID"
 
-#: web/models/image.ex:132
+#: web/models/image.ex:129
 msgid "Image"
 msgstr "Bilde"
 
-#: web/models/image_series.ex:153 web/models/image_series.ex:154
+#: web/models/image_series.ex:151 web/models/image_series.ex:152
 msgid "Image category"
 msgstr "Bildekategori"
 
-#: web/models/image.ex:135 web/models/image_category.ex:125
+#: web/models/image.ex:132 web/models/image_category.ex:122
 msgid "Image series"
 msgstr "Bildeserie"
 
-#: web/models/image.ex:136 web/models/image_category.ex:126
-#: web/models/image_series.ex:155 web/models/user.ex:197
+#: web/models/image.ex:133 web/models/image_category.ex:123
+#: web/models/image_series.ex:153 web/models/user.ex:197
 msgid "Inserted at"
 msgstr "Lagt til"
 
@@ -468,7 +468,7 @@ msgstr "Språk"
 msgid "Last login"
 msgstr "Forrige innlogging"
 
-#: web/models/image_category.ex:121 web/models/image_series.ex:146
+#: web/models/image_category.ex:118 web/models/image_series.ex:144
 msgid "Name"
 msgstr "Navn"
 
@@ -481,15 +481,15 @@ msgid "No results"
 msgstr "Ingen resultater"
 
 #: lib/brando/html/inspect.ex:95 lib/brando/html/inspect.ex:103
-#: lib/brando/html/inspect.ex:182
+#: lib/brando/html/inspect.ex:190
 msgid "No value"
 msgstr "Ingen verdi"
 
-#: lib/brando/html.ex:342 lib/brando/html/inspect.ex:144
+#: lib/brando/html.ex:342 lib/brando/html/inspect.ex:152
 msgid "Pending"
 msgstr "Venter"
 
-#: lib/brando/html.ex:336 lib/brando/html/inspect.ex:143
+#: lib/brando/html.ex:336 lib/brando/html/inspect.ex:151
 msgid "Published"
 msgstr "Publisert"
 
@@ -501,20 +501,20 @@ msgstr "Rettigheter"
 msgid "Roles"
 msgstr "Roller"
 
-#: lib/brando/form/fields.ex:91 lib/brando/images/utils.ex:355
+#: lib/brando/form/fields.ex:91 lib/brando/images/utils.ex:353
 msgid "Save"
 msgstr "Lagre"
 
-#: web/models/image.ex:133 web/models/image_series.ex:150
+#: web/models/image.ex:130 web/models/image_series.ex:148
 msgid "Sequence"
 msgstr "Sekvens"
 
-#: web/models/image_category.ex:122 web/models/image_series.ex:147
+#: web/models/image_category.ex:119 web/models/image_series.ex:145
 msgid "Slug"
 msgstr "URL-tamp"
 
-#: web/models/image.ex:137 web/models/image_category.ex:127
-#: web/models/image_series.ex:156 web/models/user.ex:198
+#: web/models/image.ex:134 web/models/image_category.ex:124
+#: web/models/image_series.ex:154 web/models/user.ex:198
 msgid "Updated at"
 msgstr "Sist oppdatert"
 
@@ -538,31 +538,31 @@ msgstr "kan ikke være tomt"
 msgid "has invalid format"
 msgstr "har ugyldig format"
 
-#: web/models/image.ex:127
+#: web/models/image.ex:124
 msgid "image"
 msgstr "bilde"
 
-#: web/models/image_category.ex:117
+#: web/models/image_category.ex:114
 msgid "image categories"
 msgstr "bildekategorier"
 
-#: web/models/image_category.ex:116
+#: web/models/image_category.ex:113
 msgid "image category"
 msgstr "bildekategori"
 
-#: web/models/image_series.ex:142
+#: web/models/image_series.ex:140
 msgid "image(s)"
 msgstr "bilde(r)"
 
-#: web/models/image.ex:128
+#: web/models/image.ex:125
 msgid "images"
 msgstr "bilder"
 
-#: web/models/image_series.ex:137
+#: web/models/image_series.ex:135
 msgid "imageserie"
 msgstr "bildeserie"
 
-#: web/models/image_series.ex:138
+#: web/models/image_series.ex:136
 msgid "imageseries"
 msgstr "bildeserier"
 
@@ -602,19 +602,19 @@ msgstr "brukere"
 msgid "Delete"
 msgstr "Slett"
 
-#: lib/brando/images/upload.ex:64
+#: lib/brando/files/upload.ex:75 lib/brando/images/upload.ex:64
 msgid "Empty filename given. Make sure you have a valid filename."
 msgstr "Tomt filnavn gitt. Kontroller at du har et gyldig filnavn."
 
-#: lib/brando/images/upload.ex:105
+#: lib/brando/files/upload.ex:116 lib/brando/images/upload.ex:105
 msgid "Error while copying"
 msgstr "Feil under kopiering"
 
-#: lib/brando/images/upload.ex:76
+#: lib/brando/files/upload.ex:87 lib/brando/images/upload.ex:76
 msgid "File type not allowed"
 msgstr "Filtypen ikke tillatt"
 
-#: lib/brando/images/upload.ex:87
+#: lib/brando/files/upload.ex:98 lib/brando/images/upload.ex:87
 msgid "Path creation failed"
 msgstr "Feil under oppretting av filbane"
 
@@ -662,7 +662,7 @@ msgstr "system"
 msgid "You are trying to authorize from an insecure URL. <a href=\"%{url}\">Please try again from this URL</a> or proceed at your own risk!"
 msgstr "Du prøver å logge inn fra en usikker adresse. <a href=\"%{url}\">Prøv fra denne adressen istedet</a> eller fortsett på eget ansvar!"
 
-#: lib/brando/images/utils.ex:317
+#: lib/brando/images/utils.ex:315
 msgid "Allowed mimetypes"
 msgstr "Tillatte mime-typer"
 
@@ -675,7 +675,7 @@ msgstr "Kategorien er forplantet"
 msgid "Configuration updated"
 msgstr "Konfigurasjonen ble oppdatert"
 
-#: lib/brando/images/utils.ex:322
+#: lib/brando/images/utils.ex:320
 msgid "Default size"
 msgstr "Standard størrelse"
 
@@ -683,7 +683,7 @@ msgstr "Standard størrelse"
 msgid "Propagate configuration to dependent image series"
 msgstr "Forplant konfigurasjonen til underliggende bildeserier"
 
-#: lib/brando/images/utils.ex:326
+#: lib/brando/images/utils.ex:324
 msgid "Random filename"
 msgstr "Vilkårlig filnavn"
 
@@ -695,11 +695,11 @@ msgstr "Gjenskap størrelser for denne serien"
 msgid "Recreated sizes for image series"
 msgstr "Gjenskapte bildestørrelser for bildeserien"
 
-#: lib/brando/images/utils.ex:331
+#: lib/brando/images/utils.ex:329
 msgid "Size limit"
 msgstr "Max størrelse"
 
-#: lib/brando/images/utils.ex:337
+#: lib/brando/images/utils.ex:335
 msgid "Upload path"
 msgstr "Opplastningsfilbane"
 
@@ -775,23 +775,23 @@ msgstr "Vennligst vent mens vi forplanter konfigurasjonen til underliggende bild
 msgid "Propagating configuration"
 msgstr "Forplanter konfigurasjonen"
 
-#: lib/brando/images/utils.ex:347
+#: lib/brando/images/utils.ex:345
 msgid "Add master key (portrait/landscape)"
 msgstr "Legg til hovednøkkel (liggende/stående)"
 
-#: lib/brando/images/utils.ex:344
+#: lib/brando/images/utils.ex:342
 msgid "Add master key (standard)"
 msgstr "Legg til hovednøkkel (standard)"
 
-#: lib/brando/images/utils.ex:420
+#: lib/brando/images/utils.ex:418
 msgid "Orientation"
 msgstr "Bildeformat"
 
-#: lib/brando/images/utils.ex:392
+#: lib/brando/images/utils.ex:390
 msgid "key"
 msgstr "nøkkel"
 
-#: lib/brando/images/utils.ex:400
+#: lib/brando/images/utils.ex:398
 msgid "masterkey"
 msgstr "hovednøkkel"
 
@@ -802,3 +802,7 @@ msgstr "Feil ved henting av skjema \"%{form}\""
 #: web/templates/error/bad_request.html.eex:3
 msgid "Bad request"
 msgstr "Ugyldig forespørsel"
+
+#: lib/brando/html/inspect.ex:141
+msgid "No connected file"
+msgstr "Ingen tilkoblet fil"

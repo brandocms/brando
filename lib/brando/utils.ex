@@ -312,6 +312,19 @@ defmodule Brando.Utils do
   end
 
   @doc """
+  Grabs `path` from the file field struct
+  """
+  def file_url(file_field, opts \\ [])
+  def file_url(nil, _) do
+    nil
+  end
+
+  def file_url(file_field, opts) do
+    prefix = Keyword.get(opts, :prefix, nil)
+    prefix && Path.join([prefix, file_field.path]) || file_field.path
+  end
+
+  @doc """
   Grabs `size` from the `image_field` json struct.
   If default is passed, return size_dir of `default`.
   Can also be passed `:original` as `size` to pass unmodified image.

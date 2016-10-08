@@ -1,4 +1,4 @@
                 <%= render(Brando.ErrorView, "top.html", assigns) %>
                 <h1 id="app-name"><%= gettext("Error") %></h1>
-                <code style="display: block; padding: 10px 0 30px;"><%= @reason.message %></code>
+                <code style="display: block; padding: 10px 0 30px;"><%= Map.get(@reason, :message) || "--" %></code>
                 <%= render(Brando.ErrorView, "bottom.html", assigns) %>

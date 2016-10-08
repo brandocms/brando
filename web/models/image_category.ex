@@ -8,9 +8,6 @@ defmodule Brando.ImageCategory do
 
   use Brando.Web, :model
 
-  alias Brando.User
-  alias Brando.ImageSeries
-
   import Brando.Gettext
   import Ecto.Query, only: [from: 2]
 
@@ -21,8 +18,8 @@ defmodule Brando.ImageCategory do
     field :name, :string
     field :slug, :string
     field :cfg, Brando.Type.ImageConfig
-    belongs_to :creator, User
-    has_many :image_series, ImageSeries
+    belongs_to :creator, Brando.User
+    has_many :image_series, Brando.ImageSeries
     timestamps
   end
 

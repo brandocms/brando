@@ -126,6 +126,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     sequenced_info =
       if sequenced? do
         """
+            # insert these two after the first get route
             get    "/#{route}/sort", #{binding[:scoped]}Controller, :sequence
             post   "/#{route}/sort", #{binding[:scoped]}Controller, :sequence_post
         """

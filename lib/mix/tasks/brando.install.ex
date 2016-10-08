@@ -54,8 +54,12 @@ defmodule Mix.Tasks.Brando.Install do
     {:keep, "templates/brando.install/logs", "priv/static/gettext/frontend"},
     {:eex,  "templates/brando.install/web/gettext.ex", "web/gettext.ex"},
 
-    # Admin web.ex
-    {:eex, "templates/brando.install/web/admin_web.ex", "web/admin_web.ex"}
+    # Frontend helpers
+    {:eex,  "templates/brando.install/web/helpers/date_time_helpers.ex", "web/helpers/date_time_helpers"},
+
+    # Web helpers for admin and frontend
+    {:eex, "templates/brando.install/web/admin_web.ex", "web/admin_web.ex"},
+    {:eex, "templates/brando.install/web/web.ex", "web/web.ex"},
   ]
 
   @static [
@@ -79,6 +83,7 @@ defmodule Mix.Tasks.Brando.Install do
     # Frontend SCSS
     {:copy, "templates/brando.install/web/static/css/app.scss", "web/static/css/app.scss"},
     {:copy, "templates/brando.install/web/static/css/custom/brando.custom.scss", "web/static/css/custom/brando.custom.scss"},
+    {:copy, "templates/brando.install/web/static/css/includes/_general.scss", "web/static/css/includes/_general.scss"},
     {:copy, "templates/brando.install/web/static/css/includes/_colorbox.scss", "web/static/css/includes/_colorbox.scss"},
     {:copy, "templates/brando.install/web/static/css/includes/_cookielaw.scss", "web/static/css/includes/_cookielaw.scss"},
     {:copy, "templates/brando.install/web/static/css/includes/_dropdown.scss", "web/static/css/includes/_dropdown.scss"},

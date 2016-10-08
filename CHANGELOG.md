@@ -1,3 +1,16 @@
+## v0.35.0 (2016-10-08)
+
+* Enhancements
+  * Add precooked `web.ex` to installer templates
+  * Add `DateTimeHelpers` to installer templates
+  * Add `put_title` to HTML plug
+  * Add Timex to installer template
+  * Upgrade Villain
+
+* Bug fixes
+  * Fix `sequenced` installer templates
+  * Fix image_series configuration not honoring new config.
+
 ## v0.34.0 (2016-09-01)
 
 * Enhancements
