@@ -7,7 +7,7 @@
   5. Bump version in `README.md` installation instructions (if we add to hex)
   6. Update translations:
      `$ mix gettext.extract && mix gettext.merge priv/gettext`
-  7. Update villain_brando if neccessary.
+  7. Update brando_villain if neccessary.
   8. `$ brunch build -p`
   9. `$ mix test`
   10. Commit with `Prepare X.X.X release`
