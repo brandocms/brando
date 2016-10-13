@@ -52,7 +52,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "templates/brando.install/web/gettext.ex", "web/gettext.ex"},
 
     # Frontend helpers
-    {:eex,  "templates/brando.install/web/helpers/date_time_helpers.ex", "web/helpers/date_time_helpers"},
+    {:eex,  "templates/brando.install/web/helpers/date_time_helpers.ex", "web/helpers/date_time_helpers.ex"},
 
     # Web helpers for admin and frontend
     {:eex, "templates/brando.install/web/admin_web.ex", "web/admin_web.ex"},
