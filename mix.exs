@@ -55,7 +55,7 @@ defmodule Brando.Mixfile do
     {:mogrify, "~> 0.4"},
     {:phoenix, "~> 1.2.0"},
     {:phoenix_html, "~> 2.7"},
-    {:poison, "~> 2.0"},
+    {:poison, "~> 2.0 or ~> 3.0"},
     {:postgrex, "~> 0.12"},
     {:scrivener_ecto, "~> 1.0"},
     {:slugger, "~> 0.1.0"},
@@ -76,7 +76,7 @@ defmodule Brando.Mixfile do
 
   defp package do
     [maintainers: ["Twined Networks"],
-     licenses: ["MIT"],
+     licenses: [""],
      files: [
        "config",
        "lib",
