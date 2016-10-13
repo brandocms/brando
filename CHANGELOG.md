@@ -1,5 +1,10 @@
 ## v0.36.0-dev (2016-XX-XX)
 
+* Enhancements
+  * Add dependency version map to system info. Only lists brando related deps.
+    Make sure that your deps are listed under the `:applications` key and not
+    the `:included_applications` key in your project's `mix.exs`
+
 ## v0.35.0 (2016-10-08)
 
 * Enhancements
