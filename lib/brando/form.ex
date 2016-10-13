@@ -160,6 +160,7 @@ defmodule Brando.Form do
           type:      Keyword.fetch!(opts, :type)
         }
 
+        # :url is not used, but we stick it in there as a fallback anyway.
         form
         |> render_fields
         |> render_form
