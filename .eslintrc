@@ -1,11 +1,13 @@
 {
-  // I want to use babel-eslint for parsing!
   "parser": "babel-eslint",
   "env": {
-    // I write for browser
-    "browser": true,
-    // in CommonJS
-    "node": true
+    "browser": true
+  },
+  "rules": {
+    // enable additional rules
+    "indent": [2, 2],
+    "quotes": [2, "single"],
+    "no-console": 0,
   },
   "extends": "eslint:recommended"
 }
