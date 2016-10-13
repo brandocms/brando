@@ -1,5 +1,3 @@
-'use strict';
-
 import $ from 'jquery';
 
 class Autoslug {
@@ -7,20 +5,20 @@ class Autoslug {
     // set up auto slug
     $('[data-slug-from]')
       .each((index, elem) => {
-        var slugFrom = $(elem)
+        const slugFrom = $(elem)
           .attr('data-slug-from');
-        $('[name="' + slugFrom + '"]')
+        $(`[name=${slugFrom}]`)
           .slugIt({
             output: $(elem),
             map: {
-              'æ': 'ae',
-              'ø': 'oe',
-              'å': 'aa'
+              æ: 'ae',
+              ø: 'oe',
+              å: 'aa',
             },
             space: '-',
-            after: function(slug) {
+            after: function afterSlugging(slug) {
               return slug.replace(/'/g, '');
-            }
+            },
           });
       });
   }

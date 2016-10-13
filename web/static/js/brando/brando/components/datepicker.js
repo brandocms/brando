@@ -1,5 +1,3 @@
-'use strict';
-
 import $ from 'jquery';
 
 class Datepicker {
@@ -11,7 +9,7 @@ class Datepicker {
         autoclose: true,
         todayHighlight: true,
         fontAwesome: true,
-        pickerPosition: 'top-right'
+        pickerPosition: 'top-right',
       });
   }
 }

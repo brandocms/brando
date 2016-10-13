@@ -1,13 +1,11 @@
-'use strict';
-
 import $ from 'jquery';
 
 class Toolbar {
   static setup() {
-    var _this = this;
+    const that = this;
     $('.toolbar .logbutton')
-      .click(function(e) {
-        _this.onClickLogButton(e, this);
+      .click(function onClick(e) {
+        that.onClickLogButton(e, this);
       });
   }
 

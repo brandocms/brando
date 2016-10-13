@@ -1,20 +1,18 @@
-'use strict';
-
 import $ from 'jquery';
 
 class ImagePreview {
   static setup() {
     $('.grid-form input[type=file]')
-      .on('change', function(e) {
+      .on('change', (e) => {
         ImagePreview.previewImage(e.target, [150], 5);
       });
   }
 
   static previewImage(el, widths, limit) {
-    var output;
-    var files = el.files;
-    var wrap = el.parentNode;
-    var imagePreviews = wrap.getElementsByClassName('image-preview');
+    let output;
+    const files = el.files;
+    const wrap = el.parentNode;
+    const imagePreviews = wrap.getElementsByClassName('image-preview');
 
     if (imagePreviews.length > 0) {
       output = wrap.getElementsByClassName('image-preview')[0];
@@ -26,26 +24,28 @@ class ImagePreview {
 
     const imageTypes = ['JPG', 'JPEG', 'GIF', 'PNG'];
 
-    var file = files[0];
-    var imageType = /image.*/;
+    const file = files[0];
+    const imageType = /image.*/;
 
     // detect device
-    var device = ImagePreview.detectDevice();
+    const device = ImagePreview.detectDevice();
 
-    if (!device.android) { // Since android doesn't handle file types right, do not do this check for phones
+    if (!device.android) {
+      // Since android doesn't handle file types right,
+      // do not do this check for phones
       if (!file.type.match(imageType)) {
         return false;
       }
     }
 
-    var img = '';
+    const img = '';
 
-    var reader = new FileReader();
-    reader.onload = (function() {
-      return function(e) {
+    const reader = new FileReader();
+    reader.onload = (function onLoad() {
+      return (e) => {
         output.innerHTML = '';
 
-        var format = e.target.result.split(';');
+        let format = e.target.result.split(';');
         format = format[0].split('/');
         format = format[1].split('+');
         format = format[0].toUpperCase();
@@ -57,38 +57,45 @@ class ImagePreview {
           format = format[0].toUpperCase();
         }
 
-        var description = document.createElement('p');
-        description.innerHTML =
-          `<span class="text-mono" style="font-size: 12px;"><b>${format}</b>/<b>${(e.total/1024).toFixed(2)}</b> KB.</span>`;
+        const description = document.createElement('p');
+        description.innerHTML = `
+          <span class="text-mono" style="font-size: 12px;">
+            <b>${format}</b>/<b>${(e.total / 1024).toFixed(2)}</b> KB.
+          </span>
+        `;
 
         if (imageTypes.indexOf(format) >= 0 && e.total < (limit * 1024 * 1024)) {
-          for (var size in widths) {
-            var image = document.createElement('img');
-            var src = e.target.result;
+          for (const size in widths) {
+            if ({}.hasOwnProperty.call(widths, size)) {
+              const image = document.createElement('img');
+              const src = e.target.result;
 
-            image.src = src;
+              image.src = src;
 
-            image.width = widths[size];
-            image.title = `${widths[size]}px`;
-            output.appendChild(image);
+              image.width = widths[size];
+              image.title = `${widths[size]}px`;
+              output.appendChild(image);
+            }
           }
         }
         output.appendChild(description);
       };
-    })(img);
+    }(img));
+
     reader.readAsDataURL(file);
+    return true;
   }
 
   // Detect client's device
   static detectDevice() {
-    var ua = navigator.userAgent;
-    var brand = {
+    const ua = navigator.userAgent;
+    const brand = {
       apple: ua.match(/(iPhone|iPod|iPad)/),
       blackberry: ua.match(/BlackBerry/),
       android: ua.match(/Android/),
       microsoft: ua.match(/Windows Phone/),
-      zune: ua.match(/ZuneWP7/)
-    }
+      zune: ua.match(/ZuneWP7/),
+    };
 
     return brand;
   }

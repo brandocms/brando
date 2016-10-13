@@ -1,3 +1,5 @@
+/* eslint-disable */
+
 /**!
  * Sortable
  * @author	RubaXa   <trash@rubaxa.org>

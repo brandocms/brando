@@ -1,5 +1,3 @@
-'use strict';
-
 import $ from 'jquery';
 
 class Flash {
@@ -8,7 +6,7 @@ class Flash {
     $('[data-dismiss]')
       .each((index, elem) => {
         $(elem)
-          .click(e => {
+          .click((e) => {
             e.preventDefault();
             $(elem)
               .parent()

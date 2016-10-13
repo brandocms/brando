@@ -1,44 +1,42 @@
-'use strict';
-
 import $ from 'jquery';
 
-import {Socket} from 'phoenix'
-import {bI18n} from './i18n';
-import {vex} from './vex_brando';
+import { Socket } from 'phoenix';
+import bI18n from './i18n';
+import { vex } from './vex_brando';
 
 class WS {
   static setup() {
-    var _this = this;
-    let userToken = document.querySelector('meta[name="channel_token"]')
+    const that = this;
+    const userToken = document.querySelector('meta[name="channel_token"]')
       .getAttribute('content');
-    let socket = new Socket('/admin/ws', {
+    const socket = new Socket('/admin/ws', {
       params: {
-        token: userToken
-      }
+        token: userToken,
+      },
     });
 
     socket.connect();
 
     WS.lobbyChannel = socket.channel('user:lobby', {});
     WS.lobbyChannel.join()
-      .receive('ok', (payload) => {
-        console.log('==> Lobby channel ready')
-        WS.userChannel = socket.channel(`user:${payload.user_id}`, {});
+      .receive('ok', (joinPayload) => {
+        console.log('==> Lobby channel ready');
+        WS.userChannel = socket.channel(`user:${joinPayload.user_id}`, {});
         WS.userChannel.join()
           .receive('ok', () => {
-            console.log('==> User channel ready')
+            console.log('==> User channel ready');
           });
 
-        WS.userChannel.on('alert', payload => {
-          _this.alert(payload.message);
+        WS.userChannel.on('alert', (payload) => {
+          that.alert(payload.message);
         });
 
-        WS.userChannel.on('set_progress', payload => {
-          _this.setProgress(payload.value);
+        WS.userChannel.on('set_progress', (payload) => {
+          that.setProgress(payload.value);
         });
 
-        WS.userChannel.on('increase_progress', payload => {
-          _this.increaseProgress(payload.value, payload.id);
+        WS.userChannel.on('increase_progress', (payload) => {
+          that.increaseProgress(payload.value, payload.id);
         });
       });
 
@@ -48,18 +46,17 @@ class WS {
         console.log('==> System channel ready');
       });
 
-    WS.systemChannel.on('alert', payload => {
-      _this.alert(payload.message);
+    WS.systemChannel.on('alert', (payload) => {
+      that.alert(payload.message);
     });
 
-    WS.systemChannel.on('set_progress', payload => {
-      _this.setProgress(payload.value);
+    WS.systemChannel.on('set_progress', (payload) => {
+      that.setProgress(payload.value);
     });
 
-    WS.systemChannel.on('increase_progress', payload => {
-      _this.increaseProgress(payload.value, payload.id);
+    WS.systemChannel.on('increase_progress', (payload) => {
+      that.increaseProgress(payload.value, payload.id);
     });
-
   }
 
   static alert(message) {
@@ -67,45 +64,44 @@ class WS {
   }
 
   static createProgress() {
-    var $overlay = $('<div id="overlay">');
-    var $container = $('<div id="progress-container">');
+    const $overlay = $('<div id="overlay">');
+    const $container = $('<div id="progress-container">');
 
     $overlay.appendTo('body');
     $container.appendTo('#overlay');
 
     $overlay.css({
-      'position':         'fixed',
-      'top':              '0',
-      'left':             '0',
-      'width':            '100%',
-      'opacity':          '0',
-      'height':           '100%',
+      'position': 'fixed',
+      'top': '0',
+      'left': '0',
+      'width': '100%',
+      'opacity': '0',
+      'height': '100%',
       'background-color': '#fff',
-      'z-index':          '99999',
-      'display':          'flex',
-      'align-items':      'center',
-      'justify-content':  'center'
+      'z-index': '99999',
+      'display': 'flex',
+      'align-items': 'center',
+      'justify-content': 'center',
     });
-    $overlay.animate({
-      opacity: 1
-    }, 'slow');
-    $('<div id="progressbar">')
-      .appendTo('#progress-container');
+    $overlay.animate({ opacity: 1 }, 'slow');
+    $('<div id="progressbar">').appendTo('#progress-container');
+
     WS.progressbar = new ProgressBar.Circle('#progressbar', {
       strokeWidth: 5,
-      color: '#c11'
+      color: '#c11',
     });
     WS.progressbar.setText(bI18n.t('ws:working'));
   }
 
   static increaseProgress(value) {
+    let newValue = 0;
     if (WS.progressbar) {
-      var newValue = WS.progressbar.value() + value;
+      newValue = WS.progressbar.value() + value;
     } else {
       WS.createProgress();
     }
 
-    WS.setProgress(newValue)
+    WS.setProgress(newValue);
   }
 
   static setProgress(value) {
@@ -116,7 +112,7 @@ class WS {
       WS.progressbar.animate(value);
     }
 
-    if (value == 1) {
+    if (value === 1) {
       WS.progressbar.setText('done!');
       $('#overlay')
         .remove();

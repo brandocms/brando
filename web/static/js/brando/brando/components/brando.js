@@ -1,5 +1,3 @@
-'use strict';
-
 import $ from 'jquery';
 
 class Brando {
@@ -10,8 +8,6 @@ class Brando {
   }
 }
 
-let brando = new Brando();
+const brando = new Brando();
 
-export {
-  brando
-}
+export default brando;

@@ -1,8 +1,6 @@
-'use strict';
-
 import $ from 'jquery';
 import vex from 'vex-js';
-import {bI18n} from './i18n';
+import bI18n from './i18n';
 
 if (typeof vex === 'undefined') {
   throw new Error('You must include vex to use vex.dialog');
@@ -10,13 +8,12 @@ if (typeof vex === 'undefined') {
 
 const $formToObject = ($form) => {
   const object = {};
-  $.each($form.serializeArray(), function() {
+  $.each($form.serializeArray(), function eachObj() {
     if (object[this.name]) {
       object[this.name] = (!object[this.name].push) ? [object[this.name]] : object[this.name];
       return object[this.name].push(this.value || '');
-    } else {
-      return object[this.name] = this.value || '';
     }
+    return object[this.name] = this.value || '';
   });
   return object;
 };
@@ -27,7 +24,7 @@ dialog.buttons = {
   YES: {
     text: 'OK',
     type: 'submit',
-    className: 'vex-dialog-button-primary'
+    className: 'vex-dialog-button-primary',
   },
   NO: {
     text: 'Cancel',
@@ -36,8 +33,8 @@ dialog.buttons = {
     click: ($vexContent) => {
       $vexContent.data().vex.value = false;
       return vex.close($vexContent.data().vex.id);
-    }
-  }
+    },
+  },
 };
 
 dialog.defaultOptions = {
@@ -48,7 +45,7 @@ dialog.defaultOptions = {
   value: false,
   buttons: [dialog.buttons.YES, dialog.buttons.NO],
   showCloseButton: false,
-  onSubmit(event) {
+  onSubmit: function onSubmit(event) {
     const $form = $(this);
     const $vexContent = $form.parent();
     event.preventDefault();
@@ -56,16 +53,16 @@ dialog.defaultOptions = {
     $vexContent.data().vex.value = dialog.getFormValueOnSubmit($formToObject($form));
     return vex.close($vexContent.data().vex.id);
   },
-  focusFirstInput: true
+  focusFirstInput: true,
 };
 
 dialog.defaultAlertOptions = {
   message: 'Alert',
-  buttons: [dialog.buttons.YES]
+  buttons: [dialog.buttons.YES],
 };
 
 dialog.defaultConfirmOptions = {
-  message: 'Confirm'
+  message: 'Confirm',
 };
 
 dialog.open = (options) => {
@@ -140,7 +137,9 @@ dialog.buttonsToDOM = (buttons) => {
         .addClass(button.className + ' vex-dialog-button ' + (index === 0 ? 'vex-first ' : '') + (index === buttons.length - 1 ? 'vex-last ' : ''))
         .bind('click.vex', function(e) {
           if (button.click) {
-            return button.click($(this).parents(vex.getSelectorFromBaseClass(vex.baseClassNames.content)), e);
+            return button.click(
+              $(this).parents(vex.getSelectorFromBaseClass(vex.baseClassNames.content)), e
+            );
           }
         });
     return $button.appendTo($buttons);
@@ -159,4 +158,4 @@ class VexBrando {
   }
 }
 
-export {VexBrando, vex};
+export { VexBrando, vex };

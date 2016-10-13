@@ -1,5 +1,3 @@
-'use strict';
-
 import $ from 'jquery';
 
 class FilterTable {
@@ -9,7 +7,7 @@ class FilterTable {
       .each((index, elem) => {
         $(elem)
           .searcher({
-            inputSelector: '#filter-input'
+            inputSelector: '#filter-input',
           });
       });
   }

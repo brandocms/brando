@@ -1,5 +1,3 @@
-'use strict';
-
 import $ from 'jquery';
 
 class Tags {
@@ -11,7 +9,7 @@ class Tags {
           .tagsInput({
             width: '100%',
             height: '35px',
-            defaultText: '+'
+            defaultText: '+',
           });
       });
   }
