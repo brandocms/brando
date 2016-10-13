@@ -21,13 +21,13 @@ defmodule <%= application_module %>.Mixfile do
   def application do
     [mod: {<%= application_module %>, []},
      included_applications: [
-       :brando_news,
-       :brando_pages,
-       :brando_villain,
-       :recon
+       :recon,
      ],
      applications: [
        :brando,
+       :brando_news,
+       :brando_pages,
+       :brando_villain,
        :cowboy,
        :hrafn,
        :gettext,
