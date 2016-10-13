@@ -1,6 +1,6 @@
-"use strict";
+'use strict';
 
-import $ from "jquery";
+import $ from 'jquery';
 
 class Accordion {
   static setup() {
@@ -27,11 +27,12 @@ class Accordion {
   }
 
   static activateTab(obj) {
-    let $obj = $(obj),
-        $accordionTabs = $obj.closest('.accordion-tabs-minimal'),
-        $openTabs = $accordionTabs.find('.is-open'),
-        $activeTabs = $accordionTabs.find('.is-active'),
-        $tabContent = $obj.next();
+    let
+      $obj = $(obj),
+      $accordionTabs = $obj.closest('.accordion-tabs-minimal'),
+      $openTabs = $accordionTabs.find('.is-open'),
+      $activeTabs = $accordionTabs.find('.is-active'),
+      $tabContent = $obj.next();
 
     if (!$obj.hasClass('is-active')) {
       document.location.hash = $obj.attr('id').replace('tab-', '');
