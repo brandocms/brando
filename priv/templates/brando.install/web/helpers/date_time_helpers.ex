@@ -1,4 +1,4 @@
-def <%= application_module %>.DateTimeHelpers do
+defmodule <%= application_module %>.DateTimeHelpers do
   import <%= application_module %>.Gettext
 
   @months %{
