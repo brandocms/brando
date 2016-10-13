@@ -36,6 +36,7 @@ defmodule <%= application_module %>.Mixfile do
        :phoenix_ecto,
        :phoenix_html,
        :phoenix_pubsub,
+       :plug_heartbeat,
        :postgrex,
        :runtime_tools,
        :timex
@@ -69,6 +70,7 @@ defmodule <%= application_module %>.Mixfile do
      {:distillery, "~> 0.10"},
      {:recon, "~> 2.3"},
      {:hrafn, "~> 0.1"},
+     {:plug_heartbeat, "~> 0.1"},
 
      # brando
      {:brando, github: "twined/brando"},

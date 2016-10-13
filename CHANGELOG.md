@@ -4,6 +4,7 @@
   * Add dependency version map to system info. Only lists brando related deps.
     Make sure that your deps are listed under the `:applications` key and not
     the `:included_applications` key in your project's `mix.exs`
+  * Add PlugHeartbeat to installation template
 
 ## v0.35.0 (2016-10-08)
 
