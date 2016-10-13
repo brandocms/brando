@@ -25,6 +25,7 @@ defmodule Brando.Admin.DashboardController do
       get_log_info(log_file)
 
     conn
+    |> assign(:deps_versions, Brando.Utils.get_deps_versions())
     |> assign(:log_last_lines, log_last_lines)
     |> assign(:log_last_updated, log_last_updated)
     |> render
