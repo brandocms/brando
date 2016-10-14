@@ -54,7 +54,7 @@ defmodule Brando.Mixfile do
     {:httpoison, "~> 0.9"},
     {:mogrify, "~> 0.4"},
     {:phoenix, "~> 1.2.0"},
-    {:phoenix_html, "~> 2.7"},
+    {:phoenix_html, "~> 2.6"},
     {:poison, "~> 2.0 or ~> 3.0"},
     {:postgrex, "~> 0.12"},
     {:scrivener_ecto, "~> 1.0"},
