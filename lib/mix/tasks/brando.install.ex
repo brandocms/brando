@@ -11,7 +11,7 @@ defmodule Mix.Tasks.Brando.Install do
   @new [
     # Mix template
     {:eex,  "templates/brando.install/mix.exs", "mix.exs"},
-    
+
     # Etc. Various OS config files and log directory.
     {:keep, "templates/brando.install/logs", "logs"},
     {:eex,  "templates/brando.install/etc/logrotate/prod.conf", "etc/logrotate/prod.conf"},
@@ -97,12 +97,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/static/brando/fonts/fontawesome-webfont.woff", "web/static/assets/fonts/fontawesome-webfont.woff"},
     {:copy, "templates/brando.install/static/brando/fonts/fontawesome-webfont.woff2", "web/static/assets/fonts/fontawesome-webfont.woff2"},
     {:copy, "templates/brando.install/static/brando/fonts/FontAwesome.otf", "web/static/assets/fonts/FontAwesome.otf"},
-
-    # Webfonts - backend
-    {:copy, "templates/brando.install/static/brando/fonts/ab.woff", "web/static/assets/fonts/ab.woff"},
-    {:copy, "templates/brando.install/static/brando/fonts/am.woff", "web/static/assets/fonts/am.woff"},
-    {:copy, "templates/brando.install/static/brando/fonts/ar.woff", "web/static/assets/fonts/ar.woff"},
-
+    
     # Images
     {:copy, "templates/brando.install/static/brando/images/blank.gif", "web/static/assets/images/brando/blank.gif"},
     {:copy, "templates/brando.install/static/brando/images/flags.png", "web/static/assets/images/brando/flags.png"},

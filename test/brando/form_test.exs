@@ -2,6 +2,31 @@ defmodule Brando.FormTest do
   use ExUnit.Case, async: true
   import Brando.Form
 
+  defmodule MyUser do
+    use Brando.Meta.Model, [
+      singular: "user",
+      plural: "users",
+      repr: &("#{&1.full_name} (#{&1.username})"),
+      fields: [
+        id: "ID",
+        username: "Username",
+        email: "Email",
+        full_name: "Full name",
+        password: "Password",
+        role: "Roles",
+        language: "Language",
+        last_login: "Last login",
+        inserted_at: "Inserted at",
+        updated_at: "Updated at",
+        avatar: "Avatar"
+      ],
+      hidden_fields: [:password, :creator],
+      help: [
+        full_name: "Full name help"
+      ]
+    ]
+  end
+
   defmodule TestForm do
     use Brando.Form
 
@@ -36,13 +61,12 @@ defmodule Brando.FormTest do
        [value: "2", text: "Valg 2"]]
     end
 
-    form "user", [helper: :admin_user_path, class: "grid-form"] do
+    form "user", [schema: Brando.FormTest.MyUser, helper: :admin_user_path, class: "grid-form"] do
       field :full_name, :text,
         [required: true,
          label: "Full name",
          label_class: "control-label",
          placeholder: "Full name",
-         help_text: "Enter full name",
          class: "form-control",
          wrapper_class: ""]
       field :username, :text,

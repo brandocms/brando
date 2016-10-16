@@ -147,15 +147,17 @@ defmodule Brando.Form.FieldsTest do
            == "has invalid format"
     assert F.parse_error("is reserved", opts)
            == "is reserved"
-    assert F.parse_error({"should be at least %{count} characters", count: 10},
-                         opts)
+    assert F.parse_error({"should be at least %{count} characters", count: 10}, opts)
            == "should be at least 10 characters"
   end
 
   test "render_help_text/1" do
-    field = %Field{opts: %{help_text: "Help text"}}
-    assert F.render_help_text(field)
-           == "<div class=\"help\"><i class=\"fa fa-fw fa-question-circle\"> </i><span>Help text</span></div>"
+    field = %Field{opts: %{test: "hello"}}
+    assert F.render_help_text(field) == ""
+
+    field = %Field{schema: Brando.FormTest.MyUser, name: :full_name, opts: %{test: "hello"}}
+    assert F.render_help_text(field) ==
+      "<div class=\"help\"><i class=\"fa fa-fw fa-question-circle\"> </i><span>Full name help</span></div>"
 
     field = %Field{}
     assert F.render_help_text(field) == ""

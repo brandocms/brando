@@ -606,7 +606,7 @@ defmodule Brando.Form.Fields do
       |> put_html(nil)
       |> put_in_opts(:label, "#{confirm_i18n} #{get_label(field)}")
       |> put_in_opts(:placeholder, "#{confirm_i18n} #{get_label(field)}")
-      |> put_in_field(:name, "#{field.name}_confirmation")
+      |> put_in_field(:name, :"#{field.name}_confirmation")
       |> input
       |> add_label
       |> wrap_in_form_group
@@ -672,8 +672,12 @@ defmodule Brando.Form.Fields do
     do_render_help_text(help_text)
   end
 
-  def render_help_text(%Field{} = f) do
-    do_render_help_text(f.schema.__help_for__(f.name) || "")
+  def render_help_text(%Field{schema: nil, name: _}) do
+    do_render_help_text("")
+  end
+
+  def render_help_text(%Field{schema: schema, name: name}) do
+    do_render_help_text(schema.__help_for__(name) || "")
   end
 
   defp do_render_help_text("") do
