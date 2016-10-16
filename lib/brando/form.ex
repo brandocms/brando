@@ -13,7 +13,7 @@ defmodule Brando.Form do
         submit :save, [class: "btn btn-success"]
       end
 
-  Set field labels, placeholders and help_text by using your `schema`'s meta.
+  Set field labels, placeholders and help text by using your `schema`'s meta.
 
   See `Brando.Meta.Model` for more info about meta.
 
@@ -266,10 +266,6 @@ defmodule Brando.Form do
       `locale` in the form's `:model` property with the field name as key.
     * `slug_from` - :name
       Automatically slugs with `:name` as source.
-    * `help_text` - "Help text for field". If not supplied, Brando will
-      look at the form's `:model` parameters supplied with
-      the form for Linguist translation. Set it in the model's
-      meta with key `help`.
     * `placeholder` - "Placeholder for field"
     * `tags` - true. If true, binds tags javascript listener to field
       which splits tags by comma.
@@ -286,7 +282,6 @@ defmodule Brando.Form do
     * `rows` - How many rows to display in the textarea.
     * `required` - true as default
     * `label` - "Label for field"
-    * `help_text` - "Help text for field"
     * `placeholder` - "Placeholder for field"
     * `default` - Default value. Can also be a function like
       `&__MODULE__.default_func/0`
@@ -347,7 +342,6 @@ defmodule Brando.Form do
 
     * `required` - true as default
     * `label` - "Label for field"
-    * `help_text` - "Help text for field"
     * `placeholder` - "Placeholder for field"
     * `default` - Default value. Can also be a function like
       `&__MODULE__.default_func/0`

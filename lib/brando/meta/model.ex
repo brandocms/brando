@@ -10,7 +10,12 @@ defmodule Brando.Meta.Model do
         repr: fn (model) -> "interpolate from model" end,
         fields: [
           id: gettext("ID"),
-          language: gettext("Language")]]
+          language: gettext("Language")
+        ],
+        help: [
+          language: gettext("This sets the wanted language for the post")
+        ]
+      ]
 
   ## Options:
 
@@ -18,6 +23,7 @@ defmodule Brando.Meta.Model do
     * `plural`: The plural form of the models representation
     * `repr`: Function returning the repr of the record.
     * `fields`: Keyword list of fields in the model. Used for translation.
+    * `help:`: Keyword list of help text for the fields in the schema.
     * `hidden_fields`: Fields not shown in the detail view.
 
   """
@@ -29,6 +35,12 @@ defmodule Brando.Meta.Model do
       end
       def __field__(field) do
         __fields__[field]
+      end
+      def __help__ do
+        unquote(opts[:help] || [])
+      end
+      def __help_for__(field) do
+        __help__[field]
       end
       def __keys__ do
         Keyword.keys(__fields__())

@@ -631,7 +631,9 @@ defmodule Brando.Form.Fields do
     classes = [class: get_group_classes(field.opts, field.errors)]
 
     html = content_tag(:div, classes) do
-      [field.html, render_errors(field.errors, field.opts), render_help_text(field)] |> raw
+      [field.html,
+       render_errors(field.errors, field.opts),
+       render_help_text(field)] |> raw
     end |> safe_to_string
 
     put_html(field, html)
@@ -653,16 +655,39 @@ defmodule Brando.Form.Fields do
   Renders `help_text` in a nicely formatted div.
   """
   @spec render_help_text(Field.t) :: String.t
-  def render_help_text(%Field{opts: []}), do: ""
-  def render_help_text(%Field{opts: %{help_text: help_text}}) do
-    content_tag(:div, class: "help") do
-      [content_tag(:i, " ", class: "fa fa-fw fa-question-circle"),
-       content_tag(:span, help_text)]
-    end |> safe_to_string
+  def render_help_text(%Field{opts: %{help_text: help_text}} = f) do
+    IO.warn("""
+    using help_text from form macros is deprecated.
+
+    Set the help text in the models meta instead:
+
+        # #{inspect f.schema}
+        use Brando.Meta.Model, [
+          ...
+          help: [
+            #{f.name}: gettext("#{help_text}")
+          ]
+        ]
+    """)
+    do_render_help_text(help_text)
   end
 
-  def render_help_text(_) do
+  def render_help_text(%Field{} = f) do
+    do_render_help_text(f.schema.__help_for__(f.name) || "")
+  end
+
+  defp do_render_help_text("") do
     ""
+  end
+
+  defp do_render_help_text(help_text) do
+    html =
+      content_tag(:div, class: "help") do
+        [content_tag(:i, " ", class: "fa fa-fw fa-question-circle"),
+         content_tag(:span, help_text)]
+      end
+
+    safe_to_string(html)
   end
 
   @doc """

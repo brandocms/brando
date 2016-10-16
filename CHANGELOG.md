@@ -6,6 +6,10 @@
     the `:included_applications` key in your project's `mix.exs`
   * Add PlugHeartbeat to installation template
 
+* Deprecations
+  * Passing `help_text` to form fields through `field` macro is now deprecated.
+    Set help text in your schema's meta instead under the `help` key.
+
 ## v0.35.0 (2016-10-08)
 
 * Enhancements
