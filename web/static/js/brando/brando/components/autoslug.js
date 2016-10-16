@@ -7,7 +7,7 @@ class Autoslug {
       .each((index, elem) => {
         const slugFrom = $(elem)
           .attr('data-slug-from');
-        $(`[name=${slugFrom}]`)
+        $(`[name="${slugFrom}"]`)
           .slugIt({
             output: $(elem),
             map: {
