@@ -109,6 +109,7 @@ exports.config = {
     },
     sass: {
       options: {
+        precision: 10,
         includePaths: [
           "node_modules/bootstrap-sass/assets/stylesheets"
         ]
