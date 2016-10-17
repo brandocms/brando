@@ -176,8 +176,8 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "get_placeholder" do
-    assert F.get_placeholder(%{placeholder: "test"}) == "test"
-    assert F.get_placeholder(%{placeholder: nil}) == nil
+    assert F.get_placeholder(%{opts: %{placeholder: "test"}}) == "test"
+    assert F.get_placeholder(%{opts: %{placeholder: nil}}) == nil
     assert F.get_placeholder(%{name: :email, schema: Brando.User}) == "Email"
   end
 
@@ -213,7 +213,7 @@ defmodule Brando.Form.FieldsTest do
     assert F.render_field(field).html
            == ~s(<div class="form-row"><div class="form-group required">) <>
               ~s(<label for="imageseries[name]">Name</label>) <>
-              ~s(<input name="imageseries[name]" type="text" value="Series name"></div></div>)
+              ~s(<input name="imageseries[name]" placeholder="Name" type="text" value="Series name"></div></div>)
 
     field =
       field
@@ -223,7 +223,7 @@ defmodule Brando.Form.FieldsTest do
     assert F.render_field(field).html
            == ~s(<div class="form-row"><div class="form-group required">) <>
               ~s(<label for="imageseries[name]">Name</label>) <>
-              ~s(<input name="imageseries[name]" type="text" value="Series name"></div>) <>
+              ~s(<input name="imageseries[name]" placeholder="Name" type="text" value="Series name"></div>) <>
               ~s(<div class="form-group required"><label for="imageseries[name_confirmation]">) <>
               ~s(Confirm Name</label><input name="imageseries[name_confirmation]" ) <>
               ~s(placeholder="Confirm Name" type="text" value="Series name"></div></div>)
@@ -249,7 +249,7 @@ defmodule Brando.Form.FieldsTest do
     assert F.render_field(field).html
            == ~s(<div class="form-row"><div class="form-group required">) <>
               ~s(<label for="user[password]">Password</label>) <>
-              ~s(<input name="user[password]" type="password" value="abcdefg"></div></div>)
+              ~s(<input name="user[password]" placeholder="Password" type="password" value="abcdefg"></div></div>)
 
     field = %Brando.Form.Field{
       errors: nil,
@@ -271,7 +271,7 @@ defmodule Brando.Form.FieldsTest do
     assert F.render_field(field).html
            == ~s(<div class="form-row"><div class="form-group required">) <>
               ~s(<label for="user[password]">Password</label>) <>
-              ~s(<input name="user[password]" type="password" value="abcdefg"></div>) <>
+              ~s(<input name="user[password]" placeholder="Password" type="password" value="abcdefg"></div>) <>
               ~s(<div class="form-group required"><label for="user[password_confirmation]">) <>
               ~s(Confirm Password</label><input name="user[password_confirmation]" ) <>
               ~s(placeholder="Confirm Password" type="password" value="abcdefg"></div></div>)
