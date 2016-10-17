@@ -162,7 +162,7 @@ defmodule Brando.Form.Fields do
       |> put_name(format_name(field.name, field.source))
       |> put_type(field.type)
       |> put_class(field.opts)
-      |> put_placeholder(field.opts)
+      |> put_placeholder(field)
 
     {:safe, html} = tag(:input, tag_opts)
     prepend_html(field, html)
@@ -526,7 +526,7 @@ defmodule Brando.Form.Fields do
       |> put_name(name)
       |> put_value("true")
       |> put_type(:checkbox)
-      |> put_placeholder(field.opts)
+      |> put_placeholder(field)
       |> put_class(field.opts)
       |> put_checked(field.value, field.opts)
 
@@ -551,7 +551,7 @@ defmodule Brando.Form.Fields do
       |> put_type(field.type)
       |> put_value(field.value, field.opts)
       |> put_slug_from(name, field.opts)
-      |> put_placeholder(field.opts)
+      |> put_placeholder(field)
       |> put_class(field.opts)
       |> put_tags(field.opts)
 
@@ -756,8 +756,8 @@ defmodule Brando.Form.Fields do
     end
   end
 
-  defp put_placeholder(tag_opts, opts) do
-    case get_placeholder(opts) do
+  defp put_placeholder(tag_opts, field) do
+    case get_placeholder(field) do
       nil -> tag_opts
       placeholder -> Keyword.put(tag_opts, :placeholder, placeholder)
     end
@@ -867,20 +867,20 @@ defmodule Brando.Form.Fields do
   If `placeholder` is not nil, returns placeholder
   """
   def get_placeholder(nil), do: ""
-  def get_placeholder(%{type: :submit}) do
+  def get_placeholder(%{opts: %{type: :submit}}) do
     nil
   end
-  def get_placeholder(%{type: :file}) do
+  def get_placeholder(%{opts: %{type: :file}}) do
     nil
+  end
+  def get_placeholder(%{opts: %{placeholder: placeholder}}) do
+    placeholder
   end
   def get_placeholder(%{name: name, schema: schema}) do
     schema.__field__(name)
   end
-  def get_placeholder(%{placeholder: nil}) do
+  def get_placeholder(%{opts: %{placeholder: nil}}) do
     nil
-  end
-  def get_placeholder(%{placeholder: placeholder}) do
-    placeholder
   end
   def get_placeholder(_) do
     nil

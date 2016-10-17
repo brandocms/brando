@@ -1,4 +1,11 @@
-## v0.36.0-dev (2016-XX-XX)
+## v0.36.0-dev (2016-XX-XX)  
+
+* Backwards incompatible changes
+  * Passing legend as text to fieldset macro is now removed. Set an atom instead which
+    should reference a `fieldsets` key in your schema's meta.
+
+* Bug fixes
+  * Placeholder now shows same text as label when there is no placeholder supplied
 
 * Enhancements
   * Add dependency version map to system info. Only lists brando related deps.

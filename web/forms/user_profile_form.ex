@@ -5,7 +5,6 @@ defmodule Brando.UserProfileForm do
   """
   use Brando.Form
   alias Brando.User
-  import Brando.Gettext
 
   @doc false
   def get_language_choices do
