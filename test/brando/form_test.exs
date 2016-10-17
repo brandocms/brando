@@ -20,6 +20,9 @@ defmodule Brando.FormTest do
         updated_at: "Updated at",
         avatar: "Avatar"
       ],
+      fieldsets: [
+        permissions: "Permissions",
+      ],
       hidden_fields: [:password, :creator],
       help: [
         full_name: "Full name help"
@@ -30,8 +33,8 @@ defmodule Brando.FormTest do
   defmodule TestForm do
     use Brando.Form
 
-    form "test", [helper: :admin_user_path, class: "grid-form"] do
-      fieldset "Brukerinfo" do
+    form "test", [schema: Brando.FormTest.MyUser, helper: :admin_user_path, class: "grid-form"] do
+      fieldset :permissions do
         field :full_name, :text,
           [required: true,
            label: "Fullt navn",
@@ -124,7 +127,7 @@ defmodule Brando.FormTest do
       fs123477010: [type: :fieldset_close],
       editor: [type: :checkbox, in_fieldset: 2, label: "Editor", default: true],
       administrator: [type: :checkbox, in_fieldset: 2, label: "Administrator", default: false],
-      fs34070328: [type: :fieldset, legend: "Permissions", row_span: 2],
+      fs34070328: [type: :fieldset, legend: :rights, row_span: 2],
       status: [type: :select, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
       status2: [type: :select, multiple: true, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
       status3: [type: :radio, choices: &UserForm.get_status_choices/0, default: "1", label: "Status"],
@@ -160,7 +163,7 @@ defmodule Brando.FormTest do
     assert html =~ ~s("form-group required")
     assert html =~ "user[username]"
     assert html =~ ~s(placeholder="Username")
-    assert html =~ "<legend><br>Permissions</legend>"
+    assert html =~ "<legend><br>Rights</legend>"
     assert html =~ ~s(type="submit")
     assert html =~ ~s(type="file")
 
@@ -187,7 +190,7 @@ defmodule Brando.FormTest do
     assert html =~ ~s("form-group required has-error")
     assert html =~ "user[username]"
     assert html =~ ~s(placeholder="Username")
-    assert html =~ "<legend><br>Permissions</legend>"
+    assert html =~ "<legend><br>Rights</legend>"
     assert html =~ ~s(type="submit")
     assert html =~ ~s(can&#39;t be blank)
     assert html =~ ~s(type="file")
