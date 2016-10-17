@@ -28,7 +28,7 @@ defmodule Brando.UserForm do
   end
 
   form "user", [schema: User, helper: :admin_user_path, class: "grid-form"] do
-    fieldset gettext("User information") do
+    fieldset :user_information do
       field :full_name, :text
       field :username, :text
     end
@@ -36,7 +36,7 @@ defmodule Brando.UserForm do
     field :email, :email
     field :password, :password, [confirm: true]
 
-    fieldset gettext("Rights") do
+    fieldset :rights do
       field :role, :checkbox,
         [choices: &__MODULE__.get_role_choices/0,
          is_selected: &__MODULE__.role_selected?/2,

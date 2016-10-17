@@ -13,7 +13,7 @@ defmodule Brando.UserProfileForm do
   end
 
   form "user", [schema: User, helper: :admin_user_path, class: "grid-form"] do
-    fieldset gettext("User information") do
+    fieldset :user_information do
       field :full_name, :text
       field :username, :text
     end

@@ -14,6 +14,7 @@ defmodule Brando.Form do
       end
 
   Set field labels, placeholders and help text by using your `schema`'s meta.
+  This is to enable gettext translations, which won't work in the field macro.
 
   See `Brando.Meta.Model` for more info about meta.
 
@@ -390,13 +391,24 @@ defmodule Brando.Form do
   ## Options
 
     * `legend`
-      - Set to a string, or use `gettext("string")` for i18n.
+      - Set to an atom that references an entry under your schema meta's `fieldsets` key.
 
   ## Example
 
-      fieldset gettext("Header") do
+      fieldset :header do
         field :...
       end
+
+      # in schema.ex
+
+      ...
+      use Brando.Meta.Schema, [
+        ...
+        fieldsets: [
+          header: gettext("My fieldset header text")
+        ]
+      ]
+
   """
   defmacro fieldset(legend \\ nil, [do: block]) do
     quote do

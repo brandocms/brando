@@ -1,6 +1,16 @@
 defmodule Brando.Meta.Controller do
   @moduledoc """
   Functions for putting and getting meta keys on `conn`.
+  Usually you would only deal with setting meta keys, the getting is handled in your
+  `app.html.eex` template.
+
+  ## Example
+
+      conn =
+        conn
+        |> put_meta("og:title", title)
+        |> put_meta("og:site_name", app_name)
+        |> put_meta("og:type", "article")
   """
 
   import Plug.Conn, only: [put_private: 3]

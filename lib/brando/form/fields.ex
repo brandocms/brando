@@ -104,7 +104,8 @@ defmodule Brando.Form.Fields do
   Render fieldset open
   """
   def render_field(%Field{type: :fieldset} = field) do
-    prepend_html(field, fieldset_open_tag(field.opts[:legend], field.opts[:row_span]))
+    legend = field.schema.__fieldset__(field.opts[:legend]) || nil
+    prepend_html(field, fieldset_open_tag(legend, field.opts[:row_span]))
   end
 
   @doc """
