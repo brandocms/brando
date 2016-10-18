@@ -1,9 +1,9 @@
 defmodule <%= admin_module %>Controller do
   use <%= base %>.Admin.Web, :controller
-<%= if sequenced do %>  use Brando.Sequence, [:controller, [model: <%= module %>]]<% end %>
+<%= if sequenced do %>  use Brando.Sequence, [:controller, [schema: <%= module %>]]<% end %>
 <%= if villain do %>  use Brando.Villain, [:controller, [
-    image_model: Brando.Image,
-    series_model: Brando.ImageSeries]]<% end %>
+    image_schema: Brando.Image,
+    series_schema: Brando.ImageSeries]]<% end %>
   alias <%= module %>
 <%= if image_field do %>  import Brando.Plug.Uploads<% end %>
 
@@ -89,7 +89,7 @@ defmodule <%= admin_module %>Controller do
 
   def delete_confirm(conn, %{"id" => id}) do
     record = Repo.get!(<%= alias %>, id)
-    
+
     conn
     |> assign(:record, record)
     |> assign(:page_title, gettext("Confirm deletion"))

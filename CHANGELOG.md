@@ -1,6 +1,22 @@
 ## v0.36.0-dev (2016-XX-XX)  
 
-* Backwards incompatible changes
+* Backwards incompatible changes`
+  * `use Brando.Web, :model` -> `use Brando.Web, :schema`
+  * `use Brando.Villain, :model` -> `use Brando.Villain, :schema`
+  * Change keys in `use Brando.Villain, [:controller ...]` to `:image_schema` and `series_schema`
+  * `Brando.Utils.Model` renamed to `Brando.Utils.Schema`
+  * Using `use Brando.Sequence, :model` now must `use Brando.Sequence, :schema` instead.
+  * Using Sequence controller now requires a `:schema` key instead of `:model` key.
+    ```
+    use Brando.Sequence,
+      [:controller, [schema: Brando.Image,
+                     filter: &Brando.Image.for_series_id/1]]
+    ```
+  * Same goes for Brando.Tag. Replace `:model` key with `:schema` when you use controller,
+    and replace `use Brando.Tag, :model` with `use Brando.Tag, :schema`
+  * Renamed `Brando.Meta.Model` to `Brando.Meta.Schema`. This means you need to change
+    all your schemas using this to:
+    `use Brando.Meta.Schema, [...]`
   * Passing legend as text to fieldset macro is now removed. Set an atom instead which
     should reference a `fieldsets` key in your schema's meta.
 
@@ -14,8 +30,10 @@
   * Add PlugHeartbeat to installation template
 
 * Deprecations
+  * `model_name` and `model_repr` are now deprecated and removed.
   * Passing `help_text` to form fields through `field` macro is now deprecated.
     Set help text in your schema's meta instead under the `help` key.
+  * Passing `model` to `form` doesn't work anymore. Pass `schema` instead.
 
 ## v0.35.0 (2016-10-08)
 

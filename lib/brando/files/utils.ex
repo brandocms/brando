@@ -4,7 +4,7 @@ defmodule Brando.Files.Utils do
   """
 
   @doc """
-  Goes through `image`, which is a model with a :sizes field
+  Goes through `image`, which is a schema with a :sizes field
   then passing to `delete_media/2` for removal
 
   ## Example:

@@ -1,7 +1,7 @@
 defmodule Mix.Tasks.Brando.Gen.Html do
   use Mix.Task
 
-  @shortdoc "Generates a Brando-styled model"
+  @shortdoc "Generates a Brando-styled schema"
 
   @moduledoc """
   Generates a Brando resource.
@@ -13,19 +13,19 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
   The generated resource will contain:
 
-    * a model in web/models
+    * a schema in web/schemas
     * a view in web/views
     * a controller in web/controllers
     * a migration file for the repository
     * default CRUD templates in web/templates
-    * test files for generated model and controller
+    * test files for generated schema and controller
 
-  The generated model can be skipped with `--no-model`.
-  Read the documentation for `phoenix.gen.model` for more
+  The generated schema can be skipped with `--no-schema`.
+  Read the documentation for `phoenix.gen.schema` for more
   information on attributes and namespaced resources.
   """
   def run(args) do
-    {_, parsed, _} = OptionParser.parse(args, switches: [model: :boolean])
+    {_, parsed, _} = OptionParser.parse(args, switches: [schema: :boolean])
     [singular, plural | attrs] = validate_args!(parsed)
 
     attrs        = Mix.Brando.attrs(attrs)
@@ -111,7 +111,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     Mix.Brando.check_module_name_availability!(binding[:admin_module] <> "Controller")
     Mix.Brando.check_module_name_availability!(binding[:admin_module] <> "View")
 
-    Mix.Task.run "brando.gen.model", args
+    Mix.Task.run "brando.gen.schema", args
 
     Mix.Brando.copy_from(apps(), "priv/templates/brando.gen.html",
                           "", binding, files)

@@ -10,13 +10,13 @@ defmodule Brando.SessionController do
 
   @doc false
   def login(conn, %{"user" => %{"email" => email, "password" => password}}) do
-    model = conn.private[:model]
-    user = Brando.repo.get_by(model, email: email)
+    schema = conn.private[:schema] || Brando.User
+    user = Brando.repo.get_by(schema, email: email)
 
-    if model.auth?(user, password) do
+    if schema.auth?(user, password) do
       user =
         user
-        |> model.set_last_login
+        |> schema.set_last_login
         |> sanitize_user
 
       conn

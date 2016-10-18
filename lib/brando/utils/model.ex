@@ -1,22 +1,22 @@
-defmodule Brando.Utils.Model do
+defmodule Brando.Utils.Schema do
   @moduledoc """
-  Common model utility functions
+  Common schema utility functions
   """
 
   @slug_collision_attemps 15
 
   @doc """
-  Updates a field on `model`.
+  Updates a field on `schema`.
   `coll` should be [field_name: value]
 
   ## Example:
 
-      {:ok, model} = update_field(model, [field_name: "value"])
+      {:ok, schema} = update_field(schema, [field_name: "value"])
 
   """
 
-  def update_field(model, coll) do
-    changeset = Ecto.Changeset.change(model, coll)
+  def update_field(schema, coll) do
+    changeset = Ecto.Changeset.change(schema, coll)
     {:ok, Brando.repo.update!(changeset)}
   end
 

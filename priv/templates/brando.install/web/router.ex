@@ -69,9 +69,9 @@ defmodule <%= application_module %>.Router do
 
   scope "/auth" do
     pipe_through :auth
-    get  "/login", Brando.SessionController, :login, private: %{model: Brando.User}
-    post "/login", Brando.SessionController, :login, private: %{model: Brando.User}
-    get  "/logout", Brando.SessionController, :logout, private: %{model: Brando.User}
+    get  "/login", Brando.SessionController, :login
+    post "/login", Brando.SessionController, :login
+    get  "/logout", Brando.SessionController, :logout
   end
 
   scope "/" do

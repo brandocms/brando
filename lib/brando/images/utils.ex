@@ -22,7 +22,7 @@ defmodule Brando.Images.Utils do
   end
 
   @doc """
-  Goes through `image`, which is a model with a :sizes field
+  Goes through `image`, which is a schema with a :sizes field
   then passing to `delete_media/2` for removal
 
   ## Example:
@@ -509,11 +509,11 @@ defmodule Brando.Images.Utils do
   when series has been renamed!
   """
   @spec check_image_paths(module, map) :: :unchanged | :changed
-  def check_image_paths(model, image_series) do
+  def check_image_paths(schema, image_series) do
     upload_path = image_series.cfg.upload_path
 
     {_, paths}  = Enum.map_reduce(image_series.images, [], fn(image, acc) ->
-      case check_image_path(model, image, upload_path) do
+      case check_image_path(schema, image, upload_path) do
         nil  -> {image, acc}
         path -> {image, [path|acc]}
       end
@@ -526,7 +526,7 @@ defmodule Brando.Images.Utils do
   end
 
   @spec check_image_path(module, map, String.t) :: Ecto.Schema.t | nil
-  defp check_image_path(model, image, upload_dirname) do
+  defp check_image_path(schema, image, upload_dirname) do
     image_path     = image.image.path
     image_dirname  = Path.dirname(image.image.path)
     image_basename = Path.basename(image.image.path)
@@ -537,7 +537,7 @@ defmodule Brando.Images.Utils do
     if img_struct != nil do
       # store new image
       image
-      |> model.changeset(:update, %{image: img_struct})
+      |> schema.changeset(:update, %{image: img_struct})
       |> Brando.repo.update!
     end
   end

@@ -1,6 +1,6 @@
 defmodule Brando.ImageCategoryConfigForm do
   @moduledoc """
-  A form for the ImageCategory configuration model. See the `Brando.Form`
+  A form for the ImageCategory configuration schema. See the `Brando.Form`
   module for more documentation
   """
 

@@ -69,7 +69,7 @@ defmodule RouterHelper do
 
   def with_user(conn, user \\ nil) do
     conn
-    |> put_private(:model, Brando.User)
+    |> put_private(:schema, Brando.User)
     |> with_session
     |> put_session(:current_user, user || @current_user)
   end
@@ -118,8 +118,8 @@ defmodule RouterHelper do
     scope "/admin", as: :admin do
       pipe_through :admin
       user_routes "/users", Brando.Admin.UserController,
-                            private: %{model: Brando.User}
-      user_routes "/users2", private: %{model: Brando.User}
+                            private: %{schema: Brando.User}
+      user_routes "/users2", private: %{schema: Brando.User}
       user_routes "/users3"
       image_routes "/images"
       dashboard_routes "/"
@@ -133,13 +133,13 @@ defmodule RouterHelper do
       pipe_through :browser
       get "/test123/:id/:language", Brando.TestController, :test
       get "/login", Brando.SessionController, :login,
-        private: %{model: Brando.User,
+        private: %{schema: Brando.User,
                    layout: {Brando.Session.LayoutView, "auth.html"}}
       post "/login", Brando.SessionController, :login,
-        private: %{model: Brando.User,
+        private: %{schema: Brando.User,
                    layout: {Brando.Session.LayoutView, "auth.html"}}
       get "/logout", Brando.SessionController, :logout,
-        private: %{model: Brando.User,
+        private: %{schema: Brando.User,
                    layout: {Brando.Session.LayoutView, "auth.html"}}
     end
   end

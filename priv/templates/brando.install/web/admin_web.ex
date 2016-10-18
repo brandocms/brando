@@ -15,7 +15,7 @@ defmodule <%= application_module %>.Admin.Web do
   Do NOT define functions inside the quoted expressions
   below.
   """
-  def model do
+  def schema do
     quote do
       use Ecto.Schema
 

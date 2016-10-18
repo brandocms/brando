@@ -6,7 +6,7 @@ defmodule Brando.ImageCategory do
 
   @type t :: %__MODULE__{}
 
-  use Brando.Web, :model
+  use Brando.Web, :schema
 
   import Brando.Gettext
   import Ecto.Query, only: [from: 2]
@@ -109,7 +109,7 @@ defmodule Brando.ImageCategory do
   #
   # Meta
 
-  use Brando.Meta.Model, [
+  use Brando.Meta.Schema, [
     singular: gettext("image category"),
     plural: gettext("image categories"),
     repr: &(&1.name),

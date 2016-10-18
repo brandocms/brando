@@ -6,13 +6,13 @@ defmodule Brando.Admin.ImageCategoryController do
   use Brando.Web, :controller
   use Brando.Sequence, [
     :controller, [
-      model: Brando.ImageSeries,
+      schema: Brando.ImageSeries,
       filter: &Brando.ImageSeries.by_category_id/1
     ]
   ]
 
   import Brando.Plug.HTML
-  import Brando.Utils.Model, only: [put_creator: 2]
+  import Brando.Utils.Schema, only: [put_creator: 2]
   import Brando.Images.Utils, only: [fix_size_cfg_vals: 1]
   import Brando.Gettext
   import Ecto.Query
