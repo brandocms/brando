@@ -660,10 +660,10 @@ defmodule Brando.Form.Fields do
     IO.warn("""
     using help_text from form macros is deprecated.
 
-    Set the help text in the models meta instead:
+    Set the help text in the schema's meta instead:
 
         # #{inspect f.schema}
-        use Brando.Meta.Model, [
+        use Brando.Meta.Schema, [
           ...
           help: [
             #{f.name}: gettext("#{help_text}")

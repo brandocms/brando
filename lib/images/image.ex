@@ -6,12 +6,12 @@ defmodule Brando.Image do
 
   @type t :: %__MODULE__{}
 
-  use Brando.Web, :model
+  use Brando.Web, :schema
+  use Brando.Sequence, :schema
   use Brando.Images.Upload
-  use Brando.Sequence, :model
 
   import Brando.Gettext
-  import Brando.Utils.Model, only: [put_creator: 2]
+  import Brando.Utils.Schema, only: [put_creator: 2]
   import Ecto.Query, only: [from: 2]
   import Brando.Images.Utils
 
@@ -52,7 +52,7 @@ defmodule Brando.Image do
 
   """
   def changeset(schema, :update, params) do
-    cast(schema, params, [], @required_fields ++ @optional_fields)
+    cast(schema, params, @required_fields ++ @optional_fields)
   end
 
   @doc """
@@ -120,7 +120,7 @@ defmodule Brando.Image do
   #
   # Meta
 
-  use Brando.Meta.Model, [
+  use Brando.Meta.Schema, [
     singular: gettext("image"),
     plural: gettext("images"),
     repr: &("#{&1.id} | #{&1.image.path}"),

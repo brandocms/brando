@@ -1,6 +1,6 @@
 defmodule Brando.Type.Role do
   @moduledoc """
-  Defines a type for managing roles in user models.
+  Defines a type for managing roles in user schemas.
   """
 
   @behaviour Ecto.Type
@@ -60,7 +60,7 @@ defmodule Brando.Type.Role do
   @doc """
   When loading `roles` from the database, we are guaranteed to
   receive an integer (as database are stricts) and we will
-  just return it to be stored in the model struct.
+  just return it to be stored in the schema struct.
   """
   def load(roles) when is_integer(roles) do
     set_roles = Keyword.get(get_config(), :roles)

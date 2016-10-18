@@ -11,6 +11,6 @@
       <%= gettext("This object cannot be restored!") %>
     </strong>
   </p>
-  <%= Brando.HTML.Inspect.model(@record) %>
+  <%= Brando.HTML.Inspect.schema(@record) %>
   <%= Brando.HTML.delete_form_button(:admin_image_series_path, @record) %>
 </div>

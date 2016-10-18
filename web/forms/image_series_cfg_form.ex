@@ -1,6 +1,6 @@
 defmodule Brando.ImageSeriesConfigForm do
   @moduledoc """
-  A form for the ImageSeries configuration model. See the `Brando.Form`
+  A form for the ImageSeries configuration schema. See the `Brando.Form`
   module for more documentation
   """
 

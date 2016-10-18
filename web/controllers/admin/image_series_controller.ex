@@ -6,7 +6,7 @@ defmodule Brando.Admin.ImageSeriesController do
   use Brando.Web, :controller
   use Brando.Sequence, [
     :controller, [
-      model:  Brando.Image,
+      schema:  Brando.Image,
       filter: &Brando.Image.for_series_id/1
     ]
   ]
@@ -14,7 +14,7 @@ defmodule Brando.Admin.ImageSeriesController do
   import Brando.Gettext
   import Brando.Plug.HTML
   import Brando.Images.Utils, only: [recreate_sizes_for: 2, fix_size_cfg_vals: 1]
-  import Brando.Utils.Model, only: [put_creator: 2]
+  import Brando.Utils.Schema, only: [put_creator: 2]
   import Ecto.Query
 
   alias Brando.Image

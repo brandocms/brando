@@ -2,7 +2,7 @@ defmodule Brando.Images.Field.ImageFieldTest do
   use ExUnit.Case, async: true
   import Brando.Images.Utils
 
-  defmodule TestModel do
+  defmodule TestSchema do
     use Brando.Field.ImageField
 
     @cfg %{
@@ -27,6 +27,6 @@ defmodule Brando.Images.Field.ImageFieldTest do
   end
 
   test "use works" do
-    assert Brando.Images.Field.ImageFieldTest.TestModel.get_image_cfg(:avatar) == TestModel.cfg
+    assert Brando.Images.Field.ImageFieldTest.TestSchema.get_image_cfg(:avatar) == TestSchema.cfg
   end
 end

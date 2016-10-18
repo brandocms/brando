@@ -84,11 +84,6 @@ defmodule Brando.UtilsTest do
     refute unique_filename(filename) == filename
   end
 
-  test "to_iso8601/1" do
-    dt = %Ecto.DateTime{year: 2014, month: 1, day: 1, hour: 12, min: 0, sec: 0}
-    assert to_iso8601(dt) == "2014-01-01T12:00:00Z"
-  end
-
   test "media_url/1" do
     assert media_url("test") == "/media/test"
     assert media_url(nil) == "/media"

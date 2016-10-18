@@ -9,13 +9,10 @@ defmodule Brando.Images.UtilsTest do
   alias Brando.Images.Upload
   alias Brando.Factory
 
-  setup do
+  test "do_upload/2" do
     File.rm_rf!(Brando.config(:media_path))
     File.mkdir_p!(Brando.config(:media_path))
-    :ok
-  end
 
-  test "do_upload/2" do
     cfg = Factory.build(:image_cfg)
     image = Factory.build(:image_type)
     upload = Factory.build(:plug_upload)
@@ -23,8 +20,7 @@ defmodule Brando.Images.UtilsTest do
     slug_upload = Map.put(upload, :filename, "file with spaces.png")
     blank_upload = Map.put(upload, :filename, "")
 
-    assert Upload.do_upload(upload, cfg) == {:ok, Map.put(image, :optimized, true)}
-    refute Upload.do_upload(upload, cfg) == {:ok, image}
+    assert Upload.do_upload(upload, cfg) == {:ok, image}
 
     {:ok, image} = Upload.do_upload(slug_upload, cfg)
     assert image.path == "images/default/file-with-spaces.png"
@@ -54,6 +50,9 @@ defmodule Brando.Images.UtilsTest do
   end
 
   test "put_size_cfg" do
+    File.rm_rf!(Brando.config(:media_path))
+    File.mkdir_p!(Brando.config(:media_path))
+    
     user      = Factory.insert(:user)
     category  = Factory.insert(:image_category, creator: user)
     series    = Factory.insert(:image_series, creator: user, image_category: category)

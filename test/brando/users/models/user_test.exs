@@ -27,13 +27,6 @@ defmodule Brando.Integration.UserTest do
     refute User.auth?(user, "finimeze123")
   end
 
-  test "set_last_login/1" do
-    user = Factory.insert(:user)
-
-    new_user = User.set_last_login(user)
-    refute user.last_login == new_user.last_login
-  end
-
   test "role?/1" do
     user = Factory.insert(:user)
 
