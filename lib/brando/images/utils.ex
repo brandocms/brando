@@ -10,19 +10,7 @@ defmodule Brando.Images.Utils do
   alias Brando.{Image, ImageSeries}
 
   @doc """
-  Deprecated
-  """
-  def delete_original_and_sized_images(nil) do
-    nil
-  end
-  def delete_original_and_sized_images(_) do
-    # DEPRECATE
-    raise "delete_original_and_sized_images/1 is deprecated, " <>
-          "use delete_original_and_sized_images/2 instead"
-  end
-
-  @doc """
-  Goes through `image`, which is a model with a :sizes field
+  Goes through `image`, which is a schema with a :sizes field
   then passing to `delete_media/2` for removal
 
   ## Example:
@@ -144,12 +132,14 @@ defmodule Brando.Images.Utils do
 
         File.mkdir_p(postfixed_size_dir)
         create_image_size(file, sized_image, size_cfg, type)
+
         {size_name, sized_path}
       end
 
-    size_struct = %Brando.Type.Image{}
-                  |> Map.put(:sizes, Enum.into(sizes, %{}))
-                  |> Map.put(:path, Path.join([upload_path, filename]))
+    size_struct =
+      %Brando.Type.Image{}
+      |> Map.put(:sizes, Enum.into(sizes, %{}))
+      |> Map.put(:path, Path.join([upload_path, filename]))
 
     {:ok, size_struct}
   end
@@ -232,17 +222,18 @@ defmodule Brando.Images.Utils do
     full_path = media_path(img.image.path)
 
     delete_sized_images(img.image)
-
     {:ok, new_image} =
       {%{uploaded_file: full_path}, img.image_series.cfg}
       |> create_image_sizes
-      |> Brando.Images.Optimize.optimize
 
     image = Map.put(img.image, :sizes, new_image.sizes)
 
-    img
-    |> Brando.Image.changeset(:update, %{image: image})
-    |> Brando.repo.update!
+    img =
+      img
+      |> Brando.Image.changeset(:update, %{image: image})
+      |> Brando.repo.update!
+
+    Brando.Images.Optimize.optimize(img, :image)
 
     :ok
   end
@@ -545,11 +536,11 @@ defmodule Brando.Images.Utils do
   when series has been renamed!
   """
   @spec check_image_paths(module, map) :: :unchanged | :changed
-  def check_image_paths(model, image_series) do
+  def check_image_paths(schema, image_series) do
     upload_path = image_series.cfg.upload_path
 
     {_, paths}  = Enum.map_reduce(image_series.images, [], fn(image, acc) ->
-      case check_image_path(model, image, upload_path) do
+      case check_image_path(schema, image, upload_path) do
         nil  -> {image, acc}
         path -> {image, [path|acc]}
       end
@@ -562,7 +553,7 @@ defmodule Brando.Images.Utils do
   end
 
   @spec check_image_path(module, map, String.t) :: Ecto.Schema.t | nil
-  defp check_image_path(model, image, upload_dirname) do
+  defp check_image_path(schema, image, upload_dirname) do
     image_path     = image.image.path
     image_dirname  = Path.dirname(image.image.path)
     image_basename = Path.basename(image.image.path)
@@ -573,7 +564,7 @@ defmodule Brando.Images.Utils do
     if img_struct != nil do
       # store new image
       image
-      |> model.changeset(:update, %{image: img_struct})
+      |> schema.changeset(:update, %{image: img_struct})
       |> Brando.repo.update!
     end
   end

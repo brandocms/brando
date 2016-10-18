@@ -37,11 +37,11 @@ defmodule Brando.Form.FieldsTest do
       choice_value in values
     end
 
-    def selected_fun_true(_form_value, _model_value) do
+    def selected_fun_true(_form_value, _schema_value) do
       true
     end
 
-    def selected_fun_false(_form_value, _model_value) do
+    def selected_fun_false(_form_value, _schema_value) do
       false
     end
 

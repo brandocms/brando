@@ -7,7 +7,7 @@ defmodule Brando.ImageSeriesService do
   import Ecto.Query
 
   @doc """
-  Returns the model's slug
+  Returns the schema's slug
   """
   @spec get_slug_by(Keyword.t) :: ImageSeries.t | no_return
   def get_slug_by(id: id) do

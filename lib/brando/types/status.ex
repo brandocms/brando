@@ -1,6 +1,6 @@
 defmodule Brando.Type.Status do
   @moduledoc """
-  Defines a type for managing status in post models.
+  Defines a type for managing status in post schemas.
   """
 
   @behaviour Ecto.Type
@@ -41,7 +41,7 @@ defmodule Brando.Type.Status do
   @doc """
   When loading `roles` from the database, we are guaranteed to
   receive an integer (as database are stricts) and we will
-  just return it to be stored in the model struct.
+  just return it to be stored in the schema struct.
   """
   def load(status) when is_integer(status) do
     case status do

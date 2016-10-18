@@ -16,7 +16,7 @@ defmodule Brando.Form do
   Set field labels, placeholders and help text by using your `schema`'s meta.
   This is to enable gettext translations, which won't work in the field macro.
 
-  See `Brando.Meta.Model` for more info about meta.
+  See `Brando.Meta.Schema` for more info about meta.
 
   See this module's `Brando.Form.form` and `Brando.Form.field` docs for more.
   """
@@ -37,7 +37,7 @@ defmodule Brando.Form do
             rendered_form: nil
 
   @type t         :: %__MODULE__{}
-  @type helper    :: {:helper, atom} | {:helper, {Module, atom}} | {:helper, function}
+  @type helper    :: {:helper, atom} | {:helper, {Module, atom}}
   @type class     :: {:class, String.t}
   @type form_opts :: [helper | class]
 
@@ -84,8 +84,6 @@ defmodule Brando.Form do
     * `action`: This represents the helper function that will get the form's action.
       You can supply:
 
-      * A helper function: `MyApp.AnotherRouter.Helpers.admin_another_create`
-
       * An atom: `:admin_post_path`. This will use the otp app's default router's helper,
       accessed through `Brando.helpers`
 
@@ -97,9 +95,6 @@ defmodule Brando.Form do
   @spec form(String.t, form_opts, [do: Macro.t]) :: Macro.t
   defmacro form(source, opts \\ [], block)
   defmacro form(source, opts, [do: block]) do
-    if Keyword.get(opts, :model) do
-      raise "form/3 :model keyword is deprecated. use :schema instead"
-    end
     quote do
       @form_opts %{
         class: unquote(opts[:class] || false),
@@ -127,7 +122,7 @@ defmodule Brando.Form do
           Example: `action: :create` or `action: :update_all`
         * `params` - Any parameters to the :action function helper.
           Example: `params: to_string(@id)`
-        * `changeset`: Model/param changeset.
+        * `changeset`: Schema/param changeset.
 
       ## Example:
 
@@ -264,7 +259,7 @@ defmodule Brando.Form do
 
     * `required` - true as default
     * `label` - If this isn't supplied, Brando will look for a Linguist
-      `locale` in the form's `:model` property with the field name as key.
+      `locale` under the form's `:schema` key with the field name as key.
     * `slug_from` - :name
       Automatically slugs with `:name` as source.
     * `placeholder` - "Placeholder for field"
@@ -272,7 +267,7 @@ defmodule Brando.Form do
       which splits tags by comma.
     * `confirm` - true. Inserts a confirmation field. You would then add
       `validate_confirmation(:password, message: "No match")`
-      to your models changeset functions.
+      to your schema's changeset functions.
     * `default` - Default value. Can also be a function like
       `&__MODULE__.default_func/0`
 
@@ -296,7 +291,7 @@ defmodule Brando.Form do
     * `choices` - &__MODULE__.get_status_choices/0.
     * `is_selected` - Pass a function that checks if `value` is selected.
       The function gets passed the checkbox's value, and
-      the model's value.
+      the schema's value.
       &__MODULE__.status_is_selected/2
     * `label`: "Label for field"
     * `empty_value`: Value to set if none of the boxes are checked.
@@ -313,7 +308,7 @@ defmodule Brando.Form do
       in the module the form was defined.
     * `is_selected` - Pass a function that checks if `value` is selected.
       The function gets passed the option's value, and
-      the model's value.
+      the schema's value.
       &__MODULE__.status_is_selected/2
     * `default` - "1"
     * `label` - "Label for the select"
@@ -331,7 +326,7 @@ defmodule Brando.Form do
     * `choices` - &__MODULE__.get_status_choices/0
     * `is_selected` - Pass a function that checks if `value` is selected.
       The function gets passed the checkbox's value, and
-      the model's value.
+      the schema's value.
       &__MODULE__.status_is_selected/2
     * `label` - Label for the entire group. Each individual radio
       gets its label from the `choices` function.
@@ -485,10 +480,6 @@ defmodule Brando.Form do
     apply(helper, fun, [Brando.endpoint(), action] ++ params)
   end
 
-  def apply_action(fun, action, params) when is_function(fun) and is_list(params) do
-    apply(fun, [Brando.endpoint(), action] ++ params)
-  end
-
   def apply_action(fun, action, params) when is_list(params) do
     apply(Brando.helpers, fun, [Brando.endpoint(), action] ++ params)
   end
@@ -497,20 +488,12 @@ defmodule Brando.Form do
     apply(helper, fun, [Brando.endpoint(), action])
   end
 
-  def apply_action(fun, action, nil) when is_function(fun) do
-    apply(fun, [Brando.endpoint(), action])
-  end
-
   def apply_action(fun, action, nil) do
     apply(Brando.helpers, fun, [Brando.endpoint(), action])
   end
 
   def apply_action({helper, fun}, action, params) do
     apply(helper, fun, [Brando.endpoint(), action, params])
-  end
-
-  def apply_action(fun, action, params) when is_function(fun) do
-    apply(fun, [Brando.endpoint(), action, params])
   end
 
   def apply_action(fun, action, params) do

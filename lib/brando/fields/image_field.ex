@@ -1,13 +1,13 @@
 defmodule Brando.Field.ImageField do
   @moduledoc """
-  Assign a model's field as an image field.
+  Assign a schema's field as an image field.
 
   This means you can configure the field with different sizes that will be
   automatically created on file upload.
 
   ## Example
 
-  In your `my_model.ex`:
+  In your `my_schema.ex`:
 
       has_image_field :avatar,
         %{allowed_exts: ["jpg", "jpeg", "png"],
@@ -36,9 +36,9 @@ defmodule Brando.Field.ImageField do
       @doc """
       Checks `params` for Plug.Upload fields and passes them on to
       `handle_upload` to check if we have a handler for the field.
-      Returns {:ok, model} or raises
+      Returns {:ok, schema} or raises
       """
-      def check_for_uploads(model, params) do
+      def check_for_uploads(schema, params) do
         uploads = params
         |> filter_plugs
         |> Enum.reduce([], fn (plug, acc) ->
@@ -137,8 +137,8 @@ defmodule Brando.Field.ImageField do
 
   @doc """
   Handles the upload by starting a chain of operations on the plug.
-  This function handles upload when we have an image field on a model,
-  not when the model itself represents an image. (See Brando.Images.Upload)
+  This function handles upload when we have an image field on a schema,
+  not when the schema itself represents an image. (See Brando.Images.Upload)
 
   ## Parameters
 

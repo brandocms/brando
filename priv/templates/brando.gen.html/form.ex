@@ -1,6 +1,6 @@
 defmodule <%= admin_module %>Form do
   @moduledoc """
-  A form for the <%= alias %> model. See the `Brando.Form` module for more
+  A form for the <%= alias %> schema. See the `Brando.Form` module for more
   documentation
   """
   use Brando.Form

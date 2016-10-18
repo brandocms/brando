@@ -1,6 +1,6 @@
   <div class="data-table">
     <h1><%= gettext("Show user") %></h1>
-    <%= Brando.HTML.Inspect.model(@user) %>
+    <%= Brando.HTML.Inspect.schema(@user) %>
     <div class="form-actions">
       <a href="<%= Brando.helpers.admin_user_path(@conn, :index) %>" class="btn btn-default">
         <i class="fa fa-list fa-fw m-r-sm"></i> <%= gettext("Back to index") %>

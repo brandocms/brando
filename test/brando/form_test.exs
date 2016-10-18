@@ -3,7 +3,7 @@ defmodule Brando.FormTest do
   import Brando.Form
 
   defmodule MyUser do
-    use Brando.Meta.Model, [
+    use Brando.Meta.Schema, [
       singular: "user",
       plural: "users",
       repr: &("#{&1.full_name} (#{&1.username})"),
@@ -215,10 +215,10 @@ defmodule Brando.FormTest do
       "email" => "test@email.com",
       "role" => 4,
       "full_name" => "Test Name", "id" => 1,
-      "inserted_at" => %Ecto.DateTime{day: 7, hour: 4, min: 36, month: 12, sec: 26, year: 2014},
-      "last_login" => %Ecto.DateTime{day: 9, hour: 5, min: 2, month: 12, sec: 36, year: 2014},
+      "inserted_at" => ~N[2016-01-01 12:00:00],
+      "last_login" => ~N[2016-01-01 12:00:00],
       "password" => "$2a$12$abcdefghijklmnopqrstuvwxyz",
-      "updated_at" => %Ecto.DateTime{day: 14, hour: 21, min: 36, month: 1, sec: 53, year: 2015},
+      "updated_at" => ~N[2016-01-01 12:00:00],
       "username" => "test"
     }
 
@@ -283,5 +283,16 @@ defmodule Brando.FormTest do
         end
       end
     end
+  end
+
+  test "apply_action" do
+    assert apply_action({Brando.helpers, :admin_user_path}, :edit, [5]) == "/admin/users/5/edit"
+    assert apply_action(:admin_user_path, :edit, [5]) == "/admin/users/5/edit"
+
+    assert apply_action({Brando.helpers, :admin_user_path}, :index, nil) == "/admin/users"
+    assert apply_action(:admin_user_path, :index, nil) == "/admin/users"
+
+    assert apply_action({Brando.helpers, :admin_user_path}, :edit, 5) == "/admin/users/5/edit"
+    assert apply_action(:admin_user_path, :edit, 5) == "/admin/users/5/edit"
   end
 end

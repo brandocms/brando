@@ -24,10 +24,9 @@ defmodule Brando.Images.Routes.Admin do
 
   defp add_resources(path, opts) do
     priv_map = %{}
-    |> Map.put(:image_model, Keyword.get(opts, :image_model, Image))
-    |> Map.put(:series_model, Keyword.get(opts, :series_model, ImageSeries))
-    |> Map.put(:category_model, Keyword.get(opts, :category_model,
-                                            ImageCategory))
+    |> Map.put(:image_schema, Keyword.get(opts, :image_schema, Image))
+    |> Map.put(:series_schema, Keyword.get(opts, :series_schema, ImageSeries))
+    |> Map.put(:category_schema, Keyword.get(opts, :category_schema,ImageCategory))
     options = Keyword.put([], :private, Macro.escape(priv_map))
 
     quote do

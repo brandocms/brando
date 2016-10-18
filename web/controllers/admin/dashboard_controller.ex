@@ -43,8 +43,8 @@ defmodule Brando.Admin.DashboardController do
       {:ok, stat} ->
         last_updated =
           stat.mtime
-          |> Ecto.DateTime.from_erl
-          |> Ecto.DateTime.to_string
+          |> NaiveDateTime.from_erl!
+          |> NaiveDateTime.to_string
 
         last_lines =
           log_file

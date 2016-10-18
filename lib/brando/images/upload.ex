@@ -6,7 +6,7 @@ defmodule Brando.Images.Upload do
   alias Brando.Exception.UploadError
   import Brando.Gettext
   import Brando.Utils
-  import Brando.Images.Optimize, only: [optimize: 1]
+  import Brando.Images.Optimize, only: [optimize: 3]
   import Brando.Images.Utils, only: [create_image_sizes: 1]
 
   defmacro __using__(_) do
@@ -14,8 +14,8 @@ defmodule Brando.Images.Upload do
       import unquote(__MODULE__)
       @doc """
       Checks `params` for Plug.Upload fields and passes them on.
-      Fields in the `put_fields` map are added to the model.
-      Returns {:ok, model} or raises
+      Fields in the `put_fields` map are added to the schema.
+      Returns {:ok, schema} or raises
       """
       def check_for_uploads(params, current_user, cfg, put_fields \\ nil) do
         Enum.reduce filter_plugs(params), [], fn (named_plug, _) ->
@@ -28,11 +28,15 @@ defmodule Brando.Images.Upload do
   @doc """
   Handles Plug.Upload for our modules.
   """
-  def handle_upload({name, plug}, current_user, put_fields, module, cfg) do
-    {:ok, file} = do_upload(plug, cfg)
-    params      = Map.put(put_fields, name, file)
+  def handle_upload({name, plug}, current_user, put_fields, schema, cfg) do
+    {:ok, img_field} = do_upload(plug, cfg)
+    params           = Map.put(put_fields, name, img_field)
 
-    apply(module, :create, [params, current_user])
+    {:ok, data} = apply(schema, :create, [params, current_user])
+
+    optimize(data, name, img_field)
+
+    {:ok, data}
   end
 
   @doc """
@@ -44,11 +48,6 @@ defmodule Brando.Images.Upload do
     process_upload(plug, cfg)
   end
 
-  def do_upload(_plug, cfg) when is_list(cfg) do
-    raise "do_upload with cfg as list is deprecated." <>
-          "please supply a %Brando.Type.ImageConfig{} struct instead."
-  end
-
   defp process_upload(plug, cfg_struct) do
     {plug, cfg_struct}
     |> get_valid_filename
@@ -56,7 +55,6 @@ defmodule Brando.Images.Upload do
     |> create_upload_path
     |> copy_uploaded_file
     |> create_image_sizes
-    |> optimize
   end
 
   defp get_valid_filename({%{filename: ""}, _cfg}) do

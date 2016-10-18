@@ -40,7 +40,7 @@ defmodule Brando.Web do
 
       import Brando.Meta.Controller
       import Brando.Utils, only: [current_user: 1, helpers: 1]
-      import Brando.Utils.Model, only: [put_creator: 2]
+      import Brando.Utils.Schema, only: [put_creator: 2]
 
       # Alias the data repository as a convenience
       alias unquote(repo)
@@ -50,7 +50,7 @@ defmodule Brando.Web do
     end
   end
 
-  def model do
+  def schema do
     repo = Brando.repo
     quote do
       use Ecto.Schema

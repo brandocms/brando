@@ -159,7 +159,7 @@ defmodule Brando.HTML do
 
   @doc """
   Renders a delete button wrapped in a POST form.
-  Pass `params` instance of model (if one param), or a list of multiple
+  Pass `params` instance of schema (if one param), or a list of multiple
   params, and `helper` path.
   """
   @spec delete_form_button(atom, Keyword.t | %{atom => any}) :: {:safe, String.t}

@@ -1,31 +1,31 @@
 defmodule Brando.Tag do
   @moduledoc """
-  Helpers for tagging models.
+  Helpers for tagging schema data.
 
-  Adds a `tags` field to your model.
+  Adds a `tags` field to your schema.
 
   ## Example/Usage
 
   Controller:
 
       use Brando.Tag,
-        [:controller, [model: Brando.Post]]
+        [:controller, [schema: Brando.Post]]
 
   View:
 
       use Brando.Tag, :view
 
-  Model:
+  Schema:
 
-      use Brando.Tag, :model
+      use Brando.Tag, :schema
 
-      schema "model" do
+      schema "my_schema" do
         # ...
         tags
       end
 
-  You will find a function in your model called `by_tag/1` which returns
-  an Ecto Queryable of all records in your model matching `tag`.
+  You will find a function in your schema called `by_tag/1` which returns
+  an Ecto Queryable of all records in your schema matching `tag`.
 
   Also remember to add
 
@@ -38,7 +38,7 @@ defmodule Brando.Tag do
       use Brando.Tag, :migration
 
       def up do
-        create table(:model) do
+        create table(:schema) do
           # ...
           tags
         end
@@ -50,7 +50,7 @@ defmodule Brando.Tag do
 
   """
 
-  defmodule Model do
+  defmodule Schema do
     @moduledoc false
     @doc false
     defmacro tags do
@@ -71,7 +71,7 @@ defmodule Brando.Tag do
   end
 
   @doc false
-  def controller(_model, _filter \\ nil) do
+  def controller(_schema, _filter \\ nil) do
     quote do
     end
   end
@@ -84,12 +84,12 @@ defmodule Brando.Tag do
   end
 
   @doc false
-  def model do
+  def schema do
     quote do
-      import Brando.Tag.Model, only: [tags: 0]
+      import Brando.Tag.Schema, only: [tags: 0]
 
       @doc """
-      Search `model`'s tags field for `tags`
+      Search `schema`'s tags field for `tags`
       """
       def by_tag(tag) do
         from m in __MODULE__,

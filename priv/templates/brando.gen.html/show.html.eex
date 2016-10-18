@@ -1,6 +1,6 @@
   <div class="data-table">
     <h1><%= "<%=" %> gettext("Show <%= singular %>") <%= "%\>" %></h1>
-    <%= "<%=" %> Brando.HTML.Inspect.model(@<%= singular %>) <%= "%\>" %>
+    <%= "<%=" %> Brando.HTML.Inspect.schema(@<%= singular %>) <%= "%\>" %>
     <div class="form-actions">
       <a href="<%= "<%=" %> Brando.helpers.<%= admin_path %>_path(@conn, :index) <%= "%\>" %>" class="btn btn-default">
         <i class="fa fa-list fa-fw m-r-sm"></i> <%= "<%=" %> gettext("Back to index") <%= "%\>" %>

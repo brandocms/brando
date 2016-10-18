@@ -1,6 +1,6 @@
 defmodule Brando.UserForm do
   @moduledoc """
-  A form for the User model. See the `Brando.Form` module for more
+  A form for the User schema. See the `Brando.Form` module for more
   documentation
   """
   use Bitwise, only_operators: true

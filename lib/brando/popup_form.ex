@@ -65,8 +65,8 @@ defmodule Brando.PopupForm do
     {:ok, changeset}              = get_changeset(mod, params)
 
     case Brando.repo.insert(changeset) do
-      {:ok, inserted_model} ->
-        {:ok, {inserted_model, fields}}
+      {:ok, inserted_data} ->
+        {:ok, {inserted_data, fields}}
       {:error, changeset} ->
         {:error, mod.get_popup_form(type: :create, action: :create,
                                     params: [], changeset: changeset)}

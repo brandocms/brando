@@ -1,5 +1,5 @@
 defmodule <%= application_module %>.DateTimeHelpers do
-  import <%= application_module %>.Gettext
+  import <%= application_module %>.Web.Gettext
 
   @months %{
     1  => gettext("January"),
@@ -18,14 +18,14 @@ defmodule <%= application_module %>.DateTimeHelpers do
   @doc """
   Prettify ecto datetime struct and return date
   """
-  def pretty_date(%Ecto.DateTime{} = datetime) do
+  def pretty_date(datetime) do
     "#{datetime.day}. #{@months[datetime.month]} #{datetime.year}"
   end
 
   @doc """
   Prettify ecto datetime struct and return date + time
   """
-  def pretty_datetime(%Ecto.DateTime{} = datetime) do
-    "#{datetime.day}. #{@months[datetime.month]} #{datetime.year} @ #{datetime.hour}:#{datetime.min}"
+  def pretty_datetime(datetime) do
+    "#{datetime.day}. #{@months[datetime.month]} #{datetime.year} @ #{datetime.hour}:#{datetime.minute}"
   end
 end

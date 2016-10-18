@@ -6,13 +6,13 @@ defmodule Brando.ImageSeries do
 
   @type t :: %__MODULE__{}
 
-  use Brando.Web, :model
-  use Brando.Sequence, :model
+  use Brando.Web, :schema
+  use Brando.Sequence, :schema
 
   alias Brando.ImageCategory
 
   import Ecto.Query, only: [from: 2]
-  import Brando.Utils.Model, only: [avoid_slug_collision: 1]
+  import Brando.Utils.Schema, only: [avoid_slug_collision: 1]
   import Brando.Gettext
 
   @required_fields ~w(name slug image_category_id creator_id)a
@@ -132,7 +132,7 @@ defmodule Brando.ImageSeries do
   #
   # Meta
 
-  use Brando.Meta.Model, [
+  use Brando.Meta.Schema, [
     singular: gettext("imageserie"),
     plural: gettext("imageseries"),
     repr: fn (schema) ->

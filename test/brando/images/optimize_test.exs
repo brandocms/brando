@@ -12,14 +12,15 @@ defmodule Brando.Image.OptimizeTest do
   alias Brando.Factory
 
   setup do
-    user = Factory.insert(:user)
+    user     = Factory.insert(:user)
     category = Factory.insert(:image_category, creator: user)
-    series = Factory.insert(:image_series, creator: user, image_category: category)
+    series   = Factory.insert(:image_series, creator: user, image_category: category)
+
     {:ok, %{user: user, category: category, series: series}}
   end
 
   test "optimize", %{series: series, user: user} do
-    up_params = Factory.build(:plug_upload)
+    up_params      = Factory.build(:plug_upload)
     up_params_jpeg = Factory.build(:plug_upload_jpeg)
 
     :post
@@ -33,9 +34,14 @@ defmodule Brando.Image.OptimizeTest do
       |> Brando.repo.all
       |> List.first
 
-    {:ok, optimized_image} = optimize({:ok, image.image})
+    #{:ok, task_pid} = optimize(image, :image)
+    optimize(image, :image)
+    #ref = Process.monitor(task_pid)
+    #assert_receive {:DOWN, ^ref, :process, _, :normal}, 5000
 
-    assert optimized_image.optimized
+    optimized_image = Brando.repo.get(Image, image.id)
+
+    assert optimized_image.image.optimized
 
     assert File.exists?(media_path("portfolio/test-category/test-series/small/sample.png"))
     assert File.exists?(media_path("portfolio/test-category/test-series/small/sample-optimized.png"))
@@ -53,9 +59,14 @@ defmodule Brando.Image.OptimizeTest do
       |> Brando.repo.all
       |> List.first
 
-    {:ok, optimized_image} = optimize({:ok, image.image})
+    #{:ok, task_pid} = optimize(image, :image)
+    optimize(image, :image)
+    #ref = Process.monitor(task_pid)
+    #assert_receive {:DOWN, ^ref, :process, _, :normal}, 5000
 
-    refute optimized_image.optimized
+    optimized_image = Brando.repo.get(Image, image.id)
+    refute optimized_image.image.optimized
+
     assert File.exists?(media_path("portfolio/test-category/test-series/small/sample.jpg"))
     refute File.exists?(media_path("portfolio/test-category/test-series/small/sample-optimized.jpg"))
   end
