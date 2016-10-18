@@ -24,7 +24,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         "secret:uuid", "photo:image", "data:villain", "first_login:date",
         "alarm:time", "address:references", "creator:references"]
 
-      assert_file "web/models/minion_face.ex", fn file ->
+      assert_file "web/schemas/minion_face.ex", fn file ->
         assert file =~ "defmodule Brando.MinionFace do"
         assert file =~ "schema \"minion_faces\" do"
         assert file =~ "field :photo, Brando.Type.Image"
@@ -35,11 +35,11 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
                        "born_at secret data first_login " <>
                        "alarm creator_id address_id)"
         assert file =~ "@optional_fields ~w(photo)"
-        assert file =~ "use Brando.Sequence, :model"
+        assert file =~ "use Brando.Sequence, :schema"
         assert file =~ "sequenced"
       end
 
-      assert_file "test/models/minion_face_test.exs"
+      assert_file "test/schemas/minion_face_test.exs"
       assert [migration_file] =
         Path.wildcard("priv/repo/migrations/*_create_minion_face.exs")
 
@@ -103,7 +103,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
       assert_file "web/templates/admin/minion_face/show.html.eex", fn file ->
         assert file =~ "<%= gettext(\"Show minion_face\") %>"
-        assert file =~ "<%= Brando.HTML.Inspect.model(@minion_face) %>"
+        assert file =~ "<%= Brando.HTML.Inspect.schema(@minion_face) %>"
       end
     end
   end

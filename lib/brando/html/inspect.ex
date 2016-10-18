@@ -1,6 +1,6 @@
 defmodule Brando.HTML.Inspect do
   @moduledoc """
-  Rendering functions for displaying model data
+  Rendering functions for displaying schema data
   """
   import Brando.Gettext
   import Brando.Render, only: [r: 1]
@@ -9,9 +9,10 @@ defmodule Brando.HTML.Inspect do
   import Phoenix.HTML.Tag, only: [content_tag: 3]
 
   @doc """
-  Returns the record's model name from __name__/1
+  Returns the record's schema name from __name__/1
   `form` is `:singular` or `:plural`
   """
+  # TODO: Deprecate for 1.0
   @spec model_name(map, :singular | :plural) :: String.t
   def model_name(_, _) do
     raise "model_name/2 is deprecated. use schema_name/2 instead."
@@ -37,35 +38,38 @@ defmodule Brando.HTML.Inspect do
   @doc """
   Returns the model's representation from __repr__/0
   """
+  # TODO: Deprecate for 1.0
   @spec model_repr(map) :: String.t
   def model_repr(_) do
     raise "model_repr/1 is deprecated. use schema_repr/1 instead."
   end
 
   @doc """
-  Inspects and displays `model`
+  Inspects and displays `schema`
   """
-  def model(nil) do
+  def schema(nil) do
     ""
   end
 
   @doc """
-  Inspects and displays `model_struct`
+  Inspects and displays `schema_struct`
   """
-  def model(model_struct) do
-    module = model_struct.__struct__
+  def schema(schema_struct) do
+    module = schema_struct.__struct__
     fields = module.__schema__(:fields)
     assocs = module.__schema__(:associations)
 
-    rendered_fields = fields
-    |> Enum.map(&(render_inspect_field(&1, module, module.__schema__(:type, &1),
-                                       Map.get(model_struct, &1))))
-    |> Enum.join
+    rendered_fields =
+      fields
+      |> Enum.map(&(render_inspect_field(&1, module, module.__schema__(:type, &1),
+                                         Map.get(schema_struct, &1))))
+      |> Enum.join
 
-    rendered_assocs = assocs
-    |> Enum.map(&(render_inspect_assoc(&1, module, module.__schema__(:association, &1),
-                                       Map.get(model_struct, &1))))
-    |> Enum.join
+    rendered_assocs =
+      assocs
+      |> Enum.map(&(render_inspect_assoc(&1, module, module.__schema__(:association, &1),
+                                         Map.get(schema_struct, &1))))
+      |> Enum.join
 
     content_tag :table, class: "table data-table" do
       {:safe, "#{rendered_fields}#{rendered_assocs}"}
@@ -230,7 +234,7 @@ defmodule Brando.HTML.Inspect do
   end
 
   @doc """
-  Public interface to inspect model associations
+  Public interface to inspect schema associations
   """
   def inspect_assoc(name, type, value) do
     do_inspect_assoc(name, type, value)

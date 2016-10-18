@@ -3,7 +3,7 @@ defmodule Brando.FormTest do
   import Brando.Form
 
   defmodule MyUser do
-    use Brando.Meta.Model, [
+    use Brando.Meta.Schema, [
       singular: "user",
       plural: "users",
       repr: &("#{&1.full_name} (#{&1.username})"),

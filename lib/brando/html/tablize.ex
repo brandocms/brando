@@ -1,6 +1,6 @@
 defmodule Brando.HTML.Tablize do
   @moduledoc """
-  Displays model data as a table.
+  Displays schema data as a table.
   """
 
   @type dropdown :: {String.t, String.t, atom, atom, atom | [atom]}

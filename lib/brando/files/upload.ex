@@ -11,8 +11,8 @@ defmodule Brando.Files.Upload do
       import unquote(__MODULE__)
       @doc """
       Checks `params` for Plug.Upload fields and passes them on.
-      Fields in the `put_fields` map are added to the model.
-      Returns {:ok, model} or raises
+      Fields in the `put_fields` map are added to the schema.
+      Returns {:ok, schema} or raises
       """
       def check_for_uploads(params, current_user, cfg, put_fields \\ nil) do
         Enum.reduce filter_plugs(params), [], fn (named_plug, _) ->

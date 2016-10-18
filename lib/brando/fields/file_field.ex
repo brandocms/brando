@@ -1,10 +1,10 @@
 defmodule Brando.Field.FileField do
   @moduledoc """
-  Assign a model's field as a file field.
+  Assign a schema's field as a file field.
 
   ## Example
 
-  In your `my_model.ex`:
+  In your `my_schema.ex`:
 
       has_file_field :pdf_report,
         %{allowed_exts: ["pdf"],
@@ -28,9 +28,9 @@ defmodule Brando.Field.FileField do
       @doc """
       Checks `params` for Plug.Upload fields and passes them on to
       `handle_upload` to check if we have a handler for the field.
-      Returns {:ok, model} or raises
+      Returns {:ok, schema} or raises
       """
-      def check_for_uploads(model, params) do
+      def check_for_uploads(schema, params) do
         uploads = params
         |> filter_plugs
         |> Enum.reduce([], fn (plug, acc) ->
@@ -118,7 +118,7 @@ defmodule Brando.Field.FileField do
 
   @doc """
   Handles the upload by starting a chain of operations on the plug.
-  This function handles upload when we have an file field on a model.
+  This function handles upload when we have an file field on a schema.
 
   ## Parameters
 

@@ -6,7 +6,7 @@ defmodule Brando.User do
 
   @type t :: %__MODULE__{}
 
-  use Brando.Web, :model
+  use Brando.Web, :schema
   use Brando.Field.ImageField
 
   alias Brando.Utils
@@ -143,7 +143,7 @@ defmodule Brando.User do
   """
   @spec set_last_login(t) :: t
   def set_last_login(user) do
-    {:ok, user} = Utils.Model.update_field(user, [last_login: Ecto.DateTime.utc])
+    {:ok, user} = Utils.Schema.update_field(user, [last_login: Ecto.DateTime.utc])
     user
   end
 
@@ -181,7 +181,7 @@ defmodule Brando.User do
   #
   # Meta
 
-  use Brando.Meta.Model, [
+  use Brando.Meta.Schema, [
     singular: gettext("user"),
     plural: gettext("users"),
     repr: &("#{&1.full_name} (#{&1.username})"),
