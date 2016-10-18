@@ -167,5 +167,5 @@ defmodule Mix.Brando do
 
   defp validate_attr!({_name, type} = attr) when type in @valid_attributes, do: attr
   defp validate_attr!({_name, {type, _}} = attr) when type in @valid_attributes, do: attr
-  defp validate_attr!({_, type}), do: Mix.raise "Unknown type `#{type}` given to generator"
+  defp validate_attr!({_, type}), do: Mix.raise "Unknown type `#{inspect type}` given to generator"
 end

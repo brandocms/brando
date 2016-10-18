@@ -32,25 +32,6 @@ defmodule Brando.Plug.I18n do
   end
 
   @doc """
-  DEPRECATED
-  """
-  def put_locale(_, otp_backend) do
-    split_module = Module.split(otp_backend)
-    use_module   = split_module
-                   |> List.delete_at(Enum.count(split_module) - 1)
-                   |> Module.concat
-
-    raise """
-    put_locale/2 plug has been deprecated.
-
-    Register the module through Brando.Registry in your application's startup function:
-
-        Brando.Registry.register(#{inspect(use_module)}, [:gettext])
-
-    """
-  end
-
-  @doc """
   Set locale to current_user's language
 
   This sets both Brando.Gettext (the default gettext we use in the backend),
@@ -72,25 +53,6 @@ defmodule Brando.Plug.I18n do
   """
   def put_admin_locale(conn, []) do
     assign_language(conn, Brando.config(:default_admin_language))
-  end
-
-  @doc """
-  DEPRECATED
-  """
-  def put_admin_locale(_, otp_backend) do
-    split_module = Module.split(otp_backend)
-    use_module   = split_module
-                   |> List.delete_at(Enum.count(split_module) - 1)
-                   |> Module.concat
-
-    raise """
-    put_admin_locale/2 plug has been deprecated.
-
-    Register the module through Brando.Registry in your application's startup function:
-
-        Brando.Registry.register(#{inspect(use_module)}, [:gettext])
-
-    """
   end
 
   @spec extract_language_from_path(Plug.Conn.t) :: String.t | nil

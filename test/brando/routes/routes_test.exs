@@ -27,13 +27,13 @@ defmodule Brando.TestRouter do
   scope "/admin", as: :admin do
     pipe_through :admin
     dashboard_routes "/"
-    user_routes "/users", Brando.Admin.UserController, private: %{model: Brando.User}
-    user_routes "/users2", private: %{model: Brando.User}
+    user_routes "/users", Brando.Admin.UserController, private: %{schema: Brando.User}
+    user_routes "/users2", private: %{schema: Brando.User}
     user_routes "/users3"
     image_routes "/images"
-    image_routes "/images2", [image_model: Brando.Image,
-                              series_model: Brando.ImageSeries,
-                              category_model: Brando.ImageCategory]
+    image_routes "/images2", [image_schema: Brando.Image,
+                              series_schema: Brando.ImageSeries,
+                              category_schema: Brando.ImageCategory]
 
     scope "/villain" do
       villain_routes Brando.Admin.PostController
@@ -49,13 +49,13 @@ defmodule Brando.TestRouter do
   scope "/" do
     pipe_through :browser
     get "/login", Brando.SessionController, :login,
-      private: %{model: Brando.User,
+      private: %{schema: Brando.User,
                  layout: {Brando.Session.LayoutView, "auth.html"}}
     post "/login", Brando.SessionController, :login,
-      private: %{model: Brando.User,
+      private: %{schema: Brando.User,
                  layout: {Brando.Session.LayoutView, "auth.html"}}
     get "/logout", Brando.SessionController, :logout,
-      private: %{model: Brando.User,
+      private: %{schema: Brando.User,
                  layout: {Brando.Session.LayoutView, "auth.html"}}
   end
 end

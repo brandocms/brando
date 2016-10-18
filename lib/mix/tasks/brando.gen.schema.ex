@@ -1,19 +1,19 @@
-defmodule Mix.Tasks.Brando.Gen.Model do
-  use Mix.Task
+defmodule Mix.Tasks.Brando.Gen.Schema do
+  # use Mix.Task
 
-  @shortdoc "Generates an Ecto model"
+  @shortdoc "Generates an Ecto schema"
 
   @moduledoc """
-  Generates an Ecto model in your Brando application.
+  Generates an Ecto schema in your Brando application.
 
-      mix brando.gen.model User users name:string age:integer
+      mix brando.gen.schema User users name:string age:integer
 
   The first argument is the module name followed by its plural
   name (used for the schema).
 
-  The generated model will contain:
+  The generated schema will contain:
 
-    * a model in web/models
+    * a schema in web/schemas
     * a migration file for the repository
 
   ## Attributes
@@ -22,35 +22,41 @@ defmodule Mix.Tasks.Brando.Gen.Model do
   where type are the types supported by Ecto. Ommitting
   the type makes it default to `:string`:
 
-      mix brando.gen.model User users name age:integer
+      mix brando.gen.schema User users name age:integer
 
   The generator also supports `belongs_to` associations:
 
-      mix brando.gen.model Post posts title user:references
+      mix brando.gen.schema Post posts title user:references
 
   This will result in a migration with an `:integer` column
   of `:user_id` and create an index. It will also generate
-  the appropriate `belongs_to` entry in the model's schema.
+  the appropriate `belongs_to` entry in the schema's schema.
 
   Furthermore an array type can also be given if it is
   supported by your database, although it requires the
   type of the underlying array element to be given too:
 
-      mix brando.gen.model User users nicknames:array:string
+      mix brando.gen.schema User users nicknames:array:string
 
   ## Namespaced resources
 
   Resources can be namespaced, for such, it is just necessary
   to namespace the first argument of the generator:
 
-      mix brando.gen.model Admin.User users name:string age:integer
+      mix brando.gen.schema Admin.User users name:string age:integer
 
   """
-  def run(args) do
-    {opts, parsed, _} = OptionParser.parse(args, switches: [sequenced: :boolean])
-    [singular, plural | attrs] = validate_args!(parsed)
+  def run(args, domain) do
+    snake_domain =
+      domain
+      |> Phoenix.Naming.underscore
+      |> String.split("/")
+      |> List.last
 
-    sequenced? = if opts[:sequenced], do: true, else: false
+    {opts, parsed, _} = OptionParser.parse(args, switches: [sequenced: :boolean])
+    [singular, plural, attrs] = parsed
+
+    sequenced? = opts[:sequenced] && true || false
 
     attrs      = Mix.Brando.attrs(attrs)
     binding    = Mix.Brando.inflect(singular)
@@ -70,8 +76,8 @@ defmodule Mix.Tasks.Brando.Gen.Model do
     {assocs, attrs} = partition_attrs_and_assocs(attrs)
 
     mig_types = Enum.map(attrs, &migration_type/1)
-    types = types(attrs)
-    defs = defaults(attrs)
+    types     = types(attrs)
+    defs      = defaults(attrs)
 
     migrations =
       attrs
@@ -82,7 +88,7 @@ defmodule Mix.Tasks.Brando.Gen.Model do
         end
       end)
 
-    model_fields =
+    schema_fields =
       attrs
       |> Enum.map(fn ({k, v}) ->
         case v do
@@ -95,21 +101,22 @@ defmodule Mix.Tasks.Brando.Gen.Model do
               [attrs: attrs, img_fields: img_fields, plural: plural,
                types: types, villain_fields: villain_fields,
                sequenced: sequenced?,
-               migrations: migrations, model_fields: model_fields,
+               migrations: migrations, schema_fields: schema_fields,
                assocs: assocs(assocs), indexes: indexes(plural, assocs),
                defaults: defs, params: params]
 
     Mix.Brando.copy_from(
       apps(),
-      "priv/templates/brando.gen.model",
+      "priv/templates/brando.gen.schema",
       "",
       binding, [
-        {:eex, "migration.exs",  "priv/repo/migrations/" <>
-                                 "#{timestamp()}_create_#{migration}.exs"},
-        {:eex, "model.ex",       "web/models/#{path}.ex"},
-        {:eex, "model_test.exs", "test/models/#{path}_test.exs"},
+        {:eex, "migration.exs",   "priv/repo/migrations/" <>
+                                  "#{timestamp()}_create_#{migration}.exs"},
+        {:eex, "schema.ex",       "lib/#{snake_domain}/#{path}.ex"},
+        {:eex, "schema_test.exs", "test/schemas/#{path}_test.exs"},
       ]
     )
+    binding
   end
 
   def migration_type({k, :image}) do
@@ -120,27 +127,6 @@ defmodule Mix.Tasks.Brando.Gen.Model do
   end
   def migration_type({k, type}) do
     {k, type}
-  end
-
-  defp validate_args!([_, plural | _] = args) do
-    if String.contains?(plural, ":") do
-      raise_with_help
-    else
-      args
-    end
-  end
-
-  defp validate_args!(_) do
-    raise_with_help
-  end
-
-  defp raise_with_help do
-    Mix.raise """
-    mix brando.gen.model expects both singular and plural names
-    of the generated resource followed by any number of attributes:
-
-        mix brando.gen.model User users name:string
-    """
   end
 
   defp partition_attrs_and_assocs(attrs) do
@@ -186,9 +172,9 @@ defmodule Mix.Tasks.Brando.Gen.Model do
 
   defp value_to_type(:text), do: :string
   defp value_to_type(:uuid), do: Ecto.UUID
-  defp value_to_type(:date), do: Ecto.Date
-  defp value_to_type(:time), do: Ecto.Time
-  defp value_to_type(:datetime), do: Ecto.DateTime
+  defp value_to_type(:date), do: :date
+  defp value_to_type(:time), do: :time
+  defp value_to_type(:datetime), do: :naive_datetime
   defp value_to_type(:status), do: Brando.Type.Status
   defp value_to_type(:image), do: Brando.Type.Image
   defp value_to_type(:villain), do: :villain

@@ -2,8 +2,8 @@ defmodule Brando.Admin.UserController do
   @moduledoc """
   Controller for the Brando Users module.
   """
-
   use Brando.Web, :controller
+  alias Brando.{User, Users}
   import Brando.Plug.Authorize
   import Brando.Plug.HTML
   import Brando.Plug.Uploads
@@ -21,8 +21,8 @@ defmodule Brando.Admin.UserController do
 
   @doc false
   def index(conn, _params) do
-    model = conn.private[:model]
-    users = model |> model.order_by_id |> Brando.repo.all
+    users = Users.get_users()
+
     conn
     |> assign(:users, users)
     |> assign(:page_title, gettext("Index - users"))
@@ -31,49 +31,46 @@ defmodule Brando.Admin.UserController do
 
   @doc false
   def show(conn, %{"id" => user_id}) do
-    model = conn.private[:model]
+    user = Users.get_user_by!(id: user_id)
+
     conn
-    |> assign(:user, Brando.repo.get_by!(model, id: user_id))
+    |> assign(:user, user)
     |> assign(:page_title, gettext("Show user"))
     |> render("show.html")
   end
 
   @doc false
   def profile(conn, _params) do
-    session_user = get_session(conn, :current_user)
-    model = conn.private[:model]
+    session_user = current_user(conn)
+    user         = Users.get_user_by!(id: session_user.id)
+
     conn
-    |> assign(:user, Brando.repo.get_by!(model, id: session_user.id))
+    |> assign(:user, user)
     |> assign(:page_title, gettext("Profile"))
     |> render("show.html")
   end
 
   @doc false
   def profile_edit(conn, _params) do
-    model = conn.private[:model]
-    user_id = current_user(conn).id
+    session_user = current_user(conn)
     changeset =
-      model
-      |> Brando.repo.get!(user_id)
-      |> model.changeset(:update)
+      Users.get_user_by!(id: session_user.id)
+      |> User.changeset(:update)
 
     conn
     |> assign(:changeset, changeset)
-    |> assign(:id, user_id)
+    |> assign(:id, session_user.id)
     |> assign(:page_title, gettext("Edit profile"))
     |> render(:profile_edit)
   end
 
   @doc false
   def profile_update(conn, %{"user" => form_data}) do
-    model = conn.private[:model]
-    user_id = current_user(conn).id
-    user = Brando.repo.get!(model, user_id)
-
-    case Brando.repo.update(model.update(user, form_data)) do
+    session_user = current_user(conn)
+    case Users.update_user(session_user.id, form_data) do
       {:ok, updated_user} ->
         conn =
-          if current_user(conn).id == user_id do
+          if session_user.id == updated_user.id do
             put_session(conn, :current_user, Map.drop(updated_user, [:password]))
           else
             conn
@@ -87,7 +84,7 @@ defmodule Brando.Admin.UserController do
         conn
         |> assign(:user, form_data)
         |> assign(:changeset, changeset)
-        |> assign(:id, user_id)
+        |> assign(:id, session_user.id)
         |> assign(:page_title, gettext("Edit profile"))
         |> put_flash(:error, gettext("Errors in form"))
         |> render(:profile_edit)
@@ -96,8 +93,7 @@ defmodule Brando.Admin.UserController do
 
   @doc false
   def new(conn, _params) do
-    model = conn.private[:model]
-    changeset = model.changeset(model.__struct__, :create)
+    changeset = User.changeset(%User{}, :create)
 
     conn
     |> assign(:changeset, changeset)
@@ -107,8 +103,7 @@ defmodule Brando.Admin.UserController do
 
   @doc false
   def create(conn, %{"user" => form_data}) do
-    model = conn.private[:model]
-    case Brando.repo.insert(model.create(form_data)) do
+    case Users.create_user(form_data) do
       {:ok, _} ->
         conn
         |> put_flash(:notice, gettext("User created"))
@@ -124,11 +119,8 @@ defmodule Brando.Admin.UserController do
 
   @doc false
   def edit(conn, %{"id" => user_id}) do
-    model = conn.private[:model]
-    changeset =
-      model
-      |> Brando.repo.get!(user_id)
-      |> model.changeset(:update)
+    user = Users.get_user_by!(id: user_id)
+    changeset = User.changeset(user, :update)
 
     conn
     |> assign(:changeset, changeset)
@@ -139,10 +131,7 @@ defmodule Brando.Admin.UserController do
 
   @doc false
   def update(conn, %{"user" => form_data, "id" => user_id}) do
-    model = conn.private[:model]
-    user = Brando.repo.get_by!(model, id: user_id)
-
-    case Brando.repo.update(model.update(user, form_data)) do
+    case Users.update_user(user_id, form_data) do
       {:ok, updated_user} ->
         conn =
           if current_user(conn).id == String.to_integer(user_id) do
@@ -167,8 +156,7 @@ defmodule Brando.Admin.UserController do
 
   @doc false
   def delete_confirm(conn, %{"id" => user_id}) do
-    model = conn.private[:model]
-    record = Brando.repo.get!(model, user_id)
+    record = Users.get_user_by!(id: user_id)
 
     conn
     |> assign(:record, record)
@@ -178,11 +166,10 @@ defmodule Brando.Admin.UserController do
 
   @doc false
   def delete(conn, %{"id" => user_id}) do
-    model = conn.private[:model]
-    record = Brando.repo.get!(model, user_id)
+    record = Users.get_user_by!(id: user_id)
 
     {:ok, _} = delete_original_and_sized_images(record, :avatar)
-    Brando.repo.delete!(record)
+    Users.delete_user(record)
 
     conn
     |> put_flash(:notice, "#{schema_name(record, :singular)} #{schema_repr(record)} #{gettext("deleted")}")

@@ -3,26 +3,26 @@ defmodule Brando.Villain do
   Interface to Villain HTML editor.
   https://github.com/twined/villain
 
-  # Model
+  # Schema
 
-  Model utilities
+  Schema utilities
 
   ## Usage
 
-      use Brando.Villain, :model
+      use Brando.Villain, :schema
 
-  Add fields to your model:
+  Add fields to your schema:
 
-      schema "my_model" do
+      schema "my_schema" do
         field "header", :string
         villain :biography
       end
 
   As Ecto 1.1 removed callbacks, we must manually call for HTML generation.
-  In your model's `changeset` functions:
+  In your schema's `changeset` functions:
 
-      def changeset(model, :create, params) do
-        model
+      def changeset(schema, :create, params) do
+        schema
         |> cast(params, @required_fields, @optional_fields)
         |> Brando.Villain.HTML.generate_html()
       end
@@ -40,7 +40,7 @@ defmodule Brando.Villain do
 
       use Brando.Villain, :migration
 
-  Add fields to your model:
+  Add fields to your schema:
 
       table "bla" do
         villain
@@ -48,14 +48,14 @@ defmodule Brando.Villain do
 
   # Controller
 
-  Controller utilities. Expects :image_model and :series_model options.
+  Controller utilities. Expects :image_schema and :series_schema options.
   Defines `:browse_images`, `:upload_image`, `:image_info` actions.
 
   ## Usage
 
       use Brando.Villain, [:controller, [
-        image_model: Brando.Image,
-        series_model: Brando.ImageSeries]]
+        image_schema: Brando.Image,
+        series_schema: Brando.ImageSeries]]
 
   Add routes to your router.ex:
 
@@ -64,17 +64,17 @@ defmodule Brando.Villain do
   """
 
   @doc false
-  def model do
+  def schema do
     quote do
-      import Brando.Villain.Model, only: [villain: 0, villain: 1]
+      import Brando.Villain.Schema, only: [villain: 0]
 
       @doc """
-      Takes the model's `json` field and transforms to `html`.
+      Takes the schema's `json` field and transforms to `html`.
 
-      This is usually called from your model's `changeset` functions:
+      This is usually called from your schema's `changeset` functions:
 
-          def changeset(model, :create, params) do
-            model
+          def changeset(schema, :create, params) do
+            schema
             |> cast(params, @required_fields, @optional_fields)
             |> generate_html()
           end
@@ -140,9 +140,9 @@ defmodule Brando.Villain do
     end
   end
 
-  defmodule Model do
+  defmodule Schema do
     @moduledoc """
-    Macro for villain model fields.
+    Macro for villain schema fields.
     """
     defmacro villain(field \\ nil) do
       data_field = field && field |> to_string |> Kernel.<>("_data") |> String.to_atom || :data
@@ -176,13 +176,13 @@ defmodule Brando.Villain do
   end
 
   @doc false
-  def controller({:image_model, image_model}, {:series_model, series_model}) do
+  def controller({:image_schema, image_schema}, {:series_schema, series_schema}) do
     quote do
       import Ecto.Query
       @doc false
       def browse_images(conn, %{"slug" => series_slug} = params) do
         image_series =
-          unquote(series_model)
+          unquote(series_schema)
           |> preload([:image_category, :images])
           |> Brando.repo.get_by(slug: series_slug)
 
@@ -209,7 +209,7 @@ defmodule Brando.Villain do
         user = Brando.Utils.current_user(conn)
 
         series =
-          unquote(series_model)
+          unquote(series_schema)
           |> preload(:image_category)
           |> Brando.repo.get_by(slug: series_slug)
 
@@ -222,7 +222,7 @@ defmodule Brando.Villain do
         cfg  = series.cfg || Brando.config(Brando.Images)[:default_config]
         opts = Map.put(%{}, "image_series_id", series.id)
 
-        {:ok, image} = unquote(image_model).check_for_uploads(params, user, cfg, opts)
+        {:ok, image} = unquote(image_schema).check_for_uploads(params, user, cfg, opts)
 
         sizes     = Enum.map(image.image.sizes, fn({k, v}) -> {k, Brando.Utils.media_url(v)} end)
         sizes_map = Enum.into(sizes, %{})
@@ -261,7 +261,7 @@ defmodule Brando.Villain do
       @doc false
       def imageseries(conn, %{"series" => series_slug}) do
         series = (
-          from is in unquote(series_model),
+          from is in unquote(series_schema),
                 join: c in assoc(is, :image_category),
                 join: i in assoc(is, :images),
                where: c.slug == "slideshows" and is.slug == ^series_slug,
@@ -286,7 +286,7 @@ defmodule Brando.Villain do
       @doc false
       def imageseries(conn, _) do
         series = Brando.repo.all(
-          from is in unquote(series_model),
+          from is in unquote(series_schema),
                 join: c in assoc(is, :image_category),
                where: c.slug == "slideshows",
             order_by: is.slug,
@@ -299,12 +299,12 @@ defmodule Brando.Villain do
 
       @doc false
       def image_info(conn, %{"form" => form, "id" => id, "uid" => uid}) do
-        form        = URI.decode_query(form)
-        image_model = unquote(image_model)
-        image       = Brando.repo.get(image_model, id)
+        form         = URI.decode_query(form)
+        image_schema = unquote(image_schema)
+        image        = Brando.repo.get(image_schema, id)
 
         {:ok, image} =
-          image_model.update_image_meta(image, form["title"], form["credits"])
+          image_schema.update_image_meta(image, form["title"], form["credits"])
 
         info = %{
           status:  "200",

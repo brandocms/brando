@@ -1,13 +1,13 @@
-defmodule Brando.Meta.Model do
+defmodule Brando.Meta.Schema do
   @moduledoc """
-  Meta functions for Brando models
+  Meta functions for Brando schemas
 
   ## Usage:
 
-      use Brando.Meta.Model, [
+      use Brando.Meta.Schema, [
         singular: gettext("post"),
         plural: gettext("posts"),
-        repr: fn (model) -> "interpolate from model" end,
+        repr: fn (schema) -> "interpolate from schema" end,
         fields: [
           id: gettext("ID"),
           language: gettext("Language")
@@ -22,10 +22,10 @@ defmodule Brando.Meta.Model do
 
   ## Options:
 
-    * `singular`: The singular form of the models representation
-    * `plural`: The plural form of the models representation
+    * `singular`: The singular form of the schema's representation
+    * `plural`: The plural form of the schema's representation
     * `repr`: Function returning the repr of the record.
-    * `fields`: Keyword list of fields in the model. Used for translation.
+    * `fields`: Keyword list of fields in the schema. Used for translation.
     * `fieldsets`: Keyword list of fieldsets. Used in forms for gettext translation.
     * `help:`: Keyword list of help text for the fields in the schema.
     * `hidden_fields`: Fields not shown in the detail view.
@@ -60,7 +60,7 @@ defmodule Brando.Meta.Model do
       end
       def __name__(:singular), do: unquote(opts[:singular])
       def __name__(:plural), do: unquote(opts[:plural])
-      def __repr__(model), do: unquote(opts[:repr]).(model)
+      def __repr__(schema), do: unquote(opts[:repr]).(schema)
     end
   end
 end

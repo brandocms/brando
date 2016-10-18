@@ -8,19 +8,25 @@ defmodule Brando.Mixfile do
     [app: :brando,
      version: @version,
      elixir: "~> 1.3",
-     deps: deps,
+     deps: deps(),
      dialyzer: [
        plt_add_apps: [
-         :gettext, :comeonin, :mogrify, :slugger, :phoenix, :phoenix_html, :phoenix_ecto
+         :gettext,
+         :comeonin,
+         :mogrify,
+         :slugger,
+         :phoenix,
+         :phoenix_html, 
+         :phoenix_ecto
        ],
        flags: []
      ],
      compilers: [:gettext, :phoenix] ++ Mix.compilers,
      elixirc_paths: elixirc_paths(Mix.env),
      test_coverage: [tool: ExCoveralls],
-     package: package,
+     package: package(),
      description: @description,
-     aliases: aliases,
+     aliases: aliases(),
 
      # Docs
      name: "Brando",
@@ -53,13 +59,16 @@ defmodule Brando.Mixfile do
     {:gettext, "~> 0.11"},
     {:httpoison, "~> 0.9"},
     {:mogrify, "~> 0.4"},
-    {:phoenix, "~> 1.2.0"},
+    {:phoenix, github: "phoenixframework/phoenix"},
     {:phoenix_html, "~> 2.6"},
     {:poison, "~> 2.0 or ~> 3.0"},
     {:postgrex, "~> 0.11"},
     {:scrivener_ecto, "~> 1.0"},
     {:slugger, "~> 0.1.0"},
-    {:phoenix_ecto, "~> 3.0.0"},
+    {:phoenix_ecto, "~> 3.1.0-rc"},
+
+    # temporary until scrivener_ecto updates
+    {:ecto, "~> 2.1-rc", override: true},
 
     # Dev dependencies
     {:credo, ">= 0.0.0", only: :dev},
