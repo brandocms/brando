@@ -175,6 +175,10 @@ defmodule Brando.HTML.Inspect do
     ~s(<em>#{gettext("No value")}</em>)
   end
 
+  defp do_inspect_field(:slug, :string, value) do
+    ~s(<span class="text-mono">value</span>)
+  end
+
   defp do_inspect_field(_name, :string, value), do: value
   defp do_inspect_field(_name, :integer, value), do: value
 
