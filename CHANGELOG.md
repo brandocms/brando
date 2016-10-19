@@ -12,6 +12,8 @@
     Make sure that your deps are listed under the `:applications` key and not
     the `:included_applications` key in your project's `mix.exs`
   * Add PlugHeartbeat to installation template
+  * Add `:truncate` option to tablize. This shortens and strips the field of html.
+  * Stripe tables (wow!).
 
 * Deprecations
   * Passing `help_text` to form fields through `field` macro is now deprecated.
