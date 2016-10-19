@@ -176,7 +176,7 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_field(:slug, :string, value) do
-    ~s(<span class="text-mono">value</span>)
+    ~s(<span class="text-mono">#{value}</span>)
   end
 
   defp do_inspect_field(_name, :string, value), do: value
