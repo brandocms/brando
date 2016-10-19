@@ -28,6 +28,8 @@
     Make sure that your deps are listed under the `:applications` key and not
     the `:included_applications` key in your project's `mix.exs`
   * Add PlugHeartbeat to installation template
+  * Add `:truncate` option to tablize. This shortens and strips the field of html.
+  * Stripe tables (wow!).
 
 * Deprecations
   * `model_name` and `model_repr` are now deprecated and removed.
