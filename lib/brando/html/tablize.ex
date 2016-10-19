@@ -51,6 +51,7 @@ defmodule Brando.HTML.Tablize do
     * `children` - Name of field that holds child elements.
     * `hide` - List of fields that should not be rendered.
     * `filter` - Boolean. Implements a filtering input box above table.
+    * `truncate` - List of fields to shorten. Default is 100 characters.
     * `split_by` - Split table by field: `split_by: :language`.
     * `colgroup` - Column widths if you need to override.
                    Supply as list: `[100, nil, nil, 200, nil, 200]`
@@ -221,18 +222,34 @@ defmodule Brando.HTML.Tablize do
 
   defp do_td(field, record, type, opts) do
     unless field in Keyword.get(opts, :hide, []) do
-      if field in Keyword.get(opts, :check_or_x, []) do
-        """
-        <td data-field="#{field}" class="text-center">
-          #{check_or_x(Map.get(record, field))}
-        </td>
-        """
-      else
-        """
-        <td data-field="#{field}">
-          #{inspect_field(field, type, Map.get(record, field))}
-        </td>
-        """
+      cond do
+        field in Keyword.get(opts, :check_or_x, []) ->
+          """
+          <td data-field="#{field}" class="text-center">
+            #{check_or_x(Map.get(record, field))}
+          </td>
+          """
+        field in Keyword.get(opts, :truncate, []) ->
+          text =
+            field
+            |> inspect_field(type, Map.get(record, field))
+
+          text =
+            ~r/<[^>]*>/
+            |> Regex.replace(text, "")
+            |> Brando.HTML.truncate(100)
+
+          """
+          <td data-field="#{field}">
+            #{text}
+          </td>
+          """
+        true ->
+          """
+          <td data-field="#{field}">
+            #{inspect_field(field, type, Map.get(record, field))}
+          </td>
+          """
       end
     end
   end
