@@ -205,14 +205,14 @@ Default login/pass is `admin@twined.net/admin`
 
 ## Sequence
 
-Implements model sequencing.
+Implements schema sequencing.
 
 Controller:
 
 ```elixir
   use Brando.Sequence,
-    [:controller, [model: MyApp.Model,
-                   filter: &MyApp.Model.by_collection_id/1]]
+    [:controller, [schema: MyApp.Schema,
+                   filter: &MyApp.Schema.by_collection_id/1]]
 ```
 
 The filter should return items by the :filter param in your routes.ex.
@@ -233,12 +233,12 @@ View:
   use Brando.Sequence, :view
 ```
 
-Model:
+Schema:
 
 ```diff
-+ use Brando.Sequence, :model
++ use Brando.Sequence, :schema
 
-  schema "model" do
+  schema "schema" do
     # ...
 +   sequenced
   end
@@ -250,7 +250,7 @@ Migration:
 + use Brando.Sequence, :migration
 
   def up do
-    create table(:model) do
+    create table(:schema) do
       # ...
 +     sequenced
     end
@@ -357,16 +357,16 @@ To insert an expander:
 
 ## Tags
 
-Implements tagging in your model.
+Implements tagging in your schema.
 
 Add to
 
-Model:
+Schema:
 
 ```diff
-+ use Brando.Tag, :model
++ use Brando.Tag, :schema
 
-  schema "model" do
+  schema "schema" do
 +   tags
   end
 ```
@@ -377,7 +377,7 @@ Migration:
 + use Brando.Tag, :migration
 
   def up do
-    create table(:model) do
+    create table(:schema) do
 +     tags
     end
   end
@@ -400,9 +400,9 @@ If the fragment isn't found, it will render an error box.
 
 ## Imagefield
 
-A built in method for adding images to your model is supplied for you.
+A built in method for adding images to your schema is supplied for you.
 
-In your model:
+In your schema:
 
 ```diff
 
@@ -487,8 +487,8 @@ Remember to add the `image_series` that Brando looks for.
 You also need to call for parsing by invoking `generate_html` in your schema's changeset:
 
 ```elixir
-  def changeset(model, params \\ %{}) do
-    model
+  def changeset(schema, params \\ %{}) do
+    schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
     |> generate_html()
