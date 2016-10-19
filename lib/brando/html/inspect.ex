@@ -168,7 +168,7 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_field(_name, :string, nil) do
-    ~s(<em>#{gettext("Encoded value")}</em>)
+    ~s(<em>#{gettext("No value")}</em>)
   end
 
   defp do_inspect_field(_name, :string, "") do
