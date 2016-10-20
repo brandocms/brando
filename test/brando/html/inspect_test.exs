@@ -73,7 +73,6 @@ defmodule Brando.HTML.InspectTest do
 
   test "schema/1" do
     user = Factory.insert(:user)
-    # assert {:ok, user} = create_user(@user_params)
 
     {:safe, ret} = schema(user)
     ret = IO.iodata_to_binary(ret)
@@ -108,6 +107,12 @@ defmodule Brando.HTML.InspectTest do
     assert inspect_field("name", :boolean, :false) =~ "fa-times"
 
     assert inspect_field("name", nil, %Brando.User{username: "Test"}) =~ "micro-avatar"
+    assert inspect_field("name", Type.Role, [:staff]) == ["<span class=\"label label-staff\">staff</span>"]
+
+    assert inspect_field("name", Type.Json, "whatever") == "<em>Encoded value</em>"
+    assert inspect_field("name", Type.Image, nil) == "<em>No connected image</em>"
+    assert inspect_field("name", Type.File, nil) == "<em>No connected file</em>"
+    assert inspect_field("name", Type.File, %{path: "a/path.jpg"}) == "<i class=\"fa fa-file m-r-sm\"> </i> a/path.jpg"
   end
 
   test "inspect_assoc/3" do
@@ -117,6 +122,8 @@ defmodule Brando.HTML.InspectTest do
            =~ "Empty association"
     assert inspect_assoc("name", @association_has, @association_val)
            =~ "74 | images/default/2ambet.jpg"
+    assert inspect_assoc("name", %Ecto.Association.BelongsTo{}, nil)
+          =~ "Empty association"
   end
 
   test "schema_repr/1" do
