@@ -284,4 +284,15 @@ defmodule Brando.FormTest do
       end
     end
   end
+
+  test "apply_action" do
+    assert apply_action({Brando.helpers, :admin_user_path}, :edit, [5]) == "/admin/users/5/edit"
+    assert apply_action(:admin_user_path, :edit, [5]) == "/admin/users/5/edit"
+
+    assert apply_action({Brando.helpers, :admin_user_path}, :index, nil) == "/admin/users"
+    assert apply_action(:admin_user_path, :index, nil) == "/admin/users"
+
+    assert apply_action({Brando.helpers, :admin_user_path}, :edit, 5) == "/admin/users/5/edit"
+    assert apply_action(:admin_user_path, :edit, 5) == "/admin/users/5/edit"
+  end
 end
