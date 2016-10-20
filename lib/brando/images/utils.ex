@@ -10,18 +10,6 @@ defmodule Brando.Images.Utils do
   alias Brando.{Image, ImageSeries}
 
   @doc """
-  Deprecated
-  """
-  def delete_original_and_sized_images(nil) do
-    nil
-  end
-  def delete_original_and_sized_images(_) do
-    # DEPRECATE
-    raise "delete_original_and_sized_images/1 is deprecated, " <>
-          "use delete_original_and_sized_images/2 instead"
-  end
-
-  @doc """
   Goes through `image`, which is a schema with a :sizes field
   then passing to `delete_media/2` for removal
 
