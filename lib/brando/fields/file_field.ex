@@ -7,7 +7,7 @@ defmodule Brando.Field.FileField do
   In your `my_schema.ex`:
 
       has_file_field :pdf_report,
-        %{allowed_exts: ["pdf"],
+        %{allowed_mimetypes: ["application/pdf"],
           random_filename: true,
           upload_path: Path.join("pdfs", "reports"),
           size_limit: 10240000,
