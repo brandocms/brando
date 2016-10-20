@@ -37,7 +37,7 @@ defmodule Brando.Form do
             rendered_form: nil
 
   @type t         :: %__MODULE__{}
-  @type helper    :: {:helper, atom} | {:helper, {Module, atom}} | {:helper, function}
+  @type helper    :: {:helper, atom} | {:helper, {Module, atom}}
   @type class     :: {:class, String.t}
   @type form_opts :: [helper | class]
 
@@ -83,8 +83,6 @@ defmodule Brando.Form do
 
     * `action`: This represents the helper function that will get the form's action.
       You can supply:
-
-      * A helper function: `MyApp.AnotherRouter.Helpers.admin_another_create`
 
       * An atom: `:admin_post_path`. This will use the otp app's default router's helper,
       accessed through `Brando.helpers`
@@ -482,10 +480,6 @@ defmodule Brando.Form do
     apply(helper, fun, [Brando.endpoint(), action] ++ params)
   end
 
-  def apply_action(fun, action, params) when is_function(fun) and is_list(params) do
-    apply(fun, [Brando.endpoint(), action] ++ params)
-  end
-
   def apply_action(fun, action, params) when is_list(params) do
     apply(Brando.helpers, fun, [Brando.endpoint(), action] ++ params)
   end
@@ -494,20 +488,12 @@ defmodule Brando.Form do
     apply(helper, fun, [Brando.endpoint(), action])
   end
 
-  def apply_action(fun, action, nil) when is_function(fun) do
-    apply(fun, [Brando.endpoint(), action])
-  end
-
   def apply_action(fun, action, nil) do
     apply(Brando.helpers, fun, [Brando.endpoint(), action])
   end
 
   def apply_action({helper, fun}, action, params) do
     apply(helper, fun, [Brando.endpoint(), action, params])
-  end
-
-  def apply_action(fun, action, params) when is_function(fun) do
-    apply(fun, [Brando.endpoint(), action, params])
   end
 
   def apply_action(fun, action, params) do
