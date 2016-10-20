@@ -44,11 +44,6 @@ defmodule Brando.Images.Upload do
     process_upload(plug, cfg)
   end
 
-  def do_upload(_plug, cfg) when is_list(cfg) do
-    raise "do_upload with cfg as list is deprecated." <>
-          "please supply a %Brando.Type.ImageConfig{} struct instead."
-  end
-
   defp process_upload(plug, cfg_struct) do
     {plug, cfg_struct}
     |> get_valid_filename
