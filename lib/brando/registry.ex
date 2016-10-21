@@ -2,6 +2,7 @@ defmodule Brando.Registry do
   @moduledoc """
   GenServer for registering extra modules
   """
+  alias Brando.Exception.RegistryError
   require Logger
 
   defmodule State do
@@ -37,13 +38,13 @@ defmodule Brando.Registry do
   def register(module, opts \\ [:gettext, :menu]) do
     if :menu in opts do
       unless Code.ensure_loaded?(Module.concat(module, "Menu")) do
-        raise "Could not find Menu module for #{inspect module}"
+        raise RegistryError, message: "Could not find Menu module for #{inspect module}"
       end
     end
 
     if :gettext in opts do
       unless Code.ensure_loaded?(Module.concat(module, "Gettext")) do
-        raise "Could not find Gettext module for #{inspect module}"
+        raise RegistryError, message: "Could not find Gettext module for #{inspect module}"
       end
     end
 
