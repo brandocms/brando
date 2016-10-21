@@ -1,5 +1,5 @@
 defmodule Brando.PopupForm.RegistryTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
   alias Brando.PopupForm.Registry
 
   setup do
