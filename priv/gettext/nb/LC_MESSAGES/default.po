@@ -158,7 +158,7 @@ msgstr "Rediger profil"
 msgid "Edit user"
 msgstr "Rediger bruker"
 
-#: web/models/user.ex:191 web/templates/session/login.html.eex:3
+#: web/schemas/user.ex:191 web/templates/session/login.html.eex:3
 msgid "Email"
 msgstr "E-post"
 
@@ -188,7 +188,7 @@ msgstr "Feil i skjemaet"
 msgid "Existing images in this series"
 msgstr "Eksisterende bilder i denne serien"
 
-#: web/controllers/admin/dashboard_controller.ex:57
+#: web/controllers/admin/dashboard_controller.ex:58
 msgid "File not found"
 msgstr "Fil ikke funnet"
 
@@ -272,7 +272,7 @@ msgstr "Ingen bilder"
 msgid "Page not found"
 msgstr "Side ikke funnet."
 
-#: web/models/user.ex:193 web/templates/session/login.html.eex:6
+#: web/schemas/user.ex:193 web/templates/session/login.html.eex:6
 msgid "Password"
 msgstr "Passord"
 
@@ -369,7 +369,7 @@ msgstr "slettet"
 msgid "Add new"
 msgstr "Legg til"
 
-#: web/menus/images_menu.ex:10 web/models/image_series.ex:150
+#: web/menus/images_menu.ex:10 web/schemas/image_series.ex:150
 msgid "Images"
 msgstr "Bilder"
 
@@ -385,19 +385,19 @@ msgstr "Brukere"
 msgid "** censored **"
 msgstr "** sensurert **"
 
-#: lib/brando/html/inspect.ex:242
+#: lib/brando/html/inspect.ex:246
 msgid "Association not fetched"
 msgstr "Forbindelse ikke hentet"
 
-#: web/models/user.ex:199
+#: web/schemas/user.ex:199
 msgid "Avatar"
 msgstr "Profilbilde"
 
-#: web/models/image_category.ex:120
+#: web/schemas/image_category.ex:120
 msgid "Config"
 msgstr "Konfigurer"
 
-#: web/models/image_series.ex:146
+#: web/schemas/image_series.ex:146
 msgid "Configuration"
 msgstr "Konfigurasjon"
 
@@ -405,20 +405,20 @@ msgstr "Konfigurasjon"
 msgid "Configuration data"
 msgstr "Konfigurasjonsdata"
 
-#: lib/brando/form/fields.ex:602
+#: lib/brando/form/fields.ex:603
 msgid "Confirm"
 msgstr "Bekreft"
 
-#: lib/brando/html/inspect.ex:260
+#: lib/brando/html/inspect.ex:264
 msgid "Connected"
 msgstr "Tilkoblet"
 
-#: web/models/image.ex:131 web/models/image_category.ex:121
-#: web/models/image_series.ex:149
+#: web/schemas/image.ex:131 web/schemas/image_category.ex:121
+#: web/schemas/image_series.ex:149
 msgid "Creator"
 msgstr "Skaper"
 
-#: web/models/image_series.ex:147
+#: web/schemas/image_series.ex:147
 msgid "Credits"
 msgstr "Krediteringer"
 
@@ -426,49 +426,49 @@ msgstr "Krediteringer"
 msgid "Draft"
 msgstr "Kladd"
 
-#: lib/brando/html/inspect.ex:236 lib/brando/html/inspect.ex:245
+#: lib/brando/html/inspect.ex:240 lib/brando/html/inspect.ex:249
 msgid "Empty association"
 msgstr "Tom forbindelse"
 
-#: lib/brando/html/inspect.ex:123 lib/brando/html/inspect.ex:186
+#: lib/brando/html/inspect.ex:123
 msgid "Encoded value"
 msgstr "Kodet verdi"
 
-#: web/models/user.ex:192
+#: web/schemas/user.ex:192
 msgid "Full name"
 msgstr "Fullt navn"
 
-#: web/models/image.ex:128 web/models/image_category.ex:117
-#: web/models/image_series.ex:143 web/models/user.ex:189
+#: web/schemas/image.ex:128 web/schemas/image_category.ex:117
+#: web/schemas/image_series.ex:143 web/schemas/user.ex:189
 msgid "ID"
 msgstr "ID"
 
-#: web/models/image.ex:129
+#: web/schemas/image.ex:129
 msgid "Image"
 msgstr "Bilde"
 
-#: web/models/image_series.ex:151 web/models/image_series.ex:152
+#: web/schemas/image_series.ex:151 web/schemas/image_series.ex:152
 msgid "Image category"
 msgstr "Bildekategori"
 
-#: web/models/image.ex:132 web/models/image_category.ex:122
+#: web/schemas/image.ex:132 web/schemas/image_category.ex:122
 msgid "Image series"
 msgstr "Bildeserie"
 
-#: web/models/image.ex:133 web/models/image_category.ex:123
-#: web/models/image_series.ex:153 web/models/user.ex:197
+#: web/schemas/image.ex:133 web/schemas/image_category.ex:123
+#: web/schemas/image_series.ex:153 web/schemas/user.ex:197
 msgid "Inserted at"
 msgstr "Lagt til"
 
-#: web/models/user.ex:195
+#: web/schemas/user.ex:195
 msgid "Language"
 msgstr "Språk"
 
-#: web/models/user.ex:196
+#: web/schemas/user.ex:196
 msgid "Last login"
 msgstr "Forrige innlogging"
 
-#: web/models/image_category.ex:118 web/models/image_series.ex:144
+#: web/schemas/image_category.ex:118 web/schemas/image_series.ex:144
 msgid "Name"
 msgstr "Navn"
 
@@ -476,12 +476,12 @@ msgstr "Navn"
 msgid "No connected image"
 msgstr "Inget tilknyttet bilde"
 
-#: lib/brando/html/tablize.ex:60 lib/brando/html/tablize.ex:61
+#: lib/brando/html/tablize.ex:61 lib/brando/html/tablize.ex:62
 msgid "No results"
 msgstr "Ingen resultater"
 
 #: lib/brando/html/inspect.ex:95 lib/brando/html/inspect.ex:103
-#: lib/brando/html/inspect.ex:190
+#: lib/brando/html/inspect.ex:186 lib/brando/html/inspect.ex:190
 msgid "No value"
 msgstr "Ingen verdi"
 
@@ -493,11 +493,11 @@ msgstr "Venter"
 msgid "Published"
 msgstr "Publisert"
 
-#: web/forms/user_form.ex:39
+#: web/schemas/user.ex:201
 msgid "Rights"
 msgstr "Rettigheter"
 
-#: web/models/user.ex:194
+#: web/schemas/user.ex:194
 msgid "Roles"
 msgstr "Roller"
 
@@ -505,24 +505,24 @@ msgstr "Roller"
 msgid "Save"
 msgstr "Lagre"
 
-#: web/models/image.ex:130 web/models/image_series.ex:148
+#: web/schemas/image.ex:130 web/schemas/image_series.ex:148
 msgid "Sequence"
 msgstr "Sekvens"
 
-#: web/models/image_category.ex:119 web/models/image_series.ex:145
+#: web/schemas/image_category.ex:119 web/schemas/image_series.ex:145
 msgid "Slug"
 msgstr "URL-tamp"
 
-#: web/models/image.ex:134 web/models/image_category.ex:124
-#: web/models/image_series.ex:154 web/models/user.ex:198
+#: web/schemas/image.ex:134 web/schemas/image_category.ex:124
+#: web/schemas/image_series.ex:154 web/schemas/user.ex:198
 msgid "Updated at"
 msgstr "Sist oppdatert"
 
-#: web/forms/user_form.ex:31 web/forms/user_profile_form.ex:16
+#: web/schemas/user.ex:202
 msgid "User information"
 msgstr "Brukerinformasjon"
 
-#: web/models/user.ex:190
+#: web/schemas/user.ex:190
 msgid "Username"
 msgstr "Brukernavn"
 
@@ -530,55 +530,55 @@ msgstr "Brukernavn"
 msgid "admin"
 msgstr "admin"
 
-#: lib/brando/form/fields.ex:690
+#: lib/brando/form/fields.ex:720
 msgid "can't be blank"
 msgstr "kan ikke være tomt"
 
-#: lib/brando/form/fields.ex:694
+#: lib/brando/form/fields.ex:724
 msgid "has invalid format"
 msgstr "har ugyldig format"
 
-#: web/models/image.ex:124
+#: web/schemas/image.ex:124
 msgid "image"
 msgstr "bilde"
 
-#: web/models/image_category.ex:114
+#: web/schemas/image_category.ex:114
 msgid "image categories"
 msgstr "bildekategorier"
 
-#: web/models/image_category.ex:113
+#: web/schemas/image_category.ex:113
 msgid "image category"
 msgstr "bildekategori"
 
-#: web/models/image_series.ex:140
+#: web/schemas/image_series.ex:140
 msgid "image(s)"
 msgstr "bilde(r)"
 
-#: web/models/image.ex:125
+#: web/schemas/image.ex:125
 msgid "images"
 msgstr "bilder"
 
-#: web/models/image_series.ex:135
+#: web/schemas/image_series.ex:135
 msgid "imageserie"
 msgstr "bildeserie"
 
-#: web/models/image_series.ex:136
+#: web/schemas/image_series.ex:136
 msgid "imageseries"
 msgstr "bildeserier"
 
-#: lib/brando/form/fields.ex:696
+#: lib/brando/form/fields.ex:726
 msgid "is invalid"
 msgstr "er ugyldig"
 
-#: lib/brando/form/fields.ex:698
+#: lib/brando/form/fields.ex:728
 msgid "is reserved"
 msgstr "er reservert"
 
-#: lib/brando/form/fields.ex:692
+#: lib/brando/form/fields.ex:722
 msgid "must be unique"
 msgstr "må være unikt"
 
-#: lib/brando/form/fields.ex:702 lib/brando/form/fields.ex:704
+#: lib/brando/form/fields.ex:732 lib/brando/form/fields.ex:734
 msgid "should be at least %{count} characters"
 msgstr "må være minst %{count} tegn"
 
@@ -590,11 +590,11 @@ msgstr "personale"
 msgid "superuser"
 msgstr "superbruker"
 
-#: web/models/user.ex:185
+#: web/schemas/user.ex:185
 msgid "user"
 msgstr "bruker"
 
-#: web/models/user.ex:186
+#: web/schemas/user.ex:186
 msgid "users"
 msgstr "brukere"
 
@@ -622,11 +622,11 @@ msgstr "Feil under oppretting av filbane"
 msgid "Access denied."
 msgstr "Adgang nektet."
 
-#: web/models/user.ex:76 web/models/user.ex:99
+#: web/schemas/user.ex:76 web/schemas/user.ex:99
 msgid "Passwords must match"
 msgstr "Passord må matche"
 
-#: web/models/user.ex:77 web/models/user.ex:100
+#: web/schemas/user.ex:77 web/schemas/user.ex:100
 msgid "Password must be at least 6 characters"
 msgstr "Passord må være minst 6 tegn"
 
@@ -735,7 +735,7 @@ msgstr "Disse mappene kan ikke gjenopprettes!"
 msgid "You are about to delete these folders. Please check carefully before proceeding."
 msgstr "Du er i ferd med å slette disse mappene. Sjekk nøye før du fortsetter."
 
-#: lib/brando/form/fields.ex:700
+#: lib/brando/form/fields.ex:730
 msgid "has already been taken"
 msgstr "er allerede i bruk"
 
@@ -806,3 +806,7 @@ msgstr "Ugyldig forespørsel"
 #: lib/brando/html/inspect.ex:141
 msgid "No connected file"
 msgstr "Ingen tilkoblet fil"
+
+#: web/templates/admin/dashboard/system_info.html.eex:77
+msgid "Deps"
+msgstr ""
