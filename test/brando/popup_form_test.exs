@@ -1,5 +1,5 @@
 defmodule Brando.PopupFormTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
   use Brando.ConnCase
   use Brando.Integration.TestCase
   alias Brando.PopupForm.Registry
@@ -27,7 +27,7 @@ defmodule Brando.PopupFormTest do
 
     user_params = Plug.Conn.Query.encode(%{"user" => user_params})
     {:ok, {user, fields_to_return}} = Brando.PopupForm.post("user", user_params)
-    
+
     assert user.email == "james@thestooges.com"
     assert fields_to_return == [:id, :username]
   end
