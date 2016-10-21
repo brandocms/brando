@@ -2,6 +2,18 @@ defmodule Brando.Utils do
   @moduledoc """
   Assorted utility functions.
   """
+  @filtered_deps [
+    :brando,
+    :brando_analytics,
+    :brando_blog,
+    :brando_instagram,
+    :brando_news,
+    :brando_pages,
+    :brando_portfolio,
+    :brando_villain,
+
+    :hrafn
+  ]
 
   @kb_size   1024
   @mb_size   1024 * @kb_size
@@ -404,5 +416,12 @@ defmodule Brando.Utils do
 
   def human_spaced_number(int) when is_integer(int) do
     human_spaced_number(Integer.to_string(int))
+  end
+
+  def get_deps_versions do
+    :application.which_applications
+    |> Enum.filter(&(elem(&1, 0) in @filtered_deps))
+    |> Enum.reverse
+    |> Enum.map(&(%{app: elem(&1, 0), version: to_string(elem(&1, 2))}))
   end
 end

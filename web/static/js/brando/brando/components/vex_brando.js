@@ -1,8 +1,6 @@
-"use strict";
-
-import $ from "jquery";
-import vex from "vex-js";
-import {bI18n} from "./i18n";
+import $ from 'jquery';
+import vex from 'vex-js';
+import bI18n from './i18n';
 
 if (typeof vex === 'undefined') {
   throw new Error('You must include vex to use vex.dialog');
@@ -10,13 +8,12 @@ if (typeof vex === 'undefined') {
 
 const $formToObject = ($form) => {
   const object = {};
-  $.each($form.serializeArray(), function() {
+  $.each($form.serializeArray(), function eachObj() {
     if (object[this.name]) {
       object[this.name] = (!object[this.name].push) ? [object[this.name]] : object[this.name];
       return object[this.name].push(this.value || '');
-    } else {
-      return object[this.name] = this.value || '';
     }
+    return object[this.name] = this.value || '';
   });
   return object;
 };
@@ -27,7 +24,7 @@ dialog.buttons = {
   YES: {
     text: 'OK',
     type: 'submit',
-    className: 'vex-dialog-button-primary'
+    className: 'vex-dialog-button-primary',
   },
   NO: {
     text: 'Cancel',
@@ -36,19 +33,19 @@ dialog.buttons = {
     click: ($vexContent) => {
       $vexContent.data().vex.value = false;
       return vex.close($vexContent.data().vex.id);
-    }
-  }
+    },
+  },
 };
 
 dialog.defaultOptions = {
   callback: () => {},
   afterOpen: () => {},
   message: 'Message',
-  input: "<input name=\"vex\" type=\"hidden\" value=\"_vex-empty-value\" />",
+  input: '<input name="vex" type="hidden" value="_vex-empty-value" />',
   value: false,
   buttons: [dialog.buttons.YES, dialog.buttons.NO],
   showCloseButton: false,
-  onSubmit(event) {
+  onSubmit: function onSubmit(event) {
     const $form = $(this);
     const $vexContent = $form.parent();
     event.preventDefault();
@@ -56,16 +53,16 @@ dialog.defaultOptions = {
     $vexContent.data().vex.value = dialog.getFormValueOnSubmit($formToObject($form));
     return vex.close($vexContent.data().vex.id);
   },
-  focusFirstInput: true
+  focusFirstInput: true,
 };
 
 dialog.defaultAlertOptions = {
   message: 'Alert',
-  buttons: [dialog.buttons.YES]
+  buttons: [dialog.buttons.YES],
 };
 
 dialog.defaultConfirmOptions = {
-  message: 'Confirm'
+  message: 'Confirm',
 };
 
 dialog.open = (options) => {
@@ -74,7 +71,7 @@ dialog.open = (options) => {
   const beforeClose = options.beforeClose;
   options.beforeClose = ($vexContent, config) => {
     options.callback(config.value);
-    return typeof beforeClose === "function" ? beforeClose($vexContent, config) : void 0;
+    return typeof beforeClose === 'function' ? beforeClose($vexContent, config) : void 0;
   };
   const $vexContent = vex.open(options);
   if (options.focusFirstInput) {
@@ -106,8 +103,8 @@ dialog.prompt = (options) => {
     return $.error('dialog.prompt(options) requires options.callback.');
   }
   const defaultPromptOptions = {
-    message: "<label for=\"vex\">" + (options.label || 'Prompt:') + "</label>",
-    input: "<input name=\"vex\" type=\"text\" class=\"vex-dialog-prompt-input\" placeholder=\"" + (options.placeholder || '') + "\"  value=\"" + (options.value || '') + "\" />"
+    message: '<label for="vex">' + (options.label || 'Prompt:') + '</label>',
+    input: '<input name="vex" type="text" class="vex-dialog-prompt-input" placeholder="' + (options.placeholder || '') + '"  value="' + (options.value || '') + '" />'
   };
   options = $.extend({}, defaultPromptOptions, options);
   return dialog.open(options);
@@ -135,12 +132,14 @@ dialog.getFormValueOnSubmit = (formData) => {
 dialog.buttonsToDOM = (buttons) => {
   const $buttons = $('<div class="vex-dialog-buttons" />');
   $.each(buttons, (index, button) => {
-    const $button = $("<button type=\"" + button.type + "\"></button>")
+    const $button = $('<button type="' + button.type + '"></button>')
         .text(button.text)
         .addClass(button.className + ' vex-dialog-button ' + (index === 0 ? 'vex-first ' : '') + (index === buttons.length - 1 ? 'vex-last ' : ''))
         .bind('click.vex', function(e) {
           if (button.click) {
-            return button.click($(this).parents(vex.getSelectorFromBaseClass(vex.baseClassNames.content)), e);
+            return button.click(
+              $(this).parents(vex.getSelectorFromBaseClass(vex.baseClassNames.content)), e
+            );
           }
         });
     return $button.appendTo($buttons);
@@ -151,12 +150,12 @@ dialog.buttonsToDOM = (buttons) => {
 vex.dialog = dialog;
 
 class VexBrando {
-    static setup() {
-        // set default theme for vex dialogs
-        vex.defaultOptions.className = "vex-theme-plain";
-        vex.dialog.buttons.YES.text = "OK";
-        vex.dialog.buttons.NO.text = bI18n.t("vex:cancel");
-    }
+  static setup() {
+    // set default theme for vex dialogs
+    vex.defaultOptions.className = 'vex-theme-plain';
+    vex.dialog.buttons.YES.text = 'OK';
+    vex.dialog.buttons.NO.text = bI18n.t('vex:cancel');
+  }
 }
 
-export {VexBrando, vex};
+export { VexBrando, vex };

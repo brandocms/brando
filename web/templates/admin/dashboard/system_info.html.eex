@@ -72,4 +72,21 @@
     </pre>
   </code>
 </div>
+
+<div id="depvers" class="clearfix">
+  <h3><%= gettext("Deps") %></h3>
+
+  <table class="table">
+  <%= for dep_ver <- @deps_versions do %>
+    <tr>
+      <td>
+        <%= inspect dep_ver.app %>
+      </td>
+      <td>
+        <%= dep_ver.version %>
+      </td>
+    </tr>
+  <% end %>
+  </table>
+</div>
 <% end %>

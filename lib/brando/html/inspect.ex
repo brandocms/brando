@@ -183,11 +183,15 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_field(_name, :string, nil) do
-    ~s(<em>#{gettext("Encoded value")}</em>)
+    ~s(<em>#{gettext("No value")}</em>)
   end
 
   defp do_inspect_field(_name, :string, "") do
     ~s(<em>#{gettext("No value")}</em>)
+  end
+
+  defp do_inspect_field(:slug, :string, value) do
+    ~s(<span class="text-mono">#{value}</span>)
   end
 
   defp do_inspect_field(_name, :string, value), do: value

@@ -1,3 +1,24 @@
+## v0.36.0 (2016-10-21)  
+
+* Backwards incompatible changes
+  * Passing legend as text to fieldset macro is now removed. Set an atom instead which
+    should reference a `fieldsets` key in your schema's meta.
+
+* Bug fixes
+  * Placeholder now shows same text as label when there is no placeholder supplied
+
+* Enhancements
+  * Add dependency version map to system info. Only lists brando related deps.
+    Make sure that your deps are listed under the `:applications` key and not
+    the `:included_applications` key in your project's `mix.exs`
+  * Add PlugHeartbeat to installation template
+  * Add `:truncate` option to tablize. This shortens and strips the field of html.
+  * Stripe tables (wow!).
+
+* Deprecations
+  * Passing `help_text` to form fields through `field` macro is now deprecated.
+    Set help text in your schema's meta instead under the `help` key.
+
 ## v0.35.0 (2016-10-08)
 
 * Enhancements

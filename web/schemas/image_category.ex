@@ -1,7 +1,7 @@
 defmodule Brando.ImageCategory do
   @moduledoc """
-  Ecto schema for the Image Category model
-  and helper functions for dealing with the model.
+  Ecto schema for the Image Category schema
+  and helper functions for dealing with the schema.
   """
 
   @type t :: %__MODULE__{}
@@ -24,18 +24,18 @@ defmodule Brando.ImageCategory do
   end
 
   @doc """
-  Casts and validates `params` against `model` to create a valid
+  Casts and validates `params` against `schema` to create a valid
   changeset when action is :create.
 
   ## Example
 
-      model_changeset = changeset(%__MODULE__{}, :create, params)
+      schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
   @spec changeset(t, :create | :update, Keyword.t) :: t
-  def changeset(model, action, params \\ %{})
-  def changeset(model, :create, params) do
-    model
+  def changeset(schema, action, params \\ %{})
+  def changeset(schema, :create, params) do
+    schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
     |> unique_constraint(:slug)
@@ -43,16 +43,16 @@ defmodule Brando.ImageCategory do
   end
 
   @doc """
-  Casts and validates `params` against `model` to create a valid
+  Casts and validates `params` against `schema` to create a valid
   changeset when action is :update.
 
   ## Example
 
-      model_changeset = changeset(%__MODULE__{}, :update, params)
+      schema_changeset = changeset(%__MODULE__{}, :update, params)
 
   """
-  def changeset(model, :update, params) do
-    model
+  def changeset(schema, :update, params) do
+    schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> unique_constraint(:slug)
     |> validate_paths

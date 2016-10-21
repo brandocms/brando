@@ -15,7 +15,7 @@ defmodule Brando.Villain.Parser.Default do
     h = header(%{"text" => text, "level" => level})
     ~s(<a name="#{anchor}"></a>#{h})
   end
-  
+
   def header(%{"text" => header_text, "level" => level}) do
     header_size = "h#{level}"
     "<#{header_size}>" <> header_text <> "</#{header_size}>"
@@ -31,7 +31,7 @@ defmodule Brando.Villain.Parser.Default do
   def text(%{"text" => markdown_data, "type" => type}) do
     markdown_data =
       if type == "lead" and byte_size(markdown_data) > 0 do
-        markdown_data = markdown_data <> "\n{: .lead}"
+        markdown_data <> "\n{: .lead}"
       else
         markdown_data
       end

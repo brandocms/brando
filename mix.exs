@@ -1,8 +1,8 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.35.0"
-  @description "Boilerplate for Twined applications."
+  @version "0.36.0"
+  @description "A helping hand for Twined applications."
 
   def project do
     [app: :brando,
@@ -54,8 +54,8 @@ defmodule Brando.Mixfile do
     {:httpoison, "~> 0.9"},
     {:mogrify, "~> 0.4"},
     {:phoenix, "~> 1.2.0"},
-    {:phoenix_html, "~> 2.5"},
-    {:poison, "~> 2.0"},
+    {:phoenix_html, "~> 2.6"},
+    {:poison, "~> 2.0 or ~> 3.0"},
     {:postgrex, "~> 0.11"},
     {:scrivener_ecto, "~> 1.0"},
     {:slugger, "~> 0.1.0"},
@@ -76,7 +76,7 @@ defmodule Brando.Mixfile do
 
   defp package do
     [maintainers: ["Twined Networks"],
-     licenses: ["MIT"],
+     licenses: [""],
      files: [
        "config",
        "lib",

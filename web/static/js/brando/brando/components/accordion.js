@@ -1,37 +1,35 @@
-"use strict";
-
-import $ from "jquery";
+import $ from 'jquery';
 
 class Accordion {
   static setup() {
-    var that = this;
-    $(document).ready(function () {
-      var hash = document.location.hash;
-      $('.accordion-tabs-minimal').each(function() {
+    const that = this;
+    $(document).ready(() => {
+      const hash = document.location.hash;
+      $('.accordion-tabs-minimal').each(() => {
         if (!hash) {
-          let $link = $(this).children('li').first().children('a');
-          let $linkSibling = $link.next();
+          const $link = $(this).children('li').first().children('a');
+          const $linkSibling = $link.next();
           $link.addClass('is-active');
           $linkSibling.addClass('is-open').show();
         } else {
-          let $link = $('#tab-' + hash.replace('#', ''));
+          const $link = $(`#tab-${hash.replace('#', '')}`);
           that.activateTab($link);
         }
       });
 
-      $('.accordion-tabs-minimal').on('click', '.tab-link', function(event) {
+      $('.accordion-tabs-minimal').on('click', '.tab-link', (event) => {
         event.preventDefault();
-        that.activateTab(this);
+        that.activateTab(event.currentTarget);
       });
     });
   }
 
   static activateTab(obj) {
-    let $obj = $(obj),
-        $accordionTabs = $obj.closest('.accordion-tabs-minimal'),
-        $openTabs = $accordionTabs.find('.is-open'),
-        $activeTabs = $accordionTabs.find('.is-active'),
-        $tabContent = $obj.next();
+    const $obj = $(obj);
+    const $accordionTabs = $obj.closest('.accordion-tabs-minimal');
+    const $openTabs = $accordionTabs.find('.is-open');
+    const $activeTabs = $accordionTabs.find('.is-active');
+    const $tabContent = $obj.next();
 
     if (!$obj.hasClass('is-active')) {
       document.location.hash = $obj.attr('id').replace('tab-', '');
@@ -44,4 +42,4 @@ class Accordion {
   }
 }
 
-export {Accordion};
+export default Accordion;

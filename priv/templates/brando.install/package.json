@@ -1,4 +1,5 @@
 {
+  "private": true,
   "repository": {},
   "dependencies": {
     "autoprefixer": "^6.2.3",

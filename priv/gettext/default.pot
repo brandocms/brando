@@ -144,7 +144,7 @@ msgstr ""
 msgid "Edit user"
 msgstr ""
 
-#: web/models/user.ex:191 web/templates/session/login.html.eex:3
+#: web/schemas/user.ex:191 web/templates/session/login.html.eex:3
 msgid "Email"
 msgstr ""
 
@@ -174,7 +174,7 @@ msgstr ""
 msgid "Existing images in this series"
 msgstr ""
 
-#: web/controllers/admin/dashboard_controller.ex:57
+#: web/controllers/admin/dashboard_controller.ex:58
 msgid "File not found"
 msgstr ""
 
@@ -258,7 +258,7 @@ msgstr ""
 msgid "Page not found"
 msgstr ""
 
-#: web/models/user.ex:193 web/templates/session/login.html.eex:6
+#: web/schemas/user.ex:193 web/templates/session/login.html.eex:6
 msgid "Password"
 msgstr ""
 
@@ -355,7 +355,7 @@ msgstr ""
 msgid "Add new"
 msgstr ""
 
-#: web/menus/images_menu.ex:10 web/models/image_series.ex:150
+#: web/menus/images_menu.ex:10 web/schemas/image_series.ex:150
 msgid "Images"
 msgstr ""
 
@@ -371,19 +371,19 @@ msgstr ""
 msgid "** censored **"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:242
+#: lib/brando/html/inspect.ex:246
 msgid "Association not fetched"
 msgstr ""
 
-#: web/models/user.ex:199
+#: web/schemas/user.ex:199
 msgid "Avatar"
 msgstr ""
 
-#: web/models/image_category.ex:120
+#: web/schemas/image_category.ex:120
 msgid "Config"
 msgstr ""
 
-#: web/models/image_series.ex:146
+#: web/schemas/image_series.ex:146
 msgid "Configuration"
 msgstr ""
 
@@ -391,20 +391,20 @@ msgstr ""
 msgid "Configuration data"
 msgstr ""
 
-#: lib/brando/form/fields.ex:602
+#: lib/brando/form/fields.ex:603
 msgid "Confirm"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:260
+#: lib/brando/html/inspect.ex:264
 msgid "Connected"
 msgstr ""
 
-#: web/models/image.ex:131 web/models/image_category.ex:121
-#: web/models/image_series.ex:149
+#: web/schemas/image.ex:131 web/schemas/image_category.ex:121
+#: web/schemas/image_series.ex:149
 msgid "Creator"
 msgstr ""
 
-#: web/models/image_series.ex:147
+#: web/schemas/image_series.ex:147
 msgid "Credits"
 msgstr ""
 
@@ -412,49 +412,49 @@ msgstr ""
 msgid "Draft"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:236 lib/brando/html/inspect.ex:245
+#: lib/brando/html/inspect.ex:240 lib/brando/html/inspect.ex:249
 msgid "Empty association"
 msgstr ""
 
-#: lib/brando/html/inspect.ex:123 lib/brando/html/inspect.ex:186
+#: lib/brando/html/inspect.ex:123
 msgid "Encoded value"
 msgstr ""
 
-#: web/models/user.ex:192
+#: web/schemas/user.ex:192
 msgid "Full name"
 msgstr ""
 
-#: web/models/image.ex:128 web/models/image_category.ex:117
-#: web/models/image_series.ex:143 web/models/user.ex:189
+#: web/schemas/image.ex:128 web/schemas/image_category.ex:117
+#: web/schemas/image_series.ex:143 web/schemas/user.ex:189
 msgid "ID"
 msgstr ""
 
-#: web/models/image.ex:129
+#: web/schemas/image.ex:129
 msgid "Image"
 msgstr ""
 
-#: web/models/image_series.ex:151 web/models/image_series.ex:152
+#: web/schemas/image_series.ex:151 web/schemas/image_series.ex:152
 msgid "Image category"
 msgstr ""
 
-#: web/models/image.ex:132 web/models/image_category.ex:122
+#: web/schemas/image.ex:132 web/schemas/image_category.ex:122
 msgid "Image series"
 msgstr ""
 
-#: web/models/image.ex:133 web/models/image_category.ex:123
-#: web/models/image_series.ex:153 web/models/user.ex:197
+#: web/schemas/image.ex:133 web/schemas/image_category.ex:123
+#: web/schemas/image_series.ex:153 web/schemas/user.ex:197
 msgid "Inserted at"
 msgstr ""
 
-#: web/models/user.ex:195
+#: web/schemas/user.ex:195
 msgid "Language"
 msgstr ""
 
-#: web/models/user.ex:196
+#: web/schemas/user.ex:196
 msgid "Last login"
 msgstr ""
 
-#: web/models/image_category.ex:118 web/models/image_series.ex:144
+#: web/schemas/image_category.ex:118 web/schemas/image_series.ex:144
 msgid "Name"
 msgstr ""
 
@@ -462,12 +462,12 @@ msgstr ""
 msgid "No connected image"
 msgstr ""
 
-#: lib/brando/html/tablize.ex:60 lib/brando/html/tablize.ex:61
+#: lib/brando/html/tablize.ex:61 lib/brando/html/tablize.ex:62
 msgid "No results"
 msgstr ""
 
 #: lib/brando/html/inspect.ex:95 lib/brando/html/inspect.ex:103
-#: lib/brando/html/inspect.ex:190
+#: lib/brando/html/inspect.ex:186 lib/brando/html/inspect.ex:190
 msgid "No value"
 msgstr ""
 
@@ -479,11 +479,11 @@ msgstr ""
 msgid "Published"
 msgstr ""
 
-#: web/forms/user_form.ex:39
+#: web/schemas/user.ex:201
 msgid "Rights"
 msgstr ""
 
-#: web/models/user.ex:194
+#: web/schemas/user.ex:194
 msgid "Roles"
 msgstr ""
 
@@ -491,24 +491,24 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
-#: web/models/image.ex:130 web/models/image_series.ex:148
+#: web/schemas/image.ex:130 web/schemas/image_series.ex:148
 msgid "Sequence"
 msgstr ""
 
-#: web/models/image_category.ex:119 web/models/image_series.ex:145
+#: web/schemas/image_category.ex:119 web/schemas/image_series.ex:145
 msgid "Slug"
 msgstr ""
 
-#: web/models/image.ex:134 web/models/image_category.ex:124
-#: web/models/image_series.ex:154 web/models/user.ex:198
+#: web/schemas/image.ex:134 web/schemas/image_category.ex:124
+#: web/schemas/image_series.ex:154 web/schemas/user.ex:198
 msgid "Updated at"
 msgstr ""
 
-#: web/forms/user_form.ex:31 web/forms/user_profile_form.ex:16
+#: web/schemas/user.ex:202
 msgid "User information"
 msgstr ""
 
-#: web/models/user.ex:190
+#: web/schemas/user.ex:190
 msgid "Username"
 msgstr ""
 
@@ -516,55 +516,55 @@ msgstr ""
 msgid "admin"
 msgstr ""
 
-#: lib/brando/form/fields.ex:690
+#: lib/brando/form/fields.ex:720
 msgid "can't be blank"
 msgstr ""
 
-#: lib/brando/form/fields.ex:694
+#: lib/brando/form/fields.ex:724
 msgid "has invalid format"
 msgstr ""
 
-#: web/models/image.ex:124
+#: web/schemas/image.ex:124
 msgid "image"
 msgstr ""
 
-#: web/models/image_category.ex:114
+#: web/schemas/image_category.ex:114
 msgid "image categories"
 msgstr ""
 
-#: web/models/image_category.ex:113
+#: web/schemas/image_category.ex:113
 msgid "image category"
 msgstr ""
 
-#: web/models/image_series.ex:140
+#: web/schemas/image_series.ex:140
 msgid "image(s)"
 msgstr ""
 
-#: web/models/image.ex:125
+#: web/schemas/image.ex:125
 msgid "images"
 msgstr ""
 
-#: web/models/image_series.ex:135
+#: web/schemas/image_series.ex:135
 msgid "imageserie"
 msgstr ""
 
-#: web/models/image_series.ex:136
+#: web/schemas/image_series.ex:136
 msgid "imageseries"
 msgstr ""
 
-#: lib/brando/form/fields.ex:696
+#: lib/brando/form/fields.ex:726
 msgid "is invalid"
 msgstr ""
 
-#: lib/brando/form/fields.ex:698
+#: lib/brando/form/fields.ex:728
 msgid "is reserved"
 msgstr ""
 
-#: lib/brando/form/fields.ex:692
+#: lib/brando/form/fields.ex:722
 msgid "must be unique"
 msgstr ""
 
-#: lib/brando/form/fields.ex:702 lib/brando/form/fields.ex:704
+#: lib/brando/form/fields.ex:732 lib/brando/form/fields.ex:734
 msgid "should be at least %{count} characters"
 msgstr ""
 
@@ -576,11 +576,11 @@ msgstr ""
 msgid "superuser"
 msgstr ""
 
-#: web/models/user.ex:185
+#: web/schemas/user.ex:185
 msgid "user"
 msgstr ""
 
-#: web/models/user.ex:186
+#: web/schemas/user.ex:186
 msgid "users"
 msgstr ""
 
@@ -608,11 +608,11 @@ msgstr ""
 msgid "Access denied."
 msgstr ""
 
-#: web/models/user.ex:76 web/models/user.ex:99
+#: web/schemas/user.ex:76 web/schemas/user.ex:99
 msgid "Passwords must match"
 msgstr ""
 
-#: web/models/user.ex:77 web/models/user.ex:100
+#: web/schemas/user.ex:77 web/schemas/user.ex:100
 msgid "Password must be at least 6 characters"
 msgstr ""
 
@@ -721,7 +721,7 @@ msgstr ""
 msgid "You are about to delete these folders. Please check carefully before proceeding."
 msgstr ""
 
-#: lib/brando/form/fields.ex:700
+#: lib/brando/form/fields.ex:730
 msgid "has already been taken"
 msgstr ""
 
@@ -791,4 +791,8 @@ msgstr ""
 
 #: lib/brando/html/inspect.ex:141
 msgid "No connected file"
+msgstr ""
+
+#: web/templates/admin/dashboard/system_info.html.eex:77
+msgid "Deps"
 msgstr ""

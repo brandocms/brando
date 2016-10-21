@@ -1,4 +1,4 @@
-FROM twined/fehn:1.3
+FROM twined/fehn:1.3.1
 
 MAINTAINER Twined Networks <mail@twined.net>
 
@@ -12,7 +12,8 @@ RUN mix deps.clean --all
 RUN mix deps.get
 RUN mix deps.compile
 
-RUN npm set progress=false && npm install
+COPY package.json yarn.lock /app/
+RUN yarn --pure-lockfile
 RUN node_modules/.bin/brunch build -p
 
 RUN mix phoenix.digest

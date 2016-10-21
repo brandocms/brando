@@ -1,5 +1,5 @@
 body {
-  color: #717171;
+  color: #505050;
   overflow-y: hidden;
 }
 
@@ -14,17 +14,17 @@ h1 {
 }
 
 h4 {
-  text-transform: uppercase;
-  font-size: 13px;
-  color: #fff;
   background-color: #292929;
-  padding: 3px 6px;
+  color: #fff;
   display: table;
+  font-size: 13px;
+  padding: 3px 6px;
+  text-transform: uppercase;
 }
 
 .image-preview {
-  margin-top: 5px;
   margin-bottom: 15px;
+  margin-top: 5px;
 }
 
 hr {

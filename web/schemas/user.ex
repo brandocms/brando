@@ -1,7 +1,7 @@
 defmodule Brando.User do
   @moduledoc """
-  Ecto schema for the User model, as well as image field definitions
-  and helper functions for dealing with the user model.
+  Ecto schema for the User schema, as well as image field definitions
+  and helper functions for dealing with the user schema.
   """
 
   @type t :: %__MODULE__{}
@@ -54,18 +54,18 @@ defmodule Brando.User do
   }
 
   @doc """
-  Casts and validates `params` against `model` to create a valid
+  Casts and validates `params` against `schema` to create a valid
   changeset when action is :create.
 
   ## Example
 
-      model_changeset = changeset(%__MODULE__{}, :create, params)
+      schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
   @spec changeset(t, :create | :update, %{binary => term} | %{atom => term}) :: t
-  def changeset(model, action, params \\ %{})
-  def changeset(model, :create, params) do
-    model
+  def changeset(schema, action, params \\ %{})
+  def changeset(schema, :create, params) do
+    schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
     |> validate_format(:email, ~r/@/)
@@ -78,16 +78,16 @@ defmodule Brando.User do
   end
 
   @doc """
-  Casts and validates `params` against `model` to create a valid
+  Casts and validates `params` against `schema` to create a valid
   changeset when action is :update.
 
   ## Example
 
-      model_changeset = changeset(%__MODULE__{}, :update, params)
+      schema_changeset = changeset(%__MODULE__{}, :update, params)
 
   """
-  def changeset(model, :update, params) do
-    model
+  def changeset(schema, :update, params) do
+    schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> cleanup_old_images()
     |> update_change(:email, &String.downcase/1)
@@ -101,7 +101,7 @@ defmodule Brando.User do
   end
 
   @doc """
-  Create a changeset for the user model by passing `params`.
+  Create a changeset for the user schema by passing `params`.
   If valid, generate a hashed password and insert user to Brando.repo.
   If not valid, return errors from changeset
   """
@@ -116,7 +116,7 @@ defmodule Brando.User do
   end
 
   @doc """
-  Create an `update` changeset for the user model by passing `params`.
+  Create an `update` changeset for the user schema by passing `params`.
   If password is in changeset, hash and insert in changeset.
   If valid, update user in Brando.repo.
   If not valid, return errors from changeset
@@ -197,6 +197,10 @@ defmodule Brando.User do
       inserted_at: gettext("Inserted at"),
       updated_at: gettext("Updated at"),
       avatar: gettext("Avatar")],
+    fieldsets: [
+      rights: gettext("Rights"),
+      user_information: gettext("User information")
+    ],
     hidden_fields: [:password, :creator]
   ]
 end

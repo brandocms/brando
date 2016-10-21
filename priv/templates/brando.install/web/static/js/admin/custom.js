@@ -1,7 +1,17 @@
-"use strict";
+'use strict';
+
+import $ from 'jquery';
 
 // import Module from "./module";
 
 $(() => {
-    // Module.setup();
+  /* page specific switch */
+
+  // switch ($('body').attr('data-script')) {
+  // case 'section-index':
+  //   // Module.setup();
+  //   break;
+  // }
+
+
 });

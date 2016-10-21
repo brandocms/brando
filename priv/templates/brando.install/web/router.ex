@@ -34,6 +34,7 @@ defmodule <%= application_module %>.Router do
     plug :put_locale
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug PlugHeartbeat
   end
 
   pipeline :auth do

@@ -1,7 +1,7 @@
 defmodule Brando.Image do
   @moduledoc """
-  Ecto schema for the Image model
-  and helper functions for dealing with the model.
+  Ecto schema for the Image schema
+  and helper functions for dealing with the schema.
   """
 
   @type t :: %__MODULE__{}
@@ -27,36 +27,36 @@ defmodule Brando.Image do
   end
 
   @doc """
-  Casts and validates `params` against `model` to create a valid
+  Casts and validates `params` against `schema` to create a valid
   changeset when action is :create.
 
   ## Example
 
-      model_changeset = changeset(%__MODULE__{}, :create, params)
+      schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
   @spec changeset(t, :create | :update, Keyword.t) :: t
-  def changeset(model, :create, params) do
-    model
+  def changeset(schema, :create, params) do
+    schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
   end
 
   @doc """
-  Casts and validates `params` against `model` to create a valid
+  Casts and validates `params` against `schema` to create a valid
   changeset when action is :update.
 
   ## Example
 
-      model_changeset = changeset(%__MODULE__{}, :update, params)
+      schema_changeset = changeset(%__MODULE__{}, :update, params)
 
   """
-  def changeset(model, :update, params) do
-    cast(model, params, [], @required_fields ++ @optional_fields)
+  def changeset(schema, :update, params) do
+    cast(schema, params, [], @required_fields ++ @optional_fields)
   end
 
   @doc """
-  Create a changeset for the model by passing `params`.
+  Create a changeset for the schema by passing `params`.
   If not valid, return errors from changeset
   """
   @spec create(%{binary => term} | %{atom => term}, Brando.User.t) :: {:ok, t} | {:error, Keyword.t}
@@ -68,29 +68,29 @@ defmodule Brando.Image do
   end
 
   @doc """
-  Create an `update` changeset for the model by passing `params`.
-  If valid, update model in Brando.repo.
+  Create an `update` changeset for the schema by passing `params`.
+  If valid, update schema in Brando.repo.
   If not valid, return errors from changeset
   """
   @spec update(t, %{binary => term} | %{atom => term}) :: {:ok, t} | {:error, Keyword.t}
-  def update(model, params) do
-    model
+  def update(schema, params) do
+    schema
     |> changeset(:update, params)
     |> Brando.repo.update
   end
 
   @doc """
-  Updates the `model`'s image JSON field with `title` and `credits`
+  Updates the `schema`'s image JSON field with `title` and `credits`
   """
-  def update_image_meta(model, title, credits) do
+  def update_image_meta(schema, title, credits) do
     image =
-      model.image
+      schema.image
       |> Map.put(:title, title)
       |> Map.put(:credits, credits)
 
     # TODO: Return changeset instead?
 
-    update(model, %{"image" => image})
+    update(schema, %{"image" => image})
   end
 
   @doc """

@@ -12,16 +12,20 @@ defmodule Brando.PopupForm do
 
   Then add javascript to your app:
 
-      import PopupForm from "brando";
+      import {PopupForm, brando} from "brando";
 
       $('.avatar img').click((e) => {
-          let clientForm = new PopupForm("client", clientInsertionSuccess);
+          let clientForm = new PopupForm("client", brando.language, clientInsertionSuccess);
       });
 
       function clientInsertionSuccess(fields) {
           // here you'd insert the returned fields into a select or something similar.
           console.log(`${fields.id} --> ${fields.username}`);
       }
+
+  That's it!
+  
+  No routing is neccessary, since PopupForms communicate through Brando's system channel.
   """
 
   alias Brando.PopupForm.Registry

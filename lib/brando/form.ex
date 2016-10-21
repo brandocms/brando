@@ -13,7 +13,8 @@ defmodule Brando.Form do
         submit :save, [class: "btn btn-success"]
       end
 
-  Set field labels, placeholders and help_text by using your `schema`'s meta.
+  Set field labels, placeholders and help text by using your `schema`'s meta.
+  This is to enable gettext translations, which won't work in the field macro.
 
   See `Brando.Meta.Model` for more info about meta.
 
@@ -36,7 +37,9 @@ defmodule Brando.Form do
             rendered_form: nil
 
   @type t         :: %__MODULE__{}
-  @type form_opts :: [{:helper, atom} | {:class, String.t}]
+  @type helper    :: {:helper, atom} | {:helper, {Module, atom}} | {:helper, function}
+  @type class     :: {:class, String.t}
+  @type form_opts :: [helper | class]
 
   @valid_field_types [
     :text,
@@ -78,8 +81,17 @@ defmodule Brando.Form do
 
   This macro accepts a set of options:
 
-    * `action`: An atom representing the helper function that will
-      get the form's action. I.E: :admin_user_path.
+    * `action`: This represents the helper function that will get the form's action.
+      You can supply:
+
+      * A helper function: `MyApp.AnotherRouter.Helpers.admin_another_create`
+
+      * An atom: `:admin_post_path`. This will use the otp app's default router's helper,
+      accessed through `Brando.helpers`
+
+      * A tuple consisting of the helper module and an atom representing the function:
+        `{MyApp.AnotherRouter.Helpers, :admin_another_create}`
+
     * `class`: Class name for the form
   """
   @spec form(String.t, form_opts, [do: Macro.t]) :: Macro.t
@@ -160,6 +172,7 @@ defmodule Brando.Form do
           type:      Keyword.fetch!(opts, :type)
         }
 
+        # :url is not used, but we stick it in there as a fallback anyway.
         form
         |> render_fields
         |> render_form
@@ -200,7 +213,8 @@ defmodule Brando.Form do
         {class, form_opts} -> Keyword.put(form_opts, :class, class)
       end
 
-    rendered_form = form_tag(form_struct.url, form_opts, do: raw(form_struct.rendered_fields))
+    rendered_form =
+      form_tag(form_struct.url, form_opts, do: raw(form_struct.rendered_fields))
 
     form_struct
     |> Map.put(:rendered_form, rendered_form)
@@ -253,10 +267,6 @@ defmodule Brando.Form do
       `locale` in the form's `:model` property with the field name as key.
     * `slug_from` - :name
       Automatically slugs with `:name` as source.
-    * `help_text` - "Help text for field". If not supplied, Brando will
-      look at the form's `:model` parameters supplied with
-      the form for Linguist translation. Set it in the model's
-      meta with key `help`.
     * `placeholder` - "Placeholder for field"
     * `tags` - true. If true, binds tags javascript listener to field
       which splits tags by comma.
@@ -273,7 +283,6 @@ defmodule Brando.Form do
     * `rows` - How many rows to display in the textarea.
     * `required` - true as default
     * `label` - "Label for field"
-    * `help_text` - "Help text for field"
     * `placeholder` - "Placeholder for field"
     * `default` - Default value. Can also be a function like
       `&__MODULE__.default_func/0`
@@ -334,7 +343,6 @@ defmodule Brando.Form do
 
     * `required` - true as default
     * `label` - "Label for field"
-    * `help_text` - "Help text for field"
     * `placeholder` - "Placeholder for field"
     * `default` - Default value. Can also be a function like
       `&__MODULE__.default_func/0`
@@ -383,13 +391,24 @@ defmodule Brando.Form do
   ## Options
 
     * `legend`
-      - Set to a string, or use `gettext("string")` for i18n.
+      - Set to an atom that references an entry under your schema meta's `fieldsets` key.
 
   ## Example
 
-      fieldset gettext("Header") do
+      fieldset :header do
         field :...
       end
+
+      # in schema.ex
+
+      ...
+      use Brando.Meta.Schema, [
+        ...
+        fieldsets: [
+          header: gettext("My fieldset header text")
+        ]
+      ]
+
   """
   defmacro fieldset(legend \\ nil, [do: block]) do
     quote do
@@ -462,12 +481,38 @@ defmodule Brando.Form do
   and returns the result
   """
   def apply_action(fun, action, params \\ nil)
+  def apply_action({helper, fun}, action, params) when is_list(params) do
+    apply(helper, fun, [Brando.endpoint(), action] ++ params)
+  end
+
+  def apply_action(fun, action, params) when is_function(fun) and is_list(params) do
+    apply(fun, [Brando.endpoint(), action] ++ params)
+  end
+
   def apply_action(fun, action, params) when is_list(params) do
     apply(Brando.helpers, fun, [Brando.endpoint(), action] ++ params)
   end
+
+  def apply_action({helper, fun}, action, nil) do
+    apply(helper, fun, [Brando.endpoint(), action])
+  end
+
+  def apply_action(fun, action, nil) when is_function(fun) do
+    apply(fun, [Brando.endpoint(), action])
+  end
+
   def apply_action(fun, action, nil) do
     apply(Brando.helpers, fun, [Brando.endpoint(), action])
   end
+
+  def apply_action({helper, fun}, action, params) do
+    apply(helper, fun, [Brando.endpoint(), action, params])
+  end
+
+  def apply_action(fun, action, params) when is_function(fun) do
+    apply(fun, [Brando.endpoint(), action, params])
+  end
+
   def apply_action(fun, action, params) do
     apply(Brando.helpers, fun, [Brando.endpoint(), action, params])
   end

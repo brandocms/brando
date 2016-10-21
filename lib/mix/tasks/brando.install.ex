@@ -12,9 +12,6 @@ defmodule Mix.Tasks.Brando.Install do
     # Mix template
     {:eex,  "templates/brando.install/mix.exs", "mix.exs"},
 
-    # EXRM release tasks (migrations)
-    {:eex,  "templates/brando.install/lib/release_tasks.ex", "lib/application_name/release_tasks.ex"},
-
     # Etc. Various OS config files and log directory.
     {:keep, "templates/brando.install/logs", "logs"},
     {:eex,  "templates/brando.install/etc/logrotate/prod.conf", "etc/logrotate/prod.conf"},
@@ -55,7 +52,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "templates/brando.install/web/gettext.ex", "web/gettext.ex"},
 
     # Frontend helpers
-    {:eex,  "templates/brando.install/web/helpers/date_time_helpers.ex", "web/helpers/date_time_helpers"},
+    {:eex,  "templates/brando.install/web/helpers/date_time_helpers.ex", "web/helpers/date_time_helpers.ex"},
 
     # Web helpers for admin and frontend
     {:eex, "templates/brando.install/web/admin_web.ex", "web/admin_web.ex"},
@@ -100,12 +97,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/static/brando/fonts/fontawesome-webfont.woff", "web/static/assets/fonts/fontawesome-webfont.woff"},
     {:copy, "templates/brando.install/static/brando/fonts/fontawesome-webfont.woff2", "web/static/assets/fonts/fontawesome-webfont.woff2"},
     {:copy, "templates/brando.install/static/brando/fonts/FontAwesome.otf", "web/static/assets/fonts/FontAwesome.otf"},
-
-    # Webfonts - backend
-    {:copy, "templates/brando.install/static/brando/fonts/ab.woff", "web/static/assets/fonts/ab.woff"},
-    {:copy, "templates/brando.install/static/brando/fonts/am.woff", "web/static/assets/fonts/am.woff"},
-    {:copy, "templates/brando.install/static/brando/fonts/ar.woff", "web/static/assets/fonts/ar.woff"},
-
+    
     # Images
     {:copy, "templates/brando.install/static/brando/images/blank.gif", "web/static/assets/images/brando/blank.gif"},
     {:copy, "templates/brando.install/static/brando/images/flags.png", "web/static/assets/images/brando/flags.png"},

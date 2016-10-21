@@ -21,13 +21,13 @@ defmodule <%= application_module %>.Mixfile do
   def application do
     [mod: {<%= application_module %>, []},
      included_applications: [
-       :brando_news,
-       :brando_pages,
-       :brando_villain,
-       :recon
+       :recon,
      ],
      applications: [
        :brando,
+       :brando_news,
+       :brando_pages,
+       :brando_villain,
        :cowboy,
        :hrafn,
        :gettext,
@@ -36,6 +36,7 @@ defmodule <%= application_module %>.Mixfile do
        :phoenix_ecto,
        :phoenix_html,
        :phoenix_pubsub,
+       :plug_heartbeat,
        :postgrex,
        :runtime_tools,
        :timex
@@ -51,38 +52,35 @@ defmodule <%= application_module %>.Mixfile do
   #
   # Type `mix help deps` for examples and options.
   defp deps do
-    [{:phoenix, "~> 1.2.0"},
+    [
+     # phoenix
+     {:phoenix, "~> 1.2.1"},
      {:phoenix_pubsub, "~> 1.0"},
      {:phoenix_ecto, "~> 3.0.0"},
      {:phoenix_html, "~> 2.5"},
      {:phoenix_live_reload, "~> 1.0", only: :dev},
 
+     # general deps
      {:postgrex, ">= 0.0.0"},
-
      {:gettext, "~> 0.11"},
      {:cowboy, "~> 1.0"},
-
      {:timex, "~> 3.0"},
 
      # release management and production tools
      {:distillery, "~> 0.10"},
-     {:recon, github: "ferd/recon"},
-     {:hrafn, github: "twined/hrafn"},
+     {:recon, "~> 2.3"},
+     {:hrafn, "~> 0.1"},
+     {:plug_heartbeat, "~> 0.1"},
 
      # brando
      {:brando, github: "twined/brando"},
-     {:brando_villain, github: "twined/brando_villain"},
+     {:brando_villain, "~> 0.1"},
 
      # optional brando modules
      {:brando_news, github: "twined/brando_news"},
      {:brando_pages, github: "twined/brando_pages"}]
   end
 
-  # Aliases are shortcut or tasks specific to the current project.
-  # For example, to create, migrate and run the seeds file at once:
-  #
-  #     $ mix ecto.setup
-  #
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     ["ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],

@@ -104,7 +104,8 @@ defmodule Brando.Form.Fields do
   Render fieldset open
   """
   def render_field(%Field{type: :fieldset} = field) do
-    prepend_html(field, fieldset_open_tag(field.opts[:legend], field.opts[:row_span]))
+    legend = field.schema.__fieldset__(field.opts[:legend]) || nil
+    prepend_html(field, fieldset_open_tag(legend, field.opts[:row_span]))
   end
 
   @doc """
@@ -161,7 +162,7 @@ defmodule Brando.Form.Fields do
       |> put_name(format_name(field.name, field.source))
       |> put_type(field.type)
       |> put_class(field.opts)
-      |> put_placeholder(field.opts)
+      |> put_placeholder(field)
 
     {:safe, html} = tag(:input, tag_opts)
     prepend_html(field, html)
@@ -525,7 +526,7 @@ defmodule Brando.Form.Fields do
       |> put_name(name)
       |> put_value("true")
       |> put_type(:checkbox)
-      |> put_placeholder(field.opts)
+      |> put_placeholder(field)
       |> put_class(field.opts)
       |> put_checked(field.value, field.opts)
 
@@ -550,7 +551,7 @@ defmodule Brando.Form.Fields do
       |> put_type(field.type)
       |> put_value(field.value, field.opts)
       |> put_slug_from(name, field.opts)
-      |> put_placeholder(field.opts)
+      |> put_placeholder(field)
       |> put_class(field.opts)
       |> put_tags(field.opts)
 
@@ -606,7 +607,7 @@ defmodule Brando.Form.Fields do
       |> put_html(nil)
       |> put_in_opts(:label, "#{confirm_i18n} #{get_label(field)}")
       |> put_in_opts(:placeholder, "#{confirm_i18n} #{get_label(field)}")
-      |> put_in_field(:name, "#{field.name}_confirmation")
+      |> put_in_field(:name, :"#{field.name}_confirmation")
       |> input
       |> add_label
       |> wrap_in_form_group
@@ -631,7 +632,9 @@ defmodule Brando.Form.Fields do
     classes = [class: get_group_classes(field.opts, field.errors)]
 
     html = content_tag(:div, classes) do
-      [field.html, render_errors(field.errors, field.opts), render_help_text(field)] |> raw
+      [field.html,
+       render_errors(field.errors, field.opts),
+       render_help_text(field)] |> raw
     end |> safe_to_string
 
     put_html(field, html)
@@ -653,16 +656,43 @@ defmodule Brando.Form.Fields do
   Renders `help_text` in a nicely formatted div.
   """
   @spec render_help_text(Field.t) :: String.t
-  def render_help_text(%Field{opts: []}), do: ""
-  def render_help_text(%Field{opts: %{help_text: help_text}}) do
-    content_tag(:div, class: "help") do
-      [content_tag(:i, " ", class: "fa fa-fw fa-question-circle"),
-       content_tag(:span, help_text)]
-    end |> safe_to_string
+  def render_help_text(%Field{opts: %{help_text: help_text}} = f) do
+    IO.warn("""
+    using help_text from form macros is deprecated.
+
+    Set the help text in the models meta instead:
+
+        # #{inspect f.schema}
+        use Brando.Meta.Model, [
+          ...
+          help: [
+            #{f.name}: gettext("#{help_text}")
+          ]
+        ]
+    """)
+    do_render_help_text(help_text)
   end
 
-  def render_help_text(_) do
+  def render_help_text(%Field{schema: nil, name: _}) do
+    do_render_help_text("")
+  end
+
+  def render_help_text(%Field{schema: schema, name: name}) do
+    do_render_help_text(schema.__help_for__(name) || "")
+  end
+
+  defp do_render_help_text("") do
     ""
+  end
+
+  defp do_render_help_text(help_text) do
+    html =
+      content_tag(:div, class: "help") do
+        [content_tag(:i, " ", class: "fa fa-fw fa-question-circle"),
+         content_tag(:span, help_text)]
+      end
+
+    safe_to_string(html)
   end
 
   @doc """
@@ -726,8 +756,8 @@ defmodule Brando.Form.Fields do
     end
   end
 
-  defp put_placeholder(tag_opts, opts) do
-    case get_placeholder(opts) do
+  defp put_placeholder(tag_opts, field) do
+    case get_placeholder(field) do
       nil -> tag_opts
       placeholder -> Keyword.put(tag_opts, :placeholder, placeholder)
     end
@@ -837,20 +867,20 @@ defmodule Brando.Form.Fields do
   If `placeholder` is not nil, returns placeholder
   """
   def get_placeholder(nil), do: ""
-  def get_placeholder(%{type: :submit}) do
+  def get_placeholder(%{opts: %{type: :submit}}) do
     nil
   end
-  def get_placeholder(%{type: :file}) do
+  def get_placeholder(%{opts: %{type: :file}}) do
     nil
+  end
+  def get_placeholder(%{opts: %{placeholder: placeholder}}) do
+    placeholder
   end
   def get_placeholder(%{name: name, schema: schema}) do
     schema.__field__(name)
   end
-  def get_placeholder(%{placeholder: nil}) do
+  def get_placeholder(%{opts: %{placeholder: nil}}) do
     nil
-  end
-  def get_placeholder(%{placeholder: placeholder}) do
-    placeholder
   end
   def get_placeholder(_) do
     nil

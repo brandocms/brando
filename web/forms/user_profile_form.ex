@@ -5,7 +5,6 @@ defmodule Brando.UserProfileForm do
   """
   use Brando.Form
   alias Brando.User
-  import Brando.Gettext
 
   @doc false
   def get_language_choices do
@@ -13,7 +12,7 @@ defmodule Brando.UserProfileForm do
   end
 
   form "user", [schema: User, helper: :admin_user_path, class: "grid-form"] do
-    fieldset gettext("User information") do
+    fieldset :user_information do
       field :full_name, :text
       field :username, :text
     end

@@ -1,11 +1,9 @@
 {
-  // I want to use babel-eslint for parsing!
-  "parser": "babel-eslint",
+  "extends": "airbnb",
   "env": {
-    // I write for browser
-    "browser": true,
-    // in CommonJS
-    "node": true
+    "browser": true
   },
-  "extends": "eslint:recommended"
+  "rules": {
+    "object-shorthand": ["error", "consistent-as-needed"]
+  }
 }
