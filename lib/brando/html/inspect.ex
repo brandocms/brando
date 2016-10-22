@@ -81,7 +81,7 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_field(_name, :naive_datetime, value) do
-    ~s(#{value.day}/#{value.month}/#{value.year} #{zero_pad(value.hour, 2)}:#{zero_pad(value.min, 2)})
+    ~s(#{value.day}/#{value.month}/#{value.year} #{zero_pad(value.hour, 2)}:#{zero_pad(value.minute, 2)})
   end
 
   defp do_inspect_field(_name, :date, nil) do
