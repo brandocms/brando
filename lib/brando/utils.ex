@@ -144,17 +144,6 @@ defmodule Brando.Utils do
   end
 
   @doc """
-  Converts an ecto datetime record to ISO 8601 format.
-  """
-  @spec to_iso8601(Ecto.DateTime.t) :: String.t
-  def to_iso8601(dt) do
-    list = [dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec]
-    "~4..0B-~2..0B-~2..0BT~2..0B:~2..0B:~2..0BZ"
-    |> :io_lib.format(list)
-    |> IO.iodata_to_binary
-  end
-
-  @doc """
   Convert string map to struct
   """
   def stringy_struct(string_struct, params) when is_map(params) do
