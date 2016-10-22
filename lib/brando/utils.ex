@@ -167,7 +167,9 @@ defmodule Brando.Utils do
   """
   @spec get_now :: String.t
   def get_now do
-    Ecto.DateTime.to_string(Ecto.DateTime.utc)
+    :calendar.local_time
+    |> NaiveDateTime.from_erl!
+    |> NaiveDateTime.to_string
   end
 
   @doc """
@@ -175,7 +177,10 @@ defmodule Brando.Utils do
   """
   @spec get_date_now :: String.t
   def get_date_now do
-    Ecto.Date.to_string(Ecto.Date.utc)
+    :calendar.local_time
+    |> elem(0)
+    |> Date.from_erl!
+    |> Date.to_string
   end
 
   @doc """

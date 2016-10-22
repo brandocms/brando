@@ -76,19 +76,19 @@ defmodule Brando.HTML.Inspect do
     do_inspect_field(name, type, value)
   end
 
-  defp do_inspect_field(_name, Ecto.DateTime, nil) do
+  defp do_inspect_field(_name, :naive_datetime, nil) do
     ~s(<em>#{gettext("No value")}<em>)
   end
 
-  defp do_inspect_field(_name, Ecto.DateTime, value) do
+  defp do_inspect_field(_name, :naive_datetime, value) do
     ~s(#{value.day}/#{value.month}/#{value.year} #{zero_pad(value.hour, 2)}:#{zero_pad(value.min, 2)})
   end
 
-  defp do_inspect_field(_name, Ecto.Date, nil) do
+  defp do_inspect_field(_name, :date, nil) do
     ~s(<em>#{gettext("No value")}<em>)
   end
 
-  defp do_inspect_field(_name, Ecto.Date, value) do
+  defp do_inspect_field(_name, :date, value) do
     ~s(#{value.day}/#{value.month}/#{value.year})
   end
 

@@ -28,7 +28,7 @@ defmodule Brando.User do
     field :avatar, Brando.Type.Image
     field :role, Brando.Type.Role
     field :language, :string
-    field :last_login, Ecto.DateTime
+    field :last_login, :naive_datetime
     timestamps
   end
 
@@ -143,7 +143,8 @@ defmodule Brando.User do
   """
   @spec set_last_login(t) :: t
   def set_last_login(user) do
-    {:ok, user} = Utils.Schema.update_field(user, [last_login: Ecto.DateTime.utc])
+    {:ok, user} =
+      Utils.Schema.update_field(user, [last_login: NaiveDateTime.from_erl!(:calendar.local_time)])
     user
   end
 
