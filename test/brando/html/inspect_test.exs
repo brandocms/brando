@@ -91,8 +91,8 @@ defmodule Brando.HTML.InspectTest do
     assert inspect_field(:password, :string, "passord") =~ "censored"
     assert inspect_field("name", :string, "") =~ "No value"
 
-    assert inspect_field("date", Ecto.Date, nil) =~ "No value"
-    assert inspect_field("date", Ecto.Date, %Ecto.Date{year: 2015, month: 12, day: 1}) =~ "1/12/2015"
+    assert inspect_field("date", :date, nil) =~ "No value"
+    assert inspect_field("date", :date, Date.new(2015, 12, 1) |> elem(1)) =~ "1/12/2015"
 
     assert inspect_field("status", Type.Status, :published) =~ "Published"
     assert inspect_field("status", Type.Status, :pending) =~ "Pending"
