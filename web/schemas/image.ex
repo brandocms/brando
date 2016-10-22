@@ -52,7 +52,7 @@ defmodule Brando.Image do
 
   """
   def changeset(schema, :update, params) do
-    cast(schema, params, [], @required_fields ++ @optional_fields)
+    cast(schema, params, @required_fields ++ @optional_fields)
   end
 
   @doc """
