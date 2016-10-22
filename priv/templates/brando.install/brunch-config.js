@@ -5,7 +5,7 @@ exports.config = {
     javascripts: {
       joinTo: {
         /* Frontend JS application */
-        'js/app.js': /^(web\/static\/js)/,
+        'js/app.js': /^(js)/,
 
         /* JQuery module */
         'js/jquery.js': 'node_modules/jquery/dist/jquery.js',
@@ -15,14 +15,14 @@ exports.config = {
           'node_modules/phoenix/priv/static/phoenix.js',
           'node_modules/phoenix_html/priv/static/phoenix_html.js',
           'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
-          /^(web\/static\/vendor)/
+          /^(vendor)/
         ],
 
         /* Copy brando main JS */
         'js/brando.js': 'node_modules/brando/priv/static/js/brando.js',
 
         /* Custom backend JS */
-        'js/brando.custom.js': /^(web\/static\/js\/admin)/,
+        'js/brando.custom.js': /^(js\/admin)/,
 
         /* Brando authentication bundle */
         'js/brando.auth.js': 'node_modules/brando/priv/static/js/brando.auth.js',
@@ -38,7 +38,7 @@ exports.config = {
         /* Frontend application-specific CSS/SCSS */
         'css/app.css': [
           'node_modules/bootstrap-sass/assets/stylesheets/_bootstrap.scss',
-          'web/static/css/app.scss',
+          'css/app.scss',
         ],
 
         /* Backend stylesheets */
@@ -48,7 +48,7 @@ exports.config = {
 
         /* Custom stylesheets for backend, loaded after brando.css */
         'css/brando.custom.css': [
-          'web/static/css/custom/*.scss'
+          'css/custom/*.scss'
         ]
       },
     },
@@ -76,12 +76,12 @@ exports.config = {
       // bootstrap
       'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
       // static
-      'web/static',
-      'test/static'
+      'static',
+      '../test/static'
     ],
 
     // Where to compile files to
-    public: 'priv/static'
+    public: '../priv/static'
   },
 
   conventions: {
@@ -89,7 +89,7 @@ exports.config = {
     // By default, we set this to '/web/static/assets'. Files in this directory
     // will be copied to `paths.public`, which is "priv/static" by default.
     assets: [
-      /^(web\/static\/assets)/,
+      /^(static)/,
     ],
     vendor: /(^bower_components|node_modules|vendor)[\\/]/
   },
@@ -99,7 +99,7 @@ exports.config = {
     babel: {
       // Do not use ES6 compiler in vendor code
       ignore: [
-        /^(web\/static\/vendor|bower_components|node_modules)/,
+        /^(vendor|bower_components|node_modules)/,
       ]
     },
     postcss: {
