@@ -42,7 +42,7 @@ defmodule Mix.Tasks.Brando.GenerateTest do
     assert File.exists?("lib/web/villain")
     assert_file "lib/web/villain/parser.ex"
     assert_file "lib/admin_web.ex", fn file ->
-      assert file =~ "Brando.Backend.Gettext"
+      assert file =~ "Brando.Web.Backend.Gettext"
     end
     assert_file "mix.exs", fn file ->
       assert file =~ "defmodule Brando.Mixfile do"
