@@ -73,7 +73,7 @@ defmodule <%= application_module %>.Mixfile do
      {:plug_heartbeat, "~> 0.1"},
 
      # brando
-     {:brando, github: "twined/brando"},
+     {:brando, github: "twined/brando", branch: "feature/phoenix1.3", override: true},
      {:brando_villain, "~> 0.1"},
 
      # optional brando modules
