@@ -31,15 +31,15 @@ defmodule <%= application_module %>.Admin.Web do
       alias <%= application_module %>.Repo
       import Ecto
       import Ecto.Query, only: [from: 1, from: 2]
-      import <%= application_module %>.Router.Helpers
-      import <%= application_module %>.Backend.Gettext
+      import <%= application_module %>.Web.Router.Helpers
+      import <%= application_module %>.Web.Backend.Gettext
     end
   end
 
   def view do
     helpers = Brando.helpers()
     quote do
-      use Phoenix.View, root: "web/templates"
+      use Phoenix.View, root: "lib/web/templates"
 
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_csrf_token: 0, get_flash: 2, view_module: 1]
@@ -53,9 +53,9 @@ defmodule <%= application_module %>.Admin.Web do
       use Phoenix.HTML
       use Brando.HTML
 
-      import <%= application_module %>.Router.Helpers
-      import <%= application_module %>.ErrorHelpers
-      import <%= application_module %>.Backend.Gettext
+      import <%= application_module %>.Web.Router.Helpers
+      import <%= application_module %>.Web.ErrorHelpers
+      import <%= application_module %>.Web.Backend.Gettext
     end
   end
 
@@ -71,7 +71,7 @@ defmodule <%= application_module %>.Admin.Web do
       alias <%= application_module %>.Repo
       import Ecto
       import Ecto.Query, only: [from: 1, from: 2]
-      import <%= application_module %>.Backend.Gettext
+      import <%= application_module %>.Web.Backend.Gettext
     end
   end
 

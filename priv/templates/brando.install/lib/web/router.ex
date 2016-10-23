@@ -1,4 +1,4 @@
-defmodule <%= application_module %>.Router do
+defmodule <%= application_module %>.Web.Router do
   use <%= application_module %>.Web, :router
 
   alias Brando.Plug.Authenticate
@@ -76,6 +76,6 @@ defmodule <%= application_module %>.Router do
 
   scope "/" do
     pipe_through :browser
-    get "/", <%= application_module %>.PageController, :index
+    get "/", <%= application_module %>.Web.PageController, :index
   end
 end
