@@ -13,7 +13,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "templates/brando.install/mix.exs", "mix.exs"},
 
     # Etc. Various OS config files and log directory.
-    {:keep, "templates/brando.install/logs", "logs"},
+    {:keep, "templates/brando.install/log", "log"},
     {:eex,  "templates/brando.install/etc/logrotate/prod.conf", "etc/logrotate/prod.conf"},
     {:eex,  "templates/brando.install/etc/nginx/prod.conf", "etc/nginx/prod.conf"},
     {:eex,  "templates/brando.install/etc/supervisord/prod.conf", "etc/supervisord/prod.conf"},
