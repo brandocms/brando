@@ -8,19 +8,25 @@ defmodule Brando.Mixfile do
     [app: :brando,
      version: @version,
      elixir: "~> 1.3",
-     deps: deps,
+     deps: deps(),
      dialyzer: [
        plt_add_apps: [
-         :gettext, :comeonin, :mogrify, :slugger, :phoenix, :phoenix_html, :phoenix_ecto
+         :gettext,
+         :comeonin,
+         :mogrify,
+         :slugger,
+         :phoenix,
+         :phoenix_html, 
+         :phoenix_ecto
        ],
        flags: []
      ],
      compilers: [:gettext, :phoenix] ++ Mix.compilers,
      elixirc_paths: elixirc_paths(Mix.env),
      test_coverage: [tool: ExCoveralls],
-     package: package,
+     package: package(),
      description: @description,
-     aliases: aliases,
+     aliases: aliases(),
 
      # Docs
      name: "Brando",
