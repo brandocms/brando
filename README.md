@@ -82,10 +82,11 @@ Static media config in `endpoint.ex`.
 +  cache_control_for_vsn_requests: "public, max-age=31536000"
 ```
 
-Also switch out (or add to it, if you use sockets in the frontend as well) the socket config in `endpoint.ex`:
+Also switch out (or add to it, if you use sockets in the frontend as well) the socket
+config in `lib/web/endpoint.ex`:
 
 ```diff
-- socket "/socket", MyApp.UserSocket
+- socket "/socket", MyApp.Web.UserSocket
 + socket "/admin/ws", Brando.UserSocket
 ```
 
@@ -123,10 +124,10 @@ And backend:
     $ mix gettext.merge priv/gettext/backend
 
 Now we register our otp app's modules in Brando's registry to automatically set Gettext locales.
-Open up you application's `lib/my_app.ex` and add to `start/2`:
+Open up you application's `lib/application.ex` and add to `start/2`:
 
-    Brando.Registry.register(MyApp, [:gettext])
-    Brando.Registry.register(MyApp.Backend, [:gettext])
+    Brando.Registry.register(MyApp.Web, [:gettext])
+    Brando.Registry.register(MyApp.Web.Backend, [:gettext])
 
 ## Extra modules
 
@@ -144,9 +145,9 @@ Generate templates:
 
 Also supports `user:references` to add a `belongs_to` assoc.
 
-Copy outputted routes and add to `web/router.ex`
+Copy outputted routes and add to `lib/web/router.ex`
 
-Register your module in `lib/my_app.ex`:
+Register your module in `lib/application.ex`:
 
 ```diff
     def start(_type, _args) do
@@ -154,14 +155,14 @@ Register your module in `lib/my_app.ex`:
 
       children = [
         # Start the endpoint when the application starts
-        supervisor(MyApp.Endpoint, []),
+        supervisor(MyApp.Web.Endpoint, []),
         # Start the Ecto repository
         supervisor(MyApp.Repo, []),
         # Here you could define other workers and supervisors as children
         # worker(MyApp.Worker, [arg1, arg2, arg3]),
       ]
 
-+     Brando.Registry.register(MyApp.MyModule, [:menu])
++     Brando.Registry.register(MyApp.Web.MyModule, [:menu])
 ```
 
 ## Releases
@@ -179,11 +180,15 @@ Then use the fabric script in `fabfile.py` for the rest.
 ### Additional admin CSS/styling
 
 For modules added through your OTP app, you can style its backend by editing
-`web/static/css/custom/brando.custom.scss`, or adding your own files to `web/static/css/custom/`. Remember to include these from `brando.custom.scss`.
+`assets/css/custom/brando.custom.scss`, or adding your own files to `assets/css/custom/`.
+Remember to include these from `brando.custom.scss`.
 
 ### Additional admin Javascript
 
-Add files to your `web/static/js/admin` folder. These are compiled down to `priv/static/js/brando.custom.js`. This file is included in the admin section's base template.
+Add files to your `assets/js/admin` folder. These are compiled down to
+`priv/static/js/brando.custom.js`.
+
+This file is included in the admin section's base template.
 
 ## Pagination
 
@@ -284,7 +289,7 @@ or add to tablize:
 {"Sort this category", "fa-sort", :admin_your_path, :sequence, :id}
 ```
 
-Finally, add to your routes (`web/router.ex`):
+Finally, add to your routes (`lib/web/router.ex`):
 
 ```elixir
   get    "/route/:filter/sorter", YourController, :sequence
@@ -442,7 +447,7 @@ plug :check_for_uploads, {"user", Brando.User}
 
 ## Villain
 
-To use villain outside `Brando.Pages` and `Brando.News`, add to your app's `web/router.ex`:
+To use villain outside `Brando.Pages` and `Brando.News`, add to your app's `lib/web/router.ex`:
 
 ```diff
 + import Brando.Villain.Routes.Admin
