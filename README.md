@@ -51,7 +51,7 @@ Add to your relevant `config/%{env}.exs` Repo config:
 
 Install NPM packages:
 
-    $ npm install
+    $ cd assets && yarn
 
 Set up database, and seed:
 
