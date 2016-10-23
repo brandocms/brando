@@ -190,6 +190,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
   end
 
   defp inputs(attrs) do
+    # this is for forms
+
     Enum.map attrs, fn
       {k, {:array, _}} ->
         {k, nil, nil}
