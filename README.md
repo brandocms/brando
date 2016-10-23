@@ -19,7 +19,7 @@ Add Brando to `deps` in your `mix.exs` file:
 
 ```elixir
 defp deps do
-  [{:brando, github: "twined/brando"}]
+  [{:brando, github: "twined/brando", branch: "feature/phoenix1.3"}]
 end
 ```
 
