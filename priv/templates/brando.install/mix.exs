@@ -19,7 +19,7 @@ defmodule <%= application_module %>.Mixfile do
   #
   # Type `mix help compile.app` for more information.
   def application do
-    [mod: {<%= application_module %>, []},
+    [mod: {<%= application_module %>.Application, []},
      included_applications: [
        :recon,
      ],
