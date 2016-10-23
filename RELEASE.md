@@ -8,7 +8,8 @@
   6. Update translations:
      `$ mix gettext.extract && mix gettext.merge priv/gettext`
   7. Update brando_villain if neccessary.
-  8. `$ brunch build -p`
+  8a. Verify that PHOENIX javascript version is the latest in `package.json`!
+  8b. `$ brunch build -p`
   9. `$ mix test`
   10. Commit with `Prepare X.X.X release`
   11. git-flow: finish release. Tag without "v", e.g. 0.1.0 - NOT v0.1.0!

@@ -8,7 +8,7 @@
     "i18next": "^2.5.1",
     "i18next-browser-languagedetector": "^0.3.0",
     "jquery": "^2.2.0",
-    "phoenix": "file:deps/phoenix",
+    "phoenix": "^1.2.1",
     "vex-js": "^2.3.4"
   },
   "repository": {
