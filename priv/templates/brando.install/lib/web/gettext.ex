@@ -5,7 +5,7 @@ defmodule <%= application_module %>.Web.Gettext do
   By using [Gettext](http://hexdocs.pm/gettext),
   your module gains a set of macros for translations, for example:
 
-      import <%= application_module %>.Gettext
+      import <%= application_module %>.Web.Gettext
 
       # Simple translation
       gettext "Here is the string to translate"
@@ -30,7 +30,7 @@ defmodule <%= application_module %>.Web.Backend.Gettext do
   By using [Gettext](http://hexdocs.pm/gettext),
   your module gains a set of macros for translations, for example:
 
-      import <%= application_module %>.Backend.Gettext
+      import <%= application_module %>.Web.Backend.Gettext
 
       # Simple translation
       gettext "Here is the string to translate"
