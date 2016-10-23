@@ -1,4 +1,4 @@
-defmodule <%= application_module %>.Gettext do
+defmodule <%= application_module %>.Web.Gettext do
   @moduledoc """
   A module providing Internationalization with a gettext-based API.
 
@@ -23,7 +23,7 @@ defmodule <%= application_module %>.Gettext do
   use Gettext, otp_app: :<%= application_name %>, priv: "priv/gettext/frontend"
 end
 
-defmodule <%= application_module %>.Backend.Gettext do
+defmodule <%= application_module %>.Web.Backend.Gettext do
   @moduledoc """
   A module providing Internationalization with a gettext-based API.
 

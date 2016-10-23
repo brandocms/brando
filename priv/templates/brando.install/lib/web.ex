@@ -1,13 +1,17 @@
 defmodule <%= application_module %>.Web do
   @moduledoc """
-  A module defining __using__ hooks for controllers,
+  A module that keeps using definitions for controllers,
   views and so on.
+
   This can be used in your application as:
+
       use <%= application_module %>.Web, :controller
       use <%= application_module %>.Web, :view
+
   The definitions below will be executed for every view,
   controller, etc, so keep them short and clean, focused
   on imports, uses and aliases.
+
   Do NOT define functions inside the quoted expressions
   below.
   """
@@ -21,9 +25,12 @@ defmodule <%= application_module %>.Web do
       import Ecto.Query
     end
   end
+
   def controller do
     quote do
-      use Phoenix.Controller
+      use Phoenix.Controller, namespace: <%= application_module %>.Web
+      import <%= application_module %>.Web.Router.Helpers
+      import <%= application_module %>.Web.Gettext
 
       alias <%= application_module %>.Repo
 
@@ -32,15 +39,13 @@ defmodule <%= application_module %>.Web do
 
       import Brando.Meta.Controller, only: [put_meta: 3]
       import Brando.Plug.HTML
-
-      import <%= application_module %>.Router.Helpers
-      import <%= application_module %>.Gettext
     end
   end
 
   def view do
     quote do
-      use Phoenix.View, root: "web/templates"
+      use Phoenix.View, root: "lib/web/templates",
+                        namespace: <%= application_module %>.Web
 
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_csrf_token: 0, get_flash: 2, view_module: 1]
@@ -51,9 +56,9 @@ defmodule <%= application_module %>.Web do
       import Brando.HTML
       import Brando.Utils
 
-      import <%= application_module %>.Router.Helpers
-      import <%= application_module %>.ErrorHelpers
-      import <%= application_module %>.Gettext
+      import <%= application_module %>.Web.Router.Helpers
+      import <%= application_module %>.Web.ErrorHelpers
+      import <%= application_module %>.Web.Gettext
       import <%= application_module %>.DateTimeHelpers
     end
   end
@@ -72,7 +77,7 @@ defmodule <%= application_module %>.Web do
       import Ecto
       import Ecto.Query
 
-      import <%= application_module %>.Gettext
+      import <%= application_module %>.Web.Gettext
     end
   end
 
