@@ -31,15 +31,9 @@ defmodule Brando.HTML.InspectTest do
         thumb: "images/default/thumb/2ambet.jpg",
         xlarge: "images/default/xlarge/2ambet.jpg"}, title: nil},
         image_series_id: 2,
-        inserted_at: %Ecto.DateTime{
-          day: 3, hour: 14, min: 18, month: 4,
-          sec: 32, usec: 0, year: 2015
-        },
+        inserted_at: ~N[2016-01-01 12:00:00],
         sequence: 0,
-        updated_at: %Ecto.DateTime{
-          day: 3, hour: 14, min: 18, month: 4,
-          sec: 32, usec: 0, year: 2015
-        }
+        updated_at: ~N[2016-01-01 12:00:00],
       },
       %Brando.Image{
         __meta__: %Ecto.Schema.Metadata{source: "images", state: :loaded},
@@ -59,15 +53,9 @@ defmodule Brando.HTML.InspectTest do
           title: nil
         },
         image_series_id: 2,
-        inserted_at: %Ecto.DateTime{
-          day: 3, hour: 14, min: 14, month: 4,
-          sec: 58, usec: 0, year: 2015
-        },
+        inserted_at: ~N[2016-01-01 12:00:00],
         sequence: 1,
-        updated_at: %Ecto.DateTime{
-          day: 3, hour: 14, min: 14, month: 4,
-          sec: 58, usec: 0, year: 2015
-        }
+        updated_at: ~N[2016-01-01 12:00:00],
       }
     ]
 

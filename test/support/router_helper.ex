@@ -20,30 +20,9 @@ defmodule RouterHelper do
     avatar: nil,
     email: "test@test.com",
     full_name: "Iggy Pop",
-    inserted_at: %Ecto.DateTime{
-      day: 7,
-      hour: 4,
-      min: 36,
-      month: 12,
-      sec: 26,
-      year: 2014
-    },
-    last_login: %Ecto.DateTime{
-      day: 9,
-      hour: 5,
-      min: 2,
-      month: 12,
-      sec: 36,
-      year: 2014
-    },
-    updated_at: %Ecto.DateTime{
-      day: 14,
-      hour: 21,
-      min: 36,
-      month: 1,
-      sec: 53,
-      year: 2015
-    },
+    inserted_at: ~N[2016-01-01 12:00:00],
+    last_login: ~N[2016-01-01 12:00:00],
+    updated_at: ~N[2016-01-01 12:00:00],
     role: [:superuser, :staff, :admin],
     username: "iggypop",
     language: "en"
