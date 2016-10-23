@@ -1,5 +1,5 @@
 defmodule <%= application_module %>.DateTimeHelpers do
-  import <%= application_module %>.Gettext
+  import <%= application_module %>.Web.Gettext
 
   @months %{
     1  => gettext("January"),
