@@ -25,8 +25,23 @@ defmodule Mix.Tasks.Brando.Gen.Html do
   information on attributes and namespaced resources.
   """
   def run(args) do
-    {_, parsed, _} = OptionParser.parse(args, switches: [schema: :boolean])
-    [singular, plural | attrs] = validate_args!(parsed)
+
+
+
+  end
+
+  defp create_domain(domain_name) do
+    mkdir_p!("lib/#{domain_name}")
+    domain_code = create_schema(domain_name)
+  end
+
+  defp create_schema(domain_name, domain_code \\ "", instructions \\ "") do
+    Mix.shell.info """
+    == Creating schema for #{domain_name}
+    """
+    singular = Mix.shell.prompt("+ Enter schema name (e.g. Post)")
+    plural   = Mix.shell.prompt("+ Enter plural name (e.g. posts)")
+    attrs    = Mix.shell.prompt("+ Enter schema fields (e.g. name:string avatar:image data:villain)")
 
     attrs        = Mix.Brando.attrs(attrs)
     villain?     = :villain in Dict.values(attrs)
@@ -53,29 +68,29 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     files = [
       {:eex, "admin_controller.ex",
-             "web/controllers/admin/#{path}_controller.ex"},
+             "lib/web/controllers/admin/#{path}_controller.ex"},
       {:eex, "controller.ex",
-             "web/controllers/#{path}_controller.ex"},
+             "lib/web/controllers/#{path}_controller.ex"},
       {:eex, "menu.ex",
-             "web/menus/admin/#{path}_menu.ex"},
+             "lib/web/menus/admin/#{path}_menu.ex"},
       {:eex, "form.ex",
-             "web/forms/admin/#{path}_form.ex"},
+             "lib/web/forms/admin/#{path}_form.ex"},
       {:eex, "edit.html.eex",
-             "web/templates/admin/#{path}/edit.html.eex"},
+             "lib/web/templates/admin/#{path}/edit.html.eex"},
       {:eex, "admin_index.html.eex",
-             "web/templates/admin/#{path}/index.html.eex"},
+             "lib/web/templates/admin/#{path}/index.html.eex"},
       {:eex, "index.html.eex",
-             "web/templates/#{path}/index.html.eex"},
+             "lib/web/templates/#{path}/index.html.eex"},
       {:eex, "new.html.eex",
-             "web/templates/admin/#{path}/new.html.eex"},
+             "lib/web/templates/admin/#{path}/new.html.eex"},
       {:eex, "show.html.eex",
-             "web/templates/admin/#{path}/show.html.eex"},
+             "lib/web/templates/admin/#{path}/show.html.eex"},
       {:eex, "delete_confirm.html.eex",
-             "web/templates/admin/#{path}/delete_confirm.html.eex"},
+             "lib/web/templates/admin/#{path}/delete_confirm.html.eex"},
       {:eex, "admin_view.ex",
-             "web/views/admin/#{path}_view.ex"},
+             "lib/web/views/admin/#{path}_view.ex"},
       {:eex, "view.ex",
-             "web/views/#{path}_view.ex"},
+             "lib/web/views/#{path}_view.ex"},
       {:eex, "admin_controller_test.exs",
              "test/controllers/admin/#{path}_controller_test.exs"},
     ]
@@ -106,10 +121,10 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {files, args}
       end
 
-    Mix.Brando.check_module_name_availability!(binding[:module] <> "Controller")
-    Mix.Brando.check_module_name_availability!(binding[:module] <> "View")
-    Mix.Brando.check_module_name_availability!(binding[:admin_module] <> "Controller")
-    Mix.Brando.check_module_name_availability!(binding[:admin_module] <> "View")
+    Mix.Brando.check_module_name_availability!(binding[:module] <> "Web.Controller")
+    Mix.Brando.check_module_name_availability!(binding[:module] <> "Web.View")
+    Mix.Brando.check_module_name_availability!(binding[:admin_module] <> "Web.Controller")
+    Mix.Brando.check_module_name_availability!(binding[:admin_module] <> "Web.View")
 
     Mix.Task.run "brando.gen.schema", args
 
@@ -134,20 +149,17 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         ""
       end
 
-    Mix.shell.info """
-    Add the resource to your browser scope in web/router.ex by either
+    instructions = instructions <> """
+    Add the resource to your browser scope in `lib/web/router.ex`:
 
-        import Brando.Admin.Routes
-        alias #{binding[:base]}.Admin.#{binding[:scoped]}Controller
-        admin_routes "#{route}", #{binding[:scoped]}Controller
-
-    or for more fine grained control:
+        # resources for #{binding[:scoped]}
 
         import Brando.Villain.Routes.Admin
         alias #{binding[:base]}.Admin.#{binding[:scoped]}Controller
 
         get    "/#{route}",            #{binding[:scoped]}Controller, :index
         get    "/#{route}/new",        #{binding[:scoped]}Controller, :new
+        #{sequenced_info}
         get    "/#{route}/:id/edit",   #{binding[:scoped]}Controller, :edit
         get    "/#{route}/:id/delete", #{binding[:scoped]}Controller, :delete_confirm
         get    "/#{route}/:id",        #{binding[:scoped]}Controller, :show
@@ -156,7 +168,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         patch  "/#{route}/:id",        #{binding[:scoped]}Controller, :update
         put    "/#{route}/:id",        #{binding[:scoped]}Controller, :update
 
-    """ <> villain_info <> sequenced_info <>
+    """ <> villain_info <>
     """
 
     and then update your repository by running migrations:
@@ -164,8 +176,24 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     Install menu by adding to your supervision tree:
 
-        Brando.Registry.register(#{binding[:base]}.#{binding[:scoped]}, [:menu])
+        Brando.Registry.register(#{binding[:base]}.Web.#{binding[:scoped]}, [:menu])
 
+    ================================================================================================
+    """
+
+    domain_code = generate_domain_code(domain_code, domain_name, bindings)
+
+    domain_code =
+      if Mix.shell.yes?("\nCreate another schema?") do
+        create_schema(domain_name, domain_code, instructions)
+      else
+        {domain_code, instructions}
+      end
+  end
+
+  defp generate_domain_code(domain_code, domain_name, bindings) do
+    domain_code = domain_code <> """
+      
     """
   end
 
