@@ -516,10 +516,9 @@ This requires you to have `pngquant`/`cjpeg` installed:
 +       bin: "/usr/local/bin/pngquant",
 +       args: "--speed 1 --force --output %{new_filename} -- %{filename}"
 +     ],
-+     jpeg: [
-+       bin: "/usr/local/bin/cjpeg",
-+       args: "-quality 90 %{filename} > %{new_filename}"
-+     ]
++   jpeg: [
++     bin: "/usr/local/bin/jpegtran",
++     args: "-copy none -optimize -progressive -outfile %{new_filename} %{filename}"
 +   ]
 ```
 
