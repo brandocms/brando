@@ -98,6 +98,13 @@ config :my_app, MyApp.Endpoint,
 
 *Remember to switch out your ports in `etc/supervisor/prod.conf` and `etc/nginx/prod.conf`*
 
+## Dependencies
+
+  * `imagemagick`/`mogrify` for image processing.
+  * `gifsicle` for GIF resizing.
+  * `pngquant` for PNG optimization.
+  * `jpegtran` for JPG optimization.
+
 ## I18n
 
 Brando uses Gettext for i18n.
@@ -507,7 +514,7 @@ Build for prod with `brunch build --production`.
 
 ## Optimizing images
 
-This requires you to have `pngquant`/`cjpeg` installed:
+This requires you to have `pngquant`/`jpegtran` installed:
 
 ```diff
   config :brando, Brando.Images,
