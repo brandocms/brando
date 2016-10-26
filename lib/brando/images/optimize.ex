@@ -34,7 +34,7 @@ defmodule Brando.Images.Optimize do
   to `do_optimize/2`.
   """
   def optimize({:ok, %Brando.Type.Image{optimized: false} = img}) do
-    type = Brando.Images.Utils.image_type(img)
+    type = Brando.Images.Utils.image_type(img.path)
     case type do
       :jpeg -> do_optimize(:jpeg, img)
       :png  -> do_optimize(:png, img)

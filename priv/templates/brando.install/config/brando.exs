@@ -47,7 +47,7 @@ config :brando,
 
 config :brando, Brando.Images,
   default_config: %{
-    allowed_mimetypes: ["image/jpeg", "image/png"],
+    allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
     default_size: :medium,
     upload_path: Path.join(["images", "site", "default"]),
     random_filename: true,

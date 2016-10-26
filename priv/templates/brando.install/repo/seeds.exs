@@ -10,7 +10,7 @@
 # We recommend using the bang functions (`insert!`, `update!`
 # and so on) as they will fail if something goes wrong.
 
-post_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"],
+post_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
     default_size: "medium", random_filename: true, size_limit: 10240000,
     sizes: %{"large" => %{"quality" => 100, "size" => "700"},
       "medium" => %{"quality" => 100, "size" => "500"},
@@ -20,7 +20,7 @@ post_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png
       "xlarge" => %{"quality" => 100, "size" => "900"}},
     upload_path: "images/site/posts"}
 
-page_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"],
+page_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
     default_size: "medium", random_filename: true, size_limit: 10240000,
     sizes: %{"large" => %{"quality" => 100, "size" => "700"},
       "medium" => %{"quality" => 100, "size" => "500"},
@@ -30,7 +30,7 @@ page_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png
       "xlarge" => %{"quality" => 100, "size" => "900"}},
     upload_path: "images/site/pages"}
 
-ss_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"],
+ss_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
     default_size: "medium", random_filename: true, size_limit: 10240000,
     sizes: %{"cropxlarge" => %{"crop" => true, "quality" => 100,
         "size" => "1140x600"}, "large" => %{"quality" => 100, "size" => "700"},

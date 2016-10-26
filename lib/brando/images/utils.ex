@@ -91,8 +91,8 @@ defmodule Brando.Images.Utils do
   @doc """
   Returns image type atom.
   """
-  @spec image_type(Brando.Type.Image.t) :: :jpeg | :png | :gif
-  def image_type(%Brando.Type.Image{path: filename}) do
+  @spec image_type(String.t) :: :jpeg | :png | :gif
+  def image_type(filename) do
     case String.downcase(Path.extname(filename)) do
       ".jpg"  -> :jpeg
       ".jpeg" -> :jpeg
@@ -121,7 +121,8 @@ defmodule Brando.Images.Utils do
   @spec optimized_filename(String.t) :: String.t
   def optimized_filename(file) do
     {path, filename} = split_path(file)
-    {basename, ext} = split_filename(filename)
+    {basename, ext}  = split_filename(filename)
+
     Path.join([path, "#{basename}-optimized#{ext}"])
   end
 
@@ -131,6 +132,7 @@ defmodule Brando.Images.Utils do
   @spec create_image_sizes({map | Plug.Upload.t, Brando.Type.ImageConfig.t})
                            :: {:ok, Brando.Type.Image.t}
   def create_image_sizes({%{uploaded_file: file}, cfg}) do
+    type                  = image_type(file)
     {file_path, filename} = split_path(file)
     upload_path           = Map.get(cfg, :upload_path)
 
@@ -141,7 +143,7 @@ defmodule Brando.Images.Utils do
         sized_path         = Path.join([upload_path, to_string(size_name), filename])
 
         File.mkdir_p(postfixed_size_dir)
-        create_image_size(file, sized_image, size_cfg)
+        create_image_size(file, sized_image, size_cfg, type)
         {size_name, sized_path}
       end
 
@@ -155,8 +157,41 @@ defmodule Brando.Images.Utils do
   @doc """
   Creates a sized version of `image_src`.
   """
-  @spec create_image_size(String.t, String.t, Brando.Type.ImageConfig.t) :: no_return
-  def create_image_size(image_src, image_dest, size_cfg) do
+  @spec create_image_size(String.t, String.t, Brando.Type.ImageConfig.t, atom) :: no_return
+  def create_image_size(image_src, image_dest, size_cfg, image_type \\ :other)
+  def create_image_size(image_src, image_dest, size_cfg, :gif) do
+    image = Mogrify.open(image_src)
+
+    size_cfg =
+      if Map.has_key?(size_cfg, "portrait") do
+        image_info = Mogrify.verbose(image)
+        if image_info.height > image_info.width do
+          size_cfg["portrait"]
+        else
+          size_cfg["landscape"]
+        end
+      else
+        size_cfg
+      end
+
+    # This is slightly dumb, but should be enough.
+    # If we crop, we always pass WxH.
+    # If we don't, we always pass W or xH.
+    {modifier, size} =
+      if size_cfg["crop"] do
+        {"--resize", size_cfg["size"]}
+      else
+        modifier =
+          String.contains?(size_cfg["size"], "x") && "--resize-fit-height" || "--resize-fit-width"
+        size =
+          String.replace(size_cfg["size"], ~r/x|\^|\!|\>|\<|\%/, "")
+        {modifier, size}
+      end
+
+    System.cmd "gifsicle", ~w(#{modifier} #{size} --output #{image_dest} -i #{image_src}), stderr_to_stdout: true
+  end
+
+  def create_image_size(image_src, image_dest, size_cfg, _) do
     image = Mogrify.open(image_src)
 
     size_cfg =
