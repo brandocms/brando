@@ -62,7 +62,7 @@ defmodule Brando.Integration.UserTest do
     user = Factory.insert(:user)
 
     up_plug =
-      %Plug.Upload{content_type: "image/gif", filename: "sample.gif",
+      %Plug.Upload{content_type: "image/tif", filename: "sample.tif",
                    path: Path.expand("../../../", __DIR__) <>
                          "/fixtures/sample.png"}
 
