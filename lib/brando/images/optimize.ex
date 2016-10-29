@@ -25,19 +25,39 @@ defmodule Brando.Images.Optimize do
       config :brando, Brando.Images,
         optimize: false
 
+  When uploading images through modules (Image, ImageSeries etc) this gets called automatically.
+
+  If you have a `Brando.ImageField`, you must call `optimize/3` in your context after inserting
+  to the database.
+
+      defmodule MyApp.Users do
+        alias MyApp.User
+        def create(params) do
+          user =
+            params
+            |> User.changeset()
+            |> Repo.insert!
+
+          optimize(user, :avatar)
+        end
+      end
+
   """
 
   @doc """
   Optimize `img`
 
   Checks image for `optimized` flag, gets the image type and sends off
-  to `do_optimize/2`.
+  to `do_optimize`.
   """
-  def optimize(%Brando.Type.Image{optimized: false} = img_field, field_name, schema, data) do
+  def optimize(record, field_name) do
+    optimize(record, field_name, Map.get(record, field_name))
+  end
+  def optimize(record, field_name, %Brando.Type.Image{optimized: false} = img_field) do
     type = Brando.Images.Utils.image_type(img_field.path)
     case type do
-      :jpeg -> do_optimize({:jpeg, img_field, field_name, schema, data})
-      :png  -> do_optimize({:png, img_field, field_name, schema, data})
+      :jpeg -> do_optimize({:jpeg, img_field, field_name, record})
+      :png  -> do_optimize({:png, img_field, field_name, record})
       _     -> {:ok, img_field}
     end
   end
@@ -55,7 +75,7 @@ defmodule Brando.Images.Optimize do
     end
   end
 
-  defp run_optimization({type, img_field, field_name, schema, data}) do
+  defp run_optimization({type, img_field, field_name, record}) do
     cfg =
       Brando.Images
       |> Brando.config
@@ -67,9 +87,9 @@ defmodule Brando.Images.Optimize do
         args = interpolate_and_split_args(file, cfg[:args])
         System.cmd cfg[:bin], args
       end
-      {:ok, {type, img_field, field_name, schema, data}}
+      {:ok, {type, img_field, field_name, record}}
     else
-      {:error, {type, img_field, field_name, schema, data}}
+      {:error, {type, img_field, field_name, record}}
     end
   end
 
@@ -91,19 +111,19 @@ defmodule Brando.Images.Optimize do
     |> String.split(" ")
   end
 
-  defp set_optimized_flag({:ok, {type, img_field, field_name, schema, data}}) do
+  defp set_optimized_flag({:ok, {type, img_field, field_name, record}}) do
     img_field = Map.put(img_field, :optimized, true)
-    {type, img_field, field_name, schema, data}
+    {type, img_field, field_name, record}
   end
 
   defp set_optimized_flag({:error, params}) do
     params
   end
 
-  defp store({type, img_field, field_name, schema, data}) do
+  defp store({_, img_field, field_name, record}) do
     field_name_atom = is_binary(field_name) && String.to_atom(field_name) || field_name
 
-    data
+    record
     |> Ecto.Changeset.cast(Map.put(%{}, field_name_atom, img_field), [field_name_atom])
     |> Brando.repo.update!
   end
