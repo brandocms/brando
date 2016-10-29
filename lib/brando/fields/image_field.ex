@@ -24,6 +24,7 @@ defmodule Brando.Field.ImageField do
 
   """
   import Brando.Images.Upload
+  import Brando.Images.Optimize, only: [optimize: 4]
 
   defmacro __using__(_) do
     quote do
@@ -36,14 +37,15 @@ defmodule Brando.Field.ImageField do
       @doc """
       Checks `params` for Plug.Upload fields and passes them on to
       `handle_upload` to check if we have a handler for the field.
-      Returns {:ok, model} or raises
+      Returns {:ok, schema} or raises
       """
-      def check_for_uploads(model, params) do
-        uploads = params
-        |> filter_plugs
-        |> Enum.reduce([], fn (plug, acc) ->
-            [handle_upload_and_defer(plug, &__MODULE__.get_image_cfg/1)|acc]
-          end)
+      def check_for_uploads(schema, params) do
+        uploads =
+          params
+          |> filter_plugs
+          |> Enum.reduce([], fn (plug, acc) ->
+               [handle_upload_and_defer(plug, &__MODULE__.get_image_cfg/1, schema)|acc]
+             end)
         {:ok, uploads}
       end
 
@@ -146,8 +148,16 @@ defmodule Brando.Field.ImageField do
     * `cfg`: the field's cfg from has_image_field
 
   """
-  def handle_upload_and_defer({name, plug}, cfg_fun) do
-    {:ok, image_field} = do_upload(plug, cfg_fun.(String.to_atom(name)))
-    {name, image_field}
+  def handle_upload_and_defer({name, plug}, cfg_fun, schema) do
+    {:ok, img_field} =
+      do_upload(plug, cfg_fun.(String.to_atom(name)))
+
+    #optimize(img_field, name, schema, data)
+    require Logger
+    Logger.error "FIELD UPLOAD"
+    Logger.error inspect name
+    Logger.error inspect img_field
+    Logger.error inspect schema
+    {name, img_field}
   end
 end
