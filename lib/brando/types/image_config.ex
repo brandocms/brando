@@ -8,7 +8,7 @@ defmodule Brando.Type.ImageConfig do
 
   import Brando.Utils, only: [stringy_struct: 2]
 
-  defstruct allowed_mimetypes: ["image/jpeg", "image/png"],
+  defstruct allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
             default_size: :medium,
             upload_path: Path.join("images", "default"),
             random_filename: false,

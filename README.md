@@ -99,6 +99,13 @@ config :my_app, MyApp.Endpoint,
 
 *Remember to switch out your ports in `etc/supervisor/prod.conf` and `etc/nginx/prod.conf`*
 
+## Dependencies
+
+  * `imagemagick`/`mogrify` for image processing.
+  * `gifsicle` for GIF resizing.
+  * `pngquant` for PNG optimization.
+  * `jpegtran` for JPG optimization.
+
 ## I18n
 
 Brando uses Gettext for i18n.
@@ -419,7 +426,7 @@ In your schema:
   end
 
 + has_image_field :avatar, %{
-+   allowed_mimetypes: ["image/jpeg", "image/png"],
++   allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
 +   default_size: :medium,
 +   upload_path: Path.join("images", "avatars"),
 +   random_filename: true,
@@ -512,7 +519,7 @@ Build for prod with `brunch build --production`.
 
 ## Optimizing images
 
-This requires you to have `pngquant`/`cjpeg` installed:
+This requires you to have `pngquant`/`jpegtran` installed:
 
 ```diff
   config :brando, Brando.Images,
@@ -521,10 +528,9 @@ This requires you to have `pngquant`/`cjpeg` installed:
 +       bin: "/usr/local/bin/pngquant",
 +       args: "--speed 1 --force --output %{new_filename} -- %{filename}"
 +     ],
-+     jpeg: [
-+       bin: "/usr/local/bin/cjpeg",
-+       args: "-quality 90 %{filename} > %{new_filename}"
-+     ]
++   jpeg: [
++     bin: "/usr/local/bin/jpegtran",
++     args: "-copy none -optimize -progressive -outfile %{new_filename} %{filename}"
 +   ]
 ```
 

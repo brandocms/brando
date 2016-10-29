@@ -39,11 +39,12 @@ defmodule Brando.Field.ImageField do
       Returns {:ok, schema} or raises
       """
       def check_for_uploads(schema, params) do
-        uploads = params
-        |> filter_plugs
-        |> Enum.reduce([], fn (plug, acc) ->
-            [handle_upload_and_defer(plug, &__MODULE__.get_image_cfg/1)|acc]
-          end)
+        uploads =
+          params
+          |> filter_plugs
+          |> Enum.reduce([], fn (plug, acc) ->
+               [handle_upload_and_defer(plug, &__MODULE__.get_image_cfg/1)|acc]
+             end)
         {:ok, uploads}
       end
 
@@ -147,7 +148,9 @@ defmodule Brando.Field.ImageField do
 
   """
   def handle_upload_and_defer({name, plug}, cfg_fun) do
-    {:ok, image_field} = do_upload(plug, cfg_fun.(String.to_atom(name)))
-    {name, image_field}
+    {:ok, img_field} =
+      do_upload(plug, cfg_fun.(String.to_atom(name)))
+
+    {name, img_field}
   end
 end

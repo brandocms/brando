@@ -16,7 +16,6 @@ defmodule Brando.Plug.Uploads do
 
     case module.check_for_uploads(module, param) do
       {:ok, fields} ->
-        Logger.debug(inspect fields)
         param  = handle_fields(param, fields)
         params = Map.put(conn.params, required_key, param)
         %{conn | params: params}
