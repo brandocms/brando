@@ -6,7 +6,7 @@ defmodule Brando.Images.Upload do
   alias Brando.Exception.UploadError
   import Brando.Gettext
   import Brando.Utils
-  import Brando.Images.Optimize, only: [optimize: 1]
+  import Brando.Images.Optimize, only: [optimize: 4]
   import Brando.Images.Utils, only: [create_image_sizes: 1]
 
   defmacro __using__(_) do
@@ -28,11 +28,14 @@ defmodule Brando.Images.Upload do
   @doc """
   Handles Plug.Upload for our modules.
   """
-  def handle_upload({name, plug}, current_user, put_fields, module, cfg) do
-    {:ok, file} = do_upload(plug, cfg)
-    params      = Map.put(put_fields, name, file)
+  def handle_upload({name, plug}, current_user, put_fields, schema, cfg) do
+    {:ok, img_field} = do_upload(plug, cfg)
+    params           = Map.put(put_fields, name, img_field)
 
-    apply(module, :create, [params, current_user])
+    {:ok, data} = apply(schema, :create, [params, current_user])
+    optimize(img_field, name, schema, data)
+
+    {:ok, data}
   end
 
   @doc """
@@ -51,7 +54,6 @@ defmodule Brando.Images.Upload do
     |> create_upload_path
     |> copy_uploaded_file
     |> create_image_sizes
-    |> optimize
   end
 
   defp get_valid_filename({%{filename: ""}, _cfg}) do

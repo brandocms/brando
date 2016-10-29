@@ -6,6 +6,7 @@ defmodule Brando.Images.Utils do
   import Brando.Utils
   import Brando.Gettext
   import Ecto.Query, only: [from: 2]
+  import Brando.Images.Optimize, only: [optimize: 4]
 
   alias Brando.{Image, ImageSeries}
 
@@ -224,13 +225,14 @@ defmodule Brando.Images.Utils do
     {:ok, new_image} =
       {%{uploaded_file: full_path}, img.image_series.cfg}
       |> create_image_sizes
-      |> Brando.Images.Optimize.optimize
 
     image = Map.put(img.image, :sizes, new_image.sizes)
 
     img
     |> Brando.Image.changeset(:update, %{image: image})
     |> Brando.repo.update!
+
+    optimize(new_image, :image, Brando.Image, img)
 
     :ok
   end
