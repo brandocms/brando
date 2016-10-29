@@ -233,9 +233,10 @@ defmodule Brando.Images.Utils do
 
     delete_sized_images(img.image)
 
-    {:ok, new_image} = {%{uploaded_file: full_path}, img.image_series.cfg}
-                       |> create_image_sizes
-                       |> Brando.Images.Optimize.optimize
+    {:ok, new_image} =
+      {%{uploaded_file: full_path}, img.image_series.cfg}
+      |> create_image_sizes
+      |> Brando.Images.Optimize.optimize
 
     image = Map.put(img.image, :sizes, new_image.sizes)
 
