@@ -1,13 +1,13 @@
 Logger.configure(level: :info)
 
+# Clear tmp dir
+File.rm_rf!(Path.join([Mix.Project.app_path, "tmp", "media"]))
+File.mkdir_p!(Path.join([Mix.Project.app_path, "tmp", "media"]))
+
 {:ok, _} = Application.ensure_all_started(:ex_machina)
 
 #ExUnit.configure(max_cases: 16)
 ExUnit.start
-
-# Clear tmp dir
-File.rm_rf!(Path.join([Mix.Project.app_path, "tmp", "media"]))
-File.mkdir_p!(Path.join([Mix.Project.app_path, "tmp", "media"]))
 
 defmodule Brando.Integration.TestRepo do
   use Ecto.Repo, otp_app: :brando

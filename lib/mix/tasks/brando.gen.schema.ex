@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Brando.Gen.Schema do
-  use Mix.Task
+  # use Mix.Task
 
   @shortdoc "Generates an Ecto schema"
 
@@ -46,11 +46,17 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
       mix brando.gen.schema Admin.User users name:string age:integer
 
   """
-  def run(args) do
-    {opts, parsed, _} = OptionParser.parse(args, switches: [sequenced: :boolean])
-    [singular, plural | attrs] = validate_args!(parsed)
+  def run(args, domain) do
+    snake_domain =
+      domain
+      |> Phoenix.Naming.underscore
+      |> String.split("/")
+      |> List.last
 
-    sequenced? = if opts[:sequenced], do: true, else: false
+    {opts, parsed, _} = OptionParser.parse(args, switches: [sequenced: :boolean])
+    [singular, plural, attrs] = parsed
+
+    sequenced? = opts[:sequenced] && true || false
 
     attrs      = Mix.Brando.attrs(attrs)
     binding    = Mix.Brando.inflect(singular)
@@ -70,8 +76,8 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
     {assocs, attrs} = partition_attrs_and_assocs(attrs)
 
     mig_types = Enum.map(attrs, &migration_type/1)
-    types = types(attrs)
-    defs = defaults(attrs)
+    types     = types(attrs)
+    defs      = defaults(attrs)
 
     migrations =
       attrs
@@ -106,10 +112,11 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
       binding, [
         {:eex, "migration.exs",   "priv/repo/migrations/" <>
                                   "#{timestamp()}_create_#{migration}.exs"},
-        {:eex, "schema.ex",       "web/schemas/#{path}.ex"},
+        {:eex, "schema.ex",       "lib/#{snake_domain}/#{path}.ex"},
         {:eex, "schema_test.exs", "test/schemas/#{path}_test.exs"},
       ]
     )
+    binding
   end
 
   def migration_type({k, :image}) do
@@ -120,27 +127,6 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
   end
   def migration_type({k, type}) do
     {k, type}
-  end
-
-  defp validate_args!([_, plural | _] = args) do
-    if String.contains?(plural, ":") do
-      raise_with_help
-    else
-      args
-    end
-  end
-
-  defp validate_args!(_) do
-    raise_with_help
-  end
-
-  defp raise_with_help do
-    Mix.raise """
-    mix brando.gen.schema expects both singular and plural names
-    of the generated resource followed by any number of attributes:
-
-        mix brando.gen.schema User users name:string
-    """
   end
 
   defp partition_attrs_and_assocs(attrs) do

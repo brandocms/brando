@@ -24,18 +24,41 @@ defmodule Mix.Tasks.Brando.Gen.Html do
   Read the documentation for `phoenix.gen.schema` for more
   information on attributes and namespaced resources.
   """
-  def run(args) do
+  def run(_) do
+    Mix.shell.info """
+    % Brando HTML generator
+    -----------------------
 
-
-
+    """
+    domain = Mix.shell.prompt("+ Enter domain name (e.g. Blog, Accounts, News)")
+    Mix.shell.info """
+    == Creating domain for #{domain}
+    """
+    create_domain(domain)
   end
 
   defp create_domain(domain_name) do
-    mkdir_p!("lib/#{domain_name}")
-    domain_code = create_schema(domain_name)
+    snake_domain =
+      domain_name
+      |> Phoenix.Naming.underscore
+      |> String.split("/")
+      |> List.last
+
+    binding = Mix.Brando.inflect(domain_name)
+
+    File.mkdir_p!("lib/#{snake_domain}")
+    {domain_code, domain_header, instructions} = create_schema(domain_name)
+    File.write!("lib/#{snake_domain}.ex",
+    """
+    defmodule #{binding[:module]} do
+      #{domain_header}\n#{domain_code}
+    end
+    """)
+
+    Mix.shell.info instructions
   end
 
-  defp create_schema(domain_name, domain_code \\ "", instructions \\ "") do
+  defp create_schema(domain_name, domain_header \\ "", domain_code \\ "", instructions \\ "") do
     Mix.shell.info """
     == Creating schema for #{domain_name}
     """
@@ -43,7 +66,10 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     plural   = Mix.shell.prompt("+ Enter plural name (e.g. posts)")
     attrs    = Mix.shell.prompt("+ Enter schema fields (e.g. name:string avatar:image data:villain)")
 
-    attrs        = Mix.Brando.attrs(attrs)
+    require Logger
+
+    org_attrs    = attrs |> String.split(" ")
+    attrs        = org_attrs |> Mix.Brando.attrs
     villain?     = :villain in Dict.values(attrs)
     sequenced?   = Mix.shell.yes?("\nMake schema sequenceable?")
     image_field? = :image in Dict.values(attrs)
@@ -64,7 +90,10 @@ defmodule Mix.Tasks.Brando.Gen.Html do
                                admin_module: admin_module,
                                admin_path: admin_path,
                                inputs: inputs(attrs),
-                               params: Mix.Brando.params(attrs)]
+                               params: Mix.Brando.params(attrs),
+                               domain: domain_name]
+
+    args = [singular, plural, org_attrs]
 
     files = [
       {:eex, "admin_controller.ex",
@@ -99,13 +128,13 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       if villain? do
         files ++ [
           {:eex, "_scripts.html.eex",
-                 "web/templates/admin/#{path}/_scripts.new.html.eex"},
+                 "lib/web/templates/admin/#{path}/_scripts.new.html.eex"},
           {:eex, "_scripts.html.eex",
-                 "web/templates/admin/#{path}/_scripts.edit.html.eex"},
+                 "lib/web/templates/admin/#{path}/_scripts.edit.html.eex"},
           {:eex, "_stylesheets.html.eex",
-                 "web/templates/admin/#{path}/_stylesheets.new.html.eex"},
+                 "lib/web/templates/admin/#{path}/_stylesheets.new.html.eex"},
           {:eex, "_stylesheets.html.eex",
-                 "web/templates/admin/#{path}/_stylesheets.edit.html.eex"},
+                 "lib/web/templates/admin/#{path}/_stylesheets.edit.html.eex"},
         ]
       else
         files
@@ -115,7 +144,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       if sequenced? do
         files = files ++ [
           {:eex, "sequence.html.eex",
-                 "web/templates/admin/#{path}/sequence.html.eex"}]
+                 "lib/web/templates/admin/#{path}/sequence.html.eex"}]
         {files, args ++ ["--sequenced"]}
       else
         {files, args}
@@ -126,10 +155,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     Mix.Brando.check_module_name_availability!(binding[:admin_module] <> "Web.Controller")
     Mix.Brando.check_module_name_availability!(binding[:admin_module] <> "Web.View")
 
-    Mix.Task.run "brando.gen.schema", args
+    schema_binding = Mix.Tasks.Brando.Gen.Schema.run(args, domain_name)
 
-    Mix.Brando.copy_from(apps(), "priv/templates/brando.gen.html",
-                          "", binding, files)
+    Mix.Brando.copy_from(apps(), "priv/templates/brando.gen.html", "", binding, files)
 
     villain_info =
       if villain? do
@@ -141,7 +169,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     sequenced_info =
       if sequenced? do
         """
-            # insert these two after the first get route
             get    "/#{route}/sort", #{binding[:scoped]}Controller, :sequence
             post   "/#{route}/sort", #{binding[:scoped]}Controller, :sequence_post
         """
@@ -181,39 +208,58 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     ================================================================================================
     """
 
-    domain_code = generate_domain_code(domain_code, domain_name, bindings)
+    domain_header = domain_header <> "\n  alias #{binding[:module]}"
+    domain_code   = generate_domain_code(domain_code, domain_name, binding, schema_binding)
 
-    domain_code =
-      if Mix.shell.yes?("\nCreate another schema?") do
-        create_schema(domain_name, domain_code, instructions)
-      else
-        {domain_code, instructions}
-      end
-  end
-
-  defp generate_domain_code(domain_code, domain_name, bindings) do
-    domain_code = domain_code <> """
-      
-    """
-  end
-
-  defp validate_args!([_, plural | _] = args) do
-    if String.contains?(plural, ":") do
-      raise_with_help
+    if Mix.shell.yes?("\nCreate another schema?") do
+      create_schema(domain_name, domain_header, domain_code, instructions)
     else
-      args
+      {domain_code, domain_header, instructions}
     end
   end
 
-  defp validate_args!(_) do
-    raise_with_help
-  end
+  defp generate_domain_code(domain_code, _, binding, schema_binding) do
+    insert_code =
+      if schema_binding[:img_fields] do
+        optimizers =
+          Enum.map(schema_binding[:img_fields],
+                   &("Brando.Images.Optimize.optimize(#{binding[:singular]}, :#{elem(&1, 1)})\n"))
 
-  defp raise_with_help do
-    Mix.raise """
-    mix brando.gen.html expects both singular and plural names
-    of the generated resource followed by any number of attributes:
-        mix brando.gen.html User users name:string avatar:image data:villain
+        "case Repo.insert(changeset) do\n" <>
+        "      {:ok, #{binding[:singular]}} ->\n" <>
+        "        #{optimizers}" <>
+        "        {:ok, #{binding[:singular]}}\n" <>
+        "      {:error, errors} ->\n" <>
+        "        {:error, errors}\n" <>
+        "    end"
+      else
+        "Repo.insert(changeset)"
+      end
+    domain_code <> """
+
+      def get_all_#{binding[:plural]} do
+        Repo.all(#{binding[:alias]})
+      end
+
+      def get_#{binding[:singular]}_by!(args) do
+        Repo.get_by!(#{binding[:alias]}, args)
+      end
+
+      def create_#{binding[:singular]}(#{binding[:singular]}_params) do
+        changeset = #{binding[:alias]}.changeset(%#{binding[:alias]}{}, #{binding[:singular]}_params)
+        #{insert_code}
+      end
+
+      def update_#{binding[:singular]}(id, #{binding[:singular]}_params) do
+        #{binding[:singular]} = Repo.get!(#{binding[:alias]}, id)
+        changeset = #{binding[:alias]}.changeset(#{binding[:singular]}, #{binding[:singular]}_params)
+
+        Repo.update(changeset)
+      end
+
+      def delete() do
+        # delete
+      end
     """
   end
 

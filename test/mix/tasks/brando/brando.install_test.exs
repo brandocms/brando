@@ -1,7 +1,7 @@
 Code.require_file "../../../support/mix_helper.exs", __DIR__
 
 defmodule Mix.Tasks.Brando.GenerateTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
 
   import MixHelper
 
