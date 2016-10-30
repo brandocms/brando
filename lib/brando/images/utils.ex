@@ -6,7 +6,6 @@ defmodule Brando.Images.Utils do
   import Brando.Utils
   import Brando.Gettext
   import Ecto.Query, only: [from: 2]
-  import Brando.Images.Optimize, only: [optimize: 2]
 
   alias Brando.{Image, ImageSeries}
 
@@ -133,12 +132,14 @@ defmodule Brando.Images.Utils do
 
         File.mkdir_p(postfixed_size_dir)
         create_image_size(file, sized_image, size_cfg, type)
+
         {size_name, sized_path}
       end
 
-    size_struct = %Brando.Type.Image{}
-                  |> Map.put(:sizes, Enum.into(sizes, %{}))
-                  |> Map.put(:path, Path.join([upload_path, filename]))
+    size_struct =
+      %Brando.Type.Image{}
+      |> Map.put(:sizes, Enum.into(sizes, %{}))
+      |> Map.put(:path, Path.join([upload_path, filename]))
 
     {:ok, size_struct}
   end
@@ -221,7 +222,6 @@ defmodule Brando.Images.Utils do
     full_path = media_path(img.image.path)
 
     delete_sized_images(img.image)
-
     {:ok, new_image} =
       {%{uploaded_file: full_path}, img.image_series.cfg}
       |> create_image_sizes
@@ -233,7 +233,7 @@ defmodule Brando.Images.Utils do
       |> Brando.Image.changeset(:update, %{image: image})
       |> Brando.repo.update!
 
-    optimize(img, :image)
+    Brando.Images.Optimize.optimize(img, :image)
 
     :ok
   end

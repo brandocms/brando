@@ -54,28 +54,34 @@ defmodule Brando.Images.Optimize do
     optimize(record, field_name, Map.get(record, field_name))
   end
   def optimize(record, field_name, %Brando.Type.Image{optimized: false} = img_field) do
-    type = Brando.Images.Utils.image_type(img_field.path)
-    case type do
-      :jpeg -> do_optimize({:jpeg, img_field, field_name, record})
-      :png  -> do_optimize({:png, img_field, field_name, record})
-      _     -> {:ok, img_field}
+    field_name_atom = is_binary(field_name) && String.to_atom(field_name) || field_name
+    if Map.get(record, field_name_atom).optimized == true do
+      {:ok, img_field}
+    else
+      type = Brando.Images.Utils.image_type(img_field.path)
+      case type do
+        :jpeg -> do_optimize({:jpeg, img_field, field_name_atom, record})
+        :png  -> do_optimize({:png, img_field, field_name_atom, record})
+        _     -> {:ok, img_field}
+      end
     end
   end
 
-  def optimize(%Brando.Type.Image{optimized: true} = img_field, _, _, _) do
+  def optimize(_, _, %Brando.Type.Image{optimized: true} = img_field) do
     {:ok, img_field}
   end
 
   defp do_optimize(params) do
-    Task.start fn ->
+    #Task.start_link fn ->
       params
       |> run_optimization()
       |> set_optimized_flag()
       |> store()
-    end
+    #end
   end
 
   defp run_optimization({type, img_field, field_name, record}) do
+    require Logger
     cfg =
       Brando.Images
       |> Brando.config
@@ -83,10 +89,11 @@ defmodule Brando.Images.Optimize do
       |> Keyword.get(type)
 
     if cfg do
-      for file <- Enum.map(img_field.sizes, &elem(&1, 1)) do
-        args = interpolate_and_split_args(file, cfg[:args])
-        System.cmd cfg[:bin], args
-      end
+      Enum.map(img_field.sizes, &(Task.async(fn ->
+        args = interpolate_and_split_args(elem(&1, 1), cfg[:args])
+        System.cmd(cfg[:bin], args)
+      end))) |> Enum.map(&Task.await/1)
+
       {:ok, {type, img_field, field_name, record}}
     else
       {:error, {type, img_field, field_name, record}}
@@ -121,10 +128,8 @@ defmodule Brando.Images.Optimize do
   end
 
   defp store({_, img_field, field_name, record}) do
-    field_name_atom = is_binary(field_name) && String.to_atom(field_name) || field_name
-
     record
-    |> Ecto.Changeset.cast(Map.put(%{}, field_name_atom, img_field), [field_name_atom])
+    |> Ecto.Changeset.cast(Map.put(%{}, field_name, img_field), [field_name])
     |> Brando.repo.update!
   end
 end

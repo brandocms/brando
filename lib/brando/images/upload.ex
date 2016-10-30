@@ -33,6 +33,7 @@ defmodule Brando.Images.Upload do
     params           = Map.put(put_fields, name, img_field)
 
     {:ok, data} = apply(schema, :create, [params, current_user])
+
     optimize(data, name, img_field)
 
     {:ok, data}
