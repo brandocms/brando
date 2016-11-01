@@ -361,8 +361,16 @@ defmodule Brando.HTML do
   @doc """
   Truncate `text` to `length`
   """
-  def truncate(text, len) do
+  def truncate(nil, _) do
+    ""
+  end
+
+  def truncate(text, len) when is_binary(text) do
     String.length(text) <= len && text || String.slice(text, 0..len) <> "..."
+  end
+
+  def truncate(val, _) do
+    val
   end
 
   @doc """
