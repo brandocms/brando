@@ -67,7 +67,8 @@ defmodule Brando.Plug.Lockdown do
         |> redirect(to: Brando.helpers.lockdown_path(conn, :index))
         |> halt
       dt ->
-        if dt > NaiveDateTime.from_erl!(:calendar.local_time) do
+        # TODO: replace with NaiveDateTime.compare/2 when elixir 1.4 is out
+        if compare(dt, NaiveDateTime.from_erl!(:calendar.local_time)) == :gt do
           conn
           |> redirect(to: Brando.helpers.lockdown_path(conn, :index))
           |> halt
@@ -75,5 +76,34 @@ defmodule Brando.Plug.Lockdown do
           conn
         end
     end
+  end
+
+  @doc """
+  Compares two `NaiveDateTime` structs.
+  Returns :gt if first is later than the second
+  and :lt for vice versa. If the two NaiveDateTime
+  are equal :eq is returned
+  ## Examples
+      iex> NaiveDateTime.compare(~N[2016-04-16 13:30:15], ~N[2016-04-28 16:19:25])
+      :lt
+      iex> NaiveDateTime.compare(~N[2016-04-16 13:30:15.1], ~N[2016-04-16 13:30:15.01])
+      :gt
+
+  TODO: REMOVE WITH ELIXIR 1.4!
+  """
+  @spec compare(NaiveDateTime.t, NaiveDateTime.t) :: :lt | :eq | :gt
+  def compare(%NaiveDateTime{} = naive_datetime1, %NaiveDateTime{} = naive_datetime2) do
+    case {to_tuple(naive_datetime1), to_tuple(naive_datetime2)} do
+      {first, second} when first > second -> :gt
+      {first, second} when first < second -> :lt
+      _ -> :eq
+    end
+  end
+  # TODO: REMOVE WITH ELIXIR 1.4!
+  defp to_tuple(%NaiveDateTime{calendar: Calendar.ISO, year: year,
+                               month: month, day: day, hour: hour,
+                               minute: minute, second: second,
+                               microsecond: {microsecond, _precision}}) do
+    {year, month, day, hour, minute, second, microsecond}
   end
 end
