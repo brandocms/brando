@@ -1,5 +1,3 @@
-'use strict';
-
 import $ from 'jquery';
 import textFit from 'textfit';
 
@@ -9,16 +7,15 @@ $(() => {
    **/
   textFit(document.getElementById('app-name'), {
     widthOnly: true,
-    maxFontSize: 80
+    maxFontSize: 80,
   });
 
   /**
    * Setup spinner
    **/
   $('input[type=submit]')
-    .click(function() {
+    .click(() => {
       $('.spinner')
         .fadeIn();
     });
-
 });

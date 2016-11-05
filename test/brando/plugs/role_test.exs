@@ -47,7 +47,8 @@ defmodule Brando.Plug.AuthorizeTest do
     end
 
     def put_current_user(conn, _) do
-      put_session(conn, :current_user, %{role: []})
+      conn
+      |> put_private(:guardian_default_resource, %{role: []})
     end
   end
 
@@ -73,7 +74,8 @@ defmodule Brando.Plug.AuthorizeTest do
     end
 
     def put_current_user(conn, _) do
-      put_session(conn, :current_user, %{role: [:admin, :superuser]})
+      conn
+      |> put_private(:guardian_default_resource, %{role: [:admin, :superuser]})
     end
   end
 
@@ -103,7 +105,7 @@ defmodule Brando.Plug.AuthorizeTest do
       |> call("/")
       |> assign(:secret_key_base, "asdf")
       |> RolePlugFailsPerms.call([])
-      
+
     assert conn.status == 403
   end
 end
