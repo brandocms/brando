@@ -13,10 +13,11 @@ defmodule Brando.Mixfile do
        plt_add_apps: [
          :gettext,
          :comeonin,
+         :guardian,
          :mogrify,
          :slugger,
          :phoenix,
-         :phoenix_html, 
+         :phoenix_html,
          :phoenix_ecto
        ],
        flags: []
@@ -45,6 +46,7 @@ defmodule Brando.Mixfile do
      :comeonin,
      :httpoison,
      :earmark,
+     :guardian,
      :mogrify,
      :poison,
      :scrivener,
@@ -59,13 +61,18 @@ defmodule Brando.Mixfile do
     {:gettext, "~> 0.11"},
     {:httpoison, "~> 0.9"},
     {:mogrify, "~> 0.4"},
-    {:phoenix, github: "phoenixframework/phoenix"},
+
+    {:phoenix, github: "phoenixframework/phoenix", override: true},
     {:phoenix_html, "~> 2.6"},
-    {:poison, "~> 2.0 or ~> 3.0"},
+    {:phoenix_ecto, "~> 3.1.0-rc"},
+
+    {:guardian, "~> 0.13.0"},
+
     {:postgrex, "~> 0.11"},
     {:scrivener_ecto, "~> 1.0"},
+    {:poison, "~> 2.0 or ~> 3.0"},
+
     {:slugger, "~> 0.1.0"},
-    {:phoenix_ecto, "~> 3.1.0-rc"},
 
     # temporary until scrivener_ecto updates
     {:ecto, "~> 2.1-rc", override: true},

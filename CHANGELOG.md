@@ -1,95 +1,65 @@
 ## v0.37.0-dev (2016-XX-XX)
-
 * Backwards incompatible changes
-  * Static changes. `brando.auth.js` is no more, nor is `brando.vendor.css`.
-    1) First `rm -rf priv/static/js && rm -rf priv/static/css`.
-    2) Then, in your `brunch-config.js`:
+  * Brando now uses `Guardian` for auth. This means some changes in your `router.ex`:
+    ```diff
+      pipeline :admin do
+        plug :accepts, ~w(html json)
+        plug :fetch_session
+        plug :fetch_flash
+        plug :put_admin_locale
+        plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
+    -   plug Authenticate
+    +   plug Guardian.Plug.VerifySession
+    +   plug Guardian.Plug.LoadResource
+    +   plug Guardian.Plug.EnsureAuthenticated, handler: Brando.AuthHandler
+        plug :put_secure_browser_headers
+      end
+
+      pipeline :browser do
+        plug :accepts, ["html"]
+        plug :fetch_session
+        plug :fetch_flash
+        plug Lockdown
+        plug :put_locale
+        plug :protect_from_forgery
+        plug :put_secure_browser_headers
+        plug PlugHeartbeat
+      end
+
+    + pipeline :browser_session do
+    +   plug Guardian.Plug.VerifySession
+    +   plug Guardian.Plug.LoadResource
+    + end
+
+      pipeline :auth do
+        plug :accepts, ["html"]
+        plug :fetch_session
+        plug :fetch_flash
+    +   plug Guardian.Plug.VerifySession
+    +   plug Guardian.Plug.LoadResource
+        plug :protect_from_forgery
+        plug :put_secure_browser_headers
+      end
+
+      pipeline :api do
+        plug :accepts, ["json"]
+      end
+
+    ```
+    and also add to your `brando.exs`:
 
     ```diff
-    + /* Copy brando main JS */
-    + 'js/brando.js': [
-    +   'node_modules/brando/priv/static/js/brando.js',
-    +   /^(web\/static\/js\/admin)/,
-    + ],
-
-    - /* Copy brando main JS */
-    - 'js/brando.js': ['node_modules/brando/priv/static/js/brando.js',
-
-    - /* Custom backend JS */
-    - 'js/brando.custom.js': /^(web\/static\/js\/admin)/,
-
-    - /* Brando authentication bundle */
-    - 'js/brando.auth.js': 'node_modules/brando/priv/static/js/brando.auth.js',
-
-    # ...
-
-      modules: {
-        autoRequire: {
-          'js/app.js': ['app'],
-    -     'js/brando.custom.js': ['admin/custom.js']
-    +     'js/brando.js': ['brando'],
-
-    # ...
-
-      npm: {
-        # ...
-        static: [
-    -     'node_modules/brando/priv/static/js/brando.js',
-    -     'node_modules/brando/priv/static/js/brando.auth.js',
-          'node_modules/brando_villain/priv/static/js/villain.all.js',
-          'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
-        ],
-    ```
-    3) Rename `web/static/js/admin/custom.js` -> `web/static/js/admin/index.js`.
-    Set the contents to something like this:
-
-    ```javascript
-    // import brando from 'brando';
-    import $ from 'jquery';
-
-    import Instagram from './instagram';
-    import Portfolio from './portfolio';
-
-    $(() => {
-      /* page specific switch */
-
-      switch ($('body').attr('data-script')) {
-      case 'instagram-index':
-        Instagram.setup();
-        break;
-      case 'portfolio-index':
-        Portfolio.setup();
-        break;
-      }
-    });
+      # Configure Guardian for auth.
+      config :guardian, Guardian,
+        allowed_algos: ["HS512"], # optional
+        verify_module: Guardian.JWT,  # optional
+        issuer: "MyApp",
+        ttl: {30, :days},
+        verify_issuer: true, # optional
+        secret_key: "SECRET_KEY. Create a new one with `mix phoenix.gen.secret`",
+        serializer: Brando.GuardianSerializer
     ```
 
-  * Changes to PopupForm. Must now be registered with an atom, so:
-    ```elixir
-    Brando.PopupForm.Registry.register(:accounts, "client", MyApp.ClientForm,
-                                       gettext("Create client"), [:id, :name])
-    ```
-    And JS:
-    ```javascript
-    import {PopupForm, brando} from "brando";
-
-    let params = [];
-    let initialValues = {email: 'sample@email.com'};
-    let clientForm = new PopupForm("accounts", brando.language, clientInsertionSuccess,
-                                   params, initialValues);
-
-    $('.avatar img').click((e) => {
-        clientForm.show();
-    });
-
-    function clientInsertionSuccess(fields) {
-        // here you'd insert the returned fields into a select or something similar.
-        console.log(`${fields.id} --> ${fields.username}`);
-    }
-    ```
-## v0.36.0 (2016-10-21)  
-
-* Backwards incompatible changes`
   * `use Brando.Web, :model` -> `use Brando.Web, :schema`
   * `use Brando.Villain, :model` -> `use Brando.Villain, :schema`
   * Change keys in `use Brando.Villain, [:controller ...]` to `:image_schema` and `series_schema`
@@ -106,6 +76,14 @@
   * Renamed `Brando.Meta.Model` to `Brando.Meta.Schema`. This means you need to change
     all your schemas using this to:
     `use Brando.Meta.Schema, [...]`
+
+* Deprecations
+  * `model_name` and `model_repr` are now deprecated and removed.
+  * Passing `model` to `form` doesn't work anymore. Pass `schema` instead.
+
+## v0.36.0 (2016-10-21)  
+
+* Backwards incompatible changes
   * Passing legend as text to fieldset macro is now removed. Set an atom instead which
     should reference a `fieldsets` key in your schema's meta.
 
@@ -121,10 +99,8 @@
   * Stripe tables (wow!).
 
 * Deprecations
-  * `model_name` and `model_repr` are now deprecated and removed.
   * Passing `help_text` to form fields through `field` macro is now deprecated.
     Set help text in your schema's meta instead under the `help` key.
-  * Passing `model` to `form` doesn't work anymore. Pass `schema` instead.
 
 ## v0.35.0 (2016-10-08)
 
