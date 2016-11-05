@@ -9,16 +9,26 @@ defmodule Brando.User do
   use Brando.Web, :schema
   use Brando.Field.ImageField
 
-  alias Brando.Utils
-
   import Brando.Gettext
 
   @required_fields ~w(username full_name email password language)a
   @optional_fields ~w(role avatar)a
 
-  @forbidden_usernames ~w(admin superadmin superuser editor
-                          root create edit delete update ny
-                          endre slett profil)
+  @forbidden_usernames ~w(
+    admin
+    superadmin
+    superuser
+    editor
+    root
+    create
+    edit
+    delete
+    update
+    ny
+    endre
+    slett
+    profil
+  )
 
   schema "users" do
     field :username, :string
@@ -33,23 +43,47 @@ defmodule Brando.User do
   end
 
   has_image_field :avatar, %{
-    allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
+    allowed_mimetypes: [
+      "image/jpeg",
+      "image/png",
+      "image/gif"
+    ],
     default_size: :medium,
     upload_path: Path.join("images", "avatars"),
     random_filename: true,
     size_limit: 10240000,
     sizes: %{
-      "micro"  => %{"size" => "25x25", "quality" => 100, "crop" => true},
-      "thumb"  => %{"size" => "150x150", "quality" => 100, "crop" => true},
-      "small"  => %{"size" => "300", "quality" => 100},
-      "medium" => %{"size" => "500", "quality" => 100},
-      "large"  => %{"size" => "700", "quality" => 100},
-      "xlarge" => %{"size" => "900", "quality" => 100}
+      "micro"  => %{
+        "size"    => "25x25",
+        "quality" => 100,
+        "crop"    => true
+      },
+      "thumb"  => %{
+        "size"    => "150x150",
+        "quality" => 100,
+        "crop"    => true
+      },
+      "small"  => %{
+        "size"    => "300",
+        "quality" => 100
+      },
+      "medium" => %{
+        "size"    => "500",
+        "quality" => 100
+      },
+      "large"  => %{
+        "size"    => "700",
+        "quality" => 100
+      },
+      "xlarge" => %{
+        "size"    => "900",
+        "quality" => 100
+     }
     },
     srcset: %{
-      "small" => "300w",
+      "small"  => "300w",
       "medium" => "500w",
-      "large" => "700w"
+      "large"  => "700w"
     }
   }
 
@@ -136,16 +170,6 @@ defmodule Brando.User do
   """
   def order_by_id(query) do
     from m in query, order_by: m.id
-  end
-
-  @doc """
-  Bumps `user`'s `last_login` to current time.
-  """
-  @spec set_last_login(t) :: t
-  def set_last_login(user) do
-    {:ok, user} =
-      Utils.Schema.update_field(user, [last_login: NaiveDateTime.from_erl!(:calendar.local_time)])
-    user
   end
 
   @doc """

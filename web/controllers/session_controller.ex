@@ -4,19 +4,19 @@ defmodule Brando.SessionController do
   """
 
   use Brando.Web, :controller
+  alias Brando.{User, Users}
   import Brando.Gettext
 
   @default_auth_sleep_duration 2500
 
   @doc false
   def login(conn, %{"user" => %{"email" => email, "password" => password}}) do
-    schema = conn.private[:schema] || Brando.User
-    user = Brando.repo.get_by(schema, email: email)
+    user = Users.get_user_by(email: email)
 
-    if schema.auth?(user, password) do
+    if User.auth?(user, password) do
       user =
         user
-        |> schema.set_last_login
+        |> Users.set_last_login()
         |> sanitize_user
 
       conn
