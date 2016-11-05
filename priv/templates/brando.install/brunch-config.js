@@ -116,6 +116,10 @@ exports.config = {
       'node_modules/brando/priv/static/js/brando.auth.js',
       'node_modules/brando_villain/priv/static/js/villain.all.js',
       'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js'
-    ]
+    ],
+    styles: {
+      brando: ['priv/static/css/brando.css', 'priv/static/css/brando.vendor.css'],
+      villain: ['priv/static/css/villain.css'],
+    }
   }
 };
