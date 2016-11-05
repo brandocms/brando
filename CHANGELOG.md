@@ -1,5 +1,15 @@
 ## v0.37.0-dev (2016-XX-XX)
 * Backwards incompatible changes
+  * Clean up `brunch-config.js`. If you choose to do this:
+    * Remove everything in `paths.watched` except for `// static` + the following 2 lines.
+    * Remove `conventions.vendor` key.
+    * Add to `npm`:
+    ```
+      styles: {
+        brando: ['priv/static/css/brando.css', 'priv/static/css/brando.vendor.css'],
+        villain: ['priv/static/css/villain.css'],
+      }
+    ```
   * Brando now uses `Guardian` for auth. This means some changes in your `router.ex`:
     ```diff
       pipeline :admin do
