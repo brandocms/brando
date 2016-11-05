@@ -14,19 +14,15 @@ defmodule Brando.SessionController do
     user = Users.get_user_by(email: email)
 
     if User.auth?(user, password) do
-      user =
-        user
-        |> Users.set_last_login()
-        |> sanitize_user
+      user = Users.set_last_login(user)
 
       conn
-      |> sleep
-      |> fetch_session
-      |> put_session(:current_user, user)
+      |> sleep()
+      |> Guardian.Plug.sign_in(user)
       |> redirect(to: "/admin")
     else
       conn
-      |> sleep
+      |> sleep()
       |> put_flash(:error, gettext("Authorization failed"))
       |> redirect(to: "/auth/login")
     end
@@ -45,12 +41,8 @@ defmodule Brando.SessionController do
     conn
     |> assign(:type, "GOODBYE!")
     |> put_layout({Brando.Session.LayoutView, "auth.html"})
-    |> delete_session(:current_user)
+    |> Guardian.Plug.sign_out()
     |> render(:logout)
-  end
-
-  defp sanitize_user(user) do
-    Map.drop(user, [:password, :__meta__])
   end
 
   defp sleep(conn) do

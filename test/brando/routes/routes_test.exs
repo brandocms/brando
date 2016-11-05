@@ -1,6 +1,5 @@
 defmodule Brando.TestRouter do
   use Phoenix.Router
-  alias Brando.Plug.Authenticate
   import Brando.Users.Routes.Admin
   import Brando.Images.Routes.Admin
   import Brando.Villain.Routes.Admin
@@ -11,7 +10,9 @@ defmodule Brando.TestRouter do
     plug :fetch_session
     plug :fetch_flash
     plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
-    plug Authenticate, login_url: "/login"
+    plug Guardian.Plug.VerifySession
+    plug Guardian.Plug.LoadResource
+    plug Guardian.Plug.EnsureAuthenticated, handler: Brando.AuthHandler
   end
 
   pipeline :browser do

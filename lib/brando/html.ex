@@ -6,8 +6,7 @@ defmodule Brando.HTML do
   @type alert_levels :: :default | :primary | :info | :success | :warning | :danger
 
   import Brando.Gettext
-  import Brando.Utils, only: [media_url: 0, current_user: 1,
-                              active_path?: 2, img_url: 3]
+  import Brando.Utils, only: [current_user: 1, active_path?: 2]
   import Brando.Meta.Controller, only: [put_meta: 3, get_meta: 1]
 
   @doc false
@@ -92,7 +91,13 @@ defmodule Brando.HTML do
     true
   end
   def can_render?(conn, %{role: role}) do
-    role in current_user(conn).role && true || false
+    current_user = current_user(conn)
+
+    if current_user do
+      role in current_user(conn).role && true || false
+    else
+      false
+    end
   end
   def can_render?(_, _) do
     true
@@ -286,40 +291,6 @@ defmodule Brando.HTML do
     </script>
     """
     Phoenix.HTML.raw(html)
-  end
-
-  @doc """
-  Output frontend admin menu if user is logged in and admin
-  """
-  def frontend_admin_menu(conn) do
-    if current_user(conn) do
-      default_img    = "/images/brando/defaults/avatar_default.jpg"
-      dashboard_path = Brando.helpers.admin_dashboard_path(conn, :dashboard)
-      logout_path    = Brando.helpers.session_path(conn, :logout)
-      avatar         = img_url(current_user(conn).avatar, :micro,
-                       [default: Brando.helpers.static_path(conn, default_img),
-                        prefix: media_url()])
-      html =
-      """
-      <div class="admin-menu">
-        <ul class="nav navbar-nav">
-          <li class="dropdown">
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown"
-               role="button" aria-expanded="false">
-              <img class="micro-avatar" src="#{avatar}" />
-            </a>
-            <ul class="dropdown-menu dropdown-menu-right" role="menu">
-              <li><a href="#{dashboard_path}">Admin</a></li>
-              <li><a href="#{logout_path}">Logg ut</a></li>
-            </ul>
-          </li>
-        </ul>
-      </div>
-      """
-      html |> Phoenix.HTML.raw
-    else
-      ""
-    end
   end
 
   @doc """

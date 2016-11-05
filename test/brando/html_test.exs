@@ -67,7 +67,9 @@ defmodule Brando.HTMLTest do
   end
 
   test "auth_content" do
-    mock_conn = %Plug.Conn{private: %{plug_session: %{"current_user" => %{role: [:admin]}}}}
+    mock_conn =
+      %Plug.Conn{private: %{guardian_default_resource: %Brando.User{role: [:admin]}}}
+
     assert auth_content(mock_conn, :admin, do: {:safe, "<h1>test</h1>"})
            == {:safe, "<h1>test</h1>"}
     assert auth_content(mock_conn, :superuser, do: {:safe, "<h1>test</h1>"})
@@ -88,27 +90,6 @@ defmodule Brando.HTMLTest do
     code = "asdf123"
     {:safe, html} = google_analytics(code)
     assert html =~ "ga('create','#{code}','auto')"
-  end
-
-  test "frontend_admin_menu" do
-    mock_conn = %Plug.Conn{private: %{plug_session: %{}}}
-    assert frontend_admin_menu(mock_conn) == ""
-    mock_conn =
-      %Plug.Conn{
-        private: %{
-          phoenix_endpoint: Brando.Integration.Endpoint,
-          plug_session: %{
-            "current_user" => %{
-              avatar: %{sizes: %{"micro" => "an_image.jpg"}},
-              role: [:admin]
-            }
-          }
-        }
-      }
-    {:safe, html} = frontend_admin_menu(mock_conn)
-
-    assert html =~ ~s(<img class="micro-avatar" src="/media/an_image.jpg" />)
-    assert html =~ ~s(/admin)
   end
 
   test "status_indicators" do

@@ -11,12 +11,12 @@ defmodule Brando.Plug.Authorize do
   Halts on failure.
   """
   @spec authorize(Plug.Conn.t, atom) :: Plug.Conn.t
-  def authorize(%{private: %{plug_session: %{"current_user" => current_user}}} = conn, role) do
-    User.role?(current_user, role) && conn || no_access(conn)
-  end
-
-  def authorize(conn, _) do
-    no_access(conn)
+  def authorize(conn, role) do
+    if current_user = Brando.Utils.current_user(conn) do
+      User.role?(current_user, role) && conn || no_access(conn)
+    else
+      no_access(conn)
+    end
   end
 
   @spec no_access(Plug.Conn.t) :: Plug.Conn.t

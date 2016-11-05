@@ -8,16 +8,6 @@ config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
-config :eightyfour,
-  credentials: "priv/tokens/google/token.json",
-  private_key: "priv/tokens/google/token.key.pem",
-  # find your view_id in your analytics url:
-  # https://www.google.com/analytics/web/#management/Settings/a000w000pVIEW_ID/
-  google_view_id: "XXXXXX",
-  start_date: "2010-01-01",
-  token_lifetime: 3600,
-  token_provider: Eightyfour.AccessToken
-
 config :brando,
   app_name: "<%= application_module %>",
   endpoint: <%= application_module %>.Web.Endpoint,
@@ -74,3 +64,24 @@ config :brando, Brando.Type.Role,
 config :brando, Brando.Villain,
   extra_blocks: [],
   parser: <%= application_module %>.Villain.Parser
+
+# Configure Guardian for auth.
+config :guardian, Guardian,
+  allowed_algos: ["HS512"], # optional
+  verify_module: Guardian.JWT,  # optional
+  issuer: "<%= application_module %>",
+  ttl: {30, :days},
+  verify_issuer: true, # optional
+  secret_key: "<%= :crypto.strong_rand_bytes(64) |> Base.encode64 |> binary_part(0, 64) %>",
+  serializer: Brando.GuardianSerializer
+
+# Configure Eightyfour for interfacing with Google Analytics
+config :eightyfour,
+  credentials: "priv/tokens/google/token.json",
+  private_key: "priv/tokens/google/token.key.pem",
+  # find your view_id in your analytics url:
+  # https://www.google.com/analytics/web/#management/Settings/a000w000pVIEW_ID/
+  google_view_id: "XXXXXX",
+  start_date: "2010-01-01",
+  token_lifetime: 3600,
+  token_provider: Eightyfour.AccessToken

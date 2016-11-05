@@ -159,14 +159,16 @@ defmodule Brando.Users.ControllerTest do
   end
 
   test "update profile w/broken params" do
-    user =
-      Factory.insert(:user)
+    user = Factory.insert(:user)
+
+    user_params =
+      user
       |> Map.delete(:__struct__)
       |> Map.put(:password, "1")
 
     conn =
       :patch
-      |> call("/admin/users/profile/edit", %{"user" => user})
+      |> call("/admin/users/profile/edit", %{"user" => user_params})
       |> with_user(user)
       |> send_request
 
@@ -188,7 +190,7 @@ defmodule Brando.Users.ControllerTest do
 
   test "delete" do
     user = Factory.insert(:user)
-    
+
     conn =
       :delete
       |> call("/admin/users/#{user.id}")

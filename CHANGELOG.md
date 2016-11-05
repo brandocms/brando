@@ -1,8 +1,65 @@
 ## v0.37.0-dev (2016-XX-XX)
+* Backwards incompatible changes
+  * Brando now uses `Guardian` for auth. This means some changes in your `router.ex`:
+    ```diff
+      pipeline :admin do
+        plug :accepts, ~w(html json)
+        plug :fetch_session
+        plug :fetch_flash
+        plug :put_admin_locale
+        plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
+    -   plug Authenticate
+    +   plug Guardian.Plug.VerifySession
+    +   plug Guardian.Plug.LoadResource
+    +   plug Guardian.Plug.EnsureAuthenticated, handler: Brando.AuthHandler
+        plug :put_secure_browser_headers
+      end
 
-## v0.36.0 (2016-10-21)  
+      pipeline :browser do
+        plug :accepts, ["html"]
+        plug :fetch_session
+        plug :fetch_flash
+        plug Lockdown
+        plug :put_locale
+        plug :protect_from_forgery
+        plug :put_secure_browser_headers
+        plug PlugHeartbeat
+      end
 
-* Backwards incompatible changes`
+    + pipeline :browser_session do
+    +   plug Guardian.Plug.VerifySession
+    +   plug Guardian.Plug.LoadResource
+    + end
+
+      pipeline :auth do
+        plug :accepts, ["html"]
+        plug :fetch_session
+        plug :fetch_flash
+    +   plug Guardian.Plug.VerifySession
+    +   plug Guardian.Plug.LoadResource
+        plug :protect_from_forgery
+        plug :put_secure_browser_headers
+      end
+
+      pipeline :api do
+        plug :accepts, ["json"]
+      end
+
+    ```
+    and also add to your `brando.exs`:
+
+    ```diff
+      # Configure Guardian for auth.
+      config :guardian, Guardian,
+        allowed_algos: ["HS512"], # optional
+        verify_module: Guardian.JWT,  # optional
+        issuer: "MyApp",
+        ttl: {30, :days},
+        verify_issuer: true, # optional
+        secret_key: "SECRET_KEY. Create a new one with `mix phoenix.gen.secret`",
+        serializer: Brando.GuardianSerializer
+    ```
+
   * `use Brando.Web, :model` -> `use Brando.Web, :schema`
   * `use Brando.Villain, :model` -> `use Brando.Villain, :schema`
   * Change keys in `use Brando.Villain, [:controller ...]` to `:image_schema` and `series_schema`
@@ -19,6 +76,14 @@
   * Renamed `Brando.Meta.Model` to `Brando.Meta.Schema`. This means you need to change
     all your schemas using this to:
     `use Brando.Meta.Schema, [...]`
+
+* Deprecations
+  * `model_name` and `model_repr` are now deprecated and removed.
+  * Passing `model` to `form` doesn't work anymore. Pass `schema` instead.
+
+## v0.36.0 (2016-10-21)  
+
+* Backwards incompatible changes
   * Passing legend as text to fieldset macro is now removed. Set an atom instead which
     should reference a `fieldsets` key in your schema's meta.
 
@@ -34,10 +99,8 @@
   * Stripe tables (wow!).
 
 * Deprecations
-  * `model_name` and `model_repr` are now deprecated and removed.
   * Passing `help_text` to form fields through `field` macro is now deprecated.
     Set help text in your schema's meta instead under the `help` key.
-  * Passing `model` to `form` doesn't work anymore. Pass `schema` instead.
 
 ## v0.35.0 (2016-10-08)
 

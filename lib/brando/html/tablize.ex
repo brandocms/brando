@@ -80,7 +80,8 @@ defmodule Brando.HTML.Tablize do
     table_body   = render_tbody(tablize_opts)
 
     table = """
-      <table class="table table-striped tablesaw tablesaw-stack" data-tablesaw-mode="stack"#{filter_attr}>
+      <table class="table table-striped tablesaw tablesaw-stack"
+             data-tablesaw-mode="stack"#{filter_attr}>
         #{colgroup}
         #{table_header}
         #{table_body}

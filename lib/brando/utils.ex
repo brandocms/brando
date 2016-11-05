@@ -298,9 +298,7 @@ defmodule Brando.Utils do
   @doc """
   Return the current user set in session.
   """
-  def current_user(conn) do
-    Plug.Conn.get_session(conn, :current_user)
-  end
+  defdelegate current_user(conn), to: Guardian.Plug, as: :current_resource
 
   @doc """
   Checks if `conn`'s `full_path` matches `current_path`.
