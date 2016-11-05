@@ -6,13 +6,8 @@ defmodule Brando.HTML.TablizeTest do
   import Brando.I18n
   alias Brando.Factory
 
-  @conn %Plug.Conn{
-    private: %{
-      plug_session: %{
-        "current_user" => %{role: [:superuser]}
-      }
-    }
-  } |> assign_language("nb")
+  @conn %Plug.Conn{private: %{guardian_default_resource: %{role: [:superuser]}}}
+        |> assign_language("nb")
 
   test "tablize/4" do
     user = Factory.insert(:user)
