@@ -55,6 +55,26 @@ table {
   font-size: 1rem;
   padding: 12px 8px;
   vertical-align: middle;
+
+  &.text-mono {
+    font-size: 14px;
+  }
+}
+
+.table > tbody > tr > td[data-field=url] {
+  font-family: "a-mono", "Monaco", "Inconsolata", "Courier New" !important;
+
+  strong {
+    color: #000;
+    font-weight: normal;
+  }
+}
+
+.table > tbody > tr > td[data-field=url]:before {
+  content: "\f0ac";
+  font-family: "fontawesome";
+  opacity: 0.3;
+  padding-right: 10px;
 }
 
 .table > thead > tr > th {
