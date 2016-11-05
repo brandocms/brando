@@ -61,21 +61,6 @@ exports.config = {
   paths: {
     // Which directories to watch
     watched: [
-      // brando
-      'node_modules/brando/priv/static/js/brando.js',
-      'node_modules/brando/priv/static/js/brando.auth.js',
-      'node_modules/brando_villain/priv/static/js/villain.all.js',
-      'node_modules/brando/priv/static/css/brando.css',
-      'node_modules/brando/priv/static/css/brando.vendor.css',
-      'node_modules/brando_villain/priv/static/css/villain.css',
-      // phoenix
-      'node_modules/phoenix/priv/static/phoenix.js',
-      'node_modules/phoenix_html/priv/static/phoenix_html.js',
-      // jquery
-      'node_modules/jquery/dist/jquery.js',
-      // bootstrap
-      'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
-      // static
       'static',
       '../test/static'
     ],
@@ -90,8 +75,7 @@ exports.config = {
     // will be copied to `paths.public`, which is "priv/static" by default.
     assets: [
       /^(static)/,
-    ],
-    vendor: /(^bower_components|node_modules|vendor)[\\/]/
+    ]
   },
 
   // Configure your plugins
