@@ -7,7 +7,7 @@
     ```
       styles: {
         brando: ['priv/static/css/brando.css', 'priv/static/css/brando.vendor.css'],
-        villain: ['priv/static/css/villain.css'],
+        brando_villain: ['priv/static/css/villain.css'],
       }
     ```
   * Brando now uses `Guardian` for auth. This means some changes in your `router.ex`:
