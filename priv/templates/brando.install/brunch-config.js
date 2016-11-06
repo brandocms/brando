@@ -119,7 +119,7 @@ exports.config = {
     ],
     styles: {
       brando: ['priv/static/css/brando.css', 'priv/static/css/brando.vendor.css'],
-      villain: ['priv/static/css/villain.css'],
+      brando_villain: ['priv/static/css/villain.css'],
     }
   }
 };
