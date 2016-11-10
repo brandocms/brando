@@ -305,12 +305,20 @@ name of the schema, second is the form module and third is a list of fields you 
 returned if repo insertion is successful:
 
 ```elixir
-Brando.PopupForm.Registry.register("client", MyApp.ClientForm, gettext("Create client"), [:id, :name])
+Brando.PopupForm.Registry.register(:accounts, "client", MyApp.ClientForm, gettext("Create client"), [:id, :name])
 ```
 
 ```javascript
+
+import {PopupForm, brando} from "brando";
+
+let params = [];
+let initialValues = {email: 'sample@email.com'};
+let clientForm = new PopupForm("accounts", brando.language, clientInsertionSuccess,
+                               params, initialValues);
+
 $('.avatar img').click((e) => {
-    let clientForm = new PopupForm("client", clientInsertionSuccess);
+    clientForm.show();
 });
 
 function clientInsertionSuccess(fields) {

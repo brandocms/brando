@@ -53,12 +53,15 @@ defmodule Brando.HTML.Tablize do
     * `filter` - Boolean. Implements a filtering input box above table.
     * `truncate` - List of fields to shorten. Default is 100 characters.
     * `split_by` - Split table by field: `split_by: :language`.
+    * `smart_fields` - Custom fields with logic. This runs the supplied function against each
+                       record in `records`. Supplied in a tuple:
+                       `{gettext("Column header"), MyApp.View, :get_value}`
     * `colgroup` - Column widths if you need to override.
                    Supply as list: `[100, nil, nil, 200, nil, 200]`
 
   """
   @spec tablize(Plug.Conn.t, [Type] | [] | nil, [dropdown], Keyword.t) :: {:safe, iodata}
-  def tablize(_, [], _, _), do: "<p>#{gettext("No results")}</p>" |> Phoenix.HTML.raw
+  def tablize(_, [], _, _),  do: "<p>#{gettext("No results")}</p>" |> Phoenix.HTML.raw
   def tablize(_, nil, _, _), do: "<p>#{gettext("No results")}</p>" |> Phoenix.HTML.raw
   def tablize(conn, records, dropdowns, opts) do
     tablize_opts =
@@ -80,7 +83,8 @@ defmodule Brando.HTML.Tablize do
     table_body   = render_tbody(tablize_opts)
 
     table = """
-      <table class="table table-striped tablesaw tablesaw-stack" data-tablesaw-mode="stack"#{filter_attr}>
+      <table class="table table-striped tablesaw tablesaw-stack"
+             data-tablesaw-mode="stack"#{filter_attr}>
         #{colgroup}
         #{table_header}
         #{table_body}
@@ -106,6 +110,8 @@ defmodule Brando.HTML.Tablize do
     fields = opts[:hide] && module.__keys__ -- opts[:hide]
                          || module.__keys__
 
+    smart_fields = opts[:smart_fields]
+
     narrow_fields = opts[:check_or_x] && @narrow_fields ++ opts[:check_or_x]
                                       || @narrow_fields
 
@@ -125,6 +131,10 @@ defmodule Brando.HTML.Tablize do
     expander  = ~s(<col style="width: 10px;">)
     colgroups = [expander|colgroups]
 
+    # add colgroups for smart_fields
+    smart_colgroups = for _ <- smart_fields || [], do: ~s(<col style="width: 40px;">)
+    colgroups       = [colgroups|smart_colgroups]
+
     # add menu col
     menu_col  = ~s(<col style="width: 80px;">)
     colgroups = colgroups ++ menu_col
@@ -133,10 +143,7 @@ defmodule Brando.HTML.Tablize do
   end
 
   defp render_colgroup(:manual, list) do
-    colgroups =
-      for col <- list, do:
-        col && ~s(<col style="width: #{col}px;">) || "<col>"
-
+    colgroups = for col <- list, do: col && ~s(<col style="width: #{col}px;">) || "<col>"
     menu_col  = ~s(<col style="width: 80px;">)
     colgroups = colgroups ++ menu_col
 
@@ -166,35 +173,6 @@ defmodule Brando.HTML.Tablize do
     "#{pre}#{content}#{post}"
   end
 
-  defp render_tr_content(record, %{module: module, opts: opts}) do
-    module.__keys__
-    |> Enum.map(&(do_td(&1, record, module.__schema__(:type, &1), opts)))
-    |> Enum.join
-  end
-
-  defp render_child_rows(children, parent, tablize_opts) do
-    for child <- children do
-      tr_content = render_tr_content(child, tablize_opts)
-      """
-      <tr data-parent-id="#{parent.id}" class="child hidden">
-        <td></td>
-        #{tr_content}
-        #{render_dropdowns(child, tablize_opts)}
-      </tr>
-      """
-    end
-  end
-
-  defp render_children(record, %{opts: opts} = tablize_opts) do
-    case Map.get(record, opts[:children]) do
-      nil      -> nil
-      []       -> nil
-      children -> children
-                  |> render_child_rows(record, tablize_opts)
-                  |> Enum.join
-    end
-  end
-
   defp do_tr(record, tablize_opts) do
     tr_content = render_tr_content(record, tablize_opts)
     children   = render_children(record, tablize_opts)
@@ -210,6 +188,50 @@ defmodule Brando.HTML.Tablize do
     """
 
     children && row <> children || row
+  end
+
+  defp render_tr_content(record, %{module: module, opts: opts}) do
+    rendered_fields =
+      module.__keys__
+      |> Enum.map(&(do_td(&1, record, module.__schema__(:type, &1), opts)))
+      |> Enum.join
+
+    rendered_smart_fields =
+      if opts[:smart_fields] do
+        Enum.map_join(opts[:smart_fields], "", fn({_, module, fun}) ->
+          ~s(<td data-field="smart-field" class="text-center">#{apply(module, fun, [record])}</td>)
+        end)
+      else
+        ""
+      end
+
+    """
+    #{rendered_fields}
+    #{rendered_smart_fields}
+    """
+  end
+
+  defp render_children(record, %{opts: opts} = tablize_opts) do
+    case Map.get(record, opts[:children]) do
+      nil      -> nil
+      []       -> nil
+      children -> children
+                  |> render_child_rows(record, tablize_opts)
+                  |> Enum.join
+    end
+  end
+
+  defp render_child_rows(children, parent, tablize_opts) do
+    Enum.map children, fn(child) ->
+      tr_content = render_tr_content(child, tablize_opts)
+      """
+      <tr data-parent-id="#{parent.id}" class="child hidden">
+        <td></td>
+        #{tr_content}
+        #{render_dropdowns(child, tablize_opts)}
+      </tr>
+      """
+    end
   end
 
   defp do_td(:id, record, _type, _opts) do
@@ -269,6 +291,16 @@ defmodule Brando.HTML.Tablize do
   end
 
   defp render_thead(%{module: module, opts: opts}) do
+    # add smart fields
+    rendered_smart_fields =
+      if opts[:smart_fields] do
+        for {th_text, _, _} <- opts[:smart_fields] do
+          ~s(<th>#{th_text}</th>)
+        end |> Enum.join
+      else
+        ""
+      end
+
     fields       = module.__keys__
     rendered_ths = fields
                    |> Enum.map(&(do_th(&1, module, opts[:hide])))
@@ -279,6 +311,7 @@ defmodule Brando.HTML.Tablize do
       <tr>
         <th></th>
         #{rendered_ths}
+        #{rendered_smart_fields}
         <th class="text-center">☰</th>
       </tr>
     </thead>
@@ -317,23 +350,31 @@ defmodule Brando.HTML.Tablize do
 
   defp render_dropdowns_content(record, %{conn: conn, dropdowns: dropdowns}) do
     for dropdown <- dropdowns do
-      dropdown = tuple_size(dropdown) < 6 && Tuple.append(dropdown, nil) || dropdown
-      {desc, icon, helper, action, param, role} = dropdown
-      fun_params = get_function_params(param, record, action)
-      url = apply(Brando.helpers, helper, fun_params)
+      render_dropdown_content(conn, record, dropdown)
+    end
+  end
 
-      if can_render?(conn, %{role: role}) do
-        """
-        <li>
-          <a href="#{url}">
-            <i class="fa #{icon} fa-fw m-r-sm"> </i>
-             #{desc}
-          </a>
-        </li>
-        """
-      else
-        ""
-      end
+  defp render_dropdown_content(_, _, nil) do
+    ""
+  end
+
+  defp render_dropdown_content(conn, record, dropdown) do
+    dropdown = tuple_size(dropdown) < 6 && Tuple.append(dropdown, nil) || dropdown
+    {desc, icon, helper, action, param, role} = dropdown
+    fun_params = get_function_params(param, record, action)
+    url = apply(Brando.helpers, helper, fun_params)
+
+    if can_render?(conn, %{role: role}) do
+      """
+      <li>
+        <a href="#{url}">
+          <i class="fa #{icon} fa-fw m-r-sm"> </i>
+           #{desc}
+        </a>
+      </li>
+      """
+    else
+      ""
     end
   end
 

@@ -198,15 +198,15 @@ defmodule Brando.HTML.Inspect do
   defp do_inspect_field(_name, :integer, value), do: value
 
   defp do_inspect_field(_name, :boolean, :true) do
-    ~s(<div class="text-center"><i class="fa fa-check text-success"></i></div>)
+    ~s(<div class="text-center"><i class="icon-centered fa fa-check text-success"></i></div>)
   end
 
   defp do_inspect_field(_name, :boolean, nil) do
-    ~s(<div class="text-center"><i class="fa fa-times text-danger"></i></div>)
+    ~s(<div class="text-center"><i class="icon-centered fa fa-times text-danger"></i></div>)
   end
 
   defp do_inspect_field(_name, :boolean, :false) do
-    ~s(<div class="text-center"><i class="fa fa-times text-danger"></i></div>)
+    ~s(<div class="text-center"><i class="icon-centered fa fa-times text-danger"></i></div>)
   end
 
   defp do_inspect_field(_name, _type, %Brando.User{} = user) do

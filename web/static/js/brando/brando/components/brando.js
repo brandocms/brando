@@ -2,8 +2,7 @@ import $ from 'jquery';
 
 class Brando {
   constructor() {
-    this.language = $('html')
-      .attr('lang');
+    this.language = $('html').attr('lang');
     console.log(`==> language = ${this.language}`);
   }
 }

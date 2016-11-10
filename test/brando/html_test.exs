@@ -34,9 +34,9 @@ defmodule Brando.HTMLTest do
   end
 
   test "check_or_x/1" do
-    assert check_or_x(false) == "<i class=\"fa fa-times text-danger\"></i>"
-    assert check_or_x(nil) == "<i class=\"fa fa-times text-danger\"></i>"
-    assert check_or_x(true) == "<i class=\"fa fa-check text-success\"></i>"
+    assert check_or_x(false) == "<i class=\"icon-centered fa fa-times text-danger\"></i>"
+    assert check_or_x(nil) == "<i class=\"icon-centered fa fa-times text-danger\"></i>"
+    assert check_or_x(true) == "<i class=\"icon-centered fa fa-check text-success\"></i>"
   end
 
   test "auth_links" do

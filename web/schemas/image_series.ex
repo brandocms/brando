@@ -82,6 +82,7 @@ defmodule Brando.ImageSeries do
   Before inserting changeset. Copies the series' category config.
   """
   def inherit_configuration(%{changes: %{image_category_id: cat_id, slug: slug}} = cs) do
+
     do_inherit_configuration(cs, cat_id, slug)
   end
 

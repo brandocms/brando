@@ -227,19 +227,19 @@ defmodule Brando.HTML do
   Returns a red X if value is nil
   """
   def check_or_x(nil) do
-    ~s(<i class="fa fa-times text-danger"></i>)
+    ~s(<i class="icon-centered fa fa-times text-danger"></i>)
   end
   @doc """
   Returns a red X if value is false
   """
   def check_or_x(false) do
-    ~s(<i class="fa fa-times text-danger"></i>)
+    ~s(<i class="icon-centered fa fa-times text-danger"></i>)
   end
   @doc """
   Returns a green check if value is anything but nil/false
   """
   def check_or_x(_) do
-    ~s(<i class="fa fa-check text-success"></i>)
+    ~s(<i class="icon-centered fa fa-check text-success"></i>)
   end
 
   @doc """

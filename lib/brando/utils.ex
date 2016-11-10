@@ -144,6 +144,18 @@ defmodule Brando.Utils do
   end
 
   @doc """
+  Converts `coll` to a map with safe atom keys
+  """
+  def to_atom_map(coll) do
+    for {key, val} <- coll, into: %{} do
+      cond do
+        is_atom(key) -> {key, val}
+        true -> {String.to_existing_atom(key), val}
+      end
+    end
+  end
+
+  @doc """
   Converts an ecto datetime record to ISO 8601 format.
   """
   @spec to_iso8601(Ecto.DateTime.t) :: String.t

@@ -81,7 +81,7 @@ defmodule Brando.ImageCategory do
     from m in query,
       left_join: is in assoc(m, :image_series),
       left_join: i in assoc(is, :images),
-       order_by: [asc: m.name, asc: is.sequence, asc: i.sequence],
+       order_by: [asc: m.inserted_at, asc: is.sequence, asc: i.sequence],
         preload: [image_series: {is, images: i}]
   end
 

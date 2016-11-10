@@ -1,6 +1,7 @@
 import $        from 'jquery';
 import Dropzone from 'dropzone';
 import Chart    from 'chart.js';
+import i18n     from 'i18next';
 
 import './brando/extensions/datepicker';
 import './brando/extensions/dropdown';
@@ -89,6 +90,7 @@ $(() => {
 
 export {
   Accordion,
+  Autoslug,
   Chart,
   Dropzone,
   PopupForm,
@@ -98,4 +100,5 @@ export {
   brando,
   bI18n,
   vex,
+  i18n,
 };

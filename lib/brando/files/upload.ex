@@ -29,10 +29,6 @@ defmodule Brando.Files.Upload do
     {:ok, file} = do_upload(plug, cfg)
     params      = Map.put(put_fields, name, file)
 
-    require Logger
-    Logger.error inspect module
-    Logger.error inspect params
-
     apply(module, :create, [params, current_user])
   end
 

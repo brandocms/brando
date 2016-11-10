@@ -28,14 +28,17 @@ defmodule Brando.PopupForm.Registry do
     GenServer.call(__MODULE__, :state)
   end
 
-  def register(name, form, header, wanted_fields) do
-    GenServer.call(__MODULE__, {:register, name, form, header, wanted_fields})
+  def register(key, name, form, header, wanted_fields) do
+    GenServer.call(__MODULE__, {:register, key, name, form, header, wanted_fields})
   end
 
   @spec get(String.t) :: {:ok, atom, String.t, [atom]} | {:error, :not_registered}
-  def get(name) do
-    {form_module, header, wanted_fields} = Map.get(state().forms, name)
-    form_module && {:ok, {form_module, header, wanted_fields}} || {:error, :not_registered}
+  def get(key) do
+    key = String.to_existing_atom(key)
+    case Map.get(state().forms, key) do
+      nil  -> {:error, :not_registered}
+      data -> {:ok, data}
+    end
   end
 
   def wipe do
@@ -54,8 +57,8 @@ defmodule Brando.PopupForm.Registry do
   end
 
   @doc false
-  def handle_call({:register, name, form, header, wanted_fields}, _from, state) do
-    state = put_in(state.forms, Map.put(state.forms, name, {form, header, wanted_fields}))
+  def handle_call({:register, key, name, form, header, wanted_fields}, _from, state) do
+    state = put_in(state.forms, Map.put(state.forms, key, {name, form, header, wanted_fields}))
     {:reply, state, state}
   end
 end

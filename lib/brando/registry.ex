@@ -26,7 +26,9 @@ defmodule Brando.Registry do
     modules = for m <- @default_modules do
       Module.concat(m, "Menu")
     end
+
     Logger.info("==> Brando.Registry initialized")
+
     {:ok, %State{menu_modules: modules}}
   end
 

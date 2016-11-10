@@ -1,5 +1,29 @@
 ## v0.37.0-dev (2016-XX-XX)
 
+* Backwards incompatible changes
+  * Changes to PopupForm. Must be registered with an atom, so:
+    ```elixir
+    Brando.PopupForm.Registry.register(:accounts, "client", MyApp.ClientForm,
+                                       gettext("Create client"), [:id, :name])
+    ```
+    And JS:
+    ```javascript
+    import {PopupForm, brando} from "brando";
+
+    let params = [];
+    let initialValues = {email: 'sample@email.com'};
+    let clientForm = new PopupForm("accounts", brando.language, clientInsertionSuccess,
+                                   params, initialValues);
+
+    $('.avatar img').click((e) => {
+        clientForm.show();
+    });
+
+    function clientInsertionSuccess(fields) {
+        // here you'd insert the returned fields into a select or something similar.
+        console.log(`${fields.id} --> ${fields.username}`);
+    }
+    ```
 ## v0.36.0 (2016-10-21)  
 
 * Backwards incompatible changes

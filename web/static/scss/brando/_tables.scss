@@ -401,3 +401,17 @@ a.expand-page-children {
 table tr.child td {
   background-color: #F4F4F4 !important;
 }
+
+td i.icon-centered {
+  display: inline-block;
+  text-align: center;
+  width: 100%;
+}
+
+td a i {
+  color: #aaa;
+
+  &:hover {
+    color: #333;
+  }
+}
