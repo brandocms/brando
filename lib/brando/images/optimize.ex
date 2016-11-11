@@ -50,6 +50,15 @@ defmodule Brando.Images.Optimize do
   Checks image for `optimized` flag, gets the image type and sends off
   to `do_optimize`.
   """
+  def optimize(%Ecto.Changeset{} = changeset, field_name) do
+    case Ecto.Changeset.get_change(changeset, field_name, nil) do
+      nil ->
+        changeset
+      record ->
+        optimize(record, field_name)
+        changeset
+    end
+  end
   def optimize(record, field_name) do
     optimize(record, field_name, Map.get(record, field_name))
   end
