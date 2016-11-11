@@ -1,7 +1,7 @@
 ## v0.37.0-dev (2016-XX-XX)
 
 * Backwards incompatible changes
-  * Changes to PopupForm. Must be registered with an atom, so:
+  * Changes to PopupForm. Must now be registered with an atom, so:
     ```elixir
     Brando.PopupForm.Registry.register(:accounts, "client", MyApp.ClientForm,
                                        gettext("Create client"), [:id, :name])

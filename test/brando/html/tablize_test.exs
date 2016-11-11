@@ -56,12 +56,21 @@ defmodule Brando.HTML.TablizeTest do
                            children: :children,
                            hide: [:parent, :children])
 
-    ret = IO.iodata_to_binary(ret)
-
+    ret        = IO.iodata_to_binary(ret)
     assert ret =~ "flag-en"
 
     {:safe, ret} = tablize(nil, nil, nil, nil)
 
     assert ret == "<p>No results</p>"
+
+    {:safe, ret} = tablize(@conn, [user], helpers, smart_fields: [{"custom header", __MODULE__, :smart}])
+
+    ret        = IO.iodata_to_binary(ret)
+    assert ret =~ "<th>custom header</th>"
+    assert ret =~ ~s(<td data-field="smart-field" class="text-center">jamesw</td>)
+  end
+
+  def smart(arg) do
+    arg.username
   end
 end
