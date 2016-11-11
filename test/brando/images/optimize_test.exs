@@ -59,26 +59,8 @@ defmodule Brando.Image.OptimizeTest do
       }
     )
 
-    assert optimize(cs, :image) == cs
-  end
-
-  test "optimize ignores with missing files" do
-    cs = Ecto.Changeset.change(
-      %Brando.User{},
-      avatar: %Brando.Type.Image{
-        credits: nil,
-        optimized: false,
-        path: "images/default/2ambet.png",
-        title: nil,
-        sizes: %{
-          large: "images/default/large/2ambet.png",
-          medium: "images/default/medium/2ambet.png",
-          small: "images/default/small/2ambet.png",
-          thumb: "images/default/thumb/2ambet.png",
-          xlarge: "images/default/xlarge/2ambet.png"
-        }
-      },
-    )
+    optimize(image, :image)
+    optimized_image = Brando.repo.get(Image, image.id)
 
     assert optimize(cs, :image) == cs
   end
