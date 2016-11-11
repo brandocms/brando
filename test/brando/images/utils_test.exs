@@ -56,7 +56,6 @@ defmodule Brando.Images.UtilsTest do
     user      = Factory.insert(:user)
     category  = Factory.insert(:image_category, creator: user)
     series    = Factory.insert(:image_series, creator: user, image_category: category)
-
     up_params = Factory.build(:plug_upload)
 
     :post
