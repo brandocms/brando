@@ -109,6 +109,7 @@ defmodule Brando.User do
     |> validate_exclusion(:username, @forbidden_usernames)
     |> validate_confirmation(:password, message: gettext("Passwords must match"))
     |> validate_length(:password, min: 6, too_short: gettext("Password must be at least 6 characters"))
+    |> Brando.Images.Optimize.optimize(:avatar)
   end
 
   @doc """

@@ -222,18 +222,17 @@ defmodule Brando.Images.Utils do
     full_path = media_path(img.image.path)
 
     delete_sized_images(img.image)
+
     {:ok, new_image} =
       {%{uploaded_file: full_path}, img.image_series.cfg}
       |> create_image_sizes
 
     image = Map.put(img.image, :sizes, new_image.sizes)
 
-    img =
-      img
-      |> Brando.Image.changeset(:update, %{image: image})
-      |> Brando.repo.update!
-
-    Brando.Images.Optimize.optimize(img, :image)
+    img
+    |> Brando.Image.changeset(:update, %{image: image})
+    |> Brando.Images.Optimize.optimize(:image)
+    |> Brando.repo.update!
 
     :ok
   end
