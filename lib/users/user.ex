@@ -51,7 +51,7 @@ defmodule Brando.User do
     default_size: :medium,
     upload_path: Path.join("images", "avatars"),
     random_filename: true,
-    size_limit: 10240000,
+    size_limit: 10_240_000,
     sizes: %{
       "micro"  => %{
         "size"    => "25x25",

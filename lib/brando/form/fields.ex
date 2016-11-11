@@ -632,9 +632,7 @@ defmodule Brando.Form.Fields do
     classes = [class: get_group_classes(field.opts, field.errors)]
 
     html = content_tag(:div, classes) do
-      [field.html,
-       render_errors(field.errors, field.opts),
-       render_help_text(field)] |> raw
+      [field.html, render_errors(field.errors), render_help_text(field)] |> raw
     end |> safe_to_string
 
     put_html(field, html)
@@ -699,13 +697,13 @@ defmodule Brando.Form.Fields do
   Renders `errors` in a nicely formatted div by calling parse_error/1
   on each error in the `errors` list.
   """
-  @spec render_errors(Keyword.t, Keyword.t) :: String.t
-  def render_errors(nil, _opts), do: ""
-  def render_errors(errors, opts) when is_list(errors) do
+  @spec render_errors(Keyword.t) :: String.t
+  def render_errors(nil), do: ""
+  def render_errors(errors) when is_list(errors) do
     for error <- errors do
       content_tag(:div, class: "error") do
         [content_tag(:i, " ", class: "fa fa-exclamation-circle"),
-         parse_error(error, opts)]
+         parse_error(error)]
       end |> safe_to_string
     end
   end
@@ -713,29 +711,25 @@ defmodule Brando.Form.Fields do
   @doc """
   Translate errors
   """
-  @spec parse_error(String.t | {String.t, integer}, Keyword.t) :: String.t
-  def parse_error(error, _) do
-    case error do
-      {"can't be blank", _}         ->
-        gettext("can't be blank")
-      {"must be unique", _}         ->
-        gettext("must be unique")
-      {"has invalid format", _}     ->
-        gettext("has invalid format")
-      {"is invalid", _}             ->
-        gettext("is invalid")
-      {"is reserved", _}            ->
-        gettext("is reserved")
-      {"has already been taken", _} ->
-        gettext("has already been taken")
-      {"should be at least %{count} character(s)", [count: len]} ->
-        gettext("should be at least %{count} characters", count: len)
-      {"should be at least %{count} characters", [count: len]} ->
-        gettext("should be at least %{count} characters", count: len)
-      err                  ->
-        is_binary(err) && err || inspect(err)
-    end
-  end
+  @spec parse_error(String.t | {String.t, integer}) :: String.t
+  def parse_error({"can't be blank", _}), do:
+    gettext("can't be blank")
+  def parse_error({"must be unique", _}), do:
+    gettext("must be unique")
+  def parse_error({"has invalid format", _}), do:
+    gettext("has invalid format")
+  def parse_error({"is invalid", _}), do:
+    gettext("is invalid")
+  def parse_error({"is reserved", _}), do:
+    gettext("is reserved")
+  def parse_error({"has already been taken", _}), do:
+    gettext("has already been taken")
+  def parse_error({"should be at least %{count} character(s)", [count: len]}), do:
+    gettext("should be at least %{count} characters", count: len)
+  def parse_error({"should be at least %{count} characters", [count: len]}), do:
+    gettext("should be at least %{count} characters", count: len)
+  def parse_error(error), do:
+    is_binary(error) && error || inspect(error)
 
   def fieldset_open_tag(nil, _in_fieldset), do:
     ~s(<fieldset><div class="form-row">)

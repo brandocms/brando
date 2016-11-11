@@ -9,7 +9,7 @@ defmodule Brando.I18nController do
   @doc false
   def switch_language(conn, %{"language" => language}) do
     Brando.I18n.put_locale_for_all_modules(language)
-    
+
     conn
     |> put_language(language)
     |> redirect(to: "/")

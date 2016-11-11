@@ -148,10 +148,7 @@ defmodule Brando.Utils do
   """
   def to_atom_map(coll) do
     for {key, val} <- coll, into: %{} do
-      cond do
-        is_atom(key) -> {key, val}
-        true -> {String.to_existing_atom(key), val}
-      end
+      if is_atom(key), do: {key, val}, else: {String.to_existing_atom(key), val}
     end
   end
 

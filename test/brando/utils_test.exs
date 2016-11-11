@@ -117,7 +117,6 @@ defmodule Brando.UtilsTest do
     assert img_url(img, :original, prefix: "prefix")
            == "prefix/original/path/file.jpg"
 
-
     assert_raise ArgumentError, fn ->
       img_url(img, :notasize, [default: "default.jpg"])
     end
@@ -166,20 +165,20 @@ defmodule Brando.UtilsTest do
 
   test "human_spaced_number" do
     assert human_spaced_number("10000000") == "10 000 000"
-    assert human_spaced_number(10000000) == "10 000 000"
+    assert human_spaced_number(10_000_000) == "10 000 000"
   end
 
   test "human_time" do
-    assert human_time(1000000000) == "11 days"
-    assert human_time(10000000) == "2 hours"
-    assert human_time(100000) == "1 mins"
+    assert human_time(1_000_000_000) == "11 days"
+    assert human_time(10_000_000) == "2 hours"
+    assert human_time(100_000) == "1 mins"
     assert human_time(1000) == "1 secs"
   end
 
   test "human_size" do
-    assert human_size(100000000) == "95 MB"
-    assert human_size(1000000) == "976 kB"
-    assert human_size(10000) == "10 000 B"
+    assert human_size(100_000_000) == "95 MB"
+    assert human_size(1_000_000) == "976 kB"
+    assert human_size(10_000) == "10 000 B"
   end
 
   test "helpers" do

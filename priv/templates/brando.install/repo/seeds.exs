@@ -11,7 +11,7 @@
 # and so on) as they will fail if something goes wrong.
 
 post_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-    default_size: "medium", random_filename: true, size_limit: 10240000,
+    default_size: "medium", random_filename: true, size_limit: 10_240_000,
     sizes: %{"large" => %{"quality" => 100, "size" => "700"},
       "medium" => %{"quality" => 100, "size" => "500"},
       "micro" => %{"crop" => true, "quality" => 100, "size" => "25x25"},
@@ -21,7 +21,7 @@ post_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png
     upload_path: "images/site/posts"}
 
 page_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-    default_size: "medium", random_filename: true, size_limit: 10240000,
+    default_size: "medium", random_filename: true, size_limit: 10_240_000,
     sizes: %{"large" => %{"quality" => 100, "size" => "700"},
       "medium" => %{"quality" => 100, "size" => "500"},
       "micro" => %{"crop" => true, "quality" => 100, "size" => "25x25"},
@@ -31,7 +31,7 @@ page_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png
     upload_path: "images/site/pages"}
 
 ss_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-    default_size: "medium", random_filename: true, size_limit: 10240000,
+    default_size: "medium", random_filename: true, size_limit: 10_240_000,
     sizes: %{"cropxlarge" => %{"crop" => true, "quality" => 100,
         "size" => "1140x600"}, "large" => %{"quality" => 100, "size" => "700"},
         "medium" => %{"quality" => 100, "size" => "500"},
