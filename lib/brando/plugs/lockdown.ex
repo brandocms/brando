@@ -69,7 +69,7 @@ defmodule Brando.Plug.Lockdown do
     |> redirect(to: Brando.helpers.lockdown_path(conn, :index))
     |> halt
   end
-  
+
   defp check_lockdown_date(conn, lockdown_until) do
     # TODO: replace with NaiveDateTime.compare/2 when elixir 1.4 is out
     if compare(lockdown_until, NaiveDateTime.from_erl!(:calendar.local_time)) == :gt do

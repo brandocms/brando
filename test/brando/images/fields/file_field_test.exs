@@ -12,7 +12,6 @@ defmodule Brando.Files.Field.FileFieldTest do
       size_limit: 10_240_000,
     }
 
-
     has_file_field :file, @cfg
 
     def cfg, do: struct!(Brando.Type.FileConfig, @cfg)

@@ -117,7 +117,6 @@ defmodule Brando.UtilsTest do
     assert img_url(img, :original, prefix: "prefix")
            == "prefix/original/path/file.jpg"
 
-
     assert_raise ArgumentError, fn ->
       img_url(img, :notasize, [default: "default.jpg"])
     end
