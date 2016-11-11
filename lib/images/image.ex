@@ -12,8 +12,10 @@ defmodule Brando.Image do
 
   import Brando.Gettext
   import Brando.Utils.Schema, only: [put_creator: 2]
-  import Ecto.Query, only: [from: 2]
+  import Brando.Images.Optimize, only: [optimize: 2]
   import Brando.Images.Utils
+
+  import Ecto.Query, only: [from: 2]
 
   @required_fields ~w(image image_series_id)a
   @optional_fields ~w(sequence creator_id)a
@@ -40,6 +42,7 @@ defmodule Brando.Image do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
+    |> optimize(:image)
   end
 
   @doc """
@@ -52,7 +55,9 @@ defmodule Brando.Image do
 
   """
   def changeset(schema, :update, params) do
-    cast(schema, params, @required_fields ++ @optional_fields)
+    schema
+    |> cast(params, @required_fields ++ @optional_fields)
+    |> optimize(:image)
   end
 
   @doc """

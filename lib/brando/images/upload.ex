@@ -6,7 +6,6 @@ defmodule Brando.Images.Upload do
   alias Brando.Exception.UploadError
   import Brando.Gettext
   import Brando.Utils
-  import Brando.Images.Optimize, only: [optimize: 3]
   import Brando.Images.Utils, only: [create_image_sizes: 1]
 
   defmacro __using__(_) do
@@ -33,8 +32,6 @@ defmodule Brando.Images.Upload do
     params           = Map.put(put_fields, name, img_field)
 
     {:ok, data} = apply(schema, :create, [params, current_user])
-
-    optimize(data, name, img_field)
 
     {:ok, data}
   end
