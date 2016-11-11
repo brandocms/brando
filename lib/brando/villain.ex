@@ -64,6 +64,7 @@ defmodule Brando.Villain do
   """
 
   @doc false
+  @lint false
   def schema do
     quote do
       import Brando.Villain.Schema, only: [villain: 0]
@@ -176,6 +177,7 @@ defmodule Brando.Villain do
   end
 
   @doc false
+  @lint false
   def controller({:image_schema, image_schema}, {:series_schema, series_schema}) do
     quote do
       import Ecto.Query
@@ -187,17 +189,7 @@ defmodule Brando.Villain do
           |> Brando.repo.get_by(slug: series_slug)
 
         if image_series do
-          image_list = Enum.map(image_series.images, fn image ->
-            sizes = Enum.map(image.image.sizes, fn({k, v}) -> {k, Brando.Utils.media_url(v)} end)
-            sizes = Enum.into(sizes, %{})
-
-            %{
-              src:   Brando.Utils.media_url(image.image.path),
-              thumb: Brando.Utils.media_url(Brando.Utils.img_url(image.image, :thumb)),
-              sizes: sizes,
-              title: image.image.title, credits: image.image.credits
-            }
-          end)
+          image_list = Brando.Villain.map_images(image_series.images)
           json(conn, %{status: "200", images: image_list})
         else
           json(conn, %{status: "204", images: []})
@@ -353,5 +345,20 @@ defmodule Brando.Villain do
     html
     |> Enum.reverse
     |> Enum.join
+  end
+
+  def map_images(images) do
+    Enum.map(images, fn image ->
+      sizes = Enum.map(image.image.sizes, fn({k, v}) -> {k, Brando.Utils.media_url(v)} end)
+      sizes = Enum.into(sizes, %{})
+
+      %{
+        src:   Brando.Utils.media_url(image.image.path),
+        thumb: Brando.Utils.media_url(Brando.Utils.img_url(image.image, :thumb)),
+        sizes: sizes,
+        title: image.image.title,
+        credits: image.image.credits
+      }
+    end)
   end
 end

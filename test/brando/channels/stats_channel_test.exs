@@ -5,7 +5,4 @@ defmodule Brando.StatsChannelTest do
 
   @endpoint Brando.Integration.Endpoint
 
-  test "stats channel join" do
-    assert 1 == 1
-  end
 end

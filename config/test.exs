@@ -25,7 +25,7 @@ config :brando, Brando.Menu, [
 config :brando, Brando.Images, [
   default_config: %{
     allowed_mimetypes: ["image/jpeg", "image/png"],
-    default_size: :medium, size_limit: 10240000,
+    default_size: :medium, size_limit: 10_240_000,
     upload_path: Path.join("images", "default"),
     sizes: %{
       "small" =>  %{"size" => "300", "quality" => 100},
