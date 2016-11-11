@@ -1,5 +1,27 @@
 ## v0.37.0-dev (2016-XX-XX)
 * Backwards incompatible changes
+  * Changes to PopupForm. Must now be registered with an atom, so:
+    ```elixir
+    Brando.PopupForm.Registry.register(:accounts, "client", MyApp.ClientForm,
+                                       gettext("Create client"), [:id, :name])
+    ```
+    And JS:
+    ```javascript
+    import {PopupForm, brando} from "brando";
+
+    let params = [];
+    let initialValues = {email: 'sample@email.com'};
+    let clientForm = new PopupForm("accounts", brando.language, clientInsertionSuccess,
+                                   params, initialValues);
+
+    $('.avatar img').click((e) => {
+        clientForm.show();
+    });
+
+    function clientInsertionSuccess(fields) {
+        // here you'd insert the returned fields into a select or something similar.
+        console.log(`${fields.id} --> ${fields.username}`);
+    }
   * Clean up `brunch-config.js`. If you choose to do this:
     * Remove everything in `paths.watched` except for `// static` + the following 2 lines.
     * Remove `conventions.vendor` key.
