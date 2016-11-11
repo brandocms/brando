@@ -41,7 +41,7 @@ config :brando, Brando.Images,
     default_size: :medium,
     upload_path: Path.join(["images", "site", "default"]),
     random_filename: true,
-    size_limit: 10240000,
+    size_limit: 10_240_000,
     sizes: %{
       "small" =>  %{"size" => "300", "quality" => 100},
       "medium" => %{"size" => "500", "quality" => 100},

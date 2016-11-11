@@ -106,38 +106,45 @@ defmodule Brando.HTML.Tablize do
     Phoenix.HTML.raw([filter|table])
   end
 
+  defp col_group_for_field(f, module, narrow_fields) do
+    type = module.__schema__(:type, f)
+    cond do
+      type in @narrow_types  -> ~s(<col style="width: 10px;">)
+      f    in narrow_fields  -> ~s(<col style="width: 10px;">)
+      f    in @date_fields   -> ~s(<col style="width: 140px;">)
+      f    == :creator       -> ~s(<col style="width: 180px;">)
+      true                   -> ~s(<col>)
+    end
+  end
+
+  defp add_expander_colgroup(colgroups) do
+    expander = ~s(<col style="width: 10px;">)
+    [expander|colgroups]
+  end
+
+  defp add_smart_colgroups(colgroups, smart_fields) do
+    smart_colgroups = for _ <- smart_fields || [], do: ~s(<col style="width: 40px;">)
+    [colgroups|smart_colgroups]
+  end
+
+  defp add_menu_colgroup(colgroups) do
+    menu_col = ~s(<col style="width: 80px;">)
+    colgroups ++ menu_col
+  end
+
   defp render_colgroup(:auto, %{module: module, opts: opts}) do
-    fields = opts[:hide] && module.__keys__ -- opts[:hide]
-                         || module.__keys__
+    fields = opts[:hide] && module.__keys__ -- opts[:hide] || module.__keys__
 
     smart_fields = opts[:smart_fields]
-
     narrow_fields = opts[:check_or_x] && @narrow_fields ++ opts[:check_or_x]
                                       || @narrow_fields
 
     colgroups =
-      for f <- fields do
-        type = module.__schema__(:type, f)
-        cond do
-          type in @narrow_types  -> ~s(<col style="width: 10px;">)
-          f in narrow_fields     -> ~s(<col style="width: 10px;">)
-          f in @date_fields      -> ~s(<col style="width: 140px;">)
-          f == :creator          -> ~s(<col style="width: 180px;">)
-          true                   -> ~s(<col>)
-        end
-      end
-
-    # add expander
-    expander  = ~s(<col style="width: 10px;">)
-    colgroups = [expander|colgroups]
-
-    # add colgroups for smart_fields
-    smart_colgroups = for _ <- smart_fields || [], do: ~s(<col style="width: 40px;">)
-    colgroups       = [colgroups|smart_colgroups]
-
-    # add menu col
-    menu_col  = ~s(<col style="width: 80px;">)
-    colgroups = colgroups ++ menu_col
+      fields
+      |> Enum.map(&(col_group_for_field(&1, module, narrow_fields)))
+      |> add_expander_colgroup
+      |> add_smart_colgroups(smart_fields)
+      |> add_menu_colgroup
 
     "<colgroup>#{IO.iodata_to_binary(colgroups)}</colgroup>"
   end

@@ -23,7 +23,7 @@ defmodule Brando.UserSocket do
   #  To deny connection, return `:error`.
 
   def connect(%{"token" => token}, socket) do
-    case Phoenix.Token.verify(socket, "user", token, max_age: 1209600) do
+    case Phoenix.Token.verify(socket, "user", token, max_age: 1_209_600) do
       {:ok, user_id} ->
         {:ok, assign(socket, :user_id, user_id)}
       {:error, _} ->
