@@ -12,19 +12,19 @@ defmodule Brando.PopupForm.RegistryTest do
   end
 
   test "add entry to registry" do
-    assert Registry.register("user", Brando.UserForm, "Create user", [:id, :username])
-           == %Registry.State{forms: %{"user" => {Brando.UserForm,
+    assert Registry.register(:accounts, "user", Brando.UserForm, "Create user", [:id, :username])
+           == %Registry.State{forms: %{accounts: {"user", Brando.UserForm,
                                        "Create user", [:id, :username]}}}
   end
 
   test "get entry from registry" do
-    Registry.register("user", Brando.UserForm, "Create user", [:id, :username])
-    assert Registry.get("user") == {:ok, {Brando.UserForm, "Create user", [:id, :username]}}
+    Registry.register(:accounts, "user", Brando.UserForm, "Create user", [:id, :username])
+    assert Registry.get("accounts") == {:ok, {"user", Brando.UserForm, "Create user", [:id, :username]}}
   end
 
   test "wipe registry" do
-    Registry.register("user", Brando.UserForm, "Create user", [:id, :username])
-    assert Registry.get("user") == {:ok, {Brando.UserForm, "Create user", [:id, :username]}}
+    Registry.register(:accounts, "user", Brando.UserForm, "Create user", [:id, :username])
+    assert Registry.get("accounts") == {:ok, {"user", Brando.UserForm, "Create user", [:id, :username]}}
     Registry.wipe()
     assert Registry.state() == %Registry.State{forms: %{}}
   end

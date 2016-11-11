@@ -52,7 +52,7 @@ defmodule Brando.Images.UtilsTest do
   test "put_size_cfg" do
     File.rm_rf!(Brando.config(:media_path))
     File.mkdir_p!(Brando.config(:media_path))
-    
+
     user      = Factory.insert(:user)
     category  = Factory.insert(:image_category, creator: user)
     series    = Factory.insert(:image_series, creator: user, image_category: category)

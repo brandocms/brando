@@ -1,35 +1,20 @@
-# This file contains the configuration for Credo.
-#
-# If you find anything wrong or unclear in this file, please report an
-# issue on GitHub: https://github.com/rrrene/credo/issues
 %{
-  #
-  # You can have as many configs as you like in the `configs:` field.
   configs: [
     %{
-      #
-      # Run any config using `mix credo -C <name>`. If no config name is given
-      # "default" is used.
       name: "default",
-      #
-      # these are the files included in the analysis
       files: %{
-        #
-        # you can give explicit globs or simply directories
-        # in the latter case `**/*.{ex,exs}` will be used
-        included: ["lib/", "src/", "web/", "apps/"],
-        excluded: []
+        included: ["lib/", "src/", "web/", "apps/", "test/"],
+        excluded: [~r"/_build/", ~r"/deps/"]
       },
+      requires: [],
+      check_for_updates: false,
       #
-      # The `checks:` field contains all the checks that are run. You can
-      # customize the parameters of any given check by adding a second element
+      # You can customize the parameters of any check by adding a second element
       # to the tuple.
       #
-      # There are two ways of deactivating a check:
-      # 1. deleting the check from this list
-      # 2. putting `false` as second element (to quickly "comment it out"):
+      # To disable a check put `false` as second element:
       #
-      #      {Credo.Check.Consistency.ExceptionNames, false}
+      #     {Credo.Check.Design.DuplicatedCode, false}
       #
       checks: [
         {Credo.Check.Consistency.ExceptionNames},
@@ -40,32 +25,37 @@
 
         # For some checks, like AliasUsage, you can only customize the priority
         # Priority values are: `low, normal, high, higher`
-        {Credo.Check.Design.AliasUsage, priority: :low},
-        # For others you can set parameters
-        {Credo.Check.Design.DuplicatedCode, mass_threshold: 16, nodes_threshold: 2},
+        {Credo.Check.Design.AliasUsage, false},
 
-        # You can also customize the exit_status of each check.
-        # If you don't want TODO comments to cause `mix credo` to fail, just
-        # set this value to 0 (zero).
-        {Credo.Check.Design.TagTODO, exit_status: 2},
-        {Credo.Check.Design.TagFIXME},
+        # For others you can set parameters
+
+        # If you don't want the `setup` and `test` macro calls in ExUnit tests
+        # or the `schema` macro in Ecto schemas to trigger DuplicatedCode, just
+        # set the `excluded_macros` parameter to `[:schema, :setup, :test]`.
+        {Credo.Check.Design.DuplicatedCode, excluded_macros: []},
+
+        # Disabled for now as they are also checked by Code Climate
+        {Credo.Check.Design.TagTODO, false},
+        {Credo.Check.Design.TagFIXME, false},
 
         {Credo.Check.Readability.FunctionNames},
-        {Credo.Check.Readability.MaxLineLength, priority: :low, max_length: 100},
+        {Credo.Check.Readability.LargeNumbers},
+        {Credo.Check.Readability.MaxLineLength, false},
         {Credo.Check.Readability.ModuleAttributeNames},
-        {Credo.Check.Readability.ModuleDoc},
+        {Credo.Check.Readability.ModuleDoc, false}, # Until it is disabled for all .exs files
         {Credo.Check.Readability.ModuleNames},
+        {Credo.Check.Readability.ParenthesesInCondition},
         {Credo.Check.Readability.PredicateFunctionNames},
         {Credo.Check.Readability.TrailingBlankLine},
         {Credo.Check.Readability.TrailingWhiteSpace},
         {Credo.Check.Readability.VariableNames},
+        {Credo.Check.Readability.RedundantBlankLines},
 
-        {Credo.Check.Refactor.ABCSize},
-        {Credo.Check.Refactor.CaseTrivialMatches},
+        {Credo.Check.Refactor.ABCSize, false},
         {Credo.Check.Refactor.CondStatements},
         {Credo.Check.Refactor.FunctionArity},
         {Credo.Check.Refactor.MatchInCondition},
-        # {Credo.Check.Refactor.PipeChainStart},
+        {Credo.Check.Refactor.PipeChainStart, false},
         {Credo.Check.Refactor.CyclomaticComplexity},
         {Credo.Check.Refactor.NegatedConditionsInUnless},
         {Credo.Check.Refactor.NegatedConditionsWithElse},
@@ -73,18 +63,25 @@
         {Credo.Check.Refactor.UnlessWithElse},
 
         {Credo.Check.Warning.IExPry},
-        {Credo.Check.Warning.IoInspect},
-        {Credo.Check.Warning.NameRedeclarationByAssignment},
-        {Credo.Check.Warning.NameRedeclarationByCase},
-        {Credo.Check.Warning.NameRedeclarationByDef},
-        {Credo.Check.Warning.NameRedeclarationByFn},
+        {Credo.Check.Warning.IoInspect, false},
+
+        # Those are warned by Elixir when it is ambiguous since Elixir v1.4
+        {Credo.Check.Warning.NameRedeclarationByAssignment, false},
+        {Credo.Check.Warning.NameRedeclarationByCase, false},
+        {Credo.Check.Warning.NameRedeclarationByDef, false},
+        {Credo.Check.Warning.NameRedeclarationByFn, false},
+
         {Credo.Check.Warning.OperationOnSameValues},
+        {Credo.Check.Warning.BoolOperationOnSameValues},
         {Credo.Check.Warning.UnusedEnumOperation},
         {Credo.Check.Warning.UnusedKeywordOperation},
         {Credo.Check.Warning.UnusedListOperation},
         {Credo.Check.Warning.UnusedStringOperation},
         {Credo.Check.Warning.UnusedTupleOperation},
         {Credo.Check.Warning.OperationWithConstantResult},
+
+        # Custom checks can be created using `mix credo.gen.check`.
+        #
       ]
     }
   ]

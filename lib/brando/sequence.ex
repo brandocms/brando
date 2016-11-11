@@ -75,6 +75,7 @@ defmodule Brando.Sequence do
   end
 
   @doc false
+  @lint false
   def controller(schema_module, filter \\ nil) do
     quote do
       if unquote(filter) do

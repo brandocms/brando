@@ -10,7 +10,7 @@ defmodule Brando.Field.FileField do
         %{allowed_mimetypes: ["application/pdf"],
           random_filename: true,
           upload_path: Path.join("pdfs", "reports"),
-          size_limit: 10240000,
+          size_limit: 10_240_000,
         }
       }
 
