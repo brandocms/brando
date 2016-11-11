@@ -9,6 +9,7 @@ defmodule Brando.User do
   use Brando.Web, :schema
   use Brando.Field.ImageField
 
+  import Brando.Images.Optimize, only: [optimize: 2]
   import Brando.Gettext
 
   @required_fields ~w(username full_name email password language)a
@@ -109,7 +110,7 @@ defmodule Brando.User do
     |> validate_exclusion(:username, @forbidden_usernames)
     |> validate_confirmation(:password, message: gettext("Passwords must match"))
     |> validate_length(:password, min: 6, too_short: gettext("Password must be at least 6 characters"))
-    |> Brando.Images.Optimize.optimize(:avatar)
+    |> optimize(:avatar)
   end
 
   @doc """
@@ -133,6 +134,7 @@ defmodule Brando.User do
     |> validate_exclusion(:username, @forbidden_usernames)
     |> validate_confirmation(:password, message: gettext("Passwords must match"))
     |> validate_length(:password, min: 6, too_short: gettext("Password must be at least 6 characters"))
+    |> optimize(:avatar)
   end
 
   @doc """
