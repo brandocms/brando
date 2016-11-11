@@ -2,7 +2,6 @@ defmodule Brando.Images.Utils do
   @moduledoc """
   General utilities pertaining to the Images module
   """
-
   import Brando.Utils
   import Brando.Gettext
   import Ecto.Query, only: [from: 2]
