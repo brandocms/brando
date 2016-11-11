@@ -4,7 +4,7 @@ defmodule Brando.Images.Optimize do
 
   ## Configuration
 
-  This requires you to have `pngquant`/`cjpeg` installed.
+  This requires you to have `pngquant`/`jpegtran` installed.
 
   Usually you would want to add this to your `config/prod.exs`:
 
@@ -15,8 +15,8 @@ defmodule Brando.Images.Optimize do
             args: "--speed 1 --force --output %{new_filename} -- %{filename}"
           ],
           jpeg: [
-            bin: "/usr/local/bin/cjpeg",
-            args: "-quality 90 %{filename} > %{new_filename}"
+            bin: "/usr/local/bin/jpegtran",
+            args: "-copy none -optimize -progressive -outfile %{new_filename} %{filename}"
           ]
         ]
 
@@ -27,22 +27,20 @@ defmodule Brando.Images.Optimize do
 
   When uploading images through modules (Image, ImageSeries etc) this gets called automatically.
 
-  If you have a `Brando.ImageField`, you must call `optimize/3` in your context after inserting
-  to the database.
+  If you have a `Brando.ImageField`, you must call `optimize/3` in your changeset function
 
-      defmodule MyApp.Users do
-        alias MyApp.User
-        def create(params) do
-          user =
-            params
-            |> User.changeset()
-            |> Repo.insert!
+      import Brando.Images.Optimize, only: [optimize: 2]
 
-          optimize(user, :avatar)
-        end
+      def changeset(schema, :create, params) do
+        schema
+        |> cast(params, @required_fields ++ @optional_fields)
+        |> optimize(:avatar)
       end
 
   """
+  require Logger
+  alias Ecto.Changeset
+  import Brando.Images.Utils, only: [image_type: 1, media_path: 1, optimized_filename: 1]
 
   @doc """
   Optimize `img`
@@ -50,95 +48,115 @@ defmodule Brando.Images.Optimize do
   Checks image for `optimized` flag, gets the image type and sends off
   to `do_optimize`.
   """
+  @spec optimize(Ecto.Changeset.t, :atom | String.t) :: Ecto.Changeset.t
   def optimize(%Ecto.Changeset{} = changeset, field_name) do
-    case Ecto.Changeset.get_change(changeset, field_name, nil) do
-      nil ->
-        changeset
-      record ->
-        optimize(record, field_name)
-        changeset
-    end
-  end
-  def optimize(record, field_name) do
-    optimize(record, field_name, Map.get(record, field_name))
-  end
-  def optimize(record, field_name, %Brando.Type.Image{optimized: false} = img_field) do
     field_name_atom = is_binary(field_name) && String.to_atom(field_name) || field_name
-    if Map.get(record, field_name_atom).optimized == true do
-      {:ok, img_field}
+
+    with {:ok, img_field} <- check_field_has_changed(changeset, field_name),
+         {:ok, _}         <- check_changeset_has_no_errors(changeset),
+         {:ok, type}      <- check_valid_image_type(img_field),
+         {:ok, cfg}       <- check_image_type_has_config(type)
+    do
+      do_optimize({cfg, changeset, field_name_atom, img_field})
     else
-      type = Brando.Images.Utils.image_type(img_field.path)
-      case type do
-        :jpeg -> do_optimize({:jpeg, img_field, field_name_atom, record})
-        :png  -> do_optimize({:png, img_field, field_name_atom, record})
-        _     -> {:ok, img_field}
-      end
+      _ ->
+        changeset
     end
   end
 
-  def optimize(_, _, %Brando.Type.Image{optimized: true} = img_field) do
-    {:ok, img_field}
+  defp check_image_type_has_config(type) do
+    Brando.Images
+    |> Brando.config
+    |> Keyword.get(:optimize, [])
+    |> Keyword.get(type)
+    |> case do
+      nil -> {:no_config, type}
+      cfg -> {:ok, cfg}
+    end
+  end
+
+  defp check_valid_image_type(img_field) do
+    case image_type(img_field.path) do
+      :jpeg -> {:ok, :jpeg}
+      :png  -> {:ok, :png}
+      type  -> {:not_valid, type}
+    end
+  end
+
+  defp check_field_has_changed(changeset, field_name) do
+    case Changeset.get_change(changeset, field_name, nil) do
+      nil       -> {:no_change, changeset}
+      img_field -> {:ok, img_field}
+    end
+  end
+
+  defp check_changeset_has_no_errors(%Ecto.Changeset{errors: []} = changeset) do
+    {:ok, changeset}
+  end
+
+  defp check_changeset_has_no_errors(%Ecto.Changeset{} = changeset) do
+    {:has_errors, changeset}
   end
 
   defp do_optimize(params) do
-    #Task.start_link fn ->
-      params
-      |> run_optimization()
-      |> set_optimized_flag()
-      |> store()
-    #end
+    params
+    |> run_optimizations()
+    |> set_optimized_flag()
   end
 
-  defp run_optimization({type, img_field, field_name, record}) do
-    require Logger
-    cfg =
-      Brando.Images
-      |> Brando.config
-      |> Keyword.get(:optimize, [])
-      |> Keyword.get(type)
+  defp run_optimizations({cfg, changeset, field_name, img_field}) do
+    Enum.map(img_field.sizes, &(Task.async(fn ->
+      args = interpolate_and_split_args(elem(&1, 1), cfg[:args])
+      execute_command(cfg[:bin], args)
+    end)))
+    |> Enum.map(&Task.await/1)
+    |> Enum.filter(&(&1 != :ok))
+    |> case do
+      [] -> {:ok, {cfg, changeset, field_name, img_field}}
+      _  -> {:error, {cfg, changeset, field_name, img_field}}
+    end
+  end
 
-    if cfg do
-      Enum.map(img_field.sizes, &(Task.async(fn ->
-        args = interpolate_and_split_args(elem(&1, 1), cfg[:args])
-        System.cmd(cfg[:bin], args)
-      end))) |> Enum.map(&Task.await/1)
-
-      {:ok, {type, img_field, field_name, record}}
-    else
-      {:error, {type, img_field, field_name, record}}
+  defp execute_command(bin, args) do
+    case System.cmd(bin, args) do
+      {_, 0}            ->
+        :ok
+      {msg, error_code} ->
+        Logger.error("""
+          ==> optimize failed:
+          bin..: #{bin}
+          args.: #{inspect args}
+          msg..: #{inspect msg}
+          code.: #{inspect error_code}
+        """)
+        :error
     end
   end
 
   defp interpolate_and_split_args(file, args) do
     filename =
       file
-      |> Brando.Images.Utils.media_path
+      |> media_path
       |> String.replace(" ", "\\ ")
 
-    newfile =
+    new_filename =
       file
-      |> Brando.Images.Utils.optimized_filename
-      |> Brando.Images.Utils.media_path
+      |> optimized_filename
+      |> media_path
       |> String.replace(" ", "\\ ")
 
     args
     |> String.replace("%{filename}", filename)
-    |> String.replace("%{new_filename}", newfile)
+    |> String.replace("%{new_filename}", new_filename)
     |> String.split(" ")
   end
 
-  defp set_optimized_flag({:ok, {type, img_field, field_name, record}}) do
+  defp set_optimized_flag({:ok, {_, changeset, field_name, img_field}}) do
     img_field = Map.put(img_field, :optimized, true)
-    {type, img_field, field_name, record}
+    Changeset.put_change(changeset, field_name, img_field)
   end
 
-  defp set_optimized_flag({:error, params}) do
-    params
-  end
-
-  defp store({_, img_field, field_name, record}) do
-    record
-    |> Ecto.Changeset.cast(Map.put(%{}, field_name, img_field), [field_name])
-    |> Brando.repo.update!
+  defp set_optimized_flag({:error, {_, changeset, _, _}}) do
+    changeset
   end
 end
