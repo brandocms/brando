@@ -34,11 +34,7 @@ defmodule Brando.Image.OptimizeTest do
       |> Brando.repo.all
       |> List.first
 
-    #{:ok, task_pid} = optimize(image, :image)
     optimize(image, :image)
-    #ref = Process.monitor(task_pid)
-    #assert_receive {:DOWN, ^ref, :process, _, :normal}, 5000
-
     optimized_image = Brando.repo.get(Image, image.id)
 
     assert optimized_image.image.optimized
@@ -59,10 +55,7 @@ defmodule Brando.Image.OptimizeTest do
       |> Brando.repo.all
       |> List.first
 
-    #{:ok, task_pid} = optimize(image, :image)
     optimize(image, :image)
-    #ref = Process.monitor(task_pid)
-    #assert_receive {:DOWN, ^ref, :process, _, :normal}, 5000
 
     optimized_image = Brando.repo.get(Image, image.id)
     refute optimized_image.image.optimized
