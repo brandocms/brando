@@ -3,8 +3,9 @@ defmodule <%= module %> do
 <%= if villain_fields != [] do %>  use Brando.Villain, :schema<% end %>
 <%= if sequenced do %>  use Brando.Sequence, :schema<% end %>
 <%= if img_fields != [] do %>  use Brando.Field.ImageField
-<% end %>
+  import Brando.Images.Optimize, only: [optimize: 2]<% end %>
   import <%= base %>.Backend.Gettext
+
   schema <%= inspect plural %> do
 <%= for schema_field <- schema_fields do %>    <%= schema_field %>
 <% end %><%= for {k, _, m} <- assocs do %>    belongs_to <%= inspect k %>, <%= m %>
@@ -43,7 +44,8 @@ defmodule <%= module %> do
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)<%= if villain_fields != [] do %>
     |> generate_html()<% end %><%= if img_fields != [] do %>
-    |> cleanup_old_images()<% end %>
+    |> cleanup_old_images()<%= for {v, k} <- img_fields do %>
+    |> optimize(<%= inspect k %>)<% end %><% end %>
   end
 
   def delete(record) do
