@@ -7,7 +7,11 @@ defmodule Brando.Admin.ImageSeriesView do
   alias Brando.ImageSeriesForm
   import Brando.Gettext
 
-  def render("upload_post.json", _assigns) do
+  def render("upload_post.json", %{status: 200}) do
     %{status: "200"}
+  end
+
+  def render("upload_post.json", %{status: 400, error_msg: error_msg}) do
+    error_msg
   end
 end

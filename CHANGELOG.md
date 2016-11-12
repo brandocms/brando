@@ -1,5 +1,17 @@
 ## v0.37.0-dev (2016-XX-XX)
 * Backwards incompatible changes
+  * `Brando.Plugs.Uploads` is deprecated. It is more explicit now, where we specify the field
+    and what kind of upload it is in your changeset function.
+    In your schema with ImageField or FileField, add to your changeset functions
+    ```elixir
+    def changeset(schema, :create, params) do
+      schema
+      |> cast(params, @required_fields ++ @optional_fields)
+      |> validate_required(@required_fields)
+      |> validate_upload({:image, :avatar})
+      |> optimize(:avatar)
+    end
+    ```
   * Changes to PopupForm. Must now be registered with an atom, so:
     ```elixir
     Brando.PopupForm.Registry.register(:accounts, "client", MyApp.ClientForm,
@@ -22,6 +34,7 @@
         // here you'd insert the returned fields into a select or something similar.
         console.log(`${fields.id} --> ${fields.username}`);
     }
+
   * Clean up `brunch-config.js`. If you choose to do this:
     * Remove everything in `paths.watched` except for `// static` + the following 2 lines.
     * Remove `conventions.vendor` key.
@@ -32,6 +45,7 @@
         brando_villain: ['priv/static/css/villain.css'],
       }
     ```
+
   * Brando now uses `Guardian` for auth. This means some changes in your `router.ex`:
     ```diff
       pipeline :admin do

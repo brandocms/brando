@@ -4,7 +4,7 @@ defmodule Mix.Brando do
 
   @valid_attributes [:integer, :float, :decimal, :boolean, :map, :string,
                      :image, :villain, :array, :references, :text, :date,
-                     :time, :datetime, :uuid]
+                     :file, :time, :datetime, :uuid]
 
   @doc """
   Copies files from source dir to target dir

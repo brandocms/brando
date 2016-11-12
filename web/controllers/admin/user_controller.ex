@@ -6,7 +6,6 @@ defmodule Brando.Admin.UserController do
   alias Brando.{User, Users}
   import Brando.Plug.Authorize
   import Brando.Plug.HTML
-  import Brando.Plug.Uploads
   import Brando.Gettext
   import Brando.HTML.Inspect, only: [schema_name: 2, schema_repr: 1]
   import Brando.Utils, only: [helpers: 1, current_user: 1]
@@ -14,10 +13,7 @@ defmodule Brando.Admin.UserController do
 
   plug :put_section, "users"
   plug :scrub_params, "user" when action in [:create, :update]
-  plug :check_for_uploads,
-       {"user", Brando.User} when action in [:create, :profile_update, :update]
-  plug :authorize,
-       :superuser when action in [:new, :create, :delete, :edit, :update]
+  plug :authorize, :superuser when action in [:new, :create, :delete, :edit, :update]
 
   @doc false
   def index(conn, _params) do

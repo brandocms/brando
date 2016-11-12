@@ -27,6 +27,6 @@ defmodule Brando.Images.Field.ImageFieldTest do
   end
 
   test "use works" do
-    assert Brando.Images.Field.ImageFieldTest.TestSchema.get_image_cfg(:avatar) == TestSchema.cfg
+    assert Brando.Images.Field.ImageFieldTest.TestSchema.get_image_cfg(:avatar) == {:ok, TestSchema.cfg}
   end
 end
