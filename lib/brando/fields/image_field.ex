@@ -24,12 +24,14 @@ defmodule Brando.Field.ImageField do
 
   """
   import Brando.Images.Upload
+  import Brando.Upload
 
   defmacro __using__(_) do
     quote do
       Module.register_attribute(__MODULE__, :imagefields, accumulate: true)
       import Brando.Images.Upload
       import Brando.Images.Utils
+      import Brando.Upload
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
 
@@ -147,7 +149,12 @@ defmodule Brando.Field.ImageField do
 
   """
   def handle_upload_and_defer({name, plug}, cfg_fun) do
-    {:ok, image_field} = do_upload(plug, cfg_fun.(String.to_atom(name)))
-    {name, image_field}
+    with {:ok, upload} <- process_upload(plug, cfg_fun.(String.to_atom(name))),
+         {:ok, field}  <- create_image_struct(upload)
+    do
+      {name, field}
+    else
+      err -> handle_upload_error(err)
+    end
   end
 end

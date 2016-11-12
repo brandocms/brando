@@ -116,9 +116,8 @@ defmodule Brando.Images.Utils do
   @doc """
   Creates sized images.
   """
-  @spec create_image_sizes({map | Plug.Upload.t, Brando.Type.ImageConfig.t})
-                           :: {:ok, Brando.Type.Image.t}
-  def create_image_sizes({%{uploaded_file: file}, cfg}) do
+  @spec create_image_sizes(Brando.Upload.t) :: {:ok, Brando.Type.Image.t}
+  def create_image_sizes(%{plug: %{uploaded_file: file}, cfg: cfg}) do
     type                  = image_type(file)
     {file_path, filename} = split_path(file)
     upload_path           = Map.get(cfg, :upload_path)
@@ -223,7 +222,7 @@ defmodule Brando.Images.Utils do
     delete_sized_images(img.image)
 
     {:ok, new_image} =
-      {%{uploaded_file: full_path}, img.image_series.cfg}
+      %{plug: %{uploaded_file: full_path}, cfg: img.image_series.cfg}
       |> create_image_sizes
 
     image = Map.put(img.image, :sizes, new_image.sizes)

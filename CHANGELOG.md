@@ -1,5 +1,9 @@
 ## v0.37.0-dev (2016-XX-XX)
 * Backwards incompatible changes
+  * `use Brando.Images.Upload` & `use Brando.Files.Upload` must be replaced by:
+    `use Brando.Upload, process_fn: &Brando.Images.Upload.create_image_struct/1` or
+    `use Brando.Upload, process_fn: &Brando.Files.Upload.create_file_struct/1`.
+
   * Changes to PopupForm. Must now be registered with an atom, so:
     ```elixir
     Brando.PopupForm.Registry.register(:accounts, "client", MyApp.ClientForm,
@@ -22,6 +26,7 @@
         // here you'd insert the returned fields into a select or something similar.
         console.log(`${fields.id} --> ${fields.username}`);
     }
+
   * Clean up `brunch-config.js`. If you choose to do this:
     * Remove everything in `paths.watched` except for `// static` + the following 2 lines.
     * Remove `conventions.vendor` key.
@@ -32,6 +37,7 @@
         brando_villain: ['priv/static/css/villain.css'],
       }
     ```
+
   * Brando now uses `Guardian` for auth. This means some changes in your `router.ex`:
     ```diff
       pipeline :admin do

@@ -8,7 +8,7 @@ defmodule Brando.Image do
 
   use Brando.Web, :schema
   use Brando.Sequence, :schema
-  use Brando.Images.Upload
+  use Brando.Upload, process_fn: &Brando.Images.Upload.create_image_struct/1
 
   import Brando.Gettext
   import Brando.Utils.Schema, only: [put_creator: 2]

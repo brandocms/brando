@@ -16,12 +16,14 @@ defmodule Brando.Field.FileField do
 
   """
   import Brando.Files.Upload
+  import Brando.Upload
 
   defmacro __using__(_) do
     quote do
       Module.register_attribute(__MODULE__, :filefields, accumulate: true)
       import Brando.Files.Upload
       import Brando.Files.Utils
+      import Brando.Upload
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
 
@@ -127,7 +129,12 @@ defmodule Brando.Field.FileField do
 
   """
   def handle_upload_and_defer({name, plug}, cfg_fun) do
-    {:ok, file_field} = do_upload(plug, cfg_fun.(String.to_atom(name)))
-    {name, file_field}
+    with {:ok, upload} <- process_upload(plug, cfg_fun.(String.to_atom(name))),
+         {:ok, field}  <- create_file_struct(upload)
+    do
+      {name, field}
+    else
+      err -> handle_upload_error(err)
+    end
   end
 end
