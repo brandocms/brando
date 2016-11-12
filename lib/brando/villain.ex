@@ -62,6 +62,7 @@ defmodule Brando.Villain do
       villain_routes MyController
 
   """
+  import Brando.Utils, only: [img_url: 2, media_url: 1]
 
   @doc false
   @lint false
@@ -348,17 +349,18 @@ defmodule Brando.Villain do
   end
 
   def map_images(images) do
-    Enum.map(images, fn image ->
-      sizes = Enum.map(image.image.sizes, fn({k, v}) -> {k, Brando.Utils.media_url(v)} end)
-      sizes = Enum.into(sizes, %{})
+    Enum.map(images, fn image_record ->
+      img_field = image_record.image
+      sizes =
+        img_field.sizes
+        |> Enum.map(&({elem(&1, 0), media_url(elem(&1, 1))}))
+        |> Enum.into(%{})
 
-      %{
-        src:   Brando.Utils.media_url(image.image.path),
-        thumb: Brando.Utils.media_url(Brando.Utils.img_url(image.image, :thumb)),
+      %{src: media_url(img_field.path),
+        thumb: media_url(img_url(img_field, :thumb)),
         sizes: sizes,
-        title: image.image.title,
-        credits: image.image.credits
-      }
+        title: img_field.title,
+        credits: img_field.credits}
     end)
   end
 end
