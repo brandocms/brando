@@ -66,6 +66,9 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
     img_fields = attrs
                  |> Enum.map(fn({k, v}) -> {v, k} end)
                  |> Enum.filter(fn({k, _}) -> k == :image end)
+    file_fields = attrs
+                 |> Enum.map(fn({k, v}) -> {v, k} end)
+                 |> Enum.filter(fn({k, _}) -> k == :file end)
 
     villain_fields = attrs
                      |> Enum.map(fn({k, v}) -> {v, k} end)
@@ -98,8 +101,8 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
       end)
 
     binding = binding ++
-              [attrs: attrs, img_fields: img_fields, plural: plural,
-               types: types, villain_fields: villain_fields,
+              [attrs: attrs, img_fields: img_fields, file_fields: file_fields,
+               plural: plural, types: types, villain_fields: villain_fields,
                sequenced: sequenced?,
                migrations: migrations, schema_fields: schema_fields,
                assocs: assocs(assocs), indexes: indexes(plural, assocs),
@@ -120,6 +123,9 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
   end
 
   def migration_type({k, :image}) do
+    {k, :text}
+  end
+  def migration_type({k, :file}) do
     {k, :text}
   end
   def migration_type({k, :status}) do
@@ -177,6 +183,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
   defp value_to_type(:datetime), do: :naive_datetime
   defp value_to_type(:status), do: Brando.Type.Status
   defp value_to_type(:image), do: Brando.Type.Image
+  defp value_to_type(:file), do: Brando.Type.File
   defp value_to_type(:villain), do: :villain
   defp value_to_type(v) do
     if Code.ensure_loaded?(Ecto.Type) and not Ecto.Type.primitive?(v) do

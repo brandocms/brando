@@ -22,7 +22,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       send self(), {:mix_shell_input, :prompt, "pirates"}
       send self(), {:mix_shell_input, :prompt,
         "name age:integer height:decimal nicks:array:text famous:boolean born_at:datetime " <>
-        "secret:uuid photo:image data:villain first_login:date " <>
+        "secret:uuid photo:image pdf:file data:villain first_login:date " <>
         "alarm:time address:references creator:references"}
       send self(), {:mix_shell_input, :yes?, true}
       # and another one
@@ -41,13 +41,14 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "defmodule Brando.Pirate do"
         assert file =~ "schema \"pirates\" do"
         assert file =~ "field :photo, Brando.Type.Image"
+        assert file =~ "field :pdf, Brando.Type.File"
         assert file =~ "singular: \"pirate\""
         assert file =~ "plural: \"pirates\""
         assert file =~ "born_at: gettext(\"Born at\")"
         assert file =~ "@required_fields ~w(name age height nicks famous " <>
                        "born_at secret data first_login " <>
                        "alarm creator_id address_id)"
-        assert file =~ "@optional_fields ~w(photo)"
+        assert file =~ "@optional_fields ~w(photo pdf)"
         assert file =~ "use Brando.Sequence, :schema"
         assert file =~ "sequenced"
         assert file =~ "villain"

@@ -220,7 +220,7 @@ defmodule Brando.HTML do
         maxFilesize: 10,
         thumbnailHeight: 150,
         thumbnailWidth: 150,
-        dictDefaultMessage: '<i class="fa fa-upload fa-4x"></i><br>' +
+        dictDefaultMessage: '<i class="fa fa-cloud fa-4x"></i><br>' +
                             'Trykk eller slipp bilder her for å laste opp'
       };
     </script>
@@ -476,7 +476,7 @@ defmodule Brando.HTML do
   end
 
   defp get_srcset(image_field, {mod, field}, opts) do
-    cfg = apply(mod, :get_image_cfg, [field])
+    {:ok, cfg} = apply(mod, :get_image_cfg, [field])
     if !cfg.srcset do
       raise ArgumentError, message: "no `:srcset` key set in #{inspect mod}'s #{inspect field} image config"
     end

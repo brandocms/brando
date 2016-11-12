@@ -101,6 +101,7 @@ defmodule Brando.HTMLTest do
   test "truncate" do
     assert truncate("hello", 7) == "hello"
     assert truncate("hello", 2) == "hel..."
+    assert truncate(5, 5) == 5
   end
 
   test "meta_tag" do
