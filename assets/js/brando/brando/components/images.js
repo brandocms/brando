@@ -119,6 +119,8 @@ class Images {
         $.each(data.attrs, (attr, val) => {
           $img.attr(`data-${attr}`, val);
         });
+      } else {
+        vex.dialog.alert(data.error_msg);
       }
     }));
   }

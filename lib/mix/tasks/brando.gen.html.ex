@@ -30,7 +30,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     -----------------------
 
     """
-    domain = Mix.shell.prompt("+ Enter domain name (e.g. Blog, Accounts, News)")
+    domain = Mix.shell.prompt("+ Enter domain name (e.g. Blog, Accounts, News)") |> String.trim("\n")
     Mix.shell.info """
     == Creating domain for #{domain}
     """
@@ -60,11 +60,11 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
   defp create_schema(domain_name, domain_header \\ "", domain_code \\ "", instructions \\ "") do
     Mix.shell.info """
-    == Creating schema for #{domain_name}
+    == Schema for #{domain_name}
     """
-    singular = Mix.shell.prompt("+ Enter schema name (e.g. Post)")
-    plural   = Mix.shell.prompt("+ Enter plural name (e.g. posts)")
-    attrs    = Mix.shell.prompt("+ Enter schema fields (e.g. name:string avatar:image data:villain)")
+    singular = Mix.shell.prompt("+ Enter schema name (e.g. Post)") |> String.trim("\n")
+    plural   = Mix.shell.prompt("+ Enter plural name (e.g. posts)") |> String.trim("\n")
+    attrs    = Mix.shell.prompt("+ Enter schema fields (e.g. name:string avatar:image data:villain)") |> String.trim("\n")
 
     require Logger
 

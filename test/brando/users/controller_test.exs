@@ -87,10 +87,11 @@ defmodule Brando.Users.ControllerTest do
 
   test "create (post) w/params" do
     user = Factory.build(:user)
+    up   = Factory.build(:plug_upload)
 
     conn =
       :post
-      |> call("/admin/users/", %{"user" => Map.delete(user, :__struct__)})
+      |> call("/admin/users/", %{"user" => user |> Map.put(:avatar, up) |> Map.delete(:__struct__)})
       |> with_user
       |> send_request
 
@@ -100,10 +101,11 @@ defmodule Brando.Users.ControllerTest do
 
   test "create (post) w/erroneus params" do
     user = Factory.insert(:user)
+    up   = Factory.build(:plug_upload)
 
     conn =
       :post
-      |> call("/admin/users/", %{"user" => Map.delete(user, :__struct__)})
+      |> call("/admin/users/", %{"user" => user |> Map.put(:avatar, up) |> Map.delete(:__struct__)})
       |> with_user
       |> send_request
 

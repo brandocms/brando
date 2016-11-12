@@ -23,29 +23,20 @@ defmodule Brando.Field.ImageField do
       }
 
   """
+  import Ecto.Changeset
   import Brando.Images.Upload
+  import Brando.Upload
+  import Brando.Upload.Utils
 
   defmacro __using__(_) do
     quote do
       Module.register_attribute(__MODULE__, :imagefields, accumulate: true)
+      import Ecto.Changeset
       import Brando.Images.Upload
       import Brando.Images.Utils
+      import Brando.Upload
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
-
-      @doc """
-      Checks `params` for Plug.Upload fields and passes them on to
-      `handle_upload` to check if we have a handler for the field.
-      Returns {:ok, schema} or raises
-      """
-      def check_for_uploads(schema, params) do
-        uploads = params
-        |> filter_plugs
-        |> Enum.reduce([], fn (plug, acc) ->
-            [handle_upload_and_defer(plug, &__MODULE__.get_image_cfg/1)|acc]
-          end)
-        {:ok, uploads}
-      end
 
       @doc """
       Cleans up old images on update
@@ -54,10 +45,30 @@ defmodule Brando.Field.ImageField do
         imagefield_keys = Keyword.keys(__imagefields__())
         for key <- Map.keys(changeset.changes) do
           if key in imagefield_keys do
-            Brando.Images.Utils.delete_original_and_sized_images(changeset.data, key)
+            delete_original_and_sized_images(changeset.data, key)
           end
         end
         changeset
+      end
+
+      @doc """
+      Validates upload in changeset
+      """
+      def validate_upload(changeset, {:image, field_name}) do
+        with {:ok, plug}          <- field_has_changed(changeset, field_name),
+             {:ok, _}             <- changeset_has_no_errors(changeset),
+             {:ok, cfg}           <- get_image_cfg(field_name),
+             {:ok, {name, field}} <- handle_image_upload(field_name, plug, cfg)
+        do
+          put_change(changeset, name, field)
+        else
+          :unchanged ->
+            changeset
+          :has_errors ->
+            changeset
+          {:error, {name, {:error, error_msg}}} ->
+            add_error(changeset, name, error_msg)
+        end
       end
     end
   end
@@ -89,7 +100,7 @@ defmodule Brando.Field.ImageField do
       Get `field_name`'s image field configuration
       """
       def get_image_cfg(field_name) when field_name == unquote(name), do:
-        unquote(escaped_contents)
+        {:ok, unquote(escaped_contents)}
     end
   end
 
@@ -142,12 +153,19 @@ defmodule Brando.Field.ImageField do
 
   ## Parameters
 
+    * `name`: the field we are operating on.
     * `plug`: a Plug.Upload struct.
     * `cfg`: the field's cfg from has_image_field
-
   """
-  def handle_upload_and_defer({name, plug}, cfg_fun) do
-    {:ok, image_field} = do_upload(plug, cfg_fun.(String.to_atom(name)))
-    {name, image_field}
+  @spec handle_image_upload(atom, Plug.Upload.t, Brando.Type.ImageConfig.t) ::
+        {:ok, {atom, Brando.Type.Image}} | {:error, {atom, {:error, String.t}}}
+  def handle_image_upload(name, plug, cfg) do
+    with {:ok, upload} <- process_upload(plug, cfg),
+         {:ok, field}  <- create_image_struct(upload)
+    do
+      {:ok, {name, field}}
+    else
+      err -> {:error, {name, handle_upload_error(err)}}
+    end
   end
 end

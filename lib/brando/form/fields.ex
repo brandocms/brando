@@ -728,8 +728,12 @@ defmodule Brando.Form.Fields do
     gettext("should be at least %{count} characters", count: len)
   def parse_error({"should be at least %{count} characters", [count: len]}), do:
     gettext("should be at least %{count} characters", count: len)
+  def parse_error({error_msg, _}), do:
+    error_msg
+  def parse_error(error) when is_binary(error), do:
+    error
   def parse_error(error), do:
-    is_binary(error) && error || inspect(error)
+    inspect(error)
 
   def fieldset_open_tag(nil, _in_fieldset), do:
     ~s(<fieldset><div class="form-row">)

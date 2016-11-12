@@ -42,7 +42,7 @@ defmodule <%= admin_module %>Controller do
   end
 
   def show(conn, %{"id" => id}) do
-    <%= singular %> = <%= domain %>.get_<%= inspect singular %>_by!(id: id)
+    <%= singular %> = <%= domain %>.get_<%= singular %>_by!(id: id)
 
     conn
     |> assign(:page_title, gettext("Show <%= Phoenix.Naming.humanize(singular) %>"))
@@ -50,7 +50,7 @@ defmodule <%= admin_module %>Controller do
   end
 
   def edit(conn, %{"id" => id}) do
-    <%= singular %> = <%= domain %>.get_<%= inspect singular %>_by!(id: id)
+    <%= singular %> = <%= domain %>.get_<%= singular %>_by!(id: id)
     changeset = <%= alias %>.changeset(<%= singular %>)
 
     conn
