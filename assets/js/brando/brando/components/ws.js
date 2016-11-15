@@ -7,8 +7,10 @@ import { vex } from './vex_brando';
 class WS {
   static setup() {
     const that = this;
-    const userToken = document.querySelector('meta[name="channel_token"]')
-      .getAttribute('content');
+    if (document.querySelector('meta[name="channel_token"]') == null) {
+      return;
+    }
+    const userToken = document.querySelector('meta[name="channel_token"]').getAttribute('content');
     const socket = new Socket('/admin/ws', {
       params: {
         token: userToken,

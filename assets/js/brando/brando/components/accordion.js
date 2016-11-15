@@ -2,7 +2,6 @@ import $ from 'jquery';
 
 class Accordion {
   static setup() {
-    const that = this;
     $(document).ready(() => {
       const hash = document.location.hash;
       $('.accordion-tabs-minimal').each(() => {
@@ -13,13 +12,13 @@ class Accordion {
           $linkSibling.addClass('is-open').show();
         } else {
           const $link = $(`#tab-${hash.replace('#', '')}`);
-          that.activateTab($link);
+          Accordion.activateTab($link);
         }
       });
 
       $('.accordion-tabs-minimal').on('click', '.tab-link', (event) => {
         event.preventDefault();
-        that.activateTab(event.currentTarget);
+        Accordion.activateTab(event.currentTarget);
       });
     });
   }

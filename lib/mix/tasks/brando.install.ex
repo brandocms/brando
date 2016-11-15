@@ -70,12 +70,11 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/dockerignore", ".dockerignore"},
     {:copy, "templates/brando.install/Dockerfile", "Dockerfile"},
     {:eex,  "templates/brando.install/fabfile.py", "fabfile.py"},
-    {:copy, "templates/brando.install/compile", "compile"},
 
     # Frontend JS
     {:copy, "templates/brando.install/web/static/js/app/app.js", "web/static/js/app.js"},
     {:copy, "templates/brando.install/web/static/js/app/flexslider.js", "web/static/js/flexslider.js"},
-    {:copy, "templates/brando.install/web/static/js/admin/custom.js", "web/static/js/admin/custom.js"},
+    {:copy, "templates/brando.install/web/static/js/admin/index.js", "web/static/js/admin/index.js"},
 
     # Frontend SCSS
     {:copy, "templates/brando.install/web/static/css/app.scss", "web/static/css/app.scss"},
@@ -97,7 +96,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/static/brando/fonts/fontawesome-webfont.woff", "web/static/assets/fonts/fontawesome-webfont.woff"},
     {:copy, "templates/brando.install/static/brando/fonts/fontawesome-webfont.woff2", "web/static/assets/fonts/fontawesome-webfont.woff2"},
     {:copy, "templates/brando.install/static/brando/fonts/FontAwesome.otf", "web/static/assets/fonts/FontAwesome.otf"},
-    
+
     # Images
     {:copy, "templates/brando.install/static/brando/images/blank.gif", "web/static/assets/images/brando/blank.gif"},
     {:copy, "templates/brando.install/static/brando/images/flags.png", "web/static/assets/images/brando/flags.png"},

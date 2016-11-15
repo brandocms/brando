@@ -1,7 +1,7 @@
-import $        from 'jquery';
+import $ from 'jquery';
+import Chart from 'chart.js';
 import Dropzone from 'dropzone';
-import Chart    from 'chart.js';
-import i18n     from 'i18next';
+import i18n from 'i18next';
 
 import './brando/extensions/datepicker';
 import './brando/extensions/dropdown';
@@ -11,6 +11,7 @@ import './brando/extensions/tablesaw';
 import './brando/extensions/tags_input';
 
 import Accordion from './brando/components/accordion';
+import Auth from './brando/components/auth';
 import Autoslug from './brando/components/autoslug';
 import brando from './brando/components/brando';
 import DatePicker from './brando/components/datepicker';
@@ -69,6 +70,9 @@ $(() => {
     case 'pages-index':
       Pages.setup();
       break;
+    case 'auth':
+      Auth.setup();
+      break;
   }
 
   /**
@@ -96,7 +100,6 @@ export {
   PopupForm,
   Sortable,
   Utils,
-
   brando,
   bI18n,
   vex,
