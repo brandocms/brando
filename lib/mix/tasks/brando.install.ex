@@ -74,7 +74,7 @@ defmodule Mix.Tasks.Brando.Install do
     # Frontend JS
     {:copy, "templates/brando.install/assets/js/app/app.js", "assets/js/app.js"},
     {:copy, "templates/brando.install/assets/js/app/flexslider.js", "assets/js/flexslider.js"},
-    {:copy, "templates/brando.install/assets/js/admin/custom.js", "assets/js/admin/custom.js"},
+    {:copy, "templates/brando.install/assets/js/admin/index.js", "assets/js/admin/index.js"},
 
     # Frontend SCSS
     {:copy, "templates/brando.install/assets/css/app.scss", "assets/css/app.scss"},
@@ -87,23 +87,23 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/assets/css/includes/_nav.scss", "assets/css/includes/_nav.scss"},
 
     # Icons
-    {:copy, "templates/brando.install/static/brando/favicon.ico", "assets/static/favicon.ico"},
+    {:copy, "templates/brando.install/assets/static/brando/favicon.ico", "assets/static/favicon.ico"},
 
     # Webfonts - icons
-    {:copy, "templates/brando.install/static/brando/fonts/fontawesome-webfont.eot", "assets/static/fonts/fontawesome-webfont.eot"},
-    {:copy, "templates/brando.install/static/brando/fonts/fontawesome-webfont.svg", "assets/static/fonts/fontawesome-webfont.svg"},
-    {:copy, "templates/brando.install/static/brando/fonts/fontawesome-webfont.ttf", "assets/static/fonts/fontawesome-webfont.ttf"},
-    {:copy, "templates/brando.install/static/brando/fonts/fontawesome-webfont.woff", "assets/static/fonts/fontawesome-webfont.woff"},
-    {:copy, "templates/brando.install/static/brando/fonts/fontawesome-webfont.woff2", "assets/static/fonts/fontawesome-webfont.woff2"},
-    {:copy, "templates/brando.install/static/brando/fonts/FontAwesome.otf", "assets/static/fonts/FontAwesome.otf"},
+    {:copy, "templates/brando.install/assets/static/brando/fonts/fontawesome-webfont.eot", "assets/static/fonts/fontawesome-webfont.eot"},
+    {:copy, "templates/brando.install/assets/static/brando/fonts/fontawesome-webfont.svg", "assets/static/fonts/fontawesome-webfont.svg"},
+    {:copy, "templates/brando.install/assets/static/brando/fonts/fontawesome-webfont.ttf", "assets/static/fonts/fontawesome-webfont.ttf"},
+    {:copy, "templates/brando.install/assets/static/brando/fonts/fontawesome-webfont.woff", "assets/static/fonts/fontawesome-webfont.woff"},
+    {:copy, "templates/brando.install/assets/static/brando/fonts/fontawesome-webfont.woff2", "assets/static/fonts/fontawesome-webfont.woff2"},
+    {:copy, "templates/brando.install/assets/static/brando/fonts/FontAwesome.otf", "assets/static/fonts/FontAwesome.otf"},
 
     # Images
-    {:copy, "templates/brando.install/static/brando/images/blank.gif", "assets/static/images/brando/blank.gif"},
-    {:copy, "templates/brando.install/static/brando/images/flags.png", "assets/static/images/brando/flags.png"},
-    {:copy, "templates/brando.install/static/brando/images/brando-big.png", "assets/static/images/brando/brando-big.png"},
+    {:copy, "templates/brando.install/assets/static/brando/images/blank.gif", "assets/static/images/brando/blank.gif"},
+    {:copy, "templates/brando.install/assets/static/brando/images/flags.png", "assets/static/images/brando/flags.png"},
+    {:copy, "templates/brando.install/assets/static/brando/images/brando-big.png", "assets/static/images/brando/brando-big.png"},
 
-    {:copy, "templates/brando.install/static/brando/images/defaults/thumb/avatar_default.jpg", "assets/static/images/brando/defaults/thumb/avatar_default.jpg"},
-    {:copy, "templates/brando.install/static/brando/images/defaults/micro/avatar_default.jpg", "assets/static/images/brando/defaults/micro/avatar_default.jpg"},
+    {:copy, "templates/brando.install/assets/static/brando/images/defaults/thumb/avatar_default.jpg", "assets/static/images/brando/defaults/thumb/avatar_default.jpg"},
+    {:copy, "templates/brando.install/assets/static/brando/images/defaults/micro/avatar_default.jpg", "assets/static/images/brando/defaults/micro/avatar_default.jpg"},
   ]
 
   @root Path.expand("../../../priv", __DIR__)
