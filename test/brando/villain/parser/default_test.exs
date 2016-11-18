@@ -3,7 +3,7 @@ defmodule Brando.Villain.ParserTest do
   use Brando.Integration.TestCase
   use Brando.ConnCase
 
-  alias Brando.Image
+  alias Brando.Images
   alias Brando.Factory
 
   import Brando.Villain.Parser.Default
@@ -123,11 +123,11 @@ defmodule Brando.Villain.ParserTest do
     img1
     |> Map.put(:creator_id, user.id)
     |> Map.put(:image_series_id, series.id)
-    |> Image.create(user)
+    |> Images.create_image(user)
 
     img2
     |> Map.put(:creator_id, user.id)
     |> Map.put(:image_series_id, series.id)
-    |> Image.create(user)
+    |> Images.create_image(user)
   end
 end
