@@ -8,12 +8,9 @@ defmodule Brando.Image do
 
   use Brando.Web, :schema
   use Brando.Sequence, :schema
-  use Brando.Images.Upload
 
   import Brando.Gettext
-  import Brando.Utils.Schema, only: [put_creator: 2]
   import Brando.Images.Optimize, only: [optimize: 2]
-  import Brando.Images.Utils
 
   import Ecto.Query, only: [from: 2]
 
@@ -61,65 +58,12 @@ defmodule Brando.Image do
   end
 
   @doc """
-  Create a changeset for the schema by passing `params`.
-  If not valid, return errors from changeset
-  """
-  @spec create(%{binary => term} | %{atom => term}, Brando.User.t) :: {:ok, t} | {:error, Keyword.t}
-  def create(params, user) do
-    %__MODULE__{}
-    |> put_creator(user)
-    |> changeset(:create, params)
-    |> Brando.repo.insert
-  end
-
-  @doc """
-  Create an `update` changeset for the schema by passing `params`.
-  If valid, update schema in Brando.repo.
-  If not valid, return errors from changeset
-  """
-  @spec update(t, %{binary => term} | %{atom => term}) :: {:ok, t} | {:error, Keyword.t}
-  def update(schema, params) do
-    schema
-    |> changeset(:update, params)
-    |> Brando.repo.update
-  end
-
-  @doc """
-  Updates the `schema`'s image JSON field with `title` and `credits`
-  """
-  def update_image_meta(schema, title, credits) do
-    image =
-      schema.image
-      |> Map.put(:title, title)
-      |> Map.put(:credits, credits)
-
-    # TODO: Return changeset instead?
-
-    update(schema, %{"image" => image})
-  end
-
-  @doc """
   Get all images in series `id`.
   """
   def for_series_id(id) do
     from m in __MODULE__,
       where: m.image_series_id == ^id,
       order_by: m.sequence
-  end
-
-  @doc """
-  Delete `record` from database
-
-  Also deletes all dependent image sizes.
-  """
-  def delete(ids) when is_list(ids) do
-    q       = from m in __MODULE__, where: m.id in ^ids
-    records = Brando.repo.all(q)
-
-    for record <- records, do:
-      {:ok, _} = delete_original_and_sized_images(record, :image)
-
-    Brando.repo.delete_all(q)
   end
 
   #
