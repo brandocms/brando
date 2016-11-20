@@ -4,13 +4,13 @@ exports.config = {
   files: {
     javascripts: {
       entryPoints: {
-        'web/static/js/admin/index.js': {
-          'js/brando.js': /^(node_modules|web\/static\/js\/admin)/,
+        'assets/js/admin/index.js': {
+          'js/brando.js': /^(node_modules|assets\/js\/admin)/,
         },
       },
       joinTo: {
         /* Frontend JS application */
-        'js/app.js': /^(web\/static\/js\/app)/,
+        'js/app.js': /^(assets\/js\/app)/,
 
         /* JQuery module */
         'js/jquery.js': 'node_modules/jquery/dist/jquery.js',
@@ -20,7 +20,7 @@ exports.config = {
           'node_modules/phoenix/priv/static/phoenix.js',
           'node_modules/phoenix_html/priv/static/phoenix_html.js',
           'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
-          /^(web\/static\/js\/app\/vendor)/,
+          /^(assets\/js\/app\/vendor)/,
         ],
 
         /* Copy Villain lib */
@@ -34,8 +34,8 @@ exports.config = {
         /* Frontend application-specific CSS/SCSS */
         'css/app.css': [
           'node_modules/bootstrap-sass/assets/stylesheets/_bootstrap.scss',
-          /^(web\/static\/app\/vendor)/,
-          'web/static/css/app.scss',
+          /^(assets\/app\/vendor)/,
+          'assets/css/app.scss',
         ],
 
         /* Backend stylesheets */
@@ -44,7 +44,7 @@ exports.config = {
 
         /* Custom stylesheets for backend, loaded after brando.css */
         'css/brando.custom.css': [
-          'web/static/css/custom/*.scss',
+          'assets/css/custom/*.scss',
         ],
       },
     },
@@ -58,7 +58,7 @@ exports.config = {
     // Which directories to watch
     watched: [
       // static
-      'web/static',
+      'assets',
       'test/static',
     ],
 
@@ -68,10 +68,10 @@ exports.config = {
 
   conventions: {
     // This option sets where we should place non-css and non-js assets in.
-    // By default, we set this to '/web/static/assets'. Files in this directory
+    // By default, we set this to '/assets/static'. Files in this directory
     // will be copied to `paths.public`, which is "priv/static" by default.
     assets: [
-      /^(web\/static\/assets)/,
+      /^(assets\/static)/,
     ],
   },
 
@@ -80,7 +80,7 @@ exports.config = {
     babel: {
       // Do not use ES6 compiler in vendor code
       ignore: [
-        /^(web\/static\/app\/vendor|bower_components|node_modules)/,
+        /^(assets\/app\/vendor|bower_components|node_modules)/,
       ],
     },
     postcss: {
@@ -103,7 +103,7 @@ exports.config = {
       'js/app.js': ['app'],
       'js/brando.js': ['brando', 'admin/index.js'],
     },
-    nameCleaner: function(path) { return path.replace(/^web\/static\/js\//, ''); },
+    nameCleaner: function(path) { return path.replace(/^assets\/js\//, ''); },
   },
 
   npm: {

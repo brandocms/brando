@@ -12,7 +12,7 @@ a {
 
   .fa {
     border-right: 1px dotted rgba(0, 0, 0, 0.09);
-    padding-right: 25px;
+    padding-right: 23px;
   }
 
   &.btn-xs {
@@ -32,6 +32,27 @@ h1 {
   display: inline-block;
 }
 
+.bold {
+  font-weight: 600;
+}
+
+h1, h2 {
+  &:before {
+    content: "\2022 \2022";
+    color: #e8e8e8;
+  }
+}
+
+h1:before {
+  padding-right: 14px;
+  margin-left: -42px;
+}
+
+h2:before {
+  padding-right: 17px;
+  margin-left: -38px;
+}
+
 h4 {
   background-color: #292929;
   color: #fff;
@@ -47,7 +68,8 @@ h4 {
 }
 
 hr {
-  background-color: #ccc;
+  background-color: transparent;
   border: 0;
+  border-bottom: 1px dotted #d4d4d4;
   height: 1px;
 }

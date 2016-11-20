@@ -61,7 +61,7 @@ table {
   }
 }
 
-.table > tbody > tr > td[data-field=status] > .label {
+.table > tbody > tr > td[data-field=status] .label {
   width: 100%;
   display: block;
   text-align: center;
