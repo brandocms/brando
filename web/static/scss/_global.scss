@@ -58,16 +58,18 @@ $global-rounded: 1000px !default;
 // We use this for default spacing
 $global-padding: 1rem !default;
 $global-spacing: rem-calc(15) !default;
+
 ///
 
 // For internal use: a color map
-$foundation-colors: (
-  primary: $primary-color,
-  success: $success-color,
-  warning: $warning-color,
-  alert: $alert-color,
-  dark: $dark-color,
-);
+$foundation-colors: (primary: $primary-color, success: $success-color, warning: $warning-color, alert: $alert-color, dark: $dark-color);
+
+.btn:focus, .btn:active {
+  outline: none;
+  outline-style: none;
+  box-shadow: none;
+  border-color: transparent;
+}
 
 @include exports(global) {
   // Make extra sure we're using the whole window
@@ -75,10 +77,12 @@ $foundation-colors: (
     height: 100%;
     font-size: $base-font-size;
   }
+
   // Set box-sizing globally to handle padding and border widths
   html {
     box-sizing: border-box;
   }
+
   *, *:before, *:after {
     box-sizing: inherit;
   }
@@ -116,7 +120,9 @@ $foundation-colors: (
   .map_canvas {
     img,
     embed,
-    object { max-width: none !important; }
+    object {
+      max-width: none !important;
+    }
   }
 
   .padding {
@@ -140,7 +146,7 @@ $foundation-colors: (
     }
 
     .form-actions .btn {
-      display:block;
+      display: block;
       margin: 5px 0;
     }
   }

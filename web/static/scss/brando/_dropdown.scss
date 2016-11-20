@@ -10,6 +10,7 @@
   margin: 0 auto;
   width: 20px;
 }
+
 .dropdown-toggle:focus {
   outline: 0;
 }
@@ -34,17 +35,19 @@
   list-style: none;
   background-color: #fff;
   -webkit-background-clip: padding-box;
-          background-clip: padding-box;
+  background-clip: padding-box;
   border: 1px solid #ccc;
-  border: 1px solid rgba(0, 0, 0, .15);
+  border: 1px solid rgba(0, 0, 0, 0.15);
   border-radius: 4px;
-  -webkit-box-shadow: 0 6px 12px rgba(0, 0, 0, .175);
-          box-shadow: 0 6px 12px rgba(0, 0, 0, .175);
+  -webkit-box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175);
 }
+
 .dropdown-menu.pull-right {
   right: 0;
   left: auto;
 }
+
 .dropdown-menu .divider {
   height: 1px;
   margin: 9px 0;
@@ -67,6 +70,7 @@
   cursor: pointer;
   border: none;
 }
+
 .dropdown-menu > li > a:hover,
 .dropdown-menu > li > a:focus,
 .dropdown-menu button:hover,
@@ -75,6 +79,7 @@
   text-decoration: none;
   background-color: #f5f5f5;
 }
+
 .dropdown-menu > .active > a,
 .dropdown-menu > .active > a:hover,
 .dropdown-menu > .active > a:focus {
@@ -83,11 +88,13 @@
   background-color: #428bca;
   outline: 0;
 }
+
 .dropdown-menu > .disabled > a,
 .dropdown-menu > .disabled > a:hover,
 .dropdown-menu > .disabled > a:focus {
   color: #777;
 }
+
 .dropdown-menu > .disabled > a:hover,
 .dropdown-menu > .disabled > a:focus {
   text-decoration: none;
@@ -96,20 +103,25 @@
   background-image: none;
   filter: progid:DXImageTransform.Microsoft.gradient(enabled = false);
 }
+
 .open > .dropdown-menu {
   display: block;
 }
+
 .open > a {
   outline: 0;
 }
+
 .dropdown-menu-right {
   right: 0;
   left: auto;
 }
+
 .dropdown-menu-left {
   right: auto;
   left: 0;
 }
+
 .dropdown-header {
   display: block;
   padding: 3px 20px;
@@ -118,6 +130,7 @@
   color: #777;
   white-space: nowrap;
 }
+
 .dropdown-backdrop {
   position: fixed;
   top: 0;
@@ -126,6 +139,7 @@
   left: 0;
   z-index: 990;
 }
+
 .pull-right > .dropdown-menu {
   right: 0;
   left: auto;
@@ -134,21 +148,25 @@
 .dropdown-menu {
   font-size: 0.9rem;
   border-radius: 2px;
-  -webkit-box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  -webkit-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   border: 1px solid #ddd;
-  border: 1px solid rgba(0,0,0,0.1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
+
 .dropdown-menu.pull-left {
   left: 100%;
 }
+
 .dropdown-menu > .panel {
   border: none;
   margin: -5px 0;
 }
+
 .dropdown-menu > li > a {
   padding: 5px 15px;
 }
+
 .dropdown-menu > li > a:hover,
 .dropdown-menu > li > a:focus,
 .dropdown-menu > .active > a,
@@ -159,38 +177,47 @@
   background-color: #f1f1f1 !important;
   color: #717171;
 }
+
 .dropdown-header {
   padding: 5px 15px;
 }
+
 .dropdown-submenu {
   position: relative;
 }
+
 .dropdown-submenu:hover > a,
 .dropdown-submenu:focus > a {
   background-color: #f1f1f1 !important;
   color: #717171;
 }
+
 .dropdown-submenu:hover > .dropdown-menu,
 .dropdown-submenu:focus > .dropdown-menu {
   display: block;
 }
+
 .dropdown-submenu.pull-left {
   float: none !important;
 }
+
 .dropdown-submenu.pull-left > .dropdown-menu {
   left: -100%;
   margin-left: 10px;
 }
+
 .dropdown-submenu .dropdown-menu {
   left: 100%;
   top: 0;
   margin-top: -6px;
   margin-left: -1px;
 }
+
 .dropup .dropdown-submenu > .dropdown-menu {
   top: auto;
   bottom: 0;
 }
+
 .dropdown-select > li > a input {
   position: absolute;
   left: -9999em;
@@ -208,7 +235,7 @@ $hover_color: #333;
  * Duration needs to be set in JS as well
  * .3s (css) = 300 (js)
  **/
-$duration: .3s;
+$duration: 0.3s;
 
 .o-c {
   appearance: none;
@@ -220,17 +247,20 @@ $duration: .3s;
   backface-visibility: hidden;
   cursor: pointer;
   margin: 0 !important;
+
   &, &:before, &:after {
     background: $color;
     width: $size;
-    height: $size/6;
+    height: $size / 6;
     display: block;
     transition: all $duration;
   }
+
   &:before, &:after {
     content: '';
     position: absolute;
   }
+
   &:focus {
     outline: none;
   }
@@ -240,15 +270,29 @@ $duration: .3s;
  * Nav Transform
  */
 .o-c.bars {
-  &, &:before, &:after { transition-timing-function: cubic-bezier(.71,.23,.62,1.6); }
-  &:before { transform: translateY(-$size/3); }
-  &:after  { transform: translateY($size/3); }
+  &, &:before, &:after {
+    transition-timing-function: cubic-bezier(0.71, 0.23, 0.62, 1.6);
+  }
+
+  &:before {
+    transform: translateY(-$size / 3);
+  }
+
+  &:after {
+    transform: translateY($size / 3);
+  }
 }
 
 .o-c.bars.hover {
   background-color: $hover_color;
-  &:before { background-color: $hover_color; }
-  &:after  { background-color: $hover_color; }
+
+  &:before {
+    background-color: $hover_color;
+  }
+
+  &:after {
+    background-color: $hover_color;
+  }
 }
 
 /**
@@ -258,8 +302,16 @@ $duration: .3s;
   background-color: transparent;
   transform: rotate(360deg);
   transition-timing-function: ease-out;
-  &:before { transform: rotate(45deg); background-color: $hover_color; }
-  &:after  { transform: rotate(-45deg); background-color: $hover_color; }
+
+  &:before {
+    transform: rotate(45deg);
+    background-color: $hover_color;
+  }
+
+  &:after {
+    transform: rotate(-45deg);
+    background-color: $hover_color;
+  }
 }
 
 /**
@@ -267,7 +319,20 @@ $duration: .3s;
  */
 
 .dropdown label {
-  padding: $size/3 0;
+  padding: ($size / 3) 0;
   cursor: pointer;
   display: block;
+}
+
+// Open state for the dropdown
+.active {
+  // Show the menu
+  > .dropdown-menu {
+    display: block;
+  }
+
+  // Remove the outline when :focus is triggered
+  > a {
+    outline: 0;
+  }
 }

@@ -1,230 +1,339 @@
-/* ========================================================================
- * Bootstrap: dropdown.js v3.2.0
- * http://getbootstrap.com/javascript/#dropdowns
- * ========================================================================
- * Copyright 2011-2014 Twitter, Inc.
+/**
+ * --------------------------------------------------------------------------
+ * Bootstrap (v4.0.0-alpha.5): dropdown.js
  * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
- * ======================================================================== */
+ * --------------------------------------------------------------------------
+ */
+function getSelectorFromElement(element) {
+  let selector = element.getAttribute('data-target')
 
-import $ from "jquery";
-
-+function ($) {
-  'use strict';
-
-  // DROPDOWN CLASS DEFINITION
-  // =========================
-
-  var backdrop = '.dropdown-backdrop'
-  var toggle   = '[data-toggle="dropdown"]'
-  var Dropdown = function (element) {
-    $(element).on('click.bs.dropdown', this.toggle)
+  if (!selector) {
+    selector = element.getAttribute('href') || ''
+    selector = /^#[a-z]/i.test(selector) ? selector : null
   }
 
-  Dropdown.VERSION = '3.2.0'
-
-  Dropdown.prototype.mouseenter = function () {
-    var $icon = $(this).find('input')
-    $icon.addClass('hover')
-  }
-
-  Dropdown.prototype.mouseleave = function () {
-    var $icon = $(this).find('input')
-    $icon.removeClass('hover')
-  }
-
-  Dropdown.prototype.toggle = function (e) {
-    var $this = $(this)
-
-    if ($this.is('.disabled, :disabled')) return
-
-    var $parent  = getParent($this)
-    var isActive = $parent.hasClass('open')
-
-    clearMenus()
-
-    if (!isActive) {
-      if ('ontouchstart' in document.documentElement && !$parent.closest('.navbar-nav').length) {
-        // if mobile we use a backdrop because click events don't delegate
-        $('<div class="dropdown-backdrop"/>').insertAfter($(this)).on('click', clearMenus)
-      }
-
-      var relatedTarget = { relatedTarget: this }
-      $parent.trigger(e = $.Event('show.bs.dropdown', relatedTarget))
-
-      if (e.isDefaultPrevented()) return
-
-      $this.trigger('focus')
-
-      $this.find('input')
-        .toggleClass('cross')
-        .toggleClass('bars')
-
-      $parent
-        .toggleClass('open')
-        .trigger('shown.bs.dropdown', relatedTarget)
-    }
-
-    return false
-  }
-
-  Dropdown.prototype.keydown = function (e) {
-    if (!/(38|40|27)/.test(e.keyCode)) return
-
-    var $this = $(this)
-
-    e.preventDefault()
-    e.stopPropagation()
-
-    if ($this.is('.disabled, :disabled')) return
-
-    var $parent  = getParent($this)
-    var isActive = $parent.hasClass('open')
-
-    if (!isActive || (isActive && e.keyCode == 27)) {
-      if (e.which == 27) $parent.find(toggle).trigger('focus')
-      return $this.trigger('click')
-    }
-
-    var desc = ' li:not(.divider):visible a'
-    var $items = $parent.find('[role="menu"]' + desc + ', [role="listbox"]' + desc)
-
-    if (!$items.length) return
-
-    var index = $items.index($items.filter(':focus'))
-
-    if (e.keyCode == 38 && index > 0)                 index--                        // up
-    if (e.keyCode == 40 && index < $items.length - 1) index++                        // down
-    if (!~index)                                      index = 0
-
-    $items.eq(index).trigger('focus')
-  }
-
-  function clearMenus(e) {
-    if (e && e.which === 3) return
-    $(backdrop).remove()
-    $(toggle).each(function () {
-      var $parent = getParent($(this))
-      var relatedTarget = { relatedTarget: this }
-      if (!$parent.hasClass('open')) return
-      $parent.trigger(e = $.Event('hide.bs.dropdown', relatedTarget))
-      if (e.isDefaultPrevented()) return
-      $(this).find('input').removeClass('cross')
-      $(this).find('input').addClass('bars')
-      $parent.removeClass('open').trigger('hidden.bs.dropdown', relatedTarget)
-    })
-  }
-
-  function getParent($this) {
-    var selector = $this.attr('data-target')
-
-    if (!selector) {
-      selector = $this.attr('href')
-      selector = selector && /#[A-Za-z]/.test(selector) && selector.replace(/.*(?=#[^\s]*$)/, '') // strip for ie7
-    }
-
-    var $parent = selector && $(selector)
-
-    return $parent && $parent.length ? $parent : $this.parent()
-  }
-
-
-  // DROPDOWN PLUGIN DEFINITION
-  // ==========================
-
-  function Plugin(option) {
-    return this.each(function () {
-      var $this = $(this)
-      var data  = $this.data('bs.dropdown')
-
-      if (!data) $this.data('bs.dropdown', (data = new Dropdown(this)))
-      if (typeof option == 'string') data[option].call($this)
-    })
-  }
-
-  var old = $.fn.dropdown
-
-  $.fn.dropdown             = Plugin
-  $.fn.dropdown.Constructor = Dropdown
-
-
-  // DROPDOWN NO CONFLICT
-  // ====================
-
-  $.fn.dropdown.noConflict = function () {
-    $.fn.dropdown = old
-    return this
-  }
-
-
-  // APPLY TO STANDARD DROPDOWN ELEMENTS
-  // ===================================
-
-  $(document)
-    .on('click.bs.dropdown.data-api', clearMenus)
-    .on('click.bs.dropdown.data-api', '.dropdown form', function (e) { e.stopPropagation() })
-    .on('click.bs.dropdown.data-api', toggle, Dropdown.prototype.toggle)
-    .on('mouseenter.bs.dropdown.data-api', toggle, Dropdown.prototype.mouseenter)
-    .on('mouseleave.bs.dropdown.data-api', toggle, Dropdown.prototype.mouseleave)
-    .on('keydown.bs.dropdown.data-api', toggle + ', [role="menu"], [role="listbox"]', Dropdown.prototype.keydown)
-
-}($);
-
-// dropdown menu
-$.fn.dropdown.Constructor.prototype.change = function(e) {
-  e.preventDefault();
-  var $item = $(e.target),
-      $select,
-      $checked = false,
-      $menu,
-      $label;
-
-  !$item.is('a') && ($item = $item.closest('a'));
-  $menu = $item.closest('.dropdown-menu');
-  $label = $menu.parent().find('.dropdown-label');
-  $select = $item.find('input');
-  $checked = $select.is(':checked');
-  if($select.is(':disabled')) return;
-  if($select.attr('type') == 'radio' && $checked) return;
-  if($select.attr('type') == 'radio') $menu.find('li').removeClass('active');
-  $item.parent().removeClass('active');
-  !$checked && $item.parent().addClass('active');
-  $select.prop("checked", !$select.prop("checked"));
-
-  let $items = $menu.find('li > a > input:checked');
-  if ($items.length) {
-      let $text = [];
-      $items.each(function () {
-          var $str = $(this).parent().text();
-          $str && $text.push($.trim($str));
-      });
-
-      $text = $text.length < 4 ? $text.join(', ') : $text.length + ' selected';
-      $label.html($text);
-  } else {
-    $label.html($label.data('placeholder'));
-  }
+  return selector
 }
 
-$(document).on('click.dropdown-menu', '.dropdown-select > li > a', $.fn.dropdown.Constructor.prototype.change);
+const Dropdown = (($) => {
 
-// collapse nav
-$(document).on('click', '.nav-primary a', function (e) {
-  var $this = $(e.target), $active;
-  $this.is('a') || ($this = $this.closest('a'));
-  if( $('.nav-vertical').length ){
-    return;
+
+  /**
+   * ------------------------------------------------------------------------
+   * Constants
+   * ------------------------------------------------------------------------
+   */
+
+  const NAME                     = 'dropdown'
+  const VERSION                  = '4.0.0-alpha.5'
+  const DATA_KEY                 = 'bs.dropdown'
+  const EVENT_KEY                = `.${DATA_KEY}`
+  const DATA_API_KEY             = '.data-api'
+  const JQUERY_NO_CONFLICT       = $.fn[NAME]
+  const ESCAPE_KEYCODE           = 27 // KeyboardEvent.which value for Escape (Esc) key
+  const ARROW_UP_KEYCODE         = 38 // KeyboardEvent.which value for up arrow key
+  const ARROW_DOWN_KEYCODE       = 40 // KeyboardEvent.which value for down arrow key
+  const RIGHT_MOUSE_BUTTON_WHICH = 3 // MouseEvent.which value for the right button (assuming a right-handed mouse)
+
+  const Event = {
+    HIDE             : `hide${EVENT_KEY}`,
+    HIDDEN           : `hidden${EVENT_KEY}`,
+    SHOW             : `show${EVENT_KEY}`,
+    SHOWN            : `shown${EVENT_KEY}`,
+    CLICK            : `click${EVENT_KEY}`,
+    CLICK_DATA_API   : `click${EVENT_KEY}${DATA_API_KEY}`,
+    KEYDOWN_DATA_API : `keydown${EVENT_KEY}${DATA_API_KEY}`
   }
 
-  $active = $this.parent().siblings( ".active" );
-  $active && $active.find('> a').toggleClass('active') && $active.toggleClass('active').find('> ul:visible').slideUp(200);
+  const ClassName = {
+    BACKDROP : 'dropdown-backdrop',
+    DISABLED : 'disabled',
+    ACTIVE   : 'active'
+  }
 
-  ($this.hasClass('active') && $this.next().slideUp(200)) || $this.next().slideDown(200);
-  $this.toggleClass('active').parent().toggleClass('active');
+  const Selector = {
+    BACKDROP      : '.dropdown-backdrop',
+    DATA_TOGGLE   : '[data-toggle="dropdown"]',
+    FORM_CHILD    : '.dropdown form',
+    ROLE_MENU     : '[role="menu"]',
+    ROLE_LISTBOX  : '[role="listbox"]',
+    NAVBAR_NAV    : '.navbar-nav',
+    VISIBLE_ITEMS : '[role="menu"] li:not(.disabled) a, '
+                  + '[role="listbox"] li:not(.disabled) a'
+  }
 
-  $this.next().is('ul') && e.preventDefault();
 
-  setTimeout(function(){ $(document).trigger('updateNav'); }, 300);
-});
+  /**
+   * ------------------------------------------------------------------------
+   * Class Definition
+   * ------------------------------------------------------------------------
+   */
 
-// dropdown still
-$(document).on('click.bs.dropdown.data-api', '.dropdown .on, .dropup .on', function (e) { e.stopPropagation() });
+  class Dropdown {
+
+    constructor(element) {
+      this._element = element
+
+      this._addEventListeners()
+    }
+
+
+    // getters
+
+    static get VERSION() {
+      return VERSION
+    }
+
+
+    // public
+
+    toggle() {
+      if (this.disabled || $(this).hasClass(ClassName.DISABLED)) {
+        return false
+      }
+
+      let parent   = Dropdown._getParentFromElement(this)
+      let isActive = $(parent).hasClass(ClassName.ACTIVE)
+
+      Dropdown._clearMenus()
+
+      if (isActive) {
+        return false
+      }
+
+      if ('ontouchstart' in document.documentElement &&
+         (!$(parent).closest(Selector.NAVBAR_NAV).length)) {
+
+        // if mobile we use a backdrop because click events don't delegate
+        let dropdown       = document.createElement('div')
+        dropdown.className = ClassName.BACKDROP
+        $(dropdown).insertBefore(this)
+        $(dropdown).on('click', Dropdown._clearMenus)
+      }
+
+      let relatedTarget = { relatedTarget : this }
+      let showEvent     = $.Event(Event.SHOW, relatedTarget)
+
+      $(parent).trigger(showEvent)
+
+      if (showEvent.isDefaultPrevented()) {
+        return false
+      }
+
+      this.focus()
+      $(parent).find('input')
+        .toggleClass('cross')
+        .toggleClass('bars')
+      this.setAttribute('aria-expanded', 'true')
+
+      $(parent).toggleClass(ClassName.ACTIVE)
+      $(parent).trigger($.Event(Event.SHOWN, relatedTarget))
+
+      return false
+    }
+
+    dispose() {
+      $.removeData(this._element, DATA_KEY)
+      $(this._element).off(EVENT_KEY)
+      this._element = null
+    }
+
+
+    // private
+
+    _addEventListeners() {
+      $(this._element).on(Event.CLICK, this.toggle)
+    }
+
+    // static
+
+    static _jQueryInterface(config) {
+      return this.each(function () {
+        let data  = $(this).data(DATA_KEY)
+
+        if (!data) {
+          $(this).data(DATA_KEY, (data = new Dropdown(this)))
+        }
+
+        if (typeof config === 'string') {
+          if (data[config] === undefined) {
+            throw new Error(`No method named "${config}"`)
+          }
+          data[config].call(this)
+        }
+      })
+    }
+
+    static _clearMenus(event) {
+      if (event && event.which === RIGHT_MOUSE_BUTTON_WHICH) {
+        return
+      }
+
+      let backdrop = $(Selector.BACKDROP)[0]
+      if (backdrop) {
+        backdrop.parentNode.removeChild(backdrop)
+      }
+
+      let toggles = $.makeArray($(Selector.DATA_TOGGLE))
+
+      for (let i = 0; i < toggles.length; i++) {
+        let parent        = Dropdown._getParentFromElement(toggles[i])
+        let relatedTarget = { relatedTarget : toggles[i] }
+
+        if (!$(parent).hasClass(ClassName.ACTIVE)) {
+          continue
+        }
+
+        if (event && event.type === 'click' &&
+           (/input|textarea/i.test(event.target.tagName)) &&
+           ($.contains(parent, event.target))) {
+          continue
+        }
+
+        let hideEvent = $.Event(Event.HIDE, relatedTarget)
+        $(parent).trigger(hideEvent)
+        if (hideEvent.isDefaultPrevented()) {
+          continue
+        }
+
+        toggles[i].setAttribute('aria-expanded', 'false')
+
+        $(parent).find('input').removeClass('cross')
+        $(parent).find('input').addClass('bars')
+
+        $(parent)
+          .removeClass(ClassName.ACTIVE)
+          .trigger($.Event(Event.HIDDEN, relatedTarget))
+      }
+    }
+
+    static _getParentFromElement(element) {
+      let parent
+      let selector = getSelectorFromElement(element)
+
+      if (selector) {
+        parent = $(selector)[0]
+      }
+
+      return parent || element.parentNode
+    }
+
+    static _dataApiKeydownHandler(event) {
+      if (!/(38|40|27|32)/.test(event.which) ||
+         /input|textarea/i.test(event.target.tagName)) {
+        return
+      }
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      if (this.disabled || $(this).hasClass(ClassName.DISABLED)) {
+        return
+      }
+
+      let parent   = Dropdown._getParentFromElement(this)
+      let isActive = $(parent).hasClass(ClassName.ACTIVE)
+
+      if ((!isActive && event.which !== ESCAPE_KEYCODE) ||
+           (isActive && event.which === ESCAPE_KEYCODE)) {
+
+        if (event.which === ESCAPE_KEYCODE) {
+          let toggle = $(parent).find(Selector.DATA_TOGGLE)[0]
+          $(toggle).trigger('focus')
+        }
+
+        $(this).trigger('click')
+        return
+      }
+
+      let items = $.makeArray($(Selector.VISIBLE_ITEMS))
+
+      items = items.filter((item) => {
+        return item.offsetWidth || item.offsetHeight
+      })
+
+      if (!items.length) {
+        return
+      }
+
+      let index = items.indexOf(event.target)
+
+      if (event.which === ARROW_UP_KEYCODE && index > 0) { // up
+        index--
+      }
+
+      if (event.which === ARROW_DOWN_KEYCODE && index < items.length - 1) { // down
+        index++
+      }
+
+      if (index < 0) {
+        index = 0
+      }
+
+      items[index].focus()
+    }
+
+  }
+
+
+  /**
+   * ------------------------------------------------------------------------
+   * Data Api implementation
+   * ------------------------------------------------------------------------
+   */
+
+  $(document)
+    .on(Event.KEYDOWN_DATA_API, Selector.DATA_TOGGLE,  Dropdown._dataApiKeydownHandler)
+    .on(Event.KEYDOWN_DATA_API, Selector.ROLE_MENU,    Dropdown._dataApiKeydownHandler)
+    .on(Event.KEYDOWN_DATA_API, Selector.ROLE_LISTBOX, Dropdown._dataApiKeydownHandler)
+    .on(Event.CLICK_DATA_API, Dropdown._clearMenus)
+    .on(Event.CLICK_DATA_API, Selector.DATA_TOGGLE, Dropdown.prototype.toggle)
+    .on('mouseenter', Selector.DATA_TOGGLE, (e) => {
+      var $icon = $(e.currentTarget).find('input')
+      $icon.addClass('hover')
+    })
+    .on('mouseleave', Selector.DATA_TOGGLE, (e) => {
+      var $icon = $(e.currentTarget).find('input')
+      $icon.removeClass('hover')
+    })
+    .on(Event.CLICK_DATA_API, Selector.FORM_CHILD, (e) => {
+      e.stopPropagation()
+    })
+
+  // collapse/expand nav for main nav
+  $(document).on('click', '.nav-primary a', function (e) {
+    var $this = $(e.target), $active;
+    $this.is('a') || ($this = $this.closest('a'));
+    if( $('.nav-vertical').length ){
+      return;
+    }
+
+    $active = $this.parent().siblings( ".active" );
+    $active && $active.find('> a').toggleClass('active') && $active.toggleClass('active').find('> ul:visible').slideUp(200);
+
+    ($this.hasClass('active') && $this.next().slideUp(200)) || $this.next().slideDown(200);
+    $this.toggleClass('active').parent().toggleClass('active');
+
+    $this.next().is('ul') && e.preventDefault();
+
+    setTimeout(function(){ $(document).trigger('updateNav'); }, 300);
+  });
+
+  /**
+   * ------------------------------------------------------------------------
+   * jQuery
+   * ------------------------------------------------------------------------
+   */
+
+  $.fn[NAME]             = Dropdown._jQueryInterface
+  $.fn[NAME].Constructor = Dropdown
+  $.fn[NAME].noConflict  = function () {
+    $.fn[NAME] = JQUERY_NO_CONFLICT
+    return Dropdown._jQueryInterface
+  }
+
+  return Dropdown
+
+})(jQuery)
+
+export default Dropdown;

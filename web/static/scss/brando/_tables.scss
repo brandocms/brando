@@ -61,6 +61,13 @@ table {
   }
 }
 
+.table > tbody > tr > td[data-field=status] > .label {
+  width: 100%;
+  display: block;
+  text-align: center;
+  text-shadow: 1px 1px 1px rgba(51, 51, 51, 0.28);
+}
+
 .table > tbody > tr > td[data-field=url] {
   font-family: "a-mono", "Monaco", "Inconsolata", "Courier New" !important;
 
@@ -267,6 +274,7 @@ table th[class*="col-"] {
 .table-hover > tbody > tr:hover > .danger {
   background-color: #ebcccc;
 }
+
 @media screen and (max-width: 767px) {
   .table-responsive {
     -ms-overflow-style: -ms-autohiding-scrollbar;

@@ -1,11 +1,11 @@
 import $ from 'jquery';
 
 import { Socket } from 'phoenix';
-import bI18n from './i18n';
-import { vex } from './vex_brando';
+import i18n from './i18n';
+import vex from './vex_brando';
 
 class WS {
-  static setup() {
+  constructor() {
     const that = this;
     const userToken = document.querySelector('meta[name="channel_token"]')
       .getAttribute('content');
@@ -17,53 +17,53 @@ class WS {
 
     socket.connect();
 
-    WS.lobbyChannel = socket.channel('user:lobby', {});
-    WS.lobbyChannel.join()
+    this.lobbyChannel = socket.channel('user:lobby', {});
+    this.lobbyChannel.join()
       .receive('ok', (joinPayload) => {
         console.log('==> Lobby channel ready');
-        WS.userChannel = socket.channel(`user:${joinPayload.user_id}`, {});
-        WS.userChannel.join()
+        this.userChannel = socket.channel(`user:${joinPayload.user_id}`, {});
+        this.userChannel.join()
           .receive('ok', () => {
             console.log('==> User channel ready');
           });
 
-        WS.userChannel.on('alert', (payload) => {
+        this.userChannel.on('alert', (payload) => {
           that.alert(payload.message);
         });
 
-        WS.userChannel.on('set_progress', (payload) => {
+        this.userChannel.on('set_progress', (payload) => {
           that.setProgress(payload.value);
         });
 
-        WS.userChannel.on('increase_progress', (payload) => {
+        this.userChannel.on('increase_progress', (payload) => {
           that.increaseProgress(payload.value, payload.id);
         });
       });
 
-    WS.systemChannel = socket.channel('system:stream', {});
-    WS.systemChannel.join()
+    this.systemChannel = socket.channel('system:stream', {});
+    this.systemChannel.join()
       .receive('ok', () => {
         console.log('==> System channel ready');
       });
 
-    WS.systemChannel.on('alert', (payload) => {
+    this.systemChannel.on('alert', (payload) => {
       that.alert(payload.message);
     });
 
-    WS.systemChannel.on('set_progress', (payload) => {
+    this.systemChannel.on('set_progress', (payload) => {
       that.setProgress(payload.value);
     });
 
-    WS.systemChannel.on('increase_progress', (payload) => {
+    this.systemChannel.on('increase_progress', (payload) => {
       that.increaseProgress(payload.value, payload.id);
     });
   }
 
-  static alert(message) {
+  alert(message) {
     vex.dialog.alert(message);
   }
 
-  static createProgress() {
+  createProgress() {
     const $overlay = $('<div id="overlay">');
     const $container = $('<div id="progress-container">');
 
@@ -86,44 +86,41 @@ class WS {
     $overlay.animate({ opacity: 1 }, 'slow');
     $('<div id="progressbar">').appendTo('#progress-container');
 
-    WS.progressbar = new ProgressBar.Circle('#progressbar', {
+    this.progressbar = new ProgressBar.Circle('#progressbar', {
       strokeWidth: 5,
       color: '#c11',
     });
-    WS.progressbar.setText(bI18n.t('ws:working'));
+    this.progressbar.setText(i18n.t('ws:working'));
   }
 
-  static increaseProgress(value) {
+  increaseProgress(value) {
     let newValue = 0;
-    if (WS.progressbar) {
-      newValue = WS.progressbar.value() + value;
+    if (this.progressbar) {
+      newValue = this.progressbar.value() + value;
     } else {
-      WS.createProgress();
+      this.createProgress();
     }
 
-    WS.setProgress(newValue);
+    this.setProgress(newValue);
   }
 
-  static setProgress(value) {
-    if (WS.progressbar) {
-      WS.progressbar.animate(value);
+  setProgress(value) {
+    if (this.progressbar) {
+      this.progressbar.animate(value);
     } else {
-      WS.createProgress();
-      WS.progressbar.animate(value);
+      this.createProgress();
+      this.progressbar.animate(value);
     }
 
     if (value === 1) {
-      WS.progressbar.setText('done!');
+      this.progressbar.setText('done!');
       $('#overlay')
         .remove();
-      WS.progressbar = null;
+      this.progressbar = null;
     }
   }
 }
 
-WS.progressbar = null;
-WS.systemChannel = null;
-WS.lobbyChannel = null;
-WS.userChannel = null;
+const ws = new WS();
 
-export default WS;
+export default ws;

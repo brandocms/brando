@@ -1,5 +1,5 @@
 import $ from 'jquery';
-import bI18n from './i18n';
+import brando from './brando';
 
 class ImageConfig {
   static replaceKey(name, newKey) {
@@ -103,33 +103,33 @@ class ImageConfig {
           <fieldset>
             <legend>
             <br>
-              ${bI18n.t('image_config:key')} <span class="btn btn-xs delete-key"><i class="fa fa-fw fa-ban"></i></span>
+              ${brando.i18n.t('image_config:key')} <span class="btn btn-xs delete-key"><i class="fa fa-fw fa-ban"></i></span>
             </legend>
             <div class="form-row">
               <div class="form-group required no-height">
-                <label>${bI18n.t('image_config:masterkey')}</label>
+                <label>${brando.i18n.t('image_config:masterkey')}</label>
                 <input type="text" class="standard-masterkey-input" value="keyname" placeholder="keyname">
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-group required no-height">
-                <label>${bI18n.t('image_config:key')} <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
+                <label>${brando.i18n.t('image_config:key')} <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
                 <input type="text" class="standard-key-input" value="quality">
               </div>
               <div class="form-group required no-height">
-                <label>${bI18n.t('image_config:value')}</label>
+                <label>${brando.i18n.t('image_config:value')}</label>
                 <input type="text" class="standard-val-input" value="100">
               </div>
               <input type="hidden" class="actual-value" name="sizes[keyname][quality]" value="100">
             </div>
             <div class="form-row">
               <div class="form-group required no-height">
-                <label>${bI18n.t('image_config:key')} <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
+                <label>${brando.i18n.t('image_config:key')} <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
                 <input type="text" class="standard-key-input" value="size">
               </div>
               <div class="form-group required no-height">
-                <label>${bI18n.t('image_config:value')}</label>
+                <label>${brando.i18n.t('image_config:value')}</label>
                 <input type="text" class="standard-val-input" value="700">
               </div>
               <input type="hidden" class="actual-value" name="sizes[keyname][size]" value="700">
@@ -154,37 +154,37 @@ class ImageConfig {
           <fieldset>
             <legend>
             <br>
-              ${bI18n.t('image_config:key')} <span class="btn btn-xs delete-key"><i class="fa fa-fw fa-ban"></i></span>
+              ${brando.i18n.t('image_config:key')} <span class="btn btn-xs delete-key"><i class="fa fa-fw fa-ban"></i></span>
             </legend>
             <div class="form-row">
               <div class="form-group required no-height">
-                <label>${bI18n.t('image_config:masterkey')}</label>
+                <label>${brando.i18n.t('image_config:masterkey')}</label>
                 <input type="text" class="recursive-masterkey-input" value="keyname" placeholder="keyname">
               </div>
             </div>
             <fieldset>
               <legend>
                 <br>
-                ${bI18n.t('image_config:orientation_landscape')}
+                ${brando.i18n.t('image_config:orientation_landscape')}
               </legend>
               <div class="form-row">
                 <div class="form-group required no-height">
-                  <label>${bI18n.t('image_config:key')} <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
+                  <label>${brando.i18n.t('image_config:key')} <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
                   <input type="text" class="recursive-key-input" value="quality">
                 </div>
                 <div class="form-group required no-height">
-                  <label>${bI18n.t('image_config:value')}</label>
+                  <label>${brando.i18n.t('image_config:value')}</label>
                   <input type="text" class="recursive-val-input" value="100">
                 </div>
                 <input type="hidden" class="actual-value orientation-value" name="sizes[keyname][landscape][quality]" value="100">
               </div>
               <div class="form-row">
                 <div class="form-group required no-height">
-                  <label>${bI18n.t('image_config:key')} <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
+                  <label>${brando.i18n.t('image_config:key')} <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
                   <input type="text" class="recursive-key-input" value="size">
                 </div>
                 <div class="form-group required no-height">
-                  <label>${bI18n.t('image_config:value')} </label>
+                  <label>${brando.i18n.t('image_config:value')} </label>
                   <input type="text" class="recursive-val-input" value="900">
                 </div>
                 <input type="hidden" class="actual-value orientation-value" name="sizes[keyname][landscape][size]" value="900">
@@ -193,26 +193,26 @@ class ImageConfig {
             <fieldset>
               <legend>
                 <br>
-                ${bI18n.t('image_config:orientation_portrait')}
+                ${brando.i18n.t('image_config:orientation_portrait')}
               </legend>
               <div class="form-row">
                 <div class="form-group required no-height">
-                  <label>${bI18n.t('image_config:key')} <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
+                  <label>${brando.i18n.t('image_config:key')} <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
                   <input type="text" class="recursive-key-input" value="quality">
                 </div>
                 <div class="form-group required no-height">
-                  <label>${bI18n.t('image_config:value')}</label>
+                  <label>${brando.i18n.t('image_config:value')}</label>
                   <input type="text" class="recursive-val-input" value="100">
                 </div>
                 <input type="hidden" class="actual-value orientation-value" name="sizes[keyname][portrait][quality]" value="100">
               </div>
               <div class="form-row">
                 <div class="form-group required no-height">
-                  <label>${bI18n.t('image_config:key')} <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
+                  <label>${brando.i18n.t('image_config:key')} <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
                   <input type="text" class="recursive-key-input" value="size">
                 </div>
                 <div class="form-group required no-height">
-                  <label>${bI18n.t('image_config:value')}</label>
+                  <label>${brando.i18n.t('image_config:value')}</label>
                   <input type="text" class="recursive-val-input" value="900">
                 </div>
                 <input type="hidden" class="actual-value orientation-value" name="sizes[keyname][portrait][size]" value="900">
@@ -241,11 +241,11 @@ class ImageConfig {
         const $row = $(`
           <div class="form-row">
             <div class="form-group required no-height">
-              <label>${bI18n.t('image_config:key')} <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
+              <label>${brando.i18n.t('image_config:key')} <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
               <input type="text" class="standard-key-input" value="keyname">
             </div>
             <div class="form-group required no-height">
-              <label>${bI18n.t('image_config:value')}</label>
+              <label>${brando.i18n.t('image_config:value')}</label>
               <input type="text" class="standard-val-input" value="keyvalue">
             </div>
             <input type="hidden" class="actual-value" name="sizes[${masterkey}][keyname]" value="keyvalue">
@@ -269,11 +269,11 @@ class ImageConfig {
         const $row = $(`
           <div class="form-row">
             <div class="form-group required no-height">
-              <label>${bI18n.t('image_config:key')} <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
+              <label>${brando.i18n.t('image_config:key')} <span class="btn btn-xs delete-subkey"><i class="fa fa-fw fa-ban"></i></span></label>
               <input type="text" class="standard-key-input" value="keyname">
             </div>
             <div class="form-group required no-height">
-              <label>${bI18n.t('image_config:value')}</label>
+              <label>${brando.i18n.t('image_config:value')}</label>
               <input type="text" class="standard-val-input" value="keyvalue">
             </div>
             <input type="hidden" class="actual-value" name="sizes[${masterkey}][${orientation}][keyname]" value="keyvalue">

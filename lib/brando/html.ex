@@ -212,18 +212,7 @@ defmodule Brando.HTML do
     path = Brando.Form.apply_action(helper, :upload_post, id)
     html =
     """
-    <form action="#{path}" class="dropzone" id="brando-dropzone"></form>
-    <script type="text/javascript">
-      Dropzone = require('dropzone');
-      Dropzone.options.brandoDropzone = {
-        paramName: "image",
-        maxFilesize: 10,
-        thumbnailHeight: 150,
-        thumbnailWidth: 150,
-        dictDefaultMessage: '<i class="fa fa-cloud fa-4x"></i><br>' +
-                            'Trykk eller slipp bilder her for å laste opp'
-      };
-    </script>
+    <form action="#{path}" class="dzone" id="brando-dropzone"></form>
     """
     Phoenix.HTML.raw(html)
   end

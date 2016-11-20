@@ -1,7 +1,7 @@
 import $ from 'jquery';
 import WS from './ws';
 import Autoslug from './autoslug';
-import { vex } from './vex_brando';
+import vex from './vex_brando';
 
 class PopupForm {
   constructor(formKey, language, callback, params = [], initialValues = {}) {

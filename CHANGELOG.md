@@ -1,57 +1,39 @@
 ## v0.37.0-dev (2016-XX-XX)
 * Backwards incompatible changes
+  * Removed `use Brando.Images.Upload`. Now calls explicitly from controller instead.
+  * Deprecating passing schemas to `use Brando.Villain, :controller`.
   * Static changes. `brando.auth.js` is no more, nor is `brando.vendor.css`.
     1) First `rm -rf priv/static/js && rm -rf priv/static/css`.
-    2) Then, in your `brunch-config.js`:
+    2) Take a look at the new `brunch-config.js`, there are a lot of changes:
+    ```javascript
 
-    ```diff
-    + /* Copy brando main JS */
-    + 'js/brando.js': [
-    +   'node_modules/brando/priv/static/js/brando.js',
-    +   /^(web\/static\/js\/admin)/,
-    + ],
 
-    - /* Copy brando main JS */
-    - 'js/brando.js': ['node_modules/brando/priv/static/js/brando.js',
-
-    - /* Custom backend JS */
-    - 'js/brando.custom.js': /^(web\/static\/js\/admin)/,
-
-    - /* Brando authentication bundle */
-    - 'js/brando.auth.js': 'node_modules/brando/priv/static/js/brando.auth.js',
-
-    # ...
-
-      modules: {
-        autoRequire: {
-          'js/app.js': ['app'],
-    -     'js/brando.custom.js': ['admin/custom.js']
-    +     'js/brando.js': ['brando'],
-
-    # ...
-
-      npm: {
-        # ...
-        static: [
-    -     'node_modules/brando/priv/static/js/brando.js',
-    -     'node_modules/brando/priv/static/js/brando.auth.js',
-          'node_modules/brando_villain/priv/static/js/villain.all.js',
-          'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
-        ],
     ```
+       a) We use an entry point to bundle the admin, so you need to update `brunch` as well:
+          `$ npm i --save-dev autoprefixer@latest babel-preset-stage-0@latest brunch@latest eslint@latest \ eslint-config-airbnb@latest eslint-plugin-import@latest eslint-plugin-jsx-a11y@latest \ eslint-plugin-react@latest sass-brunch@latest`
     3) Rename `web/static/js/admin/custom.js` -> `web/static/js/admin/index.js`.
     Set the contents to something like this:
 
     ```javascript
-    // import brando from 'brando';
+    /**
+     * Brando admin entry point
+     */
     import $ from 'jquery';
+    import brando from 'brando';
+    import i18next from 'i18next';
+    import Dropzone from 'dropzone';
 
+    /**
+     * Addons
+     */
     import Instagram from './instagram';
     import Portfolio from './portfolio';
+    import News from './news';
 
+    /**
+     * Page-specific initialization
+     */
     $(() => {
-      /* page specific switch */
-
       switch ($('body').attr('data-script')) {
       case 'instagram-index':
         Instagram.setup();
@@ -59,9 +41,18 @@
       case 'portfolio-index':
         Portfolio.setup();
         break;
+      case 'portfolio-upload':
+        Portfolio.setupUpload();
+        break;
+      case 'gallery-new':
+        News.setup();
+        break;
       }
     });
+
     ```
+    4) Ensure instagram.js, portfolio.js or news.js don't initialize themselves. Remove
+       any document.ready() callbacks.
   * `Brando.Plugs.Uploads` is deprecated. It is more explicit now, where we specify the field
     and what kind of upload it is in your changeset function.
     In your schema with ImageField or FileField, add to your changeset functions

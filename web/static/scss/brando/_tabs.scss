@@ -1,5 +1,6 @@
 .accordion-tabs-minimal {
   $gutter: 10px;
+
   ///////////////////////////////////////////////////////////////////////////////////
   $base-border-color: gainsboro !default;
   $base-background-color: white !default;
@@ -8,6 +9,7 @@
   $base-link-color: $base-accent-color !default;
   $dark-gray: #333 !default;
   $medium-screen: em(640) !default;
+
   //////////////////////////////////////////////////////////////////////////////////
 
   $tab-active: #FAFAFA;
@@ -19,6 +21,7 @@
   $tab-mode: $medium-screen;
 
   @include clearfix;
+
   line-height: 1.5;
   padding: 0;
 
@@ -32,13 +35,13 @@
     border-top: $tab-border;
     color: $tab-link-color;
     display: block;
-    font-weight: bold;
+    font-weight: normal;
     padding: ($base-spacing / 2) $gutter;
     text-decoration: none;
     display: inline-block;
     border-top: 0;
     text-transform: uppercase;
-    font-size: 14px;
+    font-size: 16px;
     padding: 10px 30px;
 
     &:hover {
@@ -55,6 +58,7 @@
       border-bottom-color: $tab-active-background;
       margin-bottom: -1px;
       background-color: $tab-active;
+      border-radius: 20px 0 0;
     }
   }
 
@@ -71,6 +75,5 @@
       border-bottom: 1px solid gainsboro;
       border-right: 1px solid gainsboro;
     }
-
   }
 }
