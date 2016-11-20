@@ -24,7 +24,7 @@ defmodule Brando.Field.ImageField do
 
   """
   import Ecto.Changeset
-  import Brando.Images.Upload
+  import Brando.Images
   import Brando.Upload
   import Brando.Upload.Utils
 
@@ -32,7 +32,6 @@ defmodule Brando.Field.ImageField do
     quote do
       Module.register_attribute(__MODULE__, :imagefields, accumulate: true)
       import Ecto.Changeset
-      import Brando.Images.Upload
       import Brando.Images.Utils
       import Brando.Upload
       import unquote(__MODULE__)
