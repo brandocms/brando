@@ -1,7 +1,6 @@
 import i18next from 'i18next';
 
 export default i18next.init({
-  debug: true,
   lng: this.language,
   fallbackLng: 'nb',
   resources: {
