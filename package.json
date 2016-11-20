@@ -5,10 +5,6 @@
   "main": "./priv/static/js/brando.js",
   "dependencies": {
     "chart.js": "^2.0.0",
-    "dropzone": "^4.2.0",
-    "i18next": "^2.5.1",
-    "i18next-browser-languagedetector": "^0.3.0",
-    "jquery": "^2.2.1",
     "phoenix": "file:deps/phoenix",
     "progressbar.js": "^1.0.1",
     "textfit": "^2.2.2",

@@ -74,7 +74,7 @@
           <hr>
           <div class="form-actions clearfix">
             <a href="<%= Brando.helpers.admin_image_series_path(@conn, :upload, serie.id) %>" class="btn btn-default">
-              <i class="fa fa-fw fa-cloud"> </i>
+              <i class="fa fa-fw fa-cloud-upload"> </i>
               <%= gettext("Upload images") %>
             </a>
 

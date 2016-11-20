@@ -1,7 +1,6 @@
 import $ from 'jquery';
 // import {Socket} from 'phoenix';
 // import {Flexslider} from './flexslider';
-// import 'phoenix_html';
 
 
 $(() => {

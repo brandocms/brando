@@ -48,14 +48,11 @@ defmodule Brando.Villain do
 
   # Controller
 
-  Controller utilities. Expects :image_schema and :series_schema options.
   Defines `:browse_images`, `:upload_image`, `:image_info` actions.
 
   ## Usage
 
-      use Brando.Villain, [:controller, [
-        image_schema: Brando.Image,
-        series_schema: Brando.ImageSeries]]
+      use Brando.Villain, :controller
 
   Add routes to your router.ex:
 
@@ -169,13 +166,14 @@ defmodule Brando.Villain do
 
   @doc false
   @lint false
-  def controller({:image_schema, image_schema}, {:series_schema, series_schema}) do
+  def controller do
     quote do
       import Ecto.Query
+
       @doc false
       def browse_images(conn, %{"slug" => series_slug} = params) do
         image_series =
-          unquote(series_schema)
+          Brando.ImageSeries
           |> preload([:image_category, :images])
           |> Brando.repo.get_by(slug: series_slug)
 
@@ -192,7 +190,7 @@ defmodule Brando.Villain do
         user = Brando.Utils.current_user(conn)
 
         series =
-          unquote(series_schema)
+          Brando.ImageSeries
           |> preload(:image_category)
           |> Brando.repo.get_by(slug: series_slug)
 
@@ -205,7 +203,7 @@ defmodule Brando.Villain do
         cfg  = series.cfg || Brando.config(Brando.Images)[:default_config]
         opts = Map.put(%{}, "image_series_id", series.id)
 
-        {:ok, image} = unquote(image_schema).check_for_uploads(params, user, cfg, opts)
+        {:ok, image} = Brando.Images.check_for_uploads(params, user, cfg, opts)
 
         sizes     = Enum.map(image.image.sizes, fn({k, v}) -> {k, Brando.Utils.media_url(v)} end)
         sizes_map = Enum.into(sizes, %{})
@@ -244,7 +242,7 @@ defmodule Brando.Villain do
       @doc false
       def imageseries(conn, %{"series" => series_slug}) do
         series = Brando.repo.first!(
-          from is in unquote(series_schema),
+          from is in Brando.ImageSeries,
                 join: c in assoc(is, :image_category),
                 join: i in assoc(is, :images),
                where: c.slug == "slideshows" and is.slug == ^series_slug,
@@ -267,7 +265,7 @@ defmodule Brando.Villain do
       @doc false
       def imageseries(conn, _) do
         series = Brando.repo.all(
-          from is in unquote(series_schema),
+          from is in Brando.ImageSeries,
                 join: c in assoc(is, :image_category),
                where: c.slug == "slideshows",
             order_by: is.slug,
@@ -281,11 +279,10 @@ defmodule Brando.Villain do
       @doc false
       def image_info(conn, %{"form" => form, "id" => id, "uid" => uid}) do
         form         = URI.decode_query(form)
-        image_schema = unquote(image_schema)
-        image        = Brando.repo.get(image_schema, id)
+        image        = Brando.repo.get(Brando.Image, id)
 
         {:ok, image} =
-          image_schema.update_image_meta(image, form["title"], form["credits"])
+          Brando.Images.update_image_meta(image, form["title"], form["credits"])
 
         info = %{
           status:  200,
@@ -305,8 +302,8 @@ defmodule Brando.Villain do
     apply(__MODULE__, which, [])
   end
 
-  defmacro __using__([:controller, ctrl_opts] = opts) when is_list(opts) do
-    apply(__MODULE__, :controller, ctrl_opts)
+  defmacro __using__([:controller, _] = opts) when is_list(opts) do
+    raise "use Brando.Villain with options is deprecated. Call without options."
   end
 
   @doc """

@@ -1,26 +1,25 @@
 import $ from 'jquery';
-import Chart from 'chart.js';
-import Dropzone from 'dropzone';
-import i18n from 'i18next';
 
 import './brando/extensions/datepicker';
-import './brando/extensions/dropdown';
+
 import './brando/extensions/searcher';
 import './brando/extensions/slugit';
 import './brando/extensions/tablesaw';
 import './brando/extensions/tags_input';
 
-import Accordion from './brando/components/accordion';
+import Dropdown from './brando/extensions/dropdown';
+
+import accordion from './brando/components/accordion';
+import vex from './brando/components/vex_brando';
+
 import Auth from './brando/components/auth';
 import Autoslug from './brando/components/autoslug';
-import brando from './brando/components/brando';
 import DatePicker from './brando/components/datepicker';
 import Flash from './brando/components/flash';
 import FilterTable from './brando/components/filter_table';
 import ImagePreview from './brando/components/image_preview';
 import Mobile from './brando/components/mobile';
-import { VexBrando, vex } from './brando/components/vex_brando';
-import bI18n from './brando/components/i18n';
+import i18n from './brando/components/i18n';
 import Images from './brando/components/images';
 import ImageConfig from './brando/components/image_config';
 import Menu from './brando/components/menu';
@@ -32,23 +31,42 @@ import Stats from './brando/components/stats';
 import Tags from './brando/components/tags';
 import Toolbar from './brando/components/toolbar';
 import Utils from './brando/components/utils';
-import WS from './brando/components/ws';
+import ws from './brando/components/ws';
+
+
+class Brando {
+  constructor() {
+    this.setLanguage();
+    this.i18n = i18n;
+    this.accordion = accordion;
+    this.vex = vex;
+    this.ws = ws;
+    this.Utils = Utils;
+    this.PopupForm = PopupForm;
+  }
+
+  setLanguage() {
+    this.language = $('html').attr('lang');
+    console.log(`==> language = ${this.language}`);
+  }
+}
+
+const brando = new Brando();
 
 $(() => {
   /**
    * Setup vendored modules.
    */
 
-  VexBrando.setup();
-  Autoslug.setup();
-  FilterTable.setup();
-  Flash.setup();
-  Mobile.setup();
-  Sequence.setup();
-  Toolbar.setup();
-  Tags.setup();
-  DatePicker.setup();
-  ImagePreview.setup();
+  Autoslug.setup(brando);
+  FilterTable.setup(brando);
+  Flash.setup(brando);
+  Mobile.setup(brando);
+  Sequence.setup(brando);
+  Toolbar.setup(brando);
+  Tags.setup(brando);
+  DatePicker.setup(brando);
+  ImagePreview.setup(brando);
 
   /**
    * Section-specific setup
@@ -56,22 +74,25 @@ $(() => {
 
   switch ($('body').attr('data-script')) {
     case 'images-index':
-      Images.setup();
+      Images.setup(brando);
+      break;
+    case 'images-upload':
+      Images.setupUpload(brando);
       break;
     case 'images-configure':
-      ImageConfig.setup();
+      ImageConfig.setup(brando);
       break;
     case 'portfolio-configure':
-      ImageConfig.setup();
+      ImageConfig.setup(brando);
       break;
     case 'dashboard-system_info':
-      Stats.setup();
+      Stats.setup(brando);
       break;
     case 'pages-index':
-      Pages.setup();
+      Pages.setup(brando);
       break;
     case 'auth':
-      Auth.setup();
+      Auth.setup(brando);
       break;
   }
 
@@ -79,8 +100,6 @@ $(() => {
    * Global setup
    */
 
-  WS.setup();
-  Accordion.setup();
   Menu.setup();
 
   $(document).trigger('enhance.tablesaw');
@@ -91,17 +110,4 @@ $(() => {
     });
 });
 
-
-export {
-  Accordion,
-  Autoslug,
-  Chart,
-  Dropzone,
-  PopupForm,
-  Sortable,
-  Utils,
-  brando,
-  bI18n,
-  vex,
-  i18n,
-};
+module.exports = brando;

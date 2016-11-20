@@ -3,25 +3,23 @@ exports.config = {
 
   files: {
     javascripts: {
+      entryPoints: {
+        'web/static/js/admin/index.js': {
+          'js/brando.js': /^(node_modules|web\/static\/js\/admin)/,
+        },
+      },
       joinTo: {
         /* Frontend JS application */
-        'js/app.js': [
-          /^(web\/static\/js)/,
-        ],
+        'js/app.js': /^(web\/static\/js\/app)/,
+
+        /* JQuery module */
+        'js/jquery.js': 'node_modules/jquery/dist/jquery.js',
 
         /* Frontend vendors */
         'js/vendor.js': [
           'node_modules/phoenix/priv/static/phoenix.js',
           'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
-          /^(web\/static\/vendor)/,
-        ],
-
-        /* Copy brando main JS */
-        'js/brando.js': [
-          'node_modules/jquery/dist/jquery.js',
-          'node_modules/process/browser.js',
-          'node_modules/brando/priv/static/js/brando.js',
-          /^(web\/static\/js\/admin)/,
+          /^(web\/static\/js\/app\/vendor)/,
         ],
 
         /* Copy Villain lib */
@@ -35,13 +33,12 @@ exports.config = {
         /* Frontend application-specific CSS/SCSS */
         'css/app.css': [
           'node_modules/bootstrap-sass/assets/stylesheets/_bootstrap.scss',
-          /^(web\/static\/vendor)/,
+          /^(web\/static\/app\/vendor)/,
           'web/static/css/app.scss',
         ],
 
         /* Backend stylesheets */
         'css/brando.css': ['node_modules/brando/priv/static/css/brando.css'],
-        'css/brando.vendor.css': ['node_modules/brando/priv/static/css/brando.vendor.css'],
         'css/villain.css': ['node_modules/brando_villain/priv/static/css/villain.css'],
 
         /* Custom stylesheets for backend, loaded after brando.css */
@@ -82,7 +79,7 @@ exports.config = {
     babel: {
       // Do not use ES6 compiler in vendor code
       ignore: [
-        /^(web\/static\/vendor|bower_components|node_modules)/,
+        /^(web\/static\/app\/vendor|bower_components|node_modules)/,
       ],
     },
     postcss: {
@@ -119,7 +116,7 @@ exports.config = {
       'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
     ],
     styles: {
-      brando: ['priv/static/css/brando.css', 'priv/static/css/brando.vendor.css'],
+      brando: ['priv/static/css/brando.css'],
       brando_villain: ['priv/static/css/villain.css'],
     },
   },

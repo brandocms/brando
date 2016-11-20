@@ -1,27 +1,33 @@
 import $ from 'jquery';
+import Dropzone from 'dropzone';
 
-import Accordion from './accordion';
+import accordion from './accordion';
 import Utils from './utils';
-import { vex } from './vex_brando';
-import bI18n from './i18n';
+import vex from './vex_brando';
+import i18n from './i18n';
 
 let imagePool = [];
 
 class Images {
   static setup() {
-    this.getHash();
-    this.deleteListener();
-    this.imageSelectionListener();
-    this.imagePropertiesListener();
+    Images.getHash();
+    Images.deleteListener();
+    Images.imageSelectionListener();
+    Images.imagePropertiesListener();
   }
+
   static getHash() {
-    const hash = document.location.hash;
+    let hash = document.location.hash;
     if (hash) {
-      Accordion.activateTab(`#tab-${hash.slice(1)}`);
+      hash = `#tab-${hash.slice(1)}`;
+    } else {
+      // get the first tab as hash
+      hash = `#${$('.tab-link').first().attr('id')}`;
     }
+    accordion.activateTab(hash);
   }
+
   static imageSelectionListener() {
-    const that = this;
     $('.image-selection-pool img')
       .click(function onClick() {
         if ($(this)
@@ -43,13 +49,11 @@ class Images {
           imagePool.push($(this).attr('data-id'));
         }
         $(this).toggleClass('selected');
-        that.checkButtonEnable(this);
+        Images.checkButtonEnable(this);
       });
   }
 
   static imagePropertiesListener() {
-    const that = this;
-
     $(document)
       .on({
         mouseenter: function onMouseEnter() {
@@ -78,7 +82,7 @@ class Images {
         vex.dialog.open({
           message: '',
           input: function inputCallback() {
-            attrs = that.buildAttrs($img.data());
+            attrs = Images.buildAttrs($img.data());
             $content.append($img)
                     .append(attrs);
 
@@ -93,7 +97,7 @@ class Images {
                 form: formWithoutId,
                 id: id,
               };
-              that.submitProperties(data);
+              Images.submitProperties(data);
             }
           },
         });
@@ -126,14 +130,13 @@ class Images {
   }
 
   static buildAttrs(data) {
-    const that = this;
     let ret = '';
     $.each(data, (attr, val) => {
       if (attr === 'id') {
         ret += `<input name="id" type="hidden" value="${val}" />`;
       } else {
         ret += `
-          <div><label>${that.capitalize(attr)}</label>
+          <div><label>${Images.capitalize(attr)}</label>
           <input name="${attr}" type="text" value="${val}" /></div>
         `;
       }
@@ -158,18 +161,17 @@ class Images {
   }
 
   static deleteListener() {
-    const that = this;
     $('.delete-selected-images')
       .click((e) => {
         e.preventDefault();
         vex.dialog.confirm({
-          message: bI18n.t('images:delete_confirm'),
+          message: i18n.t('images:delete_confirm'),
           callback: function dialogCallback(value) {
             if (value) {
               $(this)
                 .removeClass('btn-danger')
                 .addClass('btn-warning')
-                .html(bI18n.t('images:deleting'));
+                .html(i18n.t('images:deleting'));
               $.ajax({
                 headers: {
                   Accept: 'application/json; charset=utf-8',
@@ -179,26 +181,49 @@ class Images {
                 data: {
                   ids: imagePool,
                 },
-                success: that.deleteSuccess,
+                success: Images.deleteSuccess,
               });
             }
           },
         });
       });
   }
+
   static deleteSuccess(data) {
     if (data.status === '200') {
       $('.delete-selected-images')
         .removeClass('btn-warning')
         .addClass('btn-danger')
-        .html(bI18n.t('images:delete_images'))
+        .html(i18n.t('images:delete_images'))
         .attr('disabled', 'disabled');
 
       for (let i = 0; i < data.ids.length; i += 1) {
-        $(`.image-selection-pool img[data-id=${data.ids[i]}]`).fadeOut();
+        const imgSel = `.image-selection-pool img[data-id=${data.ids[i]}]`;
+        $(imgSel).fadeOut(() => {
+          $(imgSel).parent().remove();
+        });
       }
       imagePool = [];
     }
+  }
+
+  static setupUpload() {
+    const dz = new Dropzone('#brando-dropzone', {
+      paramName: 'image',
+      maxFilesize: 10,
+      thumbnailHeight: 150,
+      thumbnailWidth: 150,
+    });
+
+    $(`<div class="dz-default dz-message">
+        <span>
+          <i class="fa fa-cloud fa-4x"></i><br>
+          Klikk her eller dra og slipp bilder her for å laste opp
+        </span>
+      </div>
+    `).appendTo('#brando-dropzone');
+
+    return dz;
   }
 }
 

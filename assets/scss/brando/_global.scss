@@ -7,6 +7,25 @@ a {
   text-decoration: none;
 }
 
+.btn {
+  text-shadow: 1px 1px 1px rgba(51, 51, 51, 0.28);
+
+  .fa {
+    border-right: 1px dotted rgba(0, 0, 0, 0.09);
+    padding-right: 25px;
+  }
+
+  &.btn-xs {
+    .fa {
+      padding-right: 10px;
+    }
+  }
+
+  &.btn-default {
+    text-shadow: none;
+  }
+}
+
 h1 {
   border-bottom: 2px solid #E2E2E2;
   color: #333;

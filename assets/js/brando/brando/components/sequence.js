@@ -1,5 +1,5 @@
 import $ from 'jquery';
-import bI18n from './i18n';
+import i18n from './i18n';
 import Sortable from './sortable';
 
 class Sequence {
@@ -13,7 +13,7 @@ class Sequence {
           $('#sort-post')
             .removeClass('btn-default', 'btn-success')
             .addClass('btn-warning')
-            .html(bI18n.t('sequence:store_new'));
+            .html(i18n.t('sequence:store_new'));
         },
       });
       this.sortListener();
@@ -26,7 +26,7 @@ class Sequence {
       $('#sort-post')
         .removeClass('btn-warning')
         .addClass('btn-success')
-        .html(bI18n.t('sequence:stored'));
+        .html(i18n.t('sequence:stored'));
     }
   }
 
@@ -38,7 +38,7 @@ class Sequence {
         $(this)
           .removeClass('btn-default')
           .addClass('btn-warning')
-          .html(bI18n.t('sequence:storing'));
+          .html(i18n.t('sequence:storing'));
         $.ajax({
           headers: {
             Accept: 'application/json; charset=utf-8',

@@ -81,7 +81,11 @@ module.exports = {
       },
     ],
   },
-
+  externals: {
+    dropzone: 'dropzone',
+    i18next: 'i18next',
+    jquery: 'jquery',
+  },
   plugins: plugins,
   resolve: {
     modules: [
