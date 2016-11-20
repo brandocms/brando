@@ -175,9 +175,10 @@
 
 .dzone {
   min-height: 250px;
-  border: 1px solid #ddd;
-  background: white;
+  border: 1px solid #efefef;
+  background: #fbfbfb;
   max-width: 730px;
+  box-shadow: 1px 1px 1px #aaa;
   }
   .dzone i {
     padding-bottom: 15px;

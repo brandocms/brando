@@ -38,7 +38,7 @@ $.fn.slugIt = function(options) {
         chars = $.extend(chars, opts.map);
     }
 
-    $(this).bind(defaults.events, function() {
+    $(this).on(defaults.events, function() {
         var text = $(this).val();
 
         if ( opts.before ) text = opts.before(text);

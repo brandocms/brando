@@ -97,7 +97,7 @@ import $ from "jquery";
                         $('<a>', {
                             href  : '#',
                             title : 'Removing tag',
-                            text  : 'x'
+                            text  : '✖'
                         }).click(function () {
                             return $('#' + id).removeTag(escape(value));
                         })
@@ -135,7 +135,7 @@ import $ from "jquery";
             value = unescape(value);
             this.each(function() {
                 var id = $(this).attr('id');
-                var str;
+                var str = '';
                 var old = $(this).val().split(delimiter[id]);
 
                 $('#'+id+'_tagsinput .tag').remove();
@@ -245,11 +245,11 @@ import $ from "jquery";
                 $(data.fake_input).css('color',settings.placeholderColor);
                 $(data.fake_input).resetAutosize(settings);
 
-                $(data.holder).bind('click',data,function(event) {
+                $(data.holder).on('click',data,function(event) {
                     $(event.data.fake_input).focus();
                 });
 
-                $(data.fake_input).bind('focus',data,function(event) {
+                $(data.fake_input).on('focus',data,function(event) {
                     if ($(event.data.fake_input).val()==$(event.data.fake_input).attr('data-default')) {
                         $(event.data.fake_input).val('');
                     }
@@ -264,14 +264,14 @@ import $ from "jquery";
 
                     if ($.Autocompleter !== undefined) {
                         $(data.fake_input).autocomplete(settings.autocomplete_url, settings.autocomplete);
-                        $(data.fake_input).bind('result',data,function(event,data) {
+                        $(data.fake_input).on('result',data,function(event,data) {
                             if (data) {
                                 $('#'+id).addTag(data[0] + "",{focus:true,unique:(settings.unique)});
                             }
                         });
                     } else if ($.ui.autocomplete !== undefined) {
                         $(data.fake_input).autocomplete(autocomplete_options);
-                        $(data.fake_input).bind('autocompleteselect',data,function(event,ui) {
+                        $(data.fake_input).on('autocompleteselect',data,function(event,ui) {
                             $(event.data.real_input).addTag(ui.item.value,{focus:true,unique:(settings.unique)});
                             return false;
                         });
@@ -281,7 +281,7 @@ import $ from "jquery";
                 } else {
                         // if a user tabs out of the field, create a new tag
                         // this is only available if autocomplete is not used.
-                        $(data.fake_input).bind('blur',data,function(event) {
+                        $(data.fake_input).on('blur',data,function(event) {
                             var d = $(this).attr('data-default');
                             if ($(event.data.fake_input).val()!='' && $(event.data.fake_input).val()!=d) {
                                 if( (event.data.minChars <= $(event.data.fake_input).val().length) && (!event.data.maxChars || (event.data.maxChars >= $(event.data.fake_input).val().length)) )
@@ -295,7 +295,7 @@ import $ from "jquery";
 
                 }
                 // if user types a default delimiter like comma,semicolon and then create a new tag
-                $(data.fake_input).bind('keypress',data,function(event) {
+                $(data.fake_input).on('keypress',data,function(event) {
                     if (_checkDelimiter(event)) {
                         event.preventDefault();
                         if( (event.data.minChars <= $(event.data.fake_input).val().length) && (!event.data.maxChars || (event.data.maxChars >= $(event.data.fake_input).val().length)) )
@@ -308,7 +308,7 @@ import $ from "jquery";
                     }
                 });
                 //Delete last tag on backspace
-                data.removeWithBackspace && $(data.fake_input).bind('keydown', function(event)
+                data.removeWithBackspace && $(data.fake_input).on('keydown', function(event)
                 {
                     if(event.keyCode == 8 && $(this).val() == '')
                     {
