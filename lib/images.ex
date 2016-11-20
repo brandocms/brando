@@ -16,7 +16,6 @@ defmodule Brando.Images do
     recreate_sizes_for: 2
   ]
   import Brando.Utils.Schema, only: [put_creator: 2]
-
   import Ecto.Query
 
   @spec create_image(%{binary => term} | %{atom => term}, Brando.User.t) :: {:ok, Image.t} | {:error, Keyword.t}
