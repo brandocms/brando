@@ -5538,6 +5538,25 @@ fieldset[disabled] .btn-gplus.active {
 form.grid-form {
   margin-bottom: 15px; }
 
+.help-box:before {
+  content: "\F059";
+  font-family: "fontawesome";
+  font-size: 40px;
+  position: absolute;
+  left: 25px;
+  top: 50%;
+  line-height: 0;
+  color: #b9cccc;
+  text-shadow: 2px 2px 0px #fff; }
+
+.help-box {
+  background-color: #e3f3f3;
+  padding: 15px;
+  font-size: 18px;
+  position: relative;
+  padding-left: 81px;
+  box-shadow: 1px 1px 0px #d3e4e4; }
+
 .has-error > label {
   color: #C04040 !important; }
 
@@ -7101,7 +7120,7 @@ h4.negative {
   background-color: #333;
   color: #fff;
   display: table;
-  font-weight: bold;
+  font-weight: 600;
   padding: 2px 10px; }
 
 .noselect {

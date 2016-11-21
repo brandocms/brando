@@ -135,7 +135,6 @@ defmodule Brando.Admin.ImageCategoryController do
 
       for s <- series do
         new_path = Path.join([category.cfg.upload_path, s.slug])
-
         new_cfg = Map.put(category.cfg, :upload_path, new_path)
 
         s
