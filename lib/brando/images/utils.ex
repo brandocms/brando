@@ -260,7 +260,7 @@ defmodule Brando.Images.Utils do
   end
 
   @doc """
-  Put `size_cfg` as ̀size_key` in `image_series`.
+  Put `size_cfg` as `size_key` in `image_series`.
   """
   @spec put_size_cfg(ImageSeries.t, String.t, Brando.Type.ImageConfig.t) :: :ok
   def put_size_cfg(image_series, size_key, size_cfg) do
