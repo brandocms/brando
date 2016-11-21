@@ -1,5 +1,11 @@
     <h1><%= gettext("New user") %></h1>
-    <%= UserForm.get_form(type: :create, action: :create, params: [], changeset: assigns[:changeset]) %>
+    <%= UserForm.get_form(
+          type: :create,
+          action: :create,
+          params: [],
+          changeset: assigns[:changeset]
+        )
+    %>
     <div class="form-actions">
       <a href="<%= Brando.helpers.admin_user_path(@conn, :index) %>" class="btn btn-default">
         <i class="fa fa-list fa-fw m-r-sm"></i> <%= gettext("Back to index") %>
