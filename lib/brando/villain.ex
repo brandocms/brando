@@ -250,7 +250,7 @@ defmodule Brando.Villain do
 
       @doc false
       def imageseries(conn, %{"series" => series_slug}) do
-        series = Brando.repo.first!(
+        series = (
           from is in unquote(series_model),
                 join: c in assoc(is, :image_category),
                 join: i in assoc(is, :images),
@@ -258,6 +258,8 @@ defmodule Brando.Villain do
             order_by: i.sequence,
              preload: [image_category: c, images: i]
         )
+        |> first
+        |> Brando.repo.one!
 
         sizes  = Enum.map(series.cfg.sizes, &elem(&1, 0))
         images = Enum.map(series.images, &(&1.image))
