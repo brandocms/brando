@@ -263,7 +263,7 @@ defmodule Brando.Villain do
         images = Enum.map(series.images, &(&1.image))
 
         json conn, %{
-          status:    200,
+          status:    "200",
           series:    series_slug,
           images:    images,
           sizes:     sizes,
@@ -282,7 +282,7 @@ defmodule Brando.Villain do
         )
 
         series_slugs = Enum.map(series, &(&1.slug))
-        json conn, %{status: 200, series: series_slugs}
+        json conn, %{status: "200", series: series_slugs}
       end
 
       @doc false
@@ -295,7 +295,7 @@ defmodule Brando.Villain do
           image_model.update_image_meta(image, form["title"], form["credits"])
 
         info = %{
-          status:  200,
+          status:  "200",
           id:      id,
           uid:     uid,
           title:   image.image.title,
