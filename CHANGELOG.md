@@ -1,69 +1,6 @@
 ## v0.37.0-dev (2016-XX-XX)
 
 * Backwards incompatible changes
-  * Static changes. `brando.auth.js` is no more, nor is `brando.vendor.css`.
-    1) First `rm -rf priv/static/js && rm -rf priv/static/css`.
-    2) Then, in your `brunch-config.js`:
-
-    ```diff
-    + /* Copy brando main JS */
-    + 'js/brando.js': [
-    +   'node_modules/brando/priv/static/js/brando.js',
-    +   /^(web\/static\/js\/admin)/,
-    + ],
-
-    - /* Copy brando main JS */
-    - 'js/brando.js': ['node_modules/brando/priv/static/js/brando.js',
-
-    - /* Custom backend JS */
-    - 'js/brando.custom.js': /^(web\/static\/js\/admin)/,
-
-    - /* Brando authentication bundle */
-    - 'js/brando.auth.js': 'node_modules/brando/priv/static/js/brando.auth.js',
-
-    # ...
-
-      modules: {
-        autoRequire: {
-          'js/app.js': ['app'],
-    -     'js/brando.custom.js': ['admin/custom.js']
-    +     'js/brando.js': ['brando'],
-
-    # ...
-
-      npm: {
-        # ...
-        static: [
-    -     'node_modules/brando/priv/static/js/brando.js',
-    -     'node_modules/brando/priv/static/js/brando.auth.js',
-          'node_modules/brando_villain/priv/static/js/villain.all.js',
-          'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
-        ],
-    ```
-    3) Rename `web/static/js/admin/custom.js` -> `web/static/js/admin/index.js`.
-    Set the contents to something like this:
-
-    ```javascript
-    // import brando from 'brando';
-    import $ from 'jquery';
-
-    import Instagram from './instagram';
-    import Portfolio from './portfolio';
-
-    $(() => {
-      /* page specific switch */
-
-      switch ($('body').attr('data-script')) {
-      case 'instagram-index':
-        Instagram.setup();
-        break;
-      case 'portfolio-index':
-        Portfolio.setup();
-        break;
-      }
-    });
-    ```
-
   * Changes to PopupForm. Must now be registered with an atom, so:
     ```elixir
     Brando.PopupForm.Registry.register(:accounts, "client", MyApp.ClientForm,

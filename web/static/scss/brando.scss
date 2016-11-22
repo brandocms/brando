@@ -8,11 +8,6 @@ $foundation-version: "1.0.2";
 // Make sure the charset is set appropriately
 @charset "UTF-8";
 
-// Vendored libs
-@import "../css/dropzone.css";
-@import "../css/font-awesome.min.css";
-@import "../css/tablesaw.stackonly.css";
-
 // Libraries (let's make Normalize an external dependency eventually)
 @import "vendor/normalize";
 
