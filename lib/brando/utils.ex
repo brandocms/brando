@@ -360,6 +360,11 @@ defmodule Brando.Utils do
     default && Brando.Images.Utils.size_dir(default, size) || ""
   end
 
+  def img_url("", size, opts) do
+    default = Keyword.get(opts, :default, nil)
+    default && Brando.Images.Utils.size_dir(default, size) || ""
+  end
+
   def img_url(image_field, :original, opts) do
     prefix = Keyword.get(opts, :prefix, nil)
     prefix && Path.join([prefix, image_field.path]) || image_field.path
