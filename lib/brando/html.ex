@@ -79,9 +79,9 @@ defmodule Brando.HTML do
   Returns `active` if `conn`'s `full_path` matches `current_path`.
   """
   @spec active(Plug.Conn.t, String.t) :: String.t
-  def active(conn, url_to_match) do
-    active_path?(conn, url_to_match) && "active"
-                                     || ""
+  def active(conn, url_to_match, add_class? \\ nil) do
+    result = add_class? && ~s(class="active") || "active"
+    active_path?(conn, url_to_match) && result || ""
   end
 
   @doc """
