@@ -21,7 +21,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       Mix.Tasks.Brando.Gen.Html.run [
         "MinionFace", "minion_faces", "name", "age:integer", "height:decimal",
         "nicks:array:text", "famous:boolean", "born_at:datetime",
-        "secret:uuid", "photo:image", "data:villain", "first_login:date",
+        "secret:uuid", "photo:image", "data:villain", "biography:villain", "first_login:date",
         "alarm:time", "address:references", "creator:references"]
 
       assert_file "web/models/minion_face.ex", fn file ->
@@ -31,12 +31,14 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "singular: \"minion face\""
         assert file =~ "plural: \"minion faces\""
         assert file =~ "born_at: gettext(\"Born at\")"
-        assert file =~ "@required_fields ~w(name age height nicks famous " <>
-                       "born_at secret data first_login " <>
-                       "alarm creator_id address_id)"
+        assert file =~ "@required_fields ~w(name age height nicks famous born_at secret first_login alarm data biography_data creator_id address_id)"
         assert file =~ "@optional_fields ~w(photo)"
         assert file =~ "use Brando.Sequence, :model"
         assert file =~ "sequenced"
+        assert file =~ "villain"
+        assert file =~ "villain(:biography)"
+        assert file =~ "generate_html()"
+        assert file =~ "generate_html(:biography)"
       end
 
       assert_file "test/models/minion_face_test.exs"
@@ -47,6 +49,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "use Brando.Villain, :migration"
         assert file =~ "villain"
         assert file =~ "sequenced"
+        assert file =~ "villain(:biography)"
       end
 
       assert_file "web/controllers/minion_face_controller.ex", fn file ->

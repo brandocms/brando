@@ -79,10 +79,13 @@ defmodule Brando.Villain do
             |> generate_html()
           end
       """
-      def generate_html(changeset, parser_mod \\ Brando.config(Brando.Villain)[:parser]) do
-        if Ecto.Changeset.get_change(changeset, :data) do
+      def generate_html(changeset, field \\ nil, parser_mod \\ Brando.config(Brando.Villain)[:parser]) do
+        data_field = field && field |> to_string |> Kernel.<>("_data") |> String.to_atom || :data
+        html_field = field && field |> to_string |> Kernel.<>("_html") |> String.to_atom || :html
+
+        if Ecto.Changeset.get_change(changeset, data_field) do
           parsed_data = Brando.Villain.parse(changeset.changes.data, parser_mod)
-          Ecto.Changeset.put_change(changeset, :html, parsed_data)
+          Ecto.Changeset.put_change(changeset, html_field, parsed_data)
         else
           changeset
         end
@@ -91,11 +94,14 @@ defmodule Brando.Villain do
       @doc """
       Rerender page HTML from data.
       """
-      def rerender_html(changeset, parser_mod \\ Brando.config(Brando.Villain)[:parser]) do
-        data = Ecto.Changeset.get_field(changeset, :data)
+      def rerender_html(changeset, field \\ nil, parser_mod \\ Brando.config(Brando.Villain)[:parser]) do
+        data_field = field && field |> to_string |> Kernel.<>("_data") |> String.to_atom || :data
+        html_field = field && field |> to_string |> Kernel.<>("_html") |> String.to_atom || :html
+
+        data = Ecto.Changeset.get_field(changeset, data_field)
 
         changeset
-        |> Ecto.Changeset.put_change(:html, Brando.Villain.parse(data, parser_mod))
+        |> Ecto.Changeset.put_change(html_field, Brando.Villain.parse(data, parser_mod))
         |> Brando.repo.update!
       end
 
@@ -138,10 +144,12 @@ defmodule Brando.Villain do
     @moduledoc """
     Macro for villain model fields.
     """
-    defmacro villain do
+    defmacro villain(field \\ nil) do
+      data_field = field && field |> to_string |> Kernel.<>("_data") |> String.to_atom || :data
+      html_field = field && field |> to_string |> Kernel.<>("_html") |> String.to_atom || :html
       quote do
-        Ecto.Schema.field(:data, Brando.Type.Json)
-        Ecto.Schema.field(:html, :string)
+        Ecto.Schema.field(unquote(data_field), Brando.Type.Json)
+        Ecto.Schema.field(unquote(html_field), :string)
       end
     end
   end
@@ -157,10 +165,12 @@ defmodule Brando.Villain do
     @moduledoc """
     Macro for villain migrations.
     """
-    defmacro villain do
+    defmacro villain(field \\ nil) do
+      data_field = field && field |> to_string |> Kernel.<>("_data") |> String.to_atom || :data
+      html_field = field && field |> to_string |> Kernel.<>("_html") |> String.to_atom || :html
       quote do
-        Ecto.Migration.add(:data, :json)
-        Ecto.Migration.add(:html, :text)
+        Ecto.Migration.add(unquote(data_field), :json)
+        Ecto.Migration.add(unquote(html_field), :text)
       end
     end
   end

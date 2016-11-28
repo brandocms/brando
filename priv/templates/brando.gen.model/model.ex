@@ -29,7 +29,7 @@ defmodule <%= module %> do
       }
     }
 <% end %>
-  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields)), " ", &elem(&1, 0)) %><%= if assocs do %> <% end %><%= Enum.map_join(assocs, " ", &elem(&1, 1)) %>)a
+  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields)) |> Keyword.drop(Keyword.values(villain_fields)), " ", &elem(&1, 0)) %><%= if villain_fields != [] do %> <% end %><%= Enum.map_join(villain_fields, " ", fn({k, v}) -> if v == :data, do: "#{v}", else: "#{v}_data" end) %><%= if assocs do %> <% end %><%= Enum.map_join(assocs, " ", &elem(&1, 1)) %>)a
   @optional_fields ~w(<%= Enum.map_join(img_fields, " ", &elem(&1, 1)) %>)a
 
   @doc """
@@ -41,8 +41,8 @@ defmodule <%= module %> do
   def changeset(model, params \\ %{}) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
-    |> validate_required(@required_fields)<%= if villain_fields != [] do %>
-    |> generate_html()<% end %><%= if img_fields != [] do %>
+    |> validate_required(@required_fields)<%= if villain_fields != [] do %><%= for {k, v} <- villain_fields do %><%= if v == :data do %>
+    |> generate_html()<% else %>  |> generate_html(<%= inspect v %>)<% end %><% end %><% end %><%= if img_fields != [] do %>
     |> cleanup_old_images()<% end %>
   end
 
