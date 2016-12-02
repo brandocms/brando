@@ -12,7 +12,7 @@ defmodule Brando.ImageSeries do
   alias Brando.ImageCategory
 
   import Ecto.Query, only: [from: 2]
-  import Brando.Utils.Model, only: [avoid_slug_collision: 1]
+  import Brando.Utils.Model, only: [avoid_slug_collision: 2]
   import Brando.Gettext
 
   @required_fields ~w(name slug image_category_id creator_id)a
@@ -45,8 +45,7 @@ defmodule Brando.ImageSeries do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> unique_constraint(:slug)
-    |> avoid_slug_collision
+    |> avoid_slug_collision(&filter_current_category/1)
     |> inherit_configuration
   end
 
@@ -62,9 +61,17 @@ defmodule Brando.ImageSeries do
   def changeset(schema, :update, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
-    |> unique_constraint(:slug)
-    |> avoid_slug_collision
+    |> avoid_slug_collision(&filter_current_category/1)
     |> validate_paths
+  end
+
+  @doc """
+  Filter used in `avoid_slug_collision` to ensure we are only checking slugs
+  from the same category.
+  """
+  def filter_current_category(cs) do
+    from m in __MODULE__,
+      where: m.image_category_id == ^get_field(cs, :image_category_id)
   end
 
   @doc """
@@ -82,7 +89,6 @@ defmodule Brando.ImageSeries do
   Before inserting changeset. Copies the series' category config.
   """
   def inherit_configuration(%{changes: %{image_category_id: cat_id, slug: slug}} = cs) do
-
     do_inherit_configuration(cs, cat_id, slug)
   end
 
