@@ -62,7 +62,6 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       sequenced
       timestamps
     end
-    create unique_index(:imageseries, [:slug])
 
     create table(:images) do
       add :image,             :text
