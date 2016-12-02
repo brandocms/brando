@@ -63,14 +63,18 @@ defmodule Brando.ImageCategory do
   """
   @spec put_default_config(Ecto.Changeset.t) :: Ecto.Changeset.t
   def put_default_config(cs) do
-    path_from_slug = get_change(cs, :slug, "default")
-    upload_path    = Path.join(["images", "site", path_from_slug])
-    default_config = Brando.Images
-                     |> Brando.config
-                     |> Keyword.get(:default_config)
-                     |> Map.put(:upload_path, upload_path)
+    if get_change(cs, :cfg, nil) do
+      cs
+    else
+      path_from_slug = get_change(cs, :slug, "default")
+      upload_path    = Path.join(["images", "site", path_from_slug])
+      default_config = Brando.Images
+                       |> Brando.config
+                       |> Keyword.get(:default_config)
+                       |> Map.put(:upload_path, upload_path)
 
-    put_change(cs, :cfg, default_config)
+      put_change(cs, :cfg, default_config)
+    end
   end
 
   @doc """
