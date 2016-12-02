@@ -36,7 +36,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "use Brando.Sequence, :model"
         assert file =~ "sequenced"
         assert file =~ "villain"
-        assert file =~ "villain(:biography)"
+        assert file =~ "villain :biography"
         assert file =~ "generate_html()"
         assert file =~ "generate_html(:biography)"
       end
@@ -49,7 +49,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "use Brando.Villain, :migration"
         assert file =~ "villain"
         assert file =~ "sequenced"
-        assert file =~ "villain(:biography)"
+        assert file =~ "villain :biography"
       end
 
       assert_file "web/controllers/minion_face_controller.ex", fn file ->
