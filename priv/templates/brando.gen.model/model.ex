@@ -42,7 +42,8 @@ defmodule <%= module %> do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)<%= if villain_fields != [] do %><%= for {k, v} <- villain_fields do %><%= if v == :data do %>
-    |> generate_html()<% else %>  |> generate_html(<%= inspect v %>)<% end %><% end %><% end %><%= if img_fields != [] do %>
+    |> generate_html()<% else %>
+    |> generate_html(<%= inspect v %>)<% end %><% end %><% end %><%= if img_fields != [] do %>
     |> cleanup_old_images()<% end %>
   end
 
