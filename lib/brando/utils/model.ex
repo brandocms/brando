@@ -3,6 +3,8 @@ defmodule Brando.Utils.Model do
   Common model utility functions
   """
 
+  import Ecto.Query
+
   @slug_collision_attemps 15
 
   @doc """
@@ -31,12 +33,12 @@ defmodule Brando.Utils.Model do
   @doc """
   Precheck :slug in `cs` to make sure we avoid collisions
   """
-  def avoid_slug_collision(cs) do
-    module = cs.data.__struct__
+  def avoid_slug_collision(cs, filter_fun \\ nil) do
+    q = filter_fun && filter_fun.(cs) || cs.data.__struct__
     slug = Ecto.Changeset.get_change(cs, :slug)
     if slug do
       unique_slug =
-        case get_unique_slug(module, slug, 0) do
+        case get_unique_slug(q, slug, 0) do
           {:ok, unique_slug} -> unique_slug
           {:error, :too_many_attempts} -> slug
         end
@@ -46,11 +48,11 @@ defmodule Brando.Utils.Model do
     end
   end
 
-  defp get_unique_slug(module, slug, attempts) when attempts < @slug_collision_attemps do
+  defp get_unique_slug(q, slug, attempts) when attempts < @slug_collision_attemps do
     slug_to_test = construct_slug(slug, attempts)
-    case Brando.repo.get_by(module, slug: slug_to_test) do
+    case Brando.repo.one(from m in q, where: m.slug == ^slug_to_test) do
       nil -> {:ok, slug_to_test}
-      _   -> get_unique_slug(module, slug, attempts + 1)
+      _   -> get_unique_slug(q, slug, attempts + 1)
     end
   end
 
