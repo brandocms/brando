@@ -12,7 +12,7 @@ defmodule Brando.ImageSeries do
   alias Brando.ImageCategory
 
   import Ecto.Query, only: [from: 2]
-  import Brando.Utils.Schema, only: [avoid_slug_collision: 1]
+  import Brando.Utils.Schema, only: [avoid_slug_collision: 2]
   import Brando.Gettext
 
   @required_fields ~w(name slug image_category_id creator_id)a
