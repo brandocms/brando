@@ -186,6 +186,10 @@
     all your schemas using this to:
     `use Brando.Meta.Schema, [...]`
 
+* Enhancements
+  * Added `title_prefix` config option.
+    `config :brando, title_prefix: "My App >> "`
+
 * Deprecations
   * `model_name` and `model_repr` are now deprecated and removed.
   * Passing `model` to `form` doesn't work anymore. Pass `schema` instead.
