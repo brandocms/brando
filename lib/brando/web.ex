@@ -58,7 +58,7 @@ defmodule Brando.Web do
       import Ecto
       import Ecto.Changeset
       import Ecto.Query, only: [from: 1, from: 2]
-      import Brando.Utils.Model
+      import Brando.Utils.Schema
 
       # Alias the data repository as a convenience
       alias unquote(repo)
