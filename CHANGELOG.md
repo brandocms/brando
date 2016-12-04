@@ -1,5 +1,15 @@
 ## v0.37.0-dev (2016-XX-XX)
 * Backwards incompatible changes
+  * Removing DB-level unique slug index from image_series.
+    1) Create a new migration:
+      `$ mix ecto.gen.migration remove_slug_index_from_image_series`
+    2) Replace the `change` function with:
+      ```
+      def change do
+        drop index(:imageseries, [:slug])
+      end
+      ```
+
   * Removed `use Brando.Images.Upload`. Now calls explicitly from controller instead.
   * Deprecating passing schemas to `use Brando.Villain, :controller`.
   * Static changes. `brando.auth.js` is no more, nor is `brando.vendor.css`.
