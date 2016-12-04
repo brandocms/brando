@@ -149,6 +149,11 @@ defmodule Brando.UtilsTest do
   test "get_page_title" do
     assert get_page_title(%{assigns: %{page_title: "Test"}}) == "MyApp | Test"
     assert get_page_title(%{}) == "MyApp"
+
+    Application.put_env(:brando, :title_prefix, "MyApp! >> ")
+
+    assert get_page_title(%{assigns: %{page_title: "Test"}}) == "MyApp! >> Test"
+    assert get_page_title(%{}) == "MyApp"
   end
 
   test "host_and_media_url" do

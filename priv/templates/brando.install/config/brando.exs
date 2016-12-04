@@ -10,6 +10,7 @@ config :logger, :console,
 
 config :brando,
   app_name: "<%= application_module %>",
+  title_prefix: "<%= application_module %> | ",
   endpoint: <%= application_module %>.Web.Endpoint,
   otp_app: :<%= application_name %>,
   log_dir: Path.expand("./log"),
