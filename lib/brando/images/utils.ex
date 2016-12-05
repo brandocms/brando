@@ -134,10 +134,20 @@ defmodule Brando.Images.Utils do
         {size_name, sized_path}
       end
 
+    new_path = Path.join([upload_path, filename])
+
+    image_info =
+      new_path
+      |> media_path()
+      |> Mogrify.open
+      |> Mogrify.verbose
+
     size_struct =
       %Brando.Type.Image{}
       |> Map.put(:sizes, Enum.into(sizes, %{}))
-      |> Map.put(:path, Path.join([upload_path, filename]))
+      |> Map.put(:path, new_path)
+      |> Map.put(:width, image_info.width)
+      |> Map.put(:height, image_info.height)
 
     {:ok, size_struct}
   end
@@ -162,8 +172,7 @@ defmodule Brando.Images.Utils do
         size_cfg
       end
 
-    # This is slightly dumb, but should be enough.
-    # If we crop, we always pass WxH.
+    # This is slightly dumb, but should be enough. If we crop, we always pass WxH.
     # If we don't, we always pass W or xH.
     {crop, modifier, size} =
       if size_cfg["crop"] do
