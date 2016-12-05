@@ -165,18 +165,30 @@ defmodule Brando.Images.Utils do
     # This is slightly dumb, but should be enough.
     # If we crop, we always pass WxH.
     # If we don't, we always pass W or xH.
-    {modifier, size} =
+    {crop, modifier, size} =
       if size_cfg["crop"] do
-        {"--resize", size_cfg["size"]}
+        image_info = Mogrify.verbose(image)
+        [dest_w, dest_h] = split_geometry(size_cfg["size"])
+        resize_to =
+          if image_info.width > image_info.height do
+            new_width = image_info.width / image_info.height * dest_h
+            new_height = dest_h
+            "#{new_width}x#{new_height}"
+          else
+            new_height = image_info.height / image_info.width * dest_w
+            new_width = dest_w
+            "#{new_width}x#{new_height}"
+          end
+        {~w(--crop #{size_cfg["size"]}), "--resize", resize_to}
       else
         modifier =
           String.contains?(size_cfg["size"], "x") && "--resize-fit-height" || "--resize-fit-width"
         size =
           String.replace(size_cfg["size"], ~r/x|\^|\!|\>|\<|\%/, "")
-        {modifier, size}
+        {"", modifier, size}
       end
 
-    System.cmd "gifsicle", ~w(#{modifier} #{size} --output #{image_dest} -i #{image_src}), stderr_to_stdout: true
+    System.cmd "gifsicle", ~w(#{crop} #{modifier} #{size} --output #{image_dest} -i #{image_src}), stderr_to_stdout: true
   end
 
   def create_image_size(image_src, image_dest, size_cfg, _) do
@@ -620,5 +632,9 @@ defmodule Brando.Images.Utils do
 
         existing_paths -- upload_paths
     end
+  end
+
+  defp split_geometry(geometry) do
+    Regex.split(~r/x/, geometry, [parts: 2])
   end
 end
