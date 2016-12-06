@@ -190,6 +190,7 @@
   * Added `title_prefix` config option.
     `config :brando, title_prefix: "My App >> "`
   * Brando.Type.Image now has width and height keys. These are set in the `create_image_sizes` function
+  * Brando.Type.File now has mimetype and size keys. These are set in the `create_file_struct` function
 
 * Bug fixes
   * Fixed gifsicle thumbnailing
