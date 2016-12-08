@@ -1,5 +1,64 @@
-## v0.37.0-dev (2016-XX-XX)
+## v1.0.0-alpha.0-dev (2016-XX-XX)
 * Backwards incompatible changes
+  * Brando now uses `Guardian` for auth. This means some changes in your `router.ex`:
+    ```diff
+      pipeline :admin do
+        plug :accepts, ~w(html json)
+        plug :fetch_session
+        plug :fetch_flash
+        plug :put_admin_locale
+        plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
+    -   plug Authenticate
+    +   plug Guardian.Plug.VerifySession
+    +   plug Guardian.Plug.LoadResource
+    +   plug Guardian.Plug.EnsureAuthenticated, handler: Brando.AuthHandler
+        plug :put_secure_browser_headers
+      end
+
+      pipeline :browser do
+        plug :accepts, ["html"]
+        plug :fetch_session
+        plug :fetch_flash
+        plug Lockdown
+        plug :put_locale
+        plug :protect_from_forgery
+        plug :put_secure_browser_headers
+        plug PlugHeartbeat
+      end
+
+    + pipeline :browser_session do
+    +   plug Guardian.Plug.VerifySession
+    +   plug Guardian.Plug.LoadResource
+    + end
+
+      pipeline :auth do
+        plug :accepts, ["html"]
+        plug :fetch_session
+        plug :fetch_flash
+    +   plug Guardian.Plug.VerifySession
+    +   plug Guardian.Plug.LoadResource
+        plug :protect_from_forgery
+        plug :put_secure_browser_headers
+      end
+
+      pipeline :api do
+        plug :accepts, ["json"]
+      end
+
+    ```
+    and also add to your `brando.exs`:
+
+    ```diff
+      # Configure Guardian for auth.
+      config :guardian, Guardian,
+        allowed_algos: ["HS512"], # optional
+        verify_module: Guardian.JWT,  # optional
+        issuer: "MyApp",
+        ttl: {30, :days},
+        verify_issuer: true, # optional
+        secret_key: "SECRET_KEY. Create a new one with `mix phoenix.gen.secret`",
+        serializer: Brando.GuardianSerializer
+    ```
   * Removing DB-level unique slug index from image_series.
     1) Create a new migration:
       `$ mix ecto.gen.migration remove_slug_index_from_image_series`
@@ -15,13 +74,11 @@
   * Static changes. `brando.auth.js` is no more, nor is `brando.vendor.css`.
     1) First `rm -rf priv/static/js && rm -rf priv/static/css`.
     2) Take a look at the new `brunch-config.js`, there are a lot of changes:
-    ```javascript
-
-
-    ```
        a) We use an entry point to bundle the admin, so you need to update `brunch` as well:
           `$ npm i --save-dev autoprefixer@latest babel-preset-stage-0@latest brunch@latest eslint@latest \ eslint-config-airbnb@latest eslint-plugin-import@latest eslint-plugin-jsx-a11y@latest \ eslint-plugin-react@latest sass-brunch@latest`
-    3) Rename `web/static/js/admin/custom.js` -> `web/static/js/admin/index.js`.
+    4) Move `web/static` -> `assets`
+    5) Rename `assets/assets` -> `assets/static`
+    3) Rename `assets/js/admin/custom.js` -> `assets/js/admin/index.js`.
     Set the contents to something like this:
 
     ```javascript
@@ -97,85 +154,13 @@
         // here you'd insert the returned fields into a select or something similar.
         console.log(`${fields.id} --> ${fields.username}`);
     }
-
-  * Clean up `brunch-config.js`. If you choose to do this:
-    * Remove everything in `paths.watched` except for `// static` + the following 2 lines.
-    * Remove `conventions.vendor` key.
-    * Add to `npm`:
-    ```
-      styles: {
-        brando: ['priv/static/css/brando.css'],
-        brando_villain: ['priv/static/css/villain.css'],
-      }
-    ```
-
-  * Brando now uses `Guardian` for auth. This means some changes in your `router.ex`:
-    ```diff
-      pipeline :admin do
-        plug :accepts, ~w(html json)
-        plug :fetch_session
-        plug :fetch_flash
-        plug :put_admin_locale
-        plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
-    -   plug Authenticate
-    +   plug Guardian.Plug.VerifySession
-    +   plug Guardian.Plug.LoadResource
-    +   plug Guardian.Plug.EnsureAuthenticated, handler: Brando.AuthHandler
-        plug :put_secure_browser_headers
-      end
-
-      pipeline :browser do
-        plug :accepts, ["html"]
-        plug :fetch_session
-        plug :fetch_flash
-        plug Lockdown
-        plug :put_locale
-        plug :protect_from_forgery
-        plug :put_secure_browser_headers
-        plug PlugHeartbeat
-      end
-
-    + pipeline :browser_session do
-    +   plug Guardian.Plug.VerifySession
-    +   plug Guardian.Plug.LoadResource
-    + end
-
-      pipeline :auth do
-        plug :accepts, ["html"]
-        plug :fetch_session
-        plug :fetch_flash
-    +   plug Guardian.Plug.VerifySession
-    +   plug Guardian.Plug.LoadResource
-        plug :protect_from_forgery
-        plug :put_secure_browser_headers
-      end
-
-      pipeline :api do
-        plug :accepts, ["json"]
-      end
-
-    ```
-    and also add to your `brando.exs`:
-
-    ```diff
-      # Configure Guardian for auth.
-      config :guardian, Guardian,
-        allowed_algos: ["HS512"], # optional
-        verify_module: Guardian.JWT,  # optional
-        issuer: "MyApp",
-        ttl: {30, :days},
-        verify_issuer: true, # optional
-        secret_key: "SECRET_KEY. Create a new one with `mix phoenix.gen.secret`",
-        serializer: Brando.GuardianSerializer
-    ```
-
+  ```
   * `use Brando.Web, :model` -> `use Brando.Web, :schema`
   * `use Brando.Villain, :model` -> `use Brando.Villain, :schema`
-  * Change keys in `use Brando.Villain, [:controller ...]` to `:image_schema` and `series_schema`
   * `Brando.Utils.Model` renamed to `Brando.Utils.Schema`
   * Using `use Brando.Sequence, :model` now must `use Brando.Sequence, :schema` instead.
   * Using Sequence controller now requires a `:schema` key instead of `:model` key.
-    ```
+    ```elixir
     use Brando.Sequence,
       [:controller, [schema: Brando.Image,
                      filter: &Brando.Image.for_series_id/1]]
@@ -184,6 +169,7 @@
     and replace `use Brando.Tag, :model` with `use Brando.Tag, :schema`
   * Renamed `Brando.Meta.Model` to `Brando.Meta.Schema`. This means you need to change
     all your schemas using this to:
+
     `use Brando.Meta.Schema, [...]`
 
 * Enhancements
