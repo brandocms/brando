@@ -11,6 +11,9 @@ $foundation-version: "1.0.2";
 // Libraries (let's make Normalize an external dependency eventually)
 @import "vendor/normalize";
 
+// Font awesome
+@import "vendor/font-awesome/font-awesome";
+
 // Helpers
 @import "helpers/functions";
 @import "helpers/mixins";
