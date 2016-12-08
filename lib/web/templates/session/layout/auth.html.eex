@@ -12,7 +12,7 @@
     <script src="<%= Brando.helpers.static_path(@conn, "/js/brando.js") %>" type="text/javascript" charset="utf-8"></script>
   </head>
 
-  <body class="auth">
+  <body class="auth" data-script="auth">
     <%= Brando.HTML.insecure_login?(@conn) %>
       <div class="grid-frame">
         <div class="grid-container v-align">
