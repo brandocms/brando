@@ -84,7 +84,7 @@ function factory($)
 			// find the input and bind to various events
 			this._fn = $.proxy(this._onValueChange, this);
 			var eventNames = "input." + pluginName + " change." + pluginName + " keyup." + pluginName;
-			this._$input = $(options.inputSelector).bind(eventNames, this._fn);
+			this._$input = $(options.inputSelector).on(eventNames, this._fn);
 
 			// remember the last entered value
 			this._lastValue = null;
