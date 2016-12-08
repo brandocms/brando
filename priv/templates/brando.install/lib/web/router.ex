@@ -20,11 +20,11 @@ defmodule <%= application_module %>.Web.Router do
     plug :accepts, ~w(html json)
     plug :fetch_session
     plug :fetch_flash
-    plug :put_admin_locale
-    plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
     plug Guardian.Plug.VerifySession
     plug Guardian.Plug.LoadResource
     plug Guardian.Plug.EnsureAuthenticated, handler: Brando.AuthHandler
+    plug :put_admin_locale
+    plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
     plug :put_secure_browser_headers
   end
 

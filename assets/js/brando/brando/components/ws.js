@@ -7,8 +7,12 @@ import vex from './vex_brando';
 class WS {
   constructor() {
     const that = this;
-    const userToken = document.querySelector('meta[name="channel_token"]')
-      .getAttribute('content');
+    const userToken = WS.getUserToken();
+
+    if (!userToken) {
+      return;
+    }
+
     const socket = new Socket('/admin/ws', {
       params: {
         token: userToken,
@@ -59,7 +63,14 @@ class WS {
     });
   }
 
-  alert(message) {
+  static getUserToken() {
+    if (document.querySelector('meta[name="channel_token"]')) {
+      return document.querySelector('meta[name="channel_token"]').getAttribute('content');
+    }
+    return null;
+  }
+
+  static alert(message) {
     vex.dialog.alert(message);
   }
 

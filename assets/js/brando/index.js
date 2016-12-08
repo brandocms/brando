@@ -1,7 +1,6 @@
 import $ from 'jquery';
 
 import './brando/extensions/datepicker';
-
 import './brando/extensions/searcher';
 import './brando/extensions/slugit';
 import './brando/extensions/tablesaw';
