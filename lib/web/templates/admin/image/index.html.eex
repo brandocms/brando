@@ -45,8 +45,8 @@
           <span class="text-muted">
             <%= String.capitalize(Brando.ImageSeries.__name__(:singular)) %>:
           </span>
-          <%= String.capitalize(serie.name) %>
-          </h2>
+          <strong><%= String.capitalize(serie.name) %></strong>
+        </h2>
           <!-- imagetoolbar -->
           <div class="image-toolbar">
             <button disabled class="delete-selected-images btn btn-danger m-b-sm">

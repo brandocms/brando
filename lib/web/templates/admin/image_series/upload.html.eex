@@ -1,4 +1,4 @@
-<h1 class="bold"><%= gettext("Upload to this image series") %> &raquo; <strong><%= @series.name %></strong></h1>
+<h1><span class="text-normal"><%= gettext("Upload to this image series") %></span> &raquo; <strong><%= @series.name %></strong></h1>
 <%= dropzone_form(:admin_image_series_path, @series.id) %>
 <div class="buttons m-t-md">
   <a href="<%= Brando.helpers.admin_image_series_path(@conn, :edit, @series.id) %>" class="btn btn-default">
