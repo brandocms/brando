@@ -64,18 +64,19 @@ defmodule Brando.Mixfile do
 
     {:phoenix, github: "phoenixframework/phoenix", override: true},
     {:phoenix_html, "~> 2.6"},
-    {:phoenix_ecto, "~> 3.1.0-rc"},
+    {:phoenix_ecto, "~> 3.2"},
 
     {:guardian, "~> 0.13.0"},
 
-    {:postgrex, "~> 0.11"},
+    # override until scrivener_ecto updates
+    {:postgrex, "~> 0.13", override: true},
     {:scrivener_ecto, "~> 1.0"},
     {:poison, "~> 2.0 or ~> 3.0"},
 
     {:slugger, "~> 0.1.0"},
 
     # temporary until scrivener_ecto updates
-    {:ecto, "~> 2.1-rc", override: true},
+    {:ecto, "~> 2.1", override: true},
 
     # Dev dependencies
     {:credo, ">= 0.0.0", only: :dev},

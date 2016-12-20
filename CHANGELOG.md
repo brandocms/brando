@@ -76,7 +76,17 @@
         drop index(:imageseries, [:slug])
       end
       ```
-
+  * Postgrex has changed its extension setup. Create `lib/postgrex_types.ex` and populate with:
+    ```
+    Postgrex.Types.define(MyApp.PostgresTypes,
+                          [Postgrex.Extensions.JSON] ++ Ecto.Adapters.Postgres.extensions(), json: Poison)
+    ```
+    Then add to your `config/(dev/prod).exs` under the repo config:
+    ```
+    config :my_app, Repo,
+      # ...
+      types: Brando.PostgresTypes,
+    ```
   * Removed `use Brando.Images.Upload`. Now calls explicitly from controller instead.
   * Deprecating passing schemas to `use Brando.Villain, :controller`.
   * Static changes. `brando.auth.js` is no more, nor is `brando.vendor.css`.

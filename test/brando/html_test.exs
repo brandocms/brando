@@ -106,9 +106,9 @@ defmodule Brando.HTMLTest do
 
   test "meta_tag" do
     assert meta_tag("keywords", "hello, world") ==
-           {:safe, ~s(<meta content="hello, world" name="keywords">)}
+           {:safe, [60, "meta", [[32, "content", 61, 34, "hello, world", 34], [32, "name", 61, 34, "keywords", 34]], 62]}
     assert meta_tag({"keywords", "hello, world"}) ==
-           {:safe, ~s(<meta content="hello, world" name="keywords">)}
+           {:safe, [60, "meta", [[32, "content", 61, 34, "hello, world", 34], [32, "name", 61, 34, "keywords", 34]], 62]}
   end
 
   test "render_meta" do

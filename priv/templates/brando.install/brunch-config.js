@@ -25,7 +25,7 @@ exports.config = {
 
         /* Copy Villain lib */
         'js/villain.all.js': [
-          'node_modules/brando_villain/priv/static/js/villain.all.js',
+          'node_modules/@twined/villain/dist/villain.all.js',
         ],
       },
     },
@@ -39,7 +39,7 @@ exports.config = {
         ],
 
         /* Backend stylesheets */
-        'css/brando.css': ['node_modules/brando/priv/static/css/brando.css'],
+        'css/brando.css': ['node_modules/@twined/villain/dist/css/villain.css'],
         'css/villain.css': ['node_modules/brando_villain/priv/static/css/villain.css'],
 
         /* Custom stylesheets for backend, loaded after brando.css */
@@ -113,7 +113,7 @@ exports.config = {
       jQuery: 'jquery',
     },
     static: [
-      'node_modules/brando_villain/priv/static/js/villain.all.js',
+      'node_modules/@twined/villain/dist/villain.all.js',
       'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
     ],
     styles: {
