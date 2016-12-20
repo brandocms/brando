@@ -1,5 +1,13 @@
 ## v1.0.0-alpha.0-dev (2016-XX-XX)
 * Backwards incompatible changes
+  * Villain is now published to npm.
+    1) Remove `"brando_villain": "file:deps/brando_villain"` from `package.json`
+    2) Remove `brando_villain` from mix.exs deps and applications
+    3) run `npm install --save @twined/villain`
+    4) Replace brando_villain's entry under your `npm.static` key in `brunch-config.js`:
+       `'node_modules/@twined/villain/dist/villain.all.js'`
+    5) Replace the `css/villain.css` entry in `brunch-config.js` with:
+       `'css/villain.css': ['node_modules/@twined/villain/dist/css/villain.css']`
   * Brando now uses `Guardian` for auth. This means some changes in your `router.ex`:
     ```diff
       pipeline :admin do

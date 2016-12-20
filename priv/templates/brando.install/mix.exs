@@ -74,7 +74,6 @@ defmodule <%= application_module %>.Mixfile do
 
      # brando
      {:brando, github: "twined/brando", branch: "feature/phoenix1.3", override: true},
-     {:brando_villain, "~> 0.1"},
 
      # optional brando modules
      {:brando_news, github: "twined/brando_news"},

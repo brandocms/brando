@@ -28,6 +28,18 @@ defmodule Brando.Meta.Controller do
   end
 
   @doc """
+  Merges `opts` in with `:brando_meta` key in `conn.private`.
+  """
+  def put_meta(conn, opts) do
+    meta =
+      conn
+      |> get_meta
+      |> Map.merge(opts)
+
+    put_private(conn, :brando_meta, meta)
+  end
+
+  @doc """
   Get all `:brando_meta` keys from `conn.private`
   """
   def get_meta(conn) do
