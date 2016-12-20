@@ -57,6 +57,9 @@ defmodule Mix.Tasks.Brando.Install do
     # Web helpers for admin and frontend
     {:eex, "templates/brando.install/lib/admin_web.ex", "lib/admin_web.ex"},
     {:eex, "templates/brando.install/lib/web.ex", "lib/web.ex"},
+
+    # Postgrex types
+    {:eex, "templates/brando.install/lib/postgrex_types.ex", "lib/postgrex_types.ex"},
   ]
 
   @static [

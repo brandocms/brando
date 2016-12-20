@@ -46,7 +46,7 @@ Add to your relevant `config/%{env}.exs` Repo config:
 
 ```diff
   config :my_app, Repo,
-+   extensions: [{Postgrex.Extensions.JSON, library: Poison}]
++   types: MyApp.PostgrexTypes
 ```
 
 Install NPM packages:
