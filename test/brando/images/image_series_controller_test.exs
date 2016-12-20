@@ -111,7 +111,7 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> send_request
 
     assert html_response(conn, 200)
-           =~ "Upload to this image series &raquo; <strong>Series name</strong>"
+           =~ "<span class=\"text-normal\">Upload to this image series</span> &raquo; <strong>Series name</strong>"
   end
 
   test "upload_post", %{user: user, category: category} do
