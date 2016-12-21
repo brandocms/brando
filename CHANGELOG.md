@@ -8,6 +8,39 @@
        `'node_modules/@twined/villain/dist/villain.all.js'`
     5) Replace the `css/villain.css` entry in `brunch-config.js` with:
        `'css/villain.css': ['node_modules/@twined/villain/dist/css/villain.css']`
+  * Default `package.json` should look like:
+  ```
+  {
+    "repository": {},
+    "dependencies": {
+      "autoprefixer": "^6.5.4",
+      "bootstrap-sass": "^3.3.6",
+      "brando": "file:deps/brando",
+      "jquery": "^2.2.1",
+      "phoenix": "file:deps/phoenix",
+      "phoenix_html": "file:deps/phoenix_html",
+      "dropzone": "^4.3.0",
+      "i18next": "^4.0.0",
+      "@twined/villain": "^0.3.0"
+    },
+    "devDependencies": {
+      "babel-preset-stage-0": "^6.16.0",
+      "brunch": "^2.9.1",
+      "eslint": "^3.12.2",
+      "babel-brunch": "^6.0.2",
+      "clean-css-brunch": "^2.0.0",
+      "css-brunch": "^2.0.0",
+      "javascript-brunch": "^2.0.0",
+      "postcss-brunch": "^0.5.0",
+      "uglify-js-brunch": "^2.0.1",
+      "eslint-config-airbnb": "^13.0.0",
+      "eslint-plugin-import": "^2.2.0",
+      "eslint-plugin-jsx-a11y": "^3.0.2",
+      "eslint-plugin-react": "^6.8.0",
+      "sass-brunch": "^2.9.0"
+    }
+  }
+  ```
   * Brando now uses `Guardian` for auth. This means some changes in your `router.ex`:
     ```diff
       pipeline :admin do
@@ -76,6 +109,7 @@
         drop index(:imageseries, [:slug])
       end
       ```
+    3) `$ mix ecto.migrate`
   * Postgrex has changed its extension setup. Create `lib/postgrex_types.ex` and populate with:
     ```
     Postgrex.Types.define(MyApp.PostgresTypes,
@@ -85,18 +119,21 @@
     ```
     config :my_app, Repo,
       # ...
-      types: Brando.PostgresTypes,
+      types: MyApp.PostgresTypes,
     ```
-  * Removed `use Brando.Images.Upload`. Now calls explicitly from controller instead.
+  * Removed `use Brando.Images.Upload`. Now calls explicitly from schema instead.
   * Deprecating passing schemas to `use Brando.Villain, :controller`.
   * Static changes. `brando.auth.js` is no more, nor is `brando.vendor.css`.
     1) First `rm -rf priv/static/js && rm -rf priv/static/css`.
     2) Take a look at the new `brunch-config.js`, there are a lot of changes:
        a) We use an entry point to bundle the admin, so you need to update `brunch` as well:
           `$ npm i --save-dev autoprefixer@latest babel-preset-stage-0@latest brunch@latest eslint@latest \ eslint-config-airbnb@latest eslint-plugin-import@latest eslint-plugin-jsx-a11y@latest \ eslint-plugin-react@latest sass-brunch@latest`
-    4) Move `web/static` -> `assets`
-    5) Rename `assets/assets` -> `assets/static`
-    3) Rename `assets/js/admin/custom.js` -> `assets/js/admin/index.js`.
+    4) `mv web/static assets`
+    5) `mv assets/assets assets/static`
+    3) `mv assets/js/admin/custom.js assets/js/admin/index.js`.
+    4) `mkdir -p assets/js/app`
+    5) `mv assets/js/app.js assets/js/app/app.js`
+    6) `mv assets/vendor/*.js assets/js/app/vendor`
     Set the contents to something like this:
 
     ```javascript
@@ -138,10 +175,16 @@
     ```
     4) Ensure instagram.js, portfolio.js or news.js don't initialize themselves. Remove
        any document.ready() callbacks.
-  * `Brando.Plugs.Uploads` is deprecated. It is more explicit now, where we specify the field
+  * Move web to lib directory:
+    1) `mv web lib`
+    2) Fix path in `web.ex` under view:
+       `use Phoenix.View, root: "lib/web/templates", namespace: MyApp`
+  * `Brando.Plug.Uploads` is deprecated. It is more explicit now, where we specify the field
     and what kind of upload it is in your changeset function.
     In your schema with ImageField or FileField, add to your changeset functions
     ```elixir
+    import Brando.Images.Optimize, only: [optimize: 2]
+
     def changeset(schema, :create, params) do
       schema
       |> cast(params, @required_fields ++ @optional_fields)
@@ -150,6 +193,8 @@
       |> optimize(:avatar)
     end
     ```
+    Now you can remove your `import Brando.Plug.Uploads` and also your `check_for_uploads`
+    plug in the controller.
   * Changes to PopupForm. Must now be registered with an atom, so:
     ```elixir
     Brando.PopupForm.Registry.register(:accounts, "client", MyApp.ClientForm,

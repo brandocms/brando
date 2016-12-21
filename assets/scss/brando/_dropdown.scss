@@ -104,11 +104,11 @@
   filter: progid:DXImageTransform.Microsoft.gradient(enabled = false);
 }
 
-.open > .dropdown-menu {
+.active > .dropdown-menu {
   display: block;
 }
 
-.open > a {
+.active > a {
   outline: 0;
 }
 

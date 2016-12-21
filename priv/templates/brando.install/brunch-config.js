@@ -20,7 +20,7 @@ exports.config = {
           'node_modules/phoenix/priv/static/phoenix.js',
           'node_modules/phoenix_html/priv/static/phoenix_html.js',
           'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
-          /^(assets\/js\/app\/vendor)/,
+          /^(assets\/vendor)/,
         ],
 
         /* Copy Villain lib */

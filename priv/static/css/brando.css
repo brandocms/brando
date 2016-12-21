@@ -6271,10 +6271,10 @@ fieldset[disabled] .btn-gplus.active {
   background-image: none;
   filter: progid:DXImageTransform.Microsoft.gradient(enabled = false); }
 
-.open > .dropdown-menu {
+.active > .dropdown-menu {
   display: block; }
 
-.open > a {
+.active > a {
   outline: 0; }
 
 .dropdown-menu-right {
