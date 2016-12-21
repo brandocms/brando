@@ -360,7 +360,7 @@ defmodule Brando.HTML do
       |> put_meta("og:url", Brando.Utils.current_url(conn))
 
     html = Enum.map_join(get_meta(conn), "\n    ", &(elem(meta_tag(&1), 1)))
-    Phoenix.HTML.raw(html)
+    Phoenix.HTML.raw("    #{html}")
   end
 
   @doc """
