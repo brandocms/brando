@@ -115,7 +115,7 @@ defmodule Brando.HTMLTest do
     mock_conn = %Plug.Conn{private: %{plug_session: %{}}}
     {:safe, html} = render_meta(mock_conn)
     assert html =~ ~s(<meta content="MyApp" name="og:site_name">)
-    assert html =~ ~s(<meta content="MyApp | MyApp" name="og:title">)
+    assert html =~ ~s(<meta content="MyApp" name="og:title">)
     assert html =~ ~s(<meta content="http://www.example.com:0" name="og:url">)
   end
 
