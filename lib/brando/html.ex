@@ -7,7 +7,7 @@ defmodule Brando.HTML do
 
   import Brando.Gettext
   import Brando.Utils, only: [current_user: 1, active_path?: 2]
-  import Brando.Meta.Controller, only: [put_meta: 3, get_meta: 1]
+  import Brando.Meta.Controller, only: [put_meta: 3, get_meta: 1, get_meta: 2]
 
   @doc false
   defmacro __using__(_) do
@@ -354,10 +354,21 @@ defmodule Brando.HTML do
     title = Brando.Utils.get_page_title(conn)
     conn =
       conn
-      |> put_meta("og:title", "#{app_name} | #{title}")
+      |> put_meta("og:title", "#{title}")
       |> put_meta("og:site_name", app_name)
       |> put_meta("og:type", "article")
       |> put_meta("og:url", Brando.Utils.current_url(conn))
+
+    conn =
+      case get_meta(conn, "og:image") do
+        nil -> conn
+        img ->
+          if String.contains?(img, "://") do
+            conn
+          else
+            put_meta(conn, "og:image", Path.join("#{conn.scheme}://#{conn.host}", img))
+          end
+      end
 
     html = Enum.map_join(get_meta(conn), "\n    ", &(elem(meta_tag(&1), 1)))
     Phoenix.HTML.raw("    #{html}")
