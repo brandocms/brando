@@ -39,8 +39,8 @@ exports.config = {
         ],
 
         /* Backend stylesheets */
-        'css/brando.css': ['node_modules/@twined/villain/dist/css/villain.css'],
-        'css/villain.css': ['node_modules/brando_villain/priv/static/css/villain.css'],
+        'css/brando.css': ['node_modules/brando/priv/static/css/brando.css'],
+        'css/villain.css': ['node_modules/@twined/villain/dist/villain.css'],
 
         /* Custom stylesheets for backend, loaded after brando.css */
         'css/brando.custom.css': [
@@ -118,7 +118,7 @@ exports.config = {
     ],
     styles: {
       brando: ['priv/static/css/brando.css'],
-      brando_villain: ['priv/static/css/villain.css'],
+      '@twined/villain': ['dist/villain.css'],
     },
   },
 };
