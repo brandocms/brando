@@ -39,6 +39,7 @@ defmodule Brando.Villain.HTML do
     base_url        = Keyword.fetch!(opts, :base_url)
     image_series    = Keyword.fetch!(opts, :image_series)
     source          = Keyword.fetch!(opts, :source)
+    default_blocks  = Keyword.get(opts, :default_blocks, [])
     extra_blocks    = Keyword.get(Brando.config(Brando.Villain),
                                   :extra_blocks, [])
 
@@ -49,12 +50,20 @@ defmodule Brando.Villain.HTML do
         "extraBlocks: #{inspect(extra_blocks)}"
       end
 
+    default_blocks =
+      if default_blocks == [] do
+        "// defaultBlocks: []"
+      else
+        "defaultBlocks: #{build_default_blocks(default_blocks)}"
+      end
+
     html =
     """
     <script type="text/javascript">
       document.addEventListener('DOMContentLoaded', function() {
         v = new Villain.Editor({
           #{extra_blocks},
+          #{default_blocks},
           baseURL: '#{base_url}',
           imageSeries: '#{image_series}',
           textArea: '#{source}'
@@ -71,5 +80,13 @@ defmodule Brando.Villain.HTML do
         [charset: "utf-8", type: "text/javascript",
          src: Brando.helpers.static_path(Brando.endpoint, src)]
     html
+  end
+
+  defp build_default_blocks(block_list) do
+    l = Enum.map(block_list, fn({block_name, block_cls}) ->
+      ~s({name: '#{block_name}', cls: #{block_cls}})
+    end) |> Enum.join(", ")
+
+    "[#{l}]"
   end
 end

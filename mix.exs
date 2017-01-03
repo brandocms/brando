@@ -56,7 +56,7 @@ defmodule Brando.Mixfile do
   end
 
   defp deps do [
-    {:comeonin, "~> 2.5"},
+    {:comeonin, "~> 3.0"},
     {:earmark, "~> 1.0", override: true},
     {:gettext, "~> 0.11"},
     {:httpoison, "~> 0.9"},
@@ -65,18 +65,11 @@ defmodule Brando.Mixfile do
     {:phoenix, github: "phoenixframework/phoenix", override: true},
     {:phoenix_html, "~> 2.6"},
     {:phoenix_ecto, "~> 3.2"},
-
-    {:guardian, "~> 0.13.0"},
-
-    # override until scrivener_ecto updates
     {:postgrex, "~> 0.13", override: true},
-    {:scrivener_ecto, "~> 1.0"},
-    {:poison, "~> 2.0 or ~> 3.0"},
+    {:guardian, "~> 0.14"},
 
     {:slugger, "~> 0.1.0"},
-
-    # temporary until scrivener_ecto updates
-    {:ecto, "~> 2.1", override: true},
+    {:scrivener_ecto, "~> 1.1"},
 
     # Dev dependencies
     {:credo, ">= 0.0.0", only: :dev},
