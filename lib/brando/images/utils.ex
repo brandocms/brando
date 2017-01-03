@@ -2,7 +2,6 @@ defmodule Brando.Images.Utils do
   @moduledoc """
   General utilities pertaining to the Images module
   """
-
   import Brando.Utils
   import Brando.Gettext
   import Ecto.Query, only: [from: 2]
@@ -10,19 +9,7 @@ defmodule Brando.Images.Utils do
   alias Brando.{Image, ImageSeries}
 
   @doc """
-  Deprecated
-  """
-  def delete_original_and_sized_images(nil) do
-    nil
-  end
-  def delete_original_and_sized_images(_) do
-    # DEPRECATE
-    raise "delete_original_and_sized_images/1 is deprecated, " <>
-          "use delete_original_and_sized_images/2 instead"
-  end
-
-  @doc """
-  Goes through `image`, which is a model with a :sizes field
+  Goes through `image`, which is a schema with a :sizes field
   then passing to `delete_media/2` for removal
 
   ## Example:
@@ -129,9 +116,8 @@ defmodule Brando.Images.Utils do
   @doc """
   Creates sized images.
   """
-  @spec create_image_sizes({map | Plug.Upload.t, Brando.Type.ImageConfig.t})
-                           :: {:ok, Brando.Type.Image.t}
-  def create_image_sizes({%{uploaded_file: file}, cfg}) do
+  @spec create_image_sizes(Brando.Upload.t) :: {:ok, Brando.Type.Image.t}
+  def create_image_sizes(%{plug: %{uploaded_file: file}, cfg: cfg}) do
     type                  = image_type(file)
     {file_path, filename} = split_path(file)
     upload_path           = Map.get(cfg, :upload_path)
@@ -144,12 +130,24 @@ defmodule Brando.Images.Utils do
 
         File.mkdir_p(postfixed_size_dir)
         create_image_size(file, sized_image, size_cfg, type)
+
         {size_name, sized_path}
       end
 
-    size_struct = %Brando.Type.Image{}
-                  |> Map.put(:sizes, Enum.into(sizes, %{}))
-                  |> Map.put(:path, Path.join([upload_path, filename]))
+    new_path = Path.join([upload_path, filename])
+
+    image_info =
+      new_path
+      |> media_path()
+      |> Mogrify.open
+      |> Mogrify.verbose
+
+    size_struct =
+      %Brando.Type.Image{}
+      |> Map.put(:sizes, Enum.into(sizes, %{}))
+      |> Map.put(:path, new_path)
+      |> Map.put(:width, image_info.width)
+      |> Map.put(:height, image_info.height)
 
     {:ok, size_struct}
   end
@@ -174,21 +172,32 @@ defmodule Brando.Images.Utils do
         size_cfg
       end
 
-    # This is slightly dumb, but should be enough.
-    # If we crop, we always pass WxH.
+    # This is slightly dumb, but should be enough. If we crop, we always pass WxH.
     # If we don't, we always pass W or xH.
-    {modifier, size} =
+    {crop, modifier, size} =
       if size_cfg["crop"] do
-        {"--resize", size_cfg["size"]}
+        image_info = Mogrify.verbose(image)
+        [dest_w, dest_h] = split_geometry(size_cfg["size"])
+        resize_to =
+          if image_info.width > image_info.height do
+            new_width = image_info.width / image_info.height * dest_h
+            new_height = dest_h
+            "#{new_width}x#{new_height}"
+          else
+            new_height = image_info.height / image_info.width * dest_w
+            new_width = dest_w
+            "#{new_width}x#{new_height}"
+          end
+        {~w(--crop #{size_cfg["size"]}), "--resize", resize_to}
       else
         modifier =
           String.contains?(size_cfg["size"], "x") && "--resize-fit-height" || "--resize-fit-width"
         size =
           String.replace(size_cfg["size"], ~r/x|\^|\!|\>|\<|\%/, "")
-        {modifier, size}
+        {"", modifier, size}
       end
 
-    System.cmd "gifsicle", ~w(#{modifier} #{size} --output #{image_dest} -i #{image_src}), stderr_to_stdout: true
+    System.cmd "gifsicle", ~w(#{crop} #{modifier} #{size} --output #{image_dest} -i #{image_src}), stderr_to_stdout: true
   end
 
   def create_image_size(image_src, image_dest, size_cfg, _) do
@@ -234,14 +243,14 @@ defmodule Brando.Images.Utils do
     delete_sized_images(img.image)
 
     {:ok, new_image} =
-      {%{uploaded_file: full_path}, img.image_series.cfg}
+      %{plug: %{uploaded_file: full_path}, cfg: img.image_series.cfg}
       |> create_image_sizes
-      |> Brando.Images.Optimize.optimize
 
     image = Map.put(img.image, :sizes, new_image.sizes)
 
     img
     |> Brando.Image.changeset(:update, %{image: image})
+    |> Brando.Images.Optimize.optimize(:image)
     |> Brando.repo.update!
 
     :ok
@@ -272,7 +281,7 @@ defmodule Brando.Images.Utils do
   end
 
   @doc """
-  Put `size_cfg` as ̀size_key` in `image_series`.
+  Put `size_cfg` as `size_key` in `image_series`.
   """
   @spec put_size_cfg(ImageSeries.t, String.t, Brando.Type.ImageConfig.t) :: :ok
   def put_size_cfg(image_series, size_key, size_cfg) do
@@ -545,11 +554,11 @@ defmodule Brando.Images.Utils do
   when series has been renamed!
   """
   @spec check_image_paths(module, map) :: :unchanged | :changed
-  def check_image_paths(model, image_series) do
+  def check_image_paths(schema, image_series) do
     upload_path = image_series.cfg.upload_path
 
     {_, paths}  = Enum.map_reduce(image_series.images, [], fn(image, acc) ->
-      case check_image_path(model, image, upload_path) do
+      case check_image_path(schema, image, upload_path) do
         nil  -> {image, acc}
         path -> {image, [path|acc]}
       end
@@ -562,7 +571,7 @@ defmodule Brando.Images.Utils do
   end
 
   @spec check_image_path(module, map, String.t) :: Ecto.Schema.t | nil
-  defp check_image_path(model, image, upload_dirname) do
+  defp check_image_path(schema, image, upload_dirname) do
     image_path     = image.image.path
     image_dirname  = Path.dirname(image.image.path)
     image_basename = Path.basename(image.image.path)
@@ -573,7 +582,7 @@ defmodule Brando.Images.Utils do
     if img_struct != nil do
       # store new image
       image
-      |> model.changeset(:update, %{image: img_struct})
+      |> schema.changeset(:update, %{image: img_struct})
       |> Brando.repo.update!
     end
   end
@@ -632,5 +641,9 @@ defmodule Brando.Images.Utils do
 
         existing_paths -- upload_paths
     end
+  end
+
+  defp split_geometry(geometry) do
+    Regex.split(~r/x/, geometry, [parts: 2])
   end
 end

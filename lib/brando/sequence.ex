@@ -1,9 +1,9 @@
 defmodule Brando.Sequence do
   @moduledoc """
-  Helpers for sequencing models.
+  Helpers for sequencing schema data.
 
-  Adds a `sequence` field to your model. You still have to sort by
-  `sequence` in your model's module.
+  Adds a `sequence` field to your schema. You still have to sort by
+  `sequence` in your schema's module.
 
   ## Example/Usage
 
@@ -13,18 +13,18 @@ defmodule Brando.Sequence do
   Controller:
 
       use Brando.Sequence,
-        [:controller, [model: Brando.Image,
+        [:controller, [schema: Brando.Image,
                        filter: &Brando.Image.for_series_id/1]]
 
   View:
 
       use Brando.Sequence, :view
 
-  Model:
+  Schema:
 
-      use Brando.Sequence, :model
+      use Brando.Sequence, :schema
 
-      schema "model" do
+      schema "my_schema" do
         # ...
         sequenced
       end
@@ -34,7 +34,7 @@ defmodule Brando.Sequence do
       use Brando.Sequence, :migration
 
       def up do
-        create table(:model) do
+        create table(:my_schema) do
           # ...
           sequenced
         end
@@ -54,7 +54,7 @@ defmodule Brando.Sequence do
       </a>
   """
 
-  defmodule Model do
+  defmodule Schema do
     @moduledoc false
     @doc false
     defmacro sequenced do
@@ -75,7 +75,8 @@ defmodule Brando.Sequence do
   end
 
   @doc false
-  def controller(model_module, filter \\ nil) do
+  @lint false
+  def controller(schema_module, filter \\ nil) do
     quote do
       if unquote(filter) do
         @doc """
@@ -105,7 +106,7 @@ defmodule Brando.Sequence do
         Render the :sequence view with `filter`
         """
         def sequence(conn, %{"filter" => filter}) do
-          {:model, model_module} = unquote(model_module)
+          {:schema, schema_module} = unquote(schema_module)
           items = filter_function(filter)
           conn
           |> assign(:items, items)
@@ -117,7 +118,7 @@ defmodule Brando.Sequence do
         Render the :sequence view.
         """
         def sequence(conn, _) do
-          {:model, model_module} = unquote(model_module)
+          {:schema, schema_module} = unquote(schema_module)
 
           conn
           |> assign(:items, filter_function())
@@ -125,19 +126,19 @@ defmodule Brando.Sequence do
         end
       else
         def sequence(conn, _) do
-          {:model, model_module} = unquote(model_module)
+          {:schema, schema_module} = unquote(schema_module)
           conn
-          |> assign(:items, Brando.repo.all(model_module))
+          |> assign(:items, Brando.repo.all(schema_module))
           |> render(:sequence)
         end
       end
 
       @doc """
-      Sequence model and render :sequence post
+      Sequence schema and render :sequence post
       """
       def sequence_post(conn, %{"order" => ids}) do
-        {:model, model_module} = unquote(model_module)
-        model_module.sequence(ids, Range.new(0, length(ids)))
+        {:schema, schema_module} = unquote(schema_module)
+        schema_module.sequence(ids, Range.new(0, length(ids)))
         conn
         |> render(:sequence_post)
       end
@@ -154,9 +155,9 @@ defmodule Brando.Sequence do
   end
 
   @doc false
-  def model do
+  def schema do
     quote do
-      import Brando.Sequence.Model, only: [sequenced: 0]
+      import Brando.Sequence.Schema, only: [sequenced: 0]
       def sequence(ids, vals) do
         order = Enum.zip(vals, ids)
         table = __MODULE__.__schema__(:source)

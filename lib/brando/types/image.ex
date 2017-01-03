@@ -11,7 +11,9 @@ defmodule Brando.Type.Image do
             credits: nil,
             path: nil,
             sizes: %{},
-            optimized: false
+            optimized: false,
+            width: nil,
+            height: nil
 
   @doc """
   Returns the internal type representation of our `Role` type for pg

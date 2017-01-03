@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="<%= current_user(@conn).language %>" class="app">
+  <head>
+    <%= meta_tag charset: "utf-8" %>
+    <%= meta_tag http_equiv: "X-UA-Compatible", content: "IE=edge" %>
+    <%= meta_tag "viewport", "width=device-width, initial-scale=1" %>
+    <%= meta_tag "description", "Brando Administration System" %>
+    <%= meta_tag "author", "Twined Networks" %>
+    <%= meta_tag "channel_token", Phoenix.Token.sign(@conn, "user", current_user(@conn).id) %>
+
+    <title><%= app_name %> | <%= assigns[:page_title] || "Administrasjon" %></title>
+
+    <!-- stylesheets -->
+    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.css") %>">
+    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.custom.css") %>">
+    <%= render_existing Phoenix.Controller.view_module(@conn), "_stylesheets." <> Phoenix.Controller.view_template(@conn), assigns %>
+
+    <!-- javascripts -->
+    <script charset="utf-8" src="<%= Brando.helpers.static_path(@conn, "/js/brando.js") %>" type="text/javascript"></script>
+    <script src="https://code.jquery.com/jquery-migrate-3.0.0.js"></script>
+    <%= render_existing Phoenix.Controller.view_module(@conn), "_scripts." <> Phoenix.Controller.view_template(@conn), assigns %>
+  </head>
+
+  <body<%= if @conn.private[:brando_section_name] do %> id="<%= @conn.private[:brando_section_name] %>" data-script="<%= @conn.private[:brando_section_name] %>-<%= @conn.private[:phoenix_action] %>"<% end %>>
+    <main id="burger" class="show-for-small-only">
+      <header>
+        <button id="mobile-nav">☰</button>
+      </header>
+    </main>
+<!-- top menu -->
+    <div id="topmenu" class="clearfix">
+      <div class="toolbar pull-right">
+        <button class="logbutton"> <i class="fa fa-fw fa-life-ring"></i></button>
+      </div>
+    </div>
+<!-- /top menu -->
+    <div class="grid-frame">
+      <div id="menu" class="collapse grid-content shrink">
+        <div class="menu-profile">
+          <!-- menu top with avatar & info -->
+          <div class="avatar">
+            <img src="<%= img_url(current_user(@conn).avatar, :thumb, [default: Brando.helpers.static_path(@conn, "/images/brando/defaults/avatar_default.jpg"), prefix: media_url()]) %>" />
+          </div>
+          <div class="name">
+            <%= current_user(@conn).full_name %>
+          </div>
+          <div class="role">
+            <%= display_roles(current_user(@conn).role) %>
+          </div>
+        </div>
+        <!-- nav -->
+        <nav class="nav-primary hidden-xs">
+          <ul class="nav">
+            <%= for menu <- Brando.Menu.get_menus() do %>
+              <%= render_menu_item(@conn, menu) %>
+            <% end %>
+          </ul>
+        </nav>
+        <!-- / nav -->
+      <!-- /#menu -->
+      </div>
+
+      <div id="content-wrapper" class="grid-block noscroll">
+        <div id="content" class="grid-content">
+        <%= Brando.HTML.display_flash(@conn) %>
+        <%= render @view_module, @view_template, assigns %>
+        </div>
+      </div>
+      <div class="grid-block noscroll" id="log-wrapper">
+        <div class="grid-content" id="log-content">
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -4,7 +4,7 @@ defmodule Mix.Brando do
 
   @valid_attributes [:integer, :float, :decimal, :boolean, :map, :string,
                      :image, :villain, :array, :references, :text, :date,
-                     :time, :datetime, :uuid]
+                     :file, :time, :datetime, :uuid]
 
   @doc """
   Copies files from source dir to target dir
@@ -167,5 +167,5 @@ defmodule Mix.Brando do
 
   defp validate_attr!({_name, type} = attr) when type in @valid_attributes, do: attr
   defp validate_attr!({_name, {type, _}} = attr) when type in @valid_attributes, do: attr
-  defp validate_attr!({_, type}), do: Mix.raise "Unknown type `#{type}` given to generator"
+  defp validate_attr!({_, type}), do: Mix.raise "Unknown type `#{inspect type}` given to generator"
 end

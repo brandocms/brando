@@ -8,19 +8,26 @@ defmodule Brando.Mixfile do
     [app: :brando,
      version: @version,
      elixir: "~> 1.3",
-     deps: deps,
+     deps: deps(),
      dialyzer: [
        plt_add_apps: [
-         :gettext, :comeonin, :mogrify, :slugger, :phoenix, :phoenix_html, :phoenix_ecto
+         :gettext,
+         :comeonin,
+         :guardian,
+         :mogrify,
+         :slugger,
+         :phoenix,
+         :phoenix_html,
+         :phoenix_ecto
        ],
        flags: []
      ],
      compilers: [:gettext, :phoenix] ++ Mix.compilers,
      elixirc_paths: elixirc_paths(Mix.env),
      test_coverage: [tool: ExCoveralls],
-     package: package,
+     package: package(),
      description: @description,
-     aliases: aliases,
+     aliases: aliases(),
 
      # Docs
      name: "Brando",
@@ -39,6 +46,7 @@ defmodule Brando.Mixfile do
      :comeonin,
      :httpoison,
      :earmark,
+     :guardian,
      :mogrify,
      :poison,
      :scrivener,
@@ -48,18 +56,20 @@ defmodule Brando.Mixfile do
   end
 
   defp deps do [
-    {:comeonin, "~> 2.5"},
+    {:comeonin, "~> 3.0"},
     {:earmark, "~> 1.0", override: true},
     {:gettext, "~> 0.11"},
     {:httpoison, "~> 0.9"},
-    {:mogrify, "~> 0.4"},
-    {:phoenix, "~> 1.2.0"},
+    {:mogrify, "0.5.0"},
+
+    {:phoenix, github: "phoenixframework/phoenix", override: true},
     {:phoenix_html, "~> 2.6"},
-    {:poison, "~> 2.0 or ~> 3.0"},
-    {:postgrex, "~> 0.11"},
-    {:scrivener_ecto, "~> 1.0"},
+    {:phoenix_ecto, "~> 3.2"},
+    {:postgrex, "~> 0.13", override: true},
+    {:guardian, "~> 0.14"},
+
     {:slugger, "~> 0.1.0"},
-    {:phoenix_ecto, "~> 3.0.0"},
+    {:scrivener_ecto, "~> 1.1"},
 
     # Dev dependencies
     {:credo, ">= 0.0.0", only: :dev},

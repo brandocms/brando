@@ -1,0 +1,121 @@
+<h1><%= gettext("Index - images") %></h1>
+<ul class="accordion-tabs-minimal">
+  <%= for category <- @categories do %>
+  <li class="tab-header-and-content">
+    <a id="tab-<%= category.slug %>" href="#" class="tab-link<%= if List.first(@categories) == category do %> is-active<% end %>">
+      <%= String.capitalize(category.name) %>
+    </a>
+    <div class="tab-content">
+      <a href="<%= Brando.helpers.admin_image_series_path(@conn, :new, category.id) %>" class="btn btn-primary m-b-sm">
+        <i class="fa fa-fw fa-plus"></i> <%= gettext("New image series") %>
+      </a>
+      <button class="btn btn-default btn-dropdown m-b-sm">
+        <div class="dropdown">
+          <label class="dropdown-toggle" data-toggle="dropdown">
+            <input type="checkbox" class="o-c bars">
+          </label>
+          <ul class="dropdown-menu" style="right: 0; left: auto;">
+            <li>
+              <a href="<%= Brando.helpers.admin_image_category_path(@conn, :edit, category.id) %>">
+                <i class="fa fa-fw fa-edit"></i> <%= gettext("Edit image category") %>
+              </a>
+            </li>
+            <li>
+              <a href="<%= Brando.helpers.admin_image_category_path(@conn, :sequence, category.id) %>">
+                <i class="fa fa-fw fa-sort"></i> <%= gettext("Sort image series") %>
+              </a>
+            </li>
+            <li>
+              <a href="<%= Brando.helpers.admin_image_category_path(@conn, :configure, category.id) %>">
+                <i class="fa fa-fw fa-cogs"></i> <%= gettext("Configure category") %>
+              </a>
+            </li>
+            <li>
+              <a href="<%= Brando.helpers.admin_image_category_path(@conn, :delete_confirm, category.id) %>">
+                <i class="fa fa-fw fa-trash"></i> <%= gettext("Delete category") %>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </button>
+    <%= if category.image_series != [] do %>
+      <%= for serie <- category.image_series do %>
+        <div class="image-serie image-selection-pool clearfix">
+        <h2 class="m-b-sm">
+          <span class="text-muted">
+            <%= String.capitalize(Brando.ImageSeries.__name__(:singular)) %>:
+          </span>
+          <strong><%= String.capitalize(serie.name) %></strong>
+        </h2>
+          <!-- imagetoolbar -->
+          <div class="image-toolbar">
+            <button disabled class="delete-selected-images btn btn-danger m-b-sm">
+              <%= gettext("Delete images") %>
+            </button>
+          </div>
+          <!-- /imagetoolbar -->
+          <%= if serie.images != [] do %>
+            <%= for image <- serie.images do %>
+            <div class="image-wrapper">
+              <img data-title="<%= image.image.title %>"
+                   data-credits="<%= image.image.credits %>"
+                   data-id="<%= image.id %>"
+                   src="<%= img_url(image.image, :thumb, prefix: media_url()) %>" />
+              <div class="overlay">
+                <a href="" class="edit-properties">
+                  <i class="fa fa-fw fa-info"></i>
+                </a>
+              </div>
+            </div>
+            <% end %>
+          <% else %>
+            <p><%= gettext("No images") %></p>
+          <% end %>
+          <hr>
+          <div class="form-actions clearfix">
+            <a href="<%= Brando.helpers.admin_image_series_path(@conn, :upload, serie.id) %>" class="btn btn-default">
+              <i class="fa fa-fw fa-cloud-upload"> </i>
+              <%= gettext("Upload images") %>
+            </a>
+
+            <button class="btn btn-default btn-dropdown">
+              <div class="dropdown">
+                <label class="dropdown-toggle" data-toggle="dropdown">
+                  <input type="checkbox" class="o-c bars">
+                </label>
+                <ul class="dropdown-menu" style="right: 0; left: auto;">
+                 <li>
+                   <a href="<%= Brando.helpers.admin_image_series_path(@conn, :edit, serie.id) %>">
+                     <i class="fa fa-fw fa-edit"> </i><%= gettext("Edit image series") %>
+                   </a>
+                  </li>
+                  <li>
+                    <a href="<%= Brando.helpers.admin_image_series_path(@conn, :sequence, serie.id) %>">
+                      <i class="fa fa-fw fa-sort"> </i><%= gettext("Sort images") %>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="<%= Brando.helpers.admin_image_series_path(@conn, :configure, serie.id) %>">
+                      <i class="fa fa-fw fa-cogs"> </i><%= gettext("Configure image series") %>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="<%= Brando.helpers.admin_image_series_path(@conn, :delete_confirm, serie.id) %>">
+                      <i class="fa fa-fw fa-trash"> </i><%= gettext("Delete image series") %>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </button>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="text-mono"><%= gettext("No image series") %></p>
+    <% end %>
+    </div>
+  </li>
+  <% end %>
+  <a href="<%= Brando.helpers.admin_image_category_path(@conn, :new) %>" class="btn btn-xs btn-default m-l-md"><i class="fa fa-fw fa-plus"></i> <%= gettext("New image category") %></a>
+</ul>
+<hr>

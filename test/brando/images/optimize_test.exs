@@ -6,57 +6,101 @@ defmodule Brando.Image.OptimizeTest do
   use RouterHelper
 
   import Brando.Images.Optimize
-  import Brando.Images.Utils, only: [media_path: 1]
+  import Brando.Images.Utils
 
-  alias Brando.Image
-  alias Brando.Factory
+  @fixture "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"
 
-  setup do
-    user = Factory.insert(:user)
-    category = Factory.insert(:image_category, creator: user)
-    series = Factory.insert(:image_series, creator: user, image_category: category)
-    {:ok, %{user: user, category: category, series: series}}
+  test "optimize ignores with changeset errors" do
+    cs = %Ecto.Changeset{
+      action: nil,
+      changes: %{image: %{dummy: "dummy"}},
+      data: nil,
+      params: %{},
+      errors: [
+        username: "has invalid format",
+        email: "has invalid format",
+        password: "can't be blank",
+        email: "can't be blank",
+        full_name: "can't be blank",
+        username: "can't be blank"
+      ]
+    }
+
+    assert optimize(cs, :image) == cs
   end
 
-  test "optimize", %{series: series, user: user} do
-    up_params = Factory.build(:plug_upload)
-    up_params_jpeg = Factory.build(:plug_upload_jpeg)
+  test "optimize ignores with no changes" do
+    cs = %Ecto.Changeset{
+      action: nil,
+      changes: %{},
+      data: nil,
+      params: %{},
+      errors: []
+    }
 
-    :post
-    |> call("/admin/images/series/#{series.id}/upload", %{"id" => series.id, "image" => up_params})
-    |> with_user(user)
-    |> as_json
-    |> send_request
+    assert optimize(cs, :image) == cs
+  end
 
-    image =
-      Image
-      |> Brando.repo.all
-      |> List.first
+  test "optimize ignores with missing config" do
+    cs = Ecto.Changeset.change(
+      %Brando.User{},
+      avatar: %Brando.Type.Image{
+        credits: nil,
+        optimized: false,
+        path: "images/default/2ambet.jpg",
+        title: nil,
+        sizes: %{
+          large: "images/default/large/2ambet.jpg",
+          medium: "images/default/medium/2ambet.jpg",
+          small: "images/default/small/2ambet.jpg",
+          thumb: "images/default/thumb/2ambet.jpg",
+          xlarge: "images/default/xlarge/2ambet.jpg"
+        }
+      }
+    )
 
-    {:ok, optimized_image} = optimize({:ok, image.image})
+    assert optimize(cs, :image) == cs
+  end
 
-    assert optimized_image.optimized
+  test "optimize ignores with missing files" do
+    cs = Ecto.Changeset.change(
+      %Brando.User{},
+      avatar: %Brando.Type.Image{
+        credits: nil,
+        optimized: false,
+        path: "images/default/2ambet.png",
+        title: nil,
+        sizes: %{
+          large: "images/default/large/2ambet.png",
+          medium: "images/default/medium/2ambet.png",
+          small: "images/default/small/2ambet.png",
+          thumb: "images/default/thumb/2ambet.png",
+          xlarge: "images/default/xlarge/2ambet.png"
+        }
+      },
+    )
 
-    assert File.exists?(media_path("portfolio/test-category/test-series/small/sample.png"))
-    assert File.exists?(media_path("portfolio/test-category/test-series/small/sample-optimized.png"))
+    assert optimize(cs, :image) == cs
+  end
 
-    Brando.repo.delete(image)
+  test "optimize" do
+    File.mkdir_p!(media_path("thumb"))
+    File.cp!(@fixture, media_path("sample.png"))
+    File.cp!(@fixture, media_path("thumb/sample.png"))
 
-    :post
-    |> call("/admin/images/series/#{series.id}/upload", %{"id" => series.id, "image" => up_params_jpeg})
-    |> with_user(user)
-    |> as_json
-    |> send_request
+    cs = Ecto.Changeset.change(
+      %Brando.User{},
+      avatar: %Brando.Type.Image{
+        credits: nil,
+        optimized: false,
+        path: "sample.png",
+        title: nil,
+        sizes: %{
+          thumb: "thumb/sample.png",
+        }
+      }
+    )
 
-    image =
-      Image
-      |> Brando.repo.all
-      |> List.first
-
-    {:ok, optimized_image} = optimize({:ok, image.image})
-
-    refute optimized_image.optimized
-    assert File.exists?(media_path("portfolio/test-category/test-series/small/sample.jpg"))
-    refute File.exists?(media_path("portfolio/test-category/test-series/small/sample-optimized.jpg"))
+    assert optimize(cs, :image) == cs
   end
 end

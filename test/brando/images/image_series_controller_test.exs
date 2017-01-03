@@ -111,10 +111,13 @@ defmodule Brando.ImageSeries.ControllerTest do
       |> send_request
 
     assert html_response(conn, 200)
-           =~ "Upload to this image series &raquo; <strong>Series name</strong>"
+           =~ "<span class=\"text-normal\">Upload to this image series</span> &raquo; <strong>Series name</strong>"
   end
 
   test "upload_post", %{user: user, category: category} do
+    File.rm_rf!(Brando.config(:media_path))
+    File.mkdir_p!(Brando.config(:media_path))
+
     series = Factory.insert(:image_series, creator: user, image_category: category)
     up_params = Factory.build(:plug_upload)
 
@@ -129,12 +132,12 @@ defmodule Brando.ImageSeries.ControllerTest do
   end
 
   test "sort", %{user: user, category: category} do
-    series = Factory.insert(:image_series, creator: user, image_category: category)
-    up_params = Factory.build(:plug_upload)
-    up_params_2 = Factory.build(:plug_upload_2)
-
     File.rm_rf!(Brando.config(:media_path))
     File.mkdir_p!(Brando.config(:media_path))
+
+    series      = Factory.insert(:image_series, creator: user, image_category: category)
+    up_params   = Factory.build(:plug_upload)
+    up_params_2 = Factory.build(:plug_upload_2)
 
     conn =
       :post

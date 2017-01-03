@@ -8,7 +8,7 @@ defmodule Brando.Users.Routes.Admin do
 
       scope "/admin", as: :admin do
         pipe_through :admin
-        user_routes "/brukere", model: Brando.User
+        user_routes "/brukere", schema: Brando.User
 
   """
   require Phoenix.Router
@@ -34,7 +34,7 @@ defmodule Brando.Users.Routes.Admin do
     add_user_routes(path, UserController, [])
 
   defp add_user_routes(path, controller, opts) do
-    map = Map.put(%{}, :model, Keyword.get(opts, :model, User))
+    map = Map.put(%{}, :schema, Keyword.get(opts, :schema, User))
     options = Keyword.put([], :private, Macro.escape(map))
     quote do
       opts = unquote(options)

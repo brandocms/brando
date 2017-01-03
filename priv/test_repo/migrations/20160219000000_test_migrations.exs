@@ -12,7 +12,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add :avatar,        :text
       add :role,          :integer
       add :language,      :text,    default: "nb"
-      add :last_login,    :datetime
+      add :last_login,    :naive_datetime
       timestamps
     end
 
@@ -33,7 +33,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add :meta_keywords,     :text
       add :featured,          :boolean
       add :published,         :boolean
-      add :publish_at,        :datetime
+      add :publish_at,        :naive_datetime
       timestamps
       tags
     end

@@ -3,7 +3,7 @@ defmodule Brando.Types.ImageConfigTest do
   alias Brando.Type.ImageConfig
 
   @result %{allowed_mimetypes: ["image/jpeg", "image/png"],
-            default_size: "medium", size_limit: 10240000,
+            default_size: "medium", size_limit: 10_240_000,
                   sizes: %{large: %{quality: 100, size: "700"},
                            medium: %{quality: 100, size: "500"},
                            small: %{quality: 100, size: "300"},
@@ -13,7 +13,7 @@ defmodule Brando.Types.ImageConfigTest do
   @result2 %Brando.Type.ImageConfig{
              allowed_mimetypes: ["image/jpeg", "image/png"],
              default_size: "medium", random_filename: false,
-             size_limit: 10240000,
+             size_limit: 10_240_000,
              sizes: %{"large" => %{"quality" => 100, "size" => "700"},
                "medium" => %{"quality" => 100, "size" => "500"},
                "small" => %{"quality" => 100, "size" => "300"},
@@ -24,7 +24,7 @@ defmodule Brando.Types.ImageConfigTest do
   @struct %ImageConfig{}
   @map %{"allowed_mimetypes" => ["image/jpeg", "image/png"],
          "default_size" => "medium",
-         "random_filename" => false, "size_limit" => 10240000,
+         "random_filename" => false, "size_limit" => 10_240_000,
          "sizes" => %{"large" => %{"quality" => 100, "size" => "700"},
                       "medium" => %{"quality" => 100, "size" => "500"},
                       "small" => %{"quality" => 100, "size" => "300"},
@@ -39,7 +39,7 @@ defmodule Brando.Types.ImageConfigTest do
                       allowed_mimetypes: ["image/jpeg", "image/png"],
                       default_size: "medium",
                       random_filename: true,
-                      size_limit: 10240000,
+                      size_limit: 10_240_000,
                       sizes: %{
                         "large" => %{
                           "quality" => 100,

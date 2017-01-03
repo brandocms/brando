@@ -37,11 +37,11 @@ defmodule Brando.Form.FieldsTest do
       choice_value in values
     end
 
-    def selected_fun_true(_form_value, _model_value) do
+    def selected_fun_true(_form_value, _schema_value) do
       true
     end
 
-    def selected_fun_false(_form_value, _model_value) do
+    def selected_fun_false(_form_value, _schema_value) do
       false
     end
 
@@ -130,24 +130,21 @@ defmodule Brando.Form.FieldsTest do
   end
 
   test "render_errors/1" do
-    assert F.render_errors([], []) == []
-    assert Enum.join(F.render_errors(["can't be blank", "must be unique"], []))
-           =~ "can&#39;t be blank"
-    assert Enum.join(F.render_errors(["can't be blank", "must be unique"], []))
-           =~ "must be unique"
+    assert F.render_errors([]) == []
+    assert Enum.join(F.render_errors(["can't be blank", "must be unique"])) =~ "can&#39;t be blank"
+    assert Enum.join(F.render_errors(["can't be blank", "must be unique"])) =~ "must be unique"
   end
 
   test "parse_error/1" do
-    opts = []
-    assert F.parse_error("can't be blank", opts)
+    assert F.parse_error("can't be blank")
            == "can't be blank"
-    assert F.parse_error("must be unique", opts)
+    assert F.parse_error("must be unique")
            == "must be unique"
-    assert F.parse_error("has invalid format", opts)
+    assert F.parse_error("has invalid format")
            == "has invalid format"
-    assert F.parse_error("is reserved", opts)
+    assert F.parse_error("is reserved")
            == "is reserved"
-    assert F.parse_error({"should be at least %{count} characters", count: 10}, opts)
+    assert F.parse_error({"should be at least %{count} characters", count: 10})
            == "should be at least 10 characters"
   end
 

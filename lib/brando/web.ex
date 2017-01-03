@@ -14,7 +14,7 @@ defmodule Brando.Web do
 
   def view do
     quote do
-      use Phoenix.View, root: "web/templates"
+      use Phoenix.View, root: "lib/web/templates"
 
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_flash: 2]
@@ -40,7 +40,7 @@ defmodule Brando.Web do
 
       import Brando.Meta.Controller
       import Brando.Utils, only: [current_user: 1, helpers: 1]
-      import Brando.Utils.Model, only: [put_creator: 2]
+      import Brando.Utils.Schema, only: [put_creator: 2]
 
       # Alias the data repository as a convenience
       alias unquote(repo)
@@ -50,7 +50,7 @@ defmodule Brando.Web do
     end
   end
 
-  def model do
+  def schema do
     repo = Brando.repo
     quote do
       use Ecto.Schema
@@ -58,7 +58,7 @@ defmodule Brando.Web do
       import Ecto
       import Ecto.Changeset
       import Ecto.Query, only: [from: 1, from: 2]
-      import Brando.Utils.Model
+      import Brando.Utils.Schema
 
       # Alias the data repository as a convenience
       alias unquote(repo)

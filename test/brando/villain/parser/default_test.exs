@@ -3,21 +3,35 @@ defmodule Brando.Villain.ParserTest do
   use Brando.Integration.TestCase
   use Brando.ConnCase
 
-  alias Brando.Image
+  alias Brando.Images
   alias Brando.Factory
 
   import Brando.Villain.Parser.Default
 
   test "header/1" do
-    assert header(%{"text" => "Header"}) == ~s(<h1>Header</h1>)
-    assert header(%{"text" => "Header", "level" => "5"}) == ~s(<h5>Header</h5>)
+    assert header(%{"text" => "Header"})
+           == ~s(<h1>Header</h1>)
+    assert header(%{"text" => "Header", "level" => "5"})
+           == ~s(<h5>Header</h5>)
+    assert header(%{"text" => "Header", "level" => "5", "anchor" => "test"})
+           == ~s(<a name="test"></a><h5>Header</h5>)
   end
 
   test "text/1" do
-    assert text(%{"text" => "**Some** text here.", "type" => "paragraph"}) ==
-      ~s(<p><strong>Some</strong> text here.</p>\n)
-    assert text(%{"text" => "**Some** text here.", "type" => "lead"}) ==
-      ~s(<p class="lead"><strong>Some</strong> text here.</p>\n)
+    assert text(%{"text" => "**Some** text here.", "type" => "paragraph"})
+           == ~s(<p><strong>Some</strong> text here.</p>\n)
+    assert text(%{"text" => "**Some** text here.", "type" => "lead"})
+           == ~s(<p class="lead"><strong>Some</strong> text here.</p>\n)
+  end
+
+  test "map/1" do
+    assert map(%{"embed_url" => "http://nrk.no", "source" => "gmaps"})
+           == "<div class=\"map-wrapper\">\n         <iframe width=\"420\"\n                 height=\"315\"\n                 src=\"http://nrk.no\"\n                 frameborder=\"0\"\n                 allowfullscreen>\n         </iframe>\n       </div>"
+  end
+
+  test "html/1" do
+    assert html(%{"text" => "<h1>test</h1>"})
+           == "<h1>test</h1>"
   end
 
   test "video/1 youtube" do
@@ -109,11 +123,11 @@ defmodule Brando.Villain.ParserTest do
     img1
     |> Map.put(:creator_id, user.id)
     |> Map.put(:image_series_id, series.id)
-    |> Image.create(user)
+    |> Images.create_image(user)
 
     img2
     |> Map.put(:creator_id, user.id)
     |> Map.put(:image_series_id, series.id)
-    |> Image.create(user)
+    |> Images.create_image(user)
   end
 end

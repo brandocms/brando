@@ -6,9 +6,8 @@ defmodule Brando.HTML do
   @type alert_levels :: :default | :primary | :info | :success | :warning | :danger
 
   import Brando.Gettext
-  import Brando.Utils, only: [media_url: 0, current_user: 1,
-                              active_path?: 2, img_url: 3]
-  import Brando.Meta.Controller, only: [put_meta: 3, get_meta: 1]
+  import Brando.Utils, only: [current_user: 1, active_path?: 2]
+  import Brando.Meta.Controller, only: [put_meta: 3, get_meta: 1, get_meta: 2]
 
   @doc false
   defmacro __using__(_) do
@@ -92,7 +91,13 @@ defmodule Brando.HTML do
     true
   end
   def can_render?(conn, %{role: role}) do
-    role in current_user(conn).role && true || false
+    current_user = current_user(conn)
+
+    if current_user do
+      role in current_user(conn).role && true || false
+    else
+      false
+    end
   end
   def can_render?(_, _) do
     true
@@ -159,7 +164,7 @@ defmodule Brando.HTML do
 
   @doc """
   Renders a delete button wrapped in a POST form.
-  Pass `params` instance of model (if one param), or a list of multiple
+  Pass `params` instance of schema (if one param), or a list of multiple
   params, and `helper` path.
   """
   @spec delete_form_button(atom, Keyword.t | %{atom => any}) :: {:safe, String.t}
@@ -207,18 +212,7 @@ defmodule Brando.HTML do
     path = Brando.Form.apply_action(helper, :upload_post, id)
     html =
     """
-    <form action="#{path}" class="dropzone" id="brando-dropzone"></form>
-    <script type="text/javascript">
-      Dropzone = require('dropzone');
-      Dropzone.options.brandoDropzone = {
-        paramName: "image",
-        maxFilesize: 10,
-        thumbnailHeight: 150,
-        thumbnailWidth: 150,
-        dictDefaultMessage: '<i class="fa fa-upload fa-4x"></i><br>' +
-                            'Trykk eller slipp bilder her for å laste opp'
-      };
-    </script>
+    <form action="#{path}" class="dzone" id="brando-dropzone"></form>
     """
     Phoenix.HTML.raw(html)
   end
@@ -286,40 +280,6 @@ defmodule Brando.HTML do
     </script>
     """
     Phoenix.HTML.raw(html)
-  end
-
-  @doc """
-  Output frontend admin menu if user is logged in and admin
-  """
-  def frontend_admin_menu(conn) do
-    if current_user(conn) do
-      default_img    = "/images/brando/defaults/avatar_default.jpg"
-      dashboard_path = Brando.helpers.admin_dashboard_path(conn, :dashboard)
-      logout_path    = Brando.helpers.session_path(conn, :logout)
-      avatar         = img_url(current_user(conn).avatar, :micro,
-                       [default: Brando.helpers.static_path(conn, default_img),
-                        prefix: media_url()])
-      html =
-      """
-      <div class="admin-menu">
-        <ul class="nav navbar-nav">
-          <li class="dropdown">
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown"
-               role="button" aria-expanded="false">
-              <img class="micro-avatar" src="#{avatar}" />
-            </a>
-            <ul class="dropdown-menu dropdown-menu-right" role="menu">
-              <li><a href="#{dashboard_path}">Admin</a></li>
-              <li><a href="#{logout_path}">Logg ut</a></li>
-            </ul>
-          </li>
-        </ul>
-      </div>
-      """
-      html |> Phoenix.HTML.raw
-    else
-      ""
-    end
   end
 
   @doc """
@@ -394,13 +354,24 @@ defmodule Brando.HTML do
     title = Brando.Utils.get_page_title(conn)
     conn =
       conn
-      |> put_meta("og:title", "#{app_name} | #{title}")
+      |> put_meta("og:title", "#{title}")
       |> put_meta("og:site_name", app_name)
       |> put_meta("og:type", "article")
       |> put_meta("og:url", Brando.Utils.current_url(conn))
 
+    conn =
+      case get_meta(conn, "og:image") do
+        nil -> conn
+        img ->
+          if String.contains?(img, "://") do
+            conn
+          else
+            put_meta(conn, "og:image", Path.join("#{conn.scheme}://#{conn.host}", img))
+          end
+      end
+
     html = Enum.map_join(get_meta(conn), "\n    ", &(elem(meta_tag(&1), 1)))
-    Phoenix.HTML.raw(html)
+    Phoenix.HTML.raw("    #{html}")
   end
 
   @doc """
@@ -505,7 +476,7 @@ defmodule Brando.HTML do
   end
 
   defp get_srcset(image_field, {mod, field}, opts) do
-    cfg = apply(mod, :get_image_cfg, [field])
+    {:ok, cfg} = apply(mod, :get_image_cfg, [field])
     if !cfg.srcset do
       raise ArgumentError, message: "no `:srcset` key set in #{inspect mod}'s #{inspect field} image config"
     end

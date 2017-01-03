@@ -84,11 +84,6 @@ defmodule Brando.UtilsTest do
     refute unique_filename(filename) == filename
   end
 
-  test "to_iso8601/1" do
-    dt = %Ecto.DateTime{year: 2014, month: 1, day: 1, hour: 12, min: 0, sec: 0}
-    assert to_iso8601(dt) == "2014-01-01T12:00:00Z"
-  end
-
   test "media_url/1" do
     assert media_url("test") == "/media/test"
     assert media_url(nil) == "/media"
@@ -122,7 +117,6 @@ defmodule Brando.UtilsTest do
     assert img_url(img, :original, prefix: "prefix")
            == "prefix/original/path/file.jpg"
 
-
     assert_raise ArgumentError, fn ->
       img_url(img, :notasize, [default: "default.jpg"])
     end
@@ -155,6 +149,11 @@ defmodule Brando.UtilsTest do
   test "get_page_title" do
     assert get_page_title(%{assigns: %{page_title: "Test"}}) == "MyApp | Test"
     assert get_page_title(%{}) == "MyApp"
+
+    Application.put_env(:brando, :title_prefix, "MyApp! >> ")
+
+    assert get_page_title(%{assigns: %{page_title: "Test"}}) == "MyApp! >> Test"
+    assert get_page_title(%{}) == "MyApp"
   end
 
   test "host_and_media_url" do
@@ -171,20 +170,20 @@ defmodule Brando.UtilsTest do
 
   test "human_spaced_number" do
     assert human_spaced_number("10000000") == "10 000 000"
-    assert human_spaced_number(10000000) == "10 000 000"
+    assert human_spaced_number(10_000_000) == "10 000 000"
   end
 
   test "human_time" do
-    assert human_time(1000000000) == "11 days"
-    assert human_time(10000000) == "2 hours"
-    assert human_time(100000) == "1 mins"
+    assert human_time(1_000_000_000) == "11 days"
+    assert human_time(10_000_000) == "2 hours"
+    assert human_time(100_000) == "1 mins"
     assert human_time(1000) == "1 secs"
   end
 
   test "human_size" do
-    assert human_size(100000000) == "95 MB"
-    assert human_size(1000000) == "976 kB"
-    assert human_size(10000) == "10 000 B"
+    assert human_size(100_000_000) == "95 MB"
+    assert human_size(1_000_000) == "976 kB"
+    assert human_size(10_000) == "10 000 B"
   end
 
   test "helpers" do

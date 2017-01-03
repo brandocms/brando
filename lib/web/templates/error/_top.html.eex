@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title><%= app_name %> | !@$#?</title>
+    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.vendor.css") %>">
+    <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.css") %>">
+    <script src="<%= Brando.helpers.static_path(@conn, "/js/brando.auth.js") %>" type="text/javascript" charset="utf-8"></script>
+  </head>
+
+  <body class="auth">
+      <div class="grid-frame">
+        <div class="grid-container v-align">
+          <div class="grid-block">
+            <div class="grid-content">
+              <div class="toolbar"></div>
+              <div class="box">

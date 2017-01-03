@@ -148,22 +148,8 @@ defmodule Brando.Utils do
   """
   def to_atom_map(coll) do
     for {key, val} <- coll, into: %{} do
-      cond do
-        is_atom(key) -> {key, val}
-        true -> {String.to_existing_atom(key), val}
-      end
+      if is_atom(key), do: {key, val}, else: {String.to_existing_atom(key), val}
     end
-  end
-
-  @doc """
-  Converts an ecto datetime record to ISO 8601 format.
-  """
-  @spec to_iso8601(Ecto.DateTime.t) :: String.t
-  def to_iso8601(dt) do
-    list = [dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec]
-    "~4..0B-~2..0B-~2..0BT~2..0B:~2..0B:~2..0BZ"
-    |> :io_lib.format(list)
-    |> IO.iodata_to_binary
   end
 
   @doc """
@@ -190,7 +176,9 @@ defmodule Brando.Utils do
   """
   @spec get_now :: String.t
   def get_now do
-    Ecto.DateTime.to_string(Ecto.DateTime.utc)
+    :calendar.local_time
+    |> NaiveDateTime.from_erl!
+    |> NaiveDateTime.to_string
   end
 
   @doc """
@@ -198,7 +186,10 @@ defmodule Brando.Utils do
   """
   @spec get_date_now :: String.t
   def get_date_now do
-    Ecto.Date.to_string(Ecto.Date.utc)
+    :calendar.local_time
+    |> elem(0)
+    |> Date.from_erl!
+    |> Date.to_string
   end
 
   @doc """
@@ -285,7 +276,8 @@ defmodule Brando.Utils do
   """
   @spec get_page_title(Plug.Conn.t) :: String.t
   def get_page_title(%{assigns: %{page_title: title}}) do
-    Brando.config(:app_name) <> " | " <> title
+    Brando.config(:title_prefix) && Brando.config(:title_prefix) <> title
+                                 || Brando.config(:app_name) <> " | " <> title
   end
   def get_page_title(_) do
     Brando.config(:app_name)
@@ -316,9 +308,7 @@ defmodule Brando.Utils do
   @doc """
   Return the current user set in session.
   """
-  def current_user(conn) do
-    Plug.Conn.get_session(conn, :current_user)
-  end
+  defdelegate current_user(conn), to: Guardian.Plug, as: :current_resource
 
   @doc """
   Checks if `conn`'s `full_path` matches `current_path`.

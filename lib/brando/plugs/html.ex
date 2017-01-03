@@ -43,7 +43,7 @@ defmodule Brando.Plug.HTML do
   end
 
   @doc """
-  Adds `title` to `conn`'s assigns as 'page_title`
+  Adds `title` to `conn`'s assigns as `page_title`
   """
   def put_title(conn, title) do
     assign(conn, :page_title, title)

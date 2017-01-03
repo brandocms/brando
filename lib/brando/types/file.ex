@@ -7,7 +7,9 @@ defmodule Brando.Type.File do
 
   @behaviour Ecto.Type
 
-  defstruct path: nil
+  defstruct path: nil,
+            mimetype: nil,
+            size: nil
 
   @doc """
   Returns the internal type representation of our `Role` type for pg

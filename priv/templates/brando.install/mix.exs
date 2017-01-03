@@ -6,20 +6,20 @@ defmodule <%= application_module %>.Mixfile do
   def project do
     [app: :<%= application_name %>,
      version: @version,
-     elixir: "~> 1.2",
+     elixir: "~> 1.3",
      elixirc_paths: elixirc_paths(Mix.env),
      compilers: [:phoenix, :gettext] ++ Mix.compilers,
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     aliases: aliases,
-     deps: deps]
+     aliases: aliases(),
+     deps: deps()]
   end
 
   # Configuration for the OTP application.
   #
   # Type `mix help compile.app` for more information.
   def application do
-    [mod: {<%= application_module %>, []},
+    [mod: {<%= application_module %>.Application, []},
      included_applications: [
        :recon,
      ],
@@ -54,10 +54,10 @@ defmodule <%= application_module %>.Mixfile do
   defp deps do
     [
      # phoenix
-     {:phoenix, "~> 1.2.1"},
+     {:phoenix, path: "../..", override: true},
      {:phoenix_pubsub, "~> 1.0"},
-     {:phoenix_ecto, "~> 3.0.0"},
-     {:phoenix_html, "~> 2.5"},
+     {:phoenix_ecto, "~> 3.1-rc.0"},
+     {:phoenix_html, "~> 2.6"},
      {:phoenix_live_reload, "~> 1.0", only: :dev},
 
      # general deps
@@ -73,8 +73,7 @@ defmodule <%= application_module %>.Mixfile do
      {:plug_heartbeat, "~> 0.1"},
 
      # brando
-     {:brando, github: "twined/brando"},
-     {:brando_villain, "~> 0.1"},
+     {:brando, github: "twined/brando", branch: "feature/phoenix1.3", override: true},
 
      # optional brando modules
      {:brando_news, github: "twined/brando_news"},
