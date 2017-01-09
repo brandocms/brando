@@ -7,11 +7,7 @@ defmodule Brando.ImageSeries.ControllerTest do
 
   alias Brando.Image
   alias Brando.ImageSeries
-  alias Brando.Type.ImageConfig
   alias Brando.Factory
-
-  @cfg Map.from_struct(%ImageConfig{})
-  @cfg_changed Map.put(@cfg, :random_filename, true)
 
   setup do
     user = Factory.insert(:user)

@@ -4,8 +4,6 @@ defmodule Brando.Form.FieldsTest do
   import Brando.Form.Fields.Utils
   alias Brando.Form.Field
 
-  @opts [context: Brando.Form.Fields]
-
   defmodule UserForm do
     use Bitwise, only_operators: true
     use Brando.Form

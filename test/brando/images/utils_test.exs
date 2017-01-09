@@ -16,7 +16,7 @@ defmodule Brando.Images.UtilsTest do
   end
 
   test "media_path" do
-    assert media_path == Brando.config(:media_path)
+    assert media_path() == Brando.config(:media_path)
     assert media_path(nil) == Brando.config(:media_path)
     assert media_path("images") == Path.join(Brando.config(:media_path), "images")
   end

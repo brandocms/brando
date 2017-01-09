@@ -115,7 +115,7 @@
     Postgrex.Types.define(MyApp.PostgresTypes,
                           [Postgrex.Extensions.JSON] ++ Ecto.Adapters.Postgres.extensions(), json: Poison)
     ```
-    Then add to your `config/(dev/prod).exs` under the repo config:
+    Then replace the `extensions` key in your `config/(dev/prod).exs` under the repo config:
     ```
     config :my_app, Repo,
       # ...
@@ -128,13 +128,13 @@
     2) Take a look at the new `brunch-config.js`, there are a lot of changes:
        a) We use an entry point to bundle the admin, so you need to update `brunch` as well:
           `$ npm i --save-dev autoprefixer@latest babel-preset-stage-0@latest brunch@latest eslint@latest \ eslint-config-airbnb@latest eslint-plugin-import@latest eslint-plugin-jsx-a11y@latest \ eslint-plugin-react@latest sass-brunch@latest`
-    4) `mv web/static assets`
-    5) `mv assets/assets assets/static`
-    3) `mv assets/js/admin/custom.js assets/js/admin/index.js`.
-    4) `mkdir -p assets/js/app`
-    5) `mv assets/js/app.js assets/js/app/app.js`
-    6) `mv assets/vendor/*.js assets/js/app/vendor`
-    Set the contents to something like this:
+    3) `mv web/static assets && mv assets/assets assets/static`
+    4) `mv assets/js/admin/custom.js assets/js/admin/index.js`.
+    5) `mkdir -p assets/js/app`
+    6) `mv assets/js/app.js assets/js/app/app.js`
+    7) `mv assets/vendor/*.js assets/js/app/vendor`
+
+    Set the contents of `assets/js/admin/index.js` to something like this:
 
     ```javascript
     /**
@@ -221,6 +221,7 @@
   * `use Brando.Web, :model` -> `use Brando.Web, :schema`
   * `use Brando.Villain, :model` -> `use Brando.Villain, :schema`
   * `Brando.Utils.Model` renamed to `Brando.Utils.Schema`
+  * Replace `import Ecto.Model` with `import Ecto.Schema` in your `web.ex`
   * Using `use Brando.Sequence, :model` now must `use Brando.Sequence, :schema` instead.
   * Using Sequence controller now requires a `:schema` key instead of `:model` key.
     ```elixir

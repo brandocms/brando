@@ -6,14 +6,7 @@ defmodule Brando.Image.ControllerTest do
   use RouterHelper
 
   alias Brando.Image
-  alias Brando.Type.ImageConfig
   alias Brando.Factory
-
-  @path "#{Path.expand("../../", __DIR__)}/fixtures/sample.png"
-  @series_params %{"name" => "Series name", "slug" => "series-name",
-                   "credits" => "Credits", "order" => 0}
-  @category_params %{"cfg" => %ImageConfig{}, "name" => "Test Category",
-                     "slug" => "test-category"}
 
   setup do
     user = Factory.insert(:user)

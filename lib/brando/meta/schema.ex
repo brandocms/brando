@@ -38,19 +38,19 @@ defmodule Brando.Meta.Schema do
         unquote(opts[:fields])
       end
       def __field__(field) do
-        __fields__[field]
+        __fields__()[field]
       end
       def __fieldsets__ do
         unquote(opts[:fieldsets] || [])
       end
       def __fieldset__(fieldset) do
-        __fieldsets__[fieldset]
+        __fieldsets__()[fieldset]
       end
       def __help__ do
         unquote(opts[:help] || [])
       end
       def __help_for__(field) do
-        __help__[field]
+        __help__()[field]
       end
       def __keys__ do
         Keyword.keys(__fields__())

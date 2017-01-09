@@ -69,7 +69,7 @@ defmodule <%= module %> do
   use Brando.Meta.Schema, [
     singular: "<%= Phoenix.Naming.humanize(singular) |> String.downcase %>",
     plural: "<%= Phoenix.Naming.humanize(plural) |> String.downcase %>",
-    repr: &("#{&1.<%= Dict.keys(attrs) |> List.first %>}"),
+    repr: &("#{&1.<%= Keyword.keys(attrs) |> List.first %>}"),
     fields: [
       id: gettext("Id"),
 <%= for {k, _} <- attrs do %>      <%= k %>: gettext("<%= Phoenix.Naming.humanize(k) %>"),

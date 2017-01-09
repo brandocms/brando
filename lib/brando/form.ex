@@ -409,7 +409,7 @@ defmodule Brando.Form do
     quote do
       fieldset_open(unquote(legend))
       unquote(block)
-      fieldset_close
+      fieldset_close()
     end
   end
 

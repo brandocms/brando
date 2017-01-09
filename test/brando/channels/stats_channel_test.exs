@@ -3,6 +3,6 @@ defmodule Brando.StatsChannelTest do
   use Phoenix.ChannelTest
   # alias Brando.Integration.UserSocket
 
-  @endpoint Brando.Integration.Endpoint
+  # @endpoint Brando.Integration.Endpoint
 
 end

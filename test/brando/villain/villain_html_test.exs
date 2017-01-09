@@ -21,6 +21,7 @@ defmodule Brando.Villain.HTMLTest do
             "  document.addEventListener('DOMContentLoaded', function() {\n" <>
             "    v = new Villain.Editor({\n" <>
             "      // extraBlocks: [],\n" <>
+            "      // defaultBlocks: [],\n" <>
             "      baseURL: '/admin/pages/',\n" <>
             "      imageSeries: 'page',\n" <>
             "      textArea: 'textarea[name=\"page[data]\"]'\n" <>
@@ -37,6 +38,7 @@ defmodule Brando.Villain.HTMLTest do
             "  document.addEventListener('DOMContentLoaded', function() {\n" <>
             "    v = new Villain.Editor({\n" <>
             "      extraBlocks: [\"Test1\", \"Test2\"],\n" <>
+            "      // defaultBlocks: [],\n" <>
             "      baseURL: '/admin/pages/',\n" <>
             "      imageSeries: 'page',\n" <>
             "      textArea: 'textarea[name=\"page[data]\"]'\n" <>
