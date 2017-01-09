@@ -26,7 +26,7 @@ defmodule Brando.Sequence do
 
       schema "my_schema" do
         # ...
-        sequenced
+        sequenced()
       end
 
   Migration:
@@ -36,7 +36,7 @@ defmodule Brando.Sequence do
       def up do
         create table(:my_schema) do
           # ...
-          sequenced
+          sequenced()
         end
       end
 

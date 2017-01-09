@@ -8,7 +8,7 @@ defmodule <%= application_module %>.Repo.Migrations.CreateImages do
       add :creator_id,        references(:users)
       add :image_series_id,   references(:imageseries)
       sequenced
-      timestamps
+      timestamps()
     end
   end
 

@@ -7,7 +7,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title><%= app_name %> | <%= gettext("Authorization") %></title>
+    <title><%= app_name() %> | <%= gettext("Authorization") %></title>
     <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.css") %>">
     <script src="<%= Brando.helpers.static_path(@conn, "/js/brando.js") %>" type="text/javascript" charset="utf-8"></script>
   </head>

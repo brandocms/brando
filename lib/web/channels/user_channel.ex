@@ -2,7 +2,6 @@ defmodule Brando.UserChannel do
   @moduledoc """
   Channel for user specific interaction.
   """
-  @interval 1000
 
   use Phoenix.Channel
 

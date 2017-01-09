@@ -16,7 +16,7 @@ defmodule Brando.StatsChannel do
   use Phoenix.Channel
 
   def join("stats", _auth_msg, socket) do
-    send self, :update
+    send self(), :update
     {:ok, socket}
   end
 
@@ -31,7 +31,7 @@ defmodule Brando.StatsChannel do
       |> :erlang.memory
       |> Keyword.values
 
-    :erlang.send_after(interval, self, :update)
+    :erlang.send_after(interval, self(), :update)
 
     push socket, "update", %{
       memory: %{
@@ -46,7 +46,7 @@ defmodule Brando.StatsChannel do
       status: %{
         instagram: instagram_status,
         registry: registry_status,
-        uptime: system_uptime
+        uptime: system_uptime()
       },
       interval: interval
     }

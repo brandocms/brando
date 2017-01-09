@@ -1,8 +1,6 @@
 defmodule Mix.Tasks.Brando.Gen.Schema do
   # use Mix.Task
 
-  @shortdoc "Generates an Ecto schema"
-
   @moduledoc """
   Generates an Ecto schema in your Brando application.
 

@@ -20,7 +20,7 @@ defmodule Brando.Type.Role do
   Ex: ["1", "2", "4"]
   """
   def cast(list) when is_list(list) do
-    set_roles = Keyword.get(get_config, :roles)
+    set_roles = Keyword.get(get_config(), :roles)
     # first turn the list of binaries into a sum
     roles = Enum.reduce(list, 0, fn (role, acc) ->
       cond do

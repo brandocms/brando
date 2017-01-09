@@ -20,7 +20,7 @@ defmodule Brando.ImageCategory do
     field :cfg, Brando.Type.ImageConfig
     belongs_to :creator, Brando.User
     has_many :image_series, Brando.ImageSeries
-    timestamps
+    timestamps()
   end
 
   @doc """

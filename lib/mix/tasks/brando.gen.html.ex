@@ -70,9 +70,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     org_attrs    = attrs |> String.split(" ")
     attrs        = org_attrs |> Mix.Brando.attrs
-    villain?     = :villain in Dict.values(attrs)
+    villain?     = :villain in Keyword.values(attrs)
     sequenced?   = Mix.shell.yes?("\nMake schema sequenceable?")
-    image_field? = :image in Dict.values(attrs)
+    image_field? = :image in Keyword.values(attrs)
     binding      = Mix.Brando.inflect(singular)
     admin_path   = Enum.join(["admin", binding[:path]], "_")
     path         = binding[:path]

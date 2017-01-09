@@ -2,8 +2,7 @@ defmodule Brando.SystemChannel do
   @moduledoc """
   Channel for system information.
   """
-  @interval 1000
-
+  
   use Phoenix.Channel
   import Brando.Gettext
 

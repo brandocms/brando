@@ -11,8 +11,8 @@ defmodule <%= module %> do
 <%= for schema_field <- schema_fields do %>    <%= schema_field %>
 <% end %><%= for {k, _, m} <- assocs do %>    belongs_to <%= inspect k %>, <%= m %>
 <% end %>
-<%= if sequenced do %>    sequenced<% end %>
-    timestamps
+<%= if sequenced do %>    sequenced()<% end %>
+    timestamps()
   end
 <%= for {v, k} <- img_fields do %>
   has_image_field <%= inspect k %>,

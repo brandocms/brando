@@ -11,7 +11,7 @@ defmodule <%= application_module %>.Repo.Migrations.CreateImageseries do
       add :creator_id,        references(:users)
       add :image_category_id, references(:imagecategories)
       sequenced
-      timestamps
+      timestamps()
     end
     create unique_index(:imageseries, [:slug])
   end

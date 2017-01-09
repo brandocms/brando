@@ -11,7 +11,7 @@ defmodule <%= application_module %>.Repo.Migrations.CreateUsers do
       add :language,      :text, default: "nb"
       add :role,          :integer
       add :last_login,    :naive_datetime
-      timestamps
+      timestamps()
     end
     create unique_index(:users, [:email])
     create unique_index(:users, [:username])

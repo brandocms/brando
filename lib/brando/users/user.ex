@@ -40,7 +40,7 @@ defmodule Brando.User do
     field :role, Brando.Type.Role
     field :language, :string
     field :last_login, :naive_datetime
-    timestamps
+    timestamps()
   end
 
   has_image_field :avatar, %{

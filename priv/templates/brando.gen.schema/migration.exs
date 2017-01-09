@@ -8,8 +8,8 @@ defmodule <%= base %>.Repo.Migrations.Create<%= scoped %> do
 <%= for migration <- migrations do %>      <%= migration %>
 <% end %><%= for {_, i, _} <- assocs do %>      add <%= inspect i %>, :integer
 <% end %>
-<%= if sequenced do %>      sequenced<% end %>
-      timestamps
+<%= if sequenced do %>      sequenced()<% end %>
+      timestamps()
     end
 <%= for index <- indexes do %>    <%= index %>
 <% end %>

@@ -21,8 +21,8 @@ defmodule Brando.Image do
     field :image, Brando.Type.Image
     belongs_to :creator, Brando.User
     belongs_to :image_series, Brando.ImageSeries
-    sequenced
-    timestamps
+    sequenced()
+    timestamps()
   end
 
   @doc """

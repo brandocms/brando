@@ -8,7 +8,7 @@
     <%= meta_tag "author", "Twined Networks" %>
     <%= meta_tag "channel_token", Phoenix.Token.sign(@conn, "user", current_user(@conn).id) %>
 
-    <title><%= app_name %> | <%= assigns[:page_title] || "Administrasjon" %></title>
+    <title><%= app_name() %> | <%= assigns[:page_title] || "Administrasjon" %></title>
 
     <!-- stylesheets -->
     <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.css") %>">

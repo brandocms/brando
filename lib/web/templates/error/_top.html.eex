@@ -7,7 +7,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title><%= app_name %> | !@$#?</title>
+    <title><%= app_name() %> | !@$#?</title>
     <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.vendor.css") %>">
     <link rel="stylesheet" href="<%= Brando.helpers.static_path(@conn, "/css/brando.css") %>">
     <script src="<%= Brando.helpers.static_path(@conn, "/js/brando.auth.js") %>" type="text/javascript" charset="utf-8"></script>

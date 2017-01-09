@@ -26,8 +26,8 @@ defmodule Brando.ImageSeries do
     belongs_to :creator, Brando.User
     belongs_to :image_category, Brando.ImageCategory
     has_many :images, Brando.Image
-    sequenced
-    timestamps
+    sequenced()
+    timestamps()
   end
 
   @doc """
