@@ -235,6 +235,18 @@
     all your schemas using this to:
 
     `use Brando.Meta.Schema, [...]`
+  * Distillery v1.0.0 uses a different path for the release artifact. Change your
+    `fabfile.py`'s `copy_release_from_docker` method -- the last command should be:
+
+    ```python
+    local('docker run --rm --entrypoint cat twined/%s /opt/app/_build/prod/rel/%s/releases/%s/%s.tar.gz > release-archives/%s_%s.tar.gz' % (
+        env.project_name,
+        env.project_name,
+        version,
+        env.project_name,
+        env.project_name,
+        version))
+    ```
 
 * Enhancements
   * Added `title_prefix` config option.

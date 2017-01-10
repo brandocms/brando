@@ -269,7 +269,13 @@ def copy_release_from_docker(version):
     """
     print(yellow('==> copying release archive from docker to release-archives/'))
     local('mkdir -p release-archives')
-    local('docker run --rm --entrypoint cat twined/%s /app/rel/%s/releases/%s/%s.tar.gz > release-archives/%s_%s.tar.gz' % (env.project_name, env.project_name, version, env.project_name, env.project_name, version))
+    local('docker run --rm --entrypoint cat twined/%s /opt/app/_build/prod/rel/%s/releases/%s/%s.tar.gz > release-archives/%s_%s.tar.gz' % (
+        env.project_name,
+        env.project_name,
+        version,
+        env.project_name,
+        env.project_name,
+        version))
 
 
 def upload_release(version):
