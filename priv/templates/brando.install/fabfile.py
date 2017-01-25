@@ -328,6 +328,8 @@ def ensure_log_directory_exists():
     if not _exists(os.path.join(env.path, "log")):
         print(yellow('==> creating %s/log as %s' % (env.path, env.project_user)))
         sudo('mkdir -p %s/log' % env.path, user=env.project_user)
+        print(yellow('==> creating %s/acme-challenge/.well-known/acme-challenge as %s' % (env.path, env.project_user)))
+        sudo('mkdir -p %s/acme-challenge/.well-known/acme-challenge' % env.path, user=env.project_user)
 
     fixprojectperms()
 
