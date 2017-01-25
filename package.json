@@ -6,7 +6,7 @@
   "dependencies": {
     "chart.js": "^2.0.0",
     "font-awesome": "^4.7.0",
-    "phoenix": "file:deps/phoenix",
+    "phoenix": "^1.2.1",
     "progressbar.js": "^1.0.1",
     "textfit": "^2.2.2",
     "vex-dialog": "^1.0.6",
