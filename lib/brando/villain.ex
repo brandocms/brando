@@ -189,9 +189,9 @@ defmodule Brando.Villain do
 
         if image_series do
           image_list = Brando.Villain.map_images(image_series.images)
-          json(conn, %{status: "200", images: image_list})
+          json(conn, %{status: 200, images: image_list})
         else
-          json(conn, %{status: "204", images: []})
+          json(conn, %{status: 204, images: []})
         end
       end
 
@@ -220,7 +220,7 @@ defmodule Brando.Villain do
 
         json conn,
           %{
-            status: "200",
+            status: 200,
             uid:    uid,
             image: %{
               id:    image.id,
@@ -266,7 +266,7 @@ defmodule Brando.Villain do
         images = Enum.map(series.images, &(&1.image))
 
         json conn, %{
-          status:    "200",
+          status:    200,
           series:    series_slug,
           images:    images,
           sizes:     sizes,
@@ -285,7 +285,7 @@ defmodule Brando.Villain do
         )
 
         series_slugs = Enum.map(series, &(&1.slug))
-        json conn, %{status: "200", series: series_slugs}
+        json conn, %{status: 200, series: series_slugs}
       end
 
       @doc false
@@ -297,7 +297,7 @@ defmodule Brando.Villain do
           Brando.Images.update_image_meta(image, form["title"], form["credits"])
 
         info = %{
-          status:  "200",
+          status:  200,
           id:      id,
           uid:     uid,
           title:   image.image.title,

@@ -256,6 +256,7 @@
 
 * Bug fixes
   * Fixed gifsicle thumbnailing
+  * Fixed villain status code inconsistencies
 
 * Deprecations
   * `model_name` and `model_repr` are now deprecated and removed.
