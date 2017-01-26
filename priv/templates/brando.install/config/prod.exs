@@ -13,12 +13,13 @@ use Mix.Config
 # which you typically run after static files are built.
 config :<%= application_name %>, <%= application_module %>.Web.Endpoint,
   http: [:inet6, port: {:system, "PORT"}],
-  url: [host: "example.com", port: 80],
+  url: [scheme: "https", host: "example.com", port: 80],
+  force_ssl: [rewrite_on: [:x_forwarded_proto]],
   server: true,
   cache_static_manifest: "priv/static/manifest.json"
 
 # Do not print debug messages in production
-config :logger, level: :info
+config :logger, level: :error
 
 # Path to your media directory.
 config :brando, media_path: "./media"
