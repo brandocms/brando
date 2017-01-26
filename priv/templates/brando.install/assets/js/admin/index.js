@@ -2,7 +2,7 @@
  * Brando admin entry point
  */
 import $ from 'jquery';
-import brando from 'brando';
+import brando from '@twined/brando';
 import i18next from 'i18next';
 import Dropzone from 'dropzone';
 

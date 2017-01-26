@@ -1,5 +1,8 @@
 ## v1.0.0-alpha.0-dev (2016-XX-XX)
 * Backwards incompatible changes
+  * Brando is now published to npm.
+    1) Replace all occurences of `brando` with `@twined/brando`
+
   * Villain is now published to npm.
     1) Remove `"brando_villain": "file:deps/brando_villain"` from `package.json`
     2) Remove `brando_villain` from mix.exs deps and applications
@@ -8,6 +11,7 @@
        `'node_modules/@twined/villain/dist/villain.all.js'`
     5) Replace the `css/villain.css` entry in `brunch-config.js` with:
        `'css/villain.css': ['node_modules/@twined/villain/dist/css/villain.css']`
+
   * Default `package.json` should look like:
   ```
   {
@@ -15,7 +19,7 @@
     "dependencies": {
       "autoprefixer": "^6.5.4",
       "bootstrap-sass": "^3.3.6",
-      "brando": "file:deps/brando",
+      "@twined/brando": "latest",
       "jquery": "^2.2.1",
       "phoenix": "file:deps/phoenix",
       "phoenix_html": "file:deps/phoenix_html",
@@ -41,6 +45,7 @@
     }
   }
   ```
+
   * Brando now uses `Guardian` for auth. This means some changes in your `router.ex`:
     ```diff
       pipeline :admin do
@@ -100,6 +105,7 @@
         secret_key: "SECRET_KEY. Create a new one with `mix phoenix.gen.secret`",
         serializer: Brando.GuardianSerializer
     ```
+
   * Removing DB-level unique slug index from image_series.
     1) Create a new migration:
       `$ mix ecto.gen.migration remove_slug_index_from_image_series`
@@ -110,6 +116,7 @@
       end
       ```
     3) `$ mix ecto.migrate`
+
   * Postgrex has changed its extension setup. Create `lib/postgrex_types.ex` and populate with:
     ```
     Postgrex.Types.define(MyApp.PostgresTypes,
@@ -121,8 +128,11 @@
       # ...
       types: MyApp.PostgresTypes,
     ```
+
   * Removed `use Brando.Images.Upload`. Now calls explicitly from schema instead.
+
   * Deprecating passing schemas to `use Brando.Villain, :controller`.
+
   * Static changes. `brando.auth.js` is no more, nor is `brando.vendor.css`.
     1) First `rm -rf priv/static/js && rm -rf priv/static/css`.
     2) Take a look at the new `brunch-config.js`, there are a lot of changes:
@@ -141,7 +151,7 @@
      * Brando admin entry point
      */
     import $ from 'jquery';
-    import brando from 'brando';
+    import brando from '@twined/brando';
     import i18next from 'i18next';
     import Dropzone from 'dropzone';
 
@@ -175,10 +185,12 @@
     ```
     4) Ensure instagram.js, portfolio.js or news.js don't initialize themselves. Remove
        any document.ready() callbacks.
+
   * Move web to lib directory:
     1) `mv web lib`
     2) Fix path in `web.ex` under view:
        `use Phoenix.View, root: "lib/web/templates", namespace: MyApp`
+
   * `Brando.Plug.Uploads` is deprecated. It is more explicit now, where we specify the field
     and what kind of upload it is in your changeset function.
     In your schema with ImageField or FileField, add to your changeset functions
@@ -195,6 +207,7 @@
     ```
     Now you can remove your `import Brando.Plug.Uploads` and also your `check_for_uploads`
     plug in the controller.
+
   * Changes to PopupForm. Must now be registered with an atom, so:
     ```elixir
     Brando.PopupForm.Registry.register(:accounts, "client", MyApp.ClientForm,
@@ -218,24 +231,33 @@
         console.log(`${fields.id} --> ${fields.username}`);
     }
   ```
+
   * `use Brando.Web, :model` -> `use Brando.Web, :schema`
+
   * `use Brando.Villain, :model` -> `use Brando.Villain, :schema`
+
   * `Brando.Utils.Model` renamed to `Brando.Utils.Schema`
+
   * Replace `import Ecto.Model` with `import Ecto.Schema` in your `web.ex`
+
   * Using `use Brando.Sequence, :model` now must `use Brando.Sequence, :schema` instead.
+
   * Using Sequence controller now requires a `:schema` key instead of `:model` key.
     ```elixir
     use Brando.Sequence,
       [:controller, [schema: Brando.Image,
                      filter: &Brando.Image.for_series_id/1]]
     ```
+
   * Same goes for Brando.Tag. Replace `:model` key with `:schema` when you use controller,
     and replace `use Brando.Tag, :model` with `use Brando.Tag, :schema`
+
   * Renamed `Brando.Meta.Model` to `Brando.Meta.Schema`. This means you need to change
     all your schemas using this to:
 
     `use Brando.Meta.Schema, [...]`
-  * Distillery v1.0.0 uses a different path for the release artifact. Change your
+
+  * Distillery v1.0.0+ uses a different path for the release artifact. Change your
     `fabfile.py`'s `copy_release_from_docker` method -- the last command should be:
 
     ```python

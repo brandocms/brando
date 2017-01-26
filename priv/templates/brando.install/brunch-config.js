@@ -39,7 +39,7 @@ exports.config = {
         ],
 
         /* Backend stylesheets */
-        'css/brando.css': ['node_modules/brando/priv/static/css/brando.css'],
+        'css/brando.css': ['node_modules/@twined/brando/priv/static/css/brando.css'],
         'css/villain.css': ['node_modules/@twined/villain/dist/villain.css'],
 
         /* Custom stylesheets for backend, loaded after brando.css */
@@ -101,7 +101,7 @@ exports.config = {
   modules: {
     autoRequire: {
       'js/app.js': ['app'],
-      'js/brando.js': ['brando', 'admin/index.js'],
+      'js/brando.js': ['@twined/brando', 'admin/index.js'],
     },
     nameCleaner: function(path) { return path.replace(/^assets\/js\//, ''); },
   },
@@ -117,7 +117,7 @@ exports.config = {
       'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
     ],
     styles: {
-      brando: ['priv/static/css/brando.css'],
+      '@twined/brando': ['priv/static/css/brando.css'],
       '@twined/villain': ['dist/villain.css'],
     },
   },
