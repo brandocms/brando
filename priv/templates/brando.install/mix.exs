@@ -27,7 +27,6 @@ defmodule <%= application_module %>.Mixfile do
        :brando,
        :brando_news,
        :brando_pages,
-       :brando_villain,
        :cowboy,
        :hrafn,
        :gettext,
@@ -54,9 +53,9 @@ defmodule <%= application_module %>.Mixfile do
   defp deps do
     [
      # phoenix
-     {:phoenix, path: "../..", override: true},
+     {:phoenix, github: "phoenixframework/phoenix", override: true},
      {:phoenix_pubsub, "~> 1.0"},
-     {:phoenix_ecto, "~> 3.1-rc.0"},
+     {:phoenix_ecto, "~> 3.2"},
      {:phoenix_html, "~> 2.6"},
      {:phoenix_live_reload, "~> 1.0", only: :dev},
 
@@ -67,17 +66,17 @@ defmodule <%= application_module %>.Mixfile do
      {:timex, "~> 3.0"},
 
      # release management and production tools
-     {:distillery, "~> 0.10"},
+     {:distillery, "~> 1.0"},
      {:recon, "~> 2.3"},
      {:hrafn, "~> 0.1"},
      {:plug_heartbeat, "~> 0.1"},
 
      # brando
-     {:brando, github: "twined/brando", branch: "feature/phoenix1.3", override: true},
+     {:brando, github: "twined/brando", branch: "develop", override: true},
 
      # optional brando modules
-     {:brando_news, github: "twined/brando_news"},
-     {:brando_pages, github: "twined/brando_pages"}]
+     {:brando_news, github: "twined/brando_news", branch: "develop"},
+     {:brando_pages, github: "twined/brando_pages", branch: "develop"}]
   end
 
   # See the documentation for `Mix` for more info on aliases.

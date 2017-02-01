@@ -1,11 +1,9 @@
 defmodule <%= application_module %>.Web.Router do
   use <%= application_module %>.Web, :router
 
-  alias Brando.Plug.Authenticate
   alias Brando.Plug.Lockdown
 
   import Brando.Plug.I18n
-
   import Brando.Dashboard.Routes.Admin
   import Brando.Images.Routes.Admin
   import Brando.Users.Routes.Admin

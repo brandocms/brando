@@ -23,6 +23,20 @@ defp deps do
 end
 ```
 
+Add Guardian conf to `config/config.exs`:
+
+```elixir
+# Configure Guardian for auth.
+config :guardian, Guardian,
+  allowed_algos: ["HS512"], # optional
+  verify_module: Guardian.JWT,  # optional
+  issuer: "MyApp",
+  ttl: {30, :days},
+  verify_issuer: true, # optional
+  secret_key: "SECRET_KEY. Create a new one with `mix phoenix.gen.secret`",
+  serializer: Brando.GuardianSerializer
+```
+
 Fetch and compile dependencies. Install Brando:
 
     $ mix do deps.get, deps.compile, brando.install
@@ -46,7 +60,7 @@ Add to your relevant `config/%{env}.exs` Repo config:
 
 ```diff
   config :my_app, Repo,
-+   types: MyApp.PostgrexTypes
++   types: MyApp.PostgresTypes
 ```
 
 Install NPM packages:
@@ -97,7 +111,15 @@ config :my_app, MyApp.Endpoint,
   render_errors: [accepts: ~w(html json), view: Brando.ErrorView, default_format: "html"],
 ```
 
-*Remember to switch out your ports in `etc/supervisor/prod.conf` and `etc/nginx/prod.conf`*
+Create a release configuration:
+
+```
+$ mix release.init
+```
+
+And set its config to default to prod.
+
+*Remember to switch out your ports and configure SSL in `etc/supervisor/prod.conf` and `etc/nginx/prod.conf`*
 
 ## Dependencies
 

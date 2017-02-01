@@ -351,6 +351,7 @@ def create_path():
         print(yellow('==> creating remote project dir: %s as %s' % (env.path, env.project_user)))
         sudo('mkdir -p %s' % env.path, user=env.project_user)
 
+    create_acme_dir()
     fixprojectperms()
 
 
@@ -788,3 +789,8 @@ def nginxrestart():
 def _notify_build_complete(version):
     local('terminal-notifier -message "Release process completed!" -title %s -subtitle v%s -sound default -group %s -open %s' % (
         PROJECT_NAME, version, PROJECT_NAME, PROD_URL))
+
+
+def create_acme_dir():
+    sudo('mkdir -p acme-challenge/.well-known', user=env.project_user)
+    _setowner(os.path.join(env.path, 'acme-challenge/.well-known' % (env.project_name, version)))
