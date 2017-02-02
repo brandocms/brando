@@ -4,13 +4,13 @@ exports.config = {
   files: {
     javascripts: {
       entryPoints: {
-        'assets/js/admin/index.js': {
-          'js/brando.js': /^(node_modules|assets\/js\/admin)/,
+        'js/admin/index.js': {
+          'js/brando.js': /^(node_modules|js\/admin)/,
         },
       },
       joinTo: {
         /* Frontend JS application */
-        'js/app.js': /^(assets\/js\/app)/,
+        'js/app.js': /^(js\/app)/,
 
         /* JQuery module */
         'js/jquery.js': 'node_modules/jquery/dist/jquery.js',
@@ -20,7 +20,7 @@ exports.config = {
           'node_modules/phoenix/priv/static/phoenix.js',
           'node_modules/phoenix_html/priv/static/phoenix_html.js',
           'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
-          /^(assets\/vendor)/,
+          /^(vendor)/,
         ],
 
         /* Copy Villain lib */
@@ -34,8 +34,8 @@ exports.config = {
         /* Frontend application-specific CSS/SCSS */
         'css/app.css': [
           'node_modules/bootstrap-sass/assets/stylesheets/_bootstrap.scss',
-          /^(assets\/app\/vendor)/,
-          'assets/css/app.scss',
+          /^(app\/vendor)/,
+          'css/app.scss',
         ],
 
         /* Backend stylesheets */
@@ -44,7 +44,7 @@ exports.config = {
 
         /* Custom stylesheets for backend, loaded after brando.css */
         'css/brando.custom.css': [
-          'assets/css/custom/*.scss',
+          'css/custom/*.scss',
         ],
       },
     },
@@ -57,9 +57,7 @@ exports.config = {
   paths: {
     // Which directories to watch
     watched: [
-      // static
-      'assets',
-      'test/static',
+      'static', 'css', 'js', 'vendor',
     ],
 
     // Where to compile files to
@@ -71,7 +69,7 @@ exports.config = {
     // By default, we set this to '/assets/static'. Files in this directory
     // will be copied to `paths.public`, which is "priv/static" by default.
     assets: [
-      /^(assets\/static)/,
+      /^(static)/,
     ],
   },
 
@@ -80,7 +78,7 @@ exports.config = {
     babel: {
       // Do not use ES6 compiler in vendor code
       ignore: [
-        /^(assets\/app\/vendor|bower_components|node_modules)/,
+        /^(app\/vendor|bower_components|node_modules)/,
       ],
     },
     postcss: {
@@ -103,7 +101,7 @@ exports.config = {
       'js/app.js': ['app'],
       'js/brando.js': ['@twined/brando', 'admin/index.js'],
     },
-    nameCleaner: function(path) { return path.replace(/^assets\/js\//, ''); },
+    nameCleaner: function(path) { return path.replace(/^js\//, ''); },
   },
 
   npm: {
