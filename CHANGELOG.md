@@ -141,7 +141,7 @@
     3) `mv web/static assets && mv assets/assets assets/static`
     4) `mv assets/js/admin/custom.js assets/js/admin/index.js`.
     5) `mkdir -p assets/js/app`
-    6) `mv assets/js/app.js assets/js/app/app.js`
+    6) `mv assets/js/app.js assets/js/app/index.js`
     7) `mv assets/vendor/*.js assets/js/app/vendor`
 
     Set the contents of `assets/js/admin/index.js` to something like this:

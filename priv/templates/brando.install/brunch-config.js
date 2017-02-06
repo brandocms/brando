@@ -8,21 +8,17 @@ exports.config = {
           'js/brando.js': /^(node_modules|js\/admin)/,
         },
       },
-      joinTo: {
-        /* Frontend JS application */
-        'js/app.js': /^(js\/app)/,
-
-        /* JQuery module */
-        'js/jquery.js': 'node_modules/jquery/dist/jquery.js',
-
-        /* Frontend vendors */
-        'js/vendor.js': [
+      'js/app/index.js': {
+        'js/app.js': [
+          'node_modules/process/browser.js',
+          'node_modules/jquery/dist/jquery.js',
           'node_modules/phoenix/priv/static/phoenix.js',
           'node_modules/phoenix_html/priv/static/phoenix_html.js',
           'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
-          /^(vendor)/,
+          /^(js\/app)/,
         ],
-
+      },
+      joinTo: {
         /* Copy Villain lib */
         'js/villain.all.js': [
           'node_modules/@twined/villain/dist/villain.all.js',
@@ -61,7 +57,7 @@ exports.config = {
     ],
 
     // Where to compile files to
-    public: 'priv/static',
+    public: '../priv/static',
   },
 
   conventions: {

@@ -75,7 +75,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "templates/brando.install/fabfile.py", "fabfile.py"},
 
     # Frontend JS
-    {:copy, "templates/brando.install/assets/js/app/app.js", "assets/js/app/app.js"},
+    {:copy, "templates/brando.install/assets/js/app/index.js", "assets/js/app/index.js"},
     {:copy, "templates/brando.install/assets/js/app/flexslider.js", "assets/js/app/flexslider.js"},
     {:copy, "templates/brando.install/assets/js/admin/index.js", "assets/js/admin/index.js"},
 
