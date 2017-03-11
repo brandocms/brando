@@ -328,6 +328,8 @@ def ensure_log_directory_exists():
     if not _exists(os.path.join(env.path, "log")):
         print(yellow('==> creating %s/log as %s' % (env.path, env.project_user)))
         sudo('mkdir -p %s/log' % env.path, user=env.project_user)
+
+    if not _exists(os.path.join(env.path, "acme-challenge")):
         print(yellow('==> creating %s/acme-challenge/.well-known/acme-challenge as %s' % (env.path, env.project_user)))
         sudo('mkdir -p %s/acme-challenge/.well-known/acme-challenge' % env.path, user=env.project_user)
 
@@ -792,5 +794,5 @@ def _notify_build_complete(version):
 
 
 def create_acme_dir():
-    sudo('mkdir -p acme-challenge/.well-known', user=env.project_user)
-    _setowner(os.path.join(env.path, 'acme-challenge/.well-known' % (env.project_name, version)))
+    sudo('mkdir -p %s/acme-challenge/.well-known' % env.path, user=env.project_user)
+    _setowner(os.path.join(env.path, 'acme-challenge/.well-known'))

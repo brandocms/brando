@@ -1,4 +1,4 @@
-FROM twined/fehn:1.3.3
+FROM twined/fehn:1.3.4
 # FROM twined/ando:1.0
 
 MAINTAINER Twined Networks <mail@twined.net>
@@ -13,8 +13,8 @@ RUN mix deps.clean --all
 RUN mix deps.get
 RUN mix deps.compile
 
-RUN npm install
-RUN node_modules/.bin/brunch build -p
+RUN cd assets && npm install
+RUN cd assets && node_modules/.bin/brunch build -p assets/
 
 RUN mix phoenix.digest
 RUN mix compile

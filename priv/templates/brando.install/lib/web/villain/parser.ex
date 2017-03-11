@@ -40,7 +40,7 @@ defmodule <%= application_module %>.Villain.Parser do
           byte_size(text) > 0 && text <> "\n{: .#{type}}" || text
       end
 
-    Earmark.to_html(text, %Earmark.Options{breaks: true})
+    Earmark.as_html!(text, %Earmark.Options{breaks: true})
   end
 
   @doc """
@@ -54,7 +54,7 @@ defmodule <%= application_module %>.Villain.Parser do
   Markdown -> html
   """
   def markdown(%{"text" => markdown}) do
-    Earmark.to_html(markdown, %Earmark.Options{breaks: true})
+    Earmark.as_html!(markdown, %Earmark.Options{breaks: true})
   end
 
   @doc """
@@ -162,7 +162,7 @@ defmodule <%= application_module %>.Villain.Parser do
   Convert list to html through Markdown
   """
   def list(%{"text" => list}) do
-    Earmark.to_html(list)
+    Earmark.as_html!(list)
   end
 
   @doc """
@@ -171,10 +171,10 @@ defmodule <%= application_module %>.Villain.Parser do
   def blockquote(%{"text" => blockquote, "cite" => cite})
       when byte_size(cite) > 0 do
     html = blockquote <> "\n>\n> -- <cite>#{cite}</cite>"
-    Earmark.to_html(html)
+    Earmark.as_html!(html)
   end
   def blockquote(%{"text" => blockquote}) do
-    Earmark.to_html(blockquote)
+    Earmark.as_html!(blockquote)
   end
 
   @doc """

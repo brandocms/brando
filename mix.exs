@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.37.0-dev"
+  @version "1.0.0-alpha.0"
   @description "A helping hand for Twined applications."
 
   def project do
@@ -62,7 +62,7 @@ defmodule Brando.Mixfile do
     {:httpoison, "~> 0.9"},
     {:mogrify, "0.5.0"},
 
-    {:phoenix, github: "phoenixframework/phoenix", override: true},
+    {:phoenix, "~> 1.3.0-rc.0", override: true},
     {:phoenix_html, "~> 2.6"},
     {:phoenix_ecto, "~> 3.2"},
     {:postgrex, "~> 0.13", override: true},
@@ -77,7 +77,7 @@ defmodule Brando.Mixfile do
 
     # Test dependencies
     {:ex_machina, "~> 1.0", only: :test},
-    {:excoveralls, "~> 0.5.1", only: :test},
+    {:excoveralls, "~> 0.6", only: :test},
 
     # Documentation dependencies
     {:ex_doc, "~> 0.11", only: :docs},

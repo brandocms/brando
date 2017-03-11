@@ -1,6 +1,6 @@
 {
   "name": "@twined/brando",
-  "version": "0.37.0-dev.0",
+  "version": "v1.0.0-alpha.0",
   "description": "Brando node deps",
   "main": "./priv/static/js/brando.js",
   "dependencies": {

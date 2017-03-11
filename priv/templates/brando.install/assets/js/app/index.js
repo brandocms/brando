@@ -1,4 +1,5 @@
 import $ from 'jquery';
+import 'bootstrap-sass';
 // import {Socket} from 'phoenix';
 // import {Flexslider} from './flexslider';
 

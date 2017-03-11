@@ -36,7 +36,7 @@ defmodule Brando.Villain.Parser.Default do
         markdown_data
       end
 
-    Earmark.to_html(markdown_data, %Earmark.Options{breaks: true})
+    Earmark.as_html!(markdown_data, %Earmark.Options{breaks: true})
   end
 
   @doc """
@@ -149,7 +149,7 @@ defmodule Brando.Villain.Parser.Default do
   Convert list to html through Markdown
   """
   def list(%{"text" => markdown_data}) do
-    Earmark.to_html(markdown_data)
+    Earmark.as_html!(markdown_data)
   end
 
   @doc """
@@ -163,7 +163,7 @@ defmodule Brando.Villain.Parser.Default do
   Markdown -> html
   """
   def markdown(%{"text" => markdown_data}) do
-    Earmark.to_html(markdown_data, %Earmark.Options{breaks: true})
+    Earmark.as_html!(markdown_data, %Earmark.Options{breaks: true})
   end
 
   @doc """
@@ -171,10 +171,10 @@ defmodule Brando.Villain.Parser.Default do
   """
   def blockquote(%{"text" => bq, "cite" => cite}) when byte_size(cite) > 0 do
     html = "#{bq}\n>\n> -- <cite>#{cite}</cite>"
-    Earmark.to_html(html)
+    Earmark.as_html!(html)
   end
   def blockquote(%{"text" => bq}) do
-    Earmark.to_html(bq)
+    Earmark.as_html!(bq)
   end
 
   @doc """

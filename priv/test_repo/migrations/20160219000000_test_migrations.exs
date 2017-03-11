@@ -35,7 +35,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add :published,         :boolean
       add :publish_at,        :naive_datetime
       timestamps()
-      tags
+      tags()
     end
 
     create index(:posts, [:language])
@@ -59,7 +59,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add :cfg,               :json
       add :creator_id,        references(:users)
       add :image_category_id, references(:imagecategories)
-      sequenced
+      sequenced()
       timestamps()
     end
 
@@ -67,7 +67,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add :image,             :text
       add :creator_id,        references(:users)
       add :image_series_id,   references(:imageseries)
-      sequenced
+      sequenced()
       timestamps()
     end
 

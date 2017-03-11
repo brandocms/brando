@@ -6,7 +6,7 @@ defmodule <%= application_module %>.Mixfile do
   def project do
     [app: :<%= application_name %>,
      version: @version,
-     elixir: "~> 1.3",
+     elixir: "~> 1.4",
      elixirc_paths: elixirc_paths(Mix.env),
      compilers: [:phoenix, :gettext] ++ Mix.compilers,
      build_embedded: Mix.env == :prod,
@@ -53,7 +53,7 @@ defmodule <%= application_module %>.Mixfile do
   defp deps do
     [
      # phoenix
-     {:phoenix, github: "phoenixframework/phoenix", override: true},
+     {:phoenix, "~> 1.3.0-rc.0", override: true},
      {:phoenix_pubsub, "~> 1.0"},
      {:phoenix_ecto, "~> 3.2"},
      {:phoenix_html, "~> 2.6"},

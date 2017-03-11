@@ -4,19 +4,16 @@ exports.config = {
   files: {
     javascripts: {
       entryPoints: {
+        // Backend javascript
         'js/admin/index.js': {
           'js/brando.js': /^(node_modules|js\/admin)/,
         },
-      },
-      'js/app/index.js': {
-        'js/app.js': [
-          'node_modules/process/browser.js',
-          'node_modules/jquery/dist/jquery.js',
-          'node_modules/phoenix/priv/static/phoenix.js',
-          'node_modules/phoenix_html/priv/static/phoenix_html.js',
-          'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
-          /^(js\/app)/,
-        ],
+        // Frontend javascript
+        'js/app/index.js': {
+          'js/app.js': [
+            /^(node_modules|js\/app)/,
+          ],
+        },
       },
       joinTo: {
         /* Copy Villain lib */
@@ -108,7 +105,6 @@ exports.config = {
     },
     static: [
       'node_modules/@twined/villain/dist/villain.all.js',
-      'node_modules/bootstrap-sass/assets/javascripts/bootstrap.js',
     ],
     styles: {
       '@twined/brando': ['priv/static/css/brando.css'],
