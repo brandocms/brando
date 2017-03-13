@@ -2,12 +2,14 @@ defmodule <%= admin_module %>Controller do
   use <%= base %>.Admin.Web, :controller
 <%= if sequenced do %>  use Brando.Sequence, [:controller, [schema: <%= module %>]]<% end %>
 <%= if villain do %>  use Brando.Villain, :controller<% end %>
-  alias <%= module %>
+
   alias <%= base %>.<%= domain %>
+  alias <%= base %>.<%= domain %>.<%= scoped %>
+
 <%= if image_field do %>  import Brando.Plug.Uploads<% end %>
 
   plug :scrub_params, <%= inspect singular %> when action in [:create, :update]
-  <%= if image_field do %>plug :check_for_uploads, {<%= inspect singular %>, <%= module %>} when action in [:create, :update]<% end %>
+  <%= if image_field do %>plug :check_for_uploads, {<%= inspect singular %>, <%= scoped %>} when action in [:create, :update]<% end %>
 
   def index(conn, _params) do
     <%= plural %> = Repo.all(<%= alias %>)
@@ -58,7 +60,8 @@ defmodule <%= admin_module %>Controller do
   end
 
   def update(conn, %{"id" => id, <%= inspect singular %> => <%= singular %>_params}) do
-    case <%= domain %>.update_<%= singular %>(id, <%= singular %>_params) do
+    <%= singular %> = <%= domain %>.get_<%= singular %>_by!(id: id)
+    case <%= domain %>.update_<%= singular %>(<%= singular %>, <%= singular %>_params) do
       {:ok, _} ->
         conn
         |> put_flash(:info, gettext("<%= Phoenix.Naming.humanize(singular) %> updated"))

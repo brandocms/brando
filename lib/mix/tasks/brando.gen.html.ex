@@ -55,6 +55,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     File.write!("lib/#{otp_app()}/#{snake_domain}/#{snake_domain}.ex",
     """
     defmodule #{binding[:module]} do
+      #{binding[:base]}.Repo
+      
       #{domain_header}\n#{domain_code}
     end
     """)
@@ -214,7 +216,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     ================================================================================================
     """
 
-    domain_header = domain_header <> "\n  alias #{binding[:module]}"
+    domain_header = domain_header <> "\n  alias <%= #{binding[:base]} %>.#{binding[:snake_domain]}.#{binding[:scoped]}"
     domain_code   = generate_domain_code(domain_code, domain_name, binding, schema_binding)
 
     if Mix.shell.yes?("\nCreate another schema?") do
@@ -256,8 +258,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         #{insert_code}
       end
 
-      def update_#{binding[:singular]}(id, #{binding[:singular]}_params) do
-        #{binding[:singular]} = Repo.get!(#{binding[:alias]}, id)
+      def update_#{binding[:singular]}(#{binding[:singular]}, #{binding[:singular]}_params) do
         changeset = #{binding[:alias]}.changeset(#{binding[:singular]}, #{binding[:singular]}_params)
 
         Repo.update(changeset)

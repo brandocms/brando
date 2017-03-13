@@ -1,6 +1,7 @@
 defmodule <%= module %>Controller do
   use <%= base %>.Web, :controller
-  alias <%= module %>
+  alias <%= base %>.<%= domain %>
+  alias <%= base %>.<%= domain %>.<%= scoped %>
 
   def index(conn, _params) do
     <%= plural %> = Brando.repo.all(<%= alias %>)

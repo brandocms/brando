@@ -10,7 +10,7 @@ defmodule <%= base %>.<%= scoped %>.Menu do
 
   """
   use Brando.Menu
-  import <%= base %>.Backend.Gettext
+  import <%= base %>.Web.Backend.Gettext
 
   menu %{
     name: gettext("<%= scoped %>s"),
