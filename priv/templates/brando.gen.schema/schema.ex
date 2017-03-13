@@ -7,7 +7,7 @@ defmodule <%= module %> do
   import Brando.Images.Optimize, only: [optimize: 2]<% end %>
   import <%= base %>.Backend.Gettext
 
-  schema <%= inspect plural %> do
+  schema <%= inspect "#{snake_domain}_#{plural}" %> do
 <%= for schema_field <- schema_fields do %>    <%= schema_field %>
 <% end %><%= for {k, _, m} <- assocs do %>    belongs_to <%= inspect k %>, <%= m %>
 <% end %>

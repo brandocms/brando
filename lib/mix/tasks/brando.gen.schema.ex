@@ -98,13 +98,15 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
         end
       end)
 
-    binding = binding ++
+    module  = Enum.join([binding[:base], domain, binding[:scoped]], ".")
+
+    binding = Keyword.delete(binding, :module) ++
               [attrs: attrs, img_fields: img_fields, file_fields: file_fields,
                plural: plural, types: types, villain_fields: villain_fields,
-               sequenced: sequenced?,
+               sequenced: sequenced?, domain: domain, snake_domain: snake_domain,
                migrations: migrations, schema_fields: schema_fields,
-               assocs: assocs(assocs), indexes: indexes(plural, assocs),
-               defaults: defs, params: params]
+               assocs: assocs(assocs), indexes: indexes(snake_domain, plural, assocs),
+               defaults: defs, params: params, module: module]
 
     Mix.Brando.copy_from(
       apps(),
@@ -146,9 +148,9 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
     end
   end
 
-  defp indexes(plural, assocs) do
+  defp indexes(snake_domain, plural, assocs) do
     Enum.reduce assocs, [], fn {key, _}, acc ->
-      ["create index(:#{plural}, [:#{key}_id])" | acc]
+      ["create index(:#{snake_domain}_#{plural}, [:#{key}_id])" | acc]
     end
   end
 

@@ -4,7 +4,7 @@ defmodule <%= base %>.Repo.Migrations.Create<%= scoped %> do
 <%= if villain_fields != [] do %>  use Brando.Villain, :migration<% end %>
 
   def change do
-    create table(:<%= plural %>) do
+    create table(:<%= snake_domain %>_<%= plural %>) do
 <%= for migration <- migrations do %>      <%= migration %>
 <% end %><%= for {_, i, _} <- assocs do %>      add <%= inspect i %>, :integer
 <% end %>

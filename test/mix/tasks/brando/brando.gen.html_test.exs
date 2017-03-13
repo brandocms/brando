@@ -17,7 +17,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
   test "generates html resource" do
     in_tmp "generates html resource", fn ->
-      send self(), {:mix_shell_input, :prompt, "Game"}
+      send self(), {:mix_shell_input, :prompt, "Games"}
       send self(), {:mix_shell_input, :prompt, "Pirate"}
       send self(), {:mix_shell_input, :prompt, "pirates"}
       send self(), {:mix_shell_input, :prompt,
@@ -37,9 +37,13 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       send self(), {:mix_shell_input, :yes?, false}
       Mix.Tasks.Brando.Gen.Html.run []
 
-      assert_file "lib/brando/game/pirate.ex", fn file ->
-        assert file =~ "defmodule Brando.Pirate do"
-        assert file =~ "schema \"pirates\" do"
+      assert_file "lib/brando/games/games.ex", fn file ->
+        assert file =~ "defmodule Brando.Games do"
+      end
+
+      assert_file "lib/brando/games/pirate.ex", fn file ->
+        assert file =~ "defmodule Brando.Games.Pirate do"
+        assert file =~ "schema \"games_pirates\" do"
         assert file =~ "field :photo, Brando.Type.Image"
         assert file =~ "field :pdf, Brando.Type.File"
         assert file =~ "singular: \"pirate\""
@@ -61,6 +65,8 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
       assert_file migration_file, fn file ->
         assert file =~ "use Brando.Villain, :migration"
+        assert file =~ "create table(:games_pirates)"
+        assert file =~ "create index(:games_pirates, [:creator_id])"
         assert file =~ "villain"
         assert file =~ "sequenced"
         assert file =~ "villain :biography"

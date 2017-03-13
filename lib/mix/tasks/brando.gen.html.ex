@@ -37,6 +37,10 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     create_domain(domain)
   end
 
+  defp otp_app do
+    Mix.Project.config |> Keyword.fetch!(:app)
+  end
+
   defp create_domain(domain_name) do
     snake_domain =
       domain_name
@@ -46,9 +50,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     binding = Mix.Brando.inflect(domain_name)
 
-    File.mkdir_p!("lib/#{snake_domain}")
+    File.mkdir_p!("lib/#{otp_app()}/#{snake_domain}")
     {domain_code, domain_header, instructions} = create_schema(domain_name)
-    File.write!("lib/#{snake_domain}.ex",
+    File.write!("lib/#{otp_app()}/#{snake_domain}/#{snake_domain}.ex",
     """
     defmodule #{binding[:module]} do
       #{domain_header}\n#{domain_code}
