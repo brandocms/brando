@@ -38,9 +38,9 @@ defmodule Mix.Tasks.Brando.GenerateTest do
   test "brando.install" do
     Mix.Tasks.Brando.Install.run(["--static"])
     assert_received {:mix_shell, :info, ["\nBrando finished copying."]}
-    assert File.exists?("lib/web/villain")
-    assert_file "lib/web/villain/parser.ex"
-    assert_file "lib/admin_web.ex", fn file ->
+    assert File.exists?("lib/brando/web/villain")
+    assert_file "lib/brando/web/villain/parser.ex"
+    assert_file "lib/brando/web/admin_web.ex", fn file ->
       assert file =~ "Brando.Web.Backend.Gettext"
     end
     assert_file "mix.exs", fn file ->

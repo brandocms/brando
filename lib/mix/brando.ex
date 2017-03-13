@@ -16,6 +16,7 @@ defmodule Mix.Brando do
     roots = Enum.map(apps, &to_app_source(&1, source_dir))
 
     for {format, source_file_path, target_file_path} <- mapping do
+      target_file_path = String.replace(target_file_path, "application_name", String.downcase(binding[:base]))
       source =
         Enum.find_value(roots, fn root ->
           source = Path.join(root, source_file_path)
