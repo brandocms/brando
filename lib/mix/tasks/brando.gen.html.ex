@@ -81,12 +81,14 @@ defmodule Mix.Tasks.Brando.Gen.Html do
                    |> Enum.drop(-1)
                    |> Kernel.++([plural])
                    |> Enum.join("/")
-    admin_module = Enum.join([binding[:base], "Admin", binding[:scoped]], ".")
-    binding      = binding ++ [plural: plural,
+    module       = Enum.join([binding[:base], "Web", binding[:scoped]], ".")
+    admin_module = Enum.join([binding[:base], "Web", "Admin", binding[:scoped]], ".")
+    binding      = Keyword.delete(binding, :module) ++ [plural: plural,
                                route: route,
                                image_field: image_field?,
                                villain: villain?,
                                sequenced: sequenced?,
+                               module: module,
                                admin_module: admin_module,
                                admin_path: admin_path,
                                inputs: inputs(attrs),
@@ -97,29 +99,29 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     files = [
       {:eex, "admin_controller.ex",
-             "lib/web/controllers/admin/#{path}_controller.ex"},
+             "lib/application_name/web/controllers/admin/#{path}_controller.ex"},
       {:eex, "controller.ex",
-             "lib/web/controllers/#{path}_controller.ex"},
+             "lib/application_name/web/controllers/#{path}_controller.ex"},
       {:eex, "menu.ex",
-             "lib/web/menus/admin/#{path}_menu.ex"},
+             "lib/application_name/web/menus/admin/#{path}_menu.ex"},
       {:eex, "form.ex",
-             "lib/web/forms/admin/#{path}_form.ex"},
+             "lib/application_name/web/forms/admin/#{path}_form.ex"},
       {:eex, "edit.html.eex",
-             "lib/web/templates/admin/#{path}/edit.html.eex"},
+             "lib/application_name/web/templates/admin/#{path}/edit.html.eex"},
       {:eex, "admin_index.html.eex",
-             "lib/web/templates/admin/#{path}/index.html.eex"},
+             "lib/application_name/web/templates/admin/#{path}/index.html.eex"},
       {:eex, "index.html.eex",
-             "lib/web/templates/#{path}/index.html.eex"},
+             "lib/application_name/web/templates/#{path}/index.html.eex"},
       {:eex, "new.html.eex",
-             "lib/web/templates/admin/#{path}/new.html.eex"},
+             "lib/application_name/web/templates/admin/#{path}/new.html.eex"},
       {:eex, "show.html.eex",
-             "lib/web/templates/admin/#{path}/show.html.eex"},
+             "lib/application_name/web/templates/admin/#{path}/show.html.eex"},
       {:eex, "delete_confirm.html.eex",
-             "lib/web/templates/admin/#{path}/delete_confirm.html.eex"},
+             "lib/application_name/web/templates/admin/#{path}/delete_confirm.html.eex"},
       {:eex, "admin_view.ex",
-             "lib/web/views/admin/#{path}_view.ex"},
+             "lib/application_name/web/views/admin/#{path}_view.ex"},
       {:eex, "view.ex",
-             "lib/web/views/#{path}_view.ex"},
+             "lib/application_name/web/views/#{path}_view.ex"},
       {:eex, "admin_controller_test.exs",
              "test/controllers/admin/#{path}_controller_test.exs"},
     ]
@@ -128,13 +130,13 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       if villain? do
         files ++ [
           {:eex, "_scripts.html.eex",
-                 "lib/web/templates/admin/#{path}/_scripts.new.html.eex"},
+                 "lib/application_name/web/templates/admin/#{path}/_scripts.new.html.eex"},
           {:eex, "_scripts.html.eex",
-                 "lib/web/templates/admin/#{path}/_scripts.edit.html.eex"},
+                 "lib/application_name/web/templates/admin/#{path}/_scripts.edit.html.eex"},
           {:eex, "_stylesheets.html.eex",
-                 "lib/web/templates/admin/#{path}/_stylesheets.new.html.eex"},
+                 "lib/application_name/web/templates/admin/#{path}/_stylesheets.new.html.eex"},
           {:eex, "_stylesheets.html.eex",
-                 "lib/web/templates/admin/#{path}/_stylesheets.edit.html.eex"},
+                 "lib/application_name/web/templates/admin/#{path}/_stylesheets.edit.html.eex"},
         ]
       else
         files
@@ -144,16 +146,16 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       if sequenced? do
         files = files ++ [
           {:eex, "sequence.html.eex",
-                 "lib/web/templates/admin/#{path}/sequence.html.eex"}]
+                 "lib/application_name/web/templates/admin/#{path}/sequence.html.eex"}]
         {files, args ++ ["--sequenced"]}
       else
         {files, args}
       end
 
-    Mix.Brando.check_module_name_availability!(binding[:module] <> "Web.Controller")
-    Mix.Brando.check_module_name_availability!(binding[:module] <> "Web.View")
-    Mix.Brando.check_module_name_availability!(binding[:admin_module] <> "Web.Controller")
-    Mix.Brando.check_module_name_availability!(binding[:admin_module] <> "Web.View")
+    Mix.Brando.check_module_name_availability!(binding[:module] <> "Controller")
+    Mix.Brando.check_module_name_availability!(binding[:module] <> "View")
+    Mix.Brando.check_module_name_availability!(binding[:admin_module] <> "Controller")
+    Mix.Brando.check_module_name_availability!(binding[:admin_module] <> "View")
 
     schema_binding = Mix.Tasks.Brando.Gen.Schema.run(args, domain_name)
 
@@ -177,12 +179,12 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       end
 
     instructions = instructions <> """
-    Add the resource to your browser scope in `lib/web/router.ex`:
+    Add the resource to your browser scope in `lib/app_name/web/router.ex`:
 
         # resources for #{binding[:scoped]}
 
         import Brando.Villain.Routes.Admin
-        alias #{binding[:base]}.Admin.#{binding[:scoped]}Controller
+        alias #{binding[:base]}.Web.Admin.#{binding[:scoped]}Controller
 
         get    "/#{route}",            #{binding[:scoped]}Controller, :index
         get    "/#{route}/new",        #{binding[:scoped]}Controller, :new

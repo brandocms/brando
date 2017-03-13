@@ -140,8 +140,14 @@ defmodule Mix.Tasks.Brando.Install do
       copy_from "./", binding, @static
     end
 
-    Mix.shell.info "\nDeleting web/static/app.css"
-    File.rm("web/static/css/app.css")
+    Mix.shell.info "\nDeleting assets/css/app.css"
+    File.rm("assets/css/app.css")
+    Mix.shell.info "\nDeleting assets/css/phoenix.css"
+    File.rm("assets/css/phoenix.css")
+    Mix.shell.info "\nDeleting assets/js/app.js"
+    File.rm("assets/js/app.js")
+    Mix.shell.info "\nDeleting assets/js/socket.js"
+    File.rm("assets/js/socket.js")
 
     Mix.shell.info "\nBrando finished copying."
   end

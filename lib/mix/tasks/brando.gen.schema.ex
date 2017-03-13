@@ -113,7 +113,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
       binding, [
         {:eex, "migration.exs",   "priv/repo/migrations/" <>
                                   "#{timestamp()}_create_#{migration}.exs"},
-        {:eex, "schema.ex",       "lib/#{snake_domain}/#{path}.ex"},
+        {:eex, "schema.ex",       "lib/application_name/#{snake_domain}/#{path}.ex"},
         {:eex, "schema_test.exs", "test/schemas/#{path}_test.exs"},
       ]
     )
