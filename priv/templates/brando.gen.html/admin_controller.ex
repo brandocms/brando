@@ -1,9 +1,7 @@
 defmodule <%= admin_module %>Controller do
   use <%= base %>.Admin.Web, :controller
 <%= if sequenced do %>  use Brando.Sequence, [:controller, [schema: <%= module %>]]<% end %>
-<%= if villain do %>  use Brando.Villain, [:controller, [
-    image_schema: Brando.Image,
-    series_schema: Brando.ImageSeries]]<% end %>
+<%= if villain do %>  use Brando.Villain, :controller<% end %>
   alias <%= module %>
   alias <%= base %>.<%= domain %>
 <%= if image_field do %>  import Brando.Plug.Uploads<% end %>
