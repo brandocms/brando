@@ -13,13 +13,13 @@ A helping hand.
 
 Start by creating a new phoenix project:
 
-    $ mix phoenix.new my_project
+    $ mix phx.new my_project
 
 Add Brando to `deps` in your `mix.exs` file:
 
 ```elixir
 defp deps do
-  [{:brando, github: "twined/brando", branch: "feature/phoenix1.3"}]
+  [{:brando, github: "twined/brando", branch: "develop"}]
 end
 ```
 
