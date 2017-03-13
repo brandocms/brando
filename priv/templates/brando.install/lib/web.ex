@@ -44,7 +44,7 @@ defmodule <%= application_module %>.Web do
 
   def view do
     quote do
-      use Phoenix.View, root: "lib/web/templates",
+      use Phoenix.View, root: "lib/<%= application_name %>/web/templates",
                         namespace: <%= application_module %>.Web
 
       # Import convenience functions from controllers

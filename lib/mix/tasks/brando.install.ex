@@ -19,16 +19,16 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "templates/brando.install/etc/supervisord/prod.conf", "etc/supervisord/prod.conf"},
 
     # Router template
-    {:eex,  "templates/brando.install/lib/web/router.ex", "lib/web/router.ex"},
+    {:eex,  "templates/brando.install/lib/web/router.ex", "lib/application_name/web/router.ex"},
 
     # Lockdown files
-    {:eex,  "templates/brando.install/lib/web/controllers/lockdown_controller.ex", "lib/web/controllers/lockdown_controller.ex"},
-    {:eex,  "templates/brando.install/lib/web/templates/layout/lockdown.html.eex", "lib/web/templates/layout/lockdown.html.eex"},
-    {:eex,  "templates/brando.install/lib/web/templates/lockdown/index.html.eex", "lib/web/templates/lockdown/index.html.eex"},
-    {:eex,  "templates/brando.install/lib/web/views/lockdown_view.ex", "lib/web/views/lockdown_view.ex"},
+    {:eex,  "templates/brando.install/lib/web/controllers/lockdown_controller.ex", "lib/application_name/web/controllers/lockdown_controller.ex"},
+    {:eex,  "templates/brando.install/lib/web/templates/layout/lockdown.html.eex", "lib/application_name/web/templates/layout/lockdown.html.eex"},
+    {:eex,  "templates/brando.install/lib/web/templates/lockdown/index.html.eex", "lib/application_name/web/templates/lockdown/index.html.eex"},
+    {:eex,  "templates/brando.install/lib/web/views/lockdown_view.ex", "lib/application_name/web/views/lockdown_view.ex"},
 
     # Default Villain parser
-    {:eex,  "templates/brando.install/lib/web/villain/parser.ex", "lib/web/villain/parser.ex"},
+    {:eex,  "templates/brando.install/lib/web/villain/parser.ex", "lib/application_name/web/villain/parser.ex"},
 
     # Default configuration files
     {:eex,  "templates/brando.install/config/brando.exs", "config/brando.exs"},
@@ -44,22 +44,22 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "templates/brando.install/repo/seeds.exs", "priv/repo/seeds.exs"},
 
     # Master app template.
-    {:text, "templates/brando.install/lib/web/templates/layout/app.html.eex", "lib/web/templates/layout/app.html.eex"},
+    {:text, "templates/brando.install/lib/web/templates/layout/app.html.eex", "lib/application_name/web/templates/layout/app.html.eex"},
 
     # Gettext templates
     {:keep, "templates/brando.install/priv/static/gettext/backend/nb", "priv/static/gettext/backend/nb/LC_MESSAGES"},
     {:keep, "templates/brando.install/priv/static/gettext/frontend", "priv/static/gettext/frontend"},
-    {:eex,  "templates/brando.install/lib/web/gettext.ex", "lib/web/gettext.ex"},
+    {:eex,  "templates/brando.install/lib/web/gettext.ex", "lib/application_name/web/gettext.ex"},
 
     # Frontend helpers
-    {:eex,  "templates/brando.install/lib/web/helpers/date_time_helpers.ex", "lib/web/helpers/date_time_helpers.ex"},
+    {:eex,  "templates/brando.install/lib/web/helpers/date_time_helpers.ex", "lib/application_name/web/helpers/date_time_helpers.ex"},
 
     # Web helpers for admin and frontend
-    {:eex, "templates/brando.install/lib/admin_web.ex", "lib/admin_web.ex"},
-    {:eex, "templates/brando.install/lib/web.ex", "lib/web.ex"},
+    {:eex, "templates/brando.install/lib/admin_web.ex", "lib/application_name/web/admin_web.ex"},
+    {:eex, "templates/brando.install/lib/web.ex", "lib/application_name/web/web.ex"},
 
     # Postgrex types
-    {:eex, "templates/brando.install/lib/postgrex_types.ex", "lib/postgrex_types.ex"},
+    {:eex, "templates/brando.install/lib/postgrex_types.ex", "lib/application_name/postgrex_types.ex"},
   ]
 
   @static [
