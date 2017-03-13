@@ -83,13 +83,13 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "use Brando.Admin.Web, :controller"
         assert file =~ "Repo.get!"
         assert file =~ "use Brando.Villain, :controller"
-        refute file =~ "import Brando.Backend.Gettext"
+        refute file =~ "import Brando.Web.Backend.Gettext"
       end
 
       assert_file "lib/brando/web/views/pirate_view.ex", fn file ->
         assert file =~ "defmodule Brando.Web.PirateView do"
         assert file =~ "use Brando.Web, :view"
-        assert file =~ "import Brando.Gettext"
+        assert file =~ "import Brando.Web.Gettext"
       end
 
       assert_file "lib/brando/web/menus/admin/pirate_menu.ex", fn file ->
