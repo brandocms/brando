@@ -27,7 +27,7 @@ defmodule <%= application_module %>.Admin.Web do
 
   def controller do
     quote do
-      use Phoenix.Controller
+      use Phoenix.Controller, namespace: <%= application_module %>.Web
       alias <%= application_module %>.Repo
       import Ecto
       import Ecto.Query, only: [from: 1, from: 2]
@@ -39,7 +39,8 @@ defmodule <%= application_module %>.Admin.Web do
   def view do
     helpers = Brando.helpers()
     quote do
-      use Phoenix.View, root: "lib/web/templates"
+      use Phoenix.View, root: "lib/<%= application_name %>/web/templates",
+                        namespace: <%= application_module %>.Web
 
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_csrf_token: 0, get_flash: 2, view_module: 1]

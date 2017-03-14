@@ -1,4 +1,4 @@
-defmodule <%= base %>.<%= scoped %>.Menu do
+defmodule <%= base %>.Web.<%= scoped %>.Menu do
   @moduledoc """
   Menu definitions for the <%= scoped %> Menu.
 
