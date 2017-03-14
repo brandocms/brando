@@ -93,13 +93,13 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       end
 
       assert_file "lib/brando/web/menus/admin/pirate_menu.ex", fn file ->
-        assert file =~ "defmodule Brando.Pirate.Menu do"
+        assert file =~ "defmodule Brando.Web.Pirate.Menu do"
         assert file =~ "Brando.Registry.register(Brando.Pirate, [:menu])"
       end
 
       assert_file "lib/brando/web/views/admin/pirate_view.ex", fn file ->
         assert file =~ "defmodule Brando.Web.Admin.PirateView do"
-        assert file =~ "use Brando.Web, :view"
+        assert file =~ "use Brando.Admin.Web, :view"
       end
 
       assert_file "lib/brando/web/templates/admin/pirate/edit.html.eex", fn file ->
