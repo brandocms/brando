@@ -97,6 +97,11 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "Brando.Registry.register(Brando.Pirate, [:menu])"
       end
 
+      assert_file "lib/brando/web/forms/admin/pirate_form.ex", fn file ->
+        assert file =~ "defmodule Brando.Web.Admin.PirateForm do"
+        assert file =~ "schema: Brando.Games.Pirate"
+      end
+
       assert_file "lib/brando/web/views/admin/pirate_view.ex", fn file ->
         assert file =~ "defmodule Brando.Web.Admin.PirateView do"
         assert file =~ "use Brando.Admin.Web, :view"
