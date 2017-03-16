@@ -4,7 +4,7 @@ defmodule <%= module %>Controller do
   alias <%= base %>.<%= domain %>.<%= scoped %>
 
   def index(conn, _params) do
-    <%= plural %> = Brando.repo.all(<%= alias %>)
+    <%= plural %> = <%= domain %>.list_<%= plural %>
 
     render conn, :index, [
       <%= plural %>: <%= plural %>,
