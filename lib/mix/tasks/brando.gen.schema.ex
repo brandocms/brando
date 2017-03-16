@@ -84,7 +84,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
       attrs
       |> Enum.map(fn ({k, v}) ->
         case v do
-          :villain -> k == :data && "villain" || "villain #{inspect k}"
+          :villain -> k == :data && "villain()" || "villain #{inspect k}"
           _        -> "add #{inspect k}, #{inspect(mig_types[k])}#{defs[k]}"
         end
       end)
@@ -93,7 +93,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
       attrs
       |> Enum.map(fn ({k, v}) ->
         case v do
-          :villain -> k == :data && "villain" || "villain #{inspect k}"
+          :villain -> k == :data && "villain()" || "villain #{inspect k}"
           _        -> "field #{inspect k}, #{inspect types[k]}#{defs[k]}"
         end
       end)
