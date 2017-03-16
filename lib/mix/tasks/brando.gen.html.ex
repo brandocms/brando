@@ -56,7 +56,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     """
     defmodule #{binding[:module]} do
       #{binding[:base]}.Repo
-      
+
       #{domain_header}\n#{domain_code}
     end
     """)
@@ -216,7 +216,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     ================================================================================================
     """
 
-    domain_header = domain_header <> "\n  alias <%= #{binding[:base]} %>.#{binding[:snake_domain]}.#{binding[:scoped]}"
+    domain_header = domain_header <> "\n  alias #{binding[:base]}.#{binding[:domain]}.#{binding[:scoped]}"
     domain_code   = generate_domain_code(domain_code, domain_name, binding, schema_binding)
 
     if Mix.shell.yes?("\nCreate another schema?") do
@@ -245,7 +245,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       end
     domain_code <> """
 
-      def get_all_#{binding[:plural]} do
+      def list_#{binding[:plural]} do
         Repo.all(#{binding[:alias]})
       end
 

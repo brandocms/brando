@@ -59,6 +59,11 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "generate_html(:biography)"
       end
 
+      assert_file "lib/brando/games/games.ex", fn file ->
+        assert file =~ "defmodule Brando.Games do"
+        assert file =~ "alias Brando.Games.Pirate"
+      end
+
       assert_file "test/schemas/pirate_test.exs"
       assert [migration_file] =
         Path.wildcard("priv/repo/migrations/*_create_pirate.exs")

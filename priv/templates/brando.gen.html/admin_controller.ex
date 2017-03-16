@@ -6,11 +6,8 @@ defmodule <%= admin_module %>Controller do
   alias <%= base %>.<%= domain %>
   alias <%= base %>.<%= domain %>.<%= scoped %>
 
-<%= if image_field do %>  import Brando.Plug.Uploads<% end %>
-
   plug :scrub_params, <%= inspect singular %> when action in [:create, :update]
-  <%= if image_field do %>plug :check_for_uploads, {<%= inspect singular %>, <%= scoped %>} when action in [:create, :update]<% end %>
-
+  
   def index(conn, _params) do
     <%= plural %> = Repo.all(<%= alias %>)
 

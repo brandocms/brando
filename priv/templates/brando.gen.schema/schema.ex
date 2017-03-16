@@ -55,6 +55,7 @@ defmodule <%= module %> do
     |> generate_html()<% else %>
     |> generate_html(<%= inspect v %>)<% end %><% end %><% end %><%= if img_fields != [] do %>
     |> cleanup_old_images()<%= for {v, k} <- img_fields do %>
+    |> validate_upload({:image, <%= inspect k %>})
     |> optimize(<%= inspect k %>)<% end %><% end %>
   end
 
