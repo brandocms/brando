@@ -61,6 +61,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
       assert_file "lib/brando/games/games.ex", fn file ->
         assert file =~ "defmodule Brando.Games do"
+        assert file =~ "alias Brando.Repo"
         assert file =~ "alias Brando.Games.Pirate"
       end
 

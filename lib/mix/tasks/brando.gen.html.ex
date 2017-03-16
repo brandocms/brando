@@ -55,7 +55,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     File.write!("lib/#{otp_app()}/#{snake_domain}/#{snake_domain}.ex",
     """
     defmodule #{binding[:module]} do
-      #{binding[:base]}.Repo
+      alias #{binding[:base]}.Repo
 
       #{domain_header}\n#{domain_code}
     end
