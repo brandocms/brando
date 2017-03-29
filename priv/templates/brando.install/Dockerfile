@@ -13,9 +13,12 @@ RUN mix deps.clean --all
 RUN mix deps.get
 RUN mix deps.compile
 
+# NPM
 RUN cd assets && npm install
-RUN cd assets && node_modules/.bin/brunch build -p assets/
+# YARN
+# RUN cd assets && yarn --pure-lockfile
+RUN cd assets && node_modules/.bin/brunch build -p
 
 RUN mix phoenix.digest
 RUN mix compile
-RUN mix release --verbosity=verbose
+RUN mix release --verbose
