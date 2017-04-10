@@ -362,8 +362,14 @@ defmodule Brando.Utils do
   def img_url(image_field, size, opts) do
     size = is_atom(size) && Atom.to_string(size) || size
     prefix = Keyword.get(opts, :prefix, nil)
-    unless Map.has_key?(image_field.sizes, size) do
-      IO.warn ~s(Wrong key for img_url. Size `#{size}` does not exist for #{inspect(image_field)})
+
+    size_dir =
+      if Map.has_key?(image_field.sizes, size) do
+        image_field.sizes[size]
+      else
+        IO.warn ~s(Wrong key for img_url. Size `#{size}` does not exist for #{inspect(image_field)})
+        "non_existing"
+      end
     end
 
     url = prefix && Path.join([prefix, image_field.sizes[size]]) || image_field.sizes[size]
