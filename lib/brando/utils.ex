@@ -370,7 +370,6 @@ defmodule Brando.Utils do
         IO.warn ~s(Wrong key for img_url. Size `#{size}` does not exist for #{inspect(image_field)})
         "non_existing"
       end
-    end
 
     url = prefix && Path.join([prefix, image_field.sizes[size]]) || image_field.sizes[size]
 
