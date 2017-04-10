@@ -215,14 +215,15 @@ defmodule Brando.Images.Utils do
         size_cfg
       end
 
-    modifier    = String.ends_with?(size_cfg["size"], ~w(< > ^ % ! @)) && "" || "^"
-    fill        = size_cfg["fill"] && "-background #{size_cfg["fill"]} " || ""
-    crop_string = "#{size_cfg["size"]}#{modifier} " <>
-                  "#{fill}-gravity center -extent #{size_cfg["size"]}"
+    # modifier    = String.ends_with?(size_cfg["size"], ~w(< > ^ % ! @)) && "" || "^"
+    # fill        = size_cfg["fill"] && "-background #{size_cfg["fill"]} " || ""
+    # crop_string = "#{size_cfg["size"]}#{modifier} " <>
+    #              "#{fill}-extent #{size_cfg["size"]}"
 
     if size_cfg["crop"] do
       image
-      |> Mogrify.custom(crop_string)
+      |> Mogrify.resize_to_fill(size_cfg["size"])
+      |> Mogrify.gravity("Center")
       |> Mogrify.save(path: image_dest)
     else
       image
