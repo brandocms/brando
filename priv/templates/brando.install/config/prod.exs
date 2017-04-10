@@ -16,7 +16,7 @@ config :<%= application_name %>, <%= application_module %>.Web.Endpoint,
   url: [scheme: "https", host: "example.com", port: 80],
   force_ssl: [rewrite_on: [:x_forwarded_proto]],
   server: true,
-  cache_static_manifest: "priv/static/manifest.json"
+  cache_static_manifest: "priv/static/cache_manifest.json"
 
 # Do not print debug messages in production
 config :logger, level: :error

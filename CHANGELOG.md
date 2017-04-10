@@ -187,10 +187,11 @@
        any document.ready() callbacks.
 
   * Move web to lib directory:
-    1) `mv web lib`
+    1) `mv web lib/my_app`
     2) Fix path in `web.ex` under view:
-       `use Phoenix.View, root: "lib/web/templates", namespace: MyApp`
-
+       `use Phoenix.View, root: "lib/my_app/web/templates", namespace: MyApp.Web`
+    3) Under controller:
+       `use Phoenix.Controller, namespace: MyApp.Web`
   * `Brando.Plug.Uploads` is deprecated. It is more explicit now, where we specify the field
     and what kind of upload it is in your changeset function.
     In your schema with ImageField or FileField, add to your changeset functions

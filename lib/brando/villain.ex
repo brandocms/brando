@@ -65,7 +65,7 @@ defmodule Brando.Villain do
   @lint false
   def schema do
     quote do
-      import Brando.Villain.Schema, only: [villain: 0]
+      import Brando.Villain.Schema, only: [villain: 0, villain: 1]
 
       @doc """
       Takes the schema's `json` field and transforms to `html`.
