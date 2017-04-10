@@ -71,11 +71,11 @@ defmodule Brando.Upload do
     {:ok, %__MODULE__{plug: plug, cfg: cfg_struct}}
   end
 
-  defp get_valid_filename(%__MODULE__{plug: %{filename: ""}}) do
+  defp get_valid_filename(%__MODULE__{plug: %Plug.Upload{filename: ""}}) do
     {:error, :empty_filename}
   end
 
-  defp get_valid_filename(%__MODULE__{plug: %{filename: filename}, cfg: cfg} = upload) do
+  defp get_valid_filename(%__MODULE__{plug: %Plug.Upload{filename: filename}, cfg: cfg} = upload) do
     upload =
       case Map.get(cfg, :random_filename, false) do
         true -> put_in(upload.plug.filename, random_filename(filename))
