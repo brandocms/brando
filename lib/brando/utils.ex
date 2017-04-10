@@ -371,7 +371,7 @@ defmodule Brando.Utils do
         "non_existing"
       end
 
-    url = prefix && Path.join([prefix, image_field.sizes[size]]) || image_field.sizes[size]
+    url = prefix && Path.join([prefix, size_dir]) || size_dir
 
     case Map.get(image_field, :optimized) do
       true  -> Brando.Images.Utils.optimized_filename(url)
