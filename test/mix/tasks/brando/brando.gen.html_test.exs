@@ -81,7 +81,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       assert_file "lib/brando/web/controllers/pirate_controller.ex", fn file ->
         assert file =~ "defmodule Brando.Web.PirateController"
         assert file =~ "use Brando.Web, :controller"
-        assert file =~ "repo.all"
+        assert file =~ "Games.list_pirates()"
       end
 
       assert_file "lib/brando/web/controllers/admin/pirate_controller.ex", fn file ->

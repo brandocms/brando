@@ -1,7 +1,10 @@
 defmodule Brando.UtilsTest do
   use ExUnit.Case, async: true
   use Plug.Test
+
   import Brando.Utils
+  import ExUnit.CaptureIO
+
   alias Brando.UtilsTest.TestStruct
 
   defmodule TestStruct do
@@ -117,9 +120,8 @@ defmodule Brando.UtilsTest do
     assert img_url(img, :original, prefix: "prefix")
            == "prefix/original/path/file.jpg"
 
-    assert_raise ArgumentError, fn ->
-      img_url(img, :notasize, [default: "default.jpg"])
-    end
+    assert capture_io(:stderr, fn -> img_url(img, :notasize, [default: "default.jpg"]) end)
+           =~ "Wrong key for img_url. Size `notasize` does not exist for"
   end
 
   test "get_now" do
