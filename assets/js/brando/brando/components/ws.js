@@ -1,6 +1,7 @@
 import $ from 'jquery';
 
 import { Socket } from 'phoenix';
+import ProgressBar from 'progressbar.js';
 import i18n from './i18n';
 import vex from './vex_brando';
 
