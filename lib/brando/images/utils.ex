@@ -222,7 +222,7 @@ defmodule Brando.Images.Utils do
 
     if size_cfg["crop"] do
       image
-      |> Mogrify.resize(crop_string)
+      |> Mogrify.custom(crop_string)
       |> Mogrify.save(path: image_dest)
     else
       image

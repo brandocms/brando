@@ -60,7 +60,7 @@ defmodule Brando.Mixfile do
     {:earmark, "~> 1.0", override: true},
     {:gettext, "~> 0.11"},
     {:httpoison, "~> 0.9"},
-    {:mogrify, "0.5.0"},
+    {:mogrify, "0.5.4"},
 
     {:phoenix, "~> 1.3.0-rc.0", override: true},
     {:phoenix_html, "~> 2.6"},
