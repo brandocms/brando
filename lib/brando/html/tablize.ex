@@ -7,7 +7,7 @@ defmodule Brando.HTML.Tablize do
 
   import Brando.Gettext
   import Brando.HTML, only: [check_or_x: 1, zero_pad: 1, can_render?: 2]
-  import Brando.HTML.Inspect, only: [inspect_field: 3]
+  import Brando.HTML.Inspect, only: [inspect_field: 3, inspect_assoc: 3]
 
   @narrow_fields [:language, :id, :status]
   @narrow_types [:integer, :boolean]
@@ -197,10 +197,17 @@ defmodule Brando.HTML.Tablize do
     children && row <> children || row
   end
 
+  defp get_type_from_module(module, field) do
+    case module.__schema__(:type, field) do
+      nil  -> module.__schema__(:association, field)
+      type -> type
+    end
+  end
+
   defp render_tr_content(record, %{module: module, opts: opts}) do
     rendered_fields =
       module.__keys__
-      |> Enum.map(&(do_td(&1, record, module.__schema__(:type, &1), opts)))
+      |> Enum.map(&(do_td(&1, record, get_type_from_module(module, &1), opts)))
       |> Enum.join
 
     rendered_smart_fields =
@@ -274,14 +281,27 @@ defmodule Brando.HTML.Tablize do
           </td>
           """
         true ->
-          """
-          <td data-field="#{field}">
-            #{inspect_field(field, type, Map.get(record, field))}
-          </td>
-          """
+          if assoc_type(type) do
+            """
+            <td data-field="#{field}">
+              #{inspect_field(field, nil, Map.get(record, field))}
+            </td>
+            """
+          else
+            """
+            <td data-field="#{field}">
+              #{inspect_field(field, type, Map.get(record, field))}
+            </td>
+            """
+          end
       end
     end
   end
+
+  defp assoc_type(%Ecto.Association.ManyToMany{}), do: true
+  defp assoc_type(%Ecto.Association.BelongsTo{}), do: true
+  defp assoc_type(%Ecto.Association.Has{}), do: true
+  defp assoc_type(_), do: false
 
   defp render_expander(_, nil) do
     "<td></td>"
