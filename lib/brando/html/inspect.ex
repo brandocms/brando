@@ -221,6 +221,9 @@ defmodule Brando.HTML.Inspect do
     do_inspect_assoc(name, type, value)
   end
 
+  defp do_inspect_assoc(name, %Ecto.Association.BelongsTo{}, %Ecto.Association.NotLoaded{}) do
+    ~s(<tr><td>#{name}</td><td>#{gettext("Association not fetched")}</td></tr>)
+  end
   defp do_inspect_assoc(name, %Ecto.Association.BelongsTo{}, nil) do
     ~s(<tr><td>#{name}</td><td><em>#{gettext("Empty association")}</em></td></tr>)
   end
@@ -233,6 +236,21 @@ defmodule Brando.HTML.Inspect do
   defp do_inspect_assoc(name, %Ecto.Association.Has{}, []) do
     ~s(<tr><td>#{name}</td><td><em>#{gettext("Empty association")}</em></td></tr>)
   end
+  defp do_inspect_assoc(name, %Ecto.Association.ManyToMany{}, %Ecto.Association.NotLoaded{}) do
+    ~s(<tr><td>#{name}</td><td>#{gettext("Association not fetched")}</td></tr>)
+  end
+  defp do_inspect_assoc(name, %Ecto.Association.ManyToMany{}, []) do
+    ~s(<tr><td>#{name}</td><td><em>#{gettext("Empty association")}</em></td></tr>)
+  end
+  defp do_inspect_assoc(name, %Ecto.Association.ManyToMany{} = type, values) do
+    values =
+      values
+      |> Enum.map(&(type.related.__repr__(&1)))
+      |> Enum.join("<br />")
+
+    ~s(<tr><td>#{name}</td><td>#{values}</td></tr>)
+  end
+
   defp do_inspect_assoc(_name, %Ecto.Association.Has{} = type, value) do
     rows =
       Enum.map value, fn (row) ->
