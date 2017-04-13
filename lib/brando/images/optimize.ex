@@ -48,11 +48,13 @@ defmodule Brando.Images.Optimize do
   Checks image for `optimized` flag, gets the image type and sends off
   to `do_optimize`.
   """
-  @spec optimize(Ecto.Changeset.t, :atom | String.t) :: Ecto.Changeset.t
-  def optimize(%Ecto.Changeset{} = changeset, field_name) do
+  @spec optimize(Ecto.Changeset.t, :atom | String.t, Keyword.t) :: Ecto.Changeset.t
+  def optimize(%Ecto.Changeset{} = changeset, field_name, opts \\ []) do
+    force? = Keyword.get(opts, :force, false)
+
     field_name_atom = is_binary(field_name) && String.to_atom(field_name) || field_name
 
-    with {:ok, img_field} <- check_field_has_changed(changeset, field_name),
+    with {:ok, img_field} <- check_field_has_changed(changeset, field_name, force?),
          {:ok, _}         <- check_changeset_has_no_errors(changeset),
          {:ok, type}      <- check_valid_image_type(img_field),
          {:ok, cfg}       <- check_image_type_has_config(type)
@@ -83,7 +85,11 @@ defmodule Brando.Images.Optimize do
     end
   end
 
-  defp check_field_has_changed(changeset, field_name) do
+  defp check_field_has_changed(changeset, field_name, true) do
+    {:ok, Changeset.get_field(changeset, field_name)}
+  end
+
+  defp check_field_has_changed(changeset, field_name, false) do
     case Changeset.get_change(changeset, field_name, nil) do
       nil       -> {:no_change, changeset}
       img_field -> {:ok, img_field}
@@ -146,9 +152,9 @@ defmodule Brando.Images.Optimize do
       |> String.replace(" ", "\\ ")
 
     args
-    |> String.replace("%{filename}", filename)
-    |> String.replace("%{new_filename}", new_filename)
     |> String.split(" ")
+    |> Enum.map(&(String.replace(&1, "%{filename}", filename)))
+    |> Enum.map(&(String.replace(&1, "%{new_filename}", new_filename)))
   end
 
   defp set_optimized_flag({:ok, {_, changeset, field_name, img_field}}) do

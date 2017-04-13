@@ -136,20 +136,24 @@ defmodule Brando.Images.Utils do
 
     new_path = Path.join([upload_path, filename])
 
-    image_info =
-      new_path
-      |> media_path()
-      |> Mogrify.open
-      |> Mogrify.verbose
+    try do
+      image_info =
+        new_path
+        |> media_path()
+        |> Mogrify.open
+        |> Mogrify.verbose
 
-    size_struct =
-      %Brando.Type.Image{}
-      |> Map.put(:sizes, Enum.into(sizes, %{}))
-      |> Map.put(:path, new_path)
-      |> Map.put(:width, image_info.width)
-      |> Map.put(:height, image_info.height)
+      size_struct =
+        %Brando.Type.Image{}
+        |> Map.put(:sizes, Enum.into(sizes, %{}))
+        |> Map.put(:path, new_path)
+        |> Map.put(:width, image_info.width)
+        |> Map.put(:height, image_info.height)
 
-    {:ok, size_struct}
+      {:ok, size_struct}
+    rescue
+      e in File.Error -> {:error, {:create_image_sizes, e}}
+    end
   end
 
   @doc """
@@ -201,41 +205,40 @@ defmodule Brando.Images.Utils do
   end
 
   def create_image_size(image_src, image_dest, size_cfg, _) do
-    image = Mogrify.open(image_src)
-
-    size_cfg =
-      if Map.has_key?(size_cfg, "portrait") do
-        image_info = Mogrify.verbose(image)
-        if image_info.height > image_info.width do
-          size_cfg["portrait"]
+    with true <- File.exists?(image_src),
+         image <- Mogrify.open(image_src) do
+      size_cfg =
+        if Map.has_key?(size_cfg, "portrait") do
+          image_info = Mogrify.verbose(image)
+          if image_info.height > image_info.width do
+            size_cfg["portrait"]
+          else
+            size_cfg["landscape"]
+          end
         else
-          size_cfg["landscape"]
+          size_cfg
         end
+
+      if size_cfg["crop"] do
+        image
+        |> Mogrify.resize_to_fill(size_cfg["size"])
+        |> Mogrify.gravity("Center")
+        |> Mogrify.save(path: image_dest)
       else
-        size_cfg
+        image
+        |> Mogrify.resize_to_limit(size_cfg["size"])
+        |> Mogrify.save(path: image_dest)
       end
-
-    # modifier    = String.ends_with?(size_cfg["size"], ~w(< > ^ % ! @)) && "" || "^"
-    # fill        = size_cfg["fill"] && "-background #{size_cfg["fill"]} " || ""
-    # crop_string = "#{size_cfg["size"]}#{modifier} " <>
-    #              "#{fill}-extent #{size_cfg["size"]}"
-
-    if size_cfg["crop"] do
-      image
-      |> Mogrify.resize_to_fill(size_cfg["size"])
-      |> Mogrify.gravity("Center")
-      |> Mogrify.save(path: image_dest)
     else
-      image
-      |> Mogrify.resize_to_limit(size_cfg["size"])
-      |> Mogrify.save(path: image_dest)
+      false ->
+        {:error, {:create_image_size, :file_not_found}}
     end
   end
 
   @doc """
   Deletes all image's sizes and recreates them.
   """
-  @spec recreate_sizes_for(:image | :image_series, Image.t) :: :ok | no_return
+  @spec recreate_sizes_for(:image, Image.t) :: :ok | no_return
   def recreate_sizes_for(:image, img) do
     img       = Brando.repo.preload(img, :image_series)
     img       = put_in(img.image.optimized, false)
@@ -243,23 +246,26 @@ defmodule Brando.Images.Utils do
 
     delete_sized_images(img.image)
 
-    {:ok, new_image} =
-      %{plug: %{uploaded_file: full_path}, cfg: img.image_series.cfg}
-      |> create_image_sizes
+    src = %{plug: %{uploaded_file: full_path}, cfg: img.image_series.cfg}
 
-    image = Map.put(img.image, :sizes, new_image.sizes)
+    with {:ok, new_image} <- create_image_sizes(src) do
+      image = Map.put(img.image, :sizes, new_image.sizes)
 
-    img
-    |> Brando.Image.changeset(:update, %{image: image})
-    |> Brando.Images.Optimize.optimize(:image)
-    |> Brando.repo.update!
+      img
+      |> Brando.Image.changeset(:update, %{image: image})
+      |> Brando.Images.Optimize.optimize(:image, force: true)
+      |> Brando.repo.update!
 
-    :ok
+      :ok
+    else
+      err -> err
+    end
   end
 
   @doc """
   Recreates all image sizes in imageseries.
   """
+  @spec recreate_sizes_for(:image_series, Image.t) :: :ok | no_return
   def recreate_sizes_for(:image_series, image_series_id) do
     q =
       from is in ImageSeries,
@@ -279,6 +285,34 @@ defmodule Brando.Images.Utils do
       recreate_sizes_for(:image, image)
 
     :ok
+  end
+
+  @doc """
+  Recreates sizes for an image field
+  """
+  @spec recreate_sizes_for(:image_field, term, atom) :: :ok | no_return
+  def recreate_sizes_for(:image_field, schema, field_name) do
+    # first, we get all rows of this schema
+    rows = Brando.repo.all(schema)
+
+    for row <- rows do
+      field = Map.get(row, field_name)
+      full_path = media_path(field.path)
+      delete_sized_images(field)
+      {:ok, cfg} = schema.get_image_cfg(field_name)
+      src = %{plug: %{uploaded_file: full_path}, cfg: cfg}
+
+      with {:ok, new_image} <- create_image_sizes(src) do
+        row
+        |> Ecto.Changeset.change(Map.put(%{}, field_name, new_image))
+        |> Brando.Images.Optimize.optimize(field_name)
+        |> Brando.repo.update!
+
+        :ok
+      else
+        err -> err
+      end
+    end
   end
 
   @doc """
