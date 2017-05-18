@@ -203,6 +203,10 @@ defmodule Brando.HTML.Inspect do
     schema_repr(value)
   end
 
+  defp do_inspect_field(_name, nil, nil) do
+    ~s(—)
+  end
+
   defp do_inspect_field(_name, _type, value) do
     inspect(value)
   end
