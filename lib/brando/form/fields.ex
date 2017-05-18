@@ -744,6 +744,14 @@ defmodule Brando.Form.Fields do
   def fieldset_close_tag, do:
     ~s(</div></fieldset>)
 
+  defp format_datetime(dt) do
+    "#{dt.year}-#{to_string(dt.month) |> String.pad_leading(2, "0")}-" <>
+    "#{to_string(dt.day) |> String.pad_leading(2, "0")} " <>
+    "#{to_string(dt.hour) |> String.pad_leading(2, "0")}:" <>
+    "#{to_string(dt.minute) |> String.pad_leading(2, "0")}:" <>
+    "#{to_string(dt.second) |> String.pad_leading(2, "0")}"
+  end
+
   defp put_slug_from(tag_opts, name, opts) do
     case opts[:slug_from] do
       nil -> tag_opts
@@ -780,6 +788,12 @@ defmodule Brando.Form.Fields do
 
   defp put_name(tag_opts, name) do
     Keyword.put(tag_opts, :name, name)
+  end
+
+  defp put_value(tag_opts, value = %NaiveDateTime{}, opts) do
+    value = format_datetime(value)
+
+    Keyword.put(tag_opts, :value, value)
   end
 
   defp put_value(tag_opts, value, opts) do
