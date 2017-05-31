@@ -76,7 +76,7 @@ defmodule Brando.Mixfile do
     {:dialyxir, "~> 0.3", only: :dev},
 
     # Test dependencies
-    {:ex_machina, "~> 1.0", only: :test},
+    {:ex_machina, "~> 2.0", only: :test},
     {:excoveralls, "~> 0.6", only: :test},
 
     # Documentation dependencies
