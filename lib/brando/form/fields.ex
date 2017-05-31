@@ -790,7 +790,7 @@ defmodule Brando.Form.Fields do
     Keyword.put(tag_opts, :name, name)
   end
 
-  defp put_value(tag_opts, value = %NaiveDateTime{}, opts) do
+  defp put_value(tag_opts, value = %NaiveDateTime{}, _opts) do
     value = format_datetime(value)
 
     Keyword.put(tag_opts, :value, value)
