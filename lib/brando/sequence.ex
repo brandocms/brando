@@ -161,6 +161,7 @@ defmodule Brando.Sequence do
       def sequence(ids, vals) do
         order = Enum.zip(vals, ids)
         table = __MODULE__.__schema__(:source)
+        
         Brando.repo.transaction(fn -> Enum.map(order, fn ({val, id}) ->
           Ecto.Adapters.SQL.query(
             Brando.repo,
