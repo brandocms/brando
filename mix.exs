@@ -57,7 +57,7 @@ defmodule Brando.Mixfile do
 
   defp deps do [
     {:comeonin, "~> 3.0"},
-    {:earmark, "~> 1.0", override: true},
+    {:earmark, "~> 1.2", override: true},
     {:gettext, "~> 0.11"},
     {:httpoison, "~> 0.9"},
     {:mogrify, "0.5.4"},
