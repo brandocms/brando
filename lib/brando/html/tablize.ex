@@ -7,7 +7,7 @@ defmodule Brando.HTML.Tablize do
 
   import Brando.Gettext
   import Brando.HTML, only: [check_or_x: 1, zero_pad: 1, can_render?: 2]
-  import Brando.HTML.Inspect, only: [inspect_field: 3, inspect_assoc: 3]
+  import Brando.HTML.Inspect, only: [inspect_field: 3]
 
   @narrow_fields [:language, :id, :status]
   @narrow_types [:integer, :boolean]
