@@ -1,6 +1,6 @@
 A helping hand.
 
-![Brando logo](https://raw.githubusercontent.com/twined/brando/develop/priv/templates/brando.install/static/brando/images/brando-big.png)
+![Brando logo](https://raw.githubusercontent.com/twined/brando/develop/priv/templates/brando.install/assets/static/brando/images/brando-big.png)
 
 [![Build Status](https://travis-ci.org/twined/brando.svg?branch=master)](https://travis-ci.org/twined/brando)
 [![Coverage Status](https://coveralls.io/repos/github/twined/brando/badge.svg?branch=master)](https://coveralls.io/github/twined/brando?branch=master)
