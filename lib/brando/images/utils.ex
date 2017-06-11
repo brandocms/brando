@@ -180,19 +180,7 @@ defmodule Brando.Images.Utils do
     # If we don't, we always pass W or xH.
     {crop, modifier, size} =
       if size_cfg["crop"] do
-        image_info = Mogrify.verbose(image)
-        [dest_w, dest_h] = split_geometry(size_cfg["size"])
-        resize_to =
-          if image_info.width > image_info.height do
-            new_width = image_info.width / image_info.height * dest_h
-            new_height = dest_h
-            "#{new_width}x#{new_height}"
-          else
-            new_height = image_info.height / image_info.width * dest_w
-            new_width = dest_w
-            "#{new_width}x#{new_height}"
-          end
-        {"--crop #{size_cfg["size"]}", "--resize", resize_to}
+        {"--crop 0,0-#{String.replace(size_cfg["size"], "x", ",")}", "--resize", size_cfg["size"]}
       else
         modifier =
           String.contains?(size_cfg["size"], "x") && "--resize-fit-height" || "--resize-fit-width"
