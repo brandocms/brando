@@ -192,7 +192,7 @@ defmodule Brando.Images.Utils do
             new_width = dest_w
             "#{new_width}x#{new_height}"
           end
-        {~w(--crop #{size_cfg["size"]}), "--resize", resize_to}
+        {"--crop #{size_cfg["size"]}", "--resize", resize_to}
       else
         modifier =
           String.contains?(size_cfg["size"], "x") && "--resize-fit-height" || "--resize-fit-width"
@@ -201,7 +201,9 @@ defmodule Brando.Images.Utils do
         {"", modifier, size}
       end
 
-    System.cmd "gifsicle", ~w(#{crop} #{modifier} #{size} --output #{image_dest} -i #{image_src}), stderr_to_stdout: true
+    params = ~w(#{crop} #{modifier} #{size} --output #{image_dest} -i #{image_src})
+
+    System.cmd "gifsicle", params, stderr_to_stdout: true
   end
 
   def create_image_size(image_src, image_dest, size_cfg, _) do
