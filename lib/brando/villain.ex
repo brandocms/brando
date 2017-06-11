@@ -1,3 +1,4 @@
+# credo:disable-for-this-file
 defmodule Brando.Villain do
   @moduledoc """
   Interface to Villain HTML editor.
@@ -62,7 +63,6 @@ defmodule Brando.Villain do
   import Brando.Utils, only: [img_url: 2, media_url: 1]
 
   @doc false
-  @lint false
   def schema do
     quote do
       import Brando.Villain.Schema, only: [villain: 0, villain: 1]
@@ -175,7 +175,6 @@ defmodule Brando.Villain do
   end
 
   @doc false
-  @lint false
   def controller do
     quote do
       import Ecto.Query

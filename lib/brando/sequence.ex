@@ -1,3 +1,4 @@
+# credo:disable-for-this-file
 defmodule Brando.Sequence do
   @moduledoc """
   Helpers for sequencing schema data.
@@ -75,7 +76,6 @@ defmodule Brando.Sequence do
   end
 
   @doc false
-  @lint false
   def controller(schema_module, filter \\ nil) do
     quote do
       if unquote(filter) do
@@ -161,7 +161,7 @@ defmodule Brando.Sequence do
       def sequence(ids, vals) do
         order = Enum.zip(vals, ids)
         table = __MODULE__.__schema__(:source)
-        
+
         Brando.repo.transaction(fn -> Enum.map(order, fn ({val, id}) ->
           Ecto.Adapters.SQL.query(
             Brando.repo,
