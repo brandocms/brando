@@ -679,6 +679,7 @@ defmodule Brando.Images.Utils do
   end
 
   defp split_geometry(geometry) do
-    Regex.split(~r/x/, geometry, [parts: 2])
+    [w, h] = Regex.split(~r/x/, geometry, [parts: 2])
+    [String.to_integer(w), String.to_integer(h)]
   end
 end
