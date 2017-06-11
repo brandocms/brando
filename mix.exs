@@ -68,7 +68,7 @@ defmodule Brando.Mixfile do
     {:postgrex, "~> 0.13", override: true},
     {:guardian, "~> 0.14"},
 
-    {:slugger, "~> 0.1.0"},
+    {:slugger, "~> 0.2"},
     {:scrivener_ecto, "~> 1.1"},
 
     # Dev dependencies
