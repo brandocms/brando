@@ -56,7 +56,7 @@ class PopupForm {
     const self = this;
 
     vex.dialog.open({
-      message: `<h3>${header}</h3>${content}`,
+      unsafeMessage: `<h3>${header}</h3>${content}`,
       overlayClosesOnClick: false,
       callback: (data) => {
         const $form = $('.vex-dialog-message form');

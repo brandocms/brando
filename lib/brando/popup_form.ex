@@ -5,8 +5,10 @@ defmodule Brando.PopupForm do
   ## Usage
 
   First, register the form in your app's endpoint startup. The first argument is the
-  name of the schema, second is the form module and third is a list of fields you want
-  returned if repo insertion is successful:
+  overarching key (if you for instance have multiple "client" schemas in different contexts, this
+  could be :account_clients, or :project_clients),
+  second is the name of the schema, third is the form module and fourth is a list
+  of fields you want returned if repo insertion is successful:
 
       Brando.PopupForm.Registry.register(:accounts, "client", MyApp.ClientForm, "Create client", [:id, :name])
 
