@@ -1,6 +1,6 @@
 {
   "name": "@twined/brando",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.2",
   "description": "Brando node deps",
   "main": "./priv/static/js/brando.js",
   "dependencies": {
@@ -43,7 +43,7 @@
     "eslint-plugin-react": "^6.4.1",
     "extract-text-webpack-plugin": "^2.0.0-beta.4",
     "file-loader": "^0.9.0",
-    "node-sass": "^3.12.5",
+    "node-sass": "^3.13.1",
     "optimize-css-assets-webpack-plugin": "^1.3.0",
     "postcss-loader": "^1.2.0",
     "sass-loader": "^4.0.2",
