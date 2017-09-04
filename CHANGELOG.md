@@ -106,6 +106,8 @@
         serializer: Brando.GuardianSerializer
     ```
 
+  * Run through the Phoenix changes as well: https://gist.github.com/chrismccord/71ab10d433c98b714b75c886eff17357
+
   * Removing DB-level unique slug index from image_series.
     1) Create a new migration:
       `$ mix ecto.gen.migration remove_slug_index_from_image_series`
@@ -116,6 +118,10 @@
       end
       ```
     3) `$ mix ecto.migrate`
+
+  * Rename db tables:
+    1) `pages` -> `pages_pages`
+    2) `posts` -> `news_posts`
 
   * Postgrex has changed its extension setup. Create `lib/postgrex_types.ex` and populate with:
     ```
@@ -143,6 +149,9 @@
     5) `mkdir -p assets/js/app`
     6) `mv assets/js/app.js assets/js/app/index.js`
     7) `mv assets/vendor/*.js assets/js/app/vendor`
+    8) `mv package.json assets/`
+    9) `mv brunch-config.js assets/`
+    10) `rm -rf node_modules`
 
     Set the contents of `assets/js/admin/index.js` to something like this:
 
