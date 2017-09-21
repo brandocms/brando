@@ -422,6 +422,18 @@ def load_db_remote():
                 print(red('==> error: database already exists'))
 
 
+def drop_db_remote():
+    """
+    Drops db on remote
+    """
+    _warn('''
+        DROPPING REMOTE DATABASE %s
+    ''' % (env.db_name))
+
+    _confirmtask()
+    sudo('dropdb %s' % (env.db_name), user='postgres')
+
+
 def load_db_local():
     """
     Loads remote db on local dev
