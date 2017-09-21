@@ -115,7 +115,7 @@ defmodule Brando.Images.Optimize do
       args = interpolate_and_split_args(elem(&1, 1), cfg[:args])
       execute_command(cfg[:bin], args)
     end)))
-    |> Enum.map(&Task.await/1)
+    |> Enum.map(&(Task.await(&1, 60_000)))
     |> Enum.filter(&(&1 != :ok))
     |> case do
       [] -> {:ok, {cfg, changeset, field_name, img_field}}
