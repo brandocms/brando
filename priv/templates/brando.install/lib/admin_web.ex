@@ -27,7 +27,7 @@ defmodule <%= application_module %>.Admin.Web do
 
   def controller do
     quote do
-      use Phoenix.Controller, namespace: <%= application_module %>.Web
+      use Phoenix.Controller, namespace: <%= application_module %>.Admin.Web
       alias <%= application_module %>.Repo
       import Ecto
       import Ecto.Query, only: [from: 1, from: 2]
