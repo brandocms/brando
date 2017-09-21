@@ -617,8 +617,7 @@ defmodule Brando.Images.Utils do
     nil
   end
 
-  @spec do_check_image_path(Ecto.Schema.t, String.t, String.t, String.t, String.t)
-                           :: Brando.Type.Image.t
+  @spec do_check_image_path(Ecto.Schema.t, String.t, String.t, String.t, String.t) :: Brando.Type.Image.t
   defp do_check_image_path(image, image_path, image_dirname, image_basename, upload_dirname) do
     media_path = Path.expand(Brando.config(:media_path))
 
@@ -650,26 +649,23 @@ defmodule Brando.Images.Utils do
     case upload_paths do
       [] -> []
       _  ->
-        path_to_check           = Path.join(media_path, starts_with)
-        full_ignored_paths      = Enum.map(ignored_paths, &(Path.join(path_to_check, &1)))
+        path_to_check = Path.join(media_path, starts_with)
+        full_ignored_paths = Enum.map(ignored_paths, &(Path.join(path_to_check, &1)))
 
-        existing_category_paths = path_to_check
-                                  |> Path.join("*")
-                                  |> Path.wildcard
-                                  |> Enum.filter(&(!&1 in full_ignored_paths))
+        existing_category_paths =
+          path_to_check
+          |> Path.join("*")
+          |> Path.wildcard
+          |> Enum.filter(&(!&1 in full_ignored_paths))
 
-        existing_series_paths   = existing_category_paths
-                                  |> Enum.map(&Path.wildcard(Path.join(&1, "*")))
-                                  |> List.flatten
+        existing_series_paths =
+          existing_category_paths
+          |> Enum.map(&Path.wildcard(Path.join(&1, "*")))
+          |> List.flatten
 
         existing_paths = existing_series_paths ++ existing_category_paths
 
         existing_paths -- upload_paths
     end
-  end
-
-  defp split_geometry(geometry) do
-    [w, h] = Regex.split(~r/x/, geometry, [parts: 2])
-    [String.to_integer(w), String.to_integer(h)]
   end
 end
