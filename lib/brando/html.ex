@@ -147,10 +147,10 @@ defmodule Brando.HTML do
   """
   def zero_pad(str, count \\ 3)
   def zero_pad(val, count) when is_binary(val) do
-    String.rjust(val, count, ?0)
+    String.pad_leading(val, count, "0")
   end
   def zero_pad(val, count) do
-    String.rjust(Integer.to_string(val), count, ?0)
+    String.pad_leading(Integer.to_string(val), count, "0")
   end
 
   @doc """

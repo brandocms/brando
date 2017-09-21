@@ -18,6 +18,7 @@ defmodule Brando.HTMLTest do
     assert zero_pad(100) == "100"
     assert zero_pad(1000) == "1000"
     assert zero_pad("1") == "001"
+    assert zero_pad("1", 10) == "0000000001"
   end
 
   test "delete_form_button/2" do
