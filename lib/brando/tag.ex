@@ -123,7 +123,7 @@ defmodule Brando.Tag do
     if params["tags"] do
       split_tags = params["tags"]
                    |> String.split(",")
-                   |> Enum.map(&String.strip/1)
+                   |> Enum.map(&String.trim/1)
 
       Map.put(params, "tags", split_tags)
     else

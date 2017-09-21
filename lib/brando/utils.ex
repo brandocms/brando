@@ -422,7 +422,7 @@ defmodule Brando.Utils do
     string        = :erlang.binary_to_list(string)
     {first, rest} = Enum.split(string, split)
     rest          = Enum.chunk(rest, 3) |> Enum.map(&[" ", &1])
-    IO.iodata_to_binary([first, rest]) |> String.lstrip
+    IO.iodata_to_binary([first, rest]) |> String.trim_leading
   end
 
   def human_spaced_number(int) when is_integer(int) do
