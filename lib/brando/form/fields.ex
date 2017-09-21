@@ -129,6 +129,13 @@ defmodule Brando.Form.Fields do
   end
 
   @doc """
+  Render hidden field
+  """
+  def render_field(%Field{type: :hidden} = field) do
+    input(field)
+  end
+
+  @doc """
   Render text/password/email (catch-all)
   """
   def render_field(field) do

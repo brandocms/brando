@@ -50,7 +50,8 @@ defmodule Brando.Form do
     :file,
     :radio,
     :textarea,
-    :datetime
+    :datetime,
+    :hidden
   ]
 
   alias Brando.Form.Field
@@ -342,6 +343,12 @@ defmodule Brando.Form do
     * `default` - Default value. Can also be a function like
       `&__MODULE__.default_func/0`
 
+  `:hidden` - A hidden field
+
+  Options
+
+    * `default` - Default value. Can also be a function like
+      `&__MODULE__.default_func/0`
   """
   defmacro field(name, type, opts \\ []) do
     quote do
