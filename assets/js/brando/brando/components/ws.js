@@ -14,19 +14,19 @@ class WS {
       return;
     }
 
-    const socket = new Socket('/admin/ws', {
+    this.socket = new Socket('/admin/ws', {
       params: {
         token: userToken,
       },
     });
 
-    socket.connect();
+    this.socket.connect();
 
-    this.lobbyChannel = socket.channel('user:lobby', {});
+    this.lobbyChannel = this.socket.channel('user:lobby', {});
     this.lobbyChannel.join()
       .receive('ok', (joinPayload) => {
         console.log('==> Lobby channel ready');
-        this.userChannel = socket.channel(`user:${joinPayload.user_id}`, {});
+        this.userChannel = this.socket.channel(`user:${joinPayload.user_id}`, {});
         this.userChannel.join()
           .receive('ok', () => {
             console.log('==> User channel ready');
@@ -45,7 +45,7 @@ class WS {
         });
       });
 
-    this.systemChannel = socket.channel('system:stream', {});
+    this.systemChannel = this.socket.channel('system:stream', {});
     this.systemChannel.join()
       .receive('ok', () => {
         console.log('==> System channel ready');
