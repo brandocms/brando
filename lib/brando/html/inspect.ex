@@ -207,8 +207,26 @@ defmodule Brando.HTML.Inspect do
     ~s(—)
   end
 
+  defp do_inspect_field(name, type, list)
+  when is_list(list) do
+    list = Enum.map(list, &(check_list(name, type, &1)))
+    Enum.count(list) > 0 && Enum.join(list, ", ") || "—"
+  end
+
   defp do_inspect_field(_name, _type, value) do
     inspect(value)
+  end
+
+  defp check_list(_name, _type, %{__struct__: _struct} = value) when is_map(value) do
+    schema_repr(value)
+  end
+
+  defp check_list(_name, _type, value) when is_map(value) do
+    "<map>"
+  end
+
+  defp check_list(_name, _type, value) do
+    value
   end
 
   #
