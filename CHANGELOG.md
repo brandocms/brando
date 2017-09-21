@@ -108,6 +108,8 @@
 
   * Run through the Phoenix changes as well: https://gist.github.com/chrismccord/71ab10d433c98b714b75c886eff17357
 
+  * Rename `YourApp.Backend.Gettext` to `YourApp.Web.Backend.Gettext`
+
   * Removing DB-level unique slug index from image_series.
     1) Create a new migration:
       `$ mix ecto.gen.migration remove_slug_index_from_image_series`
@@ -281,6 +283,7 @@
     ```
 
 * Enhancements
+  * Added `:hidden` form field type
   * Added `title_prefix` config option.
     `config :brando, title_prefix: "My App >> "`
   * Brando.Type.Image now has width and height keys. These are set in the `create_image_sizes` function
