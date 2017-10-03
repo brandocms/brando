@@ -71,7 +71,7 @@ class WS {
     return null;
   }
 
-  static alert(message) {
+  alert(message) {
     vex.dialog.alert(message);
   }
 

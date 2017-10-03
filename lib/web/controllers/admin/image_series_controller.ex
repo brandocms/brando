@@ -132,7 +132,7 @@ defmodule Brando.Admin.ImageSeriesController do
     user = current_user(conn)
 
     # send this off for async processing
-    _ = Task.start_link(fn ->
+    _ = Task.start(fn ->
       Brando.UserChannel.set_progress(user, 0)
       :ok = recreate_sizes_for(:image_series, id)
       Brando.UserChannel.set_progress(user, 1)

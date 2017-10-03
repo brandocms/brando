@@ -79,28 +79,27 @@ class Images {
                           .find('img')
                           .clone();
 
+        let todayDateString = new Date().toJSON().slice(0, 10)
         vex.dialog.open({
-          message: '',
-          input: function inputCallback() {
-            attrs = Images.buildAttrs($img.data());
-            $content.append($img)
-                    .append(attrs);
+            message: '',
+            input: [`
+              ${$img[0].outerHTML}
+              ${Images.buildAttrs($img.data())}
+            `].join(''),
+            callback: function dialogCallback(form) {
+              const formWithoutId = form;
+              if (form !== false) {
+                const id = formWithoutId.id;
+                delete formWithoutId.id;
+                const data = {
+                  form: formWithoutId,
+                  id: id,
+                };
+                Images.submitProperties(data);
+              }
+            },
+          });
 
-            return $content;
-          },
-          callback: function dialogCallback(form) {
-            const formWithoutId = form;
-            if (form !== false) {
-              const id = formWithoutId.id;
-              delete formWithoutId.id;
-              const data = {
-                form: formWithoutId,
-                id: id,
-              };
-              Images.submitProperties(data);
-            }
-          },
-        });
       });
   }
 

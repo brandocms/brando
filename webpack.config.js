@@ -14,7 +14,7 @@ const plugins = debug ? [new ExtractTextPlugin('css/[name].css')] : [
     cssProcessorOptions: { discardComments: { removeAll: true } }
   }),
   new webpack.optimize.OccurrenceOrderPlugin(),
-  new webpack.optimize.UglifyJsPlugin(),
+  new webpack.optimize.UglifyJsPlugin({ sourceMap: true }),
   new webpack.optimize.AggressiveMergingPlugin(),
 ];
 
@@ -33,6 +33,7 @@ module.exports = {
     umdNamedDefine: true,
   },
 
+  devtool: 'source-map',
   target: 'web',
 
   module: {

@@ -153,6 +153,7 @@ defmodule Brando.Images.Utils do
       {:ok, size_struct}
     rescue
       e in File.Error -> {:error, {:create_image_sizes, e}}
+      e -> {:error, {:create_image_sizes, e}}
     end
   end
 
@@ -248,7 +249,11 @@ defmodule Brando.Images.Utils do
 
       :ok
     else
-      err -> err
+      err ->
+        require Logger
+        Logger.error "==> recreate_sizes_for(:image, ...) failed"
+        Logger.error inspect err
+        err
     end
   end
 
@@ -271,8 +276,7 @@ defmodule Brando.Images.Utils do
         :unchanged -> image_series
       end
 
-    for image <- image_series.images, do:
-      recreate_sizes_for(:image, image)
+    ret = Enum.map(image_series.images, &(recreate_sizes_for(:image, &1)))
 
     :ok
   end

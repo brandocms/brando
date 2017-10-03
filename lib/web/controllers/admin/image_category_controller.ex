@@ -127,7 +127,7 @@ defmodule Brando.Admin.ImageCategoryController do
     series   = Images.get_series_for(category_id: category.id)
 
     # send this off for async processing
-    _ = Task.start_link(fn ->
+    _ = Task.start(fn ->
       Brando.UserChannel.set_progress(user, 0)
 
       series_count = Enum.count(series)
