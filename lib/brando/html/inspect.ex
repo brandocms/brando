@@ -258,6 +258,9 @@ defmodule Brando.HTML.Inspect do
   defp do_inspect_assoc(name, %Ecto.Association.Has{}, []) do
     ~s(<tr><td>#{name}</td><td><em>#{gettext("Empty association")}</em></td></tr>)
   end
+  defp do_inspect_assoc(name, %Ecto.Association.Has{}, nil) do
+    ~s(<tr><td>#{name}</td><td><em>#{gettext("Empty association")}</em></td></tr>)
+  end
   defp do_inspect_assoc(name, %Ecto.Association.ManyToMany{}, %Ecto.Association.NotLoaded{}) do
     ~s(<tr><td>#{name}</td><td>#{gettext("Association not fetched")}</td></tr>)
   end
