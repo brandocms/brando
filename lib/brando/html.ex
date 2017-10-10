@@ -459,21 +459,39 @@ defmodule Brando.HTML do
       full path.
     * `srcset` - if you want to use the srcset attribute. Set in the form of `{module, field}`.
       I.e `srcset: {Brando.User, :avatar}`
-
+      You can also reference a config struct directly:
+      I.e `srcset: image_series.cfg`
+      Or supply a srcset directly:
+        srcset: %{
+          "small" => "300w",
+          "medium" => "582w",
+          "large" => "936w",
+          "xlarge" => "1200w"
+        }
   """
   def img_tag(image_field, size, opts \\ []) do
     srcset_attr = get_srcset(image_field, opts[:srcset], opts) || []
+    sizes_attr = get_sizes(opts[:sizes]) || []
     attrs =
       Keyword.new
       |> Keyword.put(:src, Brando.Utils.img_url(image_field, size, opts))
-      |> Keyword.merge(Keyword.drop(opts, [:prefix, :srcset, :default]) ++ srcset_attr)
+      |> Keyword.merge(Keyword.drop(opts, [:prefix, :srcset, :sizes, :default]) ++ sizes_attr ++ srcset_attr)
+
+    # drop the src if we have srcset, since the browser seems to load this DOUBLE?
+    attrs = srcset_attr != [] && Keyword.drop(attrs, [:src]) || attrs
 
     Phoenix.HTML.Tag.tag(:img, attrs)
   end
 
-  defp get_srcset(_, nil, _) do
-    nil
+  defp get_sizes(nil), do: nil
+  defp get_sizes(sizes) when is_list(sizes) do
+    [sizes: Enum.join(sizes, ", ")]
   end
+  defp get_sizes(_) do
+    raise ArgumentError, message: ~s<sizes key must be a list: ["(min-width: 36em) 33.3vw", "100vw"]>
+  end
+
+  defp get_srcset(_, nil, _), do: nil
 
   defp get_srcset(image_field, {mod, field}, opts) do
     {:ok, cfg} = apply(mod, :get_image_cfg, [field])
@@ -489,4 +507,54 @@ defmodule Brando.HTML do
 
     [srcset: Enum.join(srcset_values, ", ")]
   end
+
+  defp get_srcset(image_field, %Brando.Type.ImageConfig{} = cfg, opts) do
+    if !cfg.srcset do
+      raise ArgumentError, message: "no `:srcset` key set in supplied image config"
+    end
+
+    srcset = sort_srcset(cfg.srcset)
+
+    srcset_values =
+      for {k, v} <- srcset do
+        path = Brando.Utils.img_url(image_field, k, opts)
+        "#{path} #{v}"
+      end
+
+    [srcset: Enum.join(srcset_values, ", ")]
+  end
+
+  defp get_srcset(image_field, srcset, opts) do
+    srcset_values =
+      for {k, v} <- srcset do
+        path = Brando.Utils.img_url(image_field, k, opts)
+        "#{path} #{v}"
+      end
+
+    [srcset: Enum.join(srcset_values, ", ")]
+  end
+
+  defp sort_srcset(map) when is_map(map) do
+    Map.to_list(map)
+    |> Enum.sort(fn ({k1, s1}, {k2, s2}) ->
+      t1 =
+        s1
+        |> String.replace("w", "")
+        |> String.replace("h", "")
+        |> String.replace("wv", "")
+        |> String.replace("hv", "")
+        |> String.to_integer
+      t2 =
+        s2
+        |> String.replace("w", "")
+        |> String.replace("h", "")
+        |> String.replace("wv", "")
+        |> String.replace("hv", "")
+        |> String.to_integer
+
+      t1 > t2
+    end)
+  end
+
+  defp sort_srcset(list), do: list
 end
