@@ -276,7 +276,7 @@ defmodule Brando.Images.Utils do
         :unchanged -> image_series
       end
 
-    ret = Enum.map(image_series.images, &(recreate_sizes_for(:image, &1)))
+    Enum.map(image_series.images, &(recreate_sizes_for(:image, &1)))
 
     :ok
   end

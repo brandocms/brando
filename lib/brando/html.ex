@@ -486,12 +486,11 @@ defmodule Brando.HTML do
     Phoenix.HTML.Tag.tag(:img, attrs)
   end
 
-  def ratio(%{height: height, width: width} = img) when is_nil(height) or is_nil(width), do: 0
+  def ratio(%{height: height, width: width}) when is_nil(height) or is_nil(width), do: 0
   def ratio(%{height: height, width: width}) do
-    r =
-      Decimal.new(height)
-      |> Decimal.div(Decimal.new(width))
-      |> Decimal.mult(Decimal.new(100))
+    Decimal.new(height)
+    |> Decimal.div(Decimal.new(width))
+    |> Decimal.mult(Decimal.new(100))
   end
   def ratio(nil), do: 0
 
@@ -523,7 +522,7 @@ defmodule Brando.HTML do
         "#{path} #{v}"
       end
 
-    [srcset: Enum.join(srcset_values, ", ")]
+    Enum.join(srcset_values, ", ")
   end
 
   def get_srcset(image_field, %Brando.Type.ImageConfig{} = cfg, opts) do
@@ -554,7 +553,7 @@ defmodule Brando.HTML do
 
   defp sort_srcset(map) when is_map(map) do
     Map.to_list(map)
-    |> Enum.sort(fn ({k1, s1}, {k2, s2}) ->
+    |> Enum.sort(fn ({_k1, s1}, {_k2, s2}) ->
       t1 =
         s1
         |> String.replace("w", "")
