@@ -470,12 +470,15 @@ defmodule Brando.HTML do
         }
   """
   def img_tag(image_field, size, opts \\ []) do
-    srcset_attr = get_srcset(image_field, opts[:srcset], opts) || []
-    sizes_attr = get_sizes(opts[:sizes]) || []
+    srcset_attr = Keyword.get(opts, :srcset) && [srcset: get_srcset(image_field, opts[:srcset], opts)] || []
+    sizes_attr = Keyword.get(opts, :sizes) && [sizes: get_sizes(opts[:sizes])] || []
+    width_attr = Keyword.get(opts, :width) && [width: Map.get(image_field, :width)] || []
+    height_attr = Keyword.get(opts, :height) && [height: Map.get(image_field, :height)] || []
+
     attrs =
       Keyword.new
       |> Keyword.put(:src, Brando.Utils.img_url(image_field, size, opts))
-      |> Keyword.merge(Keyword.drop(opts, [:prefix, :srcset, :sizes, :default]) ++ sizes_attr ++ srcset_attr)
+      |> Keyword.merge(Keyword.drop(opts, [:prefix, :srcset, :sizes, :default]) ++ sizes_attr ++ srcset_attr ++ width_attr ++ height_attr)
 
     # drop the src if we have srcset, since the browser seems to load this DOUBLE?
     attrs = srcset_attr != [] && Keyword.drop(attrs, [:src]) || attrs
@@ -483,17 +486,32 @@ defmodule Brando.HTML do
     Phoenix.HTML.Tag.tag(:img, attrs)
   end
 
-  defp get_sizes(nil), do: nil
-  defp get_sizes(sizes) when is_list(sizes) do
-    [sizes: Enum.join(sizes, ", ")]
+  def ratio(%{height: height, width: width} = img) when is_nil(height) or is_nil(width), do: 0
+  def ratio(%{height: height, width: width}) do
+    r =
+      Decimal.new(height)
+      |> Decimal.div(Decimal.new(width))
+      |> Decimal.mult(Decimal.new(100))
   end
-  defp get_sizes(_) do
+  def ratio(nil), do: 0
+
+  @doc """
+  Get sizes from image config
+  """
+  def get_sizes(nil), do: nil
+  def get_sizes(sizes) when is_list(sizes) do
+    Enum.join(sizes, ", ")
+  end
+  def get_sizes(_) do
     raise ArgumentError, message: ~s<sizes key must be a list: ["(min-width: 36em) 33.3vw", "100vw"]>
   end
 
-  defp get_srcset(_, nil, _), do: nil
+  @doc """
+  Get srcset from image config
+  """
+  def get_srcset(_, nil, _), do: nil
 
-  defp get_srcset(image_field, {mod, field}, opts) do
+  def get_srcset(image_field, {mod, field}, opts) do
     {:ok, cfg} = apply(mod, :get_image_cfg, [field])
     if !cfg.srcset do
       raise ArgumentError, message: "no `:srcset` key set in #{inspect mod}'s #{inspect field} image config"
@@ -508,7 +526,7 @@ defmodule Brando.HTML do
     [srcset: Enum.join(srcset_values, ", ")]
   end
 
-  defp get_srcset(image_field, %Brando.Type.ImageConfig{} = cfg, opts) do
+  def get_srcset(image_field, %Brando.Type.ImageConfig{} = cfg, opts) do
     if !cfg.srcset do
       raise ArgumentError, message: "no `:srcset` key set in supplied image config"
     end
@@ -521,17 +539,17 @@ defmodule Brando.HTML do
         "#{path} #{v}"
       end
 
-    [srcset: Enum.join(srcset_values, ", ")]
+    Enum.join(srcset_values, ", ")
   end
 
-  defp get_srcset(image_field, srcset, opts) do
+  def get_srcset(image_field, srcset, opts) do
     srcset_values =
       for {k, v} <- srcset do
         path = Brando.Utils.img_url(image_field, k, opts)
         "#{path} #{v}"
       end
 
-    [srcset: Enum.join(srcset_values, ", ")]
+    Enum.join(srcset_values, ", ")
   end
 
   defp sort_srcset(map) when is_map(map) do
