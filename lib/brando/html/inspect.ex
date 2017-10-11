@@ -276,7 +276,7 @@ defmodule Brando.HTML.Inspect do
     ~s(<tr><td>#{name}</td><td>#{values}</td></tr>)
   end
 
-  defp do_inspect_assoc(_name, %Ecto.Association.Has{} = type, value) do
+  defp do_inspect_assoc(_name, %Ecto.Association.Has{} = type, value) when is_list(value) do
     rows =
       Enum.map value, fn (row) ->
         """
@@ -290,6 +290,26 @@ defmodule Brando.HTML.Inspect do
       <td>
         <i class="fa fa-link"></i>
         #{gettext("Connected")} #{type.related.__name__(:plural)}
+      </td>
+      <td>
+        #{rows}
+      </td>
+    </tr>
+    """
+  end
+
+  defp do_inspect_assoc(_name, %Ecto.Association.Has{} = type, value) do
+    rows =
+      """
+      <div class="assoc #{type.field}">
+        #{type.related.__repr__(value)}
+      </div>
+      """
+    """
+    <tr>
+      <td>
+        <i class="fa fa-link"></i>
+        #{gettext("Connected")} #{type.related.__name__(:singular)}
       </td>
       <td>
         #{rows}
