@@ -65,6 +65,24 @@ defmodule Brando.Web do
     end
   end
 
+  def absinthe do
+    quote do
+      # Provides us with a DSL for defining GraphQL Types
+      use Absinthe.Schema.Notation
+
+      # Enable helpers for batching associated requests
+      use Absinthe.Ecto, repo: Brando.repo()
+
+      import Absinthe.Ecto
+    end
+  end
+
+  def resolver do
+    quote do
+      import Brando.GraphQL.Helpers
+    end
+  end
+
   @doc """
   When used, dispatch to the appropriate controller/view/etc.
   """

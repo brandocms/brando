@@ -122,9 +122,9 @@ defmodule Brando.Admin.ImageCategoryController do
 
   @doc false
   def propagate_configuration(conn, %{"id" => id}) do
-    user     = current_user(conn)
-    category = Images.get_category(id)
-    series   = Images.get_series_for(category_id: category.id)
+    user = current_user(conn)
+    {:ok, category} = Images.get_category(id)
+    series = Images.get_series_for(category_id: category.id)
 
     # send this off for async processing
     _ = Task.start(fn ->

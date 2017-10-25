@@ -4,7 +4,7 @@ defmodule Brando.Images do
   Handles uploads too.
   Interfaces with database
   """
-  
+
   alias Brando.{ImageCategory, ImageSeries, Image}
 
   import Brando.Upload
@@ -188,7 +188,18 @@ defmodule Brando.Images do
   Get category by `id`
   """
   def get_category(id) do
-    Brando.repo.get(ImageCategory, id)
+    case Brando.repo.get(ImageCategory, id) do
+      nil -> {:error, {:image_category, :not_found}}
+      cat -> {:ok, cat}
+    end
+  end
+
+  def list_categories do
+    categories = Brando.repo().all(
+      from category in ImageCategory,
+        order_by: fragment("lower(?) ASC", category.name)
+      )
+    {:ok, categories}
   end
 
   @doc """
@@ -228,6 +239,8 @@ defmodule Brando.Images do
     category = Brando.repo.get_by!(ImageCategory, id: id)
     Brando.Images.Utils.delete_series_for(:image_category, category.id)
     Brando.repo.delete!(category)
+
+    {:ok, category}
   end
 
   @doc """

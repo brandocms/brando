@@ -1,6 +1,0 @@
-<h1><%= gettext("Access denied") %></h1>
-<p><%= gettext("You do not have the proper clearance for this area.") %></p>
-<p><%= gettext("Please contact an administrator.") %></p>
-<a class="btn btn-info" href="javascript:history.back()">
-  <%= gettext("Go back") %>
-</a>

@@ -10,9 +10,10 @@ defmodule Brando.ImageCategory do
 
   import Brando.Gettext
   import Ecto.Query, only: [from: 2]
+  import Ecto.Changeset
 
-  @required_fields ~w(name slug creator_id)a
-  @optional_fields ~w(cfg)a
+  @required_fields ~w(name creator_id)a
+  @optional_fields ~w(cfg slug)a
 
   schema "imagecategories" do
     field :name, :string
@@ -38,6 +39,8 @@ defmodule Brando.ImageCategory do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
+    |> put_slug()
+    |> avoid_slug_collision()
     |> unique_constraint(:slug)
     |> put_default_config
   end
@@ -54,8 +57,17 @@ defmodule Brando.ImageCategory do
   def changeset(schema, :update, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
+    |> put_slug()
+    |> avoid_slug_collision()
     |> unique_constraint(:slug)
     |> validate_paths
+  end
+
+  @doc """
+  Put slug in changeset
+  """
+  def put_slug(%{changes: %{name: name}} = cs) do
+    change(cs, %{slug: Brando.Utils.slugify(name)})
   end
 
   @doc """
