@@ -45,6 +45,11 @@ defmodule Brando.Images do
     Brando.repo.get!(Image, id)
   end
 
+  def get_category_id_by_slug(slug) do
+    category = Brando.repo.get_by(ImageCategory, slug: slug)
+    {:ok, category.id}
+  end
+
   @doc """
   Updates the `schema`'s image JSON field with `title` and `credits`
   """
@@ -194,6 +199,16 @@ defmodule Brando.Images do
     end
   end
 
+  @doc """
+  Get series by `id`
+  """
+  def get_series(id) do
+    case Brando.repo.get(ImageSeries, id) do
+      nil -> {:error, {:image_series, :not_found}}
+      series -> {:ok, series}
+    end
+  end
+
   def list_categories do
     categories = Brando.repo().all(
       from category in ImageCategory,
@@ -241,6 +256,14 @@ defmodule Brando.Images do
     Brando.repo.delete!(category)
 
     {:ok, category}
+  end
+
+  def image_series_count(category_id) do
+    Brando.repo.one(
+      from is in ImageSeries,
+        select: count(is.id),
+        where: is.image_category_id == ^category_id
+    )
   end
 
   @doc """

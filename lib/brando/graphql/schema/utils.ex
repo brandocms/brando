@@ -6,15 +6,9 @@ defmodule Brando.Schema.Utils do
     {:ok, "/images/admin/avatar.png"}
   end
   def resolve_avatar(user, %{type: type}, _) do
-    # {:ok, Brando.Uploaders.Avatar.url({user.avatar, user}, String.to_existing_atom(type))}
-    {:ok, "/images/admin/avatar.png"}
+    img_url = Brando.Utils.img_url(user.avatar, type, prefix: Brando.Utils.media_url())
+    {:ok, img_url}
   end
-
-  # def resolve_image(image, %{size: size}, _) do
-  #   require Logger
-  #   Logger.error inspect image
-  #   {:ok, "/images/admin/avatar.png"}
-  # end
 
   def resolve_assignment_file(%{file: nil}, _, _) do
     {:ok, ""}

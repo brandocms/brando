@@ -1,2 +1,0 @@
-    <h1><%= gettext("New image series") %></h1>
-    <%= ImageSeriesForm.get_form(type: :create, action: :create, params: [], changeset: @changeset) %>

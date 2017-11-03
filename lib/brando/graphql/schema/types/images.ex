@@ -29,10 +29,15 @@ defmodule Brando.Schema.Types.Images do
     field :slug, :string
     field :cfg, :image_config
     field :creator, :user
+    field :image_series_count, :integer do
+      resolve fn cat, _, _ ->
+        {:ok, Brando.Images.image_series_count(cat.id)}
+      end
+    end
     field :image_series, list_of(:image_series) do
       arg :limit, :integer, default_value: 10
       arg :offset, :integer, default_value: 0
-      resolve assoc(:image_series, fn query, args, b ->
+      resolve assoc(:image_series, fn query, args, _ ->
         query
         |> order_by([is], [asc: fragment("lower(?)", is.name)])
         |> limit([is], ^args.limit)
@@ -41,6 +46,10 @@ defmodule Brando.Schema.Types.Images do
     end
     field :inserted_at, :time
     field :updated_at, :time
+  end
+
+  object :page_info do
+    field :has_next_page, :boolean
   end
 
   object :image_series do
@@ -53,18 +62,20 @@ defmodule Brando.Schema.Types.Images do
     field :image_category_id, :id
     field :image_category, :image_category, resolve: assoc(:image_category)
     field :images, list_of(:image) do
-      arg :limit, :integer, default_value: 100000
-      arg :offset, :integer, default_value: 0
-      resolve assoc(:images, fn query, args, b ->
+      # arg :limit, :integer, default_value: 10000000
+      # arg :offset, :integer, default_value: 0
+      resolve assoc(:images, fn query, args, _ ->
         query
         |> order_by([i], [asc: i.sequence])
-        |> limit([i], ^args.limit)
-        |> offset([i], ^args.offset)
+        # |> limit([i], ^args.limit)
+        # |> offset([i], ^args.offset)
       end)
     end
     field :sequence, :integer
     field :inserted_at, :time
     field :updated_at, :time
+
+    field :page_info, :page_info
   end
 
   object :image do
@@ -137,6 +148,12 @@ defmodule Brando.Schema.Types.Images do
     field :image_category, type: :image_category do
       arg :category_id, non_null(:id)
       resolve &Brando.Images.ImageCategoryResolver.find/2
+    end
+
+    @desc "Get image series"
+    field :image_series, type: :image_series do
+      arg :series_id, non_null(:id)
+      resolve &Brando.Images.ImageSeriesResolver.find/2
     end
   end
 

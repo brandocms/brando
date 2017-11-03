@@ -10,6 +10,7 @@ defmodule Brando.Schema.Types.User do
     field :email, :string
     field :role, :string
     field :password, :string
+    field :avatar, :upload
   end
 
   input_object :update_user_params do
@@ -18,6 +19,7 @@ defmodule Brando.Schema.Types.User do
     field :email, :string
     field :role, :string
     field :password, :string
+    field :avatar, :upload
   end
 
   object :user do
