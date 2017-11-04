@@ -4,8 +4,7 @@ defmodule Brando.Types.StatusTest do
 
   test "cast" do
     assert Status.cast(:atom) == {:ok, :atom}
-    assert Status.cast("0") == {:ok, :draft}
-    assert Status.cast(0) == {:ok, :draft}
+    assert Status.cast("draft") == {:ok, :draft}
   end
 
   test "blank?" do

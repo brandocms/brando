@@ -24,7 +24,6 @@ defmodule RouterHelper do
     last_login: ~N[2016-01-01 12:00:00],
     updated_at: ~N[2016-01-01 12:00:00],
     role: [:superuser, :staff, :admin],
-    username: "iggypop",
     language: "en"
   }
 
@@ -73,9 +72,7 @@ defmodule RouterHelper do
   defmodule TestRouter do
     @moduledoc false
     use Phoenix.Router
-    import Brando.Dashboard.Routes.Admin
-    import Brando.Users.Routes.Admin
-    import Brando.Images.Routes.Admin
+    import Brando.Images.Routes.Admin.API
     import Brando.Plug.I18n
 
     pipeline :admin do
@@ -97,12 +94,7 @@ defmodule RouterHelper do
 
     scope "/admin", as: :admin do
       pipe_through :admin
-      user_routes "/users", Brando.Admin.UserController,
-                            private: %{schema: Brando.User}
-      user_routes "/users2", private: %{schema: Brando.User}
-      user_routes "/users3"
-      image_routes "/images"
-      dashboard_routes "/"
+      api_image_routes "/images"
     end
 
     scope "/coming-soon" do

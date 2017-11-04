@@ -134,7 +134,7 @@ defmodule Brando.User do
   """
   @spec role?(t, atom) :: boolean
   def role?(user, role) when is_atom(role) do
-    role in user.role && true || false
+    role == user.role
   end
 
   @doc """
@@ -152,7 +152,7 @@ defmodule Brando.User do
   use Brando.Meta.Schema, [
     singular: gettext("user"),
     plural: gettext("users"),
-    repr: &("#{&1.full_name} (#{&1.username})"),
+    repr: &("#{&1.full_name} (#{&1.email})"),
     fields: [
       id: gettext("ID"),
       email: gettext("Email"),

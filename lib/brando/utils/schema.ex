@@ -31,6 +31,15 @@ defmodule Brando.Utils.Schema do
   end
 
   @doc """
+  Put slug in changeset
+  """
+  def put_slug(%{changes: %{title: title}} = cs) do
+    Ecto.Changeset.change(cs, %{slug: Brando.Utils.slugify(title)})
+  end
+
+  def put_slug(cs), do: cs
+
+  @doc """
   Precheck :slug in `cs` to make sure we avoid collisions
   """
   def avoid_slug_collision(cs, filter_fun \\ nil) do

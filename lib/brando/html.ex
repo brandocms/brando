@@ -14,63 +14,6 @@ defmodule Brando.HTML do
     quote do
       import Brando.HTML
       import Brando.HTML.Inspect
-      import Brando.HTML.Tablize
-    end
-  end
-
-  @doc """
-  Renders a menu item.
-  Also calls to render submenu items, if `current_user` has required role
-  """
-  def render_menu_item(conn, {color, menu}) do
-    submenu_items = Enum.map_join(menu.submenu, "\n", &render_submenu_item(conn, &1))
-
-    html =
-    """
-    <!-- menu item -->
-      <li class="menuparent">
-        <a href="##{menu.anchor}">
-          <i class="#{menu.icon}">
-            <b style="background-color: #{color}"></b>
-          </i>
-          <span class="pull-right">
-            <i class="fa fa-angle-down text"></i>
-            <i class="fa fa-angle-up text-active"></i>
-          </span>
-          <span>#{menu.name}</span>
-        </a>
-        <ul class="nav lt">
-          #{submenu_items}
-        </ul>
-      </li>
-    <!-- /menu item -->
-    """
-    Phoenix.HTML.raw(html)
-  end
-
-  @doc """
-  Creates a menu link from a submenu item.
-  Also checks if current_user has required role.
-  """
-  def render_submenu_item(conn, item) do
-    {fun, action} = item.url
-
-    if can_render?(conn, item) do
-      url        = apply(Brando.Utils.helpers(conn), fun, [conn, action])
-      active?    = active_path?(conn, url)
-      li_classes = active? && "menuitem active" || "menuitem"
-      a_class    = active? && "active" || ""
-
-      """
-      <li class="#{li_classes}">
-        <a href="#{url}" class="#{a_class}">
-          <i class="fa fa-angle-right"></i>
-          <span>#{item.name}</span>
-        </a>
-      </li>
-      """
-    else
-      ""
     end
   end
 
@@ -104,39 +47,6 @@ defmodule Brando.HTML do
   end
 
   @doc """
-  Shows `content` if `current_user` has `role` that allows it.
-  """
-  @spec auth_content(Plug.Conn.t, atom, [{:do, term}]) :: {:safe, String.t}
-  def auth_content(conn, role, do: {:safe, block}) do
-    html = can_render?(conn, %{role: role}) && block || ""
-    Phoenix.HTML.raw(html)
-  end
-
-  @doc """
-  Shows `link` if `current_user` has `role` that allows it.
-  """
-  @spec auth_link(Plug.Conn.t, String.t, atom, [{:do, term}]) :: {:safe, String.t}
-  def auth_link(conn, link, role, do: {:safe, block}) do
-    do_auth_link({"btn-default", conn, link, role}, block)
-  end
-  @doc """
-  Shows `link` with `type` if `current_user` has `role` that allows it.
-  """
-  @spec auth_link(alert_levels, Plug.Conn.t, String.t, atom, [{:do, term}]) :: {:safe, String.t}
-  def auth_link(type, conn, link, role, do: {:safe, block}) do
-    do_auth_link({"btn-#{type}", conn, link, role}, block)
-  end
-  defp do_auth_link({class, conn, link, role}, block) do
-    html =
-      if can_render?(conn, %{role: role}) do
-        ~s(<a href="#{link}" class="btn #{class}"> #{to_string(block)}</a>)
-      else
-        ""
-      end
-    Phoenix.HTML.raw(html)
-  end
-
-  @doc """
   Zero pad `val` as a binary.
 
   ## Example
@@ -160,61 +70,6 @@ defmodule Brando.HTML do
     full_name
     |> String.split
     |> hd
-  end
-
-  @doc """
-  Renders a delete button wrapped in a POST form.
-  Pass `params` instance of schema (if one param), or a list of multiple
-  params, and `helper` path.
-  """
-  @spec delete_form_button(atom, Keyword.t | %{atom => any}) :: {:safe, String.t}
-  def delete_form_button(helper, params) do
-    action = Brando.Form.apply_action(helper, :delete, params)
-    html =
-    """
-    <form method="POST" action="#{action}">
-      <input type="hidden" name="_method" value="delete" />
-      <button class="btn btn-danger">
-        <i class="fa fa-trash-o m-r-sm"> </i>
-        #{gettext("Delete")}
-      </button>
-    </form>
-    """
-    Phoenix.HTML.raw(html)
-  end
-
-  @doc """
-  Renders a post button
-  """
-  def post_form_button(text, helper, controller_action, params \\ nil) do
-    action = Brando.Form.apply_action(helper, controller_action, params)
-    """
-    <form method="POST" action="#{action}">
-      <input type="hidden" name="_method" value="post" />
-      <button class="btn btn-danger">
-        <i class="fa fa-exclamation-circle m-r-sm"> </i>
-        #{text}
-      </button>
-    </form>
-    """ |> Phoenix.HTML.raw
-  end
-
-  @doc """
-  Renders a dropzone form.
-  Pass in a `helper` and the `id` we are uploading to.
-
-  ## Example
-
-      dropzone_form(:admin_image_series_path, @series.id)
-
-  """
-  def dropzone_form(helper, id) do
-    path = Brando.Form.apply_action(helper, :upload_post, id)
-    html =
-    """
-    <form action="#{path}" class="dzone" id="brando-dropzone"></form>
-    """
-    Phoenix.HTML.raw(html)
   end
 
   @doc """
@@ -406,32 +261,7 @@ defmodule Brando.HTML do
 
     Phoenix.HTML.raw(body <> ">")
   end
-
-  @doc """
-  Formats and shows roles
-  """
-  def display_roles(roles) do
-    roles
-    |> List.first
-    |> Atom.to_string
-  end
-
-  @doc """
-  Checks if conn.scheme is :https. If not, warn and provide link to secure login.
-  """
-  def insecure_login?(conn) do
-    if Brando.config(:warn_on_http_auth) do
-      if conn.scheme != :https do
-        ~s(<div class="text-center alert alert-block alert-danger">) <>
-        gettext("You are trying to authorize from an insecure URL. " <>
-                "<a href=\"%{url}\">Please try again from this URL</a> " <>
-                "or proceed at your own risk!", url: Brando.Utils.https_url(conn)) <>
-        ~s(</div>)
-        |> Phoenix.HTML.raw
-      end
-    end
-  end
-
+  
   @doc """
   Displays all flash messages in conn
   """

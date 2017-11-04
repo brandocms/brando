@@ -21,40 +21,10 @@ defmodule Brando.HTMLTest do
     assert zero_pad("1", 10) == "0000000001"
   end
 
-  test "delete_form_button/2" do
-    {:safe, ret} = delete_form_button(:admin_user_path,
-                                      %{__struct__: :user, id: 1})
-    assert ret =~ "/admin/users/1"
-    assert ret =~ "value=\"delete\""
-  end
-
-  test "dropzone_form/3" do
-    {:safe, form} = dropzone_form(:admin_image_series_path, 1)
-    assert form =~ "/admin/images/series/1/upload"
-    assert form =~ "dropzone"
-  end
-
   test "check_or_x/1" do
     assert check_or_x(false) == "<i class=\"icon-centered fa fa-times text-danger\"></i>"
     assert check_or_x(nil) == "<i class=\"icon-centered fa fa-times text-danger\"></i>"
     assert check_or_x(true) == "<i class=\"icon-centered fa fa-check text-success\"></i>"
-  end
-
-  test "auth_links" do
-    conn = :get |> call("/admin/users") |> with_user
-
-    assert auth_link(conn, "test", :admin, do: {:safe, "text"})
-           == {:safe, "<a href=\"test\" class=\"btn btn-default\"> text</a>"}
-    assert auth_link(:primary, conn, "test", :admin, do: {:safe, "text"})
-           == {:safe, "<a href=\"test\" class=\"btn btn-primary\"> text</a>"}
-    assert auth_link(:info, conn, "test", :admin, do: {:safe, "text"})
-           == {:safe, "<a href=\"test\" class=\"btn btn-info\"> text</a>"}
-    assert auth_link(:success, conn, "test", :admin, do: {:safe, "text"})
-           == {:safe, "<a href=\"test\" class=\"btn btn-success\"> text</a>"}
-    assert auth_link(:warning, conn, "test", :admin, do: {:safe, "text"})
-           == {:safe, "<a href=\"test\" class=\"btn btn-warning\"> text</a>"}
-    assert auth_link(:danger, conn, "test", :admin, do: {:safe, "text"})
-           == {:safe, "<a href=\"test\" class=\"btn btn-danger\"> text</a>"}
   end
 
   test "body_tag" do
@@ -65,16 +35,6 @@ defmodule Brando.HTMLTest do
     mock_conn = %{private: %{brando_css_classes: "one two three", brando_section_name: "some-section"}}
     assert body_tag(mock_conn)
            == {:safe, ~s(<body id="some-section" data-script="some-section" class="one two three">)}
-  end
-
-  test "auth_content" do
-    mock_conn =
-      %Plug.Conn{private: %{guardian_default_resource: %Brando.User{role: [:admin]}}}
-
-    assert auth_content(mock_conn, :admin, do: {:safe, "<h1>test</h1>"})
-           == {:safe, "<h1>test</h1>"}
-    assert auth_content(mock_conn, :superuser, do: {:safe, "<h1>test</h1>"})
-           == {:safe, ""}
   end
 
   test "cookie_law" do
@@ -124,20 +84,6 @@ defmodule Brando.HTMLTest do
     conn = build_conn(:get, "/some/link")
     assert active(conn, "/some/link") == "active"
     assert active(conn, "/some/other/link") == ""
-  end
-
-  test "post_form_button/4" do
-    html = post_form_button("Post", :admin_user_path, :new) |> Phoenix.HTML.safe_to_string
-    assert html =~ ~s(action="/admin/users/new")
-    assert html =~ "Post"
-  end
-
-  test "insecure_login?/1" do
-    conn = build_conn(:get, "/auth/login")
-    ret = insecure_login?(conn) |> Phoenix.HTML.safe_to_string
-    assert ret =~ "https://www.example.com/auth/login"
-    conn = conn |> Map.put(:scheme, :https)
-    assert insecure_login?(conn) == nil
   end
 
   test "img_tag" do

@@ -6,7 +6,6 @@ File.mkdir_p!(Path.join([Mix.Project.app_path, "tmp", "media"]))
 
 {:ok, _} = Application.ensure_all_started(:ex_machina)
 
-#ExUnit.configure(max_cases: 16)
 ExUnit.start
 
 defmodule Brando.Integration.TestRepo do
@@ -48,6 +47,7 @@ end
 
 Code.require_file "support/user_socket.exs", __DIR__
 
+Mix.Task.run "ecto.drop", ["-r", Repo, "--quiet"]
 Mix.Task.run "ecto.create", ["-r", Repo, "--quiet"]
 Mix.Task.run "ecto.migrate", ["-r", Repo, "--quiet"]
 

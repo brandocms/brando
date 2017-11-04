@@ -122,6 +122,16 @@ defmodule Brando.Images do
   end
 
   @doc """
+  Get image series by id
+  """
+  def get_series(id) do
+    case Brando.repo.get(ImageSeries, id) do
+      nil -> {:error, {:image_series, :not_found}}
+      is -> {:ok, is}
+    end
+  end
+
+  @doc """
   Update image series config
   """
   def update_series_config(id, cfg, sizes) do
@@ -146,13 +156,13 @@ defmodule Brando.Images do
   Also deletes all images depending on the series and executes any callbacks
   """
   def delete_series(id) do
-    series = Brando.repo.get_by!(ImageSeries, id: id)
-    :ok    = Brando.Images.Utils.delete_images_for(:image_series, series.id)
+    with {:ok, series} <- get_series(id) do
+      :ok = Brando.Images.Utils.delete_images_for(:image_series, series.id)
+      series = Brando.repo.preload(series, :image_category)
+      Brando.repo.delete!(series)
 
-    series = Brando.repo.preload(series, :image_category)
-    Brando.repo.delete!(series)
-
-    {:ok, series}
+      {:ok, series}
+    end
   end
 
   @doc """

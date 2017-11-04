@@ -9,8 +9,7 @@ defmodule Brando.Registry do
     @moduledoc """
     Struct for Registry server state.
     """
-    defstruct menu_modules: [],
-              gettext_modules: []
+    defstruct gettext_modules: []
   end
 
   use GenServer
@@ -24,30 +23,19 @@ defmodule Brando.Registry do
   end
 
   def init(_) do
-    modules = for m <- @default_modules do
-      Module.concat(m, "Menu")
-    end
-
     Logger.info("==> Brando.Registry initialized")
 
-    {:ok, %State{menu_modules: modules}}
+    {:ok, %State{}}
   end
 
   def state do
     GenServer.call(__MODULE__, :state)
   end
 
-  def register(module, opts \\ [:gettext, :menu]) do
-    if :menu in opts do
-      unless Code.ensure_loaded?(Module.concat(module, "Menu")) do
-        raise RegistryError, message: "Could not find Menu module for #{inspect module}"
-      end
-    end
+  def register(module, opts \\ [:menu]) do
 
-    if :gettext in opts do
-      unless Code.ensure_loaded?(Module.concat(module, "Gettext")) do
-        raise RegistryError, message: "Could not find Gettext module for #{inspect module}"
-      end
+    unless Code.ensure_loaded?(Module.concat(module, "Gettext")) do
+      raise RegistryError, message: "Could not find Gettext module for #{inspect module}"
     end
 
     GenServer.call(__MODULE__, {:register, module, opts})
@@ -55,10 +43,6 @@ defmodule Brando.Registry do
 
   def gettext_modules do
     state() |> Map.get(:gettext_modules) |> Enum.reverse
-  end
-
-  def menu_modules do
-    state() |> Map.get(:menu_modules) |> Enum.reverse
   end
 
   def wipe do
@@ -78,11 +62,6 @@ defmodule Brando.Registry do
 
   @doc false
   def handle_call({:register, module, opts}, _from, state) do
-    state =
-      if :menu in opts, do:
-        %State{state | menu_modules: [Module.concat(module, "Menu")|state.menu_modules]},
-      else: state
-
     state =
       if :gettext in opts, do:
         %State{state | gettext_modules: [Module.concat(module, "Gettext")|state.gettext_modules]},

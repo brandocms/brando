@@ -4,18 +4,18 @@ defmodule Brando.Integration.UserTest do
   use Brando.Integration.TestCase
 
   alias Brando.User
+  alias Brando.Users
   alias Brando.Factory
 
   test "create/1 and update/1" do
     user = Factory.insert(:user)
 
-    assert {:ok, updated_user}
-           = User.update(user, %{"full_name" => "Elvis Presley"}) |> Brando.repo.update
+    assert {:ok, updated_user} = Users.update_user(user.id, %{"full_name" => "Elvis Presley"})
     assert updated_user.full_name == "Elvis Presley"
 
     old_pass = updated_user.password
     assert {:ok, updated_password_user}
-           = User.update(updated_user, %{"password" => "newpass"}) |> Brando.repo.update
+           = Users.update_user(updated_user.id, %{"password" => "newpass"})
     refute old_pass == updated_password_user.password
     refute updated_password_user.password == "newpass"
   end
@@ -31,7 +31,7 @@ defmodule Brando.Integration.UserTest do
     user = Factory.insert(:user)
 
     assert User.role?(user, :superuser)
-    assert User.role?(user, :admin)
+    refute User.role?(user, :admin)
     refute User.role?(user, :staff)
   end
 end

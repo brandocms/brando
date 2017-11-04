@@ -3,27 +3,15 @@ defmodule Brando.Types.RoleTest do
   alias Brando.Type.Role
 
   test "cast" do
-    assert Role.cast(["2", "4"]) == {:ok, [:superuser, :admin]}
-    assert Role.cast([2, 4]) == {:ok, [:superuser, :admin]}
-    assert Role.cast([:superuser, :admin]) == {:ok, [:superuser, :admin]}
-    assert Role.cast("0") == {:ok, 0}
-    assert Role.cast(:test) == :error
-  end
-
-  test "blank?" do
-    refute Role.blank?([2, 4])
+    assert Role.cast("superuser") == {:ok, :superuser}
+    assert Role.cast(2) == {:ok, :admin}
   end
 
   test "load" do
-    assert Role.load(6) == {:ok, [:superuser, :admin]}
-    assert Role.load(0) == {:ok, []}
+    assert Role.load(0) == {:ok, :user}
   end
 
   test "dump" do
-    assert Role.dump(6) == {:ok, 6}
-    assert Role.dump("6") == {:ok, 6}
-    assert Role.dump(["2", "4"]) == {:ok, 6}
-    assert Role.dump([2, 4]) == {:ok, 6}
-    assert Role.dump([:superuser, :admin]) == {:ok, 6}
+    assert Role.dump(:superuser) == {:ok, 3}
   end
 end

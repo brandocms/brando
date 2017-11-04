@@ -61,9 +61,6 @@ defmodule Brando.Users do
   end
 
   defp maybe_update_password(%{changes: %{password: password}} = cs) do
-    require Logger
-    Logger.error "YES UPDATE -->"
-    Logger.error inspect cs
     put_change(cs, :password, Comeonin.Bcrypt.hashpwsalt(password))
   end
 

@@ -24,7 +24,6 @@ defmodule Brando.Schema.Types.User do
 
   object :user do
     field :id, :id
-    field :username, :string
     field :email, :string
     field :full_name, :string
     field :password, :string

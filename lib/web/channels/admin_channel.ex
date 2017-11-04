@@ -29,6 +29,11 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         {:ok, series} = Brando.Images.create_series(params, user)
         {:reply, {:ok, %{code: 200, series: Map.merge(series, %{creator: nil, image_category: nil, images: nil})}}, socket}
       end
+
+      def handle_in("pages:list_parents", _, socket) do
+        {:ok, parents} = Brando.Pages.list_parents()
+        {:reply, {:ok, %{code: 200, parents: parents}}, socket}
+      end
     end
   end
 end

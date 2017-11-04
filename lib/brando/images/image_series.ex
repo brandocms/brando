@@ -12,7 +12,6 @@ defmodule Brando.ImageSeries do
   alias Brando.ImageCategory
 
   import Ecto.Query, only: [from: 2]
-  import Brando.Utils.Schema, only: [avoid_slug_collision: 2]
   import Brando.Gettext
 
   @required_fields ~w(name image_category_id creator_id)a
@@ -65,13 +64,6 @@ defmodule Brando.ImageSeries do
     |> put_slug()
     |> avoid_slug_collision(&filter_current_category/1)
     |> validate_paths
-  end
-
-  @doc """
-  Put slug in changeset
-  """
-  def put_slug(%{changes: %{name: name}} = cs) do
-    change(cs, %{slug: Brando.Utils.slugify(name)})
   end
 
   @doc """

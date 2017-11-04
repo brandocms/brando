@@ -40,6 +40,9 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "templates/brando.install/migrations/20150215090306_create_imageseries.exs", "priv/repo/migrations/20150215090306_create_imageseries.exs"},
     {:eex,  "templates/brando.install/migrations/20150215090307_create_images.exs", "priv/repo/migrations/20150215090307_create_images.exs"},
 
+    {:eex,  "templates/brando.install/migrations/20171103152200_create_pages.exs", "priv/repo/migrations/20171103152200_create_pages.exs"},
+    {:eex,  "templates/brando.install/migrations/20171103152205_create_pagefragments.exs", "priv/repo/migrations/20171103152205_create_pagefragments.exs"},
+
     # Repo seeds
     {:eex,  "templates/brando.install/repo/seeds.exs", "priv/repo/seeds.exs"},
 
@@ -75,36 +78,27 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "templates/brando.install/fabfile.py", "fabfile.py"},
 
     # Frontend JS
-    {:copy, "templates/brando.install/assets/js/app/index.js", "assets/js/app/index.js"},
-    {:copy, "templates/brando.install/assets/js/app/flexslider.js", "assets/js/app/flexslider.js"},
-    {:copy, "templates/brando.install/assets/js/admin/index.js", "assets/js/admin/index.js"},
+    {:copy, "templates/brando.install/assets/frontend/js/index.js", "assets/frontend/js/index.js"},
+    {:copy, "templates/brando.install/assets/frontend/js/flexslider.js", "assets/frontend/js/flexslider.js"},
+
+    # Backend JS
+    {:copy, "templates/brando.install/assets/backend/js/src/main.js", "assets/backend/src/main.js"},
 
     # Frontend SCSS
-    {:copy, "templates/brando.install/assets/css/app.scss", "assets/css/app.scss"},
-    {:copy, "templates/brando.install/assets/css/custom/brando.custom.scss", "assets/css/custom/brando.custom.scss"},
-    {:copy, "templates/brando.install/assets/css/includes/_general.scss", "assets/css/includes/_general.scss"},
-    {:copy, "templates/brando.install/assets/css/includes/_colorbox.scss", "assets/css/includes/_colorbox.scss"},
-    {:copy, "templates/brando.install/assets/css/includes/_cookielaw.scss", "assets/css/includes/_cookielaw.scss"},
-    {:copy, "templates/brando.install/assets/css/includes/_dropdown.scss", "assets/css/includes/_dropdown.scss"},
-    {:copy, "templates/brando.install/assets/css/includes/_instagram.scss", "assets/css/includes/_instagram.scss"},
-    {:copy, "templates/brando.install/assets/css/includes/_nav.scss", "assets/css/includes/_nav.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/app.scss", "assets/frontend/css/app.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_general.scss", "assets/frontend/css/includes/_general.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_colorbox.scss", "assets/frontend/css/includes/_colorbox.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_cookielaw.scss", "assets/frontend/css/includes/_cookielaw.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_dropdown.scss", "assets/frontend/css/includes/_dropdown.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_instagram.scss", "assets/frontend/css/includes/_instagram.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_nav.scss", "assets/frontend/css/includes/_nav.scss"},
 
     # Icons
     {:copy, "templates/brando.install/assets/static/brando/favicon.ico", "assets/static/favicon.ico"},
 
-    # Webfonts - icons
-    {:copy, "templates/brando.install/assets/static/brando/fonts/fontawesome-webfont.eot", "assets/static/fonts/fontawesome-webfont.eot"},
-    {:copy, "templates/brando.install/assets/static/brando/fonts/fontawesome-webfont.svg", "assets/static/fonts/fontawesome-webfont.svg"},
-    {:copy, "templates/brando.install/assets/static/brando/fonts/fontawesome-webfont.ttf", "assets/static/fonts/fontawesome-webfont.ttf"},
-    {:copy, "templates/brando.install/assets/static/brando/fonts/fontawesome-webfont.woff", "assets/static/fonts/fontawesome-webfont.woff"},
-    {:copy, "templates/brando.install/assets/static/brando/fonts/fontawesome-webfont.woff2", "assets/static/fonts/fontawesome-webfont.woff2"},
-    {:copy, "templates/brando.install/assets/static/brando/fonts/FontAwesome.otf", "assets/static/fonts/FontAwesome.otf"},
-
     # Images
     {:copy, "templates/brando.install/assets/static/brando/images/blank.gif", "assets/static/images/brando/blank.gif"},
-    {:copy, "templates/brando.install/assets/static/brando/images/flags.png", "assets/static/images/brando/flags.png"},
     {:copy, "templates/brando.install/assets/static/brando/images/brando-big.png", "assets/static/images/brando/brando-big.png"},
-
     {:copy, "templates/brando.install/assets/static/brando/images/defaults/thumb/avatar_default.jpg", "assets/static/images/brando/defaults/thumb/avatar_default.jpg"},
     {:copy, "templates/brando.install/assets/static/brando/images/defaults/micro/avatar_default.jpg", "assets/static/images/brando/defaults/micro/avatar_default.jpg"},
   ]

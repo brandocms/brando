@@ -11,7 +11,6 @@
     submitErrorReport(
       "<%= @public_dsn %>",
       "<%= @event_id %>",
-      "<%= @current_user.username %>",
       "<%= @current_user.email %>",
       comments,
       "<%= gettext("Thanks!") %>"

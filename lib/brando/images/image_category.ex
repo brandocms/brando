@@ -64,13 +64,6 @@ defmodule Brando.ImageCategory do
   end
 
   @doc """
-  Put slug in changeset
-  """
-  def put_slug(%{changes: %{name: name}} = cs) do
-    change(cs, %{slug: Brando.Utils.slugify(name)})
-  end
-
-  @doc """
   Put default image config in changeset
   """
   @spec put_default_config(Ecto.Changeset.t) :: Ecto.Changeset.t
