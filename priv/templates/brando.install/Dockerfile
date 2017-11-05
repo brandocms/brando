@@ -1,5 +1,4 @@
-FROM twined/fehn:1.3.4
-# FROM twined/ando:1.0
+FROM twined/fehn:1.3.5
 
 MAINTAINER Twined Networks <mail@twined.net>
 
@@ -13,12 +12,13 @@ RUN mix deps.clean --all
 RUN mix deps.get
 RUN mix deps.compile
 
-# NPM
-RUN cd assets && npm install
-# YARN
-# RUN cd assets && yarn --pure-lockfile
-RUN cd assets && node_modules/.bin/brunch build -p
+COPY assets/frontend/package.json assets/frontend/yarn.lock /opt/app/assets/frontend/
+COPY assets/backend/package.json assets/backend/yarn.lock /opt/app/assets/backend/
+RUN cd assets/frontend && yarn install --force --pure-lockfile
+RUN cd assets/backend && yarn install --force --pure-lockfile
+RUN cd assets/frontend && node_modules/.bin/brunch build -p
+RUN cd assets/backend && yarn build
 
-RUN mix phoenix.digest
+RUN mix phx.digest
 RUN mix compile
-RUN mix release --verbose
+RUN mix release
