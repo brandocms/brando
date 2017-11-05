@@ -1,12 +1,12 @@
-defmodule <%= application_module %>.Web do
+defmodule <%= application_module %>Web do
   @moduledoc """
   A module that keeps using definitions for controllers,
   views and so on.
 
   This can be used in your application as:
 
-      use <%= application_module %>.Web, :controller
-      use <%= application_module %>.Web, :view
+      use <%= application_module %>Web, :controller
+      use <%= application_module %>Web, :view
 
   The definitions below will be executed for every view,
   controller, etc, so keep them short and clean, focused
@@ -23,14 +23,15 @@ defmodule <%= application_module %>.Web do
       import Ecto
       import Ecto.Changeset
       import Ecto.Query
+      import Brando.Utils.Schema
     end
   end
 
   def controller do
     quote do
-      use Phoenix.Controller, namespace: <%= application_module %>.Web
-      import <%= application_module %>.Web.Router.Helpers
-      import <%= application_module %>.Web.Gettext
+      use Phoenix.Controller, namespace: <%= application_module %>Web
+      import <%= application_module %>Web.Router.Helpers
+      import <%= application_module %>Web.Gettext
 
       alias <%= application_module %>.Repo
 
@@ -42,10 +43,22 @@ defmodule <%= application_module %>.Web do
     end
   end
 
+  def absinthe do
+    quote do
+      # Provides us with a DSL for defining GraphQL Types
+      use Absinthe.Schema.Notation
+
+      # Enable helpers for batching associated requests
+      use Absinthe.Ecto, repo: <%= application_module %>.Repo
+
+      import Absinthe.Ecto
+    end
+  end
+
   def view do
     quote do
-      use Phoenix.View, root: "lib/<%= application_name %>/web/templates",
-                        namespace: <%= application_module %>.Web
+      use Phoenix.View, root: "lib/<%= application_name %>_web/templates",
+                        namespace: <%= application_module %>Web
 
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_csrf_token: 0, get_flash: 2, view_module: 1]
@@ -56,10 +69,9 @@ defmodule <%= application_module %>.Web do
       import Brando.HTML
       import Brando.Utils
 
-      import <%= application_module %>.Web.Router.Helpers
-      import <%= application_module %>.Web.ErrorHelpers
-      import <%= application_module %>.Web.Gettext
-      import <%= application_module %>.DateTimeHelpers
+      import <%= application_module %>Web.Router.Helpers
+      import <%= application_module %>Web.ErrorHelpers
+      import <%= application_module %>Web.Gettext
     end
   end
 
@@ -77,7 +89,7 @@ defmodule <%= application_module %>.Web do
       import Ecto
       import Ecto.Query
 
-      import <%= application_module %>.Web.Gettext
+      import <%= application_module %>Web.Gettext
     end
   end
 

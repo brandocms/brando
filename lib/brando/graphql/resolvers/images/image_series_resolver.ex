@@ -3,17 +3,7 @@ defmodule Brando.Images.ImageSeriesResolver do
   Resolver for image series
   """
   use Brando.Web, :resolver
-  alias Brando.ImageSeries
   alias Brando.Images
-
-  import Ecto.Query
-
-  @doc """
-  Get all series
-  """
-  def all(_, %{context: %{current_user: _current_user}}) do
-    Images.list_series()
-  end
 
   @doc """
   Get series

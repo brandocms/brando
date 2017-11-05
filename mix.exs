@@ -62,7 +62,8 @@ defmodule Brando.Mixfile do
      :poison,
      :scrivener,
      :scrivener_ecto,
-     :slugger
+     :slugger,
+     :timex
     ]
   end
 
@@ -81,6 +82,8 @@ defmodule Brando.Mixfile do
 
     {:slugger, "~> 0.2"},
     {:scrivener_ecto, "~> 1.1"},
+
+    {:timex, "~> 3.0"},
 
     # Dev dependencies
     {:credo, ">= 0.0.0", only: :dev},

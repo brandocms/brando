@@ -5,7 +5,6 @@ defmodule Brando.Images.UtilsTest do
   use RouterHelper
 
   import Brando.Images.Utils
-  alias Brando.Factory
 
   test "size_dir/2 binary" do
     assert size_dir("test/dir/filename.jpg", "thumb") == "test/dir/thumb/filename.jpg"

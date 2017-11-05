@@ -122,16 +122,6 @@ defmodule Brando.Images do
   end
 
   @doc """
-  Get image series by id
-  """
-  def get_series(id) do
-    case Brando.repo.get(ImageSeries, id) do
-      nil -> {:error, {:image_series, :not_found}}
-      is -> {:ok, is}
-    end
-  end
-
-  @doc """
   Update image series config
   """
   def update_series_config(id, cfg, sizes) do
@@ -217,6 +207,11 @@ defmodule Brando.Images do
       nil -> {:error, {:image_series, :not_found}}
       series -> {:ok, series}
     end
+  end
+
+  def preload_series({:ok, series}) do
+    series = Brando.repo.preload(series, [:images, :image_category])
+    {:ok, series}
   end
 
   def list_categories do

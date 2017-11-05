@@ -2,7 +2,6 @@ defmodule Brando.Schema.Types.Images do
   use Brando.Web, :absinthe
 
   import Ecto.Query
-  import Brando.Schema.Utils
 
   input_object :create_image_series_params do
     field :name, :string
@@ -62,13 +61,8 @@ defmodule Brando.Schema.Types.Images do
     field :image_category_id, :id
     field :image_category, :image_category, resolve: assoc(:image_category)
     field :images, list_of(:image) do
-      # arg :limit, :integer, default_value: 10000000
-      # arg :offset, :integer, default_value: 0
       resolve assoc(:images, fn query, args, _ ->
-        query
-        |> order_by([i], [asc: i.sequence])
-        # |> limit([i], ^args.limit)
-        # |> offset([i], ^args.offset)
+        order_by(query, [i], [asc: i.sequence])
       end)
     end
     field :sequence, :integer

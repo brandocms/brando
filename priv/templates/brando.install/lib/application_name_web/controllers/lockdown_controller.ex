@@ -1,5 +1,5 @@
 defmodule <%= application_module %>.LockdownController do
-  use <%= application_module %>.Web, :controller
+  use <%= application_module %>Web, :controller
 
   def index(conn, _) do
     conn

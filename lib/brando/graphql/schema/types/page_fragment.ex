@@ -1,9 +1,6 @@
 defmodule Brando.Schema.Types.PageFragment do
   use Brando.Web, :absinthe
 
-  import Ecto.Query
-  import Brando.Schema.Utils
-
   input_object :page_fragment_params do
     field :parent_key, :string
     field :key, :string

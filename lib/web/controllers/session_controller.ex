@@ -1,7 +1,6 @@
 defmodule Brando.SessionController do
   use Brando.Web, :controller
   alias Brando.User
-  alias Brando.Utils
 
   def create(conn, %{"email" => email, "password" => password}) do
     case Brando.repo.get_by(User, email: email) do

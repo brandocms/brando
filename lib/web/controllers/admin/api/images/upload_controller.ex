@@ -13,9 +13,6 @@ defmodule Brando.Admin.API.Images.UploadController do
     ]
   ]
 
-  import Brando.Gettext
-  import Brando.Plug.HTML
-  import Brando.Images.Utils, only: [recreate_sizes_for: 2]
   import Ecto.Query
 
   alias Brando.ImageSeries
@@ -23,10 +20,10 @@ defmodule Brando.Admin.API.Images.UploadController do
 
   @doc false
   def post(conn, %{"image_series_id" => id} = params, current_user, _) do
-    series =
-      ImageSeries
-      |> preload([:image_category, :images])
-      |> Brando.repo.get_by!(id: id)
+    {:ok, series} =
+      id
+      |> Images.get_series()
+      |> Images.preload_series()
 
     opts = Map.put(%{}, "image_series_id", series.id)
     cfg  = series.cfg || Brando.config(Brando.Images)[:default_config]
