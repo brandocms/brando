@@ -16,7 +16,7 @@ defmodule Brando.Type.Status do
   """
   def cast(atom) when is_atom(atom), do: {:ok, atom}
   def cast(binary) when is_binary(binary) do
-    [atom] = for {k, v} <- @status_codes, v == String.to_integer(binary), do: k
+    atom = String.to_existing_atom(binary)
     {:ok, atom}
   end
   def cast(status) when is_integer(status) do

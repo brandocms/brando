@@ -45,7 +45,7 @@ ss_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png",
 # insert admin user
 password = Brando.User.gen_password("admin")
 user = %Brando.User{
-  username: "admin", full_name: "Twined Admin",
+  full_name: "Twined Admin",
   email: "admin@twined.net", password: password,
   avatar: nil, role: 7, language: "nb"}
 user = <%= application_module %>.Repo.insert!(user)

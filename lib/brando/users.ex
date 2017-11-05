@@ -6,6 +6,14 @@ defmodule Brando.Users do
   """
   alias Brando.Utils
   alias Brando.User
+  import Ecto.Changeset
+
+  def get_user(id) do
+    case Brando.repo.get(User, id) do
+      nil -> {:error, {:user, :not_found}}
+      user -> {:ok, user}
+    end
+  end
 
   def get_user_by(args) do
     Brando.repo.get_by(User, args)
@@ -22,15 +30,20 @@ defmodule Brando.Users do
   end
 
   def create_user(params) do
-    params
-    |> User.create()
+    User.changeset(%User{}, :create, params)
+    |> maybe_update_password
     |> Brando.repo.insert
   end
 
   def update_user(id, params) do
-    get_user_by!(id: id)
-    |> User.update(params)
-    |> Brando.repo.update
+    with {:ok, user} <- get_user(id) do
+      user
+      |> User.changeset(:update, params)
+      |> maybe_update_password
+      |> Brando.repo.update
+    else
+      _ -> {:error, {:user, :not_found}}
+    end
   end
 
   def delete_user(user) do
@@ -46,4 +59,10 @@ defmodule Brando.Users do
       Utils.Schema.update_field(user, [last_login: NaiveDateTime.from_erl!(:calendar.local_time)])
     user
   end
+
+  defp maybe_update_password(%{changes: %{password: password}} = cs) do
+    put_change(cs, :password, Comeonin.Bcrypt.hashpwsalt(password))
+  end
+
+  defp maybe_update_password(cs), do: cs
 end

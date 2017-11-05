@@ -1,52 +1,49 @@
 defmodule Brando.SessionController do
-  @moduledoc """
-  Controller for authentication actions.
-  """
-
   use Brando.Web, :controller
-  alias Brando.{User, Users}
-  import Brando.Gettext
+  alias Brando.User
 
-  @default_auth_sleep_duration 2500
+  def create(conn, %{"email" => email, "password" => password}) do
+    case Brando.repo.get_by(User, email: email) do
+      nil ->
+        Comeonin.Bcrypt.dummy_checkpw()
 
-  @doc false
-  def login(conn, %{"user" => %{"email" => email, "password" => password}}) do
-    user = Users.get_user_by(email: email)
+        conn
+        |> put_status(:unauthorized)
+        |> render("error.json")
 
-    if User.auth?(user, password) do
-      user = Users.set_last_login(user)
+      user ->
+        if Comeonin.Bcrypt.checkpw(password, user.password) do
+            # |> Utils.add_avatar(:medium)
 
-      conn
-      |> sleep()
-      |> Guardian.Plug.sign_in(user)
-      |> redirect(to: "/admin")
-    else
-      conn
-      |> sleep()
-      |> put_flash(:error, gettext("Authorization failed"))
-      |> redirect(to: "/auth/login")
+          {:ok, jwt, _full_claims} = Guardian.encode_and_sign(user, :token)
+
+          conn
+          |> put_status(:created)
+          |> render("show.json", jwt: jwt, user: user)
+        else
+          conn
+          |> put_status(:unauthorized)
+          |> render("error.json")
+        end
     end
   end
 
-  @doc false
-  def login(conn, _params) do
-    conn
-    |> assign(:type, "HELLO!")
-    |> put_layout({Brando.Session.LayoutView, "auth.html"})
-    |> render(:login)
+  def delete(conn, %{"jwt" => jwt}) do
+    Guardian.revoke!(jwt)
+
+    render(conn, "delete.json")
   end
 
-  @doc false
-  def logout(conn, _params) do
-    conn
-    |> assign(:type, "GOODBYE!")
-    |> put_layout({Brando.Session.LayoutView, "auth.html"})
-    |> Guardian.Plug.sign_out()
-    |> render(:logout)
-  end
-
-  defp sleep(conn) do
-    :timer.sleep(Brando.config(:auth_sleep_duration) || @default_auth_sleep_duration)
-    conn
+  def verify(conn, %{"jwt" => jwt}) do
+    case Guardian.decode_and_verify(jwt) do
+      {:error, :token_expired} ->
+        conn
+        |> put_status(:unauthorized)
+        |> render("expired.json")
+      _ ->
+        conn
+        |> put_status(:ok)
+        |> render("ok.json")
+    end
   end
 end

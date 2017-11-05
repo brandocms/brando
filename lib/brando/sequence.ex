@@ -78,69 +78,13 @@ defmodule Brando.Sequence do
   @doc false
   def controller(schema_module, filter \\ nil) do
     quote do
-      if unquote(filter) do
-        @doc """
-        Filters the results through `filter`.
-        """
-        @spec filter_function(term) :: [term]
-        def filter_function(filter_param) do
-          {:filter, fun} = unquote(filter)
-          case fun.(filter_param) do
-            res when is_list(res) -> res
-            res -> Brando.repo.all(res)
-          end
-        end
-
-        @spec filter_function() :: [term]
-        def filter_function do
-          {:filter, fun} = unquote(filter)
-          case fun.() do
-            res when is_list(res) -> res
-            res -> Brando.repo.all(res)
-          end
-        end
-      end
-
-      if unquote(filter) do
-        @doc """
-        Render the :sequence view with `filter`
-        """
-        def sequence(conn, %{"filter" => filter}) do
-          {:schema, schema_module} = unquote(schema_module)
-          items = filter_function(filter)
-          conn
-          |> assign(:items, items)
-          |> assign(:filter, filter)
-          |> render(:sequence)
-        end
-
-        @doc """
-        Render the :sequence view.
-        """
-        def sequence(conn, _) do
-          {:schema, schema_module} = unquote(schema_module)
-
-          conn
-          |> assign(:items, filter_function())
-          |> render(:sequence)
-        end
-      else
-        def sequence(conn, _) do
-          {:schema, schema_module} = unquote(schema_module)
-          conn
-          |> assign(:items, Brando.repo.all(schema_module))
-          |> render(:sequence)
-        end
-      end
-
       @doc """
       Sequence schema and render :sequence post
       """
       def sequence_post(conn, %{"order" => ids}) do
         {:schema, schema_module} = unquote(schema_module)
         schema_module.sequence(ids, Range.new(0, length(ids)))
-        conn
-        |> render(:sequence_post)
+        render(conn, :sequence_post)
       end
     end
   end

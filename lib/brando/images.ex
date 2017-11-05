@@ -4,7 +4,7 @@ defmodule Brando.Images do
   Handles uploads too.
   Interfaces with database
   """
-  
+
   alias Brando.{ImageCategory, ImageSeries, Image}
 
   import Brando.Upload
@@ -43,6 +43,11 @@ defmodule Brando.Images do
   """
   def get_image!(id) do
     Brando.repo.get!(Image, id)
+  end
+
+  def get_category_id_by_slug(slug) do
+    category = Brando.repo.get_by(ImageCategory, slug: slug)
+    {:ok, category.id}
   end
 
   @doc """
@@ -141,13 +146,13 @@ defmodule Brando.Images do
   Also deletes all images depending on the series and executes any callbacks
   """
   def delete_series(id) do
-    series = Brando.repo.get_by!(ImageSeries, id: id)
-    :ok    = Brando.Images.Utils.delete_images_for(:image_series, series.id)
+    with {:ok, series} <- get_series(id) do
+      :ok = Brando.Images.Utils.delete_images_for(:image_series, series.id)
+      series = Brando.repo.preload(series, :image_category)
+      Brando.repo.delete!(series)
 
-    series = Brando.repo.preload(series, :image_category)
-    Brando.repo.delete!(series)
-
-    {:ok, series}
+      {:ok, series}
+    end
   end
 
   @doc """
@@ -188,7 +193,33 @@ defmodule Brando.Images do
   Get category by `id`
   """
   def get_category(id) do
-    Brando.repo.get(ImageCategory, id)
+    case Brando.repo.get(ImageCategory, id) do
+      nil -> {:error, {:image_category, :not_found}}
+      cat -> {:ok, cat}
+    end
+  end
+
+  @doc """
+  Get series by `id`
+  """
+  def get_series(id) do
+    case Brando.repo.get(ImageSeries, id) do
+      nil -> {:error, {:image_series, :not_found}}
+      series -> {:ok, series}
+    end
+  end
+
+  def preload_series({:ok, series}) do
+    series = Brando.repo.preload(series, [:images, :image_category])
+    {:ok, series}
+  end
+
+  def list_categories do
+    categories = Brando.repo().all(
+      from category in ImageCategory,
+        order_by: fragment("lower(?) ASC", category.name)
+      )
+    {:ok, categories}
   end
 
   @doc """
@@ -228,6 +259,16 @@ defmodule Brando.Images do
     category = Brando.repo.get_by!(ImageCategory, id: id)
     Brando.Images.Utils.delete_series_for(:image_category, category.id)
     Brando.repo.delete!(category)
+
+    {:ok, category}
+  end
+
+  def image_series_count(category_id) do
+    Brando.repo.one(
+      from is in ImageSeries,
+        select: count(is.id),
+        where: is.image_category_id == ^category_id
+    )
   end
 
   @doc """

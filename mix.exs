@@ -40,8 +40,18 @@ defmodule Brando.Mixfile do
      applications: applications(Mix.env)]
   end
 
-  defp applications(:test), do: applications(:all) ++ [:ecto, :postgrex]
+  defp applications(:test) do
+    applications(:all) ++ [
+      :ecto,
+      :postgrex,
+      :absinthe,
+      :absinthe_ecto,
+      :absinthe_plug
+    ]
+  end
+
   defp applications(_all) do [
+     :absinthe,
      :gettext,
      :comeonin,
      :httpoison,
@@ -52,7 +62,8 @@ defmodule Brando.Mixfile do
      :poison,
      :scrivener,
      :scrivener_ecto,
-     :slugger
+     :slugger,
+     :timex
     ]
   end
 
@@ -72,6 +83,8 @@ defmodule Brando.Mixfile do
     {:slugger, "~> 0.2"},
     {:scrivener_ecto, "~> 1.1"},
 
+    {:timex, "~> 3.0"},
+
     # Dev dependencies
     {:credo, ">= 0.0.0", only: :dev},
     {:dialyxir, "~> 0.3", only: :dev},
@@ -79,6 +92,9 @@ defmodule Brando.Mixfile do
     # Test dependencies
     {:ex_machina, "~> 2.0", only: :test},
     {:excoveralls, "~> 0.6", only: :test},
+    {:absinthe, "~> 1.4.0-rc", override: true, only: :test},
+    {:absinthe_plug, "~> 1.4.0-rc", override: true, only: :test},
+    {:absinthe_ecto, "~> 0.1.0", only: :test},
 
     # Documentation dependencies
     {:ex_doc, "~> 0.11", only: :docs},

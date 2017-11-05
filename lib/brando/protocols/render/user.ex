@@ -7,6 +7,6 @@ defimpl Brando.Render, for: Brando.User do
         prefix: media_url(),
         default: Brando.helpers.static_path(
           Brando.endpoint, "/images/brando/defaults/avatar_default.jpg")])
-    ~s(<img class="micro-avatar" src="#{src}" /> #{data.username})
+    ~s(<img class="micro-avatar" src="#{src}" /> #{data.full_name})
   end
 end

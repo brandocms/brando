@@ -19,16 +19,22 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "templates/brando.install/etc/supervisord/prod.conf", "etc/supervisord/prod.conf"},
 
     # Router template
-    {:eex,  "templates/brando.install/lib/web/router.ex", "lib/application_name/web/router.ex"},
+    {:eex,  "templates/brando.install/lib/application_name_web/router.ex", "lib/application_name_web/router.ex"},
 
     # Lockdown files
-    {:eex,  "templates/brando.install/lib/web/controllers/lockdown_controller.ex", "lib/application_name/web/controllers/lockdown_controller.ex"},
-    {:eex,  "templates/brando.install/lib/web/templates/layout/lockdown.html.eex", "lib/application_name/web/templates/layout/lockdown.html.eex"},
-    {:eex,  "templates/brando.install/lib/web/templates/lockdown/index.html.eex", "lib/application_name/web/templates/lockdown/index.html.eex"},
-    {:eex,  "templates/brando.install/lib/web/views/lockdown_view.ex", "lib/application_name/web/views/lockdown_view.ex"},
+    {:eex,  "templates/brando.install/lib/application_name_web/controllers/lockdown_controller.ex", "lib/application_name_web/controllers/lockdown_controller.ex"},
+    {:eex,  "templates/brando.install/lib/application_name_web/templates/layout/lockdown.html.eex", "lib/application_name_web/templates/layout/lockdown.html.eex"},
+    {:eex,  "templates/brando.install/lib/application_name_web/templates/lockdown/index.html.eex", "lib/application_name_web/templates/lockdown/index.html.eex"},
+    {:eex,  "templates/brando.install/lib/application_name_web/views/lockdown_view.ex", "lib/application_name_web/views/lockdown_view.ex"},
+
+    # Fallback and errors
+    {:eex,  "templates/brando.install/lib/application_name_web/controllers/fallback_controller.ex", "lib/application_name_web/controllers/fallback_controller.ex"},
+    {:eex,  "templates/brando.install/lib/application_name_web/views/error_view.ex", "lib/application_name_web/views/error_view.ex"},
+    {:eex,  "templates/brando.install/lib/application_name_web/templates/error/404_page.html.eex", "lib/application_name_web/templates/error/404_page.html.eex"},
+    {:eex,  "templates/brando.install/lib/application_name_web/templates/error/500_page.html.eex", "lib/application_name_web/templates/error/404_page.html.eex"},
 
     # Default Villain parser
-    {:eex,  "templates/brando.install/lib/web/villain/parser.ex", "lib/application_name/web/villain/parser.ex"},
+    {:eex,  "templates/brando.install/lib/application_name_web/villain/parser.ex", "lib/application_name_web/villain/parser.ex"},
 
     # Default configuration files
     {:eex,  "templates/brando.install/config/brando.exs", "config/brando.exs"},
@@ -40,26 +46,29 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "templates/brando.install/migrations/20150215090306_create_imageseries.exs", "priv/repo/migrations/20150215090306_create_imageseries.exs"},
     {:eex,  "templates/brando.install/migrations/20150215090307_create_images.exs", "priv/repo/migrations/20150215090307_create_images.exs"},
 
+    {:eex,  "templates/brando.install/migrations/20171103152200_create_pages.exs", "priv/repo/migrations/20171103152200_create_pages.exs"},
+    {:eex,  "templates/brando.install/migrations/20171103152205_create_pagefragments.exs", "priv/repo/migrations/20171103152205_create_pagefragments.exs"},
+
     # Repo seeds
     {:eex,  "templates/brando.install/repo/seeds.exs", "priv/repo/seeds.exs"},
 
     # Master app template.
-    {:text, "templates/brando.install/lib/web/templates/layout/app.html.eex", "lib/application_name/web/templates/layout/app.html.eex"},
+    {:text, "templates/brando.install/lib/application_name_web/templates/layout/app.html.eex", "lib/application_name_web/templates/layout/app.html.eex"},
 
     # Gettext templates
     {:keep, "templates/brando.install/priv/static/gettext/backend/nb", "priv/static/gettext/backend/nb/LC_MESSAGES"},
     {:keep, "templates/brando.install/priv/static/gettext/frontend", "priv/static/gettext/frontend"},
-    {:eex,  "templates/brando.install/lib/web/gettext.ex", "lib/application_name/web/gettext.ex"},
+    {:eex,  "templates/brando.install/lib/application_name_web/gettext.ex", "lib/application_name_web/gettext.ex"},
 
-    # Frontend helpers
-    {:eex,  "templates/brando.install/lib/web/helpers/date_time_helpers.ex", "lib/application_name/web/helpers/date_time_helpers.ex"},
-
-    # Web helpers for admin and frontend
-    {:eex, "templates/brando.install/lib/admin_web.ex", "lib/application_name/web/admin_web.ex"},
-    {:eex, "templates/brando.install/lib/web.ex", "lib/application_name/web/web.ex"},
+    # Helpers for frontend
+    {:eex, "templates/brando.install/lib/application_name_web.ex", "lib/application_name_web.ex"},
 
     # Postgrex types
     {:eex, "templates/brando.install/lib/postgrex_types.ex", "lib/application_name/postgrex_types.ex"},
+
+    # Channel + socket
+    {:eex, "templates/brando.install/lib/application_name_web/channels/admin_channel.ex", "lib/application_name/application_name_web/channels/admin_channel.ex"},
+    {:eex, "templates/brando.install/lib/application_name_web/channels/admin_socket.ex", "lib/application_name/application_name_web/channels/admin_socket.ex"},
   ]
 
   @static [
@@ -75,36 +84,27 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "templates/brando.install/fabfile.py", "fabfile.py"},
 
     # Frontend JS
-    {:copy, "templates/brando.install/assets/js/app/index.js", "assets/js/app/index.js"},
-    {:copy, "templates/brando.install/assets/js/app/flexslider.js", "assets/js/app/flexslider.js"},
-    {:copy, "templates/brando.install/assets/js/admin/index.js", "assets/js/admin/index.js"},
+    {:copy, "templates/brando.install/assets/frontend/js/index.js", "assets/frontend/js/index.js"},
+    {:copy, "templates/brando.install/assets/frontend/js/flexslider.js", "assets/frontend/js/flexslider.js"},
+
+    # Backend JS
+    {:copy, "templates/brando.install/assets/backend/src/main.js", "assets/backend/src/main.js"},
 
     # Frontend SCSS
-    {:copy, "templates/brando.install/assets/css/app.scss", "assets/css/app.scss"},
-    {:copy, "templates/brando.install/assets/css/custom/brando.custom.scss", "assets/css/custom/brando.custom.scss"},
-    {:copy, "templates/brando.install/assets/css/includes/_general.scss", "assets/css/includes/_general.scss"},
-    {:copy, "templates/brando.install/assets/css/includes/_colorbox.scss", "assets/css/includes/_colorbox.scss"},
-    {:copy, "templates/brando.install/assets/css/includes/_cookielaw.scss", "assets/css/includes/_cookielaw.scss"},
-    {:copy, "templates/brando.install/assets/css/includes/_dropdown.scss", "assets/css/includes/_dropdown.scss"},
-    {:copy, "templates/brando.install/assets/css/includes/_instagram.scss", "assets/css/includes/_instagram.scss"},
-    {:copy, "templates/brando.install/assets/css/includes/_nav.scss", "assets/css/includes/_nav.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/app.scss", "assets/frontend/css/app.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_general.scss", "assets/frontend/css/includes/_general.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_colorbox.scss", "assets/frontend/css/includes/_colorbox.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_cookielaw.scss", "assets/frontend/css/includes/_cookielaw.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_dropdown.scss", "assets/frontend/css/includes/_dropdown.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_instagram.scss", "assets/frontend/css/includes/_instagram.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_nav.scss", "assets/frontend/css/includes/_nav.scss"},
 
     # Icons
     {:copy, "templates/brando.install/assets/static/brando/favicon.ico", "assets/static/favicon.ico"},
 
-    # Webfonts - icons
-    {:copy, "templates/brando.install/assets/static/brando/fonts/fontawesome-webfont.eot", "assets/static/fonts/fontawesome-webfont.eot"},
-    {:copy, "templates/brando.install/assets/static/brando/fonts/fontawesome-webfont.svg", "assets/static/fonts/fontawesome-webfont.svg"},
-    {:copy, "templates/brando.install/assets/static/brando/fonts/fontawesome-webfont.ttf", "assets/static/fonts/fontawesome-webfont.ttf"},
-    {:copy, "templates/brando.install/assets/static/brando/fonts/fontawesome-webfont.woff", "assets/static/fonts/fontawesome-webfont.woff"},
-    {:copy, "templates/brando.install/assets/static/brando/fonts/fontawesome-webfont.woff2", "assets/static/fonts/fontawesome-webfont.woff2"},
-    {:copy, "templates/brando.install/assets/static/brando/fonts/FontAwesome.otf", "assets/static/fonts/FontAwesome.otf"},
-
     # Images
     {:copy, "templates/brando.install/assets/static/brando/images/blank.gif", "assets/static/images/brando/blank.gif"},
-    {:copy, "templates/brando.install/assets/static/brando/images/flags.png", "assets/static/images/brando/flags.png"},
     {:copy, "templates/brando.install/assets/static/brando/images/brando-big.png", "assets/static/images/brando/brando-big.png"},
-
     {:copy, "templates/brando.install/assets/static/brando/images/defaults/thumb/avatar_default.jpg", "assets/static/images/brando/defaults/thumb/avatar_default.jpg"},
     {:copy, "templates/brando.install/assets/static/brando/images/defaults/micro/avatar_default.jpg", "assets/static/images/brando/defaults/micro/avatar_default.jpg"},
   ]

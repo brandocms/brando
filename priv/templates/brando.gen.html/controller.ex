@@ -1,10 +1,10 @@
 defmodule <%= module %>Controller do
-  use <%= base %>.Web, :controller
-  alias <%= base %>.<%= domain %>
-  alias <%= base %>.<%= domain %>.<%= scoped %>
+  use <%= base %>Web, :controller
+  alias <%= base %>Web.<%= domain %>
 
+  @doc false
   def index(conn, _params) do
-    <%= plural %> = <%= domain %>.list_<%= plural %>()
+    {:ok, <%= plural %>} = <%= domain %>.list_<%= plural %>()
 
     render conn, :index, [
       <%= plural %>: <%= plural %>,

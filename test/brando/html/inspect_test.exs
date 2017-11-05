@@ -65,7 +65,6 @@ defmodule Brando.HTML.InspectTest do
     {:safe, ret} = schema(user)
     ret = IO.iodata_to_binary(ret)
 
-    assert ret =~ "jamesw"
     assert ret =~ "James Williamson"
     assert ret =~ "/media/images/avatars/thumb/27i97a.jpeg"
     assert ret =~ "superuser"
@@ -94,8 +93,7 @@ defmodule Brando.HTML.InspectTest do
     assert inspect_field("name", :boolean, nil) =~ "fa-times"
     assert inspect_field("name", :boolean, :false) =~ "fa-times"
 
-    assert inspect_field("name", nil, %Brando.User{username: "Test"}) =~ "micro-avatar"
-    assert inspect_field("name", Type.Role, [:staff]) == ["<span class=\"label label-staff\">staff</span>"]
+    assert inspect_field("name", Type.Role, :staff) == "<span class=\"label label-staff\">staff</span>"
 
     assert inspect_field("name", Type.Json, "whatever") == "<em>Encoded value</em>"
     assert inspect_field("name", Type.Image, nil) == "<em>No connected image</em>"
@@ -116,7 +114,7 @@ defmodule Brando.HTML.InspectTest do
 
   test "schema_repr/1" do
     user = Factory.insert(:user)
-    assert schema_repr(user) == "James Williamson (jamesw)"
+    assert schema_repr(user) == "James Williamson (james@thestooges.com)"
   end
 
   test "schema_name/2" do

@@ -11,16 +11,27 @@ defmodule Brando.UserChannel do
     "increase_progress"
   ]
 
-  def join("user:lobby", _auth_msg, socket) do
-    {:ok, %{user_id: socket.assigns.user_id}, socket}
-  end
+  @doc """
+  Join user channel for your user
+  """
+  def join("user:" <> user_id, _params, socket) do
+    require Logger
+    Logger.error inspect user_id
+    user = Guardian.Phoenix.Socket.current_resource(socket)
 
-  def join("user:" <> user_id, _auth_msg, socket) do
-    if socket.assigns.user_id == String.to_integer(user_id) do
-      {:ok, socket}
-    else
-      {:error, %{reason: "unauthorized"}}
-    end
+    # with {:ok, requested_user} <- Users.get_user_by(id: user_id),
+    #      {:ok, :authorized}    <- can?(user, :access, requested_user)
+    # do
+      socket = assign(socket, :user_id, user.id)
+      # send(self(), :after_join)
+
+      {:ok, user.id, socket}
+    # else
+    #   {:error, :unauthorized} ->
+    #     {:error, %{reason: "ikke autorisert for denne brukerkanalen"}}
+    #   {:error, {:user, :not_found}} ->
+    #     {:error, %{reason: "fant ikke brukeren"}}
+    # end
   end
 
   def handle_out("alert", payload, socket) do

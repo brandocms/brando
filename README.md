@@ -325,35 +325,6 @@ Finally, add to your routes (`lib/web/router.ex`):
   post   "/route/:filter/sorter", YourController, :sequence_post
 ```
 
-## Popup forms
-
-First, register the form in your app's endpoint startup. The first argument is the
-name of the schema, second is the form module and third is a list of fields you want
-returned if repo insertion is successful:
-
-```elixir
-Brando.PopupForm.Registry.register(:accounts, "client", MyApp.ClientForm, gettext("Create client"), [:id, :name])
-```
-
-```javascript
-
-import {PopupForm, brando} from "brando";
-
-let params = [];
-let initialValues = {email: 'sample@email.com'};
-let clientForm = new PopupForm("accounts", brando.language, clientInsertionSuccess,
-                               params, initialValues);
-
-$('.avatar img').click((e) => {
-    clientForm.show();
-});
-
-function clientInsertionSuccess(fields) {
-    // here you'd insert the returned fields into a select or something similar.
-    console.log(`${fields.id} --> ${fields.username}`);
-}
-```
-
 ## Lockdown
 
 If you want to limit the availability of your site while developing, you can use the

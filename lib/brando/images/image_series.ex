@@ -12,11 +12,10 @@ defmodule Brando.ImageSeries do
   alias Brando.ImageCategory
 
   import Ecto.Query, only: [from: 2]
-  import Brando.Utils.Schema, only: [avoid_slug_collision: 2]
   import Brando.Gettext
 
-  @required_fields ~w(name slug image_category_id creator_id)a
-  @optional_fields ~w(credits sequence cfg)a
+  @required_fields ~w(name image_category_id creator_id)a
+  @optional_fields ~w(credits sequence cfg slug)a
 
   schema "imageseries" do
     field :name, :string
@@ -45,6 +44,7 @@ defmodule Brando.ImageSeries do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
+    |> put_slug()
     |> avoid_slug_collision(&filter_current_category/1)
     |> inherit_configuration
   end
@@ -61,6 +61,7 @@ defmodule Brando.ImageSeries do
   def changeset(schema, :update, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
+    |> put_slug()
     |> avoid_slug_collision(&filter_current_category/1)
     |> validate_paths
   end
@@ -89,6 +90,8 @@ defmodule Brando.ImageSeries do
   Before inserting changeset. Copies the series' category config.
   """
   def inherit_configuration(%{changes: %{image_category_id: cat_id, slug: slug}} = cs) do
+    require Logger
+    Logger.error inspect cs.changes
     do_inherit_configuration(cs, cat_id, slug)
   end
 

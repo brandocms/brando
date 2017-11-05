@@ -5,18 +5,17 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
 
   def up do
     create table(:users) do
-      add :username,      :text
       add :full_name,     :text
       add :email,         :text
       add :password,      :text
       add :avatar,        :text
       add :role,          :integer
+      add :active,        :boolean, default: true
       add :language,      :text,    default: "nb"
       add :last_login,    :naive_datetime
       timestamps()
     end
 
-    create index(:users, [:username], unique: true)
     create index(:users, [:email], unique: true)
 
     create table(:posts) do
@@ -119,7 +118,6 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
 
   def down do
     drop table(:users)
-    drop index(:users, [:username], unique: true)
     drop index(:users, [:email], unique: true)
 
     drop table(:posts)

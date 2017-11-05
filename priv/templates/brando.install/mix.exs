@@ -1,12 +1,12 @@
 defmodule <%= application_module %>.Mixfile do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "2.0.0"
 
   def project do
     [app: :<%= application_name %>,
      version: @version,
-     elixir: "~> 1.4",
+     elixir: "~> 1.5",
      elixirc_paths: elixirc_paths(Mix.env),
      compilers: [:phoenix, :gettext] ++ Mix.compilers,
      build_embedded: Mix.env == :prod,
@@ -19,27 +19,9 @@ defmodule <%= application_module %>.Mixfile do
   #
   # Type `mix help compile.app` for more information.
   def application do
-    [mod: {<%= application_module %>.Application, []},
-     included_applications: [
-       :recon,
-     ],
-     applications: [
-       :brando,
-       :brando_news,
-       :brando_pages,
-       :cowboy,
-       :hrafn,
-       :gettext,
-       :logger,
-       :phoenix,
-       :phoenix_ecto,
-       :phoenix_html,
-       :phoenix_pubsub,
-       :plug_heartbeat,
-       :postgrex,
-       :runtime_tools,
-       :timex
-     ]
+    [
+      mod: {<%= application_module %>.Application, []},
+      extra_applications: [:logger, :runtime_tools, :recon]
     ]
   end
 
@@ -53,10 +35,10 @@ defmodule <%= application_module %>.Mixfile do
   defp deps do
     [
      # phoenix
-     {:phoenix, "~> 1.3.0-rc.0", override: true},
+     {:phoenix, "~> 1.3.0", override: true},
      {:phoenix_pubsub, "~> 1.0"},
      {:phoenix_ecto, "~> 3.2"},
-     {:phoenix_html, "~> 2.6"},
+     {:phoenix_html, "~> 2.10"},
      {:phoenix_live_reload, "~> 1.0", only: :dev},
 
      # general deps
@@ -64,19 +46,26 @@ defmodule <%= application_module %>.Mixfile do
      {:gettext, "~> 0.11"},
      {:cowboy, "~> 1.0"},
      {:timex, "~> 3.0"},
+     {:absinthe, "~> 1.4.0-rc", override: true},
+     {:absinthe_plug, "~> 1.4.0-rc", override: true},
+     {:absinthe_ecto, "~> 0.1.0"},
 
      # release management and production tools
-     {:distillery, "~> 1.0"},
+     {:distillery, github: "bitwalker/distillery"},
      {:recon, "~> 2.3"},
      {:hrafn, "~> 0.1"},
      {:plug_heartbeat, "~> 0.1"},
 
-     # brando
-     {:brando, github: "twined/brando", branch: "develop", override: true},
+     # pagination
+     {:scrivener_ecto, "~> 1.2"},
 
-     # optional brando modules
-     {:brando_news, github: "twined/brando_news", branch: "develop"},
-     {:brando_pages, github: "twined/brando_pages", branch: "develop"}]
+     # testing
+     {:wallaby, "~> 0.19"},
+
+     # brando
+     {:brando, github: "twined/brando", branch: "develop"}
+     # {:brando, path: "../../brando", override: true},
+    ]
   end
 
   # See the documentation for `Mix` for more info on aliases.

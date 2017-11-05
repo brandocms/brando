@@ -12,32 +12,16 @@ defmodule Brando.User do
   import Brando.Images.Optimize, only: [optimize: 2]
   import Brando.Gettext
 
-  @required_fields ~w(username full_name email password language)a
-  @optional_fields ~w(role avatar)a
-
-  @forbidden_usernames ~w(
-    admin
-    superadmin
-    superuser
-    editor
-    root
-    create
-    edit
-    delete
-    update
-    ny
-    endre
-    slett
-    profil
-  )
+  @required_fields ~w(full_name email password language)a
+  @optional_fields ~w(role avatar active)a
 
   schema "users" do
-    field :username, :string
     field :email, :string
     field :full_name, :string
     field :password, :string
     field :avatar, Brando.Type.Image
     field :role, Brando.Type.Role
+    field :active, :boolean
     field :language, :string
     field :last_login, :naive_datetime
     timestamps()
@@ -105,10 +89,6 @@ defmodule Brando.User do
     |> validate_required(@required_fields)
     |> validate_format(:email, ~r/@/)
     |> unique_constraint(:email)
-    |> unique_constraint(:username)
-    |> validate_format(:username, ~r/^[a-z0-9_\-\.!~\*'\(\)]+$/)
-    |> validate_exclusion(:username, @forbidden_usernames)
-    |> validate_confirmation(:password, message: gettext("Passwords must match"))
     |> validate_length(:password, min: 6, too_short: gettext("Password must be at least 6 characters"))
     |> validate_upload({:image, :avatar})
     |> optimize(:avatar)
@@ -130,44 +110,9 @@ defmodule Brando.User do
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
     |> unique_constraint(:email)
-    |> unique_constraint(:username)
-    |> validate_format(:username, ~r/^[a-z0-9_\-\.!~\*'\(\)]+$/)
-    |> validate_exclusion(:username, @forbidden_usernames)
-    |> validate_confirmation(:password, message: gettext("Passwords must match"))
     |> validate_length(:password, min: 6, too_short: gettext("Password must be at least 6 characters"))
     |> validate_upload({:image, :avatar})
     |> optimize(:avatar)
-  end
-
-  @doc """
-  Create a changeset for the user schema by passing `params`.
-  If valid, generate a hashed password and insert user to Brando.repo.
-  If not valid, return errors from changeset
-  """
-  def create(params) do
-    cs = changeset(%__MODULE__{}, :create, params)
-
-    if get_change(cs, :password) do
-      put_change(cs, :password, gen_password(cs.changes[:password]))
-    else
-      cs
-    end
-  end
-
-  @doc """
-  Create an `update` changeset for the user schema by passing `params`.
-  If password is in changeset, hash and insert in changeset.
-  If valid, update user in Brando.repo.
-  If not valid, return errors from changeset
-  """
-  def update(user, params) do
-    cs = changeset(user, :update, params)
-
-    if get_change(cs, :password) do
-      put_change(cs, :password, gen_password(cs.changes[:password]))
-    else
-      cs
-    end
   end
 
   @doc """
@@ -185,18 +130,11 @@ defmodule Brando.User do
     Comeonin.Bcrypt.checkpw(password, user.password)
 
   @doc """
-  Hashes `password` using Comeonin.Bcrypt
-  """
-  @spec gen_password(String.t) :: String.t
-  def gen_password(password), do:
-    Comeonin.Bcrypt.hashpwsalt(password)
-
-  @doc """
   Checks if `user` has `role`.
   """
   @spec role?(t, atom) :: boolean
   def role?(user, role) when is_atom(role) do
-    role in user.role && true || false
+    role == user.role
   end
 
   @doc """
@@ -214,10 +152,9 @@ defmodule Brando.User do
   use Brando.Meta.Schema, [
     singular: gettext("user"),
     plural: gettext("users"),
-    repr: &("#{&1.full_name} (#{&1.username})"),
+    repr: &("#{&1.full_name} (#{&1.email})"),
     fields: [
       id: gettext("ID"),
-      username: gettext("Username"),
       email: gettext("Email"),
       full_name: gettext("Full name"),
       password: gettext("Password"),

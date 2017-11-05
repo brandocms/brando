@@ -13,7 +13,6 @@ defmodule Brando.Supervisor do
   def init([]) do
     children = [
       supervisor(Brando.Registry, []),
-      supervisor(Brando.PopupForm.Registry, [])
     ]
     supervise(children, strategy: :one_for_one)
   end

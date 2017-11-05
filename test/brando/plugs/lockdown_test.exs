@@ -50,7 +50,7 @@ defmodule Brando.Plug.LockdownTest do
     end
 
     def put_current_user(conn, _) do
-      put_session(conn, :current_user, %{role: [:admin, :superuser]})
+      put_session(conn, :current_user, %{role: :superuser})
     end
   end
 
@@ -78,7 +78,7 @@ defmodule Brando.Plug.LockdownTest do
     end
 
     def put_current_user(conn, _) do
-      put_session(conn, :current_user, %{role: []})
+      put_session(conn, :current_user, %{role: :user})
     end
   end
 

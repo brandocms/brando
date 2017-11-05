@@ -92,16 +92,14 @@ defmodule Brando.HTML.Inspect do
     ~s(#{value.day}/#{value.month}/#{value.year})
   end
 
-  defp do_inspect_field(_name, Brando.Type.Role, roles) do
-    Enum.map roles, fn (role) ->
-      role_name =
-        case role do
-          :superuser -> gettext("superuser")
-          :admin     -> gettext("admin")
-          :staff     -> gettext("staff")
-        end
-      ~s(<span class="label label-#{role}">#{role_name}</span>)
-    end
+  defp do_inspect_field(_name, Brando.Type.Role, role) do
+    role_name =
+      case role do
+        :superuser -> gettext("superuser")
+        :admin     -> gettext("admin")
+        :staff     -> gettext("staff")
+      end
+    ~s(<span class="label label-#{role}">#{role_name}</span>)
   end
 
   defp do_inspect_field(_name, Brando.Type.Json, _value) do

@@ -41,51 +41,6 @@ defmodule Brando.SystemChannel do
     {:noreply, socket}
   end
 
-  def handle_in("popup_form:create", %{"key" => key, "language" => language, "params" => params,
-                                       "initial_values" => initial_values}, socket) do
-    Gettext.put_locale(Brando.Gettext, language)
-    Brando.I18n.put_locale_for_all_modules(language)
-
-    case Brando.PopupForm.Registry.get(key) do
-      {:ok, {_, _, header, _}} ->
-        case Brando.PopupForm.create(key, params, initial_values) do
-          %Brando.Form{} = form ->
-            push socket, "popup_form:reply:#{key}", %{
-              rendered_form: Phoenix.HTML.safe_to_string(form.rendered_form),
-              url: form.url,
-              header: header
-            }
-          _ ->
-            push socket, "popup_form:error:#{key}", %{
-              message: gettext(~s(Error retrieving form "%{form}"), form: inspect(key))
-            }
-        end
-      {:error, :not_registered} ->
-        push socket, "popup_form:error:#{key}", %{
-          message: gettext(~s(Error retrieving form "%{form}". Not registered.), form: inspect(key))
-        }
-    end
-
-    {:noreply, socket}
-  end
-
-  def handle_in("popup_form:push_data", %{"key" => key, "data" => data}, socket) do
-    {:ok, {_, _, header, _}} = Brando.PopupForm.Registry.get(key)
-
-    case Brando.PopupForm.post(key, data, socket) do
-      {:error, form} ->
-        push socket, "popup_form:reply_errors:#{key}", %{
-          rendered_form: Phoenix.HTML.safe_to_string(form.rendered_form),
-          url: form.url,
-          header: header
-        }
-      {:ok, {inserted_record, wanted_fields}} ->
-        fields = Map.take(inserted_record, wanted_fields)
-        push socket, "popup_form:success:#{key}", %{fields: fields}
-    end
-    {:noreply, socket}
-  end
-
   @doc """
   Logs when `user` performs a successful login
   """

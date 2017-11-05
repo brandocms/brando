@@ -118,16 +118,25 @@ defmodule Brando.Tag do
   @doc """
   Splits the "tags" field in `params` to an array and returns `params`
   """
-  def split_tags(params) when params == %{}, do: %{}
-  def split_tags(params) do
-    if params["tags"] do
-      split_tags = params["tags"]
-                   |> String.split(",")
-                   |> Enum.map(&String.trim/1)
+  def split_tags(%{"tags" => nil} = params), do: params
+  def split_tags(%{"tags" => tags} = params) do
+    split_tags =
+      tags
+      |> String.split(",")
+      |> Enum.map(&String.trim/1)
 
-      Map.put(params, "tags", split_tags)
-    else
-      params
-    end
+    Map.put(params, "tags", split_tags)
+  end
+  def split_tags(%{tags: nil} = params), do: params
+  def split_tags(%{tags: tags} = params) do
+    split_tags =
+      tags
+      |> String.split(",")
+      |> Enum.map(&String.trim/1)
+
+    Map.put(params, :tags, split_tags)
+  end
+  def split_tags(params) do
+    params
   end
 end

@@ -1,4 +1,4 @@
-defmodule Brando.Villain.Routes.Admin do
+defmodule Brando.Villain.Routes.Admin.API do
   @moduledoc """
   Routes for Brando.Villain
 
@@ -8,9 +8,7 @@ defmodule Brando.Villain.Routes.Admin do
 
       scope "/admin", as: :admin do
         pipe_through :admin
-        scope "/mymodule" do
-          villain_routes MyController
-        end
+        api_villain_routes()
       end
 
   """
@@ -18,15 +16,8 @@ defmodule Brando.Villain.Routes.Admin do
   @doc """
   Defines "RESTful" endpoints for the news resource.
   """
-  defmacro villain_routes(ctrl) do
-    add_villain_routes("", ctrl)
-  end
-
-  @doc """
-  See villain_routes/2
-  """
-  defmacro villain_routes(path, ctrl) do
-    add_villain_routes(path, ctrl)
+  defmacro api_villain_routes() do
+    add_villain_routes("", Brando.VillainController)
   end
 
   defp add_villain_routes(path, controller) do
@@ -39,8 +30,8 @@ defmodule Brando.Villain.Routes.Admin do
       get  "#{path}/villain/browse/:slug",           ctrl, :browse_images, opts
       get  "#{path}/villain/imageseries",            ctrl, :imageseries,   opts
       post "#{path}/villain/imagedata/:id",          ctrl, :image_info,    opts
-      post "#{path}/:x/villain/imagedata/:id",      ctrl, :image_info,    opts
-      post "#{path}/:x/edit/villain/imagedata/:id", ctrl, :image_info,    opts
+      post "#{path}/:x/villain/imagedata/:id",       ctrl, :image_info,    opts
+      post "#{path}/:x/edit/villain/imagedata/:id",  ctrl, :image_info,    opts
     end
   end
 end
