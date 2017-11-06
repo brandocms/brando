@@ -7,7 +7,7 @@ exports.config = {
         // Frontend javascript
         'js/app/index.js': {
           'js/app.js': [
-            /^(node_modules|js\/app)/,
+            /^(node_modules|js)/,
           ],
         },
       },
@@ -16,7 +16,6 @@ exports.config = {
       joinTo: {
         /* Frontend application-specific CSS/SCSS */
         'css/app.css': [
-          'node_modules/bootstrap/scss/_bootstrap.scss',
           'css/app.scss',
         ],
       },
@@ -62,9 +61,7 @@ exports.config = {
     sass: {
       options: {
         precision: 10,
-        includePaths: [
-          'node_modules/bootstrap-sass/assets/stylesheets',
-        ],
+        includePaths: ['./node_modules/bootstrap/scss/'],
       },
     },
   },
@@ -79,8 +76,9 @@ exports.config = {
   npm: {
     enabled: true,
     globals: {
-      // $: 'jquery',
-      // jQuery: 'jquery',
+      $: 'jquery',
+      jQuery: 'jquery',
+      Tether: 'tether'
     },
   },
 };
