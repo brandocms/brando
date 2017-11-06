@@ -1,13 +1,9 @@
 {
   "repository": {},
   "dependencies": {
-    "bootstrap-sass": "^3.3.6",
-    "@twined/brando": "latest",
+    "bootstrap": "^4.0.0",
     "dropzone": "^4.3.0",
-    "i18next": "^4.0.0",
-    "jquery": "^3.1.1",
-    "phoenix": "^1.2.1",
-    "@twined/villain": "^0.3.2"
+    "phoenix": "^1.3.0"
   },
   "devDependencies": {
     "autoprefixer": "^6.2.3",

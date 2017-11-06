@@ -4,10 +4,6 @@ exports.config = {
   files: {
     javascripts: {
       entryPoints: {
-        // Backend javascript
-        'js/admin/index.js': {
-          'js/brando.js': /^(node_modules|js\/admin)/,
-        },
         // Frontend javascript
         'js/app/index.js': {
           'js/app.js': [
@@ -15,29 +11,13 @@ exports.config = {
           ],
         },
       },
-      joinTo: {
-        /* Copy Villain lib */
-        'js/villain.all.js': [
-          'node_modules/@twined/villain/dist/villain.all.js',
-        ],
-      },
     },
     stylesheets: {
       joinTo: {
         /* Frontend application-specific CSS/SCSS */
         'css/app.css': [
-          'node_modules/bootstrap-sass/assets/stylesheets/_bootstrap.scss',
-          /^(app\/vendor)/,
+          'node_modules/bootstrap/scss/_bootstrap.scss',
           'css/app.scss',
-        ],
-
-        /* Backend stylesheets */
-        'css/brando.css': ['node_modules/@twined/brando/priv/static/css/brando.css'],
-        'css/villain.css': ['node_modules/@twined/villain/dist/villain.css'],
-
-        /* Custom stylesheets for backend, loaded after brando.css */
-        'css/brando.custom.css': [
-          'css/custom/*.scss',
         ],
       },
     },
@@ -54,7 +34,7 @@ exports.config = {
     ],
 
     // Where to compile files to
-    public: '../priv/static',
+    public: '../../priv/static',
   },
 
   conventions: {
@@ -91,8 +71,7 @@ exports.config = {
 
   modules: {
     autoRequire: {
-      'js/app.js': ['app'],
-      'js/brando.js': ['@twined/brando', 'admin/index.js'],
+      'js/app.js': ['app']
     },
     nameCleaner: function(path) { return path.replace(/^js\//, ''); },
   },
@@ -100,15 +79,8 @@ exports.config = {
   npm: {
     enabled: true,
     globals: {
-      $: 'jquery',
-      jQuery: 'jquery',
-    },
-    static: [
-      'node_modules/@twined/villain/dist/villain.all.js',
-    ],
-    styles: {
-      '@twined/brando': ['priv/static/css/brando.css'],
-      '@twined/villain': ['dist/villain.css'],
+      // $: 'jquery',
+      // jQuery: 'jquery',
     },
   },
 };
