@@ -67,8 +67,8 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "templates/brando.install/lib/postgrex_types.ex", "lib/application_name/postgrex_types.ex"},
 
     # Channel + socket
-    {:eex, "templates/brando.install/lib/application_name_web/channels/admin_channel.ex", "lib/application_name/application_name_web/channels/admin_channel.ex"},
-    {:eex, "templates/brando.install/lib/application_name_web/channels/admin_socket.ex", "lib/application_name/application_name_web/channels/admin_socket.ex"},
+    {:eex, "templates/brando.install/lib/application_name_web/channels/admin_channel.ex", "lib/application_name_web/channels/admin_channel.ex"},
+    {:eex, "templates/brando.install/lib/application_name_web/channels/admin_socket.ex", "lib/application_name_web/channels/admin_socket.ex"},
 
     # Absinthe/GraphQL
     {:eex, "templates/brando.install/lib/graphql/schema.ex", "lib/application_name/graphql/schema.ex"},
@@ -77,7 +77,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:keep, "templates/brando.install/lib/graphql/resolvers", "lib/application_name/graphql/resolvers"},
 
     # Endpoint
-    {:eex, "templates/brando.install/lib/application_name_web/endpoint.ex", "lib/application_name/application_name_web/endpoint.ex"},
+    {:eex, "templates/brando.install/lib/application_name_web/endpoint.ex", "lib/application_name_web/endpoint.ex"},
   ]
 
   @static [
