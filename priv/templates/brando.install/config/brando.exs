@@ -8,10 +8,19 @@ config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
+config :guardian, Guardian,
+  allowed_algos: ["HS512"], # optional
+  verify_module: Guardian.JWT,  # optional
+  issuer: "<%= application_name %>",
+  ttl: {30, :days},
+  verify_issuer: true, # optional
+  secret_key: "<%= :crypto.strong_rand_bytes(64) |> Base.encode64 |> binary_part(0, 64) %>",
+  serializer: Brando.GuardianSerializer
+
 config :brando,
   app_name: "<%= application_module %>",
   title_prefix: "<%= application_module %> | ",
-  endpoint: <%= application_module %>.Web.Endpoint,
+  endpoint: <%= application_module %>Web.Endpoint,
   otp_app: :<%= application_name %>,
   log_dir: Path.expand("./log"),
   default_language: "en",
@@ -31,8 +40,8 @@ config :brando,
   media_path: Path.expand("./media"),
   media_url: "/media",
   repo: <%= application_module %>.Repo,
-  router: <%= application_module %>.Web.Router,
-  helpers: <%= application_module %>.Web.Router.Helpers,
+  router: <%= application_module %>Web.Router,
+  helpers: <%= application_module %>Web.Router.Helpers,
   warn_on_http_auth: false,
   stats_polling_interval: 5000
 

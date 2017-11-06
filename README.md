@@ -23,20 +23,6 @@ defp deps do
 end
 ```
 
-Add Guardian conf to `config/config.exs`:
-
-```elixir
-# Configure Guardian for auth.
-config :guardian, Guardian,
-  allowed_algos: ["HS512"], # optional
-  verify_module: Guardian.JWT,  # optional
-  issuer: "MyApp",
-  ttl: {30, :days},
-  verify_issuer: true, # optional
-  secret_key: "SECRET_KEY. Create a new one with `mix phoenix.gen.secret`",
-  serializer: Brando.GuardianSerializer
-```
-
 Fetch and compile dependencies. Install Brando:
 
     $ mix do deps.get, deps.compile, brando.install
@@ -63,9 +49,10 @@ Add to your relevant `config/%{env}.exs` Repo config:
 +   types: MyApp.PostgresTypes
 ```
 
-Install NPM packages:
+Install node packages:
 
-    $ cd assets && yarn
+    $ cd assets/frontend && yarn
+    $ cd assets/backend && yarn
 
 Set up database, and seed:
 
@@ -86,23 +73,6 @@ Add to your `config/prod.secret.exs` (see https://github.com/elixir-lang/ecto/is
 
 
 Go through `config/brando.exs`.
-
-Static media config in `endpoint.ex`.
-
-```diff
-+ plug Plug.Static,
-+  at: "/media", from: Brando.config(:media_path),
-+  cache_control_for_etags: "public, max-age=31536000",
-+  cache_control_for_vsn_requests: "public, max-age=31536000"
-```
-
-Also switch out (or add to it, if you use sockets in the frontend as well) the socket
-config in `lib/web/endpoint.ex`:
-
-```diff
-- socket "/socket", MyApp.Web.UserSocket
-+ socket "/admin/ws", Brando.UserSocket
-```
 
 To use Brando's error view, add to your Endpoint's config (in prod.exs):
 
@@ -160,7 +130,6 @@ Open up you application's `lib/application.ex` and add to `start/2`:
 
 ## Extra modules
 
-  * [brando_pages](http://github.com/twined/brando_pages)
   * [brando_news](http://github.com/twined/brando_news)
   * [brando_portfolio](http://github.com/twined/brando_portfolio)
   * [brando_instagram](http://github.com/twined/brando_instagram)
@@ -176,7 +145,7 @@ Also supports `user:references` to add a `belongs_to` assoc.
 
 Copy outputted routes and add to `lib/web/router.ex`
 
-Register your module in `lib/application.ex`:
+If you use Gettext, register your module in `lib/application.ex`:
 
 ```diff
     def start(_type, _args) do
@@ -191,7 +160,7 @@ Register your module in `lib/application.ex`:
         # worker(MyApp.Worker, [arg1, arg2, arg3]),
       ]
 
-+     Brando.Registry.register(MyApp.Web.MyModule, [:menu])
++     Brando.Registry.register(MyApp.Web.MyModule, [:gettext])
 ```
 
 ## Releases
@@ -205,19 +174,6 @@ Start off by running
 Then use the fabric script in `fabfile.py` for the rest.
 
     # fab prod -l
-
-### Additional admin CSS/styling
-
-For modules added through your OTP app, you can style its backend by editing
-`assets/css/custom/brando.custom.scss`, or adding your own files to `assets/css/custom/`.
-Remember to include these from `brando.custom.scss`.
-
-### Additional admin Javascript
-
-Add files to your `assets/js/admin` folder. These are compiled down to
-`priv/static/js/brando.custom.js`.
-
-This file is included in the admin section's base template.
 
 ## Pagination
 
@@ -241,32 +197,6 @@ Default login/pass is `admin@twined.net/admin`
 
 Implements schema sequencing.
 
-Controller:
-
-```elixir
-  use Brando.Sequence,
-    [:controller, [schema: MyApp.Schema,
-                   filter: &MyApp.Schema.by_collection_id/1]]
-```
-
-The filter should return items by the :filter param in your routes.ex.
-
-Example of a filter
-
-```elixir
-def by_collection_id(id) do
-  __MODULE__
-  |> where([c], collection.id == ^id)
-  |> order_by([c], c.sequence)
-end
-```
-
-View:
-
-```elixir
-  use Brando.Sequence, :view
-```
-
 Schema:
 
 ```diff
@@ -289,40 +219,6 @@ Migration:
 +     sequenced
     end
   end
-```
-
-Template (`sequence.html.eex`):
-
-```html
-<ul id="sequence" class="clearfix">
-<%= for i <- @items do %>
-  <li data-id="<%= i.id %>"><%= i.name %></li>
-<% end %>
-</ul>
-<a id="sort-post" href="<%= Helpers.your_path(@conn, :sequence_post, @filter) %>" class="btn btn-default">
-  Lagre rekkefølge
-</a>
-```
-
-Add a link to the sequencer from your main template:
-
-```html
-<a href="<%= Helpers.admin_your_path(@conn, :sequence, filter_id) %>" class="btn btn-default m-b-sm">
-  <i class="fa fa-sort"></i> Sort
-</a>
-```
-
-or add to tablize:
-
-```elixir
-{"Sort this category", "fa-sort", :admin_your_path, :sequence, :id}
-```
-
-Finally, add to your routes (`lib/web/router.ex`):
-
-```elixir
-  get    "/route/:filter/sorter", YourController, :sequence
-  post   "/route/:filter/sorter", YourController, :sequence_post
 ```
 
 ## Lockdown
