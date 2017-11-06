@@ -25,7 +25,8 @@ end
 
 Fetch and compile dependencies. Install Brando:
 
-    $ mix do deps.get, deps.compile, brando.install
+    $ mix do deps.get, deps.compile
+    $ mix brando.install --module YourApp
 
 And then refetch new dependencies Brando has added to your `mix.exs`:
 
