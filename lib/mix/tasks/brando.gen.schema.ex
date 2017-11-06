@@ -108,9 +108,6 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
                assocs: assocs(assocs), indexes: indexes(snake_domain, plural, assocs),
                defaults: defs, params: params, module: module]
 
-    require Logger
-    Logger.error inspect binding, pretty: true
-
     Mix.Brando.copy_from(
       apps(),
       "priv/templates/brando.gen.schema",

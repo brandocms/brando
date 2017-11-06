@@ -1,0 +1,7 @@
+mutation Create<%= String.capitalize(singular) %>($<%= singular %>Params: <%= String.capitalize(singular) %>Params) {
+  create_<%= singular %>(
+    <%= singular %>Params: $<%= singular %>Params,
+  ) {
+    id
+  }
+}

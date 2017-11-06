@@ -3,10 +3,7 @@ defmodule Brando.Pages.PageResolver do
   Resolver for Pages
   """
   use Brando.Web, :resolver
-  alias Brando.Page
   alias Brando.Pages
-
-  import Ecto.Query
 
   @doc """
   Find page

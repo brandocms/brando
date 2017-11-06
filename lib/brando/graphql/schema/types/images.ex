@@ -61,7 +61,7 @@ defmodule Brando.Schema.Types.Images do
     field :image_category_id, :id
     field :image_category, :image_category, resolve: assoc(:image_category)
     field :images, list_of(:image) do
-      resolve assoc(:images, fn query, args, _ ->
+      resolve assoc(:images, fn query, _, _ ->
         order_by(query, [i], [asc: i.sequence])
       end)
     end

@@ -3,7 +3,7 @@ defmodule Brando.VillainController do
   import Ecto.Query
 
   @doc false
-  def browse_images(conn, %{"slug" => series_slug} = params) do
+  def browse_images(conn, %{"slug" => series_slug}) do
     image_series =
       Brando.ImageSeries
       |> preload([:image_category, :images])

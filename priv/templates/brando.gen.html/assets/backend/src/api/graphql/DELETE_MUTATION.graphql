@@ -1,0 +1,5 @@
+mutation Delete<%= String.capitalize(singular) %>($<%= singular %>Id: ID!) {
+  delete_<%= singular %>(<%= singular %>Id: $<%= singular %>Id) {
+    id
+  }
+}

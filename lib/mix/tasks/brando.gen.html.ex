@@ -68,11 +68,16 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     Mix.shell.info """
     == Schema for #{domain_name}
     """
+
+    snake_domain =
+      domain_name
+      |> Phoenix.Naming.underscore
+      |> String.split("/")
+      |> List.last
+
     singular = Mix.shell.prompt("+ Enter schema name (e.g. Post)") |> String.trim("\n")
     plural   = Mix.shell.prompt("+ Enter plural name (e.g. posts)") |> String.trim("\n")
     attrs    = Mix.shell.prompt("+ Enter schema fields (e.g. name:string avatar:image data:villain)") |> String.trim("\n")
-
-    require Logger
 
     org_attrs    = attrs |> String.split(" ")
     attrs        = org_attrs |> Mix.Brando.attrs
@@ -97,7 +102,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
                                module: module,
                                admin_module: admin_module,
                                admin_path: admin_path,
-                               inputs: inputs(attrs),
+                               gql_inputs: graphql_inputs(attrs),
+                               gql_types: graphql_types(attrs),
                                params: Mix.Brando.params(attrs),
                                domain: domain_name]
 
@@ -106,7 +112,29 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     files = [
       {:eex, "controller.ex", "lib/application_name_web/controllers/#{path}_controller.ex"},
       {:eex, "index.html.eex", "lib/application_name_web/templates/#{path}/index.html.eex"},
-      {:eex, "view.ex", "lib/application_name_web/views/#{path}_view.ex"}
+      {:eex, "view.ex", "lib/application_name_web/views/#{path}_view.ex"},
+
+      # GQL
+      {:eex, "graphql/schema/types/type.ex", "lib/application_name/graphql/schema/types/#{path}.ex"},
+      {:eex, "graphql/resolvers/resolver.ex", "lib/application_name/graphql/resolvers/#{path}_resolver.ex"},
+
+      # Backend JS
+      {:eex, "assets/backend/src/store/modules/module.js", "assets/backend/src/store/modules/#{plural}.js"},
+
+      {:eex, "assets/backend/src/api/api.js", "assets/backend/src/api/#{path}.js"},
+      {:eex, "assets/backend/src/api/graphql/ALL_QUERY.graphql", "assets/backend/src/api/#{plural}/#{String.upcase(plural)}_QUERY.graphql"},
+      {:eex, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql", "assets/backend/src/api/#{plural}/#{String.upcase(singular)}_QUERY.graphql"},
+      {:eex, "assets/backend/src/api/graphql/CREATE_MUTATION.graphql", "assets/backend/src/api/#{plural}/CREATE_#{String.upcase(singular)}_MUTATION.graphql"},
+      {:eex, "assets/backend/src/api/graphql/UPDATE_MUTATION.graphql", "assets/backend/src/api/#{plural}/UPDATE_#{String.upcase(singular)}_MUTATION.graphql"},
+      {:eex, "assets/backend/src/api/graphql/DELETE_MUTATION.graphql", "assets/backend/src/api/#{plural}/DELETE_#{String.upcase(singular)}_MUTATION.graphql"},
+
+      {:eex, "assets/backend/src/menus/menu.js", "assets/backend/src/menus/#{plural}.js"},
+
+      {:eex, "assets/backend/src/routes/route.js", "assets/backend/src/routes/#{plural}.js"},
+
+      {:eex, "assets/backend/src/views/List.vue", "assets/backend/src/views/#{snake_domain}/#{String.capitalize(singular)}ListView.vue"},
+      {:eex, "assets/backend/src/views/Create.vue", "assets/backend/src/views/#{snake_domain}/#{String.capitalize(singular)}CreateView.vue"},
+      {:eex, "assets/backend/src/views/Edit.vue", "assets/backend/src/views/#{snake_domain}/#{String.capitalize(singular)}EditView.vue"},
     ]
 
     {files, args} =
@@ -134,10 +162,28 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       end
 
     instructions = instructions <> """
-    Add the resource to your browser scope in `lib/app_name_web/router.ex`:
+    You must add the GraphQL types/mutations/queries to your applications schema
+    `lib/#{binding[:application_name]}/graphql/schema.ex`
 
-        # resources for #{binding[:scoped]}
-        alias #{binding[:base]}.Web.Admin.#{binding[:scoped]}Controller
+        query do
+          import_brando_queries()
+
+          # local queries
+          import_fields :#{binding[:singular]}_queries
+        end
+
+        mutation do
+          import_brando_mutations()
+
+          # local mutations
+          import_fields :#{binding[:singular]}_mutations
+        end
+
+    Also add the type imports to your types file
+    `lib/#{binding[:application_name]}`/graphql/schema/types.ex`
+
+        # local imports
+        import_types #{binding[:application_module]}.Schema.Types.#{binding[:module]}
 
         #{sequenced_info}
 
@@ -206,28 +252,59 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     """
   end
 
-  defp inputs(attrs) do
-    # this is for forms
+  defp graphql_types(attrs) do
+    # this is for GraphQL type objects
+
+    Enum.map attrs, fn
+      {k, {:array, _}} ->
+        {k, ~s(field #{inspect(k)}, list_of\(:string\))}
+      {k, :boolean} ->
+        {k, ~s(field #{inspect(k)}, :boolean)}
+      {k, :text} ->
+        {k, ~s(field #{inspect(k)}, :string)}
+      {k, :date} ->
+        {k, ~s(field #{inspect(k)}, :date)}
+      {k, :time} ->
+        {k, ~s(field #{inspect(k)}, :time)}
+      {k, :datetime} ->
+        {k, ~s(field #{inspect(k)}, :time)}
+      {k, :image} ->
+        {k, ~s(field #{inspect(k)}, :image_type)}
+      {k, :villain} ->
+        fields =
+          case k do
+            :data -> [:data, :html]
+            _ -> [String.to_atom(to_string(k) <> "_data"), String.to_atom(to_string(k) <> "_html")]
+          end
+        {k, ~s(field #{inspect(Enum.at(fields, 0))}, :string\n    field #{inspect(Enum.at(fields, 1))}, :string)}
+      {k, _} ->
+        {k, ~s(field #{inspect(k)}, :string)}
+    end
+  end
+
+  defp graphql_inputs(attrs) do
+    # this is for GraphQL input objects
 
     Enum.map attrs, fn
       {k, {:array, _}} ->
         {k, nil, nil}
-      {k, :boolean}    ->
-        {k, ~s(field #{inspect(k)}, :checkbox)}
-      {k, :text}       ->
-        {k, ~s(field #{inspect(k)}, :textarea, [rows: 4])}
-      {k, :date}       ->
-        {k, ~s(field #{inspect(k)}, :text, [default: &Brando.Utils.get_now/0])}
-      {k, :time}       ->
-        {k, ~s(field #{inspect(k)}, :text, [default: &Brando.Utils.get_now/0])}
-      {k, :datetime}   ->
-        {k, ~s(field #{inspect(k)}, :text, [default: &Brando.Utils.get_now/0])}
-      {k, :image}      ->
-        {k, ~s(field #{inspect(k)}, :file, [required: false])}
-      {k, :villain}      ->
-        {k, ~s(field #{inspect(k)}, :textarea)}
-      {k, _}           ->
-        {k, ~s(field #{inspect(k)}, :text)}
+      {k, :boolean} ->
+        {k, ~s(field #{inspect(k)}, :boolean)}
+      {k, :text} ->
+        {k, ~s(field #{inspect(k)}, :string)}
+      {k, :date} ->
+        {k, ~s(field #{inspect(k)}, :date)}
+      {k, :time} ->
+        {k, ~s(field #{inspect(k)}, :time)}
+      {k, :datetime} ->
+        {k, ~s(field #{inspect(k)}, :time)}
+      {k, :image} ->
+        {k, ~s(field #{inspect(k)}, :upload)}
+      {k, :villain} ->
+        k = k == :data && :data || String.to_atom(Atom.to_string(k) <> "_data")
+        {k, ~s(field #{inspect(k)}, :string)}
+      {k, _} ->
+        {k, ~s(field #{inspect(k)}, :string)}
     end
   end
 

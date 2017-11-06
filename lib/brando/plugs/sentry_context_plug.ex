@@ -8,12 +8,11 @@ defmodule Brando.Plug.SentryUserContext do
 
   defp set_context(%{private: %{guardian_default_resource: nil}} = conn), do: conn
   defp set_context(%{private: %{guardian_default_resource: user}} = conn) do
-    # TODO: reenable?
-    # Sentry.Context.set_user_context(%{
-    #   id: user.id,
-    #   email: user.email,
-    #   name: user.full_name
-    # })
+    Sentry.Context.set_user_context(%{
+      id: user.id,
+      email: user.email,
+      name: user.full_name
+    })
 
     conn
   end

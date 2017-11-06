@@ -8,16 +8,15 @@ defmodule Brando.Images.Routes.Admin.API do
 
       scope "/admin", as: :admin do
         pipe_through :admin
-        image_routes "/images"
+        image_routes()
 
   """
 
-  alias Brando.Admin.ImageController
-  alias Brando.Admin.ImageSeriesController
-  alias Brando.Admin.ImageCategoryController
+
   alias Brando.Image
   alias Brando.ImageSeries
   alias Brando.ImageCategory
+  alias Brando.Admin.API.Images.UploadController
 
   defmacro api_image_routes(path, opts \\ []), do:
     add_resources(path, opts)
@@ -34,7 +33,7 @@ defmodule Brando.Images.Routes.Admin.API do
       path = unquote(path)
       opts = unquote(options)
 
-      post "#{path}/upload/image_series/:image_series_id", Brando.Admin.API.Images.UploadController, :post, opts
+      post "#{path}/upload/image_series/:image_series_id", UploadController, :post, opts
     end
   end
 end

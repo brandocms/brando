@@ -11,21 +11,21 @@ defmodule Mix.Tasks.Brando.GenerateTest do
   @root_path Path.expand(".")
 
   setup_all do
-    templates_path = Path.join([@project_path, "deps", "brando", "lib", "brando_web", "templates"])
+    templates_path = Path.join([@project_path, "deps", "brando", "lib", "web", "templates"])
     root_path =  File.cwd!
 
     # Clean up
     File.rm_rf @project_path
 
     # Create path for app
-    File.mkdir_p Path.join(@project_path, "brando_web")
+    File.mkdir_p Path.join(@project_path, "brando")
 
     # Create path for templates
     File.mkdir_p templates_path
 
     # Copy templates into `deps/ashes/templates`
     # to mimic a real Phoenix application
-    File.cp_r! Path.join([root_path, "lib", "brando_web", "templates"]), templates_path
+    File.cp_r! Path.join([root_path, "lib", "web", "templates"]), templates_path
 
     # Move into the project directory to run the generator
     File.cd! @project_path
@@ -36,12 +36,12 @@ defmodule Mix.Tasks.Brando.GenerateTest do
   end
 
   test "brando.install" do
-    Mix.Tasks.Brando.Install.run(["--static"])
+    Mix.Tasks.Brando.Install.run([])
     assert_received {:mix_shell, :info, ["\nBrando finished copying."]}
     assert File.exists?("lib/brando_web/villain")
     assert_file "lib/brando_web/villain/parser.ex"
-    assert_file "lib/brando_web/admin_web.ex", fn file ->
-      assert file =~ "BrandoWeb.Backend.Gettext"
+    assert_file "lib/brando_web.ex", fn file ->
+      assert file =~ "BrandoWeb.Gettext"
     end
     assert_file "mix.exs", fn file ->
       assert file =~ "defmodule Brando.Mixfile do"

@@ -1,0 +1,8 @@
+mutation Update<%= String.capitalize(singular) %>($<%= singular %>Id: ID!, $<%= singular %>Params: <%= String.capitalize(singular) %>Params) {
+  update_<%= singular %>(
+    <%= singular %>Id: $<%= singular %>Id,
+    <%= singular %>Params: $<%= singular %>Params,
+  ) {
+    id
+  }
+}

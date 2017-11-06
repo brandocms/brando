@@ -62,6 +62,7 @@ defmodule Brando.Mixfile do
      :poison,
      :scrivener,
      :scrivener_ecto,
+     :sentry,
      :slugger,
      :timex
     ]
@@ -85,6 +86,9 @@ defmodule Brando.Mixfile do
 
     {:timex, "~> 3.0"},
 
+    # monitoring
+    {:sentry, "~> 6.0"},
+
     # Dev dependencies
     {:credo, ">= 0.0.0", only: :dev},
     {:dialyxir, "~> 0.3", only: :dev},
@@ -105,11 +109,11 @@ defmodule Brando.Mixfile do
     [maintainers: ["Twined Networks"],
      licenses: [""],
      files: [
+       "assets",
        "config",
        "lib",
        "priv",
        "test",
-       "web",
        "mix.exs",
        "README.md",
        "CHANGELOG.md",

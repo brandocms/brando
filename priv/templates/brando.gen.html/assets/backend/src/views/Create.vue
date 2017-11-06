@@ -1,0 +1,80 @@
+<template>
+  <div class="create-<%= singular %>">
+    <div class="container">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="section mb-0">Opprett</h5>
+        </div>
+        <div class="card-body">
+          <!--
+          FORM FIELDS HERE
+          -->
+          <button :disabled="!!loading" @click="validate" class="btn btn-secondary">
+            Lagre
+          </button>
+
+          <router-link :disabled="!!loading" :to="{ name: '<%= plural %>' }" class="btn btn-outline-secondary">
+            Tilbake til oversikten
+          </router-link>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+
+import nprogress from 'nprogress'
+import showError from 'kurtz/lib/utils/showError'
+import { <%= singular %>API } from '@/api/<%= singular %>'
+
+export default {
+  data () {
+    return {
+      loading: 0,
+      <%= singular %>: {
+        // add fields
+      }
+    }
+  },
+
+  inject: [
+    'adminChannel'
+  ],
+
+  created () {
+
+  },
+
+  methods: {
+    validate () {
+      this.inject()
+
+      this.$validator.validateAll().then(() => {
+        this.save()
+      }).catch(err => {
+        console.log(err)
+        alert('Feil i skjema', 'Vennligst se over og rett feil i rødt')
+        this.loading = false
+      })
+    },
+
+    async save () {
+      try {
+        nprogress.start()
+        await <%= singular %>API.create<%= String.capitalize(singular) %>(<%= singular %>)
+        nprogress.done()
+        this.$toast.success({message: 'Objekt opprettet'})
+        this.$router.push({ name: '<%= plural %>' })
+      } catch (err) {
+        showError(err)
+      }
+    },
+
+    inject () {
+      // if the model has a VILLAIN field, uncomment this. `data` is the data field with villain json.
+      // this.<%= singular %>.data = this.$refs.villain.$villain.getJSON()
+    }
+  }
+}
+</script>

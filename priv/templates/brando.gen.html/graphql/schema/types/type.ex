@@ -1,4 +1,7 @@
 defmodule <%= base %>.Schema.Types.<%= alias %> do
+  @moduledoc """
+  GraphQL type spec, mutations and queries for <%= alias %>
+  """
   use <%= base %>Web, :absinthe
 
   import Ecto.Query
@@ -7,13 +10,14 @@ defmodule <%= base %>.Schema.Types.<%= alias %> do
   alias <%= base %>.Repo
 
   object :<%= singular %> do
-    field :id, :id
-    <%= inspect attrs, pretty: true %>
+    field :id, :id<%= for {v, k} <- gql_types do %>
+    <%= k %><% end %>
     field :inserted_at, :time
+    field :updated_at, :time
   end
 
-  input_object :<%= singular %>_params do
-
+  input_object :<%= singular %>_params do<%= for {v, k} <- gql_inputs do %>
+    <%= k %><% end %>
   end
 
   object :<%= singular %>_queries do
@@ -31,14 +35,14 @@ defmodule <%= base %>.Schema.Types.<%= alias %> do
 
   object :<%= singular %>_mutations do
     field :create_<%= singular %>, type: :<%= singular %> do
-      arg :<%= singular %>_params, non_null(:create_<%= singular %>_params)
+      arg :<%= singular %>_params, non_null(:<%= singular %>_params)
 
       resolve &<%= base %>.<%= domain %>.<%= alias %>Resolver.create/2
     end
 
     field :update_<%= singular %>, type: :<%= singular %> do
       arg :<%= singular %>_id, non_null(:id)
-      arg :<%= singular %>_params, :update_<%= singular %>_params
+      arg :<%= singular %>_params, :<%= singular %>_params
 
       resolve &<%= base %>.<%= domain %>.<%= alias %>Resolver.update/2
     end

@@ -24,8 +24,6 @@ defmodule Brando.Type.Image do
   Cast should return OUR type no matter what the input.
   """
   def cast(val) when is_binary(val) do
-    require Logger
-    Logger.error inspect val
     val = Poison.decode!(val, as: %Brando.Type.Image{})
     {:ok, val}
   end

@@ -1,9 +1,6 @@
 defmodule Brando.Schema.Types.Page do
   use Brando.Web, :absinthe
 
-  import Ecto.Query
-  import Brando.Schema.Utils
-
   input_object :page_params do
     field :parent_id, :id
     field :key, :string

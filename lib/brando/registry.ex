@@ -14,8 +14,6 @@ defmodule Brando.Registry do
 
   use GenServer
 
-  @default_modules [Brando.Images, Brando.Users, Brando.Admin]
-
   # Public
   @doc false
   def start_link do

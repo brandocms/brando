@@ -13,9 +13,6 @@ defmodule Brando.Admin.API.Images.UploadController do
     ]
   ]
 
-  import Ecto.Query
-
-  alias Brando.ImageSeries
   alias Brando.Images
 
   @doc false

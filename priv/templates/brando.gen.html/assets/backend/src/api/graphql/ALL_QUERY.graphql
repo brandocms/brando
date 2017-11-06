@@ -1,0 +1,5 @@
+query <%= String.capitalize(plural) %> {
+  <%= plural %> {
+    id
+  }
+}

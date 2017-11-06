@@ -76,7 +76,7 @@ defmodule Brando.Sequence do
   end
 
   @doc false
-  def controller(schema_module, filter \\ nil) do
+  def controller(schema_module, _filter \\ nil) do
     quote do
       @doc """
       Sequence schema and render :sequence post

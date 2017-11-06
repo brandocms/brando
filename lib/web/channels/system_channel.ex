@@ -4,7 +4,6 @@ defmodule Brando.SystemChannel do
   """
 
   use Phoenix.Channel
-  import Brando.Gettext
 
   intercept [
     "log_msg",

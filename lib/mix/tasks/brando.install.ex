@@ -31,7 +31,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "templates/brando.install/lib/application_name_web/controllers/fallback_controller.ex", "lib/application_name_web/controllers/fallback_controller.ex"},
     {:eex,  "templates/brando.install/lib/application_name_web/views/error_view.ex", "lib/application_name_web/views/error_view.ex"},
     {:eex,  "templates/brando.install/lib/application_name_web/templates/error/404_page.html.eex", "lib/application_name_web/templates/error/404_page.html.eex"},
-    {:eex,  "templates/brando.install/lib/application_name_web/templates/error/500_page.html.eex", "lib/application_name_web/templates/error/404_page.html.eex"},
+    {:eex,  "templates/brando.install/lib/application_name_web/templates/error/500_page.html.eex", "lib/application_name_web/templates/error/500_page.html.eex"},
 
     # Default Villain parser
     {:eex,  "templates/brando.install/lib/application_name_web/villain/parser.ex", "lib/application_name_web/villain/parser.ex"},
@@ -82,9 +82,8 @@ defmodule Mix.Tasks.Brando.Install do
 
   @static [
     # Javascript assets
-    {:copy, "templates/brando.install/package.json", "assets/package.json"},
-    {:copy, "templates/brando.install/brunch-config.js", "assets/brunch-config.js"},
-    {:copy, "templates/brando.install/assets/js/cookie_law.js", "assets/vendor/cookie_law.js"},
+    {:copy, "templates/brando.install/package.json", "assets/frontend/package.json"},
+    {:copy, "templates/brando.install/brunch-config.js", "assets/frontend/brunch-config.js"},
 
     # Deployment tools
     {:copy, "templates/brando.install/gitignore", ".gitignore"},
@@ -95,6 +94,7 @@ defmodule Mix.Tasks.Brando.Install do
     # Frontend JS
     {:copy, "templates/brando.install/assets/frontend/js/index.js", "assets/frontend/js/index.js"},
     {:copy, "templates/brando.install/assets/frontend/js/flexslider.js", "assets/frontend/js/flexslider.js"},
+    {:copy, "templates/brando.install/assets/frontend/js/cookie_law.js", "assets/frontend/js/cookie_law.js"},
 
     # Backend JS
     {:copy, "templates/brando.install/assets/backend/build/build.js", "assets/backend/build/build.js"},
@@ -164,13 +164,13 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/assets/frontend/css/includes/_nav.scss", "assets/frontend/css/includes/_nav.scss"},
 
     # Icons
-    {:copy, "templates/brando.install/assets/static/brando/favicon.ico", "assets/static/favicon.ico"},
+    {:copy, "templates/brando.install/assets/frontend/static/brando/favicon.ico", "assets/frontend/static/favicon.ico"},
 
     # Images
-    {:copy, "templates/brando.install/assets/static/brando/images/blank.gif", "assets/static/images/brando/blank.gif"},
-    {:copy, "templates/brando.install/assets/static/brando/images/brando-big.png", "assets/static/images/brando/brando-big.png"},
-    {:copy, "templates/brando.install/assets/static/brando/images/defaults/thumb/avatar_default.jpg", "assets/static/images/brando/defaults/thumb/avatar_default.jpg"},
-    {:copy, "templates/brando.install/assets/static/brando/images/defaults/micro/avatar_default.jpg", "assets/static/images/brando/defaults/micro/avatar_default.jpg"},
+    {:copy, "templates/brando.install/assets/frontend/static/brando/images/blank.gif", "assets/frontend/static/images/brando/blank.gif"},
+    {:copy, "templates/brando.install/assets/frontend/static/brando/images/brando-big.png", "assets/frontend/static/images/brando/brando-big.png"},
+    {:copy, "templates/brando.install/assets/frontend/static/brando/images/defaults/thumb/avatar_default.jpg", "assets/frontend/static/images/brando/defaults/thumb/avatar_default.jpg"},
+    {:copy, "templates/brando.install/assets/frontend/static/brando/images/defaults/micro/avatar_default.jpg", "assets/frontend/static/images/brando/defaults/micro/avatar_default.jpg"},
   ]
 
   @root Path.expand("../../../priv", __DIR__)
@@ -185,8 +185,7 @@ defmodule Mix.Tasks.Brando.Install do
   @doc """
   Copies Brando files from template and static directories to OTP app.
   """
-  def run(args) do
-    {opts, _, _} = OptionParser.parse(args, switches: [static: :boolean])
+  def run(_) do
     app = Mix.Project.config()[:app]
     binding = [
       application_module: Phoenix.Naming.camelize(Atom.to_string(app)),
@@ -194,15 +193,7 @@ defmodule Mix.Tasks.Brando.Install do
     ]
 
     copy_from "./", binding, @new
-
-    static? = if opts[:static] do
-      true
-    else
-      Mix.shell.yes?("\nInstall static files?")
-    end
-    if static? do
-      copy_from "./", binding, @static
-    end
+    copy_from "./", binding, @static
 
     Mix.shell.info "\nDeleting assets/css/app.css"
     File.rm("assets/css/app.css")
@@ -226,8 +217,7 @@ defmodule Mix.Tasks.Brando.Install do
         :text -> create_file(target, render(source))
         :copy -> File.mkdir_p!(Path.dirname(target))
                  File.copy!(Path.join(@root, source), target)
-        :eex  -> contents = EEx.eval_string(render(source),
-                                            binding, file: source)
+        :eex  -> contents = EEx.eval_string(render(source), binding, file: source)
                  create_file(target, contents)
       end
     end
