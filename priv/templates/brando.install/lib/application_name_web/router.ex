@@ -104,13 +104,6 @@ defmodule <%= application_module %>Web.Router do
 
   scope "/" do
     pipe_through :browser
-    get "/", <%= application_module %>Web.ProjectController, :index
-    get "/illustrators", <%= application_module %>Web.IllustratorController, :index
-    get "/illustrators/:illustrator_slug", <%= application_module %>Web.IllustratorController, :show
-    get "/illustrators/:illustrator_slug/:project_slug", <%= application_module %>Web.ProjectController, :show
-    get "/news", <%= application_module %>Web.PostController, :index
-    get "/news/:slug", <%= application_module %>Web.PostController, :show
-    get "/about", <%= application_module %>Web.PageController, :about
-    get "/contact", <%= application_module %>Web.PageController, :contact
+    get "/", <%= application_module %>Web.PostController, :index
   end
 end

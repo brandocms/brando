@@ -31,7 +31,7 @@ defmodule Brando.Web do
 
   def controller do
     helpers = Brando.helpers()
-    repo = Brando.repo
+    repo = Brando.repo()
     quote do
       use Phoenix.Controller
 
@@ -51,7 +51,7 @@ defmodule Brando.Web do
   end
 
   def schema do
-    repo = Brando.repo
+    repo = Brando.repo()
     quote do
       use Ecto.Schema
 
@@ -66,12 +66,13 @@ defmodule Brando.Web do
   end
 
   def absinthe do
+    repo = Brando.repo()
     quote do
       # Provides us with a DSL for defining GraphQL Types
       use Absinthe.Schema.Notation
 
       # Enable helpers for batching associated requests
-      use Absinthe.Ecto, repo: Brando.repo()
+      use Absinthe.Ecto, repo: unquote(repo)
 
       import Absinthe.Ecto
     end

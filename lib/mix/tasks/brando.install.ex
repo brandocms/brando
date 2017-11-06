@@ -109,6 +109,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/assets/backend/config/index.js", "assets/backend/config/index.js"},
     {:copy, "templates/brando.install/assets/backend/config/prod.env.js", "assets/backend/config/prod.env.js"},
     {:copy, "templates/brando.install/assets/backend/config/test.env.js", "assets/backend/config/test.env.js"},
+    {:copy, "templates/brando.install/assets/backend/babelrc", "assets/backend/.babelrc"},
     {:copy, "templates/brando.install/assets/backend/package.json", "assets/backend/package.json"},
     {:copy, "templates/brando.install/assets/backend/src/config.js", "assets/backend/src/config.js"},
     {:copy, "templates/brando.install/assets/backend/src/main.js", "assets/backend/src/main.js"},

@@ -9,7 +9,7 @@ defmodule <%= application_module %>.Repo.Migrations.CreateUsers do
       add :avatar,        :text
       add :language,      :text, default: "nb"
       add :role,          :integer, default: 0
-      add :active         :boolean, default: true
+      add :active,        :boolean, default: true
       add :last_login,    :naive_datetime
       timestamps()
     end

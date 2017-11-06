@@ -1,5 +1,5 @@
-defmodule <%= application_module %>.ErrorView do
-  use <%= application_module %>, :view
+defmodule <%= application_module %>Web.ErrorView do
+  use <%= application_module %>Web, :view
 
   def render("404.html", assigns) do
     render "404_page.html", assigns

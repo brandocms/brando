@@ -43,7 +43,7 @@ ss_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png",
     upload_path: "images/site/slideshows"}
 
 # insert admin user
-password = Brando.User.gen_password("admin")
+password = Comeonin.Bcrypt.hashpwsalt("admin")
 user = %Brando.User{
   full_name: "Twined Admin",
   email: "admin@twined.net", password: password,
