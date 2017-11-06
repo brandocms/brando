@@ -30,3 +30,5 @@ sql
 prod_rel
 fabfile.py
 fabfile.pyc
+assets/backend/node_modules
+assets/frontend/node_modules
