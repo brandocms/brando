@@ -14,10 +14,11 @@ RUN mix deps.compile
 
 COPY assets/frontend/package.json assets/frontend/yarn.lock /opt/app/assets/frontend/
 COPY assets/backend/package.json assets/backend/yarn.lock /opt/app/assets/backend/
-RUN cd assets/frontend && yarn install --force --pure-lockfile
+
 RUN cd assets/backend && yarn install --force --pure-lockfile
-RUN cd assets/frontend && node_modules/.bin/brunch build -p
+RUN cd assets/frontend && yarn install --force --pure-lockfile
 RUN cd assets/backend && yarn build
+RUN cd assets/frontend && node_modules/.bin/brunch build -p
 
 RUN mix phx.digest
 RUN mix compile
