@@ -135,6 +135,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/assets/backend/static/fonts/osb.woff", "assets/backend/static/fonts/osb.woff"},
     {:copy, "templates/brando.install/assets/backend/static/fonts/osr.woff", "assets/backend/static/fonts/osr.woff"},
     {:copy, "templates/brando.install/assets/backend/static/fonts/osr.woff2", "assets/backend/static/fonts/osr.woff2"},
+    {:copy, "templates/brando.install/assets/backend/static/images/admin/avatar.png", "assets/backend/static/images/admin/avatar.png"},
     {:copy, "templates/brando.install/assets/backend/styles/app.scss", "assets/backend/styles/app.scss"},
     {:copy, "templates/brando.install/assets/backend/styles/fontawesome/_animated.scss", "assets/backend/styles/fontawesome/_animated.scss"},
     {:copy, "templates/brando.install/assets/backend/styles/fontawesome/_bordered-pulled.scss", "assets/backend/styles/fontawesome/_bordered-pulled.scss"},
