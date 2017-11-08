@@ -118,7 +118,7 @@ defmodule Brando.Pages do
   def list_page_fragments() do
     fragments =
       PageFragment
-      |> order_by([p], asc: p.key)
+      |> order_by([p], [asc: p.parent_key, asc: p.key])
       |> Brando.repo.all()
 
     {:ok, fragments}
