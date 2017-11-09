@@ -20,16 +20,6 @@ post_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png
       "xlarge" => %{"quality" => 100, "size" => "900"}},
     upload_path: "images/site/posts"}
 
-page_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-    default_size: "medium", random_filename: true, size_limit: 10_240_000,
-    sizes: %{"large" => %{"quality" => 100, "size" => "700"},
-      "medium" => %{"quality" => 100, "size" => "500"},
-      "micro" => %{"crop" => true, "quality" => 100, "size" => "25x25"},
-      "small" => %{"quality" => 100, "size" => "300"},
-      "thumb" => %{"crop" => true, "quality" => 100, "size" => "150x150"},
-      "xlarge" => %{"quality" => 100, "size" => "900"}},
-    upload_path: "images/site/pages"}
-
 ss_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
     default_size: "medium", random_filename: true, size_limit: 10_240_000,
     sizes: %{"cropxlarge" => %{"crop" => true, "quality" => 100,
@@ -55,11 +45,6 @@ post_category = %Brando.ImageCategory{
   cfg: post_cfg}
 post_category = <%= application_module %>.Repo.insert!(post_category)
 
-page_category = %Brando.ImageCategory{
-  creator_id: user.id, name: "page", slug: "page",
-  cfg: page_cfg}
-page_category = <%= application_module %>.Repo.insert!(page_category)
-
 ss_category = %Brando.ImageCategory{
   cfg: ss_cfg,
   creator_id: user.id,
@@ -74,11 +59,3 @@ post_series = %Brando.ImageSeries{
   name: "post", sequence: 0, slug: "post"}
 
 <%= application_module %>.Repo.insert!(post_series)
-
-page_series = %Brando.ImageSeries{
-  creator_id: user.id, credits: nil,
-  cfg: page_cfg,
-  image_category_id: page_category.id,
-  name: "page", sequence: 0, slug: "page"}
-
-<%= application_module %>.Repo.insert!(page_series)
