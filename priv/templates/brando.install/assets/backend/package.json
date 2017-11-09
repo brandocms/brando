@@ -62,7 +62,6 @@
     "vue-chartjs": "^2.8.7",
     "vue-core-image-upload": "^2.3.9",
     "vue-multiselect": "^2.0.3",
-    "vue-picture-input": "^1.16.1",
     "vue-router": "^3.0.1",
     "vue-template-compiler": "^2.5.2",
     "vue-timeago": "^3.3.6",
