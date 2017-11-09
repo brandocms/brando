@@ -6610,10 +6610,6 @@ vue-multiselect@^2.0.3:
   version "2.0.6"
   resolved "https://registry.yarnpkg.com/vue-multiselect/-/vue-multiselect-2.0.6.tgz#7ca80e6c53db41e414bf76a66b9377ddf4659ebd"
 
-vue-picture-input@^1.16.1:
-  version "1.17.0"
-  resolved "https://registry.yarnpkg.com/vue-picture-input/-/vue-picture-input-1.17.0.tgz#a221c71d7656ff457524d11011a490839bffa187"
-
 vue-router@^3.0.1:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/vue-router/-/vue-router-3.0.1.tgz#d9b05ad9c7420ba0f626d6500d693e60092cc1e9"
