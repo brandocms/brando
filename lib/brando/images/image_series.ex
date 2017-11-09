@@ -44,7 +44,7 @@ defmodule Brando.ImageSeries do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> put_slug()
+    |> put_slug(:name)
     |> avoid_slug_collision(&filter_current_category/1)
     |> inherit_configuration
   end
@@ -99,15 +99,15 @@ defmodule Brando.ImageSeries do
 
   defp do_inherit_configuration(cs, cat_id, nil) do
     category = Brando.repo.get(ImageCategory, cat_id)
-    cfg      = category.cfg
+    cfg = category.cfg
 
     put_change(cs, :cfg, cfg)
   end
 
   defp do_inherit_configuration(cs, cat_id, slug) do
-    category        = Brando.repo.get(ImageCategory, cat_id)
+    category = Brando.repo.get(ImageCategory, cat_id)
     new_upload_path = Path.join(Map.get(category.cfg, :upload_path), slug)
-    cfg             = Map.put(category.cfg, :upload_path, new_upload_path)
+    cfg = Map.put(category.cfg, :upload_path, new_upload_path)
 
     put_change(cs, :cfg, cfg)
   end
