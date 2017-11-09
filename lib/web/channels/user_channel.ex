@@ -15,23 +15,9 @@ defmodule Brando.UserChannel do
   Join user channel for your user
   """
   def join("user:" <> user_id, _params, socket) do
-    require Logger
-    Logger.error inspect user_id
     user = Guardian.Phoenix.Socket.current_resource(socket)
-
-    # with {:ok, requested_user} <- Users.get_user_by(id: user_id),
-    #      {:ok, :authorized}    <- can?(user, :access, requested_user)
-    # do
-      socket = assign(socket, :user_id, user.id)
-      # send(self(), :after_join)
-
-      {:ok, user.id, socket}
-    # else
-    #   {:error, :unauthorized} ->
-    #     {:error, %{reason: "ikke autorisert for denne brukerkanalen"}}
-    #   {:error, {:user, :not_found}} ->
-    #     {:error, %{reason: "fant ikke brukeren"}}
-    # end
+    socket = assign(socket, :user_id, user.id)
+    {:ok, user.id, socket}
   end
 
   def handle_out("alert", payload, socket) do
