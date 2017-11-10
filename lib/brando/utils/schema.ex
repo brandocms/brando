@@ -39,7 +39,7 @@ defmodule Brando.Utils.Schema do
 
   def put_slug(cs), do: cs
 
-  def put_slug(%{changes: changes} = cs, field) do
+  def put_slug(%{changes: _} = cs, field) do
     case Ecto.Changeset.get_change(cs, field) do
       nil -> cs
       to_slug -> Ecto.Changeset.change(cs, %{slug: Brando.Utils.slugify(to_slug)})
