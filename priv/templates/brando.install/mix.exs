@@ -59,7 +59,7 @@ defmodule <%= application_module %>.Mixfile do
      {:scrivener_ecto, "~> 1.2"},
 
      # testing
-     {:wallaby, "~> 0.19"},
+     {:wallaby, "~> 0.19", only: :test},
 
      # brando
      {:brando, github: "twined/brando", branch: "develop"}
