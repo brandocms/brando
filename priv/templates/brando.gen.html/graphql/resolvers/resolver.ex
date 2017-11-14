@@ -3,17 +3,20 @@ defmodule <%= base %>.<%= domain %>.<%= alias %>Resolver do
   Resolver for <%= plural %>
   """
   use Brando.Web, :resolver
-  alias <%= base %>.<%= alias %>
   alias <%= base %>.<%= domain %>
-  alias <%= base %>.Repo
-
-  import Ecto.Query
 
   @doc """
   Get all <%= plural %>
   """
   def all(_, %{context: %{current_user: _}}) do
     <%= domain %>.list_<%= plural %>()
+  end
+
+  @doc """
+  Get <%= singular %> by id
+  """
+  def get(%{<%= singular %>_id: <%= singular %>_id}, %{context: %{current_user: _}}) do
+    <%= domain %>.get_<%= singular %>(<%= singular %>_id)
   end
 
   @doc """

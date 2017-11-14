@@ -55,6 +55,10 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     File.write!("lib/#{otp_app()}/#{snake_domain}/#{snake_domain}.ex",
     """
     defmodule #{binding[:module]} do
+      @moduledoc \"\"\"
+      Context for #{binding[:plural]}
+      \"\"\"
+
       alias #{binding[:base]}.Repo
 
       #{domain_header}\n#{domain_code}
@@ -105,6 +109,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
                                gql_inputs: graphql_inputs(attrs),
                                gql_types: graphql_types(attrs),
                                params: Mix.Brando.params(attrs),
+                               snake_domain: snake_domain,
                                domain: domain_name]
 
     args = [singular, plural, org_attrs]
@@ -123,10 +128,10 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
       {:eex, "assets/backend/src/api/api.js", "assets/backend/src/api/#{path}.js"},
       {:eex, "assets/backend/src/api/graphql/ALL_QUERY.graphql", "assets/backend/src/api/#{plural}/#{String.upcase(plural)}_QUERY.graphql"},
-      {:eex, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql", "assets/backend/src/api/#{plural}/#{String.upcase(singular)}_QUERY.graphql"},
-      {:eex, "assets/backend/src/api/graphql/CREATE_MUTATION.graphql", "assets/backend/src/api/#{plural}/CREATE_#{String.upcase(singular)}_MUTATION.graphql"},
-      {:eex, "assets/backend/src/api/graphql/UPDATE_MUTATION.graphql", "assets/backend/src/api/#{plural}/UPDATE_#{String.upcase(singular)}_MUTATION.graphql"},
-      {:eex, "assets/backend/src/api/graphql/DELETE_MUTATION.graphql", "assets/backend/src/api/#{plural}/DELETE_#{String.upcase(singular)}_MUTATION.graphql"},
+      {:eex, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql", "assets/backend/src/api/graphql/#{plural}/#{String.upcase(singular)}_QUERY.graphql"},
+      {:eex, "assets/backend/src/api/graphql/CREATE_MUTATION.graphql", "assets/backend/src/api/graphql/#{plural}/CREATE_#{String.upcase(singular)}_MUTATION.graphql"},
+      {:eex, "assets/backend/src/api/graphql/UPDATE_MUTATION.graphql", "assets/backend/src/api/graphql/#{plural}/UPDATE_#{String.upcase(singular)}_MUTATION.graphql"},
+      {:eex, "assets/backend/src/api/graphql/DELETE_MUTATION.graphql", "assets/backend/src/api/graphql/#{plural}/DELETE_#{String.upcase(singular)}_MUTATION.graphql"},
 
       {:eex, "assets/backend/src/menus/menu.js", "assets/backend/src/menus/#{plural}.js"},
 
@@ -221,11 +226,16 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         "Repo.insert(changeset)"
       end
     domain_code <> """
-
+      @doc \"\"\"
+      List all #{binding[:plural]}
+      \"\"\"
       def list_#{binding[:plural]} do
-        Repo.all(#{binding[:alias]})
+        {:ok, Repo.all(#{binding[:alias]})}
       end
 
+      @doc \"\"\"
+      Get single #{binding[:singular]}
+      \"\"\"
       def get_#{binding[:singular]}(id) do
         case Repo.get(#{binding[:alias]}, id) do
           nil -> {:error, {:#{binding[:singular]}, :not_found}}
@@ -233,18 +243,26 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         end
       end
 
+      @doc \"\"\"
+      Create new #{binding[:singular]}
+      \"\"\"
       def create_#{binding[:singular]}(#{binding[:singular]}_params) do
         changeset = #{binding[:alias]}.changeset(%#{binding[:alias]}{}, #{binding[:singular]}_params)
         #{insert_code}
       end
 
+      @doc \"\"\"
+      Update existing #{binding[:singular]}
+      \"\"\"
       def update_#{binding[:singular]}(#{binding[:singular]}, #{binding[:singular]}_params) do
         changeset = #{binding[:alias]}.changeset(#{binding[:singular]}, #{binding[:singular]}_params)
-
         Repo.update(changeset)
       end
 
-      def delete(id) do
+      @doc \"\"\"
+      Delete #{binding[:singular]} by id
+      \"\"\"
+      def delete_#{binding[:singular]}(id) do
         {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(id)
         Repo.delete(#{binding[:singular]})
         {:ok, #{binding[:singular]}}

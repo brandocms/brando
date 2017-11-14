@@ -39,7 +39,7 @@ defmodule Brando.ImageCategory do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> put_slug()
+    |> put_slug(:name)
     |> avoid_slug_collision()
     |> unique_constraint(:slug)
     |> put_default_config
@@ -57,7 +57,7 @@ defmodule Brando.ImageCategory do
   def changeset(schema, :update, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
-    |> put_slug()
+    |> put_slug(:name)
     |> avoid_slug_collision()
     |> unique_constraint(:slug)
     |> validate_paths

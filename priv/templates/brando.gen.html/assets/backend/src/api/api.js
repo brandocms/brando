@@ -55,7 +55,7 @@ const <%= singular %>API = {
    */
   async create<%= String.capitalize(singular) %> (<%= singular %>Params) {
     try {
-      const result = await apollo.<%= singular %>.mutate({
+      const result = await apollo.client.mutate({
         mutation: CREATE_<%= String.upcase(singular) %>_MUTATION,
         variables: {
           <%= singular %>Params
@@ -76,7 +76,7 @@ const <%= singular %>API = {
    */
   async update<%= String.capitalize(singular) %> (<%= singular %>Id, <%= singular %>Params) {
     try {
-      const result = await apollo.<%= singular %>.mutate({
+      const result = await apollo.client.mutate({
         mutation: UPDATE_<%= String.upcase(singular) %>_MUTATION,
         variables: {
           <%= singular %>Id,
@@ -98,7 +98,7 @@ const <%= singular %>API = {
    */
   async delete<%= String.capitalize(singular) %> (<%= singular %>Id) {
     try {
-      const result = await apollo.<%= singular %>.mutate({
+      const result = await apollo.client.mutate({
         mutation: DELETE_<%= String.upcase(singular) %>_MUTATION,
         variables: {
           <%= singular %>Id

@@ -1,6 +1,6 @@
-import <%= String.capitalize(singular) %>ListView from '@/views/<%= domain %>/<%= String.capitalize(singular) %>ListView'
-import <%= String.capitalize(singular) %>CreateView from '@/views/<%= domain %>/<%= String.capitalize(singular) %>CreateView'
-import <%= String.capitalize(singular) %>EditView from '@/views/<%= domain %>/<%= String.capitalize(singular) %>EditView'
+import <%= String.capitalize(singular) %>ListView from '@/views/<%= snake_domain %>/<%= String.capitalize(singular) %>ListView'
+import <%= String.capitalize(singular) %>CreateView from '@/views/<%= snake_domain %>/<%= String.capitalize(singular) %>CreateView'
+import <%= String.capitalize(singular) %>EditView from '@/views/<%= snake_domain %>/<%= String.capitalize(singular) %>EditView'
 
 export default [
   {

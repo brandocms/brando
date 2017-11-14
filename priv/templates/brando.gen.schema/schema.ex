@@ -1,11 +1,11 @@
 defmodule <%= module %> do
-  use <%= base %>.Web, :schema
+  use <%= base %>Web, :schema
 <%= if villain_fields != [] do %>  use Brando.Villain, :schema<% end %>
 <%= if sequenced do %>  use Brando.Sequence, :schema<% end %>
 <%= if file_fields != [] do %>  use Brando.Field.FileField<% end %>
 <%= if img_fields != [] do %>  use Brando.Field.ImageField
   import Brando.Images.Optimize, only: [optimize: 2]<% end %>
-  import <%= base %>.Web.Backend.Gettext
+  import <%= base %>Web.Backend.Gettext
 
   schema <%= inspect "#{snake_domain}_#{plural}" %> do
 <%= for schema_field <- schema_fields do %>    <%= schema_field %>

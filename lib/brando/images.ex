@@ -11,7 +11,6 @@ defmodule Brando.Images do
   import Brando.Images.Utils, only: [
     create_image_sizes: 1,
     delete_original_and_sized_images: 2,
-    fix_size_cfg_vals: 1,
     recreate_sizes_for: 2
   ]
   import Brando.Utils.Schema, only: [put_creator: 2]
@@ -122,23 +121,13 @@ defmodule Brando.Images do
   end
 
   @doc """
-  Update image series config
+  Update series's config
   """
-  def update_series_config(id, cfg, sizes) do
-    series = Brando.repo.get_by!(Brando.ImageSeries, id: id)
-    sizes  = fix_size_cfg_vals(sizes)
-
-    new_cfg =
-      (Map.get(series, :cfg) || %Brando.Type.ImageConfig{})
-      |> Map.put(:allowed_mimetypes, String.split(cfg["allowed_mimetypes"], ", "))
-      |> Map.put(:default_size, cfg["default_size"])
-      |> Map.put(:size_limit, String.to_integer(cfg["size_limit"]))
-      |> Map.put(:upload_path, cfg["upload_path"])
-      |> Map.put(:sizes, sizes)
-
-    series
-    |> ImageSeries.changeset(:update, %{cfg: new_cfg})
-    |> Brando.repo.update()
+  def update_series_config(id, cfg) do
+    ImageSeries
+    |> Brando.repo.get_by!(id: id)
+    |> Ecto.Changeset.change(%{cfg: cfg})
+    |> Brando.repo.update
   end
 
   @doc """
@@ -200,12 +189,46 @@ defmodule Brando.Images do
   end
 
   @doc """
+  Get category's config
+  """
+  def get_category_config(id) do
+    {:ok, category} = get_category(id)
+    {:ok, category.cfg}
+  end
+
+  @doc """
+  Get series's config
+  """
+  def get_series_config(id) do
+    {:ok, series} = get_series(id)
+    {:ok, series.cfg}
+  end
+
+  @doc """
   Get series by `id`
   """
   def get_series(id) do
     case Brando.repo.get(ImageSeries, id) do
       nil -> {:error, {:image_series, :not_found}}
       series -> {:ok, series}
+    end
+  end
+
+  @doc """
+  Get series by category slug and series slug
+  """
+  def get_series(cat_slug, s_slug) do
+    series = Brando.repo.one(
+      from is in ImageSeries,
+        join: cat in assoc(is, :image_category),
+        where: cat.slug == ^cat_slug and
+               is.slug == ^s_slug,
+        preload: :images
+    )
+
+    case series do
+      nil -> {:error, {:image_series, :not_found}}
+      _ -> {:ok, series}
     end
   end
 
@@ -234,20 +257,10 @@ defmodule Brando.Images do
   @doc """
   Update category's config
   """
-  def update_category_config(id, cfg, sizes) do
-    img_cat = Brando.repo.get_by!(ImageCategory, id: id)
-    sizes  = fix_size_cfg_vals(sizes)
-
-    new_cfg =
-      img_cat.cfg
-      |> Map.put(:allowed_mimetypes, String.split(cfg["allowed_mimetypes"], ", "))
-      |> Map.put(:default_size, cfg["default_size"])
-      |> Map.put(:size_limit, String.to_integer(cfg["size_limit"]))
-      |> Map.put(:upload_path, cfg["upload_path"])
-      |> Map.put(:sizes, sizes)
-
-    img_cat
-    |> ImageCategory.changeset(:update, %{cfg: new_cfg})
+  def update_category_config(id, cfg) do
+    ImageCategory
+    |> Brando.repo.get_by!(id: id)
+    |> Ecto.Changeset.change(%{cfg: cfg})
     |> Brando.repo.update
   end
 

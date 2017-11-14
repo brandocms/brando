@@ -72,9 +72,9 @@ export default {
     async save () {
       try {
         nprogress.start()
-        await <%= singular %>API.create<%= String.capitalize(singular) %>(<%= singular %>)
+        await <%= singular %>API.create<%= String.capitalize(singular) %>(this.<%= singular %>)
         nprogress.done()
-        this.$toast.success({message: 'Objekt opprettet'})
+        this.$toast.success({message: 'Objekt endret'})
         this.$router.push({ name: '<%= plural %>' })
       } catch (err) {
         showError(err)

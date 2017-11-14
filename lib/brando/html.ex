@@ -261,7 +261,7 @@ defmodule Brando.HTML do
 
     Phoenix.HTML.raw(body <> ">")
   end
-  
+
   @doc """
   Displays all flash messages in conn
   """
@@ -298,20 +298,22 @@ defmodule Brando.HTML do
           "large" => "936w",
           "xlarge" => "1200w"
         }
+    * `attrs` - extra attributes to the tag, ie data attrs
   """
   def img_tag(image_field, size, opts \\ []) do
     srcset_attr = Keyword.get(opts, :srcset) && [srcset: get_srcset(image_field, opts[:srcset], opts)] || []
     sizes_attr = Keyword.get(opts, :sizes) && [sizes: get_sizes(opts[:sizes])] || []
     width_attr = Keyword.get(opts, :width) && [width: Map.get(image_field, :width)] || []
     height_attr = Keyword.get(opts, :height) && [height: Map.get(image_field, :height)] || []
+    extra_attrs = Keyword.get(opts, :attrs, [])
 
     attrs =
       Keyword.new
       |> Keyword.put(:src, Brando.Utils.img_url(image_field, size, opts))
-      |> Keyword.merge(Keyword.drop(opts, [:prefix, :srcset, :sizes, :default]) ++ sizes_attr ++ srcset_attr ++ width_attr ++ height_attr)
+      |> Keyword.merge(Keyword.drop(opts, [:attrs, :prefix, :srcset, :sizes, :default]) ++ sizes_attr ++ srcset_attr ++ width_attr ++ height_attr ++ extra_attrs)
 
-    # drop the src if we have srcset, since the browser seems to load this DOUBLE?
-    attrs = srcset_attr != [] && Keyword.drop(attrs, [:src]) || attrs
+    # if we have srcset, set src as empty svg
+    attrs = srcset_attr != [] && Keyword.put(attrs, :src, svg_fallback(image_field)) || attrs
 
     Phoenix.HTML.Tag.tag(:img, attrs)
   end
@@ -323,6 +325,14 @@ defmodule Brando.HTML do
     |> Decimal.mult(Decimal.new(100))
   end
   def ratio(nil), do: 0
+
+  def svg_fallback(image_field) do
+    width = Map.get(image_field, :width, 0)
+    height = Map.get(image_field, :height, 0)
+    "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg" <>
+    "%27%20width%3D%27#{width}%27%20height%3D%27#{height}%27" <>
+    "%20style%3D%27background%3Atransparent%27%2F%3E"
+  end
 
   @doc """
   Get sizes from image config

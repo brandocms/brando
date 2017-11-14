@@ -30,6 +30,30 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         {:reply, {:ok, %{code: 200, series: Map.merge(series, %{creator: nil, image_category: nil, images: nil})}}, socket}
       end
 
+      def handle_in("images:get_category_config", %{"category_id" => category_id}, socket) do
+        user = Guardian.Phoenix.Socket.current_resource(socket)
+        {:ok, config} = Brando.Images.get_category_config(category_id)
+        {:reply, {:ok, %{code: 200, config: config}}, socket}
+      end
+
+      def handle_in("images:update_category_config", %{"category_id" => category_id, "config" => config}, socket) do
+        user = Guardian.Phoenix.Socket.current_resource(socket)
+        {:ok, config} = Brando.Images.update_category_config(category_id, config)
+        {:reply, {:ok, %{code: 200}}, socket}
+      end
+
+      def handle_in("images:get_series_config", %{"series_id" => series_id}, socket) do
+        user = Guardian.Phoenix.Socket.current_resource(socket)
+        {:ok, config} = Brando.Images.get_series_config(series_id)
+        {:reply, {:ok, %{code: 200, config: config}}, socket}
+      end
+
+      def handle_in("images:update_series_config", %{"series_id" => series_id, "config" => config}, socket) do
+        user = Guardian.Phoenix.Socket.current_resource(socket)
+        {:ok, config} = Brando.Images.update_series_config(series_id, config)
+        {:reply, {:ok, %{code: 200}}, socket}
+      end
+
       def handle_in("pages:list_parents", _, socket) do
         {:ok, parents} = Brando.Pages.list_parents()
         {:reply, {:ok, %{code: 200, parents: parents}}, socket}

@@ -4,11 +4,6 @@ defmodule <%= base %>.Schema.Types.<%= alias %> do
   """
   use <%= base %>Web, :absinthe
 
-  import Ecto.Query
-  import Brando.Schema.Utils
-
-  alias <%= base %>.Repo
-
   object :<%= singular %> do
     field :id, :id<%= for {v, k} <- gql_types do %>
     <%= k %><% end %>
@@ -29,7 +24,7 @@ defmodule <%= base %>.Schema.Types.<%= alias %> do
     @desc "Get <%= singular %>"
     field :<%= singular %>, type: :<%= singular %> do
       arg :<%= singular %>_id, non_null(:id)
-      resolve &<%= base %>.<%= domain %>.<%= alias %>Resolver.find/2
+      resolve &<%= base %>.<%= domain %>.<%= alias %>Resolver.get/2
     end
   end
 
@@ -47,7 +42,7 @@ defmodule <%= base %>.Schema.Types.<%= alias %> do
       resolve &<%= base %>.<%= domain %>.<%= alias %>Resolver.update/2
     end
 
-    field :delete_<%= singular %>, type :<%= singular %> do
+    field :delete_<%= singular %>, type: :<%= singular %> do
       arg :<%= singular %>_id, non_null(:id)
 
       resolve &<%= base %>.<%= domain %>.<%= alias %>Resolver.delete/2
