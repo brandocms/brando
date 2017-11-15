@@ -218,12 +218,16 @@ defmodule Brando.Images do
   Get series by category slug and series slug
   """
   def get_series(cat_slug, s_slug) do
+    images_query =
+      from i in Image,
+        order_by: [asc: i.sequence]
+
     series = Brando.repo.one(
       from is in ImageSeries,
         join: cat in assoc(is, :image_category),
         where: cat.slug == ^cat_slug and
                is.slug == ^s_slug,
-        preload: :images
+        preload: [images: ^images_query]
     )
 
     case series do
