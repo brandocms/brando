@@ -1,9 +1,9 @@
 <template>
-  <div class="create-<%= singular %>">
+  <div class="create-<%= singular %>" v-if="!loading">
     <div class="container">
       <div class="card">
         <div class="card-header">
-          <h5 class="section mb-0">Opprett</h5>
+          <h5 class="section mb-0">Endre</h5>
         </div>
         <div class="card-body">
           <!--
@@ -25,7 +25,7 @@
 <script>
 
 import nprogress from 'nprogress'
-import showError from 'kurtz/lib/utils/showError'
+import { showError, validateImageParams, stripParams } from 'kurtz/lib/utils'
 import { <%= singular %>API } from '@/api/<%= singular %>'
 
 export default {
@@ -70,9 +70,17 @@ export default {
     },
 
     async save () {
+      this.loading = false
+      let params = {...this.<%= singular %>}
+
+      // strip out params we don't want sent in the mutation
+      stripParams(params, ['__typename', 'id'])
+      // validate image params, if any, to ensure they are files
+      // validateImageParams(params, ['avatar'])
+
       try {
         nprogress.start()
-        await <%= singular %>API.create<%= String.capitalize(singular) %>(this.<%= singular %>)
+        await <%= singular %>API.update<%= String.capitalize(singular) %>(this.<%= singular %>.id, params)
         nprogress.done()
         this.$toast.success({message: 'Objekt endret'})
         this.$router.push({ name: '<%= plural %>' })

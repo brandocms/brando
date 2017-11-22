@@ -254,9 +254,12 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       @doc \"\"\"
       Update existing #{binding[:singular]}
       \"\"\"
-      def update_#{binding[:singular]}(#{binding[:singular]}, #{binding[:singular]}_params) do
-        changeset = #{binding[:alias]}.changeset(#{binding[:singular]}, #{binding[:singular]}_params)
-        Repo.update(changeset)
+      def update_#{binding[:singular]}(#{binding[:singular]}_id, #{binding[:singular]}_params) do
+        {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(#{binding[:singular]}_id)
+
+        #{binding[:singular]}
+        |> #{binding[:alias]}.changeset(#{binding[:singular]}_params)
+        |> Repo.update()
       end
 
       @doc \"\"\"
@@ -294,7 +297,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
             :data -> [:data, :html]
             _ -> [String.to_atom(to_string(k) <> "_data"), String.to_atom(to_string(k) <> "_html")]
           end
-        {k, ~s(field #{inspect(Enum.at(fields, 0))}, :string\n    field #{inspect(Enum.at(fields, 1))}, :string)}
+        {k, ~s(field #{inspect(Enum.at(fields, 0))}, :json\n    field #{inspect(Enum.at(fields, 1))}, :string)}
       {k, _} ->
         {k, ~s(field #{inspect(k)}, :string)}
     end

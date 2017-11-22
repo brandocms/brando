@@ -1,5 +1,5 @@
-query <%= String.capitalize(singular) %> {
-  <%= singular %> {
+query <%= String.capitalize(singular) %>($<%= singular %>Id: <%= String.capitalize(singular) %>Id) { {
+  <%= singular %>(<%= singular %>Id: $<%= singular %>Id) {
     id
   }
 }

@@ -25,7 +25,7 @@
 <script>
 
 import nprogress from 'nprogress'
-import showError from 'kurtz/lib/utils/showError'
+import { showError, validateImageParams, stripParams } from 'kurtz/lib/utils'
 import { <%= singular %>API } from '@/api/<%= singular %>'
 
 export default {
@@ -60,9 +60,15 @@ export default {
     },
 
     async save () {
+      this.loading = false
+      let params = {...this.<%= singular %>}
+
+      // validate image params, if any, to ensure they are files
+      validateImageParams(params, [])
+
       try {
         nprogress.start()
-        await <%= singular %>API.create<%= String.capitalize(singular) %>(this.<%= singular %>)
+        await <%= singular %>API.create<%= String.capitalize(singular) %>(params)
         nprogress.done()
         this.$toast.success({message: 'Objekt opprettet'})
         this.$router.push({ name: '<%= plural %>' })

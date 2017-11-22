@@ -91,7 +91,7 @@ defmodule Brando.Schema.Types.Images do
       arg :size, :string, default_value: "thumb"
       resolve fn image, args, _ ->
         case Enum.find(image.sizes, &(elem(&1, 0) == args.size)) do
-          nil -> {:error, "URL size not found :("}
+          nil -> {:error, "URL size `#{args.size}` not found :("}
           {_, url} -> {:ok, Brando.Utils.media_url(url)}
         end
       end
