@@ -124,10 +124,19 @@ defmodule Brando.Images do
   Update series's config
   """
   def update_series_config(id, cfg) do
-    ImageSeries
-    |> Brando.repo.get_by!(id: id)
-    |> Ecto.Changeset.change(%{cfg: cfg})
-    |> Brando.repo.update
+    res =
+      ImageSeries
+      |> Brando.repo.get_by!(id: id)
+      |> Ecto.Changeset.change(%{cfg: cfg})
+      |> Brando.repo.update
+
+    case res do
+      {:ok, series} ->
+        recreate_sizes_for(:image_series, series.id)
+        {:ok, series}
+      err ->
+        err
+    end
   end
 
   @doc """
