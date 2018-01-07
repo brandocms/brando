@@ -113,7 +113,7 @@ defmodule <%= application_module %>.Villain.Parser do
     end
     """
     <div class="img-wrapper">
-      #{link_open}<img src="#{url}" alt="#{title}/#{credits}" class="img-responsive" />#{link_close}
+      #{link_open}<img src="#{url}" alt="#{title}/#{credits}" class="img-fluid" />#{link_close}
       <div class="image-info-wrapper">
         <div class="image-title">
           #{title}
