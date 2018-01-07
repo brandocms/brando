@@ -104,6 +104,6 @@ defmodule <%= application_module %>Web.Router do
 
   scope "/" do
     pipe_through :browser
-    get "/", <%= application_module %>Web.PostController, :index
+    get "/", <%= application_module %>Web.PageController, :index
   end
 end

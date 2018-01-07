@@ -4,7 +4,6 @@
  */
 
 import $ from 'jquery'
-import './moonwalk'
 import ScrollReveal from 'scrollreveal'
 window.sr = ScrollReveal()
 console.log(sr)

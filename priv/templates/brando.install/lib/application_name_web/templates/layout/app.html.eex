@@ -1,70 +1,106 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="no-js" lang="en">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <%= Brando.HTML.render_meta(@conn) %>
 
+    <link rel="apple-touch-icon" sizes="180x180" href="/ico/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/ico/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/ico/favicon-16x16.png">
+    <link rel="manifest" href="/ico/manifest.json">
+    <link rel="mask-icon" href="/ico/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="shortcut icon" href="/ico/favicon.ico">
+    <meta name="msapplication-config" content="/ico/browserconfig.xml">
+    <meta name="theme-color" content="#ffffff">
+
     <title><%= Brando.Utils.get_page_title(@conn) %></title>
+    <script>
+
+    /*! modernizr 3.5.0 (Custom Build) | MIT *
+ * https://modernizr.com/download/?-setclasses !*/
+!function(n,e,s){function o(n){var e=f.className,s=Modernizr._config.classPrefix||"";if(l&&(e=e.baseVal),Modernizr._config.enableJSClass){var o=new RegExp("(^|\\s)"+s+"no-js(\\s|$)");e=e.replace(o,"$1"+s+"js$2")}Modernizr._config.enableClasses&&(e+=" "+s+n.join(" "+s),l?f.className.baseVal=e:f.className=e)}function a(n,e){return typeof n===e}function i(){var n,e,s,o,i,f,l;for(var c in r)if(r.hasOwnProperty(c)){if(n=[],e=r[c],e.name&&(n.push(e.name.toLowerCase()),e.options&&e.options.aliases&&e.options.aliases.length))for(s=0;s<e.options.aliases.length;s++)n.push(e.options.aliases[s].toLowerCase());for(o=a(e.fn,"function")?e.fn():e.fn,i=0;i<n.length;i++)f=n[i],l=f.split("."),1===l.length?Modernizr[l[0]]=o:(!Modernizr[l[0]]||Modernizr[l[0]]instanceof Boolean||(Modernizr[l[0]]=new Boolean(Modernizr[l[0]])),Modernizr[l[0]][l[1]]=o),t.push((o?"":"no-")+l.join("-"))}}var t=[],f=e.documentElement,l="svg"===f.nodeName.toLowerCase(),r=[],c={_version:"3.5.0",_config:{classPrefix:"",enableClasses:!0,enableJSClass:!0,usePrefixes:!0},_q:[],on:function(n,e){var s=this;setTimeout(function(){e(s[n])},0)},addTest:function(n,e,s){r.push({name:n,fn:e,options:s})},addAsyncTest:function(n){r.push({name:null,fn:n})}},Modernizr=function(){};Modernizr.prototype=c,Modernizr=new Modernizr,i(),o(t),delete c.addTest,delete c.addAsyncTest;for(var u=0;u<Modernizr._q.length;u++)Modernizr._q[u]();n.Modernizr=Modernizr}(window,document);
+    </script>
     <link rel="stylesheet" href="<%= static_path(@conn, "/css/app.css") %>">
-    <script src="<%= static_path(@conn, "/js/jquery.js") %>"></script>
   </head>
-  <%= Brando.HTML.body_tag(@conn) %>
-  <!--
-    <section class="cookie-container">
-      <section class="container">
-        <%= Brando.HTML.cookie_law @conn,
-          "This webpage uses cookies for responsive design and analytics. " <>
-          "You can turn these off in your browser.",
-          "Accept & dismiss" %>
-      </section>
-      <hr class="mobile-hide">
-    </section>
-  -->
-
-<!-- :header - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-    <header class="navbar navbar-static-top" id="top" role="banner">
-      <div class="container">
-        <div class="navbar-header">
-          <button class="navbar-toggle collapsed" type="button" data-toggle="collapse" data-target=".bs-navbar-collapse">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a href="/" class="navbar-brand">BRAND NAME</a>
+  <body class="unloaded" id="toppen">
+    <div class="fader" id="fader">
+      <div class="loading-container">
+        <div>
+          <div class="display-3 mb-2">◣</div>
+          <span class="blink">LOADING</span>
         </div>
-        <nav class="collapse navbar-collapse bs-navbar-collapse pull-right">
-          <ul class="nav navbar-nav">
-            <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Menu</a>
-              <ul class="dropdown-menu" role="menu">
-                <li><a href="">Submenu</a></li>
-                <li><a href="">Submenu</a></li>
-              </ul>
-            </li>
-            <li>
-              <a href="">Menu</a>
-            </li>
-            <li>
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-                <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
-              </a>
-            </li>
-          </ul>
-        </nav>
       </div>
-    </header>
-<!-- /header - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-
+    </div>
+    <script>var zf = document.getElementById("fader");zf.style.display = 'block';</script>
 <!-- :content - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
-    <section class="container">
-      <%= render @view_module, @view_template, assigns %>
+    <div class="backdrop"></div>
+    <header>
+      <section class="container" data-moonwalk-section>
+        <div class="row">
+          <div class="col-12">
+            <nav class="navbar row navbar-expand-md align-items-middle">
+              <div class="col-lg-6 col-md-6 col-sm-12">
+              <div class="d-flex justify-content-between mr-auto">
+                <a class="navbar-brand" href="/">
+                  <h1><span class="mr-3">◣</span> SITE NAME</h1>
+                </a>
+              </div>
+              </div>
+
+              <div class="col-lg-6 col-md-6 col-sm-12">
+                <div class="collapse navbar-collapse" id="navbar-content">
+                  <ul class="navbar-nav">
+                    <li class="nav-item">
+                      <a class="nav-link <%= Brando.HTML.active(@conn, "/whatever") %>" href="/whatever">
+                        Link
+                      </a>
+                    </li>
+                    <li class="nav-item">
+                      <a class="nav-link <%= Brando.HTML.active(@conn, "/whatever") %>" href="/whatever">
+                        Link
+                      </a>
+                    </li>
+                    <li class="nav-item">
+                      <a class="nav-link <%= Brando.HTML.active(@conn, "/whatever") %>" href="/whatever">
+                        Link
+                      </a>
+                    </li>
+                    <li class="nav-item">
+                      <a class="nav-link <%= Brando.HTML.active(@conn, "/whatever") %>" href="/whatever">
+                        Link
+                      </a>
+                    </li>
+                    <li class="nav-item">
+                      <a class="nav-link <%= Brando.HTML.active(@conn, "/whatever") %>" href="/whatever">
+                        Link
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <button class="navbar-toggler float-right hamburger hamburger--spin" type="button"
+                      aria-label="Menu" aria-controls="navbar-content">
+                <span class="hamburger-box">
+                  <span class="hamburger-inner"></span>
+                </span>
+              </button>
+            </nav>
+          </div>
+        </div>
+      </section>
+    </header>
+
+    <%= render @view_module, @view_template, assigns %>
+    <section class="light">
+      <section class="pt-sm pb-sm">
+        <section class="container">
+          <small>&copy; SITE NAME</small>
+        </section>
+      </section>
     </section>
 <!-- /content - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
-
-    <script src="<%= static_path(@conn, "/js/vendor.js") %>"></script>
     <script src="<%= static_path(@conn, "/js/app.js") %>"></script>
     <%= Brando.HTML.google_analytics("UA-XXXXX-X") %>
   </body>
