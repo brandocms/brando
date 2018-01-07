@@ -66,9 +66,9 @@ defmodule Brando.Villain.ParserTest do
 
   test "image/1" do
     assert image(%{"url" => "http://vg.no", "title" => "Caption", "credits" => "Credits"}) ==
-      ~s(<div class=\"img-wrapper\">\n  <img src=\"http://vg.no\" alt=\"Caption/Credits\" class=\"img-responsive\" />\n  <div class=\"image-info-wrapper\">\n    <div class=\"image-title\">\n      Caption\n    </div>\n    <div class=\"image-credits\">\n      Credits\n    </div>\n  </div>\n</div>\n)
+      ~s(<div class=\"img-wrapper\">\n  <img src=\"http://vg.no\" alt=\"Caption/Credits\" class=\"img-fluid\" />\n  <div class=\"image-info-wrapper\">\n    <div class=\"image-title\">\n      Caption\n    </div>\n    <div class=\"image-credits\">\n      Credits\n    </div>\n  </div>\n</div>\n)
     assert image(%{"url" => "http://vg.no", "title" => "Caption", "credits" => "Credits", "link" => "http://db.no"}) ==
-      ~s(<div class="img-wrapper">\n  <a href="http://db.no" title="Caption"><img src="http://vg.no" alt="Caption/Credits" class="img-responsive" /></a>\n  <div class="image-info-wrapper">\n    <div class="image-title">\n      Caption\n    </div>\n    <div class="image-credits">\n      Credits\n    </div>\n  </div>\n</div>\n)
+      ~s(<div class="img-wrapper">\n  <a href="http://db.no" title="Caption"><img src="http://vg.no" alt="Caption/Credits" class="img-fluid" /></a>\n  <div class="image-info-wrapper">\n    <div class="image-title">\n      Caption\n    </div>\n    <div class="image-credits">\n      Credits\n    </div>\n  </div>\n</div>\n)
   end
 
   test "divider/1" do

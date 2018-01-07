@@ -1,0 +1,218 @@
+@function reverse($list, $recursive: false) {
+   $result: ();
+
+   @for $i from length($list)*-1 through -1 {
+      @if type-of(nth($list, abs($i))) == list and $recursive {
+        $result: append($result, reverse(nth($list, abs($i)), $recursive));
+      }
+
+      @else {
+        $result: append($result, nth($list, abs($i)));
+      }
+   }
+
+   @return $result;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// PADDING / MARGINS
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$padding-xl: (
+  xs: 135px,
+  sm: 195px,
+  md: 200px,
+  lg: 270px
+);
+
+$padding-big: (
+  xs: 50px,
+  sm: 100px,
+  md: 100px,
+  lg: 140px
+);
+
+$padding-small: (
+  xs: 30px,
+  sm: 35px,
+  md: 50px,
+  lg: 70px
+);
+
+$container-padding: (
+  xs: 20px,
+  sm: 48px,
+  md: 75px,
+  lg: 100px,
+);
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// FONT SIZES
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$fontsize-base: (
+  xs: 15px,
+  sm: 18px,
+  md: 20px,
+  lg: 25px
+);
+
+$lineheight-base: (
+  xs: 23px,
+  sm: 26px,
+  md: 28px,
+  lg: 35px
+);
+
+$fontsize-lead: (
+  xs: 21px,
+  sm: 38px,
+  md: 38px,
+  lg: 45px
+);
+
+$lineheight-lead: (
+  xs: 25px,
+  sm: 45px,
+  md: 45px,
+  lg: 53px
+);
+
+$marginbottom-lead: (
+  xs: 30px,
+  sm: 50px,
+  md: 100px,
+  lg: 125px
+);
+
+$fontsize-credits: (
+  xs: 15px,
+  sm: 13px,
+  md: 15px,
+  lg: 18px
+);
+
+$lineheight-credits: (
+  xs: 23px,
+  sm: 16px,
+  md: 18px,
+  lg: 23px
+);
+
+$fontsize-caps: (
+  xs: 10px,
+  sm: 15px,
+  md: 15px,
+  lg: 20px
+);
+
+$lineheight-caps: (
+  xs: 13px,
+  sm: 18px,
+  md: 18px,
+  lg: 25px
+);
+
+$padding-caps: (
+  xs: 30px,
+  sm: 50px,
+  md: 50px,
+  lg: 60px
+);
+
+$fontsize-menu: (
+  xs: 36px,
+  sm: 36px,
+  md: map-get($fontsize-base, "md"),
+  lg: map-get($fontsize-base, "lg")
+);
+
+$lineheight-menu: (
+  xs: 55px,
+  sm: 55px,
+  md: map-get($lineheight-base, "md"),
+  lg: map-get($lineheight-base, "lg")
+);
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// COLORS
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$dark: #1C1B1B;
+$light: #FFFFFF;
+
+$contrast: #F0F;
+$primary: #F00;
+$menu-bg: $light;
+
+$body-bg: $light;
+$body-color: $dark;
+$link-color: $primary;
+$menuaccentcolor: $primary;
+$enable-rounded: false;
+
+$hamburger-layer-color: $dark;
+$hamburger-layer-width: 30px;
+$hamburger-padding-x: 0px;
+$hamburger-padding-y: 0px;
+$hamburger-types: (
+  spin
+);
+
+/*
+ * Mobil opp til 768px
+ * iPad fra 768px -> 1300px
+ * Vanlig fra 1300px -> 2200px(?) eller 1800?
+ * HD fra 2200px ->
+ */
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// BREAKPOINTS/GRID
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$grid-gutter-width: 50px;
+
+$gutters: (
+  xs: 30px,
+  sm: 35px,
+  md: 50px,
+  lg: 75px
+);
+
+$grid-breakpoints: (
+  xs: 0,
+  sm: 768px,
+  md: 1100px,
+  lg: 1900px
+);
+
+$container-max-widths: (
+  xs: 580px,
+  sm: 981px,
+  md: 1800px,
+  lg: 2200px
+);
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// FONTS
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$font-family-sans-serif: "Apercu Regular", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// NAVBAR
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$navbar-brand-widths: (
+  xs: 127px,
+  sm: 200px,
+  md: 200px,
+  lg: 200px
+);
+
+$fixed-menu-compensation-padding: (
+  xs: 125px,
+  sm: 125px,
+  md: 125px,
+  lg: 125px
+);

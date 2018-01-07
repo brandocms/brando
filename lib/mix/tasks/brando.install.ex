@@ -91,12 +91,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/Dockerfile", "Dockerfile"},
     {:eex,  "templates/brando.install/fabfile.py", "fabfile.py"},
 
-    # Frontend JS
-    {:copy, "templates/brando.install/assets/frontend/js/index.js", "assets/frontend/js/index.js"},
-    {:copy, "templates/brando.install/assets/frontend/js/flexslider.js", "assets/frontend/js/flexslider.js"},
-    {:copy, "templates/brando.install/assets/frontend/js/cookie_law.js", "assets/frontend/js/cookie_law.js"},
-
-    # Backend JS
+    # Backend assets
     {:copy, "templates/brando.install/assets/backend/build/build.js", "assets/backend/build/build.js"},
     {:copy, "templates/brando.install/assets/backend/build/check-versions.js", "assets/backend/build/check-versions.js"},
     {:copy, "templates/brando.install/assets/backend/build/utils.js", "assets/backend/build/utils.js"},
@@ -156,23 +151,42 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/assets/backend/styles/includes/_fonts.scss", "assets/backend/styles/includes/_fonts.scss"},
     {:copy, "templates/brando.install/assets/backend/yarn.lock", "assets/backend/yarn.lock"},
 
-    # Frontend SCSS
+    # Frontend assets
+    {:copy, "templates/brando.install/assets/frontend/css/_bootstrap.scss", "assets/frontend/css/_bootstrap.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/_variables.scss", "assets/frontend/css/_variables.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/app.scss", "assets/frontend/css/app.scss"},
-    {:copy, "templates/brando.install/assets/frontend/css/includes/_general.scss", "assets/frontend/css/includes/_general.scss"},
-    {:copy, "templates/brando.install/assets/frontend/css/includes/_colorbox.scss", "assets/frontend/css/includes/_colorbox.scss"},
-    {:copy, "templates/brando.install/assets/frontend/css/includes/_cookielaw.scss", "assets/frontend/css/includes/_cookielaw.scss"},
-    {:copy, "templates/brando.install/assets/frontend/css/includes/_dropdown.scss", "assets/frontend/css/includes/_dropdown.scss"},
-    {:copy, "templates/brando.install/assets/frontend/css/includes/_instagram.scss", "assets/frontend/css/includes/_instagram.scss"},
-    {:copy, "templates/brando.install/assets/frontend/css/includes/_nav.scss", "assets/frontend/css/includes/_nav.scss"},
-
-    # Icons
-    {:copy, "templates/brando.install/assets/frontend/static/brando/favicon.ico", "assets/frontend/static/favicon.ico"},
-
-    # Images
-    {:copy, "templates/brando.install/assets/frontend/static/brando/images/blank.gif", "assets/frontend/static/images/brando/blank.gif"},
-    {:copy, "templates/brando.install/assets/frontend/static/brando/images/brando-big.png", "assets/frontend/static/images/brando/brando-big.png"},
-    {:copy, "templates/brando.install/assets/frontend/static/brando/images/defaults/thumb/avatar_default.jpg", "assets/frontend/static/images/brando/defaults/thumb/avatar_default.jpg"},
-    {:copy, "templates/brando.install/assets/frontend/static/brando/images/defaults/micro/avatar_default.jpg", "assets/frontend/static/images/brando/defaults/micro/avatar_default.jpg"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_animations.scss", "assets/frontend/css/includes/_animations.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_containers.scss", "assets/frontend/css/includes/_containers.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_fonts.scss", "assets/frontend/css/includes/_fonts.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_headers.scss", "assets/frontend/css/includes/_headers.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_navigation.scss", "assets/frontend/css/includes/_navigation.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_paragraphs.scss", "assets/frontend/css/includes/_paragraphs.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_slider.scss", "assets/frontend/css/includes/_slider.scss"},
+    {:copy, "templates/brando.install/assets/frontend/js/index.js", "assets/frontend/js/index.js"},
+    {:copy, "templates/brando.install/assets/frontend/package.json", "assets/frontend/package.json"},
+    {:copy, "templates/brando.install/assets/frontend/postcss.config.js", "assets/frontend/postcss.config.js"},
+    {:copy, "templates/brando.install/assets/frontend/static/favicon.ico", "assets/frontend/static/favicon.ico"},
+    {:copy, "templates/brando.install/assets/frontend/static/ico/android-chrome-192x192.png", "assets/frontend/static/ico/android-chrome-192x192.png"},
+    {:copy, "templates/brando.install/assets/frontend/static/ico/android-chrome-512x512.png", "assets/frontend/static/ico/android-chrome-512x512.png"},
+    {:copy, "templates/brando.install/assets/frontend/static/ico/apple-touch-icon.png", "assets/frontend/static/ico/apple-touch-icon.png"},
+    {:copy, "templates/brando.install/assets/frontend/static/ico/browserconfig.xml", "assets/frontend/static/ico/browserconfig.xml"},
+    {:copy, "templates/brando.install/assets/frontend/static/ico/favicon-16x16.png", "assets/frontend/static/ico/favicon-16x16.png"},
+    {:copy, "templates/brando.install/assets/frontend/static/ico/favicon-32x32.png", "assets/frontend/static/ico/favicon-32x32.png"},
+    {:copy, "templates/brando.install/assets/frontend/static/ico/favicon.ico", "assets/frontend/static/ico/favicon.ico"},
+    {:copy, "templates/brando.install/assets/frontend/static/ico/manifest.json", "assets/frontend/static/ico/manifest.json"},
+    {:copy, "templates/brando.install/assets/frontend/static/ico/mstile-144x144.png", "assets/frontend/static/ico/mstile-144x144.png"},
+    {:copy, "templates/brando.install/assets/frontend/static/ico/mstile-150x150.png", "assets/frontend/static/ico/mstile-150x150.png"},
+    {:copy, "templates/brando.install/assets/frontend/static/ico/mstile-310x150.png", "assets/frontend/static/ico/mstile-310x150.png"},
+    {:copy, "templates/brando.install/assets/frontend/static/ico/mstile-310x310.png", "assets/frontend/static/ico/mstile-310x310.png"},
+    {:copy, "templates/brando.install/assets/frontend/static/ico/mstile-70x70.png", "assets/frontend/static/ico/mstile-70x70.png"},
+    {:copy, "templates/brando.install/assets/frontend/static/ico/safari-pinned-tab.svg", "assets/frontend/static/ico/safari-pinned-tab.svg"},
+    {:copy, "templates/brando.install/assets/frontend/static/images/brando/blank.gif", "assets/frontend/static/images/brando/blank.gif"},
+    {:copy, "templates/brando.install/assets/frontend/static/images/brando/brando-big.png", "assets/frontend/static/images/brando/brando-big.png"},
+    {:copy, "templates/brando.install/assets/frontend/static/images/brando/defaults/micro/avatar_default.jpg", "assets/frontend/static/images/brando/defaults/micro/avatar_default.jpg"},
+    {:copy, "templates/brando.install/assets/frontend/static/images/brando/defaults/thumb/avatar_default.jpg", "assets/frontend/static/images/brando/defaults/thumb/avatar_default.jpg"},
+    {:copy, "templates/brando.install/assets/frontend/static/images/logo.svg", "assets/frontend/static/images/logo.svg"},
+    {:copy, "templates/brando.install/assets/frontend/webpack.config.js", "assets/frontend/webpack.config.js"},
+    {:copy, "templates/brando.install/assets/frontend/yarn.lock", "assets/frontend/yarn.lock"},
   ]
 
   @root Path.expand("../../../priv", __DIR__)
@@ -196,17 +210,11 @@ defmodule Mix.Tasks.Brando.Install do
       application_name: Atom.to_string(app)
     ]
 
+    Mix.shell.info "\nDeleting old assets"
+    File.rm_rf("assets")
+
     copy_from "./", binding, @new
     copy_from "./", binding, @static
-
-    Mix.shell.info "\nDeleting assets/css/app.css"
-    File.rm("assets/css/app.css")
-    Mix.shell.info "\nDeleting assets/css/phoenix.css"
-    File.rm("assets/css/phoenix.css")
-    Mix.shell.info "\nDeleting assets/js/app.js"
-    File.rm("assets/js/app.js")
-    Mix.shell.info "\nDeleting assets/js/socket.js"
-    File.rm("assets/js/socket.js")
 
     Mix.shell.info "\nBrando finished copying."
   end

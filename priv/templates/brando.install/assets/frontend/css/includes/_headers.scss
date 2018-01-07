@@ -1,0 +1,40 @@
+h2 {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    margin-bottom: 0;
+    @include media-breakpoint-up($bp-name) {
+      font-size: map-get($fontsize-caps, $bp-name);
+      letter-spacing: map-get($fontsize-caps, $bp-name)/10;
+      font-weight: bold;
+      line-height: map-get($lineheight-caps, $bp-name);
+      padding-bottom: map-get($padding-caps, $bp-name);
+    }
+  }
+  @include media-breakpoint-up(xs) {
+    padding-bottom: map-get($padding-big, xs);
+  }
+}
+
+#about h2 {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    margin-bottom: 0;
+    @include media-breakpoint-up($bp-name) {
+      font-size: map-get($fontsize-caps, $bp-name);
+      letter-spacing: map-get($fontsize-caps, $bp-name)/10;
+      font-weight: bold;
+      line-height: map-get($lineheight-caps, $bp-name);
+      padding-bottom: map-get($padding-caps, $bp-name);
+    }
+  }
+}
+
+h3 {
+  font-weight: bold;
+  margin: 0;
+
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      font-size: map-get($fontsize-base, $bp-name);
+      line-height: map-get($lineheight-base, $bp-name);
+    }
+  }
+}

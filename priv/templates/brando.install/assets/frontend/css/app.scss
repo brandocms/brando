@@ -1,40 +1,450 @@
 /**
  * Application-specific SCSS.
- * (c) twined 2016
+ * (c) twined 2018
  */
 
-@import "bootstrap";
+@import "variables.scss";
+@import "~animate.css";
+@import "bootstrap.scss";
+@import "~hamburgers/_sass/hamburgers/hamburgers.scss";
 
-body {}
-
-p {
-  font-size: 16px;
+.no-js body.unloaded {
+  opacity: 1;
 }
 
-header#top {
-  margin-top: 20px;
+.no-js body.unloaded header {
+  opacity: 1;
 }
 
-a.block-link {
-  border: 1px solid #D2D2D2;
-  color: #222;
+.no-js body.unloaded .navbar {
+  transform: none;
+}
+
+html, body {
+}
+
+.fader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: $primary;
+  z-index: 9998;
+  display: none;
+
+  .loading-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+
+    color: darken($main, 15);
+
+    text-align: center;
+    font-size: 12px;
+  }
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+.blink {
+  animation: blink-animation 1s steps(30, start) infinite;
+}
+@keyframes blink-animation {
+  0% {
+    opacity: 0.1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+
+header {
+  opacity: 1;
+  transition: opacity 2s ease;
+}
+
+span[class^="arrow-"] {
+  transition: all 150ms ease;
   display: inline-block;
-  font-weight: bold;
-  letter-spacing: 1px;
-  margin: 20px 0;
-  padding: 22px 0;
-  text-align: center;
-  text-transform: uppercase;
-  width: 100%;
+  backface-visibility: hidden;
+}
+
+.c {
+  align-self: center;
+}
+
+a:hover {
+  span.arrow-r {
+    transform: translateX(5px);
+    backface-visibility: hidden;
+  }
+
+  span.arrow-l {
+    transform: translateX(-5px);
+    backface-visibility: hidden;
+  }
+
+  span.arrow-u {
+    transform: translateY(-5px);
+    backface-visibility: hidden;
+  }
+}
+
+span.line {
+  display: inline-block;
+}
+
+.sm-mt-sm {
+  @include media-breakpoint-up(sm) {
+    margin-top: map-get($padding-small, sm);
+  }
+}
+
+.xs-mt-sm {
+  @include media-breakpoint-up(xs) {
+    margin-top: map-get($padding-small, xs);
+  }
+}
+
+.sm-mb-sm {
+  @include media-breakpoint-up(sm) {
+    margin-bottom: map-get($padding-small, sm);
+  }
+}
+
+.sm-mt-sm {
+  @include media-breakpoint-up(sm) {
+    margin-top: map-get($padding-small, sm);
+  }
+}
+
+.xs-mb-sm {
+  @include media-breakpoint-up(xs) {
+    margin-bottom: map-get($padding-small, xs);
+  }
+}
+
+.sm-mb-lg {
+  @include media-breakpoint-up(sm) {
+    margin-bottom: map-get($padding-big, sm);
+  }
+}
+
+.xs-mb-lg {
+  @include media-breakpoint-up(xs) {
+    margin-bottom: map-get($padding-big, xs);
+  }
+}
+
+.sm-mt-lg {
+  @include media-breakpoint-up(sm) {
+    margin-top: map-get($padding-big, sm);
+  }
+}
+
+.xs-mt-lg {
+  @include media-breakpoint-up(xs) {
+    margin-top: map-get($padding-big, xs);
+  }
+}
+
+.xs-mt-sm {
+  @include media-breakpoint-up(xs) {
+    margin-top: map-get($padding-small, xs);
+  }
+}
+
+.xs-mt-0 {
+  @include media-breakpoint-up(xs) {
+    margin-top: 0;
+  }
+}
+
+.sm-mt-0 {
+  @include media-breakpoint-up(sm) {
+    margin-top: 0;
+  }
+}
+
+.md-mt-0 {
+  @include media-breakpoint-up(md) {
+    margin-top: 0;
+  }
+}
+
+.sm-pt-sm {
+  @include media-breakpoint-up(sm) {
+    padding-top: map-get($padding-small, sm);
+  }
+}
+
+.xs-pt-sm {
+  @include media-breakpoint-up(xs) {
+    padding-top: map-get($padding-small, xs);
+  }
+}
+
+.sm-pb-sm {
+  @include media-breakpoint-up(sm) {
+    padding-bottom: map-get($padding-small, sm);
+  }
+}
+
+.sm-pt-sm {
+  @include media-breakpoint-up(sm) {
+    padding-top: map-get($padding-small, sm);
+  }
+}
+
+.xs-pb-sm {
+  @include media-breakpoint-only(xs) {
+    padding-bottom: map-get($padding-small, xs);
+  }
+}
+
+.sm-pb-lg {
+  @include media-breakpoint-up(sm) {
+    padding-bottom: map-get($padding-big, sm);
+  }
+}
+
+.xs-pb-lg {
+  @include media-breakpoint-up(xs) {
+    padding-bottom: map-get($padding-big, xs);
+  }
+}
+
+.sm-pt-lg {
+  @include media-breakpoint-up(sm) {
+    padding-top: map-get($padding-big, sm);
+  }
+}
+
+.xs-pt-lg {
+  @include media-breakpoint-up(xs) {
+    padding-top: map-get($padding-big, xs);
+  }
+}
+
+.xs-pt-sm {
+  @include media-breakpoint-only(xs) {
+    padding-top: map-get($padding-small, xs);
+  }
+  @include media-breakpoint-up(sm) {
+    padding-top: 0;
+  }
+}
+
+.xs-pt-0 {
+  @include media-breakpoint-up(xs) {
+    padding-top: 0;
+  }
+}
+
+.xs-p-lg {
+  @include media-breakpoint-up(xs) {
+    padding-top: map-get($padding-big, xs);
+    padding-bottom: map-get($padding-big, xs);
+  }
+}
+
+.sm-p-lg {
+  @include media-breakpoint-up(sm) {
+    padding-top: map-get($padding-big, sm);
+    padding-bottom: map-get($padding-big, sm);
+  }
+}
+
+.md-pt-lg {
+  @include media-breakpoint-up(md) {
+    padding-top: map-get($padding-big, md);
+  }
+}
+
+.md-pb-lg {
+  @include media-breakpoint-up(md) {
+    padding-bottom: map-get($padding-big, md);
+  }
+}
+
+.md-pt-sm {
+  @include media-breakpoint-up(md) {
+    padding-top: map-get($padding-small, md);
+  }
+}
+
+.md-pb-sm {
+  @include media-breakpoint-up(md) {
+    padding-bottom: map-get($padding-small, md);
+  }
+}
+
+.md-p-lg {
+  @include media-breakpoint-up(md) {
+    padding-top: map-get($padding-big, md);
+    padding-bottom: map-get($padding-big, md);
+  }
+}
+
+.lg-pt-lg {
+  @include media-breakpoint-up(lg) {
+    padding-top: map-get($padding-big, lg);
+  }
+}
+
+.lg-pb-lg {
+  @include media-breakpoint-up(lg) {
+    padding-bottom: map-get($padding-big, lg);
+  }
+}
+
+.lg-pt-sm {
+  @include media-breakpoint-up(lg) {
+    padding-top: map-get($padding-small, lg);
+  }
+}
+
+.lg-pb-sm {
+  @include media-breakpoint-up(lg) {
+    padding-bottom: map-get($padding-small, lg);
+  }
+}
+
+.lg-p-lg {
+  @include media-breakpoint-up(lg) {
+    padding-top: map-get($padding-big, lg);
+    padding-bottom: map-get($padding-big, lg);
+  }
+}
+
+.sm-pt-0 {
+  @include media-breakpoint-up(sm) {
+    padding-top: 0;
+  }
+}
+
+.md-pt-0 {
+  @include media-breakpoint-up(md) {
+    padding-top: 0;
+  }
+}
+
+.pt-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-top: map-get($padding-small, $bp-name);
+    }
+  }
+}
+
+.pt-xl {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-top: map-get($padding-xl, $bp-name);
+    }
+  }
+}
+
+.pt-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-top: map-get($padding-big, $bp-name);
+    }
+  }
+}
+
+.pb-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-bottom: map-get($padding-big, $bp-name);
+    }
+  }
+}
+
+.pb-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-bottom: map-get($padding-small, $bp-name);
+    }
+  }
+}
+
+.p-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-top: map-get($padding-big, $bp-name);
+      padding-bottom: map-get($padding-big, $bp-name);
+    }
+  }
+}
+
+.p-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-top: map-get($padding-small, $bp-name);
+      padding-bottom: map-get($padding-small, $bp-name);
+    }
+  }
+}
+
+.mb-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      margin-bottom: map-get($padding-big, $bp-name);
+    }
+  }
+}
+
+.mb-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      margin-bottom: map-get($padding-small, $bp-name);
+    }
+  }
+}
+
+.xs-p-0 {
+  @include media-breakpoint-down(xs) {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  @include media-breakpoint-only($bp-name) {
+    $gutter: map-get($gutters, $bp-name);
+
+    [class^='col-'],
+    [class*=' col-'] {
+      padding-right: ($gutter / 2);
+      padding-left: ($gutter / 2);
+    }
+
+    .row {
+      margin-right: ($gutter / -2);
+      margin-left: ($gutter / -2);
+    }
+  }
 }
 
 /**
  * Imports
  */
-@import "includes/general";
-@import "includes/colorbox";
-@import "includes/cookielaw";
-@import "includes/dropdown";
-@import "includes/instagram";
-@import "includes/pages";
-@import "includes/nav";
+
+@import "includes/animations";
+@import "includes/containers";
+@import "includes/fonts";
+@import "includes/headers";
+@import "includes/paragraphs";
+@import "includes/navigation";
+@import "includes/slider";

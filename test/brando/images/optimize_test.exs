@@ -77,7 +77,7 @@ defmodule Brando.Image.OptimizeTest do
           thumb: "images/default/thumb/2ambet.png",
           xlarge: "images/default/xlarge/2ambet.png"
         }
-      },
+      }
     )
 
     assert optimize(cs, :image) == cs
