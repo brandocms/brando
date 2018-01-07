@@ -18,6 +18,9 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "templates/brando.install/etc/nginx/prod.conf", "etc/nginx/prod.conf"},
     {:eex,  "templates/brando.install/etc/supervisord/prod.conf", "etc/supervisord/prod.conf"},
 
+    # Tuple implementation for Poison
+    {:eex,  "templates/brando.install/lib/application_name/tuple.ex", "lib/application_name/tuple.ex"},
+
     # Router template
     {:eex,  "templates/brando.install/lib/application_name_web/router.ex", "lib/application_name_web/router.ex"},
 
