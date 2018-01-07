@@ -37,7 +37,7 @@ password = Comeonin.Bcrypt.hashpwsalt("admin")
 user = %Brando.User{
   full_name: "Twined Admin",
   email: "admin@twined.net", password: password,
-  avatar: nil, role: 7, language: "nb"}
+  avatar: nil, role: :superuser, language: "nb"}
 user = <%= application_module %>.Repo.insert!(user)
 
 post_category = %Brando.ImageCategory{
