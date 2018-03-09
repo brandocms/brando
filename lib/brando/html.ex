@@ -192,10 +192,10 @@ defmodule Brando.HTML do
   Renders a <meta> tag
   """
   def meta_tag(name, content) do
-    Phoenix.HTML.Tag.tag(:meta, content: content, name: name)
+    Phoenix.HTML.Tag.tag(:meta, content: content, property: name)
   end
   def meta_tag({name, content}) do
-    Phoenix.HTML.Tag.tag(:meta, content: content, name: name)
+    Phoenix.HTML.Tag.tag(:meta, content: content, property: name)
   end
   def meta_tag(attrs) when is_list(attrs) do
     Phoenix.HTML.Tag.tag(:meta, attrs)

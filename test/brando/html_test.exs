@@ -67,17 +67,17 @@ defmodule Brando.HTMLTest do
 
   test "meta_tag" do
     assert meta_tag("keywords", "hello, world") ==
-           {:safe, [60, "meta", [[32, "content", 61, 34, "hello, world", 34], [32, "name", 61, 34, "keywords", 34]], 62]}
+           {:safe, [60, "meta", [[32, "content", 61, 34, "hello, world", 34], [32, "property", 61, 34, "keywords", 34]], 62]}
     assert meta_tag({"keywords", "hello, world"}) ==
-           {:safe, [60, "meta", [[32, "content", 61, 34, "hello, world", 34], [32, "name", 61, 34, "keywords", 34]], 62]}
+           {:safe, [60, "meta", [[32, "content", 61, 34, "hello, world", 34], [32, "property", 61, 34, "keywords", 34]], 62]}
   end
 
   test "render_meta" do
     mock_conn = %Plug.Conn{private: %{plug_session: %{}}}
     {:safe, html} = render_meta(mock_conn)
-    assert html =~ ~s(<meta content="MyApp" name="og:site_name">)
-    assert html =~ ~s(<meta content="MyApp" name="og:title">)
-    assert html =~ ~s(<meta content="http://www.example.com:0" name="og:url">)
+    assert html =~ ~s(<meta content="MyApp" property="og:site_name">)
+    assert html =~ ~s(<meta content="MyApp" property="og:title">)
+    assert html =~ ~s(<meta content="http://www.example.com:0" property="og:url">)
   end
 
   test "active/2" do
