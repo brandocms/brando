@@ -58,8 +58,6 @@ export default {
 
   methods: {
     validate () {
-      this.inject()
-
       this.$validator.validateAll().then(() => {
         this.save()
       }).catch(err => {
@@ -87,11 +85,6 @@ export default {
       } catch (err) {
         showError(err)
       }
-    },
-
-    inject () {
-      // if the model has a VILLAIN field, uncomment this. `data` is the data field with villain json.
-      // this.<%= singular %>.data = this.$refs.villain.$villain.getJSON()
     }
   }
 }
