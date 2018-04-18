@@ -8,7 +8,11 @@
         <div class="card-body">
           <!--
           FORM FIELDS HERE
-          -->
+          --><%= for {v, k} <- vue_inputs do %>
+          <%= List.first(k) %><% {_, r} = List.pop_at(k, 0); {_, remainder} = List.pop_at(r, -1) %><%= for prop <- remainder do %>
+            <%= prop %><% end %>
+          />
+          <% end %>
           <button :disabled="!!loading" @click="validate" class="btn btn-secondary">
             Lagre
           </button>
@@ -32,9 +36,7 @@ export default {
   data () {
     return {
       loading: 0,
-      <%= singular %>: {
-        // add fields
-      }
+      <%= singular %>: {}
     }
   },
 
@@ -73,6 +75,7 @@ export default {
 
       // strip out params we don't want sent in the mutation
       stripParams(params, ['__typename', 'id'])
+
       // validate image params, if any, to ensure they are files
       // validateImageParams(params, ['avatar'])
 

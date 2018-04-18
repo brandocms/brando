@@ -89,6 +89,10 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "use BrandoWeb, :view"
         assert file =~ "import BrandoWeb.Gettext"
       end
+
+      assert_file "assets/backend/src/views/games/CaptainCreateView.vue", fn file ->
+        assert file =~ ~s(<router-link :disabled="!!loading" :to="{ name: 'captains' }" class="btn btn-outline-secondary">)
+      end
     end
   end
 end

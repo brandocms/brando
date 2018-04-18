@@ -136,7 +136,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
   end
 
   defp partition_attrs_and_assocs(attrs) do
-    Enum.partition attrs, fn {_, kind} ->
+    Enum.split_with attrs, fn {_, kind} ->
       kind == :references
     end
   end

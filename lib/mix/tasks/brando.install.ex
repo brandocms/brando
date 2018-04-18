@@ -84,10 +84,6 @@ defmodule Mix.Tasks.Brando.Install do
   ]
 
   @static [
-    # Javascript assets
-    {:copy, "templates/brando.install/package.json", "assets/frontend/package.json"},
-    {:copy, "templates/brando.install/brunch-config.js", "assets/frontend/brunch-config.js"},
-
     # Deployment tools
     {:copy, "templates/brando.install/gitignore", ".gitignore"},
     {:copy, "templates/brando.install/dockerignore", ".dockerignore"},

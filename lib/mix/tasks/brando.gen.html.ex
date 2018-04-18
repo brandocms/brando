@@ -108,6 +108,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
                                admin_path: admin_path,
                                gql_inputs: graphql_inputs(attrs),
                                gql_types: graphql_types(attrs),
+                               vue_inputs: vue_inputs(attrs, binding[:singular]),
+                               vue_defaults: vue_defaults(attrs),
                                params: Mix.Brando.params(attrs),
                                snake_domain: snake_domain,
                                domain: domain_name]
@@ -281,6 +283,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k, ~s(field #{inspect(k)}, list_of\(:string\))}
       {k, :boolean} ->
         {k, ~s(field #{inspect(k)}, :boolean)}
+      {k, :string} ->
+        {k, ~s(field #{inspect(k)}, :string)}
       {k, :text} ->
         {k, ~s(field #{inspect(k)}, :string)}
       {k, :date} ->
@@ -305,12 +309,13 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
   defp graphql_inputs(attrs) do
     # this is for GraphQL input objects
-
     Enum.map attrs, fn
       {k, {:array, _}} ->
         {k, nil, nil}
       {k, :boolean} ->
         {k, ~s(field #{inspect(k)}, :boolean)}
+      {k, :string} ->
+        {k, ~s(field #{inspect(k)}, :string)}
       {k, :text} ->
         {k, ~s(field #{inspect(k)}, :string)}
       {k, :date} ->
@@ -326,6 +331,152 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k, ~s(field #{inspect(k)}, :string)}
       {k, _} ->
         {k, ~s(field #{inspect(k)}, :string)}
+    end
+  end
+
+  defp vue_defaults(attrs) do
+    # this is for vue default objects
+    Enum.map attrs, fn
+      {k, {:array, _}} ->
+        {k, nil, nil}
+      {k, :boolean} ->
+        {k, "false"}
+      {k, :text} ->
+        {k, "''"}
+      {k, :string} ->
+        {k, "''"}
+      {k, :date} ->
+        {k, "null"}
+      {k, :time} ->
+        {k, "null"}
+      {k, :datetime} ->
+        {k, "null"}
+      {k, :image} ->
+        {k, "null"}
+      {k, :villain} ->
+        k = k == :data && :data || String.to_atom(Atom.to_string(k) <> "_data")
+        {k, "null"}
+      {k, _} ->
+        {k, "null"}
+    end
+  end
+
+  defp vue_inputs(attrs, singular) do
+    # this is for vue components
+    Enum.map attrs, fn
+      {k, {:array, _}} ->
+        {k, nil, nil}
+      {k, :boolean} ->
+        {k, [
+          "<KInputCheckbox",
+          "v-model=\"#{singular}.#{k}\"",
+          ":value=\"#{singular}.#{k}\"",
+          ":has-error=\"errors.has('#{singular}[#{k}]')\"",
+          ":error-text=\"errors.first('#{singular}[#{k}]')\"",
+          "name=\"#{singular}[#{k}]\"",
+          "label=\"#{String.capitalize(to_string(k))}\"",
+          "data-vv-name=\"#{singular}[#{k}]\"",
+          "data-vv-value-path=\"innerValue\"",
+          "/>"
+        ]}
+      {k, :text} ->
+        {k, [
+          "<KInput",
+          "v-model=\"#{singular}.#{k}\"",
+          ":value=\"#{singular}.#{k}\"",
+          ":has-error=\"errors.has('#{singular}[#{k}]')\"",
+          ":error-text=\"errors.first('#{singular}[#{k}]')\"",
+          "v-validate=\"'required'\"",
+          "name=\"#{singular}[#{k}]\"",
+          "label=\"#{String.capitalize(to_string(k))}\"",
+          "placeholder=\"#{String.capitalize(to_string(k))}\"",
+          "data-vv-name=\"#{singular}[#{k}]\"",
+          "data-vv-value-path=\"innerValue\"",
+          "/>"
+        ]}
+      {k, :date} ->
+        {k, [
+          "<KInputDatetime",
+          "v-model=\"#{singular}.#{k}\"",
+          ":value=\"#{singular}.#{k}\"",
+          ":has-error=\"errors.has('#{singular}[#{k}]')\"",
+          ":error-text=\"errors.first('#{singular}[#{k}]')\"",
+          "v-validate=\"'required'\"",
+          "name=\"#{singular}[#{k}]\"",
+          "label=\"#{String.capitalize(to_string(k))}\"",
+          "placeholder=\"#{String.capitalize(to_string(k))}\"",
+          "data-vv-name=\"#{singular}[#{k}]\"",
+          "data-vv-value-path=\"innerValue\"",
+          "/>"
+        ]}
+      {k, :time} ->
+        {k, [
+          "<KInputDatetime",
+          "v-model=\"#{singular}.#{k}\"",
+          ":value=\"#{singular}.#{k}\"",
+          ":has-error=\"errors.has('#{singular}[#{k}]')\"",
+          ":error-text=\"errors.first('#{singular}[#{k}]')\"",
+          "v-validate=\"'required'\"",
+          "name=\"#{singular}[#{k}]\"",
+          "label=\"#{String.capitalize(to_string(k))}\"",
+          "placeholder=\"#{String.capitalize(to_string(k))}\"",
+          "data-vv-name=\"#{singular}[#{k}]\"",
+          "data-vv-value-path=\"innerValue\"",
+          "/>"
+        ]}
+      {k, :datetime} ->
+        {k, [
+          "<KInputDatetime",
+          "v-model=\"#{singular}.#{k}\"",
+          ":value=\"#{singular}.#{k}\"",
+          ":has-error=\"errors.has('#{singular}[#{k}]')\"",
+          ":error-text=\"errors.first('#{singular}[#{k}]')\"",
+          "v-validate=\"'required'\"",
+          "name=\"#{singular}[#{k}]\"",
+          "label=\"#{String.capitalize(to_string(k))}\"",
+          "placeholder=\"#{String.capitalize(to_string(k))}\"",
+          "data-vv-name=\"#{singular}[#{k}]\"",
+          "data-vv-value-path=\"innerValue\"",
+          "/>"
+        ]}
+      {k, :image} ->
+        {k, [
+          "<KInputImage",
+          "v-model=\"#{singular}.#{k}\"",
+          ":value=\"#{singular}.#{k}\"",
+          ":has-error=\"errors.has('#{singular}[#{k}]')\"",
+          ":error-text=\"errors.first('#{singular}[#{k}]')\"",
+          "v-validate=\"'required'\"",
+          "name=\"#{singular}[#{k}]\"",
+          "label=\"#{String.capitalize(to_string(k))}\"",
+          "data-vv-name=\"#{singular}[#{k}]\"",
+          "data-vv-value-path=\"innerValue\"",
+          "/>"
+        ]}
+      {k, :villain} ->
+        k = k == :data && :data || String.to_atom(Atom.to_string(k) <> "_data")
+        {k, [
+          "<Villain",
+          ":value=\"#{singular}.#{k}\"",
+          "@input=\"#{singular}.#{k} = $event\"",
+          "label=\"#{String.capitalize(to_string(k))}\"",
+          "/>"
+        ]}
+      {k, _} ->
+        {k, [
+          "<KInput",
+          "v-model=\"#{singular}.#{k}\"",
+          ":value=\"#{singular}.#{k}\"",
+          ":has-error=\"errors.has('#{singular}[#{k}]')\"",
+          ":error-text=\"errors.first('#{singular}[#{k}]')\"",
+          "v-validate=\"'required'\"",
+          "name=\"#{singular}[#{k}]\"",
+          "label=\"#{String.capitalize(to_string(k))}\"",
+          "placeholder=\"#{String.capitalize(to_string(k))}\"",
+          "data-vv-name=\"#{singular}[#{k}]\"",
+          "data-vv-value-path=\"innerValue\"",
+          "/>"
+        ]}
     end
   end
 
