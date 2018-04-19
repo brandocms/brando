@@ -81,9 +81,6 @@ defmodule RouterHelper do
       plug :fetch_flash
       plug :put_admin_locale
       plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
-      plug Guardian.Plug.VerifySession
-      plug Guardian.Plug.LoadResource
-      plug Guardian.Plug.EnsureAuthenticated, handler: Brando.AuthHandler
     end
 
     pipeline :browser do
