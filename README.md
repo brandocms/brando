@@ -57,7 +57,7 @@ Install node packages:
 
 Set up database, and seed:
 
-    $ mix ecto.setup
+    $ mix deps.install --force && mix ecto.setup
 
 Add to your `config/prod.secret.exs` (see https://github.com/elixir-lang/ecto/issues/1328)
 
@@ -89,6 +89,13 @@ $ mix release.init
 ```
 
 And set its config to default to prod.
+
+Fix dev asset reloading in `config/dev.exs`
+
+```elixir
+config :my_app, MyApp.Endpoint,
+  watchers: [npm: ["run", "dev", cd: Path.expand("../assets/frontend", __DIR__)]]
+```
 
 *Remember to switch out your ports and configure SSL in `etc/supervisor/prod.conf` and `etc/nginx/prod.conf`*
 
