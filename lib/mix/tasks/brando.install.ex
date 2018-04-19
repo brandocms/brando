@@ -148,7 +148,6 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/assets/backend/styles/fontawesome/fontawesome-pro-regular.scss", "assets/backend/styles/fontawesome/fontawesome-pro-regular.scss"},
     {:copy, "templates/brando.install/assets/backend/styles/fontawesome/fontawesome-pro-solid.scss", "assets/backend/styles/fontawesome/fontawesome-pro-solid.scss"},
     {:copy, "templates/brando.install/assets/backend/styles/includes/_fonts.scss", "assets/backend/styles/includes/_fonts.scss"},
-    {:copy, "templates/brando.install/assets/backend/yarn.lock", "assets/backend/yarn.lock"},
 
     # Frontend assets
     {:copy, "templates/brando.install/assets/frontend/css/_bootstrap.scss", "assets/frontend/css/_bootstrap.scss"},
@@ -185,7 +184,6 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/assets/frontend/static/images/brando/defaults/thumb/avatar_default.jpg", "assets/frontend/static/images/brando/defaults/thumb/avatar_default.jpg"},
     {:copy, "templates/brando.install/assets/frontend/static/images/logo.svg", "assets/frontend/static/images/logo.svg"},
     {:copy, "templates/brando.install/assets/frontend/webpack.config.js", "assets/frontend/webpack.config.js"},
-    {:copy, "templates/brando.install/assets/frontend/yarn.lock", "assets/frontend/yarn.lock"},
   ]
 
   @root Path.expand("../../../priv", __DIR__)
