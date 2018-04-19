@@ -14,3 +14,4 @@ coveralls.json
 doc
 cover
 npm-debug.log
+/.elixir_ls
