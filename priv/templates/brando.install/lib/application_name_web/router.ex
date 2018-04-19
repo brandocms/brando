@@ -18,9 +18,7 @@ defmodule <%= application_module %>Web.Router do
 
   pipeline :graphql do
     # plug RemoteIp
-    plug Guardian.Plug.VerifyHeader, realm: "Bearer"
-    plug Guardian.Plug.EnsureAuthenticated, handler: Brando.AuthHandler.GQLAuthHandler
-    plug Guardian.Plug.LoadResource
+    plug <%= application_module %>Web.Guardian.GQLPipeline
     plug Brando.Plug.APIContext
     plug Brando.Plug.SentryUserContext
   end
@@ -35,21 +33,6 @@ defmodule <%= application_module %>Web.Router do
     plug PlugHeartbeat
   end
 
-  pipeline :browser_session do
-    plug Guardian.Plug.VerifySession
-    plug Guardian.Plug.LoadResource
-  end
-
-  pipeline :auth do
-    plug :accepts, ["html"]
-    plug :fetch_session
-    plug :fetch_flash
-    plug Guardian.Plug.VerifySession
-    plug Guardian.Plug.LoadResource
-    plug :protect_from_forgery
-    plug :put_secure_browser_headers
-  end
-
   pipeline :api do
     plug :accepts, ["json"]
     # plug RemoteIp
@@ -57,8 +40,7 @@ defmodule <%= application_module %>Web.Router do
   end
 
   pipeline :token do
-    plug Guardian.Plug.VerifyHeader, realm: "Bearer"
-    plug Guardian.Plug.LoadResource
+    plug <%= application_module %>Web.Guardian.TokenPipeline
     plug Brando.Plug.SentryUserContext
   end
 
@@ -70,9 +52,9 @@ defmodule <%= application_module %>Web.Router do
     pipe_through :admin
 
     scope "/auth" do
-      post "/login", Brando.SessionController, :create
-      post "/logout", Brando.SessionController, :delete
-      post "/verify", Brando.SessionController, :verify
+      post "/login", <%= application_module %>Web.SessionController, :create
+      post "/logout", <%= application_module %>Web.SessionController, :delete
+      post "/verify", <%= application_module %>Web.SessionController, :verify
     end
 
     scope "/api" do
@@ -93,13 +75,6 @@ defmodule <%= application_module %>Web.Router do
   scope "/coming-soon" do
     get "/", Brando.LockdownController, :index
     post "/", Brando.LockdownController, :post_password
-  end
-
-  scope "/auth" do
-    pipe_through :auth
-    get  "/login", Brando.SessionController, :login, private: %{model: Brando.User}
-    post "/login", Brando.SessionController, :login, private: %{model: Brando.User}
-    get  "/logout", Brando.SessionController, :logout, private: %{model: Brando.User}
   end
 
   scope "/" do

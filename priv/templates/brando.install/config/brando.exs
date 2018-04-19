@@ -67,14 +67,10 @@ config :brando, Brando.Villain,
   parser: <%= application_module %>.Villain.Parser
 
 # Configure Guardian for auth.
-config :guardian, Guardian,
-  allowed_algos: ["HS512"], # optional
-  verify_module: Guardian.JWT,  # optional
+config :<%= application_name %>, <%= application_module %>Web.Guardian,
   issuer: "<%= application_module %>",
   ttl: {30, :days},
-  verify_issuer: true, # optional
-  secret_key: "<%= :crypto.strong_rand_bytes(64) |> Base.encode64 |> binary_part(0, 64) %>",
-  serializer: Brando.GuardianSerializer
+  secret_key: "<%= :crypto.strong_rand_bytes(64) |> Base.encode64 |> binary_part(0, 64) %>"
 
 # Configure Eightyfour for interfacing with Google Analytics
 # config :eightyfour,

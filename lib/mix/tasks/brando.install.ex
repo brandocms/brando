@@ -63,6 +63,11 @@ defmodule Mix.Tasks.Brando.Install do
     {:keep, "templates/brando.install/priv/static/gettext/frontend", "priv/static/gettext/frontend"},
     {:eex,  "templates/brando.install/lib/application_name_web/gettext.ex", "lib/application_name_web/gettext.ex"},
 
+    # Guardian templates
+    {:eex,  "templates/brando.install/lib/application_name_web/guardian.ex", "lib/application_name_web/guardian.ex"},
+    {:eex,  "templates/brando.install/lib/application_name_web/controllers/session_controller.ex", "lib/application_name_web/controllers/session_controller.ex"},
+    {:eex,  "templates/brando.install/lib/application_name_web/views/session_view.ex", "lib/application_name_web/views/session_view.ex"},
+
     # Helpers for frontend
     {:eex, "templates/brando.install/lib/application_name_web.ex", "lib/application_name_web.ex"},
 

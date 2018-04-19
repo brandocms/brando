@@ -3,7 +3,6 @@ defmodule <%= application_module %>Web.AdminSocket do
   Socket specs for System and Stats channels.
   """
   use Phoenix.Socket
-  import Guardian.Phoenix.Socket
 
   ## Channels
   channel "admin", <%= application_module %>.AdminChannel
@@ -17,10 +16,11 @@ defmodule <%= application_module %>Web.AdminSocket do
   Connect socket with token
   """
   def connect(%{"guardian_token" => jwt}, socket) do
-    case sign_in(socket, jwt) do
-      {:ok, authed_socket, _guardian_params} ->
+    case Guardian.Phoenix.Socket.authenticate(socket, <%= application_module %>Web.Guardian, jwt) do
+      {:ok, authed_socket} ->
         {:ok, authed_socket}
-      _ ->
+
+      {:error, err} ->
         :error
     end
   end

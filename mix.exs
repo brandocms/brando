@@ -56,7 +56,6 @@ defmodule Brando.Mixfile do
      :comeonin,
      :httpoison,
      :earmark,
-     :guardian,
      :mogrify,
      :phoenix_html,
      :poison,
@@ -80,7 +79,6 @@ defmodule Brando.Mixfile do
     {:phoenix_html, "~> 2.6"},
     {:phoenix_ecto, "~> 3.2"},
     {:postgrex, "~> 0.13", override: true},
-    {:guardian, "~> 0.14"},
 
     {:slugger, "~> 0.2"},
     {:scrivener_ecto, "~> 1.1"},

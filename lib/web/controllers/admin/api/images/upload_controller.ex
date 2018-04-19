@@ -4,11 +4,10 @@ defmodule Brando.Admin.API.Images.UploadController do
   """
 
   use Brando.Web, :controller
-  use Guardian.Phoenix.Controller
 
   use Brando.Sequence, [
     :controller, [
-      schema:  Brando.Image,
+      schema: Brando.Image,
       filter: &Brando.Image.for_series_id/1
     ]
   ]
@@ -16,7 +15,8 @@ defmodule Brando.Admin.API.Images.UploadController do
   alias Brando.Images
 
   @doc false
-  def post(conn, %{"image_series_id" => id} = params, current_user, _) do
+  def post(conn, %{"image_series_id" => id} = params) do
+    current_user = Guardian.Plug.current_resource(conn)
     {:ok, series} =
       id
       |> Images.get_series()
