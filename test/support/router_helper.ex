@@ -14,19 +14,6 @@ defmodule RouterHelper do
                              encryption_salt: "yadayada",
                              signing_salt: "yadayada")
 
-  @current_user %{
-    __struct__: Brando.User,
-    id: 1,
-    avatar: nil,
-    email: "test@test.com",
-    full_name: "Iggy Pop",
-    inserted_at: ~N[2016-01-01 12:00:00],
-    last_login: ~N[2016-01-01 12:00:00],
-    updated_at: ~N[2016-01-01 12:00:00],
-    role: [:superuser, :staff, :admin],
-    language: "en"
-  }
-
   defmacro __using__(_) do
     quote do
       import RouterHelper
