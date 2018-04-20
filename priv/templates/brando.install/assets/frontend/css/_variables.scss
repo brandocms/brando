@@ -25,14 +25,14 @@ $padding-xl: (
   lg: 270px
 );
 
-$padding-big: (
+$padding-lg: (
   xs: 50px,
   sm: 100px,
   md: 100px,
   lg: 140px
 );
 
-$padding-small: (
+$padding-sm: (
   xs: 30px,
   sm: 35px,
   md: 50px,
@@ -66,14 +66,14 @@ $lineheight-base: (
 
 $fontsize-lead: (
   xs: 21px,
-  sm: 38px,
+  sm: 25px,
   md: 38px,
   lg: 45px
 );
 
 $lineheight-lead: (
-  xs: 25px,
-  sm: 45px,
+  xs: 29px,
+  sm: 33px,
   md: 45px,
   lg: 53px
 );
@@ -84,6 +84,41 @@ $marginbottom-lead: (
   md: 100px,
   lg: 125px
 );
+
+// H1
+$fontsize-h1: (
+  xs: 28px,
+  sm: 38px,
+  md: 45px,
+  lg: 55px
+);
+
+$lineheight-h1: (
+  xs: 25px,
+  sm: 45px,
+  md: 45px,
+  lg: 55px
+);
+
+$marginbottom-h1: $padding-sm;
+
+// H1
+$fontsize-h2: (
+  xs: map-get($fontsize-h1, xs) / 1.7,
+  sm: map-get($fontsize-h1, sm) / 1.7,
+  md: map-get($fontsize-h1, md) / 1.7,
+  lg: map-get($fontsize-h1, lg) / 1.7
+);
+
+$lineheight-h2: (
+  xs: map-get($lineheight-h1, xs) / 1.7,
+  sm: map-get($lineheight-h1, sm) / 1.7,
+  md: map-get($lineheight-h1, md) / 1.7,
+  lg: map-get($lineheight-h1, lg) / 1.7
+);
+
+$marginbottom-h2: $padding-sm;
+
 
 $fontsize-credits: (
   xs: 15px,
@@ -100,24 +135,24 @@ $lineheight-credits: (
 );
 
 $fontsize-caps: (
-  xs: 10px,
-  sm: 15px,
-  md: 15px,
-  lg: 20px
+  xs: 15px,
+  sm: 18px,
+  md: 18px,
+  lg: 22px
 );
 
 $lineheight-caps: (
-  xs: 13px,
-  sm: 18px,
-  md: 18px,
-  lg: 25px
+  xs: 18px,
+  sm: 24px,
+  md: 24px,
+  lg: 29px
 );
 
 $padding-caps: (
-  xs: 30px,
-  sm: 50px,
-  md: 50px,
-  lg: 60px
+  xs: 10px,
+  sm: 10px,
+  md: 10px,
+  lg: 15px
 );
 
 $fontsize-menu: (
@@ -141,8 +176,8 @@ $lineheight-menu: (
 $dark: #1C1B1B;
 $light: #FFFFFF;
 
-$contrast: #F0F;
-$primary: #F00;
+$contrast: #d23434;
+$primary: #d23434;
 $menu-bg: $light;
 
 $body-bg: $light;

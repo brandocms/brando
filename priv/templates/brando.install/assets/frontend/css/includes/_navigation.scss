@@ -19,8 +19,8 @@ header {
   @each $bp-name, $bp-size in $grid-breakpoints {
     @include media-breakpoint-up($bp-name) {
       /* #{$bp-name} */
-      padding-top: map-get($padding-small, $bp-name);
-      padding-bottom: map-get($padding-small, $bp-name);
+      padding-top: map-get($padding-sm, $bp-name);
+      padding-bottom: map-get($padding-sm, $bp-name);
     }
   }
   height: auto;
@@ -55,8 +55,8 @@ header {
     }
     @each $bp-name, $bp-size in $grid-breakpoints {
       @include media-breakpoint-up($bp-name) {
-        padding-top: map-get($padding-small, $bp-name) / 2;
-        padding-bottom: map-get($padding-small, $bp-name) / 2;
+        padding-top: map-get($padding-sm, $bp-name) / 2;
+        padding-bottom: map-get($padding-sm, $bp-name) / 2;
       }
     }
 
@@ -159,6 +159,7 @@ header {
   h1 {
     color: $dark;
     font-size: 2rem;
+    margin-bottom: 0;
   }
   svg {
     width: 100%;

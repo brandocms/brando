@@ -33,11 +33,12 @@ p {
   }
 }
 
-.lead-container p {
+.lead-container p, p.lead {
   @each $bp-name, $bp-size in $grid-breakpoints {
     @include media-breakpoint-up($bp-name) {
       font-size: map-get($fontsize-lead, $bp-name);
       line-height: map-get($lineheight-lead, $bp-name);
+      margin-bottom: map-get($padding-sm, $bp-name);
     }
   }
 }

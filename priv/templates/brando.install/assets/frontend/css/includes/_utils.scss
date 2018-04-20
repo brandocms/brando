@@ -1,0 +1,236 @@
+//////////////////////////////////////////////////////////////////////////////////////////
+// PADDING
+//////////////////////////////////////////////////////////////////////////////////////////
+
+// PADDING - TOP
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pt-sm {
+    @include media-breakpoint-up($bp-name) {
+      padding-top: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pt-lg {
+    @include media-breakpoint-up($bp-name) {
+      padding-top: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// PADDING - RIGHT
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pr-sm {
+    @include media-breakpoint-up($bp-name) {
+      padding-right: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pr-lg {
+    @include media-breakpoint-up($bp-name) {
+      padding-right: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// PADDING - BOTTOM
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pb-sm {
+    @include media-breakpoint-up($bp-name) {
+      padding-bottom: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pb-lg {
+    @include media-breakpoint-up($bp-name) {
+      padding-bottom: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// PADDING - LEFT
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pl-sm {
+    @include media-breakpoint-up($bp-name) {
+      padding-right: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pl-lg {
+    @include media-breakpoint-up($bp-name) {
+      padding-left: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// PADDING - RESETS
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pt-0 {
+    @include media-breakpoint-up($bp-name) {
+      padding-top: 0;
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pr-0 {
+    @include media-breakpoint-up($bp-name) {
+      padding-right: 0;
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pb-0 {
+    @include media-breakpoint-up($bp-name) {
+      padding-bottom: 0;
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pl-0 {
+    @include media-breakpoint-up($bp-name) {
+      padding-left: 0;
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// MARGIN
+//////////////////////////////////////////////////////////////////////////////////////////
+
+// MARGIN - TOP
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mt-sm {
+    @include media-breakpoint-up($bp-name) {
+      margin-top: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mt-lg {
+    @include media-breakpoint-up($bp-name) {
+      margin-top: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// MARGIN - RIGHT
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mr-sm {
+    @include media-breakpoint-up($bp-name) {
+      margin-right: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mr-lg {
+    @include media-breakpoint-up($bp-name) {
+      margin-right: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// MARGIN - BOTTOM
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mb-sm {
+    @include media-breakpoint-up($bp-name) {
+      margin-bottom: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mb-lg {
+    @include media-breakpoint-up($bp-name) {
+      margin-bottom: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// MARGIN - LEFT
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-ml-sm {
+    @include media-breakpoint-up($bp-name) {
+      margin-right: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-ml-lg {
+    @include media-breakpoint-up($bp-name) {
+      margin-left: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// MARGIN - RESETS
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mt-0 {
+    @include media-breakpoint-up($bp-name) {
+      margin-top: 0;
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mr-0 {
+    @include media-breakpoint-up($bp-name) {
+      margin-right: 0;
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mb-0 {
+    @include media-breakpoint-up($bp-name) {
+      margin-bottom: 0;
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-ml-0 {
+    @include media-breakpoint-up($bp-name) {
+      margin-left: 0;
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  @include media-breakpoint-only($bp-name) {
+    $gutter: map-get($gutters, $bp-name);
+
+    [class^='col-'],
+    [class*=' col-'] {
+      padding-right: ($gutter / 2);
+      padding-left: ($gutter / 2);
+    }
+
+    .row {
+      margin-right: ($gutter / -2);
+      margin-left: ($gutter / -2);
+    }
+  }
+}

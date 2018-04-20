@@ -49,8 +49,8 @@
   // @each $bp-name, $bp-size in $grid-breakpoints {
   //   @include media-breakpoint-up($bp-name) {
   //     /* #{$bp-name} */
-  //     padding-top: map-get($padding-big, $bp-name);
-  //     padding-bottom: map-get($padding-big, $bp-name);
+  //     padding-top: map-get($padding-lg, $bp-name);
+  //     padding-bottom: map-get($padding-lg, $bp-name);
   //   }
   // }
 
