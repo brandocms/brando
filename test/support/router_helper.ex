@@ -45,13 +45,6 @@ defmodule RouterHelper do
     |> Map.put(:secret_key_base, String.duplicate("abcdefgh", 8))
   end
 
-  def with_user(conn, user \\ @current_user) do
-    conn
-    |> put_private(:schema, Brando.User)
-    |> with_session
-    |> Guardian.Plug.api_sign_in(user)
-  end
-
   def as_json(conn) do
     conn
     |> Plug.Conn.put_req_header("accept", "application/json")

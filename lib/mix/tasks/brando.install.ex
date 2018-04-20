@@ -36,6 +36,10 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "templates/brando.install/lib/application_name_web/templates/error/404_page.html.eex", "lib/application_name_web/templates/error/404_page.html.eex"},
     {:eex,  "templates/brando.install/lib/application_name_web/templates/error/500_page.html.eex", "lib/application_name_web/templates/error/500_page.html.eex"},
 
+    # Navigation and page index
+    {:text,  "templates/brando.install/lib/application_name_web/templates/page/_navigation.html.eex", "lib/application_name_web/templates/page/_navigation.html.eex"},
+    {:text,  "templates/brando.install/lib/application_name_web/templates/page/index.html.eex", "lib/application_name_web/templates/page/index.html.eex"},
+
     # Default Villain parser
     {:eex,  "templates/brando.install/lib/application_name_web/villain/parser.ex", "lib/application_name_web/villain/parser.ex"},
 
@@ -56,7 +60,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex,  "templates/brando.install/repo/seeds.exs", "priv/repo/seeds.exs"},
 
     # Master app template.
-    {:text, "templates/brando.install/lib/application_name_web/templates/layout/app.html.eex", "lib/application_name_web/templates/layout/app.html.eex"},
+    {:eex, "templates/brando.install/lib/application_name_web/templates/layout/app.html.eex", "lib/application_name_web/templates/layout/app.html.eex"},
 
     # Gettext templates
     {:keep, "templates/brando.install/priv/static/gettext/backend/nb", "priv/static/gettext/backend/nb/LC_MESSAGES"},
