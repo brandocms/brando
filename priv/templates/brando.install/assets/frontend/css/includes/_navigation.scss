@@ -94,7 +94,7 @@ header {
     }
 
     .nav-link {
-      color: $dark;
+      color: $menu-link-color;
       padding: 0;
       position: relative;
       @include media-breakpoint-down(sm) {
@@ -105,7 +105,7 @@ header {
       }
       &:after {
         @include media-breakpoint-up(md) {
-          color: $menuaccentcolor;
+          color: $menu-accent-color;
           transition: opacity 750ms ease;
           content: '◣';
           font-size: 13px;
