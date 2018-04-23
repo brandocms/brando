@@ -69,6 +69,8 @@ defmodule Mix.Tasks.Brando.Install do
 
     # Guardian templates
     {:eex,  "templates/brando.install/lib/application_name_web/guardian.ex", "lib/application_name_web/guardian.ex"},
+    {:eex,  "templates/brando.install/lib/application_name_web/guardian/gql_pipeline.ex", "lib/application_name_web/guardian/gql_pipeline.ex"},
+    {:eex,  "templates/brando.install/lib/application_name_web/guardian/token_pipeline.ex", "lib/application_name_web/guardian/token_pipeline.ex"},
     {:eex,  "templates/brando.install/lib/application_name_web/controllers/session_controller.ex", "lib/application_name_web/controllers/session_controller.ex"},
     {:eex,  "templates/brando.install/lib/application_name_web/views/session_view.ex", "lib/application_name_web/views/session_view.ex"},
 
