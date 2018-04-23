@@ -1,47 +1,48 @@
 const path = require('path')
 const Webpack = require('webpack')
-const ExtractTextPlugin = require('extract-text-webpack-plugin')
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 const OptimizeCSSPlugin = require('optimize-css-assets-webpack-plugin')
+const UglifyJsPlugin = require("uglifyjs-webpack-plugin")
+
 const config = require('./package')
 
 const ENV = process.env.NODE_ENV || 'development'
-const IS_PROD = ENV === 'production'
+const IS_DEV = ENV === 'development'
 const OUTPUT_PATH = path.resolve(__dirname, '..', '..', 'priv', 'static')
 
-const ExtractCSS = new ExtractTextPlugin({
+const ExtractCSS = new MiniCssExtractPlugin({
   filename: 'css/[name].css'
 })
 
+const Provide = new Webpack.ProvidePlugin({
+  $: 'jquery',
+  jQuery: 'jquery',
+  Tether: 'tether'
+})
+
+const Define = new Webpack.DefinePlugin({
+  APP_NAME: JSON.stringify(config.app_name),
+  VERSION: JSON.stringify(config.version),
+  ENV: JSON.stringify(ENV)
+})
+
+const Copy = new CopyWebpackPlugin([{
+  context: './static',
+  from: '**/*',
+  to: '.'
+}, {
+  context: './node_modules/font-awesome/fonts',
+  from: '*',
+  to: './fonts'
+}])
+
 var PLUGINS = [
   ExtractCSS,
-  new Webpack.ProvidePlugin({
-    $: 'jquery',
-    jQuery: 'jquery',
-    Tether: 'tether'
-  }),
-  new Webpack.DefinePlugin({
-    APP_NAME: JSON.stringify(config.app_name),
-    VERSION: JSON.stringify(config.version),
-    ENV: JSON.stringify(ENV)
-  }),
-  new CopyWebpackPlugin([{
-    context: './static',
-    from: '**/*',
-    to: '.'
-  }, {
-    context: './node_modules/font-awesome/fonts',
-    from: '*',
-    to: './fonts'
-  }])
+  Provide,
+  Define,
+  Copy
 ]
-
-if (IS_PROD) {
-  PLUGINS = PLUGINS.concat([
-    new OptimizeCSSPlugin({cssProcessorOptions: { discardComments: { removeAll: true } }}),
-    new Webpack.optimize.UglifyJsPlugin({compress: true})
-  ])
-}
 
 module.exports = function (env = {}) {
   return {
@@ -54,6 +55,28 @@ module.exports = function (env = {}) {
       ]
     },
 
+    optimization: {
+      minimizer: [
+        new UglifyJsPlugin({
+          cache: true,
+          parallel: true,
+          sourceMap: IS_DEV
+        }),
+        new OptimizeCSSPlugin({})
+      ],
+
+      splitChunks: {
+        cacheGroups: {
+          styles: {
+            name: 'styles',
+            test: /\.css$/,
+            chunks: 'all',
+            enforce: true
+          }
+        }
+      }
+    },
+
     output: {
       filename: 'js/app.js',
       path: OUTPUT_PATH
@@ -64,29 +87,24 @@ module.exports = function (env = {}) {
         test: /\.js$/,
         exclude: /(node_modules|bower_components)/,
         loader: 'babel-loader'
-      }, {
+      },
+      {
         test: /\.css$/,
-        loader: ExtractCSS.extract({
-          use: [{
-            loader: 'css-loader'
-          }, {
-            loader: 'postcss-loader'
-          }],
-          fallback: 'style-loader'
-        })
-      }, {
+        use: [
+          MiniCssExtractPlugin.loader,
+          "css-loader"
+        ]
+      },
+      {
         test: /\.scss$/,
-        loader: ExtractCSS.extract({
-          use: [{
-            loader: 'css-loader'
-          }, {
-            loader: 'postcss-loader'
-          }, {
-            loader: 'sass-loader'
-          }],
-          fallback: 'style-loader'
-        })
-      }, {
+        use: [
+          MiniCssExtractPlugin.loader,
+          'css-loader',
+          'postcss-loader',
+          'sass-loader',
+        ]
+      },
+      {
         test: /\.(eot|svg|ttf|woff|woff2)$/,
         loader: 'url-loader'
       }]

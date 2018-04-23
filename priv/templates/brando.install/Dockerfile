@@ -18,7 +18,7 @@ COPY assets/backend/package.json assets/backend/yarn.lock /opt/app/assets/backen
 RUN cd assets/backend && yarn install --force --pure-lockfile
 RUN cd assets/frontend && yarn install --force --pure-lockfile
 RUN cd assets/backend && yarn build
-RUN cd assets/frontend && node_modules/.bin/brunch build -p
+RUN cd assets/frontend && yarn build
 
 RUN mix phx.digest
 RUN mix compile
