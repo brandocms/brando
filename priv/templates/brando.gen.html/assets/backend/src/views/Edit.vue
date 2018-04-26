@@ -36,7 +36,7 @@ export default {
   data () {
     return {
       loading: 0,
-      <%= singular %>: {}
+      <%= singular %>: null
     }
   },
 
