@@ -1,4 +1,4 @@
-defmodule <%= application_module %>WebWeb.Guardian do
+defmodule <%= application_module %>Web.Guardian do
   @moduledoc """
   Interface for Guardian auth
   """
