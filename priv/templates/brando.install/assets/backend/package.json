@@ -56,6 +56,7 @@
     "sortablejs": "^1.7.0",
     "test-vue-app": "^1.0.0",
     "tether": "^1.4.4",
+    "uglifyjs-webpack-plugin": "^1.2.5",
     "url-slug": "^2.0.0",
     "v-click-outside": "^1.0.4",
     "vee-validate": "^2.0.0-rc.19",
