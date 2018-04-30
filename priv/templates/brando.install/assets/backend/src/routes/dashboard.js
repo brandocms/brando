@@ -5,6 +5,6 @@ export default [
     path: '/',
     component: DashboardView,
     name: 'dashboard',
-    meta: { title: 'byHands admin' }
+    meta: { title: 'APP admin' }
   }
 ]

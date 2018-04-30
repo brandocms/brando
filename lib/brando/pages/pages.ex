@@ -192,12 +192,12 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  Renders a page fragment by `key`.
+  Fetch a page fragment by `key`.
 
   ## Example:
 
-      render_fragment("my/fragment", Gettext.get_locale(MyApp.Gettext)
-      render_fragment("my/fragment", "en")
+      fetch_fragment("my/fragment", Gettext.get_locale(MyApp.Gettext)
+      fetch_fragment("my/fragment", "en")
 
   If no language is passed, default language set in `brando.exs` will be used.
   If the fragment isn't found, it will render an error box.

@@ -37,7 +37,7 @@ defmodule <%= application_module %>Web.AdminSocket do
   # Would allow you to broadcast a "disconnect" event and terminate
   # all active sockets and channels for a given user:
   #
-  #     ByHands.Web.Endpoint.broadcast("users_socket:#{user.id}", "disconnect", %{})
+  #     <%= application_module %>Web.Endpoint.broadcast("users_socket:#{user.id}", "disconnect", %{})
   #
   # Returning `nil` makes this socket anonymous.
   def id(_socket), do: nil
