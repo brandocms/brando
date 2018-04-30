@@ -305,14 +305,13 @@ Migration:
 ## Example:
 
 ```elixir
-import Brando.Pages.Utils, only: [render_fragment: 2]
+import Brando.Pages, only: [fetch_fragment: 2]
 
-render_fragment("my/fragment", Gettext.get_locale(MyApp.Gettext)
-render_fragment("my/fragment", "en")
+fetch_fragment("my/fragment", Gettext.get_locale(MyApp.Gettext)
+fetch_fragment("my/fragment", "en")
 ```
 
-If no language is passed, the default language set in `brando.exs` as `default_language` will be used.
-
+If no language is passed, default language set in `brando.exs` will be used.
 If the fragment isn't found, it will render an error box.
 
 ## Imagefield
