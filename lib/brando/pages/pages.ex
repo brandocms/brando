@@ -233,4 +233,26 @@ defmodule Brando.Pages do
         Phoenix.HTML.raw(fragment.html)
     end
   end
+
+  def render_fragment(parent, key, language \\ nil) when is_binary(parent) and is_binary(key) do
+    language = language || Brando.config(:default_language)
+    fragment = Brando.repo.one(
+      from p in PageFragment,
+        where: p.parent == ^parent and
+               p.key == ^key and
+              p.language == ^language
+    )
+
+    case fragment do
+      nil ->
+        ~s(<div class="page-fragment-missing">
+             <strong>Missing page fragment</strong> <br />
+             parent: #{parent}<br />
+             key...: #{key}<br />
+             lang..: #{language}
+           </div>) |> Phoenix.HTML.raw
+      fragment ->
+        Phoenix.HTML.raw(fragment.html)
+    end
+  end
 end
