@@ -239,7 +239,7 @@ defmodule Brando.Pages do
     fragment = Brando.repo.one(
       from p in PageFragment,
         where: p.parent == ^parent and
-               p.key == ^key and
+               p.parent_key == ^key and
               p.language == ^language
     )
 
