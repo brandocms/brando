@@ -238,8 +238,8 @@ defmodule Brando.Pages do
     language = language || Brando.config(:default_language)
     fragment = Brando.repo.one(
       from p in PageFragment,
-        where: p.parent == ^parent and
-               p.parent_key == ^key and
+        where: p.parent_key == ^parent and
+               p.key == ^key and
               p.language == ^language
     )
 
