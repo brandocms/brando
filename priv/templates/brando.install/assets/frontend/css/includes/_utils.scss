@@ -1,6 +1,140 @@
 //////////////////////////////////////////////////////////////////////////////////////////
+// MARGIN
+//////////////////////////////////////////////////////////////////////////////////////////
+
+
+.mt-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      margin-top: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.mt-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      margin-top: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+.mr-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      margin-right: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.mr-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      margin-right: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+.mb-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      margin-bottom: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.mb-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      margin-bottom: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+.ml-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      margin-left: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.ml-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      margin-left: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
 // PADDING
 //////////////////////////////////////////////////////////////////////////////////////////
+
+
+.pt-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-top: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.pt-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-top: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+.pr-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-right: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.pr-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-right: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+.pb-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-bottom: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.pb-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-bottom: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+.pl-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-left: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.pl-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-left: map-get($padding-lg, $bp-name);
+    }
+  }
+}
 
 // PADDING - TOP
 
