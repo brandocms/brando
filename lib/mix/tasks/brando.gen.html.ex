@@ -129,7 +129,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       {:eex, "assets/backend/src/store/modules/module.js", "assets/backend/src/store/modules/#{plural}.js"},
 
       {:eex, "assets/backend/src/api/api.js", "assets/backend/src/api/#{path}.js"},
-      {:eex, "assets/backend/src/api/graphql/ALL_QUERY.graphql", "assets/backend/src/api/#{plural}/#{String.upcase(plural)}_QUERY.graphql"},
+      {:eex, "assets/backend/src/api/graphql/ALL_QUERY.graphql", "assets/backend/src/api/graphql/#{plural}/#{String.upcase(plural)}_QUERY.graphql"},
       {:eex, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql", "assets/backend/src/api/graphql/#{plural}/#{String.upcase(singular)}_QUERY.graphql"},
       {:eex, "assets/backend/src/api/graphql/CREATE_MUTATION.graphql", "assets/backend/src/api/graphql/#{plural}/CREATE_#{String.upcase(singular)}_MUTATION.graphql"},
       {:eex, "assets/backend/src/api/graphql/UPDATE_MUTATION.graphql", "assets/backend/src/api/graphql/#{plural}/UPDATE_#{String.upcase(singular)}_MUTATION.graphql"},
