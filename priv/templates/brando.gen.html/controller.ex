@@ -1,6 +1,6 @@
 defmodule <%= module %>Controller do
   use <%= base %>Web, :controller
-  alias <%= base %>Web.<%= domain %>
+  alias <%= base %>.<%= domain %>
 
   @doc false
   def index(conn, _params) do
