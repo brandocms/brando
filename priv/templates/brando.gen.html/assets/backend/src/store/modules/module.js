@@ -59,7 +59,7 @@ export const <%= plural %> = {
 
     async delete<%= String.capitalize(singular) %> (context, <%= singular %>) {
       nprogress.start()
-      await <%= singular %>API.delete<%= String.capitalize(singular) %>(<%= singular %>)
+      await <%= singular %>API.delete<%= String.capitalize(singular) %>(<%= singular %>.id)
       context.commit(DELETE_<%= String.upcase(singular) %>, <%= singular %>)
       nprogress.done()
       return <%= singular %>
