@@ -211,11 +211,12 @@ defmodule Brando.Utils do
   @doc """
   Returns scheme, host and port (if non-standard)
   """
-  @spec hostname(Keyword.t) :: String.t
-  def hostname(cfg) do
-    scheme = Keyword.get(cfg, :scheme, "http")
-    host = Keyword.get(cfg, :host, "localhost")
-    port = Keyword.get(cfg, :port, "80")
+  @spec hostname() :: String.t
+  def hostname() do
+    url_cfg = Brando.endpoint().config(:url)
+    scheme = Keyword.get(url_cfg, :scheme, "http")
+    host = Keyword.get(url_cfg, :host, "localhost")
+    port = Keyword.get(url_cfg, :port, "80")
     port = port == "80" && "" || ":#{port}"
     "#{scheme}://#{host}#{port}"
   end
@@ -226,8 +227,7 @@ defmodule Brando.Utils do
   @spec current_url(Plug.Conn.t, String.t) :: String.t
   def current_url(conn, url \\ nil) do
     path = url && url || conn.request_path
-    url_cfg = Brando.endpoint().config(:url)
-    "#{hostname(url_cfg)}#{path}"
+    "#{hostname()}#{path}"
   end
 
   @doc """
@@ -246,8 +246,7 @@ defmodule Brando.Utils do
   """
   @spec escape_and_prefix_host(Plug.Conn.t, String.t) :: String.t
   def escape_and_prefix_host(conn, media) do
-    port = conn.port == 80 && "" || ":#{conn.port}"
-    url = "#{conn.scheme}://#{conn.host}#{port}#{media}"
+    url = current_url(conn, media)
     URI.encode_www_form(url)
   end
 
@@ -290,9 +289,9 @@ defmodule Brando.Utils do
   @doc """
   Returns hostname and media directory.
   """
-  @spec host_and_media_url(Plug.Conn.t) :: String.t
-  def host_and_media_url(conn) do
-    "#{hostname(conn)}#{Brando.config(:media_url)}"
+  @spec host_and_media_url() :: String.t
+  def host_and_media_url() do
+    hostname() <> Brando.config(:media_url)
   end
 
   @doc """

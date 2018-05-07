@@ -159,10 +159,7 @@ defmodule Brando.UtilsTest do
   end
 
   test "host_and_media_url" do
-    mock_conn = %{port: 80, scheme: "http", host: "brando.com"}
-    assert host_and_media_url(mock_conn) == "http://brando.com/media"
-    mock_conn = %{port: 8000, scheme: "https", host: "brando.com"}
-    assert host_and_media_url(mock_conn) == "https://brando.com:8000/media"
+    assert host_and_media_url() == "http://localhost/media"
   end
 
   test "https_url" do

@@ -77,7 +77,7 @@ defmodule Brando.HTMLTest do
     {:safe, html} = render_meta(mock_conn)
     assert html =~ ~s(<meta content="MyApp" property="og:site_name">)
     assert html =~ ~s(<meta content="MyApp" property="og:title">)
-    assert html =~ ~s(<meta content="http://www.example.com:0" property="og:url">)
+    assert html =~ ~s(<meta content="http://localhost" property="og:url">)
   end
 
   test "active/2" do

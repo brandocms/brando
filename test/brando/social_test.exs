@@ -10,14 +10,14 @@ defmodule Brando.SocialTest do
     conn = conn(:get, "/awesome/link", [])
     assert Social.Facebook.link(conn, do: {:safe, "facebook"})
           |> Phoenix.HTML.safe_to_string
-           == "<a href=\"https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Fwww.example.com%2Fawesome%2Flink\" title=\"facebook\">facebook</a>"
+           == "<a href=\"https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Flocalhost%2Fawesome%2Flink\" title=\"facebook\">facebook</a>"
   end
 
   test "Twitter.link" do
     conn = conn(:get, "/awesome/link", [])
     assert Social.Twitter.link(conn, "Twitter text", do: {:safe, "twitter"})
            |> Phoenix.HTML.safe_to_string
-           == "<a href=\"https://twitter.com/intent/tweet?url=http%3A%2F%2Fwww.example.com%2Fawesome%2Flink&amp;text=Twitter+text\" title=\"twitter\">twitter</a>"
+           == "<a href=\"https://twitter.com/intent/tweet?url=http%3A%2F%2Flocalhost%2Fawesome%2Flink&amp;text=Twitter+text\" title=\"twitter\">twitter</a>"
   end
 
   test "Pinterest.link" do
@@ -27,12 +27,12 @@ defmodule Brando.SocialTest do
                                  [prefix: media_url()]), "Pinterest text",
                                  do: {:safe, "pinterest"})
     assert link |> Phoenix.HTML.safe_to_string
-           == "<a href=\"https://pinterest.com/pin/create/button/?url=http%3A%2F%2Fwww.example.com%2Fawesome%2Flink&amp;media=http%3A%2F%2Fwww.example.com%2Fmedia%2Fimages%2Fxlarge%2Ffile.jpg&amp;description=Pinterest+text&quot;\" title=\"pinterest\">pinterest</a>"
+           == "<a href=\"https://pinterest.com/pin/create/button/?url=http%3A%2F%2Flocalhost%2Fawesome%2Flink&amp;media=http%3A%2F%2Flocalhost%2Fmedia%2Fimages%2Fxlarge%2Ffile.jpg&amp;description=Pinterest+text&quot;\" title=\"pinterest\">pinterest</a>"
   end
 
   test "Email.link" do
     conn = conn(:get, "/awesome/link", [])
     assert Social.Email.link(conn, "Subject", do: {:safe, "email"}) |> Phoenix.HTML.safe_to_string
-           == "<a href=\"mailto:?subject=Subject&amp;body=http://www.example.com/awesome/link\" title=\"email\">email</a>"
+           == "<a href=\"mailto:?subject=Subject&amp;body=http://localhost/awesome/link\" title=\"email\">email</a>"
   end
 end
