@@ -190,7 +190,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     `lib/#{binding[:application_name]}`/graphql/schema/types.ex`
 
         # local imports
-        import_types #{binding[:application_module]}.Schema.Types.#{binding[:module]}
+        import_types #{binding[:base]}.Schema.Types.(TypeHere!)
 
         #{sequenced_info}
 
@@ -211,22 +211,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
   end
 
   defp generate_domain_code(domain_code, _, binding, schema_binding) do
-    insert_code =
-      if schema_binding[:img_fields] do
-        optimizers =
-          Enum.map(schema_binding[:img_fields],
-                   &("Brando.Images.Optimize.optimize(#{binding[:singular]}, :#{elem(&1, 1)})\n"))
-
-        "case Repo.insert(changeset) do\n" <>
-        "      {:ok, #{binding[:singular]}} ->\n" <>
-        "        #{optimizers}" <>
-        "        {:ok, #{binding[:singular]}}\n" <>
-        "      {:error, errors} ->\n" <>
-        "        {:error, errors}\n" <>
-        "    end"
-      else
-        "Repo.insert(changeset)"
-      end
+    insert_code = "Repo.insert(changeset)"
     domain_code <> """
       @doc \"\"\"
       List all #{binding[:plural]}

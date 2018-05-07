@@ -6,6 +6,11 @@ export default [
       {
         text: 'Oversikt',
         to: { name: '<%= plural %>' }
+      },
+
+      {
+        text: 'Legg til',
+        to: { name: '<%= singular %>-new' }
       }
     ]
   }

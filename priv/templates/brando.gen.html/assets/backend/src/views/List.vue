@@ -13,7 +13,9 @@
               <p class="lead">Kort om delsiden</p>
               <hr class="my-4">
               <p class="lead">
-                -- linker
+                <router-link :to="{ name: '<%= singular %>-new' }" class="btn btn-secondary" exact>
+                  Ny <%= singular %>
+                </router-link>
               </p>
             </div>
 

@@ -291,20 +291,22 @@ defmodule Brando.Images.Utils do
 
     for row <- rows do
       field = Map.get(row, field_name)
-      full_path = media_path(field.path)
-      delete_sized_images(field)
-      {:ok, cfg} = schema.get_image_cfg(field_name)
-      src = %{plug: %{uploaded_file: full_path}, cfg: cfg}
+      if field do
+        full_path = media_path(field.path)
+        delete_sized_images(field)
+        {:ok, cfg} = schema.get_image_cfg(field_name)
+        src = %{plug: %{uploaded_file: full_path}, cfg: cfg}
 
-      with {:ok, new_image} <- create_image_sizes(src) do
-        row
-        |> Ecto.Changeset.change(Map.put(%{}, field_name, new_image))
-        |> Brando.Images.Optimize.optimize(field_name)
-        |> Brando.repo.update!
+        with {:ok, new_image} <- create_image_sizes(src) do
+          row
+          |> Ecto.Changeset.change(Map.put(%{}, field_name, new_image))
+          |> Brando.Images.Optimize.optimize(field_name)
+          |> Brando.repo.update!
 
-        :ok
-      else
-        err -> err
+          :ok
+        else
+          err -> err
+        end
       end
     end
   end

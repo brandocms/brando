@@ -66,7 +66,7 @@ export default {
       let params = {...this.<%= singular %>}
 
       // validate image params, if any, to ensure they are files
-      validateImageParams(params, [])
+      // validateImageParams(params, ['avatar'])
 
       try {
         nprogress.start()
