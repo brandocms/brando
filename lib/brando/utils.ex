@@ -212,17 +212,22 @@ defmodule Brando.Utils do
   Returns scheme, host and port (if non-standard)
   """
   @spec hostname(Keyword.t) :: String.t
-  def hostname([scheme: scheme, host: host]) do
-    "#{scheme}://#{host}"
+  def hostname(cfg) do
+    scheme = Keyword.get(cfg, :scheme, "http")
+    host = Keyword.get(cfg, :host, "localhost")
+    port = Keyword.get(cfg, :port, "80")
+    port = port == "80" && "" || ":#{port}"
+    "#{scheme}://#{host}#{port}"
   end
 
   @doc """
   Returns full url path with scheme and host.
   """
-  @spec current_url(Plug.Conn.t) :: String.t
-  def current_url(conn) do
+  @spec current_url(Plug.Conn.t, String.t) :: String.t
+  def current_url(conn, url \\ nil) do
+    path = url && url || conn.request_path
     url_cfg = Brando.endpoint().config(:url)
-    "#{hostname(url_cfg)}#{conn.request_path}"
+    "#{hostname(url_cfg)}#{path}"
   end
 
   @doc """
