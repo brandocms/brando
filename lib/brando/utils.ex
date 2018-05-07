@@ -211,10 +211,9 @@ defmodule Brando.Utils do
   @doc """
   Returns scheme, host and port (if non-standard)
   """
-  @spec hostname(Plug.Conn.t) :: String.t
-  def hostname(conn) do
-    port = conn.port == 80 && "" || ":#{conn.port}"
-    "#{conn.scheme}://#{conn.host}#{port}"
+  @spec hostname(Keyword.t) :: String.t
+  def hostname([scheme: scheme, host: host]) do
+    "#{scheme}://#{host}"
   end
 
   @doc """
@@ -222,7 +221,8 @@ defmodule Brando.Utils do
   """
   @spec current_url(Plug.Conn.t) :: String.t
   def current_url(conn) do
-    "#{hostname(conn)}#{conn.request_path}"
+    url_cfg = Brando.endpoint().config(:url)
+    "#{hostname(url_cfg)}#{conn.request_path}"
   end
 
   @doc """
