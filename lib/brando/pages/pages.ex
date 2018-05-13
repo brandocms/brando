@@ -104,6 +104,21 @@ defmodule Brando.Pages do
     end
   end
 
+  @doc """
+  Get page by key
+  """
+  def get_page(key, lang) when is_binary(key) do
+    q =
+      from p in Page,
+        where: p.key == ^key and
+               p.language == ^lang
+
+    case Brando.repo.one(q) do
+      nil  -> {:error, {:page, :not_found}}
+      page -> {:ok, page}
+    end
+  end
+
   def rerender_pages() do
     {:ok, pages} = list_pages()
 
@@ -155,6 +170,19 @@ defmodule Brando.Pages do
     fragments =
       PageFragment
       |> where([p], p.parent_key == ^parent_key)
+      |> Brando.repo.all
+
+    Enum.reduce(fragments, %{}, fn (x, acc) -> Map.put(acc, x.key, x) end)
+  end
+
+  @doc """
+  Get set of fragments by parent key and language
+  """
+  def get_page_fragments(parent_key, language) do
+    fragments =
+      PageFragment
+      |> where([p], p.parent_key == ^parent_key)
+      |> where([p], p.language == ^language)
       |> Brando.repo.all
 
     Enum.reduce(fragments, %{}, fn (x, acc) -> Map.put(acc, x.key, x) end)
