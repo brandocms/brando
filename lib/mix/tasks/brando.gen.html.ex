@@ -210,7 +210,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     end
   end
 
-  defp generate_domain_code(domain_code, _, binding, schema_binding) do
+  defp generate_domain_code(domain_code, _, binding, _schema_binding) do
     insert_code = "Repo.insert(changeset)"
     domain_code <> """
       @doc \"\"\"
@@ -266,6 +266,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     Enum.map attrs, fn
       {k, {:array, _}} ->
         {k, ~s(field #{inspect(k)}, list_of\(:string\))}
+      {k, :integer} ->
+        {k, ~s(field #{inspect(k)}, :integer)}
       {k, :boolean} ->
         {k, ~s(field #{inspect(k)}, :boolean)}
       {k, :string} ->
@@ -297,6 +299,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     Enum.map attrs, fn
       {k, {:array, _}} ->
         {k, nil, nil}
+      {k, :integer} ->
+        {k, ~s(field #{inspect(k)}, :integer)}
       {k, :boolean} ->
         {k, ~s(field #{inspect(k)}, :boolean)}
       {k, :string} ->

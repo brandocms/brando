@@ -128,6 +128,9 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
   def migration_type({k, :file}) do
     {k, :text}
   end
+  def migration_type({k, :text}) do
+    {k, :text}
+  end
   def migration_type({k, :status}) do
     {k, :integer}
   end
@@ -176,7 +179,9 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
     end
   end
 
+  defp value_to_type(:integer), do: :integer
   defp value_to_type(:text), do: :string
+  defp value_to_type(:string), do: :string
   defp value_to_type(:uuid), do: Ecto.UUID
   defp value_to_type(:date), do: :date
   defp value_to_type(:time), do: :time
