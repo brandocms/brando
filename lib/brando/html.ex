@@ -243,7 +243,7 @@ defmodule Brando.HTML do
 
     body =
       if id, do:
-        body <> ~s( id="#{id}"),
+        body <> ~s( id="toppen"),
       else:
         body
 
@@ -255,9 +255,9 @@ defmodule Brando.HTML do
 
     body =
       if classes, do:
-        body <> ~s( class="#{classes}"),
+        body <> ~s( class="#{classes} unloaded"),
       else:
-        body
+        body <> ~s( class="unloaded")
 
     Phoenix.HTML.raw(body <> ">")
   end
