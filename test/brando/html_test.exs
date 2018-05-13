@@ -30,11 +30,11 @@ defmodule Brando.HTMLTest do
   test "body_tag" do
     mock_conn = %{private: %{brando_css_classes: "one two three"}}
     assert body_tag(mock_conn)
-           == {:safe, ~s(<body class="one two three">)}
+           == {:safe, ~s(<body class="one two three unloaded">)}
 
     mock_conn = %{private: %{brando_css_classes: "one two three", brando_section_name: "some-section"}}
     assert body_tag(mock_conn)
-           == {:safe, ~s(<body id="some-section" data-script="some-section" class="one two three">)}
+           == {:safe, ~s(<body id="toppen" data-script="some-section" class="one two three unloaded">)}
   end
 
   test "cookie_law" do
