@@ -30,14 +30,9 @@ defmodule <%= application_module %>.Villain.Parser do
   def text(%{"text" => text} = params) do
     text =
       case Map.get(params, "type") do
-        nil  ->
-          text
-        "lead" ->
-          byte_size(text) > 0 && text <> "\n{: .lead}" || text
-        "paragraph" ->
-          text
-        type ->
-          byte_size(text) > 0 && text <> "\n{: .#{type}}" || text
+        nil  -> text
+        "paragraph" -> text
+        type -> "<div class=\"#{type}\">#{text}</div>"
       end
 
     Earmark.as_html!(text, %Earmark.Options{breaks: true})
@@ -192,5 +187,29 @@ defmodule <%= application_module %>.Villain.Parser do
       ~s(<div class="#{class}">#{Enum.reverse(c)}</div>)
     end
     ~s(<div class="row">#{col_html}</div>)
+  end
+
+  @doc """
+  Timeline
+  """
+  def timeline(items) do
+    timeline_html = for item <- items do
+      ~s(
+      <li class="villain-timeline-item">
+        <div class="villain-timeline-item-date">
+          <div class="villain-timeline-item-date-inner">
+            #{Map.get(item, "caption")}
+          </div>
+        </div>
+        <div class="villain-timeline-item-content">
+          <div class="villain-timeline-item-content-inner">
+            #{Map.get(item, "text")}
+          </div>
+        </div>
+      </li>
+      )
+    end
+
+    ~s(<ul class="villain-timeline">#{timeline_html}</ul>)
   end
 end
