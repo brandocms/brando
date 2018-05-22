@@ -33,10 +33,10 @@ defmodule Brando.Field.FileField do
       Validates upload in changeset
       """
       def validate_upload(changeset, {:file, field_name}) do
-        with {:ok, plug}          <- field_has_changed(changeset, field_name),
-             {:ok, _}             <- changeset_has_no_errors(changeset),
-             {:ok, cfg}           <- get_file_cfg(field_name),
-             {:ok, {name, field}} <- handle_file_upload(field_name, plug, cfg)
+        with {:ok, plug} <- field_has_changed(changeset, field_name),
+             {:ok, _} <- changeset_has_no_errors(changeset),
+             {:ok, cfg} <- get_file_cfg(field_name),
+             {:ok, {:handled, name, field}} <- handle_file_upload(field_name, plug, cfg)
         do
           put_change(changeset, name, field)
         else
@@ -91,7 +91,7 @@ defmodule Brando.Field.FileField do
       Get `field_name`'s file field configuration
       """
       def get_file_cfg(field_name) when field_name == unquote(name), do:
-        unquote(escaped_contents)
+        {:ok, unquote(escaped_contents)}
     end
   end
 
@@ -139,13 +139,18 @@ defmodule Brando.Field.FileField do
   """
   @spec handle_file_upload(atom, Plug.Upload.t, Brando.Type.FileConfig.t) ::
         {:ok, {atom, Brando.Type.File}} | {:error, {atom, {:error, String.t}}}
-  def handle_file_upload(name, plug, cfg) do
+  def handle_file_upload(name, %Plug.Upload{} = plug, cfg) do
     with {:ok, upload} <- process_upload(plug, cfg),
          {:ok, field}  <- create_file_struct(upload)
     do
-      {:ok, {name, field}}
+      {:ok, {:handled, name, field}}
     else
       err -> {:error, {name, handle_upload_error(err)}}
     end
+  end
+
+  @spec handle_file_upload(atom, Map.t, Brando.Type.FileConfig.t) :: {:ok, Map.t}
+  def handle_file_upload(name, file, _) do
+    {:ok, {:unhandled, name, file}}
   end
 end
