@@ -18,6 +18,6 @@ defmodule Brando.Files.Field.FileFieldTest do
   end
 
   test "use works" do
-    assert Brando.Files.Field.FileFieldTest.TestSchema.get_file_cfg(:file) == TestSchema.cfg
+    assert Brando.Files.Field.FileFieldTest.TestSchema.get_file_cfg(:file) == {:ok, TestSchema.cfg}
   end
 end
