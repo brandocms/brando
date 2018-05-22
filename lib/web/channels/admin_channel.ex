@@ -58,6 +58,23 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         {:ok, parents} = Brando.Pages.list_parents()
         {:reply, {:ok, %{code: 200, parents: parents}}, socket}
       end
+
+      def handle_in("page:delete", %{"id" => page_id}, socket) do
+        Brando.Pages.delete_page(page_id)
+        {:reply, {:ok, %{code: 200}}, socket}
+      end
+
+      def handle_in("page:duplicate", %{"id" => page_id}, socket) do
+        user = Guardian.Phoenix.Socket.current_resource(socket)
+        {:ok, new_page} = Brando.Pages.duplicate_page(page_id, user)
+        {:reply, {:ok, %{code: 200, page: new_page}}, socket}
+      end
+
+      def handle_in("page_fragment:duplicate", %{"id" => page_id}, socket) do
+        user = Guardian.Phoenix.Socket.current_resource(socket)
+        {:ok, new_fragment} = Brando.Pages.duplicate_page_fragment(page_id, user)
+        {:reply, {:ok, %{code: 200, page_fragment: new_fragment}}, socket}
+      end
     end
   end
 end

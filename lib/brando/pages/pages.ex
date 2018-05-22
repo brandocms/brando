@@ -39,9 +39,25 @@ defmodule Brando.Pages do
   Delete page
   """
   def delete_page(page_id) do
+    page_id = is_binary(page_id) && String.to_integer(page_id) || page_id
     {:ok, page} = get_page(page_id)
     Brando.repo.delete(page)
     {:ok, page}
+  end
+
+  @doc """
+  Duplicate page
+  """
+  def duplicate_page(page_id, user) do
+    page_id = is_binary(page_id) && String.to_integer(page_id) || page_id
+    {:ok, page} = get_page(page_id)
+
+    page = Map.merge(page, %{key: "#{page.key}_kopi", title: "#{page.title} (kopi)"})
+    page = Map.delete(page, [:id, :children, :creator, :parent])
+    page = Map.from_struct(page)
+
+    {:ok, duplicated_page} = create_page(page, user)
+    {:ok, Map.merge(duplicated_page, %{parent: nil, children: nil, creator: nil})}
   end
 
   @doc """
@@ -133,7 +149,7 @@ defmodule Brando.Pages do
   def list_page_fragments() do
     fragments =
       PageFragment
-      |> order_by([p], [asc: p.parent_key, asc: p.key])
+      |> order_by([p], [asc: p.parent_key, asc: p.key, asc: p.language])
       |> Brando.repo.all()
 
     {:ok, fragments}
@@ -217,6 +233,21 @@ defmodule Brando.Pages do
     {:ok, page_fragment} = get_page_fragment(page_fragment_id)
     Brando.repo.delete(page_fragment)
     {:ok, page_fragment}
+  end
+
+  @doc """
+  Duplicate page fragment
+  """
+  def duplicate_page_fragment(fragment_id, user) do
+    fragment_id = is_binary(fragment_id) && String.to_integer(fragment_id) || fragment_id
+    {:ok, fragment} = get_page_fragment(fragment_id)
+
+    fragment = Map.merge(fragment, %{key: "#{fragment.key}_kopi"})
+    fragment = Map.delete(fragment, [:id, :parent])
+    fragment = Map.from_struct(fragment)
+
+    {:ok, duplicated_fragment} = create_page_fragment(fragment, user)
+    {:ok, Map.merge(duplicated_fragment, %{creator: nil})}
   end
 
   @doc """
