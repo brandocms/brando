@@ -19,6 +19,27 @@ $(() => {
     $('header').addClass("headroom--unpinned")
   }
 
+  $('a:not([href*="#"])')
+    .click(function(e) {
+      // hide the loader
+      $('.loading-container').hide()
+      const that = this
+      e.preventDefault()
+      fader.style.display = 'block'
+      Velocity(
+        fader,
+        {
+          opacity: 1
+        },
+        {
+          duration: 250,
+          complete: function(elements) {
+            window.location = $(that).attr('href')
+          }
+        }
+      )
+    })
+
   $('[data-moonwalk-children]').each(function(idx, m) {
     const $children = $(m).children()
     $children.each(function(idx, c) {
