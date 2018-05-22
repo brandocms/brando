@@ -88,7 +88,11 @@ defmodule Brando.Upload do
     if content_type in Map.get(cfg, :allowed_mimetypes) do
       {:ok, upload}
     else
-      {:error, :content_type, content_type, Map.get(cfg, :allowed_mimetypes)}
+      if Map.get(cfg, :allowed_mimetypes) == ["*"] do
+        {:ok, upload}
+      else
+        {:error, :content_type, content_type, Map.get(cfg, :allowed_mimetypes)}
+      end
     end
   end
 
