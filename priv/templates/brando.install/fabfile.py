@@ -766,7 +766,7 @@ def createdb():
     require('hosts')
     with _settings(warn_only=True):
         print(yellow('==> creating database user %s' % env.db_user))
-        result = sudo('psql -c "CREATE USER %s WITH NOCREATEDB NOCREATEUSER ENCRYPTED PASSWORD \'%s\';"' % (env.db_user, env.db_pass), user='postgres')
+        result = sudo('psql -c "CREATE USER %s WITH NOCREATEDB ENCRYPTED PASSWORD \'%s\';"' % (env.db_user, env.db_pass), user='postgres')
         if result.failed:
             if 'already exists' in result:
                 print(red('==> database user %s already exists' % env.db_user))
