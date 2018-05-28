@@ -89,6 +89,17 @@ $ mix release.init
 ```
 
 And set its config to default to prod.
+Then add `:bcrypt_elixir` to applications:
+
+```elixir
+release :my_app do
+  set version: current_version(:my_app)
+  set applications: [
+    :runtime_tools,
+    :bcrypt_elixir
+  ]
+end
+```
 
 Fix dev asset reloading in `config/dev.exs`
 
