@@ -1,4 +1,8 @@
 defmodule <%= application_module %>.Schema.Types do
+  @moduledoc """
+  Absinthe schema types
+  """
+
   use <%= application_module %>Web, :absinthe
 
   # absinthe types

@@ -1,4 +1,8 @@
 defmodule <%= application_module %>.Schema do
+  @moduledoc """
+  Main graphQL schema definition
+  """
+
   use Absinthe.Schema
   use Brando.Schema
 
