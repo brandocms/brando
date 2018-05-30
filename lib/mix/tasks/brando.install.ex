@@ -168,6 +168,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/assets/frontend/css/includes/_containers.scss", "assets/frontend/css/includes/_containers.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/includes/_fonts.scss", "assets/frontend/css/includes/_fonts.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/includes/_headers.scss", "assets/frontend/css/includes/_headers.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_lightbox.scss", "assets/frontend/css/includes/_lightbox.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/includes/_navigation.scss", "assets/frontend/css/includes/_navigation.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/includes/_paragraphs.scss", "assets/frontend/css/includes/_paragraphs.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/includes/_sections.scss", "assets/frontend/css/includes/_sections.scss"},
