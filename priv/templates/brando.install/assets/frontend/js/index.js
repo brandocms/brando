@@ -10,11 +10,14 @@ console.log(sr)
 import Headroom from 'headroom.js'
 import imagesLoaded from 'imagesloaded'
 import Velocity from 'velocity-animate'
+import hookLightbox from './lightbox'
 import '../css/app.scss'
 
 const SLIDE_DURATION = 4000
 
 $(() => {
+  hookLightbox()
+
   if(window.location.hash) {
     $('header').addClass("headroom--unpinned")
   }

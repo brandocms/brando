@@ -174,6 +174,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/assets/frontend/css/includes/_slider.scss", "assets/frontend/css/includes/_slider.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/includes/_utils.scss", "assets/frontend/css/includes/_utils.scss"},
     {:copy, "templates/brando.install/assets/frontend/js/index.js", "assets/frontend/js/index.js"},
+    {:copy, "templates/brando.install/assets/frontend/js/lightbox/index.js", "assets/frontend/js/lightbox/index.js"},
     {:copy, "templates/brando.install/assets/frontend/package.json", "assets/frontend/package.json"},
     {:copy, "templates/brando.install/assets/frontend/postcss.config.js", "assets/frontend/postcss.config.js"},
     {:copy, "templates/brando.install/assets/frontend/static/favicon.ico", "assets/frontend/static/favicon.ico"},
