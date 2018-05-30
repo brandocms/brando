@@ -25,12 +25,7 @@ end
 
 Fetch and compile dependencies. Install Brando:
 
-    $ mix do deps.get, deps.compile
-    $ mix brando.install --module YourApp
-
-And then refetch new dependencies Brando has added to your `mix.exs`:
-
-    $ mix do deps.get, deps.compile
+    $ mix do deps.get, deps.compile, brando.install --module Neva, deps.get, deps.compile
 
 Add to your `config/config.exs` right before the env-specific import:
 
@@ -52,8 +47,7 @@ Add to your relevant `config/%{env}.exs` Repo config:
 
 Install node packages:
 
-    $ cd assets/frontend && yarn
-    $ cd assets/backend && yarn
+    $ cd assets/frontend && yarn && cd ../backend && yarn && cd ../../
 
 Set up database, and seed:
 
