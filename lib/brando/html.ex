@@ -102,10 +102,10 @@ defmodule Brando.HTML do
         <section class="cookie-container-inner">
           <div class="cookie-law">
             <p>#{text}</p>
-            <a href="javascript:Cookielaw.createCookielawCookie();"
+            <button
                class="dismiss-cookielaw">
               #{button_text}
-            </a>
+            </button>
           </div>
         </section>
       </section>
