@@ -54,6 +54,12 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         {:reply, {:ok, %{code: 200}}, socket}
       end
 
+      def handle_in("image:update", %{"id" => id, "image" => %{"title" => title, "credits" => credits}}, socket) do
+        image = Brando.Images.get_image!(id)
+        {:ok, updated_image} = Brando.Images.update_image_meta(image, title, credits)
+        {:reply, {:ok, %{status: 200}}, socket}
+      end
+
       def handle_in("pages:list_parents", _, socket) do
         {:ok, parents} = Brando.Pages.list_parents()
         {:reply, {:ok, %{code: 200, parents: parents}}, socket}
