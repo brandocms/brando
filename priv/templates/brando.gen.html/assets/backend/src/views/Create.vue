@@ -1,5 +1,5 @@
 <template>
-  <div class="create-<%= singular %>">
+  <div class="create-<%= vue_singular %>">
     <div class="container">
       <div class="card">
         <div class="card-header">
@@ -30,13 +30,13 @@
 
 import nprogress from 'nprogress'
 import { showError, validateImageParams, stripParams } from 'kurtz/lib/utils'
-import { <%= singular %>API } from '@/api/<%= singular %>'
+import { <%= vue_singular %>API } from '@/api/<%= vue_singular %>'
 
 export default {
   data () {
     return {
       loading: 0,
-      <%= singular %>: {<%= for {v, d} <- vue_defaults do %>
+      <%= vue_singular %>: {<%= for {v, d} <- vue_defaults do %>
         <%= v %>: <%= d %>,<% end %>
       }
     }
@@ -63,14 +63,14 @@ export default {
 
     async save () {
       this.loading = false
-      let params = {...this.<%= singular %>}
+      let params = {...this.<%= vue_singular %>}
 
       // validate image params, if any, to ensure they are files
       // validateImageParams(params, ['avatar'])
 
       try {
         nprogress.start()
-        await <%= singular %>API.create<%= String.capitalize(singular) %>(params)
+        await <%= vue_singular %>API.create<%= Recase.to_pascal(vue_singular) %>(params)
         nprogress.done()
         this.$toast.success({message: 'Objekt opprettet'})
         this.$router.push({ name: '<%= plural %>' })

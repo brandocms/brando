@@ -60,6 +60,7 @@ defmodule Brando.Mixfile do
      :mogrify,
      :phoenix_html,
      :poison,
+     :recase,
      :scrivener,
      :scrivener_ecto,
      :sentry,
@@ -82,6 +83,7 @@ defmodule Brando.Mixfile do
     {:postgrex, "~> 0.13", override: true},
 
     {:slugger, "~> 0.2"},
+    {:recase, "~> 0.2"},
     {:scrivener_ecto, "~> 1.1"},
     {:guardian, "~> 1.0"},
 

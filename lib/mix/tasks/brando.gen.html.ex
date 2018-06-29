@@ -98,6 +98,10 @@ defmodule Mix.Tasks.Brando.Gen.Html do
                    |> Enum.join("/")
     module       = Enum.join([binding[:base] <> "Web", binding[:scoped]], ".")
     admin_module = Enum.join([binding[:base] <> "Web", "Admin", binding[:scoped]], ".")
+
+    vue_plural = Recase.to_camel(plural)
+    vue_singular = Recase.to_camel(singular)
+
     binding      = Keyword.delete(binding, :module) ++ [plural: plural,
                                route: route,
                                image_field: image_field?,
@@ -108,11 +112,13 @@ defmodule Mix.Tasks.Brando.Gen.Html do
                                admin_path: admin_path,
                                gql_inputs: graphql_inputs(attrs),
                                gql_types: graphql_types(attrs),
-                               vue_inputs: vue_inputs(attrs, binding[:singular]),
+                               vue_inputs: vue_inputs(attrs, Recase.to_camel(binding[:singular])),
                                vue_defaults: vue_defaults(attrs),
                                params: Mix.Brando.params(attrs),
                                snake_domain: snake_domain,
-                               domain: domain_name]
+                               domain: domain_name,
+                               vue_singular: Recase.to_camel(binding[:singular]),
+                               vue_plural: Recase.to_camel(vue_plural)]
 
     args = [singular, plural, org_attrs]
 
@@ -126,22 +132,23 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       {:eex, "graphql/resolvers/resolver.ex", "lib/application_name/graphql/resolvers/#{path}_resolver.ex"},
 
       # Backend JS
-      {:eex, "assets/backend/src/store/modules/module.js", "assets/backend/src/store/modules/#{plural}.js"},
+      {:eex, "assets/backend/src/store/modules/module.js", "assets/backend/src/store/modules/#{vue_plural}.js"},
 
-      {:eex, "assets/backend/src/api/api.js", "assets/backend/src/api/#{path}.js"},
-      {:eex, "assets/backend/src/api/graphql/ALL_QUERY.graphql", "assets/backend/src/api/graphql/#{plural}/#{String.upcase(plural)}_QUERY.graphql"},
-      {:eex, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql", "assets/backend/src/api/graphql/#{plural}/#{String.upcase(singular)}_QUERY.graphql"},
-      {:eex, "assets/backend/src/api/graphql/CREATE_MUTATION.graphql", "assets/backend/src/api/graphql/#{plural}/CREATE_#{String.upcase(singular)}_MUTATION.graphql"},
-      {:eex, "assets/backend/src/api/graphql/UPDATE_MUTATION.graphql", "assets/backend/src/api/graphql/#{plural}/UPDATE_#{String.upcase(singular)}_MUTATION.graphql"},
-      {:eex, "assets/backend/src/api/graphql/DELETE_MUTATION.graphql", "assets/backend/src/api/graphql/#{plural}/DELETE_#{String.upcase(singular)}_MUTATION.graphql"},
+      {:eex, "assets/backend/src/api/api.js", "assets/backend/src/api/#{vue_singular}.js"},
 
-      {:eex, "assets/backend/src/menus/menu.js", "assets/backend/src/menus/#{plural}.js"},
+      {:eex, "assets/backend/src/api/graphql/ALL_QUERY.graphql", "assets/backend/src/api/graphql/#{vue_plural}/#{String.upcase(plural)}_QUERY.graphql"},
+      {:eex, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql", "assets/backend/src/api/graphql/#{vue_plural}/#{String.upcase(singular)}_QUERY.graphql"},
+      {:eex, "assets/backend/src/api/graphql/CREATE_MUTATION.graphql", "assets/backend/src/api/graphql/#{vue_plural}/CREATE_#{String.upcase(singular)}_MUTATION.graphql"},
+      {:eex, "assets/backend/src/api/graphql/UPDATE_MUTATION.graphql", "assets/backend/src/api/graphql/#{vue_plural}/UPDATE_#{String.upcase(singular)}_MUTATION.graphql"},
+      {:eex, "assets/backend/src/api/graphql/DELETE_MUTATION.graphql", "assets/backend/src/api/graphql/#{vue_plural}/DELETE_#{String.upcase(singular)}_MUTATION.graphql"},
 
-      {:eex, "assets/backend/src/routes/route.js", "assets/backend/src/routes/#{plural}.js"},
+      {:eex, "assets/backend/src/menus/menu.js", "assets/backend/src/menus/#{vue_plural}.js"},
 
-      {:eex, "assets/backend/src/views/List.vue", "assets/backend/src/views/#{snake_domain}/#{String.capitalize(singular)}ListView.vue"},
-      {:eex, "assets/backend/src/views/Create.vue", "assets/backend/src/views/#{snake_domain}/#{String.capitalize(singular)}CreateView.vue"},
-      {:eex, "assets/backend/src/views/Edit.vue", "assets/backend/src/views/#{snake_domain}/#{String.capitalize(singular)}EditView.vue"},
+      {:eex, "assets/backend/src/routes/route.js", "assets/backend/src/routes/#{vue_plural}.js"},
+
+      {:eex, "assets/backend/src/views/List.vue", "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}ListView.vue"},
+      {:eex, "assets/backend/src/views/Create.vue", "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}CreateView.vue"},
+      {:eex, "assets/backend/src/views/Edit.vue", "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}EditView.vue"},
     ]
 
     {files, args} =

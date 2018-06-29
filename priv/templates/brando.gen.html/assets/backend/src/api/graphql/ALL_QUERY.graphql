@@ -1,5 +1,5 @@
-query <%= String.capitalize(plural) %> {
-  <%= plural %> {
+query <%= Recase.to_pascal(vue_plural) %> {
+  <%= vue_plural %> {
     id
   }
 }

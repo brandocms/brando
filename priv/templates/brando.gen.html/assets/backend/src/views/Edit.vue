@@ -30,13 +30,13 @@
 
 import nprogress from 'nprogress'
 import { showError, validateImageParams, stripParams } from 'kurtz/lib/utils'
-import { <%= singular %>API } from '@/api/<%= singular %>'
+import { <%= vue_singular %>API } from '@/api/<%= vue_singular %>'
 
 export default {
   data () {
     return {
       loading: 0,
-      <%= singular %>: null
+      <%= vue_singular %>: null
     }
   },
 
@@ -46,13 +46,13 @@ export default {
 
   async created () {
     this.loading++
-    const v = await <%= singular %>API.get<%= String.capitalize(singular) %>(this.<%= singular %>Id)
-    this.<%= singular %> = {...v}
+    const v = await <%= vue_singular %>API.get<%= Recase.to_pascal(vue_singular) %>(this.<%= vue_singular %>Id)
+    this.<%= vue_singular %> = {...v}
     this.loading--
   },
 
   props: {
-    <%= singular %>Id: {
+    <%= vue_singular %>Id: {
       type: String,
       required: true
     }
@@ -71,7 +71,7 @@ export default {
 
     async save () {
       this.loading = false
-      let params = {...this.<%= singular %>}
+      let params = {...this.<%= vue_singular %>}
 
       // strip out params we don't want sent in the mutation
       stripParams(params, ['__typename', 'id'])
@@ -81,7 +81,7 @@ export default {
 
       try {
         nprogress.start()
-        await <%= singular %>API.update<%= String.capitalize(singular) %>(this.<%= singular %>.id, params)
+        await <%= singular %>API.update<%= Recase.to_pascal(vue_singular) %>(this.<%= vue_singular %>.id, params)
         nprogress.done()
         this.$toast.success({message: 'Objekt endret'})
         this.$router.push({ name: '<%= plural %>' })

@@ -4,67 +4,65 @@ const STORE_<%= String.upcase(singular) %> = 'STORE_<%= String.upcase(singular) 
 const STORE_<%= String.upcase(plural) %> = 'STORE_<%= String.upcase(plural) %>'
 const DELETE_<%= String.upcase(singular) %> = 'DELETE_<%= String.upcase(singular) %>'
 
-import { <%= singular %>API } from '../../api/<%= singular %>'
+import { <%= vue_singular %>API } from '../../api/<%= vue_singular %>'
 
-export const <%= plural %> = {
+export const <%= vue_plural %> = {
   namespaced: true,
   // initial state
   state: {
-    <%= singular %>: {},
-    <%= plural %>: []
+    <%= vue_singular %>: {},
+    <%= vue_plural %>: []
   },
 
   // mutations
   mutations: {
-    [DELETE_<%= String.upcase(singular) %>] (state, <%= singular %>) {
-      const pIdx = state.<%= plural %>.indexOf(<%= singular %>)
+    [DELETE_<%= String.upcase(singular) %>] (state, <%= vue_singular %>) {
+      const pIdx = state.<%= vue_plural %>.indexOf(<%= vue_singular %>)
 
-      state.<%= plural %> = [
-        ...state.<%= plural %>.slice(0, pIdx),
-        ...state.<%= plural %>.slice(pIdx + 1)
+      state.<%= vue_plural %> = [
+        ...state.<%= vue_plural %>.slice(0, pIdx),
+        ...state.<%= vue_plural %>.slice(pIdx + 1)
       ]
     },
 
-    [STORE_<%= String.upcase(singular) %>] (state, <%= singular %>) {
-      state.<%= singular %> = <%= singular %>
+    [STORE_<%= String.upcase(singular) %>] (state, <%= vue_singular %>) {
+      state.<%= vue_singular %> = <%= vue_singular %>
     },
 
-    [STORE_<%= String.upcase(plural) %>] (state, <%= plural %>) {
-      state.<%= plural %> = <%= plural %>
+    [STORE_<%= String.upcase(plural) %>] (state, <%= vue_plural %>) {
+      state.<%= vue_plural %> = <%= vue_plural %>
     }
   },
 
   getters: {
-    all<%= String.capitalize(singular) %>s: state => {
-      return state.<%= plural %>
+    all<%= Recase.to_pascal(vue_plural) %>: state => {
+      return state.<%= vue_plural %>
     }
   },
 
   actions: {
-    async get<%= String.capitalize(plural) %> (context, variables) {
+    async get<%= Recase.to_pascal(vue_plural) %> (context, variables) {
       nprogress.start()
-      const <%= plural %> = await <%= singular %>API.get<%= String.capitalize(plural) %>(variables)
-      context.commit(STORE_<%= String.upcase(plural) %>, <%= plural %>)
+      const <%= vue_plural %> = await <%= vue_singular %>API.get<%= Recase.to_pascal(vue_plural) %>(variables)
+      context.commit(STORE_<%= String.upcase(plural) %>, <%= vue_plural %>)
       nprogress.done()
-      return <%= plural %>
+      return <%= vue_plural %>
     },
 
-    async get<%= String.capitalize(singular) %> (context, <%= singular %>Id) {
+    async get<%= Recase.to_pascal(vue_singular) %> (context, <%= vue_singular %>Id) {
       nprogress.start()
-      const <%= singular %> = await <%= singular %>API.get<%= String.capitalize(singular) %>(<%= singular %>Id)
-      context.commit(STORE_<%= String.upcase(singular) %>, <%= singular %>)
+      const <%= vue_singular %> = await <%= vue_singular %>API.get<%= Recase.to_pascal(vue_singular) %>(<%= vue_singular %>Id)
+      context.commit(STORE_<%= String.upcase(singular) %>, <%= vue_singular %>)
       nprogress.done()
-      return <%= singular %>
+      return <%= vue_singular %>
     },
 
-    async delete<%= String.capitalize(singular) %> (context, <%= singular %>) {
+    async delete<%= Recase.to_pascal(vue_plural) %> (context, <%= vue_singular %>) {
       nprogress.start()
-      await <%= singular %>API.delete<%= String.capitalize(singular) %>(<%= singular %>.id)
-      context.commit(DELETE_<%= String.upcase(singular) %>, <%= singular %>)
+      await <%= singular %>API.delete<%= Recase.to_pascal(vue_singular) %>(<%= vue_singular %>.id)
+      context.commit(DELETE_<%= String.upcase(singular) %>, <%= vue_singular %>)
       nprogress.done()
-      return <%= singular %>
-    },
-
-
+      return <%= vue_singular %>
+    }
   }
 }

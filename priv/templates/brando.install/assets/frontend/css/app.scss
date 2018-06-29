@@ -59,11 +59,11 @@ p:last-child {
 }
 
 .blink {
-  animation: blink-animation 1s steps(30, start) infinite;
+  animation: blink-animation 2.7s steps(200, start) infinite;
 }
 @keyframes blink-animation {
   0% {
-    opacity: 0.1;
+    opacity: 0;
   }
 
   100% {
@@ -71,7 +71,7 @@ p:last-child {
   }
 
   50% {
-    opacity: 1;
+    opacity: .8;
   }
 }
 

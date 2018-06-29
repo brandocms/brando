@@ -34,6 +34,13 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         "secret:uuid photo:image data:villain first_login:date " <>
         "alarm:time address:references creator:references"}
       send self(), {:mix_shell_input, :yes?, true}
+      # and another one
+      send self(), {:mix_shell_input, :yes?, true}
+      send self(), {:mix_shell_input, :prompt, "PegLeg"}
+      send self(), {:mix_shell_input, :prompt, "peg_legs"}
+      send self(), {:mix_shell_input, :prompt,
+        "name length:integer"}
+      send self(), {:mix_shell_input, :yes?, true}
       send self(), {:mix_shell_input, :yes?, false}
       Mix.Tasks.Brando.Gen.Html.run []
 
@@ -92,6 +99,11 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
       assert_file "assets/backend/src/views/games/CaptainCreateView.vue", fn file ->
         assert file =~ ~s(<router-link :disabled="!!loading" :to="{ name: 'captains' }" class="btn btn-outline-secondary">)
+      end
+
+      assert_file "assets/backend/src/views/games/PegLegCreateView.vue", fn file ->
+        assert file =~ ~s(<router-link :disabled="!!loading" :to="{ name: 'peg_legs' }" class="btn btn-outline-secondary">)
+        assert file =~ ~s(v-model="pegLeg.name")
       end
     end
   end

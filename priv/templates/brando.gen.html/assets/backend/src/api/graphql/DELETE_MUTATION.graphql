@@ -1,5 +1,5 @@
-mutation Delete<%= String.capitalize(singular) %>($<%= singular %>Id: ID!) {
-  delete_<%= singular %>(<%= singular %>Id: $<%= singular %>Id) {
+mutation Delete<%= Recase.to_pascal(vue_singular) %>($<%= vue_singular %>Id: ID!) {
+  delete_<%= singular %>(<%= vue_singular %>Id: $<%= vue_singular %>Id) {
     id
   }
 }

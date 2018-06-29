@@ -14,20 +14,20 @@
               <hr class="my-4">
               <p class="lead">
                 <router-link :to="{ name: '<%= singular %>-new' }" class="btn btn-secondary" exact>
-                  Ny <%= singular %>
+                  Ny <%= vue_singular %>
                 </router-link>
               </p>
             </div>
 
-            <table class="table table-airy" v-if="all<%= String.capitalize(plural) %>.length">
+            <table class="table table-airy" v-if="all<%= Recase.to_pascal(vue_plural) %>.length">
               <tbody name="slide-fade-top-slow" is="transition-group">
-                <tr :key="<%= singular %>.id" v-for="<%= singular %> in all<%= String.capitalize(plural) %>">
+                <tr :key="<%= vue_singular %>.id" v-for="<%= vue_singular %> in all<%= Recase.to_pascal(vue_plural) %>">
                   <td class="text-strong">
-                    <!-- <%= singular %>.field -->
+                    <!-- {{ <%= vue_singular %>.field }} -->
                   </td>
 
-                  <td class="text-xs">
-                    {{ <%= singular %>.inserted_at | datetime }}
+                  <td class="text-xs fit">
+                    {{ <%= vue_singular %>.inserted_at | datetime }}
                   </td>
                   <td class="text-center fit" v-if="['superuser'].includes(me.role)">
                     <b-dropdown variant="white" no-caret>
@@ -35,7 +35,7 @@
                         <i class="k-dropdown-icon"></i>
                       </template>
                       <router-link
-                        :to="{ name: '<%= singular %>-edit', params: { <%= singular %>Id: <%= singular %>.id } }"
+                        :to="{ name: '<%= singular %>-edit', params: { <%= vue_singular %>Id: <%= vue_singular %>.id } }"
                         tag="button"
                         :class="{'dropdown-item': true}"
                         exact
@@ -43,7 +43,7 @@
                         <i class="fal fa-pencil fa-fw mr-4"></i>
                         Endre
                       </router-link>
-                      <button @click.prevent="delete<%= String.capitalize(singular) %>(<%= singular %>)" class="dropdown-item">
+                      <button @click.prevent="delete<%= Recase.to_pascal(vue_singular) %>(<%= vue_singular %>)" class="dropdown-item">
                         <i class="fal fa-fw fa-trash-alt mr-4"></i>Slett
                       </button>
                     </b-dropdown>
@@ -72,9 +72,9 @@ export default {
   },
 
   async created () {
-    console.debug('created <<%= String.capitalize(singular) %>ListView />')
+    console.debug('created <<%= Recase.to_pascal(vue_singular) %>ListView />')
     this.loading++
-    await this.get<%= String.capitalize(plural) %>()
+    await this.get<%= Recase.to_pascal(vue_plural) %>()
     this.loading--
   },
 
@@ -82,8 +82,8 @@ export default {
     ...mapGetters('users', [
       'me'
     ]),
-    ...mapGetters('<%= plural %>', [
-      'all<%= String.capitalize(plural) %>'
+    ...mapGetters('<%= vue_plural %>', [
+      'all<%= Recase.to_pascal(vue_plural) %>'
     ])
   },
 
@@ -92,9 +92,9 @@ export default {
   ],
 
   methods: {
-    ...mapActions('<%= plural %>', [
-      'get<%= String.capitalize(plural) %>',
-      'delete<%= String.capitalize(singular) %>'
+    ...mapActions('<%= vue_plural %>', [
+      'get<%= Recase.to_pascal(vue_plural) %>',
+      'delete<%= Recase.to_pascal(vue_singular) %>'
     ])
   }
 }

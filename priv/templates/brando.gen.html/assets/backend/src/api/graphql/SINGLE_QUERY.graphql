@@ -1,5 +1,5 @@
-query <%= String.capitalize(singular) %>($<%= singular %>Id: ID!) {
-  <%= singular %>(<%= singular %>Id: $<%= singular %>Id) {
+query <%= Recase.to_pascal(vue_singular) %>($<%= vue_singular %>Id: ID!) {
+  <%= singular %>(<%= vue_singular %>Id: $<%= vue_singular %>Id) {
     id
   }
 }
