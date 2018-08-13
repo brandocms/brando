@@ -34,23 +34,23 @@ defmodule <%= application_module %>.Mixfile do
   defp deps do
     [
      # phoenix
-     {:phoenix, "~> 1.3.0", override: true},
-     {:phoenix_pubsub, "~> 1.0"},
+     {:phoenix, "~> 1.3.4"},
+     {:phoenix_pubsub, "~> 1.1"},
      {:phoenix_ecto, "~> 3.2"},
-     {:phoenix_html, "~> 2.10"},
-     {:phoenix_live_reload, "~> 1.0", only: :dev},
+     {:phoenix_html, "~> 2.12"},
+     {:phoenix_live_reload, "~> 1.1", only: :dev},
 
      # general deps
      {:postgrex, ">= 0.0.0"},
      {:gettext, "~> 0.11"},
      {:cowboy, "~> 1.0"},
      {:timex, "~> 3.0"},
-     {:absinthe, "~> 1.4.0-rc", override: true},
-     {:absinthe_plug, "~> 1.4.0-rc", override: true},
+     {:absinthe, "~> 1.4.13"},
+     {:absinthe_plug, "~> 1.4.5"},
      {:absinthe_ecto, "~> 0.1.0"},
 
      # release management and production tools
-     {:distillery, "~> 1.5.2"},
+     {:distillery, "~> 1.5.3"},
      {:recon, "~> 2.3"},
      {:hrafn, "~> 0.1"},
      {:plug_heartbeat, "~> 0.1"},
