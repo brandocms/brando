@@ -1,4 +1,5 @@
 import 'babel-polyfill'
+import '@/styles/app.scss'
 import Vue from 'vue'
 
 // import Raven from 'raven-js'
