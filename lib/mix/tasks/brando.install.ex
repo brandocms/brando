@@ -156,6 +156,11 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/assets/backend/src/styles/includes/_fonts.scss", "assets/backend/src/styles/includes/_fonts.scss"},
 
     # Frontend assets
+    {:copy, "templates/brando.install/assets/frontend/package.json", "assets/frontend/package.json"},
+    {:copy, "templates/brando.install/assets/frontend/eslintrc.js", "assets/frontend/.eslintrc.js"},
+    {:copy, "templates/brando.install/assets/frontend/postcss.config.js", "assets/frontend/postcss.config.js"},
+    {:copy, "templates/brando.install/assets/frontend/webpack.config.js", "assets/frontend/webpack.config.js"},
+
     {:copy, "templates/brando.install/assets/frontend/css/_bootstrap.scss", "assets/frontend/css/_bootstrap.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/_variables.scss", "assets/frontend/css/_variables.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/app.scss", "assets/frontend/css/app.scss"},
@@ -170,10 +175,10 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/assets/frontend/css/includes/_sections.scss", "assets/frontend/css/includes/_sections.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/includes/_slider.scss", "assets/frontend/css/includes/_slider.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/includes/_utils.scss", "assets/frontend/css/includes/_utils.scss"},
+
     {:copy, "templates/brando.install/assets/frontend/js/index.js", "assets/frontend/js/index.js"},
     {:copy, "templates/brando.install/assets/frontend/js/lightbox/index.js", "assets/frontend/js/lightbox/index.js"},
-    {:copy, "templates/brando.install/assets/frontend/package.json", "assets/frontend/package.json"},
-    {:copy, "templates/brando.install/assets/frontend/postcss.config.js", "assets/frontend/postcss.config.js"},
+
     {:copy, "templates/brando.install/assets/frontend/static/favicon.ico", "assets/frontend/static/favicon.ico"},
     {:copy, "templates/brando.install/assets/frontend/static/ico/android-chrome-192x192.png", "assets/frontend/static/ico/android-chrome-192x192.png"},
     {:copy, "templates/brando.install/assets/frontend/static/ico/android-chrome-512x512.png", "assets/frontend/static/ico/android-chrome-512x512.png"},
@@ -194,7 +199,6 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/assets/frontend/static/images/brando/defaults/micro/avatar_default.jpg", "assets/frontend/static/images/brando/defaults/micro/avatar_default.jpg"},
     {:copy, "templates/brando.install/assets/frontend/static/images/brando/defaults/thumb/avatar_default.jpg", "assets/frontend/static/images/brando/defaults/thumb/avatar_default.jpg"},
     {:copy, "templates/brando.install/assets/frontend/static/images/logo.svg", "assets/frontend/static/images/logo.svg"},
-    {:copy, "templates/brando.install/assets/frontend/webpack.config.js", "assets/frontend/webpack.config.js"},
   ]
 
   @root Path.expand("../../../priv", __DIR__)
