@@ -24,7 +24,7 @@ defmodule Brando.UtilsTest do
   end
 
   test "slugify strips symbols" do
-    assert slugify("Is ♬ ♫ ♪ ♩ a melody or just noise?") == "is-a-melody-or-just-noise"
+    assert slugify("Is ♬ ♫ ♪ ♩ a melody or just noise?") == "is-♬-♫-♪-♩-a-melody-or-just-noise"
   end
 
   test "slugify strips accents" do
