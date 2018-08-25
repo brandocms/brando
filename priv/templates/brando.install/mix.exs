@@ -45,12 +45,12 @@ defmodule <%= application_module %>.Mixfile do
      {:gettext, "~> 0.11"},
      {:cowboy, "~> 1.0"},
      {:timex, "~> 3.0"},
-     {:absinthe, "~> 1.4.13"},
-     {:absinthe_plug, "~> 1.4.5"},
-     {:absinthe_ecto, "~> 0.1.0"},
+     {:absinthe, "~> 1.4"},
+     {:absinthe_plug, "~> 1.4"},
+     {:absinthe_ecto, "~> 0.1"},
 
      # release management and production tools
-     {:distillery, "~> 1.5.3"},
+     {:distillery, "~> 1.5"},
      {:recon, "~> 2.3"},
      {:hrafn, "~> 0.1"},
      {:plug_heartbeat, "~> 0.1"},
@@ -71,6 +71,6 @@ defmodule <%= application_module %>.Mixfile do
   defp aliases do
     ["ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
      "ecto.reset": ["ecto.drop", "ecto.setup"],
-     "test": ["ecto.create --quiet", "ecto.migrate", "test"]]
+     test: ["ecto.create --quiet", "ecto.migrate", "test"]]
   end
 end
