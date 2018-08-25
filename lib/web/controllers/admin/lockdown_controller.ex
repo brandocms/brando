@@ -16,7 +16,7 @@ defmodule Brando.LockdownController do
       |> put_session(:lockdown_authorized, true)
       |> redirect(to: "/")
     else
-      redirect conn, to: Brando.helpers.lockdown_path(conn, :index)
+      redirect conn, to: Brando.helpers().lockdown_path(conn, :index)
     end
   end
 end

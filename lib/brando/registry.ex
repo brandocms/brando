@@ -31,16 +31,15 @@ defmodule Brando.Registry do
   end
 
   def register(module, opts \\ [:menu]) do
-
     unless Code.ensure_loaded?(Module.concat(module, "Gettext")) do
-      raise RegistryError, message: "Could not find Gettext module for #{inspect module}"
+      raise RegistryError, message: "Could not find Gettext module for #{inspect(module)}"
     end
 
     GenServer.call(__MODULE__, {:register, module, opts})
   end
 
   def gettext_modules do
-    state() |> Map.get(:gettext_modules) |> Enum.reverse
+    state() |> Map.get(:gettext_modules) |> Enum.reverse()
   end
 
   def wipe do
@@ -61,9 +60,12 @@ defmodule Brando.Registry do
   @doc false
   def handle_call({:register, module, opts}, _from, state) do
     state =
-      if :gettext in opts, do:
-        %State{state | gettext_modules: [Module.concat(module, "Gettext")|state.gettext_modules]},
-      else: state
+      if :gettext in opts,
+        do: %State{
+          state
+          | gettext_modules: [Module.concat(module, "Gettext") | state.gettext_modules]
+        },
+        else: state
 
     {:reply, state, state}
   end

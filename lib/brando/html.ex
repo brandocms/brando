@@ -20,28 +20,30 @@ defmodule Brando.HTML do
   @doc """
   Returns `active` if `conn`'s `full_path` matches `current_path`.
   """
-  @spec active(Plug.Conn.t, String.t) :: String.t
+  @spec active(Plug.Conn.t(), String.t()) :: String.t()
   def active(conn, url_to_match, add_class? \\ nil) do
-    result = add_class? && ~s(class="active") || "active"
-    active_path?(conn, url_to_match) && result || ""
+    result = (add_class? && ~s(class="active")) || "active"
+    (active_path?(conn, url_to_match) && result) || ""
   end
 
   @doc """
   Checks if current_user in conn has `role`
   """
-  @spec can_render?(Plug.Conn.t, map) :: boolean
+  @spec can_render?(Plug.Conn.t(), map) :: boolean
   def can_render?(_, %{role: nil}) do
     true
   end
+
   def can_render?(conn, %{role: role}) do
     current_user = current_user(conn)
 
     if current_user do
-      role in current_user(conn).role && true || false
+      (role in current_user(conn).role && true) || false
     else
       false
     end
   end
+
   def can_render?(_, _) do
     true
   end
@@ -56,9 +58,11 @@ defmodule Brando.HTML do
 
   """
   def zero_pad(str, count \\ 3)
+
   def zero_pad(val, count) when is_binary(val) do
     String.pad_leading(val, count, "0")
   end
+
   def zero_pad(val, count) do
     String.pad_leading(Integer.to_string(val), count, "0")
   end
@@ -68,7 +72,7 @@ defmodule Brando.HTML do
   """
   def first_name(full_name) do
     full_name
-    |> String.split
+    |> String.split()
     |> hd
   end
 
@@ -78,9 +82,11 @@ defmodule Brando.HTML do
   def check_or_x(nil) do
     ~s(<i class="icon-centered fa fa-times text-danger"></i>)
   end
+
   def check_or_x(false) do
     ~s(<i class="icon-centered fa fa-times text-danger"></i>)
   end
+
   def check_or_x(_) do
     ~s(<i class="icon-centered fa fa-check text-success"></i>)
   end
@@ -90,8 +96,7 @@ defmodule Brando.HTML do
   """
   def cookie_law(conn, text, button_text \\ "OK") do
     if Map.get(conn.cookies, "cookielaw_accepted") != "1" do
-      html =
-      """
+      html = """
       <section class="container cookie-container">
         <section class="cookie-container-inner">
           <div class="cookie-law">
@@ -104,6 +109,7 @@ defmodule Brando.HTML do
         </section>
       </section>
       """
+
       Phoenix.HTML.raw(html)
     end
   end
@@ -117,8 +123,7 @@ defmodule Brando.HTML do
 
   """
   def google_analytics(code) do
-    html =
-    """
+    html = """
     <script>
     (function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=
     function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;
@@ -128,6 +133,7 @@ defmodule Brando.HTML do
     ga('create','#{code}','auto');ga('set', 'anonymizeIp', true);ga('send','pageview');
     </script>
     """
+
     Phoenix.HTML.raw(html)
   end
 
@@ -135,8 +141,7 @@ defmodule Brando.HTML do
   Render status indicators
   """
   def status_indicators do
-    html =
-    """
+    html = """
     <div class="status-indicators pull-left">
       <span class="m-r-sm">
         <span class="status-published">
@@ -164,6 +169,7 @@ defmodule Brando.HTML do
       </span>
     </div>
     """
+
     Phoenix.HTML.raw(html)
   end
 
@@ -175,7 +181,7 @@ defmodule Brando.HTML do
   end
 
   def truncate(text, len) when is_binary(text) do
-    String.length(text) <= len && text || String.slice(text, 0..len) <> "..."
+    (String.length(text) <= len && text) || String.slice(text, 0..len) <> "..."
   end
 
   def truncate(val, _) do
@@ -188,9 +194,11 @@ defmodule Brando.HTML do
   def meta_tag(name, content) do
     Phoenix.HTML.Tag.tag(:meta, content: content, property: name)
   end
+
   def meta_tag({name, content}) do
     Phoenix.HTML.Tag.tag(:meta, content: content, property: name)
   end
+
   def meta_tag(attrs) when is_list(attrs) do
     Phoenix.HTML.Tag.tag(:meta, attrs)
   end
@@ -201,6 +209,7 @@ defmodule Brando.HTML do
   def render_meta(conn) do
     app_name = Brando.config(:app_name)
     title = Brando.Utils.get_page_title(conn)
+
     conn =
       conn
       |> put_meta("og:title", "#{title}")
@@ -210,7 +219,9 @@ defmodule Brando.HTML do
 
     conn =
       case get_meta(conn, "og:image") do
-        nil -> conn
+        nil ->
+          conn
+
         img ->
           if String.contains?(img, "://") do
             conn
@@ -219,7 +230,7 @@ defmodule Brando.HTML do
           end
       end
 
-    html = Enum.map_join(get_meta(conn), "\n    ", &(elem(meta_tag(&1), 1)))
+    html = Enum.map_join(get_meta(conn), "\n    ", &elem(meta_tag(&1), 1))
     Phoenix.HTML.raw("    #{html}")
   end
 
@@ -236,22 +247,19 @@ defmodule Brando.HTML do
     body = "<body"
 
     body =
-      if id, do:
-        body <> ~s( id="toppen"),
-      else:
-        body
+      if id,
+        do: body <> ~s( id="toppen"),
+        else: body
 
     body =
-      if data_script, do:
-        body <> ~s( data-script="#{data_script}"),
-      else:
-        body
+      if data_script,
+        do: body <> ~s( data-script="#{data_script}"),
+        else: body
 
     body =
-      if classes, do:
-        body <> ~s( class="#{classes} unloaded"),
-      else:
-        body <> ~s( class="unloaded")
+      if classes,
+        do: body <> ~s( class="#{classes} unloaded"),
+        else: body <> ~s( class="unloaded")
 
     Phoenix.HTML.raw(body <> ">")
   end
@@ -269,7 +277,8 @@ defmodule Brando.HTML do
         <i class="fa fa-exclamation-circle m-r-sm"> </i>
         #{msg}
       </div>
-      """ |> Phoenix.HTML.raw
+      """
+      |> Phoenix.HTML.raw()
     end
   end
 
@@ -295,48 +304,59 @@ defmodule Brando.HTML do
     * `attrs` - extra attributes to the tag, ie data attrs
   """
   def img_tag(image_field, size, opts \\ []) do
-    srcset_attr = Keyword.get(opts, :srcset) && [srcset: get_srcset(image_field, opts[:srcset], opts)] || []
-    sizes_attr = Keyword.get(opts, :sizes) && [sizes: get_sizes(opts[:sizes])] || []
-    width_attr = Keyword.get(opts, :width) && [width: Map.get(image_field, :width)] || []
-    height_attr = Keyword.get(opts, :height) && [height: Map.get(image_field, :height)] || []
+    srcset_attr =
+      (Keyword.get(opts, :srcset) && [srcset: get_srcset(image_field, opts[:srcset], opts)]) || []
+
+    sizes_attr = (Keyword.get(opts, :sizes) && [sizes: get_sizes(opts[:sizes])]) || []
+    width_attr = (Keyword.get(opts, :width) && [width: Map.get(image_field, :width)]) || []
+    height_attr = (Keyword.get(opts, :height) && [height: Map.get(image_field, :height)]) || []
     extra_attrs = Keyword.get(opts, :attrs, [])
 
     attrs =
-      Keyword.new
+      Keyword.new()
       |> Keyword.put(:src, Brando.Utils.img_url(image_field, size, opts))
-      |> Keyword.merge(Keyword.drop(opts, [:attrs, :prefix, :srcset, :sizes, :default]) ++ sizes_attr ++ srcset_attr ++ width_attr ++ height_attr ++ extra_attrs)
+      |> Keyword.merge(
+        Keyword.drop(opts, [:attrs, :prefix, :srcset, :sizes, :default]) ++
+          sizes_attr ++ srcset_attr ++ width_attr ++ height_attr ++ extra_attrs
+      )
 
     # if we have srcset, set src as empty svg
-    attrs = srcset_attr != [] && Keyword.put(attrs, :src, svg_fallback(image_field)) || attrs
+    attrs = (srcset_attr != [] && Keyword.put(attrs, :src, svg_fallback(image_field))) || attrs
 
     Phoenix.HTML.Tag.tag(:img, attrs)
   end
 
   def ratio(%{height: height, width: width}) when is_nil(height) or is_nil(width), do: 0
+
   def ratio(%{height: height, width: width}) do
     Decimal.new(height)
     |> Decimal.div(Decimal.new(width))
     |> Decimal.mult(Decimal.new(100))
   end
+
   def ratio(nil), do: 0
 
   def svg_fallback(image_field) do
     width = Map.get(image_field, :width, 0)
     height = Map.get(image_field, :height, 0)
+
     "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg" <>
-    "%27%20width%3D%27#{width}%27%20height%3D%27#{height}%27" <>
-    "%20style%3D%27background%3Atransparent%27%2F%3E"
+      "%27%20width%3D%27#{width}%27%20height%3D%27#{height}%27" <>
+      "%20style%3D%27background%3Atransparent%27%2F%3E"
   end
 
   @doc """
   Get sizes from image config
   """
   def get_sizes(nil), do: nil
+
   def get_sizes(sizes) when is_list(sizes) do
     Enum.join(sizes, ", ")
   end
+
   def get_sizes(_) do
-    raise ArgumentError, message: ~s<sizes key must be a list: ["(min-width: 36em) 33.3vw", "100vw"]>
+    raise ArgumentError,
+      message: ~s<sizes key must be a list: ["(min-width: 36em) 33.3vw", "100vw"]>
   end
 
   @doc """
@@ -346,8 +366,10 @@ defmodule Brando.HTML do
 
   def get_srcset(image_field, {mod, field}, opts) do
     {:ok, cfg} = apply(mod, :get_image_cfg, [field])
+
     if !cfg.srcset do
-      raise ArgumentError, message: "no `:srcset` key set in #{inspect mod}'s #{inspect field} image config"
+      raise ArgumentError,
+        message: "no `:srcset` key set in #{inspect(mod)}'s #{inspect(field)} image config"
     end
 
     srcset_values =
@@ -387,21 +409,22 @@ defmodule Brando.HTML do
 
   defp sort_srcset(map) when is_map(map) do
     Map.to_list(map)
-    |> Enum.sort(fn ({_k1, s1}, {_k2, s2}) ->
+    |> Enum.sort(fn {_k1, s1}, {_k2, s2} ->
       t1 =
         s1
         |> String.replace("w", "")
         |> String.replace("h", "")
         |> String.replace("wv", "")
         |> String.replace("hv", "")
-        |> String.to_integer
+        |> String.to_integer()
+
       t2 =
         s2
         |> String.replace("w", "")
         |> String.replace("h", "")
         |> String.replace("wv", "")
         |> String.replace("hv", "")
-        |> String.to_integer
+        |> String.to_integer()
 
       t1 > t2
     end)

@@ -17,7 +17,7 @@ defmodule Brando.Plug.AdminHostname do
   @doc """
   Checks that `conn.host` has admin prefix.
   """
-  @spec admin_hostname(Plug.Conn.t, Keyword.t) :: Plug.Conn.t
+  @spec admin_hostname(Plug.Conn.t(), Keyword.t()) :: Plug.Conn.t()
   def admin_hostname(conn, _) do
     cond do
       String.starts_with?(conn.host, "admin") -> conn

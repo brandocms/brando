@@ -5,11 +5,11 @@ defmodule Brando.UserChannel do
 
   use Phoenix.Channel
 
-  intercept [
+  intercept([
     "alert",
     "set_progress",
     "increase_progress"
-  ]
+  ])
 
   @doc """
   Join user channel for your user
@@ -36,14 +36,20 @@ defmodule Brando.UserChannel do
   end
 
   def alert(user, message) do
-    Brando.endpoint.broadcast!("user:" <> Integer.to_string(user.id), "alert", %{message: message})
+    Brando.endpoint().broadcast!("user:" <> Integer.to_string(user.id), "alert", %{
+      message: message
+    })
   end
 
   def set_progress(user, value) do
-    Brando.endpoint.broadcast!("user:" <> Integer.to_string(user.id), "set_progress", %{value: value})
+    Brando.endpoint().broadcast!("user:" <> Integer.to_string(user.id), "set_progress", %{
+      value: value
+    })
   end
 
   def increase_progress(user, value) do
-    Brando.endpoint.broadcast!("user:" <> Integer.to_string(user.id), "increase_progress", %{value: value})
+    Brando.endpoint().broadcast!("user:" <> Integer.to_string(user.id), "increase_progress", %{
+      value: value
+    })
   end
 end

@@ -88,11 +88,13 @@ defmodule Brando.Villain.Parser.Default do
   Convert image to html, with caption and credits and optional link
   """
   def image(%{"url" => url, "title" => title, "credits" => credits} = data) do
-    {link_open, link_close} = if Map.get(data, "link", "") != "" do
-      {~s(<a href="#{data["link"]}" title="#{title}">), ~s(</a>)}
-    else
-      {"", ""}
-    end
+    {link_open, link_close} =
+      if Map.get(data, "link", "") != "" do
+        {~s(<a href="#{data["link"]}" title="#{title}">), ~s(</a>)}
+      else
+        {"", ""}
+      end
+
     """
     <div class="img-wrapper">
       #{link_open}<img src="#{url}" alt="#{title}/#{credits}" class="img-fluid" />#{link_close}
@@ -112,19 +114,22 @@ defmodule Brando.Villain.Parser.Default do
   Slideshow
   """
   def slideshow(%{"imageseries" => series_slug, "size" => size}) do
-    series = Brando.repo.all(
-      from is in Brando.ImageSeries,
-            join: c in assoc(is, :image_category),
-            join: i in assoc(is, :images),
-           where: c.slug == "slideshows" and is.slug == ^series_slug,
-        order_by: i.sequence,
-         preload: [image_category: c, images: i]
-    ) |> List.first
+    series =
+      Brando.repo().all(
+        from is in Brando.ImageSeries,
+          join: c in assoc(is, :image_category),
+          join: i in assoc(is, :images),
+          where: c.slug == "slideshows" and is.slug == ^series_slug,
+          order_by: i.sequence,
+          preload: [image_category: c, images: i]
+      )
+      |> List.first()
 
-    images = Enum.map_join(series.images, "\n", fn(img) ->
-      src = img_url(img.image, String.to_atom(size), [prefix: media_url()])
-      ~s(<li><img src="#{src}" /></li>)
-    end)
+    images =
+      Enum.map_join(series.images, "\n", fn img ->
+        src = img_url(img.image, String.to_atom(size), prefix: media_url())
+        ~s(<li><img src="#{src}" /></li>)
+      end)
 
     """
     <div class="flexslider flex-viewport">
@@ -170,6 +175,7 @@ defmodule Brando.Villain.Parser.Default do
     html = "#{bq}\n>\n> -- <cite>#{cite}</cite>"
     Earmark.as_html!(html)
   end
+
   def blockquote(%{"text" => bq}) do
     Earmark.as_html!(bq)
   end
@@ -178,16 +184,22 @@ defmodule Brando.Villain.Parser.Default do
   Convert columns to html. Recursive parsing.
   """
   def columns(cols) do
-    col_html = for col <- cols do
-      c = Enum.reduce(col["data"], [], fn(d, acc) ->
-        [apply(__MODULE__, String.to_atom(d["type"]), [d["data"]])|acc]
-      end)
-      class = case col["class"] do
-        "six" -> "col-md-6"
-        class -> class
+    col_html =
+      for col <- cols do
+        c =
+          Enum.reduce(col["data"], [], fn d, acc ->
+            [apply(__MODULE__, String.to_atom(d["type"]), [d["data"]]) | acc]
+          end)
+
+        class =
+          case col["class"] do
+            "six" -> "col-md-6"
+            class -> class
+          end
+
+        ~s(<div class="#{class}">#{Enum.reverse(c)}</div>)
       end
-      ~s(<div class="#{class}">#{Enum.reverse(c)}</div>)
-    end
+
     ~s(<div class="row">#{col_html}</div>)
   end
 end

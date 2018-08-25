@@ -32,6 +32,7 @@ defmodule Brando.Type.Enum do
 
   defp defenumcast(val, idx) do
     str = Atom.to_string(val)
+
     quote do
       @doc false
       def cast(unquote(idx)), do: {:ok, unquote(val)}

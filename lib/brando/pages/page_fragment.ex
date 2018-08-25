@@ -33,14 +33,16 @@ defmodule Brando.Pages.PageFragment do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, atom, Keyword.t | Options.t) :: t
+  @spec changeset(t, atom, Keyword.t() | Options.t()) :: t
   def changeset(schema, action, params \\ %{})
+
   def changeset(schema, :create, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
     |> generate_html()
   end
+
   def changeset(schema, :update, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
@@ -59,10 +61,10 @@ defmodule Brando.Pages.PageFragment do
   #
   # Meta
 
-  use Brando.Meta.Schema, [
+  use Brando.Meta.Schema,
     singular: gettext("page fragment"),
     plural: gettext("page fragments"),
-    repr: &("#{&1.key}"),
+    repr: &"#{&1.key}",
     fields: [
       id: "№",
       language: gettext("Language"),
@@ -74,5 +76,4 @@ defmodule Brando.Pages.PageFragment do
       inserted_at: gettext("Inserted"),
       updated_at: gettext("Updated")
     ]
-  ]
 end

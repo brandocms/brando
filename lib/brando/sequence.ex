@@ -102,16 +102,20 @@ defmodule Brando.Sequence do
   def schema do
     quote do
       import Brando.Sequence.Schema, only: [sequenced: 0]
+
       def sequence(ids, vals) do
         order = Enum.zip(vals, ids)
         table = __MODULE__.__schema__(:source)
 
-        Brando.repo.transaction(fn -> Enum.map(order, fn ({val, id}) ->
-          Ecto.Adapters.SQL.query(
-            Brando.repo,
-            ~s(UPDATE #{table} SET "sequence" = $1 WHERE "id" = $2),
-            [val, String.to_integer(id)])
-        end) end)
+        Brando.repo().transaction(fn ->
+          Enum.map(order, fn {val, id} ->
+            Ecto.Adapters.SQL.query(
+              Brando.repo(),
+              ~s(UPDATE #{table} SET "sequence" = $1 WHERE "id" = $2),
+              [val, String.to_integer(id)]
+            )
+          end)
+        end)
       end
     end
   end
@@ -129,6 +133,7 @@ defmodule Brando.Sequence do
   defmacro __using__(which) when is_atom(which) do
     apply(__MODULE__, which, [])
   end
+
   defmacro __using__([:controller, ctrl_opts] = opts) when is_list(opts) do
     apply(__MODULE__, :controller, ctrl_opts)
   end

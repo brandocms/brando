@@ -13,7 +13,7 @@ defmodule Brando.Schema.Types.Scalar do
 
   scalar :list, description: "JS array to list instead of map" do
     parse fn p ->
-      {:ok, Enum.map(p.fields, &(&1.input_value.normalized.value))}
+      {:ok, Enum.map(p.fields, & &1.input_value.normalized.value)}
     end
   end
 

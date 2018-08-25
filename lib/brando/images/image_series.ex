@@ -37,8 +37,9 @@ defmodule Brando.ImageSeries do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, :create | :update, Keyword.t) :: t
+  @spec changeset(t, :create | :update, Keyword.t()) :: t
   def changeset(schema, action, params \\ %{})
+
   def changeset(schema, :create, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
@@ -68,12 +69,12 @@ defmodule Brando.ImageSeries do
   @doc """
   Get all imageseries in category `id`.
   """
-  @spec by_category_id(integer) :: Ecto.Queryable.t
+  @spec by_category_id(integer) :: Ecto.Queryable.t()
   def by_category_id(id) do
     from m in __MODULE__,
-         where: m.image_category_id == ^id,
+      where: m.image_category_id == ^id,
       order_by: m.sequence,
-       preload: [:images]
+      preload: [:images]
   end
 
   @doc """
@@ -88,14 +89,14 @@ defmodule Brando.ImageSeries do
   end
 
   defp do_inherit_configuration(cs, cat_id, nil) do
-    category = Brando.repo.get(ImageCategory, cat_id)
+    category = Brando.repo().get(ImageCategory, cat_id)
     cfg = category.cfg
 
     put_change(cs, :cfg, cfg)
   end
 
   defp do_inherit_configuration(cs, cat_id, slug) do
-    category = Brando.repo.get(ImageCategory, cat_id)
+    category = Brando.repo().get(ImageCategory, cat_id)
     new_upload_path = Path.join(Map.get(category.cfg, :upload_path), slug)
     cfg = Map.put(category.cfg, :upload_path, new_upload_path)
 
@@ -109,6 +110,7 @@ defmodule Brando.ImageSeries do
   """
   def validate_paths(cs) do
     slug = get_change(cs, :slug)
+
     if slug do
       cfg = cs.data.cfg
       split_path = Path.split(cfg.upload_path)
@@ -116,7 +118,7 @@ defmodule Brando.ImageSeries do
       new_path =
         split_path
         |> List.delete_at(Enum.count(split_path) - 1)
-        |> Path.join
+        |> Path.join()
         |> Path.join(slug)
 
       cfg = Map.put(cfg, :upload_path, new_path)
@@ -129,13 +131,13 @@ defmodule Brando.ImageSeries do
   #
   # Meta
 
-  use Brando.Meta.Schema, [
+  use Brando.Meta.Schema,
     singular: gettext("imageserie"),
     plural: gettext("imageseries"),
-    repr: fn (schema) ->
-       schema = Brando.repo.preload(schema, :images)
-       image_count = Enum.count(schema.images)
-       "#{schema.name} – #{image_count} #{gettext("image(s)")}."
+    repr: fn schema ->
+      schema = Brando.repo().preload(schema, :images)
+      image_count = Enum.count(schema.images)
+      "#{schema.name} – #{image_count} #{gettext("image(s)")}."
     end,
     fields: [
       id: gettext("ID"),
@@ -152,5 +154,4 @@ defmodule Brando.ImageSeries do
       updated_at: gettext("Updated at")
     ],
     hidden_fields: []
-  ]
 end

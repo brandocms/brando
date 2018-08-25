@@ -25,6 +25,7 @@ defmodule Brando.Type.FileConfig do
     val = Poison.decode!(val, as: %Brando.Type.FileConfig{})
     {:ok, val}
   end
+
   def cast(val) when is_map(val) do
     {:ok, val}
   end

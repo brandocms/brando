@@ -16,7 +16,7 @@ defmodule Brando.StatsChannel do
   use Phoenix.Channel
 
   def join("stats", _auth_msg, socket) do
-    send self(), :update
+    send(self(), :update)
     {:ok, socket}
   end
 
@@ -28,8 +28,8 @@ defmodule Brando.StatsChannel do
 
     mem_list =
       @info_memory
-      |> :erlang.memory
-      |> Keyword.values
+      |> :erlang.memory()
+      |> Keyword.values()
 
     :erlang.send_after(interval, self(), :update)
 
@@ -57,8 +57,8 @@ defmodule Brando.StatsChannel do
   defp alive?(module) do
     try do
       module
-      |> Process.whereis
-      |> Process.alive?
+      |> Process.whereis()
+      |> Process.alive?()
     rescue
       _ -> false
     end
@@ -67,6 +67,6 @@ defmodule Brando.StatsChannel do
   defp system_uptime do
     :erlang.statistics(:wall_clock)
     |> elem(0)
-    |> Brando.Utils.human_time
+    |> Brando.Utils.human_time()
   end
 end

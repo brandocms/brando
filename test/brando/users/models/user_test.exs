@@ -14,8 +14,10 @@ defmodule Brando.Integration.UserTest do
     assert updated_user.full_name == "Elvis Presley"
 
     old_pass = updated_user.password
-    assert {:ok, updated_password_user}
-           = Users.update_user(updated_user.id, %{"password" => "newpass"})
+
+    assert {:ok, updated_password_user} =
+             Users.update_user(updated_user.id, %{"password" => "newpass"})
+
     refute old_pass == updated_password_user.password
     refute updated_password_user.password == "newpass"
   end

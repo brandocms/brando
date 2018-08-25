@@ -4,6 +4,7 @@ end
 
 defmodule Brando.ErrorView do
   import Brando.Gettext
+
   @moduledoc """
   Error views for Brando.
 
@@ -40,10 +41,10 @@ defmodule Brando.ErrorView do
   end
 
   def render("feedback.html", %{conn: conn} = assigns) do
-    conn         = Plug.Conn.fetch_session(conn)
+    conn = Plug.Conn.fetch_session(conn)
     current_user = Brando.Utils.current_user(conn)
-    event_id     = Map.get(conn.private, :hrafn_event_id, nil)
-    public_dsn   = Map.get(conn.private, :hrafn_public_dsn, nil)
+    event_id = Map.get(conn.private, :hrafn_event_id, nil)
+    public_dsn = Map.get(conn.private, :hrafn_public_dsn, nil)
 
     assigns =
       assigns
@@ -57,6 +58,6 @@ defmodule Brando.ErrorView do
   # In case no render clause matches or no
   # template is found, let's render it as 500
   def template_not_found(_, assigns) do
-    render "catch_all.html", assigns
+    render("catch_all.html", assigns)
   end
 end

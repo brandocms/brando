@@ -13,7 +13,7 @@ defmodule Brando.Plug.I18n do
 
   Otherwise adds to session and assigns, and sets it through gettext
   """
-  @spec put_locale(Plug.Conn.t, Keyword.t) :: Plug.Conn.t
+  @spec put_locale(Plug.Conn.t(), Keyword.t()) :: Plug.Conn.t()
   def put_locale(%{private: %{plug_session: %{"language" => language}}} = conn, []) do
     language = extract_language_from_path(conn) || language
     Brando.I18n.put_locale_for_all_modules(language)
@@ -36,12 +36,13 @@ defmodule Brando.Plug.I18n do
   as well as delegating to the I18n module for setting proper locale for all
   registered gettext modules.
   """
-  @spec put_admin_locale(Plug.Conn.t, Keyword.t) :: Plug.Conn.t
+  @spec put_admin_locale(Plug.Conn.t(), Keyword.t()) :: Plug.Conn.t()
   def put_admin_locale(conn, []) do
     language =
       case current_user(conn) do
         nil ->
           Brando.config(:default_admin_language)
+
         user ->
           Map.get(user, :language, Brando.config(:default_admin_language))
       end
@@ -52,14 +53,15 @@ defmodule Brando.Plug.I18n do
     conn
   end
 
-  @spec extract_language_from_path(Plug.Conn.t) :: String.t | nil
+  @spec extract_language_from_path(Plug.Conn.t()) :: String.t() | nil
   defp extract_language_from_path(conn) do
     lang = List.first(conn.path_info)
+
     if lang do
       langs =
         :languages
-        |> Brando.config
-        |> List.flatten
+        |> Brando.config()
+        |> List.flatten()
         |> Keyword.get_values(:value)
 
       if lang in langs, do: lang

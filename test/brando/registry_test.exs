@@ -18,14 +18,13 @@ defmodule Brando.RegistryTest do
   end
 
   test "register gettext module" do
-    assert Registry.register(Brando, [:gettext])
-           == %Brando.Registry.State{gettext_modules: [Brando.Gettext]}
-    assert Registry.gettext_modules()
-           == [Brando.Gettext]
+    assert Registry.register(Brando, [:gettext]) ==
+             %Brando.Registry.State{gettext_modules: [Brando.Gettext]}
+
+    assert Registry.gettext_modules() == [Brando.Gettext]
 
     Registry.wipe()
 
-    assert Registry.gettext_modules()
-           == []
+    assert Registry.gettext_modules() == []
   end
 end

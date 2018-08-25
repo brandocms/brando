@@ -48,17 +48,16 @@ defmodule Brando.Images.Optimize do
   Checks image for `optimized` flag, gets the image type and sends off
   to `do_optimize`.
   """
-  @spec optimize(Ecto.Changeset.t, :atom | String.t, Keyword.t) :: Ecto.Changeset.t
+  @spec optimize(Ecto.Changeset.t(), :atom | String.t(), Keyword.t()) :: Ecto.Changeset.t()
   def optimize(%Ecto.Changeset{} = changeset, field_name, opts \\ []) do
     force? = Keyword.get(opts, :force, false)
 
-    field_name_atom = is_binary(field_name) && String.to_atom(field_name) || field_name
+    field_name_atom = (is_binary(field_name) && String.to_atom(field_name)) || field_name
 
     with {:ok, img_field} <- check_field_has_changed(changeset, field_name, force?),
-         {:ok, _}         <- check_changeset_has_no_errors(changeset),
-         {:ok, type}      <- check_valid_image_type(img_field),
-         {:ok, cfg}       <- check_image_type_has_config(type)
-    do
+         {:ok, _} <- check_changeset_has_no_errors(changeset),
+         {:ok, type} <- check_valid_image_type(img_field),
+         {:ok, cfg} <- check_image_type_has_config(type) do
       do_optimize({cfg, changeset, field_name_atom, img_field})
     else
       _ ->
@@ -68,7 +67,7 @@ defmodule Brando.Images.Optimize do
 
   defp check_image_type_has_config(type) do
     Brando.Images
-    |> Brando.config
+    |> Brando.config()
     |> Keyword.get(:optimize, [])
     |> Keyword.get(type)
     |> case do
@@ -80,8 +79,8 @@ defmodule Brando.Images.Optimize do
   defp check_valid_image_type(img_field) do
     case image_type(img_field.path) do
       :jpeg -> {:ok, :jpeg}
-      :png  -> {:ok, :png}
-      type  -> {:not_valid, type}
+      :png -> {:ok, :png}
+      type -> {:not_valid, type}
     end
   end
 
@@ -91,7 +90,7 @@ defmodule Brando.Images.Optimize do
 
   defp check_field_has_changed(changeset, field_name, false) do
     case Changeset.get_change(changeset, field_name, nil) do
-      nil       -> {:no_change, changeset}
+      nil -> {:no_change, changeset}
       img_field -> {:ok, img_field}
     end
   end
@@ -111,30 +110,35 @@ defmodule Brando.Images.Optimize do
   end
 
   defp run_optimizations({cfg, changeset, field_name, img_field}) do
-    Enum.map(img_field.sizes, &(Task.async(fn ->
-      args = interpolate_and_split_args(elem(&1, 1), cfg[:args])
-      execute_command(cfg[:bin], args)
-    end)))
-    |> Enum.map(&(Task.await(&1, 60_000)))
+    Enum.map(
+      img_field.sizes,
+      &Task.async(fn ->
+        args = interpolate_and_split_args(elem(&1, 1), cfg[:args])
+        execute_command(cfg[:bin], args)
+      end)
+    )
+    |> Enum.map(&Task.await(&1, 60_000))
     |> Enum.filter(&(&1 != :ok))
     |> case do
       [] -> {:ok, {cfg, changeset, field_name, img_field}}
-      _  -> {:error, {cfg, changeset, field_name, img_field}}
+      _ -> {:error, {cfg, changeset, field_name, img_field}}
     end
   end
 
   defp execute_command(bin, args) do
     case System.cmd(bin, args) do
-      {_, 0}            ->
+      {_, 0} ->
         :ok
+
       {msg, error_code} ->
         Logger.error("""
           ==> optimize failed:
           bin..: #{bin}
-          args.: #{inspect args}
-          msg..: #{inspect msg}
-          code.: #{inspect error_code}
+          args.: #{inspect(args)}
+          msg..: #{inspect(msg)}
+          code.: #{inspect(error_code)}
         """)
+
         :error
     end
   end
@@ -153,8 +157,8 @@ defmodule Brando.Images.Optimize do
 
     args
     |> String.split(" ")
-    |> Enum.map(&(String.replace(&1, "%{filename}", filename)))
-    |> Enum.map(&(String.replace(&1, "%{new_filename}", new_filename)))
+    |> Enum.map(&String.replace(&1, "%{filename}", filename))
+    |> Enum.map(&String.replace(&1, "%{new_filename}", new_filename))
   end
 
   defp set_optimized_flag({:ok, {_, changeset, field_name, img_field}}) do

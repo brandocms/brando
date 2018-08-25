@@ -5,12 +5,12 @@ defmodule Brando.SystemChannel do
 
   use Phoenix.Channel
 
-  intercept [
+  intercept([
     "log_msg",
     "alert",
     "set_progress",
     "increase_progress"
-  ]
+  ])
 
   def join("system:stream", _auth_msg, socket) do
     {:ok, socket}
@@ -63,29 +63,32 @@ defmodule Brando.SystemChannel do
 
   defp do_log(level, icon, body) do
     unless Brando.config(:logging)[:disable_logging] do
-      Brando.endpoint.broadcast!("system:stream", "log_msg",
-                                 %{level: level, icon: icon, body: body})
+      Brando.endpoint().broadcast!("system:stream", "log_msg", %{
+        level: level,
+        icon: icon,
+        body: body
+      })
     end
   end
 
   def alert(message) do
     unless Brando.config(:logging)[:disable_logging] do
-      Brando.endpoint.broadcast!("system:stream", "alert", %{message: message})
+      Brando.endpoint().broadcast!("system:stream", "alert", %{message: message})
     end
   end
 
   def set_progress(value) do
-    Brando.endpoint.broadcast!("system:stream", "set_progress", %{value: value})
+    Brando.endpoint().broadcast!("system:stream", "set_progress", %{value: value})
   end
 
   def increase_progress(value) do
-    Brando.endpoint.broadcast!("system:stream", "increase_progress", %{value: value})
+    Brando.endpoint().broadcast!("system:stream", "increase_progress", %{value: value})
   end
 
   def popup_form(header, form, opts) do
     form = form.get_popup_form(opts)
 
-    Brando.endpoint.broadcast!("system:stream", "popup_form", %{
+    Brando.endpoint().broadcast!("system:stream", "popup_form", %{
       form: Phoenix.HTML.safe_to_string(form.rendered_form),
       url: form.url,
       header: header

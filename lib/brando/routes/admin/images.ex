@@ -12,20 +12,20 @@ defmodule Brando.Images.Routes.Admin.API do
 
   """
 
-
   alias Brando.Image
   alias Brando.ImageSeries
   alias Brando.ImageCategory
   alias Brando.Admin.API.Images.UploadController
 
-  defmacro api_image_routes(path, opts \\ []), do:
-    add_resources(path, opts)
+  defmacro api_image_routes(path, opts \\ []), do: add_resources(path, opts)
 
   defp add_resources(path, opts) do
-    priv_map = %{}
-    |> Map.put(:image_schema, Keyword.get(opts, :image_schema, Image))
-    |> Map.put(:series_schema, Keyword.get(opts, :series_schema, ImageSeries))
-    |> Map.put(:category_schema, Keyword.get(opts, :category_schema,ImageCategory))
+    priv_map =
+      %{}
+      |> Map.put(:image_schema, Keyword.get(opts, :image_schema, Image))
+      |> Map.put(:series_schema, Keyword.get(opts, :series_schema, ImageSeries))
+      |> Map.put(:category_schema, Keyword.get(opts, :category_schema, ImageCategory))
+
     options = Keyword.put([], :private, Macro.escape(priv_map))
 
     # API routes

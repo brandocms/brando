@@ -67,6 +67,7 @@ defmodule Brando.M2M do
           |> Enum.map(&change/1)
 
         put_assoc(set, assoc, changes)
+
       :error ->
         set
     end

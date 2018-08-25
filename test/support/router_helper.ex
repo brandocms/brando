@@ -6,13 +6,23 @@ defmodule RouterHelper do
   skew endpoint tests.
   """
 
-  import Plug.Conn, only: [fetch_query_params: 1, fetch_session: 1,
-                           put_session: 3, put_private: 3, put_req_header: 3]
+  import Plug.Conn,
+    only: [
+      fetch_query_params: 1,
+      fetch_session: 1,
+      put_session: 3,
+      put_private: 3,
+      put_req_header: 3
+    ]
+
   alias Plug.Session
 
-  @session Plug.Session.init(store: :cookie, key: "_app",
-                             encryption_salt: "yadayada",
-                             signing_salt: "yadayada")
+  @session Plug.Session.init(
+             store: :cookie,
+             key: "_app",
+             encryption_salt: "yadayada",
+             signing_salt: "yadayada"
+           )
 
   defmacro __using__(_) do
     quote do
@@ -43,10 +53,10 @@ defmodule RouterHelper do
 
   def send_request(conn) do
     conn
-    |> put_private(:phoenix_endpoint, Brando.endpoint)
+    |> put_private(:phoenix_endpoint, Brando.endpoint())
     |> put_private(:plug_skip_csrf_protection, true)
     |> fetch_query_params
-    |> Brando.router.call(Brando.router.init([]))
+    |> Brando.router().call(Brando.router().init([]))
   end
 
   defmodule TestRouter do
@@ -71,7 +81,7 @@ defmodule RouterHelper do
 
     scope "/admin", as: :admin do
       pipe_through :admin
-      api_image_routes "/images"
+      api_image_routes("/images")
     end
 
     scope "/coming-soon" do
@@ -81,15 +91,15 @@ defmodule RouterHelper do
     scope "/" do
       pipe_through :browser
       get "/test123/:id/:language", Brando.TestController, :test
+
       get "/login", Brando.SessionController, :login,
-        private: %{schema: Brando.User,
-                   layout: {Brando.Session.LayoutView, "auth.html"}}
+        private: %{schema: Brando.User, layout: {Brando.Session.LayoutView, "auth.html"}}
+
       post "/login", Brando.SessionController, :login,
-        private: %{schema: Brando.User,
-                   layout: {Brando.Session.LayoutView, "auth.html"}}
+        private: %{schema: Brando.User, layout: {Brando.Session.LayoutView, "auth.html"}}
+
       get "/logout", Brando.SessionController, :logout,
-        private: %{schema: Brando.User,
-                   layout: {Brando.Session.LayoutView, "auth.html"}}
+        private: %{schema: Brando.User, layout: {Brando.Session.LayoutView, "auth.html"}}
     end
   end
 end

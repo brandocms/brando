@@ -27,7 +27,7 @@ defmodule Brando.User do
     timestamps()
   end
 
-  has_image_field :avatar, %{
+  has_image_field(:avatar, %{
     allowed_mimetypes: [
       "image/jpeg",
       "image/png",
@@ -38,39 +38,39 @@ defmodule Brando.User do
     random_filename: true,
     size_limit: 10_240_000,
     sizes: %{
-      "micro"  => %{
-        "size"    => "25x25",
+      "micro" => %{
+        "size" => "25x25",
         "quality" => 100,
-        "crop"    => true
+        "crop" => true
       },
-      "thumb"  => %{
-        "size"    => "150x150",
+      "thumb" => %{
+        "size" => "150x150",
         "quality" => 100,
-        "crop"    => true
+        "crop" => true
       },
-      "small"  => %{
-        "size"    => "300",
+      "small" => %{
+        "size" => "300",
         "quality" => 100
       },
       "medium" => %{
-        "size"    => "500",
+        "size" => "500",
         "quality" => 100
       },
-      "large"  => %{
-        "size"    => "700",
+      "large" => %{
+        "size" => "700",
         "quality" => 100
       },
       "xlarge" => %{
-        "size"    => "900",
+        "size" => "900",
         "quality" => 100
-     }
+      }
     },
     srcset: %{
-      "small"  => "300w",
+      "small" => "300w",
       "medium" => "500w",
-      "large"  => "700w"
+      "large" => "700w"
     }
-  }
+  })
 
   @doc """
   Casts and validates `params` against `schema` to create a valid changeset
@@ -82,13 +82,17 @@ defmodule Brando.User do
   """
   @spec changeset(t, :create | :update, %{binary => term} | %{atom => term}) :: t
   def changeset(schema, action, params \\ %{})
+
   def changeset(schema, :create, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
     |> validate_format(:email, ~r/@/)
     |> unique_constraint(:email)
-    |> validate_length(:password, min: 6, too_short: gettext("Password must be at least 6 characters"))
+    |> validate_length(:password,
+      min: 6,
+      too_short: gettext("Password must be at least 6 characters")
+    )
     |> validate_upload({:image, :avatar})
     |> optimize(:avatar)
   end
@@ -100,7 +104,10 @@ defmodule Brando.User do
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
     |> unique_constraint(:email)
-    |> validate_length(:password, min: 6, too_short: gettext("Password must be at least 6 characters"))
+    |> validate_length(:password,
+      min: 6,
+      too_short: gettext("Password must be at least 6 characters")
+    )
     |> validate_upload({:image, :avatar})
     |> optimize(:avatar)
   end
@@ -116,8 +123,7 @@ defmodule Brando.User do
   Checks `password` against `user`. Return bool.
   """
   def auth?(nil, _password), do: false
-  def auth?(user, password), do:
-    Comeonin.Bcrypt.checkpw(password, user.password)
+  def auth?(user, password), do: Comeonin.Bcrypt.checkpw(password, user.password)
 
   @doc """
   Checks if `user` has `role`.
@@ -133,16 +139,16 @@ defmodule Brando.User do
   @spec can_login?(t) :: boolean
   def can_login?(user) do
     {:ok, role} = Brando.Type.Role.dump(user.role)
-    role > 0 && true || false
+    (role > 0 && true) || false
   end
 
   #
   # Meta
 
-  use Brando.Meta.Schema, [
+  use Brando.Meta.Schema,
     singular: gettext("user"),
     plural: gettext("users"),
-    repr: &("#{&1.full_name} (#{&1.email})"),
+    repr: &"#{&1.full_name} (#{&1.email})",
     fields: [
       id: gettext("ID"),
       email: gettext("Email"),
@@ -153,11 +159,11 @@ defmodule Brando.User do
       last_login: gettext("Last login"),
       inserted_at: gettext("Inserted at"),
       updated_at: gettext("Updated at"),
-      avatar: gettext("Avatar")],
+      avatar: gettext("Avatar")
+    ],
     fieldsets: [
       rights: gettext("Rights"),
       user_information: gettext("User information")
     ],
     hidden_fields: [:password, :creator]
-  ]
 end

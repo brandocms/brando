@@ -33,7 +33,7 @@ defmodule Brando.Image do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, :create | :update, Keyword.t) :: t
+  @spec changeset(t, :create | :update, Keyword.t()) :: t
   def changeset(schema, :create, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
@@ -59,10 +59,10 @@ defmodule Brando.Image do
   #
   # Meta
 
-  use Brando.Meta.Schema, [
+  use Brando.Meta.Schema,
     singular: gettext("image"),
     plural: gettext("images"),
-    repr: &("#{&1.id} | #{&1.image.path}"),
+    repr: &"#{&1.id} | #{&1.image.path}",
     fields: [
       id: gettext("ID"),
       image: gettext("Image"),
@@ -71,6 +71,5 @@ defmodule Brando.Image do
       image_series: gettext("Image series"),
       inserted_at: gettext("Inserted at"),
       updated_at: gettext("Updated at")
-    ],
-  ]
+    ]
 end

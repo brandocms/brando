@@ -9,30 +9,30 @@ defmodule Brando.Users do
   import Ecto.Changeset
 
   def get_user(id) do
-    case Brando.repo.get(User, id) do
+    case Brando.repo().get(User, id) do
       nil -> {:error, {:user, :not_found}}
       user -> {:ok, user}
     end
   end
 
   def get_user_by(args) do
-    Brando.repo.get_by(User, args)
+    Brando.repo().get_by(User, args)
   end
 
   def get_user_by!(args) do
-    Brando.repo.get_by!(User, args)
+    Brando.repo().get_by!(User, args)
   end
 
   def get_users() do
     User
     |> User.order_by_id()
-    |> Brando.repo.all()
+    |> Brando.repo().all()
   end
 
   def create_user(params) do
     User.changeset(%User{}, :create, params)
     |> maybe_update_password
-    |> Brando.repo.insert
+    |> Brando.repo().insert
   end
 
   def update_user(id, params) do
@@ -40,14 +40,14 @@ defmodule Brando.Users do
       user
       |> User.changeset(:update, params)
       |> maybe_update_password
-      |> Brando.repo.update
+      |> Brando.repo().update
     else
       _ -> {:error, {:user, :not_found}}
     end
   end
 
   def delete_user(user) do
-    Brando.repo.delete!(user)
+    Brando.repo().delete!(user)
   end
 
   @doc """
@@ -56,7 +56,8 @@ defmodule Brando.Users do
   @spec set_last_login(User) :: User
   def set_last_login(user) do
     {:ok, user} =
-      Utils.Schema.update_field(user, [last_login: NaiveDateTime.from_erl!(:calendar.local_time)])
+      Utils.Schema.update_field(user, last_login: NaiveDateTime.from_erl!(:calendar.local_time()))
+
     user
   end
 

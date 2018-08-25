@@ -22,7 +22,9 @@ defmodule Brando.Images.ImageCategoryResolver do
   @doc """
   create image category
   """
-  def create(%{image_category_params: image_category_params}, %{context: %{current_user: current_user}}) do
+  def create(%{image_category_params: image_category_params}, %{
+        context: %{current_user: current_user}
+      }) do
     image_category_params
     |> Images.create_category(current_user)
     |> response
@@ -31,7 +33,10 @@ defmodule Brando.Images.ImageCategoryResolver do
   @doc """
   update image category
   """
-  def update(%{image_category_id: image_category_id, image_category_params: image_category_params}, _) do
+  def update(
+        %{image_category_id: image_category_id, image_category_params: image_category_params},
+        _
+      ) do
     image_category_id
     |> Images.update_category(image_category_params)
     |> response
@@ -42,7 +47,7 @@ defmodule Brando.Images.ImageCategoryResolver do
   """
   def delete(%{image_category_id: image_category_id}, _) do
     image_category_id
-    |> Images.delete_category
+    |> Images.delete_category()
     |> response
   end
 end

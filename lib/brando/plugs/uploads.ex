@@ -10,18 +10,19 @@ defmodule Brando.Plug.Uploads do
   """
   # DEPRECATED
   # TODO: REMOVE BEFORE 1.0
-  @spec check_for_uploads(Plug.Conn.t, {String.t, module}) :: Plug.Conn.t
+  @spec check_for_uploads(Plug.Conn.t(), {String.t(), module}) :: Plug.Conn.t()
   def check_for_uploads(_, {required_key, _}) when is_binary(required_key) do
-    raise RuntimeError, message: """
-    Brando.Plug.Uploads.check_for_uploads is deprecated.
+    raise RuntimeError,
+      message: """
+      Brando.Plug.Uploads.check_for_uploads is deprecated.
 
-    Add `validate_upload/2` to your changeset function instead.
+      Add `validate_upload/2` to your changeset function instead.
 
-        def changeset(schema, params) do
-          schema
-          |> cast(...)
-          |> validate_upload({:image, :field_name}) # or {:file, :field_name}
-        end
-    """
+          def changeset(schema, params) do
+            schema
+            |> cast(...)
+            |> validate_upload({:image, :field_name}) # or {:file, :field_name}
+          end
+      """
   end
 end

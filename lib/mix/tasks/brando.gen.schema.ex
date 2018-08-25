@@ -47,114 +47,138 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
   def run(args, domain) do
     snake_domain =
       domain
-      |> Phoenix.Naming.underscore
+      |> Phoenix.Naming.underscore()
       |> String.split("/")
-      |> List.last
+      |> List.last()
 
     {opts, parsed, _} = OptionParser.parse(args, switches: [sequenced: :boolean])
     [singular, plural, attrs] = parsed
 
-    sequenced? = opts[:sequenced] && true || false
+    sequenced? = (opts[:sequenced] && true) || false
 
-    attrs      = Mix.Brando.attrs(attrs)
-    binding    = Mix.Brando.inflect(singular)
-    params     = Mix.Brando.params(attrs)
-    path       = binding[:path]
-    migration  = String.replace(path, "/", "_")
-    img_fields = attrs
-                 |> Enum.map(fn({k, v}) -> {v, k} end)
-                 |> Enum.filter(fn({k, _}) -> k == :image end)
-    file_fields = attrs
-                 |> Enum.map(fn({k, v}) -> {v, k} end)
-                 |> Enum.filter(fn({k, _}) -> k == :file end)
+    attrs = Mix.Brando.attrs(attrs)
+    binding = Mix.Brando.inflect(singular)
+    params = Mix.Brando.params(attrs)
+    path = binding[:path]
+    migration = String.replace(path, "/", "_")
 
-    villain_fields = attrs
-                     |> Enum.map(fn({k, v}) -> {v, k} end)
-                     |> Enum.filter(fn({k, _}) -> k == :villain end)
+    img_fields =
+      attrs
+      |> Enum.map(fn {k, v} -> {v, k} end)
+      |> Enum.filter(fn {k, _} -> k == :image end)
+
+    file_fields =
+      attrs
+      |> Enum.map(fn {k, v} -> {v, k} end)
+      |> Enum.filter(fn {k, _} -> k == :file end)
+
+    villain_fields =
+      attrs
+      |> Enum.map(fn {k, v} -> {v, k} end)
+      |> Enum.filter(fn {k, _} -> k == :villain end)
 
     Mix.Brando.check_module_name_availability!(binding[:module])
 
     {assocs, attrs} = partition_attrs_and_assocs(attrs)
 
     mig_types = Enum.map(attrs, &migration_type/1)
-    types     = types(attrs)
-    defs      = defaults(attrs)
+    types = types(attrs)
+    defs = defaults(attrs)
 
     migrations =
       attrs
-      |> Enum.map(fn ({k, v}) ->
+      |> Enum.map(fn {k, v} ->
         case v do
-          :villain -> k == :data && "villain()" || "villain #{inspect k}"
-          _        -> "add #{inspect k}, #{inspect(mig_types[k])}#{defs[k]}"
+          :villain -> (k == :data && "villain()") || "villain #{inspect(k)}"
+          _ -> "add #{inspect(k)}, #{inspect(mig_types[k])}#{defs[k]}"
         end
       end)
 
     schema_fields =
       attrs
-      |> Enum.map(fn ({k, v}) ->
+      |> Enum.map(fn {k, v} ->
         case v do
-          :villain -> k == :data && "villain()" || "villain #{inspect k}"
-          _        -> "field #{inspect k}, #{inspect types[k]}#{defs[k]}"
+          :villain -> (k == :data && "villain()") || "villain #{inspect(k)}"
+          _ -> "field #{inspect(k)}, #{inspect(types[k])}#{defs[k]}"
         end
       end)
 
-    module  = Enum.join([binding[:base], domain, binding[:scoped]], ".")
+    module = Enum.join([binding[:base], domain, binding[:scoped]], ".")
 
-    binding = Keyword.delete(binding, :module) ++
-              [attrs: attrs, img_fields: img_fields, file_fields: file_fields,
-               plural: plural, types: types, villain_fields: villain_fields,
-               sequenced: sequenced?, domain: domain, snake_domain: snake_domain,
-               migrations: migrations, schema_fields: schema_fields,
-               assocs: assocs(assocs), indexes: indexes(snake_domain, plural, assocs),
-               defaults: defs, params: params, module: module]
+    binding =
+      Keyword.delete(binding, :module) ++
+        [
+          attrs: attrs,
+          img_fields: img_fields,
+          file_fields: file_fields,
+          plural: plural,
+          types: types,
+          villain_fields: villain_fields,
+          sequenced: sequenced?,
+          domain: domain,
+          snake_domain: snake_domain,
+          migrations: migrations,
+          schema_fields: schema_fields,
+          assocs: assocs(assocs),
+          indexes: indexes(snake_domain, plural, assocs),
+          defaults: defs,
+          params: params,
+          module: module
+        ]
 
     Mix.Brando.copy_from(
       apps(),
       "priv/templates/brando.gen.schema",
       "",
-      binding, [
-        {:eex, "migration.exs",   "priv/repo/migrations/" <>
-                                  "#{timestamp()}_create_#{migration}.exs"},
-        {:eex, "schema.ex",       "lib/application_name/#{snake_domain}/#{path}.ex"},
-        {:eex, "schema_test.exs", "test/schemas/#{path}_test.exs"},
+      binding,
+      [
+        {:eex, "migration.exs",
+         "priv/repo/migrations/" <> "#{timestamp()}_create_#{migration}.exs"},
+        {:eex, "schema.ex", "lib/application_name/#{snake_domain}/#{path}.ex"},
+        {:eex, "schema_test.exs", "test/schemas/#{path}_test.exs"}
       ]
     )
+
     binding
   end
 
   def migration_type({k, :image}) do
     {k, :text}
   end
+
   def migration_type({k, :file}) do
     {k, :text}
   end
+
   def migration_type({k, :text}) do
     {k, :text}
   end
+
   def migration_type({k, :status}) do
     {k, :integer}
   end
+
   def migration_type({k, type}) do
     {k, type}
   end
 
   defp partition_attrs_and_assocs(attrs) do
-    Enum.split_with attrs, fn {_, kind} ->
+    Enum.split_with(attrs, fn {_, kind} ->
       kind == :references
-    end
+    end)
   end
 
   defp assocs(assocs) do
-    Enum.reduce assocs, [], fn {key, _}, acc ->
-      assoc = Mix.Brando.inflect Atom.to_string(key)
+    Enum.reduce(assocs, [], fn {key, _}, acc ->
+      assoc = Mix.Brando.inflect(Atom.to_string(key))
       [{key, :"#{key}_id", assoc[:module]} | acc]
-    end
+    end)
   end
 
   defp indexes(snake_domain, plural, assocs) do
-    Enum.reduce assocs, [], fn {key, _}, acc ->
+    Enum.reduce(assocs, [], fn {key, _}, acc ->
       ["create index(:#{snake_domain}_#{plural}, [:#{key}_id])" | acc]
-    end
+    end)
   end
 
   defp timestamp do
@@ -162,21 +186,21 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
     "#{y}#{pad(m)}#{pad(d)}#{pad(hh)}#{pad(mm)}#{pad(ss)}"
   end
 
-  defp pad(i) when i < 10, do: << ?0, ?0 + i >>
+  defp pad(i) when i < 10, do: <<?0, ?0 + i>>
   defp pad(i), do: to_string(i)
 
   defp types(attrs) do
-    Enum.into attrs, %{}, fn
+    Enum.into(attrs, %{}, fn
       {k, {c, v}} -> {k, {c, value_to_type(v)}}
-      {k, v}      -> {k, value_to_type(v)}
-    end
+      {k, v} -> {k, value_to_type(v)}
+    end)
   end
 
   defp defaults(attrs) do
-    Enum.into attrs, %{}, fn
-      {k, :boolean}  -> {k, ", default: false"}
-      {k, _}         -> {k, ""}
-    end
+    Enum.into(attrs, %{}, fn
+      {k, :boolean} -> {k, ", default: false"}
+      {k, _} -> {k, ""}
+    end)
   end
 
   defp value_to_type(:integer), do: :integer
@@ -190,9 +214,10 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
   defp value_to_type(:image), do: Brando.Type.Image
   defp value_to_type(:file), do: Brando.Type.File
   defp value_to_type(:villain), do: :villain
+
   defp value_to_type(v) do
     if Code.ensure_loaded?(Ecto.Type) and not Ecto.Type.primitive?(v) do
-      Mix.raise "Unknown type `#{v}` given to generator"
+      Mix.raise("Unknown type `#{v}` given to generator")
     else
       v
     end

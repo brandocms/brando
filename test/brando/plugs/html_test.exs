@@ -23,5 +23,4 @@ defmodule Brando.Plug.HTMLTest do
     conn = HTML.put_title(mock_conn, "Title")
     assert conn.assigns.page_title == "Title"
   end
-
 end

@@ -19,14 +19,14 @@ defmodule Brando.Utils.Schema do
 
   def update_field(schema, coll) do
     changeset = Ecto.Changeset.change(schema, coll)
-    {:ok, Brando.repo.update!(changeset)}
+    {:ok, Brando.repo().update!(changeset)}
   end
 
   @doc """
   Puts `id` from `user` in the `params` map.
   """
   def put_creator(params, user) do
-    key = is_atom(List.first(Map.keys(params))) && :creator_id || "creator_id"
+    key = (is_atom(List.first(Map.keys(params))) && :creator_id) || "creator_id"
     Map.put(params, key, user.id)
   end
 
@@ -50,14 +50,16 @@ defmodule Brando.Utils.Schema do
   Precheck :slug in `cs` to make sure we avoid collisions
   """
   def avoid_slug_collision(cs, filter_fun \\ nil) do
-    q = filter_fun && filter_fun.(cs) || cs.data.__struct__
+    q = (filter_fun && filter_fun.(cs)) || cs.data.__struct__
     slug = Ecto.Changeset.get_change(cs, :slug)
+
     if slug do
       unique_slug =
         case get_unique_slug(q, slug, 0) do
           {:ok, unique_slug} -> unique_slug
           {:error, :too_many_attempts} -> slug
         end
+
       Ecto.Changeset.put_change(cs, :slug, unique_slug)
     else
       cs
@@ -66,9 +68,10 @@ defmodule Brando.Utils.Schema do
 
   defp get_unique_slug(q, slug, attempts) when attempts < @slug_collision_attemps do
     slug_to_test = construct_slug(slug, attempts)
-    case Brando.repo.one(from m in q, where: m.slug == ^slug_to_test) do
+
+    case Brando.repo().one(from m in q, where: m.slug == ^slug_to_test) do
       nil -> {:ok, slug_to_test}
-      _   -> get_unique_slug(q, slug, attempts + 1)
+      _ -> get_unique_slug(q, slug, attempts + 1)
     end
   end
 

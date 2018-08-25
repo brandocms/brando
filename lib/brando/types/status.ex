@@ -15,10 +15,12 @@ defmodule Brando.Type.Status do
   Cast should return OUR type no matter what the input.
   """
   def cast(atom) when is_atom(atom), do: {:ok, atom}
+
   def cast(binary) when is_binary(binary) do
     atom = String.to_existing_atom(binary)
     {:ok, atom}
   end
+
   def cast(status) when is_integer(status) do
     case status do
       0 -> {:ok, :draft}
@@ -28,10 +30,8 @@ defmodule Brando.Type.Status do
     end
   end
 
-
   # Cast anything else is a failure
   def cast(_), do: :error
-
 
   # Integers are never considered blank
   def blank?(_), do: false
@@ -57,6 +57,7 @@ defmodule Brando.Type.Status do
   def dump(atom) when is_atom(atom), do: {:ok, @status_codes[atom]}
   def dump(binary) when is_binary(binary), do: {:ok, String.to_integer(binary)}
   def dump(integer) when is_integer(integer), do: {:ok, integer}
+
   def dump(_) do
     :error
   end

@@ -36,14 +36,15 @@ defmodule Brando.Field.FileField do
         with {:ok, plug} <- field_has_changed(changeset, field_name),
              {:ok, _} <- changeset_has_no_errors(changeset),
              {:ok, cfg} <- get_file_cfg(field_name),
-             {:ok, {:handled, name, field}} <- handle_file_upload(field_name, plug, cfg)
-        do
+             {:ok, {:handled, name, field}} <- handle_file_upload(field_name, plug, cfg) do
           put_change(changeset, name, field)
         else
           :unchanged ->
             changeset
+
           :has_errors ->
             changeset
+
           {:error, {name, {:error, error_msg}}} ->
             add_error(changeset, name, error_msg)
         end
@@ -54,11 +55,13 @@ defmodule Brando.Field.FileField do
       """
       def cleanup_old_files(changeset) do
         filefield_keys = Keyword.keys(__filefields__())
+
         for key <- Map.keys(changeset.changes) do
           if key in filefield_keys do
             Brando.Files.Utils.delete_original(changeset.data, key)
           end
         end
+
         changeset
       end
     end
@@ -72,8 +75,7 @@ defmodule Brando.Field.FileField do
 
   @doc false
   def compile(filefields) do
-    filefields_src =
-      for {name, contents} <- filefields, do: defcfg(name, contents)
+    filefields_src = for {name, contents} <- filefields, do: defcfg(name, contents)
 
     quote do
       def __filefields__ do
@@ -86,12 +88,13 @@ defmodule Brando.Field.FileField do
 
   defp defcfg(name, cfg) do
     escaped_contents = Macro.escape(cfg)
+
     quote do
       @doc """
       Get `field_name`'s file field configuration
       """
-      def get_file_cfg(field_name) when field_name == unquote(name), do:
-        {:ok, unquote(escaped_contents)}
+      def get_file_cfg(field_name) when field_name == unquote(name),
+        do: {:ok, unquote(escaped_contents)}
     end
   end
 
@@ -120,7 +123,7 @@ defmodule Brando.Field.FileField do
   defmacro has_file_field(field_name, opts) do
     quote do
       filefields = Module.get_attribute(__MODULE__, :filefields)
-      cfg_struct  = struct!(%Brando.Type.FileConfig{}, unquote(opts))
+      cfg_struct = struct!(%Brando.Type.FileConfig{}, unquote(opts))
 
       Module.put_attribute(__MODULE__, :filefields, {unquote(field_name), cfg_struct})
     end
@@ -137,19 +140,18 @@ defmodule Brando.Field.FileField do
     * `cfg`: the field's cfg from has_image_field
 
   """
-  @spec handle_file_upload(atom, Plug.Upload.t, Brando.Type.FileConfig.t) ::
-        {:ok, {atom, Brando.Type.File}} | {:error, {atom, {:error, String.t}}}
+  @spec handle_file_upload(atom, Plug.Upload.t(), Brando.Type.FileConfig.t()) ::
+          {:ok, {atom, Brando.Type.File}} | {:error, {atom, {:error, String.t()}}}
   def handle_file_upload(name, %Plug.Upload{} = plug, cfg) do
     with {:ok, upload} <- process_upload(plug, cfg),
-         {:ok, field}  <- create_file_struct(upload)
-    do
+         {:ok, field} <- create_file_struct(upload) do
       {:ok, {:handled, name, field}}
     else
       err -> {:error, {name, handle_upload_error(err)}}
     end
   end
 
-  @spec handle_file_upload(atom, Map.t, Brando.Type.FileConfig.t) :: {:ok, Map.t}
+  @spec handle_file_upload(atom, Map.t(), Brando.Type.FileConfig.t()) :: {:ok, Map.t()}
   def handle_file_upload(name, file, _) do
     {:ok, {:unhandled, name, file}}
   end

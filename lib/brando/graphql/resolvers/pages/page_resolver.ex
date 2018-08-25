@@ -31,7 +31,9 @@ defmodule Brando.Pages.PageResolver do
   @doc """
   Update page
   """
-  def update(%{page_id: page_id, page_params: page_params}, %{context: %{current_user: _current_user}}) do
+  def update(%{page_id: page_id, page_params: page_params}, %{
+        context: %{current_user: _current_user}
+      }) do
     page_id
     |> Pages.update_page(page_params)
     |> response
@@ -42,7 +44,7 @@ defmodule Brando.Pages.PageResolver do
   """
   def delete(%{page_id: page_id}, %{context: %{current_user: _current_user}}) do
     page_id
-    |> Pages.delete_page
+    |> Pages.delete_page()
     |> response
   end
 end

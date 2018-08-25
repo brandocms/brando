@@ -14,25 +14,29 @@ defmodule Brando.UploadTest do
     random_filename: true,
     size_limit: 10_240_000,
     sizes: %{
-      "thumb"  => %{"size" => "150x150", "quality" => 100, "crop" => true},
-      "large"  => %{"size" => "700", "quality" => 100},
+      "thumb" => %{"size" => "150x150", "quality" => 100, "crop" => true},
+      "large" => %{"size" => "700", "quality" => 100}
     }
   }
 
-  @up %Plug.Upload{content_type: "image/png", filename: "sample.png",
-                   path: Path.expand("../", __DIR__) <>
-                                     "/fixtures/sample.png"}
+  @up %Plug.Upload{
+    content_type: "image/png",
+    filename: "sample.png",
+    path: Path.expand("../", __DIR__) <> "/fixtures/sample.png"
+  }
 
   test "process_upload regular" do
     {:ok, upload} = process_upload(@up, @cfg)
-    refute upload.plug.filename      == "sample.png"
-    assert upload.plug.upload_path   == media_path("images/avatars")
+    refute upload.plug.filename == "sample.png"
+    assert upload.plug.upload_path == media_path("images/avatars")
     assert upload.plug.uploaded_file == media_path("images/avatars/#{upload.plug.filename}")
   end
 
   test "process_upload with non allowed mimetype" do
     up = Map.merge(@up, %{content_type: "image/zip", filename: "sample.zip"})
-    assert process_upload(up, @cfg) == {:error, :content_type, "image/zip", ["image/jpeg", "image/png"]}
+
+    assert process_upload(up, @cfg) ==
+             {:error, :content_type, "image/zip", ["image/jpeg", "image/png"]}
   end
 
   test "process_upload with empty filename" do

@@ -8,7 +8,11 @@ defmodule Brando.Plug.I18nTest do
     assert conn.assigns.language == "nb"
     assert conn.private.plug_session["language"] == "nb"
 
-    mock_conn = %Plug.Conn{path_info: ["en", "news"], private: %{plug_session: %{"language" => "en"}}}
+    mock_conn = %Plug.Conn{
+      path_info: ["en", "news"],
+      private: %{plug_session: %{"language" => "en"}}
+    }
+
     conn = I18n.put_locale(mock_conn, [])
     assert conn.assigns.language == "en"
     assert conn.private.plug_session["language"] == "en"

@@ -12,33 +12,28 @@ defmodule Brando.UtilsTest do
   end
 
   test "slugify basic stripping/no ending dash" do
-    assert slugify("This is basic functionality!!!    ")
-           == "this-is-basic-functionality"
+    assert slugify("This is basic functionality!!!    ") == "this-is-basic-functionality"
   end
 
   test "slugify no starting dash" do
-    assert slugify("-This is basic functionality!!!    ")
-           == "this-is-basic-functionality"
+    assert slugify("-This is basic functionality!!!    ") == "this-is-basic-functionality"
   end
 
   test "slugify straße" do
-    assert slugify("straße")
-           == "strasse"
+    assert slugify("straße") == "strasse"
   end
 
   test "slugify strips symbols" do
-    assert slugify("Is ♬ ♫ ♪ ♩ a melody or just noise?")
-           == "is-a-melody-or-just-noise"
+    assert slugify("Is ♬ ♫ ♪ ♩ a melody or just noise?") == "is-a-melody-or-just-noise"
   end
 
   test "slugify strips accents" do
-    assert slugify("Àddîñg áçćèńtš tô Éñgłïśh íš śīłłÿ!")
-           == "adding-accents-to-english-is-silly"
+    assert slugify("Àddîñg áçćèńtš tô Éñgłïśh íš śīłłÿ!") == "adding-accents-to-english-is-silly"
   end
 
   test "slugify special characters" do
-    assert slugify("special characters (#?@$%^*) are also ASCII")
-           == "special-characters-atdollar-are-also-ascii"
+    assert slugify("special characters (#?@$%^*) are also ASCII") ==
+             "special-characters-atdollar-are-also-ascii"
   end
 
   test "slugify & -> and" do
@@ -50,10 +45,8 @@ defmodule Brando.UtilsTest do
   end
 
   test "slugify_filename/1" do
-    assert slugify_filename("testing with spaces.jpeg")
-           == "testing-with-spaces.jpeg"
-    assert slugify_filename("-start æøå-.jpeg")
-           == "start-aeoeaa.jpeg"
+    assert slugify_filename("testing with spaces.jpeg") == "testing-with-spaces.jpeg"
+    assert slugify_filename("-start æøå-.jpeg") == "start-aeoeaa.jpeg"
   end
 
   test "random_filename/1" do
@@ -103,25 +96,21 @@ defmodule Brando.UtilsTest do
       path: "original/path/file.jpg",
       sizes: %{"thumb" => "images/thumb/file.jpg"}
     }
-    assert img_url(img, :thumb)
-           == "images/thumb/file.jpg"
-    assert img_url(nil, :thumb, [default: "default.jpg", prefix: "prefix"])
-           == "thumb/default.jpg"
-    assert img_url(nil, :thumb, [default: "default.jpg"])
-           == "thumb/default.jpg"
-    assert img_url(img, :thumb, [default: "default.jpg", prefix: "prefix"])
-           == "prefix/images/thumb/file.jpg"
-    assert img_url(img, :thumb, [default: "default.jpg"])
-           == "images/thumb/file.jpg"
-    assert img_url(img, "thumb", [default: "default.jpg"])
-           == "images/thumb/file.jpg"
-    assert img_url(img, :original)
-           == "original/path/file.jpg"
-    assert img_url(img, :original, prefix: "prefix")
-           == "prefix/original/path/file.jpg"
 
-    assert capture_io(:stderr, fn -> img_url(img, :notasize, [default: "default.jpg"]) end)
-           =~ "Wrong key for img_url. Size `notasize` does not exist for"
+    assert img_url(img, :thumb) == "images/thumb/file.jpg"
+    assert img_url(nil, :thumb, default: "default.jpg", prefix: "prefix") == "thumb/default.jpg"
+    assert img_url(nil, :thumb, default: "default.jpg") == "thumb/default.jpg"
+
+    assert img_url(img, :thumb, default: "default.jpg", prefix: "prefix") ==
+             "prefix/images/thumb/file.jpg"
+
+    assert img_url(img, :thumb, default: "default.jpg") == "images/thumb/file.jpg"
+    assert img_url(img, "thumb", default: "default.jpg") == "images/thumb/file.jpg"
+    assert img_url(img, :original) == "original/path/file.jpg"
+    assert img_url(img, :original, prefix: "prefix") == "prefix/original/path/file.jpg"
+
+    assert capture_io(:stderr, fn -> img_url(img, :notasize, default: "default.jpg") end) =~
+             "Wrong key for img_url. Size `notasize` does not exist for"
   end
 
   test "get_now" do
@@ -143,6 +132,7 @@ defmodule Brando.UtilsTest do
       %{name: "Liza", gender: :female},
       %{name: "Karen", gender: :female}
     ]
+
     result = split_by(records, :gender)
     assert length(result[:male]) == 1
     assert length(result[:female]) == 3

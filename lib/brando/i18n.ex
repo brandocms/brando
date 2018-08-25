@@ -30,6 +30,7 @@ defmodule Brando.I18n do
   """
   def put_locale_for_all_modules(language) do
     modules = Brando.Registry.gettext_modules()
+
     for module <- modules do
       Gettext.put_locale(module, language)
     end

@@ -4,32 +4,32 @@ defmodule Brando.Villain.Parser do
   """
 
   @doc "Parses a header"
-  @callback header(%{String.t => any}) :: String.t
+  @callback header(%{String.t() => any}) :: String.t()
 
   @doc "Parses text/paragraphs"
-  @callback text(%{String.t => any}) :: String.t
+  @callback text(%{String.t() => any}) :: String.t()
 
   @doc "Parses video"
-  @callback video(%{String.t => any}) :: String.t
+  @callback video(%{String.t() => any}) :: String.t()
 
   @doc "Parses map"
-  @callback map(%{String.t => any}) :: String.t
+  @callback map(%{String.t() => any}) :: String.t()
 
   @doc "Parses image"
-  @callback image(%{String.t => any}) :: String.t
+  @callback image(%{String.t() => any}) :: String.t()
 
   @doc "Parses slideshow"
-  @callback slideshow(%{String.t => any}) :: String.t
+  @callback slideshow(%{String.t() => any}) :: String.t()
 
   @doc "Parses divider"
-  @callback divider(%{String.t => any}) :: String.t
+  @callback divider(%{String.t() => any}) :: String.t()
 
   @doc "Parses list"
-  @callback list(%{String.t => any}) :: String.t
+  @callback list(%{String.t() => any}) :: String.t()
 
   @doc "Parses blockquote"
-  @callback blockquote(%{String.t => any}) :: String.t
+  @callback blockquote(%{String.t() => any}) :: String.t()
 
   @doc "Parses columns"
-  @callback columns(%{String.t => any}) :: String.t
+  @callback columns(%{String.t() => any}) :: String.t()
 end

@@ -42,11 +42,13 @@ defmodule Brando.Field.ImageField do
       """
       def cleanup_old_images(changeset) do
         imagefield_keys = Keyword.keys(__imagefields__())
+
         for key <- Map.keys(changeset.changes) do
           if key in imagefield_keys do
             delete_original_and_sized_images(changeset.data, key)
           end
         end
+
         changeset
       end
 
@@ -57,16 +59,18 @@ defmodule Brando.Field.ImageField do
         with {:ok, plug} <- field_has_changed(changeset, field_name),
              {:ok, _} <- changeset_has_no_errors(changeset),
              {:ok, cfg} <- get_image_cfg(field_name),
-             {:ok, {:handled, name, field}} <- handle_image_upload(field_name, plug, cfg)
-        do
+             {:ok, {:handled, name, field}} <- handle_image_upload(field_name, plug, cfg) do
           put_change(changeset, name, field)
         else
           :unchanged ->
             changeset
+
           :has_errors ->
             changeset
+
           {:error, {name, {:error, error_msg}}} ->
             add_error(changeset, name, error_msg)
+
           {:ok, {:unhandled, name, field}} ->
             changeset
         end
@@ -82,8 +86,7 @@ defmodule Brando.Field.ImageField do
 
   @doc false
   def compile(imagefields) do
-    imagefields_src =
-      for {name, contents} <- imagefields, do: defcfg(name, contents)
+    imagefields_src = for {name, contents} <- imagefields, do: defcfg(name, contents)
 
     quote do
       def __imagefields__ do
@@ -96,12 +99,13 @@ defmodule Brando.Field.ImageField do
 
   defp defcfg(name, cfg) do
     escaped_contents = Macro.escape(cfg)
+
     quote do
       @doc """
       Get `field_name`'s image field configuration
       """
-      def get_image_cfg(field_name) when field_name == unquote(name), do:
-        {:ok, unquote(escaped_contents)}
+      def get_image_cfg(field_name) when field_name == unquote(name),
+        do: {:ok, unquote(escaped_contents)}
     end
   end
 
@@ -141,7 +145,7 @@ defmodule Brando.Field.ImageField do
   defmacro has_image_field(field_name, opts) do
     quote do
       imagefields = Module.get_attribute(__MODULE__, :imagefields)
-      cfg_struct  = struct!(%Brando.Type.ImageConfig{}, unquote(opts))
+      cfg_struct = struct!(%Brando.Type.ImageConfig{}, unquote(opts))
 
       Module.put_attribute(__MODULE__, :imagefields, {unquote(field_name), cfg_struct})
     end
@@ -158,19 +162,18 @@ defmodule Brando.Field.ImageField do
     * `plug`: a Plug.Upload struct.
     * `cfg`: the field's cfg from has_image_field
   """
-  @spec handle_image_upload(atom, Plug.Upload.t, Brando.Type.ImageConfig.t) ::
-        {:ok, {atom, Brando.Type.Image}} | {:error, {atom, {:error, String.t}}}
+  @spec handle_image_upload(atom, Plug.Upload.t(), Brando.Type.ImageConfig.t()) ::
+          {:ok, {atom, Brando.Type.Image}} | {:error, {atom, {:error, String.t()}}}
   def handle_image_upload(name, %Plug.Upload{} = plug, cfg) do
     with {:ok, upload} <- process_upload(plug, cfg),
-         {:ok, field}  <- create_image_struct(upload)
-    do
+         {:ok, field} <- create_image_struct(upload) do
       {:ok, {:handled, name, field}}
     else
       err -> {:error, {name, handle_upload_error(err)}}
     end
   end
 
-  @spec handle_image_upload(atom, Map.t, Brando.Type.ImageConfig.t) :: {:ok, Map.t}
+  @spec handle_image_upload(atom, Map.t(), Brando.Type.ImageConfig.t()) :: {:ok, Map.t()}
   def handle_image_upload(name, image, _) do
     {:ok, {:unhandled, name, image}}
   end

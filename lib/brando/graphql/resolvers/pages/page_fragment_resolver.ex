@@ -22,7 +22,9 @@ defmodule Brando.Pages.PageFragmentResolver do
   @doc """
   Create page
   """
-  def create(%{page_fragment_params: page_fragment_params}, %{context: %{current_user: current_user}}) do
+  def create(%{page_fragment_params: page_fragment_params}, %{
+        context: %{current_user: current_user}
+      }) do
     page_fragment_params
     |> Pages.create_page_fragment(current_user)
     |> response
@@ -42,7 +44,7 @@ defmodule Brando.Pages.PageFragmentResolver do
   """
   def delete(%{page_fragment_id: page_fragment_id}, %{context: %{current_user: _current_user}}) do
     String.to_integer(page_fragment_id)
-    |> Pages.delete_page_fragment
+    |> Pages.delete_page_fragment()
     |> response
   end
 end

@@ -78,9 +78,16 @@ defmodule Brando.Villain do
             |> generate_html()
           end
       """
-      def generate_html(changeset, field \\ nil, parser_mod \\ Brando.config(Brando.Villain)[:parser]) do
-        data_field = field && (field |> to_string |> Kernel.<>("_data") |> String.to_atom) || :data
-        html_field = field && (field |> to_string |> Kernel.<>("_html") |> String.to_atom) || :html
+      def generate_html(
+            changeset,
+            field \\ nil,
+            parser_mod \\ Brando.config(Brando.Villain)[:parser]
+          ) do
+        data_field =
+          (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
+
+        html_field =
+          (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
 
         if Ecto.Changeset.get_change(changeset, data_field) do
           parsed_data = Brando.Villain.parse(Map.get(changeset.changes, data_field), parser_mod)
@@ -93,28 +100,37 @@ defmodule Brando.Villain do
       @doc """
       Rerender page HTML from data.
       """
-      def rerender_html(changeset, field \\ nil, parser_mod \\ Brando.config(Brando.Villain)[:parser]) do
-        data_field = field && field |> to_string |> Kernel.<>("_data") |> String.to_atom || :data
-        html_field = field && field |> to_string |> Kernel.<>("_html") |> String.to_atom || :html
+      def rerender_html(
+            changeset,
+            field \\ nil,
+            parser_mod \\ Brando.config(Brando.Villain)[:parser]
+          ) do
+        data_field =
+          (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
+
+        html_field =
+          (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
 
         data = Ecto.Changeset.get_field(changeset, data_field)
 
         changeset
         |> Ecto.Changeset.put_change(html_field, Brando.Villain.parse(data, parser_mod))
-        |> Brando.repo.update!
+        |> Brando.repo().update!
       end
 
       @doc """
       Check all posts for missing images
       """
       def check_posts_for_missing_images do
-        posts = Brando.repo.all(__MODULE__)
-        result = Enum.reduce posts, [], fn(post, acc) ->
-          check_post_for_missing_images(post)
-        end
+        posts = Brando.repo().all(__MODULE__)
+
+        result =
+          Enum.reduce(posts, [], fn post, acc ->
+            check_post_for_missing_images(post)
+          end)
 
         case result do
-          []     -> false
+          [] -> false
           result -> result
         end
       end
@@ -123,16 +139,17 @@ defmodule Brando.Villain do
       Check post's villain data field for missing images
       """
       def check_post_for_missing_images(post) do
-        image_blocks = Enum.filter post.data, fn(block) -> block["type"] == "image" end
+        image_blocks = Enum.filter(post.data, fn block -> block["type"] == "image" end)
 
-        Enum.reduce(image_blocks, [], fn(block, acc) ->
+        Enum.reduce(image_blocks, [], fn block, acc ->
           reduced_block =
-            Enum.reduce(block["data"]["sizes"], [], fn({_size, path}, acc) ->
-              File.exists?(Path.join(["priv", path])) && acc || {:missing, post, path}
+            Enum.reduce(block["data"]["sizes"], [], fn {_size, path}, acc ->
+              (File.exists?(Path.join(["priv", path])) && acc) || {:missing, post, path}
             end)
+
           case reduced_block do
-            []  -> acc
-            res -> [res|acc]
+            [] -> acc
+            res -> [res | acc]
           end
         end)
       end
@@ -144,8 +161,12 @@ defmodule Brando.Villain do
     Macro for villain schema fields.
     """
     defmacro villain(field \\ nil) do
-      data_field = field && field |> to_string |> Kernel.<>("_data") |> String.to_atom || :data
-      html_field = field && field |> to_string |> Kernel.<>("_html") |> String.to_atom || :html
+      data_field =
+        (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
+
+      html_field =
+        (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
+
       quote do
         Ecto.Schema.field(unquote(data_field), Brando.Type.Json)
         Ecto.Schema.field(unquote(html_field), :string)
@@ -165,8 +186,12 @@ defmodule Brando.Villain do
     Macro for villain migrations.
     """
     defmacro villain(field \\ nil) do
-      data_field = field && field |> to_string |> Kernel.<>("_data") |> String.to_atom || :data
-      html_field = field && field |> to_string |> Kernel.<>("_html") |> String.to_atom || :html
+      data_field =
+        (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
+
+      html_field =
+        (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
+
       quote do
         Ecto.Migration.add(unquote(data_field), :json)
         Ecto.Migration.add(unquote(html_field), :text)
@@ -188,25 +213,23 @@ defmodule Brando.Villain do
   otp_app's config.exs.
   Returns HTML.
   """
-  @spec parse(String.t, Module.t) :: String.t
+  @spec parse(String.t(), Module.t()) :: String.t()
   def parse("", _), do: ""
   def parse(nil, _), do: ""
-  def parse(json, parser_mod) when is_binary(json), do:
-    do_parse(Poison.decode!(json), parser_mod)
-  def parse(json,parser_mod) when is_list(json), do:
-    do_parse(json, parser_mod)
+  def parse(json, parser_mod) when is_binary(json), do: do_parse(Poison.decode!(json), parser_mod)
+  def parse(json, parser_mod) when is_list(json), do: do_parse(json, parser_mod)
 
   defp do_parse(data, parser_mod) do
     html =
-      Enum.reduce(data, [], fn(data_node, acc) ->
+      Enum.reduce(data, [], fn data_node, acc ->
         type_atom = String.to_atom(data_node["type"])
         data_node_content = data_node["data"]
-        [apply(parser_mod, type_atom, [data_node_content])|acc]
+        [apply(parser_mod, type_atom, [data_node_content]) | acc]
       end)
 
     html
-    |> Enum.reverse
-    |> Enum.join
+    |> Enum.reverse()
+    |> Enum.join()
   end
 
   def map_images(images) do
@@ -215,14 +238,14 @@ defmodule Brando.Villain do
 
       sizes =
         img_field.sizes
-        |> Enum.map(&({elem(&1, 0), media_url(elem(&1, 1))}))
+        |> Enum.map(&{elem(&1, 0), media_url(elem(&1, 1))})
         |> Enum.into(%{})
 
       %{
-        src:     media_url(img_field.path),
-        thumb:   media_url(img_url(img_field, :thumb)),
-        sizes:   sizes,
-        title:   img_field.title,
+        src: media_url(img_field.path),
+        thumb: media_url(img_url(img_field, :thumb)),
+        sizes: sizes,
+        title: img_field.title,
         credits: img_field.credits
       }
     end)

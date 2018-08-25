@@ -24,10 +24,12 @@ defmodule Brando.Schema.Types.User do
     field :email, :string
     field :full_name, :string
     field :password, :string
+
     field :avatar, :string do
       arg :type, :string, default_value: "thumb"
       resolve &resolve_avatar/3
     end
+
     field :role, :string
     field :active, :boolean
     field :language, :string

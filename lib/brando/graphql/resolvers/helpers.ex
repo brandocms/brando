@@ -7,15 +7,18 @@ defmodule Brando.GraphQL.Helpers do
           message: "Validation failed.",
           code: 422,
           changeset: %{
-            errors: changeset
-                    |> Ecto.Changeset.traverse_errors(fn
-                      {msg, opts} -> String.replace(msg, "%{count}", to_string(opts[:count]))
-                      msg -> msg
-                    end),
+            errors:
+              changeset
+              |> Ecto.Changeset.traverse_errors(fn
+                {msg, opts} -> String.replace(msg, "%{count}", to_string(opts[:count]))
+                msg -> msg
+              end),
             action: changeset.action
           }
         }
-      _ -> {status, payload}
+
+      _ ->
+        {status, payload}
     end
   end
 end

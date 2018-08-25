@@ -8,7 +8,8 @@ defmodule Brando.HTML.InspectTest do
 
   @association_has %Ecto.Association.Has{
     related: Brando.Image,
-    related_key: :image_series_id, cardinality: :many,
+    related_key: :image_series_id,
+    cardinality: :many,
     field: :images,
     owner: Brando.ImageSeries,
     owner_key: :id,
@@ -23,41 +24,47 @@ defmodule Brando.HTML.InspectTest do
       },
       creator_id: 1,
       id: 74,
-      image: %Brando.Type.Image{credits: nil, optimized: false,
+      image: %Brando.Type.Image{
+        credits: nil,
+        optimized: false,
         path: "images/default/2ambet.jpg",
-        sizes: %{large: "images/default/large/2ambet.jpg",
-        medium: "images/default/medium/2ambet.jpg",
-        small: "images/default/small/2ambet.jpg",
-        thumb: "images/default/thumb/2ambet.jpg",
-        xlarge: "images/default/xlarge/2ambet.jpg"}, title: nil},
-        image_series_id: 2,
-        inserted_at: ~N[2016-01-01 12:00:00],
-        sequence: 0,
-        updated_at: ~N[2016-01-01 12:00:00],
-      },
-      %Brando.Image{
-        __meta__: %Ecto.Schema.Metadata{source: "images", state: :loaded},
-        creator_id: 1,
-        id: 67,
-        image: %Brando.Type.Image{
-          credits: nil,
-          optimized: false,
-          path: "images/default/e9anl.jpg",
-          sizes: %{
-            large: "images/default/large/e9anl.jpg",
-            medium: "images/default/medium/e9anl.jpg",
-            small: "images/default/small/e9anl.jpg",
-            thumb: "images/default/thumb/e9anl.jpg",
-            xlarge: "images/default/xlarge/e9anl.jpg"
-          },
-          title: nil
+        sizes: %{
+          large: "images/default/large/2ambet.jpg",
+          medium: "images/default/medium/2ambet.jpg",
+          small: "images/default/small/2ambet.jpg",
+          thumb: "images/default/thumb/2ambet.jpg",
+          xlarge: "images/default/xlarge/2ambet.jpg"
         },
-        image_series_id: 2,
-        inserted_at: ~N[2016-01-01 12:00:00],
-        sequence: 1,
-        updated_at: ~N[2016-01-01 12:00:00],
-      }
-    ]
+        title: nil
+      },
+      image_series_id: 2,
+      inserted_at: ~N[2016-01-01 12:00:00],
+      sequence: 0,
+      updated_at: ~N[2016-01-01 12:00:00]
+    },
+    %Brando.Image{
+      __meta__: %Ecto.Schema.Metadata{source: "images", state: :loaded},
+      creator_id: 1,
+      id: 67,
+      image: %Brando.Type.Image{
+        credits: nil,
+        optimized: false,
+        path: "images/default/e9anl.jpg",
+        sizes: %{
+          large: "images/default/large/e9anl.jpg",
+          medium: "images/default/medium/e9anl.jpg",
+          small: "images/default/small/e9anl.jpg",
+          thumb: "images/default/thumb/e9anl.jpg",
+          xlarge: "images/default/xlarge/e9anl.jpg"
+        },
+        title: nil
+      },
+      image_series_id: 2,
+      inserted_at: ~N[2016-01-01 12:00:00],
+      sequence: 1,
+      updated_at: ~N[2016-01-01 12:00:00]
+    }
+  ]
 
   test "schema/1" do
     user = Factory.insert(:user)
@@ -74,7 +81,10 @@ defmodule Brando.HTML.InspectTest do
     image_type = Factory.build(:image_type)
 
     assert inspect_field("name", Type.ImageConfig, "value") == ~s(<em>Configuration data</em>)
-    assert inspect_field("name", Type.Image, image_type) =~ "/media/images/default/thumb/sample.png"
+
+    assert inspect_field("name", Type.Image, image_type) =~
+             "/media/images/default/thumb/sample.png"
+
     assert inspect_field(:password, :string, "passord") =~ "censored"
     assert inspect_field("name", :string, "") =~ "No value"
 
@@ -89,27 +99,31 @@ defmodule Brando.HTML.InspectTest do
     assert inspect_field(:key, :string, "test/path") == "<strong>test</strong>/path"
     assert inspect_field(:key, :string, "test") == "<strong>test</strong>"
 
-    assert inspect_field("name", :boolean, :true) =~ "fa-check"
+    assert inspect_field("name", :boolean, true) =~ "fa-check"
     assert inspect_field("name", :boolean, nil) =~ "fa-times"
-    assert inspect_field("name", :boolean, :false) =~ "fa-times"
+    assert inspect_field("name", :boolean, false) =~ "fa-times"
 
-    assert inspect_field("name", Type.Role, :staff) == "<span class=\"label label-staff\">staff</span>"
+    assert inspect_field("name", Type.Role, :staff) ==
+             "<span class=\"label label-staff\">staff</span>"
 
     assert inspect_field("name", Type.Json, "whatever") == "<em>Encoded value</em>"
     assert inspect_field("name", Type.Image, nil) == "<em>No connected image</em>"
     assert inspect_field("name", Type.File, nil) == "<em>No connected file</em>"
-    assert inspect_field("name", Type.File, %{path: "a/path.jpg"}) == "<i class=\"fa fa-file m-r-sm\"> </i> a/path.jpg"
+
+    assert inspect_field("name", Type.File, %{path: "a/path.jpg"}) ==
+             "<i class=\"fa fa-file m-r-sm\"> </i> a/path.jpg"
   end
 
   test "inspect_assoc/3" do
-    assert inspect_assoc("name", %Ecto.Association.Has{}, %Ecto.Association.NotLoaded{})
-           =~ "Association not fetched"
-    assert inspect_assoc("name", %Ecto.Association.Has{}, [])
-           =~ "Empty association"
-    assert inspect_assoc("name", @association_has, @association_val)
-           =~ "74 | images/default/2ambet.jpg"
-    assert inspect_assoc("name", %Ecto.Association.BelongsTo{}, nil)
-          =~ "Empty association"
+    assert inspect_assoc("name", %Ecto.Association.Has{}, %Ecto.Association.NotLoaded{}) =~
+             "Association not fetched"
+
+    assert inspect_assoc("name", %Ecto.Association.Has{}, []) =~ "Empty association"
+
+    assert inspect_assoc("name", @association_has, @association_val) =~
+             "74 | images/default/2ambet.jpg"
+
+    assert inspect_assoc("name", %Ecto.Association.BelongsTo{}, nil) =~ "Empty association"
   end
 
   test "schema_repr/1" do

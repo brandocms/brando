@@ -27,6 +27,7 @@ defmodule Brando.Type.Image do
     val = Poison.decode!(val, as: %Brando.Type.Image{})
     {:ok, val}
   end
+
   def cast(val) when is_map(val) do
     {:ok, val}
   end

@@ -38,8 +38,9 @@ defmodule Brando.Pages.Page do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, atom, Keyword.t | Options.t) :: t
+  @spec changeset(t, atom, Keyword.t() | Options.t()) :: t
   def changeset(schema, action, params \\ %{})
+
   def changeset(schema, :create, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
@@ -49,7 +50,7 @@ defmodule Brando.Pages.Page do
     |> generate_html()
   end
 
-  @spec changeset(t, atom, Keyword.t | Options.t) :: t
+  @spec changeset(t, atom, Keyword.t() | Options.t()) :: t
   def changeset(schema, :update, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
@@ -134,10 +135,10 @@ defmodule Brando.Pages.Page do
   #
   # Meta
 
-  use Brando.Meta.Schema, [
+  use Brando.Meta.Schema,
     singular: gettext("page"),
     plural: gettext("pages"),
-    repr: &("#{&1.title}"),
+    repr: &"#{&1.title}",
     fields: [
       id: "№",
       status: gettext("Status"),
@@ -155,10 +156,9 @@ defmodule Brando.Pages.Page do
       meta_description: gettext("META description"),
       meta_keywords: gettext("META keywords"),
       inserted_at: gettext("Inserted"),
-      updated_at: gettext("Updated"),
+      updated_at: gettext("Updated")
     ],
     help: [
       parent_id: gettext("If this page should belong to another, select parent page here.")
     ]
-  ]
 end

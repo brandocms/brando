@@ -34,10 +34,10 @@ defmodule Brando.Plug.Lockdown do
 
   @behaviour Plug
 
-  @spec init(Keyword.t) :: Keyword.t
+  @spec init(Keyword.t()) :: Keyword.t()
   def init(options), do: options
 
-  @spec call(Plug.Conn.t, Keyword.t) :: Plug.Conn.t
+  @spec call(Plug.Conn.t(), Keyword.t()) :: Plug.Conn.t()
   def call(conn, _) do
     if Brando.config(:lockdown) do
       conn
@@ -47,7 +47,7 @@ defmodule Brando.Plug.Lockdown do
     end
   end
 
-  @spec allowed?(Plug.Conn.t) :: Plug.Conn.t
+  @spec allowed?(Plug.Conn.t()) :: Plug.Conn.t()
   defp allowed?(%{private: %{plug_session: %{"current_user" => user}}} = conn) do
     if User.can_login?(user) do
       conn
@@ -59,22 +59,22 @@ defmodule Brando.Plug.Lockdown do
   defp allowed?(%{private: %{plug_session: %{"lockdown_authorized" => true}}} = conn), do: conn
   defp allowed?(conn), do: lockdown(conn)
 
-  @spec lockdown(Plug.Conn.t) :: Plug.Conn.t
+  @spec lockdown(Plug.Conn.t()) :: Plug.Conn.t()
   defp lockdown(conn) do
     check_lockdown_date(conn, Brando.config(:lockdown_until))
   end
 
   defp check_lockdown_date(conn, nil) do
     conn
-    |> redirect(to: Brando.helpers.lockdown_path(conn, :index))
+    |> redirect(to: Brando.helpers().lockdown_path(conn, :index))
     |> halt
   end
 
   defp check_lockdown_date(conn, lockdown_until) do
     # TODO: replace with NaiveDateTime.compare/2 when elixir 1.4 is out
-    if compare(lockdown_until, NaiveDateTime.from_erl!(:calendar.local_time)) == :gt do
+    if compare(lockdown_until, NaiveDateTime.from_erl!(:calendar.local_time())) == :gt do
       conn
-      |> redirect(to: Brando.helpers.lockdown_path(conn, :index))
+      |> redirect(to: Brando.helpers().lockdown_path(conn, :index))
       |> halt
     else
       conn
@@ -94,7 +94,7 @@ defmodule Brando.Plug.Lockdown do
 
   TODO: REMOVE WITH ELIXIR 1.4!
   """
-  @spec compare(NaiveDateTime.t, NaiveDateTime.t) :: :lt | :eq | :gt
+  @spec compare(NaiveDateTime.t(), NaiveDateTime.t()) :: :lt | :eq | :gt
   def compare(%NaiveDateTime{} = naive_datetime1, %NaiveDateTime{} = naive_datetime2) do
     case {to_tuple(naive_datetime1), to_tuple(naive_datetime2)} do
       {first, second} when first > second -> :gt
@@ -102,11 +102,18 @@ defmodule Brando.Plug.Lockdown do
       _ -> :eq
     end
   end
+
   # TODO: REMOVE WITH ELIXIR 1.4!
-  defp to_tuple(%NaiveDateTime{calendar: Calendar.ISO, year: year,
-                               month: month, day: day, hour: hour,
-                               minute: minute, second: second,
-                               microsecond: {microsecond, _precision}}) do
+  defp to_tuple(%NaiveDateTime{
+         calendar: Calendar.ISO,
+         year: year,
+         month: month,
+         day: day,
+         hour: hour,
+         minute: minute,
+         second: second,
+         microsecond: {microsecond, _precision}
+       }) do
     {year, month, day, hour, minute, second, microsecond}
   end
 end

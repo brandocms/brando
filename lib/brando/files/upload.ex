@@ -9,19 +9,19 @@ defmodule Brando.Files.Upload do
   @doc """
   Creates a File{} struct pointing to the copied uploaded file.
   """
-  @spec create_file_struct(Brando.Upload.t) :: {:ok, Brando.Type.File.t}
+  @spec create_file_struct(Brando.Upload.t()) :: {:ok, Brando.Type.File.t()}
   def create_file_struct(%Upload{plug: %{uploaded_file: file, content_type: mime_type}, cfg: cfg}) do
     require Logger
-    Logger.error "-- creating file struct"
+    Logger.error("-- creating file struct")
     {_, filename} = split_path(file)
-    upload_path   = Map.get(cfg, :upload_path)
+    upload_path = Map.get(cfg, :upload_path)
 
     file_path = Path.join([upload_path, filename])
 
     file_stat =
       file_path
       |> media_path()
-      |> File.stat!
+      |> File.stat!()
 
     file_struct =
       %Brando.Type.File{}

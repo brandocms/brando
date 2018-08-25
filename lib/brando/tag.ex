@@ -111,6 +111,7 @@ defmodule Brando.Tag do
   defmacro __using__(which) when is_atom(which) do
     apply(__MODULE__, which, [])
   end
+
   defmacro __using__([:controller, ctrl_opts] = opts) when is_list(opts) do
     apply(__MODULE__, :controller, ctrl_opts)
   end
@@ -119,6 +120,7 @@ defmodule Brando.Tag do
   Splits the "tags" field in `params` to an array and returns `params`
   """
   def split_tags(%{"tags" => nil} = params), do: params
+
   def split_tags(%{"tags" => tags} = params) do
     split_tags =
       tags
@@ -127,7 +129,9 @@ defmodule Brando.Tag do
 
     Map.put(params, "tags", split_tags)
   end
+
   def split_tags(%{tags: nil} = params), do: params
+
   def split_tags(%{tags: tags} = params) do
     split_tags =
       tags
@@ -136,6 +140,7 @@ defmodule Brando.Tag do
 
     Map.put(params, :tags, split_tags)
   end
+
   def split_tags(params) do
     params
   end

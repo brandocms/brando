@@ -6,17 +6,15 @@ defmodule Brando.Meta.SchemaTest do
 
   defmodule Meta do
     @moduledoc false
-    use Brando.Meta.Schema, [
+    use Brando.Meta.Schema,
       singular: "post",
       plural: "posts",
-      repr: fn (schema) -> "#{schema.test}" end,
+      repr: fn schema -> "#{schema.test}" end,
       hidden_fields: [:id],
       fields: [
         id: "ID",
         language: "Language"
       ]
-    ]
-
   end
 
   test "__name__" do
@@ -29,10 +27,10 @@ defmodule Brando.Meta.SchemaTest do
   end
 
   test "__keys__" do
-    assert Meta.__keys__ == [:id, :language]
+    assert Meta.__keys__() == [:id, :language]
   end
 
   test "__hidden_fields__" do
-    assert Meta.__hidden_fields__ == [:id]
+    assert Meta.__hidden_fields__() == [:id]
   end
 end

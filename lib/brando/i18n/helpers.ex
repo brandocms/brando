@@ -9,6 +9,7 @@ defmodule Brando.I18n.Helpers do
   """
   defmacro __using__(opts) do
     helpers = Keyword.fetch!(opts, :helpers)
+
     quote do
       def localized(locale, fun, args) do
         apply(unquote(helpers), :"#{locale}_#{fun}", args)

@@ -13,12 +13,13 @@ defmodule Brando.Users.UserResolver do
   """
   def me(_, %{context: %{current_user: current_user}}) do
     require Logger
-    Logger.debug "-- $resolver: :users(me)"
+    Logger.debug("-- $resolver: :users(me)")
+
     me =
       Brando.repo().one(
         from user in User,
           where: user.id == ^current_user.id
-        )
+      )
 
     case me do
       nil -> {:error, "User id #{current_user.id} not found"}
@@ -31,12 +32,13 @@ defmodule Brando.Users.UserResolver do
   """
   def find(%{user_id: user_id}, %{context: %{current_user: _current_user}}) do
     require Logger
-    Logger.debug "-- $resolver: :users(find)"
+    Logger.debug("-- $resolver: :users(find)")
+
     user =
       Brando.repo().one(
         from user in User,
           where: user.id == ^user_id
-        )
+      )
 
     case user do
       nil -> {:error, "User id #{user_id} not found"}
@@ -52,7 +54,8 @@ defmodule Brando.Users.UserResolver do
       Brando.repo().all(
         from user in User,
           order_by: [asc: user.full_name]
-        )
+      )
+
     {:ok, users}
   end
 
@@ -67,7 +70,9 @@ defmodule Brando.Users.UserResolver do
   @doc """
   update user
   """
-  def update(%{user_id: user_id, user_params: user_params}, %{context: %{current_user: _current_user}}) do
+  def update(%{user_id: user_id, user_params: user_params}, %{
+        context: %{current_user: _current_user}
+      }) do
     Users.update_user(user_id, user_params)
     |> response
   end

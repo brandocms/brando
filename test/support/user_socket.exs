@@ -2,12 +2,12 @@ defmodule Brando.Integration.UserSocket do
   use Phoenix.Socket
 
   ## Channels
-  channel "system:*", Brando.SystemChannel
-  channel "stats", Brando.StatsChannel
+  channel("system:*", Brando.SystemChannel)
+  channel("stats", Brando.StatsChannel)
 
   ## Transports
-  transport :websocket, Phoenix.Transports.WebSocket
-  transport :longpoll, Phoenix.Transports.LongPoll
+  transport(:websocket, Phoenix.Transports.WebSocket)
+  transport(:longpoll, Phoenix.Transports.LongPoll)
 
   # Socket params are passed from the client and can
   # be used to verify and authenticate a user. After
@@ -21,6 +21,7 @@ defmodule Brando.Integration.UserSocket do
     case Phoenix.Token.verify(socket, "user", token, max_age: 1_209_600) do
       {:ok, user_id} ->
         {:ok, assign(socket, :user, user_id)}
+
       {:error, _} ->
         :error
     end

@@ -15,7 +15,9 @@ defmodule Brando.Images.ImageSeriesResolver do
   @doc """
   create image series
   """
-  def create(%{image_series_params: image_series_params}, %{context: %{current_user: current_user}}) do
+  def create(%{image_series_params: image_series_params}, %{
+        context: %{current_user: current_user}
+      }) do
     Images.create_series(image_series_params, current_user)
     |> response
   end

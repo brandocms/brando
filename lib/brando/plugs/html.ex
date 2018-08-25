@@ -16,7 +16,7 @@ defmodule Brando.Plug.HTML do
       plug :put_section, "users"
   """
 
-  @spec put_section(Plug.Conn.t, String.t) :: Plug.Conn.t
+  @spec put_section(Plug.Conn.t(), String.t()) :: Plug.Conn.t()
   def put_section(conn, name) do
     put_private(conn, :brando_section_name, name)
   end
@@ -29,9 +29,9 @@ defmodule Brando.Plug.HTML do
       import Brando.Plug.HTML
       plug :put_css_classes, "wrapper box"
   """
-  @spec put_css_classes(Plug.Conn.t, String.t | [String.t]) :: Plug.Conn.t
+  @spec put_css_classes(Plug.Conn.t(), String.t() | [String.t()]) :: Plug.Conn.t()
   def put_css_classes(conn, classes) when is_binary(classes) do
-     put_private(conn, :brando_css_classes, classes)
+    put_private(conn, :brando_css_classes, classes)
   end
 
   def put_css_classes(conn, classes) when is_list(classes) do

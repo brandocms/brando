@@ -26,21 +26,25 @@ defmodule Brando.Schema.Types.Images do
     field :slug, :string
     field :cfg, :image_config
     field :creator, :user
+
     field :image_series_count, :integer do
       resolve fn cat, _, _ ->
         {:ok, Brando.Images.image_series_count(cat.id)}
       end
     end
+
     field :image_series, list_of(:image_series) do
       arg :limit, :integer, default_value: 10
       arg :offset, :integer, default_value: 0
+
       resolve assoc(:image_series, fn query, args, _ ->
-        query
-        |> order_by([is], [asc: fragment("lower(?)", is.name)])
-        |> limit([is], ^args.limit)
-        |> offset([is], ^args.offset)
-      end)
+                query
+                |> order_by([is], asc: fragment("lower(?)", is.name))
+                |> limit([is], ^args.limit)
+                |> offset([is], ^args.offset)
+              end)
     end
+
     field :inserted_at, :time
     field :updated_at, :time
   end
@@ -58,11 +62,13 @@ defmodule Brando.Schema.Types.Images do
     field :creator, :user
     field :image_category_id, :id
     field :image_category, :image_category, resolve: assoc(:image_category)
+
     field :images, list_of(:image) do
       resolve assoc(:images, fn query, _, _ ->
-        order_by(query, [i], [asc: i.sequence])
-      end)
+                order_by(query, [i], asc: i.sequence)
+              end)
     end
+
     field :sequence, :integer
     field :inserted_at, :time
     field :updated_at, :time
@@ -88,6 +94,7 @@ defmodule Brando.Schema.Types.Images do
 
     field :url, :string do
       arg :size, :string, default_value: "thumb"
+
       resolve fn image, args, _ ->
         case Enum.find(image.sizes, &(elem(&1, 0) == args.size)) do
           nil -> {:error, "URL size `#{args.size}` not found :("}
@@ -95,12 +102,14 @@ defmodule Brando.Schema.Types.Images do
         end
       end
     end
+
     field :sizes, list_of(:image_size) do
       resolve fn image, _args, _ ->
-        map = Enum.map(image.sizes, &(%{key: elem(&1, 0), value: elem(&1, 1)}))
+        map = Enum.map(image.sizes, &%{key: elem(&1, 0), value: elem(&1, 1)})
         {:ok, map}
       end
     end
+
     field :optimized, :boolean
     field :width, :integer
     field :height, :integer

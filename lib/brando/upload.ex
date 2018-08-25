@@ -16,7 +16,7 @@ defmodule Brando.Upload do
   This module contains helper functions for both paths.
   """
   defstruct plug: nil,
-            cfg:  nil
+            cfg: nil
 
   @type t :: %__MODULE__{}
 
@@ -33,8 +33,7 @@ defmodule Brando.Upload do
          {:ok, upload} <- get_valid_filename(upload),
          {:ok, upload} <- check_mimetype(upload),
          {:ok, upload} <- create_upload_path(upload),
-         {:ok, upload} <- copy_uploaded_file(upload)
-    do
+         {:ok, upload} <- copy_uploaded_file(upload) do
       {:ok, upload}
     else
       error -> error
@@ -45,10 +44,10 @@ defmodule Brando.Upload do
   Filters out all fields except `%Plug.Upload{}` fields.
   """
   def filter_plugs(params) do
-    Enum.filter(params, fn (param) ->
+    Enum.filter(params, fn param ->
       case param do
         {_, %Plug.Upload{}} -> true
-        {_, _}              -> false
+        {_, _} -> false
       end
     end)
   end
@@ -57,13 +56,20 @@ defmodule Brando.Upload do
     case err do
       {:error, :empty_filename} ->
         {:error, gettext("Empty filename given. Make sure you have a valid filename.")}
+
       {:error, :content_type, content_type, allowed_content_types} ->
-        {:error, gettext("File type not allowed: %{type}. Must be one of: %{allowed}",
-                         [type: content_type, allowed: inspect(allowed_content_types)])}
+        {:error,
+         gettext("File type not allowed: %{type}. Must be one of: %{allowed}",
+           type: content_type,
+           allowed: inspect(allowed_content_types)
+         )}
+
       {:error, :mkdir, reason} ->
         {:error, gettext("Path creation failed") <> " -> #{inspect(reason)}"}
+
       {:error, :cp, {reason, src, dest}} ->
-        {:error, gettext("Error while copying") <> " -> #{inspect(reason)}\nsrc..: #{src}\ndest.: #{dest}"}
+        {:error,
+         gettext("Error while copying") <> " -> #{inspect(reason)}\nsrc..: #{src}\ndest.: #{dest}"}
     end
   end
 
@@ -79,8 +85,9 @@ defmodule Brando.Upload do
     upload =
       case Map.get(cfg, :random_filename, false) do
         true -> put_in(upload.plug.filename, random_filename(filename))
-        _    -> put_in(upload.plug.filename, slugify_filename(filename))
+        _ -> put_in(upload.plug.filename, slugify_filename(filename))
       end
+
     {:ok, upload}
   end
 
@@ -102,19 +109,24 @@ defmodule Brando.Upload do
     case File.mkdir_p(upload_path) do
       :ok ->
         {:ok, put_in(upload.plug, Map.put(upload.plug, :upload_path, upload_path))}
+
       {:error, reason} ->
         {:error, :mkdir, reason}
     end
   end
 
-  defp copy_uploaded_file(%__MODULE__{plug: %{filename: fname, path: src, upload_path: ul_path}} = upload) do
+  defp copy_uploaded_file(
+         %__MODULE__{plug: %{filename: fname, path: src, upload_path: ul_path}} = upload
+       ) do
     joined_dest = Path.join(ul_path, fname)
-    dest = File.exists?(joined_dest) && Path.join(ul_path, unique_filename(fname))
-                                     || joined_dest
+
+    dest =
+      (File.exists?(joined_dest) && Path.join(ul_path, unique_filename(fname))) || joined_dest
 
     case File.cp(src, dest, fn _, _ -> false end) do
       :ok ->
         {:ok, put_in(upload.plug, Map.put(upload.plug, :uploaded_file, dest))}
+
       {:error, reason} ->
         {:error, :cp, {reason, src, dest}}
     end

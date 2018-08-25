@@ -9,6 +9,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         socket = assign(socket, :user_id, user.id)
         {:ok, user.id, socket}
       end
+
       def handle_in("images:delete_images", %{"ids" => ids}, socket) do
         Brando.Images.delete_images(ids)
         {:reply, {:ok, %{code: 200, ids: ids}}, socket}
@@ -27,7 +28,13 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
       def handle_in("images:create_image_series", params, socket) do
         user = Guardian.Phoenix.Socket.current_resource(socket)
         {:ok, series} = Brando.Images.create_series(params, user)
-        {:reply, {:ok, %{code: 200, series: Map.merge(series, %{creator: nil, image_category: nil, images: nil})}}, socket}
+
+        {:reply,
+         {:ok,
+          %{
+            code: 200,
+            series: Map.merge(series, %{creator: nil, image_category: nil, images: nil})
+          }}, socket}
       end
 
       def handle_in("images:get_category_config", %{"category_id" => category_id}, socket) do
@@ -36,7 +43,11 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         {:reply, {:ok, %{code: 200, config: config}}, socket}
       end
 
-      def handle_in("images:update_category_config", %{"category_id" => category_id, "config" => config}, socket) do
+      def handle_in(
+            "images:update_category_config",
+            %{"category_id" => category_id, "config" => config},
+            socket
+          ) do
         user = Guardian.Phoenix.Socket.current_resource(socket)
         {:ok, config} = Brando.Images.update_category_config(category_id, config)
         {:reply, {:ok, %{code: 200}}, socket}
@@ -48,13 +59,21 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         {:reply, {:ok, %{code: 200, config: config}}, socket}
       end
 
-      def handle_in("images:update_series_config", %{"series_id" => series_id, "config" => config}, socket) do
+      def handle_in(
+            "images:update_series_config",
+            %{"series_id" => series_id, "config" => config},
+            socket
+          ) do
         user = Guardian.Phoenix.Socket.current_resource(socket)
         {:ok, config} = Brando.Images.update_series_config(series_id, config)
         {:reply, {:ok, %{code: 200}}, socket}
       end
 
-      def handle_in("image:update", %{"id" => id, "image" => %{"title" => title, "credits" => credits}}, socket) do
+      def handle_in(
+            "image:update",
+            %{"id" => id, "image" => %{"title" => title, "credits" => credits}},
+            socket
+          ) do
         image = Brando.Images.get_image!(id)
         {:ok, updated_image} = Brando.Images.update_image_meta(image, title, credits)
         {:reply, {:ok, %{status: 200}}, socket}

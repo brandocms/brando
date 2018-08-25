@@ -1,13 +1,16 @@
 defmodule Brando.Factory do
-  use ExMachina.Ecto, repo: Brando.repo
+  use ExMachina.Ecto, repo: Brando.repo()
 
   alias Brando.Type.ImageConfig
   alias Brando.{ImageCategory, ImageSeries, User}
 
   @sizes %{
-    "small" =>  %{"size" => "300", "quality" => 1},
-    "medium" => %{"portrait" => %{"size" => "300", "quality" => 1}, "landscape" => %{"size" => "250", "quality" => 1}},
-    "thumb" =>  %{"size" => "150x150", "quality" => 1, "crop" => true}
+    "small" => %{"size" => "300", "quality" => 1},
+    "medium" => %{
+      "portrait" => %{"size" => "300", "quality" => 1},
+      "landscape" => %{"size" => "250", "quality" => 1}
+    },
+    "thumb" => %{"size" => "150x150", "quality" => 1, "crop" => true}
   }
 
   def user_factory do
@@ -21,10 +24,10 @@ defmodule Brando.Factory do
         path: "images/avatars/27i97a.jpeg",
         title: nil,
         sizes: %{
-          "thumb"  => "images/avatars/thumb/27i97a.jpeg",
-          "small"  => "images/avatars/small/27i97a.jpeg",
+          "thumb" => "images/avatars/thumb/27i97a.jpeg",
+          "small" => "images/avatars/small/27i97a.jpeg",
           "medium" => "images/avatars/medium/27i97a.jpeg",
-          "large"  => "images/avatars/large/27i97a.jpeg"
+          "large" => "images/avatars/large/27i97a.jpeg"
         }
       },
       role: :superuser,
@@ -39,7 +42,7 @@ defmodule Brando.Factory do
       cfg: %ImageConfig{sizes: @sizes, upload_path: "portfolio/test-category/test-series"},
       sequence: 0,
       image_category: build(:image_category),
-      creator: build(:user),
+      creator: build(:user)
     }
   end
 
@@ -63,7 +66,8 @@ defmodule Brando.Factory do
         "micro" => "images/default/micro/sample.png",
         "small" => "images/default/small/sample.png",
         "thumb" => "images/default/thumb/sample.png",
-        "xlarge" => "images/default/xlarge/sample.png"},
+        "xlarge" => "images/default/xlarge/sample.png"
+      },
       title: nil
     }
   end
@@ -76,12 +80,15 @@ defmodule Brando.Factory do
       random_filename: false,
       size_limit: 10_240_000,
       sizes: %{
-        "small"  => %{"size" => "300", "quality" => 100},
-        "medium" => %{"portrait" => %{"size" => "300", "quality" => 1}, "landscape" => %{"size" => "250", "quality" => 1}},
-        "large"  => %{"size" => "700", "quality" => 100},
+        "small" => %{"size" => "300", "quality" => 100},
+        "medium" => %{
+          "portrait" => %{"size" => "300", "quality" => 1},
+          "landscape" => %{"size" => "250", "quality" => 1}
+        },
+        "large" => %{"size" => "700", "quality" => 100},
         "xlarge" => %{"size" => "900", "quality" => 100},
-        "thumb"  => %{"size" => "150x150", "quality" => 100, "crop" => true},
-        "micro"  => %{"size" => "25x25", "quality" => 100, "crop" => true}
+        "thumb" => %{"size" => "150x150", "quality" => 100, "crop" => true},
+        "micro" => %{"size" => "25x25", "quality" => 100, "crop" => true}
       }
     }
   end
