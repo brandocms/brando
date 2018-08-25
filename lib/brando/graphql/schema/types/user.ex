@@ -27,7 +27,7 @@ defmodule Brando.Schema.Types.User do
 
     field :avatar, :string do
       arg :type, :string, default_value: "thumb"
-      resolve &resolve_avatar/3
+      resolve &Brando.Schema.Utils.resolve_avatar/3
     end
 
     field :role, :string
