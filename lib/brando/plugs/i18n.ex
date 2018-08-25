@@ -8,8 +8,10 @@ defmodule Brando.Plug.I18n do
   @doc """
   Assign current locale.
 
-  The locale was already found in `conn`'s session, so we set it
+  If the locale was already found in `conn`'s session, so we set it
   through Gettext as well as assigning it to `conn`.
+
+  Otherwise adds to session and assigns, and sets it through gettext
   """
   @spec put_locale(Plug.Conn.t, Keyword.t) :: Plug.Conn.t
   def put_locale(%{private: %{plug_session: %{"language" => language}}} = conn, []) do
@@ -18,11 +20,6 @@ defmodule Brando.Plug.I18n do
     assign_language(conn, language)
   end
 
-  @doc """
-  Add current language to `conn`.
-
-  Adds to session and assigns, and sets it through gettext
-  """
   def put_locale(conn, []) do
     language = extract_language_from_path(conn) || Brando.config(:default_language)
     Brando.I18n.put_locale_for_all_modules(language)

@@ -30,8 +30,7 @@ defmodule Brando.ImageSeries do
   end
 
   @doc """
-  Casts and validates `params` against `schema` to create a valid
-  changeset when action is :create.
+  Casts and validates `params` against `schema` to create a valid changeset
 
   ## Example
 
@@ -49,15 +48,6 @@ defmodule Brando.ImageSeries do
     |> inherit_configuration
   end
 
-  @doc """
-  Casts and validates `params` against `schema` to create a valid
-  changeset when action is :update.
-
-  ## Example
-
-      schema_changeset = changeset(%__MODULE__{}, :update, params)
-
-  """
   def changeset(schema, :update, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)

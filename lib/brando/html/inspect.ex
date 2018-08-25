@@ -28,13 +28,7 @@ defmodule Brando.HTML.Inspect do
   @doc """
   Inspects and displays `schema`
   """
-  def schema(nil) do
-    ""
-  end
-
-  @doc """
-  Inspects and displays `schema_struct`
-  """
+  def schema(nil), do: ""
   def schema(schema_struct) do
     module = schema_struct.__struct__
     fields = module.__schema__(:fields)
@@ -58,7 +52,7 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp render_inspect_field(name, module, type, value) do
-    if not String.ends_with?(to_string(name), "_id") and not name in module.__hidden_fields__ do
+    if not String.ends_with?(to_string(name), "_id") and name not in module.__hidden_fields__ do
       val = inspect_field(name, type, value)
       """
       <tr>

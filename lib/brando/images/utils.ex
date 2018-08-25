@@ -229,7 +229,7 @@ defmodule Brando.Images.Utils do
   @doc """
   Deletes all image's sizes and recreates them.
   """
-  @spec recreate_sizes_for(:image, Image.t) :: :ok | no_return
+  @spec recreate_sizes_for(:image | :image_series, Image.t) :: :ok | no_return
   def recreate_sizes_for(:image, img) do
     img       = Brando.repo.preload(img, :image_series)
     img       = put_in(img.image.optimized, false)
@@ -257,9 +257,6 @@ defmodule Brando.Images.Utils do
     end
   end
 
-  @doc """
-  Recreates all image sizes in imageseries.
-  """
   @spec recreate_sizes_for(:image_series, Image.t) :: :ok | no_return
   def recreate_sizes_for(:image_series, image_series_id) do
     q =
@@ -276,7 +273,8 @@ defmodule Brando.Images.Utils do
         :unchanged -> image_series
       end
 
-    Enum.map(image_series.images, &(recreate_sizes_for(:image, &1)))
+    for image <- image_series.images, do:
+      recreate_sizes_for(:image, image)
 
     :ok
   end
@@ -662,7 +660,7 @@ defmodule Brando.Images.Utils do
           path_to_check
           |> Path.join("*")
           |> Path.wildcard
-          |> Enum.filter(&(!&1 in full_ignored_paths))
+          |> Enum.filter(&(&1 not in full_ignored_paths))
 
         existing_series_paths =
           existing_category_paths

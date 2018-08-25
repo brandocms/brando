@@ -26,8 +26,7 @@ defmodule Brando.Pages.PageFragment do
   end
 
   @doc """
-  Casts and validates `params` against `schema` to create a valid
-  changeset when action is :create.
+  Casts and validates `params` against `schema` to create a valid changeset
 
   ## Example
 
@@ -42,17 +41,6 @@ defmodule Brando.Pages.PageFragment do
     |> validate_required(@required_fields)
     |> generate_html()
   end
-
-  @doc """
-  Casts and validates `params` against `schema` to create a valid
-  changeset when action is :update.
-
-  ## Example
-
-      schema_changeset = changeset(%__MODULE__{}, :update, params)
-
-  """
-  @spec changeset(t, atom, Keyword.t | Options.t) :: t
   def changeset(schema, :update, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)

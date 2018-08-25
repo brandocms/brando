@@ -41,31 +41,22 @@ defmodule Brando.SystemChannel do
   end
 
   @doc """
-  Logs when `user` performs a successful login
+  Log different events
   """
   def log(:logged_in, user) do
     body = "#{user.full_name} logget inn"
     do_log(:notice, "fa-info-circle", body)
   end
 
-  @doc """
-  Logs when `user` performs a successful logout
-  """
   def log(:logged_out, user) do
     body = "#{user.full_name} logget ut"
     do_log(:notice, "fa-info-circle", body)
   end
 
-  @doc """
-  Logs system error
-  """
   def log(:error, message) do
     do_log(:error, "fa-times-circle", message)
   end
 
-  @doc """
-  Logs system info
-  """
   def log(:info, message) do
     do_log(:info, "fa-info-circle", message)
   end

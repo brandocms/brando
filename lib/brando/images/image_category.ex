@@ -26,7 +26,7 @@ defmodule Brando.ImageCategory do
 
   @doc """
   Casts and validates `params` against `schema` to create a valid
-  changeset when action is :create.
+  changeset
 
   ## Example
 
@@ -45,15 +45,6 @@ defmodule Brando.ImageCategory do
     |> put_default_config
   end
 
-  @doc """
-  Casts and validates `params` against `schema` to create a valid
-  changeset when action is :update.
-
-  ## Example
-
-      schema_changeset = changeset(%__MODULE__{}, :update, params)
-
-  """
   def changeset(schema, :update, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
@@ -111,9 +102,7 @@ defmodule Brando.ImageCategory do
     put_change(cs, :cfg, new_cfg)
   end
 
-  def validate_paths(cs) do
-    cs
-  end
+  def validate_paths(cs), do: cs
 
   #
   # Meta

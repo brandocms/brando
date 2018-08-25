@@ -28,14 +28,12 @@ defmodule Brando.Type.Status do
     end
   end
 
-  @doc """
-  Cast anything else is a failure
-  """
+
+  # Cast anything else is a failure
   def cast(_), do: :error
 
-  @doc """
-  Integers are never considered blank
-  """
+
+  # Integers are never considered blank
   def blank?(_), do: false
 
   @doc """

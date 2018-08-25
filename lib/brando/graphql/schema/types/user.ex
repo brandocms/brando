@@ -1,6 +1,5 @@
 defmodule Brando.Schema.Types.User do
   use Brando.Web, :absinthe
-  import Brando.Schema.Utils
 
   input_object :create_user_params do
     field :full_name, :string

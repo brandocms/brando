@@ -54,7 +54,7 @@ defmodule Brando.Villain.Parser.Default do
   end
 
   @doc """
-  Convert YouTube video to iframe html
+  Convert YouTube and Vimeo videos to iframe html
   """
   def video(%{"remote_id" => remote_id, "source" => "youtube"}) do
     """
@@ -69,9 +69,6 @@ defmodule Brando.Villain.Parser.Default do
     """
   end
 
-  @doc """
-  Convert Vimeo video to iframe html
-  """
   def video(%{"remote_id" => remote_id, "source" => "vimeo"}) do
     """
     <div class="video-wrapper">

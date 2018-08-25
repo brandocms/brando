@@ -97,7 +97,7 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  Get page by key
+  Get page
   """
   def get_page(key) when is_binary(key) do
     page = Brando.repo.get_by(Page, key: key)
@@ -107,10 +107,6 @@ defmodule Brando.Pages do
       page -> {:ok, page}
     end
   end
-
-  @doc """
-  Get page by id
-  """
   def get_page(id) do
     page = Brando.repo.get(Page, id)
 
@@ -150,9 +146,6 @@ defmodule Brando.Pages do
     end
   end
 
-  @doc """
-  Get page by parent_key and key
-  """
   def get_page(parent_key, key, lang) when is_binary(key) do
     q =
       from p in Page,
@@ -188,7 +181,7 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  Get page by key
+  Get page fragment
   """
   def get_page_fragment(key) when is_binary(key) do
     page = Brando.repo.get_by(PageFragment, key: key)
@@ -199,9 +192,6 @@ defmodule Brando.Pages do
     end
   end
 
-  @doc """
-  Get page by id
-  """
   def get_page_fragment(id) do
     page = Brando.repo.get(PageFragment, id)
 
