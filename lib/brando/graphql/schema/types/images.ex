@@ -1,5 +1,6 @@
 defmodule Brando.Schema.Types.Images do
   use Brando.Web, :absinthe
+  import Ecto.Query
 
   input_object :create_image_series_params do
     field :name, :string
