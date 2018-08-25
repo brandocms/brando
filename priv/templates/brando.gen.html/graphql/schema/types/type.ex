@@ -5,13 +5,13 @@ defmodule <%= base %>.Schema.Types.<%= alias %> do
   use <%= base %>Web, :absinthe
 
   object :<%= singular %> do
-    field :id, :id<%= for {v, k} <- gql_types do %>
+    field :id, :id<%= for {_v, k} <- gql_types do %>
     <%= k %><% end %>
     field :inserted_at, :time
     field :updated_at, :time
   end
 
-  input_object :<%= singular %>_params do<%= for {v, k} <- gql_inputs do %>
+  input_object :<%= singular %>_params do<%= for {_v, k} <- gql_inputs do %>
     <%= k %><% end %>
   end
 

@@ -8,7 +8,7 @@
         <div class="card-body">
           <!--
           FORM FIELDS HERE
-          --><%= for {v, k} <- vue_inputs do %>
+          --><%= for {_v, k} <- vue_inputs do %>
           <%= List.first(k) %><% {_, r} = List.pop_at(k, 0); {_, remainder} = List.pop_at(r, -1) %><%= for prop <- remainder do %>
             <%= prop %><% end %>
           />

@@ -14,7 +14,7 @@ defmodule <%= module %> do
 <%= if sequenced do %>    sequenced()<% end %>
     timestamps()
   end
-<%= for {v, k} <- img_fields do %>
+<%= for {_v, k} <- img_fields do %>
   has_image_field <%= inspect k %>,
     %{allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
       default_size: :medium,
@@ -31,7 +31,7 @@ defmodule <%= module %> do
       }
     }
 <% end %>
-<%= for {v, k} <- file_fields do %>
+<%= for {_v, k} <- file_fields do %>
   has_file_field <%= inspect k %>,
     %{allowed_mimetypes: ["application/pdf"],
       random_filename: true,
@@ -39,7 +39,7 @@ defmodule <%= module %> do
       size_limit: 10_240_000,
     }
 <% end %>
-  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields ++ file_fields)) |> Keyword.drop(Keyword.values(villain_fields)), " ", &elem(&1, 0)) %><%= if villain_fields != [] do %> <% end %><%= Enum.map_join(villain_fields, " ", fn({k, v}) -> if v == :data, do: "#{v}", else: "#{v}_data" end) %><%= if assocs do %> <% end %><%= Enum.map_join(assocs, " ", &elem(&1, 1)) %>)a
+  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields ++ file_fields)) |> Keyword.drop(Keyword.values(villain_fields)), " ", &elem(&1, 0)) %><%= if villain_fields != [] do %> <% end %><%= Enum.map_join(villain_fields, " ", fn({_k, v}) -> if v == :data, do: "#{v}", else: "#{v}_data" end) %><%= if assocs do %> <% end %><%= Enum.map_join(assocs, " ", &elem(&1, 1)) %>)a
   @optional_fields ~w(<%= Enum.map_join(img_fields ++ file_fields, " ", &elem(&1, 1)) %>)a
 
   @doc """
@@ -51,16 +51,16 @@ defmodule <%= module %> do
   def changeset(schema, params \\ %{}) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
-    |> validate_required(@required_fields)<%= if villain_fields != [] do %><%= for {k, v} <- villain_fields do %><%= if v == :data do %>
+    |> validate_required(@required_fields)<%= if villain_fields != [] do %><%= for {_k, v} <- villain_fields do %><%= if v == :data do %>
     |> generate_html()<% else %>
     |> generate_html(<%= inspect v %>)<% end %><% end %><% end %><%= if img_fields != [] do %>
-    |> cleanup_old_images()<%= for {v, k} <- img_fields do %>
+    |> cleanup_old_images()<%= for {_v, k} <- img_fields do %>
     |> validate_upload({:image, <%= inspect k %>})
     |> optimize(<%= inspect k %>)<% end %><% end %>
   end
 
   def delete(record) do
-<%= for {v, k} <- img_fields do %>    delete_original_and_sized_images(record, <%= inspect k %>)
+<%= for {_v, k} <- img_fields do %>    delete_original_and_sized_images(record, <%= inspect k %>)
 <% end %>    Brando.repo.delete!(record)
   end
 
