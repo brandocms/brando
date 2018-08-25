@@ -8,7 +8,7 @@ defmodule Brando.Mixfile do
     [
       app: :brando,
       version: @version,
-      elixir: "~> 1.3",
+      elixir: "~> 1.6",
       deps: deps(),
       dialyzer: [
         plt_add_apps: [

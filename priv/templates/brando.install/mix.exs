@@ -1,12 +1,12 @@
 defmodule <%= application_module %>.Mixfile do
   use Mix.Project
 
-  @version "2.0.0"
+  @version "1.0.0"
 
   def project do
     [app: :<%= application_name %>,
      version: @version,
-     elixir: "~> 1.5",
+     elixir: "~> 1.6",
      elixirc_paths: elixirc_paths(Mix.env),
      compilers: [:phoenix, :gettext] ++ Mix.compilers,
      start_permanent: Mix.env == :prod,
