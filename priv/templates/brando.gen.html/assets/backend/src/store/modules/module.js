@@ -57,9 +57,9 @@ export const <%= vue_plural %> = {
       return <%= vue_singular %>
     },
 
-    async delete<%= Recase.to_pascal(vue_plural) %> (context, <%= vue_singular %>) {
+    async delete<%= Recase.to_pascal(vue_singular) %> (context, <%= vue_singular %>) {
       nprogress.start()
-      await <%= singular %>API.delete<%= Recase.to_pascal(vue_singular) %>(<%= vue_singular %>.id)
+      await <%= vue_singular %>API.delete<%= Recase.to_pascal(vue_singular) %>(<%= vue_singular %>.id)
       context.commit(DELETE_<%= String.upcase(singular) %>, <%= vue_singular %>)
       nprogress.done()
       return <%= vue_singular %>
