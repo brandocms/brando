@@ -1,6 +1,6 @@
 defmodule Brando.Mixin.Channels.AdminChannelMixin do
   defmacro __using__(_) do
-    quote do
+    quote(generated: true) do
       @doc """
       Join admin channel
       """
