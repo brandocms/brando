@@ -55,6 +55,19 @@ defmodule Brando.Sequence do
       </a>
   """
 
+  defmodule Channel do
+    @moduledoc false
+    defmacro sequence(key, module) do
+      quote [generated: true] do
+        @doc false
+        def handle_in("#{unquote(key)}:sequence_#{unquote(key)}", %{"ids" => ids}, socket) do
+          unquote(module).sequence(ids, Range.new(0, length(ids)))
+          {:reply, {:ok, %{code: 200}}, socket}
+        end
+      end
+    end
+  end
+
   defmodule Schema do
     @moduledoc false
     @doc false
@@ -124,6 +137,13 @@ defmodule Brando.Sequence do
   def migration do
     quote do
       import Brando.Sequence.Migration, only: [sequenced: 0]
+    end
+  end
+
+  @doc false
+  def channel do
+    quote do
+      import Brando.Sequence.Channel, only: [sequence: 2]
     end
   end
 
