@@ -121,8 +121,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       end)
 
       assert_file("assets/backend/src/views/games/CaptainListView.vue", fn file ->
-        assert file =~
-                 ~s(v-sortable)
+        assert file =~ ~s(v-sortable)
       end)
     end)
   end
