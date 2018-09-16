@@ -25,7 +25,7 @@
                 v-sortable="{handle: 'tr', animation: 250, store: {get: getOrder, set: storeOrder}}"<% end %>
                 is="transition-group">
                 <%= if sequenced do %>
-                <tr :data-id="employee.id" :key="employee.id" v-for="employee in allEmployees">
+                <tr :data-id="<%= vue_singular %>" :key="<%= vue_singular %>.id" v-for="<%= vue_singular %> in all<%= Recase.to_pascal(vue_plural)">
                   <td class="fit">
                     <i class="fal fa-fw fa-arrows-v"></i>
                   </td>
