@@ -119,6 +119,11 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
         assert file =~ ~s(v-model="pegLeg.name")
       end)
+
+      assert_file("assets/backend/src/views/games/CaptainListView.vue", fn file ->
+        assert file =~
+                 ~s(v-sortable)
+      end)
     end)
   end
 end
