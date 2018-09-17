@@ -1,6 +1,6 @@
 module.exports = {
   outputDir: '../../priv/static',
-  assetsDir: '../../priv/static',
+  assetsDir: '/',
   runtimeCompiler: true,
   // disable hashes in filenames
   filenameHashing: false,
