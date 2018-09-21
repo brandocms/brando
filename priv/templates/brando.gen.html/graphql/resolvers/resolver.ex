@@ -22,8 +22,8 @@ defmodule <%= base %>.<%= domain %>.<%= alias %>Resolver do
   @doc """
   Create <%= singular %>
   """
-  def create(%{<%= singular %>_params: <%= singular %>_params}, %{context: %{current_user: current_user}}) do
-    <%= domain %>.create_<%= singular %>(<%= singular %>_params, current_user.id)
+  def create(%{<%= singular %>_params: <%= singular %>_params}, %{context: %{current_user: _}}) do
+    <%= domain %>.create_<%= singular %>(<%= singular %>_params)
   end
 
   @doc """
