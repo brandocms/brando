@@ -73,8 +73,8 @@ defmodule <%= application_module %>Web.Router do
   end
 
   scope "/coming-soon" do
-    get "/", Brando.LockdownController, :index
-    post "/", Brando.LockdownController, :post_password
+    get "/", <%= application_module %>Web.LockdownController, :index
+    post "/", <%= application_module %>Web.LockdownController, :post_password
   end
 
   scope "/" do

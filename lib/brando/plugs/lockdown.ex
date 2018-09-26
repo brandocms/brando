@@ -40,8 +40,7 @@ defmodule Brando.Plug.Lockdown do
   @spec call(Plug.Conn.t(), Keyword.t()) :: Plug.Conn.t()
   def call(conn, _) do
     if Brando.config(:lockdown) do
-      conn
-      |> allowed?
+      allowed?(conn)
     else
       conn
     end
