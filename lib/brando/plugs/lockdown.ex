@@ -70,6 +70,7 @@ defmodule Brando.Plug.Lockdown do
   end
 
   defp check_lockdown_date(conn, lockdown_until) do
+    lockdown_until = Timex.to_datetime(lockdown_until, "Europe/Oslo"),
     time_now = Timex.now("Europe/Oslo")
     if DateTime.compare(lockdown_until, time_now) == :gt do
       conn
