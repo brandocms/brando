@@ -6,7 +6,9 @@ defmodule <%= application_module %>Web.Endpoint do
     plug Phoenix.Ecto.SQL.Sandbox
   end
 
-  socket "/admin/socket", <%= application_module %>Web.AdminSocket
+  socket "/admin/socket", <%= application_module %>Web.AdminSocket,
+    websocket: true,
+    longpoll: true
 
   # Serve at "/" the static files from "priv/static" directory.
   #

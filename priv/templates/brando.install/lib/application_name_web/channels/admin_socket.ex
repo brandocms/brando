@@ -8,10 +8,6 @@ defmodule <%= application_module %>Web.AdminSocket do
   channel "admin", <%= application_module %>.AdminChannel
   channel "user:*", Brando.UserChannel
 
-  ## Transports
-  transport :websocket, Phoenix.Transports.WebSocket
-  transport :longpoll, Phoenix.Transports.LongPoll
-
   @doc """
   Connect socket with token
   """
