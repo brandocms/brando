@@ -83,11 +83,14 @@ $ mix release.init
 ```
 
 And set its config to default to prod.
-Then add `:bcrypt_elixir` to applications:
+Then add this to the release cfg
 
 ```elixir
 release :my_app do
   set version: current_version(:my_app)
+  set commands: [
+    migrate: "rel/commands/migrate.sh"
+  ]
   set applications: [
     :runtime_tools,
     :bcrypt_elixir
