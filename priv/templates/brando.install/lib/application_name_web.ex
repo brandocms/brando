@@ -30,10 +30,10 @@ defmodule <%= application_module %>Web do
   def controller do
     quote do
       use Phoenix.Controller, namespace: <%= application_module %>Web
-      import <%= application_module %>Web.Router.Helpers
       import <%= application_module %>Web.Gettext
 
       alias <%= application_module %>.Repo
+      alias <%= application_module %>Web.Router.Helpers, as: Routes
 
       import Ecto
       import Ecto.Query
@@ -69,9 +69,10 @@ defmodule <%= application_module %>Web do
       import Brando.HTML
       import Brando.Utils
 
-      import <%= application_module %>Web.Router.Helpers
       import <%= application_module %>Web.ErrorHelpers
       import <%= application_module %>Web.Gettext
+
+      alias <%= application_module %>Web.Router.Helpers, as: Routes
     end
   end
 
