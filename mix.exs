@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "1.0.0-alpha.0"
+  @version "1.0.0"
   @description "A helping hand for Twined applications."
 
   def project do
