@@ -51,7 +51,7 @@ defmodule <%= application_module %>.Mixfile do
      {:absinthe_ecto, "~> 0.1"},
 
      # release management and production tools
-     {:distillery, "~> 1.5"},
+     {:distillery, "~> 2.0"},
      {:recon, "~> 2.3"},
      {:hrafn, "~> 0.1"},
      {:plug_heartbeat, "~> 0.1"},

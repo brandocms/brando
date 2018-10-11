@@ -15,6 +15,11 @@ defmodule Mix.Tasks.Brando.Install do
     # Formatter
     {:eex, "templates/brando.install/formatter.exs", ".formatter.exs"},
 
+    # Release migrator
+    {:eex, "templates/brando.install/rel/commands/migrate.sh", "rel/commands/migrate.sh"},
+    {:eex, "templates/brando.install/lib/application_name/release_tasks.ex",
+     "lib/application_name/release_tasks.ex"},
+
     # Etc. Various OS config files and log directory.
     {:keep, "templates/brando.install/log", "log"},
     {:eex, "templates/brando.install/etc/logrotate/prod.conf", "etc/logrotate/prod.conf"},
