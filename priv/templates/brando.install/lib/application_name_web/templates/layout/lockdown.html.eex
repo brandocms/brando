@@ -8,16 +8,16 @@
     <meta name="author" content="">
 
     <title><%%= Brando.config(:title_prefix) %> | Coming soon</title>
-    <link rel="stylesheet" href="<%%= static_path(@conn, "/css/app.css") %>">
-    <script src="<%%= static_path(@conn, "/js/jquery.js") %>"></script>
+    <link rel="stylesheet" href="<%%= Routes.static_path(@conn, "/css/app.css") %>">
+    <script src="<%%= Routes.static_path(@conn, "/js/jquery.js") %>"></script>
   </head>
   <body id="lockdown">
     <section class="container">
       <%%= render @view_module, @view_template, assigns %>
     </section>
 
-    <script src="<%%= static_path(@conn, "/js/vendor.js") %>"></script>
-    <script src="<%%= static_path(@conn, "/js/app.js") %>"></script>
+    <script src="<%%= Routes.static_path(@conn, "/js/vendor.js") %>"></script>
+    <script src="<%%= Routes.static_path(@conn, "/js/app.js") %>"></script>
     <%%= Brando.HTML.google_analytics("UA-XXXXX-X") %>
   </body>
 </html>
