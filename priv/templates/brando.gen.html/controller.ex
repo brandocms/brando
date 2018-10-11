@@ -1,9 +1,10 @@
 defmodule <%= module %>Controller do
-  use <%= base %>.Web, :controller
-  alias <%= module %>
+  use <%= base %>Web, :controller
+  alias <%= base %>.<%= domain %>
 
+  @doc false
   def index(conn, _params) do
-    <%= plural %> = Brando.repo.all(<%= alias %>)
+    {:ok, <%= plural %>} = <%= domain %>.list_<%= plural %>()
 
     render conn, :index, [
       <%= plural %>: <%= plural %>,

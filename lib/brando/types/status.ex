@@ -1,6 +1,6 @@
 defmodule Brando.Type.Status do
   @moduledoc """
-  Defines a type for managing status in post models.
+  Defines a type for managing status in post schemas.
   """
 
   @behaviour Ecto.Type
@@ -15,10 +15,12 @@ defmodule Brando.Type.Status do
   Cast should return OUR type no matter what the input.
   """
   def cast(atom) when is_atom(atom), do: {:ok, atom}
+
   def cast(binary) when is_binary(binary) do
-    [atom] = for {k, v} <- @status_codes, v == String.to_integer(binary), do: k
+    atom = String.to_existing_atom(binary)
     {:ok, atom}
   end
+
   def cast(status) when is_integer(status) do
     case status do
       0 -> {:ok, :draft}
@@ -28,20 +30,16 @@ defmodule Brando.Type.Status do
     end
   end
 
-  @doc """
-  Cast anything else is a failure
-  """
+  # Cast anything else is a failure
   def cast(_), do: :error
 
-  @doc """
-  Integers are never considered blank
-  """
+  # Integers are never considered blank
   def blank?(_), do: false
 
   @doc """
   When loading `roles` from the database, we are guaranteed to
   receive an integer (as database are stricts) and we will
-  just return it to be stored in the model struct.
+  just return it to be stored in the schema struct.
   """
   def load(status) when is_integer(status) do
     case status do
@@ -59,6 +57,7 @@ defmodule Brando.Type.Status do
   def dump(atom) when is_atom(atom), do: {:ok, @status_codes[atom]}
   def dump(binary) when is_binary(binary), do: {:ok, String.to_integer(binary)}
   def dump(integer) when is_integer(integer), do: {:ok, integer}
+
   def dump(_) do
     :error
   end

@@ -1,7 +1,10 @@
 defmodule Brando.UtilsTest do
   use ExUnit.Case, async: true
   use Plug.Test
+
   import Brando.Utils
+  import ExUnit.CaptureIO
+
   alias Brando.UtilsTest.TestStruct
 
   defmodule TestStruct do
@@ -9,33 +12,28 @@ defmodule Brando.UtilsTest do
   end
 
   test "slugify basic stripping/no ending dash" do
-    assert slugify("This is basic functionality!!!    ")
-           == "this-is-basic-functionality"
+    assert slugify("This is basic functionality!!!    ") == "this-is-basic-functionality"
   end
 
   test "slugify no starting dash" do
-    assert slugify("-This is basic functionality!!!    ")
-           == "this-is-basic-functionality"
+    assert slugify("-This is basic functionality!!!    ") == "this-is-basic-functionality"
   end
 
   test "slugify straße" do
-    assert slugify("straße")
-           == "strasse"
+    assert slugify("straße") == "strasse"
   end
 
   test "slugify strips symbols" do
-    assert slugify("Is ♬ ♫ ♪ ♩ a melody or just noise?")
-           == "is-a-melody-or-just-noise"
+    assert slugify("Is ♬ ♫ ♪ ♩ a melody or just noise?") == "is-♬-♫-♪-♩-a-melody-or-just-noise"
   end
 
   test "slugify strips accents" do
-    assert slugify("Àddîñg áçćèńtš tô Éñgłïśh íš śīłłÿ!")
-           == "adding-accents-to-english-is-silly"
+    assert slugify("Àddîñg áçćèńtš tô Éñgłïśh íš śīłłÿ!") == "adding-accents-to-english-is-silly"
   end
 
   test "slugify special characters" do
-    assert slugify("special characters (#?@$%^*) are also ASCII")
-           == "special-characters-atdollar-are-also-ascii"
+    assert slugify("special characters (#?@$%^*) are also ASCII") ==
+             "special-characters-atdollar-are-also-ascii"
   end
 
   test "slugify & -> and" do
@@ -47,10 +45,8 @@ defmodule Brando.UtilsTest do
   end
 
   test "slugify_filename/1" do
-    assert slugify_filename("testing with spaces.jpeg")
-           == "testing-with-spaces.jpeg"
-    assert slugify_filename("-start æøå-.jpeg")
-           == "start-aeoeaa.jpeg"
+    assert slugify_filename("testing with spaces.jpeg") == "testing-with-spaces.jpeg"
+    assert slugify_filename("-start æøå-.jpeg") == "start-aeoeaa.jpeg"
   end
 
   test "random_filename/1" do
@@ -84,11 +80,6 @@ defmodule Brando.UtilsTest do
     refute unique_filename(filename) == filename
   end
 
-  test "to_iso8601/1" do
-    dt = %Ecto.DateTime{year: 2014, month: 1, day: 1, hour: 12, min: 0, sec: 0}
-    assert to_iso8601(dt) == "2014-01-01T12:00:00Z"
-  end
-
   test "media_url/1" do
     assert media_url("test") == "/media/test"
     assert media_url(nil) == "/media"
@@ -105,27 +96,21 @@ defmodule Brando.UtilsTest do
       path: "original/path/file.jpg",
       sizes: %{"thumb" => "images/thumb/file.jpg"}
     }
-    assert img_url(img, :thumb)
-           == "images/thumb/file.jpg"
-    assert img_url(nil, :thumb, [default: "default.jpg", prefix: "prefix"])
-           == "thumb/default.jpg"
-    assert img_url(nil, :thumb, [default: "default.jpg"])
-           == "thumb/default.jpg"
-    assert img_url(img, :thumb, [default: "default.jpg", prefix: "prefix"])
-           == "prefix/images/thumb/file.jpg"
-    assert img_url(img, :thumb, [default: "default.jpg"])
-           == "images/thumb/file.jpg"
-    assert img_url(img, "thumb", [default: "default.jpg"])
-           == "images/thumb/file.jpg"
-    assert img_url(img, :original)
-           == "original/path/file.jpg"
-    assert img_url(img, :original, prefix: "prefix")
-           == "prefix/original/path/file.jpg"
 
+    assert img_url(img, :thumb) == "images/thumb/file.jpg"
+    assert img_url(nil, :thumb, default: "default.jpg", prefix: "prefix") == "thumb/default.jpg"
+    assert img_url(nil, :thumb, default: "default.jpg") == "thumb/default.jpg"
 
-    assert_raise ArgumentError, fn ->
-      img_url(img, :notasize, [default: "default.jpg"])
-    end
+    assert img_url(img, :thumb, default: "default.jpg", prefix: "prefix") ==
+             "prefix/images/thumb/file.jpg"
+
+    assert img_url(img, :thumb, default: "default.jpg") == "images/thumb/file.jpg"
+    assert img_url(img, "thumb", default: "default.jpg") == "images/thumb/file.jpg"
+    assert img_url(img, :original) == "original/path/file.jpg"
+    assert img_url(img, :original, prefix: "prefix") == "prefix/original/path/file.jpg"
+
+    assert capture_io(:stderr, fn -> img_url(img, :notasize, default: "default.jpg") end) =~
+             "Wrong key for img_url. Size `notasize` does not exist for"
   end
 
   test "get_now" do
@@ -147,6 +132,7 @@ defmodule Brando.UtilsTest do
       %{name: "Liza", gender: :female},
       %{name: "Karen", gender: :female}
     ]
+
     result = split_by(records, :gender)
     assert length(result[:male]) == 1
     assert length(result[:female]) == 3
@@ -155,13 +141,15 @@ defmodule Brando.UtilsTest do
   test "get_page_title" do
     assert get_page_title(%{assigns: %{page_title: "Test"}}) == "MyApp | Test"
     assert get_page_title(%{}) == "MyApp"
+
+    Application.put_env(:brando, :title_prefix, "MyApp! >> ")
+
+    assert get_page_title(%{assigns: %{page_title: "Test"}}) == "MyApp! >> Test"
+    assert get_page_title(%{}) == "MyApp"
   end
 
   test "host_and_media_url" do
-    mock_conn = %{port: 80, scheme: "http", host: "brando.com"}
-    assert host_and_media_url(mock_conn) == "http://brando.com/media"
-    mock_conn = %{port: 8000, scheme: "https", host: "brando.com"}
-    assert host_and_media_url(mock_conn) == "https://brando.com:8000/media"
+    assert host_and_media_url() == "http://localhost/media"
   end
 
   test "https_url" do
@@ -171,20 +159,20 @@ defmodule Brando.UtilsTest do
 
   test "human_spaced_number" do
     assert human_spaced_number("10000000") == "10 000 000"
-    assert human_spaced_number(10000000) == "10 000 000"
+    assert human_spaced_number(10_000_000) == "10 000 000"
   end
 
   test "human_time" do
-    assert human_time(1000000000) == "11 days"
-    assert human_time(10000000) == "2 hours"
-    assert human_time(100000) == "1 mins"
+    assert human_time(1_000_000_000) == "11 days"
+    assert human_time(10_000_000) == "2 hours"
+    assert human_time(100_000) == "1 mins"
     assert human_time(1000) == "1 secs"
   end
 
   test "human_size" do
-    assert human_size(100000000) == "95 MB"
-    assert human_size(1000000) == "976 kB"
-    assert human_size(10000) == "10 000 B"
+    assert human_size(100_000_000) == "95 MB"
+    assert human_size(1_000_000) == "976 kB"
+    assert human_size(10_000) == "10 000 B"
   end
 
   test "helpers" do

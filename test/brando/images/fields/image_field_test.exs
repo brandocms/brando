@@ -2,7 +2,7 @@ defmodule Brando.Images.Field.ImageFieldTest do
   use ExUnit.Case, async: true
   import Brando.Images.Utils
 
-  defmodule TestModel do
+  defmodule TestSchema do
     use Brando.Field.ImageField
 
     @cfg %{
@@ -10,23 +10,24 @@ defmodule Brando.Images.Field.ImageFieldTest do
       default_size: :medium,
       upload_path: Path.join("images", "avatars"),
       random_filename: true,
-      size_limit: 10240000,
+      size_limit: 10_240_000,
       sizes: %{
-        "micro"  => %{"size" => "25x25", "quality" => 100, "crop" => true},
-        "thumb"  => %{"size" => "150x150", "quality" => 100, "crop" => true},
-        "small"  => %{"size" => "300", "quality" => 100},
+        "micro" => %{"size" => "25x25", "quality" => 100, "crop" => true},
+        "thumb" => %{"size" => "150x150", "quality" => 100, "crop" => true},
+        "small" => %{"size" => "300", "quality" => 100},
         "medium" => %{"size" => "500", "quality" => 100},
-        "large"  => %{"size" => "700", "quality" => 100},
+        "large" => %{"size" => "700", "quality" => 100},
         "xlarge" => %{"size" => "900", "quality" => 100}
       }
     }
 
-    has_image_field :avatar, @cfg
+    has_image_field(:avatar, @cfg)
 
     def cfg, do: struct!(Brando.Type.ImageConfig, @cfg)
   end
 
   test "use works" do
-    assert Brando.Images.Field.ImageFieldTest.TestModel.get_image_cfg(:avatar) == TestModel.cfg
+    assert Brando.Images.Field.ImageFieldTest.TestSchema.get_image_cfg(:avatar) ==
+             {:ok, TestSchema.cfg()}
   end
 end

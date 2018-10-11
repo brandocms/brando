@@ -14,14 +14,15 @@ defmodule Brando.Web do
 
   def view do
     quote do
-      use Phoenix.View, root: "web/templates"
+      use Phoenix.View, root: "lib/web/templates"
 
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_flash: 2]
 
       import Plug.Conn, only: [get_session: 2]
-      import Brando.Utils, only: [media_url: 0, media_url: 1,
-                                  current_user: 1, app_name: 0, img_url: 3]
+
+      import Brando.Utils,
+        only: [media_url: 0, media_url: 1, current_user: 1, app_name: 0, img_url: 3]
 
       # Import all HTML functions (forms, tags, etc)
       use Phoenix.HTML
@@ -31,7 +32,8 @@ defmodule Brando.Web do
 
   def controller do
     helpers = Brando.helpers()
-    repo = Brando.repo
+    repo = Brando.repo()
+
     quote do
       use Phoenix.Controller
 
@@ -40,7 +42,7 @@ defmodule Brando.Web do
 
       import Brando.Meta.Controller
       import Brando.Utils, only: [current_user: 1, helpers: 1]
-      import Brando.Utils.Model, only: [put_creator: 2]
+      import Brando.Utils.Schema, only: [put_creator: 2]
 
       # Alias the data repository as a convenience
       alias unquote(repo)
@@ -50,17 +52,39 @@ defmodule Brando.Web do
     end
   end
 
-  def model do
-    repo = Brando.repo
+  def schema do
+    repo = Brando.repo()
+
     quote do
       use Ecto.Schema
 
       import Ecto
       import Ecto.Changeset
       import Ecto.Query, only: [from: 1, from: 2]
+      import Brando.Utils.Schema
 
       # Alias the data repository as a convenience
       alias unquote(repo)
+    end
+  end
+
+  def absinthe do
+    repo = Brando.repo()
+
+    quote do
+      # Provides us with a DSL for defining GraphQL Types
+      use Absinthe.Schema.Notation
+
+      # Enable helpers for batching associated requests
+      use Absinthe.Ecto, repo: unquote(repo)
+
+      import Absinthe.Ecto
+    end
+  end
+
+  def resolver do
+    quote do
+      import Brando.GraphQL.Helpers
     end
   end
 

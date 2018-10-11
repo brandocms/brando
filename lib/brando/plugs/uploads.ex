@@ -8,29 +8,21 @@ defmodule Brando.Plug.Uploads do
       plug :check_for_uploads, {"user", Brando.User}
            when action in [:create, :profile_update, :update]
   """
-  require Logger
+  # DEPRECATED
+  # TODO: REMOVE BEFORE 1.0
+  @spec check_for_uploads(Plug.Conn.t(), {String.t(), module}) :: Plug.Conn.t()
+  def check_for_uploads(_, {required_key, _}) when is_binary(required_key) do
+    raise RuntimeError,
+      message: """
+      Brando.Plug.Uploads.check_for_uploads is deprecated.
 
-  @spec check_for_uploads(Plug.Conn.t, {String.t, module}) :: Plug.Conn.t
-  def check_for_uploads(conn, {required_key, module}) when is_binary(required_key) do
-    param = Map.get(conn.params, required_key)
+      Add `validate_upload/2` to your changeset function instead.
 
-    case module.check_for_uploads(module, param) do
-      {:ok, fields} ->
-        Logger.debug(inspect fields)
-        param  = handle_fields(param, fields)
-        params = Map.put(conn.params, required_key, param)
-        %{conn | params: params}
-      {:error, errors} ->
-        Logger.error(inspect(errors))
-        conn
-      [] ->
-        conn
-    end
-  end
-
-  defp handle_fields(param, fields) do
-    Enum.reduce fields, param, fn ({name, field}, acc) ->
-      Map.put(acc, name, field)
-    end
+          def changeset(schema, params) do
+            schema
+            |> cast(...)
+            |> validate_upload({:image, :field_name}) # or {:file, :field_name}
+          end
+      """
   end
 end

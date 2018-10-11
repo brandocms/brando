@@ -2,9 +2,24 @@ defmodule Mix.Brando do
   # Conveniences for Phoenix tasks.
   @moduledoc false
 
-  @valid_attributes [:integer, :float, :decimal, :boolean, :map, :string,
-                     :image, :villain, :array, :references, :text, :date,
-                     :time, :datetime, :uuid]
+  @valid_attributes [
+    :integer,
+    :float,
+    :decimal,
+    :boolean,
+    :map,
+    :string,
+    :image,
+    :villain,
+    :array,
+    :references,
+    :text,
+    :date,
+    :file,
+    :time,
+    :datetime,
+    :uuid
+  ]
 
   @doc """
   Copies files from source dir to target dir
@@ -16,6 +31,9 @@ defmodule Mix.Brando do
     roots = Enum.map(apps, &to_app_source(&1, source_dir))
 
     for {format, source_file_path, target_file_path} <- mapping do
+      target_file_path =
+        String.replace(target_file_path, "application_name", to_string(otp_app()))
+
       source =
         Enum.find_value(roots, fn root ->
           source = Path.join(root, source_file_path)
@@ -27,7 +45,7 @@ defmodule Mix.Brando do
       contents =
         case format do
           :text -> File.read!(source)
-          :eex  -> EEx.eval_file(source, binding)
+          :eex -> EEx.eval_file(source, binding)
         end
 
       Mix.Generator.create_file(target, contents)
@@ -36,6 +54,7 @@ defmodule Mix.Brando do
 
   defp to_app_source(path, source_dir) when is_binary(path),
     do: Path.join(path, source_dir)
+
   defp to_app_source(app, source_dir) when is_atom(app),
     do: Application.app_dir(app, source_dir)
 
@@ -67,21 +86,23 @@ defmodule Mix.Brando do
        path: "admin/super_user"]
   """
   def inflect(singular) do
-    base     = Mix.Phoenix.base
-    scoped   = Phoenix.Naming.camelize(singular)
-    path     = Phoenix.Naming.underscore(scoped)
-    singular = path |> String.split("/") |> List.last
-    module   = base |> Module.concat(scoped) |> inspect
-    alias    = module |> String.split(".") |> List.last
-    human    = Phoenix.Naming.humanize(singular)
+    base = Mix.Phoenix.base()
+    scoped = Phoenix.Naming.camelize(singular)
+    path = Phoenix.Naming.underscore(scoped)
+    singular = path |> String.split("/") |> List.last()
+    module = base |> Module.concat(scoped) |> inspect
+    alias = module |> String.split(".") |> List.last()
+    human = Phoenix.Naming.humanize(singular)
 
-    [alias: alias,
-     human: human,
-     base: base,
-     module: module,
-     scoped: scoped,
-     singular: singular,
-     path: path]
+    [
+      alias: alias,
+      human: human,
+      base: base,
+      module: module,
+      scoped: scoped,
+      singular: singular,
+      path: path
+    ]
   end
 
   @doc """
@@ -102,22 +123,22 @@ defmodule Mix.Brando do
   def params(attrs) do
     attrs
     |> Enum.reject(fn
-        {_, {:references, _}} -> true
-        {_, _} -> false
-       end)
+      {_, {:references, _}} -> true
+      {_, _} -> false
+    end)
     |> Enum.into(%{}, fn
-        {k, {:array, _}}      -> {k, []}
-        {k, :integer}         -> {k, 42}
-        {k, :float}           -> {k, "120.5"}
-        {k, :decimal}         -> {k, "120.5"}
-        {k, :boolean}         -> {k, true}
-        {k, :map}             -> {k, %{}}
-        {k, :text}            -> {k, "some content"}
-        {k, :date}            -> {k, "2010-04-17"}
-        {k, :time}            -> {k, "14:00:00"}
-        {k, :datetime}        -> {k, "2010-04-17 14:00:00"}
-        {k, :uuid}            -> {k, "7488a646-e31f-11e4-aace-600308960662"}
-        {k, _}                -> {k, "some content"}
+      {k, {:array, _}} -> {k, []}
+      {k, :integer} -> {k, 42}
+      {k, :float} -> {k, "120.5"}
+      {k, :decimal} -> {k, "120.5"}
+      {k, :boolean} -> {k, true}
+      {k, :map} -> {k, %{}}
+      {k, :text} -> {k, "some content"}
+      {k, :date} -> {k, "2010-04-17"}
+      {k, :time} -> {k, "14:00:00"}
+      {k, :datetime} -> {k, "2010-04-17 14:00:00"}
+      {k, :uuid} -> {k, "7488a646-e31f-11e4-aace-600308960662"}
+      {k, _} -> {k, "some content"}
     end)
   end
 
@@ -126,8 +147,9 @@ defmodule Mix.Brando do
   """
   def check_module_name_availability!(name) do
     name = Module.concat(Elixir, name)
+
     if Code.ensure_loaded?(name) do
-      Mix.raise "Module name #{inspect name} is already taken, please choose another name"
+      Mix.raise("Module name #{inspect(name)} is already taken, please choose another name")
     end
   end
 
@@ -137,11 +159,11 @@ defmodule Mix.Brando do
         app_namespace: My.App
   """
   def base do
-    app = Mix.Project.config |> Keyword.fetch!(:app)
+    app = Mix.Project.config() |> Keyword.fetch!(:app)
 
     case Application.get_env(app, :app_namespace, app) do
-      ^app -> app |> to_string |> Phoenix.Naming.camelize
-      mod  -> mod |> inspect
+      ^app -> app |> to_string |> Phoenix.Naming.camelize()
+      mod -> mod |> inspect
     end
   end
 
@@ -149,9 +171,9 @@ defmodule Mix.Brando do
   Returns all compiled modules in a project.
   """
   def modules do
-    Mix.Project.compile_path
+    Mix.Project.compile_path()
     |> Path.join("*.beam")
-    |> Path.wildcard
+    |> Path.wildcard()
     |> Enum.map(&beam_to_module/1)
   end
 
@@ -159,13 +181,20 @@ defmodule Mix.Brando do
     path |> Path.basename(".beam") |> String.to_atom()
   end
 
+  defp otp_app do
+    Mix.Project.config() |> Keyword.fetch!(:app)
+  end
+
   defp list_to_attr([key]), do: {String.to_atom(key), :string}
   defp list_to_attr([key, value]), do: {String.to_atom(key), String.to_atom(value)}
+
   defp list_to_attr([key, comp, value]) do
     {String.to_atom(key), {String.to_atom(comp), String.to_atom(value)}}
   end
 
   defp validate_attr!({_name, type} = attr) when type in @valid_attributes, do: attr
   defp validate_attr!({_name, {type, _}} = attr) when type in @valid_attributes, do: attr
-  defp validate_attr!({_, type}), do: Mix.raise "Unknown type `#{type}` given to generator"
+
+  defp validate_attr!({_, type}),
+    do: Mix.raise("Unknown type `#{inspect(type)}` given to generator")
 end

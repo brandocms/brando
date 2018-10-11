@@ -1,6 +1,6 @@
 defmodule Brando.HTML.Inspect do
   @moduledoc """
-  Rendering functions for displaying model data
+  Rendering functions for displaying schema data
   """
   import Brando.Gettext
   import Brando.Render, only: [r: 1]
@@ -9,19 +9,10 @@ defmodule Brando.HTML.Inspect do
   import Phoenix.HTML.Tag, only: [content_tag: 3]
 
   @doc """
-  Returns the record's model name from __name__/1
-  `form` is `:singular` or `:plural`
-  """
-  @spec model_name(map, :singular | :plural) :: String.t
-  def model_name(_, _) do
-    raise "model_name/2 is deprecated. use schema_name/2 instead."
-  end
-
-  @doc """
   Returns the record's schema name from __name__/1
   `form` is `:singular` or `:plural`
   """
-  @spec schema_name(map, :singular | :plural) :: String.t
+  @spec schema_name(map, :singular | :plural) :: String.t()
   def schema_name(record, form) do
     record.__struct__.__name__(form)
   end
@@ -29,43 +20,44 @@ defmodule Brando.HTML.Inspect do
   @doc """
   Returns the schema's representation from __repr__/0
   """
-  @spec schema_repr(map) :: String.t
+  @spec schema_repr(map) :: String.t()
   def schema_repr(record) do
     record.__struct__.__repr__(record)
   end
 
   @doc """
-  Returns the model's representation from __repr__/0
+  Inspects and displays `schema`
   """
-  @spec model_repr(map) :: String.t
-  def model_repr(_) do
-    raise "model_repr/1 is deprecated. use schema_repr/1 instead."
-  end
+  def schema(nil), do: ""
 
-  @doc """
-  Inspects and displays `model`
-  """
-  def model(nil) do
-    ""
-  end
-
-  @doc """
-  Inspects and displays `model_struct`
-  """
-  def model(model_struct) do
-    module = model_struct.__struct__
+  def schema(schema_struct) do
+    module = schema_struct.__struct__
     fields = module.__schema__(:fields)
     assocs = module.__schema__(:associations)
 
-    rendered_fields = fields
-    |> Enum.map(&(render_inspect_field(&1, module, module.__schema__(:type, &1),
-                                       Map.get(model_struct, &1))))
-    |> Enum.join
+    rendered_fields =
+      fields
+      |> Enum.map(
+        &render_inspect_field(
+          &1,
+          module,
+          module.__schema__(:type, &1),
+          Map.get(schema_struct, &1)
+        )
+      )
+      |> Enum.join()
 
-    rendered_assocs = assocs
-    |> Enum.map(&(render_inspect_assoc(&1, module, module.__schema__(:association, &1),
-                                       Map.get(model_struct, &1))))
-    |> Enum.join
+    rendered_assocs =
+      assocs
+      |> Enum.map(
+        &render_inspect_assoc(
+          &1,
+          module,
+          module.__schema__(:association, &1),
+          Map.get(schema_struct, &1)
+        )
+      )
+      |> Enum.join()
 
     content_tag :table, class: "table data-table" do
       {:safe, "#{rendered_fields}#{rendered_assocs}"}
@@ -73,8 +65,9 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp render_inspect_field(name, module, type, value) do
-    if not String.ends_with?(to_string(name), "_id") and not name in module.__hidden_fields__ do
+    if not String.ends_with?(to_string(name), "_id") and name not in module.__hidden_fields__ do
       val = inspect_field(name, type, value)
+
       """
       <tr>
         <td>#{module.__field__(name)}</td>
@@ -91,32 +84,33 @@ defmodule Brando.HTML.Inspect do
     do_inspect_field(name, type, value)
   end
 
-  defp do_inspect_field(_name, Ecto.DateTime, nil) do
+  defp do_inspect_field(_name, :naive_datetime, nil) do
     ~s(<em>#{gettext("No value")}<em>)
   end
 
-  defp do_inspect_field(_name, Ecto.DateTime, value) do
-    ~s(#{value.day}/#{value.month}/#{value.year} #{zero_pad(value.hour, 2)}:#{zero_pad(value.min, 2)})
+  defp do_inspect_field(_name, :naive_datetime, value) do
+    ~s(#{value.day}/#{value.month}/#{value.year} #{zero_pad(value.hour, 2)}:#{
+      zero_pad(value.minute, 2)
+    })
   end
 
-  defp do_inspect_field(_name, Ecto.Date, nil) do
+  defp do_inspect_field(_name, :date, nil) do
     ~s(<em>#{gettext("No value")}<em>)
   end
 
-  defp do_inspect_field(_name, Ecto.Date, value) do
+  defp do_inspect_field(_name, :date, value) do
     ~s(#{value.day}/#{value.month}/#{value.year})
   end
 
-  defp do_inspect_field(_name, Brando.Type.Role, roles) do
-    Enum.map roles, fn (role) ->
-      role_name =
-        case role do
-          :superuser -> gettext("superuser")
-          :admin     -> gettext("admin")
-          :staff     -> gettext("staff")
-        end
-      ~s(<span class="label label-#{role}">#{role_name}</span>)
-    end
+  defp do_inspect_field(_name, Brando.Type.Role, role) do
+    role_name =
+      case role do
+        :superuser -> gettext("superuser")
+        :admin -> gettext("admin")
+        :staff -> gettext("staff")
+      end
+
+    ~s(<span class="label label-#{role}">#{role_name}</span>)
   end
 
   defp do_inspect_field(_name, Brando.Type.Json, _value) do
@@ -149,10 +143,11 @@ defmodule Brando.HTML.Inspect do
     status =
       case value do
         :published -> gettext("Published")
-        :pending   -> gettext("Pending")
-        :draft     -> gettext("Draft")
-        :deleted   -> gettext("Deleted")
+        :pending -> gettext("Pending")
+        :draft -> gettext("Draft")
+        :deleted -> gettext("Deleted")
       end
+
     ~s(<span class="label label-#{value}">#{status}</span>)
   end
 
@@ -163,7 +158,7 @@ defmodule Brando.HTML.Inspect do
   defp do_inspect_field(:language, :string, language_code) do
     """
     <div class="text-center">
-      <img src="#{Brando.helpers.static_path(Brando.endpoint, "/images/brando/blank.gif")}"
+      <img src="#{Brando.helpers().static_path(Brando.endpoint(), "/images/brando/blank.gif")}"
            class="flag flag-#{language_code}" alt="#{language_code}" />
     </div>
     """
@@ -172,8 +167,10 @@ defmodule Brando.HTML.Inspect do
   defp do_inspect_field(:key, :string, nil) do
     ""
   end
+
   defp do_inspect_field(:key, :string, val) do
     split = String.split(val, "/", parts: 2)
+
     if Enum.count(split) == 1 do
       ~s(<strong>#{split}</strong>)
     else
@@ -197,16 +194,16 @@ defmodule Brando.HTML.Inspect do
   defp do_inspect_field(_name, :string, value), do: value
   defp do_inspect_field(_name, :integer, value), do: value
 
-  defp do_inspect_field(_name, :boolean, :true) do
-    ~s(<div class="text-center"><i class="fa fa-check text-success"></i></div>)
+  defp do_inspect_field(_name, :boolean, true) do
+    ~s(<div class="text-center"><i class="icon-centered fa fa-check text-success"></i></div>)
   end
 
   defp do_inspect_field(_name, :boolean, nil) do
-    ~s(<div class="text-center"><i class="fa fa-times text-danger"></i></div>)
+    ~s(<div class="text-center"><i class="icon-centered fa fa-times text-danger"></i></div>)
   end
 
-  defp do_inspect_field(_name, :boolean, :false) do
-    ~s(<div class="text-center"><i class="fa fa-times text-danger"></i></div>)
+  defp do_inspect_field(_name, :boolean, false) do
+    ~s(<div class="text-center"><i class="icon-centered fa fa-times text-danger"></i></div>)
   end
 
   defp do_inspect_field(_name, _type, %Brando.User{} = user) do
@@ -214,12 +211,34 @@ defmodule Brando.HTML.Inspect do
   end
 
   defp do_inspect_field(_name, nil, %{__struct__: _struct} = value)
-  when is_map(value) do
+       when is_map(value) do
     schema_repr(value)
+  end
+
+  defp do_inspect_field(_name, nil, nil) do
+    ~s(—)
+  end
+
+  defp do_inspect_field(name, type, list)
+       when is_list(list) do
+    list = Enum.map(list, &check_list(name, type, &1))
+    (Enum.count(list) > 0 && Enum.join(list, ", ")) || "—"
   end
 
   defp do_inspect_field(_name, _type, value) do
     inspect(value)
+  end
+
+  defp check_list(_name, _type, %{__struct__: _struct} = value) when is_map(value) do
+    schema_repr(value)
+  end
+
+  defp check_list(_name, _type, value) when is_map(value) do
+    "<map>"
+  end
+
+  defp check_list(_name, _type, value) do
+    value
   end
 
   #
@@ -230,38 +249,88 @@ defmodule Brando.HTML.Inspect do
   end
 
   @doc """
-  Public interface to inspect model associations
+  Public interface to inspect schema associations
   """
   def inspect_assoc(name, type, value) do
     do_inspect_assoc(name, type, value)
   end
 
+  defp do_inspect_assoc(name, %Ecto.Association.BelongsTo{}, %Ecto.Association.NotLoaded{}) do
+    ~s(<tr><td>#{name}</td><td>#{gettext("Association not fetched")}</td></tr>)
+  end
+
   defp do_inspect_assoc(name, %Ecto.Association.BelongsTo{}, nil) do
     ~s(<tr><td>#{name}</td><td><em>#{gettext("Empty association")}</em></td></tr>)
   end
+
   defp do_inspect_assoc(name, %Ecto.Association.BelongsTo{} = type, value) do
     ~s(<tr><td>#{name}</td><td>#{type.related.__repr__(value)}</td></tr>)
   end
+
   defp do_inspect_assoc(name, %Ecto.Association.Has{}, %Ecto.Association.NotLoaded{}) do
     ~s(<tr><td>#{name}</td><td>#{gettext("Association not fetched")}</td></tr>)
   end
+
   defp do_inspect_assoc(name, %Ecto.Association.Has{}, []) do
     ~s(<tr><td>#{name}</td><td><em>#{gettext("Empty association")}</em></td></tr>)
   end
-  defp do_inspect_assoc(_name, %Ecto.Association.Has{} = type, value) do
+
+  defp do_inspect_assoc(name, %Ecto.Association.Has{}, nil) do
+    ~s(<tr><td>#{name}</td><td><em>#{gettext("Empty association")}</em></td></tr>)
+  end
+
+  defp do_inspect_assoc(name, %Ecto.Association.ManyToMany{}, %Ecto.Association.NotLoaded{}) do
+    ~s(<tr><td>#{name}</td><td>#{gettext("Association not fetched")}</td></tr>)
+  end
+
+  defp do_inspect_assoc(name, %Ecto.Association.ManyToMany{}, []) do
+    ~s(<tr><td>#{name}</td><td><em>#{gettext("Empty association")}</em></td></tr>)
+  end
+
+  defp do_inspect_assoc(name, %Ecto.Association.ManyToMany{} = type, values) do
+    values =
+      values
+      |> Enum.map(&type.related.__repr__(&1))
+      |> Enum.join("<br />")
+
+    ~s(<tr><td>#{name}</td><td>#{values}</td></tr>)
+  end
+
+  defp do_inspect_assoc(_name, %Ecto.Association.Has{} = type, value) when is_list(value) do
     rows =
-      Enum.map value, fn (row) ->
+      Enum.map(value, fn row ->
         """
         <div class="assoc #{type.field}">
           #{type.related.__repr__(row)}
         </div>
         """
-      end
+      end)
+
     """
     <tr>
       <td>
         <i class="fa fa-link"></i>
         #{gettext("Connected")} #{type.related.__name__(:plural)}
+      </td>
+      <td>
+        #{rows}
+      </td>
+    </tr>
+    """
+  end
+
+  defp do_inspect_assoc(_name, %Ecto.Association.Has{} = type, value) do
+    rows = """
+    <div class="assoc #{type.field}">
+      #{type.related.__repr__(value)}
+    </div>
+    """
+
+    """
+    <tr>
+      <td>
+        <i class="fa fa-link"></i>
+        #{gettext("Connected")} #{type.related.__name__(:singular)}
       </td>
       <td>
         #{rows}

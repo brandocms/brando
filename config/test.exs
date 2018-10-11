@@ -9,8 +9,8 @@ config :brando, Brando.Integration.Endpoint,
 
 config :brando, Brando.Integration.TestRepo,
   url: "ecto://postgres:postgres@localhost/brando_test",
+  types: Brando.PostgresTypes,
   adapter: Ecto.Adapters.Postgres,
-  extensions: [{Postgrex.Extensions.JSON, library: Poison}],
   pool: Ecto.Adapters.SQL.Sandbox,
   ownership_pool: DBConnection.Poolboy,
   pool_overflow: 0
@@ -25,7 +25,7 @@ config :brando, Brando.Menu, [
 config :brando, Brando.Images, [
   default_config: %{
     allowed_mimetypes: ["image/jpeg", "image/png"],
-    default_size: :medium, size_limit: 10240000,
+    default_size: :medium, size_limit: 10_240_000,
     upload_path: Path.join("images", "default"),
     sizes: %{
       "small" =>  %{"size" => "300", "quality" => 100},
@@ -58,7 +58,7 @@ config :brando, :login_url, "/login"
 config :brando, :otp_app, :brando
 config :brando, :warn_on_http_auth, true
 config :brando, :default_language, "nb"
-config :brando, :admin_default_language, "nb"
+config :brando, :default_admin_language, "nb"
 config :brando, :languages, [
   [value: "nb", text: "Norsk"],
   [value: "en", text: "English"]

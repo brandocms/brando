@@ -1,7 +1,7 @@
-Code.require_file "../../../support/mix_helper.exs", __DIR__
+Code.require_file("../../../support/mix_helper.exs", __DIR__)
 
 defmodule Mix.Tasks.Brando.GenerateTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
 
   import MixHelper
 
@@ -11,42 +11,44 @@ defmodule Mix.Tasks.Brando.GenerateTest do
   @root_path Path.expand(".")
 
   setup_all do
-    templates_path = Path.join([@project_path, "deps", "brando",
-                                "web", "templates"])
-    root_path =  File.cwd!
+    templates_path = Path.join([@project_path, "deps", "brando", "lib", "web", "templates"])
+    root_path = File.cwd!()
 
     # Clean up
-    File.rm_rf @project_path
+    File.rm_rf(@project_path)
 
     # Create path for app
-    File.mkdir_p Path.join(@project_path, "web")
+    File.mkdir_p(Path.join(@project_path, "brando"))
 
     # Create path for templates
-    File.mkdir_p templates_path
+    File.mkdir_p(templates_path)
 
     # Copy templates into `deps/ashes/templates`
     # to mimic a real Phoenix application
-    File.cp_r! Path.join([root_path, "web", "templates"]), templates_path
+    File.cp_r!(Path.join([root_path, "lib", "web", "templates"]), templates_path)
 
     # Move into the project directory to run the generator
-    File.cd! @project_path
+    File.cd!(@project_path)
 
-    on_exit fn ->
-      File.cd! @root_path
-    end
+    on_exit(fn ->
+      File.cd!(@root_path)
+    end)
   end
 
   test "brando.install" do
-    Mix.Tasks.Brando.Install.run(["--static"])
+    Mix.Tasks.Brando.Install.run([])
     assert_received {:mix_shell, :info, ["\nBrando finished copying."]}
-    assert File.exists?("web/villain")
-    assert_file "web/villain/parser.ex"
-    assert_file "web/admin_web.ex", fn file ->
-      assert file =~ "Brando.Backend.Gettext"
-    end
-    assert_file "mix.exs", fn file ->
+    assert File.exists?("lib/brando_web/villain")
+    assert_file("lib/brando_web/villain/parser.ex")
+
+    assert_file("lib/brando_web.ex", fn file ->
+      assert file =~ "BrandoWeb.Gettext"
+    end)
+
+    assert_file("mix.exs", fn file ->
       assert file =~ "defmodule Brando.Mixfile do"
-    end
-    refute File.exists?("web/static/css/app.css")
+    end)
+
+    refute File.exists?("assets/css/app.css")
   end
 end

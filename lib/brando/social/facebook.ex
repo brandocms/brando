@@ -20,7 +20,6 @@ defmodule Brando.Social.Facebook do
 
   """
   def link(conn, do: {:safe, link_contents}) do
-    content_tag :a, link_contents,
-      [href: share_url(conn), title: to_string(link_contents)]
+    content_tag(:a, link_contents, href: share_url(conn), title: to_string(link_contents))
   end
 end

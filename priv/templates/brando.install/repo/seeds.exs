@@ -5,13 +5,13 @@
 # Inside the script, you can read and write to any of your
 # repositories directly:
 #
-#     <%= application_module %>.Repo.insert!(%SomeModel{})
+#     <%= application_module %>.Repo.insert!(%SomeSchema{})
 #
 # We recommend using the bang functions (`insert!`, `update!`
 # and so on) as they will fail if something goes wrong.
 
-post_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"],
-    default_size: "medium", random_filename: true, size_limit: 10240000,
+post_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
+    default_size: "medium", random_filename: true, size_limit: 10_240_000,
     sizes: %{"large" => %{"quality" => 100, "size" => "700"},
       "medium" => %{"quality" => 100, "size" => "500"},
       "micro" => %{"crop" => true, "quality" => 100, "size" => "25x25"},
@@ -20,18 +20,8 @@ post_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png
       "xlarge" => %{"quality" => 100, "size" => "900"}},
     upload_path: "images/site/posts"}
 
-page_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"],
-    default_size: "medium", random_filename: true, size_limit: 10240000,
-    sizes: %{"large" => %{"quality" => 100, "size" => "700"},
-      "medium" => %{"quality" => 100, "size" => "500"},
-      "micro" => %{"crop" => true, "quality" => 100, "size" => "25x25"},
-      "small" => %{"quality" => 100, "size" => "300"},
-      "thumb" => %{"crop" => true, "quality" => 100, "size" => "150x150"},
-      "xlarge" => %{"quality" => 100, "size" => "900"}},
-    upload_path: "images/site/pages"}
-
-ss_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"],
-    default_size: "medium", random_filename: true, size_limit: 10240000,
+ss_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
+    default_size: "medium", random_filename: true, size_limit: 10_240_000,
     sizes: %{"cropxlarge" => %{"crop" => true, "quality" => 100,
         "size" => "1140x600"}, "large" => %{"quality" => 100, "size" => "700"},
         "medium" => %{"quality" => 100, "size" => "500"},
@@ -43,22 +33,17 @@ ss_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png"]
     upload_path: "images/site/slideshows"}
 
 # insert admin user
-password = Brando.User.gen_password("admin")
+password = Comeonin.Bcrypt.hashpwsalt("admin")
 user = %Brando.User{
-  username: "admin", full_name: "Twined Admin",
+  full_name: "Twined Admin",
   email: "admin@twined.net", password: password,
-  avatar: nil, role: 7, language: "nb"}
+  avatar: nil, role: :superuser, language: "nb"}
 user = <%= application_module %>.Repo.insert!(user)
 
 post_category = %Brando.ImageCategory{
   creator_id: user.id, name: "post", slug: "post",
   cfg: post_cfg}
 post_category = <%= application_module %>.Repo.insert!(post_category)
-
-page_category = %Brando.ImageCategory{
-  creator_id: user.id, name: "page", slug: "page",
-  cfg: page_cfg}
-page_category = <%= application_module %>.Repo.insert!(page_category)
 
 ss_category = %Brando.ImageCategory{
   cfg: ss_cfg,
@@ -74,11 +59,3 @@ post_series = %Brando.ImageSeries{
   name: "post", sequence: 0, slug: "post"}
 
 <%= application_module %>.Repo.insert!(post_series)
-
-page_series = %Brando.ImageSeries{
-  creator_id: user.id, credits: nil,
-  cfg: page_cfg,
-  image_category_id: page_category.id,
-  name: "page", sequence: 0, slug: "page"}
-
-<%= application_module %>.Repo.insert!(page_series)

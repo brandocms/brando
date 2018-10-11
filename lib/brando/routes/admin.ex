@@ -16,15 +16,14 @@ defmodule Brando.Admin.Routes do
   @doc """
   Defines "RESTful" endpoints for the admins resource.
   """
-  defmacro admin_routes(path, ctrl), do:
-    add_admin_routes(path, ctrl)
+  defmacro admin_routes(path, ctrl), do: add_admin_routes(path, ctrl)
 
   defp add_admin_routes(path, controller) do
     quote do
       ctrl = unquote(controller)
       path = "/" <> unquote(path)
-      get   "#{path}/:id/delete",    ctrl, :delete_confirm
-      Phoenix.Router.resources path, ctrl
+      get "#{path}/:id/delete", ctrl, :delete_confirm
+      Phoenix.Router.resources(path, ctrl)
     end
   end
 end

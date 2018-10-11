@@ -1,0 +1,12 @@
+.slider {
+  position: relative;
+  display: inline-block;
+  height: 100%;
+  width: 100%;
+  img {
+    top: 0;
+    left: 0;
+    position: absolute;
+    opacity: 0;
+  }
+}

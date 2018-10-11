@@ -11,7 +11,9 @@ defmodule Brando.Type.Image do
             credits: nil,
             path: nil,
             sizes: %{},
-            optimized: false
+            optimized: false,
+            width: nil,
+            height: nil
 
   @doc """
   Returns the internal type representation of our `Role` type for pg
@@ -25,6 +27,7 @@ defmodule Brando.Type.Image do
     val = Poison.decode!(val, as: %Brando.Type.Image{})
     {:ok, val}
   end
+
   def cast(val) when is_map(val) do
     {:ok, val}
   end

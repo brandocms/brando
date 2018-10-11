@@ -10,8 +10,8 @@ defmodule <%= application_module %>.Repo.Migrations.CreateImageseries do
       add :credits,           :text
       add :creator_id,        references(:users)
       add :image_category_id, references(:imagecategories)
-      sequenced
-      timestamps
+      sequenced()
+      timestamps()
     end
     create unique_index(:imageseries, [:slug])
   end

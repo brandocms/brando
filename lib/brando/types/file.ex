@@ -7,7 +7,9 @@ defmodule Brando.Type.File do
 
   @behaviour Ecto.Type
 
-  defstruct path: nil
+  defstruct path: nil,
+            mimetype: nil,
+            size: nil
 
   @doc """
   Returns the internal type representation of our `Role` type for pg
@@ -21,6 +23,7 @@ defmodule Brando.Type.File do
     val = Poison.decode!(val, as: %Brando.Type.File{})
     {:ok, val}
   end
+
   def cast(val) when is_map(val) do
     {:ok, val}
   end

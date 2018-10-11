@@ -5,18 +5,17 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
 
   def up do
     create table(:users) do
-      add :username,      :text
       add :full_name,     :text
       add :email,         :text
       add :password,      :text
       add :avatar,        :text
       add :role,          :integer
+      add :active,        :boolean, default: true
       add :language,      :text,    default: "nb"
-      add :last_login,    :datetime
-      timestamps
+      add :last_login,    :naive_datetime
+      timestamps()
     end
 
-    create index(:users, [:username], unique: true)
     create index(:users, [:email], unique: true)
 
     create table(:posts) do
@@ -33,9 +32,9 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add :meta_keywords,     :text
       add :featured,          :boolean
       add :published,         :boolean
-      add :publish_at,        :datetime
-      timestamps
-      tags
+      add :publish_at,        :naive_datetime
+      timestamps()
+      tags()
     end
 
     create index(:posts, [:language])
@@ -48,7 +47,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add :slug,              :text
       add :cfg,               :json
       add :creator_id,        references(:users)
-      timestamps
+      timestamps()
     end
     create index(:imagecategories, [:slug])
 
@@ -59,17 +58,16 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add :cfg,               :json
       add :creator_id,        references(:users)
       add :image_category_id, references(:imagecategories)
-      sequenced
-      timestamps
+      sequenced()
+      timestamps()
     end
-    create unique_index(:imageseries, [:slug])
 
     create table(:images) do
       add :image,             :text
       add :creator_id,        references(:users)
       add :image_series_id,   references(:imageseries)
-      sequenced
-      timestamps
+      sequenced()
+      timestamps()
     end
 
     create table(:instagramimages) do
@@ -98,7 +96,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add :css_classes,       :text
       add :meta_description,  :text
       add :meta_keywords,     :text
-      timestamps
+      timestamps()
     end
     create index(:pages, [:language])
     create index(:pages, [:slug])
@@ -112,7 +110,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add :data,              :json
       add :html,              :text
       add :creator_id,        references(:users)
-      timestamps
+      timestamps()
     end
     create index(:pagefragments, [:language])
     create index(:pagefragments, [:key])
@@ -120,7 +118,6 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
 
   def down do
     drop table(:users)
-    drop index(:users, [:username], unique: true)
     drop index(:users, [:email], unique: true)
 
     drop table(:posts)

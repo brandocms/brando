@@ -1,7 +1,11 @@
 .git
 __design
 _build
+.temp
 media
 deps
-node_modules
+assets/backend/node_modules
+assets/frontend/node_modules
 priv/static
+.elixir_ls
+release-archives

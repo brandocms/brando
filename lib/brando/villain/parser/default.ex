@@ -36,7 +36,7 @@ defmodule Brando.Villain.Parser.Default do
         markdown_data
       end
 
-    Earmark.to_html(markdown_data, %Earmark.Options{breaks: true})
+    Earmark.as_html!(markdown_data, %Earmark.Options{breaks: true})
   end
 
   @doc """
@@ -54,7 +54,7 @@ defmodule Brando.Villain.Parser.Default do
   end
 
   @doc """
-  Convert YouTube video to iframe html
+  Convert YouTube and Vimeo videos to iframe html
   """
   def video(%{"remote_id" => remote_id, "source" => "youtube"}) do
     """
@@ -69,9 +69,6 @@ defmodule Brando.Villain.Parser.Default do
     """
   end
 
-  @doc """
-  Convert Vimeo video to iframe html
-  """
   def video(%{"remote_id" => remote_id, "source" => "vimeo"}) do
     """
     <div class="video-wrapper">
@@ -91,14 +88,16 @@ defmodule Brando.Villain.Parser.Default do
   Convert image to html, with caption and credits and optional link
   """
   def image(%{"url" => url, "title" => title, "credits" => credits} = data) do
-    {link_open, link_close} = if Map.get(data, "link", "") != "" do
-      {~s(<a href="#{data["link"]}" title="#{title}">), ~s(</a>)}
-    else
-      {"", ""}
-    end
+    {link_open, link_close} =
+      if Map.get(data, "link", "") != "" do
+        {~s(<a href="#{data["link"]}" title="#{title}">), ~s(</a>)}
+      else
+        {"", ""}
+      end
+
     """
     <div class="img-wrapper">
-      #{link_open}<img src="#{url}" alt="#{title}/#{credits}" class="img-responsive" />#{link_close}
+      #{link_open}<img src="#{url}" alt="#{title}/#{credits}" class="img-fluid" />#{link_close}
       <div class="image-info-wrapper">
         <div class="image-title">
           #{title}
@@ -115,19 +114,22 @@ defmodule Brando.Villain.Parser.Default do
   Slideshow
   """
   def slideshow(%{"imageseries" => series_slug, "size" => size}) do
-    series = Brando.repo.all(
-      from is in Brando.ImageSeries,
-            join: c in assoc(is, :image_category),
-            join: i in assoc(is, :images),
-           where: c.slug == "slideshows" and is.slug == ^series_slug,
-        order_by: i.sequence,
-         preload: [image_category: c, images: i]
-    ) |> List.first
+    series =
+      Brando.repo().all(
+        from is in Brando.ImageSeries,
+          join: c in assoc(is, :image_category),
+          join: i in assoc(is, :images),
+          where: c.slug == "slideshows" and is.slug == ^series_slug,
+          order_by: i.sequence,
+          preload: [image_category: c, images: i]
+      )
+      |> List.first()
 
-    images = Enum.map_join(series.images, "\n", fn(img) ->
-      src = img_url(img.image, String.to_atom(size), [prefix: media_url()])
-      ~s(<li><img src="#{src}" /></li>)
-    end)
+    images =
+      Enum.map_join(series.images, "\n", fn img ->
+        src = img_url(img.image, String.to_atom(size), prefix: media_url())
+        ~s(<li><img src="#{src}" /></li>)
+      end)
 
     """
     <div class="flexslider flex-viewport">
@@ -149,7 +151,7 @@ defmodule Brando.Villain.Parser.Default do
   Convert list to html through Markdown
   """
   def list(%{"text" => markdown_data}) do
-    Earmark.to_html(markdown_data)
+    Earmark.as_html!(markdown_data)
   end
 
   @doc """
@@ -163,7 +165,7 @@ defmodule Brando.Villain.Parser.Default do
   Markdown -> html
   """
   def markdown(%{"text" => markdown_data}) do
-    Earmark.to_html(markdown_data, %Earmark.Options{breaks: true})
+    Earmark.as_html!(markdown_data, %Earmark.Options{breaks: true})
   end
 
   @doc """
@@ -171,26 +173,33 @@ defmodule Brando.Villain.Parser.Default do
   """
   def blockquote(%{"text" => bq, "cite" => cite}) when byte_size(cite) > 0 do
     html = "#{bq}\n>\n> -- <cite>#{cite}</cite>"
-    Earmark.to_html(html)
+    Earmark.as_html!(html)
   end
+
   def blockquote(%{"text" => bq}) do
-    Earmark.to_html(bq)
+    Earmark.as_html!(bq)
   end
 
   @doc """
   Convert columns to html. Recursive parsing.
   """
   def columns(cols) do
-    col_html = for col <- cols do
-      c = Enum.reduce(col["data"], [], fn(d, acc) ->
-        [apply(__MODULE__, String.to_atom(d["type"]), [d["data"]])|acc]
-      end)
-      class = case col["class"] do
-        "six" -> "col-md-6"
-        class -> class
+    col_html =
+      for col <- cols do
+        c =
+          Enum.reduce(col["data"], [], fn d, acc ->
+            [apply(__MODULE__, String.to_atom(d["type"]), [d["data"]]) | acc]
+          end)
+
+        class =
+          case col["class"] do
+            "six" -> "col-md-6"
+            class -> class
+          end
+
+        ~s(<div class="#{class}">#{Enum.reverse(c)}</div>)
       end
-      ~s(<div class="#{class}">#{Enum.reverse(c)}</div>)
-    end
+
     ~s(<div class="row">#{col_html}</div>)
   end
 end

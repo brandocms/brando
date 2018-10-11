@@ -21,7 +21,9 @@ defmodule Brando.Social.Twitter do
 
   """
   def link(conn, twitter_text, do: {:safe, link_contents}) do
-    content_tag :a, link_contents,
-      [href: share_url(conn, twitter_text), title: to_string(link_contents)]
+    content_tag(:a, link_contents,
+      href: share_url(conn, twitter_text),
+      title: to_string(link_contents)
+    )
   end
 end

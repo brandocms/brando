@@ -1,6 +1,6 @@
 A helping hand.
 
-![Brando logo](https://raw.githubusercontent.com/twined/brando/develop/priv/templates/brando.install/static/brando/images/brando-big.png)
+![Brando logo](https://raw.githubusercontent.com/twined/brando/develop/priv/templates/brando.install/assets/static/brando/images/brando-big.png)
 
 [![Build Status](https://travis-ci.org/twined/brando.svg?branch=master)](https://travis-ci.org/twined/brando)
 [![Coverage Status](https://coveralls.io/repos/github/twined/brando/badge.svg?branch=master)](https://coveralls.io/github/twined/brando?branch=master)
@@ -13,23 +13,19 @@ A helping hand.
 
 Start by creating a new phoenix project:
 
-    $ mix phoenix.new my_project
+    $ mix phx.new my_project
 
 Add Brando to `deps` in your `mix.exs` file:
 
 ```elixir
 defp deps do
-  [{:brando, github: "twined/brando"}]
+  [{:brando, github: "twined/brando", branch: "develop"}]
 end
 ```
 
 Fetch and compile dependencies. Install Brando:
 
-    $ mix do deps.get, deps.compile, brando.install
-
-And then refetch new dependencies Brando has added to your `mix.exs`:
-
-    $ mix do deps.get, deps.compile
+    $ mix do deps.get, deps.compile, brando.install --module Neva, deps.get, deps.compile
 
 Add to your `config/config.exs` right before the env-specific import:
 
@@ -46,16 +42,16 @@ Add to your relevant `config/%{env}.exs` Repo config:
 
 ```diff
   config :my_app, Repo,
-+   extensions: [{Postgrex.Extensions.JSON, library: Poison}]
++   types: MyApp.PostgresTypes
 ```
 
-Install NPM packages:
+Install node packages:
 
-    $ npm install
+    $ cd assets/frontend && yarn && cd ../backend && yarn && cd ../../
 
 Set up database, and seed:
 
-    $ mix ecto.setup
+    $ mix deps.compile --force && mix ecto.setup
 
 Add to your `config/prod.secret.exs` (see https://github.com/elixir-lang/ecto/issues/1328)
 
@@ -73,22 +69,6 @@ Add to your `config/prod.secret.exs` (see https://github.com/elixir-lang/ecto/is
 
 Go through `config/brando.exs`.
 
-Static media config in `endpoint.ex`.
-
-```diff
-+ plug Plug.Static,
-+  at: "/media", from: Brando.config(:media_path),
-+  cache_control_for_etags: "public, max-age=31536000",
-+  cache_control_for_vsn_requests: "public, max-age=31536000"
-```
-
-Also switch out (or add to it, if you use sockets in the frontend as well) the socket config in `endpoint.ex`:
-
-```diff
-- socket "/socket", MyApp.UserSocket
-+ socket "/admin/ws", Brando.UserSocket
-```
-
 To use Brando's error view, add to your Endpoint's config (in prod.exs):
 
 ```elixir
@@ -96,7 +76,40 @@ config :my_app, MyApp.Endpoint,
   render_errors: [accepts: ~w(html json), view: Brando.ErrorView, default_format: "html"],
 ```
 
-*Remember to switch out your ports in `etc/supervisor/prod.conf` and `etc/nginx/prod.conf`*
+Create a release configuration:
+
+```
+$ mix release.init
+```
+
+And set its config to default to prod.
+Then add `:bcrypt_elixir` to applications:
+
+```elixir
+release :my_app do
+  set version: current_version(:my_app)
+  set applications: [
+    :runtime_tools,
+    :bcrypt_elixir
+  ]
+end
+```
+
+Fix dev asset reloading in `config/dev.exs`
+
+```elixir
+config :my_app, MyApp.Endpoint,
+  watchers: [npm: ["run", "dev", cd: Path.expand("../assets/frontend", __DIR__)]]
+```
+
+*Remember to switch out your ports and configure SSL in `etc/supervisor/prod.conf` and `etc/nginx/prod.conf`*
+
+## Dependencies
+
+  * `imagemagick`/`mogrify` for image processing.
+  * `gifsicle` for GIF resizing.
+  * `pngquant` for PNG optimization.
+  * `jpegtran` for JPG optimization.
 
 ## I18n
 
@@ -123,14 +136,13 @@ And backend:
     $ mix gettext.merge priv/gettext/backend
 
 Now we register our otp app's modules in Brando's registry to automatically set Gettext locales.
-Open up you application's `lib/my_app.ex` and add to `start/2`:
+Open up you application's `lib/application.ex` and add to `start/2`:
 
-    Brando.Registry.register(MyApp, [:gettext])
-    Brando.Registry.register(MyApp.Backend, [:gettext])
+    Brando.Registry.register(MyApp.Web, [:gettext])
+    Brando.Registry.register(MyApp.Web.Backend, [:gettext])
 
 ## Extra modules
 
-  * [brando_pages](http://github.com/twined/brando_pages)
   * [brando_news](http://github.com/twined/brando_news)
   * [brando_portfolio](http://github.com/twined/brando_portfolio)
   * [brando_instagram](http://github.com/twined/brando_instagram)
@@ -144,9 +156,9 @@ Generate templates:
 
 Also supports `user:references` to add a `belongs_to` assoc.
 
-Copy outputted routes and add to `web/router.ex`
+Copy outputted routes and add to `lib/web/router.ex`
 
-Register your module in `lib/my_app.ex`:
+If you use Gettext, register your module in `lib/application.ex`:
 
 ```diff
     def start(_type, _args) do
@@ -154,14 +166,14 @@ Register your module in `lib/my_app.ex`:
 
       children = [
         # Start the endpoint when the application starts
-        supervisor(MyApp.Endpoint, []),
+        supervisor(MyApp.Web.Endpoint, []),
         # Start the Ecto repository
         supervisor(MyApp.Repo, []),
         # Here you could define other workers and supervisors as children
         # worker(MyApp.Worker, [arg1, arg2, arg3]),
       ]
 
-+     Brando.Registry.register(MyApp.MyModule, [:menu])
++     Brando.Registry.register(MyApp.Web.MyModule, [:gettext])
 ```
 
 ## Releases
@@ -175,15 +187,6 @@ Start off by running
 Then use the fabric script in `fabfile.py` for the rest.
 
     # fab prod -l
-
-### Additional admin CSS/styling
-
-For modules added through your OTP app, you can style its backend by editing
-`web/static/css/custom/brando.custom.scss`, or adding your own files to `web/static/css/custom/`. Remember to include these from `brando.custom.scss`.
-
-### Additional admin Javascript
-
-Add files to your `web/static/js/admin` folder. These are compiled down to `priv/static/js/brando.custom.js`. This file is included in the admin section's base template.
 
 ## Pagination
 
@@ -205,40 +208,14 @@ Default login/pass is `admin@twined.net/admin`
 
 ## Sequence
 
-Implements model sequencing.
+Implements schema sequencing.
 
-Controller:
-
-```elixir
-  use Brando.Sequence,
-    [:controller, [model: MyApp.Model,
-                   filter: &MyApp.Model.by_collection_id/1]]
-```
-
-The filter should return items by the :filter param in your routes.ex.
-
-Example of a filter
-
-```elixir
-def by_collection_id(id) do
-  __MODULE__
-  |> where([c], collection.id == ^id)
-  |> order_by([c], c.sequence)
-end
-```
-
-View:
-
-```elixir
-  use Brando.Sequence, :view
-```
-
-Model:
+Schema:
 
 ```diff
-+ use Brando.Sequence, :model
++ use Brando.Sequence, :schema
 
-  schema "model" do
+  schema "schema" do
     # ...
 +   sequenced
   end
@@ -250,66 +227,11 @@ Migration:
 + use Brando.Sequence, :migration
 
   def up do
-    create table(:model) do
+    create table(:schema) do
       # ...
 +     sequenced
     end
   end
-```
-
-Template (`sequence.html.eex`):
-
-```html
-<ul id="sequence" class="clearfix">
-<%= for i <- @items do %>
-  <li data-id="<%= i.id %>"><%= i.name %></li>
-<% end %>
-</ul>
-<a id="sort-post" href="<%= Helpers.your_path(@conn, :sequence_post, @filter) %>" class="btn btn-default">
-  Lagre rekkefølge
-</a>
-```
-
-Add a link to the sequencer from your main template:
-
-```html
-<a href="<%= Helpers.admin_your_path(@conn, :sequence, filter_id) %>" class="btn btn-default m-b-sm">
-  <i class="fa fa-sort"></i> Sort
-</a>
-```
-
-or add to tablize:
-
-```elixir
-{"Sort this category", "fa-sort", :admin_your_path, :sequence, :id}
-```
-
-Finally, add to your routes (`web/router.ex`):
-
-```elixir
-  get    "/route/:filter/sorter", YourController, :sequence
-  post   "/route/:filter/sorter", YourController, :sequence_post
-```
-
-## Popup forms
-
-First, register the form in your app's endpoint startup. The first argument is the
-name of the schema, second is the form module and third is a list of fields you want
-returned if repo insertion is successful:
-
-```elixir
-Brando.PopupForm.Registry.register("client", MyApp.ClientForm, gettext("Create client"), [:id, :name])
-```
-
-```javascript
-$('.avatar img').click((e) => {
-    let clientForm = new PopupForm("client", clientInsertionSuccess);
-});
-
-function clientInsertionSuccess(fields) {
-    // here you'd insert the returned fields into a select or something similar.
-    console.log(`${fields.id} --> ${fields.username}`);
-}
 ```
 
 ## Lockdown
@@ -357,16 +279,16 @@ To insert an expander:
 
 ## Tags
 
-Implements tagging in your model.
+Implements tagging in your schema.
 
 Add to
 
-Model:
+Schema:
 
 ```diff
-+ use Brando.Tag, :model
++ use Brando.Tag, :schema
 
-  schema "model" do
+  schema "schema" do
 +   tags
   end
 ```
@@ -377,7 +299,7 @@ Migration:
 + use Brando.Tag, :migration
 
   def up do
-    create table(:model) do
+    create table(:schema) do
 +     tags
     end
   end
@@ -388,21 +310,20 @@ Migration:
 ## Example:
 
 ```elixir
-import Brando.Pages.Utils, only: [render_fragment: 2]
+import Brando.Pages, only: [fetch_fragment: 2]
 
-render_fragment("my/fragment", Gettext.get_locale(MyApp.Gettext)
-render_fragment("my/fragment", "en")
+fetch_fragment("my/fragment", Gettext.get_locale(MyApp.Gettext)
+fetch_fragment("my/fragment", "en")
 ```
 
-If no language is passed, the default language set in `brando.exs` as `default_language` will be used.
-
+If no language is passed, default language set in `brando.exs` will be used.
 If the fragment isn't found, it will render an error box.
 
 ## Imagefield
 
-A built in method for adding images to your model is supplied for you.
+A built in method for adding images to your schema is supplied for you.
 
-In your model:
+In your schema:
 
 ```diff
 
@@ -414,11 +335,11 @@ In your model:
   end
 
 + has_image_field :avatar, %{
-+   allowed_mimetypes: ["image/jpeg", "image/png"],
++   allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
 +   default_size: :medium,
 +   upload_path: Path.join("images", "avatars"),
 +   random_filename: true,
-+   size_limit: 10240000,
++   size_limit: 10_240_000,
 +   sizes: %{
 +     "micro"  => %{"size" => "25x25>", "quality" => 100, "crop" => true},
 +     "thumb"  => %{"size" => "150x150>", "quality" => 100, "crop" => true},
@@ -442,7 +363,7 @@ plug :check_for_uploads, {"user", Brando.User}
 
 ## Villain
 
-To use villain outside `Brando.Pages` and `Brando.News`, add to your app's `web/router.ex`:
+To use villain outside `Brando.Pages` and `Brando.News`, add to your app's `lib/web/router.ex`:
 
 ```diff
 + import Brando.Villain.Routes.Admin
@@ -487,8 +408,8 @@ Remember to add the `image_series` that Brando looks for.
 You also need to call for parsing by invoking `generate_html` in your schema's changeset:
 
 ```elixir
-  def changeset(model, params \\ %{}) do
-    model
+  def changeset(schema, params \\ %{}) do
+    schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
     |> generate_html()
@@ -507,7 +428,7 @@ Build for prod with `brunch build --production`.
 
 ## Optimizing images
 
-This requires you to have `pngquant`/`cjpeg` installed:
+This requires you to have `pngquant`/`jpegtran` installed:
 
 ```diff
   config :brando, Brando.Images,
@@ -516,10 +437,9 @@ This requires you to have `pngquant`/`cjpeg` installed:
 +       bin: "/usr/local/bin/pngquant",
 +       args: "--speed 1 --force --output %{new_filename} -- %{filename}"
 +     ],
-+     jpeg: [
-+       bin: "/usr/local/bin/cjpeg",
-+       args: "-quality 90 %{filename} > %{new_filename}"
-+     ]
++   jpeg: [
++     bin: "/usr/local/bin/jpegtran",
++     args: "-copy none -optimize -progressive -outfile %{new_filename} %{filename}"
 +   ]
 ```
 

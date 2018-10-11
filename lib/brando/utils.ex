@@ -11,26 +11,23 @@ defmodule Brando.Utils do
     :brando_pages,
     :brando_portfolio,
     :brando_villain,
-
     :hrafn
   ]
 
-  @kb_size   1024
-  @mb_size   1024 * @kb_size
-  @gb_size   1024 * @mb_size
+  @kb_size 1024
+  @mb_size 1024 * @kb_size
 
-  @sec_time  1000
-  @min_time  60 * @sec_time
+  @sec_time 1000
+  @min_time 60 * @sec_time
   @hour_time 60 * @min_time
-  @day_time  24 * @hour_time
+  @day_time 24 * @hour_time
 
   @doc """
   Converts `string` to an ascii slug. Removes all unicode, spaces,
   extraneous dashes and punctuation and downcases the slug
   """
-  @spec slugify(String.t) :: String.t
-  def slugify(string), do:
-    Slugger.slugify_downcase(string)
+  @spec slugify(String.t()) :: String.t()
+  def slugify(string), do: Slugger.slugify_downcase(string)
 
   @doc """
   Converts `filename` to an ascii slug, as per slugify/1.
@@ -43,7 +40,7 @@ defmodule Brando.Utils do
         "test-with-spaces.jpeg"
 
   """
-  @spec slugify_filename(String.t) :: String.t
+  @spec slugify_filename(String.t()) :: String.t()
   def slugify_filename(filename) do
     {basename, ext} = split_filename(filename)
     slugged_filename = slugify(basename)
@@ -54,34 +51,39 @@ defmodule Brando.Utils do
   Generates a random basename for `filename`.
   Keeps the original extension.
   """
-  @spec random_filename(String.t) :: String.t
+  @spec random_filename(String.t()) :: String.t()
   def random_filename(filename) do
     ext = Path.extname(filename)
+
     rnd_basename_1 =
-      {filename, :os.timestamp}
-      |> :erlang.phash2
+      {filename, :os.timestamp()}
+      |> :erlang.phash2()
       |> Integer.to_string(32)
-      |> String.downcase
+      |> String.downcase()
+
     rnd_basename_2 =
-      {:os.timestamp, filename}
-      |> :erlang.phash2
+      {:os.timestamp(), filename}
+      |> :erlang.phash2()
       |> Integer.to_string(32)
-      |> String.downcase
+      |> String.downcase()
+
     "#{rnd_basename_1}#{rnd_basename_2}#{ext}"
   end
 
   @doc """
   Adds an unique postfix to `filename`
   """
-  @spec unique_filename(String.t) :: String.t
+  @spec unique_filename(String.t()) :: String.t()
   def unique_filename(filename) do
     ext = Path.extname(filename)
     base = String.replace(filename, ext, "")
+
     rnd_basename =
-      {filename, :os.timestamp}
-      |> :erlang.phash2
+      {filename, :os.timestamp()}
+      |> :erlang.phash2()
       |> Integer.to_string(32)
-      |> String.downcase
+      |> String.downcase()
+
     "#{base}-#{rnd_basename}#{ext}"
   end
 
@@ -94,18 +96,20 @@ defmodule Brando.Utils do
       iex> split_path("test/dir/filename.jpg")
       {"test/dir", "filename.jpg"}
   """
-  @spec split_path(String.t) :: {String.t, String.t}
+  @spec split_path(String.t()) :: {String.t(), String.t()}
   def split_path(file) do
     if String.contains?(file, "/") do
       filename =
         file
-        |> Path.split
-        |> List.last
+        |> Path.split()
+        |> List.last()
+
       path =
         file
-        |> Path.split
+        |> Path.split()
         |> List.delete_at(-1)
-        |> Path.join
+        |> Path.join()
+
       {path, filename}
     else
       {"", file}
@@ -121,7 +125,7 @@ defmodule Brando.Utils do
       iex> split_filename("filename.jpg")
       {"filename", ".jpg"}
   """
-  @spec split_filename(String.t) :: {String.t, String.t}
+  @spec split_filename(String.t()) :: {String.t(), String.t()}
   def split_filename(filename) do
     ext = Path.extname(filename)
     basename = Path.basename(filename, ext)
@@ -132,11 +136,12 @@ defmodule Brando.Utils do
   Converts `coll` (if it's a struct) to a map with string keys
   """
   def to_string_map(nil), do: nil
+
   def to_string_map(coll) do
     if Map.has_key?(coll, :__struct__) do
       coll
       |> Map.delete(:__struct__)
-      |> Enum.map(fn({k, v}) -> {Atom.to_string(k), v} end)
+      |> Enum.map(fn {k, v} -> {Atom.to_string(k), v} end)
       |> Enum.into(%{})
     else
       coll
@@ -144,14 +149,12 @@ defmodule Brando.Utils do
   end
 
   @doc """
-  Converts an ecto datetime record to ISO 8601 format.
+  Converts `coll` to a map with safe atom keys
   """
-  @spec to_iso8601(Ecto.DateTime.t) :: String.t
-  def to_iso8601(dt) do
-    list = [dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec]
-    "~4..0B-~2..0B-~2..0BT~2..0B:~2..0B:~2..0BZ"
-    |> :io_lib.format(list)
-    |> IO.iodata_to_binary
+  def to_atom_map(coll) do
+    for {key, val} <- coll, into: %{} do
+      if is_atom(key), do: {key, val}, else: {String.to_existing_atom(key), val}
+    end
   end
 
   @doc """
@@ -161,8 +164,8 @@ defmodule Brando.Utils do
     keys =
       string_struct
       |> struct([])
-      |> Map.from_struct
-      |> Map.keys
+      |> Map.from_struct()
+      |> Map.keys()
       |> Enum.map(&Atom.to_string/1)
 
     params =
@@ -176,17 +179,22 @@ defmodule Brando.Utils do
   @doc """
   Returns current date & time
   """
-  @spec get_now :: String.t
+  @spec get_now :: String.t()
   def get_now do
-    Ecto.DateTime.to_string(Ecto.DateTime.utc)
+    :calendar.local_time()
+    |> NaiveDateTime.from_erl!()
+    |> NaiveDateTime.to_string()
   end
 
   @doc """
   Returns current date
   """
-  @spec get_date_now :: String.t
+  @spec get_date_now :: String.t()
   def get_date_now do
-    Ecto.Date.to_string(Ecto.Date.utc)
+    :calendar.local_time()
+    |> elem(0)
+    |> Date.from_erl!()
+    |> Date.to_string()
   end
 
   @doc """
@@ -194,53 +202,60 @@ defmodule Brando.Utils do
   Creates a new map with `attr`'s values as keys
   """
   def split_by(records, attr) do
-    {_, split_records} = Enum.map_reduce records, %{}, fn(record, agg) ->
-      insert =
-        if agg[Map.get(record, attr)] do
-          [record|agg[Map.get(record, attr)]]
-        else
-          [record]
-        end
-      {record, Map.put(agg, Map.get(record, attr), insert)}
-    end
+    {_, split_records} =
+      Enum.map_reduce(records, %{}, fn record, agg ->
+        insert =
+          if agg[Map.get(record, attr)] do
+            [record | agg[Map.get(record, attr)]]
+          else
+            [record]
+          end
+
+        {record, Map.put(agg, Map.get(record, attr), insert)}
+      end)
+
     split_records
   end
 
   @doc """
   Returns scheme, host and port (if non-standard)
   """
-  @spec hostname(Plug.Conn.t) :: String.t
-  def hostname(conn) do
-    port = conn.port == 80 && "" || ":#{conn.port}"
-    "#{conn.scheme}://#{conn.host}#{port}"
+  @spec hostname() :: String.t()
+  def hostname() do
+    url_cfg = Brando.endpoint().config(:url)
+    scheme = Keyword.get(url_cfg, :scheme, "http")
+    host = Keyword.get(url_cfg, :host, "localhost")
+    port = Keyword.get(url_cfg, :port, "80")
+    port = (port == "80" && "") || ":#{port}"
+    "#{scheme}://#{host}#{port}"
   end
 
   @doc """
   Returns full url path with scheme and host.
   """
-  @spec current_url(Plug.Conn.t) :: String.t
-  def current_url(conn) do
-    "#{hostname(conn)}#{conn.request_path}"
+  @spec current_url(Plug.Conn.t(), String.t()) :: String.t()
+  def current_url(conn, url \\ nil) do
+    path = (url && url) || conn.request_path
+    "#{hostname()}#{path}"
   end
 
   @doc """
   Returns URI encoded www form of current url
   """
-  @spec escape_current_url(Plug.Conn.t) :: String.t
+  @spec escape_current_url(Plug.Conn.t()) :: String.t()
   def escape_current_url(conn) do
     conn
     |> current_url
-    |> URI.encode_www_form
+    |> URI.encode_www_form()
   end
 
   @doc """
   Prefix `media` with scheme / host and port from `conn`.
   Returns URI encoded www form.
   """
-  @spec escape_and_prefix_host(Plug.Conn.t, String.t) :: String.t
+  @spec escape_and_prefix_host(Plug.Conn.t(), String.t()) :: String.t()
   def escape_and_prefix_host(conn, media) do
-    port = conn.port == 80 && "" || ":#{conn.port}"
-    url = "#{conn.scheme}://#{conn.host}#{port}#{media}"
+    url = current_url(conn, media)
     URI.encode_www_form(url)
   end
 
@@ -248,7 +263,7 @@ defmodule Brando.Utils do
   Return link with :https scheme
   """
   def https_url(conn) do
-    port = conn.port == 80 && "" || ":#{conn.port}"
+    port = (conn.port == 80 && "") || ":#{conn.port}"
     "https://#{conn.host}#{port}#{conn.request_path}"
   end
 
@@ -256,14 +271,16 @@ defmodule Brando.Utils do
   Return joined path of `file` and the :media_url config option
   as set in your app's config.exs.
   """
-  @spec media_url :: String.t | nil
+  @spec media_url :: String.t() | nil
   def media_url do
     Brando.config(:media_url)
   end
-  @spec media_url(String.t | nil) :: String.t | nil
+
+  @spec media_url(String.t() | nil) :: String.t() | nil
   def media_url(nil) do
     Brando.config(:media_url)
   end
+
   def media_url(file) do
     Path.join([Brando.config(:media_url), file])
   end
@@ -271,10 +288,12 @@ defmodule Brando.Utils do
   @doc """
   Get title assign from `conn`
   """
-  @spec get_page_title(Plug.Conn.t) :: String.t
+  @spec get_page_title(Plug.Conn.t()) :: String.t()
   def get_page_title(%{assigns: %{page_title: title}}) do
-    Brando.config(:app_name) <> " | " <> title
+    (Brando.config(:title_prefix) && Brando.config(:title_prefix) <> title) ||
+      Brando.config(:app_name) <> " | " <> title
   end
+
   def get_page_title(_) do
     Brando.config(:app_name)
   end
@@ -282,9 +301,9 @@ defmodule Brando.Utils do
   @doc """
   Returns hostname and media directory.
   """
-  @spec host_and_media_url(Plug.Conn.t) :: String.t
-  def host_and_media_url(conn) do
-    "#{hostname(conn)}#{Brando.config(:media_url)}"
+  @spec host_and_media_url() :: String.t()
+  def host_and_media_url() do
+    hostname() <> Brando.config(:media_url)
   end
 
   @doc """
@@ -304,14 +323,12 @@ defmodule Brando.Utils do
   @doc """
   Return the current user set in session.
   """
-  def current_user(conn) do
-    Plug.Conn.get_session(conn, :current_user)
-  end
+  defdelegate current_user(conn), to: Guardian.Plug, as: :current_resource
 
   @doc """
   Checks if `conn`'s `full_path` matches `current_path`.
   """
-  @spec active_path?(Plug.Conn.t, String.t) :: boolean
+  @spec active_path?(Plug.Conn.t(), String.t()) :: boolean
   def active_path?(conn, url_to_match) do
     conn.request_path == url_to_match
   end
@@ -327,13 +344,14 @@ defmodule Brando.Utils do
   Grabs `path` from the file field struct
   """
   def file_url(file_field, opts \\ [])
+
   def file_url(nil, _) do
     nil
   end
 
   def file_url(file_field, opts) do
     prefix = Keyword.get(opts, :prefix, nil)
-    prefix && Path.join([prefix, file_field.path]) || file_field.path
+    (prefix && Path.join([prefix, file_field.path])) || file_field.path
   end
 
   @doc """
@@ -343,29 +361,43 @@ defmodule Brando.Utils do
   Returns path to image.
   """
   def img_url(image_field, size, opts \\ [])
+
   def img_url(nil, size, opts) do
     default = Keyword.get(opts, :default, nil)
-    default && Brando.Images.Utils.size_dir(default, size) || ""
+    (default && Brando.Images.Utils.size_dir(default, size)) || ""
+  end
+
+  def img_url("", size, opts) do
+    default = Keyword.get(opts, :default, nil)
+    (default && Brando.Images.Utils.size_dir(default, size)) || ""
   end
 
   def img_url(image_field, :original, opts) do
     prefix = Keyword.get(opts, :prefix, nil)
-    prefix && Path.join([prefix, image_field.path]) || image_field.path
+    (prefix && Path.join([prefix, image_field.path])) || image_field.path
   end
 
   def img_url(image_field, size, opts) do
-    size = is_atom(size) && Atom.to_string(size) || size
+    size = (is_atom(size) && Atom.to_string(size)) || size
     prefix = Keyword.get(opts, :prefix, nil)
-    unless Map.has_key?(image_field.sizes, size) do
-      raise ArgumentError, message: ~s(Wrong key for img_url. Size `#{size}` does not exist for #{inspect(image_field)})
-    end
 
-    url = prefix && Path.join([prefix, image_field.sizes[size]]) || image_field.sizes[size]
+    size_dir =
+      if Map.has_key?(image_field.sizes, size) do
+        image_field.sizes[size]
+      else
+        IO.warn(
+          ~s(Wrong key for img_url. Size `#{size}` does not exist for #{inspect(image_field)})
+        )
+
+        "non_existing"
+      end
+
+    url = (prefix && Path.join([prefix, size_dir])) || size_dir
 
     case Map.get(image_field, :optimized) do
-      true  -> Brando.Images.Utils.optimized_filename(url)
+      true -> Brando.Images.Utils.optimized_filename(url)
       false -> url
-      nil   -> url
+      nil -> url
     end
   end
 
@@ -378,8 +410,10 @@ defmodule Brando.Utils do
   """
   def human_size(size) when size < @kb_size * 10,
     do: "#{human_spaced_number(size)} B"
+
   def human_size(size) when size < @mb_size * 10,
     do: "#{human_spaced_number(div(size, @kb_size))} kB"
+
   def human_size(size),
     do: "#{human_spaced_number(div(size, @mb_size))} MB"
 
@@ -392,10 +426,13 @@ defmodule Brando.Utils do
   """
   def human_time(ms) when ms < @min_time,
     do: "#{human_spaced_number(div(ms, @sec_time))} secs"
+
   def human_time(ms) when ms < @hour_time,
     do: "#{human_spaced_number(div(ms, @min_time))} mins"
+
   def human_time(ms) when ms < @day_time,
     do: "#{human_spaced_number(div(ms, @hour_time))} hours"
+
   def human_time(ms),
     do: "#{human_spaced_number(div(ms, @day_time))} days"
 
@@ -407,11 +444,11 @@ defmodule Brando.Utils do
   "1 000 000 000"
   """
   def human_spaced_number(string) when is_binary(string) do
-    split         = rem(byte_size(string), 3)
-    string        = :erlang.binary_to_list(string)
+    split = rem(byte_size(string), 3)
+    string = :erlang.binary_to_list(string)
     {first, rest} = Enum.split(string, split)
-    rest          = Enum.chunk(rest, 3) |> Enum.map(&[" ", &1])
-    IO.iodata_to_binary([first, rest]) |> String.lstrip
+    rest = Enum.chunk_every(rest, 3) |> Enum.map(&[" ", &1])
+    IO.iodata_to_binary([first, rest]) |> String.trim_leading()
   end
 
   def human_spaced_number(int) when is_integer(int) do
@@ -419,9 +456,9 @@ defmodule Brando.Utils do
   end
 
   def get_deps_versions do
-    :application.which_applications
+    :application.which_applications()
     |> Enum.filter(&(elem(&1, 0) in @filtered_deps))
-    |> Enum.reverse
-    |> Enum.map(&(%{app: elem(&1, 0), version: to_string(elem(&1, 2))}))
+    |> Enum.reverse()
+    |> Enum.map(&%{app: elem(&1, 0), version: to_string(elem(&1, 2))})
   end
 end

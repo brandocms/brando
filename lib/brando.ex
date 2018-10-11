@@ -2,10 +2,10 @@ defmodule Brando do
   use Application
 
   @moduledoc File.read!("README.md")
-  @version Mix.Project.config[:version]
+  @version Mix.Project.config()[:version]
 
   def start(_type, _args) do
-    Brando.Supervisor.start_link
+    Brando.Supervisor.start_link()
   end
 
   @doc """

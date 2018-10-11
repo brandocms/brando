@@ -20,7 +20,6 @@ defmodule Brando.Social.Email do
 
   """
   def link(conn, subject, do: {:safe, link_contents}) do
-    content_tag :a, link_contents,
-      [href: share_url(conn, subject), title: to_string(link_contents)]
+    content_tag(:a, link_contents, href: share_url(conn, subject), title: to_string(link_contents))
   end
 end

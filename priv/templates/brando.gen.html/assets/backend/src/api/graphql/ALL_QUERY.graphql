@@ -1,0 +1,5 @@
+query <%= Recase.to_pascal(vue_plural) %> {
+  <%= vue_plural %> {
+    id
+  }
+}

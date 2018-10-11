@@ -1,13 +1,12 @@
 Logger.configure(level: :info)
 
+# Clear tmp dir
+File.rm_rf!(Path.join([Mix.Project.app_path(), "tmp", "media"]))
+File.mkdir_p!(Path.join([Mix.Project.app_path(), "tmp", "media"]))
+
 {:ok, _} = Application.ensure_all_started(:ex_machina)
 
-#ExUnit.configure(max_cases: 16)
-ExUnit.start
-
-# Clear tmp dir
-File.rm_rf!(Path.join([Mix.Project.app_path, "tmp", "media"]))
-File.mkdir_p!(Path.join([Mix.Project.app_path, "tmp", "media"]))
+ExUnit.start()
 
 defmodule Brando.Integration.TestRepo do
   use Ecto.Repo, otp_app: :brando
@@ -26,12 +25,14 @@ defmodule Brando.Integration.Endpoint do
     signing_salt: "signingsalt"
 
   plug Plug.Static,
-    at: "/", from: :brando, gzip: false,
+    at: "/",
+    from: :brando,
+    gzip: false,
     only: ~w(css images js fonts favicon.ico robots.txt),
     cache_control_for_vsn_requests: nil,
     cache_control_for_etags: nil
 
-  socket "/admin/ws", Brando.Integration.UserSocket
+  socket("/admin/ws", Brando.Integration.UserSocket)
 end
 
 defmodule Brando.Integration.TestCase do
@@ -46,14 +47,15 @@ defmodule Brando.Integration.TestCase do
   end
 end
 
-Code.require_file "support/user_socket.exs", __DIR__
+Code.require_file("support/user_socket.exs", __DIR__)
 
-Mix.Task.run "ecto.create", ["-r", Repo, "--quiet"]
-Mix.Task.run "ecto.migrate", ["-r", Repo, "--quiet"]
+Mix.Task.run("ecto.drop", ["-r", Repo, "--quiet"])
+Mix.Task.run("ecto.create", ["-r", Repo, "--quiet"])
+Mix.Task.run("ecto.migrate", ["-r", Repo, "--quiet"])
 
-Repo.start_link
+Repo.start_link()
 
 Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)
-Brando.endpoint.start_link
-Brando.Registry.start_link
+Brando.endpoint().start_link
+Brando.Registry.start_link()
 Brando.Registry.register(Brando, [:gettext])

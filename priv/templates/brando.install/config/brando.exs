@@ -8,19 +8,10 @@ config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
-config :eightyfour,
-  credentials: "priv/tokens/google/token.json",
-  private_key: "priv/tokens/google/token.key.pem",
-  # find your view_id in your analytics url:
-  # https://www.google.com/analytics/web/#management/Settings/a000w000pVIEW_ID/
-  google_view_id: "XXXXXX",
-  start_date: "2010-01-01",
-  token_lifetime: 3600,
-  token_provider: Eightyfour.AccessToken
-
 config :brando,
   app_name: "<%= application_module %>",
-  endpoint: <%= application_module %>.Endpoint,
+  title_prefix: "<%= application_module %> | ",
+  endpoint: <%= application_module %>Web.Endpoint,
   otp_app: :<%= application_name %>,
   log_dir: Path.expand("./log"),
   default_language: "en",
@@ -40,18 +31,18 @@ config :brando,
   media_path: Path.expand("./media"),
   media_url: "/media",
   repo: <%= application_module %>.Repo,
-  router: <%= application_module %>.Router,
-  helpers: <%= application_module %>.Router.Helpers,
+  router: <%= application_module %>Web.Router,
+  helpers: <%= application_module %>Web.Router.Helpers,
   warn_on_http_auth: false,
   stats_polling_interval: 5000
 
 config :brando, Brando.Images,
   default_config: %{
-    allowed_mimetypes: ["image/jpeg", "image/png"],
+    allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
     default_size: :medium,
     upload_path: Path.join(["images", "site", "default"]),
     random_filename: true,
-    size_limit: 10240000,
+    size_limit: 10_240_000,
     sizes: %{
       "small" =>  %{"size" => "300", "quality" => 100},
       "medium" => %{"size" => "500", "quality" => 100},
@@ -74,3 +65,20 @@ config :brando, Brando.Type.Role,
 config :brando, Brando.Villain,
   extra_blocks: [],
   parser: <%= application_module %>.Villain.Parser
+
+# Configure Guardian for auth.
+config :<%= application_name %>, <%= application_module %>Web.Guardian,
+  issuer: "<%= application_module %>",
+  ttl: {30, :days},
+  secret_key: "<%= :crypto.strong_rand_bytes(64) |> Base.encode64 |> binary_part(0, 64) %>"
+
+# Configure Eightyfour for interfacing with Google Analytics
+# config :eightyfour,
+#   credentials: "priv/tokens/google/token.json",
+#   private_key: "priv/tokens/google/token.key.pem",
+#   # find your view_id in your analytics url:
+#   # https://www.google.com/analytics/web/#management/Settings/a000w000pVIEW_ID/
+#   google_view_id: "XXXXXX",
+#   start_date: "2010-01-01",
+#   token_lifetime: 3600,
+#   token_provider: Eightyfour.AccessToken

@@ -1,0 +1,130 @@
+/**
+ * Application-specific SCSS.
+ * (c) twined 2018
+ */
+
+@import "variables.scss";
+@import "~animate.css";
+@import "bootstrap.scss";
+@import "~hamburgers/_sass/hamburgers/hamburgers.scss";
+
+.no-js body.unloaded {
+  opacity: 1;
+}
+
+.no-js body.unloaded header {
+  opacity: 1;
+}
+
+.no-js body.unloaded .navbar {
+  transform: none;
+}
+
+html, body {
+}
+
+body {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-top: map-get($padding-lg, $bp-name) * 1.8;
+    }
+  }
+}
+
+.fader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: $primary;
+  z-index: 9998;
+  display: none;
+
+  .loading-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+
+    color: darken($primary, 15);
+
+    text-align: center;
+    font-size: 12px;
+  }
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+.blink {
+  animation: blink-animation 2.7s steps(200, start) infinite;
+}
+@keyframes blink-animation {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: .8;
+  }
+}
+
+
+header {
+  opacity: 1;
+  transition: opacity 2s ease;
+}
+
+span[class^="arrow-"] {
+  transition: all 150ms ease;
+  display: inline-block;
+  backface-visibility: hidden;
+}
+
+.c {
+  align-self: center;
+}
+
+a:hover {
+  span.arrow-r {
+    transform: translateX(5px);
+    backface-visibility: hidden;
+  }
+
+  span.arrow-l {
+    transform: translateX(-5px);
+    backface-visibility: hidden;
+  }
+
+  span.arrow-u {
+    transform: translateY(-5px);
+    backface-visibility: hidden;
+  }
+}
+
+span.line {
+  display: inline-block;
+}
+
+
+/**
+ * Imports
+ */
+
+@import "includes/animations";
+@import "includes/containers";
+@import "includes/fader";
+@import "includes/fonts";
+@import "includes/headers";
+@import "includes/lightbox";
+@import "includes/paragraphs";
+@import "includes/navigation";
+@import "includes/sections";
+@import "includes/slider";
+@import "includes/utils";

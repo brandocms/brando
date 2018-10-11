@@ -1,9 +1,9 @@
-FROM twined/fehn:1.3.1
+FROM twined/fehn:1.7
 
 MAINTAINER Twined Networks <mail@twined.net>
 
-COPY . /app
-WORKDIR /app
+COPY . /opt/app
+WORKDIR /opt/app
 
 ENV MIX_ENV prod
 
@@ -12,10 +12,14 @@ RUN mix deps.clean --all
 RUN mix deps.get
 RUN mix deps.compile
 
-COPY package.json yarn.lock /app/
-RUN yarn --pure-lockfile
-RUN node_modules/.bin/brunch build -p
+COPY assets/frontend/package.json assets/frontend/yarn.lock /opt/app/assets/frontend/
+COPY assets/backend/package.json assets/backend/yarn.lock /opt/app/assets/backend/
 
-RUN mix phoenix.digest
+RUN cd assets/backend && yarn install --force --pure-lockfile
+RUN cd assets/frontend && yarn install --force --pure-lockfile
+RUN cd assets/backend && yarn build
+RUN cd assets/frontend && yarn build
+
+RUN mix phx.digest
 RUN mix compile
-RUN mix release --verbosity=verbose
+RUN mix release

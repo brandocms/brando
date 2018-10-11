@@ -1,54 +1,67 @@
 defmodule Brando.Field.FileField do
   @moduledoc """
-  Assign a model's field as a file field.
+  Assign a schema's field as a file field.
 
   ## Example
 
-  In your `my_model.ex`:
+  In your `my_schema.ex`:
 
       has_file_field :pdf_report,
-        %{allowed_exts: ["pdf"],
+        %{allowed_mimetypes: ["application/pdf"],
           random_filename: true,
           upload_path: Path.join("pdfs", "reports"),
-          size_limit: 10240000,
+          size_limit: 10_240_000,
         }
       }
 
   """
+  import Ecto.Changeset
   import Brando.Files.Upload
+  import Brando.Upload
 
   defmacro __using__(_) do
     quote do
       Module.register_attribute(__MODULE__, :filefields, accumulate: true)
       import Brando.Files.Upload
       import Brando.Files.Utils
+      import Brando.Upload
+      import Brando.Upload.Utils
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
 
       @doc """
-      Checks `params` for Plug.Upload fields and passes them on to
-      `handle_upload` to check if we have a handler for the field.
-      Returns {:ok, model} or raises
+      Validates upload in changeset
       """
-      def check_for_uploads(model, params) do
-        uploads = params
-        |> filter_plugs
-        |> Enum.reduce([], fn (plug, acc) ->
-            [handle_upload_and_defer(plug, &__MODULE__.get_file_cfg/1)|acc]
-          end)
-        {:ok, uploads}
+      def validate_upload(changeset, {:file, field_name}) do
+        with {:ok, plug} <- field_has_changed(changeset, field_name),
+             {:ok, _} <- changeset_has_no_errors(changeset),
+             {:ok, cfg} <- get_file_cfg(field_name),
+             {:ok, {:handled, name, field}} <- handle_file_upload(field_name, plug, cfg) do
+          put_change(changeset, name, field)
+        else
+          :unchanged ->
+            changeset
+
+          :has_errors ->
+            changeset
+
+          {:error, {name, {:error, error_msg}}} ->
+            add_error(changeset, name, error_msg)
+        end
       end
 
       @doc """
-      Cleans up old images on update
+      Cleans up old files on update
       """
-      def cleanup_old_images(changeset) do
+      def cleanup_old_files(changeset) do
         filefield_keys = Keyword.keys(__filefields__())
+
         for key <- Map.keys(changeset.changes) do
           if key in filefield_keys do
             Brando.Files.Utils.delete_original(changeset.data, key)
           end
         end
+
         changeset
       end
     end
@@ -62,8 +75,7 @@ defmodule Brando.Field.FileField do
 
   @doc false
   def compile(filefields) do
-    filefields_src =
-      for {name, contents} <- filefields, do: defcfg(name, contents)
+    filefields_src = for {name, contents} <- filefields, do: defcfg(name, contents)
 
     quote do
       def __filefields__ do
@@ -76,12 +88,13 @@ defmodule Brando.Field.FileField do
 
   defp defcfg(name, cfg) do
     escaped_contents = Macro.escape(cfg)
+
     quote do
       @doc """
       Get `field_name`'s file field configuration
       """
-      def get_file_cfg(field_name) when field_name == unquote(name), do:
-        unquote(escaped_contents)
+      def get_file_cfg(field_name) when field_name == unquote(name),
+        do: {:ok, unquote(escaped_contents)}
     end
   end
 
@@ -110,7 +123,7 @@ defmodule Brando.Field.FileField do
   defmacro has_file_field(field_name, opts) do
     quote do
       filefields = Module.get_attribute(__MODULE__, :filefields)
-      cfg_struct  = struct!(%Brando.Type.FileConfig{}, unquote(opts))
+      cfg_struct = struct!(%Brando.Type.FileConfig{}, unquote(opts))
 
       Module.put_attribute(__MODULE__, :filefields, {unquote(field_name), cfg_struct})
     end
@@ -118,16 +131,28 @@ defmodule Brando.Field.FileField do
 
   @doc """
   Handles the upload by starting a chain of operations on the plug.
-  This function handles upload when we have an file field on a model.
+  This function handles upload when we have an file field on a schema.
 
   ## Parameters
 
+    * `name`:
     * `plug`: a Plug.Upload struct.
     * `cfg`: the field's cfg from has_image_field
 
   """
-  def handle_upload_and_defer({name, plug}, cfg_fun) do
-    {:ok, file_field} = do_upload(plug, cfg_fun.(String.to_atom(name)))
-    {name, file_field}
+  @spec handle_file_upload(atom, Plug.Upload.t(), Brando.Type.FileConfig.t()) ::
+          {:ok, {atom, Brando.Type.File}} | {:error, {atom, {:error, String.t()}}}
+  def handle_file_upload(name, %Plug.Upload{} = plug, cfg) do
+    with {:ok, upload} <- process_upload(plug, cfg),
+         {:ok, field} <- create_file_struct(upload) do
+      {:ok, {:handled, name, field}}
+    else
+      err -> {:error, {name, handle_upload_error(err)}}
+    end
+  end
+
+  @spec handle_file_upload(atom, Map.t(), Brando.Type.FileConfig.t()) :: {:ok, Map.t()}
+  def handle_file_upload(name, file, _) do
+    {:ok, {:unhandled, name, file}}
   end
 end

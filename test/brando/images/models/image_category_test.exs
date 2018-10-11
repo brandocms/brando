@@ -4,7 +4,6 @@ defmodule Brando.Integration.ImageCategoryTest do
   use Brando.Integration.TestCase
 
   alias Brando.ImageCategory
-  alias Brando.ImageCategoryService
   alias Brando.Factory
 
   setup do
@@ -12,10 +11,6 @@ defmodule Brando.Integration.ImageCategoryTest do
     category = Factory.insert(:image_category, creator: user)
     series = Factory.insert(:image_series, creator: user, image_category: category)
     {:ok, %{user: user, category: category, series: series}}
-  end
-
-  test "get_slug", %{category: category} do
-    assert ImageCategoryService.get_slug_by(id: category.id) == "test-category"
   end
 
   test "meta", %{category: category} do

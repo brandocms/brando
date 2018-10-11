@@ -269,7 +269,13 @@ def copy_release_from_docker(version):
     """
     print(yellow('==> copying release archive from docker to release-archives/'))
     local('mkdir -p release-archives')
-    local('docker run --rm --entrypoint cat twined/%s /app/rel/%s/releases/%s/%s.tar.gz > release-archives/%s_%s.tar.gz' % (env.project_name, env.project_name, version, env.project_name, env.project_name, version))
+    local('docker run --rm --entrypoint cat twined/%s /opt/app/_build/prod/rel/%s/releases/%s/%s.tar.gz > release-archives/%s_%s.tar.gz' % (
+        env.project_name,
+        env.project_name,
+        version,
+        env.project_name,
+        env.project_name,
+        version))
 
 
 def upload_release(version):
@@ -323,6 +329,10 @@ def ensure_log_directory_exists():
         print(yellow('==> creating %s/log as %s' % (env.path, env.project_user)))
         sudo('mkdir -p %s/log' % env.path, user=env.project_user)
 
+    if not _exists(os.path.join(env.path, "acme-challenge")):
+        print(yellow('==> creating %s/acme-challenge/.well-known/acme-challenge as %s' % (env.path, env.project_user)))
+        sudo('mkdir -p %s/acme-challenge/.well-known/acme-challenge' % env.path, user=env.project_user)
+
     fixprojectperms()
 
 
@@ -343,6 +353,7 @@ def create_path():
         print(yellow('==> creating remote project dir: %s as %s' % (env.path, env.project_user)))
         sudo('mkdir -p %s' % env.path, user=env.project_user)
 
+    create_acme_dir()
     fixprojectperms()
 
 
@@ -409,6 +420,18 @@ def load_db_remote():
         if result.failed:
             if 'already exists' in result:
                 print(red('==> error: database already exists'))
+
+
+def drop_db_remote():
+    """
+    Drops db on remote
+    """
+    _warn('''
+        DROPPING REMOTE DATABASE %s
+    ''' % (env.db_name))
+
+    _confirmtask()
+    sudo('dropdb %s' % (env.db_name), user='postgres')
 
 
 def load_db_local():
@@ -743,7 +766,7 @@ def createdb():
     require('hosts')
     with _settings(warn_only=True):
         print(yellow('==> creating database user %s' % env.db_user))
-        result = sudo('psql -c "CREATE USER %s WITH NOCREATEDB NOCREATEUSER ENCRYPTED PASSWORD \'%s\';"' % (env.db_user, env.db_pass), user='postgres')
+        result = sudo('psql -c "CREATE USER %s WITH NOCREATEDB ENCRYPTED PASSWORD \'%s\';"' % (env.db_user, env.db_pass), user='postgres')
         if result.failed:
             if 'already exists' in result:
                 print(red('==> database user %s already exists' % env.db_user))
@@ -780,3 +803,8 @@ def nginxrestart():
 def _notify_build_complete(version):
     local('terminal-notifier -message "Release process completed!" -title %s -subtitle v%s -sound default -group %s -open %s' % (
         PROJECT_NAME, version, PROJECT_NAME, PROD_URL))
+
+
+def create_acme_dir():
+    sudo('mkdir -p %s/acme-challenge/.well-known' % env.path, user=env.project_user)
+    _setowner(os.path.join(env.path, 'acme-challenge/.well-known'))
