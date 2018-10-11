@@ -25,7 +25,7 @@ end
 
 Fetch and compile dependencies. Install Brando:
 
-    $ mix do deps.get, deps.compile, brando.install --module Neva, deps.get, deps.compile
+    $ mix do deps.get, deps.compile, brando.install --module MyApp, deps.get, deps.compile
 
 Add to your `config/config.exs` right before the env-specific import:
 
