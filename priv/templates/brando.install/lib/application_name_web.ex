@@ -29,17 +29,15 @@ defmodule <%= application_module %>Web do
 
   def controller do
     quote do
-      use Phoenix.Controller, namespace: <%= application_module %>Web
+      use Phoenix.Controller,
+        namespace: <%= application_module %>Web
+
       import <%= application_module %>Web.Gettext
-
-      alias <%= application_module %>.Repo
-      alias <%= application_module %>Web.Router.Helpers, as: Routes
-
-      import Ecto
-      import Ecto.Query
-
       import Brando.Meta.Controller, only: [put_meta: 3]
       import Brando.Plug.HTML
+      import Plug.Conn
+
+      alias <%= application_module %>Web.Router.Helpers, as: Routes
     end
   end
 
@@ -57,8 +55,9 @@ defmodule <%= application_module %>Web do
 
   def view do
     quote do
-      use Phoenix.View, root: "lib/<%= application_name %>_web/templates",
-                        namespace: <%= application_module %>Web
+      use Phoenix.View,
+        root: "lib/<%= application_name %>_web/templates",
+        namespace: <%= application_module %>Web
 
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_csrf_token: 0, get_flash: 2, view_module: 1]
@@ -79,6 +78,8 @@ defmodule <%= application_module %>Web do
   def router do
     quote do
       use Phoenix.Router
+      import Plug.Conn
+      import Phoenix.Controller
     end
   end
 

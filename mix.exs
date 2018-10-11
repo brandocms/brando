@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "1.0.0"
+  @version "2.0.0-dev"
   @description "A helping hand for Twined applications."
 
   def project do
@@ -79,7 +79,7 @@ defmodule Brando.Mixfile do
       {:gettext, "~> 0.11"},
       {:httpoison, "~> 0.9"},
       {:mogrify, "~> 0.5"},
-      {:phoenix, "~> 1.3.0", override: true},
+      {:phoenix, "~> 1.4.0-rc", override: true},
       {:phoenix_html, "~> 2.6"},
       {:phoenix_ecto, "~> 3.2"},
       {:postgrex, "~> 0.13", override: true},
@@ -121,9 +121,7 @@ defmodule Brando.Mixfile do
         "test",
         "mix.exs",
         "README.md",
-        "CHANGELOG.md",
-        "brunch-config.js",
-        "package.json"
+        "CHANGELOG.md"
       ]
     ]
   end

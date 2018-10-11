@@ -26,7 +26,7 @@ defmodule <%= application_module %>.Mixfile do
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_),     do: ["lib"]
+  defp elixirc_paths(_), do: ["lib"]
 
   # Specifies your project dependencies.
   #
@@ -34,7 +34,7 @@ defmodule <%= application_module %>.Mixfile do
   defp deps do
     [
      # phoenix
-     {:phoenix, "~> 1.3.4"},
+     {:phoenix, "~> 1.4.0-rc", override: true},
      {:phoenix_pubsub, "~> 1.1"},
      {:phoenix_ecto, "~> 3.2"},
      {:phoenix_html, "~> 2.12"},
@@ -45,6 +45,7 @@ defmodule <%= application_module %>.Mixfile do
      {:gettext, "~> 0.11"},
      {:cowboy, "~> 1.0"},
      {:timex, "~> 3.0"},
+     {:jason, "~> 1.0"},
      {:absinthe, "~> 1.4"},
      {:absinthe_plug, "~> 1.4"},
      {:absinthe_ecto, "~> 0.1"},
