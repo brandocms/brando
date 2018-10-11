@@ -62,9 +62,6 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "schema \"games_pirates\" do"
         assert file =~ "field :photo, Brando.Type.Image"
         assert file =~ "field :pdf, Brando.Type.File"
-        assert file =~ "singular: \"pirate\""
-        assert file =~ "plural: \"pirates\""
-        assert file =~ "born_at: gettext(\"Born at\")"
 
         assert file =~
                  "@required_fields ~w(name age height nicks famous born_at secret first_login alarm data biography_data creator_id address_id)"
