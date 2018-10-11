@@ -12,6 +12,9 @@ defmodule Mix.Tasks.Brando.Install do
     # Mix template
     {:eex, "templates/brando.install/mix.exs", "mix.exs"},
 
+    # Formatter
+    {:eex, "templates/brando.install/formatter.exs", ".formatter.exs"},
+
     # Etc. Various OS config files and log directory.
     {:keep, "templates/brando.install/log", "log"},
     {:eex, "templates/brando.install/etc/logrotate/prod.conf", "etc/logrotate/prod.conf"},
