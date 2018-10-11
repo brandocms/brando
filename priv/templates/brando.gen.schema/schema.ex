@@ -22,12 +22,12 @@ defmodule <%= module %> do
       random_filename: true,
       size_limit: 10_240_000,
       sizes: %{
-        "micro"  => %{"size" => "25x25>", "quality" => 100, "crop" => true},
-        "thumb"  => %{"size" => "150x150>", "quality" => 100, "crop" => true},
-        "small"  => %{"size" => "300", "quality" => 100},
-        "medium" => %{"size" => "500", "quality" => 100},
-        "large"  => %{"size" => "700", "quality" => 100},
-        "xlarge" => %{"size" => "900", "quality" => 100}
+        "micro"  => %{"size" => "25x25>", "quality" => 90, "crop" => true},
+        "thumb"  => %{"size" => "150x150>", "quality" => 90, "crop" => true},
+        "small"  => %{"size" => "300", "quality" => 90},
+        "medium" => %{"size" => "500", "quality" => 90},
+        "large"  => %{"size" => "700", "quality" => 90},
+        "xlarge" => %{"size" => "900", "quality" => 90}
       }
     }
 <% end %>
@@ -63,20 +63,4 @@ defmodule <%= module %> do
 <%= for {_v, k} <- img_fields do %>    delete_original_and_sized_images(record, <%= inspect k %>)
 <% end %>    Brando.repo.delete!(record)
   end
-
-  #
-  # Meta
-
-  use Brando.Meta.Schema, [
-    singular: "<%= Phoenix.Naming.humanize(singular) |> String.downcase %>",
-    plural: "<%= Phoenix.Naming.humanize(plural) |> String.downcase %>",
-    repr: &("#{&1.<%= Keyword.keys(attrs) |> List.first %>}"),
-    fields: [
-      id: gettext("Id"),
-<%= for {k, _} <- attrs do %>      <%= k %>: gettext("<%= Phoenix.Naming.humanize(k) %>"),
-<% end %><%= if villain_fields != [] do %>      html: gettext("HTML"),<% end %>
-      inserted_at: gettext("Inserted at"),
-      updated_at: gettext("Updated at")],
-    hidden_fields: []
-  ]
 end
