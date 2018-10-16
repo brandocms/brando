@@ -30,6 +30,10 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "templates/brando.install/lib/application_name/tuple.ex",
      "lib/application_name/tuple.ex"},
 
+    # Presence
+    {:eex, "templates/brando.install/lib/application_name/presence.ex",
+     "lib/application_name/presence.ex"},
+
     # Router template
     {:eex, "templates/brando.install/lib/application_name_web/router.ex",
      "lib/application_name_web/router.ex"},

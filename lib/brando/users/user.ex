@@ -15,6 +15,8 @@ defmodule Brando.User do
   @required_fields ~w(full_name email password language)a
   @optional_fields ~w(role avatar active)a
 
+  @derive {Jason.Encoder, only: ~w(full_name email password language role avatar active inserted_at updated_at)a}
+
   schema "users" do
     field :email, :string
     field :full_name, :string
