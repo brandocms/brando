@@ -63,7 +63,7 @@ export default {
 
     async save () {
       this.loading = false
-      let params = {...this.<%= vue_singular %>}
+      let params = { ...this.<%= vue_singular %> }
 
       // validate image params, if any, to ensure they are files
       // validateImageParams(params, ['avatar'])
@@ -72,7 +72,7 @@ export default {
         nprogress.start()
         await <%= vue_singular %>API.create<%= Recase.to_pascal(vue_singular) %>(params)
         nprogress.done()
-        this.$toast.success({message: 'Objekt opprettet'})
+        this.$toast.success({ message: 'Objekt opprettet' })
         this.$router.push({ name: '<%= plural %>' })
       } catch (err) {
         showError(err)

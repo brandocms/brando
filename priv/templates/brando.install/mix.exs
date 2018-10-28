@@ -36,14 +36,17 @@ defmodule <%= application_module %>.Mixfile do
      # phoenix
      {:phoenix, "~> 1.4.0-rc", override: true},
      {:phoenix_pubsub, "~> 1.1"},
-     {:phoenix_ecto, "~> 3.2"},
+     {:phoenix_ecto, "~> 3.5"},
      {:phoenix_html, "~> 2.12"},
-     {:phoenix_live_reload, "~> 1.1", only: :dev},
+     {:phoenix_live_reload, "~> 1.2-rc", only: :dev},
+     {:plug_cowboy, "~> 2.0"},
+     {:ecto, "~> 3.0-rc", override: true},
+     {:ecto_sql, "~> 3.0-rc", override: true},
 
      # general deps
-     {:postgrex, ">= 0.0.0"},
+     {:postgrex, "~> 0.14.0-rc"},
      {:gettext, "~> 0.11"},
-     {:cowboy, "~> 1.0"},
+
      {:timex, "~> 3.0"},
      {:jason, "~> 1.0"},
      {:absinthe, "~> 1.4"},
@@ -56,15 +59,12 @@ defmodule <%= application_module %>.Mixfile do
      {:hrafn, "~> 0.1"},
      {:plug_heartbeat, "~> 0.1"},
 
-     # pagination
-     {:scrivener_ecto, "~> 1.2"},
-
      # testing
      {:wallaby, "~> 0.19", only: :test},
 
      # brando
-     {:brando, github: "twined/brando", branch: "develop"}
-     # {:brando, path: "../../brando", override: true},
+     # {:brando, github: "twined/brando", branch: "develop"}
+     {:brando, path: "../../brando", override: true},
     ]
   end
 

@@ -47,7 +47,7 @@ export default {
   async created () {
     this.loading++
     const v = await <%= vue_singular %>API.get<%= Recase.to_pascal(vue_singular) %>(this.<%= vue_singular %>Id)
-    this.<%= vue_singular %> = {...v}
+    this.<%= vue_singular %> = { ...v }
     this.loading--
   },
 
@@ -71,7 +71,7 @@ export default {
 
     async save () {
       this.loading = false
-      let params = {...this.<%= vue_singular %>}
+      let params = { ...this.<%= vue_singular %> }
 
       // strip out params we don't want sent in the mutation
       stripParams(params, ['__typename', 'id'])
@@ -83,7 +83,7 @@ export default {
         nprogress.start()
         await <%= singular %>API.update<%= Recase.to_pascal(vue_singular) %>(this.<%= vue_singular %>.id, params)
         nprogress.done()
-        this.$toast.success({message: 'Objekt endret'})
+        this.$toast.success({ message: 'Objekt endret' })
         this.$router.push({ name: '<%= plural %>' })
       } catch (err) {
         showError(err)

@@ -111,7 +111,7 @@ export default {
       this.adminChannel.channel
         .push('<%= plural %>:sequence_<%= plural %>', { ids: this.sorted<%= Recase.to_pascal(vue_singular) %>Ids })
         .receive('ok', payload => {
-          this.$toast.success({message: 'Rekkefølge lagret'})
+          this.$toast.success({ message: 'Rekkefølge lagret' })
         })
     },
     ...mapActions('<%= vue_plural %>', [
