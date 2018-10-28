@@ -207,19 +207,6 @@ Then use the fabric script in `fabfile.py` for the rest.
 
     # fab prod -l
 
-## Pagination
-
-For pagination, add to your app's `repo.ex`:
-
-```diff
-  defmodule MyApp.Repo do
-    use Ecto.Repo, otp_app: :my_app
-+   use Scrivener
-  end
-```
-
-See Scrivener's docs for usage: https://hexdocs.pm/scrivener/
-
 ## Default admin credentials
 
 Default login/pass is `admin@twined.net/admin`
