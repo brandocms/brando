@@ -17,6 +17,7 @@ defmodule Brando.ImageSeries do
   @required_fields ~w(name image_category_id creator_id)a
   @optional_fields ~w(credits sequence cfg slug)a
 
+  @derive {Jason.Encoder, only: [:id, :name, :slug, :credits, :cfg, :creator, :creator_id, :image_category_id, :image_category, :images, :sequence, :inserted_at, :updated_at]}
   schema "imageseries" do
     field :name, :string
     field :slug, :string

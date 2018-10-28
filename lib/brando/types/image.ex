@@ -4,8 +4,8 @@ defmodule Brando.Type.Image do
   """
 
   @type t :: %__MODULE__{}
-
   @behaviour Ecto.Type
+  @derive {Jason.Encoder, only: ~w(title credits path sizes optimized width height thumb medium)a}
 
   defstruct title: nil,
             credits: nil,

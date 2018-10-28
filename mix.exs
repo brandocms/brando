@@ -63,8 +63,6 @@ defmodule Brando.Mixfile do
       :phoenix_html,
       :poison,
       :recase,
-      :scrivener,
-      :scrivener_ecto,
       :sentry,
       :slugger,
       :timex
@@ -81,11 +79,10 @@ defmodule Brando.Mixfile do
       {:mogrify, "~> 0.5"},
       {:phoenix, "~> 1.4.0-rc", override: true},
       {:phoenix_html, "~> 2.6"},
-      {:phoenix_ecto, "~> 3.2"},
-      {:postgrex, "~> 0.13", override: true},
+      {:phoenix_ecto, "~> 3.5"},
+      {:postgrex, "~> 0.14-rc", override: true},
       {:slugger, "~> 0.2"},
       {:recase, "~> 0.2"},
-      {:scrivener_ecto, "~> 1.1"},
       {:guardian, "~> 1.0"},
       {:timex, "~> 3.0"},
 
@@ -99,8 +96,8 @@ defmodule Brando.Mixfile do
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test},
       {:excoveralls, "~> 0.6", only: :test},
-      {:absinthe, "~> 1.4.0", override: true},
-      {:absinthe_plug, "~> 1.4.0", override: true},
+      {:absinthe, "~> 1.4", override: true},
+      {:absinthe_plug, "~> 1.4", override: true},
       {:absinthe_ecto, "~> 0.1.0"},
 
       # Documentation dependencies
