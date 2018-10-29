@@ -4,8 +4,8 @@ defmodule Brando.Type.File do
   """
 
   @type t :: %__MODULE__{}
-
   @behaviour Ecto.Type
+  @derive Jason.Encoder
 
   defstruct path: nil,
             mimetype: nil,

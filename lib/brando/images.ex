@@ -8,14 +8,12 @@ defmodule Brando.Images do
   alias Brando.{ImageCategory, ImageSeries, Image}
 
   import Brando.Upload
-
   import Brando.Images.Utils,
     only: [
-      create_image_sizes: 1,
+      create_image_sizes: 2,
       delete_original_and_sized_images: 2,
       recreate_sizes_for: 2
     ]
-
   import Brando.Utils.Schema, only: [put_creator: 2]
   import Ecto.Query
 
@@ -323,7 +321,7 @@ defmodule Brando.Images do
     Enum.reduce(filter_plugs(params), [], fn named_plug, _ ->
       handle_upload(
         named_plug,
-        &create_image_struct/1,
+        &create_image_struct/2,
         current_user,
         put_fields,
         cfg
@@ -337,7 +335,7 @@ defmodule Brando.Images do
   """
   def handle_upload({name, plug}, process_fn, user, put_fields, cfg) do
     with {:ok, upload} <- process_upload(plug, cfg),
-         {:ok, processed_field} <- process_fn.(upload) do
+         {:ok, processed_field} <- process_fn.(upload, :system) do
       params = Map.put(put_fields, name, processed_field)
       create_image(params, user)
     else
@@ -348,7 +346,7 @@ defmodule Brando.Images do
   @doc """
   Passes upload to create_image_sizes.
   """
-  def create_image_struct(upload) do
-    create_image_sizes(upload)
+  def create_image_struct(upload, user) do
+    create_image_sizes(upload, user)
   end
 end

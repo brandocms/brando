@@ -86,6 +86,10 @@ defmodule Brando.Mixfile do
       {:guardian, "~> 1.0"},
       {:timex, "~> 3.0"},
 
+      {:db_connection, "~> 2.0-rc", override: true},
+      {:ecto, "~> 3.0", override: true},
+      {:ecto_sql, "~> 3.0-rc", override: true},
+
       # monitoring
       {:sentry, "~> 6.0"},
 

@@ -24,10 +24,10 @@ defmodule <%= module %> do
       sizes: %{
         "micro"  => %{"size" => "25x25>", "quality" => 90, "crop" => true},
         "thumb"  => %{"size" => "150x150>", "quality" => 90, "crop" => true},
-        "small"  => %{"size" => "300", "quality" => 90},
-        "medium" => %{"size" => "500", "quality" => 90},
-        "large"  => %{"size" => "700", "quality" => 90},
-        "xlarge" => %{"size" => "900", "quality" => 90}
+        "xs"  => %{"size" => "700", "quality" => 90},
+        "sm" => %{"size" => "1100", "quality" => 90},
+        "md"  => %{"size" => "1700", "quality" => 90},
+        "lg" => %{"size" => "2100", "quality" => 90}
       }
     }
 <% end %>
@@ -48,14 +48,14 @@ defmodule <%= module %> do
   If no params are provided, an invalid changeset is returned
   with no validation performed.
   """
-  def changeset(schema, params \\ %{}) do
+  def changeset(schema, params \\ %{}, user) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)<%= if villain_fields != [] do %><%= for {_k, v} <- villain_fields do %><%= if v == :data do %>
     |> generate_html()<% else %>
     |> generate_html(<%= inspect v %>)<% end %><% end %><% end %><%= if img_fields != [] do %>
     |> cleanup_old_images()<%= for {_v, k} <- img_fields do %>
-    |> validate_upload({:image, <%= inspect k %>})
+    |> validate_upload({:image, <%= inspect k %>}, user)
     |> optimize(<%= inspect k %>)<% end %><% end %>
   end
 

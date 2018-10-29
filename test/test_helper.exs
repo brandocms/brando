@@ -9,7 +9,9 @@ File.mkdir_p!(Path.join([Mix.Project.app_path(), "tmp", "media"]))
 ExUnit.start()
 
 defmodule Brando.Integration.TestRepo do
-  use Ecto.Repo, otp_app: :brando
+  use Ecto.Repo,
+    otp_app: :brando,
+    adapter: Ecto.Adapters.Postgres
 end
 
 # Basic test repo
@@ -18,6 +20,10 @@ alias Brando.Integration.TestRepo, as: Repo
 defmodule Brando.Integration.Endpoint do
   use Phoenix.Endpoint,
     otp_app: :brando
+
+  # socket "/admin/socket", MartinuzziWeb.AdminSocket,
+  #   websocket: true,
+  #   longpoll: true
 
   plug Plug.Session,
     store: :cookie,

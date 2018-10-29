@@ -6,7 +6,7 @@ defmodule Brando.Images.Utils do
   import Brando.Gettext
   import Ecto.Query, only: [from: 2]
 
-  alias Brando.{Image, ImageSeries}
+  alias Brando.{Image, ImageSeries, Progress}
 
   @doc """
   Goes through `image`, which is a schema with a :sizes field
@@ -123,8 +123,9 @@ defmodule Brando.Images.Utils do
   @doc """
   Creates sized images.
   """
-  @spec create_image_sizes(Brando.Upload.t()) :: {:ok, Brando.Type.Image.t()}
-  def create_image_sizes(%{plug: %{uploaded_file: file}, cfg: cfg}) do
+  @spec create_image_sizes(Brando.Upload.t(), Brando.User.t | :system) :: {:ok, Brando.Type.Image.t()}
+  def create_image_sizes(%{plug: %{uploaded_file: file}, cfg: cfg}, user \\ :system) do
+    Progress.show_progress(user)
     type = image_type(file)
     {file_path, filename} = split_path(file)
     upload_path = Map.get(cfg, :upload_path)
@@ -133,17 +134,20 @@ defmodule Brando.Images.Utils do
       for {size_name, size_cfg} <- Map.get(cfg, :sizes) do
         postfixed_size_dir = Path.join([file_path, to_string(size_name)])
         sized_image = Path.join([postfixed_size_dir, filename])
+        Progress.update_progress(user, "#{filename} — Oppretter bildestørrelse: <strong>#{size_name}</strong>")
         sized_path = Path.join([upload_path, to_string(size_name), filename])
 
         File.mkdir_p(postfixed_size_dir)
         create_image_size(file, sized_image, size_cfg, type)
-
+        Progress.update_progress(user, "#{filename} — Fullført bildestørrelse: <strong>#{size_name}</strong>")
         {size_name, sized_path}
       end
 
     new_path = Path.join([upload_path, filename])
 
     try do
+      Progress.update_progress(user, "#{filename} — Henter bildeinformasjon...")
+
       image_info =
         new_path
         |> media_path()
@@ -157,10 +161,15 @@ defmodule Brando.Images.Utils do
         |> Map.put(:width, image_info.width)
         |> Map.put(:height, image_info.height)
 
+      Progress.hide_progress(user)
       {:ok, size_struct}
     rescue
-      e in File.Error -> {:error, {:create_image_sizes, e}}
-      e -> {:error, {:create_image_sizes, e}}
+      e in File.Error ->
+        Progress.hide_progress(user)
+        {:error, {:create_image_sizes, e}}
+      e ->
+        Progress.hide_progress(user)
+        {:error, {:create_image_sizes, e}}
     end
   end
 

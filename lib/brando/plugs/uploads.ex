@@ -21,7 +21,7 @@ defmodule Brando.Plug.Uploads do
           def changeset(schema, params) do
             schema
             |> cast(...)
-            |> validate_upload({:image, :field_name}) # or {:file, :field_name}
+            |> validate_upload({:image, :field_name}, user) # or {:file, :field_name}
           end
       """
   end

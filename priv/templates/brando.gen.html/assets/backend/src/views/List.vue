@@ -13,24 +13,34 @@
               <p class="lead">Kort om delsiden</p>
               <hr class="my-4">
               <p class="lead">
-                <router-link :to="{ name: '<%= singular %>-new' }" class="btn btn-secondary" exact>
+                <router-link
+                  :to="{ name: '<%= singular %>-new' }"
+                  class="btn btn-secondary"
+                  exact>
                   Ny <%= vue_singular %>
                 </router-link>
               </p>
             </div>
 
-            <table class="table table-airy" v-if="all<%= Recase.to_pascal(vue_plural) %>.length">
+            <table
+              v-if="all<%= Recase.to_pascal(vue_plural) %>.length"
+              class="table table-airy">
               <tbody
                 name="slide-fade-top-slow"<%= if sequenced do %>
                 v-sortable="{handle: 'tr', animation: 250, store: {get: getOrder, set: storeOrder}}"<% end %>
                 is="transition-group">
                 <%= if sequenced do %>
-                <tr :data-id="<%= vue_singular %>" :key="<%= vue_singular %>.id" v-for="<%= vue_singular %> in all<%= Recase.to_pascal(vue_plural) %>">
+                <tr
+                  v-for="<%= vue_singular %> in all<%= Recase.to_pascal(vue_plural) %>"
+                  :key="<%= vue_singular %>.id"
+                  :data-id="<%= vue_singular %>.id">
                   <td class="fit">
                     <i class="fal fa-fw fa-arrows-v"></i>
                   </td>
                 <% else %>
-                <tr :key="<%= vue_singular %>.id" v-for="<%= vue_singular %> in all<%= Recase.to_pascal(vue_plural) %>">
+                <tr
+                  v-for="<%= vue_singular %> in all<%= Recase.to_pascal(vue_plural) %>"
+                  :key="<%= vue_singular %>.id">
                   <td class="text-strong">
                     <!-- {{ <%= vue_singular %>.field }} -->
                   </td>
@@ -38,7 +48,9 @@
                   <td class="text-xs fit">
                     {{ <%= vue_singular %>.inserted_at | datetime }}
                   </td>
-                  <td class="text-center fit" v-if="['superuser'].includes(me.role)">
+                  <td
+                    v-if="['superuser'].includes(me.role)"
+                    class="text-center fit">
                     <b-dropdown variant="white" no-caret>
                       <template slot="button-content">
                         <i class="k-dropdown-icon"></i>

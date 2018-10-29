@@ -74,7 +74,7 @@ defmodule Brando.VillainController do
   end
 
   @doc false
-  def imageseries(conn, %{"series" => series_slug}) do
+  def slideshow(conn, %{"slug" => series_slug}) do
     series =
       from(is in Brando.ImageSeries,
         join: c in assoc(is, :image_category),
@@ -83,23 +83,19 @@ defmodule Brando.VillainController do
         order_by: i.sequence,
         preload: [image_category: c, images: i]
       )
-      |> first
       |> Brando.repo().one!
 
-    sizes = Enum.map(series.cfg.sizes, &elem(&1, 0))
-    images = Enum.map(series.images, & &1.image)
+    images = Enum.map(series.images, &Brando.Utils.img_url(&1.image, :thumb, prefix: Brando.Utils.media_url()))
 
     json(conn, %{
       status: 200,
       series: series_slug,
-      images: images,
-      sizes: sizes,
-      media_url: Brando.config(:media_url)
+      images: images
     })
   end
 
   @doc false
-  def imageseries(conn, _) do
+  def slideshows(conn, _) do
     series =
       Brando.repo().all(
         from is in Brando.ImageSeries,

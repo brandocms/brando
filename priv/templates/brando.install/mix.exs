@@ -40,8 +40,8 @@ defmodule <%= application_module %>.Mixfile do
      {:phoenix_html, "~> 2.12"},
      {:phoenix_live_reload, "~> 1.2-rc", only: :dev},
      {:plug_cowboy, "~> 2.0"},
-     {:ecto, "~> 3.0-rc", override: true},
-     {:ecto_sql, "~> 3.0-rc", override: true},
+     {:ecto, "~> 3.0", override: true},
+     {:ecto_sql, "~> 3.0", override: true},
 
      # general deps
      {:postgrex, "~> 0.14.0-rc"},

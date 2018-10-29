@@ -269,19 +269,19 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         @doc \"\"\"
         Create new #{binding[:singular]}
         \"\"\"
-        def create_#{binding[:singular]}(#{binding[:singular]}_params) do
-          changeset = #{binding[:alias]}.changeset(%#{binding[:alias]}{}, #{binding[:singular]}_params)
+        def create_#{binding[:singular]}(#{binding[:singular]}_params, user \\ :system) do
+          changeset = #{binding[:alias]}.changeset(%#{binding[:alias]}{}, #{binding[:singular]}_params, user)
           #{insert_code}
         end
 
         @doc \"\"\"
         Update existing #{binding[:singular]}
         \"\"\"
-        def update_#{binding[:singular]}(#{binding[:singular]}_id, #{binding[:singular]}_params) do
+        def update_#{binding[:singular]}(#{binding[:singular]}_id, #{binding[:singular]}_params, user \\ :system) do
           {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(#{binding[:singular]}_id)
 
           #{binding[:singular]}
-          |> #{binding[:alias]}.changeset(#{binding[:singular]}_params)
+          |> #{binding[:alias]}.changeset(#{binding[:singular]}_params, user)
           |> Repo.update()
         end
 

@@ -55,11 +55,11 @@ defmodule Brando.Field.ImageField do
       @doc """
       Validates upload in changeset
       """
-      def validate_upload(changeset, {:image, field_name}) do
+      def validate_upload(changeset, {:image, field_name}, user \\ :system) do
         with {:ok, plug} <- field_has_changed(changeset, field_name),
              {:ok, _} <- changeset_has_no_errors(changeset),
              {:ok, cfg} <- get_image_cfg(field_name),
-             {:ok, {:handled, name, field}} <- handle_image_upload(field_name, plug, cfg) do
+             {:ok, {:handled, name, field}} <- handle_image_upload(field_name, plug, cfg, user) do
           put_change(changeset, name, field)
         else
           :unchanged ->
@@ -162,19 +162,19 @@ defmodule Brando.Field.ImageField do
     * `plug`: a Plug.Upload struct.
     * `cfg`: the field's cfg from has_image_field
   """
-  @spec handle_image_upload(atom, Plug.Upload.t(), Brando.Type.ImageConfig.t()) ::
+  @spec handle_image_upload(atom, Plug.Upload.t(), Brando.Type.ImageConfig.t(), Brando.User.t | :system) ::
           {:ok, {atom, Brando.Type.Image}} | {:error, {atom, {:error, String.t()}}}
-  def handle_image_upload(name, %Plug.Upload{} = plug, cfg) do
+  def handle_image_upload(name, %Plug.Upload{} = plug, cfg, user) do
     with {:ok, upload} <- process_upload(plug, cfg),
-         {:ok, field} <- create_image_struct(upload) do
+         {:ok, field} <- create_image_struct(upload, user) do
       {:ok, {:handled, name, field}}
     else
       err -> {:error, {name, handle_upload_error(err)}}
     end
   end
 
-  @spec handle_image_upload(atom, Map.t(), Brando.Type.ImageConfig.t()) :: {:ok, Map.t()}
-  def handle_image_upload(name, image, _) do
+  @spec handle_image_upload(atom, Map.t(), Brando.Type.ImageConfig.t(), Brando.User.t | :system) :: {:ok, Map.t()}
+  def handle_image_upload(name, image, _, _) do
     {:ok, {:unhandled, name, image}}
   end
 end
