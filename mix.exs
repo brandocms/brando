@@ -79,14 +79,13 @@ defmodule Brando.Mixfile do
       {:mogrify, "~> 0.5"},
       {:phoenix, "~> 1.4.0-rc", override: true},
       {:phoenix_html, "~> 2.6"},
-      {:phoenix_ecto, "~> 3.5"},
-      {:postgrex, "~> 0.14-rc", override: true},
+      {:phoenix_ecto, "~> 4.0"},
+      {:postgrex, "~> 0.14", override: true},
       {:slugger, "~> 0.2"},
       {:recase, "~> 0.2"},
       {:guardian, "~> 1.0"},
       {:timex, "~> 3.0"},
 
-      {:db_connection, "~> 2.0-rc", override: true},
       {:ecto, "~> 3.0", override: true},
       {:ecto_sql, "~> 3.0-rc", override: true},
 
