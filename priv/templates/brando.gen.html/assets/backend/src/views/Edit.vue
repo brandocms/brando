@@ -30,6 +30,7 @@
 
 import nprogress from 'nprogress'
 import { showError, validateImageParams, stripParams } from 'kurtz/lib/utils'
+import { alertError } from 'kurtz/lib/utils/alerts'
 import { <%= vue_singular %>API } from '@/api/<%= vue_singular %>'
 
 export default {
@@ -60,12 +61,14 @@ export default {
 
   methods: {
     validate () {
-      this.$validator.validateAll().then(() => {
+      this.$validator.validateAll().then(valid => {
+        if (!valid) {
+          alertError('Feil i skjema', 'Vennligst se over og rett feil i rødt')
+          this.loading = false
+        }
         this.save()
       }).catch(err => {
         console.log(err)
-        alert('Feil i skjema', 'Vennligst se over og rett feil i rødt')
-        this.loading = false
       })
     },
 
