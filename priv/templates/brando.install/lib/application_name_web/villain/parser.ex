@@ -17,11 +17,11 @@ defmodule <%= application_module %>.Villain.Parser do
 
   def header(%{"text" => text, "level" => level}) do
     header_size = "h#{level}"
-    "<#{header_size}>" <> text <> "</#{header_size}>"
+    "<#{header_size} data-moonwalk>" <> text <> "</#{header_size}>"
   end
 
   def header(%{"text" => text}) do
-    "<h1>" <> text <> "</h1>"
+    "<h1 data-moonwalk>" <> text <> "</h1>"
   end
 
   @doc """
@@ -49,14 +49,17 @@ defmodule <%= application_module %>.Villain.Parser do
   Markdown -> html
   """
   def markdown(%{"text" => markdown}) do
-    Earmark.as_html!(markdown, %Earmark.Options{breaks: true})
+    html = Earmark.as_html!(markdown, %Earmark.Options{breaks: true})
+    """
+    <div data-moonwalk-children>#{html}</div>
+    """
   end
 
   @doc """
   Convert GMaps url to iframe html
   """
   def map(%{"embed_url" => embed_url, "source" => "gmaps"}) do
-    ~s(<div class="map-wrapper">
+    ~s(<div class="map-wrapper" data-moonwalk>
          <iframe width="420"
                  height="315"
                  src="#{embed_url}"
@@ -81,9 +84,6 @@ defmodule <%= application_module %>.Villain.Parser do
        </div>)
   end
 
-  @doc """
-  Convert Vimeo video to iframe html
-  """
   def video(%{"remote_id" => remote_id, "source" => "vimeo"}) do
     ~s(<div class="video-wrapper">
          <iframe src="//player.vimeo.com/video/#{remote_id}"
@@ -100,23 +100,31 @@ defmodule <%= application_module %>.Villain.Parser do
   @doc """
   Convert image to html, with caption and credits and optional link
   """
-  def image(%{"url" => url, "title" => title, "credits" => credits} = data) do
-    {link_open, link_close} = if Map.get(data, "link", "") != "" do
+  def image(data) do
+    url = Map.get(data, "url", "")
+    title = Map.get(data, "title", "")
+    credits = Map.get(data, "credits", "")
+    link = Map.get(data, "link", "")
+    class = Map.get(data, "class", "")
+
+    {link_open, link_close} = if link != "" do
       {~s(<a href="#{data["link"]}" title="#{title}">), ~s(</a>)}
     else
       {"", ""}
     end
+    title = if title == "", do: nil, else: title
+    caption =
+      if title do
+        """
+        <p class="small photo-caption"><span class="arrow-se">&searr;</span> #{title}</p>
+        """
+      else
+        ""
+      end
     """
-    <div class="img-wrapper">
-      #{link_open}<img src="#{url}" alt="#{title}/#{credits}" class="img-fluid" />#{link_close}
-      <div class="image-info-wrapper">
-        <div class="image-title">
-          #{title}
-        </div>
-        <div class="image-credits">
-          #{credits}
-        </div>
-      </div>
+    <div class="img-wrapper" data-moonwalk-children>
+      #{link_open}<img src="#{url}" alt="#{title}/#{credits}" class="#{class}" />#{link_close}
+      #{caption}
     </div>
     """
   end
@@ -124,24 +132,36 @@ defmodule <%= application_module %>.Villain.Parser do
   @doc """
   Slideshow
   """
-  def slideshow(%{"imageseries" => series_slug, "size" => size}) do
+  def slideshow(%{"imageseries" => series_slug}) do
+    # srcset
     q = from is in Brando.ImageSeries,
              join: c in assoc(is, :image_category),
              join: i in assoc(is, :images),
              where: c.slug == "slideshows" and is.slug == ^series_slug,
              order_by: i.sequence,
              preload: [image_category: c, images: i]
-    series = Brando.repo.first!(q)
+    series = Brando.repo.one!(q)
 
     images = Enum.map_join series.images, "\n", fn(img) ->
-      src = img_url(img.image, String.to_atom(size), [prefix: media_url()])
-      ~s(<li><img src="#{src}" /></li>)
+      src = img_url(img.image, :xlarge, [prefix: media_url()])
+      title = img.image.title && ~s(<p class="small photo-caption"><span class="arrow-se">&searr;</span> #{img.image.title}</p>) || ""
+      """
+      <li class="glide__slide">
+        <img class="img-fluid" src="#{src}" />
+        #{title}
+      </li>
+      """
     end
     """
-    <div class="flexslider flex-viewport">
-      <ul class="slides">
-        #{images}
-      </ul>
+    <div class="glide">
+      <div class="follower">
+        <div class="arrow">&rarr;</div>
+      </div>
+      <div class="glide__track" data-glide-el="track" data-moonwalk>
+        <ul class="glide__slides">
+          #{images}
+        </ul>
+      </div>
     </div>
     """
   end
@@ -187,6 +207,17 @@ defmodule <%= application_module %>.Villain.Parser do
       ~s(<div class="#{class}">#{Enum.reverse(c)}</div>)
     end
     ~s(<div class="row">#{col_html}</div>)
+  end
+
+  @doc """
+  Convert template to html.
+  """
+  def template(%{"code" => code, "refs" => refs}) do
+    Regex.replace(~r/%{(\w+)}/, code, fn _, match ->
+      ref = Enum.find(refs, &(&1["name"] == match))
+      block = Map.get(ref, "data")
+      apply(__MODULE__, String.to_atom(block["type"]), [block["data"]])
+    end)
   end
 
   @doc """
