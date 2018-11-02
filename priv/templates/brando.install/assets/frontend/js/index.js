@@ -1,113 +1,42 @@
 /**
- * APPLICATION FRONTEND
- * (c) 2018
+ * TWINED APPLICATION FRONTEND
+ * (c) 2018 UNIVERS/TWINED TM
  */
 
-import $ from 'jquery'
-import ScrollReveal from 'scrollreveal'
-window.sr = ScrollReveal()
-console.log(sr)
-import Headroom from 'headroom.js'
 import imagesLoaded from 'imagesloaded'
 import Velocity from 'velocity-animate'
-import hookLightbox from './lightbox'
+
+import { initializeLightbox } from './lightbox'
+import { initializeNavigation, navigationReady } from './navigation'
+import { initializeMoonwalk, moonwalkReady } from './moonwalk'
+
 import '../css/app.scss'
 
-const SLIDE_DURATION = 4000
+// trigger ready state
+if (document.attachEvent ? document.readyState === 'complete' : document.readyState !== 'loading') {
+  ready()
+} else {
+  document.addEventListener('DOMContentLoaded', ready)
+}
 
-$(() => {
-  hookLightbox()
+function ready() {
+  initializeLightbox()
+  initializeMoonwalk()
+  initializeNavigation()
 
-  if(window.location.hash) {
-    $('header').addClass("headroom--unpinned")
-  }
-
-  $('a:not([href*="#"])')
-    .click(function(e) {
-      // hide the loader
-      $('.loading-container').hide()
-      const that = this
-      e.preventDefault()
-      fader.style.display = 'block'
-      Velocity(
-        fader,
-        {
-          opacity: 1
-        },
-        {
-          duration: 250,
-          complete: function(elements) {
-            window.location = $(that).attr('href')
-          }
-        }
-      )
-    })
-
-  $('[data-moonwalk-children]').each(function(idx, m) {
-    const $children = $(m).children()
-    $children.each(function(idx, c) {
-      $(c).attr('data-moonwalk', '')
-    })
-  })
-
-  $('.hamburger').click(function () {
-    $(this).toggleClass('is-active')
-    $('body').toggleClass('open-menu')
-  })
-
-  var opts = {
-    offset: 0,
-    tolerance: {
-      down: 5,
-      up: 10
-    },
-    classes: {
-      initial: "animated"
-    }
-  };
-
-  var headroom  = new Headroom(document.querySelector('header'), opts);
-  headroom.init()
-
-  imagesLoaded(document.querySelector('body'), function(instance) {
+  imagesLoaded(document.querySelector('body'), function (instance) {
     setTimeout(setReady, 500)
   })
-})
+}
 
-function setReady () {
-  $('body').removeClass('unloaded')
+function setReady() {
+  const body = document.querySelector('body')
   const fader = document.querySelector('#fader')
 
-  const revealOptions = {
-    duration: 1200,
-    distance: '20px',
-    easing: 'ease',
-    viewFactor: 0.0,
-    delay: 0,
-    useDelay: 'once'
-  }
+  body.classList.remove('unloaded')
 
-  const offsetRevealOptions = {
-    duration: 1200,
-    distance: '20px',
-    easing: 'ease',
-    viewFactor: 0.0,
-    viewOffset: { top: 0, right: 0, bottom: -400, left: 0 },
-    delay: 500,
-    useDelay: 'once'
-  }
-
-  const walkSections = document.querySelectorAll('[data-moonwalk-section]')
-
-  // loop through walk sections
-  for (let i = 0; i < walkSections.length; i++) {
-    // process walksection
-    let walks = walkSections[i].querySelectorAll('[data-moonwalk]')
-    sr.reveal(walks, revealOptions, 150);
-  }
-
-  // sr.reveal('[data-moonwalk]', revealOptions, 150);
-  sr.reveal('[data-moonwalk-offset]', offsetRevealOptions, 150);
+  navigationReady()
+  moonwalkReady()
 
   Velocity(
     fader,
@@ -116,14 +45,13 @@ function setReady () {
     },
     {
       duration: 1000,
-      complete: function(elements) {
+      complete: () => {
         fader.style.display = 'none'
       }
     }
   )
 }
 
-let App = {};
+let App = {}
 
-
-export default App;
+export default App
