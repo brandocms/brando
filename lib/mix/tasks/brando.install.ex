@@ -254,14 +254,14 @@ defmodule Mix.Tasks.Brando.Install do
      "assets/backend/src/styles/includes/_fonts.scss"},
 
     # Frontend assets
-    {:copy, "templates/brando.install/assets/frontend/package.json",
-     "assets/frontend/package.json"},
-    {:copy, "templates/brando.install/assets/frontend/eslintrc.js",
-     "assets/frontend/.eslintrc.js"},
-    {:copy, "templates/brando.install/assets/frontend/postcss.config.js",
-     "assets/frontend/postcss.config.js"},
-    {:copy, "templates/brando.install/assets/frontend/webpack.config.js",
-     "assets/frontend/webpack.config.js"},
+    {:copy, "templates/brando.install/assets/frontend/babelrc", "assets/frontend/.babelrc"},
+    {:copy, "templates/brando.install/assets/frontend/browserslistrc", "assets/frontend/.browserslistrc"},
+    {:copy, "templates/brando.install/assets/frontend/eslintrc.js", "assets/frontend/.eslintrc.js"},
+    {:copy, "templates/brando.install/assets/frontend/package.json", "assets/frontend/package.json"},
+    {:copy, "templates/brando.install/assets/frontend/postcss.config.js", "assets/frontend/postcss.config.js"},
+    {:copy, "templates/brando.install/assets/frontend/webpack.config.js", "assets/frontend/webpack.config.js"},
+    {:copy, "templates/brando.install/assets/frontend/yarn.lock", "assets/frontend/yarn.lock"},
+
     {:copy, "templates/brando.install/assets/frontend/css/_bootstrap.scss",
      "assets/frontend/css/_bootstrap.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/_variables.scss",

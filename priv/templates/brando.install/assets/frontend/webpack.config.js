@@ -3,7 +3,7 @@ const Webpack = require('webpack')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 const OptimizeCSSPlugin = require('optimize-css-assets-webpack-plugin')
-const UglifyJsPlugin = require("uglifyjs-webpack-plugin")
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 
 const config = require('./package')
 
@@ -13,12 +13,6 @@ const OUTPUT_PATH = path.resolve(__dirname, '..', '..', 'priv', 'static')
 
 const ExtractCSS = new MiniCssExtractPlugin({
   filename: 'css/[name].css'
-})
-
-const Provide = new Webpack.ProvidePlugin({
-  $: 'jquery',
-  jQuery: 'jquery',
-  Tether: 'tether'
 })
 
 const Define = new Webpack.DefinePlugin({
@@ -39,7 +33,6 @@ const Copy = new CopyWebpackPlugin([{
 
 var PLUGINS = [
   ExtractCSS,
-  Provide,
   Define,
   Copy
 ]
@@ -50,7 +43,6 @@ module.exports = function (env = {}) {
     entry: {
       app: [
         // Set up an ES6-ish environment
-        'babel-polyfill',
         './js/index.js'
       ]
     },
@@ -92,7 +84,7 @@ module.exports = function (env = {}) {
         test: /\.css$/,
         use: [
           MiniCssExtractPlugin.loader,
-          "css-loader"
+          'css-loader'
         ]
       },
       {
@@ -101,7 +93,7 @@ module.exports = function (env = {}) {
           MiniCssExtractPlugin.loader,
           'css-loader',
           'postcss-loader',
-          'sass-loader',
+          'sass-loader'
         ]
       },
       {
