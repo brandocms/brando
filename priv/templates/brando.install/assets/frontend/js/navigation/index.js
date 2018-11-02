@@ -49,19 +49,34 @@ function bindLinks () {
   const fader = document.querySelector('#fader')
   const links = document.querySelectorAll('a:not([href^="#"]):not([target="_blank"]):not([data-lightbox])')
   const anchors = document.querySelectorAll('a[href^="#"]')
+  let wait = false
 
   anchors.forEach(link => {
-    link.addEventListener('click', e => {
-      toggleMenuOff()
-
-      let dataID = e.currentTarget.getAttribute('href')
-      let dataTarget = document.querySelector(dataID)
+    link.addEventListener('click', function (e) {
       e.preventDefault()
-      if (dataTarget) {
-        Velocity(dataTarget, 'scroll', {
-          // duration: 1500,
-          easing: 'ease-in-out'
-        })
+      const href = this.getAttribute('href')
+
+      if (document.body.classList.contains('open-menu')) {
+        toggleMenuOff()
+        wait = true
+      }
+
+      const move = () => {
+        let dataID = href
+        let dataTarget = document.querySelector(dataID)
+        e.preventDefault()
+        if (dataTarget) {
+          Velocity(dataTarget, 'scroll', {
+            // duration: 1500,
+            easing: 'ease-in-out'
+          })
+        }
+      }
+
+      if (wait) {
+        setTimeout(move, 100)
+      } else {
+        move()
       }
     })
   })
@@ -144,6 +159,7 @@ function toggleMenuOn () {
 
   // OPENING MENU
   header.classList.remove('headroom--pinned')
+  nav.style.position = 'fixed'
   Velocity(nav, { translateX: '100%' }, { duration: 0, queue: false })
   Velocity(header, { height: '100%' }, {
     duration: 0,
