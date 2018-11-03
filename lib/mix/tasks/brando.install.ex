@@ -27,36 +27,29 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "templates/brando.install/etc/supervisord/prod.conf", "etc/supervisord/prod.conf"},
 
     # Tuple implementation for Poison
-    {:eex, "templates/brando.install/lib/application_name/tuple.ex",
-     "lib/application_name/tuple.ex"},
+    {:eex, "templates/brando.install/lib/application_name/tuple.ex", "lib/application_name/tuple.ex"},
 
     # Presence
-    {:eex, "templates/brando.install/lib/application_name/presence.ex",
-     "lib/application_name/presence.ex"},
+    {:eex, "templates/brando.install/lib/application_name/presence.ex", "lib/application_name/presence.ex"},
 
     # Router template
-    {:eex, "templates/brando.install/lib/application_name_web/router.ex",
-     "lib/application_name_web/router.ex"},
+    {:eex, "templates/brando.install/lib/application_name_web/router.ex", "lib/application_name_web/router.ex"},
 
     # Lockdown files
-    {:eex, "templates/brando.install/lib/application_name_web/controllers/lockdown_controller.ex",
-     "lib/application_name_web/controllers/lockdown_controller.ex"},
-    {:eex, "templates/brando.install/lib/application_name_web/templates/layout/lockdown.html.eex",
-     "lib/application_name_web/templates/layout/lockdown.html.eex"},
-    {:eex, "templates/brando.install/lib/application_name_web/templates/lockdown/index.html.eex",
-     "lib/application_name_web/templates/lockdown/index.html.eex"},
-    {:eex, "templates/brando.install/lib/application_name_web/views/lockdown_view.ex",
-     "lib/application_name_web/views/lockdown_view.ex"},
+    {:eex, "templates/brando.install/lib/application_name_web/controllers/lockdown_controller.ex", "lib/application_name_web/controllers/lockdown_controller.ex"},
+    {:eex, "templates/brando.install/lib/application_name_web/templates/layout/lockdown.html.eex", "lib/application_name_web/templates/layout/lockdown.html.eex"},
+    {:eex, "templates/brando.install/lib/application_name_web/templates/lockdown/index.html.eex", "lib/application_name_web/templates/lockdown/index.html.eex"},
+    {:eex, "templates/brando.install/lib/application_name_web/views/lockdown_view.ex", "lib/application_name_web/views/lockdown_view.ex"},
+
+    # Page files
+    {:eex, "templates/brando.install/lib/application_name_web/controllers/page_controller.ex", "lib/application_name_web/controllers/page_controller.ex"},
+    {:eex, "templates/brando.install/lib/application_name_web/templates/page/cookies.html.eex", "lib/application_name_web/templates/page/cookies.html.eex"},
 
     # Fallback and errors
-    {:eex, "templates/brando.install/lib/application_name_web/controllers/fallback_controller.ex",
-     "lib/application_name_web/controllers/fallback_controller.ex"},
-    {:eex, "templates/brando.install/lib/application_name_web/views/error_view.ex",
-     "lib/application_name_web/views/error_view.ex"},
-    {:eex, "templates/brando.install/lib/application_name_web/templates/error/404_page.html.eex",
-     "lib/application_name_web/templates/error/404_page.html.eex"},
-    {:eex, "templates/brando.install/lib/application_name_web/templates/error/500_page.html.eex",
-     "lib/application_name_web/templates/error/500_page.html.eex"},
+    {:eex, "templates/brando.install/lib/application_name_web/controllers/fallback_controller.ex", "lib/application_name_web/controllers/fallback_controller.ex"},
+    {:eex, "templates/brando.install/lib/application_name_web/views/error_view.ex", "lib/application_name_web/views/error_view.ex"},
+    {:eex, "templates/brando.install/lib/application_name_web/templates/error/404_page.html.eex", "lib/application_name_web/templates/error/404_page.html.eex"},
+    {:eex, "templates/brando.install/lib/application_name_web/templates/error/500_page.html.eex", "lib/application_name_web/templates/error/500_page.html.eex"},
 
     # Navigation and page index
     {:text,
@@ -294,6 +287,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/assets/frontend/js/lightbox/index.js", "assets/frontend/js/lightbox/index.js"},
     {:copy, "templates/brando.install/assets/frontend/js/navigation/index.js", "assets/frontend/js/navigation/index.js"},
     {:copy, "templates/brando.install/assets/frontend/js/moonwalk/index.js", "assets/frontend/js/moonwalk/index.js"},
+    {:copy, "templates/brando.install/assets/frontend/js/cookies/index.js", "assets/frontend/js/cookies/index.js"},
     {:copy, "templates/brando.install/assets/frontend/static/favicon.ico",
      "assets/frontend/static/favicon.ico"},
     {:copy, "templates/brando.install/assets/frontend/static/ico/android-chrome-192x192.png",

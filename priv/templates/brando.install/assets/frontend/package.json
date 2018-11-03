@@ -21,12 +21,13 @@
     "animate.css": "^3.6.1",
     "bootstrap": "^4.1.0",
     "font-awesome": "^4.7.0",
+    "gsap": "^2.0.2",
     "hamburgers": "^0.9.3",
     "headroom.js": "^0.9.4",
     "imagesloaded": "^4.1.4",
     "mini-css-extract-plugin": "^0.4.0",
-    "scrollreveal": "^4.0.5",
-    "velocity-animate": "^1.5.2"
+    "scroll-into-view-if-needed": "^2.2.20",
+    "scrollreveal": "^4.0.5"
   },
   "devDependencies": {
     "@babel/core": "^7.0.0",

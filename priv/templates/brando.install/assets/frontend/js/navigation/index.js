@@ -1,5 +1,6 @@
 import Headroom from 'headroom.js'
-import Velocity from 'velocity-animate'
+import { TweenLite } from 'gsap/TweenMax'
+import scrollIntoView from 'scroll-into-view-if-needed'
 
 /**
  * Called at document ready
@@ -66,10 +67,7 @@ function bindLinks () {
         let dataTarget = document.querySelector(dataID)
         e.preventDefault()
         if (dataTarget) {
-          Velocity(dataTarget, 'scroll', {
-            // duration: 1500,
-            easing: 'ease-in-out'
-          })
+          scrollIntoView(dataTarget, { block: 'start', behavior: 'smooth' })
         }
       }
 
@@ -92,19 +90,12 @@ function bindLinks () {
 
       if (href.indexOf(document.location.hostname) > -1 || href.startsWith('/')) {
         fader.style.display = 'block'
-
-        Velocity(
-          fader,
-          {
-            opacity: 1
-          },
-          {
-            duration: 350,
-            complete: (elements) => {
-              window.location = href
-            }
+        TweenLite.to(fader, 0.350, {
+          opacity: 1,
+          onComplete: () => {
+            window.location = href
           }
-        )
+        })
       }
     })
   })
@@ -136,17 +127,18 @@ function toggleMenuOff () {
 
   // CLOSING MENU
   hamburger.classList.toggle('is-active')
-  Velocity(nav, {
-    // opacity: 0,
-    translateX: '100%'
-  }, {
-    duration: 350,
-    complete: () => {
-      header.style.height = 'auto'
-      body.classList.toggle('open-menu')
-      if (header.classList.contains('headroom--not-top')) {
-        header.classList.add('headroom--pinned')
-      }
+  TweenLite.to(nav, 0.350, {
+    x: '100%',
+    onComplete: () => {
+      TweenLite.to(header, 0, {
+        clearProps: 'backgroundColor,height',
+        onComplete: () => {
+          body.classList.toggle('open-menu')
+          if (header.classList.contains('headroom--not-top')) {
+            header.classList.add('headroom--pinned')
+          }
+        }
+      })
     }
   })
 }
@@ -158,17 +150,18 @@ function toggleMenuOn () {
   const hamburger = document.querySelector('.hamburger')
 
   // OPENING MENU
-  header.classList.remove('headroom--pinned')
   nav.style.position = 'fixed'
-  Velocity(nav, { translateX: '100%' }, { duration: 0, queue: false })
-  Velocity(header, { height: '100%' }, {
-    duration: 0,
-    queue: false,
-    complete: () => {
+  nav.style.transform = 'translateX: 100%'
+
+  TweenLite.to(header, 0, {
+    backgroundColor: 'transparent',
+    height: '100%',
+    onComplete: () => {
+      body.classList.toggle('open-menu')
+      header.classList.remove('headroom--pinned')
       nav.style.opacity = 1
       hamburger.classList.toggle('is-active')
-      body.classList.toggle('open-menu')
-      Velocity(nav, { translateX: '0%' }, { duration: 350 })
+      TweenLite.to(nav, 0.350, { x: '0%' })
     }
   })
 }

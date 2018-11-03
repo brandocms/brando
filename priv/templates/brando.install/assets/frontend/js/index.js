@@ -4,13 +4,16 @@
  */
 
 import imagesLoaded from 'imagesloaded'
-import Velocity from 'velocity-animate'
+import { TweenLite, Sine } from 'gsap/TweenMax'
 
 import { initializeLightbox } from './lightbox'
 import { initializeNavigation, navigationReady } from './navigation'
 import { initializeMoonwalk, moonwalkReady } from './moonwalk'
+import { initializeCookies } from './cookies'
 
 import '../css/app.scss'
+
+TweenLite.defaultEase = Sine.easeOut
 
 // trigger ready state
 if (document.attachEvent ? document.readyState === 'complete' : document.readyState !== 'loading') {
@@ -19,17 +22,18 @@ if (document.attachEvent ? document.readyState === 'complete' : document.readySt
   document.addEventListener('DOMContentLoaded', ready)
 }
 
-function ready() {
+function ready () {
   initializeLightbox()
   initializeMoonwalk()
   initializeNavigation()
+  initializeCookies()
 
   imagesLoaded(document.querySelector('body'), function (instance) {
     setTimeout(setReady, 500)
   })
 }
 
-function setReady() {
+function setReady () {
   const body = document.querySelector('body')
   const fader = document.querySelector('#fader')
 
@@ -38,18 +42,12 @@ function setReady() {
   navigationReady()
   moonwalkReady()
 
-  Velocity(
-    fader,
-    {
-      opacity: 0
-    },
-    {
-      duration: 1000,
-      complete: () => {
-        fader.style.display = 'none'
-      }
+  TweenLite.to(fader, 1, {
+    opacity: 0,
+    onComplete: () => {
+      fader.style.display = 'none'
     }
-  )
+  })
 }
 
 let App = {}

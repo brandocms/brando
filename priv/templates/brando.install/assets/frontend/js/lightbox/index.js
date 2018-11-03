@@ -1,7 +1,7 @@
 import imagesLoaded from 'imagesloaded'
-import Velocity from 'velocity-animate'
+import { TweenLite } from 'gsap/TweenMax'
 
-export function initializeLightbox() {
+export function initializeLightbox () {
   const lightboxes = document.querySelectorAll('a[data-lightbox]')
   const fader = document.querySelector('#fader')
 
@@ -11,55 +11,38 @@ export function initializeLightbox() {
       const href = this.href
       fader.style.display = 'block'
 
-      Velocity(
-        fader,
-        {
-          opacity: 1
-        },
-        {
-          duration: 250,
-          complete: () => {
-            const wrapper = document.createElement('div')
-            const img = document.createElement('img')
-            wrapper.classList.add('lightbox-backdrop')
-            img.classList.add('lightbox-image', 'img-fluid', 'm-lg')
-            img.src = href
+      TweenLite.to(fader, 0.250, {
+        opacity: 1,
+        onComplete: () => {
+          const wrapper = document.createElement('div')
+          const img = document.createElement('img')
+          wrapper.classList.add('lightbox-backdrop')
+          img.classList.add('lightbox-image', 'img-fluid', 'm-lg')
+          img.src = href
 
-            wrapper.appendChild(img)
-            document.body.appendChild(wrapper)
+          wrapper.appendChild(img)
+          document.body.appendChild(wrapper)
 
-            imagesLoaded(wrapper, function (instance) {
-              Velocity(
-                wrapper,
-                {
-                  opacity: 1
-                },
-                {
-                  duration: 500,
-                  complete: () => {
-                    fader.style.display = 'none'
-                    fader.style.opacity = 0
-                  }
-                }
-              )
+          imagesLoaded(wrapper, function (instance) {
+            TweenLite.to(wrapper, 0.5, {
+              opacity: 1,
+              onComplete: () => {
+                fader.style.display = 'none'
+                fader.style.opacity = 0
+              }
             })
-            wrapper.addEventListener('click', e => {
-              Velocity(
-                wrapper,
-                {
-                  opacity: 0
-                },
-                {
-                  duration: 500,
-                  complete: () => {
-                    wrapper.parentNode.removeChild(wrapper)
-                  }
-                }
-              )
+          })
+
+          wrapper.addEventListener('click', e => {
+            TweenLite.to(wrapper, 0.5, {
+              opacity: 0,
+              onComplete: () => {
+                wrapper.parentNode.removeChild(wrapper)
+              }
             })
-          }
+          })
         }
-      )
+      })
     })
   })
 }
