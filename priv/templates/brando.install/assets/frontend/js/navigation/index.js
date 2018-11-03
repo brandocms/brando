@@ -150,7 +150,6 @@ function toggleMenuOn () {
   const hamburger = document.querySelector('.hamburger')
 
   // OPENING MENU
-  nav.style.position = 'fixed'
   nav.style.transform = 'translateX: 100%'
 
   TweenLite.to(header, 0, {
