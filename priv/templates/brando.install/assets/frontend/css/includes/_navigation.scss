@@ -8,74 +8,192 @@ body.unloaded {
 
 .no-js {
   header {
+    background-color: $light;
+    color: $dark;
+
     &.headroom--unpinned {
       transform: translate3d(0, 0, 0);
       backface-visibility: hidden;
     }
-  }
-}
 
-header {
-  @each $bp-name, $bp-size in $grid-breakpoints {
-    @include media-breakpoint-up($bp-name) {
-      /* #{$bp-name} */
-      padding-top: map-get($padding-sm, $bp-name);
-      padding-bottom: map-get($padding-sm, $bp-name);
+    .hamburger {
+      display: none;
     }
-  }
-  height: auto;
-  transition: all 250ms ease;
-  background-color: $menu-bg;
-  position: fixed;
-  z-index: 10;
-  right: 0;
-  left: 0;
-  top: 0;
 
-  path#logo-text {
-    opacity: 1;
-    transition: opacity 1s ease;
-  }
-
-  &.headroom--unpinned {
-    visibility: hidden;
-    transform: translate3d(0, -100%, 0);
-    backface-visibility: hidden;
-  }
-
-  &.headroom--pinned {
-    visibility: visible;
-    transform: translate3d(0, 0, 0);
-    backface-visibility: hidden;
-  }
-
-  &.headroom--not-top {
-    path#logo-text {
-      opacity: 0;
+    .navbar-brand svg path {
+      fill: $dark !important;
     }
-    @each $bp-name, $bp-size in $grid-breakpoints {
-      @include media-breakpoint-up($bp-name) {
-        padding-top: map-get($padding-sm, $bp-name) / 2;
-        padding-bottom: map-get($padding-sm, $bp-name) / 2;
+
+    @include media-breakpoint-up(md) {
+      .nav-link {
+        color: $dark !important;
       }
     }
 
-    .navbar-brand {
-      @each $bp-name, $bp-size in $grid-breakpoints {
-        @include media-breakpoint-up($bp-name) {
-          /* #{$bp-name} */
-          max-width: map-get($navbar-brand-widths, $bp-name) * 0.5;
-          // transform: scale(0.75);
+    @include media-breakpoint-down(sm) {
+      .no-js-menu, .no-js-menu-close {
+        right: 0;
+        position: absolute;
+        z-index: 9999;
+        display: block;
+      }
+
+      .no-js-menu-close {
+        display: none;
+      }
+
+      #menu {
+        display: none;
+      }
+
+      #menu:target {
+        display: flex!important;
+        opacity: 1;
+
+        & + noscript .no-js-menu {
+          display: none;
+        }
+
+        & + noscript .no-js-menu-close {
+          display: block;
         }
       }
     }
   }
 }
 
+header {
+  @extend .pt-sm;
+  @extend .pb-sm;
+
+  z-index: 10;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  @include media-breakpoint-only(xs) {
+    padding-top: 30px;
+  }
+}
+
+.headroom {
+  @include media-breakpoint-up(md) {
+    transform: translateY(-100%);
+  }
+  will-change: transform;
+  transition: all 750ms ease, background-color 450ms ease;
+}
+
+.headroom--top {
+  @include media-breakpoint-up(xs) {
+    transition: all 750ms ease;
+    background-color: transparent;
+  }
+}
+
+.headroom--not-top {
+  @include media-breakpoint-up(xs) {
+    transition: all 750ms ease;
+    padding-top: 25px;
+    padding-bottom: 25px;
+  }
+}
+
+.headroom--pinned {
+  transform: translateY(0%);
+
+  &.headroom--not-top {
+    @include media-breakpoint-up(xs) {
+      transition: all 750ms ease;
+      background-color: $light;
+      z-index: 99;
+
+      .nav-link {
+        transition: border-color 350ms ease;
+        color: $dark !important;
+
+        &:hover {
+          transition: border-color 250ms ease;
+          border-color: $dark !important;
+        }
+      }
+
+      .navbar-brand svg path {
+        transition: fill 250ms ease;
+        fill: $dark !important;
+      }
+
+      .hamburger-inner,
+      .hamburger-inner::before,
+      .hamburger-inner::after {
+        @include media-breakpoint-down(sm) {
+          background-color: $dark;
+        }
+      }
+    }
+  }
+}
+
+.open-menu {
+  .headroom--not-top .navbar-brand svg path {
+    fill: $dark !important;
+  }
+}
+
+.headroom--unpinned {
+  transition: transform 7 50ms ease, background-color 450ms ease;
+  transform: translateY(-100%);
+}
+
+nav {
+  @extend .navbar;
+  @extend .navbar-expand-md;
+
+  @include media-breakpoint-down(sm) {
+    // display: none;
+    overflow: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 50;
+    opacity: 0;
+    background-color: $dark;
+    color: $light;
+    text-align: center;
+    transform: translateX(100%);
+  }
+
+  @include media-breakpoint-up(md) {
+    height: 100%;
+    align-items: flex-end;
+    transform: translateX(0%) !important;
+    opacity: 1 !important;
+  }
+}
+
+.open-menu {
+  @include media-breakpoint-down(sm) {
+    .navbar-brand {
+      transform: translateY(-200%);
+      backface-visibility: hidden;
+      opacity: 0;
+    }
+  }
+
+  @include media-breakpoint-down(sm) {
+    .hamburger.is-active .hamburger-inner, .hamburger.is-active .hamburger-inner::before, .hamburger.is-active .hamburger-inner::after,
+    .hamburger-inner, .hamburger-inner::before, .hamburger-inner::after {
+      background-color: $light;
+    }
+  }
+}
+
 .navbar {
   padding: 0;
-  transition: transform 1s ease;
-  transform: translateY(0);
   backface-visibility: hidden;
 }
 
@@ -87,72 +205,55 @@ header {
   .nav-item {
     @each $bp-name, $bp-size in $grid-breakpoints {
       @include media-breakpoint-up($bp-name) {
-        /* #{$bp-name} */
         font-size: map-get($fontsize-menu, $bp-name);
         line-height: map-get($lineheight-menu, $bp-name);
+        text-transform: uppercase;
       }
+    }
+
+    @include media-breakpoint-down(sm) {
+      font-weight: bold;
     }
 
     .nav-link {
       color: $menu-link-color;
       padding: 0;
       position: relative;
+      padding-bottom: 2px;
+      border-bottom: 1px solid transparent;
+      transition: border-color 350ms ease;
+
       @include media-breakpoint-down(sm) {
         display: inline-block;
-        border-bottom: 1px solid;
-        border-color: transparent;
-        transition: border-color 250ms ease-out;
+        border: none;
       }
-      &:after {
-        @include media-breakpoint-up(md) {
-          color: $menu-accent-color;
-          transition: opacity 750ms ease;
-          content: '◣';
-          font-size: 13px;
-          position: absolute;
-          width: 100%;
-          text-align: center;
-          opacity: 0;
-          left: 0;
-          bottom: -25px;
-        }
 
-        @include media-breakpoint-up(lg) {
-          font-size: 20px;
-          bottom: -40px;
-        }
-      }
-      &:hover {
-        @include media-breakpoint-down(sm) {
-          border-bottom: 1px solid;
-          transition: border-color 250ms ease-out;
-        }
-        &:after {
-          transition: opacity 500ms ease;
-          opacity: 1;
+      @include media-breakpoint-up(md) {
+        &:hover {
+          border-color: $light;
+          transition: border-color 250ms ease;
         }
       }
 
       &.active {
-        &:after {
-          transition: opacity 500ms ease;
-          opacity: 1;
-        }
+        border-bottom: 3px solid;
       }
     }
   }
 }
 
 .navbar-brand {
-  transition: all 750ms ease;
+  padding: 0;
+  margin: 0;
+  transition: all 250ms ease;
   opacity: 1;
   @include media-breakpoint-down(sm) {
-    transition: all 1s ease;
+    transition: all 250ms ease;
   }
+
   @each $bp-name, $bp-size in $grid-breakpoints {
     @include media-breakpoint-up($bp-name) {
-      /* #{$bp-name} */
-      max-width: map-get($navbar-brand-widths, $bp-name);
+      width: map-get($navbar-brand-widths, $bp-name);
     }
   }
 
@@ -160,43 +261,41 @@ header {
     color: $dark;
     font-size: 2rem;
     margin-bottom: 0;
+    padding-bottom: 0;
   }
+
   svg {
     width: 100%;
     height: 100%;
   }
 }
 
-.navbar-nav {
+.hamburger.is-active .hamburger-inner, .hamburger.is-active .hamburger-inner::before, .hamburger.is-active .hamburger-inner::after,
+.hamburger-inner, .hamburger-inner::before, .hamburger-inner::after {
   @include media-breakpoint-down(sm) {
-    transition: all 1s ease;
-    opacity: 0;
+    background-color: $light;
   }
 }
 
 .hamburger {
   z-index: 150;
   position: absolute;
-  top: 12px;
-  right: 15px; // due to col padding
+
+  @include media-breakpoint-up(md) {
+    display: none;
+  }
+
+  @each $bp-name, $bp-config in $hamburger-config {
+    @include media-breakpoint-up($bp-name) {
+      /* #{$bp-name} */
+      top: map-get($bp-config, top);
+      right: map-get($bp-config, right);
+      margin-top: map-get($bp-config, margin-top);
+    }
+  }
+
   &:focus, &:active {
    outline: none !important;
-  }
-}
-
-#navbar-content {
-  display: block;
-  @include media-breakpoint-down(sm) {
-    transition: all 1s ease;
-    display: block;
-    position: fixed;
-    opacity: 0;
-    transform: translate3d(-500%, -88px, 0);
-    backface-visibility: hidden;
-    @include media-breakpoint-down(xs) {
-      transform: translate3d(-500%, -61px, 0);
-      backface-visibility: hidden;
-    }
   }
 }
 
@@ -206,47 +305,6 @@ header {
   }
 }
 
-
-.open-menu {
-  @include media-breakpoint-down(sm) {
-    header {
-      transition: all 1s ease;
-      padding-bottom: 500%;
-    }
-
-    #navbar-content {
-      transition: all 1s ease;
-      opacity: 1;
-      transform: translate3d(0, -88px, 0);
-      backface-visibility: hidden;
-      @include media-breakpoint-down(xs) {
-        transform: translate3d(0, -61px, 0);
-        backface-visibility: hidden;
-      }
-    }
-
-    header.headroom--not-top {
-      #navbar-content {
-        transition: all 1s ease;
-        opacity: 1;
-        transform: translate3d(0, -60px, 0);
-        backface-visibility: hidden;
-        @include media-breakpoint-down(xs) {
-          transform: translate3d(0, -45px, 0);
-          backface-visibility: hidden;
-        }
-      }
-    }
-
-    .navbar-brand {
-      transform: translateY(-200%);
-      backface-visibility: hidden;
-      opacity: 0;
-    }
-
-    .navbar-nav {
-      transition: all 1s ease;
-      opacity: 1;
-    }
-  }
+#navbar-content {
+  display: block;
 }

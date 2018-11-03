@@ -269,6 +269,8 @@ defmodule Mix.Tasks.Brando.Install do
      "assets/frontend/css/includes/_fader.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/includes/_fonts.scss",
      "assets/frontend/css/includes/_fonts.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_hamburgers.scss",
+     "assets/frontend/css/includes/_hamburgers.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/includes/_headers.scss",
      "assets/frontend/css/includes/_headers.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/includes/_lightbox.scss",

@@ -1,54 +1,76 @@
 <header>
   <div class="container" data-moonwalk-section>
     <div class="row">
-      <div class="col-12">
-        <nav class="navbar row navbar-expand-md align-items-middle">
-          <div class="col-lg-6 col-md-6 col-sm-12">
-            <div class="d-flex justify-content-between mr-auto">
-              <a class="navbar-brand" href="/">
-                <h1><span class="mr-3">◣</span> SITE NAME</h1>
-              </a>
-            </div>
+      <div class="col-lg-6 col-md-6 col-sm-12">
+        <div class="d-flex justify-content-between mr-auto">
+          <a class="navbar-brand" href="/">
+            <h1 class="sr-only">Martinuzzi</h1>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 243 26">
+              <path fill="#E5DAD1" d="M21.2 0L15 21.4 8.9 0H0v25h4.8V2.6L11.4 25h7.3l6.5-22.4V25H30V0h-8.8zm22.3 0L33 25h5.6l2.2-5.6h12.4l2.3 5.6H61L50.6 0h-7.1zM47 3.8L51.5 15h-9L47 3.8zm29.6 7.1c2.5 0 3.7-1.3 3.7-3.2 0-1.9-1.3-3.1-3.7-3.1h-7.3v6.3h7.3zm3.2 14.7c-.6-1.3-.8-2.5-.8-5.8 0-3.2-1.6-4.3-4.1-4.3h-5.5v10.1h-4.9V.1H77c5.3 0 8.4 3.2 8.4 7.2 0 3.1-2 5.6-5 6.7 2.2.7 3.8 2.6 4 5.7.1 2.3.3 4 1.3 5.3v.6h-5.9zm31.5-20.9h-9v21h-4.9v-21h-9V.1h22.9v4.6zm4.9 20.9h4.9V.1h-4.9v25.5zm16.2 0h-4.9V.1h8.5l10.6 22.1V.1h4.9v25.5H143L132.4 3.5v22.1zM161.7.1v15.1c0 3.9 2.3 6.2 5.8 6.2s5.7-2.3 5.7-6.2V.1h4.9v15.2c0 6.5-4 10.7-10.6 10.7s-10.7-4.2-10.7-10.7V.1h4.9zm36.9 4.6H183V.1h22v4.6l-15.7 16.4h15.9v4.6h-22.4v-4.6l15.8-16.4zm27.4 0h-15.6V.1h22v4.6l-15.7 16.4h15.9v4.6h-22.4v-4.6L226 4.7zm11.7 20.9h4.9V.1h-4.9v25.5z"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+      <div class="col-lg-6 col-md-6 col-sm-12">
+        <nav id="menu" aria-label="Menu" role="navigation">
+          <div class="collapse navbar-collapse" id="navbar-content">
+            <ul class="navbar-nav">
+              <li class="nav-item">
+                <a class="nav-link" href="#expertise">
+                  Expertise
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#projects">
+                  Projects
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#how">
+                  How we work
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#about">
+                  About
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#clients">
+                  Clients
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#contact">
+                  Contact
+                </a>
+              </li>
+            </ul>
           </div>
-
-          <div class="col-lg-6 col-md-6 col-sm-12">
-            <div class="collapse navbar-collapse" id="navbar-content">
-              <ul class="navbar-nav">
-                <li class="nav-item">
-                  <a class="nav-link <%= Brando.HTML.active(@conn, "/whatever") %>" href="/whatever">
-                    Link
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link <%= Brando.HTML.active(@conn, "/whatever") %>" href="/whatever">
-                    Link
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link <%= Brando.HTML.active(@conn, "/whatever") %>" href="/whatever">
-                    Link
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link <%= Brando.HTML.active(@conn, "/whatever") %>" href="/whatever">
-                    Link
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link <%= Brando.HTML.active(@conn, "/whatever") %>" href="/whatever">
-                    Link
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <button class="navbar-toggler float-right hamburger hamburger--spin" type="button"
-                  aria-label="Menu" aria-controls="navbar-content">
+        </nav>
+        <noscript>
+          <a href="#menu" class="no-js-menu hamburger">
+            <span class="sr-only">Menu</span>
             <span class="hamburger-box">
               <span class="hamburger-inner"></span>
             </span>
-          </button>
-        </nav>
+          </a>
+          <a href="#top" class="no-js-menu-close hamburger is-active">
+            <span class="sr-only">Menu</span>
+            <span class="hamburger-box">
+              <span class="hamburger-inner"></span>
+            </span>
+          </a>
+        </noscript>
+        <button
+          class="navbar-toggler float-right hamburger hamburger--spin"
+          type="button"
+          aria-label="Menu"
+          aria-controls="navbar-content">
+          <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+          </span>
+        </button>
       </div>
     </div>
   </div>

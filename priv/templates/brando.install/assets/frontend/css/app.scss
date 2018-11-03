@@ -6,7 +6,6 @@
 @import "variables.scss";
 @import "~animate.css";
 @import "bootstrap.scss";
-@import "~hamburgers/_sass/hamburgers/hamburgers.scss";
 
 .no-js body.unloaded {
   opacity: 1;
@@ -121,6 +120,7 @@ span.line {
 @import "includes/containers";
 @import "includes/fader";
 @import "includes/fonts";
+@import "includes/hamburgers";
 @import "includes/headers";
 @import "includes/lightbox";
 @import "includes/paragraphs";
