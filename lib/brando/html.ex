@@ -94,17 +94,26 @@ defmodule Brando.HTML do
   @doc """
   Displays a banner informing about cookie laws
   """
-  def cookie_law(conn, text, button_text \\ "OK") do
+  def cookie_law(conn, text, button_text \\ "OK", info_text \\ "Mer info") do
     if Map.get(conn.cookies, "cookielaw_accepted") != "1" do
       html = """
       <section class="container cookie-container">
         <section class="cookie-container-inner">
           <div class="cookie-law">
-            <p>#{text}</p>
-            <button
-               class="dismiss-cookielaw">
-              #{button_text}
-            </button>
+            <div class="cookie-law-text">
+              <p>#{text}</p>
+            </div>
+            <div class="cookie-law-buttons">
+              <button
+                class="dismiss-cookielaw">
+                #{button_text}
+              </button>
+              <a
+                href="/cookies"
+                class="info-cookielaw">
+                #{info_text}
+              </a>
+            </div>
           </div>
         </section>
       </section>
