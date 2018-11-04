@@ -302,6 +302,9 @@ defmodule Brando.HTML do
   @doc """
   Outputs an `img` tag marked as safe html
 
+  The `srcset` attribute is the ACTUAL width of the image, as saved to disk. You'll find that in the
+  image type's `sizes` map.
+
   ## Options:
 
     * `prefix` - string to prefix to the image's url. I.e. `prefix: media_url()`

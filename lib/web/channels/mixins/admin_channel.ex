@@ -100,6 +100,12 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         {:ok, new_fragment} = Brando.Pages.duplicate_page_fragment(page_id, user)
         {:reply, {:ok, %{code: 200, page_fragment: new_fragment}}, socket}
       end
+
+      def handle_in("page_fragment:rerender", %{"id" => fragment_id}, socket) do
+        user = Guardian.Phoenix.Socket.current_resource(socket)
+        Brando.Pages.rerender_fragment(String.to_integer(fragment_id))
+        {:reply, {:ok, %{code: 200}}, socket}
+      end
     end
   end
 end

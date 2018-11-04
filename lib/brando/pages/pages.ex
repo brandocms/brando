@@ -167,6 +167,12 @@ defmodule Brando.Pages do
     end
   end
 
+  def rerender_fragment(id) do
+    {:ok, fragment} = get_page_fragment(id)
+    changeset = Ecto.Changeset.change(fragment)
+    PageFragment.rerender_html(changeset)
+  end
+
   @doc """
   List all page fragments
   """
