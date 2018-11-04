@@ -55,9 +55,10 @@ defmodule Brando.ErrorView do
     render("_feedback.html", assigns)
   end
 
-  # In case no render clause matches or no
-  # template is found, let's render it as 500
-  def template_not_found(_, assigns) do
-    render("catch_all.html", assigns)
+  # By default, Phoenix returns the status message from
+  # the template name. For example, "404.html" becomes
+  # "Not Found".
+  def template_not_found(template, _assigns) do
+    Phoenix.Controller.status_message_from_template(template)
   end
 end
