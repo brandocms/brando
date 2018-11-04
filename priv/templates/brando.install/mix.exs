@@ -39,7 +39,7 @@ defmodule <%= application_module %>.Mixfile do
      {:phoenix_ecto, "~> 4.0"},
      {:phoenix_html, "~> 2.12"},
      {:phoenix_live_reload, "~> 1.2-rc", only: :dev},
-     {:plug_cowboy, "~> 2.0"},
+     {:plug_cowboy, "~> 1.0"},
      {:ecto, "~> 3.0", override: true},
      {:ecto_sql, "~> 3.0-rc", override: true},
 
