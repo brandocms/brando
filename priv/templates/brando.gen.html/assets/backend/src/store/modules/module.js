@@ -1,10 +1,9 @@
 import nprogress from 'nprogress'
+import { <%= vue_singular %> API } from '../../api/<%= vue_singular %>'
 
 const STORE_<%= String.upcase(singular) %> = 'STORE_<%= String.upcase(singular) %>'
 const STORE_<%= String.upcase(plural) %> = 'STORE_<%= String.upcase(plural) %>'
 const DELETE_<%= String.upcase(singular) %> = 'DELETE_<%= String.upcase(singular) %>'
-
-import { <%= vue_singular %>API } from '../../api/<%= vue_singular %>'
 
 export const <%= vue_plural %> = {
   namespaced: true,
