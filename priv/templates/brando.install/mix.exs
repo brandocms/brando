@@ -41,7 +41,7 @@ defmodule <%= application_module %>.Mixfile do
      {:phoenix_live_reload, "~> 1.2-rc", only: :dev},
      {:plug_cowboy, "~> 1.0"},
      {:ecto, "~> 3.0", override: true},
-     {:ecto_sql, "~> 3.0-rc", override: true},
+     {:ecto_sql, "~> 3.0", override: true},
 
      # general deps
      {:postgrex, "~> 0.14.0"},

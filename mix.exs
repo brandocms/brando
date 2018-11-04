@@ -87,7 +87,7 @@ defmodule Brando.Mixfile do
       {:timex, "~> 3.0"},
 
       {:ecto, "~> 3.0", override: true},
-      {:ecto_sql, "~> 3.0-rc", override: true},
+      {:ecto_sql, "~> 3.0", override: true},
 
       # monitoring
       {:sentry, "~> 6.0"},
