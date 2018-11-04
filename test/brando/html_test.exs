@@ -76,7 +76,7 @@ defmodule Brando.HTMLTest do
                 "meta",
                 [
                   [32, "content", 61, 34, "hello, world", 34],
-                  [32, "property", 61, 34, "keywords", 34]
+                  [32, "name", 61, 34, "keywords", 34]
                 ],
                 62
               ]}
@@ -88,7 +88,7 @@ defmodule Brando.HTMLTest do
                 "meta",
                 [
                   [32, "content", 61, 34, "hello, world", 34],
-                  [32, "property", 61, 34, "keywords", 34]
+                  [32, "name", 61, 34, "keywords", 34]
                 ],
                 62
               ]}
