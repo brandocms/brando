@@ -52,9 +52,19 @@ module.exports = function (env = {}) {
         new UglifyJsPlugin({
           cache: true,
           parallel: true,
-          sourceMap: IS_DEV
+          sourceMap: IS_DEV,
+          uglifyOptions: {
+            mangle: true,
+            output: {
+              comments: false
+            }
+          }
         }),
-        new OptimizeCSSPlugin({})
+        new OptimizeCSSPlugin({
+          cssProcessorPluginOptions: {
+            preset: ['default', { discardComments: { removeAll: true } }]
+          }
+        })
       ],
 
       splitChunks: {
