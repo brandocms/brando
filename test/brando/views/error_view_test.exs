@@ -33,7 +33,6 @@ defmodule Brando.ErrorViewTest do
         reason: %{message: "Hello"}
       )
 
-    assert result =~ "Error"
-    assert result =~ "Hello"
+    assert result =~ "HTTP Version Not Supported"
   end
 end
