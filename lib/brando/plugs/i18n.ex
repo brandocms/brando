@@ -17,7 +17,10 @@ defmodule Brando.Plug.I18n do
   def put_locale(%{private: %{plug_session: %{"language" => language}}} = conn, []) do
     language = extract_language_from_path(conn) || language
     Brando.I18n.put_locale_for_all_modules(language)
-    assign_language(conn, language)
+
+    conn
+    |> put_language(language)
+    |> assign_language(language)
   end
 
   def put_locale(conn, []) do
