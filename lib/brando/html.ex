@@ -101,8 +101,7 @@ defmodule Brando.HTML do
       text = raw(text)
       button_text = Keyword.get(opts, :button_text, "OK")
       info_text = Keyword.get(opts, :info_text)
-      require Logger
-      Logger.error inspect info_text
+
       ~E|
       <div class="container cookie-container">
         <div class="cookie-container-inner">
