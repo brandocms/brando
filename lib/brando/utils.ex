@@ -225,9 +225,7 @@ defmodule Brando.Utils do
     url_cfg = Brando.endpoint().config(:url)
     scheme = Keyword.get(url_cfg, :scheme, "http")
     host = Keyword.get(url_cfg, :host, "localhost")
-    port = Keyword.get(url_cfg, :port, "80")
-    port = (port == "80" && "") || ":#{port}"
-    "#{scheme}://#{host}#{port}"
+    "#{scheme}://#{host}"
   end
 
   @doc """
