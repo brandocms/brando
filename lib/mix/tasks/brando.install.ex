@@ -263,6 +263,8 @@ defmodule Mix.Tasks.Brando.Install do
      "assets/frontend/css/app.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/includes/_animations.scss",
      "assets/frontend/css/includes/_animations.scss"},
+    {:copy, "templates/brando.install/assets/frontend/css/includes/_cookies.scss",
+     "assets/frontend/css/includes/_cookies.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/includes/_containers.scss",
      "assets/frontend/css/includes/_containers.scss"},
     {:copy, "templates/brando.install/assets/frontend/css/includes/_fader.scss",

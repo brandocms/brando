@@ -238,13 +238,37 @@ defmodule Brando.HTML do
       conn
       |> put_meta("og:title", "#{title}")
       |> put_meta("og:site_name", app_name)
-      |> put_meta("og:type", "article")
+      |> put_meta("og:type", "website")
       |> put_meta("og:url", Brando.Utils.current_url(conn))
+
+    conn =
+      if meta_keywords = Brando.Config.get_site_config("meta_keywords") do
+        conn
+        |> put_meta("keywords", meta_keywords)
+        |> put_meta("og:keywords", meta_keywords)
+      else
+        conn
+      end
+
+    conn =
+      if meta_description = Brando.Config.get_site_config("meta_description") do
+        conn
+        |> put_meta("description", meta_description)
+        |> put_meta("og:description", meta_description)
+      else
+        conn
+      end
 
     conn =
       case get_meta(conn, "og:image") do
         nil ->
-          conn
+          if meta_image = Brando.Config.get_site_config("meta_image") do
+            conn
+            |> put_meta("image", meta_image)
+            |> put_meta("og:image", meta_image)
+          else
+            conn
+          end
 
         img ->
           if String.contains?(img, "://") do

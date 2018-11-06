@@ -1,0 +1,49 @@
+#cookies {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-top: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+.cookie-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  background-color: $dark;
+  color: $light;
+  z-index: 99999;
+  margin-bottom: 0 !important;
+
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-top: map-get($padding-sm, $bp-name) / 2;
+      padding-bottom: map-get($padding-sm, $bp-name) / 2;
+    }
+  }
+
+  .cookie-law {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .cookie-law-text {
+    width: 100%;
+    p {
+      font-size: 15px;
+    }
+  }
+
+  .cookie-law-buttons {
+    flex-shrink: 0;
+    text-align: right;
+
+    button {
+      background-color: $light;
+      color: $dark;
+      border: 0;
+      margin-right: 15px;
+    }
+  }
+}

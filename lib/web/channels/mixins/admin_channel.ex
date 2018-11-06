@@ -106,6 +106,16 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         Brando.Pages.rerender_fragment(String.to_integer(fragment_id))
         {:reply, {:ok, %{code: 200}}, socket}
       end
+
+      def handle_in("config:get", _, socket) do
+        cfg = Brando.Config.get_site_config
+        {:reply, {:ok, %{code: 200, cfg: cfg}}, socket}
+      end
+
+      def handle_in("config:set", %{"cfg" => cfg}, socket) do
+        Brando.Config.set_site_config(cfg)
+        {:reply, {:ok, %{code: 200, cfg: cfg}}, socket}
+      end
     end
   end
 end
