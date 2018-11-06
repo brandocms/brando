@@ -51,7 +51,7 @@ Install node packages:
 
 Set up database, and seed:
 
-    $ mix deps.compile --force && mix ecto.setup
+    $ mix do deps.get, deps.compile --force && mix ecto.setup
 
 Add to your `config/prod.secret.exs` (see https://github.com/elixir-lang/ecto/issues/1328)
 
