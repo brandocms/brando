@@ -24,8 +24,8 @@
     </script>
     <link rel="stylesheet" href="<%%= Routes.static_path(@conn, "/css/app.css") %>">
   </head>
-  <%= body_tag @conn %>
-    <%= cookie_law @conn, "Denne nettsiden bruker informasjonskapsler for statistikk og informasjon om besøkendes samhandling med nettsiden.<br>Klikk OK for å akseptere bruken av disse." %>
+  <%%= body_tag @conn %>
+    <%%= cookie_law @conn, "Denne nettsiden bruker informasjonskapsler for statistikk og informasjon om besøkendes samhandling med nettsiden.<br>Klikk OK for å akseptere bruken av disse." %>
     <div class="fader" id="fader">
       <div class="loading-container">
         <div>
