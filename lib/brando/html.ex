@@ -242,9 +242,7 @@ defmodule Brando.HTML do
 
     conn =
       if meta_keywords = Brando.Config.get_site_config("meta_keywords") do
-        conn
-        |> put_meta("keywords", meta_keywords)
-        |> put_meta("og:keywords", meta_keywords)
+        put_meta(conn, "keywords", meta_keywords)
       else
         conn
       end
