@@ -9,6 +9,8 @@ defmodule Brando.HTML do
   import Brando.Utils, only: [current_user: 1, active_path?: 2]
   import Brando.Meta.Controller, only: [put_meta: 3, get_meta: 1, get_meta: 2]
 
+  import Phoenix.HTML
+
   @doc false
   defmacro __using__(_) do
     quote do
@@ -94,32 +96,37 @@ defmodule Brando.HTML do
   @doc """
   Displays a banner informing about cookie laws
   """
-  def cookie_law(conn, text, button_text \\ "OK", info_text \\ "Mer info") do
+  def cookie_law(conn, text, opts \\ []) do
     if Map.get(conn.cookies, "cookielaw_accepted") != "1" do
-      html = """
+      text = raw(text)
+      button_text = Keyword.get(opts, :button_text, "OK")
+      info_text = Keyword.get(opts, :info_text)
+      require Logger
+      Logger.error inspect info_text
+      ~E|
       <div class="container cookie-container">
         <div class="cookie-container-inner">
           <div class="cookie-law">
             <div class="cookie-law-text">
-              <p>#{text}</p>
+              <p><%= text %></p>
             </div>
             <div class="cookie-law-buttons">
               <button
                 class="dismiss-cookielaw">
-                #{button_text}
+                <%= button_text %>
               </button>
+              <%= if info_text do %>
               <a
                 href="/cookies"
                 class="info-cookielaw">
-                #{info_text}
+                <%= info_text %>
               </a>
+              <% end %>
             </div>
           </div>
         </div>
       </div>
-      """
-
-      Phoenix.HTML.raw(html)
+      |
     end
   end
 
