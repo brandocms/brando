@@ -286,8 +286,8 @@ defmodule Brando.HTML do
 
   Checks conn.private for various settings
   """
-  def body_tag(conn) do
-    id = conn.private[:brando_section_name]
+  def body_tag(conn, opts \\ []) do
+    id = Keyword.get(opts, :id, nil)
     data_script = conn.private[:brando_section_name]
     classes = conn.private[:brando_css_classes]
 
@@ -295,7 +295,7 @@ defmodule Brando.HTML do
 
     body =
       if id,
-        do: body <> ~s( id="toppen"),
+        do: body <> ~s( id="#{id}"),
         else: body
 
     body =
