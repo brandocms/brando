@@ -97,8 +97,8 @@ defmodule Brando.HTML do
   def cookie_law(conn, text, button_text \\ "OK", info_text \\ "Mer info") do
     if Map.get(conn.cookies, "cookielaw_accepted") != "1" do
       html = """
-      <section class="container cookie-container">
-        <section class="cookie-container-inner">
+      <div class="container cookie-container">
+        <div class="cookie-container-inner">
           <div class="cookie-law">
             <div class="cookie-law-text">
               <p>#{text}</p>
@@ -115,8 +115,8 @@ defmodule Brando.HTML do
               </a>
             </div>
           </div>
-        </section>
-      </section>
+        </div>
+      </div>
       """
 
       Phoenix.HTML.raw(html)
