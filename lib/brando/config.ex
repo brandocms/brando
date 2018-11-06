@@ -5,7 +5,7 @@ defmodule Brando.Config do
   alias Brando.Exception.ConfigError
   require Logger
 
-  @cfg_file "priv/config/site_config.dat"
+  @cfg_file "site_config.dat"
 
   defmodule State do
     @moduledoc """
@@ -69,7 +69,6 @@ defmodule Brando.Config do
 
   def write_to_disk(cfg) do
     insert = :erlang.term_to_binary(cfg, [minor_version: 2])
-    File.mkdir_p!("priv/config")
     case File.write(@cfg_file, insert) do
       :ok ->
         :ok
