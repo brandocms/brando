@@ -226,11 +226,12 @@ nav {
       @include media-breakpoint-down(sm) {
         display: inline-block;
         border: none;
+        color: $menu-link-mobile-color;
       }
 
       @include media-breakpoint-up(md) {
         &:hover {
-          border-color: $light;
+          border-color: $dark;
           transition: border-color 250ms ease;
         }
       }
@@ -273,7 +274,7 @@ nav {
 .hamburger.is-active .hamburger-inner, .hamburger.is-active .hamburger-inner::before, .hamburger.is-active .hamburger-inner::after,
 .hamburger-inner, .hamburger-inner::before, .hamburger-inner::after {
   @include media-breakpoint-down(sm) {
-    background-color: $light;
+    background-color: $dark;
   }
 }
 

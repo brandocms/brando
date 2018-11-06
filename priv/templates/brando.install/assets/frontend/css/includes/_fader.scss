@@ -16,5 +16,19 @@
     color: $fader-fg;
     text-align: center;
     font-size: 12px;
+
+    svg {
+      width: 200px;
+      animation: pulse 1s ease-out alternate infinite;
+    }
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
   }
 }

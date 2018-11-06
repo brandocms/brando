@@ -13,8 +13,8 @@ section {
   }
 
   &.contrast {
-    background-color: $contrast;
-    color: $light;
+    background-color: $contrast-bg;
+    color: $contrast-fg;
     @each $bp-name, $bp-size in $grid-breakpoints {
       @include media-breakpoint-up($bp-name) {
         padding: map-get($padding-sm, $bp-name);

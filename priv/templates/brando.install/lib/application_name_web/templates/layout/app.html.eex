@@ -24,7 +24,8 @@
     </script>
     <link rel="stylesheet" href="<%%= Routes.static_path(@conn, "/css/app.css") %>">
   </head>
-  <body class="unloaded" id="toppen">
+  <%= body_tag @conn %>
+    <%= cookie_law @conn, "Denne nettsiden bruker informasjonskapsler for statistikk og informasjon om besøkendes samhandling med nettsiden.<br>Klikk OK for å akseptere bruken av disse." %>
     <div class="fader" id="fader">
       <div class="loading-container">
         <div>
@@ -36,11 +37,9 @@
     <script>var zf = document.getElementById("fader");zf.style.display = 'block';</script>
 <!-- :content - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
     <div class="backdrop"></div>
-
 <!-- :nav - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
     <%%= render <%= application_module %>Web.PageView, "_navigation.html", %{conn: @conn} %>
 <!-- /nav - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
-
     <%%= render @view_module, @view_template, assigns %>
     <section class="light">
       <section class="pt-sm pb-sm">

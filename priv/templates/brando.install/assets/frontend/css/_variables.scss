@@ -224,33 +224,29 @@ $lineheight-menu: (
 // COLORS
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$m-medium-gray: #6A6F71;
-$m-dark-gray: #25262B;
-$m-brown: #7B5946;
-$m-bg: #F2E9E1;
+$dark: #25262B;
+$light: #fff;
 
-$dark: $m-dark-gray;
-$light: $m-bg;
-
-$contrast-bg: $m-dark-gray;
-$contrast-fg: $m-bg;
+$contrast-bg: $dark;
+$contrast-fg: $light;
 
 $primary: #d23434;
 $menu-bg: transparent;
-$fader-bg: $m-bg;
-$fader-fg: $m-dark-gray;
-$header-bg: $m-medium-gray;
-$header-fg: $m-bg;
+$fader-bg: $light;
+$fader-fg: $dark;
+$header-bg: $light;
+$header-fg: $dark;
 
-$body-bg: $m-bg;
+$body-bg: $light;
 $body-color: #3D3E40;
 $link-color: inherit;
 $link-hover-color: inherit;
-$menu-link-color: $m-bg;
-$menu-accent-color: $m-bg;
+$menu-link-color: $dark;
+$menu-link-mobile-color: $light;
+$menu-accent-color: transparent;
 $enable-rounded: false;
 
-$hamburger-layer-color: $m-bg;
+$hamburger-layer-color: $dark;
 $hamburger-layer-width: 32px;
 $hamburger-padding-x: 0px;
 $hamburger-padding-y: 0px;
@@ -261,7 +257,7 @@ $hamburger-hover-opacity: 1;
 
 $hamburger-config: (
   xs: (
-    layer-color: $m-bg,
+    layer-color: $dark,
     layer-width: 25px,
     layer-height: 4px,
     layer-spacing: 4px,
@@ -273,7 +269,7 @@ $hamburger-config: (
     right: 13px
   ),
   sm: (
-    layer-color: $m-bg,
+    layer-color: $dark,
     layer-width: 32px,
     layer-height: 5px,
     layer-spacing: 5px,

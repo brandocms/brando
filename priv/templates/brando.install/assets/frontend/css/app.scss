@@ -24,7 +24,7 @@ html, body {
 body {
   @each $bp-name, $bp-size in $grid-breakpoints {
     @include media-breakpoint-up($bp-name) {
-      padding-top: map-get($padding-lg, $bp-name) * 1.8;
+      padding-top: map-get($fixed-menu-compensation-padding, $bp-name);
     }
   }
 }

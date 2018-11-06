@@ -43,8 +43,8 @@
 // }
 
 .contrast {
-  background-color: $contrast;
-  color: $dark;
+  background-color: $contrast-bg;
+  color: $contrast-fg;
 
   // @each $bp-name, $bp-size in $grid-breakpoints {
   //   @include media-breakpoint-up($bp-name) {
