@@ -5,7 +5,7 @@ defmodule Brando.Config do
   alias Brando.Exception.ConfigError
   require Logger
 
-  @cfg_file "site_config.dat"
+  @cfg_file "priv/config/site_config.dat"
 
   defmodule State do
     @moduledoc """
@@ -45,10 +45,13 @@ defmodule Brando.Config do
   end
 
   def get_site_config(key) do
-    state()
-    |> Map.get(:site_config)
-    |> Map.get(key)
-    |> Map.get("value")
+    cfg = get_site_config()
+
+    if key_map = Map.get(cfg, key) do
+      Map.get(key_map, "value", nil)
+    else
+      nil
+    end
   end
 
   def set_site_config(cfg) do
@@ -66,7 +69,7 @@ defmodule Brando.Config do
 
   def write_to_disk(cfg) do
     insert = :erlang.term_to_binary(cfg, [minor_version: 2])
-
+    File.mkdir_p!("priv/config")
     case File.write(@cfg_file, insert) do
       :ok ->
         :ok
