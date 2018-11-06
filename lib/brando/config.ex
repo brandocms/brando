@@ -76,6 +76,7 @@ defmodule Brando.Config do
 
       err ->
         require Logger
+        Logger.error "==> Brando.Config: Failed write_to_disk()"
         Logger.error inspect err
     end
   end
