@@ -1,4 +1,15 @@
-## v2.0.0-alpha.0 (XX-XX-XXXX)
+## v1.1.0
+
+* Update for Ecto 3, Phoenix 1.4
+* More configuration choices in backend/config
+* Add opts to body_tag
+* Add config genserver
+* More flexible cookie_law
+* Add rerendering of page fragments
+* Larger default image sizes
+
+
+## v1.0.0
 
 * Backwards incompatible changes
   - Guardian was updated.
@@ -215,4 +226,4 @@
 
   - `brando_pages` has been incorporated into `brando` core. Remove `brando_pages` from your deps and application list
 
-## v1.0.0, see own v1 branch
+## pre v1.0.0
