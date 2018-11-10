@@ -34,14 +34,14 @@ defmodule <%= application_module %>.Mixfile do
   defp deps do
     [
      # phoenix
-     {:phoenix, "~> 1.4.0-rc", override: true},
+     {:phoenix, "~> 1.4.0"},
      {:phoenix_pubsub, "~> 1.1"},
      {:phoenix_ecto, "~> 4.0"},
      {:phoenix_html, "~> 2.12"},
-     {:phoenix_live_reload, "~> 1.2-rc", only: :dev},
+     {:phoenix_live_reload, "~> 1.2", only: :dev},
      {:plug_cowboy, "~> 1.0"},
-     {:ecto, "~> 3.0", override: true},
-     {:ecto_sql, "~> 3.0", override: true},
+     {:ecto, "~> 3.0"},
+     {:ecto_sql, "~> 3.0"},
 
      # general deps
      {:postgrex, "~> 0.14.0"},
@@ -64,7 +64,7 @@ defmodule <%= application_module %>.Mixfile do
 
      # brando
      # {:brando, github: "twined/brando", branch: "develop"}
-     {:brando, path: "../../brando", override: true},
+     {:brando, path: "../../brando"},
     ]
   end
 

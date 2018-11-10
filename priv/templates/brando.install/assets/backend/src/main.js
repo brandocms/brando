@@ -7,8 +7,7 @@ import Vue from 'vue'
 
 import { installMenus } from './menus'
 import { installConfig, installKurtz } from 'kurtz/lib/install'
-// import { installTemplates, setTemplateMode } from 'kurtz/lib/install'
-// import templates from './templates/page'
+
 import App from 'kurtz/lib/views/App.vue'
 import store from '@/store'
 import router from '@/router'
@@ -24,10 +23,6 @@ installMenus(store)
 
 // Install configuration
 installConfig(store, SITE_CONFIG)
-
-// Install page templates
-// installTemplates(store, templates)
-// setTemplateMode(store)
 
 // Sync router with store
 sync(store, router)

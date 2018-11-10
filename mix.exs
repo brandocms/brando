@@ -73,21 +73,21 @@ defmodule Brando.Mixfile do
     [
       {:bcrypt_elixir, "~> 1.0"},
       {:comeonin, "~> 4.0"},
-      {:earmark, "~> 1.2", override: true},
+      {:earmark, "~> 1.2"},
       {:gettext, "~> 0.11"},
       {:httpoison, "~> 0.9"},
       {:mogrify, "~> 0.5"},
-      {:phoenix, "~> 1.4.0-rc", override: true},
+      {:phoenix, "~> 1.4.0"},
       {:phoenix_html, "~> 2.6"},
       {:phoenix_ecto, "~> 4.0"},
-      {:postgrex, "~> 0.14", override: true},
+      {:postgrex, "~> 0.14"},
       {:slugger, "~> 0.2"},
       {:recase, "~> 0.2"},
       {:guardian, "~> 1.0"},
       {:timex, "~> 3.0"},
 
-      {:ecto, "~> 3.0", override: true},
-      {:ecto_sql, "~> 3.0", override: true},
+      {:ecto, "~> 3.0"},
+      {:ecto_sql, "~> 3.0"},
 
       # monitoring
       {:sentry, "~> 6.0"},
@@ -99,8 +99,8 @@ defmodule Brando.Mixfile do
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test},
       {:excoveralls, "~> 0.6", only: :test},
-      {:absinthe, "~> 1.4", override: true},
-      {:absinthe_plug, "~> 1.4", override: true},
+      {:absinthe, "~> 1.4"},
+      {:absinthe_plug, "~> 1.4"},
       {:absinthe_ecto, "~> 0.1.0"},
 
       # Documentation dependencies
