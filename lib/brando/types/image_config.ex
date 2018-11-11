@@ -4,8 +4,9 @@ defmodule Brando.Type.ImageConfig do
   """
   @type t :: %__MODULE__{}
   @behaviour Ecto.Type
-  @derive Jason.Encoder
 
+  @derive Poison.Encoder
+  @derive Jason.Encoder
   defstruct allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
             default_size: :medium,
             upload_path: Path.join("images", "default"),
