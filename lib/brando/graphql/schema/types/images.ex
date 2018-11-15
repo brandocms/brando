@@ -122,17 +122,17 @@ defmodule Brando.Schema.Types.Images do
   end
 
   object :image_config do
-    field :allowed_mimetypes, list_of(:image_mimetype)
+    field :allowed_mimetypes, list_of(:string)
     field :default_size, :string
     field :upload_path, :string
     field :random_filename, :boolean
     field :size_limit, :integer
-    field :sizes, list_of(:image_size)
+    field :sizes, :json
     field :srcset, list_of(:image_srcset)
   end
 
   object :image_mimetype do
-    field :name
+    field :name, :string
   end
 
   object :image_size do
@@ -185,6 +185,13 @@ defmodule Brando.Schema.Types.Images do
       arg :image_category_id, :id
 
       resolve &Brando.Images.ImageCategoryResolver.delete/2
+    end
+
+    @desc "Duplicate image category"
+    field :duplicate_image_category, type: :image_category do
+      arg :image_category_id, :id
+
+      resolve &Brando.Images.ImageCategoryResolver.duplicate/2
     end
 
     @desc "Create image series"

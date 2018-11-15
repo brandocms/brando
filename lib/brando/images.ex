@@ -295,6 +295,22 @@ defmodule Brando.Images do
     {:ok, category}
   end
 
+  @doc """
+  Duplicate category with id `id`.
+  """
+  def duplicate_category(id, user) do
+    cat = Brando.repo().get_by!(ImageCategory, id: id)
+    params = %{
+      name: cat.name <> " kopi",
+      slug: cat.slug <> "-kopi",
+      creator_id: user.id,
+      cfg: Map.put(cat.cfg, :upload_path, "images/site/" <> cat.slug <> "-kopi")
+    }
+
+    cs = ImageCategory.changeset(%ImageCategory{}, :create, params)
+    Brando.repo.insert(cs)
+  end
+
   def image_series_count(category_id) do
     Brando.repo().one(
       from is in ImageSeries,
