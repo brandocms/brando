@@ -134,6 +134,22 @@ defmodule Brando.Pages do
   end
 
   @doc """
+  Get page by key
+  """
+  def get_page_with_children(key, lang) when is_binary(key) do
+    q =
+      from p in Page,
+        join: c in assoc(p, :children),
+        where: p.key == ^key and p.language == ^lang,
+        preload: :children
+
+    case Brando.repo().one(q) do
+      nil -> {:error, {:page, :not_found}}
+      page -> {:ok, page}
+    end
+  end
+
+  @doc """
   Get page by parent_key and key
   """
   def get_page(nil, key, lang) when is_binary(key) do
