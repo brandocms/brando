@@ -359,10 +359,12 @@ defmodule Brando.HTML do
     width_attr = (Keyword.get(opts, :width) && [width: Map.get(image_field, :width)]) || []
     height_attr = (Keyword.get(opts, :height) && [height: Map.get(image_field, :height)]) || []
     extra_attrs = Keyword.get(opts, :attrs, [])
+    lightbox = Keyword.get(opts, :lightbox, false)
+    img_src = Brando.Utils.img_url(image_field, size, opts)
 
     attrs =
       Keyword.new()
-      |> Keyword.put(:src, Brando.Utils.img_url(image_field, size, opts))
+      |> Keyword.put(:src, img_src)
       |> Keyword.merge(
         Keyword.drop(opts, [:attrs, :prefix, :srcset, :sizes, :default]) ++
           sizes_attr ++ srcset_attr ++ width_attr ++ height_attr ++ extra_attrs
@@ -371,7 +373,15 @@ defmodule Brando.HTML do
     # if we have srcset, set src as empty svg
     attrs = (srcset_attr != [] && Keyword.put(attrs, :src, svg_fallback(image_field))) || attrs
 
-    Phoenix.HTML.Tag.tag(:img, attrs)
+    if lightbox do
+      ~E|
+        <a href="<%= img_src %>" data-lightbox>
+          <%= Phoenix.HTML.Tag.tag(:img, attrs) %>
+        </a>
+      |
+    else
+      Phoenix.HTML.Tag.tag(:img, attrs)
+    end
   end
 
   def ratio(%{height: height, width: width}) when is_nil(height) or is_nil(width), do: 0
