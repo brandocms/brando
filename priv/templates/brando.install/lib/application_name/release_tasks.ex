@@ -3,7 +3,8 @@ defmodule <%= application_module %>.ReleaseTasks do
     :crypto,
     :ssl,
     :postgrex,
-    :ecto
+    :ecto,
+    :ecto_sql
   ]
 
   @repos Application.get_env(:<%= application_name %>, :ecto_repos, [])
@@ -33,7 +34,7 @@ defmodule <%= application_module %>.ReleaseTasks do
 
     # Start the Repo(s) for app
     IO.puts("Starting repos..")
-    Enum.each(@repos, & &1.start_link(pool_size: 1))
+    Enum.each(@repos, & &1.start_link(pool_size: 2))
   end
 
   defp stop_services do
