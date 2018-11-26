@@ -109,12 +109,19 @@ defmodule Brando.Schema.Types.Images do
       end
     end
 
-    field :sizes, list_of(:image_size) do
-      resolve fn image, _args, _ ->
-        map = Enum.map(image.sizes, &%{key: elem(&1, 0), value: elem(&1, 1)})
-        {:ok, map}
+    field :sizes, :json do
+      resolve fn image, _, _ ->
+        sizes = for {k, v} <- image.sizes, into: %{}, do: {k, Brando.Utils.media_url(v)}
+        {:ok, sizes}
       end
     end
+
+    # field :sizes, list_of(:image_size) do
+    #   resolve fn image, _args, _ ->
+    #     map = Enum.map(image.sizes, &%{key: elem(&1, 0), value: elem(&1, 1)})
+    #     {:ok, map}
+    #   end
+    # end
 
     field :optimized, :boolean
     field :width, :integer

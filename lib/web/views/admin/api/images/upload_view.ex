@@ -10,7 +10,7 @@ defmodule Brando.Admin.API.Images.UploadView do
     image =
       image
       |> Map.merge(%{creator: nil, image_series: nil})
-      |> add_image_urls
+      |> prefix_image_urls
 
     %{status: "200", image: image}
   end
@@ -19,24 +19,10 @@ defmodule Brando.Admin.API.Images.UploadView do
     params
   end
 
-  defp add_image_urls(image) do
-    image =
-      put_in(
-        image.image,
-        Map.put(
-          image.image,
-          :thumb,
-          Brando.Utils.img_url(image.image, :thumb, prefix: Brando.Utils.media_url())
-        )
-      )
+  defp prefix_image_urls(image) do
+    sizes =
+      for {k, v} <- image.image.sizes, into: %{}, do: {k, Brando.Utils.media_url(v)}
 
-    put_in(
-      image.image,
-      Map.put(
-        image.image,
-        :medium,
-        Brando.Utils.img_url(image.image, :medium, prefix: Brando.Utils.media_url())
-      )
-    )
+    put_in(image.image.sizes, sizes)
   end
 end
