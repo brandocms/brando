@@ -19,6 +19,7 @@ defmodule Brando.Image do
 
   @derive {Poison.Encoder, only: [:id, :image, :creator, :creator_id, :image_series_id, :image_series, :sequence, :inserted_at, :updated_at]}
   @derive {Jason.Encoder, only: [:id, :image, :creator, :creator_id, :image_series_id, :image_series, :sequence, :inserted_at, :updated_at]}
+
   schema "images" do
     field :image, Brando.Type.Image
     belongs_to :creator, Brando.User

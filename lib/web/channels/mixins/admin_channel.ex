@@ -79,6 +79,15 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         {:reply, {:ok, %{status: 200}}, socket}
       end
 
+      def handle_in(
+            "image:get",
+            %{"id" => id},
+            socket
+          ) do
+        image = Brando.Images.get_image!(id)
+        {:reply, {:ok, %{status: 200, image: image.image}}, socket}
+      end
+
       def handle_in("pages:list_parents", _, socket) do
         {:ok, parents} = Brando.Pages.list_parents()
         {:reply, {:ok, %{code: 200, parents: parents}}, socket}

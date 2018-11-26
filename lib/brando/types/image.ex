@@ -7,7 +7,15 @@ defmodule Brando.Type.Image do
   @behaviour Ecto.Type
 
   @derive {Poison.Encoder, only: ~w(title credits path sizes optimized width height thumb medium)a}
-  @derive {Jason.Encoder, only: ~w(title credits path sizes optimized width height thumb medium)a}
+  @derive {Jason.Encoder, only: [
+    :title,
+    :credits,
+    :path,
+    :sizes,
+    :optimized,
+    :width,
+    :height
+  ]}
   defstruct title: nil,
             credits: nil,
             path: nil,
