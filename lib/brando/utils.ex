@@ -380,15 +380,23 @@ defmodule Brando.Utils do
     prefix = Keyword.get(opts, :prefix, nil)
 
     size_dir =
-      if Map.has_key?(image_field.sizes, size) do
-        image_field.sizes[size]
-      else
-        IO.warn(
-          ~s(Wrong key for img_url. Size `#{size}` does not exist for #{inspect(image_field)})
-        )
+      try do
+        if Map.has_key?(image_field.sizes, size) do
+          image_field.sizes[size]
+        else
+          IO.warn(
+            ~s(Wrong key for img_url. Size `#{size}` does not exist for #{inspect(image_field)})
+          )
 
-        "non_existing"
+          "non_existing"
+        end
+      rescue
+        KeyError ->
+          if Map.has_key?(image_field["sizes"], size) do
+            image_field["sizes"][size]
+          end
       end
+
 
     url = (prefix && Path.join([prefix, size_dir])) || size_dir
 
