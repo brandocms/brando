@@ -5,7 +5,6 @@
   "license": "UNLICENSED",
   "scripts": {
     "lint:js": "standard --verbose | snazzy",
-    "lint": "npm-run-all --parallel lint:*",
     "dev": "webpack --mode=development --debug --watch --colors",
     "build": "NODE_ENV=production webpack --mode=production"
   },
@@ -40,7 +39,6 @@
     "extract-text-webpack-plugin": "^4.0.0-beta.0",
     "file-loader": "^2.0.0",
     "node-sass": "^4.9.4",
-    "npm-run-all": "^4.1.2",
     "optimize-css-assets-webpack-plugin": "^5.0.1",
     "postcss-loader": "^3.0.0",
     "sass-loader": "^7.0.1",
