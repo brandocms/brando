@@ -12,19 +12,21 @@
 
 post_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
     default_size: "medium", random_filename: true, size_limit: 10_240_000,
-    sizes: %{"large" => %{"quality" => 100, "size" => "700"},
-      "medium" => %{"quality" => 85, "size" => "1400"},
+    sizes: %{
+      "large" => %{"quality" => 85, "size" => "1400"},
+      "medium" => %{"quality" => 85, "size" => "1000"},
       "micro" => %{"crop" => true, "quality" => 85, "size" => "25x25"},
-      "small" => %{"quality" => 85, "size" => "800"},
+      "small" => %{"quality" => 85, "size" => "700"},
       "thumb" => %{"crop" => true, "quality" => 85, "size" => "150x150"},
       "xlarge" => %{"quality" => 85, "size" => "1900"}},
     upload_path: "images/site/posts"}
 
 ss_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
     default_size: "medium", random_filename: true, size_limit: 10_240_000,
-    sizes: %{"cropxlarge" => %{"crop" => true, "quality" => 80,
-        "size" => "1140x600"}, "large" => %{"quality" => 80, "size" => "700"},
-        "medium" => %{"quality" => 80, "size" => "500"},
+    sizes: %{
+        "cropxlarge" => %{"crop" => true, "quality" => 80, "size" => "1140x600"},
+        "large" => %{"quality" => 80, "size" => "1400"},
+        "medium" => %{"quality" => 80, "size" => "900"},
         "micro" => %{"crop" => true, "quality" => 80, "size" => "25x25"},
         "small" => %{"quality" => 80, "size" => "300"},
         "test" => %{"quality" => 80, "size" => "900"},
