@@ -65,7 +65,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
             socket
           ) do
         user = Guardian.Phoenix.Socket.current_resource(socket)
-        {:ok, config} = Brando.Images.update_series_config(series_id, config)
+        {:ok, config} = Brando.Images.update_series_config(series_id, config, user)
         {:reply, {:ok, %{code: 200}}, socket}
       end
 

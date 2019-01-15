@@ -12,7 +12,7 @@ defmodule Brando.Images do
     only: [
       create_image_sizes: 2,
       delete_original_and_sized_images: 2,
-      recreate_sizes_for: 2
+      recreate_sizes_for: 3
     ]
   import Brando.Utils.Schema, only: [put_creator: 2]
   import Ecto.Query
@@ -90,7 +90,7 @@ defmodule Brando.Images do
   Update image series.
   If slug or category has changed, we redo all the images
   """
-  def update_series(id, data) do
+  def update_series(id, data, user \\ :system) do
     changeset =
       ImageSeries
       |> Brando.repo().get_by!(id: id)
@@ -103,7 +103,7 @@ defmodule Brando.Images do
         # if slug is changed we recreate all the image sizes to reflect the new path
         if Ecto.Changeset.get_change(changeset, :slug) ||
              Ecto.Changeset.get_change(changeset, :image_category_id),
-           do: recreate_sizes_for(:image_series, inserted_series.id)
+           do: recreate_sizes_for(:image_series, inserted_series.id, user)
 
         {:ok, Brando.repo().preload(inserted_series, :image_category)}
 
@@ -125,7 +125,7 @@ defmodule Brando.Images do
   @doc """
   Update series's config
   """
-  def update_series_config(id, cfg) do
+  def update_series_config(id, cfg, user \\ :system) do
     res =
       ImageSeries
       |> Brando.repo().get_by!(id: id)
@@ -134,7 +134,7 @@ defmodule Brando.Images do
 
     case res do
       {:ok, series} ->
-        recreate_sizes_for(:image_series, series.id)
+        recreate_sizes_for(:image_series, series.id, user)
         {:ok, series}
 
       err ->

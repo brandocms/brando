@@ -259,8 +259,9 @@ defmodule Brando.Images.Utils do
   @doc """
   Deletes all image's sizes and recreates them.
   """
-  @spec recreate_sizes_for(:image | :image_series, Image.t()) :: :ok | no_return
-  def recreate_sizes_for(:image, img) do
+  @spec recreate_sizes_for(:image | :image_series, Image.t(), User.t() | atom) :: :ok | no_return
+  def recreate_sizes_for(type, img, user \\ :system)
+  def recreate_sizes_for(:image, img, user) do
     img = Brando.repo().preload(img, :image_series)
     img = put_in(img.image.optimized, false)
     full_path = media_path(img.image.path)
@@ -269,7 +270,7 @@ defmodule Brando.Images.Utils do
 
     src = %{plug: %{uploaded_file: full_path}, cfg: img.image_series.cfg}
 
-    with {:ok, new_image} <- create_image_sizes(src) do
+    with {:ok, new_image} <- create_image_sizes(src, user) do
       image = Map.put(img.image, :sizes, new_image.sizes)
 
       img
@@ -287,8 +288,8 @@ defmodule Brando.Images.Utils do
     end
   end
 
-  @spec recreate_sizes_for(:image_series, Image.t()) :: :ok | no_return
-  def recreate_sizes_for(:image_series, image_series_id) do
+  @spec recreate_sizes_for(:image_series, Image.t(), User.t | atom) :: :ok | no_return
+  def recreate_sizes_for(:image_series, image_series_id, user) do
     q =
       from is in ImageSeries,
         preload: :images,
@@ -303,7 +304,7 @@ defmodule Brando.Images.Utils do
         :unchanged -> image_series
       end
 
-    for image <- image_series.images, do: recreate_sizes_for(:image, image)
+    for image <- image_series.images, do: recreate_sizes_for(:image, image, user)
 
     :ok
   end
