@@ -217,6 +217,14 @@ defmodule Brando.Images.Utils do
   def create_image_size(image_src, image_dest, size_cfg, _) do
     with true <- File.exists?(image_src),
          image <- Mogrify.open(image_src) do
+
+      quality =
+        if Map.has_key?(size_cfg, "quality") do
+          Map.get(size_cfg, "quality")
+        else
+          "100"
+        end
+
       size_cfg =
         if Map.has_key?(size_cfg, "portrait") do
           image_info = Mogrify.verbose(image)
@@ -234,10 +242,12 @@ defmodule Brando.Images.Utils do
         image
         |> Mogrify.resize_to_fill(size_cfg["size"])
         |> Mogrify.gravity("Center")
+        |> Mogrify.custom("quality", quality)
         |> Mogrify.save(path: image_dest)
       else
         image
         |> Mogrify.resize_to_limit(size_cfg["size"])
+        |> Mogrify.custom("quality", quality)
         |> Mogrify.save(path: image_dest)
       end
     else
