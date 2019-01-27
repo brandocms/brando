@@ -32,7 +32,7 @@ defmodule Brando.Field.FileField do
       @doc """
       Validates upload in changeset
       """
-      def validate_upload(changeset, {:file, field_name}, user \\ :system) do
+      def validate_upload(changeset, {:file, field_name}, user) do
         with {:ok, plug} <- field_has_changed(changeset, field_name),
              {:ok, _} <- changeset_has_no_errors(changeset),
              {:ok, cfg} <- get_file_cfg(field_name),
@@ -48,6 +48,10 @@ defmodule Brando.Field.FileField do
           {:error, {name, {:error, error_msg}}} ->
             add_error(changeset, name, error_msg)
         end
+      end
+
+      def validate_upload(changeset, {:file, field_name}) do
+        validate_upload(changeset, {:file, field_name}, :system)
       end
 
       @doc """
