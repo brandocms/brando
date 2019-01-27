@@ -18,14 +18,15 @@ defmodule Brando.Field.FileField do
   import Ecto.Changeset
   import Brando.Files.Upload
   import Brando.Upload
+  import Brando.Upload.Utils
+  import Brando.Files.Upload
+  import Brando.Files.Utils
 
   defmacro __using__(_) do
     quote do
       Module.register_attribute(__MODULE__, :filefields, accumulate: true)
-      import Brando.Files.Upload
-      import Brando.Files.Utils
-      import Brando.Upload
-      import Brando.Upload.Utils
+
+
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
 
@@ -33,10 +34,18 @@ defmodule Brando.Field.FileField do
       Validates upload in changeset
       """
       def validate_upload(changeset, {:file, field_name}, user) do
+        do_validate_upload(changeset, {:file, field_name}, user)
+      end
+
+      def validate_upload(changeset, {:file, field_name}) do
+        do_validate_upload(changeset, {:file, field_name}, :system)
+      end
+
+      defp do_validate_upload(changeset, {:file, field_name}, _user) do
         with {:ok, plug} <- field_has_changed(changeset, field_name),
-             {:ok, _} <- changeset_has_no_errors(changeset),
-             {:ok, cfg} <- get_file_cfg(field_name),
-             {:ok, {:handled, name, field}} <- handle_file_upload(field_name, plug, cfg) do
+            {:ok, _} <- changeset_has_no_errors(changeset),
+            {:ok, cfg} <- get_file_cfg(field_name),
+            {:ok, {:handled, name, field}} <- handle_file_upload(field_name, plug, cfg) do
           put_change(changeset, name, field)
         else
           :unchanged ->
@@ -50,10 +59,6 @@ defmodule Brando.Field.FileField do
         end
       end
 
-      def validate_upload(changeset, {:file, field_name}) do
-        validate_upload(changeset, {:file, field_name}, :system)
-      end
-
       @doc """
       Cleans up old files on update
       """
@@ -62,7 +67,7 @@ defmodule Brando.Field.FileField do
 
         for key <- Map.keys(changeset.changes) do
           if key in filefield_keys do
-            Brando.Files.Utils.delete_original(changeset.data, key)
+            delete_original(changeset.data, key)
           end
         end
 

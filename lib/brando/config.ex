@@ -2,7 +2,6 @@ defmodule Brando.Config do
   @moduledoc """
   GenServer for holding config
   """
-  alias Brando.Exception.ConfigError
   require Logger
 
   @cfg_file "site_config.dat"

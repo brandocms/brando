@@ -56,10 +56,18 @@ defmodule Brando.Field.ImageField do
       Validates upload in changeset
       """
       def validate_upload(changeset, {:image, field_name}, user) do
+        do_validate_upload(changeset, {:image, field_name}, user)
+      end
+
+      def validate_upload(changeset, {:image, field_name}) do
+        do_validate_upload(changeset, {:image, field_name}, :system)
+      end
+
+      defp do_validate_upload(changeset, {:image, field_name}, user) do
         with {:ok, plug} <- field_has_changed(changeset, field_name),
-             {:ok, _} <- changeset_has_no_errors(changeset),
-             {:ok, cfg} <- get_image_cfg(field_name),
-             {:ok, {:handled, name, field}} <- handle_image_upload(field_name, plug, cfg, user) do
+            {:ok, _} <- changeset_has_no_errors(changeset),
+            {:ok, cfg} <- get_image_cfg(field_name),
+            {:ok, {:handled, name, field}} <- handle_image_upload(field_name, plug, cfg, user) do
           put_change(changeset, name, field)
         else
           :unchanged ->
@@ -76,11 +84,9 @@ defmodule Brando.Field.ImageField do
         end
       end
     end
-
-    def validate_upload(changeset, {:image, field_name}) do
-      validate_upload(changeset, {:image, field_name}, :system)
-    end
   end
+
+
 
   @doc false
   defmacro __before_compile__(env) do
