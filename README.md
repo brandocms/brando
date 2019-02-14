@@ -108,10 +108,8 @@ config :my_app, MyApp.Endpoint,
 Now lets add the presence server. First in `lib/application.ex` add a supervisor:
 
 ```elixir
-supervisor(MyApp.Presence, []),
+MyApp.Presence
 ```
-
-(you might need to `import Supervisor.Spec` in your `start/2`)
 
 Then add the presence mixin to your `admin_channel.ex`
 

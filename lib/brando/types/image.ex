@@ -6,7 +6,7 @@ defmodule Brando.Type.Image do
   @type t :: %__MODULE__{}
   @behaviour Ecto.Type
 
-  @derive {Poison.Encoder, only: ~w(title credits path sizes optimized width height thumb medium)a}
+  @derive {Poison.Encoder, only: ~w(title credits path sizes optimized width height thumb medium focal)a}
   @derive {Jason.Encoder, only: [
     :title,
     :credits,
@@ -14,15 +14,18 @@ defmodule Brando.Type.Image do
     :sizes,
     :optimized,
     :width,
-    :height
+    :height,
+    :focal
   ]}
+
   defstruct title: nil,
             credits: nil,
             path: nil,
             sizes: %{},
             optimized: false,
             width: nil,
-            height: nil
+            height: nil,
+            focal: nil
 
   @doc """
   Returns the internal type representation of our `Role` type for pg

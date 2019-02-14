@@ -92,6 +92,7 @@ defmodule Brando.Schema.Types.Images do
     field :title, :string
     field :credits, :string
     field :path, :string
+    field :focal, :json
 
     field :url, :string do
       arg :size, :string, default_value: "thumb"

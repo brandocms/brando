@@ -114,7 +114,7 @@ defmodule Brando.VillainController do
     form = URI.decode_query(form)
     image = Brando.repo().get(Brando.Image, id)
 
-    {:ok, image} = Brando.Images.update_image_meta(image, form["title"], form["credits"])
+    {:ok, image} = Brando.Images.update_image_meta(image, form["title"], form["credits"], nil)
 
     info = %{
       status: 200,

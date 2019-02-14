@@ -71,11 +71,11 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
 
       def handle_in(
             "image:update",
-            %{"id" => id, "image" => %{"title" => title, "credits" => credits}},
+            %{"id" => id, "image" => %{"title" => title, "credits" => credits, "focal" => focal}},
             socket
           ) do
         image = Brando.Images.get_image!(id)
-        {:ok, updated_image} = Brando.Images.update_image_meta(image, title, credits)
+        {:ok, updated_image} = Brando.Images.update_image_meta(image, title, credits, focal)
         {:reply, {:ok, %{status: 200}}, socket}
       end
 
