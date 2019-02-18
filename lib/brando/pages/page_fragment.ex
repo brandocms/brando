@@ -15,6 +15,25 @@ defmodule Brando.Pages.PageFragment do
   @required_fields ~w(parent_key key language data creator_id)a
   @optional_fields ~w(html)a
 
+  @derive {Poison.Encoder, only: ~w(
+    id
+    parent_key
+    key
+    language
+    data
+    html
+    creator_id
+  )a}
+  @derive {Jason.Encoder, only: ~w(
+    id
+    parent_key
+    key
+    language
+    data
+    html
+    creator_id
+  )a}
+
   schema "pagefragments" do
     field :parent_key, :string
     field :key, :string

@@ -287,12 +287,14 @@ defmodule Brando.Pages do
     fragment_id = (is_binary(fragment_id) && String.to_integer(fragment_id)) || fragment_id
     {:ok, fragment} = get_page_fragment(fragment_id)
 
-    fragment = Map.merge(fragment, %{key: "#{fragment.key}_kopi"})
-    fragment = Map.delete(fragment, [:id, :parent])
-    fragment = Map.from_struct(fragment)
+    {:ok, dup_fragment} =
+      fragment
+      |> Map.merge(%{key: "#{fragment.key}_kopi"})
+      |> Map.delete([:id, :parent])
+      |> Map.from_struct()
+      |> create_page_fragment(user)
 
-    {:ok, duplicated_fragment} = create_page_fragment(fragment, user)
-    {:ok, Map.merge(duplicated_fragment, %{creator: nil})}
+    {:ok, Map.merge(dup_fragment, %{creator: nil})}
   end
 
   @doc """

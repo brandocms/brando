@@ -14,6 +14,41 @@ defmodule Brando.Pages.Page do
   @required_fields ~w(key language slug title data status creator_id)a
   @optional_fields ~w(parent_id meta_description meta_keywords html css_classes)a
 
+  @derive {Poison.Encoder, only: ~w(
+    id
+    key
+    language
+    title
+    slug
+    data
+    html
+    status
+    css_classes
+    creator_id
+    parent_id
+    meta_description
+    meta_keywords
+    inserted_at
+    updated_at
+  )a}
+  @derive {Jason.Encoder, only: ~w(
+    id
+    key
+    language
+    title
+    slug
+    data
+    html
+    status
+    css_classes
+    creator_id
+    parent_id
+    meta_description
+    meta_keywords
+    inserted_at
+    updated_at
+  )a}
+
   schema "pages" do
     field :key, :string
     field :language, :string
