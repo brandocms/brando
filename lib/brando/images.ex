@@ -54,12 +54,16 @@ defmodule Brando.Images do
   @doc """
   Updates the `schema`'s image JSON field with `title` and `credits`
   """
-  def update_image_meta(schema, title, credits, focal) do
+  def update_image_meta(schema, title, credits, focal, user \\ :system) do
     image =
       schema.image
       |> Map.put(:title, title)
       |> Map.put(:credits, credits)
       |> Map.put(:focal, focal)
+
+    unless Map.equal?(Map.get(schema.image, :focal, nil), focal) do
+      recreate_sizes_for(:image, put_in(schema.image, image), user)
+    end
 
     update_image(schema, %{"image" => image})
   end

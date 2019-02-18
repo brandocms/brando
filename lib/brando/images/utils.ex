@@ -123,8 +123,8 @@ defmodule Brando.Images.Utils do
   @doc """
   Creates sized images.
   """
-  @spec create_image_sizes(Brando.Upload.t(), Brando.User.t | :system) :: {:ok, Brando.Type.Image.t()}
-  def create_image_sizes(%{plug: %{uploaded_file: file}, cfg: cfg}, user \\ :system) do
+  @spec create_image_sizes(Brando.Upload.t(), Brando.User.t() | :system, Map.t()) :: {:ok, Brando.Type.Image.t()}
+  def create_image_sizes(%{plug: %{uploaded_file: file}, cfg: cfg}, user \\ :system, focal \\ %{"x" => 50, "y" => 50}) do
     Progress.show_progress(user)
     type = image_type(file)
     {file_path, filename} = split_path(file)
@@ -138,7 +138,7 @@ defmodule Brando.Images.Utils do
         sized_path = Path.join([upload_path, to_string(size_name), filename])
 
         File.mkdir_p(postfixed_size_dir)
-        create_image_size(file, sized_image, size_cfg, type)
+        create_image_size(type, file, sized_image, size_cfg, focal)
         Progress.update_progress(user, "#{filename} — Fullført bildestørrelse: <strong>#{size_name}</strong>")
         {size_name, sized_path}
       end
@@ -176,10 +176,10 @@ defmodule Brando.Images.Utils do
   @doc """
   Creates a sized version of `image_src`.
   """
-  @spec create_image_size(String.t(), String.t(), Brando.Type.ImageConfig.t(), atom) :: no_return
-  def create_image_size(image_src, image_dest, size_cfg, image_type \\ :other)
+  @spec create_image_size(atom, String.t(), String.t(), Brando.Type.ImageConfig.t(), Map.t()) :: no_return
+  def create_image_size(image_type \\ :other, image_src, image_dest, size_cfg, focal)
 
-  def create_image_size(image_src, image_dest, size_cfg, :gif) do
+  def create_image_size(:gif, image_src, image_dest, size_cfg, _) do
     image = Mogrify.open(image_src)
 
     size_cfg =
@@ -214,7 +214,7 @@ defmodule Brando.Images.Utils do
     System.cmd("gifsicle", params, stderr_to_stdout: true)
   end
 
-  def create_image_size(image_src, image_dest, size_cfg, _) do
+  def create_image_size(_, image_src, image_dest, size_cfg, focal) do
     with true <- File.exists?(image_src),
          image <- Mogrify.open(image_src) do
 
@@ -239,11 +239,40 @@ defmodule Brando.Images.Utils do
         end
 
       if size_cfg["crop"] do
+        image_info = Mogrify.verbose(image)
+
+        focal = %{
+          x: focal["x"] / 100 * image_info.width,
+          y: focal["y"] / 100 * image_info.height
+        }
+
+        [resize_width, resize_height] =
+          size_cfg["size"]
+          |> String.replace(~r/\^|\!|\>|\<|\%/, "")
+          |> String.split("x")
+
+        k = String.to_integer(resize_width) / String.to_integer(resize_height)
+
+        wm = image_info.width
+        hm = wm / k
+
+        [hm, wm] =
+          if hm > image_info.height do
+            [image_info.height, image_info.height * k]
+          else
+            [hm, wm]
+          end
+
+        fx2 = focal.x * wm / image_info.width
+        fy2 = focal.y * hm / image_info.height
+        geometry = "#{wm}x#{hm}+#{focal.x-fx2}+#{focal.y-fy2}"
+
         image
+        |> Mogrify.resize_to_fill(geometry)
         |> Mogrify.resize_to_fill(size_cfg["size"])
-        |> Mogrify.gravity("Center")
         |> Mogrify.custom("quality", quality)
         |> Mogrify.save(path: image_dest)
+
       else
         image
         |> Mogrify.resize_to_limit(size_cfg["size"])
@@ -265,12 +294,13 @@ defmodule Brando.Images.Utils do
     img = Brando.repo().preload(img, :image_series)
     img = put_in(img.image.optimized, false)
     full_path = media_path(img.image.path)
+    focal = Map.get(img.image, "focal", %{"x" => 50, "y" => 50})
 
     delete_sized_images(img.image)
 
     src = %{plug: %{uploaded_file: full_path}, cfg: img.image_series.cfg}
 
-    with {:ok, new_image} <- create_image_sizes(src, user) do
+    with {:ok, new_image} <- create_image_sizes(src, user, focal) do
       image = Map.put(img.image, :sizes, new_image.sizes)
 
       img

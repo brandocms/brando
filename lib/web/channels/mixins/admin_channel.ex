@@ -74,8 +74,9 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
             %{"id" => id, "image" => %{"title" => title, "credits" => credits, "focal" => focal}},
             socket
           ) do
+        user = Guardian.Phoenix.Socket.current_resource(socket)
         image = Brando.Images.get_image!(id)
-        {:ok, updated_image} = Brando.Images.update_image_meta(image, title, credits, focal)
+        {:ok, updated_image} = Brando.Images.update_image_meta(image, title, credits, focal, user)
         {:reply, {:ok, %{status: 200}}, socket}
       end
 
