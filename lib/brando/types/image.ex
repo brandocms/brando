@@ -25,7 +25,7 @@ defmodule Brando.Type.Image do
             optimized: false,
             width: nil,
             height: nil,
-            focal: nil
+            focal: %{"x" => 50, "y" => 50}
 
   @doc """
   Returns the internal type representation of our `Role` type for pg

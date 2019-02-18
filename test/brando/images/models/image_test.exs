@@ -3,14 +3,14 @@ defmodule Brando.Integration.ImageTest do
   use Brando.ConnCase
   use Brando.Integration.TestCase
 
+  alias Brando.Factory
   alias Brando.Image
   alias Brando.Images
   alias Brando.ImageSeries
-  alias Brando.Factory
 
   @params %{
     sequence: 0,
-    image: %{
+    image: %Brando.Type.Image{
       title: "Title",
       credits: "credits",
       path: "/tmp/path/to/fake/image.jpg",
@@ -23,7 +23,7 @@ defmodule Brando.Integration.ImageTest do
 
   @params2 %{
     sequence: 1,
-    image: %{
+    image: %Brando.Type.Image{
       title: "Title2",
       credits: "credits2",
       path: "/tmp/path/to/fake/image2.jpg",
@@ -97,7 +97,7 @@ defmodule Brando.Integration.ImageTest do
     assert image.image.title == "Title"
     assert image.image.credits == "credits"
 
-    assert {:ok, new_image} = Images.update_image_meta(image, "new title", "new credits", nil)
+    assert {:ok, new_image} = Images.update_image_meta(image, "new title", "new credits", %{"x" => 50, "y" => 50})
 
     refute new_image.image == image.image
     assert new_image.image.title == "new title"
