@@ -246,7 +246,10 @@ defmodule Brando.Villain do
         thumb: media_url(img_url(img_field, :thumb)),
         sizes: sizes,
         title: img_field.title,
-        credits: img_field.credits
+        credits: img_field.credits,
+        inserted_at: image_record.inserted_at,
+        width: img_field.width,
+        height: img_field.height
       }
     end)
   end
