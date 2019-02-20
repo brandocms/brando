@@ -47,6 +47,7 @@
     "vue-router": "^3.0.2",
     "vue-template-compiler": "^2.6.6",
     "vue-timeago": "^3.4.4",
+    "vue-upload-component": "^2.6.3",
     "vuex": "^3.1.0",
     "vuex-router-sync": "^5.0.0"
   },
