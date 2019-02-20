@@ -122,7 +122,8 @@ defmodule Brando.VillainController do
       uid: uid,
       title: image.image.title,
       credits: image.image.credits,
-      link: form["link"]
+      link: form["link"],
+      focal: %{"x" => 50, "y" => 50}
     }
 
     json(conn, info)
