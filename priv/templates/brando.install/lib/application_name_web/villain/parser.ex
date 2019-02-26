@@ -132,19 +132,10 @@ defmodule <%= application_module %>.Villain.Parser do
   @doc """
   Slideshow
   """
-  def slideshow(%{"imageseries" => series_slug}) do
-    # srcset
-    q = from is in Brando.ImageSeries,
-             join: c in assoc(is, :image_category),
-             join: i in assoc(is, :images),
-             where: c.slug == "slideshows" and is.slug == ^series_slug,
-             order_by: i.sequence,
-             preload: [image_category: c, images: i]
-    series = Brando.repo.one!(q)
-
-    images = Enum.map_join series.images, "\n", fn(img) ->
-      src = img_url(img.image, :xlarge, [prefix: media_url()])
-      title = img.image.title && ~s(<p class="small photo-caption"><span class="arrow-se">&searr;</span> #{img.image.title}</p>) || ""
+  def slideshow(images) do
+    images_html = Enum.map_join images, "\n", fn(img) ->
+      src = img.sizes["xlarge"]
+      title = img.title && ~s(<p class="small photo-caption"><span class="arrow-se">&searr;</span> #{img.title}</p>) || ""
       """
       <li class="glide__slide">
         <img class="img-fluid" src="#{src}" />
@@ -159,10 +150,35 @@ defmodule <%= application_module %>.Villain.Parser do
       </div>
       <div class="glide__track" data-glide-el="track" data-moonwalk>
         <ul class="glide__slides">
-          #{images}
+          #{images_html}
         </ul>
       </div>
     </div>
+    """
+  end
+
+  @doc """
+  Datatable
+  """
+  def datatable(rows) do
+    rows_html =
+      Enum.map_join rows, "\n", fn row ->
+        """
+        <tr>
+          <td class="v-datatable-key">
+            #{row["key"]}
+          </td>
+          <td class="v-datatable-value">
+            #{row["value"]}
+          </td>
+        </tr>
+        """
+      end
+
+    """
+    <table class="table v-datatable">
+      #{rows_html}
+    </table>
     """
   end
 
