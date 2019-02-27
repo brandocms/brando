@@ -1,4 +1,5 @@
 [
-  inputs: ["*.{ex,exs}", "{config,lib,priv,test}/**/*.{ex,exs}"],
-  import_deps: [:ecto, :absinthe, :plug, :phoenix]
+  import_deps: [:absinthe, :ecto, :phoenix, :plug],
+  inputs: ["*.{ex,exs}", "priv/*/seeds.exs", "{config,lib,test}/**/*.{ex,exs}"],
+  subdirectories: ["priv/*/migrations"]
 ]
