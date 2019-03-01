@@ -1,13 +1,75 @@
-import Headroom from 'headroom.js'
-import { TweenLite } from 'gsap/TweenMax'
+// import Headroom from 'headroom.js'
+import { TweenLite, Power3, Sine } from 'gsap/TweenMax'
 import scrollIntoView from 'scroll-into-view-if-needed'
+import FixedHeader from '../fixedHeader/'
 
 /**
  * Called at document ready
  */
-export function initializeNavigation () {
+export function initializeNavigation() {
+  if (document.body.getAttribute('data-script') === 'licenses') {
+    return
+  }
+
+  const logo = document.querySelector('.navbar-brand')
+  const logoText = document.querySelector('.navbar-brand .logo-text')
+
+  const header = new FixedHeader(
+    document.querySelector('header'),
+    {
+      regBgColor: '#ffffff',
+      onPin: (h) => {
+        TweenLite.to(
+          h.el,
+          0.5,
+          {
+            yPercent: '0',
+            ease: Sine.easeOut,
+            force3D: true
+          }
+        )
+      },
+
+      onUnpin: (h) => {
+        TweenLite.to(
+          h.el,
+          0.5,
+          {
+            yPercent: '-100',
+            ease: Sine.easeIn,
+            force3D: true
+          }
+        )
+      },
+
+      onSmall: () => {
+      },
+      onNotSmall: () => {
+      },
+
+      onAltBg: (h) => {
+        TweenLite.to(
+          h.el,
+          0.2,
+          {
+            backgroundColor: h.altBgColor
+          }
+        )
+      },
+
+      onNotAltBg: (h) => {
+        TweenLite.to(
+          h.el,
+          0.4,
+          {
+            backgroundColor: h.regBgColor
+          }
+        )
+      }
+    }
+  )
+  header.initialize()
   initializeMenu()
-  initializeHeadroom()
   bindLinks()
 
   if (window.location.hash) {
@@ -20,23 +82,7 @@ export function initializeNavigation () {
  * Called right before page ready
  */
 export function navigationReady () {
-  checkHeadroom()
-}
 
-function initializeHeadroom () {
-  var opts = {
-    offset: 5,
-    tolerance: {
-      down: 0,
-      up: 0
-    },
-    classes: {
-      initial: 'animated'
-    }
-  }
-
-  var headroom = new Headroom(document.querySelector('header'), opts)
-  headroom.init()
 }
 
 function initializeMenu () {
@@ -48,7 +94,7 @@ function initializeMenu () {
 
 function bindLinks () {
   const fader = document.querySelector('#fader')
-  const links = document.querySelectorAll('a:not([href^="#"]):not([target="_blank"]):not([data-lightbox])')
+  const links = document.querySelectorAll('a:not([href^="#"]):not([target="_blank"]):not([data-lightbox]):not(.plain)')
   const anchors = document.querySelectorAll('a[href^="#"]')
   let wait = false
 
@@ -89,7 +135,13 @@ function bindLinks () {
       loadingContainer.style.display = 'none'
 
       if (href.indexOf(document.location.hostname) > -1 || href.startsWith('/')) {
+        let main = document.querySelector('main')
         fader.style.display = 'block'
+        TweenLite.to(main, 0.8, {
+          yPercent: 3,
+          ease: Power3.easeOut
+        })
+
         TweenLite.to(fader, 0.350, {
           opacity: 1,
           onComplete: () => {
@@ -99,15 +151,6 @@ function bindLinks () {
       }
     })
   })
-}
-
-function checkHeadroom () {
-  // If we are scrolled down on page load, add the pinned class
-  let top = window.pageYOffset || document.documentElement.scrollTop
-  if (top > 0) {
-    document.querySelector('header').classList.remove('headroom--unpinned')
-    document.querySelector('header').classList.add('headroom--pinned')
-  }
 }
 
 function toggleMenu () {

@@ -292,6 +292,8 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "templates/brando.install/assets/frontend/js/navigation/index.js", "assets/frontend/js/navigation/index.js"},
     {:copy, "templates/brando.install/assets/frontend/js/moonwalk/index.js", "assets/frontend/js/moonwalk/index.js"},
     {:copy, "templates/brando.install/assets/frontend/js/cookies/index.js", "assets/frontend/js/cookies/index.js"},
+    {:copy, "templates/brando.install/assets/frontend/js/fixedHeader/index.js", "assets/frontend/js/fixedHeader/index.js"},
+    {:copy, "templates/brando.install/assets/frontend/js/heroSlider/index.js", "assets/frontend/js/heroSlider/index.js"},
     {:copy, "templates/brando.install/assets/frontend/static/favicon.ico",
      "assets/frontend/static/favicon.ico"},
     {:copy, "templates/brando.install/assets/frontend/static/ico/android-chrome-192x192.png",
