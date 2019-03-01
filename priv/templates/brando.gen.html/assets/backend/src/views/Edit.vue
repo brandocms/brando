@@ -65,6 +65,7 @@ export default {
         if (!valid) {
           alertError('Feil i skjema', 'Vennligst se over og rett feil i rødt')
           this.loading = false
+          return
         }
         this.save()
       }).catch(err => {
