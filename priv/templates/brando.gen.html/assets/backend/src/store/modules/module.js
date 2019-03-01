@@ -1,5 +1,5 @@
 import nprogress from 'nprogress'
-import { <%= vue_singular %> API } from '../../api/<%= vue_singular %>'
+import { <%= vue_singular %>API } from '../../api/<%= vue_singular %>'
 
 const STORE_<%= String.upcase(singular) %> = 'STORE_<%= String.upcase(singular) %>'
 const STORE_<%= String.upcase(plural) %> = 'STORE_<%= String.upcase(plural) %>'
