@@ -7,10 +7,6 @@ import FixedHeader from '../fixedHeader/'
  * Called at document ready
  */
 export function initializeNavigation() {
-  if (document.body.getAttribute('data-script') === 'licenses') {
-    return
-  }
-
   const logo = document.querySelector('.navbar-brand')
   const logoText = document.querySelector('.navbar-brand .logo-text')
 
