@@ -27,12 +27,6 @@ defmodule Brando.Tag do
   You will find a function in your schema called `by_tag/1` which returns
   an Ecto Queryable of all records in your schema matching `tag`.
 
-  Also remember to add
-
-      params = params |> Brando.Tag.split_tags
-
-  to your changeset functions
-
   Migration:
 
       use Brando.Tag, :migration
@@ -47,6 +41,13 @@ defmodule Brando.Tag do
   Template (`post_with_tags.html.eex`):
 
       TODO: show example
+
+
+  Vue frontend:
+
+    * Add a `KInputTags` component to your view
+    * Add `tags` to your gql schema as `:json`
+    * Add `tags` to your gql input object as `list_of(:string)`
 
   """
 
