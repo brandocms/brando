@@ -328,7 +328,41 @@ defmodule Brando.Utils do
   """
   @spec active_path?(Plug.Conn.t(), String.t()) :: boolean
   def active_path?(conn, url_to_match) do
-    conn.request_path == url_to_match
+    current_path = Path.join(["/" | conn.path_info])
+    chunks = String.split(url_to_match, "/")
+
+    {url, current_path} =
+      if List.last(chunks) == "*" do
+        url_without_star =
+          chunks
+          |> List.delete_at(Enum.count(chunks) - 1)
+          |> Enum.reject(&(&1 == ""))
+
+        chunks_count = Enum.count(url_without_star)
+
+        split_current_path =
+          current_path
+          |> String.split("/")
+          |> Enum.reject(&(&1 == ""))
+
+        shortened_path =
+          for {path, x} <- Enum.with_index(split_current_path) do
+            if x < chunks_count do
+              path
+            else
+              ""
+            end
+          end
+          |> Enum.reject(&(&1 == ""))
+          |> Enum.join("/")
+
+
+        {Enum.join(url_without_star, "/"), shortened_path}
+      else
+        {url_to_match, current_path}
+      end
+
+    current_path == url
   end
 
   @doc """

@@ -18,6 +18,12 @@
   transform: none;
 }
 
+html.sr {
+  [data-moonwalk] {
+    visibility: hidden;
+  }
+}
+
 html, body {
 }
 
