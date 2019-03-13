@@ -147,8 +147,6 @@ defmodule Brando.Images.Utils do
 
     try do
       focal = Map.get(extra_info || %{}, :focal, focal)
-      require Logger
-      Logger.error "==> FOCAL IS #{inspect focal}"
 
       Progress.update_progress(user, "#{filename} — Henter bildeinformasjon...")
 
@@ -303,7 +301,7 @@ defmodule Brando.Images.Utils do
 
     delete_sized_images(img.image)
 
-    src = %{plug: %{uploaded_file: full_path}, cfg: img.image_series.cfg}
+    src = %{plug: %{uploaded_file: full_path}, cfg: img.image_series.cfg, extra_info: nil}
 
     with {:ok, new_image} <- create_image_sizes(src, user, focal) do
       image = Map.put(img.image, :sizes, new_image.sizes)
@@ -359,7 +357,7 @@ defmodule Brando.Images.Utils do
         full_path = media_path(field.path)
         delete_sized_images(field)
         {:ok, cfg} = schema.get_image_cfg(field_name)
-        src = %{plug: %{uploaded_file: full_path}, cfg: cfg}
+        src = %{plug: %{uploaded_file: full_path}, cfg: cfg, extra_info: nil}
 
         with {:ok, new_image} <- create_image_sizes(src) do
           row
