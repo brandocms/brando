@@ -124,7 +124,7 @@ defmodule Brando.Images.Utils do
   Creates sized images.
   """
   @spec create_image_sizes(Brando.Upload.t(), Brando.User.t() | :system, Map.t()) :: {:ok, Brando.Type.Image.t()}
-  def create_image_sizes(%{plug: %{uploaded_file: file}, cfg: cfg}, user \\ :system, focal \\ %{"x" => 50, "y" => 50}) do
+  def create_image_sizes(%{plug: %{uploaded_file: file}, cfg: cfg, extra_info: extra_info}, user \\ :system, focal \\ %{"x" => 50, "y" => 50}) do
     Progress.show_progress(user)
     type = image_type(file)
     {file_path, filename} = split_path(file)
@@ -146,6 +146,10 @@ defmodule Brando.Images.Utils do
     new_path = Path.join([upload_path, filename])
 
     try do
+      focal = Map.get(extra_info || %{}, :focal, focal)
+      require Logger
+      Logger.error "==> FOCAL IS #{inspect focal}"
+
       Progress.update_progress(user, "#{filename} — Henter bildeinformasjon...")
 
       image_info =
@@ -160,6 +164,7 @@ defmodule Brando.Images.Utils do
         |> Map.put(:path, new_path)
         |> Map.put(:width, image_info.width)
         |> Map.put(:height, image_info.height)
+        |> Map.put(:focal, focal)
 
       Progress.hide_progress(user)
       {:ok, size_struct}
@@ -367,6 +372,28 @@ defmodule Brando.Images.Utils do
           err -> err
         end
       end
+    end
+  end
+
+  # usually used when changing focal point
+  # recreate_sizes_for(:image_field_record, changeset, :cover, user)
+  @spec recreate_sizes_for(:image_field_record, term, term, term) :: :ok | no_return
+  def recreate_sizes_for(:image_field_record, changeset, field_name, user) do
+    # get image field
+    image_field = Ecto.Changeset.get_change(changeset, field_name)
+    focal = Map.get(image_field, :focal, %{"x" => 50, "y" => 50})
+    full_path = media_path(image_field.path)
+    delete_sized_images(image_field)
+    schema = changeset.data.__struct__
+
+    {:ok, cfg} = schema.get_image_cfg(field_name)
+    src = %{plug: %{uploaded_file: full_path}, cfg: cfg, extra_info: %{focal: focal}}
+
+    with {:ok, new_image} <- create_image_sizes(src, user, focal) do
+      {:ok, Ecto.Changeset.put_change(changeset, field_name, new_image)}
+    else
+      err ->
+        {:error, err, changeset}
     end
   end
 

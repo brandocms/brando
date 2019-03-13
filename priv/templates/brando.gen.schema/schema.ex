@@ -53,8 +53,7 @@ defmodule <%= module %> do
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)<%= if villain_fields != [] do %><%= for {_k, v} <- villain_fields do %><%= if v == :data do %>
     |> generate_html()<% else %>
-    |> generate_html(<%= inspect v %>)<% end %><% end %><% end %><%= if img_fields != [] do %>
-    |> cleanup_old_images()<%= for {_v, k} <- img_fields do %>
+    |> generate_html(<%= inspect v %>)<% end %><% end %><% end %><%= if img_fields != [] do %><%= for {_v, k} <- img_fields do %>
     |> validate_upload({:image, <%= inspect k %>}, user)
     |> optimize(<%= inspect k %>)<% end %><% end %>
   end

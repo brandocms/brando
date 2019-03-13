@@ -373,7 +373,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k, ~s(field #{inspect(k)}, :time)}
 
       {k, :image} ->
-        {k, ~s(field #{inspect(k)}, :upload)}
+        {k, ~s(field #{inspect(k)}, :upload_or_image)}
 
       {k, :villain} ->
         k = (k == :data && :data) || String.to_atom(Atom.to_string(k) <> "_data")

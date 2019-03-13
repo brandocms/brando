@@ -40,7 +40,12 @@ defmodule Brando.Field.ImageField do
       @doc """
       Cleans up old images on update
       """
-      def cleanup_old_images(changeset) do
+      @deprecated "cleanup_old_images/1 should not be used in changesets anymore."
+      def cleanup_old_images(_) do
+        raise "cleanup_old_images() should not be used in changesets anymore."
+      end
+
+      def cleanup_old_images(changeset, :safe) do
         imagefield_keys = Keyword.keys(__imagefields__())
 
         for key <- Map.keys(changeset.changes) do
@@ -64,16 +69,26 @@ defmodule Brando.Field.ImageField do
       end
 
       defp do_validate_upload(changeset, {:image, field_name}, user) do
-        with {:ok, plug} <- field_has_changed(changeset, field_name),
+        with {:ok, {:upload, changeset}} <- merge_focal(changeset, field_name),
+            {:ok, plug} <- field_has_changed(changeset, field_name),
             {:ok, _} <- changeset_has_no_errors(changeset),
             {:ok, cfg} <- get_image_cfg(field_name),
             {:ok, {:handled, name, field}} <- handle_image_upload(field_name, plug, cfg, user) do
+          cleanup_old_images(changeset, :safe)
           put_change(changeset, name, field)
         else
           :unchanged ->
             changeset
 
           :has_errors ->
+            changeset
+
+          {:ok, {:focal_changed, changeset}} ->
+            {:ok, changeset} =
+              recreate_sizes_for(:image_field_record, changeset, field_name, user)
+            changeset
+
+          {:ok, {:focal_unchanged, changeset}} ->
             changeset
 
           {:error, {name, {:error, error_msg}}} ->
@@ -186,5 +201,32 @@ defmodule Brando.Field.ImageField do
   @spec handle_image_upload(atom, Map.t(), Brando.Type.ImageConfig.t(), Brando.User.t | :system) :: {:ok, Map.t()}
   def handle_image_upload(name, image, _, _) do
     {:ok, {:unhandled, name, image}}
+  end
+
+  def merge_focal(changeset, field_name) do
+    case get_field(changeset, field_name) do
+      %Brando.Type.Focal{focal: focal} ->
+        # Merge focal with the cs
+        case Map.get(changeset.data, field_name, nil) do
+          nil ->
+            # nothing in data, return regular changeset
+            {:ok, {:upload, changeset}}
+          img ->
+            case Map.equal?(img.focal, focal) do
+              true ->
+                # nothing changed, delete change
+                changeset = delete_change(changeset, field_name)
+                {:ok, {:focal_unchanged, changeset}}
+
+              false ->
+                changeset = put_change(changeset, field_name, Map.put(img, :focal, focal))
+                {:ok, {:focal_changed, changeset}}
+            end
+
+        end
+
+      _ ->
+        {:ok, {:upload, changeset}}
+    end
   end
 end
