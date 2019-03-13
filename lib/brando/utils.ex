@@ -386,6 +386,19 @@ defmodule Brando.Utils do
     (prefix && Path.join([prefix, file_field.path])) || file_field.path
   end
 
+  def add_cache_string(opts) do
+    case Keyword.get(opts, :cache, nil) do
+      nil -> ""
+      cache ->
+        stamp =
+          cache
+          |> DateTime.from_naive!("Etc/UTC")
+          |> DateTime.to_unix()
+
+        "?#{stamp}"
+    end
+  end
+
   @doc """
   Grabs `size` from the `image_field` json struct.
   If default is passed, return size_dir of `default`.
@@ -396,17 +409,17 @@ defmodule Brando.Utils do
 
   def img_url(nil, size, opts) do
     default = Keyword.get(opts, :default, nil)
-    (default && Brando.Images.Utils.size_dir(default, size)) || ""
+    (default && Brando.Images.Utils.size_dir(default, size)) || "" <> add_cache_string(opts)
   end
 
   def img_url("", size, opts) do
     default = Keyword.get(opts, :default, nil)
-    (default && Brando.Images.Utils.size_dir(default, size)) || ""
+    (default && Brando.Images.Utils.size_dir(default, size)) || "" <> add_cache_string(opts)
   end
 
   def img_url(image_field, :original, opts) do
     prefix = Keyword.get(opts, :prefix, nil)
-    (prefix && Path.join([prefix, image_field.path])) || image_field.path
+    (prefix && Path.join([prefix, image_field.path])) || image_field.path <> add_cache_string(opts)
   end
 
   def img_url(image_field, size, opts) do
@@ -431,13 +444,12 @@ defmodule Brando.Utils do
           end
       end
 
-
     url = (prefix && Path.join([prefix, size_dir])) || size_dir
 
     case Map.get(image_field, :optimized) do
-      true -> Brando.Images.Utils.optimized_filename(url)
-      false -> url
-      nil -> url
+      true -> Brando.Images.Utils.optimized_filename(url) <> add_cache_string(opts)
+      false -> url <> add_cache_string(opts)
+      nil -> url <> add_cache_string(opts)
     end
   end
 
