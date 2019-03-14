@@ -241,20 +241,31 @@ defmodule Brando.HTML do
       |> put_meta("og:url", Brando.Utils.current_url(conn))
 
     conn =
-      if meta_keywords = Brando.Config.get_site_config("meta_keywords") do
-        put_meta(conn, "keywords", meta_keywords)
-      else
-        conn
-      end
+      case get_meta(conn, "keywords") do
+        nil ->
+          if meta_keywords = Brando.Config.get_site_config("meta_keywords") do
+            put_meta(conn, "keywords", meta_keywords)
+          else
+            conn
+          end
+
+        _ ->
+          conn
+        end
 
     conn =
-      if meta_description = Brando.Config.get_site_config("meta_description") do
-        conn
-        |> put_meta("description", meta_description)
-        |> put_meta("og:description", meta_description)
-      else
-        conn
-      end
+      case get_meta(conn, "description") do
+        nil ->
+          if meta_description = Brando.Config.get_site_config("meta_description") do
+            conn
+            |> put_meta("description", meta_description)
+            |> put_meta("og:description", meta_description)
+          else
+            conn
+          end
+        _ ->
+          conn
+        end
 
     conn =
       case get_meta(conn, "og:image") do
