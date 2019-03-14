@@ -175,11 +175,34 @@ defmodule Brando.Pages do
     end
   end
 
+  @doc """
+  Re-render page
+  """
+  def rerender_page(id) do
+    {:ok, page} = get_page(id)
+    changeset = Ecto.Changeset.change(page)
+    Page.rerender_html(changeset)
+  end
+
+  @doc """
+  Rerender all pages
+  """
   def rerender_pages() do
     {:ok, pages} = list_pages()
 
     for page <- pages do
-      Page.rerender_html(Page.changeset(page, :update, %{}))
+      Page.rerender_html(Ecto.Changeset.change(page))
+    end
+  end
+
+  @doc """
+  Rerender all fragments
+  """
+  def rerender_fragments() do
+    {:ok, fragments} = list_page_fragments()
+
+    for fragment <- fragments do
+      PageFragment.rerender_html(Ecto.Changeset.change(fragment))
     end
   end
 

@@ -105,6 +105,17 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         {:reply, {:ok, %{code: 200, page: new_page}}, socket}
       end
 
+      def handle_in("page:rerender", %{"id" => page_id}, socket) do
+        user = Guardian.Phoenix.Socket.current_resource(socket)
+        Brando.Pages.rerender_page(String.to_integer(page_id))
+        {:reply, {:ok, %{code: 200}}, socket}
+      end
+
+      def handle_in("page:rerender_all", _, socket) do
+        Brando.Pages.rerender_pages()
+        {:reply, {:ok, %{code: 200}}, socket}
+      end
+
       def handle_in("page_fragment:duplicate", %{"id" => page_id}, socket) do
         user = Guardian.Phoenix.Socket.current_resource(socket)
         {:ok, new_fragment} = Brando.Pages.duplicate_page_fragment(page_id, user)
@@ -112,8 +123,12 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
       end
 
       def handle_in("page_fragment:rerender", %{"id" => fragment_id}, socket) do
-        user = Guardian.Phoenix.Socket.current_resource(socket)
         Brando.Pages.rerender_fragment(String.to_integer(fragment_id))
+        {:reply, {:ok, %{code: 200}}, socket}
+      end
+
+      def handle_in("page_fragment:rerender_all", _, socket) do
+        Brando.Pages.rerender_fragments()
         {:reply, {:ok, %{code: 200}}, socket}
       end
 
