@@ -338,6 +338,7 @@ defmodule Brando.HTML do
     * `prefix` - string to prefix to the image's url. I.e. `prefix: media_url()`
     * `default` - default value if `image_field` is nil. Does not respect `prefix`, so use
       full path.
+    * `cache` - key to cache by, i.e `cache: schema.updated_at`
     * `srcset` - if you want to use the srcset attribute. Set in the form of `{module, field}`.
       I.e `srcset: {Brando.User, :avatar}`
       You can also reference a config struct directly:
