@@ -271,9 +271,16 @@ defmodule Brando.HTML do
       case get_meta(conn, "og:image") do
         nil ->
           if meta_image = Brando.Config.get_site_config("meta_image") do
+            img =
+              if String.contains?(meta_image, "://") do
+                meta_image
+              else
+                Path.join("#{conn.scheme}://#{conn.host}", meta_image)
+              end
+
             conn
-            |> put_meta("image", meta_image)
-            |> put_meta("og:image", meta_image)
+            |> put_meta("image", img)
+            |> put_meta("og:image", img)
           else
             conn
           end
