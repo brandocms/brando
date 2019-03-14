@@ -366,7 +366,7 @@ def migrate_release():
     print(yellow('==> running db migrations escript for remote release'))
     with cd(env.path), shell_env(MIX_ENV='%s' % env.flavor,
                                  HOME='/home/%s' % env.project_user):
-        sudo('bin/%s escript bin/release_tasks.escript migrate' % env.project_name,
+        sudo('bin/%s migrate' % env.project_name,
              user=env.project_user)
 
 
