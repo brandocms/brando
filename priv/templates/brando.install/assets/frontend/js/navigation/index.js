@@ -126,11 +126,10 @@ function bindLinks () {
       const loadingContainer = document.querySelector('.loading-container')
       const href = link.getAttribute('href')
 
-      e.preventDefault()
-
       loadingContainer.style.display = 'none'
 
       if (href.indexOf(document.location.hostname) > -1 || href.startsWith('/')) {
+        e.preventDefault()
         let main = document.querySelector('main')
         fader.style.display = 'block'
         TweenLite.to(main, 0.8, {
