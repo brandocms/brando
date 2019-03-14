@@ -31,6 +31,13 @@ defmodule Brando.Config do
     GenServer.call(__MODULE__, :state)
   end
 
+  @doc """
+  Register a new configuration key
+
+  ## Example
+
+      iex> register_key("meta_image", %{"description" => "META image", "type" => "image", "value" => "..."})
+  """
   def register_key(key, val) do
     GenServer.call(__MODULE__, {:register, key, val})
   end
