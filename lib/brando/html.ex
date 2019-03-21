@@ -8,7 +8,6 @@ defmodule Brando.HTML do
   import Brando.Gettext
   import Brando.Utils, only: [current_user: 1, active_path?: 2]
   import Brando.Meta.Controller, only: [put_meta: 3, get_meta: 1, get_meta: 2]
-
   import Phoenix.HTML
 
   @doc false
@@ -100,6 +99,7 @@ defmodule Brando.HTML do
     if Map.get(conn.cookies, "cookielaw_accepted") != "1" do
       text = raw(text)
       button_text = Keyword.get(opts, :button_text, "OK")
+      info_link = Keyword.get(opts, :info_link, "/cookies")
       info_text = Keyword.get(opts, :info_text)
 
       ~E|
@@ -116,7 +116,7 @@ defmodule Brando.HTML do
               </button>
               <%= if info_text do %>
               <a
-                href="/cookies"
+                href="<%= info_link %>"
                 class="info-cookielaw">
                 <%= info_text %>
               </a>
@@ -385,7 +385,7 @@ defmodule Brando.HTML do
       Keyword.new()
       |> Keyword.put(:src, img_src)
       |> Keyword.merge(
-        Keyword.drop(opts, [:attrs, :prefix, :srcset, :sizes, :default]) ++
+        Keyword.drop(opts, [:lightbox, :cache, :attrs, :prefix, :srcset, :sizes, :default]) ++
           sizes_attr ++ srcset_attr ++ width_attr ++ height_attr ++ extra_attrs
       )
 
@@ -401,6 +401,51 @@ defmodule Brando.HTML do
     else
       Phoenix.HTML.Tag.tag(:img, attrs)
     end
+  end
+
+  def picture_tag(image_field, placeholder_size \\ :micro, opts \\ []) do
+    srcset_attr =
+      (Keyword.get(opts, :srcset) && get_srcset(image_field, opts[:srcset], opts)) || []
+
+    if srcset_attr == [] do
+      require Logger
+      Logger.error "==> picture_tag: NO SRC SET!"
+    end
+
+    width_attr = (Keyword.get(opts, :width) && [width: Map.get(image_field, :width)]) || []
+    height_attr = (Keyword.get(opts, :height) && [height: Map.get(image_field, :height)]) || []
+    extra_attrs = Keyword.get(opts, :attrs, [])
+
+    lightbox = Keyword.get(opts, :lightbox, false)
+
+    attrs =
+      Keyword.new()
+      |> Keyword.merge(
+        Keyword.drop(opts, [:class, :lazyload, :lightbox, :cache, :attrs, :prefix, :srcset, :sizes, :default]) ++
+          Keyword.get(opts, :lazyload) && [data_srcset: srcset_attr] || [srcset: srcset_attr] ++ width_attr ++ height_attr ++ extra_attrs
+      )
+
+    placeholder = Brando.Utils.img_url(image_field, placeholder_size, opts)
+    attrs = (srcset_attr != [] && Keyword.put(attrs, :src, placeholder)) || attrs
+
+    img_class =
+      if Keyword.get(opts, :lazyload) do
+        [class: "lazyload"]
+      else
+        []
+      end
+
+    img_tag = Phoenix.HTML.Tag.tag(:img, attrs ++ img_class)
+    picture_class = Keyword.get(opts, :class, nil)
+
+    ~E|
+      <picture class="<%= picture_class %>">
+        <%= img_tag %>
+        <noscript>
+          <img src="<%= Brando.Utils.img_url(image_field, placeholder_size) %>">
+        </noscript>
+      </picture>
+    |
   end
 
   def ratio(%{height: height, width: width}) when is_nil(height) or is_nil(width), do: 0
