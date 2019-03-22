@@ -111,7 +111,7 @@ defmodule Brando.Mixfile do
 
   defp package do
     [
-      maintainers: ["Twined Networks"],
+      maintainers: ["Univers/Twined"],
       licenses: [""],
       files: [
         "assets",
