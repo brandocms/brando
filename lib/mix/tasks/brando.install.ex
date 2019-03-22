@@ -123,10 +123,6 @@ defmodule Mix.Tasks.Brando.Install do
     # Helpers for frontend
     {:eex, "templates/brando.install/lib/application_name_web.ex", "lib/application_name_web.ex"},
 
-    # Postgrex types
-    {:eex, "templates/brando.install/lib/postgrex_types.ex",
-     "lib/application_name/postgrex_types.ex"},
-
     # Channel + socket
     {:eex, "templates/brando.install/lib/application_name_web/channels/admin_channel.ex",
      "lib/application_name_web/channels/admin_channel.ex"},
