@@ -133,7 +133,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
       end
 
       def handle_in("config:get", _, socket) do
-        cfg = Brando.Config.get_site_config
+        cfg = Brando.Config.get_site_config()
         {:reply, {:ok, %{code: 200, cfg: cfg}}, socket}
       end
 

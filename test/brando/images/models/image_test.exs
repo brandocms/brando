@@ -97,7 +97,8 @@ defmodule Brando.Integration.ImageTest do
     assert image.image.title == "Title"
     assert image.image.credits == "credits"
 
-    assert {:ok, new_image} = Images.update_image_meta(image, "new title", "new credits", %{"x" => 50, "y" => 50})
+    assert {:ok, new_image} =
+             Images.update_image_meta(image, "new title", "new credits", %{"x" => 50, "y" => 50})
 
     refute new_image.image == image.image
     assert new_image.image.title == "new title"

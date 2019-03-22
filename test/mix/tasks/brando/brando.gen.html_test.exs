@@ -52,7 +52,11 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       send(self(), {:mix_shell_input, :yes?, true})
       send(self(), {:mix_shell_input, :yes?, false})
       Mix.Tasks.Brando.Gen.Html.run([])
-      assert_received {:mix_shell, :info, ["You must add the GraphQL types/mutations/queries to your applications schema\n`lib/brando/graphql/schema.ex`\n\n    query do\n      import_brando_queries()\n\n      # local queries\n      import_fields :pirate_queries\n    end\n\n    mutation do\n      import_brando_mutations()\n\n      # local mutations\n      import_fields :pirate_mutations\n    end\n\nAlso add the type imports to your types file\n`lib/brando/graphql/schema/types.ex`\n\n    # local imports\n    import_types Brando.Schema.Types.Pirate\n\nAdd the sequence helper to your `admin_channel`:\n\n    use Brando.Sequence, :channel\n    sequence \"pirates\", BrandoWeb.Pirate\n\n\n\n\nand then update your repository by running migrations:\n    $ mix ecto.migrate\n\n================================================================================================\nYou must add the GraphQL types/mutations/queries to your applications schema\n`lib/brando/graphql/schema.ex`\n\n    query do\n      import_brando_queries()\n\n      # local queries\n      import_fields :captain_queries\n    end\n\n    mutation do\n      import_brando_mutations()\n\n      # local mutations\n      import_fields :captain_mutations\n    end\n\nAlso add the type imports to your types file\n`lib/brando/graphql/schema/types.ex`\n\n    # local imports\n    import_types Brando.Schema.Types.Captain\n\nAdd the sequence helper to your `admin_channel`:\n\n    use Brando.Sequence, :channel\n    sequence \"captains\", BrandoWeb.Captain\n\n\nAdd this gallery helper to your `admin_channel`:\n\n    def handle_in(\"captain:create_image_series\", %{\"captain_id\" => captain_id}, socket) do\n      user = Guardian.Phoenix.Socket.current_resource(socket)\n      {:ok, image_series} = Games.create_image_series(captain_id, user)\n      {:reply, {:ok, %{code: 200, image_series: Map.merge(image_series, %{creator: nil, image_category: nil, images: nil})}}, socket}\n    end\n\n\n\nand then update your repository by running migrations:\n    $ mix ecto.migrate\n\n================================================================================================\nYou must add the GraphQL types/mutations/queries to your applications schema\n`lib/brando/graphql/schema.ex`\n\n    query do\n      import_brando_queries()\n\n      # local queries\n      import_fields :peg_leg_queries\n    end\n\n    mutation do\n      import_brando_mutations()\n\n      # local mutations\n      import_fields :peg_leg_mutations\n    end\n\nAlso add the type imports to your types file\n`lib/brando/graphql/schema/types.ex`\n\n    # local imports\n    import_types Brando.Schema.Types.PegLeg\n\nAdd the sequence helper to your `admin_channel`:\n\n    use Brando.Sequence, :channel\n    sequence \"peg_legs\", BrandoWeb.PegLeg\n\n\n\n\nand then update your repository by running migrations:\n    $ mix ecto.migrate\n\n================================================================================================\n"]}
+
+      assert_received {:mix_shell, :info,
+                       [
+                         "You must add the GraphQL types/mutations/queries to your applications schema\n`lib/brando/graphql/schema.ex`\n\n    query do\n      import_brando_queries()\n\n      # local queries\n      import_fields :pirate_queries\n    end\n\n    mutation do\n      import_brando_mutations()\n\n      # local mutations\n      import_fields :pirate_mutations\n    end\n\nAlso add the type imports to your types file\n`lib/brando/graphql/schema/types.ex`\n\n    # local imports\n    import_types Brando.Schema.Types.Pirate\n\nAdd the sequence helper to your `admin_channel`:\n\n    use Brando.Sequence, :channel\n    sequence \"pirates\", BrandoWeb.Pirate\n\n\n\n\nand then update your repository by running migrations:\n    $ mix ecto.migrate\n\n================================================================================================\nYou must add the GraphQL types/mutations/queries to your applications schema\n`lib/brando/graphql/schema.ex`\n\n    query do\n      import_brando_queries()\n\n      # local queries\n      import_fields :captain_queries\n    end\n\n    mutation do\n      import_brando_mutations()\n\n      # local mutations\n      import_fields :captain_mutations\n    end\n\nAlso add the type imports to your types file\n`lib/brando/graphql/schema/types.ex`\n\n    # local imports\n    import_types Brando.Schema.Types.Captain\n\nAdd the sequence helper to your `admin_channel`:\n\n    use Brando.Sequence, :channel\n    sequence \"captains\", BrandoWeb.Captain\n\n\nAdd this gallery helper to your `admin_channel`:\n\n    def handle_in(\"captain:create_image_series\", %{\"captain_id\" => captain_id}, socket) do\n      user = Guardian.Phoenix.Socket.current_resource(socket)\n      {:ok, image_series} = Games.create_image_series(captain_id, user)\n      {:reply, {:ok, %{code: 200, image_series: Map.merge(image_series, %{creator: nil, image_category: nil, images: nil})}}, socket}\n    end\n\n\n\nand then update your repository by running migrations:\n    $ mix ecto.migrate\n\n================================================================================================\nYou must add the GraphQL types/mutations/queries to your applications schema\n`lib/brando/graphql/schema.ex`\n\n    query do\n      import_brando_queries()\n\n      # local queries\n      import_fields :peg_leg_queries\n    end\n\n    mutation do\n      import_brando_mutations()\n\n      # local mutations\n      import_fields :peg_leg_mutations\n    end\n\nAlso add the type imports to your types file\n`lib/brando/graphql/schema/types.ex`\n\n    # local imports\n    import_types Brando.Schema.Types.PegLeg\n\nAdd the sequence helper to your `admin_channel`:\n\n    use Brando.Sequence, :channel\n    sequence \"peg_legs\", BrandoWeb.PegLeg\n\n\n\n\nand then update your repository by running migrations:\n    $ mix ecto.migrate\n\n================================================================================================\n"
+                       ]}
 
       assert_file("lib/brando/games/games.ex", fn file ->
         assert file =~ "defmodule Brando.Games do"
@@ -107,11 +111,13 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       end)
 
       assert_file("assets/backend/src/api/graphql/captains/CAPTAIN_QUERY.graphql", fn file ->
-        assert file =~ ~s({\n    id\n    name\n    age\n    height\n    nicks\n    famous\n    born_at\n    secret\n    cover {\n      thumb: url\(size: "original"\)\n      focal\n    }\n    data\n    first_login\n    alarm\n    address\n    creator\n    image_series_id\n  })
+        assert file =~
+                 ~s({\n    id\n    name\n    age\n    height\n    nicks\n    famous\n    born_at\n    secret\n    cover {\n      thumb: url\(size: "original"\)\n      focal\n    }\n    data\n    first_login\n    alarm\n    address\n    creator\n    image_series_id\n  })
       end)
 
       assert_file("assets/backend/src/api/graphql/captains/CAPTAINS_QUERY.graphql", fn file ->
-        assert file =~ ~s({\n    id\n    name\n    age\n    height\n    nicks\n    famous\n    born_at\n    secret\n    cover {\n      thumb: url\(size: "original"\)\n      focal\n    }\n    data\n    first_login\n    alarm\n    address\n    creator\n    image_series_id\n    updated_at\n  })
+        assert file =~
+                 ~s({\n    id\n    name\n    age\n    height\n    nicks\n    famous\n    born_at\n    secret\n    cover {\n      thumb: url\(size: "original"\)\n      focal\n    }\n    data\n    first_login\n    alarm\n    address\n    creator\n    image_series_id\n    updated_at\n  })
       end)
 
       assert_file("assets/backend/src/views/games/CaptainCreateView.vue", fn file ->
@@ -128,9 +134,15 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
       assert_file("assets/backend/src/views/games/CaptainListView.vue", fn file ->
         assert file =~ ~s(v-sortable)
-        assert file =~ "<td class=\"fit\">\n                    {{ captain.name }}\n                  </td>"
-        assert file =~ "<td class=\"fit\">\n                    <CheckOrX :val=\"captain.famous\" />\n                  </td>"
-        assert file =~ "<td class=\"fit\">\n                    <img\n                      v-if=\"captain.cover\"\n                      :src=\"captain.cover.thumb\"\n                      class=\"avatar-sm img-border-lg\" />\n                  </td>"
+
+        assert file =~
+                 "<td class=\"fit\">\n                    {{ captain.name }}\n                  </td>"
+
+        assert file =~
+                 "<td class=\"fit\">\n                    <CheckOrX :val=\"captain.famous\" />\n                  </td>"
+
+        assert file =~
+                 "<td class=\"fit\">\n                    <img\n                      v-if=\"captain.cover\"\n                      :src=\"captain.cover.thumb\"\n                      class=\"avatar-sm img-border-lg\" />\n                  </td>"
       end)
     end)
   end

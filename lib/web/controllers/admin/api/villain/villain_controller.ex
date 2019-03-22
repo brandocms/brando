@@ -85,7 +85,11 @@ defmodule Brando.VillainController do
       )
       |> Brando.repo().one!
 
-    images = Enum.map(series.images, &Brando.Utils.img_url(&1.image, :thumb, prefix: Brando.Utils.media_url()))
+    images =
+      Enum.map(
+        series.images,
+        &Brando.Utils.img_url(&1.image, :thumb, prefix: Brando.Utils.media_url())
+      )
 
     json(conn, %{
       status: 200,
@@ -114,7 +118,11 @@ defmodule Brando.VillainController do
     form = URI.decode_query(form)
     image = Brando.repo().get(Brando.Image, id)
 
-    {:ok, image} = Brando.Images.update_image_meta(image, form["title"], form["credits"], %{"x" => 50, "y" => 50})
+    {:ok, image} =
+      Brando.Images.update_image_meta(image, form["title"], form["credits"], %{
+        "x" => 50,
+        "y" => 50
+      })
 
     info = %{
       status: 200,

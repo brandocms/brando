@@ -60,7 +60,7 @@ defmodule Brando.Sequence do
   defmodule Channel do
     @moduledoc false
     defmacro sequence(key, module) do
-      quote [generated: true] do
+      quote generated: true do
         @doc false
         def handle_in("#{unquote(key)}:sequence_#{unquote(key)}", %{"ids" => ids}, socket) do
           unquote(module).sequence(ids, Range.new(0, length(ids)))

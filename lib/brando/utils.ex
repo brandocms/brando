@@ -356,7 +356,6 @@ defmodule Brando.Utils do
           |> Enum.reject(&(&1 == ""))
           |> Enum.join("/")
 
-
         {Enum.join(url_without_star, "/"), shortened_path}
       else
         {url_to_match, current_path}
@@ -388,7 +387,9 @@ defmodule Brando.Utils do
 
   def add_cache_string(opts) do
     case Keyword.get(opts, :cache, nil) do
-      nil -> ""
+      nil ->
+        ""
+
       cache ->
         stamp =
           cache
@@ -419,7 +420,9 @@ defmodule Brando.Utils do
 
   def img_url(image_field, :original, opts) do
     prefix = Keyword.get(opts, :prefix, nil)
-    (prefix && Path.join([prefix, image_field.path])) || image_field.path <> add_cache_string(opts)
+
+    (prefix && Path.join([prefix, image_field.path])) ||
+      image_field.path <> add_cache_string(opts)
   end
 
   def img_url(image_field, size, opts) do

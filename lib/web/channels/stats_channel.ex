@@ -33,7 +33,7 @@ defmodule Brando.StatsChannel do
 
     :erlang.send_after(interval, self(), :update)
 
-    push socket, "update", %{
+    push(socket, "update", %{
       memory: %{
         total: Enum.at(mem_list, 0),
         system: Enum.at(mem_list, 1),
@@ -49,7 +49,7 @@ defmodule Brando.StatsChannel do
         uptime: system_uptime()
       },
       interval: interval
-    }
+    })
 
     {:noreply, socket}
   end

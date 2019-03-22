@@ -70,10 +70,10 @@ defmodule Brando.Field.ImageField do
 
       defp do_validate_upload(changeset, {:image, field_name}, user) do
         with {:ok, {:upload, changeset}} <- merge_focal(changeset, field_name),
-            {:ok, plug} <- field_has_changed(changeset, field_name),
-            {:ok, _} <- changeset_has_no_errors(changeset),
-            {:ok, cfg} <- get_image_cfg(field_name),
-            {:ok, {:handled, name, field}} <- handle_image_upload(field_name, plug, cfg, user) do
+             {:ok, plug} <- field_has_changed(changeset, field_name),
+             {:ok, _} <- changeset_has_no_errors(changeset),
+             {:ok, cfg} <- get_image_cfg(field_name),
+             {:ok, {:handled, name, field}} <- handle_image_upload(field_name, plug, cfg, user) do
           cleanup_old_images(changeset, :safe)
           put_change(changeset, name, field)
         else
@@ -86,6 +86,7 @@ defmodule Brando.Field.ImageField do
           {:ok, {:focal_changed, changeset}} ->
             {:ok, changeset} =
               recreate_sizes_for(:image_field_record, changeset, field_name, user)
+
             changeset
 
           {:ok, {:focal_unchanged, changeset}} ->
@@ -100,8 +101,6 @@ defmodule Brando.Field.ImageField do
       end
     end
   end
-
-
 
   @doc false
   defmacro __before_compile__(env) do
@@ -187,7 +186,12 @@ defmodule Brando.Field.ImageField do
     * `plug`: a Plug.Upload struct.
     * `cfg`: the field's cfg from has_image_field
   """
-  @spec handle_image_upload(atom, Plug.Upload.t(), Brando.Type.ImageConfig.t(), Brando.User.t | :system) ::
+  @spec handle_image_upload(
+          atom,
+          Plug.Upload.t(),
+          Brando.Type.ImageConfig.t(),
+          Brando.User.t() | :system
+        ) ::
           {:ok, {atom, Brando.Type.Image}} | {:error, {atom, {:error, String.t()}}}
   def handle_image_upload(name, %Plug.Upload{} = plug, cfg, user) do
     with {:ok, upload} <- process_upload(plug, cfg),
@@ -198,7 +202,8 @@ defmodule Brando.Field.ImageField do
     end
   end
 
-  @spec handle_image_upload(atom, Map.t(), Brando.Type.ImageConfig.t(), Brando.User.t | :system) :: {:ok, Map.t()}
+  @spec handle_image_upload(atom, Map.t(), Brando.Type.ImageConfig.t(), Brando.User.t() | :system) ::
+          {:ok, Map.t()}
   def handle_image_upload(name, image, _, _) do
     {:ok, {:unhandled, name, image}}
   end
@@ -211,6 +216,7 @@ defmodule Brando.Field.ImageField do
           nil ->
             # nothing in data, return regular changeset
             {:ok, {:upload, changeset}}
+
           img ->
             case Map.equal?(img.focal, focal) do
               true ->
@@ -222,7 +228,6 @@ defmodule Brando.Field.ImageField do
                 changeset = put_change(changeset, field_name, Map.put(img, :focal, focal))
                 {:ok, {:focal_changed, changeset}}
             end
-
         end
 
       _ ->

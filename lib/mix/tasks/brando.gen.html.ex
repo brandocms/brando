@@ -90,7 +90,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     plural = Mix.shell().prompt("+ Enter plural name (e.g. posts)") |> String.trim("\n")
 
     attrs =
-      Mix.shell().prompt("+ Enter schema fields (e.g. name:string avatar:image data:villain image_series:gallery)")
+      Mix.shell().prompt(
+        "+ Enter schema fields (e.g. name:string avatar:image data:villain image_series:gallery)"
+      )
       |> String.trim("\n")
 
     org_attrs = attrs |> String.split(" ")
@@ -194,7 +196,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         Add the sequence helper to your `admin_channel`:
 
             use Brando.Sequence, :channel
-            sequence #{inspect plural}, #{module}
+            sequence #{inspect(plural)}, #{module}
 
         """
       else
@@ -206,7 +208,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         """
         Add this gallery helper to your `admin_channel`:
 
-            def handle_in("#{binding[:singular]}:create_image_series", %{"#{binding[:singular]}_id" => #{binding[:singular]}_id}, socket) do
+            def handle_in("#{binding[:singular]}:create_image_series", %{"#{binding[:singular]}_id" => #{
+          binding[:singular]
+        }_id}, socket) do
               user = Guardian.Phoenix.Socket.current_resource(socket)
               {:ok, image_series} = #{domain_name}.create_image_series(#{binding[:singular]}_id, user)
               {:reply, {:ok, %{code: 200, image_series: Map.merge(image_series, %{creator: nil, image_category: nil, images: nil})}}, socket}
@@ -267,82 +271,84 @@ defmodule Mix.Tasks.Brando.Gen.Html do
   defp generate_domain_code(domain_code, _, binding, _schema_binding) do
     insert_code = "Repo.insert(changeset)"
 
-    domain_code = domain_code <>
-      """
-        @doc \"\"\"
-        List all #{binding[:plural]}
-        \"\"\"
-        def list_#{binding[:plural]} do
-          {:ok, Repo.all(#{binding[:alias]})}
-        end
-
-        @doc \"\"\"
-        Get single #{binding[:singular]}
-        \"\"\"
-        def get_#{binding[:singular]}(id) do
-          case Repo.get(#{binding[:alias]}, id) do
-            nil -> {:error, {:#{binding[:singular]}, :not_found}}
-            #{binding[:singular]} -> {:ok, #{binding[:singular]}}
+    domain_code =
+      domain_code <>
+        """
+          @doc \"\"\"
+          List all #{binding[:plural]}
+          \"\"\"
+          def list_#{binding[:plural]} do
+            {:ok, Repo.all(#{binding[:alias]})}
           end
-        end
 
-        @doc \"\"\"
-        Create new #{binding[:singular]}
-        \"\"\"
-        def create_#{binding[:singular]}(#{binding[:singular]}_params, user \\\\ :system) do
-          changeset = #{binding[:alias]}.changeset(%#{binding[:alias]}{}, #{binding[:singular]}_params, user)
-          #{insert_code}
-        end
+          @doc \"\"\"
+          Get single #{binding[:singular]}
+          \"\"\"
+          def get_#{binding[:singular]}(id) do
+            case Repo.get(#{binding[:alias]}, id) do
+              nil -> {:error, {:#{binding[:singular]}, :not_found}}
+              #{binding[:singular]} -> {:ok, #{binding[:singular]}}
+            end
+          end
 
-        @doc \"\"\"
-        Update existing #{binding[:singular]}
-        \"\"\"
-        def update_#{binding[:singular]}(#{binding[:singular]}_id, #{binding[:singular]}_params, user \\\\ :system) do
-          {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(#{binding[:singular]}_id)
+          @doc \"\"\"
+          Create new #{binding[:singular]}
+          \"\"\"
+          def create_#{binding[:singular]}(#{binding[:singular]}_params, user \\\\ :system) do
+            changeset = #{binding[:alias]}.changeset(%#{binding[:alias]}{}, #{binding[:singular]}_params, user)
+            #{insert_code}
+          end
 
-          #{binding[:singular]}
-          |> #{binding[:alias]}.changeset(#{binding[:singular]}_params, user)
-          |> Repo.update()
-        end
+          @doc \"\"\"
+          Update existing #{binding[:singular]}
+          \"\"\"
+          def update_#{binding[:singular]}(#{binding[:singular]}_id, #{binding[:singular]}_params, user \\\\ :system) do
+            {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(#{binding[:singular]}_id)
 
-        @doc \"\"\"
-        Delete #{binding[:singular]} by id
-        \"\"\"
-        def delete_#{binding[:singular]}(id) do
-          {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(id)
-          Repo.delete(#{binding[:singular]})
-          {:ok, #{binding[:singular]}}
-        end
-      """
-      if binding[:gallery] do
-        domain_code <>
+            #{binding[:singular]}
+            |> #{binding[:alias]}.changeset(#{binding[:singular]}_params, user)
+            |> Repo.update()
+          end
+
+          @doc \"\"\"
+          Delete #{binding[:singular]} by id
+          \"\"\"
+          def delete_#{binding[:singular]}(id) do
+            {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(id)
+            Repo.delete(#{binding[:singular]})
+            {:ok, #{binding[:singular]}}
+          end
         """
 
-        @doc \"\"\"
-        Create an image series entry
-        \"\"\"
-        def create_image_series(#{binding[:singular]}_id, user) do
-          {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(#{binding[:singular]}_id)
-          {:ok, cat} = Brando.Images.get_or_create_category_id_by_slug("#{binding[:singular]}-gallery", user)
+    if binding[:gallery] do
+      domain_code <>
+        """
 
-          data = %{
-            name: #{binding[:singular]}.name,
-            slug: #{binding[:singular]}.slug,
-            image_category_id: cat.id
-          }
+          @doc \"\"\"
+          Create an image series entry
+          \"\"\"
+          def create_image_series(#{binding[:singular]}_id, user) do
+            {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(#{binding[:singular]}_id)
+            {:ok, cat} = Brando.Images.get_or_create_category_id_by_slug("#{binding[:singular]}-gallery", user)
 
-          with {:ok, series} <- Brando.Images.create_series(data, user) do
-            cs = Ecto.Changeset.change(#{binding[:singular]}, image_series_id: series.id)
-            Repo.update(cs)
+            data = %{
+              name: #{binding[:singular]}.name,
+              slug: #{binding[:singular]}.slug,
+              image_category_id: cat.id
+            }
 
-            {:ok, series}
+            with {:ok, series} <- Brando.Images.create_series(data, user) do
+              cs = Ecto.Changeset.change(#{binding[:singular]}, image_series_id: series.id)
+              Repo.update(cs)
+
+              {:ok, series}
+            end
           end
-        end
 
-      """
-      else
-        domain_code
-      end
+        """
+    else
+      domain_code
+    end
   end
 
   defp graphql_types(attrs) do
@@ -459,7 +465,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     end)
   end
 
-
   defp graphql_query_fields(attrs) do
     # this is for GraphQL query fields
     Enum.map(attrs, fn
@@ -502,6 +507,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
           _ ->
             {k, ~s(#{k}_data)}
         end
+
       {k, _} ->
         {k, ~s(#{k})}
     end)

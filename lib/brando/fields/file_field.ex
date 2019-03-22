@@ -26,7 +26,6 @@ defmodule Brando.Field.FileField do
     quote do
       Module.register_attribute(__MODULE__, :filefields, accumulate: true)
 
-
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
 
@@ -43,9 +42,9 @@ defmodule Brando.Field.FileField do
 
       defp do_validate_upload(changeset, {:file, field_name}, _user) do
         with {:ok, plug} <- field_has_changed(changeset, field_name),
-            {:ok, _} <- changeset_has_no_errors(changeset),
-            {:ok, cfg} <- get_file_cfg(field_name),
-            {:ok, {:handled, name, field}} <- handle_file_upload(field_name, plug, cfg) do
+             {:ok, _} <- changeset_has_no_errors(changeset),
+             {:ok, cfg} <- get_file_cfg(field_name),
+             {:ok, {:handled, name, field}} <- handle_file_upload(field_name, plug, cfg) do
           put_change(changeset, name, field)
         else
           :unchanged ->

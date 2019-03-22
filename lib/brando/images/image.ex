@@ -17,8 +17,30 @@ defmodule Brando.Image do
   @required_fields ~w(image image_series_id)a
   @optional_fields ~w(sequence creator_id)a
 
-  @derive {Poison.Encoder, only: [:id, :image, :creator, :creator_id, :image_series_id, :image_series, :sequence, :inserted_at, :updated_at]}
-  @derive {Jason.Encoder, only: [:id, :image, :creator, :creator_id, :image_series_id, :image_series, :sequence, :inserted_at, :updated_at]}
+  @derive {Poison.Encoder,
+           only: [
+             :id,
+             :image,
+             :creator,
+             :creator_id,
+             :image_series_id,
+             :image_series,
+             :sequence,
+             :inserted_at,
+             :updated_at
+           ]}
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :image,
+             :creator,
+             :creator_id,
+             :image_series_id,
+             :image_series,
+             :sequence,
+             :inserted_at,
+             :updated_at
+           ]}
 
   schema "images" do
     field :image, Brando.Type.Image

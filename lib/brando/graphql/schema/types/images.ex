@@ -39,11 +39,11 @@ defmodule Brando.Schema.Types.Images do
       arg :offset, :integer, default_value: 0
 
       resolve assoc(:image_series, fn query, args, _ ->
-        query
-        |> order_by([is], asc: fragment("lower(?)", is.name))
-        |> limit([is], ^args.limit)
-        |> offset([is], ^args.offset)
-      end)
+                query
+                |> order_by([is], asc: fragment("lower(?)", is.name))
+                |> limit([is], ^args.limit)
+                |> offset([is], ^args.offset)
+              end)
     end
 
     field :inserted_at, :time
@@ -100,8 +100,8 @@ defmodule Brando.Schema.Types.Images do
       resolve fn image, args, _ ->
         case Enum.find(image.sizes, &(elem(&1, 0) == args.size)) do
           nil ->
-            args.size == "original" &&
-              {:ok, Brando.Utils.media_url(image.path)} ||
+            (args.size == "original" &&
+               {:ok, Brando.Utils.media_url(image.path)}) ||
               {:error, "URL size `#{args.size}` not found :("}
 
           {_, url} ->

@@ -6,17 +6,19 @@ defmodule Brando.Type.Image do
   @type t :: %__MODULE__{}
   @behaviour Ecto.Type
 
-  @derive {Poison.Encoder, only: ~w(title credits path sizes optimized width height thumb medium focal)a}
-  @derive {Jason.Encoder, only: [
-    :title,
-    :credits,
-    :path,
-    :sizes,
-    :optimized,
-    :width,
-    :height,
-    :focal
-  ]}
+  @derive {Poison.Encoder,
+           only: ~w(title credits path sizes optimized width height thumb medium focal)a}
+  @derive {Jason.Encoder,
+           only: [
+             :title,
+             :credits,
+             :path,
+             :sizes,
+             :optimized,
+             :width,
+             :height,
+             :focal
+           ]}
 
   defstruct title: nil,
             credits: nil,

@@ -22,7 +22,7 @@ defmodule Brando.Plug.AdminHostname do
     cond do
       String.starts_with?(conn.host, "admin") -> conn
       conn.host == "localhost" -> conn
-      true -> redirect conn, to: "/"
+      true -> redirect(conn, to: "/")
     end
   end
 end

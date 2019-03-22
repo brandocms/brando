@@ -66,7 +66,7 @@ defmodule Brando.Config do
 
   def read_from_disk do
     @cfg_file
-    |> File.read!
+    |> File.read!()
     |> :erlang.binary_to_term([:safe])
   rescue
     _ ->
@@ -74,15 +74,16 @@ defmodule Brando.Config do
   end
 
   def write_to_disk(cfg) do
-    insert = :erlang.term_to_binary(cfg, [minor_version: 2])
+    insert = :erlang.term_to_binary(cfg, minor_version: 2)
+
     case File.write(@cfg_file, insert) do
       :ok ->
         :ok
 
       err ->
         require Logger
-        Logger.error "==> Brando.Config: Failed write_to_disk()"
-        Logger.error inspect err
+        Logger.error("==> Brando.Config: Failed write_to_disk()")
+        Logger.error(inspect(err))
     end
   end
 

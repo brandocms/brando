@@ -123,8 +123,13 @@ defmodule Brando.Images.Utils do
   @doc """
   Creates sized images.
   """
-  @spec create_image_sizes(Brando.Upload.t(), Brando.User.t() | :system, Map.t()) :: {:ok, Brando.Type.Image.t()}
-  def create_image_sizes(%{plug: %{uploaded_file: file}, cfg: cfg, extra_info: extra_info}, user \\ :system, focal \\ %{"x" => 50, "y" => 50}) do
+  @spec create_image_sizes(Brando.Upload.t(), Brando.User.t() | :system, Map.t()) ::
+          {:ok, Brando.Type.Image.t()}
+  def create_image_sizes(
+        %{plug: %{uploaded_file: file}, cfg: cfg, extra_info: extra_info},
+        user \\ :system,
+        focal \\ %{"x" => 50, "y" => 50}
+      ) do
     Progress.show_progress(user)
     type = image_type(file)
     {file_path, filename} = split_path(file)
@@ -134,12 +139,22 @@ defmodule Brando.Images.Utils do
       for {size_name, size_cfg} <- Map.get(cfg, :sizes) do
         postfixed_size_dir = Path.join([file_path, to_string(size_name)])
         sized_image = Path.join([postfixed_size_dir, filename])
-        Progress.update_progress(user, "#{filename} — Oppretter bildestørrelse: <strong>#{size_name}</strong>")
+
+        Progress.update_progress(
+          user,
+          "#{filename} — Oppretter bildestørrelse: <strong>#{size_name}</strong>"
+        )
+
         sized_path = Path.join([upload_path, to_string(size_name), filename])
 
         File.mkdir_p(postfixed_size_dir)
         create_image_size(type, file, sized_image, size_cfg, focal)
-        Progress.update_progress(user, "#{filename} — Fullført bildestørrelse: <strong>#{size_name}</strong>")
+
+        Progress.update_progress(
+          user,
+          "#{filename} — Fullført bildestørrelse: <strong>#{size_name}</strong>"
+        )
+
         {size_name, sized_path}
       end
 
@@ -170,6 +185,7 @@ defmodule Brando.Images.Utils do
       e in File.Error ->
         Progress.hide_progress(user)
         {:error, {:create_image_sizes, e}}
+
       e ->
         Progress.hide_progress(user)
         {:error, {:create_image_sizes, e}}
@@ -179,7 +195,8 @@ defmodule Brando.Images.Utils do
   @doc """
   Creates a sized version of `image_src`.
   """
-  @spec create_image_size(atom, String.t(), String.t(), Brando.Type.ImageConfig.t(), Map.t()) :: no_return
+  @spec create_image_size(atom, String.t(), String.t(), Brando.Type.ImageConfig.t(), Map.t()) ::
+          no_return
   def create_image_size(image_type \\ :other, image_src, image_dest, size_cfg, focal)
 
   def create_image_size(:gif, image_src, image_dest, size_cfg, _) do
@@ -220,7 +237,6 @@ defmodule Brando.Images.Utils do
   def create_image_size(_, image_src, image_dest, size_cfg, focal) do
     with true <- File.exists?(image_src),
          image <- Mogrify.open(image_src) do
-
       quality =
         if Map.has_key?(size_cfg, "quality") do
           Map.get(size_cfg, "quality")
@@ -268,14 +284,13 @@ defmodule Brando.Images.Utils do
 
         fx2 = focal.x * wm / image_info.width
         fy2 = focal.y * hm / image_info.height
-        geometry = "#{wm}x#{hm}+#{focal.x-fx2}+#{focal.y-fy2}"
+        geometry = "#{wm}x#{hm}+#{focal.x - fx2}+#{focal.y - fy2}"
 
         image
         |> Mogrify.resize_to_fill(geometry)
         |> Mogrify.resize_to_fill(size_cfg["size"])
         |> Mogrify.custom("quality", quality)
         |> Mogrify.save(path: image_dest)
-
       else
         image
         |> Mogrify.resize_to_limit(size_cfg["size"])
@@ -293,6 +308,7 @@ defmodule Brando.Images.Utils do
   """
   @spec recreate_sizes_for(:image | :image_series, Image.t(), User.t() | atom) :: :ok | no_return
   def recreate_sizes_for(type, img, user \\ :system)
+
   def recreate_sizes_for(:image, img, user) do
     img = Brando.repo().preload(img, :image_series)
     img = put_in(img.image.optimized, false)
@@ -321,7 +337,7 @@ defmodule Brando.Images.Utils do
     end
   end
 
-  @spec recreate_sizes_for(:image_series, Image.t(), User.t | atom) :: :ok | no_return
+  @spec recreate_sizes_for(:image_series, Image.t(), User.t() | atom) :: :ok | no_return
   def recreate_sizes_for(:image_series, image_series_id, user) do
     q =
       from is in ImageSeries,

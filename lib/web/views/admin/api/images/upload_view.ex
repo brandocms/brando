@@ -20,8 +20,7 @@ defmodule Brando.Admin.API.Images.UploadView do
   end
 
   defp prefix_image_urls(image) do
-    sizes =
-      for {k, v} <- image.image.sizes, into: %{}, do: {k, Brando.Utils.media_url(v)}
+    sizes = for {k, v} <- image.image.sizes, into: %{}, do: {k, Brando.Utils.media_url(v)}
 
     put_in(image.image.sizes, sizes)
   end

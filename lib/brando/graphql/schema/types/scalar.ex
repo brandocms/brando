@@ -37,6 +37,7 @@ defmodule Brando.Schema.Types.Scalar do
 
       %Blueprint.Input.Null{}, _ ->
         {:ok, nil}
+
       _, _ ->
         :error
     end

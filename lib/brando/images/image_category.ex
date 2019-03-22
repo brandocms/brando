@@ -15,8 +15,30 @@ defmodule Brando.ImageCategory do
   @required_fields ~w(name creator_id)a
   @optional_fields ~w(cfg slug)a
 
-  @derive {Poison.Encoder, only: [:id, :name, :slug, :cfg, :creator, :creator_id, :image_series, :inserted_at, :updated_at]}
-  @derive {Jason.Encoder, only: [:id, :name, :slug, :cfg, :creator, :creator_id, :image_series, :inserted_at, :updated_at]}
+  @derive {Poison.Encoder,
+           only: [
+             :id,
+             :name,
+             :slug,
+             :cfg,
+             :creator,
+             :creator_id,
+             :image_series,
+             :inserted_at,
+             :updated_at
+           ]}
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :name,
+             :slug,
+             :cfg,
+             :creator,
+             :creator_id,
+             :image_series,
+             :inserted_at,
+             :updated_at
+           ]}
   schema "imagecategories" do
     field :name, :string
     field :slug, :string

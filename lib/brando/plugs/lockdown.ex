@@ -46,7 +46,7 @@ defmodule Brando.Plug.Lockdown do
     end
   end
 
-  @spec allowed?(Plug.Conn.t(), String.t) :: Plug.Conn.t()
+  @spec allowed?(Plug.Conn.t(), String.t()) :: Plug.Conn.t()
   defp allowed?(%{private: %{plug_session: %{"current_user" => user}}} = conn, _) do
     if User.can_login?(user) do
       conn
@@ -56,8 +56,10 @@ defmodule Brando.Plug.Lockdown do
   end
 
   defp allowed?(%{private: %{plug_session: %{"lockdown_authorized" => true}}} = conn, _), do: conn
-  defp allowed?(%{query_params: %{"key" => key}} = conn, pass) when key == pass, do:
-    Plug.Conn.put_session(conn, :lockdown_authorized, true)
+
+  defp allowed?(%{query_params: %{"key" => key}} = conn, pass) when key == pass,
+    do: Plug.Conn.put_session(conn, :lockdown_authorized, true)
+
   defp allowed?(conn, _), do: lockdown(conn)
 
   @spec lockdown(Plug.Conn.t()) :: Plug.Conn.t()
@@ -74,6 +76,7 @@ defmodule Brando.Plug.Lockdown do
   defp check_lockdown_date(conn, lockdown_until) do
     lockdown_until = Timex.to_datetime(lockdown_until, "Europe/Oslo")
     time_now = Timex.now("Europe/Oslo")
+
     if DateTime.compare(lockdown_until, time_now) == :gt do
       conn
       |> redirect(to: Brando.helpers().lockdown_path(conn, :index))

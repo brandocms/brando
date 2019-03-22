@@ -4,7 +4,6 @@ alias Dogma.Rule
 config :dogma,
   # Select a set of rules as a base
   rule_set: Dogma.RuleSet.All,
-
   exclude: [
     ~r(\Aconfig/),
     ~r(\Alib/\w+/endpoint.ex),
@@ -12,7 +11,7 @@ config :dogma,
     ~r(tmp/),
     ~r(node_modules/),
     ~r(lib/mix/tasks/brando.install.ex),
-    ~r(test/),
+    ~r(test/)
   ],
   # Override an existing rule configuration
   override: [
@@ -21,5 +20,5 @@ config :dogma,
     %Rule.MatchInCondition{enabled: false},
     %Rule.LineLength{enabled: true, max_length: 120},
     %Rule.PipelineStart{enabled: false},
-    %Rule.QuotesInString{enabled: false},
+    %Rule.QuotesInString{enabled: false}
   ]

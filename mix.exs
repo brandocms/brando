@@ -85,7 +85,6 @@ defmodule Brando.Mixfile do
       {:recase, "~> 0.2"},
       {:guardian, "~> 1.0"},
       {:timex, "~> 3.0"},
-
       {:ecto, "~> 3.0"},
       {:ecto_sql, "~> 3.0"},
 

@@ -36,8 +36,7 @@ defmodule Brando.HTMLTest do
     }
 
     assert body_tag(mock_conn) ==
-             {:safe,
-              ~s(<body data-script="some-section" class="one two three unloaded">)}
+             {:safe, ~s(<body data-script="some-section" class="one two three unloaded">)}
 
     assert body_tag(mock_conn, id: "test") ==
              {:safe,
@@ -49,7 +48,7 @@ defmodule Brando.HTMLTest do
     assert cookie_law(mock_conn, "Accept cookielaw") == nil
 
     mock_conn = %{cookies: %{}}
-    html = cookie_law(mock_conn, "Accept cookielaw")  |> Phoenix.HTML.safe_to_string
+    html = cookie_law(mock_conn, "Accept cookielaw") |> Phoenix.HTML.safe_to_string()
     assert html =~ "<p>Accept cookielaw</p>"
     assert html =~ "OK"
   end
@@ -134,14 +133,15 @@ defmodule Brando.HTMLTest do
     srcset = {Brando.User, :avatar}
 
     assert picture_tag(
-      user.avatar,
-      srcset: srcset,
-      prefix: media_url(),
-      size: :large,
-      placeholder_size: :micro,
-      picture_class: "avatar",
-      img_class: "img-fluid"
-    ) |> safe_to_string
-      == "<picture class=\"avatar\"><source data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img class=\"img-fluid\" data-src=\"/media/images/avatars/large/27i97a.jpeg\" data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><noscript><img class=\"img-fluid\" src=\"/media/images/avatars/large/27i97a.jpeg\"></noscript></picture>"
+             user.avatar,
+             srcset: srcset,
+             prefix: media_url(),
+             size: :large,
+             placeholder_size: :micro,
+             picture_class: "avatar",
+             img_class: "img-fluid"
+           )
+           |> safe_to_string ==
+             "<picture class=\"avatar\"><source data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img class=\"img-fluid\" data-src=\"/media/images/avatars/large/27i97a.jpeg\" data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><noscript><img class=\"img-fluid\" src=\"/media/images/avatars/large/27i97a.jpeg\"></noscript></picture>"
   end
 end

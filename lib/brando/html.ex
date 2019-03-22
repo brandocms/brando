@@ -252,7 +252,7 @@ defmodule Brando.HTML do
 
         _ ->
           conn
-        end
+      end
 
     conn =
       case get_meta(conn, "description") do
@@ -264,9 +264,10 @@ defmodule Brando.HTML do
           else
             conn
           end
+
         _ ->
           conn
-        end
+      end
 
     conn =
       case get_meta(conn, "og:image") do
@@ -404,7 +405,7 @@ defmodule Brando.HTML do
     end
   end
 
-   @doc """
+  @doc """
   Outputs a `picture` tag with source, img and a noscript fallback
 
   The `srcset` attribute is the ACTUAL width of the image, as saved to disk. You'll find that in the
@@ -430,10 +431,10 @@ defmodule Brando.HTML do
   @spec picture_tag(Map.t(), keyword()) :: {:safe, [...]}
   def picture_tag(img_field, opts \\ []) do
     src = Brando.Utils.img_url(img_field, Keyword.get(opts, :size, :xlarge), opts)
-    sizes = Keyword.get(opts, :sizes) && get_sizes(opts[:sizes]) || false
-    srcset = Keyword.get(opts, :srcset) && get_srcset(img_field, opts[:srcset], opts) || false
-    width = Keyword.get(opts, :width) && Map.get(img_field, :width) || false
-    height = Keyword.get(opts, :height) && Map.get(img_field, :height) || false
+    sizes = (Keyword.get(opts, :sizes) && get_sizes(opts[:sizes])) || false
+    srcset = (Keyword.get(opts, :srcset) && get_srcset(img_field, opts[:srcset], opts)) || false
+    width = (Keyword.get(opts, :width) && Map.get(img_field, :width)) || false
+    height = (Keyword.get(opts, :height) && Map.get(img_field, :height)) || false
     img_class = Keyword.get(opts, :img_class, false)
     picture_class = Keyword.get(opts, :picture_class, false)
 
@@ -460,11 +461,11 @@ defmodule Brando.HTML do
       class: img_class
     ]
 
-    img_tag = tag :img, img_attrs
-    noscript_img_tag = tag :img, noscript_img_attrs
-    source_tag = tag :source, source_attrs
-    noscript_tag = content_tag :noscript, noscript_img_tag
-    content_tag :picture, [source_tag, img_tag, noscript_tag], picture_attrs
+    img_tag = tag(:img, img_attrs)
+    noscript_img_tag = tag(:img, noscript_img_attrs)
+    source_tag = tag(:source, source_attrs)
+    noscript_tag = content_tag(:noscript, noscript_img_tag)
+    content_tag(:picture, [source_tag, img_tag, noscript_tag], picture_attrs)
   end
 
   def ratio(%{height: height, width: width}) when is_nil(height) or is_nil(width), do: 0

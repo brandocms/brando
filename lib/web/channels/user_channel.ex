@@ -21,17 +21,17 @@ defmodule Brando.UserChannel do
   end
 
   def handle_out("alert", payload, socket) do
-    push socket, "alert", payload
+    push(socket, "alert", payload)
     {:noreply, socket}
   end
 
   def handle_out("set_progress", payload, socket) do
-    push socket, "set_progress", payload
+    push(socket, "set_progress", payload)
     {:noreply, socket}
   end
 
   def handle_out("increase_progress", payload, socket) do
-    push socket, "increase_progress", payload
+    push(socket, "increase_progress", payload)
     {:noreply, socket}
   end
 

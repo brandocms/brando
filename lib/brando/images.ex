@@ -8,12 +8,14 @@ defmodule Brando.Images do
   alias Brando.{ImageCategory, ImageSeries, Image}
 
   import Brando.Upload
+
   import Brando.Images.Utils,
     only: [
       create_image_sizes: 2,
       delete_original_and_sized_images: 2,
       recreate_sizes_for: 3
     ]
+
   import Brando.Utils.Schema, only: [put_creator: 2]
   import Ecto.Query
 
@@ -321,6 +323,7 @@ defmodule Brando.Images do
   """
   def duplicate_category(id, user) do
     cat = Brando.repo().get_by!(ImageCategory, id: id)
+
     params = %{
       name: cat.name <> " kopi",
       slug: cat.slug <> "-kopi",
@@ -329,7 +332,7 @@ defmodule Brando.Images do
     }
 
     cs = ImageCategory.changeset(%ImageCategory{}, :create, params)
-    Brando.repo.insert(cs)
+    Brando.repo().insert(cs)
   end
 
   def image_series_count(category_id) do
