@@ -9,6 +9,7 @@ defmodule Brando.HTML do
   import Brando.Utils, only: [current_user: 1, active_path?: 2]
   import Brando.Meta.Controller, only: [put_meta: 3, get_meta: 1, get_meta: 2]
   import Phoenix.HTML
+  import Phoenix.HTML.Tag
 
   @doc false
   defmacro __using__(_) do
@@ -207,23 +208,23 @@ defmodule Brando.HTML do
   Renders a <meta> tag
   """
   def meta_tag({"og:" <> og_property, content}) do
-    Phoenix.HTML.Tag.tag(:meta, content: content, property: "og:" <> og_property)
+    tag(:meta, content: content, property: "og:" <> og_property)
   end
 
   def meta_tag({name, content}) do
-    Phoenix.HTML.Tag.tag(:meta, content: content, name: name)
+    tag(:meta, content: content, name: name)
   end
 
   def meta_tag(attrs) when is_list(attrs) do
-    Phoenix.HTML.Tag.tag(:meta, attrs)
+    tag(:meta, attrs)
   end
 
   def meta_tag("og:" <> og_property, content) do
-    Phoenix.HTML.Tag.tag(:meta, content: content, property: "og:" <> og_property)
+    tag(:meta, content: content, property: "og:" <> og_property)
   end
 
   def meta_tag(name, content) do
-    Phoenix.HTML.Tag.tag(:meta, content: content, name: name)
+    tag(:meta, content: content, name: name)
   end
 
   @doc """
@@ -395,57 +396,75 @@ defmodule Brando.HTML do
     if lightbox do
       ~E|
         <a href="<%= img_src %>" data-lightbox>
-          <%= Phoenix.HTML.Tag.tag(:img, attrs) %>
+          <%= tag(:img, attrs) %>
         </a>
       |
     else
-      Phoenix.HTML.Tag.tag(:img, attrs)
+      tag(:img, attrs)
     end
   end
 
-  def picture_tag(image_field, placeholder_size \\ :micro, opts \\ []) do
-    srcset_attr =
-      (Keyword.get(opts, :srcset) && get_srcset(image_field, opts[:srcset], opts)) || []
+   @doc """
+  Outputs a `picture` tag with source, img and a noscript fallback
 
-    if srcset_attr == [] do
-      require Logger
-      Logger.error "==> picture_tag: NO SRC SET!"
-    end
+  The `srcset` attribute is the ACTUAL width of the image, as saved to disk. You'll find that in the
+  image type's `sizes` map.
 
-    width_attr = (Keyword.get(opts, :width) && [width: Map.get(image_field, :width)]) || []
-    height_attr = (Keyword.get(opts, :height) && [height: Map.get(image_field, :height)]) || []
-    extra_attrs = Keyword.get(opts, :attrs, [])
+  ## Options:
 
-    lightbox = Keyword.get(opts, :lightbox, false)
+    * `prefix` - string to prefix to the image's url. I.e. `prefix: media_url()`
+    * `picture_class` - class added to the picture root element
+    * `img_class` - class added to the img element. I.e img_class: "img-fluid"
+    * `srcset` - if you want to use the srcset attribute. Set in the form of `{module, field}`.
+      I.e `srcset: {Brando.User, :avatar}`
+      You can also reference a config struct directly:
+      I.e `srcset: image_series.cfg`
+      Or supply a srcset directly:
+        srcset: %{
+          "small" => "300w",
+          "medium" => "582w",
+          "large" => "936w",
+          "xlarge" => "1200w"
+        }
+  """
+  @spec picture_tag(Map.t(), keyword()) :: {:safe, [...]}
+  def picture_tag(img_field, opts \\ []) do
+    src = Brando.Utils.img_url(img_field, Keyword.get(opts, :size, :xlarge), opts)
+    sizes = Keyword.get(opts, :sizes) && get_sizes(opts[:sizes]) || false
+    srcset = Keyword.get(opts, :srcset) && get_srcset(img_field, opts[:srcset], opts) || false
+    width = Keyword.get(opts, :width) && Map.get(img_field, :width) || false
+    height = Keyword.get(opts, :height) && Map.get(img_field, :height) || false
+    img_class = Keyword.get(opts, :img_class, false)
+    picture_class = Keyword.get(opts, :picture_class, false)
 
-    attrs =
-      Keyword.new()
-      |> Keyword.merge(
-        Keyword.drop(opts, [:class, :lazyload, :lightbox, :cache, :attrs, :prefix, :srcset, :sizes, :default]) ++
-          Keyword.get(opts, :lazyload) && [data_srcset: srcset_attr] || [srcset: srcset_attr] ++ width_attr ++ height_attr ++ extra_attrs
-      )
+    picture_attrs = [
+      class: picture_class
+    ]
 
-    placeholder = Brando.Utils.img_url(image_field, placeholder_size, opts)
-    attrs = (srcset_attr != [] && Keyword.put(attrs, :src, placeholder)) || attrs
+    source_attrs = [
+      data_srcset: srcset,
+      sizes: sizes
+    ]
 
-    img_class =
-      if Keyword.get(opts, :lazyload) do
-        [class: "lazyload"]
-      else
-        []
-      end
+    img_attrs = [
+      data_srcset: srcset,
+      data_src: src,
+      sizes: sizes,
+      class: img_class,
+      width: width,
+      height: height
+    ]
 
-    img_tag = Phoenix.HTML.Tag.tag(:img, attrs ++ img_class)
-    picture_class = Keyword.get(opts, :class, nil)
+    noscript_img_attrs = [
+      src: src,
+      class: img_class
+    ]
 
-    ~E|
-      <picture class="<%= picture_class %>">
-        <%= img_tag %>
-        <noscript>
-          <img src="<%= Brando.Utils.img_url(image_field, placeholder_size) %>">
-        </noscript>
-      </picture>
-    |
+    img_tag = tag :img, img_attrs
+    noscript_img_tag = tag :img, noscript_img_attrs
+    source_tag = tag :source, source_attrs
+    noscript_tag = content_tag :noscript, noscript_img_tag
+    content_tag :picture, [source_tag, img_tag, noscript_tag], picture_attrs
   end
 
   def ratio(%{height: height, width: width}) when is_nil(height) or is_nil(width), do: 0
