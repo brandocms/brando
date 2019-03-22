@@ -38,13 +38,6 @@ Add to your `config/config.exs` right before the env-specific import:
   import_config "#{Mix.env}.exs"
 ```
 
-Add to your relevant `config/%{env}.exs` Repo config:
-
-```diff
-  config :my_app, Repo,
-+   types: MyApp.PostgresTypes
-```
-
 Install node packages:
 
     $ cd assets/frontend && yarn && cd ../backend && yarn && cd ../../

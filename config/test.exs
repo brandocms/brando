@@ -9,7 +9,6 @@ config :brando, Brando.Integration.Endpoint,
 
 config :brando, Brando.Integration.TestRepo,
   url: "ecto://postgres:postgres@localhost/brando_test",
-  types: Brando.PostgresTypes,
   pool: Ecto.Adapters.SQL.Sandbox,
   ownership_pool: DBConnection.Poolboy,
   pool_overflow: 0
