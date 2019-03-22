@@ -95,6 +95,7 @@ defmodule Brando.Mixfile do
       # Dev dependencies
       {:credo, ">= 0.0.0", only: :dev},
       {:dialyxir, "~> 0.3", only: :dev},
+      {:mix_test_watch, "~> 0.8", only: :dev, runtime: false},
 
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test},
