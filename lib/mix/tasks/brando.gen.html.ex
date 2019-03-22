@@ -128,6 +128,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
           admin_path: admin_path,
           gql_inputs: graphql_inputs(attrs),
           gql_types: graphql_types(attrs),
+          gql_query_fields: graphql_query_fields(attrs),
           vue_inputs: vue_inputs(attrs, Recase.to_camel(binding[:singular])),
           vue_defaults: vue_defaults(attrs),
           params: Mix.Brando.params(attrs),
@@ -154,9 +155,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       {:eex, "assets/backend/src/store/modules/module.js",
        "assets/backend/src/store/modules/#{vue_plural}.js"},
       {:eex, "assets/backend/src/api/api.js", "assets/backend/src/api/#{vue_singular}.js"},
-      {:eex, "assets/backend/src/api/graphql/ALL_QUERY.graphql",
+      {:eex_trim, "assets/backend/src/api/graphql/ALL_QUERY.graphql",
        "assets/backend/src/api/graphql/#{vue_plural}/#{String.upcase(plural)}_QUERY.graphql"},
-      {:eex, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql",
+      {:eex_trim, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql",
        "assets/backend/src/api/graphql/#{vue_plural}/#{String.upcase(singular)}_QUERY.graphql"},
       {:eex, "assets/backend/src/api/graphql/CREATE_MUTATION.graphql",
        "assets/backend/src/api/graphql/#{vue_plural}/CREATE_#{String.upcase(singular)}_MUTATION.graphql"},
@@ -342,6 +343,51 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
       {k, _} ->
         {k, ~s(field #{inspect(k)}, :string)}
+    end)
+  end
+
+
+  defp graphql_query_fields(attrs) do
+    # this is for GraphQL query fields
+    Enum.map(attrs, fn
+      {k, {:array, _}} ->
+        {k, ~s(#{k})}
+
+      {k, :integer} ->
+        {k, ~s(#{k})}
+
+      {k, :boolean} ->
+        {k, ~s(#{k})}
+
+      {k, :string} ->
+        {k, ~s(#{k})}
+
+      {k, :text} ->
+        {k, ~s(#{k})}
+
+      {k, :date} ->
+        {k, ~s(#{k})}
+
+      {k, :time} ->
+        {k, ~s(#{k})}
+
+      {k, :datetime} ->
+        {k, ~s(#{k})}
+
+      {k, :image} ->
+        image_code = "#{k} {\n      thumb: url(size: \"original\")\n      focal\n    }"
+        {k, image_code}
+
+      {k, :villain} ->
+        case k do
+          :data ->
+            {k, ~s(#{k})}
+
+          _ ->
+            {k, ~s(#{k}_data)}
+        end
+      {k, _} ->
+        {k, ~s(#{k})}
     end)
   end
 

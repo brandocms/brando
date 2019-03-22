@@ -46,6 +46,7 @@ defmodule Mix.Brando do
         case format do
           :text -> File.read!(source)
           :eex -> EEx.eval_file(source, binding)
+          :eex_trim -> EEx.eval_file(source, binding, trim: true)
         end
 
       Mix.Generator.create_file(target, contents)

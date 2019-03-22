@@ -25,7 +25,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         self(),
         {:mix_shell_input, :prompt,
          "name age:integer height:decimal nicks:array:text famous:boolean born_at:datetime " <>
-           "secret:uuid photo:image pdf:file data:villain biography:villain first_login:date " <>
+           "secret:uuid cover:image pdf:file data:villain biography:villain first_login:date " <>
            "alarm:time address:references creator:references"}
       )
 
@@ -39,7 +39,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         self(),
         {:mix_shell_input, :prompt,
          "name age:integer height:decimal nicks:array:text famous:boolean born_at:datetime " <>
-           "secret:uuid photo:image data:villain first_login:date " <>
+           "secret:uuid cover:image data:villain first_login:date " <>
            "alarm:time address:references creator:references"}
       )
 
@@ -60,13 +60,13 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       assert_file("lib/brando/games/pirate.ex", fn file ->
         assert file =~ "defmodule Brando.Games.Pirate do"
         assert file =~ "schema \"games_pirates\" do"
-        assert file =~ "field :photo, Brando.Type.Image"
+        assert file =~ "field :cover, Brando.Type.Image"
         assert file =~ "field :pdf, Brando.Type.File"
 
         assert file =~
                  "@required_fields ~w(name age height nicks famous born_at secret first_login alarm data biography_data creator_id address_id)"
 
-        assert file =~ "@optional_fields ~w(photo pdf)"
+        assert file =~ "@optional_fields ~w(cover pdf)"
         assert file =~ "use Brando.Sequence, :schema"
         assert file =~ "sequenced"
         assert file =~ "villain"
@@ -103,6 +103,14 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "defmodule BrandoWeb.PirateView do"
         assert file =~ "use BrandoWeb, :view"
         assert file =~ "import BrandoWeb.Gettext"
+      end)
+
+      assert_file("assets/backend/src/api/graphql/captains/CAPTAIN_QUERY.graphql", fn file ->
+        assert file =~ ~s({\n    id\n    name\n    age\n    height\n    nicks\n    famous\n    born_at\n    secret\n    cover {\n      thumb: url\(size: "original"\)\n      focal\n    }\n    data\n    first_login\n    alarm\n    address\n    creator\n  })
+      end)
+
+      assert_file("assets/backend/src/api/graphql/captains/CAPTAINS_QUERY.graphql", fn file ->
+        assert file =~ ~s({\n    id\n    name\n    age\n    height\n    nicks\n    famous\n    born_at\n    secret\n    cover {\n      thumb: url\(size: "original"\)\n      focal\n    }\n    data\n    first_login\n    alarm\n    address\n    creator\n    updated_at\n  })
       end)
 
       assert_file("assets/backend/src/views/games/CaptainCreateView.vue", fn file ->
