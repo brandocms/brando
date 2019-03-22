@@ -22,12 +22,12 @@ defmodule <%= module %> do
       random_filename: true,
       size_limit: 10_240_000,
       sizes: %{
-        "micro"  => %{"size" => "25x25>", "quality" => 90, "crop" => true},
+        "micro"  => %{"size" => "25x25>", "quality" => 30, "crop" => true},
         "thumb"  => %{"size" => "150x150>", "quality" => 90, "crop" => true},
-        "xs"  => %{"size" => "700", "quality" => 90},
-        "sm" => %{"size" => "1100", "quality" => 90},
-        "md"  => %{"size" => "1700", "quality" => 90},
-        "lg" => %{"size" => "2100", "quality" => 90}
+        "small"  => %{"size" => "700", "quality" => 90},
+        "medium" => %{"size" => "1100", "quality" => 90},
+        "large"  => %{"size" => "1700", "quality" => 90},
+        "xlarge" => %{"size" => "2100", "quality" => 90}
       }
     }
 <% end %>
@@ -39,8 +39,8 @@ defmodule <%= module %> do
       size_limit: 10_240_000,
     }
 <% end %>
-  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields ++ file_fields)) |> Keyword.drop(Keyword.values(villain_fields)), " ", &elem(&1, 0)) %><%= if villain_fields != [] do %> <% end %><%= Enum.map_join(villain_fields, " ", fn({_k, v}) -> if v == :data, do: "#{v}", else: "#{v}_data" end) %><%= if assocs do %> <% end %><%= Enum.map_join(assocs, " ", &elem(&1, 1)) %>)a
-  @optional_fields ~w(<%= Enum.map_join(img_fields ++ file_fields, " ", &elem(&1, 1)) %>)a
+  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields ++ file_fields)) |> Keyword.drop(Keyword.values(villain_fields)), " ", &elem(&1, 0)) %><%= if villain_fields != [] do %> <% end %><%= Enum.map_join(villain_fields, " ", fn({_k, v}) -> if v == :data, do: "#{v}", else: "#{v}_data" end) %><%= if assocs do %> <% end %><%= Enum.map_join(assocs, " ", fn {_, y, _} -> if to_string(y) not in Keyword.values(gallery_fields), do: y, else: nil end) %>)a
+  @optional_fields ~w(<%= Enum.map_join(img_fields ++ file_fields ++ gallery_fields, " ", &elem(&1, 1)) %>)a
 
   @doc """
   Creates a changeset based on the `schema` and `params`.
@@ -61,5 +61,6 @@ defmodule <%= module %> do
   def delete(record) do
 <%= for {_v, k} <- img_fields do %>    delete_original_and_sized_images(record, <%= inspect k %>)
 <% end %>    Brando.repo.delete!(record)
-  end
+<%= for {_v, k} <- gallery_fields do %>    Brando.Images.delete_series(record.<%= k %>)
+<% end %>  end
 end

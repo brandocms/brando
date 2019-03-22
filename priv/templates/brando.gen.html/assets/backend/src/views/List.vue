@@ -41,13 +41,10 @@
                 <tr
                   v-for="<%= vue_singular %> in all<%= Recase.to_pascal(vue_plural) %>"
                   :key="<%= vue_singular %>.id">
-                  <td class="text-strong">
-                    <!-- {{ <%= vue_singular %>.field }} -->
-                  </td>
                 <% end %>
-                  <td class="text-xs fit">
-                    {{ <%= vue_singular %>.inserted_at | datetime }}
-                  </td>
+                  <%= for {_, v} <- list_rows do %>
+                    <%= v %>
+                  <% end %>
                   <td
                     v-if="['superuser'].includes(me.role)"
                     class="text-center fit">
@@ -89,7 +86,9 @@ export default {
   data () {
     return {
       loading: 0,
-      sorted<%= Recase.to_pascal(vue_singular) %>Ids: []
+      sorted<%= Recase.to_pascal(vue_singular) %>Ids: []<%= if gallery do %>,
+      showImageSeriesModal: null,
+      selectedImages: []<% end %>
     }
   },
 
@@ -126,9 +125,27 @@ export default {
           this.$toast.success({ message: 'Rekkefølge lagret' })
         })
     },
+    <%= if gallery do %>
+    createImageSeries (id) {
+      this.adminChannel.channel
+        .push('<%= singular %>:create_image_series', { <%= singular %>_id: id })
+        .receive('ok', payload => {
+          this.addImageSeriesTo<%= Recase.to_pascal(vue_singular) %>({ <%= singular %>Id: id, imageSeries: payload.image_series })
+        })
+    },
+
+    openImageSeriesModal (id) {
+      this.showImageSeriesModal = id
+    },
+
+    closeImageSeriesModal () {
+      this.showImageSeriesModal = null
+    },
+    <% end %>
     ...mapActions('<%= vue_plural %>', [
       'get<%= Recase.to_pascal(vue_plural) %>',
-      'delete<%= Recase.to_pascal(vue_singular) %>'
+      'delete<%= Recase.to_pascal(vue_singular) %>'<%= if gallery do %>,
+      'addImageSeriesTo<%= Recase.to_pascal(vue_singular) %>'<% end %>
     ])
   }
 }

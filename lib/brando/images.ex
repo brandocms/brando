@@ -46,9 +46,25 @@ defmodule Brando.Images do
     Brando.repo().get!(Image, id)
   end
 
+  @doc """
+  Get category id by slug
+  """
   def get_category_id_by_slug(slug) do
     category = Brando.repo().get_by(ImageCategory, slug: slug)
     {:ok, category.id}
+  end
+
+  @doc """
+  Get or create category id by slug
+  """
+  def get_or_create_category_id_by_slug(slug, user) do
+    case Brando.repo().get_by(ImageCategory, slug: slug) do
+      nil ->
+        create_category(%{name: slug, slug: slug}, user)
+
+      category ->
+        {:ok, category}
+    end
   end
 
   @doc """

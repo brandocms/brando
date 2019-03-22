@@ -11,6 +11,7 @@ defmodule Mix.Brando do
     :string,
     :image,
     :villain,
+    :gallery,
     :array,
     :references,
     :text,
