@@ -70,6 +70,10 @@ defmodule Mix.Tasks.Brando.Install do
      "lib/application_name_web/templates/page/_navigation.html.eex"},
     {:text, "templates/brando.install/lib/application_name_web/templates/page/index.html.eex",
      "lib/application_name_web/templates/page/index.html.eex"},
+    {:text, "templates/brando.install/lib/application_name_web/templates/page/_footer.html.eex",
+     "lib/application_name_web/templates/page/_footer.html.eex"},
+    {:text, "templates/brando.install/lib/application_name_web/templates/page/__logo.html.eex",
+     "lib/application_name_web/templates/page/__logo.html.eex"},
 
     # Default Villain parser
     {:eex, "templates/brando.install/lib/application_name_web/villain/parser.ex",

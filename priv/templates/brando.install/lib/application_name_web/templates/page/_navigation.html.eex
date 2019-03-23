@@ -1,49 +1,64 @@
 <header>
   <div class="container" data-moonwalk-section>
     <div class="row">
-      <div class="col-lg-6 col-md-6 col-sm-12">
-        <div class="d-flex justify-content-between mr-auto">
+      <div class="col-md-4 col-sm-12">
+        <div class="navbar-wrapper d-flex justify-content-between mr-auto">
           <a class="navbar-brand" href="/">
-            <h1 class="sr-only">LOGO/NAME</h1>
-            <h1>LOGO/NAME</h1>
+            <h1 class="sr-only">NAME</h1>
+            <%%= render <%= application_module %>Web.PageView, "__logo.html" %>
           </a>
         </div>
       </div>
-      <div class="col-lg-6 col-md-6 col-sm-12">
+      <div class="col-md-8 col-sm-12">
         <nav id="menu" aria-label="Menu" role="navigation">
           <div class="collapse navbar-collapse" id="navbar-content">
-            <ul class="navbar-nav">
-              <li class="nav-item">
-                <a class="nav-link" href="#link">
-                  Expertise
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="#link">
-                  Projects
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="#lin">
-                  How we work
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="#lin">
-                  About
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="#link">
-                  Clients
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="#link">
-                  Contact
-                </a>
-              </li>
-            </ul>
+            <div class="c-nav">
+              <ul class="navbar-nav">
+                <li class="nav-item">
+                  <a class="nav-link <%%= Brando.HTML.active(@conn, "/nyheter/*") %>" href="/nyheter">
+                    Nyheter
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link <%%= Brando.HTML.active(@conn, "/produkter/*") %>" href="/produkter">
+                    Produkter
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link <%%= Brando.HTML.active(@conn, "/kampanjer/*") %>" href="/kampanjer">
+                    Kampanjer
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div class="r-nav">
+              <ul class="navbar-nav">
+                <li class="nav-item">
+                  <a class="nav-link <%%= Brando.HTML.active(@conn, "/om") %>" href="/om">
+                    Om oss
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link <%%= Brando.HTML.active(@conn, "/kontakt") %>" href="/kontakt">
+                    Kontakt
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div class="extra-nav">
+              <ul class="navbar-nav small">
+                <li class="nav-item">
+                  <a class="nav-link" href="#footer">
+                    Nyhetsbrev
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="/personvern">
+                    Personvern
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
         </nav>
         <noscript>
