@@ -25,7 +25,7 @@ Fetch and compile dependencies. Install Brando:
 
 Add to your `config/config.exs` right before the env-specific import:
 
-    gsed -i '/Import environment specific config/i\# import BRANDO config\nimport_config "brando.exs"\n' config/config.exs
+    $ gsed -i '/Import environment specific config/i\# import BRANDO config\nimport_config "brando.exs"\n' config/config.exs
 
 (Install gsed, if it's missing: `brew install gnu-sed`)
 
@@ -39,7 +39,7 @@ Set up database, and seed:
 
 Add to your `config/prod.secret.exs` (see https://github.com/elixir-lang/ecto/issues/1328)
 
-    gsed -i '/pool_size:/i\  socket_options: [recbuf: 8192, sndbuf: 8192],' config/prod.secret.exs
+    $ gsed -i '/pool_size:/i\  socket_options: [recbuf: 8192, sndbuf: 8192],' config/prod.secret.exs
 
 Go through `config/brando.exs`.
 
