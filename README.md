@@ -17,11 +17,7 @@ Start by creating a new phoenix project:
 
 Add Brando to `deps` in your `mix.exs` file:
 
-```elixir
-defp deps do
-  [{:brando, github: "twined/brando", branch: "develop"}]
-end
-```
+    $ gsed -i '/{:phoenix,/i\      {:brando, github: "twined/brando", branch: "develop"},' mix.exs
 
 Fetch and compile dependencies. Install Brando:
 
@@ -29,14 +25,9 @@ Fetch and compile dependencies. Install Brando:
 
 Add to your `config/config.exs` right before the env-specific import:
 
-```diff
-+ # Import Brando specific config.
-+ import_config "brando.exs"
-+
-  # Import environment specific config. This must remain at the bottom
-  # of this file so it overrides the configuration defined above.
-  import_config "#{Mix.env}.exs"
-```
+    gsed -i '/Import environment specific config/i\# import BRANDO config\nimport_config "brando.exs"\n' config/config.exs
+
+(Install gsed, if it's missing: `brew install gnu-sed`)
 
 Install node packages:
 
@@ -48,17 +39,7 @@ Set up database, and seed:
 
 Add to your `config/prod.secret.exs` (see https://github.com/elixir-lang/ecto/issues/1328)
 
-```diff
-  config :my_app, MyApp.Repo,
-    adapter: Ecto.Adapters.Postgres,
-    username: "my_app",
-    password: "my_password",
-    database: "my_app_prod",
-    extensions: [{Postgrex.Extensions.JSON, library: Poison}],
-+   socket_options: [recbuf: 8192, sndbuf: 8192],
-    pool_size: 20
-```
-
+    gsed -i '/pool_size:/i\  socket_options: [recbuf: 8192, sndbuf: 8192],' config/prod.secret.exs
 
 Go through `config/brando.exs`.
 
