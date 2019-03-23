@@ -1,6 +1,6 @@
 /**
  * Application-specific SCSS.
- * (c) twined 2018
+ * (c) twined 2019
  */
 
 @import "variables.scss";
@@ -19,42 +19,56 @@
 }
 
 html.sr {
-  [data-moonwalk] {
+  [data-moonwalk],
+  [data-moonwalk-offset],
+  [data-moonwalk-logo],
+  [data-moonwalk-fade],
+  [data-moonwalk-slow] {
     visibility: hidden;
   }
 }
 
-html, body {
-}
+.no-gutters {
+  margin-right: 0;
+  margin-left: 0;
 
-body {
-  @each $bp-name, $bp-size in $grid-breakpoints {
-    @include media-breakpoint-up($bp-name) {
-      padding-top: map-get($fixed-menu-compensation-padding, $bp-name);
-    }
+  > .col,
+  > [class*="col-"] {
+    padding-right: 0;
+    padding-left: 0;
   }
 }
 
-.fader {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: $primary;
-  z-index: 9998;
-  display: none;
+a.plain {
+  border: none;
+  text-decoration: none;
 
-  .loading-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
+  &:hover {
+    border: none;
+    text-decoration: none;
+  }
+}
 
-    color: darken($primary, 15);
+footer a.plain {
+  color: inherit;
 
-    text-align: center;
-    font-size: 12px;
+  &:hover {
+    color: inherit;
+  }
+}
+
+body {
+  letter-spacing: 0.4px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-up($bp-name) {
+      padding-top: map-get($fixed-menu-compensation-padding, $bp-name);
+      font-size: map-get($fontsize-base, $bp-name);
+      line-height: map-get($lineheight-base, $bp-name);
+    }
   }
 }
 
@@ -80,19 +94,19 @@ p:last-child {
 }
 
 
-header {
-  opacity: 1;
-  transition: opacity 2s ease;
+// header {
+//   opacity: 1;
+//   transition: opacity 2s ease;
+// }
+
+.c {
+  align-self: center;
 }
 
 span[class^="arrow-"] {
   transition: all 150ms ease;
   display: inline-block;
   backface-visibility: hidden;
-}
-
-.c {
-  align-self: center;
 }
 
 a:hover {
@@ -110,10 +124,37 @@ a:hover {
     transform: translateY(-5px);
     backface-visibility: hidden;
   }
+
+  span.arrow-d {
+    transform: translateY(5px);
+    backface-visibility: hidden;
+  }
+
+  span.arrow-ne {
+    transform: translateY(-5px) translateX(5px);
+    backface-visibility: hidden;
+  }
 }
 
 span.line {
   display: inline-block;
+}
+
+.dev-debug-sizes {
+  position: fixed;
+  bottom: 4px;
+  left: 4px;
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: bold;
+  z-index: 99;
+  display: none;
+}
+
+.no-js {
+  .v-slideshow {
+    display: none;
+  }
 }
 
 
@@ -121,16 +162,21 @@ span.line {
  * Imports
  */
 
+@import "includes/utils";
 @import "includes/animations";
 @import "includes/cookies";
 @import "includes/containers";
+@import "includes/content";
 @import "includes/fader";
 @import "includes/fonts";
+@import "includes/footer";
 @import "includes/hamburgers";
+@import "includes/header";
 @import "includes/headers";
 @import "includes/lightbox";
 @import "includes/paragraphs";
 @import "includes/navigation";
 @import "includes/sections";
 @import "includes/slider";
-@import "includes/utils";
+@import "includes/templates";
+

@@ -1,11 +1,11 @@
+.elixir_ls
 .git
-__design
-_build
 .temp
-media
-deps
+_build
+__design
 assets/backend/node_modules
 assets/frontend/node_modules
+deps
+media
 priv/static
-.elixir_ls
 release-archives

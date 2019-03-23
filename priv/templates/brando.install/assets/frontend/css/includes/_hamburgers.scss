@@ -27,10 +27,6 @@ $hamburger-hover-use-filter   : false !default;
 $hamburger-hover-filter       : opacity(50%) !default;
 $hamburger-active-hover-filter: $hamburger-hover-filter !default;
 
-// Types (Remove or comment out what you don’t need)
-// ==================================================
-$hamburger-types: (spin) !default;
-
 // Hamburger
 // ==================================================
 @each $bp-name, $bp-cfg in $hamburger-config {
@@ -130,43 +126,41 @@ $hamburger-types: (spin) !default;
 
 // Hamburger types
 // ==================================================
-@if index($hamburger-types, spin) {
   /*
    * Spin
    */
   .hamburger--spin {
     .hamburger-inner {
-      transition: transform 0.22s cubic-bezier(0.55, 0.055, 0.675, 0.19), background-color 1.25s ease;
+      transition: transform 0.12s cubic-bezier(0.55, 0.055, 0.675, 0.19), background-color 1.25s ease;
 
       &::before {
         transition: top 0.1s 0.25s ease-in,
-                    opacity 0.1s ease-in,
-                    background-color 1.25s ease;
+                    transform 0.22s cubic-bezier(0.55, 0.055, 0.675, 0.19),
+                    background-color 2s ease;
       }
 
       &::after {
         transition: bottom 0.1s 0.25s ease-in,
                     transform 0.22s cubic-bezier(0.55, 0.055, 0.675, 0.19),
-                    background-color 1.25s ease;
+                    background-color 2s ease;
       }
     }
 
     &.is-active {
       .hamburger-inner {
-        transform: rotate(225deg);
         transition: transform 0.12s cubic-bezier(0.215, 0.61, 0.355, 1), background-color 1.25s ease;
 
         &::before {
           top: 0;
-          opacity: 0;
+          transform: rotate(45deg);
           transition: top 0.1s ease-out,
-                      opacity 0.1s 0.12s ease-out,
+                      transform 0.22s 0.12s cubic-bezier(0.215, 0.61, 0.355, 1),
                       background-color 1.25s ease;
         }
 
         &::after {
           bottom: 0;
-          transform: rotate(-90deg);
+          transform: rotate(-45deg);
           transition: bottom 0.1s ease-out,
                       transform 0.22s 0.12s cubic-bezier(0.215, 0.61, 0.355, 1),
                       background-color 1.25s ease;
@@ -174,7 +168,51 @@ $hamburger-types: (spin) !default;
       }
     }
   }
-}
+  /*
+   * Collapse
+   */
+  .hamburger--collapse {
+    .hamburger-inner {
+      top: auto;
+      bottom: 0;
+      transition-duration: 0.13s;
+      transition-delay: 0.13s;
+      transition-timing-function: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+
+      &::after {
+        top: ($hamburger-layer-spacing * 2 + $hamburger-layer-height * 2) * -1;
+        transition: top 0.2s 0.2s cubic-bezier(0.33333, 0.66667, 0.66667, 1),
+                    opacity 0.1s linear;
+      }
+
+      &::before {
+        transition: top 0.12s 0.2s cubic-bezier(0.33333, 0.66667, 0.66667, 1),
+                    transform 0.13s cubic-bezier(0.55, 0.055, 0.675, 0.19);
+      }
+    }
+
+    &.is-active {
+      .hamburger-inner {
+        transform: translate3d(0, ($hamburger-layer-spacing + $hamburger-layer-height) * -1, 0) rotate(-45deg);
+        transition-delay: 0.22s;
+        transition-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+
+        &::after {
+          top: 0;
+          opacity: 0;
+          transition: top 0.2s cubic-bezier(0.33333, 0, 0.66667, 0.33333),
+                      opacity 0.1s 0.22s linear;
+        }
+
+        &::before {
+          top: 0;
+          transform: rotate(-90deg);
+          transition: top 0.1s 0.16s cubic-bezier(0.33333, 0, 0.66667, 0.33333),
+                      transform 0.13s 0.25s cubic-bezier(0.215, 0.61, 0.355, 1);
+        }
+      }
+    }
+  }
 
 
 // ==================================================

@@ -19,52 +19,52 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $padding-xl: (
-  xs: 100px,
-  sm: 100px,
-  md: 150px,
-  lg: 200px
+  xs: 90px, //
+  sm: 90px, //
+  md: 180px, //
+  lg: 180px
 );
 
 $padding-lg: (
-  xs: 50px,
-  sm: 100px,
-  md: 100px,
-  lg: 150px
+  xs: 60px, //
+  sm: 60px, //
+  md: 80px, //
+  lg: 80px
 );
 
 $padding-sm: (
   xs: 30px,
   sm: 35px,
   md: 50px,
-  lg: 100px
+  lg: 50px
 );
 
 $padding-xs: (
   xs: 15px,
   sm: 23px,
   md: 25px,
-  lg: 35px
+  lg: 25px
 );
 
 $container-padding: (
-  xs: 25px,
-  sm: 55px,
-  md: 95px,
-  lg: 125px,
+  xs: 20px,
+  sm: 40px,
+  md: 100px,
+  lg: 100px,
 );
 
 $pretty-pad: (
   xs: 0px,
   sm: 5px,
   md: 40px,
-  lg: 50px,
+  lg: 40px,
 );
 
 $pretty-pad-max: (
   xs: 98%,
   sm: 55%,
   md: 60%,
-  lg: 70%
+  lg: 60%
 );
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -75,49 +75,49 @@ $fontsize-base: (
   xs: 18px,
   sm: 18px,
   md: 18px,
-  lg: 22px
+  lg: 18px
 );
 
 $lineheight-base: (
   xs: 28px,
   sm: 28px,
   md: 28px,
-  lg: 32px
+  lg: 28px
 );
 
 $fontsize-small: (
   xs: 18px,
   sm: 15px,
   md: 15px,
-  lg: 18px
+  lg: 15px
 );
 
 $lineheight-small: (
   xs: 28px,
   sm: 25px,
   md: 25px,
-  lg: 28px
+  lg: 25px
 );
 
 $fontsize-lead: (
   xs: 21px,
-  sm: 25px,
-  md: 38px,
-  lg: 45px
+  sm: 32px, //
+  md: 38px, //
+  lg: 38px  //
 );
 
 $lineheight-lead: (
   xs: 29px,
-  sm: 33px,
-  md: 45px,
-  lg: 53px
+  sm: 48px, //
+  md: 57px, //
+  lg: 57px  //
 );
 
 $marginbottom-lead: (
   xs: 30px,
   sm: 50px,
   md: 100px,
-  lg: 125px
+  lg: 100px
 );
 
 // H1
@@ -125,14 +125,14 @@ $fontsize-h1: (
   xs: 28px,
   sm: 38px,
   md: 45px,
-  lg: 55px
+  lg: 45px
 );
 
 $lineheight-h1: (
   xs: 25px,
   sm: 45px,
   md: 45px,
-  lg: 55px
+  lg: 45px
 );
 
 $marginbottom-h1: $padding-sm;
@@ -142,14 +142,14 @@ $fontsize-h2: (
   xs: 28px,
   sm: 45px,
   md: 48px,
-  lg: 55px
+  lg: 48px
 );
 
 $lineheight-h2: (
   xs: 35px,
   sm: 52px,
   md: 60px,
-  lg: 65px
+  lg: 60px
 );
 
 $marginbottom-h2: $padding-sm;
@@ -159,14 +159,14 @@ $fontsize-h3: (
   xs: 25px,
   sm: 35px,
   md: 35px,
-  lg: 40px
+  lg: 35px
 );
 
 $lineheight-h3: (
   xs: 1,
   sm: 1,
   md: 45px,
-  lg: 1
+  lg: 45px
 );
 
 $marginbottom-h3: $padding-sm;
@@ -175,49 +175,49 @@ $fontsize-credits: (
   xs: 15px,
   sm: 13px,
   md: 15px,
-  lg: 18px
+  lg: 15px
 );
 
 $lineheight-credits: (
   xs: 23px,
   sm: 16px,
   md: 18px,
-  lg: 23px
+  lg: 18px
 );
 
 $fontsize-caps: (
   xs: 15px,
   sm: 18px,
   md: 18px,
-  lg: 22px
+  lg: 18px
 );
 
 $lineheight-caps: (
   xs: 18px,
   sm: 24px,
   md: 24px,
-  lg: 29px
+  lg: 24px
 );
 
 $padding-caps: (
   xs: 10px,
   sm: 10px,
   md: 10px,
-  lg: 15px
+  lg: 10px
 );
 
 $fontsize-menu: (
-  xs: 25px,
-  sm: 35px,
-  md: 15px,
-  lg: 18px
+  xs: 26px, //
+  sm: 32px, //
+  md: 22px, //
+  lg: 22px  //
 );
 
 $lineheight-menu: (
-  xs: 40px,
-  sm: 50px,
-  md: 20px,
-  lg: 20px
+  xs: 45px, //
+  sm: 62px, //
+  md: 27px, //
+  lg: 27px  //
 );
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -233,20 +233,20 @@ $contrast-fg: $light;
 $primary: #d23434;
 $menu-bg: transparent;
 $fader-bg: $light;
-$fader-fg: $dark;
+$fader-fg: rgb(143, 143, 143);
 $header-bg: $light;
 $header-fg: $dark;
 
 $body-bg: $light;
-$body-color: #3D3E40;
+$body-color: black;
 $link-color: inherit;
 $link-hover-color: inherit;
 $menu-link-color: $dark;
-$menu-link-mobile-color: $light;
+$menu-link-mobile-color: $dark;
 $menu-accent-color: transparent;
 $enable-rounded: false;
 
-$hamburger-layer-color: $dark;
+$hamburger-layer-color: #fff;
 $hamburger-layer-width: 32px;
 $hamburger-padding-x: 0px;
 $hamburger-padding-y: 0px;
@@ -257,9 +257,9 @@ $hamburger-hover-opacity: 1;
 
 $hamburger-config: (
   xs: (
-    layer-color: $dark,
+    layer-color: #fff,
     layer-width: 25px,
-    layer-height: 4px,
+    layer-height: 3px,
     layer-spacing: 4px,
     layer-radius: 0px,
     padding-x: 0px,
@@ -269,15 +269,15 @@ $hamburger-config: (
     right: 13px
   ),
   sm: (
-    layer-color: $dark,
-    layer-width: 32px,
-    layer-height: 5px,
+    layer-color: #fff,
+    layer-width: 25px,
+    layer-height: 3px,
     layer-spacing: 5px,
     layer-radius: 0px,
     padding-x: 0px,
     padding-y: 0px,
     margin-top: 0,
-    top: -26px,
+    top: -24px,
     right: 18px
   )
 );
@@ -303,43 +303,43 @@ $gutters: (
   xs: 25px,
   sm: 35px,
   md: 50px,
-  lg: 75px
+  lg: 50px
 );
 
 $grid-breakpoints: (
   xs: 0,
-  sm: 768px,
+  sm: 740px,
   md: 1280px,
   lg: 1900px
 );
 
 $container-max-widths: (
-  xs: 750px,
+  xs: 730px,
   sm: 1260px,
   md: 1800px,
-  lg: 2200px
+  lg: 1900px
 );
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FONTS
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$font-family-sans-serif: "Apercu Regular", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+$font-family-sans-serif: "Gerstner Programm FS", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // NAVBAR
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $navbar-brand-widths: (
-  xs: 187px,
-  sm: 243px,
-  md: 243px,
-  lg: 319px
+  xs: 134px,
+  sm: 168px,
+  md: 167.5px,
+  lg: 167.5px
 );
 
 $fixed-menu-compensation-padding: (
-  xs: 109px,
-  sm: 129.27px,
-  md: 128.27px,
-  lg: 234.33px
+  xs: 0,
+  sm: 0,
+  md: 0,
+  lg: 0
 );

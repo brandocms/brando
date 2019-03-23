@@ -4,8 +4,8 @@ defmodule <%= application_module %>.Villain.Parser do
   """
   @behaviour Brando.Villain.Parser
 
-  import Brando.Utils, only: [img_url: 3, media_url: 0]
-  import Ecto.Query
+  import Brando.HTML
+  import Phoenix.HTML
 
   @doc """
   Convert header to HTML
@@ -15,9 +15,16 @@ defmodule <%= application_module %>.Villain.Parser do
     ~s(<a name="#{anchor}"></a>#{h})
   end
 
-  def header(%{"text" => text, "level" => level}) do
+  def header(%{"text" => text, "level" => level} = data) do
+    classes =
+      if Map.get(data, "class", nil) do
+        ~s( class="#{Map.get(data, "class")}")
+      else
+        ""
+      end
+
     header_size = "h#{level}"
-    "<#{header_size} data-moonwalk>" <> text <> "</#{header_size}>"
+    "<#{header_size}#{classes} data-moonwalk>" <> text <> "</#{header_size}>"
   end
 
   def header(%{"text" => text}) do
@@ -101,7 +108,6 @@ defmodule <%= application_module %>.Villain.Parser do
   Convert image to html, with caption and credits and optional link
   """
   def image(data) do
-    url = Map.get(data, "url", "")
     title = Map.get(data, "title", "")
     credits = Map.get(data, "credits", "")
     link = Map.get(data, "link", "")
@@ -121,9 +127,26 @@ defmodule <%= application_module %>.Villain.Parser do
       else
         ""
       end
+
+    srcset = [
+      {"small", "700w"},
+      {"medium", "1000w"},
+      {"large", "1400w"},
+      {"xlarge", "1900w"},
+    ]
+
+    itag =
+      img_tag(data, :xlarge, [
+        srcset: srcset,
+        alt: "#{title}/#{credits}",
+        class: class
+      ]) |> safe_to_string
+
     """
     <div class="img-wrapper" data-moonwalk-children>
-      #{link_open}<img src="#{url}" alt="#{title}/#{credits}" class="#{class}" />#{link_close}
+      #{link_open}
+      #{itag}
+      #{link_close}
       #{caption}
     </div>
     """
@@ -132,26 +155,24 @@ defmodule <%= application_module %>.Villain.Parser do
   @doc """
   Slideshow
   """
-  def slideshow(images) do
+  def slideshow(%{"images" => images}) do
     images_html = Enum.map_join images, "\n", fn(img) ->
-      src = img.sizes["xlarge"]
-      title = img.title && ~s(<p class="small photo-caption"><span class="arrow-se">&searr;</span> #{img.title}</p>) || ""
+      src = img["sizes"]["xlarge"]
       """
-      <li class="glide__slide">
+      <div class="glide-slide">
         <img class="img-fluid" src="#{src}" />
-        #{title}
-      </li>
+        <div class="overlay-zoom">
+          <a href="#{src}" class="zoom plain" data-lightbox="#{src}">
+            +
+          </a>
+        </div>
+      </div>
       """
     end
     """
-    <div class="glide">
-      <div class="follower">
-        <div class="arrow">&rarr;</div>
-      </div>
-      <div class="glide__track" data-glide-el="track" data-moonwalk>
-        <ul class="glide__slides">
-          #{images_html}
-        </ul>
+    <div class="glide-wrapper">
+      <div class="glide">
+        #{images_html}
       </div>
     </div>
     """
@@ -165,10 +186,10 @@ defmodule <%= application_module %>.Villain.Parser do
       Enum.map_join rows, "\n", fn row ->
         """
         <tr>
-          <td class="v-datatable-key">
+          <td class="key">
             #{row["key"]}
           </td>
-          <td class="v-datatable-value">
+          <td class="value">
             #{row["value"]}
           </td>
         </tr>
@@ -176,9 +197,11 @@ defmodule <%= application_module %>.Villain.Parser do
       end
 
     """
-    <table class="table v-datatable">
-      #{rows_html}
-    </table>
+    <div class="data-table-wrapper">
+      <table class="data-table">
+        #{rows_html}
+      </table>
+    </div>
     """
   end
 

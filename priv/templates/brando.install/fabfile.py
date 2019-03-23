@@ -7,6 +7,7 @@ from datetime import datetime
 from fabric.api import *
 from fabric.contrib.files import exists as _exists
 from fabric.contrib.console import confirm
+from fabric.contrib.project import rsync_project
 from fabric.context_managers import settings as _settings
 from fabric.colors import red, green, yellow, cyan, blue
 from fabric.operations import prompt
@@ -233,6 +234,7 @@ def bootstrap_release():
     dump_local_db_and_load_db_on_remote()
 
     restart()
+    prune_dangling_docker_images()
     _success()
     _notify_build_complete(version)
 
@@ -278,6 +280,13 @@ def copy_release_from_docker(version):
         env.project_name,
         version))
 
+
+def prune_dangling_docker_images():
+    """
+    Delete dangling docker images
+    """
+    print(yellow('==> pruning dangling images'))
+    local('docker image prune --force')
 
 def upload_release(version):
     """
@@ -497,6 +506,40 @@ def showconfig():
     import pprint
     pp = pprint.PrettyPrinter(indent=4)
     pp.pprint(env)
+
+
+def upload_new_media():
+    """
+    Uploads media to new dir
+    """
+    if _exists(os.path.join(env.path, 'new_media')):
+        print(red('-- WARNING ---------------------------------------'))
+        print(red('You are about to delete %s from the remote server.' % "new_media"))
+        print(red('command: rm -rf %s' % "new_media"))
+        print(red('-- WARNING ---------------------------------------'))
+        _confirmtask()
+        with cd(env.path):
+            sudo('rm -rf new_media')
+
+    with cd(env.path):
+        print(yellow('==> uploading local media folder to remote'))
+        sudo('mkdir -p new_media', user=env.project_user)
+        put('media', '%s/new_media' % env.path, use_sudo=True)
+        print(yellow('==> chowning remote media folder'))
+        _setowner(os.path.join(env.path, 'new_media'))
+        print(yellow('==> chmoding remote media folder'))
+        _setperms('755', os.path.join(env.path, 'new_media'))
+
+
+def update_media():
+    """
+    Rsync media
+    """
+    print(red('-- WARNING ---------------------------------------'))
+    print(red('You are about to rsync the local media dir with server.'))
+    print(red('-- WARNING ---------------------------------------'))
+    _confirmtask()
+    rsync_project(local_dir='media', remote_dir=os.path.join(env.path, 'rsync_media'), use_sudo=True)
 
 
 def upload_media():

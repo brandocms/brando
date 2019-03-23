@@ -1,4 +1,3 @@
-
 body.unloaded {
   .navbar {
     transform: translateY(-100%);
@@ -6,22 +5,24 @@ body.unloaded {
   }
 }
 
+// hide top layer
+.hamburger-inner {
+  background-color: transparent !important;
+}
+
 .no-js {
   header {
-    background-color: $light;
-    color: $dark;
+    background-color: $light !important;
+    color: $dark !important;
+    padding-top: 20px !important;
+    padding-bottom: 20px !important;
 
-    &.headroom--unpinned {
-      transform: translate3d(0, 0, 0);
-      backface-visibility: hidden;
+    .navbar-brand svg path {
+      fill: #000 !important;
     }
 
     .hamburger {
       display: none;
-    }
-
-    .navbar-brand svg path {
-      fill: $dark !important;
     }
 
     @include media-breakpoint-up(md) {
@@ -40,6 +41,16 @@ body.unloaded {
 
       .no-js-menu-close {
         display: none;
+
+        .hamburger.is-active .hamburger-inner::before, .hamburger.is-active .hamburger-inner::after {
+          background-color: #000;
+        }
+      }
+
+      .no-js-menu {
+        .hamburger-inner::before, .hamburger-inner::after {
+          background-color: #000;
+        }
       }
 
       #menu {
@@ -62,89 +73,90 @@ body.unloaded {
   }
 }
 
-header {
-  @extend .pt-sm;
-  @extend .pb-sm;
+.navbar-wrapper {
+  @include media-breakpoint-only(xs) {
+    margin-top: -5px;
+  }
 
+  @include media-breakpoint-only(sm) {
+    margin-top: -10px;
+  }
+}
+
+header {
   z-index: 10;
   position: fixed;
   width: 100%;
   top: 0;
   left: 0;
   right: 0;
+  backface-visibility: hidden;
 
-  @include media-breakpoint-only(xs) {
-    padding-top: 30px;
+  transition: padding-top 500ms ease;
+
+  &[data-header-small] {
+    transition: padding-top 500ms ease;
+    @include media-breakpoint-up(md) {
+      padding-top: 30px;
+      padding-bottom: 30px;
+    }
+
+    @include media-breakpoint-only(xs) {
+      padding-top: 15px;
+      padding-bottom: 15px;
+    }
   }
-}
 
-.headroom {
-  @include media-breakpoint-up(md) {
-    transform: translateY(-100%);
-  }
-  will-change: transform;
-  transition: all 750ms ease, background-color 450ms ease;
-}
-
-.headroom--top {
-  @include media-breakpoint-up(xs) {
-    transition: all 750ms ease;
-    background-color: transparent;
-  }
-}
-
-.headroom--not-top {
-  @include media-breakpoint-up(xs) {
-    transition: all 750ms ease;
-    padding-top: 25px;
-    padding-bottom: 25px;
-  }
-}
-
-.headroom--pinned {
-  transform: translateY(0%);
-
-  &.headroom--not-top {
-    @include media-breakpoint-up(xs) {
-      transition: all 750ms ease;
-      background-color: $light;
-      z-index: 99;
-
-      .nav-link {
-        transition: border-color 350ms ease;
-        color: $dark !important;
-
-        &:hover {
-          transition: border-color 250ms ease;
-          border-color: $dark !important;
+  &[data-header-alt-bg] {
+    .navbar-nav {
+      .nav-item {
+        .nav-link {
+          @include media-breakpoint-up(md) {
+            color: black !important;
+          }
         }
       }
+    }
 
-      .navbar-brand svg path {
-        transition: fill 250ms ease;
-        fill: $dark !important;
-      }
+    .hamburger.is-active .hamburger-inner::before, .hamburger.is-active .hamburger-inner::after,
+    .hamburger-inner::before, .hamburger-inner::after {
+      background-color: #000 !important;
+    }
 
-      .hamburger-inner,
-      .hamburger-inner::before,
-      .hamburger-inner::after {
-        @include media-breakpoint-down(sm) {
-          background-color: $dark;
+    .navbar-brand {
+      svg {
+        path {
+          fill: black !important;
         }
       }
     }
   }
-}
 
-.open-menu {
-  .headroom--not-top .navbar-brand svg path {
-    fill: $dark !important;
+  @include media-breakpoint-only(xs) {
+    padding-top: 30px;
+    padding-bottom: 30px;
+  }
+
+  @include media-breakpoint-only(sm) {
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+
+  @include media-breakpoint-up(md) {
+    padding-top: 60px;
+    padding-bottom: 60px;
+  }
+
+  .container {
+    backface-visibility: hidden;
   }
 }
 
-.headroom--unpinned {
-  transition: transform 7 50ms ease, background-color 450ms ease;
-  transform: translateY(-100%);
+.open-menu {
+  .hamburger.is-active .hamburger-inner::before, .hamburger.is-active .hamburger-inner::after,
+  .hamburger-inner::before, .hamburger-inner::after {
+    background-color: #000 !important;
+  }
 }
 
 nav {
@@ -152,19 +164,18 @@ nav {
   @extend .navbar-expand-md;
 
   @include media-breakpoint-down(sm) {
-    // display: none;
     overflow: hidden;
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
     z-index: 50;
     opacity: 0;
-    background-color: $dark;
-    color: $light;
-    text-align: center;
+    background-color: #DBD8D5;
+    color: #000000;
     transform: translateX(100%);
+    align-items: flex-start;
   }
 
   @include media-breakpoint-up(md) {
@@ -175,26 +186,94 @@ nav {
   }
 }
 
-.open-menu {
-  @include media-breakpoint-down(sm) {
-    .navbar-brand {
-      transform: translateY(-200%);
-      backface-visibility: hidden;
-      opacity: 0;
-    }
+.navbar {
+  padding: 0;
+  backface-visibility: hidden;
+}
+
+.r-nav {
+  @extend .col-md-6;
+
+  @include media-breakpoint-up(md) {
+    padding-right: 0;
   }
 
-  @include media-breakpoint-down(sm) {
-    .hamburger.is-active .hamburger-inner, .hamburger.is-active .hamburger-inner::before, .hamburger.is-active .hamburger-inner::after,
-    .hamburger-inner, .hamburger-inner::before, .hamburger-inner::after {
-      background-color: $light;
+  .navbar-nav {
+    justify-content: flex-end;
+
+    li {
+      @include media-breakpoint-up(md) {
+        margin-left: 40px;
+        margin-top: 8px;
+      }
     }
   }
 }
 
-.navbar {
-  padding: 0;
-  backface-visibility: hidden;
+.c-nav {
+  @extend .col-md-6;
+  .navbar-nav {
+    @include media-breakpoint-up(md) {
+      justify-content: center;
+    }
+
+    li {
+      @include media-breakpoint-up(md) {
+        margin: 0 40px;
+        margin-top: 8px;
+
+        &:first-of-type, &:last-of-type {
+          margin: 0;
+          margin-top: 8px;
+        }
+      }
+    }
+  }
+}
+
+.extra-nav {
+  @extend .col-md-6;
+
+  @include media-breakpoint-up(md) {
+    display: none;
+  }
+
+  @include media-breakpoint-only(sm) {
+    margin-top: 60px;
+  }
+
+  @include media-breakpoint-only(xs) {
+    position: absolute;
+    bottom: 0;
+    padding-right: 19%;
+    padding-bottom: 40px;
+  }
+
+  .navbar-nav {
+    @include media-breakpoint-only(xs) {
+      flex-direction: row;
+    }
+
+    .nav-item {
+      font-size: 22px;
+      letter-spacing: 0.8px;
+      line-height: 42px;
+    }
+  }
+}
+
+.navbar-nav.small {
+  .nav-item {
+    .nav-link {
+      &.active, &:hover {
+        @include media-breakpoint-only(sm) {
+          &:before {
+            margin-top: 20px;
+          }
+        }
+      }
+    }
+  }
 }
 
 .navbar-nav {
@@ -207,12 +286,11 @@ nav {
       @include media-breakpoint-up($bp-name) {
         font-size: map-get($fontsize-menu, $bp-name);
         line-height: map-get($lineheight-menu, $bp-name);
-        text-transform: uppercase;
       }
     }
 
     @include media-breakpoint-down(sm) {
-      font-weight: bold;
+      text-align: left;
     }
 
     .nav-link {
@@ -223,21 +301,78 @@ nav {
       border-bottom: 1px solid transparent;
       transition: border-color 350ms ease;
 
-      @include media-breakpoint-down(sm) {
-        display: inline-block;
-        border: none;
-        color: $menu-link-mobile-color;
-      }
+      &.active, &:hover {
+        @include media-breakpoint-up(md) {
+          border-bottom: 1px solid #717373;
+        }
 
-      @include media-breakpoint-up(md) {
-        &:hover {
-          border-color: $dark;
-          transition: border-color 250ms ease;
+        @include media-breakpoint-down(sm) {
+          border-bottom: 1px solid transparent;
+
+          &:before {
+            content: '';
+            position: absolute;
+            font-size: 20px;
+            margin-left: -35px;
+            width: 5px;
+            height: 5px;
+            background-color: black;
+            margin-top: 30px;
+          }
+        }
+
+        @include media-breakpoint-only(xs) {
+          &:before {
+            margin-left: -29px;
+            margin-top: 20px;
+          }
         }
       }
 
-      &.active {
-        border-bottom: 3px solid;
+      @include media-breakpoint-down(sm) {
+        display: inline-block;
+        border-bottom: 1px solid transparent;
+        color: $menu-link-mobile-color;
+        font-weight: normal;
+      }
+    }
+  }
+}
+
+body {
+  background-color: #F8F8F7;
+
+  .hamburger.is-active .hamburger-inner::before, .hamburger.is-active .hamburger-inner::after,
+  .hamburger-inner::before, .hamburger-inner::after {
+    background-color: #000;
+  }
+}
+
+body[data-script=alternative_bg] {
+  background-color: #422F2F;
+
+  .hamburger.is-active .hamburger-inner::before, .hamburger.is-active .hamburger-inner::after,
+  .hamburger-inner::before, .hamburger-inner::after {
+    background-color: #fff;
+  }
+
+  .navbar-brand {
+    svg {
+      path {
+        fill: #fff;
+      }
+    }
+  }
+
+  @include media-breakpoint-up(md) {
+    .navbar-nav {
+      .nav-item {
+        .nav-link {
+          color: #fff;
+          &.active, &:hover {
+            border-bottom: 1px solid #A09797
+          }
+        }
       }
     }
   }
@@ -246,11 +381,11 @@ nav {
 .navbar-brand {
   padding: 0;
   margin: 0;
-  transition: all 250ms ease;
-  opacity: 1;
-  @include media-breakpoint-down(sm) {
-    transition: all 250ms ease;
+  z-index: 99;
+  @include media-breakpoint-up(md) {
+    margin-top: 0;
   }
+  opacity: 1;
 
   @each $bp-name, $bp-size in $grid-breakpoints {
     @include media-breakpoint-up($bp-name) {
@@ -268,13 +403,6 @@ nav {
   svg {
     width: 100%;
     height: 100%;
-  }
-}
-
-.hamburger.is-active .hamburger-inner, .hamburger.is-active .hamburger-inner::before, .hamburger.is-active .hamburger-inner::after,
-.hamburger-inner, .hamburger-inner::before, .hamburger-inner::after {
-  @include media-breakpoint-down(sm) {
-    background-color: $dark;
   }
 }
 
@@ -308,4 +436,19 @@ nav {
 
 #navbar-content {
   display: block;
+
+  @include media-breakpoint-only(sm) {
+    margin-top: 155px;
+    margin-left: 12.0%;
+  }
+
+  @include media-breakpoint-only(xs) {
+    margin-left: 10%;
+    margin-top: 105px;
+  }
+}
+
+.hero-slide-img {
+  position: relative;
+  backface-visibility: hidden;
 }

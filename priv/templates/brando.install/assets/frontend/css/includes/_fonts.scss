@@ -1,23 +1,9 @@
 @font-face {
-  font-family: "Apercu Regular";
+  font-family: "Gerstner Programm FS";
   font-display: fallback;
-  src:url("/fonts/apercu/apercu_regular.eot");
-  src:url("/fonts/apercu/apercu_regular.woff") format("woff");
-  src:url("/fonts/apercu/apercu_regular.ttf") format("truetype"),
-  url("/fonts/apercu/apercu_regular.svg#apercuregular") format("svg"),
-  url("/fonts/apercu/apercu_regular.eot?#iefix") format("embedded-opentype");
+  src:
+		url('/fonts/gerstner/Gerstner-ProgrammLight.woff2') format('woff2'),
+		url('/fonts/gerstner/Gerstner-ProgrammLight.woff') format('woff');
   font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "Apercu Regular";
-  font-display: fallback;
-  src:url("/fonts/apercu/apercu_bold.eot");
-  src:url("/fonts/apercu/apercu_bold.woff") format("woff");
-  src:url("/fonts/apercu/apercu_bold.ttf") format("truetype"),
-  url("/fonts/apercu/apercu_bold.svg#apercubold") format("svg"),
-  url("/fonts/apercu/apercu_bold.eot?#iefix") format("embedded-opentype");
-  font-weight: bold;
   font-style: normal;
 }

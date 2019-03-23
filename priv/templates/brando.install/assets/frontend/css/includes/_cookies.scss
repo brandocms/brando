@@ -6,7 +6,14 @@
   }
 }
 
+.no-js {
+  .cookie-container {
+    display: block !important;
+  }
+}
+
 .cookie-container {
+  display: none;
   position: fixed;
   bottom: 0;
   left: 0;
@@ -14,6 +21,7 @@
   color: $light;
   z-index: 99999;
   margin-bottom: 0 !important;
+  max-width: 100% !important;
 
   @each $bp-name, $bp-size in $grid-breakpoints {
     @include media-breakpoint-up($bp-name) {
@@ -26,6 +34,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+
+    @include media-breakpoint-only(xs) {
+      flex-direction: column;
+    }
   }
 
   .cookie-law-text {
@@ -39,11 +51,31 @@
     flex-shrink: 0;
     text-align: right;
 
+    @include media-breakpoint-only(xs) {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      margin-top: 15px;
+      justify-content: space-between;
+    }
+
+    @include media-breakpoint-only(sm) {
+      padding-left: 15px;
+    }
+
+    a {
+      @extend .plain;
+    }
+
     button {
       background-color: $light;
       color: $dark;
       border: 0;
-      margin-right: 15px;
+      padding: 3px 25px;
+
+      @include media-breakpoint-up(sm) {
+        margin-right: 15px;
+      }
     }
   }
 }
