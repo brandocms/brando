@@ -51,10 +51,10 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "lib/application_name_web/templates/error/500_page.html.eex", "lib/application_name_web/templates/error/500_page.html.eex"},
 
     # Navigation and page index
-    {:text, "lib/application_name_web/templates/page/_navigation.html.eex", "lib/application_name_web/templates/page/_navigation.html.eex"},
-    {:text, "lib/application_name_web/templates/page/index.html.eex", "lib/application_name_web/templates/page/index.html.eex"},
-    {:text, "lib/application_name_web/templates/page/_footer.html.eex", "lib/application_name_web/templates/page/_footer.html.eex"},
-    {:text, "lib/application_name_web/templates/page/__logo.html.eex", "lib/application_name_web/templates/page/__logo.html.eex"},
+    {:eex, "lib/application_name_web/templates/page/_navigation.html.eex", "lib/application_name_web/templates/page/_navigation.html.eex"},
+    {:eex, "lib/application_name_web/templates/page/index.html.eex", "lib/application_name_web/templates/page/index.html.eex"},
+    {:eex, "lib/application_name_web/templates/page/_footer.html.eex", "lib/application_name_web/templates/page/_footer.html.eex"},
+    {:eex, "lib/application_name_web/templates/page/__logo.html.eex", "lib/application_name_web/templates/page/__logo.html.eex"},
 
     # Default Villain parser
     {:eex, "lib/application_name_web/villain/parser.ex", "lib/application_name_web/villain/parser.ex"},

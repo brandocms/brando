@@ -9,27 +9,27 @@
 <section class="hero stretch" data-moonwalk-section>
   <div class="hero-bg">
     <div class="hero-slider">
-      <%% for {img, idx} <- Enum.with_index(@s.images) do %>
+      <%= for {img, idx} <- Enum.with_index(@s.images) do %>
       <div class="hero-slide">
         <div class="">
-          <%% picture_tag img.image, :micro, class: "hero-slide-img", srcset: hero_srcset, cache: img.updated_at, prefix: media_url() %>
+          <%= picture_tag img.image, :micro, class: "hero-slide-img", srcset: hero_srcset, cache: img.updated_at, prefix: media_url() %>
         </div>
       </div>
-      <%% end %>
+      <% end %>
       <noscript>
-        <%% if Enum.count(@s.images) do %>
+        <%= if Enum.count(@s.images) do %>
           <img src="<%% img_url(List.first(@s.images).image, :xlarge, prefix: media_url()) %>">
-        <%% end %>
+        <% end %>
       </noscript>
     </div>
   </div>
-  <%% render <%= application_module %>Web.PageView, "_navigation.html", assigns %>
+  <%%= render <%= application_module %>Web.PageView, "_navigation.html", assigns %>
   <div class="about">
     <div class="container">
       <div class="row">
         Hero text
         <div class="logo" data-moonwalk>
-          <%% render <%= application_module %>Web.PageView, "__logo.html" %>
+          <%%= render <%= application_module %>Web.PageView, "__logo.html" %>
         </div>
       </div>
       <div class="centered-arrow" data-moonwalk>
