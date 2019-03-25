@@ -9,16 +9,7 @@ defmodule Brando.Type.Image do
   @derive {Poison.Encoder,
            only: ~w(title credits path sizes optimized width height thumb medium focal)a}
   @derive {Jason.Encoder,
-           only: [
-             :title,
-             :credits,
-             :path,
-             :sizes,
-             :optimized,
-             :width,
-             :height,
-             :focal
-           ]}
+           only: ~w(title credits path sizes optimized width height focal)a}
 
   defstruct title: nil,
             credits: nil,
@@ -42,9 +33,8 @@ defmodule Brando.Type.Image do
     {:ok, val}
   end
 
-  def cast(val) when is_map(val) do
+  def cast(val) when is_map(val), do:
     {:ok, val}
-  end
 
   @doc """
   Integers are never considered blank

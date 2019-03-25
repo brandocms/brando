@@ -7,32 +7,22 @@ defmodule Brando.Pages.PageFragment do
 
   use Brando.Web, :schema
   use Brando.Villain, :schema
-
   alias Brando.Type.Json
-
-  import Brando.Gettext
 
   @required_fields ~w(parent_key key language data creator_id)a
   @optional_fields ~w(html)a
+  @derived_fields ~w(
+    id
+    parent_key
+    key
+    language
+    data
+    html
+    creator_id
+  )a
 
-  @derive {Poison.Encoder, only: ~w(
-    id
-    parent_key
-    key
-    language
-    data
-    html
-    creator_id
-  )a}
-  @derive {Jason.Encoder, only: ~w(
-    id
-    parent_key
-    key
-    language
-    data
-    html
-    creator_id
-  )a}
+  @derive {Poison.Encoder, only: @derived_fields}
+  @derive {Jason.Encoder, only: @derived_fields}
 
   schema "pagefragments" do
     field :parent_key, :string
@@ -76,23 +66,4 @@ defmodule Brando.Pages.PageFragment do
       params
     end
   end
-
-  #
-  # Meta
-
-  use Brando.Meta.Schema,
-    singular: gettext("page fragment"),
-    plural: gettext("page fragments"),
-    repr: &"#{&1.key}",
-    fields: [
-      id: "№",
-      language: gettext("Language"),
-      parent_key: gettext("Parent key"),
-      key: gettext("Key"),
-      data: gettext("Data"),
-      html: gettext("HTML"),
-      creator: gettext("Creator"),
-      inserted_at: gettext("Inserted"),
-      updated_at: gettext("Updated")
-    ]
 end

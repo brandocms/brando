@@ -12,7 +12,6 @@ defmodule Brando.ImageSeries do
   alias Brando.ImageCategory
 
   import Ecto.Query, only: [from: 2]
-  import Brando.Gettext
 
   @required_fields ~w(name image_category_id creator_id)a
   @optional_fields ~w(credits sequence cfg slug)a
@@ -159,31 +158,4 @@ defmodule Brando.ImageSeries do
       cs
     end
   end
-
-  #
-  # Meta
-
-  use Brando.Meta.Schema,
-    singular: gettext("imageserie"),
-    plural: gettext("imageseries"),
-    repr: fn schema ->
-      schema = Brando.repo().preload(schema, :images)
-      image_count = Enum.count(schema.images)
-      "#{schema.name} – #{image_count} #{gettext("image(s)")}."
-    end,
-    fields: [
-      id: gettext("ID"),
-      name: gettext("Name"),
-      slug: gettext("Slug"),
-      cfg: gettext("Configuration"),
-      credits: gettext("Credits"),
-      sequence: gettext("Sequence"),
-      creator: gettext("Creator"),
-      images: gettext("Images"),
-      image_category: gettext("Image category"),
-      image_category_id: gettext("Image category"),
-      inserted_at: gettext("Inserted at"),
-      updated_at: gettext("Updated at")
-    ],
-    hidden_fields: []
 end

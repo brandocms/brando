@@ -32,4 +32,13 @@ defmodule Brando.Villain.Parser do
 
   @doc "Parses columns"
   @callback columns(%{String.t() => any}) :: String.t()
+
+  @doc "Parses datatables"
+  @callback datatable(%{String.t() => any}) :: String.t()
+
+  @doc "Parses markdown"
+  @callback markdown(%{String.t() => any}) :: String.t()
+
+  @doc "Parses html"
+  @callback html(%{String.t() => any}) :: String.t()
 end

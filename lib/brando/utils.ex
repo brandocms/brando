@@ -314,16 +314,15 @@ defmodule Brando.Utils do
   @doc """
   Runs some config checks.
   """
-  def run_checks do
-    # noop, deprecated
+  defmacro run_checks do
+    raise "run_checks/0 is deprecated. Remove."
   end
 
   @doc """
   Returns the Helpers module from the router.
   """
-  def helpers(conn) do
+  def helpers(conn), do:
     Phoenix.Controller.router_module(conn).__helpers__
-  end
 
   @doc """
   Return the current user set in session.
@@ -374,24 +373,22 @@ defmodule Brando.Utils do
   @doc """
   Returns the application name set in config.exs
   """
-  def app_name do
+  def app_name, do:
     Brando.config(:app_name)
-  end
 
   @doc """
   Grabs `path` from the file field struct
   """
   def file_url(file_field, opts \\ [])
-
-  def file_url(nil, _) do
-    nil
-  end
-
+  def file_url(nil, _), do: nil
   def file_url(file_field, opts) do
     prefix = Keyword.get(opts, :prefix, nil)
     (prefix && Path.join([prefix, file_field.path])) || file_field.path
   end
 
+  @doc """
+  Create a cache string and return
+  """
   def add_cache_string(opts) do
     case Keyword.get(opts, :cache, nil) do
       nil ->
@@ -513,10 +510,12 @@ defmodule Brando.Utils do
     IO.iodata_to_binary([first, rest]) |> String.trim_leading()
   end
 
-  def human_spaced_number(int) when is_integer(int) do
+  def human_spaced_number(int) when is_integer(int), do:
     human_spaced_number(Integer.to_string(int))
-  end
 
+  @doc """
+  Get dependencies' versions
+  """
   def get_deps_versions do
     :application.which_applications()
     |> Enum.filter(&(elem(&1, 0) in @filtered_deps))

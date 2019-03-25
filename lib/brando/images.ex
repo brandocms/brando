@@ -275,11 +275,17 @@ defmodule Brando.Images do
     end
   end
 
+  @doc """
+  Preload images and category
+  """
   def preload_series({:ok, series}) do
     series = Brando.repo().preload(series, [:images, :image_category])
     {:ok, series}
   end
 
+  @doc """
+  List categories by name
+  """
   def list_categories do
     categories =
       Brando.repo().all(
@@ -338,6 +344,9 @@ defmodule Brando.Images do
     Brando.repo().insert(cs)
   end
 
+  @doc """
+  Count image series in category (by id)
+  """
   def image_series_count(category_id) do
     Brando.repo().one(
       from is in ImageSeries,

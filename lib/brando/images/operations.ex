@@ -35,6 +35,9 @@ defmodule Brando.Images.Operations do
     {:ok, operations}
   end
 
+  @doc """
+  Perform list of image operations as Flow
+  """
   def perform_operations(operations, user) do
     Progress.show_progress(user)
 
@@ -72,16 +75,11 @@ defmodule Brando.Images.Operations do
     |> Enum.into(%{})
   end
 
-  def get_operation_by_key(key, operations) do
+  defp get_operation_by_key(key, operations) do
     Enum.find(operations, &(&1.id == key))
   end
 
-  def announce_progress_start(operation) do
-    Progress.update_progress(operation.user, "#{operation.filename} — Klargjør bildestørrelse: <strong>#{operation.size_key}</strong>", key: to_string(operation.id) <> operation.size_key)
-    operation
-  end
-
-  def resize_image(%{id: id, filename: filename, size_key: size_key, img_struct: %{path: path}, user: user} = operation) do
+  defp resize_image(%Images.Operation{size_key: size_key, img_struct: %{path: path}} = operation) do
     operation =
       Map.merge(operation, %{
         sized_img_dir: Images.Utils.get_sized_dir(path, size_key),

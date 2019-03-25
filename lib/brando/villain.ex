@@ -232,6 +232,9 @@ defmodule Brando.Villain do
     |> Enum.join()
   end
 
+  @doc """
+  Map out images
+  """
   def map_images(images) do
     Enum.map(images, fn image_record ->
       img_struct = image_record.image

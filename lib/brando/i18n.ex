@@ -7,23 +7,20 @@ defmodule Brando.I18n do
   @doc """
   Put `language` in session.
   """
-  def put_language(conn, language) do
+  def put_language(conn, language), do:
     put_session(conn, :language, language)
-  end
 
   @doc """
   Put `language` in assigns.
   """
-  def assign_language(conn, language) do
+  def assign_language(conn, language), do:
     assign(conn, :language, language)
-  end
 
   @doc """
   Get `language` from assigns.
   """
-  def get_language(conn) do
+  def get_language(conn), do:
     Map.get(conn.assigns, :language, Brando.config(:default_admin_language))
-  end
 
   @doc """
   Puts `language` as locale for all registered gettext modules

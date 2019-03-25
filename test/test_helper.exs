@@ -37,8 +37,6 @@ defmodule Brando.Integration.Endpoint do
     only: ~w(css images js fonts favicon.ico robots.txt),
     cache_control_for_vsn_requests: nil,
     cache_control_for_etags: nil
-
-  socket("/admin/ws", Brando.Integration.UserSocket)
 end
 
 defmodule Brando.Integration.TestCase do

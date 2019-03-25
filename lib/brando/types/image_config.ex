@@ -30,9 +30,8 @@ defmodule Brando.Type.ImageConfig do
     {:ok, val}
   end
 
-  def cast(val) when is_map(val) do
+  def cast(val) when is_map(val), do:
     {:ok, val}
-  end
 
   @doc """
   Integers are never considered blank
@@ -51,7 +50,6 @@ defmodule Brando.Type.ImageConfig do
   When dumping data to the database we expect a `list`, but check for
   other options as well.
   """
-  def dump(val) when is_map(val) do
+  def dump(val) when is_map(val), do:
     {:ok, val}
-  end
 end

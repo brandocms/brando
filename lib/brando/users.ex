@@ -4,10 +4,13 @@ defmodule Brando.Users do
 
   Interfaces with database
   """
-  alias Brando.Utils
   alias Brando.User
+  alias Brando.Utils
   import Ecto.Changeset
 
+  @doc """
+  Get user by id
+  """
   def get_user(id) do
     case Brando.repo().get(User, id) do
       nil -> {:error, {:user, :not_found}}
@@ -15,26 +18,40 @@ defmodule Brando.Users do
     end
   end
 
-  def get_user_by(args) do
+  @doc """
+  Get user by `args` kw list
+  """
+  def get_user_by(args), do:
     Brando.repo().get_by(User, args)
-  end
 
+  @doc """
+  Get user by `args` kw list
+  """
   def get_user_by!(args) do
     Brando.repo().get_by!(User, args)
   end
 
+  @doc """
+  List users
+  """
   def get_users() do
     User
     |> User.order_by_id()
     |> Brando.repo().all()
   end
 
+  @doc """
+  Create user
+  """
   def create_user(params) do
     User.changeset(%User{}, :create, params)
     |> maybe_update_password
     |> Brando.repo().insert
   end
 
+  @doc """
+  Update user
+  """
   def update_user(id, params) do
     with {:ok, user} <- get_user(id) do
       user
@@ -46,9 +63,11 @@ defmodule Brando.Users do
     end
   end
 
-  def delete_user(user) do
+  @doc """
+  Delete user
+  """
+  def delete_user(user), do:
     Brando.repo().delete!(user)
-  end
 
   @doc """
   Bumps `user`'s `last_login` to current time.
@@ -57,13 +76,11 @@ defmodule Brando.Users do
   def set_last_login(user) do
     {:ok, user} =
       Utils.Schema.update_field(user, last_login: NaiveDateTime.from_erl!(:calendar.local_time()))
-
     user
   end
 
-  defp maybe_update_password(%{changes: %{password: password}} = cs) do
+  defp maybe_update_password(%{changes: %{password: password}} = cs), do:
     put_change(cs, :password, Comeonin.Bcrypt.hashpwsalt(password))
-  end
 
   defp maybe_update_password(cs), do: cs
 end

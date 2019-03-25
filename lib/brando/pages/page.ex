@@ -9,12 +9,10 @@ defmodule Brando.Pages.Page do
   use Brando.Villain, :schema
 
   alias Brando.Type.Status
-  import Brando.Gettext
 
   @required_fields ~w(key language slug title data status creator_id)a
   @optional_fields ~w(parent_id meta_description meta_keywords html css_classes)a
-
-  @derive {Poison.Encoder, only: ~w(
+  @derived_fields ~w(
     id
     key
     language
@@ -30,24 +28,9 @@ defmodule Brando.Pages.Page do
     meta_keywords
     inserted_at
     updated_at
-  )a}
-  @derive {Jason.Encoder, only: ~w(
-    id
-    key
-    language
-    title
-    slug
-    data
-    html
-    status
-    css_classes
-    creator_id
-    parent_id
-    meta_description
-    meta_keywords
-    inserted_at
-    updated_at
-  )a}
+  )a
+  @derive {Poison.Encoder, only: @derived_fields}
+  @derive {Jason.Encoder, only: @derived_fields}
 
   schema "pages" do
     field :key, :string
@@ -166,34 +149,4 @@ defmodule Brando.Pages.Page do
       where: p.language == ^language,
       where: ilike(p.html, ^"%#{query}%")
   end
-
-  #
-  # Meta
-
-  use Brando.Meta.Schema,
-    singular: gettext("page"),
-    plural: gettext("pages"),
-    repr: &"#{&1.title}",
-    fields: [
-      id: "№",
-      status: gettext("Status"),
-      language: gettext("Language"),
-      key: gettext("Key"),
-      title: gettext("Title"),
-      slug: gettext("Slug"),
-      data: gettext("Data"),
-      html: gettext("HTML"),
-      parent: gettext("Belongs to"),
-      parent_id: gettext("Belongs to"),
-      children: gettext("Sub pages"),
-      creator: gettext("Creator"),
-      css_classes: gettext("Extra CSS classes"),
-      meta_description: gettext("META description"),
-      meta_keywords: gettext("META keywords"),
-      inserted_at: gettext("Inserted"),
-      updated_at: gettext("Updated")
-    ],
-    help: [
-      parent_id: gettext("If this page should belong to another, select parent page here.")
-    ]
 end

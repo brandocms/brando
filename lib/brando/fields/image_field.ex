@@ -39,9 +39,8 @@ defmodule Brando.Field.ImageField do
       @doc """
       Cleans up old images on update
       """
-      @deprecated "cleanup_old_images/1 should not be used in changesets anymore."
-      def cleanup_old_images(_) do
-        raise "cleanup_old_images() should not be used in changesets anymore."
+      defmacro cleanup_old_images(_) do
+        raise "cleanup_old_images() should not be used in changesets anymore, just remove it."
       end
 
       def cleanup_old_images(changeset, :safe) do

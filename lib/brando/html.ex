@@ -467,7 +467,11 @@ defmodule Brando.HTML do
     content_tag(:picture, [source_tag, img_tag, noscript_tag], picture_attrs)
   end
 
-  def ratio(%{height: height, width: width}) when is_nil(height) or is_nil(width), do: 0
+  @doc """
+  Calculate image ratio
+  """
+  def ratio(%{height: height, width: width})
+      when is_nil(height) or is_nil(width), do: 0
 
   def ratio(%{height: height, width: width}) do
     Decimal.new(height)
@@ -477,6 +481,9 @@ defmodule Brando.HTML do
 
   def ratio(nil), do: 0
 
+  @doc """
+  Return a correctly sized svg fallback
+  """
   def svg_fallback(image_field) do
     width = Map.get(image_field, :width, 0)
     height = Map.get(image_field, :height, 0)
@@ -491,14 +498,12 @@ defmodule Brando.HTML do
   """
   def get_sizes(nil), do: nil
 
-  def get_sizes(sizes) when is_list(sizes) do
+  def get_sizes(sizes) when is_list(sizes), do:
     Enum.join(sizes, ", ")
-  end
 
-  def get_sizes(_) do
+  def get_sizes(_), do:
     raise ArgumentError,
       message: ~s<sizes key must be a list: ["(min-width: 36em) 33.3vw", "100vw"]>
-  end
 
   @doc """
   Get srcset from image config
