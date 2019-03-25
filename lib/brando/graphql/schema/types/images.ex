@@ -102,7 +102,7 @@ defmodule Brando.Schema.Types.Images do
           nil ->
             (args.size == "original" &&
                {:ok, Brando.Utils.media_url(image.path)}) ||
-              {:error, "URL size `#{args.size}` not found :("}
+              {:ok, ""}
 
           {_, url} ->
             {:ok, Brando.Utils.media_url(url)}

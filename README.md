@@ -339,14 +339,6 @@ In your schema:
 
 The migration's field should be `:text`, not `:string`.
 
-In your controller:
-
-```elixir
-import Brando.Plug.Uploads
-plug :check_for_uploads, {"user", Brando.User}
-     when action in [:create, :profile_update, :update]
-```
-
 ## Villain
 
 To use villain outside `Brando.Pages` and `Brando.News`, add to your app's `lib/web/router.ex`:

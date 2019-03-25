@@ -24,16 +24,15 @@ defmodule Brando.Field.ImageField do
 
   """
   import Ecto.Changeset
-  import Brando.Images
-  import Brando.Upload
   import Brando.Upload.Utils
 
   defmacro __using__(_) do
     quote do
       Module.register_attribute(__MODULE__, :imagefields, accumulate: true)
-      import Ecto.Changeset
+      alias Brando.Images
       import Brando.Images.Utils
       import Brando.Upload
+      import Ecto.Changeset
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
 
@@ -73,7 +72,7 @@ defmodule Brando.Field.ImageField do
              {:ok, plug} <- field_has_changed(changeset, field_name),
              {:ok, _} <- changeset_has_no_errors(changeset),
              {:ok, cfg} <- get_image_cfg(field_name),
-             {:ok, {:handled, name, field}} <- handle_image_upload(field_name, plug, cfg, user) do
+             {:ok, {:handled, name, field}} <- Images.Upload.Field.handle_upload(field_name, plug, cfg, user) do
           cleanup_old_images(changeset, :safe)
           put_change(changeset, name, field)
         else
@@ -173,39 +172,6 @@ defmodule Brando.Field.ImageField do
 
       Module.put_attribute(__MODULE__, :imagefields, {unquote(field_name), cfg_struct})
     end
-  end
-
-  @doc """
-  Handles the upload by starting a chain of operations on the plug.
-  This function handles upload when we have an image field on a schema,
-  not when the schema itself represents an image. (See Brando.Images.Upload)
-
-  ## Parameters
-
-    * `name`: the field we are operating on.
-    * `plug`: a Plug.Upload struct.
-    * `cfg`: the field's cfg from has_image_field
-  """
-  @spec handle_image_upload(
-          atom,
-          Plug.Upload.t(),
-          Brando.Type.ImageConfig.t(),
-          Brando.User.t() | :system
-        ) ::
-          {:ok, {atom, Brando.Type.Image}} | {:error, {atom, {:error, String.t()}}}
-  def handle_image_upload(name, %Plug.Upload{} = plug, cfg, user) do
-    with {:ok, upload} <- process_upload(plug, cfg),
-         {:ok, field} <- create_image_struct(upload, user) do
-      {:ok, {:handled, name, field}}
-    else
-      err -> {:error, {name, handle_upload_error(err)}}
-    end
-  end
-
-  @spec handle_image_upload(atom, Map.t(), Brando.Type.ImageConfig.t(), Brando.User.t() | :system) ::
-          {:ok, Map.t()}
-  def handle_image_upload(name, image, _, _) do
-    {:ok, {:unhandled, name, image}}
   end
 
   def merge_focal(changeset, field_name) do

@@ -1,5 +1,6 @@
 defmodule Brando.VillainController do
   use Brando.Web, :controller
+  alias Brando.Images
   import Ecto.Query
 
   @doc false
@@ -33,44 +34,106 @@ defmodule Brando.VillainController do
     end
 
     cfg = series.cfg || Brando.config(Brando.Images)[:default_config]
-    opts = Map.put(%{}, "image_series_id", series.id)
+    params = Map.put(params, "image_series_id", series.id)
 
-    {:ok, image} = Brando.Images.check_for_uploads(params, user, cfg, opts)
+    case Images.Uploads.Schema.handle_upload(params, cfg, user) do
+      {:ok, image} ->
+        sizes = Enum.map(image.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
+        sizes_map = Enum.into(sizes, %{})
 
-    sizes = Enum.map(image.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
-    sizes_map = Enum.into(sizes, %{})
-
-    json(
-      conn,
-      %{
-        status: 200,
-        uid: uid,
-        image: %{
-          id: image.id,
-          sizes: sizes_map,
-          src: Brando.Utils.media_url(image.image.path)
-        },
-        form: %{
-          method: "post",
-          action: "villain/imagedata/#{image.id}",
-          name: "villain-imagedata",
-          fields: [
-            %{
-              name: "title",
-              type: "text",
-              label: "Tittel",
-              value: ""
+        json(
+          conn,
+          %{
+            status: 200,
+            uid: uid,
+            image: %{
+              id: image.id,
+              sizes: sizes_map,
+              src: Brando.Utils.media_url(image.image.path)
             },
-            %{
-              name: "credits",
-              type: "text",
-              label: "Krediteringer",
-              value: ""
+            form: %{
+              method: "post",
+              action: "villain/imagedata/#{image.id}",
+              name: "villain-imagedata",
+              fields: [
+                %{
+                  name: "title",
+                  type: "text",
+                  label: "Tittel",
+                  value: ""
+                },
+                %{
+                  name: "credits",
+                  type: "text",
+                  label: "Krediteringer",
+                  value: ""
+                }
+              ]
             }
-          ]
-        }
-      }
-    )
+          }
+        )
+
+      {:error, err} ->
+        json(
+          conn,
+          %{
+            status: 500,
+            error: err
+          }
+        )
+
+      images when length(images) > 1 ->
+        images = Enum.map(images, fn {:ok, img} ->
+          sizes = Enum.map(img.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
+          sizes_map = Enum.into(sizes, %{})
+          %{id: img.id, sizes: sizes_map, src: Brando.Utils.media_url(img.image.path)}
+        end)
+
+        json(
+          conn,
+          %{
+            status: 200,
+            uid: uid,
+            images: images
+          }
+        )
+
+      [{:ok, image}] ->
+        sizes = Enum.map(image.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
+        sizes_map = Enum.into(sizes, %{})
+
+        json(
+          conn,
+          %{
+            status: 200,
+            uid: uid,
+            image: %{
+              id: image.id,
+              sizes: sizes_map,
+              src: Brando.Utils.media_url(image.image.path)
+            },
+            form: %{
+              method: "post",
+              action: "villain/imagedata/#{image.id}",
+              name: "villain-imagedata",
+              fields: [
+                %{
+                  name: "title",
+                  type: "text",
+                  label: "Tittel",
+                  value: ""
+                },
+                %{
+                  name: "credits",
+                  type: "text",
+                  label: "Krediteringer",
+                  value: ""
+                }
+              ]
+            }
+          }
+        )
+    end
   end
 
   @doc false

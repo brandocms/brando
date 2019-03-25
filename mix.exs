@@ -12,6 +12,7 @@ defmodule Brando.Mixfile do
       deps: deps(),
       dialyzer: [
         plt_add_apps: [
+          :flow,
           :gettext,
           :comeonin,
           :guardian,
@@ -53,6 +54,7 @@ defmodule Brando.Mixfile do
 
   defp applications(_all) do
     [
+      :flow,
       :absinthe,
       :gettext,
       :comeonin,
@@ -87,6 +89,7 @@ defmodule Brando.Mixfile do
       {:timex, "~> 3.0"},
       {:ecto, "~> 3.0"},
       {:ecto_sql, "~> 3.0"},
+      {:flow, "~> 0.14"},
 
       # monitoring
       {:sentry, "~> 6.0"},

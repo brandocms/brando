@@ -10,14 +10,11 @@ defmodule Brando.Progress do
     :ignore
   end
 
-  def update_progress(user, status) do
-    Brando.endpoint().broadcast!("user:#{user.id}", "progress:update", %{status: status})
-  end
-
-  def update_progress(user, status, percent) do
+  def update_progress(user, status, opts \\ []) do
     Brando.endpoint().broadcast!("user:#{user.id}", "progress:update", %{
       status: status,
-      percent: percent
+      percent: Keyword.get(opts, :percent, nil),
+      key: Keyword.get(opts, :key, nil)
     })
   end
 

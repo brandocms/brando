@@ -54,20 +54,27 @@ defmodule Brando.Utils do
   @spec random_filename(String.t()) :: String.t()
   def random_filename(filename) do
     ext = Path.extname(filename)
+    random_str = random_string(filename)
+    "#{random_str}#{ext}"
+  end
 
+  @doc """
+  Generate a random string from `seed`
+  """
+  def random_string(seed) do
     rnd_basename_1 =
-      {filename, :os.timestamp()}
+      {seed, :os.timestamp()}
       |> :erlang.phash2()
       |> Integer.to_string(32)
       |> String.downcase()
 
     rnd_basename_2 =
-      {:os.timestamp(), filename}
+      {:os.timestamp(), seed}
       |> :erlang.phash2()
       |> Integer.to_string(32)
       |> String.downcase()
 
-    "#{rnd_basename_1}#{rnd_basename_2}#{ext}"
+    rnd_basename_1 <> rnd_basename_2
   end
 
   @doc """
@@ -410,12 +417,12 @@ defmodule Brando.Utils do
 
   def img_url(nil, size, opts) do
     default = Keyword.get(opts, :default, nil)
-    (default && Brando.Images.Utils.size_dir(default, size)) || "" <> add_cache_string(opts)
+    (default && Brando.Images.Utils.get_sized_path(default, size)) || "" <> add_cache_string(opts)
   end
 
   def img_url("", size, opts) do
     default = Keyword.get(opts, :default, nil)
-    (default && Brando.Images.Utils.size_dir(default, size)) || "" <> add_cache_string(opts)
+    (default && Brando.Images.Utils.get_sized_path(default, size)) || "" <> add_cache_string(opts)
   end
 
   def img_url(image_field, :original, opts) do

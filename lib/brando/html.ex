@@ -15,7 +15,6 @@ defmodule Brando.HTML do
   defmacro __using__(_) do
     quote do
       import Brando.HTML
-      import Brando.HTML.Inspect
     end
   end
 

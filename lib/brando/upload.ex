@@ -5,9 +5,7 @@ defmodule Brando.Upload do
   There are two distinct paths of travel within Brando for file uploading.
 
     1) `ImageField` and `FileField`.
-       `Brando.Plugs.Uploads` looks through params in the controller and passes off to
-       the module's `check_for_uploads` which is retrieved through `use Brando.Fields.ImageField`
-       or `use Brando.Fields.FileField`.
+        Called from the schema's changeset -> validate_upload
 
     2) `Brando.Image` / `Brando.Portfolio.Image`.
        Manually initiated from the controller by invoking `check_for_uploads` which is retrieved
@@ -82,10 +80,11 @@ defmodule Brando.Upload do
   defp extract_focal_info(%__MODULE__{plug: %Plug.Upload{filename: filename}} = upload) do
     case Regex.named_captures(~r/(?<cleaned_filename>.*)\%\%\%(?<x>.+)\:(?<y>.+)\%\%\%/, filename) do
       nil ->
+        upload = Map.put(upload, :extra_info, %{focal: %{"x" => 50, "y" => 50}})
         {:ok, upload}
 
       %{"x" => x, "y" => y, "cleaned_filename" => cleaned_filename} ->
-        upload = Map.put(upload, :extra_info, %{focal: %{x: x, y: y}})
+        upload = Map.put(upload, :extra_info, %{focal: %{"x" => x, "y" => y}})
         upload = put_in(upload.plug.filename, cleaned_filename)
         {:ok, upload}
     end

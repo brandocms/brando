@@ -40,7 +40,7 @@ defmodule Brando.Images.Optimize do
   """
   require Logger
   alias Ecto.Changeset
-  import Brando.Images.Utils, only: [image_type: 1, media_path: 1, optimized_filename: 1]
+  alias Brando.Images
 
   @doc """
   Optimize `img`
@@ -77,7 +77,7 @@ defmodule Brando.Images.Optimize do
   end
 
   defp check_valid_image_type(img_field) do
-    case image_type(img_field.path) do
+    case Images.Utils.image_type(img_field.path) do
       :jpeg -> {:ok, :jpeg}
       :png -> {:ok, :png}
       type -> {:not_valid, type}
@@ -146,13 +146,13 @@ defmodule Brando.Images.Optimize do
   defp interpolate_and_split_args(file, args) do
     filename =
       file
-      |> media_path
+      |> Images.Utils.media_path()
       |> String.replace(" ", "\\ ")
 
     new_filename =
       file
-      |> optimized_filename
-      |> media_path
+      |> Images.Utils.optimized_filename()
+      |> Images.Utils.media_path()
       |> String.replace(" ", "\\ ")
 
     args

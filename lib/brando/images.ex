@@ -5,13 +5,12 @@ defmodule Brando.Images do
   Interfaces with database
   """
 
-  alias Brando.{ImageCategory, ImageSeries, Image}
-
-  import Brando.Upload
+  alias Brando.Image
+  alias Brando.ImageCategory
+  alias Brando.ImageSeries
 
   import Brando.Images.Utils,
     only: [
-      create_image_sizes: 2,
       delete_original_and_sized_images: 2,
       recreate_sizes_for: 3
     ]
@@ -236,8 +235,12 @@ defmodule Brando.Images do
   Get series's config
   """
   def get_series_config(id) do
-    {:ok, series} = get_series(id)
-    {:ok, series.cfg}
+    with {:ok, series} <- get_series(id) do
+      {:ok, series.cfg}
+    else
+      err ->
+        err
+    end
   end
 
   @doc """
@@ -350,43 +353,5 @@ defmodule Brando.Images do
     categories = Brando.repo().all(ImageCategory)
     series = Brando.repo().all(ImageSeries)
     Brando.Images.Utils.get_orphaned_series(categories, series, starts_with: "images/site")
-  end
-
-  @doc """
-  Checks `params` for Plug.Upload fields and passes them on.
-  Fields in the `put_fields` map are added to the schema.
-  Returns {:ok, schema} or raises
-  """
-  def check_for_uploads(params, current_user, cfg, put_fields \\ nil) do
-    Enum.reduce(filter_plugs(params), [], fn named_plug, _ ->
-      handle_upload(
-        named_plug,
-        &create_image_struct/2,
-        current_user,
-        put_fields,
-        cfg
-      )
-    end)
-  end
-
-  @doc """
-  Handles Plug.Upload for our modules.
-  This is the handler for Brando.Image and Brando.Portfolio.Image
-  """
-  def handle_upload({name, plug}, process_fn, user, put_fields, cfg) do
-    with {:ok, upload} <- process_upload(plug, cfg),
-         {:ok, processed_field} <- process_fn.(upload, :system) do
-      params = Map.put(put_fields, name, processed_field)
-      create_image(params, user)
-    else
-      err -> handle_upload_error(err)
-    end
-  end
-
-  @doc """
-  Passes upload to create_image_sizes.
-  """
-  def create_image_struct(upload, user) do
-    create_image_sizes(upload, user)
   end
 end
