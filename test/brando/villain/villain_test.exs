@@ -6,6 +6,9 @@ defmodule Brando.VillainTest do
       "other parser"
     end
 
+    def datatable(_), do: nil
+    def markdown(_), do: nil
+    def html(_), do: nil
     def map(_), do: nil
     def blockquote(_), do: nil
     def columns(_), do: nil

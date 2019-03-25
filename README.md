@@ -1,6 +1,6 @@
 A helping hand.
 
-![Brando logo](https://raw.githubusercontent.com/twined/brando/develop/priv/templates/brando.install/assets/static/brando/images/brando-big.png)
+![Brando logo](https://raw.githubusercontent.com/twined/brando/master/priv/templates/brando.install/assets/frontend/static/images/brando/brando-big.png)
 
 [![Build Status](https://travis-ci.org/twined/brando.svg?branch=master)](https://travis-ci.org/twined/brando)
 [![Coverage Status](https://coveralls.io/repos/github/twined/brando/badge.svg?branch=master)](https://coveralls.io/github/twined/brando?branch=master)
@@ -143,7 +143,7 @@ Open up you application's `lib/application.ex` and add to `start/2`:
 
 Generate templates:
 
-    $ mix brando.gen.html Task tasks name:string avatar:image data:villain
+    $ mix brando.gen.html Task tasks name:string avatar:image data:villain image_series:gallery
 
 Also supports `user:references` to add a `belongs_to` assoc.
 
@@ -249,6 +249,11 @@ Password and time is optional.
 
 If no password configuration is found, you have to login
 through the backend to see the frontend website.
+
+You can also add a key as query string to set a cookie that allows browsing.
+
+`http://website/?key=<pass>`
+
 
 ## HTML
 

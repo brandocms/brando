@@ -186,16 +186,4 @@ defmodule Brando.Integration.ImageTest do
 
     assert Enum.count(series.images) == 0
   end
-
-  test "meta", %{user: user, series: series} do
-    assert {:ok, image} =
-             @params
-             |> Map.put(:creator_id, user.id)
-             |> Map.put(:image_series_id, series.id)
-             |> Images.create_image(user)
-
-    assert Brando.Image.__name__(:singular) == "image"
-    assert Brando.Image.__name__(:plural) == "images"
-    assert Brando.Image.__repr__(image) == "#{image.id} | /tmp/path/to/fake/image.jpg"
-  end
 end
