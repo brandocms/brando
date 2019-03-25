@@ -6,7 +6,6 @@ defmodule Brando.Images.Upload.Field do
   """
 
   alias Brando.Images
-  alias Brando.Progress
   alias Brando.Type
   alias Brando.Upload
   alias Brando.User
@@ -28,11 +27,8 @@ defmodule Brando.Images.Upload.Field do
     with {:ok, upload} <- Upload.process_upload(plug, cfg),
          {:ok, img_struct} <- Images.Utils.create_image_struct(upload, user),
          {:ok, operations} <- Images.Operations.create_operations(img_struct, cfg, user),
-         _ <- Progress.show_progress(user),
-         {:ok, [img_struct_with_sizes]} <- Images.Operations.perform_operations(operations, user) do
-      Progress.hide_progress(user)
-
-      {:ok, {:handled, name, img_struct_with_sizes}}
+         {:ok, [result]} <- Images.Operations.perform_operations(operations, user) do
+      {:ok, {:handled, name, result.img_struct}}
     else
       err -> {:error, {name, Upload.handle_upload_error(err)}}
     end

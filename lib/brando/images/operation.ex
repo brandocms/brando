@@ -6,7 +6,7 @@ defmodule Brando.Images.Operation do
 
   defstruct id: nil,
             user: nil,
-            img_field: %Type.Image{},
+            img_struct: %Type.Image{},
             filename: nil,
             type: nil,
             size_cfg: %Type.ImageConfig{},

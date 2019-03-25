@@ -11,20 +11,20 @@ defmodule Brando.Images.Operations do
 
   ## Example
 
-      {:ok, operations} = create_operations(img_field, img_cfg, user, id)
+      {:ok, operations} = create_operations(img_struct, img_cfg, user, id)
 
   """
-  def create_operations(img_field, cfg, user, id \\ nil) do
+  def create_operations(img_struct, cfg, user, id \\ nil) do
     id = id && id || Utils.random_string(:os.timestamp())
-    {_, filename} = Utils.split_path(img_field.path)
-    type = Images.Utils.image_type(img_field.path)
+    {_, filename} = Utils.split_path(img_struct.path)
+    type = Images.Utils.image_type(img_struct.path)
 
     operations =
       for {size_key, size_cfg} <- Map.get(cfg, :sizes) do
         %Images.Operation{
           id: id,
           user: user,
-          img_field: img_field,
+          img_struct: img_struct,
           filename: filename,
           type: type,
           size_cfg: size_cfg,
@@ -56,11 +56,20 @@ defmodule Brando.Images.Operations do
   defp compile_transform_results(transform_results, operations) do
     for {key, transforms} <- transform_results do
       operation = get_operation_by_key(key, operations)
+      img_struct = Map.put(operation.img_struct, :sizes, transforms_to_sizes(transforms))
+
       %Images.OperationResult{
         id: key,
-        img_struct: put_in(operation.img_field.sizes, Enum.map(transforms, &({&1.size_key, &1.image_path})) |> Enum.into(%{}))
+        img_struct: img_struct
       }
     end
+  end
+
+  # convert a list of transforms to a map of sizes
+  defp transforms_to_sizes(transforms) do
+    transforms
+    |> Enum.map(&({&1.size_key, &1.image_path}))
+    |> Enum.into(%{})
   end
 
   def get_operation_by_key(key, operations) do
@@ -72,7 +81,7 @@ defmodule Brando.Images.Operations do
     operation
   end
 
-  def resize_image(%{id: id, filename: filename, size_key: size_key, img_field: %{path: path}, user: user} = operation) do
+  def resize_image(%{id: id, filename: filename, size_key: size_key, img_struct: %{path: path}, user: user} = operation) do
     operation =
       Map.merge(operation, %{
         sized_img_dir: Images.Utils.get_sized_dir(path, size_key),

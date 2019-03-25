@@ -6,7 +6,6 @@ defmodule Brando.Images.Uploads.Schema do
   """
 
   alias Brando.Images
-  alias Brando.Progress
   alias Brando.Upload
 
   @doc """
@@ -18,11 +17,11 @@ defmodule Brando.Images.Uploads.Schema do
          {:ok, upload} <- Upload.process_upload(plug, cfg),
          {:ok, img_struct} <- Images.Utils.create_image_struct(upload, user),
          {:ok, operations} <- Images.Operations.create_operations(img_struct, cfg, user),
-         {:ok, image_structs} <- Images.Operations.perform_operations(operations, user) do
+         {:ok, operation_results} <- Images.Operations.perform_operations(operations, user) do
 
-      for i <- image_structs do
+      for result <- operation_results do
         Images.create_image(%{
-          image: i,
+          image: result.img_struct,
           image_series_id: img_series_id,
         }, user)
       end

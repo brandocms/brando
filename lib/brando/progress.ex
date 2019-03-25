@@ -6,9 +6,8 @@ defmodule Brando.Progress do
   @doc """
   Send progress through channel
   """
-  def update_progress(:system, _) do
-    :ignore
-  end
+  def update_progress(:system, _), do: :ignore
+  def update_progress(:system, _, _), do: :ignore
 
   def update_progress(user, status, opts \\ []) do
     Brando.endpoint().broadcast!("user:#{user.id}", "progress:update", %{

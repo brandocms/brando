@@ -428,12 +428,12 @@ defmodule Brando.HTML do
         }
   """
   @spec picture_tag(Map.t(), keyword()) :: {:safe, [...]}
-  def picture_tag(img_field, opts \\ []) do
-    src = Brando.Utils.img_url(img_field, Keyword.get(opts, :size, :xlarge), opts)
+  def picture_tag(img_struct, opts \\ []) do
+    src = Brando.Utils.img_url(img_struct, Keyword.get(opts, :size, :xlarge), opts)
     sizes = (Keyword.get(opts, :sizes) && get_sizes(opts[:sizes])) || false
-    srcset = (Keyword.get(opts, :srcset) && get_srcset(img_field, opts[:srcset], opts)) || false
-    width = (Keyword.get(opts, :width) && Map.get(img_field, :width)) || false
-    height = (Keyword.get(opts, :height) && Map.get(img_field, :height)) || false
+    srcset = (Keyword.get(opts, :srcset) && get_srcset(img_struct, opts[:srcset], opts)) || false
+    width = (Keyword.get(opts, :width) && Map.get(img_struct, :width)) || false
+    height = (Keyword.get(opts, :height) && Map.get(img_struct, :height)) || false
     img_class = Keyword.get(opts, :img_class, false)
     picture_class = Keyword.get(opts, :picture_class, false)
 

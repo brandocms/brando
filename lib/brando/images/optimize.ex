@@ -54,11 +54,11 @@ defmodule Brando.Images.Optimize do
 
     field_name_atom = (is_binary(field_name) && String.to_atom(field_name)) || field_name
 
-    with {:ok, img_field} <- check_field_has_changed(changeset, field_name, force?),
+    with {:ok, img_struct} <- check_field_has_changed(changeset, field_name, force?),
          {:ok, _} <- check_changeset_has_no_errors(changeset),
-         {:ok, type} <- check_valid_image_type(img_field),
+         {:ok, type} <- check_valid_image_type(img_struct),
          {:ok, cfg} <- check_image_type_has_config(type) do
-      do_optimize({cfg, changeset, field_name_atom, img_field})
+      do_optimize({cfg, changeset, field_name_atom, img_struct})
     else
       _ ->
         changeset
@@ -76,8 +76,8 @@ defmodule Brando.Images.Optimize do
     end
   end
 
-  defp check_valid_image_type(img_field) do
-    case Images.Utils.image_type(img_field.path) do
+  defp check_valid_image_type(img_struct) do
+    case Images.Utils.image_type(img_struct.path) do
       :jpeg -> {:ok, :jpeg}
       :png -> {:ok, :png}
       type -> {:not_valid, type}
@@ -91,7 +91,7 @@ defmodule Brando.Images.Optimize do
   defp check_field_has_changed(changeset, field_name, false) do
     case Changeset.get_change(changeset, field_name, nil) do
       nil -> {:no_change, changeset}
-      img_field -> {:ok, img_field}
+      img_struct -> {:ok, img_struct}
     end
   end
 
@@ -109,9 +109,9 @@ defmodule Brando.Images.Optimize do
     |> set_optimized_flag()
   end
 
-  defp run_optimizations({cfg, changeset, field_name, img_field}) do
+  defp run_optimizations({cfg, changeset, field_name, img_struct}) do
     Enum.map(
-      img_field.sizes,
+      img_struct.sizes,
       &Task.async(fn ->
         args = interpolate_and_split_args(elem(&1, 1), cfg[:args])
         execute_command(cfg[:bin], args)
@@ -120,8 +120,8 @@ defmodule Brando.Images.Optimize do
     |> Enum.map(&Task.await(&1, 60_000))
     |> Enum.filter(&(&1 != :ok))
     |> case do
-      [] -> {:ok, {cfg, changeset, field_name, img_field}}
-      _ -> {:error, {cfg, changeset, field_name, img_field}}
+      [] -> {:ok, {cfg, changeset, field_name, img_struct}}
+      _ -> {:error, {cfg, changeset, field_name, img_struct}}
     end
   end
 
@@ -161,9 +161,9 @@ defmodule Brando.Images.Optimize do
     |> Enum.map(&String.replace(&1, "%{new_filename}", new_filename))
   end
 
-  defp set_optimized_flag({:ok, {_, changeset, field_name, img_field}}) do
-    img_field = Map.put(img_field, :optimized, true)
-    Changeset.put_change(changeset, field_name, img_field)
+  defp set_optimized_flag({:ok, {_, changeset, field_name, img_struct}}) do
+    img_struct = Map.put(img_struct, :optimized, true)
+    Changeset.put_change(changeset, field_name, img_struct)
   end
 
   defp set_optimized_flag({:error, {_, changeset, _, _}}) do
