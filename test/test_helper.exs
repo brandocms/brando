@@ -51,8 +51,6 @@ defmodule Brando.Integration.TestCase do
   end
 end
 
-Code.require_file("support/user_socket.exs", __DIR__)
-
 Mix.Task.run("ecto.drop", ["-r", Repo, "--quiet"])
 Mix.Task.run("ecto.create", ["-r", Repo, "--quiet"])
 Mix.Task.run("ecto.migrate", ["-r", Repo, "--quiet"])

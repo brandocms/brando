@@ -1,4 +1,4 @@
-## v1.1.0
+## v2.0.0-alpha.0
 
 * Update for Ecto 3, Phoenix 1.4
 * More configuration choices in backend/config
@@ -7,6 +7,9 @@
 * More flexible cookie_law
 * Add rerendering of page fragments
 * Larger default image sizes
+* Rewritten backend JS
+* Rewritten generators
+* Rewritten image handling
 
 
 ## v1.0.0
