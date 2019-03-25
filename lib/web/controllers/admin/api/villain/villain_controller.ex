@@ -49,7 +49,9 @@ defmodule Brando.VillainController do
             image: %{
               id: image.id,
               sizes: sizes_map,
-              src: Brando.Utils.media_url(image.image.path)
+              src: Brando.Utils.media_url(image.image.path),
+              width: image.image.width,
+              height: image.image.height
             },
             form: %{
               method: "post",
@@ -110,7 +112,9 @@ defmodule Brando.VillainController do
             image: %{
               id: image.id,
               sizes: sizes_map,
-              src: Brando.Utils.media_url(image.image.path)
+              src: Brando.Utils.media_url(image.image.path),
+              width: image.image.width,
+              height: image.image.height
             },
             form: %{
               method: "post",
