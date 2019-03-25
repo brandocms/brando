@@ -23,7 +23,7 @@ p {
 
   > a {
     color: $dark;
-    border-bottom: 1px solid;
+    border-bottom: 1px solid #AAA39F;
     transition: border-color 250ms ease-out;
     &:hover {
       color: $dark;
@@ -34,6 +34,7 @@ p {
 }
 
 .lead-container p, p.lead {
+  letter-spacing: 0.8px;
   @each $bp-name, $bp-size in $grid-breakpoints {
     @include media-breakpoint-up($bp-name) {
       font-size: map-get($fontsize-lead, $bp-name);

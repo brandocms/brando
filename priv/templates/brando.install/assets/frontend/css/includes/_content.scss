@@ -1,0 +1,15 @@
+body {
+  main#content {
+    @include media-breakpoint-up(md) {
+      padding-top: 232px;
+    }
+
+    @include media-breakpoint-only(sm) {
+      padding-top: 155px;
+    }
+
+    @include media-breakpoint-only(xs) {
+      padding-top: 90px;
+    }
+  }
+}

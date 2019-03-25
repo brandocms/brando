@@ -1,3 +1,37 @@
+@function map-deep-get($map, $keys...) {
+  @each $key in $keys {
+      $map: map-get($map, $key);
+  }
+  @return $map;
+}
+
+@mixin make-col-pad($size, $columns: $grid-columns) {
+  $num: $size / $columns;
+  padding-left: if($num == 0, 0, percentage($num));
+  padding-right: if($num == 0, 0, percentage($num));
+}
+
+/* css always adds some spacing to top and bottom of elements, this ruins the absolute spacing. */
+@mixin fix-spacing() {
+  margin-top: -2px !important;
+  margin-bottom: -6px !important;
+}
+
+@mixin width-in-cols($size) {
+  $num: $size / $grid-columns;
+  width: if($num == 0, 0, percentage($num));
+  min-width: auto;
+}
+
+@mixin max-width-in-cols($size) {
+  $num: $size / $grid-columns;
+  max-width: if($num == 0, 0, percentage($num));
+}
+
+@mixin min-width-in-cols($size) {
+  $num: $size / $grid-columns;
+  min-width: if($num == 0, 0, percentage($num));
+}
 
 .sm-tc {
   @include media-breakpoint-down(sm) {
@@ -5,6 +39,31 @@
   }
 }
 
+.fancy-pad {
+  padding-bottom: 44px; /* same as the row gets pulled up */
+  margin-top: -5%;
+
+  @include media-breakpoint-down(sm) {
+    padding-bottom: 50px;
+    margin-top: 0;
+  }
+}
+
+.img-fluid {
+  min-width: 100%;
+}
+
+.p {
+  @include make-col-pad(1);
+
+  @include media-breakpoint-down(sm) {
+    @include make-col-pad(2);
+  }
+
+  @include media-breakpoint-down(xs) {
+    @include make-col-pad(1);
+  }
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // MARGIN
@@ -390,6 +449,11 @@
 
     [class^='col-'],
     [class*=' col-'] {
+      padding-right: ($gutter / 2);
+      padding-left: ($gutter / 2);
+    }
+
+    [class='col'] {
       padding-right: ($gutter / 2);
       padding-left: ($gutter / 2);
     }

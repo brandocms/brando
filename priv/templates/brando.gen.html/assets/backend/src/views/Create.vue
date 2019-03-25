@@ -30,6 +30,7 @@
 
 import nprogress from 'nprogress'
 import { showError, validateImageParams, stripParams } from 'kurtz/lib/utils'
+import { alertError } from 'kurtz/lib/utils/alerts'
 import { <%= vue_singular %>API } from '@/api/<%= vue_singular %>'
 
 export default {
@@ -52,18 +53,21 @@ export default {
 
   methods: {
     validate () {
-      this.$validator.validateAll().then(() => {
+      this.$validator.validateAll().then(valid => {
+        if (!valid) {
+          alertError('Feil i skjema', 'Vennligst se over og rett feil i rødt')
+          this.loading = false
+          return
+        }
         this.save()
       }).catch(err => {
         console.log(err)
-        alert('Feil i skjema', 'Vennligst se over og rett feil i rødt')
-        this.loading = false
       })
     },
 
     async save () {
       this.loading = false
-      let params = {...this.<%= vue_singular %>}
+      let params = { ...this.<%= vue_singular %> }
 
       // validate image params, if any, to ensure they are files
       // validateImageParams(params, ['avatar'])
@@ -72,7 +76,7 @@ export default {
         nprogress.start()
         await <%= vue_singular %>API.create<%= Recase.to_pascal(vue_singular) %>(params)
         nprogress.done()
-        this.$toast.success({message: 'Objekt opprettet'})
+        this.$toast.success({ message: 'Objekt opprettet' })
         this.$router.push({ name: '<%= plural %>' })
       } catch (err) {
         showError(err)

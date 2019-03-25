@@ -37,12 +37,12 @@
         # Disabled for now as they are also checked by Code Climate
         {Credo.Check.Design.TagTODO, false},
         {Credo.Check.Design.TagFIXME, false},
-
         {Credo.Check.Readability.FunctionNames},
         {Credo.Check.Readability.LargeNumbers},
         {Credo.Check.Readability.MaxLineLength, false},
         {Credo.Check.Readability.ModuleAttributeNames},
-        {Credo.Check.Readability.ModuleDoc, false}, # Until it is disabled for all .exs files
+        # Until it is disabled for all .exs files
+        {Credo.Check.Readability.ModuleDoc, false},
         {Credo.Check.Readability.ModuleNames},
         {Credo.Check.Readability.ParenthesesInCondition},
         {Credo.Check.Readability.PredicateFunctionNames},
@@ -50,7 +50,6 @@
         {Credo.Check.Readability.TrailingWhiteSpace},
         {Credo.Check.Readability.VariableNames},
         {Credo.Check.Readability.RedundantBlankLines},
-
         {Credo.Check.Refactor.ABCSize, false},
         {Credo.Check.Refactor.CondStatements},
         {Credo.Check.Refactor.FunctionArity},
@@ -61,7 +60,6 @@
         {Credo.Check.Refactor.NegatedConditionsWithElse},
         {Credo.Check.Refactor.Nesting},
         {Credo.Check.Refactor.UnlessWithElse},
-
         {Credo.Check.Warning.IExPry},
         {Credo.Check.Warning.IoInspect, false},
 
@@ -70,7 +68,6 @@
         {Credo.Check.Warning.NameRedeclarationByCase, false},
         {Credo.Check.Warning.NameRedeclarationByDef, false},
         {Credo.Check.Warning.NameRedeclarationByFn, false},
-
         {Credo.Check.Warning.OperationOnSameValues},
         {Credo.Check.Warning.BoolOperationOnSameValues},
         {Credo.Check.Warning.UnusedEnumOperation},
@@ -78,7 +75,7 @@
         {Credo.Check.Warning.UnusedListOperation},
         {Credo.Check.Warning.UnusedStringOperation},
         {Credo.Check.Warning.UnusedTupleOperation},
-        {Credo.Check.Warning.OperationWithConstantResult},
+        {Credo.Check.Warning.OperationWithConstantResult}
 
         # Custom checks can be created using `mix credo.gen.check`.
         #

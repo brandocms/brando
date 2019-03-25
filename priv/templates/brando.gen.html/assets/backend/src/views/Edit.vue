@@ -30,6 +30,7 @@
 
 import nprogress from 'nprogress'
 import { showError, validateImageParams, stripParams } from 'kurtz/lib/utils'
+import { alertError } from 'kurtz/lib/utils/alerts'
 import { <%= vue_singular %>API } from '@/api/<%= vue_singular %>'
 
 export default {
@@ -47,7 +48,7 @@ export default {
   async created () {
     this.loading++
     const v = await <%= vue_singular %>API.get<%= Recase.to_pascal(vue_singular) %>(this.<%= vue_singular %>Id)
-    this.<%= vue_singular %> = {...v}
+    this.<%= vue_singular %> = { ...v }
     this.loading--
   },
 
@@ -60,18 +61,21 @@ export default {
 
   methods: {
     validate () {
-      this.$validator.validateAll().then(() => {
+      this.$validator.validateAll().then(valid => {
+        if (!valid) {
+          alertError('Feil i skjema', 'Vennligst se over og rett feil i rødt')
+          this.loading = false
+          return
+        }
         this.save()
       }).catch(err => {
         console.log(err)
-        alert('Feil i skjema', 'Vennligst se over og rett feil i rødt')
-        this.loading = false
       })
     },
 
     async save () {
       this.loading = false
-      let params = {...this.<%= vue_singular %>}
+      let params = { ...this.<%= vue_singular %> }
 
       // strip out params we don't want sent in the mutation
       stripParams(params, ['__typename', 'id'])
@@ -83,7 +87,7 @@ export default {
         nprogress.start()
         await <%= singular %>API.update<%= Recase.to_pascal(vue_singular) %>(this.<%= vue_singular %>.id, params)
         nprogress.done()
-        this.$toast.success({message: 'Objekt endret'})
+        this.$toast.success({ message: 'Objekt endret' })
         this.$router.push({ name: '<%= plural %>' })
       } catch (err) {
         showError(err)

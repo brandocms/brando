@@ -3,15 +3,15 @@ defmodule Brando.Type.FileConfig do
   Defines a type for an image configuration field.
   """
   @type t :: %__MODULE__{}
-
   @behaviour Ecto.Type
-
-  import Brando.Utils, only: [stringy_struct: 2]
-
+  @derive Poison.Encoder
+  @derive Jason.Encoder
   defstruct allowed_mimetypes: ["application/pdf", "text/plain"],
             upload_path: Path.join("files", "default"),
             random_filename: false,
             size_limit: 10_240_000
+
+  import Brando.Utils, only: [stringy_struct: 2]
 
   @doc """
   Returns the internal type representation of our `Role` type for pg

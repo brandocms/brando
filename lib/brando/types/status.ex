@@ -57,8 +57,5 @@ defmodule Brando.Type.Status do
   def dump(atom) when is_atom(atom), do: {:ok, @status_codes[atom]}
   def dump(binary) when is_binary(binary), do: {:ok, String.to_integer(binary)}
   def dump(integer) when is_integer(integer), do: {:ok, integer}
-
-  def dump(_) do
-    :error
-  end
+  def dump(_), do: :error
 end

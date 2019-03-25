@@ -4,8 +4,12 @@ defmodule Brando.Type.Image do
   """
 
   @type t :: %__MODULE__{}
-
   @behaviour Ecto.Type
+
+  @derive {Poison.Encoder,
+           only: ~w(title credits path sizes optimized width height thumb medium focal)a}
+  @derive {Jason.Encoder,
+           only: ~w(title credits path sizes optimized width height focal)a}
 
   defstruct title: nil,
             credits: nil,
@@ -13,7 +17,8 @@ defmodule Brando.Type.Image do
             sizes: %{},
             optimized: false,
             width: nil,
-            height: nil
+            height: nil,
+            focal: %{"x" => 50, "y" => 50}
 
   @doc """
   Returns the internal type representation of our `Role` type for pg
@@ -28,9 +33,8 @@ defmodule Brando.Type.Image do
     {:ok, val}
   end
 
-  def cast(val) when is_map(val) do
+  def cast(val) when is_map(val), do:
     {:ok, val}
-  end
 
   @doc """
   Integers are never considered blank

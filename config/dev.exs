@@ -5,10 +5,13 @@ config :logger, :level, :debug
 
 # Configure Guardian for auth.
 config :guardian, Guardian,
-  allowed_algos: ["HS512"], # optional
-  verify_module: Guardian.JWT,  # optional
+  # optional
+  allowed_algos: ["HS512"],
+  # optional
+  verify_module: Guardian.JWT,
   issuer: "BrandoTesting",
   ttl: {30, :days},
-  verify_issuer: true, # optional
+  # optional
+  verify_issuer: true,
   secret_key: "XX9ND0BmT51mrKWp46WdYZoPWOv6awnEScbNg3HPWTnnl605tmDKEogZCb9109gb",
   serializer: Brando.GuardianSerializer

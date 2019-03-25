@@ -1,6 +1,5 @@
 defmodule Brando.Files.Field.FileFieldTest do
   use ExUnit.Case, async: true
-  import Brando.Files.Utils
 
   defmodule TestSchema do
     use Brando.Field.FileField

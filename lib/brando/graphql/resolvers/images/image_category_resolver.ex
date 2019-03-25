@@ -50,4 +50,13 @@ defmodule Brando.Images.ImageCategoryResolver do
     |> Images.delete_category()
     |> response
   end
+
+  @doc """
+  duplicate image category
+  """
+  def duplicate(%{image_category_id: image_category_id}, %{context: %{current_user: current_user}}) do
+    image_category_id
+    |> Images.duplicate_category(current_user)
+    |> response
+  end
 end

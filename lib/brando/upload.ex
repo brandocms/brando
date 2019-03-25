@@ -5,9 +5,7 @@ defmodule Brando.Upload do
   There are two distinct paths of travel within Brando for file uploading.
 
     1) `ImageField` and `FileField`.
-       `Brando.Plugs.Uploads` looks through params in the controller and passes off to
-       the module's `check_for_uploads` which is retrieved through `use Brando.Fields.ImageField`
-       or `use Brando.Fields.FileField`.
+        Called from the schema's changeset -> validate_upload
 
     2) `Brando.Image` / `Brando.Portfolio.Image`.
        Manually initiated from the controller by invoking `check_for_uploads` which is retrieved
@@ -16,7 +14,8 @@ defmodule Brando.Upload do
   This module contains helper functions for both paths.
   """
   defstruct plug: nil,
-            cfg: nil
+            cfg: nil,
+            extra_info: nil
 
   @type t :: %__MODULE__{}
 
@@ -30,6 +29,7 @@ defmodule Brando.Upload do
   """
   def process_upload(plug, cfg_struct) do
     with {:ok, upload} <- create_upload_struct(plug, cfg_struct),
+         {:ok, upload} <- extract_focal_info(upload),
          {:ok, upload} <- get_valid_filename(upload),
          {:ok, upload} <- check_mimetype(upload),
          {:ok, upload} <- create_upload_path(upload),
@@ -75,6 +75,19 @@ defmodule Brando.Upload do
 
   defp create_upload_struct(plug, cfg_struct) do
     {:ok, %__MODULE__{plug: plug, cfg: cfg_struct}}
+  end
+
+  defp extract_focal_info(%__MODULE__{plug: %Plug.Upload{filename: filename}} = upload) do
+    case Regex.named_captures(~r/(?<cleaned_filename>.*)\%\%\%(?<x>.+)\:(?<y>.+)\%\%\%/, filename) do
+      nil ->
+        upload = Map.put(upload, :extra_info, %{focal: %{"x" => 50, "y" => 50}})
+        {:ok, upload}
+
+      %{"x" => x, "y" => y, "cleaned_filename" => cleaned_filename} ->
+        upload = Map.put(upload, :extra_info, %{focal: %{"x" => x, "y" => y}})
+        upload = put_in(upload.plug.filename, cleaned_filename)
+        {:ok, upload}
+    end
   end
 
   defp get_valid_filename(%__MODULE__{plug: %Plug.Upload{filename: ""}}) do

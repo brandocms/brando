@@ -25,8 +25,10 @@ defmodule Brando.Images.ImageSeriesResolver do
   @doc """
   update image series
   """
-  def update(%{image_series_id: image_series_id, image_series_params: image_series_params}, _) do
-    Images.update_series(image_series_id, image_series_params)
+  def update(%{image_series_id: image_series_id, image_series_params: image_series_params}, %{
+        context: %{current_user: current_user}
+      }) do
+    Images.update_series(image_series_id, image_series_params, current_user)
     |> response
   end
 

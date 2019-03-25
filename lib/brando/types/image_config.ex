@@ -3,11 +3,10 @@ defmodule Brando.Type.ImageConfig do
   Defines a type for an image configuration field.
   """
   @type t :: %__MODULE__{}
-
   @behaviour Ecto.Type
 
-  import Brando.Utils, only: [stringy_struct: 2]
-
+  @derive Poison.Encoder
+  @derive Jason.Encoder
   defstruct allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
             default_size: :medium,
             upload_path: Path.join("images", "default"),
@@ -15,6 +14,8 @@ defmodule Brando.Type.ImageConfig do
             size_limit: 10_240_000,
             sizes: %{},
             srcset: nil
+
+  import Brando.Utils, only: [stringy_struct: 2]
 
   @doc """
   Returns the internal type representation of our `Role` type for pg
@@ -29,9 +30,8 @@ defmodule Brando.Type.ImageConfig do
     {:ok, val}
   end
 
-  def cast(val) when is_map(val) do
+  def cast(val) when is_map(val), do:
     {:ok, val}
-  end
 
   @doc """
   Integers are never considered blank
@@ -50,7 +50,6 @@ defmodule Brando.Type.ImageConfig do
   When dumping data to the database we expect a `list`, but check for
   other options as well.
   """
-  def dump(val) when is_map(val) do
+  def dump(val) when is_map(val), do:
     {:ok, val}
-  end
 end

@@ -8,12 +8,13 @@ defmodule Brando.HTML do
   import Brando.Gettext
   import Brando.Utils, only: [current_user: 1, active_path?: 2]
   import Brando.Meta.Controller, only: [put_meta: 3, get_meta: 1, get_meta: 2]
+  import Phoenix.HTML
+  import Phoenix.HTML.Tag
 
   @doc false
   defmacro __using__(_) do
     quote do
       import Brando.HTML
-      import Brando.HTML.Inspect
     end
   end
 
@@ -94,23 +95,37 @@ defmodule Brando.HTML do
   @doc """
   Displays a banner informing about cookie laws
   """
-  def cookie_law(conn, text, button_text \\ "OK") do
+  def cookie_law(conn, text, opts \\ []) do
     if Map.get(conn.cookies, "cookielaw_accepted") != "1" do
-      html = """
-      <section class="container cookie-container">
-        <section class="cookie-container-inner">
-          <div class="cookie-law">
-            <p>#{text}</p>
-            <button
-               class="dismiss-cookielaw">
-              #{button_text}
-            </button>
-          </div>
-        </section>
-      </section>
-      """
+      text = raw(text)
+      button_text = Keyword.get(opts, :button_text, "OK")
+      info_link = Keyword.get(opts, :info_link, "/cookies")
+      info_text = Keyword.get(opts, :info_text)
 
-      Phoenix.HTML.raw(html)
+      ~E|
+      <div class="container cookie-container">
+        <div class="cookie-container-inner">
+          <div class="cookie-law">
+            <div class="cookie-law-text">
+              <p><%= text %></p>
+            </div>
+            <div class="cookie-law-buttons">
+              <button
+                class="dismiss-cookielaw">
+                <%= button_text %>
+              </button>
+              <%= if info_text do %>
+              <a
+                href="<%= info_link %>"
+                class="info-cookielaw">
+                <%= info_text %>
+              </a>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+      |
     end
   end
 
@@ -191,16 +206,24 @@ defmodule Brando.HTML do
   @doc """
   Renders a <meta> tag
   """
-  def meta_tag(name, content) do
-    Phoenix.HTML.Tag.tag(:meta, content: content, property: name)
+  def meta_tag({"og:" <> og_property, content}) do
+    tag(:meta, content: content, property: "og:" <> og_property)
   end
 
   def meta_tag({name, content}) do
-    Phoenix.HTML.Tag.tag(:meta, content: content, property: name)
+    tag(:meta, content: content, name: name)
   end
 
   def meta_tag(attrs) when is_list(attrs) do
-    Phoenix.HTML.Tag.tag(:meta, attrs)
+    tag(:meta, attrs)
+  end
+
+  def meta_tag("og:" <> og_property, content) do
+    tag(:meta, content: content, property: "og:" <> og_property)
+  end
+
+  def meta_tag(name, content) do
+    tag(:meta, content: content, name: name)
   end
 
   @doc """
@@ -214,13 +237,54 @@ defmodule Brando.HTML do
       conn
       |> put_meta("og:title", "#{title}")
       |> put_meta("og:site_name", app_name)
-      |> put_meta("og:type", "article")
+      |> put_meta("og:type", "website")
       |> put_meta("og:url", Brando.Utils.current_url(conn))
+
+    conn =
+      case get_meta(conn, "keywords") do
+        nil ->
+          if meta_keywords = Brando.Config.get_site_config("meta_keywords") do
+            put_meta(conn, "keywords", meta_keywords)
+          else
+            conn
+          end
+
+        _ ->
+          conn
+      end
+
+    conn =
+      case get_meta(conn, "description") do
+        nil ->
+          if meta_description = Brando.Config.get_site_config("meta_description") do
+            conn
+            |> put_meta("description", meta_description)
+            |> put_meta("og:description", meta_description)
+          else
+            conn
+          end
+
+        _ ->
+          conn
+      end
 
     conn =
       case get_meta(conn, "og:image") do
         nil ->
-          conn
+          if meta_image = Brando.Config.get_site_config("meta_image") do
+            img =
+              if String.contains?(meta_image, "://") do
+                meta_image
+              else
+                Path.join("#{conn.scheme}://#{conn.host}", meta_image)
+              end
+
+            conn
+            |> put_meta("image", img)
+            |> put_meta("og:image", img)
+          else
+            conn
+          end
 
         img ->
           if String.contains?(img, "://") do
@@ -239,8 +303,8 @@ defmodule Brando.HTML do
 
   Checks conn.private for various settings
   """
-  def body_tag(conn) do
-    id = conn.private[:brando_section_name]
+  def body_tag(conn, opts \\ []) do
+    id = Keyword.get(opts, :id, nil)
     data_script = conn.private[:brando_section_name]
     classes = conn.private[:brando_css_classes]
 
@@ -248,7 +312,7 @@ defmodule Brando.HTML do
 
     body =
       if id,
-        do: body <> ~s( id="toppen"),
+        do: body <> ~s( id="#{id}"),
         else: body
 
     body =
@@ -285,11 +349,15 @@ defmodule Brando.HTML do
   @doc """
   Outputs an `img` tag marked as safe html
 
+  The `srcset` attribute is the ACTUAL width of the image, as saved to disk. You'll find that in the
+  image type's `sizes` map.
+
   ## Options:
 
     * `prefix` - string to prefix to the image's url. I.e. `prefix: media_url()`
     * `default` - default value if `image_field` is nil. Does not respect `prefix`, so use
       full path.
+    * `cache` - key to cache by, i.e `cache: schema.updated_at`
     * `srcset` - if you want to use the srcset attribute. Set in the form of `{module, field}`.
       I.e `srcset: {Brando.User, :avatar}`
       You can also reference a config struct directly:
@@ -311,22 +379,99 @@ defmodule Brando.HTML do
     width_attr = (Keyword.get(opts, :width) && [width: Map.get(image_field, :width)]) || []
     height_attr = (Keyword.get(opts, :height) && [height: Map.get(image_field, :height)]) || []
     extra_attrs = Keyword.get(opts, :attrs, [])
+    lightbox = Keyword.get(opts, :lightbox, false)
+    img_src = Brando.Utils.img_url(image_field, size, opts)
 
     attrs =
       Keyword.new()
-      |> Keyword.put(:src, Brando.Utils.img_url(image_field, size, opts))
+      |> Keyword.put(:src, img_src)
       |> Keyword.merge(
-        Keyword.drop(opts, [:attrs, :prefix, :srcset, :sizes, :default]) ++
+        Keyword.drop(opts, [:lightbox, :cache, :attrs, :prefix, :srcset, :sizes, :default]) ++
           sizes_attr ++ srcset_attr ++ width_attr ++ height_attr ++ extra_attrs
       )
 
     # if we have srcset, set src as empty svg
     attrs = (srcset_attr != [] && Keyword.put(attrs, :src, svg_fallback(image_field))) || attrs
 
-    Phoenix.HTML.Tag.tag(:img, attrs)
+    if lightbox do
+      ~E|
+        <a href="<%= img_src %>" data-lightbox>
+          <%= tag(:img, attrs) %>
+        </a>
+      |
+    else
+      tag(:img, attrs)
+    end
   end
 
-  def ratio(%{height: height, width: width}) when is_nil(height) or is_nil(width), do: 0
+  @doc """
+  Outputs a `picture` tag with source, img and a noscript fallback
+
+  The `srcset` attribute is the ACTUAL width of the image, as saved to disk. You'll find that in the
+  image type's `sizes` map.
+
+  ## Options:
+
+    * `prefix` - string to prefix to the image's url. I.e. `prefix: media_url()`
+    * `picture_class` - class added to the picture root element
+    * `img_class` - class added to the img element. I.e img_class: "img-fluid"
+    * `srcset` - if you want to use the srcset attribute. Set in the form of `{module, field}`.
+      I.e `srcset: {Brando.User, :avatar}`
+      You can also reference a config struct directly:
+      I.e `srcset: image_series.cfg`
+      Or supply a srcset directly:
+        srcset: %{
+          "small" => "300w",
+          "medium" => "582w",
+          "large" => "936w",
+          "xlarge" => "1200w"
+        }
+  """
+  @spec picture_tag(Map.t(), keyword()) :: {:safe, [...]}
+  def picture_tag(img_struct, opts \\ []) do
+    src = Brando.Utils.img_url(img_struct, Keyword.get(opts, :size, :xlarge), opts)
+    sizes = (Keyword.get(opts, :sizes) && get_sizes(opts[:sizes])) || false
+    srcset = (Keyword.get(opts, :srcset) && get_srcset(img_struct, opts[:srcset], opts)) || false
+    width = (Keyword.get(opts, :width) && Map.get(img_struct, :width)) || false
+    height = (Keyword.get(opts, :height) && Map.get(img_struct, :height)) || false
+    img_class = Keyword.get(opts, :img_class, false)
+    picture_class = Keyword.get(opts, :picture_class, false)
+
+    picture_attrs = [
+      class: picture_class
+    ]
+
+    source_attrs = [
+      data_srcset: srcset,
+      sizes: sizes
+    ]
+
+    img_attrs = [
+      data_srcset: srcset,
+      data_src: src,
+      sizes: sizes,
+      class: img_class,
+      width: width,
+      height: height
+    ]
+
+    noscript_img_attrs = [
+      src: src,
+      class: img_class
+    ]
+
+    img_tag = tag(:img, img_attrs)
+    noscript_img_tag = tag(:img, noscript_img_attrs)
+    source_tag = tag(:source, source_attrs)
+    noscript_tag = content_tag(:noscript, noscript_img_tag)
+    content_tag(:picture, [source_tag, img_tag, noscript_tag], picture_attrs)
+  end
+
+  @doc """
+  Calculate image ratio
+  """
+  def ratio(%{height: height, width: width})
+      when is_nil(height) or is_nil(width), do: 0
 
   def ratio(%{height: height, width: width}) do
     Decimal.new(height)
@@ -336,6 +481,9 @@ defmodule Brando.HTML do
 
   def ratio(nil), do: 0
 
+  @doc """
+  Return a correctly sized svg fallback
+  """
   def svg_fallback(image_field) do
     width = Map.get(image_field, :width, 0)
     height = Map.get(image_field, :height, 0)
@@ -350,14 +498,12 @@ defmodule Brando.HTML do
   """
   def get_sizes(nil), do: nil
 
-  def get_sizes(sizes) when is_list(sizes) do
+  def get_sizes(sizes) when is_list(sizes), do:
     Enum.join(sizes, ", ")
-  end
 
-  def get_sizes(_) do
+  def get_sizes(_), do:
     raise ArgumentError,
       message: ~s<sizes key must be a list: ["(min-width: 36em) 33.3vw", "100vw"]>
-  end
 
   @doc """
   Get srcset from image config

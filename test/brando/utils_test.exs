@@ -87,8 +87,14 @@ defmodule Brando.UtilsTest do
 
   test "active_path?/2" do
     conn = conn(:get, "/some/link")
-    assert active_path?(conn, "/some/link")
-    refute active_path?(conn, "/some/other/link")
+    assert active_path?(conn, "/some/link") == true
+    assert active_path?(conn, "/some/*") == true
+    assert active_path?(conn, "/some/other/link") == false
+    assert active_path?(conn, "/some/other/*") == false
+
+    conn = conn(:get, "/some/link/that/is/really/long")
+    assert active_path?(conn, "/some/*") == true
+    assert active_path?(conn, "/some/test/*") == false
   end
 
   test "img_url/2" do

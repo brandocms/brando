@@ -75,15 +75,9 @@ defmodule Brando.Utils.Schema do
     end
   end
 
-  defp get_unique_slug(_, _, _) do
+  defp get_unique_slug(_, _, _), do:
     {:error, :too_many_attempts}
-  end
 
-  defp construct_slug(slug, 0) do
-    slug
-  end
-
-  defp construct_slug(slug, attempts) do
-    "#{slug}-#{to_string(attempts)}"
-  end
+  defp construct_slug(slug, 0), do: slug
+  defp construct_slug(slug, attempts), do: "#{slug}-#{to_string(attempts)}"
 end

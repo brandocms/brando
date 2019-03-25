@@ -54,20 +54,27 @@ defmodule Brando.Utils do
   @spec random_filename(String.t()) :: String.t()
   def random_filename(filename) do
     ext = Path.extname(filename)
+    random_str = random_string(filename)
+    "#{random_str}#{ext}"
+  end
 
+  @doc """
+  Generate a random string from `seed`
+  """
+  def random_string(seed) do
     rnd_basename_1 =
-      {filename, :os.timestamp()}
+      {seed, :os.timestamp()}
       |> :erlang.phash2()
       |> Integer.to_string(32)
       |> String.downcase()
 
     rnd_basename_2 =
-      {:os.timestamp(), filename}
+      {:os.timestamp(), seed}
       |> :erlang.phash2()
       |> Integer.to_string(32)
       |> String.downcase()
 
-    "#{rnd_basename_1}#{rnd_basename_2}#{ext}"
+    rnd_basename_1 <> rnd_basename_2
   end
 
   @doc """
@@ -225,9 +232,7 @@ defmodule Brando.Utils do
     url_cfg = Brando.endpoint().config(:url)
     scheme = Keyword.get(url_cfg, :scheme, "http")
     host = Keyword.get(url_cfg, :host, "localhost")
-    port = Keyword.get(url_cfg, :port, "80")
-    port = (port == "80" && "") || ":#{port}"
-    "#{scheme}://#{host}#{port}"
+    "#{scheme}://#{host}"
   end
 
   @doc """
@@ -309,16 +314,15 @@ defmodule Brando.Utils do
   @doc """
   Runs some config checks.
   """
-  def run_checks do
-    # noop, deprecated
+  defmacro run_checks do
+    raise "run_checks/0 is deprecated. Remove."
   end
 
   @doc """
   Returns the Helpers module from the router.
   """
-  def helpers(conn) do
+  def helpers(conn), do:
     Phoenix.Controller.router_module(conn).__helpers__
-  end
 
   @doc """
   Return the current user set in session.
@@ -330,28 +334,74 @@ defmodule Brando.Utils do
   """
   @spec active_path?(Plug.Conn.t(), String.t()) :: boolean
   def active_path?(conn, url_to_match) do
-    conn.request_path == url_to_match
+    current_path = Path.join(["/" | conn.path_info])
+    chunks = String.split(url_to_match, "/")
+
+    {url, current_path} =
+      if List.last(chunks) == "*" do
+        url_without_star =
+          chunks
+          |> List.delete_at(Enum.count(chunks) - 1)
+          |> Enum.reject(&(&1 == ""))
+
+        chunks_count = Enum.count(url_without_star)
+
+        split_current_path =
+          current_path
+          |> String.split("/")
+          |> Enum.reject(&(&1 == ""))
+
+        shortened_path =
+          for {path, x} <- Enum.with_index(split_current_path) do
+            if x < chunks_count do
+              path
+            else
+              ""
+            end
+          end
+          |> Enum.reject(&(&1 == ""))
+          |> Enum.join("/")
+
+        {Enum.join(url_without_star, "/"), shortened_path}
+      else
+        {url_to_match, current_path}
+      end
+
+    current_path == url
   end
 
   @doc """
   Returns the application name set in config.exs
   """
-  def app_name do
+  def app_name, do:
     Brando.config(:app_name)
-  end
 
   @doc """
   Grabs `path` from the file field struct
   """
   def file_url(file_field, opts \\ [])
-
-  def file_url(nil, _) do
-    nil
-  end
-
+  def file_url(nil, _), do: nil
   def file_url(file_field, opts) do
     prefix = Keyword.get(opts, :prefix, nil)
     (prefix && Path.join([prefix, file_field.path])) || file_field.path
+  end
+
+  @doc """
+  Create a cache string and return
+  """
+  def add_cache_string(opts) do
+    case Keyword.get(opts, :cache, nil) do
+      nil ->
+        ""
+
+      cache ->
+        stamp =
+          cache
+          |> DateTime.from_naive!("Etc/UTC")
+          |> DateTime.to_unix()
+
+        "?#{stamp}"
+    end
   end
 
   @doc """
@@ -364,17 +414,19 @@ defmodule Brando.Utils do
 
   def img_url(nil, size, opts) do
     default = Keyword.get(opts, :default, nil)
-    (default && Brando.Images.Utils.size_dir(default, size)) || ""
+    (default && Brando.Images.Utils.get_sized_path(default, size)) || "" <> add_cache_string(opts)
   end
 
   def img_url("", size, opts) do
     default = Keyword.get(opts, :default, nil)
-    (default && Brando.Images.Utils.size_dir(default, size)) || ""
+    (default && Brando.Images.Utils.get_sized_path(default, size)) || "" <> add_cache_string(opts)
   end
 
   def img_url(image_field, :original, opts) do
     prefix = Keyword.get(opts, :prefix, nil)
-    (prefix && Path.join([prefix, image_field.path])) || image_field.path
+
+    (prefix && Path.join([prefix, image_field.path])) ||
+      image_field.path <> add_cache_string(opts)
   end
 
   def img_url(image_field, size, opts) do
@@ -382,22 +434,29 @@ defmodule Brando.Utils do
     prefix = Keyword.get(opts, :prefix, nil)
 
     size_dir =
-      if Map.has_key?(image_field.sizes, size) do
-        image_field.sizes[size]
-      else
-        IO.warn(
-          ~s(Wrong key for img_url. Size `#{size}` does not exist for #{inspect(image_field)})
-        )
+      try do
+        if Map.has_key?(image_field.sizes, size) do
+          image_field.sizes[size]
+        else
+          IO.warn(
+            ~s(Wrong key for img_url. Size `#{size}` does not exist for #{inspect(image_field)})
+          )
 
-        "non_existing"
+          "non_existing"
+        end
+      rescue
+        KeyError ->
+          if Map.has_key?(image_field["sizes"], size) do
+            image_field["sizes"][size]
+          end
       end
 
     url = (prefix && Path.join([prefix, size_dir])) || size_dir
 
     case Map.get(image_field, :optimized) do
-      true -> Brando.Images.Utils.optimized_filename(url)
-      false -> url
-      nil -> url
+      true -> Brando.Images.Utils.optimized_filename(url) <> add_cache_string(opts)
+      false -> url <> add_cache_string(opts)
+      nil -> url <> add_cache_string(opts)
     end
   end
 
@@ -451,10 +510,12 @@ defmodule Brando.Utils do
     IO.iodata_to_binary([first, rest]) |> String.trim_leading()
   end
 
-  def human_spaced_number(int) when is_integer(int) do
+  def human_spaced_number(int) when is_integer(int), do:
     human_spaced_number(Integer.to_string(int))
-  end
 
+  @doc """
+  Get dependencies' versions
+  """
   def get_deps_versions do
     :application.which_applications()
     |> Enum.filter(&(elem(&1, 0) in @filtered_deps))

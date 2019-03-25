@@ -15,6 +15,10 @@ defmodule Brando.User do
   @required_fields ~w(full_name email password language)a
   @optional_fields ~w(role avatar active)a
 
+  @derived_fields ~w(id full_name email password language role avatar active inserted_at updated_at)a
+  @derive {Poison.Encoder, only: @derived_fields}
+  @derive {Jason.Encoder, only: @derived_fields}
+
   schema "users" do
     field :email, :string
     field :full_name, :string
@@ -100,7 +104,6 @@ defmodule Brando.User do
   def changeset(schema, :update, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
-    |> cleanup_old_images()
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, ~r/@/)
     |> unique_constraint(:email)
@@ -115,9 +118,8 @@ defmodule Brando.User do
   @doc """
   Orders by ID
   """
-  def order_by_id(query) do
+  def order_by_id(query), do:
     from m in query, order_by: m.id
-  end
 
   @doc """
   Checks `password` against `user`. Return bool.
@@ -129,9 +131,8 @@ defmodule Brando.User do
   Checks if `user` has `role`.
   """
   @spec role?(t, atom) :: boolean
-  def role?(user, role) when is_atom(role) do
+  def role?(user, role) when is_atom(role), do:
     role == user.role
-  end
 
   @doc """
   Checks if `user` has access to admin area.
@@ -141,29 +142,4 @@ defmodule Brando.User do
     {:ok, role} = Brando.Type.Role.dump(user.role)
     (role > 0 && true) || false
   end
-
-  #
-  # Meta
-
-  use Brando.Meta.Schema,
-    singular: gettext("user"),
-    plural: gettext("users"),
-    repr: &"#{&1.full_name} (#{&1.email})",
-    fields: [
-      id: gettext("ID"),
-      email: gettext("Email"),
-      full_name: gettext("Full name"),
-      password: gettext("Password"),
-      role: gettext("Roles"),
-      language: gettext("Language"),
-      last_login: gettext("Last login"),
-      inserted_at: gettext("Inserted at"),
-      updated_at: gettext("Updated at"),
-      avatar: gettext("Avatar")
-    ],
-    fieldsets: [
-      rights: gettext("Rights"),
-      user_information: gettext("User information")
-    ],
-    hidden_fields: [:password, :creator]
 end

@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "1.0.0"
+  @version "2.0.0-alpha.0"
   @description "A helping hand for Twined applications."
 
   def project do
@@ -12,6 +12,7 @@ defmodule Brando.Mixfile do
       deps: deps(),
       dialyzer: [
         plt_add_apps: [
+          :flow,
           :gettext,
           :comeonin,
           :guardian,
@@ -53,6 +54,7 @@ defmodule Brando.Mixfile do
 
   defp applications(_all) do
     [
+      :flow,
       :absinthe,
       :gettext,
       :comeonin,
@@ -63,8 +65,6 @@ defmodule Brando.Mixfile do
       :phoenix_html,
       :poison,
       :recase,
-      :scrivener,
-      :scrivener_ecto,
       :sentry,
       :slugger,
       :timex
@@ -75,19 +75,21 @@ defmodule Brando.Mixfile do
     [
       {:bcrypt_elixir, "~> 1.0"},
       {:comeonin, "~> 4.0"},
-      {:earmark, "~> 1.2", override: true},
+      {:earmark, "~> 1.2"},
       {:gettext, "~> 0.11"},
       {:httpoison, "~> 0.9"},
       {:mogrify, "~> 0.5"},
-      {:phoenix, "~> 1.3.0", override: true},
+      {:phoenix, "~> 1.4.0"},
       {:phoenix_html, "~> 2.6"},
-      {:phoenix_ecto, "~> 3.2"},
-      {:postgrex, "~> 0.13", override: true},
+      {:phoenix_ecto, "~> 4.0"},
+      {:postgrex, "~> 0.14"},
       {:slugger, "~> 0.2"},
       {:recase, "~> 0.2"},
-      {:scrivener_ecto, "~> 1.1"},
       {:guardian, "~> 1.0"},
       {:timex, "~> 3.0"},
+      {:ecto, "~> 3.0"},
+      {:ecto_sql, "~> 3.0"},
+      {:flow, "~> 0.14"},
 
       # monitoring
       {:sentry, "~> 6.0"},
@@ -95,12 +97,13 @@ defmodule Brando.Mixfile do
       # Dev dependencies
       {:credo, ">= 0.0.0", only: :dev},
       {:dialyxir, "~> 0.3", only: :dev},
+      {:mix_test_watch, "~> 0.8", only: :dev, runtime: false},
 
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test},
       {:excoveralls, "~> 0.6", only: :test},
-      {:absinthe, "~> 1.4.0", override: true},
-      {:absinthe_plug, "~> 1.4.0", override: true},
+      {:absinthe, "~> 1.4"},
+      {:absinthe_plug, "~> 1.4"},
       {:absinthe_ecto, "~> 0.1.0"},
 
       # Documentation dependencies
@@ -111,7 +114,7 @@ defmodule Brando.Mixfile do
 
   defp package do
     [
-      maintainers: ["Twined Networks"],
+      maintainers: ["Univers/Twined"],
       licenses: [""],
       files: [
         "assets",
@@ -121,9 +124,7 @@ defmodule Brando.Mixfile do
         "test",
         "mix.exs",
         "README.md",
-        "CHANGELOG.md",
-        "brunch-config.js",
-        "package.json"
+        "CHANGELOG.md"
       ]
     ]
   end

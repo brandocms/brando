@@ -29,17 +29,15 @@ defmodule <%= application_module %>Web do
 
   def controller do
     quote do
-      use Phoenix.Controller, namespace: <%= application_module %>Web
-      import <%= application_module %>Web.Router.Helpers
+      use Phoenix.Controller,
+        namespace: <%= application_module %>Web
+
       import <%= application_module %>Web.Gettext
-
-      alias <%= application_module %>.Repo
-
-      import Ecto
-      import Ecto.Query
-
-      import Brando.Meta.Controller, only: [put_meta: 3]
+      import Brando.Meta.Controller, only: [put_meta: 2, put_meta: 3]
       import Brando.Plug.HTML
+      import Plug.Conn
+
+      alias <%= application_module %>Web.Router.Helpers, as: Routes
     end
   end
 
@@ -57,8 +55,9 @@ defmodule <%= application_module %>Web do
 
   def view do
     quote do
-      use Phoenix.View, root: "lib/<%= application_name %>_web/templates",
-                        namespace: <%= application_module %>Web
+      use Phoenix.View,
+        root: "lib/<%= application_name %>_web/templates",
+        namespace: <%= application_module %>Web
 
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_csrf_token: 0, get_flash: 2, view_module: 1]
@@ -68,16 +67,21 @@ defmodule <%= application_module %>Web do
 
       import Brando.HTML
       import Brando.Utils
+      import Brando.Pages, only: [render_fragment: 2, render_fragment: 3]
 
-      import <%= application_module %>Web.Router.Helpers
       import <%= application_module %>Web.ErrorHelpers
       import <%= application_module %>Web.Gettext
+
+      alias <%= application_module %>Web.Router.Helpers, as: Routes
     end
   end
 
   def router do
     quote do
       use Phoenix.Router
+      import Plug.Conn
+      import Phoenix.Controller
+      import Brando.Meta.Controller
     end
   end
 

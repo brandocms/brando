@@ -3,14 +3,14 @@ defmodule Brando.Integration.ImageTest do
   use Brando.ConnCase
   use Brando.Integration.TestCase
 
+  alias Brando.Factory
   alias Brando.Image
   alias Brando.Images
   alias Brando.ImageSeries
-  alias Brando.Factory
 
   @params %{
     sequence: 0,
-    image: %{
+    image: %Brando.Type.Image{
       title: "Title",
       credits: "credits",
       path: "/tmp/path/to/fake/image.jpg",
@@ -23,7 +23,7 @@ defmodule Brando.Integration.ImageTest do
 
   @params2 %{
     sequence: 1,
-    image: %{
+    image: %Brando.Type.Image{
       title: "Title2",
       credits: "credits2",
       path: "/tmp/path/to/fake/image2.jpg",
@@ -87,7 +87,7 @@ defmodule Brando.Integration.ImageTest do
     assert cs.errors == [sequence: {"is invalid", [type: :integer, validation: :cast]}]
   end
 
-  test "update_image_meta/3", %{user: user, series: series} do
+  test "update_image_meta/4", %{user: user, series: series} do
     assert {:ok, image} =
              @params
              |> Map.put(:creator_id, user.id)
@@ -97,7 +97,8 @@ defmodule Brando.Integration.ImageTest do
     assert image.image.title == "Title"
     assert image.image.credits == "credits"
 
-    assert {:ok, new_image} = Images.update_image_meta(image, "new title", "new credits")
+    assert {:ok, new_image} =
+             Images.update_image_meta(image, "new title", "new credits", %{"x" => 50, "y" => 50})
 
     refute new_image.image == image.image
     assert new_image.image.title == "new title"
@@ -184,17 +185,5 @@ defmodule Brando.Integration.ImageTest do
       |> Brando.repo().preload(:images)
 
     assert Enum.count(series.images) == 0
-  end
-
-  test "meta", %{user: user, series: series} do
-    assert {:ok, image} =
-             @params
-             |> Map.put(:creator_id, user.id)
-             |> Map.put(:image_series_id, series.id)
-             |> Images.create_image(user)
-
-    assert Brando.Image.__name__(:singular) == "image"
-    assert Brando.Image.__name__(:plural) == "images"
-    assert Brando.Image.__repr__(image) == "#{image.id} | /tmp/path/to/fake/image.jpg"
   end
 end

@@ -8,13 +8,36 @@ defmodule Brando.ImageCategory do
 
   use Brando.Web, :schema
 
-  import Brando.Gettext
   import Ecto.Query, only: [from: 2]
   import Ecto.Changeset
 
   @required_fields ~w(name creator_id)a
   @optional_fields ~w(cfg slug)a
 
+  @derive {Poison.Encoder,
+           only: [
+             :id,
+             :name,
+             :slug,
+             :cfg,
+             :creator,
+             :creator_id,
+             :image_series,
+             :inserted_at,
+             :updated_at
+           ]}
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :name,
+             :slug,
+             :cfg,
+             :creator,
+             :creator_id,
+             :image_series,
+             :inserted_at,
+             :updated_at
+           ]}
   schema "imagecategories" do
     field :name, :string
     field :slug, :string
@@ -108,22 +131,4 @@ defmodule Brando.ImageCategory do
   end
 
   def validate_paths(cs), do: cs
-
-  #
-  # Meta
-
-  use Brando.Meta.Schema,
-    singular: gettext("image category"),
-    plural: gettext("image categories"),
-    repr: & &1.name,
-    fields: [
-      id: gettext("ID"),
-      name: gettext("Name"),
-      slug: gettext("Slug"),
-      cfg: gettext("Config"),
-      creator: gettext("Creator"),
-      image_series: gettext("Image series"),
-      inserted_at: gettext("Inserted at"),
-      updated_at: gettext("Updated at")
-    ]
 end

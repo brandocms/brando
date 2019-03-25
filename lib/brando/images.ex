@@ -5,15 +5,14 @@ defmodule Brando.Images do
   Interfaces with database
   """
 
-  alias Brando.{ImageCategory, ImageSeries, Image}
-
-  import Brando.Upload
+  alias Brando.Image
+  alias Brando.ImageCategory
+  alias Brando.ImageSeries
 
   import Brando.Images.Utils,
     only: [
-      create_image_sizes: 1,
       delete_original_and_sized_images: 2,
-      recreate_sizes_for: 2
+      recreate_sizes_for: 3
     ]
 
   import Brando.Utils.Schema, only: [put_creator: 2]
@@ -48,19 +47,40 @@ defmodule Brando.Images do
     Brando.repo().get!(Image, id)
   end
 
+  @doc """
+  Get category id by slug
+  """
   def get_category_id_by_slug(slug) do
     category = Brando.repo().get_by(ImageCategory, slug: slug)
     {:ok, category.id}
   end
 
   @doc """
+  Get or create category id by slug
+  """
+  def get_or_create_category_id_by_slug(slug, user) do
+    case Brando.repo().get_by(ImageCategory, slug: slug) do
+      nil ->
+        create_category(%{name: slug, slug: slug}, user)
+
+      category ->
+        {:ok, category}
+    end
+  end
+
+  @doc """
   Updates the `schema`'s image JSON field with `title` and `credits`
   """
-  def update_image_meta(schema, title, credits) do
+  def update_image_meta(schema, title, credits, focal, user \\ :system) do
     image =
       schema.image
       |> Map.put(:title, title)
       |> Map.put(:credits, credits)
+      |> Map.put(:focal, focal)
+
+    unless Map.equal?(Map.get(schema.image, :focal, nil), focal) do
+      recreate_sizes_for(:image, put_in(schema.image, image), user)
+    end
 
     update_image(schema, %{"image" => image})
   end
@@ -92,7 +112,7 @@ defmodule Brando.Images do
   Update image series.
   If slug or category has changed, we redo all the images
   """
-  def update_series(id, data) do
+  def update_series(id, data, user \\ :system) do
     changeset =
       ImageSeries
       |> Brando.repo().get_by!(id: id)
@@ -105,7 +125,7 @@ defmodule Brando.Images do
         # if slug is changed we recreate all the image sizes to reflect the new path
         if Ecto.Changeset.get_change(changeset, :slug) ||
              Ecto.Changeset.get_change(changeset, :image_category_id),
-           do: recreate_sizes_for(:image_series, inserted_series.id)
+           do: recreate_sizes_for(:image_series, inserted_series.id, user)
 
         {:ok, Brando.repo().preload(inserted_series, :image_category)}
 
@@ -127,7 +147,7 @@ defmodule Brando.Images do
   @doc """
   Update series's config
   """
-  def update_series_config(id, cfg) do
+  def update_series_config(id, cfg, user \\ :system) do
     res =
       ImageSeries
       |> Brando.repo().get_by!(id: id)
@@ -136,7 +156,7 @@ defmodule Brando.Images do
 
     case res do
       {:ok, series} ->
-        recreate_sizes_for(:image_series, series.id)
+        recreate_sizes_for(:image_series, series.id, user)
         {:ok, series}
 
       err ->
@@ -215,8 +235,12 @@ defmodule Brando.Images do
   Get series's config
   """
   def get_series_config(id) do
-    {:ok, series} = get_series(id)
-    {:ok, series.cfg}
+    with {:ok, series} <- get_series(id) do
+      {:ok, series.cfg}
+    else
+      err ->
+        err
+    end
   end
 
   @doc """
@@ -251,11 +275,17 @@ defmodule Brando.Images do
     end
   end
 
+  @doc """
+  Preload images and category
+  """
   def preload_series({:ok, series}) do
     series = Brando.repo().preload(series, [:images, :image_category])
     {:ok, series}
   end
 
+  @doc """
+  List categories by name
+  """
   def list_categories do
     categories =
       Brando.repo().all(
@@ -297,6 +327,26 @@ defmodule Brando.Images do
     {:ok, category}
   end
 
+  @doc """
+  Duplicate category with id `id`.
+  """
+  def duplicate_category(id, user) do
+    cat = Brando.repo().get_by!(ImageCategory, id: id)
+
+    params = %{
+      name: cat.name <> " kopi",
+      slug: cat.slug <> "-kopi",
+      creator_id: user.id,
+      cfg: Map.put(cat.cfg, :upload_path, "images/site/" <> cat.slug <> "-kopi")
+    }
+
+    cs = ImageCategory.changeset(%ImageCategory{}, :create, params)
+    Brando.repo().insert(cs)
+  end
+
+  @doc """
+  Count image series in category (by id)
+  """
   def image_series_count(category_id) do
     Brando.repo().one(
       from is in ImageSeries,
@@ -312,43 +362,5 @@ defmodule Brando.Images do
     categories = Brando.repo().all(ImageCategory)
     series = Brando.repo().all(ImageSeries)
     Brando.Images.Utils.get_orphaned_series(categories, series, starts_with: "images/site")
-  end
-
-  @doc """
-  Checks `params` for Plug.Upload fields and passes them on.
-  Fields in the `put_fields` map are added to the schema.
-  Returns {:ok, schema} or raises
-  """
-  def check_for_uploads(params, current_user, cfg, put_fields \\ nil) do
-    Enum.reduce(filter_plugs(params), [], fn named_plug, _ ->
-      handle_upload(
-        named_plug,
-        &create_image_struct/1,
-        current_user,
-        put_fields,
-        cfg
-      )
-    end)
-  end
-
-  @doc """
-  Handles Plug.Upload for our modules.
-  This is the handler for Brando.Image and Brando.Portfolio.Image
-  """
-  def handle_upload({name, plug}, process_fn, user, put_fields, cfg) do
-    with {:ok, upload} <- process_upload(plug, cfg),
-         {:ok, processed_field} <- process_fn.(upload) do
-      params = Map.put(put_fields, name, processed_field)
-      create_image(params, user)
-    else
-      err -> handle_upload_error(err)
-    end
-  end
-
-  @doc """
-  Passes upload to create_image_sizes.
-  """
-  def create_image_struct(upload) do
-    create_image_sizes(upload)
   end
 end

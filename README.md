@@ -1,6 +1,6 @@
 A helping hand.
 
-![Brando logo](https://raw.githubusercontent.com/twined/brando/develop/priv/templates/brando.install/assets/static/brando/images/brando-big.png)
+![Brando logo](https://raw.githubusercontent.com/twined/brando/master/priv/templates/brando.install/assets/frontend/static/images/brando/brando-big.png)
 
 [![Build Status](https://travis-ci.org/twined/brando.svg?branch=master)](https://travis-ci.org/twined/brando)
 [![Coverage Status](https://coveralls.io/repos/github/twined/brando/badge.svg?branch=master)](https://coveralls.io/github/twined/brando?branch=master)
@@ -17,33 +17,17 @@ Start by creating a new phoenix project:
 
 Add Brando to `deps` in your `mix.exs` file:
 
-```elixir
-defp deps do
-  [{:brando, github: "twined/brando", branch: "develop"}]
-end
-```
+    $ gsed -i '/{:phoenix,/i\      {:brando, github: "twined/brando", branch: "develop"},' mix.exs
 
 Fetch and compile dependencies. Install Brando:
 
-    $ mix do deps.get, deps.compile, brando.install --module Neva, deps.get, deps.compile
+    $ mix do deps.get, deps.compile, brando.install --module MyApp, deps.get, deps.compile
 
 Add to your `config/config.exs` right before the env-specific import:
 
-```diff
-+ # Import Brando specific config.
-+ import_config "brando.exs"
-+
-  # Import environment specific config. This must remain at the bottom
-  # of this file so it overrides the configuration defined above.
-  import_config "#{Mix.env}.exs"
-```
+    $ gsed -i '/Import environment specific config/i\# import BRANDO config\nimport_config "brando.exs"\n' config/config.exs
 
-Add to your relevant `config/%{env}.exs` Repo config:
-
-```diff
-  config :my_app, Repo,
-+   types: MyApp.PostgresTypes
-```
+(Install gsed, if it's missing: `brew install gnu-sed`)
 
 Install node packages:
 
@@ -51,21 +35,11 @@ Install node packages:
 
 Set up database, and seed:
 
-    $ mix deps.compile --force && mix ecto.setup
+    $ mix do deps.get, deps.compile --force && mix ecto.setup
 
 Add to your `config/prod.secret.exs` (see https://github.com/elixir-lang/ecto/issues/1328)
 
-```diff
-  config :my_app, MyApp.Repo,
-    adapter: Ecto.Adapters.Postgres,
-    username: "my_app",
-    password: "my_password",
-    database: "my_app_prod",
-    extensions: [{Postgrex.Extensions.JSON, library: Poison}],
-+   socket_options: [recbuf: 8192, sndbuf: 8192],
-    pool_size: 20
-```
-
+    $ gsed -i '/pool_size:/i\  socket_options: [recbuf: 8192, sndbuf: 8192],' config/prod.secret.exs
 
 Go through `config/brando.exs`.
 
@@ -83,11 +57,14 @@ $ mix release.init
 ```
 
 And set its config to default to prod.
-Then add `:bcrypt_elixir` to applications:
+Then add this to the release cfg
 
 ```elixir
 release :my_app do
   set version: current_version(:my_app)
+  set commands: [
+    migrate: "rel/commands/migrate.sh"
+  ]
   set applications: [
     :runtime_tools,
     :bcrypt_elixir
@@ -101,6 +78,20 @@ Fix dev asset reloading in `config/dev.exs`
 config :my_app, MyApp.Endpoint,
   watchers: [npm: ["run", "dev", cd: Path.expand("../assets/frontend", __DIR__)]]
 ```
+
+Now lets add the presence server. First in `lib/application.ex` add a supervisor:
+
+```elixir
+MyApp.Presence
+```
+
+Then add the presence mixin to your `admin_channel.ex`
+
+```elixir
+use Brando.Mixin.Channels.PresenceMixin,
+  presence_module: MyApp.Presence
+```
+
 
 *Remember to switch out your ports and configure SSL in `etc/supervisor/prod.conf` and `etc/nginx/prod.conf`*
 
@@ -152,7 +143,7 @@ Open up you application's `lib/application.ex` and add to `start/2`:
 
 Generate templates:
 
-    $ mix brando.gen.html Task tasks name:string avatar:image data:villain
+    $ mix brando.gen.html Task tasks name:string avatar:image data:villain image_series:gallery
 
 Also supports `user:references` to add a `belongs_to` assoc.
 
@@ -188,19 +179,6 @@ Then use the fabric script in `fabfile.py` for the rest.
 
     # fab prod -l
 
-## Pagination
-
-For pagination, add to your app's `repo.ex`:
-
-```diff
-  defmodule MyApp.Repo do
-    use Ecto.Repo, otp_app: :my_app
-+   use Scrivener
-  end
-```
-
-See Scrivener's docs for usage: https://hexdocs.pm/scrivener/
-
 ## Default admin credentials
 
 Default login/pass is `admin@twined.net/admin`
@@ -234,6 +212,14 @@ Migration:
   end
 ```
 
+Admin channel:
+
+```diff
++ use Brando.Sequence, :channel
+
++ sequence "employees", MyApp.Employee
+```
+
 ## Lockdown
 
 If you want to limit the availability of your site while developing, you can use the
@@ -263,6 +249,11 @@ Password and time is optional.
 
 If no password configuration is found, you have to login
 through the backend to see the frontend website.
+
+You can also add a key as query string to set a cookie that allows browsing.
+
+`http://website/?key=<pass>`
+
 
 ## HTML
 
@@ -352,79 +343,6 @@ In your schema:
 ```
 
 The migration's field should be `:text`, not `:string`.
-
-In your controller:
-
-```elixir
-import Brando.Plug.Uploads
-plug :check_for_uploads, {"user", Brando.User}
-     when action in [:create, :profile_update, :update]
-```
-
-## Villain
-
-To use villain outside `Brando.Pages` and `Brando.News`, add to your app's `lib/web/router.ex`:
-
-```diff
-+ import Brando.Villain.Routes.Admin
-
-  scope "/admin", as: :admin do
-    pipe_through :admin
-+   villain_routes "/whatever/has/villain", YourController
-  end
-
-```
-
-Include js in `whatever/_scripts.<action>.html.eex`:
-
-```html
-<%= Brando.Villain.HTML.include_scripts %>
-```
-
-Include css in `whatever/_stylesheets.<action>.html.eex`:
-
-```html
-<link rel="stylesheet" href="<%= Helpers.static_path(@conn, "/css/villain.css") %>">
-```
-
-Initialize Villain in your template:
-
-```html
-<%= Brando.Villain.HTML.initialize(
-      base_url:     "/admin/news/",
-      image_series: "news",
-      source:       "textarea[name=\"post[data]\"]") %>
-```
-
-If you have custom blocks, add them in your `config/brando.exs`:
-
-```elixir
-config :brando, Brando.Villain,
-  extra_blocks: ["MyBlock", "AnotherBlock"]
-```
-
-Remember to add the `image_series` that Brando looks for.
-
-You also need to call for parsing by invoking `generate_html` in your schema's changeset:
-
-```elixir
-  def changeset(schema, params \\ %{}) do
-    schema
-    |> cast(params, @required_fields ++ @optional_fields)
-    |> validate_required(@required_fields)
-    |> generate_html()
-  end
-```
-
-You can add separate parsers by supplying the parser module as a parameter to the `generate_html`
-function. If not, it will use the parser module given in `config :brando, Brando.Villain, :parser`.
-
-See `Brando.Villain` help for more information on how to use in your project.
-
-## Brunch
-
-Build for prod with `brunch build --production`.
-
 
 ## Optimizing images
 

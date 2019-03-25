@@ -92,24 +92,37 @@ defmodule Brando.Schema.Types.Images do
     field :title, :string
     field :credits, :string
     field :path, :string
+    field :focal, :json
 
     field :url, :string do
       arg :size, :string, default_value: "thumb"
 
       resolve fn image, args, _ ->
         case Enum.find(image.sizes, &(elem(&1, 0) == args.size)) do
-          nil -> {:error, "URL size `#{args.size}` not found :("}
-          {_, url} -> {:ok, Brando.Utils.media_url(url)}
+          nil ->
+            (args.size == "original" &&
+               {:ok, Brando.Utils.media_url(image.path)}) ||
+              {:ok, ""}
+
+          {_, url} ->
+            {:ok, Brando.Utils.media_url(url)}
         end
       end
     end
 
-    field :sizes, list_of(:image_size) do
-      resolve fn image, _args, _ ->
-        map = Enum.map(image.sizes, &%{key: elem(&1, 0), value: elem(&1, 1)})
-        {:ok, map}
+    field :sizes, :json do
+      resolve fn image, _, _ ->
+        sizes = for {k, v} <- image.sizes, into: %{}, do: {k, Brando.Utils.media_url(v)}
+        {:ok, sizes}
       end
     end
+
+    # field :sizes, list_of(:image_size) do
+    #   resolve fn image, _args, _ ->
+    #     map = Enum.map(image.sizes, &%{key: elem(&1, 0), value: elem(&1, 1)})
+    #     {:ok, map}
+    #   end
+    # end
 
     field :optimized, :boolean
     field :width, :integer
@@ -117,17 +130,17 @@ defmodule Brando.Schema.Types.Images do
   end
 
   object :image_config do
-    field :allowed_mimetypes, list_of(:image_mimetype)
+    field :allowed_mimetypes, list_of(:string)
     field :default_size, :string
     field :upload_path, :string
     field :random_filename, :boolean
     field :size_limit, :integer
-    field :sizes, list_of(:image_size)
+    field :sizes, :json
     field :srcset, list_of(:image_srcset)
   end
 
   object :image_mimetype do
-    field :name
+    field :name, :string
   end
 
   object :image_size do
@@ -180,6 +193,13 @@ defmodule Brando.Schema.Types.Images do
       arg :image_category_id, :id
 
       resolve &Brando.Images.ImageCategoryResolver.delete/2
+    end
+
+    @desc "Duplicate image category"
+    field :duplicate_image_category, type: :image_category do
+      arg :image_category_id, :id
+
+      resolve &Brando.Images.ImageCategoryResolver.duplicate/2
     end
 
     @desc "Create image series"

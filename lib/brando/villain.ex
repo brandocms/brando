@@ -232,21 +232,27 @@ defmodule Brando.Villain do
     |> Enum.join()
   end
 
+  @doc """
+  Map out images
+  """
   def map_images(images) do
     Enum.map(images, fn image_record ->
-      img_field = image_record.image
+      img_struct = image_record.image
 
       sizes =
-        img_field.sizes
+        img_struct.sizes
         |> Enum.map(&{elem(&1, 0), media_url(elem(&1, 1))})
         |> Enum.into(%{})
 
       %{
-        src: media_url(img_field.path),
-        thumb: media_url(img_url(img_field, :thumb)),
+        src: media_url(img_struct.path),
+        thumb: media_url(img_url(img_struct, :thumb)),
         sizes: sizes,
-        title: img_field.title,
-        credits: img_field.credits
+        title: img_struct.title,
+        credits: img_struct.credits,
+        inserted_at: image_record.inserted_at,
+        width: img_struct.width,
+        height: img_struct.height
       }
     end)
   end

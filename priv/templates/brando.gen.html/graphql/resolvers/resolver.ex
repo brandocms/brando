@@ -22,15 +22,15 @@ defmodule <%= base %>.<%= domain %>.<%= alias %>Resolver do
   @doc """
   Create <%= singular %>
   """
-  def create(%{<%= singular %>_params: <%= singular %>_params}, %{context: %{current_user: _}}) do
-    <%= domain %>.create_<%= singular %>(<%= singular %>_params)
+  def create(%{<%= singular %>_params: <%= singular %>_params}, %{context: %{current_user: user}}) do
+    <%= domain %>.create_<%= singular %>(<%= singular %>_params, user)
   end
 
   @doc """
   Update <%= singular %>
   """
-  def update(%{<%= singular %>_id: <%= singular %>_id, <%= singular %>_params: <%= singular %>_params}, %{context: %{current_user: _}}) do
-    <%= domain %>.update_<%= singular %>(<%= singular %>_id, <%= singular %>_params)
+  def update(%{<%= singular %>_id: <%= singular %>_id, <%= singular %>_params: <%= singular %>_params}, %{context: %{current_user: user}}) do
+    <%= domain %>.update_<%= singular %>(<%= singular %>_id, <%= singular %>_params, user)
   end
 
   @doc """

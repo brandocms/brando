@@ -17,10 +17,6 @@ defmodule Brando.Sequence do
         [:controller, [schema: Brando.Image,
                        filter: &Brando.Image.for_series_id/1]]
 
-  View:
-
-      use Brando.Sequence, :view
-
   Schema:
 
       use Brando.Sequence, :schema
@@ -29,6 +25,12 @@ defmodule Brando.Sequence do
         # ...
         sequenced()
       end
+
+  Channel:
+
+      use Brando.Sequence, :channel
+
+      sequence "posts", MyApp.News.Post
 
   Migration:
 
@@ -58,7 +60,7 @@ defmodule Brando.Sequence do
   defmodule Channel do
     @moduledoc false
     defmacro sequence(key, module) do
-      quote [generated: true] do
+      quote generated: true do
         @doc false
         def handle_in("#{unquote(key)}:sequence_#{unquote(key)}", %{"ids" => ids}, socket) do
           unquote(module).sequence(ids, Range.new(0, length(ids)))

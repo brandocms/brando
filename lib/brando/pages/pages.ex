@@ -134,6 +134,22 @@ defmodule Brando.Pages do
   end
 
   @doc """
+  Get page by key
+  """
+  def get_page_with_children(key, lang) when is_binary(key) do
+    q =
+      from p in Page,
+        join: c in assoc(p, :children),
+        where: p.key == ^key and p.language == ^lang,
+        preload: :children
+
+    case Brando.repo().one(q) do
+      nil -> {:error, {:page, :not_found}}
+      page -> {:ok, page}
+    end
+  end
+
+  @doc """
   Get page by parent_key and key
   """
   def get_page(nil, key, lang) when is_binary(key) do
@@ -159,12 +175,41 @@ defmodule Brando.Pages do
     end
   end
 
+  @doc """
+  Re-render page
+  """
+  def rerender_page(id) do
+    {:ok, page} = get_page(id)
+    changeset = Ecto.Changeset.change(page)
+    Page.rerender_html(changeset)
+  end
+
+  @doc """
+  Rerender all pages
+  """
   def rerender_pages() do
     {:ok, pages} = list_pages()
 
     for page <- pages do
-      Page.rerender_html(Page.changeset(page, :update, %{}))
+      Page.rerender_html(Ecto.Changeset.change(page))
     end
+  end
+
+  @doc """
+  Rerender all fragments
+  """
+  def rerender_fragments() do
+    {:ok, fragments} = list_page_fragments()
+
+    for fragment <- fragments do
+      PageFragment.rerender_html(Ecto.Changeset.change(fragment))
+    end
+  end
+
+  def rerender_fragment(id) do
+    {:ok, fragment} = get_page_fragment(id)
+    changeset = Ecto.Changeset.change(fragment)
+    PageFragment.rerender_html(changeset)
   end
 
   @doc """
@@ -265,12 +310,14 @@ defmodule Brando.Pages do
     fragment_id = (is_binary(fragment_id) && String.to_integer(fragment_id)) || fragment_id
     {:ok, fragment} = get_page_fragment(fragment_id)
 
-    fragment = Map.merge(fragment, %{key: "#{fragment.key}_kopi"})
-    fragment = Map.delete(fragment, [:id, :parent])
-    fragment = Map.from_struct(fragment)
+    {:ok, dup_fragment} =
+      fragment
+      |> Map.merge(%{key: "#{fragment.key}_kopi"})
+      |> Map.delete([:id, :parent])
+      |> Map.from_struct()
+      |> create_page_fragment(user)
 
-    {:ok, duplicated_fragment} = create_page_fragment(fragment, user)
-    {:ok, Map.merge(duplicated_fragment, %{creator: nil})}
+    {:ok, Map.merge(dup_fragment, %{creator: nil})}
   end
 
   @doc """

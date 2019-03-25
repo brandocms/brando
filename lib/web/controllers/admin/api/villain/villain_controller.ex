@@ -1,5 +1,6 @@
 defmodule Brando.VillainController do
   use Brando.Web, :controller
+  alias Brando.Images
   import Ecto.Query
 
   @doc false
@@ -33,48 +34,114 @@ defmodule Brando.VillainController do
     end
 
     cfg = series.cfg || Brando.config(Brando.Images)[:default_config]
-    opts = Map.put(%{}, "image_series_id", series.id)
+    params = Map.put(params, "image_series_id", series.id)
 
-    {:ok, image} = Brando.Images.check_for_uploads(params, user, cfg, opts)
+    case Images.Uploads.Schema.handle_upload(params, cfg, user) do
+      {:ok, image} ->
+        sizes = Enum.map(image.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
+        sizes_map = Enum.into(sizes, %{})
 
-    sizes = Enum.map(image.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
-    sizes_map = Enum.into(sizes, %{})
-
-    json(
-      conn,
-      %{
-        status: 200,
-        uid: uid,
-        image: %{
-          id: image.id,
-          sizes: sizes_map,
-          src: Brando.Utils.media_url(image.image.path)
-        },
-        form: %{
-          method: "post",
-          action: "villain/imagedata/#{image.id}",
-          name: "villain-imagedata",
-          fields: [
-            %{
-              name: "title",
-              type: "text",
-              label: "Tittel",
-              value: ""
+        json(
+          conn,
+          %{
+            status: 200,
+            uid: uid,
+            image: %{
+              id: image.id,
+              sizes: sizes_map,
+              src: Brando.Utils.media_url(image.image.path),
+              width: image.image.width,
+              height: image.image.height
             },
-            %{
-              name: "credits",
-              type: "text",
-              label: "Krediteringer",
-              value: ""
+            form: %{
+              method: "post",
+              action: "villain/imagedata/#{image.id}",
+              name: "villain-imagedata",
+              fields: [
+                %{
+                  name: "title",
+                  type: "text",
+                  label: "Tittel",
+                  value: ""
+                },
+                %{
+                  name: "credits",
+                  type: "text",
+                  label: "Krediteringer",
+                  value: ""
+                }
+              ]
             }
-          ]
-        }
-      }
-    )
+          }
+        )
+
+      {:error, err} ->
+        json(
+          conn,
+          %{
+            status: 500,
+            error: err
+          }
+        )
+
+      images when length(images) > 1 ->
+        images = Enum.map(images, fn {:ok, img} ->
+          sizes = Enum.map(img.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
+          sizes_map = Enum.into(sizes, %{})
+          %{id: img.id, sizes: sizes_map, src: Brando.Utils.media_url(img.image.path)}
+        end)
+
+        json(
+          conn,
+          %{
+            status: 200,
+            uid: uid,
+            images: images
+          }
+        )
+
+      [{:ok, image}] ->
+        sizes = Enum.map(image.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
+        sizes_map = Enum.into(sizes, %{})
+
+        json(
+          conn,
+          %{
+            status: 200,
+            uid: uid,
+            image: %{
+              id: image.id,
+              sizes: sizes_map,
+              src: Brando.Utils.media_url(image.image.path),
+              width: image.image.width,
+              height: image.image.height
+            },
+            form: %{
+              method: "post",
+              action: "villain/imagedata/#{image.id}",
+              name: "villain-imagedata",
+              fields: [
+                %{
+                  name: "title",
+                  type: "text",
+                  label: "Tittel",
+                  value: ""
+                },
+                %{
+                  name: "credits",
+                  type: "text",
+                  label: "Krediteringer",
+                  value: ""
+                }
+              ]
+            }
+          }
+        )
+    end
   end
 
   @doc false
-  def imageseries(conn, %{"series" => series_slug}) do
+  def slideshow(conn, %{"slug" => series_slug}) do
     series =
       from(is in Brando.ImageSeries,
         join: c in assoc(is, :image_category),
@@ -83,23 +150,23 @@ defmodule Brando.VillainController do
         order_by: i.sequence,
         preload: [image_category: c, images: i]
       )
-      |> first
       |> Brando.repo().one!
 
-    sizes = Enum.map(series.cfg.sizes, &elem(&1, 0))
-    images = Enum.map(series.images, & &1.image)
+    images =
+      Enum.map(
+        series.images,
+        &Brando.Utils.img_url(&1.image, :thumb, prefix: Brando.Utils.media_url())
+      )
 
     json(conn, %{
       status: 200,
       series: series_slug,
-      images: images,
-      sizes: sizes,
-      media_url: Brando.config(:media_url)
+      images: images
     })
   end
 
   @doc false
-  def imageseries(conn, _) do
+  def slideshows(conn, _) do
     series =
       Brando.repo().all(
         from is in Brando.ImageSeries,
@@ -118,7 +185,11 @@ defmodule Brando.VillainController do
     form = URI.decode_query(form)
     image = Brando.repo().get(Brando.Image, id)
 
-    {:ok, image} = Brando.Images.update_image_meta(image, form["title"], form["credits"])
+    {:ok, image} =
+      Brando.Images.update_image_meta(image, form["title"], form["credits"], %{
+        "x" => 50,
+        "y" => 50
+      })
 
     info = %{
       status: 200,
@@ -126,7 +197,8 @@ defmodule Brando.VillainController do
       uid: uid,
       title: image.image.title,
       credits: image.image.credits,
-      link: form["link"]
+      link: form["link"],
+      focal: %{"x" => 50, "y" => 50}
     }
 
     json(conn, info)

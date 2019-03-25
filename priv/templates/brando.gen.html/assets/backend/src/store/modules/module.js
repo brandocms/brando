@@ -1,10 +1,10 @@
 import nprogress from 'nprogress'
+import { <%= vue_singular %>API } from '../../api/<%= vue_singular %>'
 
 const STORE_<%= String.upcase(singular) %> = 'STORE_<%= String.upcase(singular) %>'
 const STORE_<%= String.upcase(plural) %> = 'STORE_<%= String.upcase(plural) %>'
-const DELETE_<%= String.upcase(singular) %> = 'DELETE_<%= String.upcase(singular) %>'
-
-import { <%= vue_singular %>API } from '../../api/<%= vue_singular %>'
+const DELETE_<%= String.upcase(singular) %> = 'DELETE_<%= String.upcase(singular) %>'<%= if gallery do %>
+const ADD_IMAGE_SERIES_TO_<%= String.upcase(singular) %> = 'ADD_IMAGE_SERIES_TO_<%= String.upcase(singular) %>'<% end %>
 
 export const <%= vue_plural %> = {
   namespaced: true,
@@ -31,7 +31,20 @@ export const <%= vue_plural %> = {
 
     [STORE_<%= String.upcase(plural) %>] (state, <%= vue_plural %>) {
       state.<%= vue_plural %> = <%= vue_plural %>
-    }
+    }<%= if gallery do %>,
+
+    [ADD_IMAGE_SERIES_TO_<%= String.upcase(singular) %>](state, { <%= vue_singular %>Id, imageSeries }) {
+      let c = state.<%= vue_plural %>.find(c => c.id === <%= vue_singular %>Id)
+      if (c) {
+        let idx = state.<%= vue_plural %>.indexOf(c)
+
+        state.<%= vue_plural %> =[
+          ...state.<%= vue_plural %>.slice(0, idx),
+          { ...c, image_series: imageSeries, image_series_id: imageSeries.id },
+          ...state.<%= vue_plural %>.slice(idx + 1)
+        ]
+      }
+    }<% end %>
   },
 
   getters: {
@@ -63,6 +76,13 @@ export const <%= vue_plural %> = {
       context.commit(DELETE_<%= String.upcase(singular) %>, <%= vue_singular %>)
       nprogress.done()
       return <%= vue_singular %>
-    }
+    }<%= if gallery do %>,
+
+    addImageSeriesTo<%= Recase.to_pascal(vue_singular) %> (context, { <%= vue_singular %>Id, imageSeries }) {
+      nprogress.start()
+      context.commit(ADD_IMAGE_SERIES_TO_<%= String.upcase(singular) %>, { caseId, imageSeries })
+      nprogress.done()
+      return caseId
+    }<% end %>
   }
 }

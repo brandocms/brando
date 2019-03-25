@@ -8,14 +8,36 @@ defmodule Brando.Image do
 
   use Brando.Web, :schema
   use Brando.Sequence, :schema
-
-  import Brando.Gettext
   import Brando.Images.Optimize, only: [optimize: 2]
-
   import Ecto.Query, only: [from: 2]
 
   @required_fields ~w(image image_series_id)a
   @optional_fields ~w(sequence creator_id)a
+
+  @derive {Poison.Encoder,
+           only: [
+             :id,
+             :image,
+             :creator,
+             :creator_id,
+             :image_series_id,
+             :image_series,
+             :sequence,
+             :inserted_at,
+             :updated_at
+           ]}
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :image,
+             :creator,
+             :creator_id,
+             :image_series_id,
+             :image_series,
+             :sequence,
+             :inserted_at,
+             :updated_at
+           ]}
 
   schema "images" do
     field :image, Brando.Type.Image
@@ -55,21 +77,4 @@ defmodule Brando.Image do
       where: m.image_series_id == ^id,
       order_by: m.sequence
   end
-
-  #
-  # Meta
-
-  use Brando.Meta.Schema,
-    singular: gettext("image"),
-    plural: gettext("images"),
-    repr: &"#{&1.id} | #{&1.image.path}",
-    fields: [
-      id: gettext("ID"),
-      image: gettext("Image"),
-      sequence: gettext("Sequence"),
-      creator: gettext("Creator"),
-      image_series: gettext("Image series"),
-      inserted_at: gettext("Inserted at"),
-      updated_at: gettext("Updated at")
-    ]
 end

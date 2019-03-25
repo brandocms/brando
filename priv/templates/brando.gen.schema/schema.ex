@@ -22,12 +22,12 @@ defmodule <%= module %> do
       random_filename: true,
       size_limit: 10_240_000,
       sizes: %{
-        "micro"  => %{"size" => "25x25>", "quality" => 100, "crop" => true},
-        "thumb"  => %{"size" => "150x150>", "quality" => 100, "crop" => true},
-        "small"  => %{"size" => "300", "quality" => 100},
-        "medium" => %{"size" => "500", "quality" => 100},
-        "large"  => %{"size" => "700", "quality" => 100},
-        "xlarge" => %{"size" => "900", "quality" => 100}
+        "micro"  => %{"size" => "25x25>", "quality" => 30, "crop" => true},
+        "thumb"  => %{"size" => "150x150>", "quality" => 90, "crop" => true},
+        "small"  => %{"size" => "700", "quality" => 90},
+        "medium" => %{"size" => "1100", "quality" => 90},
+        "large"  => %{"size" => "1700", "quality" => 90},
+        "xlarge" => %{"size" => "2100", "quality" => 90}
       }
     }
 <% end %>
@@ -39,8 +39,8 @@ defmodule <%= module %> do
       size_limit: 10_240_000,
     }
 <% end %>
-  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields ++ file_fields)) |> Keyword.drop(Keyword.values(villain_fields)), " ", &elem(&1, 0)) %><%= if villain_fields != [] do %> <% end %><%= Enum.map_join(villain_fields, " ", fn({_k, v}) -> if v == :data, do: "#{v}", else: "#{v}_data" end) %><%= if assocs do %> <% end %><%= Enum.map_join(assocs, " ", &elem(&1, 1)) %>)a
-  @optional_fields ~w(<%= Enum.map_join(img_fields ++ file_fields, " ", &elem(&1, 1)) %>)a
+  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields ++ file_fields)) |> Keyword.drop(Keyword.values(villain_fields)), " ", &elem(&1, 0)) %><%= if villain_fields != [] do %> <% end %><%= Enum.map_join(villain_fields, " ", fn({_k, v}) -> if v == :data, do: "#{v}", else: "#{v}_data" end) %><%= if assocs do %> <% end %><%= Enum.map_join(assocs, " ", fn {_, y, _} -> if to_string(y) not in Keyword.values(gallery_fields), do: y, else: nil end) %>)a
+  @optional_fields ~w(<%= Enum.map_join(img_fields ++ file_fields ++ gallery_fields, " ", &elem(&1, 1)) %>)a
 
   @doc """
   Creates a changeset based on the `schema` and `params`.
@@ -48,35 +48,19 @@ defmodule <%= module %> do
   If no params are provided, an invalid changeset is returned
   with no validation performed.
   """
-  def changeset(schema, params \\ %{}) do
+  def changeset(schema, params \\ %{}, user) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)<%= if villain_fields != [] do %><%= for {_k, v} <- villain_fields do %><%= if v == :data do %>
     |> generate_html()<% else %>
-    |> generate_html(<%= inspect v %>)<% end %><% end %><% end %><%= if img_fields != [] do %>
-    |> cleanup_old_images()<%= for {_v, k} <- img_fields do %>
-    |> validate_upload({:image, <%= inspect k %>})
+    |> generate_html(<%= inspect v %>)<% end %><% end %><% end %><%= if img_fields != [] do %><%= for {_v, k} <- img_fields do %>
+    |> validate_upload({:image, <%= inspect k %>}, user)
     |> optimize(<%= inspect k %>)<% end %><% end %>
   end
 
   def delete(record) do
 <%= for {_v, k} <- img_fields do %>    delete_original_and_sized_images(record, <%= inspect k %>)
 <% end %>    Brando.repo.delete!(record)
-  end
-
-  #
-  # Meta
-
-  use Brando.Meta.Schema, [
-    singular: "<%= Phoenix.Naming.humanize(singular) |> String.downcase %>",
-    plural: "<%= Phoenix.Naming.humanize(plural) |> String.downcase %>",
-    repr: &("#{&1.<%= Keyword.keys(attrs) |> List.first %>}"),
-    fields: [
-      id: gettext("Id"),
-<%= for {k, _} <- attrs do %>      <%= k %>: gettext("<%= Phoenix.Naming.humanize(k) %>"),
-<% end %><%= if villain_fields != [] do %>      html: gettext("HTML"),<% end %>
-      inserted_at: gettext("Inserted at"),
-      updated_at: gettext("Updated at")],
-    hidden_fields: []
-  ]
+<%= for {_v, k} <- gallery_fields do %>    Brando.Images.delete_series(record.<%= k %>)
+<% end %>  end
 end

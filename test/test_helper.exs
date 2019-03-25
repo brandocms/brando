@@ -9,7 +9,9 @@ File.mkdir_p!(Path.join([Mix.Project.app_path(), "tmp", "media"]))
 ExUnit.start()
 
 defmodule Brando.Integration.TestRepo do
-  use Ecto.Repo, otp_app: :brando
+  use Ecto.Repo,
+    otp_app: :brando,
+    adapter: Ecto.Adapters.Postgres
 end
 
 # Basic test repo
@@ -18,6 +20,10 @@ alias Brando.Integration.TestRepo, as: Repo
 defmodule Brando.Integration.Endpoint do
   use Phoenix.Endpoint,
     otp_app: :brando
+
+  # socket "/admin/socket", MartinuzziWeb.AdminSocket,
+  #   websocket: true,
+  #   longpoll: true
 
   plug Plug.Session,
     store: :cookie,
@@ -31,8 +37,6 @@ defmodule Brando.Integration.Endpoint do
     only: ~w(css images js fonts favicon.ico robots.txt),
     cache_control_for_vsn_requests: nil,
     cache_control_for_etags: nil
-
-  socket("/admin/ws", Brando.Integration.UserSocket)
 end
 
 defmodule Brando.Integration.TestCase do
@@ -46,8 +50,6 @@ defmodule Brando.Integration.TestCase do
     end
   end
 end
-
-Code.require_file("support/user_socket.exs", __DIR__)
 
 Mix.Task.run("ecto.drop", ["-r", Repo, "--quiet"])
 Mix.Task.run("ecto.create", ["-r", Repo, "--quiet"])

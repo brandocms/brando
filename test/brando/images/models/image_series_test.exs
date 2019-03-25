@@ -30,10 +30,4 @@ defmodule Brando.Integration.ImageSeriesTest do
     assert Ecto.Changeset.get_change(cs, :cfg).upload_path ==
              "portfolio/test-category/abracadabra"
   end
-
-  test "meta", %{series: series} do
-    assert ImageSeries.__name__(:singular) == "imageserie"
-    assert ImageSeries.__name__(:plural) == "imageseries"
-    assert ImageSeries.__repr__(series) == "Series name – 0 image(s)."
-  end
 end

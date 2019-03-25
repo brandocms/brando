@@ -6,6 +6,9 @@ defmodule Brando.VillainTest do
       "other parser"
     end
 
+    def datatable(_), do: nil
+    def markdown(_), do: nil
+    def html(_), do: nil
     def map(_), do: nil
     def blockquote(_), do: nil
     def columns(_), do: nil
@@ -97,7 +100,12 @@ defmodule Brando.VillainTest do
 
     images = Brando.repo().all(Brando.Image)
 
-    assert Brando.Villain.map_images(images) ==
+    mapped_images =
+      images
+      |> Brando.Villain.map_images()
+      |> Enum.map(&Map.delete(&1, :inserted_at))
+
+    assert mapped_images ==
              [
                %{
                  credits: "Credits",
@@ -110,7 +118,9 @@ defmodule Brando.VillainTest do
                  },
                  src: "/media/image/1.jpg",
                  thumb: "/media/image/thumb/1.jpg",
-                 title: "Title one"
+                 title: "Title one",
+                 height: nil,
+                 width: nil
                }
              ]
   end

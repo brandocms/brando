@@ -1,12 +1,172 @@
 defmodule Brando.Images.Utils do
   @moduledoc """
   General utilities pertaining to the Images module
+
+  TODO: Create a Processing module.
+        Split out create_image_struct, create_image_sizes, etc...
   """
   import Brando.Utils
-  import Brando.Gettext
   import Ecto.Query, only: [from: 2]
 
-  alias Brando.{Image, ImageSeries}
+  alias Brando.Image
+  alias Brando.Images
+  alias Brando.ImageSeries
+  alias Brando.Progress
+  alias Brando.Type
+  alias Brando.Upload
+
+  @doc """
+  Create an image struct from upload, cfg and extra info
+  """
+  def create_image_struct(%Upload{plug: %{uploaded_file: file}, cfg: cfg, extra_info: %{focal: focal}}, user) do
+    {_, filename} = split_path(file)
+    upload_path = Map.get(cfg, :upload_path)
+    new_path = Path.join([upload_path, filename])
+
+    try do
+      image_info =
+        new_path
+        |> media_path()
+        |> Mogrify.open()
+        |> Mogrify.verbose()
+
+      size_struct =
+        %Brando.Type.Image{}
+        |> Map.put(:path, new_path)
+        |> Map.put(:width, image_info.width)
+        |> Map.put(:height, image_info.height)
+        |> Map.put(:focal, focal)
+
+      {:ok, size_struct}
+
+    rescue
+      e in File.Error ->
+        Progress.hide_progress(user)
+        {:error, {:create_image_sizes, e}}
+
+      e ->
+        Progress.hide_progress(user)
+        {:error, {:create_image_sizes, e}}
+    end
+  end
+
+  @doc """
+  Deletes all image's sizes and recreates them.
+  """
+  @spec recreate_sizes_for(:image | :image_series, Image.t(), User.t() | atom) :: :ok | no_return
+  def recreate_sizes_for(type, img, user \\ :system)
+
+  def recreate_sizes_for(:image, img_schema, user) do
+    img_cfg = Images.get_series_config(img_schema.image_series_id)
+    img_schema = reset_optimized_flag(img_schema)
+    delete_sized_images(img_schema.image)
+
+    with {:ok, operations} <- Images.Operations.create_operations(img_schema.image, img_cfg, user, img_schema.id),
+         {:ok, [result]} <- Images.Operations.perform_operations(operations, user) do
+
+      img_schema
+      |> Image.changeset(:update, %{image: result.img_struct})
+      |> Images.Optimize.optimize(:image, force: true)
+      |> Brando.repo().update!
+
+      :ok
+    else
+      err ->
+        require Logger
+        Logger.error("==> recreate_sizes_for(:image, ...) failed")
+        Logger.error(inspect(err))
+        err
+    end
+  end
+
+  @spec recreate_sizes_for(:image_series, Image.t(), User.t() | atom) :: :ok | no_return
+  def recreate_sizes_for(:image_series, image_series_id, user) do
+    query =
+      from is in ImageSeries,
+        preload: :images,
+        where: is.id == ^image_series_id
+
+    image_series = Brando.repo().one!(query)
+
+    # check if the paths have changed. if so, reload series
+    image_series =
+      case check_image_paths(Image, image_series) do
+        :changed -> Brando.repo().one!(query)
+        :unchanged -> image_series
+      end
+
+    images = image_series.images
+
+    # build operations
+    operations =
+      Enum.flat_map(images, fn img_schema ->
+        img_schema.image
+        |> Images.Operations.create_operations(image_series.cfg, user, img_schema.id)
+        |> elem(1)
+      end)
+
+    {:ok, operation_results} = Images.Operations.perform_operations(operations, user)
+
+    for result <- operation_results do
+      img_schema = Enum.find(images, &(&1.id == result.id))
+      Images.update_image(img_schema, %{image: result.img_struct})
+    end
+
+    :ok
+  end
+
+  @doc """
+  Recreates sizes for an image field
+  """
+  @spec recreate_sizes_for(:image_field, term, atom) :: :ok | no_return
+  def recreate_sizes_for(:image_field, schema, field_name) do
+    rows = Brando.repo().all(schema)
+    {:ok, cfg} = schema.get_image_cfg(field_name)
+
+    operations =
+      Enum.flat_map(rows, fn row ->
+        img_field = Map.get(row, field_name)
+
+        if img_field do
+          delete_sized_images(img_field)
+          img_field
+          |> Images.Operations.create_operations(cfg, :system, row.id)
+          |> elem(1)
+        end
+      end)
+
+
+    {:ok, operation_results} = Images.Operations.perform_operations(operations, :system)
+
+    for result <- operation_results do
+      rows
+      |> Enum.find(&(&1.id == result.id))
+      |> Ecto.Changeset.change(Map.put(%{}, field_name, result.img_struct))
+      |> Brando.Images.Optimize.optimize(field_name)
+      |> Brando.repo().update!
+    end
+  end
+
+  # usually used when changing focal point
+  # recreate_sizes_for(:image_field_record, changeset, :cover, user)
+  @spec recreate_sizes_for(:image_field_record, term, term, term) :: :ok | no_return
+  def recreate_sizes_for(:image_field_record, changeset, field_name, user) do
+    img_struct = Ecto.Changeset.get_change(changeset, field_name)
+    schema = changeset.data.__struct__
+    delete_sized_images(img_struct)
+    {:ok, cfg} = schema.get_image_cfg(field_name)
+
+    with {:ok, operations} <- Images.Operations.create_operations(img_struct, cfg, user),
+         {:ok, [result]} <- Images.Operations.perform_operations(operations, user) do
+        {:ok, Ecto.Changeset.put_change(changeset, field_name, result.img_struct)}
+    else
+      err ->
+        require Logger
+        Logger.error("==> recreate_sizes_for(:image_field_record, ...) failed")
+        Logger.error(inspect(err))
+        err
+    end
+  end
 
   @doc """
   Goes through `image`, which is a schema with a :sizes field
@@ -65,19 +225,48 @@ defmodule Brando.Images.Utils do
 
   ## Example
 
-      iex> size_dir("test/dir/filename.jpg", :thumb)
+      iex> get_sized_path("test/dir/filename.jpg", :thumb)
       "test/dir/thumb/filename.jpg"
 
   """
-  @spec size_dir(String.t(), atom | String.t()) :: String.t()
-  def size_dir(file, size) when is_binary(size) do
-    {path, filename} = split_path(file)
-    Path.join([path, size, filename])
+  @spec get_sized_path(String.t(), atom | String.t()) :: String.t()
+  def get_sized_path(path, size) when is_binary(size) do
+    {dir, filename} = split_path(path)
+    Path.join([dir, size, filename])
   end
 
-  def size_dir(file, size) when is_atom(size) do
-    {path, filename} = split_path(file)
-    Path.join([path, Atom.to_string(size), filename])
+  def get_sized_path(file, size) when is_atom(size) do
+    get_sized_path(file, Atom.to_string(size))
+  end
+
+  @doc """
+  Adds `size` to the path before
+
+  ## Example
+
+      iex> get_sized_dir("test/dir/filename.jpg", :thumb)
+      "test/dir/thumb"
+
+  """
+  @spec get_sized_dir(String.t(), atom | String.t()) :: String.t()
+  def get_sized_dir(path, size) when is_binary(size) do
+    {dir, _} = split_path(path)
+    Path.join([dir, size])
+  end
+
+  def get_sized_dir(file, size) when is_atom(size) do
+    get_sized_dir(file, Atom.to_string(size))
+  end
+
+  @doc """
+  Reset image field's `:optimized` flag
+  """
+  def reset_optimized_flag(%Image{} = img_schema) do
+    put_in(img_schema.image.optimized, false)
+  end
+
+  def reset_optimized_flag(%Type.Image{} = img_struct) do
+    put_in(img_struct.optimized, false)
   end
 
   @doc """
@@ -97,17 +286,9 @@ defmodule Brando.Images.Utils do
   Return joined path of `file` and the :media_path config option
   as set in your app's config.exs.
   """
-  def media_path do
-    Brando.config(:media_path)
-  end
-
-  def media_path(nil) do
-    Brando.config(:media_path)
-  end
-
-  def media_path(file) do
-    Path.join([Brando.config(:media_path), file])
-  end
+  def media_path, do: Brando.config(:media_path)
+  def media_path(nil), do: Brando.config(:media_path)
+  def media_path(file), do: Path.join([Brando.config(:media_path), file])
 
   @doc """
   Add `-optimized` between basename and ext of `file`.
@@ -118,233 +299,6 @@ defmodule Brando.Images.Utils do
     {basename, ext} = split_filename(filename)
 
     Path.join([path, "#{basename}-optimized#{ext}"])
-  end
-
-  @doc """
-  Creates sized images.
-  """
-  @spec create_image_sizes(Brando.Upload.t()) :: {:ok, Brando.Type.Image.t()}
-  def create_image_sizes(%{plug: %{uploaded_file: file}, cfg: cfg}) do
-    type = image_type(file)
-    {file_path, filename} = split_path(file)
-    upload_path = Map.get(cfg, :upload_path)
-
-    sizes =
-      for {size_name, size_cfg} <- Map.get(cfg, :sizes) do
-        postfixed_size_dir = Path.join([file_path, to_string(size_name)])
-        sized_image = Path.join([postfixed_size_dir, filename])
-        sized_path = Path.join([upload_path, to_string(size_name), filename])
-
-        File.mkdir_p(postfixed_size_dir)
-        create_image_size(file, sized_image, size_cfg, type)
-
-        {size_name, sized_path}
-      end
-
-    new_path = Path.join([upload_path, filename])
-
-    try do
-      image_info =
-        new_path
-        |> media_path()
-        |> Mogrify.open()
-        |> Mogrify.verbose()
-
-      size_struct =
-        %Brando.Type.Image{}
-        |> Map.put(:sizes, Enum.into(sizes, %{}))
-        |> Map.put(:path, new_path)
-        |> Map.put(:width, image_info.width)
-        |> Map.put(:height, image_info.height)
-
-      {:ok, size_struct}
-    rescue
-      e in File.Error -> {:error, {:create_image_sizes, e}}
-      e -> {:error, {:create_image_sizes, e}}
-    end
-  end
-
-  @doc """
-  Creates a sized version of `image_src`.
-  """
-  @spec create_image_size(String.t(), String.t(), Brando.Type.ImageConfig.t(), atom) :: no_return
-  def create_image_size(image_src, image_dest, size_cfg, image_type \\ :other)
-
-  def create_image_size(image_src, image_dest, size_cfg, :gif) do
-    image = Mogrify.open(image_src)
-
-    size_cfg =
-      if Map.has_key?(size_cfg, "portrait") do
-        image_info = Mogrify.verbose(image)
-
-        if image_info.height > image_info.width do
-          size_cfg["portrait"]
-        else
-          size_cfg["landscape"]
-        end
-      else
-        size_cfg
-      end
-
-    # This is slightly dumb, but should be enough. If we crop, we always pass WxH.
-    # If we don't, we always pass W or xH.
-    {crop, modifier, size} =
-      if size_cfg["crop"] do
-        {"--crop 0,0-#{String.replace(size_cfg["size"], "x", ",")}", "--resize", size_cfg["size"]}
-      else
-        modifier =
-          (String.contains?(size_cfg["size"], "x") && "--resize-fit-height") ||
-            "--resize-fit-width"
-
-        size = String.replace(size_cfg["size"], ~r/x|\^|\!|\>|\<|\%/, "")
-        {"", modifier, size}
-      end
-
-    params = ~w(#{crop} #{modifier} #{size} --output #{image_dest} -i #{image_src})
-
-    System.cmd("gifsicle", params, stderr_to_stdout: true)
-  end
-
-  def create_image_size(image_src, image_dest, size_cfg, _) do
-    with true <- File.exists?(image_src),
-         image <- Mogrify.open(image_src) do
-      size_cfg =
-        if Map.has_key?(size_cfg, "portrait") do
-          image_info = Mogrify.verbose(image)
-
-          if image_info.height > image_info.width do
-            size_cfg["portrait"]
-          else
-            size_cfg["landscape"]
-          end
-        else
-          size_cfg
-        end
-
-      if size_cfg["crop"] do
-        image
-        |> Mogrify.resize_to_fill(size_cfg["size"])
-        |> Mogrify.gravity("Center")
-        |> Mogrify.save(path: image_dest)
-      else
-        image
-        |> Mogrify.resize_to_limit(size_cfg["size"])
-        |> Mogrify.save(path: image_dest)
-      end
-    else
-      false ->
-        {:error, {:create_image_size, :file_not_found}}
-    end
-  end
-
-  @doc """
-  Deletes all image's sizes and recreates them.
-  """
-  @spec recreate_sizes_for(:image | :image_series, Image.t()) :: :ok | no_return
-  def recreate_sizes_for(:image, img) do
-    img = Brando.repo().preload(img, :image_series)
-    img = put_in(img.image.optimized, false)
-    full_path = media_path(img.image.path)
-
-    delete_sized_images(img.image)
-
-    src = %{plug: %{uploaded_file: full_path}, cfg: img.image_series.cfg}
-
-    with {:ok, new_image} <- create_image_sizes(src) do
-      image = Map.put(img.image, :sizes, new_image.sizes)
-
-      img
-      |> Brando.Image.changeset(:update, %{image: image})
-      |> Brando.Images.Optimize.optimize(:image, force: true)
-      |> Brando.repo().update!
-
-      :ok
-    else
-      err ->
-        require Logger
-        Logger.error("==> recreate_sizes_for(:image, ...) failed")
-        Logger.error(inspect(err))
-        err
-    end
-  end
-
-  @spec recreate_sizes_for(:image_series, Image.t()) :: :ok | no_return
-  def recreate_sizes_for(:image_series, image_series_id) do
-    q =
-      from is in ImageSeries,
-        preload: :images,
-        where: is.id == ^image_series_id
-
-    image_series = Brando.repo().one!(q)
-
-    # check if the paths have changed. if so, reload series
-    image_series =
-      case check_image_paths(Image, image_series) do
-        :changed -> Brando.repo().one!(q)
-        :unchanged -> image_series
-      end
-
-    for image <- image_series.images, do: recreate_sizes_for(:image, image)
-
-    :ok
-  end
-
-  @doc """
-  Recreates sizes for an image field
-  """
-  @spec recreate_sizes_for(:image_field, term, atom) :: :ok | no_return
-  def recreate_sizes_for(:image_field, schema, field_name) do
-    # first, we get all rows of this schema
-    rows = Brando.repo().all(schema)
-
-    for row <- rows do
-      field = Map.get(row, field_name)
-
-      if field do
-        full_path = media_path(field.path)
-        delete_sized_images(field)
-        {:ok, cfg} = schema.get_image_cfg(field_name)
-        src = %{plug: %{uploaded_file: full_path}, cfg: cfg}
-
-        with {:ok, new_image} <- create_image_sizes(src) do
-          row
-          |> Ecto.Changeset.change(Map.put(%{}, field_name, new_image))
-          |> Brando.Images.Optimize.optimize(field_name)
-          |> Brando.repo().update!
-
-          :ok
-        else
-          err -> err
-        end
-      end
-    end
-  end
-
-  @doc """
-  Put `size_cfg` as `size_key` in `image_series`.
-  """
-  @spec put_size_cfg(ImageSeries.t(), String.t(), Brando.Type.ImageConfig.t()) :: :ok
-  def put_size_cfg(image_series, size_key, size_cfg) do
-    size_key = (is_atom(size_key) && Atom.to_string(size_key)) || size_key
-
-    cfg = image_series.cfg
-
-    cfg =
-      if Map.has_key?(cfg.sizes[size_key], "portrait") do
-        put_in(cfg.sizes[size_key], size_cfg)
-      else
-        if Map.has_key?(size_cfg, "portrait") do
-          put_in(cfg.sizes[size_key], size_cfg)
-        else
-          put_in(cfg.sizes[size_key]["size"], size_cfg)
-        end
-      end
-
-    image_series
-    |> Brando.ImageSeries.changeset(:update, %{cfg: cfg})
-    |> Brando.repo().update!
-
-    recreate_sizes_for(:image_series, image_series.id)
   end
 
   @doc """
@@ -381,216 +335,6 @@ defmodule Brando.Images.Utils do
       delete_images_for(:image_series, is.id)
       Brando.repo().delete!(is)
     end
-  end
-
-  @doc """
-  Create a form from given image configuration `cfg`
-  """
-  @spec make_form_from_image_config(Brando.Type.ImageConfig.t()) :: {:safe, iodata}
-  def make_form_from_image_config(cfg) do
-    size_rows = Enum.map(cfg.sizes, &make_row_for_size(elem(&1, 0), elem(&1, 1)))
-    csrf_token = Phoenix.Controller.get_csrf_token()
-    allowed_mimetypes = Map.get(cfg, :allowed_mimetypes) |> Enum.join(", ")
-
-    """
-    <form accept-charset="UTF-8" class="grid-form" method="post" role="form">
-      <input name="_method" type="hidden" value="patch">
-      <input name="_csrf_token" type="hidden" value="#{csrf_token}">
-      <input name="_utf8" type="hidden" value="✓">
-      <div class="form-row">
-        <div class="form-group required no-height">
-          <label for="config[cfg]">#{gettext("Allowed mimetypes")}</label>
-          <input type="text" name="config[allowed_mimetypes]"
-                 value="#{allowed_mimetypes}">
-        </div>
-        <div class="form-group required no-height">
-          <label for="config[cfg]">#{gettext("Default size")}</label>
-          <input type="text" name="config[default_size]" value="#{Map.get(cfg, :default_size)}">
-        </div>
-        <div class="form-group required no-height">
-          <label for="config[cfg]">#{gettext("Random filename")}</label>
-          <input type="checkbox" name="config[random_filename]"
-                 value="#{Map.get(cfg, :random_filename)}">
-        </div>
-        <div class="form-group required no-height">
-          <label for="config[cfg]">#{gettext("Size limit")}</label>
-          <input type="text" name="config[size_limit]" value="#{Map.get(cfg, :size_limit)}">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group required no-height">
-          <label for="config[cfg]">#{gettext("Upload path")}</label>
-          <input type="text" name="config[upload_path]" value="#{Map.get(cfg, :upload_path)}">
-        </div>
-      </div>
-      #{size_rows}
-      <div class="form-row">
-        <button class="m-t-sm m-b-sm btn btn-default add-masterkey-standard">
-          #{gettext("Add master key (standard)")}
-        </button>
-        <button class="m-t-sm m-b-sm m-l-sm btn btn-default add-masterkey-pl">
-          #{gettext("Add master key (portrait/landscape)")}
-        </button>
-      </div>
-      <div class="form-row">
-        <div class="form-group required">
-          <input class="btn btn-success"
-                 name="config[submit]"
-                 type="submit"
-                 value="#{gettext("Save")}">
-        </div>
-      </div>
-    </form>
-    """
-    |> Phoenix.HTML.raw()
-  end
-
-  @spec make_row_for_size(String.t(), Brando.Type.ImageConfig.t()) :: String.t()
-  defp make_row_for_size(name, cfg) do
-    {type, inputs} =
-      if Map.has_key?(cfg, "landscape") do
-        i = for {k, v} <- cfg, do: make_recursive_input_for(k, v, name)
-        {:recursive, i}
-      else
-        i = for {k, v} <- cfg, do: make_input_for({k, v}, name, cfg, :standard)
-        {:standard, i}
-      end
-
-    masterkey_type = "#{type}-masterkey-input"
-
-    add_button =
-      if type == :standard do
-        """
-        <div class="form-row">
-          <span class="m-t-sm m-b-sm btn btn-xs btn-block add-key-standard">
-            <i class="fa fa-plus-circle"></i>
-          </span>
-        </div>
-        """
-      else
-        ""
-      end
-
-    """
-    <fieldset>
-      <legend>
-        <br />
-        #{gettext("key")}
-        <span class="btn btn-xs delete-key">
-          <i class="fa fa-fw fa-ban"></i>
-        </span>
-      </legend>
-
-      <div class="form-row">
-        <div class="form-group required no-height">
-          <label>#{gettext("masterkey")}</label>
-          <input type="text" class="#{masterkey_type}" value="#{name}">
-        </div>
-      </div>
-
-      #{inputs}
-      #{add_button}
-
-    </fieldset>
-    """
-  end
-
-  @spec make_recursive_input_for(String.t(), Brando.Type.ImageConfig.t(), String.t()) ::
-          String.t()
-  defp make_recursive_input_for(orientation, cfg_map, name) do
-    inputs = Enum.map(cfg_map, &make_input_for(&1, name, cfg_map, orientation))
-
-    """
-    <fieldset>
-      <legend>
-      <br />
-        #{gettext("Orientation")}: #{orientation}
-      </legend>
-
-      #{inputs}
-
-      <div class="form-row">
-        <span data-orientation="#{orientation}"
-              class="m-t-sm m-b-sm btn btn-xs btn-block add-key-recursive">
-          <i class="fa fa-plus-circle"></i>
-        </span>
-      </div>
-    </fieldset>
-    """
-  end
-
-  defp make_input_for({k, v}, name, _, :standard) do
-    actual_value_input = """
-    <input type="hidden"
-           class="actual-value"
-           name="sizes[#{name}][#{k}]"
-           value="#{v}">
-    """
-
-    class_modifier = "standard"
-
-    render_input_for(k, v, actual_value_input, class_modifier)
-  end
-
-  defp make_input_for({k, v}, name, _, modifier) do
-    actual_value_input = """
-    <input type="hidden"
-           class="actual-value orientation-value"
-           name="sizes[#{name}][#{modifier}][#{k}]"
-           value="#{v}">
-    """
-
-    class_modifier = "recursive"
-    render_input_for(k, v, actual_value_input, class_modifier)
-  end
-
-  defp render_input_for(k, v, actual_value_input, class_modifier) do
-    """
-    <div class="form-row">
-      <div class="form-group required no-height">
-        <label>
-          Key
-          <span class="btn btn-xs delete-subkey">
-            <i class="fa fa-fw fa-ban"></i>
-          </span>
-        </label>
-        <input type="text" class="#{class_modifier}-key-input" value="#{k}">
-      </div>
-      <div class="form-group required no-height">
-        <label>Value</label>
-        <input type="text" class="#{class_modifier}-val-input" value="#{v}">
-      </div>
-      #{actual_value_input}
-    </div>
-    """
-  end
-
-  @doc """
-  Converts some of the values to proper types.
-  Textual representation of boolean -> bool, etc.
-  """
-  @spec fix_size_cfg_vals(map) :: map
-  def fix_size_cfg_vals(sizes) do
-    Enum.reduce(sizes, %{}, fn {key, val}, acc ->
-      {key, val} = convert_value(key, val)
-      Map.put(acc, key, val)
-    end)
-  end
-
-  @spec convert_value(String.t(), String.t() | map) :: {String.t(), String.t() | map}
-  defp convert_value(key, val) when is_map(val) do
-    {key, fix_size_cfg_vals(val)}
-  end
-
-  defp convert_value(key, val) do
-    val =
-      case key do
-        "crop" -> (val == "true" && true) || false
-        "quality" -> String.to_integer(val)
-        _ -> val
-      end
-
-    {key, val}
   end
 
   @doc """

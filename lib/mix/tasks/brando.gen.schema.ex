@@ -77,6 +77,11 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
       |> Enum.map(fn {k, v} -> {v, k} end)
       |> Enum.filter(fn {k, _} -> k == :villain end)
 
+    gallery_fields =
+      attrs
+      |> Enum.map(fn {k, v} -> {v, "#{k}_id"} end)
+      |> Enum.filter(fn {k, _} -> k == :gallery end)
+
     Mix.Brando.check_module_name_availability!(binding[:module])
 
     {assocs, attrs} = partition_attrs_and_assocs(attrs)
@@ -111,9 +116,10 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
           attrs: attrs,
           img_fields: img_fields,
           file_fields: file_fields,
+          villain_fields: villain_fields,
+          gallery_fields: gallery_fields,
           plural: plural,
           types: types,
-          villain_fields: villain_fields,
           sequenced: sequenced?,
           domain: domain,
           snake_domain: snake_domain,
@@ -164,7 +170,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
 
   defp partition_attrs_and_assocs(attrs) do
     Enum.split_with(attrs, fn {_, kind} ->
-      kind == :references
+      kind == :references or kind == :gallery
     end)
   end
 
@@ -214,6 +220,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
   defp value_to_type(:image), do: Brando.Type.Image
   defp value_to_type(:file), do: Brando.Type.File
   defp value_to_type(:villain), do: :villain
+  defp value_to_type(:gallery), do: Brando.ImageSeries
 
   defp value_to_type(v) do
     if Code.ensure_loaded?(Ecto.Type) and not Ecto.Type.primitive?(v) do

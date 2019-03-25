@@ -18,6 +18,14 @@ defmodule Brando.Meta.Controller do
   @doc """
   Puts `key` with `value` in `:brando_meta` key in `conn.private`.
   """
+  def put_meta(conn, _key, "") do
+    conn
+  end
+
+  def put_meta(conn, _key, nil) do
+    conn
+  end
+
   def put_meta(conn, key, value) do
     meta =
       conn

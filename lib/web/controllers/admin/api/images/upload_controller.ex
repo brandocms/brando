@@ -17,17 +17,15 @@ defmodule Brando.Admin.API.Images.UploadController do
 
   @doc false
   def post(conn, %{"image_series_id" => id} = params) do
-    current_user = Guardian.Plug.current_resource(conn)
+    user = Guardian.Plug.current_resource(conn)
 
-    {:ok, series} =
-      id
-      |> Images.get_series()
-      |> Images.preload_series()
+    cfg =
+      case Images.get_series_config(id) do
+        {:error, _} -> Brando.config(Brando.Images)[:default_config]
+        {:ok, cfg} -> cfg
+      end
 
-    opts = Map.put(%{}, "image_series_id", series.id)
-    cfg = series.cfg || Brando.config(Brando.Images)[:default_config]
-
-    case Images.check_for_uploads(params, current_user, cfg, opts) do
+    case Images.Uploads.Schema.handle_upload(params, cfg, user) do
       {:ok, image} ->
         render(conn, :post, image: image, status: 200, error_msg: nil)
 
@@ -35,6 +33,13 @@ defmodule Brando.Admin.API.Images.UploadController do
         conn
         |> put_status(400)
         |> render(:post, status: 400, error_msg: error_msg)
+
+      images when length(images) > 1 ->
+        images = Enum.map(images, fn {:ok, img} -> img end)
+        render(conn, :post, images: images, status: 200, error_msg: nil)
+
+      [{:ok, image}] ->
+        render(conn, :post, image: image, status: 200, error_msg: nil)
     end
   end
 end
