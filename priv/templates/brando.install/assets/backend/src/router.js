@@ -1,5 +1,4 @@
-import Vue from 'vue'
-import Router from 'vue-router'
+import { Vue, Router } from 'kurtz'
 import kurtzBaseRoutes from 'kurtz/lib/routes/base'
 import localRoutes from '@/routes'
 import store from './store'

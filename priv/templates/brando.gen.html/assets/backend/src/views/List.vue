@@ -77,7 +77,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from 'vuex'
+import { mapActions, mapGetters } from 'kurtz/vuex'
 
 export default {
   components: {
@@ -92,13 +92,6 @@ export default {
     }
   },
 
-  async created () {
-    console.debug('created <<%= Recase.to_pascal(vue_singular) %>ListView />')
-    this.loading++
-    await this.get<%= Recase.to_pascal(vue_plural) %>()
-    this.loading--
-  },
-
   computed: {
     ...mapGetters('users', [
       'me'
@@ -111,6 +104,13 @@ export default {
   inject: [
     'adminChannel'
   ],
+
+  async created () {
+    console.debug('created <<%= Recase.to_pascal(vue_singular) %>ListView />')
+    this.loading++
+    await this.get<%= Recase.to_pascal(vue_plural) %>()
+    this.loading--
+  },
 
   methods: {
     getOrder (sortable) {

@@ -1,5 +1,13 @@
 ## v2.0.0-alpha.1-dev
 
+* Backwards incompatible changes
+  - Replace all `backend/*.`
+    `import Vuex from 'vuex'` -> `import { Vuex } from 'kurtz'`
+    `from 'vuex'` -> `from 'kurtz/lib/vuex'`
+    `import Vue from 'vue'` -> `import { Vue } from 'kurtz'`
+    `from 'vue'` -> `from 'kurtz/lib/vue'`
+    `import nprogress from 'nprogress'` -> `import { nprogress } from 'kurtz'`
+
 ## v2.0.0-alpha.0
 
 * Update for Ecto 3, Phoenix 1.4

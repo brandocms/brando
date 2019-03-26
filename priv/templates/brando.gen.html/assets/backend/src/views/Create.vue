@@ -28,7 +28,7 @@
 
 <script>
 
-import nprogress from 'nprogress'
+import { nprogress } from 'kurtz'
 import { showError, validateImageParams, stripParams } from 'kurtz/lib/utils'
 import { alertError } from 'kurtz/lib/utils/alerts'
 import { <%= vue_singular %>API } from '@/api/<%= vue_singular %>'

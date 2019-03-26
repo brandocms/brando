@@ -1,5 +1,4 @@
-import Vue from 'vue'
-import Vuex from 'vuex'
+import { Vue, Vuex } from 'kurtz'
 import * as kurtzBaseStoreModules from 'kurtz/lib/stores'
 
 Vue.use(Vuex)
