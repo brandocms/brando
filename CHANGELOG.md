@@ -8,6 +8,9 @@
     `from 'vue'` -> `from 'kurtz/lib/vue'`
     `import nprogress from 'nprogress'` -> `import { nprogress } from 'kurtz'`
 
+  - All Apollo calls with 'network-only' must be 'no-cache'
+  - Switch out the `backend/package.json` with a fresh one from source.
+
 ## v2.0.0-alpha.0
 
 * Update for Ecto 3, Phoenix 1.4
