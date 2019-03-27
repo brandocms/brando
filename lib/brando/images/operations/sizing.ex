@@ -7,16 +7,11 @@ defmodule Brando.Images.Operations.Sizing do
   """
   def create_image_size(%Images.Operation{
     type: :gif,
-    id: id,
     img_struct: %{path: image_src, width: width, height: height},
     sized_img_path: image_dest,
     sized_img_dir: image_dest_dir,
-    filename: filename,
-    size_key: size_key,
     size_cfg: size_cfg,
-    user: user
   }) do
-    Progress.update_progress(user, "#{filename} — Oppretter bildestørrelse: <strong>#{size_key}</strong>", key: to_string(id) <> size_key)
     File.mkdir_p(image_dest_dir)
 
     size_cfg = get_size_cfg_orientation(size_cfg, height, width)
@@ -54,23 +49,27 @@ defmodule Brando.Images.Operations.Sizing do
     size_cfg: size_cfg,
     user: user
   }) do
-    Progress.update_progress(user, "#{filename} — Oppretter bildestørrelse: <strong>#{size_key}</strong>", key: to_string(id) <> size_key)
-    File.mkdir_p(image_dest_dir)
+    image_src_path = Images.Utils.media_path(image_src)
+    image_dest_path = Images.Utils.media_path(image_dest)
+    image_dest_dir = Images.Utils.media_path(image_dest_dir)
+
+    File.mkdir_p!(image_dest_dir)
 
     conversion_parameters =
       %Images.ConversionParameters{
         id: id,
         size_key: size_key,
-        image_src_path: Images.Utils.media_path(image_src),
-        image_dest_path: Images.Utils.media_path(image_dest),
+        image_src_path: image_src_path,
+        image_dest_path: image_dest_path,
         image_dest_rel_path: image_dest,
         original_width: width / 1,
         original_height: height / 1
       }
 
     with {:ok, {:image, :exists}} <- image_src_exists(conversion_parameters) do
-      conversion_parameters =
+      result =
         conversion_parameters
+        |> set_progress(0, filename, user)
         |> add_size_cfg(size_cfg)
         |> add_quality()
         |> add_focal_point(focal)
@@ -80,8 +79,10 @@ defmodule Brando.Images.Operations.Sizing do
         |> add_resize_dimensions()
         |> add_anchor()
         |> add_geographies()
-      Progress.update_progress(user, "#{filename} — Oppretter bildestørrelse: <strong>#{size_key}</strong>", key: to_string(id) <> size_key, percent: 100)
-      process_image(conversion_parameters)
+        |> process_image()
+
+      set_progress(conversion_parameters, 100, filename, user)
+      result
     else
       {:error, {:image, :not_found}} ->
         {:error, {:create_image_size, {:file_not_found, conversion_parameters.image_src_path}}}
@@ -388,5 +389,14 @@ defmodule Brando.Images.Operations.Sizing do
       |> String.split("x")
 
     {String.to_integer(target_width), String.to_integer(target_height)}
+  end
+
+  @doc """
+  Set progress for user
+  """
+  def set_progress(%{size_key: size_key, id: id} = conversion_parameters, progress, filename, user) do
+    progress_string = "#{filename} — Oppretter bildestørrelse: <strong>#{size_key}</strong>"
+    Progress.update_progress(user, progress_string, key: to_string(id) <> size_key, percent: progress)
+    conversion_parameters
   end
 end
