@@ -23,6 +23,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:keep, "log", "log"},
     {:eex, "etc/logrotate/prod.conf", "etc/logrotate/prod.conf"},
     {:eex, "etc/nginx/prod.conf", "etc/nginx/prod.conf"},
+    {:eex, "etc/nginx/502.html", "etc/nginx/502.html"},
     {:eex, "etc/supervisord/prod.conf", "etc/supervisord/prod.conf"},
 
     # Tuple implementation for Poison
