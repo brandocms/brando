@@ -10,6 +10,10 @@
 
   - All Apollo calls with 'network-only' must be 'no-cache'
   - Switch out the `backend/package.json` with a fresh one from source.
+  - `yarn upgrade kurtz`
+  - Replace `Dockerfile`, `.dockerignore`, `fabfile.py` from source.
+  - Remove `YourApp.PostgresTypes` — this is not needed.
+
 
 ## v2.0.0-alpha.0
 
