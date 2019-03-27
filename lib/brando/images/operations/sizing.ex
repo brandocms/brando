@@ -40,6 +40,9 @@ defmodule Brando.Images.Operations.Sizing do
     System.cmd("gifsicle", params, stderr_to_stdout: true)
   end
 
+  @doc """
+  Create image size for png/jpeg
+  """
   def create_image_size(%Images.Operation{
     type: _,
     id: id,
@@ -85,6 +88,9 @@ defmodule Brando.Images.Operations.Sizing do
     end
   end
 
+  @doc """
+  Process image conversion when crop is false
+  """
   def process_image(%Images.ConversionParameters{
     id: id,
     size_key: size_key,
@@ -107,6 +113,9 @@ defmodule Brando.Images.Operations.Sizing do
     }}
   end
 
+  @doc """
+  Process image conversion when crop is true
+  """
   def process_image(%Images.ConversionParameters{
     id: id,
     size_key: size_key,
@@ -131,6 +140,9 @@ defmodule Brando.Images.Operations.Sizing do
     }}
   end
 
+  @doc """
+  Check if `image_src_path` exists
+  """
   def image_src_exists(%Images.ConversionParameters{image_src_path: src}) do
     case File.exists?(src) do
       true -> {:ok, {:image, :exists}}
@@ -138,6 +150,9 @@ defmodule Brando.Images.Operations.Sizing do
     end
   end
 
+  @doc """
+  Convert and add focal point to conversion parameters
+  """
   def add_focal_point(conversion_parameters, focal) do
     focal =
       focal
@@ -147,15 +162,24 @@ defmodule Brando.Images.Operations.Sizing do
     Map.put(conversion_parameters, :focal_point, focal)
   end
 
+  @doc """
+  Add size cfg to conversion parameters
+  """
   def add_size_cfg(%{original_width: width, original_height: height} = conversion_parameters, size_cfg) do
     Map.put(conversion_parameters, :size_cfg, get_size_cfg_orientation(size_cfg, height, width))
   end
 
+  @doc """
+  Add the opened Mogrify image to conversion parameters
+  """
   def add_open_image(conversion_parameters) do
     image = Mogrify.open(conversion_parameters.image_src_path)
     Map.put(conversion_parameters, :image, image)
   end
 
+  @doc """
+  Add crop flag to conversion parameters
+  """
   def add_crop_flag(%{size_cfg: %{"crop" => crop}} = conversion_parameters) do
     Map.put(conversion_parameters, :crop, crop)
   end
@@ -164,11 +188,17 @@ defmodule Brando.Images.Operations.Sizing do
     Map.put(conversion_parameters, :crop, false)
   end
 
+  @doc """
+  Add quality setting to conversion parameters. Falls back to 100 (max quality)
+  """
   def add_quality(%{size_cfg: size_cfg} = conversion_parameters) do
     quality = Map.get(size_cfg, "quality", "100")
     Map.put(conversion_parameters, :quality, quality)
   end
 
+  @doc """
+  Add extracted crop dimensions to conversion parameters
+  """
   def add_crop_dimensions(%{crop: true, size_cfg: size_cfg} = conversion_parameters) do
     {crop_width, crop_height} = get_crop_dimensions_from_cfg(size_cfg)
 
@@ -182,7 +212,7 @@ defmodule Brando.Images.Operations.Sizing do
   end
 
   @doc """
-  Calculate resize dimension while keeping aspect ratio
+  Calculate resize dimension while keeping aspect ratio and add to conversion parameters
   """
   def add_resize_dimensions(%{
     crop: true,
@@ -227,6 +257,9 @@ defmodule Brando.Images.Operations.Sizing do
     conversion_parameters
   end
 
+  @doc """
+  Add resize and crop geometries to conversion parameters if `crop` is true
+  """
   def add_geographies(%{
     crop: true,
     anchor: anchor,
@@ -243,22 +276,16 @@ defmodule Brando.Images.Operations.Sizing do
     |> Map.put(:crop_geography, crop_geography)
   end
 
+  @doc """
+  Add resize geometry from size config to conversion parameters if `crop` is false
+  """
   def add_geographies(%{crop: false, size_cfg: %{"size" => resize_geography}} = conversion_parameters) do
     Map.put(conversion_parameters, :resize_geography, resize_geography)
   end
 
-  defp get_size_cfg_orientation(size_cfg, width, height) do
-    if Map.has_key?(size_cfg, "portrait") do
-      if height > width do
-        size_cfg["portrait"]
-      else
-        size_cfg["landscape"]
-      end
-    else
-      size_cfg
-    end
-  end
-
+  @doc """
+  Add anchor for cropping by focal point to conversion parameters
+  """
   def add_anchor(%{
     crop: true
   } = conversion_parameters) do
@@ -272,6 +299,9 @@ defmodule Brando.Images.Operations.Sizing do
     conversion_parameters
   end
 
+  @doc """
+  Calculate anchor
+  """
   def calculate_anchor(%{
     transformed_focal_point: transformed_focal_point,
     resize_width: resize_width,
@@ -299,7 +329,7 @@ defmodule Brando.Images.Operations.Sizing do
   end
 
   @doc """
-  Get pixel X and Y of focal point
+  Get pixel X and Y of focal point and add to conversion parameters
   """
   def get_original_focal_point(%{
     focal_point: focal,
@@ -315,7 +345,8 @@ defmodule Brando.Images.Operations.Sizing do
   end
 
   @doc """
-  Transform original focal point to a scaled version fitting the resized image dimensions
+  Transform original focal point to a scaled version fitting the resized image dimensions,
+  then add to conversion parameters
   """
   def transform_focal_point(%{
     original_focal_point: original_focal_point,
@@ -330,6 +361,21 @@ defmodule Brando.Images.Operations.Sizing do
     }
 
     Map.put(conversion_parameters, :transformed_focal_point, transformed_focal_point)
+  end
+
+  @doc """
+  Get correct size config according to the image's orientation
+  """
+  def get_size_cfg_orientation(size_cfg, width, height) do
+    if Map.has_key?(size_cfg, "portrait") do
+      if height > width do
+        size_cfg["portrait"]
+      else
+        size_cfg["landscape"]
+      end
+    else
+      size_cfg
+    end
   end
 
   @doc """
