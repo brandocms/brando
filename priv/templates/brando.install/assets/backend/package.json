@@ -13,10 +13,7 @@
   "dependencies": {
     "bootstrap": "^4.3.1",
     "kurtz": "twined/kurtz",
-    "nprogress": "^0.2.0",
-    "tether": "^1.4.4",
-    "vue": "^2.6.10",
-    "vue-template-compiler": "^2.6.10"
+    "vue": "^2.6.10"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "^3.5.1",
@@ -28,7 +25,8 @@
     "graphql-tag": "^2.10.1",
     "lint-staged": "^8.1.5",
     "node-sass": "^4.11.0",
-    "sass-loader": "^7.0.1"
+    "sass-loader": "^7.0.1",
+    "vue-template-compiler": "^2.6.10"
   },
   "gitHooks": {
     "pre-commit": "lint-staged"

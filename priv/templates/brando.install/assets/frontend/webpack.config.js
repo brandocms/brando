@@ -95,7 +95,7 @@ const cfg = {
       {
         test: /\.(sa|sc|c)ss$/,
         use: [
-          IS_DEV ? 'style-loader' : MiniCssExtractPlugin.loader,
+          MiniCssExtractPlugin.loader,
           'css-loader',
           'postcss-loader',
           'sass-loader'
