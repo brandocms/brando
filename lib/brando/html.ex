@@ -434,6 +434,7 @@ defmodule Brando.HTML do
     srcset = (Keyword.get(opts, :srcset) && get_srcset(img_struct, opts[:srcset], opts)) || false
     width = (Keyword.get(opts, :width) && Map.get(img_struct, :width)) || false
     height = (Keyword.get(opts, :height) && Map.get(img_struct, :height)) || false
+    lazyload = Keyword.get(opts, :lazyload, false)
     img_class = Keyword.get(opts, :img_class, false)
     picture_class = Keyword.get(opts, :picture_class, false)
 
@@ -446,18 +447,35 @@ defmodule Brando.HTML do
       sizes: sizes
     ]
 
-    img_attrs = [
-      data_srcset: srcset,
-      data_src: src,
-      sizes: sizes,
-      class: img_class,
-      width: width,
-      height: height
-    ]
+    source_attrs =
+      if lazyload do
+        source_attrs
+      else
+        Keyword.merge(source_attrs, [data_srcset: false, srcset: srcset])
+      end
+
+    img_class =
+      "#{img_class && img_class || ""}#{lazyload && " lazyload" || ""}"
+
+    img_attrs =
+      [
+        data_srcset: srcset,
+        data_src: src,
+        sizes: sizes,
+        class: img_class,
+        width: width,
+        height: height
+      ]
+
+    img_attrs =
+      if lazyload do
+        img_attrs
+      else
+        Keyword.merge(img_attrs, [data_srcset: false, data_src: false, srcset: srcset, src: src])
+      end
 
     noscript_img_attrs = [
-      src: src,
-      class: img_class
+      src: src
     ]
 
     img_tag = tag(:img, img_attrs)
