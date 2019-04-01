@@ -12,14 +12,14 @@ defmodule <%= application_module %>.Schema do
   query do
     import_brando_queries()
 
-    #++queries
-    #__queries
+    # ++queries
+    # __queries
   end
 
   mutation do
     import_brando_mutations()
 
-    #++mutations
-    #__mutations
+    # ++mutations
+    # __mutations
   end
 end

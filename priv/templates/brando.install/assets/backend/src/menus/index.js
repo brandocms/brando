@@ -1,7 +1,7 @@
-//++imports
-//__imports
+// ++imports
+// __imports
 
 export function installMenus (store) {
-  //++content
-  //__content
+  // ++content
+  // __content
 }

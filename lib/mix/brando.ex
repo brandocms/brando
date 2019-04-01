@@ -176,10 +176,10 @@ defmodule Mix.Brando do
     marker_start =
       case Path.extname(file) do
         ".ex" ->
-          "#"
+          "# __"
 
         ".js" ->
-          "//"
+          "// __"
       end
 
     exists? =
@@ -192,7 +192,7 @@ defmodule Mix.Brando do
       end
 
     unless exists? do
-      marker = "#{marker_start}__#{marker}"
+      marker = "#{marker_start}#{marker}"
       marker_regex = ~r/(\s+)?(#{marker})/
 
       new_content =

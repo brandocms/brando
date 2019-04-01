@@ -13,6 +13,26 @@
   - `yarn upgrade kurtz`
   - Replace `Dockerfile`, `.dockerignore`, `fabfile.py` from source.
   - Remove `YourApp.PostgresTypes` — this is not needed.
+  - Add insertion points to important files. These markers will be used with `brando.gen.html`
+    `__` denotes end of block, `++` denotes start. Start of block is not mandatory.
+    - `admin_channel.ex`
+      - `# __imports`
+      - `# __macros`
+      - `# __functions`
+    - `graphql/schema/types.ex`
+      - `# __types`
+    - `graphql/schema.ex`
+      - `# __queries`
+      - `# __mutations`
+    - `assets/backend/src/store/index.js`
+      - `// __imports
+      - `// __content
+    - `assets/backend/src/routes/index.js`
+      - `// __imports
+      - `// __content
+    - `assets/backend/src/menus/index.js`
+      - `// __imports
+      - `// __content
 
 
 ## v2.0.0-alpha.0
