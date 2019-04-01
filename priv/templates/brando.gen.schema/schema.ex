@@ -7,6 +7,8 @@ defmodule <%= module %> do
   import Brando.Images.Optimize, only: [optimize: 2]<% end %>
   import <%= base %>Web.Backend.Gettext
 
+  @type t :: %__MODULE__{}
+
   schema <%= inspect "#{snake_domain}_#{plural}" %> do
 <%= for schema_field <- schema_fields do %>    <%= schema_field %>
 <% end %><%= for {k, _, m} <- assocs do %>    belongs_to <%= inspect k %>, <%= m %>
@@ -57,10 +59,4 @@ defmodule <%= module %> do
     |> validate_upload({:image, <%= inspect k %>}, user)
     |> optimize(<%= inspect k %>)<% end %><% end %>
   end
-
-  def delete(record) do
-<%= for {_v, k} <- img_fields do %>    delete_original_and_sized_images(record, <%= inspect k %>)
-<% end %>    Brando.repo.delete!(record)
-<%= for {_v, k} <- gallery_fields do %>    Brando.Images.delete_series(record.<%= k %>)
-<% end %>  end
 end

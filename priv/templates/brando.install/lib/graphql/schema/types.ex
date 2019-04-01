@@ -8,6 +8,6 @@ defmodule <%= application_module %>.Schema.Types do
   # absinthe types
   import_types Absinthe.Plug.Types
 
-  # import app types
-  # import_types <%= application_module %>.Schema.Types.Example
+  #++types
+  #__types
 end

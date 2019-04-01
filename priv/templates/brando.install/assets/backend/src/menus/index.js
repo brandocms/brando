@@ -1,3 +1,7 @@
+//++imports
+//__imports
+
 export function installMenus (store) {
-  store.commit('menu/STORE_MENU', [].concat([]))
+  //++content
+  //__content
 }

@@ -23,8 +23,10 @@ defmodule Mix.Tasks.Brando.Install do
     {:keep, "log", "log"},
     {:eex, "etc/logrotate/prod.conf", "etc/logrotate/prod.conf"},
     {:eex, "etc/nginx/prod.conf", "etc/nginx/prod.conf"},
+    {:eex, "etc/nginx/staging.conf", "etc/nginx/staging.conf"},
     {:eex, "etc/nginx/502.html", "etc/nginx/502.html"},
     {:eex, "etc/supervisord/prod.conf", "etc/supervisord/prod.conf"},
+    {:eex, "etc/supervisord/staging.conf", "etc/supervisord/staging.conf"},
 
     # Tuple implementation for Poison
     {:eex, "lib/application_name/tuple.ex", "lib/application_name/tuple.ex"},
@@ -63,6 +65,8 @@ defmodule Mix.Tasks.Brando.Install do
     # Default configuration files
     {:eex, "config/brando.exs", "config/brando.exs"},
     {:eex, "config/prod.exs", "config/prod.exs"},
+    {:eex, "config/staging.exs", "config/staging.exs"},
+    {:eex, "config/staging.secret.exs", "config/staging.secret.exs"},
 
     # Migration files
     {:eex, "migrations/20150123230712_create_users.exs", "priv/repo/migrations/20150123230712_create_users.exs"},
