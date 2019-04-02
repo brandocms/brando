@@ -50,7 +50,7 @@ defmodule Mix.Brando do
           :eex_trim -> EEx.eval_file(source, binding, trim: true)
         end
 
-      Mix.Generator.create_file(target, contents)
+      Mix.Generator.create_file(target, contents, force: true)
     end
   end
 

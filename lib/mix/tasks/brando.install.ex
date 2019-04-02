@@ -361,7 +361,7 @@ defmodule Mix.Tasks.Brando.Install do
           File.mkdir_p!(target)
 
         :text ->
-          create_file(target, render(source))
+          create_file(target, render(source), force: true)
 
         :copy ->
           File.mkdir_p!(Path.dirname(target))
@@ -369,7 +369,7 @@ defmodule Mix.Tasks.Brando.Install do
 
         :eex ->
           contents = EEx.eval_string(render(source), binding, file: source)
-          create_file(target, contents)
+          create_file(target, contents, force: true)
       end
     end
   end
