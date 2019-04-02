@@ -15,7 +15,6 @@ import {
   Fader,
   FixedHeader,
   HeroSlider,
-  Lazyload,
   Lightbox,
   Links,
   MobileMenu,
@@ -25,69 +24,67 @@ import {
   TweenLite,
   Sine,
   Power3,
-  imagesLoaded,
-  SR
+  TimelineLite,
+  imagesLoaded
 } from 'jupiter'
 
-import Slider from './slider'
 import '../css/app.scss'
 
 TweenLite.defaultEase = Sine.easeOut
 
 class Application {
-  constructor () {
+  constructor() {
     this.fader = null
   }
 
-  initialize () {
+  initialize() {
     this.lightbox = new Lightbox()
     this.fader = new Fader(this, document.querySelector('#fader'))
 
-    const heroSlider = document.querySelector('.hero-slider')
+    const heroSlider = document.querySelector('[data-hero-slider]')
     if (heroSlider) {
       this.heroSlider = new HeroSlider(heroSlider)
     }
-
-    this.moonwalk = new Moonwalk()
 
     this.header = new FixedHeader(
       document.querySelector('header'),
       {
         default: {
+          enterDelay: 0.5,
           offset: 8,
           offsetSmall: 10,
           offsetBg: 50,
           regBgColor: 'transparent'
-        },
-
-        sections: {
-          index: {
-            offsetBg: '#content'
-          }
         }
       }
     )
 
-    this.mobileMenu = new MobileMenu()
+    this.mobileMenu = new MobileMenu({
+      onResize: (m) => {
+        if (document.body.classList.contains('open-menu')) {
+          TweenLite.to(m.bg, 0.1, { height: window.innerHeight })
+        }
+      }
+    })
+
     this.links = new Links(this)
     this.cookies = new Cookies()
     this.typography = new Typography()
-    this.lazyload = new Lazyload()
-    // this.breakpoints = new Breakpoints()
+
     this._emitInitializedEvent()
     setTimeout(this.ready.apply(this), 350)
   }
 
-  ready () {
+  ready() {
     this.fader.out()
   }
 
-  _emitInitializedEvent () {
+  _emitInitializedEvent() {
     const initializedEvent = new window.CustomEvent('application:initialized')
     window.dispatchEvent(initializedEvent)
   }
 
-  _emitReadyEvent () {
+  _emitReadyEvent() {
     const readyEvent = new window.CustomEvent('application:ready')
     window.dispatchEvent(readyEvent)
   }
@@ -101,4 +98,3 @@ if (document.attachEvent ? document.readyState === 'complete' : document.readySt
 } else {
   document.addEventListener('DOMContentLoaded', app.initialize.apply(app))
 }
-

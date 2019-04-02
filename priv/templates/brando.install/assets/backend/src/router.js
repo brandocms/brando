@@ -18,7 +18,7 @@ const router = new Router({
 })
 
 router.afterEach(route => {
-  document.title = route.meta.title ? route.meta.title : 'SITE NAME'
+  document.title = route.meta.title ? route.meta.title : 'SITE NAME admin'
 })
 
 router.beforeEach((to, from, next) => {

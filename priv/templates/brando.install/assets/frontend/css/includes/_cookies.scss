@@ -1,6 +1,6 @@
 #cookies {
   @each $bp-name, $bp-size in $grid-breakpoints {
-    @include media-breakpoint-up($bp-name) {
+    @include media('>=#{$bp-name}') {
       padding-top: map-get($padding-lg, $bp-name);
     }
   }
@@ -24,7 +24,7 @@
   max-width: 100% !important;
 
   @each $bp-name, $bp-size in $grid-breakpoints {
-    @include media-breakpoint-up($bp-name) {
+    @include media('>=#{$bp-name}') {
       padding-top: map-get($padding-sm, $bp-name) / 2;
       padding-bottom: map-get($padding-sm, $bp-name) / 2;
     }
@@ -35,7 +35,7 @@
     justify-content: space-between;
     align-items: center;
 
-    @include media-breakpoint-only(xs) {
+    @include media(xs) {
       flex-direction: column;
     }
   }
@@ -51,7 +51,7 @@
     flex-shrink: 0;
     text-align: right;
 
-    @include media-breakpoint-only(xs) {
+    @include media(xs) {
       display: flex;
       align-items: center;
       width: 100%;
@@ -59,7 +59,7 @@
       justify-content: space-between;
     }
 
-    @include media-breakpoint-only(sm) {
+    @include media('sm') {
       padding-left: 15px;
     }
 
@@ -73,7 +73,7 @@
       border: 0;
       padding: 3px 25px;
 
-      @include media-breakpoint-up(sm) {
+      @include media('>=sm') {
         margin-right: 15px;
       }
     }

@@ -1,6 +1,6 @@
 p {
   @each $bp-name, $bp-size in $grid-breakpoints {
-    @include media-breakpoint-up($bp-name) {
+    @include media('>=#{$bp-name}') {
       font-size: map-get($fontsize-base, $bp-name);
       line-height: map-get($lineheight-base, $bp-name);
       margin-bottom: map-get($lineheight-base, $bp-name);
@@ -14,7 +14,7 @@ p {
 
   &.credits {
     @each $bp-name, $bp-size in $grid-breakpoints {
-      @include media-breakpoint-up($bp-name) {
+      @include media('>=#{$bp-name}') {
         font-size: map-get($fontsize-credits, $bp-name);
         line-height: map-get($lineheight-credits, $bp-name);
       }
@@ -36,7 +36,7 @@ p {
 .lead-container p, p.lead {
   letter-spacing: 0.8px;
   @each $bp-name, $bp-size in $grid-breakpoints {
-    @include media-breakpoint-up($bp-name) {
+    @include media('>=#{$bp-name}') {
       font-size: map-get($fontsize-lead, $bp-name);
       line-height: map-get($lineheight-lead, $bp-name);
       margin-bottom: map-get($padding-sm, $bp-name);
