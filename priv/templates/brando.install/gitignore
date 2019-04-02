@@ -3,6 +3,7 @@
 /db
 /deps
 /.elixir_ls
+/.vscode
 /*.ez
 
 # Generated on crash by the VM
