@@ -3,6 +3,7 @@
 use Mix.Config
 
 config :<%= application_name %>, ecto_repos: [<%= application_module %>.Repo]
+config :<%= application_name %>, hmr: true
 
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",

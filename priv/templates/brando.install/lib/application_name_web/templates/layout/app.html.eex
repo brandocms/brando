@@ -17,7 +17,11 @@
 
     <title><%%= Brando.Utils.get_page_title(@conn) %></title>
     <script>!function(n,e,s){function o(n){var e=f.className,s=Modernizr._config.classPrefix||"";if(l&&(e=e.baseVal),Modernizr._config.enableJSClass){var o=new RegExp("(^|\\s)"+s+"no-js(\\s|$)");e=e.replace(o,"$1"+s+"js$2")}Modernizr._config.enableClasses&&(e+=" "+s+n.join(" "+s),l?f.className.baseVal=e:f.className=e)}function a(n,e){return typeof n===e}function i(){var n,e,s,o,i,f,l;for(var c in r)if(r.hasOwnProperty(c)){if(n=[],e=r[c],e.name&&(n.push(e.name.toLowerCase()),e.options&&e.options.aliases&&e.options.aliases.length))for(s=0;s<e.options.aliases.length;s++)n.push(e.options.aliases[s].toLowerCase());for(o=a(e.fn,"function")?e.fn():e.fn,i=0;i<n.length;i++)f=n[i],l=f.split("."),1===l.length?Modernizr[l[0]]=o:(!Modernizr[l[0]]||Modernizr[l[0]]instanceof Boolean||(Modernizr[l[0]]=new Boolean(Modernizr[l[0]])),Modernizr[l[0]][l[1]]=o),t.push((o?"":"no-")+l.join("-"))}}var t=[],f=e.documentElement,l="svg"===f.nodeName.toLowerCase(),r=[],c={_version:"3.5.0",_config:{classPrefix:"",enableClasses:!0,enableJSClass:!0,usePrefixes:!0},_q:[],on:function(n,e){var s=this;setTimeout(function(){e(s[n])},0)},addTest:function(n,e,s){r.push({name:n,fn:e,options:s})},addAsyncTest:function(n){r.push({name:null,fn:n})}},Modernizr=function(){};Modernizr.prototype=c,Modernizr=new Modernizr,i(),o(t),delete c.addTest,delete c.addAsyncTest;for(var u=0;u<Modernizr._q.length;u++)Modernizr._q[u]();n.Modernizr=Modernizr}(window,document);</script>
-    <link rel="stylesheet" href="<%%= Routes.static_path(@conn, "/css/app.css") %>">
+    <%%= if Application.get_env(:<%= application_name %>, :hmr) do %>
+      <link rel="stylesheet" href="http://<%%= @conn.host %>:9999/app.css">
+    <%% else %>
+      <link rel="stylesheet" href="<%%= Routes.static_path(@conn, "/css/app.css") %>">
+    <%% end %>
   </head>
   <%%= body_tag @conn, id: "top" %>
     <%%= cookie_law(
@@ -32,6 +36,7 @@
     </div>
     <div class="backdrop"></div>
 <!-- :nav - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
+    <%%= render <%= application_module %>Web.PageView, "_navigation.html", assigns %>
 <!-- /nav - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
 <!-- :content - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
     <%%= render @view_module, @view_template, assigns %>
@@ -40,7 +45,11 @@
     <%%= render <%= application_module %>Web.PageView, "_footer.html", assigns %>
 <!-- /footer - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
 
-    <script src="<%%= Routes.static_path(@conn, "/js/app.js") %>"></script>
+    <%%= if Application.get_env(:<%= application_name %>, :hmr) do %>
+      <script src='http://<%= @conn.host %>:9999/app.js'></script>
+    <%% else %>
+      <script src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>
+    <%% end %>
     <%%= Brando.HTML.google_analytics("UA-XXXXXXXX-1") %>
 
     <div class="dev-debug-sizes">
