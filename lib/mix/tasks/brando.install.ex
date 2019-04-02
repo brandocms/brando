@@ -275,7 +275,6 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "assets/frontend/css/includes/_templates.scss",
      "assets/frontend/css/includes/_templates.scss"},
     {:copy, "assets/frontend/js/index.js", "assets/frontend/js/index.js"},
-    {:copy, "assets/frontend/js/slider/index.js", "assets/frontend/js/slider/index.js"},
     {:copy, "assets/frontend/static/favicon.ico", "assets/frontend/static/favicon.ico"},
     {:copy, "assets/frontend/static/ico/android-chrome-192x192.png",
      "assets/frontend/static/ico/android-chrome-192x192.png"},
