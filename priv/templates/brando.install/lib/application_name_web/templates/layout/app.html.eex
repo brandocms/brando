@@ -46,9 +46,9 @@
 <!-- /footer - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
 
     <%%= if Application.get_env(:<%= application_name %>, :hmr) do %>
-      <script src='http://<%= @conn.host %>:9999/app.js'></script>
+      <script src='http://<%%= @conn.host %>:9999/app.js'></script>
     <%% else %>
-      <script src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>
+      <script src="<%%= Routes.static_path(@conn, "/js/app.js") %>"></script>
     <%% end %>
     <%%= Brando.HTML.google_analytics("UA-XXXXXXXX-1") %>
 
