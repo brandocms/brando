@@ -46,12 +46,6 @@
         display: block;
         align-items: flex-start;
       }
-      section.extra {
-        padding-right: 20%;
-        ul {
-          width: 100%;
-        }
-      }
     }
 
     @include media('<=sm') {

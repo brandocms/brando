@@ -76,7 +76,7 @@ Fix dev asset reloading in `config/dev.exs`
 
 ```elixir
 config :my_app, MyApp.Endpoint,
-  watchers: [npm: ["run", "dev", cd: Path.expand("../assets/frontend", __DIR__)]]
+  watchers: [npm: ["run", "watch", cd: Path.expand("../assets/frontend", __DIR__)]]
 ```
 
 Now lets add the presence server. First in `lib/application.ex` add a supervisor:

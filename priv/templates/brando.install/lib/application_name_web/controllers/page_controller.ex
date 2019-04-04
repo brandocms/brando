@@ -8,10 +8,17 @@ defmodule <%= application_module %>Web.PageController do
   @doc false
   def index(conn, _params) do
     f = Pages.get_page_fragments("index")
+    # {:ok, s} =
+    #   Images.get_series(
+    #     "forside",
+    #     "bildekarusell"
+    #   )
+    s = []
 
     conn
     |> put_section("index")
     |> assign(:section, "index")
+    |> assign(:s, s)
     |> assign(:f, f)
     |> render(:index)
   end

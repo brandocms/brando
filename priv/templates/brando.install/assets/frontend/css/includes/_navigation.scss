@@ -1,5 +1,4 @@
 @import "navigation-nojs";
-@import "navigation-section-overrides";
 
 .hero-slide-img {
   position: relative;
@@ -191,62 +190,6 @@ header {
         @include media('>=md') {
           justify-self: end;
           align-self: end;
-        }
-      }
-
-      &.extra {
-        width: 100%;
-
-        @include media('>=md') {
-          display: none !important;
-        }
-
-        @include media(sm) {
-          grid-area: nav_extra;
-          margin-top: 60px;
-
-          ul {
-            li {
-              a {
-                &:hover, &.active {
-                  &:before {
-                    margin-top: 18px;
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        @include media(xs) {
-          grid-area: nav_extra;
-          padding-bottom: 60px;
-          position: absolute;
-          bottom: 0;
-          padding-right: 30%;
-
-          ul {
-            flex-direction: row;
-            justify-content: space-between;
-
-            li {
-              a {
-                font-size: 18px;
-              }
-            }
-          }
-        }
-
-        ul {
-          li {
-            font-size: 22px;
-            letter-spacing: 0.8px;
-            line-height: 42px;
-
-            a {
-              color: $dark !important;
-            }
-          }
         }
       }
 

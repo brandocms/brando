@@ -8,6 +8,7 @@
 %>
 <section class="hero stretch" data-moonwalk-section>
   <div class="hero-bg">
+    <%%= if @s do %>
     <div data-hero-slider data-object-fit="cover">
       <%%= for {img, _idx} <- Enum.with_index(@s.images) do %>
       <div data-hero-slide>
@@ -20,6 +21,7 @@
         <%% end %>
       </noscript>
     </div>
+    <%% end %>
   </div>
 
   <div class="about">
@@ -27,7 +29,7 @@
       <div class="row">
         Hero text
         <div class="logo-circle" data-moonwalk>
-          <%%= render <%= application_module %>Web.PageView, "__logocircle.html" %>
+          <%%= render <%= application_module %>Web.PageView, "__logo.html" %>
         </div>
       </div>
       <div class="centered-arrow" data-moonwalk>

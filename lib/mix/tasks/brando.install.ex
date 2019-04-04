@@ -262,6 +262,8 @@ defmodule Mix.Tasks.Brando.Install do
      "assets/frontend/css/includes/_headers.scss"},
     {:copy, "assets/frontend/css/includes/_lightbox.scss",
      "assets/frontend/css/includes/_lightbox.scss"},
+    {:copy, "assets/frontend/css/includes/_modules.scss",
+     "assets/frontend/css/includes/_modules.scss"},
     {:copy, "assets/frontend/css/includes/_navigation.scss",
      "assets/frontend/css/includes/_navigation.scss"},
     {:copy, "assets/frontend/css/includes/_navigation-nojs.scss",

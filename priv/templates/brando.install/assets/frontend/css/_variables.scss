@@ -251,18 +251,9 @@ $menu-link-mobile-color: $dark;
 $menu-accent-color: transparent;
 $enable-rounded: false;
 
-$hamburger-layer-color: #fff;
-$hamburger-layer-width: 32px;
-$hamburger-padding-x: 0px;
-$hamburger-padding-y: 0px;
-$hamburger-layer-height: 5px;
-$hamburger-layer-spacing: 5px;
-$hamburger-layer-border-radius: 0px;
-$hamburger-hover-opacity: 1;
-
 $hamburger-config: (
   xs: (
-    layer-color: #fff,
+    layer-color: #000,
     layer-width: 25px,
     layer-height: 3px,
     layer-spacing: 4px,
@@ -274,7 +265,7 @@ $hamburger-config: (
     right: 13px
   ),
   sm: (
-    layer-color: #fff,
+    layer-color: #000,
     layer-width: 25px,
     layer-height: 3px,
     layer-spacing: 5px,
@@ -330,20 +321,20 @@ $font-family-sans-serif: -apple-system, BlinkMacSystemFont, Roboto, "Helvetica N
 
 $navbar-brand: (
   xs: (
-    width: 134px,
-    height: 28px
+    width: 118.37px,
+    height: 29.52px
   ),
   sm: (
-    width: 168px,
-    height: 29.48px
+    width: 118.37px,
+    height: 29.52px
   ),
   md: (
-    width: 167.5px,
-    height: 29.45px
+    width: 118.37px,
+    height: 29.52px
   ),
   lg: (
-    width: 167.5px,
-    height: 29.45px
+    width: 118.37px,
+    height: 29.52px
   ),
 );
 
