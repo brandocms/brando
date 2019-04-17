@@ -4,7 +4,6 @@ defmodule Brando.Type.FileConfig do
   """
   @type t :: %__MODULE__{}
   @behaviour Ecto.Type
-  @derive Poison.Encoder
   @derive Jason.Encoder
   defstruct allowed_mimetypes: ["application/pdf", "text/plain"],
             upload_path: Path.join("files", "default"),

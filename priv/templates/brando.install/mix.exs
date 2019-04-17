@@ -63,7 +63,6 @@ defmodule <%= application_module %>.Mixfile do
      # release management and production tools
      {:distillery, "~> 2.0"},
      {:recon, "~> 2.3"},
-     {:hrafn, "~> 0.1"},
      {:plug_heartbeat, "~> 0.1"},
 
      # brando

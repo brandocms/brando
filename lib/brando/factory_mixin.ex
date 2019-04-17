@@ -15,6 +15,7 @@ defmodule Brando.FactoryMixin do
       alias Brando.ImageCategory
       alias Brando.ImageSeries
       alias Brando.Pages.Page
+      alias Brando.Pages.PageFragment
       alias Brando.User
 
       @sizes %{
@@ -59,6 +60,17 @@ defmodule Brando.FactoryMixin do
           status: :published,
           creator: build(:user),
           parent_id: nil
+        }
+      end
+
+      def page_fragment_factory do
+        %PageFragment{
+          parent_key: "parent",
+          key: "a-key",
+          language: "no",
+          html: nil,
+          data: nil,
+          creator: build(:user)
         }
       end
 

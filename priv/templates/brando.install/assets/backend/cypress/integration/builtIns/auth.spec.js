@@ -53,4 +53,12 @@ describe('Auth', () => {
     cy.contains('administrator')
     cy.get('.user-presence > .avatar > .rounded-circle').its('length').should('eq', 1)
   })
+
+  it('can log out', () => {
+    cy.factorydb('user', { email: 'lou@reed.com', role: 'superuser' })
+    cy.login('lou@reed.com', 'admin')
+    cy.get('#profile-dropdown-button').click()
+    cy.contains('Logg ut').click()
+    cy.location('pathname').should('eq', '/admin/login')
+  })
 })

@@ -5,7 +5,6 @@ defmodule Brando.Type.ImageConfig do
   @type t :: %__MODULE__{}
   @behaviour Ecto.Type
 
-  @derive Poison.Encoder
   @derive Jason.Encoder
   defstruct allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
             default_size: :medium,
@@ -30,8 +29,7 @@ defmodule Brando.Type.ImageConfig do
     {:ok, val}
   end
 
-  def cast(val) when is_map(val), do:
-    {:ok, val}
+  def cast(val) when is_map(val), do: {:ok, val}
 
   @doc """
   Integers are never considered blank
@@ -50,6 +48,5 @@ defmodule Brando.Type.ImageConfig do
   When dumping data to the database we expect a `list`, but check for
   other options as well.
   """
-  def dump(val) when is_map(val), do:
-    {:ok, val}
+  def dump(val) when is_map(val), do: {:ok, val}
 end

@@ -10,8 +10,7 @@ defmodule Brando.Utils do
     :brando_news,
     :brando_pages,
     :brando_portfolio,
-    :brando_villain,
-    :hrafn
+    :brando_villain
   ]
 
   @kb_size 1024
@@ -321,8 +320,7 @@ defmodule Brando.Utils do
   @doc """
   Returns the Helpers module from the router.
   """
-  def helpers(conn), do:
-    Phoenix.Controller.router_module(conn).__helpers__
+  def helpers(conn), do: Phoenix.Controller.router_module(conn).__helpers__
 
   @doc """
   Return the current user set in session.
@@ -373,14 +371,14 @@ defmodule Brando.Utils do
   @doc """
   Returns the application name set in config.exs
   """
-  def app_name, do:
-    Brando.config(:app_name)
+  def app_name, do: Brando.config(:app_name)
 
   @doc """
   Grabs `path` from the file field struct
   """
   def file_url(file_field, opts \\ [])
   def file_url(nil, _), do: nil
+
   def file_url(file_field, opts) do
     prefix = Keyword.get(opts, :prefix, nil)
     (prefix && Path.join([prefix, file_field.path])) || file_field.path
@@ -510,8 +508,8 @@ defmodule Brando.Utils do
     IO.iodata_to_binary([first, rest]) |> String.trim_leading()
   end
 
-  def human_spaced_number(int) when is_integer(int), do:
-    human_spaced_number(Integer.to_string(int))
+  def human_spaced_number(int) when is_integer(int),
+    do: human_spaced_number(Integer.to_string(int))
 
   @doc """
   Get dependencies' versions

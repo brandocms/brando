@@ -1,4 +1,4 @@
-describe('Pages', () => {
+describe('<%= Recase.SentenceCase.convert(snake_domain) %>', () => {
   beforeEach(() => {
     cy.factorydb('user', { email: 'lou@reed.com', role: 'superuser' })
     cy.login('lou@reed.com', 'admin')

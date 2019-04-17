@@ -36,13 +36,13 @@ describe('Users', () => {
     cy.contains('Iggy Pop')
     cy.contains('David Bowie')
 
-    cy.get('#__BVID__40__BV_toggle_').click()
-    cy.get('#__BVID__40 > .dropdown-menu > :nth-child(1)').click()
+    cy.get('tbody > tr:nth-child(2) button.dropdown-toggle').click()
+    cy.get('tbody > tr:nth-child(2) .dropdown-menu > :nth-child(1)').click()
 
     cy.contains('Brukeren ble deaktivert')
 
-    cy.get('#__BVID__36__BV_toggle_').click()
-    cy.get('#__BVID__36 > .dropdown-menu > :nth-child(1)').click()
+    cy.get('tbody > :nth-child(1) button.dropdown-toggle').click()
+    cy.get('tbody > :nth-child(1) .dropdown-menu > :nth-child(1)').click()
     cy.contains('Brukeren er superbruker — kan ikke deaktiveres')
   })
 

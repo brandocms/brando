@@ -34,6 +34,11 @@
       - `// __imports
       - `// __content
 
+  - `Comeonin.Bcrypt.checkpw` -> `Bcrypt.verify_pass`
+    `$ gsed -i 's/Comeonin.Bcrypt.checkpw/Bcrypt.verify_pass/' lib/**/*.ex`
+  - `Comeonin.Bcrypt.hashpwsalt` -> `Bcrypt.hash_pwd_salt`
+    `$ gsed -i 's/Comeonin.Bcrypt.hashpwsalt/Bcrypt.hash_pwd_salt/' lib/**/*.ex`
+
 
 ## v2.0.0-alpha.0
 

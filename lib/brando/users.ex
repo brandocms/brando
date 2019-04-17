@@ -90,7 +90,7 @@ defmodule Brando.Users do
   end
 
   defp maybe_update_password(%{changes: %{password: password}} = cs),
-    do: put_change(cs, :password, Comeonin.Bcrypt.hashpwsalt(password))
+    do: put_change(cs, :password, Bcrypt.hash_pwd_salt(password))
 
   defp maybe_update_password(cs), do: cs
 end

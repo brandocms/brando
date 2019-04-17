@@ -167,6 +167,8 @@ defmodule Mix.Tasks.Brando.Install do
      "assets/backend/cypress/integration/example.js"},
     {:copy, "assets/backend/cypress/integration/builtIns/auth.spec.js",
      "assets/backend/cypress/integration/builtIns/auth.spec.js"},
+    {:copy, "assets/backend/cypress/integration/builtIns/pageFragments.spec.js",
+     "assets/backend/cypress/integration/builtIns/pageFragments.spec.js"},
     {:copy, "assets/backend/cypress/integration/builtIns/pages.spec.js",
      "assets/backend/cypress/integration/builtIns/pages.spec.js"},
     {:copy, "assets/backend/cypress/integration/builtIns/users.spec.js",

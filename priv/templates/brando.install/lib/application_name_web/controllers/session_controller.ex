@@ -19,7 +19,7 @@ defmodule <%= application_module %>Web.SessionController do
         |> render("error.json")
 
       user ->
-        if Comeonin.Bcrypt.checkpw(password, user.password) do
+        if Bcrypt.verify_pass(password, user.password) do
           {:ok, jwt, _full_claims} = <%= application_module %>Web.Guardian.encode_and_sign(user)
 
           conn

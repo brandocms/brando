@@ -48,7 +48,7 @@ defmodule Brando.Plug.E2ETest do
       db_schema = String.to_atom(schema)
       db_attrs = Enum.map(attrs, fn {k, v} -> {String.to_atom(k), v} end)
       db_entry = Brando.factory().insert(db_schema, db_attrs)
-      send_resp(conn, 200, Poison.encode!(db_entry))
+      send_resp(conn, 200, Jason.encode!(db_entry))
     else
       _ -> send_resp(conn, 401, "schema or attributes missing")
     end

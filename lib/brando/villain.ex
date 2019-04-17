@@ -168,7 +168,7 @@ defmodule Brando.Villain do
         (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
 
       quote do
-        Ecto.Schema.field(unquote(data_field), Brando.Type.Json)
+        Ecto.Schema.field(unquote(data_field), :map)
         Ecto.Schema.field(unquote(html_field), :string)
       end
     end

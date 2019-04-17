@@ -201,7 +201,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       {:eex, "assets/backend/src/views/Create.vue",
        "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}CreateView.vue"},
       {:eex, "assets/backend/src/views/Edit.vue",
-       "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}EditView.vue"}
+       "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}EditView.vue"},
+      {:eex_trim, "assets/backend/cypress/integration/spec.js",
+       "assets/backend/cypress/integration/#{snake_domain}/#{Recase.to_pascal(vue_singular)}.spec.js"}
     ]
 
     {files, args} =

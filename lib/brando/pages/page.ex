@@ -29,7 +29,6 @@ defmodule Brando.Pages.Page do
     inserted_at
     updated_at
   )a
-  @derive {Poison.Encoder, only: @derived_fields}
   @derive {Jason.Encoder, only: @derived_fields}
 
   schema "pages" do
@@ -83,7 +82,7 @@ defmodule Brando.Pages.Page do
   """
   def encode_data(params) do
     if is_list(params.data) do
-      Map.put(params, :data, Poison.encode!(params.data))
+      Map.put(params, :data, Jason.encode!(params.data))
     else
       params
     end
