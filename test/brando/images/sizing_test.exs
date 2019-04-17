@@ -62,18 +62,17 @@ defmodule Brando.Images.Processing.SizingTest do
   end
 
   test "add_anchor" do
-    cp =
-      %ConversionParameters{
-        crop: true,
-        original_width: 1000,
-        original_height: 500,
-        quality: 100,
-        focal_point: %{"x" => 100, "y" => 100},
-        size_cfg: %{"crop" => true, "quality" => 70, "size" => "50x200"}
-      }
-      |> add_crop_dimensions()
-      |> add_resize_dimensions()
-      |> add_anchor()
+    %ConversionParameters{
+      crop: true,
+      original_width: 1000,
+      original_height: 500,
+      quality: 100,
+      focal_point: %{"x" => 100, "y" => 100},
+      size_cfg: %{"crop" => true, "quality" => 70, "size" => "50x200"}
+    }
+    |> add_crop_dimensions()
+    |> add_resize_dimensions()
+    |> add_anchor()
   end
 
   # test "get_original_focal_point" do
