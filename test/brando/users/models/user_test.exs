@@ -25,7 +25,7 @@ defmodule Brando.Integration.UserTest do
   test "auth?/2" do
     user = Factory.insert(:user)
 
-    assert User.auth?(user, "hunter2hunter2")
+    assert User.auth?(user, "admin")
     refute User.auth?(user, "finimeze123")
   end
 

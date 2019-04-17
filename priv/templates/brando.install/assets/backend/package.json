@@ -8,7 +8,8 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build --no-clean",
     "lint": "vue-cli-service lint",
-    "watch": "vue-cli-service build --watch --no-clean"
+    "watch": "vue-cli-service build --watch --no-clean",
+    "test": "cypress open"
   },
   "dependencies": {
     "bootstrap": "^4.3.1",
@@ -16,6 +17,9 @@
     "vue": "^2.6.10"
   },
   "devDependencies": {
+    "autoprefixer": "^9.5.1",
+    "cypress": "^3.2.0",
+    "eslint-plugin-cypress": "^2.2.1",
     "@vue/cli-plugin-babel": "^3.5.1",
     "@vue/cli-plugin-eslint": "^3.5.1",
     "@vue/cli-service": "^3.5.1",

@@ -141,6 +141,16 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         Brando.Config.set_site_config(cfg)
         {:reply, {:ok, %{code: 200, cfg: cfg}}, socket}
       end
+
+      def handle_in("user:deactivate", %{"user_id" => user_id}, socket) do
+        Brando.Users.set_active(user_id, false)
+        {:reply, {:ok, %{code: 200, user_id: user_id}}, socket}
+      end
+
+      def handle_in("user:activate", %{"user_id" => user_id}, socket) do
+        Brando.Users.set_active(user_id, true)
+        {:reply, {:ok, %{code: 200, user_id: user_id}}, socket}
+      end
     end
   end
 end

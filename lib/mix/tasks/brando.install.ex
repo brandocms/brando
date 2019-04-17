@@ -77,8 +77,12 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "lib/application_name_web/villain/parser.ex",
      "lib/application_name_web/villain/parser.ex"},
 
+    # E2E test setup
+    {:eex, "test/e2e/test_helper.exs", "test/e2e/test_helper.exs"},
+
     # Default configuration files
     {:eex, "config/brando.exs", "config/brando.exs"},
+    {:eex, "config/e2e.exs", "config/e2e.exs"},
     {:eex, "config/prod.exs", "config/prod.exs"},
     {:eex, "config/staging.exs", "config/staging.exs"},
     {:eex, "config/staging.secret.exs", "config/staging.secret.exs"},
@@ -153,6 +157,22 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "assets/backend/package.json", "assets/backend/package.json"},
     {:copy, "assets/backend/postcssrc.js", "assets/backend/.postcssrc.js"},
     {:copy, "assets/backend/vue.config.js", "assets/backend/vue.config.js"},
+
+    # Backend CYPRESS
+    {:copy, "assets/backend/cypress.json", "assets/backend/cypress.json"},
+    {:copy, "assets/backend/cypress/support/index.js", "assets/backend/cypress/support/index.js"},
+    {:copy, "assets/backend/cypress/support/commands.js",
+     "assets/backend/cypress/support/commands.js"},
+    {:copy, "assets/backend/cypress/integration/example.js",
+     "assets/backend/cypress/integration/example.js"},
+    {:copy, "assets/backend/cypress/integration/builtIns/auth.spec.js",
+     "assets/backend/cypress/integration/builtIns/auth.spec.js"},
+    {:copy, "assets/backend/cypress/integration/builtIns/pages.spec.js",
+     "assets/backend/cypress/integration/builtIns/pages.spec.js"},
+    {:copy, "assets/backend/cypress/integration/builtIns/users.spec.js",
+     "assets/backend/cypress/integration/builtIns/users.spec.js"},
+
+    # Backend src
     {:copy, "assets/backend/src/config.js", "assets/backend/src/config.js"},
     {:copy, "assets/backend/src/main.js", "assets/backend/src/main.js"},
     {:copy, "assets/backend/src/menus/index.js", "assets/backend/src/menus/index.js"},
@@ -238,6 +258,13 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "assets/frontend/stylelint.config.js", "assets/frontend/stylelint.config.js"},
     {:copy, "assets/frontend/webpack.config.js", "assets/frontend/webpack.config.js"},
     {:copy, "assets/frontend/yarn.lock", "assets/frontend/yarn.lock"},
+
+    # Frontend CYPRESS
+    {:copy, "assets/frontend/cypress.json", "assets/frontend/cypress.json"},
+    {:copy, "assets/backend/cypress/integration/example.js",
+     "assets/frontend/cypress/integration/example.js"},
+
+    # Frontend src
     {:copy, "assets/frontend/css/_variables.scss", "assets/frontend/css/_variables.scss"},
     {:copy, "assets/frontend/css/app.scss", "assets/frontend/css/app.scss"},
     {:copy, "assets/frontend/css/includes/_animations.scss",
@@ -342,6 +369,9 @@ defmodule Mix.Tasks.Brando.Install do
 
     Mix.shell().info("\nDeleting old assets")
     File.rm_rf("assets")
+
+    Mix.shell().info("\nMoving test/ to test/unit/")
+    File.rename("test", "test/unit")
 
     copy_from("templates/brando.install", "./", binding, @new)
     copy_from("templates/brando.install", "./", binding, @static)

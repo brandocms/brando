@@ -7,13 +7,12 @@ defmodule Brando.Images.Processing.SizingTest do
   alias Brando.Images.ConversionParameters
 
   test "add_crop_dimensions" do
-    cp =
-      %ConversionParameters{
-        crop: true,
-        original_width: 2560,
-        original_height: 1600,
-        size_cfg: %{"crop" => true, "quality" => 70, "size" => "500x500"}
-      }
+    cp = %ConversionParameters{
+      crop: true,
+      original_width: 2560,
+      original_height: 1600,
+      size_cfg: %{"crop" => true, "quality" => 70, "size" => "500x500"}
+    }
 
     new_cp = add_crop_dimensions(cp)
     assert new_cp.crop_height == 500
@@ -27,7 +26,8 @@ defmodule Brando.Images.Processing.SizingTest do
         original_width: 2560,
         original_height: 1600,
         size_cfg: %{"crop" => true, "quality" => 70, "size" => "500x500"}
-      } |> add_crop_dimensions()
+      }
+      |> add_crop_dimensions()
 
     cp = add_resize_dimensions(cp)
     assert cp.resize_width == 800
@@ -43,7 +43,14 @@ defmodule Brando.Images.Processing.SizingTest do
     assert cp.resize_width == 3200
     assert cp.resize_height == 2000
 
-    cp = Map.merge(cp, %{original_width: 300, original_height: 300, crop_width: 500, crop_height: 500})
+    cp =
+      Map.merge(cp, %{
+        original_width: 300,
+        original_height: 300,
+        crop_width: 500,
+        crop_height: 500
+      })
+
     cp = add_resize_dimensions(cp)
     assert cp.resize_width == 500
     assert cp.resize_height == 500
@@ -55,17 +62,6 @@ defmodule Brando.Images.Processing.SizingTest do
   end
 
   test "add_anchor" do
-  #   focal = %{"x" => 100, "y" => 100}
-  #   original_width = 1000
-  #   original_height = 500
-  #   resized_width = 500
-  #   resized_height = 250
-  #   crop_width = 50
-  #   crop_height = 50
-
-  #   assert get_anchor(focal, original_width, original_height, resized_width, resized_height, crop_width, crop_height)
-  #          == %{x: 450, y: 200}
-
     cp =
       %ConversionParameters{
         crop: true,
@@ -78,10 +74,6 @@ defmodule Brando.Images.Processing.SizingTest do
       |> add_crop_dimensions()
       |> add_resize_dimensions()
       |> add_anchor()
-
-    require Logger
-    Logger.error inspect cp, pretty: true
-
   end
 
   # test "get_original_focal_point" do
@@ -151,7 +143,6 @@ defmodule Brando.Images.Processing.SizingTest do
   #   res = process_img(geo, cfg)
 
   #   Logger.error inspect res
-
 
   #   # focal = %{"x" => 50, "y" => 50}
   #   # width = 2560
