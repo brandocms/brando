@@ -356,12 +356,12 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     delete_img_code =
       Enum.map(binding[:img_fields] || [], fn {_v, k} ->
-        "    delete_original_and_sized_images(record, #{inspect(k)})"
+        "    Brando.Images.Utils.delete_original_and_sized_images(#{binding[:singular]}, #{inspect(k)})"
       end)
 
     delete_gallery_code =
       Enum.map(binding[:gallery_fields] || [], fn {_v, k} ->
-        "    Brando.Images.delete_series(record.#{k})"
+        "    Brando.Images.delete_series(#{binding[:singular]}.#{k})"
       end)
 
     img_code = (delete_img_code ++ delete_gallery_code) |> Enum.join("\n")
