@@ -5,7 +5,6 @@ defmodule <%= module %> do
 <%= if file_fields != [] do %>  use Brando.Field.FileField<% end %>
 <%= if img_fields != [] do %>  use Brando.Field.ImageField
   import Brando.Images.Optimize, only: [optimize: 2]<% end %>
-  import <%= base %>Web.Backend.Gettext
 
   @type t :: %__MODULE__{}
 
