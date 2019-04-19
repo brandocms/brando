@@ -95,7 +95,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     attrs =
       Mix.shell().prompt(
-        "+ Enter schema fields (e.g. name:string avatar:image data:villain image_series:gallery)"
+        "+ Enter schema fields (e.g. name:string avatar:image data:villain image_series:gallery user:references:users)"
       )
       |> String.trim("\n")
 
@@ -356,7 +356,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     delete_img_code =
       Enum.map(binding[:img_fields] || [], fn {_v, k} ->
-        "    Brando.Images.Utils.delete_original_and_sized_images(#{binding[:singular]}, #{inspect(k)})"
+        "    Brando.Images.Utils.delete_original_and_sized_images(#{binding[:singular]}, #{
+          inspect(k)
+        })"
       end)
 
     delete_gallery_code =

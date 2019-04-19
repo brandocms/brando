@@ -1,4 +1,4 @@
-defmodule <%= application_module %>.Mixfile do
+defmodule <%= application_module %>.MixProject do
   use Mix.Project
 
   @version "1.0.0"

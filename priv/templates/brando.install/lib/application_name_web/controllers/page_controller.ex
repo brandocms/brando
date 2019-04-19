@@ -1,5 +1,6 @@
 defmodule <%= application_module %>Web.PageController do
   use <%= application_module %>Web, :controller
+  alias Brando.Images
   alias Brando.Pages
   alias <%= application_module %>Web.FallbackController
 

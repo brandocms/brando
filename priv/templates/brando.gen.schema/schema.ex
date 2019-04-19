@@ -10,7 +10,7 @@ defmodule <%= module %> do
 
   schema <%= inspect "#{snake_domain}_#{plural}" %> do
 <%= for schema_field <- schema_fields do %>    <%= schema_field %>
-<% end %><%= for {k, _, m} <- assocs do %>    belongs_to <%= inspect k %>, <%= m %>
+<% end %><%= for {k, _, m} <- schema_assocs do %>    belongs_to <%= inspect k %>, <%= m %>
 <% end %>
 <%= if sequenced do %>    sequenced()<% end %>
     timestamps()
@@ -40,7 +40,7 @@ defmodule <%= module %> do
       size_limit: 10_240_000,
     }
 <% end %>
-  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields ++ file_fields)) |> Keyword.drop(Keyword.values(villain_fields)), " ", &elem(&1, 0)) %><%= if villain_fields != [] do %> <% end %><%= Enum.map_join(villain_fields, " ", fn({_k, v}) -> if v == :data, do: "#{v}", else: "#{v}_data" end) %><%= if assocs do %> <% end %><%= Enum.map_join(assocs, " ", fn {_, y, _} -> if to_string(y) not in Keyword.values(gallery_fields), do: y, else: nil end) %>)a
+  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields ++ file_fields)) |> Keyword.drop(Keyword.values(villain_fields)), " ", &elem(&1, 0)) %><%= if villain_fields != [] do %> <% end %><%= Enum.map_join(villain_fields, " ", fn({_k, v}) -> if v == :data, do: "#{v}", else: "#{v}_data" end) %><%= if schema_assocs do %> <% end %><%= Enum.map_join(schema_assocs, " ", fn {_, y, _} -> if to_string(y) not in Keyword.values(gallery_fields), do: y, else: nil end) %>)a
   @optional_fields ~w(<%= Enum.map_join(img_fields ++ file_fields ++ gallery_fields, " ", &elem(&1, 1)) %>)a
 
   @doc """

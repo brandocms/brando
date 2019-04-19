@@ -45,6 +45,7 @@ defmodule Brando.Mixfile do
       :gettext,
       :comeonin,
       :httpoison,
+      :inflex,
       :earmark,
       :guardian,
       :mogrify,
@@ -78,6 +79,7 @@ defmodule Brando.Mixfile do
       {:flow, "~> 0.14"},
       {:jason, "~> 1.0"},
       {:poison, "~> 4.0"},
+      {:inflex, "~> 1.10.0"},
 
       # monitoring
       {:sentry, "~> 7.0"},

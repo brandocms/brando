@@ -26,9 +26,9 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       send(
         self(),
         {:mix_shell_input, :prompt,
-         "name age:integer height:decimal nicks:array:text famous:boolean born_at:datetime " <>
+         "name age:integer height:decimal famous:boolean born_at:datetime " <>
            "secret:uuid cover:image pdf:file data:villain biography:villain first_login:date " <>
-           "alarm:time address:references creator:references"}
+           "alarm:time address:references:addresses creator:references:users"}
       )
 
       send(self(), {:mix_shell_input, :yes?, true})
@@ -40,9 +40,9 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       send(
         self(),
         {:mix_shell_input, :prompt,
-         "name age:integer height:decimal nicks:array:text famous:boolean born_at:datetime " <>
+         "name age:integer height:decimal famous:boolean born_at:datetime " <>
            "secret:uuid cover:image data:villain first_login:date " <>
-           "alarm:time address:references creator:references image_series:gallery"}
+           "alarm:time creator:references:users image_series:gallery"}
       )
 
       send(self(), {:mix_shell_input, :yes?, true})
@@ -71,7 +71,8 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "field :pdf, Brando.Type.File"
 
         assert file =~
-                 "@required_fields ~w(name age height nicks famous born_at secret first_login alarm data biography_data creator_id address_id)"
+                 "@required_fields ~w(name age height famous born_at secret " <>
+                   "first_login alarm data biography_data creator_id address_id)a"
 
         assert file =~ "@optional_fields ~w(cover pdf)"
         assert file =~ "use Brando.Sequence, :schema"
@@ -114,12 +115,12 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
       assert_file("assets/backend/src/api/graphql/captains/CAPTAIN_QUERY.graphql", fn file ->
         assert file =~
-                 ~s({\n    id\n    name\n    age\n    height\n    nicks\n    famous\n    born_at\n    secret\n    cover {\n      thumb: url\(size: "original"\)\n      focal\n    }\n    data\n    first_login\n    alarm\n    address\n    creator\n    image_series_id\n  })
+                 ~s({\n    id\n    name\n    age\n    height\n    famous\n    born_at\n    secret\n    cover {\n      thumb: url\(size: "original"\)\n      focal\n    }\n    data\n    first_login\n    alarm\n    creator\n    image_series_id\n  })
       end)
 
       assert_file("assets/backend/src/api/graphql/captains/CAPTAINS_QUERY.graphql", fn file ->
         assert file =~
-                 ~s({\n    id\n    name\n    age\n    height\n    nicks\n    famous\n    born_at\n    secret\n    cover {\n      thumb: url\(size: "original"\)\n      focal\n    }\n    data\n    first_login\n    alarm\n    address\n    creator\n    image_series_id\n    updated_at\n  })
+                 ~s({\n    id\n    name\n    age\n    height\n    famous\n    born_at\n    secret\n    cover {\n      thumb: url\(size: "original"\)\n      focal\n    }\n    data\n    first_login\n    alarm\n    creator\n    image_series_id\n    updated_at\n  })
       end)
 
       assert_file("assets/backend/src/views/games/CaptainCreateView.vue", fn file ->
