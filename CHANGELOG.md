@@ -8,6 +8,7 @@
     `from 'vue'` -> `from 'kurtz/lib/vue'`
     `import nprogress from 'nprogress'` -> `import { nprogress } from 'kurtz'`
 
+  - All Villain fields in graphql `input_object` must be type `:json` instead of `:string`
   - All Apollo calls with 'network-only' must be 'no-cache'
   - Switch out the `backend/package.json` with a fresh one from source.
   - `yarn upgrade kurtz`
