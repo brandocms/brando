@@ -3,6 +3,7 @@ const Webpack = require('webpack')
 const ExtractCssChunks = require('extract-css-chunks-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
+const WriteFilePlugin = require('write-file-webpack-plugin')
 const OptimizeCSSPlugin = require('optimize-css-assets-webpack-plugin')
 const TerserPlugin = require('terser-webpack-plugin')
 const SpeedMeasurePlugin = require('speed-measure-webpack-plugin')
@@ -23,20 +24,19 @@ const Define = new Webpack.DefinePlugin({
   ENV: JSON.stringify(ENV)
 })
 
-const Copy = new CopyWebpackPlugin([{
-  context: './static',
-  from: '**/*',
-  to: '.'
-}, {
-  context: './node_modules/font-awesome/fonts',
-  from: '*',
-  to: './fonts'
-}])
-
 var PLUGINS = IS_PROD
   ? [ExtractCSS,
     Define,
-    Copy
+    new CopyWebpackPlugin([{
+      context: './static',
+      from: '**/*',
+      to: '.',
+      force: true
+    }, {
+      context: './node_modules/font-awesome/fonts',
+      from: '*',
+      to: './fonts'
+    }], { debug: true })
   ]
   : [
     new ExtractCssChunks(
@@ -48,7 +48,17 @@ var PLUGINS = IS_PROD
       }
     ),
     Define,
-    Copy
+    new WriteFilePlugin(),
+    new CopyWebpackPlugin([{
+      context: './static',
+      from: '**/*',
+      to: '.',
+      force: true
+    }, {
+      context: './node_modules/font-awesome/fonts',
+      from: '*',
+      to: './fonts'
+    }], { debug: true })
   ]
 
 const cfg = {
@@ -107,7 +117,8 @@ const cfg = {
       path: OUTPUT_PATH
     }
     : {
-      path: path.resolve(__dirname, 'public'),
+      futureEmitAssets: false,
+      path: OUTPUT_PATH,
       filename: 'app.js',
       publicPath: 'http://localhost:9999/'
     },
