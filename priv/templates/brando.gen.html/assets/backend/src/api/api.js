@@ -18,7 +18,7 @@ const <%= vue_singular %>API = {
     try {
       const result = await apollo.client.query({
         query: <%= String.upcase(plural) %>_QUERY,
-        fetchPolicy: 'network-only'
+        fetchPolicy: 'no-cache'
       })
       return result.data.<%= vue_plural %>
     } catch (err) {
@@ -39,7 +39,7 @@ const <%= vue_singular %>API = {
         variables: {
           <%= vue_singular %>Id
         },
-        fetchPolicy: 'network-only'
+        fetchPolicy: 'no-cache'
       })
       return result.data.<%= vue_singular %>
     } catch (err) {
@@ -60,7 +60,7 @@ const <%= vue_singular %>API = {
         variables: {
           <%= vue_singular %>Params
         },
-        fetchPolicy: 'network-only'
+        fetchPolicy: 'no-cache'
       })
       return result.data.create<%= Recase.to_pascal(vue_singular) %>
     } catch (err) {
@@ -82,7 +82,7 @@ const <%= vue_singular %>API = {
           <%= vue_singular %>Id,
           <%= vue_singular %>Params
         },
-        fetchPolicy: 'network-only'
+        fetchPolicy: 'no-cache'
       })
       return result.data.update<%= Recase.to_pascal(vue_singular) %>
     } catch (err) {
@@ -103,7 +103,7 @@ const <%= vue_singular %>API = {
         variables: {
           <%= vue_singular %>Id
         },
-        fetchPolicy: 'network-only'
+        fetchPolicy: 'no-cache'
       })
       return result.data.delete<%= Recase.to_pascal(vue_singular) %>
     } catch (err) {
