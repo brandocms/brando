@@ -656,7 +656,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
       {k, :villain} ->
         k = (k == :data && :data) || String.to_atom(Atom.to_string(k) <> "_data")
-        {k, ~s(field #{inspect(k)}, :string)}
+        {k, ~s(field #{inspect(k)}, :json)}
 
       {k, _} ->
         {k, ~s(field #{inspect(k)}, :string)}
