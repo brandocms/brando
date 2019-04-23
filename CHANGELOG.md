@@ -9,8 +9,19 @@
     `import nprogress from 'nprogress'` -> `import { nprogress } from 'kurtz'`
 
   - All Villain fields in graphql `input_object` must be type `:json` instead of `:string`
+  - Updated `<Villain>` JS inputs for validation:
+  ```vue
+  <Villain
+    v-validate="'required'"
+    v-model="location.data"
+    :value="location.data"
+    :has-error="errors.has('location[data]')"
+    :error-text="errors.first('location[data]')"
+    name="location[data]"
+    label="Innhold"/>
+  ```
   - All Apollo calls with 'network-only' must be 'no-cache'
-  - Switch out the `backend/package.json` with a fresh one from source.
+  - Switch out the `backend/package.json` and `yarn.lock` with fresh ones from source.
   - `yarn upgrade kurtz`
   - Replace `Dockerfile`, `.dockerignore`, `fabfile.py` from source.
   - Remove `YourApp.PostgresTypes` — this is not needed.
