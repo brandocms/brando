@@ -168,6 +168,10 @@ defmodule Brando.Images do
   Delete image series.
   Also deletes all images depending on the series and executes any callbacks
   """
+  def delete_series(nil) do
+    :ok
+  end
+
   def delete_series(id) do
     with {:ok, series} <- get_series(id) do
       :ok = Brando.Images.Utils.delete_images_for(:image_series, series.id)
