@@ -22,4 +22,9 @@ defmodule <%= application_module %>.Schema do
     # ++mutations
     # __mutations
   end
+
+  def middleware(middleware, _field, %{identifier: :mutation}), do:
+    middleware ++ [Brando.Schema.Middleware.ChangesetErrors]
+  def middleware(middleware, _field, _object), do:
+    middleware
 end

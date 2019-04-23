@@ -3,11 +3,19 @@
 * Backwards incompatible changes
   - Replace all `backend/*.`
     `import Vuex from 'vuex'` -> `import { Vuex } from 'kurtz'`
-    `from 'vuex'` -> `from 'kurtz/lib/vuex'`
+    `import Router from 'vue-router'` -> `import { Router } from 'kurtz'
     `import Vue from 'vue'` -> `import { Vue } from 'kurtz'`
+    `from 'vuex'` -> `from 'kurtz/lib/vuex'`
     `from 'vue'` -> `from 'kurtz/lib/vue'`
     `import nprogress from 'nprogress'` -> `import { nprogress } from 'kurtz'`
 
+  - Add to your graphql `schema.ex`
+    ```elixir
+    def middleware(middleware, _field, %{identifier: :mutation}), do:
+      middleware ++ [Brando.Schema.Middleware.ChangesetErrors]
+    def middleware(middleware, _field, _object), do:
+      middleware
+    ```
   - All Villain fields in graphql `input_object` must be type `:json` instead of `:string`
   - Updated `<Villain>` JS inputs for validation:
   ```vue
