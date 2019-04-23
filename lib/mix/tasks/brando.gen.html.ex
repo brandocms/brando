@@ -715,8 +715,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            ":error-text=\"errors.first('#{singular}[#{k}]')\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
-           "data-vv-name=\"#{singular}[#{k}]\"",
-           "data-vv-value-path=\"innerValue\"",
            "/>"
          ]}
 
@@ -732,8 +730,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
            "placeholder=\"#{String.capitalize(to_string(k))}\"",
-           "data-vv-name=\"#{singular}[#{k}]\"",
-           "data-vv-value-path=\"innerValue\"",
            "/>"
          ]}
 
@@ -749,8 +745,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
            "placeholder=\"#{String.capitalize(to_string(k))}\"",
-           "data-vv-name=\"#{singular}[#{k}]\"",
-           "data-vv-value-path=\"innerValue\"",
            "/>"
          ]}
 
@@ -766,8 +760,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
            "placeholder=\"#{String.capitalize(to_string(k))}\"",
-           "data-vv-name=\"#{singular}[#{k}]\"",
-           "data-vv-value-path=\"innerValue\"",
            "/>"
          ]}
 
@@ -783,8 +775,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
            "placeholder=\"#{String.capitalize(to_string(k))}\"",
-           "data-vv-name=\"#{singular}[#{k}]\"",
-           "data-vv-value-path=\"innerValue\"",
            "/>"
          ]}
 
@@ -799,8 +789,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "v-validate=\"'required'\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
-           "data-vv-name=\"#{singular}[#{k}]\"",
-           "data-vv-value-path=\"innerValue\"",
            "/>"
          ]}
 
@@ -810,10 +798,13 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k,
          [
            "<Villain",
+           "v-validate=\"'required'\"",
+           "v-model=\"#{singular}.#{k}\"",
            ":value=\"#{singular}.#{k}\"",
-           "@input=\"#{singular}.#{k} = $event\"",
-           "label=\"#{String.capitalize(to_string(k))}\"",
-           "/>"
+           ":has-error=\"errors.has('#{singular}[#{k}]')\"",
+           ":error-text=\"errors.first('#{singular}[#{k}]')\"",
+           "name=\"#{singular}[#{k}]')\"",
+           "label=\"#{String.capitalize(to_string(k))}\""
          ]}
 
       {k, _} ->
@@ -828,8 +819,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
            "placeholder=\"#{String.capitalize(to_string(k))}\"",
-           "data-vv-name=\"#{singular}[#{k}]\"",
-           "data-vv-value-path=\"innerValue\"",
            "/>"
          ]}
     end)
