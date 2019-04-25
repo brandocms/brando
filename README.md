@@ -73,35 +73,6 @@ use Brando.Mixin.Channels.PresenceMixin,
   * `pngquant` for PNG optimization.
   * `jpegtran` for JPG optimization.
 
-## I18n
-
-Brando uses Gettext for i18n.
-
-To extract your frontend translations:
-
-    $ mix gettext.extract
-
-Create your frontend translation directories: (for norwegian)
-
-    $ mkdir -p priv/gettext/frontend/nb/LC_MESSAGES
-
-And backend:
-
-    $ mkdir -p priv/gettext/backend/nb/LC_MESSAGES
-
-Merge frontend translations
-
-    $ mix gettext.merge priv/gettext/frontend
-
-And backend:
-
-    $ mix gettext.merge priv/gettext/backend
-
-Now we register our otp app's modules in Brando's registry to automatically set Gettext locales.
-Open up you application's `lib/application.ex` and add to `start/2`:
-
-    Brando.Registry.register(MyApp.Web, [:gettext])
-    Brando.Registry.register(MyApp.Web.Backend, [:gettext])
 
 ## Extra modules
 
