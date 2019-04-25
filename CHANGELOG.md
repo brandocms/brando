@@ -2,12 +2,15 @@
 
 * Backwards incompatible changes
   - Replace all `backend/*.`
-    `import Vuex from 'vuex'` -> `import { Vuex } from 'kurtz'`
-    `import Router from 'vue-router'` -> `import { Router } from 'kurtz'
-    `import Vue from 'vue'` -> `import { Vue } from 'kurtz'`
-    `from 'vuex'` -> `from 'kurtz/lib/vuex'`
-    `from 'vue'` -> `from 'kurtz/lib/vue'`
-    `import nprogress from 'nprogress'` -> `import { nprogress } from 'kurtz'`
+    `$ gsed -i "s/import Vuex from 'vuex'/import { Vuex } from 'kurtz'/" assets/backend/src/**/*.js && \
+       gsed -i "s/import Router from 'vue-router'/import { Router } from 'kurtz'/" assets/backend/src/**/*.js && \
+       gsed -i "s/import Vue from 'vue'/import { Vue } from 'kurtz'/" assets/backend/src/**/*.js && \
+       gsed -i "s/import Vue from 'vue'/import { Vue } from 'kurtz'/" assets/backend/src/**/*.vue && \
+       gsed -i "s|from 'vuex'|from 'kurtz/lib/vuex'|" assets/backend/src/**/*.js && \
+       gsed -i "s|from 'vuex'|from 'kurtz/lib/vuex'|" assets/backend/src/**/*.vue && \
+       gsed -i "s|from 'vue'|from 'kurtz/lib/vue'|" assets/backend/src/**/*.js && \
+       gsed -i "s|from 'vue'|from 'kurtz/lib/vue'|" assets/backend/src/**/*.vue && \
+       gsed -i "s|import nprogress from 'nprogress'|import { nprogress } from 'kurtz'|" assets/backend/src/**/*.vue`
 
   - Add to your graphql `schema.ex`
     ```elixir
