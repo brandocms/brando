@@ -40,6 +40,11 @@ defmodule Brando do
   def helpers, do: config(:helpers)
 
   @doc """
+  Gets the parent app's otp name, as set in config.exs
+  """
+  def otp_app, do: config(:otp_app)
+
+  @doc """
   Get Brando version
   """
   def version, do: @version
