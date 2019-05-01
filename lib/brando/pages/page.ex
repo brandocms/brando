@@ -6,7 +6,7 @@ defmodule Brando.Pages.Page do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :schema
-  use Brando.Villain, :schema
+  use Brando.Villain.Schema
 
   alias Brando.Type.Status
 

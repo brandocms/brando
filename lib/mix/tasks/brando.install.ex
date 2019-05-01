@@ -100,6 +100,8 @@ defmodule Mix.Tasks.Brando.Install do
      "priv/repo/migrations/20171103152200_create_pages.exs"},
     {:eex, "migrations/20171103152205_create_pagefragments.exs",
      "priv/repo/migrations/20171103152205_create_pagefragments.exs"},
+    {:eex, "migrations/20190426105600_create_templates.exs",
+     "priv/repo/migrations/20190426105600_create_templates.exs"},
 
     # Repo seeds
     {:eex, "repo/seeds.exs", "priv/repo/seeds.exs"},

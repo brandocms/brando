@@ -6,7 +6,7 @@ defmodule Brando.Pages.PageFragment do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :schema
-  use Brando.Villain, :schema
+  use Brando.Villain.Schema
 
   @required_fields ~w(parent_key key language data creator_id)a
   @optional_fields ~w(html)a
@@ -26,8 +26,7 @@ defmodule Brando.Pages.PageFragment do
     field :parent_key, :string
     field :key, :string
     field :language, :string
-    field :data, :map
-    field :html, :string
+    villain()
     belongs_to :creator, Brando.User
     timestamps()
   end

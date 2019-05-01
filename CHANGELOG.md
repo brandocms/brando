@@ -1,6 +1,26 @@
 ## v2.0.0-alpha.1-dev
 
 * Backwards incompatible changes
+  - add to your `parser.ex`
+  ```
+  @doc """
+  Convert template to html.
+  """
+  def template(%{"id" => id, "refs" => refs}) do
+    {:ok, template} = Brando.Villain.get_template(id)
+
+    Regex.replace(~r/%{(\w+)}/, template.code, fn _, match ->
+      ref = Enum.find(refs, &(&1["name"] == match))
+
+      if ref do
+        block = Map.get(ref, "data")
+        apply(__MODULE__, String.to_atom(block["type"]), [block["data"]])
+      else
+        "<!-- REF #{match} missing // template: #{id}. -->"
+      end
+    end)
+  end
+  ```
   - Replace all `backend/*.`
     `$ gsed -i "s/import Vuex from 'vuex'/import { Vuex } from 'kurtz'/" assets/backend/src/**/*.js && \
        gsed -i "s/import Router from 'vue-router'/import { Router } from 'kurtz'/" assets/backend/src/**/*.js && \
@@ -20,6 +40,10 @@
       middleware
     ```
   - All Villain fields in graphql `input_object` must be type `:json` instead of `:string`
+  - Change to new use Villain format:
+    `$ gsed -i "s/use Brando.Villain, :schema/use Brando.Villain.Schema/" lib/**/*.ex`
+    `$ gsed -i "s/use Brando.Villain, :migration/use Brando.Villain.Migration/" priv/**/*.exs`
+  - Moved `rerender_html` from being a schema macro to `Brando.Villain.rerender_html`
   - Updated `<Villain>` JS inputs for validation:
   ```vue
   <Villain
@@ -273,9 +297,9 @@
     -     post "/login", Brando.SessionController, :create
     -     post "/logout", Brando.SessionController, :delete
     -     post "/verify", Brando.SessionController, :verify
-    +     post "/login", FilmFarmsWeb.SessionController, :create
-    +     post "/logout", FilmFarmsWeb.SessionController, :delete
-    +     post "/verify", FilmFarmsWeb.SessionController, :verify
+    +     post "/login", MyAppWeb.SessionController, :create
+    +     post "/logout", MyAppWeb.SessionController, :delete
+    +     post "/verify", MyAppWeb.SessionController, :verify
         end
 
         # ...

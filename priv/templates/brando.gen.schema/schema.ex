@@ -1,6 +1,6 @@
 defmodule <%= module %> do
   use <%= base %>Web, :schema
-<%= if villain_fields != [] do %>  use Brando.Villain, :schema<% end %>
+<%= if villain_fields != [] do %>  use Brando.Villain.Schema<% end %>
 <%= if sequenced do %>  use Brando.Sequence, :schema<% end %>
 <%= if file_fields != [] do %>  use Brando.Field.FileField<% end %>
 <%= if img_fields != [] do %>  use Brando.Field.ImageField
