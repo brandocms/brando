@@ -80,8 +80,14 @@ export default {
       // strip out params we don't want sent in the mutation
       stripParams(params, ['__typename', 'id'])
 
+      <%= if Enum.count(img_fields) > 0 do %>
       // validate image params, if any, to ensure they are files
-      // validateImageParams(params, ['avatar'])
+      <%
+        fs =
+          img_fields
+          |> Enum.map(fn {_v, k} -> ~s('#{k}') end)
+          |> Enum.join()
+      %>validateImageParams(params, [<%= fs %>])<% end %>
 
       try {
         nprogress.start()

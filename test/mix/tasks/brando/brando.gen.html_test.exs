@@ -145,6 +145,14 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       assert_file("assets/backend/src/views/games/CaptainCreateView.vue", fn file ->
         assert file =~
                  ~s(<router-link :disabled="!!loading" :to="{ name: 'captains' }" class="btn btn-outline-secondary">)
+
+        assert file =~
+                 ~s(validateImageParams\(params, ['cover']\))
+      end)
+
+      assert_file("assets/backend/src/views/games/CaptainEditView.vue", fn file ->
+        assert file =~
+                 ~s(validateImageParams\(params, ['cover']\))
       end)
 
       assert_file("assets/backend/src/views/games/PegLegCreateView.vue", fn file ->
