@@ -46,6 +46,7 @@ end
 Fix dev asset reloading in `config/dev.exs`
 
 ```elixir
+config :my_app, hmr: true
 config :my_app, MyApp.Endpoint,
   watchers: [npm: ["run", "watch", cd: Path.expand("../assets/frontend", __DIR__)]]
 ```

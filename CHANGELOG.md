@@ -1,6 +1,10 @@
 ## v2.0.0-alpha.1-dev
 
 * Backwards incompatible changes
+  - add to `config/dev.exs`
+  ```
+  config :my_app, hmr: true
+  ```
   - add to your `parser.ex`
   ```
   @doc """
