@@ -1,7 +1,7 @@
 defmodule <%= base %>.Repo.Migrations.Create<%= scoped %> do
   use Ecto.Migration
 <%= if sequenced do %>  use Brando.Sequence, :migration<% end %>
-<%= if villain_fields != [] do %>  use Brando.Villain, :migration<% end %>
+<%= if villain_fields != [] do %>  use Brando.Villain.Migration<% end %>
 
   def change do
     create table(:<%= snake_domain %>_<%= plural %>) do

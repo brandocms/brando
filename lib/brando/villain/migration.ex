@@ -9,7 +9,7 @@ defmodule Brando.Villain.Migration do
 
   ## Usage
 
-      use Brando.Villain, :migration
+      use Brando.Villain.Migration
 
   Add fields to your schema:
 

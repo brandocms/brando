@@ -490,6 +490,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       {k, :datetime} ->
         {k, ~s(field #{inspect(k)}, :time)}
 
+      {k, :file} ->
+        {k, ~s(field #{inspect(k)}, :file_type)}
+
       {k, :image} ->
         {k, ~s(field #{inspect(k)}, :image_type)}
 
@@ -606,6 +609,10 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       {k, :gallery} ->
         {k, ~s(#{k}_id)}
 
+      {k, :file} ->
+        file_code = "#{k} {\n      url\n    }"
+        {k, file_code}
+
       {k, :image} ->
         image_code = "#{k} {\n      thumb: url(size: \"original\")\n      focal\n    }"
         {k, image_code}
@@ -654,6 +661,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       {k, :image} ->
         {k, ~s(field #{inspect(k)}, :upload_or_image)}
 
+      {k, :file} ->
+        {k, ~s(field #{inspect(k)}, :upload)}
+
       {k, :villain} ->
         k = (k == :data && :data) || String.to_atom(Atom.to_string(k) <> "_data")
         {k, ~s(field #{inspect(k)}, :json)}
@@ -688,6 +698,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k, "null"}
 
       {k, :image} ->
+        {k, "null"}
+
+      {k, :file} ->
         {k, "null"}
 
       {k, :villain} ->
@@ -782,6 +795,20 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k,
          [
            "<KInputImage",
+           "v-model=\"#{singular}.#{k}\"",
+           ":value=\"#{singular}.#{k}\"",
+           ":has-error=\"errors.has('#{singular}[#{k}]')\"",
+           ":error-text=\"errors.first('#{singular}[#{k}]')\"",
+           "v-validate=\"'required'\"",
+           "name=\"#{singular}[#{k}]\"",
+           "label=\"#{String.capitalize(to_string(k))}\"",
+           "/>"
+         ]}
+
+      {k, :file} ->
+        {k,
+         [
+           "<KInputFile",
            "v-model=\"#{singular}.#{k}\"",
            ":value=\"#{singular}.#{k}\"",
            ":has-error=\"errors.has('#{singular}[#{k}]')\"",

@@ -60,6 +60,21 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
                          "Update your repository by running migrations:\n    $ mix ecto.migrate\n================================================================================================\n"
                        ]}
 
+      assert_file("lib/brando/graphql/schema.ex", fn file ->
+        assert file =~ "import_fields :pirate_queries"
+        assert file =~ "import_fields :pirate_mutations"
+      end)
+
+      assert_file("lib/brando/graphql/schema/types.ex", fn file ->
+        assert file =~ "import_types Brando.Schema.Types.Pirate"
+      end)
+
+      assert_file("lib/brando/graphql/schema/types/pirate.ex", fn file ->
+        assert file =~ "defmodule Brando.Schema.Types.Pirate do"
+        assert file =~ "field :pdf, :file_type"
+        assert file =~ "field :pdf, :upload"
+      end)
+
       assert_file("lib/brando/games/games.ex", fn file ->
         assert file =~ "defmodule Brando.Games do"
       end)
@@ -93,7 +108,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       assert [migration_file] = Path.wildcard("priv/repo/migrations/*_create_pirate.exs")
 
       assert_file(migration_file, fn file ->
-        assert file =~ "use Brando.Villain, :migration"
+        assert file =~ "use Brando.Villain.Migration"
         assert file =~ "create table(:games_pirates)"
         assert file =~ "create index(:games_pirates, [:creator_id])"
         assert file =~ "villain"
@@ -111,6 +126,10 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "defmodule BrandoWeb.PirateView do"
         assert file =~ "use BrandoWeb, :view"
         assert file =~ "import BrandoWeb.Gettext"
+      end)
+
+      assert_file("assets/backend/src/api/graphql/pirates/PIRATE_QUERY.graphql", fn file ->
+        assert file =~ ~s(\n    pdf {\n      url\n    }\n)
       end)
 
       assert_file("assets/backend/src/api/graphql/captains/CAPTAIN_QUERY.graphql", fn file ->
