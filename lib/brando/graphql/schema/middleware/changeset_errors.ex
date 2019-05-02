@@ -1,5 +1,7 @@
 defmodule Brando.Schema.Middleware.ChangesetErrors do
   @behaviour Absinthe.Middleware
+
+  @spec call(Absinthe.Resolution.t(), any()) :: Absinthe.Resolution.t()
   def call(res, _) do
     with %{errors: [%Ecto.Changeset{} = changeset]} <- res do
       errors = [
@@ -19,6 +21,8 @@ defmodule Brando.Schema.Middleware.ChangesetErrors do
       ]
 
       %{res | errors: errors}
+    else
+      _ -> res
     end
   end
 end

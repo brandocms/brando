@@ -89,6 +89,8 @@
     `$ gsed -i 's/Comeonin.Bcrypt.checkpw/Bcrypt.verify_pass/' lib/**/*.ex`
   - `Comeonin.Bcrypt.hashpwsalt` -> `Bcrypt.hash_pwd_salt`
     `$ gsed -i 's/Comeonin.Bcrypt.hashpwsalt/Bcrypt.hash_pwd_salt/' lib/**/*.ex`
+  - `Comeonin.Bcrypt.dummy_checkpw`-> `Bcrypt.no_user_verify`
+    `$ gsed -i 's/Comeonin.Bcrypt.dummy_checkpw/Bcrypt.no_user_verify/' lib/**/*.ex`
 
 
 ## v2.0.0-alpha.0

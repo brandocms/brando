@@ -237,7 +237,7 @@ defmodule Brando.Utils do
   @doc """
   Returns full url path with scheme and host.
   """
-  @spec current_url(Plug.Conn.t(), String.t()) :: String.t()
+  @spec current_url(Plug.Conn.t(), String.t() | nil) :: String.t()
   def current_url(conn, url \\ nil) do
     path = (url && url) || conn.request_path
     "#{hostname()}#{path}"

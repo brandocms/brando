@@ -43,7 +43,7 @@ defmodule Brando.Image do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, :create | :update, Keyword.t()) :: t
+  @spec changeset(t, :create | :update, Keyword.t()) :: Ecto.Changeset.t()
   def changeset(schema, :create, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)

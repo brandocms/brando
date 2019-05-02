@@ -18,7 +18,10 @@ defmodule Brando.Images.Utils do
   @doc """
   Create an image struct from upload, cfg and extra info
   """
-  def create_image_struct(%Upload{plug: %{uploaded_file: file}, cfg: cfg, extra_info: %{focal: focal}}, user) do
+  def create_image_struct(
+        %Upload{plug: %{uploaded_file: file}, cfg: cfg, extra_info: %{focal: focal}},
+        user
+      ) do
     {_, filename} = split_path(file)
     upload_path = Map.get(cfg, :upload_path)
     new_path = Path.join([upload_path, filename])
@@ -38,7 +41,6 @@ defmodule Brando.Images.Utils do
         |> Map.put(:focal, focal)
 
       {:ok, size_struct}
-
     rescue
       e in File.Error ->
         Progress.hide_progress(user)
@@ -53,7 +55,8 @@ defmodule Brando.Images.Utils do
   @doc """
   Deletes all image's sizes and recreates them.
   """
-  @spec recreate_sizes_for(:image | :image_series, Image.t(), User.t() | atom) :: :ok | no_return
+  @spec recreate_sizes_for(:image | :image_series | :image_field, Image.t(), User.t() | :system) ::
+          :ok | no_return
   def recreate_sizes_for(type, img, user \\ :system)
 
   def recreate_sizes_for(:image, img_schema, user) do
@@ -61,9 +64,9 @@ defmodule Brando.Images.Utils do
     img_schema = reset_optimized_flag(img_schema)
     delete_sized_images(img_schema.image)
 
-    with {:ok, operations} <- Images.Operations.create_operations(img_schema.image, img_cfg, user, img_schema.id),
+    with {:ok, operations} <-
+           Images.Operations.create_operations(img_schema.image, img_cfg, user, img_schema.id),
          {:ok, [result]} <- Images.Operations.perform_operations(operations, user) do
-
       img_schema
       |> Image.changeset(:update, %{image: result.img_struct})
       |> Images.Optimize.optimize(:image, force: true)
@@ -79,7 +82,6 @@ defmodule Brando.Images.Utils do
     end
   end
 
-  @spec recreate_sizes_for(:image_series, Image.t(), User.t() | atom) :: :ok | no_return
   def recreate_sizes_for(:image_series, image_series_id, user) do
     query =
       from is in ImageSeries,
@@ -118,7 +120,6 @@ defmodule Brando.Images.Utils do
   @doc """
   Recreates sizes for an image field
   """
-  @spec recreate_sizes_for(:image_field, term, atom) :: :ok | no_return
   def recreate_sizes_for(:image_field, schema, field_name) do
     rows = Brando.repo().all(schema)
     {:ok, cfg} = schema.get_image_cfg(field_name)
@@ -129,12 +130,12 @@ defmodule Brando.Images.Utils do
 
         if img_field do
           delete_sized_images(img_field)
+
           img_field
           |> Images.Operations.create_operations(cfg, :system, row.id)
           |> elem(1)
         end
       end)
-
 
     {:ok, operation_results} = Images.Operations.perform_operations(operations, :system)
 
@@ -147,9 +148,16 @@ defmodule Brando.Images.Utils do
     end
   end
 
-  # usually used when changing focal point
-  # recreate_sizes_for(:image_field_record, changeset, :cover, user)
-  @spec recreate_sizes_for(:image_field_record, term, term, term) :: :ok | no_return
+  @doc """
+  Recreate sizes for image field record.
+  Usually used when changing focal point
+
+  ## Example:
+
+      recreate_sizes_for(:image_field_record, changeset, :cover, user)
+  """
+  @spec recreate_sizes_for(:image_field_record, Ecto.Changeset.t(), atom, User.t() | :system) ::
+          {:ok, Ecto.Changeset.t()} | {:error, Ecto.Changeset.t()}
   def recreate_sizes_for(:image_field_record, changeset, field_name, user) do
     img_struct = Ecto.Changeset.get_change(changeset, field_name)
     schema = changeset.data.__struct__
@@ -158,7 +166,7 @@ defmodule Brando.Images.Utils do
 
     with {:ok, operations} <- Images.Operations.create_operations(img_struct, cfg, user),
          {:ok, [result]} <- Images.Operations.perform_operations(operations, user) do
-        {:ok, Ecto.Changeset.put_change(changeset, field_name, result.img_struct)}
+      {:ok, Ecto.Changeset.put_change(changeset, field_name, result.img_struct)}
     else
       err ->
         require Logger

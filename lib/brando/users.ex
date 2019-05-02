@@ -70,10 +70,10 @@ defmodule Brando.Users do
   @doc """
   Bumps `user`'s `last_login` to current time.
   """
-  @spec set_last_login(User) :: User
+  @spec set_last_login(User.t()) :: User.t()
   def set_last_login(user) do
-    {:ok, user} =
-      Utils.Schema.update_field(user, last_login: NaiveDateTime.from_erl!(:calendar.local_time()))
+    current_time = NaiveDateTime.from_erl!(:calendar.local_time())
+    {:ok, user} = Utils.Schema.update_field(user, last_login: current_time)
 
     user
   end

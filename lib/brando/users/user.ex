@@ -83,7 +83,7 @@ defmodule Brando.User do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, :create | :update, %{binary => term} | %{atom => term}) :: t
+  @spec changeset(t, :create | :update, %{binary => term} | %{atom => term}) :: Ecto.Changeset.t()
   def changeset(schema, action, params \\ %{})
 
   def changeset(schema, :create, params) do
