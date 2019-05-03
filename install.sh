@@ -8,7 +8,7 @@ MODULE=$(cat mix.exs | sed -n 's/defmodule \(.*\)\.MixProject.*/\1/p')
 echo "==> Extracted module from mix.exs => $MODULE"
 echo   # new line
 read -p "Do you want to continue installation? " -n 1 -r
-echo  # new line
+echo   # new line
 if [[ $REPLY =~ ^[Yy]$ ]]
 then
   echo "==> Starting installation"
