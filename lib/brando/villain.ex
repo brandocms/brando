@@ -9,11 +9,11 @@ defmodule Brando.Villain do
   import Ecto.Query
 
   defmacro __using__(:schema) do
-    raise "`use Brando.Villain.Schema` is deprecated. Call `use Brando.Villain.Schema` instead."
+    raise "`use Brando.Villain, :schema` is deprecated. Call `use Brando.Villain.Schema` instead."
   end
 
   defmacro __using__(:migration) do
-    raise "`use Brando.Villain.Migration` is deprecated. Call `use Brando.Villain.Migration` instead."
+    raise "`use Brando.Villain, :migration` is deprecated. Call `use Brando.Villain.Migration` instead."
   end
 
   defmacro __using__([:controller, _] = opts) when is_list(opts) do
