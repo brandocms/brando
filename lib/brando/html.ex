@@ -235,6 +235,7 @@ defmodule Brando.HTML do
 
     conn =
       conn
+      |> put_meta("title", "#{title}")
       |> put_meta("og:title", "#{title}")
       |> put_meta("og:site_name", app_name)
       |> put_meta("og:type", "website")
@@ -453,7 +454,7 @@ defmodule Brando.HTML do
 
   defp add_classes(%{lazyload: lazyload} = attrs, opts) do
     img_class = Keyword.get(opts, :img_class, false)
-    img_class = "#{img_class && img_class || ""}#{lazyload && " lazyload" || ""}"
+    img_class = "#{(img_class && img_class) || ""}#{(lazyload && " lazyload") || ""}"
     picture_class = Keyword.get(opts, :picture_class, false)
 
     attrs
@@ -463,6 +464,7 @@ defmodule Brando.HTML do
 
   defp add_sizes(attrs, opts) do
     sizes = (Keyword.get(opts, :sizes) && get_sizes(opts[:sizes])) || false
+
     attrs
     |> put_in([:img, :sizes], sizes)
     |> put_in([:source, :sizes], sizes)
@@ -526,7 +528,8 @@ defmodule Brando.HTML do
   Calculate image ratio
   """
   def ratio(%{height: height, width: width})
-      when is_nil(height) or is_nil(width), do: 0
+      when is_nil(height) or is_nil(width),
+      do: 0
 
   def ratio(%{height: height, width: width}) do
     Decimal.new(height)
@@ -553,12 +556,13 @@ defmodule Brando.HTML do
   """
   def get_sizes(nil), do: nil
 
-  def get_sizes(sizes) when is_list(sizes), do:
-    Enum.join(sizes, ", ")
+  def get_sizes(sizes) when is_list(sizes), do: Enum.join(sizes, ", ")
 
-  def get_sizes(_), do:
-    raise ArgumentError,
-      message: ~s<sizes key must be a list: ["(min-width: 36em) 33.3vw", "100vw"]>
+  def get_sizes(_),
+    do:
+      raise(ArgumentError,
+        message: ~s<sizes key must be a list: ["(min-width: 36em) 33.3vw", "100vw"]>
+      )
 
   @doc """
   Get srcset from image config
