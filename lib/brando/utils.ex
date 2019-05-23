@@ -294,8 +294,10 @@ defmodule Brando.Utils do
   """
   @spec get_page_title(Plug.Conn.t()) :: String.t()
   def get_page_title(%{assigns: %{page_title: title}}) do
-    (Brando.config(:title_prefix) && Brando.config(:title_prefix) <> title) ||
-      Brando.config(:app_name) <> " | " <> title
+    prefix = (Brando.config(:title_prefix) && Brando.config(:title_prefix)) || ""
+    postfix = (Brando.config(:title_postfix) && Brando.config(:title_postfix)) || ""
+
+    prefix <> title <> postfix
   end
 
   def get_page_title(_) do
