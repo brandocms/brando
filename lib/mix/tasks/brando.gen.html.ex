@@ -57,29 +57,51 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     File.mkdir_p!("lib/#{otp_app()}/#{snake_domain}")
     {domain_code, domain_header, instructions} = create_schema(domain_name)
 
-    File.write!(
-      "lib/#{otp_app()}/#{snake_domain}/#{snake_domain}.ex",
-      """
-      defmodule #{binding[:module]} do
-        @moduledoc \"\"\"
-        Context for #{binding[:human]}
-        \"\"\"
+    # check if it exists
 
-        @type id :: Integer.t() | String.t()
-        @type params :: Map.t()
-        @type user :: Brando.User.t()
+    file_name = "lib/#{otp_app()}/#{snake_domain}/#{snake_domain}.ex"
 
-        alias #{binding[:base]}.Repo
+    if not File.exists?(file_name) do
+      File.write!(
+        file_name,
+        """
+        defmodule #{binding[:module]} do
+          @moduledoc \"\"\"
+          Context for #{binding[:human]}
+          \"\"\"
 
-      #{domain_header}\n#{domain_code}
-      end
-      """
+          @type id :: Integer.t() | String.t()
+          @type params :: Map.t()
+          @type user :: Brando.User.t()
+
+          alias #{binding[:base]}.Repo
+
+          # ++header
+          # __header
+
+          # ++code
+          # __code
+        end
+        """
+      )
+    end
+
+    Mix.Brando.add_to_file(
+      file_name,
+      "header",
+      Enum.join(domain_header, "\n")
+    )
+
+    Mix.Brando.add_to_file(
+      file_name,
+      "code",
+      domain_code
     )
 
     Mix.shell().info(instructions)
   end
 
-  defp create_schema(domain_name, domain_header \\ "", domain_code \\ "") do
+  defp create_schema(domain_name, domain_header \\ [], domain_code \\ "") do
     Mix.shell().info("""
     == Schema for #{domain_name}
     """)
@@ -227,7 +249,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     """
 
     domain_header =
-      domain_header <> "  alias #{binding[:base]}.#{binding[:domain]}.#{binding[:scoped]}\n"
+      domain_header ++ ["alias #{binding[:base]}.#{binding[:domain]}.#{binding[:scoped]}"]
 
     domain_code = generate_domain_code(domain_code, domain_name, binding, schema_binding)
 
@@ -371,90 +393,88 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     domain_code =
       domain_code <>
         """
-          @doc \"\"\"
-          List all #{binding[:plural]}
-          \"\"\"
-          @spec list_#{binding[:plural]}() :: {:ok, [#{binding[:alias]}.t()]}
-          def list_#{binding[:plural]} do
-            {:ok, Repo.all(#{binding[:alias]})}
+        @doc \"\"\"
+        List all #{binding[:plural]}
+        \"\"\"
+        @spec list_#{binding[:plural]}() :: {:ok, [#{binding[:alias]}.t()]}
+        def list_#{binding[:plural]} do
+          {:ok, Repo.all(#{binding[:alias]})}
+        end
+
+        @doc \"\"\"
+        Get single #{binding[:singular]}
+        \"\"\"
+        @spec get_#{binding[:singular]}(id) ::
+                {:ok, #{binding[:alias]}.t()} | {:error, {:#{binding[:singular]}, :not_found}}
+        def get_#{binding[:singular]}(id) do
+          case Repo.get(#{binding[:alias]}, id) do
+            nil -> {:error, {:#{binding[:singular]}, :not_found}}
+            #{binding[:singular]} -> {:ok, #{binding[:singular]}}
           end
+        end
 
-          @doc \"\"\"
-          Get single #{binding[:singular]}
-          \"\"\"
-          @spec get_#{binding[:singular]}(id) ::
-                  {:ok, #{binding[:alias]}.t()} | {:error, {:#{binding[:singular]}, :not_found}}
-          def get_#{binding[:singular]}(id) do
-            case Repo.get(#{binding[:alias]}, id) do
-              nil -> {:error, {:#{binding[:singular]}, :not_found}}
-              #{binding[:singular]} -> {:ok, #{binding[:singular]}}
-            end
-          end
+        @doc \"\"\"
+        Create new #{binding[:singular]}
+        \"\"\"
+        @spec create_#{binding[:singular]}(params, user | :system) ::
+                {:ok, #{binding[:alias]}.t()} | {:error, Ecto.Changeset.t()}
+        def create_#{binding[:singular]}(#{binding[:singular]}_params, user \\\\ :system) do
+          changeset = #{binding[:alias]}.changeset(%#{binding[:alias]}{}, #{binding[:singular]}_params, user)
+          #{insert_code}
+        end
 
-          @doc \"\"\"
-          Create new #{binding[:singular]}
-          \"\"\"
-          @spec create_#{binding[:singular]}(params, user | :system) ::
-                  {:ok, #{binding[:alias]}.t()} | {:error, Ecto.Changeset.t()}
-          def create_#{binding[:singular]}(#{binding[:singular]}_params, user \\\\ :system) do
-            changeset = #{binding[:alias]}.changeset(%#{binding[:alias]}{}, #{binding[:singular]}_params, user)
-            #{insert_code}
-          end
+        @doc \"\"\"
+        Update existing #{binding[:singular]}
+        \"\"\"
+        @spec update_#{binding[:singular]}(id, params, user | :system) ::
+                {:ok, #{binding[:alias]}.t()} | {:error, Ecto.Changeset.t()}
+        def update_#{binding[:singular]}(#{binding[:singular]}_id, #{binding[:singular]}_params, user \\\\ :system) do
+          {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(#{binding[:singular]}_id)
 
-          @doc \"\"\"
-          Update existing #{binding[:singular]}
-          \"\"\"
-          @spec update_#{binding[:singular]}(id, params, user | :system) ::
-                  {:ok, #{binding[:alias]}.t()} | {:error, Ecto.Changeset.t()}
-          def update_#{binding[:singular]}(#{binding[:singular]}_id, #{binding[:singular]}_params, user \\\\ :system) do
-            {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(#{binding[:singular]}_id)
+          #{binding[:singular]}
+          |> #{binding[:alias]}.changeset(#{binding[:singular]}_params, user)
+          |> Repo.update()
+        end
 
-            #{binding[:singular]}
-            |> #{binding[:alias]}.changeset(#{binding[:singular]}_params, user)
-            |> Repo.update()
-          end
-
-          @doc \"\"\"
-          Delete #{binding[:singular]} by id
-          \"\"\"
-          @spec delete_#{binding[:singular]}(id) ::
-                  {:ok, #{binding[:alias]}.t()}
-          def delete_#{binding[:singular]}(id) do
-            {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(id)
-            Repo.delete(#{binding[:singular]})
+        @doc \"\"\"
+        Delete #{binding[:singular]} by id
+        \"\"\"
+        @spec delete_#{binding[:singular]}(id) ::
+                {:ok, #{binding[:alias]}.t()}
+        def delete_#{binding[:singular]}(id) do
+          {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(id)
+          Repo.delete(#{binding[:singular]})
         #{img_code}
-            {:ok, #{binding[:singular]}}
-          end
+          {:ok, #{binding[:singular]}}
+        end
         """
 
     if binding[:gallery] do
       domain_code <>
         """
 
-          @doc \"\"\"
-          Create an image series entry
-          \"\"\"
-          @spec create_image_series(id, user) ::
-                  {:ok, Brando.ImageSeries.t()} | {:error, Ecto.Changeset.t()}
-          def create_image_series(#{binding[:singular]}_id, user) do
-            {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(#{binding[:singular]}_id)
-            {:ok, category} = Brando.Images.get_or_create_category_id_by_slug("#{
-          binding[:singular]
-        }-gallery", user)
+        @doc \"\"\"
+        Create an image series entry
+        \"\"\"
+        @spec create_image_series(id, user) ::
+                {:ok, Brando.ImageSeries.t()} | {:error, Ecto.Changeset.t()}
+        def create_image_series(#{binding[:singular]}_id, user) do
+          {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(#{binding[:singular]}_id)
+          {:ok, category} = Brando.Images.get_or_create_category_id_by_slug("#{binding[:singular]}-gallery", user)
 
-            data = %{
-              name: #{binding[:singular]}.name,
-              slug: #{binding[:singular]}.slug,
-              image_category_id: category.id
-            }
+          data = %{
+            name: #{binding[:singular]}.name,
+            slug: #{binding[:singular]}.slug,
+            image_category_id: category.id
+          }
 
-            with {:ok, series} <- Brando.Images.create_series(data, user) do
-              cs = Ecto.Changeset.change(#{binding[:singular]}, image_series_id: series.id)
-              Repo.update(cs)
+          with {:ok, series} <- Brando.Images.create_series(data, user) do
+            cs = Ecto.Changeset.change(#{binding[:singular]}, image_series_id: series.id)
+            Repo.update(cs)
 
-              {:ok, series}
-            end
+            {:ok, series}
           end
+        end
 
         """
     else

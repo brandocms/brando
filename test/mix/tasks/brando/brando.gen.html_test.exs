@@ -174,6 +174,20 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~
                  "<td class=\"fit\">\n                    <img\n                      v-if=\"captain.cover\"\n                      :src=\"captain.cover.thumb\"\n                      class=\"avatar-sm img-border-lg\" />\n                  </td>"
       end)
+
+      send(self(), {:mix_shell_input, :prompt, "Games"})
+      send(self(), {:mix_shell_input, :prompt, "Parrot"})
+      send(self(), {:mix_shell_input, :prompt, "parrots"})
+
+      send(
+        self(),
+        {:mix_shell_input, :prompt, "name age:integer height:decimal"}
+      )
+
+      send(self(), {:mix_shell_input, :yes?, true})
+      send(self(), {:mix_shell_input, :yes?, false})
+
+      Mix.Tasks.Brando.Gen.Html.run([])
     end)
   end
 end
