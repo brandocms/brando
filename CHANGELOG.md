@@ -1,3 +1,9 @@
+## v2.0.0-alpha.2-dev
+
+* Switch all your image fields to `:jsonb` types in migrations from `:text`.
+
+
+
 ## v2.0.0-alpha.1-dev
 
 * Backwards incompatible changes

@@ -9,8 +9,8 @@ defmodule Brando.Integration.ImageTest do
   alias Brando.ImageSeries
 
   @params %{
-    sequence: 0,
-    image: %Brando.Type.Image{
+    "sequence" => 0,
+    "image" => %Brando.Type.Image{
       title: "Title",
       credits: "credits",
       path: "/tmp/path/to/fake/image.jpg",
@@ -22,8 +22,8 @@ defmodule Brando.Integration.ImageTest do
   }
 
   @params2 %{
-    sequence: 1,
-    image: %Brando.Type.Image{
+    "sequence" => 1,
+    "image" => %Brando.Type.Image{
       title: "Title2",
       credits: "credits2",
       path: "/tmp/path/to/fake/image2.jpg",
@@ -44,8 +44,8 @@ defmodule Brando.Integration.ImageTest do
   test "create/2", %{user: user, series: series} do
     assert {:ok, image} =
              @params
-             |> Map.put(:creator_id, user.id)
-             |> Map.put(:image_series_id, series.id)
+             |> Map.put("creator_id", user.id)
+             |> Map.put("image_series_id", series.id)
              |> Images.create_image(user)
 
     assert image.creator_id == user.id
@@ -60,8 +60,8 @@ defmodule Brando.Integration.ImageTest do
   test "update/2", %{user: user, series: series} do
     assert {:ok, image} =
              @params
-             |> Map.put(:creator_id, user.id)
-             |> Map.put(:image_series_id, series.id)
+             |> Map.put("creator_id", user.id)
+             |> Map.put("image_series_id", series.id)
              |> Images.create_image(user)
 
     assert image.creator_id == user.id
@@ -75,8 +75,8 @@ defmodule Brando.Integration.ImageTest do
   test "update/2 bad params", %{user: user, series: series} do
     assert {:ok, image} =
              @params
-             |> Map.put(:creator_id, user.id)
-             |> Map.put(:image_series_id, series.id)
+             |> Map.put("creator_id", user.id)
+             |> Map.put("image_series_id", series.id)
              |> Images.create_image(user)
 
     assert image.creator_id == user.id
@@ -90,8 +90,8 @@ defmodule Brando.Integration.ImageTest do
   test "update_image_meta/4", %{user: user, series: series} do
     assert {:ok, image} =
              @params
-             |> Map.put(:creator_id, user.id)
-             |> Map.put(:image_series_id, series.id)
+             |> Map.put("creator_id", user.id)
+             |> Map.put("image_series_id", series.id)
              |> Images.create_image(user)
 
     assert image.image.title == "Title"
@@ -108,8 +108,8 @@ defmodule Brando.Integration.ImageTest do
   test "get/1", %{user: user, series: series} do
     assert {:ok, image} =
              @params
-             |> Map.put(:creator_id, user.id)
-             |> Map.put(:image_series_id, series.id)
+             |> Map.put("creator_id", user.id)
+             |> Map.put("image_series_id", series.id)
              |> Images.create_image(user)
 
     assert Brando.repo().get_by!(Image, id: image.id).id == image.id
@@ -120,8 +120,8 @@ defmodule Brando.Integration.ImageTest do
   test "get!/1", %{user: user, series: series} do
     assert {:ok, image} =
              @params
-             |> Map.put(:creator_id, user.id)
-             |> Map.put(:image_series_id, series.id)
+             |> Map.put("creator_id", user.id)
+             |> Map.put("image_series_id", series.id)
              |> Images.create_image(user)
 
     assert Brando.repo().get_by!(Image, id: image.id).id == image.id
@@ -131,14 +131,14 @@ defmodule Brando.Integration.ImageTest do
   test "sequence/2", %{user: user, series: series} do
     assert {:ok, image1} =
              @params
-             |> Map.put(:creator_id, user.id)
-             |> Map.put(:image_series_id, series.id)
+             |> Map.put("creator_id", user.id)
+             |> Map.put("image_series_id", series.id)
              |> Images.create_image(user)
 
     assert {:ok, image2} =
              @params2
-             |> Map.put(:creator_id, user.id)
-             |> Map.put(:image_series_id, series.id)
+             |> Map.put("creator_id", user.id)
+             |> Map.put("image_series_id", series.id)
              |> Images.create_image(user)
 
     assert image1.sequence == 0
@@ -155,16 +155,16 @@ defmodule Brando.Integration.ImageTest do
   test "delete_images_for/1", %{user: user, series: series} do
     assert {:ok, image} =
              @params
-             |> Map.put(:creator_id, user.id)
-             |> Map.put(:image_series_id, series.id)
+             |> Map.put("creator_id", user.id)
+             |> Map.put("image_series_id", series.id)
              |> Images.create_image(user)
 
     assert Brando.repo().get_by!(Image, id: image.id).id == image.id
 
     assert {:ok, image} =
              @params
-             |> Map.put(:creator_id, user.id)
-             |> Map.put(:image_series_id, series.id)
+             |> Map.put("creator_id", user.id)
+             |> Map.put("image_series_id", series.id)
              |> Images.create_image(user)
 
     assert Brando.repo().get_by!(Image, id: image.id).id == image.id

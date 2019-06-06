@@ -154,7 +154,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
   end
 
   def migration_type({k, :image}) do
-    {k, :text}
+    {k, :jsonb}
   end
 
   def migration_type({k, :file}) do

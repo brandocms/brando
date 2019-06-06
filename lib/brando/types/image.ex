@@ -18,9 +18,9 @@ defmodule Brando.Type.Image do
             focal: %{"x" => 50, "y" => 50}
 
   @doc """
-  Returns the internal type representation of our `Role` type for pg
+  Returns the internal type representation of our image type for pg
   """
-  def type, do: :json
+  def type, do: :jsonb
 
   @doc """
   Cast should return OUR type no matter what the input.
@@ -30,7 +30,10 @@ defmodule Brando.Type.Image do
     {:ok, val}
   end
 
-  def cast(val) when is_map(val), do: {:ok, val}
+  def cast(%Brando.Type.Image{} = val) when is_map(val),
+    do: {:ok, val}
+
+  def cast(val) when is_map(val), do: {:ok, Brando.Utils.stringy_struct(Brando.Type.Image, val)}
 
   @doc """
   Integers are never considered blank
@@ -40,10 +43,11 @@ defmodule Brando.Type.Image do
   @doc """
   Load
   """
+  def load(%Brando.Type.Image{} = val) when is_map(val),
+    do: {:ok, val}
+
   def load(val) do
-    val = Poison.decode!(val, as: %Brando.Type.Image{})
-    val = if val == nil, do: %Brando.Type.Image{}, else: val
-    {:ok, val}
+    {:ok, Brando.Utils.stringy_struct(Brando.Type.Image, val)}
   end
 
   @doc """
@@ -51,7 +55,6 @@ defmodule Brando.Type.Image do
   other options as well.
   """
   def dump(val) do
-    val = Jason.encode!(val)
     {:ok, val}
   end
 end

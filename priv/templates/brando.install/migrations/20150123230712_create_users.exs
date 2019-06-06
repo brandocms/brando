@@ -6,7 +6,7 @@ defmodule <%= application_module %>.Repo.Migrations.CreateUsers do
       add :full_name,     :text
       add :email,         :text
       add :password,      :text
-      add :avatar,        :text
+      add :avatar,        :jsonb
       add :language,      :text, default: "nb"
       add :role,          :integer, default: 0
       add :active,        :boolean, default: true

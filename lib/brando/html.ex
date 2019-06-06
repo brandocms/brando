@@ -396,7 +396,7 @@ defmodule Brando.HTML do
 
     if lightbox do
       ~E|
-        <a href="<%= img_src %>" data-lightbox>
+        <a href="<%= img_src %>" data-lightbox="<%= img_src %>">
           <%= tag(:img, attrs) %>
         </a>
       |

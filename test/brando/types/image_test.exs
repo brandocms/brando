@@ -2,7 +2,16 @@ defmodule Brando.Types.ImageTest do
   use ExUnit.Case
   alias Brando.Type.Image
 
-  @raw "{\"title\":null,\"credits\":\"Credits\",\"path\":\"images/avatars/27i97a.jpeg\",\"sizes\":{\"medium\":\"images/avatars/medium/27i97a.jpeg\",\"thumb\":\"images/avatars/thumb/27i97a.jpeg\"},\"optimized\":false,\"width\":null,\"height\":null,\"focal\":{\"x\":50,\"y\":50}}"
+  @raw %{
+    "credits" => "Credits",
+    "optimized" => false,
+    "path" => "images/avatars/27i97a.jpeg",
+    "title" => nil,
+    "sizes" => %{
+      "medium" => "images/avatars/medium/27i97a.jpeg",
+      "thumb" => "images/avatars/thumb/27i97a.jpeg"
+    }
+  }
 
   @result %Image{
     credits: "Credits",
@@ -31,6 +40,20 @@ defmodule Brando.Types.ImageTest do
   end
 
   test "dump" do
-    assert Image.dump(@result) == {:ok, @raw}
+    assert Image.dump(@result) ==
+             {:ok,
+              %Brando.Type.Image{
+                credits: "Credits",
+                focal: %{"x" => 50, "y" => 50},
+                height: nil,
+                optimized: false,
+                path: "images/avatars/27i97a.jpeg",
+                sizes: %{
+                  "medium" => "images/avatars/medium/27i97a.jpeg",
+                  "thumb" => "images/avatars/thumb/27i97a.jpeg"
+                },
+                title: nil,
+                width: nil
+              }}
   end
 end
