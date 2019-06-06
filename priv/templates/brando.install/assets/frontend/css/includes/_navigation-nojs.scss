@@ -1,5 +1,5 @@
 .no-js {
-  header {
+  header[data-nav] {
     background-color: $light !important;
     color: $dark !important;
     padding-top: 30px !important;

@@ -1,4 +1,4 @@
-<header>
+<header data-nav>
   <nav id="menu" aria-label="Menu" role="navigation">
     <div class="mobile-bg"></div>
     <figure class="brand">

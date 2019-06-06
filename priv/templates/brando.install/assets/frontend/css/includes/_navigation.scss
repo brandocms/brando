@@ -5,7 +5,7 @@
   backface-visibility: hidden;
 }
 
-header {
+header[data-nav] {
   @include container();
 
   z-index: 10;

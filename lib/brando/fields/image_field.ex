@@ -71,7 +71,8 @@ defmodule Brando.Field.ImageField do
              {:ok, plug} <- field_has_changed(changeset, field_name),
              {:ok, _} <- changeset_has_no_errors(changeset),
              {:ok, cfg} <- get_image_cfg(field_name),
-             {:ok, {:handled, name, field}} <- Images.Upload.Field.handle_upload(field_name, plug, cfg, user) do
+             {:ok, {:handled, name, field}} <-
+               Images.Upload.Field.handle_upload(field_name, plug, cfg, user) do
           cleanup_old_images(changeset, :safe)
           put_change(changeset, name, field)
         else
@@ -198,5 +199,42 @@ defmodule Brando.Field.ImageField do
       _ ->
         {:ok, {:upload, changeset}}
     end
+  end
+
+  @doc """
+  List all registered image fields
+  """
+  def list_image_fields do
+    {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
+
+    modules = app_modules
+
+    modules
+    |> Enum.filter(&({:__imagefields__, 0} in &1.__info__(:functions)))
+    |> Enum.map(fn module ->
+      %{
+        source: module.__schema__(:source),
+        fields: module.__imagefields__() |> Keyword.keys()
+      }
+    end)
+  end
+
+  def generate_image_fields_migration do
+    img_fields = list_image_fields()
+
+    contents =
+      Enum.map(img_fields, fn %{source: source, fields: fields} ->
+        Enum.map(fields, fn field ->
+          ~s(
+          execute """
+          alter table #{source} alter column #{field} type jsonb using #{field}::JSON
+          """
+          )
+        end)
+        |> Enum.join("\n")
+      end)
+      |> Enum.join("\n")
+
+    IO.write(contents)
   end
 end

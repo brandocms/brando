@@ -60,7 +60,7 @@ defmodule Brando.Images.Utils do
   def recreate_sizes_for(type, img, user \\ :system)
 
   def recreate_sizes_for(:image, img_schema, user) do
-    img_cfg = Images.get_series_config(img_schema.image_series_id)
+    {:ok, img_cfg} = Images.get_series_config(img_schema.image_series_id)
     img_schema = reset_optimized_flag(img_schema)
     delete_sized_images(img_schema.image)
 
