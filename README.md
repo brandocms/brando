@@ -139,6 +139,21 @@ If you use Gettext, register your module in `lib/application.ex`:
 +     Brando.Registry.register(MyApp.Web.MyModule, [:gettext])
 ```
 
+## Villain templates
+
+Naming guidelines
+
+```
+<!-- header block next to text block -->
+<div class="v-block" data-v="header|text">
+
+<!-- image with full bleed -->
+<div class="v-block" data-v="image+bleed">
+
+<!-- body text with an image underneath -->
+<div class="v-block" data-v="body/image">
+```
+
 ## Releases
 
 Brando uses distillery through Docker for release management.
