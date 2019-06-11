@@ -147,4 +147,12 @@ defmodule Brando.Pages.Page do
       where: p.language == ^language,
       where: ilike(p.html, ^"%#{query}%")
   end
+
+  defimpl Phoenix.HTML.Safe, for: Brando.Pages.Page do
+    def to_iodata(page) do
+      page.html
+      |> Phoenix.HTML.raw()
+      |> Phoenix.HTML.Safe.to_iodata()
+    end
+  end
 end
