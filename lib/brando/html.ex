@@ -406,6 +406,13 @@ defmodule Brando.HTML do
   end
 
   @doc """
+  Replaces all newlines with HTML break elements.
+  """
+  def nl2br(text) do
+    String.replace(text, "\n", "<br>")
+  end
+
+  @doc """
   Outputs a `picture` tag with source, img and a noscript fallback
 
   The `srcset` attribute is the ACTUAL width of the image, as saved to disk. You'll find that in the
@@ -427,15 +434,17 @@ defmodule Brando.HTML do
           "large" => "936w",
           "xlarge" => "1200w"
         }
+      Or a list of srcsets to generate multiple source elements
   """
   @spec picture_tag(Map.t(), keyword()) :: {:safe, [...]}
   def picture_tag(img_struct, opts \\ []) do
     attrs =
-      %{img: [], picture: [], source: [], noscript_img: []}
+      %{img: [], picture: [], source: [], noscript_img: [], mq_sources: []}
       |> add_lazyload(opts)
       |> add_classes(opts)
       |> add_sizes(opts)
       |> add_srcset(opts, img_struct)
+      |> add_mq(opts, img_struct)
       |> add_dims(opts, img_struct)
       |> add_src(opts, img_struct)
       |> add_moonwalk(opts)
@@ -443,9 +452,10 @@ defmodule Brando.HTML do
     img_tag = tag(:img, attrs.img)
     noscript_img_tag = tag(:img, attrs.noscript_img)
     source_tag = tag(:source, attrs.source)
+    mq_source_tags = attrs.mq_sources
     noscript_tag = content_tag(:noscript, noscript_img_tag)
 
-    content_tag(:picture, [source_tag, img_tag, noscript_tag], attrs.picture)
+    content_tag(:picture, [mq_source_tags, source_tag, img_tag, noscript_tag], attrs.picture)
   end
 
   defp add_lazyload(attrs, opts) do
@@ -488,6 +498,23 @@ defmodule Brando.HTML do
     |> put_in([:img, :data_srcset], false)
     |> put_in([:source, :srcset], srcset)
     |> put_in([:source, :data_srcset], false)
+  end
+
+  defp add_mq(%{lazyload: _} = attrs, opts, img_struct) do
+    case (Keyword.get(opts, :media_queries) && get_mq(img_struct, opts[:media_queries], opts)) ||
+           false do
+      false ->
+        attrs
+
+      mqs ->
+        tags =
+          Enum.map(mqs, fn {media_query, srcset} ->
+            tag(:source, media: media_query, srcset: srcset)
+          end)
+
+        attrs
+        |> put_in([:mq_sources], tags)
+    end
   end
 
   defp add_src(%{lazyload: true} = attrs, opts, img_struct) do
@@ -610,6 +637,18 @@ defmodule Brando.HTML do
       end
 
     Enum.join(srcset_values, ", ")
+  end
+
+  def get_mq(image_field, mq, opts) do
+    for {media_query, srcsets} <- mq do
+      rendered_srcsets =
+        Enum.map(srcsets, fn {k, v} ->
+          path = Brando.Utils.img_url(image_field, k, opts)
+          "#{path} #{v}"
+        end)
+
+      {media_query, Enum.join(rendered_srcsets, ", ")}
+    end
   end
 
   defp sort_srcset(map) when is_map(map) do
