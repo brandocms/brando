@@ -183,13 +183,15 @@ defmodule Brando.Villain do
   Update all villain fields in database that has a template with `id`.
   """
   def update_template_in_fields(template_id) do
+    villains = list_villains()
+
     result =
-      Enum.reduce(list_villains(), fn {schema, fields}, _acc ->
-        Enum.reduce(fields, [], fn {_, data_field, html_field}, _acc ->
+      for {schema, fields} <- villains do
+        Enum.reduce(fields, [], fn {_, data_field, html_field}, acc ->
           ids = list_ids_with_template(schema, data_field, template_id)
-          rerender_html_from_ids({schema, data_field, html_field}, ids)
+          [acc | rerender_html_from_ids({schema, data_field, html_field}, ids)]
         end)
-      end)
+      end
 
     {:ok, result}
   end
@@ -228,12 +230,15 @@ defmodule Brando.Villain do
     with {:ok, template} <- get_template(id) do
       params = Map.drop(data, ["id"])
 
-      template
-      |> Brando.Villain.Template.changeset(params)
-      |> Brando.repo().update
-    end
+      new_template =
+        template
+        |> Brando.Villain.Template.changeset(params)
+        |> Brando.repo().update
 
-    update_template_in_fields(id)
+      update_template_in_fields(id)
+
+      new_template
+    end
   end
 
   def update_or_create_template(%{"data" => params}) do
