@@ -37,6 +37,10 @@ defmodule Brando.Type.Image do
   def cast(%Plug.Upload{} = val) when is_map(val),
     do: {:ok, val}
 
+  # if we get a Focal struct, we pass it on.. it gets handled later!
+  def cast(%Brando.Type.Focal{} = val) when is_map(val),
+    do: {:ok, val}
+
   def cast(val) when is_map(val), do: {:ok, Brando.Utils.stringy_struct(Brando.Type.Image, val)}
 
   @doc """
