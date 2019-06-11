@@ -67,9 +67,9 @@ class Application {
       }
     })
 
-    this.links = new Links(this)
     this.cookies = new Cookies()
     this.typography = new Typography()
+    this.links = new Links(this)
 
     this._emitInitializedEvent()
     setTimeout(this.ready.apply(this), 350)
