@@ -7,6 +7,11 @@
     v-else
     class="<%= plural %> container"
     appear>
+    <%= if gallery do %>
+    <ImageSelection
+      :selected-images="selectedImages"
+      :delete-callback="deleteCallback" />
+    <% end %>
     <div class="row">
       <div class="col-md-12">
         <div class="card">
@@ -135,6 +140,14 @@ export default {
         })
     },
     <%= if gallery do %>
+    /**
+     * Callback from ImageSelection when we delete images
+     */
+    deleteCallback () {
+      // we don't need to do anything here, except closing modal, since we refetch image series anyway.
+      this.closeImageSeriesModal()
+    },
+
     createImageSeries (id) {
       this.adminChannel.channel
         .push('<%= singular %>:create_image_series', { <%= singular %>_id: id })
