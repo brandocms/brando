@@ -21,6 +21,8 @@ config :<%= application_name %>, <%= application_module %>Web.Endpoint,
   render_errors: [accepts: ~w(html json), view: Brando.ErrorView, default_format: "html"],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
+config :<%= application_name %>, hmr: false
+
 # Do not print debug messages in production
 config :logger, level: :error
 
