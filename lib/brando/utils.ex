@@ -454,9 +454,14 @@ defmodule Brando.Utils do
     url = (prefix && Path.join([prefix, size_dir])) || size_dir
 
     case Map.get(image_field, :optimized) do
-      true -> Brando.Images.Utils.optimized_filename(url) <> add_cache_string(opts)
-      false -> url <> add_cache_string(opts)
-      nil -> url <> add_cache_string(opts)
+      true ->
+        Brando.Images.Utils.optimized_filename(url) <> add_cache_string(opts)
+
+      false ->
+        url <> add_cache_string(opts)
+
+      nil ->
+        url || "NO_URL" <> add_cache_string(opts)
     end
   end
 
