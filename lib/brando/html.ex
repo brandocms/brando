@@ -272,19 +272,32 @@ defmodule Brando.HTML do
     conn =
       case get_meta(conn, "og:image") do
         nil ->
-          if meta_image = Brando.Config.get_site_config("meta_image") do
-            img =
-              if String.contains?(meta_image, "://") do
-                meta_image
-              else
-                Path.join("#{conn.scheme}://#{conn.host}", meta_image)
-              end
+          case Brando.Config.get_site_config("meta_image") do
+            nil ->
+              conn
 
-            conn
-            |> put_meta("image", img)
-            |> put_meta("og:image", img)
-          else
-            conn
+            meta_image when is_map(meta_image) ->
+              # grab xlarge from img
+              img_src =
+                Brando.Utils.img_url(meta_image, :xlarge, prefix: Brando.Utils.media_url())
+
+              img = Path.join("#{conn.scheme}://#{conn.host}", img_src)
+
+              conn
+              |> put_meta("image", img)
+              |> put_meta("og:image", img)
+
+            meta_image when is_binary(meta_image) ->
+              img =
+                if String.contains?(meta_image, "://") do
+                  meta_image
+                else
+                  Path.join("#{conn.scheme}://#{conn.host}", meta_image)
+                end
+
+              conn
+              |> put_meta("image", img)
+              |> put_meta("og:image", img)
           end
 
         img ->
