@@ -46,6 +46,10 @@ defmodule Brando.Config do
     GenServer.call(__MODULE__, {:update, key, val})
   end
 
+  def add_prop(key, prop, val) do
+    GenServer.call(__MODULE__, {:add_prop, key, prop, val})
+  end
+
   def get_site_config do
     state() |> Map.get(:site_config)
   end
@@ -113,6 +117,13 @@ defmodule Brando.Config do
   @doc false
   def handle_call({:update, key, val}, _from, state) do
     state = put_in(state, [Access.key(:site_config), Access.key(key), Access.key("value")], val)
+
+    {:reply, state, state}
+  end
+
+  @doc false
+  def handle_call({:add_prop, key, prop, value}, _from, state) do
+    state = put_in(state, [Access.key(:site_config), Access.key(key), Access.key(prop)], value)
 
     {:reply, state, state}
   end
