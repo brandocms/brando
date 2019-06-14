@@ -38,6 +38,13 @@ class Application {
   }
 
   initialize() {
+    this.initializedEvent = new window.CustomEvent('application:initialized')
+    this.readyEvent = new window.CustomEvent('application:ready')
+
+    window.addEventListener('application:ready', () => {
+      // on ready
+    })
+
     this.lightbox = new Lightbox()
     this.fader = new Fader(this, document.querySelector('#fader'))
 
@@ -80,13 +87,11 @@ class Application {
   }
 
   _emitInitializedEvent() {
-    const initializedEvent = new window.CustomEvent('application:initialized')
-    window.dispatchEvent(initializedEvent)
+    window.dispatchEvent(this.initializedEvent)
   }
 
   _emitReadyEvent() {
-    const readyEvent = new window.CustomEvent('application:ready')
-    window.dispatchEvent(readyEvent)
+    window.dispatchEvent(this.readyEvent)
   }
 }
 
