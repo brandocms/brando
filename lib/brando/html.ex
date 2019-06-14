@@ -456,6 +456,7 @@ defmodule Brando.HTML do
       |> add_lazyload(opts)
       |> add_classes(opts)
       |> add_sizes(opts)
+      |> add_alt(opts)
       |> add_srcset(opts, img_struct)
       |> add_mq(opts, img_struct)
       |> add_dims(opts, img_struct)
@@ -469,6 +470,12 @@ defmodule Brando.HTML do
     noscript_tag = content_tag(:noscript, noscript_img_tag)
 
     content_tag(:picture, [mq_source_tags, source_tag, img_tag, noscript_tag], attrs.picture)
+  end
+
+  defp add_alt(attrs, opts) do
+    alt = Keyword.get(opts, :alt, "")
+
+    put_in(attrs, [:img, :alt], alt)
   end
 
   defp add_lazyload(attrs, opts) do
