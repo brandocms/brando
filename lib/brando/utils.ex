@@ -58,6 +58,16 @@ defmodule Brando.Utils do
   end
 
   @doc """
+  Sets a new basename for file.
+  Keeps the original extension.
+  """
+  @spec change_basename(String.t(), String.t()) :: String.t()
+  def change_basename(filename, new_basename) do
+    ext = Path.extname(filename)
+    "#{new_basename}#{ext}"
+  end
+
+  @doc """
   Generate a random string from `seed`
   """
   def random_string(seed) do
