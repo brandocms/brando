@@ -7,6 +7,7 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import 'custom-event-polyfill'
+import 'intersection-observer'
 import 'picturefill'
 
 import {
@@ -32,6 +33,32 @@ import '../css/app.scss'
 
 TweenLite.defaultEase = Sine.easeOut
 
+const FIXED_HEADER_OPTS = {
+  default: {
+    enterDelay: 0.5,
+    offset: 8,
+    offsetSmall: 10,
+    offsetBg: 50,
+    regBgColor: 'transparent'
+  }
+}
+
+const MOBILE_MENU_OPTS = {
+  onResize: (m) => {
+    if (document.body.classList.contains('open-menu')) {
+      TweenLite.to(m.bg, 0.1, { height: window.innerHeight })
+    }
+  }
+}
+
+const MOONWALK_OPTS = {
+  walks: {
+    default: {
+      distance: '4px'
+    }
+  }
+}
+
 class Application {
   constructor() {
     this.fader = null
@@ -46,34 +73,11 @@ class Application {
     })
 
     this.lightbox = new Lightbox()
-    this.fader = new Fader(this, document.querySelector('#fader'))
-
-    const heroSlider = document.querySelector('[data-hero-slider]')
-    if (heroSlider) {
-      this.heroSlider = new HeroSlider(heroSlider)
-    }
-
-    this.header = new FixedHeader(
-      document.querySelector('header'),
-      {
-        default: {
-          enterDelay: 0.5,
-          offset: 8,
-          offsetSmall: 10,
-          offsetBg: 50,
-          regBgColor: 'transparent'
-        }
-      }
-    )
-
-    this.mobileMenu = new MobileMenu({
-      onResize: (m) => {
-        if (document.body.classList.contains('open-menu')) {
-          TweenLite.to(m.bg, 0.1, { height: window.innerHeight })
-        }
-      }
-    })
-
+    this.fader = new Fader(this, '#fader')
+    this.moonwalk = await new Moonwalk(MOONWALK_OPTS)
+    this.heroSlider = new HeroSlider('[data-hero-slider]')
+    this.header = new FixedHeader('header[data-nav]', FIXED_HEADER_OPTS)
+    this.mobileMenu = new MobileMenu(MOBILE_MENU_OPTS)
     this.cookies = new Cookies()
     this.typography = new Typography()
     this.links = new Links(this)

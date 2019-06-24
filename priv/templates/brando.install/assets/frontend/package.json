@@ -28,6 +28,7 @@
     "hamburgers": "^1.1.3",
     "hammerjs": "^2.0.8",
     "include-media": "^1.4.9",
+    "intersection-observer": "^0.7.0",
     "io": "twined/io",
     "jupiter": "twined/jupiter",
     "picturefill": "^3.0.3",
