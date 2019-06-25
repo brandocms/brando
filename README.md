@@ -11,13 +11,14 @@ A helping hand.
 
 ## Install
 
-Start by creating a new phoenix project:
+Start by creating a new Phoenix project:
 
     $ mix phx.new my_project
 
 Run the install script:
 
-    $ wget -O - https://raw.githubusercontent.com/twined/brando/develop/install.sh | bash
+    $ wget https://raw.githubusercontent.com/twined/brando/develop/install.sh
+    $ chmod +x install.sh && ./install.sh
 
 Go through `config/brando.exs`.
 
