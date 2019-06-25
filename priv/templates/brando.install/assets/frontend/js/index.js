@@ -74,7 +74,7 @@ class Application {
 
     this.lightbox = new Lightbox()
     this.fader = new Fader(this, '#fader')
-    this.moonwalk = await new Moonwalk(MOONWALK_OPTS)
+    this.moonwalk = new Moonwalk(MOONWALK_OPTS)
     this.heroSlider = new HeroSlider('[data-hero-slider]')
     this.header = new FixedHeader('header[data-nav]', FIXED_HEADER_OPTS)
     this.mobileMenu = new MobileMenu(MOBILE_MENU_OPTS)
