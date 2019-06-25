@@ -225,6 +225,97 @@ $typography-menu: (
   )
 );
 
+/* How much to translate arrow on hover */
+$io-arrow-travel: 5px;
+
+$io-padding-map: (
+  xs: (
+    xs: 15px,
+    sm: 15px,
+    md: 15px,
+    lg: 15px
+  ),
+  sm: (
+    xs: 15px,
+    sm: 15px,
+    md: 30px,
+    lg: 45px
+  ),
+  md: (
+    xs: 15px,
+    sm: 15px,
+    md: 50px,
+    lg: 70px
+  ),
+  lg: (
+    xs: 15px,
+    sm: 15px,
+    md: 75px,
+    lg: 120px
+  ),
+  xl: (
+    xs: 15px,
+    sm: 15px,
+    md: 140px,
+    lg: 180px
+  ),
+);
+
+
+$io-font-sizes: (
+  xs: (
+    xs: 12px,
+    sm: 12px,
+    md: 12px,
+    lg: 12px
+  ),
+  sm: (
+    xs: 14px,
+    sm: 14px,
+    md: 14px,
+    lg: 14px
+  ),
+  md: (
+    xs: 16px,
+    sm: 16px,
+    md: 38px,
+    lg: 38px
+  ),
+  lg: (
+    xs: 24px,
+    sm: 24px,
+    md: 24px,
+    lg: 24px
+  ),
+  xl: (
+    xs: 38px,
+    sm: 38px,
+    md: 38px,
+    lg: 38px
+  ),
+  xxl: (
+    xs: 58px,
+    sm: 58px,
+    md: 58px,
+    lg: 58px
+  )
+);
+
+$io-line-heights: (
+  xs: 1.6,
+  sm: 1.6,
+  md: 1.6,
+  lg: 1.6
+);
+
+/* how much margin is added to the right of each list item, EXCEPT last item */
+$io-list-inline-padding: (
+  xs: 0,
+  sm: 0,
+  md: 55px,
+  lg: 55px
+);
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // COLORS
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
