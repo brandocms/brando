@@ -153,6 +153,77 @@ defmodule <%= application_module %>.Villain.Parser do
   end
 
   @doc """
+  Convert image to html, with caption and credits and optional link
+  """
+  def picture(data) do
+    title = Map.get(data, "title", "")
+    credits = Map.get(data, "credits", "")
+
+    link = Map.get(data, "link", "")
+    img_class = Map.get(data, "img_class", "")
+    picture_class = Map.get(data, "picture_class", "")
+    srcset = Map.get(data, "srcset", "")
+    media_queries = Map.get(data, "media_queries", "")
+
+    {link_open, link_close} =
+      if link != "" do
+        {~s(<a href="#{data["link"]}" title="#{title}">), ~s(</a>)}
+      else
+        {"", ""}
+      end
+
+    title = if title == "", do: nil, else: title
+
+    caption =
+      if title do
+        """
+        <p class="small photo-caption"><span class="arrow-se">&searr;</span> #{title}</p>
+        """
+      else
+        ""
+      end
+
+    srcset =
+      if srcset != "",
+        do: Code.string_to_quoted!(srcset, existing_atoms_only: true),
+        else: nil
+
+    media_queries =
+      if media_queries != "",
+        do: Code.string_to_quoted!(media_queries, existing_atoms_only: true),
+        else: nil
+
+    alt =
+      if title && credits do
+        "#{title}/#{credits}"
+      else
+        "Ill."
+      end
+
+    ptag =
+      picture_tag(data,
+        key: :xlarge,
+        picture_class: "picture-img",
+        img_class: img_class,
+        picture_class: picture_class,
+        media_queries: media_queries,
+        alt: alt,
+        srcset: srcset
+        # cache: img.updated_at,
+      )
+      |> safe_to_string
+
+    """
+    <div class="picture-wrapper" data-moonwalk-children>
+      #{link_open}
+      #{ptag}
+      #{link_close}
+      #{caption}
+    </div>
+    """
+  end
+
+  @doc """
   Slideshow
   """
   def slideshow(%{"images" => images}) do
