@@ -16,7 +16,7 @@ config :<%= application_name %>, <%= application_module %>Web.Endpoint,
   url: [scheme: "https", host: "sitename.no", port: 80],
   # force_ssl: [rewrite_on: [:x_forwarded_proto]],
   check_origin: ["//sitename.no", "//*.sitename.no",
-                 "//*.twined.net", "//localhost:4000"],
+                 "//*.univers.agency", "//localhost:4000"],
   server: true,
   render_errors: [accepts: ~w(html json), view: Brando.ErrorView, default_format: "html"],
   cache_static_manifest: "priv/static/cache_manifest.json"
