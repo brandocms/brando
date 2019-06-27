@@ -40,4 +40,4 @@ COPY --from=frontend_builder /opt/app/priv/static/ priv/static/
 COPY --from=backend_builder /opt/app/priv/static/ priv/static/
 
 RUN mix phx.digest
-RUN mix release
+RUN mix distillery.release
