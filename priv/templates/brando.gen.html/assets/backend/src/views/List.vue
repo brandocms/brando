@@ -53,8 +53,7 @@
                   v-for="<%= vue_singular %> in all<%= Recase.to_pascal(vue_plural) %>"
                   :key="<%= vue_singular %>.id">
                 <% end %>
-                  <%= for {_, v} <- list_rows do %>
-                    <%= v %>
+                  <%= for {_, v} <- list_rows do %><%= v %>
                   <% end %>
                   <td
                     v-if="['superuser'].includes(me.role)"

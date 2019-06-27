@@ -1,8 +1,6 @@
 query <%= Recase.to_pascal(vue_singular) %>($<%= vue_singular %>Id: ID!) {
   <%= singular %>(<%= vue_singular %>Id: $<%= vue_singular %>Id) {
-    id
-    <%= for {_k, v} <- gql_query_fields do %>
-    <%= v %>
-    <% end %>
+    id<%= for {_k, v} <- gql_query_fields do %>
+    <%= v %><% end %>
   }
 }

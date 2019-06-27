@@ -206,9 +206,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       {:eex, "assets/backend/src/store/modules/module.js",
        "assets/backend/src/store/modules/#{vue_plural}.js"},
       {:eex, "assets/backend/src/api/api.js", "assets/backend/src/api/#{vue_singular}.js"},
-      {:eex_trim, "assets/backend/src/api/graphql/ALL_QUERY.graphql",
+      {:eex, "assets/backend/src/api/graphql/ALL_QUERY.graphql",
        "assets/backend/src/api/graphql/#{vue_plural}/#{String.upcase(plural)}_QUERY.graphql"},
-      {:eex_trim, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql",
+      {:eex, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql",
        "assets/backend/src/api/graphql/#{vue_plural}/#{String.upcase(singular)}_QUERY.graphql"},
       {:eex, "assets/backend/src/api/graphql/CREATE_MUTATION.graphql",
        "assets/backend/src/api/graphql/#{vue_plural}/CREATE_#{String.upcase(singular)}_MUTATION.graphql"},
@@ -218,7 +218,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
        "assets/backend/src/api/graphql/#{vue_plural}/DELETE_#{String.upcase(singular)}_MUTATION.graphql"},
       {:eex, "assets/backend/src/menus/menu.js", "assets/backend/src/menus/#{vue_plural}.js"},
       {:eex, "assets/backend/src/routes/route.js", "assets/backend/src/routes/#{vue_plural}.js"},
-      {:eex_trim, "assets/backend/src/views/List.vue",
+      {:eex, "assets/backend/src/views/List.vue",
        "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}ListView.vue"},
       {:eex_trim, "assets/backend/src/views/Create.vue",
        "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}CreateView.vue"},
@@ -482,6 +482,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     end
   end
 
+  ##
   defp graphql_types(attrs) do
     # this is for GraphQL type objects
 
@@ -541,27 +542,27 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k, ""}
 
       {k, :boolean} ->
-        {k, ~s(                  <td class="fit">
+        {k, ~s(<td class="fit">
                     <CheckOrX :val="#{vue_singular}.#{k}" />
                   </td>)}
 
       {k, :date} ->
-        {k, ~s(                  <td class="fit">
+        {k, ~s(<td class="fit">
                     {{ #{vue_singular}.#{k} | datetime }}
                   </td>)}
 
       {k, :time} ->
-        {k, ~s(                  <td class="fit">
+        {k, ~s(<td class="fit">
                     {{ #{vue_singular}.#{k} | datetime }}
                   </td>)}
 
       {k, :datetime} ->
-        {k, ~s(                  <td class="fit">
+        {k, ~s(<td class="fit">
                     {{ #{vue_singular}.#{k} | datetime }}
                   </td>)}
 
       {k, :image} ->
-        {k, ~s(                  <td class="fit">
+        {k, ~s(<td class="fit">
                     <img
                       v-if="#{vue_singular}.#{k}"
                       :src="#{vue_singular}.#{k}.thumb"
@@ -572,7 +573,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k, ""}
 
       {k, :gallery} ->
-        {k, ~s(                  <td class="fit">
+        {k, ~s(<td class="fit">
                     <template v-if="#{vue_singular}.#{k}_id">
                       <ModalImageSeries
                         :selectedImages="selectedImages"
@@ -593,7 +594,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
                   </td>)}
 
       {k, _} ->
-        {k, ~s(                  <td class="fit">
+        {k, ~s(<td class="fit">
                     {{ #{vue_singular}.#{k} }}
                   </td>)}
     end)
