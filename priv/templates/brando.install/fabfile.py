@@ -675,21 +675,20 @@ def _setowner(path=''):
 
 def nukemedia():
     """
-    Deletes media path recursively on host, then recreates
-    directory and sets perms
+    Deletes media path recursively on host.
     """
     require('hosts')
     print(red('-- WARNING ---------------------------------------'))
-    print(red('You are about to delete %s from the remote server.' % env.media_path))
-    print(red('command: rm -rf %s' % env.media_path))
+    print(red('You are about to delete %s from the remote server.' % os.path.join(env.path, 'media')))
+    print(red('command: rm -rf %s' % os.path.join(env.path, 'media')))
     print(red('-- WARNING ---------------------------------------'))
     _confirmtask()
     print(yellow('==> ok, nuking files.'))
-    sudo('rm -rf %s' % env.media_path)
-    print(yellow('==> recreating media directory'))
-    sudo('mkdir -p %s' % env.media_path, user=env.project_user)
-    _setowner(env.media_path)
-    _setperms('g+w', env.media_path)
+    sudo('rm -rf %s' % os.path.join(env.path, 'media'))
+    # print(yellow('==> recreating media directory'))
+    # sudo('mkdir -p %s' % env.media_path, user=env.project_user)
+    # _setowner(env.media_path)
+    # _setperms('g+w', env.media_path)
 
 
 WORDLIST_PATHS = [os.path.join('/', 'usr', 'share', 'dict', 'words')]
