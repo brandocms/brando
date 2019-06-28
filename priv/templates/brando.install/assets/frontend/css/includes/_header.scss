@@ -3,7 +3,7 @@ section.hero {
   color: $header-fg;
 
   &.stretch {
-    height: 100vh;
+    height: 100%; // 100vh breaks with iOS Safari's bottom bar :(
   }
 
   h2 {
