@@ -104,7 +104,7 @@ defmodule Brando.Mixfile do
 
   defp package do
     [
-      maintainers: ["Univers/Twined"],
+      maintainers: ["Univers TM"],
       licenses: [""],
       files: [
         "assets",

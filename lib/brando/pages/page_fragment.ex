@@ -9,7 +9,7 @@ defmodule Brando.Pages.PageFragment do
   use Brando.Villain.Schema
 
   @required_fields ~w(parent_key key language data creator_id)a
-  @optional_fields ~w(html)a
+  @optional_fields ~w(html page_id)a
   @derived_fields ~w(
     id
     parent_key
@@ -18,16 +18,18 @@ defmodule Brando.Pages.PageFragment do
     data
     html
     creator_id
+    page_id
   )a
 
   @derive {Jason.Encoder, only: @derived_fields}
 
   schema "pagefragments" do
-    field :parent_key, :string
-    field :key, :string
-    field :language, :string
+    field(:parent_key, :string)
+    field(:key, :string)
+    field(:language, :string)
     villain()
-    belongs_to :creator, Brando.User
+    belongs_to(:creator, Brando.User)
+    belongs_to(:page, Brando.Pages.Page)
     timestamps()
   end
 

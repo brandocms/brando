@@ -448,9 +448,13 @@ defmodule Brando.Utils do
         if Map.has_key?(image_field.sizes, size) do
           image_field.sizes[size]
         else
-          IO.warn(
-            ~s(Wrong key for img_url. Size `#{size}` does not exist for #{inspect(image_field)})
-          )
+          IO.warn("""
+          Wrong size key for img_url function.
+
+          Size `#{size}` does not exist for image struct:
+
+          #{inspect(image_field, pretty: true)})
+          """)
 
           "non_existing"
         end

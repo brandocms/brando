@@ -9,6 +9,7 @@ defmodule <%= application_module %>.Repo.Migrations.CreatePageFragments do
       add :data,              :json
       add :html,              :text
       add :creator_id,        references(:users)
+      add :page_id,           references(:pages)
       timestamps()
     end
     create index(:pagefragments, [:language])

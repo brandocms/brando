@@ -451,8 +451,10 @@ defmodule Brando.HTML do
   """
   @spec picture_tag(Map.t(), keyword()) :: {:safe, [...]}
   def picture_tag(img_struct, opts \\ []) do
+    initial_map = %{img: [], picture: [], source: [], noscript_img: [], mq_sources: []}
+
     attrs =
-      %{img: [], picture: [], source: [], noscript_img: [], mq_sources: []}
+      initial_map
       |> add_lazyload(opts)
       |> add_classes(opts)
       |> add_sizes(opts)
@@ -465,7 +467,14 @@ defmodule Brando.HTML do
 
     img_tag = tag(:img, attrs.img)
     noscript_img_tag = tag(:img, attrs.noscript_img)
-    source_tag = tag(:source, attrs.source)
+
+    source_tag =
+      if Enum.all?(attrs.source, fn {_k, v} -> v == false end) do
+        ""
+      else
+        tag(:source, attrs.source)
+      end
+
     mq_source_tags = attrs.mq_sources
     noscript_tag = content_tag(:noscript, noscript_img_tag)
 

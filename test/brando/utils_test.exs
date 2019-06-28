@@ -116,7 +116,7 @@ defmodule Brando.UtilsTest do
     assert img_url(img, :original, prefix: "prefix") == "prefix/original/path/file.jpg"
 
     assert capture_io(:stderr, fn -> img_url(img, :notasize, default: "default.jpg") end) =~
-             "Wrong key for img_url. Size `notasize` does not exist for"
+             "Wrong size key for img_url function."
   end
 
   test "get_now" do

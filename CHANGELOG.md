@@ -1,3 +1,21 @@
+## v2.0.0-alpha.3-dev
+
+* Fragments now belong to pages.
+
+  ```
+  $ mix ecto.gen.migration add_fragments_to_pages
+  ```
+  Paste in:
+  ```
+  alter table(:pagefragments) do
+    add :page_id, references(:pages)
+  end
+  ```
+
+  ```
+  $ mix ecto.migrate
+  ```
+
 ## v2.0.0-alpha.2-dev
 
 * Switch all your image fields to `:jsonb` types in migrations from `:text`.
