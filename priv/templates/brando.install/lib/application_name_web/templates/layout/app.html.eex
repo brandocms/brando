@@ -46,17 +46,13 @@
 <!-- /footer - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
 
     <%%= if Application.get_env(:<%= application_name %>, :hmr) do %>
+      <i class="dbg"></i>
       <script src='http://<%%= @conn.host %>:9999/app.js'></script>
     <%% else %>
       <script src="<%%= Routes.static_path(@conn, "/js/app.js") %>"></script>
     <%% end %>
     <%%= Brando.HTML.google_analytics("UA-XXXXXXXX-1") %>
 
-    <div class="dev-debug-sizes">
-      <div class="d-xs-block d-sm-none d-md-none d-lg-none">XS</div>
-      <div class="d-none d-sm-block d-xs-none d-md-none d-lg-none">SM</div>
-      <div class="d-none d-md-block d-xs-none d-sm-none d-lg-none">MD</div>
-      <div class="d-none d-lg-block d-xs-none d-sm-none d-md-none">LG</div>
-    </div>
+    <!-- (u(n(i(v(e(r(s))))))) // vsn <%%= Application.spec(:<%= application_name %>, :vsn) %> -->
   </body>
 </html>

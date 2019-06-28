@@ -110,7 +110,7 @@ span.line {
   display: inline-block;
 }
 
-.dev-debug-sizes {
+i.dbg {
   position: fixed;
   bottom: 4px;
   left: 4px;
@@ -118,7 +118,31 @@ span.line {
   font-size: 11px;
   font-weight: bold;
   z-index: 99;
-  display: none;
+  display: block;
+
+  &:after {
+    text-transform: uppercase;
+    background-color: #fff;
+    font-style: normal;
+    padding: 4px 5px;
+    text-align: center;
+
+    @include media(xs) {
+      content: 'xs';
+    }
+
+    @include media(sm) {
+      content: 'sm';
+    }
+
+    @include media(md) {
+      content: 'md';
+    }
+
+    @include media(lg) {
+      content: 'lg';
+    }
+  }
 }
 
 /**
