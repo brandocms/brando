@@ -1,9 +1,5 @@
 #cookies {
-  @each $bp-name, $bp-size in $grid-breakpoints {
-    @include media('>=#{$bp-name}') {
-      padding-top: map-get($padding-lg, $bp-name);
-    }
-  }
+  @include space('padding-top', lg);
 }
 
 .no-js {
@@ -23,12 +19,8 @@
   margin-bottom: 0 !important;
   max-width: 100% !important;
 
-  @each $bp-name, $bp-size in $grid-breakpoints {
-    @include media('>=#{$bp-name}') {
-      padding-top: map-get($padding-sm, $bp-name) / 2;
-      padding-bottom: map-get($padding-sm, $bp-name) / 2;
-    }
-  }
+  @include space('padding-top', sm);
+  @include space('padding-bottom', sm);
 
   .cookie-law {
     display: flex;

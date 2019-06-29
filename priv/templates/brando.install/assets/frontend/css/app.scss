@@ -67,11 +67,11 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
+  @include fontsize-rfs(md);
+
   @each $bp-name, $bp-size in $grid-breakpoints {
     @include media('>=#{$bp-name}') {
       padding-top: map-get($fixed-menu-compensation-padding, $bp-name);
-      font-size: map-get($fontsize-base, $bp-name);
-      line-height: map-get($lineheight-base, $bp-name);
     }
   }
 }
@@ -83,6 +83,7 @@ p:last-child {
 .blink {
   animation: blink-animation 2.7s steps(200, start) infinite;
 }
+
 @keyframes blink-animation {
   0% {
     opacity: 0;
@@ -157,7 +158,6 @@ i.dbg {
 @import "includes/footer";
 @import "includes/hamburgers";
 @import "includes/header";
-@import "includes/headers";
 @import "includes/lightbox";
 @import "includes/modules";
 @import "includes/paragraphs";
