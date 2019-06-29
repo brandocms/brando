@@ -292,8 +292,6 @@ defmodule Mix.Tasks.Brando.Install do
      "assets/frontend/css/includes/_hamburgers.scss"},
     {:copy, "assets/frontend/css/includes/_header.scss",
      "assets/frontend/css/includes/_header.scss"},
-    {:copy, "assets/frontend/css/includes/_headers.scss",
-     "assets/frontend/css/includes/_headers.scss"},
     {:copy, "assets/frontend/css/includes/_lightbox.scss",
      "assets/frontend/css/includes/_lightbox.scss"},
     {:copy, "assets/frontend/css/includes/_modules.scss",
