@@ -15,7 +15,7 @@ then
   gsed -i '/{:phoenix,/i\      {:brando, github: "twined/brando", branch: "develop"},' mix.exs
   mix do deps.get, deps.compile, brando.install --module $MODULE, deps.get, deps.compile
   gsed -i '/Import environment specific config/i\# import BRANDO config\nimport_config "brando.exs"\n' config/config.exs
-  cd assets/frontend && yarn && cd ../backend && yarn && cd ../../
+  cd assets/frontend && yarn && yarn upgrade jupiter io && cd ../backend && yarn && yarn upgrade kurtz && cd ../../
   mix do deps.get, deps.compile --force && mix ecto.setup
   gsed -i '/pool_size:/i\  socket_options: [recbuf: 8192, sndbuf: 8192],' config/prod.secret.exs
   mix release.init
