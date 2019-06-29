@@ -124,10 +124,9 @@ defmodule Brando.Pages do
   """
   def get_page(key, lang) when is_binary(key) do
     q =
-      from(p in Page,
+      from p in Page,
         where: p.key == ^key and p.language == ^lang,
         preload: :fragments
-      )
 
     case Brando.repo().one(q) do
       nil -> {:error, {:page, :not_found}}
@@ -140,11 +139,10 @@ defmodule Brando.Pages do
   """
   def get_page_with_children(key, lang) when is_binary(key) do
     q =
-      from(p in Page,
+      from p in Page,
         join: c in assoc(p, :children),
         where: p.key == ^key and p.language == ^lang,
         preload: [:children, :fragments]
-      )
 
     case Brando.repo().one(q) do
       nil -> {:error, {:page, :not_found}}
@@ -157,10 +155,9 @@ defmodule Brando.Pages do
   """
   def get_page(nil, key, lang) when is_binary(key) do
     q =
-      from(p in Page,
+      from p in Page,
         where: p.key == ^key and p.language == ^lang,
         preload: [:fragments]
-      )
 
     case Brando.repo().one(q) do
       nil -> {:error, {:page, :not_found}}
@@ -170,11 +167,10 @@ defmodule Brando.Pages do
 
   def get_page(parent_key, key, lang) when is_binary(key) do
     q =
-      from(p in Page,
+      from p in Page,
         left_join: pp in assoc(p, :parent),
         where: p.key == ^key and pp.key == ^parent_key and p.language == ^lang,
         preload: [:fragments]
-      )
 
     case Brando.repo().one(q) do
       nil -> {:error, {:page, :not_found}}
@@ -343,9 +339,8 @@ defmodule Brando.Pages do
 
     fragment =
       Brando.repo().one(
-        from(p in PageFragment,
+        from p in PageFragment,
           where: p.key == ^key and p.language == ^language
-        )
       )
 
     case fragment do
@@ -380,9 +375,8 @@ defmodule Brando.Pages do
 
     fragment =
       Brando.repo().one(
-        from(p in PageFragment,
+        from p in PageFragment,
           where: p.parent_key == ^parent and p.key == ^key and p.language == ^language
-        )
       )
 
     case fragment do

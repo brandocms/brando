@@ -33,6 +33,6 @@ defmodule Brando.Meta.Schema do
   """
   @doc false
   defmacro __using__(_) do
-    raise "META/schemas are deprecated. Remove."
+    raise "META/schemas are deprecated, and are not in use anymore."
   end
 end

@@ -84,7 +84,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
       |> Enum.map(fn {k, v} -> {v, "#{k}_id"} end)
       |> Enum.filter(fn {k, _} -> k == :gallery end)
 
-    Mix.Brando.check_module_name_availability!(binding[:module])
+    :ok = Mix.Brando.check_module_name_availability(binding[:module])
 
     {assocs, attrs} = partition_attrs_and_assocs(attrs)
 

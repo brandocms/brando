@@ -147,11 +147,13 @@ defmodule Mix.Brando do
   @doc """
   Checks the availability of a given module name.
   """
-  def check_module_name_availability!(name) do
+  def check_module_name_availability(name) do
     name = Module.concat(Elixir, name)
 
     if Code.ensure_loaded?(name) do
-      Mix.raise("Module name #{inspect(name)} is already taken, please choose another name")
+      {:error, "Module name #{inspect(name)} is already taken, please choose another name"}
+    else
+      :ok
     end
   end
 

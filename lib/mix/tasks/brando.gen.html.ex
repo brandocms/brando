@@ -24,6 +24,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
   Read the documentation for `phoenix.gen.schema` for more
   information on attributes and namespaced resources.
   """
+  @spec run(any) :: no_return
   def run(_) do
     Mix.shell().info("""
     % Brando HTML generator
@@ -45,6 +46,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     Mix.Project.config() |> Keyword.fetch!(:app)
   end
 
+  @spec create_domain(any) :: no_return
   defp create_domain(domain_name) do
     snake_domain =
       domain_name
@@ -54,7 +56,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     binding = Mix.Brando.inflect(domain_name)
 
-    File.mkdir_p!("lib/#{otp_app()}/#{snake_domain}")
+    :ok = File.mkdir_p("lib/#{otp_app()}/#{snake_domain}")
     {domain_code, domain_header, instructions} = create_schema(domain_name)
 
     # check if it exists
@@ -62,28 +64,29 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     file_name = "lib/#{otp_app()}/#{snake_domain}/#{snake_domain}.ex"
 
     if not File.exists?(file_name) do
-      File.write!(
-        file_name,
-        """
-        defmodule #{binding[:module]} do
-          @moduledoc \"\"\"
-          Context for #{binding[:human]}
-          \"\"\"
+      :ok =
+        File.write(
+          file_name,
+          """
+          defmodule #{binding[:module]} do
+            @moduledoc \"\"\"
+            Context for #{binding[:human]}
+            \"\"\"
 
-          @type id :: Integer.t() | String.t()
-          @type params :: Map.t()
-          @type user :: Brando.User.t()
+            @type id :: Integer.t() | String.t()
+            @type params :: Map.t()
+            @type user :: Brando.User.t()
 
-          alias #{binding[:base]}.Repo
+            alias #{binding[:base]}.Repo
 
-          # ++header
-          # __header
+            # ++header
+            # __header
 
-          # ++code
-          # __code
-        end
-        """
-      )
+            # ++code
+            # __code
+          end
+          """
+        )
     end
 
     Mix.Brando.add_to_file(
@@ -101,6 +104,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     Mix.shell().info(instructions)
   end
 
+  @spec create_schema(any) :: no_return
+  @spec create_schema(any, any, any) :: no_return
   defp create_schema(domain_name, domain_header \\ [], domain_code \\ "") do
     Mix.shell().info("""
     == Schema for #{domain_name}
@@ -235,8 +240,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {files, args}
       end
 
-    Mix.Brando.check_module_name_availability!(binding[:module] <> "Controller")
-    Mix.Brando.check_module_name_availability!(binding[:module] <> "View")
+    :ok = Mix.Brando.check_module_name_availability(binding[:module] <> "Controller")
+    :ok = Mix.Brando.check_module_name_availability(binding[:module] <> "View")
 
     schema_binding = Mix.Tasks.Brando.Gen.Schema.run(args, domain_name)
 

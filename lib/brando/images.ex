@@ -4,16 +4,13 @@ defmodule Brando.Images do
   Handles uploads too.
   Interfaces with database
   """
+  @type user :: Brando.User.t() | :system
+  @type params :: %{binary => term} | %{atom => term}
 
   alias Brando.Image
   alias Brando.ImageCategory
   alias Brando.ImageSeries
-
-  import Brando.Images.Utils,
-    only: [
-      delete_original_and_sized_images: 2,
-      recreate_sizes_for: 3
-    ]
+  alias Brando.Images
 
   import Brando.Utils.Schema, only: [put_creator: 2]
   import Ecto.Query
@@ -21,8 +18,8 @@ defmodule Brando.Images do
   @doc """
   Create new image
   """
-  @spec create_image(%{binary => term} | %{atom => term}, Brando.User.t()) ::
-          {:ok, Image.t()} | {:error, Keyword.t()}
+  @spec create_image(params :: params, user :: Brando.User.t()) ::
+          {:ok, Image.t()} | {:error, Ecto.Changeset.t()}
   def create_image(params, user) do
     %Image{}
     |> put_creator(user)
@@ -33,6 +30,8 @@ defmodule Brando.Images do
   @doc """
   Update image
   """
+  @spec update_image(schema :: Image.t(), params :: params) ::
+          {:ok, Image.t()} | {:error, Ecto.Changeset.t()}
   def update_image(schema, params) do
     schema
     |> Image.changeset(:update, params)
@@ -71,6 +70,13 @@ defmodule Brando.Images do
   @doc """
   Updates the `schema`'s image JSON field with `title` and `credits`
   """
+  @spec update_image_meta(
+          schema :: Brando.Image.t(),
+          title :: any(),
+          credits :: any(),
+          focal :: Map.t(),
+          user :: user
+        ) :: {:ok, Brando.Image.t()} | {:error, Ecto.Changeset.t()}
   def update_image_meta(schema, title, credits, focal, user \\ :system) do
     image =
       schema.image
@@ -79,7 +85,8 @@ defmodule Brando.Images do
       |> Map.put(:focal, focal)
 
     unless Map.equal?(Map.get(schema.image, :focal, nil), focal) do
-      recreate_sizes_for(:image, put_in(schema.image, image), user)
+      updated_schema = put_in(schema.image, image)
+      _ = Images.Utils.recreate_sizes_for_image(updated_schema, user)
     end
 
     update_image(schema, %{"image" => image})
@@ -93,7 +100,7 @@ defmodule Brando.Images do
     q = from m in Image, where: m.id in ^ids
     imgs = Brando.repo().all(q)
 
-    for img <- imgs, do: {:ok, _} = delete_original_and_sized_images(img, :image)
+    for img <- imgs, do: {:ok, _} = Images.Utils.delete_original_and_sized_images(img, :image)
 
     Brando.repo().delete_all(q)
   end
@@ -125,7 +132,7 @@ defmodule Brando.Images do
         # if slug is changed we recreate all the image sizes to reflect the new path
         if Ecto.Changeset.get_change(changeset, :slug) ||
              Ecto.Changeset.get_change(changeset, :image_category_id),
-           do: recreate_sizes_for(:image_series, inserted_series.id, user)
+           do: Images.Utils.recreate_sizes_for_image_series(inserted_series.id, user)
 
         {:ok, Brando.repo().preload(inserted_series, :image_category)}
 
@@ -156,7 +163,7 @@ defmodule Brando.Images do
 
     case res do
       {:ok, series} ->
-        recreate_sizes_for(:image_series, series.id, user)
+        Images.Utils.recreate_sizes_for_image_series(series.id, user)
         {:ok, series}
 
       err ->
@@ -174,7 +181,7 @@ defmodule Brando.Images do
 
   def delete_series(id) do
     with {:ok, series} <- get_series(id) do
-      :ok = Brando.Images.Utils.delete_images_for(:image_series, series.id)
+      :ok = Images.Utils.delete_images_for(:image_series, series.id)
       series = Brando.repo().preload(series, :image_category)
       Brando.repo().delete!(series)
 
@@ -325,7 +332,7 @@ defmodule Brando.Images do
   """
   def delete_category(id) do
     category = Brando.repo().get_by!(ImageCategory, id: id)
-    Brando.Images.Utils.delete_series_for(:image_category, category.id)
+    Images.Utils.delete_series_for(:image_category, category.id)
     Brando.repo().delete!(category)
 
     {:ok, category}
@@ -365,6 +372,6 @@ defmodule Brando.Images do
   def get_all_orphaned_series() do
     categories = Brando.repo().all(ImageCategory)
     series = Brando.repo().all(ImageSeries)
-    Brando.Images.Utils.get_orphaned_series(categories, series, starts_with: "images/site")
+    Images.Utils.get_orphaned_series(categories, series, starts_with: "images/site")
   end
 end

@@ -2,6 +2,12 @@ defmodule Brando.Images.Operations do
   @moduledoc """
   This is where we process images
   """
+  @type image :: Brando.Type.Image.t()
+  @type image_config :: Brando.Type.ImageConfig.t()
+  @type operation :: Brando.Images.Operation.t()
+  @type operation_result :: Brando.Images.OperationResult.t()
+  @type user :: Brando.User.t() | :system
+
   alias Brando.Images
   alias Brando.Progress
   alias Brando.Utils
@@ -14,8 +20,15 @@ defmodule Brando.Images.Operations do
       {:ok, operations} = create_operations(img_struct, img_cfg, user, id)
 
   """
+  @spec create_operations(
+          img_struct :: image,
+          cfg :: image_config,
+          user :: user,
+          id :: integer | nil
+        ) ::
+          {:ok, [operation]}
   def create_operations(img_struct, cfg, user, id \\ nil) do
-    id = id && id || Utils.random_string(:os.timestamp())
+    id = (id && id) || Utils.random_string(:os.timestamp())
     {_, filename} = Utils.split_path(img_struct.path)
     type = Images.Utils.image_type(img_struct.path)
 
@@ -28,7 +41,7 @@ defmodule Brando.Images.Operations do
           filename: filename,
           type: type,
           size_cfg: size_cfg,
-          size_key: size_key,
+          size_key: size_key
         }
       end
 
@@ -38,6 +51,7 @@ defmodule Brando.Images.Operations do
   @doc """
   Perform list of image operations as Flow
   """
+  @spec perform_operations(operations :: [operation], user :: user) :: {:ok, [operation_result]}
   def perform_operations(operations, user) do
     Progress.show_progress(user)
 
@@ -45,10 +59,12 @@ defmodule Brando.Images.Operations do
       operations
       |> Flow.from_enumerable(stages: 5, max_demand: 1)
       |> Flow.map(&resize_image/1)
-      |> Flow.reduce(fn -> %{} end, fn operation, map -> Map.update(map, operation.id, [operation], &([operation|&1])) end)
-      |> Flow.departition(&Map.new/0, &Map.merge(&1, &2, fn _, la, lb -> la ++ lb end), &(&1))
+      |> Flow.reduce(fn -> %{} end, fn operation, map ->
+        Map.update(map, operation.id, [operation], &[operation | &1])
+      end)
+      |> Flow.departition(&Map.new/0, &Map.merge(&1, &2, fn _, la, lb -> la ++ lb end), & &1)
       |> Enum.map(fn result -> compile_transform_results(result, operations) end)
-      |> List.flatten
+      |> List.flatten()
 
     Progress.hide_progress(user)
 
@@ -71,7 +87,7 @@ defmodule Brando.Images.Operations do
   # convert a list of transforms to a map of sizes
   defp transforms_to_sizes(transforms) do
     transforms
-    |> Enum.map(&({&1.size_key, &1.image_path}))
+    |> Enum.map(&{&1.size_key, &1.image_path})
     |> Enum.into(%{})
   end
 
@@ -91,4 +107,3 @@ defmodule Brando.Images.Operations do
     end
   end
 end
-

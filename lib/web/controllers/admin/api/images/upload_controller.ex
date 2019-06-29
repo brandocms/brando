@@ -26,9 +26,6 @@ defmodule Brando.Admin.API.Images.UploadController do
       end
 
     case Images.Uploads.Schema.handle_upload(params, cfg, user) do
-      {:ok, image} ->
-        render(conn, :post, image: image, status: 200, error_msg: nil)
-
       {:error, error_msg} ->
         conn
         |> put_status(400)

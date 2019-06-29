@@ -32,19 +32,19 @@ defmodule Brando.Pages.Page do
   @derive {Jason.Encoder, only: @derived_fields}
 
   schema "pages" do
-    field(:key, :string)
-    field(:language, :string)
-    field(:title, :string)
-    field(:slug, :string)
+    field :key, :string
+    field :language, :string
+    field :title, :string
+    field :slug, :string
     villain()
-    field(:status, Status)
-    field(:css_classes, :string)
-    belongs_to(:creator, Brando.User)
-    belongs_to(:parent, __MODULE__)
-    has_many(:children, __MODULE__, foreign_key: :parent_id)
-    has_many(:fragments, Brando.Pages.PageFragment)
-    field(:meta_description, :string)
-    field(:meta_keywords, :string)
+    field :status, Status
+    field :css_classes, :string
+    belongs_to :creator, Brando.User
+    belongs_to :parent, __MODULE__
+    has_many :children, __MODULE__, foreign_key: :parent_id
+    has_many :fragments, Brando.Pages.PageFragment
+    field :meta_description, :string
+    field :meta_keywords, :string
     timestamps()
   end
 
@@ -92,37 +92,34 @@ defmodule Brando.Pages.Page do
   Order by language, status, key and insertion
   """
   def order(query) do
-    from(m in query,
+    from m in query,
       order_by: [
         asc: m.language,
         asc: m.status,
         desc: m.key,
         desc: m.inserted_at
       ]
-    )
   end
 
   @doc """
   Only gets schemas that are parents
   """
   def only_parents(query) do
-    from(m in query,
+    from m in query,
       where: is_nil(m.parent_id)
-    )
   end
 
   @doc """
   Get schema with children from DB by `id`
   """
   def with_children(query) do
-    from(m in query,
+    from m in query,
       left_join: c in assoc(m, :children),
       left_join: p in assoc(m, :parent),
       left_join: cu in assoc(c, :creator),
       join: u in assoc(m, :creator),
       preload: [children: {c, creator: cu}, creator: u, parent: p],
       select: m
-    )
   end
 
   @doc """
@@ -130,29 +127,26 @@ defmodule Brando.Pages.Page do
   """
   def with_parents_and_children(query) do
     children_query =
-      from(c in query,
+      from c in query,
         order_by: [asc: c.status, asc: c.key, desc: c.updated_at],
         preload: [:creator]
-      )
 
-    from(m in query,
+    from m in query,
       left_join: c in assoc(m, :children),
       left_join: cu in assoc(c, :creator),
       join: u in assoc(m, :creator),
       where: is_nil(m.parent_id),
       preload: [children: ^children_query, creator: u],
       select: m
-    )
   end
 
   @doc """
   Search pages for `q`
   """
   def search(language, query) do
-    from(p in __MODULE__,
+    from p in __MODULE__,
       where: p.language == ^language,
       where: ilike(p.html, ^"%#{query}%")
-    )
   end
 
   defimpl Phoenix.HTML.Safe, for: Brando.Pages.Page do

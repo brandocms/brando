@@ -83,8 +83,7 @@ defmodule Brando.Field.ImageField do
             changeset
 
           {:ok, {:focal_changed, changeset}} ->
-            {:ok, changeset} =
-              recreate_sizes_for(:image_field_record, changeset, field_name, user)
+            {:ok, changeset} = recreate_sizes_for_image_field_record(changeset, field_name, user)
 
             changeset
 

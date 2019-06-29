@@ -5,6 +5,12 @@ defmodule Brando.Images.Utils do
   TODO: Create a Processing module.
         Split out create_image_struct, create_image_sizes, etc...
   """
+  @type id :: String.t() | integer
+  @type user :: Brando.User.t() | :system
+  @type image_schema :: Brando.Image.t()
+  @type image_struct :: Brando.Type.Image.t()
+  @type image_kind :: :image | :image_series | :image_field
+
   import Brando.Utils
   import Ecto.Query, only: [from: 2]
 
@@ -18,6 +24,8 @@ defmodule Brando.Images.Utils do
   @doc """
   Create an image struct from upload, cfg and extra info
   """
+  @spec create_image_struct(Upload.t(), user) ::
+          {:ok, image_struct} | {:error, {:create_image_sizes, any()}}
   def create_image_struct(
         %Upload{plug: %{uploaded_file: file}, cfg: cfg, extra_info: %{focal: focal}},
         user
@@ -33,14 +41,14 @@ defmodule Brando.Images.Utils do
         |> Mogrify.open()
         |> Mogrify.verbose()
 
-      size_struct =
+      image_struct =
         %Brando.Type.Image{}
         |> Map.put(:path, new_path)
         |> Map.put(:width, image_info.width)
         |> Map.put(:height, image_info.height)
         |> Map.put(:focal, focal)
 
-      {:ok, size_struct}
+      {:ok, image_struct}
     rescue
       e in File.Error ->
         Progress.hide_progress(user)
@@ -55,11 +63,36 @@ defmodule Brando.Images.Utils do
   @doc """
   Deletes all image's sizes and recreates them.
   """
-  @spec recreate_sizes_for(:image | :image_series | :image_field, Image.t(), User.t() | :system) ::
-          :ok | no_return
-  def recreate_sizes_for(type, img, user \\ :system)
+  defmacro recreate_sizes_for(_, _, _) do
+    raise """
+    recreate_sizes_for(:image | :image_field | :image_series, _, _) has been deprecated.
 
-  def recreate_sizes_for(:image, img_schema, user) do
+    use
+
+        recreate_sizes_for_image()
+        recreate_sizes_for_image_series()
+
+    instead.
+    """
+  end
+
+  defmacro recreate_sizes_for(_, _, _, _) do
+    raise """
+    recreate_sizes_for(:image_field_record, _, _, _) has been deprecated.
+
+    use
+
+        recreate_sizes_for_image_field_record()
+
+    instead.
+    """
+  end
+
+  @spec recreate_sizes_for_image(
+          image_schema :: image_schema,
+          user :: user
+        ) :: {:ok, image_schema} | {:error, Ecto.Changeset.t()}
+  def recreate_sizes_for_image(img_schema, user \\ :system) do
     {:ok, img_cfg} = Images.get_series_config(img_schema.image_series_id)
     img_schema = reset_optimized_flag(img_schema)
     delete_sized_images(img_schema.image)
@@ -70,9 +103,7 @@ defmodule Brando.Images.Utils do
       img_schema
       |> Image.changeset(:update, %{image: result.img_struct})
       |> Images.Optimize.optimize(:image, force: true)
-      |> Brando.repo().update!
-
-      :ok
+      |> Brando.repo().update
     else
       err ->
         require Logger
@@ -82,7 +113,11 @@ defmodule Brando.Images.Utils do
     end
   end
 
-  def recreate_sizes_for(:image_series, image_series_id, user) do
+  @spec recreate_sizes_for_image_series(
+          image_series_id :: id,
+          user :: user
+        ) :: [{:ok, image_schema} | {:error, Ecto.Changeset.t()}]
+  def recreate_sizes_for_image_series(image_series_id, user \\ :system) do
     query =
       from is in ImageSeries,
         preload: :images,
@@ -113,40 +148,42 @@ defmodule Brando.Images.Utils do
       img_schema = Enum.find(images, &(&1.id == result.id))
       Images.update_image(img_schema, %{image: result.img_struct})
     end
-
-    :ok
   end
 
-  @doc """
-  Recreates sizes for an image field
-  """
-  def recreate_sizes_for(:image_field, schema, field_name) do
-    rows = Brando.repo().all(schema)
-    {:ok, cfg} = schema.get_image_cfg(field_name)
+  # @doc """
+  # Recreates sizes for an image field
+  # """
+  # @spec recreate_sizes_for_image_field(
+  #         image_schema :: image,
+  #         field_name :: atom | String.t()
+  #       ) :: [any()]
+  # def recreate_sizes_for_image_field(schema, field_name) do
+  #   rows = Brando.repo().all(schema)
+  #   {:ok, cfg} = schema.get_image_cfg(field_name)
 
-    operations =
-      Enum.flat_map(rows, fn row ->
-        img_field = Map.get(row, field_name)
+  #   operations =
+  #     Enum.flat_map(rows, fn row ->
+  #       img_field = Map.get(row, field_name)
 
-        if img_field do
-          delete_sized_images(img_field)
+  #       if img_field do
+  #         delete_sized_images(img_field)
 
-          img_field
-          |> Images.Operations.create_operations(cfg, :system, row.id)
-          |> elem(1)
-        end
-      end)
+  #         img_field
+  #         |> Images.Operations.create_operations(cfg, :system, row.id)
+  #         |> elem(1)
+  #       end
+  #     end)
 
-    {:ok, operation_results} = Images.Operations.perform_operations(operations, :system)
+  #   {:ok, operation_results} = Images.Operations.perform_operations(operations, :system)
 
-    for result <- operation_results do
-      rows
-      |> Enum.find(&(&1.id == result.id))
-      |> Ecto.Changeset.change(Map.put(%{}, field_name, result.img_struct))
-      |> Brando.Images.Optimize.optimize(field_name)
-      |> Brando.repo().update!
-    end
-  end
+  #   for result <- operation_results do
+  #     rows
+  #     |> Enum.find(&(&1.id == result.id))
+  #     |> Ecto.Changeset.change(Map.put(%{}, field_name, result.img_struct))
+  #     |> Brando.Images.Optimize.optimize(field_name)
+  #     |> Brando.repo().update
+  #   end
+  # end
 
   @doc """
   Recreate sizes for image field record.
@@ -154,19 +191,27 @@ defmodule Brando.Images.Utils do
 
   ## Example:
 
-      recreate_sizes_for(:image_field_record, changeset, :cover, user)
+      recreate_sizes_for_image_field_record(changeset, :cover, user)
   """
-  @spec recreate_sizes_for(:image_field_record, Ecto.Changeset.t(), atom, User.t() | :system) ::
-          {:ok, Ecto.Changeset.t()} | {:error, Ecto.Changeset.t()}
-  def recreate_sizes_for(:image_field_record, changeset, field_name, user) do
+  @spec recreate_sizes_for_image_field_record(
+          changeset :: Ecto.Changeset.t(),
+          field_name :: atom,
+          user :: user
+        ) :: {:ok, Ecto.Changeset.t()} | {:error, Ecto.Changeset.t()}
+  def recreate_sizes_for_image_field_record(changeset, field_name, user \\ :system) do
     img_struct = Ecto.Changeset.get_change(changeset, field_name)
     schema = changeset.data.__struct__
     delete_sized_images(img_struct)
-    {:ok, cfg} = schema.get_image_cfg(field_name)
 
-    with {:ok, operations} <- Images.Operations.create_operations(img_struct, cfg, user),
-         {:ok, [result]} <- Images.Operations.perform_operations(operations, user) do
-      {:ok, Ecto.Changeset.put_change(changeset, field_name, result.img_struct)}
+    with {:ok, cfg} = schema.get_image_cfg(field_name),
+         {:ok, operations} <- Images.Operations.create_operations(img_struct, cfg, user),
+         {:ok, results} <- Images.Operations.perform_operations(operations, user) do
+      updated_img_struct =
+        results
+        |> List.first()
+        |> Map.get(:img_struct)
+
+      {:ok, Ecto.Changeset.put_change(changeset, field_name, updated_img_struct)}
     else
       err ->
         require Logger
@@ -177,7 +222,7 @@ defmodule Brando.Images.Utils do
   end
 
   @doc """
-  Goes through `image`, which is a schema with a :sizes field
+  Goes through `image`, which is a schema with an image_field
   then passing to `delete_media/2` for removal
 
   ## Example:
@@ -200,10 +245,8 @@ defmodule Brando.Images.Utils do
   @doc """
   Delete sizes associated with `image`, but keep original.
   """
-  @spec delete_sized_images(Image.t()) :: no_return
-  def delete_sized_images(nil) do
-    nil
-  end
+  @spec delete_sized_images(image_struct :: image_struct) :: any
+  def delete_sized_images(nil), do: nil
 
   def delete_sized_images(image) do
     sizes = Map.get(image, :sizes)
@@ -216,7 +259,7 @@ defmodule Brando.Images.Utils do
   @doc """
   Deletes `file` after joining it with `media_path`
   """
-  @spec delete_media(String.t()) :: no_return
+  @spec delete_media(file_name :: String.t()) :: any
   def delete_media(nil), do: nil
   def delete_media(""), do: nil
 
@@ -390,7 +433,7 @@ defmodule Brando.Images.Utils do
   end
 
   @spec do_check_image_path(Ecto.Schema.t(), String.t(), String.t(), String.t(), String.t()) ::
-          Brando.Type.Image.t()
+          image_struct
   defp do_check_image_path(image, image_path, image_dirname, image_basename, upload_dirname) do
     media_path = Path.expand(Brando.config(:media_path))
 

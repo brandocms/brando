@@ -24,12 +24,13 @@ defmodule Brando.Pages.PageFragment do
   @derive {Jason.Encoder, only: @derived_fields}
 
   schema "pagefragments" do
-    field(:parent_key, :string)
-    field(:key, :string)
-    field(:language, :string)
+    field :parent_key, :string
+    field :key, :string
+    field :language, :string
     villain()
-    belongs_to(:creator, Brando.User)
-    belongs_to(:page, Brando.Pages.Page)
+    belongs_to :creator, Brando.User
+    belongs_to :page, Brando.Pages.Page
+
     timestamps()
   end
 

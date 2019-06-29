@@ -41,44 +41,6 @@ defmodule Brando.API.Villain.VillainController do
     params = Map.put(params, "image_series_id", series.id)
 
     case Images.Uploads.Schema.handle_upload(params, cfg, user) do
-      {:ok, image} ->
-        sizes = Enum.map(image.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
-        sizes_map = Enum.into(sizes, %{})
-
-        json(
-          conn,
-          %{
-            status: 200,
-            uid: uid,
-            image: %{
-              id: image.id,
-              sizes: sizes_map,
-              src: Brando.Utils.media_url(image.image.path),
-              width: image.image.width,
-              height: image.image.height
-            },
-            form: %{
-              method: "post",
-              action: "villain/imagedata/#{image.id}",
-              name: "villain-imagedata",
-              fields: [
-                %{
-                  name: "title",
-                  type: "text",
-                  label: "Tittel",
-                  value: ""
-                },
-                %{
-                  name: "credits",
-                  type: "text",
-                  label: "Krediteringer",
-                  value: ""
-                }
-              ]
-            }
-          }
-        )
-
       {:error, err} ->
         json(
           conn,
@@ -147,15 +109,15 @@ defmodule Brando.API.Villain.VillainController do
 
   @doc false
   def slideshow(conn, %{"slug" => series_slug}) do
-    series =
-      from(is in Brando.ImageSeries,
+    series_query =
+      from is in Brando.ImageSeries,
         join: c in assoc(is, :image_category),
         join: i in assoc(is, :images),
         where: c.slug == "slideshows" and is.slug == ^series_slug,
         order_by: i.sequence,
         preload: [image_category: c, images: i]
-      )
-      |> Brando.repo().one!
+
+    series = Brando.repo().one!(series_query)
 
     images =
       Enum.map(
@@ -190,7 +152,7 @@ defmodule Brando.API.Villain.VillainController do
     form = URI.decode_query(form)
     image = Brando.repo().get(Brando.Image, id)
 
-    {:ok, image} =
+    {:ok, updated_image} =
       Brando.Images.update_image_meta(image, form["title"], form["credits"], %{
         "x" => 50,
         "y" => 50
@@ -200,8 +162,8 @@ defmodule Brando.API.Villain.VillainController do
       status: 200,
       id: id,
       uid: uid,
-      title: image.image.title,
-      credits: image.image.credits,
+      title: updated_image.image.title,
+      credits: updated_image.image.credits,
       link: form["link"],
       focal: %{"x" => 50, "y" => 50}
     }
