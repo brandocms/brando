@@ -4,6 +4,9 @@ defmodule Brando do
   @moduledoc File.read!("README.md")
   @version Mix.Project.config()[:version]
 
+  @doc """
+  Start supervisor
+  """
   def start(_type, _args) do
     Brando.Supervisor.start_link()
   end

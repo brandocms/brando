@@ -5,6 +5,7 @@ defmodule Brando.Factory do
   alias Brando.{ImageCategory, ImageSeries, User}
 
   @sizes %{
+    "mobile" => %{"size" => "300", "quality" => 1},
     "small" => %{"size" => "300", "quality" => 1},
     "medium" => %{
       "portrait" => %{"size" => "300", "quality" => 1},
@@ -27,7 +28,8 @@ defmodule Brando.Factory do
           "thumb" => "images/avatars/thumb/27i97a.jpeg",
           "small" => "images/avatars/small/27i97a.jpeg",
           "medium" => "images/avatars/medium/27i97a.jpeg",
-          "large" => "images/avatars/large/27i97a.jpeg"
+          "large" => "images/avatars/large/27i97a.jpeg",
+          "mobile" => "images/avatars/mobile/27i97a.jpeg",
         }
       },
       role: :superuser,

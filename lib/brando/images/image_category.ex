@@ -26,6 +26,7 @@ defmodule Brando.ImageCategory do
              :inserted_at,
              :updated_at
            ]}
+
   schema "imagecategories" do
     field :name, :string
     field :slug, :string

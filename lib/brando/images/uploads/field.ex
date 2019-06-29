@@ -20,6 +20,7 @@ defmodule Brando.Images.Upload.Field do
     * `name`: the field we are operating on.
     * `plug`: a Plug.Upload struct.
     * `cfg`: the field's cfg from has_image_field
+
   """
   @spec handle_upload(atom | String.t(), Plug.Upload.t(), Type.ImageConfig.t(), User.t() | :system)
         :: {:ok, {:handled, atom, Type.Image}} | {:error, {atom, {:error, String.t()}}}
