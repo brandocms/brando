@@ -27,7 +27,7 @@ defmodule Brando.Image do
              :updated_at
            ]}
 
-  schema "images" do
+  schema "images_images" do
     field :image, Brando.Type.Image
     belongs_to :creator, Brando.User
     belongs_to :image_series, Brando.ImageSeries

@@ -27,7 +27,7 @@ defmodule Brando.ImageCategory do
              :updated_at
            ]}
 
-  schema "imagecategories" do
+  schema "images_categories" do
     field :name, :string
     field :slug, :string
     field :cfg, Brando.Type.ImageConfig

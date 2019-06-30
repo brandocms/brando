@@ -31,7 +31,7 @@ defmodule Brando.Pages.Page do
   )a
   @derive {Jason.Encoder, only: @derived_fields}
 
-  schema "pages" do
+  schema "pages_pages" do
     field :key, :string
     field :language, :string
     field :title, :string

@@ -18,7 +18,7 @@ defmodule Brando.User do
   @derived_fields ~w(id full_name email password language role avatar active inserted_at updated_at)a
   @derive {Jason.Encoder, only: @derived_fields}
 
-  schema "users" do
+  schema "users_users" do
     field :email, :string
     field :full_name, :string
     field :password, :string

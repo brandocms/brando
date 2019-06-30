@@ -13,7 +13,7 @@ defmodule Brando.Villain.Template do
   @derived_fields ~w(id name namespace help_text class code refs)a
   @derive {Jason.Encoder, only: @derived_fields}
 
-  schema "templates" do
+  schema "pages_templates" do
     field :name, :string
     field :namespace, :string
     field :help_text, :string

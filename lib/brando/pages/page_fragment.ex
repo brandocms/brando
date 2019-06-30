@@ -23,7 +23,7 @@ defmodule Brando.Pages.PageFragment do
 
   @derive {Jason.Encoder, only: @derived_fields}
 
-  schema "pagefragments" do
+  schema "pages_fragments" do
     field :parent_key, :string
     field :key, :string
     field :language, :string

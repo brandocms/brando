@@ -204,8 +204,7 @@ defmodule Brando.Field.ImageField do
   List all registered image fields
   """
   def list_image_fields do
-    {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
-
+    app_modules = Application.spec(Brando.otp_app(), :modules)
     modules = app_modules
 
     modules
@@ -221,19 +220,16 @@ defmodule Brando.Field.ImageField do
   def generate_image_fields_migration do
     img_fields = list_image_fields()
 
-    contents =
-      Enum.map(img_fields, fn %{source: source, fields: fields} ->
-        Enum.map(fields, fn field ->
-          ~s(
+    Enum.map(img_fields, fn %{source: source, fields: fields} ->
+      Enum.map(fields, fn field ->
+        ~s(
           execute """
           alter table #{source} alter column #{field} type jsonb using #{field}::JSON
           """
           )
-        end)
-        |> Enum.join("\n")
       end)
       |> Enum.join("\n")
-
-    IO.write(contents)
+    end)
+    |> Enum.join("\n")
   end
 end

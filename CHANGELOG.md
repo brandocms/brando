@@ -1,46 +1,13 @@
 ## v2.0.0-alpha.3-dev
 
-* Fragments now belong to pages.
+* Tables have been renamed. Run `mix brando.upgrade`
+* Fragments now belong to pages. Run `mix brando.upgrade`
 
-  ```
-  $ mix ecto.gen.migration add_fragments_to_pages
-  ```
-  Paste in:
-  ```
-  alter table(:pagefragments) do
-    add :page_id, references(:pages)
-  end
-  ```
-
-  ```
-  $ mix ecto.migrate
-  ```
 
 ## v2.0.0-alpha.2-dev
 
-* Switch all your image fields to `:jsonb` types in migrations from `:text`.
-
-  ```
-  $ mix ecto.gen.migration switch_image_fields_to_jsonb
-  ```
-  Paste in:
-
-  ```
-  execute """
-  alter table images alter column image type jsonb using image::JSON
-  """
-
-  flush()
-
-  execute """
-  alter table users alter column avatar type jsonb using avatar::JSON
-  """
-  ```
-
-  Generate migrations for image fields and paste them into your migration
-  ```
-  Brando.Field.ImageField.generate_image_fields_migration()
-  ```
+* Switch all your image fields to `:jsonb` types in migrations from `:text`. Run `mix brando.upgrade`
+* Copy the upgrade script from brando src.
 
 
 ## v2.0.0-alpha.1-dev

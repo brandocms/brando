@@ -19,6 +19,9 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "rel/commands/migrate.sh", "rel/commands/migrate.sh"},
     {:eex, "lib/application_name/release_tasks.ex", "lib/application_name/release_tasks.ex"},
 
+    # Brando migrator
+    {:eex, "lib/mix/brando.upgrade.ex", "lib/mix/brando.upgrade.ex"},
+
     # Site Config
     {:copy, "site_config.dat", "site_config.dat"},
 

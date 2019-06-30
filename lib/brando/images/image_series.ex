@@ -32,7 +32,7 @@ defmodule Brando.ImageSeries do
              :inserted_at,
              :updated_at
            ]}
-  schema "imageseries" do
+  schema "images_series" do
     field :name, :string
     field :slug, :string
     field :credits, :string
