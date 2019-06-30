@@ -4,7 +4,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
   use Brando.Tag, :migration
 
   def up do
-    create table(:users) do
+    create table(:users_users) do
       add(:full_name, :text)
       add(:email, :text)
       add(:password, :text)
@@ -16,7 +16,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       timestamps()
     end
 
-    create(index(:users, [:email], unique: true))
+    create(index(:users_users, [:email], unique: true))
 
     create table(:posts) do
       add(:language, :text)
@@ -27,7 +27,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add(:html, :text)
       add(:cover, :text)
       add(:status, :integer)
-      add(:creator_id, references(:users))
+      add(:creator_id, references(:users_users))
       add(:meta_description, :text)
       add(:meta_keywords, :text)
       add(:featured, :boolean)
@@ -42,31 +42,31 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
     create(index(:posts, [:status]))
     create(index(:posts, [:tags]))
 
-    create table(:imagecategories) do
+    create table(:images_categories) do
       add(:name, :text)
       add(:slug, :text)
       add(:cfg, :json)
-      add(:creator_id, references(:users))
+      add(:creator_id, references(:users_users))
       timestamps()
     end
 
-    create(index(:imagecategories, [:slug]))
+    create(index(:images_categories, [:slug]))
 
-    create table(:imageseries) do
+    create table(:images_series) do
       add(:name, :text)
       add(:slug, :text)
       add(:credits, :text)
       add(:cfg, :json)
-      add(:creator_id, references(:users))
-      add(:image_category_id, references(:imagecategories))
+      add(:creator_id, references(:users_users))
+      add(:image_category_id, references(:images_categories))
       sequenced()
       timestamps()
     end
 
-    create table(:images) do
+    create table(:images_images) do
       add(:image, :jsonb)
-      add(:creator_id, references(:users))
-      add(:image_series_id, references(:imageseries))
+      add(:creator_id, references(:users_users))
+      add(:image_series_id, references(:images_series))
       sequenced()
       timestamps()
     end
@@ -84,7 +84,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add(:status, :integer, default: 1)
     end
 
-    create table(:pages) do
+    create table(:pages_pages) do
       add(:key, :text)
       add(:language, :text)
       add(:title, :text)
@@ -92,36 +92,36 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add(:data, :json)
       add(:html, :text)
       add(:status, :integer)
-      add(:parent_id, references(:pages), default: nil)
-      add(:creator_id, references(:users))
+      add(:parent_id, references(:pages_pages), default: nil)
+      add(:creator_id, references(:users_users))
       add(:css_classes, :text)
       add(:meta_description, :text)
       add(:meta_keywords, :text)
       timestamps()
     end
 
-    create(index(:pages, [:language]))
-    create(index(:pages, [:slug]))
-    create(index(:pages, [:key]))
-    create(index(:pages, [:parent_id]))
-    create(index(:pages, [:status]))
+    create(index(:pages_pages, [:language]))
+    create(index(:pages_pages, [:slug]))
+    create(index(:pages_pages, [:key]))
+    create(index(:pages_pages, [:parent_id]))
+    create(index(:pages_pages, [:status]))
 
-    create table(:pagefragments) do
+    create table(:pages_fragments) do
       add(:key, :text)
       add(:language, :text)
       add(:data, :json)
       add(:html, :text)
-      add(:creator_id, references(:users))
+      add(:creator_id, references(:users_users))
       timestamps()
     end
 
-    create(index(:pagefragments, [:language]))
-    create(index(:pagefragments, [:key]))
+    create(index(:pages_fragments, [:language]))
+    create(index(:pages_fragments, [:key]))
   end
 
   def down do
-    drop(table(:users))
-    drop(index(:users, [:email], unique: true))
+    drop(table(:users_users))
+    drop(index(:users_users, [:email], unique: true))
 
     drop(table(:posts))
     drop(index(:posts, [:language]))
@@ -129,18 +129,18 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
     drop(index(:posts, [:key]))
     drop(index(:posts, [:status]))
 
-    drop(table(:imagecategories))
-    drop(index(:imagecategories, [:slug]))
+    drop(table(:images_categories))
+    drop(index(:images_categories, [:slug]))
 
-    drop(table(:imageseries))
-    drop(index(:imageseries, [:slug]))
+    drop(table(:images_series))
+    drop(index(:images_series, [:slug]))
 
-    drop(table(:images))
+    drop(table(:images_images))
 
     drop(table(:instagramimages))
 
-    drop(table(:pagefragments))
-    drop(index(:pagefragments, [:language]))
-    drop(index(:pagefragments, [:key]))
+    drop(table(:pages_fragments))
+    drop(index(:pages_fragments, [:language]))
+    drop(index(:pages_fragments, [:key]))
   end
 end
