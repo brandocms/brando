@@ -306,7 +306,7 @@ def unpack_release(version):
     """
     with cd(env.path), shell_env(HOME='/home/%s' % env.project_user):
         print(red('==> deleting old release'))
-        sudo('rm -rf bin erts-7.2 lib releases running-config', user=env.project_user)
+        sudo('rm -rf bin var erts-* lib releases running-config', user=env.project_user)
         print(yellow('==> unpacking release'))
         sudo('tar xvf %s_%s.tar.gz' % (env.project_name, version), user=env.project_user)
         print(yellow('==> archiving release'))
