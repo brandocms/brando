@@ -21,12 +21,14 @@ defmodule Brando.Config do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
+  @spec init(any) :: {:ok, any}
   def init(_) do
     Logger.info("==> Brando.Config initialized")
     cfg = read_from_disk()
     {:ok, cfg}
   end
 
+  @spec state :: any
   def state do
     GenServer.call(__MODULE__, :state)
   end
@@ -40,6 +42,13 @@ defmodule Brando.Config do
   """
   def register_key(key, val) do
     GenServer.call(__MODULE__, {:register, key, val})
+  end
+
+  @doc """
+  Delete key
+  """
+  def delete_key(key) do
+    GenServer.call(__MODULE__, {:delete, key})
   end
 
   def update_key(key, val) do
@@ -110,6 +119,13 @@ defmodule Brando.Config do
   @doc false
   def handle_call({:register, key, val}, _from, state) do
     state = put_in(state, [Access.key(:site_config), Access.key(key)], val)
+
+    {:reply, state, state}
+  end
+
+  @doc false
+  def handle_call({:delete, key}, _from, state) do
+    state = put_in(state, [Access.key(:site_config)], Map.delete(state.site_config, key))
 
     {:reply, state, state}
   end
