@@ -445,7 +445,7 @@ defmodule Brando.Utils do
 
     size_dir =
       try do
-        if Map.has_key?(image_field.sizes, size) do
+        if is_map(image_field.sizes) && Map.has_key?(image_field.sizes, size) do
           image_field.sizes[size]
         else
           IO.warn("""

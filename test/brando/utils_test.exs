@@ -103,6 +103,14 @@ defmodule Brando.UtilsTest do
       sizes: %{"thumb" => "images/thumb/file.jpg"}
     }
 
+    broken_img = %{
+      path: "original/path/file.jpg",
+      sizes: nil
+    }
+
+    assert capture_io(:stderr, fn -> img_url(broken_img, :xlarge) end) =~
+             "Wrong size key for img_url function."
+
     assert img_url(img, :thumb) == "images/thumb/file.jpg"
     assert img_url(nil, :thumb, default: "default.jpg", prefix: "prefix") == "thumb/default.jpg"
     assert img_url(nil, :thumb, default: "default.jpg") == "thumb/default.jpg"
