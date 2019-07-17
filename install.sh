@@ -18,5 +18,5 @@ then
   cd assets/frontend && yarn && yarn upgrade jupiter io && cd ../backend && yarn && yarn upgrade kurtz && cd ../../
   mix do deps.get, deps.compile --force && mix ecto.setup
   gsed -i '/pool_size:/i\  socket_options: [recbuf: 8192, sndbuf: 8192],' config/prod.secret.exs
-  mix release.init
+  mix distillery.init
 fi
