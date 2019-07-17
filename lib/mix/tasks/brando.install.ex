@@ -108,6 +108,12 @@ defmodule Mix.Tasks.Brando.Install do
      "priv/repo/migrations/20171103152205_create_pagefragments.exs"},
     {:eex, "migrations/20190426105600_create_templates.exs",
      "priv/repo/migrations/20190426105600_create_templates.exs"},
+    {:eex, "migrations/20190630110527_brando_01_set_image_as_jsonb.exs",
+     "priv/repo/migrations/20190630110527_brando_01_set_image_as_jsonb.exs"},
+    {:eex, "migrations/20190630110528_brando_02_add_fragments_to_pages.exs",
+     "priv/repo/migrations/20190630110528_brando_02_add_fragments_to_pages.exs"},
+    {:eex, "migrations/20190630110530_brando_03_change_table_names.exs",
+     "priv/repo/migrations/20190630110530_brando_03_change_table_names.exs"},
 
     # Repo seeds
     {:eex, "repo/seeds.exs", "priv/repo/seeds.exs"},
