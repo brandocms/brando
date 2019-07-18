@@ -28,7 +28,7 @@ defmodule Brando.Images.Operations do
         ) ::
           {:ok, [operation]}
   def create_operations(img_struct, cfg, user, id \\ nil) do
-    id = (id && id) || Utils.random_string(:os.timestamp())
+    id = id || Utils.random_string(:os.timestamp())
     {_, filename} = Utils.split_path(img_struct.path)
     type = Images.Utils.image_type(img_struct.path)
 

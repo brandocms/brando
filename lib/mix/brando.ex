@@ -195,27 +195,31 @@ defmodule Mix.Brando do
 
     unless exists? do
       marker = "#{marker_start}#{marker}"
-      marker_regex = ~r/(\s+)?(#{marker})/
 
       new_content =
-        File.stream!(file)
-        |> Enum.map(fn line ->
-          case Regex.run(marker_regex, line, capture: :all_but_first) do
-            nil ->
-              line
-
-            [whitespace, marker] ->
-              content_split =
-                String.split(content, "\n")
-                |> Enum.map(&"#{whitespace}#{&1}")
-                |> Enum.join("\n")
-
-              content = "#{content_split}\n#{whitespace}#{marker}"
-              String.replace(line, whitespace <> marker, content)
-          end
-        end)
+        file
+        |> File.stream!()
+        |> Enum.map(&process_line(&1, marker, content))
 
       File.write(file, new_content)
+    end
+  end
+
+  defp process_line(line, marker, content) do
+    marker_regex = ~r/(\s+)?(#{marker})/
+
+    case Regex.run(marker_regex, line, capture: :all_but_first) do
+      nil ->
+        line
+
+      [whitespace, marker] ->
+        content_split =
+          String.split(content, "\n")
+          |> Enum.map(&"#{whitespace}#{&1}")
+          |> Enum.join("\n")
+
+        content = "#{content_split}\n#{whitespace}#{marker}"
+        String.replace(line, whitespace <> marker, content)
     end
   end
 

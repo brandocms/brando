@@ -42,9 +42,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     create_domain(domain)
   end
 
-  defp otp_app do
-    Mix.Project.config() |> Keyword.fetch!(:app)
-  end
+  defp otp_app, do: Mix.Project.config() |> Keyword.fetch!(:app)
 
   @spec create_domain(any) :: no_return
   defp create_domain(domain_name) do

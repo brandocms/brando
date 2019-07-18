@@ -249,7 +249,7 @@ defmodule Brando.Utils do
   """
   @spec current_url(Plug.Conn.t(), String.t() | nil) :: String.t()
   def current_url(conn, url \\ nil) do
-    path = (url && url) || conn.request_path
+    path = url || conn.request_path
     "#{hostname()}#{path}"
   end
 
@@ -304,8 +304,8 @@ defmodule Brando.Utils do
   """
   @spec get_page_title(Plug.Conn.t()) :: String.t()
   def get_page_title(%{assigns: %{page_title: title}}) do
-    prefix = (Brando.config(:title_prefix) && Brando.config(:title_prefix)) || ""
-    postfix = (Brando.config(:title_postfix) && Brando.config(:title_postfix)) || ""
+    prefix = Brando.config(:title_prefix) || ""
+    postfix = Brando.config(:title_postfix) || ""
 
     prefix <> title <> postfix
   end
@@ -441,30 +441,9 @@ defmodule Brando.Utils do
 
   def img_url(image_field, size, opts) do
     size = (is_atom(size) && Atom.to_string(size)) || size
+    size_dir = extract_size_dir(image_field, size)
+
     prefix = Keyword.get(opts, :prefix, nil)
-
-    size_dir =
-      try do
-        if is_map(image_field.sizes) && Map.has_key?(image_field.sizes, size) do
-          image_field.sizes[size]
-        else
-          IO.warn("""
-          Wrong size key for img_url function.
-
-          Size `#{size}` does not exist for image struct:
-
-          #{inspect(image_field, pretty: true)})
-          """)
-
-          "non_existing"
-        end
-      rescue
-        KeyError ->
-          if Map.has_key?(image_field["sizes"], size) do
-            image_field["sizes"][size]
-          end
-      end
-
     url = (prefix && Path.join([prefix, size_dir])) || size_dir
 
     case Map.get(image_field, :optimized) do
@@ -476,6 +455,29 @@ defmodule Brando.Utils do
 
       nil ->
         url || "NO_URL" <> add_cache_string(opts)
+    end
+  end
+
+  defp extract_size_dir(image_field, size) do
+    try do
+      if is_map(image_field.sizes) && Map.has_key?(image_field.sizes, size) do
+        image_field.sizes[size]
+      else
+        IO.warn("""
+        Wrong size key for img_url function.
+
+        Size `#{size}` does not exist for image struct:
+
+        #{inspect(image_field, pretty: true)})
+        """)
+
+        "non_existing"
+      end
+    rescue
+      KeyError ->
+        if Map.has_key?(image_field["sizes"], size) do
+          image_field["sizes"][size]
+        end
     end
   end
 

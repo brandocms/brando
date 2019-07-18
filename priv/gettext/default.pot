@@ -109,7 +109,7 @@ msgstr ""
 msgid "Delete user"
 msgstr ""
 
-#: lib/brando/html.ex:314 lib/brando/html/inspect.ex:139
+#: lib/brando/html.ex:183 lib/brando/html.ex:183
 msgid "Deleted"
 msgstr ""
 
@@ -410,7 +410,7 @@ msgstr ""
 msgid "Credits"
 msgstr ""
 
-#: lib/brando/html.ex:308 lib/brando/html/inspect.ex:138
+#: lib/brando/html.ex:177 lib/brando/html.ex:177
 msgid "Draft"
 msgstr ""
 
@@ -473,11 +473,11 @@ msgstr ""
 msgid "No value"
 msgstr ""
 
-#: lib/brando/html.ex:302 lib/brando/html/inspect.ex:137
+#: lib/brando/html.ex:171 lib/brando/html.ex:171
 msgid "Pending"
 msgstr ""
 
-#: lib/brando/html.ex:296 lib/brando/html/inspect.ex:136
+#: lib/brando/html.ex:165 lib/brando/html.ex:165
 msgid "Published"
 msgstr ""
 
@@ -590,15 +590,15 @@ msgstr ""
 msgid "Delete"
 msgstr ""
 
-#: lib/brando/upload.ex:59
+#: lib/brando/upload.ex:78
 msgid "Empty filename given. Make sure you have a valid filename."
 msgstr ""
 
-#: lib/brando/upload.ex:66
+#: lib/brando/upload.ex:95
 msgid "Error while copying"
 msgstr ""
 
-#: lib/brando/upload.ex:64
+#: lib/brando/upload.ex:91
 msgid "Path creation failed"
 msgstr ""
 
@@ -610,7 +610,7 @@ msgstr ""
 msgid "Passwords must match"
 msgstr ""
 
-#: lib/brando/users/user.ex:112 lib/brando/users/user.ex:137
+#: lib/brando/users/user.ex:97 lib/brando/users/user.ex:111
 msgid "Password must be at least 6 characters"
 msgstr ""
 
@@ -740,7 +740,7 @@ msgstr ""
 msgid "Developers have been notified about this error, but if you can provide extra information about the error, please do so in the textbox below. If not, that's OK too!"
 msgstr ""
 
-#: lib/web/templates/error/_feedback.html.eex:17
+#: lib/web/templates/error/_feedback.html.eex:16
 msgid "Thanks!"
 msgstr ""
 
@@ -800,6 +800,16 @@ msgstr ""
 msgid "Error retrieving form \"%{form}\". Not registered."
 msgstr ""
 
-#: lib/brando/upload.ex:61
+#: lib/brando/upload.ex:82
 msgid "File type not allowed: %{type}. Must be one of: %{allowed}"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/upload.ex:88
+msgid "Error while creating image sizes"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/upload.ex:98
+msgid "Unknown error while creating image sizes."
 msgstr ""

@@ -52,13 +52,15 @@ defmodule Brando.Users do
   Update user
   """
   def update_user(id, params) do
-    with {:ok, user} <- get_user(id) do
-      user
-      |> User.changeset(:update, params)
-      |> maybe_update_password
-      |> Brando.repo().update
-    else
-      _ -> {:error, {:user, :not_found}}
+    case get_user(id) do
+      {:ok, user} ->
+        user
+        |> User.changeset(:update, params)
+        |> maybe_update_password
+        |> Brando.repo().update
+
+      _ ->
+        {:error, {:user, :not_found}}
     end
   end
 

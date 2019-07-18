@@ -29,18 +29,35 @@ defmodule Brando.HTMLTest do
 
   test "body_tag" do
     mock_conn = %{private: %{brando_css_classes: "one two three"}}
-    assert body_tag(mock_conn) == {:safe, ~s(<body class="one two three unloaded">)}
+
+    html =
+      mock_conn
+      |> body_tag
+      |> safe_to_string
+
+    assert html == ~s(<body class="one two three unloaded">)
 
     mock_conn = %{
-      private: %{brando_css_classes: "one two three", brando_section_name: "some-section"}
+      private: %{
+        brando_css_classes: "one two three",
+        brando_section_name: "some-section"
+      }
     }
 
-    assert body_tag(mock_conn) ==
-             {:safe, ~s(<body data-script="some-section" class="one two three unloaded">)}
+    html =
+      mock_conn
+      |> body_tag
+      |> safe_to_string
 
-    assert body_tag(mock_conn, id: "test") ==
-             {:safe,
-              ~s(<body id="test" data-script="some-section" class="one two three unloaded">)}
+    assert html == "<body class=\"one two three unloaded\" data-script=\"some-section\">"
+
+    html =
+      mock_conn
+      |> body_tag(id: "test")
+      |> safe_to_string
+
+    assert html ==
+             "<body class=\"one two three unloaded\" data-script=\"some-section\" id=\"test\">"
   end
 
   test "cookie_law" do
@@ -55,14 +72,13 @@ defmodule Brando.HTMLTest do
 
   test "google_analytics" do
     code = "asdf123"
-    {:safe, html} = google_analytics(code)
-    assert html =~ "ga('create','#{code}','auto')"
-  end
 
-  test "status_indicators" do
-    {:safe, html} = status_indicators()
-    assert html =~ "status-published"
-    assert html =~ "Published"
+    html =
+      code
+      |> google_analytics
+      |> safe_to_string
+
+    assert html =~ "ga('create','#{code}','auto')"
   end
 
   test "truncate" do
@@ -99,7 +115,12 @@ defmodule Brando.HTMLTest do
 
   test "render_meta" do
     mock_conn = %Plug.Conn{private: %{plug_session: %{}}}
-    {:safe, html} = render_meta(mock_conn)
+
+    html =
+      mock_conn
+      |> render_meta()
+      |> safe_to_string()
+
     assert html =~ ~s(<meta content="MyApp" property="og:site_name">)
     assert html =~ ~s(<meta content="MyApp" property="og:title">)
     assert html =~ ~s(<meta content="MyApp" name="title">)
@@ -170,6 +191,6 @@ defmodule Brando.HTMLTest do
              img_class: "img-fluid"
            )
            |> safe_to_string ==
-           "<picture class=\"avatar\"><source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\"><source srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+             "<picture class=\"avatar\"><source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\"><source srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
   end
 end

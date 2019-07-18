@@ -376,8 +376,7 @@ defmodule Mix.Tasks.Brando.Install do
     app = Mix.Project.config()[:app]
 
     binding = [
-      application_module:
-        (opts[:module] && opts[:module]) || Phoenix.Naming.camelize(Atom.to_string(app)),
+      application_module: opts[:module] || Phoenix.Naming.camelize(Atom.to_string(app)),
       application_name: Atom.to_string(app)
     ]
 

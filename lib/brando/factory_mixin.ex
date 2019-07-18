@@ -113,7 +113,7 @@ defmodule Brando.FactoryMixin do
 
       def image_cfg_factory do
         %Brando.Type.ImageConfig{
-          allowed_mimetypes: ["image/jpeg", "image/png"],
+          allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
           default_size: :medium,
           upload_path: Path.join("images", "default"),
           random_filename: false,

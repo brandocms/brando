@@ -1,3 +1,7 @@
+## v2.0.0-beta.0-dev
+
+
+
 ## v2.0.0-alpha.3-dev
 
 * Tables have been renamed. Run `mix brando.upgrade`

@@ -4,8 +4,8 @@ defmodule Brando.HTML do
   """
 
   @type alert_levels :: :default | :primary | :info | :success | :warning | :danger
+  @type conn :: Plug.Conn.t()
 
-  import Brando.Gettext
   import Brando.Utils, only: [current_user: 1, active_path?: 2]
   import Brando.Meta.Controller, only: [put_meta: 3, get_meta: 1, get_meta: 2]
   import Phoenix.HTML
@@ -21,7 +21,7 @@ defmodule Brando.HTML do
   @doc """
   Returns `active` if `conn`'s `full_path` matches `current_path`.
   """
-  @spec active(Plug.Conn.t(), String.t()) :: String.t()
+  @spec active(conn, String.t()) :: String.t()
   def active(conn, url_to_match, add_class? \\ nil) do
     result = (add_class? && ~s(class="active")) || "active"
     (active_path?(conn, url_to_match) && result) || ""
@@ -30,7 +30,7 @@ defmodule Brando.HTML do
   @doc """
   Checks if current_user in conn has `role`
   """
-  @spec can_render?(Plug.Conn.t(), map) :: boolean
+  @spec can_render?(conn, map) :: boolean
   def can_render?(_, %{role: nil}) do
     true
   end
@@ -45,9 +45,7 @@ defmodule Brando.HTML do
     end
   end
 
-  def can_render?(_, _) do
-    true
-  end
+  def can_render?(_, _), do: true
 
   @doc """
   Zero pad `val` as a binary.
@@ -58,15 +56,12 @@ defmodule Brando.HTML do
       "005"
 
   """
+  @spec zero_pad(val :: String.t() | Integer.t(), count :: Integer.t()) :: String.t()
   def zero_pad(str, count \\ 3)
+  def zero_pad(val, count) when is_binary(val), do: String.pad_leading(val, count, "0")
 
-  def zero_pad(val, count) when is_binary(val) do
-    String.pad_leading(val, count, "0")
-  end
-
-  def zero_pad(val, count) do
-    String.pad_leading(Integer.to_string(val), count, "0")
-  end
+  def zero_pad(val, count) when is_integer(val),
+    do: String.pad_leading(Integer.to_string(val), count, "0")
 
   @doc """
   Split `full_name` and return first name
@@ -80,17 +75,10 @@ defmodule Brando.HTML do
   @doc """
   Returns a red X if value is nil, or a check if the value is truthy
   """
-  def check_or_x(nil) do
-    ~s(<i class="icon-centered fa fa-times text-danger"></i>)
-  end
-
-  def check_or_x(false) do
-    ~s(<i class="icon-centered fa fa-times text-danger"></i>)
-  end
-
-  def check_or_x(_) do
-    ~s(<i class="icon-centered fa fa-check text-success"></i>)
-  end
+  @spec check_or_x(val :: nil | bool) :: String.t()
+  def check_or_x(nil), do: ~s(<i class="icon-centered fa fa-times text-danger"></i>)
+  def check_or_x(false), do: ~s(<i class="icon-centered fa fa-times text-danger"></i>)
+  def check_or_x(_), do: ~s(<i class="icon-centered fa fa-check text-success"></i>)
 
   @doc """
   Displays a banner informing about cookie laws
@@ -102,30 +90,29 @@ defmodule Brando.HTML do
       info_link = Keyword.get(opts, :info_link, "/cookies")
       info_text = Keyword.get(opts, :info_text)
 
-      ~E|
-      <div class="container cookie-container">
-        <div class="cookie-container-inner">
-          <div class="cookie-law">
-            <div class="cookie-law-text">
-              <p><%= text %></p>
-            </div>
-            <div class="cookie-law-buttons">
-              <button
-                class="dismiss-cookielaw">
-                <%= button_text %>
-              </button>
-              <%= if info_text do %>
-              <a
-                href="<%= info_link %>"
-                class="info-cookielaw">
-                <%= info_text %>
-              </a>
-              <% end %>
-            </div>
-          </div>
-        </div>
-      </div>
-      |
+      content_tag :div, class: "container cookie-container" do
+        content_tag :div, class: "cookie-container-inner" do
+          content_tag :div, class: "cookie-law" do
+            [
+              content_tag :div, class: "cookie-law-text" do
+                content_tag(:p, text)
+              end,
+              content_tag :div, class: "cookie-law-buttons" do
+                [
+                  content_tag(:button, button_text, class: "dismiss-cookielaw"),
+                  if info_text do
+                    content_tag :a, href: info_link, class: "info-cookielaw" do
+                      info_text
+                    end
+                  else
+                    []
+                  end
+                ]
+              end
+            ]
+          end
+        end
+      end
     end
   end
 
@@ -137,71 +124,31 @@ defmodule Brando.HTML do
       google_analytics("UA-XXXXX-X")
 
   """
-  def google_analytics(code) do
-    html = """
-    <script>
-    (function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=
-    function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;
-    e=o.createElement(i);r=o.getElementsByTagName(i)[0];
-    e.src='//www.google-analytics.com/analytics.js';
-    r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));
-    ga('create','#{code}','auto');ga('set', 'anonymizeIp', true);ga('send','pageview');
-    </script>
-    """
+  @spec google_analytics(ua_code :: String.t()) :: {:safe, term}
+  def google_analytics(ua_code) do
+    content =
+      """
+      (function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=
+      function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;
+      e=o.createElement(i);r=o.getElementsByTagName(i)[0];
+      e.src='//www.google-analytics.com/analytics.js';
+      r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));
+      ga('create','#{ua_code}','auto');ga('set', 'anonymizeIp', true);ga('send','pageview');
+      """
+      |> raw
 
-    Phoenix.HTML.raw(html)
-  end
-
-  @doc """
-  Render status indicators
-  """
-  def status_indicators do
-    html = """
-    <div class="status-indicators pull-left">
-      <span class="m-r-sm">
-        <span class="status-published">
-          <i class="fa fa-circle m-r-sm"> </i>
-        </span>
-        #{gettext("Published")}
-      </span>
-      <span class="m-r-sm">
-        <span class="status-pending">
-          <i class="fa fa-circle m-r-sm"> </i>
-        </span>
-        #{gettext("Pending")}
-      </span>
-      <span class="m-r-sm">
-        <span class="status-draft">
-          <i class="fa fa-circle m-r-sm"> </i>
-        </span>
-        #{gettext("Draft")}
-      </span>
-      <span class="m-r-sm">
-        <span class="status-deleted">
-          <i class="fa fa-circle m-r-sm"> </i>
-        </span>
-        #{gettext("Deleted")}
-      </span>
-    </div>
-    """
-
-    Phoenix.HTML.raw(html)
+    content_tag(:script, content)
   end
 
   @doc """
   Truncate `text` to `length`
   """
-  def truncate(nil, _) do
-    ""
-  end
+  def truncate(nil, _), do: ""
 
-  def truncate(text, len) when is_binary(text) do
-    (String.length(text) <= len && text) || String.slice(text, 0..len) <> "..."
-  end
+  def truncate(text, len) when is_binary(text),
+    do: (String.length(text) <= len && text) || String.slice(text, 0..len) <> "..."
 
-  def truncate(val, _) do
-    val
-  end
+  def truncate(val, _), do: val
 
   @doc """
   Renders a <meta> tag
@@ -229,6 +176,7 @@ defmodule Brando.HTML do
   @doc """
   Renders all meta/opengraph
   """
+  @spec render_meta(conn) :: {:safe, term}
   def render_meta(conn) do
     app_name = Brando.config(:app_name)
     title = Brando.Utils.get_page_title(conn)
@@ -308,8 +256,10 @@ defmodule Brando.HTML do
           end
       end
 
-    html = Enum.map_join(get_meta(conn), "\n    ", &elem(meta_tag(&1), 1))
-    Phoenix.HTML.raw("    #{html}")
+    conn
+    |> get_meta()
+    |> Enum.map(&elem(meta_tag(&1), 1))
+    |> raw()
   end
 
   @doc """
@@ -318,28 +268,16 @@ defmodule Brando.HTML do
   Checks conn.private for various settings
   """
   def body_tag(conn, opts \\ []) do
+    attrs = []
     id = Keyword.get(opts, :id, nil)
     data_script = conn.private[:brando_section_name]
     classes = conn.private[:brando_css_classes]
 
-    body = "<body"
+    attrs = attrs ++ [class: (classes && "#{classes} unloaded") || "unloaded"]
+    attrs = (id && attrs ++ [id: id]) || attrs
+    attrs = (data_script && attrs ++ [data_script: data_script]) || attrs
 
-    body =
-      if id,
-        do: body <> ~s( id="#{id}"),
-        else: body
-
-    body =
-      if data_script,
-        do: body <> ~s( data-script="#{data_script}"),
-        else: body
-
-    body =
-      if classes,
-        do: body <> ~s( class="#{classes} unloaded"),
-        else: body <> ~s( class="unloaded")
-
-    Phoenix.HTML.raw(body <> ">")
+    tag(:body, attrs)
   end
 
   @doc """
@@ -356,7 +294,7 @@ defmodule Brando.HTML do
         #{msg}
       </div>
       """
-      |> Phoenix.HTML.raw()
+      |> raw()
     end
   end
 
@@ -386,44 +324,55 @@ defmodule Brando.HTML do
     * `attrs` - extra attributes to the tag, ie data attrs
   """
   def img_tag(image_field, size, opts \\ []) do
-    srcset_attr =
-      (Keyword.get(opts, :srcset) && [srcset: get_srcset(image_field, opts[:srcset], opts)]) || []
-
-    sizes_attr = (Keyword.get(opts, :sizes) && [sizes: get_sizes(opts[:sizes])]) || []
-    width_attr = (Keyword.get(opts, :width) && [width: Map.get(image_field, :width)]) || []
-    height_attr = (Keyword.get(opts, :height) && [height: Map.get(image_field, :height)]) || []
-    extra_attrs = Keyword.get(opts, :attrs, [])
     lightbox = Keyword.get(opts, :lightbox, false)
     img_src = Brando.Utils.img_url(image_field, size, opts)
+    attrs = extract_attrs(image_field, img_src, opts)
+    rendered_tag = tag(:img, attrs)
+    (lightbox && wrap_lightbox(rendered_tag, img_src)) || rendered_tag
+  end
+
+  defp extract_attrs(image_field, img_src, opts) do
+    srcset_attr = extract_srcset_attr(image_field, opts)
+    sizes_attr = extract_sizes_attr(image_field, opts)
+    width_attr = extract_width_attr(image_field, opts)
+    height_attr = extract_height_attr(image_field, opts)
+    extra_attrs = extract_extra_attr(image_field, opts)
+
+    cleaned_opts =
+      Keyword.drop(opts, [:lightbox, :cache, :attrs, :prefix, :srcset, :sizes, :default])
 
     attrs =
       Keyword.new()
       |> Keyword.put(:src, img_src)
       |> Keyword.merge(
-        Keyword.drop(opts, [:lightbox, :cache, :attrs, :prefix, :srcset, :sizes, :default]) ++
-          sizes_attr ++ srcset_attr ++ width_attr ++ height_attr ++ extra_attrs
+        cleaned_opts ++ sizes_attr ++ srcset_attr ++ width_attr ++ height_attr ++ extra_attrs
       )
 
     # if we have srcset, set src as empty svg
-    attrs = (srcset_attr != [] && Keyword.put(attrs, :src, svg_fallback(image_field))) || attrs
-
-    if lightbox do
-      ~E|
-        <a href="<%= img_src %>" data-lightbox="<%= img_src %>">
-          <%= tag(:img, attrs) %>
-        </a>
-      |
-    else
-      tag(:img, attrs)
-    end
+    (srcset_attr != [] && Keyword.put(attrs, :src, svg_fallback(image_field))) || attrs
   end
+
+  defp extract_srcset_attr(img_field, opts),
+    do: (Keyword.get(opts, :srcset) && [srcset: get_srcset(img_field, opts[:srcset], opts)]) || []
+
+  defp extract_sizes_attr(_, opts),
+    do: (Keyword.get(opts, :sizes) && [sizes: get_sizes(opts[:sizes])]) || []
+
+  defp extract_width_attr(img_field, opts),
+    do: (Keyword.get(opts, :width) && [width: Map.get(img_field, :width)]) || []
+
+  defp extract_height_attr(img_field, opts),
+    do: (Keyword.get(opts, :height) && [height: Map.get(img_field, :height)]) || []
+
+  defp extract_extra_attr(_, opts), do: Keyword.get(opts, :attrs, [])
+
+  defp wrap_lightbox(rendered_tag, img_src),
+    do: content_tag(:a, rendered_tag, href: img_src, data_lightbox: img_src)
 
   @doc """
   Replaces all newlines with HTML break elements.
   """
-  def nl2br(text) do
-    String.replace(text, "\n", "<br>")
-  end
+  def nl2br(text), do: String.replace(text, "\n", "<br>")
 
   @doc """
   Outputs a `picture` tag with source, img and a noscript fallback
@@ -493,7 +442,7 @@ defmodule Brando.HTML do
 
   defp add_classes(%{lazyload: lazyload} = attrs, opts) do
     img_class = Keyword.get(opts, :img_class, false)
-    img_class = "#{(img_class && img_class) || ""}#{(lazyload && " lazyload") || ""}"
+    img_class = "#{img_class || ""}#{(lazyload && " lazyload") || ""}"
     picture_class = Keyword.get(opts, :picture_class, false)
 
     attrs
@@ -547,7 +496,7 @@ defmodule Brando.HTML do
   end
 
   defp add_src(%{lazyload: true} = attrs, opts, img_struct) do
-    key = (Keyword.get(opts, :key) && Keyword.get(opts, :key)) || :xlarge
+    key = Keyword.get(opts, :key) || :xlarge
     src = Brando.Utils.img_url(img_struct, key, opts)
 
     attrs
@@ -557,7 +506,7 @@ defmodule Brando.HTML do
   end
 
   defp add_src(%{lazyload: false} = attrs, opts, img_struct) do
-    key = (Keyword.get(opts, :key) && Keyword.get(opts, :key)) || :xlarge
+    key = Keyword.get(opts, :key) || :xlarge
     src = Brando.Utils.img_url(img_struct, key, opts)
 
     attrs
@@ -611,7 +560,6 @@ defmodule Brando.HTML do
   Get sizes from image config
   """
   def get_sizes(nil), do: nil
-
   def get_sizes(sizes) when is_list(sizes), do: Enum.join(sizes, ", ")
 
   def get_sizes(_),

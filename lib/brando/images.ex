@@ -246,9 +246,10 @@ defmodule Brando.Images do
   Get series's config
   """
   def get_series_config(id) do
-    with {:ok, series} <- get_series(id) do
-      {:ok, series.cfg}
-    else
+    case get_series(id) do
+      {:ok, series} ->
+        {:ok, series.cfg}
+
       err ->
         err
     end

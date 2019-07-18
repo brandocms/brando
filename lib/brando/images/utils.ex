@@ -203,8 +203,9 @@ defmodule Brando.Images.Utils do
     schema = changeset.data.__struct__
     delete_sized_images(img_struct)
 
-    with {:ok, cfg} = schema.get_image_cfg(field_name),
-         {:ok, operations} <- Images.Operations.create_operations(img_struct, cfg, user),
+    {:ok, cfg} = schema.get_image_cfg(field_name)
+
+    with {:ok, operations} <- Images.Operations.create_operations(img_struct, cfg, user),
          {:ok, results} <- Images.Operations.perform_operations(operations, user) do
       updated_img_struct =
         results
