@@ -173,30 +173,42 @@ defmodule Brando.Field.ImageField do
     end
   end
 
+  @spec merge_focal(changeset :: Ecto.Changeset.t(), field_name :: atom) ::
+          {:ok, {:focal_changed, Ecto.Changeset.t()}}
+          | {:ok, {:focal_unchanged, Ecto.Changeset.t()}}
+          | {:ok, {:upload, Ecto.Changeset.t()}}
   def merge_focal(changeset, field_name) do
     case get_field(changeset, field_name) do
       %Brando.Type.Focal{focal: focal} ->
         # Merge focal with the cs
-        case Map.get(changeset.data, field_name, nil) do
-          nil ->
-            # nothing in data, return regular changeset
-            {:ok, {:upload, changeset}}
-
-          img ->
-            case Map.equal?(img.focal, focal) do
-              true ->
-                # nothing changed, delete change
-                changeset = delete_change(changeset, field_name)
-                {:ok, {:focal_unchanged, changeset}}
-
-              false ->
-                changeset = put_change(changeset, field_name, Map.put(img, :focal, focal))
-                {:ok, {:focal_changed, changeset}}
-            end
-        end
+        do_merge_focal(changeset, field_name, focal)
 
       _ ->
         {:ok, {:upload, changeset}}
+    end
+  end
+
+  defp do_merge_focal(changeset, field_name, focal) do
+    case Map.get(changeset.data, field_name, nil) do
+      nil ->
+        # nothing in data, return regular changeset
+        {:ok, {:upload, changeset}}
+
+      img ->
+        put_or_delete_change(changeset, field_name, img, focal)
+    end
+  end
+
+  defp put_or_delete_change(changeset, field_name, img, focal) do
+    case Map.equal?(img.focal, focal) do
+      true ->
+        # nothing changed, delete change
+        changeset = delete_change(changeset, field_name)
+        {:ok, {:focal_unchanged, changeset}}
+
+      false ->
+        changeset = put_change(changeset, field_name, Map.put(img, :focal, focal))
+        {:ok, {:focal_changed, changeset}}
     end
   end
 

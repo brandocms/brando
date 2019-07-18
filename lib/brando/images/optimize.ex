@@ -39,8 +39,9 @@ defmodule Brando.Images.Optimize do
 
   """
   require Logger
-  alias Ecto.Changeset
+
   alias Brando.Images
+  alias Ecto.Changeset
 
   @doc """
   Optimize `img`

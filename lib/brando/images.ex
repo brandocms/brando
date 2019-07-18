@@ -9,8 +9,8 @@ defmodule Brando.Images do
 
   alias Brando.Image
   alias Brando.ImageCategory
-  alias Brando.ImageSeries
   alias Brando.Images
+  alias Brando.ImageSeries
 
   import Brando.Utils.Schema, only: [put_creator: 2]
   import Ecto.Query
@@ -311,7 +311,7 @@ defmodule Brando.Images do
   @doc """
   Get all categories with preloaded series and images
   """
-  def get_categories_with_series_and_images() do
+  def get_categories_with_series_and_images do
     ImageCategory
     |> ImageCategory.with_image_series_and_images()
     |> Brando.repo().all
@@ -370,7 +370,7 @@ defmodule Brando.Images do
   @doc """
   Get all portfolio image series that are orphaned
   """
-  def get_all_orphaned_series() do
+  def get_all_orphaned_series do
     categories = Brando.repo().all(ImageCategory)
     series = Brando.repo().all(ImageSeries)
     Images.Utils.get_orphaned_series(categories, series, starts_with: "images/site")

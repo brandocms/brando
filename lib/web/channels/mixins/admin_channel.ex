@@ -39,7 +39,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     end
   end
 
-  defp handle_ins() do
+  defp handle_ins do
     for key <- @keys do
       quote do
         def handle_in(unquote(key), params, socket),

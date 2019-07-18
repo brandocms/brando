@@ -1,3 +1,4 @@
+# credo:disable-for-this-file Credo.Check.Design.DuplicatedCode
 defmodule Mix.Tasks.Brando.Gen.Html do
   use Mix.Task
 
@@ -395,18 +396,18 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     domain_code =
       domain_code <>
-        """
-        @doc \"\"\"
+        ~s'''
+        @doc """
         List all #{binding[:plural]}
-        \"\"\"
+        """
         @spec list_#{binding[:plural]}() :: {:ok, [#{binding[:alias]}.t()]}
         def list_#{binding[:plural]} do
           {:ok, Repo.all(#{binding[:alias]})}
         end
 
-        @doc \"\"\"
+        @doc """
         Get single #{binding[:singular]}
-        \"\"\"
+        """
         @spec get_#{binding[:singular]}(id) ::
                 {:ok, #{binding[:alias]}.t()} | {:error, {:#{binding[:singular]}, :not_found}}
         def get_#{binding[:singular]}(id) do
@@ -416,9 +417,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
           end
         end
 
-        @doc \"\"\"
+        @doc """
         Create new #{binding[:singular]}
-        \"\"\"
+        """
         @spec create_#{binding[:singular]}(params, user | :system) ::
                 {:ok, #{binding[:alias]}.t()} | {:error, Ecto.Changeset.t()}
         def create_#{binding[:singular]}(#{binding[:singular]}_params, user \\\\ :system) do
@@ -426,9 +427,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
           #{insert_code}
         end
 
-        @doc \"\"\"
+        @doc """
         Update existing #{binding[:singular]}
-        \"\"\"
+        """
         @spec update_#{binding[:singular]}(id, params, user | :system) ::
                 {:ok, #{binding[:alias]}.t()} | {:error, Ecto.Changeset.t()}
         def update_#{binding[:singular]}(#{binding[:singular]}_id, #{binding[:singular]}_params, user \\\\ :system) do
@@ -439,9 +440,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
           |> Repo.update()
         end
 
-        @doc \"\"\"
+        @doc """
         Delete #{binding[:singular]} by id
-        \"\"\"
+        """
         @spec delete_#{binding[:singular]}(id) ::
                 {:ok, #{binding[:alias]}.t()}
         def delete_#{binding[:singular]}(id) do
@@ -450,15 +451,15 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         #{img_code}
           {:ok, #{binding[:singular]}}
         end
-        """
+        '''
 
     if binding[:gallery] do
       domain_code <>
-        """
+        ~s'''
 
-        @doc \"\"\"
+        @doc """
         Create an image series entry
-        \"\"\"
+        """
         @spec create_image_series(id, user) ::
                 {:ok, Brando.ImageSeries.t()} | {:error, Ecto.Changeset.t()}
         def create_image_series(#{binding[:singular]}_id, user) do
@@ -479,7 +480,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
           end
         end
 
-        """
+        '''
     else
       domain_code
     end
@@ -491,34 +492,34 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     Enum.map(attrs, fn
       {k, {:array, _}} ->
-        {k, ~s(field #{inspect(k)}, list_of\(:string\))}
+        {k, ~s<field #{inspect(k)}, list_of\(:string\)>}
 
       {k, :integer} ->
-        {k, ~s(field #{inspect(k)}, :integer)}
+        {k, ~s<field #{inspect(k)}, :integer>}
 
       {k, :boolean} ->
-        {k, ~s(field #{inspect(k)}, :boolean)}
+        {k, ~s<field #{inspect(k)}, :boolean>}
 
       {k, :string} ->
-        {k, ~s(field #{inspect(k)}, :string)}
+        {k, ~s<field #{inspect(k)}, :string>}
 
       {k, :text} ->
-        {k, ~s(field #{inspect(k)}, :string)}
+        {k, ~s<field #{inspect(k)}, :string>}
 
       {k, :date} ->
-        {k, ~s(field #{inspect(k)}, :date)}
+        {k, ~s<field #{inspect(k)}, :date>}
 
       {k, :time} ->
-        {k, ~s(field #{inspect(k)}, :time)}
+        {k, ~s<field #{inspect(k)}, :time>}
 
       {k, :datetime} ->
-        {k, ~s(field #{inspect(k)}, :time)}
+        {k, ~s<field #{inspect(k)}, :time>}
 
       {k, :file} ->
-        {k, ~s(field #{inspect(k)}, :file_type)}
+        {k, ~s<field #{inspect(k)}, :file_type>}
 
       {k, :image} ->
-        {k, ~s(field #{inspect(k)}, :image_type)}
+        {k, ~s<field #{inspect(k)}, :image_type>}
 
       {k, :villain} ->
         fields =
@@ -531,10 +532,10 @@ defmodule Mix.Tasks.Brando.Gen.Html do
           end
 
         {k,
-         ~s(field #{inspect(Enum.at(fields, 0))}, :json\n    field #{inspect(Enum.at(fields, 1))}, :string)}
+         ~s<field #{inspect(Enum.at(fields, 0))}, :json\n    field #{inspect(Enum.at(fields, 1))}, :string>}
 
       {k, _} ->
-        {k, ~s(field #{inspect(k)}, :string)}
+        {k, ~s<field #{inspect(k)}, :string>}
     end)
   end
 
@@ -607,31 +608,31 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     # this is for GraphQL query fields
     Enum.map(attrs, fn
       {k, {:array, _}} ->
-        {k, ~s(#{k})}
+        {k, k}
 
       {k, :integer} ->
-        {k, ~s(#{k})}
+        {k, k}
 
       {k, :boolean} ->
-        {k, ~s(#{k})}
+        {k, k}
 
       {k, :string} ->
-        {k, ~s(#{k})}
+        {k, k}
 
       {k, :text} ->
-        {k, ~s(#{k})}
+        {k, k}
 
       {k, :date} ->
-        {k, ~s(#{k})}
+        {k, k}
 
       {k, :time} ->
-        {k, ~s(#{k})}
+        {k, k}
 
       {k, :datetime} ->
-        {k, ~s(#{k})}
+        {k, k}
 
       {k, :gallery} ->
-        {k, ~s(#{k}_id)}
+        {k, ~s<#{k}_id>}
 
       {k, :file} ->
         file_code = "#{k} {\n      url\n    }"
@@ -644,14 +645,14 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       {k, :villain} ->
         case k do
           :data ->
-            {k, ~s(#{k})}
+            {k, k}
 
           _ ->
-            {k, ~s(#{k}_data)}
+            {k, ~s<#{k}_data>}
         end
 
       {k, _} ->
-        {k, ~s(#{k})}
+        {k, k}
     end)
   end
 
@@ -662,38 +663,38 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k, nil, nil}
 
       {k, :integer} ->
-        {k, ~s(field #{inspect(k)}, :integer)}
+        {k, ~s<field #{inspect(k)}, :integer>}
 
       {k, :boolean} ->
-        {k, ~s(field #{inspect(k)}, :boolean)}
+        {k, ~s<field #{inspect(k)}, :boolean>}
 
       {k, :string} ->
-        {k, ~s(field #{inspect(k)}, :string)}
+        {k, ~s<field #{inspect(k)}, :string>}
 
       {k, :text} ->
-        {k, ~s(field #{inspect(k)}, :string)}
+        {k, ~s<field #{inspect(k)}, :string>}
 
       {k, :date} ->
-        {k, ~s(field #{inspect(k)}, :date)}
+        {k, ~s<field #{inspect(k)}, :date>}
 
       {k, :time} ->
-        {k, ~s(field #{inspect(k)}, :time)}
+        {k, ~s<field #{inspect(k)}, :time>}
 
       {k, :datetime} ->
-        {k, ~s(field #{inspect(k)}, :time)}
+        {k, ~s<field #{inspect(k)}, :time>}
 
       {k, :image} ->
-        {k, ~s(field #{inspect(k)}, :upload_or_image)}
+        {k, ~s<field #{inspect(k)}, :upload_or_image>}
 
       {k, :file} ->
-        {k, ~s(field #{inspect(k)}, :upload)}
+        {k, ~s<field #{inspect(k)}, :upload>}
 
       {k, :villain} ->
         k = (k == :data && :data) || String.to_atom(Atom.to_string(k) <> "_data")
-        {k, ~s(field #{inspect(k)}, :json)}
+        {k, ~s<field #{inspect(k)}, :json>}
 
       {k, _} ->
-        {k, ~s(field #{inspect(k)}, :string)}
+        {k, ~s<field #{inspect(k)}, :string>}
     end)
   end
 

@@ -16,7 +16,7 @@ defmodule Brando.Villain.Routes.Admin.API do
   @doc """
   Defines "RESTful" endpoints for the news resource.
   """
-  defmacro api_villain_routes() do
+  defmacro api_villain_routes do
     add_villain_routes("", Brando.API.Villain.VillainController)
   end
 

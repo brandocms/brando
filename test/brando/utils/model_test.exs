@@ -4,8 +4,8 @@ defmodule Brando.Utils.SchemaTest do
   use Brando.Integration.TestCase
   use Plug.Test
 
-  alias Brando.Utils
   alias Brando.Factory
+  alias Brando.Utils
 
   test "update_field/2" do
     user = Factory.insert(:user)

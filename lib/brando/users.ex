@@ -33,7 +33,7 @@ defmodule Brando.Users do
   @doc """
   List users
   """
-  def get_users() do
+  def get_users do
     User
     |> User.order_by_id()
     |> Brando.repo().all()

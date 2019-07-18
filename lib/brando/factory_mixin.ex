@@ -11,11 +11,11 @@ defmodule Brando.FactoryMixin do
   """
   defmacro __using__(_) do
     quote do
-      alias Brando.Type.ImageConfig
       alias Brando.ImageCategory
       alias Brando.ImageSeries
       alias Brando.Pages.Page
       alias Brando.Pages.PageFragment
+      alias Brando.Type.ImageConfig
       alias Brando.User
 
       @sizes %{

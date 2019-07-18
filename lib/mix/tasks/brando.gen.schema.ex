@@ -92,25 +92,10 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
     types = types(attrs)
     defs = defaults(attrs)
 
-    migrations =
-      attrs
-      |> Enum.map(fn {k, v} ->
-        case v do
-          :villain -> (k == :data && "villain()") || "villain #{inspect(k)}"
-          _ -> "add #{inspect(k)}, #{inspect(mig_types[k])}#{defs[k]}"
-        end
-      end)
-
+    migrations = map_mig_attrs(attrs, mig_types, defs)
     mig_assocs = migration_assocs(assocs)
 
-    schema_fields =
-      attrs
-      |> Enum.map(fn {k, v} ->
-        case v do
-          :villain -> (k == :data && "villain()") || "villain #{inspect(k)}"
-          _ -> "field #{inspect(k)}, #{inspect(types[k])}#{defs[k]}"
-        end
-      end)
+    schema_fields = map_schema_attrs(attrs, types, defs)
 
     module = Enum.join([binding[:base], domain, binding[:scoped]], ".")
 
@@ -151,6 +136,26 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
     )
 
     binding
+  end
+
+  defp map_mig_attrs(attrs, mig_types, defs) do
+    attrs
+    |> Enum.map(fn {k, v} ->
+      case v do
+        :villain -> (k == :data && "villain()") || "villain #{inspect(k)}"
+        _ -> "add #{inspect(k)}, #{inspect(mig_types[k])}#{defs[k]}"
+      end
+    end)
+  end
+
+  defp map_schema_attrs(attrs, types, defs) do
+    attrs
+    |> Enum.map(fn {k, v} ->
+      case v do
+        :villain -> (k == :data && "villain()") || "villain #{inspect(k)}"
+        _ -> "field #{inspect(k)}, #{inspect(types[k])}#{defs[k]}"
+      end
+    end)
   end
 
   def migration_type({k, :image}) do

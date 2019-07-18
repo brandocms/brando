@@ -181,85 +181,83 @@ defmodule Brando.HTML do
     app_name = Brando.config(:app_name)
     title = Brando.Utils.get_page_title(conn)
 
-    conn =
-      conn
-      |> put_meta("title", "#{title}")
-      |> put_meta("og:title", "#{title}")
-      |> put_meta("og:site_name", app_name)
-      |> put_meta("og:type", "website")
-      |> put_meta("og:url", Brando.Utils.current_url(conn))
-
-    conn =
-      case get_meta(conn, "keywords") do
-        nil ->
-          if meta_keywords = Brando.Config.get_site_config("meta_keywords") do
-            put_meta(conn, "keywords", meta_keywords)
-          else
-            conn
-          end
-
-        _ ->
-          conn
-      end
-
-    conn =
-      case get_meta(conn, "description") do
-        nil ->
-          if meta_description = Brando.Config.get_site_config("meta_description") do
-            conn
-            |> put_meta("description", meta_description)
-            |> put_meta("og:description", meta_description)
-          else
-            conn
-          end
-
-        _ ->
-          conn
-      end
-
-    conn =
-      case get_meta(conn, "og:image") do
-        nil ->
-          case Brando.Config.get_site_config("meta_image") do
-            nil ->
-              conn
-
-            meta_image when is_map(meta_image) ->
-              # grab xlarge from img
-              img_src =
-                Brando.Utils.img_url(meta_image, :xlarge, prefix: Brando.Utils.media_url())
-
-              img = Path.join("#{conn.scheme}://#{conn.host}", img_src)
-
-              conn
-              |> put_meta("image", img)
-              |> put_meta("og:image", img)
-
-            meta_image when is_binary(meta_image) ->
-              img =
-                if String.contains?(meta_image, "://") do
-                  meta_image
-                else
-                  Path.join("#{conn.scheme}://#{conn.host}", meta_image)
-                end
-
-              conn
-              |> put_meta("image", img)
-              |> put_meta("og:image", img)
-          end
-
-        img ->
-          if String.contains?(img, "://") do
-            conn
-          else
-            put_meta(conn, "og:image", Path.join("#{conn.scheme}://#{conn.host}", img))
-          end
-      end
-
     conn
+    |> put_meta("title", "#{title}")
+    |> put_meta("og:title", "#{title}")
+    |> put_meta("og:site_name", app_name)
+    |> put_meta("og:type", "website")
+    |> put_meta("og:url", Brando.Utils.current_url(conn))
+    |> maybe_put_meta_keywords()
+    |> maybe_put_meta_description()
+    |> maybe_put_meta_image
     |> get_meta()
     |> Enum.map(&elem(meta_tag(&1), 1))
     |> raw()
+  end
+
+  defp maybe_put_meta_keywords(conn) do
+    case get_meta(conn, "keywords") do
+      nil ->
+        if meta_keywords = Brando.Config.get_site_config("meta_keywords") do
+          put_meta(conn, "keywords", meta_keywords)
+        else
+          conn
+        end
+
+      _ ->
+        conn
+    end
+  end
+
+  defp maybe_put_meta_description(conn) do
+    case get_meta(conn, "description") do
+      nil ->
+        if meta_description = Brando.Config.get_site_config("meta_description") do
+          conn
+          |> put_meta("description", meta_description)
+          |> put_meta("og:description", meta_description)
+        else
+          conn
+        end
+
+      _ ->
+        conn
+    end
+  end
+
+  defp maybe_put_meta_image(conn) do
+    case get_meta(conn, "og:image") do
+      nil ->
+        case Brando.Config.get_site_config("meta_image") do
+          nil ->
+            conn
+
+          meta_image when is_map(meta_image) ->
+            # grab xlarge from img
+            img_src = Brando.Utils.img_url(meta_image, :xlarge, prefix: Brando.Utils.media_url())
+            img = Path.join("#{conn.scheme}://#{conn.host}", img_src)
+
+            conn
+            |> put_meta("image", img)
+            |> put_meta("og:image", img)
+
+          meta_image when is_binary(meta_image) ->
+            img =
+              (String.contains?(meta_image, "://") && meta_image) ||
+                Path.join("#{conn.scheme}://#{conn.host}", meta_image)
+
+            conn
+            |> put_meta("image", img)
+            |> put_meta("og:image", img)
+        end
+
+      img ->
+        if String.contains?(img, "://") do
+          conn
+        else
+          put_meta(conn, "og:image", Path.join("#{conn.scheme}://#{conn.host}", img))
+        end
+    end
   end
 
   @doc """

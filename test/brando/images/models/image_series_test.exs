@@ -3,8 +3,8 @@ defmodule Brando.Integration.ImageSeriesTest do
   use Brando.ConnCase
   use Brando.Integration.TestCase
 
-  alias Brando.ImageSeries
   alias Brando.Factory
+  alias Brando.ImageSeries
 
   setup do
     user = Factory.insert(:user)

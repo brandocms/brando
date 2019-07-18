@@ -3,8 +3,8 @@ defmodule Brando.Villain.ParserTest do
   use Brando.Integration.TestCase
   use Brando.ConnCase
 
-  alias Brando.Images
   alias Brando.Factory
+  alias Brando.Images
 
   import Brando.Villain.Parser.Default
 

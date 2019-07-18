@@ -63,7 +63,7 @@ defmodule Brando.Pages do
   @doc """
   List all pages
   """
-  def list_pages() do
+  def list_pages do
     pages =
       Page
       |> Page.only_parents()
@@ -76,7 +76,7 @@ defmodule Brando.Pages do
   @doc """
   List page parents
   """
-  def list_parents() do
+  def list_parents do
     no_value = %{value: nil, name: "–"}
 
     parents =
@@ -190,7 +190,7 @@ defmodule Brando.Pages do
   @doc """
   Rerender all pages
   """
-  def rerender_pages() do
+  def rerender_pages do
     {:ok, pages} = list_pages()
 
     for page <- pages do
@@ -201,7 +201,7 @@ defmodule Brando.Pages do
   @doc """
   Rerender all fragments
   """
-  def rerender_fragments() do
+  def rerender_fragments do
     {:ok, fragments} = list_page_fragments()
 
     for fragment <- fragments do
@@ -218,7 +218,7 @@ defmodule Brando.Pages do
   @doc """
   List all page fragments
   """
-  def list_page_fragments() do
+  def list_page_fragments do
     fragments =
       PageFragment
       |> order_by([p], asc: p.parent_key, asc: p.key, asc: p.language)

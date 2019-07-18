@@ -237,7 +237,7 @@ defmodule Brando.Utils do
   Returns scheme, host and port (if non-standard)
   """
   @spec hostname() :: String.t()
-  def hostname() do
+  def hostname do
     url_cfg = Brando.endpoint().config(:url)
     scheme = Keyword.get(url_cfg, :scheme, "http")
     host = Keyword.get(url_cfg, :host, "localhost")
@@ -318,7 +318,7 @@ defmodule Brando.Utils do
   Returns hostname and media directory.
   """
   @spec host_and_media_url() :: String.t()
-  def host_and_media_url() do
+  def host_and_media_url do
     hostname() <> Brando.config(:media_url)
   end
 
@@ -459,26 +459,24 @@ defmodule Brando.Utils do
   end
 
   defp extract_size_dir(image_field, size) do
-    try do
-      if is_map(image_field.sizes) && Map.has_key?(image_field.sizes, size) do
-        image_field.sizes[size]
-      else
-        IO.warn("""
-        Wrong size key for img_url function.
+    if is_map(image_field.sizes) && Map.has_key?(image_field.sizes, size) do
+      image_field.sizes[size]
+    else
+      IO.warn("""
+      Wrong size key for img_url function.
 
-        Size `#{size}` does not exist for image struct:
+      Size `#{size}` does not exist for image struct:
 
-        #{inspect(image_field, pretty: true)})
-        """)
+      #{inspect(image_field, pretty: true)})
+      """)
 
-        "non_existing"
-      end
-    rescue
-      KeyError ->
-        if Map.has_key?(image_field["sizes"], size) do
-          image_field["sizes"][size]
-        end
+      "non_existing"
     end
+  rescue
+    KeyError ->
+      if Map.has_key?(image_field["sizes"], size) do
+        image_field["sizes"][size]
+      end
   end
 
   @doc """

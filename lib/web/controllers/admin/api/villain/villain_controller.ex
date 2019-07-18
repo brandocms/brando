@@ -14,12 +14,15 @@ defmodule Brando.API.Villain.VillainController do
       |> preload([:image_category, :images])
       |> Brando.repo().get_by(slug: series_slug)
 
-    if image_series do
-      image_list = Villain.map_images(image_series.images)
-      json(conn, %{status: 200, images: image_list})
-    else
-      json(conn, %{status: 204, images: []})
-    end
+    payload =
+      if image_series do
+        image_list = Villain.map_images(image_series.images)
+        %{status: 200, images: image_list}
+      else
+        %{status: 204, images: []}
+      end
+
+    json(conn, payload)
   end
 
   @doc false
@@ -40,39 +43,27 @@ defmodule Brando.API.Villain.VillainController do
     cfg = series.cfg || Brando.config(Brando.Images)[:default_config]
     params = Map.put(params, "image_series_id", series.id)
 
-    case Images.Uploads.Schema.handle_upload(params, cfg, user) do
-      {:error, err} ->
-        json(
-          conn,
+    payload =
+      case Images.Uploads.Schema.handle_upload(params, cfg, user) do
+        {:error, err} ->
           %{
             status: 500,
             error: err
           }
-        )
 
-      images when length(images) > 1 ->
-        images =
-          Enum.map(images, fn {:ok, img} ->
-            sizes = Enum.map(img.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
-            sizes_map = Enum.into(sizes, %{})
-            %{id: img.id, sizes: sizes_map, src: Brando.Utils.media_url(img.image.path)}
-          end)
+        images when length(images) > 1 ->
+          images = map_images(images)
 
-        json(
-          conn,
           %{
             status: 200,
             uid: uid,
             images: images
           }
-        )
 
-      [{:ok, image}] ->
-        sizes = Enum.map(image.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
-        sizes_map = Enum.into(sizes, %{})
+        [{:ok, image}] ->
+          sizes = sizes_with_media_url(image)
+          sizes_map = Enum.into(sizes, %{})
 
-        json(
-          conn,
           %{
             status: 200,
             uid: uid,
@@ -103,8 +94,9 @@ defmodule Brando.API.Villain.VillainController do
               ]
             }
           }
-        )
-    end
+      end
+
+    json(conn, payload)
   end
 
   @doc false
@@ -125,11 +117,13 @@ defmodule Brando.API.Villain.VillainController do
         &Brando.Utils.img_url(&1.image, :thumb, prefix: Brando.Utils.media_url())
       )
 
-    json(conn, %{
+    payload = %{
       status: 200,
       series: series_slug,
       images: images
-    })
+    }
+
+    json(conn, payload)
   end
 
   @doc false
@@ -144,7 +138,9 @@ defmodule Brando.API.Villain.VillainController do
       )
 
     series_slugs = Enum.map(series, & &1.slug)
-    json(conn, %{status: 200, series: series_slugs})
+    payload = %{status: 200, series: series_slugs}
+
+    json(conn, payload)
   end
 
   @doc false
@@ -158,7 +154,7 @@ defmodule Brando.API.Villain.VillainController do
         "y" => 50
       })
 
-    info = %{
+    payload = %{
       status: 200,
       id: id,
       uid: uid,
@@ -168,7 +164,7 @@ defmodule Brando.API.Villain.VillainController do
       focal: %{"x" => 50, "y" => 50}
     }
 
-    json(conn, info)
+    json(conn, payload)
   end
 
   @doc false
@@ -190,12 +186,23 @@ defmodule Brando.API.Villain.VillainController do
   def store_template(conn, %{"template" => json_template}) do
     with {:ok, decoded_template} <- Jason.decode(json_template),
          {:ok, stored_template} <- Villain.update_or_create_template(decoded_template) do
-      response = %{
+      payload = %{
         status: 200,
         template: stored_template
       }
 
-      json(conn, response)
+      json(conn, payload)
     end
+  end
+
+  defp sizes_with_media_url(image),
+    do: Enum.map(image.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
+
+  defp map_images(images) do
+    Enum.map(images, fn {:ok, img} ->
+      sizes = Enum.map(img.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
+      sizes_map = Enum.into(sizes, %{})
+      %{id: img.id, sizes: sizes_map, src: Brando.Utils.media_url(img.image.path)}
+    end)
   end
 end

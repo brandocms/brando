@@ -464,6 +464,10 @@ defmodule Brando.Images.Utils do
     category_paths = Enum.map(categories, &Path.join(media_path, &1.cfg.upload_path))
     upload_paths = series_paths ++ category_paths
 
+    check_upload_paths(upload_paths, media_path, starts_with, ignored_paths)
+  end
+
+  defp check_upload_paths(upload_paths, media_path, starts_with, ignored_paths) do
     case upload_paths do
       [] ->
         []
@@ -472,20 +476,24 @@ defmodule Brando.Images.Utils do
         path_to_check = Path.join(media_path, starts_with)
         full_ignored_paths = Enum.map(ignored_paths, &Path.join(path_to_check, &1))
 
-        existing_category_paths =
-          path_to_check
-          |> Path.join("*")
-          |> Path.wildcard()
-          |> Enum.filter(&(&1 not in full_ignored_paths))
-
-        existing_series_paths =
-          existing_category_paths
-          |> Enum.map(&Path.wildcard(Path.join(&1, "*")))
-          |> List.flatten()
-
+        existing_category_paths = get_existing_category_paths(path_to_check, full_ignored_paths)
+        existing_series_paths = get_existing_series_paths(existing_category_paths)
         existing_paths = existing_series_paths ++ existing_category_paths
 
         existing_paths -- upload_paths
     end
+  end
+
+  defp get_existing_category_paths(path_to_check, full_ignored_paths) do
+    path_to_check
+    |> Path.join("*")
+    |> Path.wildcard()
+    |> Enum.filter(&(&1 not in full_ignored_paths))
+  end
+
+  defp get_existing_series_paths(existing_category_paths) do
+    existing_category_paths
+    |> Enum.map(&Path.wildcard(Path.join(&1, "*")))
+    |> List.flatten()
   end
 end

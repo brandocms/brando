@@ -3,9 +3,9 @@ defmodule Brando.Integration.UserTest do
   use Brando.ConnCase
   use Brando.Integration.TestCase
 
+  alias Brando.Factory
   alias Brando.User
   alias Brando.Users
-  alias Brando.Factory
 
   test "create/1 and update/1" do
     user = Factory.insert(:user)
