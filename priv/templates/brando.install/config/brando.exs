@@ -48,7 +48,7 @@ config :brando, Brando.Images,
     sizes: %{
       "large" => %{"quality" => 85, "size" => "1400"},
       "medium" => %{"quality" => 85, "size" => "1000"},
-      "micro" => %{"crop" => true, "quality" => 85, "size" => "25x25"},
+      "micro" => %{"crop" => false, "quality" => 25, "size" => "25"},
       "small" => %{"quality" => 85, "size" => "700"},
       "thumb" => %{"crop" => true, "quality" => 85, "size" => "150x150"},
       "xlarge" => %{"quality" => 85, "size" => "1900"}

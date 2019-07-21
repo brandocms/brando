@@ -150,40 +150,45 @@ defmodule Brando.Images.Utils do
     end
   end
 
-  # @doc """
-  # Recreates sizes for an image field
-  # """
-  # @spec recreate_sizes_for_image_field(
-  #         image_schema :: image,
-  #         field_name :: atom | String.t()
-  #       ) :: [any()]
-  # def recreate_sizes_for_image_field(schema, field_name) do
-  #   rows = Brando.repo().all(schema)
-  #   {:ok, cfg} = schema.get_image_cfg(field_name)
+  @doc """
+  Recreates sizes for an image field.
 
-  #   operations =
-  #     Enum.flat_map(rows, fn row ->
-  #       img_field = Map.get(row, field_name)
+  This applies to ALL records with matching schema/field
+  """
+  @spec recreate_sizes_for_image_field(
+          schema :: any,
+          field_name :: atom | String.t(),
+          user_id :: id | atom
+        ) :: [any()]
+  def recreate_sizes_for_image_field(schema, field_name, user_id \\ :system) do
+    rows = Brando.repo().all(schema)
+    {:ok, cfg} = schema.get_image_cfg(field_name)
 
-  #       if img_field do
-  #         delete_sized_images(img_field)
+    operations =
+      Enum.flat_map(rows, fn row ->
+        img_field = Map.get(row, field_name)
 
-  #         img_field
-  #         |> Images.Operations.create_operations(cfg, :system, row.id)
-  #         |> elem(1)
-  #       end
-  #     end)
+        if img_field do
+          delete_sized_images(img_field)
 
-  #   {:ok, operation_results} = Images.Operations.perform_operations(operations, :system)
+          img_field
+          |> Images.Operations.create_operations(cfg, user_id, row.id)
+          |> elem(1)
+        else
+          []
+        end
+      end)
 
-  #   for result <- operation_results do
-  #     rows
-  #     |> Enum.find(&(&1.id == result.id))
-  #     |> Ecto.Changeset.change(Map.put(%{}, field_name, result.img_struct))
-  #     |> Brando.Images.Optimize.optimize(field_name)
-  #     |> Brando.repo().update
-  #   end
-  # end
+    {:ok, operation_results} = Images.Operations.perform_operations(operations, user_id)
+
+    for result <- operation_results do
+      rows
+      |> Enum.find(&(&1.id == result.id))
+      |> Ecto.Changeset.change(Map.put(%{}, field_name, result.img_struct))
+      |> Brando.Images.Optimize.optimize(field_name)
+      |> Brando.repo().update
+    end
+  end
 
   @doc """
   Recreate sizes for image field record.
@@ -324,13 +329,20 @@ defmodule Brando.Images.Utils do
   @doc """
   Returns image type atom.
   """
-  @spec image_type(String.t()) :: :jpeg | :png | :gif
+  @spec image_type(String.t()) :: :jpeg | :png | :gif | :bmp | :tiff | :svg | :crw | :webp
   def image_type(filename) do
     case String.downcase(Path.extname(filename)) do
       ".jpg" -> :jpeg
       ".jpeg" -> :jpeg
       ".png" -> :png
       ".gif" -> :gif
+      ".bmp" -> :bmp
+      ".tif" -> :tiff
+      ".tiff" -> :tiff
+      ".psd" -> :psd
+      ".svg" -> :svg
+      ".crw" -> :crw
+      ".webp" -> :webp
     end
   end
 

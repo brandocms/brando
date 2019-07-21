@@ -23,6 +23,6 @@ defmodule Brando.Images.ConversionParameters do
             anchor: nil,
             quality: "100",
             resize_geography: nil,
-            crop_geography: nil
-
+            crop_geography: nil,
+            format: nil
 end

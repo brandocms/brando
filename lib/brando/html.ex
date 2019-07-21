@@ -398,19 +398,26 @@ defmodule Brando.HTML do
   """
   @spec picture_tag(Map.t(), keyword()) :: {:safe, [...]}
   def picture_tag(img_struct, opts \\ []) do
-    initial_map = %{img: [], picture: [], source: [], noscript_img: [], mq_sources: []}
+    initial_map = %{
+      img: [],
+      picture: [],
+      source: [],
+      noscript_img: [],
+      mq_sources: [],
+      opts: opts
+    }
 
     attrs =
       initial_map
-      |> add_lazyload(opts)
-      |> add_classes(opts)
-      |> add_sizes(opts)
-      |> add_alt(opts)
-      |> add_srcset(opts, img_struct)
-      |> add_mq(opts, img_struct)
-      |> add_dims(opts, img_struct)
-      |> add_src(opts, img_struct)
-      |> add_moonwalk(opts)
+      |> add_lazyload()
+      |> add_sizes()
+      |> add_alt()
+      |> add_srcset(img_struct)
+      |> add_mq(img_struct)
+      |> add_dims(img_struct)
+      |> add_src(img_struct)
+      |> add_classes()
+      |> add_moonwalk()
 
     img_tag = tag(:img, attrs.img)
     noscript_img_tag = tag(:img, attrs.noscript_img)
@@ -425,49 +432,69 @@ defmodule Brando.HTML do
     mq_source_tags = attrs.mq_sources
     noscript_tag = content_tag(:noscript, noscript_img_tag)
 
-    content_tag(:picture, [mq_source_tags, source_tag, img_tag, noscript_tag], attrs.picture)
+    picture_tag =
+      content_tag(:picture, [mq_source_tags, source_tag, img_tag, noscript_tag], attrs.picture)
+
+    lightbox = Keyword.get(opts, :lightbox, false)
+    (lightbox && wrap_lightbox(picture_tag, attrs.src)) || picture_tag
   end
 
-  defp add_alt(attrs, opts) do
-    alt = Keyword.get(opts, :alt, "")
+  defp add_alt(attrs) do
+    alt = Keyword.get(attrs.opts, :alt, "")
 
     put_in(attrs, [:img, :alt], alt)
   end
 
-  defp add_lazyload(attrs, opts) do
-    Map.put(attrs, :lazyload, Keyword.get(opts, :lazyload, false))
+  defp add_lazyload(attrs) do
+    attrs = Map.put(attrs, :lazyload, Keyword.get(attrs.opts, :lazyload, false))
+    # We want width and height keys when we lazyload
+    put_in(attrs.opts, Keyword.merge(attrs.opts, width: true, height: true))
   end
 
-  defp add_classes(%{lazyload: lazyload} = attrs, opts) do
-    img_class = Keyword.get(opts, :img_class, false)
-    img_class = "#{img_class || ""}#{(lazyload && " lazyload") || ""}"
-    picture_class = Keyword.get(opts, :picture_class, false)
+  defp add_classes(%{lazyload: lazyload} = attrs) do
+    img_class = Keyword.get(attrs.opts, :img_class, false)
+    picture_class = Keyword.get(attrs.opts, :picture_class, false)
 
     attrs
     |> put_in([:picture, :class], picture_class)
     |> put_in([:img, :class], img_class)
+    |> put_in(
+      [:img, :data_ll_image],
+      lazyload && !Keyword.get(attrs.picture, :data_ll_srcset, false)
+    )
   end
 
-  defp add_sizes(attrs, opts) do
-    sizes = (Keyword.get(opts, :sizes) && get_sizes(opts[:sizes])) || false
+  defp add_sizes(attrs) do
+    sizes = (Keyword.get(attrs.opts, :sizes) && get_sizes(attrs.opts[:sizes])) || false
 
     attrs
     |> put_in([:img, :sizes], sizes)
     |> put_in([:source, :sizes], sizes)
   end
 
-  defp add_srcset(%{lazyload: true} = attrs, opts, img_struct) do
-    srcset = (Keyword.get(opts, :srcset) && get_srcset(img_struct, opts[:srcset], opts)) || false
+  defp add_srcset(%{lazyload: true} = attrs, img_struct) do
+    srcset =
+      (Keyword.get(attrs.opts, :srcset) && get_srcset(img_struct, attrs.opts[:srcset], attrs.opts)) ||
+        false
+
+    placeholder_srcset =
+      (Keyword.get(attrs.opts, :srcset) &&
+         get_srcset(img_struct, attrs.opts[:srcset], attrs.opts, :placeholder)) ||
+        false
 
     attrs
-    |> put_in([:img, :srcset], false)
+    |> put_in([:picture, :data_ll_srcset], !!srcset)
+    |> put_in([:img, :srcset], placeholder_srcset)
+    |> put_in([:img, :data_ll_placeholder], !!placeholder_srcset)
     |> put_in([:img, :data_srcset], srcset)
-    |> put_in([:source, :srcset], false)
+    |> put_in([:source, :srcset], placeholder_srcset)
     |> put_in([:source, :data_srcset], srcset)
   end
 
-  defp add_srcset(%{lazyload: false} = attrs, opts, img_struct) do
-    srcset = (Keyword.get(opts, :srcset) && get_srcset(img_struct, opts[:srcset], opts)) || false
+  defp add_srcset(%{lazyload: false} = attrs, img_struct) do
+    srcset =
+      (Keyword.get(attrs.opts, :srcset) && get_srcset(img_struct, attrs.opts[:srcset], attrs.opts)) ||
+        false
 
     attrs
     |> put_in([:img, :srcset], srcset)
@@ -476,8 +503,9 @@ defmodule Brando.HTML do
     |> put_in([:source, :data_srcset], false)
   end
 
-  defp add_mq(%{lazyload: _} = attrs, opts, img_struct) do
-    case (Keyword.get(opts, :media_queries) && get_mq(img_struct, opts[:media_queries], opts)) ||
+  defp add_mq(%{lazyload: _} = attrs, img_struct) do
+    case (Keyword.get(attrs.opts, :media_queries) &&
+            get_mq(img_struct, attrs.opts[:media_queries], attrs.opts)) ||
            false do
       false ->
         attrs
@@ -493,19 +521,21 @@ defmodule Brando.HTML do
     end
   end
 
-  defp add_src(%{lazyload: true} = attrs, opts, img_struct) do
-    key = Keyword.get(opts, :key) || :xlarge
-    src = Brando.Utils.img_url(img_struct, key, opts)
+  defp add_src(%{lazyload: true} = attrs, img_struct) do
+    key = Keyword.get(attrs.opts, :key) || :xlarge
+    src = Brando.Utils.img_url(img_struct, key, attrs.opts)
+    fallback = svg_fallback(img_struct, 0.05)
 
     attrs
-    |> put_in([:img, :src], false)
+    |> put_in([:img, :src], fallback)
     |> put_in([:img, :data_src], src)
     |> put_in([:noscript_img, :src], src)
+    |> Map.put(:src, src)
   end
 
-  defp add_src(%{lazyload: false} = attrs, opts, img_struct) do
-    key = Keyword.get(opts, :key) || :xlarge
-    src = Brando.Utils.img_url(img_struct, key, opts)
+  defp add_src(%{lazyload: false} = attrs, img_struct) do
+    key = Keyword.get(attrs.opts, :key) || :xlarge
+    src = Brando.Utils.img_url(img_struct, key, attrs.opts)
 
     attrs
     |> put_in([:img, :src], src)
@@ -513,17 +543,17 @@ defmodule Brando.HTML do
     |> put_in([:noscript_img, :src], src)
   end
 
-  defp add_dims(attrs, opts, img_struct) do
-    width = (Keyword.get(opts, :width) && Map.get(img_struct, :width)) || false
-    height = (Keyword.get(opts, :height) && Map.get(img_struct, :height)) || false
+  defp add_dims(attrs, img_struct) do
+    width = (Keyword.get(attrs.opts, :width) && Map.get(img_struct, :width)) || false
+    height = (Keyword.get(attrs.opts, :height) && Map.get(img_struct, :height)) || false
 
     attrs
     |> put_in([:img, :width], width)
     |> put_in([:img, :height], height)
   end
 
-  defp add_moonwalk(attrs, opts) do
-    moonwalk = Keyword.get(opts, :moonwalk, false)
+  defp add_moonwalk(attrs) do
+    moonwalk = Keyword.get(attrs.opts, :moonwalk, false)
     put_in(attrs, [:picture, :moonwalk], moonwalk)
   end
 
@@ -545,13 +575,13 @@ defmodule Brando.HTML do
   @doc """
   Return a correctly sized svg fallback
   """
-  def svg_fallback(image_field) do
+  def svg_fallback(image_field, opacity \\ 0) do
     width = Map.get(image_field, :width, 0)
     height = Map.get(image_field, :height, 0)
 
     "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg" <>
       "%27%20width%3D%27#{width}%27%20height%3D%27#{height}%27" <>
-      "%20style%3D%27background%3Atransparent%27%2F%3E"
+      "%20style%3D%27background%3Argba%280%2C0%2C0%2C#{opacity}%29%27%2F%3E"
   end
 
   @doc """
@@ -569,9 +599,10 @@ defmodule Brando.HTML do
   @doc """
   Get srcset from image config
   """
-  def get_srcset(_, nil, _), do: nil
+  def get_srcset(image_field, cfg, opts, placeholder \\ false)
+  def get_srcset(_, nil, _, _), do: nil
 
-  def get_srcset(image_field, {mod, field}, opts) do
+  def get_srcset(image_field, {mod, field}, opts, placeholder) do
     {:ok, cfg} = apply(mod, :get_image_cfg, [field])
 
     if !cfg.srcset do
@@ -581,14 +612,14 @@ defmodule Brando.HTML do
 
     srcset_values =
       for {k, v} <- cfg.srcset do
-        path = Brando.Utils.img_url(image_field, k, opts)
+        path = Brando.Utils.img_url(image_field, (placeholder && "micro") || k, opts)
         "#{path} #{v}"
       end
 
     Enum.join(srcset_values, ", ")
   end
 
-  def get_srcset(image_field, %Brando.Type.ImageConfig{} = cfg, opts) do
+  def get_srcset(image_field, %Brando.Type.ImageConfig{} = cfg, opts, placeholder) do
     if !cfg.srcset do
       raise ArgumentError, message: "no `:srcset` key set in supplied image config"
     end
@@ -597,17 +628,17 @@ defmodule Brando.HTML do
 
     srcset_values =
       for {k, v} <- srcset do
-        path = Brando.Utils.img_url(image_field, k, opts)
+        path = Brando.Utils.img_url(image_field, (placeholder && "micro") || k, opts)
         "#{path} #{v}"
       end
 
     Enum.join(srcset_values, ", ")
   end
 
-  def get_srcset(image_field, srcset, opts) do
+  def get_srcset(image_field, srcset, opts, placeholder) do
     srcset_values =
       for {k, v} <- srcset do
-        path = Brando.Utils.img_url(image_field, k, opts)
+        path = Brando.Utils.img_url(image_field, (placeholder && "micro") || k, opts)
         "#{path} #{v}"
       end
 

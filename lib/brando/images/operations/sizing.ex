@@ -1,4 +1,7 @@
 defmodule Brando.Images.Operations.Sizing do
+  @moduledoc """
+  Sizing operations
+  """
   alias Brando.Images
   alias Brando.Progress
 
@@ -6,13 +9,19 @@ defmodule Brando.Images.Operations.Sizing do
   Create a sized version of image
   """
   def create_image_size(%Images.Operation{
+        id: id,
         type: :gif,
         img_struct: %{path: image_src, width: width, height: height},
         sized_img_path: image_dest,
         sized_img_dir: image_dest_dir,
+        size_key: size_key,
         size_cfg: size_cfg
       }) do
-    File.mkdir_p(image_dest_dir)
+    image_src_path = Images.Utils.media_path(image_src)
+    image_dest_path = Images.Utils.media_path(image_dest)
+    image_dest_dir = Images.Utils.media_path(image_dest_dir)
+
+    File.mkdir_p!(image_dest_dir)
 
     size_cfg = get_size_cfg_orientation(size_cfg, height, width)
 
@@ -31,16 +40,23 @@ defmodule Brando.Images.Operations.Sizing do
         {"", modifier, size}
       end
 
-    params = ~w(#{crop} #{modifier} #{size} --output #{image_dest} -i #{image_src})
+    params = ~w(#{crop} #{modifier} #{size} --output #{image_dest_path} -i #{image_src_path})
 
     System.cmd("gifsicle", params, stderr_to_stdout: true)
+
+    {:ok,
+     %Images.TransformResult{
+       id: id,
+       size_key: size_key,
+       image_path: image_dest
+     }}
   end
 
   @doc """
   Create image size for png/jpeg
   """
   def create_image_size(%Images.Operation{
-        type: _,
+        type: type,
         id: id,
         img_struct: %{path: image_src, focal: focal, width: width, height: height},
         filename: filename,
@@ -50,6 +66,7 @@ defmodule Brando.Images.Operations.Sizing do
         size_cfg: size_cfg,
         user: user
       }) do
+    format = maybe_change_format(type)
     image_src_path = Images.Utils.media_path(image_src)
     image_dest_path = Images.Utils.media_path(image_dest)
     image_dest_dir = Images.Utils.media_path(image_dest_dir)
@@ -63,7 +80,8 @@ defmodule Brando.Images.Operations.Sizing do
       image_dest_path: image_dest_path,
       image_dest_rel_path: image_dest,
       original_width: width / 1,
-      original_height: height / 1
+      original_height: height / 1,
+      format: format
     }
 
     case image_src_exists(conversion_parameters) do
@@ -99,11 +117,13 @@ defmodule Brando.Images.Operations.Sizing do
         crop: false,
         image: image,
         quality: quality,
+        format: format,
         image_dest_path: image_dest_path,
         image_dest_rel_path: image_dest_rel_path,
         resize_geography: resize_geography
       }) do
     image
+    |> Mogrify.format(format)
     |> Mogrify.custom("quality", quality)
     |> Mogrify.resize_to_limit(resize_geography)
     |> Mogrify.save(path: image_dest_path)
@@ -125,12 +145,14 @@ defmodule Brando.Images.Operations.Sizing do
         crop: true,
         image: image,
         quality: quality,
+        format: format,
         image_dest_path: image_dest_path,
         image_dest_rel_path: image_dest_rel_path,
         resize_geography: resize_geography,
         crop_geography: crop_geography
       }) do
     image
+    |> Mogrify.format(format)
     |> Mogrify.custom("quality", quality)
     |> Mogrify.custom("resize", resize_geography)
     |> Mogrify.custom("crop", crop_geography)
@@ -429,4 +451,7 @@ defmodule Brando.Images.Operations.Sizing do
 
     conversion_parameters
   end
+
+  defp maybe_change_format(type) when type in [:jpeg, :png, :gif], do: Atom.to_string(type)
+  defp maybe_change_format(_), do: "jpeg"
 end

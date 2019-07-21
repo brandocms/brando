@@ -23,7 +23,7 @@ defmodule <%= module %> do
       random_filename: true,
       size_limit: 10_240_000,
       sizes: %{
-        "micro"  => %{"size" => "25x25>", "quality" => 30, "crop" => true},
+        "micro"  => %{"size" => "25", "quality" => 20, "crop" => false},
         "thumb"  => %{"size" => "150x150>", "quality" => 90, "crop" => true},
         "small"  => %{"size" => "700", "quality" => 90},
         "medium" => %{"size" => "1100", "quality" => 90},

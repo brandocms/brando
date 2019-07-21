@@ -319,7 +319,7 @@ In your schema:
 +   random_filename: true,
 +   size_limit: 10_240_000,
 +   sizes: %{
-+     "micro"  => %{"size" => "25x25>", "quality" => 100, "crop" => true},
++     "micro"  => %{"crop" => false, "quality" => 10, "size" => "25"},
 +     "thumb"  => %{"size" => "150x150>", "quality" => 100, "crop" => true},
 +     "small"  => %{"size" => "300", "quality" => 100},
 +     "medium" => %{"size" => "500", "quality" => 100},

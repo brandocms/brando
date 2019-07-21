@@ -42,9 +42,9 @@ defmodule Brando.User do
     size_limit: 10_240_000,
     sizes: %{
       "micro" => %{
-        "size" => "25x25",
-        "quality" => 100,
-        "crop" => true
+        "size" => "25",
+        "quality" => 10,
+        "crop" => false
       },
       "thumb" => %{
         "size" => "150x150",

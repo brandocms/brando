@@ -5,6 +5,7 @@ defmodule Brando.Factory do
   alias Brando.{ImageCategory, ImageSeries, User}
 
   @sizes %{
+    "micro" => %{"size" => "25", "quality" => 1},
     "mobile" => %{"size" => "300", "quality" => 1},
     "small" => %{"size" => "300", "quality" => 1},
     "medium" => %{
@@ -25,11 +26,12 @@ defmodule Brando.Factory do
         path: "images/avatars/27i97a.jpeg",
         title: nil,
         sizes: %{
+          "micro" => "images/avatars/micro/27i97a.jpeg",
           "thumb" => "images/avatars/thumb/27i97a.jpeg",
           "small" => "images/avatars/small/27i97a.jpeg",
           "medium" => "images/avatars/medium/27i97a.jpeg",
           "large" => "images/avatars/large/27i97a.jpeg",
-          "mobile" => "images/avatars/mobile/27i97a.jpeg",
+          "mobile" => "images/avatars/mobile/27i97a.jpeg"
         }
       },
       role: :superuser,
@@ -90,7 +92,7 @@ defmodule Brando.Factory do
         "large" => %{"size" => "700", "quality" => 100},
         "xlarge" => %{"size" => "900", "quality" => 100},
         "thumb" => %{"size" => "150x150", "quality" => 100, "crop" => true},
-        "micro" => %{"size" => "25x25", "quality" => 100, "crop" => true}
+        "micro" => %{"size" => "25", "quality" => 100}
       }
     }
   end
