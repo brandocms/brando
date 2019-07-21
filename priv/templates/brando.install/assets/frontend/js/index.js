@@ -70,6 +70,7 @@ class Application {
 
     window.addEventListener('application:ready', () => {
       // on ready
+      this.links = new Links(this)
     })
 
     this.lightbox = new Lightbox()
@@ -80,7 +81,6 @@ class Application {
     this.mobileMenu = new MobileMenu(MOBILE_MENU_OPTS)
     this.cookies = new Cookies()
     this.typography = new Typography()
-    this.links = new Links(this)
 
     this._emitInitializedEvent()
     setTimeout(this.ready.apply(this), 350)
