@@ -274,7 +274,9 @@ defmodule Brando.Villain do
       render_villain page.data, %{"link" => "hello"}
   """
   @spec render_villain([map], %{required(String.t()) => String.t()}) :: binary()
-  def render_villain(data_field, vars \\ %{}) do
+  def render_villain(data_field, vars \\ %{})
+
+  def render_villain(data_field, vars) when is_list(data_field) do
     parser_mod = Brando.config(Brando.Villain)[:parser]
     html = Brando.Villain.parse(data_field, parser_mod)
 
@@ -285,4 +287,6 @@ defmodule Brando.Villain do
       end
     end)
   end
+
+  def render_villain(_, _), do: ""
 end
