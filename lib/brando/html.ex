@@ -657,6 +657,74 @@ defmodule Brando.HTML do
     end
   end
 
+  @spec include_css :: {:safe, [...]}
+  def include_css do
+    if Application.get_env(Brando.otp_app(), :hmr) do
+      url = "http://#{Brando.endpoint().host}:9999/app.css"
+      tag(:link, rel: "stylesheet", href: url)
+    else
+      cdn? = !!Brando.endpoint().config(:static_url)
+
+      url =
+        (cdn? && Brando.helpers().static_url(Brando.endpoint(), "/css/app.css")) ||
+          Brando.helpers().static_path(Brando.endpoint(), "/css/app.css")
+
+      tag(:link, rel: "stylesheet", href: url)
+    end
+  end
+
+  @spec include_js :: {:safe, [...]}
+  def include_js do
+    # check if we're HMR
+    if Application.get_env(Brando.otp_app(), :hmr) do
+      url = "http://#{Brando.endpoint().host}:9999/app.js"
+
+      [
+        content_tag(:script, "", async: true, defer: true, src: url),
+        content_tag(:i, "", class: "dbg")
+      ]
+    else
+      cdn? = !!Brando.endpoint().config(:static_url)
+
+      {modern_route, legacy_route} =
+        case cdn? do
+          true ->
+            {
+              Brando.helpers().static_url(
+                Brando.endpoint(),
+                "/js/app.modern.js"
+              ),
+              Brando.helpers().static_url(
+                Brando.endpoint(),
+                "/js/app.legacy.js"
+              )
+            }
+
+          false ->
+            {
+              Brando.helpers().static_path(
+                Brando.endpoint(),
+                "/js/app.modern.js"
+              ),
+              Brando.helpers().static_path(
+                Brando.endpoint(),
+                "/js/app.legacy.js"
+              )
+            }
+        end
+
+      polyfill = '''
+      !function(e,t,n){!("noModule"in(t=e.createElement("script")))&&"onbeforeload"in t&&(n=!1,e.addEventListener("beforeload",function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()},!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove())}(document)
+      '''
+
+      [
+        content_tag(:script, polyfill, type: "module"),
+        content_tag(:script, "", async: true, defer: true, src: modern_route, type: "module"),
+        content_tag(:script, "", async: true, defer: true, src: legacy_route, nomodule: true)
+      ]
+    end
+  end
+
   defp sort_srcset(map) when is_map(map) do
     Map.to_list(map)
     |> Enum.sort(fn {_k1, s1}, {_k2, s2} ->
