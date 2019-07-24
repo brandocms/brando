@@ -295,8 +295,8 @@ defmodule Brando.Utils do
     Brando.config(:media_url)
   end
 
-  def media_url(file) do
-    Path.join([Brando.config(:media_url), file])
+  def media_url(path) do
+    Path.join([Brando.config(:media_url), path])
   end
 
   @doc """
