@@ -380,9 +380,15 @@ defmodule Brando.HTML do
 
   ## Options:
 
+    * `lazyload` - whether to lazyload picture or not
+
     * `prefix` - string to prefix to the image's url. I.e. `prefix: media_url()`
     * `picture_class` - class added to the picture root element
+    * `picture_attrs` - list of attributes to add to picture element. I.e picture_attrs: [data_test: true]
     * `img_class` - class added to the img element. I.e img_class: "img-fluid"
+    * `img_attrs` - list of attributes to add to img element. I.e img_attrs: [data_test: true]
+    * `media_queries` - list of media queries to add to source.
+      I.e `media_queries: [{"(min-width: 0px) and (max-width: 760px)", [{"mobile", "700w"}]}]`
     * `srcset` - if you want to use the srcset attribute. Set in the form of `{module, field}`.
       I.e `srcset: {Brando.User, :avatar}`
 
@@ -420,6 +426,7 @@ defmodule Brando.HTML do
       |> add_mq(img_struct)
       |> add_dims(img_struct)
       |> add_src(img_struct)
+      |> add_attrs()
       |> add_classes()
       |> add_moonwalk()
 
@@ -466,6 +473,14 @@ defmodule Brando.HTML do
       [:img, :data_ll_image],
       lazyload && !Keyword.get(attrs.picture, :data_ll_srcset, false)
     )
+  end
+
+  defp add_attrs(attrs) do
+    img_attrs = Keyword.get(attrs.opts, :img_attrs, [])
+    picture_attrs = Keyword.get(attrs.opts, :picture_attrs, [])
+
+    attrs = Enum.reduce(img_attrs, attrs, fn {k, v}, acc -> put_in(acc, [:img, k], v) end)
+    Enum.reduce(picture_attrs, attrs, fn {k, v}, acc -> put_in(acc, [:picture, k], v) end)
   end
 
   defp add_sizes(attrs) do

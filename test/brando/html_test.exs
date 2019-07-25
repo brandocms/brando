@@ -192,5 +192,19 @@ defmodule Brando.HTMLTest do
            )
            |> safe_to_string ==
              "<picture class=\"avatar\"><source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\"><source srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+
+    assert picture_tag(
+             user.avatar,
+             srcset: srcset,
+             media_queries: media_queries,
+             prefix: media_url(),
+             key: :small,
+             picture_attrs: [data_test: true, data_test_params: "hepp"],
+             img_attrs: [data_test2: true, data_test2_params: "hepp"],
+             picture_class: "avatar",
+             img_class: "img-fluid"
+           )
+           |> safe_to_string ==
+             "<picture class=\"avatar\" data-test-params=\"hepp\" data-test><source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\"><source srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" data-test2-params=\"hepp\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" data-test2><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
   end
 end
