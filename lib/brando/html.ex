@@ -385,8 +385,10 @@ defmodule Brando.HTML do
     * `img_class` - class added to the img element. I.e img_class: "img-fluid"
     * `srcset` - if you want to use the srcset attribute. Set in the form of `{module, field}`.
       I.e `srcset: {Brando.User, :avatar}`
-      You can also reference a config struct directly:
+
+      You can also reference a config struct:
       I.e `srcset: image_series.cfg`
+
       Or supply a srcset directly:
         srcset: %{
           "small" => "300w",
@@ -394,10 +396,12 @@ defmodule Brando.HTML do
           "large" => "936w",
           "xlarge" => "1200w"
         }
-      Or a list of srcsets to generate multiple source elements
+
+      Or a list of srcsets to generate multiple source elements:
+
   """
   @spec picture_tag(Map.t(), keyword()) :: {:safe, [...]}
-  def picture_tag(img_struct, opts \\ []) do
+  def picture_tag(%Brando.Type.Image{} = img_struct, opts \\ []) do
     initial_map = %{
       img: [],
       picture: [],
@@ -657,35 +661,50 @@ defmodule Brando.HTML do
     end
   end
 
-  @spec include_css :: {:safe, [...]}
-  def include_css do
-    if Application.get_env(Brando.otp_app(), :hmr) do
-      url = "http://#{Brando.endpoint().host}:9999/app.css"
-      tag(:link, rel: "stylesheet", href: url)
-    else
-      cdn? = !!Brando.endpoint().config(:static_url)
+  @doc """
+  Include CSS link tag.
 
-      url =
+  Also includes a preconnect link tag for faster resolution
+  """
+  @spec include_css :: {:safe, [...]} | [{:safe, [...]}]
+  def include_css do
+    cdn? = !!Brando.endpoint().config(:static_url)
+    hmr? = Application.get_env(Brando.otp_app(), :hmr)
+
+    url =
+      if hmr? do
+        "http://#{Brando.endpoint().host}:9999/static/app.css"
+      else
         (cdn? && Brando.helpers().static_url(Brando.endpoint(), "/css/app.css")) ||
           Brando.helpers().static_path(Brando.endpoint(), "/css/app.css")
+      end
 
-      tag(:link, rel: "stylesheet", href: url)
-    end
+    css_tag = tag(:link, rel: "stylesheet", href: url, crossorigin: cdn?)
+
+    (cdn? &&
+       [
+         (hmr? && []) || preconnect_tag(),
+         css_tag
+       ]) || css_tag
   end
 
-  @spec include_js :: {:safe, [...]}
+  @doc """
+  Renders JS script tags
+
+  Also includes a polyfill for safari for prod.
+  """
+  @spec include_js :: [{:safe, [...]}]
   def include_js do
+    cdn? = !!Brando.endpoint().config(:static_url)
     # check if we're HMR
     if Application.get_env(Brando.otp_app(), :hmr) do
-      url = "http://#{Brando.endpoint().host}:9999/app.js"
+      url = "http://#{Brando.endpoint().host}:9999/static/app.js"
 
       [
-        content_tag(:script, "", async: true, defer: true, src: url),
+        content_tag(:script, "", defer: true, src: url),
         content_tag(:i, "", class: "dbg")
       ]
     else
-      cdn? = !!Brando.endpoint().config(:static_url)
-
       {modern_route, legacy_route} =
         case cdn? do
           true ->
@@ -713,16 +732,37 @@ defmodule Brando.HTML do
             }
         end
 
-      polyfill = '''
-      !function(e,t,n){!("noModule"in(t=e.createElement("script")))&&"onbeforeload"in t&&(n=!1,e.addEventListener("beforeload",function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()},!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove())}(document)
-      '''
+      polyfill =
+        '''
+        !function(e,t,n){!("noModule"in(t=e.createElement("script")))&&"onbeforeload"in t&&(n=!1,e.addEventListener("beforeload",function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()},!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove())}(document)
+        '''
+        |> Phoenix.HTML.raw()
 
       [
         content_tag(:script, polyfill, type: "module"),
-        content_tag(:script, "", async: true, defer: true, src: modern_route, type: "module"),
-        content_tag(:script, "", async: true, defer: true, src: legacy_route, nomodule: true)
+        content_tag(:script, "",
+          defer: true,
+          src: modern_route,
+          type: "module",
+          crossorigin: cdn?
+        ),
+        content_tag(:script, "",
+          defer: true,
+          src: legacy_route,
+          nomodule: true,
+          crossorigin: cdn?
+        )
       ]
     end
+  end
+
+  @doc """
+  Renders a link tag with preconnect to the CDN domain
+  """
+  @spec preconnect_tag :: {:safe, [...]}
+  def preconnect_tag do
+    static_url = Brando.endpoint().static_url
+    tag(:link, href: static_url, rel: "preconnect", crossorigin: true)
   end
 
   defp sort_srcset(map) when is_map(map) do
