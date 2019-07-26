@@ -54,7 +54,10 @@ defmodule Brando.Mixfile do
       :recase,
       :sentry,
       :slugger,
-      :timex
+      :timex,
+      :ex_aws,
+      :hackney,
+      :sweet_xml
     ]
   end
 
@@ -83,6 +86,12 @@ defmodule Brando.Mixfile do
 
       # monitoring
       {:sentry, "~> 7.0"},
+
+      # AWS
+      {:ex_aws, "~> 2.0"},
+      {:ex_aws_s3, "~> 2.0"},
+      {:hackney, "~> 1.9"},
+      {:sweet_xml, "~> 0.6"},
 
       # Dev dependencies
       {:credo, ">= 0.0.0", only: :dev},

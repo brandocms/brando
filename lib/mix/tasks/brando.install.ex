@@ -269,7 +269,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "assets/frontend/babel.config.js", "assets/frontend/babel.config.js"},
     {:copy, "assets/frontend/browserslistrc", "assets/frontend/.browserslistrc"},
     {:copy, "assets/frontend/eslintrc.js", "assets/frontend/.eslintrc.js"},
-    {:copy, "assets/frontend/package.json", "assets/frontend/package.json"},
+    {:eex, "assets/frontend/package.json", "assets/frontend/package.json"},
     {:copy, "assets/frontend/postcss.config.js", "assets/frontend/postcss.config.js"},
     {:copy, "assets/frontend/stylelint.config.js", "assets/frontend/stylelint.config.js"},
     {:copy, "assets/frontend/webpack.config.js", "assets/frontend/webpack.config.js"},

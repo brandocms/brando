@@ -86,23 +86,15 @@ Create your frontend translation directories: (for norwegian)
 
     $ mkdir -p priv/gettext/frontend/nb/LC_MESSAGES
 
-And backend:
-
-    $ mkdir -p priv/gettext/backend/nb/LC_MESSAGES
-
 Merge frontend translations
 
     $ mix gettext.merge priv/gettext/frontend
 
-And backend:
-
-    $ mix gettext.merge priv/gettext/backend
 
 Now we register our otp app's modules in Brando's registry to automatically set Gettext locales.
 Open up you application's `lib/application.ex` and add to `start/2`:
 
     Brando.Registry.register(MyApp.Web, [:gettext])
-    Brando.Registry.register(MyApp.Web.Backend, [:gettext])
 
 ## Extra modules
 
@@ -136,8 +128,57 @@ If you use Gettext, register your module in `lib/application.ex`:
         # worker(MyApp.Worker, [arg1, arg2, arg3]),
       ]
 
-+     Brando.Registry.register(MyApp.Web.MyModule, [:gettext])
++     Brando.Registry.register(MyAppWeb.MyModule, [:gettext])
 ```
+
+## Serve static from DO Spaces
+
+Setup Endpoint for `prod.exs`
+
+```elixir
+config :my_app, hmr: false
+config :my_app, MyAppWeb.Endpoint,
+  static_url: [
+    scheme: "https",
+    host: "cdn.univers.agency",
+    path: "/my_app/static",
+    port: 443
+  ]
+
+config :ex_aws, :s3, %{
+  access_key_id: System.get_env("AWS_ACCESS_KEY_ID"),
+  secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY"),
+  scheme: "https://",
+  host: %{"fra1" => "SPACES_NAME.fra1.digitaloceanspaces.com"},
+  region: "fra1"
+}
+```
+
+Use `Brando.HTML.include_js/0` and `Brando.HTML.include_css/0` right before `</head>`
+in `app.html.eex`, since these functions figure out whether to use `path` or `url` for
+static asset links.
+
+Add to your frontend `package.json`
+```
+"build:cdn": "yarn build:legacy:cdn && yarn build:modern:cdn",
+"build:legacy": "NODE_ENV=production BROWSERSLIST_ENV=legacy webpack --mode=production",
+"build:modern": "NODE_ENV=production BROWSERSLIST_ENV=modern webpack --mode=production",
+"build:legacy:cdn": "UNIVERS_CDN=my_app NODE_ENV=production BROWSERSLIST_ENV=legacy webpack --mode=production",
+"build:modern:cdn": "UNIVERS_CDN=my_app NODE_ENV=production BROWSERSLIST_ENV=modern webpack --mode=production",
+```
+
+Make sure you build frontend with:
+
+```dockerfile
+RUN yarn run build.cdn
+```
+
+Add to Dockerfile build:
+
+```bash
+$ mix brando.upload_static
+```
+
 
 ## Villain templates
 

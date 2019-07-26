@@ -6,17 +6,19 @@ const CopyWebpackPlugin = require('copy-webpack-plugin')
 const WriteFilePlugin = require('write-file-webpack-plugin')
 const OptimizeCSSPlugin = require('optimize-css-assets-webpack-plugin')
 const TerserPlugin = require('terser-webpack-plugin')
-const SpeedMeasurePlugin = require('speed-measure-webpack-plugin')
 const config = require('./package')
 
 const ENV = process.env.NODE_ENV || 'development'
-const IS_DEV = ENV === 'development'
-const IS_PROD = ENV === 'production'
+const isDev = ENV === 'development'
+const isProd = ENV === 'production'
+const isModern = process.env.BROWSERSLIST_ENV === 'modern'
+const isCDN = process.env.UNIVERS_CDN
 
-const OUTPUT_PATH = path.resolve(__dirname, '..', '..', 'priv', 'static')
-const smp = new SpeedMeasurePlugin()
+const OUTPUT_PATH = path.resolve(__dirname, '..', '..', 'priv')
 
-const ExtractCSS = new MiniCssExtractPlugin({ filename: 'css/[name].css' })
+const ExtractCSS = new MiniCssExtractPlugin({
+  filename: isModern ? 'static/css/[name].modern.css' : 'static/css/[name].css'
+})
 
 const Define = new Webpack.DefinePlugin({
   APP_NAME: JSON.stringify(config.app_name),
@@ -24,53 +26,76 @@ const Define = new Webpack.DefinePlugin({
   ENV: JSON.stringify(ENV)
 })
 
-var PLUGINS = IS_PROD
-  ? [ExtractCSS,
-    Define,
-    new CopyWebpackPlugin([{
-      context: './static',
-      from: '**/*',
-      to: '.',
-      force: true
-    }, {
-      context: './node_modules/font-awesome/fonts',
-      from: '*',
-      to: './fonts'
-    }], { debug: true })
-  ]
-  : [
-    new ExtractCssChunks(
-      {
-        // Options similar to the same options in webpackOptions.output
-        // both options are optional
-        filename: '[name].css',
-        orderWarning: true // Disable to remove warnings about conflicting order between imports
-      }
-    ),
-    Define,
-    new WriteFilePlugin(),
-    new CopyWebpackPlugin([{
-      context: './static',
-      from: '**/*',
-      to: '.',
-      force: true
-    }, {
-      context: './node_modules/font-awesome/fonts',
-      from: '*',
-      to: './fonts'
-    }], { debug: true })
-  ]
+const PLUGINS_PROD = [
+  ExtractCSS,
+  Define,
+  new CopyWebpackPlugin([{
+    context: './static',
+    from: '**/*',
+    to: './static',
+    ignore: [
+      'fonts/'
+    ],
+    force: true
+  }, {
+    context: './node_modules/font-awesome/fonts',
+    from: '*',
+    to: './static/fonts'
+  }], { debug: true })
+]
+
+const PLUGINS_DEV = [
+  new ExtractCssChunks(
+    {
+      filename: 'static/[name].css',
+      orderWarning: true
+    }
+  ),
+  Define,
+  new WriteFilePlugin(),
+  new CopyWebpackPlugin([{
+    context: './static',
+    from: '**/*',
+    to: './static/',
+    force: true
+  }, {
+    context: './node_modules/font-awesome/fonts',
+    from: '*',
+    to: './static/fonts'
+  }], { debug: true })
+]
+
+const OUTPUT_PROD = {
+  filename: isModern ? 'static/js/app.modern.js' : 'static/js/app.legacy.js',
+  path: OUTPUT_PATH,
+  publicPath: isCDN ? '/' + isCDN + '/' : ''
+}
+
+const OUTPUT_DEV = {
+  futureEmitAssets: false,
+  path: OUTPUT_PATH,
+  filename: 'static/app.js',
+  publicPath: 'http://antennae.local:9999/'
+}
+
+const PLUGINS = isProd ? PLUGINS_PROD : PLUGINS_DEV
 
 const cfg = {
   target: 'web',
   entry: {
     app: [
+      isModern ? './js/polyfills.modern.js' : './js/polyfills.legacy.js',
       './js/index.js'
     ]
   },
 
+  devtool: isProd ? '' : 'cheap-module-eval-source-map',
+
   devServer: {
     port: 9999,
+    host: '0.0.0.0',
+    useLocalIp: true,
+    overlay: true,
     disableHostCheck: true,
     headers: {
       'Access-Control-Allow-Origin': '*'
@@ -82,10 +107,11 @@ const cfg = {
       new TerserPlugin({
         cache: true,
         parallel: true,
-        sourceMap: IS_DEV,
+        sourceMap: isDev,
         terserOptions: {
           mangle: true,
           toplevel: true,
+          safari10: true,
           output: {
             comments: false
           }
@@ -111,21 +137,11 @@ const cfg = {
     }
   },
 
-  output: IS_PROD
-    ? {
-      filename: 'js/app.js',
-      path: OUTPUT_PATH
-    }
-    : {
-      futureEmitAssets: false,
-      path: OUTPUT_PATH,
-      filename: 'app.js',
-      publicPath: 'http://localhost:9999/'
-    },
+  output: isProd ? OUTPUT_PROD : OUTPUT_DEV,
 
   module: {
     rules: [
-      IS_PROD
+      isProd
         ? {
           test: /\.js$/,
           exclude: /node_modules(?!\/jupiter)/,
@@ -136,11 +152,13 @@ const cfg = {
           exclude: /node_modules(?!\/(jupiter|normalize-url|prepend-http|sort-keys))/,
           loader: 'babel-loader'
         },
-      IS_PROD
+      isProd
         ? {
           test: /\.(sa|sc|c)ss$/,
           use: [
-            MiniCssExtractPlugin.loader,
+            {
+              loader: MiniCssExtractPlugin.loader
+            },
             'css-loader',
             'postcss-loader',
             'sass-loader'
@@ -163,7 +181,15 @@ const cfg = {
         },
       {
         test: /\.(eot|svg|ttf|woff|woff2)$/,
-        loader: 'url-loader'
+        use: [
+          {
+            loader: 'url-loader',
+            options: {
+              limit: 8192,
+              name: '[path][name].[ext]'
+            },
+          },
+        ]
       }
     ]
   },
@@ -175,4 +201,4 @@ const cfg = {
   }
 }
 
-module.exports = smp.wrap(cfg)
+module.exports = cfg
