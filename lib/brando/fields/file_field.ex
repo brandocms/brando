@@ -147,7 +147,9 @@ defmodule Brando.Field.FileField do
 
   """
   @spec handle_file_upload(atom, Plug.Upload.t() | Map.t(), Brando.Type.FileConfig.t()) ::
-          {:ok, {atom, Brando.Type.File}} | {:error, {atom, {:error, String.t()}}}
+          {:ok, {:handled, Brando.Type.File}}
+          | {:ok, {:unhandled, atom, term}}
+          | {:error, {atom, {:error, String.t()}}}
   def handle_file_upload(name, %Plug.Upload{} = plug, cfg) do
     with {:ok, upload} <- process_upload(plug, cfg),
          {:ok, field} <- create_file_struct(upload) do

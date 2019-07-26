@@ -8,6 +8,7 @@ defmodule Brando.Images.Utils do
   @type id :: String.t() | integer
   @type user :: Brando.User.t() | :system
   @type image_schema :: Brando.Image.t()
+  @type image_series_schema :: Brando.ImageSeries.t()
   @type image_struct :: Brando.Type.Image.t()
   @type image_kind :: :image | :image_series | :image_field
 
@@ -24,8 +25,9 @@ defmodule Brando.Images.Utils do
   @doc """
   Create an image struct from upload, cfg and extra info
   """
-  @spec create_image_struct(Upload.t(), user) ::
-          {:ok, image_struct} | {:error, {:create_image_sizes, any()}}
+  @spec create_image_struct(upload :: Upload.t(), user :: user) ::
+          {:ok, image_struct}
+          | {:error, {:create_image_sizes, any()}}
   def create_image_struct(
         %Upload{plug: %{uploaded_file: file}, cfg: cfg, extra_info: %{focal: focal}},
         user
@@ -236,7 +238,7 @@ defmodule Brando.Images.Utils do
       delete_original_and_sized_images(record, :cover)
 
   """
-  @spec delete_original_and_sized_images(Image.t(), atom) :: {:ok, Image.t()}
+  @spec delete_original_and_sized_images(schema :: term, key :: atom) :: {:ok, Image.t()}
   def delete_original_and_sized_images(image, key) do
     img = Map.get(image, key)
 
@@ -286,7 +288,7 @@ defmodule Brando.Images.Utils do
       "test/dir/thumb/filename.jpg"
 
   """
-  @spec get_sized_path(String.t(), atom | String.t()) :: String.t()
+  @spec get_sized_path(path :: String.t(), size :: atom | String.t()) :: String.t()
   def get_sized_path(path, size) when is_binary(size) do
     {dir, filename} = split_path(path)
     Path.join([dir, size, filename])
@@ -305,7 +307,7 @@ defmodule Brando.Images.Utils do
       "test/dir/thumb"
 
   """
-  @spec get_sized_dir(String.t(), atom | String.t()) :: String.t()
+  @spec get_sized_dir(path :: String.t(), size :: atom | String.t()) :: String.t()
   def get_sized_dir(path, size) when is_binary(size) do
     {dir, _} = split_path(path)
     Path.join([dir, size])
@@ -318,6 +320,8 @@ defmodule Brando.Images.Utils do
   @doc """
   Reset image field's `:optimized` flag
   """
+  @spec reset_optimized_flag(img_schema :: image_schema | image_struct) ::
+          image_schema | image_struct
   def reset_optimized_flag(%Image{} = img_schema) do
     put_in(img_schema.image.optimized, false)
   end
@@ -329,7 +333,7 @@ defmodule Brando.Images.Utils do
   @doc """
   Returns image type atom.
   """
-  @spec image_type(String.t()) :: :jpeg | :png | :gif | :bmp | :tiff | :svg | :crw | :webp
+  @spec image_type(filename :: String.t()) :: atom
   def image_type(filename) do
     case String.downcase(Path.extname(filename)) do
       ".jpg" -> :jpeg
@@ -350,6 +354,9 @@ defmodule Brando.Images.Utils do
   Return joined path of `file` and the :media_path config option
   as set in your app's config.exs.
   """
+
+  @spec media_path() :: String.t()
+  @spec media_path(nil | binary) :: String.t()
   def media_path, do: Brando.config(:media_path)
   def media_path(nil), do: Brando.config(:media_path)
   def media_path(file), do: Path.join([Brando.config(:media_path), file])
@@ -357,7 +364,7 @@ defmodule Brando.Images.Utils do
   @doc """
   Add `-optimized` between basename and ext of `file`.
   """
-  @spec optimized_filename(String.t()) :: String.t()
+  @spec optimized_filename(file :: String.t()) :: String.t()
   def optimized_filename(file) do
     {path, filename} = split_path(file)
     {basename, ext} = split_filename(filename)
@@ -368,7 +375,7 @@ defmodule Brando.Images.Utils do
   @doc """
   Delete all images depending on imageserie `series_id`
   """
-  @spec delete_images_for(:image_series, integer) :: :ok
+  @spec delete_images_for(:image_series, series_id :: integer) :: :ok
   def delete_images_for(:image_series, series_id) do
     images =
       Brando.repo().all(
@@ -387,7 +394,9 @@ defmodule Brando.Images.Utils do
   @doc """
   Delete all imageseries dependant on `category_id`
   """
-  @spec delete_series_for(:image_category, integer) :: [ImageSeries.t() | no_return]
+  @spec delete_series_for(:image_category, category_id :: integer) :: [
+          image_series_schema | no_return
+        ]
   def delete_series_for(:image_category, category_id) do
     image_series =
       Brando.repo().all(
@@ -405,7 +414,7 @@ defmodule Brando.Images.Utils do
   Checks that the existing images' path matches the config. these may differ
   when series has been renamed!
   """
-  @spec check_image_paths(module, map) :: :unchanged | :changed
+  @spec check_image_paths(module, map | image_series_schema) :: :unchanged | :changed
   def check_image_paths(schema, image_series) do
     upload_path = image_series.cfg.upload_path
 
