@@ -690,8 +690,8 @@ defmodule Brando.HTML do
       if hmr? do
         "http://#{Brando.endpoint().host}:9999/static/app.css"
       else
-        (cdn? && Brando.helpers().static_url(Brando.endpoint(), "/css/app.css")) ||
-          Brando.helpers().static_path(Brando.endpoint(), "/css/app.css")
+        (cdn? && Brando.helpers().static_url(Brando.endpoint(), "/css/app.legacy.css")) ||
+          Brando.helpers().static_path(Brando.endpoint(), "/css/app.legacy.css")
       end
 
     css_tag = tag(:link, rel: "stylesheet", href: url, crossorigin: cdn?)
