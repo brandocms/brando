@@ -688,10 +688,10 @@ defmodule Brando.HTML do
 
     url =
       if hmr? do
-        "http://#{Brando.endpoint().host}:9999/static/app.css"
+        "http://#{Brando.endpoint().host}:9999/css/app.css"
       else
-        (cdn? && Brando.helpers().static_url(Brando.endpoint(), "/css/app.legacy.css")) ||
-          Brando.helpers().static_path(Brando.endpoint(), "/css/app.legacy.css")
+        (cdn? && Brando.helpers().static_url(Brando.endpoint(), "/css/app.css")) ||
+          Brando.helpers().static_path(Brando.endpoint(), "/css/app.css")
       end
 
     css_tag = tag(:link, rel: "stylesheet", href: url, crossorigin: cdn?)
@@ -713,7 +713,7 @@ defmodule Brando.HTML do
     cdn? = !!Brando.endpoint().config(:static_url)
     # check if we're HMR
     if Application.get_env(Brando.otp_app(), :hmr) do
-      url = "http://#{Brando.endpoint().host}:9999/static/app.js"
+      url = "http://#{Brando.endpoint().host}:9999/js/app.js"
 
       [
         content_tag(:script, "", defer: true, src: url),
@@ -726,7 +726,7 @@ defmodule Brando.HTML do
             {
               Brando.helpers().static_url(
                 Brando.endpoint(),
-                "/js/app.modern.js"
+                "/js/app.js"
               ),
               Brando.helpers().static_url(
                 Brando.endpoint(),
@@ -738,7 +738,7 @@ defmodule Brando.HTML do
             {
               Brando.helpers().static_path(
                 Brando.endpoint(),
-                "/js/app.modern.js"
+                "/js/app.js"
               ),
               Brando.helpers().static_path(
                 Brando.endpoint(),
