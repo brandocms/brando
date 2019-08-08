@@ -66,7 +66,6 @@ defmodule Brando.Meta.Controller do
     * cover image (`cover`)
     * `meta_title`
     * `meta_description`
-    * `meta_keywords`
   """
   def extract_meta(conn, record) do
     meta_image =
@@ -87,9 +86,7 @@ defmodule Brando.Meta.Controller do
     conn =
       conn
       |> put_meta("description", record.meta_description)
-      |> put_meta("keywords", record.meta_keywords)
       |> put_meta("og:description", record.meta_description)
-      |> put_meta("og:keywords", record.meta_keywords)
 
     conn =
       if meta_image do

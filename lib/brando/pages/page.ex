@@ -11,7 +11,7 @@ defmodule Brando.Pages.Page do
   alias Brando.Type.Status
 
   @required_fields ~w(key language slug title data status creator_id)a
-  @optional_fields ~w(parent_id meta_description meta_keywords html css_classes)a
+  @optional_fields ~w(parent_id meta_description html css_classes)a
   @derived_fields ~w(
     id
     key
@@ -25,7 +25,6 @@ defmodule Brando.Pages.Page do
     creator_id
     parent_id
     meta_description
-    meta_keywords
     inserted_at
     updated_at
   )a
@@ -44,7 +43,6 @@ defmodule Brando.Pages.Page do
     has_many :children, __MODULE__, foreign_key: :parent_id
     has_many :fragments, Brando.Pages.PageFragment
     field :meta_description, :string
-    field :meta_keywords, :string
     timestamps()
   end
 

@@ -187,26 +187,11 @@ defmodule Brando.HTML do
     |> put_meta("og:site_name", app_name)
     |> put_meta("og:type", "website")
     |> put_meta("og:url", Brando.Utils.current_url(conn))
-    |> maybe_put_meta_keywords()
     |> maybe_put_meta_description()
     |> maybe_put_meta_image
     |> get_meta()
     |> Enum.map(&elem(meta_tag(&1), 1))
     |> raw()
-  end
-
-  defp maybe_put_meta_keywords(conn) do
-    case get_meta(conn, "keywords") do
-      nil ->
-        if meta_keywords = Brando.Config.get_site_config("meta_keywords") do
-          put_meta(conn, "keywords", meta_keywords)
-        else
-          conn
-        end
-
-      _ ->
-        conn
-    end
   end
 
   defp maybe_put_meta_description(conn) do

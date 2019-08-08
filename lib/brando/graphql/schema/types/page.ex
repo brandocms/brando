@@ -11,7 +11,6 @@ defmodule Brando.Schema.Types.Page do
     field :data, :json
     field :css_classes, :string
     field :meta_description, :string
-    field :meta_keywords, :string
   end
 
   object :page do
@@ -36,7 +35,6 @@ defmodule Brando.Schema.Types.Page do
         end)
 
     field :meta_description, :string
-    field :meta_keywords, :string
     field :inserted_at, :time
     field :updated_at, :time
   end

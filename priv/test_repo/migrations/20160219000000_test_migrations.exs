@@ -29,7 +29,6 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add(:status, :integer)
       add(:creator_id, references(:users_users))
       add(:meta_description, :text)
-      add(:meta_keywords, :text)
       add(:featured, :boolean)
       add(:published, :boolean)
       add(:publish_at, :naive_datetime)
@@ -96,7 +95,6 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add(:creator_id, references(:users_users))
       add(:css_classes, :text)
       add(:meta_description, :text)
-      add(:meta_keywords, :text)
       timestamps()
     end
 

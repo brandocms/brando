@@ -98,7 +98,6 @@ describe('Pages', () => {
     cy.get('#page_key_').type('my-key')
     cy.get('#page_title_').type('My title')
     cy.get('#page_meta_description_').type('Meta description')
-    cy.get('#page_meta_keywords_').type('Meta keywords')
     cy.get('#page_css_classes_').type('css class')
 
     cy.get('.villain-editor-plus-inactive > a').click()
