@@ -48,24 +48,28 @@ defmodule Brando.User do
       },
       "thumb" => %{
         "size" => "150x150",
-        "quality" => 100,
+        "quality" => 65,
         "crop" => true
       },
       "small" => %{
-        "size" => "300",
-        "quality" => 100
+        "size" => "300x300",
+        "quality" => 65,
+        "crop" => true
       },
       "medium" => %{
-        "size" => "500",
-        "quality" => 100
+        "size" => "500x500",
+        "quality" => 65,
+        "crop" => true
       },
       "large" => %{
-        "size" => "700",
-        "quality" => 100
+        "size" => "700x700",
+        "quality" => 65,
+        "crop" => true
       },
       "xlarge" => %{
-        "size" => "900",
-        "quality" => 100
+        "size" => "900x900",
+        "quality" => 65,
+        "crop" => true
       }
     },
     srcset: %{

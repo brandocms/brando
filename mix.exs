@@ -68,7 +68,6 @@ defmodule Brando.Mixfile do
       {:earmark, "~> 1.2"},
       {:gettext, "~> 0.11"},
       {:httpoison, "~> 1.0"},
-      {:mogrify, "~> 0.5"},
       {:phoenix, "~> 1.4.0"},
       {:phoenix_html, "~> 2.6"},
       {:phoenix_ecto, "~> 4.0"},
@@ -86,6 +85,10 @@ defmodule Brando.Mixfile do
 
       # monitoring
       {:sentry, "~> 7.0"},
+      {:mogrify, "~> 0.5"},
+
+      # images
+      {:fastimage, "~> 1.0.0-rc4"},
 
       # AWS
       {:ex_aws, "~> 2.0"},

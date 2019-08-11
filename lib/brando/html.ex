@@ -547,6 +547,16 @@ defmodule Brando.HTML do
     |> put_in([:noscript_img, :src], src)
   end
 
+  # automatically add dims when lazyload: true
+  defp add_dims(%{lazyload: true} = attrs, img_struct) do
+    width = Map.get(img_struct, :width) || false
+    height = Map.get(img_struct, :height) || false
+
+    attrs
+    |> put_in([:img, :width], width)
+    |> put_in([:img, :height], height)
+  end
+
   defp add_dims(attrs, img_struct) do
     width = (Keyword.get(attrs.opts, :width) && Map.get(img_struct, :width)) || false
     height = (Keyword.get(attrs.opts, :height) && Map.get(img_struct, :height)) || false
@@ -558,7 +568,7 @@ defmodule Brando.HTML do
 
   defp add_moonwalk(attrs) do
     moonwalk = Keyword.get(attrs.opts, :moonwalk, false)
-    put_in(attrs, [:picture, :moonwalk], moonwalk)
+    put_in(attrs, [:img, :data_moonwalk], moonwalk)
   end
 
   @doc """

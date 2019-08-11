@@ -86,7 +86,7 @@ defmodule Brando.Images do
 
     unless Map.equal?(Map.get(schema.image, :focal, nil), focal) do
       updated_schema = put_in(schema.image, image)
-      _ = Images.Utils.recreate_sizes_for_image(updated_schema, user)
+      _ = Images.Processing.recreate_sizes_for_image(updated_schema, user)
     end
 
     update_image(schema, %{"image" => image})
@@ -132,7 +132,7 @@ defmodule Brando.Images do
         # if slug is changed we recreate all the image sizes to reflect the new path
         if Ecto.Changeset.get_change(changeset, :slug) ||
              Ecto.Changeset.get_change(changeset, :image_category_id),
-           do: Images.Utils.recreate_sizes_for_image_series(inserted_series.id, user)
+           do: Images.Processing.recreate_sizes_for_image_series(inserted_series.id, user)
 
         {:ok, Brando.repo().preload(inserted_series, :image_category)}
 
@@ -163,7 +163,7 @@ defmodule Brando.Images do
 
     case res do
       {:ok, series} ->
-        Images.Utils.recreate_sizes_for_image_series(series.id, user)
+        Images.Processing.recreate_sizes_for_image_series(series.id, user)
         {:ok, series}
 
       err ->

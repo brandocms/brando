@@ -39,6 +39,7 @@ config :brando,
   stats_polling_interval: 5000
 
 config :brando, Brando.Images,
+  processor_module: Brando.Images.Processing.Sharp,
   default_config: %{
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
     default_size: :medium,

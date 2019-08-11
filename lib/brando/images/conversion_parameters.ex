@@ -22,7 +22,7 @@ defmodule Brando.Images.ConversionParameters do
             transformed_focal_point: nil,
             anchor: nil,
             quality: "100",
-            resize_geography: nil,
-            crop_geography: nil,
+            resize_values: nil,
+            crop_values: nil,
             format: nil
 end

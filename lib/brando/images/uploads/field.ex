@@ -32,7 +32,7 @@ defmodule Brando.Images.Upload.Field do
           {:ok, {:handled, atom, Type.Image}} | {:error, {atom, {:error, String.t()}}}
   def handle_upload(name, %Plug.Upload{} = plug, cfg, user) do
     with {:ok, upload} <- Upload.process_upload(plug, cfg),
-         {:ok, img_struct} <- Images.Utils.create_image_struct(upload, user),
+         {:ok, img_struct} <- Images.Processing.create_image_struct(upload, user),
          {:ok, operations} <- Images.Operations.create_operations(img_struct, cfg, user),
          {:ok, results} <- Images.Operations.perform_operations(operations, user) do
       img_struct =

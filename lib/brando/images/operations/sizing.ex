@@ -92,13 +92,12 @@ defmodule Brando.Images.Operations.Sizing do
           |> add_size_cfg(size_cfg)
           |> add_quality()
           |> add_focal_point(focal)
-          |> add_open_image()
           |> add_crop_flag()
           |> add_crop_dimensions()
           |> add_resize_dimensions()
           |> add_anchor()
-          |> add_geographies()
-          |> process_image()
+          |> add_values()
+          |> delegate_processor()
 
         set_progress(conversion_parameters, 100, filename, user)
         result
@@ -109,61 +108,12 @@ defmodule Brando.Images.Operations.Sizing do
   end
 
   @doc """
-  Process image conversion when crop is false
+  Get processor module from config and call process function
   """
-  def process_image(%Images.ConversionParameters{
-        id: id,
-        size_key: size_key,
-        crop: false,
-        image: image,
-        quality: quality,
-        format: format,
-        image_dest_path: image_dest_path,
-        image_dest_rel_path: image_dest_rel_path,
-        resize_geography: resize_geography
-      }) do
-    image
-    |> Mogrify.format(format)
-    |> Mogrify.custom("quality", quality)
-    |> Mogrify.resize_to_limit(resize_geography)
-    |> Mogrify.save(path: image_dest_path)
-
-    {:ok,
-     %Images.TransformResult{
-       id: id,
-       size_key: size_key,
-       image_path: image_dest_rel_path
-     }}
-  end
-
-  @doc """
-  Process image conversion when crop is true
-  """
-  def process_image(%Images.ConversionParameters{
-        id: id,
-        size_key: size_key,
-        crop: true,
-        image: image,
-        quality: quality,
-        format: format,
-        image_dest_path: image_dest_path,
-        image_dest_rel_path: image_dest_rel_path,
-        resize_geography: resize_geography,
-        crop_geography: crop_geography
-      }) do
-    image
-    |> Mogrify.format(format)
-    |> Mogrify.custom("quality", quality)
-    |> Mogrify.custom("resize", resize_geography)
-    |> Mogrify.custom("crop", crop_geography)
-    |> Mogrify.save(path: image_dest_path)
-
-    {:ok,
-     %Images.TransformResult{
-       id: id,
-       size_key: size_key,
-       image_path: image_dest_rel_path
-     }}
+  def delegate_processor(conversion_parameters) do
+    # grab processor module
+    module = Brando.config(Brando.Images)[:processor_module] || Brando.Images.Processor.Mogrify
+    apply(module, :process_image, [conversion_parameters])
   end
 
   @doc """
@@ -196,14 +146,6 @@ defmodule Brando.Images.Operations.Sizing do
         size_cfg
       ) do
     Map.put(conversion_parameters, :size_cfg, get_size_cfg_orientation(size_cfg, height, width))
-  end
-
-  @doc """
-  Add the opened Mogrify image to conversion parameters
-  """
-  def add_open_image(conversion_parameters) do
-    image = Mogrify.open(conversion_parameters.image_src_path)
-    Map.put(conversion_parameters, :image, image)
   end
 
   @doc """
@@ -289,9 +231,9 @@ defmodule Brando.Images.Operations.Sizing do
   end
 
   @doc """
-  Add resize and crop geometries to conversion parameters if `crop` is true
+  Add resize and crop values to conversion parameters if `crop` is true
   """
-  def add_geographies(
+  def add_values(
         %{
           crop: true,
           anchor: anchor,
@@ -301,21 +243,46 @@ defmodule Brando.Images.Operations.Sizing do
           crop_height: crop_height
         } = conversion_parameters
       ) do
-    resize_geography = "#{resize_width}x#{resize_height}"
-    crop_geography = "#{crop_width}x#{crop_height}+#{anchor.x}+#{anchor.y}"
+    resize_values = %{
+      width: resize_width,
+      height: resize_height
+    }
+
+    crop_values = %{
+      width: crop_width,
+      height: crop_height,
+      top: anchor.x,
+      left: anchor.y
+    }
 
     conversion_parameters
-    |> Map.put(:resize_geography, resize_geography)
-    |> Map.put(:crop_geography, crop_geography)
+    |> Map.put(:resize_values, resize_values)
+    |> Map.put(:crop_values, crop_values)
   end
 
   @doc """
   Add resize geometry from size config to conversion parameters if `crop` is false
   """
-  def add_geographies(
-        %{crop: false, size_cfg: %{"size" => resize_geography}} = conversion_parameters
-      ) do
-    Map.put(conversion_parameters, :resize_geography, resize_geography)
+  def add_values(%{crop: false, size_cfg: %{"size" => resize_geography}} = conversion_parameters) do
+    resize_values =
+      resize_geography
+      |> String.replace(~r/\^|\!|\>|\<|\%/, "")
+      |> String.split("x")
+      |> case do
+        ["", target_height] ->
+          %{height: String.to_integer(target_height)}
+
+        [target_width, target_height] ->
+          %{
+            width: String.to_integer(target_width),
+            height: String.to_integer(target_height)
+          }
+
+        [target_width] ->
+          %{width: String.to_integer(target_width)}
+      end
+
+    Map.put(conversion_parameters, :resize_values, resize_values)
   end
 
   @doc """
@@ -332,9 +299,7 @@ defmodule Brando.Images.Operations.Sizing do
     |> calculate_anchor()
   end
 
-  def add_anchor(%{crop: false} = conversion_parameters) do
-    conversion_parameters
-  end
+  def add_anchor(%{crop: false} = conversion_parameters), do: conversion_parameters
 
   @doc """
   Calculate anchor
