@@ -172,25 +172,6 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
-  def do_handle_in("config:get", _, socket) do
-    cfg = Brando.Config.get_site_config()
-    {:reply, {:ok, %{code: 200, cfg: cfg}}, socket}
-  end
-
-  def do_handle_in("config:set", %{"cfg" => cfg}, socket) do
-    Brando.Config.set_site_config(cfg)
-    {:reply, {:ok, %{code: 200, cfg: cfg}}, socket}
-  end
-
-  def do_handle_in(
-        "config:add_key",
-        %{"key" => key, "description" => description, "type" => type},
-        socket
-      ) do
-    Brando.Config.register_key(key, %{"description" => description, "type" => type})
-    {:reply, {:ok, %{code: 200}}, socket}
-  end
-
   def do_handle_in("user:deactivate", %{"user_id" => user_id}, socket) do
     Brando.Users.set_active(user_id, false)
     {:reply, {:ok, %{code: 200, user_id: user_id}}, socket}

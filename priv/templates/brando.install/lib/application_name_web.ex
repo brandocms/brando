@@ -18,6 +18,7 @@ defmodule <%= application_module %>Web do
 
   def schema do
     quote do
+      use Brando.JSONLD.Schema
       use Ecto.Schema
 
       import Ecto

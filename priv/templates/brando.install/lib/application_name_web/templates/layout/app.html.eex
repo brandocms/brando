@@ -19,6 +19,8 @@
 
     <%%= Brando.HTML.include_css() %>
     <%%= Brando.HTML.include_js() %>
+
+    <%%= Brando.HTML.render_json_ld(@conn) %>
   </head>
   <%%= body_tag @conn, id: "top" %>
     <%%= cookie_law(

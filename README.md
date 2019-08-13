@@ -51,20 +51,6 @@ config :my_app, MyApp.Endpoint,
   watchers: [npm: ["run", "watch", cd: Path.expand("../assets/frontend", __DIR__)]]
 ```
 
-Now lets add the presence server. First in `lib/application.ex` add a supervisor:
-
-```elixir
-MyApp.Presence
-```
-
-Then add the presence mixin to your `admin_channel.ex`
-
-```elixir
-use Brando.Mixin.Channels.PresenceMixin,
-  presence_module: MyApp.Presence
-```
-
-
 *Remember to switch out your ports and configure SSL in `etc/supervisor/prod.conf` and `etc/nginx/prod.conf`*
 
 ## Dependencies

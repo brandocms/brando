@@ -3,7 +3,7 @@ defmodule Brando.Repo.Migrations.ChangeTableNames do
 
   def change do
     alter table(:pages_pages) do
-      delete(:meta_keywords)
+      remove :meta_keywords
     end
   end
 end

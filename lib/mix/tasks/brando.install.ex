@@ -34,6 +34,9 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "etc/supervisord/prod.conf", "etc/supervisord/prod.conf"},
     {:eex, "etc/supervisord/staging.conf", "etc/supervisord/staging.conf"},
 
+    # Main application file
+    {:eex, "lib/application_name/application.ex", "lib/application_name/application.ex"},
+
     # Tuple implementation for Poison
     {:eex, "lib/application_name/tuple.ex", "lib/application_name/tuple.ex"},
 

@@ -53,11 +53,15 @@ defmodule Brando.Images.Operations do
   """
   @spec perform_operations(operations :: [operation], user :: user) :: {:ok, [operation_result]}
   def perform_operations(operations, user) do
+    require Logger
+
     Progress.show_progress(user)
+    Logger.info("==> Brando.Images.Operations: Starting #{Enum.count(operations)} operations..")
+    start_msec = :os.system_time(:millisecond)
 
     operation_results =
       operations
-      |> Flow.from_enumerable(stages: 5, max_demand: 1)
+      |> Flow.from_enumerable(max_demand: 5)
       |> Flow.map(&resize_image/1)
       |> Flow.reduce(fn -> %{} end, fn operation, map ->
         Map.update(map, operation.id, [operation], &[operation | &1])
@@ -65,6 +69,11 @@ defmodule Brando.Images.Operations do
       |> Flow.departition(&Map.new/0, &Map.merge(&1, &2, fn _, la, lb -> la ++ lb end), & &1)
       |> Enum.map(fn result -> compile_transform_results(result, operations) end)
       |> List.flatten()
+
+    end_msec = :os.system_time(:millisecond)
+
+    seconds_lapsed = (end_msec - start_msec) * 0.001
+    Logger.info("==> Brando.Images.Operations: Finished in #{seconds_lapsed} seconds..")
 
     Progress.hide_progress(user)
 

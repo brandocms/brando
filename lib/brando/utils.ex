@@ -2,6 +2,9 @@ defmodule Brando.Utils do
   @moduledoc """
   Assorted utility functions.
   """
+
+  alias Brando.Cache
+
   @filtered_deps [
     :brando,
     :brando_analytics,
@@ -237,12 +240,9 @@ defmodule Brando.Utils do
   Returns scheme, host and port (if non-standard)
   """
   @spec hostname() :: String.t()
-  def hostname do
-    url_cfg = Brando.endpoint().config(:url)
-    scheme = Keyword.get(url_cfg, :scheme, "http")
-    host = Keyword.get(url_cfg, :host, "localhost")
-    "#{scheme}://#{host}"
-  end
+  @spec hostname(path :: String.t()) :: String.t()
+  def hostname, do: "#{Brando.endpoint().url}"
+  def hostname(path), do: Path.join(hostname(), path)
 
   @doc """
   Returns full url path with scheme and host.
@@ -286,32 +286,25 @@ defmodule Brando.Utils do
   as set in your app's config.exs.
   """
   @spec media_url :: String.t() | nil
-  def media_url do
-    Brando.config(:media_url)
-  end
-
+  def media_url, do: Brando.config(:media_url)
   @spec media_url(String.t() | nil) :: String.t() | nil
-  def media_url(nil) do
-    Brando.config(:media_url)
-  end
-
-  def media_url(path) do
-    Path.join([Brando.config(:media_url), path])
-  end
+  def media_url(nil), do: Brando.config(:media_url)
+  def media_url(path), do: Path.join([Brando.config(:media_url), path])
 
   @doc """
   Get title assign from `conn`
   """
   @spec get_page_title(Plug.Conn.t()) :: String.t()
   def get_page_title(%{assigns: %{page_title: title}}) do
-    prefix = Brando.config(:title_prefix) || ""
-    postfix = Brando.config(:title_postfix) || ""
-
-    prefix <> title <> postfix
+    organization = Cache.get(:organization)
+    %{title_prefix: title_prefix, title_postfix: title_postfix} = organization
+    "#{title_prefix || ""}#{title}#{title_postfix || ""}"
   end
 
   def get_page_title(_) do
-    Brando.config(:app_name)
+    organization = Cache.get(:organization)
+    %{title_prefix: title_prefix, title_postfix: title_postfix, title: title} = organization
+    "#{title_prefix || ""}#{title || Brando.config(:app_name)}#{title_postfix || ""}"
   end
 
   @doc """

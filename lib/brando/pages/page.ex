@@ -9,6 +9,7 @@ defmodule Brando.Pages.Page do
   use Brando.Villain.Schema
 
   alias Brando.Type.Status
+  alias Brando.JSONLD
 
   @required_fields ~w(key language slug title data status creator_id)a
   @optional_fields ~w(parent_id meta_description html css_classes)a
@@ -28,8 +29,28 @@ defmodule Brando.Pages.Page do
     inserted_at
     updated_at
   )a
-  @derive {Jason.Encoder, only: @derived_fields}
 
+  json_ld_schema JSONLD.Schema.Article do
+    field :author, {:references, :identity}
+    field :copyrightHolder, {:references, :identity}
+    field :copyrightYear, :string, [:inserted_at], & &1.year
+    field :creator, {:references, :creator}
+    field :dateModified, :string, [:updated_at], &Timex.to_datetime(&1, :utc)
+    field :datePublished, :string, [:inserted_at], &Timex.to_datetime(&1, :utc)
+    field :description, :string, [:meta_description]
+    field :headline, :string, [:title]
+    field :inLanguage, :string, [:language]
+    field :mainEntityOfPage, :string, &get_absolute_url/1
+    field :name, :string, [:title]
+    field :publisher, {:references, :creator}
+    field :url, :string, &get_absolute_url/1
+  end
+
+  def get_absolute_url(data) do
+    "blabla #{data.id}"
+  end
+
+  @derive {Jason.Encoder, only: @derived_fields}
   schema "pages_pages" do
     field :key, :string
     field :language, :string

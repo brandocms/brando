@@ -48,4 +48,16 @@ defmodule Brando.Plug.HTML do
   def put_title(conn, title) do
     assign(conn, :page_title, title)
   end
+
+  @doc """
+  Adds JSON-LD to conn
+  """
+  def put_json_ld(conn, :breadcrumbs, breadcrumbs) do
+    assign(conn, :json_ld_breadcrumbs, breadcrumbs)
+  end
+
+  # puts entity data in conn
+  def put_json_ld(conn, module, data) do
+    assign(conn, :json_ld_entity, module.extract_json_ld(data))
+  end
 end

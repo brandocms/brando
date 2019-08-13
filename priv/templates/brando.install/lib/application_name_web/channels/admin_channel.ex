@@ -5,6 +5,8 @@ defmodule <%= application_module %>.AdminChannel do
 
   use Phoenix.Channel
   use Brando.Mixin.Channels.AdminChannelMixin
+  use Brando.Mixin.Channels.PresenceMixin,
+    presence_module: <%= application_module %>.Presence
 
   # ++imports
   # __imports

@@ -40,6 +40,7 @@ defmodule Brando.Mixfile do
 
   defp applications(_all) do
     [
+      :cachex,
       :flow,
       :absinthe,
       :gettext,
@@ -86,6 +87,9 @@ defmodule Brando.Mixfile do
       # monitoring
       {:sentry, "~> 7.0"},
       {:mogrify, "~> 0.5"},
+
+      # cache
+      {:cachex, "~> 3.2"},
 
       # images
       {:fastimage, "~> 1.0.0-rc4"},

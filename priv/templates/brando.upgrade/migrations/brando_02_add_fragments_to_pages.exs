@@ -3,7 +3,7 @@ defmodule Brando.Repo.Migrations.AddFragmentsToPages do
 
   def change do
     alter table(:pagefragments) do
-      add(:page_id, references(:pages))
+      add :page_id, references(:pages)
     end
   end
 end
