@@ -1,63 +1,6 @@
 defmodule Brando.JSONLD.Schema do
   @moduledoc """
-
   TODO:
-    * a way to reference the `organization` and `creator` @ids.
-    * This needs to grab `organization.url` from Brando.Cache
-      field "author", references(:identity)
-      "author": {
-        "@id": "https://univers.agency/#identity"
-      },
-
-      field "creator", references(:creator)
-
-      "creator": {
-        "@id": "https://univers.agency/#creator"
-      },
-
-
-    All in all should create a
-
-    def __render_json_ld__(record) do
-      # this loops through all the fields we have registered for this module
-      # :field_name, :type, :path, :fn
-    end
-
-    # to populate a string with a path
-    # field "description", :string, [:meta_description], &(Brando.HTML.truncate(&1, 155))
-    defmacro field(field_name, :string, path, mutation_function) when is_list(path) do
-      value = get_in(record, path)
-      {field_name, mutation_function.(value)}
-    end
-
-    # to populate a schema with a path
-    # field "author", "Person", [:author], &(Enum.join([&1.first_name, &1.last_name], " "))
-    defmacro field(field_name, schema, path, mutation_function \\ nil) do
-      value = get_in(record, path)
-      mutated_value = mutation_function && mutation_function.(value) || mutated_value
-      {field_name, schema.build(mutated_value)}
-    end
-
-    # to populate a schema from data outside of `record`. no path needed.
-    # field "organization", "Organization", &Brando.Cache.get(:organization)
-    # NOTE: disallow populator_function == nil!
-    defmacro field(field_name, schema, populator_function)
-
-
-
-      json_ld_schema "ExhibitionEvent" do
-        field "startDate", :string, [:programme, :period_begin], &Timex.to_utc/1
-        field "endDate", :string, [:programme, :period_end], &Timex.to_utc/1
-
-        field "location",
-              JSONLD.Schema.Place,
-              &JSONLD.Schema.Place.build(Brando.Cache.get(:organization))
-
-        field "image", JSONLD.Schema.Image, [:cover]
-        field "description", :string, [:description], &Brando.HTML.truncate(&1, 155)
-        field "artist", JSONLD.Schema.Person, [:artist, :name]
-      end
-
   """
 
   @doc false

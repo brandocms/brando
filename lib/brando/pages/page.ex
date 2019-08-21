@@ -35,8 +35,8 @@ defmodule Brando.Pages.Page do
     field :copyrightHolder, {:references, :identity}
     field :copyrightYear, :string, [:inserted_at], & &1.year
     field :creator, {:references, :creator}
-    field :dateModified, :string, [:updated_at], &Timex.to_datetime(&1, :utc)
-    field :datePublished, :string, [:inserted_at], &Timex.to_datetime(&1, :utc)
+    field :dateModified, :string, [:updated_at], &JSONLD.to_datetime(&1)
+    field :datePublished, :string, [:inserted_at], &JSONLD.to_datetime(&1)
     field :description, :string, [:meta_description]
     field :headline, :string, [:title]
     field :inLanguage, :string, [:language]
