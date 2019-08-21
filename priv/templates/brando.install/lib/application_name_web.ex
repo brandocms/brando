@@ -34,7 +34,6 @@ defmodule <%= application_module %>Web do
         namespace: <%= application_module %>Web
 
       import <%= application_module %>Web.Gettext
-      import Brando.Meta.Controller, only: [put_meta: 2, put_meta: 3]
       import Brando.Plug.HTML
       import Plug.Conn
 
@@ -82,7 +81,6 @@ defmodule <%= application_module %>Web do
       use Phoenix.Router
       import Plug.Conn
       import Phoenix.Controller
-      import Brando.Meta.Controller
     end
   end
 

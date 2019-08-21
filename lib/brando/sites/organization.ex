@@ -1,7 +1,6 @@
 defmodule Brando.Sites.Organization do
   use Brando.Web, :schema
   use Brando.Field.ImageField
-  import Brando.Images.Optimize, only: [optimize: 2]
 
   @type t :: %__MODULE__{}
 

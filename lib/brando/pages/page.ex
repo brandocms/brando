@@ -8,8 +8,13 @@ defmodule Brando.Pages.Page do
   use Brando.Web, :schema
   use Brando.Villain.Schema
 
+  import Brando.HTML, only: [truncate: 2]
+
   alias Brando.Type.Status
   alias Brando.JSONLD
+
+  @max_meta_description_length 155
+  @max_meta_title_length 60
 
   @required_fields ~w(key language slug title data status creator_id)a
   @optional_fields ~w(parent_id meta_description html css_classes)a
@@ -40,14 +45,22 @@ defmodule Brando.Pages.Page do
     field :description, :string, [:meta_description]
     field :headline, :string, [:title]
     field :inLanguage, :string, [:language]
-    field :mainEntityOfPage, :string, &get_absolute_url/1
+    field :mainEntityOfPage, :string, & &1.__meta__.current_url
     field :name, :string, [:title]
     field :publisher, {:references, :creator}
-    field :url, :string, &get_absolute_url/1
+    field :url, :string, & &1.__meta__.current_url
   end
 
-  def get_absolute_url(data) do
-    "blabla #{data.id}"
+  meta_schema do
+    field ["description", "og:description"],
+          [:meta_description],
+          &truncate(&1, @max_meta_description_length)
+
+    field ["title", "og:title"],
+          [:title],
+          &truncate(&1, @max_meta_title_length)
+
+    field "og:locale", [:language], &Brando.Meta.Utils.encode_locale/1
   end
 
   @derive {Jason.Encoder, only: @derived_fields}
@@ -59,11 +72,13 @@ defmodule Brando.Pages.Page do
     villain()
     field :status, Status
     field :css_classes, :string
+    field :meta_description, :string
+
     belongs_to :creator, Brando.User
     belongs_to :parent, __MODULE__
     has_many :children, __MODULE__, foreign_key: :parent_id
     has_many :fragments, Brando.Pages.PageFragment
-    field :meta_description, :string
+
     timestamps()
   end
 

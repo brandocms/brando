@@ -33,7 +33,7 @@ defmodule Brando.HTMLTest do
     html =
       mock_conn
       |> body_tag
-      |> safe_to_string
+      |> safe_to_string()
 
     assert html == ~s(<body class="one two three unloaded">)
 
@@ -122,8 +122,8 @@ defmodule Brando.HTMLTest do
       |> safe_to_string()
 
     assert html =~ ~s(<meta content="MyApp" property="og:site_name">)
-    assert html =~ ~s(<meta content="MyApp" property="og:title">)
-    assert html =~ ~s(<meta content="MyApp" name="title">)
+    assert html =~ ~s(<meta content="Firma | Velkommen!" property="og:title">)
+    assert html =~ ~s(<meta content="Firma | Velkommen!" name="title">)
     assert html =~ ~s(<meta content="http://localhost" property="og:url">)
   end
 

@@ -1,4 +1,9 @@
 defmodule Brando.Cache do
+  @moduledoc """
+
+  """
+  @cache_module Application.get_env(:brando, :cache_module, Cachex)
+
   @spec get(atom) :: any
   def get(key) do
     case get_from_cache(key) do
@@ -15,5 +20,7 @@ defmodule Brando.Cache do
     end
   end
 
-  defp get_from_cache(key), do: Cachex.get(:cache, key)
+  defp get_from_cache(key) do
+    @cache_module.get(:cache, key)
+  end
 end

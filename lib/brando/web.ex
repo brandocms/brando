@@ -40,7 +40,6 @@ defmodule Brando.Web do
       import Ecto
       import Ecto.Query, only: [from: 1, from: 2]
 
-      import Brando.Meta.Controller
       import Brando.Utils, only: [current_user: 1, helpers: 1]
       import Brando.Utils.Schema, only: [put_creator: 2]
 
@@ -58,6 +57,7 @@ defmodule Brando.Web do
     quote do
       use Ecto.Schema
       use Brando.JSONLD.Schema
+      use Brando.Meta.Schema
 
       import Ecto
       import Ecto.Changeset

@@ -22,8 +22,7 @@ defmodule Brando.Meta.Schema do
     end
   end
 
-  defmacro meta_schema([do: block]), do:
-    do_meta_schema(block)
+  defmacro meta_schema(do: block), do: do_meta_schema(block)
 
   defp do_meta_schema(block) do
     prelude =
@@ -43,7 +42,7 @@ defmodule Brando.Meta.Schema do
         def __meta_schema__(:fields), do: unquote(fields)
 
         def extract_meta(data) do
-        Brando.META.Schema.extract_meta(__MODULE__, data)
+          Brando.Meta.Schema.extract_meta(__MODULE__, data)
         end
       end
 
@@ -56,13 +55,63 @@ defmodule Brando.Meta.Schema do
   @doc """
   Defines a META field and how to extract data against our schema
   """
-  defmacro field(name, path, mutator_function) do
-    Module.put_attribute(__MODULE__, :meta_fields, name)
+  defmacro field(name, _) when is_atom(name),
+    do: raise("Brando META: field name must be a binary or a list of binaries, not an atom.")
 
+  defmacro field(name, _, _) when is_atom(name),
+    do: raise("Brando META: field name must be a binary or a list of binaries, not an atom.")
+
+  defmacro field(list_of_names, path) when is_list(list_of_names) and is_list(path) do
+    for name <- list_of_names do
+      quote do
+        field(unquote(name), unquote(path))
+      end
+    end
+  end
+
+  defmacro field(list_of_names, path, function) when is_list(list_of_names) and is_list(path) do
+    for name <- list_of_names do
+      quote do
+        field(unquote(name), unquote(path), unquote(function))
+      end
+    end
+  end
+
+  defmacro field(list_of_names, function) when is_list(list_of_names) do
+    for name <- list_of_names do
+      quote do
+        field(unquote(name), unquote(function))
+      end
+    end
+  end
+
+  defmacro field(name, path) when is_binary(name) and is_list(path) do
     quote do
-      def __meta_field__(name, data) do
-        value = get_in(data, Enum.map(unquote(path), &Access.get/1))
+      Module.put_attribute(__MODULE__, :meta_fields, unquote(name))
+
+      def __meta_field__(unquote(name), data) do
+        get_in(data, Enum.map(unquote(path), &Access.key/1))
+      end
+    end
+  end
+
+  defmacro field(name, path, mutator_function) when is_binary(name) and is_list(path) do
+    quote do
+      Module.put_attribute(__MODULE__, :meta_fields, unquote(name))
+
+      def __meta_field__(unquote(name), data) do
+        value = get_in(data, Enum.map(unquote(path), &Access.key/1))
         unquote(mutator_function).(value)
+      end
+    end
+  end
+
+  defmacro field(name, mutator_function) when is_binary(name) do
+    quote do
+      Module.put_attribute(__MODULE__, :meta_fields, unquote(name))
+
+      def __meta_field__(unquote(name), data) do
+        unquote(mutator_function).(data)
       end
     end
   end

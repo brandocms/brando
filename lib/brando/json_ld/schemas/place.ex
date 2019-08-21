@@ -4,7 +4,6 @@ defmodule Brando.JSONLD.Schema.Place do
   """
 
   alias Brando.JSONLD.Schema
-  alias Brando.Sites
 
   @derive Jason.Encoder
   defstruct "@context": "http://schema.org",

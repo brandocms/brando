@@ -1,6 +1,11 @@
 defmodule Brando.JSONLD.Schema do
   @moduledoc """
   TODO:
+
+  If the data passed to a `field` mutator function is the raw data (there is no extraction path provided),
+  you can access the `current_url` in `data.__meta__.current_url`
+
+      field :my_current_url, &(&1.__meta__.current_url)
   """
 
   @doc false

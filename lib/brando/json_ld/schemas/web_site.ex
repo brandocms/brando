@@ -3,9 +3,6 @@ defmodule Brando.JSONLD.Schema.WebSite do
   Organization schema
   """
 
-  alias Brando.JSONLD.Schema
-  alias Brando.Sites
-
   @derive Jason.Encoder
   defstruct "@context": "http://schema.org",
             "@type": "WebSite",
