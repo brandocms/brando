@@ -1,4 +1,4 @@
-defmodule Brando.RenderTest do
+defmodule Brando.MetaRenderTest do
   use ExUnit.Case, async: true
   import Phoenix.HTML
 
@@ -23,7 +23,7 @@ defmodule Brando.RenderTest do
   end
 
   test "rendered meta" do
-    mock_conn = Brando.Plug.HTML.put_meta(%Plug.Conn{}, Brando.RenderTest.Page, @mock_data)
+    mock_conn = Brando.Plug.HTML.put_meta(%Plug.Conn{}, Brando.MetaRenderTest.Page, @mock_data)
     rendered_meta = Brando.Meta.HTML.render_meta(mock_conn)
 
     assert safe_to_string(rendered_meta) ==

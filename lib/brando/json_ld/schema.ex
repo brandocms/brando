@@ -1,11 +1,6 @@
 defmodule Brando.JSONLD.Schema do
   @moduledoc """
-  TODO:
-
-  If the data passed to a `field` mutator function is the raw data (there is no extraction path provided),
-  you can access the `current_url` in `data.__meta__.current_url`
-
-      field :my_current_url, &(&1.__meta__.current_url)
+  Schema definitions for JSONLD schemas
   """
 
   @doc false
@@ -52,7 +47,15 @@ defmodule Brando.JSONLD.Schema do
     end
   end
 
-  # populate a field as a reference
+  @doc """
+  Defines a JSON LD field.
+
+  This macro defines
+
+    * a field name
+    * a path to extract the data from
+    * a mutator/generator function
+  """
   defmacro field(name, {:references, target}) do
     quote do
       Module.put_attribute(__MODULE__, :json_ld_fields, unquote(name))

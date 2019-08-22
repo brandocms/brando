@@ -1,6 +1,6 @@
 defmodule Brando.JSONLD do
   @moduledoc """
-  JSON LD helpers
+  JSON-LD is a lightweight Linked Data format.
   """
 
   @doc """

@@ -1,4 +1,4 @@
-defmodule Brando.MetaTest do
+defmodule Brando.MetaSchemaTest do
   use ExUnit.Case, async: true
 
   @mock_data %{
@@ -21,7 +21,7 @@ defmodule Brando.MetaTest do
   end
 
   test "extract meta" do
-    extracted_meta = Brando.MetaTest.Page.extract_meta(@mock_data)
+    extracted_meta = Brando.MetaSchemaTest.Page.extract_meta(@mock_data)
 
     assert extracted_meta["description"] == "@ Our description"
     assert extracted_meta["title"] == "Our title"
