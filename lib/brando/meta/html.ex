@@ -97,8 +97,6 @@ defmodule Brando.Meta.HTML do
   end
 
   defp put_meta_image(conn, meta_image) when is_map(meta_image) do
-    require Logger
-    Logger.error(inspect(meta_image, pretty: true))
     # grab xlarge from img
     img_src = Brando.Utils.img_url(meta_image, :xlarge, prefix: Brando.Utils.media_url())
     img = Brando.Utils.hostname(img_src)
