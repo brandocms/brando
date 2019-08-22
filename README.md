@@ -1,10 +1,10 @@
 A helping hand.
 
-![Brando logo](https://raw.githubusercontent.com/twined/brando/master/priv/templates/brando.install/assets/frontend/static/images/brando/brando-big.png)
+![Brando logo](https://raw.githubusercontent.com/univers-agency/brando/master/priv/templates/brando.install/assets/frontend/static/images/brando/brando-big.png)
 
-[![Build Status](https://travis-ci.org/twined/brando.svg?branch=master)](https://travis-ci.org/twined/brando)
-[![Coverage Status](https://coveralls.io/repos/github/twined/brando/badge.svg?branch=master)](https://coveralls.io/github/twined/brando?branch=master)
-[![Inline docs](http://inch-ci.org/github/twined/brando.svg?branch=master)](http://inch-ci.org/github/twined/brando)
+[![Build Status](https://travis-ci.org/univers-agency/brando.svg?branch=master)](https://travis-ci.org/univers-agency/brando)
+[![Coverage Status](https://coveralls.io/repos/github/univers-agency/brando/badge.svg?branch=master)](https://coveralls.io/github/univers-agency/brando?branch=master)
+[![Inline docs](http://inch-ci.org/github/univers-agency/brando.svg?branch=master)](http://inch-ci.org/github/univers-agency/brando)
 
 *EXPERIMENTAL, DO NOT USE*
 
@@ -17,7 +17,7 @@ Start by creating a new Phoenix project:
 
 Run the install script:
 
-    $ wget https://raw.githubusercontent.com/twined/brando/develop/install.sh && chmod +x install.sh && ./install.sh
+    $ wget https://raw.githubusercontent.com/univers-agency/brando/develop/install.sh && chmod +x install.sh && ./install.sh
 
 Go through `config/brando.exs`.
 
@@ -82,12 +82,6 @@ Open up you application's `lib/application.ex` and add to `start/2`:
 
     Brando.Registry.register(MyApp.Web, [:gettext])
 
-## Extra modules
-
-  * [brando_news](http://github.com/twined/brando_news)
-  * [brando_portfolio](http://github.com/twined/brando_portfolio)
-  * [brando_instagram](http://github.com/twined/brando_instagram)
-  * [brando_analytics](http://github.com/twined/brando_analytics)
 
 ## App specific modules
 
@@ -193,10 +187,6 @@ Then use the fabric script in `fabfile.py` for the rest.
 
     # fab prod -l
 
-## Default admin credentials
-
-Default login/pass is `admin@twined.net/admin`
-
 
 ## Sequence
 
@@ -268,19 +258,6 @@ You can also add a key as query string to set a cookie that allows browsing.
 
 `http://website/?key=<pass>`
 
-
-## HTML
-
-To insert an expander:
-
-```html
-<div class="expander">
-  <a class="expander-trigger expander-hidden">Expandable section</a>
-  <div class="expander-content">
-    <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Distinctio mollitia fugiat facilis enim accusamus quisquam aut, repellendus incidunt quod optio facere labore illo numquam ipsum beatae vero debitis, fugit excepturi.</p>
-  </div>
-</div>
-```
 
 ## Tags
 
