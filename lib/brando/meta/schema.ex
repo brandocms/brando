@@ -53,7 +53,31 @@ defmodule Brando.Meta.Schema do
   end
 
   @doc """
-  Defines a META field and how to extract data against our schema
+  Defines a META field.
+
+  This macro defines
+
+    * a field name
+    * a path to extract the data from
+    * a mutator/generator function
+
+
+  ### Examples
+
+      field "title", &generate_random_title/1
+
+  If no `path` is supplied, the entire data map is passed to the supplied mutator function
+
+      field ["description", "og:description"], [:meta_description], &truncate(&1, 155)
+
+  This defines two fields, `description` and `og:description`. It should find its value from
+  `meta_description` from the provided data map. This data gets passed to `truncate/1`.
+
+  If the data passed to a `field` mutator function is the raw data (there is no extraction path provided),
+  you can access the `current_url` in `data.__meta__.current_url`
+
+      field "og:url", &(&1.__meta__.current_url)
+
   """
   defmacro field(name, _) when is_atom(name),
     do: raise("Brando META: field name must be a binary or a list of binaries, not an atom.")
