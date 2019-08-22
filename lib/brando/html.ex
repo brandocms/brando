@@ -689,7 +689,7 @@ defmodule Brando.HTML do
   @doc """
   Renders all JSON LD
   """
-  @spec render_json_ld(conn) :: {:safe, term}
+  @spec render_json_ld(conn) :: [{:safe, term}]
   def render_json_ld(conn) do
     # render breadcrumbs
     breadcrumbs = render_json_ld(:breadcrumbs, conn)
