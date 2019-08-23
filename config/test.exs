@@ -27,13 +27,7 @@ config :brando, Brando.Images,
       "thumb" => %{"size" => "150x150", "quality" => 70, "crop" => true},
       "micro" => %{"size" => "25x25", "quality" => 70, "crop" => true}
     }
-  },
-  optimize: [
-    png: [
-      bin: "cp",
-      args: "%{filename} %{new_filename}"
-    ]
-  ]
+  }
 
 config :brando, :app_name, "MyApp"
 config :brando, :auth_sleep_duration, 0

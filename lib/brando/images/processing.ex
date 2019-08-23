@@ -82,7 +82,6 @@ defmodule Brando.Images.Processing do
         ) :: {:ok, image_schema} | {:error, Ecto.Changeset.t()}
   def recreate_sizes_for_image(img_schema, user \\ :system) do
     {:ok, img_cfg} = Images.get_series_config(img_schema.image_series_id)
-    img_schema = Images.Utils.reset_optimized_flag(img_schema)
     Images.Utils.delete_sized_images(img_schema.image)
 
     with {:ok, operations} <-
@@ -90,7 +89,6 @@ defmodule Brando.Images.Processing do
          {:ok, [result]} <- Images.Operations.perform_operations(operations, user) do
       img_schema
       |> Image.changeset(:update, %{image: result.img_struct})
-      |> Images.Optimize.optimize(:image, force: true)
       |> Brando.repo().update
     else
       err ->
@@ -173,7 +171,6 @@ defmodule Brando.Images.Processing do
       rows
       |> Enum.find(&(&1.id == result.id))
       |> Ecto.Changeset.change(Map.put(%{}, field_name, result.img_struct))
-      |> Brando.Images.Optimize.optimize(field_name)
       |> Brando.repo().update
     end
   end

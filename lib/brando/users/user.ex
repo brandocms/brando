@@ -9,7 +9,6 @@ defmodule Brando.User do
   use Brando.Web, :schema
   use Brando.Field.ImageField
 
-  import Brando.Images.Optimize, only: [optimize: 2]
   import Brando.Gettext
 
   @required_fields ~w(full_name email password language)a
@@ -101,7 +100,6 @@ defmodule Brando.User do
       too_short: gettext("Password must be at least 6 characters")
     )
     |> validate_upload({:image, :avatar})
-    |> optimize(:avatar)
   end
 
   def changeset(schema, :update, params) do
@@ -115,7 +113,6 @@ defmodule Brando.User do
       too_short: gettext("Password must be at least 6 characters")
     )
     |> validate_upload({:image, :avatar})
-    |> optimize(:avatar)
   end
 
   @doc """

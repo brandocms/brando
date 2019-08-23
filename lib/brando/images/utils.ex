@@ -1,9 +1,6 @@
 defmodule Brando.Images.Utils do
   @moduledoc """
   General utilities pertaining to the Images module
-
-  TODO: Create a Processing module.
-        Split out create_image_struct, create_image_sizes, etc...
   """
   @type id :: String.t() | integer
   @type user :: Brando.User.t() | :system
@@ -14,9 +11,9 @@ defmodule Brando.Images.Utils do
 
   import Brando.Utils
   import Ecto.Query, only: [from: 2]
+
   alias Brando.Image
   alias Brando.ImageSeries
-  alias Brando.Type
 
   @doc """
   Goes through `image`, which is a schema with an image_field
@@ -62,8 +59,6 @@ defmodule Brando.Images.Utils do
 
   def delete_media(file) do
     file = Path.join([Brando.config(:media_path), file])
-    optimized_file = Brando.Images.Utils.optimized_filename(file)
-    File.rm(optimized_file)
     File.rm(file)
   end
 
@@ -76,16 +71,22 @@ defmodule Brando.Images.Utils do
       iex> get_sized_path("test/dir/filename.jpg", :thumb)
       "test/dir/thumb/filename.jpg"
 
+      iex> get_sized_path("test/dir/filename.jpeg", :thumb)
+      "test/dir/thumb/filename.jpg"
+
   """
-  @spec get_sized_path(path :: String.t(), size :: atom | String.t()) :: String.t()
-  def get_sized_path(path, size) when is_binary(size) do
+  @spec get_sized_path(path :: String.t(), size :: atom | String.t(), type :: atom | nil) ::
+          String.t()
+  def get_sized_path(path, size, type \\ nil)
+
+  def get_sized_path(path, size, type) when is_binary(size) do
     {dir, filename} = split_path(path)
+    filename = ensure_correct_extension(filename, type)
     Path.join([dir, size, filename])
   end
 
-  def get_sized_path(file, size) when is_atom(size) do
-    get_sized_path(file, Atom.to_string(size))
-  end
+  def get_sized_path(file, size, type) when is_atom(size),
+    do: get_sized_path(file, Atom.to_string(size), type)
 
   @doc """
   Adds `size` to the path before
@@ -102,22 +103,7 @@ defmodule Brando.Images.Utils do
     Path.join([dir, size])
   end
 
-  def get_sized_dir(file, size) when is_atom(size) do
-    get_sized_dir(file, Atom.to_string(size))
-  end
-
-  @doc """
-  Reset image field's `:optimized` flag
-  """
-  @spec reset_optimized_flag(img_schema :: image_schema | image_struct) ::
-          image_schema | image_struct
-  def reset_optimized_flag(%Image{} = img_schema) do
-    put_in(img_schema.image.optimized, false)
-  end
-
-  def reset_optimized_flag(%Type.Image{} = img_struct) do
-    put_in(img_struct.optimized, false)
-  end
+  def get_sized_dir(file, size) when is_atom(size), do: get_sized_dir(file, Atom.to_string(size))
 
   @doc """
   Returns image type atom.
@@ -125,8 +111,8 @@ defmodule Brando.Images.Utils do
   @spec image_type(filename :: String.t()) :: atom
   def image_type(filename) do
     case String.downcase(Path.extname(filename)) do
-      ".jpg" -> :jpeg
-      ".jpeg" -> :jpeg
+      ".jpg" -> :jpg
+      ".jpeg" -> :jpg
       ".png" -> :png
       ".gif" -> :gif
       ".bmp" -> :bmp
@@ -149,17 +135,6 @@ defmodule Brando.Images.Utils do
   def media_path, do: Brando.config(:media_path)
   def media_path(nil), do: Brando.config(:media_path)
   def media_path(file), do: Path.join([Brando.config(:media_path), file])
-
-  @doc """
-  Add `-optimized` between basename and ext of `file`.
-  """
-  @spec optimized_filename(file :: String.t()) :: String.t()
-  def optimized_filename(file) do
-    {path, filename} = split_path(file)
-    {basename, ext} = split_filename(filename)
-
-    Path.join([path, "#{basename}-optimized#{ext}"])
-  end
 
   @doc """
   Delete all images depending on imageserie `series_id`

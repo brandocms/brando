@@ -4,7 +4,6 @@ defmodule Brando.Types.ImageTest do
 
   @raw %{
     "credits" => "Credits",
-    "optimized" => false,
     "path" => "images/avatars/27i97a.jpeg",
     "title" => nil,
     "sizes" => %{
@@ -15,7 +14,6 @@ defmodule Brando.Types.ImageTest do
 
   @result %Image{
     credits: "Credits",
-    optimized: false,
     path: "images/avatars/27i97a.jpeg",
     title: nil,
     sizes: %{
@@ -46,7 +44,6 @@ defmodule Brando.Types.ImageTest do
                 credits: "Credits",
                 focal: %{"x" => 50, "y" => 50},
                 height: nil,
-                optimized: false,
                 path: "images/avatars/27i97a.jpeg",
                 sizes: %{
                   "medium" => "images/avatars/medium/27i97a.jpeg",

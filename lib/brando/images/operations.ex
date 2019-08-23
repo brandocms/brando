@@ -25,12 +25,11 @@ defmodule Brando.Images.Operations do
           cfg :: image_config,
           user :: user,
           id :: integer | nil
-        ) ::
-          {:ok, [operation]}
-  def create_operations(img_struct, cfg, user, id \\ nil) do
+        ) :: {:ok, [operation]}
+  def create_operations(%{path: path} = img_struct, cfg, user, id \\ nil) do
     id = id || Utils.random_string(:os.timestamp())
-    {_, filename} = Utils.split_path(img_struct.path)
-    type = Images.Utils.image_type(img_struct.path)
+    {_, filename} = Utils.split_path(path)
+    type = cfg.target_format || Images.Utils.image_type(path)
 
     operations =
       for {size_key, size_cfg} <- Map.get(cfg, :sizes) do
@@ -41,7 +40,9 @@ defmodule Brando.Images.Operations do
           filename: filename,
           type: type,
           size_cfg: size_cfg,
-          size_key: size_key
+          size_key: size_key,
+          sized_img_dir: Images.Utils.get_sized_dir(path, size_key),
+          sized_img_path: Images.Utils.get_sized_path(path, size_key, type)
         }
       end
 
@@ -104,15 +105,8 @@ defmodule Brando.Images.Operations do
     Enum.find(operations, &(&1.id == key))
   end
 
-  defp resize_image(%Images.Operation{size_key: size_key, img_struct: %{path: path}} = operation) do
-    operation =
-      Map.merge(operation, %{
-        sized_img_dir: Images.Utils.get_sized_dir(path, size_key),
-        sized_img_path: Images.Utils.get_sized_path(path, size_key)
-      })
-
-    with {:ok, transform_result} <- Images.Operations.Sizing.create_image_size(operation) do
-      transform_result
-    end
+  defp resize_image(%Images.Operation{} = operation) do
+    {:ok, transform_result} = Images.Operations.Sizing.create_image_size(operation)
+    transform_result
   end
 end

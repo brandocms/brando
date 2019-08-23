@@ -1,7 +1,14 @@
 defmodule Brando.Type.ImageConfig do
   @moduledoc """
   Defines a type for an image configuration field.
+
+  ### Options
+
+    * random_filename - use filename given at upload, or create a random filename
+    * target_format - if set, forces conversion to this format. Master image is kept in its original format.
+
   """
+
   @type t :: %__MODULE__{}
   @behaviour Ecto.Type
 
@@ -12,7 +19,8 @@ defmodule Brando.Type.ImageConfig do
             random_filename: false,
             size_limit: 10_240_000,
             sizes: %{},
-            srcset: nil
+            srcset: nil,
+            target_format: nil
 
   import Brando.Utils, only: [stringy_struct: 2]
 

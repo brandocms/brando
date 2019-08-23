@@ -57,8 +57,6 @@ config :my_app, MyApp.Endpoint,
 
   * `imagemagick`/`mogrify` for image processing.
   * `gifsicle` for GIF resizing.
-  * `pngquant` for PNG optimization.
-  * `jpegtran` for JPG optimization.
 
 ## I18n
 
@@ -335,29 +333,6 @@ In your schema:
 
 The migration's field should be `:text`, not `:string`.
 
-## Optimizing images
-
-This requires you to have `pngquant`/`jpegtran` installed:
-
-```diff
-  config :brando, Brando.Images,
-+   optimize: [
-+     png: [
-+       bin: "/usr/local/bin/pngquant",
-+       args: "--speed 1 --force --output %{new_filename} -- %{filename}"
-+     ],
-+   jpeg: [
-+     bin: "/usr/local/bin/jpegtran",
-+     args: "-copy none -optimize -progressive -outfile %{new_filename} %{filename}"
-+   ]
-```
-
-or
-
-```diff
-  config :brando, Brando.Images,
-+   optimize: false
-```
 
 ## Deployment
 

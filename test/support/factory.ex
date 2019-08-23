@@ -22,7 +22,6 @@ defmodule Brando.Factory do
       password: Bcrypt.hash_pwd_salt("admin"),
       avatar: %Brando.Type.Image{
         credits: nil,
-        optimized: false,
         path: "images/avatars/27i97a.jpeg",
         title: nil,
         sizes: %{
@@ -62,7 +61,6 @@ defmodule Brando.Factory do
   def image_type_factory do
     %Brando.Type.Image{
       credits: nil,
-      optimized: false,
       path: "images/default/sample.png",
       sizes: %{
         "large" => "images/default/large/sample.png",

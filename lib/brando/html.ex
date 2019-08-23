@@ -687,6 +687,14 @@ defmodule Brando.HTML do
   end
 
   @doc """
+  Render rel links
+  """
+  @spec render_rel(conn) :: [{:safe, term}]
+  def render_rel(_) do
+    []
+  end
+
+  @doc """
   Renders all JSON LD
   """
   @spec render_json_ld(conn) :: [{:safe, term}]

@@ -71,6 +71,33 @@ defmodule Brando.Utils do
   end
 
   @doc """
+  Sets a new extension name for file
+  """
+  @spec change_extension(file :: String.t(), new_extension :: String.t()) :: String.t()
+  def change_extension(file, new_extension) do
+    Enum.join([Path.rootname(file), new_extension], ".")
+  end
+
+  @doc """
+  Sharp-cli for some dumb reason enforces the .jpg extension, so make sure that all jpegs are
+  written as such.
+  """
+  @spec ensure_correct_extension(binary, atom | nil) :: binary
+  def ensure_correct_extension(filename, type \\ nil) do
+    if type do
+      change_extension(filename, to_string(type))
+    else
+      case Path.extname(filename) |> String.downcase() do
+        ".jpeg" ->
+          change_extension(filename, "jpg")
+
+        _ ->
+          filename
+      end
+    end
+  end
+
+  @doc """
   Generate a random string from `seed`
   """
   def random_string(seed) do
@@ -438,17 +465,7 @@ defmodule Brando.Utils do
 
     prefix = Keyword.get(opts, :prefix, nil)
     url = (prefix && Path.join([prefix, size_dir])) || size_dir
-
-    case Map.get(image_field, :optimized) do
-      true ->
-        Brando.Images.Utils.optimized_filename(url) <> add_cache_string(opts)
-
-      false ->
-        url <> add_cache_string(opts)
-
-      nil ->
-        url || "NO_URL" <> add_cache_string(opts)
-    end
+    url <> add_cache_string(opts)
   end
 
   defp extract_size_dir(image_field, size) do

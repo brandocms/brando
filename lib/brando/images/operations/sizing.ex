@@ -100,6 +100,7 @@ defmodule Brando.Images.Operations.Sizing do
           |> delegate_processor()
 
         set_progress(conversion_parameters, 100, filename, user)
+
         result
 
       {:error, {:image, :not_found}} ->
@@ -417,6 +418,6 @@ defmodule Brando.Images.Operations.Sizing do
     conversion_parameters
   end
 
-  defp maybe_change_format(type) when type in [:jpeg, :png, :gif], do: Atom.to_string(type)
-  defp maybe_change_format(_), do: "jpeg"
+  defp maybe_change_format(type) when type in [:jpg, :png, :gif], do: Atom.to_string(type)
+  defp maybe_change_format(_), do: "jpg"
 end

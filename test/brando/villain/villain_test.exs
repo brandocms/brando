@@ -85,7 +85,6 @@ defmodule Brando.VillainTest do
       creator_id: user.id,
       image: %Brando.Type.Image{
         credits: "Credits",
-        optimized: false,
         path: "image/1.jpg",
         sizes: %{
           large: "image/large/1.jpg",

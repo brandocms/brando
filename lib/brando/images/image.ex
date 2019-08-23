@@ -8,7 +8,6 @@ defmodule Brando.Image do
 
   use Brando.Web, :schema
   use Brando.Sequence, :schema
-  import Brando.Images.Optimize, only: [optimize: 2]
   import Ecto.Query, only: [from: 2]
 
   @required_fields ~w(image image_series_id)a
@@ -48,13 +47,11 @@ defmodule Brando.Image do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> optimize(:image)
   end
 
   def changeset(schema, :update, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
-    |> optimize(:image)
   end
 
   @doc """

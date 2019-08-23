@@ -1,7 +1,8 @@
 defmodule Brando.Images.Processor.Sharp do
   @moduledoc """
-  Process image with Mogrify
+  Process image with Sharp
   """
+
   @behaviour Brando.Images.Processor
 
   alias Brando.Images

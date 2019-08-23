@@ -3,8 +3,7 @@ defmodule <%= module %> do
 <%= if villain_fields != [] do %>  use Brando.Villain.Schema<% end %>
 <%= if sequenced do %>  use Brando.Sequence, :schema<% end %>
 <%= if file_fields != [] do %>  use Brando.Field.FileField<% end %>
-<%= if img_fields != [] do %>  use Brando.Field.ImageField
-  import Brando.Images.Optimize, only: [optimize: 2]<% end %>
+<%= if img_fields != [] do %>  use Brando.Field.ImageField<% end %>
 
   @type t :: %__MODULE__{}
 
@@ -55,7 +54,6 @@ defmodule <%= module %> do
     |> validate_required(@required_fields)<%= if villain_fields != [] do %><%= for {_k, v} <- villain_fields do %><%= if v == :data do %>
     |> generate_html()<% else %>
     |> generate_html(<%= inspect v %>)<% end %><% end %><% end %><%= if img_fields != [] do %><%= for {_v, k} <- img_fields do %>
-    |> validate_upload({:image, <%= inspect k %>}, user)
-    |> optimize(<%= inspect k %>)<% end %><% end %>
+    |> validate_upload({:image, <%= inspect k %>}, user)<% end %><% end %>
   end
 end

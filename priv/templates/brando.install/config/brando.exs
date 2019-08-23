@@ -54,13 +54,7 @@ config :brando, Brando.Images,
       "thumb" => %{"crop" => true, "quality" => 85, "size" => "150x150"},
       "xlarge" => %{"quality" => 85, "size" => "1900"}
     },
-  },
-  optimize: [
-    png: [
-      bin: "/usr/local/bin/pngquant",
-      args: "--speed 1 --force --output %{new_filename} -- %{filename}"
-    ]
-  ]
+  }
 
 config :brando, Brando.Type.Role,
   roles: %{staff: 1, admin: 2, superuser: 4}

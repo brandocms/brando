@@ -124,7 +124,6 @@ defmodule Brando.Schema.Types.Images do
     #   end
     # end
 
-    field :optimized, :boolean
     field :width, :integer
     field :height, :integer
   end
