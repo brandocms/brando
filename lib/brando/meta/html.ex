@@ -6,7 +6,6 @@ defmodule Brando.Meta.HTML do
   import Phoenix.HTML
   import Phoenix.HTML.Tag
   import Brando.Plug.HTML
-
   alias Brando.Cache
 
   @type conn :: Plug.Conn.t()

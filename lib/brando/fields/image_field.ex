@@ -15,6 +15,7 @@ defmodule Brando.Field.ImageField do
          random_filename: true,
          upload_path: Path.join("images", "default"),
          size_limit: 10_240_000,
+         target_format: :jpg,
          sizes: %{
            "thumb" =>  %{"size" => "150x150", "quality" => 100, "crop" => true},
            "small" =>  %{"size" => "300x", "quality" => 100},
