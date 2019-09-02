@@ -1,4 +1,4 @@
-defmodule Brando.Repo.Migrations.ChangeTableNames do
+defmodule Brando.Repo.Migrations.DeleteMetaKeywords do
   use Ecto.Migration
 
   def change do
