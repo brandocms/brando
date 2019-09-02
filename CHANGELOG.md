@@ -1,5 +1,26 @@
 ## v2.0.0-beta.0-dev
 
+### Startup checks
+* Add to your `application.ex`
+    result = Supervisor.start_link(children, opts)
+    # Run Brando system checks
+    Brando.System.initialize()
+
+    result
+
+### Meta rewrite
+* Remove `import Brando.Meta.Controller` from `my_app_web.ex`.
+  Both from `controller/0` and `router/0`.
+* Remove any `put_meta` in `router.ex´
+* Add `use Brando.JSONLD.Schema` to `my_app_web.ex` under `schema`
+* Add `use Brando.Meta.Schema` to `my_app_web.ex` under `schema`
+
+### Image processing
+* Added SHARP image processing. Choose this for the fastest/highest quality
+    config :brando, Brando.Images,
+      processor_module: Brando.Images.Processor.Sharp # or Mogrify
+* Remove all `import Brando.Images.Optimize` and `optimize/2` in changeset functions.
+  If you need optimizing, use SHARP.
 
 
 ## v2.0.0-alpha.3-dev
@@ -10,8 +31,8 @@
 
 ## v2.0.0-alpha.2-dev
 
+* Copy the brando.upgrade mix task from brando src.
 * Switch all your image fields to `:jsonb` types in migrations from `:text`. Run `mix brando.upgrade`
-* Copy the upgrade script from brando src.
 
 
 ## v2.0.0-alpha.1-dev
