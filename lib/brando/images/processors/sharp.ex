@@ -47,6 +47,8 @@ defmodule Brando.Images.Processor.Sharp do
     extra_params = [
       "--quality",
       to_string(quality),
+      "--palette",
+      "true",
       "--format",
       format
     ]

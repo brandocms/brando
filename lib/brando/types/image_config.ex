@@ -6,7 +6,6 @@ defmodule Brando.Type.ImageConfig do
 
     * random_filename - use filename given at upload, or create a random filename
     * target_format - if set, forces conversion to this format. Master image is kept in its original format.
-
   """
 
   @type t :: %__MODULE__{}
