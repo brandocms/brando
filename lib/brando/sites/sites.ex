@@ -97,13 +97,12 @@ defmodule Brando.Sites do
   @spec update_organization(params, user | :system) ::
           {:ok, Organization.t()} | {:error, Ecto.Changeset.t()}
   def update_organization(organization_params, user \\ :system) do
-    require Logger
-    Logger.error(inspect(organization_params, pretty: true))
     {:ok, organization} = get_organization()
 
     organization
     |> Organization.changeset(organization_params, user)
     |> Brando.repo().update()
+    |> update_cache()
   end
 
   @doc """
@@ -146,6 +145,12 @@ defmodule Brando.Sites do
   def cache_organization do
     {:ok, organization} = get_organization()
     Cachex.put(:cache, :organization, organization)
+  end
+
+  @spec update_cache({:ok, Organization.t()}) :: {:ok, Organization.t()}
+  def update_cache({:ok, updated_organization}) do
+    Cachex.update(:cache, :organization, updated_organization)
+    {:ok, updated_organization}
   end
 
   # __code
