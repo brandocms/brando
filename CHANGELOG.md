@@ -1,5 +1,13 @@
 ## v2.0.0-beta.0-dev
 
+### Application layout template
+* Switch out the `:hmr` logic for `css` and `js` with
+
+    <%= Brando.HTML.include_css() %>
+    <%= Brando.HTML.include_js() %>
+
+  right before `</head>`
+
 ### Startup checks
 * Add to your `application.ex`
     result = Supervisor.start_link(children, opts)
@@ -12,8 +20,12 @@
 * Remove `import Brando.Meta.Controller` from `my_app_web.ex`.
   Both from `controller/0` and `router/0`.
 * Remove any `put_meta` in `router.ex´
-* Add `use Brando.JSONLD.Schema` to `my_app_web.ex` under `schema`
-* Add `use Brando.Meta.Schema` to `my_app_web.ex` under `schema`
+* Add
+
+    use Brando.JSONLD.Schema
+    use Brando.Meta.Schema
+
+  to `my_app_web.ex` under `schema/0`.
 
 ### Image processing
 * Added SHARP image processing. Choose this for the fastest/highest quality
