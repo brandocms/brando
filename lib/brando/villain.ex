@@ -5,8 +5,11 @@ defmodule Brando.Villain do
   """
 
   require Logger
+  alias Brando.Pages
   alias Brando.Utils
   import Ecto.Query
+
+  @fragment_regex ~r/\$\{FRAGMENT:([a-zA-Z0-9-_]+)\/([a-zA-Z0-9-_]+)\/(\w+)}/
 
   defmacro __using__(:schema) do
     raise "`use Brando.Villain, :schema` is deprecated. Call `use Brando.Villain.Schema` instead."
@@ -43,6 +46,7 @@ defmodule Brando.Villain do
     html
     |> Enum.reverse()
     |> Enum.join()
+    |> replace_fragment_refs()
   end
 
   @doc """
@@ -278,8 +282,56 @@ defmodule Brando.Villain do
 
   def render_villain(data_field, vars) when is_list(data_field) do
     parser_mod = Brando.config(Brando.Villain)[:parser]
-    html = Brando.Villain.parse(data_field, parser_mod)
 
+    data_field
+    |> Brando.Villain.parse(parser_mod)
+    |> replace_vars(vars)
+  end
+
+  def render_villain(_, _), do: ""
+
+  @doc """
+  Check all fields for references to `fragment`.
+  Rerender if found. This gets called from `update_page_fragment`
+  """
+  @spec update_referencing_villains(fragment :: Brando.Pages.PageFragment.t()) :: [any]
+  def update_referencing_villains(fragment) do
+    lookup_tag = "${FRAGMENT:#{fragment.parent_key}/#{fragment.key}/#{fragment.language}"
+    villains = list_villains()
+
+    result =
+      for {schema, fields} <- villains do
+        Enum.reduce(fields, [], fn {_, data_field, html_field}, acc ->
+          ids = list_ids_with_fragment(schema, data_field, lookup_tag)
+          [acc | rerender_html_from_ids({schema, data_field, html_field}, ids)]
+        end)
+      end
+  end
+
+  @doc """
+  List all occurences of fragment in `schema`'s `data_field`
+  """
+  def list_ids_with_fragment(schema, data_field, lookup_tag) do
+    Brando.repo().all(
+      from s in schema,
+        select: s.id,
+        where: ilike(type(field(s, ^data_field), :string), ^"%#{lookup_tag}%")
+    )
+  end
+
+  defp replace_fragment_refs(html) do
+    Regex.replace(@fragment_regex, html, fn _, parent_key, key, lang ->
+      case Pages.get_page_fragment(parent_key, key, lang) do
+        {:ok, fragment} ->
+          Phoenix.HTML.Safe.to_iodata(fragment)
+
+        {:error, {:page_fragment, :not_found}} ->
+          "==> MISSING FRAGMENT: #{parent_key}/#{key}/#{lang} <=="
+      end
+    end)
+  end
+
+  defp replace_vars(html, vars) do
     Regex.replace(~r/\${(\w+)}/, html, fn _, match ->
       case Map.get(vars, match, nil) do
         nil -> "${#{match}}"
@@ -287,6 +339,4 @@ defmodule Brando.Villain do
       end
     end)
   end
-
-  def render_villain(_, _), do: ""
 end

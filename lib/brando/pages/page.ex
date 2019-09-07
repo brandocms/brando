@@ -192,8 +192,14 @@ defmodule Brando.Pages.Page do
   end
 
   defimpl Phoenix.HTML.Safe, for: Brando.Pages.PageFragment do
-    def to_iodata(page) do
-      page.html
+    def to_iodata(%{wrapper: nil} = fragment) do
+      fragment.html
+      |> Phoenix.HTML.raw()
+      |> Phoenix.HTML.Safe.to_iodata()
+    end
+
+    def to_iodata(%{wrapper: wrapper} = fragment) do
+      String.replace(wrapper, "${CONTENT}", fragment.html)
       |> Phoenix.HTML.raw()
       |> Phoenix.HTML.Safe.to_iodata()
     end

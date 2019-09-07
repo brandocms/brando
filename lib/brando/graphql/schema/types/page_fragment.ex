@@ -5,6 +5,7 @@ defmodule Brando.Schema.Types.PageFragment do
     field :parent_key, :string
     field :key, :string
     field :language, :string
+    field :wrapper, :string
     field :data, :json
     field :page_id, :id
   end
@@ -14,11 +15,11 @@ defmodule Brando.Schema.Types.PageFragment do
     field :parent_key, :string
     field :key, :string
     field :language, :string
+    field :wrapper, :string
     field :data, :json
     field :html, :string
     field :creator, :user
     field :page_id, :id
-    # field(:page, :page, resolve: assoc(:page))
     field :inserted_at, :time
     field :updated_at, :time
   end

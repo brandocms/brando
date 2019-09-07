@@ -20,7 +20,23 @@ defmodule Brando.Images.Processor.Mogrify do
         image_dest_rel_path: image_dest_rel_path,
         resize_values: resize_values
       }) do
-    resize_geo = "#{resize_values.width}x#{resize_values.height}"
+    resize_geo =
+      case {Map.get(resize_values, :width), Map.get(resize_values, :height)} do
+        {nil, nil} ->
+          raise """
+          MOGRIFY: No resize values..
+          #{inspect(resize_values, pretty: true)}
+          """
+
+        {width, nil} ->
+          "#{width}"
+
+        {nil, height} ->
+          "x#{height}"
+
+        {width, height} ->
+          "#{width}x#{height}"
+      end
 
     image_src_path
     |> Mogrify.open()
@@ -52,7 +68,23 @@ defmodule Brando.Images.Processor.Mogrify do
         resize_values: resize_values,
         crop_values: crop_values
       }) do
-    resize_geo = "#{resize_values.width}x#{resize_values.height}"
+    resize_geo =
+      case {Map.get(resize_values, :width), Map.get(resize_values, :height)} do
+        {nil, nil} ->
+          raise """
+          MOGRIFY: No resize values..
+          #{inspect(resize_values, pretty: true)}
+          """
+
+        {width, nil} ->
+          "#{width}"
+
+        {nil, height} ->
+          "x#{height}"
+
+        {width, height} ->
+          "#{width}x#{height}"
+      end
 
     crop_geo =
       "#{crop_values.width}x" <>

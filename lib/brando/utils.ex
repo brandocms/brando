@@ -324,15 +324,38 @@ defmodule Brando.Utils do
   @spec get_page_title(Plug.Conn.t()) :: String.t()
   def get_page_title(%{assigns: %{page_title: title}}) do
     organization = Cache.get(:organization)
-    %{title_prefix: title_prefix, title_postfix: title_postfix} = organization
-    "#{title_prefix || ""}#{title}#{title_postfix || ""}"
+
+    if organization do
+      %{title_prefix: title_prefix, title_postfix: title_postfix} = organization
+      render_title(title_prefix, title, title_postfix)
+    else
+      ""
+    end
   end
 
   def get_page_title(_) do
     organization = Cache.get(:organization)
-    %{title_prefix: title_prefix, title_postfix: title_postfix, title: title} = organization
-    "#{title_prefix || ""}#{title || Brando.config(:app_name)}#{title_postfix || ""}"
+
+    if organization do
+      %{title_prefix: title_prefix, title: title, title_postfix: title_postfix} = organization
+      render_title(title_prefix, title, title_postfix)
+    else
+      ""
+    end
   end
+
+  @spec render_title(binary | nil, binary, binary | nil) :: binary
+  def render_title(nil, title, nil),
+    do: "#{title}"
+
+  def render_title(title_prefix, title, nil),
+    do: "#{title_prefix}#{title}"
+
+  def render_title(nil, title, title_postfix),
+    do: "#{title}#{title_postfix}"
+
+  def render_title(title_prefix, title, title_postfix),
+    do: "#{title_prefix}#{title}#{title_postfix}"
 
   @doc """
   Returns hostname and media directory.

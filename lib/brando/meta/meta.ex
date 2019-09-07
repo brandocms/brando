@@ -1,11 +1,11 @@
-defmodule Brando.Link do
+defmodule Brando.Meta do
   use Brando.Web, :schema
 
-  @fields [:name, :url]
+  @fields [:key, :value]
 
   embedded_schema do
-    field :name
-    field :url
+    field :key
+    field :value
   end
 
   def changeset(schema, params \\ %{}) do

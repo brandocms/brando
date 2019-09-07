@@ -21,7 +21,8 @@ defmodule Brando.Sites.Organization do
     field :logo, Brando.Type.Image
     field :url, :string
 
-    has_many :links, Brando.Sites.Link
+    embeds_many :metas, Brando.Meta, on_replace: :delete
+    embeds_many :links, Brando.Link, on_replace: :delete
 
     timestamps()
   end
@@ -68,12 +69,10 @@ defmodule Brando.Sites.Organization do
   with no validation performed.
   """
   def changeset(schema, params \\ %{}, user) do
-    require Logger
-    Logger.error(inspect(params, pretty: true))
-
     schema
     |> cast(params, @required_fields ++ @optional_fields)
-    |> cast_assoc(:links)
+    |> cast_embed(:links)
+    |> cast_embed(:metas)
     |> validate_required(@required_fields)
     |> validate_upload({:image, :image}, user)
     |> validate_upload({:image, :logo}, user)

@@ -6,9 +6,10 @@ defmodule Brando.Images.Upload.Field do
   """
 
   @type user :: Brando.User.t() | :system
+  @type image_config :: Brando.Type.ImageConfig.t()
+  @type image_type :: Brando.Type.Image.t()
 
   alias Brando.Images
-  alias Brando.Type
   alias Brando.Upload
 
   @doc """
@@ -24,12 +25,11 @@ defmodule Brando.Images.Upload.Field do
 
   """
   @spec handle_upload(
-          field_name :: atom | String.t(),
-          upload_plug :: Plug.Upload.t(),
-          image_config :: Type.ImageConfig.t(),
-          user :: user
-        ) ::
-          {:ok, {:handled, atom, Type.Image}} | {:error, {atom, {:error, String.t()}}}
+          field_name :: atom | binary,
+          upload_plug :: any(),
+          image_config :: image_config,
+          user :: any()
+        ) :: {:ok, {:handled, atom, image_type}} | {:error, {atom, {:error, binary}}}
   def handle_upload(name, %Plug.Upload{} = plug, cfg, user) do
     with {:ok, upload} <- Upload.process_upload(plug, cfg),
          {:ok, img_struct} <- Images.Processing.create_image_struct(upload, user),

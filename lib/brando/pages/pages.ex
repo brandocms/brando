@@ -248,6 +248,19 @@ defmodule Brando.Pages do
     end
   end
 
+  def get_page_fragment(parent_key, key, language \\ nil) do
+    language = language || Brando.config(:default_language)
+
+    query =
+      from p in PageFragment,
+        where: p.parent_key == ^parent_key and p.key == ^key and p.language == ^language
+
+    case Brando.repo().one(query) do
+      nil -> {:error, {:page_fragment, :not_found}}
+      fragment -> {:ok, fragment}
+    end
+  end
+
   @doc """
   Get set of fragments by parent key
   """
@@ -292,9 +305,14 @@ defmodule Brando.Pages do
 
     {:ok, page_fragment} = get_page_fragment(page_fragment_id)
 
-    page_fragment
-    |> PageFragment.changeset(:update, params)
-    |> Brando.repo().update
+    case page_fragment |> PageFragment.changeset(:update, params) |> Brando.repo().update do
+      {:ok, page_fragment} ->
+        Brando.Villain.update_referencing_villains(page_fragment)
+        {:ok, page_fragment}
+
+      err ->
+        err
+    end
   end
 
   @doc """
@@ -356,6 +374,10 @@ defmodule Brando.Pages do
     end
   end
 
+  def render_fragment(%PageFragment{} = fragment) do
+    Phoenix.HTML.raw(fragment.html)
+  end
+
   def render_fragment(fragments, key) when is_map(fragments) do
     case Map.get(fragments, key) do
       nil ->
@@ -371,16 +393,8 @@ defmodule Brando.Pages do
   end
 
   def render_fragment(parent, key, language \\ nil) when is_binary(parent) and is_binary(key) do
-    language = language || Brando.config(:default_language)
-
-    fragment =
-      Brando.repo().one(
-        from p in PageFragment,
-          where: p.parent_key == ^parent and p.key == ^key and p.language == ^language
-      )
-
-    case fragment do
-      nil ->
+    case get_page_fragment(parent, key, language) do
+      {:error, {:page_fragment, :not_found}} ->
         ~s(<div class="page-fragment-missing">
              <strong>Missing page fragment</strong> <br />
              parent: #{parent}<br />
@@ -388,7 +402,7 @@ defmodule Brando.Pages do
              lang..: #{language}
            </div>) |> Phoenix.HTML.raw()
 
-      fragment ->
+      {:ok, fragment} ->
         Phoenix.HTML.raw(fragment.html)
     end
   end

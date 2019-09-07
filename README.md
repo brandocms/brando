@@ -173,6 +173,16 @@ Naming guidelines
 <div class="v-block" data-v="body/image">
 ```
 
+You may reference other fragments by entering
+
+```
+${FRAGMENT:index/01_intro/en}
+            ^     ^       ^
+            |     |       `-- language
+            |     `-- key
+            `-- parent key
+```
+
 ## Releases
 
 Brando uses distillery through Docker for release management.

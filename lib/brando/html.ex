@@ -223,7 +223,7 @@ defmodule Brando.HTML do
   """
   def img_tag(image_field, size, opts \\ []) do
     lightbox = Keyword.get(opts, :lightbox, false)
-    img_src = Brando.Utils.img_url(image_field, size, opts)
+    img_src = Utils.img_url(image_field, size, opts)
     attrs = extract_attrs(image_field, img_src, opts)
     rendered_tag = tag(:img, attrs)
     (lightbox && wrap_lightbox(rendered_tag, img_src)) || rendered_tag
@@ -307,7 +307,9 @@ defmodule Brando.HTML do
 
   """
   @spec picture_tag(Map.t(), keyword()) :: {:safe, [...]}
-  def picture_tag(%Brando.Type.Image{} = img_struct, opts \\ []) do
+  def picture_tag(img_struct, opts \\ [])
+
+  def picture_tag(%Brando.Type.Image{} = img_struct, opts) do
     initial_map = %{
       img: [],
       picture: [],
@@ -348,6 +350,15 @@ defmodule Brando.HTML do
 
     lightbox = Keyword.get(opts, :lightbox, false)
     (lightbox && wrap_lightbox(picture_tag, attrs.src)) || picture_tag
+  end
+
+  # when we're not given a struct
+  def picture_tag(img_map, opts) do
+    img_struct = Utils.stringy_struct(Brando.Type.Image, img_map)
+    require Logger
+    Logger.error(inspect(img_map, pretty: true))
+    Logger.error(inspect(img_struct, pretty: true))
+    picture_tag(img_struct, opts)
   end
 
   defp add_alt(attrs) do
@@ -442,7 +453,7 @@ defmodule Brando.HTML do
 
   defp add_src(%{lazyload: true} = attrs, img_struct) do
     key = Keyword.get(attrs.opts, :key) || :xlarge
-    src = Brando.Utils.img_url(img_struct, key, attrs.opts)
+    src = Utils.img_url(img_struct, key, attrs.opts)
     fallback = svg_fallback(img_struct, 0.05)
 
     attrs
@@ -454,7 +465,7 @@ defmodule Brando.HTML do
 
   defp add_src(%{lazyload: false} = attrs, img_struct) do
     key = Keyword.get(attrs.opts, :key) || :xlarge
-    src = Brando.Utils.img_url(img_struct, key, attrs.opts)
+    src = Utils.img_url(img_struct, key, attrs.opts)
 
     attrs
     |> put_in([:img, :src], src)
@@ -541,7 +552,7 @@ defmodule Brando.HTML do
 
     srcset_values =
       for {k, v} <- cfg.srcset do
-        path = Brando.Utils.img_url(image_field, (placeholder && "micro") || k, opts)
+        path = Utils.img_url(image_field, (placeholder && "micro") || k, opts)
         "#{path} #{v}"
       end
 
@@ -557,7 +568,7 @@ defmodule Brando.HTML do
 
     srcset_values =
       for {k, v} <- srcset do
-        path = Brando.Utils.img_url(image_field, (placeholder && "micro") || k, opts)
+        path = Utils.img_url(image_field, (placeholder && "micro") || k, opts)
         "#{path} #{v}"
       end
 
@@ -567,7 +578,7 @@ defmodule Brando.HTML do
   def get_srcset(image_field, srcset, opts, placeholder) do
     srcset_values =
       for {k, v} <- srcset do
-        path = Brando.Utils.img_url(image_field, (placeholder && "micro") || k, opts)
+        path = Utils.img_url(image_field, (placeholder && "micro") || k, opts)
         "#{path} #{v}"
       end
 
@@ -578,7 +589,7 @@ defmodule Brando.HTML do
     for {media_query, srcsets} <- mq do
       rendered_srcsets =
         Enum.map(srcsets, fn {k, v} ->
-          path = Brando.Utils.img_url(image_field, k, opts)
+          path = Utils.img_url(image_field, k, opts)
           "#{path} #{v}"
         end)
 
