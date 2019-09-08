@@ -23,6 +23,7 @@ defmodule Brando.Schema.Types.Organization do
     field :url, :string
     field :links, list_of(:link), resolve: assoc(:links)
     field :metas, list_of(:meta), resolve: assoc(:metas)
+    field :configs, list_of(:config), resolve: assoc(:configs)
     field :inserted_at, :time
     field :updated_at, :time
   end
@@ -34,6 +35,12 @@ defmodule Brando.Schema.Types.Organization do
   end
 
   object :meta do
+    field :id, :id
+    field :key, :string
+    field :value, :string
+  end
+
+  object :config do
     field :id, :id
     field :key, :string
     field :value, :string
@@ -54,6 +61,7 @@ defmodule Brando.Schema.Types.Organization do
     field :title_postfix, :string
     field :links, list_of(:link)
     field :metas, list_of(:meta)
+    field :configs, list_of(:config)
     field :image, :upload_or_image
     field :logo, :upload_or_image
     field :url, :string

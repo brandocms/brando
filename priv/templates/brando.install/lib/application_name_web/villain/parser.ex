@@ -63,7 +63,7 @@ defmodule <%= application_module %>.Villain.Parser do
   Markdown -> html
   """
   def markdown(%{"text" => markdown}) do
-    html = Earmark.as_html!(markdown, %Earmark.Options{breaks: true})
+    html = Earmark.as_html!(markdown, %Earmark.Options{breaks: false, gfm: true, smartypants: true})
 
     """
     <div data-moonwalk-children>#{html}</div>

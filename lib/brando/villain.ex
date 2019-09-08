@@ -9,7 +9,10 @@ defmodule Brando.Villain do
   alias Brando.Utils
   import Ecto.Query
 
-  @fragment_regex ~r/\$\{FRAGMENT:([a-zA-Z0-9-_]+)\/([a-zA-Z0-9-_]+)\/(\w+)}/
+  @regex_fragment_ref ~r/(?:\$\{|\$\%7B)FRAGMENT:([a-zA-Z0-9-_]+)\/([a-zA-Z0-9-_]+)\/(\w+)(?:\}|\%7D)/
+  @regex_config_ref ~r/(?:\$\{|\$\%7B)CONFIG:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
+  @regex_link_ref ~r/(?:\$\{|\$\%7B)LINK:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
+  @regex_org_ref ~r/(?:\$\{|\$\%7B)ORG:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
 
   defmacro __using__(:schema) do
     raise "`use Brando.Villain, :schema` is deprecated. Call `use Brando.Villain.Schema` instead."
@@ -47,6 +50,9 @@ defmodule Brando.Villain do
     |> Enum.reverse()
     |> Enum.join()
     |> replace_fragment_refs()
+    |> replace_org_refs()
+    |> replace_link_refs()
+    |> replace_config_refs()
   end
 
   @doc """
@@ -291,42 +297,83 @@ defmodule Brando.Villain do
   def render_villain(_, _), do: ""
 
   @doc """
-  Check all fields for references to `fragment`.
-  Rerender if found. This gets called from `update_page_fragment`
+  List all occurences of fragment in `schema`'s `data_field`
   """
-  @spec update_referencing_villains(fragment :: Brando.Pages.PageFragment.t()) :: [any]
-  def update_referencing_villains(fragment) do
-    lookup_tag = "${FRAGMENT:#{fragment.parent_key}/#{fragment.key}/#{fragment.language}"
-    villains = list_villains()
+  @spec search_villains_for_text(
+          schema :: any,
+          data_field :: atom,
+          search_terms :: binary | [binary]
+        ) :: [any]
+  def search_villains_for_text(schema, data_field, search_terms) do
+    search_terms = (is_list(search_terms) && search_terms) || [search_terms]
+    org_query = from s in schema, select: s.id
 
-    result =
-      for {schema, fields} <- villains do
-        Enum.reduce(fields, [], fn {_, data_field, html_field}, acc ->
-          ids = list_ids_with_fragment(schema, data_field, lookup_tag)
-          [acc | rerender_html_from_ids({schema, data_field, html_field}, ids)]
-        end)
-      end
+    built_query =
+      Enum.reduce(search_terms, org_query, fn search_term, query ->
+        from q in query,
+          or_where: ilike(type(field(q, ^data_field), :string), ^"%#{search_term}%")
+      end)
+
+    Brando.repo().all(built_query)
   end
 
   @doc """
-  List all occurences of fragment in `schema`'s `data_field`
+  Look through all `villains` for `search_term` and rerender all matching
   """
-  def list_ids_with_fragment(schema, data_field, lookup_tag) do
-    Brando.repo().all(
-      from s in schema,
-        select: s.id,
-        where: ilike(type(field(s, ^data_field), :string), ^"%#{lookup_tag}%")
-    )
+  @spec rerender_matching_villains([any], binary | [binary]) :: [any]
+  def rerender_matching_villains(villains, search_terms) do
+    for {schema, fields} <- villains do
+      Enum.reduce(fields, [], fn {_, data_field, html_field}, acc ->
+        ids = search_villains_for_text(schema, data_field, search_terms)
+        [acc | rerender_html_from_ids({schema, data_field, html_field}, ids)]
+      end)
+    end
   end
 
   defp replace_fragment_refs(html) do
-    Regex.replace(@fragment_regex, html, fn _, parent_key, key, lang ->
+    Regex.replace(@regex_fragment_ref, html, fn _, parent_key, key, lang ->
       case Pages.get_page_fragment(parent_key, key, lang) do
         {:ok, fragment} ->
           Phoenix.HTML.Safe.to_iodata(fragment)
 
         {:error, {:page_fragment, :not_found}} ->
           "==> MISSING FRAGMENT: #{parent_key}/#{key}/#{lang} <=="
+      end
+    end)
+  end
+
+  def replace_org_refs(html) do
+    Regex.replace(@regex_org_ref, html, fn _, key ->
+      organization = Brando.Cache.get(:organization)
+
+      Map.get(
+        organization,
+        String.to_existing_atom(key),
+        "==> MISSING ORG. KEY: ${ORG:#{key}} <=="
+      )
+    end)
+  end
+
+  def replace_link_refs(html) do
+    Regex.replace(@regex_link_ref, html, fn _, name ->
+      organization = Brando.Cache.get(:organization)
+      link_list = organization.links
+
+      case Enum.find(link_list, &(String.downcase(&1.name) == String.downcase(name))) do
+        nil -> "==> MISSING LINK NAME: ${LINK:#{name}} <=="
+        link_entry -> link_entry.url
+      end
+    end)
+  end
+
+  def replace_config_refs(html) do
+    Regex.replace(@regex_config_ref, html, fn _, key ->
+      organization = Brando.Cache.get(:organization)
+      config_list = organization.configs
+
+      case Enum.find(config_list, &(String.downcase(&1.key) == String.downcase(key))) do
+        nil -> "==> MISSING CONFIG KEY: ${CONFIG:#{key}} <=="
+        config_entry -> config_entry.value
       end
     end)
   end

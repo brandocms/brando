@@ -4,6 +4,7 @@ defmodule Brando.Pages do
   """
   alias Brando.Pages.Page
   alias Brando.Pages.PageFragment
+  alias Brando.Villain
 
   import Ecto.Query
 
@@ -307,7 +308,7 @@ defmodule Brando.Pages do
 
     case page_fragment |> PageFragment.changeset(:update, params) |> Brando.repo().update do
       {:ok, page_fragment} ->
-        Brando.Villain.update_referencing_villains(page_fragment)
+        update_villains_referencing_fragment(page_fragment)
         {:ok, page_fragment}
 
       err ->
@@ -339,6 +340,18 @@ defmodule Brando.Pages do
       |> create_page_fragment(user)
 
     {:ok, Map.merge(dup_fragment, %{creator: nil})}
+  end
+
+  @doc """
+  Check all fields for references to `fragment`.
+  Rerender if found.
+  """
+  @spec update_villains_referencing_fragment(fragment :: Brando.Pages.PageFragment.t()) :: [any]
+  def update_villains_referencing_fragment(fragment) do
+    search_term = "${FRAGMENT:#{fragment.parent_key}/#{fragment.key}/#{fragment.language}"
+    villains = Villain.list_villains()
+
+    Villain.rerender_matching_villains(villains, search_term)
   end
 
   @doc """

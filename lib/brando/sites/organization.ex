@@ -3,6 +3,7 @@ defmodule Brando.Sites.Organization do
   use Brando.Field.ImageField
 
   @type t :: %__MODULE__{}
+  @type changeset :: Ecto.Changeset.t()
 
   schema "sites_organizations" do
     field :name, :string
@@ -23,6 +24,7 @@ defmodule Brando.Sites.Organization do
 
     embeds_many :metas, Brando.Meta, on_replace: :delete
     embeds_many :links, Brando.Link, on_replace: :delete
+    embeds_many :configs, Brando.ConfigEntry, on_replace: :delete
 
     timestamps()
   end
@@ -73,6 +75,7 @@ defmodule Brando.Sites.Organization do
     |> cast(params, @required_fields ++ @optional_fields)
     |> cast_embed(:links)
     |> cast_embed(:metas)
+    |> cast_embed(:configs)
     |> validate_required(@required_fields)
     |> validate_upload({:image, :image}, user)
     |> validate_upload({:image, :logo}, user)

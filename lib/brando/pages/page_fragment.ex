@@ -4,6 +4,7 @@ defmodule Brando.Pages.PageFragment do
   """
 
   @type t :: %__MODULE__{}
+  @type changeset :: Ecto.Changeset.t()
 
   use Brando.Web, :schema
   use Brando.Villain.Schema
@@ -44,7 +45,7 @@ defmodule Brando.Pages.PageFragment do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, atom, Keyword.t() | Options.t()) :: Ecto.Changeset.t()
+  @spec changeset(t, atom, Keyword.t() | Options.t()) :: changeset
   def changeset(schema, action, params \\ %{})
 
   def changeset(schema, :create, params) do
@@ -63,18 +64,18 @@ defmodule Brando.Pages.PageFragment do
     |> generate_html()
   end
 
-  def encode_data(params) do
-    if is_list(params.data) do
-      Map.put(params, :data, Jason.encode!(params.data))
-    else
-      params
-    end
-  end
+  # def encode_data(params) do
+  #   if is_list(params.data) do
+  #     Map.put(params, :data, Jason.encode!(params.data))
+  #   else
+  #     params
+  #   end
+  # end
 
   @doc """
   Ensure that the fragment doesn't reference itself
   """
-  @spec guard_for_circular_references(changeset :: Ecto.Changeset.t()) :: Ecto.Changeset.t()
+  @spec guard_for_circular_references(changeset :: changeset) :: changeset
   def guard_for_circular_references(changeset) do
     case Ecto.Changeset.get_change(changeset, :data) do
       nil ->
