@@ -168,7 +168,7 @@ defmodule Brando.HTML do
     attrs = (id && attrs ++ [id: id]) || attrs
     attrs = (data_script && attrs ++ [data_script: data_script]) || attrs
 
-    if Application.get_env(Brando.otp_app(), :hmr) do
+    if Application.get_env(Brando.otp_app(), :show_breakpoint_debug) do
       [
         tag(:body, attrs),
         content_tag(:i, "", class: "dbg")

@@ -32,6 +32,9 @@ config :brando, media_path: "./media"
 # Path to your log directory.
 config :brando, log_dir: "./log"
 
+# Show breakpoint debug in frontend
+config :brando, show_breakpoint_debug: false
+
 # ## SSL Support
 #
 # To get SSL working, you will need to add the `https` key
