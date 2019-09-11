@@ -33,7 +33,7 @@ config :brando, media_path: "./media"
 config :brando, log_dir: "./log"
 
 # Show breakpoint debug in frontend
-config :brando, show_breakpoint_debug: false
+config :<%= application_name %>, show_breakpoint_debug: false
 
 # ## SSL Support
 #
