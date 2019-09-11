@@ -261,7 +261,10 @@ defmodule Brando.Villain do
   List templates by namespace
   """
   def list_templates(namespace) do
-    query = from(t in Brando.Villain.Template, order_by: [asc: t.id, desc: t.updated_at])
+    query =
+      from(t in Brando.Villain.Template,
+        order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
+      )
 
     query =
       case namespace do

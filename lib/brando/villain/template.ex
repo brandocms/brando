@@ -6,11 +6,12 @@ defmodule Brando.Villain.Template do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :schema
+  use Brando.Sequence, :schema
 
   @required_fields ~w(name namespace help_text class code refs)a
-  @optional_fields ~w()a
+  @optional_fields ~w(sequence)a
 
-  @derived_fields ~w(id name namespace help_text class code refs)a
+  @derived_fields ~w(id name sequence namespace help_text class code refs)a
   @derive {Jason.Encoder, only: @derived_fields}
 
   schema "pages_templates" do
@@ -20,6 +21,7 @@ defmodule Brando.Villain.Template do
     field :class, :string
     field :code, :string
     field :refs, {:array, :map}
+    sequenced()
     timestamps()
   end
 

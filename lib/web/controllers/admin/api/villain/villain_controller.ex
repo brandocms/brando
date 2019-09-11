@@ -195,6 +195,28 @@ defmodule Brando.API.Villain.VillainController do
     end
   end
 
+  def sequence_templates(conn, %{"sequence" => json_sequence}) do
+    with {:ok, decoded_sequence} <- Jason.decode(json_sequence),
+         _ <-
+           Brando.Villain.Template.sequence(
+             decoded_sequence,
+             Range.new(0, length(decoded_sequence))
+           ) do
+      payload = %{
+        status: 200
+      }
+
+      json(conn, payload)
+    else
+      _ ->
+        payload = %{
+          status: 400
+        }
+
+        json(conn, payload)
+    end
+  end
+
   defp sizes_with_media_url(image),
     do: Enum.map(image.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
 

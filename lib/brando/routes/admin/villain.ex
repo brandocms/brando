@@ -29,6 +29,7 @@ defmodule Brando.Villain.Routes.Admin.API do
       post "#{path}/villain/upload/:slug", ctrl, :upload_image, opts
       get "#{path}/villain/templates/:slug", ctrl, :templates, opts
       post "#{path}/villain/templates/", ctrl, :store_template, opts
+      post "#{path}/villain/templates/sequence", ctrl, :sequence_templates, opts
       get "#{path}/villain/browse/:slug", ctrl, :browse_images, opts
       get "#{path}/villain/slideshows/:slug", ctrl, :slideshow, opts
       get "#{path}/villain/slideshows", ctrl, :slideshows, opts
