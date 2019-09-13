@@ -285,6 +285,7 @@ defmodule Brando.HTML do
     * `prefix` - string to prefix to the image's url. I.e. `prefix: media_url()`
     * `picture_class` - class added to the picture root element
     * `picture_attrs` - list of attributes to add to picture element. I.e picture_attrs: [data_test: true]
+    * `svg_placeholder` - for lazyloading. use svgs as placeholders
     * `img_class` - class added to the img element. I.e img_class: "img-fluid"
     * `img_attrs` - list of attributes to add to img element. I.e img_attrs: [data_test: true]
     * `media_queries` - list of media queries to add to source.
@@ -403,6 +404,8 @@ defmodule Brando.HTML do
   end
 
   defp add_srcset(%{lazyload: true} = attrs, img_struct) do
+    svg_placeholder = Keyword.get(attrs.opts, :svg_placeholder, false)
+
     srcset =
       (Keyword.get(attrs.opts, :srcset) && get_srcset(img_struct, attrs.opts[:srcset], attrs.opts)) ||
         false
@@ -414,10 +417,10 @@ defmodule Brando.HTML do
 
     attrs
     |> put_in([:picture, :data_ll_srcset], !!srcset)
-    |> put_in([:img, :srcset], placeholder_srcset)
+    |> put_in([:img, :srcset], if(svg_placeholder, do: false, else: placeholder_srcset))
     |> put_in([:img, :data_ll_placeholder], !!placeholder_srcset)
     |> put_in([:img, :data_srcset], srcset)
-    |> put_in([:source, :srcset], placeholder_srcset)
+    |> put_in([:source, :srcset], if(svg_placeholder, do: false, else: placeholder_srcset))
     |> put_in([:source, :data_srcset], srcset)
   end
 
