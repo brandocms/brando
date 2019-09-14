@@ -172,10 +172,11 @@ defmodule Brando.HTMLTest do
              key: :small,
              picture_class: "avatar",
              img_class: "img-fluid",
-             lazyload: true
+             lazyload: true,
+             placeholder: :micro
            )
            |> safe_to_string ==
-             "<picture class=\"avatar\" data-ll-srcset><source data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" srcset=\"/media/images/avatars/micro/27i97a.jpeg 700w, /media/images/avatars/micro/27i97a.jpeg 500w, /media/images/avatars/micro/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27%27%20height%3D%27%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E\" srcset=\"/media/images/avatars/micro/27i97a.jpeg 700w, /media/images/avatars/micro/27i97a.jpeg 500w, /media/images/avatars/micro/27i97a.jpeg 300w\" data-ll-placeholder><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+             "<picture class=\"avatar\" data-ll-srcset><source data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" srcset=\"/media/images/avatars/micro/27i97a.jpeg 700w, /media/images/avatars/micro/27i97a.jpeg 500w, /media/images/avatars/micro/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" src=\"/media/images/avatars/micro/27i97a.jpeg\" srcset=\"/media/images/avatars/micro/27i97a.jpeg 700w, /media/images/avatars/micro/27i97a.jpeg 500w, /media/images/avatars/micro/27i97a.jpeg 300w\" data-ll-placeholder><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
 
     assert picture_tag(
              user.avatar,
@@ -184,11 +185,23 @@ defmodule Brando.HTMLTest do
              key: :small,
              picture_class: "avatar",
              img_class: "img-fluid",
-             svg_placeholder: true,
+             placeholder: :svg,
              lazyload: true
            )
            |> safe_to_string ==
              "<picture class=\"avatar\" data-ll-srcset><source data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27%27%20height%3D%27%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E\" data-ll-placeholder><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+
+    assert picture_tag(
+             user.avatar,
+             srcset: srcset,
+             prefix: media_url(),
+             key: :small,
+             picture_class: "avatar",
+             img_class: "img-fluid",
+             lazyload: true
+           )
+           |> safe_to_string ==
+             "<picture class=\"avatar\" data-ll-srcset><source data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" data-ll-placeholder><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
 
     media_queries = [
       {"(min-width: 0px) and (max-width: 760px)", [{"mobile", "700w"}]}

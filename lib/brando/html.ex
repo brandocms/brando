@@ -567,7 +567,7 @@ defmodule Brando.HTML do
 
     srcset_values =
       for {k, v} <- cfg.srcset do
-        path = Utils.img_url(image_field, (placeholder && placeholder) || k, opts)
+        path = Utils.img_url(image_field, (placeholder !== :svg && placeholder) || k, opts)
         "#{path} #{v}"
       end
 
@@ -583,7 +583,7 @@ defmodule Brando.HTML do
 
     srcset_values =
       for {k, v} <- srcset do
-        path = Utils.img_url(image_field, (placeholder && placeholder) || k, opts)
+        path = Utils.img_url(image_field, (placeholder !== :svg && placeholder) || k, opts)
         "#{path} #{v}"
       end
 
@@ -593,7 +593,7 @@ defmodule Brando.HTML do
   def get_srcset(image_field, srcset, opts, placeholder) do
     srcset_values =
       for {k, v} <- srcset do
-        path = Utils.img_url(image_field, (placeholder && placeholder) || k, opts)
+        path = Utils.img_url(image_field, (placeholder !== :svg && placeholder) || k, opts)
         "#{path} #{v}"
       end
 
