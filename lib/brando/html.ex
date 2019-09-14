@@ -285,7 +285,7 @@ defmodule Brando.HTML do
     * `prefix` - string to prefix to the image's url. I.e. `prefix: media_url()`
     * `picture_class` - class added to the picture root element
     * `picture_attrs` - list of attributes to add to picture element. I.e picture_attrs: [data_test: true]
-    * `svg_placeholder` - for lazyloading. use svgs as placeholders
+    * `placeholder` - for lazyloading. :svg for svg placeholder -- :micro for blur-up -- :none for nothing
     * `img_class` - class added to the img element. I.e img_class: "img-fluid"
     * `img_attrs` - list of attributes to add to img element. I.e img_attrs: [data_test: true]
     * `media_queries` - list of media queries to add to source.
@@ -356,9 +356,6 @@ defmodule Brando.HTML do
   # when we're not given a struct
   def picture_tag(img_map, opts) do
     img_struct = Utils.stringy_struct(Brando.Type.Image, img_map)
-    require Logger
-    Logger.error(inspect(img_map, pretty: true))
-    Logger.error(inspect(img_struct, pretty: true))
     picture_tag(img_struct, opts)
   end
 
@@ -404,7 +401,14 @@ defmodule Brando.HTML do
   end
 
   defp add_srcset(%{lazyload: true} = attrs, img_struct) do
-    svg_placeholder = Keyword.get(attrs.opts, :svg_placeholder, false)
+    placeholder = Keyword.get(attrs.opts, :placeholder, false)
+
+    no_srcset_placeholder =
+      case placeholder do
+        :svg -> true
+        false -> true
+        _ -> false
+      end
 
     srcset =
       (Keyword.get(attrs.opts, :srcset) && get_srcset(img_struct, attrs.opts[:srcset], attrs.opts)) ||
@@ -412,15 +416,15 @@ defmodule Brando.HTML do
 
     placeholder_srcset =
       (Keyword.get(attrs.opts, :srcset) &&
-         get_srcset(img_struct, attrs.opts[:srcset], attrs.opts, :placeholder)) ||
+         get_srcset(img_struct, attrs.opts[:srcset], attrs.opts, placeholder)) ||
         false
 
     attrs
     |> put_in([:picture, :data_ll_srcset], !!srcset)
-    |> put_in([:img, :srcset], if(svg_placeholder, do: false, else: placeholder_srcset))
+    |> put_in([:img, :srcset], if(no_srcset_placeholder, do: false, else: placeholder_srcset))
     |> put_in([:img, :data_ll_placeholder], !!placeholder_srcset)
     |> put_in([:img, :data_srcset], srcset)
-    |> put_in([:source, :srcset], if(svg_placeholder, do: false, else: placeholder_srcset))
+    |> put_in([:source, :srcset], if(no_srcset_placeholder, do: false, else: placeholder_srcset))
     |> put_in([:source, :data_srcset], srcset)
   end
 
@@ -455,9 +459,17 @@ defmodule Brando.HTML do
   end
 
   defp add_src(%{lazyload: true} = attrs, img_struct) do
+    placeholder = Keyword.get(attrs.opts, :placeholder, false)
+
     key = Keyword.get(attrs.opts, :key) || :xlarge
     src = Utils.img_url(img_struct, key, attrs.opts)
-    fallback = svg_fallback(img_struct, 0.05)
+
+    fallback =
+      case placeholder do
+        :svg -> svg_fallback(img_struct, 0.05)
+        false -> false
+        _ -> Utils.img_url(img_struct, placeholder, attrs.opts)
+      end
 
     attrs
     |> put_in([:img, :src], fallback)
@@ -555,7 +567,7 @@ defmodule Brando.HTML do
 
     srcset_values =
       for {k, v} <- cfg.srcset do
-        path = Utils.img_url(image_field, (placeholder && "micro") || k, opts)
+        path = Utils.img_url(image_field, (placeholder && placeholder) || k, opts)
         "#{path} #{v}"
       end
 
@@ -571,7 +583,7 @@ defmodule Brando.HTML do
 
     srcset_values =
       for {k, v} <- srcset do
-        path = Utils.img_url(image_field, (placeholder && "micro") || k, opts)
+        path = Utils.img_url(image_field, (placeholder && placeholder) || k, opts)
         "#{path} #{v}"
       end
 
@@ -581,7 +593,7 @@ defmodule Brando.HTML do
   def get_srcset(image_field, srcset, opts, placeholder) do
     srcset_values =
       for {k, v} <- srcset do
-        path = Utils.img_url(image_field, (placeholder && "micro") || k, opts)
+        path = Utils.img_url(image_field, (placeholder && placeholder) || k, opts)
         "#{path} #{v}"
       end
 
