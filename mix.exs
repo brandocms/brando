@@ -48,6 +48,7 @@ defmodule Brando.Mixfile do
       :httpoison,
       :inflex,
       :earmark,
+      :fastimage,
       :guardian,
       :mogrify,
       :phoenix_html,
