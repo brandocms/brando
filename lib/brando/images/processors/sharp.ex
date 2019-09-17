@@ -22,12 +22,13 @@ defmodule Brando.Images.Processor.Sharp do
         resize_values: resize_values
       }) do
     image_dest_dir = Path.dirname(image_dest_path)
+    image_dest_path = Path.join(image_dest_dir, "{name}{ext}")
 
     file_params = [
       "-i",
       image_src_path,
       "-o",
-      image_dest_dir
+      image_dest_path
     ]
 
     resize_params = [
@@ -55,15 +56,7 @@ defmodule Brando.Images.Processor.Sharp do
 
     params = List.flatten(file_params ++ extra_params ++ resize_params)
 
-    require Logger
-
-    case System.cmd("sharp", params, stderr_to_stdout: true) do
-      {_, 0} ->
-        Logger.info("==> SHARP: returned 0 :)")
-
-      {msg, level} ->
-        Logger.error("==> SHARP: returned #{level}\n#{inspect(msg)}")
-    end
+    System.cmd("sharp", params, stderr_to_stdout: true)
 
     {:ok,
      %Images.TransformResult{
@@ -89,12 +82,13 @@ defmodule Brando.Images.Processor.Sharp do
         crop_values: crop_values
       }) do
     image_dest_dir = Path.dirname(image_dest_path)
+    image_dest_path = Path.join(image_dest_dir, "{name}{ext}")
 
     file_params = [
       "-i",
       image_src_path,
       "-o",
-      image_dest_dir
+      image_dest_path
     ]
 
     resize_params = [
@@ -128,15 +122,7 @@ defmodule Brando.Images.Processor.Sharp do
     params =
       List.flatten(file_params ++ extra_params ++ resize_params ++ ["--"] ++ extract_params)
 
-    require Logger
-
-    case System.cmd("sharp", params, stderr_to_stdout: true) do
-      {_, 0} ->
-        Logger.info("==> SHARP: returned 0 :)")
-
-      {msg, level} ->
-        Logger.error("==> SHARP: returned #{level}\n#{inspect(msg)}")
-    end
+    System.cmd("sharp", params, stderr_to_stdout: true)
 
     {:ok,
      %Images.TransformResult{
