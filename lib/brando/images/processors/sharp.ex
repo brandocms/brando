@@ -55,7 +55,15 @@ defmodule Brando.Images.Processor.Sharp do
 
     params = List.flatten(file_params ++ extra_params ++ resize_params)
 
-    System.cmd("sharp", params, stderr_to_stdout: true)
+    require Logger
+
+    case System.cmd("sharp", params, stderr_to_stdout: true) do
+      {_, 0} ->
+        Logger.info("==> SHARP: returned 0 :)")
+
+      {msg, level} ->
+        Logger.error("==> SHARP: returned #{level}\n#{inspect(msg)}")
+    end
 
     {:ok,
      %Images.TransformResult{
@@ -120,7 +128,15 @@ defmodule Brando.Images.Processor.Sharp do
     params =
       List.flatten(file_params ++ extra_params ++ resize_params ++ ["--"] ++ extract_params)
 
-    System.cmd("sharp", params, stderr_to_stdout: true)
+    require Logger
+
+    case System.cmd("sharp", params, stderr_to_stdout: true) do
+      {_, 0} ->
+        Logger.info("==> SHARP: returned 0 :)")
+
+      {msg, level} ->
+        Logger.error("==> SHARP: returned #{level}\n#{inspect(msg)}")
+    end
 
     {:ok,
      %Images.TransformResult{
