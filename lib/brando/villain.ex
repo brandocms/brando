@@ -4,7 +4,6 @@ defmodule Brando.Villain do
   Interface to Villain HTML editor.
   """
 
-  require Logger
   alias Brando.Pages
   alias Brando.Utils
   import Ecto.Query
@@ -102,9 +101,12 @@ defmodule Brando.Villain do
 
   ## Example
 
-      rerender_html_from_id({Brando.Pages.Page, :data, :html}, 1)
+      rerender_html_from_id({Pages.Page, :data, :html}, 1)
 
   Will try to rerender html for page with id: 1.
+
+  We treat page fragments special, since they need to propogate to other referencing
+  pages and fragments
   """
   @spec rerender_html_from_id({Module, atom, atom}, Integer.t() | String.t()) :: any()
   def rerender_html_from_id({schema, data_field, html_field}, id) do
@@ -125,7 +127,13 @@ defmodule Brando.Villain do
         parsed_data
       )
 
-    Brando.repo().update(changeset)
+    case Brando.repo().update(changeset) do
+      {:ok, %Pages.PageFragment{} = page_fragment} ->
+        Pages.update_villains_referencing_fragment(page_fragment)
+
+      {:ok, result} ->
+        {:ok, result}
+    end
   end
 
   @doc """
@@ -182,7 +190,7 @@ defmodule Brando.Villain do
   def list_villains do
     {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
 
-    modules = app_modules ++ [Brando.Pages.Page, Brando.Pages.PageFragment]
+    modules = app_modules ++ [Pages.Page, Pages.PageFragment]
 
     modules
     |> Enum.filter(&({:__villain_fields__, 0} in &1.__info__(:functions)))
@@ -283,7 +291,7 @@ defmodule Brando.Villain do
 
   ## Example:
 
-      {:ok, page} = Brando.Pages.get_page(1)
+      {:ok, page} = Pages.get_page(1)
       render_villain page.data, %{"link" => "hello"}
   """
   @spec render_villain([map], %{required(String.t()) => String.t()}) :: binary()
@@ -327,8 +335,13 @@ defmodule Brando.Villain do
   def rerender_matching_villains(villains, search_terms) do
     for {schema, fields} <- villains do
       Enum.reduce(fields, [], fn {_, data_field, html_field}, acc ->
-        ids = search_villains_for_text(schema, data_field, search_terms)
-        [acc | rerender_html_from_ids({schema, data_field, html_field}, ids)]
+        case search_villains_for_text(schema, data_field, search_terms) do
+          [] ->
+            acc
+
+          ids ->
+            [rerender_html_from_ids({schema, data_field, html_field}, ids) | acc]
+        end
       end)
     end
   end
