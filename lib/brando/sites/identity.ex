@@ -1,11 +1,12 @@
-defmodule Brando.Sites.Organization do
+defmodule Brando.Sites.Identity do
   use Brando.Web, :schema
   use Brando.Field.ImageField
 
   @type t :: %__MODULE__{}
   @type changeset :: Ecto.Changeset.t()
 
-  schema "sites_organizations" do
+  schema "sites_identities" do
+    field :type, :string
     field :name, :string
     field :alternate_name, :string
     field :email, :string
@@ -34,7 +35,7 @@ defmodule Brando.Sites.Organization do
     %{
       allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
       default_size: :medium,
-      upload_path: Path.join(["images", "sites", "organization", "image"]),
+      upload_path: Path.join(["images", "sites", "identity", "image"]),
       random_filename: true,
       size_limit: 10_240_000,
       sizes: %{
@@ -50,7 +51,7 @@ defmodule Brando.Sites.Organization do
     %{
       allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
       default_size: :medium,
-      upload_path: Path.join(["images", "sites", "organization", "logo"]),
+      upload_path: Path.join(["images", "sites", "identity", "logo"]),
       random_filename: true,
       size_limit: 10_240_000,
       sizes: %{
@@ -61,7 +62,7 @@ defmodule Brando.Sites.Organization do
     }
   )
 
-  @required_fields ~w(name email phone address zipcode city country description title url)a
+  @required_fields ~w(name type email phone address zipcode city country description title url)a
   @optional_fields ~w(alternate_name image logo title_prefix title_postfix)a
 
   @doc """

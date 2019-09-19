@@ -323,7 +323,7 @@ defmodule Brando.Utils do
   """
   @spec get_page_title(Plug.Conn.t()) :: String.t()
   def get_page_title(%{assigns: %{page_title: title}}) do
-    organization = Cache.get(:organization)
+    organization = Cache.get(:identity)
 
     if organization do
       %{title_prefix: title_prefix, title_postfix: title_postfix} = organization
@@ -334,7 +334,7 @@ defmodule Brando.Utils do
   end
 
   def get_page_title(_) do
-    organization = Cache.get(:organization)
+    organization = Cache.get(:identity)
 
     if organization do
       %{title_prefix: title_prefix, title: title, title_postfix: title_postfix} = organization

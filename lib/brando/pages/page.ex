@@ -39,7 +39,7 @@ defmodule Brando.Pages.Page do
     field :author, {:references, :identity}
     field :copyrightHolder, {:references, :identity}
     field :copyrightYear, :string, [:inserted_at], & &1.year
-    field :creator, {:references, :creator}
+    field :creator, {:references, :identity}
     field :dateModified, :string, [:updated_at], &JSONLD.to_datetime(&1)
     field :datePublished, :string, [:inserted_at], &JSONLD.to_datetime(&1)
     field :description, :string, [:meta_description]
@@ -47,7 +47,7 @@ defmodule Brando.Pages.Page do
     field :inLanguage, :string, [:language]
     field :mainEntityOfPage, :string, & &1.__meta__.current_url
     field :name, :string, [:title]
-    field :publisher, {:references, :creator}
+    field :publisher, {:references, :identity}
     field :url, :string, & &1.__meta__.current_url
   end
 

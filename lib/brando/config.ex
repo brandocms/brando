@@ -13,7 +13,7 @@ defmodule Brando.Config do
   @doc false
   def start_link do
     raise(
-      "Brando.Config is deprecated. Specify configuration data in `sites_organizations` instead."
+      "Brando.Config is deprecated. Specify configuration data in `sites_identities` instead."
     )
   end
 end

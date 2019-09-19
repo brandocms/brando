@@ -1,6 +1,6 @@
 defmodule Brando.JSONLD.Schema.Place do
   @moduledoc """
-  Organization schema
+  Place schema
   """
 
   alias Brando.JSONLD.Schema

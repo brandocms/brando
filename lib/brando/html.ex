@@ -727,10 +727,11 @@ defmodule Brando.HTML do
   def render_json_ld(conn) do
     # render breadcrumbs
     breadcrumbs = render_json_ld(:breadcrumbs, conn)
-    organization = render_json_ld(:organization, conn)
+    cached_identity = Brando.Cache.get(:identity)
+    identity = render_json_ld(String.to_existing_atom(cached_identity.type), conn)
     entity = render_json_ld(:entity, conn)
 
-    [breadcrumbs, organization, entity]
+    [breadcrumbs, identity, entity]
   end
 
   def render_json_ld(:breadcrumbs, %{assigns: %{json_ld_breadcrumbs: breadcrumbs}}) do
@@ -744,9 +745,18 @@ defmodule Brando.HTML do
     content_tag(:script, raw(breadcrumb_json), type: "application/ld+json")
   end
 
+  def render_json_ld(:corporation, _) do
+    corporation_json =
+      Brando.Cache.get(:identity)
+      |> JSONLD.Schema.Corporation.build()
+      |> JSONLD.to_json()
+
+    content_tag(:script, raw(corporation_json), type: "application/ld+json")
+  end
+
   def render_json_ld(:organization, _) do
     organization_json =
-      Brando.Cache.get(:organization)
+      Brando.Cache.get(:identity)
       |> JSONLD.Schema.Organization.build()
       |> JSONLD.to_json()
 

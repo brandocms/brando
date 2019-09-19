@@ -1,6 +1,6 @@
 defmodule Brando.JSONLD.Schema.ExhibitionEvent do
   @moduledoc """
-  Organization schema
+  Exhibition schema
   """
 
   @derive Jason.Encoder

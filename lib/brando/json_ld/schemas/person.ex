@@ -1,6 +1,6 @@
 defmodule Brando.JSONLD.Schema.Person do
   @moduledoc """
-  Organization schema
+  Person schema
   """
 
   alias Brando.JSONLD.Schema

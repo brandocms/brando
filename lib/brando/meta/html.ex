@@ -51,7 +51,7 @@ defmodule Brando.Meta.HTML do
   defp maybe_put_meta_description(conn) do
     case get_meta(conn, "description") do
       nil ->
-        if meta_description = Cache.get(:organization, :description) do
+        if meta_description = Cache.get(:identity, :description) do
           conn
           |> put_meta("description", meta_description)
           |> put_meta("og:description", meta_description)
@@ -67,7 +67,7 @@ defmodule Brando.Meta.HTML do
   defp maybe_put_meta_image(conn) do
     case get_meta(conn, "og:image") do
       nil ->
-        default_meta_image = Cache.get(:organization, :image)
+        default_meta_image = Cache.get(:identity, :image)
         put_meta_image(conn, default_meta_image)
 
       meta_image ->

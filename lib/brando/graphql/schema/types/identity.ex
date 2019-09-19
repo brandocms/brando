@@ -1,11 +1,12 @@
-defmodule Brando.Schema.Types.Organization do
+defmodule Brando.Schema.Types.Identity do
   @moduledoc """
-  GraphQL type spec, mutations and queries for Organization
+  GraphQL type spec, mutations and queries for Identity
   """
   use Brando.Web, :absinthe
 
-  object :organization do
+  object :identity do
     field :id, :id
+    field :type, :string
     field :name, :string
     field :alternate_name, :string
     field :email, :string
@@ -46,7 +47,8 @@ defmodule Brando.Schema.Types.Organization do
     field :value, :string
   end
 
-  input_object :organization_params do
+  input_object :identity_params do
+    field :type, :string
     field :name, :string
     field :alternate_name, :string
     field :email, :string
@@ -67,26 +69,26 @@ defmodule Brando.Schema.Types.Organization do
     field :url, :string
   end
 
-  object :organization_queries do
-    @desc "Get organization"
-    field :organization, type: :organization do
-      resolve &Brando.Sites.OrganizationResolver.get/2
+  object :identity_queries do
+    @desc "Get identity"
+    field :identity, type: :identity do
+      resolve &Brando.Sites.IdentityResolver.get/2
     end
   end
 
-  object :organization_mutations do
-    field :create_organization, type: :organization do
-      arg :organization_params, non_null(:organization_params)
-      resolve &Brando.Sites.OrganizationResolver.create/2
+  object :identity_mutations do
+    field :create_identity, type: :identity do
+      arg :identity_params, non_null(:identity_params)
+      resolve &Brando.Sites.IdentityResolver.create/2
     end
 
-    field :update_organization, type: :organization do
-      arg :organization_params, :organization_params
-      resolve &Brando.Sites.OrganizationResolver.update/2
+    field :update_identity, type: :identity do
+      arg :identity_params, :identity_params
+      resolve &Brando.Sites.IdentityResolver.update/2
     end
 
-    field :delete_organization, type: :organization do
-      resolve &Brando.Sites.OrganizationResolver.delete/2
+    field :delete_identity, type: :identity do
+      resolve &Brando.Sites.IdentityResolver.delete/2
     end
   end
 end

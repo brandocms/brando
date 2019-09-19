@@ -1,6 +1,6 @@
 defmodule Brando.JSONLD.Schema.WebSite do
   @moduledoc """
-  Organization schema
+  WebSite schema
   """
 
   @derive Jason.Encoder

@@ -5,71 +5,71 @@ defmodule Brando.Sites do
 
   @type changeset :: Ecto.Changeset.t()
   @type id :: Integer.t() | String.t()
-  @type organization :: Brando.Sites.Organization.t()
+  @type identity :: Brando.Sites.Identity.t()
   @type params :: Map.t()
   @type user :: Brando.User.t()
 
   # ++header
   import Ecto.Query
-  alias Brando.Sites.Organization
+  alias Brando.Sites.Identity
   alias Brando.Villain
   # __header
 
   # ++code
   @doc """
-  Get organization
+  Get identity
   """
-  @spec get_organization() ::
-          {:ok, organization} | {:error, {:organization, :not_found}}
-  def get_organization do
-    case Organization |> first() |> Brando.repo().one do
-      nil -> {:error, {:organization, :not_found}}
-      organization -> {:ok, organization}
+  @spec get_identity() ::
+          {:ok, identity} | {:error, {:identity, :not_found}}
+  def get_identity do
+    case Identity |> first() |> Brando.repo().one do
+      nil -> {:error, {:identity, :not_found}}
+      identity -> {:ok, identity}
     end
   end
 
   @doc """
-  Create new organization
+  Create new identity
   """
-  @spec create_organization(params, user | :system) ::
-          {:ok, organization} | {:error, Ecto.Changeset.t()}
-  def create_organization(organization_params, user \\ :system) do
-    changeset = Organization.changeset(%Organization{}, organization_params, user)
+  @spec create_identity(params, user | :system) ::
+          {:ok, identity} | {:error, Ecto.Changeset.t()}
+  def create_identity(identity_params, user \\ :system) do
+    changeset = Identity.changeset(%Identity{}, identity_params, user)
     Brando.repo().insert(changeset)
   end
 
   @doc """
-  Update existing organization
+  Update existing identity
   """
-  @spec update_organization(params, user | :system) ::
-          {:ok, organization} | {:error, Ecto.Changeset.t()}
-  def update_organization(organization_params, user \\ :system) do
-    {:ok, organization} = get_organization()
+  @spec update_identity(params, user | :system) ::
+          {:ok, identity} | {:error, Ecto.Changeset.t()}
+  def update_identity(identity_params, user \\ :system) do
+    {:ok, identity} = get_identity()
 
-    organization
-    |> Organization.changeset(organization_params, user)
+    identity
+    |> Identity.changeset(identity_params, user)
     |> Brando.repo().update()
     |> update_cache()
     |> update_villains_referencing_org()
   end
 
   @doc """
-  Delete organization by id
+  Delete identity by id
   """
-  @spec delete_organization :: {:ok, organization}
-  def delete_organization() do
-    {:ok, organization} = get_organization()
-    Brando.repo().delete(organization)
-    Brando.Images.Utils.delete_original_and_sized_images(organization, :image)
-    Brando.Images.Utils.delete_original_and_sized_images(organization, :logo)
-    {:ok, organization}
+  @spec delete_identity :: {:ok, identity}
+  def delete_identity() do
+    {:ok, identity} = get_identity()
+    Brando.repo().delete(identity)
+    Brando.Images.Utils.delete_original_and_sized_images(identity, :image)
+    Brando.Images.Utils.delete_original_and_sized_images(identity, :logo)
+    {:ok, identity}
   end
 
   @doc """
-  Create default organization
+  Create default identity
   """
-  def create_default_organization do
-    %Organization{
+  def create_default_identity do
+    %Identity{
       name: "Organisasjonens navn",
       alternate_name: "Kortversjon av navnet",
       email: "mail@domain.tld",
@@ -90,28 +90,28 @@ defmodule Brando.Sites do
   end
 
   @doc """
-  Check all fields for references to `["${ORG:", "${CONFIG:", "${LINK:"]`.
+  Check all fields for references to `["${IDENTITY:", "${CONFIG:", "${LINK:"]`.
   Rerender if found.
   """
-  @spec update_villains_referencing_org(organization) :: [any]
-  def update_villains_referencing_org(organization) do
-    search_terms = ["${ORG:", "${CONFIG:", "${LINK:"]
+  @spec update_villains_referencing_org(identity) :: [any]
+  def update_villains_referencing_org(identity) do
+    search_terms = ["${IDENTITY:", "${CONFIG:", "${LINK:"]
     villains = Villain.list_villains()
     Villain.rerender_matching_villains(villains, search_terms)
-    organization
+    identity
   end
 
-  @spec cache_organization :: {:error, boolean} | {:ok, boolean}
-  def cache_organization do
-    {:ok, organization} = get_organization()
-    Cachex.put(:cache, :organization, organization)
+  @spec cache_identity :: {:error, boolean} | {:ok, boolean}
+  def cache_identity do
+    {:ok, identity} = get_identity()
+    Cachex.put(:cache, :identity, identity)
   end
 
-  @spec update_cache({:ok, organization} | {:error, changeset}) ::
-          {:ok, organization} | {:error, changeset}
-  def update_cache({:ok, updated_organization}) do
-    Cachex.update(:cache, :organization, updated_organization)
-    {:ok, updated_organization}
+  @spec update_cache({:ok, identity} | {:error, changeset}) ::
+          {:ok, identity} | {:error, changeset}
+  def update_cache({:ok, updated_identity}) do
+    Cachex.update(:cache, :identity, updated_identity)
+    {:ok, updated_identity}
   end
 
   def update_cache({:error, changeset}), do: {:error, changeset}

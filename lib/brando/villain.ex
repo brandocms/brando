@@ -11,7 +11,7 @@ defmodule Brando.Villain do
   @regex_fragment_ref ~r/(?:\$\{|\$\%7B)FRAGMENT:([a-zA-Z0-9-_]+)\/([a-zA-Z0-9-_]+)\/(\w+)(?:\}|\%7D)/
   @regex_config_ref ~r/(?:\$\{|\$\%7B)CONFIG:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
   @regex_link_ref ~r/(?:\$\{|\$\%7B)LINK:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
-  @regex_org_ref ~r/(?:\$\{|\$\%7B)ORG:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
+  @regex_identity_ref ~r/(?:\$\{|\$\%7B)IDENTITY:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
 
   defmacro __using__(:schema) do
     raise "`use Brando.Villain, :schema` is deprecated. Call `use Brando.Villain.Schema` instead."
@@ -49,7 +49,7 @@ defmodule Brando.Villain do
     |> Enum.reverse()
     |> Enum.join()
     |> replace_fragment_refs()
-    |> replace_org_refs()
+    |> replace_identity_refs()
     |> replace_link_refs()
     |> replace_config_refs()
   end
@@ -358,22 +358,22 @@ defmodule Brando.Villain do
     end)
   end
 
-  def replace_org_refs(html) do
-    Regex.replace(@regex_org_ref, html, fn _, key ->
-      organization = Brando.Cache.get(:organization)
+  def replace_identity_refs(html) do
+    Regex.replace(@regex_identity_ref, html, fn _, key ->
+      identity = Brando.Cache.get(:identity)
 
       Map.get(
-        organization,
+        identity,
         String.to_existing_atom(key),
-        "==> MISSING ORG. KEY: ${ORG:#{key}} <=="
+        "==> MISSING IDENTITY KEY: ${IDENTITY:#{key}} <=="
       )
     end)
   end
 
   def replace_link_refs(html) do
     Regex.replace(@regex_link_ref, html, fn _, name ->
-      organization = Brando.Cache.get(:organization)
-      link_list = organization.links
+      identity = Brando.Cache.get(:identity)
+      link_list = identity.links
 
       case Enum.find(link_list, &(String.downcase(&1.name) == String.downcase(name))) do
         nil -> "==> MISSING LINK NAME: ${LINK:#{name}} <=="
@@ -384,8 +384,8 @@ defmodule Brando.Villain do
 
   def replace_config_refs(html) do
     Regex.replace(@regex_config_ref, html, fn _, key ->
-      organization = Brando.Cache.get(:organization)
-      config_list = organization.configs
+      identity = Brando.Cache.get(:identity)
+      config_list = identity.configs
 
       case Enum.find(config_list, &(String.downcase(&1.key) == String.downcase(key))) do
         nil -> "==> MISSING CONFIG KEY: ${CONFIG:#{key}} <=="

@@ -78,6 +78,10 @@ defmodule Brando.Meta.Schema do
 
       field "og:url", &(&1.__meta__.current_url)
 
+  To grab an image from the `identity`
+
+      field ["image", "og:image"], &get_org_image(&1)
+
   """
   defmacro field(name, _) when is_atom(name),
     do: raise("Brando META: field name must be a binary or a list of binaries, not an atom.")

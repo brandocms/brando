@@ -1,6 +1,6 @@
 defmodule Brando.JSONLD.Schema.Article do
   @moduledoc """
-  Organization schema
+  Article schema
   """
 
   @derive Jason.Encoder
