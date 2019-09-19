@@ -4,7 +4,8 @@ defmodule Brando.Integration.MockCache do
       {:error, :test}
     else
       {:ok,
-       %Brando.Sites.Organization{
+       %Brando.Sites.Identity{
+         type: "organization",
          name: "Organisasjonens navn",
          alternate_name: "Kortversjon av navnet",
          email: "mail@domain.tld",
