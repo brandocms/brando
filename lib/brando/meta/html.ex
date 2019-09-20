@@ -44,8 +44,21 @@ defmodule Brando.Meta.HTML do
     |> maybe_put_meta_description()
     |> maybe_put_meta_image()
     |> get_meta()
-    |> Enum.map(&elem(meta_tag(&1), 1))
+    |> Enum.map(&safe_to_string(meta_tag(&1)))
+    |> maybe_add_see_also()
     |> raw()
+  end
+
+  defp maybe_add_see_also(meta_tags) do
+    case Cache.get(:identity, :links) do
+      [] ->
+        meta_tags
+
+      links ->
+        Enum.reduce(links, meta_tags, fn link, acc ->
+          [safe_to_string(meta_tag("og:see_also", link.url)) | acc]
+        end)
+    end
   end
 
   defp maybe_put_meta_description(conn) do
