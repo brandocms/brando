@@ -12,6 +12,20 @@ defmodule Brando.JSONLD do
     Jason.encode!(map)
   end
 
+  @doc """
+  Convert date to ISO friendly string
+  """
+  @spec to_date(date :: any) :: String.t()
+  def to_date(date),
+    do: Timex.format!(Timex.to_date(date), "{ISOdate}")
+
+  @doc """
+  Convert datetime to ISO friendly string
+  """
+  @spec to_datetime(datetime :: any) :: String.t()
+  def to_datetime(datetime),
+    do: Timex.format!(Timex.to_datetime(datetime, "Etc/UTC"), "{ISO:Extended:Z}")
+
   defp to_slim_map(%_{} = struct) do
     for {k, v} <- Map.from_struct(struct),
         v != nil,
@@ -41,18 +55,4 @@ defmodule Brando.JSONLD do
   end
 
   defp slim_map(value), do: value
-
-  @doc """
-  Convert date to ISO friendly string
-  """
-  @spec to_date(date :: any) :: String.t()
-  def to_date(date),
-    do: Timex.format!(Timex.to_date(date), "{ISOdate}")
-
-  @doc """
-  Convert datetime to ISO friendly string
-  """
-  @spec to_datetime(datetime :: any) :: String.t()
-  def to_datetime(datetime),
-    do: Timex.format!(Timex.to_datetime(datetime, "Etc/UTC"), "{ISO:Extended:Z}")
 end

@@ -16,6 +16,7 @@ defmodule Brando.JSONLD.Schema.ImageObject do
   end
 
   def build(image) do
+    #! TODO: Get largest key instead of using :xlarge
     %__MODULE__{
       height: image.height,
       url: hostname(media_url(img_url(image, :xlarge))),

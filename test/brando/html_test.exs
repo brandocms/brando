@@ -35,7 +35,7 @@ defmodule Brando.HTMLTest do
       |> body_tag
       |> safe_to_string()
 
-    assert html == ~s(<body class="one two three unloaded">)
+    assert html == ~s(<body class="one two three unloaded" data-vsn=\"#{Brando.version()}\">)
 
     mock_conn = %{
       private: %{
@@ -49,7 +49,10 @@ defmodule Brando.HTMLTest do
       |> body_tag
       |> safe_to_string
 
-    assert html == "<body class=\"one two three unloaded\" data-script=\"some-section\">"
+    assert html ==
+             "<body class=\"one two three unloaded\" data-script=\"some-section\" data-vsn=\"#{
+               Brando.version()
+             }\">"
 
     html =
       mock_conn
@@ -57,7 +60,9 @@ defmodule Brando.HTMLTest do
       |> safe_to_string
 
     assert html ==
-             "<body class=\"one two three unloaded\" data-script=\"some-section\" id=\"test\">"
+             "<body class=\"one two three unloaded\" data-script=\"some-section\" data-vsn=\"#{
+               Brando.version()
+             }\" id=\"test\">"
   end
 
   test "cookie_law" do

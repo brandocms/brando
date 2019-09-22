@@ -47,6 +47,6 @@
 
     <%%= Brando.HTML.google_analytics("UA-XXXXXXXX-1") %>
 
-    <!-- (u(n(i(v(e(r(s))))))) // vsn <%%= Application.spec(:<%= application_name %>, :vsn) %> -->
+    <!-- // vsn <%%= Application.spec(:<%= application_name %>, :vsn) %> -->
   </body>
 </html>

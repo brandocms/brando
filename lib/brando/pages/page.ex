@@ -38,17 +38,17 @@ defmodule Brando.Pages.Page do
   json_ld_schema JSONLD.Schema.Article do
     field :author, {:references, :identity}
     field :copyrightHolder, {:references, :identity}
-    field :copyrightYear, :string, [:inserted_at], & &1.year
+    field :copyrightYear, :string, [:inserted_at, :year]
     field :creator, {:references, :identity}
-    field :dateModified, :string, [:updated_at], &JSONLD.to_datetime(&1)
-    field :datePublished, :string, [:inserted_at], &JSONLD.to_datetime(&1)
+    field :dateModified, :string, [:updated_at], &JSONLD.to_datetime/1
+    field :datePublished, :string, [:inserted_at], &JSONLD.to_datetime/1
     field :description, :string, [:meta_description]
     field :headline, :string, [:title]
     field :inLanguage, :string, [:language]
-    field :mainEntityOfPage, :string, & &1.__meta__.current_url
+    field :mainEntityOfPage, :string, [:__meta__, :current_url]
     field :name, :string, [:title]
     field :publisher, {:references, :identity}
-    field :url, :string, & &1.__meta__.current_url
+    field :url, :string, [:__meta__, :current_url]
   end
 
   meta_schema do

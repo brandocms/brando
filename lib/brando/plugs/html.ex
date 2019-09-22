@@ -3,6 +3,7 @@ defmodule Brando.Plug.HTML do
   A plug with HTML oriented helpers
   """
   alias Brando.Utils
+  alias Brando.JSONLD
   import Plug.Conn
 
   @type conn :: Plug.Conn.t()
@@ -50,10 +51,11 @@ defmodule Brando.Plug.HTML do
   def put_json_ld(conn, :breadcrumbs, breadcrumbs),
     do: assign(conn, :json_ld_breadcrumbs, breadcrumbs)
 
-  def put_json_ld(conn, module, data) do
+  def put_json_ld(conn, module, data, extra_fields \\ []) do
+    extra_fields = JSONLD.Schema.convert_format(extra_fields)
     meta_meta = %{__meta__: %{current_url: Utils.current_url(conn)}}
     data_with_meta = Map.merge(data, meta_meta)
-    assign(conn, :json_ld_entity, module.extract_json_ld(data_with_meta))
+    assign(conn, :json_ld_entity, module.extract_json_ld(data_with_meta, extra_fields))
   end
 
   @doc """

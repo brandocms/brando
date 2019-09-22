@@ -149,6 +149,9 @@ defmodule Brando.HTML do
 
   def truncate(val, _), do: val
 
+  def truncate_meta_description(val), do: truncate(val, 155)
+  def truncate_meta_title(val), do: truncate(val, 60)
+
   defdelegate meta_tag(name, content), to: Brando.Meta.HTML
   defdelegate meta_tag(tuple), to: Brando.Meta.HTML
   defdelegate render_meta(conn), to: Brando.Meta.HTML
@@ -167,14 +170,49 @@ defmodule Brando.HTML do
     attrs = attrs ++ [class: (classes && "#{classes} unloaded") || "unloaded"]
     attrs = (id && attrs ++ [id: id]) || attrs
     attrs = (data_script && attrs ++ [data_script: data_script]) || attrs
+    attrs = attrs ++ [data_vsn: Application.spec(Brando.otp_app(), :vsn)]
 
     if Application.get_env(Brando.otp_app(), :show_breakpoint_debug) do
       [
         tag(:body, attrs),
-        content_tag(:i, "", class: "dbg")
+        breakpoint_debug_tag(),
+        grid_debug_tag()
       ]
     else
       tag(:body, attrs)
+    end
+  end
+
+  defp breakpoint_debug_tag do
+    breakpoint = content_tag(:div, "", class: "breakpoint")
+
+    branding =
+      case(Application.get_env(:brando, :agency_brand)) do
+        nil -> ""
+        svg -> content_tag(:div, raw(svg), class: "brand")
+      end
+
+    user_agent = content_tag(:div, "", class: "user-agent")
+
+    content_tag(:i, [branding, breakpoint, user_agent], class: "dbg-breakpoints")
+  end
+
+  defp grid_debug_tag do
+    content_tag :div, class: "dbg-grid" do
+      [
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, "")
+      ]
     end
   end
 
