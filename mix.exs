@@ -8,7 +8,7 @@ defmodule Brando.Mixfile do
     [
       app: :brando,
       version: @version,
-      elixir: "~> 1.6",
+      elixir: "~> 1.8",
       deps: deps(),
       compilers: [:gettext, :phoenix] ++ Mix.compilers(),
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -84,7 +84,7 @@ defmodule Brando.Mixfile do
       {:flow, "~> 0.14"},
       {:jason, "~> 1.0"},
       {:poison, "~> 4.0"},
-      {:inflex, "~> 1.10.0"},
+      {:inflex, "~> 2.0"},
 
       # monitoring
       {:sentry, "~> 7.0"},
