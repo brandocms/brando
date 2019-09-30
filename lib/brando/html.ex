@@ -89,29 +89,27 @@ defmodule Brando.HTML do
       info_link = Keyword.get(opts, :info_link, "/cookies")
       info_text = Keyword.get(opts, :info_text)
 
-      content_tag :div, class: "container cookie-container" do
-        content_tag :div, class: "cookie-container-inner" do
-          content_tag :div, class: "cookie-law" do
-            [
-              content_tag :div, class: "cookie-law-text" do
-                content_tag(:p, text)
-              end,
-              content_tag :div, class: "cookie-law-buttons" do
-                [
-                  content_tag(:button, button_text, class: "dismiss-cookielaw"),
-                  if info_text do
-                    content_tag :a, href: info_link, class: "info-cookielaw" do
-                      info_text
-                    end
-                  else
-                    []
-                  end
-                ]
-              end
-            ]
-          end
-        end
-      end
+      ~E"""
+      <div class="container cookie-container">
+        <div class="cookie-container-inner">
+          <div class="cookie-law">
+            <div class="cookie-law-text">
+              <p><%= text %></p>
+            </div>
+            <div class="cookie-law-buttons">
+              <button class="dismiss-cookielaw">
+                <%= button_text %>
+              </button>
+              <%= if info_text do %>
+              <a href="<%= info_link %>" class="info-cookielaw">
+                <%= info_text %>
+              </a>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+      """
     end
   end
 
@@ -680,7 +678,7 @@ defmodule Brando.HTML do
   @doc """
   Renders JS script tags
 
-  Also includes a polyfill for safari for prod.
+  Also includes a polyfill for Safari in prod.
   """
   @spec include_js :: [{:safe, [...]}]
   def include_js do
