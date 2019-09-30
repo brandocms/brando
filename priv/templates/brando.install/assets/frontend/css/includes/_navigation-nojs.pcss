@@ -1,7 +1,7 @@
 .no-js {
-  header[data-nav] {
-    background-color: $light !important;
-    color: $dark !important;
+  header {
+    background-color: theme(colors.light) !important;
+    color: theme(colors.dark) !important;
     padding-top: 30px !important;
     padding-bottom: 30px !important;
 
@@ -18,12 +18,12 @@
         top: 0;
       }
 
-      @include media('>=md') {
+      @responsive >=desktop_md {
         section {
           ul {
             li {
               a {
-                color: $dark !important;
+                color: theme(colors.dark) !important;
 
                 &:hover {
                   border-bottom: 1px solid black;
@@ -35,20 +35,20 @@
       }
     }
 
-    @include media('>=md') {
+    @responsive >=desktop_md {
       .hamburger {
         display: none;
       }
     }
 
-    @include media('xs') {
+    @responsive <=mobile {
       #menu:target {
         display: block;
         align-items: flex-start;
       }
     }
 
-    @include media('<=sm') {
+    @responsive <=ipad_landscape {
       #menu {
         .no-js-menu {
           display: block;

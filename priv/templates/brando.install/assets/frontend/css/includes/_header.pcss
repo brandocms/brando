@@ -1,17 +1,17 @@
 section.hero {
-  background-color: $header-bg;
-  color: $header-fg;
+  background-color: theme(colors.header.background);
+  color: theme(colors.header.foreground);
 
   &.stretch {
-    height: 100%; // 100vh breaks with iOS Safari's bottom bar :(
+    height: 100vh;
   }
 
   h2 {
-    @include media(sm) {
+    @responsive ipad_portrait/ipad_landscape {
       max-width: 500px;
     }
 
-    @include media(xs) {
+    @responsive <=mobile {
       padding: 0 10%;
     }
   }
@@ -68,21 +68,21 @@ section.hero {
       .row {
         flex-wrap: nowrap;
 
-        @include media('>=md') {
+        @responsive >=desktop_md {
           height: 100%;
           flex-direction: column;
           align-items: center;
           justify-content: center;
         }
 
-        @include media(sm) {
+        @responsive ipad_portrait/ipad_landscape {
           height: 100%;
           flex-direction: column;
           align-items: center;
           justify-content: center;
         }
 
-        @include media(xs) {
+        @responsive <=mobile {
           height: 100%;
           flex-direction: column;
           align-items: center;
@@ -97,7 +97,7 @@ section.hero {
       fill: #ffffff;
       width: 120px;
 
-      @include media(xs) {
+      @responsive <=mobile {
         width: 90px;
       }
 
@@ -110,28 +110,28 @@ section.hero {
       padding-bottom: 0;
       font-weight: normal;
 
-      @include media(lg) {
+      @responsive desktop_lg {
         max-width: 750px;
       }
 
-      @include media('>=md') {
+      @responsive >=desktop_md {
         max-width: 640px;
-        padding-top: 100px; // height of header
+        padding-top: 100px; /* height of header */
         font-size: 55px;
         line-height: 80px;
         margin-bottom: 5%;
       }
 
-      @include media(sm) {
+      @responsive ipad_portrait/ipad_landscape {
         font-size: 46px;
         letter-spacing: 0.8px;
         line-height: 60px;
         max-width: 640px;
-        padding-top: 50px; // height of header
+        padding-top: 50px; /* height of header */
         margin-bottom: 10%;
       }
 
-      @include media(xs) {
+      @responsive <=mobile {
         font-size: 26px;
         letter-spacing: 0.8px;
         line-height: 39px;
@@ -151,7 +151,7 @@ section.hero {
 
       font-size: 26px;
 
-      @include media(xs) {
+      @responsive <=mobile {
         font-size: 18px;
         color: #F8F8F7;
         letter-spacing: 0.55px;

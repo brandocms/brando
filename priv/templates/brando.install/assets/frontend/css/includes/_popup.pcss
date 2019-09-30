@@ -1,0 +1,29 @@
+[data-popup] {
+  position: fixed;
+  justify-self: center;
+  align-self: center;
+  background-color: white;
+  top: 50%;
+  left: 50%;
+  z-index: 5000;
+  padding: 3em;
+  text-align: center;
+  display: none;
+  opacity: 0;
+
+  @responsive mobile {
+    width: 80%;
+  }
+}
+
+[data-popup-backdrop] {
+  z-index: 4999;
+  display: none;
+  opacity: 0;
+  background-color: theme(colors.blue.100);
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+}

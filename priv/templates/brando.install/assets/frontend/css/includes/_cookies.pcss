@@ -1,5 +1,5 @@
 #cookies {
-  @include space('padding-top', lg);
+  @space padding-top lg;
 }
 
 .no-js {
@@ -13,21 +13,20 @@
   position: fixed;
   bottom: 0;
   left: 0;
-  background-color: $dark;
-  color: $light;
+  background-color: theme(colors.dark);
+  color: theme(colors.light);
   z-index: 99999;
   margin-bottom: 0 !important;
   max-width: 100% !important;
 
-  @include space('padding-top', sm);
-  @include space('padding-bottom', sm);
+  @space padding-y sm;
 
   .cookie-law {
     display: flex;
     justify-content: space-between;
     align-items: center;
 
-    @include media(xs) {
+    @responsive <=mobile {
       flex-direction: column;
     }
   }
@@ -43,7 +42,7 @@
     flex-shrink: 0;
     text-align: right;
 
-    @include media(xs) {
+    @responsive <=mobile {
       display: flex;
       align-items: center;
       width: 100%;
@@ -51,21 +50,22 @@
       justify-content: space-between;
     }
 
-    @include media('sm') {
+    @responsive ipad_portrait/ipad_landscape {
       padding-left: 15px;
     }
 
     a {
       @extend .plain;
+      color: theme(colors.light);
     }
 
     button {
-      background-color: $light;
-      color: $dark;
+      background-color: theme(colors.light);
+      color: theme(colors.dark);
       border: 0;
       padding: 3px 25px;
 
-      @include media('>=sm') {
+      @responsive >=ipad_portrait {
         margin-right: 15px;
       }
     }

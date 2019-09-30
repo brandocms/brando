@@ -19,18 +19,18 @@
     .lightbox-image {
       max-height: 100vh;
 
-      @include media('>=md') {
+      @responsive >=desktop_md {
         padding-bottom: 73px;
         padding-top: 73px;
       }
 
-      @include media(sm) {
+      @responsive ipad_portrait/ipad_landscape {
         padding-bottom: 83px;
         padding-top: 83px;
         max-width: calc(100vw - 80px);
       }
 
-      @include media(xs) {
+      @responsive <=mobile {
         max-width: calc(100vw);
         padding-top: 100px;
         padding-bottom: 93px;
@@ -45,7 +45,7 @@
     letter-spacing: 0.6px;
     line-height: 32px;
 
-    @include media('<=sm') {
+    @responsive <=ipad_landscape {
       display: none;
     }
   }
@@ -64,12 +64,12 @@
       color: #000;
     }
 
-    @include media(sm) {
+    @responsive ipad_portrait/ipad_landscape {
       top: 44px;
       right: 40px;
     }
 
-    @include media(xs) {
+    @responsive <=mobile {
       top: 40px;
       right: 0;
       left: 0;
@@ -81,7 +81,7 @@
   .lightbox-next {
     position: absolute;
 
-    @include media('>=md') {
+    @responsive >=desktop_md {
       right: 100px;
     }
   }
@@ -89,9 +89,16 @@
   .lightbox-prev {
     position: absolute;
 
-    @include media('>=md') {
+    @responsive >=desktop_md {
       left: 100px;
     }
+  }
+
+  .lightbox-caption {
+    @fontsize xs;
+    text-transform: uppercase;
+    position: absolute;
+    top: 24px;
   }
 
   .lightbox-dots {

@@ -4,7 +4,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: $fader-bg;;
+  background: theme(colors.fader.background);
   z-index: 9998;
   display: none;
 
@@ -13,7 +13,7 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: $fader-fg;
+    color: theme(colors.fader.foreground);
     text-align: center;
     font-size: 12px;
 
@@ -21,7 +21,7 @@
       width: 200px;
       animation: pulse 1s ease-out alternate infinite;
       path {
-        fill: $fader-fg;
+        fill: theme(colors.fader.foreground);
       }
     }
   }

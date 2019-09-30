@@ -49,6 +49,10 @@ defmodule Mix.Tasks.Brando.GenerateTest do
       assert file =~ "defmodule Brando.MixProject do"
     end)
 
+    assert_file("assets/frontend/package.json", fn file ->
+      assert file =~ "brando FRONTEND"
+    end)
+
     refute File.exists?("assets/css/app.css")
   end
 end

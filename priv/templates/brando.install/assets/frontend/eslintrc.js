@@ -1,18 +1,36 @@
 module.exports = {
   root: true,
   env: {
-    node: true,
-    'cypress/globals': true
+    browser: true,
+    'cypress/globals': true,
+  },
+  globals: {
+    __APP_NAME__: true,
+    __ENV__: true,
+    __VSN_HASH__: true,
+    __VERSION__: true
   },
   plugins: [
     'cypress'
   ],
   extends: [
-    'standard'
+    'airbnb-base',
+    'plugin:compat/recommended'
   ],
   rules: {
-    'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'off',
-    'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'off'
+    'no-console': 'off',
+    'no-debugger': 'off',
+    'arrow-parens': [2, 'as-needed'],
+    'class-methods-use-this': 0,
+    'comma-dangle': ['error', 'never'],
+    'no-console': 'off',
+    'no-debugger': 'off',
+    'no-param-reassign': 0,
+    'no-underscore-dangle': 0,
+    'quotes': ['error', 'single'],
+    'radix': ['error', 'as-needed'],
+    'semi': 0,
+    'space-before-function-paren': ['error', 'always']
   },
   parserOptions: {
     parser: 'babel-eslint'

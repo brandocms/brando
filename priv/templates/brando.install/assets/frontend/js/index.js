@@ -3,107 +3,64 @@
  * (c) 2019 UNIVERS/TWINED TM
  */
 
-// polyfills
-import 'core-js/stable'
-import 'regenerator-runtime/runtime'
-import 'custom-event-polyfill'
-import 'intersection-observer'
-import 'picturefill'
-
+/**
+ * JUPITER IMPORTS
+ */
 import {
-  // Breakpoints,
+  Application,
   Cookies,
-  Fader,
-  FixedHeader,
-  HeroSlider,
+  Events,
+  Lazyload,
   Lightbox,
   Links,
   MobileMenu,
   Moonwalk,
-  Typography,
+  Popup,
+  StackedBoxes,
+  StickyHeader
+} from '@univers-agency/jupiter'
 
-  TweenLite,
-  Sine,
-  Power3,
-  TimelineLite,
-  imagesLoaded
-} from 'jupiter'
+/**
+ * APP SPECIFIC MODULE IMPORTS
+ */
 
-import '../css/app.scss'
+/**
+ * CONFIG IMPORTS
+ */
+import configureBreakpoints from './config/BREAKPOINTS'
+import configureHeader from './config/STICKY_HEADER'
+import configureLightbox from './config/LIGHTBOX'
+import configureMobileMenu from './config/MOBILE_MENU'
+import configureMoonwalk from './config/MOONWALK'
 
-TweenLite.defaultEase = Sine.easeOut
 
-const FIXED_HEADER_OPTS = {
-  default: {
-    enterDelay: 0.5,
-    offset: 8,
-    offsetSmall: 10,
-    offsetBg: 50,
-    regBgColor: 'transparent'
-  }
-}
+import '../css/app.pcss'
 
-const MOBILE_MENU_OPTS = {
-  onResize: (m) => {
-    if (document.body.classList.contains('open-menu')) {
-      TweenLite.to(m.bg, 0.1, { height: window.innerHeight })
-    }
-  }
-}
+const app = new Application({
+  breakpointConfig: configureBreakpoints
+})
 
-const MOONWALK_OPTS = {
-  walks: {
-    default: {
-      distance: '4px'
-    }
-  }
-}
+app.registerCallback(Events.APPLICATION_READY, () => {
+  app.links = new Links(app)
+})
 
-class Application {
-  constructor() {
-    this.fader = null
-  }
-
-  initialize() {
-    this.initializedEvent = new window.CustomEvent('application:initialized')
-    this.readyEvent = new window.CustomEvent('application:ready')
-
-    window.addEventListener('application:ready', () => {
-      // on ready
-      this.links = new Links(this)
-    })
-
-    this.lightbox = new Lightbox()
-    this.fader = new Fader(this, '#fader')
-    this.moonwalk = new Moonwalk(MOONWALK_OPTS)
-    this.heroSlider = new HeroSlider('[data-hero-slider]')
-    this.header = new FixedHeader('header[data-nav]', FIXED_HEADER_OPTS)
-    this.mobileMenu = new MobileMenu(MOBILE_MENU_OPTS)
-    this.cookies = new Cookies()
-    this.typography = new Typography()
-
-    this._emitInitializedEvent()
-    setTimeout(this.ready.apply(this), 350)
-  }
-
-  ready() {
-    this.fader.out()
-  }
-
-  _emitInitializedEvent() {
-    window.dispatchEvent(this.initializedEvent)
-  }
-
-  _emitReadyEvent() {
-    window.dispatchEvent(this.readyEvent)
-  }
-}
-
-const app = new Application()
+app.registerCallback(Events.APPLICATION_PRELUDIUM, () => {
+  app.lightbox = new Lightbox(app, configureLightbox(app))
+  app.lazyload = new Lazyload(app, { useNativeLazyloadIfAvailable: false })
+  app.moonwalk = new Moonwalk(app, configureMoonwalk(app))
+  app.header = new StickyHeader(app, configureHeader(app))
+  app.mobileMenu = new MobileMenu(app, configureMobileMenu(app))
+  app.cookies = new Cookies(app)
+})
 
 // trigger ready state
 if (document.attachEvent ? document.readyState === 'complete' : document.readyState !== 'loading') {
   app.initialize()
 } else {
   document.addEventListener('DOMContentLoaded', app.initialize.apply(app))
+}
+
+// Accept HMR as per: https://webpack.js.org/api/hot-module-replacement#accept
+if (module.hot) {
+  module.hot.accept()
 }
