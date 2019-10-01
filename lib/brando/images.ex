@@ -117,8 +117,6 @@ defmodule Brando.Images do
   """
   def delete_images(ids) when is_list(ids) do
     q = from m in Image, where: m.id in ^ids
-    imgs = Brando.repo().all(q)
-
     Brando.repo().soft_delete_all(q)
   end
 
