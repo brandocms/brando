@@ -107,18 +107,18 @@ defmodule Brando.Pages do
   Get page
   """
   def get_page(key) when is_binary(key) do
-    page = Brando.repo().get_by(Page, key: key, deleted_at: nil)
+    query = from t in Page, where: t.key == ^key and is_nil(t.deleted_at)
 
-    case page do
+    case Brando.repo().one(query) do
       nil -> {:error, {:page, :not_found}}
       page -> {:ok, Brando.repo().preload(page, :fragments)}
     end
   end
 
   def get_page(id) do
-    page = Brando.repo().get_by(Page, id: id, deleted_at: nil)
+    query = from t in Page, where: t.id == ^id and is_nil(t.deleted_at)
 
-    case page do
+    case Brando.repo().one(query) do
       nil -> {:error, {:page, :not_found}}
       page -> {:ok, Brando.repo().preload(page, :fragments)}
     end
@@ -241,18 +241,18 @@ defmodule Brando.Pages do
   Get page fragment
   """
   def get_page_fragment(key) when is_binary(key) do
-    page = Brando.repo().get_by(PageFragment, key: key, deleted_at: nil)
+    query = from t in PageFragment, where: t.key == ^key and is_nil(t.deleted_at)
 
-    case page do
+    case Brando.repo().one(query) do
       nil -> {:error, {:page_fragment, :not_found}}
       page -> {:ok, page}
     end
   end
 
   def get_page_fragment(id) do
-    page = Brando.repo().get_by(PageFragment, id: id, deleted_at: nil)
+    query = from t in PageFragment, where: t.id == ^id and is_nil(t.deleted_at)
 
-    case page do
+    case Brando.repo().one(query) do
       nil -> {:error, {:page_fragment, :not_found}}
       page -> {:ok, page}
     end
