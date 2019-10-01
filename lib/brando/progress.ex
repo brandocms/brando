@@ -10,7 +10,7 @@ defmodule Brando.Progress do
   def update_progress(user, status, opts \\ [])
   def update_progress(:system, _, _), do: :ignore
 
-  def update_progress(%Brando.User{id: id}, status, opts), do: update_progress(id, status, opts)
+  def update_progress(%Brando.Users.User{id: id}, status, opts), do: update_progress(id, status, opts)
 
   def update_progress(id, status, opts) do
     Brando.endpoint().broadcast!("user:#{id}", "progress:update", %{
@@ -25,7 +25,7 @@ defmodule Brando.Progress do
   """
   def show_progress(:system), do: :ignore
 
-  def show_progress(%Brando.User{id: id}),
+  def show_progress(%Brando.Users.User{id: id}),
     do: show_progress(id)
 
   def show_progress(id), do: Brando.endpoint().broadcast!("user:#{id}", "progress:show", %{})
@@ -35,7 +35,7 @@ defmodule Brando.Progress do
   """
   def hide_progress(:system), do: :ignore
 
-  def hide_progress(%Brando.User{id: id}),
+  def hide_progress(%Brando.Users.User{id: id}),
     do: hide_progress(id)
 
   def hide_progress(id),

@@ -8,10 +8,12 @@ defmodule Brando.Image do
 
   use Brando.Web, :schema
   use Brando.Sequence, :schema
+  use Brando.SoftDelete.Schema
+
   import Ecto.Query, only: [from: 2]
 
   @required_fields ~w(image image_series_id)a
-  @optional_fields ~w(sequence creator_id)a
+  @optional_fields ~w(sequence creator_id deleted_at)a
 
   @derive {Jason.Encoder,
            only: [
@@ -23,15 +25,17 @@ defmodule Brando.Image do
              :image_series,
              :sequence,
              :inserted_at,
-             :updated_at
+             :updated_at,
+             :deleted_at
            ]}
 
   schema "images_images" do
     field :image, Brando.Type.Image
-    belongs_to :creator, Brando.User
+    belongs_to :creator, Brando.Users.User
     belongs_to :image_series, Brando.ImageSeries
     sequenced()
     timestamps()
+    soft_delete()
   end
 
   @doc """

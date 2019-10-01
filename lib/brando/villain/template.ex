@@ -7,11 +7,12 @@ defmodule Brando.Villain.Template do
 
   use Brando.Web, :schema
   use Brando.Sequence, :schema
+  use Brando.SoftDelete.Schema
 
   @required_fields ~w(name namespace help_text class code refs)a
-  @optional_fields ~w(sequence)a
+  @optional_fields ~w(sequence deleted_at)a
 
-  @derived_fields ~w(id name sequence namespace help_text class code refs)a
+  @derived_fields ~w(id name sequence namespace help_text class code refs deleted_at)a
   @derive {Jason.Encoder, only: @derived_fields}
 
   schema "pages_templates" do
@@ -23,6 +24,7 @@ defmodule Brando.Villain.Template do
     field :refs, {:array, :map}
     sequenced()
     timestamps()
+    soft_delete()
   end
 
   @doc """

@@ -4,7 +4,7 @@ defmodule Brando.Integration.UsersTest do
   use Brando.Integration.TestCase
 
   alias Brando.Factory
-  alias Brando.User
+  alias Brando.Users.User
 
   test "set_last_login/1" do
     user = Factory.insert(:user)

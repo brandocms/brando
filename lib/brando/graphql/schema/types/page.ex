@@ -37,6 +37,7 @@ defmodule Brando.Schema.Types.Page do
     field :meta_description, :string
     field :inserted_at, :time
     field :updated_at, :time
+    field :deleted_at, :time
   end
 
   object :page_queries do

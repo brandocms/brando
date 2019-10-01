@@ -7,6 +7,7 @@ defmodule Brando.Pages.Page do
 
   use Brando.Web, :schema
   use Brando.Villain.Schema
+  use Brando.SoftDelete.Schema
 
   import Brando.HTML, only: [truncate: 2]
 
@@ -17,7 +18,7 @@ defmodule Brando.Pages.Page do
   @max_meta_title_length 60
 
   @required_fields ~w(key language slug title data status creator_id)a
-  @optional_fields ~w(parent_id meta_description html css_classes)a
+  @optional_fields ~w(parent_id meta_description html css_classes deleted_at)a
   @derived_fields ~w(
     id
     key
@@ -33,6 +34,7 @@ defmodule Brando.Pages.Page do
     meta_description
     inserted_at
     updated_at
+    deleted_at
   )a
 
   json_ld_schema JSONLD.Schema.Article do
@@ -74,12 +76,13 @@ defmodule Brando.Pages.Page do
     field :css_classes, :string
     field :meta_description, :string
 
-    belongs_to :creator, Brando.User
+    belongs_to :creator, Brando.Users.User
     belongs_to :parent, __MODULE__
     has_many :children, __MODULE__, foreign_key: :parent_id
     has_many :fragments, Brando.Pages.PageFragment
 
     timestamps()
+    soft_delete()
   end
 
   @doc """

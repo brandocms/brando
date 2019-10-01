@@ -8,9 +8,10 @@ defmodule Brando.Pages.PageFragment do
 
   use Brando.Web, :schema
   use Brando.Villain.Schema
+  use Brando.SoftDelete.Schema
 
   @required_fields ~w(parent_key key language data creator_id)a
-  @optional_fields ~w(html page_id wrapper)a
+  @optional_fields ~w(html page_id wrapper deleted_at)a
   @derived_fields ~w(
     id
     parent_key
@@ -21,6 +22,9 @@ defmodule Brando.Pages.PageFragment do
     wrapper
     creator_id
     page_id
+    inserted_at
+    updated_at
+    deleted_at
   )a
 
   @derive {Jason.Encoder, only: @derived_fields}
@@ -31,9 +35,9 @@ defmodule Brando.Pages.PageFragment do
     field :language, :string
     field :wrapper, :string
     villain()
-    belongs_to :creator, Brando.User
+    belongs_to :creator, Brando.Users.User
     belongs_to :page, Brando.Pages.Page
-
+    soft_delete()
     timestamps()
   end
 

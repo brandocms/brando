@@ -2,6 +2,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
   use Ecto.Migration
   use Brando.Sequence, :migration
   use Brando.Tag, :migration
+  import Brando.SoftDelete.Migration
 
   def up do
     create table(:users_users) do
@@ -14,6 +15,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add(:language, :text, default: "nb")
       add(:last_login, :naive_datetime)
       timestamps()
+      soft_delete()
     end
 
     create(index(:users_users, [:email], unique: true))
@@ -33,6 +35,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add(:published, :boolean)
       add(:publish_at, :naive_datetime)
       timestamps()
+      soft_delete()
       tags()
     end
 
@@ -46,6 +49,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add(:slug, :text)
       add(:cfg, :json)
       add(:creator_id, references(:users_users))
+      soft_delete()
       timestamps()
     end
 
@@ -58,6 +62,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add(:cfg, :json)
       add(:creator_id, references(:users_users))
       add(:image_category_id, references(:images_categories))
+      soft_delete()
       sequenced()
       timestamps()
     end
@@ -66,6 +71,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add(:image, :jsonb)
       add(:creator_id, references(:users_users))
       add(:image_series_id, references(:images_series))
+      soft_delete()
       sequenced()
       timestamps()
     end
@@ -95,6 +101,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add(:creator_id, references(:users_users))
       add(:css_classes, :text)
       add(:meta_description, :text)
+      soft_delete()
       timestamps()
     end
 
@@ -110,6 +117,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add(:data, :json)
       add(:html, :text)
       add(:creator_id, references(:users_users))
+      soft_delete()
       timestamps()
     end
 

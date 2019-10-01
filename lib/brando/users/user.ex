@@ -1,4 +1,4 @@
-defmodule Brando.User do
+defmodule Brando.Users.User do
   @moduledoc """
   Ecto schema for the User schema, as well as image field definitions
   and helper functions for dealing with the user schema.
@@ -8,13 +8,14 @@ defmodule Brando.User do
 
   use Brando.Web, :schema
   use Brando.Field.ImageField
+  use Brando.SoftDelete.Schema
 
   import Brando.Gettext
 
   @required_fields ~w(full_name email password language)a
-  @optional_fields ~w(role avatar active)a
+  @optional_fields ~w(role avatar active deleted_at)a
 
-  @derived_fields ~w(id full_name email password language role avatar active inserted_at updated_at)a
+  @derived_fields ~w(id full_name email password language role avatar active inserted_at updated_at deleted_at)a
   @derive {Jason.Encoder, only: @derived_fields}
 
   schema "users_users" do
@@ -27,6 +28,7 @@ defmodule Brando.User do
     field :language, :string
     field :last_login, :naive_datetime
     timestamps()
+    soft_delete()
   end
 
   has_image_field(:avatar, %{

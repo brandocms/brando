@@ -1,7 +1,6 @@
 defmodule Brando.Villain.Schema do
   @moduledoc """
   Interface to Villain HTML editor.
-  https://github.com/twined/villain
 
   # Schema
 
@@ -14,7 +13,7 @@ defmodule Brando.Villain.Schema do
   Add fields to your schema:
 
       schema "my_schema" do
-        field "header", :string
+        field :header, :string
         villain :biography
       end
 

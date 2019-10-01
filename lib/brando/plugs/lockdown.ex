@@ -28,7 +28,7 @@ defmodule Brando.Plug.Lockdown do
   through the backend to see the frontend website.
 
   """
-  alias Brando.User
+  alias Brando.Users.User
   import Phoenix.Controller, only: [redirect: 2]
   import Plug.Conn, only: [halt: 1]
 

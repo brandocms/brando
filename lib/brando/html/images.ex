@@ -24,7 +24,7 @@ defmodule Brando.HTML.Images do
     * `media_queries` - list of media queries to add to source.
       I.e `media_queries: [{"(min-width: 0px) and (max-width: 760px)", [{"mobile", "700w"}]}]`
     * `srcset` - if you want to use the srcset attribute. Set in the form of `{module, field}`.
-      I.e `srcset: {Brando.User, :avatar}`
+      I.e `srcset: {Brando.Users.User, :avatar}`
 
       You can also reference a config struct:
       I.e `srcset: image_series.cfg`
@@ -262,7 +262,7 @@ defmodule Brando.HTML.Images do
       full path.
     * `cache` - key to cache by, i.e `cache: schema.updated_at`
     * `srcset` - if you want to use the srcset attribute. Set in the form of `{module, field}`.
-      I.e `srcset: {Brando.User, :avatar}`
+      I.e `srcset: {Brando.Users.User, :avatar}`
       You can also reference a config struct directly:
       I.e `srcset: image_series.cfg`
       Or supply a srcset directly:

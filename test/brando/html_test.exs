@@ -150,14 +150,14 @@ defmodule Brando.HTMLTest do
     assert img_tag(nil, :medium, default: "test.jpg") |> safe_to_string ==
              "<img src=\"medium/test.jpg\">"
 
-    assert img_tag(user.avatar, :medium, prefix: media_url(), srcset: {Brando.User, :avatar})
+    assert img_tag(user.avatar, :medium, prefix: media_url(), srcset: {Brando.Users.User, :avatar})
            |> safe_to_string ==
              "<img src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27%27%20height%3D%27%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\">"
   end
 
   test "picture_tag" do
     user = Factory.insert(:user)
-    srcset = {Brando.User, :avatar}
+    srcset = {Brando.Users.User, :avatar}
 
     assert picture_tag(
              user.avatar,

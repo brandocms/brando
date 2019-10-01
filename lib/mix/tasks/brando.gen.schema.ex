@@ -204,7 +204,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
   defp schema_assocs(base, domain, assocs) do
     Enum.reduce(assocs, [], fn
       {key, {:references, :users}}, acc ->
-        [{key, :"#{key}_id", "Brando.User"} | acc]
+        [{key, :"#{key}_id", "Brando.Users.User"} | acc]
 
       {key, {:references, target}}, acc ->
         inflected = singularize(to_string(target)) |> camelize()

@@ -7,15 +7,13 @@ defmodule Brando.Sites do
   @type id :: Integer.t() | String.t()
   @type identity :: Brando.Sites.Identity.t()
   @type params :: Map.t()
-  @type user :: Brando.User.t()
+  @type user :: Brando.Users.User.t()
 
-  # ++header
   import Ecto.Query
+  alias Brando.Images
   alias Brando.Sites.Identity
   alias Brando.Villain
-  # __header
 
-  # ++code
   @doc """
   Get identity
   """
@@ -60,8 +58,9 @@ defmodule Brando.Sites do
   def delete_identity() do
     {:ok, identity} = get_identity()
     Brando.repo().delete(identity)
-    Brando.Images.Utils.delete_original_and_sized_images(identity, :image)
-    Brando.Images.Utils.delete_original_and_sized_images(identity, :logo)
+    Images.Utils.delete_original_and_sized_images(identity, :image)
+    Images.Utils.delete_original_and_sized_images(identity, :logo)
+
     {:ok, identity}
   end
 
@@ -115,6 +114,4 @@ defmodule Brando.Sites do
   end
 
   def update_cache({:error, changeset}), do: {:error, changeset}
-
-  # __code
 end

@@ -48,6 +48,7 @@ defmodule Brando.Schema.Types.Images do
 
     field :inserted_at, :time
     field :updated_at, :time
+    field :deleted_at, :time
   end
 
   object :page_info do
@@ -73,6 +74,7 @@ defmodule Brando.Schema.Types.Images do
     field :sequence, :integer
     field :inserted_at, :time
     field :updated_at, :time
+    field :deleted_at, :time
 
     field :page_info, :page_info
   end
@@ -86,6 +88,7 @@ defmodule Brando.Schema.Types.Images do
     field :sequence, :integer
     field :inserted_at, :time
     field :updated_at, :time
+    field :deleted_at, :time
   end
 
   object :image_type do
@@ -116,13 +119,6 @@ defmodule Brando.Schema.Types.Images do
         {:ok, sizes}
       end
     end
-
-    # field :sizes, list_of(:image_size) do
-    #   resolve fn image, _args, _ ->
-    #     map = Enum.map(image.sizes, &%{key: elem(&1, 0), value: elem(&1, 1)})
-    #     {:ok, map}
-    #   end
-    # end
 
     field :width, :integer
     field :height, :integer

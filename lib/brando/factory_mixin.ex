@@ -16,7 +16,7 @@ defmodule Brando.FactoryMixin do
       alias Brando.Pages.Page
       alias Brando.Pages.PageFragment
       alias Brando.Type.ImageConfig
-      alias Brando.User
+      alias Brando.Users.User
 
       @sizes %{
         "small" => %{"size" => "300", "quality" => 1},

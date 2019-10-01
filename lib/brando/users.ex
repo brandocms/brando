@@ -4,15 +4,31 @@ defmodule Brando.Users do
 
   Interfaces with database
   """
-  alias Brando.User
+  use Brando.Web, :context
+  alias Brando.Users.User
   alias Brando.Utils
   import Ecto.Changeset
+  import Ecto.Query
 
   @doc """
   Get user by id
   """
   def get_user(id) do
-    case Brando.repo().get(User, id) do
+    query = from t in User, where: t.id == ^id and is_nil(t.deleted_at)
+
+    case Brando.repo().one(query) do
+      nil -> {:error, {:user, :not_found}}
+      user -> {:ok, user}
+    end
+  end
+
+  @doc """
+  Get non deleted user by email
+  """
+  def get_user_by_email(email) do
+    query = from t in Users, where: t.email == ^email and is_nil(t.deleted_at)
+
+    case Brando.repo().one(query) do
       nil -> {:error, {:user, :not_found}}
       user -> {:ok, user}
     end
@@ -36,6 +52,7 @@ defmodule Brando.Users do
   def get_users do
     User
     |> User.order_by_id()
+    |> exclude_deleted()
     |> Brando.repo().all()
   end
 
@@ -67,7 +84,7 @@ defmodule Brando.Users do
   @doc """
   Delete user
   """
-  def delete_user(user), do: Brando.repo().delete!(user)
+  def delete_user(user), do: Brando.repo().soft_delete!(user)
 
   @doc """
   Bumps `user`'s `last_login` to current time.

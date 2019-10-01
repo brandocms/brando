@@ -74,7 +74,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
             @type id :: Integer.t() | String.t()
             @type params :: Map.t()
-            @type user :: Brando.User.t()
+            @type user :: Brando.Users.User.t()
 
             alias #{binding[:base]}.Repo
 
@@ -380,19 +380,12 @@ defmodule Mix.Tasks.Brando.Gen.Html do
   defp generate_domain_code(domain_code, _, binding, _schema_binding) do
     insert_code = "Repo.insert(changeset)"
 
-    delete_img_code =
-      Enum.map(binding[:img_fields] || [], fn {_v, k} ->
-        "    Brando.Images.Utils.delete_original_and_sized_images(#{binding[:singular]}, #{
-          inspect(k)
-        })"
-      end)
-
     delete_gallery_code =
       Enum.map(binding[:gallery_fields] || [], fn {_v, k} ->
         "    Brando.Images.delete_series(#{binding[:singular]}.#{k})"
       end)
 
-    img_code = (delete_img_code ++ delete_gallery_code) |> Enum.join("\n")
+    img_code = delete_gallery_code |> Enum.join("\n")
 
     domain_code =
       domain_code <>

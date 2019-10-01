@@ -3,11 +3,11 @@ defmodule Brando.Images.Utils do
   General utilities pertaining to the Images module
   """
   @type id :: String.t() | integer
-  @type user :: Brando.User.t() | :system
   @type image_schema :: Brando.Image.t()
   @type image_series_schema :: Brando.ImageSeries.t()
   @type image_struct :: Brando.Type.Image.t()
   @type image_kind :: :image | :image_series | :image_field
+  @type user :: Brando.Users.User.t() | :system
 
   import Brando.Utils
   import Ecto.Query, only: [from: 2]
@@ -148,8 +148,7 @@ defmodule Brando.Images.Utils do
       )
 
     for img <- images do
-      delete_original_and_sized_images(img, :image)
-      Brando.repo().delete!(img)
+      Brando.repo().soft_delete!(img)
     end
 
     :ok
@@ -170,7 +169,7 @@ defmodule Brando.Images.Utils do
 
     for is <- image_series do
       delete_images_for(:image_series, is.id)
-      Brando.repo().delete!(is)
+      Brando.repo().soft_delete!(is)
     end
   end
 

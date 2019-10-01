@@ -6,7 +6,7 @@ defmodule Brando.Images.Operations do
   @type image_config :: Brando.Type.ImageConfig.t()
   @type operation :: Brando.Images.Operation.t()
   @type operation_result :: Brando.Images.OperationResult.t()
-  @type user :: Brando.User.t() | :system
+  @type user :: Brando.Users.User.t() | :system
 
   alias Brando.Images
   alias Brando.Progress

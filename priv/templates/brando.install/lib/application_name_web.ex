@@ -41,6 +41,18 @@ defmodule <%= application_module %>Web do
     end
   end
 
+  def migration do
+    quote do
+      import Brando.SoftDelete.Migration
+    end
+  end
+
+  def context do
+    quote do
+      import Brando.SoftDelete.Query
+    end
+  end
+
   def absinthe do
     quote do
       # Provides us with a DSL for defining GraphQL Types

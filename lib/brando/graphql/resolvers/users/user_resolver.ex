@@ -3,8 +3,8 @@ defmodule Brando.Users.UserResolver do
   Resolver for Users
   """
   use Brando.Web, :resolver
-  alias Brando.User
   alias Brando.Users
+  alias Brando.Users.User
 
   import Ecto.Query
 

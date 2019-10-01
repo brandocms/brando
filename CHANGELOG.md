@@ -1,6 +1,45 @@
-## v2.0.0-beta.0-dev
+## v3.0.0-alpha.0-dev
+
+### General
+
+* `Brando.User` is now `Brando.Users.User` for consistency.
+* In `session_controller.ex`, ensure user has not been soft deleted in `create/3`
+
+  ```elixir
+  def create(conn, %{"email" => email, "password" => password}) do
+    case Users.get_user_by_email(email) do
+      {:error, {:user, :not_found}} ->
+        Comeonin.Bcrypt.dummy_checkpw()
+
+        conn
+        |> put_status(:unauthorized)
+        |> render("error.json")
+
+      {:ok, user} ->
+        if Bcrypt.verify_pass(password, user.password) do
+          {:ok, jwt, _full_claims} = <%= application_module %>Web.Guardian.encode_and_sign(user)
+
+          conn
+          |> put_status(:created)
+          |> render("show.json", jwt: jwt, user: user)
+        else
+          conn
+          |> put_status(:unauthorized)
+          |> render("error.json")
+        end
+    end
+  end
+  ```
+
+### Soft deletion
+
+* Soft deletion fields have been added. Run `mix brando.upgrade`
+* Add to your `repo.ex`:
+
+    use Brando.SoftDelete.Repo
 
 ### Application layout template
+
 * Switch out the `:hmr` logic for `css` and `js` with
 
     <%= Brando.HTML.include_css() %>
@@ -9,6 +48,7 @@
   right before `</head>`
 
 ### Startup checks
+
 * Add to your `application.ex`
     result = Supervisor.start_link(children, opts)
     # Run Brando system checks
@@ -17,6 +57,7 @@
     result
 
 ### Meta rewrite
+
 * Remove `import Brando.Meta.Controller` from `my_app_web.ex`.
   Both from `controller/0` and `router/0`.
 * Remove any `put_meta` in `router.ex´
@@ -28,6 +69,7 @@
   to `my_app_web.ex` under `schema/0`.
 
 ### Image processing
+
 * Added SHARP image processing. Choose this for the fastest/highest quality
     config :brando, Brando.Images,
       processor_module: Brando.Images.Processor.Sharp # or Mogrify

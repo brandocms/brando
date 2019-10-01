@@ -141,12 +141,7 @@ defmodule Brando.Villain do
   """
   @spec rerender_html_from_ids({Module, atom, atom}, [Integer.t() | String.t()]) :: nil | [any()]
   def rerender_html_from_ids(_, []), do: nil
-
-  def rerender_html_from_ids(args, ids) do
-    for id <- ids do
-      rerender_html_from_id(args, id)
-    end
-  end
+  def rerender_html_from_ids(args, ids), do: for(id <- ids, do: rerender_html_from_id(args, id))
 
   @doc """
   Check all posts for missing images
@@ -233,7 +228,7 @@ defmodule Brando.Villain do
   def get_template(id) do
     query =
       from t in Brando.Villain.Template,
-        where: t.id == ^id
+        where: t.id == ^id and is_nil(t.deleted_at)
 
     case Brando.repo().one(query) do
       nil -> {:error, {:template, :not_found}}
@@ -270,9 +265,9 @@ defmodule Brando.Villain do
   """
   def list_templates(namespace) do
     query =
-      from(t in Brando.Villain.Template,
+      from t in Brando.Villain.Template,
+        where: is_nil(t.deleted_at),
         order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
-      )
 
     query =
       case namespace do

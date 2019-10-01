@@ -29,6 +29,9 @@ defmodule Brando.Schema.Types.User do
     field :active, :boolean
     field :language, :string
     field :last_login, :date
+    field :inserted_at, :time
+    field :updated_at, :time
+    field :deleted_at, :time
   end
 
   object :user_queries do

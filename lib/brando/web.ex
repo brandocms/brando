@@ -89,6 +89,12 @@ defmodule Brando.Web do
     end
   end
 
+  def context do
+    quote do
+      import Brando.SoftDelete.Query
+    end
+  end
+
   @doc """
   When used, dispatch to the appropriate controller/view/etc.
   """

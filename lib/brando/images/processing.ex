@@ -8,7 +8,7 @@ defmodule Brando.Images.Processing do
   import Ecto.Query, only: [from: 2]
 
   @type id :: String.t() | integer
-  @type user :: Brando.User.t() | :system
+  @type user :: Brando.Users.User.t() | :system
   @type image_schema :: Brando.Image.t()
   @type image_series_schema :: Brando.ImageSeries.t()
   @type image_struct :: Brando.Type.Image.t()
