@@ -322,6 +322,13 @@ defmodule <%= application_module %>.Villain.Parser do
   end
 
   @doc """
+  Strip comments
+  """
+  def comment(_) do
+    ""
+  end
+
+  @doc """
   Convert columns to html. Recursive parsing.
   """
   def columns(cols) do
