@@ -4,8 +4,6 @@ defmodule <%= application_module %>Web.SessionController do
   """
   use <%= application_module %>Web, :controller
   alias Brando.Users
-  alias Brando.Users.User
-  alias <%= application_module %>.Repo
 
   @doc """
   Create new token
