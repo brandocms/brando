@@ -1,10 +1,10 @@
 import '@/styles/app.scss'
-import { Vue } from 'kurtz'
+import { Vue } from '@univers-agency/kurtz'
 
 import { installMenus } from './menus'
-import { installConfig, installKurtz } from 'kurtz/lib/install'
+import { installConfig, installKurtz } from '@univers-agency/kurtz/lib/install'
 
-import App from 'kurtz/lib/views/App.vue'
+import App from '@univers-agency/kurtz/lib/views/App.vue'
 import store from '@/store'
 import router from '@/router'
 

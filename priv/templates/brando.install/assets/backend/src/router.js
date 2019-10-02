@@ -1,5 +1,5 @@
-import { Vue, Router } from 'kurtz'
-import kurtzBaseRoutes from 'kurtz/lib/routes/base'
+import { Vue, Router } from '@univers-agency/kurtz'
+import kurtzBaseRoutes from '@univers-agency/kurtz/lib/routes/base'
 import localRoutes from '@/routes'
 import store from './store'
 

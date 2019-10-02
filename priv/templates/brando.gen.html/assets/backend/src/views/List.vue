@@ -90,7 +90,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from 'kurtz/lib/vuex'
+import { mapActions, mapGetters } from '@univers-agency/kurtz/lib/vuex'
 
 export default {
   components: {
