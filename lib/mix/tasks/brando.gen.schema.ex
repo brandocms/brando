@@ -197,7 +197,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
         [{key, :"#{key}_id", target, :nothing} | acc]
 
       {key, :gallery}, acc ->
-        [{key, :"#{key}_id", :imageseries, :delete_all} | acc]
+        [{key, :"#{key}_id", :images_series, :delete_all} | acc]
     end)
   end
 
