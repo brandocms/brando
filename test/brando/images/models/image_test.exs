@@ -184,6 +184,6 @@ defmodule Brando.Integration.ImageTest do
       |> Brando.repo().get_by!(id: series.id)
       |> Brando.repo().preload(:images)
 
-    assert Enum.empty?(series.images)
+    assert Enum.count(Enum.filter(series.images, &(&1.deleted_at != nil))) == 2
   end
 end
