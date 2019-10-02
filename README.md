@@ -47,9 +47,10 @@ Fix dev asset reloading in `config/dev.exs`
 
 ```elixir
 config :my_app, hmr: true
-config :my_app, MyApp.Endpoint,
-  watchers: [npm: ["run", "watch", cd: Path.expand("../assets/frontend", __DIR__)]]
+config :my_app, show_breakpoint_debug: true
 ```
+
+Remove `watcher` completely from the Endpoint setup. Run your own `yarn watch` instead
 
 *Remember to switch out your ports and configure SSL in `etc/supervisor/prod.conf` and `etc/nginx/prod.conf`*
 
