@@ -46,7 +46,7 @@ config :brando,
   """
 
 config :brando, Brando.Images,
-  processor_module: Brando.Images.Processing.Sharp,
+  processor_module: Brando.Images.Processor.Sharp,
   default_config: %{
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
     default_size: :medium,
