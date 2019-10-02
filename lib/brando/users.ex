@@ -26,7 +26,7 @@ defmodule Brando.Users do
   Get non deleted user by email
   """
   def get_user_by_email(email) do
-    query = from t in Users, where: t.email == ^email and is_nil(t.deleted_at)
+    query = from t in User, where: t.email == ^email and is_nil(t.deleted_at)
 
     case Brando.repo().one(query) do
       nil -> {:error, {:user, :not_found}}
