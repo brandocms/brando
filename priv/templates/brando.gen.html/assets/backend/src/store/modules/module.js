@@ -80,9 +80,9 @@ export const <%= vue_plural %> = {
 
     addImageSeriesTo<%= Recase.to_pascal(vue_singular) %> (context, { <%= vue_singular %>Id, imageSeries }) {
       nprogress.start()
-      context.commit(ADD_IMAGE_SERIES_TO_<%= String.upcase(singular) %>, { caseId, imageSeries })
+      context.commit(ADD_IMAGE_SERIES_TO_<%= String.upcase(singular) %>, { <%= vue_singular %>Id, imageSeries })
       nprogress.done()
-      return caseId
+      return <%= vue_singular %>Id
     }<% end %>
   }
 }
