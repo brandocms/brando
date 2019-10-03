@@ -283,6 +283,8 @@ defmodule Brando.Images do
   @doc """
   Get series by `id`
   """
+  def get_series(nil), do: {:error, {:image_series, :not_found}}
+
   def get_series(id) do
     query =
       from t in ImageSeries,
