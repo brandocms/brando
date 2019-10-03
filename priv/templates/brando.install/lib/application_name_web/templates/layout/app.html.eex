@@ -18,9 +18,8 @@
 
     <title><%%= Brando.Utils.get_page_title(@conn) %></title>
 
-    <%%= Brando.HTML.include_css() %>
-    <%%= Brando.HTML.include_js() %>
-
+    <%%= Brando.HTML.include_css(@conn) %>
+    <%%= Brando.HTML.include_js(@conn) %>
     <%%= Brando.HTML.render_json_ld(@conn) %>
   </head>
   <%%= body_tag @conn, id: "top" %>

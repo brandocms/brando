@@ -262,13 +262,17 @@ defmodule Brando.HTML do
   Also includes a preconnect link tag for faster resolution
   """
   @spec include_css :: {:safe, [...]} | [{:safe, [...]}]
-  def include_css do
+  @spec include_css(conn) :: {:safe, [...]} | [{:safe, [...]}]
+  def include_css, do: do_include_css(Brando.endpoint().host)
+  def include_css(conn), do: do_include_css(conn.host)
+
+  def do_include_css(host) do
     cdn? = !!Brando.endpoint().config(:static_url)
     hmr? = Application.get_env(Brando.otp_app(), :hmr)
 
     url =
       if hmr? do
-        "http://#{Brando.endpoint().host}:9999/css/app.css"
+        "http://#{host}:9999/css/app.css"
       else
         (cdn? && Brando.helpers().static_url(Brando.endpoint(), "/css/app.css")) ||
           Brando.helpers().static_path(Brando.endpoint(), "/css/app.css")
@@ -288,12 +292,16 @@ defmodule Brando.HTML do
 
   Also includes a polyfill for Safari in prod.
   """
-  @spec include_js :: [{:safe, [...]}]
-  def include_js do
+  @spec include_js() :: [{:safe, [...]}]
+  @spec include_js(conn) :: [{:safe, [...]}]
+  def include_js, do: do_include_js(Brando.endpoint().host)
+  def include_js(conn), do: do_include_js(conn.host)
+
+  defp do_include_js(host) do
     cdn? = !!Brando.endpoint().config(:static_url)
     # check if we're HMR
     if Application.get_env(Brando.otp_app(), :hmr) do
-      url = "http://#{Brando.endpoint().host}:9999/js/app.js"
+      url = "http://#{host}:9999/js/app.js"
       content_tag(:script, "", defer: true, src: url)
     else
       {modern_route, legacy_route} =
