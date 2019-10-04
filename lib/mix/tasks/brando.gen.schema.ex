@@ -57,6 +57,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
     [singular, plural, attrs] = parsed
 
     sequenced? = (opts[:sequenced] && true) || false
+    soft_delete? = (opts[:softdelete] && true) || false
 
     attrs = Mix.Brando.attrs(attrs)
     binding = Mix.Brando.inflect(singular)
@@ -110,6 +111,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
           plural: plural,
           types: types,
           sequenced: sequenced?,
+          soft_delete: soft_delete?,
           domain: domain,
           snake_domain: snake_domain,
           migrations: migrations,

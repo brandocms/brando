@@ -40,72 +40,13 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     == Creating domain for #{domain}
     """)
 
-    create_domain(domain)
+    create_schema(domain)
   end
 
   defp otp_app, do: Mix.Project.config() |> Keyword.fetch!(:app)
 
-  @spec create_domain(any) :: no_return
-  defp create_domain(domain_name) do
-    snake_domain =
-      domain_name
-      |> Phoenix.Naming.underscore()
-      |> String.split("/")
-      |> List.last()
-
-    binding = Mix.Brando.inflect(domain_name)
-
-    :ok = File.mkdir_p("lib/#{otp_app()}/#{snake_domain}")
-    {domain_code, domain_header, instructions} = create_schema(domain_name)
-
-    # check if it exists
-
-    file_name = "lib/#{otp_app()}/#{snake_domain}/#{snake_domain}.ex"
-
-    if not File.exists?(file_name) do
-      :ok =
-        File.write(
-          file_name,
-          """
-          defmodule #{binding[:module]} do
-            @moduledoc \"\"\"
-            Context for #{binding[:human]}
-            \"\"\"
-
-            @type id :: Integer.t() | String.t()
-            @type params :: Map.t()
-            @type user :: Brando.Users.User.t()
-
-            alias #{binding[:base]}.Repo
-
-            # ++header
-            # __header
-
-            # ++code
-            # __code
-          end
-          """
-        )
-    end
-
-    Mix.Brando.add_to_file(
-      file_name,
-      "header",
-      Enum.join(domain_header, "\n")
-    )
-
-    Mix.Brando.add_to_file(
-      file_name,
-      "code",
-      domain_code
-    )
-
-    Mix.shell().info(instructions)
-  end
-
   @spec create_schema(any) :: no_return
-  @spec create_schema(any, any, any) :: no_return
-  defp create_schema(domain_name, domain_header \\ [], domain_code \\ "") do
+  defp create_schema(domain_name) do
     Mix.shell().info("""
     == Schema for #{domain_name}
     """)
@@ -115,6 +56,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       |> Phoenix.Naming.underscore()
       |> String.split("/")
       |> List.last()
+
+    domain_filename = "lib/#{otp_app()}/#{snake_domain}/#{snake_domain}.ex"
+    domain_exists? = File.exists?(domain_filename)
 
     singular = Mix.shell().prompt("+ Enter schema name (e.g. Post)") |> String.trim("\n")
     plural = Mix.shell().prompt("+ Enter plural name (e.g. posts)") |> String.trim("\n")
@@ -129,6 +73,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     attrs = org_attrs |> Mix.Brando.attrs()
     villain? = :villain in Keyword.values(attrs)
     sequenced? = Mix.shell().yes?("\nMake schema sequenceable?")
+    soft_delete? = Mix.shell().yes?("\nAdd soft deletion?")
     image_field? = :image in Keyword.values(attrs)
     gallery? = :gallery in Keyword.values(attrs)
     binding = Mix.Brando.inflect(singular)
@@ -175,6 +120,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
           villain: villain?,
           gallery: gallery?,
           sequenced: sequenced?,
+          soft_delete: soft_delete?,
           img_fields: img_fields,
           file_fields: file_fields,
           villain_fields: villain_fields,
@@ -195,46 +141,60 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     args = [singular, plural, org_attrs]
 
-    files = [
-      {:eex, "controller.ex", "lib/application_name_web/controllers/#{path}_controller.ex"},
-      {:eex, "index.html.eex", "lib/application_name_web/templates/#{path}/index.html.eex"},
-      {:eex, "view.ex", "lib/application_name_web/views/#{path}_view.ex"},
+    files =
+      (domain_exists? && []) ||
+        [{:eex, "domain.ex", "lib/application_name/#{snake_domain}/#{snake_domain}.ex"}]
 
-      # GQL
-      {:eex, "graphql/schema/types/type.ex",
-       "lib/application_name/graphql/schema/types/#{path}.ex"},
-      {:eex, "graphql/resolvers/resolver.ex",
-       "lib/application_name/graphql/resolvers/#{path}_resolver.ex"},
+    files =
+      files ++
+        [
+          {:eex, "controller.ex", "lib/application_name_web/controllers/#{path}_controller.ex"},
+          {:eex, "index.html.eex", "lib/application_name_web/templates/#{path}/index.html.eex"},
+          {:eex, "view.ex", "lib/application_name_web/views/#{path}_view.ex"},
 
-      # Backend JS
-      {:eex, "assets/backend/src/store/modules/module.js",
-       "assets/backend/src/store/modules/#{vue_plural}.js"},
-      {:eex, "assets/backend/src/api/api.js", "assets/backend/src/api/#{vue_singular}.js"},
-      {:eex, "assets/backend/src/api/graphql/ALL_QUERY.graphql",
-       "assets/backend/src/api/graphql/#{vue_plural}/#{String.upcase(plural)}_QUERY.graphql"},
-      {:eex, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql",
-       "assets/backend/src/api/graphql/#{vue_plural}/#{String.upcase(singular)}_QUERY.graphql"},
-      {:eex, "assets/backend/src/api/graphql/CREATE_MUTATION.graphql",
-       "assets/backend/src/api/graphql/#{vue_plural}/CREATE_#{String.upcase(singular)}_MUTATION.graphql"},
-      {:eex, "assets/backend/src/api/graphql/UPDATE_MUTATION.graphql",
-       "assets/backend/src/api/graphql/#{vue_plural}/UPDATE_#{String.upcase(singular)}_MUTATION.graphql"},
-      {:eex, "assets/backend/src/api/graphql/DELETE_MUTATION.graphql",
-       "assets/backend/src/api/graphql/#{vue_plural}/DELETE_#{String.upcase(singular)}_MUTATION.graphql"},
-      {:eex, "assets/backend/src/menus/menu.js", "assets/backend/src/menus/#{vue_plural}.js"},
-      {:eex, "assets/backend/src/routes/route.js", "assets/backend/src/routes/#{vue_plural}.js"},
-      {:eex, "assets/backend/src/views/List.vue",
-       "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}ListView.vue"},
-      {:eex_trim, "assets/backend/src/views/Create.vue",
-       "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}CreateView.vue"},
-      {:eex_trim, "assets/backend/src/views/Edit.vue",
-       "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}EditView.vue"},
-      {:eex_trim, "assets/backend/cypress/integration/spec.js",
-       "assets/backend/cypress/integration/#{snake_domain}/#{Recase.to_pascal(vue_singular)}.spec.js"}
-    ]
+          # GQL
+          {:eex, "graphql/schema/types/type.ex",
+           "lib/application_name/graphql/schema/types/#{path}.ex"},
+          {:eex, "graphql/resolvers/resolver.ex",
+           "lib/application_name/graphql/resolvers/#{path}_resolver.ex"},
+
+          # Backend JS
+          {:eex, "assets/backend/src/store/modules/module.js",
+           "assets/backend/src/store/modules/#{vue_plural}.js"},
+          {:eex, "assets/backend/src/api/api.js", "assets/backend/src/api/#{vue_singular}.js"},
+          {:eex, "assets/backend/src/api/graphql/ALL_QUERY.graphql",
+           "assets/backend/src/api/graphql/#{vue_plural}/#{String.upcase(plural)}_QUERY.graphql"},
+          {:eex, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql",
+           "assets/backend/src/api/graphql/#{vue_plural}/#{String.upcase(singular)}_QUERY.graphql"},
+          {:eex, "assets/backend/src/api/graphql/CREATE_MUTATION.graphql",
+           "assets/backend/src/api/graphql/#{vue_plural}/CREATE_#{String.upcase(singular)}_MUTATION.graphql"},
+          {:eex, "assets/backend/src/api/graphql/UPDATE_MUTATION.graphql",
+           "assets/backend/src/api/graphql/#{vue_plural}/UPDATE_#{String.upcase(singular)}_MUTATION.graphql"},
+          {:eex, "assets/backend/src/api/graphql/DELETE_MUTATION.graphql",
+           "assets/backend/src/api/graphql/#{vue_plural}/DELETE_#{String.upcase(singular)}_MUTATION.graphql"},
+          {:eex, "assets/backend/src/menus/menu.js", "assets/backend/src/menus/#{vue_plural}.js"},
+          {:eex, "assets/backend/src/routes/route.js",
+           "assets/backend/src/routes/#{vue_plural}.js"},
+          {:eex, "assets/backend/src/views/List.vue",
+           "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}ListView.vue"},
+          {:eex_trim, "assets/backend/src/views/Create.vue",
+           "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}CreateView.vue"},
+          {:eex_trim, "assets/backend/src/views/Edit.vue",
+           "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}EditView.vue"},
+          {:eex_trim, "assets/backend/cypress/integration/spec.js",
+           "assets/backend/cypress/integration/#{snake_domain}/#{Recase.to_pascal(vue_singular)}.spec.js"}
+        ]
 
     {files, args} =
       if sequenced? do
         {files, args ++ ["--sequenced"]}
+      else
+        {files, args}
+      end
+
+    {files, args} =
+      if soft_delete? do
+        {files, args ++ ["--softdelete"]}
       else
         {files, args}
       end
@@ -252,12 +212,34 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     ================================================================================================
     """
 
-    domain_header =
-      domain_header ++ ["alias #{binding[:base]}.#{binding[:domain]}.#{binding[:scoped]}"]
-
-    domain_code = generate_domain_code(domain_code, domain_name, binding, schema_binding)
-
     # Add content to files
+
+    Mix.Brando.add_to_file(
+      domain_filename,
+      "types",
+      "@type #{binding[:singular]} :: #{binding[:base]}.#{binding[:domain]}.#{binding[:scoped]}.t()"
+    )
+
+    Mix.Brando.add_to_file(
+      domain_filename,
+      "header",
+      "alias #{binding[:base]}.#{binding[:domain]}.#{binding[:scoped]}"
+    )
+
+    domain_code =
+      EEx.eval_file(
+        Application.app_dir(
+          :brando,
+          "priv/templates/brando.gen.html/domain_code.eex"
+        ),
+        binding
+      )
+
+    Mix.Brando.add_to_file(
+      domain_filename,
+      "code",
+      domain_code
+    )
 
     ## MENUS
 
@@ -370,113 +352,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       )
     end
 
-    if Mix.shell().yes?("\nCreate another schema?") do
-      create_schema(domain_name, domain_header, domain_code)
-    else
-      {domain_code, domain_header, instructions}
-    end
-  end
-
-  defp generate_domain_code(domain_code, _, binding, _schema_binding) do
-    insert_code = "Repo.insert(changeset)"
-
-    delete_gallery_code =
-      Enum.map(binding[:gallery_fields] || [], fn {_v, k} ->
-        "    Brando.Images.delete_series(#{binding[:singular]}.#{k})"
-      end)
-
-    img_code = delete_gallery_code |> Enum.join("\n")
-
-    domain_code =
-      domain_code <>
-        ~s'''
-        @doc """
-        List all #{binding[:plural]}
-        """
-        @spec list_#{binding[:plural]}() :: {:ok, [#{binding[:alias]}.t()]}
-        def list_#{binding[:plural]} do
-          {:ok, Repo.all(#{binding[:alias]})}
-        end
-
-        @doc """
-        Get single #{binding[:singular]}
-        """
-        @spec get_#{binding[:singular]}(id) ::
-                {:ok, #{binding[:alias]}.t()} | {:error, {:#{binding[:singular]}, :not_found}}
-        def get_#{binding[:singular]}(id) do
-          case Repo.get(#{binding[:alias]}, id) do
-            nil -> {:error, {:#{binding[:singular]}, :not_found}}
-            #{binding[:singular]} -> {:ok, #{binding[:singular]}}
-          end
-        end
-
-        @doc """
-        Create new #{binding[:singular]}
-        """
-        @spec create_#{binding[:singular]}(params, user | :system) ::
-                {:ok, #{binding[:alias]}.t()} | {:error, Ecto.Changeset.t()}
-        def create_#{binding[:singular]}(#{binding[:singular]}_params, user \\\\ :system) do
-          changeset = #{binding[:alias]}.changeset(%#{binding[:alias]}{}, #{binding[:singular]}_params, user)
-          #{insert_code}
-        end
-
-        @doc """
-        Update existing #{binding[:singular]}
-        """
-        @spec update_#{binding[:singular]}(id, params, user | :system) ::
-                {:ok, #{binding[:alias]}.t()} | {:error, Ecto.Changeset.t()}
-        def update_#{binding[:singular]}(#{binding[:singular]}_id, #{binding[:singular]}_params, user \\\\ :system) do
-          {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(#{binding[:singular]}_id)
-
-          #{binding[:singular]}
-          |> #{binding[:alias]}.changeset(#{binding[:singular]}_params, user)
-          |> Repo.update()
-        end
-
-        @doc """
-        Delete #{binding[:singular]} by id
-        """
-        @spec delete_#{binding[:singular]}(id) ::
-                {:ok, #{binding[:alias]}.t()}
-        def delete_#{binding[:singular]}(id) do
-          {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(id)
-          Repo.delete(#{binding[:singular]})
-        #{img_code}
-          {:ok, #{binding[:singular]}}
-        end
-        '''
-
-    if binding[:gallery] do
-      domain_code <>
-        ~s'''
-
-        @doc """
-        Create an image series entry
-        """
-        @spec create_image_series(id, user) ::
-                {:ok, Brando.ImageSeries.t()} | {:error, Ecto.Changeset.t()}
-        def create_image_series(#{binding[:singular]}_id, user) do
-          {:ok, #{binding[:singular]}} = get_#{binding[:singular]}(#{binding[:singular]}_id)
-          {:ok, category} = Brando.Images.get_or_create_category_id_by_slug("#{binding[:singular]}-gallery", user)
-
-          data = %{
-            name: #{binding[:singular]}.name,
-            slug: #{binding[:singular]}.slug,
-            image_category_id: category.id
-          }
-
-          with {:ok, series} <- Brando.Images.create_series(data, user) do
-            cs = Ecto.Changeset.change(#{binding[:singular]}, image_series_id: series.id)
-            Repo.update(cs)
-
-            {:ok, series}
-          end
-        end
-
-        '''
-    else
-      domain_code
-    end
+    Mix.shell().info(instructions)
   end
 
   ##
