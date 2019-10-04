@@ -35,5 +35,7 @@ fabfile.py
 fabfile.pyc
 assets/backend/node_modules
 assets/frontend/node_modules
+assets/backend/.yalc
+assets/frontend/.yalc
 /release-archives
 /certs
