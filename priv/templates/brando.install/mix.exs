@@ -50,7 +50,7 @@ defmodule <%= application_module %>.MixProject do
      {:ecto_sql, "~> 3.0"},
 
      # general deps
-     {:postgrex, "~> 0.14.0"},
+     {:postgrex, "~> 0.15"},
      {:gettext, "~> 0.11"},
 
      {:timex, "~> 3.0"},
@@ -67,7 +67,7 @@ defmodule <%= application_module %>.MixProject do
 
      # brando
      # {:brando, github: "twined/brando", branch: "develop"}
-     {:brando, path: "../../brando"},
+     {:brando, path: "../../brando"}
     ]
   end
 
