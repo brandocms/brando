@@ -31,9 +31,14 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
            "alarm:time address:references:addresses creator:references:users"}
       )
 
+      # sequence?
       send(self(), {:mix_shell_input, :yes?, true})
-      # and another one
-      send(self(), {:mix_shell_input, :yes?, true})
+      # deleted_at?
+      send(self(), {:mix_shell_input, :yes?, false})
+
+      Mix.Tasks.Brando.Gen.Html.run([])
+
+      send(self(), {:mix_shell_input, :prompt, "Games"})
       send(self(), {:mix_shell_input, :prompt, "Captain"})
       send(self(), {:mix_shell_input, :prompt, "captains"})
 
@@ -45,14 +50,23 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
            "alarm:time creator:references:users image_series:gallery"}
       )
 
+      # sequence?
       send(self(), {:mix_shell_input, :yes?, true})
-      # and another one
-      send(self(), {:mix_shell_input, :yes?, true})
+      # deleted_at?
+      send(self(), {:mix_shell_input, :yes?, false})
+
+      Mix.Tasks.Brando.Gen.Html.run([])
+
+      send(self(), {:mix_shell_input, :prompt, "Games"})
       send(self(), {:mix_shell_input, :prompt, "PegLeg"})
       send(self(), {:mix_shell_input, :prompt, "peg_legs"})
       send(self(), {:mix_shell_input, :prompt, "name length:integer"})
-      send(self(), {:mix_shell_input, :yes?, true})
+
+      # sequence?
       send(self(), {:mix_shell_input, :yes?, false})
+      # deleted_at?
+      send(self(), {:mix_shell_input, :yes?, false})
+
       Mix.Tasks.Brando.Gen.Html.run([])
 
       assert_received {:mix_shell, :info,
@@ -184,10 +198,46 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         {:mix_shell_input, :prompt, "name age:integer height:decimal"}
       )
 
-      send(self(), {:mix_shell_input, :yes?, true})
+      # sequence?
+      send(self(), {:mix_shell_input, :yes?, false})
+      # deleted_at?
       send(self(), {:mix_shell_input, :yes?, false})
 
       Mix.Tasks.Brando.Gen.Html.run([])
+
+      # test with soft delete
+
+      send(self(), {:mix_shell_input, :prompt, "Projects"})
+      send(self(), {:mix_shell_input, :prompt, "Project"})
+      send(self(), {:mix_shell_input, :prompt, "projects"})
+
+      send(
+        self(),
+        {:mix_shell_input, :prompt, "name slug"}
+      )
+
+      # sequence?
+      send(self(), {:mix_shell_input, :yes?, true})
+      # deleted_at?
+      send(self(), {:mix_shell_input, :yes?, true})
+
+      Mix.Tasks.Brando.Gen.Html.run([])
+
+      assert_file("lib/brando/graphql/schema/types/project.ex", fn file ->
+        assert file =~ "defmodule Brando.Schema.Types.Project do"
+        assert file =~ "field :name, :string"
+        assert file =~ "field :slug, :string"
+        assert file =~ "field :deleted_at, :time"
+      end)
+
+      assert_file("lib/brando/graphql/resolvers/project_resolver.ex", fn file ->
+        assert file =~ "defmodule Brando.Projects.ProjectResolver do"
+      end)
+
+      assert_file("assets/backend/src/api/graphql/projects/PROJECTS_QUERY.graphql", fn file ->
+        assert file =~
+                 ~s({\n    id\n    name\n    slug\n    deleted_at\n    updated_at\n  })
+      end)
     end)
   end
 end

@@ -1,18 +1,18 @@
 defmodule <%= module %> do
-  use <%= base %>Web, :schema
-<%= if villain_fields != [] do %>  use Brando.Villain.Schema<% end %>
-<%= if sequenced do %>  use Brando.Sequence, :schema<% end %>
-<%= if file_fields != [] do %>  use Brando.Field.FileField<% end %>
-<%= if img_fields != [] do %>  use Brando.Field.ImageField<% end %>
+  use <%= base %>Web, :schema<%= if villain_fields != [] do %>
+  use Brando.Villain.Schema<% end %><%= if sequenced do %>
+  use Brando.Sequence, :schema<% end %><%= if file_fields != [] do %>
+  use Brando.Field.FileField<% end %><%= if img_fields != [] do %>
+  use Brando.Field.ImageField<% end %>
 
   @type t :: %__MODULE__{}
 
   schema <%= inspect "#{snake_domain}_#{plural}" %> do
 <%= for schema_field <- schema_fields do %>    <%= schema_field %>
 <% end %><%= for {k, _, m} <- schema_assocs do %>    belongs_to <%= inspect k %>, <%= m %>
-<% end %>
-<%= if sequenced do %>    sequenced()<% end %>
-    timestamps()
+<% end %><%= if sequenced do %>    sequenced()
+<% end %><%= if soft_delete do %>    soft_delete()
+<% end %>    timestamps()
   end
 <%= for {_v, k} <- img_fields do %>
   has_image_field <%= inspect k %>,
@@ -38,9 +38,8 @@ defmodule <%= module %> do
       upload_path: Path.join("files", "<%= k %>"),
       size_limit: 10_240_000,
     }
-<% end %>
-  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields ++ file_fields)) |> Keyword.drop(Keyword.values(villain_fields)), " ", &elem(&1, 0)) %><%= if villain_fields != [] do %> <% end %><%= Enum.map_join(villain_fields, " ", fn({_k, v}) -> if v == :data, do: "#{v}", else: "#{v}_data" end) %><%= if schema_assocs do %> <% end %><%= Enum.map_join(schema_assocs, " ", fn {_, y, _} -> if to_string(y) not in Keyword.values(gallery_fields), do: y, else: nil end) %>)a
-  @optional_fields ~w(<%= Enum.map_join(img_fields ++ file_fields ++ gallery_fields, " ", &elem(&1, 1)) %>)a
+<% end %>  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields ++ file_fields)) |> Keyword.drop(Keyword.values(villain_fields)), " ", &elem(&1, 0)) %><%= if villain_fields != [] do %> <% end %><%= Enum.map_join(villain_fields, " ", fn({_k, v}) -> if v == :data, do: "#{v}", else: "#{v}_data" end) %><%= if schema_assocs do %> <% end %><%= Enum.map_join(schema_assocs, " ", fn {_, y, _} -> if to_string(y) not in Keyword.values(gallery_fields), do: y, else: nil end) %>)a
+  @optional_fields ~w(<%= Enum.map_join(img_fields ++ file_fields ++ gallery_fields, " ", &elem(&1, 1)) %><%= if soft_delete do %> soft_delete<% end %>)a
 
   @doc """
   Creates a changeset based on the `schema` and `params`.
