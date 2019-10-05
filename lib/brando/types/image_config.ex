@@ -8,8 +8,9 @@ defmodule Brando.Type.ImageConfig do
     * target_format - if set, forces conversion to this format. Master image is kept in its original format.
   """
 
+  use Ecto.Type
+
   @type t :: %__MODULE__{}
-  @behaviour Ecto.Type
 
   @derive Jason.Encoder
   defstruct allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],

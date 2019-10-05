@@ -3,8 +3,9 @@ defmodule Brando.Type.Image do
   Defines a type for an image field.
   """
 
+  use Ecto.Type
+
   @type t :: %__MODULE__{}
-  @behaviour Ecto.Type
 
   @derive {Jason.Encoder, only: ~w(title credits path sizes width height focal)a}
 

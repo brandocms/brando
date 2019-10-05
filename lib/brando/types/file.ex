@@ -3,8 +3,9 @@ defmodule Brando.Type.File do
   Defines a type for an file field.
   """
 
+  use Ecto.Type
+
   @type t :: %__MODULE__{}
-  @behaviour Ecto.Type
 
   @derive Jason.Encoder
   defstruct path: nil,
