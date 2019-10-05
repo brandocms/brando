@@ -110,9 +110,9 @@ defmodule Brando.Mixfile do
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test},
       {:excoveralls, "~> 0.6", only: :test},
-      {:absinthe, "~> 1.4"},
-      {:absinthe_plug, "~> 1.4"},
-      {:absinthe_ecto, "~> 0.1.0"},
+      {:absinthe, "~> 1.5.0-beta", override: true},
+      {:absinthe_plug, "~> 1.5.0-alpha"},
+      {:absinthe_ecto, "~> 0.1"},
 
       # Documentation dependencies
       {:ex_doc, "~> 0.11", only: :docs},
