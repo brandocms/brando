@@ -3,17 +3,16 @@ defmodule Brando.Images.Utils do
   General utilities pertaining to the Images module
   """
   @type id :: String.t() | integer
+  @type image_kind :: :image | :image_series | :image_field
   @type image_schema :: Brando.Image.t()
   @type image_series_schema :: Brando.ImageSeries.t()
   @type image_struct :: Brando.Type.Image.t()
-  @type image_kind :: :image | :image_series | :image_field
   @type user :: Brando.Users.User.t() | :system
-
-  import Brando.Utils
-  import Ecto.Query, only: [from: 2]
 
   alias Brando.Image
   alias Brando.ImageSeries
+  import Brando.Utils
+  import Ecto.Query, only: [from: 2]
 
   @doc """
   Delete all physical images depending on imageserie `series_id`

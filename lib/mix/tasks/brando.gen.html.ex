@@ -209,7 +209,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     :ok = Mix.Brando.check_module_name_availability(binding[:module] <> "Controller")
     :ok = Mix.Brando.check_module_name_availability(binding[:module] <> "View")
 
-    schema_binding = Mix.Tasks.Brando.Gen.Schema.run(args, domain_name)
+    Mix.Tasks.Brando.Gen.Schema.run(args, domain_name)
 
     Mix.Brando.copy_from(apps(), "priv/templates/brando.gen.html", "", binding, files)
 

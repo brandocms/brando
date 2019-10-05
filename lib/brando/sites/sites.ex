@@ -39,8 +39,7 @@ defmodule Brando.Sites do
   @doc """
   Update existing identity
   """
-  @spec update_identity(params, user | :system) ::
-          {:ok, identity} | {:error, Ecto.Changeset.t()}
+  @spec update_identity(params, user | :system) :: {:ok, identity} | {:error, changeset}
   def update_identity(identity_params, user \\ :system) do
     {:ok, identity} = get_identity()
 
@@ -92,12 +91,15 @@ defmodule Brando.Sites do
   Check all fields for references to `["${IDENTITY:", "${CONFIG:", "${LINK:"]`.
   Rerender if found.
   """
-  @spec update_villains_referencing_org(identity) :: [any]
-  def update_villains_referencing_org(identity) do
+  @spec update_villains_referencing_org({:ok, identity} | {:error, changeset}) ::
+          {:ok, identity} | {:error, changeset}
+  def update_villains_referencing_org({:error, changeset}), do: {:error, changeset}
+
+  def update_villains_referencing_org({:ok, identity}) do
     search_terms = ["${IDENTITY:", "${CONFIG:", "${LINK:"]
     villains = Villain.list_villains()
     Villain.rerender_matching_villains(villains, search_terms)
-    identity
+    {:ok, identity}
   end
 
   @spec cache_identity :: {:error, boolean} | {:ok, boolean}
