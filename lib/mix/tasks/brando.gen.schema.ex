@@ -58,6 +58,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
 
     sequenced? = (opts[:sequenced] && true) || false
     soft_delete? = (opts[:softdelete] && true) || false
+    gallery? = (opts[:gallery] && true) || false
 
     attrs = Mix.Brando.attrs(attrs)
     binding = Mix.Brando.inflect(singular)
@@ -82,7 +83,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
 
     gallery_fields =
       attrs
-      |> Enum.map(fn {k, v} -> {v, "#{k}_id"} end)
+      |> Enum.map(fn {k, v} -> {v, k} end)
       |> Enum.filter(fn {k, _} -> k == :gallery end)
 
     :ok = Mix.Brando.check_module_name_availability(binding[:module])
@@ -112,6 +113,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
           types: types,
           sequenced: sequenced?,
           soft_delete: soft_delete?,
+          gallery: gallery?,
           domain: domain,
           snake_domain: snake_domain,
           migrations: migrations,
@@ -130,7 +132,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
       "",
       binding,
       [
-        {:eex_trim, "migration.exs",
+        {:eex, "migration.exs",
          "priv/repo/migrations/" <> "#{timestamp()}_create_#{migration}.exs"},
         {:eex, "schema.ex", "lib/application_name/#{snake_domain}/#{path}.ex"},
         {:eex, "schema_test.exs", "test/schemas/#{path}_test.exs"}
@@ -145,6 +147,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
     |> Enum.map(fn {k, v} ->
       case v do
         :villain -> (k == :data && "villain()") || "villain #{inspect(k)}"
+        :gallery -> (k == :image_series && "gallery()") || "gallery #{inspect(k)}"
         _ -> "add #{inspect(k)}, #{inspect(mig_types[k])}#{defs[k]}"
       end
     end)
@@ -155,6 +158,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
     |> Enum.map(fn {k, v} ->
       case v do
         :villain -> (k == :data && "villain()") || "villain #{inspect(k)}"
+        :gallery -> (k == :image_series && "gallery()") || "gallery #{inspect(k)}"
         _ -> "field #{inspect(k)}, #{inspect(types[k])}#{defs[k]}"
       end
     end)
@@ -181,25 +185,16 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
   end
 
   defp partition_attrs_and_assocs(attrs) do
-    Enum.split_with(
-      attrs,
-      fn
-        {_, {kind, _}} ->
-          kind == :references
-
-        {_, kind} ->
-          kind == :gallery
-      end
-    )
+    Enum.split_with(attrs, fn
+      {_, {_, _}} -> true
+      _ -> false
+    end)
   end
 
   defp migration_assocs(assocs) do
     Enum.reduce(assocs, [], fn
       {key, {:references, target}}, acc ->
         [{key, :"#{key}_id", target, :nothing} | acc]
-
-      {key, :gallery}, acc ->
-        [{key, :"#{key}_id", :images_series, :delete_all} | acc]
     end)
   end
 
@@ -211,9 +206,6 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
       {key, {:references, target}}, acc ->
         inflected = singularize(to_string(target)) |> camelize()
         [{key, :"#{key}_id", Enum.join([base, domain, inflected], ".")} | acc]
-
-      {key, :gallery}, acc ->
-        [{key, :"#{key}_id", "Brando.ImageSeries"} | acc]
     end)
   end
 
@@ -262,7 +254,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
   defp value_to_type(:image), do: Brando.Type.Image
   defp value_to_type(:file), do: Brando.Type.File
   defp value_to_type(:villain), do: :villain
-  defp value_to_type(:gallery), do: Brando.ImageSeries
+  defp value_to_type(:gallery), do: :gallery
 
   defp value_to_type(v) do
     if Code.ensure_loaded?(Ecto.Type) and not Ecto.Type.primitive?(v) do
@@ -272,7 +264,5 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
     end
   end
 
-  defp apps do
-    [".", :brando]
-  end
+  defp apps, do: [".", :brando]
 end

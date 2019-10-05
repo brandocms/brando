@@ -1,7 +1,9 @@
 defmodule <%= base %>.Repo.Migrations.Create<%= scoped %> do
-  use Ecto.Migration
-<%= if sequenced do %>  use Brando.Sequence, :migration<% end %>
-<%= if villain_fields != [] do %>  use Brando.Villain.Migration<% end %>
+  use Ecto.Migration<%= if sequenced do %>
+  use Brando.Sequence, :migration<% end %><%= if soft_delete do %>
+  use Brando.SoftDelete.Migration<% end %><%= if gallery do %>
+  use Brando.Gallery.Migration<% end %><%= if villain_fields != [] do %>
+  use Brando.Villain.Migration<% end %>
 
   def change do
     create table(:<%= snake_domain %>_<%= plural %>) do
@@ -12,7 +14,6 @@ defmodule <%= base %>.Repo.Migrations.Create<%= scoped %> do
       timestamps()
     end
   <%= for index <- indexes do %>
-    <%= index %>
-  <% end %>
+    <%= index %><% end %>
   end
 end

@@ -199,6 +199,13 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {files, args}
       end
 
+    {files, args} =
+      if gallery? do
+        {files, args ++ ["--gallery"]}
+      else
+        {files, args}
+      end
+
     :ok = Mix.Brando.check_module_name_availability(binding[:module] <> "Controller")
     :ok = Mix.Brando.check_module_name_availability(binding[:module] <> "View")
 
@@ -403,6 +410,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k,
          ~s<field #{inspect(Enum.at(fields, 0))}, :json\n    field #{inspect(Enum.at(fields, 1))}, :string>}
 
+      {k, :gallery} ->
+        {k, ~s<field #{inspect(k)}_id, :id>}
+
       {k, _} ->
         {k, ~s<field #{inspect(k)}, :string>}
     end)
@@ -562,6 +572,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         k = (k == :data && :data) || String.to_atom(Atom.to_string(k) <> "_data")
         {k, ~s<field #{inspect(k)}, :json>}
 
+      {k, :gallery} ->
+        {k, ~s<field #{inspect(k)}_id, :id>}
+
       {k, _} ->
         {k, ~s<field #{inspect(k)}, :string>}
     end)
@@ -581,21 +594,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
       {k, :string} ->
         {k, "''"}
-
-      {k, :date} ->
-        {k, "null"}
-
-      {k, :time} ->
-        {k, "null"}
-
-      {k, :datetime} ->
-        {k, "null"}
-
-      {k, :image} ->
-        {k, "null"}
-
-      {k, :file} ->
-        {k, "null"}
 
       {k, :villain} ->
         k = (k == :data && :data) || String.to_atom(Atom.to_string(k) <> "_data")
