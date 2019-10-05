@@ -204,7 +204,7 @@ Implements schema sequencing.
 Schema:
 
 ```diff
-+ use Brando.Sequence, :schema
++ use Brando.Sequence.Schema
 
   schema "schema" do
     # ...
@@ -215,7 +215,7 @@ Schema:
 Migration:
 
 ```diff
-+ use Brando.Sequence, :migration
++ use Brando.Sequence.Migration
 
   def up do
     create table(:schema) do
@@ -228,7 +228,7 @@ Migration:
 Admin channel:
 
 ```diff
-+ use Brando.Sequence, :channel
++ use Brando.Sequence.Channel
 
 + sequence "employees", MyApp.Employee
 ```

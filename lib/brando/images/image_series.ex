@@ -7,7 +7,7 @@ defmodule Brando.ImageSeries do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :schema
-  use Brando.Sequence, :schema
+  use Brando.Sequence.Schema
   use Brando.SoftDelete.Schema
 
   alias Brando.ImageCategory
@@ -34,6 +34,7 @@ defmodule Brando.ImageSeries do
              :updated_at,
              :deleted_at
            ]}
+
   schema "images_series" do
     field :name, :string
     field :slug, :string

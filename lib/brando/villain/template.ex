@@ -6,7 +6,7 @@ defmodule Brando.Villain.Template do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :schema
-  use Brando.Sequence, :schema
+  use Brando.Sequence.Schema
   use Brando.SoftDelete.Schema
 
   @required_fields ~w(name namespace help_text class code refs)a

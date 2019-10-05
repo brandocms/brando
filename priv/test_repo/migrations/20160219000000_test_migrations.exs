@@ -1,6 +1,6 @@
 defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
   use Ecto.Migration
-  use Brando.Sequence, :migration
+  use Brando.Sequence.Migration
   use Brando.Tag, :migration
   import Brando.SoftDelete.Migration
 

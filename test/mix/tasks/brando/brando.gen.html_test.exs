@@ -104,7 +104,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
                    "first_login alarm data biography_data creator_id address_id)a"
 
         assert file =~ "@optional_fields ~w(cover pdf)"
-        assert file =~ "use Brando.Sequence, :schema"
+        assert file =~ "use Brando.Sequence.Schema"
         assert file =~ "sequenced"
         assert file =~ "villain"
         assert file =~ "villain :biography"

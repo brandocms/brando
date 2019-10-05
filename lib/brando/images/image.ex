@@ -7,7 +7,7 @@ defmodule Brando.Image do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :schema
-  use Brando.Sequence, :schema
+  use Brando.Sequence.Schema
   use Brando.SoftDelete.Schema
 
   import Ecto.Query, only: [from: 2]

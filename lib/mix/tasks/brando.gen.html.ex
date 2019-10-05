@@ -354,7 +354,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       Mix.Brando.add_to_file(
         "lib/#{Mix.Brando.otp_app()}_web/channels/admin_channel.ex",
         "imports",
-        "use Brando.Sequence, :channel",
+        "use Brando.Sequence.Channel",
         :singular
       )
     end

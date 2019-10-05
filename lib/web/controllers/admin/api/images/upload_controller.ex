@@ -5,13 +5,7 @@ defmodule Brando.Admin.API.Images.UploadController do
 
   use Brando.Web, :controller
 
-  use Brando.Sequence, [
-    :controller,
-    [
-      schema: Brando.Image,
-      filter: &Brando.Image.for_series_id/1
-    ]
-  ]
+  use Brando.Sequence.Controller, schema: Brando.Image
 
   alias Brando.Images
 
