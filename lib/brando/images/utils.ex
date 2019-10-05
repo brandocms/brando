@@ -16,6 +16,22 @@ defmodule Brando.Images.Utils do
   alias Brando.ImageSeries
 
   @doc """
+  Delete all physical images depending on imageserie `series_id`
+  """
+  @spec clear_media_for(:image_series, series_id :: integer) :: :ok
+  def clear_media_for(:image_series, series_id) do
+    images =
+      Brando.repo().all(
+        from i in Image,
+          where: i.image_series_id == ^series_id
+      )
+
+    for img <- images, do: delete_original_and_sized_images(img, :image)
+
+    :ok
+  end
+
+  @doc """
   Goes through `image`, which is a schema with an image_field
   then passing to `delete_media/2` for removal
 
@@ -137,7 +153,7 @@ defmodule Brando.Images.Utils do
   def media_path(file), do: Path.join([Brando.config(:media_path), file])
 
   @doc """
-  Delete all images depending on imageserie `series_id`
+  Soft delete all images depending on imageserie `series_id`
   """
   @spec delete_images_for(:image_series, series_id :: integer) :: :ok
   def delete_images_for(:image_series, series_id) do
