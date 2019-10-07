@@ -31,7 +31,7 @@ bower_components
 media
 sql
 prod_rel
-fabfile.py
+deployment.cfg
 fabfile.pyc
 assets/backend/node_modules
 assets/frontend/node_modules

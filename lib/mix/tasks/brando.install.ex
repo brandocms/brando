@@ -165,7 +165,8 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "gitignore", ".gitignore"},
     {:copy, "dockerignore", ".dockerignore"},
     {:copy, "Dockerfile", "Dockerfile"},
-    {:eex, "fabfile.py", "fabfile.py"},
+    {:copy, "fabfile.py", "fabfile.py"},
+    {:eex, "deployment.cfg", "deployment.cfg"},
 
     # Backend assets
     {:copy, "assets/backend/babel.config.js", "assets/backend/babel.config.js"},

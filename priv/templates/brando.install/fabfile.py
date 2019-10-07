@@ -15,17 +15,22 @@ from fabric.utils import abort
 
 VERSION_NUMBER = '2.0.0'
 
+import ConfigParser
+
+config = ConfigParser.ConfigParser()
+config.read('deployment.cfg')
+
 #
 # Project-specific setup.
 
-PROJECT_NAME = '<%= application_name %>'
-PROD_URL = 'http://somesite.com'
-DB_PASS = 'prod_database_password'
+PROJECT_NAME = config.get('DEPLOYMENT', 'PROJECT_NAME')
+PROD_URL = config.get('DEPLOYMENT', 'PROD_URL')
+DB_PASS = config.get('DEPLOYMENT', 'DB_PASS')
 
-SSH_USER = 'username'
-SSH_PASS = 'sudoer_pass'
-SSH_HOST = 'host.net'
-SSH_PORT = 30000
+SSH_USER = config.get('DEPLOYMENT', 'SSH_USER')
+SSH_PASS = config.get('DEPLOYMENT', 'SSH_PASS')
+SSH_HOST = config.get('DEPLOYMENT', 'SSH_HOST')
+SSH_PORT = config.getint('DEPLOYMENT', 'SSH_PORT')
 
 #
 # Shhh, don't be so loud.
