@@ -12,6 +12,9 @@ defmodule Mix.Tasks.Brando.Install do
     # Mix template
     {:eex, "mix.exs", "mix.exs"},
 
+    # README
+    {:eex, "README.md", "README.md"},
+
     # Formatter
     {:eex, "formatter.exs", ".formatter.exs"},
 
