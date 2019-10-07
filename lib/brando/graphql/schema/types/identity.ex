@@ -61,12 +61,30 @@ defmodule Brando.Schema.Types.Identity do
     field :title_prefix, :string
     field :title, :string
     field :title_postfix, :string
-    field :links, list_of(:link)
-    field :metas, list_of(:meta)
-    field :configs, list_of(:config)
+    field :links, list_of(:link_params)
+    field :metas, list_of(:meta_params)
+    field :configs, list_of(:config_params)
     field :image, :upload_or_image
     field :logo, :upload_or_image
     field :url, :string
+  end
+
+  input_object :link_params do
+    field :id, :id
+    field :name, :string
+    field :url, :string
+  end
+
+  input_object :meta_params do
+    field :id, :id
+    field :key, :string
+    field :value, :string
+  end
+
+  input_object :config_params do
+    field :id, :id
+    field :key, :string
+    field :value, :string
   end
 
   object :identity_queries do
