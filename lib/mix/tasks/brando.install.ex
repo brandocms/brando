@@ -352,8 +352,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "assets/frontend/js/config/MOBILE_MENU.js",
      "assets/frontend/js/config/MOBILE_MENU.js"},
     {:copy, "assets/frontend/js/config/MOONWALK.js", "assets/frontend/js/config/MOONWALK.js"},
-    {:copy, "assets/frontend/js/config/STICKY_HEADER.js",
-     "assets/frontend/js/config/STICKY_HEADER.js"}
+    {:copy, "assets/frontend/js/config/HEADER.js", "assets/frontend/js/config/HEADER.js"}
   ]
 
   @root Path.expand("../../../priv", __DIR__)
