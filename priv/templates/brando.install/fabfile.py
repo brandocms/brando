@@ -227,7 +227,6 @@ def bootstrap_release():
 
     upload_media()
     upload_etc()
-    upload_site_config()
     createdb()
 
     ensure_log_directory_exists()
@@ -598,20 +597,6 @@ def upload_etc():
     print(yellow('==> chmoding etc folder'))
     _setperms('755', os.path.join(env.path, 'etc'))
     _set_logrotate_perms()
-
-
-def upload_site_config():
-    """
-    Uploads site_config.dat
-    """
-    if (os.path.exists('site_config.dat')):
-        print(yellow('==> uploading site_config.dat'))
-        put('site_config.dat', '%s' % env.path, use_sudo=True)
-        print(yellow('==> chowning site_config.dat'))
-        _setowner(os.path.join(env.path, 'site_config.dat'))
-        print(yellow('==> chmoding site_config.dat'))
-        _setperms('755', os.path.join(env.path, 'site_config.dat'))
-        _set_logrotate_perms()
 
 
 def _warn(str):

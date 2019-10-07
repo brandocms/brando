@@ -22,9 +22,6 @@ defmodule Mix.Tasks.Brando.Install do
     # Brando migrator
     {:eex, "lib/mix/brando.upgrade.ex", "lib/mix/brando.upgrade.ex"},
 
-    # Site Config
-    {:copy, "site_config.dat", "site_config.dat"},
-
     # Etc. Various OS config files and log directory.
     {:keep, "log", "log"},
     {:eex, "etc/logrotate/prod.conf", "etc/logrotate/prod.conf"},
