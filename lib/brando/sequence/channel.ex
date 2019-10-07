@@ -9,7 +9,7 @@ defmodule Brando.Sequence.Channel do
 
   """
 
-  defmacro __using__() do
+  defmacro __using__(_) do
     quote do
       import unquote(__MODULE__)
     end
