@@ -381,21 +381,18 @@ module.exports = {
           mobile: {},
 
           desktop_md: {
-            'font-size': '12px',
-            'line-height': '12px',
-            'letter-spacing': '0.12rem'
+            'font-size': '16px',
+            'line-height': '12px'
           },
 
           desktop_lg: {
-            'font-size': '14px',
-            'line-height': '14px',
-            'letter-spacing': '0.12rem'
+            'font-size': '18px',
+            'line-height': '14px'
           },
 
           desktop_xl: {
-            'font-size': '15px',
-            'line-height': '15px',
-            'letter-spacing': '2px'
+            'font-size': '21px',
+            'line-height': '15px'
           }
         }
       },

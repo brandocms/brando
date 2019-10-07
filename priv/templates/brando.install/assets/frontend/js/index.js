@@ -17,7 +17,7 @@ import {
   Moonwalk,
   Popup,
   StackedBoxes,
-  StickyHeader
+  FixedHeader
 } from '@univers-agency/jupiter'
 
 /**
@@ -28,7 +28,7 @@ import {
  * CONFIG IMPORTS
  */
 import configureBreakpoints from './config/BREAKPOINTS'
-import configureHeader from './config/STICKY_HEADER'
+import configureHeader from './config/HEADER'
 import configureLightbox from './config/LIGHTBOX'
 import configureMobileMenu from './config/MOBILE_MENU'
 import configureMoonwalk from './config/MOONWALK'
@@ -48,7 +48,7 @@ app.registerCallback(Events.APPLICATION_PRELUDIUM, () => {
   app.lightbox = new Lightbox(app, configureLightbox(app))
   app.lazyload = new Lazyload(app, { useNativeLazyloadIfAvailable: false })
   app.moonwalk = new Moonwalk(app, configureMoonwalk(app))
-  app.header = new StickyHeader(app, configureHeader(app))
+  app.header = new FixedHeader(app, configureHeader(app))
   app.mobileMenu = new MobileMenu(app, configureMobileMenu(app))
   app.cookies = new Cookies(app)
 })

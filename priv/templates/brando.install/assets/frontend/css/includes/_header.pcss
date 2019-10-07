@@ -56,86 +56,44 @@ section.hero {
     }
   }
 
-  .about {
+  .hero-content {
     position: absolute;
     top: 0;
     height: 100%;
     width: 100%;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 
-    .container {
-      height: 100%;
+    section.hero-text {
+      h2 {
+        z-index: 2;
+        color: #fff;
+        text-align: center;
+        padding-bottom: 0;
+        font-weight: normal;
 
-      .row {
-        flex-wrap: nowrap;
+        @responsive desktop_lg {
+          max-width: 750px;
+        }
 
         @responsive >=desktop_md {
-          height: 100%;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
+          max-width: 640px;
+          font-size: 55px;
+          line-height: 80px;
         }
 
         @responsive ipad_portrait/ipad_landscape {
-          height: 100%;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
+          font-size: 46px;
+          line-height: 60px;
+          max-width: 640px;
         }
 
         @responsive <=mobile {
-          height: 100%;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
+          font-size: 26px;
+          line-height: 39px;
         }
-      }
-    }
-
-    .logo-circle {
-      z-index: 2;
-
-      fill: #ffffff;
-      width: 120px;
-
-      @responsive <=mobile {
-        width: 90px;
-      }
-
-    }
-
-    h2 {
-      z-index: 2;
-      color: #fff;
-      text-align: center;
-      padding-bottom: 0;
-      font-weight: normal;
-
-      @responsive desktop_lg {
-        max-width: 750px;
-      }
-
-      @responsive >=desktop_md {
-        max-width: 640px;
-        padding-top: 100px; /* height of header */
-        font-size: 55px;
-        line-height: 80px;
-        margin-bottom: 5%;
-      }
-
-      @responsive ipad_portrait/ipad_landscape {
-        font-size: 46px;
-        letter-spacing: 0.8px;
-        line-height: 60px;
-        max-width: 640px;
-        padding-top: 50px; /* height of header */
-        margin-bottom: 10%;
-      }
-
-      @responsive <=mobile {
-        font-size: 26px;
-        letter-spacing: 0.8px;
-        line-height: 39px;
-        margin-bottom: 10%;
       }
     }
 
