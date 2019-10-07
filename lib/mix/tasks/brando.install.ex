@@ -88,8 +88,10 @@ defmodule Mix.Tasks.Brando.Install do
 
     # Default configuration files
     {:eex, "config/brando.exs", "config/brando.exs"},
+    {:eex, "config/dev.exs", "config/dev.exs"},
     {:eex, "config/e2e.exs", "config/e2e.exs"},
     {:eex, "config/prod.exs", "config/prod.exs"},
+    {:eex, "config/prod.secret.exs", "config/prod.secret.exs"},
     {:eex, "config/staging.exs", "config/staging.exs"},
     {:eex, "config/staging.secret.exs", "config/staging.secret.exs"},
 
