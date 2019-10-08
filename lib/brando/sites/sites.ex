@@ -88,6 +88,14 @@ defmodule Brando.Sites do
   end
 
   @doc """
+  Try to get `name` from list of `links` in `identity`.
+  """
+  def get_link(name) do
+    identity = Brando.Cache.get(:identity)
+    Enum.find(identity.links, &(String.downcase(&1.name) == String.downcase(name)))
+  end
+
+  @doc """
   Check all fields for references to `["${IDENTITY:", "${CONFIG:", "${LINK:"]`.
   Rerender if found.
   """

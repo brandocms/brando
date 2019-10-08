@@ -13,4 +13,12 @@ defmodule Brando.Link do
     |> cast(params, @fields)
     |> validate_required(@fields)
   end
+
+  defimpl Phoenix.HTML.Safe, for: Brando.Link do
+    def to_iodata(link) do
+      link.url
+      |> Phoenix.HTML.raw()
+      |> Phoenix.HTML.Safe.to_iodata()
+    end
+  end
 end
