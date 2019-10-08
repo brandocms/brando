@@ -200,6 +200,11 @@ defmodule Brando.Villain.Parser.Default do
   end
 
   @doc """
+  Strip out comments
+  """
+  def comment(_), do: ""
+
+  @doc """
   Markdown -> html
   """
   def markdown(%{"text" => markdown_data}) do
