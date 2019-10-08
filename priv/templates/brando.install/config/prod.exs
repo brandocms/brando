@@ -30,6 +30,9 @@ config :<%= application_name %>, hmr: false
 # Do not print debug messages in production
 config :logger, level: :error
 
+# Handle SASL reports
+config :logger, handle_sasl_reports: true
+
 # Path to your media directory.
 config :brando, media_path: "./media"
 
