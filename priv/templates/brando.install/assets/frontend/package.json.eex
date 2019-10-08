@@ -5,7 +5,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "lint:js": "standard --verbose | snazzy",
-    "build": "webpack --config webpack.prod.js --progress --show-modules",
+    "build": "webpack --mode=production --config webpack.prod.js",
     "build:cdn": "UNIVERS_CDN=<%= application_name %> NODE_ENV=production webpack --mode=production --config ./webpack.config.prod.js",
     "dev": "webpack-dev-server --config webpack.dev.js",
     "watch": "webpack-dev-server --config webpack.dev.js",
@@ -86,6 +86,7 @@
     "html-webpack-plugin": "^3.2.0",
     "ignore-loader": "^0.1.2",
     "inspectpack": "^4.2.2",
+    "mdn-polyfills": "^5.18.0",
     "mini-css-extract-plugin": "^0.8.0",
     "moment": "^2.22.2",
     "move-file-cli": "^1.0.0",
