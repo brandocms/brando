@@ -2,6 +2,14 @@
 
 ### General
 
+* Moved js deps to `@univers-agency` package scope.
+  - replace `kurtz` with `@univers-agency/kurtz` in `assets/backend/package.json`
+  - yarn install
+  - `gsed -i "s=from 'kurtz=from '@univers-agency\/kurtz=" assets/backend/src/**/*.js`
+  - `gsed -i "s=from 'kurtz=from '@univers-agency\/kurtz=" assets/backend/src/**/*.vue`
+  - `gsed -i "s=~kurtz=~@univers-agency\/kurtz=" assets/backend/src/**/*.scss`
+  - `gsed -i "s=~villain-editor=~@univers-agency\/villain-editor=" assets/backend/src/**/*.scss`
+
 * `Brando.User` is now `Brando.Users.User` for consistency.
 * In `session_controller.ex`, ensure user has not been soft deleted in `create/3`
 
