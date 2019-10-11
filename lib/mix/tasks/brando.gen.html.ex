@@ -722,7 +722,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            ":value=\"#{singular}.#{k}\"",
            ":has-error=\"errors.has('#{singular}[#{k}]')\"",
            ":error-text=\"errors.first('#{singular}[#{k}]')\"",
-           "name=\"#{singular}[#{k}]')\"",
+           "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\""
          ]}
 
