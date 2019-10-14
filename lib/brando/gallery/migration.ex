@@ -3,6 +3,12 @@ defmodule Brando.Gallery.Migration do
   Macro for adding field to migration.
   """
 
+  defmacro __using__(_) do
+    quote do
+      import unquote(__MODULE__)
+    end
+  end
+
   @doc """
   Add soft delete field to migration
   """
