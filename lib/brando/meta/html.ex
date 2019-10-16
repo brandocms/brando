@@ -46,6 +46,7 @@ defmodule Brando.Meta.HTML do
     |> get_meta()
     |> Enum.map(&safe_to_string(meta_tag(&1)))
     |> maybe_add_see_also()
+    |> add_js_init()
     |> raw()
   end
 
@@ -59,6 +60,19 @@ defmodule Brando.Meta.HTML do
           [safe_to_string(meta_tag("og:see_also", link.url)) | acc]
         end)
     end
+  end
+
+  defp add_js_init(stuff) do
+    script =
+      content_tag(
+        :script,
+        raw(
+          "(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)"
+        )
+      )
+      |> safe_to_string
+
+    [script | stuff]
   end
 
   defp maybe_put_meta_description(conn) do
