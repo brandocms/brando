@@ -97,6 +97,28 @@ defmodule Brando.Villain do
   end
 
   @doc """
+  Rerenders HTML for all ids in `schema`
+
+  ### Example
+
+      iex> rerender_villains_for(Brando.Pages.Page)
+
+  """
+  def rerender_villains_for(schema) do
+    ids =
+      Brando.repo().all(
+        from s in schema,
+          select: s.id
+      )
+
+    {_, villain_fields} = schema.__villain_fields__()
+
+    Enum.map(villain_fields, fn {:villain, data_field, html_field} ->
+      rerender_html_from_ids({schema, data_field, html_field}, ids)
+    end)
+  end
+
+  @doc """
   Rerender HTML from an ID
 
   ## Example
