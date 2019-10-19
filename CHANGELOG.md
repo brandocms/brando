@@ -17,7 +17,7 @@
   def create(conn, %{"email" => email, "password" => password}) do
     case Users.get_user_by_email(email) do
       {:error, {:user, :not_found}} ->
-        Comeonin.Bcrypt.dummy_checkpw()
+        Bcrypt.no_user_verify()
 
         conn
         |> put_status(:unauthorized)
@@ -137,10 +137,10 @@
 
   - Add to your graphql `schema.ex`
     ```elixir
-    def middleware(middleware, _field, %{identifier: :mutation}), do:
-      middleware ++ [Brando.Schema.Middleware.ChangesetErrors]
-    def middleware(middleware, _field, _object), do:
-      middleware
+    def middleware(middleware, _field, %{identifier: :mutation}),
+      do: middleware ++ [Brando.Schema.Middleware.ChangesetErrors]
+
+    def middleware(middleware, _field, _object), do: middleware
     ```
   - All Villain fields in graphql `input_object` must be type `:json` instead of `:string`
   - Change to new use Villain format:
