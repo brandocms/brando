@@ -1,4 +1,11 @@
-## v3.0.0-alpha.0-dev
+## v3.0.0-alpha.1
+
+### General
+
+* Add `Brando.HTML.init_js()` at the top of your `app.html.eex`, before `render_meta`
+
+
+## v3.0.0-alpha.0
 
 ### General
 
