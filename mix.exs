@@ -50,6 +50,7 @@ defmodule Brando.Mixfile do
       :earmark,
       :fastimage,
       :guardian,
+      :guardian_phoenix,
       :mogrify,
       :phoenix_html,
       :poison,
