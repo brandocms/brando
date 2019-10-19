@@ -126,20 +126,106 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
           module: module
         ]
 
-    Mix.Brando.copy_from(
-      apps(),
-      "priv/templates/brando.gen.schema",
-      "",
-      binding,
-      [
-        {:eex, "migration.exs",
-         "priv/repo/migrations/" <> "#{timestamp()}_create_#{migration}.exs"},
-        {:eex, "schema.ex", "lib/application_name/#{snake_domain}/#{path}.ex"},
-        {:eex, "schema_test.exs", "test/schemas/#{path}_test.exs"}
-      ]
-    )
+    binding =
+      binding ++
+        [
+          required_fields: build_required_fields(binding),
+          optional_fields: build_optional_fields(binding)
+        ]
+
+    migration_path = "priv/repo/migrations/" <> "#{timestamp()}_create_#{migration}.exs"
+    schema_path = "lib/application_name/#{snake_domain}/#{path}.ex"
+    schema_test_path = "test/schemas/#{path}_test.exs"
+
+    Mix.Brando.copy_from(apps(), "priv/templates/brando.gen.schema", "", binding, [
+      {:eex, "migration.exs", migration_path},
+      {:eex, "schema.ex", schema_path},
+      {:eex, "schema_test.exs", schema_test_path}
+    ])
 
     binding
+  end
+
+  defp build_optional_fields(binding) do
+    binding = Enum.into(binding, %{})
+
+    fields = []
+
+    {_, fields} =
+      {binding, fields}
+      |> maybe_add_gallery_fields()
+      |> maybe_add_img_fields()
+      |> maybe_add_file_fields()
+      |> maybe_add_soft_delete()
+
+    "~w(#{Enum.join(fields, " ")})a"
+  end
+
+  defp maybe_add_gallery_fields({%{gallery_fields: []} = binding, fields}), do: {binding, fields}
+
+  defp maybe_add_gallery_fields({%{gallery_fields: gallery_fields} = binding, fields}) do
+    gallery_fields = Enum.map(gallery_fields, fn {_, v} -> "#{v}_id" end)
+    {binding, fields ++ gallery_fields}
+  end
+
+  defp maybe_add_img_fields({%{img_fields: []} = binding, fields}), do: {binding, fields}
+
+  defp maybe_add_img_fields({%{img_fields: img_fields} = binding, fields}) do
+    img_fields = Enum.map(img_fields, &elem(&1, 1))
+    {binding, fields ++ img_fields}
+  end
+
+  defp maybe_add_file_fields({%{file_fields: []} = binding, fields}), do: {binding, fields}
+
+  defp maybe_add_file_fields({%{file_fields: file_fields} = binding, fields}) do
+    file_fields = Enum.map(file_fields, &elem(&1, 1))
+    {binding, fields ++ file_fields}
+  end
+
+  defp maybe_add_soft_delete({%{soft_delete: false} = binding, fields}), do: {binding, fields}
+
+  defp maybe_add_soft_delete({%{soft_delete: true} = binding, fields}) do
+    {binding, fields ++ ["soft_delete"]}
+  end
+
+  defp build_required_fields(binding) do
+    binding_map = Enum.into(binding, %{})
+    fields =
+      binding[:attrs]
+      |> Keyword.drop(Keyword.values(binding[:img_fields]))
+      |> Keyword.drop(Keyword.values(binding[:file_fields]))
+      |> Keyword.drop(Keyword.values(binding[:villain_fields]))
+      |> Keyword.drop(Keyword.values(binding[:gallery_fields]))
+      |> Enum.map_join(" ", &elem(&1, 0))
+      |> maybe_add_villain_fields(binding_map)
+      |> maybe_add_schema_assocs(binding_map)
+
+    "~w(#{fields})a"
+  end
+
+  defp maybe_add_villain_fields(fields, %{villain_fields: []}), do: fields
+
+  defp maybe_add_villain_fields(fields, %{villain_fields: villain_fields}) do
+    extra_fields =
+      Enum.map_join(villain_fields, " ", fn {_k, v} ->
+        if v == :data, do: "#{v}", else: "#{v}_data"
+      end)
+
+    Enum.join([fields, extra_fields], " ")
+  end
+
+  defp maybe_add_schema_assocs(fields, %{schema_assocs: []}), do: fields
+
+  defp maybe_add_schema_assocs(fields, %{
+         schema_assocs: schema_assocs,
+         gallery_fields: gallery_fields
+       }) do
+    extra_fields =
+      Enum.map_join(schema_assocs, " ", fn {_, y, _} ->
+        if to_string(y) not in Keyword.values(gallery_fields), do: y, else: nil
+      end)
+
+    Enum.join([fields, extra_fields], " ")
   end
 
   defp map_mig_attrs(attrs, mig_types, defs) do

@@ -2,10 +2,7 @@ defmodule Brando.VillainTest do
   defmodule OtherParser do
     @behaviour Brando.Villain.Parser
 
-    def text(%{"text" => _, "type" => _}) do
-      "other parser"
-    end
-
+    def text(%{"text" => _, "type" => _}), do: "other parser"
     def datatable(_), do: nil
     def markdown(_), do: nil
     def html(_), do: nil
@@ -19,6 +16,7 @@ defmodule Brando.VillainTest do
     def slideshow(_), do: nil
     def video(_), do: nil
     def template(_), do: nil
+    def comment(_), do: nil
   end
 
   use Brando.ConnCase

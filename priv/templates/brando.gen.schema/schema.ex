@@ -32,16 +32,16 @@ defmodule <%= module %> do
         "xlarge" => %{"size" => "2100", "quality" => 90}
       }
     }
-<% end %>
-<%= for {_v, k} <- file_fields do %>
+<% end %><%= for {_v, k} <- file_fields do %>
   has_file_field <%= inspect k %>,
     %{allowed_mimetypes: ["application/pdf"],
       random_filename: true,
       upload_path: Path.join("files", "<%= k %>"),
       size_limit: 10_240_000,
     }
-<% end %>  @required_fields ~w(<%= Enum.map_join(Keyword.drop(attrs, Keyword.values(img_fields ++ file_fields)) |> Keyword.drop(Keyword.values(villain_fields)), " ", &elem(&1, 0)) %><%= if villain_fields != [] do %> <% end %><%= Enum.map_join(villain_fields, " ", fn({_k, v}) -> if v == :data, do: "#{v}", else: "#{v}_data" end) %><%= if schema_assocs do %> <% end %><%= Enum.map_join(schema_assocs, " ", fn {_, y, _} -> if to_string(y) not in Keyword.values(gallery_fields), do: y, else: nil end) %>)a
-  @optional_fields ~w(<%= Enum.map_join(gallery_fields, " ", &elem(&1, 1) <> "_id") %><%= Enum.map_join(img_fields ++ file_fields, " ", &elem(&1, 1)) %><%= if soft_delete do %> soft_delete<% end %>)a
+<% end %>
+  @required_fields <%= required_fields %>
+  @optional_fields <%= optional_fields %>
 
   @doc """
   Creates a changeset based on the `schema` and `params`.
