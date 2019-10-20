@@ -358,7 +358,7 @@ defmodule Brando.HTML do
   @doc """
   Run JS init code
   """
-  @spec init_js() :: binary
+  @spec init_js() :: {:safe, [...]}
   def init_js() do
     js =
       "(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)"
