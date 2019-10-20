@@ -356,6 +356,19 @@ defmodule Brando.HTML do
   end
 
   @doc """
+  Run JS init code
+  """
+  @spec init_js() :: binary
+  def init_js() do
+    js =
+      "(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)"
+
+    :script
+    |> content_tag(raw(js))
+    |> raw
+  end
+
+  @doc """
   Renders a link tag with preconnect to the CDN domain
   """
   @spec preconnect_tag :: {:safe, [...]}
