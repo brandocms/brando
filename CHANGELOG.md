@@ -1,11 +1,11 @@
-## v3.0.0-alpha.1
+## 0.43.0-dev
 
 ### General
 
 * Add `Brando.HTML.init_js()` at the top of your `app.html.eex`, before `render_meta`
 
 
-## v3.0.0-alpha.0
+## 0.42.0
 
 ### General
 
@@ -92,19 +92,19 @@
   If you need optimizing, use SHARP.
 
 
-## v2.0.0-alpha.3-dev
+## 0.41.0
 
 * Tables have been renamed. Run `mix brando.upgrade`
 * Fragments now belong to pages. Run `mix brando.upgrade`
 
 
-## v2.0.0-alpha.2-dev
+## 0.40.0
 
 * Copy the brando.upgrade mix task from brando src.
 * Switch all your image fields to `:jsonb` types in migrations from `:text`. Run `mix brando.upgrade`
 
 
-## v2.0.0-alpha.1-dev
+## 0.39.0
 
 * Backwards incompatible changes
   - add to `config/dev.exs`
@@ -199,7 +199,7 @@
     `$ gsed -i 's/Comeonin.Bcrypt.dummy_checkpw/Bcrypt.no_user_verify/' lib/**/*.ex`
 
 
-## v2.0.0-alpha.0
+## 0.38.0
 
 * Update for Ecto 3, Phoenix 1.4
 * More configuration choices in backend/config
@@ -213,7 +213,7 @@
 * Rewritten image handling
 
 
-## v1.0.0
+## 0.37.0
 
 * Backwards incompatible changes
   - Guardian was updated.
@@ -430,4 +430,4 @@
 
   - `brando_pages` has been incorporated into `brando` core. Remove `brando_pages` from your deps and application list
 
-## pre v1.0.0
+## pre 0.37.0
