@@ -29,7 +29,6 @@ defmodule Brando.Plug.Lockdown do
 
   """
   alias Brando.Users
-  alias Brando.Users.User
   import Phoenix.Controller, only: [redirect: 2]
   import Plug.Conn, only: [halt: 1]
 
