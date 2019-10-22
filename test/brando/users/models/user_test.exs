@@ -21,19 +21,4 @@ defmodule Brando.Integration.UserTest do
     refute old_pass == updated_password_user.password
     refute updated_password_user.password == "newpass"
   end
-
-  test "auth?/2" do
-    user = Factory.insert(:user)
-
-    assert User.auth?(user, "admin")
-    refute User.auth?(user, "finimeze123")
-  end
-
-  test "role?/1" do
-    user = Factory.insert(:user)
-
-    assert User.role?(user, :superuser)
-    refute User.role?(user, :admin)
-    refute User.role?(user, :staff)
-  end
 end
