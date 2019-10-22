@@ -76,8 +76,7 @@ defmodule Brando.Users.User do
     srcset: %{
       "small" => "300w",
       "medium" => "500w",
-      "large" => "700w",
-      "xlarge" => "900w"
+      "large" => "700w"
     }
   })
 
