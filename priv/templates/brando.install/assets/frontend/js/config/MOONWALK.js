@@ -1,7 +1,6 @@
 import { Sine, Expo } from '@univers-agency/jupiter'
 
 export default () => ({
-  fireOnReady: true,
   rootMargin: '-10%',
   threshold: 0,
 
