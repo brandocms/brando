@@ -7,23 +7,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
   @moduledoc """
   Generates a Brando resource.
 
-      mix brando.gen.html User users name:string avatar:image data:villain
+      mix brando.gen.html
 
-  The first argument is the module name followed by
-  its plural name (used for resources and schema).
-
-  The generated resource will contain:
-
-    * a schema in web/schemas
-    * a view in web/views
-    * a controller in web/controllers
-    * a migration file for the repository
-    * default CRUD templates in web/templates
-    * test files for generated schema and controller
-
-  The generated schema can be skipped with `--no-schema`.
-  Read the documentation for `phoenix.gen.schema` for more
-  information on attributes and namespaced resources.
   """
   @spec run(any) :: no_return
   def run(_) do
@@ -35,10 +20,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     domain =
       Mix.shell().prompt("+ Enter domain name (e.g. Blog, Accounts, News)") |> String.trim("\n")
-
-    Mix.shell().info("""
-    == Creating domain for #{domain}
-    """)
 
     create_schema(domain)
   end
