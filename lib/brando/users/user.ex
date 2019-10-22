@@ -76,7 +76,8 @@ defmodule Brando.Users.User do
     srcset: %{
       "small" => "300w",
       "medium" => "500w",
-      "large" => "700w"
+      "large" => "700w",
+      "xlarge" => "900w"
     }
   })
 
@@ -115,31 +116,5 @@ defmodule Brando.Users.User do
       too_short: gettext("Password must be at least 6 characters")
     )
     |> validate_upload({:image, :avatar})
-  end
-
-  @doc """
-  Orders by ID
-  """
-  def order_by_id(query), do: from(m in query, order_by: m.id)
-
-  @doc """
-  Checks `password` against `user`. Return bool.
-  """
-  def auth?(nil, _password), do: false
-  def auth?(user, password), do: Bcrypt.verify_pass(password, user.password)
-
-  @doc """
-  Checks if `user` has `role`.
-  """
-  @spec role?(t, atom) :: boolean
-  def role?(user, role) when is_atom(role), do: role == user.role
-
-  @doc """
-  Checks if `user` has access to admin area.
-  """
-  @spec can_login?(t) :: boolean
-  def can_login?(user) do
-    {:ok, role} = Brando.Type.Role.dump(user.role)
-    (role > 0 && true) || false
   end
 end

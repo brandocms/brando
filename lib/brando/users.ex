@@ -1,14 +1,14 @@
 defmodule Brando.Users do
   @moduledoc """
   Context for Users.
-
-  Interfaces with database
   """
   use Brando.Web, :context
   alias Brando.Users.User
   alias Brando.Utils
   import Ecto.Changeset
   import Ecto.Query
+
+  @type user :: User.t()
 
   @doc """
   Get user by id
@@ -47,11 +47,16 @@ defmodule Brando.Users do
   end
 
   @doc """
+  Orders by ID
+  """
+  def order_by_id(query), do: from(m in query, order_by: m.id)
+
+  @doc """
   List users
   """
   def get_users do
     User
-    |> User.order_by_id()
+    |> order_by_id()
     |> exclude_deleted()
     |> Brando.repo().all()
   end
@@ -89,7 +94,7 @@ defmodule Brando.Users do
   @doc """
   Bumps `user`'s `last_login` to current time.
   """
-  @spec set_last_login(User.t()) :: User.t()
+  @spec set_last_login(user) :: user
   def set_last_login(user) do
     current_time = NaiveDateTime.from_erl!(:calendar.local_time())
     {:ok, user} = Utils.Schema.update_field(user, last_login: current_time)
@@ -106,6 +111,15 @@ defmodule Brando.Users do
     user
     |> Ecto.Changeset.change(%{active: status})
     |> Brando.repo().update
+  end
+
+  @doc """
+  Checks if `user` has access to admin area.
+  """
+  @spec can_login?(user) :: boolean
+  def can_login?(user) do
+    {:ok, role} = Brando.Type.Role.dump(user.role)
+    (role > 0 && true) || false
   end
 
   defp maybe_update_password(%{changes: %{password: password}} = cs),
