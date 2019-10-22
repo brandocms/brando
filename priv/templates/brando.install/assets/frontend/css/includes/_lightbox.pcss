@@ -16,8 +16,21 @@
   }
 
   .lightbox-image-wrapper {
+    position: relative;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
     .lightbox-image {
-      max-height: 100vh;
+      min-width: 1px;
+      max-height: 82vh;
+      user-select: none;
+      pointer-events: none;
+      position: fixed;
 
       @responsive >=desktop_md {
         padding-bottom: 73px;
@@ -57,6 +70,7 @@
     position: absolute;
     right: 100px;
     color: #1E2123;
+    z-index: 999999;
 
     &:hover {
       border: none;
