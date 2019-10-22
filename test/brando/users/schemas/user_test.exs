@@ -5,7 +5,6 @@ defmodule Brando.Integration.UserTest do
 
   alias Brando.Factory
   alias Brando.Users
-  alias Brando.Users.User
 
   test "create/1 and update/1" do
     user = Factory.insert(:user)
