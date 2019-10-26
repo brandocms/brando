@@ -2,6 +2,7 @@
 
 ### General
 
+* Run `mix brando.upgrade && mix ecto.migrate`
 * Add `Brando.HTML.init_js()` at the top of your `app.html.eex`, before `render_meta`
 
 

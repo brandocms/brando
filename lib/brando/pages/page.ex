@@ -9,8 +9,6 @@ defmodule Brando.Pages.Page do
   use Brando.Villain.Schema
   use Brando.SoftDelete.Schema
 
-  import Brando.HTML, only: [truncate: 2]
-
   alias Brando.Type.Status
   alias Brando.JSONLD
 
