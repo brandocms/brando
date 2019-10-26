@@ -14,9 +14,6 @@ defmodule Brando.Pages.Page do
   alias Brando.Type.Status
   alias Brando.JSONLD
 
-  @max_meta_description_length 155
-  @max_meta_title_length 60
-
   @required_fields ~w(key language slug title data status creator_id)a
   @optional_fields ~w(parent_id meta_description html css_classes deleted_at)a
   @derived_fields ~w(
@@ -54,14 +51,8 @@ defmodule Brando.Pages.Page do
   end
 
   meta_schema do
-    field ["description", "og:description"],
-          [:meta_description],
-          &truncate(&1, @max_meta_description_length)
-
-    field ["title", "og:title"],
-          [:title],
-          &truncate(&1, @max_meta_title_length)
-
+    field ["description", "og:description"], [:meta_description]
+    field ["title", "og:title"], [:title]
     field "og:locale", [:language], &Brando.Meta.Utils.encode_locale/1
   end
 
