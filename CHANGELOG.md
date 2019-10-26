@@ -4,6 +4,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 * Add `Brando.HTML.init_js()`
 * Change potentially long identity fields to `:text`.
+* Adds custom meta from `identity` setup to page
 
 
 ## 0.42.0
