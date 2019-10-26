@@ -273,6 +273,9 @@ defmodule Brando.Images.Operations.Sizing do
         ["", target_height] ->
           %{height: String.to_integer(target_height)}
 
+        [target_width, ""] ->
+          %{width: String.to_integer(target_width)}
+
         [target_width, target_height] ->
           %{
             width: String.to_integer(target_width),
