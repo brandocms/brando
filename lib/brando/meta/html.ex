@@ -46,6 +46,7 @@ defmodule Brando.Meta.HTML do
     |> get_meta()
     |> Enum.map(&safe_to_string(meta_tag(&1)))
     |> maybe_add_see_also()
+    |> maybe_add_custom_meta()
     |> raw()
   end
 
@@ -57,6 +58,18 @@ defmodule Brando.Meta.HTML do
       links ->
         Enum.reduce(links, meta_tags, fn link, acc ->
           [safe_to_string(meta_tag("og:see_also", link.url)) | acc]
+        end)
+    end
+  end
+
+  defp maybe_add_custom_meta(meta_tags) do
+    case Cache.get(:identity, :metas) do
+      [] ->
+        meta_tags
+
+      metas ->
+        Enum.reduce(metas, meta_tags, fn meta, acc ->
+          [safe_to_string(meta_tag(meta.key, meta.value)) | acc]
         end)
     end
   end
