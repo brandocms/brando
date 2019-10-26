@@ -46,7 +46,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     attrs =
       Mix.shell().prompt(
-        "+ Enter schema fields (e.g. name:string avatar:image data:villain image_series:gallery user:references:users)"
+        "+ Enter schema fields (e.g. name:string meta_description:text avatar:image data:villain image_series:gallery user:references:users)"
       )
       |> String.trim("\n")
 
