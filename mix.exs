@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.43.0-dev"
+  @version "0.43.0"
   @description "A helping hand for Twined applications."
 
   def project do
@@ -19,7 +19,7 @@ defmodule Brando.Mixfile do
 
       # Docs
       name: "Brando",
-      docs: [source_ref: "v#{@version}", source_url: "https://github.com/twined/brando"]
+      docs: [source_ref: "v#{@version}", source_url: "https://github.com/univers-agency/brando"]
     ]
   end
 
@@ -106,7 +106,7 @@ defmodule Brando.Mixfile do
       # Dev dependencies
       {:credo, ">= 0.0.0", only: :dev},
       {:dialyxir, "~> 0.3", only: :dev},
-      {:mix_test_watch, "~> 0.8", only: :dev, runtime: false},
+      {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
 
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test},

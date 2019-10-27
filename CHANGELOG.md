@@ -1,6 +1,6 @@
 See `UPGRADE.md` for instructions on upgrading between versions.
 
-## 0.43.0-dev
+## 0.43.0
 
 * Add `Brando.HTML.init_js()`
 * Change potentially long identity fields to `:text`.
