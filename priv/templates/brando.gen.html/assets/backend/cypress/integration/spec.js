@@ -43,7 +43,7 @@ describe('<%= Recase.SentenceCase.convert(snake_domain) %>', () => {
 
       cy.location('pathname').should('match', /admin\/<%= singular %>\/endre\/(\d+)/)
       cy.contains('Endre')
-      <%= for { _, cypress_field } < - cypress_fields do %>
+      <%= for { _, cypress_field } <- cypress_fields do %>
       <%= Enum.join(cypress_field, "\n      ") %><% end %>
 
       cy.contains('Lagre').click()
