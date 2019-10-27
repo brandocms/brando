@@ -31,7 +31,9 @@ defmodule Brando.Schema.Types.Page do
     field :fragments, list_of(:page_fragment),
       resolve:
         assoc(:fragments, fn query, _, _ ->
-          order_by(query, [f], asc: fragment("lower(?)", f.key))
+          query
+          |> where([f], is_nil(f.deleted_at))
+          |> order_by([f], asc: fragment("lower(?)", f.key))
         end)
 
     field :meta_description, :string
