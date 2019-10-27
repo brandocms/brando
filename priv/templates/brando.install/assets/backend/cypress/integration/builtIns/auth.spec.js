@@ -33,6 +33,8 @@ describe('Auth', () => {
 
   it('succeeds logging in an existing user', () => {
     cy.factorydb('user', {
+      full_name: 'Lou Reed',
+      avatar: null,
       email: 'lou@reed.com'
     })
 
@@ -49,13 +51,13 @@ describe('Auth', () => {
 
     cy.location('pathname').should('eq', '/admin/')
     cy.contains('Administrasjonsområde')
-    cy.contains('James Williamson')
+    cy.contains('Lou Reed')
     cy.contains('administrator')
     cy.get('.user-presence > .avatar > .rounded-circle').its('length').should('eq', 1)
   })
 
   it('can log out', () => {
-    cy.factorydb('user', { email: 'lou@reed.com', role: 'superuser' })
+    cy.factorydb('user', { avatar: null, email: 'lou@reed.com', role: 'superuser' })
     cy.login('lou@reed.com', 'admin')
     cy.get('#profile-dropdown-button').click()
     cy.contains('Logg ut').click()

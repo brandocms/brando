@@ -112,6 +112,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
           gql_query_fields: graphql_query_fields(attrs),
           list_rows: list_rows(attrs, Recase.to_camel(binding[:singular])),
           vue_inputs: vue_inputs(attrs, Recase.to_camel(binding[:singular])),
+          cypress_fields: cypress_fields(attrs, Recase.to_camel(binding[:singular])),
           vue_defaults: vue_defaults(attrs),
           params: Mix.Brando.params(attrs),
           snake_domain: snake_domain,
@@ -162,7 +163,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}CreateView.vue"},
           {:eex_trim, "assets/backend/src/views/Edit.vue",
            "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}EditView.vue"},
-          {:eex_trim, "assets/backend/cypress/integration/spec.js",
+          {:eex, "assets/backend/cypress/integration/spec.js",
            "assets/backend/cypress/integration/#{snake_domain}/#{Recase.to_pascal(vue_singular)}.spec.js"}
         ]
 
@@ -339,6 +340,28 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         :singular
       )
     end
+
+    ## Cypress / factory stuff
+    Mix.Brando.add_to_file(
+      "lib/#{Mix.Brando.otp_app()}/factory.ex",
+      "aliases",
+      "alias #{binding[:base]}.#{binding[:domain]}.#{binding[:alias]}"
+    )
+
+    factory_code =
+      EEx.eval_file(
+        Application.app_dir(
+          :brando,
+          "priv/templates/brando.gen.html/factory_function.eex"
+        ),
+        binding
+      )
+
+    Mix.Brando.add_to_file(
+      "lib/#{Mix.Brando.otp_app()}/factory.ex",
+      "functions",
+      factory_code
+    )
 
     Mix.shell().info(instructions)
   end
@@ -721,6 +744,65 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "placeholder=\"#{String.capitalize(to_string(k))}\"",
            "/>"
          ]}
+    end)
+  end
+
+  defp cypress_fields(attrs, singular) do
+    # this is for vue components
+    Enum.map(attrs, fn
+      {k, :boolean} ->
+        {k, ["cy.get('##{singular}_#{k}_').clear().check()"]}
+
+      {k, :text} ->
+        {k, ["cy.get('##{singular}_#{k}_').clear().type('Default Text Value')"]}
+
+      {k, :date} ->
+        {k,
+         [
+           "cy.get('##{singular}_#{k}_').siblings('.form-control').click()",
+           "cy.get('.today').click()"
+         ]}
+
+      {k, :time} ->
+        {k,
+         [
+           "cy.get('##{singular}_#{k}_').siblings('.form-control').click()",
+           "cy.get('.today').click()"
+         ]}
+
+      {k, :datetime} ->
+        {k,
+         [
+           "cy.get('##{singular}_#{k}_').siblings('.form-control').click()",
+           "cy.get('.today').click()"
+         ]}
+
+      {k, :image} ->
+        {k,
+         [
+           "cy.fixture('jpeg.jpg', 'base64').then(fileContent => {",
+           "  cy.get('##{singular}_#{k}_').upload({ fileContent, fileName: 'jpeg.jpg', mimeType: 'image/jpeg' })",
+           "})"
+         ]}
+
+      {k, :file} ->
+        {k,
+         [
+           "cy.fixture('example.json', 'base64').then(fileContent => {",
+           "  cy.get('##{singular}_#{k}_').upload({ fileContent, fileName: 'example.json', mimeType: 'application/json' })",
+           "})"
+         ]}
+
+      {k, :villain} ->
+        {k,
+         [
+           "cy.get('.villain-editor-plus-inactive > a').click()",
+           "cy.get('.villain-editor-plus-available-blocks > :nth-child(1)').click()",
+           "cy.get('.ql-editor > p').click().type('This is a paragraph')"
+         ]}
+
+      {k, _} ->
+        {k, ["cy.get('##{singular}_#{k}_').clear().type('Default value')"]}
     end)
   end
 

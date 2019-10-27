@@ -74,7 +74,7 @@
                       </router-link>
                       <button
                         class="dropdown-item"
-                        @click.prevent="delete<%= Recase.to_pascal(vue_singular) %>(<%= vue_singular %>)">
+                        @click.prevent="del(<%= vue_singular %>)">
                         <i class="fal fa-fw fa-trash-alt mr-4"></i>Slett
                       </button>
                     </b-dropdown>
@@ -91,6 +91,7 @@
 
 <script>
 import { mapActions, mapGetters } from '@univers-agency/kurtz/lib/vuex'
+import { alertConfirm } from '@univers-agency/kurtz/lib/utils/alerts'
 
 export default {
   components: {
@@ -138,6 +139,17 @@ export default {
           this.$toast.success({ message: 'Rekkefølge lagret' })
         })
     },
+
+    del (<%= vue_singular %>) {
+      alertConfirm('OBS', 'Er du sikker på at du vil slette dette objektet?', async (data) => {
+        if (!data) {
+          return
+        }
+        this.delete<%= Recase.to_pascal(vue_singular) %>(event)
+        this.$toast.success({ message: 'Objektet ble slettet' })
+      })
+    },
+
     <%= if gallery do %>
     /**
      * Callback from ImageSelection when we delete images

@@ -1,4 +1,19 @@
-## 0.43.0-dev
+## 0.44.0
+
+* Add `config :brando, :media_path, Path.join([Mix.Project.app_path(), "tmp", "media"])` to
+  `config/e2e.exs`
+* Add
+  ```
+  # ++aliases
+  # __aliases
+
+  # ++functions
+  # __functions
+  ```
+  to `lib/my_app/factory.ex`
+
+
+## 0.43.0
 
 ### General
 

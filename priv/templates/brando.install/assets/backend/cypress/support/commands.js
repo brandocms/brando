@@ -8,6 +8,8 @@
 // https://on.cypress.io/custom-commands
 // ***********************************************
 
+import 'cypress-file-upload'
+
 Cypress.Commands.add('checkoutdb', () => {
   cy.request('POST', '/__e2e/db/checkout').as('checkoutDb')
 })
@@ -31,5 +33,14 @@ Cypress.Commands.add('login', (email, password) => {
   })
     .then(resp => {
       window.localStorage.setItem('token', resp.body.jwt)
+    })
+})
+
+Cypress.Commands.add('loginUser', () => {
+  cy
+    .factorydb('user', { full_name: 'Lou Reed', avatar: null, email: 'lou@reed.com', role: 'superuser' })
+    .as('currentUser')
+    .then(response => {
+      cy.login(response.body.email, 'admin')
     })
 })
