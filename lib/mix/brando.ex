@@ -129,18 +129,48 @@ defmodule Mix.Brando do
       {_, _} -> false
     end)
     |> Enum.into(%{}, fn
-      {k, {:array, _}} -> {k, []}
-      {k, :integer} -> {k, 42}
-      {k, :float} -> {k, "120.5"}
-      {k, :decimal} -> {k, "120.5"}
-      {k, :boolean} -> {k, true}
-      {k, :map} -> {k, %{}}
-      {k, :text} -> {k, "some content"}
-      {k, :date} -> {k, "2010-04-17"}
-      {k, :time} -> {k, "14:00:00"}
-      {k, :datetime} -> {k, "2010-04-17 14:00:00"}
-      {k, :uuid} -> {k, "7488a646-e31f-11e4-aace-600308960662"}
-      {k, _} -> {k, "some content"}
+      {k, {:array, _}} ->
+        {k, []}
+
+      {k, :integer} ->
+        {k, 42}
+
+      {k, :float} ->
+        {k, "120.5"}
+
+      {k, :decimal} ->
+        {k, "120.5"}
+
+      {k, :boolean} ->
+        {k, true}
+
+      {k, :map} ->
+        {k, %{}}
+
+      {k, :text} ->
+        {k, "some content"}
+
+      {k, :date} ->
+        {k, "2010-04-17"}
+
+      {k, :time} ->
+        {k, "14:00:00"}
+
+      {k, :datetime} ->
+        {k, "2010-04-17 14:00:00"}
+
+      {k, :uuid} ->
+        {k, "7488a646-e31f-11e4-aace-600308960662"}
+
+      {k, :villain} ->
+        k = (k == :data && :data) || String.to_atom(Atom.to_string(k) <> "_data")
+        {k, []}
+
+      {k, :image} ->
+        {k, nil}
+
+      {k, _} ->
+        {k, "some content"}
     end)
   end
 
