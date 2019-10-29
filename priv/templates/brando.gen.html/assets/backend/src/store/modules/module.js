@@ -1,4 +1,4 @@
-import { nprogress } from 'kurtz'
+import nprogress from 'nprogress'
 import { <%= vue_singular %>API } from '../../api/<%= vue_singular %>'
 
 const STORE_<%= String.upcase(singular) %> = 'STORE_<%= String.upcase(singular) %>'

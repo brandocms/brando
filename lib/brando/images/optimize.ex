@@ -48,7 +48,7 @@ defmodule Brando.Images.Optimize do
   Checks image for `optimized` flag, gets the image type and sends off
   to `do_optimize`.
   """
-  @spec optimize(Ecto.Changeset.t(), atom | String.t(), Keyword.t()) :: Ecto.Changeset.t()
+  @spec optimize(Ecto.Changeset.t(), :atom | String.t(), Keyword.t()) :: Ecto.Changeset.t()
   def optimize(%Ecto.Changeset{} = changeset, field_name, opts \\ []) do
     force? = Keyword.get(opts, :force, false)
 

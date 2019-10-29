@@ -17,8 +17,8 @@ defmodule Brando.Field.ImageField do
          size_limit: 10_240_000,
          sizes: %{
            "thumb" =>  %{"size" => "150x150", "quality" => 100, "crop" => true},
-           "small" =>  %{"size" => "300x", "quality" => 100},
-           "large" =>  %{"size" => "700x", "quality" => 10},
+           "small" =>  %{"size" => "300x",    "quality" => 100},
+           "large" =>  %{"size" => "700x",    "quality" => 10},
         }
       }
 

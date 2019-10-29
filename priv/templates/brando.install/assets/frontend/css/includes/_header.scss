@@ -7,11 +7,11 @@ section.hero {
   }
 
   h2 {
-    @include media(sm) {
+    @include media-breakpoint-only(sm) {
       max-width: 500px;
     }
 
-    @include media(xs) {
+    @include media-breakpoint-only(xs) {
       padding: 0 10%;
     }
   }
@@ -68,21 +68,21 @@ section.hero {
       .row {
         flex-wrap: nowrap;
 
-        @include media('>=md') {
+        @include media-breakpoint-up(md) {
           height: 100%;
           flex-direction: column;
           align-items: center;
           justify-content: center;
         }
 
-        @include media(sm) {
+        @include media-breakpoint-only(sm) {
           height: 100%;
           flex-direction: column;
           align-items: center;
           justify-content: center;
         }
 
-        @include media(xs) {
+        @include media-breakpoint-only(xs) {
           height: 100%;
           flex-direction: column;
           align-items: center;
@@ -91,13 +91,13 @@ section.hero {
       }
     }
 
-    .logo-circle {
+    .logo {
       z-index: 2;
 
       fill: #ffffff;
       width: 120px;
 
-      @include media(xs) {
+      @include media-breakpoint-only(xs) {
         width: 90px;
       }
 
@@ -110,11 +110,11 @@ section.hero {
       padding-bottom: 0;
       font-weight: normal;
 
-      @include media(lg) {
+      @include media-breakpoint-only(lg) {
         max-width: 750px;
       }
 
-      @include media('>=md') {
+      @include media-breakpoint-up(md) {
         max-width: 640px;
         padding-top: 100px; // height of header
         font-size: 55px;
@@ -122,7 +122,7 @@ section.hero {
         margin-bottom: 5%;
       }
 
-      @include media(sm) {
+      @include media-breakpoint-only(sm) {
         font-size: 46px;
         letter-spacing: 0.8px;
         line-height: 60px;
@@ -131,7 +131,7 @@ section.hero {
         margin-bottom: 10%;
       }
 
-      @include media(xs) {
+      @include media-breakpoint-only(xs) {
         font-size: 26px;
         letter-spacing: 0.8px;
         line-height: 39px;
@@ -151,7 +151,7 @@ section.hero {
 
       font-size: 26px;
 
-      @include media(xs) {
+      @include media-breakpoint-only(xs) {
         font-size: 18px;
         color: #F8F8F7;
         letter-spacing: 0.55px;

@@ -1,10 +1,10 @@
 /**
  * Application-specific SCSS.
- * (c) univers/twined 2019
+ * (c) twined 2019
  */
 
 @import "variables.scss";
-@import "~io/scss/io";
+@import "bootstrap.scss";
 
 .no-js body.unloaded {
   opacity: 1;
@@ -18,16 +18,12 @@
   transform: none;
 }
 
-html, body {
-  height: 100%;
-}
-
-svg:not(:root) {
-  overflow: hidden;
-}
-
 html.sr {
-  [data-moonwalk], [data-moonwalk-product] {
+  [data-moonwalk],
+  [data-moonwalk-offset],
+  [data-moonwalk-logo],
+  [data-moonwalk-fade],
+  [data-moonwalk-slow] {
     visibility: hidden;
   }
 }
@@ -68,7 +64,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 
   @each $bp-name, $bp-size in $grid-breakpoints {
-    @include media('>=#{$bp-name}') {
+    @include media-breakpoint-up($bp-name) {
       padding-top: map-get($fixed-menu-compensation-padding, $bp-name);
       font-size: map-get($fontsize-base, $bp-name);
       line-height: map-get($lineheight-base, $bp-name);
@@ -97,13 +93,47 @@ p:last-child {
   }
 }
 
-header {
-  opacity: 1;
-  transition: opacity 2s ease;
-}
+
+// header {
+//   opacity: 1;
+//   transition: opacity 2s ease;
+// }
 
 .c {
   align-self: center;
+}
+
+span[class^="arrow-"] {
+  transition: all 150ms ease;
+  display: inline-block;
+  backface-visibility: hidden;
+}
+
+a:hover {
+  span.arrow-r {
+    transform: translateX(5px);
+    backface-visibility: hidden;
+  }
+
+  span.arrow-l {
+    transform: translateX(-5px);
+    backface-visibility: hidden;
+  }
+
+  span.arrow-u {
+    transform: translateY(-5px);
+    backface-visibility: hidden;
+  }
+
+  span.arrow-d {
+    transform: translateY(5px);
+    backface-visibility: hidden;
+  }
+
+  span.arrow-ne {
+    transform: translateY(-5px) translateX(5px);
+    backface-visibility: hidden;
+  }
 }
 
 span.line {
@@ -121,9 +151,18 @@ span.line {
   display: none;
 }
 
+.no-js {
+  .v-slideshow {
+    display: none;
+  }
+}
+
+
 /**
-* Imports
-*/
+ * Imports
+ */
+
+@import "includes/utils";
 @import "includes/animations";
 @import "includes/cookies";
 @import "includes/containers";
@@ -135,9 +174,9 @@ span.line {
 @import "includes/header";
 @import "includes/headers";
 @import "includes/lightbox";
-@import "includes/modules";
 @import "includes/paragraphs";
 @import "includes/navigation";
 @import "includes/sections";
+@import "includes/slider";
 @import "includes/templates";
 

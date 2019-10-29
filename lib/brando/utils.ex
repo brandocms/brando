@@ -10,7 +10,8 @@ defmodule Brando.Utils do
     :brando_news,
     :brando_pages,
     :brando_portfolio,
-    :brando_villain
+    :brando_villain,
+    :hrafn
   ]
 
   @kb_size 1024
@@ -237,7 +238,7 @@ defmodule Brando.Utils do
   @doc """
   Returns full url path with scheme and host.
   """
-  @spec current_url(Plug.Conn.t(), String.t() | nil) :: String.t()
+  @spec current_url(Plug.Conn.t(), String.t()) :: String.t()
   def current_url(conn, url \\ nil) do
     path = (url && url) || conn.request_path
     "#{hostname()}#{path}"
@@ -294,10 +295,8 @@ defmodule Brando.Utils do
   """
   @spec get_page_title(Plug.Conn.t()) :: String.t()
   def get_page_title(%{assigns: %{page_title: title}}) do
-    prefix = (Brando.config(:title_prefix) && Brando.config(:title_prefix)) || ""
-    postfix = (Brando.config(:title_postfix) && Brando.config(:title_postfix)) || ""
-
-    prefix <> title <> postfix
+    (Brando.config(:title_prefix) && Brando.config(:title_prefix) <> title) ||
+      Brando.config(:app_name) <> " | " <> title
   end
 
   def get_page_title(_) do
@@ -322,7 +321,8 @@ defmodule Brando.Utils do
   @doc """
   Returns the Helpers module from the router.
   """
-  def helpers(conn), do: Phoenix.Controller.router_module(conn).__helpers__
+  def helpers(conn), do:
+    Phoenix.Controller.router_module(conn).__helpers__
 
   @doc """
   Return the current user set in session.
@@ -373,14 +373,14 @@ defmodule Brando.Utils do
   @doc """
   Returns the application name set in config.exs
   """
-  def app_name, do: Brando.config(:app_name)
+  def app_name, do:
+    Brando.config(:app_name)
 
   @doc """
   Grabs `path` from the file field struct
   """
   def file_url(file_field, opts \\ [])
   def file_url(nil, _), do: nil
-
   def file_url(file_field, opts) do
     prefix = Keyword.get(opts, :prefix, nil)
     (prefix && Path.join([prefix, file_field.path])) || file_field.path
@@ -510,8 +510,8 @@ defmodule Brando.Utils do
     IO.iodata_to_binary([first, rest]) |> String.trim_leading()
   end
 
-  def human_spaced_number(int) when is_integer(int),
-    do: human_spaced_number(Integer.to_string(int))
+  def human_spaced_number(int) when is_integer(int), do:
+    human_spaced_number(Integer.to_string(int))
 
   @doc """
   Get dependencies' versions

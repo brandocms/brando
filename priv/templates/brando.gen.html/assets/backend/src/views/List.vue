@@ -1,12 +1,6 @@
 <template>
-  <spinner
-    v-if="loading"
-    :overlay="true"
-    :transparent="true"/>
-  <div
-    v-else
-    class="<%= plural %> container"
-    appear>
+  <spinner :overlay="true" :transparent="true" v-if="loading" />
+  <div class="<%= plural %> container" v-else appear>
     <div class="row">
       <div class="col-md-12">
         <div class="card">
@@ -32,9 +26,9 @@
               v-if="all<%= Recase.to_pascal(vue_plural) %>.length"
               class="table table-airy">
               <tbody
-                is="transition-group"
                 name="slide-fade-top-slow"<%= if sequenced do %>
-                v-sortable="{handle: 'tr', animation: 250, store: {get: getOrder, set: storeOrder}}"<% end %>>
+                v-sortable="{handle: 'tr', animation: 250, store: {get: getOrder, set: storeOrder}}"<% end %>
+                is="transition-group">
                 <%= if sequenced do %>
                 <tr
                   v-for="<%= vue_singular %> in all<%= Recase.to_pascal(vue_plural) %>"
@@ -54,23 +48,20 @@
                   <td
                     v-if="['superuser'].includes(me.role)"
                     class="text-center fit">
-                    <b-dropdown
-                      variant="white"
-                      no-caret>
+                    <b-dropdown variant="white" no-caret>
                       <template slot="button-content">
                         <i class="k-dropdown-icon"></i>
                       </template>
                       <router-link
                         :to="{ name: '<%= singular %>-edit', params: { <%= vue_singular %>Id: <%= vue_singular %>.id } }"
-                        :class="{'dropdown-item': true}"
                         tag="button"
-                        exact>
+                        :class="{'dropdown-item': true}"
+                        exact
+                      >
                         <i class="fal fa-pencil fa-fw mr-4"></i>
                         Endre
                       </router-link>
-                      <button
-                        class="dropdown-item"
-                        @click.prevent="delete<%= Recase.to_pascal(vue_singular) %>(<%= vue_singular %>)">
+                      <button @click.prevent="delete<%= Recase.to_pascal(vue_singular) %>(<%= vue_singular %>)" class="dropdown-item">
                         <i class="fal fa-fw fa-trash-alt mr-4"></i>Slett
                       </button>
                     </b-dropdown>
@@ -86,7 +77,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from 'kurtz/lib/vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 export default {
   components: {
@@ -101,6 +92,13 @@ export default {
     }
   },
 
+  async created () {
+    console.debug('created <<%= Recase.to_pascal(vue_singular) %>ListView />')
+    this.loading++
+    await this.get<%= Recase.to_pascal(vue_plural) %>()
+    this.loading--
+  },
+
   computed: {
     ...mapGetters('users', [
       'me'
@@ -113,13 +111,6 @@ export default {
   inject: [
     'adminChannel'
   ],
-
-  async created () {
-    console.debug('created <<%= Recase.to_pascal(vue_singular) %>ListView />')
-    this.loading++
-    await this.get<%= Recase.to_pascal(vue_plural) %>()
-    this.loading--
-  },
 
   methods: {
     getOrder (sortable) {

@@ -15,9 +15,31 @@ Start by creating a new phoenix project:
 
     $ mix phx.new my_project
 
-Run the install script:
+Add Brando to `deps` in your `mix.exs` file:
 
-    $ wget -O - https://raw.githubusercontent.com/twined/brando/develop/install.sh | bash
+    $ gsed -i '/{:phoenix,/i\      {:brando, github: "twined/brando", branch: "develop"},' mix.exs
+
+Fetch and compile dependencies. Install Brando:
+
+    $ mix do deps.get, deps.compile, brando.install --module MyApp, deps.get, deps.compile
+
+Add to your `config/config.exs` right before the env-specific import:
+
+    $ gsed -i '/Import environment specific config/i\# import BRANDO config\nimport_config "brando.exs"\n' config/config.exs
+
+(Install gsed, if it's missing: `brew install gnu-sed`)
+
+Install node packages:
+
+    $ cd assets/frontend && yarn && cd ../backend && yarn && cd ../../
+
+Set up database, and seed:
+
+    $ mix do deps.get, deps.compile --force && mix ecto.setup
+
+Add to your `config/prod.secret.exs` (see https://github.com/elixir-lang/ecto/issues/1328)
+
+    $ gsed -i '/pool_size:/i\  socket_options: [recbuf: 8192, sndbuf: 8192],' config/prod.secret.exs
 
 Go through `config/brando.exs`.
 
@@ -28,7 +50,14 @@ config :my_app, MyApp.Endpoint,
   render_errors: [accepts: ~w(html json), view: Brando.ErrorView, default_format: "html"],
 ```
 
-Set your release config (`rel/config.exs`) to default to prod, and add this:
+Create a release configuration:
+
+```
+$ mix release.init
+```
+
+And set its config to default to prod.
+Then add this to the release cfg
 
 ```elixir
 release :my_app do
@@ -46,9 +75,8 @@ end
 Fix dev asset reloading in `config/dev.exs`
 
 ```elixir
-config :my_app, hmr: true
 config :my_app, MyApp.Endpoint,
-  watchers: [npm: ["run", "watch", cd: Path.expand("../assets/frontend", __DIR__)]]
+  watchers: [npm: ["run", "dev", cd: Path.expand("../assets/frontend", __DIR__)]]
 ```
 
 Now lets add the presence server. First in `lib/application.ex` add a supervisor:

@@ -260,24 +260,6 @@ defmodule <%= application_module %>.Villain.Parser do
   end
 
   @doc """
-  Convert template to html.
-  """
-  def template(%{"id" => id, "refs" => refs}) do
-    {:ok, template} = Brando.Villain.get_template(id)
-
-    Regex.replace(~r/%{(\w+)}/, template.code, fn _, match ->
-      ref = Enum.find(refs, &(&1["name"] == match))
-
-      if ref do
-        block = Map.get(ref, "data")
-        apply(__MODULE__, String.to_atom(block["type"]), [block["data"]])
-      else
-        "<!-- REF #{match} missing // template: #{id}. -->"
-      end
-    end)
-  end
-
-  @doc """
   Timeline
   """
   def timeline(items) do

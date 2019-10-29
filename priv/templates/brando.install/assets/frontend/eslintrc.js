@@ -1,12 +1,8 @@
 module.exports = {
   root: true,
   env: {
-    node: true,
-    'cypress/globals': true
+    node: true
   },
-  plugins: [
-    'cypress'
-  ],
   extends: [
     'standard'
   ],

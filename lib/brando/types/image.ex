@@ -6,7 +6,10 @@ defmodule Brando.Type.Image do
   @type t :: %__MODULE__{}
   @behaviour Ecto.Type
 
-  @derive {Jason.Encoder, only: ~w(title credits path sizes optimized width height focal)a}
+  @derive {Poison.Encoder,
+           only: ~w(title credits path sizes optimized width height thumb medium focal)a}
+  @derive {Jason.Encoder,
+           only: ~w(title credits path sizes optimized width height focal)a}
 
   defstruct title: nil,
             credits: nil,
@@ -30,7 +33,8 @@ defmodule Brando.Type.Image do
     {:ok, val}
   end
 
-  def cast(val) when is_map(val), do: {:ok, val}
+  def cast(val) when is_map(val), do:
+    {:ok, val}
 
   @doc """
   Integers are never considered blank
@@ -51,7 +55,7 @@ defmodule Brando.Type.Image do
   other options as well.
   """
   def dump(val) do
-    val = Jason.encode!(val)
+    val = Poison.encode!(val)
     {:ok, val}
   end
 end

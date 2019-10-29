@@ -18,7 +18,6 @@ defmodule Brando.VillainTest do
     def list(_), do: nil
     def slideshow(_), do: nil
     def video(_), do: nil
-    def template(_), do: nil
   end
 
   use Brando.ConnCase

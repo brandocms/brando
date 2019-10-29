@@ -1,17 +1,17 @@
 @function reverse($list, $recursive: false) {
-  $result: ();
+   $result: ();
 
-  @for $i from length($list)*-1 through -1 {
-    @if type-of(nth($list, abs($i))) == list and $recursive {
-      $result: append($result, reverse(nth($list, abs($i)), $recursive));
-    }
+   @for $i from length($list)*-1 through -1 {
+      @if type-of(nth($list, abs($i))) == list and $recursive {
+        $result: append($result, reverse(nth($list, abs($i)), $recursive));
+      }
 
-    @else {
-      $result: append($result, nth($list, abs($i)));
-    }
-  }
+      @else {
+        $result: append($result, nth($list, abs($i)));
+      }
+   }
 
-  @return $result;
+   @return $result;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -206,23 +206,18 @@ $padding-caps: (
   lg: 10px
 );
 
-$typography-menu: (
-  xs: (
-    font-size: 26px,
-    line-height: 45px
-  ),
-  sm: (
-    font-size: 32px,
-    line-height: 62px
-  ),
-  md: (
-    font-size: 22px,
-    line-height: 27px
-  ),
-  lg: (
-    font-size: 22px,
-    line-height: 27px
-  )
+$fontsize-menu: (
+  xs: 26px, //
+  sm: 32px, //
+  md: 22px, //
+  lg: 22px  //
+);
+
+$lineheight-menu: (
+  xs: 45px, //
+  sm: 62px, //
+  md: 27px, //
+  lg: 27px  //
 );
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -251,9 +246,18 @@ $menu-link-mobile-color: $dark;
 $menu-accent-color: transparent;
 $enable-rounded: false;
 
+$hamburger-layer-color: #fff;
+$hamburger-layer-width: 32px;
+$hamburger-padding-x: 0px;
+$hamburger-padding-y: 0px;
+$hamburger-layer-height: 5px;
+$hamburger-layer-spacing: 5px;
+$hamburger-layer-border-radius: 0px;
+$hamburger-hover-opacity: 1;
+
 $hamburger-config: (
   xs: (
-    layer-color: #000,
+    layer-color: #fff,
     layer-width: 25px,
     layer-height: 3px,
     layer-spacing: 4px,
@@ -265,7 +269,7 @@ $hamburger-config: (
     right: 13px
   ),
   sm: (
-    layer-color: #000,
+    layer-color: #fff,
     layer-width: 25px,
     layer-height: 3px,
     layer-spacing: 5px,
@@ -281,6 +285,13 @@ $hamburger-config: (
 $hamburger-types: (
   spin
 );
+
+/*
+ * Mobil opp til 768px
+ * iPad fra 768px -> 1300px
+ * Vanlig fra 1300px -> 2200px(?) eller 1800?
+ * HD fra 2200px ->
+ */
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // BREAKPOINTS/GRID
@@ -313,29 +324,17 @@ $container-max-widths: (
 // FONTS
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$font-family-sans-serif: -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+$font-family-sans-serif: "Gerstner Programm FS", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // NAVBAR
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$navbar-brand: (
-  xs: (
-    width: 118.37px,
-    height: 29.52px
-  ),
-  sm: (
-    width: 118.37px,
-    height: 29.52px
-  ),
-  md: (
-    width: 118.37px,
-    height: 29.52px
-  ),
-  lg: (
-    width: 118.37px,
-    height: 29.52px
-  ),
+$navbar-brand-widths: (
+  xs: 134px,
+  sm: 168px,
+  md: 167.5px,
+  lg: 167.5px
 );
 
 $fixed-menu-compensation-padding: (
@@ -344,46 +343,3 @@ $fixed-menu-compensation-padding: (
   md: 0,
   lg: 0
 );
-
-
-//// NEW
-
-$header-padding: (
-  xs: (
-    padding-top: 30px,
-    padding-bottom: 30px
-  ),
-  sm: (
-    padding-top: 40px,
-    padding-bottom: 40px
-  ),
-  md: (
-    padding-top: 60px,
-    padding-bottom: 60px
-  ),
-  lg: (
-    padding-top: 60px,
-    padding-bottom: 60px
-  )
-);
-
-// small version
-$header-padding-small: (
-  xs: (
-    padding-top: 15px,
-    padding-bottom: 15px
-  ),
-  sm: (
-    padding-top: 30px,
-    padding-bottom: 30px
-  ),
-  md: (
-    padding-top: 30px,
-    padding-bottom: 30px
-  ),
-  lg: (
-    padding-top: 30px,
-    padding-bottom: 30px
-  )
-);
-

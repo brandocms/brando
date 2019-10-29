@@ -24,7 +24,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
 
   The generator also supports `belongs_to` associations:
 
-      mix brando.gen.schema Post posts title user:references:users
+      mix brando.gen.schema Post posts title user:references
 
   This will result in a migration with an `:integer` column
   of `:user_id` and create an index. It will also generate
@@ -44,8 +44,6 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
       mix brando.gen.schema Admin.User users name:string age:integer
 
   """
-  import Inflex
-
   def run(args, domain) do
     snake_domain =
       domain
@@ -101,8 +99,6 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
         end
       end)
 
-    mig_assocs = migration_assocs(assocs)
-
     schema_fields =
       attrs
       |> Enum.map(fn {k, v} ->
@@ -129,8 +125,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
           snake_domain: snake_domain,
           migrations: migrations,
           schema_fields: schema_fields,
-          schema_assocs: schema_assocs(binding[:base], domain, assocs),
-          migration_assocs: mig_assocs,
+          assocs: assocs(assocs),
           indexes: indexes(snake_domain, plural, assocs),
           defaults: defs,
           params: params,
@@ -143,7 +138,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
       "",
       binding,
       [
-        {:eex_trim, "migration.exs",
+        {:eex, "migration.exs",
          "priv/repo/migrations/" <> "#{timestamp()}_create_#{migration}.exs"},
         {:eex, "schema.ex", "lib/application_name/#{snake_domain}/#{path}.ex"},
         {:eex, "schema_test.exs", "test/schemas/#{path}_test.exs"}
@@ -174,39 +169,15 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
   end
 
   defp partition_attrs_and_assocs(attrs) do
-    Enum.split_with(
-      attrs,
-      fn
-        {_, {kind, _}} ->
-          kind == :references
-
-        {_, kind} ->
-          kind == :gallery
-      end
-    )
-  end
-
-  defp migration_assocs(assocs) do
-    Enum.reduce(assocs, [], fn
-      {key, {:references, target}}, acc ->
-        [{key, :"#{key}_id", target, :nothing} | acc]
-
-      {key, :gallery}, acc ->
-        [{key, :"#{key}_id", :imageseries, :delete_all} | acc]
+    Enum.split_with(attrs, fn {_, kind} ->
+      kind == :references or kind == :gallery
     end)
   end
 
-  defp schema_assocs(base, domain, assocs) do
-    Enum.reduce(assocs, [], fn
-      {key, {:references, :users}}, acc ->
-        [{key, :"#{key}_id", "Brando.User"} | acc]
-
-      {key, {:references, target}}, acc ->
-        inflected = singularize(to_string(target)) |> camelize()
-        [{key, :"#{key}_id", Enum.join([base, domain, inflected], ".")} | acc]
-
-      {key, :gallery}, acc ->
-        [{key, :"#{key}_id", "Brando.ImageSeries"} | acc]
+  defp assocs(assocs) do
+    Enum.reduce(assocs, [], fn {key, _}, acc ->
+      assoc = Mix.Brando.inflect(Atom.to_string(key))
+      [{key, :"#{key}_id", assoc[:module]} | acc]
     end)
   end
 
@@ -226,14 +197,8 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
 
   defp types(attrs) do
     Enum.into(attrs, %{}, fn
-      {k, {:references, target}} ->
-        {k, {:references, target}}
-
-      {k, {c, v}} ->
-        {k, {c, value_to_type(v)}}
-
-      {k, v} ->
-        {k, value_to_type(v)}
+      {k, {c, v}} -> {k, {c, value_to_type(v)}}
+      {k, v} -> {k, value_to_type(v)}
     end)
   end
 

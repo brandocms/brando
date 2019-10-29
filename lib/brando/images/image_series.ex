@@ -16,6 +16,22 @@ defmodule Brando.ImageSeries do
   @required_fields ~w(name image_category_id creator_id)a
   @optional_fields ~w(credits sequence cfg slug)a
 
+  @derive {Poison.Encoder,
+           only: [
+             :id,
+             :name,
+             :slug,
+             :credits,
+             :cfg,
+             :creator,
+             :creator_id,
+             :image_category_id,
+             :image_category,
+             :images,
+             :sequence,
+             :inserted_at,
+             :updated_at
+           ]}
   @derive {Jason.Encoder,
            only: [
              :id,
@@ -52,7 +68,7 @@ defmodule Brando.ImageSeries do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, :create | :update, Keyword.t()) :: Ecto.Changeset.t()
+  @spec changeset(t, :create | :update, Keyword.t()) :: t
   def changeset(schema, action, params \\ %{})
 
   def changeset(schema, :create, params) do

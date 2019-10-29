@@ -1,6 +1,11 @@
 defmodule <%= application_module %>Web.Endpoint do
   use Phoenix.Endpoint, otp_app: :<%= application_name %>
 
+  # wallaby testing env
+  if Application.get_env(:<%= application_name %>, :sql_sandbox) do
+    plug Phoenix.Ecto.SQL.Sandbox
+  end
+
   socket "/admin/socket", <%= application_module %>Web.AdminSocket,
     websocket: true,
     longpoll: true

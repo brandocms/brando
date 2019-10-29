@@ -50,7 +50,7 @@ defmodule Mix.Brando do
           :eex_trim -> EEx.eval_file(source, binding, trim: true)
         end
 
-      Mix.Generator.create_file(target, contents, force: true)
+      Mix.Generator.create_file(target, contents)
     end
   end
 
@@ -170,54 +170,6 @@ defmodule Mix.Brando do
   end
 
   @doc """
-  Add content to file under marker
-  """
-  def add_to_file(file, marker, content, multiple \\ false) do
-    marker_start =
-      case Path.extname(file) do
-        ".ex" ->
-          "# __"
-
-        ".js" ->
-          "// __"
-      end
-
-    exists? =
-      if multiple do
-        File.stream!(file)
-        |> Enum.map(&String.contains?(&1, content))
-        |> Enum.any?(&(&1 == true))
-      else
-        false
-      end
-
-    unless exists? do
-      marker = "#{marker_start}#{marker}"
-      marker_regex = ~r/(\s+)?(#{marker})/
-
-      new_content =
-        File.stream!(file)
-        |> Enum.map(fn line ->
-          case Regex.run(marker_regex, line, capture: :all_but_first) do
-            nil ->
-              line
-
-            [whitespace, marker] ->
-              content_split =
-                String.split(content, "\n")
-                |> Enum.map(&"#{whitespace}#{&1}")
-                |> Enum.join("\n")
-
-              content = "#{content_split}\n#{whitespace}#{marker}"
-              String.replace(line, whitespace <> marker, content)
-          end
-        end)
-
-      File.write(file, new_content)
-    end
-  end
-
-  @doc """
   Returns all compiled modules in a project.
   """
   def modules do
@@ -231,7 +183,7 @@ defmodule Mix.Brando do
     path |> Path.basename(".beam") |> String.to_atom()
   end
 
-  def otp_app do
+  defp otp_app do
     Mix.Project.config() |> Keyword.fetch!(:app)
   end
 

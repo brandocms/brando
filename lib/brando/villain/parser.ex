@@ -41,7 +41,4 @@ defmodule Brando.Villain.Parser do
 
   @doc "Parses html"
   @callback html(%{String.t() => any}) :: String.t()
-
-  @doc "Parses template"
-  @callback template(%{String.t() => any}) :: String.t()
 end

@@ -2,7 +2,9 @@ defmodule Brando.Types.ImageTest do
   use ExUnit.Case
   alias Brando.Type.Image
 
-  @raw "{\"title\":null,\"credits\":\"Credits\",\"path\":\"images/avatars/27i97a.jpeg\",\"sizes\":{\"medium\":\"images/avatars/medium/27i97a.jpeg\",\"thumb\":\"images/avatars/thumb/27i97a.jpeg\"},\"optimized\":false,\"width\":null,\"height\":null,\"focal\":{\"x\":50,\"y\":50}}"
+  @raw ~s({"width":null,"title":null,"sizes":{"thumb":"images/avatars/thumb/27i97a.) <>
+         ~s(jpeg","medium":"images/avatars/medium/27i97a.jpeg"},"path":") <>
+         ~s(images/avatars/27i97a.jpeg","optimized":false,"height":null,"focal":{"y":50,"x":50},"credits":"Credits"})
 
   @result %Image{
     credits: "Credits",

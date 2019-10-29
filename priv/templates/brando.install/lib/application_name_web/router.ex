@@ -5,8 +5,6 @@ defmodule <%= application_module %>Web.Router do
   import Brando.Images.Routes.Admin.API
   import Brando.Villain.Routes.Admin.API
 
-  @sql_sandbox Application.get_env(:<%= application_name %>, :sql_sandbox) || false
-
   # additional optional modules
 
   pipeline :admin do
@@ -51,10 +49,6 @@ defmodule <%= application_module %>Web.Router do
 
   pipeline :authenticated do
     plug Guardian.Plug.EnsureAuthenticated, handler: Brando.AuthHandler.APIAuthHandler
-  end
-
-  if @sql_sandbox do
-    forward "/__e2e", Brando.Plug.E2ETest
   end
 
   scope "/admin", as: :admin do

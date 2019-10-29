@@ -4,7 +4,6 @@ module.exports = {
   runtimeCompiler: true,
   // disable hashes in filenames
   filenameHashing: false,
-  productionSourceMap: false,
   // delete HTML related webpack plugins
   chainWebpack: config => {
     config.plugins.delete('html')

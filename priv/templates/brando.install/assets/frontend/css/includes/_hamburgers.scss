@@ -30,10 +30,10 @@ $hamburger-active-hover-filter: $hamburger-hover-filter !default;
 // Hamburger
 // ==================================================
 @each $bp-name, $bp-cfg in $hamburger-config {
-  @include media('>=#{$bp-name}') {
+  @include media-breakpoint-up($bp-name) {
     .hamburger {
       padding: map-get($bp-cfg, padding-x) map-get($bp-cfg, padding-y);
-      display: block;
+      display: inline-block;
       cursor: pointer;
 
       transition-property: opacity, filter;
@@ -82,11 +82,11 @@ $hamburger-active-hover-filter: $hamburger-hover-filter !default;
 }
 
 @each $bp-name, $bp-cfg in $hamburger-config {
-  @include media('>=#{$bp-name}') {
+  @include media-breakpoint-up($bp-name) {
     .hamburger-box {
       width: map-get($bp-cfg, layer-width);
       height: map-get($bp-cfg, layer-height) * 3 + map-get($bp-cfg, layer-spacing) * 2;
-      display: block;
+      display: inline-block;
       position: relative;
     }
 
@@ -126,91 +126,107 @@ $hamburger-active-hover-filter: $hamburger-hover-filter !default;
 
 // Hamburger types
 // ==================================================
-/*
-  * Spin
-  */
-.hamburger--spin {
-  .hamburger-inner {
-    transition: transform 0.12s cubic-bezier(0.55, 0.055, 0.675, 0.19), background-color 1.25s ease;
-
-    &::before {
-      transition: top 0.1s 0.25s ease-in,
-        transform 0.22s cubic-bezier(0.55, 0.055, 0.675, 0.19),
-        background-color 2s ease;
-    }
-
-    &::after {
-      transition: bottom 0.1s 0.25s ease-in,
-        transform 0.22s cubic-bezier(0.55, 0.055, 0.675, 0.19),
-        background-color 2s ease;
-    }
-  }
-
-  &.is-active {
+  /*
+   * Spin
+   */
+  .hamburger--spin {
     .hamburger-inner {
-      transition: transform 0.12s cubic-bezier(0.215, 0.61, 0.355, 1), background-color 1.25s ease;
+      transition: transform 0.12s cubic-bezier(0.55, 0.055, 0.675, 0.19), background-color 1.25s ease;
 
       &::before {
-        top: 0;
-        transform: rotate(45deg);
-        transition: top 0.1s ease-out,
-          transform 0.22s 0.12s cubic-bezier(0.215, 0.61, 0.355, 1),
-          background-color 1.25s ease;
+        transition: top 0.1s 0.25s ease-in,
+                    transform 0.22s cubic-bezier(0.55, 0.055, 0.675, 0.19),
+                    background-color 2s ease;
       }
 
       &::after {
-        bottom: 0;
-        transform: rotate(-45deg);
-        transition: bottom 0.1s ease-out,
-          transform 0.22s 0.12s cubic-bezier(0.215, 0.61, 0.355, 1),
-          background-color 1.25s ease;
+        transition: bottom 0.1s 0.25s ease-in,
+                    transform 0.22s cubic-bezier(0.55, 0.055, 0.675, 0.19),
+                    background-color 2s ease;
+      }
+    }
+
+    &.is-active {
+      .hamburger-inner {
+        transition: transform 0.12s cubic-bezier(0.215, 0.61, 0.355, 1), background-color 1.25s ease;
+
+        &::before {
+          top: 0;
+          transform: rotate(45deg);
+          transition: top 0.1s ease-out,
+                      transform 0.22s 0.12s cubic-bezier(0.215, 0.61, 0.355, 1),
+                      background-color 1.25s ease;
+        }
+
+        &::after {
+          bottom: 0;
+          transform: rotate(-45deg);
+          transition: bottom 0.1s ease-out,
+                      transform 0.22s 0.12s cubic-bezier(0.215, 0.61, 0.355, 1),
+                      background-color 1.25s ease;
+        }
       }
     }
   }
-}
-
-/*
- * Collapse
- */
-.hamburger--collapse {
-  .hamburger-inner {
-    top: auto;
-    bottom: 0;
-    transition-duration: 0.13s;
-    transition-delay: 0.13s;
-    transition-timing-function: cubic-bezier(0.55, 0.055, 0.675, 0.19);
-
-    &::after {
-      top: ($hamburger-layer-spacing * 2 + $hamburger-layer-height * 2) * -1;
-      transition: top 0.2s 0.2s cubic-bezier(0.33333, 0.66667, 0.66667, 1),
-                  opacity 0.1s linear;
-    }
-
-    &::before {
-      transition: top 0.12s 0.2s cubic-bezier(0.33333, 0.66667, 0.66667, 1),
-                  transform 0.13s cubic-bezier(0.55, 0.055, 0.675, 0.19);
-    }
-  }
-
-  &.is-active {
+  /*
+   * Collapse
+   */
+  .hamburger--collapse {
     .hamburger-inner {
-      transform: translate3d(0, ($hamburger-layer-spacing + $hamburger-layer-height) * -1, 0) rotate(-45deg);
-      transition-delay: 0.22s;
-      transition-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+      top: auto;
+      bottom: 0;
+      transition-duration: 0.13s;
+      transition-delay: 0.13s;
+      transition-timing-function: cubic-bezier(0.55, 0.055, 0.675, 0.19);
 
       &::after {
-        top: 0;
-        opacity: 0;
-        transition: top 0.2s cubic-bezier(0.33333, 0, 0.66667, 0.33333),
-                    opacity 0.1s 0.22s linear;
+        top: ($hamburger-layer-spacing * 2 + $hamburger-layer-height * 2) * -1;
+        transition: top 0.2s 0.2s cubic-bezier(0.33333, 0.66667, 0.66667, 1),
+                    opacity 0.1s linear;
       }
 
       &::before {
-        top: 0;
-        transform: rotate(-90deg);
-        transition: top 0.1s 0.16s cubic-bezier(0.33333, 0, 0.66667, 0.33333),
-                    transform 0.13s 0.25s cubic-bezier(0.215, 0.61, 0.355, 1);
+        transition: top 0.12s 0.2s cubic-bezier(0.33333, 0.66667, 0.66667, 1),
+                    transform 0.13s cubic-bezier(0.55, 0.055, 0.675, 0.19);
+      }
+    }
+
+    &.is-active {
+      .hamburger-inner {
+        transform: translate3d(0, ($hamburger-layer-spacing + $hamburger-layer-height) * -1, 0) rotate(-45deg);
+        transition-delay: 0.22s;
+        transition-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+
+        &::after {
+          top: 0;
+          opacity: 0;
+          transition: top 0.2s cubic-bezier(0.33333, 0, 0.66667, 0.33333),
+                      opacity 0.1s 0.22s linear;
+        }
+
+        &::before {
+          top: 0;
+          transform: rotate(-90deg);
+          transition: top 0.1s 0.16s cubic-bezier(0.33333, 0, 0.66667, 0.33333),
+                      transform 0.13s 0.25s cubic-bezier(0.215, 0.61, 0.355, 1);
+        }
       }
     }
   }
-}
+
+
+// ==================================================
+// Cooking up additional types:
+//
+// The Sass for each hamburger type should be nested
+// inside an @if directive to check whether or not
+// it exists in $hamburger-types so only the CSS for
+// included types are generated.
+//
+// e.g. hamburgers/types/_new-type.scss
+//
+// @if index($hamburger-types, new-type) {
+//   .hamburger--new-type {
+//     ...
+//   }
+// }

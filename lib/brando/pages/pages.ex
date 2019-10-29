@@ -181,7 +181,7 @@ defmodule Brando.Pages do
   def rerender_page(id) do
     {:ok, page} = get_page(id)
     changeset = Ecto.Changeset.change(page)
-    Brando.Villain.rerender_html(changeset)
+    Page.rerender_html(changeset)
   end
 
   @doc """
@@ -191,7 +191,7 @@ defmodule Brando.Pages do
     {:ok, pages} = list_pages()
 
     for page <- pages do
-      Brando.Villain.rerender_html(Ecto.Changeset.change(page))
+      Page.rerender_html(Ecto.Changeset.change(page))
     end
   end
 
@@ -202,14 +202,14 @@ defmodule Brando.Pages do
     {:ok, fragments} = list_page_fragments()
 
     for fragment <- fragments do
-      Brando.Villain.rerender_html(Ecto.Changeset.change(fragment))
+      PageFragment.rerender_html(Ecto.Changeset.change(fragment))
     end
   end
 
   def rerender_fragment(id) do
     {:ok, fragment} = get_page_fragment(id)
     changeset = Ecto.Changeset.change(fragment)
-    Brando.Villain.rerender_html(changeset)
+    PageFragment.rerender_html(changeset)
   end
 
   @doc """

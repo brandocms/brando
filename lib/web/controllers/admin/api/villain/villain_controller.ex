@@ -1,10 +1,6 @@
-defmodule Brando.API.Villain.VillainController do
-  @moduledoc """
-  The API backend for villain-editor JS.
-  """
+defmodule Brando.VillainController do
   use Brando.Web, :controller
   alias Brando.Images
-  alias Brando.Villain
   import Ecto.Query
 
   @doc false
@@ -15,7 +11,7 @@ defmodule Brando.API.Villain.VillainController do
       |> Brando.repo().get_by(slug: series_slug)
 
     if image_series do
-      image_list = Villain.map_images(image_series.images)
+      image_list = Brando.Villain.map_images(image_series.images)
       json(conn, %{status: 200, images: image_list})
     else
       json(conn, %{status: 204, images: []})
@@ -89,12 +85,11 @@ defmodule Brando.API.Villain.VillainController do
         )
 
       images when length(images) > 1 ->
-        images =
-          Enum.map(images, fn {:ok, img} ->
-            sizes = Enum.map(img.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
-            sizes_map = Enum.into(sizes, %{})
-            %{id: img.id, sizes: sizes_map, src: Brando.Utils.media_url(img.image.path)}
-          end)
+        images = Enum.map(images, fn {:ok, img} ->
+          sizes = Enum.map(img.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
+          sizes_map = Enum.into(sizes, %{})
+          %{id: img.id, sizes: sizes_map, src: Brando.Utils.media_url(img.image.path)}
+        end)
 
         json(
           conn,
@@ -207,33 +202,5 @@ defmodule Brando.API.Villain.VillainController do
     }
 
     json(conn, info)
-  end
-
-  @doc false
-  def templates(conn, %{"slug" => slug}) do
-    {:ok, templates} = Villain.list_templates(slug)
-
-    formatted_templates =
-      Enum.map(templates, fn template ->
-        %{
-          type: "template",
-          data: template
-        }
-      end)
-
-    json(conn, formatted_templates)
-  end
-
-  @doc false
-  def store_template(conn, %{"template" => json_template}) do
-    with {:ok, decoded_template} <- Jason.decode(json_template),
-         {:ok, stored_template} <- Villain.update_or_create_template(decoded_template) do
-      response = %{
-        status: 200,
-        template: stored_template
-      }
-
-      json(conn, response)
-    end
   end
 end

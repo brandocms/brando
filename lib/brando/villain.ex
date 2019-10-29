@@ -2,18 +2,205 @@
 defmodule Brando.Villain do
   @moduledoc """
   Interface to Villain HTML editor.
+  https://github.com/twined/villain
+
+  # Schema
+
+  Schema utilities
+
+  ## Usage
+
+      use Brando.Villain, :schema
+
+  Add fields to your schema:
+
+      schema "my_schema" do
+        field "header", :string
+        villain :biography
+      end
+
+  As Ecto 1.1 removed callbacks, we must manually call for HTML generation.
+  In your schema's `changeset` functions:
+
+      def changeset(schema, :create, params) do
+        schema
+        |> cast(params, @required_fields, @optional_fields)
+        |> Brando.Villain.HTML.generate_html()
+      end
+
+  You can add separate parsers by supplying the parser module as a parameter to the `generate_html`
+  function or `rerender_html` funtion. If not, it will use the parser module given in
+
+      config :brando, Brando.Villain, :parser
+
+  # Migration
+
+  Migration utilities
+
+  ## Usage
+
+      use Brando.Villain, :migration
+
+  Add fields to your schema:
+
+      table "bla" do
+        villain
+      end
+
+  # Controller
+
+  Defines `:browse_images`, `:upload_image`, `:image_info` actions.
+
+  ## Usage
+
+      use Brando.Villain, :controller
+
+  Add routes to your router.ex:
+
+      villain_routes MyController
+
   """
+  import Brando.Utils, only: [img_url: 2, media_url: 1]
 
-  require Logger
-  alias Brando.Utils
-  import Ecto.Query
+  @doc false
+  def schema do
+    quote do
+      import Brando.Villain.Schema, only: [villain: 0, villain: 1]
 
-  defmacro __using__(:schema) do
-    raise "`use Brando.Villain, :schema` is deprecated. Call `use Brando.Villain.Schema` instead."
+      @doc """
+      Takes the schema's `json` field and transforms to `html`.
+
+      This is usually called from your schema's `changeset` functions:
+
+          def changeset(schema, :create, params) do
+            schema
+            |> cast(params, @required_fields, @optional_fields)
+            |> generate_html()
+          end
+      """
+      def generate_html(
+            changeset,
+            field \\ nil,
+            parser_mod \\ Brando.config(Brando.Villain)[:parser]
+          ) do
+        data_field =
+          (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
+
+        html_field =
+          (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
+
+        if Ecto.Changeset.get_change(changeset, data_field) do
+          parsed_data = Brando.Villain.parse(Map.get(changeset.changes, data_field), parser_mod)
+          Ecto.Changeset.put_change(changeset, html_field, parsed_data)
+        else
+          changeset
+        end
+      end
+
+      @doc """
+      Rerender page HTML from data.
+      """
+      def rerender_html(
+            changeset,
+            field \\ nil,
+            parser_mod \\ Brando.config(Brando.Villain)[:parser]
+          ) do
+        data_field =
+          (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
+
+        html_field =
+          (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
+
+        data = Ecto.Changeset.get_field(changeset, data_field)
+
+        changeset
+        |> Ecto.Changeset.put_change(html_field, Brando.Villain.parse(data, parser_mod))
+        |> Brando.repo().update!
+      end
+
+      @doc """
+      Check all posts for missing images
+      """
+      def check_posts_for_missing_images do
+        posts = Brando.repo().all(__MODULE__)
+
+        result =
+          Enum.reduce(posts, [], fn post, acc ->
+            check_post_for_missing_images(post)
+          end)
+
+        case result do
+          [] -> false
+          result -> result
+        end
+      end
+
+      @doc """
+      Check post's villain data field for missing images
+      """
+      def check_post_for_missing_images(post) do
+        image_blocks = Enum.filter(post.data, fn block -> block["type"] == "image" end)
+
+        Enum.reduce(image_blocks, [], fn block, acc ->
+          reduced_block =
+            Enum.reduce(block["data"]["sizes"], [], fn {_size, path}, acc ->
+              (File.exists?(Path.join(["priv", path])) && acc) || {:missing, post, path}
+            end)
+
+          case reduced_block do
+            [] -> acc
+            res -> [res | acc]
+          end
+        end)
+      end
+    end
   end
 
-  defmacro __using__(:migration) do
-    raise "`use Brando.Villain, :migration` is deprecated. Call `use Brando.Villain.Migration` instead."
+  defmodule Schema do
+    @moduledoc """
+    Macro for villain schema fields.
+    """
+    defmacro villain(field \\ nil) do
+      data_field =
+        (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
+
+      html_field =
+        (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
+
+      quote do
+        Ecto.Schema.field(unquote(data_field), Brando.Type.Json)
+        Ecto.Schema.field(unquote(html_field), :string)
+      end
+    end
+  end
+
+  @doc false
+  def migration do
+    quote do
+      import Brando.Villain.Migration, only: [villain: 0, villain: 1]
+    end
+  end
+
+  defmodule Migration do
+    @moduledoc """
+    Macro for villain migrations.
+    """
+    defmacro villain(field \\ nil) do
+      data_field =
+        (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
+
+      html_field =
+        (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
+
+      quote do
+        Ecto.Migration.add(unquote(data_field), :json)
+        Ecto.Migration.add(unquote(html_field), :text)
+      end
+    end
+  end
+
+  defmacro __using__(which) when is_atom(which) do
+    apply(__MODULE__, which, [])
   end
 
   defmacro __using__([:controller, _] = opts) when is_list(opts) do
@@ -26,7 +213,7 @@ defmodule Brando.Villain do
   otp_app's config.exs.
   Returns HTML.
   """
-  @spec parse(String.t() | [map], Module.t()) :: String.t()
+  @spec parse(String.t(), Module.t()) :: String.t()
   def parse("", _), do: ""
   def parse(nil, _), do: ""
   def parse(json, parser_mod) when is_binary(json), do: do_parse(Poison.decode!(json), parser_mod)
@@ -54,12 +241,12 @@ defmodule Brando.Villain do
 
       sizes =
         img_struct.sizes
-        |> Enum.map(&{elem(&1, 0), Utils.media_url(elem(&1, 1))})
+        |> Enum.map(&{elem(&1, 0), media_url(elem(&1, 1))})
         |> Enum.into(%{})
 
       %{
-        src: Utils.media_url(img_struct.path),
-        thumb: Utils.media_url(Utils.img_url(img_struct, :thumb)),
+        src: media_url(img_struct.path),
+        thumb: media_url(img_url(img_struct, :thumb)),
         sizes: sizes,
         title: img_struct.title,
         credits: img_struct.credits,
@@ -67,217 +254,6 @@ defmodule Brando.Villain do
         width: img_struct.width,
         height: img_struct.height
       }
-    end)
-  end
-
-  @doc """
-  Rerender page HTML from data.
-  """
-  def rerender_html(
-        %Ecto.Changeset{} = changeset,
-        field \\ nil,
-        parser_mod \\ Brando.config(Brando.Villain)[:parser]
-      ) do
-    data_field = (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
-    html_field = (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
-    data = Ecto.Changeset.get_field(changeset, data_field)
-
-    changeset
-    |> Ecto.Changeset.put_change(html_field, Brando.Villain.parse(data, parser_mod))
-    |> Brando.repo().update!
-  end
-
-  @doc """
-  Rerender HTML from an ID
-
-  ## Example
-
-      rerender_html_from_id({Brando.Pages.Page, :data, :html}, 1)
-
-  Will try to rerender html for page with id: 1.
-  """
-  @spec rerender_html_from_id({Module, atom, atom}, Integer.t() | String.t()) :: any()
-  def rerender_html_from_id({schema, data_field, html_field}, id) do
-    parser = Brando.config(Brando.Villain)[:parser]
-
-    query =
-      from s in schema,
-        where: s.id == ^id
-
-    record = Brando.repo().one(query)
-    parsed_data = Brando.Villain.parse(Map.get(record, data_field), parser)
-
-    changeset =
-      record
-      |> Ecto.Changeset.change()
-      |> Ecto.Changeset.put_change(
-        html_field,
-        parsed_data
-      )
-
-    Brando.repo().update(changeset)
-  end
-
-  @doc """
-  Rerender multiple IDS
-  """
-  @spec rerender_html_from_ids({Module, atom, atom}, [Integer.t() | String.t()]) :: nil | [any()]
-  def rerender_html_from_ids(_, []), do: nil
-
-  def rerender_html_from_ids(args, ids) do
-    for id <- ids do
-      rerender_html_from_id(args, id)
-    end
-  end
-
-  @doc """
-  Check all posts for missing images
-  """
-  def check_posts_for_missing_images do
-    posts = Brando.repo().all(__MODULE__)
-
-    result =
-      Enum.map(posts, fn post ->
-        check_post_for_missing_images(post)
-      end)
-
-    case result do
-      [] -> false
-      result -> result
-    end
-  end
-
-  @doc """
-  Check post's villain data field for missing images
-  """
-  def check_post_for_missing_images(post) do
-    image_blocks = Enum.filter(post.data, fn block -> block["type"] == "image" end)
-
-    Enum.reduce(image_blocks, [], fn block, acc ->
-      reduced_block =
-        Enum.reduce(block["data"]["sizes"], [], fn {_size, path}, acc ->
-          (File.exists?(Path.join(["priv", path])) && acc) || {:missing, post, path}
-        end)
-
-      case reduced_block do
-        [] -> acc
-        res -> [res | acc]
-      end
-    end)
-  end
-
-  @doc """
-  List all registered Villain fields
-  """
-  def list_villains do
-    {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
-
-    modules = app_modules ++ [Brando.Pages.Page, Brando.Pages.PageFragment]
-
-    modules
-    |> Enum.filter(&({:__villain_fields__, 0} in &1.__info__(:functions)))
-    |> Enum.map(& &1.__villain_fields__())
-  end
-
-  @doc """
-  Update all villain fields in database that has a template with `id`.
-  """
-  def update_template_in_fields(template_id) do
-    result =
-      Enum.reduce(list_villains(), fn {schema, fields}, _acc ->
-        Enum.reduce(fields, [], fn {_, data_field, html_field}, _acc ->
-          ids = list_ids_with_template(schema, data_field, template_id)
-          rerender_html_from_ids({schema, data_field, html_field}, ids)
-        end)
-      end)
-
-    {:ok, result}
-  end
-
-  @doc """
-  List ids of `schema` records that has `template_id` in `data_field`
-  """
-  def list_ids_with_template(schema, data_field, template_id) do
-    t = [%{type: "template", data: %{id: template_id}}]
-
-    Brando.repo().all(
-      from s in schema,
-        select: s.id,
-        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t)
-    )
-  end
-
-  @doc """
-  Get template from DB
-  """
-  def get_template(id) do
-    query =
-      from t in Brando.Villain.Template,
-        where: t.id == ^id
-
-    case Brando.repo().one(query) do
-      nil -> {:error, {:template, :not_found}}
-      t -> {:ok, t}
-    end
-  end
-
-  @doc """
-  Update or create template in DB
-  """
-  def update_or_create_template(%{"data" => %{"id" => id} = data}) do
-    with {:ok, template} <- get_template(id) do
-      params = Map.drop(data, ["id"])
-
-      template
-      |> Brando.Villain.Template.changeset(params)
-      |> Brando.repo().update
-    end
-
-    update_template_in_fields(id)
-  end
-
-  def update_or_create_template(%{"data" => params}) do
-    %Brando.Villain.Template{}
-    |> Brando.Villain.Template.changeset(params)
-    |> Brando.repo().insert
-  end
-
-  @doc """
-  List templates by namespace
-  """
-  def list_templates(namespace) do
-    query = from(t in Brando.Villain.Template, order_by: [asc: t.id, desc: t.updated_at])
-
-    query =
-      case namespace do
-        "all" ->
-          query
-
-        _ ->
-          from t in query, where: t.namespace == ^namespace
-      end
-
-    {:ok, Brando.repo().all(query)}
-  end
-
-  @doc """
-  Render a Villain data field to HTML and look for variables to interpolate.
-
-  ## Example:
-
-      {:ok, page} = Brando.Pages.get_page(1)
-      render_villain page.data, %{"link" => "hello"}
-  """
-  @spec render_villain([map], %{required(String.t()) => String.t()}) :: binary()
-  def render_villain(data_field, vars \\ %{}) do
-    parser_mod = Brando.config(Brando.Villain)[:parser]
-    html = Brando.Villain.parse(data_field, parser_mod)
-
-    Regex.replace(~r/\${(\w+)}/, html, fn _, match ->
-      case Map.get(vars, match, nil) do
-        nil -> "${#{match}}"
-        val -> val
-      end
     end)
   end
 end

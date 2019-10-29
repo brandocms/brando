@@ -18,11 +18,6 @@ defmodule Brando.Upload do
             extra_info: nil
 
   @type t :: %__MODULE__{}
-  @type upload_error_input ::
-          {:error, :empty_filename}
-          | {:error, :cp | :mkdir, any()}
-          | {:error, :content_type, any(), any()}
-  @type upload_error_result :: {:error, String.t()}
 
   import Brando.Gettext
   import Brando.Utils
@@ -57,7 +52,6 @@ defmodule Brando.Upload do
     end)
   end
 
-  @spec handle_upload_error(upload_error_input) :: upload_error_result
   def handle_upload_error(err) do
     case err do
       {:error, :empty_filename} ->
