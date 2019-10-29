@@ -14,18 +14,6 @@ defmodule Brando.ImageCategory do
   @required_fields ~w(name creator_id)a
   @optional_fields ~w(cfg slug)a
 
-  @derive {Poison.Encoder,
-           only: [
-             :id,
-             :name,
-             :slug,
-             :cfg,
-             :creator,
-             :creator_id,
-             :image_series,
-             :inserted_at,
-             :updated_at
-           ]}
   @derive {Jason.Encoder,
            only: [
              :id,
@@ -56,7 +44,7 @@ defmodule Brando.ImageCategory do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, :create | :update, Keyword.t()) :: t
+  @spec changeset(t, :create | :update, Keyword.t()) :: Ecto.Changeset.t()
   def changeset(schema, action, params \\ %{})
 
   def changeset(schema, :create, params) do

@@ -1,3 +1,98 @@
+## v2.0.0-alpha.1-dev
+
+* Backwards incompatible changes
+  - add to `config/dev.exs`
+  ```
+  config :my_app, hmr: true
+  ```
+  - add to your `parser.ex`
+  ```
+  @doc """
+  Convert template to html.
+  """
+  def template(%{"id" => id, "refs" => refs}) do
+    {:ok, template} = Brando.Villain.get_template(id)
+
+    Regex.replace(~r/%{(\w+)}/, template.code, fn _, match ->
+      ref = Enum.find(refs, &(&1["name"] == match))
+
+      if ref do
+        block = Map.get(ref, "data")
+        apply(__MODULE__, String.to_atom(block["type"]), [block["data"]])
+      else
+        "<!-- REF #{match} missing // template: #{id}. -->"
+      end
+    end)
+  end
+  ```
+  - Replace all `backend/*.`
+    `$ gsed -i "s/import Vuex from 'vuex'/import { Vuex } from 'kurtz'/" assets/backend/src/**/*.js && \
+       gsed -i "s/import Router from 'vue-router'/import { Router } from 'kurtz'/" assets/backend/src/**/*.js && \
+       gsed -i "s/import Vue from 'vue'/import { Vue } from 'kurtz'/" assets/backend/src/**/*.js && \
+       gsed -i "s/import Vue from 'vue'/import { Vue } from 'kurtz'/" assets/backend/src/**/*.vue && \
+       gsed -i "s|from 'vuex'|from 'kurtz/lib/vuex'|" assets/backend/src/**/*.js && \
+       gsed -i "s|from 'vuex'|from 'kurtz/lib/vuex'|" assets/backend/src/**/*.vue && \
+       gsed -i "s|from 'vue'|from 'kurtz/lib/vue'|" assets/backend/src/**/*.js && \
+       gsed -i "s|from 'vue'|from 'kurtz/lib/vue'|" assets/backend/src/**/*.vue && \
+       gsed -i "s|import nprogress from 'nprogress'|import { nprogress } from 'kurtz'|" assets/backend/src/**/*.vue`
+
+  - Add to your graphql `schema.ex`
+    ```elixir
+    def middleware(middleware, _field, %{identifier: :mutation}), do:
+      middleware ++ [Brando.Schema.Middleware.ChangesetErrors]
+    def middleware(middleware, _field, _object), do:
+      middleware
+    ```
+  - All Villain fields in graphql `input_object` must be type `:json` instead of `:string`
+  - Change to new use Villain format:
+    `$ gsed -i "s/use Brando.Villain, :schema/use Brando.Villain.Schema/" lib/**/*.ex`
+    `$ gsed -i "s/use Brando.Villain, :migration/use Brando.Villain.Migration/" priv/**/*.exs`
+  - Moved `rerender_html` from being a schema macro to `Brando.Villain.rerender_html`
+  - Updated `<Villain>` JS inputs for validation:
+  ```vue
+  <Villain
+    v-validate="'required'"
+    v-model="location.data"
+    :value="location.data"
+    :has-error="errors.has('location[data]')"
+    :error-text="errors.first('location[data]')"
+    name="location[data]"
+    label="Innhold"/>
+  ```
+  - All Apollo calls with 'network-only' must be 'no-cache'
+  - Switch out the `backend/package.json` and `yarn.lock` with fresh ones from source.
+  - `yarn upgrade kurtz`
+  - Replace `Dockerfile`, `.dockerignore`, `fabfile.py` from source.
+  - Remove `YourApp.PostgresTypes` — this is not needed.
+  - Add insertion points to important files. These markers will be used with `brando.gen.html`
+    `__` denotes end of block, `++` denotes start. Start of block is not mandatory.
+    - `admin_channel.ex`
+      - `# __imports`
+      - `# __macros`
+      - `# __functions`
+    - `graphql/schema/types.ex`
+      - `# __types`
+    - `graphql/schema.ex`
+      - `# __queries`
+      - `# __mutations`
+    - `assets/backend/src/store/index.js`
+      - `// __imports
+      - `// __content
+    - `assets/backend/src/routes/index.js`
+      - `// __imports
+      - `// __content
+    - `assets/backend/src/menus/index.js`
+      - `// __imports
+      - `// __content
+
+  - `Comeonin.Bcrypt.checkpw` -> `Bcrypt.verify_pass`
+    `$ gsed -i 's/Comeonin.Bcrypt.checkpw/Bcrypt.verify_pass/' lib/**/*.ex`
+  - `Comeonin.Bcrypt.hashpwsalt` -> `Bcrypt.hash_pwd_salt`
+    `$ gsed -i 's/Comeonin.Bcrypt.hashpwsalt/Bcrypt.hash_pwd_salt/' lib/**/*.ex`
+  - `Comeonin.Bcrypt.dummy_checkpw`-> `Bcrypt.no_user_verify`
+    `$ gsed -i 's/Comeonin.Bcrypt.dummy_checkpw/Bcrypt.no_user_verify/' lib/**/*.ex`
+
+
 ## v2.0.0-alpha.0
 
 * Update for Ecto 3, Phoenix 1.4
@@ -208,9 +303,9 @@
     -     post "/login", Brando.SessionController, :create
     -     post "/logout", Brando.SessionController, :delete
     -     post "/verify", Brando.SessionController, :verify
-    +     post "/login", FilmFarmsWeb.SessionController, :create
-    +     post "/logout", FilmFarmsWeb.SessionController, :delete
-    +     post "/verify", FilmFarmsWeb.SessionController, :verify
+    +     post "/login", MyAppWeb.SessionController, :create
+    +     post "/logout", MyAppWeb.SessionController, :delete
+    +     post "/verify", MyAppWeb.SessionController, :verify
         end
 
         # ...

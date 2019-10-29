@@ -6,8 +6,7 @@ defmodule Brando.Pages.PageFragment do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :schema
-  use Brando.Villain, :schema
-  alias Brando.Type.Json
+  use Brando.Villain.Schema
 
   @required_fields ~w(parent_key key language data creator_id)a
   @optional_fields ~w(html)a
@@ -21,15 +20,13 @@ defmodule Brando.Pages.PageFragment do
     creator_id
   )a
 
-  @derive {Poison.Encoder, only: @derived_fields}
   @derive {Jason.Encoder, only: @derived_fields}
 
   schema "pagefragments" do
     field :parent_key, :string
     field :key, :string
     field :language, :string
-    field :data, Json
-    field :html, :string
+    villain()
     belongs_to :creator, Brando.User
     timestamps()
   end
@@ -42,7 +39,7 @@ defmodule Brando.Pages.PageFragment do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, atom, Keyword.t() | Options.t()) :: t
+  @spec changeset(t, atom, Keyword.t() | Options.t()) :: Ecto.Changeset.t()
   def changeset(schema, action, params \\ %{})
 
   def changeset(schema, :create, params) do
@@ -61,7 +58,7 @@ defmodule Brando.Pages.PageFragment do
 
   def encode_data(params) do
     if is_list(params.data) do
-      Map.put(params, :data, Poison.encode!(params.data))
+      Map.put(params, :data, Jason.encode!(params.data))
     else
       params
     end

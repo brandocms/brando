@@ -8,9 +8,9 @@ defmodule Brando.LockdownController do
   end
 
   def post_password(conn, %{"password" => password}) do
-    hashed_pass = Comeonin.Bcrypt.hashpwsalt(Brando.config(:lockdown_password))
+    hashed_pass = Bcrypt.hash_pwd_salt(Brando.config(:lockdown_password))
 
-    if Comeonin.Bcrypt.checkpw(password, hashed_pass) do
+    if Bcrypt.verify_pass(password, hashed_pass) do
       conn
       |> fetch_session
       |> put_session(:lockdown_authorized, true)

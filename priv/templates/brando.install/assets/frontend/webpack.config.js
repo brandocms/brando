@@ -1,7 +1,9 @@
 const path = require('path')
 const Webpack = require('webpack')
+const ExtractCssChunks = require('extract-css-chunks-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
+const WriteFilePlugin = require('write-file-webpack-plugin')
 const OptimizeCSSPlugin = require('optimize-css-assets-webpack-plugin')
 const TerserPlugin = require('terser-webpack-plugin')
 const SpeedMeasurePlugin = require('speed-measure-webpack-plugin')
@@ -9,12 +11,12 @@ const config = require('./package')
 
 const ENV = process.env.NODE_ENV || 'development'
 const IS_DEV = ENV === 'development'
+const IS_PROD = ENV === 'production'
+
 const OUTPUT_PATH = path.resolve(__dirname, '..', '..', 'priv', 'static')
 const smp = new SpeedMeasurePlugin()
 
-const ExtractCSS = new MiniCssExtractPlugin({
-  filename: 'css/[name].css'
-})
+const ExtractCSS = new MiniCssExtractPlugin({ filename: 'css/[name].css' })
 
 const Define = new Webpack.DefinePlugin({
   APP_NAME: JSON.stringify(config.app_name),
@@ -22,21 +24,42 @@ const Define = new Webpack.DefinePlugin({
   ENV: JSON.stringify(ENV)
 })
 
-const Copy = new CopyWebpackPlugin([{
-  context: './static',
-  from: '**/*',
-  to: '.'
-}, {
-  context: './node_modules/font-awesome/fonts',
-  from: '*',
-  to: './fonts'
-}])
-
-var PLUGINS = [
-  ExtractCSS,
-  Define,
-  Copy
-]
+var PLUGINS = IS_PROD
+  ? [ExtractCSS,
+    Define,
+    new CopyWebpackPlugin([{
+      context: './static',
+      from: '**/*',
+      to: '.',
+      force: true
+    }, {
+      context: './node_modules/font-awesome/fonts',
+      from: '*',
+      to: './fonts'
+    }], { debug: true })
+  ]
+  : [
+    new ExtractCssChunks(
+      {
+        // Options similar to the same options in webpackOptions.output
+        // both options are optional
+        filename: '[name].css',
+        orderWarning: true // Disable to remove warnings about conflicting order between imports
+      }
+    ),
+    Define,
+    new WriteFilePlugin(),
+    new CopyWebpackPlugin([{
+      context: './static',
+      from: '**/*',
+      to: '.',
+      force: true
+    }, {
+      context: './node_modules/font-awesome/fonts',
+      from: '*',
+      to: './fonts'
+    }], { debug: true })
+  ]
 
 const cfg = {
   target: 'web',
@@ -44,6 +67,14 @@ const cfg = {
     app: [
       './js/index.js'
     ]
+  },
+
+  devServer: {
+    port: 9999,
+    disableHostCheck: true,
+    headers: {
+      'Access-Control-Allow-Origin': '*'
+    }
   },
 
   optimization: {
@@ -80,27 +111,56 @@ const cfg = {
     }
   },
 
-  output: {
-    filename: 'js/app.js',
-    path: OUTPUT_PATH
-  },
+  output: IS_PROD
+    ? {
+      filename: 'js/app.js',
+      path: OUTPUT_PATH
+    }
+    : {
+      futureEmitAssets: false,
+      path: OUTPUT_PATH,
+      filename: 'app.js',
+      publicPath: 'http://localhost:9999/'
+    },
 
   module: {
     rules: [
-      {
-        test: /\.js$/,
-        exclude: /node_modules(?!\/jupiter)/,
-        loader: 'babel-loader'
-      },
-      {
-        test: /\.(sa|sc|c)ss$/,
-        use: [
-          IS_DEV ? 'style-loader' : MiniCssExtractPlugin.loader,
-          'css-loader',
-          'postcss-loader',
-          'sass-loader'
-        ]
-      },
+      IS_PROD
+        ? {
+          test: /\.js$/,
+          exclude: /node_modules(?!\/jupiter)/,
+          loader: 'babel-loader'
+        }
+        : {
+          test: /\.js$/,
+          exclude: /node_modules(?!\/(jupiter|normalize-url|prepend-http|sort-keys))/,
+          loader: 'babel-loader'
+        },
+      IS_PROD
+        ? {
+          test: /\.(sa|sc|c)ss$/,
+          use: [
+            MiniCssExtractPlugin.loader,
+            'css-loader',
+            'postcss-loader',
+            'sass-loader'
+          ]
+        }
+        : {
+          test: /\.(sa|sc|c)ss$/,
+          use: [
+            {
+              loader: ExtractCssChunks.loader,
+              options: {
+                hot: true, // if you want HMR - we try to automatically inject hot reloading but if it's not working, add it to the config
+                reloadAll: true // when desperation kicks in - this is a brute force HMR flag
+              }
+            },
+            'css-loader',
+            'postcss-loader',
+            'sass-loader'
+          ]
+        },
       {
         test: /\.(eot|svg|ttf|woff|woff2)$/,
         loader: 'url-loader'

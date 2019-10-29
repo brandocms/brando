@@ -12,9 +12,7 @@
      - tag message: Release vX.X.X
   10. Switch to master. Push.
   11. Push `X.X.X` tag to `origin`
-  16. (Push package and docs to hex)
-
-  17. Switch to develop-branch.
-  18. Bump version in CHANGELOG + -dev
-  19. Bump version in mix.exs + -dev
-  21. Commit `develop` with `Start X.X.X development`. Push
+  12. Switch to develop-branch.
+  13. Bump version in CHANGELOG + -dev
+  14. Bump version in mix.exs + -dev
+  15. Commit `develop` with `Start X.X.X development`. Push

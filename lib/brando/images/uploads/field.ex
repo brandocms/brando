@@ -21,8 +21,8 @@ defmodule Brando.Images.Upload.Field do
     * `plug`: a Plug.Upload struct.
     * `cfg`: the field's cfg from has_image_field
   """
-  @spec handle_upload(atom, Plug.Upload.t(), Type.ImageConfig.t(), User.t() | :system)
-        :: {:ok, {atom, Type.Image}} | {:error, {atom, {:error, String.t()}}}
+  @spec handle_upload(atom | String.t(), Plug.Upload.t(), Type.ImageConfig.t(), User.t() | :system)
+        :: {:ok, {:handled, atom, Type.Image}} | {:error, {atom, {:error, String.t()}}}
   def handle_upload(name, %Plug.Upload{} = plug, cfg, user) do
     with {:ok, upload} <- Upload.process_upload(plug, cfg),
          {:ok, img_struct} <- Images.Utils.create_image_struct(upload, user),

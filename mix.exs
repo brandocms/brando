@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "2.0.0-alpha.0"
+  @version "2.0.0-alpha.1-dev"
   @description "A helping hand for Twined applications."
 
   def project do
@@ -10,20 +10,6 @@ defmodule Brando.Mixfile do
       version: @version,
       elixir: "~> 1.6",
       deps: deps(),
-      dialyzer: [
-        plt_add_apps: [
-          :flow,
-          :gettext,
-          :comeonin,
-          :guardian,
-          :mogrify,
-          :slugger,
-          :phoenix,
-          :phoenix_html,
-          :phoenix_ecto
-        ],
-        flags: []
-      ],
       compilers: [:gettext, :phoenix] ++ Mix.compilers(),
       elixirc_paths: elixirc_paths(Mix.env()),
       test_coverage: [tool: ExCoveralls],
@@ -59,6 +45,7 @@ defmodule Brando.Mixfile do
       :gettext,
       :comeonin,
       :httpoison,
+      :inflex,
       :earmark,
       :guardian,
       :mogrify,
@@ -73,11 +60,11 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:bcrypt_elixir, "~> 1.0"},
-      {:comeonin, "~> 4.0"},
+      {:bcrypt_elixir, "~> 2.0"},
+      {:comeonin, "~> 5.0"},
       {:earmark, "~> 1.2"},
       {:gettext, "~> 0.11"},
-      {:httpoison, "~> 0.9"},
+      {:httpoison, "~> 1.0"},
       {:mogrify, "~> 0.5"},
       {:phoenix, "~> 1.4.0"},
       {:phoenix_html, "~> 2.6"},
@@ -90,9 +77,12 @@ defmodule Brando.Mixfile do
       {:ecto, "~> 3.0"},
       {:ecto_sql, "~> 3.0"},
       {:flow, "~> 0.14"},
+      {:jason, "~> 1.0"},
+      {:poison, "~> 4.0"},
+      {:inflex, "~> 1.10.0"},
 
       # monitoring
-      {:sentry, "~> 6.0"},
+      {:sentry, "~> 7.0"},
 
       # Dev dependencies
       {:credo, ">= 0.0.0", only: :dev},
@@ -108,7 +98,7 @@ defmodule Brando.Mixfile do
 
       # Documentation dependencies
       {:ex_doc, "~> 0.11", only: :docs},
-      {:inch_ex, "~> 1.0", only: :docs}
+      {:inch_ex, "~> 2.0", only: :docs}
     ]
   end
 

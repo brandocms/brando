@@ -6,7 +6,6 @@ defmodule Brando.Type.File do
   @type t :: %__MODULE__{}
   @behaviour Ecto.Type
 
-  @derive Poison.Encoder
   @derive Jason.Encoder
   defstruct path: nil,
             mimetype: nil,
@@ -48,7 +47,7 @@ defmodule Brando.Type.File do
   other options as well.
   """
   def dump(val) do
-    val = Poison.encode!(val)
+    val = Jason.encode!(val)
     {:ok, val}
   end
 end

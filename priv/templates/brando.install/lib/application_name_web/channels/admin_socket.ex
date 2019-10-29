@@ -16,7 +16,7 @@ defmodule <%= application_module %>Web.AdminSocket do
       {:ok, authed_socket} ->
         {:ok, authed_socket}
 
-      {:error, err} ->
+      {:error, _} ->
         :error
     end
   end

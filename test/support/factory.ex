@@ -17,7 +17,7 @@ defmodule Brando.Factory do
     %User{
       full_name: "James Williamson",
       email: "james@thestooges.com",
-      password: "$2b$12$VD9opg289oNQAHii8VVpoOIOe.y4kx7.lGb9SYRwscByP.tRtJTsa",
+      password: Bcrypt.hash_pwd_salt("admin"),
       avatar: %Brando.Type.Image{
         credits: nil,
         optimized: false,

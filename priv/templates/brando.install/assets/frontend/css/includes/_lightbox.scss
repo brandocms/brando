@@ -19,18 +19,18 @@
     .lightbox-image {
       max-height: 100vh;
 
-      @include media-breakpoint-up(md) {
+      @include media('>=md') {
         padding-bottom: 73px;
         padding-top: 73px;
       }
 
-      @include media-breakpoint-only(sm) {
+      @include media(sm) {
         padding-bottom: 83px;
         padding-top: 83px;
         max-width: calc(100vw - 80px);
       }
 
-      @include media-breakpoint-only(xs) {
+      @include media(xs) {
         max-width: calc(100vw);
         padding-top: 100px;
         padding-bottom: 93px;
@@ -45,7 +45,7 @@
     letter-spacing: 0.6px;
     line-height: 32px;
 
-    @include media-breakpoint-down(sm) {
+    @include media('<=sm') {
       display: none;
     }
   }
@@ -64,12 +64,12 @@
       color: #000;
     }
 
-    @include media-breakpoint-only(sm) {
+    @include media(sm) {
       top: 44px;
       right: 40px;
     }
 
-    @include media-breakpoint-only(xs) {
+    @include media(xs) {
       top: 40px;
       right: 0;
       left: 0;
@@ -81,7 +81,7 @@
   .lightbox-next {
     position: absolute;
 
-    @include media-breakpoint-up(md) {
+    @include media('>=md') {
       right: 100px;
     }
   }
@@ -89,7 +89,7 @@
   .lightbox-prev {
     position: absolute;
 
-    @include media-breakpoint-up(md) {
+    @include media('>=md') {
       left: 100px;
     }
   }

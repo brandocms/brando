@@ -316,6 +316,25 @@ def unpack_release(version):
     fixprojectperms()
 
 
+def rollback_release(version):
+    """
+    Delete old stuff, unpack release at target
+    """
+    stop()
+    with cd(env.path), shell_env(HOME='/home/%s' % env.project_user):
+        print(red('==> deleting old release'))
+        sudo('rm -rf bin erts-7.2 lib releases running-config', user=env.project_user)
+        print(yellow('==> copy old release'))
+        sudo('cp release-archives/%s_%s.tar.gz .' % (env.project_name, version), user=env.project_user)
+        print(yellow('==> unpacking release'))
+        sudo('tar xvf %s_%s.tar.gz' % (env.project_name, version), user=env.project_user)
+        print(yellow('==> removing tarball'))
+        sudo('rm %s_%s.tar.gz' % (env.project_name, version), user=env.project_user)
+
+    fixprojectperms()
+    start()
+
+
 def grant_db():
     """
     Grant privileges on remote database

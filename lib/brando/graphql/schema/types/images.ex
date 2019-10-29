@@ -66,7 +66,7 @@ defmodule Brando.Schema.Types.Images do
 
     field :images, list_of(:image) do
       resolve assoc(:images, fn query, _, _ ->
-                order_by(query, [i], asc: i.sequence)
+                order_by(query, [i], asc: i.sequence, desc: i.updated_at)
               end)
     end
 
