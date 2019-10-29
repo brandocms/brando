@@ -1,0 +1,290 @@
+@import "./navigation-nojs.pcss";
+
+.hero-slide-img {
+  position: relative;
+  backface-visibility: hidden;
+}
+
+header[data-nav] {
+  @container;
+  @unpack theme.header.padding.large;
+
+  position: fixed;
+  background-color: transparent;
+  width: 100%;
+  backface-visibility: hidden;
+  transition: padding-top 500ms ease, padding-bottom 500ms ease;
+
+  &[data-header-small] {
+    @unpack theme.header.padding.small;
+    transition: padding-top 500ms ease, padding-bottom 500ms ease;
+  }
+
+  nav {
+    height: auto;
+    position: relative;
+    display: grid;
+
+    @unpack theme.header.padding.rows;
+
+    @responsive <=ipad_landscape {
+      grid-template:
+        "nav_brand" max-content
+        "nav_primary" auto;
+    }
+
+    @responsive >=desktop_md {
+      height: auto;
+      /* grid-row-gap: 20px; */
+      grid-template:
+        "nav_brand" min-content
+        "nav_primary" min-content
+        / min-content 1fr min-content;
+    }
+
+    .mobile-bg {
+      z-index: 3;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      transform: translateX(100%);
+      background-color: theme(colors.blue.300);
+      display: none;
+    }
+
+    figure {
+      &.brand {
+        z-index: 5;
+        grid-area: nav_brand;
+        justify-self: flex-start;
+        align-self: end;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+
+        @responsive <=ipad_landscape {
+          align-items: flex-start;
+        }
+
+        a {
+          @responsive <=ipad_landscape {
+            opacity: 1 !important;
+          }
+        }
+
+        svg {
+          /* set height and width per breakpoint for brand svg */
+          @unpack theme.header.sections.brand;
+          /* width: 100%;
+          height: 100%; */
+          path {
+            fill: theme(colors.blue.300);
+          }
+        }
+      }
+
+      &.menu-button {
+        z-index: 150;
+        position: absolute;
+        right: 0;
+
+        @responsive <=mobile { top: 25px; }
+        @responsive ipad_portrait/ipad_landscape { top: 20px; }
+        @responsive >=desktop_md { display: none; }
+
+        .hamburger {
+          color: theme(colors.dark);
+          font-size: 17px;
+          border: 1px solid theme(colors.dark);
+          text-align: center;
+          padding: 8px 20px 8px 40px;
+          margin-top: -4px;
+          position: relative;
+
+          @responsive <=mobile {
+            font-size: 17px;
+            margin-top: -7px;
+            padding: 8px 15px 8px 40px;
+          }
+
+          &.close {
+            &:before {
+              background-image: url('/images/close.svg');
+            }
+          }
+
+          &:before {
+            transition: opacity 750ms ease;
+            top: 0;
+            left: 0;
+            position: absolute;
+            display: block;
+            content: ' ';
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg data-name='Layer 15'%3E%3Crect width='70' height='10' x='10' y='18' rx='5' ry='5'/%3E%3Crect width='50' height='10' x='30' y='42' rx='5' ry='5'/%3E%3Crect width='70' height='10' x='10' y='66' rx='5' ry='5'/%3E%3Ccircle cx='15' cy='47' r='5'/%3E%3C/g%3E%3C/svg%3E%0A");
+            background-size: 25px;
+            background-repeat: no-repeat;
+            background-position: 10px calc(50% + 1px);
+            height: 100%;
+            width: 100%;
+
+            @responsive <=mobile {
+              background-size: 20px;
+            }
+          }
+
+          &:focus, &:active {
+            outline: none !important;
+          }
+        }
+      }
+    }
+
+    section {
+      @responsive >=desktop_md {
+        display: block !important;
+      }
+
+      @responsive <=ipad_landscape {
+        display: none;
+        z-index: 5;
+      }
+
+      ul {
+        list-style: none;
+        display: flex;
+        margin: 0;
+        padding: 0;
+        flex-direction: column;
+
+        @responsive >=desktop_md {
+          width: 100%;
+          flex-direction: row;
+        }
+
+        @responsive <=ipad_landscape {
+          align-items: center;
+          justify-content: center;
+        }
+
+        > li {
+          @unpack theme.typography.sections.navigation;
+          @responsive >=desktop_md {
+            color: theme(colors.light);
+            display: inline-block;
+            white-space: nowrap;
+
+            &:not(:last-of-type) {
+              margin-right: 2vw;
+            }
+          }
+
+          a {
+            font-weight: 400;
+            color: #000;
+
+            @responsive <=ipad_landscape {
+              @fontsize 2xl;
+              color: theme(colors.light) !important;
+              display: inline-block;
+              text-transform: none;
+
+              &:hover, &:active, &.active {
+                color: theme(colors.light) !important;
+              }
+            }
+
+            @responsive >=desktop_md {
+              position: relative;
+              &:first-of-type {
+                margin: 0;
+              }
+
+              &:after {
+                transition: opacity .75s ease, transform .75s ease;
+                content: "\25CF";
+                font-size: 18px;
+                position: absolute;
+                width: 100%;
+                text-align: center;
+                opacity: 0;
+                left: 0;
+                bottom: -21px;
+                color: theme(colors.blue.500);
+                transform: translateY(5px);
+              }
+            }
+
+            &.active, &:hover {
+              @responsive >=desktop_md {
+                transition: border-color 250ms ease, transform 250ms ease;
+
+                &:after {
+                  opacity: 1;
+                  transform: translateY(0);
+                }
+              }
+
+              @responsive <=ipad_landscape {
+                position: relative;
+                border-bottom: 1px solid transparent;
+              }
+
+              @responsive <=mobile {
+                &:before {
+                  margin-left: -29px;
+                  margin-top: 20px;
+                }
+              }
+            }
+
+            @responsive <=ipad_landscape {
+              display: inline-block;
+              border-bottom: 1px solid transparent;
+              color: theme(colors.dark);
+              font-weight: normal;
+            }
+
+            &:hover {
+              text-decoration: none;
+            }
+          }
+        }
+      }
+
+      &.primary {
+        grid-area: nav_primary;
+        align-self: flex-end;
+        position: relative;
+
+        @responsive >=desktop_md {
+          justify-self: start;
+          width: 100%;
+        }
+
+        @responsive <=ipad_landscape {
+          align-self: center;
+        }
+
+        ul {
+          @responsive >=desktop_md {
+            justify-content: flex-start;
+          }
+        }
+      }
+    }
+  }
+}
+
+figure {
+  margin: 0;
+}
+
+
+.open-menu {
+  .hamburger.is-active .hamburger-inner::before, .hamburger.is-active .hamburger-inner::after,
+  .hamburger-inner::before, .hamburger-inner::after {
+    background-color: #000 !important;
+  }
+}

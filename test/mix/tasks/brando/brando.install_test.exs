@@ -45,8 +45,16 @@ defmodule Mix.Tasks.Brando.GenerateTest do
       assert file =~ "BrandoWeb.Gettext"
     end)
 
+    assert_file("config/prod.secret.exs", fn file ->
+      assert file =~ ~s(url: "postgres://brando:PROD_PASSWORD_HERE@localhost/brando_prod")
+    end)
+
     assert_file("mix.exs", fn file ->
-      assert file =~ "defmodule Brando.Mixfile do"
+      assert file =~ "defmodule Brando.MixProject do"
+    end)
+
+    assert_file("assets/frontend/package.json", fn file ->
+      assert file =~ "brando FRONTEND"
     end)
 
     refute File.exists?("assets/css/app.css")

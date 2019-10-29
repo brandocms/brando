@@ -1,17 +1,12 @@
-import 'babel-polyfill'
 import '@/styles/app.scss'
-import Vue from 'vue'
-
-// import Raven from 'raven-js'
-// import RavenVue from 'raven-js/plugins/vue
+import { Vue } from '@univers-agency/kurtz'
 
 import { installMenus } from './menus'
-import { installConfig, installKurtz } from 'kurtz/lib/install'
+import { installConfig, installKurtz } from '@univers-agency/kurtz/lib/install'
 
-import App from 'kurtz/lib/views/App.vue'
+import App from '@univers-agency/kurtz/lib/views/App.vue'
 import store from '@/store'
 import router from '@/router'
-import { sync } from 'vuex-router-sync'
 
 import SITE_CONFIG from './config'
 
@@ -23,9 +18,6 @@ installMenus(store)
 
 // Install configuration
 installConfig(store, SITE_CONFIG)
-
-// Sync router with store
-sync(store, router)
 
 // Create application Vue instance
 const app = new Vue({

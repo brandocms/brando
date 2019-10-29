@@ -103,6 +103,14 @@ defmodule Brando.UtilsTest do
       sizes: %{"thumb" => "images/thumb/file.jpg"}
     }
 
+    broken_img = %{
+      path: "original/path/file.jpg",
+      sizes: nil
+    }
+
+    assert capture_io(:stderr, fn -> img_url(broken_img, :xlarge) end) =~
+             "Wrong size key for img_url function."
+
     assert img_url(img, :thumb) == "images/thumb/file.jpg"
     assert img_url(nil, :thumb, default: "default.jpg", prefix: "prefix") == "thumb/default.jpg"
     assert img_url(nil, :thumb, default: "default.jpg") == "thumb/default.jpg"
@@ -116,7 +124,7 @@ defmodule Brando.UtilsTest do
     assert img_url(img, :original, prefix: "prefix") == "prefix/original/path/file.jpg"
 
     assert capture_io(:stderr, fn -> img_url(img, :notasize, default: "default.jpg") end) =~
-             "Wrong key for img_url. Size `notasize` does not exist for"
+             "Wrong size key for img_url function."
   end
 
   test "get_now" do
@@ -145,13 +153,8 @@ defmodule Brando.UtilsTest do
   end
 
   test "get_page_title" do
-    assert get_page_title(%{assigns: %{page_title: "Test"}}) == "MyApp | Test"
-    assert get_page_title(%{}) == "MyApp"
-
-    Application.put_env(:brando, :title_prefix, "MyApp! >> ")
-
-    assert get_page_title(%{assigns: %{page_title: "Test"}}) == "MyApp! >> Test"
-    assert get_page_title(%{}) == "MyApp"
+    assert get_page_title(%{assigns: %{page_title: "Test"}}) == "Firma | Test"
+    assert get_page_title(%{}) == "Firma | Velkommen!"
   end
 
   test "host_and_media_url" do

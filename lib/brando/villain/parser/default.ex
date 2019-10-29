@@ -26,11 +26,22 @@ defmodule Brando.Villain.Parser.Default do
   end
 
   @doc """
+  Convert template to html.
+  """
+  def template(%{"code" => code, "refs" => refs}) do
+    Regex.replace(~r/%{(\w+)}/, code, fn _, match ->
+      ref = Enum.find(refs, &(&1["name"] == match))
+      block = Map.get(ref, "data")
+      apply(__MODULE__, String.to_atom(block["type"]), [block["data"]])
+    end)
+  end
+
+  @doc """
   Datatable
   """
   def datatable(rows) do
     rows_html =
-      Enum.map_join rows, "\n", fn row ->
+      Enum.map_join(rows, "\n", fn row ->
         """
         <tr>
           <td class="key">
@@ -41,7 +52,7 @@ defmodule Brando.Villain.Parser.Default do
           </td>
         </tr>
         """
-      end
+      end)
 
     """
     <div class="data-table-wrapper">
@@ -187,6 +198,11 @@ defmodule Brando.Villain.Parser.Default do
   def html(%{"text" => html_data}) do
     html_data
   end
+
+  @doc """
+  Strip out comments
+  """
+  def comment(_), do: ""
 
   @doc """
   Markdown -> html

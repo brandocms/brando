@@ -6,11 +6,15 @@ defmodule Brando.Images.UtilsTest do
 
   import Brando.Images.Utils
 
-  test "size_dir/2 binary" do
+  test "get_sized_path/2 binary" do
     assert get_sized_path("test/dir/filename.jpg", "thumb") == "test/dir/thumb/filename.jpg"
   end
 
-  test "size_dir/2 atom" do
+  test "get_sized_path/2 binary with .jpeg ext" do
+    assert get_sized_path("test/dir/filename.jpeg", "thumb") == "test/dir/thumb/filename.jpg"
+  end
+
+  test "get_sized_path/2 atom" do
     assert get_sized_path("test/dir/filename.jpg", :thumb) == "test/dir/thumb/filename.jpg"
   end
 

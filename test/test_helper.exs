@@ -12,6 +12,8 @@ defmodule Brando.Integration.TestRepo do
   use Ecto.Repo,
     otp_app: :brando,
     adapter: Ecto.Adapters.Postgres
+
+  use Brando.SoftDelete.Repo
 end
 
 # Basic test repo

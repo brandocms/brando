@@ -1,6 +1,6 @@
 export default [
   {
-    text: 'MENY TEKST',
+    text: '<%= alias %>',
     icon: 'fal fa-dollar-sign fa-fw',
     children: [
       {

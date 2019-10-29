@@ -1,5 +1,9 @@
+// ++imports
 import dashboard from './dashboard'
+// __imports
 
 export default [].concat(
-  dashboard
+  // ++content
+  dashboard,
+  // __content
 )

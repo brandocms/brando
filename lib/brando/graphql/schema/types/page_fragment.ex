@@ -5,7 +5,9 @@ defmodule Brando.Schema.Types.PageFragment do
     field :parent_key, :string
     field :key, :string
     field :language, :string
+    field :wrapper, :string
     field :data, :json
+    field :page_id, :id
   end
 
   object :page_fragment do
@@ -13,11 +15,14 @@ defmodule Brando.Schema.Types.PageFragment do
     field :parent_key, :string
     field :key, :string
     field :language, :string
+    field :wrapper, :string
     field :data, :json
     field :html, :string
     field :creator, :user
+    field :page_id, :id
     field :inserted_at, :time
     field :updated_at, :time
+    field :deleted_at, :time
   end
 
   object :page_fragment_queries do

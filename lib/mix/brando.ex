@@ -50,7 +50,7 @@ defmodule Mix.Brando do
           :eex_trim -> EEx.eval_file(source, binding, trim: true)
         end
 
-      Mix.Generator.create_file(target, contents)
+      Mix.Generator.create_file(target, contents, force: true)
     end
   end
 
@@ -129,29 +129,61 @@ defmodule Mix.Brando do
       {_, _} -> false
     end)
     |> Enum.into(%{}, fn
-      {k, {:array, _}} -> {k, []}
-      {k, :integer} -> {k, 42}
-      {k, :float} -> {k, "120.5"}
-      {k, :decimal} -> {k, "120.5"}
-      {k, :boolean} -> {k, true}
-      {k, :map} -> {k, %{}}
-      {k, :text} -> {k, "some content"}
-      {k, :date} -> {k, "2010-04-17"}
-      {k, :time} -> {k, "14:00:00"}
-      {k, :datetime} -> {k, "2010-04-17 14:00:00"}
-      {k, :uuid} -> {k, "7488a646-e31f-11e4-aace-600308960662"}
-      {k, _} -> {k, "some content"}
+      {k, {:array, _}} ->
+        {k, []}
+
+      {k, :integer} ->
+        {k, 42}
+
+      {k, :float} ->
+        {k, "120.5"}
+
+      {k, :decimal} ->
+        {k, "120.5"}
+
+      {k, :boolean} ->
+        {k, true}
+
+      {k, :map} ->
+        {k, %{}}
+
+      {k, :text} ->
+        {k, "some content"}
+
+      {k, :date} ->
+        {k, "2010-04-17"}
+
+      {k, :time} ->
+        {k, "14:00:00"}
+
+      {k, :datetime} ->
+        {k, "2010-04-17 14:00:00"}
+
+      {k, :uuid} ->
+        {k, "7488a646-e31f-11e4-aace-600308960662"}
+
+      {k, :villain} ->
+        k = (k == :data && :data) || String.to_atom(Atom.to_string(k) <> "_data")
+        {k, []}
+
+      {k, :image} ->
+        {k, nil}
+
+      {k, _} ->
+        {k, "some content"}
     end)
   end
 
   @doc """
   Checks the availability of a given module name.
   """
-  def check_module_name_availability!(name) do
+  def check_module_name_availability(name) do
     name = Module.concat(Elixir, name)
 
     if Code.ensure_loaded?(name) do
-      Mix.raise("Module name #{inspect(name)} is already taken, please choose another name")
+      {:error, "Module name #{inspect(name)} is already taken, please choose another name"}
+    else
+      :ok
     end
   end
 
@@ -170,6 +202,58 @@ defmodule Mix.Brando do
   end
 
   @doc """
+  Add content to file under marker
+  """
+  def add_to_file(file, marker, content, multiple \\ false) do
+    marker_start =
+      case Path.extname(file) do
+        ".ex" ->
+          "# __"
+
+        ".js" ->
+          "// __"
+      end
+
+    exists? =
+      if multiple do
+        File.stream!(file)
+        |> Enum.map(&String.contains?(&1, content))
+        |> Enum.any?(&(&1 == true))
+      else
+        false
+      end
+
+    unless exists? do
+      marker = "#{marker_start}#{marker}"
+
+      new_content =
+        file
+        |> File.stream!()
+        |> Enum.map(&process_line(&1, marker, content))
+
+      File.write(file, new_content)
+    end
+  end
+
+  defp process_line(line, marker, content) do
+    marker_regex = ~r/(\s+)?(#{marker})/
+
+    case Regex.run(marker_regex, line, capture: :all_but_first) do
+      nil ->
+        line
+
+      [whitespace, marker] ->
+        content_split =
+          String.split(content, "\n")
+          |> Enum.map(&"#{whitespace}#{&1}")
+          |> Enum.join("\n")
+
+        content = "#{content_split}\n#{whitespace}#{marker}"
+        String.replace(line, whitespace <> marker, content)
+    end
+  end
+
+  @doc """
   Returns all compiled modules in a project.
   """
   def modules do
@@ -183,7 +267,7 @@ defmodule Mix.Brando do
     path |> Path.basename(".beam") |> String.to_atom()
   end
 
-  defp otp_app do
+  def otp_app do
     Mix.Project.config() |> Keyword.fetch!(:app)
   end
 

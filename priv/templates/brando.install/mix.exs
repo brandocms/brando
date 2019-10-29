@@ -1,7 +1,8 @@
-defmodule <%= application_module %>.Mixfile do
+defmodule <%= application_module %>.MixProject do
   use Mix.Project
 
   @version "1.0.0"
+  @test_envs [:test, :e2e]
 
   def project do
     [app: :<%= application_name %>,
@@ -10,6 +11,7 @@ defmodule <%= application_module %>.Mixfile do
      elixirc_paths: elixirc_paths(Mix.env),
      compilers: [:phoenix, :gettext] ++ Mix.compilers,
      start_permanent: Mix.env == :prod,
+     test_paths: test_paths(Mix.env()),
      aliases: aliases(),
      deps: deps()]
   end
@@ -20,13 +22,17 @@ defmodule <%= application_module %>.Mixfile do
   def application do
     [
       mod: {<%= application_module %>.Application, []},
-      extra_applications: [:logger, :runtime_tools, :recon]
+      extra_applications: [:logger, :runtime_tools, :recon, :sasl]
     ]
   end
 
   # Specifies which paths to compile per environment.
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(env) when env in @test_envs, do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  # Specify test path per environment
+  defp test_paths(:e2e), do: ["test/e2e"]
+  defp test_paths(_), do: ["test/unit"]
 
   # Specifies your project dependencies.
   #
@@ -44,27 +50,24 @@ defmodule <%= application_module %>.Mixfile do
      {:ecto_sql, "~> 3.0"},
 
      # general deps
-     {:postgrex, "~> 0.14.0"},
+     {:postgrex, "~> 0.15"},
      {:gettext, "~> 0.11"},
 
      {:timex, "~> 3.0"},
      {:jason, "~> 1.0"},
-     {:absinthe, "~> 1.4"},
-     {:absinthe_plug, "~> 1.4"},
+     {:absinthe, "~> 1.5.0-beta", override: true},
+     {:absinthe_plug, "~> 1.5.0-alpha"},
      {:absinthe_ecto, "~> 0.1"},
+     {:ex_machina, "~> 2.3"},
 
      # release management and production tools
      {:distillery, "~> 2.0"},
      {:recon, "~> 2.3"},
-     {:hrafn, "~> 0.1"},
      {:plug_heartbeat, "~> 0.1"},
-
-     # testing
-     {:wallaby, "~> 0.19", only: :test},
 
      # brando
      # {:brando, github: "twined/brando", branch: "develop"}
-     {:brando, path: "../../brando"},
+     {:brando, path: "../../brando"}
     ]
   end
 
@@ -72,6 +75,27 @@ defmodule <%= application_module %>.Mixfile do
   defp aliases do
     ["ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
      "ecto.reset": ["ecto.drop", "ecto.setup"],
+     "test.all": ["test.unit", "test.e2e"],
+     "test.unit": &run_unit_tests/1,
+     "test.e2e": &run_e2e_tests/1,
      test: ["ecto.create --quiet", "ecto.migrate", "test"]]
+  end
+
+  def run_e2e_tests(args), do: test_with_env("e2e", args)
+  def run_unit_tests(args), do: test_with_env("test", args)
+
+  def test_with_env(env, args) do
+    args = if IO.ANSI.enabled?(), do: ["--color" | args], else: ["--no-color" | args]
+    IO.puts("==> Running tests with `MIX_ENV=#{env}`")
+
+    {_, res} =
+      System.cmd("mix", ["test" | args],
+        into: IO.binstream(:stdio, :line),
+        env: [{"MIX_ENV", to_string(env)}]
+      )
+
+    if res > 0 do
+      System.at_exit(fn _ -> exit({:shutdown, 1}) end)
+    end
   end
 end

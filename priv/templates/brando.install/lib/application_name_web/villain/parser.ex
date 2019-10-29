@@ -37,7 +37,7 @@ defmodule <%= application_module %>.Villain.Parser do
   def text(%{"text" => text} = params) do
     text =
       case Map.get(params, "type") do
-        nil  -> text
+        nil -> text
         "paragraph" -> text
         type -> "<div class=\"#{type}\">#{text}</div>"
       end
@@ -53,10 +53,18 @@ defmodule <%= application_module %>.Villain.Parser do
   end
 
   @doc """
+  Svg -> html. Easy as pie.
+  """
+  def svg(%{"code" => html}) do
+    html
+  end
+
+  @doc """
   Markdown -> html
   """
   def markdown(%{"text" => markdown}) do
-    html = Earmark.as_html!(markdown, %Earmark.Options{breaks: true})
+    html = Earmark.as_html!(markdown, %Earmark.Options{breaks: false, gfm: true, smartypants: true})
+
     """
     <div data-moonwalk-children>#{html}</div>
     """
@@ -92,16 +100,17 @@ defmodule <%= application_module %>.Villain.Parser do
   end
 
   def video(%{"remote_id" => remote_id, "source" => "vimeo"}) do
-    ~s(<div class="video-wrapper">
-         <iframe src="//player.vimeo.com/video/#{remote_id}"
+    ~s(
+         <iframe src="//player.vimeo.com/video/#{remote_id}?muted=1"
+                 title="Video fra Vimeo"
                  width="500"
                  height="281"
                  frameborder="0"
                  webkitallowfullscreen
                  mozallowfullscreen
-                 allowfullscreen>
-         </iframe>
-       </div>)
+                 allowfullscreen
+                 allow="autoplay">
+         </iframe>)
   end
 
   @doc """
@@ -113,12 +122,15 @@ defmodule <%= application_module %>.Villain.Parser do
     link = Map.get(data, "link", "")
     class = Map.get(data, "class", "")
 
-    {link_open, link_close} = if link != "" do
-      {~s(<a href="#{data["link"]}" title="#{title}">), ~s(</a>)}
-    else
-      {"", ""}
-    end
+    {link_open, link_close} =
+      if link != "" do
+        {~s(<a href="#{data["link"]}" title="#{title}">), ~s(</a>)}
+      else
+        {"", ""}
+      end
+
     title = if title == "", do: nil, else: title
+
     caption =
       if title do
         """
@@ -132,15 +144,16 @@ defmodule <%= application_module %>.Villain.Parser do
       {"small", "700w"},
       {"medium", "1000w"},
       {"large", "1400w"},
-      {"xlarge", "1900w"},
+      {"xlarge", "1900w"}
     ]
 
     itag =
-      img_tag(data, :xlarge, [
+      img_tag(data, :xlarge,
         srcset: srcset,
         alt: "#{title}/#{credits}",
         class: class
-      ]) |> safe_to_string
+      )
+      |> safe_to_string
 
     """
     <div class="img-wrapper" data-moonwalk-children>
@@ -153,22 +166,98 @@ defmodule <%= application_module %>.Villain.Parser do
   end
 
   @doc """
+  Convert image to html, with caption and credits and optional link
+  """
+  def picture(data) do
+    title = Map.get(data, "title", "")
+    credits = Map.get(data, "credits", "")
+
+    link = Map.get(data, "link", "")
+    img_class = Map.get(data, "img_class", "")
+    picture_class = Map.get(data, "picture_class", "")
+    srcset = Map.get(data, "srcset", "")
+    media_queries = Map.get(data, "media_queries", "")
+
+    {link_open, link_close} =
+      if link != "" do
+        {~s(<a href="#{data["link"]}" title="#{title}">), ~s(</a>)}
+      else
+        {"", ""}
+      end
+
+    title = if title == "", do: nil, else: title
+    credits = if credits == "", do: nil, else: credits
+
+    caption = ""
+
+    srcset =
+      if srcset != "",
+        do: Code.string_to_quoted!(srcset, existing_atoms_only: true),
+        else: nil
+
+    media_queries =
+      if media_queries != "",
+        do: Code.string_to_quoted!(media_queries, existing_atoms_only: true),
+        else: nil
+
+    alt =
+      cond do
+        title && credits ->
+          "#{title} by #{credits}"
+
+        title ->
+          title
+
+        credits ->
+          "by #{credits}"
+
+        true ->
+          "Ill."
+      end
+
+    ptag =
+      picture_tag(data,
+        key: :xlarge,
+        picture_class: "picture-img",
+        img_class: img_class,
+        picture_class: picture_class,
+        media_queries: media_queries,
+        alt: alt,
+        srcset: srcset
+        # cache: img.updated_at,
+      )
+      |> safe_to_string
+
+    """
+    <div class="picture-wrapper" data-moonwalk-children>
+      #{link_open}
+      #{ptag}
+      #{link_close}
+      #{caption}
+    </div>
+    """
+  end
+
+  @doc """
   Slideshow
   """
   def slideshow(%{"images" => images}) do
-    images_html = Enum.map_join images, "\n", fn(img) ->
-      src = img["sizes"]["xlarge"]
-      """
-      <div class="glide-slide">
-        <img class="img-fluid" src="#{src}" />
-        <div class="overlay-zoom">
-          <a href="#{src}" class="zoom plain" data-lightbox="#{src}">
-            +
-          </a>
+    images_html =
+      Enum.map_join(images, "\n", fn img ->
+        src = img["sizes"]["xlarge"]
+
+        """
+        <div class="glide-slide">
+          <img class="img-fluid" src="#{src}" />
+          <div class="overlay-zoom">
+            <a href="#{src}" class="zoom plain" data-lightbox="#{src}">
+              +
+            </a>
+          </div>
         </div>
-      </div>
-      """
-    end
+        """
+      end)
+
     """
     <div class="glide-wrapper">
       <div class="glide">
@@ -183,7 +272,7 @@ defmodule <%= application_module %>.Villain.Parser do
   """
   def datatable(rows) do
     rows_html =
-      Enum.map_join rows, "\n", fn row ->
+      Enum.map_join(rows, "\n", fn row ->
         """
         <tr>
           <td class="key">
@@ -194,7 +283,7 @@ defmodule <%= application_module %>.Villain.Parser do
           </td>
         </tr>
         """
-      end
+      end)
 
     """
     <div class="data-table-wrapper">
@@ -227,24 +316,38 @@ defmodule <%= application_module %>.Villain.Parser do
     html = blockquote <> "\n>\n> -- <cite>#{cite}</cite>"
     Earmark.as_html!(html)
   end
+
   def blockquote(%{"text" => blockquote}) do
     Earmark.as_html!(blockquote)
+  end
+
+  @doc """
+  Strip comments
+  """
+  def comment(_) do
+    ""
   end
 
   @doc """
   Convert columns to html. Recursive parsing.
   """
   def columns(cols) do
-    col_html = for col <- cols do
-      c = Enum.reduce(col["data"], [], fn(d, acc) ->
-        [apply(__MODULE__, String.to_atom(d["type"]), [d["data"]])|acc]
-      end)
-      class = case col["class"] do
-        "six" -> "col-md-6"
-        other -> other
+    col_html =
+      for col <- cols do
+        c =
+          Enum.reduce(col["data"], [], fn d, acc ->
+            [apply(__MODULE__, String.to_atom(d["type"]), [d["data"]]) | acc]
+          end)
+
+        class =
+          case col["class"] do
+            "six" -> "col-md-6"
+            other -> other
+          end
+
+        ~s(<div class="#{class}">#{Enum.reverse(c)}</div>)
       end
-      ~s(<div class="#{class}">#{Enum.reverse(c)}</div>)
-    end
+
     ~s(<div class="row">#{col_html}</div>)
   end
 
@@ -260,11 +363,30 @@ defmodule <%= application_module %>.Villain.Parser do
   end
 
   @doc """
+  Convert template to html.
+  """
+  def template(%{"id" => id, "refs" => refs}) do
+    {:ok, template} = Brando.Villain.get_template(id)
+
+    Regex.replace(~r/%{(\w+)}/, template.code, fn _, match ->
+      ref = Enum.find(refs, &(&1["name"] == match))
+
+      if ref do
+        block = Map.get(ref, "data")
+        apply(__MODULE__, String.to_atom(block["type"]), [block["data"]])
+      else
+        "<!-- REF #{match} missing // template: #{id}. -->"
+      end
+    end)
+  end
+
+  @doc """
   Timeline
   """
   def timeline(items) do
-    timeline_html = for item <- items do
-      ~s(
+    timeline_html =
+      for item <- items do
+        ~s(
       <li class="villain-timeline-item">
         <div class="villain-timeline-item-date">
           <div class="villain-timeline-item-date-inner">
@@ -278,7 +400,7 @@ defmodule <%= application_module %>.Villain.Parser do
         </div>
       </li>
       )
-    end
+      end
 
     ~s(<ul class="villain-timeline">#{timeline_html}</ul>)
   end

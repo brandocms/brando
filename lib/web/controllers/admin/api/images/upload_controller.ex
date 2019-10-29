@@ -5,13 +5,7 @@ defmodule Brando.Admin.API.Images.UploadController do
 
   use Brando.Web, :controller
 
-  use Brando.Sequence, [
-    :controller,
-    [
-      schema: Brando.Image,
-      filter: &Brando.Image.for_series_id/1
-    ]
-  ]
+  use Brando.Sequence.Controller, schema: Brando.Image
 
   alias Brando.Images
 
@@ -26,9 +20,6 @@ defmodule Brando.Admin.API.Images.UploadController do
       end
 
     case Images.Uploads.Schema.handle_upload(params, cfg, user) do
-      {:ok, image} ->
-        render(conn, :post, image: image, status: 200, error_msg: nil)
-
       {:error, error_msg} ->
         conn
         |> put_status(400)

@@ -3,23 +3,22 @@ defmodule <%= application_module %>Web.SessionController do
   Generated session controller
   """
   use <%= application_module %>Web, :controller
-  alias Brando.User
-  alias <%= application_module %>.Repo
+  alias Brando.Users
 
   @doc """
   Create new token
   """
   def create(conn, %{"email" => email, "password" => password}) do
-    case Repo.get_by(User, email: email) do
-      nil ->
-        Comeonin.Bcrypt.dummy_checkpw()
+    case Users.get_user_by_email(email) do
+      {:error, {:user, :not_found}} ->
+        Bcrypt.no_user_verify()
 
         conn
         |> put_status(:unauthorized)
         |> render("error.json")
 
-      user ->
-        if Comeonin.Bcrypt.checkpw(password, user.password) do
+      {:ok, user} ->
+        if Bcrypt.verify_pass(password, user.password) do
           {:ok, jwt, _full_claims} = <%= application_module %>Web.Guardian.encode_and_sign(user)
 
           conn

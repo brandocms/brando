@@ -8,7 +8,7 @@ defmodule Brando.Upload.Utils do
   Checks changeset if `field_name` is changed.
   Returns :unchanged, or {:ok, change}
   """
-  @spec field_has_changed(Ecto.Changeset.t(), atom) :: {:ok, Ecto.Changeset.t()} | :unchanged
+  @spec field_has_changed(Ecto.Changeset.t(), atom) :: {:ok, any()} | :unchanged
   def field_has_changed(changeset, field_name) do
     case get_change(changeset, field_name) do
       nil -> :unchanged

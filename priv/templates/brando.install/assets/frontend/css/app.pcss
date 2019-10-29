@@ -1,0 +1,115 @@
+/**
+ * Application-specific CSS.
+ * (c) univers/twined 2019
+ */
+
+/**
+* Imports
+*/
+
+@import './includes/fonts.pcss';
+@import "./includes/animations.pcss";
+@import "./includes/arrows.pcss";
+@import "./includes/cookies.pcss";
+@import "./includes/containers.pcss";
+@import "./includes/content.pcss";
+@import "./includes/fader.pcss";
+@import "./includes/footer.pcss";
+@import "./includes/general.pcss";
+@import "./includes/header.pcss";
+@import "./includes/headers.pcss";
+@import "./includes/lazyload.pcss";
+@import "./includes/lightbox.pcss";
+@import "./includes/modules.pcss";
+@import "./includes/newsletter.pcss";
+@import "./includes/paragraphs.pcss";
+@import "./includes/popup.pcss";
+@import "./includes/navigation.pcss";
+
+@europa arrows;
+@europa base;
+
+/* lazyload fix for chrome. sometimes IntersectionObserver doesn't pick up the image */
+img[data-src], img[data-srcset] { min-height: 1px; min-width: 100%; }
+
+.no-js body.unloaded {
+  opacity: 1;
+}
+
+.no-js body.unloaded header {
+  opacity: 1;
+}
+
+.no-js body.unloaded .navbar {
+  transform: none;
+}
+
+html, body {
+  min-height: 100%;
+}
+
+svg:not(:root) {
+  overflow: hidden;
+}
+
+@responsive <=mobile {
+  ul li {
+    list-style-position: inside;
+  }
+}
+
+a.plain {
+  color: inherit;
+  border: none;
+  text-decoration: none;
+
+  &:hover {
+    border: none;
+    text-decoration: none;
+  }
+}
+
+body {
+  background-color: theme(colors.body.background);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @fontsize base;
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+.blink {
+  animation: blink-animation 2.7s steps(200, start) infinite;
+}
+
+@keyframes blink-animation {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: .8;
+  }
+}
+
+header {
+  opacity: 1;
+  transition: opacity 2s ease;
+}
+
+.ft {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.c {
+  align-self: center;
+}

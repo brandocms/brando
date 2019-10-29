@@ -2,9 +2,12 @@ defmodule Brando.Factory do
   use ExMachina.Ecto, repo: Brando.repo()
 
   alias Brando.Type.ImageConfig
-  alias Brando.{ImageCategory, ImageSeries, User}
+  alias Brando.{ImageCategory, ImageSeries}
+  alias Brando.Users.User
 
   @sizes %{
+    "micro" => %{"size" => "25", "quality" => 1},
+    "mobile" => %{"size" => "300", "quality" => 1},
     "small" => %{"size" => "300", "quality" => 1},
     "medium" => %{
       "portrait" => %{"size" => "300", "quality" => 1},
@@ -17,17 +20,18 @@ defmodule Brando.Factory do
     %User{
       full_name: "James Williamson",
       email: "james@thestooges.com",
-      password: "$2b$12$VD9opg289oNQAHii8VVpoOIOe.y4kx7.lGb9SYRwscByP.tRtJTsa",
+      password: Bcrypt.hash_pwd_salt("admin"),
       avatar: %Brando.Type.Image{
         credits: nil,
-        optimized: false,
         path: "images/avatars/27i97a.jpeg",
         title: nil,
         sizes: %{
+          "micro" => "images/avatars/micro/27i97a.jpeg",
           "thumb" => "images/avatars/thumb/27i97a.jpeg",
           "small" => "images/avatars/small/27i97a.jpeg",
           "medium" => "images/avatars/medium/27i97a.jpeg",
-          "large" => "images/avatars/large/27i97a.jpeg"
+          "large" => "images/avatars/large/27i97a.jpeg",
+          "mobile" => "images/avatars/mobile/27i97a.jpeg"
         }
       },
       role: :superuser,
@@ -58,7 +62,6 @@ defmodule Brando.Factory do
   def image_type_factory do
     %Brando.Type.Image{
       credits: nil,
-      optimized: false,
       path: "images/default/sample.png",
       sizes: %{
         "large" => "images/default/large/sample.png",
@@ -88,7 +91,7 @@ defmodule Brando.Factory do
         "large" => %{"size" => "700", "quality" => 100},
         "xlarge" => %{"size" => "900", "quality" => 100},
         "thumb" => %{"size" => "150x150", "quality" => 100, "crop" => true},
-        "micro" => %{"size" => "25x25", "quality" => 100, "crop" => true}
+        "micro" => %{"size" => "25", "quality" => 100}
       }
     }
   end

@@ -38,11 +38,6 @@ defmodule Brando.Tag do
         end
       end
 
-  Template (`post_with_tags.html.eex`):
-
-      TODO: show example
-
-
   Vue frontend:
 
     * Add a `KInputTags` component to your view
@@ -74,13 +69,6 @@ defmodule Brando.Tag do
   @doc false
   def controller(_schema, _filter \\ nil) do
     quote do
-    end
-  end
-
-  @doc false
-  def view do
-    quote do
-      # TODO: include some convenience helpers here
     end
   end
 

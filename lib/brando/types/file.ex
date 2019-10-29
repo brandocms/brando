@@ -3,10 +3,10 @@ defmodule Brando.Type.File do
   Defines a type for an file field.
   """
 
-  @type t :: %__MODULE__{}
-  @behaviour Ecto.Type
+  use Ecto.Type
 
-  @derive Poison.Encoder
+  @type t :: %__MODULE__{}
+
   @derive Jason.Encoder
   defstruct path: nil,
             mimetype: nil,
@@ -48,7 +48,7 @@ defmodule Brando.Type.File do
   other options as well.
   """
   def dump(val) do
-    val = Poison.encode!(val)
+    val = Jason.encode!(val)
     {:ok, val}
   end
 end
