@@ -2,22 +2,28 @@
 <html class="no-js" lang="en">
   <head>
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="format-detection" content="telephone=no">
+    <%%= Brando.HTML.init_js() %>
     <%%= Brando.HTML.render_meta(@conn) %>
+    <%%= Brando.HTML.render_rel(@conn) %>
 
     <link rel="apple-touch-icon" sizes="180x180" href="/ico/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/ico/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/ico/favicon-16x16.png">
-    <link rel="manifest" href="/ico/manifest.json">
-    <link rel="mask-icon" href="/ico/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="manifest" href="/ico/site.webmanifest">
+    <link rel="mask-icon" href="/ico/safari-pinned-tab.svg" color="#000000">
     <link rel="shortcut icon" href="/ico/favicon.ico">
+    <meta name="msapplication-TileColor" content="#da532c">
     <meta name="msapplication-config" content="/ico/browserconfig.xml">
     <meta name="theme-color" content="#ffffff">
 
     <title><%%= Brando.Utils.get_page_title(@conn) %></title>
-    <script>!function(n,e,s){function o(n){var e=f.className,s=Modernizr._config.classPrefix||"";if(l&&(e=e.baseVal),Modernizr._config.enableJSClass){var o=new RegExp("(^|\\s)"+s+"no-js(\\s|$)");e=e.replace(o,"$1"+s+"js$2")}Modernizr._config.enableClasses&&(e+=" "+s+n.join(" "+s),l?f.className.baseVal=e:f.className=e)}function a(n,e){return typeof n===e}function i(){var n,e,s,o,i,f,l;for(var c in r)if(r.hasOwnProperty(c)){if(n=[],e=r[c],e.name&&(n.push(e.name.toLowerCase()),e.options&&e.options.aliases&&e.options.aliases.length))for(s=0;s<e.options.aliases.length;s++)n.push(e.options.aliases[s].toLowerCase());for(o=a(e.fn,"function")?e.fn():e.fn,i=0;i<n.length;i++)f=n[i],l=f.split("."),1===l.length?Modernizr[l[0]]=o:(!Modernizr[l[0]]||Modernizr[l[0]]instanceof Boolean||(Modernizr[l[0]]=new Boolean(Modernizr[l[0]])),Modernizr[l[0]][l[1]]=o),t.push((o?"":"no-")+l.join("-"))}}var t=[],f=e.documentElement,l="svg"===f.nodeName.toLowerCase(),r=[],c={_version:"3.5.0",_config:{classPrefix:"",enableClasses:!0,enableJSClass:!0,usePrefixes:!0},_q:[],on:function(n,e){var s=this;setTimeout(function(){e(s[n])},0)},addTest:function(n,e,s){r.push({name:n,fn:e,options:s})},addAsyncTest:function(n){r.push({name:null,fn:n})}},Modernizr=function(){};Modernizr.prototype=c,Modernizr=new Modernizr,i(),o(t),delete c.addTest,delete c.addAsyncTest;for(var u=0;u<Modernizr._q.length;u++)Modernizr._q[u]();n.Modernizr=Modernizr}(window,document);</script>
-    <link rel="stylesheet" href="<%%= Routes.static_path(@conn, "/css/app.css") %>">
+
+    <%%= Brando.HTML.include_css(@conn) %>
+    <%%= Brando.HTML.include_js(@conn) %>
+    <%%= Brando.HTML.render_json_ld(@conn) %>
   </head>
   <%%= body_tag @conn, id: "top" %>
     <%%= cookie_law(
@@ -27,11 +33,12 @@
       info_text: "Personvern"
     ) %>
     <div class="fader" id="fader">
-      <script>var zf = document.getElementById("fader");zf.style.display = 'block';</script>
+      <script>var zf = document.getElementById("fader");zf.style.display = 'block';setTimeout(function(){zf.style.display = 'none'},4000);</script>
       <div class="loading-container"></div>
     </div>
     <div class="backdrop"></div>
 <!-- :nav - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
+    <%%= render <%= application_module %>Web.PageView, "_navigation.html", assigns %>
 <!-- /nav - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
 <!-- :content - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
     <%%= render @view_module, @view_template, assigns %>
@@ -40,14 +47,8 @@
     <%%= render <%= application_module %>Web.PageView, "_footer.html", assigns %>
 <!-- /footer - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
 
-    <script src="<%%= Routes.static_path(@conn, "/js/app.js") %>"></script>
     <%%= Brando.HTML.google_analytics("UA-XXXXXXXX-1") %>
 
-    <div class="dev-debug-sizes">
-      <div class="d-xs-block d-sm-none d-md-none d-lg-none">XS</div>
-      <div class="d-none d-sm-block d-xs-none d-md-none d-lg-none">SM</div>
-      <div class="d-none d-md-block d-xs-none d-sm-none d-lg-none">MD</div>
-      <div class="d-none d-lg-block d-xs-none d-sm-none d-md-none">LG</div>
-    </div>
+    <!-- // vsn <%%= Application.spec(:<%= application_name %>, :vsn) %> -->
   </body>
 </html>

@@ -2,9 +2,8 @@ defmodule Mix.BrandoTest do
   use ExUnit.Case, async: true
 
   test "check_module_name_availability" do
-    assert_raise Mix.Error, fn ->
-      Mix.Brando.check_module_name_availability!(Mix.BrandoTest)
-    end
+    assert Mix.Brando.check_module_name_availability(Mix.BrandoTest) ==
+             {:error, "Module name Mix.BrandoTest is already taken, please choose another name"}
   end
 
   test "base" do

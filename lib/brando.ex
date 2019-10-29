@@ -4,6 +4,9 @@ defmodule Brando do
   @moduledoc File.read!("README.md")
   @version Mix.Project.config()[:version]
 
+  @doc """
+  Start supervisor
+  """
   def start(_type, _args) do
     Brando.Supervisor.start_link()
   end
@@ -30,9 +33,19 @@ defmodule Brando do
   def repo, do: config(:repo)
 
   @doc """
+  Gets the parent app's factory, as set in config.exs
+  """
+  def factory, do: config(:factory)
+
+  @doc """
   Gets the parent app's helpers, as set in config.exs
   """
   def helpers, do: config(:helpers)
+
+  @doc """
+  Gets the parent app's otp name, as set in config.exs
+  """
+  def otp_app, do: config(:otp_app)
 
   @doc """
   Get Brando version

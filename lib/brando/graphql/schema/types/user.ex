@@ -7,7 +7,7 @@ defmodule Brando.Schema.Types.User do
     field :email, :string
     field :role, :string
     field :password, :string
-    field :avatar, :upload
+    field :avatar, :upload_or_image
   end
 
   input_object :update_user_params do
@@ -16,7 +16,7 @@ defmodule Brando.Schema.Types.User do
     field :email, :string
     field :role, :string
     field :password, :string
-    field :avatar, :upload
+    field :avatar, :upload_or_image
   end
 
   object :user do
@@ -24,16 +24,14 @@ defmodule Brando.Schema.Types.User do
     field :email, :string
     field :full_name, :string
     field :password, :string
-
-    field :avatar, :string do
-      arg :type, :string, default_value: "thumb"
-      resolve &Brando.Schema.Utils.resolve_avatar/3
-    end
-
+    field :avatar, :image_type
     field :role, :string
     field :active, :boolean
     field :language, :string
     field :last_login, :date
+    field :inserted_at, :time
+    field :updated_at, :time
+    field :deleted_at, :time
   end
 
   object :user_queries do

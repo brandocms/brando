@@ -7,25 +7,14 @@ defmodule Brando.ImageCategory do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :schema
+  use Brando.SoftDelete.Schema
 
   import Ecto.Query, only: [from: 2]
   import Ecto.Changeset
 
   @required_fields ~w(name creator_id)a
-  @optional_fields ~w(cfg slug)a
+  @optional_fields ~w(cfg slug deleted_at)a
 
-  @derive {Poison.Encoder,
-           only: [
-             :id,
-             :name,
-             :slug,
-             :cfg,
-             :creator,
-             :creator_id,
-             :image_series,
-             :inserted_at,
-             :updated_at
-           ]}
   @derive {Jason.Encoder,
            only: [
              :id,
@@ -36,15 +25,18 @@ defmodule Brando.ImageCategory do
              :creator_id,
              :image_series,
              :inserted_at,
-             :updated_at
+             :updated_at,
+             :deleted_at
            ]}
-  schema "imagecategories" do
+
+  schema "images_categories" do
     field :name, :string
     field :slug, :string
     field :cfg, Brando.Type.ImageConfig
-    belongs_to :creator, Brando.User
+    belongs_to :creator, Brando.Users.User
     has_many :image_series, Brando.ImageSeries
     timestamps()
+    soft_delete()
   end
 
   @doc """
@@ -56,7 +48,7 @@ defmodule Brando.ImageCategory do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, :create | :update, Keyword.t()) :: t
+  @spec changeset(t, :create | :update, Map.t()) :: Ecto.Changeset.t()
   def changeset(schema, action, params \\ %{})
 
   def changeset(schema, :create, params) do

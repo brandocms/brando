@@ -1,3 +1,8 @@
+defmodule Brando.Integration.LockdownController do
+  use Phoenix.Controller,
+        namespace: Brando
+end
+
 defmodule RouterHelper do
   @moduledoc """
   Conveniences for testing routers and controllers.
@@ -90,16 +95,6 @@ defmodule RouterHelper do
 
     scope "/" do
       pipe_through :browser
-      get "/test123/:id/:language", Brando.TestController, :test
-
-      get "/login", Brando.SessionController, :login,
-        private: %{schema: Brando.User, layout: {Brando.Session.LayoutView, "auth.html"}}
-
-      post "/login", Brando.SessionController, :login,
-        private: %{schema: Brando.User, layout: {Brando.Session.LayoutView, "auth.html"}}
-
-      get "/logout", Brando.SessionController, :logout,
-        private: %{schema: Brando.User, layout: {Brando.Session.LayoutView, "auth.html"}}
     end
   end
 end

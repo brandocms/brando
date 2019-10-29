@@ -1,5 +1,6 @@
 defmodule Brando.Schema.Types.Page do
   use Brando.Web, :absinthe
+  import Ecto.Query
 
   input_object :page_params do
     field :parent_id, :id
@@ -10,7 +11,6 @@ defmodule Brando.Schema.Types.Page do
     field :data, :json
     field :css_classes, :string
     field :meta_description, :string
-    field :meta_keywords, :string
   end
 
   object :page do
@@ -27,10 +27,19 @@ defmodule Brando.Schema.Types.Page do
     field :parent_id, :id
     field :parent, :page, resolve: assoc(:parent)
     field :children, list_of(:page), resolve: assoc(:children)
+
+    field :fragments, list_of(:page_fragment),
+      resolve:
+        assoc(:fragments, fn query, _, _ ->
+          query
+          |> where([f], is_nil(f.deleted_at))
+          |> order_by([f], asc: fragment("lower(?)", f.key))
+        end)
+
     field :meta_description, :string
-    field :meta_keywords, :string
     field :inserted_at, :time
     field :updated_at, :time
+    field :deleted_at, :time
   end
 
   object :page_queries do

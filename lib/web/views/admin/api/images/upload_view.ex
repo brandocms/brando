@@ -3,7 +3,7 @@ defmodule Brando.Admin.API.Images.UploadView do
   View for the images upload module.
   """
   use Brando.Web, :view
-  use Brando.Sequence, :view
+  use Brando.Sequence.View
 
   def render("post.json", %{status: 200, image: image}) do
     # fix image here, so poison doesn't choke

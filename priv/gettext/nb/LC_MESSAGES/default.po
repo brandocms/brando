@@ -123,7 +123,7 @@ msgstr "Slett bilder"
 msgid "Delete user"
 msgstr "Slett bruker"
 
-#: lib/brando/html.ex:314 lib/brando/html/inspect.ex:139
+#: lib/brando/html.ex:183 lib/brando/html.ex:183
 msgid "Deleted"
 msgstr "Slettet"
 
@@ -424,7 +424,7 @@ msgstr "Skaper"
 msgid "Credits"
 msgstr "Krediteringer"
 
-#: lib/brando/html.ex:308 lib/brando/html/inspect.ex:138
+#: lib/brando/html.ex:177 lib/brando/html.ex:177
 msgid "Draft"
 msgstr "Kladd"
 
@@ -470,8 +470,7 @@ msgstr "Språk"
 msgid "Last login"
 msgstr "Forrige innlogging"
 
-#: lib/brando/images/image_category.ex:122
-#: lib/brando/images/image_series.ex:151
+#: lib/brando/images/image_category.ex:122 lib/brando/images/image_series.ex:151
 msgid "Name"
 msgstr "Navn"
 
@@ -488,11 +487,11 @@ msgstr "Ingen resultater"
 msgid "No value"
 msgstr "Ingen verdi"
 
-#: lib/brando/html.ex:302 lib/brando/html/inspect.ex:137
+#: lib/brando/html.ex:171 lib/brando/html.ex:171
 msgid "Pending"
 msgstr "Venter"
 
-#: lib/brando/html.ex:296 lib/brando/html/inspect.ex:136
+#: lib/brando/html.ex:165 lib/brando/html.ex:165
 msgid "Published"
 msgstr "Publisert"
 
@@ -512,8 +511,7 @@ msgstr "Lagre"
 msgid "Sequence"
 msgstr "Sekvens"
 
-#: lib/brando/images/image_category.ex:123
-#: lib/brando/images/image_series.ex:152
+#: lib/brando/images/image_category.ex:123 lib/brando/images/image_series.ex:152
 msgid "Slug"
 msgstr "URL-tamp"
 
@@ -606,15 +604,15 @@ msgstr "brukere"
 msgid "Delete"
 msgstr "Slett"
 
-#: lib/brando/upload.ex:59
+#: lib/brando/upload.ex:78
 msgid "Empty filename given. Make sure you have a valid filename."
 msgstr "Tomt filnavn gitt. Kontroller at du har et gyldig filnavn."
 
-#: lib/brando/upload.ex:66
+#: lib/brando/upload.ex:95
 msgid "Error while copying"
 msgstr "Feil under kopiering"
 
-#: lib/brando/upload.ex:64
+#: lib/brando/upload.ex:91
 msgid "Path creation failed"
 msgstr "Feil under oppretting av filbane"
 
@@ -626,7 +624,7 @@ msgstr "Adgang nektet."
 msgid "Passwords must match"
 msgstr "Passord må matche"
 
-#: lib/brando/users/user.ex:112 lib/brando/users/user.ex:137
+#: lib/brando/users/user.ex:97 lib/brando/users/user.ex:111
 msgid "Password must be at least 6 characters"
 msgstr "Passord må være minst 6 tegn"
 
@@ -756,7 +754,7 @@ msgstr "Applikasjonsfeil"
 msgid "Developers have been notified about this error, but if you can provide extra information about the error, please do so in the textbox below. If not, that's OK too!"
 msgstr "Feilen er logget og utvikler er varslet, men hvis du kan supplere med ekstra informasjon om feilen, vennligst fyll inn i tekstboksen under."
 
-#: lib/web/templates/error/_feedback.html.eex:17
+#: lib/web/templates/error/_feedback.html.eex:16
 msgid "Thanks!"
 msgstr "Takk!"
 
@@ -816,6 +814,16 @@ msgstr "Moduler"
 msgid "Error retrieving form \"%{form}\". Not registered."
 msgstr "Feil ved henting av skjema \"%{form}\". Ikke registrert."
 
-#: lib/brando/upload.ex:61
+#: lib/brando/upload.ex:82
 msgid "File type not allowed: %{type}. Must be one of: %{allowed}"
 msgstr "Filtype ikke tillatt: %{type}. Må være en av: %{allowed}"
+
+#, elixir-format
+#: lib/brando/upload.ex:88
+msgid "Error while creating image sizes"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/upload.ex:98
+msgid "Unknown error while creating image sizes."
+msgstr ""

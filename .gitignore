@@ -15,3 +15,4 @@ doc
 cover
 npm-debug.log
 /.elixir_ls
+/.vscode

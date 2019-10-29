@@ -1,4 +1,4 @@
-defmodule Brando.User do
+defmodule Brando.Users.User do
   @moduledoc """
   Ecto schema for the User schema, as well as image field definitions
   and helper functions for dealing with the user schema.
@@ -8,18 +8,17 @@ defmodule Brando.User do
 
   use Brando.Web, :schema
   use Brando.Field.ImageField
+  use Brando.SoftDelete.Schema
 
-  import Brando.Images.Optimize, only: [optimize: 2]
   import Brando.Gettext
 
   @required_fields ~w(full_name email password language)a
-  @optional_fields ~w(role avatar active)a
+  @optional_fields ~w(role avatar active deleted_at)a
 
-  @derived_fields ~w(id full_name email password language role avatar active inserted_at updated_at)a
-  @derive {Poison.Encoder, only: @derived_fields}
+  @derived_fields ~w(id full_name email password language role avatar active inserted_at updated_at deleted_at)a
   @derive {Jason.Encoder, only: @derived_fields}
 
-  schema "users" do
+  schema "users_users" do
     field :email, :string
     field :full_name, :string
     field :password, :string
@@ -29,6 +28,7 @@ defmodule Brando.User do
     field :language, :string
     field :last_login, :naive_datetime
     timestamps()
+    soft_delete()
   end
 
   has_image_field(:avatar, %{
@@ -43,30 +43,34 @@ defmodule Brando.User do
     size_limit: 10_240_000,
     sizes: %{
       "micro" => %{
-        "size" => "25x25",
-        "quality" => 100,
-        "crop" => true
+        "size" => "25",
+        "quality" => 10,
+        "crop" => false
       },
       "thumb" => %{
         "size" => "150x150",
-        "quality" => 100,
+        "quality" => 65,
         "crop" => true
       },
       "small" => %{
-        "size" => "300",
-        "quality" => 100
+        "size" => "300x300",
+        "quality" => 65,
+        "crop" => true
       },
       "medium" => %{
-        "size" => "500",
-        "quality" => 100
+        "size" => "500x500",
+        "quality" => 65,
+        "crop" => true
       },
       "large" => %{
-        "size" => "700",
-        "quality" => 100
+        "size" => "700x700",
+        "quality" => 65,
+        "crop" => true
       },
       "xlarge" => %{
-        "size" => "900",
-        "quality" => 100
+        "size" => "900x900",
+        "quality" => 65,
+        "crop" => true
       }
     },
     srcset: %{
@@ -84,7 +88,7 @@ defmodule Brando.User do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, :create | :update, %{binary => term} | %{atom => term}) :: t
+  @spec changeset(t, :create | :update, %{binary => term} | %{atom => term}) :: Ecto.Changeset.t()
   def changeset(schema, action, params \\ %{})
 
   def changeset(schema, :create, params) do
@@ -98,7 +102,6 @@ defmodule Brando.User do
       too_short: gettext("Password must be at least 6 characters")
     )
     |> validate_upload({:image, :avatar})
-    |> optimize(:avatar)
   end
 
   def changeset(schema, :update, params) do
@@ -112,34 +115,5 @@ defmodule Brando.User do
       too_short: gettext("Password must be at least 6 characters")
     )
     |> validate_upload({:image, :avatar})
-    |> optimize(:avatar)
-  end
-
-  @doc """
-  Orders by ID
-  """
-  def order_by_id(query), do:
-    from m in query, order_by: m.id
-
-  @doc """
-  Checks `password` against `user`. Return bool.
-  """
-  def auth?(nil, _password), do: false
-  def auth?(user, password), do: Comeonin.Bcrypt.checkpw(password, user.password)
-
-  @doc """
-  Checks if `user` has `role`.
-  """
-  @spec role?(t, atom) :: boolean
-  def role?(user, role) when is_atom(role), do:
-    role == user.role
-
-  @doc """
-  Checks if `user` has access to admin area.
-  """
-  @spec can_login?(t) :: boolean
-  def can_login?(user) do
-    {:ok, role} = Brando.Type.Role.dump(user.role)
-    (role > 0 && true) || false
   end
 end

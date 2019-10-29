@@ -18,6 +18,14 @@ defmodule Brando.Upload do
             extra_info: nil
 
   @type t :: %__MODULE__{}
+  @type img_config :: Brando.Type.ImageConfig.t()
+  @type upload_error_input ::
+          :error
+          | {:error, :empty_filename}
+          | {:error, :cp | :mkdir, any()}
+          | {:error, :content_type, any(), any()}
+          | {:error, {:create_image_sizes, any()}}
+  @type upload_error_result :: {:error, String.t()}
 
   import Brando.Gettext
   import Brando.Utils
@@ -27,6 +35,7 @@ defmodule Brando.Upload do
   Checks `plug` for filename, checks mimetype, creates upload path,
   copies files and creates all sizes of image according to `cfg`
   """
+  @spec process_upload(upload_plug :: Plug.Upload.t(), cfg_struct :: img_config) :: {:ok, t()}
   def process_upload(plug, cfg_struct) do
     with {:ok, upload} <- create_upload_struct(plug, cfg_struct),
          {:ok, upload} <- extract_focal_info(upload),
@@ -36,7 +45,17 @@ defmodule Brando.Upload do
          {:ok, upload} <- copy_uploaded_file(upload) do
       {:ok, upload}
     else
-      error -> error
+      {:error, :empty_filename} ->
+        {:error, :empty_filename}
+
+      {:error, :content_type, content_type, allowed_mimetypes} ->
+        {:error, :content_type, content_type, allowed_mimetypes}
+
+      {:error, :mkdir, reason} ->
+        {:error, :mkdir, reason}
+
+      {:error, :cp, {reason, src, dest}} ->
+        {:error, :cp, {reason, src, dest}}
     end
   end
 
@@ -52,6 +71,7 @@ defmodule Brando.Upload do
     end)
   end
 
+  @spec handle_upload_error(upload_error_input) :: upload_error_result
   def handle_upload_error(err) do
     case err do
       {:error, :empty_filename} ->
@@ -64,12 +84,18 @@ defmodule Brando.Upload do
            allowed: inspect(allowed_content_types)
          )}
 
+      {:error, {:create_image_sizes, reason}} ->
+        {:error, gettext("Error while creating image sizes") <> " -> #{inspect(reason)}"}
+
       {:error, :mkdir, reason} ->
         {:error, gettext("Path creation failed") <> " -> #{inspect(reason)}"}
 
       {:error, :cp, {reason, src, dest}} ->
         {:error,
          gettext("Error while copying") <> " -> #{inspect(reason)}\nsrc..: #{src}\ndest.: #{dest}"}
+
+      :error ->
+        {:error, gettext("Unknown error while creating image sizes.")}
     end
   end
 
