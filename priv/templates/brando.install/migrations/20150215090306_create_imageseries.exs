@@ -1,6 +1,6 @@
 defmodule <%= application_module %>.Repo.Migrations.CreateImageseries do
   use Ecto.Migration
-  use Brando.Sequence.Migration
+  use Brando.Sequence, :migration
 
   def up do
     create table(:imageseries) do

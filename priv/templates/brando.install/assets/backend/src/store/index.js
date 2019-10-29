@@ -1,7 +1,6 @@
-// ++imports
-import { Vue, Vuex } from '@univers-agency/kurtz'
-import * as kurtzBaseStoreModules from '@univers-agency/kurtz/lib/stores'
-// __imports
+import Vue from 'vue'
+import Vuex from 'vuex'
+import * as kurtzBaseStoreModules from 'kurtz/lib/stores'
 
 Vue.use(Vuex)
 
@@ -9,9 +8,7 @@ const debug = process.env.NODE_ENV !== 'production'
 
 const store = new Vuex.Store({
   modules: {
-    // ++content
-    ...kurtzBaseStoreModules,
-    // __content
+    ...kurtzBaseStoreModules
   },
   strict: debug
 })

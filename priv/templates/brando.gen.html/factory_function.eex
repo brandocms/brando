@@ -1,9 +1,0 @@
-
-@doc """
-Factory function for <%= plural %>
-"""
-def <%= singular %>_factory do
-  %<%= alias %>{<%= for {{k, v}, idx} <- Enum.with_index(params) do %>
-    <%= k %>: <%= inspect v %><%= if idx != Enum.count(params) do %>,<%end%><% end %>
-  }
-end

@@ -15,22 +15,17 @@ from fabric.utils import abort
 
 VERSION_NUMBER = '2.0.0'
 
-import ConfigParser
-
-config = ConfigParser.ConfigParser()
-config.read('deployment.cfg')
-
 #
 # Project-specific setup.
 
-PROJECT_NAME = config.get('DEPLOYMENT', 'PROJECT_NAME')
-PROD_URL = config.get('DEPLOYMENT', 'PROD_URL')
-DB_PASS = config.get('DEPLOYMENT', 'DB_PASS')
+PROJECT_NAME = '<%= application_name %>'
+PROD_URL = 'http://somesite.com'
+DB_PASS = 'prod_database_password'
 
-SSH_USER = config.get('DEPLOYMENT', 'SSH_USER')
-SSH_PASS = config.get('DEPLOYMENT', 'SSH_PASS')
-SSH_HOST = config.get('DEPLOYMENT', 'SSH_HOST')
-SSH_PORT = config.getint('DEPLOYMENT', 'SSH_PORT')
+SSH_USER = 'username'
+SSH_PASS = 'sudoer_pass'
+SSH_HOST = 'host.net'
+SSH_PORT = 30000
 
 #
 # Shhh, don't be so loud.
@@ -227,6 +222,7 @@ def bootstrap_release():
 
     upload_media()
     upload_etc()
+    upload_site_config()
     createdb()
 
     ensure_log_directory_exists()
@@ -310,7 +306,7 @@ def unpack_release(version):
     """
     with cd(env.path), shell_env(HOME='/home/%s' % env.project_user):
         print(red('==> deleting old release'))
-        sudo('rm -rf bin var erts-* lib releases running-config', user=env.project_user)
+        sudo('rm -rf bin erts-7.2 lib releases running-config', user=env.project_user)
         print(yellow('==> unpacking release'))
         sudo('tar xvf %s_%s.tar.gz' % (env.project_name, version), user=env.project_user)
         print(yellow('==> archiving release'))
@@ -318,25 +314,6 @@ def unpack_release(version):
         sudo('mv %s_%s.tar.gz release-archives/%s_%s.tar.gz' % (env.project_name, version, env.project_name, version), user=env.project_user)
 
     fixprojectperms()
-
-
-def rollback_release(version):
-    """
-    Delete old stuff, unpack release at target
-    """
-    stop()
-    with cd(env.path), shell_env(HOME='/home/%s' % env.project_user):
-        print(red('==> deleting old release'))
-        sudo('rm -rf bin erts-7.2 lib releases running-config', user=env.project_user)
-        print(yellow('==> copy old release'))
-        sudo('cp release-archives/%s_%s.tar.gz .' % (env.project_name, version), user=env.project_user)
-        print(yellow('==> unpacking release'))
-        sudo('tar xvf %s_%s.tar.gz' % (env.project_name, version), user=env.project_user)
-        print(yellow('==> removing tarball'))
-        sudo('rm %s_%s.tar.gz' % (env.project_name, version), user=env.project_user)
-
-    fixprojectperms()
-    start()
 
 
 def grant_db():
@@ -599,6 +576,20 @@ def upload_etc():
     _set_logrotate_perms()
 
 
+def upload_site_config():
+    """
+    Uploads site_config.dat
+    """
+    if (os.path.exists('site_config.dat')):
+        print(yellow('==> uploading site_config.dat'))
+        put('site_config.dat', '%s' % env.path, use_sudo=True)
+        print(yellow('==> chowning site_config.dat'))
+        _setowner(os.path.join(env.path, 'site_config.dat'))
+        print(yellow('==> chmoding site_config.dat'))
+        _setperms('755', os.path.join(env.path, 'site_config.dat'))
+        _set_logrotate_perms()
+
+
 def _warn(str):
     """
     Outputs a warning formatted str
@@ -665,20 +656,21 @@ def _setowner(path=''):
 
 def nukemedia():
     """
-    Deletes media path recursively on host.
+    Deletes media path recursively on host, then recreates
+    directory and sets perms
     """
     require('hosts')
     print(red('-- WARNING ---------------------------------------'))
-    print(red('You are about to delete %s from the remote server.' % os.path.join(env.path, 'media')))
-    print(red('command: rm -rf %s' % os.path.join(env.path, 'media')))
+    print(red('You are about to delete %s from the remote server.' % env.media_path))
+    print(red('command: rm -rf %s' % env.media_path))
     print(red('-- WARNING ---------------------------------------'))
     _confirmtask()
     print(yellow('==> ok, nuking files.'))
-    sudo('rm -rf %s' % os.path.join(env.path, 'media'))
-    # print(yellow('==> recreating media directory'))
-    # sudo('mkdir -p %s' % env.media_path, user=env.project_user)
-    # _setowner(env.media_path)
-    # _setperms('g+w', env.media_path)
+    sudo('rm -rf %s' % env.media_path)
+    print(yellow('==> recreating media directory'))
+    sudo('mkdir -p %s' % env.media_path, user=env.project_user)
+    _setowner(env.media_path)
+    _setperms('g+w', env.media_path)
 
 
 WORDLIST_PATHS = [os.path.join('/', 'usr', 'share', 'dict', 'words')]

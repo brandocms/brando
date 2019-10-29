@@ -1,6 +1,6 @@
-import apollo from '@univers-agency/kurtz/lib/api/apolloClient'
-import { handleErr } from '@univers-agency/kurtz/lib/api/errorHandler.js'
-// import { pick } from '@univers-agency/kurtz/lib/utils'
+import apollo from 'kurtz/lib/api/apolloClient'
+import { handleErr } from 'kurtz/lib/api/errorHandler.js'
+// import { pick } from 'kurtz/lib/utils'
 
 import <%= String.upcase(singular) %>_QUERY from './graphql/<%= vue_plural %>/<%= String.upcase(singular) %>_QUERY.graphql'
 import <%= String.upcase(plural) %>_QUERY from './graphql/<%= vue_plural %>/<%= String.upcase(plural) %>_QUERY.graphql'
@@ -18,7 +18,7 @@ const <%= vue_singular %>API = {
     try {
       const result = await apollo.client.query({
         query: <%= String.upcase(plural) %>_QUERY,
-        fetchPolicy: 'no-cache'
+        fetchPolicy: 'network-only'
       })
       return result.data.<%= vue_plural %>
     } catch (err) {
@@ -39,7 +39,7 @@ const <%= vue_singular %>API = {
         variables: {
           <%= vue_singular %>Id
         },
-        fetchPolicy: 'no-cache'
+        fetchPolicy: 'network-only'
       })
       return result.data.<%= vue_singular %>
     } catch (err) {
@@ -60,7 +60,7 @@ const <%= vue_singular %>API = {
         variables: {
           <%= vue_singular %>Params
         },
-        fetchPolicy: 'no-cache'
+        fetchPolicy: 'network-only'
       })
       return result.data.create<%= Recase.to_pascal(vue_singular) %>
     } catch (err) {
@@ -82,7 +82,7 @@ const <%= vue_singular %>API = {
           <%= vue_singular %>Id,
           <%= vue_singular %>Params
         },
-        fetchPolicy: 'no-cache'
+        fetchPolicy: 'network-only'
       })
       return result.data.update<%= Recase.to_pascal(vue_singular) %>
     } catch (err) {
@@ -103,7 +103,7 @@ const <%= vue_singular %>API = {
         variables: {
           <%= vue_singular %>Id
         },
-        fetchPolicy: 'no-cache'
+        fetchPolicy: 'network-only'
       })
       return result.data.delete<%= Recase.to_pascal(vue_singular) %>
     } catch (err) {

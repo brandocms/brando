@@ -1,17 +1,6 @@
 <template>
-  <spinner
-    v-if="loading"
-    :overlay="true"
-    :transparent="true"/>
-  <div
-    v-else
-    class="<%= plural %> container"
-    appear>
-    <%= if gallery do %>
-    <ImageSelection
-      :selected-images="selectedImages"
-      :delete-callback="deleteCallback" />
-    <% end %>
+  <spinner :overlay="true" :transparent="true" v-if="loading" />
+  <div class="<%= plural %> container" v-else appear>
     <div class="row">
       <div class="col-md-12">
         <div class="card">
@@ -37,9 +26,9 @@
               v-if="all<%= Recase.to_pascal(vue_plural) %>.length"
               class="table table-airy">
               <tbody
-                is="transition-group"
                 name="slide-fade-top-slow"<%= if sequenced do %>
-                v-sortable="{handle: 'tr', animation: 250, store: {get: getOrder, set: storeOrder}}"<% end %>>
+                v-sortable="{handle: 'tr', animation: 250, store: {get: getOrder, set: storeOrder}}"<% end %>
+                is="transition-group">
                 <%= if sequenced do %>
                 <tr
                   v-for="<%= vue_singular %> in all<%= Recase.to_pascal(vue_plural) %>"
@@ -53,28 +42,26 @@
                   v-for="<%= vue_singular %> in all<%= Recase.to_pascal(vue_plural) %>"
                   :key="<%= vue_singular %>.id">
                 <% end %>
-                  <%= for {_, v} <- list_rows do %><%= v %>
+                  <%= for {_, v} <- list_rows do %>
+                    <%= v %>
                   <% end %>
                   <td
                     v-if="['superuser'].includes(me.role)"
                     class="text-center fit">
-                    <b-dropdown
-                      variant="white"
-                      no-caret>
+                    <b-dropdown variant="white" no-caret>
                       <template slot="button-content">
                         <i class="k-dropdown-icon"></i>
                       </template>
                       <router-link
                         :to="{ name: '<%= singular %>-edit', params: { <%= vue_singular %>Id: <%= vue_singular %>.id } }"
-                        :class="{'dropdown-item': true}"
                         tag="button"
-                        exact>
+                        :class="{'dropdown-item': true}"
+                        exact
+                      >
                         <i class="fal fa-pencil fa-fw mr-4"></i>
                         Endre
                       </router-link>
-                      <button
-                        class="dropdown-item"
-                        @click.prevent="del(<%= vue_singular %>)">
+                      <button @click.prevent="delete<%= Recase.to_pascal(vue_singular) %>(<%= vue_singular %>)" class="dropdown-item">
                         <i class="fal fa-fw fa-trash-alt mr-4"></i>Slett
                       </button>
                     </b-dropdown>
@@ -90,8 +77,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from '@univers-agency/kurtz/lib/vuex'
-import { alertConfirm } from '@univers-agency/kurtz/lib/utils/alerts'
+import { mapActions, mapGetters } from 'vuex'
 
 export default {
   components: {
@@ -104,6 +90,13 @@ export default {
       showImageSeriesModal: null,
       selectedImages: []<% end %>
     }
+  },
+
+  async created () {
+    console.debug('created <<%= Recase.to_pascal(vue_singular) %>ListView />')
+    this.loading++
+    await this.get<%= Recase.to_pascal(vue_plural) %>()
+    this.loading--
   },
 
   computed: {
@@ -119,13 +112,6 @@ export default {
     'adminChannel'
   ],
 
-  async created () {
-    console.debug('created <<%= Recase.to_pascal(vue_singular) %>ListView />')
-    this.loading++
-    await this.get<%= Recase.to_pascal(vue_plural) %>()
-    this.loading--
-  },
-
   methods: {
     getOrder (sortable) {
       return this.all<%= Recase.to_pascal(vue_plural) %>
@@ -139,26 +125,7 @@ export default {
           this.$toast.success({ message: 'Rekkefølge lagret' })
         })
     },
-
-    del (<%= vue_singular %>) {
-      alertConfirm('OBS', 'Er du sikker på at du vil slette dette objektet?', async (data) => {
-        if (!data) {
-          return
-        }
-        this.delete<%= Recase.to_pascal(vue_singular) %>(event)
-        this.$toast.success({ message: 'Objektet ble slettet' })
-      })
-    },
-
     <%= if gallery do %>
-    /**
-     * Callback from ImageSelection when we delete images
-     */
-    deleteCallback () {
-      // we don't need to do anything here, except closing modal, since we refetch image series anyway.
-      this.closeImageSeriesModal()
-    },
-
     createImageSeries (id) {
       this.adminChannel.channel
         .push('<%= singular %>:create_image_series', { <%= singular %>_id: id })

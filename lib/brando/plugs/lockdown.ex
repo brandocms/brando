@@ -28,7 +28,7 @@ defmodule Brando.Plug.Lockdown do
   through the backend to see the frontend website.
 
   """
-  alias Brando.Users
+  alias Brando.User
   import Phoenix.Controller, only: [redirect: 2]
   import Plug.Conn, only: [halt: 1]
 
@@ -48,7 +48,7 @@ defmodule Brando.Plug.Lockdown do
 
   @spec allowed?(Plug.Conn.t(), String.t()) :: Plug.Conn.t()
   defp allowed?(%{private: %{plug_session: %{"current_user" => user}}} = conn, _) do
-    if Users.can_login?(user) do
+    if User.can_login?(user) do
       conn
     else
       lockdown(conn)

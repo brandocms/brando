@@ -1,5 +1,5 @@
 {
-  "extends": "standard",
+  "extends": "airbnb",
   "env": {
     "browser": true
   },

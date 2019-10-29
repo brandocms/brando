@@ -1,14 +1,15 @@
 defmodule Brando.Files.Utils do
   @moduledoc """
-  General utilities pertaining to the Files module
+  General utilities pertaining to the Images module
   """
 
   @doc """
-  Goes through `file` then passing to `delete_media/2` for removal
+  Goes through `image`, which is a schema with a :sizes field
+  then passing to `delete_media/2` for removal
 
   ## Example:
 
-      delete_original(record, :cover)
+      delete_original_and_sized_images(record, :cover)
 
   """
   @spec delete_original(Image.t(), atom) :: {:ok, Image.t()}

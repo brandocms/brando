@@ -4,9 +4,6 @@ defmodule Brando.Guardian.GQLErrorHandler do
   """
   use Brando.Web, :controller
 
-  @doc """
-  Auth error handlers
-  """
   def auth_error(conn, {:unauthenticated, _reason}, _opts) do
     conn
     |> put_status(406)

@@ -1,0 +1,466 @@
+@function map-deep-get($map, $keys...) {
+  @each $key in $keys {
+      $map: map-get($map, $key);
+  }
+  @return $map;
+}
+
+@mixin make-col-pad($size, $columns: $grid-columns) {
+  $num: $size / $columns;
+  padding-left: if($num == 0, 0, percentage($num));
+  padding-right: if($num == 0, 0, percentage($num));
+}
+
+/* css always adds some spacing to top and bottom of elements, this ruins the absolute spacing. */
+@mixin fix-spacing() {
+  margin-top: -2px !important;
+  margin-bottom: -6px !important;
+}
+
+@mixin width-in-cols($size) {
+  $num: $size / $grid-columns;
+  width: if($num == 0, 0, percentage($num));
+  min-width: auto;
+}
+
+@mixin max-width-in-cols($size) {
+  $num: $size / $grid-columns;
+  max-width: if($num == 0, 0, percentage($num));
+}
+
+@mixin min-width-in-cols($size) {
+  $num: $size / $grid-columns;
+  min-width: if($num == 0, 0, percentage($num));
+}
+
+.sm-tc {
+  @include media-breakpoint-down(sm) {
+    text-align: center;
+  }
+}
+
+.fancy-pad {
+  padding-bottom: 44px; /* same as the row gets pulled up */
+  margin-top: -5%;
+
+  @include media-breakpoint-down(sm) {
+    padding-bottom: 50px;
+    margin-top: 0;
+  }
+}
+
+.img-fluid {
+  min-width: 100%;
+}
+
+.p {
+  @include make-col-pad(1);
+
+  @include media-breakpoint-down(sm) {
+    @include make-col-pad(2);
+  }
+
+  @include media-breakpoint-down(xs) {
+    @include make-col-pad(1);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// MARGIN
+//////////////////////////////////////////////////////////////////////////////////////////
+
+
+.mt-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      margin-top: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.mt-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      margin-top: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+.mr-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      margin-right: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.mr-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      margin-right: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+.mb-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      margin-bottom: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.mb-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      margin-bottom: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+.ml-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      margin-left: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.ml-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      margin-left: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// PADDING
+//////////////////////////////////////////////////////////////////////////////////////////
+
+.sm-p-xs {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      padding: map-get($padding-xs, $bp-name);
+    }
+  }
+}
+
+.p-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      padding: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.p-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      padding: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+
+.pt-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      padding-top: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.pt-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      padding-top: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+.pr-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      padding-right: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.pr-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      padding-right: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+.pb-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      padding-bottom: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.pb-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      padding-bottom: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+.pl-sm {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      padding-left: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+.pl-lg {
+  @each $bp-name, $bp-size in $grid-breakpoints {
+    @include media-breakpoint-down($bp-name) {
+      padding-left: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// PADDING - TOP
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pt-sm {
+    @include media-breakpoint-down($bp-name) {
+      padding-top: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pt-lg {
+    @include media-breakpoint-down($bp-name) {
+      padding-top: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// PADDING - RIGHT
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pr-sm {
+    @include media-breakpoint-down($bp-name) {
+      padding-right: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pr-lg {
+    @include media-breakpoint-down($bp-name) {
+      padding-right: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// PADDING - BOTTOM
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pb-sm {
+    @include media-breakpoint-down($bp-name) {
+      padding-bottom: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pb-lg {
+    @include media-breakpoint-down($bp-name) {
+      padding-bottom: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// PADDING - LEFT
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pl-sm {
+    @include media-breakpoint-down($bp-name) {
+      padding-right: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pl-lg {
+    @include media-breakpoint-down($bp-name) {
+      padding-left: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// PADDING - RESETS
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pt-0 {
+    @include media-breakpoint-down($bp-name) {
+      padding-top: 0;
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pr-0 {
+    @include media-breakpoint-down($bp-name) {
+      padding-right: 0;
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pb-0 {
+    @include media-breakpoint-down($bp-name) {
+      padding-bottom: 0;
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-pl-0 {
+    @include media-breakpoint-down($bp-name) {
+      padding-left: 0;
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// MARGIN
+//////////////////////////////////////////////////////////////////////////////////////////
+
+// MARGIN - TOP
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mt-sm {
+    @include media-breakpoint-down($bp-name) {
+      margin-top: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mt-lg {
+    @include media-breakpoint-down($bp-name) {
+      margin-top: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// MARGIN - RIGHT
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mr-sm {
+    @include media-breakpoint-down($bp-name) {
+      margin-right: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mr-lg {
+    @include media-breakpoint-down($bp-name) {
+      margin-right: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// MARGIN - BOTTOM
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mb-sm {
+    @include media-breakpoint-down($bp-name) {
+      margin-bottom: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mb-lg {
+    @include media-breakpoint-down($bp-name) {
+      margin-bottom: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// MARGIN - LEFT
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-ml-sm {
+    @include media-breakpoint-down($bp-name) {
+      margin-right: map-get($padding-sm, $bp-name);
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-ml-lg {
+    @include media-breakpoint-down($bp-name) {
+      margin-left: map-get($padding-lg, $bp-name);
+    }
+  }
+}
+
+// MARGIN - RESETS
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mt-0 {
+    @include media-breakpoint-down($bp-name) {
+      margin-top: 0;
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mr-0 {
+    @include media-breakpoint-down($bp-name) {
+      margin-right: 0;
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-mb-0 {
+    @include media-breakpoint-down($bp-name) {
+      margin-bottom: 0;
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  .#{$bp-name}-ml-0 {
+    @include media-breakpoint-down($bp-name) {
+      margin-left: 0;
+    }
+  }
+}
+
+@each $bp-name, $bp-size in $grid-breakpoints {
+  @include media-breakpoint-only($bp-name) {
+    $gutter: map-get($gutters, $bp-name);
+
+    [class^='col-'],
+    [class*=' col-'] {
+      padding-right: ($gutter / 2);
+      padding-left: ($gutter / 2);
+    }
+
+    [class='col'] {
+      padding-right: ($gutter / 2);
+      padding-left: ($gutter / 2);
+    }
+
+    .row {
+      margin-right: ($gutter / -2);
+      margin-left: ($gutter / -2);
+    }
+  }
+}

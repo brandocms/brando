@@ -4,7 +4,7 @@ defmodule <%= application_module %>Web.Guardian do
   """
 
   use Guardian, otp_app: :<%= application_name %>
-  alias Brando.Users.User
+  alias Brando.User
 
   def subject_for_token(user = %User{}, _claims) do
     {:ok, "User:#{user.id}"}

@@ -2,7 +2,10 @@ defmodule Brando.VillainTest do
   defmodule OtherParser do
     @behaviour Brando.Villain.Parser
 
-    def text(%{"text" => _, "type" => _}), do: "other parser"
+    def text(%{"text" => _, "type" => _}) do
+      "other parser"
+    end
+
     def datatable(_), do: nil
     def markdown(_), do: nil
     def html(_), do: nil
@@ -15,8 +18,6 @@ defmodule Brando.VillainTest do
     def list(_), do: nil
     def slideshow(_), do: nil
     def video(_), do: nil
-    def template(_), do: nil
-    def comment(_), do: nil
   end
 
   use Brando.ConnCase
@@ -83,6 +84,7 @@ defmodule Brando.VillainTest do
       creator_id: user.id,
       image: %Brando.Type.Image{
         credits: "Credits",
+        optimized: false,
         path: "image/1.jpg",
         sizes: %{
           large: "image/large/1.jpg",

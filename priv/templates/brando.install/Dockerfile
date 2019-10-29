@@ -1,13 +1,13 @@
 ## JAVASCRIPT FRONTEND AND BACKEND
 
-FROM node:10 AS frontend_builder
+FROM node:9 AS frontend_builder
 
 COPY assets/frontend /opt/app/assets/frontend
 WORKDIR /opt/app/assets/frontend
 RUN yarn install --force --pure-lockfile
 RUN yarn run build
 
-FROM node:10 AS backend_builder
+FROM node:9 AS backend_builder
 
 COPY assets/backend /opt/app/assets/backend
 WORKDIR /opt/app/assets/backend
@@ -16,7 +16,7 @@ RUN yarn run build
 
 ## MAIN ELIXIR APPLICATION
 
-FROM twined/fehn:2.1
+FROM twined/fehn:1.9
 
 LABEL maintainer="Twined Networks <mail@twined.net>"
 
@@ -40,4 +40,4 @@ COPY --from=frontend_builder /opt/app/priv/static/ priv/static/
 COPY --from=backend_builder /opt/app/priv/static/ priv/static/
 
 RUN mix phx.digest
-RUN mix distillery.release
+RUN mix release

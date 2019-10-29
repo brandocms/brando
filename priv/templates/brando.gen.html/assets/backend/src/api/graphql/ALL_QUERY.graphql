@@ -1,8 +1,9 @@
 query <%= Recase.to_pascal(vue_plural) %> {
   <%= vue_plural %> {
-    id<%= for {_k, v} <- gql_query_fields do %>
-    <%= v %><% end %><%= if soft_delete do %>
-    deleted_at<% end %>
+    id
+    <%= for {_k, v} <- gql_query_fields do %>
+    <%= v %>
+    <% end %>
     updated_at
   }
 }

@@ -29,40 +29,18 @@ defmodule Brando.HTMLTest do
 
   test "body_tag" do
     mock_conn = %{private: %{brando_css_classes: "one two three"}}
-
-    html =
-      mock_conn
-      |> body_tag
-      |> safe_to_string()
-
-    assert html == ~s(<body class="one two three unloaded" data-vsn=\"#{Brando.version()}\">)
+    assert body_tag(mock_conn) == {:safe, ~s(<body class="one two three unloaded">)}
 
     mock_conn = %{
-      private: %{
-        brando_css_classes: "one two three",
-        brando_section_name: "some-section"
-      }
+      private: %{brando_css_classes: "one two three", brando_section_name: "some-section"}
     }
 
-    html =
-      mock_conn
-      |> body_tag
-      |> safe_to_string
+    assert body_tag(mock_conn) ==
+             {:safe, ~s(<body data-script="some-section" class="one two three unloaded">)}
 
-    assert html ==
-             "<body class=\"one two three unloaded\" data-script=\"some-section\" data-vsn=\"#{
-               Brando.version()
-             }\">"
-
-    html =
-      mock_conn
-      |> body_tag(id: "test")
-      |> safe_to_string
-
-    assert html ==
-             "<body class=\"one two three unloaded\" data-script=\"some-section\" data-vsn=\"#{
-               Brando.version()
-             }\" id=\"test\">"
+    assert body_tag(mock_conn, id: "test") ==
+             {:safe,
+              ~s(<body id="test" data-script="some-section" class="one two three unloaded">)}
   end
 
   test "cookie_law" do
@@ -77,13 +55,14 @@ defmodule Brando.HTMLTest do
 
   test "google_analytics" do
     code = "asdf123"
-
-    html =
-      code
-      |> google_analytics
-      |> safe_to_string
-
+    {:safe, html} = google_analytics(code)
     assert html =~ "ga('create','#{code}','auto')"
+  end
+
+  test "status_indicators" do
+    {:safe, html} = status_indicators()
+    assert html =~ "status-published"
+    assert html =~ "Published"
   end
 
   test "truncate" do
@@ -120,15 +99,9 @@ defmodule Brando.HTMLTest do
 
   test "render_meta" do
     mock_conn = %Plug.Conn{private: %{plug_session: %{}}}
-
-    html =
-      mock_conn
-      |> render_meta()
-      |> safe_to_string()
-
+    {:safe, html} = render_meta(mock_conn)
     assert html =~ ~s(<meta content="MyApp" property="og:site_name">)
-    assert html =~ ~s(<meta content="Firma | Velkommen!" property="og:title">)
-    assert html =~ ~s(<meta content="Firma | Velkommen!" name="title">)
+    assert html =~ ~s(<meta content="MyApp" property="og:title">)
     assert html =~ ~s(<meta content="http://localhost" property="og:url">)
   end
 
@@ -150,92 +123,25 @@ defmodule Brando.HTMLTest do
     assert img_tag(nil, :medium, default: "test.jpg") |> safe_to_string ==
              "<img src=\"medium/test.jpg\">"
 
-    assert img_tag(user.avatar, :medium, prefix: media_url(), srcset: {Brando.Users.User, :avatar})
+    assert img_tag(user.avatar, :medium, prefix: media_url(), srcset: {Brando.User, :avatar})
            |> safe_to_string ==
-             "<img src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27%27%20height%3D%27%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\">"
+             "<img src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27%27%20height%3D%27%27%20style%3D%27background%3Atransparent%27%2F%3E\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\">"
   end
 
   test "picture_tag" do
     user = Factory.insert(:user)
-    srcset = {Brando.Users.User, :avatar}
+    srcset = {Brando.User, :avatar}
 
     assert picture_tag(
              user.avatar,
              srcset: srcset,
              prefix: media_url(),
-             key: :small,
+             size: :large,
+             placeholder_size: :micro,
              picture_class: "avatar",
              img_class: "img-fluid"
            )
            |> safe_to_string ==
-             "<picture class=\"avatar\"><source srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
-
-    assert picture_tag(
-             user.avatar,
-             srcset: srcset,
-             prefix: media_url(),
-             key: :small,
-             picture_class: "avatar",
-             img_class: "img-fluid",
-             lazyload: true,
-             placeholder: :micro
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-ll-srcset><source data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" srcset=\"/media/images/avatars/micro/27i97a.jpeg 700w, /media/images/avatars/micro/27i97a.jpeg 500w, /media/images/avatars/micro/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" src=\"/media/images/avatars/micro/27i97a.jpeg\" srcset=\"/media/images/avatars/micro/27i97a.jpeg 700w, /media/images/avatars/micro/27i97a.jpeg 500w, /media/images/avatars/micro/27i97a.jpeg 300w\" data-ll-placeholder><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
-
-    assert picture_tag(
-             user.avatar,
-             srcset: srcset,
-             prefix: media_url(),
-             key: :small,
-             picture_class: "avatar",
-             img_class: "img-fluid",
-             placeholder: :svg,
-             lazyload: true
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-ll-srcset><source data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27%27%20height%3D%27%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E\" data-ll-placeholder><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
-
-    assert picture_tag(
-             user.avatar,
-             srcset: srcset,
-             prefix: media_url(),
-             key: :small,
-             picture_class: "avatar",
-             img_class: "img-fluid",
-             lazyload: true
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-ll-srcset><source data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" data-ll-placeholder><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
-
-    media_queries = [
-      {"(min-width: 0px) and (max-width: 760px)", [{"mobile", "700w"}]}
-    ]
-
-    assert picture_tag(
-             user.avatar,
-             srcset: srcset,
-             media_queries: media_queries,
-             prefix: media_url(),
-             key: :small,
-             picture_class: "avatar",
-             img_class: "img-fluid"
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\"><source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\"><source srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
-
-    assert picture_tag(
-             user.avatar,
-             srcset: srcset,
-             media_queries: media_queries,
-             prefix: media_url(),
-             key: :small,
-             picture_attrs: [data_test: true, data_test_params: "hepp"],
-             img_attrs: [data_test2: true, data_test2_params: "hepp"],
-             picture_class: "avatar",
-             img_class: "img-fluid"
-           )
-           |> safe_to_string ==
-             "<picture class=\"avatar\" data-test-params=\"hepp\" data-test><source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\"><source srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" data-test2-params=\"hepp\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" data-test2><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+             "<picture class=\"avatar\"><source data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img class=\"img-fluid\" data-src=\"/media/images/avatars/large/27i97a.jpeg\" data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><noscript><img class=\"img-fluid\" src=\"/media/images/avatars/large/27i97a.jpeg\"></noscript></picture>"
   end
 end

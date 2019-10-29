@@ -13,4 +13,5 @@ defmodule Brando.Images.Operation do
             size_key: nil,
             sized_img_dir: nil,
             sized_img_path: nil
+
 end

@@ -1,17 +1,11 @@
 defmodule Brando.Type.ImageConfig do
   @moduledoc """
   Defines a type for an image configuration field.
-
-  ### Options
-
-    * random_filename - use filename given at upload, or create a random filename
-    * target_format - if set, forces conversion to this format. Master image is kept in its original format.
   """
-
-  use Ecto.Type
-
   @type t :: %__MODULE__{}
+  @behaviour Ecto.Type
 
+  @derive Poison.Encoder
   @derive Jason.Encoder
   defstruct allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
             default_size: :medium,
@@ -19,8 +13,7 @@ defmodule Brando.Type.ImageConfig do
             random_filename: false,
             size_limit: 10_240_000,
             sizes: %{},
-            srcset: nil,
-            target_format: nil
+            srcset: nil
 
   import Brando.Utils, only: [stringy_struct: 2]
 
@@ -37,7 +30,8 @@ defmodule Brando.Type.ImageConfig do
     {:ok, val}
   end
 
-  def cast(val) when is_map(val), do: {:ok, val}
+  def cast(val) when is_map(val), do:
+    {:ok, val}
 
   @doc """
   Integers are never considered blank
@@ -56,5 +50,6 @@ defmodule Brando.Type.ImageConfig do
   When dumping data to the database we expect a `list`, but check for
   other options as well.
   """
-  def dump(val) when is_map(val), do: {:ok, val}
+  def dump(val) when is_map(val), do:
+    {:ok, val}
 end

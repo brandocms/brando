@@ -12,19 +12,17 @@ defmodule <%= application_module %>.Schema do
   query do
     import_brando_queries()
 
-    # ++queries
-    # __queries
+    # local queries
+    # import_fields :client_queries
+    # import_fields :post_queries
+    # import_fields :project_queries
   end
 
   mutation do
     import_brando_mutations()
 
-    # ++mutations
-    # __mutations
+    # local mutations
+    # import_fields :client_mutations
+    # import_fields :post_mutations
   end
-
-  def middleware(middleware, _field, %{identifier: :mutation}), do:
-    middleware ++ [Brando.Schema.Middleware.ChangesetErrors]
-  def middleware(middleware, _field, _object), do:
-    middleware
 end

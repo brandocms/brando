@@ -1,0 +1,92 @@
+<h1><%= gettext("System information") %></h1>
+
+<h3><%= gettext("Memory") %></h3>
+<div id="memoryinfo" class="clearfix">
+  <div class="card" id="total-memory">
+    <h4><%= gettext("total") %></h4>
+    <canvas id="total-memory-chart"></canvas>
+    <div class="text">0 mb</div>
+  </div>
+  <div class="card" id="system-memory">
+    <h4><%= gettext("system") %></h4>
+    <canvas id="system-memory-chart"></canvas>
+    <div class="text">0 mb</div>
+  </div>
+  <div class="card" id="atom-memory">
+    <h4><%= gettext("atoms") %></h4>
+    <canvas id="atom-memory-chart"></canvas>
+    <div class="text">0 mb</div>
+  </div>
+  <div class="card" id="binary-memory">
+    <h4><%= gettext("binary") %></h4>
+    <canvas id="binary-memory-chart"></canvas>
+    <div class="text">0 mb</div>
+  </div>
+  <div class="card" id="process-memory">
+    <h4><%= gettext("process") %></h4>
+    <canvas id="process-memory-chart"></canvas>
+    <div class="text">0 mb</div>
+  </div>
+  <div class="card" id="code-memory">
+    <h4><%= gettext("code") %></h4>
+    <canvas id="code-memory-chart"></canvas>
+    <div class="text">0 mb</div>
+  </div>
+  <div class="card" id="ets-memory">
+    <h4><%= gettext("ets") %></h4>
+    <canvas id="ets-memory-chart"></canvas>
+    <div class="text">0 mb</div>
+  </div>
+  <div class="card" id="system-uptime">
+    <h4><%= gettext("system uptime") %></h4>
+    <div class="card-content-wrapper">
+      <div class="display">0 min</div>
+    </div>
+  </div>
+</div>
+
+<h3><%= gettext("Servers") %></h3>
+<div id="processinfo" class="clearfix">
+  <div class="text-mono">
+    Instagram.......: <span id="instagram-status">?</span>
+  </div>
+  <div class="text-mono">
+    Registry........: <span id="registry-status">?</span>
+  </div>
+</div>
+
+<%= auth_content @conn, :superuser do %>
+<div id="logs" class="clearfix">
+  <h3><%= gettext("Log") %></h3>
+
+  <code>
+    <pre>
+/**
+ * application log
+ * <%= gettext("last updated") %>: <%= @log_last_updated %>
+ */
+
+
+<%= @log_last_lines %>
+
+    </pre>
+  </code>
+</div>
+
+<div id="depvers" class="clearfix">
+  <h3><%= gettext("Deps") %></h3>
+
+  <table class="table">
+  <%= for dep_ver <- @deps_versions do %>
+    <tr>
+      <td>
+        <%= inspect dep_ver.app %>
+      </td>
+      <td>
+        <%= dep_ver.version %>
+      </td>
+    </tr>
+  <% end %>
+  </table>
+</div>
+<% end %>

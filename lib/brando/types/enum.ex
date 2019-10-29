@@ -3,7 +3,7 @@ defmodule Brando.Type.Enum do
     quote do
       Module.put_attribute(__MODULE__, :enum, unquote(attrs))
 
-      use Ecto.Type
+      @behaviour Ecto.Type
       import unquote(__MODULE__)
       @doc false
       def type, do: :integer

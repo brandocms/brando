@@ -3,24 +3,27 @@ defmodule Brando.Type.Image do
   Defines a type for an image field.
   """
 
-  use Ecto.Type
-
   @type t :: %__MODULE__{}
+  @behaviour Ecto.Type
 
-  @derive {Jason.Encoder, only: ~w(title credits path sizes width height focal)a}
+  @derive {Poison.Encoder,
+           only: ~w(title credits path sizes optimized width height thumb medium focal)a}
+  @derive {Jason.Encoder,
+           only: ~w(title credits path sizes optimized width height focal)a}
 
   defstruct title: nil,
             credits: nil,
             path: nil,
             sizes: %{},
+            optimized: false,
             width: nil,
             height: nil,
             focal: %{"x" => 50, "y" => 50}
 
   @doc """
-  Returns the internal type representation of our image type for pg
+  Returns the internal type representation of our `Role` type for pg
   """
-  def type, do: :jsonb
+  def type, do: :json
 
   @doc """
   Cast should return OUR type no matter what the input.
@@ -30,13 +33,8 @@ defmodule Brando.Type.Image do
     {:ok, val}
   end
 
-  def cast(%Brando.Type.Image{} = val) when is_map(val), do: {:ok, val}
-
-  # if we get a Plug Upload or a Focal struct, we pass it on.. it gets handled later!
-  def cast(%Plug.Upload{} = val) when is_map(val), do: {:ok, val}
-  def cast(%Brando.Type.Focal{} = val) when is_map(val), do: {:ok, val}
-
-  def cast(val) when is_map(val), do: {:ok, Brando.Utils.stringy_struct(Brando.Type.Image, val)}
+  def cast(val) when is_map(val), do:
+    {:ok, val}
 
   @doc """
   Integers are never considered blank
@@ -46,12 +44,18 @@ defmodule Brando.Type.Image do
   @doc """
   Load
   """
-  def load(%Brando.Type.Image{} = val) when is_map(val), do: {:ok, val}
-  def load(val), do: {:ok, Brando.Utils.stringy_struct(Brando.Type.Image, val)}
+  def load(val) do
+    val = Poison.decode!(val, as: %Brando.Type.Image{})
+    val = if val == nil, do: %Brando.Type.Image{}, else: val
+    {:ok, val}
+  end
 
   @doc """
   When dumping data to the database we expect a `list`, but check for
   other options as well.
   """
-  def dump(val), do: {:ok, val}
+  def dump(val) do
+    val = Poison.encode!(val)
+    {:ok, val}
+  end
 end

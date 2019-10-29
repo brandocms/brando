@@ -8,5 +8,4 @@ defmodule Brando.Schema.Types do
   import_types Brando.Schema.Types.Files
   import_types Brando.Schema.Types.Page
   import_types Brando.Schema.Types.PageFragment
-  import_types Brando.Schema.Types.Identity
 end

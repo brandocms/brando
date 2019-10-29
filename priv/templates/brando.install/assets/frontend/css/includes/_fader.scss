@@ -1,0 +1,37 @@
+.fader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: $fader-bg;;
+  z-index: 9998;
+  display: none;
+
+  .loading-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: $fader-fg;
+    text-align: center;
+    font-size: 12px;
+
+    svg {
+      width: 200px;
+      animation: pulse 1s ease-out alternate infinite;
+      path {
+        fill: $fader-fg;
+      }
+    }
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}

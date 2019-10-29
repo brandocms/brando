@@ -1,0 +1,9 @@
+@font-face {
+  font-family: "Gerstner Programm FS";
+  font-display: fallback;
+  src:
+		url('/fonts/gerstner/Gerstner-ProgrammLight.woff2') format('woff2'),
+		url('/fonts/gerstner/Gerstner-ProgrammLight.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}

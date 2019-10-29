@@ -16,7 +16,7 @@ defmodule Brando.Mixin.Channels.PresenceMixin do
       def handle_in("admin:list_presence", _, socket) do
         {:ok, _} =
           unquote(presence_module).track(socket, socket.assigns.user_id, %{
-            online_at: inspect(System.system_time(:second))
+            online_at: inspect(System.system_time(:seconds))
           })
 
         push(socket, "admin:presence_state", unquote(presence_module).list(socket))

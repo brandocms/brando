@@ -3,8 +3,7 @@ defmodule Brando.Type.Status do
   Defines a type for managing status in post schemas.
   """
 
-  use Ecto.Type
-
+  @behaviour Ecto.Type
   @status_codes [draft: 0, published: 1, pending: 2, deleted: 3]
 
   @doc """

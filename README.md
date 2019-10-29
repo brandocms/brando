@@ -1,23 +1,45 @@
 A helping hand.
 
-![Brando logo](https://raw.githubusercontent.com/univers-agency/brando/master/priv/templates/brando.install/assets/frontend/static/images/brando/brando-big.png)
+![Brando logo](https://raw.githubusercontent.com/twined/brando/master/priv/templates/brando.install/assets/frontend/static/images/brando/brando-big.png)
 
-[![Build Status](https://travis-ci.org/univers-agency/brando.svg?branch=master)](https://travis-ci.org/univers-agency/brando)
-[![Coverage Status](https://coveralls.io/repos/github/univers-agency/brando/badge.svg?branch=master)](https://coveralls.io/github/univers-agency/brando?branch=master)
-[![Inline docs](http://inch-ci.org/github/univers-agency/brando.svg?branch=master)](http://inch-ci.org/github/univers-agency/brando)
+[![Build Status](https://travis-ci.org/twined/brando.svg?branch=master)](https://travis-ci.org/twined/brando)
+[![Coverage Status](https://coveralls.io/repos/github/twined/brando/badge.svg?branch=master)](https://coveralls.io/github/twined/brando?branch=master)
+[![Inline docs](http://inch-ci.org/github/twined/brando.svg?branch=master)](http://inch-ci.org/github/twined/brando)
 
 *EXPERIMENTAL, DO NOT USE*
 
 
 ## Install
 
-Start by creating a new Phoenix project:
+Start by creating a new phoenix project:
 
     $ mix phx.new my_project
 
-Run the install script:
+Add Brando to `deps` in your `mix.exs` file:
 
-    $ wget https://raw.githubusercontent.com/univers-agency/brando/develop/install.sh && chmod +x install.sh && ./install.sh
+    $ gsed -i '/{:phoenix,/i\      {:brando, github: "twined/brando", branch: "develop"},' mix.exs
+
+Fetch and compile dependencies. Install Brando:
+
+    $ mix do deps.get, deps.compile, brando.install --module MyApp, deps.get, deps.compile
+
+Add to your `config/config.exs` right before the env-specific import:
+
+    $ gsed -i '/Import environment specific config/i\# import BRANDO config\nimport_config "brando.exs"\n' config/config.exs
+
+(Install gsed, if it's missing: `brew install gnu-sed`)
+
+Install node packages:
+
+    $ cd assets/frontend && yarn && cd ../backend && yarn && cd ../../
+
+Set up database, and seed:
+
+    $ mix do deps.get, deps.compile --force && mix ecto.setup
+
+Add to your `config/prod.secret.exs` (see https://github.com/elixir-lang/ecto/issues/1328)
+
+    $ gsed -i '/pool_size:/i\  socket_options: [recbuf: 8192, sndbuf: 8192],' config/prod.secret.exs
 
 Go through `config/brando.exs`.
 
@@ -28,7 +50,14 @@ config :my_app, MyApp.Endpoint,
   render_errors: [accepts: ~w(html json), view: Brando.ErrorView, default_format: "html"],
 ```
 
-Set your release config (`rel/config.exs`) to default to prod, and add this:
+Create a release configuration:
+
+```
+$ mix release.init
+```
+
+And set its config to default to prod.
+Then add this to the release cfg
 
 ```elixir
 release :my_app do
@@ -43,12 +72,35 @@ release :my_app do
 end
 ```
 
+Fix dev asset reloading in `config/dev.exs`
+
+```elixir
+config :my_app, MyApp.Endpoint,
+  watchers: [npm: ["run", "dev", cd: Path.expand("../assets/frontend", __DIR__)]]
+```
+
+Now lets add the presence server. First in `lib/application.ex` add a supervisor:
+
+```elixir
+MyApp.Presence
+```
+
+Then add the presence mixin to your `admin_channel.ex`
+
+```elixir
+use Brando.Mixin.Channels.PresenceMixin,
+  presence_module: MyApp.Presence
+```
+
+
 *Remember to switch out your ports and configure SSL in `etc/supervisor/prod.conf` and `etc/nginx/prod.conf`*
 
 ## Dependencies
 
   * `imagemagick`/`mogrify` for image processing.
   * `gifsicle` for GIF resizing.
+  * `pngquant` for PNG optimization.
+  * `jpegtran` for JPG optimization.
 
 ## I18n
 
@@ -62,16 +114,30 @@ Create your frontend translation directories: (for norwegian)
 
     $ mkdir -p priv/gettext/frontend/nb/LC_MESSAGES
 
+And backend:
+
+    $ mkdir -p priv/gettext/backend/nb/LC_MESSAGES
+
 Merge frontend translations
 
     $ mix gettext.merge priv/gettext/frontend
 
+And backend:
+
+    $ mix gettext.merge priv/gettext/backend
 
 Now we register our otp app's modules in Brando's registry to automatically set Gettext locales.
 Open up you application's `lib/application.ex` and add to `start/2`:
 
     Brando.Registry.register(MyApp.Web, [:gettext])
+    Brando.Registry.register(MyApp.Web.Backend, [:gettext])
 
+## Extra modules
+
+  * [brando_news](http://github.com/twined/brando_news)
+  * [brando_portfolio](http://github.com/twined/brando_portfolio)
+  * [brando_instagram](http://github.com/twined/brando_instagram)
+  * [brando_analytics](http://github.com/twined/brando_analytics)
 
 ## App specific modules
 
@@ -98,81 +164,7 @@ If you use Gettext, register your module in `lib/application.ex`:
         # worker(MyApp.Worker, [arg1, arg2, arg3]),
       ]
 
-+     Brando.Registry.register(MyAppWeb.MyModule, [:gettext])
-```
-
-## Serve static from DO Spaces
-
-Setup Endpoint for `prod.exs`
-
-```elixir
-config :my_app, hmr: false
-config :my_app, MyAppWeb.Endpoint,
-  static_url: [
-    scheme: "https",
-    host: "cdn.univers.agency",
-    path: "/my_app/static",
-    port: 443
-  ]
-
-config :ex_aws, :s3, %{
-  access_key_id: System.get_env("AWS_ACCESS_KEY_ID"),
-  secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY"),
-  scheme: "https://",
-  host: %{"fra1" => "SPACES_NAME.fra1.digitaloceanspaces.com"},
-  region: "fra1"
-}
-```
-
-Use `Brando.HTML.include_js/0` and `Brando.HTML.include_css/0` right before `</head>`
-in `app.html.eex`, since these functions figure out whether to use `path` or `url` for
-static asset links.
-
-Add to your frontend `package.json`
-```
-"build:cdn": "yarn build:legacy:cdn && yarn build:modern:cdn",
-"build:legacy": "NODE_ENV=production BROWSERSLIST_ENV=legacy webpack --mode=production",
-"build:modern": "NODE_ENV=production BROWSERSLIST_ENV=modern webpack --mode=production",
-"build:legacy:cdn": "UNIVERS_CDN=my_app NODE_ENV=production BROWSERSLIST_ENV=legacy webpack --mode=production",
-"build:modern:cdn": "UNIVERS_CDN=my_app NODE_ENV=production BROWSERSLIST_ENV=modern webpack --mode=production",
-```
-
-Make sure you build frontend with:
-
-```dockerfile
-RUN yarn run build.cdn
-```
-
-Add to Dockerfile build:
-
-```bash
-$ mix brando.upload_static
-```
-
-
-## Villain templates
-
-Naming guidelines
-
-```
-<!-- header block next to text block -->
-<div class="v-block" data-v="header|text">
-
-<!-- image with full bleed -->
-<div class="v-block" data-v="image+bleed">
-
-<!-- body text with an image underneath -->
-<div class="v-block" data-v="body/image">
-```
-
-You may reference other fragments by entering
-
-```
-${FRAGMENT:index/01_intro/en}
-            ^     ^       ^
-            |     |       `-- language
-            |     `-- key
-            `-- parent key
++     Brando.Registry.register(MyApp.Web.MyModule, [:gettext])
 ```
 
 ## Releases
@@ -187,6 +179,10 @@ Then use the fabric script in `fabfile.py` for the rest.
 
     # fab prod -l
 
+## Default admin credentials
+
+Default login/pass is `admin@twined.net/admin`
+
 
 ## Sequence
 
@@ -195,7 +191,7 @@ Implements schema sequencing.
 Schema:
 
 ```diff
-+ use Brando.Sequence.Schema
++ use Brando.Sequence, :schema
 
   schema "schema" do
     # ...
@@ -206,7 +202,7 @@ Schema:
 Migration:
 
 ```diff
-+ use Brando.Sequence.Migration
++ use Brando.Sequence, :migration
 
   def up do
     create table(:schema) do
@@ -219,7 +215,7 @@ Migration:
 Admin channel:
 
 ```diff
-+ use Brando.Sequence.Channel
++ use Brando.Sequence, :channel
 
 + sequence "employees", MyApp.Employee
 ```
@@ -258,6 +254,19 @@ You can also add a key as query string to set a cookie that allows browsing.
 
 `http://website/?key=<pass>`
 
+
+## HTML
+
+To insert an expander:
+
+```html
+<div class="expander">
+  <a class="expander-trigger expander-hidden">Expandable section</a>
+  <div class="expander-content">
+    <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Distinctio mollitia fugiat facilis enim accusamus quisquam aut, repellendus incidunt quod optio facere labore illo numquam ipsum beatae vero debitis, fugit excepturi.</p>
+  </div>
+</div>
+```
 
 ## Tags
 
@@ -323,7 +332,7 @@ In your schema:
 +   random_filename: true,
 +   size_limit: 10_240_000,
 +   sizes: %{
-+     "micro"  => %{"crop" => false, "quality" => 10, "size" => "25"},
++     "micro"  => %{"size" => "25x25>", "quality" => 100, "crop" => true},
 +     "thumb"  => %{"size" => "150x150>", "quality" => 100, "crop" => true},
 +     "small"  => %{"size" => "300", "quality" => 100},
 +     "medium" => %{"size" => "500", "quality" => 100},
@@ -335,6 +344,29 @@ In your schema:
 
 The migration's field should be `:text`, not `:string`.
 
+## Optimizing images
+
+This requires you to have `pngquant`/`jpegtran` installed:
+
+```diff
+  config :brando, Brando.Images,
++   optimize: [
++     png: [
++       bin: "/usr/local/bin/pngquant",
++       args: "--speed 1 --force --output %{new_filename} -- %{filename}"
++     ],
++   jpeg: [
++     bin: "/usr/local/bin/jpegtran",
++     args: "-copy none -optimize -progressive -outfile %{new_filename} %{filename}"
++   ]
+```
+
+or
+
+```diff
+  config :brando, Brando.Images,
++   optimize: false
+```
 
 ## Deployment
 

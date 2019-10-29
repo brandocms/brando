@@ -6,11 +6,6 @@ defmodule Brando.I18n.Helpers do
 
       use Brando.I18n.Helpers, helpers: MyApp.Router.Helpers
 
-
-  You can then call
-
-      <a href="<%= localized(@language, :page_path, [@conn, :about]) %>"><%= gettext("About") %>
-
   """
   defmacro __using__(opts) do
     helpers = Keyword.fetch!(opts, :helpers)

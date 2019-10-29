@@ -13,34 +13,22 @@ use Mix.Config
 # which you typically run after static files are built.
 config :<%= application_name %>, <%= application_module %>Web.Endpoint,
   http: [:inet6, port: {:system, "PORT"}],
-  url: [scheme: "https", host: "<%= application_name %>", port: 443],
+  url: [scheme: "https", host: "sitename.no", port: 80],
   # force_ssl: [rewrite_on: [:x_forwarded_proto]],
-  check_origin: [
-    "//<%= application_name %>",
-    "//*.<%= application_name %>",
-    "//*.univers.agency",
-    "//localhost:4000"
-  ],
+  check_origin: ["//sitename.no", "//*.sitename.no",
+                 "//*.twined.net", "//localhost:4000"],
   server: true,
   render_errors: [accepts: ~w(html json), view: Brando.ErrorView, default_format: "html"],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
-config :<%= application_name %>, hmr: false
-
 # Do not print debug messages in production
 config :logger, level: :error
-
-# Handle SASL reports
-config :logger, handle_sasl_reports: true
 
 # Path to your media directory.
 config :brando, media_path: "./media"
 
 # Path to your log directory.
 config :brando, log_dir: "./log"
-
-# Show breakpoint debug in frontend
-config :<%= application_name %>, show_breakpoint_debug: false
 
 # ## SSL Support
 #

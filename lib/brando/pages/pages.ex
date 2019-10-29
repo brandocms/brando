@@ -2,11 +2,8 @@ defmodule Brando.Pages do
   @moduledoc """
   Context for pages
   """
-  use Brando.Web, :context
-
   alias Brando.Pages.Page
   alias Brando.Pages.PageFragment
-  alias Brando.Villain
 
   import Ecto.Query
 
@@ -44,7 +41,7 @@ defmodule Brando.Pages do
   def delete_page(page_id) do
     page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
     {:ok, page} = get_page(page_id)
-    Brando.repo().soft_delete!(page)
+    Brando.repo().delete(page)
     {:ok, page}
   end
 
@@ -66,12 +63,11 @@ defmodule Brando.Pages do
   @doc """
   List all pages
   """
-  def list_pages do
+  def list_pages() do
     pages =
       Page
       |> Page.only_parents()
       |> order_by([p], asc: p.key)
-      |> exclude_deleted()
       |> Brando.repo().all
 
     {:ok, pages}
@@ -80,13 +76,12 @@ defmodule Brando.Pages do
   @doc """
   List page parents
   """
-  def list_parents do
+  def list_parents() do
     no_value = %{value: nil, name: "–"}
 
     parents =
       Page
       |> Page.only_parents()
-      |> exclude_deleted()
       |> Brando.repo().all
 
     val =
@@ -107,20 +102,20 @@ defmodule Brando.Pages do
   Get page
   """
   def get_page(key) when is_binary(key) do
-    query = from t in Page, where: t.key == ^key and is_nil(t.deleted_at)
+    page = Brando.repo().get_by(Page, key: key)
 
-    case Brando.repo().one(query) do
+    case page do
       nil -> {:error, {:page, :not_found}}
-      page -> {:ok, Brando.repo().preload(page, :fragments)}
+      page -> {:ok, page}
     end
   end
 
   def get_page(id) do
-    query = from t in Page, where: t.id == ^id and is_nil(t.deleted_at)
+    page = Brando.repo().get(Page, id)
 
-    case Brando.repo().one(query) do
+    case page do
       nil -> {:error, {:page, :not_found}}
-      page -> {:ok, Brando.repo().preload(page, :fragments)}
+      page -> {:ok, page}
     end
   end
 
@@ -130,8 +125,7 @@ defmodule Brando.Pages do
   def get_page(key, lang) when is_binary(key) do
     q =
       from p in Page,
-        where: p.key == ^key and p.language == ^lang and is_nil(p.deleted_at),
-        preload: :fragments
+        where: p.key == ^key and p.language == ^lang
 
     case Brando.repo().one(q) do
       nil -> {:error, {:page, :not_found}}
@@ -146,8 +140,8 @@ defmodule Brando.Pages do
     q =
       from p in Page,
         join: c in assoc(p, :children),
-        where: p.key == ^key and p.language == ^lang and is_nil(p.deleted_at),
-        preload: [:children, :fragments]
+        where: p.key == ^key and p.language == ^lang,
+        preload: :children
 
     case Brando.repo().one(q) do
       nil -> {:error, {:page, :not_found}}
@@ -161,8 +155,7 @@ defmodule Brando.Pages do
   def get_page(nil, key, lang) when is_binary(key) do
     q =
       from p in Page,
-        where: p.key == ^key and p.language == ^lang and is_nil(p.deleted_at),
-        preload: [:fragments]
+        where: p.key == ^key and p.language == ^lang
 
     case Brando.repo().one(q) do
       nil -> {:error, {:page, :not_found}}
@@ -174,12 +167,7 @@ defmodule Brando.Pages do
     q =
       from p in Page,
         left_join: pp in assoc(p, :parent),
-        where:
-          p.key == ^key and
-            pp.key == ^parent_key and
-            p.language == ^lang and
-            is_nil(p.deleted_at),
-        preload: [:fragments]
+        where: p.key == ^key and pp.key == ^parent_key and p.language == ^lang
 
     case Brando.repo().one(q) do
       nil -> {:error, {:page, :not_found}}
@@ -193,45 +181,44 @@ defmodule Brando.Pages do
   def rerender_page(id) do
     {:ok, page} = get_page(id)
     changeset = Ecto.Changeset.change(page)
-    Brando.Villain.rerender_html(changeset)
+    Page.rerender_html(changeset)
   end
 
   @doc """
   Rerender all pages
   """
-  def rerender_pages do
+  def rerender_pages() do
     {:ok, pages} = list_pages()
 
     for page <- pages do
-      Brando.Villain.rerender_html(Ecto.Changeset.change(page))
+      Page.rerender_html(Ecto.Changeset.change(page))
     end
   end
 
   @doc """
   Rerender all fragments
   """
-  def rerender_fragments do
+  def rerender_fragments() do
     {:ok, fragments} = list_page_fragments()
 
     for fragment <- fragments do
-      Brando.Villain.rerender_html(Ecto.Changeset.change(fragment))
+      PageFragment.rerender_html(Ecto.Changeset.change(fragment))
     end
   end
 
   def rerender_fragment(id) do
     {:ok, fragment} = get_page_fragment(id)
     changeset = Ecto.Changeset.change(fragment)
-    Brando.Villain.rerender_html(changeset)
+    PageFragment.rerender_html(changeset)
   end
 
   @doc """
   List all page fragments
   """
-  def list_page_fragments do
+  def list_page_fragments() do
     fragments =
       PageFragment
       |> order_by([p], asc: p.parent_key, asc: p.key, asc: p.language)
-      |> exclude_deleted()
       |> Brando.repo().all()
 
     {:ok, fragments}
@@ -241,37 +228,20 @@ defmodule Brando.Pages do
   Get page fragment
   """
   def get_page_fragment(key) when is_binary(key) do
-    query = from t in PageFragment, where: t.key == ^key and is_nil(t.deleted_at)
+    page = Brando.repo().get_by(PageFragment, key: key)
 
-    case Brando.repo().one(query) do
+    case page do
       nil -> {:error, {:page_fragment, :not_found}}
       page -> {:ok, page}
     end
   end
 
   def get_page_fragment(id) do
-    query = from t in PageFragment, where: t.id == ^id and is_nil(t.deleted_at)
+    page = Brando.repo().get(PageFragment, id)
 
-    case Brando.repo().one(query) do
+    case page do
       nil -> {:error, {:page_fragment, :not_found}}
       page -> {:ok, page}
-    end
-  end
-
-  def get_page_fragment(parent_key, key, language \\ nil) do
-    language = language || Brando.config(:default_language)
-
-    query =
-      from p in PageFragment,
-        where:
-          p.parent_key == ^parent_key and
-            p.key == ^key and
-            p.language == ^language and
-            is_nil(p.deleted_at)
-
-    case Brando.repo().one(query) do
-      nil -> {:error, {:page_fragment, :not_found}}
-      fragment -> {:ok, fragment}
     end
   end
 
@@ -282,7 +252,6 @@ defmodule Brando.Pages do
     fragments =
       PageFragment
       |> where([p], p.parent_key == ^parent_key)
-      |> exclude_deleted()
       |> Brando.repo().all
 
     Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)
@@ -296,7 +265,6 @@ defmodule Brando.Pages do
       PageFragment
       |> where([p], p.parent_key == ^parent_key)
       |> where([p], p.language == ^language)
-      |> exclude_deleted()
       |> Brando.repo().all
 
     Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)
@@ -321,14 +289,9 @@ defmodule Brando.Pages do
 
     {:ok, page_fragment} = get_page_fragment(page_fragment_id)
 
-    case page_fragment |> PageFragment.changeset(:update, params) |> Brando.repo().update do
-      {:ok, page_fragment} ->
-        update_villains_referencing_fragment(page_fragment)
-        {:ok, page_fragment}
-
-      err ->
-        err
-    end
+    page_fragment
+    |> PageFragment.changeset(:update, params)
+    |> Brando.repo().update
   end
 
   @doc """
@@ -336,7 +299,7 @@ defmodule Brando.Pages do
   """
   def delete_page_fragment(page_fragment_id) do
     {:ok, page_fragment} = get_page_fragment(page_fragment_id)
-    Brando.repo().soft_delete!(page_fragment)
+    Brando.repo().delete(page_fragment)
     {:ok, page_fragment}
   end
 
@@ -358,18 +321,6 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  Check all fields for references to `fragment`.
-  Rerender if found.
-  """
-  @spec update_villains_referencing_fragment(fragment :: Brando.Pages.PageFragment.t()) :: [any]
-  def update_villains_referencing_fragment(fragment) do
-    search_term = "${FRAGMENT:#{fragment.parent_key}/#{fragment.key}/#{fragment.language}"
-    villains = Villain.list_villains()
-
-    Villain.rerender_matching_villains(villains, search_term)
-  end
-
-  @doc """
   Fetch a page fragment by `key`.
 
   ## Example:
@@ -386,7 +337,7 @@ defmodule Brando.Pages do
     fragment =
       Brando.repo().one(
         from p in PageFragment,
-          where: p.key == ^key and p.language == ^language and is_nil(p.deleted_at)
+          where: p.key == ^key and p.language == ^language
       )
 
     case fragment do
@@ -400,10 +351,6 @@ defmodule Brando.Pages do
       fragment ->
         Phoenix.HTML.raw(fragment.html)
     end
-  end
-
-  def render_fragment(%PageFragment{} = fragment) do
-    Phoenix.HTML.raw(fragment.html)
   end
 
   def render_fragment(fragments, key) when is_map(fragments) do
@@ -421,8 +368,16 @@ defmodule Brando.Pages do
   end
 
   def render_fragment(parent, key, language \\ nil) when is_binary(parent) and is_binary(key) do
-    case get_page_fragment(parent, key, language) do
-      {:error, {:page_fragment, :not_found}} ->
+    language = language || Brando.config(:default_language)
+
+    fragment =
+      Brando.repo().one(
+        from p in PageFragment,
+          where: p.parent_key == ^parent and p.key == ^key and p.language == ^language
+      )
+
+    case fragment do
+      nil ->
         ~s(<div class="page-fragment-missing">
              <strong>Missing page fragment</strong> <br />
              parent: #{parent}<br />
@@ -430,7 +385,7 @@ defmodule Brando.Pages do
              lang..: #{language}
            </div>) |> Phoenix.HTML.raw()
 
-      {:ok, fragment} ->
+      fragment ->
         Phoenix.HTML.raw(fragment.html)
     end
   end

@@ -20,5 +20,5 @@ export default [
     component: <%= Recase.to_pascal(vue_singular) %>EditView,
     name: '<%= singular %>-edit',
     props: true
-  }
+  },
 ]

@@ -2,9 +2,6 @@ defmodule Brando.Utils do
   @moduledoc """
   Assorted utility functions.
   """
-
-  alias Brando.Cache
-
   @filtered_deps [
     :brando,
     :brando_analytics,
@@ -13,7 +10,8 @@ defmodule Brando.Utils do
     :brando_news,
     :brando_pages,
     :brando_portfolio,
-    :brando_villain
+    :brando_villain,
+    :hrafn
   ]
 
   @kb_size 1024
@@ -58,43 +56,6 @@ defmodule Brando.Utils do
     ext = Path.extname(filename)
     random_str = random_string(filename)
     "#{random_str}#{ext}"
-  end
-
-  @doc """
-  Sets a new basename for file.
-  Keeps the original extension.
-  """
-  @spec change_basename(String.t(), String.t()) :: String.t()
-  def change_basename(filename, new_basename) do
-    ext = Path.extname(filename)
-    "#{new_basename}#{ext}"
-  end
-
-  @doc """
-  Sets a new extension name for file
-  """
-  @spec change_extension(file :: String.t(), new_extension :: String.t()) :: String.t()
-  def change_extension(file, new_extension) do
-    Enum.join([Path.rootname(file), new_extension], ".")
-  end
-
-  @doc """
-  Sharp-cli for some dumb reason enforces the .jpg extension, so make sure that all jpegs are
-  written as such.
-  """
-  @spec ensure_correct_extension(binary, atom | nil) :: binary
-  def ensure_correct_extension(filename, type \\ nil) do
-    if type do
-      change_extension(filename, to_string(type))
-    else
-      case Path.extname(filename) |> String.downcase() do
-        ".jpeg" ->
-          change_extension(filename, "jpg")
-
-        _ ->
-          filename
-      end
-    end
   end
 
   @doc """
@@ -267,16 +228,19 @@ defmodule Brando.Utils do
   Returns scheme, host and port (if non-standard)
   """
   @spec hostname() :: String.t()
-  @spec hostname(path :: String.t()) :: String.t()
-  def hostname, do: "#{Brando.endpoint().url}"
-  def hostname(path), do: Path.join(hostname(), path)
+  def hostname() do
+    url_cfg = Brando.endpoint().config(:url)
+    scheme = Keyword.get(url_cfg, :scheme, "http")
+    host = Keyword.get(url_cfg, :host, "localhost")
+    "#{scheme}://#{host}"
+  end
 
   @doc """
   Returns full url path with scheme and host.
   """
-  @spec current_url(Plug.Conn.t(), String.t() | nil) :: String.t()
+  @spec current_url(Plug.Conn.t(), String.t()) :: String.t()
   def current_url(conn, url \\ nil) do
-    path = url || conn.request_path
+    path = (url && url) || conn.request_path
     "#{hostname()}#{path}"
   end
 
@@ -313,55 +277,37 @@ defmodule Brando.Utils do
   as set in your app's config.exs.
   """
   @spec media_url :: String.t() | nil
-  def media_url, do: Brando.config(:media_url)
+  def media_url do
+    Brando.config(:media_url)
+  end
+
   @spec media_url(String.t() | nil) :: String.t() | nil
-  def media_url(nil), do: Brando.config(:media_url)
-  def media_url(path), do: Path.join([Brando.config(:media_url), path])
+  def media_url(nil) do
+    Brando.config(:media_url)
+  end
+
+  def media_url(file) do
+    Path.join([Brando.config(:media_url), file])
+  end
 
   @doc """
   Get title assign from `conn`
   """
   @spec get_page_title(Plug.Conn.t()) :: String.t()
   def get_page_title(%{assigns: %{page_title: title}}) do
-    organization = Cache.get(:identity)
-
-    if organization do
-      %{title_prefix: title_prefix, title_postfix: title_postfix} = organization
-      render_title(title_prefix, title, title_postfix)
-    else
-      ""
-    end
+    (Brando.config(:title_prefix) && Brando.config(:title_prefix) <> title) ||
+      Brando.config(:app_name) <> " | " <> title
   end
 
   def get_page_title(_) do
-    organization = Cache.get(:identity)
-
-    if organization do
-      %{title_prefix: title_prefix, title: title, title_postfix: title_postfix} = organization
-      render_title(title_prefix, title, title_postfix)
-    else
-      ""
-    end
+    Brando.config(:app_name)
   end
-
-  @spec render_title(binary | nil, binary, binary | nil) :: binary
-  def render_title(nil, title, nil),
-    do: "#{title}"
-
-  def render_title(title_prefix, title, nil),
-    do: "#{title_prefix}#{title}"
-
-  def render_title(nil, title, title_postfix),
-    do: "#{title}#{title_postfix}"
-
-  def render_title(title_prefix, title, title_postfix),
-    do: "#{title_prefix}#{title}#{title_postfix}"
 
   @doc """
   Returns hostname and media directory.
   """
   @spec host_and_media_url() :: String.t()
-  def host_and_media_url do
+  def host_and_media_url() do
     hostname() <> Brando.config(:media_url)
   end
 
@@ -375,7 +321,8 @@ defmodule Brando.Utils do
   @doc """
   Returns the Helpers module from the router.
   """
-  def helpers(conn), do: Phoenix.Controller.router_module(conn).__helpers__
+  def helpers(conn), do:
+    Phoenix.Controller.router_module(conn).__helpers__
 
   @doc """
   Return the current user set in session.
@@ -426,14 +373,14 @@ defmodule Brando.Utils do
   @doc """
   Returns the application name set in config.exs
   """
-  def app_name, do: Brando.config(:app_name)
+  def app_name, do:
+    Brando.config(:app_name)
 
   @doc """
   Grabs `path` from the file field struct
   """
   def file_url(file_field, opts \\ [])
   def file_url(nil, _), do: nil
-
   def file_url(file_field, opts) do
     prefix = Keyword.get(opts, :prefix, nil)
     (prefix && Path.join([prefix, file_field.path])) || file_field.path
@@ -484,32 +431,33 @@ defmodule Brando.Utils do
 
   def img_url(image_field, size, opts) do
     size = (is_atom(size) && Atom.to_string(size)) || size
-    size_dir = extract_size_dir(image_field, size)
-
     prefix = Keyword.get(opts, :prefix, nil)
-    url = (prefix && Path.join([prefix, size_dir])) || size_dir
-    url <> add_cache_string(opts)
-  end
 
-  defp extract_size_dir(image_field, size) do
-    if is_map(image_field.sizes) && Map.has_key?(image_field.sizes, size) do
-      image_field.sizes[size]
-    else
-      IO.warn("""
-      Wrong size key for img_url function.
+    size_dir =
+      try do
+        if Map.has_key?(image_field.sizes, size) do
+          image_field.sizes[size]
+        else
+          IO.warn(
+            ~s(Wrong key for img_url. Size `#{size}` does not exist for #{inspect(image_field)})
+          )
 
-      Size `#{size}` does not exist for image struct:
-
-      #{inspect(image_field, pretty: true)})
-      """)
-
-      "non_existing"
-    end
-  rescue
-    KeyError ->
-      if Map.has_key?(image_field["sizes"], size) do
-        image_field["sizes"][size]
+          "non_existing"
+        end
+      rescue
+        KeyError ->
+          if Map.has_key?(image_field["sizes"], size) do
+            image_field["sizes"][size]
+          end
       end
+
+    url = (prefix && Path.join([prefix, size_dir])) || size_dir
+
+    case Map.get(image_field, :optimized) do
+      true -> Brando.Images.Utils.optimized_filename(url) <> add_cache_string(opts)
+      false -> url <> add_cache_string(opts)
+      nil -> url <> add_cache_string(opts)
+    end
   end
 
   @doc """
@@ -562,8 +510,8 @@ defmodule Brando.Utils do
     IO.iodata_to_binary([first, rest]) |> String.trim_leading()
   end
 
-  def human_spaced_number(int) when is_integer(int),
-    do: human_spaced_number(Integer.to_string(int))
+  def human_spaced_number(int) when is_integer(int), do:
+    human_spaced_number(Integer.to_string(int))
 
   @doc """
   Get dependencies' versions

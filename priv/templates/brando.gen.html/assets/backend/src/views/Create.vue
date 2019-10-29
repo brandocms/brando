@@ -28,9 +28,9 @@
 
 <script>
 
-import { nprogress } from '@univers-agency/kurtz'
-import { showError, validateImageParams, stripParams } from '@univers-agency/kurtz/lib/utils'
-import { alertError } from '@univers-agency/kurtz/lib/utils/alerts'
+import nprogress from 'nprogress'
+import { showError, validateImageParams, stripParams } from 'kurtz/lib/utils'
+import { alertError } from 'kurtz/lib/utils/alerts'
 import { <%= vue_singular %>API } from '@/api/<%= vue_singular %>'
 
 export default {
@@ -69,14 +69,8 @@ export default {
       this.loading = false
       let params = { ...this.<%= vue_singular %> }
 
-      <%= if Enum.count(img_fields) > 0 do %>
       // validate image params, if any, to ensure they are files
-      <%
-        fs =
-          img_fields
-          |> Enum.map(fn {_v, k} -> ~s('#{k}') end)
-          |> Enum.join()
-      %>validateImageParams(params, [<%= fs %>])<% end %>
+      // validateImageParams(params, ['avatar'])
 
       try {
         nprogress.start()

@@ -27,7 +27,7 @@ defmodule Brando.Schema.Types.Scalar do
         # if ctx :uploads is empty, it's an image.
         case Map.fetch(context[:__absinthe_plug__][:uploads] || %{}, value) do
           :error ->
-            # it's an image/focal update
+            # it's an image
             {:ok, img_params} = Jason.decode(value)
             {:ok, %Brando.Type.Focal{focal: img_params["focal"]}}
 

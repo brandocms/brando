@@ -6,8 +6,7 @@ defmodule <%= base %>.Schema.Types.<%= alias %> do
 
   object :<%= singular %> do
     field :id, :id<%= for {_v, k} <- gql_types do %>
-    <%= k %><% end %><%= if soft_delete do %>
-    field :deleted_at, :time<% end %>
+    <%= k %><% end %>
     field :inserted_at, :time
     field :updated_at, :time
   end

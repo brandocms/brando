@@ -1,37 +1,175 @@
 defmodule Brando.Images.Utils do
   @moduledoc """
   General utilities pertaining to the Images module
-  """
-  @type id :: String.t() | integer
-  @type image_kind :: :image | :image_series | :image_field
-  @type image_schema :: Brando.Image.t()
-  @type image_series_schema :: Brando.ImageSeries.t()
-  @type image_struct :: Brando.Type.Image.t()
-  @type user :: Brando.Users.User.t() | :system
 
-  alias Brando.Image
-  alias Brando.ImageSeries
+  TODO: Create a Processing module.
+        Split out create_image_struct, create_image_sizes, etc...
+  """
   import Brando.Utils
   import Ecto.Query, only: [from: 2]
 
-  @doc """
-  Delete all physical images depending on imageserie `series_id`
-  """
-  @spec clear_media_for(:image_series, series_id :: integer) :: :ok
-  def clear_media_for(:image_series, series_id) do
-    images =
-      Brando.repo().all(
-        from i in Image,
-          where: i.image_series_id == ^series_id
-      )
+  alias Brando.Image
+  alias Brando.Images
+  alias Brando.ImageSeries
+  alias Brando.Progress
+  alias Brando.Type
+  alias Brando.Upload
 
-    for img <- images, do: delete_original_and_sized_images(img, :image)
+  @doc """
+  Create an image struct from upload, cfg and extra info
+  """
+  def create_image_struct(%Upload{plug: %{uploaded_file: file}, cfg: cfg, extra_info: %{focal: focal}}, user) do
+    {_, filename} = split_path(file)
+    upload_path = Map.get(cfg, :upload_path)
+    new_path = Path.join([upload_path, filename])
+
+    try do
+      image_info =
+        new_path
+        |> media_path()
+        |> Mogrify.open()
+        |> Mogrify.verbose()
+
+      size_struct =
+        %Brando.Type.Image{}
+        |> Map.put(:path, new_path)
+        |> Map.put(:width, image_info.width)
+        |> Map.put(:height, image_info.height)
+        |> Map.put(:focal, focal)
+
+      {:ok, size_struct}
+
+    rescue
+      e in File.Error ->
+        Progress.hide_progress(user)
+        {:error, {:create_image_sizes, e}}
+
+      e ->
+        Progress.hide_progress(user)
+        {:error, {:create_image_sizes, e}}
+    end
+  end
+
+  @doc """
+  Deletes all image's sizes and recreates them.
+  """
+  @spec recreate_sizes_for(:image | :image_series, Image.t(), User.t() | atom) :: :ok | no_return
+  def recreate_sizes_for(type, img, user \\ :system)
+
+  def recreate_sizes_for(:image, img_schema, user) do
+    img_cfg = Images.get_series_config(img_schema.image_series_id)
+    img_schema = reset_optimized_flag(img_schema)
+    delete_sized_images(img_schema.image)
+
+    with {:ok, operations} <- Images.Operations.create_operations(img_schema.image, img_cfg, user, img_schema.id),
+         {:ok, [result]} <- Images.Operations.perform_operations(operations, user) do
+
+      img_schema
+      |> Image.changeset(:update, %{image: result.img_struct})
+      |> Images.Optimize.optimize(:image, force: true)
+      |> Brando.repo().update!
+
+      :ok
+    else
+      err ->
+        require Logger
+        Logger.error("==> recreate_sizes_for(:image, ...) failed")
+        Logger.error(inspect(err))
+        err
+    end
+  end
+
+  @spec recreate_sizes_for(:image_series, Image.t(), User.t() | atom) :: :ok | no_return
+  def recreate_sizes_for(:image_series, image_series_id, user) do
+    query =
+      from is in ImageSeries,
+        preload: :images,
+        where: is.id == ^image_series_id
+
+    image_series = Brando.repo().one!(query)
+
+    # check if the paths have changed. if so, reload series
+    image_series =
+      case check_image_paths(Image, image_series) do
+        :changed -> Brando.repo().one!(query)
+        :unchanged -> image_series
+      end
+
+    images = image_series.images
+
+    # build operations
+    operations =
+      Enum.flat_map(images, fn img_schema ->
+        img_schema.image
+        |> Images.Operations.create_operations(image_series.cfg, user, img_schema.id)
+        |> elem(1)
+      end)
+
+    {:ok, operation_results} = Images.Operations.perform_operations(operations, user)
+
+    for result <- operation_results do
+      img_schema = Enum.find(images, &(&1.id == result.id))
+      Images.update_image(img_schema, %{image: result.img_struct})
+    end
 
     :ok
   end
 
   @doc """
-  Goes through `image`, which is a schema with an image_field
+  Recreates sizes for an image field
+  """
+  @spec recreate_sizes_for(:image_field, term, atom) :: :ok | no_return
+  def recreate_sizes_for(:image_field, schema, field_name) do
+    rows = Brando.repo().all(schema)
+    {:ok, cfg} = schema.get_image_cfg(field_name)
+
+    operations =
+      Enum.flat_map(rows, fn row ->
+        img_field = Map.get(row, field_name)
+
+        if img_field do
+          delete_sized_images(img_field)
+          img_field
+          |> Images.Operations.create_operations(cfg, :system, row.id)
+          |> elem(1)
+        end
+      end)
+
+
+    {:ok, operation_results} = Images.Operations.perform_operations(operations, :system)
+
+    for result <- operation_results do
+      rows
+      |> Enum.find(&(&1.id == result.id))
+      |> Ecto.Changeset.change(Map.put(%{}, field_name, result.img_struct))
+      |> Brando.Images.Optimize.optimize(field_name)
+      |> Brando.repo().update!
+    end
+  end
+
+  # usually used when changing focal point
+  # recreate_sizes_for(:image_field_record, changeset, :cover, user)
+  @spec recreate_sizes_for(:image_field_record, term, term, term) :: :ok | no_return
+  def recreate_sizes_for(:image_field_record, changeset, field_name, user) do
+    img_struct = Ecto.Changeset.get_change(changeset, field_name)
+    schema = changeset.data.__struct__
+    delete_sized_images(img_struct)
+    {:ok, cfg} = schema.get_image_cfg(field_name)
+
+    with {:ok, operations} <- Images.Operations.create_operations(img_struct, cfg, user),
+         {:ok, [result]} <- Images.Operations.perform_operations(operations, user) do
+        {:ok, Ecto.Changeset.put_change(changeset, field_name, result.img_struct)}
+    else
+      err ->
+        require Logger
+        Logger.error("==> recreate_sizes_for(:image_field_record, ...) failed")
+        Logger.error(inspect(err))
+        err
+    end
+  end
+
+  @doc """
+  Goes through `image`, which is a schema with a :sizes field
   then passing to `delete_media/2` for removal
 
   ## Example:
@@ -39,7 +177,7 @@ defmodule Brando.Images.Utils do
       delete_original_and_sized_images(record, :cover)
 
   """
-  @spec delete_original_and_sized_images(schema :: term, key :: atom) :: {:ok, Image.t()}
+  @spec delete_original_and_sized_images(Image.t(), atom) :: {:ok, Image.t()}
   def delete_original_and_sized_images(image, key) do
     img = Map.get(image, key)
 
@@ -54,8 +192,10 @@ defmodule Brando.Images.Utils do
   @doc """
   Delete sizes associated with `image`, but keep original.
   """
-  @spec delete_sized_images(image_struct :: image_struct) :: any
-  def delete_sized_images(nil), do: nil
+  @spec delete_sized_images(Image.t()) :: no_return
+  def delete_sized_images(nil) do
+    nil
+  end
 
   def delete_sized_images(image) do
     sizes = Map.get(image, :sizes)
@@ -68,12 +208,14 @@ defmodule Brando.Images.Utils do
   @doc """
   Deletes `file` after joining it with `media_path`
   """
-  @spec delete_media(file_name :: String.t()) :: any
+  @spec delete_media(String.t()) :: no_return
   def delete_media(nil), do: nil
   def delete_media(""), do: nil
 
   def delete_media(file) do
     file = Path.join([Brando.config(:media_path), file])
+    optimized_file = Brando.Images.Utils.optimized_filename(file)
+    File.rm(optimized_file)
     File.rm(file)
   end
 
@@ -86,22 +228,16 @@ defmodule Brando.Images.Utils do
       iex> get_sized_path("test/dir/filename.jpg", :thumb)
       "test/dir/thumb/filename.jpg"
 
-      iex> get_sized_path("test/dir/filename.jpeg", :thumb)
-      "test/dir/thumb/filename.jpg"
-
   """
-  @spec get_sized_path(path :: String.t(), size :: atom | String.t(), type :: atom | nil) ::
-          String.t()
-  def get_sized_path(path, size, type \\ nil)
-
-  def get_sized_path(path, size, type) when is_binary(size) do
+  @spec get_sized_path(String.t(), atom | String.t()) :: String.t()
+  def get_sized_path(path, size) when is_binary(size) do
     {dir, filename} = split_path(path)
-    filename = ensure_correct_extension(filename, type)
     Path.join([dir, size, filename])
   end
 
-  def get_sized_path(file, size, type) when is_atom(size),
-    do: get_sized_path(file, Atom.to_string(size), type)
+  def get_sized_path(file, size) when is_atom(size) do
+    get_sized_path(file, Atom.to_string(size))
+  end
 
   @doc """
   Adds `size` to the path before
@@ -112,31 +248,37 @@ defmodule Brando.Images.Utils do
       "test/dir/thumb"
 
   """
-  @spec get_sized_dir(path :: String.t(), size :: atom | String.t()) :: String.t()
+  @spec get_sized_dir(String.t(), atom | String.t()) :: String.t()
   def get_sized_dir(path, size) when is_binary(size) do
     {dir, _} = split_path(path)
     Path.join([dir, size])
   end
 
-  def get_sized_dir(file, size) when is_atom(size), do: get_sized_dir(file, Atom.to_string(size))
+  def get_sized_dir(file, size) when is_atom(size) do
+    get_sized_dir(file, Atom.to_string(size))
+  end
+
+  @doc """
+  Reset image field's `:optimized` flag
+  """
+  def reset_optimized_flag(%Image{} = img_schema) do
+    put_in(img_schema.image.optimized, false)
+  end
+
+  def reset_optimized_flag(%Type.Image{} = img_struct) do
+    put_in(img_struct.optimized, false)
+  end
 
   @doc """
   Returns image type atom.
   """
-  @spec image_type(filename :: String.t()) :: atom
+  @spec image_type(String.t()) :: :jpeg | :png | :gif
   def image_type(filename) do
     case String.downcase(Path.extname(filename)) do
-      ".jpg" -> :jpg
-      ".jpeg" -> :jpg
+      ".jpg" -> :jpeg
+      ".jpeg" -> :jpeg
       ".png" -> :png
       ".gif" -> :gif
-      ".bmp" -> :bmp
-      ".tif" -> :tiff
-      ".tiff" -> :tiff
-      ".psd" -> :psd
-      ".svg" -> :svg
-      ".crw" -> :crw
-      ".webp" -> :webp
     end
   end
 
@@ -144,17 +286,25 @@ defmodule Brando.Images.Utils do
   Return joined path of `file` and the :media_path config option
   as set in your app's config.exs.
   """
-
-  @spec media_path() :: String.t()
-  @spec media_path(nil | binary) :: String.t()
   def media_path, do: Brando.config(:media_path)
   def media_path(nil), do: Brando.config(:media_path)
   def media_path(file), do: Path.join([Brando.config(:media_path), file])
 
   @doc """
-  Soft delete all images depending on imageserie `series_id`
+  Add `-optimized` between basename and ext of `file`.
   """
-  @spec delete_images_for(:image_series, series_id :: integer) :: :ok
+  @spec optimized_filename(String.t()) :: String.t()
+  def optimized_filename(file) do
+    {path, filename} = split_path(file)
+    {basename, ext} = split_filename(filename)
+
+    Path.join([path, "#{basename}-optimized#{ext}"])
+  end
+
+  @doc """
+  Delete all images depending on imageserie `series_id`
+  """
+  @spec delete_images_for(:image_series, integer) :: :ok
   def delete_images_for(:image_series, series_id) do
     images =
       Brando.repo().all(
@@ -163,7 +313,8 @@ defmodule Brando.Images.Utils do
       )
 
     for img <- images do
-      Brando.repo().soft_delete!(img)
+      delete_original_and_sized_images(img, :image)
+      Brando.repo().delete!(img)
     end
 
     :ok
@@ -172,9 +323,7 @@ defmodule Brando.Images.Utils do
   @doc """
   Delete all imageseries dependant on `category_id`
   """
-  @spec delete_series_for(:image_category, category_id :: integer) :: [
-          image_series_schema | no_return
-        ]
+  @spec delete_series_for(:image_category, integer) :: [ImageSeries.t() | no_return]
   def delete_series_for(:image_category, category_id) do
     image_series =
       Brando.repo().all(
@@ -184,7 +333,7 @@ defmodule Brando.Images.Utils do
 
     for is <- image_series do
       delete_images_for(:image_series, is.id)
-      Brando.repo().soft_delete!(is)
+      Brando.repo().delete!(is)
     end
   end
 
@@ -192,7 +341,7 @@ defmodule Brando.Images.Utils do
   Checks that the existing images' path matches the config. these may differ
   when series has been renamed!
   """
-  @spec check_image_paths(module, map | image_series_schema) :: :unchanged | :changed
+  @spec check_image_paths(module, map) :: :unchanged | :changed
   def check_image_paths(schema, image_series) do
     upload_path = image_series.cfg.upload_path
 
@@ -233,7 +382,7 @@ defmodule Brando.Images.Utils do
   end
 
   @spec do_check_image_path(Ecto.Schema.t(), String.t(), String.t(), String.t(), String.t()) ::
-          image_struct
+          Brando.Type.Image.t()
   defp do_check_image_path(image, image_path, image_dirname, image_basename, upload_dirname) do
     media_path = Path.expand(Brando.config(:media_path))
 
@@ -263,10 +412,6 @@ defmodule Brando.Images.Utils do
     category_paths = Enum.map(categories, &Path.join(media_path, &1.cfg.upload_path))
     upload_paths = series_paths ++ category_paths
 
-    check_upload_paths(upload_paths, media_path, starts_with, ignored_paths)
-  end
-
-  defp check_upload_paths(upload_paths, media_path, starts_with, ignored_paths) do
     case upload_paths do
       [] ->
         []
@@ -275,24 +420,20 @@ defmodule Brando.Images.Utils do
         path_to_check = Path.join(media_path, starts_with)
         full_ignored_paths = Enum.map(ignored_paths, &Path.join(path_to_check, &1))
 
-        existing_category_paths = get_existing_category_paths(path_to_check, full_ignored_paths)
-        existing_series_paths = get_existing_series_paths(existing_category_paths)
+        existing_category_paths =
+          path_to_check
+          |> Path.join("*")
+          |> Path.wildcard()
+          |> Enum.filter(&(&1 not in full_ignored_paths))
+
+        existing_series_paths =
+          existing_category_paths
+          |> Enum.map(&Path.wildcard(Path.join(&1, "*")))
+          |> List.flatten()
+
         existing_paths = existing_series_paths ++ existing_category_paths
 
         existing_paths -- upload_paths
     end
-  end
-
-  defp get_existing_category_paths(path_to_check, full_ignored_paths) do
-    path_to_check
-    |> Path.join("*")
-    |> Path.wildcard()
-    |> Enum.filter(&(&1 not in full_ignored_paths))
-  end
-
-  defp get_existing_series_paths(existing_category_paths) do
-    existing_category_paths
-    |> Enum.map(&Path.wildcard(Path.join(&1, "*")))
-    |> List.flatten()
   end
 end

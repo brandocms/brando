@@ -16,8 +16,8 @@ defmodule Brando.Villain.Routes.Admin.API do
   @doc """
   Defines "RESTful" endpoints for the news resource.
   """
-  defmacro api_villain_routes do
-    add_villain_routes("", Brando.API.Villain.VillainController)
+  defmacro api_villain_routes() do
+    add_villain_routes("", Brando.VillainController)
   end
 
   defp add_villain_routes(path, controller) do
@@ -27,9 +27,6 @@ defmodule Brando.Villain.Routes.Admin.API do
       opts = []
 
       post "#{path}/villain/upload/:slug", ctrl, :upload_image, opts
-      get "#{path}/villain/templates/:slug", ctrl, :templates, opts
-      post "#{path}/villain/templates/", ctrl, :store_template, opts
-      post "#{path}/villain/templates/sequence", ctrl, :sequence_templates, opts
       get "#{path}/villain/browse/:slug", ctrl, :browse_images, opts
       get "#{path}/villain/slideshows/:slug", ctrl, :slideshow, opts
       get "#{path}/villain/slideshows", ctrl, :slideshows, opts

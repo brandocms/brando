@@ -5,12 +5,10 @@ defmodule Brando.Images.Upload.Field do
   For schemas, see Brando.Images.Uploads.Schema
   """
 
-  @type image_config :: Brando.Type.ImageConfig.t()
-  @type image_type :: Brando.Type.Image.t()
-  @type user :: Brando.Users.User.t() | :system
-
   alias Brando.Images
+  alias Brando.Type
   alias Brando.Upload
+  alias Brando.User
 
   @doc """
   Handles the upload by starting a chain of operations on the plug.
@@ -22,25 +20,15 @@ defmodule Brando.Images.Upload.Field do
     * `name`: the field we are operating on.
     * `plug`: a Plug.Upload struct.
     * `cfg`: the field's cfg from has_image_field
-
   """
-  @spec handle_upload(
-          field_name :: atom | binary,
-          upload_plug :: any(),
-          image_config :: image_config,
-          user :: any()
-        ) :: {:ok, {:handled, atom, image_type}} | {:error, {atom, {:error, binary}}}
+  @spec handle_upload(atom, Plug.Upload.t(), Type.ImageConfig.t(), User.t() | :system)
+        :: {:ok, {atom, Type.Image}} | {:error, {atom, {:error, String.t()}}}
   def handle_upload(name, %Plug.Upload{} = plug, cfg, user) do
     with {:ok, upload} <- Upload.process_upload(plug, cfg),
-         {:ok, img_struct} <- Images.Processing.create_image_struct(upload, user),
+         {:ok, img_struct} <- Images.Utils.create_image_struct(upload, user),
          {:ok, operations} <- Images.Operations.create_operations(img_struct, cfg, user),
-         {:ok, results} <- Images.Operations.perform_operations(operations, user) do
-      img_struct =
-        results
-        |> List.first()
-        |> Map.get(:img_struct)
-
-      {:ok, {:handled, name, img_struct}}
+         {:ok, [result]} <- Images.Operations.perform_operations(operations, user) do
+      {:ok, {:handled, name, result.img_struct}}
     else
       err -> {:error, {name, Upload.handle_upload_error(err)}}
     end

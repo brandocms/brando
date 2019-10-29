@@ -6,8 +6,6 @@
 use Mix.Config
 
 config :brando, ecto_repos: [Brando.Integration.TestRepo]
-config :phoenix, :json_library, Jason
-
 # These are defaults for internals, mostly overridden for testing
 # purposes. We put them here to not pollute the brando.exs file.
 config :brando,

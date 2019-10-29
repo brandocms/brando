@@ -3,55 +3,97 @@
  * (c) 2019 UNIVERS/TWINED TM
  */
 
-/**
- * JUPITER IMPORTS
- */
+// polyfills
+import 'core-js/stable'
+import 'regenerator-runtime/runtime'
+import 'custom-event-polyfill'
+import 'picturefill'
+
 import {
-  Application,
+  // Breakpoints,
   Cookies,
-  Events,
+  Fader,
+  FixedHeader,
+  HeroSlider,
   Lazyload,
   Lightbox,
   Links,
   MobileMenu,
   Moonwalk,
-  Popup,
-  StackedBoxes,
-  FixedHeader
-} from '@univers-agency/jupiter'
+  Typography,
 
-/**
- * APP SPECIFIC MODULE IMPORTS
- */
+  TweenLite,
+  Sine,
+  Power3,
+  imagesLoaded,
+  SR
+} from 'jupiter'
 
-/**
- * CONFIG IMPORTS
- */
-import configureBreakpoints from './config/BREAKPOINTS'
-import configureHeader from './config/HEADER'
-import configureLightbox from './config/LIGHTBOX'
-import configureMobileMenu from './config/MOBILE_MENU'
-import configureMoonwalk from './config/MOONWALK'
+import Slider from './slider'
+import '../css/app.scss'
 
+TweenLite.defaultEase = Sine.easeOut
 
-import '../css/app.pcss'
+class Application {
+  constructor () {
+    this.fader = null
+  }
 
-const app = new Application({
-  breakpointConfig: configureBreakpoints
-})
+  initialize () {
+    this.lightbox = new Lightbox()
+    this.fader = new Fader(this, document.querySelector('#fader'))
 
-app.registerCallback(Events.APPLICATION_READY, () => {
-  app.links = new Links(app)
-})
+    const heroSlider = document.querySelector('.hero-slider')
+    if (heroSlider) {
+      this.heroSlider = new HeroSlider(heroSlider)
+    }
 
-app.registerCallback(Events.APPLICATION_PRELUDIUM, () => {
-  app.lightbox = new Lightbox(app, configureLightbox(app))
-  app.lazyload = new Lazyload(app, { useNativeLazyloadIfAvailable: false })
-  app.moonwalk = new Moonwalk(app, configureMoonwalk(app))
-  app.header = new FixedHeader(app, configureHeader(app))
-  app.mobileMenu = new MobileMenu(app, configureMobileMenu(app))
-  app.cookies = new Cookies(app)
-})
+    this.moonwalk = new Moonwalk()
+
+    this.header = new FixedHeader(
+      document.querySelector('header'),
+      {
+        default: {
+          offset: 8,
+          offsetSmall: 10,
+          offsetBg: 50,
+          regBgColor: 'transparent'
+        },
+
+        sections: {
+          index: {
+            offsetBg: '#content'
+          }
+        }
+      }
+    )
+
+    this.mobileMenu = new MobileMenu()
+    this.links = new Links(this)
+    this.cookies = new Cookies()
+    this.typography = new Typography()
+    this.lazyload = new Lazyload()
+    // this.breakpoints = new Breakpoints()
+    this._emitInitializedEvent()
+    setTimeout(this.ready.apply(this), 350)
+  }
+
+  ready () {
+    this.fader.out()
+  }
+
+  _emitInitializedEvent () {
+    const initializedEvent = new window.CustomEvent('application:initialized')
+    window.dispatchEvent(initializedEvent)
+  }
+
+  _emitReadyEvent () {
+    const readyEvent = new window.CustomEvent('application:ready')
+    window.dispatchEvent(readyEvent)
+  }
+}
+
+const app = new Application()
 
 // trigger ready state
 if (document.attachEvent ? document.readyState === 'complete' : document.readyState !== 'loading') {
@@ -60,7 +102,3 @@ if (document.attachEvent ? document.readyState === 'complete' : document.readySt
   document.addEventListener('DOMContentLoaded', app.initialize.apply(app))
 }
 
-// Accept HMR as per: https://webpack.js.org/api/hot-module-replacement#accept
-if (module.hot) {
-  module.hot.accept()
-}

@@ -32,11 +32,13 @@ defmodule Brando.Field.FileField do
       @doc """
       Validates upload in changeset
       """
-      def validate_upload(changeset, {:file, field_name}, user),
-        do: do_validate_upload(changeset, {:file, field_name}, user)
+      def validate_upload(changeset, {:file, field_name}, user) do
+        do_validate_upload(changeset, {:file, field_name}, user)
+      end
 
-      def validate_upload(changeset, {:file, field_name}),
-        do: do_validate_upload(changeset, {:file, field_name}, :system)
+      def validate_upload(changeset, {:file, field_name}) do
+        do_validate_upload(changeset, {:file, field_name}, :system)
+      end
 
       defp do_validate_upload(changeset, {:file, field_name}, _user) do
         with {:ok, plug} <- field_has_changed(changeset, field_name),
@@ -146,10 +148,8 @@ defmodule Brando.Field.FileField do
     * `cfg`: the field's cfg from has_image_field
 
   """
-  @spec handle_file_upload(atom, Plug.Upload.t() | Map.t(), Brando.Type.FileConfig.t()) ::
-          {:ok, {:handled, Brando.Type.File}}
-          | {:ok, {:unhandled, atom, term}}
-          | {:error, {atom, {:error, String.t()}}}
+  @spec handle_file_upload(atom, Plug.Upload.t(), Brando.Type.FileConfig.t()) ::
+          {:ok, {atom, Brando.Type.File}} | {:error, {atom, {:error, String.t()}}}
   def handle_file_upload(name, %Plug.Upload{} = plug, cfg) do
     with {:ok, upload} <- process_upload(plug, cfg),
          {:ok, field} <- create_file_struct(upload) do
@@ -159,6 +159,7 @@ defmodule Brando.Field.FileField do
     end
   end
 
+  @spec handle_file_upload(atom, Map.t(), Brando.Type.FileConfig.t()) :: {:ok, Map.t()}
   def handle_file_upload(name, file, _) do
     {:ok, {:unhandled, name, file}}
   end

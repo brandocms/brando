@@ -3,9 +3,6 @@ defmodule Brando.Villain.Parser do
   Defines callbacks for the Villain.Parser behaviour.
   """
 
-  @doc "Parses a comment"
-  @callback comment(%{String.t() => any}) :: String.t()
-
   @doc "Parses a header"
   @callback header(%{String.t() => any}) :: String.t()
 
@@ -44,7 +41,4 @@ defmodule Brando.Villain.Parser do
 
   @doc "Parses html"
   @callback html(%{String.t() => any}) :: String.t()
-
-  @doc "Parses template"
-  @callback template(%{String.t() => any}) :: String.t()
 end

@@ -1,5 +1,5 @@
 <footer>
-  <div data-moonwalk-section>
+  <div class="container" data-moonwalk-section>
     Footer.
   </div>
 </footer>

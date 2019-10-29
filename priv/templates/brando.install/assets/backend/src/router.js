@@ -1,5 +1,6 @@
-import { Vue, Router } from '@univers-agency/kurtz'
-import kurtzBaseRoutes from '@univers-agency/kurtz/lib/routes/base'
+import Vue from 'vue'
+import Router from 'vue-router'
+import kurtzBaseRoutes from 'kurtz/lib/routes/base'
 import localRoutes from '@/routes'
 import store from './store'
 
@@ -18,7 +19,7 @@ const router = new Router({
 })
 
 router.afterEach(route => {
-  document.title = route.meta.title ? route.meta.title : 'SITE NAME admin'
+  document.title = route.meta.title ? route.meta.title : 'SITE NAME'
 })
 
 router.beforeEach((to, from, next) => {

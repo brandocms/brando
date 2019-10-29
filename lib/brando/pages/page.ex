@@ -6,14 +6,12 @@ defmodule Brando.Pages.Page do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :schema
-  use Brando.Villain.Schema
-  use Brando.SoftDelete.Schema
+  use Brando.Villain, :schema
 
   alias Brando.Type.Status
-  alias Brando.JSONLD
 
   @required_fields ~w(key language slug title data status creator_id)a
-  @optional_fields ~w(parent_id meta_description html css_classes deleted_at)a
+  @optional_fields ~w(parent_id meta_description meta_keywords html css_classes)a
   @derived_fields ~w(
     id
     key
@@ -27,35 +25,14 @@ defmodule Brando.Pages.Page do
     creator_id
     parent_id
     meta_description
+    meta_keywords
     inserted_at
     updated_at
-    deleted_at
   )a
-
-  json_ld_schema JSONLD.Schema.Article do
-    field :author, {:references, :identity}
-    field :copyrightHolder, {:references, :identity}
-    field :copyrightYear, :string, [:inserted_at, :year]
-    field :creator, {:references, :identity}
-    field :dateModified, :string, [:updated_at], &JSONLD.to_datetime/1
-    field :datePublished, :string, [:inserted_at], &JSONLD.to_datetime/1
-    field :description, :string, [:meta_description]
-    field :headline, :string, [:title]
-    field :inLanguage, :string, [:language]
-    field :mainEntityOfPage, :string, [:__meta__, :current_url]
-    field :name, :string, [:title]
-    field :publisher, {:references, :identity}
-    field :url, :string, [:__meta__, :current_url]
-  end
-
-  meta_schema do
-    field ["description", "og:description"], [:meta_description]
-    field ["title", "og:title"], [:title]
-    field "og:locale", [:language], &Brando.Meta.Utils.encode_locale/1
-  end
-
+  @derive {Poison.Encoder, only: @derived_fields}
   @derive {Jason.Encoder, only: @derived_fields}
-  schema "pages_pages" do
+
+  schema "pages" do
     field :key, :string
     field :language, :string
     field :title, :string
@@ -63,15 +40,12 @@ defmodule Brando.Pages.Page do
     villain()
     field :status, Status
     field :css_classes, :string
-    field :meta_description, :string
-
-    belongs_to :creator, Brando.Users.User
+    belongs_to :creator, Brando.User
     belongs_to :parent, __MODULE__
     has_many :children, __MODULE__, foreign_key: :parent_id
-    has_many :fragments, Brando.Pages.PageFragment
-
+    field :meta_description, :string
+    field :meta_keywords, :string
     timestamps()
-    soft_delete()
   end
 
   @doc """
@@ -82,7 +56,7 @@ defmodule Brando.Pages.Page do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, :create | :update, Keyword.t() | Options.t()) :: Ecto.Changeset.t()
+  @spec changeset(t, atom, Keyword.t() | Options.t()) :: t
   def changeset(schema, action, params \\ %{})
 
   def changeset(schema, :create, params) do
@@ -94,6 +68,7 @@ defmodule Brando.Pages.Page do
     |> generate_html()
   end
 
+  @spec changeset(t, atom, Keyword.t() | Options.t()) :: t
   def changeset(schema, :update, params) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
@@ -108,7 +83,7 @@ defmodule Brando.Pages.Page do
   """
   def encode_data(params) do
     if is_list(params.data) do
-      Map.put(params, :data, Jason.encode!(params.data))
+      Map.put(params, :data, Poison.encode!(params.data))
     else
       params
     end
@@ -173,27 +148,5 @@ defmodule Brando.Pages.Page do
     from p in __MODULE__,
       where: p.language == ^language,
       where: ilike(p.html, ^"%#{query}%")
-  end
-
-  defimpl Phoenix.HTML.Safe, for: Brando.Pages.Page do
-    def to_iodata(page) do
-      page.html
-      |> Phoenix.HTML.raw()
-      |> Phoenix.HTML.Safe.to_iodata()
-    end
-  end
-
-  defimpl Phoenix.HTML.Safe, for: Brando.Pages.PageFragment do
-    def to_iodata(%{wrapper: nil} = fragment) do
-      fragment.html
-      |> Phoenix.HTML.raw()
-      |> Phoenix.HTML.Safe.to_iodata()
-    end
-
-    def to_iodata(%{wrapper: wrapper} = fragment) do
-      String.replace(wrapper, "${CONTENT}", fragment.html)
-      |> Phoenix.HTML.raw()
-      |> Phoenix.HTML.Safe.to_iodata()
-    end
   end
 end

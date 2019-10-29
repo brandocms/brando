@@ -7,7 +7,7 @@
         excluded: [~r"/_build/", ~r"/deps/"]
       },
       requires: [],
-      check_for_updates: true,
+      check_for_updates: false,
       #
       # You can customize the parameters of any check by adding a second element
       # to the tuple.
@@ -61,7 +61,7 @@
         {Credo.Check.Refactor.Nesting},
         {Credo.Check.Refactor.UnlessWithElse},
         {Credo.Check.Warning.IExPry},
-        {Credo.Check.Warning.IoInspect},
+        {Credo.Check.Warning.IoInspect, false},
 
         # Those are warned by Elixir when it is ambiguous since Elixir v1.4
         {Credo.Check.Warning.NameRedeclarationByAssignment, false},

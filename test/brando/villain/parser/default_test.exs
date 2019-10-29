@@ -3,8 +3,8 @@ defmodule Brando.Villain.ParserTest do
   use Brando.Integration.TestCase
   use Brando.ConnCase
 
-  alias Brando.Factory
   alias Brando.Images
+  alias Brando.Factory
 
   import Brando.Villain.Parser.Default
 
@@ -124,22 +124,22 @@ defmodule Brando.Villain.ParserTest do
 
   defp setup_images do
     img1 = %{
-      "sequence" => 0,
-      "image" => %{
-        "title" => "Title",
-        "credits" => "credits",
-        "path" => "/tmp/path/to/fake/image.jpg",
-        "sizes" => %{small: "/tmp/path/to/fake/image.jpg", thumb: "/tmp/path/to/fake/thumb.jpg"}
+      sequence: 0,
+      image: %{
+        title: "Title",
+        credits: "credits",
+        path: "/tmp/path/to/fake/image.jpg",
+        sizes: %{small: "/tmp/path/to/fake/image.jpg", thumb: "/tmp/path/to/fake/thumb.jpg"}
       }
     }
 
     img2 = %{
-      "sequence" => 1,
-      "image" => %{
-        "title" => "Title2",
-        "credits" => "credits2",
-        "path" => "/tmp/path/to/fake/image2.jpg",
-        "sizes" => %{small: "/tmp/path/to/fake/image2.jpg", thumb: "/tmp/path/to/fake/thumb2.jpg"}
+      sequence: 1,
+      image: %{
+        title: "Title2",
+        credits: "credits2",
+        path: "/tmp/path/to/fake/image2.jpg",
+        sizes: %{small: "/tmp/path/to/fake/image2.jpg", thumb: "/tmp/path/to/fake/thumb2.jpg"}
       }
     }
 
@@ -157,13 +157,13 @@ defmodule Brando.Villain.ParserTest do
       )
 
     img1
-    |> Map.put("creator_id", user.id)
-    |> Map.put("image_series_id", series.id)
+    |> Map.put(:creator_id, user.id)
+    |> Map.put(:image_series_id, series.id)
     |> Images.create_image(user)
 
     img2
-    |> Map.put("creator_id", user.id)
-    |> Map.put("image_series_id", series.id)
+    |> Map.put(:creator_id, user.id)
+    |> Map.put(:image_series_id, series.id)
     |> Images.create_image(user)
   end
 end

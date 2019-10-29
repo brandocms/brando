@@ -1,4 +1,4 @@
-import { nprogress } from '@univers-agency/kurtz'
+import nprogress from 'nprogress'
 import { <%= vue_singular %>API } from '../../api/<%= vue_singular %>'
 
 const STORE_<%= String.upcase(singular) %> = 'STORE_<%= String.upcase(singular) %>'
@@ -80,9 +80,9 @@ export const <%= vue_plural %> = {
 
     addImageSeriesTo<%= Recase.to_pascal(vue_singular) %> (context, { <%= vue_singular %>Id, imageSeries }) {
       nprogress.start()
-      context.commit(ADD_IMAGE_SERIES_TO_<%= String.upcase(singular) %>, { <%= vue_singular %>Id, imageSeries })
+      context.commit(ADD_IMAGE_SERIES_TO_<%= String.upcase(singular) %>, { caseId, imageSeries })
       nprogress.done()
-      return <%= vue_singular %>Id
+      return caseId
     }<% end %>
   }
 }

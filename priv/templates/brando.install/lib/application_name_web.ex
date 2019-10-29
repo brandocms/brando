@@ -18,7 +18,6 @@ defmodule <%= application_module %>Web do
 
   def schema do
     quote do
-      use Brando.JSONLD.Schema
       use Ecto.Schema
 
       import Ecto
@@ -34,22 +33,11 @@ defmodule <%= application_module %>Web do
         namespace: <%= application_module %>Web
 
       import <%= application_module %>Web.Gettext
+      import Brando.Meta.Controller, only: [put_meta: 2, put_meta: 3]
       import Brando.Plug.HTML
       import Plug.Conn
 
       alias <%= application_module %>Web.Router.Helpers, as: Routes
-    end
-  end
-
-  def migration do
-    quote do
-      import Brando.SoftDelete.Migration
-    end
-  end
-
-  def context do
-    quote do
-      import Brando.SoftDelete.Query
     end
   end
 
@@ -93,6 +81,7 @@ defmodule <%= application_module %>Web do
       use Phoenix.Router
       import Plug.Conn
       import Phoenix.Controller
+      import Brando.Meta.Controller
     end
   end
 

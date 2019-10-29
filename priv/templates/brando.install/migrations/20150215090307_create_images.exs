@@ -1,10 +1,10 @@
 defmodule <%= application_module %>.Repo.Migrations.CreateImages do
   use Ecto.Migration
-  use Brando.Sequence.Migration
+  use Brando.Sequence, :migration
 
   def up do
     create table(:images) do
-      add :image,             :jsonb
+      add :image,             :text
       add :creator_id,        references(:users)
       add :image_series_id,   references(:imageseries)
       sequenced()

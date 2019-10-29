@@ -15,11 +15,10 @@ defmodule Brando.Field.ImageField do
          random_filename: true,
          upload_path: Path.join("images", "default"),
          size_limit: 10_240_000,
-         target_format: :jpg,
          sizes: %{
            "thumb" =>  %{"size" => "150x150", "quality" => 100, "crop" => true},
-           "small" =>  %{"size" => "300x", "quality" => 100},
-           "large" =>  %{"size" => "700x", "quality" => 10},
+           "small" =>  %{"size" => "300x",    "quality" => 100},
+           "large" =>  %{"size" => "700x",    "quality" => 10},
         }
       }
 
@@ -72,8 +71,7 @@ defmodule Brando.Field.ImageField do
              {:ok, plug} <- field_has_changed(changeset, field_name),
              {:ok, _} <- changeset_has_no_errors(changeset),
              {:ok, cfg} <- get_image_cfg(field_name),
-             {:ok, {:handled, name, field}} <-
-               Images.Upload.Field.handle_upload(field_name, plug, cfg, user) do
+             {:ok, {:handled, name, field}} <- Images.Upload.Field.handle_upload(field_name, plug, cfg, user) do
           cleanup_old_images(changeset, :safe)
           put_change(changeset, name, field)
         else
@@ -85,7 +83,7 @@ defmodule Brando.Field.ImageField do
 
           {:ok, {:focal_changed, changeset}} ->
             {:ok, changeset} =
-              Images.Processing.recreate_sizes_for_image_field_record(changeset, field_name, user)
+              recreate_sizes_for(:image_field_record, changeset, field_name, user)
 
             changeset
 
@@ -175,75 +173,30 @@ defmodule Brando.Field.ImageField do
     end
   end
 
-  @spec merge_focal(changeset :: Ecto.Changeset.t(), field_name :: atom) ::
-          {:ok, {:focal_changed, Ecto.Changeset.t()}}
-          | {:ok, {:focal_unchanged, Ecto.Changeset.t()}}
-          | {:ok, {:upload, Ecto.Changeset.t()}}
   def merge_focal(changeset, field_name) do
     case get_field(changeset, field_name) do
       %Brando.Type.Focal{focal: focal} ->
         # Merge focal with the cs
-        do_merge_focal(changeset, field_name, focal)
+        case Map.get(changeset.data, field_name, nil) do
+          nil ->
+            # nothing in data, return regular changeset
+            {:ok, {:upload, changeset}}
+
+          img ->
+            case Map.equal?(img.focal, focal) do
+              true ->
+                # nothing changed, delete change
+                changeset = delete_change(changeset, field_name)
+                {:ok, {:focal_unchanged, changeset}}
+
+              false ->
+                changeset = put_change(changeset, field_name, Map.put(img, :focal, focal))
+                {:ok, {:focal_changed, changeset}}
+            end
+        end
 
       _ ->
         {:ok, {:upload, changeset}}
     end
-  end
-
-  defp do_merge_focal(changeset, field_name, focal) do
-    case Map.get(changeset.data, field_name, nil) do
-      nil ->
-        # nothing in data, return regular changeset
-        {:ok, {:upload, changeset}}
-
-      img ->
-        put_or_delete_change(changeset, field_name, img, focal)
-    end
-  end
-
-  defp put_or_delete_change(changeset, field_name, img, focal) do
-    case Map.equal?(img.focal, focal) do
-      true ->
-        # nothing changed, delete change
-        changeset = delete_change(changeset, field_name)
-        {:ok, {:focal_unchanged, changeset}}
-
-      false ->
-        changeset = put_change(changeset, field_name, Map.put(img, :focal, focal))
-        {:ok, {:focal_changed, changeset}}
-    end
-  end
-
-  @doc """
-  List all registered image fields
-  """
-  def list_image_fields do
-    app_modules = Application.spec(Brando.otp_app(), :modules)
-    modules = app_modules
-
-    modules
-    |> Enum.filter(&({:__imagefields__, 0} in &1.__info__(:functions)))
-    |> Enum.map(fn module ->
-      %{
-        source: module.__schema__(:source),
-        fields: module.__imagefields__() |> Keyword.keys()
-      }
-    end)
-  end
-
-  def generate_image_fields_migration do
-    img_fields = list_image_fields()
-
-    Enum.map(img_fields, fn %{source: source, fields: fields} ->
-      Enum.map(fields, fn field ->
-        ~s(
-          execute """
-          alter table #{source} alter column #{field} type jsonb using #{field}::JSON
-          """
-          )
-      end)
-      |> Enum.join("\n")
-    end)
-    |> Enum.join("\n")
   end
 end
