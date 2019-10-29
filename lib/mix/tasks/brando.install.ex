@@ -282,7 +282,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "assets/frontend/webpack.dev.js", "assets/frontend/webpack.dev.js"},
     {:copy, "assets/frontend/webpack.prod.js", "assets/frontend/webpack.prod.js"},
     {:eex, "assets/frontend/webpack.settings.js.eex", "assets/frontend/webpack.settings.js"},
-    {:copy, "assets/frontend/yarn.lock", "assets/frontend/yarn.lock"},
+    {:copy, "assets/frontend/yarn.lock.eex", "assets/frontend/yarn.lock"},
 
     # Frontend CYPRESS
     {:copy, "assets/frontend/cypress.json", "assets/frontend/cypress.json"},
