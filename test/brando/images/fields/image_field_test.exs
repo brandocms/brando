@@ -3,7 +3,7 @@ defmodule Brando.Images.Field.ImageFieldTest do
   import Brando.Images.Utils
 
   defmodule TestSchema do
-    use Brando.Field.ImageField
+    use Brando.Field.Image.Schema
 
     @cfg %{
       allowed_mimetypes: ["image/jpeg", "image/png"],

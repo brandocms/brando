@@ -2,7 +2,7 @@ defmodule Brando.Files.Field.FileFieldTest do
   use ExUnit.Case, async: true
 
   defmodule TestSchema do
-    use Brando.Field.FileField
+    use Brando.Field.File.Schema
 
     @cfg %{
       allowed_mimetypes: ["application/pdf"],

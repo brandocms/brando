@@ -1,6 +1,6 @@
 defmodule Brando.Sites.Identity do
   use Brando.Web, :schema
-  use Brando.Field.ImageField
+  use Brando.Field.Image.Schema
 
   @type t :: %__MODULE__{}
   @type changeset :: Ecto.Changeset.t()

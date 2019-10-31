@@ -4,8 +4,8 @@ defmodule <%= module %> do
   use Brando.Gallery.Schema<% end %><%= if soft_delete do %>
   use Brando.SoftDelete.Schema<% end %><%= if sequenced do %>
   use Brando.Sequence.Schema<% end %><%= if file_fields != [] do %>
-  use Brando.Field.FileField<% end %><%= if img_fields != [] do %>
-  use Brando.Field.ImageField<% end %>
+  use Brando.Field.File.Schema<% end %><%= if img_fields != [] do %>
+  use Brando.Field.Image.Schema<% end %>
 
   @type t :: %__MODULE__{}
 

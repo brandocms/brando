@@ -1,5 +1,7 @@
 ## 0.44.0
 
+* `gsed -i "s=use Brando.Field.ImageField=use Brando.Field.Image.Schema=" *.ex`
+* `gsed -i "s=use Brando.Field.FileField=use Brando.Field.File.Schema=" *.ex`
 * Add `config :brando, :media_path, Path.join([Mix.Project.app_path(), "tmp", "media"])` to
   `config/e2e.exs`
 * Add

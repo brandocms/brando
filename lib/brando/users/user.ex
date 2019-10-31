@@ -7,7 +7,7 @@ defmodule Brando.Users.User do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :schema
-  use Brando.Field.ImageField
+  use Brando.Field.Image.Schema
   use Brando.SoftDelete.Schema
 
   import Brando.Gettext

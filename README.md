@@ -309,7 +309,7 @@ In your schema:
 
 ```diff
 
-+ use Brando.Field.ImageField
++ use Brando.Field.Image.Schema
 
   schema "user" do
     field :username, :string
