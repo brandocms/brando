@@ -15,12 +15,12 @@ defmodule Brando.Field.File.Schema do
       }
 
   """
+  alias Brando.Images
+  alias Brando.Utils
+
   import Ecto.Changeset
-  import Brando.Files.Upload
+  import Brando.Field.File.Utils
   import Brando.Upload
-  import Brando.Upload.Utils
-  import Brando.Files.Upload
-  import Brando.Files.Utils
 
   defmacro __using__(_) do
     quote do
@@ -161,5 +161,32 @@ defmodule Brando.Field.File.Schema do
 
   def handle_file_upload(name, file, _) do
     {:ok, {:unhandled, name, file}}
+  end
+
+  @doc """
+  Creates a File{} struct pointing to the copied uploaded file.
+  """
+  @spec create_file_struct(Brando.Upload.t()) :: {:ok, Brando.Type.File.t()}
+  def create_file_struct(%Brando.Upload{
+        plug: %{uploaded_file: file, content_type: mime_type},
+        cfg: cfg
+      }) do
+    {_, filename} = Utils.split_path(file)
+    upload_path = Map.get(cfg, :upload_path)
+
+    file_path = Path.join([upload_path, filename])
+
+    file_stat =
+      file_path
+      |> Images.Utils.media_path()
+      |> File.stat!()
+
+    file_struct =
+      %Brando.Type.File{}
+      |> Map.put(:path, file_path)
+      |> Map.put(:size, file_stat.size)
+      |> Map.put(:mimetype, mime_type)
+
+    {:ok, file_struct}
   end
 end

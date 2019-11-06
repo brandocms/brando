@@ -1,4 +1,4 @@
-defmodule Brando.Files.Utils do
+defmodule Brando.Field.File.Utils do
   @moduledoc """
   General utilities pertaining to the Files module
   """
