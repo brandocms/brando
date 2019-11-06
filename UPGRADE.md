@@ -167,11 +167,14 @@
 ### Startup checks
 
 * Add to your `application.ex`
-    result = Supervisor.start_link(children, opts)
-    # Run Brando system checks
-    Brando.System.initialize()
 
-    result
+  ```elixir
+  result = Supervisor.start_link(children, opts)
+  # Run Brando system checks
+  Brando.System.initialize()
+
+  result
+  ```
 
 ### Meta rewrite
 
@@ -180,8 +183,10 @@
 * Remove any `put_meta` in `router.ex´
 * Add
 
-    use Brando.JSONLD.Schema
-    use Brando.Meta.Schema
+  ```elixir
+  use Brando.JSONLD.Schema
+  use Brando.Meta.Schema
+  ```
 
   to `my_app_web.ex` under `schema/0`.
 
