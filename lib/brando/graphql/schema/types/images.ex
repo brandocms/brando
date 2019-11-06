@@ -1,6 +1,5 @@
 defmodule Brando.Schema.Types.Images do
   use Brando.Web, :absinthe
-  import Ecto.Query
 
   input_object :create_image_series_params do
     field :name, :string
@@ -37,13 +36,7 @@ defmodule Brando.Schema.Types.Images do
     field :image_series, list_of(:image_series) do
       arg :limit, :integer, default_value: 10
       arg :offset, :integer, default_value: 0
-
-      resolve assoc(:image_series, fn query, args, _ ->
-                query
-                |> order_by([is], asc: fragment("lower(?)", is.name))
-                |> limit([is], ^args.limit)
-                |> offset([is], ^args.offset)
-              end)
+      resolve dataloader(Brando.Images, :image_series)
     end
 
     field :inserted_at, :time
@@ -63,16 +56,8 @@ defmodule Brando.Schema.Types.Images do
     field :cfg, :image_config
     field :creator, :user
     field :image_category_id, :id
-    field :image_category, :image_category, resolve: assoc(:image_category)
-
-    field :images, list_of(:image) do
-      resolve assoc(:images, fn query, _, _ ->
-                query
-                |> where([i], is_nil(i.deleted_at))
-                |> order_by([i], asc: i.sequence, desc: i.updated_at)
-              end)
-    end
-
+    field :image_category, :image_category, resolve: dataloader(Brando.Images)
+    field :images, list_of(:image), resolve: dataloader(Brando.Images)
     field :sequence, :integer
     field :inserted_at, :time
     field :updated_at, :time
@@ -86,7 +71,7 @@ defmodule Brando.Schema.Types.Images do
     field :image, :image_type
     field :creator, :user
     field :image_series_id, :id
-    field :image_series, :image_series, resolve: assoc(:image_series)
+    field :image_series, :image_series, resolve: dataloader(Brando.Images)
     field :sequence, :integer
     field :inserted_at, :time
     field :updated_at, :time

@@ -276,6 +276,15 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     Mix.Brando.add_to_file(
       "lib/#{Mix.Brando.otp_app()}/graphql/schema.ex",
+      "dataloader",
+      "  |> Dataloader.add_source(#{binding[:base]}.#{binding[:domain]}, #{binding[:base]}.#{
+        binding[:domain]
+      }.data())",
+      :singular
+    )
+
+    Mix.Brando.add_to_file(
+      "lib/#{Mix.Brando.otp_app()}/graphql/schema.ex",
       "queries",
       "import_fields :#{binding[:singular]}_queries"
     )

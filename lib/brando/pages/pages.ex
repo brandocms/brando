@@ -17,6 +17,27 @@ defmodule Brando.Pages do
   end
 
   @doc """
+  Dataloader initializer
+  """
+  def data(_) do
+    Dataloader.Ecto.new(
+      Brando.repo(),
+      query: &query/2
+    )
+  end
+
+  @doc """
+  Dataloader queries
+  """
+  def query(PageFragment = query, _) do
+    query
+    |> where([f], is_nil(f.deleted_at))
+    |> order_by([f], asc: fragment("lower(?)", f.key))
+  end
+
+  def query(queryable, _), do: queryable
+
+  @doc """
   Create new page
   """
   def create_page(params, user) do

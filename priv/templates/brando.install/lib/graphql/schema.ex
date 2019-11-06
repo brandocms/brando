@@ -9,6 +9,20 @@ defmodule <%= application_module %>.Schema do
   import_types <%= application_module %>.Schema.Types
   import_types Brando.Schema.Types
 
+  def context(ctx) do
+    # ++dataloaders
+    loader =
+      Dataloader.new()
+      |> import_brando_dataloaders(ctx)
+    # __dataloaders
+
+    Map.put(ctx, :loader, loader)
+  end
+
+  def plugins do
+    [Absinthe.Middleware.Dataloader] ++ Absinthe.Plugin.defaults()
+  end
+
   query do
     import_brando_queries()
 

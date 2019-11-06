@@ -56,7 +56,6 @@
                   <%= for {_, v} <- list_rows do %><%= v %>
                   <% end %>
                   <td
-                    v-if="['superuser'].includes(me.role)"
                     class="text-center fit">
                     <b-dropdown
                       variant="white"

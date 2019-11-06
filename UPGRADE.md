@@ -1,9 +1,91 @@
 ## 0.44.0
 
-* `gsed -i "s=use Brando.Field.ImageField=use Brando.Field.Image.Schema=" *.ex`
-* `gsed -i "s=use Brando.Field.FileField=use Brando.Field.File.Schema=" *.ex`
+* Part 1 of the big backend Vue rewrite has been updating it to use the new Vee-Validate syntax.
+  All `<KInput(...)>` components with validation now needs to be wrapped in a `<ValidationObserver>` HOC:
+
+  ```html
+  <ValidationObserver
+    ref="observer"
+    v-slot="{ invalid }">
+    <!-- fields here -->
+  </ValidationObserver>
+  ```
+
+  All `<KInput(...)>` components needs to:
+
+  - Add:
+    - A `rules` prop i.e -> `rules="required"`
+  - Remove:
+    - `v-validate`
+    - `:has-error`
+    - `:error-text`
+
+  Switch out the `validate` function with:
+
+  ```es6
+  async validate () {
+    const isValid = await this.$refs.observer.validate()
+    if (!isValid) {
+      alertError('Feil i skjema', 'Vennligst se over og rett feil i rødt')
+      this.loading = false
+      return
+    }
+    this.save()
+  },
+  ```
+
+* Change `assets/backend/src/main.js` by removing the `Vue` import from `kurtz` then change
+  ```es6
+  // Install Kurtz
+  let Vue = installKurtz()
+  ```
+
+* Add dataloaders to your contexts:
+  ```elixir
+  @doc """
+  Dataloader initializer
+  """
+  def data(_) do
+    Dataloader.Ecto.new(
+      Repo,
+      query: &query/2
+    )
+  end
+
+  @doc """
+  Dataloader queries
+  """
+  def query(queryable, _), do: queryable
+  ```
+
+* Add to your `lib/my_app/graphql/schema.ex`
+  ```elixir
+  def context(ctx) do
+    # ++dataloaders
+    loader =
+      Dataloader.new()
+      |> import_brando_dataloaders(ctx)
+      |> Dataloader.add_source(Exhibitions, Exhibitions.data())
+      |> Dataloader.add_source(Artists, Artists.data())
+    # __dataloaders
+
+    Map.put(ctx, :loader, loader)
+  end
+
+  def plugins do
+    [Absinthe.Middleware.Dataloader] ++ Absinthe.Plugin.defaults()
+  end
+  ```
+
+* Remove `absinthe_ecto` from your deps in `mix.exs`
+* Add `{:dataloader, "~> 1.0"}` instead
+
+* `gsed -i "s=use Brando.Field.ImageField=use Brando.Field.Image.Schema=" */**/*.ex`
+* `gsed -i "s=use Brando.Field.FileField=use Brando.Field.File.Schema=" */**/*.ex`
+
 * Add `config :brando, :media_path, Path.join([Mix.Project.app_path(), "tmp", "media"])` to
   `config/e2e.exs`
+
 * Add
   ```
   # ++aliases

@@ -11,6 +11,21 @@ defmodule Brando.Users do
   @type user :: User.t()
 
   @doc """
+  Dataloader initializer
+  """
+  def data(_) do
+    Dataloader.Ecto.new(
+      Brando.repo(),
+      query: &query/2
+    )
+  end
+
+  @doc """
+  Dataloader queries
+  """
+  def query(queryable, _), do: queryable
+
+  @doc """
   Get user by id
   """
   def get_user(id) do

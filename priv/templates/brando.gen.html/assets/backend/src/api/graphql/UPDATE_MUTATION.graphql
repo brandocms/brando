@@ -1,5 +1,5 @@
 mutation Update<%= Recase.to_pascal(vue_singular) %>($<%= vue_singular %>Id: ID!, $<%= vue_singular %>Params: <%= Recase.to_pascal(vue_singular) %>Params) {
-  update_<%= singular %>(
+  update<%= Recase.to_pascal(vue_singular) %>(
     <%= vue_singular %>Id: $<%= vue_singular %>Id,
     <%= vue_singular %>Params: $<%= vue_singular %>Params,
   ) {
