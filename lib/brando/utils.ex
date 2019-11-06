@@ -5,6 +5,9 @@ defmodule Brando.Utils do
 
   alias Brando.Cache
 
+  @type changeset :: Ecto.Changeset.t()
+  @type conn :: Plug.Conn.t()
+
   @filtered_deps [
     :brando,
     :brando_analytics,
@@ -28,7 +31,7 @@ defmodule Brando.Utils do
   Converts `string` to an ascii slug. Removes all unicode, spaces,
   extraneous dashes and punctuation and downcases the slug
   """
-  @spec slugify(String.t()) :: String.t()
+  @spec slugify(binary) :: binary
   def slugify(string), do: Slugger.slugify_downcase(string)
 
   @doc """
@@ -42,7 +45,7 @@ defmodule Brando.Utils do
         "test-with-spaces.jpeg"
 
   """
-  @spec slugify_filename(String.t()) :: String.t()
+  @spec slugify_filename(binary) :: binary
   def slugify_filename(filename) do
     {basename, ext} = split_filename(filename)
     slugged_filename = slugify(basename)
@@ -53,7 +56,7 @@ defmodule Brando.Utils do
   Generates a random basename for `filename`.
   Keeps the original extension.
   """
-  @spec random_filename(String.t()) :: String.t()
+  @spec random_filename(binary) :: binary
   def random_filename(filename) do
     ext = Path.extname(filename)
     random_str = random_string(filename)
@@ -64,7 +67,7 @@ defmodule Brando.Utils do
   Sets a new basename for file.
   Keeps the original extension.
   """
-  @spec change_basename(String.t(), String.t()) :: String.t()
+  @spec change_basename(binary, binary) :: binary
   def change_basename(filename, new_basename) do
     ext = Path.extname(filename)
     "#{new_basename}#{ext}"
@@ -73,7 +76,7 @@ defmodule Brando.Utils do
   @doc """
   Sets a new extension name for file
   """
-  @spec change_extension(file :: String.t(), new_extension :: String.t()) :: String.t()
+  @spec change_extension(file :: binary, new_extension :: binary) :: binary
   def change_extension(file, new_extension) do
     Enum.join([Path.rootname(file), new_extension], ".")
   end
@@ -119,7 +122,7 @@ defmodule Brando.Utils do
   @doc """
   Adds an unique postfix to `filename`
   """
-  @spec unique_filename(String.t()) :: String.t()
+  @spec unique_filename(binary) :: binary
   def unique_filename(filename) do
     ext = Path.extname(filename)
     base = String.replace(filename, ext, "")
@@ -142,7 +145,7 @@ defmodule Brando.Utils do
       iex> split_path("test/dir/filename.jpg")
       {"test/dir", "filename.jpg"}
   """
-  @spec split_path(String.t()) :: {String.t(), String.t()}
+  @spec split_path(binary) :: {binary, binary}
   def split_path(file) do
     if String.contains?(file, "/") do
       filename =
@@ -171,7 +174,7 @@ defmodule Brando.Utils do
       iex> split_filename("filename.jpg")
       {"filename", ".jpg"}
   """
-  @spec split_filename(String.t()) :: {String.t(), String.t()}
+  @spec split_filename(binary) :: {binary, binary}
   def split_filename(filename) do
     ext = Path.extname(filename)
     basename = Path.basename(filename, ext)
@@ -179,26 +182,26 @@ defmodule Brando.Utils do
   end
 
   @doc """
-  Converts `coll` (if it's a struct) to a map with string keys
+  Converts `collection` (if it's a struct) to a map with string keys
   """
   def to_string_map(nil), do: nil
 
-  def to_string_map(coll) do
-    if Map.has_key?(coll, :__struct__) do
-      coll
+  def to_string_map(collection) do
+    if Map.has_key?(collection, :__struct__) do
+      collection
       |> Map.delete(:__struct__)
       |> Enum.map(fn {k, v} -> {Atom.to_string(k), v} end)
       |> Enum.into(%{})
     else
-      coll
+      collection
     end
   end
 
   @doc """
-  Converts `coll` to a map with safe atom keys
+  Converts `collection` to a map with safe atom keys
   """
-  def to_atom_map(coll) do
-    for {key, val} <- coll, into: %{} do
+  def to_atom_map(collection) do
+    for {key, val} <- collection, into: %{} do
       if is_atom(key), do: {key, val}, else: {String.to_existing_atom(key), val}
     end
   end
@@ -225,7 +228,7 @@ defmodule Brando.Utils do
   @doc """
   Returns current date & time
   """
-  @spec get_now :: String.t()
+  @spec get_now :: binary
   def get_now do
     :calendar.local_time()
     |> NaiveDateTime.from_erl!()
@@ -235,7 +238,7 @@ defmodule Brando.Utils do
   @doc """
   Returns current date
   """
-  @spec get_date_now :: String.t()
+  @spec get_date_now :: binary
   def get_date_now do
     :calendar.local_time()
     |> elem(0)
@@ -266,15 +269,15 @@ defmodule Brando.Utils do
   @doc """
   Returns scheme, host and port (if non-standard)
   """
-  @spec hostname() :: String.t()
-  @spec hostname(path :: String.t()) :: String.t()
+  @spec hostname() :: binary
+  @spec hostname(path :: binary) :: binary
   def hostname, do: "#{Brando.endpoint().url}"
   def hostname(path), do: Path.join(hostname(), path)
 
   @doc """
   Returns full url path with scheme and host.
   """
-  @spec current_url(Plug.Conn.t(), String.t() | nil) :: String.t()
+  @spec current_url(conn, binary | nil) :: binary
   def current_url(conn, url \\ nil) do
     path = url || conn.request_path
     "#{hostname()}#{path}"
@@ -283,7 +286,7 @@ defmodule Brando.Utils do
   @doc """
   Returns URI encoded www form of current url
   """
-  @spec escape_current_url(Plug.Conn.t()) :: String.t()
+  @spec escape_current_url(conn) :: binary
   def escape_current_url(conn) do
     conn
     |> current_url
@@ -294,7 +297,7 @@ defmodule Brando.Utils do
   Prefix `media` with scheme / host and port from `conn`.
   Returns URI encoded www form.
   """
-  @spec escape_and_prefix_host(Plug.Conn.t(), String.t()) :: String.t()
+  @spec escape_and_prefix_host(conn, binary) :: binary
   def escape_and_prefix_host(conn, media) do
     url = current_url(conn, media)
     URI.encode_www_form(url)
@@ -312,16 +315,16 @@ defmodule Brando.Utils do
   Return joined path of `file` and the :media_url config option
   as set in your app's config.exs.
   """
-  @spec media_url :: String.t() | nil
+  @spec media_url :: binary | nil
   def media_url, do: Brando.config(:media_url)
-  @spec media_url(String.t() | nil) :: String.t() | nil
+  @spec media_url(binary | nil) :: binary | nil
   def media_url(nil), do: Brando.config(:media_url)
   def media_url(path), do: Path.join([Brando.config(:media_url), path])
 
   @doc """
   Get title assign from `conn`
   """
-  @spec get_page_title(Plug.Conn.t()) :: String.t()
+  @spec get_page_title(conn) :: binary
   def get_page_title(%{assigns: %{page_title: title}}) do
     organization = Cache.get(:identity)
 
@@ -360,7 +363,7 @@ defmodule Brando.Utils do
   @doc """
   Returns hostname and media directory.
   """
-  @spec host_and_media_url() :: String.t()
+  @spec host_and_media_url() :: binary
   def host_and_media_url do
     hostname() <> Brando.config(:media_url)
   end
@@ -385,7 +388,7 @@ defmodule Brando.Utils do
   @doc """
   Checks if `conn`'s `full_path` matches `current_path`.
   """
-  @spec active_path?(Plug.Conn.t(), String.t()) :: boolean
+  @spec active_path?(conn, binary) :: boolean
   def active_path?(conn, url_to_match) do
     current_path = Path.join(["/" | conn.path_info])
     chunks = String.split(url_to_match, "/")
@@ -573,5 +576,29 @@ defmodule Brando.Utils do
     |> Enum.filter(&(elem(&1, 0) in @filtered_deps))
     |> Enum.reverse()
     |> Enum.map(&%{app: elem(&1, 0), version: to_string(elem(&1, 2))})
+  end
+
+  @doc """
+  Checks changeset if `field_name` is changed.
+  Returns :unchanged, or {:ok, change}
+  """
+  @spec field_has_changed(changeset, atom) :: {:ok, any()} | :unchanged
+  def field_has_changed(changeset, field_name) do
+    case Ecto.Changeset.get_change(changeset, field_name) do
+      nil -> :unchanged
+      change -> {:ok, change}
+    end
+  end
+
+  @doc """
+  Checks changeset for errors.
+  No need to process upload if there are other errors.
+  """
+  @spec changeset_has_no_errors(changeset) :: {:ok, changeset} | :has_errors
+  def changeset_has_no_errors(changeset) do
+    case changeset.errors do
+      [] -> {:ok, changeset}
+      _ -> :has_errors
+    end
   end
 end

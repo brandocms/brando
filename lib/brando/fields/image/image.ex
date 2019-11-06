@@ -25,7 +25,6 @@ defmodule Brando.Field.Image.Schema do
 
   """
   import Ecto.Changeset
-  import Brando.Upload.Utils
 
   defmacro __using__(_) do
     quote do
@@ -69,8 +68,8 @@ defmodule Brando.Field.Image.Schema do
 
       defp do_validate_upload(changeset, {:image, field_name}, user) do
         with {:ok, {:upload, changeset}} <- merge_focal(changeset, field_name),
-             {:ok, plug} <- field_has_changed(changeset, field_name),
-             {:ok, _} <- changeset_has_no_errors(changeset),
+             {:ok, plug} <- Brando.Utils.field_has_changed(changeset, field_name),
+             {:ok, _} <- Brando.Utils.changeset_has_no_errors(changeset),
              {:ok, cfg} <- get_image_cfg(field_name),
              {:ok, {:handled, name, field}} <-
                Images.Upload.Field.handle_upload(field_name, plug, cfg, user) do

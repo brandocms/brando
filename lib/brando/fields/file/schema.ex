@@ -39,8 +39,8 @@ defmodule Brando.Field.File.Schema do
         do: do_validate_upload(changeset, {:file, field_name}, :system)
 
       defp do_validate_upload(changeset, {:file, field_name}, _user) do
-        with {:ok, plug} <- field_has_changed(changeset, field_name),
-             {:ok, _} <- changeset_has_no_errors(changeset),
+        with {:ok, plug} <- Brando.Utils.field_has_changed(changeset, field_name),
+             {:ok, _} <- Brando.Utils.changeset_has_no_errors(changeset),
              {:ok, cfg} <- get_file_cfg(field_name),
              {:ok, {:handled, name, field}} <- handle_file_upload(field_name, plug, cfg) do
           put_change(changeset, name, field)
