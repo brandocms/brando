@@ -18,7 +18,10 @@ defmodule Mix.Tasks.Brando.Install do
     # Formatter
     {:eex, "formatter.exs", ".formatter.exs"},
 
-    # Release migrator
+    # Release cfg & setup
+    {:eex, "rel/config.exs", "rel/config.exs"},
+    {:text, "rel/vm.args.staging", "rel/vm.args.staging"},
+    {:text, "rel/vm.args.prod", "rel/vm.args.prod"},
     {:eex, "rel/commands/migrate.sh", "rel/commands/migrate.sh"},
     {:eex, "lib/application_name/release_tasks.ex", "lib/application_name/release_tasks.ex"},
 
@@ -28,6 +31,7 @@ defmodule Mix.Tasks.Brando.Install do
     # Etc. Various OS config files and log directory.
     {:keep, "log", "log"},
     {:eex, "etc/logrotate/prod.conf", "etc/logrotate/prod.conf"},
+    {:eex, "etc/logrotate/staging.conf", "etc/logrotate/staging.conf"},
     {:eex, "etc/nginx/prod.conf", "etc/nginx/prod.conf"},
     {:eex, "etc/nginx/staging.conf", "etc/nginx/staging.conf"},
     {:eex, "etc/nginx/502.html", "etc/nginx/502.html"},
@@ -167,7 +171,8 @@ defmodule Mix.Tasks.Brando.Install do
     # Deployment tools
     {:copy, "gitignore", ".gitignore"},
     {:copy, "dockerignore", ".dockerignore"},
-    {:copy, "Dockerfile", "Dockerfile"},
+    {:copy, "Dockerfile.prod", "Dockerfile.prod"},
+    {:copy, "Dockerfile.staging", "Dockerfile.staging"},
     {:copy, "fabfile.py", "fabfile.py"},
     {:eex, "deployment.cfg", "deployment.cfg"},
 

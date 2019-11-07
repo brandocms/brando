@@ -6,20 +6,10 @@
           <h5 class="section mb-0">Endre</h5>
         </div>
         <div class="card-body">
-          <!--
-          FORM FIELDS HERE
-          --><%= for {_v, k} <- vue_inputs do %>
-          <%= List.first(k) %><% {_, r} = List.pop_at(k, 0); {_, remainder} = List.pop_at(r, -1) %><%= for prop <- remainder do %>
-            <%= prop %><% end %>
-          />
-          <% end %>
-          <button :disabled="!!loading" @click="validate" class="btn btn-secondary">
-            Lagre
-          </button>
-
-          <router-link :disabled="!!loading" :to="{ name: '<%= plural %>' }" class="btn btn-outline-secondary">
-            Tilbake til oversikten
-          </router-link>
+          <<%= Recase.to_pascal(vue_singular) %>Form
+            :<%= vue_singular %>="<%= vue_singular %>"
+            :loading="loading"
+            @validate="validate" />
         </div>
       </div>
     </div>
@@ -32,8 +22,13 @@ import { nprogress } from '@univers-agency/kurtz'
 import { showError, validateImageParams, stripParams } from '@univers-agency/kurtz/lib/utils'
 import { alertError } from '@univers-agency/kurtz/lib/utils/alerts'
 import { <%= vue_singular %>API } from '@/api/<%= vue_singular %>'
+import <%= Recase.to_pascal(vue_singular) %>Form from '@/views/<%= snake_domain %>/<%= Recase.to_pascal(vue_singular) %>Form'
 
 export default {
+  components: {
+    <%= Recase.to_pascal(vue_singular) %>Form
+  },
+
   data () {
     return {
       loading: 0,
@@ -60,21 +55,8 @@ export default {
   },
 
   methods: {
-    validate () {
-      this.$validator.validateAll().then(valid => {
-        if (!valid) {
-          alertError('Feil i skjema', 'Vennligst se over og rett feil i rødt')
-          this.loading = false
-          return
-        }
-        this.save()
-      }).catch(err => {
-        console.log(err)
-      })
-    },
-
     async save () {
-      this.loading = false
+      this.loading = 0
       let params = { ...this.<%= vue_singular %> }
 
       // strip out params we don't want sent in the mutation

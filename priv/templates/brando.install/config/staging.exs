@@ -13,12 +13,10 @@ use Mix.Config
 # which you typically run after static files are built.
 config :<%= application_name %>, <%= application_module %>Web.Endpoint,
   http: [:inet6, port: {:system, "PORT"}],
-  url: [scheme: "https", host: "sitename.no", port: 80],
+  url: [scheme: "http", host: "<%= application_name %>.staging.yourhost.name", port: 80],
   # force_ssl: [rewrite_on: [:x_forwarded_proto]],
-  check_origin: ["//sitename.no", "//*.sitename.no",
-                 "//*.univers.agency", "//localhost:4000"],
+  check_origin: ["//*.univers.agency", "//localhost:4000"],
   server: true,
-  render_errors: [accepts: ~w(html json), view: Brando.ErrorView, default_format: "html"],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
 # Do not print debug messages in production

@@ -156,12 +156,14 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
                  ~s({\n    id\n    name\n    age\n    height\n    famous\n    born_at\n    secret\n    cover {\n      thumb: url\(size: "original"\)\n      focal\n    }\n    data\n    first_login\n    alarm\n    creator\n    image_series_id\n    updated_at\n  })
       end)
 
+      assert_file("assets/backend/src/views/games/CaptainForm.vue", fn file ->
+        assert file =~
+                 "<router-link\n        :disabled=\"!!loading\"\n        :to=\"{ name: 'captains' }\""
+      end)
+
       assert_file("assets/backend/src/views/games/CaptainCreateView.vue", fn file ->
         assert file =~
-                 ~s(<router-link :disabled="!!loading" :to="{ name: 'captains' }" class="btn btn-outline-secondary">)
-
-        assert file =~
-                 ~s(validateImageParams\(params, ['cover']\))
+                 "<CaptainForm\n            :captain=\"captain\"\n            :loading=\"loading\"\n            @save=\"save\" />"
       end)
 
       assert_file("assets/backend/src/views/games/CaptainEditView.vue", fn file ->
@@ -169,11 +171,16 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
                  ~s(validateImageParams\(params, ['cover']\))
       end)
 
-      assert_file("assets/backend/src/views/games/PegLegCreateView.vue", fn file ->
+      assert_file("assets/backend/src/views/games/PegLegForm.vue", fn file ->
         assert file =~
-                 ~s(<router-link :disabled="!!loading" :to="{ name: 'peg_legs' }" class="btn btn-outline-secondary">)
+                 "<router-link\n        :disabled=\"!!loading\"\n        :to=\"{ name: 'peg_legs' }\""
 
         assert file =~ ~s(v-model="pegLeg.name")
+      end)
+
+      assert_file("assets/backend/src/views/games/PegLegCreateView.vue", fn file ->
+        assert file =~
+                 "<PegLegForm\n            :pegLeg=\"pegLeg\"\n            :loading=\"loading\"\n            @save=\"save\" />"
       end)
 
       assert_file("assets/backend/src/views/games/CaptainListView.vue", fn file ->

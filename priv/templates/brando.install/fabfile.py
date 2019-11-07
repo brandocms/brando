@@ -13,7 +13,7 @@ from fabric.colors import red, green, yellow, cyan, blue
 from fabric.operations import prompt
 from fabric.utils import abort
 
-VERSION_NUMBER = '2.0.0'
+VERSION_NUMBER = '3.0.0'
 
 import ConfigParser
 
@@ -60,8 +60,6 @@ GLUE_SETTINGS = {
         'db_name': "%s_prod" % PROJECT_NAME,
         'db_user': PROJECT_NAME,
         'db_pass': DB_PASS,
-        'repo': PROJECT_NAME,
-        'git_branch': 'master',
         'public_path': 'priv',
         'media_path': 'media',
     },
@@ -71,8 +69,6 @@ GLUE_SETTINGS = {
         'db_name': "%s_staging" % PROJECT_NAME,
         'db_user': PROJECT_NAME,
         'db_pass': DB_PASS,
-        'repo': PROJECT_NAME,
-        'git_branch': 'master',
         'public_path': 'priv',
         'media_path': 'media',
     }
@@ -92,11 +88,12 @@ def _get_project_version():
 def _get_bds_version():
     return VERSION_NUMBER
 
-print "--------------------------------------------------------------"
-print blue('& brando deployment script v%s | copyright twined 2010-%s'
+print "-------------------------------------------------------------------"
+print blue('& brando deployment script v%s | copyright univers agency 2010-%s'
            % (_get_bds_version(), datetime.now().year))
-print "--------------------------------------------------------------"
+print "-------------------------------------------------------------------"
 print ""
+
 
 
 def prod():
@@ -107,6 +104,9 @@ def prod():
     env.flavor = 'prod'
     # the process name, also the base name
     env.procname = GLUE_SETTINGS['prod']['process_name']
+
+    # the dockerfile
+    env.dockerfile = 'Dockerfile.prod'
 
     # username for the ssh connection
     env.user = GLUE_SETTINGS['ssh_user']
@@ -121,14 +121,9 @@ def prod():
         env.passwords = {'%s@%s:%s' % (env.user, env.host, env.port): SSH_PASS}
     # project base
     env.project_base = GLUE_SETTINGS['prod']['project_base']
-    # the path to clone our git repo into
+    # the path to work with
     env.path = os.path.join(GLUE_SETTINGS['prod']['project_base'],
                             GLUE_SETTINGS['project_name'])
-    # name of the repo we are cloning
-    env.repo = '%s' % GLUE_SETTINGS['prod']['repo']
-    # branch name to clone, or empty for master
-    env.branch = GLUE_SETTINGS['prod']['git_branch']
-
     # the user we will create on host, also runs manage.py tasks etc.
     env.project_user = GLUE_SETTINGS['project_name']
     # the group we add the user to. this is what the project path
@@ -160,6 +155,9 @@ def staging():
     # the process name, also the base name
     env.procname = GLUE_SETTINGS['staging']['process_name']
 
+    # the dockerfile
+    env.dockerfile = 'Dockerfile.staging'
+
     # username for the ssh connection
     env.user = GLUE_SETTINGS['ssh_user']
     # hostname for the ssh connection
@@ -168,17 +166,14 @@ def staging():
     env.port = GLUE_SETTINGS['ssh_port']
     # here we build the hosts string
     env.hosts = ['%s@%s:%s' % (env.user, env.host, env.port)]
-
+    # password to use
+    if SSH_PASS != '':
+        env.passwords = {'%s@%s:%s' % (env.user, env.host, env.port): SSH_PASS}
     # project base
     env.project_base = GLUE_SETTINGS['staging']['project_base']
-    # the path to clone our git repo into
+    # the path to work with
     env.path = os.path.join(GLUE_SETTINGS['staging']['project_base'],
                             GLUE_SETTINGS['project_name'])
-    # name of the repo we are cloning
-    env.repo = '%s' % GLUE_SETTINGS['staging']['repo']
-    # branch name to clone, or empty for master
-    env.branch = GLUE_SETTINGS['staging']['git_branch']
-
     # the user we will create on host, also runs manage.py tasks etc.
     env.project_user = GLUE_SETTINGS['project_name']
     # the group we add the user to. this is what the project path
@@ -208,12 +203,14 @@ def bootstrap_release():
     require('hosts')
     version = _get_project_version()
 
+    print(red('(!) FLAVOR => %s' % env.flavor))
+
     _warn('''
-        Deploying %s v%s.\r\n
+        Deploying >> %s << %s v%s.\r\n
         This is a potientially dangerous operation. Make sure you have\r\n
         all your ducks in a row, and that you have checked the configuration\r\n
         files both in etc/ and in the fabfile.py itself!
-    ''' % (PROJECT_NAME, version))
+    ''' % (env.flavor, PROJECT_NAME, version))
 
     _confirmtask()
 
@@ -248,6 +245,7 @@ def deploy_release():
     Build release on local Docker, upload and unpack to remote before restarting
     """
     version = _get_project_version()
+    print(red('(!) FLAVOR => %s' % env.flavor))
     print(yellow('==> deploy release %s v%s' % (PROJECT_NAME, version)))
     if not confirm("Is the version correct?"):
         abort("Aborting")
@@ -267,7 +265,8 @@ def build_release():
     Build release with docker
     """
     print(yellow('==> building local release with docker...'))
-    local('docker build -t twined/%s .' % env.project_name)
+    print(red('(!) FLAVOR => %s' % env.flavor))
+    local('docker build -f %s -t twined/%s_%s .' % (env.dockerfile, env.project_name, env.flavor))
 
 
 def copy_release_from_docker(version):
@@ -276,12 +275,15 @@ def copy_release_from_docker(version):
     """
     print(yellow('==> copying release archive from docker to release-archives/'))
     local('mkdir -p release-archives')
-    local('docker run --rm --entrypoint cat twined/%s /opt/app/_build/prod/rel/%s/releases/%s/%s.tar.gz > release-archives/%s_%s.tar.gz' % (
+    local('docker run --rm --entrypoint cat twined/%s_%s /opt/app/_build/%s/rel/%s/releases/%s/%s.tar.gz > release-archives/%s_%s_%s.tar.gz' % (
         env.project_name,
+        env.flavor,
+        env.flavor,
         env.project_name,
         version,
         env.project_name,
         env.project_name,
+        env.flavor,
         version))
 
 
@@ -297,11 +299,11 @@ def upload_release(version):
     Upload release to target
     """
     print(yellow('==> uploading release to target host'))
-    put('release-archives/%s_%s.tar.gz' % (env.project_name, version), '%s' % env.path, use_sudo=True)
+    put('release-archives/%s_%s_%s.tar.gz' % (env.project_name, env.flavor, version), '%s' % env.path, use_sudo=True)
     print(yellow('==> chowning archive'))
-    _setowner(os.path.join(env.path, '%s_%s.tar.gz' % (env.project_name, version)))
+    _setowner(os.path.join(env.path, '%s_%s_%s.tar.gz' % (env.project_name, env.flavor, version)))
     print(yellow('==> chmoding archive'))
-    _setperms('660', os.path.join(env.path, '%s_%s.tar.gz' % (env.project_name, version)))
+    _setperms('660', os.path.join(env.path, '%s_%s_%s.tar.gz' % (env.project_name, env.flavor, version)))
 
 
 def unpack_release(version):
@@ -312,10 +314,10 @@ def unpack_release(version):
         print(red('==> deleting old release'))
         sudo('rm -rf bin var erts-* lib releases running-config', user=env.project_user)
         print(yellow('==> unpacking release'))
-        sudo('tar xvf %s_%s.tar.gz' % (env.project_name, version), user=env.project_user)
+        sudo('tar xvf %s_%s_%s.tar.gz' % (env.project_name, env.flavor, version), user=env.project_user)
         print(yellow('==> archiving release'))
         sudo('mkdir -p release-archives', user=env.project_user)
-        sudo('mv %s_%s.tar.gz release-archives/%s_%s.tar.gz' % (env.project_name, version, env.project_name, version), user=env.project_user)
+        sudo('mv %s_%s_%s.tar.gz release-archives/%s_%s_%s.tar.gz' % (env.project_name, env.flavor, version, env.project_name, env.flavor, version), user=env.project_user)
 
     fixprojectperms()
 
@@ -329,11 +331,11 @@ def rollback_release(version):
         print(red('==> deleting old release'))
         sudo('rm -rf bin erts-7.2 lib releases running-config', user=env.project_user)
         print(yellow('==> copy old release'))
-        sudo('cp release-archives/%s_%s.tar.gz .' % (env.project_name, version), user=env.project_user)
+        sudo('cp release-archives/%s_%s_%s.tar.gz .' % (env.project_name, env.flavor, version), user=env.project_user)
         print(yellow('==> unpacking release'))
-        sudo('tar xvf %s_%s.tar.gz' % (env.project_name, version), user=env.project_user)
+        sudo('tar xvf %s_%s_%s.tar.gz' % (env.project_name, env.flavor, version), user=env.project_user)
         print(yellow('==> removing tarball'))
-        sudo('rm %s_%s.tar.gz' % (env.project_name, version), user=env.project_user)
+        sudo('rm %s_%s_%s.tar.gz' % (env.project_name, env.flavor, version), user=env.project_user)
 
     fixprojectperms()
     start()
@@ -459,6 +461,7 @@ def drop_db_remote():
     """
     Drops db on remote
     """
+    print(red('(!) FLAVOR => %s' % env.flavor))
     _warn('''
         DROPPING REMOTE DATABASE %s
     ''' % (env.db_name))
@@ -803,7 +806,7 @@ def _set_media_perms():
 def createuser():
     """
     Creates a linux user on host, if it doesn't already exists
-    and adds is to configured group
+    and adds it to the configured group
     """
     require('hosts')
     print(yellow('==> creating user %s on remote' % env.project_user))

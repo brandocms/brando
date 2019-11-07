@@ -1,5 +1,7 @@
 ## 0.44.0
 
+### Vue backend rewrite part 1/? (sorry)
+
 * Part 1 of the big backend Vue rewrite has been updating it to use the new Vee-Validate syntax.
   All `<KInput(...)>` components with validation now needs to be wrapped in a `<ValidationObserver>` HOC:
 
@@ -27,7 +29,7 @@
     const isValid = await this.$refs.observer.validate()
     if (!isValid) {
       alertError('Feil i skjema', 'Vennligst se over og rett feil i rødt')
-      this.loading = false
+      this.loading = 0
       return
     }
     this.save()
@@ -39,6 +41,55 @@
   // Install Kurtz
   let Vue = installKurtz()
   ```
+
+### A working staging setup!
+
+* Add staging conf for logrotate
+  ```
+    cp etc/logrotate/prod.conf etc/logrotate/staging.conf \
+       gsed -i "s=prod=staging=" etc/logrotate/staging.conf
+  ```
+* Ensure you have config/staging.conf & config/staging.secret.conf, and that the `endpoint` config
+  looks OK (http/url/etc)
+  ```
+  config :my_app, MyAppWeb.Endpoint,
+    http: [:inet6, port: {:system, "PORT"}],
+    url: [scheme: "http", host: "my_app.staging.yourhost.name", port: 80],
+    # force_ssl: [rewrite_on: [:x_forwarded_proto]],
+    check_origin: ["//*.yourhost.name", "//localhost:4000"],
+    server: true,
+    cache_static_manifest: "priv/static/cache_manifest.json"
+  ```
+* Ensure you have rel/vm.args.prod & rel/vm.args.staging
+  ```
+    cp rel/vm.args rel/vm.args.prod && cp rel/vm.args rel/vm.args.staging && \
+       gsed -i "s=<%= release_name %>@127.0.0.1=<%= release_name %>_staging@127.0.0.1=" rel/vm.args.staging && \
+       rm rel/vm.args
+  ```
+* Ensure you have Dockerfile.prod & Dockerfile.staging
+  ```
+    cp Dockerfile Dockerfile.prod && cp Dockerfile Dockerfile.staging && \
+       gsed -i "s=prod=staging=" Dockerfile.staging && \
+       rm Dockerfile
+  ```
+* Ensure you have fabfile.py version 3.0.0
+  --> copy from https://github.com/univers-agency/brando/blob/develop/priv/templates/brando.install/fabfile.py
+* Ensure `rel/config.exs` has:
+    ```
+    environment :staging do
+      set include_erts: true
+      set include_src: false
+      set cookie: :"<secret>"
+      set vm_args: "rel/vm.args.staging"
+    end
+
+    environment :prod do
+      set include_erts: true
+      set include_src: false
+      set cookie: :"<secret>"
+      set vm_args: "rel/vm.args.prod"
+    end
+    ```
 
 * Add dataloaders to your contexts:
   ```elixir
