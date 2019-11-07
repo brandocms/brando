@@ -1,6 +1,7 @@
 <template>
   <ValidationProvider
     v-slot="{ errors, invalid }"
+    :vid="name"
     :name="name"
     :immediate="true"
     :rules="rules">
