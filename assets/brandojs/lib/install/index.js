@@ -62,13 +62,13 @@ export function installKurtz () {
   // Add the max rule
   extend('max', {
     ...max,
-    message: 'Kan maksimalt inneholde {_length_} tegn'
+    message: 'Kan maksimalt inneholde {length} tegn'
   })
 
   // Add the min rule
   extend('min', {
     ...min,
-    message: 'Må minst inneholde {_length_} tegn'
+    message: 'Må minst inneholde {length} tegn'
   })
 
   // Add the max rule
