@@ -1,5 +1,5 @@
 mutation Delete<%= Recase.to_pascal(vue_singular) %>($<%= vue_singular %>Id: ID!) {
-  delete_<%= singular %>(<%= vue_singular %>Id: $<%= vue_singular %>Id) {
+  delete<%= Recase.to_pascal(vue_singular) %>(<%= vue_singular %>Id: $<%= vue_singular %>Id) {
     id
   }
 }

@@ -2,6 +2,10 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.44.0
 
+* Move to local backend JS for tighter integration.
+* Generator now generates a more complete `staging` config
+* Generator separates out the form for backend schemas
+* GraphQL rewrite to use Dataloader internally, also when using `brando.gen.html`
 * Rename `Brando.Field.ImageField` -> `Brando.Field.Image.Schema`
 * Rename `Brando.Field.FileField` -> `Brando.Field.File.Schema`
 

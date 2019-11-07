@@ -1,9 +1,142 @@
 ## 0.44.0
 
-* `gsed -i "s=use Brando.Field.ImageField=use Brando.Field.Image.Schema=" *.ex`
-* `gsed -i "s=use Brando.Field.FileField=use Brando.Field.File.Schema=" *.ex`
+### Vue backend rewrite part 1/? (sorry)
+
+* Part 1 of the big backend Vue rewrite has been updating it to use the new Vee-Validate syntax.
+  All `<KInput(...)>` components with validation now needs to be wrapped in a `<ValidationObserver>` HOC:
+
+  ```html
+  <ValidationObserver
+    ref="observer"
+    v-slot="{ invalid }">
+    <!-- fields here -->
+  </ValidationObserver>
+  ```
+
+  All `<KInput(...)>` components needs to:
+
+  - Add:
+    - A `rules` prop i.e -> `rules="required"`
+  - Remove:
+    - `v-validate`
+    - `:has-error`
+    - `:error-text`
+
+  Switch out the `validate` function with:
+
+  ```es6
+  async validate () {
+    const isValid = await this.$refs.observer.validate()
+    if (!isValid) {
+      alertError('Feil i skjema', 'Vennligst se over og rett feil i rødt')
+      this.loading = 0
+      return
+    }
+    this.save()
+  },
+  ```
+
+* Change `assets/backend/src/main.js` by removing the `Vue` import from `kurtz` then change
+  ```es6
+  // Install Kurtz
+  let Vue = installKurtz()
+  ```
+
+### A working staging setup!
+
+* Add staging conf for logrotate
+  ```
+    cp etc/logrotate/prod.conf etc/logrotate/staging.conf \
+       gsed -i "s=prod=staging=" etc/logrotate/staging.conf
+  ```
+* Ensure you have config/staging.conf & config/staging.secret.conf, and that the `endpoint` config
+  looks OK (http/url/etc)
+  ```
+  config :my_app, MyAppWeb.Endpoint,
+    http: [:inet6, port: {:system, "PORT"}],
+    url: [scheme: "http", host: "my_app.staging.yourhost.name", port: 80],
+    # force_ssl: [rewrite_on: [:x_forwarded_proto]],
+    check_origin: ["//*.yourhost.name", "//localhost:4000"],
+    server: true,
+    cache_static_manifest: "priv/static/cache_manifest.json"
+  ```
+* Ensure you have rel/vm.args.prod & rel/vm.args.staging
+  ```
+    cp rel/vm.args rel/vm.args.prod && cp rel/vm.args rel/vm.args.staging && \
+       gsed -i "s=<%= release_name %>@127.0.0.1=<%= release_name %>_staging@127.0.0.1=" rel/vm.args.staging && \
+       rm rel/vm.args
+  ```
+* Ensure you have Dockerfile.prod & Dockerfile.staging
+  ```
+    cp Dockerfile Dockerfile.prod && cp Dockerfile Dockerfile.staging && \
+       gsed -i "s=prod=staging=" Dockerfile.staging && \
+       rm Dockerfile
+  ```
+* Ensure you have fabfile.py version 3.0.0
+  --> copy from https://github.com/univers-agency/brando/blob/develop/priv/templates/brando.install/fabfile.py
+* Ensure `rel/config.exs` has:
+    ```
+    environment :staging do
+      set include_erts: true
+      set include_src: false
+      set cookie: :"<secret>"
+      set vm_args: "rel/vm.args.staging"
+    end
+
+    environment :prod do
+      set include_erts: true
+      set include_src: false
+      set cookie: :"<secret>"
+      set vm_args: "rel/vm.args.prod"
+    end
+    ```
+
+* Add dataloaders to your contexts:
+  ```elixir
+  @doc """
+  Dataloader initializer
+  """
+  def data(_) do
+    Dataloader.Ecto.new(
+      Repo,
+      query: &query/2
+    )
+  end
+
+  @doc """
+  Dataloader queries
+  """
+  def query(queryable, _), do: queryable
+  ```
+
+* Add to your `lib/my_app/graphql/schema.ex`
+  ```elixir
+  def context(ctx) do
+    # ++dataloaders
+    loader =
+      Dataloader.new()
+      |> import_brando_dataloaders(ctx)
+      |> Dataloader.add_source(Exhibitions, Exhibitions.data())
+      |> Dataloader.add_source(Artists, Artists.data())
+    # __dataloaders
+
+    Map.put(ctx, :loader, loader)
+  end
+
+  def plugins do
+    [Absinthe.Middleware.Dataloader] ++ Absinthe.Plugin.defaults()
+  end
+  ```
+
+* Remove `absinthe_ecto` from your deps in `mix.exs`
+* Add `{:dataloader, "~> 1.0"}` instead
+
+* `gsed -i "s=use Brando.Field.ImageField=use Brando.Field.Image.Schema=" */**/*.ex`
+* `gsed -i "s=use Brando.Field.FileField=use Brando.Field.File.Schema=" */**/*.ex`
+
 * Add `config :brando, :media_path, Path.join([Mix.Project.app_path(), "tmp", "media"])` to
   `config/e2e.exs`
+
 * Add
   ```
   # ++aliases

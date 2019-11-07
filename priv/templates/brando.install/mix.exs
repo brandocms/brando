@@ -57,7 +57,7 @@ defmodule <%= application_module %>.MixProject do
      {:jason, "~> 1.0"},
      {:absinthe, "~> 1.5.0-beta", override: true},
      {:absinthe_plug, "~> 1.5.0-alpha"},
-     {:absinthe_ecto, "~> 0.1"},
+     {:dataloader, "~> 1.0"},
      {:ex_machina, "~> 2.3"},
 
      # release management and production tools

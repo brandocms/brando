@@ -4,8 +4,6 @@ defmodule Brando.Images do
   Handles uploads too.
   Interfaces with database
   """
-  @type user :: Brando.Users.User.t() | :system
-  @type params :: %{binary => term} | %{atom => term}
 
   use Brando.Web, :context
 
@@ -16,6 +14,38 @@ defmodule Brando.Images do
 
   import Brando.Utils.Schema, only: [put_creator: 2]
   import Ecto.Query
+
+  @type user :: Brando.Users.User.t() | :system
+  @type params :: %{binary => term} | %{atom => term}
+
+  @doc """
+  Dataloader initializer
+  """
+  def data(_) do
+    Dataloader.Ecto.new(
+      Brando.repo(),
+      query: &query/2
+    )
+  end
+
+  @doc """
+  Dataloader queries
+  """
+  def query(Image = query, _) do
+    query
+    |> where([i], is_nil(i.deleted_at))
+    |> order_by([i], asc: i.sequence, desc: i.updated_at)
+  end
+
+  def query(ImageSeries = query, %{limit: limit, offset: offset}) do
+    query
+    |> order_by([is], asc: fragment("lower(?)", is.name))
+    |> where([is], is_nil(is.deleted_at))
+    |> limit([is], ^limit)
+    |> offset([is], ^offset)
+  end
+
+  def query(queryable, _), do: queryable
 
   @doc """
   Create new image

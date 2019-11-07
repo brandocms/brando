@@ -3,16 +3,31 @@ defmodule Brando.Sites do
   Context for Sites
   """
 
+  import Ecto.Query
+  alias Brando.Images
+  alias Brando.Sites.Identity
+  alias Brando.Villain
+
   @type changeset :: Ecto.Changeset.t()
   @type id :: Integer.t() | String.t()
   @type identity :: Brando.Sites.Identity.t()
   @type params :: Map.t()
   @type user :: Brando.Users.User.t()
 
-  import Ecto.Query
-  alias Brando.Images
-  alias Brando.Sites.Identity
-  alias Brando.Villain
+  @doc """
+  Dataloader initializer
+  """
+  def data(_) do
+    Dataloader.Ecto.new(
+      Brando.repo(),
+      query: &query/2
+    )
+  end
+
+  @doc """
+  Dataloader queries
+  """
+  def query(queryable, _), do: queryable
 
   @doc """
   Get identity

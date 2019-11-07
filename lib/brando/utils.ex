@@ -601,4 +601,18 @@ defmodule Brando.Utils do
       _ -> :has_errors
     end
   end
+
+  @doc """
+  Generates a secure cookie based on `:crypto.strong_rand_bytes/1`.
+  """
+  @spec generate_secure_cookie() :: atom
+  def generate_secure_cookie do
+    Stream.unfold(nil, fn _ -> {:crypto.strong_rand_bytes(1), nil} end)
+    |> Stream.filter(fn <<b>> -> b >= ?! && b <= ?~ end)
+    # special when erlexec parses vm.args
+    |> Stream.reject(fn <<b>> -> b in [?-, ?+, ?', ?\", ?\\, ?\#, ?,] end)
+    |> Enum.take(64)
+    |> Enum.join()
+    |> String.to_atom()
+  end
 end

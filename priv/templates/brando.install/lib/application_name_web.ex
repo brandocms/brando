@@ -57,11 +57,7 @@ defmodule <%= application_module %>Web do
     quote do
       # Provides us with a DSL for defining GraphQL Types
       use Absinthe.Schema.Notation
-
-      # Enable helpers for batching associated requests
-      use Absinthe.Ecto, repo: <%= application_module %>.Repo
-
-      import Absinthe.Ecto
+      import Absinthe.Resolution.Helpers
     end
   end
 

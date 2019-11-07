@@ -9,6 +9,14 @@ defmodule Brando.Schema do
     end
   end
 
+  def import_brando_dataloaders(dataloader, ctx) do
+    dataloader
+    |> Dataloader.add_source(Brando.Users, Brando.Users.data(ctx))
+    |> Dataloader.add_source(Brando.Images, Brando.Images.data(ctx))
+    |> Dataloader.add_source(Brando.Sites, Brando.Sites.data(ctx))
+    |> Dataloader.add_source(Brando.Pages, Brando.Pages.data(ctx))
+  end
+
   @doc """
   Imports all brando mutations
   """

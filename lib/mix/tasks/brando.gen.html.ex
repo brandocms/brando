@@ -163,6 +163,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}CreateView.vue"},
           {:eex_trim, "assets/backend/src/views/Edit.vue",
            "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}EditView.vue"},
+          {:eex_trim, "assets/backend/src/views/Form.vue",
+           "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}Form.vue"},
           {:eex, "assets/backend/cypress/integration/spec.js",
            "assets/backend/cypress/integration/#{snake_domain}/#{Recase.to_pascal(vue_singular)}.spec.js"}
         ]
@@ -273,6 +275,15 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     )
 
     ## GQL SCHEMA
+
+    Mix.Brando.add_to_file(
+      "lib/#{Mix.Brando.otp_app()}/graphql/schema.ex",
+      "dataloader",
+      "  |> Dataloader.add_source(#{binding[:base]}.#{binding[:domain]}, #{binding[:base]}.#{
+        binding[:domain]
+      }.data())",
+      :singular
+    )
 
     Mix.Brando.add_to_file(
       "lib/#{Mix.Brando.otp_app()}/graphql/schema.ex",
@@ -620,8 +631,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "<KInputCheckbox",
            "v-model=\"#{singular}.#{k}\"",
            ":value=\"#{singular}.#{k}\"",
-           ":has-error=\"errors.has('#{singular}[#{k}]')\"",
-           ":error-text=\"errors.first('#{singular}[#{k}]')\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
            "/>"
@@ -633,9 +642,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "<KInput",
            "v-model=\"#{singular}.#{k}\"",
            ":value=\"#{singular}.#{k}\"",
-           ":has-error=\"errors.has('#{singular}[#{k}]')\"",
-           ":error-text=\"errors.first('#{singular}[#{k}]')\"",
-           "v-validate=\"'required'\"",
+           "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
            "placeholder=\"#{String.capitalize(to_string(k))}\"",
@@ -648,9 +655,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "<KInputDatetime",
            "v-model=\"#{singular}.#{k}\"",
            ":value=\"#{singular}.#{k}\"",
-           ":has-error=\"errors.has('#{singular}[#{k}]')\"",
-           ":error-text=\"errors.first('#{singular}[#{k}]')\"",
-           "v-validate=\"'required'\"",
+           "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
            "placeholder=\"#{String.capitalize(to_string(k))}\"",
@@ -663,9 +668,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "<KInputDatetime",
            "v-model=\"#{singular}.#{k}\"",
            ":value=\"#{singular}.#{k}\"",
-           ":has-error=\"errors.has('#{singular}[#{k}]')\"",
-           ":error-text=\"errors.first('#{singular}[#{k}]')\"",
-           "v-validate=\"'required'\"",
+           "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
            "placeholder=\"#{String.capitalize(to_string(k))}\"",
@@ -678,9 +681,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "<KInputDatetime",
            "v-model=\"#{singular}.#{k}\"",
            ":value=\"#{singular}.#{k}\"",
-           ":has-error=\"errors.has('#{singular}[#{k}]')\"",
-           ":error-text=\"errors.first('#{singular}[#{k}]')\"",
-           "v-validate=\"'required'\"",
+           "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
            "placeholder=\"#{String.capitalize(to_string(k))}\"",
@@ -693,9 +694,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "<KInputImage",
            "v-model=\"#{singular}.#{k}\"",
            ":value=\"#{singular}.#{k}\"",
-           ":has-error=\"errors.has('#{singular}[#{k}]')\"",
-           ":error-text=\"errors.first('#{singular}[#{k}]')\"",
-           "v-validate=\"'required'\"",
+           "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
            "/>"
@@ -707,9 +706,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "<KInputFile",
            "v-model=\"#{singular}.#{k}\"",
            ":value=\"#{singular}.#{k}\"",
-           ":has-error=\"errors.has('#{singular}[#{k}]')\"",
-           ":error-text=\"errors.first('#{singular}[#{k}]')\"",
-           "v-validate=\"'required'\"",
+           "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
            "/>"
@@ -721,11 +718,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k,
          [
            "<Villain",
-           "v-validate=\"'required'\"",
            "v-model=\"#{singular}.#{k}\"",
            ":value=\"#{singular}.#{k}\"",
-           ":has-error=\"errors.has('#{singular}[#{k}]')\"",
-           ":error-text=\"errors.first('#{singular}[#{k}]')\"",
+           "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\""
          ]}
@@ -736,9 +731,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "<KInput",
            "v-model=\"#{singular}.#{k}\"",
            ":value=\"#{singular}.#{k}\"",
-           ":has-error=\"errors.has('#{singular}[#{k}]')\"",
-           ":error-text=\"errors.first('#{singular}[#{k}]')\"",
-           "v-validate=\"'required'\"",
+           "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
            "placeholder=\"#{String.capitalize(to_string(k))}\"",

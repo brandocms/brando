@@ -33,7 +33,7 @@ defmodule Brando.Mixfile do
         :ecto,
         :postgrex,
         :absinthe,
-        :absinthe_ecto,
+        :dataloader,
         :absinthe_plug
       ]
   end
@@ -43,6 +43,7 @@ defmodule Brando.Mixfile do
       :cachex,
       :flow,
       :absinthe,
+      :dataloader,
       :gettext,
       :comeonin,
       :httpoison,
@@ -87,6 +88,11 @@ defmodule Brando.Mixfile do
       {:poison, "~> 4.0"},
       {:inflex, "~> 2.0"},
 
+      # graphql
+      {:absinthe, "~> 1.5.0-beta", override: true},
+      {:absinthe_plug, "~> 1.5.0-alpha"},
+      {:dataloader, "~> 1.0"},
+
       # monitoring
       {:sentry, "~> 7.0"},
       {:mogrify, "~> 0.5"},
@@ -111,9 +117,6 @@ defmodule Brando.Mixfile do
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test},
       {:excoveralls, "~> 0.6", only: :test},
-      {:absinthe, "~> 1.5.0-beta", override: true},
-      {:absinthe_plug, "~> 1.5.0-alpha"},
-      {:absinthe_ecto, "~> 0.1"},
 
       # Documentation dependencies
       {:ex_doc, "~> 0.11", only: :docs},
