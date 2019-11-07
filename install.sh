@@ -17,5 +17,4 @@ then
   gsed -i '/Import environment specific config/i\# import BRANDO config\nimport_config "brando.exs"\n' config/config.exs
   cd assets/frontend && yarn && yarn upgrade @univers-agency/jupiter @univers-agency/europacss && cd ../backend && yarn && cd ../../
   mix do deps.get, deps.compile --force && mix brando.upgrade && mix ecto.setup
-  mix distillery.init
 fi
