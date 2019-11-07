@@ -1,0 +1,16 @@
+mutation UpdateUser($user_id: ID!, $user_params: UpdateUserParams) {
+  update_user(
+    user_id: $user_id,
+    user_params: $user_params
+  ) {
+    id
+    language
+    full_name
+    email
+    avatar {
+      focal
+      thumb: url(size: "original")
+    }
+    role
+  }
+}

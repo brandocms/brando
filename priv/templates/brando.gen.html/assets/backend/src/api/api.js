@@ -1,6 +1,6 @@
-import apollo from '@univers-agency/kurtz/lib/api/apolloClient'
-import { handleErr } from '@univers-agency/kurtz/lib/api/errorHandler.js'
-// import { pick } from '@univers-agency/kurtz/lib/utils'
+import apollo from 'brandojs/lib/api/apolloClient'
+import { handleErr } from 'brandojs/lib/api/errorHandler.js'
+// import { pick } from 'brandojs/lib/utils'
 
 import <%= String.upcase(singular) %>_QUERY from './graphql/<%= vue_plural %>/<%= String.upcase(singular) %>_QUERY.graphql'
 import <%= String.upcase(plural) %>_QUERY from './graphql/<%= vue_plural %>/<%= String.upcase(plural) %>_QUERY.graphql'

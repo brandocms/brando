@@ -1,0 +1,30 @@
+.vue-simple-spinner {
+  transition: all 0.3s linear;
+}
+
+@keyframes vue-simple-spinner-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.vue-simple-spinner-container {
+  background-color: rgba(255, 255, 255, 0.38);
+  display: flex;
+  height: 100%;
+  left: 0;
+  padding-top: 15%;
+  position: absolute;
+  top: 0;
+  transition: all 500ms ease;
+  width: 100%;
+  z-index: 5000;
+
+  &.vue-simple-spinner-container-transparent {
+    background-color: transparent !important;
+  }
+}

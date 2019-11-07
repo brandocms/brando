@@ -89,8 +89,8 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from '@univers-agency/kurtz/lib/vuex'
-import { alertConfirm } from '@univers-agency/kurtz/lib/utils/alerts'
+import { mapActions, mapGetters } from 'brandojs/lib/vuex'
+import { alertConfirm } from 'brandojs/lib/utils/alerts'
 
 export default {
   components: {

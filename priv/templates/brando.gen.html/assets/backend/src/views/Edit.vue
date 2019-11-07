@@ -18,9 +18,9 @@
 
 <script>
 
-import { nprogress } from '@univers-agency/kurtz'
-import { showError, validateImageParams, stripParams } from '@univers-agency/kurtz/lib/utils'
-import { alertError } from '@univers-agency/kurtz/lib/utils/alerts'
+import { nprogress } from 'brandojs'
+import { showError, validateImageParams, stripParams } from 'brandojs/lib/utils'
+import { alertError } from 'brandojs/lib/utils/alerts'
 import { <%= vue_singular %>API } from '@/api/<%= vue_singular %>'
 import <%= Recase.to_pascal(vue_singular) %>Form from '@/views/<%= snake_domain %>/<%= Recase.to_pascal(vue_singular) %>Form'
 

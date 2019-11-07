@@ -1,0 +1,24 @@
+.search-input {
+  display: flex;
+  position: relative;
+
+  i {
+    align-self: center;
+
+    position: absolute;
+
+    &.close-icon {
+      cursor: pointer;
+      right: 0.65rem;
+    }
+
+    &.search-icon {
+      left: 0.65rem;
+    }
+  }
+
+  input {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+}

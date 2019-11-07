@@ -1,0 +1,15 @@
+query ImageCategories {
+  image_categories {
+    id
+    name
+    slug
+    cfg {
+      upload_path
+    }
+    creator {
+      id
+      full_name
+    }
+    deleted_at
+  }
+}

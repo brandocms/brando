@@ -1,0 +1,7 @@
+mutation CreatePageFragment($pageFragmentParams: PageFragmentParams) {
+  create_page_fragment(
+    pageFragmentParams: $pageFragmentParams,
+  ) {
+    id
+  }
+}

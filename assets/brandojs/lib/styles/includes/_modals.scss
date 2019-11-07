@@ -1,0 +1,90 @@
+body.modal-open {
+  overflow-y: auto;
+  padding-right: 0 !important;
+}
+
+.modal {
+  display: block;
+  font-size: 1rem;
+}
+
+.modal {
+  .card-block {
+    background-color: #fff;
+  }
+}
+
+.modal-no-chrome {
+  margin: 5% auto 0;
+  position: relative;
+  transition: all 0.2s ease;
+  width: 400px;
+  z-index: 1250;
+
+  &.modal-lg {
+    max-width: 800px;
+    width: 100%;
+  }
+}
+
+.modal-backdrop {
+  // background-color: rgba(98, 79, 160, 0.75);
+  background-color: transparentize(map-get($theme-colors, 'overlay'), 0.1);
+  height: 100%;
+  left: 0;
+  overflow-y: scroll;
+  position: fixed;
+  top: 0;
+  transition: all 0.5s ease;
+  width: 100%;
+  z-index: 1001;
+}
+
+.modal-dialog {
+  transition: all 0.2s ease;
+  z-index: 1050;
+}
+
+// .modal-enter, .modal-leave {
+//   opacity: 0;
+// }
+
+.modal-enter .modal-dialog,
+.modal-enter .modal-no-chrome,
+.modal-leave-to .modal-dialog,
+.modal-leave-to .modal-no-chrome {
+  opacity: 0;
+  transform: scale(1.1);
+}
+
+.modal-enter .modal-backdrop,
+.modal-leave-to .modal-backdrop {
+  opacity: 0;
+}
+
+.modal-enter-to .modal-backdrop,
+.modal-leave .modal-backdrop {
+  opacity: 1;
+}
+
+// .modal-enter, .modal-leave {
+//   opacity: 0;
+// }
+
+.modal-content {
+  background-clip: padding-box;
+  background-color: #fff;
+  border: none;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  outline: 0;
+  padding: 0.5rem;
+  position: relative;
+}
+
+.modal-no-chrome-content {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}

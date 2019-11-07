@@ -1,0 +1,290 @@
+html {
+  font-size: 15px;
+  height: 100%;
+  min-height: 100%;
+  overflow-y: hidden;
+  position: relative;
+}
+
+body {
+  background-color: $kurtz-bg;
+  height: 100%;
+  width: 100%;
+}
+
+#content {
+  padding-bottom: 25px;
+}
+
+a.clean {
+  border-bottom: none;
+}
+
+h5 {
+  &.section {
+    border-bottom: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding-bottom: 0;
+    text-transform: uppercase;
+
+    &:after {
+      content: "↓";
+      float: right;
+    }
+  }
+}
+
+.jumbotron {
+  padding: 2.5rem 2rem;
+  background-color: #f5f5f5;
+}
+
+.bg-aside {
+  background-color: #fffbf6;
+  border: 1px solid #efebe6;
+}
+
+.twined-versioning {
+  bottom: 0;
+  font-size: 0.6rem;
+  padding-left: 4vh;
+  position: fixed;
+  text-align: center;
+  transform: rotate(-90deg);
+  transform-origin: 0 100% 0;
+}
+
+.avatar-xxs {
+  border: 2px solid #fff;
+  width: 20px;
+}
+
+.avatar-xs {
+  border: 2px solid #fff;
+  width: 40px;
+}
+
+.avatar-sm {
+  width: 100px;
+}
+
+.avatar-md {
+  width: 135px;
+
+  img {
+    border: 1px solid #efefef;
+  }
+}
+
+.show .dropdown-menu {
+  display: block;
+}
+
+.card-columns {
+  @include media-breakpoint-down(sm) {
+    column-count: 1;
+  }
+  @include media-breakpoint-up(md) {
+    column-count: 2;
+  }
+}
+
+dt {
+  font-size: 0.8rem;
+}
+
+dd {
+  margin-bottom: 0.5rem;
+  margin-left: 0;
+  white-space: initial;
+  word-wrap: normal;
+}
+
+.table td.fit,
+.table th.fit {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.table td,
+.table th {
+  vertical-align: middle;
+}
+
+// .table td {
+//   border-top: 10px solid $kurtz-bg;
+// }
+
+// .table tr {
+//   background-color: #fff;
+// }
+// .table tr {
+//   background-color: #fff;
+// }
+
+.btn-block + .btn-block {
+  margin-left: 0 !important;
+}
+
+body#login,
+body#registration {}
+
+/* Enter and leave animations can use different */
+/* durations and timing functions.              */
+.slide-fade-enter-active {
+  transition: all 0.3s ease;
+}
+
+.slide-fade-leave-active {
+  transition: all 0.3s cubic-bezier(1, 0.5, 0.8, 1);
+}
+
+.slide-fade-enter,
+.slide-fade-leave-to {
+  opacity: 0;
+  transform: translateX(10px);
+}
+
+/* Enter and leave animations can use different */
+/* durations and timing functions.              */
+.slide-fade-top-slow-enter-active {
+  transition: all 750ms ease-out;
+}
+
+.slide-fade-top-slow-leave-active {
+  transition: all 750ms cubic-bezier(1, 0.5, 0.8, 1);
+}
+
+.slide-fade-top-slow-enter,
+.slide-fade-top-slow-leave-to {
+  opacity: 0;
+  transform: translateY(-30px);
+}
+
+/* Enter and leave animations can use different */
+/* durations and timing functions.              */
+.slide-fade-left-slow-enter-active {
+  transition: all 750ms ease-out;
+}
+
+.slide-fade-left-slow-leave-active {
+  transition: all 750ms cubic-bezier(1, 0.5, 0.8, 1);
+}
+
+.slide-fade-left-slow-enter,
+.slide-fade-left-slow-leave-to {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+/* Enter and leave animations can use different */
+/* durations and timing functions.              */
+.slide-fade-right-slow-enter-active {
+  transition: all 750ms ease-out;
+}
+
+.slide-fade-right-slow-leave-active {
+  transition: all 750ms cubic-bezier(1, 0.5, 0.8, 1);
+}
+
+.slide-fade-right-slow-enter,
+.slide-fade-right-slow-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s;
+}
+
+.fade-enter,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.fade-move-enter-active,
+.fade-move-leave-active {
+  transition: opacity 0.3s;
+}
+
+.fade-move-enter,
+.fade-move-leave-to {
+  opacity: 0;
+}
+
+.fade-move-move {
+  transition: transform 1s;
+}
+
+.v-spinner-outer {
+  background-color: #fff;
+  height: 100%;
+  left: 0;
+  opacity: 1;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 950;
+
+  .v-spinner-inner {
+    -webkit-transform: translate(-50%, -50%);
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+
+    .v-spinner-text {
+      font-size: 0.8rem;
+      font-weight: bold;
+      letter-spacing: 0.7px;
+      margin-top: 1rem;
+      text-align: center;
+      text-transform: uppercase;
+    }
+  }
+}
+
+.v-spinner .v-bounce {}
+
+.v-spinner .v-bounce1 {}
+
+.v-spinner .v-bounce2 {
+  -webkit-animation: v-bounceStretchDelay 2s 1s infinite ease-in-out;
+  -webkit-animation-fill-mode: both;
+  animation: v-bounceStretchDelay 2s 1s infinite ease-in-out;
+  animation-fill-mode: both;
+}
+
+.v-spinner .v-bounce3 {
+  -webkit-animation: v-bounceStretchDelay 2s 0s infinite ease-in-out;
+  -webkit-animation-fill-mode: both;
+  animation: v-bounceStretchDelay 2s 0s infinite ease-in-out;
+  animation-fill-mode: both;
+}
+@-webkit-keyframes v-bounceStretchDelay {
+  0%,
+  100% {
+    -webkit-transform: scale(0);
+    transform: scale(0);
+  }
+
+  50% {
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+@keyframes v-bounceStretchDelay {
+  0%,
+  100% {
+    -webkit-transform: scale(0);
+    transform: scale(0);
+  }
+
+  50% {
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}

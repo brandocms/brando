@@ -1,0 +1,9 @@
+node_modules/
+*.log
+/dist
+*.iml
+.idea
+sw.js
+.DS_Store
+.vscode
+coverage

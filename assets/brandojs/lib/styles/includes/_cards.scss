@@ -1,0 +1,28 @@
+.card-body {
+  flex: 1 1 auto;
+  // padding: 0.75rem 1.5rem;
+}
+
+.card-header {
+  color: #fff;
+  background-color: $kurtz-purple;
+}
+
+.card-title {
+  font-weight: normal;
+}
+
+.card-header-tab {
+  background-color: rgba(255, 255, 255, 0.76);
+  display: inline-block;
+  padding: 1rem 2rem 0.8rem 1.5rem;
+
+  h5 {
+    display: inline-block;
+    font-size: 1rem;
+    margin-bottom: 0;
+    padding-left: 0;
+    text-transform: uppercase;
+  }
+
+}

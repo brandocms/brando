@@ -1,0 +1,88 @@
+{
+  "name": "brandojs",
+  "version": "0.44.0",
+  "description": "Brando JS backend",
+  "main": "lib/index.js",
+  "module": "lib/index.js",
+  "license": "LICENSE",
+  "homepage": "https://brando.github.io",
+  "contributors": [
+    {
+      "name": "T. Mjoen",
+      "url": "https://github.com/tmjoen"
+    }
+  ],
+  "bugs": {
+    "url": "https://github.com/univers-agency/brando/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/univers-agency/brando.git"
+  },
+  "files": [
+    "lib"
+  ],
+  "dependencies": {
+    "@jacobmischka/vue-flatpickr": "^3.0.1",
+    "@univers-agency/villain-editor": "univers-agency/villain-editor",
+    "apollo-absinthe-upload-link": "^1.5.0",
+    "apollo-cache-inmemory": "^1.6.3",
+    "apollo-client": "^2.6.4",
+    "apollo-link": "^1.2.13",
+    "apollo-link-error": "^1.1.12",
+    "bootstrap-vue": "^2.0.4",
+    "chart.js": "^2.9.2",
+    "countup.js": "^2.0.4",
+    "izitoast": "^1.3.0",
+    "lodash": "^4.17.15",
+    "moment": "^2.24.0",
+    "moment-timezone": "^0.5.27",
+    "nprogress": "^0.2.0",
+    "phoenix": "^1.4.10",
+    "progressbar.js": "^1.1.0",
+    "sortablejs": "^1.10.1",
+    "url-slug": "^2.2.0",
+    "v-click-outside": "^2.1.5",
+    "vee-validate": "^3.0.11",
+    "vex-js": "^4.1.0",
+    "vue": "^2.6.10",
+    "vue-chartjs": "^3.5.0",
+    "vue-core-image-upload": "^2.3.9",
+    "vue-multiselect": "^2.1.6",
+    "vue-router": "^3.1.3",
+    "vue-upload-component": "^2.8.20",
+    "vuex": "^3.1.1"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.7.1",
+    "@vue/eslint-config-standard": "^4.0.0",
+    "autoprefixer": "^9.7.1",
+    "babel-eslint": "^10.0.3",
+    "babel-plugin-external-helpers": "^6.22.0",
+    "babel-plugin-istanbul": "^5.2.0",
+    "clean-css": "^4.2.1",
+    "codecov": "^3.6.1",
+    "codemirror": "^5.49.2",
+    "cross-env": "^6.0.3",
+    "eslint": "^6.6.0",
+    "eslint-config-standard": "^14.1.0",
+    "eslint-plugin-html": "^6.0.0",
+    "eslint-plugin-import": "^2.18.2",
+    "eslint-plugin-node": "^10.0.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.1",
+    "eslint-plugin-vue": "6.0.0",
+    "eslint-plugin-vue-libs": "^4.0.0",
+    "graphql": "^14.5.8",
+    "highlight-loader": "^0.7.3",
+    "highlightjs": "^9.16.2",
+    "html-loader": "^0.5.5",
+    "jest": "^24.9.0",
+    "jest-vue-preprocessor": "^1.7.0",
+    "markdown-loader": "^5.1.0",
+    "marked": "^0.7.0",
+    "standard-version": "^7.0.0",
+    "uglify-es": "^3.3.9",
+    "vue-template-compiler": "^2.6.10"
+  }
+}

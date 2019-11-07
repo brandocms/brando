@@ -1,0 +1,10 @@
+mutation UpdatePagefragment($pageFragmentId: ID!, $pageFragmentParams: PageFragmentParams) {
+  update_page_fragment(
+    pageFragmentId: $pageFragmentId,
+    pageFragmentParams: $pageFragmentParams
+  ) {
+    id
+    parent_key
+    key
+  }
+}

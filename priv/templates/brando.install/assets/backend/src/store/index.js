@@ -1,6 +1,6 @@
 // ++imports
-import { Vue, Vuex } from '@univers-agency/kurtz'
-import * as kurtzBaseStoreModules from '@univers-agency/kurtz/lib/stores'
+import { Vue, Vuex } from 'brandojs'
+import * as kurtzBaseStoreModules from 'brandojs/lib/stores'
 // __imports
 
 Vue.use(Vuex)

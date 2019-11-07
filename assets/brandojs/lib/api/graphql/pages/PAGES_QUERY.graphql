@@ -1,0 +1,34 @@
+query Pages {
+  pages {
+    id
+    key
+    title
+    slug
+    language
+    parent {
+      id
+      key
+      language
+      title
+      slug
+    }
+    children {
+      id
+      key
+      language
+      title
+      slug
+    }
+    fragments {
+      id
+      key
+      parent_key
+      language
+      updated_at
+      page_id
+    }
+    inserted_at
+    updated_at
+    deleted_at
+  }
+}

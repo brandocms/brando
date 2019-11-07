@@ -1,0 +1,7 @@
+mutation CreateLink($linkParams: LinkParams) {
+  create_link(
+    linkParams: $linkParams,
+  ) {
+    id
+  }
+}

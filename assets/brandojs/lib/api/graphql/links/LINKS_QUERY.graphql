@@ -1,0 +1,8 @@
+query Links {
+  links {
+    id
+    name
+    url
+    updated_at
+  }
+}

@@ -1,0 +1,10 @@
+mutation UpdateImageSeries($image_series_id: ID!, $image_series_params: UpdateImageSeriesParams) {
+  update_image_series(
+    image_series_id: $image_series_id,
+    image_series_params: $image_series_params
+  ) {
+    id
+    name
+    slug
+  }
+}

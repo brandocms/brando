@@ -1,0 +1,9 @@
+mutation UpdatePage($pageId: ID!, $pageParams: PageParams) {
+  update_page(
+    pageId: $pageId,
+    pageParams: $pageParams
+  ) {
+    id
+    key
+  }
+}

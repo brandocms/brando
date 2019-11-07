@@ -1,0 +1,15 @@
+query Me {
+  me {
+    id
+    full_name
+    email
+    avatar {
+      focal
+      thumb: url(size: "original")
+      medium: url(size: "medium")
+    }
+    role
+    language
+    active
+  }
+}

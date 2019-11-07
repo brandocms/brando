@@ -1,0 +1,8 @@
+mutation UpdateLink($linkId: ID!, $linkParams: LinkParams) {
+  update_link(
+    linkId: $linkId,
+    linkParams: $linkParams,
+  ) {
+    id
+  }
+}

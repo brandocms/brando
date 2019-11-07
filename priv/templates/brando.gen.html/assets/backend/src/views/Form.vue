@@ -1,8 +1,7 @@
 <template>
   <div class="form-wrapper">
     <ValidationObserver
-      ref="observer"
-      v-slot="{ invalid }">
+      ref="observer">
       <!--
       FORM FIELDS HERE
       --><%= for {_v, k} <- vue_inputs do %>

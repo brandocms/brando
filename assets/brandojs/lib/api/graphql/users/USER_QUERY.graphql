@@ -1,0 +1,15 @@
+query User ($userId: ID!) {
+  user (userId: $userId) {
+    id
+    full_name
+    email
+    avatar {
+      focal
+      thumb: url(size: "original")
+    }
+    role
+    language
+    active
+    deleted_at
+  }
+}

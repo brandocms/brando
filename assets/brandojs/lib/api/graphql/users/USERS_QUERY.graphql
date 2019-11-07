@@ -1,0 +1,15 @@
+query Users {
+  users {
+    id
+    full_name
+    email
+    avatar {
+      focal
+      thumb: url(size: "thumb")
+    }
+    role
+    language
+    active
+    deleted_at
+  }
+}

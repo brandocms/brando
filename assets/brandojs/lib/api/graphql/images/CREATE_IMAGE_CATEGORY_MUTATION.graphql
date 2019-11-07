@@ -1,0 +1,14 @@
+mutation CreateImageCategory($image_category_params: CreateImageCategoryParams) {
+  create_image_category(
+    image_category_params: $image_category_params
+  ) {
+    id
+    name
+    slug
+    cfg { upload_path }
+    creator {
+      id
+      full_name
+    }
+  }
+}

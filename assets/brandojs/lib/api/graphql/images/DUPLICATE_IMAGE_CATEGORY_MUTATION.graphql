@@ -1,0 +1,7 @@
+mutation DuplicateImageCategory($image_category_id: ID!) {
+  duplicate_image_category(
+    image_category_id: $image_category_id
+  ) {
+    id
+  }
+}

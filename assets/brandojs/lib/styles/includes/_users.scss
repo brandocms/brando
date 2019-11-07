@@ -1,0 +1,61 @@
+.user-presence {
+  margin-right: 2px;
+}
+
+.user-box {
+  align-items: center;
+  border-bottom: 0;
+  cursor: pointer;
+  display: inline-flex;
+  padding: 0.3rem 0.5rem;
+  transition: all 600ms ease;
+  user-select: none;
+  width: auto;
+
+  &.active {
+    background-color: $hover-color;
+  }
+
+  &:hover {
+    background-color: $hover-color;
+    border-bottom: 0;
+    transition: all 200ms ease;
+  }
+
+  > .avatar {
+    margin-right: 1rem;
+    position: relative;
+  }
+
+  > .userinfo {
+    margin-right: 0.5rem;
+    text-align: left;
+
+    span {
+      display: block;
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+  }
+}
+
+.full-width {
+  .user-box {
+    width: 100%;
+  }
+}
+
+.presences {
+  position: fixed;
+  bottom: 5px;
+  font-size: 12px;
+  left: 0px;
+  transform: translateX(0) rotate(-90deg);
+  transform-origin: 0 0% 0;
+  margin-left: 5px;
+  transition: transform 2s ease;
+}
+
+.menu-open .presences {
+  transform: translateX(-1000px)
+}

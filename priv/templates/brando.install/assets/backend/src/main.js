@@ -1,10 +1,10 @@
 import '@/styles/app.scss'
-import { Vue } from '@univers-agency/kurtz'
+import { Vue } from 'brandojs'
 
 import { installMenus } from './menus'
-import { installConfig, installKurtz } from '@univers-agency/kurtz/lib/install'
+import { installConfig, installKurtz } from 'brandojs/lib/install'
 
-import App from '@univers-agency/kurtz/lib/views/App.vue'
+import App from 'brandojs/lib/views/App.vue'
 import store from '@/store'
 import router from '@/router'
 

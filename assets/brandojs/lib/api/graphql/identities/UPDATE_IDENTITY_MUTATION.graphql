@@ -1,0 +1,7 @@
+mutation UpdateIdentity($identityParams: IdentityParams) {
+  update_identity(
+    identityParams: $identityParams,
+  ) {
+    id
+  }
+}

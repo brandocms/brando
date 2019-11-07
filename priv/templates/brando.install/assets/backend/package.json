@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "bootstrap": "^4.3.1",
-    "@univers-agency/kurtz": "univers-agency/kurtz",
+    "brandojs": "file:../../deps/brando/assets/brandojs",
     "vue": "^2.6.10"
   },
   "devDependencies": {

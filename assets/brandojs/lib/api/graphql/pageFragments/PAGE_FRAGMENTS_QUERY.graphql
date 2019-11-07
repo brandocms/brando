@@ -1,0 +1,17 @@
+query PageFragments {
+  page_fragments {
+    id
+    parent_key
+    key
+    language
+    wrapper
+    data
+    creator {
+      id
+      full_name
+    }
+    inserted_at
+    updated_at
+    deleted_at
+  }
+}

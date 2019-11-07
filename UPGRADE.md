@@ -2,13 +2,22 @@
 
 ### Vue backend rewrite part 1/? (sorry)
 
+* Switch out in your `assets/backend/package.json`
+  - remove `@univers-agency/kurtz`
+  - add `"brandojs": "file:../../deps/brando/assets/brandojs",`
+    - (if developing on brandojs, yalc it.)
+* Switch out `kurtz` with `brandojs`:
+  ```
+  gsed -i "s=@univers-agency\/kurtz=brandojs=" assets/backend/src/**/*.js && \
+  gsed -i "s=@univers-agency\/kurtz=brandojs=" assets/backend/src/**/*.vue && \
+  gsed -i "s=~@univers-agency\/kurtz=~brandojs=" assets/backend/src/**/*.scss &&
+  ```
 * Part 1 of the big backend Vue rewrite has been updating it to use the new Vee-Validate syntax.
   All `<KInput(...)>` components with validation now needs to be wrapped in a `<ValidationObserver>` HOC:
 
   ```html
   <ValidationObserver
-    ref="observer"
-    v-slot="{ invalid }">
+    ref="observer">
     <!-- fields here -->
   </ValidationObserver>
   ```

@@ -1,0 +1,9 @@
+mutation DeletePageFragment($pageFragmentId: ID!) {
+  delete_page_fragment(
+    pageFragmentId: $pageFragmentId
+  ) {
+    id
+    parent_key
+    key
+  }
+}
