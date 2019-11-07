@@ -4,8 +4,8 @@
       <div
         :class="{'logging-in': loggingIn}"
         class="container-fluid fixed-full-content">
-        <div class="twined-versioning">
-          <i class="fa fa-fw fa-adjust" /> KURTZ V &copy; TWINED 2007 - 2017
+        <div class="brando-versioning">
+          <i class="fa fa-fw fa-adjust" /> BRANDOJS V &copy; UNIVERS 2007 - 2019
         </div>
         <div
           class="d-flex justify-content-center flex-wrap align-items-center text-center"
