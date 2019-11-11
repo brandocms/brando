@@ -2,6 +2,8 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.44.0
 
+* Drag and drop sequence pages.
+* Ensure all jpg files are written as `.jpg`
 * Move to local backend JS for tighter integration.
 * Generator now generates a more complete `staging` config
 * Generator separates out the form for backend schemas

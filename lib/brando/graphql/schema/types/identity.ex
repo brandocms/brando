@@ -22,9 +22,9 @@ defmodule Brando.Schema.Types.Identity do
     field :image, :image_type
     field :logo, :image_type
     field :url, :string
-    field :links, list_of(:link), resolve: dataloader(Brando.Sites)
-    field :metas, list_of(:meta), resolve: dataloader(Brando.Sites)
-    field :configs, list_of(:config), resolve: dataloader(Brando.Sites)
+    field :configs, list_of(:config)
+    field :links, list_of(:link)
+    field :metas, list_of(:meta)
     field :inserted_at, :time
     field :updated_at, :time
   end

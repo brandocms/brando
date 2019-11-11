@@ -9,9 +9,10 @@ defmodule Brando.Pages.PageFragment do
   use Brando.Web, :schema
   use Brando.Villain.Schema
   use Brando.SoftDelete.Schema
+  use Brando.Sequence.Schema
 
   @required_fields ~w(parent_key key language data creator_id)a
-  @optional_fields ~w(html page_id wrapper deleted_at)a
+  @optional_fields ~w(html page_id wrapper sequence deleted_at)a
   @derived_fields ~w(
     id
     parent_key
@@ -20,6 +21,7 @@ defmodule Brando.Pages.PageFragment do
     data
     html
     wrapper
+    sequence
     creator_id
     page_id
     inserted_at
@@ -38,6 +40,7 @@ defmodule Brando.Pages.PageFragment do
     belongs_to :creator, Brando.Users.User
     belongs_to :page, Brando.Pages.Page
     soft_delete()
+    sequenced()
     timestamps()
   end
 
@@ -67,14 +70,6 @@ defmodule Brando.Pages.PageFragment do
     |> guard_for_circular_references()
     |> generate_html()
   end
-
-  # def encode_data(params) do
-  #   if is_list(params.data) do
-  #     Map.put(params, :data, Jason.encode!(params.data))
-  #   else
-  #     params
-  #   end
-  # end
 
   @doc """
   Ensure that the fragment doesn't reference itself

@@ -16,7 +16,7 @@
             <div class="login-box">
               <img
                 src="/images/logo.svg"
-                class="avatar-sm mb-5">
+                class="mb-5">
               <div v-if="!loading">
                 <div class="text-center">
                   <form>

@@ -2,6 +2,7 @@
   <ValidationProvider
     v-if="!loading"
     v-slot="{ errors, invalid }"
+    ref="provider"
     :name="name"
     :immediate="true"
     :rules="rules">
@@ -102,6 +103,11 @@ export default {
       required: true
     },
 
+    rules: {
+      type: String,
+      default: null
+    },
+
     value: {
       required: false,
       default: null,
@@ -127,6 +133,7 @@ export default {
 
   watch: {
     innerValue (value) {
+      this.$refs.provider.validate(value)
       this.$emit('input', value)
     },
 

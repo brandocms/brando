@@ -40,6 +40,7 @@ defmodule Brando.Upload do
     with {:ok, upload} <- create_upload_struct(plug, cfg_struct),
          {:ok, upload} <- extract_focal_info(upload),
          {:ok, upload} <- get_valid_filename(upload),
+         {:ok, upload} <- ensure_correct_ext(upload),
          {:ok, upload} <- check_mimetype(upload),
          {:ok, upload} <- create_upload_path(upload),
          {:ok, upload} <- copy_uploaded_file(upload) do
@@ -126,6 +127,17 @@ defmodule Brando.Upload do
         true -> put_in(upload.plug.filename, random_filename(filename))
         _ -> put_in(upload.plug.filename, slugify_filename(filename))
       end
+
+    {:ok, upload}
+  end
+
+  defp ensure_correct_ext(%__MODULE__{plug: %Plug.Upload{filename: ""}}) do
+    {:error, :empty_filename}
+  end
+
+  # make sure jpeg's extension are jpg to avoid headaches w/sharp-cli
+  defp ensure_correct_ext(%__MODULE__{plug: %Plug.Upload{filename: filename}} = upload) do
+    upload = put_in(upload.plug.filename, ensure_correct_extension(filename))
 
     {:ok, upload}
   end

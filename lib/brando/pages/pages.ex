@@ -32,7 +32,7 @@ defmodule Brando.Pages do
   def query(PageFragment = query, _) do
     query
     |> where([f], is_nil(f.deleted_at))
-    |> order_by([f], asc: fragment("lower(?)", f.key))
+    |> order_by([f], asc: f.sequence, asc: fragment("lower(?)", f.key))
   end
 
   def query(queryable, _), do: queryable
@@ -91,7 +91,7 @@ defmodule Brando.Pages do
     pages =
       Page
       |> Page.only_parents()
-      |> order_by([p], asc: p.key)
+      |> order_by([p], asc: p.language, asc: p.sequence, asc: p.key)
       |> exclude_deleted()
       |> Brando.repo().all
 
@@ -128,20 +128,26 @@ defmodule Brando.Pages do
   Get page
   """
   def get_page(key) when is_binary(key) do
-    query = from t in Page, where: t.key == ^key and is_nil(t.deleted_at)
+    query =
+      from t in Page,
+        where: t.key == ^key and is_nil(t.deleted_at),
+        preload: [fragments: ^build_fragments_query()]
 
     case Brando.repo().one(query) do
       nil -> {:error, {:page, :not_found}}
-      page -> {:ok, Brando.repo().preload(page, :fragments)}
+      page -> {:ok, page}
     end
   end
 
   def get_page(id) do
-    query = from t in Page, where: t.id == ^id and is_nil(t.deleted_at)
+    query =
+      from t in Page,
+        where: t.id == ^id and is_nil(t.deleted_at),
+        preload: [fragments: ^build_fragments_query()]
 
     case Brando.repo().one(query) do
       nil -> {:error, {:page, :not_found}}
-      page -> {:ok, Brando.repo().preload(page, :fragments)}
+      page -> {:ok, page}
     end
   end
 
@@ -152,7 +158,7 @@ defmodule Brando.Pages do
     q =
       from p in Page,
         where: p.key == ^key and p.language == ^lang and is_nil(p.deleted_at),
-        preload: :fragments
+        preload: [fragments: ^build_fragments_query()]
 
     case Brando.repo().one(q) do
       nil -> {:error, {:page, :not_found}}
@@ -168,7 +174,7 @@ defmodule Brando.Pages do
       from p in Page,
         join: c in assoc(p, :children),
         where: p.key == ^key and p.language == ^lang and is_nil(p.deleted_at),
-        preload: [:children, :fragments]
+        preload: [children: ^build_children_query(), fragments: ^build_fragments_query()]
 
     case Brando.repo().one(q) do
       nil -> {:error, {:page, :not_found}}
@@ -183,7 +189,7 @@ defmodule Brando.Pages do
     q =
       from p in Page,
         where: p.key == ^key and p.language == ^lang and is_nil(p.deleted_at),
-        preload: [:fragments]
+        preload: [fragments: ^build_fragments_query()]
 
     case Brando.repo().one(q) do
       nil -> {:error, {:page, :not_found}}
@@ -191,6 +197,9 @@ defmodule Brando.Pages do
     end
   end
 
+  @doc """
+  Get page by parent_key, key and language
+  """
   def get_page(parent_key, key, lang) when is_binary(key) do
     q =
       from p in Page,
@@ -200,7 +209,7 @@ defmodule Brando.Pages do
             pp.key == ^parent_key and
             p.language == ^lang and
             is_nil(p.deleted_at),
-        preload: [:fragments]
+        preload: [fragments: ^build_fragments_query()]
 
     case Brando.repo().one(q) do
       nil -> {:error, {:page, :not_found}}
@@ -454,5 +463,17 @@ defmodule Brando.Pages do
       {:ok, fragment} ->
         Phoenix.HTML.raw(fragment.html)
     end
+  end
+
+  defp build_fragments_query do
+    from f in PageFragment,
+      where: is_nil(f.deleted_at),
+      order_by: [asc: f.sequence, asc: f.key]
+  end
+
+  defp build_children_query do
+    from p in Page,
+      where: is_nil(p.deleted_at),
+      order_by: [asc: p.sequence, asc: p.key]
   end
 end

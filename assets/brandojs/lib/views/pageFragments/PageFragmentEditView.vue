@@ -82,7 +82,7 @@
                   name="page[wrapper]"
                   type="text"
                   label="HTML wrapper (avansert)"
-                  help-text="bruk ${CONTENT} for å hente ut fragmentets verdi"
+                  help-text="${CONTENT}: fragmentets innhold\n${KEY}: fragmentets nøkkel"
                   data-vv-name="page[wrapper]"
                   data-vv-value-path="innerValue"></KInputTextarea>
 

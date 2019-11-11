@@ -8,12 +8,13 @@ defmodule Brando.Pages.Page do
   use Brando.Web, :schema
   use Brando.Villain.Schema
   use Brando.SoftDelete.Schema
+  use Brando.Sequence.Schema
 
   alias Brando.Type.Status
   alias Brando.JSONLD
 
   @required_fields ~w(key language slug title data status creator_id)a
-  @optional_fields ~w(parent_id meta_description html css_classes deleted_at)a
+  @optional_fields ~w(parent_id meta_description html css_classes sequence deleted_at)a
   @derived_fields ~w(
     id
     key
@@ -27,6 +28,7 @@ defmodule Brando.Pages.Page do
     creator_id
     parent_id
     meta_description
+    sequence
     inserted_at
     updated_at
     deleted_at
@@ -70,6 +72,7 @@ defmodule Brando.Pages.Page do
     has_many :children, __MODULE__, foreign_key: :parent_id
     has_many :fragments, Brando.Pages.PageFragment
 
+    sequenced()
     timestamps()
     soft_delete()
   end
@@ -121,6 +124,7 @@ defmodule Brando.Pages.Page do
     from m in query,
       order_by: [
         asc: m.language,
+        asc: m.sequence,
         asc: m.status,
         desc: m.key,
         desc: m.inserted_at
@@ -191,7 +195,11 @@ defmodule Brando.Pages.Page do
     end
 
     def to_iodata(%{wrapper: wrapper} = fragment) do
-      String.replace(wrapper, "${CONTENT}", fragment.html)
+      wrapper
+      |> String.replace("${CONTENT}", fragment.html)
+      |> String.replace("${PARENT_KEY}", fragment.parent_key)
+      |> String.replace("${KEY}", fragment.key)
+      |> String.replace("${LANGUAGE}", fragment.language)
       |> Phoenix.HTML.raw()
       |> Phoenix.HTML.Safe.to_iodata()
     end

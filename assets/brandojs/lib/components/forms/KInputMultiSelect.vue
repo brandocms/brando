@@ -59,6 +59,11 @@ export default {
       default: true
     },
 
+    name: {
+      type: String,
+      required: true
+    },
+
     showLabels: {
       type: Boolean,
       default: false

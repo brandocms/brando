@@ -11,6 +11,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "image:update",
     "image:get",
     "pages:list_parents",
+    "pages:sequence_pages",
     "page:delete",
     "page:rerender",
     "page:duplicate",
@@ -133,6 +134,11 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   def do_handle_in("pages:list_parents", _, socket) do
     {:ok, parents} = Brando.Pages.list_parents()
     {:reply, {:ok, %{code: 200, parents: parents}}, socket}
+  end
+
+  def do_handle_in("pages:sequence_pages", %{"ids" => ids}, socket) do
+    Brando.Pages.Page.sequence(ids, Range.new(0, length(ids)))
+    {:reply, {:ok, %{code: 200}}, socket}
   end
 
   def do_handle_in("page:delete", %{"id" => page_id}, socket) do
