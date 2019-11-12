@@ -55,8 +55,8 @@
 
 * Add staging conf for logrotate
   ```
-    cp etc/logrotate/prod.conf etc/logrotate/staging.conf \
-       gsed -i "s=prod=staging=" etc/logrotate/staging.conf
+    cp etc/logrotate/prod.conf etc/logrotate/staging.conf && \
+      gsed -i "s/prod/staging/g" etc/logrotate/staging.conf
   ```
 * Ensure you have config/staging.conf & config/staging.secret.conf, and that the `endpoint` config
   looks OK (http/url/etc)
@@ -72,14 +72,14 @@
 * Ensure you have rel/vm.args.prod & rel/vm.args.staging
   ```
     cp rel/vm.args rel/vm.args.prod && cp rel/vm.args rel/vm.args.staging && \
-       gsed -i "s=<%= release_name %>@127.0.0.1=<%= release_name %>_staging@127.0.0.1=" rel/vm.args.staging && \
-       rm rel/vm.args
+      gsed -i "s/<%= release_name %>@127.0.0.1/<%= release_name %>_staging@127.0.0.1/" rel/vm.args.staging && \
+      rm rel/vm.args
   ```
 * Ensure you have Dockerfile.prod & Dockerfile.staging
   ```
     cp Dockerfile Dockerfile.prod && cp Dockerfile Dockerfile.staging && \
-       gsed -i "s=prod=staging=" Dockerfile.staging && \
-       rm Dockerfile
+      gsed -i "s=prod=staging=" Dockerfile.staging && \
+      rm Dockerfile
   ```
 * Ensure you have fabfile.py version 3.0.0
   --> copy from https://github.com/univers-agency/brando/blob/develop/priv/templates/brando.install/fabfile.py
