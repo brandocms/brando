@@ -15,8 +15,6 @@ defmodule Mix.Tasks.Brando.UploadStatic do
 
     bucket = Atom.to_string(Brando.otp_app())
 
-    require Logger
-
     bucket
     |> S3.get_bucket_location()
     |> ExAws.request()
