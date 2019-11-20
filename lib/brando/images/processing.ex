@@ -48,9 +48,7 @@ defmodule Brando.Images.Processing do
     end
   end
 
-  @doc """
-  Deletes all image's sizes and recreates them.
-  """
+  @deprecated "Use recreate_sizes_for_image/2 or recreate_sizes_for_image_series/2 instead"
   defmacro recreate_sizes_for(_, _, _) do
     raise """
     recreate_sizes_for(:image | :image_field | :image_series, _, _) has been deprecated.
@@ -64,6 +62,7 @@ defmodule Brando.Images.Processing do
     """
   end
 
+  @deprecated "Use recreate_sizes_for_image_field_record/2 instead"
   defmacro recreate_sizes_for(_, _, _, _) do
     raise """
     recreate_sizes_for(:image_field_record, _, _, _) has been deprecated.
@@ -76,6 +75,9 @@ defmodule Brando.Images.Processing do
     """
   end
 
+  @doc """
+  Deletes all image's sizes and recreates them.
+  """
   @spec recreate_sizes_for_image(
           image_schema :: image_schema,
           user :: user
