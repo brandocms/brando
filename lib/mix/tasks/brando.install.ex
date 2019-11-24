@@ -181,7 +181,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "assets/backend/browserslistrc", "assets/backend/.browserslistrc"},
     {:copy, "assets/backend/eslintrc.js", "assets/backend/.eslintrc.js"},
     {:copy, "assets/backend/package.json", "assets/backend/package.json"},
-    {:copy, "assets/backend/postcssrc.js", "assets/backend/.postcssrc.js"},
+    {:copy, "assets/backend/postcss.config.js", "assets/backend/postcss.config.js"},
     {:copy, "assets/backend/vue.config.js", "assets/backend/vue.config.js"},
 
     # Backend CYPRESS
