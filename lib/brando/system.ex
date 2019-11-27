@@ -13,6 +13,7 @@ defmodule Brando.System do
     Logger.info("==> Brando >> Running system checks...")
     {:ok, {:executable, :exists}} = check_image_processing_executable()
     {:ok, {:identity, :exists}} = check_identity_exists()
+    {:ok, {:bucket, :exists}} = check_cdn_bucket_exists()
     Logger.info("==> Brando >> System checks complete!")
   end
 
@@ -33,6 +34,14 @@ defmodule Brando.System do
 
       _ ->
         {:ok, {:identity, :exists}}
+    end
+  end
+
+  defp check_cdn_bucket_exists do
+    if Brando.CDN.enabled?() do
+      Brando.CDN.ensure_bucket_exists()
+    else
+      {:ok, {:bucket, :exists}}
     end
   end
 

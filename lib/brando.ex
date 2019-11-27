@@ -7,9 +7,7 @@ defmodule Brando do
   @doc """
   Start supervisor
   """
-  def start(_type, _args) do
-    Brando.Supervisor.start_link()
-  end
+  def start(_type, _args), do: Brando.Supervisor.start_link()
 
   @doc """
   Gets the configuration for `module` under :brando,

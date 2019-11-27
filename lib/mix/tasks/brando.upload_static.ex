@@ -5,6 +5,10 @@ defmodule Mix.Tasks.Brando.UploadStatic do
   @shortdoc "Upload static files to CDN"
 
   def run(_args) do
+    unless Brando.CDN.enabled?() do
+      raise "CDN not enabled in config."
+    end
+
     :erlang.system_flag(:backtrace_depth, 20)
 
     Application.ensure_all_started(:ex_aws)
