@@ -136,7 +136,8 @@
     [Absinthe.Middleware.Dataloader] ++ Absinthe.Plugin.defaults()
   end
   ```
-
+* Remove `Absinthe.Ecto` stuff from `my_app_web.ex`
+* Add `import Absinthe.Resolution.Helpers` to `:absinthe` in `my_app_web.ex`
 * Remove `absinthe_ecto` from your deps in `mix.exs`
 * Add `{:dataloader, "~> 1.0"}` instead
 

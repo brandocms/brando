@@ -185,11 +185,12 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
   defp maybe_add_soft_delete({%{soft_delete: false} = binding, fields}), do: {binding, fields}
 
   defp maybe_add_soft_delete({%{soft_delete: true} = binding, fields}) do
-    {binding, fields ++ ["soft_delete"]}
+    {binding, fields ++ ["deleted_at"]}
   end
 
   defp build_required_fields(binding) do
     binding_map = Enum.into(binding, %{})
+
     fields =
       binding[:attrs]
       |> Keyword.drop(Keyword.values(binding[:img_fields]))
