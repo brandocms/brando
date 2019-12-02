@@ -415,12 +415,12 @@ def dump_localdb():
 
 def dump_remotedb():
     """
-    Dumps remote prod database
+    Dumps remote flavored database
     """
-    print(yellow('==> dumping remote database %s -> sql/db_dump_remote.sql' % PROJECT_NAME))
+    print(yellow('==> dumping remote database %s_%s -> sql/db_dump_remote.sql' % (PROJECT_NAME, env.flavor)))
     with cd(env.path):
         sudo('mkdir -p sql', user=env.project_user)
-        sudo('pg_dump --no-owner --no-acl %s_prod > sql/db_dump_remote.sql' % PROJECT_NAME, user=env.project_user)
+        sudo('pg_dump --no-owner --no-acl %s_%s > sql/db_dump_remote.sql' % (PROJECT_NAME, env.flavor), user=env.project_user)
 
 
 def upload_db():
@@ -572,13 +572,16 @@ def upload_media():
     """
     Uploads media
     """
-    if not _exists(os.path.join(env.path, 'media')):
-        print(yellow('==> uploading local media folder to remote'))
-        put('media', '%s' % env.path, use_sudo=True)
-        print(yellow('==> chowning remote media folder'))
-        _setowner(os.path.join(env.path, 'media'))
-        print(yellow('==> chmoding remote media folder'))
-        _setperms('755', os.path.join(env.path, 'media'))
+    print(red('-- WARNING ---------------------------------------'))
+    print(red('You are about to upload the LOCAL media dir to SERVER'))
+    print(red('-- WARNING ---------------------------------------'))
+    _confirmtask()
+    print(yellow('==> uploading local media folder to remote'))
+    put('media', '%s' % env.path, use_sudo=True)
+    print(yellow('==> chowning remote media folder'))
+    _setowner(os.path.join(env.path, 'media'))
+    print(yellow('==> chmoding remote media folder'))
+    _setperms('755', os.path.join(env.path, 'media'))
 
 
 def download_media():
