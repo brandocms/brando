@@ -61,7 +61,7 @@
 * Ensure you have config/staging.conf & config/staging.secret.conf, and that the `endpoint` config
   looks OK (http/url/etc)
   ```
-  config :my_app, MyAppWeb.Endpoint,
+  config :my_app, <<<<<<MyAppWeb>>>>>>.Endpoint,
     http: [:inet6, port: {:system, "PORT"}],
     url: [scheme: "http", host: "my_app.staging.yourhost.name", port: 80],
     # force_ssl: [rewrite_on: [:x_forwarded_proto]],

@@ -1,0 +1,49 @@
+query ImageCategory ($categoryId: ID!, $imageSeriesLimit: Int, $imageSeriesOffset: Int) {
+  imageCategory (categoryId: $categoryId){
+    id
+    name
+    slug
+    cfg {
+      allowed_mimetypes
+      default_size
+      upload_path
+      random_filename
+      size_limit
+      sizes
+      srcset {
+        key
+        value
+      }
+    }
+    creator {
+      id
+      full_name
+    }
+    image_series_count
+    image_series (limit: $imageSeriesLimit, offset: $imageSeriesOffset) {
+      id
+      name
+      slug
+      image_category_id
+
+      images {
+        id
+        image {
+          path
+          credits
+          title
+          focal
+          width
+          height
+          sizes
+          thumb: url(size: "thumb")
+          medium: url(size: "medium")
+        }
+        image_series_id
+        sequence
+        updated_at
+        deleted_at
+      }
+    }
+  }
+}

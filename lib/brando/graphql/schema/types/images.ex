@@ -1,23 +1,38 @@
 defmodule Brando.Schema.Types.Images do
   use Brando.Web, :absinthe
 
-  input_object :create_image_series_params do
+  input_object :image_series_params do
     field :name, :string
     field :credits, :string
+    field :cfg, :string
     field :image_category_id, :string
   end
 
   input_object :create_image_category_params do
     field :name, :string
-  end
-
-  input_object :update_image_series_params do
-    field :name, :string
-    field :credits, :string
+    field :slug, :string
+    field :cfg, :string
   end
 
   input_object :update_image_category_params do
     field :name, :string
+    field :slug, :string
+    field :cfg, :string
+  end
+
+  input_object :image_config_params do
+    field :allowed_mimetypes, list_of(:string)
+    field :default_size, :string
+    field :upload_path, :string
+    field :random_filename, :boolean
+    field :size_limit, :integer
+    field :sizes, :json
+    field :srcset, list_of(:image_srcset_params)
+  end
+
+  input_object :image_srcset_params do
+    field :key, :string
+    field :value, :string
   end
 
   object :image_category do
@@ -186,7 +201,7 @@ defmodule Brando.Schema.Types.Images do
 
     @desc "Create image series"
     field :create_image_series, type: :image_series do
-      arg :image_series_params, :create_image_series_params
+      arg :image_series_params, :image_series_params
 
       resolve &Brando.Images.ImageSeriesResolver.create/2
     end
@@ -194,7 +209,7 @@ defmodule Brando.Schema.Types.Images do
     @desc "Update image series"
     field :update_image_series, type: :image_series do
       arg :image_series_id, :id
-      arg :image_series_params, :update_image_series_params
+      arg :image_series_params, :image_series_params
 
       resolve &Brando.Images.ImageSeriesResolver.update/2
     end

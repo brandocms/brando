@@ -34,11 +34,11 @@ defmodule Brando.Images.Processor.Sharp do
     resize_params = [
       "resize",
       (Map.has_key?(resize_values, :width) &&
-         to_string(resize_values.width)) || "0",
+         round_to_string(resize_values.width)) || "0",
       (Map.has_key?(resize_values, :height) &&
          [
            "--height",
-           to_string(resize_values.height)
+           round_to_string(resize_values.height)
          ]) || [],
       "--withoutEnlargement",
       "--fit",
@@ -94,11 +94,11 @@ defmodule Brando.Images.Processor.Sharp do
     resize_params = [
       "resize",
       (Map.has_key?(resize_values, :width) &&
-         to_string(resize_values.width)) || "0",
+         round_to_string(resize_values.width)) || "0",
       (Map.has_key?(resize_values, :height) &&
          [
            "--height",
-           to_string(resize_values.height)
+           round_to_string(resize_values.height)
          ]) || [],
       "--fit",
       "inside"
@@ -146,5 +146,6 @@ defmodule Brando.Images.Processor.Sharp do
   end
 
   defp round_to_string(0), do: "0"
-  defp round_to_string(val), do: val |> Float.round() |> Float.to_string()
+  defp round_to_string(val) when is_float(val), do: val |> Float.round() |> Float.to_string()
+  defp round_to_string(val), do: val |> to_string()
 end

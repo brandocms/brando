@@ -213,6 +213,18 @@ defmodule Brando.HTML do
         content_tag(:b, ""),
         content_tag(:b, ""),
         content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
+        content_tag(:b, ""),
         content_tag(:b, "")
       ]
     end

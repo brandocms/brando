@@ -9,10 +9,7 @@ defmodule Brando.API.Villain.VillainController do
 
   @doc false
   def browse_images(conn, %{"slug" => series_slug}) do
-    image_series =
-      Brando.ImageSeries
-      |> preload([:image_category, :images])
-      |> Brando.repo().get_by(slug: series_slug)
+    {:ok, image_series} = Brando.Images.get_series_by_slug(series_slug)
 
     payload =
       if image_series do
@@ -197,10 +194,11 @@ defmodule Brando.API.Villain.VillainController do
 
   def sequence_templates(conn, %{"sequence" => json_sequence}) do
     with {:ok, decoded_sequence} <- Jason.decode(json_sequence),
+      fixed_sequence <- Enum.map(decoded_sequence, &String.to_integer/1),
          _ <-
            Brando.Villain.Template.sequence(
-             decoded_sequence,
-             Range.new(0, length(decoded_sequence))
+             fixed_sequence,
+             Range.new(0, length(fixed_sequence))
            ) do
       payload = %{
         status: 200

@@ -1,48 +1,35 @@
 {
   "name": "admin",
-  "description": "Admin frontend",
-  "author": "T. Mjoen <trond@twined.net>",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build --no-clean",
+    "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
     "watch": "vue-cli-service build --watch --no-clean",
-    "test": "cypress open"
+    "i18n:report": "vue-cli-service i18n:report --src './src/**/*.?(js|vue)' --locales './src/locales/**/*.json'"
   },
   "dependencies": {
-    "bootstrap": "^4.3.1",
-    "brandojs": "file:../../deps/brando/assets/brandojs",
+    "@univers-agency/villain-editor": "@univers-agency/villain-editor",
+    "brandojs": "file:.yalc/brandojs",
+    "core-js": "^3.4.3",
     "vue": "^2.6.10"
   },
   "devDependencies": {
-    "autoprefixer": "^9.5.1",
-    "cypress": "^3.2.0",
-    "eslint-plugin-cypress": "^2.2.1",
-    "@vue/cli-plugin-babel": "^3.5.1",
-    "@vue/cli-plugin-eslint": "^3.5.1",
-    "@vue/cli-service": "^3.5.1",
+    "@kazupon/vue-i18n-loader": "^0.3.0",
+    "@univers-agency/europacss": "^0.1.7",
+    "@vue/cli-plugin-babel": "^4.1.0",
+    "@vue/cli-plugin-eslint": "^4.1.0",
+    "@vue/cli-plugin-router": "^4.1.0",
+    "@vue/cli-plugin-vuex": "^4.1.0",
+    "@vue/cli-service": "^4.1.0",
     "@vue/eslint-config-standard": "^4.0.0",
-    "eslint-plugin-html": "^5.0.3",
-    "graphql": "^14.1.1",
-    "graphql-tag": "^2.10.1",
-    "lint-staged": "^8.1.5",
-    "node-sass": "^4.11.0",
-    "sass-loader": "^7.0.1",
+    "babel-eslint": "^10.0.3",
+    "eslint": "^5.16.0",
+    "eslint-plugin-vue": "^5.0.0",
+    "graphql-tag": "^2.9.0",
+    "vue-cli-plugin-apollo": "^0.21.3",
+    "vue-cli-plugin-i18n": "^0.6.0",
     "vue-template-compiler": "^2.6.10"
-  },
-  "gitHooks": {
-    "pre-commit": "lint-staged"
-  },
-  "lint-staged": {
-    "*.js": [
-      "vue-cli-service lint",
-      "git add"
-    ],
-    "*.vue": [
-      "vue-cli-service lint",
-      "git add"
-    ]
   }
 }

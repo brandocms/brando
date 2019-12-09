@@ -12,9 +12,10 @@ defmodule Brando.Pages.PageFragment do
   use Brando.Sequence.Schema
 
   @required_fields ~w(parent_key key language data creator_id)a
-  @optional_fields ~w(html page_id wrapper sequence deleted_at)a
+  @optional_fields ~w(html page_id title wrapper sequence deleted_at)a
   @derived_fields ~w(
     id
+    title
     parent_key
     key
     language
@@ -32,6 +33,7 @@ defmodule Brando.Pages.PageFragment do
   @derive {Jason.Encoder, only: @derived_fields}
 
   schema "pages_fragments" do
+    field :title, :string
     field :parent_key, :string
     field :key, :string
     field :language, :string

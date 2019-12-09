@@ -10,15 +10,15 @@ export default [
   },
 
   {
-    path: '/<%= singular %>/ny',
+    path: '/<%= plural %>/new',
     component: <%= Recase.to_pascal(vue_singular) %>CreateView,
-    name: '<%= singular %>-new'
+    name: '<%= plural %>-new'
   },
 
   {
-    path: '/<%= singular %>/endre/:<%= singular %>Id',
+    path: '/<%= plural %>/edit/:<%= singular %>Id',
     component: <%= Recase.to_pascal(vue_singular) %>EditView,
-    name: '<%= singular %>-edit',
+    name: '<%= plural %>-edit',
     props: true
   }
 ]

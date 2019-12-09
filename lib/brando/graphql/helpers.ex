@@ -4,7 +4,7 @@ defmodule Brando.GraphQL.Helpers do
       %Ecto.Changeset{} = changeset ->
         {
           status,
-          message: "Validation failed.",
+          message: "Validation failed!",
           code: 422,
           changeset: %{
             errors:

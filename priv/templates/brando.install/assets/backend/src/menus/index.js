@@ -1,7 +1,7 @@
 // ++imports
 // __imports
 
-export function installMenus (store) {
+export default [].concat(
   // ++content
   // __content
-}
+)

@@ -1,0 +1,59 @@
+query Pages {
+  pages {
+    id
+    key
+    title
+    slug
+    language
+    data
+
+    creator {
+      id
+      full_name
+      avatar {
+        thumb: url(size: "xlarge")
+      }
+    }
+
+    parent {
+      id
+      key
+      language
+      title
+      data
+      slug
+    }
+
+    children {
+      id
+      key
+      language
+      data
+      title
+      slug
+    }
+
+    fragments {
+      id
+      title
+      key
+      parent_key
+      language
+      updated_at
+      page_id
+      data
+
+      creator {
+        id
+        full_name
+        avatar {
+          thumb: url(size: "xlarge")
+        }
+      }
+    }
+
+    inserted_at
+    updated_at
+    deleted_at
+  }
+}

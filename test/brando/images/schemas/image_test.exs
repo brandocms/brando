@@ -144,7 +144,7 @@ defmodule Brando.Integration.ImageTest do
     assert image1.sequence == 0
     assert image2.sequence == 1
 
-    assert {:ok, _} = Image.sequence([to_string(image1.id), to_string(image2.id)], [1, 0])
+    assert {:ok, _} = Image.sequence([image1.id, image2.id], [1, 0])
 
     image1 = Brando.repo().get_by!(Image, id: image1.id)
     image2 = Brando.repo().get_by!(Image, id: image2.id)

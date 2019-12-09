@@ -22,7 +22,7 @@ defmodule Brando.Schema.Types.Page do
     field :html, :string
     field :status, :string
     field :css_classes, :string
-    field :creator, :user
+    field :creator, :user, resolve: dataloader(Brando.Pages)
     field :parent_id, :id
     field :parent, :page, resolve: dataloader(Brando.Pages)
     field :children, list_of(:page), resolve: dataloader(Brando.Pages)

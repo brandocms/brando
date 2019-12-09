@@ -1,36 +1,21 @@
-import '@/styles/app.scss'
-import { Vue } from 'brandojs'
+import Vue from 'vue'
+import VueBrando from 'brandojs'
 
-import { installMenus } from './menus'
-import { installConfig, installKurtz } from 'brandojs/lib/install'
+import Admin from 'brandojs/src/Admin'
+import router from 'brandojs/src/router'
+import routes from './routes'
+import menuSections from './menus'
+import i18n from 'brandojs/src/i18n'
+import app from './config'
 
-import App from 'brandojs/lib/views/App.vue'
-import store from '@/store'
-import router from '@/router'
+Vue.use(VueBrando, { app, menuSections })
 
-import SITE_CONFIG from './config'
-
-// Install Kurtz
-installKurtz(Vue)
-
-// Install local menus
-installMenus(store)
-
-// Install configuration
-installConfig(store, SITE_CONFIG)
-
-// Create application Vue instance
-const app = new Vue({
+new Vue({
   router,
-  store,
-  ...App
-})
-
-// Mount application
-app.$mount('#app')
-
-export {
-  app,
-  router,
-  store
-}
+  i18n,
+  render: h => h(Admin),
+  created() {
+    console.log('==> adding local routes')
+    this.$router.addRoutes(routes)
+  }
+}).$mount('#app')

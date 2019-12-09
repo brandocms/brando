@@ -2,7 +2,10 @@
 
 export default {
   // the text shown in the navigation bar
-  siteName: 'SITENAME admin',
+  name: 'Set this in config.js',
   templateMode: true,
-  // templates: templates
+  // templates: templates,
+  // additional styling for the figure element on the login page
+  logoStyle: '',
+  logo: 'set in config.js'
 }

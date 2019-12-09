@@ -28,7 +28,7 @@ defmodule Brando.Sequence.Schema do
             Ecto.Adapters.SQL.query(
               Brando.repo(),
               ~s(UPDATE #{table} SET "sequence" = $1 WHERE "id" = $2),
-              [val, String.to_integer(id)]
+              [val, id]
             )
           end)
         end)

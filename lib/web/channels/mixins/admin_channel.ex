@@ -16,6 +16,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "page:rerender",
     "page:duplicate",
     "page:rerender_all",
+    "page_fragments:sequence_fragments",
     "page_fragment:rerender",
     "page_fragment:duplicate",
     "page_fragment:rerender_all",
@@ -159,6 +160,11 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
 
   def do_handle_in("page:rerender_all", _, socket) do
     Brando.Pages.rerender_pages()
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in("page_fragments:sequence_fragments", %{"ids" => ids}, socket) do
+    Brando.Pages.PageFragment.sequence(ids, Range.new(0, length(ids)))
     {:reply, {:ok, %{code: 200}}, socket}
   end
 

@@ -1,7 +1,9 @@
+#import "./<%= String.upcase(singular) %>_FRAGMENT.graphql"
+
 mutation Create<%= Recase.to_pascal(vue_singular) %>($<%= vue_singular %>Params: <%= Recase.to_pascal(vue_singular) %>Params) {
   create<%= Recase.to_pascal(vue_singular) %>(
     <%= vue_singular %>Params: $<%= vue_singular %>Params,
   ) {
-    id
+    ...<%= vue_singular %>
   }
 }

@@ -2,6 +2,7 @@ defmodule Brando.Schema.Types.PageFragment do
   use Brando.Web, :absinthe
 
   input_object :page_fragment_params do
+    field :title, :string
     field :parent_key, :string
     field :key, :string
     field :language, :string
@@ -12,6 +13,7 @@ defmodule Brando.Schema.Types.PageFragment do
 
   object :page_fragment do
     field :id, :id
+    field :title, :string
     field :parent_key, :string
     field :key, :string
     field :language, :string

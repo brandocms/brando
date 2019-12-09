@@ -141,19 +141,18 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "lib/application_name/graphql/resolvers/#{path}_resolver.ex"},
 
           # Backend JS
-          {:eex, "assets/backend/src/store/modules/module.js",
-           "assets/backend/src/store/modules/#{vue_plural}.js"},
-          {:eex, "assets/backend/src/api/api.js", "assets/backend/src/api/#{vue_singular}.js"},
           {:eex, "assets/backend/src/api/graphql/ALL_QUERY.graphql",
-           "assets/backend/src/api/graphql/#{vue_plural}/#{String.upcase(plural)}_QUERY.graphql"},
+           "assets/backend/src/views/#{snake_domain}/gql/#{String.upcase(plural)}_QUERY.graphql"},
           {:eex, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql",
-           "assets/backend/src/api/graphql/#{vue_plural}/#{String.upcase(singular)}_QUERY.graphql"},
+           "assets/backend/src/views/#{snake_domain}/gql/#{String.upcase(singular)}_QUERY.graphql"},
+          {:eex, "assets/backend/src/api/graphql/FRAGMENT.graphql",
+           "assets/backend/src/views/#{snake_domain}/gql/#{String.upcase(singular)}_FRAGMENT.graphql"},
           {:eex, "assets/backend/src/api/graphql/CREATE_MUTATION.graphql",
-           "assets/backend/src/api/graphql/#{vue_plural}/CREATE_#{String.upcase(singular)}_MUTATION.graphql"},
+           "assets/backend/src/views/#{snake_domain}/gql/CREATE_#{String.upcase(singular)}_MUTATION.graphql"},
           {:eex, "assets/backend/src/api/graphql/UPDATE_MUTATION.graphql",
-           "assets/backend/src/api/graphql/#{vue_plural}/UPDATE_#{String.upcase(singular)}_MUTATION.graphql"},
+           "assets/backend/src/views/#{snake_domain}/gql/UPDATE_#{String.upcase(singular)}_MUTATION.graphql"},
           {:eex, "assets/backend/src/api/graphql/DELETE_MUTATION.graphql",
-           "assets/backend/src/api/graphql/#{vue_plural}/DELETE_#{String.upcase(singular)}_MUTATION.graphql"},
+           "assets/backend/src/views/#{snake_domain}/gql/DELETE_#{String.upcase(singular)}_MUTATION.graphql"},
           {:eex, "assets/backend/src/menus/menu.js", "assets/backend/src/menus/#{vue_plural}.js"},
           {:eex, "assets/backend/src/routes/route.js",
            "assets/backend/src/routes/#{vue_plural}.js"},
@@ -165,6 +164,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}EditView.vue"},
           {:eex_trim, "assets/backend/src/views/Form.vue",
            "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}Form.vue"},
+          {:eex, "assets/backend/src/views/cache/index.js",
+           "assets/backend/src/views/#{vue_plural}/cache/index.js"},
           {:eex, "assets/backend/cypress/integration/spec.js",
            "assets/backend/cypress/integration/#{snake_domain}/#{Recase.to_pascal(vue_singular)}.spec.js"}
         ]
@@ -240,12 +241,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       "import #{binding[:plural]} from './#{binding[:plural]}'"
     )
 
-    Mix.Brando.add_to_file(
-      "assets/backend/src/menus/index.js",
-      "content",
-      "store.commit('menu/STORE_MENU', #{binding[:plural]})"
-    )
-
     ## ROUTES
 
     Mix.Brando.add_to_file(
@@ -256,20 +251,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     Mix.Brando.add_to_file(
       "assets/backend/src/routes/index.js",
-      "content",
-      "#{binding[:plural]},"
-    )
-
-    ## VUEX STORES
-
-    Mix.Brando.add_to_file(
-      "assets/backend/src/store/index.js",
-      "imports",
-      "import { #{binding[:plural]} } from './modules/#{binding[:plural]}'"
-    )
-
-    Mix.Brando.add_to_file(
-      "assets/backend/src/store/index.js",
       "content",
       "#{binding[:plural]},"
     )
@@ -440,61 +421,61 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k, ""}
 
       {k, :boolean} ->
-        {k, ~s(<td class="fit">
-                    <CheckOrX :val="#{vue_singular}.#{k}" />
-                  </td>)}
+        {k, ~s(<div class="col-2">
+          <CheckOrX :val="entry.#{k}" />
+        </div>)}
 
       {k, :date} ->
-        {k, ~s(<td class="fit">
-                    {{ #{vue_singular}.#{k} | datetime }}
-                  </td>)}
+        {k, ~s(<div class="col-2">
+          {{ entry.#{k} | datetime }}
+        </div>)}
 
       {k, :time} ->
-        {k, ~s(<td class="fit">
-                    {{ #{vue_singular}.#{k} | datetime }}
-                  </td>)}
+        {k, ~s(<div class="col-2">
+          {{ entry.#{k} | datetime }}
+        </div>)}
 
       {k, :datetime} ->
-        {k, ~s(<td class="fit">
-                    {{ #{vue_singular}.#{k} | datetime }}
-                  </td>)}
+        {k, ~s(<div class="col-2">
+          {{ entry.#{k} | datetime }}
+        </div>)}
 
       {k, :image} ->
-        {k, ~s(<td class="fit">
-                    <img
-                      v-if="#{vue_singular}.#{k}"
-                      :src="#{vue_singular}.#{k}.thumb"
-                      class="avatar-sm img-border-lg" />
-                  </td>)}
+        {k, ~s(<div class="col-2">
+          <img
+            v-if="entry.#{k}"
+            :src="entry.#{k}.thumb"
+            class="avatar-sm img-border-lg" />
+        </div>)}
 
       {k, :villain} ->
         {k, ""}
 
       {k, :gallery} ->
-        {k, ~s(<td class="fit">
-                    <template v-if="#{vue_singular}.#{k}_id">
-                      <ModalImageSeries
-                        :selectedImages="selectedImages"
-                        :imageSeriesId="#{vue_singular}.#{k}_id"
-                        :showModal="showImageSeriesModal === #{vue_singular}.#{k}_id"
-                        @close="closeImageSeriesModal"
-                        v-if="showImageSeriesModal === #{vue_singular}.#{k}_id"
-                      />
-                      <button @click.prevent="openImageSeriesModal\(#{vue_singular}.#{k}_id\)" class="btn btn-white" v-b-popover.hover.top="'Rediger galleri'">
-                        <i class="fal fa-fw fa-images"> </i>
-                      </button>
-                    </template>
-                    <template v-else>
-                      <button @click.prevent="createImageSeries\(#{vue_singular}.id\)" class="btn btn-white" v-b-popover.hover.top="'Lag bildegalleri'">
-                        <i class="fal fa-fw fa-plus"> </i>
-                      </button>
-                    </template>
-                  </td>)}
+        {k, ~s(<div class="col-2">
+          <template v-if="entry.#{k}_id">
+            <ModalImageSeries
+              :selectedImages="selectedImages"
+              :imageSeriesId="entry.#{k}_id"
+              :showModal="showImageSeriesModal === entry.#{k}_id"
+              @close="closeImageSeriesModal"
+              v-if="showImageSeriesModal === entry.#{k}_id"
+            />
+            <button @click.prevent="openImageSeriesModal\(entry.#{k}_id\)" class="btn btn-white" v-b-popover.hover.top="'Rediger galleri'">
+              <i class="fal fa-fw fa-images"> </i>
+            </button>
+          </template>
+          <template v-else>
+            <button @click.prevent="createImageSeries\(entry.id\)" class="btn btn-white" v-b-popover.hover.top="'Lag bildegalleri'">
+              <i class="fal fa-fw fa-plus"> </i>
+            </button>
+          </template>
+        </div>)}
 
       {k, _} ->
-        {k, ~s(<td class="fit">
-                    {{ #{vue_singular}.#{k} }}
-                  </td>)}
+        {k, ~s(<div class="col-2">
+          {{ entry.#{k} }}
+        </div>)}
     end)
   end
 
@@ -630,7 +611,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
          [
            "<KInputCheckbox",
            "v-model=\"#{singular}.#{k}\"",
-           ":value=\"#{singular}.#{k}\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
            "/>"
@@ -641,7 +621,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
          [
            "<KInput",
            "v-model=\"#{singular}.#{k}\"",
-           ":value=\"#{singular}.#{k}\"",
            "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
@@ -654,7 +633,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
          [
            "<KInputDatetime",
            "v-model=\"#{singular}.#{k}\"",
-           ":value=\"#{singular}.#{k}\"",
            "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
@@ -667,7 +645,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
          [
            "<KInputDatetime",
            "v-model=\"#{singular}.#{k}\"",
-           ":value=\"#{singular}.#{k}\"",
            "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
@@ -680,7 +657,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
          [
            "<KInputDatetime",
            "v-model=\"#{singular}.#{k}\"",
-           ":value=\"#{singular}.#{k}\"",
            "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
@@ -693,7 +669,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
          [
            "<KInputImage",
            "v-model=\"#{singular}.#{k}\"",
-           ":value=\"#{singular}.#{k}\"",
            "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
@@ -705,7 +680,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
          [
            "<KInputFile",
            "v-model=\"#{singular}.#{k}\"",
-           ":value=\"#{singular}.#{k}\"",
            "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
@@ -719,7 +693,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
          [
            "<Villain",
            "v-model=\"#{singular}.#{k}\"",
-           ":value=\"#{singular}.#{k}\"",
            "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\""
@@ -730,7 +703,6 @@ defmodule Mix.Tasks.Brando.Gen.Html do
          [
            "<KInput",
            "v-model=\"#{singular}.#{k}\"",
-           ":value=\"#{singular}.#{k}\"",
            "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",

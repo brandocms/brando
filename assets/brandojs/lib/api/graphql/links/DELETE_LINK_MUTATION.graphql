@@ -1,5 +1,0 @@
-mutation DeleteLink($linkId: ID!) {
-  delete_link(linkId: $linkId) {
-    id
-  }
-}

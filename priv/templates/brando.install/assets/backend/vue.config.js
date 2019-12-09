@@ -1,29 +1,15 @@
 module.exports = {
   outputDir: '../../priv/static',
-  assetsDir: '/',
+  // assetsDir: '/',
   runtimeCompiler: true,
   // disable hashes in filenames
-  filenameHashing: false,
-  productionSourceMap: false,
-  // delete HTML related webpack plugins
-  chainWebpack: config => {
-    config.plugins.delete('html')
-    config.plugins.delete('preload')
-    config.plugins.delete('prefetch')
-
-    // GraphQL Loader
-    config.module
-      .rule('graphql')
-      .test(/\.graphql$/)
-      .use('graphql-tag/loader')
-      .loader('graphql-tag/loader')
-      .end()
-  },
-
-  css: {
-    extract: {
-      filename: 'css/admin/[name].css',
-      chunkFilename: 'css/admin/[name].css'
+  // filenameHashing: false,
+  pluginOptions: {
+    i18n: {
+      locale: 'en',
+      fallbackLocale: 'en',
+      localeDir: 'locales',
+      enableInSFC: true
     }
   },
 
@@ -31,6 +17,10 @@ module.exports = {
     output: {
       filename: 'js/admin/[name].js',
       chunkFilename: 'js/admin/[name].js'
-    }
-  }
+    },
+  },
+
+  transpileDependencies: [
+    'brandojs'
+  ]
 }

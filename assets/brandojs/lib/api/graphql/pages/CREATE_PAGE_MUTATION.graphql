@@ -1,8 +1,0 @@
-mutation CreatePage($pageParams: PageParams) {
-  create_page(
-    pageParams: $pageParams,
-  ) {
-    id
-    key
-  }
-}

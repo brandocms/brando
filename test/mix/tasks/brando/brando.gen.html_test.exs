@@ -142,18 +142,18 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "import BrandoWeb.Gettext"
       end)
 
-      assert_file("assets/backend/src/api/graphql/pirates/PIRATE_QUERY.graphql", fn file ->
-        assert file =~ ~s(\n    pdf {\n      url\n    }\n)
+      assert_file("assets/backend/src/views/pirates/gql/PIRATE_QUERY.graphql", fn file ->
+        assert file =~ "#import \"./PIRATE_FRAGMENT.graphql\"\nquery Pirate($pirateId: ID!) {\n  pirate(pirateId: $pirateId) {\n    ...pirate\n  }\n}\n"
       end)
 
-      assert_file("assets/backend/src/api/graphql/captains/CAPTAIN_QUERY.graphql", fn file ->
+      assert_file("assets/backend/src/views/captains/gql/CAPTAIN_QUERY.graphql", fn file ->
         assert file =~
-                 ~s({\n    id\n    name\n    age\n    height\n    famous\n    born_at\n    secret\n    cover {\n      thumb: url\(size: "original"\)\n      focal\n    }\n    data\n    first_login\n    alarm\n    creator\n    image_series_id\n  })
+                 "#import \"./CAPTAIN_FRAGMENT.graphql\"\nquery Captain($captainId: ID!) {\n  captain(captainId: $captainId) {\n    ...captain\n  }\n}\n"
       end)
 
-      assert_file("assets/backend/src/api/graphql/captains/CAPTAINS_QUERY.graphql", fn file ->
+      assert_file("assets/backend/src/views/captains/gql/CAPTAINS_QUERY.graphql", fn file ->
         assert file =~
-                 ~s({\n    id\n    name\n    age\n    height\n    famous\n    born_at\n    secret\n    cover {\n      thumb: url\(size: "original"\)\n      focal\n    }\n    data\n    first_login\n    alarm\n    creator\n    image_series_id\n    updated_at\n  })
+        "#import \"./CAPTAIN_FRAGMENT.graphql\"\n\nquery Captains {\n  captains {\n    ...captain\n  }\n}\n"
       end)
 
       assert_file("assets/backend/src/views/games/CaptainForm.vue", fn file ->
@@ -163,7 +163,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
       assert_file("assets/backend/src/views/games/CaptainCreateView.vue", fn file ->
         assert file =~
-                 "<CaptainForm\n            :captain=\"captain\"\n            :loading=\"loading\"\n            @save=\"save\" />"
+                 "<CaptainForm\n            :captain=\"captain\"\n            @save=\"save\" />"
       end)
 
       assert_file("assets/backend/src/views/games/CaptainEditView.vue", fn file ->
@@ -185,15 +185,6 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
       assert_file("assets/backend/src/views/games/CaptainListView.vue", fn file ->
         assert file =~ ~s(v-sortable)
-
-        assert file =~
-                 "<td class=\"fit\">\n                    {{ captain.name }}\n                  </td>"
-
-        assert file =~
-                 "<td class=\"fit\">\n                    <CheckOrX :val=\"captain.famous\" />\n                  </td>"
-
-        assert file =~
-                 "<td class=\"fit\">\n                    <img\n                      v-if=\"captain.cover\"\n                      :src=\"captain.cover.thumb\"\n                      class=\"avatar-sm img-border-lg\" />\n                  </td>"
       end)
 
       send(self(), {:mix_shell_input, :prompt, "Games"})
@@ -241,7 +232,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "defmodule Brando.Projects.ProjectResolver do"
       end)
 
-      assert_file("assets/backend/src/api/graphql/projects/PROJECTS_QUERY.graphql", fn file ->
+      assert_file("assets/backend/src/projects/gql/PROJECTS_QUERY.graphql", fn file ->
         assert file =~
                  ~s({\n    id\n    name\n    slug\n    deleted_at\n    updated_at\n  })
       end)

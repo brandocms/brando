@@ -50,9 +50,11 @@ defmodule Brando.Pages do
   @doc """
   Update page
   """
-  def update_page(page_id, params) do
+  def update_page(page_id, params, user) do
     page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
     {:ok, page} = get_page(page_id)
+
+    params = Map.put(params, :creator_id, user.id)
 
     page
     |> Page.changeset(:update, params)
@@ -345,13 +347,17 @@ defmodule Brando.Pages do
   @doc """
   Update page fragment
   """
-  def update_page_fragment(page_fragment_id, params) do
+  def update_page_fragment(page_fragment_id, params, user) do
     page_fragment_id =
       (is_binary(page_fragment_id) && String.to_integer(page_fragment_id)) || page_fragment_id
 
     {:ok, page_fragment} = get_page_fragment(page_fragment_id)
 
-    case page_fragment |> PageFragment.changeset(:update, params) |> Brando.repo().update do
+    params = Map.put(params, :creator_id, user.id)
+
+    case page_fragment
+         |> PageFragment.changeset(:update, params)
+         |> Brando.repo().update do
       {:ok, page_fragment} ->
         update_villains_referencing_fragment(page_fragment)
         {:ok, page_fragment}

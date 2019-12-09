@@ -75,5 +75,7 @@ defmodule Brando.Schema.Types.Scalar do
     :error
   end
 
-  defp encode(value), do: value
+  defp encode(value) do
+    value
+  end
 end

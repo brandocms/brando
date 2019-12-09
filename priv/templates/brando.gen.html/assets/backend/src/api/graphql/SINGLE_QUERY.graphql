@@ -1,6 +1,6 @@
+#import "./<%= String.upcase(singular) %>_FRAGMENT.graphql"
 query <%= Recase.to_pascal(vue_singular) %>($<%= vue_singular %>Id: ID!) {
   <%= vue_singular %>(<%= vue_singular %>Id: $<%= vue_singular %>Id) {
-    id<%= for {_k, v} <- gql_query_fields do %>
-    <%= v %><% end %>
+    ...<%= vue_singular %>
   }
 }

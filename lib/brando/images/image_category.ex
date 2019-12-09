@@ -62,6 +62,9 @@ defmodule Brando.ImageCategory do
   end
 
   def changeset(schema, :update, params) do
+    require Logger
+    Logger.error(inspect(params, pretty: true))
+
     schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> put_slug(:name)

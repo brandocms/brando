@@ -32,10 +32,10 @@ defmodule Brando.Pages.PageResolver do
   Update page
   """
   def update(%{page_id: page_id, page_params: page_params}, %{
-        context: %{current_user: _current_user}
+        context: %{current_user: current_user}
       }) do
     page_id
-    |> Pages.update_page(page_params)
+    |> Pages.update_page(page_params, current_user)
     |> response
   end
 

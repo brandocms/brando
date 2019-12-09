@@ -1,29 +1,20 @@
 <template>
-  <div class="form-wrapper">
-    <ValidationObserver
-      ref="observer">
-      <!--
-      FORM FIELDS HERE
-      --><%= for {_v, k} <- vue_inputs do %>
-      <%= List.first(k) %><% {_, r} = List.pop_at(k, 0); {_, remainder} = List.pop_at(r, -1) %><%= for prop <- remainder do %>
-        <%= prop %><% end %>
-      />
-      <% end %>
-      <button
-        :disabled="!!loading"
-        class="btn btn-secondary"
-        @click="validate">
-        Lagre
-      </button>
-
-      <router-link
-        :disabled="!!loading"
-        :to="{ name: '<%= plural %>' }"
-        class="btn btn-outline-secondary">
-        Tilbake til oversikten
-      </router-link>
-    </ValidationObserver>
-  </div>
+  <KForm
+    v-if="<%= vue_singular %>"
+    :back="{ name: '<%= vue_plural %>' }"
+    @save="save">
+    <section class="row">
+      <div class="half">
+        <!--
+        FORM FIELDS HERE
+        --><%= for {_v, k} <- vue_inputs do %>
+        <%= List.first(k) %><% {_, r} = List.pop_at(k, 0); {_, remainder} = List.pop_at(r, -1) %><%= for prop <- remainder do %>
+          <%= prop %><% end %>
+        />
+        <% end %>
+      </div>
+    </section>
+  </KForm>
 </template>
 
 <script>
@@ -31,24 +22,40 @@ export default {
   props: {
     <%= vue_singular %>: {
       type: Object,
-      required: true
+      default: () => {}
     },
-    loading: {
-      type: Number,
+
+    save: {
+      type: Function,
       required: true
     }
   },
 
-  methods: {
-    async validate () {
-      const isValid = await this.$refs.observer.validate()
-      if (!isValid) {
-        alertError('Feil i skjema', 'Vennligst se over og rett feil i rødt')
-        this.loading = 0
-        return
+  data () {
+    return {
+      parents: [],
+      settings: {
+        templateMode: false,
+        templateNamespace: 'all',
+        namespacedTemplates: []
       }
-      this.$emit('save')
     }
+  },
+
+  inject: [
+    'adminChannel'
+  ],
+
+  created () {
+    //
+  },
+
+  methods: {
+    //
   }
 }
 </script>
+
+<style lang="postcss" scoped>
+
+</style>

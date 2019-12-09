@@ -1,0 +1,24 @@
+query ImageCategories {
+  imageCategories {
+    id
+    name
+    slug
+
+    cfg {
+      upload_path
+    }
+
+    creator {
+      id
+      full_name
+      avatar {
+        thumb: url(size: "xlarge")
+      }
+    }
+
+    image_series_count
+
+    updated_at
+    deleted_at
+  }
+}

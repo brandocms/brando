@@ -1,86 +1,102 @@
 <template>
-  <div class="create-<%= singular %>" v-if="!loading">
-    <div class="container">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="section mb-0">Endre</h5>
-        </div>
-        <div class="card-body">
-          <<%= Recase.to_pascal(vue_singular) %>Form
-            :<%= vue_singular %>="<%= vue_singular %>"
-            :loading="loading"
-            @validate="validate" />
-        </div>
-      </div>
-    </div>
-  </div>
+  <article v-if="<%= vue_singular %>">
+    <ContentHeader>
+      <template v-slot:title>
+        <%= plural %> admin
+      </template>
+      <template v-slot:subtitle>
+        Edit <%= singular %>
+      </template>
+    </ContentHeader>
+    <<%= Recase.to_pascal(vue_singular) %>Form
+      :<%= vue_singular %>="<%= vue_singular %>"
+      :save="save" />
+  </article>
 </template>
 
 <script>
 
-import { nprogress } from 'brandojs'
-import { showError, validateImageParams, stripParams } from 'brandojs/lib/utils'
-import { alertError } from 'brandojs/lib/utils/alerts'
-import { <%= vue_singular %>API } from '@/api/<%= vue_singular %>'
-import <%= Recase.to_pascal(vue_singular) %>Form from '@/views/<%= snake_domain %>/<%= Recase.to_pascal(vue_singular) %>Form'
+import gql from 'graphql-tag'
+import <%= Recase.to_pascal(vue_singular) %>Form from './<%= Recase.to_pascal(vue_singular) %>Form'
+import <%= String.upcase(singular) %>_FRAGMENT from './gql/<%= String.upcase(singular) %>_FRAGMENT.graphql
 
 export default {
   components: {
     <%= Recase.to_pascal(vue_singular) %>Form
   },
 
-  data () {
-    return {
-      loading: 0,
-      <%= vue_singular %>: null
-    }
-  },
-
-  inject: [
-    'adminChannel'
-  ],
-
-  async created () {
-    this.loading++
-    const v = await <%= vue_singular %>API.get<%= Recase.to_pascal(vue_singular) %>(this.<%= vue_singular %>Id)
-    this.<%= vue_singular %> = { ...v }
-    this.loading--
-  },
-
   props: {
     <%= vue_singular %>Id: {
-      type: String,
+      type: [String, Number],
       required: true
     }
   },
 
+  data () {
+    return {
+    }
+  },
+
+  fragments: {
+    <%= vue_singular %>: <%= String.upcase(singular) %>_FRAGMENT
+  },
+
   methods: {
     async save () {
-      this.loading = 0
-      let params = { ...this.<%= vue_singular %> }
-
-      // strip out params we don't want sent in the mutation
-      stripParams(params, ['__typename', 'id'])
-
-      <%= if Enum.count(img_fields) > 0 do %>
-      // validate image params, if any, to ensure they are files
-      <%
-        fs =
-          img_fields
-          |> Enum.map(fn {_v, k} -> ~s('#{k}') end)
-          |> Enum.join()
-      %>validateImageParams(params, [<%= fs %>])<% end %>
+      const <%= vue_singular %>Params = this.$utils.stripParams(this.<%= vue_singular %>, ['__typename', 'id', 'inserted_at', 'updated_at', 'deleted_at'])
+      this.$utils.validateImageParams(<%= vue_singular %>Params, ['avatar'])
 
       try {
-        nprogress.start()
-        await <%= singular %>API.update<%= Recase.to_pascal(vue_singular) %>(this.<%= vue_singular %>.id, params)
-        nprogress.done()
-        this.$toast.success({ message: 'Objekt endret' })
-        this.$router.push({ name: '<%= plural %>' })
+        await this.$apollo.mutate({
+          mutation: gql`
+            mutation Update<%= Recase.to_pascal(vue_singular) %>($<%= vue_singular %>Id: ID!, $<%= vue_singular %>Params: <%= Recase.to_pascal(vue_singular) %>Params) {
+              update<%= Recase.to_pascal(vue_singular) %>(
+                <%= vue_singular %>Id: $<%= vue_singular %>Id,
+                <%= vue_singular %>Params: $<%= vue_singular %>Params
+              ) {
+                ...<%= vue_singular %>
+              }
+            }
+            ${<%= String.upcase(singular) %>_FRAGMENT}
+          `,
+          variables: {
+            <%= vue_singular %>Params,
+            <%= vue_singular %>Id: this.<%= vue_singular %>Id
+          }
+        })
+
+        this.$toast.success({ message: 'Entry updated' })
+        this.$router.push({ name: '<%= vue_plural %>' })
       } catch (err) {
-        showError(err)
+        this.$utils.showError(err)
+      }
+    }
+  },
+
+  apollo: {
+    <%= vue_singular %>: {
+      query: gql`
+        query <%= Recase.to_pascal(vue_singular) %> ($<%= vue_singular %>Id: ID!) {
+          <%= vue_singular %> (<%= vue_singular %>Id: $<%= vue_singular %>Id) {
+            ...<%= vue_singular %>
+          }
+        }
+        ${<%= String.upcase(singular) %>_FRAGMENT}
+      `,
+      variables () {
+        return {
+          <%= vue_singular %>Id: this.<%= vue_singular %>Id
+        }
+      },
+
+      skip () {
+        return !this.<%= vue_singular %>Id
       }
     }
   }
 }
 </script>
+
+<style lang="postcss" scoped>
+
+</style>

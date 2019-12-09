@@ -1,5 +1,0 @@
-mutation DeleteIdentity {
-  delete_identity {
-    id
-  }
-}

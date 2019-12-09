@@ -33,9 +33,11 @@ defmodule Brando.Pages.PageFragmentResolver do
   @doc """
   Update page
   """
-  def update(%{page_fragment_id: page_fragment_id, page_fragment_params: page_fragment_params}, _) do
+  def update(%{page_fragment_id: page_fragment_id, page_fragment_params: page_fragment_params}, %{
+        context: %{current_user: current_user}
+      }) do
     page_fragment_id
-    |> Pages.update_page_fragment(page_fragment_params)
+    |> Pages.update_page_fragment(page_fragment_params, current_user)
     |> response
   end
 
