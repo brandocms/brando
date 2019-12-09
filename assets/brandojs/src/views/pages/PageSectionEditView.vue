@@ -12,7 +12,7 @@
 <script>
 
 import gql from 'graphql-tag'
-import GET_PAGES from '../../gql/pages/PAGES_QUERY'
+import GET_PAGES from '../../gql/pages/PAGES_QUERY.graphql'
 import PageSectionForm from './PageSectionForm'
 
 export default {

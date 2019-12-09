@@ -99,7 +99,7 @@ export function createProvider (options = {}) {
       }
     },
 
-    errorHandler (err) {
+    async errorHandler (err) {
       const { networkError, graphQLErrors } = err
       console.log('errorHandler', err)
       switch (networkError.statusCode) {
@@ -107,9 +107,8 @@ export function createProvider (options = {}) {
           Vue.prototype.$alerts.alertError('Valideringsfeil', err.error)
           break
         case 406:
-          console.log('got 406')
-          onLogout(apolloClient)
-          Vue.prototype.$token.value = null
+          console.log('got 406, call onLogout')
+          await onLogout(apolloClient)
           break
         default:
           if (graphQLErrors && graphQLErrors.length) {
@@ -141,6 +140,11 @@ export async function onLogin (apolloClient, token) {
 
 // Manually call this when user log out
 export async function onLogout (apolloClient) {
-  await apolloClient.resetStore()
-  // Vue.$router.push({ name: 'login' })
+  try {
+    localStorage.removeItem('token')
+    await apolloClient.resetStore()
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.log('%cError on cache reset (logout)', 'color: orange;', e.message)
+  }
 }

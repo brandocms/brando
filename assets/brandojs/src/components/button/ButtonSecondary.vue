@@ -24,7 +24,7 @@ export default {
 
 <style lang="postcss" scoped>
   a {
-    padding-top: 18px;
+    padding-top: 15.5px; /* was 18px */
     display: inline-block;
   }
 
