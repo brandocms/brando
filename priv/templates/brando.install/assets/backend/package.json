@@ -10,7 +10,7 @@
     "i18n:report": "vue-cli-service i18n:report --src './src/**/*.?(js|vue)' --locales './src/locales/**/*.json'"
   },
   "dependencies": {
-    "@univers-agency/villain-editor": "@univers-agency/villain-editor",
+    "@univers-agency/villain-editor": "univers-agency/villain-editor",
     "brandojs": "file:.yalc/brandojs",
     "core-js": "^3.4.3",
     "vue": "^2.6.10"
