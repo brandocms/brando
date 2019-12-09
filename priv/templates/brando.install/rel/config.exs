@@ -7,7 +7,7 @@
 |> Path.wildcard()
 |> Enum.map(&Code.eval_file(&1))
 
-use Mix.Releases.Config,
+use Distillery.Releases.Config,
   # This sets the default release built by `mix release`
   default_release: :default,
   # This sets the default environment used by `mix release`
@@ -30,20 +30,20 @@ environment :dev do
   # dev mode.
   set dev_mode: true
   set include_erts: false
-  set cookie: <%= Brando.Utils.generate_secure_cookie() %>
+  set cookie: :"<%= Brando.Utils.generate_secure_cookie() %>"
 end
 
 environment :staging do
   set include_erts: true
   set include_src: false
-  set cookie: <%= Brando.Utils.generate_secure_cookie() %>
+  set cookie: :"<%= Brando.Utils.generate_secure_cookie() %>"
   set vm_args: "rel/vm.args.staging"
 end
 
 environment :prod do
   set include_erts: true
   set include_src: false
-  set cookie: <%= Brando.Utils.generate_secure_cookie() %>
+  set cookie: :"<%= Brando.Utils.generate_secure_cookie() %>"
   set vm_args: "rel/vm.args.prod"
 end
 
@@ -52,8 +52,8 @@ end
 # when running `mix release`, the first release in the file
 # will be used by default
 
-release :bg14b do
-  set version: current_version(:bg14b)
+release :<%= application_name %> do
+  set version: current_version(:<%= application_name %>)
 
   set commands: [
         migrate: "rel/commands/migrate.sh"
