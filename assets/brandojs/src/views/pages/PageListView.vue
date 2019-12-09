@@ -170,7 +170,7 @@
 
 import gql from 'graphql-tag'
 
-import GET_USERS from './gql/PAGES_QUERY.graphql'
+import GET_PAGES from '../../gql/pages/PAGES_QUERY.graphql'
 
 export default {
   data () {
@@ -190,7 +190,7 @@ export default {
         .receive('ok', payload => {
           this.$toast.success({ message: this.$t('pages.sequence-updated') })
 
-          const query = { query: GET_USERS }
+          const query = { query: GET_PAGES }
           const store = this.$apolloProvider.defaultClient.store.cache
           const data = store.readQuery(query)
 
@@ -211,7 +211,7 @@ export default {
         .receive('ok', payload => {
           this.$toast.success({ message: this.$t('pages.sequence-updated') })
 
-          const query = { query: GET_USERS }
+          const query = { query: GET_PAGES }
           const store = this.$apolloProvider.defaultClient.store.cache
           const data = store.readQuery(query)
 
@@ -254,7 +254,7 @@ export default {
 
               update: (store, { data: { deletePageFragment } }) => {
                 const query = {
-                  query: require('./gql/PAGES_QUERY.graphql')
+                  query: GET_PAGES
                 }
                 const data = store.readQuery(query)
                 const page = data.pages.find(page => parseInt(page.id) === parseInt(section.page_id))
@@ -290,7 +290,7 @@ export default {
 
   apollo: {
     pages: {
-      query: require('./gql/PAGES_QUERY.graphql')
+      query: GET_PAGES
     }
   }
 }

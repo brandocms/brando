@@ -142,33 +142,36 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "import BrandoWeb.Gettext"
       end)
 
-      assert_file("assets/backend/src/views/pirates/gql/PIRATE_QUERY.graphql", fn file ->
-        assert file =~ "#import \"./PIRATE_FRAGMENT.graphql\"\nquery Pirate($pirateId: ID!) {\n  pirate(pirateId: $pirateId) {\n    ...pirate\n  }\n}\n"
+      assert_file("assets/backend/src/gql/games/PIRATE_QUERY.graphql", fn file ->
+        assert file =~
+                 "#import \"./PIRATE_FRAGMENT.graphql\"\nquery Pirate($pirateId: ID!) {\n  pirate(pirateId: $pirateId) {\n    ...pirate\n  }\n}\n"
       end)
 
-      assert_file("assets/backend/src/views/captains/gql/CAPTAIN_QUERY.graphql", fn file ->
+      assert_file("assets/backend/src/gql/games/CAPTAIN_QUERY.graphql", fn file ->
         assert file =~
                  "#import \"./CAPTAIN_FRAGMENT.graphql\"\nquery Captain($captainId: ID!) {\n  captain(captainId: $captainId) {\n    ...captain\n  }\n}\n"
       end)
 
-      assert_file("assets/backend/src/views/captains/gql/CAPTAINS_QUERY.graphql", fn file ->
+      assert_file("assets/backend/src/gql/games/CAPTAINS_QUERY.graphql", fn file ->
         assert file =~
-        "#import \"./CAPTAIN_FRAGMENT.graphql\"\n\nquery Captains {\n  captains {\n    ...captain\n  }\n}\n"
+                 "#import \"./CAPTAIN_FRAGMENT.graphql\"\n\nquery Captains {\n  captains {\n    ...captain\n  }\n}\n"
       end)
 
       assert_file("assets/backend/src/views/games/CaptainForm.vue", fn file ->
         assert file =~
-                 "<router-link\n        :disabled=\"!!loading\"\n        :to=\"{ name: 'captains' }\""
+                 "<KForm\n    v-if=\"captain\"\n    :back=\"{ name: 'captains' }\"\n    @save=\"save\">"
       end)
 
       assert_file("assets/backend/src/views/games/CaptainCreateView.vue", fn file ->
         assert file =~
-                 "<CaptainForm\n            :captain=\"captain\"\n            @save=\"save\" />"
+                 "<CaptainForm\n      :captain=\"captain\"\n      :save=\"save\" />"
+
+        assert file =~ "import CAPTAIN_FRAGMENT from '../../gql/games/CAPTAIN_FRAGMENT.graphql"
       end)
 
       assert_file("assets/backend/src/views/games/CaptainEditView.vue", fn file ->
         assert file =~
-                 ~s(validateImageParams\(params, ['cover']\))
+                 ~s($utils.validateImageParams\(params, ['cover']\))
       end)
 
       assert_file("assets/backend/src/views/games/PegLegForm.vue", fn file ->

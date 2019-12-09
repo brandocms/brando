@@ -142,17 +142,17 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
           # Backend JS
           {:eex, "assets/backend/src/api/graphql/ALL_QUERY.graphql",
-           "assets/backend/src/views/#{snake_domain}/gql/#{String.upcase(plural)}_QUERY.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/#{String.upcase(plural)}_QUERY.graphql"},
           {:eex, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql",
-           "assets/backend/src/views/#{snake_domain}/gql/#{String.upcase(singular)}_QUERY.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/#{String.upcase(singular)}_QUERY.graphql"},
           {:eex, "assets/backend/src/api/graphql/FRAGMENT.graphql",
-           "assets/backend/src/views/#{snake_domain}/gql/#{String.upcase(singular)}_FRAGMENT.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/#{String.upcase(singular)}_FRAGMENT.graphql"},
           {:eex, "assets/backend/src/api/graphql/CREATE_MUTATION.graphql",
-           "assets/backend/src/views/#{snake_domain}/gql/CREATE_#{String.upcase(singular)}_MUTATION.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/CREATE_#{String.upcase(singular)}_MUTATION.graphql"},
           {:eex, "assets/backend/src/api/graphql/UPDATE_MUTATION.graphql",
-           "assets/backend/src/views/#{snake_domain}/gql/UPDATE_#{String.upcase(singular)}_MUTATION.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/UPDATE_#{String.upcase(singular)}_MUTATION.graphql"},
           {:eex, "assets/backend/src/api/graphql/DELETE_MUTATION.graphql",
-           "assets/backend/src/views/#{snake_domain}/gql/DELETE_#{String.upcase(singular)}_MUTATION.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/DELETE_#{String.upcase(singular)}_MUTATION.graphql"},
           {:eex, "assets/backend/src/menus/menu.js", "assets/backend/src/menus/#{vue_plural}.js"},
           {:eex, "assets/backend/src/routes/route.js",
            "assets/backend/src/routes/#{vue_plural}.js"},
@@ -414,7 +414,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     end)
   end
 
-  defp list_rows(attrs, vue_singular) do
+  defp list_rows(attrs, _vue_singular) do
     # this is for List.vue
     Enum.map(attrs, fn
       {k, {:array, _}} ->

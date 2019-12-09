@@ -1,5 +1,5 @@
-import GET_IMAGE_CATEGORY from '../gql/IMAGE_CATEGORY_QUERY.graphql'
-import GET_IMAGE_CATEGORIES from '../gql/CATEGORIES_QUERY.graphql'
+import GET_IMAGE_CATEGORY from '../../../gql/IMAGE_CATEGORY_QUERY.graphql'
+import GET_IMAGE_CATEGORIES from '../../../gql/CATEGORIES_QUERY.graphql'
 
 export default {
   removeSeries (provider, series) {

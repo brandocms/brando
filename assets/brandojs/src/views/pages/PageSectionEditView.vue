@@ -12,7 +12,7 @@
 <script>
 
 import gql from 'graphql-tag'
-
+import GET_PAGES from '../../gql/pages/PAGES_QUERY'
 import PageSectionForm from './PageSectionForm'
 
 export default {
@@ -68,7 +68,7 @@ export default {
 
           update: (store, { data: { updatePageFragment } }) => {
             const query = {
-              query: require('./gql/PAGES_QUERY.graphql')
+              query: GET_PAGES
             }
             const data = store.readQuery(query)
             const page = data.pages.find(page => parseInt(page.id) === parseInt(this.pageFragment.page_id))

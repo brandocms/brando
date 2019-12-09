@@ -53,7 +53,7 @@
 
 <script>
 
-import GET_CATEGORIES from './gql/CATEGORIES_QUERY.graphql'
+import GET_CATEGORIES from '../../gql/images/CATEGORIES_QUERY.graphql'
 
 export default {
   apollo: {

@@ -106,7 +106,7 @@
 </template>
 
 <script>
-import GET_IMAGE_CATEGORY from './gql/IMAGE_CATEGORY_QUERY.graphql'
+import GET_IMAGE_CATEGORY from '../../gql/images/IMAGE_CATEGORY_QUERY.graphql'
 import cache from './cache'
 
 import ImageSeries from '../../components/images/ImageSeries'

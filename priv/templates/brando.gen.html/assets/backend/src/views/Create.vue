@@ -15,8 +15,8 @@
 
 import gql from 'graphql-tag'
 import <%= Recase.to_pascal(vue_singular) %>Form from './<%= Recase.to_pascal(vue_singular) %>Form'
-import <%= String.upcase(singular) %>_FRAGMENT from './gql/<%= String.upcase(singular) %>_FRAGMENT.graphql'
-import GET_<%= String.upcase(plural) %> from './gql/<%= String.upcase(plural) %>_QUERY.graphql'
+import <%= String.upcase(singular) %>_FRAGMENT from '../../gql/<%= snake_domain %>/<%= String.upcase(singular) %>_FRAGMENT.graphql'
+import GET_<%= String.upcase(plural) %> from '../../gql/<%= snake_domain %>/<%= String.upcase(plural) %>_QUERY.graphql'
 
 export default {
   components: {

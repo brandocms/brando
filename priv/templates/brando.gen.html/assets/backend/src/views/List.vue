@@ -74,7 +74,7 @@
 <script>
 
 import gql from 'graphql-tag'
-import GET_<%= String.upcase(plural) %> from './gql/<%= String.upcase(plural) %>_QUERY.graphql'
+import GET_<%= String.upcase(plural) %> from '../../gql/<%= snake_domain %>/<%= String.upcase(plural) %>_QUERY.graphql'
 
 export default {
   data () {

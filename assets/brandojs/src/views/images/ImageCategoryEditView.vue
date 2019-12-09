@@ -13,7 +13,7 @@
 
 import gql from 'graphql-tag'
 import ImageCategoryForm from './ImageCategoryForm'
-import GET_IMAGE_CATEGORY from './gql/IMAGE_CATEGORY_QUERY.graphql'
+import GET_IMAGE_CATEGORY from '../../gql/images/IMAGE_CATEGORY_QUERY.graphql'
 
 export default {
   components: {

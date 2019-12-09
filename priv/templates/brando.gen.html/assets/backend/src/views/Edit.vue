@@ -18,7 +18,8 @@
 
 import gql from 'graphql-tag'
 import <%= Recase.to_pascal(vue_singular) %>Form from './<%= Recase.to_pascal(vue_singular) %>Form'
-import <%= String.upcase(singular) %>_FRAGMENT from './gql/<%= String.upcase(singular) %>_FRAGMENT.graphql
+import <%= String.upcase(singular) %>_FRAGMENT from '../../gql/<%= snake_domain %>/<%= String.upcase(singular) %>_FRAGMENT.graphql
+import GET_<%= String.upcase(singular) %> from '../../gql/<%= snake_domain %>/<%= String.upcase(singular) %>_QUERY.graphql
 
 export default {
   components: {
@@ -75,14 +76,7 @@ export default {
 
   apollo: {
     <%= vue_singular %>: {
-      query: gql`
-        query <%= Recase.to_pascal(vue_singular) %> ($<%= vue_singular %>Id: ID!) {
-          <%= vue_singular %> (<%= vue_singular %>Id: $<%= vue_singular %>Id) {
-            ...<%= vue_singular %>
-          }
-        }
-        ${<%= String.upcase(singular) %>_FRAGMENT}
-      `,
+      query: GET_<%= String.upcase(singular) %>,
       variables () {
         return {
           <%= vue_singular %>Id: this.<%= vue_singular %>Id
