@@ -43,8 +43,8 @@ defmodule Brando.SoftDelete.Query do
       from t in Brando.Image,
         where: fragment("? < current_timestamp - interval '30 day'", t.deleted_at)
 
-    for image <- Brando.repo().all(query),
-        do: Images.Utils.delete_original_and_sized_images(image, :image)
+    for image <- Brando.repo().all(query), do:
+      Images.Utils.delete_original_and_sized_images(image, :image)
 
     Brando.repo().delete_all(query)
   end
@@ -79,7 +79,8 @@ defmodule Brando.SoftDelete.Query do
     end
 
     if galleries do
-      # Though the image_series is already marked for deletion, we need to clear out its files
+      # Though the image_series is already marked for deletion,
+      # we need to clear out its files
       for row <- rows do
         Enum.map(galleries, fn gallery_field ->
           field =

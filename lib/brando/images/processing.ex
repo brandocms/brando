@@ -90,7 +90,7 @@ defmodule Brando.Images.Processing do
            Images.Operations.create_operations(img_schema.image, img_cfg, user, img_schema.id),
          {:ok, [result]} <- Images.Operations.perform_operations(operations, user) do
       img_schema
-      |> Image.changeset(:update, %{image: result.img_struct})
+      |> Image.changeset(%{image: result.img_struct})
       |> Brando.repo().update
     else
       err ->

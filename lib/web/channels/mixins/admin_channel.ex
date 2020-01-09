@@ -2,7 +2,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   @keys [
     "images:delete_images",
     "images:sequence_images",
-    "images:images:get_category_id_by_slug",
+    "images:get_category_id_by_slug",
     "images:create_image_series",
     "images:get_category_config",
     "images:update_category_config",
@@ -85,6 +85,11 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
 
   def do_handle_in("images:get_category_config", %{"category_id" => category_id}, socket) do
     {:ok, config} = Brando.Images.get_category_config(category_id)
+    {:reply, {:ok, %{code: 200, config: config}}, socket}
+  end
+
+  def do_handle_in("images:get_category_config", %{"category_slug" => category_slug}, socket) do
+    {:ok, config} = Brando.Images.get_category_config_by_slug(category_slug)
     {:reply, {:ok, %{code: 200, config: config}}, socket}
   end
 

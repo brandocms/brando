@@ -58,6 +58,8 @@ defmodule Brando.Images.Operations.Sizing do
   def create_image_size(%Images.Operation{
         type: type,
         id: id,
+        total_operations: total_operations,
+        operation_index: operation_index,
         img_struct: %{path: image_src, focal: focal, width: width, height: height},
         filename: filename,
         sized_img_path: image_dest,
@@ -86,9 +88,11 @@ defmodule Brando.Images.Operations.Sizing do
 
     case image_src_exists(conversion_parameters) do
       {:ok, {:image, :exists}} ->
+        if operation_index == 1, do:
+          set_progress(conversion_parameters, 0, filename, user)
+
         result =
           conversion_parameters
-          |> set_progress(0, filename, user)
           |> add_size_cfg(size_cfg)
           |> add_quality()
           |> add_focal_point(focal)
@@ -99,7 +103,9 @@ defmodule Brando.Images.Operations.Sizing do
           |> add_values()
           |> delegate_processor()
 
-        set_progress(conversion_parameters, 100, filename, user)
+
+        progress_percent = operation_index / total_operations * 100
+        set_progress(conversion_parameters, progress_percent, filename, user)
 
         result
 
@@ -414,7 +420,7 @@ defmodule Brando.Images.Operations.Sizing do
     progress_string = "#{filename} — Oppretter bildestørrelse: <strong>#{size_key}</strong>"
 
     Progress.update_progress(user, progress_string,
-      key: to_string(id) <> size_key,
+      key: to_string(id),
       percent: progress
     )
 

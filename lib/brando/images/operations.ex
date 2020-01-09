@@ -31,10 +31,17 @@ defmodule Brando.Images.Operations do
     {_, filename} = Utils.split_path(path)
     type = cfg.target_format || Images.Utils.image_type(path)
 
+    total_operations =
+      Map.get(cfg, :sizes)
+      |> Map.keys()
+      |> Enum.count
+
     operations =
-      for {size_key, size_cfg} <- Map.get(cfg, :sizes) do
+      for {{size_key, size_cfg}, idx} <- Enum.with_index(Map.get(cfg, :sizes)) do
         %Images.Operation{
           id: id,
+          total_operations: total_operations,
+          operation_index: idx + 1,
           user: user,
           img_struct: img_struct,
           filename: filename,
@@ -60,9 +67,12 @@ defmodule Brando.Images.Operations do
     Logger.info("==> Brando.Images.Operations: Starting #{Enum.count(operations)} operations..")
     start_msec = :os.system_time(:millisecond)
 
+    Logger.error inspect operations, pretty: true
+
     operation_results =
       operations
-      |> Flow.from_enumerable(max_demand: 5)
+      |> Flow.from_enumerable()
+      |> Flow.partition(stages: 1, hash: fn e -> e.key end)
       |> Flow.map(&resize_image/1)
       |> Flow.reduce(fn -> %{} end, fn operation, map ->
         Map.update(map, operation.id, [operation], &[operation | &1])

@@ -271,7 +271,8 @@
 ## 0.40.0
 
 * Copy the brando.upgrade mix task from brando src.
-* Switch all your image fields to `:jsonb` types in migrations from `:text`. Run `mix brando.upgrade`
+* Switch all your image fields to `:jsonb` types in migrations from `:text`
+  by running `mix brando.upgrade`
 
 
 ## 0.39.0
@@ -353,9 +354,6 @@
     - `graphql/schema.ex`
       - `# __queries`
       - `# __mutations`
-    - `assets/backend/src/store/index.js`
-      - `// __imports
-      - `// __content
     - `assets/backend/src/routes/index.js`
       - `// __imports
       - `// __content
@@ -522,7 +520,7 @@
     In `config/brando.exs`, change the guardian config as so:
 
     ```elixir
-    config :film_farms, MyAppWeb.Guardian,
+    config :my_app, MyAppWeb.Guardian,
       issuer: "MyApp",
       ttl: {30, :days},
       secret_key: "4bK7w0vuz8lAuhsckr0McyH0Efy2mfedySXfppI/4XjRWp274bUxBkNfgXMgH1lP"

@@ -23,7 +23,7 @@ defmodule Brando.Integration.ImageSeriesTest do
   end
 
   test "validate_paths", %{series: series} do
-    cs = ImageSeries.changeset(series, :update, %{slug: "abracadabra"})
+    cs = ImageSeries.changeset(series, %{slug: "abracadabra"})
     assert Ecto.Changeset.get_change(cs, :slug) == "abracadabra"
     cs = ImageSeries.validate_paths(cs)
 

@@ -36,6 +36,7 @@ defmodule Brando.Schema.Types.Page do
   object :page_queries do
     @desc "Get all pages"
     field :pages, type: list_of(:page) do
+      arg :filter, :string
       resolve &Brando.Pages.PageResolver.all/2
     end
 
@@ -64,6 +65,13 @@ defmodule Brando.Schema.Types.Page do
       arg :page_id, non_null(:id)
 
       resolve &Brando.Pages.PageResolver.delete/2
+    end
+
+    @desc "Duplicate page"
+    field :duplicate_page, type: :page do
+      arg :page_id, :id
+
+      resolve &Brando.Pages.PageResolver.duplicate/2
     end
   end
 end

@@ -25,6 +25,18 @@ defmodule Brando.Utils.Schema do
   @doc """
   Puts `id` from `user` in the `params` map.
   """
+  def put_creator(%Ecto.Changeset{} = cs, user) when is_map(user) do
+    Ecto.Changeset.put_change(cs, :creator_id, user.id)
+  end
+
+  def put_creator(%Ecto.Changeset{} = cs, :system), do: cs
+
+  def put_creator(%Ecto.Changeset{} = cs, user_id) do
+    Ecto.Changeset.put_change(cs, :creator_id, user_id)
+  end
+
+  def put_creator(params, :system), do: params
+
   def put_creator(params, user) do
     key = (is_atom(List.first(Map.keys(params))) && :creator_id) || "creator_id"
     Map.put(params, key, user.id)
@@ -49,7 +61,8 @@ defmodule Brando.Utils.Schema do
   @doc """
   Precheck :slug in `cs` to make sure we avoid collisions
   """
-  def avoid_slug_collision(cs, filter_fun \\ nil) do
+  def avoid_slug_collision(cs, filter_fun \\ nil)
+  def avoid_slug_collision(%{valid?: true} = cs, filter_fun) do
     q = (filter_fun && filter_fun.(cs)) || cs.data.__struct__
     slug = Ecto.Changeset.get_change(cs, :slug)
 
@@ -65,6 +78,7 @@ defmodule Brando.Utils.Schema do
       cs
     end
   end
+  def avoid_slug_collision(cs, _), do: cs
 
   defp get_unique_slug(q, slug, attempts) when attempts < @slug_collision_attemps do
     slug_to_test = construct_slug(slug, attempts)

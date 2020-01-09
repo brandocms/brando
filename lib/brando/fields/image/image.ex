@@ -58,19 +58,27 @@ defmodule Brando.Field.Image.Schema do
       @doc """
       Validates upload in changeset
       """
+      def validate_upload(changeset, {:image, field_name}, user, cfg) do
+        do_validate_upload(changeset, {:image, field_name}, user, cfg)
+      end
+
       def validate_upload(changeset, {:image, field_name}, user) do
-        do_validate_upload(changeset, {:image, field_name}, user)
+        do_validate_upload(changeset, {:image, field_name}, user, nil)
       end
 
       def validate_upload(changeset, {:image, field_name}) do
-        do_validate_upload(changeset, {:image, field_name}, :system)
+        do_validate_upload(changeset, {:image, field_name}, :system, nil)
       end
 
-      defp do_validate_upload(changeset, {:image, field_name}, user) do
+      defp do_validate_upload(changeset, {:image, field_name}, user, cfg) do
+        require Logger
+        Logger.error "==> do_validate_upload"
+        Logger.error inspect changeset, pretty: true
+
         with {:ok, {:upload, changeset}} <- merge_focal(changeset, field_name),
              {:ok, plug} <- Brando.Utils.field_has_changed(changeset, field_name),
              {:ok, _} <- Brando.Utils.changeset_has_no_errors(changeset),
-             {:ok, cfg} <- get_image_cfg(field_name),
+             {:ok, cfg} <- cfg && {:ok, cfg} || get_image_cfg(field_name),
              {:ok, {:handled, name, field}} <-
                Images.Upload.Field.handle_upload(field_name, plug, cfg, user) do
           cleanup_old_images(changeset, :safe)
@@ -168,9 +176,17 @@ defmodule Brando.Field.Image.Schema do
   defmacro has_image_field(field_name, opts) do
     quote do
       imagefields = Module.get_attribute(__MODULE__, :imagefields)
-      cfg_struct = struct!(%Brando.Type.ImageConfig{}, unquote(opts))
 
-      Module.put_attribute(__MODULE__, :imagefields, {unquote(field_name), cfg_struct})
+      val =
+        case is_map(unquote(opts)) do
+          true ->
+            struct!(%Brando.Type.ImageConfig{}, unquote(opts))
+
+          false ->
+            unquote(opts)
+        end
+
+      Module.put_attribute(__MODULE__, :imagefields, {unquote(field_name), val})
     end
   end
 

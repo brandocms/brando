@@ -53,27 +53,23 @@ defmodule Brando.ImageSeries do
 
   ## Example
 
-      schema_changeset = changeset(%__MODULE__{}, :create, params)
+      schema_changeset = changeset(%__MODULE__{}, params)
 
   """
-  @spec changeset(t, :create | :update, Map.t()) :: Ecto.Changeset.t()
-  def changeset(schema, action, params \\ %{})
+  @spec changeset(t, Map.t()) :: Ecto.Changeset.t()
+  def changeset(schema, params \\ %{}, user \\ :system) do
+    cs =
+      schema
+      |> put_creator(user)
+      |> cast(params, @required_fields ++ @optional_fields)
+      |> validate_required(@required_fields)
+      |> put_slug(:name)
+      |> avoid_slug_collision(&filter_current_category/1)
+      |> inherit_configuration()
 
-  def changeset(schema, :create, params) do
-    schema
-    |> cast(params, @required_fields ++ @optional_fields)
-    |> validate_required(@required_fields)
-    |> put_slug(:name)
-    |> avoid_slug_collision(&filter_current_category/1)
-    |> inherit_configuration
-  end
-
-  def changeset(schema, :update, params) do
-    schema
-    |> cast(params, @required_fields ++ @optional_fields)
-    |> put_slug()
-    |> avoid_slug_collision(&filter_current_category/1)
-    |> validate_paths
+    cs
+    |> cast_assoc(:images, with: {Brando.Image, :changeset, [user, get_field(cs, :cfg)]})
+    |> validate_paths()
   end
 
   @doc """
@@ -99,27 +95,22 @@ defmodule Brando.ImageSeries do
   @doc """
   Before inserting changeset. Copies the series' category config.
   """
-  def inherit_configuration(%{changes: %{image_category_id: cat_id, slug: slug}} = cs) do
-    do_inherit_configuration(cs, cat_id, slug)
+  def inherit_configuration(%{valid?: true} = cs) do
+    case get_change(cs, :cfg) do
+      nil ->
+        cat_id = get_change(cs, :image_category_id)
+        slug = get_change(cs, :slug)
+        category = Brando.repo().get(ImageCategory, cat_id)
+        new_upload_path = Path.join(Map.get(category.cfg, :upload_path), slug)
+        cfg = Map.put(category.cfg, :upload_path, new_upload_path)
+        put_change(cs, :cfg, cfg)
+
+      _ ->
+        cs
+    end
   end
-
-  def inherit_configuration(%{data: %{image_category_id: cat_id, slug: slug}} = cs) do
-    do_inherit_configuration(cs, cat_id, slug)
-  end
-
-  defp do_inherit_configuration(cs, cat_id, nil) do
-    category = Brando.repo().get(ImageCategory, cat_id)
-    cfg = category.cfg
-
-    put_change(cs, :cfg, cfg)
-  end
-
-  defp do_inherit_configuration(cs, cat_id, slug) do
-    category = Brando.repo().get(ImageCategory, cat_id)
-    new_upload_path = Path.join(Map.get(category.cfg, :upload_path), slug)
-    cfg = Map.put(category.cfg, :upload_path, new_upload_path)
-
-    put_change(cs, :cfg, cfg)
+  def inherit_configuration(cs) do
+    cs
   end
 
   @doc """
@@ -127,7 +118,7 @@ defmodule Brando.ImageSeries do
 
   If it is, move and fix paths/files + redo thumbs
   """
-  def validate_paths(cs) do
+  def validate_paths(%Ecto.Changeset{valid?: true, data: %{id: id}} = cs) when not is_nil(id) do
     slug = get_change(cs, :slug)
 
     if slug do
@@ -146,4 +137,5 @@ defmodule Brando.ImageSeries do
       cs
     end
   end
+  def validate_paths(cs), do: cs
 end

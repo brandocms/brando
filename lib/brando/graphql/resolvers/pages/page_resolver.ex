@@ -47,4 +47,13 @@ defmodule Brando.Pages.PageResolver do
     |> Pages.delete_page()
     |> response
   end
+
+  @doc """
+  Duplicate page
+  """
+  def duplicate(%{page_id: page_id}, %{context: %{current_user: user}}) do
+    page_id
+    |> Pages.duplicate_page(user)
+    |> response
+  end
 end

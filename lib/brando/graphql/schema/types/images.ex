@@ -8,6 +8,19 @@ defmodule Brando.Schema.Types.Images do
     field :image_category_id, :string
   end
 
+  input_object :image_series_upload do
+    field :id, :id
+    field :name, :string
+    field :slug, :string
+    field :image_category_id, :id
+    field :images, list_of(non_null(:image_upload))
+  end
+
+  input_object :image_upload do
+    field :image, :upload
+    field :sequence, :integer
+  end
+
   input_object :create_image_category_params do
     field :name, :string
     field :slug, :string
@@ -170,6 +183,21 @@ defmodule Brando.Schema.Types.Images do
   end
 
   object :image_mutations do
+    @desc "Upload images to image series"
+    field :create_image, type: :image do
+      arg :image_series_id, :id
+      arg :image_upload_params, :image_upload
+
+      resolve &Brando.Images.ImageResolver.create/2
+    end
+
+    @desc "Delete multiple images"
+    field :delete_images, type: :integer do
+      arg :image_ids, list_of(:id)
+
+      resolve &Brando.Images.ImageResolver.delete_images/2
+    end
+
     @desc "Create image category"
     field :create_image_category, type: :image_category do
       arg :image_category_params, :create_image_category_params

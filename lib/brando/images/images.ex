@@ -55,7 +55,7 @@ defmodule Brando.Images do
   def create_image(params, user) do
     %Image{}
     |> put_creator(user)
-    |> Image.changeset(:create, params)
+    |> Image.changeset(params)
     |> Brando.repo().insert
   end
 
@@ -66,7 +66,7 @@ defmodule Brando.Images do
           {:ok, Image.t()} | {:error, Ecto.Changeset.t()}
   def update_image(schema, params) do
     schema
-    |> Image.changeset(:update, params)
+    |> Image.changeset(params)
     |> Brando.repo().update
   end
 
@@ -156,7 +156,7 @@ defmodule Brando.Images do
   def create_series(data, user) do
     %ImageSeries{}
     |> put_creator(user)
-    |> ImageSeries.changeset(:create, data)
+    |> ImageSeries.changeset(data)
     |> Brando.repo().insert()
   end
 
@@ -172,7 +172,7 @@ defmodule Brando.Images do
     changeset =
       query
       |> Brando.repo().one!()
-      |> ImageSeries.changeset(:update, data)
+      |> ImageSeries.changeset(data)
 
     changeset
     |> Brando.repo().update()
@@ -290,10 +290,32 @@ defmodule Brando.Images do
   end
 
   @doc """
+  Get category by `slug`
+  """
+  def get_category_by_slug(slug) do
+    query =
+      from t in ImageCategory,
+        where: t.slug == ^slug and is_nil(t.deleted_at)
+
+    case Brando.repo().one(query) do
+      nil -> {:error, {:image_category, :not_found}}
+      cat -> {:ok, cat}
+    end
+  end
+
+  @doc """
   Get category's config
   """
   def get_category_config(id) do
     {:ok, category} = get_category(id)
+    {:ok, category.cfg}
+  end
+
+  @doc """
+  Get category's config by slug
+  """
+  def get_category_config_by_slug(slug) do
+    {:ok, category} = get_category_by_slug(slug)
     {:ok, category.cfg}
   end
 
