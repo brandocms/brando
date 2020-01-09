@@ -10,6 +10,8 @@ const webpack = require('webpack')
 // webpack plugins
 const DashboardPlugin = require('webpack-dashboard/plugin')
 const ExtractCssChunks = require('extract-css-chunks-webpack-plugin')
+const CopyPlugin = require('copy-webpack-plugin')
+const WriteFilePlugin = require('write-file-webpack-plugin')
 
 // config files
 const common = require('./webpack.common.js')
@@ -24,6 +26,7 @@ const configureDevServer = buildType => ({
   disableHostCheck: true,
   hot: true,
   overlay: true,
+  // outputPath: path.resolve(__dirname, settings.paths.dist.base),
   contentBase: path.resolve('static'),
   watchOptions: {
     poll: !!parseInt(settings.devServerConfig.poll()),
@@ -109,12 +112,24 @@ module.exports = [
         ]
       },
       plugins: [
+        new WriteFilePlugin(),
+
+        new CopyPlugin([
+          {
+            context: './static',
+            from: '**/*',
+            to: '.',
+            force: true
+          }
+        ]),
+
         new ExtractCssChunks(
           {
             filename: 'css/[name].css',
             orderWarning: true
           }
         ),
+
         new webpack.HotModuleReplacementPlugin()
       ]
     }
