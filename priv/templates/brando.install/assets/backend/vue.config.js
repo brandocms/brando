@@ -17,7 +17,7 @@ module.exports = {
     output: {
       filename: 'js/admin/[name].js',
       chunkFilename: 'js/admin/[name].js'
-    },
+    }
   },
 
   transpileDependencies: [

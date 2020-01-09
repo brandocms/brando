@@ -13,9 +13,9 @@ Vue.use(VueBrando, { app, menuSections })
 new Vue({
   router,
   i18n,
+  data: { ready: false },
   render: h => h(Admin),
   created() {
-    console.log('==> adding local routes')
     this.$router.addRoutes(routes)
   }
 }).$mount('#app')
