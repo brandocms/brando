@@ -16,6 +16,7 @@ module.exports = {
     'no-duplicate-selectors': true,
     'at-rule-no-unknown': [true, {
       ignoreAtRules: [
+        'color',
         'column',
         'column-offset',
         'column-typography',
@@ -23,6 +24,7 @@ module.exports = {
         'embed-responsive',
         'europa',
         'extend',
+        'font',
         'fontsize',
         'iterate',
         'responsive',
