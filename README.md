@@ -28,26 +28,11 @@ config :my_app, MyApp.Endpoint,
   render_errors: [accepts: ~w(html json), view: Brando.ErrorView, default_format: "html"],
 ```
 
-Set your release config (`rel/config.exs`) to default to prod, and add this:
-
-```elixir
-release :my_app do
-  set version: current_version(:my_app)
-  set commands: [
-    migrate: "rel/commands/migrate.sh"
-  ]
-  set applications: [
-    :runtime_tools,
-    :bcrypt_elixir
-  ]
-end
-```
-
 *Remember to switch out your ports and configure SSL in `etc/supervisor/prod.conf` and `etc/nginx/prod.conf`*
 
 ## Dependencies
 
-  * `imagemagick`/`mogrify` for image processing.
+  * `imagemagick`/`mogrify` or `sharp`/`sharp-cli` for image processing.
   * `gifsicle` for GIF resizing.
 
 ## I18n
@@ -73,11 +58,13 @@ Open up you application's `lib/application.ex` and add to `start/2`:
     Brando.Registry.register(MyApp.Web, [:gettext])
 
 
-## App specific modules
+## Generator
 
 Generate templates:
 
-    $ mix brando.gen.html Task tasks name:string avatar:image data:villain image_series:gallery
+    $ mix brando.gen.html
+
+`name:string avatar:image data:villain image_series:gallery`
 
 Also supports `user:references` to add a `belongs_to` assoc.
 
@@ -171,7 +158,7 @@ You may reference other fragments by entering
 ${FRAGMENT:index/01_intro/en}
             ^     ^       ^
             |     |       `-- language
-            |     `-- key
+            |     `-- fragment key
             `-- parent key
 ```
 
@@ -179,11 +166,7 @@ ${FRAGMENT:index/01_intro/en}
 
 Brando uses distillery through Docker for release management.
 
-Start off by running
-
-    # mix release.init
-
-Then use the fabric script in `fabfile.py` for the rest.
+Use the fabric script in `fabfile.py` for deploying and controlling.
 
     # fab prod -l
 
