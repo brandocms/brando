@@ -98,7 +98,11 @@ defmodule Brando.ImageSeries do
   def inherit_configuration(%{valid?: true} = cs) do
     case get_change(cs, :cfg) do
       nil ->
-        cat_id = get_change(cs, :image_category_id)
+        cat_id = get_field(cs, :image_category_id)
+        if !cat_id do
+          raise "inherit_configuration => image_category_id === nil!"
+        end
+
         slug = get_change(cs, :slug)
         category = Brando.repo().get(ImageCategory, cat_id)
         new_upload_path = Path.join(Map.get(category.cfg, :upload_path), slug)
