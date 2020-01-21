@@ -71,9 +71,6 @@ defmodule Brando.Field.Image.Schema do
       end
 
       defp do_validate_upload(changeset, {:image, field_name}, user, cfg) do
-        require Logger
-        Logger.error "==> do_validate_upload"
-        Logger.error inspect changeset, pretty: true
 
         with {:ok, {:upload, changeset}} <- merge_focal(changeset, field_name),
              {:ok, plug} <- Brando.Utils.field_has_changed(changeset, field_name),
