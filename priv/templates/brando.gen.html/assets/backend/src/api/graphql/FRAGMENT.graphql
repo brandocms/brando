@@ -1,6 +1,13 @@
 fragment <%= vue_singular %> on <%= Recase.to_pascal(vue_singular) %> {
   id<%= for {_k, v} <- gql_query_fields do %>
-  <%= v %><% end %><%= if soft_delete do %>
+  <%= v %><% end %><%= if creator do %>
+  creator {
+    id
+    full_name
+    avatar {
+      thumb: url(size: "xlarge")
+    }
+  }<% end %><%= if soft_delete do %>
   deleted_at<% end %>
   inserted_at
   updated_at

@@ -28,13 +28,15 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         {:mix_shell_input, :prompt,
          "name age:integer height:decimal famous:boolean born_at:datetime " <>
            "secret:uuid cover:image pdf:file data:villain biography:villain first_login:date " <>
-           "alarm:time address:references:addresses creator:references:users"}
+           "alarm:time address:references:addresses"}
       )
 
       # sequence?
       send(self(), {:mix_shell_input, :yes?, true})
       # deleted_at?
       send(self(), {:mix_shell_input, :yes?, false})
+      # creator?
+      send(self(), {:mix_shell_input, :yes?, true})
 
       Mix.Tasks.Brando.Gen.Html.run([])
 
@@ -47,13 +49,15 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         {:mix_shell_input, :prompt,
          "name age:integer height:decimal famous:boolean born_at:datetime " <>
            "secret:uuid cover:image data:villain first_login:date " <>
-           "alarm:time creator:references:users image_series:gallery"}
+           "alarm:time image_series:gallery"}
       )
 
       # sequence?
       send(self(), {:mix_shell_input, :yes?, true})
       # deleted_at?
       send(self(), {:mix_shell_input, :yes?, false})
+      # creator?
+      send(self(), {:mix_shell_input, :yes?, true})
 
       Mix.Tasks.Brando.Gen.Html.run([])
 
@@ -66,6 +70,8 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       send(self(), {:mix_shell_input, :yes?, false})
       # deleted_at?
       send(self(), {:mix_shell_input, :yes?, false})
+      # creator?
+      send(self(), {:mix_shell_input, :yes?, true})
 
       Mix.Tasks.Brando.Gen.Html.run([])
 
@@ -99,9 +105,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "field :cover, Brando.Type.Image"
         assert file =~ "field :pdf, Brando.Type.File"
 
-        assert file =~
-                 "@required_fields ~w(name age height famous born_at secret " <>
-                   "first_login alarm data biography_data creator_id address_id)a"
+        assert file =~ "@required_fields ~w(name age height famous born_at secret first_login alarm creator_id data biography_data address_id)a"
 
         assert file =~ "@optional_fields ~w(cover pdf)"
         assert file =~ "use Brando.Sequence.Schema"
@@ -207,6 +211,8 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       send(self(), {:mix_shell_input, :yes?, false})
       # deleted_at?
       send(self(), {:mix_shell_input, :yes?, false})
+      # creator?
+      send(self(), {:mix_shell_input, :yes?, true})
 
       Mix.Tasks.Brando.Gen.Html.run([])
 
@@ -224,6 +230,8 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       # sequence?
       send(self(), {:mix_shell_input, :yes?, true})
       # deleted_at?
+      send(self(), {:mix_shell_input, :yes?, true})
+      # creator?
       send(self(), {:mix_shell_input, :yes?, true})
 
       Mix.Tasks.Brando.Gen.Html.run([])

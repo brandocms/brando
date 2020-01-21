@@ -59,6 +59,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
     sequenced? = (opts[:sequenced] && true) || false
     soft_delete? = (opts[:softdelete] && true) || false
     gallery? = (opts[:gallery] && true) || false
+    creator? = (opts[:creator] && true) || false
 
     attrs = Mix.Brando.attrs(attrs)
     binding = Mix.Brando.inflect(singular)
@@ -114,6 +115,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
           sequenced: sequenced?,
           soft_delete: soft_delete?,
           gallery: gallery?,
+          creator: creator?,
           domain: domain,
           snake_domain: snake_domain,
           migrations: migrations,
@@ -198,11 +200,16 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
       |> Keyword.drop(Keyword.values(binding[:villain_fields]))
       |> Keyword.drop(Keyword.values(binding[:gallery_fields]))
       |> Enum.map_join(" ", &elem(&1, 0))
+      |> maybe_add_creator_field(binding_map)
       |> maybe_add_villain_fields(binding_map)
       |> maybe_add_schema_assocs(binding_map)
 
     "~w(#{fields})a"
   end
+
+  defp maybe_add_creator_field(fields, %{creator: false}), do: fields
+  defp maybe_add_creator_field(fields, %{creator: true}), do:
+    Enum.join([fields, "creator_id"], " ")
 
   defp maybe_add_villain_fields(fields, %{villain_fields: []}), do: fields
 

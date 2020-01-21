@@ -7,7 +7,8 @@ defmodule <%= base %>.Schema.Types.<%= alias %> do
   object :<%= singular %> do
     field :id, :id<%= for {_v, k} <- gql_types do %>
     <%= k %><% end %><%= if soft_delete do %>
-    field :deleted_at, :time<% end %>
+    field :deleted_at, :time<% end %><%= if creator do %>
+    field :creator, :user, resolve: dataloader(Brando.Users)<% end %>
     field :inserted_at, :time
     field :updated_at, :time
   end

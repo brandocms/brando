@@ -45,11 +45,11 @@
       <template v-slot:row="{ entry }">
         <%= for {_, v} <- list_rows do %><%= v %>
         <% end %>
-        <div class="col-3">
+        <%= if creator do %><div class="col-3">
           <ItemMeta
             :entry="entry"
             :user="entry.creator" />
-        </div>
+        </div><% end %>
 
         <div class="col-1">
           <CircleDropdown>

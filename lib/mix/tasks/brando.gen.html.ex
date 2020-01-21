@@ -55,6 +55,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     villain? = :villain in Keyword.values(attrs)
     sequenced? = Mix.shell().yes?("\nMake schema sequenceable?")
     soft_delete? = Mix.shell().yes?("\nAdd soft deletion?")
+    creator? = Mix.shell().yes?("\nAdd creator?")
     image_field? = :image in Keyword.values(attrs)
     gallery? = :gallery in Keyword.values(attrs)
     binding = Mix.Brando.inflect(singular)
@@ -102,6 +103,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
           gallery: gallery?,
           sequenced: sequenced?,
           soft_delete: soft_delete?,
+          creator: creator?,
           img_fields: img_fields,
           file_fields: file_fields,
           villain_fields: villain_fields,
@@ -187,6 +189,13 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     {files, args} =
       if gallery? do
         {files, args ++ ["--gallery"]}
+      else
+        {files, args}
+      end
+
+    {files, args} =
+      if creator? do
+        {files, args ++ ["--creator"]}
       else
         {files, args}
       end
@@ -520,7 +529,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k, file_code}
 
       {k, :image} ->
-        image_code = "#{k} {\n      thumb: url(size: \"original\")\n      focal\n    }"
+        image_code = "#{k} {\n    thumb: url(size: \"original\")\n    focal\n  }"
         {k, image_code}
 
       {k, :villain} ->

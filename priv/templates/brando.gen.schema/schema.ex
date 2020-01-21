@@ -12,6 +12,7 @@ defmodule <%= module %> do
   schema <%= inspect "#{snake_domain}_#{plural}" %> do
 <%= for schema_field <- schema_fields do %>    <%= schema_field %>
 <% end %><%= for {k, _, m} <- schema_assocs do %>    belongs_to <%= inspect k %>, <%= m %>
+<% end %><%= if creator do %>    belongs_to :creator, Brando.Users.User
 <% end %><%= if sequenced do %>    sequenced()
 <% end %><%= if soft_delete do %>    soft_delete()
 <% end %>    timestamps()
@@ -50,7 +51,8 @@ defmodule <%= module %> do
   with no validation performed.
   """
   def changeset(schema, params \\ %{}, user) do
-    schema
+    schema<%= if creator do %>
+    |> put_creator(user)<% end %>
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)<%= if villain_fields != [] do %><%= for {_k, v} <- villain_fields do %><%= if v == :data do %>
     |> generate_html()<% else %>

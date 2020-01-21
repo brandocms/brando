@@ -15,6 +15,7 @@ defmodule <%= base %>.Repo.Migrations.Create<%= scoped %> do
       timestamps()
     end
   <%= for index <- indexes do %>
-    <%= index %><% end %>
+    <%= index %><% end %><%= if creator do %>
+    create index(:<%= snake_domain %>_<%= plural %>, [:creator_id])<% end %>
   end
 end
