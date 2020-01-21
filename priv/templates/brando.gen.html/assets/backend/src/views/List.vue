@@ -40,7 +40,7 @@
       v-if="<%= vue_plural %>"
       :entries="<%= vue_plural %>"<%= if sequenced do %>
       :sortable="true"
-      @sort="sortPages"<% end %>>
+      @sort="sortEntries"<% end %>>
 
       <template v-slot:row="{ entry }">
         <%= for {_, v} <- list_rows do %><%= v %>
@@ -92,7 +92,7 @@ export default {
   ],
 
   methods: {
-    <%= if sequenced do %>    sort (seq) {
+    <%= if sequenced do %>sortEntries (seq) {
       this.adminChannel.channel
         .push('<%= vue_plural %>:sequence_<%= vue_plural %>', { ids: seq })
         .receive('ok', payload => {

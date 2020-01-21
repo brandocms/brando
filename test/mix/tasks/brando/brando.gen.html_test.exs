@@ -171,23 +171,27 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
       assert_file("assets/backend/src/views/games/CaptainEditView.vue", fn file ->
         assert file =~
-                 ~s($utils.validateImageParams\(params, ['cover']\))
+                 ~s(this.$utils.validateImageParams\(captainParams, ['avatar']\))
       end)
 
       assert_file("assets/backend/src/views/games/PegLegForm.vue", fn file ->
         assert file =~
-                 "<router-link\n        :disabled=\"!!loading\"\n        :to=\"{ name: 'peg_legs' }\""
+                 "<KForm\n    v-if=\"pegLeg\"\n    :back=\"{ name: 'pegLegs' }\"\n    @save=\"save\">"
 
         assert file =~ ~s(v-model="pegLeg.name")
       end)
 
       assert_file("assets/backend/src/views/games/PegLegCreateView.vue", fn file ->
         assert file =~
-                 "<PegLegForm\n            :pegLeg=\"pegLeg\"\n            :loading=\"loading\"\n            @save=\"save\" />"
+                 "<PegLegForm\n      :pegLeg=\"pegLeg\"\n      :save=\"save\" />"
       end)
 
       assert_file("assets/backend/src/views/games/CaptainListView.vue", fn file ->
-        assert file =~ ~s(v-sortable)
+        assert file =~ ":sortable=\"true\"\n      @sort=\"sortEntries\""
+      end)
+
+      assert_file("assets/backend/src/views/games/CaptainListView.vue", fn file ->
+        assert file =~ "sortEntries (seq)"
       end)
 
       send(self(), {:mix_shell_input, :prompt, "Games"})
@@ -235,9 +239,9 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "defmodule Brando.Projects.ProjectResolver do"
       end)
 
-      assert_file("assets/backend/src/projects/gql/PROJECTS_QUERY.graphql", fn file ->
+      assert_file("assets/backend/src/gql/projects/PROJECTS_QUERY.graphql", fn file ->
         assert file =~
-                 ~s({\n    id\n    name\n    slug\n    deleted_at\n    updated_at\n  })
+          "#import \"./PROJECT_FRAGMENT.graphql\"\n\nquery Projects {\n  projects {\n    ...project\n  }\n}\n"
       end)
     end)
   end

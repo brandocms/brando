@@ -6,7 +6,7 @@
     {"xlarge", "2200w"}
   ]
 %>
-<section class="hero stretch" data-moonwalk-section>
+<section class="hero stretch">
   <div class="hero-bg">
     <%%= if @s && @s[:images] do %>
     <div data-hero-slider data-object-fit="cover">
@@ -24,7 +24,7 @@
     <%% end %>
   </div>
 
-  <article class="hero-content">
+  <article class="hero-content" data-moonwalk-section>
     <section class="hero-text">
       <h2>Hero text</h2>
     </section>

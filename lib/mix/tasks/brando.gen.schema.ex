@@ -336,7 +336,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
   defp value_to_type(:uuid), do: Ecto.UUID
   defp value_to_type(:date), do: :date
   defp value_to_type(:time), do: :time
-  defp value_to_type(:datetime), do: :naive_datetime
+  defp value_to_type(:datetime), do: :utc_datetime
   defp value_to_type(:status), do: Brando.Type.Status
   defp value_to_type(:image), do: Brando.Type.Image
   defp value_to_type(:file), do: Brando.Type.File

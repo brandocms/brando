@@ -53,8 +53,8 @@ defmodule Brando.Integration.ImageTest do
   end
 
   test "create/2 bad params", %{user: user} do
-    assert {:error, cs} = Images.create_image(@params, user)
-    assert cs.errors == [image_series_id: {"can't be blank", [validation: :required]}]
+    assert {:error, cs} = Images.create_image(%{}, user)
+    assert cs.errors == [image: {"can't be blank", [validation: :required]}]
   end
 
   test "update/2", %{user: user, series: series} do

@@ -52,6 +52,19 @@ export default {
           `,
           variables: {
             <%= vue_singular %>Params
+          },
+
+          update: (store, { data: { create<%= Recase.to_pascal(vue_singular) %> } }) => {
+            const query = {
+              query: GET_<%= String.upcase(plural) %>
+            }
+            const data = store.readQuery(query)
+            data.<%= vue_plural %>.push(create<%= Recase.to_pascal(vue_singular) %>)
+            // Write back to the cache
+            store.writeQuery({
+              ...query,
+              data
+            })
           }
         })
 

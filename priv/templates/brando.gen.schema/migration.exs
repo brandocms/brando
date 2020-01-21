@@ -11,6 +11,7 @@ defmodule <%= base %>.Repo.Migrations.Create<%= scoped %> do
 <% end %><%= for {_, i, s, on_delete} <- migration_assocs do %>      add <%= inspect i %>, references(<%= inspect s %>, on_delete: <%= inspect on_delete %>)
 <% end %>
 <%= if sequenced do %>      sequenced()<% end %>
+<%= if soft_delete do %>      soft_delete()<% end %>
       timestamps()
     end
   <%= for index <- indexes do %>

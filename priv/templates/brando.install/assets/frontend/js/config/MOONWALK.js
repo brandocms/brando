@@ -3,6 +3,7 @@ import { Sine, Expo } from '@univers-agency/jupiter'
 export default () => ({
   rootMargin: '-10%',
   threshold: 0,
+  initialDelay: 0.1,
 
   walks: {
     default: {
