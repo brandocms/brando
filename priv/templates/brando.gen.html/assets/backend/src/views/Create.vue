@@ -2,7 +2,10 @@
   <article>
     <ContentHeader>
       <template v-slot:title>
-        <%= plural %> admin
+        <%= Recase.SentenceCase.convert(plural) %>
+      </template>
+      <template v-slot:subtitle>
+        Opprett ny
       </template>
     </ContentHeader>
     <<%= Recase.to_pascal(vue_singular) %>Form

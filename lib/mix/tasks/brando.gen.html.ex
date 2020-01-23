@@ -112,7 +112,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
           gql_inputs: graphql_inputs(attrs),
           gql_types: graphql_types(attrs),
           gql_query_fields: graphql_query_fields(attrs),
-          list_rows: list_rows(attrs, Recase.to_camel(binding[:singular])),
+          list_rows: list_rows(attrs, vue_singular, vue_plural),
           vue_inputs: vue_inputs(attrs, Recase.to_camel(binding[:singular])),
           cypress_fields: cypress_fields(attrs, Recase.to_camel(binding[:singular])),
           vue_defaults: vue_defaults(attrs),
@@ -134,6 +134,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         [
           {:eex, "controller.ex", "lib/application_name_web/controllers/#{path}_controller.ex"},
           {:eex, "index.html.eex", "lib/application_name_web/templates/#{path}/index.html.eex"},
+          {:eex, "show.html.eex", "lib/application_name_web/templates/#{path}/show.html.eex"},
+          {:eex, "__entry.html.eex", "lib/application_name_web/templates/#{path}/__#{binding[:singular]}.html.eex"},
           {:eex, "view.ex", "lib/application_name_web/views/#{path}_view.ex"},
 
           # GQL
@@ -429,7 +431,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     end)
   end
 
-  defp list_rows(attrs, _vue_singular) do
+  defp list_rows(attrs, vue_singular, vue_plural) do
     # this is for List.vue
     Enum.map(attrs, fn
       {k, {:array, _}} ->
@@ -487,6 +489,33 @@ defmodule Mix.Tasks.Brando.Gen.Html do
           </template>
         </div>)}
 
+      {:title = k, _} ->
+        {k, ~s(<div class="col-2">
+          <router-link
+            :to="{ name: '#{vue_plural}-edit', params: { #{vue_singular}Id: entry.id } }"
+            class="link name-link">
+            {{ entry.#{k} }}
+          </router-link>
+        </div>)}
+
+      {:name = k, _} ->
+        {k, ~s(<div class="col-2">
+          <router-link
+            :to="{ name: '#{vue_plural}-edit', params: { #{vue_singular}Id: entry.id } }"
+            class="link name-link">
+            {{ entry.#{k} }}
+          </router-link>
+        </div>)}
+
+      {:heading = k, _} ->
+        {k, ~s(<div class="col-2">
+          <router-link
+            :to="{ name: '#{vue_plural}-edit', params: { #{vue_singular}Id: entry.id } }"
+            class="link name-link">
+            {{ entry.#{k} }}
+          </router-link>
+        </div>)}
+
       {k, _} ->
         {k, ~s(<div class="col-2">
           {{ entry.#{k} }}
@@ -529,7 +558,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k, file_code}
 
       {k, :image} ->
-        image_code = "#{k} {\n    thumb: url(size: \"original\")\n    focal\n  }"
+        image_code = "#{k} {\n    thumb: url(size: \"original\")\n    xlarge: url(size: \"xlarge\")\n    focal\n  }"
         {k, image_code}
 
       {k, :villain} ->

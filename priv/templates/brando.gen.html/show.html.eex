@@ -1,0 +1,7 @@
+<div class="page-header">
+  <h2><%%= @entry.title %></h2>
+  <%%= picture_tag @entry.cover, placeholder: :svg, prefix: media_url() %>
+  <p class="intro">
+    Lorem ipsum dolor sit amet consectetur adipisicing elit. Autem delectus error, ex fugit omnis sint facere commodi dolores vero fugiat ducimus similique repellendus et vel corporis quia quidem, sequi officiis.
+  </p>
+</div>

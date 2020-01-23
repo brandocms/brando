@@ -1,0 +1,16 @@
+<article class="<%= singular %>">
+  <%= if img_fields do %><%%= picture_tag @entry.cover, placeholder: :svg, prefix: media_url() %><% end %>
+  <div class="info">
+    <section class="meta">
+      <div class="time">
+        <%%= @entry.updated_at %>
+      </div>
+    </section>
+    <h2>
+      <%%= @entry.title %>
+    </h2>
+    <section class="more">
+      <p>Read more &rarr;</p>
+    </section>
+  </div>
+</article>

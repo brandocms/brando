@@ -2,7 +2,7 @@
   <article v-if="<%= vue_singular %>">
     <ContentHeader>
       <template v-slot:title>
-        <%= plural %> admin
+        <%= Recase.SentenceCase.convert(plural) %>
       </template>
       <template v-slot:subtitle>
         Edit <%= singular %>
@@ -44,8 +44,8 @@ export default {
 
   methods: {
     async save () {
-      const <%= vue_singular %>Params = this.$utils.stripParams(this.<%= vue_singular %>, ['__typename', 'id', 'inserted_at', 'updated_at', 'deleted_at'])
-      this.$utils.validateImageParams(<%= vue_singular %>Params, ['avatar'])
+      const <%= vue_singular %>Params = this.$utils.stripParams(this.<%= vue_singular %>, ['__typename', 'id', 'inserted_at', 'updated_at', 'deleted_at'<%= if creator do %>, 'creator'<% end %>])
+      <%= if img_fields != [] do %>this.$utils.validateImageParams(<%= vue_singular %>Params, <%= img_fields |> Enum.map(&(to_charlist(elem(&1, 1)))) |> inspect %>)<% end %>
 
       try {
         await this.$apollo.mutate({

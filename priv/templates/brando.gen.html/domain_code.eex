@@ -10,8 +10,16 @@ end
 @doc """
 Get single <%= singular %>
 """
-@spec get_<%= singular %>(id) ::
+@spec get_<%= singular %>(keyword() | id) ::
         {:ok, <%= singular %>} | {:error, {:<%= singular %>, :not_found}}
+def get_<%= singular %>(args) when is_list(args) do
+  query = from t in <%= alias %><%= if soft_delete do %>, where: is_nil(t.deleted_at)<% end %>
+  case Repo.get_by(query, args) do
+    nil -> {:error, {:<%= singular %>, :not_found}}
+    <%= singular %> -> {:ok, <%= singular %>}
+  end
+end
+
 def get_<%= singular %>(id) do
   query = from t in <%= alias %>, where: t.id == ^id<%= if soft_delete do %>, where: is_nil(t.deleted_at)<% end %>
   case Repo.one(query) do

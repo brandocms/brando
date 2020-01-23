@@ -181,8 +181,8 @@ export default {
   "en": {
     "<%= vue_plural %>.edit": "Edit entry",
     "<%= vue_plural %>.delete": "Delete entry",
-    "<%= vue_plural %>.title": "Title",
-    "<%= vue_plural %>.subtitle": "Subtitle",
+    "<%= vue_plural %>.title": "<%= Recase.SentenceCase.convert(plural) %>",
+    "<%= vue_plural %>.subtitle": "Administration",
     "<%= vue_plural %>.index": "Index",
     "<%= vue_plural %>.actions": "Actions",
     "<%= vue_plural %>.new": "New entry",
@@ -194,8 +194,8 @@ export default {
   "nb": {
     "<%= vue_plural %>.edit": "Rediger objekt",
     "<%= vue_plural %>.delete": "Slett objekt",
-    "<%= vue_plural %>.title": "Tittel",
-    "<%= vue_plural %>.subtitle": "Undertittel",
+    "<%= vue_plural %>.title": "<%= Recase.SentenceCase.convert(plural) %>",
+    "<%= vue_plural %>.subtitle": "Administrasjon",
     "<%= vue_plural %>.index": "Oversikt",
     "<%= vue_plural %>.actions": "Handlinger",
     "<%= vue_plural %>.new": "Nytt objekt",

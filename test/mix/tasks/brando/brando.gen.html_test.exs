@@ -175,7 +175,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
       assert_file("assets/backend/src/views/games/CaptainEditView.vue", fn file ->
         assert file =~
-                 ~s(this.$utils.validateImageParams\(captainParams, ['avatar']\))
+                 ~s(this.$utils.validateImageParams\(captainParams, ['cover']\))
       end)
 
       assert_file("assets/backend/src/views/games/PegLegForm.vue", fn file ->

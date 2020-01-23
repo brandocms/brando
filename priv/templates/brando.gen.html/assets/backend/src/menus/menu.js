@@ -1,7 +1,7 @@
 export default {
   en: [
     {
-      name: '<%= String.upcase(plural) %>',
+      name: '<%= Recase.SentenceCase.convert(plural) %>',
       to: {
         name: '<%= plural %>'
       }
@@ -9,7 +9,7 @@ export default {
   ],
   nb: [
     {
-      name: '<%= String.upcase(plural) %>',
+      name: '<%= Recase.SentenceCase.convert(plural) %>',
       to: {
         name: '<%= plural %>'
       }
