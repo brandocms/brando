@@ -205,7 +205,7 @@ defmodule Mix.Brando do
   Add content to file under marker
   """
   def add_to_file(file, marker, content, multiple \\ false) do
-    marker_start =
+    marker_end =
       case Path.extname(file) do
         ".ex" ->
           "# __"
@@ -224,7 +224,7 @@ defmodule Mix.Brando do
       end
 
     unless exists? do
-      marker = "#{marker_start}#{marker}"
+      marker = "#{marker_end}#{marker}"
 
       new_content =
         file
