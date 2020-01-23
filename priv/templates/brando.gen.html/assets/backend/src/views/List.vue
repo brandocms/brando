@@ -17,7 +17,7 @@
     <div class="row">
       <div class="half">
         <h2>
-          {{ $t('<%= vue_plural %>.index')}}
+          {{ $t('<%= vue_plural %>.index') }}
         </h2>
       </div>
       <div class="half">
@@ -55,13 +55,13 @@
           <CircleDropdown>
             <li>
               <router-link :to="{ name: '<%= vue_plural %>-edit', params: { <%= vue_singular %>Id: entry.id } }">
-                {{$t('<%= vue_plural %>.edit')}}
+                {{ $t('<%= vue_plural %>.edit') }}
               </router-link>
             </li>
             <li>
               <button
                 @click="del(entry)">
-                {{$t('<%= vue_plural %>.delete')}}
+                {{ $t('<%= vue_plural %>.delete') }}
               </button>
             </li>
           </CircleDropdown>
