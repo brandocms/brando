@@ -14,8 +14,8 @@ new Vue({
   router,
   i18n,
   data: { ready: false },
-  render: h => h(Admin),
   created() {
     this.$router.addRoutes(routes)
-  }
+  },
+  render: h => h(Admin)
 }).$mount('#app')
