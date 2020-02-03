@@ -42,6 +42,15 @@
       :sortable="true"
       @sort="sortEntries"<% end %>>
 
+      <template v-slot:selected="{ entries, clearSelection }">
+        <li>
+          <button
+            @click="deleteEntries(entries, clearSelection)">
+            {{ $t('<%= vue_plural %>.delete-entries') }}
+          </button>
+        </li>
+      </template>
+
       <template v-slot:row="{ entry }">
         <%= for {_, v} <- list_rows do %><%= v %>
         <% end %>
@@ -60,7 +69,7 @@
             </li>
             <li>
               <button
-                @click="del(entry)">
+                @click="deleteEntry(entry)">
                 {{ $t('<%= vue_plural %>.delete') }}
               </button>
             </li>
@@ -111,57 +120,80 @@ export default {
             data
           })
         })
-    },<% end %>
-    async del (entry) {
-      this.$alerts.alertConfirm('OBS', this.$t('<%= vue_plural %>.delete-confirm'), async confirm => {
-        if (!confirm) {
-          return false
-        } else {
-          try {
-            await this.$apollo.mutate({
-              mutation: gql`
-                mutation Delete<%= Recase.to_pascal(vue_singular) %>($<%= vue_singular %>Id: ID!) {
-                  delete<%= Recase.to_pascal(vue_singular) %>(
-                    <%= vue_singular %>Id: $<%= vue_singular %>Id,
-                  ) {
-                    id
-                  }
-                }
-              `,
-              variables: {
-                <%= vue_singular %>Id: parseInt(entry.id)
-              },
+    },
+    <% end %>
+    deleteEntries (entries, clearSelection) {
+      this.$alerts.alertConfirm('OBS', this.$t('<%= vue_plural %>.delete-confirm-many'), async data => {
+        if (!data) {
+          return
+        }
 
-              update: (store, { data: { delete<%= Recase.to_pascal(vue_singular) %> } }) => {
-                try {
-                  const query = {
-                    query: GET_<%= String.upcase(plural) %>
-                  }
-                  const data = store.readQuery(query)
-                  const idx = data.<%= vue_plural %>.findIndex(<%= vue_singular %> => parseInt(<%= vue_singular %>.id) === parseInt(entry.id))
+        entries.forEach(async id => {
+          this.deleteEntry(id, true)
+        })
 
-                  if (idx !== -1) {
-                    data.<%= vue_plural %>.splice(idx, 1)
+        clearSelection()
+      })
+    },
 
-                    // Write back to the cache
-                    store.writeQuery({
-                      ...query,
-                      data
-                    })
-                  }
-                } catch (e) {
-                  console.log(e)
-                  // ignore errors. usually means it's just not in cache.
+    async deleteEntry (entryId, override = false) {
+      const fn = async () => {
+        try {
+          await this.$apollo.mutate({
+            mutation: gql`
+              mutation Delete<%= Recase.to_pascal(vue_singular) %>($<%= vue_singular %>Id: ID!) {
+                delete<%= Recase.to_pascal(vue_singular) %>(
+                  <%= vue_singular %>Id: $<%= vue_singular %>Id,
+                ) {
+                  id
                 }
               }
-            })
+            `,
+            variables: {
+              <%= vue_singular %>Id: parseInt(entry.id)
+            },
 
-            this.$toast.success({ message: this.$t('<%= vue_plural %>.deleted') })
-          } catch (err) {
-            this.$utils.showError(err)
-          }
+            update: (store, { data: { delete<%= Recase.to_pascal(vue_singular) %> } }) => {
+              try {
+                const query = {
+                  query: GET_<%= String.upcase(plural) %>
+                }
+                const data = store.readQuery(query)
+                const idx = data.<%= vue_plural %>.findIndex(<%= vue_singular %> => parseInt(<%= vue_singular %>.id) === parseInt(entry.id))
+
+                if (idx !== -1) {
+                  data.<%= vue_plural %>.splice(idx, 1)
+
+                  // Write back to the cache
+                  store.writeQuery({
+                    ...query,
+                    data
+                  })
+                }
+              } catch (e) {
+                console.log(e)
+                // ignore errors. usually means it's just not in cache.
+              }
+            }
+          })
+
+          this.$toast.success({ message: this.$t('<%= vue_plural %>.deleted') })
+        } catch (err) {
+          this.$utils.showError(err)
         }
-      })
+      }
+
+      if (override) {
+        fn()
+      } else {
+        this.$alerts.alertConfirm('OBS', this.$t('<%= vue_plural %>.delete-confirm'), async confirm => {
+          if (!confirm) {
+            return false
+          } else {
+            fn()
+          }
+        })
+      }
     }
   },
 
@@ -188,7 +220,9 @@ export default {
     "<%= vue_plural %>.new": "New entry",
     "<%= vue_plural %>.sequence_updated": "Sequence updated",
     "<%= vue_plural %>.deleted": "Entry deleted",
+    "<%= vue_plural %>.delete-entries": "Delete entries",
     "<%= vue_plural %>.delete-confirm": "Are you sure you want to delete this?",
+    "<%= vue_plural %>.delete-confirm-many": "Are you sure you want to delete these entries?",
     "<%= vue_plural %>.sequence-updated": "Sequence updated"
   },
   "nb": {
@@ -201,7 +235,9 @@ export default {
     "<%= vue_plural %>.new": "Nytt objekt",
     "<%= vue_plural %>.sequence_updated": "Rekkefølgen ble oppdatert",
     "<%= vue_plural %>.deleted": "Objektet ble slettet",
+    "<%= vue_plural %>.delete-entries": "Slett objekter",
     "<%= vue_plural %>.delete-confirm": "Er du sikker på at du vil slette dette?",
+    "<%= vue_plural %>.delete-confirm-many": "Er du sikker på at du vil slette disse?",
     "<%= vue_plural %>.sequence-updated": "Rekkefølge oppdatert"
   }
 }
