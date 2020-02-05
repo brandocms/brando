@@ -61,6 +61,13 @@ export default {
               value
             }
 
+            globals {
+              id
+              label
+              key
+              value
+            }
+
             configs {
               id
               key

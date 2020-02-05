@@ -110,6 +110,16 @@ defmodule Brando.Sites do
     Enum.find(identity.links, &(String.downcase(&1.name) == String.downcase(name)))
   end
 
+  def get_globals do
+    identity = Brando.Cache.get(:identity)
+    identity.globals
+  end
+
+  def get_global(key) do
+    identity = Brando.Cache.get(:identity)
+    Enum.find(identity.globals, &(String.downcase(&1.key) == String.downcase(key)))
+  end
+
   @doc """
   Check all fields for references to `["${IDENTITY:", "${CONFIG:", "${LINK:"]`.
   Rerender if found.
