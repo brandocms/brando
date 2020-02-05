@@ -37,9 +37,6 @@ defmodule Brando.Images.ImageCategoryResolver do
         %{image_category_id: image_category_id, image_category_params: image_category_params},
         _
       ) do
-    require Logger
-    Logger.error(inspect(image_category_params, pretty: true))
-
     image_category_id
     |> Images.update_category(image_category_params)
     |> response

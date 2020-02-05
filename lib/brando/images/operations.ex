@@ -67,8 +67,6 @@ defmodule Brando.Images.Operations do
     Logger.info("==> Brando.Images.Operations: Starting #{Enum.count(operations)} operations..")
     start_msec = :os.system_time(:millisecond)
 
-    Logger.error inspect operations, pretty: true
-
     operation_results =
       operations
       |> Flow.from_enumerable()
