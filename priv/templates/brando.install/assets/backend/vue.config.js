@@ -13,6 +13,10 @@ module.exports = {
     }
   },
 
+  css: {
+    extract: false
+  },
+
   configureWebpack: {
     output: {
       filename: 'js/admin/[name].js',
