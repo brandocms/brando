@@ -17,9 +17,25 @@ defmodule <%= base %>.Schema.Types.<%= alias %> do
     <%= k %><% end %>
   end
 
+  @desc "Filtering options for <%= singular %>"
+  input_object :<%= singular %>_filter do
+    <%= List.first(gql_types) |> elem(1) %>
+    # field :featured, :boolean
+  end
+
+  @desc "Ordering options for <%= singular %>"
+  input_object :<%= singular %>_order do
+    field :dir, :sort_order
+    field :by, :string
+  end
+
   object :<%= singular %>_queries do
     @desc "Get all <%= plural %>"
     field :<%= plural %>, type: list_of(:<%= singular %>) do
+      arg :order, :<%= singular %>_order
+      arg :limit, :integer, default_value: 25
+      arg :offset, :integer, default_value: 0
+      arg :filter, :<%= singular %>_filter
       resolve &<%= base %>.<%= domain %>.<%= alias %>Resolver.all/2
     end
 

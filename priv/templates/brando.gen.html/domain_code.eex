@@ -1,10 +1,37 @@
 @doc """
 List all <%= plural %>
 """
-@spec list_<%= plural %>() :: {:ok, [<%= singular %>]}
-def list_<%= plural %> do
-  query = from t in <%= alias %><%= if soft_delete do %>, where: is_nil(t.deleted_at)<% end %>
+@spec list_<%= plural %>(args :: map) :: {:ok, [<%= singular %>]}
+def list_<%= plural %>(args \\ %{}) do
+  query =
+    args
+    |> Enum.reduce(<%= alias %>, fn
+      {_, nil}, query ->
+        query
+      {:order, {dir, by}}, query ->
+        query |> order_by({^dir, ^by})
+      {:offset, offset}, query ->
+        query |> offset(^offset)
+      {:limit, limit}, query ->
+        query |> limit(^limit)
+      {:filter, filter}, query ->
+        query |> filter_with(filter)
+    end)
+
+  query =
+    from t in query<%= if soft_delete do %>, where: is_nil(t.deleted_at)<% end %>
+
   {:ok, Repo.all(query)}
+end
+
+defp filter_with(query, filter) do
+  Enum.reduce(filter, query, fn
+    {:title, title}, query ->
+      from q in query, where: ilike(q.title, ^"%#{title}%")
+
+    # {:featured, featured}, query ->
+    #   from q in query, where: q.featured == ^featured
+  end)
 end
 
 @doc """

@@ -11,6 +11,7 @@ defmodule Brando.Villain do
   @regex_fragment_ref ~r/(?:\$\{|\$\%7B)FRAGMENT:([a-zA-Z0-9-_]+)\/([a-zA-Z0-9-_]+)\/(\w+)(?:\}|\%7D)/
   @regex_config_ref ~r/(?:\$\{|\$\%7B)CONFIG:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
   @regex_link_ref ~r/(?:\$\{|\$\%7B)LINK:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
+  @regex_global_ref ~r/(?:\$\{|\$\%7B)GLOBAL:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
   @regex_identity_ref ~r/(?:\$\{|\$\%7B)IDENTITY:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
 
   defmacro __using__(:schema) do
@@ -51,6 +52,7 @@ defmodule Brando.Villain do
     |> replace_fragment_refs()
     |> replace_identity_refs()
     |> replace_link_refs()
+    |> replace_global_refs()
     |> replace_config_refs()
   end
 
@@ -395,6 +397,18 @@ defmodule Brando.Villain do
       case Enum.find(link_list, &(String.downcase(&1.name) == String.downcase(name))) do
         nil -> "==> MISSING LINK NAME: ${LINK:#{name}} <=="
         link_entry -> link_entry.url
+      end
+    end)
+  end
+
+  def replace_global_refs(html) do
+    Regex.replace(@regex_global_ref, html, fn _, key ->
+      identity = Brando.Cache.get(:identity)
+      global_list = identity.globals
+
+      case Enum.find(global_list, &(String.downcase(&1.key) == String.downcase(key))) do
+        nil -> "==> MISSING GLOBAL KEY: ${GLOBAL:#{key}} <=="
+        global_entry -> global_entry.value
       end
     end)
   end

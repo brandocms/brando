@@ -8,8 +8,8 @@ defmodule <%= base %>.<%= domain %>.<%= alias %>Resolver do
   @doc """
   Get all <%= plural %>
   """
-  def all(_, %{context: %{current_user: _}}) do
-    <%= domain %>.list_<%= plural %>()
+  def all(args, %{context: %{current_user: _}}) do
+    <%= domain %>.list_<%= plural %>(args)
   end
 
   @doc """

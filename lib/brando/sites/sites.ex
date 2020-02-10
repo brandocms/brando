@@ -62,7 +62,7 @@ defmodule Brando.Sites do
     |> Identity.changeset(identity_params, user)
     |> Brando.repo().update()
     |> update_cache()
-    |> update_villains_referencing_org()
+    |> update_villains_referencing_identity()
   end
 
   @doc """
@@ -121,15 +121,15 @@ defmodule Brando.Sites do
   end
 
   @doc """
-  Check all fields for references to `["${IDENTITY:", "${CONFIG:", "${LINK:"]`.
+  Check all fields for references to IDENTITY, CONFIG, LINK and GLOBAL
   Rerender if found.
   """
-  @spec update_villains_referencing_org({:ok, identity} | {:error, changeset}) ::
+  @spec update_villains_referencing_identity({:ok, identity} | {:error, changeset}) ::
           {:ok, identity} | {:error, changeset}
-  def update_villains_referencing_org({:error, changeset}), do: {:error, changeset}
+  def update_villains_referencing_identity({:error, changeset}), do: {:error, changeset}
 
-  def update_villains_referencing_org({:ok, identity}) do
-    search_terms = ["${IDENTITY:", "${CONFIG:", "${LINK:"]
+  def update_villains_referencing_identity({:ok, identity}) do
+    search_terms = ["${IDENTITY:", "${CONFIG:", "${LINK:", "${GLOBAL:"]
     villains = Villain.list_villains()
     Villain.rerender_matching_villains(villains, search_terms)
     {:ok, identity}

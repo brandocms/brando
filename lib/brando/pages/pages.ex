@@ -262,7 +262,7 @@ defmodule Brando.Pages do
   def list_page_fragments do
     fragments =
       PageFragment
-      |> order_by([p], asc: p.parent_key, asc: p.key, asc: p.language)
+      |> order_by([p], asc: p.parent_key, asc: p.sequence, asc: p.language)
       |> exclude_deleted()
       |> Brando.repo().all()
 
@@ -311,13 +311,22 @@ defmodule Brando.Pages do
   Get set of fragments by parent key
   """
   def get_page_fragments(parent_key) do
+    {:ok, fragments} = list_page_fragments(parent_key)
+    Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)
+  end
+
+  @doc """
+  Get set of fragments by parent key
+  """
+  def list_page_fragments(parent_key) do
     fragments =
       PageFragment
       |> where([p], p.parent_key == ^parent_key)
       |> exclude_deleted()
+      |> order_by([p], asc: p.parent_key, asc: p.sequence, asc: p.language)
       |> Brando.repo().all
 
-    Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)
+    {:ok, fragments}
   end
 
   @doc """

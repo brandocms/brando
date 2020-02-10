@@ -40,7 +40,10 @@
       v-if="<%= vue_plural %>"
       :entries="<%= vue_plural %>"<%= if sequenced do %>
       :sortable="true"
-      @sort="sortEntries"<% end %>>
+      :filter-keys="['title']"
+      @sort="sortEntries"<% end %>
+      @filter="filter = $event"
+      @more="showMore">
 
       <template v-slot:selected="{ entries, clearSelection }">
         <li>
@@ -77,6 +80,7 @@
         </div>
       </template>
     </ContentList>
+    <button @click="showMore()">{{ $t('<%= vue_plural %>.more') }}</button>
   </article>
 </template>
 
@@ -88,6 +92,9 @@ import GET_<%= String.upcase(plural) %> from '../../gql/<%= snake_domain %>/<%= 
 export default {
   data () {
     return {
+      filter: null,
+      offset: 0,
+      page: 0
       // if the entries has children, enable this
       // and call ChildrenButton with :visible-children="visibleChildren".
       // You can then query the child list for visibility with this.
@@ -101,6 +108,30 @@ export default {
   ],
 
   methods: {
+    showMore () {
+      this.page++
+      // Fetch more data and transform the original result
+      this.$apollo.queries.<%= vue_plural %>.fetchMore({
+        // New variables
+        variables: {
+          limit: 25,
+          offset: this.page * 25,
+          filter: this.filter
+        },
+        // Transform the previous result with new data
+        updateQuery: (previousResult, { fetchMoreResult }) => {
+          const newEntries = fetchMoreResult.<%= vue_plural %>
+          // const hasMore = true
+
+          return {
+            <%= vue_plural %>: [
+              ...previousResult.<%= vue_plural %>, ...newEntries
+            ]
+          }
+        }
+      })
+    },
+
     <%= if sequenced do %>sortEntries (seq) {
       this.adminChannel.channel
         .push('<%= vue_plural %>:sequence_<%= vue_plural %>', { ids: seq })
@@ -199,7 +230,15 @@ export default {
 
   apollo: {
     <%= vue_plural %>: {
-      query: GET_<%= String.upcase(plural) %>
+      query: GET_<%= String.upcase(plural) %>,
+      debounce: 1000,
+      variables () {
+        return {
+          limit: 25,
+          offset: 0,
+          filter: this.filter
+        }
+      }
     }
   }
 }
@@ -223,7 +262,8 @@ export default {
     "<%= vue_plural %>.delete-entries": "Delete entries",
     "<%= vue_plural %>.delete-confirm": "Are you sure you want to delete this?",
     "<%= vue_plural %>.delete-confirm-many": "Are you sure you want to delete these entries?",
-    "<%= vue_plural %>.sequence-updated": "Sequence updated"
+    "<%= vue_plural %>.sequence-updated": "Sequence updated",
+    "<%= vue_plural %>.more": "More"
   },
   "nb": {
     "<%= vue_plural %>.edit": "Rediger objekt",
@@ -238,7 +278,8 @@ export default {
     "<%= vue_plural %>.delete-entries": "Slett objekter",
     "<%= vue_plural %>.delete-confirm": "Er du sikker på at du vil slette dette?",
     "<%= vue_plural %>.delete-confirm-many": "Er du sikker på at du vil slette disse?",
-    "<%= vue_plural %>.sequence-updated": "Rekkefølge oppdatert"
+    "<%= vue_plural %>.sequence-updated": "Rekkefølge oppdatert",
+    "<%= vue_plural %>.more": "Mer"
   }
 }
 </i18n>
