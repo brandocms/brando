@@ -3,6 +3,7 @@ defmodule Brando.Schema.Types.Images do
 
   input_object :image_series_params do
     field :name, :string
+    field :slug, :string
     field :credits, :string
     field :cfg, :string
     field :image_category_id, :string

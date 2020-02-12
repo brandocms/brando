@@ -180,7 +180,8 @@ defmodule Brando.Images do
       {:ok, inserted_series} ->
         # if slug is changed we recreate all the image sizes to reflect the new path
         if Ecto.Changeset.get_change(changeset, :slug) ||
-             Ecto.Changeset.get_change(changeset, :image_category_id),
+             Ecto.Changeset.get_change(changeset, :image_category_id) ||
+             Ecto.Changeset.get_change(changeset, :cfg),
            do: Images.Processing.recreate_sizes_for_image_series(inserted_series.id, user)
 
         {:ok, Brando.repo().preload(inserted_series, :image_category)}

@@ -104,10 +104,15 @@ defmodule Brando.ImageSeries do
         end
 
         slug = get_change(cs, :slug)
-        category = Brando.repo().get(ImageCategory, cat_id)
-        new_upload_path = Path.join(Map.get(category.cfg, :upload_path), slug)
-        cfg = Map.put(category.cfg, :upload_path, new_upload_path)
-        put_change(cs, :cfg, cfg)
+
+        if slug do
+          category = Brando.repo().get(ImageCategory, cat_id)
+          new_upload_path = Path.join(Map.get(category.cfg, :upload_path), slug)
+          cfg = Map.put(category.cfg, :upload_path, new_upload_path)
+          put_change(cs, :cfg, cfg)
+        else
+          cs
+        end
 
       _ ->
         cs

@@ -22,6 +22,7 @@ defmodule Brando.HTML.Images do
     * `img_class` - class added to the img element. I.e img_class: "img-fluid"
     * `img_attrs` - list of attributes to add to img element. I.e img_attrs: [data_test: true]
     * `media_queries` - list of media queries to add to source.
+    * `cache` - key to cache by, i.e `cache: schema.updated_at`
       I.e `media_queries: [{"(min-width: 0px) and (max-width: 760px)", [{"mobile", "700w"}]}]`
     * `srcset` - if you want to use the srcset attribute. Set in the form of `{module, field}`.
       I.e `srcset: {Brando.Users.User, :avatar}`
