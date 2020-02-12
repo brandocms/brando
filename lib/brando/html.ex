@@ -28,6 +28,58 @@ defmodule Brando.HTML do
   defdelegate render_meta(conn), to: Brando.Meta.HTML
 
   @doc """
+  Returns a video tag with an overlay for lazyloading
+  """
+  @spec video_tag(binary, Map.t) :: binary
+  def video_tag(src, opts) do
+    width = Map.get(opts, :width)
+    height = Map.get(opts, :height)
+    preload = Map.get(opts, :preload, false)
+
+    cover =
+      if width do
+        ~s(
+          <div data-cover>
+            <img
+              src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27#{
+            width
+          }%27%20height%3D%27#{height}%27%20style%3D%27background%3Argba%280%2C0%2C0%2C#{
+            0.00
+          }%29%27%2F%3E" />
+          </div>
+        )
+      else
+        ""
+      end
+
+    ~s(
+      <div class="video-wrapper" data-smart-video>
+        #{cover}
+        <video
+          tabindex="-1"
+          role="presentation"
+          preload="auto"
+          muted
+          loop
+          playsinline
+          data-video
+          #{preload && "data-src=\"#{src}\"" || ""}
+          #{preload && "" || "src=\"#{src}\""}></video>
+        <noscript>
+          <video
+            tabindex="-1"
+            role="presentation"
+            preload="metadata"
+            muted
+            loop
+            playsinline
+            src="#{src}"></video>
+        </noscript>
+      </div>
+      )
+  end
+
+  @doc """
   Returns `active` if `conn`'s `full_path` matches `current_path`.
   """
   @spec active(conn, String.t()) :: String.t()
