@@ -66,13 +66,13 @@
         <div class="col-1">
           <CircleDropdown>
             <li>
-              <router-link :to="{ name: '<%= vue_plural %>-edit', params: { <%= vue_singular %>Id: entry.id } }">
+              <router-link :to="{ name: '<%= vue_plural %>-edit', params: { <%= vue_singular %>Id: entryId } }">
                 {{ $t('<%= vue_plural %>.edit') }}
               </router-link>
             </li>
             <li>
               <button
-                @click="deleteEntry(entry)">
+                @click="deleteEntry(entry.id)">
                 {{ $t('<%= vue_plural %>.delete') }}
               </button>
             </li>
@@ -181,7 +181,7 @@ export default {
               }
             `,
             variables: {
-              <%= vue_singular %>Id: parseInt(entry.id)
+              <%= vue_singular %>Id: parseInt(entryId)
             },
 
             update: (store, { data: { delete<%= Recase.to_pascal(vue_singular) %> } }) => {
