@@ -450,16 +450,16 @@ defmodule Brando.Utils do
       nil ->
         ""
 
-      cache when is_boolean(cache) ->
+      cache when is_binary(cache) ->
+        "?#{cache}"
+
+      cache ->
         stamp =
           cache
           |> DateTime.from_naive!("Etc/UTC")
           |> DateTime.to_unix()
 
         "?#{stamp}"
-
-      cache when is_binary(cache) ->
-        "?#{cache}"
     end
   end
 
