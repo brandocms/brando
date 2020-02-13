@@ -60,10 +60,6 @@ defmodule Brando.Upload do
     end
   end
 
-  defp validate_cfg(plug, cfg_struct) do
-    cfg_struct
-  end
-
   @doc """
   Filters out all fields except `%Plug.Upload{}` fields.
   """
