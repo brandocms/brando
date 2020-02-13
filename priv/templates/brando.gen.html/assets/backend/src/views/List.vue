@@ -66,7 +66,7 @@
         <div class="col-1">
           <CircleDropdown>
             <li>
-              <router-link :to="{ name: '<%= vue_plural %>-edit', params: { <%= vue_singular %>Id: entryId } }">
+              <router-link :to="{ name: '<%= vue_plural %>-edit', params: { <%= vue_singular %>Id: entry.id } }">
                 {{ $t('<%= vue_plural %>.edit') }}
               </router-link>
             </li>
