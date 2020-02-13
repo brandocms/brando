@@ -190,7 +190,7 @@ export default {
                   query: GET_<%= String.upcase(plural) %>
                 }
                 const data = store.readQuery(query)
-                const idx = data.<%= vue_plural %>.findIndex(<%= vue_singular %> => parseInt(<%= vue_singular %>.id) === parseInt(entry.id))
+                const idx = data.<%= vue_plural %>.findIndex(<%= vue_singular %> => parseInt(<%= vue_singular %>.id) === parseInt(entryId))
 
                 if (idx !== -1) {
                   data.<%= vue_plural %>.splice(idx, 1)
