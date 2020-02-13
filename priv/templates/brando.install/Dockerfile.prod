@@ -2,8 +2,9 @@
 
 FROM node:12 AS frontend_builder
 
-COPY assets/frontend/package.json assets/frontend/yarn.lock assets/frontend/yalc.lock /opt/app/assets/frontend/
-COPY assets/frontend/.yalc /opt/app/assets/frontend/.yalc
+COPY assets/frontend/package.json assets/frontend/yarn.lock /opt/app/assets/frontend/
+COPY assets/frontend/yalc.* /opt/app/assets/frontend/
+COPY assets/frontend/.yalc* /opt/app/assets/frontend/.yalc
 WORKDIR /opt/app/assets/frontend
 RUN yarn install --force --pure-lockfile
 COPY assets/frontend /opt/app/assets/frontend
@@ -12,8 +13,9 @@ RUN yarn run move_srcmaps
 
 FROM node:12 AS backend_builder
 
-COPY assets/backend/package.json assets/backend/yarn.lock assets/backend/yalc.lock /opt/app/assets/backend/
-COPY assets/backend/.yalc /opt/app/assets/backend/.yalc
+COPY assets/backend/package.json assets/backend/yarn.lock /opt/app/assets/backend/
+COPY assets/backend/yalc.* /opt/app/assets/backend/
+COPY assets/backend/.yalc* /opt/app/assets/backend/.yalc
 WORKDIR /opt/app/assets/backend
 RUN yarn install --force --pure-lockfile
 COPY assets/backend /opt/app/assets/backend
@@ -23,7 +25,7 @@ RUN yarn run build
 
 FROM twined/fehn:2.3
 
-LABEL maintainer="B&Y <trond@bielkeyang.com>"
+LABEL maintainer="Bielke Yang <trond@bielkeyang.com>"
 
 WORKDIR /opt/app
 ENV MIX_ENV prod
