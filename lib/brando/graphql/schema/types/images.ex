@@ -22,13 +22,7 @@ defmodule Brando.Schema.Types.Images do
     field :sequence, :integer
   end
 
-  input_object :create_image_category_params do
-    field :name, :string
-    field :slug, :string
-    field :cfg, :string
-  end
-
-  input_object :update_image_category_params do
+  input_object :image_category_params do
     field :name, :string
     field :slug, :string
     field :cfg, :string
@@ -42,6 +36,26 @@ defmodule Brando.Schema.Types.Images do
     field :size_limit, :integer
     field :sizes, :json
     field :srcset, list_of(:image_srcset_params)
+  end
+
+  input_object :image_meta_params do
+    field :title, :string
+    field :credits, :string
+    field :alt, :string
+    field :focal, :focal_params
+  end
+
+  input_object :image_type_params do
+    field :title, :string
+    field :credits, :string
+    field :alt, :string
+    field :path, :string
+    field :focal, :json
+  end
+
+  input_object :focal_params do
+    field :x, :integer
+    field :y, :integer
   end
 
   input_object :image_srcset_params do
@@ -110,6 +124,7 @@ defmodule Brando.Schema.Types.Images do
   object :image_type do
     field :title, :string
     field :credits, :string
+    field :alt, :string
     field :path, :string
     field :focal, :json
 
@@ -192,6 +207,14 @@ defmodule Brando.Schema.Types.Images do
       resolve &Brando.Images.ImageResolver.create/2
     end
 
+    @desc "Edit image data"
+    field :update_image_meta, type: :image do
+      arg :image_id, :id
+      arg :image_meta_params, :image_meta_params
+
+      resolve &Brando.Images.ImageResolver.update_meta/2
+    end
+
     @desc "Delete multiple images"
     field :delete_images, type: :integer do
       arg :image_ids, list_of(:id)
@@ -201,7 +224,7 @@ defmodule Brando.Schema.Types.Images do
 
     @desc "Create image category"
     field :create_image_category, type: :image_category do
-      arg :image_category_params, :create_image_category_params
+      arg :image_category_params, :image_category_params
 
       resolve &Brando.Images.ImageCategoryResolver.create/2
     end
@@ -209,7 +232,7 @@ defmodule Brando.Schema.Types.Images do
     @desc "Update image category"
     field :update_image_category, type: :image_category do
       arg :image_category_id, :id
-      arg :image_category_params, :update_image_category_params
+      arg :image_category_params, :image_category_params
 
       resolve &Brando.Images.ImageCategoryResolver.update/2
     end

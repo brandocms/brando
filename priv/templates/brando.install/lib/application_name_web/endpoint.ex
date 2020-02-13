@@ -32,7 +32,8 @@ defmodule <%= application_module %>Web.Endpoint do
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json, Absinthe.Plug.Parser],
     pass: ["*/*"],
-    json_decoder: Phoenix.json_library()
+    json_decoder: Phoenix.json_library(),
+    length: 100_000_000
 
   plug Plug.MethodOverride
   plug Plug.Head

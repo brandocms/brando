@@ -71,11 +71,10 @@ defmodule Brando.Field.Image.Schema do
       end
 
       defp do_validate_upload(changeset, {:image, field_name}, user, cfg) do
-
         with {:ok, {:upload, changeset}} <- merge_focal(changeset, field_name),
              {:ok, plug} <- Brando.Utils.field_has_changed(changeset, field_name),
              {:ok, _} <- Brando.Utils.changeset_has_no_errors(changeset),
-             {:ok, cfg} <- cfg && {:ok, cfg} || get_image_cfg(field_name),
+             {:ok, cfg} <- grab_cfg(cfg, field_name, changeset),
              {:ok, {:handled, name, field}} <-
                Images.Upload.Field.handle_upload(field_name, plug, cfg, user) do
           cleanup_old_images(changeset, :safe)
@@ -102,6 +101,15 @@ defmodule Brando.Field.Image.Schema do
           {:ok, {:unhandled, name, field}} ->
             changeset
         end
+      end
+
+      defp grab_cfg(nil, field_name, _), do: get_image_cfg(field_name)
+      defp grab_cfg(:db, _, changeset) do
+        image_series_id = get_field(changeset, :image_series_id)
+        Brando.Images.get_series_config(image_series_id)
+      end
+      defp grab_cfg(cfg, _, _) do
+        {:ok, cfg}
       end
     end
   end

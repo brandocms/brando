@@ -141,6 +141,29 @@ defmodule Brando.Images do
     update_image(schema, %{"image" => image})
   end
 
+  @spec update_image_meta(
+          schema :: Brando.Image.t(),
+          params :: Map.t(),
+          user :: user
+        ) :: {:ok, Brando.Image.t()} | {:error, Ecto.Changeset.t()}
+  def update_image_meta(schema, params, user \\ :system) do
+    params = Map.put(params, :focal, map_keys_to_strings(params.focal))
+
+    image =
+      schema.image
+      |> Map.merge(params)
+
+    org_focal = Map.get(schema.image, :focal, %{})
+    new_focal = params.focal
+
+    unless Map.equal?(org_focal, new_focal) do
+      updated_schema = put_in(schema.image, image)
+      _ = Images.Processing.recreate_sizes_for_image(updated_schema, user)
+    end
+
+    update_image(schema, %{"image" => image})
+  end
+
   @doc """
   Delete `ids` from database
   Also deletes all dependent image sizes.
@@ -488,5 +511,13 @@ defmodule Brando.Images do
     categories = Brando.repo().all(ImageCategory)
     series = Brando.repo().all(ImageSeries)
     Images.Utils.get_orphaned_series(categories, series, starts_with: "images/site")
+  end
+
+  defp map_keys_to_atoms(map) do
+    for {key, val} <- map, into: %{}, do: {String.to_existing_atom(key), val}
+  end
+
+  defp map_keys_to_strings(map) do
+    for {key, val} <- map, into: %{}, do: {Atom.to_string(key), val}
   end
 end

@@ -28,4 +28,9 @@ defmodule Brando.Images.ImageResolver do
     Images.delete_images(image_ids)
     {:ok, 200}
   end
+
+  def update_meta(%{image_id: image_id, image_meta_params: image_meta_params}, %{context: %{current_user: current_user}}) do
+    image = Brando.Images.get_image!(image_id)
+    Brando.Images.update_image_meta(image, image_meta_params, current_user)
+  end
 end

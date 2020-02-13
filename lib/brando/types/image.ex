@@ -7,10 +7,11 @@ defmodule Brando.Type.Image do
 
   @type t :: %__MODULE__{}
 
-  @derive {Jason.Encoder, only: [:title, :credits, :path, :sizes, :width, :height, :focal]}
+  @derive {Jason.Encoder, only: [:title, :credits, :alt, :path, :sizes, :width, :height, :focal]}
 
   defstruct title: nil,
             credits: nil,
+            alt: nil,
             path: nil,
             sizes: %{},
             width: nil,

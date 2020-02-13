@@ -157,6 +157,7 @@ defmodule Brando.API.Villain.VillainController do
       uid: uid,
       title: updated_image.image.title,
       credits: updated_image.image.credits,
+      alt: updated_image.image.alt,
       link: form["link"],
       focal: %{"x" => 50, "y" => 50}
     }
