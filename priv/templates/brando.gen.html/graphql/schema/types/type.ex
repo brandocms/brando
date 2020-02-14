@@ -32,7 +32,7 @@ defmodule <%= base %>.Schema.Types.<%= alias %> do
   object :<%= singular %>_queries do
     @desc "Get all <%= plural %>"
     field :<%= plural %>, type: list_of(:<%= singular %>) do
-      arg :order, :<%= singular %>_order
+      arg :order, :<%= singular %>_order, default_value: {:asc, :sequence}
       arg :limit, :integer, default_value: 25
       arg :offset, :integer, default_value: 0
       arg :filter, :<%= singular %>_filter

@@ -33,10 +33,17 @@ defmodule Brando.Schema.Types.Page do
     field :deleted_at, :time
   end
 
+  @desc "Filtering options for page"
+  input_object :page_filter do
+    field :title, :string
+  end
+
   object :page_queries do
     @desc "Get all pages"
     field :pages, type: list_of(:page) do
-      arg :filter, :string
+      arg :limit, :integer, default_value: 25
+      arg :offset, :integer, default_value: 0
+      arg :filter, :page_filter
       resolve &Brando.Pages.PageResolver.all/2
     end
 

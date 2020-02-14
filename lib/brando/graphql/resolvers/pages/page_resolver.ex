@@ -15,8 +15,8 @@ defmodule Brando.Pages.PageResolver do
   @doc """
   Get all pages (at parent level)
   """
-  def all(_, %{context: %{current_user: _current_user}}) do
-    Pages.list_pages()
+  def all(args, %{context: %{current_user: _current_user}}) do
+    Pages.list_pages(args)
   end
 
   @doc """

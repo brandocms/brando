@@ -10,6 +10,8 @@ defmodule Brando.Pages do
 
   import Ecto.Query
 
+  @type page :: Brando.Pages.Page.t()
+
   defmacro __using__(_) do
     quote do
       import Brando.Pages, only: [get_page_fragments: 1, render_fragment: 2]
@@ -89,15 +91,40 @@ defmodule Brando.Pages do
   @doc """
   List all pages
   """
-  def list_pages do
-    pages =
-      Page
-      |> Page.only_parents()
-      |> order_by([p], asc: p.language, asc: p.sequence, asc: p.key)
-      |> exclude_deleted()
-      |> Brando.repo().all
+  @spec list_pages(args :: map) :: {:ok, [page]}
+  def list_pages(args \\ %{}) do
+    query =
+      args
+      |> Enum.reduce(Page, fn
+        {_, nil}, query ->
+          query
+        {:filter, filter}, query ->
+          query |> filter_with(filter)
 
-    {:ok, pages}
+        {:offset, offset}, query ->
+          query |> offset(^offset)
+
+        {:limit, limit}, query ->
+          query |> limit(^limit)
+        end)
+
+    query =
+      from q in query,
+        where: is_nil(q.deleted_at),
+        where: is_nil(q.parent_id),
+        order_by: [asc: q.language, asc: q.sequence, asc: q.key]
+
+    {:ok, Brando.repo().all(query)}
+  end
+
+  defp filter_with(query, filter) do
+    Enum.reduce(filter, query, fn
+      {:title, title}, query ->
+        from q in query, where: ilike(q.title, ^"%#{title}%")
+
+        # {:featured, featured}, query ->
+        #   from q in query, where: q.featured == ^featured
+    end)
   end
 
   @doc """
