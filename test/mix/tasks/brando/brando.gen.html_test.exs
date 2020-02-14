@@ -158,7 +158,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
       assert_file("assets/backend/src/gql/games/CAPTAINS_QUERY.graphql", fn file ->
         assert file =~
-                 "#import \"./CAPTAIN_FRAGMENT.graphql\"\n\nquery Captains {\n  captains {\n    ...captain\n  }\n}\n"
+                 "#import \"./CAPTAIN_FRAGMENT.graphql\"\nquery Captains ($order: CaptainOrder, $limit: Int, $offset: Int, $filter: CaptainFilter) {\n  captains (order: $order, limit: $limit, offset: $offset, filter: $filter) {\n    ...captain\n  }\n}\n"
       end)
 
       assert_file("assets/backend/src/views/games/CaptainForm.vue", fn file ->
@@ -249,7 +249,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
       assert_file("assets/backend/src/gql/projects/PROJECTS_QUERY.graphql", fn file ->
         assert file =~
-          "#import \"./PROJECT_FRAGMENT.graphql\"\n\nquery Projects {\n  projects {\n    ...project\n  }\n}\n"
+          "#import \"./PROJECT_FRAGMENT.graphql\"\nquery Projects ($order: ProjectOrder, $limit: Int, $offset: Int, $filter: ProjectFilter) {\n  projects (order: $order, limit: $limit, offset: $offset, filter: $filter) {\n    ...project\n  }\n}\n"
       end)
     end)
   end
