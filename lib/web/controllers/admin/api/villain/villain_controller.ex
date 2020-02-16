@@ -193,6 +193,17 @@ defmodule Brando.API.Villain.VillainController do
     end
   end
 
+  @doc false
+  def delete_template(conn, %{"id" => template_id}) do
+    with {:ok, _} <- Villain.delete_template(template_id) do
+      payload = %{
+        status: 200
+      }
+
+      json(conn, payload)
+    end
+  end
+
   def sequence_templates(conn, %{"sequence" => json_sequence}) do
     with {:ok, decoded_sequence} <- Jason.decode(json_sequence),
       fixed_sequence <- Enum.map(decoded_sequence, &String.to_integer/1),

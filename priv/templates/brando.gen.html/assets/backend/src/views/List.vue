@@ -40,8 +40,8 @@
       v-if="<%= vue_plural %>"
       :entries="<%= vue_plural %>"<%= if sequenced do %>
       :sortable="true"
-      :filter-keys="['title']"
       @sort="sortEntries"<% end %>
+      :filter-keys="['title']"
       @filter="filter = $event"
       @more="showMore">
 
@@ -231,7 +231,7 @@ export default {
   apollo: {
     <%= vue_plural %>: {
       query: GET_<%= String.upcase(plural) %>,
-      debounce: 1000,
+      debounce: 750,
       variables () {
         return {
           limit: 25,

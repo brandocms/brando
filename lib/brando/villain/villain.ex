@@ -132,7 +132,7 @@ defmodule Brando.Villain do
   We treat page fragments special, since they need to propogate to other referencing
   pages and fragments
   """
-  @spec rerender_html_from_id({Module, atom, atom}, Integer.t() | String.t()) :: any()
+  @spec rerender_html_from_id({schema :: Module, data_field :: atom, html_field :: atom}, Integer.t() | String.t()) :: any()
   def rerender_html_from_id({schema, data_field, html_field}, id) do
     parser = Brando.config(Brando.Villain)[:parser]
 
@@ -238,11 +238,13 @@ defmodule Brando.Villain do
   """
   def list_ids_with_template(schema, data_field, template_id) do
     t = [%{type: "template", data: %{id: template_id}}]
+    d = [%{type: "datasource", data: %{template: template_id}}]
 
     Brando.repo().all(
       from s in schema,
         select: s.id,
-        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t)
+        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t),
+        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^d)
     )
   end
 
@@ -282,6 +284,14 @@ defmodule Brando.Villain do
     %Brando.Villain.Template{}
     |> Brando.Villain.Template.changeset(params)
     |> Brando.repo().insert
+  end
+
+  @doc """
+  Delete template by `id`
+  """
+  def delete_template(id) do
+    {:ok, template} = get_template(id)
+    Brando.repo().delete(template)
   end
 
   @doc """

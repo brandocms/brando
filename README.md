@@ -35,6 +35,67 @@ config :my_app, MyApp.Endpoint,
   * `imagemagick`/`mogrify` or `sharp`/`sharp-cli` for image processing.
   * `gifsicle` for GIF resizing.
 
+
+## Datasources
+
+The content editor can access datasources from the frontend.
+
+First register the datasource in your schema:
+
+```elixir
+  use Brando.Datasource
+
+  datasource :many, %{
+    shareholders: &MyApplication.Shares.list_shareholders/0
+  }
+```
+
+It's important that the `create`, `update` and `delete` functions in your context file calls
+`Brando.Datasource.update_datasource(<schema>, entry)`
+
+Examples here:
+
+```elixir
+  @doc """
+  Create new artist
+  """
+  @spec create_artist(params, user | :system) :: {:ok, Artist.t()} | {:error, Ecto.Changeset.t()}
+  def create_artist(artist_params, user \\ :system) do
+    with changeset <- Artist.changeset(%Artist{}, artist_params, user),
+         {:ok, entry} <- Repo.insert(changeset) do
+      Brando.Datasource.update_datasource(Artist, entry)
+    else
+      err -> err
+    end
+  end
+
+  @doc """
+  Update existing artist
+  """
+  @spec update_artist(id, params, user | :system) ::
+          {:ok, Artist.t()} | {:error, Ecto.Changeset.t()}
+  def update_artist(artist_id, artist_params, user \\ :system) do
+    with {:ok, artist} <- get_artist(artist_id),
+         changeset <- Artist.changeset(artist, artist_params, user),
+         {:ok, entry} <- Repo.update(changeset) do
+      Brando.Datasource.update_datasource(Artist, entry)
+    else
+      err -> err
+    end
+  end
+
+  @doc """
+  Delete artist by id
+  """
+  @spec delete_artist(id) :: {:ok, Artist.t()}
+  def delete_artist(id) do
+    {:ok, entry} = get_artist(id)
+    Repo.delete(entry)
+    Brando.Datasource.update_datasource(Artist, entry)
+  end
+```
+
+
 ## I18n
 
 Brando uses Gettext for i18n.

@@ -1,6 +1,7 @@
 locals_without_parens = [
   sequence: 2,
-  villain: 1
+  villain: 1,
+  datasource: 2
 ]
 
 [

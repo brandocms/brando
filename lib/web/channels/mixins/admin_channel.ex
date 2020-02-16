@@ -24,7 +24,10 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "config:set",
     "config:add_key",
     "user:deactivate",
-    "user:activate"
+    "user:activate",
+    "datasource:list_modules",
+    "datasource:list_module_keys",
+    "templates:list_templates"
   ]
 
   defmacro __using__(_) do
@@ -197,5 +200,23 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   def do_handle_in("user:activate", %{"user_id" => user_id}, socket) do
     Brando.Users.set_active(user_id, true)
     {:reply, {:ok, %{code: 200, user_id: user_id}}, socket}
+  end
+
+  def do_handle_in("datasource:list_modules", _, socket) do
+    {:ok, available_modules} = Brando.Datasource.list_datasources()
+    available_modules = Enum.map(available_modules, &(Map.put(%{}, :module, &1)))
+    {:reply, {:ok, %{code: 200, available_modules: available_modules}}, socket}
+  end
+
+  def do_handle_in("datasource:list_module_keys", %{"module" => module}, socket) do
+    {:ok, available_keys} = Brando.Datasource.list_datasource_keys(module)
+    # available_keys = Enum.map(available_keys, &(Map.put(%{}, :module, &1)))
+    {:reply, {:ok, %{code: 200, available_module_keys: available_keys}}, socket}
+  end
+
+  def do_handle_in("templates:list_templates", _, socket) do
+    {:ok, templates} = Brando.Villain.list_templates("all")
+    templates = Enum.map(templates, &(%{id: &1.id, name: "#{&1.namespace} - #{&1.name}"}))
+    {:reply, {:ok, %{code: 200, templates: templates}}, socket}
   end
 end

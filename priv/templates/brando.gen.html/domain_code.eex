@@ -61,8 +61,12 @@ Create new <%= singular %>
 @spec create_<%= singular %>(params, user | :system) ::
         {:ok, <%= singular %>} | {:error, Ecto.Changeset.t()}
 def create_<%= singular %>(<%= singular %>_params, user \\ :system) do
-  changeset = <%= alias %>.changeset(%<%= alias %>{}, <%= singular %>_params, user)
-  Repo.insert(changeset)
+  with changeset <- <%= alias %>.changeset(%<%= alias %>{}, <%= singular %>_params, user),
+       {:ok, <%= singular %>} <- Repo.insert(changeset) do
+    Brando.Datasource.update_datasource(<%= alias %>, <%= singular %>)
+  else
+    err -> err
+  end
 end
 
 @doc """
@@ -71,11 +75,13 @@ Update existing <%= singular %>
 @spec update_<%= singular %>(id, params, user | :system) ::
         {:ok, <%= singular %>} | {:error, Ecto.Changeset.t()}
 def update_<%= singular %>(<%= singular %>_id, <%= singular %>_params, user \\ :system) do
-  {:ok, <%= singular %>} = get_<%= singular %>(<%= singular %>_id)
-
-  <%= singular %>
-  |> <%= alias %>.changeset(<%= singular %>_params, user)
-  |> Repo.update()
+  with {:ok, <%= singular %>} <- get_<%= singular %>(<%= singular %>_id),
+       changeset <- <%= alias %>.changeset(<%= singular %>, <%= singular %>_params, user),
+       {:ok, <%= singular %>} <- Repo.update(changeset) do
+    Brando.Datasource.update_datasource(<%= alias %>, <%= singular %>)
+  else
+    err -> err
+  end
 end
 
 @doc """
@@ -89,7 +95,7 @@ def delete_<%= singular %>(id) do
   Repo.delete(<%= singular %>)<% end %>
   <%= for {_v, k} <- gallery_fields || [] do %>
   Brando.Images.delete_series(<%= singular %>.<%= k %>)<% end %>
-  {:ok, <%= singular %>}
+  Brando.Datasource.update_datasource(<%= alias %>, <%= singular %>)
 end
 
 <%= if gallery do %>
