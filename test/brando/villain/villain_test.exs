@@ -4,6 +4,7 @@ defmodule Brando.VillainTest do
 
     def text(%{"text" => _, "type" => _}), do: "other parser"
     def datatable(_), do: nil
+    def datasource(_), do: nil
     def markdown(_), do: nil
     def html(_), do: nil
     def map(_), do: nil
@@ -23,7 +24,7 @@ defmodule Brando.VillainTest do
   use ExUnit.Case, async: true
   alias Brando.Factory
 
-  @parser_mod Brando.Villain.Parser.Default
+  @parser_mod Brando.Villain.ParserTest.Parser
 
   setup do
     user = Factory.insert(:user)

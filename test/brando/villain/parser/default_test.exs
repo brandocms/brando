@@ -1,3 +1,8 @@
+
+defmodule Brando.Villain.ParserTest.Parser do
+  use Brando.Villain.Parser
+end
+
 defmodule Brando.Villain.ParserTest do
   use ExUnit.Case
   use Brando.Integration.TestCase
@@ -6,7 +11,7 @@ defmodule Brando.Villain.ParserTest do
   alias Brando.Factory
   alias Brando.Images
 
-  import Brando.Villain.Parser.Default
+  import __MODULE__.Parser
 
   test "header/1" do
     assert header(%{"text" => "Header"}) == ~s(<h1>Header</h1>)
