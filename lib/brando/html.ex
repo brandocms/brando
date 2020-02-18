@@ -57,7 +57,7 @@ defmodule Brando.HTML do
       <div class="video-wrapper" data-smart-video>
         #{cover}
         <video
-          tabindex="-1"
+          tabindex="0"
           role="presentation"
           preload="auto"
           muted
@@ -68,7 +68,7 @@ defmodule Brando.HTML do
           #{preload && "" || "src=\"#{src}\""}></video>
         <noscript>
           <video
-            tabindex="-1"
+            tabindex="0"
             role="presentation"
             preload="metadata"
             muted
