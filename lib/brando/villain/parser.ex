@@ -51,8 +51,6 @@ defmodule Brando.Villain.Parser do
   @doc "Parses datasource"
   @callback datasource(%{String.t() => any}) :: String.t()
 
-  # @optional_callbacks handle_call: 3
-
   defmacro __using__(_) do
     quote do
       @behaviour Brando.Villain.Parser
@@ -91,22 +89,16 @@ defmodule Brando.Villain.Parser do
             "template" => template_id,
             "wrapper" => wrapper
           }) do
-        require Logger
-
         {:ok, entries} = Brando.Datasource.get_many(module, query)
         {:ok, template} = Brando.Villain.get_template(template_id)
 
         content =
           for entry <- entries do
             Regex.replace(~r/\${entry\:(\w+)}/, template.code, fn _, match ->
-              require Logger
-              Logger.error inspect match, pretty: true
               var_path =
                 match
                 |> String.split(".")
                 |> Enum.map(&String.to_existing_atom/1)
-
-              Logger.error inspect var_path, pretty: true
 
               case get_in(entry, var_path) do
                 nil ->
@@ -121,8 +113,6 @@ defmodule Brando.Villain.Parser do
             end)
           end
           |> Enum.join("\n")
-
-        Logger.error inspect content, pretty: true
 
         String.replace(wrapper, "${CONTENT}", content)
       end
