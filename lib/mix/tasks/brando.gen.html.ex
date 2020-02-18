@@ -249,13 +249,13 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     Mix.Brando.add_to_file(
       "assets/backend/src/menus/index.js",
       "imports",
-      "import #{binding[:plural]} from './#{binding[:plural]}'"
+      "import #{binding[:vue_plural]} from './#{binding[:vue_plural]}'"
     )
 
     Mix.Brando.add_to_file(
       "assets/backend/src/menus/index.js",
       "content",
-      "#{binding[:plural]}"
+      "#{binding[:vue_plural]}"
     )
 
     ## ROUTES
@@ -263,13 +263,13 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     Mix.Brando.add_to_file(
       "assets/backend/src/routes/index.js",
       "imports",
-      "import #{binding[:plural]} from './#{binding[:plural]}'"
+      "import #{binding[:vue_plural]} from './#{binding[:vue_plural]}'"
     )
 
     Mix.Brando.add_to_file(
       "assets/backend/src/routes/index.js",
       "content",
-      "#{binding[:plural]}"
+      "#{binding[:vue_plural]}"
     )
 
     ## GQL SCHEMA
