@@ -36,6 +36,7 @@ defmodule Brando.HTML do
     height = Map.get(opts, :height)
     opacity = Map.get(opts, :opacity, 0)
     preload = Map.get(opts, :preload, false)
+    autoplay = Map.get(opts, :autoplay, false) && "autoplay" || ""
 
     cover =
       if width do
@@ -60,6 +61,7 @@ defmodule Brando.HTML do
           tabindex="0"
           role="presentation"
           preload="auto"
+          #{autoplay}
           muted
           loop
           playsinline
