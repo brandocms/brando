@@ -28,7 +28,12 @@ export default {
 
   data () {
     return {
-      <%= vue_singular %>: {}
+      <%= vue_singular %>: {},
+      queryVars: {
+        filter: null,
+        offset: 0,
+        limit: 25
+      }
     }
   },
 
@@ -59,7 +64,8 @@ export default {
 
           update: (store, { data: { create<%= Recase.to_pascal(vue_singular) %> } }) => {
             const query = {
-              query: GET_<%= String.upcase(plural) %>
+              query: GET_<%= String.upcase(plural) %>,
+              variables: { ...this.queryVars }
             }
             const data = store.readQuery(query)
             data.<%= vue_plural %>.push(create<%= Recase.to_pascal(vue_singular) %>)

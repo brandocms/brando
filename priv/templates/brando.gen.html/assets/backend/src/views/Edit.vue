@@ -35,6 +35,11 @@ export default {
 
   data () {
     return {
+      queryVars: {
+        filter: null,
+        offset: 0,
+        limit: 25
+      }
     }
   },
 

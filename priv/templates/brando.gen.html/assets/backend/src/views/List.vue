@@ -42,7 +42,7 @@
       :sortable="true"
       @sort="sortEntries"<% end %>
       :filter-keys="['title']"
-      @filter="filter = $event"
+      @filter="queryVars.filter = $event"
       @more="showMore">
 
       <template v-slot:selected="{ entries, clearSelection }">
@@ -80,7 +80,6 @@
         </div>
       </template>
     </ContentList>
-    <button @click="showMore()">{{ $t('<%= vue_plural %>.more') }}</button>
   </article>
 </template>
 
@@ -92,9 +91,12 @@ import GET_<%= String.upcase(plural) %> from '../../gql/<%= snake_domain %>/<%= 
 export default {
   data () {
     return {
-      filter: null,
-      offset: 0,
-      page: 0
+      queryVars: {
+        filter: null,
+        offset: 0,
+        limit: 25
+      },
+      page: 0,
       // if the entries has children, enable this
       // and call ChildrenButton with :visible-children="visibleChildren".
       // You can then query the child list for visibility with this.
@@ -114,9 +116,9 @@ export default {
       this.$apollo.queries.<%= vue_plural %>.fetchMore({
         // New variables
         variables: {
-          limit: 25,
+          limit: this.queryVars.limit,
           offset: this.page * 25,
-          filter: this.filter
+          filter: this.queryVars.filter
         },
         // Transform the previous result with new data
         updateQuery: (previousResult, { fetchMoreResult }) => {
@@ -138,7 +140,10 @@ export default {
         .receive('ok', payload => {
           this.$toast.success({ message: this.$t('<%= vue_plural %>.sequence-updated') })
 
-          const query = { query: GET_<%= String.upcase(plural) %> }
+          const query = {
+            query: GET_<%= String.upcase(plural) %>,
+            variables: { ...this.queryVars }
+          }
           const store = this.$apolloProvider.defaultClient.store.cache
           const data = store.readQuery(query)
 
@@ -187,7 +192,8 @@ export default {
             update: (store, { data: { delete<%= Recase.to_pascal(vue_singular) %> } }) => {
               try {
                 const query = {
-                  query: GET_<%= String.upcase(plural) %>
+                  query: GET_<%= String.upcase(plural) %>,
+                  variables: { ...this.queryVars }
                 }
                 const data = store.readQuery(query)
                 const idx = data.<%= vue_plural %>.findIndex(<%= vue_singular %> => parseInt(<%= vue_singular %>.id) === parseInt(entryId))
@@ -234,9 +240,9 @@ export default {
       debounce: 750,
       variables () {
         return {
-          limit: 25,
-          offset: 0,
-          filter: this.filter
+          limit: this.queryVars.limit,
+          offset: this.queryVars.offset,
+          filter: this.queryVars.filter
         }
       }
     }
