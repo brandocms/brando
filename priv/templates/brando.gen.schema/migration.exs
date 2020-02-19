@@ -17,6 +17,7 @@ defmodule <%= base %>.Repo.Migrations.Create<%= scoped %> do
     end
   <%= for index <- indexes do %>
     <%= index %><% end %><%= if creator do %>
-    create index(:<%= snake_domain %>_<%= plural %>, [:creator_id])<% end %>
+    create index(:<%= snake_domain %>_<%= plural %>, [:creator_id])<% end %><%= if status do %>
+    create index(:<%= snake_domain %>_<%= plural %>, [:status])<% end %>
   end
 end

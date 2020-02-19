@@ -46,18 +46,20 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
     attrs =
       Mix.shell().prompt(
-        "+ Enter schema fields (e.g. name:string meta_description:text avatar:image data:villain image_series:gallery user:references:users)"
+        "+ Enter schema fields (e.g. name:string status:status meta_description:text avatar:image data:villain image_series:gallery user:references:users)"
       )
       |> String.trim("\n")
 
     org_attrs = attrs |> String.split(" ")
     attrs = org_attrs |> Mix.Brando.attrs()
+    main_field = attrs |> List.first() |> elem(0)
     villain? = :villain in Keyword.values(attrs)
     sequenced? = Mix.shell().yes?("\nMake schema sequenceable?")
     soft_delete? = Mix.shell().yes?("\nAdd soft deletion?")
     creator? = Mix.shell().yes?("\nAdd creator?")
     image_field? = :image in Keyword.values(attrs)
     gallery? = :gallery in Keyword.values(attrs)
+    status? = :status in Keyword.values(attrs)
     binding = Mix.Brando.inflect(singular)
     path = binding[:path]
 
@@ -101,6 +103,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
           image_field: image_field?,
           villain: villain?,
           gallery: gallery?,
+          status: status?,
           sequenced: sequenced?,
           soft_delete: soft_delete?,
           creator: creator?,
@@ -120,7 +123,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
           snake_domain: snake_domain,
           domain: domain_name,
           vue_singular: Recase.to_camel(binding[:singular]),
-          vue_plural: Recase.to_camel(vue_plural)
+          vue_plural: Recase.to_camel(vue_plural),
+          main_field: main_field
         ]
 
     args = [singular, plural, org_attrs]
@@ -191,6 +195,13 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     {files, args} =
       if gallery? do
         {files, args ++ ["--gallery"]}
+      else
+        {files, args}
+      end
+
+    {files, args} =
+      if status? do
+        {files, args ++ ["--status"]}
       else
         {files, args}
       end
@@ -426,6 +437,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       {k, :gallery} ->
         {k, ~s<field #{inspect(k)}_id, :id>}
 
+      {k, :status} ->
+          {k, ~s<field :status, :string>}
+
       {k, _} ->
         {k, ~s<field #{inspect(k)}, :string>}
     end)
@@ -468,26 +482,11 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       {k, :villain} ->
         {k, ""}
 
+      {k, :status} ->
+        {k, ""}
+
       {k, :gallery} ->
-        {k, ~s(<div class="col-2">
-          <template v-if="entry.#{k}_id">
-            <ModalImageSeries
-              :selectedImages="selectedImages"
-              :imageSeriesId="entry.#{k}_id"
-              :showModal="showImageSeriesModal === entry.#{k}_id"
-              @close="closeImageSeriesModal"
-              v-if="showImageSeriesModal === entry.#{k}_id"
-            />
-            <button @click.prevent="openImageSeriesModal\(entry.#{k}_id\)" class="btn btn-white" v-b-popover.hover.top="'Rediger galleri'">
-              <i class="fal fa-fw fa-images"> </i>
-            </button>
-          </template>
-          <template v-else>
-            <button @click.prevent="createImageSeries\(entry.id\)" class="btn btn-white" v-b-popover.hover.top="'Lag bildegalleri'">
-              <i class="fal fa-fw fa-plus"> </i>
-            </button>
-          </template>
-        </div>)}
+        {k, ""}
 
       {:title = k, _} ->
         {k, ~s(<div class="col-2">
@@ -548,6 +547,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k, k}
 
       {k, :datetime} ->
+        {k, k}
+
+      {k, :status} ->
         {k, k}
 
       {k, :gallery} ->
@@ -612,6 +614,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         k = (k == :data && :data) || String.to_atom(Atom.to_string(k) <> "_data")
         {k, ~s<field #{inspect(k)}, :json>}
 
+      {k, :status} ->
+        {k, ~s<field #{inspect(k)}, :string>}
+
       {k, :gallery} ->
         {k, ~s<field #{inspect(k)}_id, :id>}
 
@@ -653,7 +658,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
       {k, :boolean} ->
         {k,
          [
-           "<KInputCheckbox",
+           "<KInputToggle",
            "v-model=\"#{singular}.#{k}\"",
            "name=\"#{singular}[#{k}]\"",
            "label=\"#{String.capitalize(to_string(k))}\"",
@@ -671,6 +676,16 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "placeholder=\"#{String.capitalize(to_string(k))}\"",
            "/>"
          ]}
+
+      {:status, :status} ->
+        {:status, [
+          "<KInputStatus",
+          "v-model=\"#{singular}.status\"",
+          "rules=\"required\"",
+          "name=\"#{singular}[status]\"",
+          "label=\"Status\"",
+          "/>"
+        ]}
 
       {k, :date} ->
         {k,

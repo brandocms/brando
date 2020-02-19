@@ -8,9 +8,6 @@ defmodule Brando.Villain.ParserTest do
   use Brando.Integration.TestCase
   use Brando.ConnCase
 
-  alias Brando.Factory
-  alias Brando.Images
-
   import __MODULE__.Parser
 
   test "header/1" do
@@ -26,12 +23,12 @@ defmodule Brando.Villain.ParserTest do
              ~s(<p><strong>Some</strong> text here.</p>\n)
 
     assert text(%{"text" => "**Some** text here.", "type" => "lead"}) ==
-             ~s(<p class="lead"><strong>Some</strong> text here.</p>\n)
+             ~s(<div class=\"lead\">**Some** text here.</div>)
   end
 
   test "map/1" do
     assert map(%{"embed_url" => "http://nrk.no", "source" => "gmaps"}) ==
-             "<div class=\"map-wrapper\">\n         <iframe width=\"420\"\n                 height=\"315\"\n                 src=\"http://nrk.no\"\n                 frameborder=\"0\"\n                 allowfullscreen>\n         </iframe>\n       </div>"
+    "<div class=\"map-wrapper\">\n             <iframe width=\"420\"\n                     height=\"315\"\n                     src=\"http://nrk.no\"\n                     frameborder=\"0\"\n                     allowfullscreen>\n             </iframe>\n           </div>"
   end
 
   test "html/1" do
@@ -40,45 +37,12 @@ defmodule Brando.Villain.ParserTest do
 
   test "video/1 youtube" do
     assert video(%{"remote_id" => "asdf1234", "source" => "youtube"}) ==
-             """
-             <div class=\"video-wrapper\">
-               <iframe width=\"420\"
-                       height=\"315\"
-                       src=\"//www.youtube.com/embed/asdf1234?autoplay=1&controls=0&showinfo=0&rel=0\"
-                       frameborder=\"0\"
-                       allowfullscreen>
-               </iframe>
-             </div>
-             """
+             "<div class=\"video-wrapper\">\n             <iframe width=\"420\"\n                     height=\"315\"\n                     src=\"//www.youtube.com/embed/asdf1234?autoplay=1&controls=0&showinfo=0&rel=0\"\n                     frameborder=\"0\"\n                     allowfullscreen>\n             </iframe>\n           </div>"
   end
 
   test "video/1 vimeo" do
     assert video(%{"remote_id" => "asdf1234", "source" => "vimeo"}) ==
-             """
-             <div class=\"video-wrapper\">
-               <iframe src=\"//player.vimeo.com/video/asdf1234\"
-                       width=\"500\"
-                       height=\"281\"
-                       frameborder=\"0\"
-                       webkitallowfullscreen
-                       mozallowfullscreen
-                       allowfullscreen>
-               </iframe>
-             </div>
-             """
-  end
-
-  test "image/1" do
-    assert image(%{"url" => "http://vg.no", "title" => "Caption", "credits" => "Credits"}) ==
-             ~s(<div class=\"img-wrapper\">\n  <img src=\"http://vg.no\" alt=\"Caption/Credits\" class=\"img-fluid\" />\n  <div class=\"image-info-wrapper\">\n    <div class=\"image-title\">\n      Caption\n    </div>\n    <div class=\"image-credits\">\n      Credits\n    </div>\n  </div>\n</div>\n)
-
-    assert image(%{
-             "url" => "http://vg.no",
-             "title" => "Caption",
-             "credits" => "Credits",
-             "link" => "http://db.no"
-           }) ==
-             ~s(<div class="img-wrapper">\n  <a href="http://db.no" title="Caption"><img src="http://vg.no" alt="Caption/Credits" class="img-fluid" /></a>\n  <div class="image-info-wrapper">\n    <div class="image-title">\n      Caption\n    </div>\n    <div class="image-credits">\n      Credits\n    </div>\n  </div>\n</div>\n)
+             "<div class=\"video-wrapper\">\n             <iframe src=\"//player.vimeo.com/video/asdf1234\"\n                     width=\"500\"\n                     height=\"281\"\n                     frameborder=\"0\"\n                     webkitallowfullscreen\n                     mozallowfullscreen\n                     allowfullscreen>\n             </iframe>\n           </div>"
   end
 
   test "divider/1" do
@@ -116,59 +80,5 @@ defmodule Brando.Villain.ParserTest do
 
     assert blockquote(%{"text" => "> Some text", "cite" => ""}) ==
              "<blockquote><p>Some text</p>\n</blockquote>\n"
-  end
-
-  test "slideshow/1" do
-    setup_images()
-
-    ret = slideshow(%{"imageseries" => "my-slides", "size" => "small"})
-
-    assert ret =~ "/media/tmp/path/to/fake/image.jpg"
-    assert ret =~ "/media/tmp/path/to/fake/image2.jpg"
-  end
-
-  defp setup_images do
-    img1 = %{
-      "sequence" => 0,
-      "image" => %{
-        "title" => "Title",
-        "credits" => "credits",
-        "path" => "/tmp/path/to/fake/image.jpg",
-        "sizes" => %{small: "/tmp/path/to/fake/image.jpg", thumb: "/tmp/path/to/fake/thumb.jpg"}
-      }
-    }
-
-    img2 = %{
-      "sequence" => 1,
-      "image" => %{
-        "title" => "Title2",
-        "credits" => "credits2",
-        "path" => "/tmp/path/to/fake/image2.jpg",
-        "sizes" => %{small: "/tmp/path/to/fake/image2.jpg", thumb: "/tmp/path/to/fake/thumb2.jpg"}
-      }
-    }
-
-    user = Factory.insert(:user)
-
-    category =
-      Factory.insert(:image_category, creator: user, name: "Slideshows", slug: "slideshows")
-
-    series =
-      Factory.insert(:image_series,
-        creator: user,
-        image_category: category,
-        name: "My Slides",
-        slug: "my-slides"
-      )
-
-    img1
-    |> Map.put("creator_id", user.id)
-    |> Map.put("image_series_id", series.id)
-    |> Images.create_image(user)
-
-    img2
-    |> Map.put("creator_id", user.id)
-    |> Map.put("image_series_id", series.id)
-    |> Images.create_image(user)
   end
 end

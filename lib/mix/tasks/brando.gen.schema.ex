@@ -60,6 +60,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
     soft_delete? = (opts[:softdelete] && true) || false
     gallery? = (opts[:gallery] && true) || false
     creator? = (opts[:creator] && true) || false
+    status? = (opts[:status] && true) || false
 
     attrs = Mix.Brando.attrs(attrs)
     binding = Mix.Brando.inflect(singular)
@@ -116,6 +117,7 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
           soft_delete: soft_delete?,
           gallery: gallery?,
           creator: creator?,
+          status: status?,
           domain: domain,
           snake_domain: snake_domain,
           migrations: migrations,

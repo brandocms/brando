@@ -191,7 +191,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       end)
 
       assert_file("assets/backend/src/views/games/CaptainListView.vue", fn file ->
-        assert file =~ ":sortable=\"true\"\n      @sort=\"sortEntries\"\n      :filter-keys=\"['title']\"\n"
+        assert file =~ ":sortable=\"true\"\n      @sort=\"sortEntries\"\n      :filter-keys=\"['name']\"\n"
       end)
 
       assert_file("assets/backend/src/views/games/CaptainListView.vue", fn file ->
@@ -224,7 +224,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
       send(
         self(),
-        {:mix_shell_input, :prompt, "name slug"}
+        {:mix_shell_input, :prompt, "name slug status:status"}
       )
 
       # sequence?

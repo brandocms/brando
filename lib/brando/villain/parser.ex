@@ -82,6 +82,12 @@ defmodule Brando.Villain.Parser do
       end
       defoverridable header: 1
 
+      defp try(map, keys) do
+        Enum.reduce(keys, map, fn key, acc ->
+          if acc, do: Map.get(acc, key)
+        end)
+      end
+
       def datasource(%{
             "module" => module,
             "type" => "many",
@@ -94,15 +100,31 @@ defmodule Brando.Villain.Parser do
 
         content =
           for entry <- entries do
-            Regex.replace(~r/\${entry\:(\w+)}/, template.code, fn _, match ->
+            Regex.replace(~r/\${entry\:(\w+)\|?(\w+)?}/, template.code, fn _, key, param ->
               var_path =
-                match
+                key
                 |> String.split(".")
                 |> Enum.map(&String.to_existing_atom/1)
 
-              case get_in(entry, var_path) do
+              case try(entry, var_path) do
                 nil ->
-                  "${entry:#{match}}"
+                  "${entry:#{key}}"
+
+                %Brando.Type.Image{} = img ->
+                  key = param != "" && String.to_existing_atom(param) || :xlarge
+                  mod = Module.concat([module])
+
+                  picture_tag(img,
+                    key: key,
+                    picture_class: "picture-img",
+                    width: true,
+                    height: true,
+                    placeholder: :svg,
+                    lazyload: true,
+                    prefix: Brando.Utils.media_url(),
+                    srcset: {mod, List.last(var_path)}
+                    # cache: img.updated_at,
+                  ) |> safe_to_string
 
                 var when is_integer(var) ->
                   Integer.to_string(var)

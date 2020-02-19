@@ -9,7 +9,7 @@
       </template>
       <template v-slot:help>
         <p>
-          Help text
+          {{ $t('<%= vue_plural %>.help-text') }}
         </p>
       </template>
     </ContentHeader>
@@ -40,8 +40,9 @@
       v-if="<%= vue_plural %>"
       :entries="<%= vue_plural %>"<%= if sequenced do %>
       :sortable="true"
-      @sort="sortEntries"<% end %>
-      :filter-keys="['title']"
+      @sort="sortEntries"<% end %><%= if status do %>
+      :status="true"<% end %>
+      :filter-keys="['<%= main_field %>']"
       @filter="queryVars.filter = $event"
       @more="showMore">
 
@@ -269,6 +270,7 @@ export default {
     "<%= vue_plural %>.delete-confirm": "Are you sure you want to delete this?",
     "<%= vue_plural %>.delete-confirm-many": "Are you sure you want to delete these entries?",
     "<%= vue_plural %>.sequence-updated": "Sequence updated",
+    "<%= vue_plural %>.help-text": "",
     "<%= vue_plural %>.more": "More"
   },
   "nb": {
@@ -285,6 +287,7 @@ export default {
     "<%= vue_plural %>.delete-confirm": "Er du sikker på at du vil slette dette?",
     "<%= vue_plural %>.delete-confirm-many": "Er du sikker på at du vil slette disse?",
     "<%= vue_plural %>.sequence-updated": "Rekkefølge oppdatert",
+    "<%= vue_plural %>.help-text": "",
     "<%= vue_plural %>.more": "Mer"
   }
 }

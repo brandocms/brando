@@ -8,14 +8,21 @@ def list_<%= plural %>(args \\ %{}) do
     |> Enum.reduce(<%= alias %>, fn
       {_, nil}, query ->
         query
-      {:order, {dir, by}}, query ->
-        query |> order_by({^dir, ^by})
+
+      {:order, order}, query ->
+        query |> with_order(order)
+
       {:offset, offset}, query ->
         query |> offset(^offset)
+
       {:limit, limit}, query ->
         query |> limit(^limit)
+
       {:filter, filter}, query ->
-        query |> filter_with(filter)
+        query |> with_filter(filter)<%= if status do %>
+
+      {:status, status}, query ->
+        query |> with_status(status)<% end %>
     end)
 
   query =
@@ -24,15 +31,29 @@ def list_<%= plural %>(args \\ %{}) do
   {:ok, Repo.all(query)}
 end
 
-defp filter_with(query, filter) do
+defp with_order(query, {_, "status"}) do
+  query
+  |> order_by(fragment("status=0 DESC"))
+  |> order_by(fragment("status=2 DESC"))
+  |> order_by(fragment("status=1 DESC"))
+  |> order_by(fragment("status=3 DESC"))
+end
+
+defp with_order(query, {dir, by}), do: query |> order_by({^dir, ^by})
+
+defp with_filter(query, filter) do
   Enum.reduce(filter, query, fn
-    {:title, title}, query ->
-      from q in query, where: ilike(q.title, ^"%#{title}%")
+    {:<%= main_field %>, <%= main_field %>}, query ->
+      from q in query, where: ilike(q.<%= main_field %>, ^"%#{<%= main_field %>}%")
 
     # {:featured, featured}, query ->
     #   from q in query, where: q.featured == ^featured
   end)
-end
+end<%= if status do %>
+
+defp with_status(query, "all"), do: query
+defp with_status(query, status), do: from q in query, where: q.status == ^status
+<% end %>
 
 @doc """
 Get single <%= singular %>
