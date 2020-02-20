@@ -122,15 +122,21 @@ defmodule Brando.Villain.Parser do
                     placeholder: :svg,
                     lazyload: true,
                     prefix: Brando.Utils.media_url(),
-                    srcset: {mod, List.last(var_path)}
-                    # cache: img.updated_at,
+                    srcset: {mod, List.last(var_path)},
+                    cache: entry.updated_at
                   ) |> safe_to_string
 
                 var when is_integer(var) ->
                   Integer.to_string(var)
 
                 var ->
-                  var
+                  case param do
+                    "" -> var
+
+
+
+
+                  end
               end
             end)
           end
