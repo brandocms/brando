@@ -204,7 +204,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
 
   def do_handle_in("datasource:list_modules", _, socket) do
     {:ok, available_modules} = Brando.Datasource.list_datasources()
-    available_modules = Enum.map(available_modules, &(Map.put(%{}, :module, &1)))
+    available_modules = Enum.map(available_modules, &Map.put(%{}, :module, &1))
     {:reply, {:ok, %{code: 200, available_modules: available_modules}}, socket}
   end
 
@@ -216,7 +216,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
 
   def do_handle_in("templates:list_templates", _, socket) do
     {:ok, templates} = Brando.Villain.list_templates("all")
-    templates = Enum.map(templates, &(%{id: &1.id, name: "#{&1.namespace} - #{&1.name}"}))
+    templates = Enum.map(templates, &%{id: &1.id, name: "#{&1.namespace} - #{&1.name}"})
     {:reply, {:ok, %{code: 200, templates: templates}}, socket}
   end
 end

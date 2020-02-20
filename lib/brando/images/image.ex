@@ -39,7 +39,7 @@ defmodule Brando.Image do
     soft_delete()
   end
 
-  has_image_field :image, :db
+  has_image_field(:image, :db)
 
   @doc """
   Casts and validates `params` against `schema` to create a valid changeset

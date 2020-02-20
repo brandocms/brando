@@ -105,7 +105,8 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
         assert file =~ "field :cover, Brando.Type.Image"
         assert file =~ "field :pdf, Brando.Type.File"
 
-        assert file =~ "@required_fields ~w(name age height famous born_at secret first_login alarm creator_id data biography_data address_id)a"
+        assert file =~
+                 "@required_fields ~w(name age height famous born_at secret first_login alarm creator_id data biography_data address_id)a"
 
         assert file =~ "@optional_fields ~w(cover pdf)"
         assert file =~ "use Brando.Sequence.Schema"
@@ -191,7 +192,8 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       end)
 
       assert_file("assets/backend/src/views/games/CaptainListView.vue", fn file ->
-        assert file =~ ":sortable=\"true\"\n      @sort=\"sortEntries\"\n      :filter-keys=\"['name']\"\n"
+        assert file =~
+                 ":sortable=\"true\"\n      @sort=\"sortEntries\"\n      :filter-keys=\"['name']\"\n"
       end)
 
       assert_file("assets/backend/src/views/games/CaptainListView.vue", fn file ->
@@ -249,7 +251,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
 
       assert_file("assets/backend/src/gql/projects/PROJECTS_QUERY.graphql", fn file ->
         assert file =~
-          "#import \"./PROJECT_FRAGMENT.graphql\"\nquery Projects ($order: ProjectOrder, $limit: Int, $offset: Int, $filter: ProjectFilter) {\n  projects (order: $order, limit: $limit, offset: $offset, filter: $filter) {\n    ...project\n  }\n}\n"
+                 "#import \"./PROJECT_FRAGMENT.graphql\"\nquery Projects ($order: ProjectOrder, $limit: Int, $offset: Int, $filter: ProjectFilter) {\n  projects (order: $order, limit: $limit, offset: $offset, filter: $filter) {\n    ...project\n  }\n}\n"
       end)
     end)
   end

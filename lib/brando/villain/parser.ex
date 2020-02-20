@@ -80,6 +80,7 @@ defmodule Brando.Villain.Parser do
       def header(%{"text" => text}) do
         "<h1>" <> nl2br(text) <> "</h1>"
       end
+
       defoverridable header: 1
 
       defp try(map, keys) do
@@ -111,7 +112,7 @@ defmodule Brando.Villain.Parser do
                   "${entry:#{key}}"
 
                 %Brando.Type.Image{} = img ->
-                  key = param != "" && String.to_existing_atom(param) || :xlarge
+                  key = (param != "" && String.to_existing_atom(param)) || :xlarge
                   mod = Module.concat([module])
 
                   picture_tag(img,
@@ -124,7 +125,8 @@ defmodule Brando.Villain.Parser do
                     prefix: Brando.Utils.media_url(),
                     srcset: {mod, List.last(var_path)},
                     cache: entry.updated_at
-                  ) |> safe_to_string
+                  )
+                  |> safe_to_string
 
                 var when is_integer(var) ->
                   Integer.to_string(var)
@@ -132,10 +134,6 @@ defmodule Brando.Villain.Parser do
                 var ->
                   case param do
                     "" -> var
-
-
-
-
                   end
               end
             end)
@@ -144,6 +142,7 @@ defmodule Brando.Villain.Parser do
 
         String.replace(wrapper, "${CONTENT}", content)
       end
+
       defoverridable datasource: 1
 
       @doc """
@@ -159,6 +158,7 @@ defmodule Brando.Villain.Parser do
 
         Earmark.as_html!(text, %Earmark.Options{breaks: true})
       end
+
       defoverridable text: 1
 
       @doc """
@@ -173,6 +173,7 @@ defmodule Brando.Villain.Parser do
       def markdown(%{"text" => markdown}) do
         Earmark.as_html!(markdown, %Earmark.Options{breaks: false})
       end
+
       defoverridable markdown: 1
 
       @doc """
@@ -188,6 +189,7 @@ defmodule Brando.Villain.Parser do
              </iframe>
            </div>)
       end
+
       defoverridable map: 1
 
       @doc """
@@ -222,8 +224,14 @@ defmodule Brando.Villain.Parser do
       Convert file video to html
       """
       def video(%{"remote_id" => src, "source" => "file"} = data) do
-        video_tag(src, %{width: data["width"], height: data["height"], preload: true, opacity: 0.1})
+        video_tag(src, %{
+          width: data["width"],
+          height: data["height"],
+          preload: true,
+          opacity: 0.1
+        })
       end
+
       defoverridable video: 1
 
       @doc """
@@ -306,6 +314,7 @@ defmodule Brando.Villain.Parser do
         </div>
         """
       end
+
       defoverridable picture: 1
 
       @doc """
@@ -359,6 +368,7 @@ defmodule Brando.Villain.Parser do
         </div>
         """
       end
+
       defoverridable image: 1
 
       @doc """
@@ -389,6 +399,7 @@ defmodule Brando.Villain.Parser do
         </div>
         """
       end
+
       defoverridable slideshow: 1
 
       @doc """
@@ -417,6 +428,7 @@ defmodule Brando.Villain.Parser do
         </div>
         """
       end
+
       defoverridable datatable: 1
 
       @doc """
@@ -443,6 +455,7 @@ defmodule Brando.Villain.Parser do
       def blockquote(%{"text" => blockquote}) do
         Earmark.as_html!(blockquote)
       end
+
       defoverridable blockquote: 1
 
       @doc """
@@ -473,6 +486,7 @@ defmodule Brando.Villain.Parser do
 
         ~s(<div class="row">#{col_html}</div>)
       end
+
       defoverridable columns: 1
 
       @doc """
@@ -503,6 +517,7 @@ defmodule Brando.Villain.Parser do
           end
         end)
       end
+
       defoverridable template: 1
 
       @doc """
@@ -529,6 +544,7 @@ defmodule Brando.Villain.Parser do
 
         ~s(<ul class="villain-timeline">#{timeline_html}</ul>)
       end
+
       defoverridable timeline: 1
       # ...
     end

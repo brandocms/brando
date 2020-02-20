@@ -98,6 +98,7 @@ defmodule Brando.Pages do
       |> Enum.reduce(Page, fn
         {_, nil}, query ->
           query
+
         {:filter, filter}, query ->
           query |> filter_with(filter)
 
@@ -106,7 +107,7 @@ defmodule Brando.Pages do
 
         {:limit, limit}, query ->
           query |> limit(^limit)
-        end)
+      end)
 
     query =
       from q in query,

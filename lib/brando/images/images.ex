@@ -513,6 +513,6 @@ defmodule Brando.Images do
     Images.Utils.get_orphaned_series(categories, series, starts_with: "images/site")
   end
 
-  defp map_keys_to_strings(map), do:
-    for {key, val} <- map, into: %{}, do: {Atom.to_string(key), val}
+  defp map_keys_to_strings(map),
+    do: for({key, val} <- map, into: %{}, do: {Atom.to_string(key), val})
 end

@@ -104,10 +104,12 @@ defmodule Brando.Field.Image.Schema do
       end
 
       defp grab_cfg(nil, field_name, _), do: get_image_cfg(field_name)
+
       defp grab_cfg(:db, _, changeset) do
         image_series_id = get_field(changeset, :image_series_id)
         Brando.Images.get_series_config(image_series_id)
       end
+
       defp grab_cfg(cfg, _, _) do
         {:ok, cfg}
       end

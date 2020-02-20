@@ -12,11 +12,16 @@ defmodule Brando.Images.ImageResolver do
         context: %{current_user: current_user}
       }) do
     {:ok, cfg} = Images.get_series_config(series_id)
-    Images.Uploads.Schema.handle_upload(%{
-      "image" => image,
-      "image_series_id" => series_id
-    }, cfg, current_user)
-    |> List.first
+
+    Images.Uploads.Schema.handle_upload(
+      %{
+        "image" => image,
+        "image_series_id" => series_id
+      },
+      cfg,
+      current_user
+    )
+    |> List.first()
     |> response
   end
 
@@ -29,7 +34,9 @@ defmodule Brando.Images.ImageResolver do
     {:ok, 200}
   end
 
-  def update_meta(%{image_id: image_id, image_meta_params: image_meta_params}, %{context: %{current_user: current_user}}) do
+  def update_meta(%{image_id: image_id, image_meta_params: image_meta_params}, %{
+        context: %{current_user: current_user}
+      }) do
     image = Brando.Images.get_image!(image_id)
     Brando.Images.update_image_meta(image, image_meta_params, current_user)
   end

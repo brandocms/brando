@@ -99,6 +99,7 @@ defmodule Brando.ImageSeries do
     case get_change(cs, :cfg) do
       nil ->
         cat_id = get_field(cs, :image_category_id)
+
         if !cat_id do
           raise "inherit_configuration => image_category_id === nil!"
         end
@@ -118,6 +119,7 @@ defmodule Brando.ImageSeries do
         cs
     end
   end
+
   def inherit_configuration(cs) do
     cs
   end
@@ -146,5 +148,6 @@ defmodule Brando.ImageSeries do
       cs
     end
   end
+
   def validate_paths(cs), do: cs
 end

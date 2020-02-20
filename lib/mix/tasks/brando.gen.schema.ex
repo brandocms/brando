@@ -210,8 +210,9 @@ defmodule Mix.Tasks.Brando.Gen.Schema do
   end
 
   defp maybe_add_creator_field(fields, %{creator: false}), do: fields
-  defp maybe_add_creator_field(fields, %{creator: true}), do:
-    Enum.join([fields, "creator_id"], " ")
+
+  defp maybe_add_creator_field(fields, %{creator: true}),
+    do: Enum.join([fields, "creator_id"], " ")
 
   defp maybe_add_villain_fields(fields, %{villain_fields: []}), do: fields
 

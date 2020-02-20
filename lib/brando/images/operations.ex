@@ -34,7 +34,7 @@ defmodule Brando.Images.Operations do
     total_operations =
       Map.get(cfg, :sizes)
       |> Map.keys()
-      |> Enum.count
+      |> Enum.count()
 
     operations =
       for {{size_key, size_cfg}, idx} <- Enum.with_index(Map.get(cfg, :sizes)) do

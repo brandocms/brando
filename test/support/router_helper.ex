@@ -1,6 +1,6 @@
 defmodule Brando.Integration.LockdownController do
   use Phoenix.Controller,
-        namespace: Brando
+    namespace: Brando
 end
 
 defmodule RouterHelper do

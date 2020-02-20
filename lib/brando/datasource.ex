@@ -20,19 +20,22 @@ defmodule Brando.Datasource do
 
   @doc false
   def compile(datasources) do
-    prelude = for {type, datasource} <- datasources,
-        {key, val} <- datasource do
-      quote do
-        def __datasource__(unquote(type), unquote(key)) do
-          unquote(Macro.escape(val))
+    prelude =
+      for {type, datasource} <- datasources,
+          {key, val} <- datasource do
+        quote do
+          def __datasource__(unquote(type), unquote(key)) do
+            unquote(Macro.escape(val))
+          end
         end
       end
-    end
-    postlude = quote do
-      def __datasources__ do
-        unquote(Macro.escape(datasources))
+
+    postlude =
+      quote do
+        def __datasources__ do
+          unquote(Macro.escape(datasources))
+        end
       end
-    end
 
     [prelude, postlude]
   end
@@ -58,10 +61,12 @@ defmodule Brando.Datasource do
   """
   def list_datasource_keys(module) do
     mod = Module.concat([module])
+
     keys =
       mod.__datasources__()
       |> Enum.map(fn {k, v} -> {k, Map.keys(v)} end)
       |> Enum.into(%{})
+
     {:ok, keys}
   end
 

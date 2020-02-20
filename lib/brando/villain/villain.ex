@@ -132,7 +132,10 @@ defmodule Brando.Villain do
   We treat page fragments special, since they need to propogate to other referencing
   pages and fragments
   """
-  @spec rerender_html_from_id({schema :: Module, data_field :: atom, html_field :: atom}, Integer.t() | String.t()) :: any()
+  @spec rerender_html_from_id(
+          {schema :: Module, data_field :: atom, html_field :: atom},
+          Integer.t() | String.t()
+        ) :: any()
   def rerender_html_from_id({schema, data_field, html_field}, id) do
     parser = Brando.config(Brando.Villain)[:parser]
 

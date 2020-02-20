@@ -30,13 +30,13 @@ defmodule Brando.HTML do
   @doc """
   Returns a video tag with an overlay for lazyloading
   """
-  @spec video_tag(binary, Map.t) :: binary
+  @spec video_tag(binary, Map.t()) :: binary
   def video_tag(src, opts) do
     width = Map.get(opts, :width)
     height = Map.get(opts, :height)
     opacity = Map.get(opts, :opacity, 0)
     preload = Map.get(opts, :preload, false)
-    autoplay = Map.get(opts, :autoplay, false) && "autoplay" || ""
+    autoplay = (Map.get(opts, :autoplay, false) && "autoplay") || ""
 
     cover =
       if width do
@@ -44,10 +44,8 @@ defmodule Brando.HTML do
           <div data-cover>
             <img
               src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27#{
-            width
-          }%27%20height%3D%27#{height}%27%20style%3D%27background%3Argba%280%2C0%2C0%2C#{
-            opacity
-          }%29%27%2F%3E" />
+          width
+        }%27%20height%3D%27#{height}%27%20style%3D%27background%3Argba%280%2C0%2C0%2C#{opacity}%29%27%2F%3E" />
           </div>
         )
       else
@@ -66,8 +64,8 @@ defmodule Brando.HTML do
           loop
           playsinline
           data-video
-          #{preload && "data-src=\"#{src}\"" || ""}
-          #{preload && "" || "src=\"#{src}\""}></video>
+          #{(preload && "data-src=\"#{src}\"") || ""}
+          #{(preload && "") || "src=\"#{src}\""}></video>
         <noscript>
           <video
             tabindex="0"

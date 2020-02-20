@@ -139,7 +139,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
           {:eex, "controller.ex", "lib/application_name_web/controllers/#{path}_controller.ex"},
           {:eex, "index.html.eex", "lib/application_name_web/templates/#{path}/index.html.eex"},
           {:eex, "show.html.eex", "lib/application_name_web/templates/#{path}/show.html.eex"},
-          {:eex, "__entry.html.eex", "lib/application_name_web/templates/#{path}/__#{binding[:singular]}.html.eex"},
+          {:eex, "__entry.html.eex",
+           "lib/application_name_web/templates/#{path}/__#{binding[:singular]}.html.eex"},
           {:eex, "view.ex", "lib/application_name_web/views/#{path}_view.ex"},
 
           # GQL
@@ -438,7 +439,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k, ~s<field #{inspect(k)}_id, :id>}
 
       {k, :status} ->
-          {k, ~s<field :status, :string>}
+        {k, ~s<field :status, :string>}
 
       {k, _} ->
         {k, ~s<field #{inspect(k)}, :string>}
@@ -560,7 +561,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k, file_code}
 
       {k, :image} ->
-        image_code = "#{k} {\n    thumb: url(size: \"original\")\n    xlarge: url(size: \"xlarge\")\n    focal\n  }"
+        image_code =
+          "#{k} {\n    thumb: url(size: \"original\")\n    xlarge: url(size: \"xlarge\")\n    focal\n  }"
+
         {k, image_code}
 
       {k, :villain} ->
@@ -678,14 +681,15 @@ defmodule Mix.Tasks.Brando.Gen.Html do
          ]}
 
       {:status, :status} ->
-        {:status, [
-          "<KInputStatus",
-          "v-model=\"#{singular}.status\"",
-          "rules=\"required\"",
-          "name=\"#{singular}[status]\"",
-          "label=\"Status\"",
-          "/>"
-        ]}
+        {:status,
+         [
+           "<KInputStatus",
+           "v-model=\"#{singular}.status\"",
+           "rules=\"required\"",
+           "name=\"#{singular}[status]\"",
+           "label=\"Status\"",
+           "/>"
+         ]}
 
       {k, :date} ->
         {k,

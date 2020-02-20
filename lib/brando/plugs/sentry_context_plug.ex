@@ -5,6 +5,7 @@ defmodule Brando.Plug.SentryUserContext do
   def init(opts), do: opts
   def call(conn, _opts), do: set_context(conn)
   defp set_context(%{private: %{guardian_default_resource: nil}} = conn), do: conn
+
   defp set_context(%{private: %{guardian_default_resource: user}} = conn) do
     Sentry.Context.set_user_context(%{
       id: user.id,

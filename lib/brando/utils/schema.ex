@@ -62,6 +62,7 @@ defmodule Brando.Utils.Schema do
   Precheck :slug in `cs` to make sure we avoid collisions
   """
   def avoid_slug_collision(cs, filter_fun \\ nil)
+
   def avoid_slug_collision(%{valid?: true} = cs, filter_fun) do
     q = (filter_fun && filter_fun.(cs)) || cs.data.__struct__
     slug = Ecto.Changeset.get_change(cs, :slug)
@@ -78,6 +79,7 @@ defmodule Brando.Utils.Schema do
       cs
     end
   end
+
   def avoid_slug_collision(cs, _), do: cs
 
   defp get_unique_slug(q, slug, attempts) when attempts < @slug_collision_attemps do
@@ -89,8 +91,7 @@ defmodule Brando.Utils.Schema do
     end
   end
 
-  defp get_unique_slug(_, _, _), do:
-    {:error, :too_many_attempts}
+  defp get_unique_slug(_, _, _), do: {:error, :too_many_attempts}
 
   defp construct_slug(slug, 0), do: slug
   defp construct_slug(slug, attempts), do: "#{slug}-#{to_string(attempts)}"

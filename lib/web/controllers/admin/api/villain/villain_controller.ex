@@ -206,7 +206,7 @@ defmodule Brando.API.Villain.VillainController do
 
   def sequence_templates(conn, %{"sequence" => json_sequence}) do
     with {:ok, decoded_sequence} <- Jason.decode(json_sequence),
-      fixed_sequence <- Enum.map(decoded_sequence, &String.to_integer/1),
+         fixed_sequence <- Enum.map(decoded_sequence, &String.to_integer/1),
          _ <-
            Brando.Villain.Template.sequence(
              fixed_sequence,

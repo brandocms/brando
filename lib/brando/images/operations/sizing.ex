@@ -88,8 +88,7 @@ defmodule Brando.Images.Operations.Sizing do
 
     case image_src_exists(conversion_parameters) do
       {:ok, {:image, :exists}} ->
-        if operation_index == 1, do:
-          set_progress(conversion_parameters, 0, filename, user)
+        if operation_index == 1, do: set_progress(conversion_parameters, 0, filename, user)
 
         result =
           conversion_parameters
@@ -102,7 +101,6 @@ defmodule Brando.Images.Operations.Sizing do
           |> add_anchor()
           |> add_values()
           |> delegate_processor()
-
 
         progress_percent = operation_index / total_operations * 100
         set_progress(conversion_parameters, progress_percent, filename, user)

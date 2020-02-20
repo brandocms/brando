@@ -23,15 +23,16 @@ defmodule Brando.SoftDelete.Query do
   def list_all_soft_delete_schemas do
     {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
 
-    modules = [
-      Pages.Page,
-      Pages.PageFragment,
-      Villain.Template,
-      Image,
-      ImageCategory,
-      ImageSeries,
-      User
-    ] ++ app_modules
+    modules =
+      [
+        Pages.Page,
+        Pages.PageFragment,
+        Villain.Template,
+        Image,
+        ImageCategory,
+        ImageSeries,
+        User
+      ] ++ app_modules
 
     Enum.filter(modules, &({:__soft_delete__, 0} in &1.__info__(:functions)))
   end
@@ -43,8 +44,8 @@ defmodule Brando.SoftDelete.Query do
       from t in Brando.Image,
         where: fragment("? < current_timestamp - interval '30 day'", t.deleted_at)
 
-    for image <- Brando.repo().all(query), do:
-      Images.Utils.delete_original_and_sized_images(image, :image)
+    for image <- Brando.repo().all(query),
+        do: Images.Utils.delete_original_and_sized_images(image, :image)
 
     Brando.repo().delete_all(query)
   end
