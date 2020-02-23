@@ -101,6 +101,16 @@ defmodule Brando.Utils do
   end
 
   @doc """
+  Tries to access `keys` as a path to `map`
+  """
+  @spec try(map :: Map.t(), keys :: [atom]) :: any | nil
+  def try(map, keys) do
+    Enum.reduce(keys, map, fn key, acc ->
+      if acc, do: Map.get(acc, key)
+    end)
+  end
+
+  @doc """
   Generate a random string from `seed`
   """
   def random_string(seed) do

@@ -493,7 +493,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k, ~s(<div class="col-2">
           <router-link
             :to="{ name: '#{vue_plural}-edit', params: { #{vue_singular}Id: entry.id } }"
-            class="link name-link">
+            class="entry-link">
             {{ entry.#{k} }}
           </router-link>
         </div>)}
@@ -502,7 +502,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k, ~s(<div class="col-2">
           <router-link
             :to="{ name: '#{vue_plural}-edit', params: { #{vue_singular}Id: entry.id } }"
-            class="link name-link">
+            class="entry-link">
             {{ entry.#{k} }}
           </router-link>
         </div>)}
@@ -511,7 +511,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
         {k, ~s(<div class="col-2">
           <router-link
             :to="{ name: '#{vue_plural}-edit', params: { #{vue_singular}Id: entry.id } }"
-            class="link name-link">
+            class="entry-link">
             {{ entry.#{k} }}
           </router-link>
         </div>)}

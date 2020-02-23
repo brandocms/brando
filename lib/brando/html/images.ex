@@ -228,18 +228,26 @@ defmodule Brando.HTML.Images do
     width = Map.get(img_struct, :width) || false
     height = Map.get(img_struct, :height) || false
 
+    orientation =
+      (Map.get(img_struct, :width) > Map.get(img_struct, :height) && "landscape") || "portrait"
+
     attrs
     |> put_in([:img, :width], width)
     |> put_in([:img, :height], height)
+    |> put_in([:picture, :data_orientation], orientation)
   end
 
   defp add_dims(attrs, img_struct) do
     width = (Keyword.get(attrs.opts, :width) && Map.get(img_struct, :width)) || false
     height = (Keyword.get(attrs.opts, :height) && Map.get(img_struct, :height)) || false
 
+    orientation =
+      (Map.get(img_struct, :width) > Map.get(img_struct, :height) && "landscape") || "portrait"
+
     attrs
     |> put_in([:img, :width], width)
     |> put_in([:img, :height], height)
+    |> put_in([:picture, :data_orientation], orientation)
   end
 
   defp add_moonwalk(attrs) do

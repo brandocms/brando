@@ -56,6 +56,8 @@ defmodule Brando.Villain.Parser do
       @behaviour Brando.Villain.Parser
       import Brando.HTML
       import Phoenix.HTML
+      alias Brando.Datasource
+      alias Brando.Villain
 
       @doc """
       Convert header to HTML
@@ -83,12 +85,6 @@ defmodule Brando.Villain.Parser do
 
       defoverridable header: 1
 
-      defp try(map, keys) do
-        Enum.reduce(keys, map, fn key, acc ->
-          if acc, do: Map.get(acc, key)
-        end)
-      end
-
       def datasource(%{
             "module" => module,
             "type" => "many",
@@ -96,48 +92,12 @@ defmodule Brando.Villain.Parser do
             "template" => template_id,
             "wrapper" => wrapper
           }) do
-        {:ok, entries} = Brando.Datasource.get_many(module, query)
-        {:ok, template} = Brando.Villain.get_template(template_id)
+        {:ok, entries} = Datasource.get_many(module, query)
+        {:ok, template} = Villain.get_template(template_id)
 
         content =
-          for entry <- entries do
-            Regex.replace(~r/\${entry\:(\w+)\|?(\w+)?}/, template.code, fn _, key, param ->
-              var_path =
-                key
-                |> String.split(".")
-                |> Enum.map(&String.to_existing_atom/1)
-
-              case try(entry, var_path) do
-                nil ->
-                  "${entry:#{key}}"
-
-                %Brando.Type.Image{} = img ->
-                  key = (param != "" && String.to_existing_atom(param)) || :xlarge
-                  mod = Module.concat([module])
-
-                  picture_tag(img,
-                    key: key,
-                    picture_class: "picture-img",
-                    width: true,
-                    height: true,
-                    placeholder: :svg,
-                    lazyload: true,
-                    prefix: Brando.Utils.media_url(),
-                    srcset: {mod, List.last(var_path)},
-                    cache: entry.updated_at
-                  )
-                  |> safe_to_string
-
-                var when is_integer(var) ->
-                  Integer.to_string(var)
-
-                var ->
-                  case param do
-                    "" -> var
-                  end
-              end
-            end)
-          end
+          entries
+          |> Enum.map(&Villain.render_entry(&1, template.code))
           |> Enum.join("\n")
 
         String.replace(wrapper, "${CONTENT}", content)
@@ -171,7 +131,7 @@ defmodule Brando.Villain.Parser do
       Markdown -> html
       """
       def markdown(%{"text" => markdown}) do
-        Earmark.as_html!(markdown, %Earmark.Options{breaks: false})
+        Earmark.as_html!(markdown, %Earmark.Options{breaks: true})
       end
 
       defoverridable markdown: 1
@@ -241,6 +201,9 @@ defmodule Brando.Villain.Parser do
         title = Map.get(data, "title", "")
         credits = Map.get(data, "credits", "")
         alt = Map.get(data, "alt", nil)
+        width = Map.get(data, "width", nil)
+        height = Map.get(data, "height", nil)
+        orientation = (width > height && "landscape") || "portrait"
 
         link = Map.get(data, "link", "")
         img_class = Map.get(data, "img_class", "")
@@ -306,7 +269,7 @@ defmodule Brando.Villain.Parser do
           |> safe_to_string
 
         """
-        <div class="picture-wrapper">
+        <div class="picture-wrapper" data-orientation="#{orientation}">
           #{link_open}
           #{ptag}
           #{link_close}
@@ -375,26 +338,41 @@ defmodule Brando.Villain.Parser do
       Slideshow
       """
       def slideshow(%{"images" => images}) do
-        images_html =
+        items =
           Enum.map_join(images, "\n", fn img ->
-            src = img["sizes"]["xlarge"]
+            orientation = (img["width"] > img["height"] && "landscape") || "portrait"
+            caption = (img["title"] && img["title"]) || nil
+
+            ptag =
+              picture_tag(img,
+                key: :xlarge,
+                alt: img["title"] || "Ill.",
+                width: true,
+                height: true,
+                placeholder: :svg,
+                lazyload: true
+              )
+              |> safe_to_string
 
             """
-            <div class="glide-slide">
-              <img class="img-fluid" src="#{src}" />
+            <figure data-lightbox data-panner-item data-orientation="#{orientation}">
+              #{ptag}
               <div class="overlay-zoom">
-                <a href="#{src}" class="zoom plain" data-lightbox="#{src}">
+                <a href="#{img["sizes"]["xlarge"]}" class="zoom plain">
                   +
                 </a>
               </div>
-            </div>
+              <figcaption><p>#{caption}</p></figcaption>
+            </figure>
             """
           end)
 
         """
-        <div class="glide-wrapper">
-          <div class="glide">
-            #{images_html}
+        <div data-panner-container>
+          <div class="inner">
+            <section class="items" data-panner>
+              #{items}
+            </section>
           </div>
         </div>
         """
@@ -503,10 +481,22 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert template to html.
       """
-      def template(%{"id" => id, "refs" => refs}) do
-        {:ok, template} = Brando.Villain.get_template(id)
+      def template(%{"id" => id, "refs" => refs} = block) do
+        {:ok, template} = Villain.get_template(id)
 
-        Regex.replace(~r/%{(\w+)}/, template.code, fn _, match ->
+        vars = Map.get(block, "vars")
+
+        template_code =
+          if vars do
+            Regex.replace(~r/\${(\w+)}/, template.code, fn _, match ->
+              get_in(vars, [match, "value"]) ||
+                "<!-- VAR #{match} missing // template: #{id}. -->"
+            end)
+          else
+            template.code
+          end
+
+        Regex.replace(~r/%{(\w+)}/, template_code, fn _, match ->
           ref = Enum.find(refs, &(&1["name"] == match))
 
           if ref do

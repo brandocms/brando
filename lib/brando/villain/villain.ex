@@ -26,6 +26,12 @@ defmodule Brando.Villain do
     raise "use Brando.Villain with options is deprecated. Call without options."
   end
 
+  defmacro __using__(_) do
+    quote do
+      import Brando.Villain, only: [render_entry: 2]
+    end
+  end
+
   @doc """
   Parses `json` (in Villain-format).
   Delegates to the module `villain_parser`, configured in the
@@ -338,6 +344,69 @@ defmodule Brando.Villain do
   end
 
   def render_villain(_, _), do: ""
+
+  @doc """
+  Apply `entry` against `code` and return replaced code
+  """
+  def render_entry(entry, %Brando.Pages.Page{} = page),
+    do: render_entry(entry, page.html) |> Phoenix.HTML.raw()
+
+  def render_entry(entry, field) when is_atom(field),
+    do: render_entry(entry, Map.get(entry, field)) |> Phoenix.HTML.raw()
+
+  def render_entry(entry, code) do
+    Regex.replace(~r/\${entry\:(\w+)\|?(\w+)?}/, code, fn _, key, param ->
+      var_path =
+        key
+        |> String.split(".")
+        |> Enum.map(&String.to_existing_atom/1)
+
+      case Brando.Utils.try(entry, var_path) do
+        nil ->
+          ""
+
+        %Brando.Type.Image{} = img ->
+          key = (param != "" && String.to_existing_atom(param)) || :xlarge
+          mod = Map.get(entry, :__struct__)
+
+          Brando.HTML.picture_tag(img,
+            key: key,
+            picture_class: "picture-img",
+            width: true,
+            height: true,
+            placeholder: :svg,
+            lazyload: true,
+            prefix: Brando.Utils.media_url(),
+            srcset: {mod, List.last(var_path)},
+            cache: entry.updated_at
+          )
+          |> Phoenix.HTML.safe_to_string()
+
+        var when is_integer(var) ->
+          Integer.to_string(var)
+
+        false ->
+          ""
+
+        true ->
+          case param do
+            "" -> key
+            _ -> param
+          end
+
+        var ->
+          case param do
+            "" ->
+              var
+
+            "markdown" ->
+              var
+              |> Brando.HTML.render_markdown()
+              |> Phoenix.HTML.safe_to_string()
+          end
+      end
+    end)
+  end
 
   @doc """
   List all occurences of fragment in `schema`'s `data_field`
