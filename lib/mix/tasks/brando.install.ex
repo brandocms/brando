@@ -175,6 +175,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "Dockerfile.staging", "Dockerfile.staging"},
     {:copy, "fabfile.py", "fabfile.py"},
     {:eex, "deployment.cfg", "deployment.cfg"},
+    {:eex, "sync_media.sh", "sync_media.sh"},
 
     # Backend assets
     {:copy, "assets/backend/apollo.config.js", "assets/backend/apollo.config.js"},

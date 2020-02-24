@@ -2,6 +2,14 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.45.0
 
+* Add `Brando.Datasource`
+* Smarter Dockerfile layer caching
+* Add globals to identity configuratin
+* Add variables to Villain templates
+* Improve default backend eslint configuration
+* Add creator switch to generator
+* Copy static files in development
+* New JS backend — BrandoJS
 * Add `Brando.Datasource`. Allows you to access preset backend queries from Villain.
 * Simplify Villain default parser. Now you can `use Brando.Villain.Parser`
 for sensible defaults, and override when neccessary.
