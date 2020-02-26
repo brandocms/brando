@@ -47,11 +47,16 @@ defmodule Brando.UtilsTest do
   test "slugify_filename/1" do
     assert slugify_filename("testing with spaces.jpeg") == "testing-with-spaces.jpeg"
     assert slugify_filename("-start æøå-.jpeg") == "start-aeoeaa.jpeg"
+    assert slugify_filename("testing.JPG") == "testing.jpg"
   end
 
   test "random_filename/1" do
     f = random_filename("original-filename.jpg")
     refute f == "original-filename.jpg"
+    assert f =~ ".jpg"
+
+    f = random_filename("original-filename.JPG")
+    refute f =~ ".JPG"
     assert f =~ ".jpg"
   end
 

@@ -49,6 +49,7 @@ defmodule Brando.Utils do
   def slugify_filename(filename) do
     {basename, ext} = split_filename(filename)
     slugged_filename = slugify(basename)
+    ext = String.downcase(ext)
     "#{slugged_filename}#{ext}"
   end
 
@@ -58,7 +59,7 @@ defmodule Brando.Utils do
   """
   @spec random_filename(binary) :: binary
   def random_filename(filename) do
-    ext = Path.extname(filename)
+    ext = filename |> Path.extname() |> String.downcase()
     random_str = random_string(filename)
     "#{random_str}#{ext}"
   end
@@ -69,7 +70,7 @@ defmodule Brando.Utils do
   """
   @spec change_basename(binary, binary) :: binary
   def change_basename(filename, new_basename) do
-    ext = Path.extname(filename)
+    ext = filename |> Path.extname() |> String.downcase()
     "#{new_basename}#{ext}"
   end
 
@@ -78,7 +79,7 @@ defmodule Brando.Utils do
   """
   @spec change_extension(file :: binary, new_extension :: binary) :: binary
   def change_extension(file, new_extension) do
-    Enum.join([Path.rootname(file), new_extension], ".")
+    Enum.join([Path.rootname(file), String.downcase(new_extension)], ".")
   end
 
   @doc """
