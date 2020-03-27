@@ -39,6 +39,7 @@ defmodule Brando.Villain do
   Returns HTML.
   """
   @spec parse(String.t() | [map], Module.t()) :: String.t()
+  def parse(data, parser_mod \\ Brando.config(Brando.Villain)[:parser])
   def parse("", _), do: ""
   def parse(nil, _), do: ""
   def parse(json, parser_mod) when is_binary(json), do: do_parse(Poison.decode!(json), parser_mod)

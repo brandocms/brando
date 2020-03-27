@@ -18,6 +18,18 @@ defmodule Brando.Schema.Types.Scalar do
     end
   end
 
+  scalar :atom, description: "Atom" do
+    parse fn
+      %{value: p} when is_binary(p) -> {:ok, String.to_existing_atom(p)}
+      %{value: p} when is_atom(p) -> {:ok, p}
+    end
+
+    serialize fn
+      p when is_binary(p) -> {:ok, String.to_existing_atom(p)}
+      p when is_atom(p) -> {:ok, p}
+    end
+  end
+
   @desc """
   Represents an uploaded file or image.
   """

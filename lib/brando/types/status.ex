@@ -5,7 +5,7 @@ defmodule Brando.Type.Status do
 
   use Ecto.Type
 
-  @status_codes [draft: 0, published: 1, pending: 2, deleted: 3]
+  @status_codes [draft: 0, published: 1, pending: 2, disabled: 3]
 
   @doc """
   Returns the internal type representation of our `Role` type for pg
@@ -27,7 +27,7 @@ defmodule Brando.Type.Status do
       0 -> {:ok, :draft}
       1 -> {:ok, :published}
       2 -> {:ok, :pending}
-      3 -> {:ok, :deleted}
+      3 -> {:ok, :disabled}
     end
   end
 
@@ -47,7 +47,7 @@ defmodule Brando.Type.Status do
       0 -> {:ok, :draft}
       1 -> {:ok, :published}
       2 -> {:ok, :pending}
-      3 -> {:ok, :deleted}
+      3 -> {:ok, :disabled}
     end
   end
 

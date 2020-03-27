@@ -46,6 +46,7 @@ defmodule Brando.Mixfile do
       :dataloader,
       :gettext,
       :comeonin,
+      :hashids,
       :httpoison,
       :inflex,
       :earmark,
@@ -83,7 +84,7 @@ defmodule Brando.Mixfile do
       {:timex, "~> 3.0"},
       {:ecto, "~> 3.0"},
       {:ecto_sql, "~> 3.0"},
-      {:flow, "~> 0.14"},
+      {:flow, "~> 1.0"},
       {:jason, "~> 1.0"},
       {:poison, "~> 4.0"},
       {:inflex, "~> 2.0"},
@@ -108,6 +109,9 @@ defmodule Brando.Mixfile do
       {:ex_aws_s3, "~> 2.0"},
       {:hackney, "~> 1.9"},
       {:sweet_xml, "~> 0.6"},
+
+      # Hashing
+      {:hashids, "~> 2.0"},
 
       # Dev dependencies
       {:credo, ">= 0.0.0", only: :dev},

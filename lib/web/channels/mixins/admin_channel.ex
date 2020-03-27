@@ -27,7 +27,9 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "user:activate",
     "datasource:list_modules",
     "datasource:list_module_keys",
-    "templates:list_templates"
+    "templates:list_templates",
+    "livepreview:initialize",
+    "livepreview:render"
   ]
 
   defmacro __using__(_) do
@@ -218,5 +220,30 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     {:ok, templates} = Brando.Villain.list_templates("all")
     templates = Enum.map(templates, &%{id: &1.id, name: "#{&1.namespace} - #{&1.name}"})
     {:reply, {:ok, %{code: 200, templates: templates}}, socket}
+  end
+
+  # Live preview
+  def do_handle_in(
+        "livepreview:initialize",
+        %{"schema" => schema, "entry" => entry, "key" => key, "prop" => prop},
+        socket
+      ) do
+    cache_key = Brando.LivePreview.initialize(schema, entry, key, prop)
+    {:reply, {:ok, %{code: 200, cache_key: cache_key}}, socket}
+  end
+
+  def do_handle_in(
+        "livepreview:render",
+        %{
+          "schema" => schema,
+          "entry" => entry,
+          "key" => key,
+          "prop" => prop,
+          "cache_key" => cache_key
+        },
+        socket
+      ) do
+    Brando.LivePreview.update(schema, entry, key, prop, cache_key)
+    {:reply, {:ok, %{code: 200, cache_key: cache_key}}, socket}
   end
 end
