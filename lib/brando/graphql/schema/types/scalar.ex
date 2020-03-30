@@ -18,6 +18,23 @@ defmodule Brando.Schema.Types.Scalar do
     end
   end
 
+  scalar :order, description: "Order string: field dir, field dir, field dir" do
+    parse fn
+      %{value: string} ->
+        order_tuples =
+          string
+          |> String.split(",")
+          |> Enum.map(fn e ->
+            String.trim(e)
+            |> String.split(" ")
+            |> Enum.map(&String.to_atom/1)
+            |> List.to_tuple()
+          end)
+
+        {:ok, order_tuples}
+    end
+  end
+
   scalar :atom, description: "Atom" do
     parse fn
       %{value: p} when is_binary(p) -> {:ok, String.to_existing_atom(p)}

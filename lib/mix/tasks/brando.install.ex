@@ -214,6 +214,7 @@ defmodule Mix.Tasks.Brando.Install do
      "assets/backend/public/fonts/fontsplaceholder"},
     {:copy, "assets/backend/public/images/admin/avatar.png",
      "assets/backend/public/images/admin/avatar.png"},
+    {:copy, "assets/backend/src/styles/blocks.pcss", "assets/backend/src/styles/blocks.pcss"},
 
     # Frontend assets
     {:keep, "assets/frontend/fonts", "assets/frontend/fonts"},

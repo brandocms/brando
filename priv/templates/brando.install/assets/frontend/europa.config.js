@@ -22,7 +22,7 @@ module.exports = {
         regular: '#000000',
         hover: '#000000',
         hoverBorder: '#000000'
-      }
+      },
 
       gray: {
         900: '#858585'

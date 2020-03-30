@@ -8,6 +8,8 @@ import menuSections from './menus'
 import i18n from 'brandojs/src/i18n'
 import app from './config'
 
+import './styles/blocks.pcss'
+
 Vue.use(VueBrando, { app, menuSections })
 
 new Vue({

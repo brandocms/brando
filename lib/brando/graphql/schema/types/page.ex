@@ -36,14 +36,17 @@ defmodule Brando.Schema.Types.Page do
   @desc "Filtering options for page"
   input_object :page_filter do
     field :title, :string
+    field :illustrator, :string
   end
 
   object :page_queries do
     @desc "Get all pages"
     field :pages, type: list_of(:page) do
+      arg :order, :order, default_value: [{:asc, :language}, {:asc, :sequence}, {:asc, :key}]
       arg :limit, :integer, default_value: 25
       arg :offset, :integer, default_value: 0
       arg :filter, :page_filter
+      arg :status, :string, default_value: "all"
       resolve &Brando.Pages.PageResolver.all/2
     end
 

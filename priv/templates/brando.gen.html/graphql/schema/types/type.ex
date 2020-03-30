@@ -23,16 +23,10 @@ defmodule <%= base %>.Schema.Types.<%= alias %> do
     # field :featured, :boolean
   end
 
-  @desc "Ordering options for <%= singular %>"
-  input_object :<%= singular %>_order do
-    field :dir, :sort_order
-    field :by, :string
-  end
-
   object :<%= singular %>_queries do
     @desc "Get all <%= plural %>"
     field :<%= plural %>, type: list_of(:<%= singular %>) do
-      arg :order, :<%= singular %>_order, default_value: {:asc, <%= if sequenced do %>:sequence<% else %>:<%= main_field %><% end %>}
+      arg :order, :order, default_value: [{:asc, <%= if sequenced do %>:sequence<% else %>:<%= main_field %><% end %>}]
       arg :limit, :integer, default_value: 25
       arg :offset, :integer, default_value: 0
       arg :filter, :<%= singular %>_filter<%= if status do %>

@@ -75,8 +75,15 @@ defmodule Brando.Villain.Parser do
             ""
           end
 
+        id =
+          if Map.get(data, "id", nil) do
+            ~s( id="#{Map.get(data, "id")}")
+          else
+            ""
+          end
+
         header_size = "h#{level}"
-        "<#{header_size}#{classes}>" <> nl2br(text) <> "</#{header_size}>"
+        "<#{header_size}#{classes}#{id}>" <> nl2br(text) <> "</#{header_size}>"
       end
 
       def header(%{"text" => text}) do

@@ -14,7 +14,7 @@ defmodule Brando.Pages do
 
   defmacro __using__(_) do
     quote do
-      import Brando.Pages, only: [get_page_fragments: 1, render_fragment: 2]
+      import Brando.Pages, only: [get_page_fragments: 1, render_fragment: 2, get_fragments: 1]
     end
   end
 
@@ -99,34 +99,55 @@ defmodule Brando.Pages do
         {_, nil}, query ->
           query
 
-        {:filter, filter}, query ->
-          query |> filter_with(filter)
+        {:order, order}, query ->
+          query |> with_order(order)
 
         {:offset, offset}, query ->
           query |> offset(^offset)
 
         {:limit, limit}, query ->
           query |> limit(^limit)
+
+        {:filter, filter}, query ->
+          query |> with_filter(filter)
+
+        {:status, status}, query ->
+          query |> with_status(status)
       end)
 
     query =
       from q in query,
         where: is_nil(q.deleted_at),
-        where: is_nil(q.parent_id),
-        order_by: [asc: q.language, asc: q.sequence, asc: q.key]
+        where: is_nil(q.parent_id)
 
     {:ok, Brando.repo().all(query)}
   end
 
-  defp filter_with(query, filter) do
+  defp with_order(query, order) when is_list(order) do
+    Enum.reduce(order, query, fn
+      {_, :status}, query ->
+        query
+        |> order_by(fragment("status=0 DESC"))
+        |> order_by(fragment("status=2 DESC"))
+        |> order_by(fragment("status=1 DESC"))
+        |> order_by(fragment("status=3 DESC"))
+
+      {dir, by}, query ->
+        query |> order_by({^dir, ^by})
+    end)
+  end
+
+  defp with_order(query, order), do: with_order(query, [order])
+
+  defp with_filter(query, filter) do
     Enum.reduce(filter, query, fn
       {:title, title}, query ->
         from q in query, where: ilike(q.title, ^"%#{title}%")
-
-        # {:featured, featured}, query ->
-        #   from q in query, where: q.featured == ^featured
     end)
   end
+
+  defp with_status(query, "all"), do: query
+  defp with_status(query, status), do: from(q in query, where: q.status == ^status)
 
   @doc """
   List page parents
@@ -338,9 +359,18 @@ defmodule Brando.Pages do
   @doc """
   Get set of fragments by parent key
   """
+  @deprecated "Use `{:ok, fragments} = get_fragments(parent_key)` instead"
   def get_page_fragments(parent_key) do
     {:ok, fragments} = list_page_fragments(parent_key)
     Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)
+  end
+
+  @doc """
+  Get set of fragments by parent key
+  """
+  def get_fragments(parent_key) do
+    {:ok, fragments} = list_page_fragments(parent_key)
+    {:ok, Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)}
   end
 
   @doc """
