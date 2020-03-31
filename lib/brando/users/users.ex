@@ -81,7 +81,7 @@ defmodule Brando.Users do
   """
   def create_user(params) do
     User.changeset(%User{}, :create, params)
-    |> maybe_update_password
+    |> maybe_update_password()
     |> Brando.repo().insert
   end
 

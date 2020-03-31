@@ -15,7 +15,20 @@ defmodule Brando.Users.User do
   @required_fields ~w(full_name email password language)a
   @optional_fields ~w(role avatar active deleted_at)a
 
-  @derived_fields ~w(id full_name email password language role avatar active inserted_at updated_at deleted_at)a
+  @derived_fields ~w(
+    id
+    full_name
+    email
+    password
+    language
+    role
+    avatar
+    active
+    inserted_at
+    updated_at
+    deleted_at
+  )a
+
   @derive {Jason.Encoder, only: @derived_fields}
 
   schema "users_users" do
@@ -24,7 +37,7 @@ defmodule Brando.Users.User do
     field :password, :string
     field :avatar, Brando.Type.Image
     field :role, Brando.Type.Role
-    field :active, :boolean
+    field :active, :boolean, default: true
     field :language, :string
     field :last_login, :naive_datetime
     timestamps()

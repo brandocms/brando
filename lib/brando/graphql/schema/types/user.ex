@@ -8,6 +8,7 @@ defmodule Brando.Schema.Types.User do
     field :role, :string
     field :password, :string
     field :avatar, :upload_or_image
+    field :active, :boolean
   end
 
   input_object :update_user_params do
