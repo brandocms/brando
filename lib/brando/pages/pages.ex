@@ -3,6 +3,7 @@ defmodule Brando.Pages do
   Context for pages
   """
   use Brando.Web, :context
+  use Brando.Query
 
   alias Brando.Pages.Page
   alias Brando.Pages.PageFragment
@@ -38,6 +39,21 @@ defmodule Brando.Pages do
   end
 
   def query(queryable, _), do: queryable
+
+  query :list, Page do
+    fn
+      query ->
+        from q in query,
+          where: is_nil(q.deleted_at),
+          where: is_nil(q.parent_id)
+    end
+  end
+
+  filters do
+    fn {:title, title}, query ->
+      from q in query, where: ilike(q.title, ^"%#{title}%")
+    end
+  end
 
   @doc """
   Create new page
@@ -87,67 +103,6 @@ defmodule Brando.Pages do
     {:ok, duplicated_page} = create_page(page, user)
     {:ok, Map.merge(duplicated_page, %{parent: nil, children: nil, creator: nil})}
   end
-
-  @doc """
-  List all pages
-  """
-  @spec list_pages(args :: map) :: {:ok, [page]}
-  def list_pages(args \\ %{}) do
-    query =
-      args
-      |> Enum.reduce(Page, fn
-        {_, nil}, query ->
-          query
-
-        {:order, order}, query ->
-          query |> with_order(order)
-
-        {:offset, offset}, query ->
-          query |> offset(^offset)
-
-        {:limit, limit}, query ->
-          query |> limit(^limit)
-
-        {:filter, filter}, query ->
-          query |> with_filter(filter)
-
-        {:status, status}, query ->
-          query |> with_status(status)
-      end)
-
-    query =
-      from q in query,
-        where: is_nil(q.deleted_at),
-        where: is_nil(q.parent_id)
-
-    {:ok, Brando.repo().all(query)}
-  end
-
-  defp with_order(query, order) when is_list(order) do
-    Enum.reduce(order, query, fn
-      {_, :status}, query ->
-        query
-        |> order_by(fragment("status=0 DESC"))
-        |> order_by(fragment("status=2 DESC"))
-        |> order_by(fragment("status=1 DESC"))
-        |> order_by(fragment("status=3 DESC"))
-
-      {dir, by}, query ->
-        query |> order_by({^dir, ^by})
-    end)
-  end
-
-  defp with_order(query, order), do: with_order(query, [order])
-
-  defp with_filter(query, filter) do
-    Enum.reduce(filter, query, fn
-      {:title, title}, query ->
-        from q in query, where: ilike(q.title, ^"%#{title}%")
-    end)
-  end
-
-  defp with_status(query, "all"), do: query
-  defp with_status(query, status), do: from(q in query, where: q.status == ^status)
 
   @doc """
   List page parents

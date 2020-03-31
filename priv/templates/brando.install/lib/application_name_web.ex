@@ -49,6 +49,7 @@ defmodule <%= application_module %>Web do
 
   def context do
     quote do
+      import Brando.Query
       import Brando.SoftDelete.Query
     end
   end
