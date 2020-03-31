@@ -1,7 +1,10 @@
 locals_without_parens = [
   sequence: 2,
   villain: 1,
-  datasource: 2
+  datasource: 2,
+  query: 3,
+  default: 1,
+  filters: 1
 ]
 
 [
