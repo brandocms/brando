@@ -1,59 +1,13 @@
-@doc """
-List all <%= plural %>
-"""
-@spec list_<%= plural %>(args :: map) :: {:ok, [<%= singular %>]}
-def list_<%= plural %>(args \\ %{}) do
-  query =
-    args
-    |> Enum.reduce(<%= alias %>, fn
-      {_, nil}, query ->
-        query
-
-      {:order, order}, query ->
-        query |> with_order(order)
-
-      {:offset, offset}, query ->
-        query |> offset(^offset)
-
-      {:limit, limit}, query ->
-        query |> limit(^limit)
-
-      {:filter, filter}, query ->
-        query |> with_filter(filter)<%= if status do %>
-
-      {:status, status}, query ->
-        query |> with_status(status)<% end %>
-    end)
-
-  query =
-    from t in query<%= if soft_delete do %>, where: is_nil(t.deleted_at)<% end %>
-
-  {:ok, Repo.all(query)}
+query :list, <%= alias %> do
+  fn query -> from t in query<%= if soft_delete do %>, where: is_nil(t.deleted_at)<% end %> end
 end
 
-defp with_order(query, {_, "status"}) do
-  query
-  |> order_by(fragment("status=0 DESC"))
-  |> order_by(fragment("status=2 DESC"))
-  |> order_by(fragment("status=1 DESC"))
-  |> order_by(fragment("status=3 DESC"))
-end
-
-defp with_order(query, {dir, by}), do: query |> order_by({^dir, ^by})
-
-defp with_filter(query, filter) do
-  Enum.reduce(filter, query, fn
+filters do
+  fn
     {:<%= main_field %>, <%= main_field %>}, query ->
       from q in query, where: ilike(q.<%= main_field %>, ^"%#{<%= main_field %>}%")
-
-    # {:featured, featured}, query ->
-    #   from q in query, where: q.featured == ^featured
-  end)
-end<%= if status do %>
-
-defp with_status(query, "all"), do: query
-defp with_status(query, status), do: from q in query, where: q.status == ^status
-<% end %>
+  end
+end
 
 @doc """
 Get single <%= singular %>

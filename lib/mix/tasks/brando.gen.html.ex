@@ -4,6 +4,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
 
   @shortdoc "Generates a Brando-styled schema"
 
+  @locales ["en", "nb"]
+
   @moduledoc """
   Generates a Brando resource.
 
@@ -98,6 +100,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     binding =
       Keyword.delete(binding, :module) ++
         [
+          locale_fields: locale_fields(attrs),
           plural: plural,
           route: route,
           image_field: image_field?,
@@ -116,7 +119,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
           gql_types: graphql_types(attrs),
           gql_query_fields: graphql_query_fields(attrs),
           list_rows: list_rows(attrs, vue_singular, vue_plural),
-          vue_inputs: vue_inputs(attrs, Recase.to_camel(binding[:singular])),
+          vue_inputs:
+            vue_inputs(attrs, Recase.to_camel(binding[:singular]), Recase.to_camel(vue_plural)),
           cypress_fields: cypress_fields(attrs, Recase.to_camel(binding[:singular])),
           vue_defaults: vue_defaults(attrs),
           params: Mix.Brando.params(attrs),
@@ -173,6 +177,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}EditView.vue"},
           {:eex_trim, "assets/backend/src/views/Form.vue",
            "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}Form.vue"},
+          {:eex, "assets/backend/src/locale.js",
+           "assets/backend/src/locales/#{vue_plural}/index.js"},
           {:eex, "assets/backend/src/views/cache/index.js",
            "assets/backend/src/views/#{vue_plural}/cache/index.js"},
           {:eex, "assets/backend/cypress/integration/spec.js",
@@ -446,6 +452,27 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     end)
   end
 
+  defp locale_fields(attrs) do
+    # this is for locale.js
+    Enum.map(@locales, fn locale ->
+      fields =
+        Enum.map(attrs, fn
+          {k, _v} ->
+            string_key = to_string(k)
+
+            %{
+              field: string_key,
+              label: String.capitalize(string_key),
+              placeholder: String.capitalize(string_key),
+              help_text: ""
+            }
+        end)
+
+      {locale, fields}
+    end)
+    |> Enum.into(%{})
+  end
+
   defp list_rows(attrs, vue_singular, vue_plural) do
     # this is for List.vue
     Enum.map(attrs, fn
@@ -652,7 +679,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     end)
   end
 
-  defp vue_inputs(attrs, singular) do
+  defp vue_inputs(attrs, singular, plural) do
     # this is for vue components
     Enum.map(attrs, fn
       {k, {:array, _}} ->
@@ -664,7 +691,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "<KInputToggle",
            "v-model=\"#{singular}.#{k}\"",
            "name=\"#{singular}[#{k}]\"",
-           "label=\"#{String.capitalize(to_string(k))}\"",
+           ":label=\"$t('#{plural}.fields.#{k}.label')\"",
+           ":help-text=\"$t('#{plural}.fields.#{k}.help_text')\"",
            "/>"
          ]}
 
@@ -674,9 +702,10 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "<KInput",
            "v-model=\"#{singular}.#{k}\"",
            "rules=\"required\"",
+           ":label=\"$t('#{plural}.fields.#{k}.label')\"",
+           ":placeholder=\"$t('#{plural}.fields.#{k}.placeholder')\"",
+           ":help-text=\"$t('#{plural}.fields.#{k}.help_text')\"",
            "name=\"#{singular}[#{k}]\"",
-           "label=\"#{String.capitalize(to_string(k))}\"",
-           "placeholder=\"#{String.capitalize(to_string(k))}\"",
            "/>"
          ]}
 
@@ -686,8 +715,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "<KInputStatus",
            "v-model=\"#{singular}.status\"",
            "rules=\"required\"",
+           ":label=\"$t('#{plural}.fields.status.label')\"",
+           ":help-text=\"$t('#{plural}.fields.status.help_text')\"",
            "name=\"#{singular}[status]\"",
-           "label=\"Status\"",
            "/>"
          ]}
 
@@ -698,8 +728,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "v-model=\"#{singular}.#{k}\"",
            "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
-           "label=\"#{String.capitalize(to_string(k))}\"",
-           "placeholder=\"#{String.capitalize(to_string(k))}\"",
+           ":label=\"$t('#{plural}.fields.#{k}.label')\"",
+           ":placeholder=\"$t('#{plural}.fields.#{k}.placeholder')\"",
+           ":help-text=\"$t('#{plural}.fields.#{k}.help_text')\"",
            "/>"
          ]}
 
@@ -710,8 +741,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "v-model=\"#{singular}.#{k}\"",
            "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
-           "label=\"#{String.capitalize(to_string(k))}\"",
-           "placeholder=\"#{String.capitalize(to_string(k))}\"",
+           ":label=\"$t('#{plural}.fields.#{k}.label')\"",
+           ":placeholder=\"$t('#{plural}.fields.#{k}.placeholder')\"",
+           ":help-text=\"$t('#{plural}.fields.#{k}.help_text')\"",
            "/>"
          ]}
 
@@ -722,8 +754,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "v-model=\"#{singular}.#{k}\"",
            "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
-           "label=\"#{String.capitalize(to_string(k))}\"",
-           "placeholder=\"#{String.capitalize(to_string(k))}\"",
+           ":label=\"$t('#{plural}.fields.#{k}.label')\"",
+           ":placeholder=\"$t('#{plural}.fields.#{k}.placeholder')\"",
+           ":help-text=\"$t('#{plural}.fields.#{k}.help_text')\"",
            "/>"
          ]}
 
@@ -734,7 +767,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "v-model=\"#{singular}.#{k}\"",
            "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
-           "label=\"#{String.capitalize(to_string(k))}\"",
+           ":label=\"$t('#{plural}.fields.#{k}.label')\"",
+           ":help-text=\"$t('#{plural}.fields.#{k}.help_text')\"",
            "/>"
          ]}
 
@@ -745,7 +779,8 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "v-model=\"#{singular}.#{k}\"",
            "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
-           "label=\"#{String.capitalize(to_string(k))}\"",
+           ":label=\"$t('#{plural}.fields.#{k}.label')\"",
+           ":help-text=\"$t('#{plural}.fields.#{k}.help_text')\"",
            "/>"
          ]}
 
@@ -758,7 +793,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "v-model=\"#{singular}.#{k}\"",
            "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
-           "label=\"#{String.capitalize(to_string(k))}\""
+           ":label=\"$t('#{plural}.fields.#{k}.label')\"",
+           ":help-text=\"$t('#{plural}.fields.#{k}.help_text')\"",
+           "/>"
          ]}
 
       {k, _} ->
@@ -768,8 +805,9 @@ defmodule Mix.Tasks.Brando.Gen.Html do
            "v-model=\"#{singular}.#{k}\"",
            "rules=\"required\"",
            "name=\"#{singular}[#{k}]\"",
-           "label=\"#{String.capitalize(to_string(k))}\"",
-           "placeholder=\"#{String.capitalize(to_string(k))}\"",
+           ":label=\"$t('#{plural}.fields.#{k}.label')\"",
+           ":placeholder=\"$t('#{plural}.fields.#{k}.placeholder')\"",
+           ":help-text=\"$t('#{plural}.fields.#{k}.help_text')\"",
            "/>"
          ]}
     end)

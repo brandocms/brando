@@ -2,10 +2,10 @@
   <article>
     <ContentHeader>
       <template v-slot:title>
-        <%= Recase.SentenceCase.convert(plural) %>
+        {{ $t('<%= vue_plural %>.title') }}
       </template>
       <template v-slot:subtitle>
-        Opprett ny
+        {{ $t('<%= vue_plural %>.new') }}
       </template>
     </ContentHeader>
     <<%= Recase.to_pascal(vue_singular) %>Form
@@ -19,7 +19,7 @@
 import gql from 'graphql-tag'
 import <%= Recase.to_pascal(vue_singular) %>Form from './<%= Recase.to_pascal(vue_singular) %>Form'
 import <%= String.upcase(singular) %>_FRAGMENT from '../../gql/<%= snake_domain %>/<%= String.upcase(singular) %>_FRAGMENT.graphql'
-import GET_<%= String.upcase(plural) %> from '../../gql/<%= snake_domain %>/<%= String.upcase(plural) %>_QUERY.graphql'
+import locale from '../../locales/<%= vue_plural %>'
 
 export default {
   components: {
@@ -28,12 +28,7 @@ export default {
 
   data () {
     return {
-      <%= vue_singular %>: {},
-      queryVars: {
-        filter: null,
-        offset: 0,
-        limit: 25
-      }
+      <%= vue_singular %>: {}
     }
   },
 
@@ -60,20 +55,6 @@ export default {
           `,
           variables: {
             <%= vue_singular %>Params
-          },
-
-          update: (store, { data: { create<%= Recase.to_pascal(vue_singular) %> } }) => {
-            const query = {
-              query: GET_<%= String.upcase(plural) %>,
-              variables: { ...this.queryVars }
-            }
-            const data = store.readQuery(query)
-            data.<%= vue_plural %>.push(create<%= Recase.to_pascal(vue_singular) %>)
-            // Write back to the cache
-            store.writeQuery({
-              ...query,
-              data
-            })
           }
         })
 
@@ -83,6 +64,10 @@ export default {
         this.$utils.showError(err)
       }
     }
+  },
+
+  i18n: {
+    sharedMessages: locale
   }
 }
 </script>

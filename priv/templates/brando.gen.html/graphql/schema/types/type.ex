@@ -29,8 +29,8 @@ defmodule <%= base %>.Schema.Types.<%= alias %> do
       arg :order, :order, default_value: [{:asc, <%= if sequenced do %>:sequence<% else %>:<%= main_field %><% end %>}]
       arg :limit, :integer, default_value: 25
       arg :offset, :integer, default_value: 0
-      arg :filter, :<%= singular %>_filter<%= if status do %>
-      arg :status, :string, default_value: "all"<% end %>
+      arg :filter, :<%= singular %>_filter
+      arg :status, :string
 
       resolve &<%= base %>.<%= domain %>.<%= alias %>Resolver.all/2
     end

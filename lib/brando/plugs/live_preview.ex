@@ -15,8 +15,6 @@ defmodule Brando.Plug.LivePreview do
 
   def call(%Plug.Conn{path_info: ["__livepreview" | _suffix]} = conn, _) do
     key = conn.query_string && Plug.Conn.Query.decode(conn.query_string)["key"]
-    require Logger
-    Logger.error(inspect(key, pretty: true))
 
     {:ok, initial_html} =
       case Brando.LivePreview.get_cache(key) do
@@ -36,6 +34,7 @@ defmodule Brando.Plug.LivePreview do
     #! CONSECUTIVE UPDATES WILL ONLY TARGET <MAIN>
 
     inject_html = """
+    <!-- BRANDO LIVE PREVIEW -->
     <script>
     #{File.read!(@phoenix_path)}
     #{File.read!(@morphdom_path)}
@@ -75,6 +74,7 @@ defmodule Brando.Plug.LivePreview do
       html.is-live-preview [data-moonwalk-section],
       html.is-live-preview [data-moonwalk-run] {
         opacity: 1 !important;
+        visibility: visible !important;
         transform: none !important;
       }
     </style>
@@ -85,13 +85,9 @@ defmodule Brando.Plug.LivePreview do
 
     conn
     |> put_resp_content_type("text/html")
-    |> send_resp(200, [
-      html
-    ])
+    |> send_resp(200, [html])
     |> halt()
   end
 
-  def call(conn, _) do
-    conn
-  end
+  def call(conn, _), do: conn
 end

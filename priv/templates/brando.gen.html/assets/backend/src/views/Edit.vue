@@ -2,10 +2,10 @@
   <article v-if="<%= vue_singular %>">
     <ContentHeader>
       <template v-slot:title>
-        <%= Recase.SentenceCase.convert(plural) %>
+        {{ $t('<%= vue_plural %>.title') }}
       </template>
       <template v-slot:subtitle>
-        Edit <%= singular %>
+        {{ $t('<%= vue_plural %>.edit') }}
       </template>
     </ContentHeader>
     <<%= Recase.to_pascal(vue_singular) %>Form
@@ -20,6 +20,7 @@ import gql from 'graphql-tag'
 import <%= Recase.to_pascal(vue_singular) %>Form from './<%= Recase.to_pascal(vue_singular) %>Form'
 import <%= String.upcase(singular) %>_FRAGMENT from '../../gql/<%= snake_domain %>/<%= String.upcase(singular) %>_FRAGMENT.graphql'
 import GET_<%= String.upcase(singular) %> from '../../gql/<%= snake_domain %>/<%= String.upcase(singular) %>_QUERY.graphql'
+import locale from '../../locales/<%= vue_plural %>'
 
 export default {
   components: {
@@ -30,16 +31,6 @@ export default {
     <%= vue_singular %>Id: {
       type: [String, Number],
       required: true
-    }
-  },
-
-  data () {
-    return {
-      queryVars: {
-        filter: null,
-        offset: 0,
-        limit: 25
-      }
     }
   },
 
@@ -92,6 +83,10 @@ export default {
         return !this.<%= vue_singular %>Id
       }
     }
+  },
+
+  i18n: {
+    sharedMessages: locale
   }
 }
 </script>

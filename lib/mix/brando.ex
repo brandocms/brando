@@ -170,6 +170,9 @@ defmodule Mix.Brando do
       {k, :image} ->
         {k, nil}
 
+      {k, :status} ->
+        {k, :published}
+
       {k, _} ->
         {k, "some content"}
     end)

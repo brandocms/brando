@@ -18,6 +18,7 @@
 </template>
 
 <script>
+import locale from '../../locales/<%= vue_plural %>'
 export default {
   props: {
     <%= vue_singular %>: {
@@ -52,6 +53,10 @@ export default {
 
   methods: {
     //
+  },
+
+  i18n: {
+    sharedMessages: locale
   }
 }
 </script>

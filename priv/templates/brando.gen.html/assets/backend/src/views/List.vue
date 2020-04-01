@@ -43,7 +43,7 @@
       @sort="sortEntries"<% end %><%= if status do %>
       :status="true"<% end %>
       :filter-keys="['<%= main_field %>']"
-      @filter="queryVars.filter = $event"
+      @updateQuery="queryVars = $event"
       @more="showMore">
 
       <template v-slot:selected="{ entries, clearSelection }">
@@ -88,6 +88,7 @@
 
 import gql from 'graphql-tag'
 import GET_<%= String.upcase(plural) %> from '../../gql/<%= snake_domain %>/<%= String.upcase(plural) %>_QUERY.graphql'
+import locale from '../../locales/<%= vue_plural %>'
 
 export default {
   data () {
@@ -95,7 +96,8 @@ export default {
       queryVars: {
         filter: null,
         offset: 0,
-        limit: 25
+        limit: 50,
+        status: 'published'
       },
       page: 0,
       // if the entries has children, enable this
@@ -117,9 +119,8 @@ export default {
       this.$apollo.queries.<%= vue_plural %>.fetchMore({
         // New variables
         variables: {
-          limit: this.queryVars.limit,
-          offset: this.page * 25,
-          filter: this.queryVars.filter
+          ...this.queryVars,
+          offset: this.queryVars.limit * this.page
         },
         // Transform the previous result with new data
         updateQuery: (previousResult, { fetchMoreResult }) => {
@@ -143,7 +144,7 @@ export default {
 
           const query = {
             query: GET_<%= String.upcase(plural) %>,
-            variables: { ...this.queryVars }
+            variables: this.queryVars
           }
           const store = this.$apolloProvider.defaultClient.store.cache
           const data = store.readQuery(query)
@@ -194,7 +195,7 @@ export default {
               try {
                 const query = {
                   query: GET_<%= String.upcase(plural) %>,
-                  variables: { ...this.queryVars }
+                  variables: this.queryVars
                 }
                 const data = store.readQuery(query)
                 const idx = data.<%= vue_plural %>.findIndex(<%= vue_singular %> => parseInt(<%= vue_singular %>.id) === parseInt(entryId))
@@ -240,55 +241,16 @@ export default {
       query: GET_<%= String.upcase(plural) %>,
       debounce: 750,
       variables () {
-        return {
-          limit: this.queryVars.limit,
-          offset: this.queryVars.offset,
-          filter: this.queryVars.filter
-        }
+        return this.queryVars
       }
     }
+  },
+
+  i18n: {
+    sharedMessages: locale
   }
 }
 </script>
 
 <style lang="postcss" scoped>
 </style>
-
-<i18n>
-{
-  "en": {
-    "<%= vue_plural %>.edit": "Edit entry",
-    "<%= vue_plural %>.delete": "Delete entry",
-    "<%= vue_plural %>.title": "<%= Recase.SentenceCase.convert(plural) %>",
-    "<%= vue_plural %>.subtitle": "Administration",
-    "<%= vue_plural %>.index": "Index",
-    "<%= vue_plural %>.actions": "Actions",
-    "<%= vue_plural %>.new": "New entry",
-    "<%= vue_plural %>.sequence_updated": "Sequence updated",
-    "<%= vue_plural %>.deleted": "Entry deleted",
-    "<%= vue_plural %>.delete-entries": "Delete entries",
-    "<%= vue_plural %>.delete-confirm": "Are you sure you want to delete this?",
-    "<%= vue_plural %>.delete-confirm-many": "Are you sure you want to delete these entries?",
-    "<%= vue_plural %>.sequence-updated": "Sequence updated",
-    "<%= vue_plural %>.help-text": "",
-    "<%= vue_plural %>.more": "More"
-  },
-  "nb": {
-    "<%= vue_plural %>.edit": "Rediger objekt",
-    "<%= vue_plural %>.delete": "Slett objekt",
-    "<%= vue_plural %>.title": "<%= Recase.SentenceCase.convert(plural) %>",
-    "<%= vue_plural %>.subtitle": "Administrasjon",
-    "<%= vue_plural %>.index": "Oversikt",
-    "<%= vue_plural %>.actions": "Handlinger",
-    "<%= vue_plural %>.new": "Nytt objekt",
-    "<%= vue_plural %>.sequence_updated": "Rekkefølgen ble oppdatert",
-    "<%= vue_plural %>.deleted": "Objektet ble slettet",
-    "<%= vue_plural %>.delete-entries": "Slett objekter",
-    "<%= vue_plural %>.delete-confirm": "Er du sikker på at du vil slette dette?",
-    "<%= vue_plural %>.delete-confirm-many": "Er du sikker på at du vil slette disse?",
-    "<%= vue_plural %>.sequence-updated": "Rekkefølge oppdatert",
-    "<%= vue_plural %>.help-text": "",
-    "<%= vue_plural %>.more": "Mer"
-  }
-}
-</i18n>

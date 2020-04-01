@@ -9,6 +9,7 @@ defmodule <%= base %>.<%= domain %> do
   @type user :: Brando.Users.User.t()
   # __types
 
+  use Brando.Query
   alias <%= base %>.Repo
   import Ecto.Query
 
