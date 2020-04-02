@@ -85,21 +85,13 @@ defmodule Brando.Pages.Page do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, :create | :update, Keyword.t() | Options.t()) :: Ecto.Changeset.t()
-  def changeset(schema, action, params \\ %{})
+  @spec changeset(t, Keyword.t() | Options.t()) :: Ecto.Changeset.t()
+  def changeset(schema, params \\ %{}, user \\ :system)
 
-  def changeset(schema, :create, params) do
+  def changeset(schema, params, user) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
-    |> put_slug()
-    |> validate_required(@required_fields)
-    |> avoid_slug_collision()
-    |> generate_html()
-  end
-
-  def changeset(schema, :update, params) do
-    schema
-    |> cast(params, @required_fields ++ @optional_fields)
+    |> put_creator(user)
     |> put_slug()
     |> validate_required(@required_fields)
     |> avoid_slug_collision()

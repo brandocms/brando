@@ -23,9 +23,9 @@ RUN yarn run build
 
 ## MAIN ELIXIR APPLICATION
 
-FROM twined/fehn:2.3
+FROM twined/fehn:2.4
 
-LABEL maintainer="Bielke Yang <trond@bielkeyang.com>"
+LABEL maintainer="Twined <mail@twined.net>"
 
 WORKDIR /opt/app
 ENV MIX_ENV prod

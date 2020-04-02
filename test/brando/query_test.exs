@@ -11,7 +11,7 @@ defmodule Brando.QueryTest do
       end
     end
 
-    filters do
+    filters Brando.Pages.Page do
       fn
         {:title, title}, query -> from q in query, where: ilike(q.title, ^"%#{title}%")
       end

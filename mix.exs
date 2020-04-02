@@ -8,7 +8,7 @@ defmodule Brando.Mixfile do
     [
       app: :brando,
       version: @version,
-      elixir: "~> 1.8",
+      elixir: "~> 1.10",
       deps: deps(),
       compilers: [:gettext, :phoenix] ++ Mix.compilers(),
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -115,7 +115,7 @@ defmodule Brando.Mixfile do
 
       # Dev dependencies
       {:credo, ">= 0.0.0", only: :dev},
-      {:dialyxir, "~> 0.3", only: :dev},
+      {:dialyxir, "~> 1.0", only: :dev},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
 
       # Test dependencies

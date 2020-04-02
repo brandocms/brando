@@ -2,7 +2,7 @@ query :list, <%= alias %> do
   fn query -> from t in query<%= if soft_delete do %>, where: is_nil(t.deleted_at)<% end %> end
 end
 
-filters do
+filters <%= alias %> do
   fn
     {:<%= main_field %>, <%= main_field %>}, query ->
       from q in query, where: ilike(q.<%= main_field %>, ^"%#{<%= main_field %>}%")

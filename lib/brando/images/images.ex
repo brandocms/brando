@@ -54,8 +54,7 @@ defmodule Brando.Images do
           {:ok, Image.t()} | {:error, Ecto.Changeset.t()}
   def create_image(params, user) do
     %Image{}
-    |> put_creator(user)
-    |> Image.changeset(params)
+    |> Image.changeset(params, user)
     |> Brando.repo().insert
   end
 
@@ -178,8 +177,7 @@ defmodule Brando.Images do
   """
   def create_series(data, user) do
     %ImageSeries{}
-    |> put_creator(user)
-    |> ImageSeries.changeset(data)
+    |> ImageSeries.changeset(data, user)
     |> Brando.repo().insert()
   end
 
@@ -269,8 +267,8 @@ defmodule Brando.Images do
   """
   def create_category(data, user) do
     %ImageCategory{}
-    |> put_creator(user)
     |> ImageCategory.changeset(:create, data)
+    |> put_creator(user)
     |> Brando.repo().insert()
   end
 

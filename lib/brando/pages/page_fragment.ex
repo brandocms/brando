@@ -55,19 +55,12 @@ defmodule Brando.Pages.PageFragment do
 
   """
   @spec changeset(t, atom, Keyword.t() | Options.t()) :: changeset
-  def changeset(schema, action, params \\ %{})
+  def changeset(schema, params \\ %{}, user \\ :system)
 
-  def changeset(schema, :create, params) do
+  def changeset(schema, params, user) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
-    |> validate_required(@required_fields)
-    |> guard_for_circular_references()
-    |> generate_html()
-  end
-
-  def changeset(schema, :update, params) do
-    schema
-    |> cast(params, @required_fields ++ @optional_fields)
+    |> put_creator(user)
     |> validate_required(@required_fields)
     |> guard_for_circular_references()
     |> generate_html()

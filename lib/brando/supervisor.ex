@@ -2,10 +2,9 @@ defmodule Brando.Supervisor do
   @moduledoc """
   Main Brando supervisor.
 
-  Looks after `Brando.Registry`.
+  Looks after `Brando.Registry` and our cache.
   """
   use Supervisor
-  require Logger
 
   @spec start_link :: :ignore | {:error, any} | {:ok, pid}
   def start_link do
@@ -18,6 +17,6 @@ defmodule Brando.Supervisor do
       worker(Cachex, [:cache, []])
     ]
 
-    supervise(children, strategy: :one_for_one)
+    Supervisor.init(children, strategy: :one_for_one)
   end
 end

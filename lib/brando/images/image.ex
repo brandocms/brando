@@ -52,8 +52,8 @@ defmodule Brando.Image do
   @spec changeset(t, Map.t()) :: any
   def changeset(schema, params, user \\ :system, cfg \\ nil) do
     schema
-    |> put_creator(user)
     |> cast(params, @required_fields ++ @optional_fields)
+    |> put_creator(user)
     |> validate_required(@required_fields)
     |> validate_upload({:image, :image}, user, cfg)
   end

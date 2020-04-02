@@ -49,7 +49,7 @@ defmodule Brando.Pages do
     end
   end
 
-  filters do
+  filters Page do
     fn {:title, title}, query ->
       from q in query, where: ilike(q.title, ^"%#{title}%")
     end
@@ -60,8 +60,7 @@ defmodule Brando.Pages do
   """
   def create_page(params, user) do
     %Page{}
-    |> Brando.Utils.Schema.put_creator(user)
-    |> Page.changeset(:create, params)
+    |> Page.changeset(params, user)
     |> Brando.repo().insert
   end
 
@@ -72,10 +71,8 @@ defmodule Brando.Pages do
     page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
     {:ok, page} = get_page(page_id)
 
-    params = Map.put(params, :creator_id, user.id)
-
     page
-    |> Page.changeset(:update, params)
+    |> Page.changeset(params, user)
     |> Brando.repo().update
   end
 
@@ -361,8 +358,7 @@ defmodule Brando.Pages do
   """
   def create_page_fragment(params, user) do
     %PageFragment{}
-    |> Brando.Utils.Schema.put_creator(user)
-    |> PageFragment.changeset(:create, params)
+    |> PageFragment.changeset(params, user)
     |> Brando.repo().insert
   end
 
@@ -375,10 +371,8 @@ defmodule Brando.Pages do
 
     {:ok, page_fragment} = get_page_fragment(page_fragment_id)
 
-    params = Map.put(params, :creator_id, user.id)
-
     case page_fragment
-         |> PageFragment.changeset(:update, params)
+         |> PageFragment.changeset(params, user)
          |> Brando.repo().update do
       {:ok, page_fragment} ->
         update_villains_referencing_fragment(page_fragment)

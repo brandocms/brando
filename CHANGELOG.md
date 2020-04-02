@@ -15,6 +15,11 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * Simplify Villain default parser. Now you can `use Brando.Villain.Parser`
 for sensible defaults, and override when neccessary.
 
+### DEPRECATIONS
+
+* Move `put_creator` to after `cast` but before `validate_required` in your
+  changeset functions.
+
 
 ## 0.44.0
 

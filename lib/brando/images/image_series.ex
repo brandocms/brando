@@ -60,8 +60,8 @@ defmodule Brando.ImageSeries do
   def changeset(schema, params \\ %{}, user \\ :system) do
     cs =
       schema
-      |> put_creator(user)
       |> cast(params, @required_fields ++ @optional_fields)
+      |> put_creator(user)
       |> validate_required(@required_fields)
       |> put_slug(:name)
       |> avoid_slug_collision(&filter_current_category/1)

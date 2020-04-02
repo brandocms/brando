@@ -5,6 +5,8 @@ defmodule Brando.Utils.Schema do
 
   import Ecto.Query
 
+  @type changeset :: Ecto.Changeset.t()
+
   @slug_collision_attemps 15
 
   @doc """
@@ -25,11 +27,11 @@ defmodule Brando.Utils.Schema do
   @doc """
   Puts `id` from `user` in the `params` map.
   """
-  def put_creator(%Ecto.Changeset{} = cs, user) when is_map(user) do
-    Ecto.Changeset.put_change(cs, :creator_id, user.id)
-  end
-
+  @spec put_creator(changeset, Map.t() | atom) :: changeset
   def put_creator(%Ecto.Changeset{} = cs, :system), do: cs
+
+  def put_creator(%Ecto.Changeset{} = cs, user) when is_map(user),
+    do: Ecto.Changeset.put_change(cs, :creator_id, user.id)
 
   def put_creator(%Ecto.Changeset{} = cs, user_id) do
     Ecto.Changeset.put_change(cs, :creator_id, user_id)
@@ -37,7 +39,18 @@ defmodule Brando.Utils.Schema do
 
   def put_creator(params, :system), do: params
 
-  def put_creator(params, user) do
+  @spec put_creator(Map.t(), Map.t()) :: changeset
+  def put_creator(params, user) when is_map(user) do
+    IO.warn(
+      """
+      Using put_creator/2 with schema instead of changeset is deprecated.
+
+      - Move `put_creator` to after `cast` but before `validate_required` in your
+      changeset function instead..
+      """,
+      elem(Process.info(self(), :current_stacktrace), 1)
+    )
+
     key = (is_atom(List.first(Map.keys(params))) && :creator_id) || "creator_id"
     Map.put(params, key, user.id)
   end

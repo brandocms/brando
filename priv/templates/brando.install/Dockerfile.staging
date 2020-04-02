@@ -1,24 +1,30 @@
 ## JAVASCRIPT FRONTEND AND BACKEND
 
-FROM node:10 AS frontend_builder
+FROM node:12 AS frontend_builder
 
-COPY assets/frontend /opt/app/assets/frontend
+COPY assets/frontend/package.json assets/frontend/yarn.lock /opt/app/assets/frontend/
+COPY assets/frontend/yalc.* /opt/app/assets/frontend/
+COPY assets/frontend/.yalc* /opt/app/assets/frontend/.yalc
 WORKDIR /opt/app/assets/frontend
 RUN yarn install --force --pure-lockfile
+COPY assets/frontend /opt/app/assets/frontend
 RUN yarn run build
 
-FROM node:10 AS backend_builder
+FROM node:12 AS backend_builder
 
-COPY assets/backend /opt/app/assets/backend
+COPY assets/backend/package.json assets/backend/yarn.lock /opt/app/assets/backend/
+COPY assets/backend/yalc.* /opt/app/assets/backend/
+COPY assets/backend/.yalc* /opt/app/assets/backend/.yalc
 WORKDIR /opt/app/assets/backend
 RUN yarn install --force --pure-lockfile
+COPY assets/backend /opt/app/assets/backend
 RUN yarn run build
 
 ## MAIN ELIXIR APPLICATION
 
-FROM twined/fehn:2.1
+FROM twined/fehn:2.4
 
-LABEL maintainer="Twined Networks <mail@twined.net>"
+LABEL maintainer="Twined <mail@twined.net>"
 
 WORKDIR /opt/app
 ENV MIX_ENV staging
