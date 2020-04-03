@@ -97,8 +97,9 @@ defmodule Brando.Utils.Schema do
 
   defp get_unique_slug(q, slug, attempts) when attempts < @slug_collision_attemps do
     slug_to_test = construct_slug(slug, attempts)
+    test_query = from m in q, where: m.slug == ^slug_to_test
 
-    case Brando.repo().one(from m in q, where: m.slug == ^slug_to_test) do
+    case Brando.repo().one(test_query) do
       nil -> {:ok, slug_to_test}
       _ -> get_unique_slug(q, slug, attempts + 1)
     end
