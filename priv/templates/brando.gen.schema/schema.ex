@@ -26,11 +26,11 @@ defmodule <%= module %> do
       size_limit: 10_240_000,
       sizes: %{
         "micro"  => %{"size" => "25", "quality" => 20, "crop" => false},
-        "thumb"  => %{"size" => "150x150>", "quality" => 90, "crop" => true},
-        "small"  => %{"size" => "700", "quality" => 90},
-        "medium" => %{"size" => "1100", "quality" => 90},
-        "large"  => %{"size" => "1700", "quality" => 90},
-        "xlarge" => %{"size" => "2100", "quality" => 90}
+        "thumb"  => %{"size" => "300x300>", "quality" => 70, "crop" => true},
+        "small"  => %{"size" => "700", "quality" => 70},
+        "medium" => %{"size" => "1100", "quality" => 70},
+        "large"  => %{"size" => "1700", "quality" => 70},
+        "xlarge" => %{"size" => "2100", "quality" => 70}
       }
     }
 <% end %><%= for {_v, k} <- file_fields do %>
