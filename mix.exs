@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.44.0"
+  @version "0.45.0"
   @description "A helping hand for Twined applications."
 
   def project do
@@ -19,7 +19,10 @@ defmodule Brando.Mixfile do
 
       # Docs
       name: "Brando",
-      docs: [source_ref: "v#{@version}", source_url: "https://github.com/univers-agency/brando"]
+      docs: [
+        source_ref: "v#{@version}",
+        source_url: "https://github.com/univers-agency/brando"
+      ]
     ]
   end
 
@@ -73,7 +76,7 @@ defmodule Brando.Mixfile do
       {:earmark, "~> 1.2"},
       {:gettext, "~> 0.11"},
       {:httpoison, "~> 1.0"},
-      {:phoenix, "~> 1.4", override: true},
+      {:phoenix, "~> 1.4"},
       {:phoenix_html, "~> 2.6"},
       {:phoenix_ecto, "~> 4.0"},
       {:postgrex, "~> 0.14"},
@@ -90,8 +93,8 @@ defmodule Brando.Mixfile do
       {:inflex, "~> 2.0"},
 
       # graphql
-      {:absinthe, "~> 1.5.0-beta", override: true},
-      {:absinthe_plug, "~> 1.5.0-alpha"},
+      {:absinthe, "~> 1.5.0-beta"},
+      {:absinthe_plug, "~> 1.5.0-beta"},
       {:dataloader, "~> 1.0"},
 
       # monitoring

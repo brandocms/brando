@@ -97,7 +97,9 @@ defmodule Brando.Query do
       end
   """
   defmacro query(:list, module, do: block), do: query_list(module, block)
+  defmacro query(:single, module, do: block), do: query_single(module, block)
   defmacro filters(module, do: block), do: filter_query(module, block)
+  defmacro matches(module, do: block), do: match_query(module, block)
 
   defmacro filters(do: _),
     do:
@@ -154,10 +156,70 @@ defmodule Brando.Query do
     end
   end
 
+  defp query_single({_, _, module_list} = module, block) do
+    name =
+      module_list
+      |> List.last()
+      |> to_string()
+      |> String.downcase()
+
+    atom = String.to_existing_atom(name)
+
+    quote do
+      def unquote(:"get_#{name}")(id) when is_binary(id) or is_integer(id) do
+        query = unquote(block).(unquote(module)) |> where([t], t.id == ^id)
+
+        case Brando.repo().one(query) do
+          nil -> {:error, {unquote(atom), :not_found}}
+          result -> {:ok, result}
+        end
+      end
+
+      def unquote(:"get_#{name}")(args) when is_map(args) do
+        query =
+          args
+          |> Enum.reduce(unquote(module), fn
+            {_, nil}, query ->
+              query
+
+            {:limit, limit}, query ->
+              query |> limit(^limit)
+
+            {:status, status}, query ->
+              query |> with_status(status)
+
+            {:preload, preload}, query ->
+              query |> with_preload(preload)
+
+            {:filter, filter}, query ->
+              query |> with_filter(unquote(module), filter)
+
+            {:matches, match}, query ->
+              query |> with_match(unquote(module), match)
+          end)
+
+        query = unquote(block).(query) |> limit(1)
+
+        case Brando.repo().one(query) do
+          nil -> {:error, {unquote(atom), :not_found}}
+          result -> {:ok, result}
+        end
+      end
+    end
+  end
+
   defp filter_query(module, block) do
     quote do
       defp with_filter(query, unquote(module), filter) do
         Enum.reduce(filter, query, unquote(block))
+      end
+    end
+  end
+
+  defp match_query(module, block) do
+    quote do
+      defp with_match(query, unquote(module), match) do
+        Enum.reduce(match, query, unquote(block))
       end
     end
   end

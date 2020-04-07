@@ -7,7 +7,7 @@ defmodule Brando.Pages.PageFragment do
   @type changeset :: Ecto.Changeset.t()
 
   use Brando.Web, :schema
-  use Brando.Villain.Schema
+  use Brando.Villain.Schema, generate_protocol: false
   use Brando.SoftDelete.Schema
   use Brando.Sequence.Schema
 
@@ -95,6 +95,24 @@ defmodule Brando.Pages.PageFragment do
         else
           changeset
         end
+    end
+  end
+
+  defimpl Phoenix.HTML.Safe, for: Brando.Pages.PageFragment do
+    def to_iodata(%{wrapper: nil} = fragment) do
+      fragment.html
+      |> Phoenix.HTML.raw()
+      |> Phoenix.HTML.Safe.to_iodata()
+    end
+
+    def to_iodata(%{wrapper: wrapper} = fragment) do
+      wrapper
+      |> String.replace("${CONTENT}", fragment.html)
+      |> String.replace("${PARENT_KEY}", fragment.parent_key)
+      |> String.replace("${KEY}", fragment.key)
+      |> String.replace("${LANGUAGE}", fragment.language)
+      |> Phoenix.HTML.raw()
+      |> Phoenix.HTML.Safe.to_iodata()
     end
   end
 end

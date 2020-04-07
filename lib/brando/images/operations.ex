@@ -62,7 +62,8 @@ defmodule Brando.Images.Operations do
   @spec perform_operations(operations :: [operation], user :: user) :: {:ok, [operation_result]}
   def perform_operations(operations, user) do
     require Logger
-
+    Logger.error("Show progress for user")
+    Logger.error(inspect(user, pretty: true))
     Progress.show_progress(user)
     Logger.info("==> Brando.Images.Operations: Starting #{Enum.count(operations)} operations..")
     start_msec = :os.system_time(:millisecond)

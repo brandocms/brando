@@ -6,15 +6,16 @@ defmodule Brando.Pages.Page do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :schema
-  use Brando.Villain.Schema
-  use Brando.SoftDelete.Schema
+  use Brando.Field.Image.Schema
   use Brando.Sequence.Schema
+  use Brando.SoftDelete.Schema
+  use Brando.Villain.Schema
 
   alias Brando.Type.Status
   alias Brando.JSONLD
 
   @required_fields ~w(key language slug title data status creator_id)a
-  @optional_fields ~w(parent_id meta_description html css_classes sequence deleted_at)a
+  @optional_fields ~w(parent_id meta_description meta_image html css_classes sequence deleted_at)a
   @derived_fields ~w(
     id
     key
@@ -28,6 +29,7 @@ defmodule Brando.Pages.Page do
     creator_id
     parent_id
     meta_description
+    meta_image
     sequence
     inserted_at
     updated_at
@@ -53,6 +55,7 @@ defmodule Brando.Pages.Page do
   meta_schema do
     field ["description", "og:description"], [:meta_description]
     field ["title", "og:title"], [:title]
+    field "og:image", [:meta_image]
     field "og:locale", [:language], &Brando.Meta.Utils.encode_locale/1
   end
 
@@ -66,6 +69,7 @@ defmodule Brando.Pages.Page do
     field :status, Status
     field :css_classes, :string
     field :meta_description, :string
+    field :meta_image, Brando.Type.Image
 
     belongs_to :creator, Brando.Users.User
     belongs_to :parent, __MODULE__
@@ -76,6 +80,19 @@ defmodule Brando.Pages.Page do
     timestamps()
     soft_delete()
   end
+
+  has_image_field :meta_image, %{
+    allowed_mimetypes: ["image/jpeg", "image/png"],
+    default_size: :xlarge,
+    upload_path: Path.join(["images", "meta", "pages"]),
+    random_filename: true,
+    size_limit: 5_240_000,
+    sizes: %{
+      "micro" => %{"size" => "25", "quality" => 20, "crop" => false},
+      "thumb" => %{"size" => "150x150>", "quality" => 75, "crop" => true},
+      "xlarge" => %{"size" => "1200x630", "quality" => 75, "crop" => true}
+    }
+  }
 
   @doc """
   Casts and validates `params` against `schema` to create a valid changeset
@@ -94,6 +111,7 @@ defmodule Brando.Pages.Page do
     |> put_creator(user)
     |> put_slug()
     |> validate_required(@required_fields)
+    |> validate_upload({:image, :meta_image}, user)
     |> avoid_slug_collision()
     |> generate_html()
   end
@@ -101,6 +119,7 @@ defmodule Brando.Pages.Page do
   @doc """
   Encodes `data` in `params` if not a binary.
   """
+  @deprecated "Not in use after conversion to jsonb"
   def encode_data(params) do
     if is_list(params.data) do
       Map.put(params, :data, Jason.encode!(params.data))
@@ -112,6 +131,7 @@ defmodule Brando.Pages.Page do
   @doc """
   Order by language, status, key and insertion
   """
+  @deprecated "Use context functions instead: Brando.Pages.*"
   def order(query) do
     from m in query,
       order_by: [
@@ -121,79 +141,5 @@ defmodule Brando.Pages.Page do
         desc: m.key,
         desc: m.inserted_at
       ]
-  end
-
-  @doc """
-  Only gets schemas that are parents
-  """
-  def only_parents(query) do
-    from m in query,
-      where: is_nil(m.parent_id)
-  end
-
-  @doc """
-  Get schema with children from DB by `id`
-  """
-  def with_children(query) do
-    from m in query,
-      left_join: c in assoc(m, :children),
-      left_join: p in assoc(m, :parent),
-      left_join: cu in assoc(c, :creator),
-      join: u in assoc(m, :creator),
-      preload: [children: {c, creator: cu}, creator: u, parent: p],
-      select: m
-  end
-
-  @doc """
-  Gets schema with parents and children
-  """
-  def with_parents_and_children(query) do
-    children_query =
-      from c in query,
-        order_by: [asc: c.status, asc: c.key, desc: c.updated_at],
-        preload: [:creator]
-
-    from m in query,
-      left_join: c in assoc(m, :children),
-      left_join: cu in assoc(c, :creator),
-      join: u in assoc(m, :creator),
-      where: is_nil(m.parent_id),
-      preload: [children: ^children_query, creator: u],
-      select: m
-  end
-
-  @doc """
-  Search pages for `q`
-  """
-  def search(language, query) do
-    from p in __MODULE__,
-      where: p.language == ^language,
-      where: ilike(p.html, ^"%#{query}%")
-  end
-
-  defimpl Phoenix.HTML.Safe, for: Brando.Pages.Page do
-    def to_iodata(page) do
-      page.html
-      |> Phoenix.HTML.raw()
-      |> Phoenix.HTML.Safe.to_iodata()
-    end
-  end
-
-  defimpl Phoenix.HTML.Safe, for: Brando.Pages.PageFragment do
-    def to_iodata(%{wrapper: nil} = fragment) do
-      fragment.html
-      |> Phoenix.HTML.raw()
-      |> Phoenix.HTML.Safe.to_iodata()
-    end
-
-    def to_iodata(%{wrapper: wrapper} = fragment) do
-      wrapper
-      |> String.replace("${CONTENT}", fragment.html)
-      |> String.replace("${PARENT_KEY}", fragment.parent_key)
-      |> String.replace("${KEY}", fragment.key)
-      |> String.replace("${LANGUAGE}", fragment.language)
-      |> Phoenix.HTML.raw()
-      |> Phoenix.HTML.Safe.to_iodata()
-    end
   end
 end

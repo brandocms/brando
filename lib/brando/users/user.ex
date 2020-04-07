@@ -5,6 +5,7 @@ defmodule Brando.Users.User do
   """
 
   @type t :: %__MODULE__{}
+  @type user :: Brando.Users.User.t() | :system
 
   use Brando.Web, :schema
   use Brando.Field.Image.Schema
@@ -44,7 +45,7 @@ defmodule Brando.Users.User do
     soft_delete()
   end
 
-  has_image_field(:avatar, %{
+  has_image_field :avatar, %{
     allowed_mimetypes: [
       "image/jpeg",
       "image/png",
@@ -91,7 +92,7 @@ defmodule Brando.Users.User do
       "medium" => "500w",
       "large" => "700w"
     }
-  })
+  }
 
   @doc """
   Casts and validates `params` against `schema` to create a valid changeset
@@ -101,10 +102,10 @@ defmodule Brando.Users.User do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, :create | :update, %{binary => term} | %{atom => term}) :: Ecto.Changeset.t()
-  def changeset(schema, action, params \\ %{})
+  @spec changeset(t, %{binary => term}, user) :: Ecto.Changeset.t()
+  def changeset(schema, params \\ %{}, user \\ :system)
 
-  def changeset(schema, :create, params) do
+  def changeset(schema, params, user) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
@@ -114,19 +115,6 @@ defmodule Brando.Users.User do
       min: 6,
       too_short: gettext("Password must be at least 6 characters")
     )
-    |> validate_upload({:image, :avatar})
-  end
-
-  def changeset(schema, :update, params) do
-    schema
-    |> cast(params, @required_fields ++ @optional_fields)
-    |> update_change(:email, &String.downcase/1)
-    |> validate_format(:email, ~r/@/)
-    |> unique_constraint(:email)
-    |> validate_length(:password,
-      min: 6,
-      too_short: gettext("Password must be at least 6 characters")
-    )
-    |> validate_upload({:image, :avatar})
+    |> validate_upload({:image, :avatar}, user)
   end
 end

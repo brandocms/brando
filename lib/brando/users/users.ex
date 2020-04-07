@@ -79,8 +79,8 @@ defmodule Brando.Users do
   @doc """
   Create user
   """
-  def create_user(params) do
-    User.changeset(%User{}, :create, params)
+  def create_user(params, current_user) do
+    User.changeset(%User{}, params, current_user)
     |> maybe_update_password()
     |> Brando.repo().insert
   end
@@ -88,11 +88,11 @@ defmodule Brando.Users do
   @doc """
   Update user
   """
-  def update_user(id, params) do
+  def update_user(id, params, current_user) do
     case get_user(id) do
       {:ok, user} ->
         user
-        |> User.changeset(:update, params)
+        |> User.changeset(params, current_user)
         |> maybe_update_password
         |> Brando.repo().update
 

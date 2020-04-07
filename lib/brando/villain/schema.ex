@@ -32,12 +32,21 @@ defmodule Brando.Villain.Schema do
       config :brando, Brando.Villain, :parser
 
   """
-  defmacro __using__(_) do
+  defmacro __using__(opts) do
     quote do
       Module.register_attribute(__MODULE__, :villain_fields, accumulate: true)
-
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
+
+      unless Keyword.fetch(unquote(opts), :generate_protocol) == {:ok, false} do
+        defimpl Phoenix.HTML.Safe, for: __MODULE__ do
+          def to_iodata(entry) do
+            entry.html
+            |> Phoenix.HTML.raw()
+            |> Phoenix.HTML.Safe.to_iodata()
+          end
+        end
+      end
     end
   end
 

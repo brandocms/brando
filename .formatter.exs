@@ -4,7 +4,8 @@ locals_without_parens = [
   datasource: 2,
   query: 3,
   default: 1,
-  filters: 1
+  filters: 1,
+  has_image_field: 2
 ]
 
 [

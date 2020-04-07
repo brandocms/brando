@@ -71,6 +71,10 @@ defmodule Brando.Pages do
     page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
     {:ok, page} = get_page(page_id)
 
+    require Logger
+    Logger.error("updating page with user")
+    Logger.error(inspect(user, pretty: true))
+
     page
     |> Page.changeset(params, user)
     |> Brando.repo().update
@@ -102,6 +106,14 @@ defmodule Brando.Pages do
   end
 
   @doc """
+  Only gets schemas that are parents
+  """
+  def only_parents(query) do
+    from m in query,
+      where: is_nil(m.parent_id)
+  end
+
+  @doc """
   List page parents
   """
   def list_parents do
@@ -109,7 +121,7 @@ defmodule Brando.Pages do
 
     parents =
       Page
-      |> Page.only_parents()
+      |> only_parents()
       |> exclude_deleted()
       |> Brando.repo().all
 

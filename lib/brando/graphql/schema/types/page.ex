@@ -10,6 +10,7 @@ defmodule Brando.Schema.Types.Page do
     field :data, :json
     field :css_classes, :string
     field :meta_description, :string
+    field :meta_image, :upload_or_image
   end
 
   object :page do
@@ -28,6 +29,7 @@ defmodule Brando.Schema.Types.Page do
     field :children, list_of(:page), resolve: dataloader(Brando.Pages)
     field :fragments, list_of(:page_fragment), resolve: dataloader(Brando.Pages)
     field :meta_description, :string
+    field :meta_image, :image_type
     field :inserted_at, :time
     field :updated_at, :time
     field :deleted_at, :time
