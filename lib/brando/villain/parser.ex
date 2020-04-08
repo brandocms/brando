@@ -489,7 +489,7 @@ defmodule Brando.Villain.Parser do
       Convert template to html.
       """
       def template(%{"id" => id, "refs" => refs} = block) do
-        {:ok, template} = Villain.get_template(id)
+        {:ok, template} = Brando.Villain.get_template(id)
 
         vars = Map.get(block, "vars")
 
@@ -507,8 +507,12 @@ defmodule Brando.Villain.Parser do
           ref = Enum.find(refs, &(&1["name"] == match))
 
           if ref do
-            block = Map.get(ref, "data")
-            apply(__MODULE__, String.to_atom(block["type"]), [block["data"]])
+            if ref["deleted"] do
+              "<!-- d -->"
+            else
+              block = Map.get(ref, "data")
+              apply(__MODULE__, String.to_atom(block["type"]), [block["data"]])
+            end
           else
             "<!-- REF #{match} missing // template: #{id}. -->"
           end
