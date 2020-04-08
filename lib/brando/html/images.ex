@@ -201,7 +201,7 @@ defmodule Brando.HTML.Images do
 
     fallback =
       case placeholder do
-        :svg -> svg_fallback(img_struct, 0.05)
+        :svg -> svg_fallback(img_struct, 0.05, attrs.opts)
         false -> false
         _ -> Utils.img_url(img_struct, placeholder, attrs.opts)
       end
@@ -225,11 +225,31 @@ defmodule Brando.HTML.Images do
 
   # automatically add dims when lazyload: true
   defp add_dims(%{lazyload: true} = attrs, img_struct) do
-    width = Map.get(img_struct, :width) || false
-    height = Map.get(img_struct, :height) || false
+    width =
+      case Keyword.fetch(attrs.opts, :width) do
+        :error ->
+          false
 
-    orientation =
-      (Map.get(img_struct, :width) > Map.get(img_struct, :height) && "landscape") || "portrait"
+        {:ok, true} ->
+          Map.get(img_struct, :width)
+
+        {:ok, width} ->
+          width
+      end
+
+    height =
+      case Keyword.fetch(attrs.opts, :height) do
+        :error ->
+          false
+
+        {:ok, true} ->
+          Map.get(img_struct, :height)
+
+        {:ok, height} ->
+          height
+      end
+
+    orientation = (width > height && "landscape") || "portrait"
 
     attrs
     |> put_in([:img, :width], width)
@@ -238,11 +258,31 @@ defmodule Brando.HTML.Images do
   end
 
   defp add_dims(attrs, img_struct) do
-    width = (Keyword.get(attrs.opts, :width) && Map.get(img_struct, :width)) || false
-    height = (Keyword.get(attrs.opts, :height) && Map.get(img_struct, :height)) || false
+    width =
+      case Keyword.fetch(attrs.opts, :width) do
+        :error ->
+          false
 
-    orientation =
-      (Map.get(img_struct, :width) > Map.get(img_struct, :height) && "landscape") || "portrait"
+        {:ok, true} ->
+          Map.get(img_struct, :width)
+
+        {:ok, width} ->
+          width
+      end
+
+    height =
+      case Keyword.fetch(attrs.opts, :height) do
+        :error ->
+          false
+
+        {:ok, true} ->
+          Map.get(img_struct, :height)
+
+        {:ok, height} ->
+          height
+      end
+
+    orientation = (width > height && "landscape") || "portrait"
 
     attrs
     |> put_in([:img, :width], width)
@@ -299,7 +339,17 @@ defmodule Brando.HTML.Images do
     extra_attrs = extract_extra_attr(image_field, opts)
 
     cleaned_opts =
-      Keyword.drop(opts, [:lightbox, :cache, :attrs, :prefix, :srcset, :sizes, :default])
+      Keyword.drop(opts, [
+        :lightbox,
+        :cache,
+        :attrs,
+        :prefix,
+        :srcset,
+        :sizes,
+        :default,
+        :width,
+        :height
+      ])
 
     attrs =
       Keyword.new()
@@ -309,7 +359,7 @@ defmodule Brando.HTML.Images do
       )
 
     # if we have srcset, set src as empty svg
-    (srcset_attr != [] && Keyword.put(attrs, :src, svg_fallback(image_field))) || attrs
+    (srcset_attr != [] && Keyword.put(attrs, :src, svg_fallback(image_field, 0, attrs))) || attrs
   end
 
   defp extract_srcset_attr(img_field, opts),
@@ -318,20 +368,61 @@ defmodule Brando.HTML.Images do
   defp extract_sizes_attr(_, opts),
     do: (Keyword.get(opts, :sizes) && [sizes: get_sizes(opts[:sizes])]) || []
 
-  defp extract_width_attr(img_field, opts),
-    do: (Keyword.get(opts, :width) && [width: Map.get(img_field, :width)]) || []
+  defp extract_width_attr(img_field, opts) do
+    case Keyword.fetch(opts, :width) do
+      :error ->
+        []
 
-  defp extract_height_attr(img_field, opts),
-    do: (Keyword.get(opts, :height) && [height: Map.get(img_field, :height)]) || []
+      {:ok, true} ->
+        [width: Map.get(img_field, :width)]
+
+      {:ok, width} ->
+        [width: width]
+    end
+  end
+
+  defp extract_height_attr(img_field, opts) do
+    case Keyword.fetch(opts, :height) do
+      :error ->
+        []
+
+      {:ok, true} ->
+        [height: Map.get(img_field, :height)]
+
+      {:ok, height} ->
+        [height: height]
+    end
+  end
 
   defp extract_extra_attr(_, opts), do: Keyword.get(opts, :attrs, [])
 
   @doc """
   Return a correctly sized svg fallback
   """
-  def svg_fallback(image_field, opacity \\ 0) do
-    width = Map.get(image_field, :width, 0)
-    height = Map.get(image_field, :height, 0)
+  def svg_fallback(image_field, opacity \\ 0, attrs \\ []) do
+    width =
+      case Keyword.fetch(attrs, :width) do
+        :error ->
+          Map.get(image_field, :width, 0)
+
+        {:ok, true} ->
+          Map.get(image_field, :width, 0)
+
+        {:ok, width} ->
+          width
+      end
+
+    height =
+      case Keyword.fetch(attrs, :height) do
+        :error ->
+          Map.get(image_field, :height, 0)
+
+        {:ok, true} ->
+          Map.get(image_field, :width, 0)
+
+        {:ok, height} ->
+          height
+      end
 
     "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg" <>
       "%27%20width%3D%27#{width}%27%20height%3D%27#{height}%27" <>
