@@ -390,7 +390,34 @@ defmodule Brando.Villain.Parser do
       @doc """
       Datatable
       """
-      def datatable(rows) do
+      def datatable(%{"rows" => rows}) do
+        rows_html =
+          Enum.map_join(rows, "\n", fn row ->
+            """
+            <tr>
+              <td class="key">
+                #{row["key"]}
+              </td>
+              <td class="value">
+                #{row["value"]}
+              </td>
+            </tr>
+            """
+          end)
+
+        """
+        <div class="data-table-wrapper">
+          <table class="data-table">
+            #{rows_html}
+          </table>
+        </div>
+        """
+      end
+
+      @doc """
+      Datatable (Legacy)
+      """
+      def datatable(rows) when is_list(rows) do
         rows_html =
           Enum.map_join(rows, "\n", fn row ->
             """
