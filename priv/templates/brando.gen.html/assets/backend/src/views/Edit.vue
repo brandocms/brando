@@ -73,6 +73,7 @@ export default {
   apollo: {
     <%= vue_singular %>: {
       query: GET_<%= String.upcase(singular) %>,
+      fetchPolicy: 'no-cache',
       variables () {
         return {
           <%= vue_singular %>Id: this.<%= vue_singular %>Id
