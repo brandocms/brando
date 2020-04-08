@@ -150,35 +150,33 @@ defmodule Brando.HTML do
   @doc """
   Displays a banner informing about cookie laws
   """
-  def cookie_law(conn, text, opts \\ []) do
-    if Map.get(conn.cookies, "cookielaw_accepted") != "1" do
-      text = raw(text)
-      button_text = Keyword.get(opts, :button_text, "OK")
-      info_link = Keyword.get(opts, :info_link, "/cookies")
-      info_text = Keyword.get(opts, :info_text)
+  def cookie_law(_conn, text, opts \\ []) do
+    text = raw(text)
+    button_text = Keyword.get(opts, :button_text, "OK")
+    info_link = Keyword.get(opts, :info_link, "/cookies")
+    info_text = Keyword.get(opts, :info_text)
 
-      ~E"""
-      <div class="container cookie-container">
-        <div class="cookie-container-inner">
-          <div class="cookie-law">
-            <div class="cookie-law-text">
-              <p><%= text %></p>
-            </div>
-            <div class="cookie-law-buttons">
-              <button class="dismiss-cookielaw">
-                <%= button_text %>
-              </button>
-              <%= if info_text do %>
-              <a href="<%= info_link %>" class="info-cookielaw">
-                <%= info_text %>
-              </a>
-              <% end %>
-            </div>
+    ~E"""
+    <div class="container cookie-container">
+      <div class="cookie-container-inner">
+        <div class="cookie-law">
+          <div class="cookie-law-text">
+            <p><%= text %></p>
+          </div>
+          <div class="cookie-law-buttons">
+            <button class="dismiss-cookielaw">
+              <%= button_text %>
+            </button>
+            <%= if info_text do %>
+            <a href="<%= info_link %>" class="info-cookielaw">
+              <%= info_text %>
+            </a>
+            <% end %>
           </div>
         </div>
       </div>
-      """
-    end
+    </div>
+    """
   end
 
   @doc """
