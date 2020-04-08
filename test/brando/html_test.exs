@@ -66,9 +66,6 @@ defmodule Brando.HTMLTest do
   end
 
   test "cookie_law" do
-    mock_conn = %{cookies: %{"cookielaw_accepted" => "1"}}
-    assert cookie_law(mock_conn, "Accept cookielaw") == nil
-
     mock_conn = %{cookies: %{}}
     html = cookie_law(mock_conn, "Accept cookielaw") |> Phoenix.HTML.safe_to_string()
     assert html =~ "<p>Accept cookielaw</p>"
