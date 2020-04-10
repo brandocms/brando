@@ -9,6 +9,21 @@ filters <%= alias %> do
   end
 end
 
+query :single, <%= alias %>, do: fn query -> from(t in query)<%= if soft_delete do %>, where: is_nil(t.deleted_at)<% end %> end
+
+matches <%= alias %> do
+  fn
+    {:id, id}, query ->
+      from t in query, where: t.id == ^id
+
+    {:<%= List.first(attrs) |> elem(0) %>, <%= List.first(attrs) |> elem(0) %>}, query ->
+      from t in query, where: t.<%= List.first(attrs) |> elem(0) %> == ^<%= List.first(attrs) |> elem(0) %><%= if Keyword.get(attrs, :slug) do %>
+
+    {:slug, slug}, query ->
+      from t in query, where: t.slug == ^slug<% end %>
+  end
+end
+
 @doc """
 Get single <%= singular %>
 """

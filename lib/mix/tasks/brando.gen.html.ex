@@ -100,6 +100,7 @@ defmodule Mix.Tasks.Brando.Gen.Html do
     binding =
       Keyword.delete(binding, :module) ++
         [
+          attrs: attrs,
           locale_fields: locale_fields(attrs),
           plural: plural,
           route: route,
