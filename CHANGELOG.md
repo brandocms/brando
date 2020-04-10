@@ -14,6 +14,8 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * Add `Brando.Datasource`. Allows you to access preset backend queries from Villain.
 * Simplify Villain default parser. Now you can `use Brando.Villain.Parser`
 for sensible defaults, and override when neccessary.
+* KInputTable: Rename `newRows` -> `addRows`
+
 
 ### DEPRECATIONS
 

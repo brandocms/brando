@@ -1,3 +1,11 @@
+## 0.45.0
+
+* Phoenix has replaced `Plug.Logger` with `Plug.Telemetry` etc in default
+  generated `endpoint.ex`.
+
+  Replace `plug Plug.Logger` with `plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]`
+* KInputTable: Rename `newRows` -> `addRows`
+
 ## 0.44.0
 
 ### Vue backend rewrite part 1/? (sorry)
