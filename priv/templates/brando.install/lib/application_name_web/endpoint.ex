@@ -44,7 +44,7 @@ defmodule <%= application_module %>Web.Endpoint do
   plug Plug.Session,
     store: :cookie,
     key: "_<%= application_name %>_key",
-    signing_salt: "Wq19EWJ9"
+    signing_salt: "<%= :crypto.strong_rand_bytes(8) |> Base.encode64 |> binary_part(0, 8) %>"
 
   plug <%= application_module %>Web.Router
 end
