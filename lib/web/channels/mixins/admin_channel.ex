@@ -8,6 +8,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "images:update_category_config",
     "images:get_series_config",
     "images:update_series_config",
+    "images:rerender_image_series",
     "image:update",
     "image:get",
     "pages:list_parents",
@@ -119,6 +120,16 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
       ) do
     user = Guardian.Phoenix.Socket.current_resource(socket)
     {:ok, _} = Brando.Images.update_series_config(series_id, config, user)
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in(
+        "images:rerender_image_series",
+        %{"series_id" => series_id},
+        socket
+      ) do
+    user = Guardian.Phoenix.Socket.current_resource(socket)
+    Brando.Images.Processing.recreate_sizes_for_image_series(series_id, user)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
