@@ -7,4 +7,4 @@ config :<%= application_name %>, <%= application_module %>.Repo,
   # ssl: true,
   url: "postgres://<%= application_name %>:PROD_PASSWORD_HERE@localhost/<%= application_name %>_prod",
   socket_options: [recbuf: 8192, sndbuf: 8192],
-  pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10")
+  pool_size: String.to_integer(System.get_env("POOL_SIZE") || "15")
