@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # BRANDO INSTALL SCRIPT
-echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-echo ">>>>>>>>>>>>> BRANDO INSTALLATION >>>>>>>>>>>>>"
-echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+clear
+echo "╓─────────────────────────────────────────────╖"
+echo "║             BRANDO Installation             ║"
+echo "╙─────────────────────────────────────────────╜"
 echo   # new line
 MODULE=$(cat mix.exs | sed -n 's/defmodule \(.*\)\.MixProject.*/\1/p')
 echo "==> Extracted module from mix.exs => $MODULE"
