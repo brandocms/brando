@@ -6,7 +6,7 @@ end
 defmodule Phoenix.DupHTMLView do
 end
 
-defmodule Mix.Tasks.Brando.Gen.HtmlTest do
+defmodule Mix.Tasks.Brando.Gen.Test do
   use ExUnit.Case
   import MixHelper
 
@@ -16,7 +16,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
   end
 
   test "generates html resource" do
-    in_tmp("brando.gen.html", fn ->
+    in_tmp("brando.gen", fn ->
       Mix.Tasks.Brando.Install.run([])
 
       send(self(), {:mix_shell_input, :prompt, "Games"})
@@ -38,7 +38,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       # creator?
       send(self(), {:mix_shell_input, :yes?, true})
 
-      Mix.Tasks.Brando.Gen.Html.run([])
+      Mix.Tasks.Brando.Gen.run([])
 
       send(self(), {:mix_shell_input, :prompt, "Games"})
       send(self(), {:mix_shell_input, :prompt, "Captain"})
@@ -59,7 +59,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       # creator?
       send(self(), {:mix_shell_input, :yes?, true})
 
-      Mix.Tasks.Brando.Gen.Html.run([])
+      Mix.Tasks.Brando.Gen.run([])
 
       send(self(), {:mix_shell_input, :prompt, "Games"})
       send(self(), {:mix_shell_input, :prompt, "PegLeg"})
@@ -73,7 +73,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       # creator?
       send(self(), {:mix_shell_input, :yes?, true})
 
-      Mix.Tasks.Brando.Gen.Html.run([])
+      Mix.Tasks.Brando.Gen.run([])
 
       assert_received {:mix_shell, :info,
                        [
@@ -216,7 +216,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       # creator?
       send(self(), {:mix_shell_input, :yes?, true})
 
-      Mix.Tasks.Brando.Gen.Html.run([])
+      Mix.Tasks.Brando.Gen.run([])
 
       # test with soft delete
 
@@ -236,7 +236,7 @@ defmodule Mix.Tasks.Brando.Gen.HtmlTest do
       # creator?
       send(self(), {:mix_shell_input, :yes?, true})
 
-      Mix.Tasks.Brando.Gen.Html.run([])
+      Mix.Tasks.Brando.Gen.run([])
 
       assert_file("lib/brando/graphql/schema/types/project.ex", fn file ->
         assert file =~ "defmodule Brando.Schema.Types.Project do"

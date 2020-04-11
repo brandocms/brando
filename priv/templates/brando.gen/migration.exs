@@ -7,7 +7,7 @@ defmodule <%= base %>.Repo.Migrations.Create<%= scoped %> do
 
   def change do
     create table(:<%= snake_domain %>_<%= plural %>) do
-<%= for migration <- migrations do %>      <%= migration %>
+<%= for migration <- migration_fields do %>      <%= migration %>
 <% end %><%= for {_, i, s, on_delete} <- migration_assocs do %>      add <%= inspect i %>, references(<%= inspect s %>, on_delete: <%= inspect on_delete %>)
 <% end %>
 <%= if creator do %>      add :creator_id, references(:users_users, on_delete: :nothing)<% end %>

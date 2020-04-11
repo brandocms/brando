@@ -17,11 +17,11 @@ export default {
       "help-text": "",
       "more": "More",
       "fields": {
-        <%= for {lf, idx} <- Enum.with_index(locale_fields["en"]) do %>"<%= lf.field %>": {
+        <%= for {lf, idx} <- Enum.with_index(vue_locales["en"]) do %>"<%= lf.field %>": {
           "label": "<%= lf.label %>",
           "placeholder": "<%= lf.placeholder %>",
           "help_text": "<%= lf.help_text %>"
-        }<%= if idx < Enum.count(locale_fields["en"]) - 1 do %>,<% end %>
+        }<%= if idx < Enum.count(vue_locales["en"]) - 1 do %>,<% end %>
         <% end %>
       }
     }
@@ -44,11 +44,11 @@ export default {
       "help-text": "",
       "more": "Mer",
       "fields": {
-        <%= for {lf, idx} <- Enum.with_index(locale_fields["nb"]) do %>"<%= lf.field %>": {
+        <%= for {lf, idx} <- Enum.with_index(vue_locales["nb"]) do %>"<%= lf.field %>": {
           "label": "<%= lf.label %>",
           "placeholder": "<%= lf.placeholder %>",
           "help_text": "<%= lf.help_text %>"
-        }<%= if idx < Enum.count(locale_fields["nb"]) - 1 do %>,<% end %>
+        }<%= if idx < Enum.count(vue_locales["nb"]) - 1 do %>,<% end %>
         <% end %>
       }
     }

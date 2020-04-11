@@ -2,6 +2,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.45.0
 
+* Rename mix task `brando.gen.html` -> `brando.gen`
 * Add `meta_image` field to `Brando.Page`
 * Add `Brando.Datasource`
 * Smarter Dockerfile layer caching

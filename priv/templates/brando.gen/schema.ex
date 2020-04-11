@@ -1,4 +1,4 @@
-defmodule <%= module %> do
+defmodule <%= schema_module %> do
   use <%= base %>Web, :schema<%= if villain_fields != [] do %>
   use Brando.Villain.Schema<% end %><%= if gallery do %>
   use Brando.Gallery.Schema<% end %><%= if soft_delete do %>

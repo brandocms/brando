@@ -7,10 +7,8 @@
       <div class="half">
         <!--
         FORM FIELDS HERE
-        --><%= for {_v, k} <- vue_inputs do %>
-        <%= List.first(k) %><% {_, r} = List.pop_at(k, 0); {_, remainder} = List.pop_at(r, -1) %><%= for prop <- remainder do %>
-          <%= prop %><% end %>
-        />
+        --><%= for {_v, html} <- vue_inputs do %>
+<%= html %>
         <% end %>
       </div>
     </section>
@@ -18,7 +16,10 @@
 </template>
 
 <script>
+// ++imports
 import locale from '../../locales/<%= vue_plural %>'
+// __imports
+
 export default {
   props: {
     <%= vue_singular %>: {
@@ -32,28 +33,9 @@ export default {
     }
   },
 
-  data () {
-    return {
-      parents: [],
-      settings: {
-        templateMode: false,
-        templateNamespace: 'all',
-        namespacedTemplates: []
-      }
-    }
-  },
-
-  inject: [
-    'adminChannel'
-  ],
-
-  created () {
-    //
-  },
-
-  methods: {
-    //
-  },
+  // ++apollo
+  <%= vue_form_queries %>
+  // __apollo
 
   i18n: {
     sharedMessages: locale

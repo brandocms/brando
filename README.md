@@ -123,13 +123,11 @@ Open up you application's `lib/application.ex` and add to `start/2`:
 
 Generate templates:
 
-    $ mix brando.gen.html
+    $ mix brando.gen
 
 `name:string avatar:image data:villain image_series:gallery`
 
-Also supports `user:references` to add a `belongs_to` assoc.
-
-Copy outputted routes and add to `lib/web/router.ex`
+Also supports `user:references:users_users` to add a `belongs_to` assoc.
 
 If you use Gettext, register your module in `lib/application.ex`:
 

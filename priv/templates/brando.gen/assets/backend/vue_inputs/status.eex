@@ -1,0 +1,6 @@
+        <KInputStatus
+          v-model="<%= vue_singular %>.status"
+          name="<%= vue_singular %>[status]"
+          rules="required"
+          :label="$t('<%= vue_plural %>.fields.status.label')"
+          :help-text="$t('<%= vue_plural %>.fields.status.help_text')" />
