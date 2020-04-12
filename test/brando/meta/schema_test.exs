@@ -11,9 +11,9 @@ defmodule Brando.MetaSchemaTest do
 
     meta_schema do
       field "title", [:title]
-      field "mutated_title", [:title], &mutator_function/1
-      field "generated_title", &generator_function/1
-      field ["description", "og:description"], [:description], &mutator_function/1
+      field "mutated_title", [:title], fn data -> ">> #{data}" end
+      field "generated_title", fn _ -> "Generated." end
+      field ["description", "og:description"], [:description], fn data -> "@ #{data}" end
     end
 
     def mutator_function(data), do: "@ #{data}"
@@ -25,7 +25,7 @@ defmodule Brando.MetaSchemaTest do
 
     assert extracted_meta["description"] == "@ Our description"
     assert extracted_meta["title"] == "Our title"
-    assert extracted_meta["mutated_title"] == "@ Our title"
+    assert extracted_meta["mutated_title"] == ">> Our title"
     assert extracted_meta["generated_title"] == "Generated."
   end
 end
