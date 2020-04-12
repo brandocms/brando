@@ -1,5 +1,15 @@
 ## 0.45.0
 
+* Authorization. First run `mix brando.gen.authorization` to create a generic
+  authorization module in your application
+
+  Then in your `router.ex`, remove the `scope "/auth"` block
+  and add a `forward` instead:
+
+        forward "/auth", Brando.Plug.Authentication,
+          guardian_module: MyAppWeb.Guardian,
+          authorization_module: MyApp.Authorization
+
 * Phoenix has replaced `Plug.Logger` with `Plug.Telemetry` etc in default
   generated `endpoint.ex`.
 

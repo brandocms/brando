@@ -5,7 +5,12 @@ locals_without_parens = [
   query: 3,
   default: 1,
   filters: 1,
-  has_image_field: 2
+  has_image_field: 2,
+  can: 2,
+  can: 3,
+  cannot: 2,
+  cannot: 3,
+  rules: 2
 ]
 
 [
