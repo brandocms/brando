@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Brando.UploadStatic do
+defmodule Mix.Tasks.Brando.Static.Deploy do
   use Mix.Task
   alias ExAws.S3
 
@@ -17,6 +17,7 @@ defmodule Mix.Tasks.Brando.UploadStatic do
 
     Mix.shell().info("=> Preparing bucket")
 
+    region = Map.fetch!(Application.get_env(:ex_aws, :s3), :region)
     bucket = Atom.to_string(Brando.otp_app())
 
     bucket
@@ -31,7 +32,7 @@ defmodule Mix.Tasks.Brando.UploadStatic do
         Mix.shell().info("==> Creating bucket ...")
 
         bucket
-        |> ExAws.S3.put_bucket("fra1")
+        |> ExAws.S3.put_bucket(region)
         |> ExAws.request()
     end
 
