@@ -167,7 +167,10 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "lib/application_name_web/endpoint.ex", "lib/application_name_web/endpoint.ex"},
 
     # Repo
-    {:eex, "lib/application_name/repo.ex", "lib/application_name/repo.ex"}
+    {:eex, "lib/application_name/repo.ex", "lib/application_name/repo.ex"},
+
+    # Authorization
+    {:eex, "lib/application_name/authorization.ex", "lib/application_name/authorization.ex"}
   ]
 
   @static [
