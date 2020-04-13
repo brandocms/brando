@@ -2,12 +2,13 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.45.0
 
+* Removed deprecated `Brando.Config` genserver.
 * Started laying the foundation for authorization. See `UPGRADE.MD`
 * Rename mix task `brando.gen.html` -> `brando.gen`
 * Add `meta_image` field to `Brando.Page`
 * Add `Brando.Datasource`
 * Smarter Dockerfile layer caching
-* Add globals to identity configuratin
+* Add globals to identity configuration
 * Add variables to Villain templates
 * Improve default backend eslint configuration
 * Add creator switch to generator
