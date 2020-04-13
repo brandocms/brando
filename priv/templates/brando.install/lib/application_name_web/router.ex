@@ -60,11 +60,9 @@ defmodule <%= application_module %>Web.Router do
   scope "/admin", as: :admin do
     pipe_through :admin
 
-    scope "/auth" do
-      post "/login", <%= application_module %>Web.SessionController, :create
-      post "/logout", <%= application_module %>Web.SessionController, :delete
-      post "/verify", <%= application_module %>Web.SessionController, :verify
-    end
+    forward "/auth", Brando.Plug.Authentication,
+          guardian_module: <%= application_module %>Web.Guardian,
+          authorization_module: <%= application_module %>.Authorization
 
     scope "/api" do
       pipe_through [:api, :token, :authenticated]
