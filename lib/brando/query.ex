@@ -43,6 +43,7 @@ defmodule Brando.Query do
       defp with_order(query, order), do: with_order(query, [order])
 
       defp with_status(query, "all"), do: query
+      defp with_status(query, "deleted"), do: from(q in query, where: not is_nil(q.is_deleted))
       defp with_status(query, status), do: from(q in query, where: q.status == ^status)
 
       @doc """
