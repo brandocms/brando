@@ -41,6 +41,11 @@ defmodule Brando do
   def helpers, do: config(:helpers)
 
   @doc """
+  Gets the parent app's authorization module, as set in config.exs
+  """
+  def authorization, do: config(:authorization)
+
+  @doc """
   Gets the parent app's otp name, as set in config.exs
   """
   def otp_app, do: config(:otp_app)
