@@ -38,6 +38,11 @@ defmodule Brando.SoftDelete.Query do
   end
 
   @doc """
+  Check if `schema` is soft deleted
+  """
+  def soft_delete_schema?(schema), do: schema in list_soft_delete_schemas()
+
+  @doc """
   Count all soft deleted entries per schema
   """
   def count_soft_deletions do

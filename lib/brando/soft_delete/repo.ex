@@ -40,6 +40,14 @@ defmodule Brando.SoftDelete.Repo do
 
   defmacro __using__(_opts) do
     quote do
+      def maybe_slug(%Ecto.Changeset{data: %{slug: slug}} = changeset) do
+        changeset
+        |> Ecto.Changeset.force_change(:slug, slug)
+        |> Brando.Utils.Schema.avoid_slug_collision()
+      end
+
+      def maybe_slug(changeset), do: changeset
+
       def soft_delete_all(queryable) do
         update_all(queryable, set: [deleted_at: utc_now()])
       end
@@ -59,12 +67,14 @@ defmodule Brando.SoftDelete.Repo do
       def restore(struct_or_changeset) do
         struct_or_changeset
         |> Ecto.Changeset.change(deleted_at: nil)
+        |> maybe_slug()
         |> update()
       end
 
       def restore!(struct_or_changeset) do
         struct_or_changeset
         |> Ecto.Changeset.change(deleted_at: nil)
+        |> maybe_slug()
         |> update!()
       end
 

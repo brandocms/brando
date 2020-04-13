@@ -4,6 +4,7 @@ defmodule Brando.Utils.Schema do
   """
 
   import Ecto.Query
+  alias Brando.SoftDelete
 
   @type changeset :: Ecto.Changeset.t()
 
@@ -82,7 +83,7 @@ defmodule Brando.Utils.Schema do
 
     if slug do
       unique_slug =
-        case get_unique_slug(q, slug, 0) do
+        case get_unique_slug(cs, q, slug, 0) do
           {:ok, unique_slug} -> unique_slug
           {:error, :too_many_attempts} -> slug
         end
@@ -95,17 +96,28 @@ defmodule Brando.Utils.Schema do
 
   def avoid_slug_collision(cs, _), do: cs
 
-  defp get_unique_slug(q, slug, attempts) when attempts < @slug_collision_attemps do
+  defp get_unique_slug(cs, q, slug, attempts) when attempts < @slug_collision_attemps do
     slug_to_test = construct_slug(slug, attempts)
     test_query = from m in q, where: m.slug == ^slug_to_test
 
+    # if schema is soft deleted, only check non deleted entries.
+    test_query =
+      if SoftDelete.Query.soft_delete_schema?(cs.data.__struct__) do
+        from m in test_query, where: is_nil(m.deleted_at)
+      else
+        test_query
+      end
+
     case Brando.repo().one(test_query) do
-      nil -> {:ok, slug_to_test}
-      _ -> get_unique_slug(q, slug, attempts + 1)
+      nil ->
+        {:ok, slug_to_test}
+
+      _ ->
+        get_unique_slug(cs, q, slug, attempts + 1)
     end
   end
 
-  defp get_unique_slug(_, _, _), do: {:error, :too_many_attempts}
+  defp get_unique_slug(_, _, _, _), do: {:error, :too_many_attempts}
 
   defp construct_slug(slug, 0), do: slug
   defp construct_slug(slug, attempts), do: "#{slug}-#{to_string(attempts)}"
