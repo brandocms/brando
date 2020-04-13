@@ -9,7 +9,7 @@ filters <%= alias %> do
   end
 end
 
-query :single, <%= alias %>, do: fn query -> from(t in query)<%= if soft_delete do %>, where: is_nil(t.deleted_at)<% end %> end
+query :single, <%= alias %>, do: fn query -> from t in query<%= if soft_delete do %>, where: is_nil(t.deleted_at)<% end %> end
 
 matches <%= alias %> do
   fn
