@@ -226,7 +226,13 @@ defmodule Mix.Tasks.Brando.Gen do
 
     instructions = """
     Update your repository by running migrations:
+
         $ mix ecto.migrate
+
+    Then lint the Vue backend files:
+
+        $ cd assets/backend && yarn lint --fix && cd ../..
+
     ================================================================================================
     """
 
