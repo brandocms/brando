@@ -75,11 +75,6 @@ defmodule Mix.Tasks.Brando.Gen.Test do
 
       Mix.Tasks.Brando.Gen.run([])
 
-      assert_received {:mix_shell, :info,
-                       [
-                         "Update your repository by running migrations:\n    $ mix ecto.migrate\n================================================================================================\n"
-                       ]}
-
       assert_file("lib/brando/graphql/schema.ex", fn file ->
         assert file =~ "import_fields :pirate_queries"
         assert file =~ "import_fields :pirate_mutations"
