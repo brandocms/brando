@@ -171,16 +171,13 @@ config :ex_aws, :s3, %{
 ```
 
 Use `Brando.HTML.include_js/0` and `Brando.HTML.include_css/0` right before `</head>`
-in `app.html.eex`, since these functions figure out whether to use `path` or `url` for
-static asset links.
+in `app.html.eex`, since these functions automatically chooses whether to use `path`
+or `url` for static asset links.
 
 Add to your frontend `package.json`
 ```
-"build:cdn": "yarn build:legacy:cdn && yarn build:modern:cdn",
-"build:legacy": "NODE_ENV=production BROWSERSLIST_ENV=legacy webpack --mode=production",
-"build:modern": "NODE_ENV=production BROWSERSLIST_ENV=modern webpack --mode=production",
-"build:legacy:cdn": "UNIVERS_CDN=my_app NODE_ENV=production BROWSERSLIST_ENV=legacy webpack --mode=production",
-"build:modern:cdn": "UNIVERS_CDN=my_app NODE_ENV=production BROWSERSLIST_ENV=modern webpack --mode=production",
+"build": "webpack --mode=production --config webpack.prod.js",
+"build:cdn": "BRANDO_CDN=<%= application_name %> NODE_ENV=production webpack --mode=production --config ./webpack.config.prod.js",
 ```
 
 Make sure you build frontend with:
@@ -192,7 +189,7 @@ RUN yarn run build.cdn
 Add to Dockerfile build:
 
 ```bash
-$ mix brando.upload_static
+$ mix brando.static.deploy
 ```
 
 
