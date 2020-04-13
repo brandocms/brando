@@ -164,7 +164,10 @@ defmodule Mix.Tasks.Brando.Install do
     {:keep, "lib/graphql/resolvers", "lib/application_name/graphql/resolvers"},
 
     # Endpoint
-    {:eex, "lib/application_name_web/endpoint.ex", "lib/application_name_web/endpoint.ex"}
+    {:eex, "lib/application_name_web/endpoint.ex", "lib/application_name_web/endpoint.ex"},
+
+    # Repo
+    {:eex, "lib/application_name/repo.ex", "lib/application_name/repo.ex"}
   ]
 
   @static [
