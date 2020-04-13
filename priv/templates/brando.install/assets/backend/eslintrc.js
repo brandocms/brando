@@ -3,7 +3,7 @@ module.exports = {
   env: {
     node: true
   },
-  'extends': [
+  extends: [
     'plugin:vue/essential',
     '@vue/standard'
   ],
@@ -21,18 +21,18 @@ module.exports = {
     'vue/html-end-tags': 1,
     'vue/html-self-closing': 0,
     'vue/html-closing-bracket-newline': ['error', {
-      'singleline': 'never',
-      'multiline': 'never'
+      singleline: 'never',
+      multiline: 'never'
     }],
     'vue/html-closing-bracket-spacing': 1,
     'vue/html-indent': 1,
     'vue/mustache-interpolation-spacing': 1,
     'vue/multiline-html-element-content-newline': 1,
     'vue/max-attributes-per-line': ['error', {
-      'singleline': 1,
-      'multiline': {
-        'max': 1,
-        'allowFirstLine': false
+      singleline: 1,
+      multiline: {
+        max: 1,
+        allowFirstLine: false
       }
     }],
     'vue/attributes-order': 1,
