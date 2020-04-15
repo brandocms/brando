@@ -17,20 +17,73 @@ defmodule Brando.LivePreview do
     end
   end
 
+  @doc """
+  Generates a render function for live previewing
+  """
   defmacro target(opts, do: block) do
+    schema_module = Keyword.fetch!(opts, :schema_module) |> Macro.expand(__CALLER__)
+    view_module = Keyword.fetch!(opts, :view_module) |> Macro.expand(__CALLER__)
+    layout_module = Keyword.fetch!(opts, :layout_module) |> Macro.expand(__CALLER__)
+    layout_template = Keyword.get(opts, :layout_template, "app.html")
+
     quote do
-      def render(unquote(opts[:schema]), entry, key, prop, cache_key) do
-        view = unquote(opts[:view])
-        template = unquote(opts[:template])
-        section = unquote(opts[:section])
+      @doc """
+      `entry` - data structure of our entry
+      `key` - refers to the Villain `data` key. If nil, then ignore
+      `prop` - the variable name we store the entry under
+      `cache_key` - unique key for this live preview
+      """
+      def render(unquote(schema_module), entry, key, prop, cache_key) do
+        template = unquote(opts[:template]).(entry)
+        section = unquote(opts[:section]).(entry)
+        var!(cache_key) = cache_key
+
+        # run block assigns
+        var!(extra_vars) = []
         unquote(block)
+
+        atom_prop = String.to_existing_atom(prop)
+
+        # if key, then parse villain
+        entry =
+          if key do
+            atom_key = String.to_existing_atom(key)
+            parsed_html = Brando.Villain.parse(Map.get(entry, atom_key))
+            rendered_data = Brando.Villain.render_entry(entry, parsed_html)
+            entry = Map.put(entry, :html, rendered_data)
+          else
+            entry
+          end
+
+        # build conn
+        conn = %Plug.Conn{host: "localhost", private: %{phoenix_endpoint: Brando.endpoint()}}
+        conn = Brando.Plug.HTML.put_section(conn, section)
+
+        unquote(layout_module).render(
+          unquote(layout_template),
+          [
+            {:conn, conn},
+            {:view_module, unquote(view_module)},
+            {:view_template, template},
+            {:section, section},
+            {atom_prop, entry}
+          ] ++ unquote(Macro.var(:extra_vars, nil))
+        )
+        |> Phoenix.HTML.safe_to_string()
       end
     end
   end
 
   defmacro assign(var_name, var_value) do
     quote do
-      unquote(var_name) = unquote(var_value)
+      cached_var =
+        Brando.LivePreview.get_var(unquote(Macro.var(:cache_key, nil)), unquote(var_name), fn ->
+          unquote(var_value).()
+        end)
+
+      var!(extra_vars) = [
+        {unquote(var_name), cached_var} | unquote(Macro.var(:extra_vars, nil))
+      ]
     end
   end
 
