@@ -239,7 +239,6 @@ export default {
   apollo: {
     <%= vue_plural %>: {
       query: GET_<%= String.upcase(plural) %>,
-      debounce: 750,
       variables () {
         return this.queryVars
       }
