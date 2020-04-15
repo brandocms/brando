@@ -9,6 +9,31 @@ defmodule Brando.LivePreview do
                    min_len: 32
                  )
 
+  defmacro __using__(_) do
+    quote do
+      # Module.register_attribute(__MODULE__, :datasources, accumulate: true)
+      import unquote(__MODULE__)
+      # @before_compile unquote(__MODULE__)
+    end
+  end
+
+  defmacro target(opts, do: block) do
+    quote do
+      def render(unquote(opts[:schema]), entry, key, prop, cache_key) do
+        view = unquote(opts[:view])
+        template = unquote(opts[:template])
+        section = unquote(opts[:section])
+        unquote(block)
+      end
+    end
+  end
+
+  defmacro assign(var_name, var_value) do
+    quote do
+      unquote(var_name) = unquote(var_value)
+    end
+  end
+
   @spec build_cache_key(Map.t()) :: String.t()
   def build_cache_key(seed) do
     "PREVIEW-" <> Hashids.encode(@preview_coder, seed)
