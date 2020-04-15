@@ -128,9 +128,11 @@ defmodule Brando.Query do
 
     quote do
       def unquote(:"list_#{name}")(args \\ %{}) do
+        initial_query = unquote(block).(unquote(module))
+
         query =
           args
-          |> Enum.reduce(unquote(module), fn
+          |> Enum.reduce(initial_query, fn
             {_, nil}, query ->
               query
 
@@ -152,8 +154,6 @@ defmodule Brando.Query do
             {:filter, filter}, query ->
               query |> with_filter(unquote(module), filter)
           end)
-
-        query = unquote(block).(query)
 
         {:ok, Brando.repo().all(query)}
       end
