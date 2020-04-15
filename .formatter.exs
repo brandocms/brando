@@ -10,7 +10,8 @@ locals_without_parens = [
   can: 3,
   cannot: 2,
   cannot: 3,
-  rules: 2
+  rules: 2,
+  assign: 2
 ]
 
 [
