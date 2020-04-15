@@ -71,10 +71,6 @@ defmodule Brando.Pages do
     page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
     {:ok, page} = get_page(page_id)
 
-    require Logger
-    Logger.error("updating page with user")
-    Logger.error(inspect(user, pretty: true))
-
     page
     |> Page.changeset(params, user)
     |> Brando.repo().update
