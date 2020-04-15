@@ -11,9 +11,9 @@
           authorization_module: MyApp.Authorization
 
 * Phoenix has replaced `Plug.Logger` with `Plug.Telemetry` etc in default
-  generated `endpoint.ex`.
+  generated `endpoint.ex`. Replace `plug Plug.Logger` with
+  `plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]`
 
-  Replace `plug Plug.Logger` with `plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]`
 * KInputTable: Rename `newRows` -> `addRows`
 
 ## 0.44.0
