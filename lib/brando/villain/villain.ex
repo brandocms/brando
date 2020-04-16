@@ -332,6 +332,7 @@ defmodule Brando.Villain do
 
       {:ok, page} = Pages.get_page(1)
       render_villain page.data, %{"link" => "hello"}
+
   """
   @spec render_villain([map], %{required(String.t()) => String.t()}) :: binary()
   def render_villain(data_field, vars \\ %{})
