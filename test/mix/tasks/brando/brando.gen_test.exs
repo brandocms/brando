@@ -26,7 +26,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       send(
         self(),
         {:mix_shell_input, :prompt,
-         "name age:integer height:decimal famous:boolean born_at:datetime " <>
+         "name slug:slug:name age:integer height:decimal famous:boolean born_at:datetime " <>
            "secret:uuid cover:image pdf:file data:villain biography:villain first_login:date " <>
            "alarm:time address:references:addresses"}
       )
@@ -101,15 +101,17 @@ defmodule Mix.Tasks.Brando.Gen.Test do
         assert file =~ "field :pdf, Brando.Type.File"
 
         assert file =~
-                 "@required_fields ~w(name age height famous born_at secret first_login alarm creator_id data biography_data address_id)a"
+                 "@required_fields ~w(name slug age height famous born_at secret first_login alarm creator_id data biography_data address_id)a"
 
         assert file =~ "@optional_fields ~w(cover pdf)"
         assert file =~ "use Brando.Sequence.Schema"
         assert file =~ "sequenced"
         assert file =~ "villain"
+        assert file =~ "field :slug, :text"
         assert file =~ "villain :biography"
         assert file =~ "generate_html()"
         assert file =~ "generate_html(:biography)"
+        assert file =~ "avoid_slug_collision()"
       end)
 
       assert_file("lib/brando/games/games.ex", fn file ->
@@ -179,6 +181,11 @@ defmodule Mix.Tasks.Brando.Gen.Test do
                  "<KForm\n    v-if=\"pegLeg\"\n    :back=\"{ name: 'pegLegs' }\"\n    @save=\"save\">"
 
         assert file =~ ~s(v-model="pegLeg.name")
+      end)
+
+      assert_file("assets/backend/src/views/games/PirateForm.vue", fn file ->
+        assert file =~ ~s(<KInputSlug)
+        assert file =~ ~s(:from="pirate.name")
       end)
 
       assert_file("assets/backend/src/views/games/PegLegCreateView.vue", fn file ->

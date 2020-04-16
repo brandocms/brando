@@ -264,6 +264,17 @@ defmodule Brando.Generators.Vue do
         {k, :gallery} ->
           {k, nil, nil}
 
+        {k, {:slug, target}} ->
+          binding = binding ++ [k: k, target: target]
+
+          filename =
+            Application.app_dir(
+              :brando,
+              "priv/templates/brando.gen/assets/backend/vue_inputs/slug.eex"
+            )
+
+          {k, EEx.eval_file(filename, binding)}
+
         {k, type} ->
           k =
             cond do

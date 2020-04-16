@@ -54,15 +54,11 @@ defmodule Mix.Tasks.Brando.Gen do
 
     attrs =
       Mix.shell().prompt("""
-      + Enter schema fields. Valid fields are:
+      + Enter schema fields:
 
-        name:string
-        status:status
-        meta_description:text
-        avatar:image
-        data:villain
-        image_series:gallery
-        user:references:users
+        ## Example
+
+        name:string slug:slug:name status:status meta_description:text avatar:image data:villain image_series:gallery user:references:users
 
       """)
       |> String.trim("\n")
@@ -78,6 +74,7 @@ defmodule Mix.Tasks.Brando.Gen do
     image_field? = :image in Keyword.values(attrs)
     gallery? = :gallery in Keyword.values(attrs)
     status? = :status in Keyword.values(attrs)
+    slug? = Keyword.has_key?(Keyword.values(attrs), :slug)
 
     binding = Mix.Brando.inflect(singular)
     path = binding[:path]
@@ -135,6 +132,7 @@ defmodule Mix.Tasks.Brando.Gen do
           villain: villain?,
           gallery: gallery?,
           status: status?,
+          slug: slug?,
           sequenced: sequenced?,
           soft_delete: soft_delete?,
           creator: creator?,
@@ -239,33 +237,6 @@ defmodule Mix.Tasks.Brando.Gen do
     binding = Enum.reduce(@generator_modules, binding, &apply(&1, :after_copy, [&2]))
 
     # Add content to files
-
-    ## ADMIN CHANNEL GALLERY
-    if gallery? do
-      ins = """
-      def handle_in("#{binding[:singular]}:create_image_series", %{"#{binding[:singular]}_id" => #{
-        binding[:singular]
-      }_id}, socket) do
-        user = Guardian.Phoenix.Socket.current_resource(socket)
-        {:ok, image_series} = #{domain_name}.create_image_series(#{binding[:singular]}_id, user)
-        {:reply, {:ok, %{code: 200, image_series: Map.merge(image_series, %{creator: nil, image_category: nil, images: nil})}}, socket}
-      end
-      """
-
-      Mix.Brando.add_to_file(
-        "lib/#{Mix.Brando.otp_app()}_web/channels/admin_channel.ex",
-        "imports",
-        "alias #{binding[:base]}.#{binding[:domain]}",
-        singular: true
-      )
-
-      Mix.Brando.add_to_file(
-        "lib/#{Mix.Brando.otp_app()}_web/channels/admin_channel.ex",
-        "functions",
-        ins
-      )
-    end
-
     if sequenced? do
       Mix.Brando.add_to_file(
         "lib/#{Mix.Brando.otp_app()}_web/channels/admin_channel.ex",
@@ -293,13 +264,14 @@ defmodule Mix.Tasks.Brando.Gen do
 
   def migration_type({k, :image}), do: {k, :jsonb}
   def migration_type({k, :file}), do: {k, :text}
+  def migration_type({k, :slug}), do: {k, :slug}
   def migration_type({k, :text}), do: {k, :text}
   def migration_type({k, :status}), do: {k, :integer}
   def migration_type({k, type}), do: {k, type}
 
   defp partition_attrs_and_assocs(attrs) do
     Enum.split_with(attrs, fn
-      {_, {_, _}} -> false
+      {_, {:references, _}} -> false
       {_, _} -> true
     end)
   end
@@ -316,6 +288,9 @@ defmodule Mix.Tasks.Brando.Gen do
     Enum.into(attrs, %{}, fn
       {k, {:references, target}} ->
         {k, {:references, target}}
+
+      {k, {:slug, target}} ->
+        {k, {:slug, target}}
 
       {k, {c, v}} ->
         {k, {c, value_to_type(v)}}

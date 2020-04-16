@@ -1,26 +1,28 @@
 defmodule Mix.Brando do
-  # Conveniences for Phoenix tasks.
+  # Conveniences for generators
+
   @moduledoc false
 
   @valid_attributes [
-    :integer,
-    :float,
-    :decimal,
-    :boolean,
-    :map,
-    :string,
-    :image,
-    :villain,
-    :gallery,
-    :status,
     :array,
-    :references,
-    :text,
+    :boolean,
     :date,
-    :file,
-    :time,
     :datetime,
-    :uuid
+    :decimal,
+    :file,
+    :float,
+    :gallery,
+    :image,
+    :integer,
+    :map,
+    :references,
+    :slug,
+    :status,
+    :string,
+    :text,
+    :time,
+    :uuid,
+    :villain
   ]
 
   @doc """
@@ -132,6 +134,9 @@ defmodule Mix.Brando do
     |> Enum.into(%{}, fn
       {k, {:array, _}} ->
         {k, []}
+
+      {k, {:slug, _}} ->
+        {k, "some-content"}
 
       {k, :integer} ->
         {k, 42}
