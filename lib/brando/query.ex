@@ -119,12 +119,7 @@ defmodule Brando.Query do
       """)
 
   defp query_list({_, _, module_list} = module, block) do
-    name =
-      module_list
-      |> List.last()
-      |> to_string()
-      |> String.downcase()
-      |> Inflex.pluralize()
+    name = module_list |> List.last() |> Inflex.underscore() |> Inflex.pluralize()
 
     quote do
       def unquote(:"list_#{name}")(args \\ %{}) do
