@@ -11,9 +11,7 @@ defmodule Brando.LivePreview do
 
   defmacro __using__(_) do
     quote do
-      # Module.register_attribute(__MODULE__, :datasources, accumulate: true)
       import unquote(__MODULE__)
-      # @before_compile unquote(__MODULE__)
     end
   end
 
