@@ -1,16 +1,29 @@
 defmodule <%= application_module %>Web.Endpoint do
   use Phoenix.Endpoint, otp_app: :<%= application_name %>
 
+  # The session will be stored in the cookie and signed,
+  # this means its contents can be read but not tampered with.
+  # Set :encryption_salt if you would also like to encrypt it.
+  @session_options [
+    store: :cookie,
+    key: "_<%= application_name %>_key",
+    signing_salt: signing_salt
+  ]
+
   socket "/admin/socket", <%= application_module %>Web.AdminSocket,
     websocket: true,
     longpoll: true
+
+  socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
 
   # Serve at "/" the static files from "priv/static" directory.
   #
   # You should set gzip to true if you are running phoenix.digest
   # when deploying your static files in production.
   plug Plug.Static,
-    at: "/", from: :<%= application_name %>, gzip: false,
+    at: "/",
+    from: :<%= application_name %>,
+    gzip: false,
     only: ~w(css fonts img images js ico favicon.ico robots.txt)
 
   plug Plug.Static,
@@ -24,7 +37,12 @@ defmodule <%= application_module %>Web.Endpoint do
     socket "/phoenix/live_reload/socket", Phoenix.LiveReloader.Socket
     plug Phoenix.LiveReloader
     plug Phoenix.CodeReloader
+    plug Phoenix.Ecto.CheckRepoStatus, otp_app: :<%= application_name %>
   end
+
+  plug Phoenix.LiveDashboard.RequestLogger,
+    param_key: "request_logger",
+    cookie_key: "request_logger"
 
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
@@ -37,14 +55,6 @@ defmodule <%= application_module %>Web.Endpoint do
 
   plug Plug.MethodOverride
   plug Plug.Head
-
-  # The session will be stored in the cookie and signed,
-  # this means its contents can be read but not tampered with.
-  # Set :encryption_salt if you would also like to encrypt it.
-  plug Plug.Session,
-    store: :cookie,
-    key: "_<%= application_name %>_key",
-    signing_salt: "<%= :crypto.strong_rand_bytes(8) |> Base.encode64 |> binary_part(0, 8) %>"
-
+  plug Plug.Session, @session_options
   plug <%= application_module %>Web.Router
 end

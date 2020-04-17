@@ -1,6 +1,9 @@
 defmodule <%= application_module %>Web.Router do
   use <%= application_module %>Web, :router
 
+  import Plug.BasicAuth
+  import Phoenix.LiveDashboard.Router
+
   import Brando.Plug.I18n
   import Brando.Images.Routes.Admin.API
   import Brando.Villain.Routes.Admin.API
@@ -38,6 +41,10 @@ defmodule <%= application_module %>Web.Router do
     # }
   end
 
+  pipeline :basic_auth do
+    plug :basic_auth, username: "admin", password: "<%= :os.timestamp |> :erlang.phash2 |> Integer.to_string(32) |> String.downcase %>"
+  end
+
   pipeline :api do
     plug :accepts, ["json"]
     # plug RemoteIp
@@ -55,6 +62,11 @@ defmodule <%= application_module %>Web.Router do
 
   if @sql_sandbox do
     forward "/__e2e", Brando.Plug.E2ETest
+  end
+
+  scope "/__dashboard" do
+    pipe_through [:browser, :basic_auth]
+    live_dashboard "/"
   end
 
   scope "/admin", as: :admin do

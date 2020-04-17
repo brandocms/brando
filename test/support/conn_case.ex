@@ -18,7 +18,9 @@ defmodule Brando.ConnCase do
   using do
     quote do
       # Import conveniences for testing with connections
-      use Phoenix.ConnTest
+      import Plug.Conn
+      import Phoenix.ConnTest
+      import Brando.ConnCase
 
       # Alias the data repository and import query/schema functions
       alias Brando.Integration.TestRepo

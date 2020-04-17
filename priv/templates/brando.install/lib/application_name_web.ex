@@ -71,17 +71,7 @@ defmodule <%= application_module %>Web do
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_csrf_token: 0, get_flash: 2, view_module: 1]
 
-      # Use all HTML functionality (forms, tags, etc)
-      use Phoenix.HTML
-
-      import Brando.HTML
-      import Brando.Utils
-      import Brando.Pages, only: [render_fragment: 2, render_fragment: 3]
-
-      import <%= application_module %>Web.ErrorHelpers
-      import <%= application_module %>Web.Gettext
-
-      alias <%= application_module %>Web.Router.Helpers, as: Routes
+      unquote(view_helpers())
     end
   end
 
@@ -102,6 +92,21 @@ defmodule <%= application_module %>Web do
       import Ecto.Query
 
       import <%= application_module %>Web.Gettext
+    end
+  end
+
+  defp view_helpers do
+    quote do
+      # Use all HTML functionality (forms, tags, etc)
+      use Phoenix.HTML
+
+      import Brando.HTML
+      import Brando.Utils
+      import Brando.Pages, only: [render_fragment: 2, render_fragment: 3]
+
+      import <%= application_module %>Web.ErrorHelpers
+      import <%= application_module %>Web.Gettext
+      alias <%= application_module %>Web.Router.Helpers, as: Routes
     end
   end
 

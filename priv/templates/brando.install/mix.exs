@@ -7,7 +7,7 @@ defmodule <%= application_module %>.MixProject do
   def project do
     [app: :<%= application_name %>,
      version: @version,
-     elixir: "~> 1.6",
+     elixir: "~> 1.10",
      elixirc_paths: elixirc_paths(Mix.env),
      compilers: [:phoenix, :gettext] ++ Mix.compilers,
      start_permanent: Mix.env == :prod,
@@ -40,14 +40,18 @@ defmodule <%= application_module %>.MixProject do
   defp deps do
     [
      # phoenix
-     {:phoenix, "~> 1.4.0"},
-     {:phoenix_pubsub, "~> 1.1"},
-     {:phoenix_ecto, "~> 4.0"},
+     {:phoenix, "~> 1.5.0-rc.0", override: true},
+     {:phoenix_pubsub, "~> 2.0"},
+     {:plug_cowboy, "~> 2.1"},
+     {:phoenix_ecto, "~> 4.1"},
      {:phoenix_html, "~> 2.12"},
      {:phoenix_live_reload, "~> 1.2", only: :dev},
-     {:plug_cowboy, "~> 1.0"},
-     {:ecto, "~> 3.0"},
-     {:ecto_sql, "~> 3.0"},
+     {:phoenix_live_dashboard, "~> 0.1.0"},
+
+     {:ecto_sql, "~> 3.4"},
+
+     {:telemetry_metrics, "~> 0.4"},
+     {:telemetry_poller, "~> 0.4"},
 
      # general deps
      {:postgrex, "~> 0.15"},

@@ -96,6 +96,7 @@ defmodule Mix.Tasks.Brando.Install do
 
     # Default configuration files
     {:eex, "config/brando.exs", "config/brando.exs"},
+    {:eex, "config/config.exs", "config/config.exs"},
     {:eex, "config/dev.exs", "config/dev.exs"},
     {:eex, "config/e2e.exs", "config/e2e.exs"},
     {:eex, "config/prod.exs", "config/prod.exs"},
@@ -170,7 +171,10 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "lib/application_name/repo.ex", "lib/application_name/repo.ex"},
 
     # Authorization
-    {:eex, "lib/application_name/authorization.ex", "lib/application_name/authorization.ex"}
+    {:eex, "lib/application_name/authorization.ex", "lib/application_name/authorization.ex"},
+
+    # Telemetry
+    {:eex, "lib/application_name_web/telemetry.ex", "lib/application_name_web/telemetry.ex"}
   ]
 
   @static [
@@ -331,7 +335,10 @@ defmodule Mix.Tasks.Brando.Install do
 
     binding = [
       application_module: opts[:module] || Phoenix.Naming.camelize(Atom.to_string(app)),
-      application_name: Atom.to_string(app)
+      application_name: Atom.to_string(app),
+      secret_key_base: random_string(64),
+      signing_salt: random_string(8),
+      lv_signing_salt: random_string(8)
     ]
 
     Mix.shell().info("\nDeleting old assets")
@@ -371,5 +378,9 @@ defmodule Mix.Tasks.Brando.Install do
           create_file(target, contents, force: true)
       end
     end
+  end
+
+  defp random_string(length) do
+    :crypto.strong_rand_bytes(length) |> Base.encode64() |> binary_part(0, length)
   end
 end
