@@ -1,12 +1,10 @@
 defmodule <%= application_module %>Web.Router do
   use <%= application_module %>Web, :router
 
-  import Plug.BasicAuth
-  import Phoenix.LiveDashboard.Router
-
   import Brando.Plug.I18n
   import Brando.Images.Routes.Admin.API
   import Brando.Villain.Routes.Admin.API
+  import Phoenix.LiveDashboard.Router
 
   @sql_sandbox Application.get_env(:<%= application_name %>, :sql_sandbox) || false
 
