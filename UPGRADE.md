@@ -1,5 +1,9 @@
 ## 0.45.0
 
+* Switch out
+  `plug :put_layout, {YourAppWeb.LayoutView, "admin.html"}` with
+  `plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}` in your app's router
+
 * Authorization. First run `mix brando.gen.authorization` to create a generic
   authorization module in your application
 
