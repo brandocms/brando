@@ -7,7 +7,7 @@ defmodule <%= application_module %>Web.Endpoint do
   @session_options [
     store: :cookie,
     key: "_<%= application_name %>_key",
-    signing_salt: <%= signing_salt %>
+    signing_salt: "<%= signing_salt %>"
   ]
 
   socket "/admin/socket", <%= application_module %>Web.AdminSocket,
