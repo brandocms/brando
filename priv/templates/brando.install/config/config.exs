@@ -11,7 +11,7 @@ config :<%= application_name %>,
   ecto_repos: [<%= application_module %>.Repo]
 
 # Configures the endpoint
-config :<%= application_name %>, <%= application_name %>Web.Endpoint,
+config :<%= application_name %>, <%= application_module %>Web.Endpoint,
   url: [host: "localhost"],
   secret_key_base: "<%= secret_key_base %>",
   render_errors: [view: <%= application_module %>Web.ErrorView, accepts: ~w(html json), layout: false],
