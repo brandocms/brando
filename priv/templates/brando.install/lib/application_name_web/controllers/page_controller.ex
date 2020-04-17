@@ -1,6 +1,5 @@
 defmodule <%= application_module %>Web.PageController do
   use <%= application_module %>Web, :controller
-  alias Brando.Images
   alias Brando.Pages
   alias <%= application_module %>Web.FallbackController
 
@@ -8,27 +7,19 @@ defmodule <%= application_module %>Web.PageController do
 
   @doc false
   def index(conn, _params) do
-    f = Pages.get_page_fragments("index")
-    # {:ok, s} =
-    #   Images.get_series(
-    #     "forside",
-    #     "bildekarusell"
-    #   )
-    s = []
-
-    conn
-    |> put_section("index")
-    |> assign(:section, "index")
-    |> assign(:s, s)
-    |> assign(:f, f)
-    |> render(:index)
+    with {:ok, page} <- Pages.get_page("index") do
+      conn
+      |> put_section("index")
+      |> put_meta(Pages.Page, page)
+      |> assign(:page, page)
+      |> render(:index)
+    end
   end
 
   @doc false
   def cookies(conn, _) do
     conn
     |> put_section("cookies")
-    |> assign(:section, "cookies")
     |> render(:cookies)
   end
 end
