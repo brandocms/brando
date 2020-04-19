@@ -242,8 +242,8 @@
 
 * Switch out the `:hmr` logic for `css` and `js` with
 
-    <%= Brando.HTML.include_css() %>
-    <%= Brando.HTML.include_js() %>
+    <%= Brando.HTML.include_css(@conn) %>
+    <%= Brando.HTML.include_js(@conn) %>
 
   right before `</head>`
 
