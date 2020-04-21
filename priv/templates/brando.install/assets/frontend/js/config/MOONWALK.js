@@ -1,57 +1,35 @@
-import { Sine, Expo } from '@univers-agency/jupiter'
-
 export default () => ({
-  rootMargin: '-10%',
+  rootMargin: '-10% 0%',
   threshold: 0,
   initialDelay: 0.1,
 
   walks: {
     default: {
-      interval: 0.1, // was 0.03
+      interval: 0.2, // was 0.03
+      duration: 0.65,
+      transition: null
+    },
+
+    slide: {
+      interval: 0.2, // was 0.03
       duration: 0.65,
       alphaTween: true,
-      transition: {
-        from: {
-          y: 5
-        },
-        to: {
-          // autoAlpha: 1,
-          ease: Sine.easeOut,
-          force3D: true,
-          y: 0
-        }
-      }
+      transition: null
     },
 
-    fast: {
-      duration: 0.2,
-      interval: 0.07,
+    fadeIn: {
+      interval: 0,
+      duration: 0.35,
+      startDelay: 0,
       transition: {
         from: {
-          x: 8,
-          autoAlpha: 0
+          scaleX: 0,
+          transformOrigin: '0% 0%'
         },
 
         to: {
-          x: 0,
-          autoAlpha: 1
-        }
-      }
-    },
-
-    slider: {
-      sectionTargets: '.glide-slide',
-      interval: 0.2,
-      duration: 1.2,
-      alphaTween: true,
-      transition: {
-        from: {
-          autoAlpha: 0,
-          y: 21
-        },
-        to: {
-          ease: Sine.easeOut,
-          y: 0
+          scaleX: 1,
+          ease: 'sine.out'
         }
       }
     }
