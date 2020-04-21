@@ -1,14 +1,13 @@
 // webpack.dev.js - developmental builds
-const LEGACY_CONFIG = 'legacy'
 const MODERN_CONFIG = 'modern'
 
 // node modules
 const merge = require('webpack-merge')
 const path = require('path')
 const webpack = require('webpack')
+const fs = require('fs')
 
 // webpack plugins
-const DashboardPlugin = require('webpack-dashboard/plugin')
 const ExtractCssChunks = require('extract-css-chunks-webpack-plugin')
 const CopyPlugin = require('copy-webpack-plugin')
 const WriteFilePlugin = require('write-file-webpack-plugin')
@@ -22,9 +21,9 @@ const configureDevServer = buildType => ({
   public: settings.devServerConfig.public(),
   host: settings.devServerConfig.host(),
   port: settings.devServerConfig.port(),
-  https: !!parseInt(settings.devServerConfig.https()),
   disableHostCheck: true,
   hot: true,
+  https: !!parseInt(settings.devServerConfig.https()),
   overlay: true,
   // outputPath: path.resolve(__dirname, settings.paths.dist.base),
   contentBase: path.resolve('static'),
@@ -61,7 +60,7 @@ const configurePostcssLoader = buildType => {
         {
           loader: ExtractCssChunks.loader,
           options: {
-            hot: true // if you want HMR - we try to automatically inject hot reloading but if it's not working, add it to the config
+            hmr: true
             // reloadAll: true // when desperation kicks in - this is a brute force HMR flag
           }
         },
