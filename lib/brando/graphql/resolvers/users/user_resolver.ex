@@ -12,9 +12,6 @@ defmodule Brando.Users.UserResolver do
   Get current user
   """
   def me(_, %{context: %{current_user: current_user}}) do
-    require Logger
-    Logger.debug("-- $resolver: :users(me)")
-
     me =
       Brando.repo().one(
         from user in User,
@@ -31,9 +28,6 @@ defmodule Brando.Users.UserResolver do
   Get current user
   """
   def find(%{user_id: user_id}, %{context: %{current_user: _current_user}}) do
-    require Logger
-    Logger.debug("-- $resolver: :users(find)")
-
     user =
       Brando.repo().one(
         from user in User,
