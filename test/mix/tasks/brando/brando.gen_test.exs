@@ -107,7 +107,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
         assert file =~ "use Brando.Sequence.Schema"
         assert file =~ "sequenced"
         assert file =~ "villain"
-        assert file =~ "field :slug, :text"
+        assert file =~ "field :slug, :string"
         assert file =~ "villain :biography"
         assert file =~ "generate_html()"
         assert file =~ "generate_html(:biography)"

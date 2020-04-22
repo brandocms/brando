@@ -7,6 +7,7 @@ defmodule Brando.VillainTest do
     def datasource(_), do: nil
     def markdown(_), do: nil
     def html(_), do: nil
+    def svg(_), do: nil
     def map(_), do: nil
     def blockquote(_), do: nil
     def columns(_), do: nil
