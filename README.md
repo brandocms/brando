@@ -2,7 +2,7 @@ A helping hand.
 
 ![Brando logo](https://raw.githubusercontent.com/univers-agency/brando/master/priv/templates/brando.install/assets/frontend/static/images/brando/brando-big.png)
 
-[![Build Status](https://travis-ci.org/univers-agency/brando.svg?branch=master)](https://travis-ci.org/univers-agency/brando)
+![Build Status](https://github.com/univers-agency/brando/workflows/CI/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/univers-agency/brando/badge.svg?branch=master)](https://coveralls.io/github/univers-agency/brando?branch=master)
 [![Inline docs](http://inch-ci.org/github/univers-agency/brando.svg?branch=master)](http://inch-ci.org/github/univers-agency/brando)
 
