@@ -59,15 +59,15 @@ defmodule <%= application_module %>.MixProject do
 
      {:timex, "~> 3.0"},
      {:jason, "~> 1.0"},
-     {:absinthe, "~> 1.5.0-beta", override: true},
-     {:absinthe_plug, "~> 1.5.0-alpha"},
+     {:absinthe, "~> 1.5.0-rc", override: true},
+     {:absinthe_plug, "~> 1.5.0-rc"},
      {:dataloader, "~> 1.0"},
      {:ex_machina, "~> 2.3"},
 
      # release management and production tools
      {:distillery, "~> 2.1"},
      {:recon, "~> 2.3"},
-     {:plug_heartbeat, "~> 0.1"},
+     {:plug_heartbeat, "~> 1.0"},
 
      # brando
      # {:brando, github: "twined/brando", branch: "develop"}
