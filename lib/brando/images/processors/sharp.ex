@@ -3,9 +3,10 @@ defmodule Brando.Images.Processor.Sharp do
   Process image with Sharp
   """
 
-  @behaviour Brando.Images.Processor
-
+  require Logger
   alias Brando.Images
+
+  @behaviour Brando.Images.Processor
 
   @doc """
   Process image conversion when crop is false
@@ -56,7 +57,24 @@ defmodule Brando.Images.Processor.Sharp do
 
     params = List.flatten(file_params ++ extra_params ++ resize_params)
 
-    System.cmd("sharp", params, stderr_to_stdout: true)
+    case System.cmd("sharp", params, stderr_to_stdout: true) do
+      {error_msg, 1} ->
+        Logger.error("""
+        ==> process_image/ERROR
+
+        Error msg:
+        #{inspect(error_msg)}
+
+        Resize values:
+        #{inspect(resize_values)}
+
+        Params:
+        #{inspect(Enum.join(params, " "), pretty: true)}
+        """)
+
+      {_, 0} ->
+        :ok
+    end
 
     {:ok,
      %Images.TransformResult{
@@ -99,15 +117,13 @@ defmodule Brando.Images.Processor.Sharp do
          [
            "--height",
            round_to_string(resize_values.height)
-         ]) || [],
-      "--fit",
-      "inside"
+         ]) || []
     ]
 
     extract_params = [
       "extract",
-      crop_values.left |> round_to_string,
       crop_values.top |> round_to_string,
+      crop_values.left |> round_to_string,
       crop_values.width |> round_to_string,
       crop_values.height |> round_to_string
     ]
@@ -122,7 +138,27 @@ defmodule Brando.Images.Processor.Sharp do
     params =
       List.flatten(file_params ++ extra_params ++ resize_params ++ ["--"] ++ extract_params)
 
-    System.cmd("sharp", params, stderr_to_stdout: true)
+    case System.cmd("sharp", params, stderr_to_stdout: true) do
+      {error_msg, 1} ->
+        Logger.error("""
+        ==> process_image/ERROR
+
+        Error msg:
+        #{inspect(error_msg)}
+
+        Resize values:
+        #{inspect(resize_values)}
+
+        Crop values:
+        #{inspect(crop_values)}
+
+        Params:
+        #{inspect(Enum.join(params, " "), pretty: true)}
+        """)
+
+      {_, 0} ->
+        :ok
+    end
 
     {:ok,
      %Images.TransformResult{
@@ -145,7 +181,7 @@ defmodule Brando.Images.Processor.Sharp do
       {:error, {:executable, :missing, "sharp-cli"}}
   end
 
-  defp round_to_string(0), do: "0"
-  defp round_to_string(val) when is_float(val), do: val |> Float.round() |> Float.to_string()
-  defp round_to_string(val), do: val |> to_string()
+  def round_to_string(0), do: "0"
+  def round_to_string(val) when is_float(val), do: val |> Float.round() |> Float.to_string()
+  def round_to_string(val), do: val |> to_string()
 end
