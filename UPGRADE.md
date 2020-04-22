@@ -20,6 +20,9 @@
 
 * KInputTable: Rename `newRows` -> `addRows`
 
+* Copy `DashboardView.vue` from Brando Install >
+
+
 ## 0.44.0
 
 ### Vue backend rewrite part 1/? (sorry)
