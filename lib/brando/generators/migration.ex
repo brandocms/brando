@@ -20,6 +20,7 @@ defmodule Brando.Generators.Migration do
         case v do
           :villain -> (k == :data && "villain()") || "villain #{inspect(k)}"
           :gallery -> (k == :image_series && "gallery()") || "gallery #{inspect(k)}"
+          {:slug, _} -> "add #{inspect(k)}, :text"
           _ -> "add #{inspect(k)}, #{inspect(migration_types[k])}#{defaults[k]}"
         end
       end)
