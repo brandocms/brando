@@ -45,6 +45,9 @@ defmodule Brando.Villain.Parser do
   @doc "Parses html"
   @callback html(%{String.t() => any}) :: String.t()
 
+  @doc "Parses svg"
+  @callback svg(%{String.t() => any}) :: String.t()
+
   @doc "Parses template"
   @callback template(%{String.t() => any}) :: String.t()
 
@@ -133,6 +136,12 @@ defmodule Brando.Villain.Parser do
       """
       def html(%{"text" => html}), do: html
       defoverridable html: 1
+
+      @doc """
+      Svg -> html. Easy as pie.
+      """
+      def svg(%{"code" => html}), do: html
+      defoverridable svg: 1
 
       @doc """
       Markdown -> html
