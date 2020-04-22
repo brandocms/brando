@@ -15,6 +15,7 @@ defmodule Brando.System do
     {:ok, {:identity, :exists}} = check_identity_exists()
     {:ok, {:bucket, :exists}} = check_cdn_bucket_exists()
     {:ok, {:authorization, :exists}} = check_authorization_exists()
+    {:ok, {:globals, :valid}} = check_valid_globals()
     Logger.info("==> Brando >> System checks complete!")
   end
 
@@ -54,6 +55,36 @@ defmodule Brando.System do
        {:authorization,
         {"Authorization module not set in config. config :brando, authorization: MyApp.Authorization"}}}
     end
+  end
+
+  defp check_valid_globals do
+    search_terms = "\\$\\{GLOBAL\\:(\\w+)\\}"
+
+    for {schema, fields} <- Brando.Villain.list_villains() do
+      Enum.reduce(fields, [], fn {_, data_field, _html_field}, acc ->
+        case Brando.Villain.search_villains_for_regex(schema, data_field, search_terms) do
+          [] ->
+            acc
+
+          ids ->
+            log_invalid_global(schema, ids)
+            [ids | acc]
+        end
+      end)
+    end
+
+    # Return valid no matter what. We only want to warn
+    {:ok, {:globals, :valid}}
+  end
+
+  defp log_invalid_global(schema, ids) do
+    require Logger
+
+    Logger.error("""
+      ==> Found deprecated global variable format `${GLOBAL:key}`. Try `${GLOBAL:system.key}` instead.
+      ==> Schema.: #{inspect(schema)}
+      ==> Ids....: #{inspect(ids)}
+    """)
   end
 
   defp set_cache do
