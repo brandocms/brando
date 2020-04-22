@@ -16,8 +16,8 @@ defmodule Brando.Global do
   end
 
   defimpl Phoenix.HTML.Safe, for: Brando.Global do
-    def to_iodata(link) do
-      link.value
+    def to_iodata(global) do
+      global.value
       |> Phoenix.HTML.raw()
       |> Phoenix.HTML.Safe.to_iodata()
     end

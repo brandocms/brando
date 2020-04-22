@@ -25,7 +25,7 @@ defmodule Brando.Schema.Types.Identity do
     field :configs, list_of(:config)
     field :links, list_of(:link)
     field :metas, list_of(:meta)
-    field :globals, list_of(:global)
+    field :global_categories, list_of(:global_category)
     field :inserted_at, :time
     field :updated_at, :time
   end
@@ -47,6 +47,13 @@ defmodule Brando.Schema.Types.Identity do
     field :label, :string
     field :key, :string
     field :value, :string
+  end
+
+  object :global_category do
+    field :id, :id
+    field :label, :string
+    field :key, :string
+    field :globals, list_of(:global)
   end
 
   object :config do
@@ -71,7 +78,7 @@ defmodule Brando.Schema.Types.Identity do
     field :title_postfix, :string
     field :links, list_of(:link_params)
     field :metas, list_of(:meta_params)
-    field :globals, list_of(:global_params)
+    field :global_categories, list_of(:global_category_params)
     field :configs, list_of(:config_params)
     field :image, :upload_or_image
     field :logo, :upload_or_image
@@ -88,6 +95,13 @@ defmodule Brando.Schema.Types.Identity do
     field :id, :id
     field :key, :string
     field :value, :string
+  end
+
+  input_object :global_category_params do
+    field :id, :id
+    field :label, :string
+    field :key, :string
+    field :globals, list_of(:global_params)
   end
 
   input_object :global_params do
