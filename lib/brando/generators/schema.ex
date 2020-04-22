@@ -87,7 +87,7 @@ defmodule Brando.Generators.Schema do
         case v do
           :villain -> (k == :data && "villain()") || "villain #{inspect(k)}"
           :gallery -> (k == :image_series && "gallery()") || "gallery #{inspect(k)}"
-          {:slug, _} -> "field #{inspect(k)}, :text"
+          {:slug, _} -> "field #{inspect(k)}, :string"
           _ -> "field #{inspect(k)}, #{inspect(types[k])}#{defaults[k]}"
         end
       end)
