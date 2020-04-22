@@ -130,6 +130,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
         assert file =~ "villain"
         assert file =~ "sequenced"
         assert file =~ "villain :biography"
+        assert file =~ "create index(:games_pirates, [:slug])"
       end)
 
       assert_file("lib/brando_web/controllers/pirate_controller.ex", fn file ->
