@@ -16,68 +16,12 @@
 
 <script>
 
-import gql from 'graphql-tag'
+import GET_IDENTITY from 'brandojs/src/gql/identity/IDENTITY_QUERY.graphql'
 
 export default {
   apollo: {
     identity: {
-      query: gql`
-        query Identity {
-          identity {
-            id
-            type
-            name
-            alternate_name
-            email
-            phone
-            address
-            zipcode
-            city
-            country
-            description
-            title_prefix
-            title
-            title_postfix
-
-            image {
-              thumb: url(size: "original")
-              focal
-            }
-
-            logo {
-              thumb: url(size: "original")
-              focal
-            }
-
-            links {
-              id
-              name
-              url
-            }
-
-            metas {
-              id
-              key
-              value
-            }
-
-            globals {
-              id
-              label
-              key
-              value
-            }
-
-            configs {
-              id
-              key
-              value
-            }
-
-            url
-          }
-        }
-      `
+      query: GET_IDENTITY
     }
   }
 }
