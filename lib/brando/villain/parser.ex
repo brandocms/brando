@@ -524,7 +524,50 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert template to html.
       """
-      def template(%{"id" => id, "refs" => refs} = block) do
+      def template(
+            %{
+              "multi" => true,
+              "id" => id,
+              "entries" => entries,
+              "wrapper" => wrapper
+            } = block
+          ) do
+        # multi template
+        {:ok, template} = Brando.Villain.get_template(id)
+
+        content =
+          Enum.map(entries, fn %{"refs" => refs, "vars" => vars} ->
+            template_code =
+              if vars do
+                Regex.replace(~r/\${(\w+)}/, template.code, fn _, match ->
+                  get_in(vars, [match, "value"]) ||
+                    "<!-- VAR #{match} missing // template: #{id}. -->"
+                end)
+              else
+                template.code
+              end
+
+            Regex.replace(~r/%{(\w+)}/, template_code, fn _, match ->
+              # TODO!: split out this and the multi:false code
+              ref = Enum.find(refs, &(&1["name"] == match))
+
+              if ref do
+                if ref["deleted"] do
+                  "<!-- d -->"
+                else
+                  block = Map.get(ref, "data")
+                  apply(__MODULE__, String.to_atom(block["type"]), [block["data"]])
+                end
+              else
+                "<!-- REF #{match} missing // template: #{id}. -->"
+              end
+            end)
+          end)
+
+        String.replace(wrapper, "${CONTENT}", Enum.join(content, "\n"))
+      end
+
+      def template(%{"id" => id, "multi" => false, "refs" => refs} = block) do
         {:ok, template} = Brando.Villain.get_template(id)
 
         vars = Map.get(block, "vars")

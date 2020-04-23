@@ -40,13 +40,13 @@ defmodule <%= application_module %>.MixProject do
   defp deps do
     [
      # phoenix
-     {:phoenix, "~> 1.5.0-rc.0", override: true},
+     {:phoenix, "~> 1.5.0"},
      {:phoenix_pubsub, "~> 2.0"},
      {:plug_cowboy, "~> 2.1"},
      {:phoenix_ecto, "~> 4.1"},
      {:phoenix_html, "~> 2.12"},
      {:phoenix_live_reload, "~> 1.2", only: :dev},
-     {:phoenix_live_dashboard, "~> 0.1.0"},
+     {:phoenix_live_dashboard, "~> 0.2"},
 
      {:ecto_sql, "~> 3.4"},
 
@@ -59,7 +59,7 @@ defmodule <%= application_module %>.MixProject do
 
      {:timex, "~> 3.0"},
      {:jason, "~> 1.0"},
-     {:absinthe, "~> 1.5.0-rc", override: true},
+     {:absinthe, "~> 1.5.0-rc"},
      {:absinthe_plug, "~> 1.5.0-rc"},
      {:dataloader, "~> 1.0"},
      {:ex_machina, "~> 2.3"},

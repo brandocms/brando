@@ -14,7 +14,7 @@ defmodule <%= application_module %>Web.Endpoint do
     websocket: true,
     longpoll: true
 
-  socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
+  socket "/live", Phoenix.LiveView.Socket
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -48,10 +48,9 @@ defmodule <%= application_module %>Web.Endpoint do
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
   plug Plug.Parsers,
-    parsers: [:urlencoded, :multipart, :json, Absinthe.Plug.Parser],
+    parsers: [:urlencoded, {:multipart, length: 100_000_000}, :json, Absinthe.Plug.Parser],
     pass: ["*/*"],
-    json_decoder: Phoenix.json_library(),
-    length: 100_000_000
+    json_decoder: Phoenix.json_library()
 
   plug Plug.MethodOverride
   plug Plug.Head
