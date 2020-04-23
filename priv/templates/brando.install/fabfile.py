@@ -246,7 +246,7 @@ def deploy_release():
     """
     version = _get_project_version()
     print(red('(!) FLAVOR => %s' % env.flavor))
-    print(yellow('==> deploy release %s v%s' % (PROJECT_NAME, version)))
+    print(yellow('==> Deploy release %s v%s' % (PROJECT_NAME, version)))
     if not confirm("Is the version correct?"):
         abort("Aborting")
 
@@ -256,6 +256,28 @@ def deploy_release():
     unpack_release(version)
     ensure_log_directory_exists()
     restart()
+    _success()
+    _notify_build_complete(version)
+
+
+def deploy_and_migrate_release():
+    """
+    Deploy release, and migrate before start
+    """
+    version = _get_project_version()
+    print(red('(!) FLAVOR => %s' % env.flavor))
+    print(yellow('==> Deploy and Migrate release %s v%s' % (PROJECT_NAME, version)))
+    if not confirm("Is the version correct?"):
+        abort("Aborting")
+
+    build_release()
+    copy_release_from_docker(version)
+    upload_release(version)
+    unpack_release(version)
+    ensure_log_directory_exists()
+    stop()
+    migrate_release()
+    start()
     _success()
     _notify_build_complete(version)
 
