@@ -528,8 +528,7 @@ defmodule Brando.Villain.Parser do
             %{
               "multi" => true,
               "id" => id,
-              "entries" => entries,
-              "wrapper" => wrapper
+              "entries" => entries
             } = block
           ) do
         # multi template
@@ -564,7 +563,7 @@ defmodule Brando.Villain.Parser do
             end)
           end)
 
-        String.replace(wrapper, "${CONTENT}", Enum.join(content, "\n"))
+        String.replace(template.wrapper, "${CONTENT}", Enum.join(content, "\n"))
       end
 
       def template(%{"id" => id, "multi" => false, "refs" => refs} = block) do
