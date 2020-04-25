@@ -9,10 +9,10 @@ defmodule Brando.Villain do
   alias Brando.Villain.Globals
   import Ecto.Query
 
-  @regex_fragment_ref ~r/(?:\$\{|\$\%7B)FRAGMENT:([a-zA-Z0-9-_]+)\/([a-zA-Z0-9-_]+)\/(\w+)(?:\}|\%7D)/
-  @regex_config_ref ~r/(?:\$\{|\$\%7B)CONFIG:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
-  @regex_link_ref ~r/(?:\$\{|\$\%7B)LINK:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
-  @regex_identity_ref ~r/(?:\$\{|\$\%7B)IDENTITY:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
+  @regex_fragment_ref ~r/(?:\$\{|\$\%7B)FRAGMENT:([a-zA-Z0-9-_]+)\/([a-zA-Z0-9-_]+)\/(\w+)(?:\}|\%7D)/i
+  @regex_config_ref ~r/(?:\$\{|\$\%7B)CONFIG:([a-zA-Z0-9-_]+)(?:\}|\%7D)/i
+  @regex_link_ref ~r/(?:\$\{|\$\%7B)LINK:([a-zA-Z0-9-_]+)(?:\}|\%7D)/i
+  @regex_identity_ref ~r/(?:\$\{|\$\%7B)IDENTITY:([a-zA-Z0-9-_]+)(?:\}|\%7D)/i
 
   defmacro __using__(:schema) do
     raise "`use Brando.Villain, :schema` is deprecated. Call `use Brando.Villain.Schema` instead."
@@ -357,7 +357,7 @@ defmodule Brando.Villain do
     do: render_entry(entry, Map.get(entry, field)) |> Phoenix.HTML.raw()
 
   def render_entry(entry, code) do
-    Regex.replace(~r/\${entry\:(\w+)\|?(\w+)?}/, code, fn _, key, param ->
+    Regex.replace(~r/\${ENTRY\:(\w+)\|?(\w+)?}/i, code, fn _, key, param ->
       var_path =
         key
         |> String.split(".")
@@ -489,7 +489,7 @@ defmodule Brando.Villain do
       Map.get(
         identity,
         String.to_existing_atom(key),
-        "==> MISSING IDENTITY KEY: ${IDENTITY:#{key}} <=="
+        "==> MISSING IDENTITY KEY: ${identity:#{key}} <=="
       )
     end)
   end
@@ -500,7 +500,7 @@ defmodule Brando.Villain do
       link_list = identity.links
 
       case Enum.find(link_list, &(String.downcase(&1.name) == String.downcase(name))) do
-        nil -> "==> MISSING LINK NAME: ${LINK:#{name}} <=="
+        nil -> "==> MISSING LINK NAME: ${link:#{name}} <=="
         link_entry -> link_entry.url
       end
     end)
@@ -512,7 +512,7 @@ defmodule Brando.Villain do
       config_list = identity.configs
 
       case Enum.find(config_list, &(String.downcase(&1.key) == String.downcase(key))) do
-        nil -> "==> MISSING CONFIG KEY: ${CONFIG:#{key}} <=="
+        nil -> "==> MISSING CONFIG KEY: ${config:#{key}} <=="
         config_entry -> config_entry.value
       end
     end)
