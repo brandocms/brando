@@ -229,7 +229,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
 
       send(
         self(),
-        {:mix_shell_input, :prompt, "name slug status:status"}
+        {:mix_shell_input, :prompt, "name slug status:status client:references:projects_clients"}
       )
 
       # sequence?
@@ -246,6 +246,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
         assert file =~ "field :name, :string"
         assert file =~ "field :slug, :string"
         assert file =~ "field :deleted_at, :time"
+        assert file =~ "field :client_id, :id"
       end)
 
       assert_file("lib/brando/graphql/resolvers/project_resolver.ex", fn file ->

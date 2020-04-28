@@ -51,12 +51,16 @@ defmodule Brando.Generators.Vue do
       }Form.vue"
 
     Enum.map(binding[:assocs], fn {_, {:references, target}} ->
+      [gql_domain, gql_target] =
+        case String.split(Atom.to_string(target), "_") do
+          [d, s] -> [d, String.upcase(s)]
+          [s] -> [binding[:snake_domain], String.upcase(s)]
+        end
+
       Mix.Brando.add_to_file(
         filename,
         "imports",
-        "import GET_#{String.upcase(Atom.to_string(target))} from '../../gql/#{
-          binding[:snake_domain]
-        }/#{String.upcase(binding[:plural])}_QUERY.graphql'"
+        "import GET_#{gql_target} from '../../gql/#{gql_domain}/#{gql_target}_QUERY.graphql'"
       )
     end)
 
@@ -216,10 +220,16 @@ defmodule Brando.Generators.Vue do
     if Enum.count(assocs) > 0 do
       queries =
         Enum.reduce(assocs, "", fn {_field, {:references, target}}, acc ->
+          trimmed_target =
+            case String.split(Atom.to_string(target), "_") do
+              [_, t] -> t
+              [t] -> t
+            end
+
           acc <>
             """
-              #{target}: {
-                  query: GET_#{String.upcase(Atom.to_string(target))}
+              #{trimmed_target}: {
+                  query: GET_#{String.upcase(trimmed_target)}
                 },
             """
         end)
@@ -245,7 +255,21 @@ defmodule Brando.Generators.Vue do
       Enum.map(assocs, fn
         {k, {:references, ref_target}} ->
           k = String.to_atom(Atom.to_string(k) <> "_id")
-          binding = binding ++ [k: k, ref_target: ref_target]
+
+          [ref_target_domain, ref_target_schema] =
+            case String.split(Atom.to_string(ref_target), "_") do
+              [d, s] -> [d, s]
+              [s] -> [nil, s]
+            end
+
+          binding =
+            binding ++
+              [
+                k: k,
+                ref_target: ref_target,
+                ref_target_domain: ref_target_domain,
+                ref_target_schema: ref_target_schema
+              ]
 
           filename =
             Application.app_dir(

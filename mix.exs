@@ -117,17 +117,17 @@ defmodule Brando.Mixfile do
       {:hashids, "~> 2.0"},
 
       # Dev dependencies
-      {:credo, ">= 0.0.0", only: :dev},
-      {:dialyxir, "~> 1.0", only: :dev},
+      {:credo, ">= 0.0.0", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
 
       # Test dependencies
-      {:ex_machina, "~> 2.0", only: :test},
-      {:excoveralls, "~> 0.6", only: :test},
+      {:ex_machina, "~> 2.0", only: :test, runtime: false},
+      {:excoveralls, "~> 0.6", only: :test, runtime: false},
 
       # Documentation dependencies
-      {:ex_doc, "~> 0.11", only: :docs},
-      {:inch_ex, "~> 2.0", only: :docs}
+      {:ex_doc, "~> 0.11", only: :docs, runtime: false},
+      {:inch_ex, "~> 2.0", only: :docs, runtime: false}
     ]
   end
 
