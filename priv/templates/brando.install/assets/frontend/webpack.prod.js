@@ -27,11 +27,7 @@ const pkg = require('./package.json')
 const settings = require('./webpack.settings.js')
 
 // custom extractor for PurgeCSS
-class PHXExtractor {
-  static extract(content) {
-    return content.match(/[A-Za-z0-9-_:/]+/g) || []
-  }
-}
+const phxExtractor = content => content.match(/[A-Za-z0-9-_:/]+/g) || []
 
 // Configure file banner
 const configureBanner = () => ({
@@ -213,7 +209,7 @@ const configurePurgeCss = () => {
     whitelistPatterns: settings.purgeCssConfig.whitelistPatterns,
     extractors: [
       {
-        extractor: PHXExtractor,
+        extractor: phxExtractor,
         extensions: settings.purgeCssConfig.extensions
       }
     ]
