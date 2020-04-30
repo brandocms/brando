@@ -97,5 +97,6 @@ defmodule <%= application_module %>Web.Router do
   scope "/" do
     pipe_through :browser
     get "/", <%= application_module %>Web.PageController, :index
+    get "/*path", <%= application_module %>Web.PageController, :show
   end
 end
