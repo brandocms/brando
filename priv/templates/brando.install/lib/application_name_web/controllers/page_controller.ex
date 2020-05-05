@@ -16,7 +16,7 @@ defmodule <%= application_module %>Web.PageController do
       |> put_section("index")
       |> put_meta(Pages.Page, page)
       |> assign(:page, page)
-      |> render(:index)
+      |> render(page.template)
     end
   end
 
@@ -31,7 +31,7 @@ defmodule <%= application_module %>Web.PageController do
       |> put_title(page.title)
       # |> assign(:partials, partials)
       |> assign(:page, page)
-      |> render(:show)
+      |> render(page.template)
     end
   end
 

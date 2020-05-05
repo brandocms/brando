@@ -12,13 +12,8 @@ config :logger, :console,
 config :brando,
   app_name: "<%= application_module %>",
   otp_app: :<%= application_name %>,
-
-  endpoint: <%= application_module %>Web.Endpoint,
-  repo: <%= application_module %>.Repo,
-  factory: <%= application_module %>.Factory,
-  router: <%= application_module %>Web.Router,
-  helpers: <%= application_module %>Web.Router.Helpers,
-  authorization: <%= application_module %>.Authorization,
+  app_module: <%= application_module %>,
+  web_module: <%= application_module %>,
 
   log_dir: Path.expand("./log"),
 

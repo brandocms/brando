@@ -15,12 +15,12 @@ defmodule <%= module %>Controller do
   end
 
   @doc false
-  def show(conn, %{"slug" => slug}) do
+  def detail(conn, %{"slug" => slug}) do
     with {:ok, <%= singular %>} <- <%= domain %>.get_<%= singular %>(slug: slug) do
       conn
       |> assign(:entry, <%= singular %>)
       |> put_section(:<%= singular %>)
-      |> render(:show)
+      |> render(:detail)
     end
   end
 end

@@ -136,8 +136,28 @@ defmodule Brando.Pages do
   end
 
   @doc """
+  List available page templates
+  """
+  def list_templates do
+    view_module = Brando.web_module(PageView)
+    {_, _, templates} = view_module.__templates__
+
+    main_templates =
+      templates
+      |> Enum.filter(&(not String.starts_with?(&1, "_")))
+      |> Enum.map(&%{name: Path.rootname(&1), value: &1})
+
+    {:ok, main_templates}
+  end
+
+  @doc """
   Get page
   """
+  def get_page(path) when is_list(path) do
+    key = Enum.join(path, "/")
+    get_page(key)
+  end
+
   def get_page(key) when is_binary(key) do
     query =
       from t in Page,

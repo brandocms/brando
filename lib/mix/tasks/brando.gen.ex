@@ -169,7 +169,7 @@ defmodule Mix.Tasks.Brando.Gen do
         [
           {:eex, "controller.ex", "lib/application_name_web/controllers/#{path}_controller.ex"},
           {:eex, "index.html.eex", "lib/application_name_web/templates/#{path}/index.html.eex"},
-          {:eex, "show.html.eex", "lib/application_name_web/templates/#{path}/show.html.eex"},
+          {:eex, "detail.html.eex", "lib/application_name_web/templates/#{path}/detail.html.eex"},
           {:eex, "__entry.html.eex",
            "lib/application_name_web/templates/#{path}/__#{binding[:singular]}.html.eex"},
           {:eex, "view.ex", "lib/application_name_web/views/#{path}_view.ex"},

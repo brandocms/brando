@@ -1,0 +1,3 @@
+<main id="content">
+  <%%= @page %>
+</main>

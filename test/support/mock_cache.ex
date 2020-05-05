@@ -1,4 +1,4 @@
-defmodule Brando.Integration.MockCache do
+defmodule Brando.Integration.Cache do
   def get(:cache, key) do
     if key == :error do
       {:error, :test}

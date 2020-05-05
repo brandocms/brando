@@ -10,40 +10,40 @@ defmodule Brando do
   def start(_type, _args), do: Brando.Supervisor.start_link()
 
   @doc """
-  Gets the configuration for `module` under :brando,
+  Gets the configuration for `key` under :brando,
   as set in config.exs
   """
-  def config(module), do: Application.get_env(:brando, module)
+  def config(key), do: Application.get_env(:brando, key)
 
   @doc """
   Gets the parent app's router, as set in config.exs
   """
-  def router, do: config(:router)
+  def router, do: web_module(Router)
 
   @doc """
   Gets the parent app's endpoint, as set in config.exs
   """
-  def endpoint, do: config(:endpoint)
+  def endpoint, do: web_module(Endpoint)
 
   @doc """
   Gets the parent app's repo, as set in config.exs
   """
-  def repo, do: config(:repo)
+  def repo, do: app_module(Repo)
 
   @doc """
   Gets the parent app's factory, as set in config.exs
   """
-  def factory, do: config(:factory)
+  def factory, do: app_module(Factory)
 
   @doc """
   Gets the parent app's helpers, as set in config.exs
   """
-  def helpers, do: config(:helpers)
+  def helpers, do: web_module(Router.Helpers)
 
   @doc """
   Gets the parent app's authorization module, as set in config.exs
   """
-  def authorization, do: config(:authorization)
+  def authorization, do: app_module(Authorization)
 
   @doc """
   Gets the parent app's otp name, as set in config.exs
@@ -54,4 +54,14 @@ defmodule Brando do
   Get Brando version
   """
   def version, do: @version
+
+  @doc """
+  Concat the configured application module with `module`
+  """
+  def app_module(module), do: Module.concat(config(:app_module), module)
+
+  @doc """
+  Concat the configured web module with `module`
+  """
+  def web_module(module), do: Module.concat(config(:web_module), module)
 end

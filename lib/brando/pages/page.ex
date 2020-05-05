@@ -14,7 +14,7 @@ defmodule Brando.Pages.Page do
   alias Brando.Type.Status
   alias Brando.JSONLD
 
-  @required_fields ~w(key language slug title data status creator_id)a
+  @required_fields ~w(key language slug title data status template creator_id)a
   @optional_fields ~w(parent_id meta_description meta_image html css_classes sequence deleted_at)a
   @derived_fields ~w(
     id
@@ -24,6 +24,7 @@ defmodule Brando.Pages.Page do
     slug
     data
     html
+    template
     status
     css_classes
     creator_id
@@ -65,6 +66,7 @@ defmodule Brando.Pages.Page do
     field :language, :string
     field :title, :string
     field :slug, :string
+    field :template, :string
     villain()
     field :status, Status
     field :css_classes, :string

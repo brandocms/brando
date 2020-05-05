@@ -8,7 +8,7 @@ File.mkdir_p!(Path.join([Mix.Project.app_path(), "tmp", "media"]))
 
 ExUnit.start()
 
-defmodule Brando.Integration.TestRepo do
+defmodule Brando.Integration.Repo do
   use Ecto.Repo,
     otp_app: :brando,
     adapter: Ecto.Adapters.Postgres
@@ -17,7 +17,7 @@ defmodule Brando.Integration.TestRepo do
 end
 
 # Basic test repo
-alias Brando.Integration.TestRepo, as: Repo
+alias Brando.Integration.Repo, as: Repo
 
 defmodule Brando.Integration.Endpoint do
   use Phoenix.Endpoint,
@@ -48,7 +48,7 @@ defmodule Brando.Integration.TestCase do
     quote do
       require Repo
       import Ecto.Query
-      alias Ecto.Integration.TestRepo, as: Repo
+      alias Ecto.Integration.Repo, as: Repo
     end
   end
 end

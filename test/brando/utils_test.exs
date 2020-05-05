@@ -190,7 +190,7 @@ defmodule Brando.UtilsTest do
   end
 
   test "helpers" do
-    mock_conn = %{private: %{phoenix_router: RouterHelper.TestRouter}}
-    assert helpers(mock_conn) == RouterHelper.TestRouter.Helpers
+    mock_conn = %{private: %{phoenix_router: Brando.Integration.Router}}
+    assert helpers(mock_conn) == Brando.Integration.Router.Helpers
   end
 end

@@ -81,6 +81,8 @@ defmodule Mix.Tasks.Brando.Install do
      "lib/application_name_web/templates/page/_navigation.html.eex"},
     {:eex, "lib/application_name_web/templates/page/index.html.eex",
      "lib/application_name_web/templates/page/index.html.eex"},
+    {:eex, "lib/application_name_web/templates/page/default.html.eex",
+     "lib/application_name_web/templates/page/default.html.eex"},
     {:eex, "lib/application_name_web/templates/page/_footer.html.eex",
      "lib/application_name_web/templates/page/_footer.html.eex"},
     {:eex, "lib/application_name_web/templates/page/__logo.html.eex",

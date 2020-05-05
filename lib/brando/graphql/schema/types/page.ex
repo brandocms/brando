@@ -7,6 +7,7 @@ defmodule Brando.Schema.Types.Page do
     field :language, :string
     field :title, :string
     field :status, :string
+    field :template, :string
     field :data, :json
     field :css_classes, :string
     field :meta_description, :string
@@ -22,6 +23,7 @@ defmodule Brando.Schema.Types.Page do
     field :data, :json
     field :html, :string
     field :status, :string
+    field :template, :string
     field :css_classes, :string
     field :creator, :user, resolve: dataloader(Brando.Pages)
     field :parent_id, :id

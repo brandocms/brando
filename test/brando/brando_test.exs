@@ -2,7 +2,7 @@ defmodule Brando.BrandoTest do
   use ExUnit.Case, async: true
 
   test "router" do
-    assert Brando.router() == RouterHelper.TestRouter
+    assert Brando.router() == Brando.Integration.Router
   end
 
   test "endpoint" do
@@ -10,10 +10,6 @@ defmodule Brando.BrandoTest do
   end
 
   test "repo" do
-    assert Brando.repo() == Brando.Integration.TestRepo
-  end
-
-  test "config" do
-    assert Brando.config(:router) == RouterHelper.TestRouter
+    assert Brando.repo() == Brando.Integration.Repo
   end
 end
