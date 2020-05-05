@@ -34,33 +34,35 @@ defmodule Brando.Villain do
 
   @doc """
   Parses `json` (in Villain-format).
-  Delegates to the module `villain_parser`, configured in the
-  otp_app's config.exs.
+  Delegates to the parser module configured in the otp_app's brando.exs.
   Returns HTML.
   """
-  @spec parse(String.t() | [map], Module.t()) :: String.t()
-  def parse(data, parser_mod \\ Brando.config(Brando.Villain)[:parser])
+  @spec parse(String.t() | [map]) :: String.t()
+  def parse(data, entry \\ nil)
   def parse("", _), do: ""
   def parse(nil, _), do: ""
-  def parse(json, parser_mod) when is_binary(json), do: do_parse(Poison.decode!(json), parser_mod)
-  def parse(json, parser_mod) when is_list(json), do: do_parse(json, parser_mod)
+  def parse(json, entry) when is_binary(json), do: do_parse(Poison.decode!(json), entry)
+  def parse(json, entry) when is_list(json), do: do_parse(json, entry)
 
-  defp do_parse(data, parser_mod) do
+  defp do_parse(data, entry) do
+    parser = Brando.config(Brando.Villain)[:parser]
+
     html =
-      Enum.reduce(data, [], fn data_node, acc ->
+      data
+      |> Enum.reduce([], fn data_node, acc ->
         type_atom = String.to_atom(data_node["type"])
         data_node_content = data_node["data"]
-        [apply(parser_mod, type_atom, [data_node_content]) | acc]
+        [apply(parser, type_atom, [data_node_content]) | acc]
       end)
+      |> Enum.reverse()
+      |> Enum.join()
+      |> replace_fragment_refs()
+      |> replace_identity_refs()
+      |> replace_link_refs()
+      |> Globals.replace_global_refs()
+      |> replace_config_refs()
 
-    html
-    |> Enum.reverse()
-    |> Enum.join()
-    |> replace_fragment_refs()
-    |> replace_identity_refs()
-    |> replace_link_refs()
-    |> Globals.replace_global_refs()
-    |> replace_config_refs()
+    render_entry(entry, html)
   end
 
   @doc """
@@ -93,15 +95,14 @@ defmodule Brando.Villain do
   """
   def rerender_html(
         %Ecto.Changeset{} = changeset,
-        field \\ nil,
-        parser_mod \\ Brando.config(Brando.Villain)[:parser]
+        field \\ nil
       ) do
     data_field = (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
     html_field = (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
     data = Ecto.Changeset.get_field(changeset, data_field)
 
     changeset
-    |> Ecto.Changeset.put_change(html_field, Brando.Villain.parse(data, parser_mod))
+    |> Ecto.Changeset.put_change(html_field, Brando.Villain.parse(data))
     |> Brando.repo().update!
   end
 
@@ -144,14 +145,12 @@ defmodule Brando.Villain do
           Integer.t() | String.t()
         ) :: any()
   def rerender_html_from_id({schema, data_field, html_field}, id) do
-    parser = Brando.config(Brando.Villain)[:parser]
-
     query =
       from s in schema,
         where: s.id == ^id
 
     record = Brando.repo().one(query)
-    parsed_data = Brando.Villain.parse(Map.get(record, data_field), parser)
+    parsed_data = Brando.Villain.parse(Map.get(record, data_field))
 
     changeset =
       record
@@ -338,10 +337,8 @@ defmodule Brando.Villain do
   def render_villain(data_field, vars \\ %{})
 
   def render_villain(data_field, vars) when is_list(data_field) do
-    parser_mod = Brando.config(Brando.Villain)[:parser]
-
     data_field
-    |> Brando.Villain.parse(parser_mod)
+    |> Brando.Villain.parse()
     |> replace_vars(vars)
   end
 

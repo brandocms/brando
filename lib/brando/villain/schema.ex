@@ -23,11 +23,10 @@ defmodule Brando.Villain.Schema do
       def changeset(schema, :create, params) do
         schema
         |> cast(params, @required_fields, @optional_fields)
-        |> Brando.Villain.HTML.generate_html()
+        |> generate_html()
       end
 
-  You can add separate parsers by supplying the parser module as a parameter to the `generate_html`
-  function or `rerender_html` funtion. If not, it will use the parser module given in
+  You can configure which parser to use with
 
       config :brando, Brando.Villain, :parser
 
@@ -97,14 +96,14 @@ defmodule Brando.Villain.Schema do
   """
   def generate_html(
         changeset,
-        field \\ nil,
-        parser_mod \\ Brando.config(Brando.Villain)[:parser]
+        field \\ nil
       ) do
     data_field = (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
     html_field = (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
 
     if Ecto.Changeset.get_change(changeset, data_field) do
-      parsed_data = Brando.Villain.parse(Map.get(changeset.changes, data_field), parser_mod)
+      data_src = Map.get(changeset.changes, data_field)
+      parsed_data = Brando.Villain.parse(data_src, changeset.data)
       Ecto.Changeset.put_change(changeset, html_field, parsed_data)
     else
       changeset

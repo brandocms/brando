@@ -535,32 +535,11 @@ defmodule Brando.Villain.Parser do
         {:ok, template} = Brando.Villain.get_template(id)
 
         content =
-          Enum.map(entries, fn %{"refs" => refs, "vars" => vars} ->
-            template_code =
-              if vars do
-                Regex.replace(~r/\${(\w+)}/, template.code, fn _, match ->
-                  get_in(vars, [match, "value"]) ||
-                    "<!-- VAR #{match} missing // template: #{id}. -->"
-                end)
-              else
-                template.code
-              end
-
-            Regex.replace(~r/%{(\w+)}/, template_code, fn _, match ->
-              # TODO!: split out this and the multi:false code
-              ref = Enum.find(refs, &(&1["name"] == match))
-
-              if ref do
-                if ref["deleted"] do
-                  "<!-- d -->"
-                else
-                  block = Map.get(ref, "data")
-                  apply(__MODULE__, String.to_atom(block["type"]), [block["data"]])
-                end
-              else
-                "<!-- REF #{match} missing // template: #{id}. -->"
-              end
-            end)
+          Enum.map(Enum.with_index(entries), fn {%{"refs" => refs, "vars" => vars}, index} ->
+            template
+            |> replace_loop_vars(entries, index)
+            |> replace_vars(vars, id)
+            |> render_refs(refs, id)
           end)
 
         String.replace(template.wrapper, "${CONTENT}", Enum.join(content, "\n"))
@@ -571,33 +550,51 @@ defmodule Brando.Villain.Parser do
 
         vars = Map.get(block, "vars")
 
-        template_code =
-          if vars do
-            Regex.replace(~r/\${(\w+)}/, template.code, fn _, match ->
-              get_in(vars, [match, "value"]) ||
-                "<!-- VAR #{match} missing // template: #{id}. -->"
-            end)
-          else
-            template.code
-          end
-
-        Regex.replace(~r/%{(\w+)}/, template_code, fn _, match ->
-          ref = Enum.find(refs, &(&1["name"] == match))
-
-          if ref do
-            if ref["deleted"] do
-              "<!-- d -->"
-            else
-              block = Map.get(ref, "data")
-              apply(__MODULE__, String.to_atom(block["type"]), [block["data"]])
-            end
-          else
-            "<!-- REF #{match} missing // template: #{id}. -->"
-          end
-        end)
+        template.code
+        |> replace_vars(vars, id)
+        |> render_refs(refs, id)
       end
 
       defoverridable template: 1
+
+      defp replace_loop_vars(template, entries, index) do
+        Regex.replace(~r/\${loop:(\w+)}/, template.code, fn
+          _, "index" ->
+            to_string(index + 1)
+
+          _, "index0" ->
+            to_string(index)
+
+          _, "length" ->
+            Enum.count(entries) |> to_string
+        end)
+      end
+
+      defp replace_vars(template_code, vars, id) do
+        if vars do
+          Regex.replace(~r/\${(\w+)}/, template_code, fn _, match ->
+            get_in(vars, [match, "value"]) ||
+              "<!-- VAR #{match} missing // template: #{id}. -->"
+          end)
+        else
+          template_code
+        end
+      end
+
+      defp render_refs(template_code, refs, id) do
+        Regex.replace(~r/%{(\w+)}/, template_code, fn _, match ->
+          ref = Enum.find(refs, &(&1["name"] == match))
+          render_ref(ref, id, match)
+        end)
+      end
+
+      defp render_ref(nil, id, match), do: "<!-- REF #{match} missing // template: #{id}. -->"
+      defp render_ref(%{"deleted" => true}, _id, _match), do: "<!-- d -->"
+
+      defp render_ref(ref, _id, _match) do
+        block = Map.get(ref, "data")
+        apply(__MODULE__, String.to_atom(block["type"]), [block["data"]])
+      end
 
       @doc """
       Timeline
@@ -606,19 +603,19 @@ defmodule Brando.Villain.Parser do
         timeline_html =
           for item <- items do
             ~s(
-          <li class="villain-timeline-item">
-            <div class="villain-timeline-item-date">
-              <div class="villain-timeline-item-date-inner">
-                #{Map.get(item, "caption")}
-              </div>
-            </div>
-            <div class="villain-timeline-item-content">
-              <div class="villain-timeline-item-content-inner">
-                #{Map.get(item, "text")}
-              </div>
-            </div>
-          </li>
-          )
+                <li class="villain-timeline-item">
+                  <div class="villain-timeline-item-date">
+                    <div class="villain-timeline-item-date-inner">
+                      #{Map.get(item, "caption")}
+                    </div>
+                  </div>
+                  <div class="villain-timeline-item-content">
+                    <div class="villain-timeline-item-content-inner">
+                      #{Map.get(item, "text")}
+                    </div>
+                  </div>
+                </li>
+                )
           end
 
         ~s(<ul class="villain-timeline">#{timeline_html}</ul>)

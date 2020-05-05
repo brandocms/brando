@@ -25,8 +25,6 @@ defmodule Brando.VillainTest do
   use ExUnit.Case, async: true
   alias Brando.Factory
 
-  @parser_mod Brando.Villain.ParserTest.Parser
-
   setup do
     user = Factory.insert(:user)
     category = Factory.insert(:image_category, creator: user)
@@ -35,47 +33,26 @@ defmodule Brando.VillainTest do
   end
 
   test "parse" do
-    assert Brando.Villain.parse("", @parser_mod) == ""
-    assert Brando.Villain.parse(nil, @parser_mod) == ""
+    Application.put_env(:brando, Brando.Villain, parser: Brando.Villain.ParserTest.Parser)
+
+    assert Brando.Villain.parse("") == ""
+    assert Brando.Villain.parse(nil) == ""
 
     assert Brando.Villain.parse(
-             ~s([{"type":"columns","data":[{"class":"col-md-6 six","data":[]},{"class":"col-md-6 six","data":[{"type":"markdown","data":{"text":"Markdown"}}]}]}]),
-             @parser_mod
+             ~s([{"type":"columns","data":[{"class":"col-md-6 six","data":[]},{"class":"col-md-6 six","data":[{"type":"markdown","data":{"text":"Markdown"}}]}]}])
            ) ==
              "<div class=\"row\"><div class=\"col-md-6 six\"></div><div class=\"col-md-6 six\"><p>Markdown</p>\n</div></div>"
 
-    assert Brando.Villain.parse(
-             [
-               %{
-                 "type" => "text",
-                 "data" => %{"text" => "**Some** text here.", "type" => "paragraph"}
-               }
-             ],
-             @parser_mod
-           ) == "<p><strong>Some</strong> text here.</p>\n"
+    assert Brando.Villain.parse([
+             %{
+               "type" => "text",
+               "data" => %{"text" => "**Some** text here.", "type" => "paragraph"}
+             }
+           ]) == "<p><strong>Some</strong> text here.</p>\n"
 
     assert_raise FunctionClauseError, fn ->
-      Brando.Villain.parse(%{"text" => "**Some** text here.", "type" => "paragraph"}, @parser_mod) ==
+      Brando.Villain.parse(%{"text" => "**Some** text here.", "type" => "paragraph"}) ==
         ""
-    end
-
-    assert Brando.Villain.parse(
-             [
-               %{
-                 "type" => "text",
-                 "data" => %{"text" => "**Some** text here.", "type" => "paragraph"}
-               }
-             ],
-             Brando.VillainTest.OtherParser
-           ) == "other parser"
-
-    assert_raise UndefinedFunctionError, fn ->
-      Brando.Villain.parse(
-        [
-          %{"type" => "text", "data" => %{"text" => "**Some** text here.", "type" => "paragraph"}}
-        ],
-        Brando.VillainTest.NoneParser
-      ) == "other parser"
     end
   end
 
