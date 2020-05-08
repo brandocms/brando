@@ -136,7 +136,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       assert_file("lib/brando_web/controllers/pirate_controller.ex", fn file ->
         assert file =~ "defmodule BrandoWeb.PirateController"
         assert file =~ "use BrandoWeb, :controller"
-        assert file =~ "Games.list_pirates()"
+        assert file =~ "Games.list_pirates(list_opts)"
       end)
 
       assert_file("lib/brando_web/views/pirate_view.ex", fn file ->
@@ -168,8 +168,6 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       assert_file("assets/backend/src/views/games/CaptainCreateView.vue", fn file ->
         assert file =~
                  "<CaptainForm\n      :captain=\"captain\"\n      :save=\"save\" />"
-
-        assert file =~ "import CAPTAIN_FRAGMENT from '../../gql/games/CAPTAIN_FRAGMENT.graphql"
       end)
 
       assert_file("assets/backend/src/views/games/CaptainEditView.vue", fn file ->
