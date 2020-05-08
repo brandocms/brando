@@ -2,6 +2,34 @@
 defmodule Brando.Villain do
   @moduledoc """
   Interface to Villain HTML editor.
+
+  ### Available variables when rendering
+
+    - `${entry:<key>}`
+    Gets `<key>` from currently rendering entry. So if we are rendering a `%Page{}` and we
+    want the `meta_description` we can do `${entry:meta_description}
+
+    - `${fragment:<parent_key>/<key>/<language>}`
+    Gets rendered fragment according to values.
+
+    - `${link:<key>}`
+    Gets `<key>` from list of links in the Identity configuration.
+
+    - `${global:<key>}`
+    Gets `<key>` from list of globals in the Identity configuration.
+
+    - `${loop:index}`
+    Only available inside templates with `multi` set to true. Returns the current index
+    of the for loop, starting at `1`
+
+    - `${loop:index0}`
+    Only available inside templates with `multi` set to true. Returns the current index
+    of the for loop, starting at `0`
+
+    - `${loop:length}`
+    Only available inside templates with `multi` set to true. Returns the total amount
+    of entries in the for loop
+
   """
 
   alias Brando.Pages
@@ -129,6 +157,13 @@ defmodule Brando.Villain do
   end
 
   @doc """
+  Rerender multiple IDS
+  """
+  @spec rerender_html_from_ids({Module, atom, atom}, [Integer.t() | String.t()]) :: nil | [any()]
+  def rerender_html_from_ids(_, []), do: nil
+  def rerender_html_from_ids(args, ids), do: for(id <- ids, do: rerender_html_from_id(args, id))
+
+  @doc """
   Rerender HTML from an ID
 
   ## Example
@@ -150,7 +185,7 @@ defmodule Brando.Villain do
         where: s.id == ^id
 
     record = Brando.repo().one(query)
-    parsed_data = Brando.Villain.parse(Map.get(record, data_field))
+    parsed_data = Brando.Villain.parse(Map.get(record, data_field), record)
 
     changeset =
       record
@@ -168,13 +203,6 @@ defmodule Brando.Villain do
         {:ok, result}
     end
   end
-
-  @doc """
-  Rerender multiple IDS
-  """
-  @spec rerender_html_from_ids({Module, atom, atom}, [Integer.t() | String.t()]) :: nil | [any()]
-  def rerender_html_from_ids(_, []), do: nil
-  def rerender_html_from_ids(args, ids), do: for(id <- ids, do: rerender_html_from_id(args, id))
 
   @doc """
   Check all posts for missing images
@@ -356,11 +384,15 @@ defmodule Brando.Villain do
   def render_entry(entry, code) do
     Regex.replace(~r/\${ENTRY\:(\w+)\|?(\w+)?}/i, code, fn _, key, param ->
       var_path =
-        key
-        |> String.split(".")
-        |> Enum.map(&String.to_existing_atom/1)
+        try do
+          key
+          |> String.split(".")
+          |> Enum.map(&String.to_existing_atom/1)
+        rescue
+          ArgumentError -> nil
+        end
 
-      case Brando.Utils.try(entry, var_path) do
+      case Brando.Utils.try_path(entry, var_path) do
         nil ->
           ""
 

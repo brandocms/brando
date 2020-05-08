@@ -104,8 +104,10 @@ defmodule Brando.Utils do
   @doc """
   Tries to access `keys` as a path to `map`
   """
-  @spec try(map :: Map.t(), keys :: [atom]) :: any | nil
-  def try(map, keys) do
+  @spec try_path(map :: Map.t(), keys :: [atom] | nil) :: any | nil
+  def try_path(_, nil), do: nil
+
+  def try_path(map, keys) do
     Enum.reduce(keys, map, fn key, acc ->
       if acc, do: Map.get(acc, key)
     end)

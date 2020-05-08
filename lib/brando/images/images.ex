@@ -12,7 +12,6 @@ defmodule Brando.Images do
   alias Brando.Images
   alias Brando.ImageSeries
 
-  import Brando.Utils.Schema, only: [put_creator: 2]
   import Ecto.Query
 
   @type user :: Brando.Users.User.t() | :system
@@ -267,8 +266,7 @@ defmodule Brando.Images do
   """
   def create_category(data, user) do
     %ImageCategory{}
-    |> ImageCategory.changeset(:create, data)
-    |> put_creator(user)
+    |> ImageCategory.changeset(:create, data, user)
     |> Brando.repo().insert()
   end
 
@@ -276,11 +274,11 @@ defmodule Brando.Images do
   Update category with `id` with `data`.
   If `slug` is changed in data, return {:propagate, category}, else return {:ok, category} or error
   """
-  def update_category(id, data) do
+  def update_category(id, data, user) do
     changeset =
       ImageCategory
       |> Brando.repo().get_by(id: id)
-      |> ImageCategory.changeset(:update, data)
+      |> ImageCategory.changeset(:update, data, user)
 
     changeset
     |> Brando.repo().update()

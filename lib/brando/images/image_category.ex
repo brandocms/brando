@@ -5,6 +5,7 @@ defmodule Brando.ImageCategory do
   """
 
   @type t :: %__MODULE__{}
+  @type user :: Brando.Users.User.t() | :system
 
   use Brando.Web, :schema
   use Brando.SoftDelete.Schema
@@ -48,12 +49,13 @@ defmodule Brando.ImageCategory do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, :create | :update, Map.t()) :: Ecto.Changeset.t()
-  def changeset(schema, action, params \\ %{})
+  @spec changeset(t, :create | :update, Map.t(), user) :: Ecto.Changeset.t()
+  def changeset(schema, action, params \\ %{}, user \\ :system)
 
-  def changeset(schema, :create, params) do
+  def changeset(schema, :create, params, user) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
+    |> put_creator(user)
     |> validate_required(@required_fields)
     |> put_slug(:name)
     |> avoid_slug_collision()
@@ -61,9 +63,10 @@ defmodule Brando.ImageCategory do
     |> put_default_config
   end
 
-  def changeset(schema, :update, params) do
+  def changeset(schema, :update, params, user) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
+    |> put_creator(user)
     |> put_slug(:name)
     |> avoid_slug_collision()
     |> unique_constraint(:slug)

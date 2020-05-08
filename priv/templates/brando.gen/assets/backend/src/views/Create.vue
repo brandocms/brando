@@ -18,7 +18,6 @@
 
 import gql from 'graphql-tag'
 import <%= Recase.to_pascal(vue_singular) %>Form from './<%= Recase.to_pascal(vue_singular) %>Form'
-import <%= String.upcase(singular) %>_FRAGMENT from '../../gql/<%= snake_domain %>/<%= String.upcase(singular) %>_FRAGMENT.graphql'
 import locale from '../../locales/<%= vue_plural %>'
 
 export default {
@@ -30,10 +29,6 @@ export default {
     return {
       <%= vue_singular %>: {}
     }
-  },
-
-  fragments: {
-    <%= vue_singular %>: <%= String.upcase(singular) %>_FRAGMENT
   },
 
   methods: {
@@ -48,10 +43,9 @@ export default {
               create<%= Recase.to_pascal(vue_singular) %>(
                 <%= vue_singular %>Params: $<%= vue_singular %>Params
               ) {
-                ...<%= vue_singular %>
+                id
               }
             }
-            ${<%= String.upcase(singular) %>_FRAGMENT}
           `,
           variables: {
             <%= vue_singular %>Params

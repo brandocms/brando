@@ -35,10 +35,10 @@ defmodule Brando.Images.ImageCategoryResolver do
   """
   def update(
         %{image_category_id: image_category_id, image_category_params: image_category_params},
-        _
+        %{context: %{current_user: current_user}}
       ) do
     image_category_id
-    |> Images.update_category(image_category_params)
+    |> Images.update_category(image_category_params, current_user)
     |> response
   end
 

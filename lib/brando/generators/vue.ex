@@ -186,7 +186,7 @@ defmodule Brando.Generators.Vue do
       Enum.map(@locales, fn locale ->
         fields =
           Enum.map(all_fields, fn
-            {k, {_, _}} ->
+            {k, {:references, _}} ->
               string_key = to_string(k) <> "_id"
 
               %{
