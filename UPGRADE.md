@@ -1,5 +1,14 @@
 ## 0.45.0
 
+* In `config/brando.exs` add:
+  ```
+  config :brando,
+    app_module: MyApp,
+    web_module: MyAppWeb,
+  ```
+  You can remove `endpoint`, `factory`, `repo`, `router` and `helpers` keys.
+
+
 * Switch out
   `plug :put_layout, {YourAppWeb.LayoutView, "admin.html"}` with
   `plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}` in your app's router

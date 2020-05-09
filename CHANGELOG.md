@@ -2,6 +2,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.45.0
 
+* Simplify needed `brando.exs` config
 * Removed deprecated `Brando.Config` genserver.
 * Started laying the foundation for authorization. See `UPGRADE.MD`
 * Rename mix task `brando.gen.html` -> `brando.gen`
