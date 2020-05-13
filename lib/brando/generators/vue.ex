@@ -285,9 +285,6 @@ defmodule Brando.Generators.Vue do
         {k, {:array, _}} ->
           {k, nil, nil}
 
-        {k, :gallery} ->
-          {k, nil, nil}
-
         {k, {:slug, target}} ->
           binding = binding ++ [k: k, target: target]
 

@@ -97,7 +97,7 @@ defmodule Mix.Tasks.Brando.Gen do
 
     gallery_fields =
       attrs
-      |> Enum.map(fn {k, v} -> {v, "#{k}_id"} end)
+      |> Enum.map(fn {k, v} -> {v, k} end)
       |> Enum.filter(fn {k, _} -> k == :gallery end)
 
     route =

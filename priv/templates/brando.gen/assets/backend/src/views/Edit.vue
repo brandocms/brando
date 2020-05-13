@@ -35,7 +35,18 @@ export default {
 
   methods: {
     async save () {
-      const <%= vue_singular %>Params = this.$utils.stripParams(this.<%= vue_singular %>, ['__typename', 'id', 'inserted_at', 'updated_at', 'deleted_at'<%= if creator do %>, 'creator'<% end %>])
+      const <%= vue_singular %>Params = this.$utils.stripParams(
+        this.<%= vue_singular %>, [
+          '__typename',
+          'id',
+          'inserted_at',
+          'updated_at',
+          'deleted_at'<%= if creator do %>,
+          'creator'<% end %><%= if gallery do %>,
+          <%= for {{_k, v}, idx} <- Enum.with_index(gallery_fields) do %>'<%= v %>'<%= unless idx == Enum.count(gallery_fields) - 1 do %>,<% end %><% end %><% end %>
+        ]
+      )
+
       <%= if img_fields != [] do %>this.$utils.validateImageParams(<%= vue_singular %>Params, <%= img_fields |> Enum.map(&(to_charlist(elem(&1, 1)))) |> inspect %>)<% end %>
 
       try {

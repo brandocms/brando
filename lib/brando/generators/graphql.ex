@@ -99,7 +99,8 @@ defmodule Brando.Generators.GraphQL do
            }, :string>}
 
         {k, :gallery} ->
-          {k, ~s<field #{inspect(k)}_id, :id>}
+          {k,
+           ~s<field #{inspect(k)}_id, :id\n    field #{inspect(k)}, :image_series, resolve: dataloader(Brando.Images)>}
 
         {k, :status} ->
           {k, ~s<field :status, :string>}
@@ -158,7 +159,7 @@ defmodule Brando.Generators.GraphQL do
           {k, ~s<field #{inspect(k)}, :string>}
 
         {k, :gallery} ->
-          {k, ~s<field #{inspect(k)}_id, :id>}
+          {k, ~s<field #{inspect(k)}_id, :id\n    field #{inspect(k)}, :image_series_upload>}
 
         {k, _} ->
           {k, ~s<field #{inspect(k)}, :string>}
