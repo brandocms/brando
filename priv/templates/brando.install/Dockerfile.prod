@@ -44,7 +44,8 @@ WORKDIR /opt/app
 ARG MIX_ENV=prod
 
 COPY lib/ ./lib
-COPY priv/ ./priv
+COPY priv/repo/ ./priv/repo
+COPY priv/gettext/ ./priv/gettext
 COPY rel ./rel
 
 RUN mix compile
