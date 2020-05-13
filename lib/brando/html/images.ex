@@ -292,7 +292,7 @@ defmodule Brando.HTML.Images do
 
   defp add_moonwalk(attrs) do
     moonwalk = Keyword.get(attrs.opts, :moonwalk, false)
-    put_in(attrs, [:img, :data_moonwalk], moonwalk)
+    put_in(attrs, [:picture, :data_moonwalk], moonwalk)
   end
 
   defp wrap_lightbox(rendered_tag, img_src),
@@ -418,7 +418,7 @@ defmodule Brando.HTML.Images do
           Map.get(image_field, :height, 0)
 
         {:ok, true} ->
-          Map.get(image_field, :width, 0)
+          Map.get(image_field, :height, 0)
 
         {:ok, height} ->
           height
