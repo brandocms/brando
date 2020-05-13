@@ -13,7 +13,7 @@ config :brando,
   app_name: "<%= application_module %>",
   otp_app: :<%= application_name %>,
   app_module: <%= application_module %>,
-  web_module: <%= application_module %>,
+  web_module: <%= application_module %>Web,
 
   log_dir: Path.expand("./log"),
 
