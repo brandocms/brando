@@ -185,7 +185,7 @@ defmodule Brando.Villain.Parser do
 
       def video(%{"remote_id" => remote_id, "source" => "vimeo"}) do
         ~s(<div class="video-wrapper">
-             <iframe src="//player.vimeo.com/video/#{remote_id}"
+             <iframe src="//player.vimeo.com/video/#{remote_id}?dnt=1"
                      width="500"
                      height="281"
                      frameborder="0"
@@ -270,7 +270,6 @@ defmodule Brando.Villain.Parser do
         ptag =
           picture_tag(data,
             key: :xlarge,
-            picture_class: "picture-img",
             img_class: img_class,
             picture_class: picture_class,
             media_queries: media_queries,
