@@ -84,7 +84,6 @@ FROM node:12 AS assets_frontend
 WORKDIR /opt/app/assets/frontend
 ENV YARN_CACHE_FOLDER ~/.yarn
 
-COPY --from=deps /opt/app/deps /opt/app/deps/
 COPY assets/frontend/package.json assets/frontend/yarn.lock ./
 COPY assets/frontend/.yalc ./.yalc
 # Use the yarn cache directory as a cache mount
