@@ -41,7 +41,7 @@ defmodule Brando.Villain.ParserTest do
 
   test "video/1 vimeo" do
     assert video(%{"remote_id" => "asdf1234", "source" => "vimeo"}) ==
-             "<div class=\"video-wrapper\">\n             <iframe src=\"//player.vimeo.com/video/asdf1234\"\n                     width=\"500\"\n                     height=\"281\"\n                     frameborder=\"0\"\n                     webkitallowfullscreen\n                     mozallowfullscreen\n                     allowfullscreen>\n             </iframe>\n           </div>"
+             "<div class=\"video-wrapper\">\n             <iframe src=\"//player.vimeo.com/video/asdf1234?dnt=1\"\n                     width=\"500\"\n                     height=\"281\"\n                     frameborder=\"0\"\n                     webkitallowfullscreen\n                     mozallowfullscreen\n                     allowfullscreen>\n             </iframe>\n           </div>"
   end
 
   test "divider/1" do
