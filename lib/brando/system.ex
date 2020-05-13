@@ -34,7 +34,13 @@ defmodule Brando.System do
       {:ok, {:identity, :exists}}
     else
       {:error, _} ->
-        {:error, {:identity, :failed}}
+        raise ConfigError,
+          message: """
+
+
+          Failed creating default `identity` table.
+
+          """
 
       _ ->
         {:ok, {:identity, :exists}}
