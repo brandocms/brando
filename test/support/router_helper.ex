@@ -1,3 +1,4 @@
+# coveralls-ignore-start
 defmodule Brando.Integration.LockdownController do
   use Phoenix.Controller,
     namespace: Brando
@@ -98,3 +99,5 @@ defmodule Brando.Integration.Router do
     pipe_through :browser
   end
 end
+
+# coveralls-ignore-stop

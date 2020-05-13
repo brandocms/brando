@@ -1,3 +1,4 @@
+# coveralls-ignore-start
 defmodule Brando.Integration.Cache do
   def get(:cache, key) do
     if key == :error do
@@ -25,3 +26,5 @@ defmodule Brando.Integration.Cache do
     end
   end
 end
+
+# coveralls-ignore-stop
