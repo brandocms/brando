@@ -192,27 +192,7 @@ export default {
             },
 
             update: (store, { data: { delete<%= Recase.to_pascal(vue_singular) %> } }) => {
-              try {
-                const query = {
-                  query: GET_<%= String.upcase(plural) %>,
-                  variables: this.queryVars
-                }
-                const data = store.readQuery(query)
-                const idx = data.<%= vue_plural %>.findIndex(<%= vue_singular %> => parseInt(<%= vue_singular %>.id) === parseInt(entryId))
-
-                if (idx !== -1) {
-                  data.<%= vue_plural %>.splice(idx, 1)
-
-                  // Write back to the cache
-                  store.writeQuery({
-                    ...query,
-                    data
-                  })
-                }
-              } catch (e) {
-                console.log(e)
-                // ignore errors. usually means it's just not in cache.
-              }
+              this.$apollo.queries.<%= vue_plural %>.refresh()
             }
           })
 
