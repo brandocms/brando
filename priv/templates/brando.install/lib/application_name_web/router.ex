@@ -34,6 +34,7 @@ defmodule <%= application_module %>Web.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug PlugHeartbeat
+    plug Brando.Plug.Identity
     # plug :put_meta, %{
     #   "google-site-verification" => "GSV"
     # }
