@@ -17,12 +17,17 @@ defmodule Brando.LivePreview do
 
   @doc """
   Generates a render function for live previewing
+
+  Set `template_prop` if your template uses another way to reference the entry than what
+  is used in Vue. For instance, if in Vue it is a `project`, but you want `entry`, then
+  set `template_prop: :entry`
   """
   defmacro target(opts, do: block) do
     schema_module = Keyword.fetch!(opts, :schema_module) |> Macro.expand(__CALLER__)
     view_module = Keyword.fetch!(opts, :view_module) |> Macro.expand(__CALLER__)
     layout_module = Keyword.fetch!(opts, :layout_module) |> Macro.expand(__CALLER__)
     layout_template = Keyword.get(opts, :layout_template, "app.html")
+    template_prop = Keyword.get(opts, :template_prop, nil)
 
     quote do
       @doc """
@@ -40,13 +45,16 @@ defmodule Brando.LivePreview do
         var!(extra_vars) = []
         unquote(block)
 
-        atom_prop = String.to_existing_atom(prop)
+        atom_prop =
+          if unquote(template_prop) !== nil,
+            do: unquote(template_prop),
+            else: String.to_existing_atom(prop)
 
         # if key, then parse villain
         entry =
           if key do
             atom_key = String.to_existing_atom(key)
-            parsed_html = Brando.Villain.parse(Map.get(entry, atom_key))
+            parsed_html = Brando.Villain.parse(Map.get(entry, atom_key), entry)
             rendered_data = Brando.Villain.render_entry(entry, parsed_html)
             entry = Map.put(entry, :html, rendered_data)
           else
