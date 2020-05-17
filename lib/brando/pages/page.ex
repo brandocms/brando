@@ -113,7 +113,7 @@ defmodule Brando.Pages.Page do
     |> put_creator(user)
     |> put_slug()
     |> validate_required(@required_fields)
-    |> unique_constraint(:key)
+    |> unique_constraint([:key, :language])
     |> validate_upload({:image, :meta_image}, user)
     |> avoid_slug_collision()
     |> generate_html()
