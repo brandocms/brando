@@ -4,55 +4,55 @@ defmodule Brando.Villain.Parser do
   """
 
   @doc "Parses a comment"
-  @callback comment(%{String.t() => any}) :: String.t()
+  @callback comment(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   @doc "Parses a header"
-  @callback header(%{String.t() => any}) :: String.t()
+  @callback header(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   @doc "Parses text/paragraphs"
-  @callback text(%{String.t() => any}) :: String.t()
+  @callback text(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   @doc "Parses video"
-  @callback video(%{String.t() => any}) :: String.t()
+  @callback video(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   @doc "Parses map"
-  @callback map(%{String.t() => any}) :: String.t()
+  @callback map(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   @doc "Parses image"
-  @callback image(%{String.t() => any}) :: String.t()
+  @callback image(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   @doc "Parses slideshow"
-  @callback slideshow(%{String.t() => any}) :: String.t()
+  @callback slideshow(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   @doc "Parses divider"
-  @callback divider(%{String.t() => any}) :: String.t()
+  @callback divider(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   @doc "Parses list"
-  @callback list(%{String.t() => any}) :: String.t()
+  @callback list(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   @doc "Parses blockquote"
-  @callback blockquote(%{String.t() => any}) :: String.t()
+  @callback blockquote(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   @doc "Parses columns"
-  @callback columns(%{String.t() => any}) :: String.t()
+  @callback columns(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   @doc "Parses datatables"
-  @callback datatable(%{String.t() => any}) :: String.t()
+  @callback datatable(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   @doc "Parses markdown"
-  @callback markdown(%{String.t() => any}) :: String.t()
+  @callback markdown(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   @doc "Parses html"
-  @callback html(%{String.t() => any}) :: String.t()
+  @callback html(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   @doc "Parses svg"
-  @callback svg(%{String.t() => any}) :: String.t()
+  @callback svg(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   @doc "Parses template"
-  @callback template(%{String.t() => any}) :: String.t()
+  @callback template(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   @doc "Parses datasource"
-  @callback datasource(%{String.t() => any}) :: String.t()
+  @callback datasource(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
 
   defmacro __using__(_) do
     quote do
@@ -65,12 +65,12 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert header to HTML
       """
-      def header(%{"text" => text, "level" => level, "anchor" => anchor}) do
-        h = header(%{"text" => text, "level" => level})
+      def header(%{"text" => text, "level" => level, "anchor" => anchor}, _) do
+        h = header(%{"text" => text, "level" => level}, [])
         ~s(<a name="#{anchor}"></a>#{h})
       end
 
-      def header(%{"text" => text, "level" => level} = data) do
+      def header(%{"text" => text, "level" => level} = data, _) do
         classes =
           if Map.get(data, "class", nil) do
             ~s( class="#{Map.get(data, "class")}")
@@ -89,19 +89,22 @@ defmodule Brando.Villain.Parser do
         "<#{header_size}#{classes}#{id}>" <> nl2br(text) <> "</#{header_size}>"
       end
 
-      def header(%{"text" => text}) do
+      def header(%{"text" => text}, _) do
         "<h1>" <> nl2br(text) <> "</h1>"
       end
 
-      defoverridable header: 1
+      defoverridable header: 2
 
-      def datasource(%{
-            "module" => module,
-            "type" => "many",
-            "query" => query,
-            "template" => template_id,
-            "wrapper" => wrapper
-          }) do
+      def datasource(
+            %{
+              "module" => module,
+              "type" => "many",
+              "query" => query,
+              "template" => template_id,
+              "wrapper" => wrapper
+            },
+            _
+          ) do
         {:ok, entries} = Datasource.get_many(module, query)
         {:ok, template} = Villain.get_template(template_id)
 
@@ -113,12 +116,12 @@ defmodule Brando.Villain.Parser do
         String.replace(wrapper, "${CONTENT}", content)
       end
 
-      defoverridable datasource: 1
+      defoverridable datasource: 2
 
       @doc """
       Convert text to HTML through Markdown
       """
-      def text(%{"text" => text} = params) do
+      def text(%{"text" => text} = params, _) do
         text =
           case Map.get(params, "type") do
             nil -> text
@@ -129,33 +132,33 @@ defmodule Brando.Villain.Parser do
         Earmark.as_html!(text, %Earmark.Options{breaks: true})
       end
 
-      defoverridable text: 1
+      defoverridable text: 2
 
       @doc """
       Html -> html. Easy as pie.
       """
-      def html(%{"text" => html}), do: html
-      defoverridable html: 1
+      def html(%{"text" => html}, _), do: html
+      defoverridable html: 2
 
       @doc """
       Svg -> html. Easy as pie.
       """
-      def svg(%{"code" => html}), do: html
-      defoverridable svg: 1
+      def svg(%{"code" => html}, _), do: html
+      defoverridable svg: 2
 
       @doc """
       Markdown -> html
       """
-      def markdown(%{"text" => markdown}) do
+      def markdown(%{"text" => markdown}, _) do
         Earmark.as_html!(markdown, %Earmark.Options{breaks: true})
       end
 
-      defoverridable markdown: 1
+      defoverridable markdown: 2
 
       @doc """
       Convert GMaps url to iframe html
       """
-      def map(%{"embed_url" => embed_url, "source" => "gmaps"}) do
+      def map(%{"embed_url" => embed_url, "source" => "gmaps"}, _) do
         ~s(<div class="map-wrapper">
              <iframe width="420"
                      height="315"
@@ -166,12 +169,12 @@ defmodule Brando.Villain.Parser do
            </div>)
       end
 
-      defoverridable map: 1
+      defoverridable map: 2
 
       @doc """
       Convert YouTube video to iframe html
       """
-      def video(%{"remote_id" => remote_id, "source" => "youtube"}) do
+      def video(%{"remote_id" => remote_id, "source" => "youtube"}, _) do
         params = "autoplay=1&controls=0&showinfo=0&rel=0"
         ~s(<div class="video-wrapper">
              <iframe width="420"
@@ -183,7 +186,7 @@ defmodule Brando.Villain.Parser do
            </div>)
       end
 
-      def video(%{"remote_id" => remote_id, "source" => "vimeo"}) do
+      def video(%{"remote_id" => remote_id, "source" => "vimeo"}, _) do
         ~s(<div class="video-wrapper">
              <iframe src="//player.vimeo.com/video/#{remote_id}?dnt=1"
                      width="500"
@@ -199,7 +202,7 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert file video to html
       """
-      def video(%{"remote_id" => src, "source" => "file"} = data) do
+      def video(%{"remote_id" => src, "source" => "file"} = data, _) do
         video_tag(src, %{
           width: data["width"],
           height: data["height"],
@@ -208,12 +211,12 @@ defmodule Brando.Villain.Parser do
         })
       end
 
-      defoverridable video: 1
+      defoverridable video: 2
 
       @doc """
       Convert image to html, with caption and credits and optional link
       """
-      def picture(data) do
+      def picture(data, _) do
         title = Map.get(data, "title", "")
         credits = Map.get(data, "credits", "")
         alt = Map.get(data, "alt", nil)
@@ -293,12 +296,12 @@ defmodule Brando.Villain.Parser do
         """
       end
 
-      defoverridable picture: 1
+      defoverridable picture: 2
 
       @doc """
       Convert image to html, with caption and credits and optional link
       """
-      def image(data) do
+      def image(data, _) do
         title = Map.get(data, "title", "")
         credits = Map.get(data, "credits", "")
         link = Map.get(data, "link", "")
@@ -347,12 +350,12 @@ defmodule Brando.Villain.Parser do
         """
       end
 
-      defoverridable image: 1
+      defoverridable image: 2
 
       @doc """
       Slideshow
       """
-      def slideshow(%{"images" => images}) do
+      def slideshow(%{"images" => images}, _) do
         items =
           Enum.map_join(images, "\n", fn img ->
             orientation = (img["width"] > img["height"] && "landscape") || "portrait"
@@ -393,12 +396,12 @@ defmodule Brando.Villain.Parser do
         """
       end
 
-      defoverridable slideshow: 1
+      defoverridable slideshow: 2
 
       @doc """
       Datatable
       """
-      def datatable(%{"rows" => rows}) do
+      def datatable(%{"rows" => rows}, _) do
         rows_html =
           Enum.map_join(rows, "\n", fn row ->
             """
@@ -425,7 +428,7 @@ defmodule Brando.Villain.Parser do
       @doc """
       Datatable (Legacy)
       """
-      def datatable(rows) when is_list(rows) do
+      def datatable(rows, _) when is_list(rows) do
         rows_html =
           Enum.map_join(rows, "\n", fn row ->
             """
@@ -449,45 +452,45 @@ defmodule Brando.Villain.Parser do
         """
       end
 
-      defoverridable datatable: 1
+      defoverridable datatable: 2
 
       @doc """
       Convert divider/hr to html
       """
-      def divider(_), do: ~s(<hr>)
-      defoverridable divider: 1
+      def divider(_, _), do: ~s(<hr>)
+      defoverridable divider: 2
 
       @doc """
       Convert list to html through Markdown
       """
-      def list(%{"text" => list}), do: Earmark.as_html!(list)
-      defoverridable list: 1
+      def list(%{"text" => list}, _), do: Earmark.as_html!(list)
+      defoverridable list: 2
 
       @doc """
       Converts quote to html.
       """
-      def blockquote(%{"text" => blockquote, "cite" => cite})
+      def blockquote(%{"text" => blockquote, "cite" => cite}, _)
           when byte_size(cite) > 0 do
         html = blockquote <> "\n>\n> -- <cite>#{cite}</cite>"
         Earmark.as_html!(html)
       end
 
-      def blockquote(%{"text" => blockquote}) do
+      def blockquote(%{"text" => blockquote}, _) do
         Earmark.as_html!(blockquote)
       end
 
-      defoverridable blockquote: 1
+      defoverridable blockquote: 2
 
       @doc """
       Strip comments
       """
-      def comment(_), do: ""
-      defoverridable comment: 1
+      def comment(_, _), do: ""
+      defoverridable comment: 2
 
       @doc """
       Convert columns to html. Recursive parsing.
       """
-      def columns(cols) do
+      def columns(cols, _) do
         col_html =
           for col <- cols do
             c =
@@ -507,12 +510,12 @@ defmodule Brando.Villain.Parser do
         ~s(<div class="row">#{col_html}</div>)
       end
 
-      defoverridable columns: 1
+      defoverridable columns: 2
 
       @doc """
       Convert template to html.
       """
-      def template(%{"code" => code, "refs" => refs}) do
+      def template(%{"code" => code, "refs" => refs}, _) do
         Regex.replace(~r/%{(\w+)}/, code, fn _, match ->
           ref = Enum.find(refs, &(&1["name"] == match))
           block = Map.get(ref, "data")
@@ -528,8 +531,18 @@ defmodule Brando.Villain.Parser do
               "multi" => true,
               "id" => id,
               "entries" => entries
-            } = block
+            } = block,
+            opts
           ) do
+        {:ok, template} =
+          case Keyword.get(opts, :cache_templates) do
+            true ->
+              Brando.Villain.get_cached_template(id)
+
+            _ ->
+              Brando.Villain.get_template(id)
+          end
+
         # multi template
         {:ok, template} = Brando.Villain.get_template(id)
 
@@ -544,8 +557,15 @@ defmodule Brando.Villain.Parser do
         String.replace(template.wrapper, "${CONTENT}", Enum.join(content, "\n"))
       end
 
-      def template(%{"id" => id, "multi" => false, "refs" => refs} = block) do
-        {:ok, template} = Brando.Villain.get_template(id)
+      def template(%{"id" => id, "multi" => false, "refs" => refs} = block, opts) do
+        {:ok, template} =
+          case Keyword.get(opts, :cache_templates) do
+            true ->
+              Brando.Villain.get_cached_template(id)
+
+            _ ->
+              Brando.Villain.get_template(id)
+          end
 
         vars = Map.get(block, "vars")
 
@@ -554,7 +574,36 @@ defmodule Brando.Villain.Parser do
         |> render_refs(refs, id)
       end
 
-      defoverridable template: 1
+      defoverridable template: 2
+
+      @doc """
+      Timeline
+      """
+      def timeline(items, _) do
+        timeline_html =
+          for item <- items do
+            ~s(
+                <li class="villain-timeline-item">
+                  <div class="villain-timeline-item-date">
+                    <div class="villain-timeline-item-date-inner">
+                      #{Map.get(item, "caption")}
+                    </div>
+                  </div>
+                  <div class="villain-timeline-item-content">
+                    <div class="villain-timeline-item-content-inner">
+                      #{Map.get(item, "text")}
+                    </div>
+                  </div>
+                </li>
+                )
+          end
+
+        ~s(<ul class="villain-timeline">#{timeline_html}</ul>)
+      end
+
+      defoverridable timeline: 2
+
+      # ...
 
       defp replace_loop_vars(template, entries, index) do
         Regex.replace(~r/\${loop:(\w+)}/, template.code, fn
@@ -592,36 +641,8 @@ defmodule Brando.Villain.Parser do
 
       defp render_ref(ref, _id, _match) do
         block = Map.get(ref, "data")
-        apply(__MODULE__, String.to_atom(block["type"]), [block["data"]])
+        apply(__MODULE__, String.to_atom(block["type"]), [block["data"], []])
       end
-
-      @doc """
-      Timeline
-      """
-      def timeline(items) do
-        timeline_html =
-          for item <- items do
-            ~s(
-                <li class="villain-timeline-item">
-                  <div class="villain-timeline-item-date">
-                    <div class="villain-timeline-item-date-inner">
-                      #{Map.get(item, "caption")}
-                    </div>
-                  </div>
-                  <div class="villain-timeline-item-content">
-                    <div class="villain-timeline-item-content-inner">
-                      #{Map.get(item, "text")}
-                    </div>
-                  </div>
-                </li>
-                )
-          end
-
-        ~s(<ul class="villain-timeline">#{timeline_html}</ul>)
-      end
-
-      defoverridable timeline: 1
-      # ...
     end
   end
 end

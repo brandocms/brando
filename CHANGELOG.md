@@ -2,6 +2,8 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.45.0
 
+* Mandatory /2 for all parser functions. Second argument is an options list.
+  Mostly for futureproofing and caching templates
 * Optimized Dockerfile templates.
 * `picture_tag` moved `moonwalk` to `<picture>` tag instead of `<img>`
 * Simplify needed `brando.exs` config

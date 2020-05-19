@@ -54,7 +54,10 @@ defmodule Brando.LivePreview do
         entry =
           if key do
             atom_key = String.to_existing_atom(key)
-            parsed_html = Brando.Villain.parse(Map.get(entry, atom_key), entry)
+
+            parsed_html =
+              Brando.Villain.parse(Map.get(entry, atom_key), entry, cache_templates: true)
+
             rendered_data = Brando.Villain.render_entry(entry, parsed_html)
             entry = Map.put(entry, :html, rendered_data)
           else

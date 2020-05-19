@@ -66,13 +66,16 @@ defmodule Brando.Villain do
   Returns HTML.
   """
   @spec parse(String.t() | [map]) :: String.t()
-  def parse(data, entry \\ nil)
-  def parse("", _), do: ""
-  def parse(nil, _), do: ""
-  def parse(json, entry) when is_binary(json), do: do_parse(Poison.decode!(json), entry)
-  def parse(json, entry) when is_list(json), do: do_parse(json, entry)
+  def parse(data, entry \\ nil, opts \\ [])
+  def parse("", _, _), do: ""
+  def parse(nil, _, _), do: ""
 
-  defp do_parse(data, entry) do
+  def parse(json, entry, opts) when is_binary(json),
+    do: do_parse(Poison.decode!(json), entry, opts)
+
+  def parse(json, entry, opts) when is_list(json), do: do_parse(json, entry, opts)
+
+  defp do_parse(data, entry, opts) do
     parser = Brando.config(Brando.Villain)[:parser]
 
     html =
@@ -80,7 +83,7 @@ defmodule Brando.Villain do
       |> Enum.reduce([], fn data_node, acc ->
         type_atom = String.to_atom(data_node["type"])
         data_node_content = data_node["data"]
-        [apply(parser, type_atom, [data_node_content]) | acc]
+        [apply(parser, type_atom, [data_node_content, opts]) | acc]
       end)
       |> Enum.reverse()
       |> Enum.join()
@@ -296,6 +299,21 @@ defmodule Brando.Villain do
     case Brando.repo().one(query) do
       nil -> {:error, {:template, :not_found}}
       t -> {:ok, t}
+    end
+  end
+
+  @doc """
+  Get template from CACHE or DB
+  """
+  def get_cached_template(id) do
+    case Cachex.get(:cache, "template__#{id}") do
+      {:ok, nil} ->
+        {:ok, template} = get_template(id)
+        Cachex.put(:cache, "template__#{id}", template, ttl: :timer.seconds(120))
+        {:ok, template}
+
+      {:ok, template} ->
+        {:ok, template}
     end
   end
 
