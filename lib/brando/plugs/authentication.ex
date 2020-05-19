@@ -1,11 +1,6 @@
 defmodule Brando.Plug.Authentication do
   use Plug.Router
 
-  plug Plug.Parsers,
-    parsers: [:json],
-    pass: ["application/json"],
-    json_decoder: Jason
-
   plug :match
   plug :dispatch
 
