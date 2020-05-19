@@ -2,23 +2,23 @@ defmodule Brando.VillainTest do
   defmodule OtherParser do
     @behaviour Brando.Villain.Parser
 
-    def text(%{"text" => _, "type" => _}), do: "other parser"
-    def datatable(_), do: nil
-    def datasource(_), do: nil
-    def markdown(_), do: nil
-    def html(_), do: nil
-    def svg(_), do: nil
-    def map(_), do: nil
-    def blockquote(_), do: nil
-    def columns(_), do: nil
-    def divider(_), do: nil
-    def header(_), do: nil
-    def image(_), do: nil
-    def list(_), do: nil
-    def slideshow(_), do: nil
-    def video(_), do: nil
-    def template(_), do: nil
-    def comment(_), do: nil
+    def text(%{"text" => _, "type" => _}, _), do: "other parser"
+    def datatable(_, _), do: nil
+    def datasource(_, _), do: nil
+    def markdown(_, _), do: nil
+    def html(_, _), do: nil
+    def svg(_, _), do: nil
+    def map(_, _), do: nil
+    def blockquote(_, _), do: nil
+    def columns(_, _), do: nil
+    def divider(_, _), do: nil
+    def header(_, _), do: nil
+    def image(_, _), do: nil
+    def list(_, _), do: nil
+    def slideshow(_, _), do: nil
+    def video(_, _), do: nil
+    def template(_, _), do: nil
+    def comment(_, _), do: nil
   end
 
   use Brando.ConnCase

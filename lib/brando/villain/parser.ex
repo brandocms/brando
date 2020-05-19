@@ -495,7 +495,7 @@ defmodule Brando.Villain.Parser do
           for col <- cols do
             c =
               Enum.reduce(col["data"], [], fn d, acc ->
-                [apply(__MODULE__, String.to_atom(d["type"]), [d["data"]]) | acc]
+                [apply(__MODULE__, String.to_atom(d["type"]), [d["data"], []]) | acc]
               end)
 
             class =
@@ -519,7 +519,7 @@ defmodule Brando.Villain.Parser do
         Regex.replace(~r/%{(\w+)}/, code, fn _, match ->
           ref = Enum.find(refs, &(&1["name"] == match))
           block = Map.get(ref, "data")
-          apply(__MODULE__, String.to_atom(block["type"]), [block["data"]])
+          apply(__MODULE__, String.to_atom(block["type"]), [block["data"], []])
         end)
       end
 
