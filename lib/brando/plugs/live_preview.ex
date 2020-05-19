@@ -8,8 +8,11 @@ defmodule Brando.Plug.LivePreview do
 
   @phoenix_path Application.app_dir(:phoenix, "priv/static/phoenix.js")
   @morphdom_path Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js")
+  @livepreview_path Application.app_dir(:brando, "priv/static/js/livepreview.js")
+
   @external_resource @phoenix_path
   @external_resource @morphdom_path
+  @external_resource @livepreview_path
 
   def init(opts), do: opts
 
@@ -36,46 +39,19 @@ defmodule Brando.Plug.LivePreview do
     inject_html = """
     <!-- BRANDO LIVE PREVIEW -->
     <script>
+    var livePreviewKey = '#{key}';
     #{File.read!(@phoenix_path)}
     #{File.read!(@morphdom_path)}
-
-    /* Add live preview class to html */
-    document.documentElement.classList.add('is-live-preview');
-    var token = localStorage.getItem('token');
-    var previewSocket = new Phoenix.Socket('/admin/socket', { params: { guardian_token: token } });
-    var main = document.querySelector('main')
-    var parser = new DOMParser();
-    previewSocket.connect();
-    var channel = previewSocket.channel("live_preview:#{key}")
-    channel.on('update', function (payload) {
-      var doc = parser.parseFromString(payload.html, "text/html");
-      var newMain = doc.querySelector('main');
-      morphdom(main, newMain, {
-        onBeforeElUpdated: (a, b) => {
-          if (a.isEqualNode(b)) {
-            return false // Skip this entire sub-tree
-          }
-
-          return !(a.dataset.src && b.dataset.src && a.dataset.src === b.dataset.src);
-        },
-
-        onBeforeNodeAdded: (node) => {
-          console.log(node);
-          return node;
-        },
-
-        childrenOnly: true
-      });
-    });
-    channel.join();
+    #{File.read!(@livepreview_path)}
     </script>
     <style>
-      html.is-live-preview [data-moonwalk],
-      html.is-live-preview [data-moonwalk-section],
+    html.is-live-preview [data-moonwalk],
+    html.is-live-preview [data-moonwalk-section],
       html.is-live-preview [data-moonwalk-run] {
         opacity: 1 !important;
         visibility: visible !important;
         transform: none !important;
+        clip-path: none !important;
       }
     </style>
     """
