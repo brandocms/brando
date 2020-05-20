@@ -36,33 +36,39 @@ defmodule Brando.Plug.LivePreview do
     #! GRAB THE COMPLETE HTML FROM ETS AND TAG ON THE JAVASCRIPT PORTION.
     #! CONSECUTIVE UPDATES WILL ONLY TARGET <MAIN>
 
-    inject_html = """
-    <!-- BRANDO LIVE PREVIEW -->
-    <script>
-    var livePreviewKey = '#{key}';
-    #{File.read!(@phoenix_path)}
-    #{File.read!(@morphdom_path)}
-    #{File.read!(@livepreview_path)}
-    </script>
-    <style>
-    html.is-live-preview [data-moonwalk],
-    html.is-live-preview [data-moonwalk-section],
-      html.is-live-preview [data-moonwalk-run] {
-        opacity: 1 !important;
-        visibility: visible !important;
-        transform: none !important;
-        clip-path: none !important;
-      }
-    </style>
-    """
+    try do
+      inject_html = """
+      <!-- BRANDO LIVE PREVIEW -->
+      <script>
+      var livePreviewKey = '#{key}';
+      #{File.read!(@phoenix_path)}
+      #{File.read!(@morphdom_path)}
+      #{File.read!(@livepreview_path)}
+      </script>
+      <style>
+      html.is-live-preview [data-moonwalk],
+      html.is-live-preview [data-moonwalk-section],
+        html.is-live-preview [data-moonwalk-run] {
+          opacity: 1 !important;
+          visibility: visible !important;
+          transform: none !important;
+          clip-path: none !important;
+        }
+      </style>
+      """
 
-    [page | rest] = String.split(initial_html, "</body>")
-    html = page <> inject_html <> Enum.join(["</body>" | rest], "")
+      [page | rest] = String.split(initial_html, "</body>")
+      html = page <> inject_html <> Enum.join(["</body>" | rest], "")
 
-    conn
-    |> put_resp_content_type("text/html")
-    |> send_resp(200, [html])
-    |> halt()
+      conn
+      |> put_resp_content_type("text/html")
+      |> send_resp(200, [html])
+      |> halt()
+    rescue
+      e ->
+        require Logger
+        Logger.error(inspect(e, pretty: true))
+    end
   end
 
   def call(conn, _), do: conn
