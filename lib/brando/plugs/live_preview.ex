@@ -6,14 +6,6 @@ defmodule Brando.Plug.LivePreview do
   import Plug.Conn
   @behaviour Plug
 
-  @phoenix_path Application.app_dir(:phoenix, "priv/static/phoenix.js")
-  @morphdom_path Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js")
-  @livepreview_path Application.app_dir(:brando, "priv/static/js/livepreview.js")
-
-  @external_resource @phoenix_path
-  @external_resource @morphdom_path
-  @external_resource @livepreview_path
-
   def init(opts), do: opts
 
   def call(%Plug.Conn{path_info: ["__livepreview" | _suffix]} = conn, _) do
@@ -41,9 +33,9 @@ defmodule Brando.Plug.LivePreview do
       <!-- BRANDO LIVE PREVIEW -->
       <script>
       var livePreviewKey = '#{key}';
-      #{File.read!(@phoenix_path)}
-      #{File.read!(@morphdom_path)}
-      #{File.read!(@livepreview_path)}
+      #{File.read!(Application.app_dir(:phoenix, "priv/static/phoenix.js"))}
+      #{File.read!(Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js"))}
+      #{File.read!(Application.app_dir(:brando, "priv/static/js/livepreview.js"))}
       </script>
       <style>
       html.is-live-preview [data-moonwalk],
