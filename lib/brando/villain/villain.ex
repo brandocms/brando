@@ -493,7 +493,7 @@ defmodule Brando.Villain do
     built_query =
       Enum.reduce(search_terms, org_query, fn search_term, query ->
         from q in query,
-          or_where: fragment("? ~ ?", type(field(q, ^data_field), :string), ^"#{search_term}")
+          or_where: fragment("? ~* ?", type(field(q, ^data_field), :string), ^"#{search_term}")
       end)
 
     Brando.repo().all(built_query)

@@ -103,7 +103,7 @@ defmodule Brando.System do
   end
 
   defp check_valid_globals do
-    search_terms = "\\$\\{GLOBAL\\:(\\w+)\\}"
+    search_terms = "\\${GLOBAL:(\\w+)}"
 
     for {schema, fields} <- Brando.Villain.list_villains() do
       Enum.reduce(fields, [], fn {_, data_field, _html_field}, acc ->
@@ -126,13 +126,13 @@ defmodule Brando.System do
     require Logger
 
     Logger.error("""
-      ==> Found deprecated global variable format `${GLOBAL:key}`. Try `${GLOBAL:system.key}` instead.
+
+
+      ==> Found deprecated global variable format `${global:key}`. Try `${global:system.key}` instead.
       ==> Schema.: #{inspect(schema)}
       ==> Ids....: #{inspect(ids)}
     """)
   end
 
-  defp set_cache do
-    Brando.Sites.cache_identity()
-  end
+  defp set_cache, do: Brando.Sites.cache_identity()
 end
