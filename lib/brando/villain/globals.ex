@@ -3,8 +3,7 @@ defmodule Brando.Villain.Globals do
   Replacing globals in data fields
   """
 
-  @regex_global_ref ~r/(?:\$\{|\$\%7B)GLOBAL:([a-zA-Z0-9-_.]+)(?:\}|\%7D)/
-
+  @regex_global_ref ~r/(?:\$\{|\$\%7B)GLOBAL:([a-zA-Z0-9-_.]+)(?:\}|\%7D)/i
   def replace_global_refs(html) do
     Regex.replace(@regex_global_ref, html, fn _, key ->
       identity = Brando.Cache.get(:identity)
