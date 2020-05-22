@@ -2,7 +2,7 @@ defmodule Brando.LivePreviewTest do
   use ExUnit.Case, async: true
 
   defmodule LayoutView do
-    use Phoenix.View, root: "test/templates"
+    use Phoenix.View, root: "test/fixtures/templates"
 
     def render("app.html", assigns) do
       {:safe, "Hello #{List.first(assigns.employees).name} :)"}
@@ -10,7 +10,7 @@ defmodule Brando.LivePreviewTest do
   end
 
   defmodule TestView do
-    use Phoenix.View, root: "test/templates"
+    use Phoenix.View, root: "test/fixtures/templates"
   end
 
   defmodule LivePreview do

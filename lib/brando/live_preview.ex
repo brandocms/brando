@@ -29,7 +29,7 @@ defmodule Brando.LivePreview do
     layout_template = Keyword.get(opts, :layout_template, "app.html")
     template_prop = Keyword.get(opts, :template_prop, nil)
 
-    quote do
+    quote location: :keep do
       @doc """
       `entry` - data structure of our entry
       `key` - refers to the Villain `data` key. If nil, then ignore
