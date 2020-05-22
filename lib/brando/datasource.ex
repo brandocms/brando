@@ -1,4 +1,24 @@
 defmodule Brando.Datasource do
+  @moduledoc """
+  Helpers to register datasources for interfacing with the block editor
+
+  ## Example
+
+  In your schema:
+
+      use Brando.Datasource
+
+      datasources do
+        many :all_posts_from_year, fn module, arg ->
+          {:ok, Repo.all(from t in module, where: t.year == ^arg)}
+        end
+
+        many :all_posts, fn _, _ -> Posts.list_posts() end
+      end
+
+  These two data source points are now available through the block editor when you create a Datasource block.
+
+  """
   import Ecto.Query
 
   @doc """
@@ -6,43 +26,64 @@ defmodule Brando.Datasource do
   """
   defmacro __using__(_) do
     quote do
-      Module.register_attribute(__MODULE__, :datasources, accumulate: true)
+      import Ecto.Query
       import unquote(__MODULE__)
+      Module.register_attribute(__MODULE__, :datasources_many, accumulate: true)
+      Module.register_attribute(__MODULE__, :datasources_one, accumulate: true)
       @before_compile unquote(__MODULE__)
     end
   end
 
   @doc false
   defmacro __before_compile__(env) do
-    datasources = Module.get_attribute(env.module, :datasources)
-    compile(datasources)
+    datasources_many = Module.get_attribute(env.module, :datasources_many)
+    datasources_one = Module.get_attribute(env.module, :datasources_one)
+    [compile(:many, datasources_many), compile(:one, datasources_one)]
   end
 
   @doc false
-  def compile(datasources) do
-    prelude =
-      for {type, datasource} <- datasources,
-          {key, val} <- datasource do
-        quote do
-          def __datasource__(unquote(type), unquote(key)) do
-            unquote(Macro.escape(val))
-          end
-        end
+  def compile(:many, datasources_many) do
+    quote do
+      def __datasources__(:many) do
+        unquote(datasources_many)
       end
-
-    postlude =
-      quote do
-        def __datasources__ do
-          unquote(Macro.escape(datasources))
-        end
-      end
-
-    [prelude, postlude]
+    end
   end
 
-  defmacro datasource(type, map) do
+  @doc false
+  def compile(:one, datasources_one) do
     quote do
-      Module.put_attribute(__MODULE__, :datasources, {unquote(type), unquote(map)})
+      def __datasources__(:one) do
+        unquote(datasources_one)
+      end
+    end
+  end
+
+  @deprecated """
+  Use new datasources syntax:
+
+    datasources do
+      many :all, fn module, _arg -> {:ok, Repo.all(from t in module, order_by: t.name)} end
+      one :latest, fn _module, _arg -> get_latest_post() end
+    end
+  """
+  defmacro datasource(_, _) do
+    raise "Deprecated"
+  end
+
+  defmacro datasources(do: block) do
+    quote do
+      unquote(block)
+    end
+  end
+
+  defmacro many(key, fun) do
+    quote do
+      Module.put_attribute(__MODULE__, :datasources_many, unquote(key))
+
+      def __datasource__(:many, unquote(key)) do
+        unquote(fun)
+      end
     end
   end
 
@@ -62,20 +103,18 @@ defmodule Brando.Datasource do
   def list_datasource_keys(module) do
     mod = Module.concat([module])
 
-    keys =
-      mod.__datasources__()
-      |> Enum.map(fn {k, v} -> {k, Map.keys(v)} end)
-      |> Enum.into(%{})
+    many_keys = mod.__datasources__(:many)
+    one_keys = []
 
-    {:ok, keys}
+    {:ok, %{many: many_keys, one: one_keys}}
   end
 
   @doc """
   Grab entry from database
   """
-  def get_many(module, query) do
+  def get_many(module, query, arg) do
     mod = Module.concat([module])
-    mod.__datasource__(:many, String.to_existing_atom(query)).()
+    mod.__datasource__(:many, String.to_existing_atom(query)).(module, arg)
   end
 
   @doc """

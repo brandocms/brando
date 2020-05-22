@@ -123,6 +123,19 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
 
     create(index(:pages_fragments, [:language]))
     create(index(:pages_fragments, [:key]))
+
+    create table(:sites_global_categories) do
+      add :key, :string
+      add :label, :text
+    end
+
+    create table(:sites_globals) do
+      add :key, :string
+      add :label, :text
+      add :type, :string
+      add :data, :jsonb
+      add :global_category_id, references(:sites_global_categories, on_delete: :delete_all)
+    end
   end
 
   def down do
@@ -148,5 +161,8 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
     drop(table(:pages_fragments))
     drop(index(:pages_fragments, [:language]))
     drop(index(:pages_fragments, [:key]))
+
+    drop table(:sites_global_categories)
+    drop table(:sites_globals)
   end
 end

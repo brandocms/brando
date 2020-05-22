@@ -101,11 +101,12 @@ defmodule Brando.Villain.Parser do
               "type" => "many",
               "query" => query,
               "template" => template_id,
-              "wrapper" => wrapper
+              "wrapper" => wrapper,
+              "arg" => arg
             },
             _
           ) do
-        {:ok, entries} = Datasource.get_many(module, query)
+        {:ok, entries} = Datasource.get_many(module, query, arg)
         {:ok, template} = Villain.get_template(template_id)
 
         content =
