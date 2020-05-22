@@ -7,10 +7,12 @@ defmodule Brando.Sites do
   alias Brando.Images
   alias Brando.Sites.Identity
   alias Brando.Villain
+  alias Brando.Sites.GlobalCategory
 
   @type changeset :: Ecto.Changeset.t()
   @type id :: Integer.t() | String.t()
   @type identity :: Brando.Sites.Identity.t()
+  @type global_category :: Brando.Sites.GlobalCategory.t()
   @type params :: Map.t()
   @type user :: Brando.Users.User.t()
 
@@ -102,6 +104,51 @@ defmodule Brando.Sites do
     |> Brando.repo().insert!
   end
 
+  def list_global_categories do
+    {:ok, Brando.repo().all(GlobalCategory)}
+  end
+
+  def get_global_categories do
+    query = from t in GlobalCategory, preload: :globals
+    {:ok, Brando.repo().all(query)}
+  end
+
+  @doc """
+  Get global category
+  """
+  @spec get_global_category(category_id :: any) ::
+          {:ok, global_category()} | {:error, {:global_category, :not_found}}
+  def get_global_category(category_id) do
+    case Brando.repo().get_by(GlobalCategory, id: category_id) do
+      nil -> {:error, {:global_category, :not_found}}
+      global_category -> {:ok, Brando.repo().preload(global_category, :globals)}
+    end
+  end
+
+  @doc """
+  Create new global category
+  """
+  @spec create_global_category(params) ::
+          {:ok, global_category} | {:error, Ecto.Changeset.t()}
+  def create_global_category(global_category_params) do
+    changeset = GlobalCategory.changeset(%GlobalCategory{}, global_category_params)
+    Brando.repo().insert(changeset)
+  end
+
+  @doc """
+  Update global category
+  """
+  @spec update_global_category(id :: any, params) ::
+          {:ok, global_category} | {:error, Ecto.Changeset.t()}
+  def update_global_category(category_id, global_category_params) do
+    {:ok, category} = get_global_category(category_id)
+    changeset = GlobalCategory.changeset(category, global_category_params)
+
+    changeset
+    |> Brando.repo().update()
+    |> update_villains_referencing_global()
+  end
+
   @doc """
   Try to get `name` from list of `links` in `identity`.
   """
@@ -121,7 +168,26 @@ defmodule Brando.Sites do
   end
 
   @doc """
-  Check all fields for references to IDENTITY, CONFIG, LINK and GLOBAL
+  Check all fields for references to GLOBAL
+  Rerender if found.
+  """
+  @spec update_villains_referencing_global({:ok, global_category} | {:error, changeset}) ::
+          {:ok, global_category} | {:error, changeset}
+  def update_villains_referencing_global({:error, changeset}), do: {:error, changeset}
+
+  def update_villains_referencing_global({:ok, global_category}) do
+    search_terms = [
+      "${GLOBAL:",
+      "${global:"
+    ]
+
+    villains = Villain.list_villains()
+    Villain.rerender_matching_villains(villains, search_terms)
+    {:ok, global_category}
+  end
+
+  @doc """
+  Check all fields for references to IDENTITY, CONFIG and LINK
   Rerender if found.
   """
   @spec update_villains_referencing_identity({:ok, identity} | {:error, changeset}) ::
@@ -133,11 +199,9 @@ defmodule Brando.Sites do
       "${IDENTITY:",
       "${CONFIG:",
       "${LINK:",
-      "${GLOBAL:",
       "${identity:",
       "${config:",
-      "${link:",
-      "${global:"
+      "${link:"
     ]
 
     villains = Villain.list_villains()

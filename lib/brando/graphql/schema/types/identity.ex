@@ -25,7 +25,6 @@ defmodule Brando.Schema.Types.Identity do
     field :configs, list_of(:config)
     field :links, list_of(:link)
     field :metas, list_of(:meta)
-    field :global_categories, list_of(:global_category)
     field :inserted_at, :time
     field :updated_at, :time
   end
@@ -45,15 +44,18 @@ defmodule Brando.Schema.Types.Identity do
   object :global do
     field :id, :id
     field :label, :string
+    field :type, :string
     field :key, :string
-    field :value, :string
+    field :data, :json
+    field :global_category_id, :id
+    field :global_category, :global_category
   end
 
   object :global_category do
     field :id, :id
     field :label, :string
     field :key, :string
-    field :globals, list_of(:global)
+    field :globals, list_of(:global), resolve: dataloader(Brando.Sites)
   end
 
   object :config do
@@ -78,11 +80,17 @@ defmodule Brando.Schema.Types.Identity do
     field :title_postfix, :string
     field :links, list_of(:link_params)
     field :metas, list_of(:meta_params)
-    field :global_categories, list_of(:global_category_params)
     field :configs, list_of(:config_params)
     field :image, :upload_or_image
     field :logo, :upload_or_image
     field :url, :string
+  end
+
+  input_object :global_category_params do
+    field :id, :id
+    field :label, :string
+    field :key, :string
+    field :globals, list_of(:global_params)
   end
 
   input_object :link_params do
@@ -97,18 +105,12 @@ defmodule Brando.Schema.Types.Identity do
     field :value, :string
   end
 
-  input_object :global_category_params do
-    field :id, :id
-    field :label, :string
-    field :key, :string
-    field :globals, list_of(:global_params)
-  end
-
   input_object :global_params do
     field :id, :id
+    field :type, :string
     field :label, :string
     field :key, :string
-    field :value, :string
+    field :data, :json
   end
 
   input_object :config_params do
@@ -137,6 +139,26 @@ defmodule Brando.Schema.Types.Identity do
 
     field :delete_identity, type: :identity do
       resolve &Brando.Sites.IdentityResolver.delete/2
+    end
+  end
+
+  object :global_queries do
+    @desc "Get global categories"
+    field :global_categories, type: list_of(:global_category) do
+      resolve &Brando.Sites.GlobalResolver.all/2
+    end
+  end
+
+  object :global_mutations do
+    field :create_global_category, type: :global_category do
+      arg :global_category_params, non_null(:global_category_params)
+      resolve &Brando.Sites.GlobalResolver.create/2
+    end
+
+    field :update_global_category, type: :global_category do
+      arg :category_id, non_null(:id)
+      arg :global_category_params, non_null(:global_category_params)
+      resolve &Brando.Sites.GlobalResolver.update/2
     end
   end
 end

@@ -25,7 +25,6 @@ defmodule Brando.Sites.Identity do
 
     embeds_many :metas, Brando.Meta, on_replace: :delete
     embeds_many :links, Brando.Link, on_replace: :delete
-    embeds_many :global_categories, Brando.GlobalCategory, on_replace: :delete
     embeds_many :configs, Brando.ConfigEntry, on_replace: :delete
 
     timestamps()
@@ -78,7 +77,6 @@ defmodule Brando.Sites.Identity do
     |> cast_embed(:links)
     |> cast_embed(:metas)
     |> cast_embed(:configs)
-    |> cast_embed(:global_categories)
     |> validate_required(@required_fields)
     |> validate_upload({:image, :image}, user)
     |> validate_upload({:image, :logo}, user)
