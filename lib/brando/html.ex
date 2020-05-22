@@ -36,9 +36,10 @@ defmodule Brando.HTML do
     height = Map.get(opts, :height)
     opacity = Map.get(opts, :opacity, 0)
     preload = Map.get(opts, :preload, false)
+    cover = Map.get(opts, :cover, false)
     autoplay = (Map.get(opts, :autoplay, false) && "autoplay") || ""
 
-    cover =
+    cover_html =
       if width do
         ~s(
           <div data-cover>
@@ -54,7 +55,7 @@ defmodule Brando.HTML do
 
     ~s(
       <div class="video-wrapper" data-smart-video>
-        #{cover}
+        #{(cover && cover_html) || ""}
         <video
           tabindex="0"
           role="presentation"
