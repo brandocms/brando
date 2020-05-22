@@ -68,17 +68,23 @@ defmodule Brando.LivePreview do
         conn = %Plug.Conn{host: "localhost", private: %{phoenix_endpoint: Brando.endpoint()}}
         conn = Brando.Plug.HTML.put_section(conn, section)
 
-        unquote(layout_module).render(
+        render_assigns =
+          ([
+             {:conn, conn},
+             {:section, section},
+             {atom_prop, entry}
+           ] ++ unquote(Macro.var(:extra_vars, nil)))
+          |> Enum.into(%{})
+
+        inner = Phoenix.View.render(unquote(view_module), template, render_assigns)
+
+        root_assigns = render_assigns |> Map.put(:inner_content, inner) |> Map.delete(:layout)
+
+        Phoenix.View.render_to_string(
+          unquote(layout_module),
           unquote(layout_template),
-          [
-            {:conn, conn},
-            {:view_module, unquote(view_module)},
-            {:view_template, template},
-            {:section, section},
-            {atom_prop, entry}
-          ] ++ unquote(Macro.var(:extra_vars, nil))
+          root_assigns
         )
-        |> Phoenix.HTML.safe_to_string()
       end
     end
   end

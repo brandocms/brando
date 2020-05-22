@@ -1,5 +1,10 @@
 ## 0.45.0
 
+* In your `app.html.eex`, replace
+  `<%= render @view_module, @view_template, @assigns %>`
+  with
+  `<%= @inner_content %>`
+
 * If you implement your own `parser.ex`, all functions must be changed to /2.
   `def text(data) do` -> `def text(data, _) do`
 
