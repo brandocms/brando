@@ -1,19 +1,18 @@
 export default {
   "en": {
     "<%= vue_plural %>": {
-      "edit": "Edit entry",
-      "delete": "Delete entry",
       "title": "<%= Recase.SentenceCase.convert(plural) %>",
       "subtitle": "Administration",
       "index": "Index",
-      "actions": "Actions",
       "new": "New entry",
-      "sequence_updated": "Sequence updated",
+      "edit": "Edit entry",
+      "delete": "Delete entry",
+      "actions": "Actions",
+      "sequence-updated": "Sequence updated",
       "deleted": "Entry deleted",
       "delete-entries": "Delete entries",
       "delete-confirm": "Are you sure you want to delete this?",
       "delete-confirm-many": "Are you sure you want to delete these entries?",
-      "sequence-updated": "Sequence updated",
       "help-text": "",
       "more": "More",
       "fields": {
@@ -28,14 +27,13 @@ export default {
   },
   "nb": {
     "<%= vue_plural %>": {
-      "edit": "Rediger objekt",
-      "delete": "Slett objekt",
       "title": "<%= Recase.SentenceCase.convert(plural) %>",
       "subtitle": "Administrasjon",
       "index": "Oversikt",
-      "actions": "Handlinger",
       "new": "Nytt objekt",
-      "sequence_updated": "Rekkefølgen ble oppdatert",
+      "edit": "Rediger objekt",
+      "delete": "Slett objekt",
+      "actions": "Handlinger",
       "deleted": "Objektet ble slettet",
       "delete-entries": "Slett objekter",
       "delete-confirm": "Er du sikker på at du vil slette dette?",
