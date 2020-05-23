@@ -354,6 +354,13 @@ defmodule Brando.Pages do
   end
 
   @doc """
+  Get fragment from page
+  """
+  def get_fragment(%Page{fragments: fragments}, key) do
+    Enum.find(fragments, &(&1.key == key))
+  end
+
+  @doc """
   Get set of fragments by parent key
   """
   def list_page_fragments(parent_key) do

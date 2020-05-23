@@ -146,10 +146,6 @@ defmodule Mix.Tasks.Brando.Install do
      "lib/application_name_web/guardian/gql_pipeline.ex"},
     {:eex, "lib/application_name_web/guardian/token_pipeline.ex",
      "lib/application_name_web/guardian/token_pipeline.ex"},
-    {:eex, "lib/application_name_web/controllers/session_controller.ex",
-     "lib/application_name_web/controllers/session_controller.ex"},
-    {:eex, "lib/application_name_web/views/session_view.ex",
-     "lib/application_name_web/views/session_view.ex"},
 
     # Helpers for frontend
     {:eex, "lib/application_name_web.ex", "lib/application_name_web.ex"},

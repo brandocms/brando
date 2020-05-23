@@ -101,11 +101,11 @@ defmodule Brando.Villain.Parser do
               "type" => "many",
               "query" => query,
               "template" => template_id,
-              "wrapper" => wrapper,
-              "arg" => arg
-            },
+              "wrapper" => wrapper
+            } = data,
             _
           ) do
+        arg = Map.get(data, "arg", nil)
         {:ok, entries} = Datasource.get_many(module, query, arg)
         {:ok, template} = Villain.get_template(template_id)
 

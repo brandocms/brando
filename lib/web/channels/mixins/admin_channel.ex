@@ -235,8 +235,6 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
 
   def do_handle_in("templates:list_templates", _, socket) do
     {:ok, templates} = Brando.Villain.list_templates("all")
-    require Logger
-    Logger.error(inspect(templates, pretty: true))
     templates = Enum.map(templates, &%{id: &1.id, name: "#{&1.namespace} - #{&1.name}"})
     {:reply, {:ok, %{code: 200, templates: templates}}, socket}
   end
