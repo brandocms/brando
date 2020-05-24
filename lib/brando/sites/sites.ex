@@ -154,7 +154,7 @@ defmodule Brando.Sites do
   """
   def get_link(name) do
     identity = Brando.Cache.get(:identity)
-    Enum.find(identity.links, &(String.downcase(&1.name) == String.downcase(name)))
+    Enum.find(identity.links, &(String.downcase(&1.name) == String.downcase(name))) || ""
   end
 
   def get_global(key) do
