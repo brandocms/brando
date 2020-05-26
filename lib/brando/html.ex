@@ -65,6 +65,7 @@ defmodule Brando.HTML do
           loop
           playsinline
           data-video
+          #{cover && "cover=\"#{cover}\""}
           #{(preload && "data-src=\"#{src}\"") || ""}
           #{(preload && "") || "src=\"#{src}\""}></video>
         <noscript>
@@ -78,7 +79,7 @@ defmodule Brando.HTML do
             src="#{src}"></video>
         </noscript>
       </div>
-      )
+      ) |> raw
   end
 
   @doc """

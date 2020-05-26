@@ -113,14 +113,16 @@ module.exports = [
       plugins: [
         new WriteFilePlugin(),
 
-        new CopyPlugin([
-          {
-            context: './static',
-            from: '**/*',
-            to: '.',
-            force: true
-          }
-        ]),
+        new CopyPlugin({
+          patterns: [
+            {
+              context: './static',
+              from: '**/*',
+              to: '.',
+              force: true
+            }
+          ]
+        }),
 
         new ExtractCssChunks(
           {

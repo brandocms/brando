@@ -84,14 +84,16 @@ const configureCleanWebpack = () => ({
   dry: false
 })
 
-const configureCopyWebpackPlugin = () => [
-  {
-    context: './static',
-    from: '**/*',
-    to: './', // + prefix,
-    force: true
-  }
-]
+const configureCopyWebpackPlugin = () => ({
+  patterns: [
+    {
+      context: './static',
+      from: '**/*',
+      to: '.',
+      force: true
+    }
+  ]
+})
 
 // Configure Image loader
 const configureImageLoader = buildType => {

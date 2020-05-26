@@ -200,13 +200,12 @@ defmodule Brando.Villain.Parser do
            </div>)
       end
 
-      @doc """
-      Convert file video to html
-      """
+      # Convert file video to html
       def video(%{"remote_id" => src, "source" => "file"} = data, _) do
         video_tag(src, %{
           width: data["width"],
           height: data["height"],
+          cover: (data["cover"] && data["cover"]) || nil,
           preload: true,
           opacity: 0.1
         })

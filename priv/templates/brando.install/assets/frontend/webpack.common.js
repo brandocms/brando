@@ -93,12 +93,7 @@ const legacyConfig = {
         Object.keys(pkg.browserslist.legacyBrowsers).map(e => pkg.browserslist.legacyBrowsers[e])
       )
     ]
-  },
-  plugins: [
-    new CopyWebpackPlugin(
-      settings.copyWebpackConfig
-    )
-  ]
+  }
 }
 
 // Modern webpack config
