@@ -187,17 +187,29 @@ defmodule Mix.Tasks.Brando.Gen do
 
           # Backend JS
           {:eex, "assets/backend/src/api/graphql/ALL_QUERY.graphql",
-           "assets/backend/src/gql/#{snake_domain}/#{String.upcase(plural)}_QUERY.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/#{
+             singular |> Inflex.underscore() |> Inflex.pluralize() |> String.upcase()
+           }_QUERY.graphql"},
           {:eex, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql",
-           "assets/backend/src/gql/#{snake_domain}/#{String.upcase(singular)}_QUERY.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/#{
+             singular |> Inflex.underscore() |> String.upcase()
+           }_QUERY.graphql"},
           {:eex, "assets/backend/src/api/graphql/FRAGMENT.graphql",
-           "assets/backend/src/gql/#{snake_domain}/#{String.upcase(singular)}_FRAGMENT.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/#{
+             singular |> Inflex.underscore() |> String.upcase()
+           }_FRAGMENT.graphql"},
           {:eex, "assets/backend/src/api/graphql/CREATE_MUTATION.graphql",
-           "assets/backend/src/gql/#{snake_domain}/CREATE_#{String.upcase(singular)}_MUTATION.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/CREATE_#{
+             singular |> Inflex.underscore() |> String.upcase()
+           }_MUTATION.graphql"},
           {:eex, "assets/backend/src/api/graphql/UPDATE_MUTATION.graphql",
-           "assets/backend/src/gql/#{snake_domain}/UPDATE_#{String.upcase(singular)}_MUTATION.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/UPDATE_#{
+             singular |> Inflex.underscore() |> String.upcase()
+           }_MUTATION.graphql"},
           {:eex, "assets/backend/src/api/graphql/DELETE_MUTATION.graphql",
-           "assets/backend/src/gql/#{snake_domain}/DELETE_#{String.upcase(singular)}_MUTATION.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/DELETE_#{
+             singular |> Inflex.underscore() |> String.upcase()
+           }_MUTATION.graphql"},
           {:eex, "assets/backend/src/menus/menu.js", "assets/backend/src/menus/#{vue_plural}.js"},
           {:eex, "assets/backend/src/routes/route.js",
            "assets/backend/src/routes/#{vue_plural}.js"},

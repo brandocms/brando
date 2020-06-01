@@ -159,8 +159,7 @@ defmodule Brando.Query do
     name =
       module_list
       |> List.last()
-      |> to_string()
-      |> String.downcase()
+      |> Inflex.underscore()
 
     atom = String.to_existing_atom(name)
 

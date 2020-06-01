@@ -413,7 +413,9 @@ defmodule Brando.Images.Operations.Sizing do
         filename,
         user
       ) do
-    progress_string = "#{filename} — Oppretter bildestørrelse: <strong>#{size_key}</strong>"
+    require Logger
+    Logger.error(inspect(conversion_parameters, pretty: true))
+    progress_string = "#{filename} &rarr; Oppretter bildestørrelse: <strong>#{size_key}</strong>"
 
     Progress.update_progress(user, progress_string,
       key: to_string(id),

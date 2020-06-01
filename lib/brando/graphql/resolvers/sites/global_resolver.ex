@@ -3,35 +3,35 @@ defmodule Brando.Sites.GlobalResolver do
   Resolver for identitys
   """
   use Brando.Web, :resolver
-  alias Brando.Sites
+  alias Brando.Globals
 
   @doc """
   Get global categories
   """
   def all(_, %{context: %{current_user: _}}) do
-    Sites.list_global_categories()
+    Globals.list_global_categories()
   end
 
   @doc """
   Create category
   """
   def create(%{global_category_params: global_category_params}, %{context: %{current_user: _user}}) do
-    Sites.create_global_category(global_category_params)
+    Globals.create_global_category(global_category_params)
   end
 
   @doc """
-  Update identity
+  Update category
   """
   def update(%{category_id: category_id, global_category_params: global_category_params}, %{
         context: %{current_user: _}
       }) do
-    Sites.update_global_category(category_id, global_category_params)
+    Globals.update_global_category(category_id, global_category_params)
   end
 
-  @doc """
-  Delete identity
-  """
-  def delete(_, %{context: %{current_user: _}}) do
-    Sites.delete_identity()
-  end
+  # @doc """
+  # Delete category
+  # """
+  # def delete(_, %{context: %{current_user: _}}) do
+  #   Globals.delete_identity()
+  # end
 end

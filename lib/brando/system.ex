@@ -4,10 +4,12 @@ defmodule Brando.System do
   """
   require Logger
   alias Brando.Exception.ConfigError
+  alias Brando.Cache
 
   def initialize do
     run_checks()
-    set_cache()
+    Cache.Identity.set()
+    Cache.Globals.set()
   end
 
   def run_checks do
@@ -133,6 +135,4 @@ defmodule Brando.System do
       ==> Ids....: #{inspect(ids)}
     """)
   end
-
-  defp set_cache, do: Brando.Sites.cache_identity()
 end
