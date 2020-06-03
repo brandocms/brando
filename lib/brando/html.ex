@@ -27,8 +27,36 @@ defmodule Brando.HTML do
   defdelegate render_json_ld(type, data), to: Brando.JSONLD.HTML
   defdelegate render_meta(conn), to: Brando.Meta.HTML
 
+  defp get_video_cover(:svg, width, height, opacity) do
+    if width do
+      ~s(
+         <div data-cover>
+           <img
+             src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27#{
+        width
+      }%27%20height%3D%27#{height}%27%20style%3D%27background%3Argba%280%2C0%2C0%2C#{opacity}%29%27%2F%3E" />
+         </div>
+       )
+    else
+      ""
+    end
+  end
+
+  defp get_video_cover(false, _, _, _), do: ""
+
+  defp get_video_cover(url, _, _, _) do
+    url
+  end
+
   @doc """
   Returns a video tag with an overlay for lazyloading
+
+  ### Opts
+
+    - `cover`
+      - `:svg`
+      - `html` -> for instance, provide a rendered picture_tag
+    - `poster` -> url to poster, i.e. on vimeo.
   """
   @spec video_tag(binary, Map.t()) :: binary
   def video_tag(src, opts) do
@@ -37,25 +65,12 @@ defmodule Brando.HTML do
     opacity = Map.get(opts, :opacity, 0)
     preload = Map.get(opts, :preload, false)
     cover = Map.get(opts, :cover, false)
+    poster = Map.get(opts, :poster, false)
     autoplay = (Map.get(opts, :autoplay, false) && "autoplay") || ""
-
-    cover_html =
-      if width do
-        ~s(
-          <div data-cover>
-            <img
-              src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27#{
-          width
-        }%27%20height%3D%27#{height}%27%20style%3D%27background%3Argba%280%2C0%2C0%2C#{opacity}%29%27%2F%3E" />
-          </div>
-        )
-      else
-        ""
-      end
 
     ~s(
       <div class="video-wrapper" data-smart-video>
-        #{(cover && cover_html) || ""}
+        #{get_video_cover(cover, width, height, opacity)}
         <video
           tabindex="0"
           role="presentation"
@@ -65,7 +80,7 @@ defmodule Brando.HTML do
           loop
           playsinline
           data-video
-          #{cover && "cover=\"#{cover}\""}
+          #{poster && "poster=\"#{poster}\""}
           #{(preload && "data-src=\"#{src}\"") || ""}
           #{(preload && "") || "src=\"#{src}\""}></video>
         <noscript>
