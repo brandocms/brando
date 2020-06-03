@@ -205,7 +205,8 @@ defmodule Brando.Villain.Parser do
         video_tag(src, %{
           width: data["width"],
           height: data["height"],
-          cover: (data["cover"] && data["cover"]) || nil,
+          cover: :svg,
+          poster: (data["poster"] && data["poster"]) || nil,
           preload: true,
           opacity: 0.1
         })
