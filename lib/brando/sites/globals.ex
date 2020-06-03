@@ -25,6 +25,16 @@ defmodule Brando.Globals do
   end
 
   @doc """
+  Get global, return global or empty string
+  """
+  def get_global!(key_path) do
+    case get_global(key_path) do
+      {:ok, global} -> global
+      _ -> ""
+    end
+  end
+
+  @doc """
   Render global by key path
   """
   def render_global(key_path) do
