@@ -44,7 +44,7 @@ defmodule Brando.Migrations.ExtractGlobals do
 
     entries =
       Enum.flat_map(categories, fn c ->
-        Enum.map(Map.get(c, "globals"), fn g ->
+        Enum.map(Map.get(c, "globals") || [], fn g ->
           [
             type: "text",
             key: Map.get(g, "key"),
@@ -52,8 +52,10 @@ defmodule Brando.Migrations.ExtractGlobals do
             data: %{value: Map.get(g, "value")},
             category_id: Enum.find(new_categories, &(&1.key == Map.get(c, "key"))).id
           ]
-        end)
+        end) || []
       end)
+
+    Brando.repo().insert_all("sites_globals", entries)
 
     flush()
 
