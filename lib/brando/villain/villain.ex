@@ -358,10 +358,15 @@ defmodule Brando.Villain do
         where: is_nil(t.deleted_at),
         order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
 
+    namespace = (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
+
     query =
       case namespace do
         "all" ->
           query
+
+        namespace_list when is_list(namespace_list) ->
+          from t in query, where: t.namespace in ^namespace_list
 
         _ ->
           from t in query, where: t.namespace == ^namespace
@@ -444,6 +449,9 @@ defmodule Brando.Villain do
           end
 
         var ->
+          require Logger
+          Logger.error(inspect(var, pretty: true))
+
           case param do
             "" ->
               var

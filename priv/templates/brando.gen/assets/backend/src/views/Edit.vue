@@ -67,7 +67,7 @@ export default {
           }
         })
 
-        this.$toast.success({ message: 'Entry updated' })
+        this.$toast.success({ message: this.$t('<%= vue_plural %>.edited') })
         this.$router.push({ name: '<%= vue_plural %>' })
       } catch (err) {
         this.$utils.showError(err)

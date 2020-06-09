@@ -225,7 +225,7 @@ defmodule Brando.Villain.Parser do
         height = Map.get(data, "height", nil)
         orientation = (width > height && "landscape") || "portrait"
 
-        link = Map.get(data, "link", "")
+        link = Map.get(data, "link") || ""
         img_class = Map.get(data, "img_class", "")
         picture_class = Map.get(data, "picture_class", "")
         srcset = Map.get(data, "srcset", "")
@@ -233,7 +233,14 @@ defmodule Brando.Villain.Parser do
 
         {link_open, link_close} =
           if link != "" do
-            {~s(<a href="#{data["link"]}" title="#{title}">), ~s(</a>)}
+            {rel, target} =
+              if String.starts_with?(link, "/") or String.starts_with?(link, "#") do
+                {"", ""}
+              else
+                {~s( rel="nofollow noopener"), ~s( target="_blank")}
+              end
+
+            {~s(<a href="#{link}" title="#{title}"#{rel}#{target}>), ~s(</a>)}
           else
             {"", ""}
           end
@@ -400,6 +407,34 @@ defmodule Brando.Villain.Parser do
       defoverridable slideshow: 2
 
       @doc """
+      List
+      """
+      def list(%{"rows" => rows} = data, _) do
+        rows_html =
+          Enum.map_join(rows, "\n", fn row ->
+            class = ~s( class="#{row["class"]}") || ""
+            value = row["value"]
+
+            """
+            <li#{class}>
+              #{value}
+            </li>
+            """
+          end)
+
+        ul_id = ~s( id="#{data["id"]}") || ""
+        ul_class = ~s( class="#{data["class"]}") || ""
+
+        """
+        <ul#{ul_id}#{ul_class}>
+          #{rows_html}
+        </ul>
+        """
+      end
+
+      defoverridable list: 2
+
+      @doc """
       Datatable
       """
       def datatable(%{"rows" => rows}, _) do
@@ -460,12 +495,6 @@ defmodule Brando.Villain.Parser do
       """
       def divider(_, _), do: ~s(<hr>)
       defoverridable divider: 2
-
-      @doc """
-      Convert list to html through Markdown
-      """
-      def list(%{"text" => list}, _), do: Earmark.as_html!(list)
-      defoverridable list: 2
 
       @doc """
       Converts quote to html.

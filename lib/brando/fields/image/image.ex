@@ -93,7 +93,12 @@ defmodule Brando.Field.Image.Schema do
             changeset
 
           {:ok, {:focal_unchanged, changeset}} ->
+            require Logger
+            Logger.error("==> focal unchanged. Delete change?")
             changeset
+
+          {:error, {:image_series, :not_found}} ->
+            add_error(changeset, :image_series, "Image series not found!")
 
           {:error, {name, {:error, error_msg}}} ->
             add_error(changeset, name, error_msg)

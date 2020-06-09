@@ -74,8 +74,13 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("images:get_category_id_by_slug", %{"slug" => slug}, socket) do
-    {:ok, id} = Brando.Images.get_category_id_by_slug(slug)
-    {:reply, {:ok, %{code: 200, category_id: id}}, socket}
+    case Brando.Images.get_category_id_by_slug(slug) do
+      {:ok, id} ->
+        {:reply, {:ok, %{code: 200, category_id: id}}, socket}
+
+      {:error, {:image_category, :not_found}} ->
+        {:reply, {:error, %{code: 404, message: "Category not found"}}, socket}
+    end
   end
 
   def do_handle_in("images:create_image_series", params, socket) do
