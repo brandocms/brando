@@ -163,7 +163,7 @@ defmodule Brando.Villain.Parser do
         ~s(<div class="map-wrapper">
              <iframe width="420"
                      height="315"
-                     src="#{embed_url}"
+                     src="https:#{embed_url}"
                      frameborder="0"
                      allowfullscreen>
              </iframe>
@@ -363,7 +363,7 @@ defmodule Brando.Villain.Parser do
       @doc """
       Slideshow
       """
-      def slideshow(%{"images" => images}, _) do
+      def slideshow(%{"images" => images} = data, _) do
         items =
           Enum.map_join(images, "\n", fn img ->
             orientation = (img["width"] > img["height"] && "landscape") || "portrait"
@@ -376,18 +376,14 @@ defmodule Brando.Villain.Parser do
                 width: true,
                 height: true,
                 placeholder: :svg,
-                lazyload: true
+                lazyload: true,
+                lightbox: data["lightbox"] || false
               )
               |> safe_to_string
 
             """
-            <figure data-lightbox data-panner-item data-orientation="#{orientation}">
+            <figure data-panner-item data-orientation="#{orientation}">
               #{ptag}
-              <div class="overlay-zoom">
-                <a href="#{img["sizes"]["xlarge"]}" class="zoom plain">
-                  +
-                </a>
-              </div>
               <figcaption><p>#{caption}</p></figcaption>
             </figure>
             """

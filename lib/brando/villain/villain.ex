@@ -419,6 +419,16 @@ defmodule Brando.Villain do
         nil ->
           ""
 
+        %DateTime{} = dt ->
+          # TODO! Read timezone from somewhere??
+          if param != "" do
+            # TODO: handle format string + locale + timezone?
+          else
+            dt
+            |> Timex.Timezone.convert("Europe/Oslo")
+            |> Timex.lformat!("%d.%m.%y, %H:%M", "nb_NO", :strftime)
+          end
+
         %Brando.Type.Image{} = img ->
           key = (param != "" && String.to_existing_atom(param)) || :xlarge
           mod = Map.get(entry, :__struct__)
@@ -455,6 +465,10 @@ defmodule Brando.Villain do
           case param do
             "" ->
               var
+
+            "slug" ->
+              var
+              |> Brando.Utils.slugify()
 
             "markdown" ->
               var
