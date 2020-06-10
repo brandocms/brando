@@ -49,8 +49,18 @@ defmodule Brando.Villain.ParserTest do
   end
 
   test "list/1" do
-    assert list(%{"text" => "* test\n * test2"}, []) ==
-             ~s(<ul>\n<li>test\n</li>\n<li>test2\n</li>\n</ul>\n)
+    assert list(
+             %{
+               "id" => "ul_id",
+               "class" => "ul_class",
+               "rows" => [
+                 %{"class" => "test", "value" => "val here!"},
+                 %{"value" => "val 2 here!"}
+               ]
+             },
+             []
+           ) ==
+             "<ul id=\"ul_id\" class=\"ul_class\">\n  <li class=\"test\">\n  val here!\n</li>\n\n<li>\n  val 2 here!\n</li>\n\n</ul>\n"
   end
 
   test "columns/1" do
@@ -83,10 +93,10 @@ defmodule Brando.Villain.ParserTest do
   end
 
   test "blockquote/1" do
-    assert blockquote(%{"text" => "> Some text", "cite" => "J. Williamson"}, []) ==
-             "<blockquote><p>Some text</p>\n<p>— <cite>J. Williamson</cite></p>\n</blockquote>\n"
+    assert blockquote(%{"text" => "Some text", "cite" => "J. Williamson"}, []) ==
+             "<blockquote>\n  <p>Some text</p>\n\n  <p class=\"cite\">\n    — <cite>J. Williamson</cite>\n  </p>\n</blockquote>\n"
 
-    assert blockquote(%{"text" => "> Some text", "cite" => ""}, []) ==
-             "<blockquote><p>Some text</p>\n</blockquote>\n"
+    assert blockquote(%{"text" => "Some text", "cite" => ""}, []) ==
+             "<blockquote>\n  <p>Some text</p>\n\n</blockquote>\n"
   end
 end

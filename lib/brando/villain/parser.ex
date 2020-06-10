@@ -412,7 +412,7 @@ defmodule Brando.Villain.Parser do
       def list(%{"rows" => rows} = data, _) do
         rows_html =
           Enum.map_join(rows, "\n", fn row ->
-            class = ~s( class="#{row["class"]}") || ""
+            class = (row["class"] && ~s( class="#{row["class"]}")) || ""
             value = row["value"]
 
             """
@@ -422,8 +422,8 @@ defmodule Brando.Villain.Parser do
             """
           end)
 
-        ul_id = ~s( id="#{data["id"]}") || ""
-        ul_class = ~s( class="#{data["class"]}") || ""
+        ul_id = (data["id"] && ~s( id="#{data["id"]}")) || ""
+        ul_class = (data["class"] && ~s( class="#{data["class"]}")) || ""
 
         """
         <ul#{ul_id}#{ul_class}>
@@ -499,14 +499,28 @@ defmodule Brando.Villain.Parser do
       @doc """
       Converts quote to html.
       """
-      def blockquote(%{"text" => blockquote, "cite" => cite}, _)
+      def blockquote(%{"text" => text, "cite" => cite}, _)
           when byte_size(cite) > 0 do
-        html = blockquote <> "\n>\n> -- <cite>#{cite}</cite>"
-        Earmark.as_html!(html)
+        text_html = Earmark.as_html!(text)
+
+        """
+        <blockquote>
+          #{text_html}
+          <p class="cite">
+            — <cite>#{cite}</cite>
+          </p>
+        </blockquote>
+        """
       end
 
-      def blockquote(%{"text" => blockquote}, _) do
-        Earmark.as_html!(blockquote)
+      def blockquote(%{"text" => text}, _) do
+        text_html = Earmark.as_html!(text)
+
+        """
+        <blockquote>
+          #{text_html}
+        </blockquote>
+        """
       end
 
       defoverridable blockquote: 2

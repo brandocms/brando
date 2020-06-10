@@ -73,7 +73,7 @@ defmodule Brando.Mixfile do
     [
       {:bcrypt_elixir, "~> 2.0"},
       {:comeonin, "~> 5.0"},
-      {:earmark, "~> 1.2"},
+      {:earmark, "1.4.4"},
       {:gettext, "~> 0.11"},
       {:httpoison, "~> 1.0"},
       {:phoenix, "~> 1.4"},
