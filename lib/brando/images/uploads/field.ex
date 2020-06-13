@@ -49,8 +49,4 @@ defmodule Brando.Images.Upload.Field do
   def handle_upload(name, image, _, _) do
     {:ok, {:unhandled, name, image}}
   end
-
-  defp add_params(upload, upload_params) do
-    {:ok, Map.put(upload, :params, Map.delete(upload_params, :file))}
-  end
 end

@@ -1,6 +1,5 @@
 defmodule Brando.Schema.Types.Scalar do
   use Brando.Web, :absinthe
-  alias Absinthe.Blueprint
 
   scalar :time, description: "ISOz time" do
     parse &Timex.parse(&1.value, "{ISO:Extended:Z}")
