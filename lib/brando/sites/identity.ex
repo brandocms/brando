@@ -22,6 +22,7 @@ defmodule Brando.Sites.Identity do
     field :image, Brando.Type.Image
     field :logo, Brando.Type.Image
     field :url, :string
+    field :languages, :map, virtual: true
 
     embeds_many :metas, Brando.Meta, on_replace: :delete
     embeds_many :links, Brando.Link, on_replace: :delete

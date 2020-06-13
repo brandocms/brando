@@ -377,6 +377,38 @@ defmodule Brando.Pages do
   @doc """
   Get set of fragments by parent key and language
   """
+  def list_page_fragments(parent_key, language) do
+    fragments =
+      PageFragment
+      |> where([p], p.parent_key == ^parent_key)
+      |> where([p], p.language == ^language)
+      |> exclude_deleted()
+      |> order_by([p], asc: p.parent_key, asc: p.sequence)
+      |> Brando.repo().all
+
+    {:ok, fragments}
+  end
+
+  def list_page_fragments_translations(
+        parent_key,
+        excluded_lang \\ Brando.config(:default_language)
+      ) do
+    fragments =
+      PageFragment
+      |> where([p], p.parent_key == ^parent_key)
+      |> where([p], p.language != ^excluded_lang)
+      |> exclude_deleted()
+      |> order_by([p], asc: p.parent_key, asc: p.sequence)
+      |> Brando.repo().all
+
+    # group keys as "key -> [lang: fragment, lang2: fragment2]
+    split_fragments = Brando.Utils.split_by(fragments, :key)
+    {:ok, split_fragments}
+  end
+
+  @doc """
+  Get set of fragments by parent key and language
+  """
   def get_page_fragments(parent_key, language) do
     fragments =
       PageFragment

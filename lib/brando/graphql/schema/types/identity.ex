@@ -27,6 +27,45 @@ defmodule Brando.Schema.Types.Identity do
     field :metas, list_of(:meta)
     field :inserted_at, :time
     field :updated_at, :time
+
+    field :default_language, :string do
+      resolve fn _, _ ->
+        {:ok, Brando.config(:default_language)}
+      end
+    end
+
+    field :languages, list_of(:language) do
+      resolve fn _, _ ->
+        languages =
+          Enum.map(Brando.config(:languages), fn [value: id, text: name] ->
+            %{id: id, name: name}
+          end)
+
+        {:ok, languages}
+      end
+    end
+
+    field :default_admin_language, :string do
+      resolve fn _, _ ->
+        {:ok, Brando.config(:default_admin_language)}
+      end
+    end
+
+    field :admin_languages, list_of(:language) do
+      resolve fn _, _ ->
+        languages =
+          Enum.map(Brando.config(:admin_languages), fn [value: id, text: name] ->
+            %{id: id, name: name}
+          end)
+
+        {:ok, languages}
+      end
+    end
+  end
+
+  object :language do
+    field :id, :string
+    field :name, :string
   end
 
   object :link do

@@ -56,4 +56,13 @@ defmodule Brando.Pages.PageResolver do
     |> Pages.duplicate_page(user)
     |> response
   end
+
+  @doc """
+  Duplicate section
+  """
+  def duplicate_section(%{section_id: section_id}, %{context: %{current_user: user}}) do
+    section_id
+    |> Pages.duplicate_page_fragment(user)
+    |> response
+  end
 end

@@ -19,13 +19,13 @@ config :brando,
 
   default_language: "en",
   languages: [
-    [value: "nb", text: "Norsk"],
+    [value: "no", text: "Norsk"],
     [value: "en", text: "English"]
   ],
 
-  default_admin_language: "nb",
+  default_admin_language: "no",
   admin_languages: [
-    [value: "nb", text: "Norsk"],
+    [value: "no", text: "Norsk"],
     [value: "en", text: "English"]
   ],
 

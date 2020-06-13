@@ -87,5 +87,12 @@ defmodule Brando.Schema.Types.Page do
 
       resolve &Brando.Pages.PageResolver.duplicate/2
     end
+
+    @desc "Duplicate section"
+    field :duplicate_section, type: :page_fragment do
+      arg :section_id, :id
+
+      resolve &Brando.Pages.PageResolver.duplicate_section/2
+    end
   end
 end

@@ -38,8 +38,16 @@ defmodule Brando.Sites do
           {:ok, identity} | {:error, {:identity, :not_found}}
   def get_identity do
     case Identity |> first() |> Brando.repo().one do
-      nil -> {:error, {:identity, :not_found}}
-      identity -> {:ok, identity}
+      nil ->
+        {:error, {:identity, :not_found}}
+
+      identity ->
+        languages =
+          Enum.map(Brando.config(:languages), fn [value: id, text: name] ->
+            %{id: id, name: name}
+          end)
+
+        {:ok, Map.put(identity, :languages, languages)}
     end
   end
 
@@ -117,6 +125,15 @@ defmodule Brando.Sites do
   """
   def get_global(key_path) do
     Brando.Globals.render_global(key_path)
+  end
+
+  def get_language(id) do
+    identity = Brando.Cache.get(:identity)
+
+    case Enum.find(identity.languages, &(&1.id == id)) do
+      nil -> nil
+      lang -> lang.name
+    end
   end
 
   @doc """
