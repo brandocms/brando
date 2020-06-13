@@ -22,6 +22,13 @@ defmodule Brando.Schema.Types.Images do
     field :sequence, :integer
   end
 
+  input_object :upload_or_image do
+    field :file, :upload
+    field :focal, :focal_params
+    field :alt, :string
+    field :title, :string
+  end
+
   input_object :image_category_params do
     field :name, :string
     field :slug, :string

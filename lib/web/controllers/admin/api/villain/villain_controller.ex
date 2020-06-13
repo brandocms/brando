@@ -147,8 +147,8 @@ defmodule Brando.API.Villain.VillainController do
 
     {:ok, updated_image} =
       Brando.Images.update_image_meta(image, form["title"], form["credits"], %{
-        "x" => 50,
-        "y" => 50
+        x: 50,
+        y: 50
       })
 
     payload = %{
@@ -159,7 +159,7 @@ defmodule Brando.API.Villain.VillainController do
       credits: updated_image.image.credits,
       alt: updated_image.image.alt,
       link: form["link"],
-      focal: %{"x" => 50, "y" => 50}
+      focal: %{x: 50, y: 50}
     }
 
     json(conn, payload)

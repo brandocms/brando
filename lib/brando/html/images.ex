@@ -59,7 +59,7 @@ defmodule Brando.HTML.Images do
       initial_map
       |> add_lazyload()
       |> add_sizes()
-      |> add_alt()
+      |> add_alt(img_struct)
       |> add_srcset(img_struct)
       |> add_mq(img_struct)
       |> add_dims(img_struct)
@@ -78,11 +78,22 @@ defmodule Brando.HTML.Images do
         tag(:source, attrs.source)
       end
 
+    figcaption_tag =
+      if Keyword.get(opts, :caption) && img_struct.title && img_struct.title != "" do
+        content_tag(:figcaption, img_struct.title)
+      else
+        ""
+      end
+
     mq_source_tags = attrs.mq_sources
     noscript_tag = content_tag(:noscript, noscript_img_tag)
 
     picture_tag =
-      content_tag(:picture, [mq_source_tags, source_tag, img_tag, noscript_tag], attrs.picture)
+      content_tag(
+        :picture,
+        [mq_source_tags, source_tag, img_tag, figcaption_tag, noscript_tag],
+        attrs.picture
+      )
 
     lightbox = Keyword.get(opts, :lightbox, false)
     (lightbox && wrap_lightbox(picture_tag, attrs.src)) || picture_tag
@@ -94,8 +105,8 @@ defmodule Brando.HTML.Images do
     picture_tag(img_struct, opts)
   end
 
-  defp add_alt(attrs) do
-    alt = Keyword.get(attrs.opts, :alt, "")
+  defp add_alt(attrs, img_struct) do
+    alt = Keyword.get(attrs.opts, :alt, Map.get(img_struct, :alt, ""))
 
     put_in(attrs, [:img, :alt], alt)
   end

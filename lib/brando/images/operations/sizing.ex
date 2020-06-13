@@ -137,8 +137,8 @@ defmodule Brando.Images.Operations.Sizing do
   def add_focal_point(conversion_parameters, focal) do
     focal =
       focal
-      |> Map.put("x", (is_binary(focal["x"]) && String.to_integer(focal["x"])) || focal["x"])
-      |> Map.put("y", (is_binary(focal["y"]) && String.to_integer(focal["y"])) || focal["y"])
+      |> Map.put(:x, (is_binary(focal.x) && String.to_integer(focal.x)) || focal.x)
+      |> Map.put(:y, (is_binary(focal.y) && String.to_integer(focal.y)) || focal.y)
 
     Map.put(conversion_parameters, :focal_point, focal)
   end
@@ -349,8 +349,8 @@ defmodule Brando.Images.Operations.Sizing do
         } = conversion_parameters
       ) do
     original_focal_point = %{
-      x: round(focal["x"] / 1 / 100 * original_width / 1),
-      y: round(focal["y"] / 1 / 100 * original_height / 1)
+      x: round(focal.x / 1 / 100 * original_width / 1),
+      y: round(focal.y / 1 / 100 * original_height / 1)
     }
 
     Map.put(conversion_parameters, :original_focal_point, original_focal_point)
@@ -413,8 +413,6 @@ defmodule Brando.Images.Operations.Sizing do
         filename,
         user
       ) do
-    require Logger
-    Logger.error(inspect(conversion_parameters, pretty: true))
     progress_string = "#{filename} &rarr; Oppretter bildestørrelse: <strong>#{size_key}</strong>"
 
     Progress.update_progress(user, progress_string,

@@ -438,6 +438,7 @@ defmodule Brando.Villain do
             picture_class: "picture-img",
             width: true,
             height: true,
+            caption: true,
             placeholder: :svg,
             lazyload: true,
             prefix: Brando.Utils.media_url(),
@@ -459,9 +460,6 @@ defmodule Brando.Villain do
           end
 
         var ->
-          require Logger
-          Logger.error(inspect(var, pretty: true))
-
           case param do
             "" ->
               var

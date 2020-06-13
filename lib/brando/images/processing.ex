@@ -14,15 +14,18 @@ defmodule Brando.Images.Processing do
   @type image_struct :: Brando.Type.Image.t()
   @type image_kind :: :image | :image_series | :image_field
 
+  @default_focal %{x: 50, y: 50}
+
   @doc """
   Create an image struct from upload, cfg and extra info
   """
-  @spec create_image_struct(upload :: Upload.t(), user :: user) ::
+  @spec create_image_struct(upload :: Upload.t(), user :: user, extra_params :: any()) ::
           {:ok, image_struct}
           | {:error, {:create_image_sizes, any()}}
   def create_image_struct(
-        %Upload{plug: %{uploaded_file: file}, cfg: cfg, extra_info: %{focal: focal}},
-        user
+        %Upload{plug: %{uploaded_file: file}, cfg: cfg},
+        user,
+        extra_params \\ %{}
       ) do
     {_, filename} = Brando.Utils.split_path(file)
     upload_path = Map.get(cfg, :upload_path)
@@ -38,7 +41,9 @@ defmodule Brando.Images.Processing do
           |> Map.put(:path, new_path)
           |> Map.put(:width, size_struct.width)
           |> Map.put(:height, size_struct.height)
-          |> Map.put(:focal, focal)
+          |> Map.put(:alt, Map.get(extra_params, :alt))
+          |> Map.put(:title, Map.get(extra_params, :title))
+          |> Map.put(:focal, Map.get(extra_params, :focal, @default_focal))
 
         {:ok, image_struct}
 

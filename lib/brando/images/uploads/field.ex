@@ -26,13 +26,13 @@ defmodule Brando.Images.Upload.Field do
   """
   @spec handle_upload(
           field_name :: atom | binary,
-          upload_plug :: any(),
+          upload_params :: any(),
           image_config :: image_config,
           user :: any()
         ) :: {:ok, {:handled, atom, image_type}} | {:error, {atom, {:error, binary}}}
-  def handle_upload(name, %Plug.Upload{} = plug, cfg, user) do
-    with {:ok, upload} <- Upload.process_upload(plug, cfg),
-         {:ok, img_struct} <- Images.Processing.create_image_struct(upload, user),
+  def handle_upload(name, upload_params, cfg, user) do
+    with {:ok, upload} <- Upload.process_upload(upload_params.file, cfg),
+         {:ok, img_struct} <- Images.Processing.create_image_struct(upload, user, upload_params),
          {:ok, operations} <- Images.Operations.create_operations(img_struct, cfg, user),
          {:ok, results} <- Images.Operations.perform_operations(operations, user) do
       img_struct =
@@ -48,5 +48,9 @@ defmodule Brando.Images.Upload.Field do
 
   def handle_upload(name, image, _, _) do
     {:ok, {:unhandled, name, image}}
+  end
+
+  defp add_params(upload, upload_params) do
+    {:ok, Map.put(upload, :params, Map.delete(upload_params, :file))}
   end
 end

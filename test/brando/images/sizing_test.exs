@@ -67,7 +67,7 @@ defmodule Brando.Images.Processing.SizingTest do
       original_width: 1000,
       original_height: 500,
       quality: 100,
-      focal_point: %{"x" => 100, "y" => 100},
+      focal_point: %{x: 100, y: 100},
       size_cfg: %{"crop" => true, "quality" => 70, "size" => "50x200"}
     }
     |> add_crop_dimensions()
