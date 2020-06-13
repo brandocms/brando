@@ -2,6 +2,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.45.0
 
+* Rewrote upload handling. **Requires** latest BrandoJS to work!
 * Please ensure that `|> generate_html()` appears LAST in your schema's `changeset` functions.
   This is to ensure that any `${entry:field}` interpolation passes successfully!
 * Mandatory /2 for all parser functions. Second argument is an options list.

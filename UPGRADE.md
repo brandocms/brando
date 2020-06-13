@@ -1,5 +1,7 @@
 ## 0.45.0
 
+* Upgrade BrandoJS to latest. Needed for rewritten upload handling
+
 * In your `app.html.eex`, replace
   `<%= render @view_module, @view_template, @assigns %>`
   with
