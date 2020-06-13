@@ -224,6 +224,7 @@ defmodule Brando.Villain.Parser do
         width = Map.get(data, "width", nil)
         height = Map.get(data, "height", nil)
         orientation = (width > height && "landscape") || "portrait"
+        lightbox = Map.get(data, "lightbox", nil)
 
         link = Map.get(data, "link") || ""
         img_class = Map.get(data, "img_class", "")
@@ -247,8 +248,7 @@ defmodule Brando.Villain.Parser do
 
         title = if title == "", do: nil, else: title
         credits = if credits == "", do: nil, else: credits
-
-        caption = ""
+        caption = if title == "", do: "", else: "<figcaption>#{title}</figcaption>"
 
         srcset =
           if srcset != "",
@@ -287,6 +287,7 @@ defmodule Brando.Villain.Parser do
             alt: alt,
             width: true,
             height: true,
+            lightbox: lightbox,
             placeholder: :svg,
             lazyload: true,
             srcset: srcset
