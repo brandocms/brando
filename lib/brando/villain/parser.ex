@@ -383,7 +383,7 @@ defmodule Brando.Villain.Parser do
               |> safe_to_string
 
             """
-            <figure data-panner-item data-orientation="#{orientation}">
+            <figure data-panner-item data-orientation="#{orientation}" data-moonwalk="panner">
               #{ptag}
               <figcaption><p>#{caption}</p></figcaption>
             </figure>
