@@ -598,7 +598,7 @@ defmodule Brando.Villain.Parser do
         String.replace(template.wrapper, "${CONTENT}", Enum.join(content, "\n"))
       end
 
-      def template(%{"id" => id, "multi" => false, "refs" => refs} = block, opts) do
+      def template(%{"id" => id, "refs" => refs} = block, opts) do
         {:ok, template} =
           case Keyword.get(opts, :cache_templates) do
             true ->
