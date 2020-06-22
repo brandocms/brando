@@ -1,5 +1,6 @@
 defmodule Brando.Images.Processing do
   alias Brando.Image
+  alias Brando.ImageCategory
   alias Brando.ImageSeries
   alias Brando.Images
   alias Brando.Progress
@@ -8,6 +9,7 @@ defmodule Brando.Images.Processing do
   import Ecto.Query, only: [from: 2]
 
   @type id :: String.t() | integer
+  @type changeset :: Ecto.Changeset.t()
   @type user :: Brando.Users.User.t() | :system
   @type image_schema :: Brando.Image.t()
   @type image_series_schema :: Brando.ImageSeries.t()
@@ -86,7 +88,7 @@ defmodule Brando.Images.Processing do
   @spec recreate_sizes_for_image(
           image_schema :: image_schema,
           user :: user
-        ) :: {:ok, image_schema} | {:error, Ecto.Changeset.t()}
+        ) :: {:ok, image_schema} | {:error, changeset}
   def recreate_sizes_for_image(img_schema, user \\ :system) do
     {:ok, img_cfg} = Images.get_series_config(img_schema.image_series_id)
     Images.Utils.delete_sized_images(img_schema.image)
@@ -109,7 +111,24 @@ defmodule Brando.Images.Processing do
   @spec recreate_sizes_for_image_series(
           image_series_id :: id,
           user :: user
-        ) :: [{:ok, image_schema} | {:error, Ecto.Changeset.t()}]
+        ) :: [{:ok, image_schema} | {:error, changeset}]
+  def recreate_sizes_for_image_category(category_id, user \\ :system) do
+    query =
+      from ic in ImageCategory,
+        preload: :image_series,
+        where: ic.id == ^category_id
+
+    category = Brando.repo().one!(query)
+
+    for is <- category.image_series do
+      recreate_sizes_for_image_series(is.id, user)
+    end
+  end
+
+  @spec recreate_sizes_for_image_series(
+          image_series_id :: id,
+          user :: user
+        ) :: [{:ok, image_schema} | {:error, changeset}]
   def recreate_sizes_for_image_series(image_series_id, user \\ :system) do
     query =
       from is in ImageSeries,
@@ -191,10 +210,10 @@ defmodule Brando.Images.Processing do
       recreate_sizes_for_image_field_record(changeset, :cover, user)
   """
   @spec recreate_sizes_for_image_field_record(
-          changeset :: Ecto.Changeset.t(),
+          changeset :: changeset,
           field_name :: atom,
           user :: user
-        ) :: {:ok, Ecto.Changeset.t()} | {:error, Ecto.Changeset.t()}
+        ) :: {:ok, changeset} | {:error, changeset}
   def recreate_sizes_for_image_field_record(changeset, field_name, user \\ :system) do
     img_struct = Ecto.Changeset.get_change(changeset, field_name)
     schema = changeset.data.__struct__

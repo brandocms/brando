@@ -45,8 +45,4 @@ defmodule Brando.Images.Upload.Field do
       err -> {:error, {name, Upload.handle_upload_error(err)}}
     end
   end
-
-  def handle_upload(name, image, _, _) do
-    {:ok, {:unhandled, name, image}}
-  end
 end

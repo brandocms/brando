@@ -26,8 +26,8 @@ defmodule Brando.Villain.ParserTest do
   end
 
   test "map/1" do
-    assert map(%{"embed_url" => "http://nrk.no", "source" => "gmaps"}, []) ==
-             "<div class=\"map-wrapper\">\n             <iframe width=\"420\"\n                     height=\"315\"\n                     src=\"http://nrk.no\"\n                     frameborder=\"0\"\n                     allowfullscreen>\n             </iframe>\n           </div>"
+    assert map(%{"embed_url" => "//nrk.no", "source" => "gmaps"}, []) ==
+             "<div class=\"map-wrapper\">\n             <iframe width=\"420\"\n                     height=\"315\"\n                     src=\"https://nrk.no\"\n                     frameborder=\"0\"\n                     allowfullscreen>\n             </iframe>\n           </div>"
   end
 
   test "html/1" do

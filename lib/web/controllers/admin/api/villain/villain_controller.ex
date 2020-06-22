@@ -97,75 +97,6 @@ defmodule Brando.API.Villain.VillainController do
   end
 
   @doc false
-  def slideshow(conn, %{"slug" => series_slug}) do
-    series_query =
-      from is in Brando.ImageSeries,
-        join: c in assoc(is, :image_category),
-        join: i in assoc(is, :images),
-        where: c.slug == "slideshows" and is.slug == ^series_slug,
-        order_by: i.sequence,
-        preload: [image_category: c, images: i]
-
-    series = Brando.repo().one!(series_query)
-
-    images =
-      Enum.map(
-        series.images,
-        &Brando.Utils.img_url(&1.image, :thumb, prefix: Brando.Utils.media_url())
-      )
-
-    payload = %{
-      status: 200,
-      series: series_slug,
-      images: images
-    }
-
-    json(conn, payload)
-  end
-
-  @doc false
-  def slideshows(conn, _) do
-    series =
-      Brando.repo().all(
-        from is in Brando.ImageSeries,
-          join: c in assoc(is, :image_category),
-          where: c.slug == "slideshows",
-          order_by: is.slug,
-          preload: [image_category: c]
-      )
-
-    series_slugs = Enum.map(series, & &1.slug)
-    payload = %{status: 200, series: series_slugs}
-
-    json(conn, payload)
-  end
-
-  @doc false
-  def image_info(conn, %{"form" => form, "id" => id, "uid" => uid}) do
-    form = URI.decode_query(form)
-    image = Brando.repo().get(Brando.Image, id)
-
-    {:ok, updated_image} =
-      Brando.Images.update_image_meta(image, form["title"], form["credits"], %{
-        x: 50,
-        y: 50
-      })
-
-    payload = %{
-      status: 200,
-      id: id,
-      uid: uid,
-      title: updated_image.image.title,
-      credits: updated_image.image.credits,
-      alt: updated_image.image.alt,
-      link: form["link"],
-      focal: %{x: 50, y: 50}
-    }
-
-    json(conn, payload)
-  end
-
-  @doc false
   def templates(conn, %{"slug" => slug}) do
     {:ok, templates} = Villain.list_templates(slug)
 
@@ -207,11 +138,7 @@ defmodule Brando.API.Villain.VillainController do
   def sequence_templates(conn, %{"sequence" => json_sequence}) do
     with {:ok, decoded_sequence} <- Jason.decode(json_sequence),
          fixed_sequence <- Enum.map(decoded_sequence, &String.to_integer/1),
-         _ <-
-           Brando.Villain.Template.sequence(
-             fixed_sequence,
-             Range.new(0, length(fixed_sequence))
-           ) do
+         _ <- Brando.Villain.Template.sequence(%{"ids" => fixed_sequence}) do
       payload = %{
         status: 200
       }

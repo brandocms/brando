@@ -6,10 +6,10 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "images:create_image_series",
     "images:get_category_config",
     "images:update_category_config",
+    "images:propagate_category_config",
     "images:get_series_config",
     "images:update_series_config",
     "images:rerender_image_series",
-    "image:update",
     "image:get",
     "pages:list_parents",
     "pages:list_templates",
@@ -68,8 +68,13 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     {:reply, {:ok, %{code: 200, ids: ids}}, socket}
   end
 
-  def do_handle_in("images:sequence_images", %{"ids" => ids}, socket) do
-    Brando.Image.sequence(ids, Range.new(0, length(ids)))
+  def do_handle_in("images:sequence_images", params, socket) do
+    Brando.Image.sequence(params)
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in("images:propagate_category_config", %{"category_id" => category_id}, socket) do
+    Brando.Images.propagate_category_config(category_id)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
@@ -130,6 +135,16 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in(
+        "images:rerender_image_category",
+        %{"category_id" => category_id},
+        socket
+      ) do
+    user = Guardian.Phoenix.Socket.current_resource(socket)
+    Brando.Images.Processing.recreate_sizes_for_image_category(category_id, user)
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in(
         "images:rerender_image_series",
         %{"series_id" => series_id},
         socket
@@ -137,17 +152,6 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     user = Guardian.Phoenix.Socket.current_resource(socket)
     Brando.Images.Processing.recreate_sizes_for_image_series(series_id, user)
     {:reply, {:ok, %{code: 200}}, socket}
-  end
-
-  def do_handle_in(
-        "image:update",
-        %{"id" => id, "image" => %{"title" => title, "credits" => credits, "focal" => focal}},
-        socket
-      ) do
-    user = Guardian.Phoenix.Socket.current_resource(socket)
-    image = Brando.Images.get_image!(id)
-    {:ok, _} = Brando.Images.update_image_meta(image, title, credits, focal, user)
-    {:reply, {:ok, %{status: 200}}, socket}
   end
 
   def do_handle_in(
@@ -169,8 +173,8 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     {:reply, {:ok, %{code: 200, templates: templates}}, socket}
   end
 
-  def do_handle_in("pages:sequence_pages", %{"ids" => ids}, socket) do
-    Brando.Pages.Page.sequence(ids, Range.new(0, length(ids)))
+  def do_handle_in("pages:sequence_pages", params, socket) do
+    Brando.Pages.Page.sequence(params)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
@@ -195,8 +199,8 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
-  def do_handle_in("page_fragments:sequence_fragments", %{"ids" => ids}, socket) do
-    Brando.Pages.PageFragment.sequence(ids, Range.new(0, length(ids)))
+  def do_handle_in("page_fragments:sequence_fragments", params, socket) do
+    Brando.Pages.PageFragment.sequence(params)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
