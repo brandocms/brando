@@ -231,7 +231,7 @@ defmodule Mix.Brando do
       end
 
     exists? =
-      if Keyword.get(opts, :multiple) do
+      if Keyword.get(opts, :singular) do
         File.stream!(file)
         |> Enum.map(&String.contains?(&1, content))
         |> Enum.any?(&(&1 == true))
