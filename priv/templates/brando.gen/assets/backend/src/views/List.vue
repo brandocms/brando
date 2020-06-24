@@ -141,22 +141,6 @@ export default {
         .push('<%= vue_plural %>:sequence_<%= vue_plural %>', { ids: seq })
         .receive('ok', payload => {
           this.$toast.success({ message: this.$t('<%= vue_plural %>.sequence-updated') })
-
-          const query = {
-            query: GET_<%= String.upcase(plural) %>,
-            variables: this.queryVars
-          }
-          const store = this.$apolloProvider.defaultClient.store.cache
-          const data = store.readQuery(query)
-
-          data.<%= vue_plural %>.sort((a, b) => {
-            return seq.indexOf(parseInt(a.id)) - seq.indexOf(parseInt(b.id))
-          })
-
-          store.writeQuery({
-            ...query,
-            data
-          })
         })
     },
     <% end %>

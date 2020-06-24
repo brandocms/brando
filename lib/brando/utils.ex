@@ -195,20 +195,28 @@ defmodule Brando.Utils do
   end
 
   @doc """
-  Converts `collection` (if it's a struct) to a map with string keys
+  Convert map atom keys to strings
   """
-  def to_string_map(nil), do: nil
+  def stringify_keys(nil), do: nil
 
-  def to_string_map(collection) do
-    if Map.has_key?(collection, :__struct__) do
-      collection
-      |> Map.delete(:__struct__)
-      |> Enum.map(fn {k, v} -> {Atom.to_string(k), v} end)
-      |> Enum.into(%{})
-    else
-      collection
-    end
+  def stringify_keys(map = %{}) do
+    map
+    |> Enum.map(fn {k, v} -> {stringify_key(k), stringify_keys(v)} end)
+    |> Enum.into(%{})
   end
+
+  # Walk the list and stringify the keys of
+  # of any map members
+  def stringify_keys([head | rest]) do
+    [stringify_keys(head) | stringify_keys(rest)]
+  end
+
+  def stringify_keys(not_a_map) do
+    not_a_map
+  end
+
+  defp stringify_key(key) when is_atom(key), do: Atom.to_string(key)
+  defp stringify_key(key), do: key
 
   @doc """
   Converts `collection` to a map with safe atom keys

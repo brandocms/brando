@@ -14,6 +14,7 @@ locals_without_parens = [
   rules: 2,
   assign: 2,
   many: 2,
+  selection: 3,
   one: 2
 ]
 

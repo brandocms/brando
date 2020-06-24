@@ -57,6 +57,7 @@ defmodule Brando.Mixfile do
       :guardian,
       :guardian_phoenix,
       :mogrify,
+      :nimble_parsec,
       :phoenix_html,
       :poison,
       :recase,
@@ -116,6 +117,9 @@ defmodule Brando.Mixfile do
       # Hashing
       {:hashids, "~> 2.0"},
 
+      # Parser
+      {:nimble_parsec, "~> 0.6", override: true},
+
       # Dev dependencies
       {:credo, ">= 0.0.0", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
@@ -134,7 +138,7 @@ defmodule Brando.Mixfile do
   defp package do
     [
       maintainers: ["Univers TM"],
-      licenses: [""],
+      licenses: ["MIT"],
       files: [
         "assets",
         "config",

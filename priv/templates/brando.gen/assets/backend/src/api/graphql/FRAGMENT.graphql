@@ -4,15 +4,15 @@ fragment <%= vue_singular %> on <%= Recase.to_pascal(vue_singular) %> {
   <%= v %><% end %><%= if creator do %>
   creator {
     id
-    full_name
+    fullName
     avatar {
       thumb: url(size: "xlarge")
     }
   }<% end %><%= if gallery do %><%= for {_k, v} <- gallery_fields do %>
   <%= v %> {
-    ...image_series
+    ...imageSeries
   }<% end %><% end %><%= if soft_delete do %>
-  deleted_at<% end %>
-  inserted_at
-  updated_at
+  deletedAt<% end %>
+  insertedAt
+  updatedAt
 }

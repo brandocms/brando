@@ -2,6 +2,31 @@ defmodule Brando.Datasource do
   @moduledoc """
   Helpers to register datasources for interfacing with the block editor
 
+  ### many
+
+  A set of entries is returned automatically
+
+  ### Selection
+
+  User can pick entries manually.
+
+  Required both a `list` function and a `get` function. The `list` function must return a list of maps in
+  the shape of `[%{id: 1, label: "Label"}]`.
+
+  The get function queries by a supplied list of `ids`:
+
+  ```
+  fn _module, ids ->
+    results =
+      from t in Post,
+        where: t.id in ^ids,
+        order_by: fragment("array_position(?, ?)", ^ids, t.id)
+
+    {:ok, Repo.all(results)}
+  ```
+
+  The `order_by: fragment(...)` sorts the returned results in the same order as the supplied `ids`
+
   ## Example
 
   In your schema:
@@ -14,9 +39,24 @@ defmodule Brando.Datasource do
         end
 
         many :all_posts, fn _, _ -> Posts.list_posts() end
+
+        selection
+          :featured,
+            fn _, _ ->
+              {:ok, posts} = Posts.list_posts()
+              {:ok, Enum.map(posts, &(%{id: &1.id, label: &1.title}))}
+            end,
+            fn _, ids ->
+              results =
+                from t in Post,
+                  where: t.id in ^ids,
+                  order_by: fragment("array_position(?, ?)", ^ids, t.id)
+
+              {:ok, Repo.all(results)}
+            end
       end
 
-  These two data source points are now available through the block editor when you create a Datasource block.
+  These data source points are now available through the block editor when you create a Datasource block.
 
   """
   import Ecto.Query
@@ -30,6 +70,7 @@ defmodule Brando.Datasource do
       import unquote(__MODULE__)
       Module.register_attribute(__MODULE__, :datasources_many, accumulate: true)
       Module.register_attribute(__MODULE__, :datasources_one, accumulate: true)
+      Module.register_attribute(__MODULE__, :datasources_selection, accumulate: true)
       @before_compile unquote(__MODULE__)
     end
   end
@@ -38,7 +79,13 @@ defmodule Brando.Datasource do
   defmacro __before_compile__(env) do
     datasources_many = Module.get_attribute(env.module, :datasources_many)
     datasources_one = Module.get_attribute(env.module, :datasources_one)
-    [compile(:many, datasources_many), compile(:one, datasources_one)]
+    datasources_selection = Module.get_attribute(env.module, :datasources_selection)
+
+    [
+      compile(:many, datasources_many),
+      compile(:one, datasources_one),
+      compile(:selection, datasources_selection)
+    ]
   end
 
   @doc false
@@ -55,6 +102,15 @@ defmodule Brando.Datasource do
     quote do
       def __datasources__(:one) do
         unquote(datasources_one)
+      end
+    end
+  end
+
+  @doc false
+  def compile(:selection, datasources_selection) do
+    quote do
+      def __datasources__(:selection) do
+        unquote(datasources_selection)
       end
     end
   end
@@ -82,7 +138,29 @@ defmodule Brando.Datasource do
       Module.put_attribute(__MODULE__, :datasources_many, unquote(key))
 
       def __datasource__(:many, unquote(key)) do
-        unquote(fun)
+        case unquote(fun) do
+          {:ok, []} -> {:error, :no_entries}
+          {:ok, nil} -> {:error, :no_entries}
+          result -> result
+        end
+      end
+    end
+  end
+
+  defmacro selection(key, list_fun, get_fun) do
+    quote do
+      Module.put_attribute(__MODULE__, :datasources_selection, unquote(key))
+
+      def __datasource__(:list_selection, unquote(key)) do
+        unquote(list_fun)
+      end
+
+      def __datasource__(:get_selection, unquote(key)) do
+        case unquote(get_fun) do
+          {:ok, []} -> {:error, :no_entries}
+          {:ok, nil} -> {:error, :no_entries}
+          result -> result
+        end
       end
     end
   end
@@ -104,9 +182,10 @@ defmodule Brando.Datasource do
     mod = Module.concat([module])
 
     many_keys = mod.__datasources__(:many)
+    selection_keys = mod.__datasources__(:selection)
     one_keys = []
 
-    {:ok, %{many: many_keys, one: one_keys}}
+    {:ok, %{many: many_keys, one: one_keys, selection: selection_keys}}
   end
 
   @doc """
@@ -115,6 +194,25 @@ defmodule Brando.Datasource do
   def get_many(module, query, arg) do
     mod = Module.concat([module])
     mod.__datasource__(:many, String.to_existing_atom(query)).(module, arg)
+  end
+
+  @doc """
+  List available entries in selection from database
+  """
+  def list_selection(module, query, arg) do
+    mod = Module.concat([module])
+    mod.__datasource__(:list_selection, String.to_existing_atom(query)).(module, arg)
+  end
+
+  @doc """
+  Get selection by [ids] from database
+  """
+  def get_selection(_, _, []), do: {:error, :no_entries}
+  def get_selection(_, _, nil), do: {:error, :no_entries}
+
+  def get_selection(module, query, ids) do
+    mod = Module.concat([module])
+    mod.__datasource__(:get_selection, String.to_existing_atom(query)).(module, ids)
   end
 
   @doc """

@@ -172,44 +172,22 @@ defmodule Brando.Generators.GraphQL do
     fields = Keyword.get(binding, :attrs) ++ Keyword.get(binding, :assocs)
     # this is for GraphQL query fields
     gql_query_fields =
-      Enum.map(fields, fn
+      fields
+      |> Enum.map(fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.map(fn
         {k, {:array, _}} ->
-          {k, k}
-
-        {k, :integer} ->
-          {k, k}
-
-        {k, :boolean} ->
-          {k, k}
-
-        {k, :string} ->
-          {k, k}
-
-        {k, :text} ->
-          {k, k}
-
-        {k, :date} ->
-          {k, k}
-
-        {k, :time} ->
-          {k, k}
-
-        {k, :datetime} ->
-          {k, k}
-
-        {k, :status} ->
-          {k, k}
+          {k, Recase.to_camel(k)}
 
         {k, :gallery} ->
-          {k, ~s<#{k}_id>}
+          {k, ~s<#{k}Id>}
 
         {k, :file} ->
-          file_code = "#{k} {\n    url\n  }"
+          file_code = "#{Recase.to_camel(k)} {\n    url\n  }"
           {k, file_code}
 
         {k, :image} ->
           image_code =
-            "#{k} {\n    thumb: url(size: \"original\")\n    xlarge: url(size: \"xlarge\")\n    focal\n  }"
+            "#{Recase.to_camel(k)} {\n    thumb: url(size: \"original\")\n    xlarge: url(size: \"xlarge\")\n    focal\n  }"
 
           {k, image_code}
 
@@ -219,14 +197,14 @@ defmodule Brando.Generators.GraphQL do
               {k, k}
 
             _ ->
-              {k, ~s<#{k}_data>}
+              {k, ~s<#{k}Data>}
           end
 
         {k, {:references, _}} ->
-          {k, ~s<#{k}_id>}
+          {k, ~s<#{k}Id>}
 
         {k, _} ->
-          {k, k}
+          {k, Recase.to_camel(k)}
       end)
 
     Keyword.put(binding, :gql_query_fields, gql_query_fields)

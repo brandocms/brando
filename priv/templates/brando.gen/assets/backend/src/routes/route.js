@@ -19,6 +19,12 @@ export default [
     path: '/<%= plural %>/edit/:<%= singular %>Id',
     component: <%= Recase.to_pascal(vue_singular) %>EditView,
     name: '<%= plural %>-edit',
-    props: true
+    props: (route) => {
+      const <%= singular %>Id = Number.parseInt(route.params.<%= singular %>Id, 10)
+      if (Number.isNaN(<%= singular %>Id)) {
+        return 0
+      }
+      return { <%= singular %>Id }
+    }
   }
 ]

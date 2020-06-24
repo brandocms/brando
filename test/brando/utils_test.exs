@@ -60,12 +60,12 @@ defmodule Brando.UtilsTest do
     assert f =~ ".jpg"
   end
 
-  test "to_string_map/1" do
-    test_struct = %TestStruct{}
-    test_map = %{"a" => "a", "b" => "b"}
-    assert to_string_map(nil) == nil
-    assert to_string_map(test_struct) == test_map
-    assert to_string_map(test_map) == test_map
+  test "stringify_keys/1" do
+    test_map_atom_keys = %{a: "a", b: %{c: "c", d: "d"}}
+    test_map = %{"a" => "a", "b" => %{"c" => "c", "d" => "d"}}
+    assert stringify_keys(nil) == nil
+    assert stringify_keys(test_map_atom_keys) == test_map
+    assert stringify_keys(test_map) == test_map
   end
 
   test "split_path/1" do

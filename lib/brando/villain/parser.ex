@@ -100,21 +100,54 @@ defmodule Brando.Villain.Parser do
               "module" => module,
               "type" => "many",
               "query" => query,
-              "template" => template_id,
-              "wrapper" => wrapper
+              "template" => template_id
             } = data,
             _
           ) do
         arg = Map.get(data, "arg", nil)
-        {:ok, entries} = Datasource.get_many(module, query, arg)
-        {:ok, template} = Villain.get_template(template_id)
 
-        content =
-          entries
-          |> Enum.map(&Villain.render_entry(&1, template.code))
-          |> Enum.join("\n")
+        with {:ok, entries} <- Datasource.get_many(module, query, arg),
+             {:ok, template} <- Villain.get_template(template_id) do
+          content =
+            entries
+            |> Enum.map(&Villain.render_entry(&1, template.code))
+            |> Enum.join("\n")
 
-        String.replace(wrapper, "${CONTENT}", content)
+          String.replace(template.wrapper, "${CONTENT}", content)
+        else
+          {:error, :no_entries} ->
+            #! Add fallback/empty clause
+            require Logger
+            Logger.error("==> No entries")
+        end
+      end
+
+      def datasource(
+            %{
+              "module" => module,
+              "type" => "selection",
+              "query" => query,
+              "ids" => ids,
+              "template" => template_id
+            } = data,
+            _
+          ) do
+        arg = Map.get(data, "arg", nil)
+
+        with {:ok, entries} <- Datasource.get_selection(module, query, ids),
+             {:ok, template} <- Villain.get_template(template_id) do
+          content =
+            entries
+            |> Enum.map(&Villain.render_entry(&1, template.code))
+            |> Enum.join("\n")
+
+          String.replace(template.wrapper, "${CONTENT}", content)
+        else
+          {:error, :no_entries} ->
+            #! Add fallback/empty clause
+            require Logger
+            Logger.error("==> No entries")
+        end
       end
 
       defoverridable datasource: 2

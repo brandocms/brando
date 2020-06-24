@@ -7,7 +7,7 @@
       <div class="half">
         <!--
         FORM FIELDS HERE
-        --><%= for {_v, html} <- vue_inputs do %>
+        --><%= for {_, html} <- vue_inputs do %>
 <%= html %>
         <% end %>
       </div>

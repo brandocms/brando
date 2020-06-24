@@ -1,6 +1,29 @@
 ## 0.45.0
 
-* Upgrade BrandoJS to latest. Needed for rewritten upload handling
+* Switch to consistent casing in GQL files. This means that you have to go through
+  your js graphql fragments and switch to camelCase (inserted_at -> insertedAt). Form
+  views, List views and locale files must be updated as well.
+
+  A lazy way to do it is to first commit your code, then
+  ```
+  gsed -i -r 's/([a-z])_([a-z])/\1\U\2/g' assets/backend/src/**/*.*
+  ```
+  And then search through your backend js and fix all `adminChannel.channel.push` calls,
+  since the above code will break topic strings.
+
+* Rename all js locale `help_text` keys to helpText:
+  ````
+  gsed -i "s=help_text=helpText=" assets/backend/src/locales/**/*.js && \
+  gsed -i "s=help_text=helpText=" assets/backend/src/**/*Form.vue
+  ```
+
+* BrandoJS Datasource: Moved `wrapper` to template instead.
+
+* Switch out all "nb" language keys to "no". Both in elixir configs and in
+  Vue files (menus/locales)
+
+* Upgrade BrandoJS to latest. Needed for rewritten upload handling and new
+  language defaults.
 
 * In your `app.html.eex`, replace
   `<%= render @view_module, @view_template, @assigns %>`

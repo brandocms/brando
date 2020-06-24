@@ -33,8 +33,8 @@ export default {
 
   methods: {
     async save () {
-      const <%= vue_singular %>Params = this.$utils.stripParams(this.<%= vue_singular %>, ['__typename', 'id', 'inserted_at', 'updated_at', 'deleted_at'])
-      <%= if img_fields != [] do %>this.$utils.validateImageParams(<%= vue_singular %>Params, <%= img_fields |> Enum.map(&(to_charlist(elem(&1, 1)))) |> inspect %>)<% end %>
+      const <%= vue_singular %>Params = this.$utils.stripParams(this.<%= vue_singular %>, ['__typename', 'id', 'insertedAt', 'updatedAt', 'deletedAt'])
+      <%= if img_fields != [] do %>this.$utils.validateImageParams(<%= vue_singular %>Params, <%= img_fields |> Enum.map(&(to_charlist(Recase.to_camel(to_string(elem(&1, 1)))))) |> inspect %>)<% end %>
 
       try {
         await this.$apollo.mutate({

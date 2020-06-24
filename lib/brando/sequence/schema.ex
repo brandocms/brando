@@ -10,6 +10,16 @@ defmodule Brando.Sequence.Schema do
         sequenced()
       end
 
+  `sequence` gets called from admin_channel like this:
+
+  With composite keys:
+
+      sequence %{"composite_keys" => [%{"id" => 1, "additional_id" => 2}, %{...}]}
+
+  With regular ids
+
+      sequence %{"ids" => [3, 5, 1]}
+
   """
 
   defmacro __using__(_) do
@@ -17,7 +27,16 @@ defmodule Brando.Sequence.Schema do
       import unquote(__MODULE__)
 
       @doc """
-      Sequences ids
+      Sequences ids or composite keys
+
+      With composite keys:
+
+          sequence %{"composite_keys" => [%{"id" => 1, "additional_id" => 2}, %{...}]}
+
+      With regular ids
+
+          sequence %{"ids" => [3, 5, 1]}
+
       """
       def sequence(%{"composite_keys" => composite_keys}) do
         table = __MODULE__.__schema__(:source)

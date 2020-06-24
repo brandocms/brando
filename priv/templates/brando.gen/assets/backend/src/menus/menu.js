@@ -7,7 +7,7 @@ export default {
       }
     }
   ],
-  nb: [
+  no: [
     {
       name: '<%= Recase.SentenceCase.convert(plural) %>',
       to: {

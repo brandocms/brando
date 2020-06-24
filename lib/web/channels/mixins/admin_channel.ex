@@ -1,5 +1,9 @@
 defmodule Brando.Mixin.Channels.AdminChannelMixin do
   @keys [
+    "datasource:list_available_entries",
+    "datasource:list_modules",
+    "datasource:list_module_keys",
+    "image:get",
     "images:delete_images",
     "images:sequence_images",
     "images:get_category_id_by_slug",
@@ -10,7 +14,6 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "images:get_series_config",
     "images:update_series_config",
     "images:rerender_image_series",
-    "image:get",
     "pages:list_parents",
     "pages:list_templates",
     "pages:sequence_pages",
@@ -27,8 +30,6 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "config:add_key",
     "user:deactivate",
     "user:activate",
-    "datasource:list_modules",
-    "datasource:list_module_keys",
     "templates:list_templates",
     "livepreview:initialize",
     "livepreview:render"
@@ -238,8 +239,16 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
 
   def do_handle_in("datasource:list_module_keys", %{"module" => module}, socket) do
     {:ok, available_keys} = Brando.Datasource.list_datasource_keys(module)
-    # available_keys = Enum.map(available_keys, &(Map.put(%{}, :module, &1)))
     {:reply, {:ok, %{code: 200, available_module_keys: available_keys}}, socket}
+  end
+
+  def do_handle_in(
+        "datasource:list_available_entries",
+        %{"module" => module, "query" => query},
+        socket
+      ) do
+    {:ok, entries} = Brando.Datasource.list_selection(module, query, nil)
+    {:reply, {:ok, %{code: 200, available_entries: entries}}, socket}
   end
 
   def do_handle_in("templates:list_templates", _, socket) do

@@ -39,11 +39,11 @@ export default {
         this.<%= vue_singular %>, [
           '__typename',
           'id',
-          'inserted_at',
-          'updated_at',
-          'deleted_at'<%= if creator do %>,
+          'insertedAt',
+          'updatedAt',
+          'deletedAt'<%= if creator do %>,
           'creator'<% end %><%= if gallery do %>,
-          <%= for {{_k, v}, idx} <- Enum.with_index(gallery_fields) do %>'<%= v %>'<%= unless idx == Enum.count(gallery_fields) - 1 do %>,<% end %><% end %><% end %>
+          <%= for {{_k, v}, idx} <- Enum.with_index(gallery_fields) do %>'<%= Recase.to_camel(to_string(v)) %>'<%= unless idx == Enum.count(gallery_fields) - 1 do %>,<% end %><% end %><% end %>
         ]
       )
 

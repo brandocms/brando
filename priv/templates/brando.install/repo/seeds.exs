@@ -39,7 +39,7 @@ password = Bcrypt.hash_pwd_salt("admin")
 user = %Brando.Users.User{
   full_name: "Twined Admin",
   email: "admin@twined.net", password: password,
-  avatar: nil, role: :superuser, language: "nb"}
+  avatar: nil, role: :superuser, language: "no"}
 user = <%= application_module %>.Repo.insert!(user)
 
 post_category = %Brando.ImageCategory{

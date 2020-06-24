@@ -223,8 +223,6 @@ defmodule Mix.Tasks.Brando.Gen do
            "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}Form.vue"},
           {:eex, "assets/backend/src/locale.js",
            "assets/backend/src/locales/#{vue_plural}/index.js"},
-          {:eex, "assets/backend/src/views/cache/index.js",
-           "assets/backend/src/views/#{vue_plural}/cache/index.js"},
           {:eex, "assets/backend/cypress/integration/spec.js",
            "assets/backend/cypress/integration/#{snake_domain}/#{Recase.to_pascal(vue_singular)}.spec.js"}
         ]

@@ -12,7 +12,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add(:avatar, :jsonb)
       add(:role, :integer)
       add(:active, :boolean, default: true)
-      add(:language, :text, default: "nb")
+      add(:language, :text, default: "no")
       add(:last_login, :naive_datetime)
       timestamps()
       soft_delete()

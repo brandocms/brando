@@ -1,5 +1,5 @@
 defmodule Brando.Generators.Vue do
-  @locales ["en", "nb"]
+  @locales ["en", "no"]
 
   def before_copy(binding) do
     binding
@@ -73,35 +73,37 @@ defmodule Brando.Generators.Vue do
     vue_plural = Keyword.get(binding, :vue_plural)
 
     vue_contentlist_rows =
-      Enum.map(attrs, fn
+      attrs
+      |> Enum.map(fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.map(fn
         {k, {:array, _}} ->
           {k, ""}
 
         {k, :boolean} ->
           {k, ~s(<div class="col-2">
-            <CheckOrX :val="entry.#{k}" />
+            <CheckOrX :val="entry.#{Recase.to_camel(k)}" />
           </div>)}
 
         {k, :date} ->
           {k, ~s(<div class="col-2">
-            {{ entry.#{k} | datetime }}
+            {{ entry.#{Recase.to_camel(k)} | datetime }}
           </div>)}
 
         {k, :time} ->
           {k, ~s(<div class="col-2">
-            {{ entry.#{k} | datetime }}
+            {{ entry.#{Recase.to_camel(k)} | datetime }}
           </div>)}
 
         {k, :datetime} ->
           {k, ~s(<div class="col-2">
-            {{ entry.#{k} | datetime }}
+            {{ entry.#{Recase.to_camel(k)} | datetime }}
           </div>)}
 
         {k, :image} ->
           {k, ~s(<div class="col-2">
             <img
-              v-if="entry.#{k}"
-              :src="entry.#{k}.thumb"
+              v-if="entry.#{Recase.to_camel(k)}"
+              :src="entry.#{Recase.to_camel(k)}.thumb"
               class="avatar-sm img-border-lg" />
           </div>)}
 
@@ -114,12 +116,15 @@ defmodule Brando.Generators.Vue do
         {k, :gallery} ->
           {k, ""}
 
+        {k, :slug} ->
+          {k, ""}
+
         {:title = k, _} ->
           {k, ~s(<div class="col-2">
             <router-link
               :to="{ name: '#{vue_plural}-edit', params: { #{vue_singular}Id: entry.id } }"
               class="entry-link">
-              {{ entry.#{k} }}
+              {{ entry.#{Recase.to_camel(k)} }}
             </router-link>
           </div>)}
 
@@ -128,7 +133,7 @@ defmodule Brando.Generators.Vue do
             <router-link
               :to="{ name: '#{vue_plural}-edit', params: { #{vue_singular}Id: entry.id } }"
               class="entry-link">
-              {{ entry.#{k} }}
+              {{ entry.#{Recase.to_camel(k)} }}
             </router-link>
           </div>)}
 
@@ -137,13 +142,13 @@ defmodule Brando.Generators.Vue do
             <router-link
               :to="{ name: '#{vue_plural}-edit', params: { #{vue_singular}Id: entry.id } }"
               class="entry-link">
-              {{ entry.#{k} }}
+              {{ entry.#{Recase.to_camel(k)} }}
             </router-link>
           </div>)}
 
         {k, _} ->
           {k, ~s(<div class="col-2">
-            {{ entry.#{k} }}
+            {{ entry.#{Recase.to_camel(k)} }}
           </div>)}
       end)
 
@@ -254,7 +259,7 @@ defmodule Brando.Generators.Vue do
     vue_assoc_inputs =
       Enum.map(assocs, fn
         {k, {:references, ref_target}} ->
-          k = String.to_atom(Atom.to_string(k) <> "_id")
+          k = String.to_atom(Atom.to_string(k) <> "Id")
 
           [ref_target_domain, ref_target_schema] =
             case String.split(Atom.to_string(ref_target), "_") do
@@ -281,12 +286,15 @@ defmodule Brando.Generators.Vue do
       end)
 
     vue_inputs =
-      Enum.map(attrs, fn
+      attrs
+      |> Enum.map(fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.map(fn
         {k, {:array, _}} ->
           {k, nil, nil}
 
         {k, {:slug, target}} ->
-          binding = binding ++ [k: k, target: target]
+          binding =
+            binding ++ [k: Recase.to_camel(k), target: Recase.to_camel(Atom.to_string(target))]
 
           filename =
             Application.app_dir(
@@ -303,13 +311,13 @@ defmodule Brando.Generators.Vue do
                 :data
 
               type == :villain ->
-                String.to_atom(Atom.to_string(k) <> "_data")
+                "#{k}Data"
 
               true ->
                 k
             end
 
-          binding = binding ++ [k: k]
+          binding = binding ++ [k: Recase.to_camel(k)]
 
           filename =
             Application.app_dir(
