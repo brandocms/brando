@@ -11,8 +11,7 @@ defmodule Brando.Lexer.Parser.Literal do
     true_value = string("true") |> replace(true)
     false_value = string("false") |> replace(false)
 
-    combinator
-    |> choice([true_value, false_value])
+    choice(combinator, [true_value, false_value])
   end
 
   def nil_value(combinator \\ empty()),

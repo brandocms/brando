@@ -58,52 +58,11 @@ defmodule Brando.Lexer.Parser.Tag.ControlFlow do
     |> ignore(Tag.tag_directive("endif"))
   end
 
-  @spec unless_expression(NimbleParsec.t()) :: NimbleParsec.t()
-  def unless_expression(combinator \\ empty()) do
-    combinator
-    |> unless_tag()
-    |> repeat(elsif_tag())
-    |> optional(else_tag())
-    |> ignore(Tag.tag_directive("endunless"))
-  end
-
-  @spec case_expression(NimbleParsec.t()) :: NimbleParsec.t()
-  def case_expression(combinator \\ empty()) do
-    when_tag =
-      ignore(Tag.open_tag())
-      |> ignore(string("when"))
-      |> ignore(Literal.whitespace(empty(), 1))
-      |> tag(Literal.literal(), :expression)
-      |> ignore(Tag.close_tag())
-      |> tag(parsec(:document), :contents)
-
-    case_tag =
-      ignore(Tag.open_tag())
-      |> ignore(string("case"))
-      |> ignore(Literal.whitespace(empty(), 1))
-      |> concat(Literal.argument())
-      |> ignore(Tag.close_tag())
-
-    combinator
-    |> tag(case_tag, :case)
-    |> ignore(Literal.whitespace())
-    |> times(tag(when_tag, :when), min: 1)
-    |> optional(else_tag())
-    |> ignore(Tag.tag_directive("endcase"))
-  end
-
   def else_tag(combinator \\ empty()) do
     combinator
     |> ignore(Tag.tag_directive("else"))
     |> tag(parsec(:document), :contents)
     |> tag(:else)
-  end
-
-  defp unless_tag(combinator) do
-    combinator
-    |> expression_tag("unless")
-    |> tag(parsec(:document), :contents)
-    |> tag(:unless)
   end
 
   defp elsif_tag(combinator \\ empty()) do
