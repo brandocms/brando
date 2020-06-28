@@ -3,7 +3,9 @@ defmodule Brando.Factory do
   use ExMachina.Ecto, repo: Brando.repo()
 
   alias Brando.Type.ImageConfig
-  alias Brando.{ImageCategory, ImageSeries}
+  alias Brando.Pages.PageFragment
+  alias Brando.ImageCategory
+  alias Brando.ImageSeries
   alias Brando.Users.User
 
   @sizes %{
@@ -37,6 +39,16 @@ defmodule Brando.Factory do
       },
       role: :superuser,
       language: "en"
+    }
+  end
+
+  def page_fragment_factory do
+    %PageFragment{
+      parent_key: "index",
+      key: "header",
+      language: "en",
+      data: [],
+      html: "fragment content!"
     }
   end
 
