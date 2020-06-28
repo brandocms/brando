@@ -13,7 +13,7 @@ defmodule Brando.Lexer.Parser.Field do
     #   - the remaining characters can include digits
     combinator
     |> utf8_string([?a..?z, ?A..?Z, ?_], 1)
-    |> concat(utf8_string([?a..?z, ?A..?Z, ?0..?9, ?_], min: 0))
+    |> concat(utf8_string([?a..?z, ?A..?Z, ?0..?9, ?_, ?/], min: 0))
     |> reduce({Enum, :join, []})
   end
 
@@ -34,8 +34,16 @@ defmodule Brando.Lexer.Parser.Field do
     |> identifier()
     |> unwrap_and_tag(:key)
     |> optional(accessor())
-    |> repeat(
+    |> times(
       ignore(string(":"))
+      |> identifier()
+      |> unwrap_and_tag(:key)
+      |> optional(accessor()),
+      min: 0,
+      max: 1
+    )
+    |> repeat(
+      ignore(string("."))
       |> identifier()
       |> unwrap_and_tag(:key)
       |> optional(accessor())

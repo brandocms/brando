@@ -634,4 +634,18 @@ defmodule Brando.Lexer.Filter do
     map
     |> Enum.filter(&(Map.get(&1, key) == value))
   end
+
+  @doc """
+  Slugs a string
+  ## Examples
+      iex> Brando.Lexer.Filter.slug("this is a string", %{})
+      "this-is-a-string
+  """
+  def slug(str, _) when is_binary(str), do: Brando.Utils.slugify(str)
+
+  def markdown(str, _) when is_binary(str) do
+    str
+    |> Brando.HTML.render_markdown()
+    |> Phoenix.HTML.safe_to_string()
+  end
 end

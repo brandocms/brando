@@ -6,7 +6,7 @@ defmodule Brando.Lexer.Render do
   @callback render({atom, any}, Context.t()) :: {any, Context.t()} | false
 
   @doc """
-  Renders a Liquid AST `document` into an `iolist`
+  Renders an AST `document` into an `iolist`
   A `context` is given to handle temporary contextual information for
   this render.
   """

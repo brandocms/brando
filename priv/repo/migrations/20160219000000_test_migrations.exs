@@ -113,16 +113,22 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
 
     create table(:pages_fragments) do
       add(:key, :text)
+      add(:parent_key, :text)
       add(:language, :text)
+      add(:title, :text)
+      add(:wrapper, :text)
       add(:data, :json)
       add(:html, :text)
+      add(:sequence, :integer)
       add(:creator_id, references(:users_users))
+      add(:page_id, references(:pages_pages))
       soft_delete()
       timestamps()
     end
 
     create(index(:pages_fragments, [:language]))
     create(index(:pages_fragments, [:key]))
+    create(index(:pages_fragments, [:parent_key]))
 
     create table(:sites_global_categories) do
       add :key, :string

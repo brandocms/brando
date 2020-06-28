@@ -32,9 +32,11 @@ defmodule Brando.Villain do
 
   """
 
+  alias Brando.Lexer
   alias Brando.Pages
   alias Brando.Utils
   alias Brando.Villain.Globals
+
   import Ecto.Query
 
   @regex_fragment_ref ~r/(?:\$\{|\$\%7B)FRAGMENT:([a-zA-Z0-9-_]+)\/([a-zA-Z0-9-_]+)\/(\w+)(?:\}|\%7D)/i
@@ -77,6 +79,15 @@ defmodule Brando.Villain do
 
   defp do_parse(data, entry, opts) do
     parser = Brando.config(Brando.Villain)[:parser]
+    identity = Brando.Cache.Identity.get()
+
+    context =
+      %{}
+      |> Lexer.Context.new()
+      |> Lexer.Context.assign("entry", entry)
+      |> Lexer.Context.assign("identity", identity)
+      |> Lexer.Context.assign("configs", identity.configs)
+      |> Lexer.Context.assign("links", identity.links)
 
     html =
       data
@@ -87,13 +98,16 @@ defmodule Brando.Villain do
       end)
       |> Enum.reverse()
       |> Enum.join()
-      |> replace_fragment_refs()
-      |> replace_identity_refs()
-      |> replace_link_refs()
-      |> Globals.replace_global_refs()
-      |> replace_config_refs()
 
-    render_entry(entry, html)
+    # |> replace_fragment_refs()
+    # |> replace_config_refs()
+    {:ok, parsed_doc, _, _, _, _} = Lexer.Parser.parse(html)
+    {result, _} = render(parsed_doc, context)
+    Enum.join(result)
+  end
+
+  def render(html, context) do
+    Lexer.render(html, context)
   end
 
   @doc """
@@ -549,19 +563,7 @@ defmodule Brando.Villain do
     end)
   end
 
-  def replace_identity_refs(html) do
-    Regex.replace(@regex_identity_ref, html, fn _, key ->
-      identity = Brando.Cache.get(:identity)
-
-      Map.get(
-        identity,
-        String.to_existing_atom(key),
-        "==> MISSING IDENTITY KEY: ${identity:#{key}} <=="
-      )
-    end)
-  end
-
-  def replace_link_refs(html) do
+  defp replace_link_refs(html) do
     Regex.replace(@regex_link_ref, html, fn _, name ->
       identity = Brando.Cache.get(:identity)
       link_list = identity.links
@@ -573,7 +575,7 @@ defmodule Brando.Villain do
     end)
   end
 
-  def replace_config_refs(html) do
+  defp replace_config_refs(html) do
     Regex.replace(@regex_config_ref, html, fn _, key ->
       identity = Brando.Cache.get(:identity)
       config_list = identity.configs

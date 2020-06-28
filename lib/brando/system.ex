@@ -5,6 +5,8 @@ defmodule Brando.System do
   require Logger
   alias Brando.Exception.ConfigError
   alias Brando.Cache
+  alias Brando.CDN
+  alias Brando.Villain
 
   def initialize do
     run_checks()
@@ -50,8 +52,8 @@ defmodule Brando.System do
   end
 
   defp check_cdn_bucket_exists do
-    if Brando.CDN.enabled?() do
-      Brando.CDN.ensure_bucket_exists()
+    if CDN.enabled?() do
+      CDN.ensure_bucket_exists()
     else
       {:ok, {:bucket, :exists}}
     end
@@ -107,9 +109,9 @@ defmodule Brando.System do
   defp check_valid_globals do
     search_terms = "\\${GLOBAL:(\\w+)}"
 
-    for {schema, fields} <- Brando.Villain.list_villains() do
+    for {schema, fields} <- Villain.list_villains() do
       Enum.reduce(fields, [], fn {_, data_field, _html_field}, acc ->
-        case Brando.Villain.search_villains_for_regex(schema, data_field, search_terms) do
+        case Villain.search_villains_for_regex(schema, data_field, search_terms) do
           [] ->
             acc
 

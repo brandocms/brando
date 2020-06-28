@@ -13,8 +13,9 @@ defmodule Brando.Lexer.Expression do
     })
   end
 
-  def eval({type, _} = argument, context) when type in [:field, :literal],
-    do: [argument] |> Argument.eval(context) |> do_eval()
+  def eval({type, _} = argument, context) when type in [:field, :literal] do
+    [argument] |> Argument.eval(context) |> do_eval()
+  end
 
   def eval(expressions, context) when is_list(expressions) do
     expressions
