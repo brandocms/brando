@@ -33,10 +33,6 @@ jobs:
         pair:
           - erlang: 22.2
             elixir: 1.10.2
-          - erlang: 22.1
-            elixir: 1.9.4
-          - erlang: 21.3
-            elixir: 1.8.2
 
     services:
       db:
