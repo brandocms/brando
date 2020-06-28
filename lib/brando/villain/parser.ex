@@ -243,6 +243,7 @@ defmodule Brando.Villain.Parser do
           preload: true,
           opacity: 0.1
         })
+        |> safe_to_string()
       end
 
       defoverridable video: 2
