@@ -1,4 +1,4 @@
-defmodule Brando.Lexer.Render.ObjectTest do
+defmodule Brando.Lexer.RenderTest do
   @moduledoc false
 
   use ExUnit.Case

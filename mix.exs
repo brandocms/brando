@@ -119,6 +119,8 @@ defmodule Brando.Mixfile do
 
       # Parser
       {:nimble_parsec, "~> 0.6", override: true},
+      {:html_entities, "~> 0.5"},
+      {:html_sanitize_ex, "~> 1.4"},
 
       # Dev dependencies
       {:credo, ">= 0.0.0", only: :dev, runtime: false},

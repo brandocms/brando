@@ -78,32 +78,29 @@ defmodule Brando.System do
   end
 
   defp check_module_config_exists do
-    with {:app, m1} when is_atom(m1) <-
-           {:app, Application.get_env(:brando, :app_module, "missing")},
-         {:web, m2} when is_atom(m2) <-
-           {:web, Application.get_env(:brando, :web_module, "missing")} do
-      {:ok, {:module_config, :exists}}
-    else
-      {:app, "missing"} ->
-        raise ConfigError,
-          message: """
+    if Application.get_env(:brando, :app_module) == nil do
+      raise ConfigError,
+        message: """
 
 
-          Application module not set in `config/brando.exs`. Add:
+        Application module not set in `config/brando.exs`. Add:
 
-          config :brando, app_module: MyApp
-          """
-
-      {:web, "missing"} ->
-        raise ConfigError,
-          message: """
-
-
-          Web module not set in `config/brando.exs`. Add:
-
-          config :brando, app_module: MyApp
-          """
+        config :brando, app_module: MyApp
+        """
     end
+
+    if Application.get_env(:brando, :web_module) == nil do
+      raise ConfigError,
+        message: """
+
+
+        Web module not set in `config/brando.exs`. Add:
+
+        config :brando, app_module: MyApp
+        """
+    end
+
+    {:ok, {:module_config, :exists}}
   end
 
   defp check_valid_globals do

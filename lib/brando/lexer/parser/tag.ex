@@ -4,17 +4,12 @@ defmodule Brando.Lexer.Parser.Tag do
   import NimbleParsec
 
   alias Brando.Lexer.Parser.Literal
-
-  alias Brando.Lexer.Parser.Tag.{
-    ControlFlow,
-    Iteration,
-    Variable
-  }
+  alias Brando.Lexer.Parser.Tag.ControlFlow
+  alias Brando.Lexer.Parser.Tag.Iteration
 
   def open_tag(combinator \\ empty()) do
     combinator
     |> string("{%")
-    # |> optional(string("-"))
     |> Literal.whitespace()
   end
 
@@ -22,8 +17,6 @@ defmodule Brando.Lexer.Parser.Tag do
     combinator
     |> Literal.whitespace()
     |> string("%}")
-
-    # |> choice([close_tag_remove_whitespace(), string("%}")])
   end
 
   @spec tag_directive(NimbleParsec.t(), String.t()) :: NimbleParsec.t()
@@ -51,34 +44,16 @@ defmodule Brando.Lexer.Parser.Tag do
     iteration_tags =
       choice([
         Iteration.for_expression(),
-        # Iteration.cycle_tag(),
         Iteration.break_tag(),
         Iteration.continue_tag()
-        # Iteration.tablerow_tag()
       ])
       |> tag(:iteration)
-
-    # variable_tags =
-    #   choice([
-    #     Variable.assign_tag(),
-    #     Variable.capture_tag(),
-    #     Variable.incrementer_tag()
-    #   ])
-    #   |> tag(:variable)
 
     combinator
     |> choice([
       control_flow_tags,
       iteration_tags,
-      # variable_tags,
       comment_tag()
     ])
-  end
-
-  # Close tag that also removes the whitespace after it
-  defp close_tag_remove_whitespace(combinator \\ empty()) do
-    combinator
-    |> string("-%}")
-    |> Literal.whitespace()
   end
 end
