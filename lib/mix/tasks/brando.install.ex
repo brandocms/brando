@@ -241,6 +241,10 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "assets/frontend/webpack.settings.js.eex", "assets/frontend/webpack.settings.js"},
     {:copy, "assets/frontend/yarn.lock.eex", "assets/frontend/yarn.lock"},
 
+    # Frontend static
+    {:copy, "assets/frontend/static/favicon.ico", "assets/frontend/static/favicon.ico"},
+    {:copy, "assets/frontend/static/ico/favicon.ico", "assets/frontend/static/ico/favicon.ico"},
+
     # Frontend CYPRESS
     {:copy, "assets/frontend/cypress.json", "assets/frontend/cypress.json"},
     {:copy, "assets/frontend/cypress/fixtures/example.json",
