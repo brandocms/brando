@@ -39,15 +39,6 @@ defmodule Brando.Lexer.FilterTest do
              )
              |> to_string()
              |> String.trim() == "Entry was inserted at 2020-01-01"
-
-      assert render(
-               """
-               Entry was inserted at ${entry:inserted_at|date}
-               """,
-               context
-             )
-             |> to_string()
-             |> String.trim() == "Entry was inserted at 2020-01-01"
     end
   end
 
