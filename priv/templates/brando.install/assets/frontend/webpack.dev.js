@@ -1,16 +1,16 @@
-// webpack.dev.js - developmental builds
+// webpack.dev.js - development builds
 const MODERN_CONFIG = 'modern'
 
 // node modules
 const merge = require('webpack-merge')
 const path = require('path')
 const webpack = require('webpack')
-const fs = require('fs')
 
 // webpack plugins
 const ExtractCssChunks = require('extract-css-chunks-webpack-plugin')
-const CopyPlugin = require('copy-webpack-plugin')
+const CopyWebpackPlugin = require('copy-webpack-plugin')
 const WriteFilePlugin = require('write-file-webpack-plugin')
+const HardSourceWebpackPlugin = require('hard-source-webpack-plugin')
 
 // config files
 const common = require('./webpack.common.js')
@@ -102,7 +102,8 @@ module.exports = [
         publicPath: `${settings.devServerConfig.public()}/`
       },
       mode: 'development',
-      devtool: 'cheap-module-eval-source-map',
+      devtool: 'eval-cheap-module-source-map',
+
       devServer: configureDevServer(MODERN_CONFIG),
       module: {
         rules: [
@@ -113,7 +114,7 @@ module.exports = [
       plugins: [
         new WriteFilePlugin(),
 
-        new CopyPlugin({
+        new CopyWebpackPlugin({
           patterns: [
             {
               context: './static',
@@ -131,7 +132,8 @@ module.exports = [
           }
         ),
 
-        new webpack.HotModuleReplacementPlugin()
+        new webpack.HotModuleReplacementPlugin(),
+        new HardSourceWebpackPlugin()
       ]
     }
   )

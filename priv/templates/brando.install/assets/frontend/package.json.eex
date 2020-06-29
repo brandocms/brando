@@ -83,6 +83,7 @@
     "file-loader": "^6.0.0",
     "git-rev-sync": "^2.0.0",
     "glob-all": "^3.2.1",
+    "hard-source-webpack-plugin": "^0.13.1",
     "html-webpack-plugin": "^4.2.0",
     "ignore-loader": "^0.1.2",
     "inspectpack": "^4.5.2",
