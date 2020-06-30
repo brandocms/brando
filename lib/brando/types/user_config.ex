@@ -36,9 +36,6 @@ defmodule Brando.Type.UserConfig do
   Load from database. We receive it as a map since Postgrex does the conversion.
   """
   def load(data) when is_map(data) do
-    require Logger
-    Logger.error(inspect(data, pretty: true))
-
     data =
       for {key, val} <- data do
         {String.to_existing_atom(key), val}
