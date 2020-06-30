@@ -263,8 +263,15 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         %{"schema" => schema, "entry" => entry, "key" => key, "prop" => prop},
         socket
       ) do
-    cache_key = Brando.LivePreview.initialize(schema, entry, key, prop)
-    {:reply, {:ok, %{code: 200, cache_key: cache_key}}, socket}
+    entry = Brando.Utils.snake_case(entry)
+
+    case Brando.LivePreview.initialize(schema, entry, key, prop) do
+      {:ok, cache_key} ->
+        {:reply, {:ok, %{code: 200, cache_key: cache_key}}, socket}
+
+      {:error, err} ->
+        {:reply, {:error, %{code: 404, message: err}}, socket}
+    end
   end
 
   def do_handle_in(
@@ -278,6 +285,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         },
         socket
       ) do
+    entry = Brando.Utils.snake_case(entry)
     Brando.LivePreview.update(schema, entry, key, prop, cache_key)
     {:reply, {:ok, %{code: 200, cache_key: cache_key}}, socket}
   end

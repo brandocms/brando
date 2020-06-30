@@ -219,6 +219,20 @@ defmodule Brando.Utils do
   defp stringify_key(key) when is_atom(key), do: Atom.to_string(key)
   defp stringify_key(key), do: key
 
+  def snake_case(map) when is_map(map) do
+    map
+    |> Enum.map(fn {k, v} -> {Recase.to_snake(k), snake_case(v)} end)
+    |> Enum.into(%{})
+  end
+
+  def snake_case([head | rest]) do
+    [snake_case(head) | snake_case(rest)]
+  end
+
+  def snake_case(not_a_map) do
+    not_a_map
+  end
+
   @doc """
   Converts `collection` to a map with safe atom keys
   """

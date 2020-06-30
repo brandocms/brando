@@ -15,6 +15,7 @@ defmodule Brando.CDN do
   @spec upload_file(file :: binary) :: {:ok, cdn_key :: binary} | upload_error
   def upload_file(_file) do
     # hepp
+    {:ok, "hepp"}
   end
 
   @spec ensure_bucket_exists :: {:ok, {:bucket, :exists}} | {:error, {:bucket, any}}

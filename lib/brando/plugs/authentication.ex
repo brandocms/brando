@@ -1,6 +1,8 @@
 defmodule Brando.Plug.Authentication do
   use Plug.Router
 
+  alias Brando.Users
+
   plug :match
   plug :dispatch
 
@@ -22,10 +24,11 @@ defmodule Brando.Plug.Authentication do
 
     with {:ok, email} <- Map.fetch(conn.body_params, "email"),
          {:ok, password} <- Map.fetch(conn.body_params, "password"),
-         {:ok, user} <- Brando.Users.get_user_by_email(email),
+         {:ok, user} <- Users.get_user_by_email(email),
          {:verified, true} <- {:verified, Bcrypt.verify_pass(password, user.password)} do
       guardian_module = conn.private.guardian_module
       {:ok, jwt, _full_claims} = guardian_module.encode_and_sign(user)
+      Users.set_last_login(user)
 
       payload = %{
         jwt: jwt,

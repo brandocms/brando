@@ -103,14 +103,10 @@ defmodule Brando.LivePreview do
   end
 
   @spec build_cache_key(Map.t()) :: String.t()
-  def build_cache_key(seed) do
-    "PREVIEW-" <> Hashids.encode(@preview_coder, seed)
-  end
+  def build_cache_key(seed), do: "PREVIEW-" <> Hashids.encode(@preview_coder, seed)
 
-  def decode_entry("PREVIEW-" <> hash) do
-    {:ok, val} = Hashids.decode(@preview_coder, hash)
-    val
-  end
+  def decode_entry("PREVIEW-" <> hash),
+    do: {:ok, _} = Hashids.decode(@preview_coder, hash) |> elem(1)
 
   def store_cache(key, html), do: Cachex.put(:cache, "__live_preview__" <> key, html)
   def get_cache(key), do: Cachex.get(:cache, "__live_preview__" <> key)
@@ -122,14 +118,20 @@ defmodule Brando.LivePreview do
       cache_key = build_cache_key(:erlang.system_time())
       schema_module = Module.concat([schema])
       entry_struct = Brando.Utils.stringy_struct(schema_module, entry)
-      wrapper_html = preview_module.render(schema_module, entry_struct, key, prop, cache_key)
 
-      if Cachex.get(:cache, cache_key) == {:ok, nil} do
-        Brando.LivePreview.store_cache(cache_key, wrapper_html)
+      try do
+        wrapper_html = preview_module.render(schema_module, entry_struct, key, prop, cache_key)
+
+        if Cachex.get(:cache, cache_key) == {:ok, nil} do
+          Brando.LivePreview.store_cache(cache_key, wrapper_html)
+        end
+
+        Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
+
+        {:ok, cache_key}
+      rescue
+        _ -> {:error, "Initialization failed."}
       end
-
-      Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
-      cache_key
     end
   end
 

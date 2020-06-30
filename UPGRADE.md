@@ -11,12 +11,6 @@
   And then search through your backend js and fix all `adminChannel.channel.push` calls,
   since the above code will break topic strings.
 
-* Rename all js locale `help_text` keys to helpText:
-  ````
-  gsed -i "s=help_text=helpText=" assets/backend/src/locales/**/*.js && \
-  gsed -i "s=help_text=helpText=" assets/backend/src/**/*Form.vue
-  ```
-
 * BrandoJS Datasource: Moved `wrapper` to template instead.
 
 * Switch out all "nb" language keys to "no". Both in elixir configs and in
@@ -40,7 +34,6 @@
     web_module: MyAppWeb,
   ```
   You can remove `endpoint`, `factory`, `repo`, `router` and `helpers` keys.
-
 
 * Switch out
   `plug :put_layout, {YourAppWeb.LayoutView, "admin.html"}` with

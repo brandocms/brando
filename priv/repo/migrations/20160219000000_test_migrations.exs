@@ -11,6 +11,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add(:password, :text)
       add(:avatar, :jsonb)
       add(:role, :integer)
+      add(:config, :map)
       add(:active, :boolean, default: true)
       add(:language, :text, default: "no")
       add(:last_login, :naive_datetime)

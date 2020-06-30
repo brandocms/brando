@@ -14,7 +14,7 @@ defmodule Brando.Users.User do
   import Brando.Gettext
 
   @required_fields ~w(full_name email password language)a
-  @optional_fields ~w(role avatar active deleted_at)a
+  @optional_fields ~w(role avatar active config deleted_at)a
 
   @derived_fields ~w(
     id
@@ -38,8 +38,9 @@ defmodule Brando.Users.User do
     field :password, :string
     field :avatar, Brando.Type.Image
     field :role, Brando.Type.Role
-    field :active, :boolean, default: true
+    field :config, Brando.Type.UserConfig, default: %Brando.Type.UserConfig{}
     field :language, :string
+    field :active, :boolean, default: true
     field :last_login, :naive_datetime
     timestamps()
     soft_delete()

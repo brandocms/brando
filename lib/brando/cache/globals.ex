@@ -12,7 +12,7 @@ defmodule Brando.Cache.Globals do
   @doc """
   Get globals from cache
   """
-  @spec get :: {:ok, map()}
+  @spec get :: map()
   def get, do: Cache.get(:globals)
 
   @doc """

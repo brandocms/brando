@@ -22,9 +22,12 @@ defmodule Brando.Pages.PageFragmentResolver do
   @doc """
   Create page
   """
+  def create(%{page_fragment_params: :invalid}, _), do: {:error, :invalid}
+
   def create(%{page_fragment_params: page_fragment_params}, %{
         context: %{current_user: current_user}
-      }) do
+      })
+      when is_map(page_fragment_params) do
     page_fragment_params
     |> Pages.create_page_fragment(current_user)
     |> response

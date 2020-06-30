@@ -11,7 +11,11 @@ defmodule Brando.Pages do
 
   import Ecto.Query
 
+  @type changeset :: Ecto.Changeset.t()
+  @type fragment :: Brando.Pages.PageFragment.t()
+  @type id :: String.t() | Integer.t()
   @type page :: Brando.Pages.Page.t()
+  @type user :: Brando.Users.User.t() | :system
 
   defmacro __using__(_) do
     quote do
@@ -423,15 +427,17 @@ defmodule Brando.Pages do
   @doc """
   Create new page fragment
   """
+  @spec create_page_fragment(map, user) :: {:ok, fragment} | {:error, changeset}
   def create_page_fragment(params, user) do
     %PageFragment{}
     |> PageFragment.changeset(params, user)
-    |> Brando.repo().insert
+    |> Brando.repo().insert()
   end
 
   @doc """
   Update page fragment
   """
+  @spec update_page_fragment(any, :invalid, any) :: any
   def update_page_fragment(page_fragment_id, params, user) do
     page_fragment_id =
       (is_binary(page_fragment_id) && String.to_integer(page_fragment_id)) || page_fragment_id
@@ -453,6 +459,7 @@ defmodule Brando.Pages do
   @doc """
   Delete page_fragment
   """
+  @spec delete_page_fragment(id) :: {:ok, fragment}
   def delete_page_fragment(page_fragment_id) do
     {:ok, page_fragment} = get_page_fragment(page_fragment_id)
     Brando.repo().soft_delete!(page_fragment)
@@ -462,18 +469,21 @@ defmodule Brando.Pages do
   @doc """
   Duplicate page fragment
   """
+  @spec duplicate_page_fragment(fragment_id :: String.t() | Integer.t(), user) ::
+          {:ok, map} | {:error, {:page_fragment, :not_found}}
   def duplicate_page_fragment(fragment_id, user) do
     fragment_id = (is_binary(fragment_id) && String.to_integer(fragment_id)) || fragment_id
-    {:ok, fragment} = get_page_fragment(fragment_id)
 
-    {:ok, dup_fragment} =
-      fragment
-      |> Map.merge(%{key: "#{fragment.key}_kopi"})
-      |> Map.delete([:id, :parent])
-      |> Map.from_struct()
-      |> create_page_fragment(user)
-
-    {:ok, Map.merge(dup_fragment, %{creator: nil})}
+    with {:ok, fragment} <- get_page_fragment(fragment_id),
+         fragment when is_map(fragment) <- Map.merge(fragment, %{key: "#{fragment.key}_kopi"}),
+         fragment when is_map(fragment) <- Map.delete(fragment, [:id, :parent]),
+         fragment when is_map(fragment) <- Map.from_struct(fragment),
+         {:ok, new_fragment} <- create_page_fragment(fragment, user) do
+      {:ok, Map.merge(new_fragment, %{creator: nil})}
+    else
+      {:error, {:page_fragment, :not_found}} ->
+        {:error, {:page_fragment, :not_found}}
+    end
   end
 
   @doc """

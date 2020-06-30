@@ -111,10 +111,8 @@ defmodule Brando.Users do
   """
   @spec set_last_login(user) :: user
   def set_last_login(user) do
-    current_time = NaiveDateTime.from_erl!(:calendar.local_time())
-    {:ok, user} = Utils.Schema.update_field(user, last_login: current_time)
-
-    user
+    current_time = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
+    Utils.Schema.update_field(user, last_login: current_time)
   end
 
   @doc """

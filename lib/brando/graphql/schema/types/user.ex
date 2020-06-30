@@ -1,26 +1,6 @@
 defmodule Brando.Schema.Types.User do
   use Brando.Web, :absinthe
 
-  input_object :create_user_params do
-    field :full_name, :string
-    field :language, :string
-    field :email, :string
-    field :role, :string
-    field :password, :string
-    field :avatar, :upload_or_image
-    field :active, :boolean
-  end
-
-  input_object :update_user_params do
-    field :full_name, :string
-    field :language, :string
-    field :email, :string
-    field :role, :string
-    field :password, :string
-    field :avatar, :upload_or_image
-    field :active, :boolean
-  end
-
   object :user do
     field :id, :id
     field :email, :string
@@ -31,9 +11,29 @@ defmodule Brando.Schema.Types.User do
     field :active, :boolean
     field :language, :string
     field :last_login, :date
+    field :config, :user_config
     field :inserted_at, :time
     field :updated_at, :time
     field :deleted_at, :time
+  end
+
+  object :user_config do
+    field :show_onboarding, :boolean
+  end
+
+  input_object :user_config_params do
+    field :show_onboarding, :boolean
+  end
+
+  input_object :user_params do
+    field :full_name, :string
+    field :language, :string
+    field :email, :string
+    field :role, :string
+    field :password, :string
+    field :avatar, :upload_or_image
+    field :active, :boolean
+    field :config, :user_config_params
   end
 
   object :user_queries do
@@ -56,14 +56,14 @@ defmodule Brando.Schema.Types.User do
 
   object :user_mutations do
     field :create_user, type: :user do
-      arg :user_params, :create_user_params
+      arg :user_params, :user_params
 
       resolve &Brando.Users.UserResolver.create/2
     end
 
     field :update_user, type: :user do
       arg :user_id, non_null(:id)
-      arg :user_params, :update_user_params
+      arg :user_params, :user_params
 
       resolve &Brando.Users.UserResolver.update/2
     end

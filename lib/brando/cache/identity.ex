@@ -11,7 +11,7 @@ defmodule Brando.Cache.Identity do
   @doc """
   Get Identity from cache
   """
-  @spec get :: {:ok, identity}
+  @spec get :: identity
   def get, do: Cache.get(:identity)
 
   @doc """
