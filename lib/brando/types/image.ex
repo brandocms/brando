@@ -44,6 +44,11 @@ defmodule Brando.Type.Image do
     {:ok, image}
   end
 
+  # upload from KInputImageseries
+  def cast(%Plug.Upload{} = upload) do
+    {:ok, {:upload, %{file: upload}}}
+  end
+
   def cast(update) when is_map(update) do
     {:ok, {:update, update}}
   end
