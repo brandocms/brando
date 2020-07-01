@@ -31,18 +31,11 @@ defmodule Brando.Villain do
     of entries in the for loop
 
   """
+  import Ecto.Query
 
   alias Brando.Lexer
   alias Brando.Pages
   alias Brando.Utils
-  alias Brando.Villain.Globals
-
-  import Ecto.Query
-
-  @regex_fragment_ref ~r/(?:\$\{|\$\%7B)FRAGMENT:([a-zA-Z0-9-_]+)\/([a-zA-Z0-9-_]+)\/(\w+)(?:\}|\%7D)/i
-  @regex_config_ref ~r/(?:\$\{|\$\%7B)CONFIG:([a-zA-Z0-9-_]+)(?:\}|\%7D)/i
-  @regex_link_ref ~r/(?:\$\{|\$\%7B)LINK:([a-zA-Z0-9-_]+)(?:\}|\%7D)/i
-  @regex_identity_ref ~r/(?:\$\{|\$\%7B)IDENTITY:([a-zA-Z0-9-_]+)(?:\}|\%7D)/i
 
   defmacro __using__(:schema) do
     raise "`use Brando.Villain, :schema` is deprecated. Call `use Brando.Villain.Schema` instead."
@@ -99,8 +92,6 @@ defmodule Brando.Villain do
       |> Enum.reverse()
       |> Enum.join()
 
-    # |> replace_fragment_refs()
-    # |> replace_config_refs()
     {:ok, parsed_doc, _, _, _, _} = Lexer.Parser.parse(html)
     {result, _} = render(parsed_doc, context)
     Enum.join(result)
@@ -549,42 +540,6 @@ defmodule Brando.Villain do
         end
       end)
     end
-  end
-
-  defp replace_fragment_refs(html) do
-    Regex.replace(@regex_fragment_ref, html, fn _, parent_key, key, lang ->
-      case Pages.get_page_fragment(parent_key, key, lang) do
-        {:ok, fragment} ->
-          Phoenix.HTML.Safe.to_iodata(fragment)
-
-        {:error, {:page_fragment, :not_found}} ->
-          "==> MISSING FRAGMENT: #{parent_key}/#{key}/#{lang} <=="
-      end
-    end)
-  end
-
-  defp replace_link_refs(html) do
-    Regex.replace(@regex_link_ref, html, fn _, name ->
-      identity = Brando.Cache.get(:identity)
-      link_list = identity.links
-
-      case Enum.find(link_list, &(String.downcase(&1.name) == String.downcase(name))) do
-        nil -> "==> MISSING LINK NAME: ${link:#{name}} <=="
-        link_entry -> link_entry.url
-      end
-    end)
-  end
-
-  defp replace_config_refs(html) do
-    Regex.replace(@regex_config_ref, html, fn _, key ->
-      identity = Brando.Cache.get(:identity)
-      config_list = identity.configs
-
-      case Enum.find(config_list, &(String.downcase(&1.key) == String.downcase(key))) do
-        nil -> "==> MISSING CONFIG KEY: ${config:#{key}} <=="
-        config_entry -> config_entry.value
-      end
-    end)
   end
 
   defp replace_vars(html, vars) do
