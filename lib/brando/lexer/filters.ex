@@ -425,13 +425,13 @@ defmodule Brando.Lexer.Filter do
   @doc """
   Returns the number of characters in a string or the number of items in an array.
   ## Examples
-      iex> Brando.Lexer.Filter.size("Ground control to Major Tom.", %{})
+      iex> Brando.Lexer.Filter.length("Ground control to Major Tom.", %{})
       28
-      iex> Brando.Lexer.Filter.size(~w(apples oranges peaches plums), %{})
+      iex> Brando.Lexer.Filter.count(~w(apples oranges peaches plums), %{})
       4
   """
-  def size(value, _) when is_list(value), do: length(value)
-  def size(value, _) when is_binary(value), do: String.length(value)
+  def count(value, _) when is_list(value), do: length(value)
+  def length(value, _) when is_binary(value), do: String.length(value)
 
   @doc """
   Returns a substring of 1 character beginning at the index specified by the
