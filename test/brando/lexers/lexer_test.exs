@@ -42,6 +42,27 @@ defmodule Brando.Lexer.RenderTest do
       assert Lexer.parse("${fragment:index/01_header/en}") ===
                {:ok, [object: [field: [key: "fragment", key: "index/01_header/en"], filters: []]]}
     end
+
+    test "if w/filter" do
+      assert Lexer.parse("""
+             {% if entries:count %}
+             Has entries!
+             {% else %}
+             No entries
+             {% endif %}
+             """) ===
+               {:ok,
+                [
+                  control_flow: [
+                    if: [
+                      expression: [field: [key: "entries", key: "count"]],
+                      contents: [text: "\nHas entries!\n"]
+                    ],
+                    else: [contents: [text: "\nNo entries\n"]]
+                  ],
+                  text: "\n"
+                ]}
+    end
   end
 
   describe "rendering" do
@@ -120,6 +141,44 @@ defmodule Brando.Lexer.RenderTest do
              )
              |> to_string()
              |> String.trim() == "The new title: A Brilliant Title"
+
+      assert render(
+               """
+               {% if entry %}
+               Has entry!
+               {% else %}
+               No entry
+               {% endif %}
+               """,
+               context
+             )
+             |> to_string()
+             |> String.trim() == "Has entry!"
+
+      context =
+        Context.new(%{
+          entries: [
+            %{
+              title: "A Brilliant Title"
+            },
+            %{
+              title: "A Brilliant Title"
+            }
+          ]
+        })
+
+      assert render(
+               """
+               {% if entries:count %}
+               Has entries!
+               {% else %}
+               No entries
+               {% endif %}
+               """,
+               context
+             )
+             |> to_string()
+             |> String.trim() == "Has entries!"
     end
 
     test "for" do

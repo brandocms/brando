@@ -113,7 +113,12 @@ defmodule Brando.Villain.Schema do
 
     applied_changes = Ecto.Changeset.apply_changes(changeset)
     data_src = Map.get(applied_changes, data_field)
-    parsed_data = Brando.Villain.parse(data_src, applied_changes)
+
+    parsed_data =
+      Brando.Villain.parse(data_src, applied_changes,
+        data_field: data_field,
+        html_field: html_field
+      )
 
     Ecto.Changeset.put_change(changeset, html_field, parsed_data)
   end

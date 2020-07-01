@@ -207,9 +207,6 @@ defmodule Brando.Datasource do
   @doc """
   Get selection by [ids] from database
   """
-  def get_selection(_, _, []), do: {:error, :no_entries}
-  def get_selection(_, _, nil), do: {:error, :no_entries}
-
   def get_selection(module, query, ids) do
     mod = Module.concat([module])
     mod.__datasource__(:get_selection, String.to_existing_atom(query)).(module, ids)

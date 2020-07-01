@@ -36,6 +36,11 @@ defmodule Brando.Lexer.Context do
     %{context | variables: updated_variables}
   end
 
+  def assign(%__MODULE__{variables: variables} = context, map) when is_map(map) do
+    updated_variables = Map.merge(variables, stringify_if_map(map))
+    %{context | variables: updated_variables}
+  end
+
   defp stringify_if_map(value) when is_map(value), do: Utils.stringify_keys(value)
   defp stringify_if_map(value), do: value
 end

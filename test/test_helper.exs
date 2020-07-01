@@ -23,10 +23,6 @@ defmodule Brando.Integration.Endpoint do
   use Phoenix.Endpoint,
     otp_app: :brando
 
-  # socket "/admin/socket", MartinuzziWeb.AdminSocket,
-  #   websocket: true,
-  #   longpoll: true
-
   plug Plug.Session,
     store: :cookie,
     key: "_test",

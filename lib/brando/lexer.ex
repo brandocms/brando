@@ -23,4 +23,10 @@ defmodule Brando.Lexer do
 
   def render(document, context \\ %Context{}),
     do: Brando.Lexer.Render.render([], document, context)
+
+  def parse_and_render(html, context) do
+    {:ok, parsed_doc, _, _, _, _} = Brando.Lexer.Parser.parse(html)
+    {result, _} = render(parsed_doc, context)
+    Enum.join(result)
+  end
 end

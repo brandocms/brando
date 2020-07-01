@@ -57,9 +57,13 @@ defmodule Brando.Villain.Parser do
   defmacro __using__(_) do
     quote do
       @behaviour Brando.Villain.Parser
+
       import Brando.HTML
       import Phoenix.HTML
+
+      alias Brando.Cache
       alias Brando.Datasource
+      alias Brando.Lexer
       alias Brando.Villain
 
       @doc """
@@ -89,11 +93,79 @@ defmodule Brando.Villain.Parser do
         "<#{header_size}#{classes}#{id}>" <> nl2br(text) <> "</#{header_size}>"
       end
 
-      def header(%{"text" => text}, _) do
-        "<h1>" <> nl2br(text) <> "</h1>"
+      def header(%{"text" => text}, _), do: "<h1>" <> nl2br(text) <> "</h1>"
+      defoverridable header: 2
+
+      @doc """
+      Convert template to html.
+      """
+      def template(
+            %{
+              "multi" => true,
+              "id" => id,
+              "entries" => entries
+            } = block,
+            opts
+          ) do
+        {:ok, template} =
+          case Keyword.get(opts, :cache_templates) do
+            true ->
+              Brando.Villain.get_cached_template(id)
+
+            _ ->
+              Brando.Villain.get_template(id)
+          end
+
+        # multi template
+        {:ok, template} = Brando.Villain.get_template(id)
+
+        base_context = opts[:context]
+
+        content =
+          Enum.map(Enum.with_index(entries), fn {%{"refs" => refs, "vars" => vars}, index} ->
+            # add vars to context
+            vars = process_vars(vars)
+            context = Lexer.Context.assign(base_context, vars)
+
+            template.code
+            |> render_refs(refs, id)
+            |> Lexer.parse_and_render(context)
+          end)
+          |> Enum.join("\n")
+
+        context =
+          base_context
+          |> Lexer.Context.assign("entries", entries)
+          |> Lexer.Context.assign("content", content)
+
+        Lexer.parse_and_render(template.wrapper, context)
       end
 
-      defoverridable header: 2
+      def template(%{"id" => id, "refs" => refs} = block, opts) do
+        {:ok, template} =
+          case Keyword.get(opts, :cache_templates) do
+            true ->
+              Brando.Villain.get_cached_template(id)
+
+            _ ->
+              Brando.Villain.get_template(id)
+          end
+
+        vars = Map.get(block, "vars")
+        base_context = opts[:context]
+
+        vars = process_vars(vars)
+
+        context =
+          base_context
+          |> Lexer.Context.assign(vars)
+
+        template.code
+        |> render_refs(refs, id)
+        |> Lexer.parse_and_render(context)
+      end
+
+      defoverridable template: 2
 
       def datasource(
             %{
@@ -108,17 +180,7 @@ defmodule Brando.Villain.Parser do
 
         with {:ok, entries} <- Datasource.get_many(module, query, arg),
              {:ok, template} <- Villain.get_template(template_id) do
-          content =
-            entries
-            |> Enum.map(&Villain.render_entry(&1, template.code))
-            |> Enum.join("\n")
-
-          String.replace(template.wrapper, "${CONTENT}", content)
-        else
-          {:error, :no_entries} ->
-            #! Add fallback/empty clause
-            require Logger
-            Logger.error("==> No entries")
+          render_datasource_entries(template, entries)
         end
       end
 
@@ -136,17 +198,7 @@ defmodule Brando.Villain.Parser do
 
         with {:ok, entries} <- Datasource.get_selection(module, query, ids),
              {:ok, template} <- Villain.get_template(template_id) do
-          content =
-            entries
-            |> Enum.map(&Villain.render_entry(&1, template.code))
-            |> Enum.join("\n")
-
-          String.replace(template.wrapper, "${CONTENT}", content)
-        else
-          {:error, :no_entries} ->
-            #! Add fallback/empty clause
-            require Logger
-            Logger.error("==> No entries")
+          render_datasource_entries(template, entries)
         end
       end
 
@@ -588,70 +640,6 @@ defmodule Brando.Villain.Parser do
       defoverridable columns: 2
 
       @doc """
-      Convert template to html.
-      """
-      def template(%{"code" => code, "refs" => refs}, _) do
-        Regex.replace(~r/%{(\w+)}/, code, fn _, match ->
-          ref = Enum.find(refs, &(&1["name"] == match))
-          block = Map.get(ref, "data")
-          apply(__MODULE__, String.to_atom(block["type"]), [block["data"], []])
-        end)
-      end
-
-      @doc """
-      Convert template to html.
-      """
-      def template(
-            %{
-              "multi" => true,
-              "id" => id,
-              "entries" => entries
-            } = block,
-            opts
-          ) do
-        {:ok, template} =
-          case Keyword.get(opts, :cache_templates) do
-            true ->
-              Brando.Villain.get_cached_template(id)
-
-            _ ->
-              Brando.Villain.get_template(id)
-          end
-
-        # multi template
-        {:ok, template} = Brando.Villain.get_template(id)
-
-        content =
-          Enum.map(Enum.with_index(entries), fn {%{"refs" => refs, "vars" => vars}, index} ->
-            template
-            |> replace_loop_vars(entries, index)
-            |> replace_vars(vars, id)
-            |> render_refs(refs, id)
-          end)
-
-        String.replace(template.wrapper, "${CONTENT}", Enum.join(content, "\n"))
-      end
-
-      def template(%{"id" => id, "refs" => refs} = block, opts) do
-        {:ok, template} =
-          case Keyword.get(opts, :cache_templates) do
-            true ->
-              Brando.Villain.get_cached_template(id)
-
-            _ ->
-              Brando.Villain.get_template(id)
-          end
-
-        vars = Map.get(block, "vars")
-
-        template.code
-        |> replace_vars(vars, id)
-        |> render_refs(refs, id)
-      end
-
-      defoverridable template: 2
-
-      @doc """
       Timeline
       """
       def timeline(items, _) do
@@ -680,28 +668,41 @@ defmodule Brando.Villain.Parser do
 
       # ...
 
-      defp replace_loop_vars(template, entries, index) do
-        Regex.replace(~r/\${loop:(\w+)}/, template.code, fn
-          _, "index" ->
-            to_string(index + 1)
+      defp process_vars(vars), do: Enum.map(vars, &process_var(&1)) |> Enum.into(%{})
 
-          _, "index0" ->
-            to_string(index)
-
-          _, "length" ->
-            Enum.count(entries) |> to_string
-        end)
+      defp process_var({name, %{"label" => label, "type" => type, "value" => value}}) do
+        {name, %Villain.Var{label: label, type: type, value: value}}
       end
 
-      defp replace_vars(template_code, vars, id) do
-        if vars do
-          Regex.replace(~r/\${(\w+)}/, template_code, fn _, match ->
-            get_in(vars, [match, "value"]) ||
-              "<!-- VAR #{match} missing // template: #{id}. -->"
-          end)
-        else
-          template_code
-        end
+      defp get_base_context() do
+        identity = Cache.Identity.get()
+
+        %{}
+        |> Lexer.Context.new()
+        |> Lexer.Context.assign("identity", identity)
+        |> Lexer.Context.assign("configs", identity.configs)
+        |> Lexer.Context.assign("links", identity.links)
+      end
+
+      defp render_datasource_entries(template, entries) do
+        base_context = get_base_context()
+
+        content =
+          entries
+          |> Enum.map(
+            &Lexer.parse_and_render(
+              template.code,
+              Lexer.Context.assign(base_context, "entry", &1)
+            )
+          )
+          |> Enum.join("\n")
+
+        context =
+          base_context
+          |> Lexer.Context.assign("entries", entries)
+          |> Lexer.Context.assign("content", content)
+
+        Lexer.parse_and_render(template.wrapper, context)
       end
 
       defp render_refs(template_code, refs, id) do

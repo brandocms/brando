@@ -74,13 +74,18 @@ defmodule Brando.Villain do
     parser = Brando.config(Brando.Villain)[:parser]
     identity = Brando.Cache.Identity.get()
 
+    slim_entry = if opts[:data_field], do: Map.delete(entry, opts[:data_field]), else: entry
+    slim_entry = if opts[:html_field], do: Map.delete(entry, opts[:html_field]), else: slim_entry
+
     context =
       %{}
       |> Lexer.Context.new()
-      |> Lexer.Context.assign("entry", entry)
+      |> Lexer.Context.assign("entry", slim_entry)
       |> Lexer.Context.assign("identity", identity)
       |> Lexer.Context.assign("configs", identity.configs)
       |> Lexer.Context.assign("links", identity.links)
+
+    opts = Keyword.put(opts, :context, context)
 
     html =
       data
@@ -92,9 +97,7 @@ defmodule Brando.Villain do
       |> Enum.reverse()
       |> Enum.join()
 
-    {:ok, parsed_doc, _, _, _, _} = Lexer.Parser.parse(html)
-    {result, _} = render(parsed_doc, context)
-    Enum.join(result)
+    Lexer.parse_and_render(html, context)
   end
 
   def render(html, context) do
@@ -135,10 +138,18 @@ defmodule Brando.Villain do
       ) do
     data_field = (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
     html_field = (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
-    data = Ecto.Changeset.get_field(changeset, data_field)
+
+    applied_changes = Ecto.Changeset.apply_changes(changeset)
+    data_src = Map.get(applied_changes, data_field)
+
+    parsed_data =
+      Brando.Villain.parse(data_src, applied_changes,
+        data_field: data_field,
+        html_field: html_field
+      )
 
     changeset
-    |> Ecto.Changeset.put_change(html_field, Brando.Villain.parse(data))
+    |> Ecto.Changeset.put_change(html_field, parsed_data)
     |> Brando.repo().update!
   end
 
@@ -389,16 +400,15 @@ defmodule Brando.Villain do
       render_villain page.data, %{"link" => "hello"}
 
   """
-  @spec render_villain([map], %{required(String.t()) => String.t()}) :: binary()
-  def render_villain(data_field, vars \\ %{})
+  @deprecated "Use Villain.parse/2 instead."
+  def render_villain(_, _),
+    do:
+      raise("""
+      render_villain/2 is deprecated. Use parse/2 instead:
 
-  def render_villain(data_field, vars) when is_list(data_field) do
-    data_field
-    |> Brando.Villain.parse()
-    |> replace_vars(vars)
-  end
+          Villain.parse(entry.data, entry)
 
-  def render_villain(_, _), do: ""
+      """)
 
   @doc """
   Apply `entry` against `code` and return replaced code
@@ -410,6 +420,10 @@ defmodule Brando.Villain do
     do: render_entry(entry, Map.get(entry, field)) |> Phoenix.HTML.raw()
 
   def render_entry(entry, code) do
+    raise """
+
+    """
+
     Regex.replace(~r/\${ENTRY\:(\w+)\|?(\w+)?}/i, code, fn _, key, param ->
       var_path =
         try do
@@ -540,14 +554,5 @@ defmodule Brando.Villain do
         end
       end)
     end
-  end
-
-  defp replace_vars(html, vars) do
-    Regex.replace(~r/\${(\w+)}/, html, fn _, match ->
-      case Map.get(vars, match, nil) do
-        nil -> "${#{match}}"
-        val -> val
-      end
-    end)
   end
 end

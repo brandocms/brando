@@ -4,6 +4,7 @@ defmodule Brando.Lexer.Argument do
   alias Brando.Lexer.Context
   alias Brando.Globals
   alias Brando.Pages
+  alias Brando.Villain
 
   @type field_t :: any
   @type argument_t ::
@@ -24,11 +25,11 @@ defmodule Brando.Lexer.Argument do
 
   def eval({:keyword, [key, value]}, context), do: {key, eval(value, context)}
 
+  defp do_eval(%Villain.Var{value: value}, []), do: value
   defp do_eval(value, []), do: value
   defp do_eval(nil, _), do: nil
 
   # Special case ":first"
-  #! TODO: Maybe move to a filter?
   defp do_eval(value, [{:key, "first"} | tail]) when is_list(value) do
     value
     |> Enum.at(0)
@@ -36,8 +37,7 @@ defmodule Brando.Lexer.Argument do
   end
 
   # Special case ":size"
-  #! TODO: Maybe move to a filter?
-  defp do_eval(value, [{:key, "size"} | tail]) when is_list(value) do
+  defp do_eval(value, [{:key, "count"} | tail]) when is_list(value) do
     value
     |> length()
     |> do_eval(tail)
