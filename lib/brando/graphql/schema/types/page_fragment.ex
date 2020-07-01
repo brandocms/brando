@@ -1,16 +1,6 @@
 defmodule Brando.Schema.Types.PageFragment do
   use Brando.Web, :absinthe
 
-  input_object :page_fragment_params do
-    field :title, :string
-    field :parent_key, :string
-    field :key, :string
-    field :language, :string
-    field :wrapper, :string
-    field :data, :json
-    field :page_id, :id
-  end
-
   object :page_fragment do
     field :id, :id
     field :title, :string
@@ -25,6 +15,16 @@ defmodule Brando.Schema.Types.PageFragment do
     field :inserted_at, :time
     field :updated_at, :time
     field :deleted_at, :time
+  end
+
+  input_object :page_fragment_params do
+    field :title, :string
+    field :parent_key, :string
+    field :key, :string
+    field :language, :string
+    field :wrapper, :string
+    field :data, :json
+    field :page_id, :id
   end
 
   object :page_fragment_queries do
@@ -42,7 +42,7 @@ defmodule Brando.Schema.Types.PageFragment do
 
   object :page_fragment_mutations do
     field :create_page_fragment, type: :page_fragment do
-      arg :page_fragment_params, :page_fragment_params
+      arg :page_fragment_params, non_null(:page_fragment_params)
 
       resolve &Brando.Pages.PageFragmentResolver.create/2
     end

@@ -4,6 +4,7 @@ defmodule Brando.HTML do
   """
 
   @type alert_levels :: :default | :primary | :info | :success | :warning | :danger
+  @type safe_string :: {:safe, [...]}
   @type conn :: Plug.Conn.t()
 
   alias Brando.Utils
@@ -58,7 +59,7 @@ defmodule Brando.HTML do
       - `html` -> for instance, provide a rendered picture_tag
     - `poster` -> url to poster, i.e. on vimeo.
   """
-  @spec video_tag(binary, Map.t()) :: binary
+  @spec video_tag(binary, map()) :: safe_string
   def video_tag(src, opts) do
     width = Map.get(opts, :width)
     height = Map.get(opts, :height)
@@ -204,7 +205,7 @@ defmodule Brando.HTML do
       google_analytics("UA-XXXXX-X")
 
   """
-  @spec google_analytics(ua_code :: String.t()) :: {:safe, term}
+  @spec google_analytics(ua_code :: String.t()) :: safe_string()
   def google_analytics(ua_code) do
     content =
       """
@@ -348,7 +349,7 @@ defmodule Brando.HTML do
 
   Also includes a preconnect link tag for faster resolution
   """
-  @spec include_css(conn) :: {:safe, [...]} | [{:safe, [...]}]
+  @spec include_css(conn) :: safe_string | [safe_string]
   def include_css(%Plug.Conn{host: host, scheme: scheme}) do
     cdn? = !!Brando.endpoint().config(:static_url)
     hmr? = Application.get_env(Brando.otp_app(), :hmr)
@@ -375,7 +376,7 @@ defmodule Brando.HTML do
 
   Also includes a polyfill for Safari in prod.
   """
-  @spec include_js(conn) :: {:safe, [...]} | [{:safe, [...]}]
+  @spec include_js(conn) :: safe_string | [safe_string]
   def include_js(%Plug.Conn{host: host, scheme: scheme}) do
     cdn? = !!Brando.endpoint().config(:static_url)
     # check if we're HMR
@@ -437,7 +438,7 @@ defmodule Brando.HTML do
   @doc """
   Run JS init code
   """
-  @spec init_js() :: {:safe, [...]}
+  @spec init_js() :: safe_string
   def init_js() do
     js =
       "(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)"
@@ -450,7 +451,7 @@ defmodule Brando.HTML do
   @doc """
   Renders a link tag with preconnect to the CDN domain
   """
-  @spec preconnect_tag :: {:safe, [...]}
+  @spec preconnect_tag :: safe_string
   def preconnect_tag do
     static_url = Brando.endpoint().static_url
     tag(:link, href: static_url, rel: "preconnect", crossorigin: true)
@@ -459,6 +460,6 @@ defmodule Brando.HTML do
   @doc """
   Render rel links
   """
-  @spec render_rel(conn) :: [{:safe, term}]
+  @spec render_rel(conn) :: [safe_string]
   def render_rel(_), do: []
 end

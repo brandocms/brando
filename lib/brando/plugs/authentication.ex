@@ -85,7 +85,7 @@ defmodule Brando.Plug.Authentication do
         |> put_resp_content_type("application/json")
         |> send_resp(401, Jason.encode!(%{error: "expired"}))
 
-      {:error, _} ->
+      _ ->
         conn
         |> put_resp_content_type("application/json")
         |> send_resp(401, Jason.encode!(%{error: "expired"}))

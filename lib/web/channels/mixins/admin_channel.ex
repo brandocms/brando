@@ -207,8 +207,14 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
 
   def do_handle_in("page_fragment:duplicate", %{"id" => page_id}, socket) do
     user = Guardian.Phoenix.Socket.current_resource(socket)
-    {:ok, new_fragment} = Brando.Pages.duplicate_page_fragment(page_id, user)
-    {:reply, {:ok, %{code: 200, page_fragment: new_fragment}}, socket}
+
+    case Brando.Pages.duplicate_page_fragment(page_id, user) do
+      {:ok, new_fragment} ->
+        {:reply, {:ok, %{code: 200, page_fragment: new_fragment}}, socket}
+
+      {:error, {:page_fragment, :not_found}} ->
+        {:reply, {:error, %{code: 400, message: "Fragment not found!"}}, socket}
+    end
   end
 
   def do_handle_in("page_fragment:rerender", %{"id" => fragment_id}, socket) do

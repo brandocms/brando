@@ -124,7 +124,7 @@ defmodule Brando.Generators.Vue do
             <router-link
               :to="{ name: '#{vue_plural}-edit', params: { #{vue_singular}Id: entry.id } }"
               class="entry-link">
-              {{ entry.#{Recase.to_camel(k)} }}
+              {{ entry.#{Recase.to_camel(Atom.to_string(k))} }}
             </router-link>
           </div>)}
 
@@ -133,7 +133,7 @@ defmodule Brando.Generators.Vue do
             <router-link
               :to="{ name: '#{vue_plural}-edit', params: { #{vue_singular}Id: entry.id } }"
               class="entry-link">
-              {{ entry.#{Recase.to_camel(k)} }}
+              {{ entry.#{Recase.to_camel(Atom.to_string(k))} }}
             </router-link>
           </div>)}
 
@@ -142,7 +142,7 @@ defmodule Brando.Generators.Vue do
             <router-link
               :to="{ name: '#{vue_plural}-edit', params: { #{vue_singular}Id: entry.id } }"
               class="entry-link">
-              {{ entry.#{Recase.to_camel(k)} }}
+              {{ entry.#{Recase.to_camel(Atom.to_string(k))} }}
             </router-link>
           </div>)}
 

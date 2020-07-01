@@ -125,10 +125,6 @@ defmodule Brando.Images.Processing do
     end
   end
 
-  @spec recreate_sizes_for_image_series(
-          image_series_id :: id,
-          user :: user
-        ) :: [{:ok, image_schema} | {:error, changeset}]
   def recreate_sizes_for_image_series(image_series_id, user \\ :system) do
     query =
       from is in ImageSeries,

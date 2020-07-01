@@ -28,19 +28,17 @@ defmodule Brando.Utils.Schema do
   @doc """
   Puts `id` from `user` in the `params` map.
   """
-  @spec put_creator(changeset, Map.t() | atom) :: changeset
+  @spec put_creator(changeset | map, map | :system) :: changeset
   def put_creator(%Ecto.Changeset{} = cs, :system), do: cs
 
   def put_creator(%Ecto.Changeset{} = cs, user) when is_map(user),
     do: Ecto.Changeset.put_change(cs, :creator_id, user.id)
 
-  def put_creator(%Ecto.Changeset{} = cs, user_id) do
-    Ecto.Changeset.put_change(cs, :creator_id, user_id)
-  end
+  def put_creator(%Ecto.Changeset{} = cs, user_id),
+    do: Ecto.Changeset.put_change(cs, :creator_id, user_id)
 
   def put_creator(params, :system), do: params
 
-  @spec put_creator(Map.t(), Map.t()) :: changeset
   def put_creator(params, user) when is_map(user) do
     IO.warn(
       """

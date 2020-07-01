@@ -105,8 +105,11 @@ defmodule Brando.LivePreview do
   @spec build_cache_key(Map.t()) :: String.t()
   def build_cache_key(seed), do: "PREVIEW-" <> Hashids.encode(@preview_coder, seed)
 
-  def decode_entry("PREVIEW-" <> hash),
-    do: {:ok, _} = Hashids.decode(@preview_coder, hash) |> elem(1)
+  def decode_entry("PREVIEW-" <> hash) do
+    case Hashids.decode(@preview_coder, hash) do
+      {:ok, decoded} -> decoded
+    end
+  end
 
   def store_cache(key, html), do: Cachex.put(:cache, "__live_preview__" <> key, html)
   def get_cache(key), do: Cachex.get(:cache, "__live_preview__" <> key)
@@ -132,6 +135,8 @@ defmodule Brando.LivePreview do
       rescue
         _ -> {:error, "Initialization failed."}
       end
+    else
+      {:error, "No render/5 function found in LivePreview module"}
     end
   end
 

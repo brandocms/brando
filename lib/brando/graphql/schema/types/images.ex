@@ -86,7 +86,7 @@ defmodule Brando.Schema.Types.Images do
     field :image_series, list_of(:image_series) do
       arg :limit, :integer, default_value: 100
       arg :offset, :integer, default_value: 0
-      resolve dataloader(Brando.Images, :image_series)
+      resolve dataloader(Brando.Images)
     end
 
     field :inserted_at, :time

@@ -64,6 +64,10 @@ defmodule Brando.Lexer.Argument do
       |> Phoenix.HTML.Safe.to_iodata()
       |> do_eval([])
     else
+      [_] ->
+        #! TODO: ADD TO ETS WARNINGS: "==> WRONG FRAGMENT FORMAT: #{search_path}"
+        ""
+
       {:error, {:page_fragment, :not_found}} ->
         #! TODO: ADD TO ETS WARNINGS: "==> MISSING FRAGMENT: #{search_path} <=="
         ""

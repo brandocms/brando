@@ -54,7 +54,7 @@ defmodule Brando.Pages.PageFragment do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, atom, Keyword.t() | Options.t()) :: changeset
+  @spec changeset(t, map()) :: changeset
   def changeset(schema, params \\ %{}, user \\ :system)
 
   def changeset(schema, params, user) do

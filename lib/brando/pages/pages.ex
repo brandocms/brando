@@ -305,12 +305,14 @@ defmodule Brando.Pages do
   @doc """
   Get page fragment
   """
+  @spec get_page_fragment(String.t() | Integer.t()) ::
+          {:error, {:page_fragment, :not_found}} | {:ok, fragment}
   def get_page_fragment(key) when is_binary(key) do
     query = from t in PageFragment, where: t.key == ^key and is_nil(t.deleted_at)
 
     case Brando.repo().one(query) do
       nil -> {:error, {:page_fragment, :not_found}}
-      page -> {:ok, page}
+      fragment -> {:ok, fragment}
     end
   end
 
@@ -323,6 +325,8 @@ defmodule Brando.Pages do
     end
   end
 
+  @spec get_page_fragment(any, any, any) ::
+          {:error, {:page_fragment, :not_found}} | {:ok, fragment}
   def get_page_fragment(parent_key, key, language \\ nil) do
     language = language || Brando.config(:default_language)
 
@@ -474,7 +478,7 @@ defmodule Brando.Pages do
   def duplicate_page_fragment(fragment_id, user) do
     fragment_id = (is_binary(fragment_id) && String.to_integer(fragment_id)) || fragment_id
 
-    with {:ok, fragment} <- get_page_fragment(fragment_id),
+    with {:ok, fragment} when is_map(fragment) <- get_page_fragment(fragment_id),
          fragment when is_map(fragment) <- Map.merge(fragment, %{key: "#{fragment.key}_kopi"}),
          fragment when is_map(fragment) <- Map.delete(fragment, [:id, :parent]),
          fragment when is_map(fragment) <- Map.from_struct(fragment),
@@ -483,6 +487,9 @@ defmodule Brando.Pages do
     else
       {:error, {:page_fragment, :not_found}} ->
         {:error, {:page_fragment, :not_found}}
+
+      {:error, changeset} ->
+        {:error, changeset}
     end
   end
 
