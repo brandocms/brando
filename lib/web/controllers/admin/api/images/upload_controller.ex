@@ -4,9 +4,7 @@ defmodule Brando.Admin.API.Images.UploadController do
   """
 
   use Brando.Web, :controller
-
   use Brando.Sequence.Controller, schema: Brando.Image
-
   alias Brando.Images
 
   @doc false

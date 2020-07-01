@@ -4,6 +4,7 @@ defmodule Brando.HTML do
   """
 
   @type alert_levels :: :default | :primary | :info | :success | :warning | :danger
+  @type safe_string :: {:safe, [...]}
   @type conn :: Plug.Conn.t()
 
   alias Brando.Utils
@@ -27,6 +28,76 @@ defmodule Brando.HTML do
   defdelegate render_json_ld(type, data), to: Brando.JSONLD.HTML
   defdelegate render_meta(conn), to: Brando.Meta.HTML
 
+  defp get_video_cover(:svg, width, height, opacity) do
+    if width do
+      ~s(
+         <div data-cover>
+           <img
+             src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27#{
+        width
+      }%27%20height%3D%27#{height}%27%20style%3D%27background%3Argba%280%2C0%2C0%2C#{opacity}%29%27%2F%3E" />
+         </div>
+       )
+    else
+      ""
+    end
+  end
+
+  defp get_video_cover(false, _, _, _), do: ""
+
+  defp get_video_cover(url, _, _, _) do
+    url
+  end
+
+  @doc """
+  Returns a video tag with an overlay for lazyloading
+
+  ### Opts
+
+    - `cover`
+      - `:svg`
+      - `html` -> for instance, provide a rendered picture_tag
+    - `poster` -> url to poster, i.e. on vimeo.
+  """
+  @spec video_tag(binary, map()) :: safe_string
+  def video_tag(src, opts) do
+    width = Map.get(opts, :width)
+    height = Map.get(opts, :height)
+    opacity = Map.get(opts, :opacity, 0)
+    preload = Map.get(opts, :preload, false)
+    cover = Map.get(opts, :cover, false)
+    poster = Map.get(opts, :poster, false)
+    autoplay = (Map.get(opts, :autoplay, false) && "autoplay") || ""
+
+    ~s(
+      <div class="video-wrapper" data-smart-video>
+        #{get_video_cover(cover, width, height, opacity)}
+        <video
+          tabindex="0"
+          role="presentation"
+          preload="auto"
+          #{autoplay}
+          muted
+          loop
+          playsinline
+          data-video
+          #{poster && "poster=\"#{poster}\""}
+          #{(preload && "data-src=\"#{src}\"") || ""}
+          #{(preload && "") || "src=\"#{src}\""}></video>
+        <noscript>
+          <video
+            tabindex="0"
+            role="presentation"
+            preload="metadata"
+            muted
+            loop
+            playsinline
+            src="#{src}"></video>
+        </noscript>
+      </div>
+      ) |> raw
+  end
+
   @doc """
   Returns `active` if `conn`'s `full_path` matches `current_path`.
   """
@@ -35,6 +106,13 @@ defmodule Brando.HTML do
     result = (add_class? && ~s(class="active")) || "active"
     (Utils.active_path?(conn, url_to_match) && result) || ""
   end
+
+  @doc """
+  Render markdown as html raw
+  """
+  def render_markdown(markdown, opts \\ [breaks: true])
+  def render_markdown(nil, _), do: ""
+  def render_markdown(markdown, opts), do: markdown |> Earmark.as_html!(opts) |> raw
 
   @doc """
   Checks if current_user in conn has `role`
@@ -90,35 +168,33 @@ defmodule Brando.HTML do
   @doc """
   Displays a banner informing about cookie laws
   """
-  def cookie_law(conn, text, opts \\ []) do
-    if Map.get(conn.cookies, "cookielaw_accepted") != "1" do
-      text = raw(text)
-      button_text = Keyword.get(opts, :button_text, "OK")
-      info_link = Keyword.get(opts, :info_link, "/cookies")
-      info_text = Keyword.get(opts, :info_text)
+  def cookie_law(_conn, text, opts \\ []) do
+    text = raw(text)
+    button_text = Keyword.get(opts, :button_text, "OK")
+    info_link = Keyword.get(opts, :info_link, "/cookies")
+    info_text = Keyword.get(opts, :info_text)
 
-      ~E"""
-      <div class="container cookie-container">
-        <div class="cookie-container-inner">
-          <div class="cookie-law">
-            <div class="cookie-law-text">
-              <p><%= text %></p>
-            </div>
-            <div class="cookie-law-buttons">
-              <button class="dismiss-cookielaw">
-                <%= button_text %>
-              </button>
-              <%= if info_text do %>
-              <a href="<%= info_link %>" class="info-cookielaw">
-                <%= info_text %>
-              </a>
-              <% end %>
-            </div>
+    ~E"""
+    <div class="container cookie-container">
+      <div class="cookie-container-inner">
+        <div class="cookie-law">
+          <div class="cookie-law-text">
+            <p><%= text %></p>
+          </div>
+          <div class="cookie-law-buttons">
+            <button class="dismiss-cookielaw">
+              <%= button_text %>
+            </button>
+            <%= if info_text do %>
+            <a href="<%= info_link %>" class="info-cookielaw">
+              <%= info_text %>
+            </a>
+            <% end %>
           </div>
         </div>
       </div>
-      """
-    end
+    </div>
+    """
   end
 
   @doc """
@@ -129,7 +205,7 @@ defmodule Brando.HTML do
       google_analytics("UA-XXXXX-X")
 
   """
-  @spec google_analytics(ua_code :: String.t()) :: {:safe, term}
+  @spec google_analytics(ua_code :: String.t()) :: safe_string()
   def google_analytics(ua_code) do
     content =
       """
@@ -273,18 +349,14 @@ defmodule Brando.HTML do
 
   Also includes a preconnect link tag for faster resolution
   """
-  @spec include_css :: {:safe, [...]} | [{:safe, [...]}]
-  @spec include_css(conn) :: {:safe, [...]} | [{:safe, [...]}]
-  def include_css, do: do_include_css(Brando.endpoint().host)
-  def include_css(conn), do: do_include_css(conn.host)
-
-  def do_include_css(host) do
+  @spec include_css(conn) :: safe_string | [safe_string]
+  def include_css(%Plug.Conn{host: host, scheme: scheme}) do
     cdn? = !!Brando.endpoint().config(:static_url)
     hmr? = Application.get_env(Brando.otp_app(), :hmr)
 
     url =
       if hmr? do
-        "http://#{host}:9999/css/app.css"
+        "#{scheme}://#{host}:9999/css/app.css"
       else
         (cdn? && Brando.helpers().static_url(Brando.endpoint(), "/css/app.css")) ||
           Brando.helpers().static_path(Brando.endpoint(), "/css/app.css")
@@ -304,16 +376,12 @@ defmodule Brando.HTML do
 
   Also includes a polyfill for Safari in prod.
   """
-  @spec include_js() :: [{:safe, [...]}]
-  @spec include_js(conn) :: [{:safe, [...]}]
-  def include_js, do: do_include_js(Brando.endpoint().host)
-  def include_js(conn), do: do_include_js(conn.host)
-
-  defp do_include_js(host) do
+  @spec include_js(conn) :: safe_string | [safe_string]
+  def include_js(%Plug.Conn{host: host, scheme: scheme}) do
     cdn? = !!Brando.endpoint().config(:static_url)
     # check if we're HMR
     if Application.get_env(Brando.otp_app(), :hmr) do
-      url = "http://#{host}:9999/js/app.js"
+      url = "#{scheme}://#{host}:9999/js/app.js"
       content_tag(:script, "", defer: true, src: url)
     else
       {modern_route, legacy_route} =
@@ -370,7 +438,7 @@ defmodule Brando.HTML do
   @doc """
   Run JS init code
   """
-  @spec init_js() :: {:safe, [...]}
+  @spec init_js() :: safe_string
   def init_js() do
     js =
       "(function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)"
@@ -383,7 +451,7 @@ defmodule Brando.HTML do
   @doc """
   Renders a link tag with preconnect to the CDN domain
   """
-  @spec preconnect_tag :: {:safe, [...]}
+  @spec preconnect_tag :: safe_string
   def preconnect_tag do
     static_url = Brando.endpoint().static_url
     tag(:link, href: static_url, rel: "preconnect", crossorigin: true)
@@ -392,6 +460,6 @@ defmodule Brando.HTML do
   @doc """
   Render rel links
   """
-  @spec render_rel(conn) :: [{:safe, term}]
+  @spec render_rel(conn) :: [safe_string]
   def render_rel(_), do: []
 end

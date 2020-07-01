@@ -1,0 +1,6 @@
+#import "./<%= String.upcase(singular) %>_FRAGMENT.graphql"
+query <%= Recase.to_pascal(vue_plural) %> ($order: Order, $limit: Int, $offset: Int, $filter: <%= Recase.to_pascal(vue_singular) %>Filter, $status: String) {
+  <%= vue_plural %> (order: $order, limit: $limit, offset: $offset, filter: $filter, status: $status) {
+    ...<%= vue_singular %>
+  }
+}

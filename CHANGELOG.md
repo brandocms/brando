@@ -1,5 +1,39 @@
 See `UPGRADE.md` for instructions on upgrading between versions.
 
+## 0.45.0
+
+* Rewrote upload handling. **Requires** latest BrandoJS to work!
+* Please ensure that `|> generate_html()` appears LAST in your schema's `changeset` functions.
+  This is to ensure that any `${entry:field}` interpolation passes successfully!
+* Mandatory /2 for all parser functions. Second argument is an options list.
+  Mostly for futureproofing and caching templates
+* Optimized Dockerfile templates.
+* `picture_tag` moved `moonwalk` to `<picture>` tag instead of `<img>`
+* Simplify needed `brando.exs` config
+* Removed deprecated `Brando.Config` genserver.
+* Started laying the foundation for authorization. See `UPGRADE.MD`
+* Rename mix task `brando.gen.html` -> `brando.gen`
+* Add `meta_image` field to `Brando.Page`
+* Add `Brando.Datasource`
+* Smarter Dockerfile layer caching
+* Add globals to identity configuration
+* Add variables to Villain templates
+* Improve default backend eslint configuration
+* Add creator switch to generator
+* Copy static files in development
+* New JS backend — BrandoJS
+* Add `Brando.Datasource`. Allows you to access preset backend queries from Villain.
+* Simplify Villain default parser. Now you can `use Brando.Villain.Parser`
+for sensible defaults, and override when neccessary.
+* KInputTable: Rename `newRows` -> `addRows`
+
+
+### DEPRECATIONS
+
+* Move `put_creator` to after `cast` but before `validate_required` in your
+  changeset functions.
+
+
 ## 0.44.0
 
 * Drag and drop sequence pages.

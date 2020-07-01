@@ -7,7 +7,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title><%%= Brando.config(:title_prefix) %> | Coming soon</title>
+    <title>Coming soon</title>
     <link rel="stylesheet" href="<%%= Routes.static_path(@conn, "/css/app.css") %>">
     <script src="<%%= Routes.static_path(@conn, "/js/jquery.js") %>"></script>
   </head>

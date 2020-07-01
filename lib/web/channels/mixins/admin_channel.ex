@@ -1,16 +1,21 @@
 defmodule Brando.Mixin.Channels.AdminChannelMixin do
   @keys [
+    "datasource:list_available_entries",
+    "datasource:list_modules",
+    "datasource:list_module_keys",
+    "image:get",
     "images:delete_images",
     "images:sequence_images",
-    "images:images:get_category_id_by_slug",
+    "images:get_category_id_by_slug",
     "images:create_image_series",
     "images:get_category_config",
     "images:update_category_config",
+    "images:propagate_category_config",
     "images:get_series_config",
     "images:update_series_config",
-    "image:update",
-    "image:get",
+    "images:rerender_image_series",
     "pages:list_parents",
+    "pages:list_templates",
     "pages:sequence_pages",
     "page:delete",
     "page:rerender",
@@ -24,7 +29,10 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "config:set",
     "config:add_key",
     "user:deactivate",
-    "user:activate"
+    "user:activate",
+    "templates:list_templates",
+    "livepreview:initialize",
+    "livepreview:render"
   ]
 
   defmacro __using__(_) do
@@ -61,14 +69,24 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     {:reply, {:ok, %{code: 200, ids: ids}}, socket}
   end
 
-  def do_handle_in("images:sequence_images", %{"ids" => ids}, socket) do
-    Brando.Image.sequence(ids, Range.new(0, length(ids)))
+  def do_handle_in("images:sequence_images", params, socket) do
+    Brando.Image.sequence(params)
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in("images:propagate_category_config", %{"category_id" => category_id}, socket) do
+    Brando.Images.propagate_category_config(category_id)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
   def do_handle_in("images:get_category_id_by_slug", %{"slug" => slug}, socket) do
-    {:ok, id} = Brando.Images.get_category_id_by_slug(slug)
-    {:reply, {:ok, %{code: 200, category_id: id}}, socket}
+    case Brando.Images.get_category_id_by_slug(slug) do
+      {:ok, id} ->
+        {:reply, {:ok, %{code: 200, category_id: id}}, socket}
+
+      {:error, {:image_category, :not_found}} ->
+        {:reply, {:error, %{code: 404, message: "Category not found"}}, socket}
+    end
   end
 
   def do_handle_in("images:create_image_series", params, socket) do
@@ -85,6 +103,11 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
 
   def do_handle_in("images:get_category_config", %{"category_id" => category_id}, socket) do
     {:ok, config} = Brando.Images.get_category_config(category_id)
+    {:reply, {:ok, %{code: 200, config: config}}, socket}
+  end
+
+  def do_handle_in("images:get_category_config", %{"category_slug" => category_slug}, socket) do
+    {:ok, config} = Brando.Images.get_category_config_by_slug(category_slug)
     {:reply, {:ok, %{code: 200, config: config}}, socket}
   end
 
@@ -113,14 +136,23 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in(
-        "image:update",
-        %{"id" => id, "image" => %{"title" => title, "credits" => credits, "focal" => focal}},
+        "images:rerender_image_category",
+        %{"category_id" => category_id},
         socket
       ) do
     user = Guardian.Phoenix.Socket.current_resource(socket)
-    image = Brando.Images.get_image!(id)
-    {:ok, _} = Brando.Images.update_image_meta(image, title, credits, focal, user)
-    {:reply, {:ok, %{status: 200}}, socket}
+    Brando.Images.Processing.recreate_sizes_for_image_category(category_id, user)
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in(
+        "images:rerender_image_series",
+        %{"series_id" => series_id},
+        socket
+      ) do
+    user = Guardian.Phoenix.Socket.current_resource(socket)
+    Brando.Images.Processing.recreate_sizes_for_image_series(series_id, user)
+    {:reply, {:ok, %{code: 200}}, socket}
   end
 
   def do_handle_in(
@@ -137,8 +169,13 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     {:reply, {:ok, %{code: 200, parents: parents}}, socket}
   end
 
-  def do_handle_in("pages:sequence_pages", %{"ids" => ids}, socket) do
-    Brando.Pages.Page.sequence(ids, Range.new(0, length(ids)))
+  def do_handle_in("pages:list_templates", _, socket) do
+    {:ok, templates} = Brando.Pages.list_templates()
+    {:reply, {:ok, %{code: 200, templates: templates}}, socket}
+  end
+
+  def do_handle_in("pages:sequence_pages", params, socket) do
+    Brando.Pages.Page.sequence(params)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
@@ -163,15 +200,21 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
-  def do_handle_in("page_fragments:sequence_fragments", %{"ids" => ids}, socket) do
-    Brando.Pages.PageFragment.sequence(ids, Range.new(0, length(ids)))
+  def do_handle_in("page_fragments:sequence_fragments", params, socket) do
+    Brando.Pages.PageFragment.sequence(params)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
   def do_handle_in("page_fragment:duplicate", %{"id" => page_id}, socket) do
     user = Guardian.Phoenix.Socket.current_resource(socket)
-    {:ok, new_fragment} = Brando.Pages.duplicate_page_fragment(page_id, user)
-    {:reply, {:ok, %{code: 200, page_fragment: new_fragment}}, socket}
+
+    case Brando.Pages.duplicate_page_fragment(page_id, user) do
+      {:ok, new_fragment} ->
+        {:reply, {:ok, %{code: 200, page_fragment: new_fragment}}, socket}
+
+      {:error, {:page_fragment, :not_found}} ->
+        {:reply, {:error, %{code: 400, message: "Fragment not found!"}}, socket}
+    end
   end
 
   def do_handle_in("page_fragment:rerender", %{"id" => fragment_id}, socket) do
@@ -192,5 +235,64 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   def do_handle_in("user:activate", %{"user_id" => user_id}, socket) do
     Brando.Users.set_active(user_id, true)
     {:reply, {:ok, %{code: 200, user_id: user_id}}, socket}
+  end
+
+  def do_handle_in("datasource:list_modules", _, socket) do
+    {:ok, available_modules} = Brando.Datasource.list_datasources()
+    available_modules = Enum.map(available_modules, &Map.put(%{}, :module, &1))
+    {:reply, {:ok, %{code: 200, available_modules: available_modules}}, socket}
+  end
+
+  def do_handle_in("datasource:list_module_keys", %{"module" => module}, socket) do
+    {:ok, available_keys} = Brando.Datasource.list_datasource_keys(module)
+    {:reply, {:ok, %{code: 200, available_module_keys: available_keys}}, socket}
+  end
+
+  def do_handle_in(
+        "datasource:list_available_entries",
+        %{"module" => module, "query" => query},
+        socket
+      ) do
+    {:ok, entries} = Brando.Datasource.list_selection(module, query, nil)
+    {:reply, {:ok, %{code: 200, available_entries: entries}}, socket}
+  end
+
+  def do_handle_in("templates:list_templates", _, socket) do
+    {:ok, templates} = Brando.Villain.list_templates("all")
+    templates = Enum.map(templates, &%{id: &1.id, name: "#{&1.namespace} - #{&1.name}"})
+    {:reply, {:ok, %{code: 200, templates: templates}}, socket}
+  end
+
+  # Live preview
+  def do_handle_in(
+        "livepreview:initialize",
+        %{"schema" => schema, "entry" => entry, "key" => key, "prop" => prop},
+        socket
+      ) do
+    entry = Brando.Utils.snake_case(entry)
+
+    case Brando.LivePreview.initialize(schema, entry, key, prop) do
+      {:ok, cache_key} ->
+        {:reply, {:ok, %{code: 200, cache_key: cache_key}}, socket}
+
+      {:error, err} ->
+        {:reply, {:error, %{code: 404, message: err}}, socket}
+    end
+  end
+
+  def do_handle_in(
+        "livepreview:render",
+        %{
+          "schema" => schema,
+          "entry" => entry,
+          "key" => key,
+          "prop" => prop,
+          "cache_key" => cache_key
+        },
+        socket
+      ) do
+    entry = Brando.Utils.snake_case(entry)
+    Brando.LivePreview.update(schema, entry, key, prop, cache_key)
+    {:reply, {:ok, %{code: 200, cache_key: cache_key}}, socket}
   end
 end

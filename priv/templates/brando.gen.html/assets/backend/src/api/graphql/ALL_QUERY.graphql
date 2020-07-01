@@ -1,7 +1,0 @@
-#import "./<%= String.upcase(singular) %>_FRAGMENT.graphql"
-
-query <%= Recase.to_pascal(vue_plural) %> {
-  <%= vue_plural %> {
-    ...<%= vue_singular %>
-  }
-}

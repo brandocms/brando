@@ -9,11 +9,12 @@ defmodule Brando.Image do
   use Brando.Web, :schema
   use Brando.Sequence.Schema
   use Brando.SoftDelete.Schema
+  use Brando.Field.Image.Schema
 
   import Ecto.Query, only: [from: 2]
 
-  @required_fields ~w(image image_series_id)a
-  @optional_fields ~w(sequence creator_id deleted_at)a
+  @required_fields ~w(image)a
+  @optional_fields ~w(sequence image_series_id creator_id deleted_at)a
 
   @derive {Jason.Encoder,
            only: [
@@ -38,6 +39,8 @@ defmodule Brando.Image do
     soft_delete()
   end
 
+  has_image_field(:image, :db)
+
   @doc """
   Casts and validates `params` against `schema` to create a valid changeset
 
@@ -46,16 +49,13 @@ defmodule Brando.Image do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, :create | :update, Map.t()) :: any
-  def changeset(schema, :create, params) do
+  @spec changeset(t, Map.t()) :: any
+  def changeset(schema, params, user \\ :system, cfg \\ nil) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
+    |> put_creator(user)
     |> validate_required(@required_fields)
-  end
-
-  def changeset(schema, :update, params) do
-    schema
-    |> cast(params, @required_fields ++ @optional_fields)
+    |> validate_upload({:image, :image}, user, cfg)
   end
 
   @doc """

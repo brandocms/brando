@@ -2,16 +2,40 @@
 defmodule Brando.Villain do
   @moduledoc """
   Interface to Villain HTML editor.
-  """
 
-  alias Brando.Pages
-  alias Brando.Utils
+  ### Available variables when rendering
+
+    - `${entry:<key>}`
+    Gets `<key>` from currently rendering entry. So if we are rendering a `%Page{}` and we
+    want the `meta_description` we can do `${entry:meta_description}
+
+    - `${fragment:<parent_key>/<key>/<language>}`
+    Gets rendered fragment according to values.
+
+    - `${link:<key>}`
+    Gets `<key>` from list of links in the Identity configuration.
+
+    - `${global:<key>}`
+    Gets `<key>` from list of globals in the Identity configuration.
+
+    - `${loop:index}`
+    Only available inside templates with `multi` set to true. Returns the current index
+    of the for loop, starting at `1`
+
+    - `${loop:index0}`
+    Only available inside templates with `multi` set to true. Returns the current index
+    of the for loop, starting at `0`
+
+    - `${loop:length}`
+    Only available inside templates with `multi` set to true. Returns the total amount
+    of entries in the for loop
+
+  """
   import Ecto.Query
 
-  @regex_fragment_ref ~r/(?:\$\{|\$\%7B)FRAGMENT:([a-zA-Z0-9-_]+)\/([a-zA-Z0-9-_]+)\/(\w+)(?:\}|\%7D)/
-  @regex_config_ref ~r/(?:\$\{|\$\%7B)CONFIG:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
-  @regex_link_ref ~r/(?:\$\{|\$\%7B)LINK:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
-  @regex_identity_ref ~r/(?:\$\{|\$\%7B)IDENTITY:([a-zA-Z0-9-_]+)(?:\}|\%7D)/
+  alias Brando.Lexer
+  alias Brando.Pages
+  alias Brando.Utils
 
   defmacro __using__(:schema) do
     raise "`use Brando.Villain, :schema` is deprecated. Call `use Brando.Villain.Schema` instead."
@@ -25,33 +49,59 @@ defmodule Brando.Villain do
     raise "use Brando.Villain with options is deprecated. Call without options."
   end
 
+  defmacro __using__(_) do
+    quote do
+      import Brando.Villain, only: [render_entry: 2]
+    end
+  end
+
   @doc """
   Parses `json` (in Villain-format).
-  Delegates to the module `villain_parser`, configured in the
-  otp_app's config.exs.
+  Delegates to the parser module configured in the otp_app's brando.exs.
   Returns HTML.
   """
-  @spec parse(String.t() | [map], Module.t()) :: String.t()
-  def parse("", _), do: ""
-  def parse(nil, _), do: ""
-  def parse(json, parser_mod) when is_binary(json), do: do_parse(Poison.decode!(json), parser_mod)
-  def parse(json, parser_mod) when is_list(json), do: do_parse(json, parser_mod)
+  @spec parse(String.t() | [map]) :: String.t()
+  def parse(data, entry \\ nil, opts \\ [])
+  def parse("", _, _), do: ""
+  def parse(nil, _, _), do: ""
 
-  defp do_parse(data, parser_mod) do
+  def parse(json, entry, opts) when is_binary(json),
+    do: do_parse(Poison.decode!(json), entry, opts)
+
+  def parse(json, entry, opts) when is_list(json), do: do_parse(json, entry, opts)
+
+  defp do_parse(data, entry, opts) do
+    parser = Brando.config(Brando.Villain)[:parser]
+    identity = Brando.Cache.Identity.get()
+
+    slim_entry = if opts[:data_field], do: Map.delete(entry, opts[:data_field]), else: entry
+    slim_entry = if opts[:html_field], do: Map.delete(entry, opts[:html_field]), else: slim_entry
+
+    context =
+      %{}
+      |> Lexer.Context.new()
+      |> Lexer.Context.assign("entry", slim_entry)
+      |> Lexer.Context.assign("identity", identity)
+      |> Lexer.Context.assign("configs", identity.configs)
+      |> Lexer.Context.assign("links", identity.links)
+
+    opts = Keyword.put(opts, :context, context)
+
     html =
-      Enum.reduce(data, [], fn data_node, acc ->
+      data
+      |> Enum.reduce([], fn data_node, acc ->
         type_atom = String.to_atom(data_node["type"])
         data_node_content = data_node["data"]
-        [apply(parser_mod, type_atom, [data_node_content]) | acc]
+        [apply(parser, type_atom, [data_node_content, opts]) | acc]
       end)
+      |> Enum.reverse()
+      |> Enum.join()
 
-    html
-    |> Enum.reverse()
-    |> Enum.join()
-    |> replace_fragment_refs()
-    |> replace_identity_refs()
-    |> replace_link_refs()
-    |> replace_config_refs()
+    Lexer.parse_and_render(html, context)
+  end
+
+  def render(html, context) do
+    Lexer.render(html, context)
   end
 
   @doc """
@@ -84,15 +134,22 @@ defmodule Brando.Villain do
   """
   def rerender_html(
         %Ecto.Changeset{} = changeset,
-        field \\ nil,
-        parser_mod \\ Brando.config(Brando.Villain)[:parser]
+        field \\ nil
       ) do
     data_field = (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
     html_field = (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
-    data = Ecto.Changeset.get_field(changeset, data_field)
+
+    applied_changes = Ecto.Changeset.apply_changes(changeset)
+    data_src = Map.get(applied_changes, data_field)
+
+    parsed_data =
+      Brando.Villain.parse(data_src, applied_changes,
+        data_field: data_field,
+        html_field: html_field
+      )
 
     changeset
-    |> Ecto.Changeset.put_change(html_field, Brando.Villain.parse(data, parser_mod))
+    |> Ecto.Changeset.put_change(html_field, parsed_data)
     |> Brando.repo().update!
   end
 
@@ -119,6 +176,13 @@ defmodule Brando.Villain do
   end
 
   @doc """
+  Rerender multiple IDS
+  """
+  @spec rerender_html_from_ids({Module, atom, atom}, [Integer.t() | String.t()]) :: nil | [any()]
+  def rerender_html_from_ids(_, []), do: nil
+  def rerender_html_from_ids(args, ids), do: for(id <- ids, do: rerender_html_from_id(args, id))
+
+  @doc """
   Rerender HTML from an ID
 
   ## Example
@@ -130,16 +194,17 @@ defmodule Brando.Villain do
   We treat page fragments special, since they need to propogate to other referencing
   pages and fragments
   """
-  @spec rerender_html_from_id({Module, atom, atom}, Integer.t() | String.t()) :: any()
+  @spec rerender_html_from_id(
+          {schema :: Module, data_field :: atom, html_field :: atom},
+          Integer.t() | String.t()
+        ) :: any()
   def rerender_html_from_id({schema, data_field, html_field}, id) do
-    parser = Brando.config(Brando.Villain)[:parser]
-
     query =
       from s in schema,
         where: s.id == ^id
 
     record = Brando.repo().one(query)
-    parsed_data = Brando.Villain.parse(Map.get(record, data_field), parser)
+    parsed_data = Brando.Villain.parse(Map.get(record, data_field), record)
 
     changeset =
       record
@@ -157,13 +222,6 @@ defmodule Brando.Villain do
         {:ok, result}
     end
   end
-
-  @doc """
-  Rerender multiple IDS
-  """
-  @spec rerender_html_from_ids({Module, atom, atom}, [Integer.t() | String.t()]) :: nil | [any()]
-  def rerender_html_from_ids(_, []), do: nil
-  def rerender_html_from_ids(args, ids), do: for(id <- ids, do: rerender_html_from_id(args, id))
 
   @doc """
   Check all posts for missing images
@@ -236,11 +294,13 @@ defmodule Brando.Villain do
   """
   def list_ids_with_template(schema, data_field, template_id) do
     t = [%{type: "template", data: %{id: template_id}}]
+    d = [%{type: "datasource", data: %{template: template_id}}]
 
     Brando.repo().all(
       from s in schema,
         select: s.id,
-        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t)
+        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t),
+        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^d)
     )
   end
 
@@ -255,6 +315,21 @@ defmodule Brando.Villain do
     case Brando.repo().one(query) do
       nil -> {:error, {:template, :not_found}}
       t -> {:ok, t}
+    end
+  end
+
+  @doc """
+  Get template from CACHE or DB
+  """
+  def get_cached_template(id) do
+    case Cachex.get(:cache, "template__#{id}") do
+      {:ok, nil} ->
+        {:ok, template} = get_template(id)
+        Cachex.put(:cache, "template__#{id}", template, ttl: :timer.seconds(120))
+        {:ok, template}
+
+      {:ok, template} ->
+        {:ok, template}
     end
   end
 
@@ -283,6 +358,14 @@ defmodule Brando.Villain do
   end
 
   @doc """
+  Delete template by `id`
+  """
+  def delete_template(id) do
+    {:ok, template} = get_template(id)
+    Brando.repo().delete(template)
+  end
+
+  @doc """
   List templates by namespace
   """
   def list_templates(namespace) do
@@ -291,10 +374,15 @@ defmodule Brando.Villain do
         where: is_nil(t.deleted_at),
         order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
 
+    namespace = (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
+
     query =
       case namespace do
         "all" ->
           query
+
+        namespace_list when is_list(namespace_list) ->
+          from t in query, where: t.namespace in ^namespace_list
 
         _ ->
           from t in query, where: t.namespace == ^namespace
@@ -310,19 +398,103 @@ defmodule Brando.Villain do
 
       {:ok, page} = Pages.get_page(1)
       render_villain page.data, %{"link" => "hello"}
+
   """
-  @spec render_villain([map], %{required(String.t()) => String.t()}) :: binary()
-  def render_villain(data_field, vars \\ %{})
+  @deprecated "Use Villain.parse/2 instead."
+  def render_villain(_, _),
+    do:
+      raise("""
+      render_villain/2 is deprecated. Use parse/2 instead:
 
-  def render_villain(data_field, vars) when is_list(data_field) do
-    parser_mod = Brando.config(Brando.Villain)[:parser]
+          Villain.parse(entry.data, entry)
 
-    data_field
-    |> Brando.Villain.parse(parser_mod)
-    |> replace_vars(vars)
+      """)
+
+  @doc """
+  Apply `entry` against `code` and return replaced code
+  """
+  def render_entry(entry, %Brando.Pages.Page{} = page),
+    do: render_entry(entry, page.html) |> Phoenix.HTML.raw()
+
+  def render_entry(entry, field) when is_atom(field),
+    do: render_entry(entry, Map.get(entry, field)) |> Phoenix.HTML.raw()
+
+  def render_entry(entry, code) do
+    raise """
+
+    """
+
+    Regex.replace(~r/\${ENTRY\:(\w+)\|?(\w+)?}/i, code, fn _, key, param ->
+      var_path =
+        try do
+          key
+          |> String.split(".")
+          |> Enum.map(&String.to_existing_atom/1)
+        rescue
+          ArgumentError -> nil
+        end
+
+      case Brando.Utils.try_path(entry, var_path) do
+        nil ->
+          ""
+
+        %DateTime{} = dt ->
+          # TODO! Read timezone from somewhere??
+          if param != "" do
+            # TODO: handle format string + locale + timezone?
+          else
+            dt
+            |> Timex.Timezone.convert("Europe/Oslo")
+            |> Timex.lformat!("%d.%m.%y, %H:%M", "nb_NO", :strftime)
+          end
+
+        %Brando.Type.Image{} = img ->
+          key = (param != "" && String.to_existing_atom(param)) || :xlarge
+          mod = Map.get(entry, :__struct__)
+
+          Brando.HTML.picture_tag(img,
+            key: key,
+            picture_class: "picture-img",
+            width: true,
+            height: true,
+            caption: true,
+            placeholder: :svg,
+            lazyload: true,
+            prefix: Brando.Utils.media_url(),
+            srcset: {mod, List.last(var_path)},
+            cache: entry.updated_at
+          )
+          |> Phoenix.HTML.safe_to_string()
+
+        var when is_integer(var) ->
+          Integer.to_string(var)
+
+        false ->
+          ""
+
+        true ->
+          case param do
+            "" -> key
+            _ -> param
+          end
+
+        var ->
+          case param do
+            "" ->
+              var
+
+            "slug" ->
+              var
+              |> Brando.Utils.slugify()
+
+            "markdown" ->
+              var
+              |> Brando.HTML.render_markdown()
+              |> Phoenix.HTML.safe_to_string()
+          end
+      end
+    end)
   end
-
-  def render_villain(_, _), do: ""
 
   @doc """
   List all occurences of fragment in `schema`'s `data_field`
@@ -346,6 +518,27 @@ defmodule Brando.Villain do
   end
 
   @doc """
+  List all occurences of regex in `schema`'s `data_field`
+  """
+  @spec search_villains_for_regex(
+          schema :: any,
+          data_field :: atom,
+          search_terms :: binary | [binary]
+        ) :: [any]
+  def search_villains_for_regex(schema, data_field, search_terms) do
+    search_terms = (is_list(search_terms) && search_terms) || [search_terms]
+    org_query = from s in schema, select: s.id
+
+    built_query =
+      Enum.reduce(search_terms, org_query, fn search_term, query ->
+        from q in query,
+          or_where: fragment("? ~* ?", type(field(q, ^data_field), :string), ^"#{search_term}")
+      end)
+
+    Brando.repo().all(built_query)
+  end
+
+  @doc """
   Look through all `villains` for `search_term` and rerender all matching
   """
   @spec rerender_matching_villains([any], binary | [binary]) :: [any]
@@ -361,62 +554,5 @@ defmodule Brando.Villain do
         end
       end)
     end
-  end
-
-  defp replace_fragment_refs(html) do
-    Regex.replace(@regex_fragment_ref, html, fn _, parent_key, key, lang ->
-      case Pages.get_page_fragment(parent_key, key, lang) do
-        {:ok, fragment} ->
-          Phoenix.HTML.Safe.to_iodata(fragment)
-
-        {:error, {:page_fragment, :not_found}} ->
-          "==> MISSING FRAGMENT: #{parent_key}/#{key}/#{lang} <=="
-      end
-    end)
-  end
-
-  def replace_identity_refs(html) do
-    Regex.replace(@regex_identity_ref, html, fn _, key ->
-      identity = Brando.Cache.get(:identity)
-
-      Map.get(
-        identity,
-        String.to_existing_atom(key),
-        "==> MISSING IDENTITY KEY: ${IDENTITY:#{key}} <=="
-      )
-    end)
-  end
-
-  def replace_link_refs(html) do
-    Regex.replace(@regex_link_ref, html, fn _, name ->
-      identity = Brando.Cache.get(:identity)
-      link_list = identity.links
-
-      case Enum.find(link_list, &(String.downcase(&1.name) == String.downcase(name))) do
-        nil -> "==> MISSING LINK NAME: ${LINK:#{name}} <=="
-        link_entry -> link_entry.url
-      end
-    end)
-  end
-
-  def replace_config_refs(html) do
-    Regex.replace(@regex_config_ref, html, fn _, key ->
-      identity = Brando.Cache.get(:identity)
-      config_list = identity.configs
-
-      case Enum.find(config_list, &(String.downcase(&1.key) == String.downcase(key))) do
-        nil -> "==> MISSING CONFIG KEY: ${CONFIG:#{key}} <=="
-        config_entry -> config_entry.value
-      end
-    end)
-  end
-
-  defp replace_vars(html, vars) do
-    Regex.replace(~r/\${(\w+)}/, html, fn _, match ->
-      case Map.get(vars, match, nil) do
-        nil -> "${#{match}}"
-        val -> val
-      end
-    end)
   end
 end

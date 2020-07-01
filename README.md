@@ -2,7 +2,7 @@ A helping hand.
 
 ![Brando logo](https://raw.githubusercontent.com/univers-agency/brando/master/priv/templates/brando.install/assets/frontend/static/images/brando/brando-big.png)
 
-[![Build Status](https://travis-ci.org/univers-agency/brando.svg?branch=master)](https://travis-ci.org/univers-agency/brando)
+![Build Status](https://github.com/univers-agency/brando/workflows/CI/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/univers-agency/brando/badge.svg?branch=master)](https://coveralls.io/github/univers-agency/brando?branch=master)
 [![Inline docs](http://inch-ci.org/github/univers-agency/brando.svg?branch=master)](http://inch-ci.org/github/univers-agency/brando)
 
@@ -28,27 +28,73 @@ config :my_app, MyApp.Endpoint,
   render_errors: [accepts: ~w(html json), view: Brando.ErrorView, default_format: "html"],
 ```
 
-Set your release config (`rel/config.exs`) to default to prod, and add this:
-
-```elixir
-release :my_app do
-  set version: current_version(:my_app)
-  set commands: [
-    migrate: "rel/commands/migrate.sh"
-  ]
-  set applications: [
-    :runtime_tools,
-    :bcrypt_elixir
-  ]
-end
-```
-
 *Remember to switch out your ports and configure SSL in `etc/supervisor/prod.conf` and `etc/nginx/prod.conf`*
 
 ## Dependencies
 
-  * `imagemagick`/`mogrify` for image processing.
+  * `imagemagick`/`mogrify` or `sharp`/`sharp-cli` for image processing.
   * `gifsicle` for GIF resizing.
+
+
+## Datasources
+
+The content editor can access datasources from the frontend.
+
+First register the datasource in your schema:
+
+```elixir
+  use Brando.Datasource
+
+  datasource :many, %{
+    shareholders: &MyApplication.Shares.list_shareholders/0
+  }
+```
+
+It's important that the `create`, `update` and `delete` functions in your context file calls
+`Brando.Datasource.update_datasource(<schema>, entry)`
+
+Examples here:
+
+```elixir
+  @doc """
+  Create new artist
+  """
+  @spec create_artist(params, user | :system) :: {:ok, Artist.t()} | {:error, Ecto.Changeset.t()}
+  def create_artist(artist_params, user \\ :system) do
+    with changeset <- Artist.changeset(%Artist{}, artist_params, user),
+         {:ok, entry} <- Repo.insert(changeset) do
+      Brando.Datasource.update_datasource(Artist, entry)
+    else
+      err -> err
+    end
+  end
+
+  @doc """
+  Update existing artist
+  """
+  @spec update_artist(id, params, user | :system) ::
+          {:ok, Artist.t()} | {:error, Ecto.Changeset.t()}
+  def update_artist(artist_id, artist_params, user \\ :system) do
+    with {:ok, artist} <- get_artist(artist_id),
+         changeset <- Artist.changeset(artist, artist_params, user),
+         {:ok, entry} <- Repo.update(changeset) do
+      Brando.Datasource.update_datasource(Artist, entry)
+    else
+      err -> err
+    end
+  end
+
+  @doc """
+  Delete artist by id
+  """
+  @spec delete_artist(id) :: {:ok, Artist.t()}
+  def delete_artist(id) do
+    {:ok, entry} = get_artist(id)
+    Repo.delete(entry)
+    Brando.Datasource.update_datasource(Artist, entry)
+  end
+```
+
 
 ## I18n
 
@@ -73,15 +119,15 @@ Open up you application's `lib/application.ex` and add to `start/2`:
     Brando.Registry.register(MyApp.Web, [:gettext])
 
 
-## App specific modules
+## Generator
 
 Generate templates:
 
-    $ mix brando.gen.html Task tasks name:string avatar:image data:villain image_series:gallery
+    $ mix brando.gen
 
-Also supports `user:references` to add a `belongs_to` assoc.
+`name:string avatar:image data:villain image_series:gallery`
 
-Copy outputted routes and add to `lib/web/router.ex`
+Also supports `user:references:users_users` to add a `belongs_to` assoc.
 
 If you use Gettext, register your module in `lib/application.ex`:
 
@@ -125,16 +171,13 @@ config :ex_aws, :s3, %{
 ```
 
 Use `Brando.HTML.include_js/0` and `Brando.HTML.include_css/0` right before `</head>`
-in `app.html.eex`, since these functions figure out whether to use `path` or `url` for
-static asset links.
+in `app.html.eex`, since these functions automatically chooses whether to use `path`
+or `url` for static asset links.
 
 Add to your frontend `package.json`
 ```
-"build:cdn": "yarn build:legacy:cdn && yarn build:modern:cdn",
-"build:legacy": "NODE_ENV=production BROWSERSLIST_ENV=legacy webpack --mode=production",
-"build:modern": "NODE_ENV=production BROWSERSLIST_ENV=modern webpack --mode=production",
-"build:legacy:cdn": "UNIVERS_CDN=my_app NODE_ENV=production BROWSERSLIST_ENV=legacy webpack --mode=production",
-"build:modern:cdn": "UNIVERS_CDN=my_app NODE_ENV=production BROWSERSLIST_ENV=modern webpack --mode=production",
+"build": "webpack --mode=production --config webpack.prod.js",
+"build:cdn": "BRANDO_CDN=<%= application_name %> NODE_ENV=production webpack --mode=production --config ./webpack.config.prod.js",
 ```
 
 Make sure you build frontend with:
@@ -146,7 +189,7 @@ RUN yarn run build.cdn
 Add to Dockerfile build:
 
 ```bash
-$ mix brando.upload_static
+$ mix brando.static.deploy
 ```
 
 
@@ -171,7 +214,7 @@ You may reference other fragments by entering
 ${FRAGMENT:index/01_intro/en}
             ^     ^       ^
             |     |       `-- language
-            |     `-- key
+            |     `-- fragment key
             `-- parent key
 ```
 
@@ -179,11 +222,7 @@ ${FRAGMENT:index/01_intro/en}
 
 Brando uses distillery through Docker for release management.
 
-Start off by running
-
-    # mix release.init
-
-Then use the fabric script in `fabfile.py` for the rest.
+Use the fabric script in `fabfile.py` for deploying and controlling.
 
     # fab prod -l
 

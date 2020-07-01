@@ -1,25 +1,28 @@
 defmodule Mix.Brando do
-  # Conveniences for Phoenix tasks.
+  # Conveniences for generators
+
   @moduledoc false
 
   @valid_attributes [
-    :integer,
-    :float,
-    :decimal,
-    :boolean,
-    :map,
-    :string,
-    :image,
-    :villain,
-    :gallery,
     :array,
-    :references,
-    :text,
+    :boolean,
     :date,
-    :file,
-    :time,
     :datetime,
-    :uuid
+    :decimal,
+    :file,
+    :float,
+    :gallery,
+    :image,
+    :integer,
+    :map,
+    :references,
+    :slug,
+    :status,
+    :string,
+    :text,
+    :time,
+    :uuid,
+    :villain
   ]
 
   @doc """
@@ -132,6 +135,9 @@ defmodule Mix.Brando do
       {k, {:array, _}} ->
         {k, []}
 
+      {k, {:slug, _}} ->
+        {k, "some-content"}
+
       {k, :integer} ->
         {k, 42}
 
@@ -169,6 +175,9 @@ defmodule Mix.Brando do
       {k, :image} ->
         {k, nil}
 
+      {k, :status} ->
+        {k, :published}
+
       {k, _} ->
         {k, "some content"}
     end)
@@ -204,18 +213,25 @@ defmodule Mix.Brando do
   @doc """
   Add content to file under marker
   """
-  def add_to_file(file, marker, content, multiple \\ false) do
-    marker_start =
+  def add_to_file(file, marker, content, opts \\ []) do
+    type = (Keyword.get(opts, :prepend) && :prepend) || :append
+    position = (type == :prepend && "\\+\\+") || "__"
+    content = (Keyword.get(opts, :comma) && "#{content},") || content
+
+    marker_token =
       case Path.extname(file) do
         ".ex" ->
-          "# __"
+          "# #{position}"
 
         ".js" ->
-          "// __"
+          "// #{position}"
+
+        ".vue" ->
+          "// #{position}"
       end
 
     exists? =
-      if multiple do
+      if Keyword.get(opts, :singular) do
         File.stream!(file)
         |> Enum.map(&String.contains?(&1, content))
         |> Enum.any?(&(&1 == true))
@@ -224,18 +240,18 @@ defmodule Mix.Brando do
       end
 
     unless exists? do
-      marker = "#{marker_start}#{marker}"
+      marker = "#{marker_token}#{marker}"
 
       new_content =
         file
         |> File.stream!()
-        |> Enum.map(&process_line(&1, marker, content))
+        |> Enum.map(&process_line(&1, marker, content, type))
 
       File.write(file, new_content)
     end
   end
 
-  defp process_line(line, marker, content) do
+  defp process_line(line, marker, content, :append) do
     marker_regex = ~r/(\s+)?(#{marker})/
 
     case Regex.run(marker_regex, line, capture: :all_but_first) do
@@ -249,6 +265,24 @@ defmodule Mix.Brando do
           |> Enum.join("\n")
 
         content = "#{content_split}\n#{whitespace}#{marker}"
+        String.replace(line, whitespace <> marker, content)
+    end
+  end
+
+  defp process_line(line, marker, content, :prepend) do
+    marker_regex = ~r/(\s+)?(#{marker})/
+
+    case Regex.run(marker_regex, line, capture: :all_but_first) do
+      nil ->
+        line
+
+      [whitespace, marker] ->
+        content_split =
+          String.split(content, "\n")
+          |> Enum.map(&"#{whitespace}#{&1}")
+          |> Enum.join("\n")
+
+        content = "#{whitespace}#{marker}\n#{content_split}"
         String.replace(line, whitespace <> marker, content)
     end
   end

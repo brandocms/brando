@@ -3,18 +3,33 @@ defmodule Brando.Schema.Types.Images do
 
   input_object :image_series_params do
     field :name, :string
+    field :slug, :string
     field :credits, :string
     field :cfg, :string
     field :image_category_id, :string
   end
 
-  input_object :create_image_category_params do
+  input_object :image_series_upload do
+    field :id, :id
     field :name, :string
     field :slug, :string
-    field :cfg, :string
+    field :image_category_id, :id
+    field :images, list_of(non_null(:image_upload))
   end
 
-  input_object :update_image_category_params do
+  input_object :image_upload do
+    field :image, :upload
+    field :sequence, :integer
+  end
+
+  input_object :upload_or_image do
+    field :file, :upload
+    field :focal, :focal_params
+    field :alt, :string
+    field :title, :string
+  end
+
+  input_object :image_category_params do
     field :name, :string
     field :slug, :string
     field :cfg, :string
@@ -28,6 +43,26 @@ defmodule Brando.Schema.Types.Images do
     field :size_limit, :integer
     field :sizes, :json
     field :srcset, list_of(:image_srcset_params)
+  end
+
+  input_object :image_meta_params do
+    field :title, :string
+    field :credits, :string
+    field :alt, :string
+    field :focal, :focal_params
+  end
+
+  input_object :image_type_params do
+    field :title, :string
+    field :credits, :string
+    field :alt, :string
+    field :path, :string
+    field :focal, :json
+  end
+
+  input_object :focal_params do
+    field :x, :integer
+    field :y, :integer
   end
 
   input_object :image_srcset_params do
@@ -49,9 +84,9 @@ defmodule Brando.Schema.Types.Images do
     end
 
     field :image_series, list_of(:image_series) do
-      arg :limit, :integer, default_value: 10
+      arg :limit, :integer, default_value: 100
       arg :offset, :integer, default_value: 0
-      resolve dataloader(Brando.Images, :image_series)
+      resolve dataloader(Brando.Images)
     end
 
     field :inserted_at, :time
@@ -96,6 +131,7 @@ defmodule Brando.Schema.Types.Images do
   object :image_type do
     field :title, :string
     field :credits, :string
+    field :alt, :string
     field :path, :string
     field :focal, :json
 
@@ -170,9 +206,32 @@ defmodule Brando.Schema.Types.Images do
   end
 
   object :image_mutations do
+    @desc "Upload images to image series"
+    field :create_image, type: :image do
+      arg :image_series_id, :id
+      arg :image_upload_params, :image_upload
+
+      resolve &Brando.Images.ImageResolver.create/2
+    end
+
+    @desc "Edit image data"
+    field :update_image_meta, type: :image do
+      arg :image_id, :id
+      arg :image_meta_params, :image_meta_params
+
+      resolve &Brando.Images.ImageResolver.update_meta/2
+    end
+
+    @desc "Delete multiple images"
+    field :delete_images, type: :integer do
+      arg :image_ids, list_of(:id)
+
+      resolve &Brando.Images.ImageResolver.delete_images/2
+    end
+
     @desc "Create image category"
     field :create_image_category, type: :image_category do
-      arg :image_category_params, :create_image_category_params
+      arg :image_category_params, :image_category_params
 
       resolve &Brando.Images.ImageCategoryResolver.create/2
     end
@@ -180,7 +239,7 @@ defmodule Brando.Schema.Types.Images do
     @desc "Update image category"
     field :update_image_category, type: :image_category do
       arg :image_category_id, :id
-      arg :image_category_params, :update_image_category_params
+      arg :image_category_params, :image_category_params
 
       resolve &Brando.Images.ImageCategoryResolver.update/2
     end

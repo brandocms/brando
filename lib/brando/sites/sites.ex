@@ -4,6 +4,8 @@ defmodule Brando.Sites do
   """
 
   import Ecto.Query
+
+  alias Brando.Cache
   alias Brando.Images
   alias Brando.Sites.Identity
   alias Brando.Villain
@@ -36,8 +38,16 @@ defmodule Brando.Sites do
           {:ok, identity} | {:error, {:identity, :not_found}}
   def get_identity do
     case Identity |> first() |> Brando.repo().one do
-      nil -> {:error, {:identity, :not_found}}
-      identity -> {:ok, identity}
+      nil ->
+        {:error, {:identity, :not_found}}
+
+      identity ->
+        languages =
+          Enum.map(Brando.config(:languages), fn [value: id, text: name] ->
+            %{id: id, name: name}
+          end)
+
+        {:ok, Map.put(identity, :languages, languages)}
     end
   end
 
@@ -61,8 +71,8 @@ defmodule Brando.Sites do
     identity
     |> Identity.changeset(identity_params, user)
     |> Brando.repo().update()
-    |> update_cache()
-    |> update_villains_referencing_org()
+    |> Cache.Identity.update()
+    |> update_villains_referencing_identity()
   end
 
   @doc """
@@ -107,36 +117,45 @@ defmodule Brando.Sites do
   """
   def get_link(name) do
     identity = Brando.Cache.get(:identity)
-    Enum.find(identity.links, &(String.downcase(&1.name) == String.downcase(name)))
+    Enum.find(identity.links, &(String.downcase(&1.name) == String.downcase(name))) || ""
+  end
+
+  @deprecated """
+  Use Brando.Globals.render_global(key_path) instead
+  """
+  def get_global(key_path) do
+    Brando.Globals.render_global(key_path)
+  end
+
+  def get_language(id) do
+    identity = Brando.Cache.get(:identity)
+
+    case Enum.find(identity.languages, &(&1.id == id)) do
+      nil -> nil
+      lang -> lang.name
+    end
   end
 
   @doc """
-  Check all fields for references to `["${IDENTITY:", "${CONFIG:", "${LINK:"]`.
+  Check all fields for references to IDENTITY, CONFIG and LINK
   Rerender if found.
   """
-  @spec update_villains_referencing_org({:ok, identity} | {:error, changeset}) ::
+  @spec update_villains_referencing_identity({:ok, identity} | {:error, changeset}) ::
           {:ok, identity} | {:error, changeset}
-  def update_villains_referencing_org({:error, changeset}), do: {:error, changeset}
+  def update_villains_referencing_identity({:error, changeset}), do: {:error, changeset}
 
-  def update_villains_referencing_org({:ok, identity}) do
-    search_terms = ["${IDENTITY:", "${CONFIG:", "${LINK:"]
+  def update_villains_referencing_identity({:ok, identity}) do
+    search_terms = [
+      "${IDENTITY:",
+      "${CONFIG:",
+      "${LINK:",
+      "${identity:",
+      "${config:",
+      "${link:"
+    ]
+
     villains = Villain.list_villains()
     Villain.rerender_matching_villains(villains, search_terms)
     {:ok, identity}
   end
-
-  @spec cache_identity :: {:error, boolean} | {:ok, boolean}
-  def cache_identity do
-    {:ok, identity} = get_identity()
-    Cachex.put(:cache, :identity, identity)
-  end
-
-  @spec update_cache({:ok, identity} | {:error, changeset}) ::
-          {:ok, identity} | {:error, changeset}
-  def update_cache({:ok, updated_identity}) do
-    Cachex.update(:cache, :identity, updated_identity)
-    {:ok, updated_identity}
-  end
-
-  def update_cache({:error, changeset}), do: {:error, changeset}
 end

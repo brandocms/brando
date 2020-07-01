@@ -4,6 +4,7 @@ defmodule <%= application_module %>Web.Router do
   import Brando.Plug.I18n
   import Brando.Images.Routes.Admin.API
   import Brando.Villain.Routes.Admin.API
+  import Phoenix.LiveDashboard.Router
 
   @sql_sandbox Application.get_env(:<%= application_name %>, :sql_sandbox) || false
 
@@ -14,7 +15,7 @@ defmodule <%= application_module %>Web.Router do
     plug :fetch_session
     plug :fetch_flash
     plug :put_admin_locale
-    plug :put_layout, {<%= application_module %>Web.LayoutView, "admin.html"}
+    plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
     plug :put_secure_browser_headers
   end
 
@@ -33,9 +34,14 @@ defmodule <%= application_module %>Web.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug PlugHeartbeat
+    plug Brando.Plug.Identity
     # plug :put_meta, %{
     #   "google-site-verification" => "GSV"
     # }
+  end
+
+  pipeline :basic_auth do
+    plug :basic_auth, username: "admin", password: "<%= :os.timestamp |> :erlang.phash2 |> Integer.to_string(32) |> String.downcase %>"
   end
 
   pipeline :api do
@@ -57,14 +63,17 @@ defmodule <%= application_module %>Web.Router do
     forward "/__e2e", Brando.Plug.E2ETest
   end
 
+  scope "/__dashboard" do
+    pipe_through [:browser, :basic_auth]
+    live_dashboard "/"
+  end
+
   scope "/admin", as: :admin do
     pipe_through :admin
 
-    scope "/auth" do
-      post "/login", <%= application_module %>Web.SessionController, :create
-      post "/logout", <%= application_module %>Web.SessionController, :delete
-      post "/verify", <%= application_module %>Web.SessionController, :verify
-    end
+    forward "/auth", Brando.Plug.Authentication,
+          guardian_module: <%= application_module %>Web.Guardian,
+          authorization_module: <%= application_module %>.Authorization
 
     scope "/api" do
       pipe_through [:api, :token, :authenticated]
@@ -89,5 +98,6 @@ defmodule <%= application_module %>Web.Router do
   scope "/" do
     pipe_through :browser
     get "/", <%= application_module %>Web.PageController, :index
+    get "/*path", <%= application_module %>Web.PageController, :show
   end
 end

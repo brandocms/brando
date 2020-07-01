@@ -47,20 +47,25 @@ defmodule Brando.UtilsTest do
   test "slugify_filename/1" do
     assert slugify_filename("testing with spaces.jpeg") == "testing-with-spaces.jpeg"
     assert slugify_filename("-start æøå-.jpeg") == "start-aeoeaa.jpeg"
+    assert slugify_filename("testing.JPG") == "testing.jpg"
   end
 
   test "random_filename/1" do
     f = random_filename("original-filename.jpg")
     refute f == "original-filename.jpg"
     assert f =~ ".jpg"
+
+    f = random_filename("original-filename.JPG")
+    refute f =~ ".JPG"
+    assert f =~ ".jpg"
   end
 
-  test "to_string_map/1" do
-    test_struct = %TestStruct{}
-    test_map = %{"a" => "a", "b" => "b"}
-    assert to_string_map(nil) == nil
-    assert to_string_map(test_struct) == test_map
-    assert to_string_map(test_map) == test_map
+  test "stringify_keys/1" do
+    test_map_atom_keys = %{a: "a", b: %{c: "c", d: "d"}}
+    test_map = %{"a" => "a", "b" => %{"c" => "c", "d" => "d"}}
+    assert stringify_keys(nil) == nil
+    assert stringify_keys(test_map_atom_keys) == test_map
+    assert stringify_keys(test_map) == test_map
   end
 
   test "split_path/1" do
@@ -185,7 +190,7 @@ defmodule Brando.UtilsTest do
   end
 
   test "helpers" do
-    mock_conn = %{private: %{phoenix_router: RouterHelper.TestRouter}}
-    assert helpers(mock_conn) == RouterHelper.TestRouter.Helpers
+    mock_conn = %{private: %{phoenix_router: Brando.Integration.Router}}
+    assert helpers(mock_conn) == Brando.Integration.Router.Helpers
   end
 end

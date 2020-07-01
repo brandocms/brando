@@ -25,7 +25,7 @@ defmodule Brando.Types.ImageTest do
   @struct %Image{}
 
   test "cast" do
-    assert Image.cast(@raw) == {:ok, @result}
+    assert Image.cast(@raw) == {:ok, {:update, @raw}}
     assert Image.cast(@struct) == {:ok, @struct}
   end
 
@@ -42,7 +42,7 @@ defmodule Brando.Types.ImageTest do
              {:ok,
               %Brando.Type.Image{
                 credits: "Credits",
-                focal: %{"x" => 50, "y" => 50},
+                focal: %{x: 50, y: 50},
                 height: nil,
                 path: "images/avatars/27i97a.jpeg",
                 sizes: %{

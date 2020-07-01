@@ -37,6 +37,11 @@ defmodule <%= application_module %>.Schema do
     # __mutations
   end
 
+  enum :sort_order do
+    value :asc
+    value :desc
+  end
+
   def middleware(middleware, _field, %{identifier: :mutation}), do:
     middleware ++ [Brando.Schema.Middleware.ChangesetErrors]
   def middleware(middleware, _field, _object), do:

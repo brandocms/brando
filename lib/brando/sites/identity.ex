@@ -22,6 +22,7 @@ defmodule Brando.Sites.Identity do
     field :image, Brando.Type.Image
     field :logo, Brando.Type.Image
     field :url, :string
+    field :languages, :map, virtual: true
 
     embeds_many :metas, Brando.Meta, on_replace: :delete
     embeds_many :links, Brando.Link, on_replace: :delete
@@ -34,7 +35,7 @@ defmodule Brando.Sites.Identity do
     :image,
     %{
       allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-      default_size: :medium,
+      default_size: :xlarge,
       upload_path: Path.join(["images", "sites", "identity", "image"]),
       random_filename: true,
       size_limit: 10_240_000,
@@ -50,7 +51,7 @@ defmodule Brando.Sites.Identity do
     :logo,
     %{
       allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-      default_size: :medium,
+      default_size: :xlarge,
       upload_path: Path.join(["images", "sites", "identity", "logo"]),
       random_filename: true,
       size_limit: 10_240_000,
@@ -62,8 +63,8 @@ defmodule Brando.Sites.Identity do
     }
   )
 
-  @required_fields ~w(name type email phone address zipcode city country description title url)a
-  @optional_fields ~w(alternate_name image logo title_prefix title_postfix)a
+  @required_fields ~w(name type email description title url)a
+  @optional_fields ~w(alternate_name image phone address zipcode city country logo title_prefix title_postfix)a
 
   @doc """
   Creates a changeset based on the `schema` and `params`.

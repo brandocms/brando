@@ -3,6 +3,7 @@ defmodule Brando.Pages do
   Context for pages
   """
   use Brando.Web, :context
+  use Brando.Query
 
   alias Brando.Pages.Page
   alias Brando.Pages.PageFragment
@@ -10,9 +11,15 @@ defmodule Brando.Pages do
 
   import Ecto.Query
 
+  @type changeset :: Ecto.Changeset.t()
+  @type fragment :: Brando.Pages.PageFragment.t()
+  @type id :: String.t() | Integer.t()
+  @type page :: Brando.Pages.Page.t()
+  @type user :: Brando.Users.User.t() | :system
+
   defmacro __using__(_) do
     quote do
-      import Brando.Pages, only: [get_page_fragments: 1, render_fragment: 2]
+      import Brando.Pages, only: [get_page_fragments: 1, render_fragment: 2, get_fragments: 1]
     end
   end
 
@@ -37,13 +44,27 @@ defmodule Brando.Pages do
 
   def query(queryable, _), do: queryable
 
+  query :list, Page do
+    fn
+      query ->
+        from q in query,
+          where: is_nil(q.deleted_at),
+          where: is_nil(q.parent_id)
+    end
+  end
+
+  filters Page do
+    fn {:title, title}, query ->
+      from q in query, where: ilike(q.title, ^"%#{title}%")
+    end
+  end
+
   @doc """
   Create new page
   """
   def create_page(params, user) do
     %Page{}
-    |> Brando.Utils.Schema.put_creator(user)
-    |> Page.changeset(:create, params)
+    |> Page.changeset(params, user)
     |> Brando.repo().insert
   end
 
@@ -54,10 +75,8 @@ defmodule Brando.Pages do
     page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
     {:ok, page} = get_page(page_id)
 
-    params = Map.put(params, :creator_id, user.id)
-
     page
-    |> Page.changeset(:update, params)
+    |> Page.changeset(params, user)
     |> Brando.repo().update
   end
 
@@ -87,17 +106,11 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  List all pages
+  Only gets schemas that are parents
   """
-  def list_pages do
-    pages =
-      Page
-      |> Page.only_parents()
-      |> order_by([p], asc: p.language, asc: p.sequence, asc: p.key)
-      |> exclude_deleted()
-      |> Brando.repo().all
-
-    {:ok, pages}
+  def only_parents(query) do
+    from m in query,
+      where: is_nil(m.parent_id)
   end
 
   @doc """
@@ -108,7 +121,7 @@ defmodule Brando.Pages do
 
     parents =
       Page
-      |> Page.only_parents()
+      |> only_parents()
       |> exclude_deleted()
       |> Brando.repo().all
 
@@ -127,8 +140,28 @@ defmodule Brando.Pages do
   end
 
   @doc """
+  List available page templates
+  """
+  def list_templates do
+    view_module = Brando.web_module(PageView)
+    {_, _, templates} = view_module.__templates__
+
+    main_templates =
+      templates
+      |> Enum.filter(&(not String.starts_with?(&1, "_")))
+      |> Enum.map(&%{name: Path.rootname(&1), value: &1})
+
+    {:ok, main_templates}
+  end
+
+  @doc """
   Get page
   """
+  def get_page(path) when is_list(path) do
+    key = Enum.join(path, "/")
+    get_page(key)
+  end
+
   def get_page(key) when is_binary(key) do
     query =
       from t in Page,
@@ -262,7 +295,7 @@ defmodule Brando.Pages do
   def list_page_fragments do
     fragments =
       PageFragment
-      |> order_by([p], asc: p.parent_key, asc: p.key, asc: p.language)
+      |> order_by([p], asc: p.parent_key, asc: p.sequence, asc: p.language)
       |> exclude_deleted()
       |> Brando.repo().all()
 
@@ -272,12 +305,14 @@ defmodule Brando.Pages do
   @doc """
   Get page fragment
   """
+  @spec get_page_fragment(String.t() | Integer.t()) ::
+          {:error, {:page_fragment, :not_found}} | {:ok, fragment}
   def get_page_fragment(key) when is_binary(key) do
     query = from t in PageFragment, where: t.key == ^key and is_nil(t.deleted_at)
 
     case Brando.repo().one(query) do
       nil -> {:error, {:page_fragment, :not_found}}
-      page -> {:ok, page}
+      fragment -> {:ok, fragment}
     end
   end
 
@@ -290,6 +325,8 @@ defmodule Brando.Pages do
     end
   end
 
+  @spec get_page_fragment(any, any, any) ::
+          {:error, {:page_fragment, :not_found}} | {:ok, fragment}
   def get_page_fragment(parent_key, key, language \\ nil) do
     language = language || Brando.config(:default_language)
 
@@ -310,14 +347,71 @@ defmodule Brando.Pages do
   @doc """
   Get set of fragments by parent key
   """
+  @deprecated "Use `{:ok, fragments} = get_fragments(parent_key)` instead"
   def get_page_fragments(parent_key) do
+    {:ok, fragments} = list_page_fragments(parent_key)
+    Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)
+  end
+
+  @doc """
+  Get set of fragments by parent key
+  """
+  def get_fragments(parent_key) do
+    {:ok, fragments} = list_page_fragments(parent_key)
+    {:ok, Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)}
+  end
+
+  @doc """
+  Get fragment from page
+  """
+  def get_fragment(%Page{fragments: fragments}, key) do
+    Enum.find(fragments, &(&1.key == key))
+  end
+
+  @doc """
+  Get set of fragments by parent key
+  """
+  def list_page_fragments(parent_key) do
     fragments =
       PageFragment
       |> where([p], p.parent_key == ^parent_key)
       |> exclude_deleted()
+      |> order_by([p], asc: p.parent_key, asc: p.sequence, asc: p.language)
       |> Brando.repo().all
 
-    Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)
+    {:ok, fragments}
+  end
+
+  @doc """
+  Get set of fragments by parent key and language
+  """
+  def list_page_fragments(parent_key, language) do
+    fragments =
+      PageFragment
+      |> where([p], p.parent_key == ^parent_key)
+      |> where([p], p.language == ^language)
+      |> exclude_deleted()
+      |> order_by([p], asc: p.parent_key, asc: p.sequence)
+      |> Brando.repo().all
+
+    {:ok, fragments}
+  end
+
+  def list_page_fragments_translations(
+        parent_key,
+        excluded_lang \\ Brando.config(:default_language)
+      ) do
+    fragments =
+      PageFragment
+      |> where([p], p.parent_key == ^parent_key)
+      |> where([p], p.language != ^excluded_lang)
+      |> exclude_deleted()
+      |> order_by([p], asc: p.parent_key, asc: p.sequence)
+      |> Brando.repo().all
+
+    # group keys as "key -> [lang: fragment, lang2: fragment2]
+    split_fragments = Brando.Utils.split_by(fragments, :key)
+    {:ok, split_fragments}
   end
 
   @doc """
@@ -337,26 +431,25 @@ defmodule Brando.Pages do
   @doc """
   Create new page fragment
   """
+  @spec create_page_fragment(map, user) :: {:ok, fragment} | {:error, changeset}
   def create_page_fragment(params, user) do
     %PageFragment{}
-    |> Brando.Utils.Schema.put_creator(user)
-    |> PageFragment.changeset(:create, params)
-    |> Brando.repo().insert
+    |> PageFragment.changeset(params, user)
+    |> Brando.repo().insert()
   end
 
   @doc """
   Update page fragment
   """
+  @spec update_page_fragment(any, :invalid, any) :: any
   def update_page_fragment(page_fragment_id, params, user) do
     page_fragment_id =
       (is_binary(page_fragment_id) && String.to_integer(page_fragment_id)) || page_fragment_id
 
     {:ok, page_fragment} = get_page_fragment(page_fragment_id)
 
-    params = Map.put(params, :creator_id, user.id)
-
     case page_fragment
-         |> PageFragment.changeset(:update, params)
+         |> PageFragment.changeset(params, user)
          |> Brando.repo().update do
       {:ok, page_fragment} ->
         update_villains_referencing_fragment(page_fragment)
@@ -370,6 +463,7 @@ defmodule Brando.Pages do
   @doc """
   Delete page_fragment
   """
+  @spec delete_page_fragment(id) :: {:ok, fragment}
   def delete_page_fragment(page_fragment_id) do
     {:ok, page_fragment} = get_page_fragment(page_fragment_id)
     Brando.repo().soft_delete!(page_fragment)
@@ -379,18 +473,24 @@ defmodule Brando.Pages do
   @doc """
   Duplicate page fragment
   """
+  @spec duplicate_page_fragment(fragment_id :: String.t() | Integer.t(), user) ::
+          {:ok, map} | {:error, {:page_fragment, :not_found}}
   def duplicate_page_fragment(fragment_id, user) do
     fragment_id = (is_binary(fragment_id) && String.to_integer(fragment_id)) || fragment_id
-    {:ok, fragment} = get_page_fragment(fragment_id)
 
-    {:ok, dup_fragment} =
-      fragment
-      |> Map.merge(%{key: "#{fragment.key}_kopi"})
-      |> Map.delete([:id, :parent])
-      |> Map.from_struct()
-      |> create_page_fragment(user)
+    with {:ok, fragment} when is_map(fragment) <- get_page_fragment(fragment_id),
+         fragment when is_map(fragment) <- Map.merge(fragment, %{key: "#{fragment.key}_kopi"}),
+         fragment when is_map(fragment) <- Map.delete(fragment, [:id, :parent]),
+         fragment when is_map(fragment) <- Map.from_struct(fragment),
+         {:ok, new_fragment} <- create_page_fragment(fragment, user) do
+      {:ok, Map.merge(new_fragment, %{creator: nil})}
+    else
+      {:error, {:page_fragment, :not_found}} ->
+        {:error, {:page_fragment, :not_found}}
 
-    {:ok, Map.merge(dup_fragment, %{creator: nil})}
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
   @doc """

@@ -1,3 +1,4 @@
+# coveralls-ignore-start
 defmodule Brando.ConnCase do
   @moduledoc """
   This module defines the test case to be used by
@@ -18,15 +19,17 @@ defmodule Brando.ConnCase do
   using do
     quote do
       # Import conveniences for testing with connections
-      use Phoenix.ConnTest
+      import Plug.Conn
+      import Phoenix.ConnTest
+      import Brando.ConnCase
 
       # Alias the data repository and import query/schema functions
-      alias Brando.Integration.TestRepo
+      alias Brando.Integration.Repo
       import Ecto.Schema
       import Ecto.Query, only: [from: 2]
 
       # Import URL helpers from the router
-      alias RouterHelper.TestRouter.Helpers
+      alias Brando.Integration.Router.Helpers
 
       # The default endpoint for testing
       @endpoint Brando.endpoint()
@@ -34,12 +37,14 @@ defmodule Brando.ConnCase do
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Brando.Integration.TestRepo)
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Brando.Integration.Repo)
 
     unless tags[:async] do
-      Ecto.Adapters.SQL.Sandbox.mode(Brando.Integration.TestRepo, {:shared, self()})
+      Ecto.Adapters.SQL.Sandbox.mode(Brando.Integration.Repo, {:shared, self()})
     end
 
     :ok
   end
 end
+
+# coveralls-ignore-stop

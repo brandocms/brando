@@ -53,8 +53,8 @@ defmodule Brando.Integration.ImageTest do
   end
 
   test "create/2 bad params", %{user: user} do
-    assert {:error, cs} = Images.create_image(@params, user)
-    assert cs.errors == [image_series_id: {"can't be blank", [validation: :required]}]
+    assert {:error, cs} = Images.create_image(%{}, user)
+    assert cs.errors == [image: {"can't be blank", [validation: :required]}]
   end
 
   test "update/2", %{user: user, series: series} do
@@ -98,7 +98,7 @@ defmodule Brando.Integration.ImageTest do
     assert image.image.credits == "credits"
 
     assert {:ok, new_image} =
-             Images.update_image_meta(image, "new title", "new credits", %{"x" => 50, "y" => 50})
+             Images.update_image_meta(image, %{title: "new title", credits: "new credits"})
 
     refute new_image.image == image.image
     assert new_image.image.title == "new title"
@@ -144,10 +144,11 @@ defmodule Brando.Integration.ImageTest do
     assert image1.sequence == 0
     assert image2.sequence == 1
 
-    assert {:ok, _} = Image.sequence([image1.id, image2.id], [1, 0])
+    assert {:ok, _} = Image.sequence(%{"ids" => [image2.id, image1.id]})
 
     image1 = Brando.repo().get_by!(Image, id: image1.id)
     image2 = Brando.repo().get_by!(Image, id: image2.id)
+
     assert image1.sequence == 1
     assert image2.sequence == 0
   end

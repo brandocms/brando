@@ -1,6 +1,4 @@
 // webpack.common.js - common webpack config
-const LEGACY_CONFIG = 'legacy'
-const MODERN_CONFIG = 'modern'
 
 // node modules
 const path = require('path')
@@ -28,7 +26,7 @@ const configureBabelLoader = browserList => ({
             modules: false,
             corejs: {
               version: 3,
-              proposals: true
+              proposals: false
             },
             useBuiltIns: 'usage',
             targets: {
@@ -48,9 +46,10 @@ const configureBabelLoader = browserList => ({
 // Configure Entries
 const configureEntries = () => {
   const entries = {}
-  for (const [key, value] of Object.entries(settings.entries)) {
-    entries[key] = path.resolve(__dirname, settings.paths.src.js + value)
-  }
+  Object.keys(settings.entries).forEach(key => {
+    const val = settings.entries[key]
+    entries[key] = path.resolve(__dirname, settings.paths.src.js + val)
+  })
 
   return entries
 }
@@ -90,21 +89,20 @@ const baseConfig = {
 const legacyConfig = {
   module: {
     rules: [
-      configureBabelLoader(Object.values(pkg.browserslist.legacyBrowsers))
+      configureBabelLoader(
+        Object.keys(pkg.browserslist.legacyBrowsers).map(e => pkg.browserslist.legacyBrowsers[e])
+      )
     ]
-  },
-  plugins: [
-    new CopyWebpackPlugin(
-      settings.copyWebpackConfig
-    )
-  ]
+  }
 }
 
 // Modern webpack config
 const modernConfig = {
   module: {
     rules: [
-      configureBabelLoader(Object.values(pkg.browserslist.modernBrowsers))
+      configureBabelLoader(
+        Object.keys(pkg.browserslist.modernBrowsers).map(e => pkg.browserslist.modernBrowsers[e])
+      )
     ]
   }
 }

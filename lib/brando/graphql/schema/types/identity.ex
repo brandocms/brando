@@ -27,6 +27,45 @@ defmodule Brando.Schema.Types.Identity do
     field :metas, list_of(:meta)
     field :inserted_at, :time
     field :updated_at, :time
+
+    field :default_language, :string do
+      resolve fn _, _ ->
+        {:ok, Brando.config(:default_language)}
+      end
+    end
+
+    field :languages, list_of(:language) do
+      resolve fn _, _ ->
+        languages =
+          Enum.map(Brando.config(:languages), fn [value: id, text: name] ->
+            %{id: id, name: name}
+          end)
+
+        {:ok, languages}
+      end
+    end
+
+    field :default_admin_language, :string do
+      resolve fn _, _ ->
+        {:ok, Brando.config(:default_admin_language)}
+      end
+    end
+
+    field :admin_languages, list_of(:language) do
+      resolve fn _, _ ->
+        languages =
+          Enum.map(Brando.config(:admin_languages), fn [value: id, text: name] ->
+            %{id: id, name: name}
+          end)
+
+        {:ok, languages}
+      end
+    end
+  end
+
+  object :language do
+    field :id, :string
+    field :name, :string
   end
 
   object :link do
@@ -39,6 +78,23 @@ defmodule Brando.Schema.Types.Identity do
     field :id, :id
     field :key, :string
     field :value, :string
+  end
+
+  object :global do
+    field :id, :id
+    field :label, :string
+    field :type, :string
+    field :key, :string
+    field :data, :json
+    field :global_category_id, :id
+    field :global_category, :global_category
+  end
+
+  object :global_category do
+    field :id, :id
+    field :label, :string
+    field :key, :string
+    field :globals, list_of(:global), resolve: dataloader(Brando.Sites)
   end
 
   object :config do
@@ -69,6 +125,13 @@ defmodule Brando.Schema.Types.Identity do
     field :url, :string
   end
 
+  input_object :global_category_params do
+    field :id, :id
+    field :label, :string
+    field :key, :string
+    field :globals, list_of(:global_params)
+  end
+
   input_object :link_params do
     field :id, :id
     field :name, :string
@@ -79,6 +142,14 @@ defmodule Brando.Schema.Types.Identity do
     field :id, :id
     field :key, :string
     field :value, :string
+  end
+
+  input_object :global_params do
+    field :id, :id
+    field :type, :string
+    field :label, :string
+    field :key, :string
+    field :data, :json
   end
 
   input_object :config_params do
@@ -107,6 +178,26 @@ defmodule Brando.Schema.Types.Identity do
 
     field :delete_identity, type: :identity do
       resolve &Brando.Sites.IdentityResolver.delete/2
+    end
+  end
+
+  object :global_queries do
+    @desc "Get global categories"
+    field :global_categories, type: list_of(:global_category) do
+      resolve &Brando.Sites.GlobalResolver.all/2
+    end
+  end
+
+  object :global_mutations do
+    field :create_global_category, type: :global_category do
+      arg :global_category_params, non_null(:global_category_params)
+      resolve &Brando.Sites.GlobalResolver.create/2
+    end
+
+    field :update_global_category, type: :global_category do
+      arg :category_id, non_null(:id)
+      arg :global_category_params, non_null(:global_category_params)
+      resolve &Brando.Sites.GlobalResolver.update/2
     end
   end
 end

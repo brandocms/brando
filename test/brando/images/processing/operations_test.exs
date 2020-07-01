@@ -86,7 +86,9 @@ defmodule Brando.OperationsTest do
                type: :jpg,
                user: :system,
                sized_img_dir: "images/exhibitions/cover/large",
-               sized_img_path: "images/exhibitions/cover/large/image.jpg"
+               sized_img_path: "images/exhibitions/cover/large/image.jpg",
+               operation_index: 1,
+               total_operations: 6
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
@@ -112,7 +114,9 @@ defmodule Brando.OperationsTest do
                type: :jpg,
                user: :system,
                sized_img_dir: "images/exhibitions/cover/medium",
-               sized_img_path: "images/exhibitions/cover/medium/image.jpg"
+               sized_img_path: "images/exhibitions/cover/medium/image.jpg",
+               operation_index: 2,
+               total_operations: 6
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
@@ -138,7 +142,9 @@ defmodule Brando.OperationsTest do
                type: :jpg,
                user: :system,
                sized_img_dir: "images/exhibitions/cover/micro",
-               sized_img_path: "images/exhibitions/cover/micro/image.jpg"
+               sized_img_path: "images/exhibitions/cover/micro/image.jpg",
+               operation_index: 3,
+               total_operations: 6
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
@@ -164,7 +170,9 @@ defmodule Brando.OperationsTest do
                type: :jpg,
                user: :system,
                sized_img_dir: "images/exhibitions/cover/small",
-               sized_img_path: "images/exhibitions/cover/small/image.jpg"
+               sized_img_path: "images/exhibitions/cover/small/image.jpg",
+               operation_index: 4,
+               total_operations: 6
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
@@ -190,7 +198,9 @@ defmodule Brando.OperationsTest do
                type: :jpg,
                user: :system,
                sized_img_dir: "images/exhibitions/cover/thumb",
-               sized_img_path: "images/exhibitions/cover/thumb/image.jpg"
+               sized_img_path: "images/exhibitions/cover/thumb/image.jpg",
+               operation_index: 5,
+               total_operations: 6
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
@@ -216,7 +226,9 @@ defmodule Brando.OperationsTest do
                type: :jpg,
                user: :system,
                sized_img_dir: "images/exhibitions/cover/xlarge",
-               sized_img_path: "images/exhibitions/cover/xlarge/image.jpg"
+               sized_img_path: "images/exhibitions/cover/xlarge/image.jpg",
+               operation_index: 6,
+               total_operations: 6
              }
            ]
   end
@@ -255,7 +267,9 @@ defmodule Brando.OperationsTest do
                type: :png,
                user: :system,
                sized_img_dir: "images/exhibitions/cover/large",
-               sized_img_path: "images/exhibitions/cover/large/image.png"
+               sized_img_path: "images/exhibitions/cover/large/image.png",
+               operation_index: 1,
+               total_operations: 6
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
@@ -281,7 +295,9 @@ defmodule Brando.OperationsTest do
                type: :png,
                user: :system,
                sized_img_dir: "images/exhibitions/cover/medium",
-               sized_img_path: "images/exhibitions/cover/medium/image.png"
+               sized_img_path: "images/exhibitions/cover/medium/image.png",
+               operation_index: 2,
+               total_operations: 6
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
@@ -307,7 +323,9 @@ defmodule Brando.OperationsTest do
                type: :png,
                user: :system,
                sized_img_dir: "images/exhibitions/cover/micro",
-               sized_img_path: "images/exhibitions/cover/micro/image.png"
+               sized_img_path: "images/exhibitions/cover/micro/image.png",
+               operation_index: 3,
+               total_operations: 6
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
@@ -333,7 +351,9 @@ defmodule Brando.OperationsTest do
                type: :png,
                user: :system,
                sized_img_dir: "images/exhibitions/cover/small",
-               sized_img_path: "images/exhibitions/cover/small/image.png"
+               sized_img_path: "images/exhibitions/cover/small/image.png",
+               operation_index: 4,
+               total_operations: 6
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
@@ -359,7 +379,9 @@ defmodule Brando.OperationsTest do
                type: :png,
                user: :system,
                sized_img_dir: "images/exhibitions/cover/thumb",
-               sized_img_path: "images/exhibitions/cover/thumb/image.png"
+               sized_img_path: "images/exhibitions/cover/thumb/image.png",
+               operation_index: 5,
+               total_operations: 6
              },
              %Brando.Images.Operation{
                filename: "image.jpeg",
@@ -385,7 +407,9 @@ defmodule Brando.OperationsTest do
                type: :png,
                user: :system,
                sized_img_dir: "images/exhibitions/cover/xlarge",
-               sized_img_path: "images/exhibitions/cover/xlarge/image.png"
+               sized_img_path: "images/exhibitions/cover/xlarge/image.png",
+               operation_index: 6,
+               total_operations: 6
              }
            ]
   end

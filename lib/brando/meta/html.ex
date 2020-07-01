@@ -168,21 +168,32 @@ defmodule Brando.Meta.HTML do
   @spec put_record_meta(conn :: Plug.Conn.t(), record :: map, opts :: keyword) :: any
   def put_record_meta(conn, record, opts \\ []) do
     img_field = Keyword.get(opts, :img_field, :cover)
-    img_field_size = Keyword.get(opts, :img_field_size, :xlarge)
+    img_field_size = Keyword.get(opts, :img_field_size, "xlarge")
     title_field = Keyword.get(opts, :title_field, :title)
     description_field = Keyword.get(opts, :description_field, :meta_description)
 
     meta_image =
-      if Map.get(record, img_field, nil) do
-        Enum.join(
-          [
-            Brando.Utils.host_and_media_url(),
-            record.cover.sizes[img_field_size]
-          ],
-          "/"
-        )
-      else
-        nil
+      cond do
+        Map.get(record, :meta_image) ->
+          Enum.join(
+            [
+              Brando.Utils.host_and_media_url(),
+              record.meta_image.sizes["xlarge"]
+            ],
+            "/"
+          )
+
+        Map.get(record, img_field, nil) ->
+          Enum.join(
+            [
+              Brando.Utils.host_and_media_url(),
+              record.cover.sizes[img_field_size]
+            ],
+            "/"
+          )
+
+        true ->
+          nil
       end
 
     title =

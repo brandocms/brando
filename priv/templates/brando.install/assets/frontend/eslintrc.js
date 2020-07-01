@@ -30,7 +30,8 @@ module.exports = {
     'quotes': ['error', 'single'],
     'radix': ['error', 'as-needed'],
     'semi': 0,
-    'space-before-function-paren': ['error', 'always']
+    'space-before-function-paren': ['error', 'always'],
+    'import/no-extraneous-dependencies': ['error', { 'devDependencies': ['./postcss.config.js', './webpack.*.js'] }]
   },
   parserOptions: {
     parser: 'babel-eslint'

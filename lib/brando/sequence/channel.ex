@@ -18,8 +18,8 @@ defmodule Brando.Sequence.Channel do
   defmacro sequence(key, module) do
     quote generated: true do
       @doc false
-      def handle_in("#{unquote(key)}:sequence_#{unquote(key)}", %{"ids" => ids}, socket) do
-        unquote(module).sequence(ids, Range.new(0, length(ids)))
+      def handle_in("#{unquote(key)}:sequence_#{unquote(key)}", params, socket) do
+        unquote(module).sequence(params)
         {:reply, {:ok, %{code: 200}}, socket}
       end
     end

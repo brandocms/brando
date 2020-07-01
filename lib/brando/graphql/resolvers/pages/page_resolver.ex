@@ -15,8 +15,8 @@ defmodule Brando.Pages.PageResolver do
   @doc """
   Get all pages (at parent level)
   """
-  def all(_, %{context: %{current_user: _current_user}}) do
-    Pages.list_pages()
+  def all(args, %{context: %{current_user: _current_user}}) do
+    Pages.list_pages(args)
   end
 
   @doc """
@@ -45,6 +45,24 @@ defmodule Brando.Pages.PageResolver do
   def delete(%{page_id: page_id}, %{context: %{current_user: _current_user}}) do
     page_id
     |> Pages.delete_page()
+    |> response
+  end
+
+  @doc """
+  Duplicate page
+  """
+  def duplicate(%{page_id: page_id}, %{context: %{current_user: user}}) do
+    page_id
+    |> Pages.duplicate_page(user)
+    |> response
+  end
+
+  @doc """
+  Duplicate section
+  """
+  def duplicate_section(%{section_id: section_id}, %{context: %{current_user: user}}) do
+    section_id
+    |> Pages.duplicate_page_fragment(user)
     |> response
   end
 end

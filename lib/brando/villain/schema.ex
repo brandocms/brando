@@ -23,21 +23,40 @@ defmodule Brando.Villain.Schema do
       def changeset(schema, :create, params) do
         schema
         |> cast(params, @required_fields, @optional_fields)
-        |> Brando.Villain.HTML.generate_html()
+        |> generate_html()
       end
 
-  You can add separate parsers by supplying the parser module as a parameter to the `generate_html`
-  function or `rerender_html` funtion. If not, it will use the parser module given in
+  You can configure which parser to use with
 
       config :brando, Brando.Villain, :parser
 
   """
-  defmacro __using__(_) do
+  defmacro __using__(opts) do
     quote do
       Module.register_attribute(__MODULE__, :villain_fields, accumulate: true)
-
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
+
+      unless Keyword.fetch(unquote(opts), :generate_protocol) == {:ok, false} do
+        defimpl Phoenix.HTML.Safe, for: __MODULE__ do
+          def to_iodata(%{html: html}) do
+            html
+            |> Phoenix.HTML.raw()
+            |> Phoenix.HTML.Safe.to_iodata()
+          end
+
+          def to_iodata(entry) do
+            raise """
+
+            Failed to auto generate protocol for #{inspect(__MODULE__)} struct.
+            Missing `:html` key.
+
+            Call `use Brando.Villain.Schema, generate_protocol: false` instead
+
+            """
+          end
+        end
+      end
     end
   end
 
@@ -86,19 +105,23 @@ defmodule Brando.Villain.Schema do
         |> generate_html()
       end
   """
-  def generate_html(
-        changeset,
-        field \\ nil,
-        parser_mod \\ Brando.config(Brando.Villain)[:parser]
-      ) do
+  def generate_html(changeset, field \\ nil)
+
+  def generate_html(%Ecto.Changeset{valid?: true} = changeset, field) do
     data_field = (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
     html_field = (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
 
-    if Ecto.Changeset.get_change(changeset, data_field) do
-      parsed_data = Brando.Villain.parse(Map.get(changeset.changes, data_field), parser_mod)
-      Ecto.Changeset.put_change(changeset, html_field, parsed_data)
-    else
-      changeset
-    end
+    applied_changes = Ecto.Changeset.apply_changes(changeset)
+    data_src = Map.get(applied_changes, data_field)
+
+    parsed_data =
+      Brando.Villain.parse(data_src, applied_changes,
+        data_field: data_field,
+        html_field: html_field
+      )
+
+    Ecto.Changeset.put_change(changeset, html_field, parsed_data)
   end
+
+  def generate_html(changeset, _), do: changeset
 end

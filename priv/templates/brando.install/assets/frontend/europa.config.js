@@ -6,7 +6,7 @@ module.exports = {
       ipad_portrait: '768px',
       ipad_landscape: '1024px',
       desktop_md: '1200px',
-      desktop_lg: '1560px',
+      desktop_lg: '1440px',
       desktop_xl: '1920px'
     },
 
@@ -18,16 +18,10 @@ module.exports = {
         background: '#fcf5f1'
       },
 
-      blue: {
-        100: '#0C0E22', // darkest-blue
-        200: '#101332', // ___
-        300: '#131841', // dark blue
-        400: '#0A19A0', // ___
-        500: '#001AFF', // blue
-        600: '#1C33FF', // ___
-        700: '#394DFF', // ___
-        800: '#5566FF', // ___
-        900: '#7180FF' // ___
+      link: {
+        regular: '#000000',
+        hover: '#000000',
+        hoverBorder: '#000000'
       },
 
       gray: {
@@ -47,9 +41,6 @@ module.exports = {
         background: '#f9f7f4',
         foreground: '#000000'
       },
-
-      line: '#e4e4e4',
-      dash: 'pink',
 
       navigation: {
         backgroundAlt: 'ghostwhite'
@@ -80,22 +71,22 @@ module.exports = {
 
     columns: {
       count: {
-        iphone: 2,
-        mobile: 2,
-        ipad_portrait: 6,
-        ipad_landscape: 6,
-        desktop_md: 6,
-        desktop_lg: 6,
-        desktop_xl: 6
+        iphone: 6,
+        mobile: 6,
+        ipad_portrait: 12,
+        ipad_landscape: 12,
+        desktop_md: 12,
+        desktop_lg: 12,
+        desktop_xl: 12
       },
       gutters: {
-        iphone: '40px',
-        mobile: '40px',
-        ipad_portrait: '35px',
-        ipad_landscape: '70px',
-        desktop_md: '80px',
-        desktop_lg: '100px',
-        desktop_xl: '120px'
+        iphone: '1.5vw',
+        mobile: '1.5vw',
+        ipad_portrait: '1.5vw',
+        ipad_landscape: '1.5vw',
+        desktop_md: '1.5vw',
+        desktop_lg: '1.5vw',
+        desktop_xl: '1.5vw'
       }
     },
 

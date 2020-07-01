@@ -1,4 +1,5 @@
-defmodule Brando.Integration.MockCache do
+# coveralls-ignore-start
+defmodule Brando.Integration.Cache do
   def get(:cache, key) do
     if key == :error do
       {:error, :test}
@@ -25,3 +26,5 @@ defmodule Brando.Integration.MockCache do
     end
   end
 end
+
+# coveralls-ignore-stop

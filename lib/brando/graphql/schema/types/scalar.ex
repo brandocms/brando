@@ -1,6 +1,5 @@
 defmodule Brando.Schema.Types.Scalar do
   use Brando.Web, :absinthe
-  alias Absinthe.Blueprint
 
   scalar :time, description: "ISOz time" do
     parse &Timex.parse(&1.value, "{ISO:Extended:Z}")
@@ -18,32 +17,32 @@ defmodule Brando.Schema.Types.Scalar do
     end
   end
 
-  @desc """
-  Represents an uploaded file or image.
-  """
-  scalar :upload_or_image do
+  scalar :order, description: "Order string: field dir, field dir, field dir" do
     parse fn
-      %Blueprint.Input.String{value: value}, context ->
-        # if ctx :uploads is empty, it's an image.
-        case Map.fetch(context[:__absinthe_plug__][:uploads] || %{}, value) do
-          :error ->
-            # it's an image/focal update
-            {:ok, img_params} = Jason.decode(value)
-            {:ok, %Brando.Type.Focal{focal: img_params["focal"]}}
+      %{value: string} ->
+        order_tuples =
+          string
+          |> String.split(",")
+          |> Enum.map(fn e ->
+            String.trim(e)
+            |> String.split(" ")
+            |> Enum.map(&String.to_atom/1)
+            |> List.to_tuple()
+          end)
 
-          {:ok, upload} ->
-            {:ok, upload}
-        end
+        {:ok, order_tuples}
+    end
+  end
 
-      %Blueprint.Input.Null{}, _ ->
-        {:ok, nil}
-
-      _, _ ->
-        :error
+  scalar :atom, description: "Atom" do
+    parse fn
+      %{value: p} when is_binary(p) -> {:ok, String.to_existing_atom(p)}
+      %{value: p} when is_atom(p) -> {:ok, p}
     end
 
-    serialize fn _ ->
-      raise "The `:upload` scalar cannot be returned!"
+    serialize fn
+      p when is_binary(p) -> {:ok, String.to_existing_atom(p)}
+      p when is_atom(p) -> {:ok, p}
     end
   end
 

@@ -1,6 +1,3 @@
-#cookies {
-  @space padding-top lg;
-}
 
 .no-js {
   .cookie-container {
@@ -15,18 +12,23 @@
   left: 0;
   background-color: theme(colors.dark);
   color: theme(colors.light);
-  z-index: 9997;
+  z-index: 99999;
   margin-bottom: 0 !important;
   max-width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 
-  @space padding-y sm;
+  @space padding-y 20px $desktop;
+  @space padding-y 20px $tablet;
+  @space padding-y 15px $mobile;
 
   .cookie-law {
+    @container;
     display: flex;
     justify-content: space-between;
     align-items: center;
 
-    @responsive <=mobile {
+    @responsive <=ipad_portrait {
       flex-direction: column;
     }
   }
@@ -34,7 +36,12 @@
   .cookie-law-text {
     width: 100%;
     p {
-      font-size: 15px;
+      @fontsize base $desktop;
+      @fontsize sm ipad_landscape;
+      @fontsize base ipad_portrait;
+      @fontsize base(0.8) $mobile;
+      @space padding-right 4 $desktop;
+      @space padding-right 4 ipad_landscape;
     }
   }
 
@@ -42,7 +49,7 @@
     flex-shrink: 0;
     text-align: right;
 
-    @responsive <=mobile {
+    @responsive <=ipad_portrait {
       display: flex;
       align-items: center;
       width: 100%;
@@ -50,7 +57,7 @@
       justify-content: space-between;
     }
 
-    @responsive ipad_portrait/ipad_landscape {
+    @responsive ipad_landscape {
       padding-left: 15px;
     }
 
@@ -65,7 +72,7 @@
       border: 0;
       padding: 3px 25px;
 
-      @responsive >=ipad_portrait {
+      @responsive >=ipad_landscape {
         margin-right: 15px;
       }
     }

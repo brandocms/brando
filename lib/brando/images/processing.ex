@@ -1,5 +1,6 @@
 defmodule Brando.Images.Processing do
   alias Brando.Image
+  alias Brando.ImageCategory
   alias Brando.ImageSeries
   alias Brando.Images
   alias Brando.Progress
@@ -8,21 +9,25 @@ defmodule Brando.Images.Processing do
   import Ecto.Query, only: [from: 2]
 
   @type id :: String.t() | integer
+  @type changeset :: Ecto.Changeset.t()
   @type user :: Brando.Users.User.t() | :system
   @type image_schema :: Brando.Image.t()
   @type image_series_schema :: Brando.ImageSeries.t()
   @type image_struct :: Brando.Type.Image.t()
   @type image_kind :: :image | :image_series | :image_field
 
+  @default_focal %{x: 50, y: 50}
+
   @doc """
   Create an image struct from upload, cfg and extra info
   """
-  @spec create_image_struct(upload :: Upload.t(), user :: user) ::
+  @spec create_image_struct(upload :: Upload.t(), user :: user, extra_params :: any()) ::
           {:ok, image_struct}
           | {:error, {:create_image_sizes, any()}}
   def create_image_struct(
-        %Upload{plug: %{uploaded_file: file}, cfg: cfg, extra_info: %{focal: focal}},
-        user
+        %Upload{plug: %{uploaded_file: file}, cfg: cfg},
+        user,
+        extra_params \\ %{}
       ) do
     {_, filename} = Brando.Utils.split_path(file)
     upload_path = Map.get(cfg, :upload_path)
@@ -38,7 +43,9 @@ defmodule Brando.Images.Processing do
           |> Map.put(:path, new_path)
           |> Map.put(:width, size_struct.width)
           |> Map.put(:height, size_struct.height)
-          |> Map.put(:focal, focal)
+          |> Map.put(:alt, Map.get(extra_params, :alt))
+          |> Map.put(:title, Map.get(extra_params, :title))
+          |> Map.put(:focal, Map.get(extra_params, :focal, @default_focal))
 
         {:ok, image_struct}
 
@@ -81,7 +88,7 @@ defmodule Brando.Images.Processing do
   @spec recreate_sizes_for_image(
           image_schema :: image_schema,
           user :: user
-        ) :: {:ok, image_schema} | {:error, Ecto.Changeset.t()}
+        ) :: {:ok, image_schema} | {:error, changeset}
   def recreate_sizes_for_image(img_schema, user \\ :system) do
     {:ok, img_cfg} = Images.get_series_config(img_schema.image_series_id)
     Images.Utils.delete_sized_images(img_schema.image)
@@ -90,7 +97,7 @@ defmodule Brando.Images.Processing do
            Images.Operations.create_operations(img_schema.image, img_cfg, user, img_schema.id),
          {:ok, [result]} <- Images.Operations.perform_operations(operations, user) do
       img_schema
-      |> Image.changeset(:update, %{image: result.img_struct})
+      |> Image.changeset(%{image: result.img_struct})
       |> Brando.repo().update
     else
       err ->
@@ -104,7 +111,20 @@ defmodule Brando.Images.Processing do
   @spec recreate_sizes_for_image_series(
           image_series_id :: id,
           user :: user
-        ) :: [{:ok, image_schema} | {:error, Ecto.Changeset.t()}]
+        ) :: [{:ok, image_schema} | {:error, changeset}]
+  def recreate_sizes_for_image_category(category_id, user \\ :system) do
+    query =
+      from ic in ImageCategory,
+        preload: :image_series,
+        where: ic.id == ^category_id
+
+    category = Brando.repo().one!(query)
+
+    for is <- category.image_series do
+      recreate_sizes_for_image_series(is.id, user)
+    end
+  end
+
   def recreate_sizes_for_image_series(image_series_id, user \\ :system) do
     query =
       from is in ImageSeries,
@@ -186,10 +206,10 @@ defmodule Brando.Images.Processing do
       recreate_sizes_for_image_field_record(changeset, :cover, user)
   """
   @spec recreate_sizes_for_image_field_record(
-          changeset :: Ecto.Changeset.t(),
+          changeset :: changeset,
           field_name :: atom,
           user :: user
-        ) :: {:ok, Ecto.Changeset.t()} | {:error, Ecto.Changeset.t()}
+        ) :: {:ok, changeset} | {:error, changeset}
   def recreate_sizes_for_image_field_record(changeset, field_name, user \\ :system) do
     img_struct = Ecto.Changeset.get_change(changeset, field_name)
     schema = changeset.data.__struct__

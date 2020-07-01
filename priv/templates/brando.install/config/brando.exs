@@ -11,30 +11,33 @@ config :logger, :console,
 
 config :brando,
   app_name: "<%= application_module %>",
-  title_prefix: "<%= application_module %> | ",
-  endpoint: <%= application_module %>Web.Endpoint,
   otp_app: :<%= application_name %>,
+  app_module: <%= application_module %>,
+  web_module: <%= application_module %>Web,
+
   log_dir: Path.expand("./log"),
+
   default_language: "en",
   languages: [
-    [value: "nb", text: "Norsk"],
+    [value: "no", text: "Norsk"],
     [value: "en", text: "English"]
   ],
-  default_admin_language: "nb",
+
+  default_admin_language: "no",
   admin_languages: [
-    [value: "nb", text: "Norsk"],
+    [value: "no", text: "Norsk"],
     [value: "en", text: "English"]
   ],
+
   lockdown: true,
   lockdown_password: "<%= :os.timestamp |> :erlang.phash2 |> Integer.to_string(32) |> String.downcase %>",
+
   mailgun_domain: "https://api.mailgun.net/v3/mydomain.com",
   mailgun_key: "key-##############",
+
   media_path: Path.expand("./media"),
   media_url: "/media",
-  repo: <%= application_module %>.Repo,
-  factory: <%= application_module %>.Factory,
-  router: <%= application_module %>Web.Router,
-  helpers: <%= application_module %>Web.Router.Helpers,
+
   warn_on_http_auth: false,
   stats_polling_interval: 5000
 
@@ -67,11 +70,7 @@ config :brando, Brando.Images,
     },
   }
 
-config :brando, Brando.Type.Role,
-  roles: %{staff: 1, admin: 2, superuser: 4}
-
 config :brando, Brando.Villain,
-  extra_blocks: [],
   parser: <%= application_module %>.Villain.Parser
 
 # Configure Guardian for auth.

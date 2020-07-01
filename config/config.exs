@@ -5,7 +5,7 @@
 # is restricted to this project.
 use Mix.Config
 
-config :brando, ecto_repos: [Brando.Integration.TestRepo]
+config :brando, ecto_repos: [Brando.Integration.Repo]
 config :phoenix, :json_library, Jason
 
 # These are defaults for internals, mostly overridden for testing

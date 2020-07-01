@@ -41,7 +41,7 @@ defmodule Brando.Users do
   Get non deleted user by email
   """
   def get_user_by_email(email) do
-    query = from t in User, where: t.email == ^email and is_nil(t.deleted_at)
+    query = from t in User, where: t.email == ^email and is_nil(t.deleted_at) and t.active == true
 
     case Brando.repo().one(query) do
       nil -> {:error, {:user, :not_found}}
@@ -79,20 +79,20 @@ defmodule Brando.Users do
   @doc """
   Create user
   """
-  def create_user(params) do
-    User.changeset(%User{}, :create, params)
-    |> maybe_update_password
+  def create_user(params, current_user) do
+    User.changeset(%User{}, params, current_user)
+    |> maybe_update_password()
     |> Brando.repo().insert
   end
 
   @doc """
   Update user
   """
-  def update_user(id, params) do
+  def update_user(id, params, current_user) do
     case get_user(id) do
       {:ok, user} ->
         user
-        |> User.changeset(:update, params)
+        |> User.changeset(params, current_user)
         |> maybe_update_password
         |> Brando.repo().update
 
@@ -109,12 +109,10 @@ defmodule Brando.Users do
   @doc """
   Bumps `user`'s `last_login` to current time.
   """
-  @spec set_last_login(user) :: user
+  @spec set_last_login(user) :: {:ok, user}
   def set_last_login(user) do
-    current_time = NaiveDateTime.from_erl!(:calendar.local_time())
-    {:ok, user} = Utils.Schema.update_field(user, last_login: current_time)
-
-    user
+    current_time = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
+    Utils.Schema.update_field(user, last_login: current_time)
   end
 
   @doc """

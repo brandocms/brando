@@ -8,14 +8,16 @@ import menuSections from './menus'
 import i18n from 'brandojs/src/i18n'
 import app from './config'
 
+import './styles/blocks.pcss'
+
 Vue.use(VueBrando, { app, menuSections })
 
 new Vue({
   router,
   i18n,
-  render: h => h(Admin),
+  data: { ready: false },
   created() {
-    console.log('==> adding local routes')
     this.$router.addRoutes(routes)
-  }
+  },
+  render: h => h(Admin)
 }).$mount('#app')

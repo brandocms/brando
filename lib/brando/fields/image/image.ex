@@ -58,44 +58,89 @@ defmodule Brando.Field.Image.Schema do
       @doc """
       Validates upload in changeset
       """
+      def validate_upload(changeset, {:image, field_name}, user, cfg) do
+        do_validate_upload(changeset, {:image, field_name}, user, cfg)
+      end
+
       def validate_upload(changeset, {:image, field_name}, user) do
-        do_validate_upload(changeset, {:image, field_name}, user)
+        do_validate_upload(changeset, {:image, field_name}, user, nil)
       end
 
       def validate_upload(changeset, {:image, field_name}) do
-        do_validate_upload(changeset, {:image, field_name}, :system)
+        do_validate_upload(changeset, {:image, field_name}, :system, nil)
       end
 
-      defp do_validate_upload(changeset, {:image, field_name}, user) do
-        with {:ok, {:upload, changeset}} <- merge_focal(changeset, field_name),
-             {:ok, plug} <- Brando.Utils.field_has_changed(changeset, field_name),
-             {:ok, _} <- Brando.Utils.changeset_has_no_errors(changeset),
-             {:ok, cfg} <- get_image_cfg(field_name),
-             {:ok, {:handled, name, field}} <-
-               Images.Upload.Field.handle_upload(field_name, plug, cfg, user) do
-          cleanup_old_images(changeset, :safe)
-          put_change(changeset, name, field)
-        else
+      defp do_validate_upload(changeset, {:image, field_name}, user, cfg) do
+        case Brando.Utils.field_has_changed(changeset, field_name) do
           :unchanged ->
             changeset
 
-          :has_errors ->
+          {:ok, {:update, update_params}} ->
+            with {:ok, _} <- Brando.Utils.changeset_has_no_errors(changeset),
+                 {:ok, image_data} <- get_image_data(changeset, field_name),
+                 {:ok, changeset} <-
+                   maybe_update_focal(update_params, image_data, changeset, field_name, user) do
+              changeset
+            else
+              :has_errors ->
+                changeset
+            end
+
+          {:ok, {:upload, upload_params}} ->
+            with {:ok, _} <- Brando.Utils.changeset_has_no_errors(changeset),
+                 {:ok, cfg} <- grab_cfg(cfg, field_name, changeset),
+                 {:ok, {:handled, name, field}} <-
+                   Images.Upload.Field.handle_upload(field_name, upload_params, cfg, user) do
+              cleanup_old_images(changeset, :safe)
+              put_change(changeset, name, field)
+            else
+              :has_errors ->
+                changeset
+
+              {:ok, {:unhandled, name, field}} ->
+                changeset
+
+              {:error, {:image_series, :not_found}} ->
+                add_error(changeset, :image_series, "Image series not found!")
+
+              {:error, {name, {:error, error_msg}}} ->
+                add_error(changeset, name, error_msg)
+            end
+
+          {:ok, %Brando.Type.Image{}} ->
+            # image from API - villain gallery/image
             changeset
+        end
+      end
 
-          {:ok, {:focal_changed, changeset}} ->
-            {:ok, changeset} =
-              Images.Processing.recreate_sizes_for_image_field_record(changeset, field_name, user)
+      defp maybe_update_focal(%{focal: focal} = params, image_data, changeset, field_name, user) do
+        changeset = put_change(changeset, field_name, Map.merge(image_data, params))
+        Images.Processing.recreate_sizes_for_image_field_record(changeset, field_name, user)
+      end
 
-            changeset
+      defp maybe_update_focal(params, image_data, changeset, field_name, _) do
+        changeset = put_change(changeset, field_name, Map.merge(image_data, params))
+        {:ok, changeset}
+      end
 
-          {:ok, {:focal_unchanged, changeset}} ->
-            changeset
+      defp grab_cfg(nil, field_name, _), do: get_image_cfg(field_name)
 
-          {:error, {name, {:error, error_msg}}} ->
-            add_error(changeset, name, error_msg)
+      defp grab_cfg(:db, _, changeset) do
+        image_series_id = get_field(changeset, :image_series_id)
+        Brando.Images.get_series_config(image_series_id)
+      end
 
-          {:ok, {:unhandled, name, field}} ->
-            changeset
+      defp grab_cfg(cfg, _, _) do
+        {:ok, cfg}
+      end
+
+      defp get_image_data(changeset, field_name) do
+        case Map.get(changeset.data, field_name, nil) do
+          nil ->
+            raise "Wanted to update image field, but no data was found!"
+
+          image_data ->
+            {:ok, image_data}
         end
       end
     end
@@ -168,48 +213,17 @@ defmodule Brando.Field.Image.Schema do
   defmacro has_image_field(field_name, opts) do
     quote do
       imagefields = Module.get_attribute(__MODULE__, :imagefields)
-      cfg_struct = struct!(%Brando.Type.ImageConfig{}, unquote(opts))
 
-      Module.put_attribute(__MODULE__, :imagefields, {unquote(field_name), cfg_struct})
-    end
-  end
+      val =
+        case is_map(unquote(opts)) do
+          true ->
+            struct!(%Brando.Type.ImageConfig{}, unquote(opts))
 
-  @spec merge_focal(changeset :: Ecto.Changeset.t(), field_name :: atom) ::
-          {:ok, {:focal_changed, Ecto.Changeset.t()}}
-          | {:ok, {:focal_unchanged, Ecto.Changeset.t()}}
-          | {:ok, {:upload, Ecto.Changeset.t()}}
-  def merge_focal(changeset, field_name) do
-    case get_field(changeset, field_name) do
-      %Brando.Type.Focal{focal: focal} ->
-        # Merge focal with the cs
-        do_merge_focal(changeset, field_name, focal)
+          false ->
+            unquote(opts)
+        end
 
-      _ ->
-        {:ok, {:upload, changeset}}
-    end
-  end
-
-  defp do_merge_focal(changeset, field_name, focal) do
-    case Map.get(changeset.data, field_name, nil) do
-      nil ->
-        # nothing in data, return regular changeset
-        {:ok, {:upload, changeset}}
-
-      img ->
-        put_or_delete_change(changeset, field_name, img, focal)
-    end
-  end
-
-  defp put_or_delete_change(changeset, field_name, img, focal) do
-    case Map.equal?(img.focal, focal) do
-      true ->
-        # nothing changed, delete change
-        changeset = delete_change(changeset, field_name)
-        {:ok, {:focal_unchanged, changeset}}
-
-      false ->
-        changeset = put_change(changeset, field_name, Map.put(img, :focal, focal))
-        {:ok, {:focal_changed, changeset}}
+      Module.put_attribute(__MODULE__, :imagefields, {unquote(field_name), val})
     end
   end
 

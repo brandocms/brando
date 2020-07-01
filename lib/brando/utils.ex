@@ -49,6 +49,7 @@ defmodule Brando.Utils do
   def slugify_filename(filename) do
     {basename, ext} = split_filename(filename)
     slugged_filename = slugify(basename)
+    ext = String.downcase(ext)
     "#{slugged_filename}#{ext}"
   end
 
@@ -58,7 +59,7 @@ defmodule Brando.Utils do
   """
   @spec random_filename(binary) :: binary
   def random_filename(filename) do
-    ext = Path.extname(filename)
+    ext = filename |> Path.extname() |> String.downcase()
     random_str = random_string(filename)
     "#{random_str}#{ext}"
   end
@@ -69,7 +70,7 @@ defmodule Brando.Utils do
   """
   @spec change_basename(binary, binary) :: binary
   def change_basename(filename, new_basename) do
-    ext = Path.extname(filename)
+    ext = filename |> Path.extname() |> String.downcase()
     "#{new_basename}#{ext}"
   end
 
@@ -78,7 +79,7 @@ defmodule Brando.Utils do
   """
   @spec change_extension(file :: binary, new_extension :: binary) :: binary
   def change_extension(file, new_extension) do
-    Enum.join([Path.rootname(file), new_extension], ".")
+    Enum.join([Path.rootname(file), String.downcase(new_extension)], ".")
   end
 
   @doc """
@@ -98,6 +99,18 @@ defmodule Brando.Utils do
           filename
       end
     end
+  end
+
+  @doc """
+  Tries to access `keys` as a path to `map`
+  """
+  @spec try_path(map :: Map.t(), keys :: [atom] | nil) :: any | nil
+  def try_path(_, nil), do: nil
+
+  def try_path(map, keys) do
+    Enum.reduce(keys, map, fn key, acc ->
+      if acc, do: Map.get(acc, key)
+    end)
   end
 
   @doc """
@@ -182,19 +195,42 @@ defmodule Brando.Utils do
   end
 
   @doc """
-  Converts `collection` (if it's a struct) to a map with string keys
+  Convert map atom keys to strings
   """
-  def to_string_map(nil), do: nil
+  def stringify_keys(nil), do: nil
+  def stringify_keys(struct = %{}) when is_struct(struct), do: struct
 
-  def to_string_map(collection) do
-    if Map.has_key?(collection, :__struct__) do
-      collection
-      |> Map.delete(:__struct__)
-      |> Enum.map(fn {k, v} -> {Atom.to_string(k), v} end)
-      |> Enum.into(%{})
-    else
-      collection
-    end
+  def stringify_keys(map = %{}) do
+    map
+    |> Enum.map(fn {k, v} -> {stringify_key(k), stringify_keys(v)} end)
+    |> Enum.into(%{})
+  end
+
+  # Walk the list and stringify the keys of
+  # of any map members
+  def stringify_keys([head | rest]) do
+    [stringify_keys(head) | stringify_keys(rest)]
+  end
+
+  def stringify_keys(not_a_map) do
+    not_a_map
+  end
+
+  defp stringify_key(key) when is_atom(key), do: Atom.to_string(key)
+  defp stringify_key(key), do: key
+
+  def snake_case(map) when is_map(map) do
+    map
+    |> Enum.map(fn {k, v} -> {Recase.to_snake(k), snake_case(v)} end)
+    |> Enum.into(%{})
+  end
+
+  def snake_case([head | rest]) do
+    [snake_case(head) | snake_case(rest)]
+  end
+
+  def snake_case(not_a_map) do
+    not_a_map
   end
 
   @doc """
@@ -449,6 +485,9 @@ defmodule Brando.Utils do
     case Keyword.get(opts, :cache, nil) do
       nil ->
         ""
+
+      cache when is_binary(cache) ->
+        "?#{cache}"
 
       cache ->
         stamp =

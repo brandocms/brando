@@ -81,6 +81,8 @@ defmodule Mix.Tasks.Brando.Install do
      "lib/application_name_web/templates/page/_navigation.html.eex"},
     {:eex, "lib/application_name_web/templates/page/index.html.eex",
      "lib/application_name_web/templates/page/index.html.eex"},
+    {:eex, "lib/application_name_web/templates/page/default.html.eex",
+     "lib/application_name_web/templates/page/default.html.eex"},
     {:eex, "lib/application_name_web/templates/page/_footer.html.eex",
      "lib/application_name_web/templates/page/_footer.html.eex"},
     {:eex, "lib/application_name_web/templates/page/__logo.html.eex",
@@ -96,6 +98,7 @@ defmodule Mix.Tasks.Brando.Install do
 
     # Default configuration files
     {:eex, "config/brando.exs", "config/brando.exs"},
+    {:eex, "config/config.exs", "config/config.exs"},
     {:eex, "config/dev.exs", "config/dev.exs"},
     {:eex, "config/e2e.exs", "config/e2e.exs"},
     {:eex, "config/prod.exs", "config/prod.exs"},
@@ -143,10 +146,6 @@ defmodule Mix.Tasks.Brando.Install do
      "lib/application_name_web/guardian/gql_pipeline.ex"},
     {:eex, "lib/application_name_web/guardian/token_pipeline.ex",
      "lib/application_name_web/guardian/token_pipeline.ex"},
-    {:eex, "lib/application_name_web/controllers/session_controller.ex",
-     "lib/application_name_web/controllers/session_controller.ex"},
-    {:eex, "lib/application_name_web/views/session_view.ex",
-     "lib/application_name_web/views/session_view.ex"},
 
     # Helpers for frontend
     {:eex, "lib/application_name_web.ex", "lib/application_name_web.ex"},
@@ -164,7 +163,16 @@ defmodule Mix.Tasks.Brando.Install do
     {:keep, "lib/graphql/resolvers", "lib/application_name/graphql/resolvers"},
 
     # Endpoint
-    {:eex, "lib/application_name_web/endpoint.ex", "lib/application_name_web/endpoint.ex"}
+    {:eex, "lib/application_name_web/endpoint.ex", "lib/application_name_web/endpoint.ex"},
+
+    # Repo
+    {:eex, "lib/application_name/repo.ex", "lib/application_name/repo.ex"},
+
+    # Authorization
+    {:eex, "lib/application_name/authorization.ex", "lib/application_name/authorization.ex"},
+
+    # Telemetry
+    {:eex, "lib/application_name_web/telemetry.ex", "lib/application_name_web/telemetry.ex"}
   ]
 
   @static [
@@ -175,6 +183,10 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "Dockerfile.staging", "Dockerfile.staging"},
     {:copy, "fabfile.py", "fabfile.py"},
     {:eex, "deployment.cfg", "deployment.cfg"},
+    {:eex, "scripts/sync_media_from_local_to_remote.sh",
+     "scripts/sync_media_from_local_to_remote.sh"},
+    {:eex, "scripts/sync_media_from_remote_to_local.sh",
+     "scripts/sync_media_from_remote_to_local.sh"},
 
     # Backend assets
     {:copy, "assets/backend/apollo.config.js", "assets/backend/apollo.config.js"},
@@ -213,6 +225,7 @@ defmodule Mix.Tasks.Brando.Install do
      "assets/backend/public/fonts/fontsplaceholder"},
     {:copy, "assets/backend/public/images/admin/avatar.png",
      "assets/backend/public/images/admin/avatar.png"},
+    {:copy, "assets/backend/src/styles/blocks.pcss", "assets/backend/src/styles/blocks.pcss"},
 
     # Frontend assets
     {:keep, "assets/frontend/fonts", "assets/frontend/fonts"},
@@ -227,6 +240,10 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "assets/frontend/webpack.prod.js", "assets/frontend/webpack.prod.js"},
     {:eex, "assets/frontend/webpack.settings.js.eex", "assets/frontend/webpack.settings.js"},
     {:copy, "assets/frontend/yarn.lock.eex", "assets/frontend/yarn.lock"},
+
+    # Frontend static
+    {:copy, "assets/frontend/static/favicon.ico", "assets/frontend/static/favicon.ico"},
+    {:copy, "assets/frontend/static/ico/favicon.ico", "assets/frontend/static/ico/favicon.ico"},
 
     # Frontend CYPRESS
     {:copy, "assets/frontend/cypress.json", "assets/frontend/cypress.json"},
@@ -320,7 +337,10 @@ defmodule Mix.Tasks.Brando.Install do
 
     binding = [
       application_module: opts[:module] || Phoenix.Naming.camelize(Atom.to_string(app)),
-      application_name: Atom.to_string(app)
+      application_name: Atom.to_string(app),
+      secret_key_base: random_string(64),
+      signing_salt: random_string(8),
+      lv_signing_salt: random_string(8)
     ]
 
     Mix.shell().info("\nDeleting old assets")
@@ -360,5 +380,9 @@ defmodule Mix.Tasks.Brando.Install do
           create_file(target, contents, force: true)
       end
     end
+  end
+
+  defp random_string(length) do
+    :crypto.strong_rand_bytes(length) |> Base.encode64() |> binary_part(0, length)
   end
 end

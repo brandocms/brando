@@ -1,43 +1,133 @@
-## JAVASCRIPT FRONTEND AND BACKEND
+# syntax = docker/dockerfile:1.0-experimental
 
-FROM node:10 AS frontend_builder
+# -----------------------------------
+# - stage: install
+# - job: dependencies
+# -----------------------------------
 
-COPY assets/frontend /opt/app/assets/frontend
-WORKDIR /opt/app/assets/frontend
-RUN yarn install --force --pure-lockfile
-RUN yarn run build
+FROM twined/fehn:2.4 AS deps
 
-FROM node:10 AS backend_builder
-
-COPY assets/backend /opt/app/assets/backend
-WORKDIR /opt/app/assets/backend
-RUN yarn install --force --pure-lockfile
-RUN yarn run build
-
-## MAIN ELIXIR APPLICATION
-
-FROM twined/fehn:2.1
-
-LABEL maintainer="Twined Networks <mail@twined.net>"
+ARG MIX_ENV=staging
+ARG HEX_MIRROR_URL=https://repo.hex.pm
 
 WORKDIR /opt/app
-ENV MIX_ENV staging
 
-COPY lib lib
-COPY test test
-COPY config config
-COPY rel rel
-COPY priv/gettext priv/gettext
-COPY priv/repo priv/repo
+COPY config/ ./config
+COPY mix.exs mix.lock /opt/app/
 
-COPY mix.exs mix.lock ./
-RUN mix deps.get
+RUN --mount=type=cache,target=~/.hex/packages/hexpm,sharing=locked \
+    --mount=type=cache,target=~/.cache/rebar3,sharing=locked \
+    mix deps.get \
+    --only $MIX_ENV
+
+
+# -----------------------------------
+# - stage: build
+# - job: compile_deps
+# -----------------------------------
+
+FROM deps AS compile_deps
+WORKDIR /opt/app
+
+ARG MIX_ENV=staging
 RUN mix deps.compile
+
+
+# -----------------------------------
+# - stage: build
+# - job: compile_app
+# -----------------------------------
+
+FROM compile_deps AS compile_app
+WORKDIR /opt/app
+
+ARG MIX_ENV=staging
+
+COPY lib/ ./lib
+COPY priv/repo/ ./priv/repo
+COPY priv/gettext/ ./priv/gettext
+COPY rel ./rel
 
 RUN mix compile
 
-COPY --from=frontend_builder /opt/app/priv/static/ priv/static/
-COPY --from=backend_builder /opt/app/priv/static/ priv/static/
 
+# -----------------------------------
+# - stage: build
+# - job: assets backend
+# -----------------------------------
+
+FROM node:12 AS assets_backend
+WORKDIR /opt/app/assets/backend
+ENV YARN_CACHE_FOLDER ~/.yarn
+
+COPY --from=deps /opt/app/deps /opt/app/deps/
+COPY assets/backend/package.json assets/backend/yarn.lock ./
+COPY assets/backend/.yalc ./.yalc
+# Use the yarn cache directory as a cache mount
+RUN --mount=type=cache,target=~/.yarn,sharing=locked \
+      yarn \
+      install \
+      --pure-lockfile \
+      --prefer-offline \
+      --progress=false
+
+COPY assets/backend/ ./
+
+RUN yarn build
+
+
+# -----------------------------------
+# - stage: build
+# - job: assets frontend
+# -----------------------------------
+
+FROM node:12 AS assets_frontend
+WORKDIR /opt/app/assets/frontend
+ENV YARN_CACHE_FOLDER ~/.yarn
+
+COPY assets/frontend/package.json assets/frontend/yarn.lock ./
+COPY assets/frontend/.yalc ./.yalc
+# Use the yarn cache directory as a cache mount
+RUN --mount=type=cache,target=~/.yarn,sharing=locked \
+      yarn \
+      install \
+      --pure-lockfile \
+      --prefer-offline \
+      --progress=false
+
+COPY assets/frontend/ ./
+
+RUN yarn build
+
+
+# -----------------------------------
+# - stage: build
+# - job: digest
+# -----------------------------------
+
+FROM compile_deps AS digest
+WORKDIR /opt/app
+
+ARG MIX_ENV=staging
+
+COPY --from=assets_backend /opt/app/priv ./priv
+COPY --from=assets_frontend /opt/app/priv ./priv
+
+RUN ls -al ./priv/static
 RUN mix phx.digest
-RUN mix distillery.release
+
+
+# -----------------------------------
+# - stage: release
+# - job: release
+# -----------------------------------
+
+FROM compile_app AS release
+
+WORKDIR /opt/app
+
+ARG MIX_ENV=staging
+
+COPY --from=digest /opt/app/priv/static ./priv/static
+
+RUN mix distillery.release --warnings-as-errors

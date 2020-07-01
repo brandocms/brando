@@ -1,0 +1,6 @@
+        <KInputImage
+          v-model="<%= vue_singular %>.<%= k %>"
+          name="<%= vue_singular %>[<%= k %>]"
+          rules="required"
+          :label="$t('<%= vue_plural %>.fields.<%= k %>.label')"
+          :help-text="$t('<%= vue_plural %>.fields.<%= k %>.help_text')" />

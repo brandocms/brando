@@ -4,7 +4,6 @@ const LEGACY_CONFIG = 'legacy'
 const MODERN_CONFIG = 'modern'
 
 // node modules
-const git = require('git-rev-sync')
 const glob = require('glob-all')
 const merge = require('webpack-merge')
 const moment = require('moment')
@@ -28,11 +27,7 @@ const pkg = require('./package.json')
 const settings = require('./webpack.settings.js')
 
 // custom extractor for PurgeCSS
-class PHXExtractor {
-  static extract (content) {
-    return content.match(/[A-Za-z0-9-_:/]+/g) || []
-  }
-}
+const phxExtractor = content => content.match(/[A-Za-z0-9-_:/]+/g) || []
 
 // Configure file banner
 const configureBanner = () => ({
@@ -50,6 +45,22 @@ const configureBanner = () => ({
   raw: true
 })
 
+// Configure terser
+const configureTerser = () => ({
+  cache: true,
+  parallel: true,
+  sourceMap: true,
+  terserOptions: {
+    extractComments: false,
+    mangle: true,
+    toplevel: true,
+    safari10: true,
+    output: {
+      comments: false
+    }
+  }
+})
+
 // Configure Bundle Analyzer
 const configureBundleAnalyzer = buildType => {
   if (buildType === LEGACY_CONFIG) {
@@ -59,12 +70,10 @@ const configureBundleAnalyzer = buildType => {
       openAnalyzer: false
     }
   }
-  if (buildType === MODERN_CONFIG) {
-    return {
-      analyzerMode: 'static',
-      reportFilename: 'report-modern.html',
-      openAnalyzer: false
-    }
+  return {
+    analyzerMode: 'static',
+    reportFilename: 'report-modern.html',
+    openAnalyzer: false
   }
 }
 
@@ -75,14 +84,16 @@ const configureCleanWebpack = () => ({
   dry: false
 })
 
-const configureCopyWebpackPlugin = () => [
-  {
-    context: './static',
-    from: '**/*',
-    to: './', // + prefix,
-    force: true
-  }
-]
+const configureCopyWebpackPlugin = () => ({
+  patterns: [
+    {
+      context: './static',
+      from: '**/*',
+      to: '.',
+      force: true
+    }
+  ]
+})
 
 // Configure Image loader
 const configureImageLoader = buildType => {
@@ -96,18 +107,16 @@ const configureImageLoader = buildType => {
       ]
     }
   }
-  if (buildType === MODERN_CONFIG) {
-    return {
-      test: /\.(png|jpe?g|gif|svg|webp)$/i,
-      use: [
-        {
-          loader: 'file-loader',
-          options: {
-            name: '[path][name].[ext]'
-          }
+  return {
+    test: /\.(png|jpe?g|gif|svg|webp)$/i,
+    use: [
+      {
+        loader: 'file-loader',
+        options: {
+          name: '[path][name].[ext]'
         }
-      ]
-    }
+      }
+    ]
   }
 }
 
@@ -145,14 +154,12 @@ const configureOptimization = buildType => {
       ]
     }
   }
-  if (buildType === MODERN_CONFIG) {
-    return {
-      minimizer: [
-        new TerserPlugin(
-          configureTerser()
-        )
-      ]
-    }
+  return {
+    minimizer: [
+      new TerserPlugin(
+        configureTerser()
+      )
+    ]
   }
 }
 
@@ -184,11 +191,9 @@ const configurePostcssLoader = buildType => {
     }
   }
   // Don't generate CSS for the modern config in production
-  if (buildType === MODERN_CONFIG) {
-    return {
-      test: /\.(sa|sc|pc|c)ss$/,
-      loader: 'ignore-loader'
-    }
+  return {
+    test: /\.(sa|sc|pc|c)ss$/,
+    loader: 'ignore-loader'
   }
 }
 
@@ -196,9 +201,9 @@ const configurePostcssLoader = buildType => {
 const configurePurgeCss = () => {
   const paths = []
   // Configure whitelist paths
-  for (const [, value] of Object.entries(settings.purgeCssConfig.paths)) {
+  settings.purgeCssConfig.paths.forEach(value => {
     paths.push(path.join(__dirname, value))
-  }
+  })
 
   return {
     paths: glob.sync(paths),
@@ -206,27 +211,12 @@ const configurePurgeCss = () => {
     whitelistPatterns: settings.purgeCssConfig.whitelistPatterns,
     extractors: [
       {
-        extractor: PHXExtractor,
+        extractor: phxExtractor,
         extensions: settings.purgeCssConfig.extensions
       }
     ]
   }
 }
-
-// Configure terser
-const configureTerser = () => ({
-  cache: true,
-  parallel: true,
-  sourceMap: true,
-  terserOptions: {
-    mangle: true,
-    toplevel: true,
-    safari10: true,
-    output: {
-      comments: false
-    }
-  }
-})
 
 // Production module exports
 module.exports = [
@@ -260,9 +250,9 @@ module.exports = [
           path: path.resolve(__dirname, settings.paths.dist.base),
           filename: path.join('./css', '[name].css')
         }),
-        // new PurgecssPlugin(
-        //   configurePurgeCss()
-        // ),
+        new PurgecssPlugin(
+          configurePurgeCss()
+        ),
         new webpack.BannerPlugin(
           configureBanner()
         )
@@ -309,10 +299,10 @@ module.exports = [
           emitErrors: false,
           // Display full duplicates information? (Default: `false`)
           verbose: false
-        })
-        // new BundleAnalyzerPlugin(
-        //   configureBundleAnalyzer(MODERN_CONFIG)
-        // )
+        }),
+        new BundleAnalyzerPlugin(
+          configureBundleAnalyzer(MODERN_CONFIG)
+        )
       ]
     }
   )

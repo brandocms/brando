@@ -7,9 +7,11 @@ defmodule Brando.Schema.Types.Page do
     field :language, :string
     field :title, :string
     field :status, :string
+    field :template, :string
     field :data, :json
     field :css_classes, :string
     field :meta_description, :string
+    field :meta_image, :upload_or_image
   end
 
   object :page do
@@ -21,6 +23,7 @@ defmodule Brando.Schema.Types.Page do
     field :data, :json
     field :html, :string
     field :status, :string
+    field :template, :string
     field :css_classes, :string
     field :creator, :user, resolve: dataloader(Brando.Pages)
     field :parent_id, :id
@@ -28,14 +31,26 @@ defmodule Brando.Schema.Types.Page do
     field :children, list_of(:page), resolve: dataloader(Brando.Pages)
     field :fragments, list_of(:page_fragment), resolve: dataloader(Brando.Pages)
     field :meta_description, :string
+    field :meta_image, :image_type
     field :inserted_at, :time
     field :updated_at, :time
     field :deleted_at, :time
   end
 
+  @desc "Filtering options for page"
+  input_object :page_filter do
+    field :title, :string
+    field :illustrator, :string
+  end
+
   object :page_queries do
     @desc "Get all pages"
     field :pages, type: list_of(:page) do
+      arg :order, :order, default_value: [{:asc, :language}, {:asc, :sequence}, {:asc, :key}]
+      arg :limit, :integer, default_value: 25
+      arg :offset, :integer, default_value: 0
+      arg :filter, :page_filter
+      arg :status, :string, default_value: "all"
       resolve &Brando.Pages.PageResolver.all/2
     end
 
@@ -64,6 +79,20 @@ defmodule Brando.Schema.Types.Page do
       arg :page_id, non_null(:id)
 
       resolve &Brando.Pages.PageResolver.delete/2
+    end
+
+    @desc "Duplicate page"
+    field :duplicate_page, type: :page do
+      arg :page_id, :id
+
+      resolve &Brando.Pages.PageResolver.duplicate/2
+    end
+
+    @desc "Duplicate section"
+    field :duplicate_section, type: :page_fragment do
+      arg :section_id, :id
+
+      resolve &Brando.Pages.PageResolver.duplicate_section/2
     end
   end
 end

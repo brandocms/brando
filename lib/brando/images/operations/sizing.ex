@@ -58,6 +58,8 @@ defmodule Brando.Images.Operations.Sizing do
   def create_image_size(%Images.Operation{
         type: type,
         id: id,
+        total_operations: total_operations,
+        operation_index: operation_index,
         img_struct: %{path: image_src, focal: focal, width: width, height: height},
         filename: filename,
         sized_img_path: image_dest,
@@ -79,16 +81,17 @@ defmodule Brando.Images.Operations.Sizing do
       image_src_path: image_src_path,
       image_dest_path: image_dest_path,
       image_dest_rel_path: image_dest,
-      original_width: width / 1,
-      original_height: height / 1,
+      original_width: width,
+      original_height: height,
       format: format
     }
 
     case image_src_exists(conversion_parameters) do
       {:ok, {:image, :exists}} ->
+        if operation_index == 1, do: set_progress(conversion_parameters, 0, filename, user)
+
         result =
           conversion_parameters
-          |> set_progress(0, filename, user)
           |> add_size_cfg(size_cfg)
           |> add_quality()
           |> add_focal_point(focal)
@@ -99,7 +102,8 @@ defmodule Brando.Images.Operations.Sizing do
           |> add_values()
           |> delegate_processor()
 
-        set_progress(conversion_parameters, 100, filename, user)
+        progress_percent = operation_index / total_operations * 100
+        set_progress(conversion_parameters, progress_percent, filename, user)
 
         result
 
@@ -133,8 +137,8 @@ defmodule Brando.Images.Operations.Sizing do
   def add_focal_point(conversion_parameters, focal) do
     focal =
       focal
-      |> Map.put("x", (is_binary(focal["x"]) && String.to_integer(focal["x"])) || focal["x"])
-      |> Map.put("y", (is_binary(focal["y"]) && String.to_integer(focal["y"])) || focal["y"])
+      |> Map.put(:x, (is_binary(focal.x) && String.to_integer(focal.x)) || focal.x)
+      |> Map.put(:y, (is_binary(focal.y) && String.to_integer(focal.y)) || focal.y)
 
     Map.put(conversion_parameters, :focal_point, focal)
   end
@@ -175,8 +179,8 @@ defmodule Brando.Images.Operations.Sizing do
     {crop_width, crop_height} = get_crop_dimensions_from_cfg(size_cfg)
 
     conversion_parameters
-    |> Map.put(:crop_width, crop_width / 1)
-    |> Map.put(:crop_height, crop_height / 1)
+    |> Map.put(:crop_width, crop_width)
+    |> Map.put(:crop_height, crop_height)
   end
 
   def add_crop_dimensions(%{crop: false} = conversion_parameters) do
@@ -198,10 +202,10 @@ defmodule Brando.Images.Operations.Sizing do
     {resize_width, resize_height} =
       if crop_width > crop_height do
         resize_width = crop_width
-        resize_height = crop_width * original_height / original_width
+        resize_height = round(crop_width * original_height / original_width)
 
         if resize_height < crop_height do
-          resize_width = crop_height * resize_width / resize_height
+          resize_width = round(crop_height * resize_width / resize_height)
           resize_height = crop_height
 
           {resize_width, resize_height}
@@ -209,11 +213,11 @@ defmodule Brando.Images.Operations.Sizing do
           {resize_width, resize_height}
         end
       else
-        resize_width = crop_height * original_width / original_height
+        resize_width = round(crop_height * original_width / original_height)
         resize_height = crop_height
 
         if resize_width < crop_width do
-          resize_height = crop_width * resize_height / resize_width
+          resize_height = round(crop_width * resize_height / resize_width)
           resize_width = crop_width
 
           {resize_width, resize_height}
@@ -223,13 +227,11 @@ defmodule Brando.Images.Operations.Sizing do
       end
 
     conversion_parameters
-    |> Map.put(:resize_width, resize_width / 1)
-    |> Map.put(:resize_height, resize_height / 1)
+    |> Map.put(:resize_width, round(resize_width / 1))
+    |> Map.put(:resize_height, round(resize_height / 1))
   end
 
-  def add_resize_dimensions(%{crop: false} = conversion_parameters) do
-    conversion_parameters
-  end
+  def add_resize_dimensions(%{crop: false} = params), do: params
 
   @doc """
   Add resize and crop values to conversion parameters if `crop` is true
@@ -244,16 +246,16 @@ defmodule Brando.Images.Operations.Sizing do
           crop_height: crop_height
         } = conversion_parameters
       ) do
-    resize_values = %{
-      width: resize_width,
-      height: resize_height
-    }
-
     crop_values = %{
       width: crop_width,
       height: crop_height,
-      top: anchor.x,
-      left: anchor.y
+      top: anchor.y,
+      left: anchor.x
+    }
+
+    resize_values = %{
+      width: resize_width,
+      height: resize_height
     }
 
     conversion_parameters
@@ -318,8 +320,8 @@ defmodule Brando.Images.Operations.Sizing do
         } = conversion_parameters
       ) do
     anchor = %{
-      x: transformed_focal_point.x - crop_width / 2,
-      y: transformed_focal_point.y - crop_height / 2
+      x: round(transformed_focal_point.x - crop_width / 2),
+      y: round(transformed_focal_point.y - crop_height / 2)
     }
 
     anchor = %{
@@ -347,8 +349,8 @@ defmodule Brando.Images.Operations.Sizing do
         } = conversion_parameters
       ) do
     original_focal_point = %{
-      x: focal["x"] / 1 / 100 * original_width / 1,
-      y: focal["y"] / 1 / 100 * original_height / 1
+      x: round(focal.x / 1 / 100 * original_width / 1),
+      y: round(focal.y / 1 / 100 * original_height / 1)
     }
 
     Map.put(conversion_parameters, :original_focal_point, original_focal_point)
@@ -368,8 +370,8 @@ defmodule Brando.Images.Operations.Sizing do
         } = conversion_parameters
       ) do
     transformed_focal_point = %{
-      x: original_focal_point.x / 1 / (original_width / 1) * resize_width / 1,
-      y: original_focal_point.y / 1 / (original_height / 1) * resize_height / 1
+      x: round(original_focal_point.x / 1 / (original_width / 1) * resize_width / 1),
+      y: round(original_focal_point.y / 1 / (original_height / 1) * resize_height / 1)
     }
 
     Map.put(conversion_parameters, :transformed_focal_point, transformed_focal_point)
@@ -411,10 +413,10 @@ defmodule Brando.Images.Operations.Sizing do
         filename,
         user
       ) do
-    progress_string = "#{filename} — Oppretter bildestørrelse: <strong>#{size_key}</strong>"
+    progress_string = "#{filename} &rarr; Oppretter bildestørrelse: <strong>#{size_key}</strong>"
 
     Progress.update_progress(user, progress_string,
-      key: to_string(id) <> size_key,
+      key: to_string(id),
       percent: progress
     )
 

@@ -2,28 +2,28 @@ defmodule Brando.VillainTest do
   defmodule OtherParser do
     @behaviour Brando.Villain.Parser
 
-    def text(%{"text" => _, "type" => _}), do: "other parser"
-    def datatable(_), do: nil
-    def markdown(_), do: nil
-    def html(_), do: nil
-    def map(_), do: nil
-    def blockquote(_), do: nil
-    def columns(_), do: nil
-    def divider(_), do: nil
-    def header(_), do: nil
-    def image(_), do: nil
-    def list(_), do: nil
-    def slideshow(_), do: nil
-    def video(_), do: nil
-    def template(_), do: nil
-    def comment(_), do: nil
+    def text(%{"text" => _, "type" => _}, _), do: "other parser"
+    def datatable(_, _), do: nil
+    def datasource(_, _), do: nil
+    def markdown(_, _), do: nil
+    def html(_, _), do: nil
+    def svg(_, _), do: nil
+    def map(_, _), do: nil
+    def blockquote(_, _), do: nil
+    def columns(_, _), do: nil
+    def divider(_, _), do: nil
+    def header(_, _), do: nil
+    def image(_, _), do: nil
+    def list(_, _), do: nil
+    def slideshow(_, _), do: nil
+    def video(_, _), do: nil
+    def template(_, _), do: nil
+    def comment(_, _), do: nil
   end
 
   use Brando.ConnCase
   use ExUnit.Case, async: true
   alias Brando.Factory
-
-  @parser_mod Brando.Villain.Parser.Default
 
   setup do
     user = Factory.insert(:user)
@@ -33,47 +33,26 @@ defmodule Brando.VillainTest do
   end
 
   test "parse" do
-    assert Brando.Villain.parse("", @parser_mod) == ""
-    assert Brando.Villain.parse(nil, @parser_mod) == ""
+    Application.put_env(:brando, Brando.Villain, parser: Brando.Villain.ParserTest.Parser)
+
+    assert Brando.Villain.parse("") == ""
+    assert Brando.Villain.parse(nil) == ""
 
     assert Brando.Villain.parse(
-             ~s([{"type":"columns","data":[{"class":"col-md-6 six","data":[]},{"class":"col-md-6 six","data":[{"type":"markdown","data":{"text":"Markdown"}}]}]}]),
-             @parser_mod
+             ~s([{"type":"columns","data":[{"class":"col-md-6 six","data":[]},{"class":"col-md-6 six","data":[{"type":"markdown","data":{"text":"Markdown"}}]}]}])
            ) ==
              "<div class=\"row\"><div class=\"col-md-6 six\"></div><div class=\"col-md-6 six\"><p>Markdown</p>\n</div></div>"
 
-    assert Brando.Villain.parse(
-             [
-               %{
-                 "type" => "text",
-                 "data" => %{"text" => "**Some** text here.", "type" => "paragraph"}
-               }
-             ],
-             @parser_mod
-           ) == "<p><strong>Some</strong> text here.</p>\n"
+    assert Brando.Villain.parse([
+             %{
+               "type" => "text",
+               "data" => %{"text" => "**Some** text here.", "type" => "paragraph"}
+             }
+           ]) == "<p><strong>Some</strong> text here.</p>\n"
 
     assert_raise FunctionClauseError, fn ->
-      Brando.Villain.parse(%{"text" => "**Some** text here.", "type" => "paragraph"}, @parser_mod) ==
+      Brando.Villain.parse(%{"text" => "**Some** text here.", "type" => "paragraph"}) ==
         ""
-    end
-
-    assert Brando.Villain.parse(
-             [
-               %{
-                 "type" => "text",
-                 "data" => %{"text" => "**Some** text here.", "type" => "paragraph"}
-               }
-             ],
-             Brando.VillainTest.OtherParser
-           ) == "other parser"
-
-    assert_raise UndefinedFunctionError, fn ->
-      Brando.Villain.parse(
-        [
-          %{"type" => "text", "data" => %{"text" => "**Some** text here.", "type" => "paragraph"}}
-        ],
-        Brando.VillainTest.NoneParser
-      ) == "other parser"
     end
   end
 

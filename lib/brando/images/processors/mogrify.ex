@@ -20,23 +20,7 @@ defmodule Brando.Images.Processor.Mogrify do
         image_dest_rel_path: image_dest_rel_path,
         resize_values: resize_values
       }) do
-    resize_geo =
-      case {Map.get(resize_values, :width), Map.get(resize_values, :height)} do
-        {nil, nil} ->
-          raise """
-          MOGRIFY: No resize values..
-          #{inspect(resize_values, pretty: true)}
-          """
-
-        {width, nil} ->
-          "#{width}"
-
-        {nil, height} ->
-          "x#{height}"
-
-        {width, height} ->
-          "#{width}x#{height}"
-      end
+    resize_geo = build_resize_geo(resize_values)
 
     image_src_path
     |> Mogrify.open()
@@ -68,23 +52,7 @@ defmodule Brando.Images.Processor.Mogrify do
         resize_values: resize_values,
         crop_values: crop_values
       }) do
-    resize_geo =
-      case {Map.get(resize_values, :width), Map.get(resize_values, :height)} do
-        {nil, nil} ->
-          raise """
-          MOGRIFY: No resize values..
-          #{inspect(resize_values, pretty: true)}
-          """
-
-        {width, nil} ->
-          "#{width}"
-
-        {nil, height} ->
-          "x#{height}"
-
-        {width, height} ->
-          "#{width}x#{height}"
-      end
+    resize_geo = build_resize_geo(resize_values)
 
     crop_geo =
       "#{crop_values.width}x" <>
@@ -117,6 +85,25 @@ defmodule Brando.Images.Processor.Mogrify do
 
       _ ->
         {:ok, {:executable, :exists}}
+    end
+  end
+
+  defp build_resize_geo(resize_values) do
+    case {Map.get(resize_values, :width), Map.get(resize_values, :height)} do
+      {nil, nil} ->
+        raise """
+        MOGRIFY: No resize values..
+        #{inspect(resize_values, pretty: true)}
+        """
+
+      {width, nil} ->
+        "#{width}"
+
+      {nil, height} ->
+        "x#{height}"
+
+      {width, height} ->
+        "#{width}x#{height}"
     end
   end
 end

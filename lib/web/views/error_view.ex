@@ -1,7 +1,3 @@
-defimpl Plug.Exception, for: Postgrex.Error do
-  def status(_exception), do: 504
-end
-
 defmodule Brando.ErrorView do
   import Brando.Gettext
 

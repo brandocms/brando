@@ -13,13 +13,15 @@ defmodule Brando.CDN do
 
   """
   @spec upload_file(file :: binary) :: {:ok, cdn_key :: binary} | upload_error
-  def upload_file(file) do
+  def upload_file(_file) do
     # hepp
+    {:ok, "hepp"}
   end
 
   @spec ensure_bucket_exists :: {:ok, {:bucket, :exists}} | {:error, {:bucket, any}}
   def ensure_bucket_exists do
     bucket = config(:bucket)
+    region = Map.fetch!(Application.get_env(:ex_aws, :s3), :region)
 
     bucket
     |> S3.get_bucket_location()
@@ -30,7 +32,7 @@ defmodule Brando.CDN do
 
       {:error, _err} ->
         bucket
-        |> ExAws.S3.put_bucket("fra1")
+        |> ExAws.S3.put_bucket(region)
         |> ExAws.request()
         |> case do
           {:ok, _} ->

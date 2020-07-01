@@ -66,9 +66,6 @@ defmodule Brando.HTMLTest do
   end
 
   test "cookie_law" do
-    mock_conn = %{cookies: %{"cookielaw_accepted" => "1"}}
-    assert cookie_law(mock_conn, "Accept cookielaw") == nil
-
     mock_conn = %{cookies: %{}}
     html = cookie_law(mock_conn, "Accept cookielaw") |> Phoenix.HTML.safe_to_string()
     assert html =~ "<p>Accept cookielaw</p>"
@@ -168,7 +165,7 @@ defmodule Brando.HTMLTest do
              img_class: "img-fluid"
            )
            |> safe_to_string ==
-             "<picture class=\"avatar\"><source srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+             "<picture class=\"avatar\" data-orientation=\"portrait\"><source srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
 
     assert picture_tag(
              user.avatar,
@@ -181,7 +178,7 @@ defmodule Brando.HTMLTest do
              placeholder: :micro
            )
            |> safe_to_string ==
-             "<picture class=\"avatar\" data-ll-srcset><source data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" srcset=\"/media/images/avatars/micro/27i97a.jpeg 700w, /media/images/avatars/micro/27i97a.jpeg 500w, /media/images/avatars/micro/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" src=\"/media/images/avatars/micro/27i97a.jpeg\" srcset=\"/media/images/avatars/micro/27i97a.jpeg 700w, /media/images/avatars/micro/27i97a.jpeg 500w, /media/images/avatars/micro/27i97a.jpeg 300w\" data-ll-placeholder><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+             "<picture class=\"avatar\" data-orientation=\"portrait\" data-ll-srcset><source data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" srcset=\"/media/images/avatars/micro/27i97a.jpeg 700w, /media/images/avatars/micro/27i97a.jpeg 500w, /media/images/avatars/micro/27i97a.jpeg 300w\"><img class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" src=\"/media/images/avatars/micro/27i97a.jpeg\" srcset=\"/media/images/avatars/micro/27i97a.jpeg 700w, /media/images/avatars/micro/27i97a.jpeg 500w, /media/images/avatars/micro/27i97a.jpeg 300w\" data-ll-placeholder><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
 
     assert picture_tag(
              user.avatar,
@@ -194,7 +191,7 @@ defmodule Brando.HTMLTest do
              lazyload: true
            )
            |> safe_to_string ==
-             "<picture class=\"avatar\" data-ll-srcset><source data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27%27%20height%3D%27%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E\" data-ll-placeholder><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+             "<picture class=\"avatar\" data-orientation=\"portrait\" data-ll-srcset><source data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27%27%20height%3D%27%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E\" data-ll-placeholder><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
 
     assert picture_tag(
              user.avatar,
@@ -206,7 +203,7 @@ defmodule Brando.HTMLTest do
              lazyload: true
            )
            |> safe_to_string ==
-             "<picture class=\"avatar\" data-ll-srcset><source data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" data-ll-placeholder><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+             "<picture class=\"avatar\" data-orientation=\"portrait\" data-ll-srcset><source data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" data-ll-placeholder><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
 
     media_queries = [
       {"(min-width: 0px) and (max-width: 760px)", [{"mobile", "700w"}]}
@@ -222,10 +219,11 @@ defmodule Brando.HTMLTest do
              img_class: "img-fluid"
            )
            |> safe_to_string ==
-             "<picture class=\"avatar\"><source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\"><source srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+             "<picture class=\"avatar\" data-orientation=\"portrait\"><source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\"><source srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
 
     assert picture_tag(
              user.avatar,
+             alt: "hepp!",
              srcset: srcset,
              media_queries: media_queries,
              prefix: media_url(),
@@ -236,6 +234,6 @@ defmodule Brando.HTMLTest do
              img_class: "img-fluid"
            )
            |> safe_to_string ==
-             "<picture class=\"avatar\" data-test-params=\"hepp\" data-test><source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\"><source srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"\" class=\"img-fluid\" data-test2-params=\"hepp\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" data-test2><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+             "<picture class=\"avatar\" data-orientation=\"portrait\" data-test-params=\"hepp\" data-test><source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\"><source srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"hepp!\" class=\"img-fluid\" data-test2-params=\"hepp\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" data-test2><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
   end
 end

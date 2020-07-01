@@ -7,15 +7,16 @@ defmodule Brando.Type.Image do
 
   @type t :: %__MODULE__{}
 
-  @derive {Jason.Encoder, only: [:title, :credits, :path, :sizes, :width, :height, :focal]}
+  @derive {Jason.Encoder, only: [:title, :credits, :alt, :path, :sizes, :width, :height, :focal]}
 
   defstruct title: nil,
             credits: nil,
+            alt: nil,
             path: nil,
             sizes: %{},
             width: nil,
             height: nil,
-            focal: %{"x" => 50, "y" => 50}
+            focal: %{x: 50, y: 50}
 
   @doc """
   Returns the internal type representation of our image type for pg
@@ -30,13 +31,29 @@ defmodule Brando.Type.Image do
     {:ok, val}
   end
 
-  def cast(%Brando.Type.Image{} = val) when is_map(val), do: {:ok, val}
+  # def cast(%Brando.Type.Image{} = val) when is_map(val), do: {:ok, val}
 
   # if we get a Plug Upload or a Focal struct, we pass it on.. it gets handled later!
-  def cast(%Plug.Upload{} = val) when is_map(val), do: {:ok, val}
-  def cast(%Brando.Type.Focal{} = val) when is_map(val), do: {:ok, val}
+  # def cast(%Plug.Upload{} = val), do: {:ok, val}
+  # def cast(%Brando.Type.Focal{} = val), do: {:ok, val}
+  def cast(%{file: %Plug.Upload{}} = upload) do
+    {:ok, {:upload, upload}}
+  end
 
-  def cast(val) when is_map(val), do: {:ok, Brando.Utils.stringy_struct(Brando.Type.Image, val)}
+  def cast(%Brando.Type.Image{} = image) do
+    {:ok, image}
+  end
+
+  # upload from KInputImageseries
+  def cast(%Plug.Upload{} = upload) do
+    {:ok, {:upload, %{file: upload}}}
+  end
+
+  def cast(update) when is_map(update) do
+    {:ok, {:update, update}}
+  end
+
+  # def cast(val) when is_map(val), do: {:ok, Brando.Utils.stringy_struct(Brando.Type.Image, val)}
 
   @doc """
   Integers are never considered blank

@@ -10,7 +10,8 @@ defmodule Brando.Progress do
   def update_progress(user, status, opts \\ [])
   def update_progress(:system, _, _), do: :ignore
 
-  def update_progress(%Brando.Users.User{id: id}, status, opts), do: update_progress(id, status, opts)
+  def update_progress(%Brando.Users.User{id: id}, status, opts),
+    do: update_progress(id, status, opts)
 
   def update_progress(id, status, opts) do
     Brando.endpoint().broadcast!("user:#{id}", "progress:update", %{

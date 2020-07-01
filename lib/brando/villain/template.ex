@@ -10,9 +10,9 @@ defmodule Brando.Villain.Template do
   use Brando.SoftDelete.Schema
 
   @required_fields ~w(name namespace help_text class code refs)a
-  @optional_fields ~w(sequence deleted_at)a
+  @optional_fields ~w(sequence deleted_at vars svg multi wrapper)a
 
-  @derived_fields ~w(id name sequence namespace help_text class code refs deleted_at)a
+  @derived_fields ~w(id name sequence namespace help_text multi wrapper class code refs vars svg deleted_at)a
   @derive {Jason.Encoder, only: @derived_fields}
 
   schema "pages_templates" do
@@ -22,6 +22,11 @@ defmodule Brando.Villain.Template do
     field :class, :string
     field :code, :string
     field :refs, {:array, :map}
+    field :vars, :map
+    field :svg, :string
+    field :multi, :boolean
+    field :wrapper, :string
+
     sequenced()
     timestamps()
     soft_delete()

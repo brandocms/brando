@@ -1,6 +1,7 @@
+# coveralls-ignore-start
 defmodule Brando.Integration.LockdownController do
   use Phoenix.Controller,
-        namespace: Brando
+    namespace: Brando
 end
 
 defmodule RouterHelper do
@@ -63,38 +64,40 @@ defmodule RouterHelper do
     |> fetch_query_params
     |> Brando.router().call(Brando.router().init([]))
   end
+end
 
-  defmodule TestRouter do
-    @moduledoc false
-    use Phoenix.Router
-    import Brando.Images.Routes.Admin.API
-    import Brando.Plug.I18n
+defmodule Brando.Integration.Router do
+  @moduledoc false
+  use Phoenix.Router
+  import Brando.Images.Routes.Admin.API
+  import Brando.Plug.I18n
 
-    pipeline :admin do
-      plug :accepts, ~w(html json)
-      plug :fetch_session
-      plug :fetch_flash
-      plug :put_admin_locale
-      plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
-    end
+  pipeline :admin do
+    plug :accepts, ~w(html json)
+    plug :fetch_session
+    plug :fetch_flash
+    plug :put_admin_locale
+    plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
+  end
 
-    pipeline :browser do
-      plug :accepts, ~w(html)
-      plug :fetch_session
-      plug :fetch_flash
-    end
+  pipeline :browser do
+    plug :accepts, ~w(html)
+    plug :fetch_session
+    plug :fetch_flash
+  end
 
-    scope "/admin", as: :admin do
-      pipe_through :admin
-      api_image_routes("/images")
-    end
+  scope "/admin", as: :admin do
+    pipe_through :admin
+    api_image_routes("/images")
+  end
 
-    scope "/coming-soon" do
-      get "/", Brando.Integration.LockdownController, :index
-    end
+  scope "/coming-soon" do
+    get "/", Brando.Integration.LockdownController, :index
+  end
 
-    scope "/" do
-      pipe_through :browser
-    end
+  scope "/" do
+    pipe_through :browser
   end
 end
+
+# coveralls-ignore-stop

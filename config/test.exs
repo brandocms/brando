@@ -7,7 +7,7 @@ config :brando, Brando.Integration.Endpoint,
   server: false,
   secret_key_base: "verysecret"
 
-config :brando, Brando.Integration.TestRepo,
+config :brando, Brando.Integration.Repo,
   url: "ecto://postgres:postgres@localhost/brando_test",
   pool: Ecto.Adapters.SQL.Sandbox,
   ownership_pool: DBConnection.Poolboy,
@@ -31,11 +31,9 @@ config :brando, Brando.Images,
 
 config :brando, :app_name, "MyApp"
 config :brando, :auth_sleep_duration, 0
-config :brando, :cache_module, Brando.Integration.MockCache
-config :brando, :router, RouterHelper.TestRouter
-config :brando, :endpoint, Brando.Integration.Endpoint
-config :brando, :repo, Brando.Integration.TestRepo
-config :brando, :helpers, RouterHelper.TestRouter.Helpers
+config :brando, :app_module, Brando.Integration
+config :brando, :web_module, Brando.Integration
+config :brando, :cache_module, Brando.Integration.Cache
 config :brando, :media_url, "/media"
 config :brando, :media_path, Path.join([Mix.Project.app_path(), "tmp", "media"])
 config :brando, :log_dir, Path.expand("./tmp/logs")
@@ -43,16 +41,16 @@ config :brando, :logging, disable_logging: true
 config :brando, :login_url, "/login"
 config :brando, :otp_app, :brando
 config :brando, :warn_on_http_auth, true
-config :brando, :default_language, "nb"
-config :brando, :default_admin_language, "nb"
+config :brando, :default_language, "no"
+config :brando, :default_admin_language, "no"
 
 config :brando, :languages, [
-  [value: "nb", text: "Norsk"],
+  [value: "no", text: "Norsk"],
   [value: "en", text: "English"]
 ]
 
 config :brando, :admin_languages, [
-  [value: "nb", text: "Norsk"],
+  [value: "no", text: "Norsk"],
   [value: "en", text: "English"]
 ]
 

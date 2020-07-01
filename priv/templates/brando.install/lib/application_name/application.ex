@@ -7,10 +7,15 @@ defmodule <%= application_module %>.Application do
     children = [
       # Start the Ecto repository
       <%= application_module %>.Repo,
-      # Start the endpoint when the application starts
+      # Start the Telemetry supervisor
+      <%= application_module %>Web.Telemetry,
+      # Start the PubSub system
+      {Phoenix.PubSub, name: <%= application_module %>.PubSub},
+      # Start the Endpoint (http/https)
       <%= application_module %>Web.Endpoint,
+      # Start the Presence system
       <%= application_module %>.Presence
-      # Starts a worker by calling: <%= application_module %>.Worker.start_link(arg)
+      # Start a worker by calling: <%= application_module %>.Worker.start_link(arg)
       # {<%= application_module %>.Worker, arg},
     ]
 

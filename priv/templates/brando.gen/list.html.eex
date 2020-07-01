@@ -1,0 +1,12 @@
+<div class="page-header">
+  <h2>Latest <%= plural %></h2>
+  <p class="intro">
+    Lorem ipsum dolor sit amet consectetur adipisicing elit. Tenetur porro nulla error tempora in quisquam assumenda a ex quae sed natus molestiae, expedita quis atque similique veniam, cum ipsam temporibus?
+  </p>
+</div>
+
+<div class="<%= plural %>">
+  <div class="inner">
+    <%%= render_many @<%= plural %>, @view_module, "__<%= singular %>.html", Map.merge(assigns, %{as: :entry}) %>
+  </div>
+</div>

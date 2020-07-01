@@ -1,0 +1,18 @@
+<%= if gallery do %>#import "brandojs/src/gql/images/IMAGE_SERIES_FRAGMENT.graphql"<% end %>
+fragment <%= vue_singular %> on <%= Recase.to_pascal(vue_singular) %> {
+  id<%= for {_k, v} <- gql_query_fields do %>
+  <%= v %><% end %><%= if creator do %>
+  creator {
+    id
+    fullName
+    avatar {
+      thumb: url(size: "xlarge")
+    }
+  }<% end %><%= if gallery do %><%= for {_k, v} <- gallery_fields do %>
+  <%= v %> {
+    ...imageSeries
+  }<% end %><% end %><%= if soft_delete do %>
+  deletedAt<% end %>
+  insertedAt
+  updatedAt
+}

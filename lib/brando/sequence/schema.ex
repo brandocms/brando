@@ -10,6 +10,16 @@ defmodule Brando.Sequence.Schema do
         sequenced()
       end
 
+  `sequence` gets called from admin_channel like this:
+
+  With composite keys:
+
+      sequence %{"composite_keys" => [%{"id" => 1, "additional_id" => 2}, %{...}]}
+
+  With regular ids
+
+      sequence %{"ids" => [3, 5, 1]}
+
   """
 
   defmacro __using__(_) do
@@ -17,19 +27,49 @@ defmodule Brando.Sequence.Schema do
       import unquote(__MODULE__)
 
       @doc """
-      Sequences ids
+      Sequences ids or composite keys
+
+      With composite keys:
+
+          sequence %{"composite_keys" => [%{"id" => 1, "additional_id" => 2}, %{...}]}
+
+      With regular ids
+
+          sequence %{"ids" => [3, 5, 1]}
+
       """
-      def sequence(ids, vals) do
+      def sequence(%{"composite_keys" => composite_keys}) do
+        table = __MODULE__.__schema__(:source)
+
+        Brando.repo().transaction(fn ->
+          for {o, idx} <- Enum.with_index(composite_keys) do
+            q = from t in table, update: [set: [sequence: ^idx]]
+
+            q =
+              Enum.reduce(o, q, fn {k, v}, nq ->
+                from t in nq, where: field(t, ^String.to_existing_atom(k)) == ^v
+              end)
+
+            Brando.repo().update_all(q, [])
+          end
+        end)
+      end
+
+      def sequence(%{"ids" => ids}) do
+        # standard list of ids
+        vals = Range.new(0, length(ids))
+
         order = Enum.zip(vals, ids)
         table = __MODULE__.__schema__(:source)
 
         Brando.repo().transaction(fn ->
           Enum.map(order, fn {val, id} ->
-            Ecto.Adapters.SQL.query(
-              Brando.repo(),
-              ~s(UPDATE #{table} SET "sequence" = $1 WHERE "id" = $2),
-              [val, id]
-            )
+            q =
+              from t in table,
+                where: field(t, :id) == ^id,
+                update: [set: [sequence: ^val]]
+
+            Brando.repo().update_all(q, [])
           end)
         end)
       end

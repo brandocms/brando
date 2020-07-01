@@ -32,13 +32,12 @@ defmodule Brando.Upload do
 
   @doc """
   Initiate the upload handling.
-  Checks `plug` for filename, checks mimetype, creates upload path,
-  copies files and creates all sizes of image according to `cfg`
+  Checks `plug` for filename, checks mimetype,
+  creates upload path and copies files
   """
   @spec process_upload(upload_plug :: Plug.Upload.t(), cfg_struct :: img_config) :: {:ok, t()}
   def process_upload(plug, cfg_struct) do
     with {:ok, upload} <- create_upload_struct(plug, cfg_struct),
-         {:ok, upload} <- extract_focal_info(upload),
          {:ok, upload} <- get_valid_filename(upload),
          {:ok, upload} <- ensure_correct_ext(upload),
          {:ok, upload} <- check_mimetype(upload),
@@ -102,19 +101,6 @@ defmodule Brando.Upload do
 
   defp create_upload_struct(plug, cfg_struct) do
     {:ok, %__MODULE__{plug: plug, cfg: cfg_struct}}
-  end
-
-  defp extract_focal_info(%__MODULE__{plug: %Plug.Upload{filename: filename}} = upload) do
-    case Regex.named_captures(~r/(?<cleaned_filename>.*)\%\%\%(?<x>.+)\:(?<y>.+)\%\%\%/, filename) do
-      nil ->
-        upload = Map.put(upload, :extra_info, %{focal: %{"x" => 50, "y" => 50}})
-        {:ok, upload}
-
-      %{"x" => x, "y" => y, "cleaned_filename" => cleaned_filename} ->
-        upload = Map.put(upload, :extra_info, %{focal: %{"x" => x, "y" => y}})
-        upload = put_in(upload.plug.filename, cleaned_filename)
-        {:ok, upload}
-    end
   end
 
   defp get_valid_filename(%__MODULE__{plug: %Plug.Upload{filename: ""}}) do

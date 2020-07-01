@@ -1,14 +1,14 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.44.0"
+  @version "0.45.0"
   @description "A helping hand for Twined applications."
 
   def project do
     [
       app: :brando,
       version: @version,
-      elixir: "~> 1.8",
+      elixir: "~> 1.10",
       deps: deps(),
       compilers: [:gettext, :phoenix] ++ Mix.compilers(),
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -19,7 +19,10 @@ defmodule Brando.Mixfile do
 
       # Docs
       name: "Brando",
-      docs: [source_ref: "v#{@version}", source_url: "https://github.com/univers-agency/brando"]
+      docs: [
+        source_ref: "v#{@version}",
+        source_url: "https://github.com/univers-agency/brando"
+      ]
     ]
   end
 
@@ -46,6 +49,7 @@ defmodule Brando.Mixfile do
       :dataloader,
       :gettext,
       :comeonin,
+      :hashids,
       :httpoison,
       :inflex,
       :earmark,
@@ -53,6 +57,7 @@ defmodule Brando.Mixfile do
       :guardian,
       :guardian_phoenix,
       :mogrify,
+      :nimble_parsec,
       :phoenix_html,
       :poison,
       :recase,
@@ -69,10 +74,10 @@ defmodule Brando.Mixfile do
     [
       {:bcrypt_elixir, "~> 2.0"},
       {:comeonin, "~> 5.0"},
-      {:earmark, "~> 1.2"},
+      {:earmark, "1.4.4"},
       {:gettext, "~> 0.11"},
       {:httpoison, "~> 1.0"},
-      {:phoenix, "~> 1.4", override: true},
+      {:phoenix, "~> 1.4"},
       {:phoenix_html, "~> 2.6"},
       {:phoenix_ecto, "~> 4.0"},
       {:postgrex, "~> 0.14"},
@@ -83,14 +88,14 @@ defmodule Brando.Mixfile do
       {:timex, "~> 3.0"},
       {:ecto, "~> 3.0"},
       {:ecto_sql, "~> 3.0"},
-      {:flow, "~> 0.14"},
+      {:flow, "~> 1.0"},
       {:jason, "~> 1.0"},
       {:poison, "~> 4.0"},
       {:inflex, "~> 2.0"},
 
       # graphql
-      {:absinthe, "~> 1.5.0-beta", override: true},
-      {:absinthe_plug, "~> 1.5.0-alpha"},
+      {:absinthe, "~> 1.5.0-beta"},
+      {:absinthe_plug, "~> 1.5.0-beta"},
       {:dataloader, "~> 1.0"},
 
       # monitoring
@@ -109,25 +114,33 @@ defmodule Brando.Mixfile do
       {:hackney, "~> 1.9"},
       {:sweet_xml, "~> 0.6"},
 
+      # Hashing
+      {:hashids, "~> 2.0"},
+
+      # Parser
+      {:nimble_parsec, "~> 0.6", override: true},
+      {:html_entities, "~> 0.5"},
+      {:html_sanitize_ex, "~> 1.4"},
+
       # Dev dependencies
-      {:credo, ">= 0.0.0", only: :dev},
-      {:dialyxir, "~> 0.3", only: :dev},
+      {:credo, ">= 0.0.0", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
 
       # Test dependencies
-      {:ex_machina, "~> 2.0", only: :test},
-      {:excoveralls, "~> 0.6", only: :test},
+      {:ex_machina, "~> 2.0", only: :test, runtime: false},
+      {:excoveralls, "~> 0.6", only: :test, runtime: false},
 
       # Documentation dependencies
-      {:ex_doc, "~> 0.11", only: :docs},
-      {:inch_ex, "~> 2.0", only: :docs}
+      {:ex_doc, "~> 0.11", only: :docs, runtime: false},
+      {:inch_ex, "~> 2.0", only: :docs, runtime: false}
     ]
   end
 
   defp package do
     [
       maintainers: ["Univers TM"],
-      licenses: [""],
+      licenses: ["MIT"],
       files: [
         "assets",
         "config",

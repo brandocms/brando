@@ -11,6 +11,7 @@ defmodule <%= application_module %>Web.AdminSocket do
   @doc """
   Connect socket with token
   """
+  @impl true
   def connect(%{"guardian_token" => jwt}, socket) do
     case Guardian.Phoenix.Socket.authenticate(socket, <%= application_module %>Web.Guardian, jwt) do
       {:ok, authed_socket} ->
@@ -36,5 +37,6 @@ defmodule <%= application_module %>Web.AdminSocket do
   #     <%= application_module %>Web.Endpoint.broadcast("users_socket:#{user.id}", "disconnect", %{})
   #
   # Returning `nil` makes this socket anonymous.
+  @impl true
   def id(_socket), do: nil
 end

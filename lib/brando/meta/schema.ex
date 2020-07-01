@@ -1,6 +1,6 @@
 defmodule Brando.Meta.Schema do
   @moduledoc """
-  Macro for mapping META fields to schema
+  Macro for mapping META fields to schema.
 
   ## Example
 
@@ -8,7 +8,7 @@ defmodule Brando.Meta.Schema do
 
       meta_schema do
         field :description, [:meta_description], &Brando.HTML.truncate(&1, 155)
-        field :title, [:heading], &Brando.HTML.truncate(&1, 60)
+        field :title, [:heading], fn data -> do_something(data) end
         field :image, [:cover]
       end
 
@@ -64,13 +64,13 @@ defmodule Brando.Meta.Schema do
 
   ### Examples
 
-      field "title", &generate_random_title/1
+      field "title", fn data -> generate_crazy_title(data.title) end
 
   If no `path` is supplied, the entire data map is passed to the supplied mutator function
 
       field ["description", "og:description"], [:meta_description], &truncate(&1, 155)
 
-  This defines two fields, `description` and `og:description`. It should find its value from
+  This defines two fields, `description` and `og:description`. It should get its value from
   `meta_description` from the provided data map. This data gets passed to `truncate/1`.
 
   If the data passed to a `field` mutator function is the raw data (there is no extraction path provided),
@@ -78,7 +78,7 @@ defmodule Brando.Meta.Schema do
 
       field "og:url", &(&1.__meta__.current_url)
 
-  To grab an image from the `identity`
+  To grab an image from `identity`
 
       field ["image", "og:image"], &get_org_image(&1)
 

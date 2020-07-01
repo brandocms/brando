@@ -6,8 +6,6 @@ defmodule Brando.AdminController do
 
   @doc false
   def index(conn, _params) do
-    conn
-    |> put_layout({Brando.Admin.LayoutView, "admin.html"})
-    |> render(:index)
+    render(conn, :index)
   end
 end

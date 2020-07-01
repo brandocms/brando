@@ -4,6 +4,6 @@ import dashboard from './dashboard'
 
 export default [].concat(
   // ++content
-  dashboard,
+  dashboard
   // __content
 )

@@ -1,3 +1,63 @@
+## 0.45.0
+
+* Switch to consistent casing in GQL files. This means that you have to go through
+  your js graphql fragments and switch to camelCase (inserted_at -> insertedAt). Form
+  views, List views and locale files must be updated as well.
+
+  A lazy way to do it is to first commit your code, then
+  ```
+  gsed -i -r 's/([a-z])_([a-z])/\1\U\2/g' assets/backend/src/**/*.*
+  ```
+  And then search through your backend js and fix all `adminChannel.channel.push` calls,
+  since the above code will break topic strings.
+
+* BrandoJS Datasource: Moved `wrapper` to template instead.
+
+* Switch out all "nb" language keys to "no". Both in elixir configs and in
+  Vue files (menus/locales)
+
+* Upgrade BrandoJS to latest. Needed for rewritten upload handling and new
+  language defaults.
+
+* In your `app.html.eex`, replace
+  `<%= render @view_module, @view_template, @assigns %>`
+  with
+  `<%= @inner_content %>`
+
+* If you implement your own `parser.ex`, all functions must be changed to /2.
+  `def text(data) do` -> `def text(data, _) do`
+
+* In `config/brando.exs` add:
+  ```
+  config :brando,
+    app_module: MyApp,
+    web_module: MyAppWeb,
+  ```
+  You can remove `endpoint`, `factory`, `repo`, `router` and `helpers` keys.
+
+* Switch out
+  `plug :put_layout, {YourAppWeb.LayoutView, "admin.html"}` with
+  `plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}` in your app's router
+
+* Authorization. First run `mix brando.gen.authorization` to create a generic
+  authorization module in your application
+
+  Then in your `router.ex`, remove the `scope "/auth"` block
+  and add a `forward` instead:
+
+        forward "/auth", Brando.Plug.Authentication,
+          guardian_module: MyAppWeb.Guardian,
+          authorization_module: MyApp.Authorization
+
+* Phoenix has replaced `Plug.Logger` with `Plug.Telemetry` etc in default
+  generated `endpoint.ex`. Replace `plug Plug.Logger` with
+  `plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]`
+
+* KInputTable: Rename `newRows` -> `addRows`
+
+* Copy `DashboardView.vue` from Brando Install >
+
+
 ## 0.44.0
 
 ### Vue backend rewrite part 1/? (sorry)
@@ -220,8 +280,8 @@
 
 * Switch out the `:hmr` logic for `css` and `js` with
 
-    <%= Brando.HTML.include_css() %>
-    <%= Brando.HTML.include_js() %>
+    <%= Brando.HTML.include_css(@conn) %>
+    <%= Brando.HTML.include_js(@conn) %>
 
   right before `</head>`
 
@@ -271,7 +331,8 @@
 ## 0.40.0
 
 * Copy the brando.upgrade mix task from brando src.
-* Switch all your image fields to `:jsonb` types in migrations from `:text`. Run `mix brando.upgrade`
+* Switch all your image fields to `:jsonb` types in migrations from `:text`
+  by running `mix brando.upgrade`
 
 
 ## 0.39.0
@@ -353,9 +414,6 @@
     - `graphql/schema.ex`
       - `# __queries`
       - `# __mutations`
-    - `assets/backend/src/store/index.js`
-      - `// __imports
-      - `// __content
     - `assets/backend/src/routes/index.js`
       - `// __imports
       - `// __content
@@ -522,7 +580,7 @@
     In `config/brando.exs`, change the guardian config as so:
 
     ```elixir
-    config :film_farms, MyAppWeb.Guardian,
+    config :my_app, MyAppWeb.Guardian,
       issuer: "MyApp",
       ttl: {30, :days},
       secret_key: "4bK7w0vuz8lAuhsckr0McyH0Efy2mfedySXfppI/4XjRWp274bUxBkNfgXMgH1lP"
