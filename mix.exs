@@ -10,10 +10,10 @@ defmodule Brando.Mixfile do
       version: @version,
       elixir: "~> 1.10",
       deps: deps(),
+      package: package(),
       compilers: [:gettext, :phoenix] ++ Mix.compilers(),
       elixirc_paths: elixirc_paths(Mix.env()),
       test_coverage: [tool: ExCoveralls],
-      package: package(),
       description: @description,
       aliases: aliases(),
 
@@ -27,47 +27,7 @@ defmodule Brando.Mixfile do
   end
 
   def application do
-    [mod: {Brando, []}, applications: applications(Mix.env())]
-  end
-
-  defp applications(:test) do
-    applications(:all) ++
-      [
-        :ecto,
-        :postgrex,
-        :absinthe,
-        :dataloader,
-        :absinthe_plug
-      ]
-  end
-
-  defp applications(_all) do
-    [
-      :cachex,
-      :flow,
-      :absinthe,
-      :dataloader,
-      :gettext,
-      :comeonin,
-      :hashids,
-      :httpoison,
-      :inflex,
-      :earmark,
-      :fastimage,
-      :guardian,
-      :guardian_phoenix,
-      :mogrify,
-      :nimble_parsec,
-      :phoenix_html,
-      :poison,
-      :recase,
-      :sentry,
-      :slugger,
-      :timex,
-      :ex_aws,
-      :hackney,
-      :sweet_xml
-    ]
+    [mod: {Brando, []}]
   end
 
   defp deps do
@@ -133,7 +93,7 @@ defmodule Brando.Mixfile do
 
       # Documentation dependencies
       {:ex_doc, "~> 0.11", only: :docs, runtime: false},
-      {:inch_ex, "~> 2.0", only: :docs, runtime: false}
+      {:inch_ex, "~> 2.1.0-rc", only: :docs, runtime: false}
     ]
   end
 
