@@ -1,12 +1,24 @@
-A helping hand.
+<p align="center">
+    <sup><em>A helping hand.</em></sup>
+</p>
 
-![Brando logo](https://raw.githubusercontent.com/brandocms/brando/master/priv/templates/brando.install/assets/frontend/static/images/brando/brando-big.png)
+<p align="center">
+<img src="https://raw.githubusercontent.com/brandocms/brando/master/priv/static/brando.png" width="350">
+</p>
 
-![Build Status](https://github.com/brandocms/brando/workflows/CI/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/brandocms/brando/badge.svg?branch=master)](https://coveralls.io/github/brandocms/brando?branch=master)
-[![Inline docs](http://inch-ci.org/github/brandocms/brando.svg?branch=master)](http://inch-ci.org/github/brandocms/brando)
+<p align="center">
+    <img src="https://github.com/brandocms/brando/workflows/CI/badge.svg">
+    <a href="https://coveralls.io/github/brandocms/brando?branch=master">
+      <img src="https://coveralls.io/repos/github/brandocms/brando/badge.svg?branch=master">
+    </a>
+    <a href="http://inch-ci.org/github/brandocms/brando">
+      <img src="http://inch-ci.org/github/brandocms/brando.svg?branch=master">
+    </a>
+</p>
 
+<p align="center">
 *EXPERIMENTAL, DO NOT USE*
+</p>
 
 
 ## Install
@@ -17,7 +29,7 @@ Start by creating a new Phoenix project:
 
 Run the install script:
 
-    $ wget https://raw.githubusercontent.com/brandocms/brando/develop/install.sh && chmod +x install.sh && ./install.sh
+    $ wget https://raw.githubusercontent.com/univers-agency/brando/develop/install.sh && chmod +x install.sh && ./install.sh
 
 Go through `config/brando.exs`.
 
