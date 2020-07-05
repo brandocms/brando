@@ -153,7 +153,7 @@ defmodule Brando.HTMLTest do
   end
 
   test "picture_tag" do
-    user = Factory.insert(:user)
+    user = Factory.build(:user)
     srcset = {Brando.Users.User, :avatar}
 
     assert picture_tag(
