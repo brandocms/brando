@@ -33,7 +33,7 @@ config :brando, :app_name, "MyApp"
 config :brando, :auth_sleep_duration, 0
 config :brando, :app_module, Brando.Integration
 config :brando, :web_module, Brando.Integration
-config :brando, :cache_module, Brando.Integration.Cache
+# config :brando, :cache_module, Brando.Integration.Cache
 config :brando, :media_url, "/media"
 config :brando, :media_path, Path.join([Mix.Project.app_path(), "tmp", "media"])
 config :brando, :log_dir, Path.expand("./tmp/logs")

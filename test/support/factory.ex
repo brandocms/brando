@@ -2,6 +2,8 @@
 defmodule Brando.Factory do
   use ExMachina.Ecto, repo: Brando.repo()
 
+  alias Brando.Sites.Global
+  alias Brando.Sites.GlobalCategory
   alias Brando.Type.ImageConfig
   alias Brando.Pages.PageFragment
   alias Brando.ImageCategory
@@ -19,10 +21,50 @@ defmodule Brando.Factory do
     "thumb" => %{"size" => "150x150", "quality" => 1, "crop" => true}
   }
 
+  def global_category_factory do
+    %GlobalCategory{
+      label: "System",
+      key: "system",
+      globals: [build_list(2, :global)]
+    }
+  end
+
+  def global_factory do
+    %Global{
+      type: "string",
+      label: "Global label",
+      key: sequence(:key, &"key-#{&1}"),
+      data: %{}
+    }
+  end
+
   def user_factory do
     %User{
       full_name: "James Williamson",
       email: "james@thestooges.com",
+      password: Bcrypt.hash_pwd_salt("admin"),
+      avatar: %Brando.Type.Image{
+        credits: nil,
+        path: "images/avatars/27i97a.jpeg",
+        title: nil,
+        sizes: %{
+          "micro" => "images/avatars/micro/27i97a.jpeg",
+          "thumb" => "images/avatars/thumb/27i97a.jpeg",
+          "small" => "images/avatars/small/27i97a.jpeg",
+          "medium" => "images/avatars/medium/27i97a.jpeg",
+          "large" => "images/avatars/large/27i97a.jpeg",
+          "mobile" => "images/avatars/mobile/27i97a.jpeg"
+        }
+      },
+      role: :superuser,
+      language: "en"
+    }
+  end
+
+  def random_user_factory do
+    %User{
+      full_name: "James Williamson",
+      email: sequence(:email, &"james#{&1}@thestooges.com"),
       password: Bcrypt.hash_pwd_salt("admin"),
       avatar: %Brando.Type.Image{
         credits: nil,

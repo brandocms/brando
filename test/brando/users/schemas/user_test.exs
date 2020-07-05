@@ -7,7 +7,7 @@ defmodule Brando.Integration.UserTest do
   alias Brando.Users
 
   test "create/1 and update/1" do
-    user = Factory.insert(:user)
+    user = Factory.insert(:random_user)
 
     assert {:ok, updated_user} =
              Users.update_user(user.id, %{"full_name" => "Elvis Presley"}, :system)

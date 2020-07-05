@@ -1,5 +1,9 @@
 See `UPGRADE.md` for instructions on upgrading between versions.
 
+## 0.46.0-dev
+
+* Switch frontend bundler to Rollup
+
 ## 0.45.0
 
 * Rewrote upload handling. **Requires** latest BrandoJS to work!

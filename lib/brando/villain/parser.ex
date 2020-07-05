@@ -125,7 +125,17 @@ defmodule Brando.Villain.Parser do
           Enum.map(Enum.with_index(entries), fn {%{"refs" => refs, "vars" => vars}, index} ->
             # add vars to context
             vars = process_vars(vars)
-            context = Lexer.Context.assign(base_context, vars)
+
+            forloop = %{
+              "index" => index + 1,
+              "index0" => index,
+              "count" => Enum.count(entries)
+            }
+
+            context =
+              base_context
+              |> Lexer.Context.assign(vars)
+              |> Lexer.Context.assign("forloop", forloop)
 
             template.code
             |> render_refs(refs, id)

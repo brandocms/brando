@@ -8,7 +8,7 @@ defmodule Brando.Utils.SchemaTest do
   alias Brando.Utils
 
   test "update_field/2" do
-    user = Factory.insert(:user)
+    user = Factory.insert(:random_user)
     assert {:ok, schema} = Utils.Schema.update_field(user, full_name: "James Bond")
     assert schema.full_name == "James Bond"
   end

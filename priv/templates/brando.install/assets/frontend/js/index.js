@@ -1,6 +1,6 @@
 /**
  * UNIVERS/TWINED APPLICATION FRONTEND
- * (c) 2019 UNIVERS/TWINED TM
+ * (c) 2020 UNIVERS/TWINED TM
  */
 
 /**
@@ -58,9 +58,4 @@ if (document.attachEvent ? document.readyState === 'complete' : document.readySt
   app.initialize()
 } else {
   document.addEventListener('DOMContentLoaded', app.initialize.apply(app))
-}
-
-// Accept HMR as per: https://webpack.js.org/api/hot-module-replacement#accept
-if (module.hot) {
-  module.hot.accept()
 }

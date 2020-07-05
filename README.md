@@ -1,10 +1,10 @@
 A helping hand.
 
-![Brando logo](https://raw.githubusercontent.com/univers-agency/brando/master/priv/templates/brando.install/assets/frontend/static/images/brando/brando-big.png)
+![Brando logo](https://raw.githubusercontent.com/brandocms/brando/master/priv/templates/brando.install/assets/frontend/static/images/brando/brando-big.png)
 
-![Build Status](https://github.com/univers-agency/brando/workflows/CI/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/univers-agency/brando/badge.svg?branch=master)](https://coveralls.io/github/univers-agency/brando?branch=master)
-[![Inline docs](http://inch-ci.org/github/univers-agency/brando.svg?branch=master)](http://inch-ci.org/github/univers-agency/brando)
+![Build Status](https://github.com/brandocms/brando/workflows/CI/badge.svg)
+[![Coverage Status](https://coveralls.io/repos/github/brandocms/brando/badge.svg?branch=master)](https://coveralls.io/github/brandocms/brando?branch=master)
+[![Inline docs](http://inch-ci.org/github/brandocms/brando.svg?branch=master)](http://inch-ci.org/github/brandocms/brando)
 
 *EXPERIMENTAL, DO NOT USE*
 
@@ -17,7 +17,7 @@ Start by creating a new Phoenix project:
 
 Run the install script:
 
-    $ wget https://raw.githubusercontent.com/univers-agency/brando/develop/install.sh && chmod +x install.sh && ./install.sh
+    $ wget https://raw.githubusercontent.com/brandocms/brando/develop/install.sh && chmod +x install.sh && ./install.sh
 
 Go through `config/brando.exs`.
 

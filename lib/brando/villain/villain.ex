@@ -19,15 +19,15 @@ defmodule Brando.Villain do
     Gets `<key>` from list of globals in the Identity configuration.
 
     - `${loop:index}`
-    Only available inside templates with `multi` set to true. Returns the current index
+    Only available inside for loops or templates with `multi` set to true. Returns the current index
     of the for loop, starting at `1`
 
     - `${loop:index0}`
-    Only available inside templates with `multi` set to true. Returns the current index
+    Only available inside for loops or templates with `multi` set to true. Returns the current index
     of the for loop, starting at `0`
 
-    - `${loop:length}`
-    Only available inside templates with `multi` set to true. Returns the total amount
+    - `${loop:count}`
+    Only available inside for loops or templates with `multi` set to true. Returns the total amount
     of entries in the for loop
 
   """
@@ -74,13 +74,13 @@ defmodule Brando.Villain do
     parser = Brando.config(Brando.Villain)[:parser]
     identity = Brando.Cache.Identity.get()
 
-    slim_entry = if opts[:data_field], do: Map.delete(entry, opts[:data_field]), else: entry
-    slim_entry = if opts[:html_field], do: Map.delete(entry, opts[:html_field]), else: slim_entry
+    entry = if opts[:data_field], do: Map.put(entry, opts[:data_field], nil), else: entry
+    entry = if opts[:html_field], do: Map.put(entry, opts[:html_field], nil), else: entry
 
     context =
       %{}
       |> Lexer.Context.new()
-      |> Lexer.Context.assign("entry", slim_entry)
+      |> Lexer.Context.assign("entry", entry)
       |> Lexer.Context.assign("identity", identity)
       |> Lexer.Context.assign("configs", identity.configs)
       |> Lexer.Context.assign("links", identity.links)

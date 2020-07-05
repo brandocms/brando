@@ -88,15 +88,15 @@ defmodule Brando.Lexer.Render.Iteration do
       {Enum.reverse(result), context}
   end
 
-  defp forloop(index, length) do
+  defp forloop(index, count) do
     %{
       "index" => index + 1,
       "index0" => index,
-      "rindex" => length - index,
-      "rindex0" => length - index - 1,
+      "rindex" => count - index,
+      "rindex0" => count - index - 1,
       "first" => index == 0,
-      "last" => index == length - 1,
-      "length" => length
+      "last" => index == count - 1,
+      "count" => count
     }
   end
 end

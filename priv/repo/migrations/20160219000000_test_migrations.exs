@@ -131,6 +131,31 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
     create(index(:pages_fragments, [:key]))
     create(index(:pages_fragments, [:parent_key]))
 
+    create table(:sites_identities) do
+      add :name, :string
+      add :alternate_name, :string
+      add :email, :string
+      add :phone, :string
+      add :address, :string
+      add :zipcode, :string
+      add :city, :string
+      add :country, :string
+      add :description, :text
+      add :title_prefix, :string
+      add :title, :text
+      add :title_postfix, :string
+      add :image, :jsonb
+      add :logo, :jsonb
+      add :url, :string
+
+      add :metas, :map
+      add :links, :map
+      add :configs, :map
+      add :type, :string, default: "organization"
+
+      timestamps()
+    end
+
     create table(:sites_global_categories) do
       add :key, :string
       add :label, :text

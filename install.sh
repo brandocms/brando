@@ -13,7 +13,7 @@ echo   # new line
 if [[ $REPLY =~ ^[Yy]$ ]]
 then
   echo "==> Starting installation"
-  gsed -i '/{:phoenix,/i\      {:brando, github: "twined/brando", branch: "develop"},' mix.exs
+  gsed -i '/{:phoenix,/i\      {:brando, github: "brandocms/brando", branch: "develop"},' mix.exs
   mix do deps.get, deps.compile, brando.install --module $MODULE, deps.get, deps.compile
   cd assets/frontend && yarn && yarn upgrade @univers-agency/jupiter @univers-agency/europacss && cd ../backend && yalc add brandojs && yarn && yarn lint --fix && cd ../../
   mix do deps.get, deps.compile --force && mix brando.upgrade && mix ecto.setup

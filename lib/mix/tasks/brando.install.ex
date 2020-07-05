@@ -232,14 +232,15 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "assets/frontend/babel.config.js", "assets/frontend/babel.config.js"},
     {:copy, "assets/frontend/eslintrc.js", "assets/frontend/.eslintrc.js"},
     {:copy, "assets/frontend/europa.config.js", "assets/frontend/europa.config.js"},
-    {:eex, "assets/frontend/package.json.eex", "assets/frontend/package.json"},
+    {:copy, "assets/frontend/rollup.config.js", "assets/frontend/rollup.config.js"},
     {:copy, "assets/frontend/postcss.config.js", "assets/frontend/postcss.config.js"},
     {:copy, "assets/frontend/stylelint.config.js", "assets/frontend/stylelint.config.js"},
-    {:copy, "assets/frontend/webpack.common.js", "assets/frontend/webpack.common.js"},
-    {:copy, "assets/frontend/webpack.dev.js", "assets/frontend/webpack.dev.js"},
-    {:copy, "assets/frontend/webpack.prod.js", "assets/frontend/webpack.prod.js"},
-    {:eex, "assets/frontend/webpack.settings.js.eex", "assets/frontend/webpack.settings.js"},
     {:copy, "assets/frontend/yarn.lock.eex", "assets/frontend/yarn.lock"},
+    {:eex, "assets/frontend/package.json.eex", "assets/frontend/package.json"},
+
+    # Frontend static
+    {:copy, "assets/frontend/static/favicon.ico", "assets/frontend/static/favicon.ico"},
+    {:copy, "assets/frontend/static/ico/favicon.ico", "assets/frontend/static/ico/favicon.ico"},
 
     # Frontend static
     {:copy, "assets/frontend/static/favicon.ico", "assets/frontend/static/favicon.ico"},

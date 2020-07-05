@@ -1,8 +1,8 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.45.0"
-  @description "A helping hand for Twined applications."
+  @version "0.46.0-dev"
+  @description "Brando CMS"
 
   def project do
     [
@@ -21,7 +21,7 @@ defmodule Brando.Mixfile do
       name: "Brando",
       docs: [
         source_ref: "v#{@version}",
-        source_url: "https://github.com/univers-agency/brando"
+        source_url: "https://github.com/brandocms/brando"
       ]
     ]
   end
@@ -94,8 +94,8 @@ defmodule Brando.Mixfile do
       {:inflex, "~> 2.0"},
 
       # graphql
-      {:absinthe, "~> 1.5.0-beta"},
-      {:absinthe_plug, "~> 1.5.0-beta"},
+      {:absinthe, "~> 1.5.0"},
+      {:absinthe_plug, "~> 1.5.0"},
       {:dataloader, "~> 1.0"},
 
       # monitoring
@@ -167,7 +167,8 @@ defmodule Brando.Mixfile do
   defp aliases do
     [
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
-      "ecto.reset": ["ecto.drop", "ecto.setup"]
+      "ecto.reset": ["ecto.drop", "ecto.setup"],
+      "ecto.seed": ["run priv/repo/seeds.exs"]
     ]
   end
 end

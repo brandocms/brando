@@ -52,8 +52,11 @@ end
 Mix.Task.run("ecto.drop", ["-r", Repo, "--quiet"])
 Mix.Task.run("ecto.create", ["-r", Repo, "--quiet"])
 Mix.Task.run("ecto.migrate", ["-r", Repo, "--quiet"])
-
 Repo.start_link()
+Mix.Task.run("ecto.seed", ["-r", Repo, "--quiet"])
+
+Brando.Cache.Identity.set()
+Brando.Cache.Globals.set()
 
 Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)
 Brando.endpoint().start_link
