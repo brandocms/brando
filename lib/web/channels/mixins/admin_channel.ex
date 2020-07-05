@@ -1,5 +1,8 @@
 defmodule Brando.Mixin.Channels.AdminChannelMixin do
   @keys [
+    "config:get",
+    "config:set",
+    "config:add_key",
     "datasource:list_available_entries",
     "datasource:list_modules",
     "datasource:list_module_keys",
@@ -14,6 +17,8 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "images:get_series_config",
     "images:update_series_config",
     "images:rerender_image_series",
+    "livepreview:initialize",
+    "livepreview:render",
     "pages:list_parents",
     "pages:list_templates",
     "pages:sequence_pages",
@@ -25,14 +30,10 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "page_fragment:rerender",
     "page_fragment:duplicate",
     "page_fragment:rerender_all",
-    "config:get",
-    "config:set",
-    "config:add_key",
+    "templates:list_templates",
     "user:deactivate",
     "user:activate",
-    "templates:list_templates",
-    "livepreview:initialize",
-    "livepreview:render"
+    "user:state"
   ]
 
   defmacro __using__(_) do
@@ -225,6 +226,16 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   def do_handle_in("page_fragment:rerender_all", _, socket) do
     Brando.Pages.rerender_fragments()
     {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  # Set user presence state active or not
+  def do_handle_in("user:state", %{"active" => active}, socket) do
+    Brando.presence().update(socket, socket.assigns.user_id, %{
+      online_at: inspect(System.system_time(:second)),
+      active: active
+    })
+
+    {:reply, :ok, socket}
   end
 
   def do_handle_in("user:deactivate", %{"user_id" => user_id}, socket) do

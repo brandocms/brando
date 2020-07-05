@@ -46,6 +46,11 @@ defmodule Brando do
   def authorization, do: app_module(Authorization)
 
   @doc """
+  Gets the parent app's presence module, as set in config.exs
+  """
+  def presence, do: app_module(Presence)
+
+  @doc """
   Gets the parent app's otp name, as set in config.exs
   """
   def otp_app, do: config(:otp_app)
