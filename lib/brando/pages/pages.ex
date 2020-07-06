@@ -93,16 +93,15 @@ defmodule Brando.Pages do
   @doc """
   Duplicate page
   """
-  def duplicate_page(page_id, user) do
+  def duplicate_page(page_id) do
     page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
     {:ok, page} = get_page(page_id)
 
     page = Map.merge(page, %{key: "#{page.key}_kopi", title: "#{page.title} (kopi)"})
-    page = Map.delete(page, [:id, :children, :creator, :parent])
+    page = Map.delete(page, [:id, :children, :parent])
     page = Map.from_struct(page)
 
-    {:ok, duplicated_page} = create_page(page, user)
-    {:ok, Map.merge(duplicated_page, %{parent: nil, children: nil, creator: nil})}
+    create_page(page, %{id: page.creator_id})
   end
 
   @doc """
@@ -473,17 +472,17 @@ defmodule Brando.Pages do
   @doc """
   Duplicate page fragment
   """
-  @spec duplicate_page_fragment(fragment_id :: String.t() | Integer.t(), user) ::
+  @spec duplicate_page_fragment(fragment_id :: String.t() | Integer.t()) ::
           {:ok, map} | {:error, {:page_fragment, :not_found}}
-  def duplicate_page_fragment(fragment_id, user) do
+  def duplicate_page_fragment(fragment_id) do
     fragment_id = (is_binary(fragment_id) && String.to_integer(fragment_id)) || fragment_id
 
     with {:ok, fragment} when is_map(fragment) <- get_page_fragment(fragment_id),
          fragment when is_map(fragment) <- Map.merge(fragment, %{key: "#{fragment.key}_kopi"}),
          fragment when is_map(fragment) <- Map.delete(fragment, [:id, :parent]),
          fragment when is_map(fragment) <- Map.from_struct(fragment),
-         {:ok, new_fragment} <- create_page_fragment(fragment, user) do
-      {:ok, Map.merge(new_fragment, %{creator: nil})}
+         {:ok, new_fragment} <- create_page_fragment(fragment, %{id: fragment.creator_id}) do
+      {:ok, new_fragment}
     else
       {:error, {:page_fragment, :not_found}} ->
         {:error, {:page_fragment, :not_found}}
