@@ -32,9 +32,11 @@ defmodule Brando.VillainTest do
     # and rolls back when it exits. setup_all runs in a distinct process
     # from each test so the data doesn't exist for each test.
     Ecto.Adapters.SQL.Sandbox.mode(Brando.repo(), :auto)
+
     user = Factory.insert(:random_user)
     category = Factory.insert(:image_category, creator: user)
     series = Factory.insert(:image_series, creator: user, image_category: category)
+    image = Factory.insert(:image, creator: user, image_series: series)
 
     on_exit(fn ->
       # this callback needs to checkout its own connection since it
@@ -42,13 +44,14 @@ defmodule Brando.VillainTest do
       :ok = Ecto.Adapters.SQL.Sandbox.checkout(Brando.repo())
       Ecto.Adapters.SQL.Sandbox.mode(Brando.repo(), :auto)
 
+      Brando.repo().delete(image)
       Brando.repo().delete(series)
       Brando.repo().delete(category)
       Brando.repo().delete(user)
       :ok
     end)
 
-    {:ok, %{user: user, category: category, series: series}}
+    {:ok, %{user: user, category: category, series: series, image: image}}
   end
 
   test "parse" do
@@ -75,29 +78,18 @@ defmodule Brando.VillainTest do
     end
   end
 
-  test "map_images", %{series: series, user: user} do
-    Ecto.Changeset.change(%Brando.Image{
-      image_series_id: series.id,
-      creator_id: user.id,
-      image: %Brando.Type.Image{
-        credits: "Credits",
-        path: "image/1.jpg",
-        sizes: %{
-          large: "image/large/1.jpg",
-          medium: "image/medium/1.jpg",
-          small: "image/small/1.jpg",
-          thumb: "image/thumb/1.jpg",
-          xlarge: "image/xlarge/1.jpg"
-        },
-        title: "Title one"
-      }
-    })
-    |> Brando.repo().insert!
+  test "list_villains" do
+    assert Brando.Villain.list_villains() == [
+             {Brando.Pages.Page, [{:villain, :data, :html}]},
+             {Brando.Pages.PageFragment, [{:villain, :data, :html}]},
+             {Brando.Pages.Page, [{:villain, :data, :html}]},
+             {Brando.Pages.PageFragment, [{:villain, :data, :html}]}
+           ]
+  end
 
-    images = Brando.repo().all(Brando.Image)
-
+  test "map_images", %{image: image} do
     mapped_images =
-      images
+      [image]
       |> Brando.Villain.map_images()
       |> Enum.map(&Map.delete(&1, :inserted_at))
 
@@ -105,6 +97,7 @@ defmodule Brando.VillainTest do
              [
                %{
                  credits: "Credits",
+                 height: nil,
                  sizes: %{
                    "large" => "/media/image/large/1.jpg",
                    "medium" => "/media/image/medium/1.jpg",
@@ -115,9 +108,76 @@ defmodule Brando.VillainTest do
                  src: "/media/image/1.jpg",
                  thumb: "/media/image/thumb/1.jpg",
                  title: "Title one",
-                 height: nil,
                  width: nil
                }
              ]
+  end
+
+  test "search_villains_for_text" do
+    pf1 =
+      Factory.insert(:page_fragment, %{
+        data: [
+          %{
+            "type" => "text",
+            "data" => %{"text" => "**Some** text here.", "type" => "paragraph"}
+          }
+        ]
+      })
+
+    _pf2 = Factory.insert(:page_fragment, %{data: []})
+    _pf3 = Factory.insert(:page_fragment, %{data: []})
+
+    pf4 =
+      Factory.insert(:page_fragment, %{
+        data: [
+          %{
+            "type" => "text",
+            "data" => %{"text" => "**Some** text here.", "type" => "paragraph"}
+          }
+        ]
+      })
+
+    resulting_ids =
+      Brando.Villain.search_villains_for_text(
+        Brando.Pages.PageFragment,
+        :data,
+        "text"
+      )
+
+    assert resulting_ids === [pf1.id, pf4.id]
+  end
+
+  test "search_villains_for_regex" do
+    pf1 =
+      Factory.insert(:page_fragment, %{
+        data: [
+          %{
+            "type" => "text",
+            "data" => %{"text" => "**Some** ${GLOBAL:old} here.", "type" => "paragraph"}
+          }
+        ]
+      })
+
+    _pf2 = Factory.insert(:page_fragment, %{data: []})
+    _pf3 = Factory.insert(:page_fragment, %{data: []})
+
+    pf4 =
+      Factory.insert(:page_fragment, %{
+        data: [
+          %{
+            "type" => "text",
+            "data" => %{"text" => "**Some** ${GLOBAL:really_old} here.", "type" => "paragraph"}
+          }
+        ]
+      })
+
+    resulting_ids =
+      Brando.Villain.search_villains_for_regex(
+        Brando.Pages.PageFragment,
+        :data,
+        "\\${GLOBAL:(\\w+)}"
+      )
+
+    assert resulting_ids === [pf1.id, pf4.id]
   end
 end

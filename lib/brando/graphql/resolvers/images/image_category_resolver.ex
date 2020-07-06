@@ -27,7 +27,6 @@ defmodule Brando.Images.ImageCategoryResolver do
       }) do
     image_category_params
     |> Images.create_category(current_user)
-    |> response
   end
 
   @doc """
@@ -39,7 +38,6 @@ defmodule Brando.Images.ImageCategoryResolver do
       ) do
     image_category_id
     |> Images.update_category(image_category_params, current_user)
-    |> response
   end
 
   @doc """
@@ -48,7 +46,6 @@ defmodule Brando.Images.ImageCategoryResolver do
   def delete(%{image_category_id: image_category_id}, _) do
     image_category_id
     |> Images.delete_category()
-    |> response
   end
 
   @doc """
@@ -57,6 +54,5 @@ defmodule Brando.Images.ImageCategoryResolver do
   def duplicate(%{image_category_id: image_category_id}, %{context: %{current_user: current_user}}) do
     image_category_id
     |> Images.duplicate_category(current_user)
-    |> response
   end
 end

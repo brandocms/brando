@@ -1,5 +1,5 @@
 defmodule Brando.Integration.ImageSeriesTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
   use Brando.ConnCase
   use Brando.Integration.TestCase
 

@@ -79,7 +79,6 @@ defmodule Brando.Web do
 
   def resolver do
     quote do
-      import Brando.GraphQL.Helpers
     end
   end
 

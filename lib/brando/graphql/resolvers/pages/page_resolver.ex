@@ -25,7 +25,6 @@ defmodule Brando.Pages.PageResolver do
   def create(%{page_params: page_params}, %{context: %{current_user: current_user}}) do
     page_params
     |> Pages.create_page(current_user)
-    |> response
   end
 
   @doc """
@@ -36,7 +35,6 @@ defmodule Brando.Pages.PageResolver do
       }) do
     page_id
     |> Pages.update_page(page_params, current_user)
-    |> response
   end
 
   @doc """
@@ -45,7 +43,6 @@ defmodule Brando.Pages.PageResolver do
   def delete(%{page_id: page_id}, %{context: %{current_user: _current_user}}) do
     page_id
     |> Pages.delete_page()
-    |> response
   end
 
   @doc """
@@ -54,7 +51,6 @@ defmodule Brando.Pages.PageResolver do
   def duplicate(%{page_id: page_id}, %{context: %{current_user: user}}) do
     page_id
     |> Pages.duplicate_page(user)
-    |> response
   end
 
   @doc """
@@ -63,6 +59,5 @@ defmodule Brando.Pages.PageResolver do
   def duplicate_section(%{section_id: section_id}, %{context: %{current_user: user}}) do
     section_id
     |> Pages.duplicate_page_fragment(user)
-    |> response
   end
 end

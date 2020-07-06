@@ -5,10 +5,13 @@ defmodule Brando.Factory do
   alias Brando.Sites.Global
   alias Brando.Sites.GlobalCategory
   alias Brando.Type.ImageConfig
+  alias Brando.Pages.Page
   alias Brando.Pages.PageFragment
+  alias Brando.Image
   alias Brando.ImageCategory
   alias Brando.ImageSeries
   alias Brando.Users.User
+  alias Brando.Villain.Template
 
   @sizes %{
     "micro" => %{"size" => "25", "quality" => 1},
@@ -84,6 +87,21 @@ defmodule Brando.Factory do
     }
   end
 
+  def template_factory do
+    %Template{}
+  end
+
+  def page_factory do
+    %Page{
+      key: sequence(:key, &"test#{&1}"),
+      language: "en",
+      status: :published,
+      title: "Title",
+      slug: "title",
+      template: "default.html"
+    }
+  end
+
   def page_fragment_factory do
     %PageFragment{
       parent_key: "index",
@@ -102,6 +120,25 @@ defmodule Brando.Factory do
       sequence: 0,
       image_category: build(:image_category),
       creator: build(:user)
+    }
+  end
+
+  def image_factory do
+    %Image{
+      image_series_id: nil,
+      creator_id: nil,
+      image: %Brando.Type.Image{
+        credits: "Credits",
+        path: "image/1.jpg",
+        sizes: %{
+          "large" => "image/large/1.jpg",
+          "medium" => "image/medium/1.jpg",
+          "small" => "image/small/1.jpg",
+          "thumb" => "image/thumb/1.jpg",
+          "xlarge" => "image/xlarge/1.jpg"
+        },
+        title: "Title one"
+      }
     }
   end
 

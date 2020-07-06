@@ -5,7 +5,8 @@ use Mix.Config
 config :brando, Brando.Integration.Endpoint,
   http: [port: 80],
   server: false,
-  secret_key_base: "verysecret"
+  secret_key_base: "verysecret",
+  pubsub_server: Brando.Integration.PubSub
 
 config :brando, Brando.Integration.Repo,
   url: "ecto://postgres:postgres@localhost/brando_test",
@@ -54,13 +55,12 @@ config :brando, :admin_languages, [
   [value: "en", text: "English"]
 ]
 
-config :brando, Brando.Villain, parser: Brando.Villain.Parser.Default
+config :brando, Brando.Villain, parser: Brando.Villain.ParserTest.Parser
 config :brando, Brando.Villain, extra_blocks: []
 
 config :brando, Brando.Type.Role, roles: %{staff: 1, admin: 2, superuser: 4}
 
-config :comeonin, :bcrypt_log_rounds, 4
-config :comeonin, :pbkdf2_rounds, 1
+config :bcrypt_elixir, :rounds, 4
 
 # Print only warnings and errors during test
 config :logger, level: :warn

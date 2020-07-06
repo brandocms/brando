@@ -5,6 +5,10 @@ defmodule Brando.Cache.GlobalsTest do
 
   alias Brando.Factory
 
+  setup do
+    ExMachina.Sequence.reset()
+  end
+
   test "set and get" do
     assert Brando.Cache.Globals.set()
     assert Brando.Cache.Globals.get() == %{}

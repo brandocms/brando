@@ -167,14 +167,6 @@ defmodule Brando.Lexer.Filter do
   ## Examples
       iex> Brando.Lexer.Filter.date(~D[2000-01-01], "%m/%d/%Y", %{})
       "01/01/2000"
-      iex> Brando.Lexer.Filter.date("2000-01-01", "%m/%d/%Y", %{})
-      "01/01/2000"
-      iex> Brando.Lexer.Filter.date("January 1, 2000", "%m/%d/%Y", %{})
-      "01/01/2000"
-      iex> Brando.Lexer.Filter.date("1/2/2000", "%m/%d/%Y", %{})
-      "01/02/2000"
-      iex> Brando.Lexer.Filter.date("March 14, 2016", "%b %d, %y", %{})
-      "Mar 14, 16"
   """
   def date(%Date{} = value, format, _), do: Timex.format!(value, format, :strftime)
   def date(%DateTime{} = value, format, _), do: Timex.format!(value, format, :strftime)
@@ -437,18 +429,24 @@ defmodule Brando.Lexer.Filter do
   Returns a substring of 1 character beginning at the index specified by the
   first argument. An optional second argument specifies the length of the
   substring to be returned.
+
   ## Examples
+
       iex> Brando.Lexer.Filter.slice("Liquid", 0, %{})
       "L"
       iex> Brando.Lexer.Filter.slice("Liquid", 2, %{})
       "q"
       iex> Brando.Lexer.Filter.slice("Liquid", 2, 5, %{})
       "quid"
+
   If the first argument is a negative number, the indices are counted from
   the end of the string:
+
   ## Examples
+
       iex> Brando.Lexer.Filter.slice("Liquid", -3, 2, %{})
       "ui"
+
   """
   def slice(value, start, length \\ 1, _),
     do: String.slice(value, start, length)
@@ -625,7 +623,7 @@ defmodule Brando.Lexer.Filter do
   Slugs a string
   ## Examples
       iex> Brando.Lexer.Filter.slug("this is a string", %{})
-      "this-is-a-string
+      "this-is-a-string"
   """
   def slug(str, _) when is_binary(str), do: Brando.Utils.slugify(str)
 

@@ -19,7 +19,6 @@ defmodule Brando.Images.ImageSeriesResolver do
         context: %{current_user: current_user}
       }) do
     Images.create_series(image_series_params, current_user)
-    |> response
   end
 
   @doc """
@@ -29,7 +28,6 @@ defmodule Brando.Images.ImageSeriesResolver do
         context: %{current_user: current_user}
       }) do
     Images.update_series(image_series_id, image_series_params, current_user)
-    |> response
   end
 
   @doc """
@@ -37,6 +35,5 @@ defmodule Brando.Images.ImageSeriesResolver do
   """
   def delete(%{image_series_id: image_series_id}, _) do
     Images.delete_series(image_series_id)
-    |> response
   end
 end

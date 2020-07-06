@@ -57,9 +57,7 @@ defmodule Brando.Users.UserResolver do
   create user
   """
   def create(%{user_params: user_params}, %{context: %{current_user: current_user}}) do
-    user_params
-    |> Users.create_user(current_user)
-    |> response
+    Users.create_user(user_params, current_user)
   end
 
   @doc """
@@ -68,8 +66,6 @@ defmodule Brando.Users.UserResolver do
   def update(%{user_id: user_id, user_params: user_params}, %{
         context: %{current_user: current_user}
       }) do
-    user_id
-    |> Users.update_user(user_params, current_user)
-    |> response
+    Users.update_user(user_id, user_params, current_user)
   end
 end

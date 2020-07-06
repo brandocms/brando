@@ -9,6 +9,8 @@ defmodule Brando.Lexer.FilterTest do
   alias Brando.Lexer.Context
   alias Brando.Lexer.Parser
 
+  doctest Brando.Lexer.Filter
+
   describe "parsing" do
     test "date" do
       assert Lexer.parse("${entry:inserted_at|date:\"%y/%m/%d\"}") ===

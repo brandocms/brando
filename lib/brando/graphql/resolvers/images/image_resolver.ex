@@ -22,7 +22,6 @@ defmodule Brando.Images.ImageResolver do
       current_user
     )
     |> List.first()
-    |> response
   end
 
   @doc """

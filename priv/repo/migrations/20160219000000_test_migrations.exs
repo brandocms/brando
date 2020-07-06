@@ -101,7 +101,10 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add(:parent_id, references(:pages_pages), default: nil)
       add(:creator_id, references(:users_users))
       add(:css_classes, :text)
+      add(:template, :text)
       add(:meta_description, :text)
+      add(:meta_image, :jsonb)
+      sequenced()
       soft_delete()
       timestamps()
     end
@@ -130,6 +133,24 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
     create(index(:pages_fragments, [:language]))
     create(index(:pages_fragments, [:key]))
     create(index(:pages_fragments, [:parent_key]))
+
+    create table(:pages_templates) do
+      add :name, :string
+      add :namespace, :string
+      add :help_text, :text
+      add :class, :string
+      add :code, :text
+      add :refs, :jsonb
+      add :vars, :jsonb
+      add :svg, :string
+      add :multi, :boolean
+      add :wrapper, :string
+      sequenced()
+      timestamps()
+      soft_delete()
+    end
+
+    create index(:pages_templates, [:namespace])
 
     create table(:sites_identities) do
       add :name, :string

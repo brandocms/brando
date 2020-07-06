@@ -1,7 +1,3 @@
-defmodule Brando.Villain.ParserTest.Parser do
-  use Brando.Villain.Parser
-end
-
 defmodule Brando.Villain.ParserTest do
   use ExUnit.Case
   use Brando.Integration.TestCase

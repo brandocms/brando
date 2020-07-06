@@ -58,7 +58,7 @@ defmodule Brando.Villain do
   @doc """
   Parses `json` (in Villain-format).
   Delegates to the parser module configured in the otp_app's brando.exs.
-  Returns HTML.
+  Renders to HTML.
   """
   @spec parse(String.t() | [map]) :: String.t()
   def parse(data, entry \\ nil, opts \\ [])
@@ -100,10 +100,6 @@ defmodule Brando.Villain do
     Lexer.parse_and_render(html, context)
   end
 
-  def render(html, context) do
-    Lexer.render(html, context)
-  end
-
   @doc """
   Map out images
   """
@@ -118,7 +114,7 @@ defmodule Brando.Villain do
 
       %{
         src: Utils.media_url(img_struct.path),
-        thumb: Utils.media_url(Utils.img_url(img_struct, :thumb)),
+        thumb: img_struct |> Utils.img_url(:thumb) |> Utils.media_url(),
         sizes: sizes,
         title: img_struct.title,
         credits: img_struct.credits,
@@ -389,111 +385,6 @@ defmodule Brando.Villain do
       end
 
     {:ok, Brando.repo().all(query)}
-  end
-
-  @doc """
-  Render a Villain data field to HTML and look for variables to interpolate.
-
-  ## Example:
-
-      {:ok, page} = Pages.get_page(1)
-      render_villain page.data, %{"link" => "hello"}
-
-  """
-  @deprecated "Use Villain.parse/2 instead."
-  def render_villain(_, _),
-    do:
-      raise("""
-      render_villain/2 is deprecated. Use parse/2 instead:
-
-          Villain.parse(entry.data, entry)
-
-      """)
-
-  @doc """
-  Apply `entry` against `code` and return replaced code
-  """
-  def render_entry(entry, %Brando.Pages.Page{} = page),
-    do: render_entry(entry, page.html) |> Phoenix.HTML.raw()
-
-  def render_entry(entry, field) when is_atom(field),
-    do: render_entry(entry, Map.get(entry, field)) |> Phoenix.HTML.raw()
-
-  def render_entry(entry, code) do
-    raise """
-
-    """
-
-    Regex.replace(~r/\${ENTRY\:(\w+)\|?(\w+)?}/i, code, fn _, key, param ->
-      var_path =
-        try do
-          key
-          |> String.split(".")
-          |> Enum.map(&String.to_existing_atom/1)
-        rescue
-          ArgumentError -> nil
-        end
-
-      case Brando.Utils.try_path(entry, var_path) do
-        nil ->
-          ""
-
-        %DateTime{} = dt ->
-          # TODO! Read timezone from somewhere??
-          if param != "" do
-            # TODO: handle format string + locale + timezone?
-          else
-            dt
-            |> Timex.Timezone.convert("Europe/Oslo")
-            |> Timex.lformat!("%d.%m.%y, %H:%M", "nb_NO", :strftime)
-          end
-
-        %Brando.Type.Image{} = img ->
-          key = (param != "" && String.to_existing_atom(param)) || :xlarge
-          mod = Map.get(entry, :__struct__)
-
-          Brando.HTML.picture_tag(img,
-            key: key,
-            picture_class: "picture-img",
-            width: true,
-            height: true,
-            caption: true,
-            placeholder: :svg,
-            lazyload: true,
-            prefix: Brando.Utils.media_url(),
-            srcset: {mod, List.last(var_path)},
-            cache: entry.updated_at
-          )
-          |> Phoenix.HTML.safe_to_string()
-
-        var when is_integer(var) ->
-          Integer.to_string(var)
-
-        false ->
-          ""
-
-        true ->
-          case param do
-            "" -> key
-            _ -> param
-          end
-
-        var ->
-          case param do
-            "" ->
-              var
-
-            "slug" ->
-              var
-              |> Brando.Utils.slugify()
-
-            "markdown" ->
-              var
-              |> Brando.HTML.render_markdown()
-              |> Phoenix.HTML.safe_to_string()
-          end
-      end
-    end)
   end
 
   @doc """

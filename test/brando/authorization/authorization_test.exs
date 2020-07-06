@@ -22,6 +22,7 @@ defmodule Brando.AuthorizationTest do
 
     rules :admin do
       can :manage, :all
+      can :read, %Page{}
       cannot :manage, %User{}, when: %{role: :superuser}
       cannot :read, "MenuItem", when: %{to: %{name: "templates"}}
     end
@@ -119,6 +120,12 @@ defmodule Brando.AuthorizationTest do
                  subject: "all"
                },
                %Brando.Authorization.Rule{
+                 action: :read,
+                 conditions: nil,
+                 inverted: false,
+                 subject: "Page"
+               },
+               %Brando.Authorization.Rule{
                  action: :manage,
                  conditions: %{role: :superuser},
                  inverted: true,
@@ -149,6 +156,12 @@ defmodule Brando.AuthorizationTest do
                conditions: nil,
                inverted: false,
                subject: "all"
+             },
+             %Brando.Authorization.Rule{
+               action: :read,
+               conditions: nil,
+               inverted: false,
+               subject: Brando.Pages.Page
              },
              %Brando.Authorization.Rule{
                action: :manage,
