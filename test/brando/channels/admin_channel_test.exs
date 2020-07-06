@@ -1,5 +1,5 @@
 defmodule Brando.AdminChannelTest do
-  use Brando.ChannelCase
+  use Brando.ChannelCase, async: false
   use ExUnit.Case, async: false
   import Ecto.Query
   alias Brando.Factory
@@ -41,11 +41,11 @@ defmodule Brando.AdminChannelTest do
     {:ok, %{user: user}}
   end
 
-  test "pages:list_parents", %{socket: socket} do
+  test "pages:list_parents", %{socket: socket, user: user} do
     ref = push(socket, "pages:list_parents", %{})
     assert_reply ref, :ok, %{code: 200, parents: [%{name: "–", value: nil}]}
 
-    Factory.insert(:page)
+    Factory.insert(:page, %{creator_id: user.id})
 
     ref = push(socket, "pages:list_parents", %{})
 
@@ -64,10 +64,10 @@ defmodule Brando.AdminChannelTest do
     }
   end
 
-  test "pages:sequence_pages", %{socket: socket} do
-    p1 = Factory.insert(:page)
-    p2 = Factory.insert(:page)
-    p3 = Factory.insert(:page)
+  test "pages:sequence_pages", %{socket: socket, user: user} do
+    p1 = Factory.insert(:page, %{creator_id: user.id})
+    p2 = Factory.insert(:page, %{creator_id: user.id})
+    p3 = Factory.insert(:page, %{creator_id: user.id})
 
     assert p1.sequence == 0
     assert p2.sequence == 0
@@ -86,23 +86,24 @@ defmodule Brando.AdminChannelTest do
     assert pages == [[p2.id], [p3.id], [p1.id]]
   end
 
-  test "page:delete", %{socket: socket} do
-    p1 = Factory.insert(:page)
+  test "page:delete", %{socket: socket, user: user} do
+    p1 = Factory.insert(:page, %{creator_id: user.id})
 
     ref = push(socket, "page:delete", %{"id" => p1.id})
     assert_reply ref, :ok, %{code: 200}
   end
 
-  test "page:duplicate", %{socket: socket} do
-    p1 = Factory.insert(:page, data: [])
+  test "page:duplicate", %{socket: socket, user: user} do
+    p1 = Factory.insert(:page, data: [], creator_id: user.id)
 
     ref = push(socket, "page:duplicate", %{"id" => p1.id})
     assert_reply ref, :ok, %{code: 200, page: %Brando.Pages.Page{key: "test0_kopi"}}
   end
 
-  test "page:rerender", %{socket: socket} do
+  test "page:rerender", %{socket: socket, user: user} do
     p1 =
       Factory.insert(:page,
+        creator_id: user.id,
         data: [
           %{
             "type" => "text",
@@ -115,9 +116,10 @@ defmodule Brando.AdminChannelTest do
     assert_reply ref, :ok, %{code: 200}
   end
 
-  test "page:rerender_all", %{socket: socket} do
+  test "page:rerender_all", %{socket: socket, user: user} do
     _ =
       Factory.insert(:page,
+        creator_id: user.id,
         data: [
           %{
             "type" => "text",
@@ -130,10 +132,10 @@ defmodule Brando.AdminChannelTest do
     assert_reply ref, :ok, %{code: 200}
   end
 
-  test "page_fragments:sequence_fragments", %{socket: socket} do
-    p1 = Factory.insert(:page_fragment)
-    p2 = Factory.insert(:page_fragment)
-    p3 = Factory.insert(:page_fragment)
+  test "page_fragments:sequence_fragments", %{socket: socket, user: user} do
+    p1 = Factory.insert(:page_fragment, creator_id: user.id)
+    p2 = Factory.insert(:page_fragment, creator_id: user.id)
+    p3 = Factory.insert(:page_fragment, creator_id: user.id)
 
     assert p1.sequence == 0
     assert p2.sequence == 0
@@ -152,8 +154,8 @@ defmodule Brando.AdminChannelTest do
     assert pages == [[p2.id], [p3.id], [p1.id]]
   end
 
-  test "page_fragment:duplicate", %{socket: socket} do
-    p1 = Factory.insert(:page_fragment, data: [])
+  test "page_fragment:duplicate", %{socket: socket, user: user} do
+    p1 = Factory.insert(:page_fragment, data: [], creator_id: user.id)
 
     ref = push(socket, "page_fragment:duplicate", %{"id" => p1.id})
 
@@ -163,9 +165,10 @@ defmodule Brando.AdminChannelTest do
     }
   end
 
-  test "page_fragment:rerender", %{socket: socket} do
+  test "page_fragment:rerender", %{socket: socket, user: user} do
     p1 =
       Factory.insert(:page_fragment,
+        creator_id: user.id,
         data: [
           %{
             "type" => "text",
@@ -178,9 +181,10 @@ defmodule Brando.AdminChannelTest do
     assert_reply ref, :ok, %{code: 200}
   end
 
-  test "page_fragment:rerender_all", %{socket: socket} do
+  test "page_fragment:rerender_all", %{socket: socket, user: user} do
     _ =
       Factory.insert(:page_fragment,
+        creator_id: user.id,
         data: [
           %{
             "type" => "text",
