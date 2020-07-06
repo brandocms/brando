@@ -167,6 +167,10 @@ defmodule Brando.Lexer.Filter do
   ## Examples
       iex> Brando.Lexer.Filter.date(~D[2000-01-01], "%m/%d/%Y", %{})
       "01/01/2000"
+      iex> Brando.Lexer.Filter.date(~N[2020-07-06 15:00:00.000000], "%m/%d/%Y", %{})
+      "07/06/2020"
+      iex> Brando.Lexer.Filter.date(~U[2020-07-06 15:00:00.000000Z], "%m/%d/%Y", %{})
+      "07/06/2020"
   """
   def date(%Date{} = value, format, _), do: Timex.format!(value, format, :strftime)
   def date(%DateTime{} = value, format, _), do: Timex.format!(value, format, :strftime)
@@ -523,6 +527,8 @@ defmodule Brando.Lexer.Filter do
   ellipsis (…) is appended to the string and is included in the character
   count.
   ## Examples
+      iex> Brando.Lexer.Filter.truncate("Short!", 20, %{})
+      "Short!"
       iex> Brando.Lexer.Filter.truncate("Ground control to Major Tom.", 20, %{})
       "Ground control to..."
       iex> Brando.Lexer.Filter.truncate("Ground control to Major Tom.", 25, ", and so on", %{})
@@ -548,6 +554,8 @@ defmodule Brando.Lexer.Filter do
   ellipsis (…) is appended to the string and is included in the character
   count.
   ## Examples
+      iex> Brando.Lexer.Filter.truncatewords("Short!", 20, %{})
+      "Short!"
       iex> Brando.Lexer.Filter.truncatewords("Ground control to Major Tom.", 3, %{})
       "Ground control to..."
       iex> Brando.Lexer.Filter.truncatewords("Ground control to Major Tom.", 3, "--", %{})
@@ -627,6 +635,12 @@ defmodule Brando.Lexer.Filter do
   """
   def slug(str, _) when is_binary(str), do: Brando.Utils.slugify(str)
 
+  @doc """
+  Converts from markdown
+  ## Examples
+      iex> Brando.Lexer.Filter.markdown("this is a **string**", %{}) |> String.trim("\\n")
+      "<p>this is a <strong>string</strong></p>"
+  """
   def markdown(str, _) when is_binary(str) do
     str
     |> Brando.HTML.render_markdown()

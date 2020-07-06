@@ -81,8 +81,6 @@ defmodule Brando.VillainTest do
   test "list_villains" do
     assert Brando.Villain.list_villains() == [
              {Brando.Pages.Page, [{:villain, :data, :html}]},
-             {Brando.Pages.PageFragment, [{:villain, :data, :html}]},
-             {Brando.Pages.Page, [{:villain, :data, :html}]},
              {Brando.Pages.PageFragment, [{:villain, :data, :html}]}
            ]
   end
@@ -179,5 +177,50 @@ defmodule Brando.VillainTest do
       )
 
     assert resulting_ids === [pf1.id, pf4.id]
+  end
+
+  test "create and update dependent template", %{user: user} do
+    tp1 =
+      Factory.insert(:template, %{
+        code: "-- this is some code ${testvar} --",
+        name: "Name",
+        help_text: "Help text",
+        refs: [],
+        namespace: "all",
+        class: "css class"
+      })
+
+    data = %{
+      "data" => %{
+        "deleted_at" => nil,
+        "id" => tp1.id,
+        "multi" => false,
+        "refs" => [],
+        "sequence" => 0,
+        "vars" => %{
+          "testvar" => %{
+            "label" => "Field name",
+            "type" => "text",
+            "value" => "Some text!"
+          }
+        }
+      },
+      "type" => "template"
+    }
+
+    {:ok, page} = Brando.Pages.create_page(Factory.params_for(:page, %{data: [data]}), user)
+
+    assert page.html == "-- this is some code Some text! --"
+
+    tp2 =
+      tp1
+      |> Map.put(:code, "-- this is some NEW code ${testvar} --")
+      |> Map.from_struct()
+      |> Brando.Utils.stringify_keys()
+
+    Brando.Villain.update_or_create_template(%{"data" => tp2})
+
+    {:ok, updated_page} = Brando.Pages.get_page(page.id)
+    assert updated_page.html == "-- this is some NEW code Some text! --"
   end
 end

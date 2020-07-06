@@ -42,6 +42,20 @@ defmodule Brando.Lexer.FilterTest do
              |> to_string()
              |> String.trim() == "Entry was inserted at 2020-01-01"
     end
+
+    test "date now" do
+      context = Context.new(%{})
+      now = Timex.format!(DateTime.utc_now(), "%Y-%m-%d", :strftime)
+
+      assert render(
+               """
+               Entry was inserted at ${'now'|date:"%Y-%m-%d"} ${'today'|date:"%Y-%m-%d"}
+               """,
+               context
+             )
+             |> to_string()
+             |> String.trim() == "Entry was inserted at #{now} #{now}"
+    end
   end
 
   def render(doc, context \\ %Context{}) do

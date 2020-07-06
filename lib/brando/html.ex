@@ -115,24 +115,6 @@ defmodule Brando.HTML do
   def render_markdown(markdown, opts), do: markdown |> Earmark.as_html!(opts) |> raw
 
   @doc """
-  Checks if current_user in conn has `role`
-  """
-  @spec can_render?(conn, map) :: boolean
-  def can_render?(_, %{role: nil}), do: true
-
-  def can_render?(conn, %{role: role}) do
-    current_user = Utils.current_user(conn)
-
-    if current_user do
-      (role in Utils.current_user(conn).role && true) || false
-    else
-      false
-    end
-  end
-
-  def can_render?(_, _), do: true
-
-  @doc """
   Zero pad `val` as a binary.
 
   ## Example

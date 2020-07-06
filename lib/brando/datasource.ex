@@ -237,7 +237,6 @@ defmodule Brando.Datasource do
   List ids of `schema` records that has a datasource matching schema
   """
   def list_ids_with_datasource(schema, datasource, data_field \\ :data) do
-    # module = Module.concat([datasource])
     t = [%{type: "datasource", data: %{module: datasource}}]
 
     Brando.repo().all(

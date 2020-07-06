@@ -37,24 +37,6 @@ defmodule Brando.Villain do
   alias Brando.Pages
   alias Brando.Utils
 
-  defmacro __using__(:schema) do
-    raise "`use Brando.Villain, :schema` is deprecated. Call `use Brando.Villain.Schema` instead."
-  end
-
-  defmacro __using__(:migration) do
-    raise "`use Brando.Villain, :migration` is deprecated. Call `use Brando.Villain.Migration` instead."
-  end
-
-  defmacro __using__([:controller, _] = opts) when is_list(opts) do
-    raise "use Brando.Villain with options is deprecated. Call without options."
-  end
-
-  defmacro __using__(_) do
-    quote do
-      import Brando.Villain, only: [render_entry: 2]
-    end
-  end
-
   @doc """
   Parses `json` (in Villain-format).
   Delegates to the parser module configured in the otp_app's brando.exs.
@@ -220,48 +202,12 @@ defmodule Brando.Villain do
   end
 
   @doc """
-  Check all posts for missing images
-  """
-  def check_posts_for_missing_images do
-    posts = Brando.repo().all(__MODULE__)
-
-    result =
-      Enum.map(posts, fn post ->
-        check_post_for_missing_images(post)
-      end)
-
-    case result do
-      [] -> false
-      result -> result
-    end
-  end
-
-  @doc """
-  Check post's villain data field for missing images
-  """
-  def check_post_for_missing_images(post) do
-    image_blocks = Enum.filter(post.data, fn block -> block["type"] == "image" end)
-
-    Enum.reduce(image_blocks, [], fn block, acc ->
-      reduced_block =
-        Enum.reduce(block["data"]["sizes"], [], fn {_size, path}, acc ->
-          (File.exists?(Path.join(["priv", path])) && acc) || {:missing, post, path}
-        end)
-
-      case reduced_block do
-        [] -> acc
-        res -> [res | acc]
-      end
-    end)
-  end
-
-  @doc """
   List all registered Villain fields
   """
   def list_villains do
     {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
 
-    modules = app_modules ++ [Pages.Page, Pages.PageFragment]
+    modules = (app_modules ++ [Pages.Page, Pages.PageFragment]) |> Enum.uniq()
 
     modules
     |> Enum.filter(&({:__villain_fields__, 0} in &1.__info__(:functions)))
@@ -336,14 +282,14 @@ defmodule Brando.Villain do
     with {:ok, template} <- get_template(id) do
       params = Map.drop(data, ["id"])
 
-      new_template =
+      {:ok, new_template} =
         template
         |> Brando.Villain.Template.changeset(params)
         |> Brando.repo().update
 
       update_template_in_fields(id)
 
-      new_template
+      {:ok, new_template}
     end
   end
 

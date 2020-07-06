@@ -1,4 +1,4 @@
-Logger.configure(level: :info)
+# Logger.configure(level: :info)
 
 # Clear tmp dir
 File.rm_rf!(Path.join([Mix.Project.app_path(), "tmp", "media"]))
@@ -48,6 +48,17 @@ defmodule Brando.Integration.Endpoint do
     only: ~w(css images js fonts favicon.ico robots.txt),
     cache_control_for_vsn_requests: nil,
     cache_control_for_etags: nil
+end
+
+defmodule Brando.Integration.Authorization do
+  use Brando.Authorization
+
+  types [{"User", Brando.Users.User}]
+
+  # Rules for :superuser
+  rules :superuser do
+    can :manage, :all
+  end
 end
 
 defmodule Brando.Integration.AdminSocket do

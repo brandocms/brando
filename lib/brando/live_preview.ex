@@ -131,22 +131,7 @@ defmodule Brando.LivePreview do
 
         {:ok, cache_key}
       rescue
-        err ->
-          require Logger
-
-          Logger.error("""
-
-          Live preview failed
-
-          #{inspect(err, pretty: true)}
-
-          - schema_module: #{inspect(schema_module)}
-          - entry_struct: #{inspect(entry_struct)}
-          - key: #{inspect(key)}
-          - prop: #{inspect(prop)}
-
-          """)
-
+        _err ->
           {:error, "Initialization failed."}
       end
     else

@@ -12,6 +12,7 @@ defmodule Brando.System do
     run_checks()
     Cache.Identity.set()
     Cache.Globals.set()
+    :ok
   end
 
   def run_checks do
