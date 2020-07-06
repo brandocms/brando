@@ -10,7 +10,6 @@ defmodule Brando.AdminChannelTest do
   @endpoint Endpoint
 
   setup %{user: user} do
-    ExMachina.Sequence.reset()
     socket = socket(AdminSocket, "admin", %{})
     socket = Guardian.Phoenix.Socket.put_current_resource(socket, user)
     {:ok, socket} = AdminSocket.connect(%{"guardian_token" => "blerg"}, socket)
@@ -20,6 +19,7 @@ defmodule Brando.AdminChannelTest do
   end
 
   setup_all do
+    ExMachina.Sequence.reset()
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Brando.repo())
     # we are setting :auto here so that the data persists for all tests,
     # normally (with :shared mode) every process runs in a transaction
@@ -51,7 +51,7 @@ defmodule Brando.AdminChannelTest do
 
     assert_reply ref, :ok, %{
       code: 200,
-      parents: [%{name: "–", value: nil}, %{name: "test0 (en)"}]
+      parents: [%{name: "–", value: nil}, %{name: _}]
     }
   end
 
@@ -97,7 +97,8 @@ defmodule Brando.AdminChannelTest do
     p1 = Factory.insert(:page, data: [], creator_id: user.id)
 
     ref = push(socket, "page:duplicate", %{"id" => p1.id})
-    assert_reply ref, :ok, %{code: 200, page: %Brando.Pages.Page{key: "test0_kopi"}}
+    assert_reply ref, :ok, %{code: 200, page: page}
+    refute page.id == p1
   end
 
   test "page:rerender", %{socket: socket, user: user} do
