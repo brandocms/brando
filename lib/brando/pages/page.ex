@@ -37,29 +37,6 @@ defmodule Brando.Pages.Page do
     deleted_at
   )a
 
-  json_ld_schema JSONLD.Schema.Article do
-    field :author, {:references, :identity}
-    field :copyrightHolder, {:references, :identity}
-    field :copyrightYear, :string, [:inserted_at, :year]
-    field :creator, {:references, :identity}
-    field :dateModified, :string, [:updated_at], &JSONLD.to_datetime/1
-    field :datePublished, :string, [:inserted_at], &JSONLD.to_datetime/1
-    field :description, :string, [:meta_description]
-    field :headline, :string, [:title]
-    field :inLanguage, :string, [:language]
-    field :mainEntityOfPage, :string, [:__meta__, :current_url]
-    field :name, :string, [:title]
-    field :publisher, {:references, :identity}
-    field :url, :string, [:__meta__, :current_url]
-  end
-
-  meta_schema do
-    field ["description", "og:description"], [:meta_description]
-    field ["title", "og:title"], [:title]
-    field "og:image", [:meta_image]
-    field "og:locale", [:language], &Brando.Meta.Utils.encode_locale/1
-  end
-
   @derive {Jason.Encoder, only: @derived_fields}
   schema "pages_pages" do
     field :key, :string
@@ -95,6 +72,29 @@ defmodule Brando.Pages.Page do
       "xlarge" => %{"size" => "1200x630", "quality" => 75, "crop" => true}
     }
   }
+
+  json_ld_schema JSONLD.Schema.Article do
+    field :author, {:references, :identity}
+    field :copyrightHolder, {:references, :identity}
+    field :copyrightYear, :string, [:inserted_at, :year]
+    field :creator, {:references, :identity}
+    field :dateModified, :string, [:updated_at], &JSONLD.to_datetime/1
+    field :datePublished, :string, [:inserted_at], &JSONLD.to_datetime/1
+    field :description, :string, [:meta_description]
+    field :headline, :string, [:title]
+    field :inLanguage, :string, [:language]
+    field :mainEntityOfPage, :string, [:__meta__, :current_url]
+    field :name, :string, [:title]
+    field :publisher, {:references, :identity}
+    field :url, :string, [:__meta__, :current_url]
+  end
+
+  meta_schema do
+    field ["description", "og:description"], [:meta_description]
+    field ["title", "og:title"], [:title]
+    field "og:image", [:meta_image]
+    field "og:locale", [:language], &Brando.Meta.Utils.encode_locale/1
+  end
 
   @doc """
   Casts and validates `params` against `schema` to create a valid changeset

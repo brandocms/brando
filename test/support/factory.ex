@@ -99,7 +99,7 @@ defmodule Brando.Factory do
       title: "Title",
       slug: "title",
       template: "default.html",
-      creator: nil
+      creator: build(:random_user)
     }
   end
 
@@ -110,7 +110,7 @@ defmodule Brando.Factory do
       language: "en",
       data: [],
       html: "fragment content!",
-      creator: nil
+      creator: build(:random_user)
     }
   end
 
