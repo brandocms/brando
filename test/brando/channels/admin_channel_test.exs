@@ -16,7 +16,7 @@ defmodule Brando.AdminChannelTest do
     {:ok, socket} = AdminSocket.connect(%{"guardian_token" => "blerg"}, socket)
     {:ok, _, socket} = subscribe_and_join(socket, AdminChannel, "admin", %{})
 
-    {:ok, %{socket: socket}}
+    {:ok, %{socket: socket, user: user}}
   end
 
   setup_all do
