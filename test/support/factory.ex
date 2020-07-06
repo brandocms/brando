@@ -98,7 +98,8 @@ defmodule Brando.Factory do
       status: :published,
       title: "Title",
       slug: "title",
-      template: "default.html"
+      template: "default.html",
+      creator: nil
     }
   end
 
@@ -108,7 +109,8 @@ defmodule Brando.Factory do
       key: "header",
       language: "en",
       data: [],
-      html: "fragment content!"
+      html: "fragment content!",
+      creator: nil
     }
   end
 
