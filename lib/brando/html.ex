@@ -205,6 +205,15 @@ defmodule Brando.HTML do
 
   @doc """
   Truncate `text` to `length`
+
+      iex> truncate(nil, 5)
+      ""
+
+      iex> truncate("bork bork bork", 4)
+      "bork ..."
+
+      iex> truncate("bork bork bork", 200)
+      "bork bork bork"
   """
   def truncate(nil, _), do: ""
 
@@ -213,7 +222,25 @@ defmodule Brando.HTML do
 
   def truncate(val, _), do: val
 
+  @doc """
+  Truncate for META description
+
+  Useful for `meta_schema`
+
+      iex> truncate_meta_description("bork bork bork")
+      "bork bork bork"
+
+  """
   def truncate_meta_description(val), do: truncate(val, 155)
+
+  @doc """
+  Truncate for META title
+
+  Useful for `meta_schema`
+
+      iex> truncate_meta_title("bork bork bork")
+      "bork bork bork"
+  """
   def truncate_meta_title(val), do: truncate(val, 60)
 
   @doc """
@@ -243,7 +270,7 @@ defmodule Brando.HTML do
     end
   end
 
-  defp breakpoint_debug_tag do
+  def breakpoint_debug_tag do
     breakpoint = content_tag(:div, "", class: "breakpoint")
 
     branding =
@@ -257,52 +284,9 @@ defmodule Brando.HTML do
     content_tag(:i, [branding, breakpoint, user_agent], class: "dbg-breakpoints")
   end
 
-  defp grid_debug_tag do
+  def grid_debug_tag do
     content_tag :div, class: "dbg-grid" do
-      [
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, ""),
-        content_tag(:b, "")
-      ]
-    end
-  end
-
-  @doc """
-  Displays all flash messages in conn
-  """
-  def display_flash(conn) do
-    flash = Phoenix.Controller.get_flash(conn)
-
-    for {type, msg} <- flash do
-      """
-      <div class="alert alert-block alert-#{type}">
-        <a class="close pull-right" data-dismiss="alert" href="#">×</a>
-        <i class="fa fa-exclamation-circle m-r-sm"> </i>
-        #{msg}
-      </div>
-      """
-      |> raw()
+      Enum.map(1..24, fn _ -> content_tag(:b, "") end)
     end
   end
 
@@ -313,6 +297,15 @@ defmodule Brando.HTML do
 
   @doc """
   Calculate image ratio
+
+      iex> ratio(%{height: nil, width: 200})
+      0
+
+      iex> ratio(%{height: 1000, width: 500})
+      #Decimal<200>
+
+      iex> ratio(nil)
+      0
   """
   def ratio(%{height: height, width: width})
       when is_nil(height) or is_nil(width),
