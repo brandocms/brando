@@ -60,7 +60,7 @@ config :brando, Brando.Villain, extra_blocks: []
 
 config :brando, Brando.Type.Role, roles: %{staff: 1, admin: 2, superuser: 4}
 
-config :bcrypt_elixir, :rounds, 4
+config :bcrypt_elixir, log_rounds: 1
 
 # Print only warnings and errors during test
 config :logger, level: :warn

@@ -9,36 +9,14 @@ defmodule Brando.AdminChannelTest do
 
   @endpoint Endpoint
 
-  setup %{user: user} do
+  setup do
+    user = Factory.insert(:random_user)
     socket = socket(AdminSocket, "admin", %{})
     socket = Guardian.Phoenix.Socket.put_current_resource(socket, user)
     {:ok, socket} = AdminSocket.connect(%{"guardian_token" => "blerg"}, socket)
     {:ok, _, socket} = subscribe_and_join(socket, AdminChannel, "admin", %{})
 
-    {:ok, %{socket: socket}}
-  end
-
-  setup_all do
-    ExMachina.Sequence.reset()
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Brando.repo())
-    # we are setting :auto here so that the data persists for all tests,
-    # normally (with :shared mode) every process runs in a transaction
-    # and rolls back when it exits. setup_all runs in a distinct process
-    # from each test so the data doesn't exist for each test.
-    Ecto.Adapters.SQL.Sandbox.mode(Brando.repo(), :auto)
-    user = Factory.insert(:random_user)
-
-    on_exit(fn ->
-      # this callback needs to checkout its own connection since it
-      # runs in its own process
-      :ok = Ecto.Adapters.SQL.Sandbox.checkout(Brando.repo())
-      Ecto.Adapters.SQL.Sandbox.mode(Brando.repo(), :auto)
-
-      Brando.repo().delete(user)
-      :ok
-    end)
-
-    {:ok, %{user: user}}
+    {:ok, %{socket: socket, user: user}}
   end
 
   test "pages:list_parents", %{socket: socket} do

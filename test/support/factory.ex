@@ -24,6 +24,8 @@ defmodule Brando.Factory do
     "thumb" => %{"size" => "150x150", "quality" => 1, "crop" => true}
   }
 
+  @encrypted_password Bcrypt.hash_pwd_salt("admin")
+
   def global_category_factory do
     %GlobalCategory{
       label: "System",
@@ -45,7 +47,7 @@ defmodule Brando.Factory do
     %User{
       full_name: "James Williamson",
       email: "james@thestooges.com",
-      password: Bcrypt.hash_pwd_salt("admin"),
+      password: @encrypted_password,
       avatar: %Brando.Type.Image{
         credits: nil,
         path: "images/avatars/27i97a.jpeg",
@@ -68,7 +70,7 @@ defmodule Brando.Factory do
     %User{
       full_name: "James Williamson",
       email: sequence(:email, &"james#{&1}@thestooges.com"),
-      password: Bcrypt.hash_pwd_salt("admin"),
+      password: @encrypted_password,
       avatar: %Brando.Type.Image{
         credits: nil,
         path: "images/avatars/27i97a.jpeg",
