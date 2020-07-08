@@ -26,7 +26,7 @@ defmodule Brando.JSONLDRenderTest do
                  "script",
                  [[32, "type", 61, 34, "application/ld+json", 34]],
                  62,
-                 "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Kortversjon av navnet\",\"description\":\"Beskrivelse av organisasjonen/nettsiden\",\"email\":\"mail@domain.tld\",\"name\":\"Organisasjonens navn\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}",
+                 "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Kortversjon av navnet\",\"description\":\"Beskrivelse av organisasjonen/nettsiden\",\"email\":\"mail@domain.tld\",\"image\":{\"@type\":\"ImageObject\",\"height\":933,\"url\":\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\",\"width\":1900},\"name\":\"Organisasjonens navn\",\"url\":\"https://www.domain.tld\"}",
                  60,
                  47,
                  "script",
