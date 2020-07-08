@@ -235,7 +235,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "assets/frontend/rollup.config.js", "assets/frontend/rollup.config.js"},
     {:copy, "assets/frontend/postcss.config.js", "assets/frontend/postcss.config.js"},
     {:copy, "assets/frontend/stylelint.config.js", "assets/frontend/stylelint.config.js"},
-    {:copy, "assets/frontend/yarn.lock.eex", "assets/frontend/yarn.lock"},
+    {:copy, "assets/frontend/yarn.lock", "assets/frontend/yarn.lock"},
     {:eex, "assets/frontend/package.json", "assets/frontend/package.json"},
 
     # Frontend static
