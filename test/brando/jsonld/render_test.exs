@@ -29,30 +29,19 @@ defmodule Brando.JSONLDRenderTest do
   }
 
   @links [
-    %Brando.Link{
+    %{
       name: "Instagram",
       url: "https://instagram.com/test"
     },
-    %Brando.Link{
+    %{
       name: "Facebook",
       url: "https://facebook.com/test"
     }
   ]
 
-  @metas [
-    %Brando.Meta{
-      key: "key1",
-      value: "value1"
-    },
-    %Brando.Meta{
-      key: "key2",
-      value: "value2"
-    }
-  ]
-
   test "render json ld" do
+    Brando.Sites.update_identity(%{image: @img, links: @links})
     mock_conn = Brando.Plug.HTML.put_json_ld(%Plug.Conn{}, Brando.Pages.Page, @mock_data)
-    Brando.Sites.update_identity(%{image: @img, links: @links, metas: @metas})
     rendered_json_ld = Brando.HTML.render_json_ld(mock_conn)
 
     assert rendered_json_ld == [
@@ -64,7 +53,7 @@ defmodule Brando.JSONLDRenderTest do
                  "script",
                  [[32, "type", 61, 34, "application/ld+json", 34]],
                  62,
-                 "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Kortversjon av navnet\",\"description\":\"Beskrivelse av organisasjonen/nettsiden\",\"email\":\"mail@domain.tld\",\"image\":{\"@type\":\"ImageObject\",\"height\":933,\"url\":\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\",\"width\":1900},\"name\":\"Organisasjonens navn\",\"url\":\"https://www.domain.tld\"}",
+                 "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Kortversjon av navnet\",\"description\":\"Beskrivelse av organisasjonen/nettsiden\",\"email\":\"mail@domain.tld\",\"image\":{\"@type\":\"ImageObject\",\"height\":933,\"url\":\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\",\"width\":1900},\"name\":\"Organisasjonens navn\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}",
                  60,
                  47,
                  "script",
