@@ -1,5 +1,5 @@
 defmodule Brando.MetaRenderTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
   use Brando.ConnCase
   import Phoenix.HTML
 
@@ -22,6 +22,28 @@ defmodule Brando.MetaRenderTest do
     title: nil,
     width: 1900
   }
+
+  @links [
+    %Brando.Link{
+      name: "Instagram",
+      url: "https://instagram.com/test"
+    },
+    %Brando.Link{
+      name: "Facebook",
+      url: "https://facebook.com/test"
+    }
+  ]
+
+  @metas [
+    %Brando.Meta{
+      key: "key1",
+      value: "value1"
+    },
+    %Brando.Meta{
+      key: "key2",
+      value: "value2"
+    }
+  ]
 
   defmodule Page do
     use Brando.Web, :schema
@@ -60,6 +82,8 @@ defmodule Brando.MetaRenderTest do
 
     assert safe_to_string(rendered_meta) ==
              "<meta content=\"@ Our description\" name=\"description\"><meta content=\"Generated.\" name=\"generated_title\"><meta content=\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\" name=\"image\"><meta content=\"@ Our title\" name=\"mutated_title\"><meta content=\"@ Our description\" property=\"og:description\"><meta content=\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\" property=\"og:image\"><meta content=\"933\" property=\"og:image:height\"><meta content=\"image/jpeg\" property=\"og:image:type\"><meta content=\"1900\" property=\"og:image:width\"><meta content=\"MyApp\" property=\"og:site_name\"><meta content=\"Firma | Velkommen!\" property=\"og:title\"><meta content=\"website\" property=\"og:type\"><meta content=\"http://localhost\" property=\"og:url\"><meta content=\"Our title\" name=\"title\">"
+
+    Brando.Sites.update_identity(%{image: nil, links: @links, metas: @metas})
   end
 
   test "meta_tag" do

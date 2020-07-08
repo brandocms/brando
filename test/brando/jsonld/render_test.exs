@@ -1,5 +1,6 @@
 defmodule Brando.JSONLDRenderTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
+  use Brando.ConnCase
 
   @mock_data %{
     __meta__: %{
@@ -12,9 +13,46 @@ defmodule Brando.JSONLDRenderTest do
     meta_description: "Meta description"
   }
 
+  @img %Brando.Type.Image{
+    alt: nil,
+    credits: nil,
+    focal: %{"x" => 50, "y" => 50},
+    height: 933,
+    path: "images/sites/identity/image/20ri181teifg.jpg",
+    sizes: %{
+      "micro" => "images/sites/identity/image/micro/20ri181teifg.jpg",
+      "thumb" => "images/sites/identity/image/thumb/20ri181teifg.jpg",
+      "xlarge" => "images/sites/identity/image/xlarge/20ri181teifg.jpg"
+    },
+    title: nil,
+    width: 1900
+  }
+
+  @links [
+    %Brando.Link{
+      name: "Instagram",
+      url: "https://instagram.com/test"
+    },
+    %Brando.Link{
+      name: "Facebook",
+      url: "https://facebook.com/test"
+    }
+  ]
+
+  @metas [
+    %Brando.Meta{
+      key: "key1",
+      value: "value1"
+    },
+    %Brando.Meta{
+      key: "key2",
+      value: "value2"
+    }
+  ]
+
   test "render json ld" do
     mock_conn = Brando.Plug.HTML.put_json_ld(%Plug.Conn{}, Brando.Pages.Page, @mock_data)
-
+    Brando.Sites.update_identity(%{image: @img, links: @links, metas: @metas})
     rendered_json_ld = Brando.HTML.render_json_ld(mock_conn)
 
     assert rendered_json_ld == [
@@ -48,5 +86,7 @@ defmodule Brando.JSONLDRenderTest do
                ]
              }
            ]
+
+    Brando.Sites.update_identity(%{image: nil})
   end
 end
