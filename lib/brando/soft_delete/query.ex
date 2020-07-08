@@ -3,13 +3,7 @@ defmodule Brando.SoftDelete.Query do
   Query tools for Soft deletion
   """
 
-  alias Brando.Image
-  alias Brando.ImageCategory
-  alias Brando.ImageSeries
   alias Brando.Images
-  alias Brando.Pages
-  alias Brando.Users.User
-  alias Brando.Villain
   import Ecto.Query
 
   @doc """
@@ -25,16 +19,16 @@ defmodule Brando.SoftDelete.Query do
 
     modules =
       [
-        Pages.Page,
-        Pages.PageFragment,
-        Villain.Template,
-        Image,
-        ImageCategory,
-        ImageSeries,
-        User
+        Brando.Pages.Page,
+        Brando.Pages.PageFragment,
+        Brando.Villain.Template,
+        Brando.Image,
+        Brando.ImageCategory,
+        Brando.ImageSeries,
+        Brando.Users.User
       ] ++ app_modules
 
-    Enum.filter(modules, &({:__soft_delete__, 0} in &1.__info__(:functions)))
+    Enum.filter(Enum.uniq(modules), &({:__soft_delete__, 0} in &1.__info__(:functions)))
   end
 
   @doc """
@@ -57,7 +51,11 @@ defmodule Brando.SoftDelete.Query do
           from t in schema, select: count(t.id), where: not is_nil(t.deleted_at), union_all: ^q
       end)
 
-    counts = Brando.repo().all(union_query)
+    counts =
+      union_query
+      |> Brando.repo().all()
+      |> Enum.reverse()
+
     Enum.zip(schemas, counts)
   end
 
