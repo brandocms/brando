@@ -178,16 +178,18 @@ defmodule Brando.Meta.HTML do
           Enum.join(
             [
               Brando.Utils.host_and_media_url(),
-              record.meta_image.sizes["xlarge"]
+              record.meta_image.sizes[img_field_size]
             ],
             "/"
           )
 
-        Map.get(record, img_field, nil) ->
+        Map.get(record, img_field) ->
+          img = Map.get(record, img_field)
+
           Enum.join(
             [
               Brando.Utils.host_and_media_url(),
-              record.cover.sizes[img_field_size]
+              img.sizes[img_field_size]
             ],
             "/"
           )

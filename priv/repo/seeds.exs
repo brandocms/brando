@@ -14,6 +14,26 @@
   title_postfix: "",
   image: nil,
   logo: nil,
-  url: "https://www.domain.tld"
+  url: "https://www.domain.tld",
+  links: [
+    %Brando.Link{
+      name: "Instagram",
+      url: "https://instagram.com/test"
+    },
+    %Brando.Link{
+      name: "Facebook",
+      url: "https://facebook.com/test"
+    }
+  ],
+  metas: [
+    %Brando.Meta{
+      key: "key1",
+      value: "value1"
+    },
+    %Brando.Meta{
+      key: "key2",
+      value: "value2"
+    }
+  ]
 }
 |> Brando.repo().insert!
