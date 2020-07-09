@@ -40,7 +40,6 @@ defmodule Brando.Schema.Types.Page do
   @desc "Filtering options for page"
   input_object :page_filter do
     field :title, :string
-    field :illustrator, :string
   end
 
   object :page_queries do

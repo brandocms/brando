@@ -105,6 +105,7 @@ defmodule Brando.Factory do
       title: "Title",
       slug: "title",
       template: "default.html",
+      data: [],
       creator: build(:random_user)
     }
   end

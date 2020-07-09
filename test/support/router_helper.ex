@@ -25,7 +25,10 @@ defmodule Brando.Integration.TestSchema do
 
   query do
     import_brando_queries()
-    # Query type must exist
+  end
+
+  mutation do
+    import_brando_mutations()
   end
 
   enum :sort_order do

@@ -60,6 +60,32 @@ defmodule Brando.GraphQL.Queries.PageQueriesTest do
              }
   end
 
+  @filtered_query """
+    query Pages ($order: Order, $limit: Int, $offset: Int, $filter: PageFilter, $status: String) {
+      pages (order: $order, limit: $limit, offset: $offset, filter: $filter, status: $status) {
+        title
+      }
+    }
+  """
+  test "filtered pages", %{opts: opts} do
+    _p1 = Factory.insert(:page, title: "test 1")
+    _p2 = Factory.insert(:page, title: "hello 2")
+
+    assert Absinthe.run(
+             @filtered_query,
+             Brando.Integration.TestSchema,
+             opts ++
+               [
+                 variables: %{
+                   "order" => "desc id",
+                   "filter" => %{"title" => "test"},
+                   "status" => "published"
+                 }
+               ]
+           ) ==
+             {:ok, %{data: %{"pages" => [%{"title" => "test 1"}]}}}
+  end
+
   @page_id_query """
   query page($pageId: ID) {
     page(pageId: $pageId) {
