@@ -33,7 +33,6 @@ defmodule Brando.GraphQL.Queries.PageQueriesTest do
   test "pages", %{opts: opts} do
     p1 = Factory.insert(:page)
     p2 = Factory.insert(:page, parent_id: p1.id)
-    p3 = Factory.insert(:page, parent_id: p1.id)
 
     pf1 = Factory.insert(:page_fragment, page_id: p1.id)
 
@@ -49,8 +48,7 @@ defmodule Brando.GraphQL.Queries.PageQueriesTest do
                    "pages" => [
                      %{
                        "children" => [
-                         %{"id" => to_string(p2.id), "title" => "Title"},
-                         %{"id" => to_string(p3.id), "title" => "Title"}
+                         %{"id" => to_string(p2.id), "title" => "Title"}
                        ],
                        "fragments" => [%{"id" => to_string(pf1.id), "title" => nil}],
                        "id" => to_string(p1.id),
