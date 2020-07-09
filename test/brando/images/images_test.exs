@@ -35,7 +35,7 @@ defmodule Brando.ImagesTest do
     assert {:ok, img2} = Images.update_image_meta(img, %{focal: %{x: 0, y: 0}}, :system)
     assert img2.image.focal == %{x: 0, y: 0}
 
-    assert {:ok, img3} = Images.update_image_meta(img, %{title: "Hello!"}, :system)
+    assert {:ok, img3} = Images.update_image_meta(img, %{title: "Hello!"})
     assert img3.image.title == "Hello!"
   end
 
@@ -134,6 +134,10 @@ defmodule Brando.ImagesTest do
     s1 = Factory.insert(:image_series)
     assert {:ok, s2} = Images.get_series_by_slug(s1.slug)
     assert s2.id == s1.id
+  end
+
+  test "get_series_config" do
+    assert {:error, _} = Images.get_series_config(5_299_345_348)
   end
 
   test "list_categories" do
