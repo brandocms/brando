@@ -15,6 +15,7 @@ defmodule Brando.GraphQL.Queries.ImageQueriesTest do
   query {
     imageCategories {
       id
+      imageSeriesCount
       imageSeries {
         id
         images {
@@ -50,6 +51,7 @@ defmodule Brando.GraphQL.Queries.ImageQueriesTest do
                    "imageCategories" => [
                      %{
                        "id" => to_string(c1.id),
+                       "imageSeriesCount" => 2,
                        "imageSeries" => [
                          %{
                            "id" => to_string(s1.id),
