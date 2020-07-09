@@ -35,7 +35,7 @@ defmodule Brando.Sites.Identity do
     :image,
     %{
       allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-      default_size: :xlarge,
+      default_size: "xlarge",
       upload_path: Path.join(["images", "sites", "identity", "image"]),
       random_filename: true,
       size_limit: 10_240_000,
@@ -51,7 +51,7 @@ defmodule Brando.Sites.Identity do
     :logo,
     %{
       allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-      default_size: :xlarge,
+      default_size: "xlarge",
       upload_path: Path.join(["images", "sites", "identity", "logo"]),
       random_filename: true,
       size_limit: 10_240_000,

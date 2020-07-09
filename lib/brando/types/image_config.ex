@@ -10,11 +10,20 @@ defmodule Brando.Type.ImageConfig do
 
   use Ecto.Type
 
-  @type t :: %__MODULE__{}
+  @type t :: %__MODULE__{
+          allowed_mimetypes: [binary],
+          default_size: binary,
+          upload_path: binary,
+          random_filename: boolean,
+          size_limit: integer,
+          sizes: %{optional(binary) => map},
+          srcset: %{optional(binary) => map},
+          target_format: atom
+        }
 
   @derive Jason.Encoder
   defstruct allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-            default_size: :medium,
+            default_size: "medium",
             upload_path: Path.join("images", "default"),
             random_filename: false,
             size_limit: 10_240_000,

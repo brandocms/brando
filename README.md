@@ -369,7 +369,7 @@ In your schema:
 
 + has_image_field :avatar, %{
 +   allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-+   default_size: :medium,
++   default_size: "medium",
 +   upload_path: Path.join("images", "avatars"),
 +   random_filename: true,
 +   size_limit: 10_240_000,

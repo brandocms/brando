@@ -95,8 +95,11 @@ defmodule Brando.HTML.Images do
         attrs.picture
       )
 
-    lightbox = Keyword.get(opts, :lightbox, false)
-    (lightbox && wrap_lightbox(picture_tag, attrs.src)) || picture_tag
+    if Keyword.get(opts, :lightbox, false) do
+      wrap_lightbox(picture_tag, Keyword.get(attrs.img, :src))
+    else
+      picture_tag
+    end
   end
 
   # when we're not given a struct
@@ -113,8 +116,13 @@ defmodule Brando.HTML.Images do
 
   defp add_lazyload(attrs) do
     attrs = Map.put(attrs, :lazyload, Keyword.get(attrs.opts, :lazyload, false))
+
     # We want width and height keys when we lazyload
-    put_in(attrs.opts, Keyword.merge(attrs.opts, width: true, height: true))
+    if attrs.lazyload do
+      put_in(attrs.opts, Keyword.merge(attrs.opts, width: true, height: true))
+    else
+      attrs
+    end
   end
 
   defp add_classes(%{lazyload: lazyload} = attrs) do

@@ -43,7 +43,7 @@ defmodule Brando.ConnCase do
       Ecto.Adapters.SQL.Sandbox.mode(Brando.Integration.Repo, {:shared, self()})
     end
 
-    :ok
+    {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end
 

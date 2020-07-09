@@ -17,7 +17,7 @@ config :brando, Brando.Integration.Repo,
 config :brando, Brando.Images,
   default_config: %{
     allowed_mimetypes: ["image/jpeg", "image/png"],
-    default_size: :medium,
+    default_size: "medium",
     size_limit: 10_240_000,
     upload_path: Path.join("images", "default"),
     sizes: %{

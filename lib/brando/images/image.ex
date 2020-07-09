@@ -57,13 +57,4 @@ defmodule Brando.Image do
     |> validate_required(@required_fields)
     |> validate_upload({:image, :image}, user, cfg)
   end
-
-  @doc """
-  Get all images in series `id`.
-  """
-  def for_series_id(id) do
-    from m in __MODULE__,
-      where: m.image_series_id == ^id,
-      order_by: m.sequence
-  end
 end

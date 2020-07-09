@@ -21,7 +21,7 @@ defmodule Brando.OperationsTest do
 
   @img_config %Brando.Type.ImageConfig{
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-    default_size: :medium,
+    default_size: "medium",
     upload_path: Path.join(["images", "exhibitions", "cover"]),
     random_filename: true,
     size_limit: 10_240_000,
@@ -37,7 +37,7 @@ defmodule Brando.OperationsTest do
 
   @img_config_png %Brando.Type.ImageConfig{
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-    default_size: :medium,
+    default_size: "medium",
     upload_path: Path.join(["images", "exhibitions", "cover"]),
     random_filename: true,
     size_limit: 10_240_000,

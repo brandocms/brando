@@ -62,7 +62,7 @@ defmodule Brando.Pages.Page do
 
   has_image_field :meta_image, %{
     allowed_mimetypes: ["image/jpeg", "image/png"],
-    default_size: :xlarge,
+    default_size: "xlarge",
     upload_path: Path.join(["images", "meta", "pages"]),
     random_filename: true,
     size_limit: 5_240_000,

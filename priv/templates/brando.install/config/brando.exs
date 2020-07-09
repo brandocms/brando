@@ -56,7 +56,7 @@ config :brando, Brando.Images,
   processor_module: Brando.Images.Processor.Sharp,
   default_config: %{
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-    default_size: :medium,
+    default_size: "medium",
     upload_path: Path.join(["images", "site", "default"]),
     random_filename: true,
     size_limit: 10_240_000,

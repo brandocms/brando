@@ -4,6 +4,19 @@ defmodule Brando.Integration.LockdownController do
     namespace: Brando
 end
 
+defmodule Brando.Integration.TestSchema do
+  use Absinthe.Schema
+  use Brando.Schema
+
+  import_types Absinthe.Plug.Types
+  import_types Brando.Schema.Types
+
+  query do
+    import_brando_queries()
+    # Query type must exist
+  end
+end
+
 defmodule RouterHelper do
   @moduledoc """
   Conveniences for testing routers and controllers.

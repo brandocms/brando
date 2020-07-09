@@ -228,10 +228,10 @@ defmodule Brando.Images do
   def delete_series(id) do
     with {:ok, series} <- get_series(id) do
       :ok = Images.Utils.delete_images_for(:image_series, series.id)
-      series = Brando.repo().preload(series, :image_category)
-      Brando.repo().soft_delete!(series)
 
-      {:ok, series}
+      series
+      |> Brando.repo().preload(:image_category)
+      |> Brando.repo().soft_delete()
     end
   end
 
@@ -248,7 +248,7 @@ defmodule Brando.Images do
   Update category with `id` with `data`.
   If `slug` is changed in data, return {:propagate, category}, else return {:ok, category} or error
   """
-  def update_category(id, data, user) do
+  def update_category(id, data, user \\ :system) do
     changeset =
       ImageCategory
       |> Brando.repo().get_by(id: id)
@@ -368,40 +368,6 @@ defmodule Brando.Images do
   end
 
   @doc """
-  Get series by category slug and series slug
-  """
-  def get_series(cat_slug, s_slug) do
-    images_query =
-      from i in Image,
-        where: is_nil(i.deleted_at),
-        order_by: [asc: i.sequence]
-
-    series =
-      Brando.repo().one(
-        from is in ImageSeries,
-          join: cat in assoc(is, :image_category),
-          where:
-            cat.slug == ^cat_slug and
-              is.slug == ^s_slug and
-              is_nil(is.deleted_at),
-          preload: [images: ^images_query]
-      )
-
-    case series do
-      nil -> {:error, {:image_series, :not_found}}
-      _ -> {:ok, series}
-    end
-  end
-
-  @doc """
-  Preload images and category
-  """
-  def preload_series({:ok, series}) do
-    series = Brando.repo().preload(series, [:images, :image_category])
-    {:ok, series}
-  end
-
-  @doc """
   List categories by name
   """
   def list_categories do
@@ -413,15 +379,6 @@ defmodule Brando.Images do
       )
 
     {:ok, categories}
-  end
-
-  @doc """
-  Get all categories with preloaded series and images
-  """
-  def get_categories_with_series_and_images do
-    ImageCategory
-    |> ImageCategory.with_image_series_and_images()
-    |> Brando.repo().all
   end
 
   @doc """
@@ -457,9 +414,7 @@ defmodule Brando.Images do
   def delete_category(id) do
     category = Brando.repo().get_by!(ImageCategory, id: id)
     Images.Utils.delete_series_for(:image_category, category.id)
-    Brando.repo().soft_delete!(category)
-
-    {:ok, category}
+    Brando.repo().soft_delete(category)
   end
 
   @doc """
@@ -482,7 +437,7 @@ defmodule Brando.Images do
   @doc """
   Count image series in category (by id)
   """
-  def image_series_count(category_id) do
+  def count_image_series(category_id) do
     Brando.repo().one(
       from is in ImageSeries,
         select: count(is.id),
@@ -494,8 +449,8 @@ defmodule Brando.Images do
   Get all portfolio image series that are orphaned
   """
   def get_all_orphaned_series do
-    categories = Brando.repo().all(ImageCategory)
-    series = Brando.repo().all(ImageSeries)
+    categories = Brando.repo().all(from t in ImageCategory, where: not is_nil(t.deleted_at))
+    series = Brando.repo().all(from t in ImageSeries, where: not is_nil(t.deleted_at))
     Images.Utils.get_orphaned_series(categories, series, starts_with: "images/site")
   end
 end

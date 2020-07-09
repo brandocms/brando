@@ -79,7 +79,7 @@ defmodule Brando.Schema.Types.Images do
 
     field :image_series_count, :integer do
       resolve fn cat, _, _ ->
-        {:ok, Brando.Images.image_series_count(cat.id)}
+        {:ok, Brando.Images.count_image_series(cat.id)}
       end
     end
 

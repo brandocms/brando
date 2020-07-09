@@ -49,9 +49,11 @@ defmodule Brando.Factory do
       email: "james@thestooges.com",
       password: @encrypted_password,
       avatar: %Brando.Type.Image{
+        width: 300,
+        height: 200,
         credits: nil,
         path: "images/avatars/27i97a.jpeg",
-        title: nil,
+        title: "Title!",
         sizes: %{
           "micro" => "images/avatars/micro/27i97a.jpeg",
           "thumb" => "images/avatars/thumb/27i97a.jpeg",
@@ -72,9 +74,11 @@ defmodule Brando.Factory do
       email: sequence(:email, &"james#{&1}@thestooges.com"),
       password: @encrypted_password,
       avatar: %Brando.Type.Image{
+        width: 300,
+        height: 200,
         credits: nil,
         path: "images/avatars/27i97a.jpeg",
-        title: nil,
+        title: "Title!",
         sizes: %{
           "micro" => "images/avatars/micro/27i97a.jpeg",
           "thumb" => "images/avatars/thumb/27i97a.jpeg",
@@ -153,7 +157,7 @@ defmodule Brando.Factory do
       cfg: %ImageConfig{sizes: @sizes, upload_path: "portfolio/test-category"},
       name: "Test Category",
       slug: "test-category",
-      creator: build(:user)
+      creator: build(:random_user)
     }
   end
 
@@ -176,7 +180,7 @@ defmodule Brando.Factory do
   def image_cfg_factory do
     %Brando.Type.ImageConfig{
       allowed_mimetypes: ["image/jpeg", "image/png"],
-      default_size: :medium,
+      default_size: "medium",
       upload_path: Path.join("images", "default"),
       random_filename: false,
       size_limit: 10_240_000,

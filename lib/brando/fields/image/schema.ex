@@ -11,7 +11,7 @@ defmodule Brando.Field.Image.Schema do
 
       has_image_field :avatar,
         %{allowed_exts: ["jpg", "jpeg", "png"],
-         default_size: :medium,
+         default_size: "medium",
          random_filename: true,
          upload_path: Path.join("images", "default"),
          size_limit: 10_240_000,
@@ -190,7 +190,7 @@ defmodule Brando.Field.Image.Schema do
       Example: `["jpg", "jpeg", "png"]`
     * `default_size`:
       If no size is provided to the image helpers, use this size.
-      Example: `:medium`
+      Example: `"medium"`
     * random_filename
     * `upload_path`:
       The path used when uploading. This is appended to the base

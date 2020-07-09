@@ -20,7 +20,7 @@ defmodule <%= schema_module %> do
 <%= for {_v, k} <- img_fields do %>
   has_image_field <%= inspect k %>,
     %{allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-      default_size: :medium,
+      default_size: "medium",
       upload_path: Path.join(["images", "<%= plural %>", "<%= k %>"]),
       random_filename: true,
       size_limit: 10_240_000,
