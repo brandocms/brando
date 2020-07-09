@@ -7,6 +7,6 @@ defmodule Brando.Images.Focal do
 
   @derive {Jason.Encoder, only: [:x, :y]}
 
-  defstruct x: nil,
-            y: nil
+  defstruct x: 50,
+            y: 50
 end

@@ -3,6 +3,8 @@ defmodule Brando.Types.ImageTest do
   alias Brando.Type.Image
 
   @raw %{
+    "height" => 292,
+    "width" => 300,
     "credits" => "Credits",
     "path" => "images/avatars/27i97a.jpeg",
     "title" => nil,
@@ -13,13 +15,17 @@ defmodule Brando.Types.ImageTest do
   }
 
   @result %Image{
+    alt: nil,
     credits: "Credits",
+    focal: %Brando.Images.Focal{x: 50, y: 50},
+    height: 292,
     path: "images/avatars/27i97a.jpeg",
-    title: nil,
     sizes: %{
       "medium" => "images/avatars/medium/27i97a.jpeg",
       "thumb" => "images/avatars/thumb/27i97a.jpeg"
-    }
+    },
+    title: nil,
+    width: 300
   }
 
   @struct %Image{}
@@ -29,28 +35,11 @@ defmodule Brando.Types.ImageTest do
     assert Image.cast(@struct) == {:ok, @struct}
   end
 
-  test "blank?" do
-    assert Image.blank?(@raw) == @struct
-  end
-
   test "load" do
     assert Image.load(@raw) == {:ok, @result}
   end
 
   test "dump" do
-    assert Image.dump(@result) ==
-             {:ok,
-              %Brando.Type.Image{
-                credits: "Credits",
-                focal: %{x: 50, y: 50},
-                height: nil,
-                path: "images/avatars/27i97a.jpeg",
-                sizes: %{
-                  "medium" => "images/avatars/medium/27i97a.jpeg",
-                  "thumb" => "images/avatars/thumb/27i97a.jpeg"
-                },
-                title: nil,
-                width: nil
-              }}
+    assert Image.dump(@result) == {:ok, @result}
   end
 end

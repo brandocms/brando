@@ -75,7 +75,7 @@ defmodule Brando.VillainTest do
              [
                %{
                  credits: "Credits",
-                 height: nil,
+                 height: 292,
                  sizes: %{
                    "large" => "/media/image/large/1.jpg",
                    "medium" => "/media/image/medium/1.jpg",
@@ -86,7 +86,7 @@ defmodule Brando.VillainTest do
                  src: "/media/image/1.jpg",
                  thumb: "/media/image/thumb/1.jpg",
                  title: "Title one",
-                 width: nil
+                 width: 300
                }
              ]
   end
