@@ -11,10 +11,32 @@ defmodule Brando.Integration.TestSchema do
   import_types Absinthe.Plug.Types
   import_types Brando.Schema.Types
 
+  def context(ctx) do
+    loader =
+      Dataloader.new()
+      |> import_brando_dataloaders(ctx)
+
+    Map.put(ctx, :loader, loader)
+  end
+
+  def plugins do
+    [Absinthe.Middleware.Dataloader] ++ Absinthe.Plugin.defaults()
+  end
+
   query do
     import_brando_queries()
     # Query type must exist
   end
+
+  enum :sort_order do
+    value :asc
+    value :desc
+  end
+
+  def middleware(middleware, _field, %{identifier: :mutation}),
+    do: middleware ++ [Brando.Schema.Middleware.ChangesetErrors]
+
+  def middleware(middleware, _field, _object), do: middleware
 end
 
 defmodule RouterHelper do

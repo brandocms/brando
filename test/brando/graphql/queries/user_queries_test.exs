@@ -61,6 +61,13 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
     me {
       id
       fullName
+
+      avatar {
+        focal
+        thumb: url(size: "thumb")
+        medium: url(size: "medium")
+        xlarge: url(size: "xlarge")
+      }
     }
   }
   """
@@ -70,11 +77,22 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
              Brando.Integration.TestSchema,
              opts
            ) ==
-             {:ok,
-              %{
-                data: %{
-                  "me" => %{"fullName" => "James Williamson", "id" => to_string(user.id)}
-                }
-              }}
+             {
+               :ok,
+               %{
+                 data: %{
+                   "me" => %{
+                     "fullName" => "James Williamson",
+                     "id" => to_string(user.id),
+                     "avatar" => %{
+                       "focal" => %Brando.Images.Focal{x: 50, y: 50},
+                       "medium" => "/media/images/avatars/medium/27i97a.jpeg",
+                       "thumb" => "/media/images/avatars/thumb/27i97a.jpeg",
+                       "xlarge" => ""
+                     }
+                   }
+                 }
+               }
+             }
   end
 end
