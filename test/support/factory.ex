@@ -123,7 +123,7 @@ defmodule Brando.Factory do
       cfg: %ImageConfig{sizes: @sizes, upload_path: "portfolio/test-category/test-series"},
       sequence: 0,
       image_category: build(:image_category),
-      creator: build(:user)
+      creator: build(:random_user)
     }
   end
 
@@ -132,6 +132,8 @@ defmodule Brando.Factory do
       image_series_id: nil,
       creator_id: nil,
       image: %Brando.Type.Image{
+        width: 300,
+        height: 292,
         credits: "Credits",
         path: "image/1.jpg",
         sizes: %{

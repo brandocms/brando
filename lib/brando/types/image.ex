@@ -3,9 +3,20 @@ defmodule Brando.Type.Image do
   Defines a type for an image field.
   """
 
-  use Ecto.Type
+  alias Brando.Images.Focal
 
-  @type t :: %__MODULE__{}
+  @behaviour Ecto.Type
+
+  @type t :: %__MODULE__{
+          title: binary,
+          credits: binary,
+          alt: binary,
+          path: binary,
+          sizes: %{optional(binary) => map},
+          width: integer,
+          height: integer,
+          focal: Focal.t()
+        }
 
   @derive {Jason.Encoder, only: [:title, :credits, :alt, :path, :sizes, :width, :height, :focal]}
 
@@ -16,26 +27,22 @@ defmodule Brando.Type.Image do
             sizes: %{},
             width: nil,
             height: nil,
-            focal: %{x: 50, y: 50}
+            focal: %Focal{x: 50, y: 50}
 
   @doc """
   Returns the internal type representation of our image type for pg
   """
-  def type, do: :jsonb
+  @impl true
+  def type, do: :map
 
   @doc """
   Cast should return OUR type no matter what the input.
   """
+  @impl true
   def cast(val) when is_binary(val) do
-    val = Poison.decode!(val, as: %Brando.Type.Image{})
-    {:ok, val}
+    {:ok, Poison.decode!(val, as: %Brando.Type.Image{})}
   end
 
-  # def cast(%Brando.Type.Image{} = val) when is_map(val), do: {:ok, val}
-
-  # if we get a Plug Upload or a Focal struct, we pass it on.. it gets handled later!
-  # def cast(%Plug.Upload{} = val), do: {:ok, val}
-  # def cast(%Brando.Type.Focal{} = val), do: {:ok, val}
   def cast(%{file: %Plug.Upload{}} = upload) do
     {:ok, {:upload, upload}}
   end
@@ -53,22 +60,33 @@ defmodule Brando.Type.Image do
     {:ok, {:update, update}}
   end
 
-  # def cast(val) when is_map(val), do: {:ok, Brando.Utils.stringy_struct(Brando.Type.Image, val)}
-
-  @doc """
-  Integers are never considered blank
-  """
-  def blank?(_), do: %Brando.Type.Image{}
-
   @doc """
   Load
   """
+  @impl true
   def load(%Brando.Type.Image{} = val) when is_map(val), do: {:ok, val}
-  def load(val), do: {:ok, Brando.Utils.stringy_struct(Brando.Type.Image, val)}
+
+  def load(val) do
+    type_struct = Brando.Utils.stringy_struct(__MODULE__, val)
+
+    {:ok,
+     put_in(
+       type_struct,
+       [Access.key(:focal)],
+       Brando.Utils.stringy_struct(Brando.Images.Focal, type_struct.focal)
+     )}
+  end
 
   @doc """
   When dumping data to the database we expect a `list`, but check for
   other options as well.
   """
+  @impl true
   def dump(val), do: {:ok, val}
+
+  @impl true
+  def embed_as(_), do: :dump
+
+  @impl true
+  def equal?(left, right), do: left == right
 end

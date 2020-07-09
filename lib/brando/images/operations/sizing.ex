@@ -60,7 +60,12 @@ defmodule Brando.Images.Operations.Sizing do
         id: id,
         total_operations: total_operations,
         operation_index: operation_index,
-        img_struct: %{path: image_src, focal: focal, width: width, height: height},
+        img_struct: %{
+          path: image_src,
+          focal: focal,
+          width: width,
+          height: height
+        },
         filename: filename,
         sized_img_path: image_dest,
         sized_img_dir: image_dest_dir,
