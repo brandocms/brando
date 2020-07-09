@@ -98,12 +98,15 @@ defmodule Brando.ImagesTest do
   end
 
   test "update_category" do
-    s1 = Factory.insert(:image_category)
-    {:propagate, s2} = Images.update_category(s1.id, %{slug: "new-name"})
-    assert s2.slug == "new-name"
+    c1 = Factory.insert(:image_category)
+    s1 = Factory.insert(:image_series, image_category: c1)
+    _ = Factory.insert(:image, image_series_id: s1.id)
 
-    {:ok, s2} = Images.update_category(s1.id, %{cfg: %{random_filename: true}})
-    assert s2.cfg.random_filename == true
+    {:propagate, c2} = Images.update_category(c1.id, %{slug: "new-name"})
+    assert c2.slug == "new-name"
+
+    {:ok, c2} = Images.update_category(c1.id, %{cfg: %{random_filename: true}})
+    assert c2.cfg.random_filename == true
   end
 
   test "get_category" do
@@ -154,8 +157,9 @@ defmodule Brando.ImagesTest do
 
   test "propagate_category_config" do
     c1 = Factory.insert(:image_category)
-    _s1 = Factory.insert(:image_series, image_category: c1)
+    s1 = Factory.insert(:image_series, image_category: c1)
     _s2 = Factory.insert(:image_series, image_category: c1)
+    _i1 = Factory.insert(:image, image_series_id: s1.id)
 
     count =
       Images.propagate_category_config(c1.id)

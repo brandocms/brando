@@ -20,14 +20,14 @@ defmodule Brando.Images.Upload.Field do
   ## Parameters
 
     * `name`: the field we are operating on.
-    * `plug`: a Plug.Upload struct.
+    * `upload_params`: a %Brand.Upload{} struct.
     * `cfg`: the field's cfg from has_image_field
 
   """
   @spec handle_upload(
           field_name :: atom | binary,
           upload_params :: any(),
-          image_config :: image_config,
+          cfg :: image_config,
           user :: any()
         ) :: {:ok, {:handled, atom, image_type}} | {:error, {atom, {:error, binary}}}
   def handle_upload(name, upload_params, cfg, user) do
