@@ -1,5 +1,9 @@
 ## 0.46.0
 
+* Deprecated `Pages.list_page_fragments_translations`. Use `Pages.list_fragments_translations` instead.
+  You now must explicitly pass language to exclude as `exclude_language: "en"`, otherwise all languages
+  are returned!
+
 * Switch frontend bundler to Rollup. Commit your code, then:
 
   ```

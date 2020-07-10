@@ -2,6 +2,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.46.0-dev
 
+* Deprecated `Pages.list_page_fragments_translations`. Use `Pages.list_fragments_translations` instead.
 * Switch frontend bundler to Rollup
 
 ## 0.45.0

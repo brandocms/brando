@@ -396,19 +396,36 @@ defmodule Brando.Pages do
     {:ok, fragments}
   end
 
+  @deprecated "use list_fragment_translations/2 instead. Now takes `:excluded_language` as Keyword opt"
   def list_page_fragments_translations(
-        parent_key,
-        excluded_lang \\ Brando.config(:default_language)
+        _,
+        _
       ) do
+    raise "deprecated!"
+  end
+
+  def list_fragments_translations(
+        parent_key,
+        opts \\ []
+      ) do
+    exclude_lang = Keyword.get(opts, :exclude_language)
+
+    query = where(PageFragment, [p], p.parent_key == ^parent_key)
+
+    query =
+      if exclude_lang do
+        where(query, [p], p.language != ^exclude_lang)
+      else
+        query
+      end
+
     fragments =
-      PageFragment
-      |> where([p], p.parent_key == ^parent_key)
-      |> where([p], p.language != ^excluded_lang)
+      query
       |> exclude_deleted()
       |> order_by([p], asc: p.parent_key, asc: p.sequence)
       |> Brando.repo().all
 
-    # group keys as "key -> [lang: fragment, lang2: fragment2]
+    # group keys as "key -> [fragment, fragment2]
     split_fragments = Brando.Utils.split_by(fragments, :key)
     {:ok, split_fragments}
   end
@@ -465,8 +482,7 @@ defmodule Brando.Pages do
   @spec delete_page_fragment(id) :: {:ok, fragment}
   def delete_page_fragment(page_fragment_id) do
     {:ok, page_fragment} = get_page_fragment(page_fragment_id)
-    Brando.repo().soft_delete!(page_fragment)
-    {:ok, page_fragment}
+    Brando.repo().soft_delete(page_fragment)
   end
 
   @doc """
