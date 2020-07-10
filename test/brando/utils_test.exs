@@ -146,15 +146,15 @@ defmodule Brando.UtilsTest do
 
   test "split_by" do
     records = [
-      %{name: "John", gender: :male},
-      %{name: "Alice", gender: :female},
-      %{name: "Liza", gender: :female},
-      %{name: "Karen", gender: :female}
+      %{name: "John", on_call: false},
+      %{name: "Alice", on_call: true},
+      %{name: "Liza", on_call: true},
+      %{name: "Karen", on_call: true}
     ]
 
-    result = split_by(records, :gender)
-    assert length(result[:male]) == 1
-    assert length(result[:female]) == 3
+    result = split_by(records, :on_call)
+    assert length(result[false]) == 1
+    assert length(result[true]) == 3
   end
 
   test "get_page_title" do

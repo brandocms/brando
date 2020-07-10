@@ -91,17 +91,57 @@ defmodule Brando.PagesTest do
   end
 
   test "list_page_fragments_translations" do
-    _pf1 = Factory.insert(:page_fragment, key: "frag1", parent_key: "parent")
-    _pf2 = Factory.insert(:page_fragment, key: "frag2", parent_key: "parent")
-    _pf3 = Factory.insert(:page_fragment, key: "frag3", parent_key: "parent")
+    _pf1 = Factory.insert(:page_fragment, key: "frag1", parent_key: "parent", sequence: 0)
+    _pf2 = Factory.insert(:page_fragment, key: "frag2", parent_key: "parent", sequence: 3)
+    _pf3 = Factory.insert(:page_fragment, key: "frag3", parent_key: "parent", sequence: 6)
 
-    _pf4 = Factory.insert(:page_fragment, key: "frag1", parent_key: "parent", language: "no")
-    _pf5 = Factory.insert(:page_fragment, key: "frag2", parent_key: "parent", language: "no")
-    _pf6 = Factory.insert(:page_fragment, key: "frag3", parent_key: "parent", language: "no")
+    _pf4 =
+      Factory.insert(:page_fragment,
+        key: "frag1",
+        parent_key: "parent",
+        language: "no",
+        sequence: 1
+      )
 
-    _pf7 = Factory.insert(:page_fragment, key: "frag1", parent_key: "parent", language: "dk")
-    _pf8 = Factory.insert(:page_fragment, key: "frag2", parent_key: "parent", language: "dk")
-    _pf9 = Factory.insert(:page_fragment, key: "frag3", parent_key: "parent", language: "dk")
+    _pf5 =
+      Factory.insert(:page_fragment,
+        key: "frag2",
+        parent_key: "parent",
+        language: "no",
+        sequence: 4
+      )
+
+    _pf6 =
+      Factory.insert(:page_fragment,
+        key: "frag3",
+        parent_key: "parent",
+        language: "no",
+        sequence: 7
+      )
+
+    _pf7 =
+      Factory.insert(:page_fragment,
+        key: "frag1",
+        parent_key: "parent",
+        language: "dk",
+        sequence: 2
+      )
+
+    _pf8 =
+      Factory.insert(:page_fragment,
+        key: "frag2",
+        parent_key: "parent",
+        language: "dk",
+        sequence: 5
+      )
+
+    _pf9 =
+      Factory.insert(:page_fragment,
+        key: "frag3",
+        parent_key: "parent",
+        language: "dk",
+        sequence: 8
+      )
 
     {:ok, frags} = Pages.list_fragments_translations("parent")
 
@@ -110,9 +150,9 @@ defmodule Brando.PagesTest do
     frag_tree = Enum.map(frags, fn {k, v} -> {k, Enum.map(v, & &1.language)} end)
 
     assert frag_tree == [
-             {"frag1", ["dk", "no", "en"]},
-             {"frag2", ["dk", "no", "en"]},
-             {"frag3", ["dk", "no", "en"]}
+             {"frag1", ["en", "no", "dk"]},
+             {"frag2", ["en", "no", "dk"]},
+             {"frag3", ["en", "no", "dk"]}
            ]
 
     {:ok, frags} = Pages.list_fragments_translations("parent", exclude_language: "dk")
@@ -120,9 +160,9 @@ defmodule Brando.PagesTest do
     frag_tree = Enum.map(frags, fn {k, v} -> {k, Enum.map(v, & &1.language)} end)
 
     assert frag_tree == [
-             {"frag1", ["no", "en"]},
-             {"frag2", ["no", "en"]},
-             {"frag3", ["no", "en"]}
+             {"frag1", ["en", "no"]},
+             {"frag2", ["en", "no"]},
+             {"frag3", ["en", "no"]}
            ]
   end
 

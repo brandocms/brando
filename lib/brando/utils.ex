@@ -288,15 +288,19 @@ defmodule Brando.Utils do
   """
   def split_by(records, attr) do
     {_, split_records} =
-      Enum.map_reduce(records, %{}, fn record, agg ->
+      records
+      |> Enum.reverse()
+      |> Enum.map_reduce(%{}, fn record, acc ->
+        attr_in_record = Map.get(record, attr)
+
         insert =
-          if agg[Map.get(record, attr)] do
-            [record | agg[Map.get(record, attr)]]
+          if acc[attr_in_record] do
+            [record | acc[attr_in_record]]
           else
             [record]
           end
 
-        {record, Map.put(agg, Map.get(record, attr), insert)}
+        {record, Map.put(acc, Map.get(record, attr), insert)}
       end)
 
     split_records
