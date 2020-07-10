@@ -5,7 +5,6 @@ defmodule Brando.API.Villain.VillainController do
   use Brando.Web, :controller
   alias Brando.Images
   alias Brando.Villain
-  import Ecto.Query
 
   @doc false
   def browse_images(conn, %{"slug" => series_slug}) do
@@ -26,74 +25,63 @@ defmodule Brando.API.Villain.VillainController do
   def upload_image(conn, %{"uid" => uid, "slug" => series_slug} = params) do
     user = Brando.Utils.current_user(conn)
 
-    series =
-      Brando.ImageSeries
-      |> preload(:image_category)
-      |> Brando.repo().get_by(slug: series_slug)
+    with {:ok, series} <- Brando.Images.get_series_by_slug(series_slug) do
+      cfg = series.cfg || Brando.config(Brando.Images)[:default_config]
+      params = Map.put(params, "image_series_id", series.id)
 
-    if series == nil do
-      raise Brando.Exception.UploadError,
-            "villain could not find image series `#{series_slug}`. \n\n" <>
-              "Make sure it exists before using it as an upload target!\n"
-    end
-
-    cfg = series.cfg || Brando.config(Brando.Images)[:default_config]
-    params = Map.put(params, "image_series_id", series.id)
-
-    payload =
-      case Images.Uploads.Schema.handle_upload(params, cfg, user) do
-        {:error, err} ->
-          %{
-            status: 500,
-            error: err
-          }
-
-        images when length(images) > 1 ->
-          images = map_images(images)
-
-          %{
-            status: 200,
-            uid: uid,
-            images: images
-          }
-
-        [{:ok, image}] ->
-          sizes = sizes_with_media_url(image)
-          sizes_map = Enum.into(sizes, %{})
-
-          %{
-            status: 200,
-            uid: uid,
-            image: %{
-              id: image.id,
-              sizes: sizes_map,
-              src: Brando.Utils.media_url(image.image.path),
-              width: image.image.width,
-              height: image.image.height
-            },
-            form: %{
-              method: "post",
-              action: "villain/imagedata/#{image.id}",
-              name: "villain-imagedata",
-              fields: [
-                %{
-                  name: "title",
-                  type: "text",
-                  label: "Tittel",
-                  value: ""
-                },
-                %{
-                  name: "credits",
-                  type: "text",
-                  label: "Krediteringer",
-                  value: ""
-                }
-              ]
+      payload =
+        case Images.Uploads.Schema.handle_upload(params, cfg, user) do
+          {:error, err} ->
+            %{
+              status: 500,
+              error: err
             }
-          }
-      end
 
-    json(conn, payload)
+          [{:ok, image}] ->
+            sizes = sizes_with_media_url(image)
+            sizes_map = Enum.into(sizes, %{})
+
+            %{
+              status: 200,
+              uid: uid,
+              image: %{
+                id: image.id,
+                sizes: sizes_map,
+                src: Brando.Utils.media_url(image.image.path),
+                width: image.image.width,
+                height: image.image.height
+              },
+              form: %{
+                method: "post",
+                action: "villain/imagedata/#{image.id}",
+                name: "villain-imagedata",
+                fields: [
+                  %{
+                    name: "title",
+                    type: "text",
+                    label: "Tittel",
+                    value: ""
+                  },
+                  %{
+                    name: "credits",
+                    type: "text",
+                    label: "Krediteringer",
+                    value: ""
+                  }
+                ]
+              }
+            }
+        end
+
+      json(conn, payload)
+    else
+      {:error, {:image_series, :not_found}} ->
+        error_msg =
+          "Image series `#{series_slug}` not found. Make sure it exists before using it as an upload target"
+
+        conn
+        |> json(%{status: 500, error: error_msg})
+    end
   end
 
   @doc false
@@ -156,12 +144,4 @@ defmodule Brando.API.Villain.VillainController do
 
   defp sizes_with_media_url(image),
     do: Enum.map(image.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
-
-  defp map_images(images) do
-    Enum.map(images, fn {:ok, img} ->
-      sizes = Enum.map(img.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
-      sizes_map = Enum.into(sizes, %{})
-      %{id: img.id, sizes: sizes_map, src: Brando.Utils.media_url(img.image.path)}
-    end)
-  end
 end

@@ -82,6 +82,22 @@ defmodule Brando.Villain.ControllerTest do
     resp_map = Jason.decode!(conn.resp_body)
     assert resp_map["status"] == 200
     assert resp_map["uid"] == "test1234"
+
+    conn = recycle(conn)
+
+    conn =
+      VillainController.upload_image(conn, %{
+        "uid" => "test1234",
+        "slug" => "non_existing",
+        "image" => @up,
+        "name" => "hepp.jpg"
+      })
+
+    resp_map = Jason.decode!(conn.resp_body)
+    assert resp_map["status"] == 500
+
+    assert resp_map["error"] ==
+             "Image series `non_existing` not found. Make sure it exists before using it as an upload target"
   end
 
   test "delete_template", %{conn: conn} do
