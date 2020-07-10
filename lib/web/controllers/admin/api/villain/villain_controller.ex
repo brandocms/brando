@@ -9,14 +9,14 @@ defmodule Brando.API.Villain.VillainController do
 
   @doc false
   def browse_images(conn, %{"slug" => series_slug}) do
-    {:ok, image_series} = Brando.Images.get_series_by_slug(series_slug)
-
     payload =
-      if image_series do
-        image_list = Villain.map_images(image_series.images)
-        %{status: 200, images: image_list}
-      else
-        %{status: 204, images: []}
+      case Brando.Images.get_series_by_slug(series_slug) do
+        {:ok, image_series} ->
+          image_list = Villain.map_images(image_series.images)
+          %{status: 200, images: image_list}
+
+        {:error, {:image_series, :not_found}} ->
+          %{status: 204, images: []}
       end
 
     json(conn, payload)

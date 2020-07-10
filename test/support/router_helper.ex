@@ -108,6 +108,7 @@ defmodule Brando.Integration.Router do
   @moduledoc false
   use Phoenix.Router
   import Brando.Images.Routes.Admin.API
+  import Brando.Villain.Routes.Admin.API
   import Brando.Plug.I18n
 
   pipeline :admin do
@@ -127,6 +128,7 @@ defmodule Brando.Integration.Router do
   scope "/admin", as: :admin do
     pipe_through :admin
     api_image_routes("/images")
+    api_villain_routes()
   end
 
   scope "/coming-soon" do

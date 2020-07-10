@@ -21,8 +21,8 @@ defmodule Brando.VillainTest do
     def comment(_, _), do: nil
   end
 
-  use Brando.ConnCase
   use ExUnit.Case
+  use Brando.ConnCase
   alias Brando.Factory
 
   setup do

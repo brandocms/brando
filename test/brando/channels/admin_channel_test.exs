@@ -206,7 +206,7 @@ defmodule Brando.AdminChannelTest do
     _ = Factory.insert(:template)
     ref = push(socket, "templates:list_templates", %{})
 
-    assert_reply ref, :ok, %{code: 200, templates: [%{id: _, name: " - "}]}
+    assert_reply ref, :ok, %{code: 200, templates: [%{id: _, name: "posts - test"}]}
   end
 
   test "livepreview:initialize", %{socket: socket} do

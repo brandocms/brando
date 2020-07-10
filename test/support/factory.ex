@@ -94,7 +94,18 @@ defmodule Brando.Factory do
   end
 
   def template_factory do
-    %Template{}
+    %Template{
+      name: "test",
+      namespace: "posts",
+      help_text: "help",
+      class: "class",
+      code: "code here",
+      refs: [],
+      vars: %{},
+      svg: nil,
+      multi: false,
+      wrapper: nil
+    }
   end
 
   def page_factory do
