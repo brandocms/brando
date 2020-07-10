@@ -5,6 +5,18 @@ defmodule Brando.Villain.ControllerTest do
   alias Brando.Factory
   alias Brando.API.Villain.VillainController
 
+  @up_error %Plug.Upload{
+    content_type: "image/png",
+    filename: "sample.png",
+    path: Path.expand("../", __DIR__) <> "/fixtures/sample.png"
+  }
+
+  @up %Plug.Upload{
+    content_type: "image/png",
+    filename: "sample.png",
+    path: Path.expand("../../", __DIR__) <> "/fixtures/sample.png"
+  }
+
   test "browse_images", %{conn: conn} do
     conn = VillainController.browse_images(conn, %{"slug" => "test"})
     assert conn.resp_body == "{\"images\":[],\"status\":204}"
@@ -41,6 +53,35 @@ defmodule Brando.Villain.ControllerTest do
     conn = VillainController.store_template(conn, %{"template" => encoded_t1})
     resp_map = Jason.decode!(conn.resp_body)
     assert resp_map["status"] == 200
+  end
+
+  test "upload", %{conn: conn} do
+    _is1 = Factory.insert(:image_series, name: "test", slug: "test")
+
+    conn =
+      VillainController.upload_image(conn, %{
+        "uid" => "test1234",
+        "slug" => "test",
+        "image" => @up_error,
+        "name" => "hepp.jpg"
+      })
+
+    resp_map = Jason.decode!(conn.resp_body)
+    assert resp_map["status"] == 500
+
+    conn = recycle(conn)
+
+    conn =
+      VillainController.upload_image(conn, %{
+        "uid" => "test1234",
+        "slug" => "test",
+        "image" => @up,
+        "name" => "hepp.jpg"
+      })
+
+    resp_map = Jason.decode!(conn.resp_body)
+    assert resp_map["status"] == 200
+    assert resp_map["uid"] == "test1234"
   end
 
   test "delete_template", %{conn: conn} do
