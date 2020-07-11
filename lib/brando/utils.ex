@@ -320,7 +320,7 @@ defmodule Brando.Utils do
   @spec current_url(conn, binary | nil) :: binary
   def current_url(conn, url \\ nil) do
     path = url || conn.request_path
-    "#{hostname()}#{path}"
+    Path.join(hostname(), path)
   end
 
   @doc """
@@ -406,13 +406,6 @@ defmodule Brando.Utils do
   @spec host_and_media_url() :: binary
   def host_and_media_url do
     hostname() <> Brando.config(:media_url)
-  end
-
-  @doc """
-  Runs some config checks.
-  """
-  defmacro run_checks do
-    raise "run_checks/0 is deprecated. Remove."
   end
 
   @doc """

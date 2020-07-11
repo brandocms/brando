@@ -1,11 +1,13 @@
 defmodule Brando.UtilsTest do
   use ExUnit.Case, async: true
+  use Brando.ConnCase
   use Plug.Test
 
   import Brando.Utils
   import ExUnit.CaptureIO
 
   alias Brando.UtilsTest.TestStruct
+  alias Brando.Factory
 
   defmodule TestStruct do
     defstruct a: "a", b: "b"
@@ -80,9 +82,67 @@ defmodule Brando.UtilsTest do
     assert split_filename("test/filename.jpg") == {"filename", ".jpg"}
   end
 
+  test "change_basename/2" do
+    assert change_basename("old_name.jpg", "new_name") == "new_name.jpg"
+  end
+
+  test "try_path/2" do
+    assert try_path(%{a: %{b: %{c: :d}}}, [:a, :b, :c]) == :d
+    assert try_path(%{a: %{b: %{c: :d}}}, [:a, :b, :d]) == nil
+  end
+
+  test "to_atom_map/1" do
+    assert to_atom_map(%{"user" => "test", "avatar" => "hello"}) == %{
+             user: "test",
+             avatar: "hello"
+           }
+  end
+
+  test "escape_current_url" do
+    conn = %Plug.Conn{request_path: "/the-url/?want=it"}
+    assert escape_current_url(conn) == "http%3A%2F%2Flocalhost%2Fthe-url%2F%3Fwant%3Dit"
+  end
+
+  test "escape_and_prefix_host" do
+    conn = %Plug.Conn{request_path: "/"}
+
+    assert escape_and_prefix_host(conn, "something") ==
+             "http%3A%2F%2Flocalhost%2Fsomething"
+  end
+
+  test "render_title" do
+    assert render_title(nil, "hello", nil) == "hello"
+    assert render_title("// ", "hello", nil) == "// hello"
+    assert render_title("// ", "hello", " //") == "// hello //"
+    assert render_title(nil, "hello", " //") == "hello //"
+  end
+
+  test "file_url" do
+    assert file_url(%{path: "some/path.jpg"}, prefix: "media") == "media/some/path.jpg"
+    assert file_url(%{path: "some/path.jpg"}) == "some/path.jpg"
+  end
+
+  test "add_cache_string" do
+    assert add_cache_string(cache: nil) == ""
+    assert add_cache_string(cache: "test") == "?test"
+    assert add_cache_string(cache: ~N[2020-01-01 12:00:00]) == "?1577880000"
+  end
+
   test "unique_filename/1" do
     filename = "testing.jpg"
     refute unique_filename(filename) == filename
+  end
+
+  test "get_deps_versions" do
+    vs = get_deps_versions()
+
+    assert List.first(vs).app == :brando
+  end
+
+  test "changeset_has_no_errors" do
+    u1 = Factory.insert(:random_user)
+    cs1 = Ecto.Changeset.change(u1)
+    assert changeset_has_no_errors(cs1) == {:ok, cs1}
   end
 
   test "media_url/1" do
@@ -119,6 +179,7 @@ defmodule Brando.UtilsTest do
     assert img_url(img, :thumb) == "images/thumb/file.jpg"
     assert img_url(nil, :thumb, default: "default.jpg", prefix: "prefix") == "thumb/default.jpg"
     assert img_url(nil, :thumb, default: "default.jpg") == "thumb/default.jpg"
+    assert img_url("", :thumb, default: "default.jpg") == "thumb/default.jpg"
 
     assert img_url(img, :thumb, default: "default.jpg", prefix: "prefix") ==
              "prefix/images/thumb/file.jpg"
