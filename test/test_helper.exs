@@ -21,6 +21,10 @@ defmodule Brando.Integration.Repo do
   use Brando.SoftDelete.Repo
 end
 
+defmodule Brando.Integration.Presence do
+  use Phoenix.Presence, otp_app: :brando, pubsub_server: Brando.Integration.PubSub
+end
+
 defmodule Brando.Villain.ParserTest.Parser do
   use Brando.Villain.Parser
 end
@@ -193,5 +197,6 @@ Brando.Cache.Globals.set()
 
 Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)
 Brando.endpoint().start_link
+Brando.presence().start_link
 Brando.Registry.start_link()
 Brando.Registry.register(Brando, [:gettext])
