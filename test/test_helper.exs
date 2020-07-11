@@ -163,6 +163,24 @@ defmodule Brando.Integration.TestCase do
   end
 end
 
+defmodule Brando.Integration.Guardian do
+  def encode_and_sign(user) do
+    {:ok, "user:#{user.id}", %{}}
+  end
+
+  def decode_and_verify(jwt) do
+    {:ok, jwt}
+  end
+
+  def resource_from_claims("user:" <> id) do
+    Brando.Users.get_user(id)
+  end
+
+  def revoke(token) do
+    token
+  end
+end
+
 defmodule Brando.Integration.ModuleWithDatasource do
   use Brando.Datasource
   use Brando.Web, :schema
