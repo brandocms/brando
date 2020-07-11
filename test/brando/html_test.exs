@@ -315,6 +315,46 @@ defmodule Brando.HTMLTest do
              "<picture class=\"avatar\" data-orientation=\"portrait\" data-test-params=\"hepp\" data-test><source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\"><source srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\"><img alt=\"hepp!\" class=\"img-fluid\" data-test2-params=\"hepp\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/large/27i97a.jpeg 700w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/small/27i97a.jpeg 300w\" data-test2><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
   end
 
+  test "svg_fallback" do
+    assert Brando.HTML.Images.svg_fallback(%{}, nil, width: 200, height: 200) ==
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27200%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C%29%27%2F%3E"
+  end
+
+  test "get_sizes" do
+    assert Brando.HTML.Images.get_sizes(["(min-width: 36em) 33.3vw", "100vw"]) ==
+             "(min-width: 36em) 33.3vw, 100vw"
+
+    assert_raise ArgumentError, fn ->
+      Brando.HTML.Images.get_sizes("(min-width: 36em) 33.3vw")
+    end
+  end
+
+  test "get_srcset" do
+    img_field = Factory.build(:image_type)
+    img_cfg = Factory.build(:image_cfg)
+
+    assert_raise ArgumentError, fn ->
+      assert Brando.HTML.Images.get_srcset(img_field, img_cfg, [], :svg) == ""
+    end
+
+    srcset = %{
+      "small" => "300w",
+      "medium" => "500w",
+      "large" => "700w"
+    }
+
+    img_cfg = Factory.build(:image_cfg, srcset: srcset)
+
+    assert Brando.HTML.Images.get_srcset(img_field, img_cfg, [], :svg) ==
+             "images/default/large/sample.png 700w, images/default/medium/sample.png 500w, images/default/small/sample.png 300w"
+
+    assert Brando.HTML.Images.get_srcset(img_field, img_cfg, [], :micro) ==
+             "images/default/micro/sample.png 700w, images/default/micro/sample.png 500w, images/default/micro/sample.png 300w"
+
+    assert Brando.HTML.Images.get_srcset(img_field, srcset, [], :svg) ==
+             "images/default/large/sample.png 700w, images/default/medium/sample.png 500w, images/default/small/sample.png 300w"
+  end
+
   test "include_css" do
     assert include_css(%Plug.Conn{host: "localhost", scheme: "http"}) ==
              {:safe,
