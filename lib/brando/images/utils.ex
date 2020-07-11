@@ -2,7 +2,7 @@ defmodule Brando.Images.Utils do
   @moduledoc """
   General utilities pertaining to the Images module
   """
-  @type id :: String.t() | integer
+  @type id :: binary | integer
   @type image_kind :: :image | :image_series | :image_field
   @type image_schema :: Brando.Image.t()
   @type image_series_schema :: Brando.ImageSeries.t()
@@ -68,7 +68,7 @@ defmodule Brando.Images.Utils do
   @doc """
   Deletes `file` after joining it with `media_path`
   """
-  @spec delete_media(file_name :: String.t()) :: any
+  @spec delete_media(file_name :: binary) :: any
   def delete_media(nil), do: nil
   def delete_media(""), do: nil
 
@@ -90,8 +90,8 @@ defmodule Brando.Images.Utils do
       "test/dir/thumb/filename.jpg"
 
   """
-  @spec get_sized_path(path :: String.t(), size :: atom | String.t(), type :: atom | nil) ::
-          String.t()
+  @spec get_sized_path(path :: binary, size :: atom | binary, type :: atom | nil) ::
+          binary
   def get_sized_path(path, size, type \\ nil)
 
   def get_sized_path(path, size, type) when is_binary(size) do
@@ -112,7 +112,7 @@ defmodule Brando.Images.Utils do
       "test/dir/thumb"
 
   """
-  @spec get_sized_dir(path :: String.t(), size :: atom | String.t()) :: String.t()
+  @spec get_sized_dir(path :: binary, size :: atom | binary) :: binary
   def get_sized_dir(path, size) when is_binary(size) do
     {dir, _} = split_path(path)
     Path.join([dir, size])
@@ -123,7 +123,7 @@ defmodule Brando.Images.Utils do
   @doc """
   Returns image type atom.
   """
-  @spec image_type(filename :: String.t()) :: atom
+  @spec image_type(filename :: binary) :: atom
   def image_type(filename) do
     case String.downcase(Path.extname(filename)) do
       ".jpg" -> :jpg
@@ -145,8 +145,8 @@ defmodule Brando.Images.Utils do
   as set in your app's config.exs.
   """
 
-  @spec media_path() :: String.t()
-  @spec media_path(nil | binary) :: String.t()
+  @spec media_path() :: binary
+  @spec media_path(nil | binary) :: binary
   def media_path, do: Brando.config(:media_path)
   def media_path(nil), do: Brando.config(:media_path)
   def media_path(file), do: Path.join([Brando.config(:media_path), file])
@@ -210,7 +210,7 @@ defmodule Brando.Images.Utils do
     end
   end
 
-  @spec check_image_path(module, map, String.t()) :: Ecto.Schema.t() | nil
+  @spec check_image_path(module, map, binary) :: Ecto.Schema.t() | nil
   defp check_image_path(schema, image, upload_dirname) do
     image_path = image.image.path
     image_dirname = Path.dirname(image.image.path)
@@ -232,7 +232,7 @@ defmodule Brando.Images.Utils do
     nil
   end
 
-  @spec do_check_image_path(Ecto.Schema.t(), String.t(), String.t(), String.t(), String.t()) ::
+  @spec do_check_image_path(Ecto.Schema.t(), binary, binary, binary, binary) ::
           image_struct
   defp do_check_image_path(image, image_path, image_dirname, image_basename, upload_dirname) do
     media_path = Path.expand(Brando.config(:media_path))
@@ -254,7 +254,7 @@ defmodule Brando.Images.Utils do
   Gets orphaned image_series.
   """
   @spec get_orphaned_series([Ecto.Schema.t()], [Ecto.Schema.t()], Keyword.t()) ::
-          [String.t()] | []
+          [binary] | []
   def get_orphaned_series(categories, series, opts) do
     starts_with = Keyword.fetch!(opts, :starts_with)
     ignored_paths = Keyword.get(opts, :ignored_paths, [])

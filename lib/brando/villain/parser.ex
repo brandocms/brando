@@ -4,55 +4,55 @@ defmodule Brando.Villain.Parser do
   """
 
   @doc "Parses a comment"
-  @callback comment(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback comment(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses a header"
-  @callback header(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback header(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses text/paragraphs"
-  @callback text(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback text(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses video"
-  @callback video(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback video(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses map"
-  @callback map(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback map(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses image"
-  @callback image(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback image(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses slideshow"
-  @callback slideshow(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback slideshow(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses divider"
-  @callback divider(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback divider(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses list"
-  @callback list(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback list(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses blockquote"
-  @callback blockquote(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback blockquote(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses columns"
-  @callback columns(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback columns(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses datatables"
-  @callback datatable(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback datatable(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses markdown"
-  @callback markdown(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback markdown(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses html"
-  @callback html(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback html(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses svg"
-  @callback svg(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback svg(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses template"
-  @callback template(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback template(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses datasource"
-  @callback datasource(data :: %{String.t() => any}, opts :: Keyword.t()) :: String.t()
+  @callback datasource(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   defmacro __using__(_) do
     quote do

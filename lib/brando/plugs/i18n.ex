@@ -56,7 +56,7 @@ defmodule Brando.Plug.I18n do
     conn
   end
 
-  @spec extract_language_from_path(Plug.Conn.t()) :: String.t() | nil
+  @spec extract_language_from_path(Plug.Conn.t()) :: binary | nil
   defp extract_language_from_path(conn) do
     lang = List.first(conn.path_info)
 

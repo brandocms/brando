@@ -68,7 +68,7 @@ defmodule Brando.Lexer.Filter do
       iex> Brando.Lexer.Filter.abs("-1.1", %{})
       1.1
   """
-  @spec abs(String.t() | number, any) :: number
+  @spec abs(binary | number, any) :: number
   def abs(value, _) when is_binary(value) do
     {float, ""} = Float.parse(value)
     abs(float)
@@ -82,7 +82,7 @@ defmodule Brando.Lexer.Filter do
       iex> Brando.Lexer.Filter.append("myfile", ".html", %{})
       "myfile.html"
   """
-  @spec append(String.t(), String.t(), map()) :: String.t()
+  @spec append(binary, binary, map()) :: binary
   def append(value, text, _), do: value <> text
 
   @doc """
@@ -117,7 +117,7 @@ defmodule Brando.Lexer.Filter do
       iex> Brando.Lexer.Filter.capitalize("my great title", %{})
       "My great title"
   """
-  @spec capitalize(String.t(), map()) :: String.t()
+  @spec capitalize(binary, map()) :: binary
   def capitalize(value, _), do: String.capitalize(value)
 
   @doc """
@@ -132,7 +132,7 @@ defmodule Brando.Lexer.Filter do
       iex> Brando.Lexer.Filter.ceil("3.5", %{})
       4
   """
-  @spec ceil(number | String.t(), map()) :: number
+  @spec ceil(number | binary, map()) :: number
   def ceil(value, _) when is_binary(value) do
     {num, ""} = Float.parse(value)
     Float.ceil(num) |> trunc()

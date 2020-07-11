@@ -9,7 +9,7 @@ defmodule Brando.Lexer do
           | {:variable, [...]}
         ]
 
-  @spec parse(String.t(), module) :: {:ok, document_t} | {:error, String.t(), pos_integer()}
+  @spec parse(binary, module) :: {:ok, document_t} | {:error, binary, pos_integer()}
   @doc """
   Parses a liquid `template` string using the given `parser`.
   Returns a liquid AST document or the parser error

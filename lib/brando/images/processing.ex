@@ -8,7 +8,7 @@ defmodule Brando.Images.Processing do
 
   import Ecto.Query, only: [from: 2]
 
-  @type id :: String.t() | integer
+  @type id :: binary | integer
   @type changeset :: Ecto.Changeset.t()
   @type user :: Brando.Users.User.t() | :system
   @type image_schema :: Brando.Image.t()
@@ -164,7 +164,7 @@ defmodule Brando.Images.Processing do
   """
   @spec recreate_sizes_for_image_field(
           schema :: any,
-          field_name :: atom | String.t(),
+          field_name :: atom | binary,
           user_id :: id | atom
         ) :: [any()]
   def recreate_sizes_for_image_field(schema, field_name, user_id \\ :system) do

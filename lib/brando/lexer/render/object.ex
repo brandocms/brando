@@ -7,7 +7,7 @@ defmodule Brando.Lexer.Render.Object do
   @behaviour Brando.Lexer.Render
 
   @impl Brando.Lexer.Render
-  @spec render(any, Context.t()) :: {String.t(), Context.t()}
+  @spec render(any, Context.t()) :: {binary, Context.t()}
   def render({:object, tag}, context), do: do_render(tag, context)
 
   def render(_, _), do: false

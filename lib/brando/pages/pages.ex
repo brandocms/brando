@@ -14,7 +14,7 @@ defmodule Brando.Pages do
 
   @type changeset :: Ecto.Changeset.t()
   @type fragment :: Brando.Pages.PageFragment.t()
-  @type id :: String.t() | Integer.t()
+  @type id :: binary | Integer.t()
   @type page :: Brando.Pages.Page.t()
   @type user :: Brando.Users.User.t() | :system
 
@@ -305,7 +305,7 @@ defmodule Brando.Pages do
   @doc """
   Get page fragment
   """
-  @spec get_page_fragment(String.t() | Integer.t()) ::
+  @spec get_page_fragment(binary | Integer.t()) ::
           {:error, {:page_fragment, :not_found}} | {:ok, fragment}
   def get_page_fragment(key) when is_binary(key) do
     query = from t in PageFragment, where: t.key == ^key and is_nil(t.deleted_at)
@@ -489,7 +489,7 @@ defmodule Brando.Pages do
   @doc """
   Duplicate page fragment
   """
-  @spec duplicate_page_fragment(fragment_id :: String.t() | Integer.t()) ::
+  @spec duplicate_page_fragment(fragment_id :: binary | Integer.t()) ::
           {:ok, map} | {:error, {:page_fragment, :not_found}} | {:error, changeset}
   def duplicate_page_fragment(fragment_id) do
     fragment_id = (is_binary(fragment_id) && String.to_integer(fragment_id)) || fragment_id

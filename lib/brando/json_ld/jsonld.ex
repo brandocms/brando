@@ -15,14 +15,14 @@ defmodule Brando.JSONLD do
   @doc """
   Convert date to ISO friendly string
   """
-  @spec to_date(date :: any) :: String.t()
+  @spec to_date(date :: any) :: binary
   def to_date(date),
     do: Timex.format!(Timex.to_date(date), "{ISOdate}")
 
   @doc """
   Convert datetime to ISO friendly string
   """
-  @spec to_datetime(datetime :: any) :: String.t()
+  @spec to_datetime(datetime :: any) :: binary
   def to_datetime(datetime),
     do: Timex.format!(Timex.to_datetime(datetime, "Etc/UTC"), "{ISO:Extended:Z}")
 

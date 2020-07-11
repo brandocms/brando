@@ -4,7 +4,7 @@ defmodule <%= base %>.<%= domain %> do
   """
 
   # ++types
-  @type id :: Integer.t() | String.t()
+  @type id :: Integer.t() | binary
   @type params :: Map.t()
   @type user :: Brando.Users.User.t()
   # __types

@@ -42,7 +42,7 @@ defmodule Brando.Villain do
   Delegates to the parser module configured in the otp_app's brando.exs.
   Renders to HTML.
   """
-  @spec parse(String.t() | [map]) :: String.t()
+  @spec parse(binary | [map]) :: binary
   def parse(data, entry \\ nil, opts \\ [])
   def parse("", _, _), do: ""
   def parse(nil, _, _), do: ""
@@ -156,7 +156,7 @@ defmodule Brando.Villain do
   @doc """
   Rerender multiple IDS
   """
-  @spec rerender_html_from_ids({Module, atom, atom}, [Integer.t() | String.t()]) :: nil | [any()]
+  @spec rerender_html_from_ids({Module, atom, atom}, [Integer.t() | binary]) :: nil | [any()]
   def rerender_html_from_ids(_, []), do: nil
   def rerender_html_from_ids(args, ids), do: for(id <- ids, do: rerender_html_from_id(args, id))
 
@@ -174,7 +174,7 @@ defmodule Brando.Villain do
   """
   @spec rerender_html_from_id(
           {schema :: Module, data_field :: atom, html_field :: atom},
-          Integer.t() | String.t()
+          Integer.t() | binary
         ) :: any()
   def rerender_html_from_id({schema, data_field, html_field}, id) do
     query =

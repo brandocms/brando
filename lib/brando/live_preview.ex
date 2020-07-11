@@ -106,7 +106,7 @@ defmodule Brando.LivePreview do
     end
   end
 
-  @spec build_cache_key(Map.t()) :: String.t()
+  @spec build_cache_key(Map.t()) :: binary
   def build_cache_key(seed), do: "PREVIEW-" <> Hashids.encode(@preview_coder, seed)
 
   def store_cache(key, html), do: Cachex.put(:cache, "__live_preview__" <> key, html)

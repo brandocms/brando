@@ -20,7 +20,7 @@ defmodule Brando.Plug.HTML do
       plug :put_section, "users"
   """
 
-  @spec put_section(Plug.Conn.t(), String.t()) :: Plug.Conn.t()
+  @spec put_section(Plug.Conn.t(), binary) :: Plug.Conn.t()
   def put_section(conn, name), do: put_private(conn, :brando_section_name, name)
 
   @doc """
@@ -31,7 +31,7 @@ defmodule Brando.Plug.HTML do
       import Brando.Plug.HTML
       plug :put_css_classes, "wrapper box"
   """
-  @spec put_css_classes(Plug.Conn.t(), String.t() | [String.t()]) :: Plug.Conn.t()
+  @spec put_css_classes(Plug.Conn.t(), binary | [binary]) :: Plug.Conn.t()
   def put_css_classes(conn, classes) when is_binary(classes),
     do: put_private(conn, :brando_css_classes, classes)
 
@@ -61,7 +61,7 @@ defmodule Brando.Plug.HTML do
   @doc """
   Put META data in conn
   """
-  @spec put_meta(conn, key :: String.t(), data :: any) :: conn
+  @spec put_meta(conn, key :: binary, data :: any) :: conn
   @spec put_meta(conn, module :: atom, data :: any) :: conn
   def put_meta(conn, module, data) when is_atom(module) do
     meta_meta = %{__meta__: %{current_url: Utils.current_url(conn)}}

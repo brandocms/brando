@@ -25,7 +25,7 @@ defmodule Brando.Field.File.Utils do
   @doc """
   Deletes `file` after joining it with `media_path`
   """
-  @spec delete_media(String.t()) :: no_return
+  @spec delete_media(binary) :: no_return
   def delete_media(nil), do: nil
   def delete_media(""), do: nil
 

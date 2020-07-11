@@ -72,7 +72,7 @@ defmodule Brando.Lexer.Parser.Tag.ControlFlow do
     |> tag(:elsif)
   end
 
-  @spec expression_tag(NimbleParsec.t(), String.t()) :: NimbleParsec.t()
+  @spec expression_tag(NimbleParsec.t(), binary) :: NimbleParsec.t()
   defp expression_tag(combinator, tag_name) do
     combinator
     |> ignore(Tag.open_tag())

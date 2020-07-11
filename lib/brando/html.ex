@@ -123,7 +123,7 @@ defmodule Brando.HTML do
       "005"
 
   """
-  @spec zero_pad(val :: String.t() | Integer.t(), count :: Integer.t()) :: String.t()
+  @spec zero_pad(val :: binary | Integer.t(), count :: Integer.t()) :: binary
   def zero_pad(str, count \\ 3)
   def zero_pad(val, count) when is_binary(val), do: String.pad_leading(val, count, "0")
 
@@ -142,7 +142,7 @@ defmodule Brando.HTML do
   @doc """
   Returns a red X if value is nil, or a check if the value is truthy
   """
-  @spec check_or_x(val :: nil | bool) :: String.t()
+  @spec check_or_x(val :: nil | bool) :: binary
   def check_or_x(nil), do: ~s(<i class="icon-centered fa fa-times text-danger"></i>)
   def check_or_x(false), do: ~s(<i class="icon-centered fa fa-times text-danger"></i>)
   def check_or_x(_), do: ~s(<i class="icon-centered fa fa-check text-success"></i>)
@@ -187,7 +187,7 @@ defmodule Brando.HTML do
       google_analytics("UA-XXXXX-X")
 
   """
-  @spec google_analytics(ua_code :: String.t()) :: safe_string()
+  @spec google_analytics(ua_code :: binary) :: safe_string()
   def google_analytics(ua_code) do
     content =
       """

@@ -46,7 +46,7 @@ defmodule Brando.Plug.Lockdown do
     end
   end
 
-  @spec allowed?(Plug.Conn.t(), String.t()) :: Plug.Conn.t()
+  @spec allowed?(Plug.Conn.t(), binary) :: Plug.Conn.t()
   defp allowed?(%{private: %{plug_session: %{"current_user" => user}}} = conn, _) do
     if Users.can_login?(user) do
       conn

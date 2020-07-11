@@ -19,7 +19,7 @@ defmodule Brando.Lexer.Parser.Tag do
     |> string("%}")
   end
 
-  @spec tag_directive(NimbleParsec.t(), String.t()) :: NimbleParsec.t()
+  @spec tag_directive(NimbleParsec.t(), binary) :: NimbleParsec.t()
   def tag_directive(combinator \\ empty(), name) do
     combinator
     |> open_tag()

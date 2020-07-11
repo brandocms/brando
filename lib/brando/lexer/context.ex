@@ -26,7 +26,7 @@ defmodule Brando.Lexer.Context do
   """
   def new(variables), do: %__MODULE__{variables: stringify_if_map(variables)}
 
-  @spec assign(t(), String.t(), any) :: t()
+  @spec assign(t(), binary, any) :: t()
   @doc """
   Assign a new variable to the `context`
   Set a variable named `key` with the given `value` in the current context
