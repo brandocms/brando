@@ -44,24 +44,6 @@ defmodule Brando.Lexer.Parser.Tag.Iteration do
     |> replace(:break)
   end
 
-  def tablerow_tag(combinator \\ empty()) do
-    combinator
-    |> ignore(Tag.open_tag())
-    |> ignore(string("tablerow"))
-    |> ignore(Literal.whitespace(empty(), 1))
-    |> unwrap_and_tag(Field.identifier(), :identifier)
-    |> ignore(Literal.whitespace(empty(), 1))
-    |> ignore(string("in"))
-    |> ignore(Literal.whitespace(empty(), 1))
-    |> tag(collection(), :collection)
-    |> ignore(Literal.whitespace())
-    |> tag(tablerow_parameters(), :parameters)
-    |> ignore(Tag.close_tag())
-    |> tag(parsec(:document), :contents)
-    |> ignore(Tag.tag_directive("endtablerow"))
-    |> tag(:tablerow)
-  end
-
   defp argument_sequence(combinator \\ empty()) do
     combinator
     |> Literal.argument()
@@ -97,22 +79,10 @@ defmodule Brando.Lexer.Parser.Tag.Iteration do
     |> repeat(choice([reversed(), limit(), offset()]))
   end
 
-  defp tablerow_parameters(combinator \\ empty()) do
-    combinator
-    |> repeat(choice([cols(), limit(), offset()]))
-  end
-
   defp reversed(combinator \\ empty()) do
     combinator
     |> replace(string("reversed"), :reversed)
     |> unwrap_and_tag(:order)
-    |> ignore(Literal.whitespace())
-  end
-
-  defp cols(combinator \\ empty()) do
-    combinator
-    |> ignore(string("cols:"))
-    |> unwrap_and_tag(integer(min: 1), :cols)
     |> ignore(Literal.whitespace())
   end
 

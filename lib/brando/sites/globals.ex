@@ -10,7 +10,7 @@ defmodule Brando.Globals do
 
   @type changeset :: Ecto.Changeset.t()
   @type global_category :: Brando.Sites.GlobalCategory.t()
-  @type params :: Map.t()
+  @type params :: map
 
   @doc """
   Get global by key path

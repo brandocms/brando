@@ -146,7 +146,7 @@ defmodule Brando.Field.File.Schema do
     * `cfg`: the field's cfg from has_image_field
 
   """
-  @spec handle_file_upload(atom, Plug.Upload.t() | Map.t(), Brando.Type.FileConfig.t()) ::
+  @spec handle_file_upload(atom, Plug.Upload.t() | map, Brando.Type.FileConfig.t()) ::
           {:ok, {:handled, Brando.Type.File}}
           | {:ok, {:unhandled, atom, term}}
           | {:error, {atom, {:error, binary}}}

@@ -40,4 +40,24 @@ defmodule Brando.Images.ProcessingTest do
              width: 608
            }
   end
+
+  test "recreate_sizes_for_image_field" do
+    {:ok, upload} = Brando.Upload.process_upload(@up, @cfg)
+    {:ok, image_struct} = Processing.create_image_type_struct(upload, :system)
+    u1 = Factory.insert(:random_user, avatar: image_struct)
+
+    [{:ok, result}] = Processing.recreate_sizes_for_image_field(Brando.Users.User, :avatar, u1)
+    assert result.id == u1.id
+  end
+
+  test "recreate_sizes_for_image_field_record" do
+    {:ok, upload} = Brando.Upload.process_upload(@up, @cfg)
+    {:ok, image_struct} = Processing.create_image_type_struct(upload, :system)
+    u1 = Factory.insert(:random_user, avatar: image_struct)
+    changeset = Ecto.Changeset.change(u1)
+
+    {:ok, changeset} = Processing.recreate_sizes_for_image_field_record(changeset, :avatar, u1)
+    assert changeset.valid?
+    assert Map.has_key?(changeset.changes, :avatar)
+  end
 end

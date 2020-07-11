@@ -11,9 +11,9 @@ defmodule Brando.Images.Operations.Sizing do
   def create_image_size(%Images.Operation{
         id: id,
         type: :gif,
-        img_struct: %{path: image_src, width: width, height: height},
-        sized_img_path: image_dest,
-        sized_img_dir: image_dest_dir,
+        image_struct: %{path: image_src, width: width, height: height},
+        sized_image_path: image_dest,
+        sized_image_dir: image_dest_dir,
         size_key: size_key,
         size_cfg: size_cfg
       }) do
@@ -60,15 +60,15 @@ defmodule Brando.Images.Operations.Sizing do
         id: id,
         total_operations: total_operations,
         operation_index: operation_index,
-        img_struct: %{
+        image_struct: %{
           path: image_src,
           focal: focal,
           width: width,
           height: height
         },
         filename: filename,
-        sized_img_path: image_dest,
-        sized_img_dir: image_dest_dir,
+        sized_image_path: image_dest,
+        sized_image_dir: image_dest_dir,
         size_key: size_key,
         size_cfg: size_cfg,
         user: user

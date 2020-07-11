@@ -49,7 +49,7 @@ defmodule Brando.ImageCategory do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, :create | :update, Map.t(), user) :: Ecto.Changeset.t()
+  @spec changeset(t, :create | :update, map, user) :: Ecto.Changeset.t()
   def changeset(schema, action, params \\ %{}, user \\ :system)
 
   def changeset(schema, :create, params, user) do

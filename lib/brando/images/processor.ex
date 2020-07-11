@@ -13,6 +13,5 @@ defmodule Brando.Images.Processor do
 
   @doc "Check filesystem for executable needed for processing"
   @callback confirm_executable_exists() ::
-              {:ok, {:executable, :exists}}
-              | {:error, {:executable, :missing}}
+              {:ok, {:executable, :exists}} | {:error, {:executable, :missing}}
 end

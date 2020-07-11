@@ -1,5 +1,7 @@
 defmodule Brando.DatasourcesTest do
   use ExUnit.Case, async: true
+  use Brando.ConnCase
+  alias Brando.Factory
 
   defmodule TestDatasource do
     use Brando.Datasource
@@ -7,6 +9,10 @@ defmodule Brando.DatasourcesTest do
     datasources do
       many :all, fn module, _ ->
         {:ok, module}
+      end
+
+      many :all_of_them, fn _, _ ->
+        {:ok, [%{id: 1}, %{id: 2}, %{id: 3}]}
       end
 
       many :all_more, fn _, arg ->
@@ -37,7 +43,7 @@ defmodule Brando.DatasourcesTest do
   alias Brando.DatasourcesTest.TestDatasource
 
   test "__datasources__" do
-    assert TestDatasource.__datasources__(:many) == [:all_more, :all]
+    assert TestDatasource.__datasources__(:many) == [:all_more, :all_of_them, :all]
   end
 
   test "list datasources" do
@@ -46,7 +52,7 @@ defmodule Brando.DatasourcesTest do
 
   test "list datasource keys" do
     assert Brando.Datasource.list_datasource_keys(TestDatasource) ==
-             {:ok, %{many: [:all_more, :all], one: [], selection: [:featured]}}
+             {:ok, %{many: [:all_more, :all_of_them, :all], one: [], selection: [:featured]}}
   end
 
   test "get_many" do
@@ -75,5 +81,26 @@ defmodule Brando.DatasourcesTest do
        ]}
 
     assert Brando.Datasource.get_selection(TestDatasource, "featured", [3, 1]) == get_result
+  end
+
+  test "update_datasource" do
+    t1 = Factory.insert(:template, code: "hello!", wrapper: "yes, thanks. ${content}")
+
+    data = [
+      %{
+        "type" => "datasource",
+        "data" => %{
+          "module" => "Elixir.Brando.DatasourcesTest.TestDatasource",
+          "type" => "many",
+          "query" => "all_of_them",
+          "template" => t1.id
+        }
+      }
+    ]
+
+    _p1 = Factory.insert(:page, data: data)
+
+    assert Brando.Datasource.update_datasource(TestDatasource, :pass_through) ==
+             {:ok, :pass_through}
   end
 end

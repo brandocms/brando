@@ -111,7 +111,7 @@ defmodule Brando.ImagesTest do
 
   test "get_category" do
     c1 = Factory.insert(:image_category)
-    assert {:ok, c2} = Images.get_category(c1.id)
+    assert {:ok, c2} = Brando.Images.get_image_category(%{matches: [id: c1.id]})
     assert c2.id == c1.id
   end
 
@@ -171,6 +171,10 @@ defmodule Brando.ImagesTest do
 
   test "delete_category" do
     c1 = Factory.insert(:image_category)
+    s1 = Factory.insert(:image_series, image_category: c1)
+    _s2 = Factory.insert(:image_series, image_category: c1)
+    _i1 = Factory.insert(:image, image_series_id: s1.id)
+
     {:ok, c2} = Images.delete_category(c1.id)
     refute c2.deleted_at == nil
   end

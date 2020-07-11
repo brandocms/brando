@@ -2,31 +2,33 @@ defmodule Brando.Images.Operations do
   @moduledoc """
   This is where we process images
   """
+  require Logger
+
+  alias Brando.Images
+  alias Brando.Progress
+  alias Brando.Utils
+
   @type image_type_struct :: Brando.Type.Image.t()
   @type image_config :: Brando.Type.ImageConfig.t()
   @type operation :: Brando.Images.Operation.t()
   @type operation_result :: Brando.Images.OperationResult.t()
   @type user :: Brando.Users.User.t() | :system
 
-  alias Brando.Images
-  alias Brando.Progress
-  alias Brando.Utils
-
   @doc """
   Creates an %Operation{} for each size key in `cfg`s `:sizes`
 
   ## Example
 
-      {:ok, operations} = create_operations(img_struct, img_cfg, user, id)
+      {:ok, operations} = create(image_struct, img_cfg, id, user)
 
   """
-  @spec create_operations(
-          img_struct :: image_type_struct,
+  @spec create(
+          image_type_struct :: image_type_struct,
           cfg :: image_config,
-          user :: user,
-          id :: integer | nil
+          id :: integer | nil,
+          user :: user
         ) :: {:ok, [operation]}
-  def create_operations(%{path: path} = img_struct, cfg, user, id \\ nil) do
+  def create(%{path: path} = image_struct, cfg, id, user) do
     id = id || Utils.random_string(:os.timestamp())
     {_, filename} = Utils.split_path(path)
     type = cfg.target_format || Images.Utils.image_type(path)
@@ -38,18 +40,21 @@ defmodule Brando.Images.Operations do
 
     operations =
       for {{size_key, size_cfg}, idx} <- Enum.with_index(Map.get(cfg, :sizes)) do
+        sized_image_dir = Images.Utils.get_sized_dir(path, size_key)
+        sized_image_path = Images.Utils.get_sized_path(path, size_key, type)
+
         %Images.Operation{
           id: id,
-          total_operations: total_operations,
-          operation_index: idx + 1,
-          user: user,
-          img_struct: img_struct,
-          filename: filename,
           type: type,
+          user: user,
+          filename: filename,
+          image_struct: image_struct,
           size_cfg: size_cfg,
           size_key: size_key,
-          sized_img_dir: Images.Utils.get_sized_dir(path, size_key),
-          sized_img_path: Images.Utils.get_sized_path(path, size_key, type)
+          sized_image_dir: sized_image_dir,
+          sized_image_path: sized_image_path,
+          total_operations: total_operations,
+          operation_index: idx + 1
         }
       end
 
@@ -59,11 +64,14 @@ defmodule Brando.Images.Operations do
   @doc """
   Perform list of image operations as Flow
   """
-  @spec perform_operations(operations :: [operation], user :: user) :: {:ok, [operation_result]}
-  def perform_operations(operations, user) do
+  @spec perform(operations :: [operation], user :: user) :: {:ok, [operation_result]}
+  def perform(operations, user) do
     Progress.show_progress(user)
-    require Logger
-    Logger.info("==> Brando.Images.Operations: Starting #{Enum.count(operations)} operations..")
+
+    Logger.info("""
+    ==> Brando.Images.Operations: Starting #{Enum.count(operations)} operations..
+    """)
+
     start_msec = :os.system_time(:millisecond)
 
     operation_results =
@@ -81,7 +89,10 @@ defmodule Brando.Images.Operations do
     end_msec = :os.system_time(:millisecond)
 
     seconds_lapsed = (end_msec - start_msec) * 0.001
-    Logger.info("==> Brando.Images.Operations: Finished in #{seconds_lapsed} seconds..")
+
+    Logger.info("""
+    ==> Brando.Images.Operations: Finished in #{seconds_lapsed} seconds..
+    """)
 
     Progress.hide_progress(user)
 
@@ -92,11 +103,11 @@ defmodule Brando.Images.Operations do
   defp compile_transform_results(transform_results, operations) do
     for {key, transforms} <- transform_results do
       operation = get_operation_by_key(key, operations)
-      img_struct = Map.put(operation.img_struct, :sizes, transforms_to_sizes(transforms))
+      image_struct = %{operation.image_struct | sizes: transforms_to_sizes(transforms)}
 
       %Images.OperationResult{
         id: key,
-        img_struct: img_struct
+        image_struct: image_struct
       }
     end
   end
@@ -108,12 +119,8 @@ defmodule Brando.Images.Operations do
     |> Enum.into(%{})
   end
 
-  defp get_operation_by_key(key, operations) do
-    Enum.find(operations, &(&1.id == key))
-  end
+  defp get_operation_by_key(key, operations), do: Enum.find(operations, &(&1.id == key))
 
-  defp resize_image(%Images.Operation{} = operation) do
-    {:ok, transform_result} = Images.Operations.Sizing.create_image_size(operation)
-    transform_result
-  end
+  defp resize_image(%Images.Operation{} = operation),
+    do: Images.Operations.Sizing.create_image_size(operation) |> elem(1)
 end

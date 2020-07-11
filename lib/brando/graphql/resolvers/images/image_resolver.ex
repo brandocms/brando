@@ -16,8 +16,8 @@ defmodule Brando.Images.ImageResolver do
     params = %{"image" => image, "image_series_id" => series_id}
 
     case Images.Uploads.Schema.handle_upload(params, cfg, current_user) do
-      {:error, _} ->
-        :error
+      {:error, reason} ->
+        {:error, reason}
 
       images when is_list(images) ->
         List.first(images)

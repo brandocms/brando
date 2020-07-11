@@ -9,7 +9,7 @@ defmodule Brando.Images.ImageSeriesResolver do
   Get series
   """
   def find(%{series_id: series_id}, %{context: %{current_user: _current_user}}) do
-    Images.get_series(series_id)
+    Images.get_image_series(%{matches: [id: series_id]})
   end
 
   @doc """

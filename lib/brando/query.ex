@@ -189,9 +189,6 @@ defmodule Brando.Query do
             {:preload, preload}, query ->
               query |> with_preload(preload)
 
-            {:filter, filter}, query ->
-              query |> with_filter(unquote(module), filter)
-
             {:matches, match}, query ->
               query |> with_match(unquote(module), match)
           end)

@@ -42,10 +42,10 @@ defmodule Brando.HTML.Images do
 
   """
 
-  @spec picture_tag(Map.t(), keyword()) :: {:safe, [...]}
-  def picture_tag(img_struct, opts \\ [])
+  @spec picture_tag(map, keyword()) :: {:safe, [...]}
+  def picture_tag(image_struct, opts \\ [])
 
-  def picture_tag(%Brando.Type.Image{} = img_struct, opts) do
+  def picture_tag(%Brando.Type.Image{} = image_struct, opts) do
     initial_map = %{
       img: [],
       picture: [],
@@ -59,11 +59,11 @@ defmodule Brando.HTML.Images do
       initial_map
       |> add_lazyload()
       |> add_sizes()
-      |> add_alt(img_struct)
-      |> add_srcset(img_struct)
-      |> add_mq(img_struct)
-      |> add_dims(img_struct)
-      |> add_src(img_struct)
+      |> add_alt(image_struct)
+      |> add_srcset(image_struct)
+      |> add_mq(image_struct)
+      |> add_dims(image_struct)
+      |> add_src(image_struct)
       |> add_attrs()
       |> add_classes()
       |> add_moonwalk()
@@ -79,8 +79,8 @@ defmodule Brando.HTML.Images do
       end
 
     figcaption_tag =
-      if Keyword.get(opts, :caption) && img_struct.title && img_struct.title != "" do
-        content_tag(:figcaption, img_struct.title)
+      if Keyword.get(opts, :caption) && image_struct.title && image_struct.title != "" do
+        content_tag(:figcaption, image_struct.title)
       else
         ""
       end
@@ -104,12 +104,12 @@ defmodule Brando.HTML.Images do
 
   # when we're not given a struct
   def picture_tag(img_map, opts) do
-    img_struct = Utils.stringy_struct(Brando.Type.Image, img_map)
-    picture_tag(img_struct, opts)
+    image_struct = Utils.stringy_struct(Brando.Type.Image, img_map)
+    picture_tag(image_struct, opts)
   end
 
-  defp add_alt(attrs, img_struct) do
-    alt = Keyword.get(attrs.opts, :alt, Map.get(img_struct, :alt, ""))
+  defp add_alt(attrs, image_struct) do
+    alt = Keyword.get(attrs.opts, :alt, Map.get(image_struct, :alt, ""))
 
     put_in(attrs, [:img, :alt], alt)
   end
@@ -154,7 +154,7 @@ defmodule Brando.HTML.Images do
     |> put_in([:source, :sizes], sizes)
   end
 
-  defp add_srcset(%{lazyload: true} = attrs, img_struct) do
+  defp add_srcset(%{lazyload: true} = attrs, image_struct) do
     placeholder = Keyword.get(attrs.opts, :placeholder, false)
 
     no_srcset_placeholder =
@@ -165,12 +165,13 @@ defmodule Brando.HTML.Images do
       end
 
     srcset =
-      (Keyword.get(attrs.opts, :srcset) && get_srcset(img_struct, attrs.opts[:srcset], attrs.opts)) ||
+      (Keyword.get(attrs.opts, :srcset) &&
+         get_srcset(image_struct, attrs.opts[:srcset], attrs.opts)) ||
         false
 
     placeholder_srcset =
       (Keyword.get(attrs.opts, :srcset) &&
-         get_srcset(img_struct, attrs.opts[:srcset], attrs.opts, placeholder)) ||
+         get_srcset(image_struct, attrs.opts[:srcset], attrs.opts, placeholder)) ||
         false
 
     attrs
@@ -182,9 +183,10 @@ defmodule Brando.HTML.Images do
     |> put_in([:source, :data_srcset], srcset)
   end
 
-  defp add_srcset(%{lazyload: false} = attrs, img_struct) do
+  defp add_srcset(%{lazyload: false} = attrs, image_struct) do
     srcset =
-      (Keyword.get(attrs.opts, :srcset) && get_srcset(img_struct, attrs.opts[:srcset], attrs.opts)) ||
+      (Keyword.get(attrs.opts, :srcset) &&
+         get_srcset(image_struct, attrs.opts[:srcset], attrs.opts)) ||
         false
 
     attrs
@@ -194,9 +196,9 @@ defmodule Brando.HTML.Images do
     |> put_in([:source, :data_srcset], false)
   end
 
-  defp add_mq(%{lazyload: _} = attrs, img_struct) do
+  defp add_mq(%{lazyload: _} = attrs, image_struct) do
     case (Keyword.get(attrs.opts, :media_queries) &&
-            get_mq(img_struct, attrs.opts[:media_queries], attrs.opts)) ||
+            get_mq(image_struct, attrs.opts[:media_queries], attrs.opts)) ||
            false do
       false ->
         attrs
@@ -212,17 +214,17 @@ defmodule Brando.HTML.Images do
     end
   end
 
-  defp add_src(%{lazyload: true} = attrs, img_struct) do
+  defp add_src(%{lazyload: true} = attrs, image_struct) do
     placeholder = Keyword.get(attrs.opts, :placeholder, false)
 
     key = Keyword.get(attrs.opts, :key) || :xlarge
-    src = Utils.img_url(img_struct, key, attrs.opts)
+    src = Utils.img_url(image_struct, key, attrs.opts)
 
     fallback =
       case placeholder do
-        :svg -> svg_fallback(img_struct, 0.05, attrs.opts)
+        :svg -> svg_fallback(image_struct, 0.05, attrs.opts)
         false -> false
-        _ -> Utils.img_url(img_struct, placeholder, attrs.opts)
+        _ -> Utils.img_url(image_struct, placeholder, attrs.opts)
       end
 
     attrs
@@ -232,9 +234,9 @@ defmodule Brando.HTML.Images do
     |> Map.put(:src, src)
   end
 
-  defp add_src(%{lazyload: false} = attrs, img_struct) do
+  defp add_src(%{lazyload: false} = attrs, image_struct) do
     key = Keyword.get(attrs.opts, :key) || :xlarge
-    src = Utils.img_url(img_struct, key, attrs.opts)
+    src = Utils.img_url(image_struct, key, attrs.opts)
 
     attrs
     |> put_in([:img, :src], src)
@@ -243,14 +245,14 @@ defmodule Brando.HTML.Images do
   end
 
   # automatically add dims when lazyload: true
-  defp add_dims(%{lazyload: true} = attrs, img_struct) do
+  defp add_dims(%{lazyload: true} = attrs, image_struct) do
     width =
       case Keyword.fetch(attrs.opts, :width) do
         :error ->
           false
 
         {:ok, true} ->
-          Map.get(img_struct, :width)
+          Map.get(image_struct, :width)
 
         {:ok, width} ->
           width
@@ -262,7 +264,7 @@ defmodule Brando.HTML.Images do
           false
 
         {:ok, true} ->
-          Map.get(img_struct, :height)
+          Map.get(image_struct, :height)
 
         {:ok, height} ->
           height
@@ -276,14 +278,14 @@ defmodule Brando.HTML.Images do
     |> put_in([:picture, :data_orientation], orientation)
   end
 
-  defp add_dims(attrs, img_struct) do
+  defp add_dims(attrs, image_struct) do
     width =
       case Keyword.fetch(attrs.opts, :width) do
         :error ->
           false
 
         {:ok, true} ->
-          Map.get(img_struct, :width)
+          Map.get(image_struct, :width)
 
         {:ok, width} ->
           width
@@ -295,7 +297,7 @@ defmodule Brando.HTML.Images do
           false
 
         {:ok, true} ->
-          Map.get(img_struct, :height)
+          Map.get(image_struct, :height)
 
         {:ok, height} ->
           height

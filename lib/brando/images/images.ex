@@ -6,6 +6,7 @@ defmodule Brando.Images do
   """
 
   use Brando.Web, :context
+  use Brando.Query
 
   alias Brando.Image
   alias Brando.ImageCategory
@@ -46,6 +47,39 @@ defmodule Brando.Images do
   end
 
   def query(queryable, _), do: queryable
+
+  query :single, ImageCategory, do: fn query -> from(t in query, where: is_nil(t.deleted_at)) end
+
+  matches ImageCategory do
+    fn
+      {:id, id}, query ->
+        from t in query, where: t.id == ^id
+
+      {:slug, slug}, query ->
+        from t in query, where: t.slug == ^slug
+    end
+  end
+
+  query :single, ImageSeries, do: fn query -> from(t in query, where: is_nil(t.deleted_at)) end
+
+  matches ImageSeries do
+    fn
+      {:id, id}, query ->
+        from t in query, where: t.id == ^id
+
+      {:slug, slug}, query ->
+        from t in query, where: t.slug == ^slug
+    end
+  end
+
+  query :single, Image, do: fn query -> from(t in query, where: is_nil(t.deleted_at)) end
+
+  matches Image do
+    fn
+      {:id, id}, query ->
+        from t in query, where: t.id == ^id
+    end
+  end
 
   @doc """
   Create new image
@@ -115,7 +149,7 @@ defmodule Brando.Images do
     end
   end
 
-  @spec update_image_meta(schema :: Brando.Image.t(), params :: Map.t(), user :: user) ::
+  @spec update_image_meta(schema :: Brando.Image.t(), params :: map, user :: user) ::
           {:ok, Brando.Image.t()} | {:error, changeset}
   def update_image_meta(schema, params, user \\ :system)
 
@@ -176,7 +210,7 @@ defmodule Brando.Images do
         if Ecto.Changeset.get_change(changeset, :slug) ||
              Ecto.Changeset.get_change(changeset, :image_category_id) ||
              Ecto.Changeset.get_change(changeset, :cfg),
-           do: Images.Processing.recreate_sizes_for_image_series(inserted_series.id, user)
+           do: Images.Processing.recreate_sizes_for_series(inserted_series.id, user)
 
         {:ok, Brando.repo().preload(inserted_series, :image_category)}
 
@@ -211,7 +245,7 @@ defmodule Brando.Images do
 
     case res do
       {:ok, series} ->
-        Images.Processing.recreate_sizes_for_image_series(series.id, user)
+        Images.Processing.recreate_sizes_for_series(series.id, user)
         {:ok, series}
 
       err ->
@@ -226,7 +260,7 @@ defmodule Brando.Images do
   def delete_series(nil), do: :ok
 
   def delete_series(id) do
-    with {:ok, series} <- get_series(id) do
+    with {:ok, series} <- get_image_series(%{matches: [id: id]}) do
       :ok = Images.Utils.delete_images_for(:image_series, series.id)
 
       series
@@ -270,20 +304,6 @@ defmodule Brando.Images do
   end
 
   @doc """
-  Get category by `id`
-  """
-  def get_category(id) do
-    query =
-      from t in ImageCategory,
-        where: t.id == ^id and is_nil(t.deleted_at)
-
-    case Brando.repo().one(query) do
-      nil -> {:error, {:image_category, :not_found}}
-      cat -> {:ok, cat}
-    end
-  end
-
-  @doc """
   Get category by `slug`
   """
   def get_category_by_slug(slug) do
@@ -301,7 +321,7 @@ defmodule Brando.Images do
   Get category's config
   """
   def get_category_config(id) do
-    {:ok, category} = get_category(id)
+    {:ok, category} = get_image_category(%{matches: [id: id]})
     {:ok, category.cfg}
   end
 
@@ -317,28 +337,12 @@ defmodule Brando.Images do
   Get series's config
   """
   def get_series_config(id) do
-    case get_series(id) do
+    case get_image_series(%{matches: [id: id]}) do
       {:ok, series} ->
         {:ok, series.cfg}
 
       err ->
         err
-    end
-  end
-
-  @doc """
-  Get series by `id`
-  """
-  def get_series(nil), do: {:error, {:image_series, :not_found}}
-
-  def get_series(id) do
-    query =
-      from t in ImageSeries,
-        where: t.id == ^id and is_nil(t.deleted_at)
-
-    case Brando.repo().one(query) do
-      nil -> {:error, {:image_series, :not_found}}
-      series -> {:ok, series}
     end
   end
 

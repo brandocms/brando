@@ -16,7 +16,7 @@ defmodule Brando.Images.ImageCategoryResolver do
   Get category
   """
   def find(%{category_id: category_id}, %{context: %{current_user: _current_user}}) do
-    Images.get_category(category_id)
+    Images.get_image_category(%{matches: [id: category_id]})
   end
 
   @doc """

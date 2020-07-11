@@ -123,7 +123,7 @@ defmodule Brando.HTML do
       "005"
 
   """
-  @spec zero_pad(val :: binary | Integer.t(), count :: Integer.t()) :: binary
+  @spec zero_pad(val :: binary | integer, count :: integer) :: binary
   def zero_pad(str, count \\ 3)
   def zero_pad(val, count) when is_binary(val), do: String.pad_leading(val, count, "0")
 

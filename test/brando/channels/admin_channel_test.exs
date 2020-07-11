@@ -106,7 +106,7 @@ defmodule Brando.AdminChannelTest do
 
       assert_reply ref, :ok, %{code: 200}
 
-      {:ok, c2} = Brando.Images.get_category(c1.id)
+      {:ok, c2} = Brando.Images.get_image_category(%{matches: [id: c1.id]})
       assert c1.cfg.random_filename == false
       assert c2.cfg.random_filename == true
     end
@@ -127,7 +127,7 @@ defmodule Brando.AdminChannelTest do
 
       assert_reply ref, :ok, %{code: 200}
 
-      {:ok, c2} = Brando.Images.get_series(c1.id)
+      {:ok, c2} = Brando.Images.get_image_series(%{matches: [id: c1.id]})
       assert c1.cfg.random_filename == false
       assert c2.cfg.random_filename == true
     end

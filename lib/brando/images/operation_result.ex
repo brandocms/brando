@@ -3,5 +3,5 @@ defmodule Brando.Images.OperationResult do
   Struct for carrying info about an image transform's result
   """
   defstruct id: nil,
-            img_struct: nil
+            image_struct: nil
 end

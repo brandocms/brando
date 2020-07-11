@@ -56,7 +56,7 @@ defmodule Brando.ImageSeries do
       schema_changeset = changeset(%__MODULE__{}, params)
 
   """
-  @spec changeset(t, Map.t()) :: Ecto.Changeset.t()
+  @spec changeset(t, map) :: Ecto.Changeset.t()
   def changeset(schema, params \\ %{}, user \\ :system) do
     cs =
       schema

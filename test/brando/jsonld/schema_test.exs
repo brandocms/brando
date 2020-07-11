@@ -89,4 +89,67 @@ defmodule Brando.JSONLDSchemaTest do
                url: "http://localhost"
              }
   end
+
+  test "Brando.JSONLD.Schema.Corporation" do
+    cached_identity = Brando.Cache.get(:identity)
+
+    assert Brando.JSONLD.Schema.Corporation.build(cached_identity) ==
+             %Brando.JSONLD.Schema.Corporation{
+               "@context": "http://schema.org",
+               "@id": "http://localhost/#identity",
+               "@type": "Corporation",
+               address: %Brando.JSONLD.Schema.PostalAddress{
+                 "@type": "PostalAddress",
+                 addressCountry: "NO",
+                 addressLocality: "Oslo",
+                 addressRegion: "Oslo",
+                 postalCode: "0000"
+               },
+               alternateName: "Kortversjon av navnet",
+               description: "Beskrivelse av organisasjonen/nettsiden",
+               email: "mail@domain.tld",
+               image: nil,
+               logo: nil,
+               name: "Organisasjonens navn",
+               sameAs: ["https://instagram.com/test", "https://facebook.com/test"],
+               url: "https://www.domain.tld"
+             }
+  end
+
+  test "Brando.JSONLD.Schema.Person" do
+    u1 = %{
+      name: "James Williamson",
+      image: @image
+    }
+
+    assert Brando.JSONLD.Schema.Person.build(u1) == %Brando.JSONLD.Schema.Person{
+             "@context": "http://schema.org",
+             "@type": "Person",
+             image: %Brando.JSONLD.Schema.ImageObject{
+               "@type": "ImageObject",
+               height: 900,
+               url: "http://localhost/media/images/avatars/large/27i97a.jpeg",
+               width: 900
+             },
+             name: "James Williamson"
+           }
+  end
+
+  test "Brando.JSONLD.Schema.WebSite" do
+    w = %{
+      name: "My website",
+      url: "https://test.com"
+    }
+
+    assert Brando.JSONLD.Schema.WebSite.build(w) == %Brando.JSONLD.Schema.WebSite{
+             "@context": "http://schema.org",
+             "@type": "WebSite",
+             name: "My website",
+             url: "https://test.com"
+           }
+  end
+
+  test "date" do
+    assert Brando.JSONLD.to_date(~D[2020-01-01]) == "2020-01-01"
+  end
 end

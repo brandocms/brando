@@ -115,18 +115,6 @@ defmodule Brando.Datasource do
     end
   end
 
-  @deprecated """
-  Use new datasources syntax:
-
-    datasources do
-      many :all, fn module, _arg -> {:ok, Repo.all(from t in module, order_by: t.name)} end
-      one :latest, fn _module, _arg -> get_latest_post() end
-    end
-  """
-  defmacro datasource(_, _) do
-    raise "Deprecated"
-  end
-
   defmacro datasources(do: block) do
     quote do
       unquote(block)

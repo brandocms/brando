@@ -8,11 +8,11 @@ defmodule Brando.Images.Operation do
             user: nil,
             total_operations: nil,
             operation_index: nil,
-            img_struct: %Type.Image{},
+            image_struct: %Type.Image{},
             filename: nil,
             type: nil,
             size_cfg: %Type.ImageConfig{},
             size_key: nil,
-            sized_img_dir: nil,
-            sized_img_path: nil
+            sized_image_dir: nil,
+            sized_image_path: nil
 end

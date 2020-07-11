@@ -181,7 +181,7 @@ defmodule Brando.Images.Processor.Sharp do
       {:error, {:executable, :missing, "sharp-cli"}}
   end
 
-  def round_to_string(0), do: "0"
-  def round_to_string(val) when is_float(val), do: val |> Float.round() |> Float.to_string()
-  def round_to_string(val), do: val |> to_string()
+  defp round_to_string(0), do: "0"
+  defp round_to_string(val) when is_float(val), do: val |> Float.round() |> Float.to_string()
+  defp round_to_string(val), do: val |> to_string()
 end

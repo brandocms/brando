@@ -216,13 +216,13 @@ defmodule Brando.Images.Utils do
     image_dirname = Path.dirname(image.image.path)
     image_basename = Path.basename(image.image.path)
 
-    img_struct =
+    image_struct =
       do_check_image_path(image, image_path, image_dirname, image_basename, upload_dirname)
 
-    if img_struct != nil do
+    if image_struct != nil do
       # store new image
       image
-      |> schema.changeset(%{image: img_struct})
+      |> schema.changeset(%{image: image_struct})
       |> Brando.repo().update!
     end
   end

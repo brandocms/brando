@@ -34,16 +34,16 @@ defmodule Brando.Images.Upload.Field do
     name = (is_binary(name) && String.to_existing_atom(name)) || name
 
     with {:ok, upload} <- Upload.process_upload(upload_params.file, cfg),
-         {:ok, img_struct} <-
+         {:ok, image_struct} <-
            Images.Processing.create_image_type_struct(upload, user, upload_params),
-         {:ok, operations} <- Images.Operations.create_operations(img_struct, cfg, user),
-         {:ok, results} <- Images.Operations.perform_operations(operations, user) do
-      img_struct =
+         {:ok, operations} <- Images.Operations.create(image_struct, cfg, nil, user),
+         {:ok, results} <- Images.Operations.perform(operations, user) do
+      image_struct =
         results
         |> List.first()
-        |> Map.get(:img_struct)
+        |> Map.get(:image_struct)
 
-      {:ok, {:handled, name, img_struct}}
+      {:ok, {:handled, name, image_struct}}
     else
       err ->
         {:error, {name, Upload.handle_upload_error(err)}}

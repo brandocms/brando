@@ -87,22 +87,22 @@ defmodule Brando.Villain do
   """
   def map_images(images) do
     Enum.map(images, fn image_record ->
-      img_struct = image_record.image
+      image_struct = image_record.image
 
       sizes =
-        img_struct.sizes
+        image_struct.sizes
         |> Enum.map(&{elem(&1, 0), Utils.media_url(elem(&1, 1))})
         |> Enum.into(%{})
 
       %{
-        src: Utils.media_url(img_struct.path),
-        thumb: img_struct |> Utils.img_url(:thumb) |> Utils.media_url(),
+        src: Utils.media_url(image_struct.path),
+        thumb: image_struct |> Utils.img_url(:thumb) |> Utils.media_url(),
         sizes: sizes,
-        title: img_struct.title,
-        credits: img_struct.credits,
+        title: image_struct.title,
+        credits: image_struct.credits,
         inserted_at: image_record.inserted_at,
-        width: img_struct.width,
-        height: img_struct.height
+        width: image_struct.width,
+        height: image_struct.height
       }
     end)
   end
@@ -156,7 +156,7 @@ defmodule Brando.Villain do
   @doc """
   Rerender multiple IDS
   """
-  @spec rerender_html_from_ids({Module, atom, atom}, [Integer.t() | binary]) :: nil | [any()]
+  @spec rerender_html_from_ids({Module, atom, atom}, [integer | binary]) :: nil | [any()]
   def rerender_html_from_ids(_, []), do: nil
   def rerender_html_from_ids(args, ids), do: for(id <- ids, do: rerender_html_from_id(args, id))
 
@@ -174,7 +174,7 @@ defmodule Brando.Villain do
   """
   @spec rerender_html_from_id(
           {schema :: Module, data_field :: atom, html_field :: atom},
-          Integer.t() | binary
+          integer | binary
         ) :: any()
   def rerender_html_from_id({schema, data_field, html_field}, id) do
     query =

@@ -11,9 +11,9 @@ defmodule Brando.Sites do
   alias Brando.Villain
 
   @type changeset :: Ecto.Changeset.t()
-  @type id :: Integer.t() | binary
+  @type id :: integer | binary
   @type identity :: Brando.Sites.Identity.t()
-  @type params :: Map.t()
+  @type params :: map
   @type user :: Brando.Users.User.t()
 
   @doc """

@@ -145,7 +145,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         socket
       ) do
     user = Guardian.Phoenix.Socket.current_resource(socket)
-    Brando.Images.Processing.recreate_sizes_for_image_category(category_id, user)
+    Brando.Images.Processing.recreate_sizes_for_category(category_id, user)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
@@ -155,7 +155,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         socket
       ) do
     user = Guardian.Phoenix.Socket.current_resource(socket)
-    Brando.Images.Processing.recreate_sizes_for_image_series(series_id, user)
+    Brando.Images.Processing.recreate_sizes_for_series(series_id, user)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
