@@ -1,13 +1,16 @@
 defmodule Brando.AdminChannelTest do
   use Brando.ChannelCase, async: false
   use ExUnit.Case, async: false
+
   import Ecto.Query
+
   alias Brando.Factory
   alias Brando.Integration.AdminChannel
   alias Brando.Integration.AdminSocket
   alias Brando.Integration.Endpoint
 
   @endpoint Endpoint
+  @long_timeout 5000
 
   setup do
     user = Factory.insert(:random_user)
@@ -17,6 +20,152 @@ defmodule Brando.AdminChannelTest do
     {:ok, _, socket} = subscribe_and_join(socket, AdminChannel, "admin", %{})
 
     {:ok, %{socket: socket, user: user}}
+  end
+
+  test "images:delete_images", %{socket: socket} do
+    i1 = Factory.insert(:image)
+    i2 = Factory.insert(:image)
+    ids = [i1.id, i2.id]
+
+    ref = push(socket, "images:delete_images", %{"ids" => ids})
+    assert_reply ref, :ok, %{code: 200, ids: ids}
+  end
+
+  test "images:sequence_images", %{socket: socket} do
+    i1 = Factory.insert(:image)
+    i2 = Factory.insert(:image)
+    i3 = Factory.insert(:image)
+
+    assert i1.sequence == 0
+    assert i2.sequence == 0
+    assert i3.sequence == 0
+
+    ref = push(socket, "images:sequence_images", %{"ids" => [i2.id, i3.id, i1.id]})
+    assert_reply ref, :ok, %{code: 200}
+
+    q =
+      from t in Brando.Image,
+        order_by: :sequence,
+        select: [t.id]
+
+    images = Brando.repo().all(q)
+
+    assert images == [[i2.id], [i3.id], [i1.id]]
+  end
+
+  test "images:propagate_category_config", %{socket: socket} do
+    c1 = Factory.insert(:image_category)
+    s1 = Factory.insert(:image_series, image_category: c1)
+    _ = Factory.insert(:image, image_series_id: s1.id)
+
+    ref = push(socket, "images:propagate_category_config", %{"category_id" => c1.id})
+    assert_reply ref, :ok, %{code: 200}
+  end
+
+  test "images:get_category_id_by_slug", %{socket: socket} do
+    c1 = Factory.insert(:image_category, name: "test", slug: "test")
+    ref = push(socket, "images:get_category_id_by_slug", %{"slug" => "non_existing"})
+    assert_reply ref, :error, %{code: 404, message: "Category not found"}
+
+    ref = push(socket, "images:get_category_id_by_slug", %{"slug" => c1.slug})
+    assert_reply ref, :ok, %{code: 200}
+  end
+
+  test "images:create_image_series", %{socket: socket} do
+    c1 = Factory.insert(:image_category)
+    params = %{"name" => "new series", "slug" => "new-series", "image_category_id" => c1.id}
+    ref = push(socket, "images:create_image_series", params)
+    assert_reply ref, :ok, %{code: 200}
+  end
+
+  test "images:get_category_config", %{socket: socket} do
+    c1 = Factory.insert(:image_category)
+    ref = push(socket, "images:get_category_config", %{"category_id" => c1.id})
+    assert_reply ref, :ok, %{code: 200, config: cfg}
+    assert cfg == c1.cfg
+
+    ref = push(socket, "images:get_category_config", %{"category_slug" => c1.slug})
+    assert_reply ref, :ok, %{code: 200, config: cfg}
+    assert cfg == c1.cfg
+  end
+
+  test "images:update_category_config", %{socket: socket} do
+    c1 = Factory.insert(:image_category)
+    new_cfg = Map.put(c1.cfg, :random_filename, true)
+
+    ref =
+      push(socket, "images:update_category_config", %{"category_id" => c1.id, "config" => new_cfg})
+
+    assert_reply ref, :ok, %{code: 200}
+
+    {:ok, c2} = Brando.Images.get_category(c1.id)
+    assert c1.cfg.random_filename == false
+    assert c2.cfg.random_filename == true
+  end
+
+  test "images:get_series_config", %{socket: socket} do
+    c1 = Factory.insert(:image_series)
+    ref = push(socket, "images:get_series_config", %{"series_id" => c1.id})
+    assert_reply ref, :ok, %{code: 200, config: cfg}
+    assert cfg == c1.cfg
+  end
+
+  test "images:update_series_config", %{socket: socket} do
+    c1 = Factory.insert(:image_series)
+    new_cfg = Map.put(c1.cfg, :random_filename, true)
+
+    ref =
+      push(socket, "images:update_series_config", %{"series_id" => c1.id, "config" => new_cfg})
+
+    assert_reply ref, :ok, %{code: 200}
+
+    {:ok, c2} = Brando.Images.get_series(c1.id)
+    assert c1.cfg.random_filename == false
+    assert c2.cfg.random_filename == true
+  end
+
+  test "images:rerender_image_category", %{socket: socket} do
+    c1 = Factory.insert(:image_category)
+    s1 = Factory.insert(:image_series, image_category: c1)
+    _i1 = Factory.insert(:image, image_series_id: s1.id)
+
+    fixture = Path.join([Path.expand("../../", __DIR__), "fixtures", "sample.jpg"])
+    target = Path.join([Brando.Images.Utils.media_path(s1.cfg.upload_path), "1.jpg"])
+    File.mkdir_p!(Path.dirname(target))
+
+    File.cp_r!(
+      fixture,
+      target
+    )
+
+    ref = push(socket, "images:rerender_image_category", %{"category_id" => c1.id})
+    assert_reply ref, :ok, %{code: 200}, @long_timeout
+  end
+
+  test "images:rerender_image_series", %{socket: socket} do
+    c1 = Factory.insert(:image_category)
+    s1 = Factory.insert(:image_series, image_category: c1)
+    _ = Factory.insert(:image, image_series_id: s1.id)
+
+    fixture = Path.join([Path.expand("../../", __DIR__), "fixtures", "sample.jpg"])
+    target = Path.join([Brando.Images.Utils.media_path(s1.cfg.upload_path), "1.jpg"])
+    File.mkdir_p!(Path.dirname(target))
+
+    File.cp_r!(
+      fixture,
+      target
+    )
+
+    ref = push(socket, "images:rerender_image_series", %{"series_id" => s1.id})
+    assert_reply ref, :ok, %{code: 200}, @long_timeout
+  end
+
+  test "images:get_image", %{socket: socket} do
+    i1 = Factory.insert(:image)
+
+    ref = push(socket, "images:get_image", %{"image_id" => i1.id})
+    assert_reply ref, :ok, %{code: 200, image: image}
+    assert image.path == "image/1.jpg"
   end
 
   test "pages:list_parents", %{socket: socket} do

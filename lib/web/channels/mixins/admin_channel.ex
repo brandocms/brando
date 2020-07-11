@@ -6,7 +6,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "datasource:list_available_entries",
     "datasource:list_modules",
     "datasource:list_module_keys",
-    "image:get",
+    "images:get_image",
     "images:delete_images",
     "images:sequence_images",
     "images:get_category_id_by_slug",
@@ -16,6 +16,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "images:propagate_category_config",
     "images:get_series_config",
     "images:update_series_config",
+    "images:rerender_image_category",
     "images:rerender_image_series",
     "livepreview:initialize",
     "livepreview:render",
@@ -157,12 +158,12 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in(
-        "image:get",
-        %{"id" => id},
+        "images:get_image",
+        %{"image_id" => id},
         socket
       ) do
     image = Brando.Images.get_image!(id)
-    {:reply, {:ok, %{status: 200, image: image.image}}, socket}
+    {:reply, {:ok, %{code: 200, image: image.image}}, socket}
   end
 
   def do_handle_in("pages:list_parents", _, socket) do

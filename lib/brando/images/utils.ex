@@ -222,7 +222,7 @@ defmodule Brando.Images.Utils do
     if img_struct != nil do
       # store new image
       image
-      |> schema.changeset(:update, %{image: img_struct})
+      |> schema.changeset(%{image: img_struct})
       |> Brando.repo().update!
     end
   end
