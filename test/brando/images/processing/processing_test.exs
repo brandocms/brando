@@ -23,11 +23,11 @@ defmodule Brando.Images.ProcessingTest do
     path: Path.expand("../../../", __DIR__) <> "/fixtures/sample.png"
   }
 
-  test "create_image_struct" do
+  test "create_image_type_struct" do
     u1 = Factory.insert(:random_user)
     {:ok, upload} = Brando.Upload.process_upload(@up, @cfg)
 
-    {:ok, image_struct} = Processing.create_image_struct(upload, u1)
+    {:ok, image_struct} = Processing.create_image_type_struct(upload, u1)
 
     assert image_struct == %Brando.Type.Image{
              alt: nil,

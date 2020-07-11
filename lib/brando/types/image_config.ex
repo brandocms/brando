@@ -15,10 +15,10 @@ defmodule Brando.Type.ImageConfig do
           default_size: binary,
           upload_path: binary,
           random_filename: boolean,
-          size_limit: integer,
+          size_limit: non_neg_integer,
           sizes: %{optional(binary) => map},
-          srcset: %{optional(binary) => map},
-          target_format: atom
+          srcset: %{optional(binary) => map} | nil,
+          target_format: atom | nil
         }
 
   @derive Jason.Encoder

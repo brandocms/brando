@@ -2,7 +2,7 @@ defmodule Brando.Images.Operations do
   @moduledoc """
   This is where we process images
   """
-  @type image :: Brando.Type.Image.t()
+  @type image_type_struct :: Brando.Type.Image.t()
   @type image_config :: Brando.Type.ImageConfig.t()
   @type operation :: Brando.Images.Operation.t()
   @type operation_result :: Brando.Images.OperationResult.t()
@@ -21,7 +21,7 @@ defmodule Brando.Images.Operations do
 
   """
   @spec create_operations(
-          img_struct :: image,
+          img_struct :: image_type_struct,
           cfg :: image_config,
           user :: user,
           id :: integer | nil
@@ -61,8 +61,8 @@ defmodule Brando.Images.Operations do
   """
   @spec perform_operations(operations :: [operation], user :: user) :: {:ok, [operation_result]}
   def perform_operations(operations, user) do
-    require Logger
     Progress.show_progress(user)
+    require Logger
     Logger.info("==> Brando.Images.Operations: Starting #{Enum.count(operations)} operations..")
     start_msec = :os.system_time(:millisecond)
 

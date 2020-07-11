@@ -13,7 +13,7 @@ defmodule Brando.Images.Processing do
   @type user :: Brando.Users.User.t() | :system
   @type image_schema :: Brando.Image.t()
   @type image_series_schema :: Brando.ImageSeries.t()
-  @type image_struct :: Brando.Type.Image.t()
+  @type image_type_struct :: Brando.Type.Image.t()
   @type image_kind :: :image | :image_series | :image_field
 
   @default_focal %{x: 50, y: 50}
@@ -21,10 +21,9 @@ defmodule Brando.Images.Processing do
   @doc """
   Create an image struct from upload, cfg and extra info
   """
-  @spec create_image_struct(upload :: Upload.t(), user :: user, extra_params :: any()) ::
-          {:ok, image_struct}
-          | {:error, {:create_image_sizes, any()}}
-  def create_image_struct(
+  @spec create_image_type_struct(upload :: Upload.t(), user :: user, extra_params :: any) ::
+          {:error, {:create_image_type_struct, any}} | {:ok, Brando.Type.Image.t()}
+  def create_image_type_struct(
         %Upload{plug: %{uploaded_file: file}, cfg: cfg},
         user,
         extra_params \\ %{}
@@ -37,21 +36,21 @@ defmodule Brando.Images.Processing do
     |> Images.Utils.media_path()
     |> Fastimage.size()
     |> case do
-      {:ok, size_struct} ->
-        image_struct =
+      {:ok, %{width: width, height: height}} ->
+        image_type_struct =
           %Brando.Type.Image{}
           |> Map.put(:path, new_path)
-          |> Map.put(:width, size_struct.width)
-          |> Map.put(:height, size_struct.height)
+          |> Map.put(:width, width)
+          |> Map.put(:height, height)
           |> Map.put(:alt, Map.get(extra_params, :alt))
           |> Map.put(:title, Map.get(extra_params, :title))
           |> Map.put(:focal, Map.get(extra_params, :focal, @default_focal))
 
-        {:ok, image_struct}
+        {:ok, image_type_struct}
 
       {:error, _} ->
         Progress.hide_progress(user)
-        {:error, {:create_image_sizes, "Fastimage.size() failed."}}
+        {:error, {:create_image_type_struct, "Fastimage.size() failed."}}
     end
   end
 

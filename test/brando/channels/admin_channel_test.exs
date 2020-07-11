@@ -306,7 +306,7 @@ defmodule Brando.AdminChannelTest do
 
       ref = push(socket, "page_fragment:duplicate", %{"id" => 9_999_999_999})
 
-      assert_reply ref, :ok, %{
+      assert_reply ref, :error, %{
         code: 400,
         message: "Fragment not found!"
       }

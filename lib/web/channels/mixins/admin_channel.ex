@@ -1,4 +1,6 @@
 defmodule Brando.Mixin.Channels.AdminChannelMixin do
+  alias Brando.Pages
+
   @keys [
     "config:get",
     "config:set",
@@ -167,47 +169,47 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("pages:list_parents", _, socket) do
-    {:ok, parents} = Brando.Pages.list_parents()
+    {:ok, parents} = Pages.list_parents()
     {:reply, {:ok, %{code: 200, parents: parents}}, socket}
   end
 
   def do_handle_in("pages:list_templates", _, socket) do
-    {:ok, templates} = Brando.Pages.list_templates()
+    {:ok, templates} = Pages.list_templates()
     {:reply, {:ok, %{code: 200, templates: templates}}, socket}
   end
 
   def do_handle_in("pages:sequence_pages", params, socket) do
-    Brando.Pages.Page.sequence(params)
+    Pages.Page.sequence(params)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
   def do_handle_in("page:delete", %{"id" => page_id}, socket) do
-    Brando.Pages.delete_page(page_id)
+    Pages.delete_page(page_id)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
   def do_handle_in("page:duplicate", %{"id" => page_id}, socket) do
-    {:ok, new_page} = Brando.Pages.duplicate_page(page_id)
+    {:ok, new_page} = Pages.duplicate_page(page_id)
     {:reply, {:ok, %{code: 200, page: new_page}}, socket}
   end
 
   def do_handle_in("page:rerender", %{"id" => page_id}, socket) do
-    Brando.Pages.rerender_page(String.to_integer(page_id))
+    Pages.rerender_page(String.to_integer(page_id))
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
   def do_handle_in("page:rerender_all", _, socket) do
-    Brando.Pages.rerender_pages()
+    Pages.rerender_pages()
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
   def do_handle_in("page_fragments:sequence_fragments", params, socket) do
-    Brando.Pages.PageFragment.sequence(params)
+    Pages.PageFragment.sequence(params)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
   def do_handle_in("page_fragment:duplicate", %{"id" => page_id}, socket) do
-    case Brando.Pages.duplicate_page_fragment(page_id) do
+    case Pages.duplicate_page_fragment(page_id) do
       {:ok, new_fragment} ->
         {:reply, {:ok, %{code: 200, page_fragment: new_fragment}}, socket}
 
@@ -217,12 +219,12 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("page_fragment:rerender", %{"id" => fragment_id}, socket) do
-    Brando.Pages.rerender_fragment(String.to_integer(fragment_id))
+    Pages.rerender_fragment(String.to_integer(fragment_id))
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
   def do_handle_in("page_fragment:rerender_all", _, socket) do
-    Brando.Pages.rerender_fragments()
+    Pages.rerender_fragments()
     {:reply, {:ok, %{code: 200}}, socket}
   end
 

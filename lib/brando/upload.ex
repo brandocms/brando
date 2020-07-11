@@ -19,13 +19,8 @@ defmodule Brando.Upload do
 
   @type t :: %__MODULE__{}
   @type img_config :: Brando.Type.ImageConfig.t()
-  @type upload_error_input ::
-          :error
-          | {:error, :empty_filename}
-          | {:error, :cp | :mkdir, any()}
-          | {:error, :content_type, any(), any()}
-          | {:error, {:create_image_sizes, any()}}
-  @type upload_error_result :: {:error, String.t()}
+  @type upload_error_input :: :error | {:error, any}
+  @type upload_error_result :: {:error, binary}
 
   import Brando.Gettext
   import Brando.Utils
@@ -35,7 +30,12 @@ defmodule Brando.Upload do
   Checks `plug` for filename, checks mimetype,
   creates upload path and copies files
   """
-  @spec process_upload(upload_plug :: Plug.Upload.t(), cfg_struct :: img_config) :: {:ok, t()}
+  @spec process_upload(upload_plug :: Plug.Upload.t(), cfg_struct :: img_config) ::
+          {:ok, t()}
+          | {:error, :empty_filename}
+          | {:error, :content_type, binary, any}
+          | {:error, :mkdir, binary}
+          | {:error, :cp, {binary, binary, binary}}
   def process_upload(plug, cfg_struct) do
     with {:ok, upload} <- create_upload_struct(plug, cfg_struct),
          {:ok, upload} <- get_valid_filename(upload),
@@ -44,18 +44,6 @@ defmodule Brando.Upload do
          {:ok, upload} <- create_upload_path(upload),
          {:ok, upload} <- copy_uploaded_file(upload) do
       {:ok, upload}
-    else
-      {:error, :empty_filename} ->
-        {:error, :empty_filename}
-
-      {:error, :content_type, content_type, allowed_mimetypes} ->
-        {:error, :content_type, content_type, allowed_mimetypes}
-
-      {:error, :mkdir, reason} ->
-        {:error, :mkdir, reason}
-
-      {:error, :cp, {reason, src, dest}} ->
-        {:error, :cp, {reason, src, dest}}
     end
   end
 
@@ -73,30 +61,35 @@ defmodule Brando.Upload do
 
   @spec handle_upload_error(upload_error_input) :: upload_error_result
   def handle_upload_error(err) do
-    case err do
-      {:error, :empty_filename} ->
-        {:error, gettext("Empty filename given. Make sure you have a valid filename.")}
+    message =
+      case err do
+        {:error, {:create_image_type_struct, _}} ->
+          gettext("Failed creating image type struct")
 
-      {:error, :content_type, content_type, allowed_content_types} ->
-        {:error,
-         gettext("File type not allowed: %{type}. Must be one of: %{allowed}",
-           type: content_type,
-           allowed: inspect(allowed_content_types)
-         )}
+        {:error, :empty_filename} ->
+          gettext("Empty filename given. Make sure you have a valid filename.")
 
-      {:error, {:create_image_sizes, reason}} ->
-        {:error, gettext("Error while creating image sizes") <> " -> #{inspect(reason)}"}
+        {:error, :content_type, content_type, allowed_content_types} ->
+          gettext("File type not allowed: %{type}. Must be one of: %{allowed}",
+            type: content_type,
+            allowed: inspect(allowed_content_types)
+          )
 
-      {:error, :mkdir, reason} ->
-        {:error, gettext("Path creation failed") <> " -> #{inspect(reason)}"}
+        {:error, {:create_image_sizes, reason}} ->
+          gettext("Error while creating image sizes") <> " -> #{inspect(reason)}"
 
-      {:error, :cp, {reason, src, dest}} ->
-        {:error,
-         gettext("Error while copying") <> " -> #{inspect(reason)}\nsrc..: #{src}\ndest.: #{dest}"}
+        {:error, :mkdir, reason} ->
+          gettext("Path creation failed") <> " -> #{inspect(reason)}"
 
-      :error ->
-        {:error, gettext("Unknown error while creating image sizes.")}
-    end
+        {:error, :cp, {reason, src, dest}} ->
+          gettext("Error while copying") <>
+            " -> #{inspect(reason)}\nsrc..: #{src}\ndest.: #{dest}"
+
+        :error ->
+          gettext("Unknown error while creating image sizes.")
+      end
+
+    {:error, message}
   end
 
   defp create_upload_struct(plug, cfg_struct) do

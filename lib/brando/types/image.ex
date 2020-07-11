@@ -8,13 +8,13 @@ defmodule Brando.Type.Image do
   @behaviour Ecto.Type
 
   @type t :: %__MODULE__{
-          title: binary,
-          credits: binary,
-          alt: binary,
-          path: binary,
-          sizes: %{optional(binary) => map},
-          width: integer,
-          height: integer,
+          title: binary | nil,
+          credits: binary | nil,
+          alt: binary | nil,
+          path: binary | nil,
+          sizes: map,
+          width: non_neg_integer | nil,
+          height: non_neg_integer | nil,
           focal: Focal.t()
         }
 

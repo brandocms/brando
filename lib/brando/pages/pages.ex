@@ -7,6 +7,7 @@ defmodule Brando.Pages do
 
   alias Brando.Pages.Page
   alias Brando.Pages.PageFragment
+  alias Brando.Users.User
   alias Brando.Villain
 
   import Ecto.Query
@@ -489,22 +490,19 @@ defmodule Brando.Pages do
   Duplicate page fragment
   """
   @spec duplicate_page_fragment(fragment_id :: String.t() | Integer.t()) ::
-          {:ok, map} | {:error, {:page_fragment, :not_found}}
+          {:ok, map} | {:error, {:page_fragment, :not_found}} | {:error, changeset}
   def duplicate_page_fragment(fragment_id) do
     fragment_id = (is_binary(fragment_id) && String.to_integer(fragment_id)) || fragment_id
 
-    with {:ok, fragment} when is_map(fragment) <- get_page_fragment(fragment_id),
-         fragment when is_map(fragment) <- Map.merge(fragment, %{key: "#{fragment.key}_kopi"}),
-         fragment when is_map(fragment) <- Map.delete(fragment, [:id, :parent]),
-         fragment when is_map(fragment) <- Map.from_struct(fragment),
-         {:ok, new_fragment} <- create_page_fragment(fragment, %{id: fragment.creator_id}) do
-      {:ok, new_fragment}
+    with {:ok, fragment} <- get_page_fragment(fragment_id) do
+      fragment
+      |> Map.merge(%{key: "#{fragment.key}_kopi"})
+      |> Map.delete([:id, :parent])
+      |> Map.from_struct()
+      |> create_page_fragment(%User{id: fragment.creator_id})
     else
       {:error, {:page_fragment, :not_found}} ->
         {:error, {:page_fragment, :not_found}}
-
-      {:error, changeset} ->
-        {:error, changeset}
     end
   end
 

@@ -29,10 +29,13 @@ defmodule Brando.Images.Upload.Field do
           upload_params :: any(),
           cfg :: image_config,
           user :: any()
-        ) :: {:ok, {:handled, atom, image_type}} | {:error, {atom, {:error, binary}}}
+        ) :: {:ok, {:handled, atom, image_type}} | {:error, any}
   def handle_upload(name, upload_params, cfg, user) do
+    name = (is_binary(name) && String.to_existing_atom(name)) || name
+
     with {:ok, upload} <- Upload.process_upload(upload_params.file, cfg),
-         {:ok, img_struct} <- Images.Processing.create_image_struct(upload, user, upload_params),
+         {:ok, img_struct} <-
+           Images.Processing.create_image_type_struct(upload, user, upload_params),
          {:ok, operations} <- Images.Operations.create_operations(img_struct, cfg, user),
          {:ok, results} <- Images.Operations.perform_operations(operations, user) do
       img_struct =
@@ -42,7 +45,8 @@ defmodule Brando.Images.Upload.Field do
 
       {:ok, {:handled, name, img_struct}}
     else
-      err -> {:error, {name, Upload.handle_upload_error(err)}}
+      err ->
+        {:error, {name, Upload.handle_upload_error(err)}}
     end
   end
 end
