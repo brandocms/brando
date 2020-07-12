@@ -39,7 +39,10 @@ defmodule Brando.Factory do
       type: "string",
       label: "Global label",
       key: sequence(:key, &"key-#{&1}"),
-      data: %{}
+      data: %{
+        "type" => "string",
+        "value" => "Hello!"
+      }
     }
   end
 
