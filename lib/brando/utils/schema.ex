@@ -39,21 +39,6 @@ defmodule Brando.Utils.Schema do
 
   def put_creator(params, :system), do: params
 
-  def put_creator(params, user) when is_map(user) do
-    IO.warn(
-      """
-      Using put_creator/2 with schema instead of changeset is deprecated.
-
-      - Move `put_creator` to after `cast` but before `validate_required` in your
-      changeset function instead..
-      """,
-      elem(Process.info(self(), :current_stacktrace), 1)
-    )
-
-    key = (is_atom(List.first(Map.keys(params))) && :creator_id) || "creator_id"
-    Map.put(params, key, user.id)
-  end
-
   @doc """
   Put slug in changeset
   """
@@ -80,13 +65,13 @@ defmodule Brando.Utils.Schema do
     slug = Ecto.Changeset.get_change(cs, :slug)
 
     if slug do
-      unique_slug =
-        case get_unique_slug(cs, q, slug, 0) do
-          {:ok, unique_slug} -> unique_slug
-          {:error, :too_many_attempts} -> slug
-        end
+      case get_unique_slug(cs, q, slug, 0) do
+        {:ok, unique_slug} ->
+          Ecto.Changeset.put_change(cs, :slug, unique_slug)
 
-      Ecto.Changeset.put_change(cs, :slug, unique_slug)
+        {:error, :too_many_attempts} ->
+          Ecto.Changeset.add_error(cs, :slug, "Klarte ikke finne en ledig URL tamp.")
+      end
     else
       cs
     end

@@ -6,7 +6,6 @@ defmodule Brando.Sites do
   import Ecto.Query
 
   alias Brando.Cache
-  alias Brando.Images
   alias Brando.Sites.Identity
   alias Brando.Villain
 
