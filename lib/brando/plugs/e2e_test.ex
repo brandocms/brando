@@ -1,4 +1,3 @@
-# coveralls-ignore-start
 defmodule Brando.Plug.E2ETest do
   use Plug.Router
 
@@ -57,5 +56,3 @@ defmodule Brando.Plug.E2ETest do
 
   match _, do: send_resp(conn, 404, "not found")
 end
-
-# coveralls-ignore-stop

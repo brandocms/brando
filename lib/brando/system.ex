@@ -105,7 +105,7 @@ defmodule Brando.System do
   end
 
   defp check_valid_globals do
-    search_terms = "\\${GLOBAL:(\\w+)}"
+    search_terms = ["\\${GLOBAL:(\\w+)}", "\\${global:(\\w+)}"]
 
     for {schema, fields} <- Villain.list_villains() do
       Enum.reduce(fields, [], fn {_, data_field, _html_field}, acc ->

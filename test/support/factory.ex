@@ -1,4 +1,3 @@
-# coveralls-ignore-start
 defmodule Brando.Factory do
   use ExMachina.Ecto, repo: Brando.repo()
 
@@ -237,5 +236,3 @@ defmodule Brando.Factory do
     }
   end
 end
-
-# coveralls-ignore-stop

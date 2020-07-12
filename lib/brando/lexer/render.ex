@@ -20,7 +20,6 @@ defmodule Brando.Lexer.Render do
       Brando.Lexer.Render.Text,
       Brando.Lexer.Render.Object,
       Brando.Lexer.Render.ControlFlow,
-      Brando.Lexer.Render.Variable,
       Brando.Lexer.Render.Iteration
     ]
     |> do_render(tag, context)

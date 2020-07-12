@@ -44,15 +44,16 @@ defmodule Brando.Lexer.Argument do
   end
 
   # ${global:category.key}
-  defp do_eval(_, [{:key, "global"} | [{:key, category}, {:key, key}]]) do
-    global = Globals.get_global!("#{category}.#{key}")
+  defp do_eval(value, [{:key, "global"} | [{:key, category}, {:key, key}]]) do
+    globals = Map.get(value, "globals", %{})
+    global = Globals.get_global!("#{category}.#{key}", globals)
     do_eval(global, [])
   end
 
   # ${link:instagram.*}
   defp do_eval(value, [{:key, "link"} | [{:key, link} | tail]]) do
-    links = Map.get(value, "links")
-    link = Enum.find(links, &(String.downcase(&1.name) == link))
+    links = Map.get(value, "links", [])
+    link = Enum.find(links, &(String.downcase(&1.name) == link)) || %{}
     do_eval(link, tail)
   end
 

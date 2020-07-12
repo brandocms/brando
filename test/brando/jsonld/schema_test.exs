@@ -35,6 +35,38 @@ defmodule Brando.JSONLDSchemaTest do
     @image
   end
 
+  import CompileTimeAssertions
+
+  test "field without populator function raises" do
+    assert_compile_time_raise(RuntimeError, "requires a populator function - someField", fn ->
+      import Brando.JSONLD.Schema
+      field "someField", Brando.JSONLD.Schema.ImageObject, nil
+    end)
+  end
+
+  test "field without schema raises" do
+    assert_compile_time_raise(RuntimeError, "requires a schema as second arg - someField", fn ->
+      import Brando.JSONLD.Schema
+      field "someField", "what is this?", :something
+    end)
+  end
+
+  test "convert_format raises on missing populator" do
+    assert_raise RuntimeError, fn ->
+      Brando.JSONLD.Schema.convert_format([
+        {"fieldName", Brando.JSONLD.Schema.ImageObject, nil}
+      ])
+    end
+  end
+
+  test "convert_format raises on binary schema" do
+    assert_raise RuntimeError, fn ->
+      Brando.JSONLD.Schema.convert_format([
+        {"fieldName", "Binary.Schema", :dummy}
+      ])
+    end
+  end
+
   test "extract json-ld" do
     extracted_json_ld = Brando.Pages.Page.extract_json_ld(@mock_data)
 

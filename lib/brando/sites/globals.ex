@@ -15,9 +15,7 @@ defmodule Brando.Globals do
   @doc """
   Get global by key path
   """
-  def get_global(key_path) do
-    globals = Cache.Globals.get()
-
+  def get_global(key_path, globals \\ Cache.Globals.get()) do
     case Map.fetch(globals, key_path) do
       {:ok, val} -> {:ok, val}
       :error -> {:error, {:global, :not_found}}
@@ -29,6 +27,13 @@ defmodule Brando.Globals do
   """
   def get_global!(key_path) do
     case get_global(key_path) do
+      {:ok, global} -> global
+      _ -> ""
+    end
+  end
+
+  def get_global!(key_path, globals) do
+    case get_global(key_path, globals) do
       {:ok, global} -> global
       _ -> ""
     end
