@@ -10,7 +10,6 @@ brando.sublime-workspace
 node_modules
 brando.sublime-project
 excoveralls.post.json
-coveralls.json
 doc
 cover
 npm-debug.log

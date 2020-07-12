@@ -1,0 +1,17 @@
+{
+  "skip_files": [
+    "lib/brando/lexer/parser/base.ex",
+    "lib/brando/lexer/parser/field.ex",
+    "lib/brando/lexer/parser/literal.ex",
+    "lib/brando/lexer/parser/object.ex",
+    "lib/brando/lexer/parser/tag.ex",
+    "lib/brando/lexer/parser/tag/control_flow.ex",
+    "lib/brando/lexer/parser/tag/iteration.ex",
+    "lib/brando/lexer/parser/tag/variable.ex",
+    "lib/mix/tasks/brando.static.deploy.ex",
+    "lib/brando/plugs/e2e_test.ex",
+    "test/support/conn_case.ex",
+    "test/support/factory.ex",
+    "test/support/router_helper.ex"
+  ]
+}
