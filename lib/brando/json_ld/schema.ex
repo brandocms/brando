@@ -70,12 +70,12 @@ defmodule Brando.JSONLD.Schema do
     end
   end
 
-  # coveralls-ignore start
+  # coveralls-ignore-start
   defmacro json_ld_schema(schema_module, do: block) do
     do_json_ld_schema(schema_module, block)
   end
 
-  # coveralls-ignore end
+  # coveralls-ignore-stop
 
   defp do_json_ld_schema(schema_module, block) do
     quote do
