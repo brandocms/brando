@@ -6,6 +6,11 @@ defmodule Brando.MetaSchemaTest do
     description: "Our description"
   }
 
+  @data %{
+    title: "Our title",
+    meta_description: "Our description"
+  }
+
   defmodule Page do
     use Brando.Meta.Schema
 
@@ -20,12 +25,21 @@ defmodule Brando.MetaSchemaTest do
     def generator_function(_), do: "Generated."
   end
 
-  test "extract meta" do
+  test "extract dummy meta" do
     extracted_meta = Brando.MetaSchemaTest.Page.extract_meta(@mock_data)
 
     assert extracted_meta["description"] == "@ Our description"
     assert extracted_meta["title"] == "Our title"
     assert extracted_meta["mutated_title"] == ">> Our title"
     assert extracted_meta["generated_title"] == "Generated."
+  end
+
+  test "extract real meta" do
+    extracted_meta = Brando.Pages.Page.extract_meta(@data)
+
+    assert extracted_meta["description"] == "Our description"
+    assert extracted_meta["title"] == "Our title"
+
+    assert :__meta_field__ in Keyword.keys(Brando.Pages.Page.__info__(:functions))
   end
 end

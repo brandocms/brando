@@ -5,6 +5,7 @@ defmodule Brando.Pages.PageFragment do
 
   @type t :: %__MODULE__{}
   @type changeset :: Ecto.Changeset.t()
+  @type user :: Brando.Users.User.t() | :system
 
   use Brando.Web, :schema
   use Brando.Villain.Schema, generate_protocol: false
@@ -54,10 +55,8 @@ defmodule Brando.Pages.PageFragment do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, map()) :: changeset
-  def changeset(schema, params \\ %{}, user \\ :system)
-
-  def changeset(schema, params, user) do
+  @spec changeset(t, map(), user) :: changeset
+  def changeset(schema, params \\ %{}, user \\ :system) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> put_creator(user)
@@ -84,7 +83,7 @@ defmodule Brando.Pages.PageFragment do
         language = Ecto.Changeset.get_field(changeset, :language)
 
         # build a fragment ref string
-        ref_string = "${FRAGMENT:#{parent_key}/#{key}/#{language}}"
+        ref_string = "${fragment:#{parent_key}/#{key}/#{language}}"
 
         if String.contains?(json, ref_string) do
           Ecto.Changeset.add_error(

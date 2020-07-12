@@ -4,6 +4,7 @@ defmodule Brando.Pages.Page do
   """
 
   @type t :: %__MODULE__{}
+  @type user :: Brando.Users.User.t() | :system
 
   use Brando.Web, :schema
   use Brando.Field.Image.Schema
@@ -104,10 +105,8 @@ defmodule Brando.Pages.Page do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, Keyword.t() | Options.t()) :: Ecto.Changeset.t()
-  def changeset(schema, params \\ %{}, user \\ :system)
-
-  def changeset(schema, params, user) do
+  @spec changeset(t, Keyword.t() | Options.t(), user) :: Ecto.Changeset.t()
+  def changeset(schema, params \\ %{}, user \\ :system) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> put_creator(user)
@@ -117,32 +116,5 @@ defmodule Brando.Pages.Page do
     |> validate_upload({:image, :meta_image}, user)
     |> avoid_slug_collision()
     |> generate_html()
-  end
-
-  @doc """
-  Encodes `data` in `params` if not a binary.
-  """
-  @deprecated "Not in use after conversion to jsonb"
-  def encode_data(params) do
-    if is_list(params.data) do
-      Map.put(params, :data, Jason.encode!(params.data))
-    else
-      params
-    end
-  end
-
-  @doc """
-  Order by language, status, key and insertion
-  """
-  @deprecated "Use context functions instead: Brando.Pages.*"
-  def order(query) do
-    from m in query,
-      order_by: [
-        asc: m.language,
-        asc: m.sequence,
-        asc: m.status,
-        desc: m.key,
-        desc: m.inserted_at
-      ]
   end
 end
