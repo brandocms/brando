@@ -51,13 +51,14 @@ defmodule Brando.Images.Operations.Sizing do
 
     params = ~w(#{crop} #{modifier} #{size} --output #{image_dest_path} -i #{image_src_path})
 
-    System.cmd("gifsicle", params, stderr_to_stdout: true)
+    Images.Processor.Commands.delegate("gifsicle", params, stderr_to_stdout: true)
 
     {:ok,
      %Images.TransformResult{
        id: id,
        size_key: size_key,
-       image_path: image_dest
+       image_path: image_dest,
+       cmd_params: Enum.join(params, " ")
      }}
   end
 

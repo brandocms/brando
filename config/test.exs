@@ -15,6 +15,7 @@ config :brando, Brando.Integration.Repo,
   pool_overflow: 0
 
 config :brando, Brando.Images,
+  commands_module: Brando.Integration.Processor.Commands,
   default_config: %{
     allowed_mimetypes: ["image/jpeg", "image/png"],
     default_size: "medium",

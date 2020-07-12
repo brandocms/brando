@@ -7,6 +7,11 @@ defmodule Brando.Images.Processor.Mogrify do
   alias Brando.Images
 
   @doc """
+  Wrapper for System.cmd
+  """
+  def command(cmd, params, opts), do: System.cmd(cmd, params, opts)
+
+  @doc """
   Process image conversion when crop is false
   """
   def process_image(%Images.ConversionParameters{

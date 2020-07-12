@@ -126,6 +126,12 @@ defmodule Brando.Integration.AdminChannel do
   # end
 end
 
+defmodule Brando.Integration.Processor.Commands do
+  def command(_, _, _) do
+    {:ok, 0}
+  end
+end
+
 defmodule Brando.Integration.PageView do
   use Phoenix.View, root: "test/fixtures/templates"
 end

@@ -5,8 +5,14 @@ defmodule Brando.Images.Processor.Sharp do
 
   require Logger
   alias Brando.Images
+  alias Brando.Images.Processor
 
   @behaviour Brando.Images.Processor
+
+  @doc """
+  Wrapper for System.cmd
+  """
+  def command(cmd, params, opts), do: System.cmd(cmd, params, opts)
 
   @doc """
   Process image conversion when crop is false
@@ -57,7 +63,7 @@ defmodule Brando.Images.Processor.Sharp do
 
     params = List.flatten(file_params ++ extra_params ++ resize_params)
 
-    case System.cmd("sharp", params, stderr_to_stdout: true) do
+    case Processor.Commands.delegate("sharp", params, stderr_to_stdout: true) do
       {error_msg, 1} ->
         Logger.error("""
         ==> process_image/ERROR
@@ -80,7 +86,8 @@ defmodule Brando.Images.Processor.Sharp do
      %Images.TransformResult{
        id: id,
        size_key: size_key,
-       image_path: image_dest_rel_path
+       image_path: image_dest_rel_path,
+       cmd_params: Enum.join(params, " ")
      }}
   end
 
@@ -138,7 +145,7 @@ defmodule Brando.Images.Processor.Sharp do
     params =
       List.flatten(file_params ++ extra_params ++ resize_params ++ ["--"] ++ extract_params)
 
-    case System.cmd("sharp", params, stderr_to_stdout: true) do
+    case Processor.Commands.delegate("sharp", params, stderr_to_stdout: true) do
       {error_msg, 1} ->
         Logger.error("""
         ==> process_image/ERROR
@@ -164,12 +171,13 @@ defmodule Brando.Images.Processor.Sharp do
      %Images.TransformResult{
        id: id,
        size_key: size_key,
-       image_path: image_dest_rel_path
+       image_path: image_dest_rel_path,
+       cmd_params: Enum.join(params, " ")
      }}
   end
 
   def confirm_executable_exists do
-    case System.cmd("sharp", ["--version"]) do
+    case Processor.Commands.delegate("sharp", ["--version"], []) do
       {_, 0} ->
         {:ok, {:executable, :exists}}
 

@@ -6,6 +6,25 @@ defmodule Brando.Images.Processing.SizingTest do
   import Brando.Images.Operations.Sizing
   alias Brando.Images.ConversionParameters
 
+  test "get_size_cfg_orientation" do
+    size_cfg = %{
+      "portrait" => %{"crop" => true, "quality" => 70, "size" => "200x500"},
+      "landscape" => %{"crop" => true, "quality" => 70, "size" => "500x200"}
+    }
+
+    assert get_size_cfg_orientation(size_cfg, 200, 500) == %{
+             "crop" => true,
+             "quality" => 70,
+             "size" => "200x500"
+           }
+
+    assert get_size_cfg_orientation(size_cfg, 500, 200) == %{
+             "crop" => true,
+             "quality" => 70,
+             "size" => "500x200"
+           }
+  end
+
   test "add_crop_dimensions" do
     cp = %ConversionParameters{
       crop: true,
@@ -62,92 +81,236 @@ defmodule Brando.Images.Processing.SizingTest do
   end
 
   test "add_anchor" do
-    %ConversionParameters{
-      crop: true,
-      original_width: 1000,
-      original_height: 500,
-      quality: 100,
-      focal_point: %{x: 100, y: 100},
-      size_cfg: %{"crop" => true, "quality" => 70, "size" => "50x200"}
-    }
+    focal = %{x: 100, y: 100}
+    size_cfg = %{"crop" => true, "quality" => 70, "size" => "50x200"}
+
+    res =
+      %ConversionParameters{
+        original_width: 1000,
+        original_height: 500
+      }
+      |> cv(size_cfg, focal)
+
+    assert res == %Brando.Images.ConversionParameters{
+             anchor: %{x: 350, y: 0},
+             crop: true,
+             crop_height: 200,
+             crop_values: %{height: 200, left: 350, top: 0, width: 50},
+             crop_width: 50,
+             focal_point: %{x: 100, y: 100},
+             format: nil,
+             id: nil,
+             image: nil,
+             image_dest_path: nil,
+             image_dest_rel_path: nil,
+             image_src_path: nil,
+             original_focal_point: %{x: 1000, y: 500},
+             original_height: 500,
+             original_width: 1000,
+             quality: 70,
+             resize_height: 200,
+             resize_values: %{height: 200, width: 400},
+             resize_width: 400,
+             size_cfg: %{"crop" => true, "quality" => 70, "size" => "50x200"},
+             size_key: nil,
+             transformed_focal_point: %{x: 400, y: 200}
+           }
+  end
+
+  test "add_anchor smaller width than crop" do
+    focal = %{x: 100, y: 100}
+    size_cfg = %{"crop" => true, "quality" => 70, "size" => "50x200"}
+
+    res =
+      %ConversionParameters{
+        original_width: 20,
+        original_height: 500
+      }
+      |> cv(size_cfg, focal)
+
+    assert res == %Brando.Images.ConversionParameters{
+             anchor: %{x: 0, y: 1050},
+             crop: true,
+             crop_height: 200,
+             crop_values: %{height: 200, left: 0, top: 1050, width: 50},
+             crop_width: 50,
+             focal_point: %{x: 100, y: 100},
+             format: nil,
+             id: nil,
+             image: nil,
+             image_dest_path: nil,
+             image_dest_rel_path: nil,
+             image_src_path: nil,
+             original_focal_point: %{x: 20, y: 500},
+             original_height: 500,
+             original_width: 20,
+             quality: 70,
+             resize_height: 1250,
+             resize_values: %{height: 1250, width: 50},
+             resize_width: 50,
+             size_cfg: %{"crop" => true, "quality" => 70, "size" => "50x200"},
+             size_key: nil,
+             transformed_focal_point: %{x: 50, y: 1250}
+           }
+  end
+
+  test "add_values WxH" do
+    focal = %{x: 50, y: 50}
+    size_cfg = %{"crop" => false, "quality" => 70, "size" => "200x200"}
+
+    res =
+      %ConversionParameters{
+        original_width: 500,
+        original_height: 500
+      }
+      |> cv(size_cfg, focal)
+
+    assert res == %Brando.Images.ConversionParameters{
+             anchor: nil,
+             crop: false,
+             crop_height: nil,
+             crop_values: nil,
+             crop_width: nil,
+             focal_point: %{x: 50, y: 50},
+             format: nil,
+             id: nil,
+             image: nil,
+             image_dest_path: nil,
+             image_dest_rel_path: nil,
+             image_src_path: nil,
+             original_focal_point: nil,
+             original_height: 500,
+             original_width: 500,
+             quality: 70,
+             resize_height: nil,
+             resize_values: %{height: 200, width: 200},
+             resize_width: nil,
+             size_cfg: %{"crop" => false, "quality" => 70, "size" => "200x200"},
+             size_key: nil,
+             transformed_focal_point: nil
+           }
+  end
+
+  test "add_values xH" do
+    focal = %{x: 50, y: 50}
+    size_cfg = %{"crop" => false, "quality" => 70, "size" => "x200"}
+
+    res =
+      %ConversionParameters{
+        original_width: 500,
+        original_height: 500
+      }
+      |> cv(size_cfg, focal)
+
+    assert res == %Brando.Images.ConversionParameters{
+             anchor: nil,
+             crop: false,
+             crop_height: nil,
+             crop_values: nil,
+             crop_width: nil,
+             focal_point: %{x: 50, y: 50},
+             format: nil,
+             id: nil,
+             image: nil,
+             image_dest_path: nil,
+             image_dest_rel_path: nil,
+             image_src_path: nil,
+             original_focal_point: nil,
+             original_height: 500,
+             original_width: 500,
+             quality: 70,
+             resize_height: nil,
+             resize_values: %{height: 200},
+             resize_width: nil,
+             size_cfg: %{"crop" => false, "quality" => 70, "size" => "x200"},
+             size_key: nil,
+             transformed_focal_point: nil
+           }
+  end
+
+  test "add_values Wx" do
+    focal = %{x: 50, y: 50}
+    size_cfg = %{"crop" => false, "quality" => 70, "size" => "200x"}
+
+    res =
+      %ConversionParameters{
+        original_width: 500,
+        original_height: 500
+      }
+      |> cv(size_cfg, focal)
+
+    assert res == %Brando.Images.ConversionParameters{
+             anchor: nil,
+             crop: false,
+             crop_height: nil,
+             crop_values: nil,
+             crop_width: nil,
+             focal_point: %{x: 50, y: 50},
+             format: nil,
+             id: nil,
+             image: nil,
+             image_dest_path: nil,
+             image_dest_rel_path: nil,
+             image_src_path: nil,
+             original_focal_point: nil,
+             original_height: 500,
+             original_width: 500,
+             quality: 70,
+             resize_height: nil,
+             resize_values: %{width: 200},
+             resize_width: nil,
+             size_cfg: %{"crop" => false, "quality" => 70, "size" => "200x"},
+             size_key: nil,
+             transformed_focal_point: nil
+           }
+  end
+
+  test "add_values W" do
+    focal = %{x: 50, y: 50}
+    size_cfg = %{"crop" => false, "quality" => 70, "size" => "200"}
+
+    res =
+      %ConversionParameters{
+        original_width: 500,
+        original_height: 500
+      }
+      |> cv(size_cfg, focal)
+
+    assert res == %Brando.Images.ConversionParameters{
+             anchor: nil,
+             crop: false,
+             crop_height: nil,
+             crop_values: nil,
+             crop_width: nil,
+             focal_point: %{x: 50, y: 50},
+             format: nil,
+             id: nil,
+             image: nil,
+             image_dest_path: nil,
+             image_dest_rel_path: nil,
+             image_src_path: nil,
+             original_focal_point: nil,
+             original_height: 500,
+             original_width: 500,
+             quality: 70,
+             resize_height: nil,
+             resize_values: %{width: 200},
+             resize_width: nil,
+             size_cfg: %{"crop" => false, "quality" => 70, "size" => "200"},
+             size_key: nil,
+             transformed_focal_point: nil
+           }
+  end
+
+  defp cv(conversion_parameters, size_cfg, focal) do
+    conversion_parameters
+    |> add_size_cfg(size_cfg)
+    |> add_quality()
+    |> add_focal_point(focal)
+    |> add_crop_flag()
     |> add_crop_dimensions()
     |> add_resize_dimensions()
     |> add_anchor()
+    |> add_values()
   end
-
-  # test "get_original_focal_point" do
-  #   focal = %{"x" => 50, "y" => 50}
-  #   original_width = 1000
-  #   original_height = 500
-  #   assert get_original_focal_point(focal, original_width, original_height) == %{x: 500.0, y: 250.0}
-
-  #   focal = %{"x" => 0, "y" => 50}
-  #   assert get_original_focal_point(focal, original_width, original_height) == %{x: 0, y: 250.0}
-  # end
-
-  # test "transform_focal_point" do
-  #   original_focal_point = %{x: 500.0, y: 250.0}
-  #   original_width = 1000
-  #   original_height = 500
-  #   resized_width = 1000
-  #   resized_height = 500
-  #   assert transform_focal_point(original_focal_point, original_width, original_height, resized_width, resized_height)
-  #          == %{x: 500.0, y: 250.0}
-
-  #   resized_width = 500
-  #   resized_height = 250
-  #   assert transform_focal_point(original_focal_point, original_width, original_height, resized_width, resized_height)
-  #          == %{x: 250.0, y: 125.0}
-  # end
-
-  # test "get_anchor" do
-  #   focal = %{"x" => 100, "y" => 100}
-  #   original_width = 1000
-  #   original_height = 500
-  #   resized_width = 500
-  #   resized_height = 250
-  #   crop_width = 50
-  #   crop_height = 50
-
-  #   assert get_anchor(focal, original_width, original_height, resized_width, resized_height, crop_width, crop_height)
-  #          == %{x: 450, y: 200}
-  # end
-
-  # test "focaled crop" do
-  #   focal = %{"x" => 70, "y" => 50}
-  #   original_width = 2560
-  #   original_height = 1600
-
-  #   {resized_width, resized_height} = calculate_resize_dimensions(original_width, original_height, %{"crop" => true, "quality" => 70, "size" => "500x500"})
-
-  #   crop_width = 300
-  #   crop_height = 1600
-
-  #   anchor = get_anchor(focal, original_width, original_height, resized_width, resized_height, crop_width, crop_height)
-
-  #   res = process_img("#{resized_width}x#{resized_height}", "#{crop_width}x#{crop_height}+#{anchor.x}+#{anchor.y}")
-  #   require Logger
-  #   Logger.error inspect res, pretty: true
-  # end
-
-  # test "calculate_geometry_with_focal" do
-  #   focal = %{"x" => 50, "y" => 50}
-  #   width = 2560
-  #   height = 1600
-  #   cfg = %{"crop" => true, "quality" => 70, "size" => "500x750"}
-  #   geo = calculate_geometry_with_focal(focal, width, height, cfg)
-
-  #   require Logger
-  #   Logger.error inspect geo
-  #   res = process_img(geo, cfg)
-
-  #   Logger.error inspect res
-
-  #   # focal = %{"x" => 50, "y" => 50}
-  #   # width = 2560
-  #   # height = 1600
-  #   # cfg = %{"crop" => true, "quality" => 70, "size" => "25x25>"}
-
-  #   # geo = calculate_geometry_with_focal(focal, width, height, cfg)
-  # end
 end
