@@ -1,3 +1,4 @@
+# coveralls-ignore start
 defmodule Brando.System do
   @moduledoc """
   Simple checks on startup to verify system integrity
@@ -136,3 +137,5 @@ defmodule Brando.System do
     """)
   end
 end
+
+# coveralls-ignore end

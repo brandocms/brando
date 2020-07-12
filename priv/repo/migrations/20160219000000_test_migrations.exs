@@ -189,6 +189,17 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
       add :data, :jsonb
       add :global_category_id, references(:sites_global_categories, on_delete: :delete_all)
     end
+
+    create table(:tags) do
+    end
+
+    create table(:photos) do
+    end
+
+    create table(:photos_to_tags, primary_key: false) do
+      add :tag_id, references(:tags, on_delete: :nothing), null: false
+      add :photo_id, references(:photos, on_delete: :nothing), null: false
+    end
   end
 
   def down do
