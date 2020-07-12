@@ -25,6 +25,15 @@ defmodule Brando.Plug.SentryUserContextTest do
       |> SentryUserContext.call(SentryUserContext.init([]))
 
     assert conn.status == nil
+
+    conn =
+      :get
+      |> conn("/pass")
+      |> put_private(:guardian_default_resource, nil)
+      |> Plug.Parsers.call(opts)
+      |> SentryUserContext.call(SentryUserContext.init([]))
+
+    assert conn.status == nil
   end
 
   test "sentry user context set", %{opts: opts} do
