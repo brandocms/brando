@@ -59,6 +59,9 @@ defmodule Brando.SoftDelete.QueryTest do
     deleted_users = Query.list_soft_deleted_entries(Brando.Users.User)
     assert Enum.count(deleted_users) == 2
 
+    deleted_entries = Query.list_soft_deleted_entries()
+    assert Enum.count(deleted_entries) == 5
+
     Query.clean_up_soft_deletions()
 
     assert Query.count_soft_deletions() == [

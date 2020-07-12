@@ -136,4 +136,55 @@ defmodule Brando.Plug.LockdownTest do
 
     Application.put_env(:brando, :lockdown, false)
   end
+
+  test "lockdown pass with lockdown_authorized" do
+    Application.put_env(:brando, :lockdown, true)
+    Application.put_env(:brando, :lockdown_password, "my_pass")
+
+    conn =
+      :get
+      |> call("/?key=my_pass")
+      |> LockdownPlugAuth.call([])
+
+    assert conn.status == nil
+
+    conn =
+      :get
+      |> call("/")
+      |> LockdownPlugAuth.call([])
+
+    assert conn.status == nil
+
+    Application.put_env(:brando, :lockdown, false)
+  end
+
+  test "lockdown pass with expired target date" do
+    Application.put_env(:brando, :lockdown, true)
+    Application.put_env(:brando, :lockdown_until, ~N[2015-01-13 10:00:00])
+
+    conn =
+      :get
+      |> call("/")
+      |> LockdownPlug.call([])
+
+    assert conn.status == nil
+
+    Application.put_env(:brando, :lockdown, false)
+    Application.put_env(:brando, :lockdown_until, nil)
+  end
+
+  test "lockdown pass with future target date" do
+    Application.put_env(:brando, :lockdown, true)
+    Application.put_env(:brando, :lockdown_until, ~N[2060-01-13 10:00:00])
+
+    conn =
+      :get
+      |> call("/")
+      |> LockdownPlug.call([])
+
+    assert conn.status == 302
+
+    Application.put_env(:brando, :lockdown, false)
+    Application.put_env(:brando, :lockdown_until, nil)
+  end
 end
