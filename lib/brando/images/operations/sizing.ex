@@ -6,6 +6,15 @@ defmodule Brando.Images.Operations.Sizing do
   alias Brando.Progress
 
   @doc """
+  Get processor module from config and call process function
+  """
+  def delegate_processor(conversion_parameters) do
+    # grab processor module
+    module = Brando.config(Brando.Images)[:processor_module] || Brando.Images.Processor.Mogrify
+    apply(module, :process_image, [conversion_parameters])
+  end
+
+  @doc """
   Create a sized version of image
   """
   def create_image_size(%Images.Operation{
@@ -115,15 +124,6 @@ defmodule Brando.Images.Operations.Sizing do
       {:error, {:image, :not_found}} ->
         {:error, {:create_image_size, {:file_not_found, conversion_parameters.image_src_path}}}
     end
-  end
-
-  @doc """
-  Get processor module from config and call process function
-  """
-  def delegate_processor(conversion_parameters) do
-    # grab processor module
-    module = Brando.config(Brando.Images)[:processor_module] || Brando.Images.Processor.Mogrify
-    apply(module, :process_image, [conversion_parameters])
   end
 
   @doc """
