@@ -34,6 +34,15 @@ defmodule Brando.VillainTest do
     {:ok, %{user: user, category: category, series: series, image: image}}
   end
 
+  @data %{
+    data: [
+      %{
+        "type" => "text",
+        "data" => %{"text" => "**Some** text here.", "type" => "paragraph"}
+      }
+    ]
+  }
+
   test "parse" do
     Application.put_env(:brando, Brando.Villain, parser: Brando.Villain.ParserTest.Parser)
 
@@ -202,5 +211,36 @@ defmodule Brando.VillainTest do
 
     {:ok, updated_page} = Brando.Pages.get_page(page.id)
     assert updated_page.html == "-- this is some NEW code Some text! --"
+
+    tp3_params = Factory.params_for(:template)
+    {:ok, _tp3} = Brando.Villain.update_or_create_template(%{"data" => tp3_params})
+  end
+
+  test "rerender_villains_for" do
+    _p1 = Factory.insert(:page, @data)
+    _p2 = Factory.insert(:page, @data)
+    _p3 = Factory.insert(:page, @data)
+
+    result = Brando.Villain.rerender_villains_for(Brando.Pages.Page)
+
+    assert result |> List.flatten() |> Keyword.keys() |> Enum.count() == 3
+  end
+
+  test "get_cached_template" do
+    tp1 =
+      Factory.insert(:template, %{
+        code: "-- this is some code ${testvar} --",
+        name: "Name",
+        help_text: "Help text",
+        refs: [],
+        namespace: "all",
+        class: "css class"
+      })
+
+    {:ok, template} = Brando.Villain.get_cached_template(tp1.id)
+    assert template.id == tp1.id
+
+    {:ok, template} = Brando.Villain.get_cached_template(tp1.id)
+    assert template.id == tp1.id
   end
 end

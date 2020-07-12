@@ -30,4 +30,10 @@ defmodule Brando.Integration.ImageSeriesTest do
     assert Ecto.Changeset.get_change(cs, :cfg).upload_path ==
              "portfolio/test-category/abracadabra"
   end
+
+  test "get" do
+    c1 = Factory.insert(:image_series, slug: "test")
+    {:ok, c2} = Brando.Images.get_image_series(%{matches: [{:slug, "test"}]})
+    assert c1.id == c2.id
+  end
 end

@@ -15,6 +15,12 @@ defmodule Brando.ImagesTest do
     assert img.sequence == 99
   end
 
+  test "get_image" do
+    img = Factory.insert(:image)
+    {:ok, img2} = Images.get_image(%{matches: [id: img.id]})
+    assert img == img2
+  end
+
   test "get_image!" do
     img = Factory.insert(:image)
     assert img2 = Images.get_image!(img.id)
