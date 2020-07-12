@@ -27,11 +27,4 @@ defmodule Brando.Sites.IdentityResolver do
       }) do
     Sites.update_identity(identity_params, user)
   end
-
-  @doc """
-  Delete identity
-  """
-  def delete(_, %{context: %{current_user: _}}) do
-    Sites.delete_identity()
-  end
 end

@@ -76,19 +76,6 @@ defmodule Brando.Sites do
   end
 
   @doc """
-  Delete identity by id
-  """
-  @spec delete_identity :: {:ok, identity}
-  def delete_identity() do
-    {:ok, identity} = get_identity()
-    Brando.repo().delete(identity)
-    Images.Utils.delete_original_and_sized_images(identity, :image)
-    Images.Utils.delete_original_and_sized_images(identity, :logo)
-
-    {:ok, identity}
-  end
-
-  @doc """
   Create default identity
   """
   def create_default_identity do

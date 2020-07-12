@@ -27,11 +27,4 @@ defmodule Brando.Sites.GlobalResolver do
       }) do
     Globals.update_global_category(category_id, global_category_params)
   end
-
-  # @doc """
-  # Delete category
-  # """
-  # def delete(_, %{context: %{current_user: _}}) do
-  #   Globals.delete_identity()
-  # end
 end

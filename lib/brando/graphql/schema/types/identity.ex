@@ -175,10 +175,6 @@ defmodule Brando.Schema.Types.Identity do
       arg :identity_params, :identity_params
       resolve &Brando.Sites.IdentityResolver.update/2
     end
-
-    field :delete_identity, type: :identity do
-      resolve &Brando.Sites.IdentityResolver.delete/2
-    end
   end
 
   object :global_queries do
