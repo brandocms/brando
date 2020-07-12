@@ -127,9 +127,7 @@ defmodule Brando.Integration.AdminChannel do
 end
 
 defmodule Brando.Integration.Processor.Commands do
-  def command(_, _, _) do
-    {:ok, 0}
-  end
+  def command(_, _, _), do: {:ok, 0}
 end
 
 defmodule Brando.Integration.PageView do

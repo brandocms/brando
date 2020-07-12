@@ -25,8 +25,9 @@ defmodule Brando.Images.SharpTest do
   }
 
   test "create_image_type_struct" do
-    previous_module = Brando.config(Brando.Images)[:processor_module]
-    Application.put_env(:brando, Brando.Images, processor_module: Brando.Images.Processor.Sharp)
+    prev_cfg = Brando.config(Brando.Images)
+    new_cfg = Keyword.put(prev_cfg, :processor_module, Brando.Images.Processor.Sharp)
+    Application.put_env(:brando, Brando.Images, new_cfg)
 
     u1 = Factory.insert(:random_user)
     {:ok, upload} = Brando.Upload.process_upload(@up, @cfg)
@@ -44,12 +45,13 @@ defmodule Brando.Images.SharpTest do
              width: 608
            }
 
-    Application.put_env(:brando, Brando.Images, processor_module: previous_module)
+    Application.put_env(:brando, Brando.Images, prev_cfg)
   end
 
   test "recreate_sizes_for_image_field" do
-    previous_module = Brando.config(Brando.Images)[:processor_module]
-    Application.put_env(:brando, Brando.Images, processor_module: Brando.Images.Processor.Sharp)
+    prev_cfg = Brando.config(Brando.Images)
+    new_cfg = Keyword.put(prev_cfg, :processor_module, Brando.Images.Processor.Sharp)
+    Application.put_env(:brando, Brando.Images, new_cfg)
 
     {:ok, upload} = Brando.Upload.process_upload(@up, @cfg)
     {:ok, image_struct} = Processing.create_image_type_struct(upload, :system)
@@ -57,12 +59,13 @@ defmodule Brando.Images.SharpTest do
 
     [{:ok, result}] = Processing.recreate_sizes_for_image_field(Brando.Users.User, :avatar, u1)
     assert result.id == u1.id
-    Application.put_env(:brando, Brando.Images, processor_module: previous_module)
+    Application.put_env(:brando, Brando.Images, prev_cfg)
   end
 
   test "recreate_sizes_for_image_field_record" do
-    previous_module = Brando.config(Brando.Images)[:processor_module]
-    Application.put_env(:brando, Brando.Images, processor_module: Brando.Images.Processor.Sharp)
+    prev_cfg = Brando.config(Brando.Images)
+    new_cfg = Keyword.put(prev_cfg, :processor_module, Brando.Images.Processor.Sharp)
+    Application.put_env(:brando, Brando.Images, new_cfg)
 
     {:ok, upload} = Brando.Upload.process_upload(@up, @cfg)
     {:ok, image_struct} = Processing.create_image_type_struct(upload, :system)
@@ -72,7 +75,7 @@ defmodule Brando.Images.SharpTest do
     {:ok, changeset} = Processing.recreate_sizes_for_image_field_record(changeset, :avatar, u1)
     assert changeset.valid?
     assert Map.has_key?(changeset.changes, :avatar)
-    Application.put_env(:brando, Brando.Images, processor_module: previous_module)
+    Application.put_env(:brando, Brando.Images, prev_cfg)
   end
 
   test "cee" do
