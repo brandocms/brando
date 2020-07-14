@@ -33,7 +33,7 @@ describe('Auth', () => {
 
   it('succeeds logging in an existing user', () => {
     cy.factorydb('user', {
-      full_name: 'Lou Reed',
+      name: 'Lou Reed',
       avatar: null,
       email: 'lou@reed.com'
     })

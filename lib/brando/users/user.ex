@@ -13,12 +13,12 @@ defmodule Brando.Users.User do
 
   import Brando.Gettext
 
-  @required_fields ~w(full_name email password language)a
+  @required_fields ~w(name email password language)a
   @optional_fields ~w(role avatar active config deleted_at)a
 
   @derived_fields ~w(
     id
-    full_name
+    name
     email
     password
     language
@@ -34,7 +34,7 @@ defmodule Brando.Users.User do
 
   schema "users_users" do
     field :email, :string
-    field :full_name, :string
+    field :name, :string
     field :password, :string
     field :avatar, Brando.Type.Image
     field :role, Brando.Type.Role

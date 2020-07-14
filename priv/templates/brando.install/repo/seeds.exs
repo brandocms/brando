@@ -37,7 +37,7 @@ ss_cfg = %Brando.Type.ImageConfig{allowed_mimetypes: ["image/jpeg", "image/png",
 # insert admin user
 password = Bcrypt.hash_pwd_salt("admin")
 user = %Brando.Users.User{
-  full_name: "Twined Admin",
+  name: "Twined Admin",
   email: "admin@twined.net", password: password,
   avatar: nil, role: :superuser, language: "no"}
 user = <%= application_module %>.Repo.insert!(user)

@@ -4,7 +4,7 @@ defmodule Brando.Schema.Types.User do
   object :user do
     field :id, :id
     field :email, :string
-    field :full_name, :string
+    field :name, :string
     field :password, :string
     field :avatar, :image_type
     field :role, :string
@@ -26,7 +26,7 @@ defmodule Brando.Schema.Types.User do
   end
 
   input_object :user_params do
-    field :full_name, :string
+    field :name, :string
     field :language, :string
     field :email, :string
     field :role, :string

@@ -29,7 +29,7 @@ defmodule Brando.FactoryMixin do
 
       def user_factory do
         %User{
-          full_name: "James Williamson",
+          name: "James Williamson",
           email: "james@thestooges.com",
           password: Bcrypt.hash_pwd_salt("admin"),
           avatar: %Brando.Type.Image{

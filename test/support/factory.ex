@@ -47,7 +47,7 @@ defmodule Brando.Factory do
 
   def user_factory do
     %User{
-      full_name: "James Williamson",
+      name: "James Williamson",
       email: "james@thestooges.com",
       password: @encrypted_password,
       avatar: %Brando.Type.Image{
@@ -72,7 +72,7 @@ defmodule Brando.Factory do
 
   def random_user_factory do
     %User{
-      full_name: "James Williamson",
+      name: "James Williamson",
       email: sequence(:email, &"james#{&1}@thestooges.com"),
       password: @encrypted_password,
       avatar: %Brando.Type.Image{

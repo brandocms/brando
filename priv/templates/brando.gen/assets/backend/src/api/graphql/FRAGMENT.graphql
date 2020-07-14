@@ -4,7 +4,7 @@ fragment <%= vue_singular %> on <%= Recase.to_pascal(vue_singular) %> {
   <%= v %><% end %><%= if creator do %>
   creator {
     id
-    fullName
+    name
     avatar {
       thumb: url(size: "xlarge")
     }

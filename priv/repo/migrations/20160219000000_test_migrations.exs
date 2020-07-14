@@ -6,7 +6,7 @@ defmodule Brando.Integration.TestRop.Migrations.CreateTestTables do
 
   def up do
     create table(:users_users) do
-      add(:full_name, :text)
+      add(:name, :text)
       add(:email, :text)
       add(:password, :text)
       add(:avatar, :jsonb)

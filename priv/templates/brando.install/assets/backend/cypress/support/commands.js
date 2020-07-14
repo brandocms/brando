@@ -38,7 +38,7 @@ Cypress.Commands.add('login', (email, password) => {
 
 Cypress.Commands.add('loginUser', () => {
   cy
-    .factorydb('user', { full_name: 'Lou Reed', avatar: null, email: 'lou@reed.com', role: 'superuser' })
+    .factorydb('user', { name: 'Lou Reed', avatar: null, email: 'lou@reed.com', role: 'superuser' })
     .as('currentUser')
     .then(response => {
       cy.login(response.body.email, 'admin')
