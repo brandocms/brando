@@ -4,6 +4,8 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 * Deprecated `Pages.list_page_fragments_translations`. Use `Pages.list_fragments_translations` instead.
 * Switch frontend bundler to Rollup
+* Renamed `User.full_name` to `User.name`. Requires BrandoJS to be updated.
+
 
 ## 0.45.0
 

@@ -1,5 +1,7 @@
 ## 0.46.0
 
+* Renamed `User.full_name` to `User.name`. Requires BrandoJS to be updated.
+
 * Deprecated `Pages.list_page_fragments_translations`. Use `Pages.list_fragments_translations` instead.
   You now must explicitly pass language to exclude as `exclude_language: "en"`, otherwise all languages
   are returned!
