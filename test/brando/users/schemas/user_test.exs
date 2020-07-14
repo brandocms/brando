@@ -9,10 +9,9 @@ defmodule Brando.Integration.UserTest do
   test "create/1 and update/1" do
     user = Factory.insert(:random_user)
 
-    assert {:ok, updated_user} =
-             Users.update_user(user.id, %{"full_name" => "Elvis Presley"}, :system)
+    assert {:ok, updated_user} = Users.update_user(user.id, %{"name" => "Elvis Presley"}, :system)
 
-    assert updated_user.full_name == "Elvis Presley"
+    assert updated_user.name == "Elvis Presley"
 
     old_pass = updated_user.password
 

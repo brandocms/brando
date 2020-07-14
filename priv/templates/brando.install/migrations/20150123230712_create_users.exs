@@ -3,7 +3,7 @@ defmodule <%= application_module %>.Repo.Migrations.CreateUsers do
 
   def up do
     create table(:users) do
-      add :full_name,     :text
+      add :name,     :text
       add :email,         :text
       add :password,      :text
       add :avatar,        :jsonb

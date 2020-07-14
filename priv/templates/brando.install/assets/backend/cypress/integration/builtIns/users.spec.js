@@ -1,6 +1,6 @@
 describe('Users', () => {
   beforeEach(() => {
-    cy.factorydb('user', { avatar: null, full_name: 'Lou Reed', email: 'lou@reed.com', role: 'superuser' })
+    cy.factorydb('user', { avatar: null, name: 'Lou Reed', email: 'lou@reed.com', role: 'superuser' })
     cy.login('lou@reed.com', 'admin')
   })
 
@@ -13,7 +13,7 @@ describe('Users', () => {
 
   it('can edit profile', () => {
     cy.visit('/admin/profil')
-    cy.get('#profile_full_name_').clear().type('Louis Reed')
+    cy.get('#profile_name_').clear().type('Louis Reed')
     cy.get('#profile_email_').clear().type('louis.reed@gmail.com')
     cy.get('#profile_password_').clear().type('password')
     cy.get('#profile_password_confirm_').clear().type('password')
@@ -29,16 +29,16 @@ describe('Users', () => {
   })
 
   it('can list users', () => {
-    cy.factorydb('user', { avatar: null, full_name: 'Iggy Pop', email: 'iggy@pop.com' })
-    cy.factorydb('user', { avatar: null, full_name: 'David Bowie', email: 'david@bowie.com' })
+    cy.factorydb('user', { avatar: null, name: 'Iggy Pop', email: 'iggy@pop.com' })
+    cy.factorydb('user', { avatar: null, name: 'David Bowie', email: 'david@bowie.com' })
     cy.visit('/admin/brukere')
     cy.contains('Iggy Pop')
     cy.contains('David Bowie')
   })
 
   it('can delete users', () => {
-    cy.factorydb('user', { avatar: null, full_name: 'Iggy Pop', email: 'iggy@pop.com', role: 'admin' })
-    cy.factorydb('user', { avatar: null, full_name: 'David Bowie', email: 'david@bowie.com' })
+    cy.factorydb('user', { avatar: null, name: 'Iggy Pop', email: 'iggy@pop.com', role: 'admin' })
+    cy.factorydb('user', { avatar: null, name: 'David Bowie', email: 'david@bowie.com' })
     cy.visit('/admin/brukere')
     cy.contains('Iggy Pop')
     cy.contains('David Bowie')
@@ -54,12 +54,12 @@ describe('Users', () => {
   })
 
   it('can add user', () => {
-    cy.factorydb('user', { avatar: null, full_name: 'Iggy Pop', email: 'iggy@pop.com', role: 'admin' })
+    cy.factorydb('user', { avatar: null, name: 'Iggy Pop', email: 'iggy@pop.com', role: 'admin' })
     cy.visit('/admin/brukere/ny')
     cy.contains('Ny bruker')
 
     cy.get(':nth-child(2) > .form-check-label > .form-check-input').click()
-    cy.get('#user_full_name_').type('Ron Asheton')
+    cy.get('#user_name_').type('Ron Asheton')
     cy.get('#user_email_').type('ron@stooges.com')
     cy.get('#user_password_').type('password')
     cy.get('#user_password_confirm_').type('password')

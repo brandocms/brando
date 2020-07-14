@@ -15,7 +15,7 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
   query {
     users {
       id
-      fullName
+      name
     }
   }
   """
@@ -29,7 +29,7 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
              {:ok,
               %{
                 data: %{
-                  "users" => [%{"fullName" => "James Williamson", "id" => to_string(user.id)}]
+                  "users" => [%{"name" => "James Williamson", "id" => to_string(user.id)}]
                 }
               }}
   end
@@ -38,7 +38,7 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
   query user($userId: ID) {
     user(userId: $userId) {
       id
-      fullName
+      name
     }
   }
   """
@@ -51,7 +51,7 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
              {:ok,
               %{
                 data: %{
-                  "user" => %{"fullName" => "James Williamson", "id" => to_string(user.id)}
+                  "user" => %{"name" => "James Williamson", "id" => to_string(user.id)}
                 }
               }}
 
@@ -77,7 +77,7 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
   query me {
     me {
       id
-      fullName
+      name
 
       avatar {
         focal
@@ -99,7 +99,7 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
                %{
                  data: %{
                    "me" => %{
-                     "fullName" => "James Williamson",
+                     "name" => "James Williamson",
                      "id" => to_string(user.id),
                      "avatar" => %{
                        "focal" => %Brando.Images.Focal{x: 50, y: 50},

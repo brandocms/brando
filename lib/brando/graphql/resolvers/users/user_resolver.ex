@@ -47,7 +47,7 @@ defmodule Brando.Users.UserResolver do
     users =
       Brando.repo().all(
         from user in User,
-          order_by: [asc: user.full_name]
+          order_by: [asc: user.name]
       )
 
     {:ok, users}

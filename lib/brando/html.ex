@@ -131,10 +131,10 @@ defmodule Brando.HTML do
     do: String.pad_leading(Integer.to_string(val), count, "0")
 
   @doc """
-  Split `full_name` and return first name
+  Split `name` and return first name
   """
-  def first_name(full_name) do
-    full_name
+  def first_name(name) do
+    name
     |> String.split()
     |> hd()
   end
