@@ -54,6 +54,23 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
                   "user" => %{"fullName" => "James Williamson", "id" => to_string(user.id)}
                 }
               }}
+
+    assert Absinthe.run(
+             @user_id_query,
+             Brando.Integration.TestSchema,
+             opts ++ [variables: %{"userId" => 9_999_999_999}]
+           ) ==
+             {:ok,
+              %{
+                data: %{"user" => nil},
+                errors: [
+                  %{
+                    locations: [%{column: 3, line: 2}],
+                    message: "User id 9999999999 not found",
+                    path: ["user"]
+                  }
+                ]
+              }}
   end
 
   @me_query """
