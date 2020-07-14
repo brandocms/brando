@@ -32,8 +32,6 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:bcrypt_elixir, "~> 2.0"},
-      {:comeonin, "~> 5.0"},
       {:earmark, "1.4.4"},
       {:gettext, "~> 0.11"},
       {:httpoison, "~> 1.0"},
@@ -43,8 +41,6 @@ defmodule Brando.Mixfile do
       {:postgrex, "~> 0.14"},
       {:slugger, "~> 0.2"},
       {:recase, "~> 0.2"},
-      {:guardian, "~> 2.0"},
-      {:guardian_phoenix, "~> 2.0"},
       {:timex, "~> 3.0"},
       {:ecto, "~> 3.0"},
       {:ecto_sql, "~> 3.0"},
@@ -57,6 +53,14 @@ defmodule Brando.Mixfile do
       {:absinthe, "~> 1.5.0"},
       {:absinthe_plug, "~> 1.5.0"},
       {:dataloader, "~> 1.0"},
+
+      # hashing/passwords
+      {:bcrypt_elixir, "~> 2.0"},
+      {:comeonin, "~> 5.0"},
+
+      # tokens/auth
+      {:guardian, "~> 2.0"},
+      {:guardian_phoenix, "~> 2.0"},
 
       # monitoring
       {:sentry, "~> 7.0"},
