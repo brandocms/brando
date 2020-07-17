@@ -1,5 +1,5 @@
 {
-  "name": "<%= application_name %>",
+  "name": "app_frontend",
   "description": "<%= application_name %> Frontend",
   "version": "1.0.0",
   "license": "UNLICENSED",
