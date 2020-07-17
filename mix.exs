@@ -32,7 +32,7 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:earmark, "1.4.4"},
+      {:earmark, "1.4.9"},
       {:gettext, "~> 0.11"},
       {:httpoison, "~> 1.0"},
       {:phoenix, "~> 1.4"},
