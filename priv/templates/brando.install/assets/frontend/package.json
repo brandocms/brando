@@ -45,7 +45,7 @@
   "dependencies": {
     "@babel/runtime": "^7.10.4",
     "@sentry/browser": "^5.19.0",
-    "@univers-agency/jupiter": "file:.yalc/@univers-agency/jupiter",
+    "@univers-agency/jupiter": "^3.36.0",
     "core-js": "3.6.5",
     "custom-event-polyfill": "^1.0.7",
     "intersection-observer": "^0.11.0",
