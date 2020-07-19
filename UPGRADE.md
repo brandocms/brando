@@ -27,6 +27,9 @@
 
 ## 0.45.0
 
+* Upgrade BrandoJS to latest. Needed for rewritten upload handling and new
+  language defaults.
+
 * Switch to consistent casing in GQL files. This means that you have to go through
   your js graphql fragments and switch to camelCase (inserted_at -> insertedAt). Form
   views, List views and locale files must be updated as well.
@@ -44,9 +47,6 @@
 
 * Switch out all "nb" language keys to "no". Both in elixir configs and in
   Vue files (menus/locales)
-
-* Upgrade BrandoJS to latest. Needed for rewritten upload handling and new
-  language defaults.
 
 * In your `app.html.eex`, replace
   `<%= render @view_module, @view_template, @assigns %>`
