@@ -63,7 +63,7 @@ defmodule Brando.Mixfile do
       {:guardian_phoenix, "~> 2.0"},
 
       # monitoring
-      {:sentry, "~> 7.0"},
+      {:sentry, "~> 8.0"},
       {:mogrify, "~> 0.5"},
 
       # cache
