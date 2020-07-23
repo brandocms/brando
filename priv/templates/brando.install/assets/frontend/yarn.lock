@@ -4462,8 +4462,9 @@ postcss-font-variant@^4.0.0:
   dependencies:
     postcss "^7.0.2"
 
-"postcss-functions@github:twined/postcss-functions":
+postcss-functions@twined/postcss-functions:
   version "4.0.0"
+  uid e70d0a5bb8919ea7140f012ba7bd6d85de015f31
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/e70d0a5bb8919ea7140f012ba7bd6d85de015f31"
   dependencies:
     glob "^7.1.2"
@@ -5396,10 +5397,10 @@ rollup-plugin-postcss@^3.1.3:
     safe-identifier "^0.4.1"
     style-inject "^0.3.0"
 
-rollup-plugin-sizes@^1.0.2:
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/rollup-plugin-sizes/-/rollup-plugin-sizes-1.0.2.tgz#098dc4ae9f7308d236e4f0b0b19cef7256315feb"
-  integrity sha512-DqQS74SEvWPpnvYM5PyRqapzbjUha/CvWb5+bLy7nG/gqainMVyzmdE0/OYdTJw+icvhZiShCvwqQ8blfUnhVw==
+rollup-plugin-sizes@^1.0.3:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/rollup-plugin-sizes/-/rollup-plugin-sizes-1.0.3.tgz#a64ecb7d8c4e6ec7957314d72ec22a6d2f733771"
+  integrity sha512-4s/uOW3CykN4kMZrrvYngA309qTd4Hb18kplErDAtOUXUK7PrFAa3g7s2H5nW9hWZy7sNUkPMkH85klwacq19A==
   dependencies:
     filesize "^6.0.1"
     module-details-from-path "^1.0.3"
