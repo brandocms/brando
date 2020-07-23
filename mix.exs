@@ -32,22 +32,12 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:earmark, "1.4.4"},
-      {:gettext, "~> 0.11"},
-      {:httpoison, "~> 1.0"},
       {:phoenix, "~> 1.4"},
       {:phoenix_html, "~> 2.6"},
       {:phoenix_ecto, "~> 4.0"},
       {:postgrex, "~> 0.14"},
-      {:slugger, "~> 0.2"},
-      {:recase, "~> 0.2"},
-      {:timex, "~> 3.0"},
       {:ecto, "~> 3.0"},
       {:ecto_sql, "~> 3.0"},
-      {:flow, "~> 1.0"},
-      {:jason, "~> 1.0"},
-      {:poison, "~> 4.0"},
-      {:inflex, "~> 2.0"},
 
       # graphql
       {:absinthe, "~> 1.5.0"},
@@ -63,13 +53,13 @@ defmodule Brando.Mixfile do
       {:guardian_phoenix, "~> 2.0"},
 
       # monitoring
-      {:sentry, "~> 7.0"},
-      {:mogrify, "~> 0.5"},
+      {:sentry, "~> 8.0"},
 
       # cache
       {:cachex, "~> 3.2"},
 
       # images
+      {:mogrify, "~> 0.5"},
       {:fastimage, "~> 1.0.0-rc4"},
 
       # AWS
@@ -81,10 +71,22 @@ defmodule Brando.Mixfile do
       # Hashing
       {:hashids, "~> 2.0"},
 
-      # Parser
+      # Parsing
       {:nimble_parsec, "~> 0.6", override: true},
       {:html_entities, "~> 0.5"},
       {:html_sanitize_ex, "~> 1.4"},
+
+      # Misc
+      {:httpoison, "~> 1.0"},
+      {:gettext, "~> 0.11"},
+      {:timex, "~> 3.0"},
+      {:earmark, "1.4.4"},
+      {:jason, "~> 1.0"},
+      {:poison, "~> 4.0"},
+      {:flow, "~> 1.0"},
+      {:slugger, "~> 0.2"},
+      {:recase, "~> 0.2"},
+      {:inflex, "~> 2.0"},
 
       # Dev dependencies
       {:credo, ">= 0.0.0", only: :dev, runtime: false},
