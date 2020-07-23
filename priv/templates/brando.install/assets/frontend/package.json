@@ -52,7 +52,7 @@
     "mdn-polyfills": "^5.18.0",
     "objectFitPolyfill": "^2.3.0",
     "picturefill": "^3.0.3",
-    "regenerator-runtime": "^0.13.5",
+    "regenerator-runtime": "^0.13.7",
     "rollup": "^2.21.0"
   },
   "devDependencies": {
