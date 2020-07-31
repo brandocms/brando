@@ -43,7 +43,7 @@
     "url": "http://univers.agency"
   },
   "dependencies": {
-    "@babel/runtime": "^7.10.5",
+    "@babel/runtime": "^7.11.0",
     "@sentry/browser": "^5.20.0",
     "@univers-agency/jupiter": "^3.36.0",
     "core-js": "3.6.5",
