@@ -15,3 +15,4 @@ cover
 npm-debug.log
 /.elixir_ls
 /.vscode
+/priv/templates/brando.install/assets/backend/.yalc

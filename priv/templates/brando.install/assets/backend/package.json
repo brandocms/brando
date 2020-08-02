@@ -24,19 +24,19 @@
     "@vue/cli-service": "^4.4.6",
     "@vue/eslint-config-standard": "^5.1.2",
     "babel-eslint": "^10.1.0",
-    "eslint": "^7.5.0",
+    "eslint": "^7.6.0",
     "eslint-plugin-graphql": "^4.0.0",
     "eslint-plugin-import": "^2.22.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.0.1",
     "eslint-plugin-vue": "^6.2.2",
-    "graphql-tag": "^2.10.4",
+    "graphql-tag": "^2.11.0",
     "vue-cli-plugin-apollo": "^0.22.2",
     "vue-cli-plugin-i18n": "^1.0.1",
     "vue-template-compiler": "^2.6.11"
   },
   "resolutions": {
-		"prosemirror-model": "1.10.0"
-	}
+    "prosemirror-model": "1.10.0"
+  }
 }
