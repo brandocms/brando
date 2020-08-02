@@ -100,15 +100,12 @@ defmodule Brando.LivePreview do
           unquote(var_value).()
         end)
 
-      var!(extra_vars) = [
-        {unquote(var_name), cached_var} | unquote(Macro.var(:extra_vars, nil))
-      ]
+      var!(extra_vars) = [{unquote(var_name), cached_var} | unquote(Macro.var(:extra_vars, nil))]
     end
   end
 
   @spec build_cache_key(integer) :: binary
   def build_cache_key(seed), do: "PREVIEW-" <> Hashids.encode(@preview_coder, seed)
-
   def store_cache(key, html), do: Cachex.put(:cache, "__live_preview__" <> key, html)
   def get_cache(key), do: Cachex.get(:cache, "__live_preview__" <> key)
 
