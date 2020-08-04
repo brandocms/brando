@@ -29,7 +29,7 @@ Start by creating a new Phoenix project:
 
 Run the install script:
 
-    $ wget https://raw.githubusercontent.com/univers-agency/brando/develop/install.sh && chmod +x install.sh && ./install.sh
+    $ wget https://raw.githubusercontent.com/brandocms/brando/master/install.sh && chmod +x install.sh && ./install.sh
 
 Go through `config/brando.exs`.
 
