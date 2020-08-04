@@ -8,16 +8,18 @@ defmodule Brando.Images do
   use Brando.Web, :context
   use Brando.Query
 
+  import Ecto.Query
+
+  alias Ecto.Changeset
   alias Brando.Image
   alias Brando.ImageCategory
   alias Brando.Images
   alias Brando.ImageSeries
 
-  import Ecto.Query
-
-  @type user :: Brando.Users.User.t() | :system
-  @type params :: %{binary => term} | %{atom => term}
+  @type id :: binary | integer
   @type changeset :: changeset
+  @type params :: map
+  @type user :: Brando.Users.User.t() | :system
 
   @doc """
   Dataloader initializer
@@ -84,8 +86,7 @@ defmodule Brando.Images do
   @doc """
   Create new image
   """
-  @spec create_image(params :: params, user :: user) ::
-          {:ok, Image.t()} | {:error, changeset}
+  @spec create_image(params, user) :: {:ok, Image.t()} | {:error, changeset}
   def create_image(params, user) do
     %Image{}
     |> Image.changeset(params, user)
@@ -95,8 +96,7 @@ defmodule Brando.Images do
   @doc """
   Update image
   """
-  @spec update_image(schema :: Image.t(), params :: params) ::
-          {:ok, Image.t()} | {:error, changeset}
+  @spec update_image(schema :: Image.t(), params) :: {:ok, Image.t()} | {:error, changeset}
   def update_image(schema, params) do
     schema
     |> Image.changeset(params)
@@ -149,8 +149,8 @@ defmodule Brando.Images do
     end
   end
 
-  @spec update_image_meta(schema :: Brando.Image.t(), params :: map, user :: user) ::
-          {:ok, Brando.Image.t()} | {:error, changeset}
+  @spec update_image_meta(schema :: Image.t(), params, user) ::
+          {:ok, Image.t()} | {:error, changeset}
   def update_image_meta(schema, params, user \\ :system)
 
   def update_image_meta(schema, %{focal: new_focal} = params, user) do
@@ -207,9 +207,9 @@ defmodule Brando.Images do
     |> case do
       {:ok, inserted_series} ->
         # if slug is changed we recreate all the image sizes to reflect the new path
-        if Ecto.Changeset.get_change(changeset, :slug) ||
-             Ecto.Changeset.get_change(changeset, :image_category_id) ||
-             Ecto.Changeset.get_change(changeset, :cfg),
+        if Changeset.get_change(changeset, :slug) ||
+             Changeset.get_change(changeset, :image_category_id) ||
+             Changeset.get_change(changeset, :cfg),
            do: Images.Processing.recreate_sizes_for_series(inserted_series.id, user)
 
         {:ok, Brando.repo().preload(inserted_series, :image_category)}
@@ -240,7 +240,7 @@ defmodule Brando.Images do
     res =
       query
       |> Brando.repo().one!()
-      |> Ecto.Changeset.change(%{cfg: cfg})
+      |> Changeset.change(%{cfg: cfg})
       |> Brando.repo().update
 
     case res do
@@ -292,7 +292,7 @@ defmodule Brando.Images do
     |> Brando.repo().update()
     |> case do
       {:ok, updated_category} ->
-        if Ecto.Changeset.get_change(changeset, :slug) do
+        if Changeset.get_change(changeset, :slug) do
           {:propagate, updated_category}
         else
           {:ok, updated_category}
@@ -321,16 +321,16 @@ defmodule Brando.Images do
   Get category's config
   """
   def get_category_config(id) do
-    {:ok, category} = get_image_category(%{matches: [id: id]})
-    {:ok, category.cfg}
+    {:ok, %{cfg: cfg}} = get_image_category(%{matches: [id: id]})
+    {:ok, cfg}
   end
 
   @doc """
   Get category's config by slug
   """
   def get_category_config_by_slug(slug) do
-    {:ok, category} = get_category_by_slug(slug)
-    {:ok, category.cfg}
+    {:ok, %{cfg: cfg}} = get_category_by_slug(slug)
+    {:ok, cfg}
   end
 
   @doc """
@@ -338,11 +338,8 @@ defmodule Brando.Images do
   """
   def get_series_config(id) do
     case get_image_series(%{matches: [id: id]}) do
-      {:ok, series} ->
-        {:ok, series.cfg}
-
-      err ->
-        err
+      {:ok, series} -> {:ok, series.cfg}
+      err -> err
     end
   end
 
@@ -391,13 +388,14 @@ defmodule Brando.Images do
   def update_category_config(id, cfg) do
     ImageCategory
     |> Brando.repo().get_by!(id: id)
-    |> Ecto.Changeset.change(%{cfg: cfg})
+    |> Changeset.change(%{cfg: cfg})
     |> Brando.repo().update
   end
 
   @doc """
   Propagate category's configuration to all dependent image series
   """
+  @spec propagate_category_config(id) :: [any]
   def propagate_category_config(id) do
     category =
       ImageCategory
@@ -405,8 +403,13 @@ defmodule Brando.Images do
       |> Brando.repo().preload(:image_series)
 
     for series <- category.image_series do
+      # ensure we keep the old upload_path, or else everything gets
+      # written to the path specified in the category config!
+      old_upload_path = series.cfg.upload_path
+      new_config = put_in(category.cfg, [Access.key(:upload_path)], old_upload_path)
+
       series
-      |> Ecto.Changeset.change(%{cfg: category.cfg})
+      |> Changeset.change(%{cfg: new_config})
       |> Brando.repo().update
     end
   end

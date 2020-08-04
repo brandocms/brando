@@ -64,13 +64,11 @@ defmodule Brando.Images.Operations do
   @doc """
   Perform list of image operations as Flow
   """
-  @spec perform(operations :: [operation], user :: user) :: {:ok, [operation_result]}
+  @spec perform([operation], user) :: {:ok, [operation_result]}
   def perform(operations, user) do
     Progress.show_progress(user)
 
-    Logger.info("""
-    ==> Brando.Images.Operations: Starting #{Enum.count(operations)} operations..
-    """)
+    Logger.debug("==> Brando.Images.Operations: Starting #{Enum.count(operations)} operations..")
 
     start_msec = :os.system_time(:millisecond)
 
@@ -87,12 +85,9 @@ defmodule Brando.Images.Operations do
       |> List.flatten()
 
     end_msec = :os.system_time(:millisecond)
-
     seconds_lapsed = (end_msec - start_msec) * 0.001
 
-    Logger.info("""
-    ==> Brando.Images.Operations: Finished in #{seconds_lapsed} seconds..
-    """)
+    Logger.debug("==> Brando.Images.Operations: Finished in #{seconds_lapsed} seconds..")
 
     Progress.hide_progress(user)
 

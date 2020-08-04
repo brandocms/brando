@@ -19,14 +19,15 @@ defmodule Brando.Images.Processing do
   @type image_series_schema :: ImageSeries.t()
   @type image_type_struct :: Type.Image.t()
   @type image_kind :: :image | :image_series | :image_field
+  @type upload :: Upload.t()
 
   @default_focal %{x: 50, y: 50}
 
   @doc """
   Create an image struct from upload, cfg and extra info
   """
-  @spec create_image_type_struct(upload :: Upload.t(), user :: user, extra_params :: any) ::
-          {:error, {:create_image_type_struct, any}} | {:ok, Type.Image.t()}
+  @spec create_image_type_struct(upload, user, extra_params :: any) ::
+          {:error, {:create_image_type_struct, any}} | {:ok, image_type_struct}
   def create_image_type_struct(
         %Upload{plug: %{uploaded_file: file}, cfg: cfg},
         user,
@@ -60,8 +61,7 @@ defmodule Brando.Images.Processing do
   @doc """
   Deletes all image's sizes and recreates them.
   """
-  @spec recreate_sizes_for_image(image_schema :: image_schema, user :: user) ::
-          {:ok, image_schema} | {:error, changeset}
+  @spec recreate_sizes_for_image(image_schema, user) :: {:ok, image_schema} | {:error, changeset}
   def recreate_sizes_for_image(img_schema, user \\ :system) do
     {:ok, img_cfg} = Images.get_series_config(img_schema.image_series_id)
     Utils.delete_sized_images(img_schema.image)
@@ -84,9 +84,7 @@ defmodule Brando.Images.Processing do
     end
   end
 
-  @spec recreate_sizes_for_category(category_id :: id, user :: user) :: [
-          {:ok, image_schema} | {:error, changeset}
-        ]
+  @spec recreate_sizes_for_category(id, user) :: [{:ok, image_schema} | {:error, changeset}]
   def recreate_sizes_for_category(category_id, user \\ :system) do
     {:ok, category} =
       Images.get_image_category(%{matches: [id: category_id], preload: [:image_series]})
@@ -96,9 +94,7 @@ defmodule Brando.Images.Processing do
     end
   end
 
-  @spec recreate_sizes_for_series(series_id :: id, user :: user) :: [
-          {:ok, image_schema} | {:error, changeset}
-        ]
+  @spec recreate_sizes_for_series(id, user) :: [{:ok, image_schema} | {:error, changeset}]
   def recreate_sizes_for_series(series_id, user \\ :system) do
     opts = %{matches: [id: series_id], preload: [:images]}
     {:ok, image_series} = Images.get_image_series(opts)

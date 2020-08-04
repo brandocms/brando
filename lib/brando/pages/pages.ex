@@ -16,6 +16,7 @@ defmodule Brando.Pages do
   @type fragment :: Brando.Pages.PageFragment.t()
   @type id :: binary | integer
   @type page :: Brando.Pages.Page.t()
+  @type params :: map
   @type user :: Brando.Users.User.t() | :system
 
   defmacro __using__(_) do
@@ -63,6 +64,7 @@ defmodule Brando.Pages do
   @doc """
   Create new page
   """
+  @spec create_page(params, user) :: any
   def create_page(params, user) do
     %Page{}
     |> Page.changeset(params, user)
@@ -85,7 +87,13 @@ defmodule Brando.Pages do
   Delete page
   """
   def delete_page(page_id) do
-    page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
+    page_id =
+      if is_binary(page_id) do
+        String.to_integer(page_id)
+      else
+        page_id
+      end
+
     {:ok, page} = get_page(page_id)
     Brando.repo().soft_delete!(page)
     {:ok, page}
@@ -102,7 +110,7 @@ defmodule Brando.Pages do
     page = Map.delete(page, [:id, :children, :parent])
     page = Map.from_struct(page)
 
-    create_page(page, %{id: page.creator_id})
+    create_page(page, %Brando.Users.User{id: page.creator_id})
   end
 
   @doc """
@@ -448,7 +456,7 @@ defmodule Brando.Pages do
   @doc """
   Create new page fragment
   """
-  @spec create_page_fragment(map, user) :: {:ok, fragment} | {:error, changeset}
+  @spec create_page_fragment(any, any) :: {:ok, fragment} | {:error, changeset}
   def create_page_fragment(params, user) do
     %PageFragment{}
     |> PageFragment.changeset(params, user)
@@ -458,7 +466,7 @@ defmodule Brando.Pages do
   @doc """
   Update page fragment
   """
-  @spec update_page_fragment(any, :invalid, any) :: any
+  @spec update_page_fragment(id, params, user) :: any
   def update_page_fragment(page_fragment_id, params, user) do
     page_fragment_id =
       (is_binary(page_fragment_id) && String.to_integer(page_fragment_id)) || page_fragment_id
@@ -489,7 +497,7 @@ defmodule Brando.Pages do
   @doc """
   Duplicate page fragment
   """
-  @spec duplicate_page_fragment(fragment_id :: binary | integer) ::
+  @spec duplicate_page_fragment(id) ::
           {:ok, map} | {:error, {:page_fragment, :not_found}} | {:error, changeset}
   def duplicate_page_fragment(fragment_id) do
     fragment_id = (is_binary(fragment_id) && String.to_integer(fragment_id)) || fragment_id
@@ -500,9 +508,6 @@ defmodule Brando.Pages do
       |> Map.delete([:id, :parent])
       |> Map.from_struct()
       |> create_page_fragment(%User{id: fragment.creator_id})
-    else
-      {:error, {:page_fragment, :not_found}} ->
-        {:error, {:page_fragment, :not_found}}
     end
   end
 

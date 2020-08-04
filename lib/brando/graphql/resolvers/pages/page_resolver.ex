@@ -48,16 +48,12 @@ defmodule Brando.Pages.PageResolver do
   @doc """
   Duplicate page
   """
-  def duplicate(%{page_id: page_id}, %{context: %{current_user: _}}) do
-    page_id
-    |> Pages.duplicate_page()
-  end
+  def duplicate(%{page_id: page_id}, %{context: %{current_user: _}}),
+    do: Pages.duplicate_page(page_id)
 
   @doc """
   Duplicate section
   """
-  def duplicate_section(%{section_id: section_id}, %{context: %{current_user: _}}) do
-    section_id
-    |> Pages.duplicate_page_fragment()
-  end
+  def duplicate_section(%{section_id: section_id}, %{context: %{current_user: _}}),
+    do: Pages.duplicate_page_fragment(section_id)
 end
