@@ -198,9 +198,9 @@ defmodule Brando.Utils do
   Convert map atom keys to strings
   """
   def stringify_keys(nil), do: nil
-  def stringify_keys(struct = %{}) when is_struct(struct), do: struct
+  def stringify_keys(%{} = struct) when is_struct(struct), do: struct
 
-  def stringify_keys(map = %{}) do
+  def stringify_keys(%{} = map) do
     map
     |> Enum.map(fn {k, v} -> {stringify_key(k), stringify_keys(v)} end)
     |> Enum.into(%{})

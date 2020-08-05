@@ -18,12 +18,14 @@ defmodule Brando.System do
 
   def run_checks do
     Logger.info("==> Brando >> Running system checks...")
+
     {:ok, {:module_config, :exists}} = check_module_config_exists()
     {:ok, {:executable, :exists}} = check_image_processing_executable()
     {:ok, {:identity, :exists}} = check_identity_exists()
     {:ok, {:bucket, :exists}} = check_cdn_bucket_exists()
     {:ok, {:authorization, :exists}} = check_authorization_exists()
-    {:ok, {:globals, :valid}} = check_valid_globals()
+    {:ok, {:globals, _}} = check_valid_globals()
+
     Logger.info("==> Brando >> System checks complete!")
   end
 
@@ -108,21 +110,22 @@ defmodule Brando.System do
   defp check_valid_globals do
     search_terms = ["\\${GLOBAL:(\\w+)}", "\\${global:(\\w+)}"]
 
-    for {schema, fields} <- Villain.list_villains() do
-      Enum.reduce(fields, [], fn {_, data_field, _html_field}, acc ->
-        case Villain.search_villains_for_regex(schema, data_field, search_terms) do
-          [] ->
-            acc
+    invalid_ids =
+      for {schema, fields} <- Villain.list_villains() do
+        Enum.reduce(fields, [], fn {_, data_field, _html_field}, acc ->
+          case Villain.search_villains_for_regex(schema, data_field, search_terms) do
+            [] ->
+              acc
 
-          ids ->
-            log_invalid_global(schema, ids)
-            [ids | acc]
-        end
-      end)
-    end
+            ids ->
+              log_invalid_global(schema, ids)
+              [ids | acc]
+          end
+        end)
+      end
 
     # Return valid no matter what. We only want to warn
-    {:ok, {:globals, :valid}}
+    {:ok, {:globals, invalid_ids}}
   end
 
   defp log_invalid_global(schema, ids) do

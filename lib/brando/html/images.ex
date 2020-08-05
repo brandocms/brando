@@ -157,12 +157,7 @@ defmodule Brando.HTML.Images do
   defp add_srcset(%{lazyload: true} = attrs, image_struct) do
     placeholder = Keyword.get(attrs.opts, :placeholder, false)
 
-    no_srcset_placeholder =
-      case placeholder do
-        :svg -> true
-        false -> true
-        _ -> false
-      end
+    no_srcset_placeholder = srcset_placeholder?(placeholder)
 
     srcset =
       (Keyword.get(attrs.opts, :srcset) &&
@@ -195,6 +190,10 @@ defmodule Brando.HTML.Images do
     |> put_in([:source, :srcset], srcset)
     |> put_in([:source, :data_srcset], false)
   end
+
+  defp srcset_placeholder?(:svg), do: true
+  defp srcset_placeholder?(false), do: true
+  defp srcset_placeholder?(_), do: false
 
   defp add_mq(%{lazyload: _} = attrs, image_struct) do
     case (Keyword.get(attrs.opts, :media_queries) &&
@@ -242,40 +241,6 @@ defmodule Brando.HTML.Images do
     |> put_in([:img, :src], src)
     |> put_in([:img, :data_src], false)
     |> put_in([:noscript_img, :src], src)
-  end
-
-  # automatically add dims when lazyload: true
-  defp add_dims(%{lazyload: true} = attrs, image_struct) do
-    width =
-      case Keyword.fetch(attrs.opts, :width) do
-        :error ->
-          false
-
-        {:ok, true} ->
-          Map.get(image_struct, :width)
-
-        {:ok, width} ->
-          width
-      end
-
-    height =
-      case Keyword.fetch(attrs.opts, :height) do
-        :error ->
-          false
-
-        {:ok, true} ->
-          Map.get(image_struct, :height)
-
-        {:ok, height} ->
-          height
-      end
-
-    orientation = (width > height && "landscape") || "portrait"
-
-    attrs
-    |> put_in([:img, :width], width)
-    |> put_in([:img, :height], height)
-    |> put_in([:picture, :data_orientation], orientation)
   end
 
   defp add_dims(attrs, image_struct) do

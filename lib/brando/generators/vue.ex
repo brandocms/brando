@@ -50,7 +50,7 @@ defmodule Brando.Generators.Vue do
         Recase.to_pascal(binding[:vue_singular])
       }Form.vue"
 
-    Enum.map(binding[:assocs], fn {_, {:references, target}} ->
+    for {_, {:references, target}} <- binding[:assocs] do
       [gql_domain, gql_target] =
         case String.split(Atom.to_string(target), "_") do
           [d, s] -> [d, String.upcase(s)]
@@ -62,7 +62,7 @@ defmodule Brando.Generators.Vue do
         "imports",
         "import GET_#{gql_target} from '../../gql/#{gql_domain}/#{gql_target}_QUERY.graphql'"
       )
-    end)
+    end
 
     binding
   end

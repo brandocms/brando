@@ -71,7 +71,7 @@ defmodule Brando.Generators.Schema do
        }) do
     extra_fields =
       Enum.map_join(schema_assocs, " ", fn {_, y, _} ->
-        if to_string(y) not in Keyword.values(gallery_fields), do: y, else: nil
+        if to_string(y) in Keyword.values(gallery_fields), do: nil, else: y
       end)
 
     Enum.join([fields, extra_fields], " ")

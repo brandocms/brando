@@ -23,11 +23,11 @@ defmodule Brando.LivePreview do
   set `template_prop: :entry`
   """
   defmacro target(opts, do: block) do
-    schema_module = Keyword.fetch!(opts, :schema_module) |> Macro.expand(__CALLER__)
-    view_module = Keyword.fetch!(opts, :view_module) |> Macro.expand(__CALLER__)
-    layout_module = Keyword.fetch!(opts, :layout_module) |> Macro.expand(__CALLER__)
-    layout_template = Keyword.get(opts, :layout_template, "app.html")
-    template_prop = Keyword.get(opts, :template_prop, nil)
+    schema_module = opts |> Keyword.fetch!(:schema_module) |> Macro.expand(__CALLER__)
+    view_module = opts |> Keyword.fetch!(:view_module) |> Macro.expand(__CALLER__)
+    layout_module = opts |> Keyword.fetch!(:layout_module) |> Macro.expand(__CALLER__)
+    layout_template = opts |> Keyword.get(:layout_template, "app.html")
+    template_prop = opts |> Keyword.get(:template_prop, nil)
 
     quote location: :keep do
       @doc """

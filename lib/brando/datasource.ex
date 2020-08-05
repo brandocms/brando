@@ -60,6 +60,7 @@ defmodule Brando.Datasource do
 
   """
   import Ecto.Query
+  alias Brando.Villain
 
   @doc """
   List all registered data sources
@@ -204,18 +205,18 @@ defmodule Brando.Datasource do
   Look through all villains for datasources using `schema`
   """
   def update_datasource(datasource, entry) do
-    villains = Brando.Villain.list_villains()
+    villains = Villain.list_villains()
 
-    for {schema, fields} <- villains do
-      Enum.reduce(fields, [], fn {_, data_field, html_field}, acc ->
-        case list_ids_with_datasource(schema, datasource, data_field) do
-          [] ->
-            acc
+    for {schema, fields} <- villains,
+        {_, data_field, html_field} <- fields do
+      ids = list_ids_with_datasource(schema, datasource, data_field)
 
-          ids ->
-            [Brando.Villain.rerender_html_from_ids({schema, data_field, html_field}, ids) | acc]
-        end
-      end)
+      unless Enum.empty?(ids) do
+        Villain.rerender_html_from_ids(
+          {schema, data_field, html_field},
+          ids
+        )
+      end
     end
 
     {:ok, entry}

@@ -87,7 +87,7 @@ defmodule Brando.PagesTest do
     assert Enum.count(fragments) == 2
 
     {:ok, fragments} = Pages.list_page_fragments("parent", "sv")
-    assert Enum.count(fragments) == 0
+    assert Enum.empty?(fragments)
   end
 
   test "list_page_fragments_translations" do

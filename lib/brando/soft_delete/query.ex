@@ -115,26 +115,26 @@ defmodule Brando.SoftDelete.Query do
     rows = Brando.repo().all(query)
 
     if image_fields do
-      for row <- rows do
-        Enum.map(image_fields, &Images.Utils.delete_original_and_sized_images(row, &1))
+      for row <- rows,
+          image_field <- image_fields do
+        Images.Utils.delete_original_and_sized_images(row, image_field)
       end
     end
 
     if galleries do
       # Though the image_series is already marked for deletion,
       # we need to clear out its files
-      for row <- rows do
-        Enum.map(galleries, fn gallery_field ->
-          field =
-            gallery_field
-            |> to_string
-            |> Kernel.<>("_id")
-            |> String.to_atom()
+      for row <- rows,
+          gallery_field <- galleries do
+        field =
+          gallery_field
+          |> to_string
+          |> Kernel.<>("_id")
+          |> String.to_atom()
 
-          series_id = Map.get(row, field)
+        series_id = Map.get(row, field)
 
-          Images.Utils.clear_media_for(:image_series, series_id)
-        end)
+        Images.Utils.clear_media_for(:image_series, series_id)
       end
     end
 

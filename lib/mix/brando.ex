@@ -217,22 +217,12 @@ defmodule Mix.Brando do
     type = (Keyword.get(opts, :prepend) && :prepend) || :append
     position = (type == :prepend && "\\+\\+") || "__"
     content = (Keyword.get(opts, :comma) && "#{content},") || content
-
-    marker_token =
-      case Path.extname(file) do
-        ".ex" ->
-          "# #{position}"
-
-        ".js" ->
-          "// #{position}"
-
-        ".vue" ->
-          "// #{position}"
-      end
+    marker_token = get_marker_token(file, position)
 
     exists? =
       if Keyword.get(opts, :singular) do
-        File.stream!(file)
+        file
+        |> File.stream!()
         |> Enum.map(&String.contains?(&1, content))
         |> Enum.any?(&(&1 == true))
       else
@@ -251,6 +241,19 @@ defmodule Mix.Brando do
     end
   end
 
+  defp get_marker_token(file, position) do
+    case Path.extname(file) do
+      ".ex" ->
+        "# #{position}"
+
+      ".js" ->
+        "// #{position}"
+
+      ".vue" ->
+        "// #{position}"
+    end
+  end
+
   defp process_line(line, marker, content, :append) do
     marker_regex = ~r/(\s+)?(#{marker})/
 
@@ -260,7 +263,8 @@ defmodule Mix.Brando do
 
       [whitespace, marker] ->
         content_split =
-          String.split(content, "\n")
+          content
+          |> String.split("\n")
           |> Enum.map(&"#{whitespace}#{&1}")
           |> Enum.join("\n")
 
@@ -278,7 +282,8 @@ defmodule Mix.Brando do
 
       [whitespace, marker] ->
         content_split =
-          String.split(content, "\n")
+          content
+          |> String.split("\n")
           |> Enum.map(&"#{whitespace}#{&1}")
           |> Enum.join("\n")
 
@@ -298,7 +303,9 @@ defmodule Mix.Brando do
   end
 
   defp beam_to_module(path) do
-    path |> Path.basename(".beam") |> String.to_atom()
+    path
+    |> Path.basename(".beam")
+    |> String.to_atom()
   end
 
   def otp_app do

@@ -34,9 +34,8 @@
         # set the `excluded_macros` parameter to `[:schema, :setup, :test]`.
         {Credo.Check.Design.DuplicatedCode, excluded_macros: []},
 
-        # Disabled for now as they are also checked by Code Climate
-        {Credo.Check.Design.TagTODO, false},
-        {Credo.Check.Design.TagFIXME, false},
+        # {Credo.Check.Design.TagTODO, false},
+        # {Credo.Check.Design.TagFIXME, false},
         {Credo.Check.Readability.FunctionNames},
         {Credo.Check.Readability.LargeNumbers},
         {Credo.Check.Readability.MaxLineLength, false},
@@ -75,7 +74,9 @@
         {Credo.Check.Warning.UnusedListOperation},
         {Credo.Check.Warning.UnusedStringOperation},
         {Credo.Check.Warning.UnusedTupleOperation},
-        {Credo.Check.Warning.OperationWithConstantResult}
+        {Credo.Check.Warning.OperationWithConstantResult},
+        {Credo.Check.Refactor.MapInto, false},
+        {Credo.Check.Warning.LazyLogging, false}
 
         # Custom checks can be created using `mix credo.gen.check`.
         #

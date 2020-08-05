@@ -3,57 +3,6 @@ defmodule Brando.Villain.Parser do
   Defines callbacks for the Villain.Parser behaviour.
   """
 
-  @doc "Parses a comment"
-  @callback comment(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
-  @doc "Parses a header"
-  @callback header(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
-  @doc "Parses text/paragraphs"
-  @callback text(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
-  @doc "Parses video"
-  @callback video(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
-  @doc "Parses map"
-  @callback map(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
-  @doc "Parses image"
-  @callback image(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
-  @doc "Parses slideshow"
-  @callback slideshow(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
-  @doc "Parses divider"
-  @callback divider(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
-  @doc "Parses list"
-  @callback list(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
-  @doc "Parses blockquote"
-  @callback blockquote(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
-  @doc "Parses columns"
-  @callback columns(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
-  @doc "Parses datatables"
-  @callback datatable(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
-  @doc "Parses markdown"
-  @callback markdown(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
-  @doc "Parses html"
-  @callback html(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
-  @doc "Parses svg"
-  @callback svg(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
-  @doc "Parses template"
-  @callback template(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
-  @doc "Parses datasource"
-  @callback datasource(data :: %{binary => any}, opts :: Keyword.t()) :: binary
-
   defmacro __using__(_) do
     quote do
       @behaviour Brando.Villain.Parser
@@ -301,7 +250,7 @@ defmodule Brando.Villain.Parser do
           width: data["width"],
           height: data["height"],
           cover: :svg,
-          poster: (data["poster"] && data["poster"]) || nil,
+          poster: data["poster"] || nil,
           preload: true,
           opacity: 0.1
         })
@@ -464,7 +413,7 @@ defmodule Brando.Villain.Parser do
         items =
           Enum.map_join(images, "\n", fn img ->
             orientation = (img["width"] > img["height"] && "landscape") || "portrait"
-            caption = (img["title"] && img["title"]) || nil
+            caption = img["title"] || nil
 
             ptag =
               picture_tag(img,
@@ -731,4 +680,55 @@ defmodule Brando.Villain.Parser do
       end
     end
   end
+
+  @doc "Parses a comment"
+  @callback comment(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses a header"
+  @callback header(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses text/paragraphs"
+  @callback text(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses video"
+  @callback video(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses map"
+  @callback map(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses image"
+  @callback image(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses slideshow"
+  @callback slideshow(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses divider"
+  @callback divider(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses list"
+  @callback list(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses blockquote"
+  @callback blockquote(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses columns"
+  @callback columns(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses datatables"
+  @callback datatable(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses markdown"
+  @callback markdown(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses html"
+  @callback html(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses svg"
+  @callback svg(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses template"
+  @callback template(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses datasource"
+  @callback datasource(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 end

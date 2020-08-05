@@ -228,17 +228,7 @@ defmodule Brando.Pages do
   @doc """
   Get page by parent_key and key
   """
-  def get_page(nil, key, lang) when is_binary(key) do
-    q =
-      from p in Page,
-        where: p.key == ^key and p.language == ^lang and is_nil(p.deleted_at),
-        preload: [fragments: ^build_fragments_query()]
-
-    case Brando.repo().one(q) do
-      nil -> {:error, {:page, :not_found}}
-      page -> {:ok, page}
-    end
-  end
+  def get_page(nil, key, lang) when is_binary(key), do: get_page(key, lang)
 
   @doc """
   Get page by parent_key, key and language

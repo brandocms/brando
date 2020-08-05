@@ -123,22 +123,26 @@ defmodule Brando.Images.Utils do
   @doc """
   Returns image type atom.
   """
-  @spec image_type(filename :: binary) :: atom
+  @spec image_type(filename :: binary) :: atom | no_return()
   def image_type(filename) do
-    case String.downcase(Path.extname(filename)) do
-      ".jpg" -> :jpg
-      ".jpeg" -> :jpg
-      ".png" -> :png
-      ".gif" -> :gif
-      ".bmp" -> :bmp
-      ".tif" -> :tiff
-      ".tiff" -> :tiff
-      ".psd" -> :psd
-      ".svg" -> :svg
-      ".crw" -> :crw
-      ".webp" -> :webp
-    end
+    filename
+    |> Path.extname()
+    |> String.downcase()
+    |> do_image_type()
   end
+
+  defp do_image_type(".jpg"), do: :jpg
+  defp do_image_type(".jpeg"), do: :jpg
+  defp do_image_type(".png"), do: :png
+  defp do_image_type(".gif"), do: :gif
+  defp do_image_type(".bmp"), do: :bmp
+  defp do_image_type(".tif"), do: :tiff
+  defp do_image_type(".tiff"), do: :tiff
+  defp do_image_type(".psd"), do: :psd
+  defp do_image_type(".svg"), do: :svg
+  defp do_image_type(".crw"), do: :crw
+  defp do_image_type(".webp"), do: :webp
+  defp do_image_type(ext), do: raise("Unknown image type #{ext}")
 
   @doc """
   Return joined path of `file` and the :media_path config option
