@@ -1,6 +1,5 @@
 use Mix.Config
 
-config :<%= application_name %>, hmr: true
 config :<%= application_name %>, show_breakpoint_debug: true
 
 # Configure your database
