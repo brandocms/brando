@@ -128,8 +128,8 @@ defmodule Brando.LivePreview do
 
         {:ok, cache_key}
       rescue
-        _err ->
-          {:error, "Initialization failed."}
+        err ->
+          {:error, "Initialization failed. #{inspect err}"}
       end
     else
       {:error, "No render/5 function found in LivePreview module"}
