@@ -430,7 +430,6 @@ defmodule Brando.AdminChannelTest do
 
   describe "livepreview" do
     test "livepreview:initialize", %{socket: socket} do
-      # p1 = Factory.insert(:page)
       entry = %{"title" => "Page title!"}
 
       ref =
@@ -441,7 +440,7 @@ defmodule Brando.AdminChannelTest do
           "prop" => "page"
         })
 
-      assert_reply ref, :error, %{code: 404, message: "Initialization failed."}
+      assert_reply ref, :error, %{code: 404}
 
       ref =
         push(socket, "livepreview:initialize", %{
