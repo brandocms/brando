@@ -46,6 +46,12 @@ defmodule Brando.Villain.Parser do
       defoverridable header: 2
 
       @doc """
+      Value of an InputBlock.
+      """
+      def input(%{"value" => value}, _), do: value
+      defoverridable input: 2
+
+      @doc """
       Convert template to html.
       """
       def template(
@@ -698,6 +704,9 @@ defmodule Brando.Villain.Parser do
 
   @doc "Parses image"
   @callback image(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
+  @doc "Parses input"
+  @callback input(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
   @doc "Parses slideshow"
   @callback slideshow(data :: %{binary => any}, opts :: Keyword.t()) :: binary
