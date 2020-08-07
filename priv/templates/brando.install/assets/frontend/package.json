@@ -9,7 +9,7 @@
     "build": "NODE_ENV=production rollup -c",
     "dev": "NODE_ENV=development rollup -c --watch",
     "test": "cypress open",
-    "move_srcmaps": "move-file ../../priv/static/js/app.js.map ../../priv/static/js/__srcmaps/app.js.map && move-file ../../priv/static/js/app.legacy.js.map ../../priv/static/js/__srcmaps/app.legacy.js.map && move-file ../../priv/static/css/app.css.map ../../priv/static/css/__srcmaps/app.css.map"
+    "move_srcmaps": "move-file ../../priv/static/js/app.js.map ../../priv/static/js/__srcmaps/app.js.map && move-file ../../priv/static/css/app.css.map ../../priv/static/css/__srcmaps/app.css.map"
   },
   "browserslist": {
     "legacyBrowsers": [
