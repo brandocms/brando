@@ -15,10 +15,12 @@ defmodule Brando.Type.Image do
           sizes: map,
           width: non_neg_integer | nil,
           height: non_neg_integer | nil,
-          focal: Focal.t()
+          focal: Focal.t(),
+          cdn: boolean
         }
 
-  @derive {Jason.Encoder, only: [:title, :credits, :alt, :path, :sizes, :width, :height, :focal]}
+  @derive {Jason.Encoder,
+           only: [:title, :credits, :alt, :path, :sizes, :width, :height, :focal, :cdn]}
 
   defstruct title: nil,
             credits: nil,
@@ -27,7 +29,8 @@ defmodule Brando.Type.Image do
             sizes: %{},
             width: nil,
             height: nil,
-            focal: %Focal{x: 50, y: 50}
+            focal: %Focal{x: 50, y: 50},
+            cdn: false
 
   @doc """
   Returns the internal type representation of our image type for pg

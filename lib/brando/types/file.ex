@@ -10,7 +10,8 @@ defmodule Brando.Type.File do
   @derive Jason.Encoder
   defstruct path: nil,
             mimetype: nil,
-            size: nil
+            size: nil,
+            cdn: false
 
   @doc """
   Returns the internal type representation of our `Role` type for pg
