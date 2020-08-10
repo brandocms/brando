@@ -277,6 +277,7 @@ defmodule Mix.Tasks.Brando.Gen do
   def migration_type({k, :slug}), do: {k, :slug}
   def migration_type({k, :text}), do: {k, :text}
   def migration_type({k, :status}), do: {k, :integer}
+  def migration_type({k, :datetime}), do: {k, :utc_datetime}
   def migration_type({k, type}), do: {k, type}
 
   defp partition_attrs_and_assocs(attrs) do
