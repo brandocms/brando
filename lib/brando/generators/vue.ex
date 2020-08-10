@@ -26,7 +26,9 @@ defmodule Brando.Generators.Vue do
     Mix.Brando.add_to_file(
       "assets/backend/src/menus/index.js",
       "content",
-      "#{binding[:vue_plural]}"
+      "#{binding[:vue_plural]}",
+      prepend: true,
+      comma: true
     )
 
     ## ROUTES
