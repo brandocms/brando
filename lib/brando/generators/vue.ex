@@ -121,30 +121,30 @@ defmodule Brando.Generators.Vue do
         {k, :slug} ->
           {k, ""}
 
-        {:title = k, _} ->
+        {"title" = k, _} ->
           {k, ~s(<div class="col-2">
             <router-link
               :to="{ name: '#{vue_plural}-edit', params: { #{vue_singular}Id: entry.id } }"
               class="entry-link">
-              {{ entry.#{Recase.to_camel(Atom.to_string(k))} }}
+              {{ entry.#{Recase.to_camel(k)} }}
             </router-link>
           </div>)}
 
-        {:name = k, _} ->
+        {"name" = k, _} ->
           {k, ~s(<div class="col-2">
             <router-link
               :to="{ name: '#{vue_plural}-edit', params: { #{vue_singular}Id: entry.id } }"
               class="entry-link">
-              {{ entry.#{Recase.to_camel(Atom.to_string(k))} }}
+              {{ entry.#{Recase.to_camel(k)} }}
             </router-link>
           </div>)}
 
-        {:heading = k, _} ->
+        {"heading" = k, _} ->
           {k, ~s(<div class="col-2">
             <router-link
               :to="{ name: '#{vue_plural}-edit', params: { #{vue_singular}Id: entry.id } }"
               class="entry-link">
-              {{ entry.#{Recase.to_camel(Atom.to_string(k))} }}
+              {{ entry.#{Recase.to_camel(k)} }}
             </router-link>
           </div>)}
 

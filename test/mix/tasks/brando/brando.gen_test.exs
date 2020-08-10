@@ -217,6 +217,10 @@ defmodule Mix.Tasks.Brando.Gen.Test do
         assert file =~ "sortEntries (seq)"
       end)
 
+      assert_file("assets/backend/src/views/games/CaptainListView.vue", fn file ->
+        assert file =~ "class=\"entry-link\">"
+      end)
+
       send(self(), {:mix_shell_input, :prompt, "Games"})
       send(self(), {:mix_shell_input, :prompt, "Parrot"})
       send(self(), {:mix_shell_input, :prompt, "parrots"})
