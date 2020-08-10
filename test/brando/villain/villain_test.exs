@@ -6,6 +6,7 @@ defmodule Brando.VillainTest do
     def datatable(_, _), do: nil
     def datasource(_, _), do: nil
     def markdown(_, _), do: nil
+    def input(_, _), do: nil
     def html(_, _), do: nil
     def svg(_, _), do: nil
     def map(_, _), do: nil
