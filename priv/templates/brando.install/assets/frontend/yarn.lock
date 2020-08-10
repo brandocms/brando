@@ -5439,10 +5439,10 @@ rollup-plugin-copy@^3.3.0:
     globby "10.0.1"
     is-plain-object "^3.0.0"
 
-rollup-plugin-hot-css@^0.3.1:
-  version "0.3.1"
-  resolved "https://registry.yarnpkg.com/rollup-plugin-hot-css/-/rollup-plugin-hot-css-0.3.1.tgz#5b619f3920ff799d6742e52d84b28d01d6ddc32f"
-  integrity sha512-RXaw+m6acwghoo6/7D5DSzCJjWNuTUntnp+gnOg3jxQxPZebJa/ehiBEmxZd3/vh/s83yH80+Wf/eenjn1zrgw==
+rollup-plugin-hot-css@^0.4.0:
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/rollup-plugin-hot-css/-/rollup-plugin-hot-css-0.4.0.tgz#be4a5c8e31370165152480b0e7f75ff24df5f077"
+  integrity sha512-TsDYIm2FJJ1IJRwfguDb4UiFED1GEsJPjPcAi8p298MxTt0QuekVOLtlMgWvCjWlLdY3vrqVrs3bh51V0Py3tA==
   dependencies:
     css-tree "1.0.0-alpha.39"
     source-map "^0.5.6"
