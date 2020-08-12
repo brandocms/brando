@@ -67,7 +67,13 @@ config :brando, Brando.Images,
       "thumb" => %{"crop" => true, "quality" => 85, "size" => "150x150"},
       "xlarge" => %{"quality" => 85, "size" => "1900"}
     },
-  }
+  },
+  default_srcset: [
+    {"small", "700w"},
+    {"medium", "1000w"},
+    {"large", "1400w"},
+    {"xlarge", "1900w"}
+  ]
 
 config :brando, Brando.Villain,
   parser: <%= application_module %>.Villain.Parser
