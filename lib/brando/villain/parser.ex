@@ -276,11 +276,13 @@ defmodule Brando.Villain.Parser do
         height = Map.get(data, "height", nil)
         orientation = (width > height && "landscape") || "portrait"
         lightbox = Map.get(data, "lightbox", nil)
+        default_srcset = Brando.config(Brando.Images)[:default_srcset]
 
         link = Map.get(data, "link") || ""
         img_class = Map.get(data, "img_class", "")
         picture_class = Map.get(data, "picture_class", "")
         srcset = Map.get(data, "srcset", "")
+
         media_queries = Map.get(data, "media_queries", "")
 
         {link_open, link_close} =
@@ -302,9 +304,9 @@ defmodule Brando.Villain.Parser do
         caption = if title == "", do: "", else: "<figcaption>#{title}</figcaption>"
 
         srcset =
-          if srcset != "",
-            do: Code.string_to_quoted!(srcset, existing_atoms_only: true),
-            else: nil
+          if srcset == "",
+            do: default_srcset,
+            else: Code.string_to_quoted!(srcset, existing_atoms_only: true)
 
         media_queries =
           if media_queries != "",
@@ -331,7 +333,6 @@ defmodule Brando.Villain.Parser do
 
         ptag =
           picture_tag(data,
-            key: :xlarge,
             img_class: img_class,
             picture_class: picture_class,
             media_queries: media_queries,
