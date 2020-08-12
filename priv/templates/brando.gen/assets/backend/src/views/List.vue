@@ -28,7 +28,9 @@
           <template v-slot:content>
             <li>
               <router-link
-                :to="{ name: '<%= vue_plural %>-new' }">
+                v-shortkey="['n']"
+                :to="{ name: '<%= vue_plural %>-new' }"
+                @shortkey.native="$router.push({ name: '<%= vue_plural %>-new' })">
                 {{ $t('<%= vue_plural %>.new') }}
               </router-link>
             </li>
