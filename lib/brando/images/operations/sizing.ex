@@ -90,6 +90,8 @@ defmodule Brando.Images.Operations.Sizing do
 
     File.mkdir_p!(image_dest_dir)
 
+    {width, height} = ensure_dims(width, height, image_src_path)
+
     conversion_parameters = %Images.ConversionParameters{
       id: id,
       size_key: size_key,
@@ -126,6 +128,18 @@ defmodule Brando.Images.Operations.Sizing do
         {:error, {:create_image_size, {:file_not_found, conversion_parameters.image_src_path}}}
     end
   end
+
+  defp ensure_dims(width, height, img_path) when is_nil(width) or is_nil(height) do
+    case Fastimage.size(img_path) do
+      {:ok, %{width: width, height: height}} ->
+        {width, height}
+
+      {:error, _} ->
+        {0, 0}
+    end
+  end
+
+  defp ensure_dims(w, h, _), do: {w, h}
 
   @doc """
   Check if `image_src_path` exists
