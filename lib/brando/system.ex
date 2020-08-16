@@ -25,6 +25,7 @@ defmodule Brando.System do
     {:ok, {:bucket, :exists}} = check_cdn_bucket_exists()
     {:ok, {:authorization, :exists}} = check_authorization_exists()
     {:ok, {:globals, _}} = check_valid_globals()
+    {:ok, _} = check_invalid_wrapper_content()
 
     Logger.info("==> Brando >> System checks complete!")
   end
@@ -137,6 +138,33 @@ defmodule Brando.System do
       ==> Found deprecated global variable format `${global:key}`. Try `${global:system.key}` instead.
       ==> Schema.: #{inspect(schema)}
       ==> Ids....: #{inspect(ids)}
+    """)
+  end
+
+  # ${CONTENT} should be ${content} now
+  defp check_invalid_wrapper_content do
+    {:ok, templates} = Brando.Villain.list_templates("all")
+
+    if Enum.count(templates) > 0 do
+      for t <- templates do
+        if t.wrapper && String.contains?(t.wrapper, "${CONTENT}") do
+          log_invalid_wrapper_content(t)
+        end
+      end
+    end
+
+    {:ok, {:wrappers, :ok}}
+  end
+
+  defp log_invalid_wrapper_content(t) do
+    require Logger
+
+    Logger.error("""
+
+
+      ==> Found deprecated wrapper content format `${CONTENT}`. Use `${content}` instead.
+      ==> Schema.: Template
+      ==> Id.....: #{t.id} - #{t.name}
     """)
   end
 end
