@@ -18,15 +18,15 @@ defmodule Brando.Villain do
     - `${global:<key>}`
     Gets `<key>` from list of globals in the Identity configuration.
 
-    - `${loop:index}`
+    - `${forloop.index}`
     Only available inside for loops or templates with `multi` set to true. Returns the current index
     of the for loop, starting at `1`
 
-    - `${loop:index0}`
+    - `${forloop.index0}`
     Only available inside for loops or templates with `multi` set to true. Returns the current index
     of the for loop, starting at `0`
 
-    - `${loop:count}`
+    - `${forloop.count}`
     Only available inside for loops or templates with `multi` set to true. Returns the total amount
     of entries in the for loop
 
