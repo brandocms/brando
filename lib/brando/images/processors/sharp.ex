@@ -29,7 +29,7 @@ defmodule Brando.Images.Processor.Sharp do
         resize_values: resize_values
       }) do
     image_dest_dir = Path.dirname(image_dest_path)
-    image_dest_path = Path.join(image_dest_dir, "{name}{ext}")
+    image_dest_path = Path.join(image_dest_dir, "{name}.#{format}")
 
     file_params = [
       "-i",
@@ -107,7 +107,7 @@ defmodule Brando.Images.Processor.Sharp do
         crop_values: crop_values
       }) do
     image_dest_dir = Path.dirname(image_dest_path)
-    image_dest_path = Path.join(image_dest_dir, "{name}{ext}")
+    image_dest_path = Path.join(image_dest_dir, "{name}.#{format}")
 
     file_params = [
       "-i",
