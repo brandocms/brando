@@ -35,6 +35,9 @@ defmodule Brando.Query do
             |> order_by(fragment("status=1 DESC"))
             |> order_by(fragment("status=3 DESC"))
 
+          {_, :random}, query ->
+            query |> order_by(fragment("RANDOM()"))
+
           {dir, by}, query ->
             query |> order_by({^dir, ^by})
         end)
