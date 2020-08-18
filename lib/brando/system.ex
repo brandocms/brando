@@ -141,7 +141,7 @@ defmodule Brando.System do
     """)
   end
 
-  # ${CONTENT} should be ${content} now
+  # wrapper should be moved from datasource block to template
   defp check_invalid_wrapper_content do
     {:ok, templates} = Brando.Villain.list_templates("all")
 
