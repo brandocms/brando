@@ -60,7 +60,7 @@ defmodule Brando.HTML do
     - `poster` -> url to poster, i.e. on vimeo.
   """
   @spec video_tag(binary, map()) :: safe_string
-  def video_tag(src, opts) do
+  def video_tag(src, opts \\ %{}) do
     width = Map.get(opts, :width)
     height = Map.get(opts, :height)
     opacity = Map.get(opts, :opacity, 0)
