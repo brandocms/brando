@@ -244,6 +244,9 @@ defmodule Brando.HTML.Images do
   end
 
   defp add_dims(attrs, image_struct) do
+    img_width = Map.get(image_struct, :width)
+    img_height = Map.get(image_struct, :height)
+
     width =
       case Keyword.fetch(attrs.opts, :width) do
         :error ->
@@ -268,7 +271,9 @@ defmodule Brando.HTML.Images do
           height
       end
 
-    orientation = (width > height && "landscape") || "portrait"
+    orientation =
+      (img_width > img_height && "landscape") || (img_width == img_height && "square") ||
+        "portrait"
 
     attrs
     |> put_in([:img, :width], width)
