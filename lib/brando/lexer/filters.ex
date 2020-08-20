@@ -192,6 +192,36 @@ defmodule Brando.Lexer.Filter do
   def default(value, _, _), do: value
 
   @doc """
+  Get key from image.
+
+  It is prefered to use |size:"thumb" instead of this, but keeping these for backwards
+  compatibility
+  """
+  #! TODO make it work for live preview fetching
+  def large(img, _),
+    do:
+      Brando.HTML.picture_tag(img, key: :large, prefix: Brando.Utils.media_url())
+      |> Phoenix.HTML.safe_to_string()
+
+  def xlarge(img, _),
+    do:
+      Brando.HTML.picture_tag(img, key: :xlarge, prefix: Brando.Utils.media_url())
+      |> Phoenix.HTML.safe_to_string()
+
+  def thumb(img, _),
+    do:
+      Brando.HTML.picture_tag(img, key: :thumb, prefix: Brando.Utils.media_url())
+      |> Phoenix.HTML.safe_to_string()
+
+  @doc """
+  Get sized version of image
+  """
+  def size(%Brando.Type.Image{} = img, size, _) do
+    Brando.HTML.picture_tag(img, key: size, prefix: Brando.Utils.media_url())
+    |> Phoenix.HTML.safe_to_string()
+  end
+
+  @doc """
   Divides a number by another number.
   ## Examples
   The result is rounded down to the nearest integer (that is, the floor) if the divisor is an integer.
