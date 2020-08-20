@@ -1,13 +1,38 @@
 defmodule Brando.Schema.Types.Scalar do
   use Brando.Web, :absinthe
+  require Logger
 
   scalar :time, description: "ISOz time" do
-    parse &Timex.parse(&1.value, "{ISO:Extended:Z}")
+    parse fn p ->
+      case Timex.parse(p.value, "{ISO:Extended:Z}") do
+        {:ok, v} ->
+          {:ok, v}
+
+        {:error, err} ->
+          Logger.error("==> :time scalar parse failed")
+          Logger.error("value: #{inspect(p.value, pretty: true)}")
+          Logger.error("error: #{inspect(err, pretty: true)}")
+          :error
+      end
+    end
+
     serialize &Timex.format!(&1, "{ISO:Extended:Z}")
   end
 
   scalar :date, description: "ISOz time" do
-    parse &Timex.parse(&1.value, "%Y-%m-%d", :strftime)
+    parse fn p ->
+      case Timex.parse(p.value, "%Y-%m-%d", :strftime) do
+        {:ok, v} ->
+          {:ok, v}
+
+        {:error, err} ->
+          Logger.error("==> :date scalar parse failed")
+          Logger.error("value: #{inspect(p.value, pretty: true)}")
+          Logger.error("error: #{inspect(err, pretty: true)}")
+          :error
+      end
+    end
+
     serialize &Timex.format!(&1, "%Y-%m-%d", :strftime)
   end
 
