@@ -24,15 +24,17 @@ defmodule Brando.Migrations.MigrateDatasourceWrappers do
       {:ok, %{rows: rows}} = Ecto.Adapters.SQL.query(Brando.repo(), query, [])
 
       for [id, wrapper, template_id] <- rows do
-        wrapper = String.replace(wrapper, "${CONTENT}", "${content}")
+        if wrapper do
+          wrapper = String.replace(wrapper, "${CONTENT}", "${content}")
 
-        query =
-          from(t in "pages_templates",
-            where: t.id == ^template_id,
-            update: [set: [wrapper: ^wrapper]]
-          )
+          query =
+            from(t in "pages_templates",
+              where: t.id == ^template_id,
+              update: [set: [wrapper: ^wrapper]]
+            )
 
-        Brando.repo().update_all(query, [])
+          Brando.repo().update_all(query, [])
+        end
       end
     end
   end
