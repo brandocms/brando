@@ -197,27 +197,42 @@ defmodule Brando.Lexer.Filter do
   It is prefered to use |size:"thumb" instead of this, but keeping these for backwards
   compatibility
   """
-  #! TODO make it work for live preview fetching
-  def large(img, _),
-    do:
-      Brando.HTML.picture_tag(img, key: :large, prefix: Brando.Utils.media_url())
-      |> Phoenix.HTML.safe_to_string()
+  def large(%Brando.Type.Image{} = img, _) do
+    img
+    |> Brando.HTML.picture_tag(key: :large, prefix: Brando.Utils.media_url())
+    |> Phoenix.HTML.safe_to_string()
+  end
 
-  def xlarge(img, _),
-    do:
-      Brando.HTML.picture_tag(img, key: :xlarge, prefix: Brando.Utils.media_url())
-      |> Phoenix.HTML.safe_to_string()
+  def large(img, _) do
+    img
+    |> Brando.HTML.picture_tag(key: :large)
+    |> Phoenix.HTML.safe_to_string()
+  end
 
-  def thumb(img, _),
-    do:
-      Brando.HTML.picture_tag(img, key: :thumb, prefix: Brando.Utils.media_url())
-      |> Phoenix.HTML.safe_to_string()
+  def xlarge(%Brando.Type.Image{} = img, _) do
+    img
+    |> Brando.HTML.picture_tag(key: :xlarge, prefix: Brando.Utils.media_url())
+    |> Phoenix.HTML.safe_to_string()
+  end
+
+  def xlarge(img, _) do
+    img
+    |> Brando.HTML.picture_tag(key: :xlarge)
+    |> Phoenix.HTML.safe_to_string()
+  end
 
   @doc """
   Get sized version of image
   """
   def size(%Brando.Type.Image{} = img, size, _) do
-    Brando.HTML.picture_tag(img, key: size, prefix: Brando.Utils.media_url())
+    img
+    |> Brando.HTML.picture_tag(key: size, prefix: Brando.Utils.media_url())
+    |> Phoenix.HTML.safe_to_string()
+  end
+
+  def size(img, size, _) do
+    img
+    |> Brando.HTML.picture_tag(key: size)
     |> Phoenix.HTML.safe_to_string()
   end
 
