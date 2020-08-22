@@ -10,6 +10,12 @@ module.exports = {
       desktop_xl: '1920px'
     },
 
+    breakpointCollections: {
+      $mobile: '<=mobile',
+      $tablet: 'ipad_portrait/ipad_landscape',
+      $desktop: '>=desktop_md'
+    },
+
     colors: () => ({
       dark: '#000000',
       light: '#f9f7f4',
