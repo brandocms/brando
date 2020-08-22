@@ -10,7 +10,7 @@ defmodule Brando.Schema.Types.PageFragment do
     field :wrapper, :string
     field :data, :json
     field :html, :string
-    field :creator, :user
+    field :creator, :user, resolve: dataloader(Brando.Pages)
     field :page_id, :id
     field :inserted_at, :time
     field :updated_at, :time
