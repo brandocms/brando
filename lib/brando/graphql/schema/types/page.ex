@@ -1,19 +1,6 @@
 defmodule Brando.Schema.Types.Page do
   use Brando.Web, :absinthe
 
-  input_object :page_params do
-    field :parent_id, :id
-    field :key, :string
-    field :language, :string
-    field :title, :string
-    field :status, :string
-    field :template, :string
-    field :data, :json
-    field :css_classes, :string
-    field :meta_description, :string
-    field :meta_image, :upload_or_image
-  end
-
   object :page do
     field :id, :id
     field :key, :string
@@ -35,6 +22,19 @@ defmodule Brando.Schema.Types.Page do
     field :inserted_at, :time
     field :updated_at, :time
     field :deleted_at, :time
+  end
+
+  input_object :page_params do
+    field :parent_id, :id
+    field :key, :string
+    field :language, :string
+    field :title, :string
+    field :status, :string
+    field :template, :string
+    field :data, :json
+    field :css_classes, :string
+    field :meta_description, :string
+    field :meta_image, :upload_or_image
   end
 
   @desc "Filtering options for page"
