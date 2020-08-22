@@ -26,8 +26,7 @@ defmodule Brando.Pages.PageFragmentResolver do
         context: %{current_user: current_user}
       })
       when is_map(page_fragment_params) do
-    page_fragment_params
-    |> Pages.create_page_fragment(current_user)
+    Pages.create_page_fragment(page_fragment_params, current_user)
   end
 
   @doc """
@@ -36,15 +35,15 @@ defmodule Brando.Pages.PageFragmentResolver do
   def update(%{page_fragment_id: page_fragment_id, page_fragment_params: page_fragment_params}, %{
         context: %{current_user: current_user}
       }) do
-    page_fragment_id
-    |> Pages.update_page_fragment(page_fragment_params, current_user)
+    Pages.update_page_fragment(page_fragment_id, page_fragment_params, current_user)
   end
 
   @doc """
   Delete page
   """
   def delete(%{page_fragment_id: page_fragment_id}, %{context: %{current_user: _current_user}}) do
-    String.to_integer(page_fragment_id)
+    page_fragment_id
+    |> String.to_integer()
     |> Pages.delete_page_fragment()
   end
 end
