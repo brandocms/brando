@@ -23,7 +23,7 @@ defmodule Brando.Migrations.MigrateDatasourceWrappers do
 
       {:ok, %{rows: rows}} = Ecto.Adapters.SQL.query(Brando.repo(), query, [])
 
-      for [id, wrapper, template_id] <- rows do
+      for [_id, wrapper, template_id] <- rows do
         if wrapper do
           wrapper = String.replace(wrapper, "${CONTENT}", "${content}")
 

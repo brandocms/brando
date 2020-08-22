@@ -1,6 +1,5 @@
 defmodule Brando.Migrations.MigrateTemplateWrapperCasing do
   use Ecto.Migration
-  import Ecto.Query
 
   def up do
     execute """
