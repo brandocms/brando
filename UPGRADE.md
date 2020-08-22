@@ -1,5 +1,35 @@
 ## 0.46.0
 
+* Add `timezone` to `config/brando.exs`. This is used by date template filters.
+  ```
+  config :brando,
+    timezone: "Europe/Oslo"
+  ```
+
+* Added an `imageType` fragment to GQL. Use this instead of your own picked field, so replace
+  ```
+  post {
+    cover {
+      focal
+      thumb: url(thumb)
+      # ..etc
+    }
+  }
+  ```
+  to
+  ```
+  post {
+    cover {
+      ...imageType
+    }
+  }
+  ```
+  This means you should fix KInputImage fields that use any of your custom sizes. You can set which
+  key to use as preview by passing the `preview-key` prop to KInputImage.
+
+  This change is neccessary to bring in more default fields for the image so that live preview
+  has the neccessary information.
+
 * Renamed `User.full_name` to `User.name`. Requires BrandoJS to be updated.
   Check through your JS code for `fullName` and replace with `name
 
