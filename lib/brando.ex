@@ -21,6 +21,11 @@ defmodule Brando do
   def router, do: web_module(Router)
 
   @doc """
+  Gets the timezone set for app
+  """
+  def timezone, do: config(:timezone) || "Europe/Oslo"
+
+  @doc """
   Gets the parent app's endpoint, as set in config.exs
   """
   def endpoint, do: web_module(Endpoint)

@@ -173,7 +173,13 @@ defmodule Brando.Lexer.Filter do
       "07/06/2020"
   """
   def date(%Date{} = value, format, _), do: Timex.format!(value, format, :strftime)
-  def date(%DateTime{} = value, format, _), do: Timex.format!(value, format, :strftime)
+
+  def date(%DateTime{} = value, format, _) do
+    value
+    |> Timex.Timezone.convert(Brando.timezone())
+    |> Timex.format!(format, :strftime)
+  end
+
   def date(%NaiveDateTime{} = value, format, _), do: Timex.format!(value, format, :strftime)
 
   def date("now", format, context), do: date(DateTime.utc_now(), format, context)

@@ -16,6 +16,7 @@ config :brando,
 
   log_dir: Path.expand("./log"),
 
+  timezone: "Europe/Oslo",
   default_language: "en",
   languages: [
     [value: "no", text: "Norsk"],
