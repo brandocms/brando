@@ -98,8 +98,6 @@ defmodule Brando.Images.Operations do
   defp compile_transform_results(transform_results, operations) do
     for {key, transforms} <- transform_results do
       operation = get_operation_by_key(key, operations)
-      require Logger
-      Logger.error(inspect(operation, pretty: true))
       image_struct = %{operation.image_struct | sizes: transforms_to_sizes(transforms)}
 
       %Images.OperationResult{
@@ -120,7 +118,6 @@ defmodule Brando.Images.Operations do
 
   defp resize_image(%Images.Operation{} = operation) do
     {:ok, transform_result} = Images.Operations.Sizing.create_image_size(operation)
-    if Brando.CDN.enabled?(), do: Brando.CDN.upload_file(transform_result)
     transform_result
   end
 end
