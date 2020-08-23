@@ -4,6 +4,7 @@ defmodule Brando.CDN do
   """
 
   alias ExAws.S3
+  alias ExAws.S3.Upload
 
   @type upload_error :: {:error, {:cdn, {:upload, :failed}}}
 
@@ -12,10 +13,29 @@ defmodule Brando.CDN do
   @doc """
 
   """
-  @spec upload_file(file :: binary) :: {:ok, cdn_key :: binary} | upload_error
-  def upload_file(_file) do
-    # hepp
-    {:ok, "hepp"}
+  @spec upload_file(binary) :: {:ok, cdn_key :: binary} | upload_error
+  def upload_file(file_path) do
+    s3_bucket = config(:bucket)
+    s3_key = Path.join(["media", file_path])
+
+    require Logger
+    Logger.error(inspect(s3_bucket, pretty: true))
+    Logger.error(inspect(file_path, pretty: true))
+
+    #   file
+    #   |> Upload.stream_file()
+    #   |> S3.upload(s3_bucket, file_path, s3_options)
+    #   |> ExAws.request()
+    #   |> case do
+    #     {:ok, %{status_code: 200}} -> {:ok, file.file_name}
+    #     {:ok, :done} -> {:ok, file.file_name}
+    #     {:error, error} -> {:error, error}
+    #   end
+    # rescue
+    #   e in ExAws.Error ->
+    #     Logger.error(inspect e)
+    #     Logger.error(e.message)
+    #     {:error, :invalid_bucket}
   end
 
   @spec ensure_bucket_exists :: {:ok, {:bucket, :exists}} | :no_return
