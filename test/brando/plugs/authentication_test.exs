@@ -72,7 +72,9 @@ defmodule Brando.Plug.AuthenticationTest do
                  "inverted" => false,
                  "subject" => "all"
                }
-             ]
+             ],
+             "config" => %{"reset_password_on_first_login" => true, "show_onboarding" => false},
+             "last_login" => nil
            }
 
     post_body = Poison.encode!(%{"jwt" => "user:#{u1.id}"})
