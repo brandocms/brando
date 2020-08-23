@@ -32,7 +32,9 @@ defmodule Brando.Plug.Authentication do
 
       payload = %{
         jwt: jwt,
-        rules: authorization_module.get_rules_for(user.role)
+        rules: authorization_module.get_rules_for(user.role),
+        config: user.config,
+        last_login: user.last_login
       }
 
       conn

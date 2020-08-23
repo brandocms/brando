@@ -10,7 +10,7 @@ defmodule Brando.Schema.Types.User do
     field :role, :string
     field :active, :boolean
     field :language, :string
-    field :last_login, :date
+    field :last_login, :time
     field :config, :user_config
     field :inserted_at, :time
     field :updated_at, :time
@@ -19,10 +19,12 @@ defmodule Brando.Schema.Types.User do
 
   object :user_config do
     field :show_onboarding, :boolean
+    field :reset_password_on_first_login, :boolean
   end
 
   input_object :user_config_params do
     field :show_onboarding, :boolean
+    field :reset_password_on_first_login, :boolean
   end
 
   input_object :user_params do
