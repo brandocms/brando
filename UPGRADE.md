@@ -1,5 +1,17 @@
 ## 0.46.0
 
+* CDN uploads
+  Add your CDN config to `config/dev.exs` and `config/prod.exs`. It is recommended
+  to use separate buckets for development and production to prevent accidental
+  overwrite.
+
+  ```
+  config :brando, Brando.CDN,
+    enabled: true,
+    bucket: "my_app_prod",
+    media_url: "https://myspace.ams3.digitaloceanspaces.com/my_app_prod"
+  ```
+
 * Add `timezone` to `config/brando.exs`. This is used by date template filters.
   ```
   config :brando,
