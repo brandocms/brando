@@ -52,7 +52,7 @@ defmodule Brando.Migrations.ExtractGlobals do
             key: Map.get(g, "key"),
             label: Map.get(g, "label"),
             data: %{value: Map.get(g, "value")},
-            category_id: Enum.find(new_categories, &(&1.key == Map.get(c, "key"))).id
+            global_category_id: Enum.find(new_categories, &(&1.key == Map.get(c, "key"))).id
           ]
         end) || []
       end)
