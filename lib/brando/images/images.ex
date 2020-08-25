@@ -346,6 +346,30 @@ defmodule Brando.Images do
   @doc """
   Get series by category slug and series slug
   """
+  def get_series_by_slug(c_slug, s_slug) do
+    images_query =
+      from i in Image,
+        where: is_nil(i.deleted_at),
+        order_by: [asc: i.sequence]
+
+    series =
+      Brando.repo().one(
+        from is in ImageSeries,
+          join: cat in assoc(is, :image_category),
+          where:
+            is.slug == ^s_slug and
+              is_nil(is.deleted_at) and
+              cat.slug == ^c_slug and
+              is_nil(cat.deleted_at),
+          preload: [:image_category, images: ^images_query]
+      )
+
+    case series do
+      nil -> {:error, {:image_series, :not_found}}
+      _ -> {:ok, series}
+    end
+  end
+
   def get_series_by_slug(s_slug) do
     images_query =
       from i in Image,
