@@ -23,6 +23,9 @@ defmodule Brando.Plug.HTML do
   @spec put_section(Plug.Conn.t(), binary) :: Plug.Conn.t()
   def put_section(conn, name), do: put_private(conn, :brando_section_name, name)
 
+  @spec get_section(Plug.Conn.t()) :: binary
+  def get_section(conn), do: conn.private.brando_section_name
+
   @doc """
   Add `classes` to body
 
