@@ -18,9 +18,10 @@ defmodule Brando.CDN do
     {:ok, "hepp"}
   end
 
-  @spec ensure_bucket_exists :: {:ok, {:bucket, :exists}} | {:error, {:bucket, any}}
+  @spec ensure_bucket_exists :: {:ok, {:bucket, :exists}} | :no_return
   def ensure_bucket_exists do
     bucket = config(:bucket)
+
     region = Map.fetch!(Application.get_env(:ex_aws, :s3), :region)
 
     bucket
@@ -28,7 +29,7 @@ defmodule Brando.CDN do
     |> ExAws.request()
     |> case do
       {:ok, _result} ->
-        {:ok, {:bucket, :exists}}
+        :ok
 
       {:error, _err} ->
         bucket
@@ -36,12 +37,20 @@ defmodule Brando.CDN do
         |> ExAws.request()
         |> case do
           {:ok, _} ->
-            {:ok, {:bucket, :exists}}
+            :ok
 
           {:error, err} ->
-            {:error, {:bucket, err}}
+            raise """
+
+            ==> Bucket #{bucket} not found!"
+
+            #{inspect(err, pretty: true)}
+
+            """
         end
     end
+
+    {:ok, {:bucket, :exists}}
   end
 
   @doc """
