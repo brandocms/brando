@@ -26,33 +26,40 @@ defmodule Brando.CDN do
   def do_upload_image({changeset, name, field}) do
     s3_bucket = config(:bucket)
 
+    # upload original
+    original_key = Path.join(["media", field.path])
+    Logger.error("==> uploading `#{original_key}` to bucket `#{s3_bucket}`")
+    s3_upload(s3_bucket, original_key)
+
+    # upload individual sizes from sizes map
     for {_, path} <- field.sizes do
-      s3_key = Path.join(["media", path])
-      Logger.error("==> uploading `#{s3_key}` to bucket `#{s3_bucket}`")
-
-      try do
-        s3_key
-        |> Upload.stream_file()
-        |> S3.upload(s3_bucket, s3_key, acl: :public_read)
-        |> ExAws.request()
-        |> case do
-          {:ok, %{status_code: 200}} ->
-            {:ok, s3_key}
-
-          {:error, error} ->
-            {:error, error}
-        end
-      rescue
-        e in ExAws.Error ->
-          Logger.error(inspect(e))
-          Logger.error(e.message)
-          {:error, :invalid_bucket}
-      end
+      sized_key = Path.join(["media", path])
+      Logger.error("==> uploading `#{sized_key}` to bucket `#{s3_bucket}`")
+      s3_upload(s3_bucket, sized_key)
     end
 
     changeset
     |> Changeset.put_change(name, put_in(field, [Access.key(:cdn)], true))
     |> Brando.repo().update
+  end
+
+  defp s3_upload(s3_bucket, s3_key) do
+    s3_key
+    |> Upload.stream_file()
+    |> S3.upload(s3_bucket, s3_key, acl: :public_read)
+    |> ExAws.request()
+    |> case do
+      {:ok, %{status_code: 200}} ->
+        {:ok, s3_key}
+
+      {:error, error} ->
+        {:error, error}
+    end
+  rescue
+    e in ExAws.Error ->
+      Logger.error(inspect(e))
+      Logger.error(e.message)
+      {:error, :invalid_bucket}
   end
 
   @spec ensure_bucket_exists :: {:ok, {:bucket, :exists}} | :no_return
