@@ -524,6 +524,8 @@ defmodule Brando.Utils do
         else
           Brando.CDN.get_prefix()
         end
+      else
+        prefix
       end
 
     (prefix && Path.join([prefix, image_field.path])) ||
@@ -543,6 +545,8 @@ defmodule Brando.Utils do
         else
           Brando.CDN.get_prefix()
         end
+      else
+        prefix
       end
 
     url = (prefix && Path.join([prefix, size_dir])) || size_dir
