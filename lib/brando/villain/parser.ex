@@ -118,12 +118,8 @@ defmodule Brando.Villain.Parser do
 
         vars = Map.get(block, "vars")
         base_context = opts[:context]
-
         vars = process_vars(vars)
-
-        context =
-          base_context
-          |> Lexer.Context.assign(vars)
+        context = Lexer.Context.assign(base_context, vars)
 
         template.code
         |> render_refs(refs, id)
@@ -633,7 +629,7 @@ defmodule Brando.Villain.Parser do
       defoverridable timeline: 2
 
       # ...
-
+      defp process_vars(nil), do: %{}
       defp process_vars(vars), do: Enum.map(vars, &process_var(&1)) |> Enum.into(%{})
 
       defp process_var({name, %{"label" => label, "type" => type, "value" => value}}) do
