@@ -18,6 +18,7 @@
   ```
   to
   ```
+  #import "brandojs/src/gql/images/IMAGE_TYPE_FRAGMENT.graphql"
   post {
     cover {
       ...imageType
