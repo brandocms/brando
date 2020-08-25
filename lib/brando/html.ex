@@ -254,10 +254,14 @@ defmodule Brando.HTML do
     data_script = conn.private[:brando_section_name]
     classes = conn.private[:brando_css_classes]
 
+    # remove id from opts and pass rest as attrs
+    rest_attrs = Keyword.drop(opts, [:id])
+
     attrs = attrs ++ [class: (classes && "#{classes} unloaded") || "unloaded"]
     attrs = (id && attrs ++ [id: id]) || attrs
     attrs = (data_script && attrs ++ [data_script: data_script]) || attrs
     attrs = attrs ++ [data_vsn: Application.spec(Brando.otp_app(), :vsn)]
+    attrs = attrs ++ rest_attrs
 
     if Application.get_env(Brando.otp_app(), :show_breakpoint_debug) do
       [
