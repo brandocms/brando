@@ -58,17 +58,14 @@ defmodule Brando.Field.Image.Schema do
       @doc """
       Validates upload in changeset
       """
-      def validate_upload(changeset, {:image, field_name}, user, cfg) do
-        do_validate_upload(changeset, {:image, field_name}, user, cfg)
-      end
+      def validate_upload(changeset, {:image, field_name}, user, cfg),
+        do: do_validate_upload(changeset, {:image, field_name}, user, cfg)
 
-      def validate_upload(changeset, {:image, field_name}, user) do
-        do_validate_upload(changeset, {:image, field_name}, user, nil)
-      end
+      def validate_upload(changeset, {:image, field_name}, user),
+        do: do_validate_upload(changeset, {:image, field_name}, user, nil)
 
-      def validate_upload(changeset, {:image, field_name}) do
-        do_validate_upload(changeset, {:image, field_name}, :system, nil)
-      end
+      def validate_upload(changeset, {:image, field_name}),
+        do: do_validate_upload(changeset, {:image, field_name}, :system, nil)
 
       defp do_validate_upload(changeset, {:image, field_name}, user, cfg) do
         case Brando.Utils.field_has_changed(changeset, field_name) do
@@ -92,6 +89,7 @@ defmodule Brando.Field.Image.Schema do
                  {:ok, {:handled, name, field}} <-
                    Images.Upload.Field.handle_upload(field_name, upload_params, cfg, user) do
               cleanup_old_images(changeset, :safe)
+              if Brando.CDN.enabled?(), do: Brando.CDN.upload_file(changeset, name, field)
               put_change(changeset, name, field)
             else
               :has_errors ->

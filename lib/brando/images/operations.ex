@@ -116,6 +116,8 @@ defmodule Brando.Images.Operations do
 
   defp get_operation_by_key(key, operations), do: Enum.find(operations, &(&1.id == key))
 
-  defp resize_image(%Images.Operation{} = operation),
-    do: Images.Operations.Sizing.create_image_size(operation) |> elem(1)
+  defp resize_image(%Images.Operation{} = operation) do
+    {:ok, transform_result} = Images.Operations.Sizing.create_image_size(operation)
+    transform_result
+  end
 end

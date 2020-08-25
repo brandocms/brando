@@ -517,6 +517,17 @@ defmodule Brando.Utils do
   def img_url(image_field, :original, opts) do
     prefix = Keyword.get(opts, :prefix, nil)
 
+    prefix =
+      if image_field.cdn && Brando.CDN.enabled?() do
+        if prefix do
+          Path.join([Brando.CDN.get_prefix(), prefix])
+        else
+          Brando.CDN.get_prefix()
+        end
+      else
+        prefix
+      end
+
     (prefix && Path.join([prefix, image_field.path])) ||
       image_field.path <> add_cache_string(opts)
   end
@@ -526,6 +537,18 @@ defmodule Brando.Utils do
     size_dir = extract_size_dir(image_field, size)
 
     prefix = Keyword.get(opts, :prefix, nil)
+
+    prefix =
+      if image_field.cdn && Brando.CDN.enabled?() do
+        if prefix do
+          Path.join([Brando.CDN.get_prefix(), prefix])
+        else
+          Brando.CDN.get_prefix()
+        end
+      else
+        prefix
+      end
+
     url = (prefix && Path.join([prefix, size_dir])) || size_dir
     url <> add_cache_string(opts)
   end
