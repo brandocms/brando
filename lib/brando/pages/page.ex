@@ -12,7 +12,6 @@ defmodule Brando.Pages.Page do
   use Brando.SoftDelete.Schema
   use Brando.Villain.Schema
 
-  alias Brando.Type.Status
   alias Brando.JSONLD
 
   @required_fields ~w(key language slug title data status template creator_id)a
@@ -46,7 +45,7 @@ defmodule Brando.Pages.Page do
     field :slug, :string
     field :template, :string
     villain()
-    field :status, Status
+    field :status, Brando.Type.Status
     field :css_classes, :string
     field :meta_description, :string
     field :meta_image, Brando.Type.Image
