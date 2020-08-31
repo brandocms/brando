@@ -71,6 +71,8 @@
 
 ## 0.45.0
 
+* Switch your `mix.exs` `:brando` github dep to `brandocms/brando`
+
 * Upgrade BrandoJS to latest. Needed for rewritten upload handling and new
   language defaults.
 
