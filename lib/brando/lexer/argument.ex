@@ -26,6 +26,9 @@ defmodule Brando.Lexer.Argument do
   def eval({:keyword, [key, value]}, context), do: {key, eval(value, context)}
 
   defp do_eval(%Villain.Var{value: value}, []), do: value
+  defp do_eval(%Brando.Sites.Global{data: %{"value" => value}, type: "text"}, []), do: value
+  defp do_eval(%Brando.Sites.Global{} = global, []), do: global
+
   defp do_eval(value, []), do: value
   defp do_eval(nil, _), do: nil
 
@@ -36,7 +39,7 @@ defmodule Brando.Lexer.Argument do
     |> do_eval(tail)
   end
 
-  # Special case ":size"
+  # Special case ":count"
   defp do_eval(value, [{:key, "count"} | tail]) when is_list(value) do
     value
     |> length()
@@ -46,7 +49,7 @@ defmodule Brando.Lexer.Argument do
   # ${global:category.key}
   defp do_eval(value, [{:key, "global"} | [{:key, category}, {:key, key}]]) do
     globals = Map.get(value, "globals", %{})
-    global = Globals.get_global!("#{category}.#{key}", globals)
+    global = Globals.render_global("#{category}.#{key}", globals)
     do_eval(global, [])
   end
 
