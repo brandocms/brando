@@ -44,7 +44,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.11.2",
-    "@sentry/browser": "^5.21.4",
+    "@sentry/browser": "^5.22.3",
     "@univers-agency/jupiter": "^3.37.0",
     "core-js": "3.6.5",
     "custom-event-polyfill": "^1.0.7",
