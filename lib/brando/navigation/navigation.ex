@@ -1,6 +1,27 @@
 defmodule Brando.Navigation do
   @moduledoc """
   Dynamic navigation
+
+  ## Usage in .eex
+
+  First grab the menu in your controller:
+
+      {:ok, menu} = Brando.Navigation.get_menu("main_menu", "en")
+
+  Then in your template:
+
+      <nav>
+        <ul>
+        <%= for item <- @menu.items do %>
+          <li>
+            <a href="<%= item.url %>">
+              <%= item.title %>
+            </a>
+          </li>
+        <% end %>
+        </ul>
+      </nav>
+
   """
   use Brando.Web, :context
   use Brando.Query
@@ -12,11 +33,11 @@ defmodule Brando.Navigation do
   import Ecto.Query
 
   @type id :: binary | integer
+  @type params :: map
   @type changeset :: Ecto.Changeset.t()
   @type menu :: Brando.Navigation.Menu.t()
   @type item :: Brando.Navigation.Item.t()
   @type user :: Brando.Users.User.t() | :system
-  @type params :: map
 
   @doc """
   Dataloader initializer
@@ -103,10 +124,28 @@ defmodule Brando.Navigation do
   def get_menu(id) do
     query =
       from t in Menu,
-        where: t.id == ^id and is_nil(t.deleted_at),
+        where: t.id == ^id,
         preload: [items: ^build_items_query()]
 
     case Brando.repo().one(query) do
+      nil -> {:error, {:menu, :not_found}}
+      menu -> {:ok, menu}
+    end
+  end
+
+  @doc """
+  Get menu.
+
+  !TODO: Try cache first
+  """
+  @spec get_menu(binary, binary) :: {:error, {:menu, :not_found}} | {:ok, menu}
+  def get_menu(key, lang) when is_binary(key) do
+    q =
+      from p in Menu,
+        where: p.key == ^key and p.language == ^lang,
+        preload: [items: ^build_items_query()]
+
+    case Brando.repo().one(q) do
       nil -> {:error, {:menu, :not_found}}
       menu -> {:ok, menu}
     end
@@ -118,7 +157,7 @@ defmodule Brando.Navigation do
   def list_items do
     items =
       Item
-      |> order_by([p], asc: p.parent_key, asc: p.sequence, asc: p.language)
+      |> order_by([p], asc: p.menu_id, asc: p.sequence)
       |> Brando.repo().all()
 
     {:ok, items}
@@ -130,7 +169,7 @@ defmodule Brando.Navigation do
   @spec get_item(binary | integer) ::
           {:error, {:item, :not_found}} | {:ok, item}
   def get_item(key) when is_binary(key) do
-    query = from t in Item, where: t.key == ^key and is_nil(t.deleted_at)
+    query = from t in Item, where: t.key == ^key
 
     case Brando.repo().one(query) do
       nil -> {:error, {:item, :not_found}}
@@ -139,7 +178,7 @@ defmodule Brando.Navigation do
   end
 
   def get_item(id) do
-    query = from t in Item, where: t.id == ^id and is_nil(t.deleted_at)
+    query = from t in Item, where: t.id == ^id
 
     case Brando.repo().one(query) do
       nil -> {:error, {:item, :not_found}}
@@ -157,8 +196,7 @@ defmodule Brando.Navigation do
         where:
           p.parent_key == ^parent_key and
             p.key == ^key and
-            p.language == ^language and
-            is_nil(p.deleted_at)
+            p.language == ^language
 
     case Brando.repo().one(query) do
       nil -> {:error, {:item, :not_found}}
@@ -251,7 +289,6 @@ defmodule Brando.Navigation do
 
   defp build_items_query do
     from f in Item,
-      where: is_nil(f.deleted_at),
       order_by: [asc: f.sequence, asc: f.key]
   end
 end
