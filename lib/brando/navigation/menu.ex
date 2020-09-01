@@ -23,8 +23,8 @@ defmodule Brando.Navigation.Menu do
     timestamps()
   end
 
-  @required_fields ~w(status title key language template creator_id)a
-  @optional_fields ~w(sequence)a
+  @required_fields ~w(status title key language creator_id)a
+  @optional_fields ~w(template sequence)a
 
   @doc """
   Casts and validates `params` against `schema` to create a valid changeset
