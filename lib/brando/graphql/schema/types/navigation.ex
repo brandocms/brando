@@ -6,35 +6,43 @@ defmodule Brando.Schema.Types.Navigation do
     field :key, :string
     field :language, :string
     field :title, :string
-    field :slug, :string
-    field :data, :json
-    field :html, :string
     field :status, :string
     field :template, :string
-    field :css_classes, :string
-    field :creator, :user, resolve: dataloader(Brando.Pages)
-    field :parent_id, :id
-    field :parent, :menu, resolve: dataloader(Brando.Pages)
-    field :children, list_of(:menu), resolve: dataloader(Brando.Pages)
-    field :fragments, list_of(:menu_fragment), resolve: dataloader(Brando.Pages)
-    field :meta_description, :string
-    field :meta_image, :image_type
+    field :creator, :user, resolve: dataloader(Brando.Navigation)
+    field :items, list_of(:menu_item), resolve: dataloader(Brando.Navigation)
     field :inserted_at, :time
     field :updated_at, :time
-    field :deleted_at, :time
   end
 
   input_object :menu_params do
-    field :parent_id, :id
     field :key, :string
     field :language, :string
     field :title, :string
     field :status, :string
     field :template, :string
-    field :data, :json
-    field :css_classes, :string
-    field :meta_description, :string
-    field :meta_image, :upload_or_image
+  end
+
+  object :menu_item do
+    field :id, :id
+    field :key, :string
+    field :title, :string
+    field :status, :string
+    field :url, :string
+    field :open_in_new_window, :boolean
+    field :menu, :menu, resolve: dataloader(Brando.Navigation)
+    field :items, list_of(:menu_item), resolve: dataloader(Brando.Navigation)
+    field :creator, :user, resolve: dataloader(Brando.Navigation)
+    field :inserted_at, :time
+    field :updated_at, :time
+  end
+
+  input_object :menu_item_params do
+    field :menu_id, :id
+    field :key, :string
+    field :title, :string
+    field :status, :string
+    field :url, :string
+    field :open_in_new_window, :boolean
   end
 
   @desc "Filtering options for menu"
@@ -50,13 +58,19 @@ defmodule Brando.Schema.Types.Navigation do
       arg :offset, :integer, default_value: 0
       arg :filter, :menu_filter
       arg :status, :string, default_value: "all"
-      resolve &Brando.Pages.PageResolver.all/2
+      resolve &Brando.Navigation.NavigationResolver.all_menus/2
     end
 
     @desc "Get menu"
     field :menu, type: :menu do
       arg :menu_id, non_null(:id)
-      resolve &Brando.Pages.PageResolver.find/2
+      resolve &Brando.Navigation.NavigationResolver.find_menu/2
+    end
+
+    @desc "Get menu item"
+    field :menu_item, type: :menu_item do
+      arg :menu_item_id, non_null(:id)
+      resolve &Brando.Navigation.NavigationResolver.find_menu_item/2
     end
   end
 
@@ -64,34 +78,53 @@ defmodule Brando.Schema.Types.Navigation do
     field :create_menu, type: :menu do
       arg :menu_params, :menu_params
 
-      resolve &Brando.Pages.PageResolver.create/2
+      resolve &Brando.Navigation.NavigationResolver.create_menu/2
     end
 
     field :update_menu, type: :menu do
       arg :menu_id, non_null(:id)
       arg :menu_params, :menu_params
 
-      resolve &Brando.Pages.PageResolver.update/2
+      resolve &Brando.Navigation.NavigationResolver.update_menu/2
     end
 
     field :delete_menu, type: :menu do
       arg :menu_id, non_null(:id)
 
-      resolve &Brando.Pages.PageResolver.delete/2
+      resolve &Brando.Navigation.NavigationResolver.delete_menu/2
     end
 
     @desc "Duplicate menu"
     field :duplicate_menu, type: :menu do
       arg :menu_id, :id
 
-      resolve &Brando.Pages.PageResolver.duplicate/2
+      resolve &Brando.Navigation.NavigationResolver.duplicate_menu/2
     end
 
-    @desc "Duplicate section"
-    field :duplicate_section, type: :menu_fragment do
-      arg :section_id, :id
+    field :create_menu_item, type: :menu_item do
+      arg :menu_item_params, :menu_item_params
 
-      resolve &Brando.Pages.PageResolver.duplicate_section/2
+      resolve &Brando.Navigation.NavigationResolver.create_menu_item/2
+    end
+
+    field :update_menu_item, type: :menu_item do
+      arg :menu_item_id, non_null(:id)
+      arg :menu_item_params, :menu_item_params
+
+      resolve &Brando.Navigation.NavigationResolver.update_menu_item/2
+    end
+
+    field :delete_menu_item, type: :menu_item do
+      arg :menu_item_id, non_null(:id)
+
+      resolve &Brando.Navigation.NavigationResolver.delete_menu_item/2
+    end
+
+    @desc "Duplicate item"
+    field :duplicate_menu_item, type: :menu_item do
+      arg :menu_item_id, :id
+
+      resolve &Brando.Navigation.NavigationResolver.duplicate_menu_item/2
     end
   end
 end
