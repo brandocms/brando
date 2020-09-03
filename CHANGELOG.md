@@ -2,11 +2,11 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.46.0
 
+* New parser for template language!
 * Added CDN image uploads.
 * Deprecated `Pages.list_page_fragments_translations`. Use `Pages.list_fragments_translations` instead.
 * Switch frontend bundler to Rollup
 * Renamed `User.full_name` to `User.name`. Requires BrandoJS to be updated.
-* New parser for template language
 
 
 ## 0.45.0
