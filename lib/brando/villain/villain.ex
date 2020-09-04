@@ -59,6 +59,7 @@ defmodule Brando.Villain do
 
     entry = if opts[:data_field], do: Map.put(entry, opts[:data_field], nil), else: entry
     entry = if opts[:html_field], do: Map.put(entry, opts[:html_field], nil), else: entry
+    entry = maybe_put_timestamps(entry)
 
     context =
       %{}
@@ -83,6 +84,13 @@ defmodule Brando.Villain do
 
     Lexer.parse_and_render(html, context)
   end
+
+  defp maybe_put_timestamps(%{inserted_at: nil} = entry) do
+    datetime = DateTime.from_unix!(System.os_time(:second), :second)
+    %{entry | updated_at: datetime, inserted_at: datetime}
+  end
+
+  defp maybe_put_timestamps(entry), do: entry
 
   @doc """
   Map out images

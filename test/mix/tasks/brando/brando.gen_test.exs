@@ -276,6 +276,10 @@ defmodule Mix.Tasks.Brando.Gen.Test do
         assert file =~
                  "#import \"./PROJECT_FRAGMENT.graphql\"\nquery Projects ($order: Order, $limit: Int, $offset: Int, $filter: ProjectFilter, $status: String) {\n  projects (order: $order, limit: $limit, offset: $offset, filter: $filter, status: $status) {\n    ...project\n  }\n}\n"
       end)
+
+      assert_file("assets/backend/src/gql/games/CAPTAIN_FRAGMENT.graphql", fn file ->
+        refute file =~ "dataData"
+      end)
     end)
   end
 end

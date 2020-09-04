@@ -11,10 +11,11 @@ defmodule Brando.Schema do
 
   def import_brando_dataloaders(dataloader, ctx) do
     dataloader
-    |> Dataloader.add_source(Brando.Users, Brando.Users.data(ctx))
     |> Dataloader.add_source(Brando.Images, Brando.Images.data(ctx))
-    |> Dataloader.add_source(Brando.Sites, Brando.Sites.data(ctx))
+    |> Dataloader.add_source(Brando.Navigation, Brando.Navigation.data(ctx))
     |> Dataloader.add_source(Brando.Pages, Brando.Pages.data(ctx))
+    |> Dataloader.add_source(Brando.Sites, Brando.Sites.data(ctx))
+    |> Dataloader.add_source(Brando.Users, Brando.Users.data(ctx))
   end
 
   @doc """
@@ -25,6 +26,7 @@ defmodule Brando.Schema do
       # brando mutations
       import_fields :image_mutations
       import_fields :page_mutations
+      import_fields :navigation_mutations
       import_fields :page_fragment_mutations
       import_fields :user_mutations
       import_fields :identity_mutations
@@ -40,6 +42,7 @@ defmodule Brando.Schema do
       # brando queries
       import_fields :image_queries
       import_fields :page_queries
+      import_fields :navigation_queries
       import_fields :page_fragment_queries
       import_fields :user_queries
       import_fields :identity_queries
