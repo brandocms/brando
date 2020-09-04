@@ -278,7 +278,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       end)
 
       assert_file("assets/backend/src/gql/games/CAPTAIN_FRAGMENT.graphql", fn file ->
-        refute file =~ "dataData"
+        assert file =~ "data\n"
         assert file =~ "cover {\n    ...imageType\n  }"
       end)
     end)
