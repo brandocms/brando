@@ -193,7 +193,7 @@ defmodule Brando.Generators.GraphQL do
 
         {k, :villain} ->
           case k do
-            :data ->
+            "data" ->
               {k, k}
 
             _ ->
@@ -201,7 +201,7 @@ defmodule Brando.Generators.GraphQL do
           end
 
         {k, {:references, _}} ->
-          {k, ~s<#{k}Id>}
+          {k, ~s<#{Recase.to_camel(k)}Id>}
 
         {k, _} ->
           {k, Recase.to_camel(k)}
