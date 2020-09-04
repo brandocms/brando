@@ -186,9 +186,7 @@ defmodule Brando.Generators.GraphQL do
           {k, file_code}
 
         {k, :image} ->
-          image_code =
-            "#{Recase.to_camel(k)} {\n    thumb: url(size: \"original\")\n    xlarge: url(size: \"xlarge\")\n    focal\n  }"
-
+          image_code = "#{Recase.to_camel(k)} {\n    ...imageType\n  }"
           {k, image_code}
 
         {k, :villain} ->
