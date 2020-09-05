@@ -2,7 +2,24 @@ defmodule Brando.Query do
   @moduledoc """
   Query macros to DRY up contexts
 
-  # Preloads
+  # Select
+
+  ## Examples
+
+      {:ok, posts} = list_posts(%{select: [:slug, :updated_at]})
+
+  Default format, returns a map with `:slug` and `updated_at` keys.
+
+      {:ok, posts} = list_posts(%{select: {:struct, [:slug, :updated_at]}})
+
+  Returns a struct with `:slug` and `updated_at` keys.
+
+      {:ok, posts} = list_posts(%{select: {:map, [:slug, :updated_at]}})
+
+  Same as the default format, only explicitly marked parameters.
+
+
+  # Preload
 
   ## Examples
 
@@ -44,7 +61,9 @@ defmodule Brando.Query do
       end
 
       defp with_order(query, order), do: with_order(query, [order])
-
+      defp with_select(query, {:map, fields}), do: from(q in query, select: map(q, ^fields))
+      defp with_select(query, {:struct, fields}), do: from(q in query, select: ^fields)
+      defp with_select(query, fields), do: from(q in query, select: map(q, ^fields))
       defp with_status(query, "all"), do: query
 
       defp with_status(query, "deleted"),
@@ -133,6 +152,9 @@ defmodule Brando.Query do
           |> Enum.reduce(initial_query, fn
             {_, nil}, query ->
               query
+
+            {:select, select}, query ->
+              query |> with_select(select)
 
             {:order, order}, query ->
               query |> with_order(order)
