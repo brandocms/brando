@@ -1,13 +1,20 @@
 defmodule Brando do
-  use Application
-
   @moduledoc File.read!("README.md")
   @version Mix.Project.config()[:version]
 
   @doc """
   Start supervisor
   """
-  def start(_type, _args), do: Brando.Supervisor.start_link()
+  def start_link(opts), do: Brando.Supervisor.start_link(opts)
+
+  def child_spec(opts) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, [opts]},
+      type: :worker,
+      restart: :permanent
+    }
+  end
 
   @doc """
   Gets the configuration for `key` under :brando,

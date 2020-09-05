@@ -144,7 +144,7 @@ defmodule Brando.Query do
     name = module_list |> List.last() |> Inflex.underscore() |> Inflex.pluralize()
 
     quote do
-      def unquote(:"list_#{name}")(args \\ %{}) do
+      def unquote(:"list_#{name}")(args \\ %{}, stream \\ false) do
         initial_query = unquote(block).(unquote(module))
 
         query =
@@ -175,7 +175,11 @@ defmodule Brando.Query do
               query |> with_filter(unquote(module), filter)
           end)
 
-        {:ok, Brando.repo().all(query)}
+        if stream do
+          Brando.repo().stream(query)
+        else
+          {:ok, Brando.repo().all(query)}
+        end
       end
     end
   end

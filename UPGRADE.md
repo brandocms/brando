@@ -1,3 +1,24 @@
+## 0.47.0
+
+* Start Brando from your application
+  In `application.ex`, add `Brando` to your supervision tree as the last child:
+
+      children = [
+        # Start the Ecto repository
+        MyApp.Repo,
+        # Start the Telemetry supervisor
+        MyAppWeb.Telemetry,
+        # Start the PubSub system
+        {Phoenix.PubSub, name: MyApp.PubSub},
+        # Start the Endpoint (http/https)
+        MyAppWeb.Endpoint,
+        # Start the Presence system
+        MyApp.Presence,
+        # Start Brando
+        Brando
+      ]
+
+
 ## 0.46.0
 
 * CDN uploads

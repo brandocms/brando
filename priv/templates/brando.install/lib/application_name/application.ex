@@ -14,7 +14,9 @@ defmodule <%= application_module %>.Application do
       # Start the Endpoint (http/https)
       <%= application_module %>Web.Endpoint,
       # Start the Presence system
-      <%= application_module %>.Presence
+      <%= application_module %>.Presence,
+      # Start the Brando supervisor
+      Brando
       # Start a worker by calling: <%= application_module %>.Worker.start_link(arg)
       # {<%= application_module %>.Worker, arg},
     ]
@@ -22,12 +24,7 @@ defmodule <%= application_module %>.Application do
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: <%= application_module %>.Supervisor]
-    result = Supervisor.start_link(children, opts)
-
-    # Run Brando system checks
-    Brando.System.initialize()
-
-    result
+    Supervisor.start_link(children, opts)
   end
 
   # Tell Phoenix to update the endpoint configuration

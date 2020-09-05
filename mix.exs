@@ -26,10 +26,6 @@ defmodule Brando.Mixfile do
     ]
   end
 
-  def application do
-    [mod: {Brando, []}]
-  end
-
   defp deps do
     [
       {:phoenix, "~> 1.4"},
@@ -57,6 +53,12 @@ defmodule Brando.Mixfile do
 
       # cache
       {:cachex, "~> 3.2"},
+
+      # cron
+      {:oban, "~> 2.1"},
+
+      # sitemaps
+      {:sitemapper, "~> 0.4.0"},
 
       # images
       {:mogrify, "~> 0.5"},
