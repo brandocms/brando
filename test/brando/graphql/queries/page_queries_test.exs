@@ -38,7 +38,7 @@ defmodule Brando.GraphQL.Queries.PageQueriesTest do
 
     assert Absinthe.run(
              @pages_query,
-             Brando.Integration.TestSchema,
+             BrandoIntegration.TestSchema,
              opts
            ) ==
              {
@@ -73,7 +73,7 @@ defmodule Brando.GraphQL.Queries.PageQueriesTest do
 
     assert Absinthe.run(
              @filtered_query,
-             Brando.Integration.TestSchema,
+             BrandoIntegration.TestSchema,
              opts ++
                [
                  variables: %{
@@ -99,7 +99,7 @@ defmodule Brando.GraphQL.Queries.PageQueriesTest do
 
     assert Absinthe.run(
              @page_id_query,
-             Brando.Integration.TestSchema,
+             BrandoIntegration.TestSchema,
              opts ++ [variables: %{"pageId" => p1.id}]
            ) ==
              {:ok, %{data: %{"page" => %{"id" => to_string(p1.id), "title" => "Title"}}}}

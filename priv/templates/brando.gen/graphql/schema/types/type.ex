@@ -1,8 +1,8 @@
-defmodule <%= base %>.Schema.Types.<%= alias %> do
+defmodule <%= app_module %>.Schema.Types.<%= alias %> do
   @moduledoc """
   GraphQL type spec, mutations and queries for <%= alias %>
   """
-  use <%= base %>Web, :absinthe
+  use <%= web_module %>, :absinthe
 
   object :<%= singular %> do
     field :id, :id<%= for {_v, k} <- gql_types do %>
@@ -32,13 +32,13 @@ defmodule <%= base %>.Schema.Types.<%= alias %> do
       arg :filter, :<%= singular %>_filter
       arg :status, :string
 
-      resolve &<%= base %>.<%= domain %>.<%= alias %>Resolver.all/2
+      resolve &<%= app_module %>.<%= domain %>.<%= alias %>Resolver.all/2
     end
 
     @desc "Get <%= singular %>"
     field :<%= singular %>, type: :<%= singular %> do
       arg :<%= singular %>_id, non_null(:id)
-      resolve &<%= base %>.<%= domain %>.<%= alias %>Resolver.get/2
+      resolve &<%= app_module %>.<%= domain %>.<%= alias %>Resolver.get/2
     end
   end
 
@@ -46,20 +46,20 @@ defmodule <%= base %>.Schema.Types.<%= alias %> do
     field :create_<%= singular %>, type: :<%= singular %> do
       arg :<%= singular %>_params, non_null(:<%= singular %>_params)
 
-      resolve &<%= base %>.<%= domain %>.<%= alias %>Resolver.create/2
+      resolve &<%= app_module %>.<%= domain %>.<%= alias %>Resolver.create/2
     end
 
     field :update_<%= singular %>, type: :<%= singular %> do
       arg :<%= singular %>_id, non_null(:id)
       arg :<%= singular %>_params, :<%= singular %>_params
 
-      resolve &<%= base %>.<%= domain %>.<%= alias %>Resolver.update/2
+      resolve &<%= app_module %>.<%= domain %>.<%= alias %>Resolver.update/2
     end
 
     field :delete_<%= singular %>, type: :<%= singular %> do
       arg :<%= singular %>_id, non_null(:id)
 
-      resolve &<%= base %>.<%= domain %>.<%= alias %>Resolver.delete/2
+      resolve &<%= app_module %>.<%= domain %>.<%= alias %>Resolver.delete/2
     end
   end
 end

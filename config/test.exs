@@ -2,20 +2,20 @@ use Mix.Config
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
-config :brando, Brando.Integration.Endpoint,
+config :brando, BrandoIntegrationWeb.Endpoint,
   http: [port: 80],
   server: false,
   secret_key_base: "verysecret",
-  pubsub_server: Brando.Integration.PubSub
+  pubsub_server: BrandoIntegration.PubSub
 
-config :brando, Brando.Integration.Repo,
+config :brando, BrandoIntegration.Repo,
   url: "ecto://postgres:postgres@localhost/brando_test",
   pool: Ecto.Adapters.SQL.Sandbox,
   ownership_pool: DBConnection.Poolboy,
   pool_overflow: 0
 
 config :brando, Brando.Images,
-  commands_module: Brando.Integration.Processor.Commands,
+  commands_module: BrandoIntegration.Processor.Commands,
   default_config: %{
     allowed_mimetypes: ["image/jpeg", "image/png"],
     default_size: "medium",
@@ -33,8 +33,8 @@ config :brando, Brando.Images,
 
 config :brando, :app_name, "MyApp"
 config :brando, :auth_sleep_duration, 0
-config :brando, :app_module, Brando.Integration
-config :brando, :web_module, Brando.Integration
+config :brando, :app_module, BrandoIntegration
+config :brando, :web_module, BrandoIntegrationWeb
 config :brando, :media_url, "/media"
 config :brando, :media_path, Path.join([Mix.Project.app_path(), "tmp", "media"])
 config :brando, :log_dir, Path.expand("./tmp/logs")
@@ -49,7 +49,7 @@ config :brando, Oban,
   crontab: false,
   queues: false,
   plugins: false,
-  repo: Brando.Integration.DummyRepo
+  repo: BrandoIntegration.DummyRepo
 
 config :brando, :languages, [
   [value: "no", text: "Norsk"],

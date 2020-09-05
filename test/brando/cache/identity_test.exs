@@ -1,7 +1,7 @@
 defmodule Brando.Cache.IdentityTest do
   use ExUnit.Case
   use Brando.ConnCase
-  use Brando.Integration.TestCase
+  use BrandoIntegration.TestCase
 
   test "get and update" do
     identity = Brando.Cache.Identity.get()

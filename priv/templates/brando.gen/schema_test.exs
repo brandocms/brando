@@ -1,5 +1,5 @@
 defmodule <%= module %>Test do
-  use <%= base %>.ModelCase
+  use <%= app_module %>.ModelCase
 
   alias <%= module %>
 

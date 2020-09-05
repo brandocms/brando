@@ -101,17 +101,17 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       end)
 
       assert_file("lib/brando/graphql/schema/types/pirate.ex", fn file ->
-        assert file =~ "defmodule Brando.Schema.Types.Pirate do"
+        assert file =~ "defmodule BrandoIntegration.Schema.Types.Pirate do"
         assert file =~ "field :pdf, :file_type"
         assert file =~ "field :pdf, :upload"
       end)
 
       assert_file("lib/brando/games/games.ex", fn file ->
-        assert file =~ "defmodule Brando.Games do"
+        assert file =~ "defmodule BrandoIntegration.Games do"
       end)
 
       assert_file("lib/brando/games/pirate.ex", fn file ->
-        assert file =~ "defmodule Brando.Games.Pirate do"
+        assert file =~ "defmodule BrandoIntegration.Games.Pirate do"
         assert file =~ "schema \"games_pirates\" do"
         assert file =~ "field :cover, Brando.Type.Image"
         assert file =~ "field :pdf, Brando.Type.File"
@@ -131,9 +131,9 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       end)
 
       assert_file("lib/brando/games/games.ex", fn file ->
-        assert file =~ "defmodule Brando.Games do"
-        assert file =~ "alias Brando.Repo"
-        assert file =~ "alias Brando.Games.Pirate"
+        assert file =~ "defmodule BrandoIntegration.Games do"
+        assert file =~ "alias BrandoIntegration.Repo"
+        assert file =~ "alias BrandoIntegration.Games.Pirate"
       end)
 
       assert_file("test/schemas/pirate_test.exs")
@@ -150,15 +150,15 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       end)
 
       assert_file("lib/brando_web/controllers/pirate_controller.ex", fn file ->
-        assert file =~ "defmodule BrandoWeb.PirateController"
-        assert file =~ "use BrandoWeb, :controller"
+        assert file =~ "defmodule BrandoIntegrationWeb.PirateController"
+        assert file =~ "use BrandoIntegrationWeb, :controller"
         assert file =~ "Games.list_pirates(list_opts)"
       end)
 
       assert_file("lib/brando_web/views/pirate_view.ex", fn file ->
-        assert file =~ "defmodule BrandoWeb.PirateView do"
-        assert file =~ "use BrandoWeb, :view"
-        assert file =~ "import BrandoWeb.Gettext"
+        assert file =~ "defmodule BrandoIntegrationWeb.PirateView do"
+        assert file =~ "use BrandoIntegrationWeb, :view"
+        assert file =~ "import BrandoIntegrationWeb.Gettext"
       end)
 
       assert_file("assets/backend/src/gql/games/PIRATE_QUERY.graphql", fn file ->
@@ -261,7 +261,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       Mix.Tasks.Brando.Gen.run([])
 
       assert_file("lib/brando/graphql/schema/types/project.ex", fn file ->
-        assert file =~ "defmodule Brando.Schema.Types.Project do"
+        assert file =~ "defmodule BrandoIntegration.Schema.Types.Project do"
         assert file =~ "field :heading, :string"
         assert file =~ "field :slug, :string"
         assert file =~ "field :deleted_at, :time"
@@ -269,7 +269,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       end)
 
       assert_file("lib/brando/graphql/resolvers/project_resolver.ex", fn file ->
-        assert file =~ "defmodule Brando.Projects.ProjectResolver do"
+        assert file =~ "defmodule BrandoIntegration.Projects.ProjectResolver do"
       end)
 
       assert_file("assets/backend/src/gql/projects/PROJECTS_QUERY.graphql", fn file ->

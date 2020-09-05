@@ -23,7 +23,7 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
   test "users", %{opts: opts, user: user} do
     assert Absinthe.run(
              @user_query,
-             Brando.Integration.TestSchema,
+             BrandoIntegration.TestSchema,
              opts
            ) ==
              {:ok,
@@ -45,7 +45,7 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
   test "user(id)", %{opts: opts, user: user} do
     assert Absinthe.run(
              @user_id_query,
-             Brando.Integration.TestSchema,
+             BrandoIntegration.TestSchema,
              opts ++ [variables: %{"userId" => user.id}]
            ) ==
              {:ok,
@@ -57,7 +57,7 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
 
     assert Absinthe.run(
              @user_id_query,
-             Brando.Integration.TestSchema,
+             BrandoIntegration.TestSchema,
              opts ++ [variables: %{"userId" => 9_999_999_999}]
            ) ==
              {:ok,
@@ -91,7 +91,7 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
   test "me", %{opts: opts, user: user} do
     assert Absinthe.run(
              @me_query,
-             Brando.Integration.TestSchema,
+             BrandoIntegration.TestSchema,
              opts
            ) ==
              {

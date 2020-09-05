@@ -41,7 +41,7 @@ defmodule Brando.GraphQL.Queries.ImageQueriesTest do
 
     assert Absinthe.run(
              @image_categories_query,
-             Brando.Integration.TestSchema,
+             BrandoIntegration.TestSchema,
              opts
            ) ==
              {

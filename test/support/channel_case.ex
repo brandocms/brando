@@ -24,15 +24,15 @@ defmodule Brando.ChannelCase do
       import Brando.ChannelCase
 
       # The default endpoint for testing
-      @endpoint Brando.Integration.Endpoint
+      @endpoint BrandoIntegrationWeb.Endpoint
     end
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Brando.Integration.Repo)
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(BrandoIntegration.Repo)
 
     unless tags[:async] do
-      Ecto.Adapters.SQL.Sandbox.mode(Brando.Integration.Repo, {:shared, self()})
+      Ecto.Adapters.SQL.Sandbox.mode(BrandoIntegration.Repo, {:shared, self()})
     end
 
     :ok

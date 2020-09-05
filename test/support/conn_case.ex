@@ -22,12 +22,12 @@ defmodule Brando.ConnCase do
       import Phoenix.ConnTest
 
       # Alias the data repository and import query/schema functions
-      alias Brando.Integration.Repo
+      alias BrandoIntegration.Repo
       import Ecto.Schema
       import Ecto.Query, only: [from: 2]
 
       # Import URL helpers from the router
-      alias Brando.Integration.Router.Helpers
+      alias BrandoIntegrationWeb.Router.Helpers
 
       # The default endpoint for testing
       @endpoint Brando.endpoint()
@@ -35,10 +35,10 @@ defmodule Brando.ConnCase do
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Brando.Integration.Repo)
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(BrandoIntegration.Repo)
 
     unless tags[:async] do
-      Ecto.Adapters.SQL.Sandbox.mode(Brando.Integration.Repo, {:shared, self()})
+      Ecto.Adapters.SQL.Sandbox.mode(BrandoIntegration.Repo, {:shared, self()})
     end
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}

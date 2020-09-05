@@ -107,8 +107,11 @@ defmodule Mix.Tasks.Brando.Gen do
       |> Kernel.++([plural])
       |> Enum.join("/")
 
-    module = Enum.join([binding[:base] <> "Web", binding[:scoped]], ".")
-    schema_module = Enum.join([binding[:base], domain_name, binding[:scoped]], ".")
+    app_module = to_string(Brando.config(:app_module)) |> String.replace("Elixir.", "")
+    web_module = to_string(Brando.config(:web_module)) |> String.replace("Elixir.", "")
+
+    module = Enum.join([web_module, binding[:scoped]], ".")
+    schema_module = Enum.join([app_module, domain_name, binding[:scoped]], ".")
 
     vue_plural = Recase.to_camel(plural)
     vue_singular = Recase.to_camel(singular)
@@ -123,8 +126,8 @@ defmodule Mix.Tasks.Brando.Gen do
     binding =
       Keyword.delete(binding, :module) ++
         [
-          app_module: Brando.config(:app_module),
-          web_module: Brando.config(:web_module),
+          app_module: app_module,
+          web_module: web_module,
           attrs: attrs,
           assocs: assocs,
           domain_filename: domain_filename,

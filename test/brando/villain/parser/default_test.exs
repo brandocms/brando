@@ -1,6 +1,6 @@
 defmodule Brando.Villain.ParserTest do
   use ExUnit.Case
-  use Brando.Integration.TestCase
+  use BrandoIntegration.TestCase
   use Brando.ConnCase
 
   import __MODULE__.Parser

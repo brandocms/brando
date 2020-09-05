@@ -5,9 +5,9 @@ defmodule Brando.AdminChannelTest do
   import Ecto.Query
 
   alias Brando.Factory
-  alias Brando.Integration.AdminChannel
-  alias Brando.Integration.AdminSocket
-  alias Brando.Integration.Endpoint
+  alias BrandoIntegration.AdminChannel
+  alias BrandoIntegration.AdminSocket
+  alias BrandoIntegrationWeb.Endpoint
 
   @endpoint Endpoint
   @long_timeout 5000
@@ -388,7 +388,7 @@ defmodule Brando.AdminChannelTest do
     test "datasource:list_module_keys", %{socket: socket} do
       ref =
         push(socket, "datasource:list_module_keys", %{
-          "module" => "Elixir.Brando.Integration.ModuleWithDatasource"
+          "module" => "Elixir.BrandoIntegration.ModuleWithDatasource"
         })
 
       assert_reply ref, :ok, %{
@@ -400,7 +400,7 @@ defmodule Brando.AdminChannelTest do
     test "datasource:list_available_entries", %{socket: socket} do
       ref =
         push(socket, "datasource:list_available_entries", %{
-          "module" => "Elixir.Brando.Integration.ModuleWithDatasource",
+          "module" => "Elixir.BrandoIntegration.ModuleWithDatasource",
           "query" => "featured"
         })
 

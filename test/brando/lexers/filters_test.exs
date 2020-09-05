@@ -3,7 +3,7 @@ defmodule Brando.Lexer.FilterTest do
 
   use ExUnit.Case
   use Brando.ConnCase
-  use Brando.Integration.TestCase
+  use BrandoIntegration.TestCase
 
   alias Brando.Lexer
   alias Brando.Lexer.Context

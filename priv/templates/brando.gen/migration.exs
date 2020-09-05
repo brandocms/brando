@@ -1,4 +1,4 @@
-defmodule <%= base %>.Repo.Migrations.Create<%= scoped %> do
+defmodule <%= app_module %>.Repo.Migrations.Create<%= scoped %> do
   use Ecto.Migration<%= if sequenced do %>
   use Brando.Sequence.Migration<% end %><%= if soft_delete do %>
   use Brando.SoftDelete.Migration<% end %><%= if gallery do %>

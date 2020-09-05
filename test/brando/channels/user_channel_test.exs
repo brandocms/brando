@@ -4,8 +4,8 @@ defmodule Brando.UserChannelTest do
 
   alias Brando.Factory
   alias Brando.UserChannel
-  alias Brando.Integration.AdminSocket
-  alias Brando.Integration.Endpoint
+  alias BrandoIntegration.AdminSocket
+  alias BrandoIntegrationWeb.Endpoint
 
   @endpoint Endpoint
 

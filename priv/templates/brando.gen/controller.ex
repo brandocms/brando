@@ -1,7 +1,7 @@
 defmodule <%= module %>Controller do
-  use <%= base %>Web, :controller
-  alias <%= base %>.<%= domain %>
-  alias <%= base %>Web.FallbackController
+  use <%= web_module %>, :controller
+  alias <%= app_module %>.<%= domain %>
+  alias <%= web_module %>.FallbackController
 
   @type conn :: Plug.Conn.t()
 

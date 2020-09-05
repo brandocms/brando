@@ -11,8 +11,8 @@ defmodule Brando.Plug.AuthenticationTest do
       :post
       |> conn("/login")
       |> Authentication.call(
-        guardian_module: Brando.Integration.Guardian,
-        authorization_module: Brando.Integration.Authorization
+        guardian_module: BrandoIntegration.Guardian,
+        authorization_module: BrandoIntegration.Authorization
       )
 
     assert conn.status == 401
@@ -33,8 +33,8 @@ defmodule Brando.Plug.AuthenticationTest do
       |> put_req_header("content-type", "application/json")
       |> Plug.Parsers.call(opts)
       |> Authentication.call(
-        guardian_module: Brando.Integration.Guardian,
-        authorization_module: Brando.Integration.Authorization
+        guardian_module: BrandoIntegration.Guardian,
+        authorization_module: BrandoIntegration.Authorization
       )
 
     assert conn.status == 401
@@ -57,8 +57,8 @@ defmodule Brando.Plug.AuthenticationTest do
       |> put_req_header("content-type", "application/json")
       |> Plug.Parsers.call(opts)
       |> Authentication.call(
-        guardian_module: Brando.Integration.Guardian,
-        authorization_module: Brando.Integration.Authorization
+        guardian_module: BrandoIntegration.Guardian,
+        authorization_module: BrandoIntegration.Authorization
       )
 
     assert conn.status == 201
@@ -85,8 +85,8 @@ defmodule Brando.Plug.AuthenticationTest do
       |> put_req_header("content-type", "application/json")
       |> Plug.Parsers.call(opts)
       |> Authentication.call(
-        guardian_module: Brando.Integration.Guardian,
-        authorization_module: Brando.Integration.Authorization
+        guardian_module: BrandoIntegration.Guardian,
+        authorization_module: BrandoIntegration.Authorization
       )
 
     assert conn.status == 200
@@ -109,8 +109,8 @@ defmodule Brando.Plug.AuthenticationTest do
       |> put_req_header("content-type", "application/json")
       |> Plug.Parsers.call(opts)
       |> Authentication.call(
-        guardian_module: Brando.Integration.Guardian,
-        authorization_module: Brando.Integration.Authorization
+        guardian_module: BrandoIntegration.Guardian,
+        authorization_module: BrandoIntegration.Authorization
       )
 
     assert conn.status == 200

@@ -6,7 +6,7 @@ File.mkdir_p!(Path.join([Mix.Project.app_path(), "tmp", "media"]))
 
 {:ok, _} = Application.ensure_all_started(:ex_machina)
 
-defmodule Brando.Integration.Repo do
+defmodule BrandoIntegration.Repo do
   use Ecto.Repo,
     otp_app: :brando,
     adapter: Ecto.Adapters.Postgres
@@ -14,7 +14,7 @@ defmodule Brando.Integration.Repo do
   use Brando.SoftDelete.Repo
 end
 
-defmodule Brando.Integration.DummyRepo do
+defmodule BrandoIntegration.DummyRepo do
   use Ecto.Repo,
     otp_app: :brando,
     adapter: Ecto.Adapters.Postgres
@@ -23,14 +23,14 @@ defmodule Brando.Integration.DummyRepo do
 end
 
 Supervisor.start_link(
-  [{Phoenix.PubSub, name: Brando.Integration.PubSub, pool_size: 1}, Brando],
+  [{Phoenix.PubSub, name: BrandoIntegration.PubSub, pool_size: 1}, Brando],
   strategy: :one_for_one
 )
 
 ExUnit.start()
 
-defmodule Brando.Integration.Presence do
-  use Phoenix.Presence, otp_app: :brando, pubsub_server: Brando.Integration.PubSub
+defmodule BrandoIntegration.Presence do
+  use Phoenix.Presence, otp_app: :brando, pubsub_server: BrandoIntegration.PubSub
 end
 
 defmodule Brando.Villain.ParserTest.Parser do
@@ -38,13 +38,13 @@ defmodule Brando.Villain.ParserTest.Parser do
 end
 
 # Basic test repo
-alias Brando.Integration.Repo, as: Repo
+alias BrandoIntegration.Repo, as: Repo
 
-defmodule Brando.Integration.Endpoint do
+defmodule BrandoIntegrationWeb.Endpoint do
   use Phoenix.Endpoint,
     otp_app: :brando
 
-  socket "/admin/socket", Brando.Integration.AdminSocket,
+  socket "/admin/socket", BrandoIntegration.AdminSocket,
     websocket: true,
     longpoll: false
 
@@ -52,6 +52,8 @@ defmodule Brando.Integration.Endpoint do
     store: :cookie,
     key: "_test",
     signing_salt: "signingsalt"
+
+  plug Brando.Plug.LivePreview
 
   plug Plug.Static,
     at: "/",
@@ -62,7 +64,7 @@ defmodule Brando.Integration.Endpoint do
     cache_control_for_etags: nil
 end
 
-defmodule Brando.Integration.Authorization do
+defmodule BrandoIntegration.Authorization do
   use Brando.Authorization
 
   types [{"User", Brando.Users.User}]
@@ -73,14 +75,14 @@ defmodule Brando.Integration.Authorization do
   end
 end
 
-defmodule Brando.Integration.AdminSocket do
+defmodule BrandoIntegration.AdminSocket do
   @moduledoc """
   Socket specs for System and Stats channels.
   """
   use Phoenix.Socket
 
   ## Channels
-  channel "admin", Brando.Integration.AdminChannel
+  channel "admin", BrandoIntegration.AdminChannel
   channel "user:*", Brando.UserChannel
   channel "live_preview:*", Brando.LivePreviewChannel
 
@@ -111,7 +113,7 @@ defmodule Brando.Integration.AdminSocket do
   def id(_socket), do: nil
 end
 
-defmodule Brando.Integration.AdminChannel do
+defmodule BrandoIntegration.AdminChannel do
   @moduledoc """
   Administration control channel
   """
@@ -134,25 +136,25 @@ defmodule Brando.Integration.AdminChannel do
   # end
 end
 
-defmodule Brando.Integration.Processor.Commands do
+defmodule BrandoIntegration.Processor.Commands do
   def command(_, _, _), do: {:ok, 0}
 end
 
-defmodule Brando.Integration.PageView do
+defmodule BrandoIntegrationWeb.PageView do
   use Phoenix.View, root: "test/fixtures/templates"
 end
 
-defmodule Brando.Integration.LayoutView do
+defmodule BrandoIntegrationWeb.LayoutView do
   use Phoenix.View, root: "test/fixtures/templates"
 end
 
-defmodule Brando.Integration.LivePreview do
+defmodule BrandoIntegrationWeb.LivePreview do
   use Brando.LivePreview
 
   target(
     schema_module: Brando.Pages.Page,
-    view_module: Brando.Integration.PageView,
-    layout_module: Brando.Integration.LayoutView,
+    view_module: BrandoIntegrationWeb.PageView,
+    layout_module: BrandoIntegrationWeb.LayoutView,
     template: fn _ -> "index.html" end,
     section: fn _ -> "index" end,
     template_prop: :page
@@ -182,7 +184,7 @@ defmodule CompileTimeAssertions do
   end
 end
 
-defmodule Brando.Integration.TestCase do
+defmodule BrandoIntegration.TestCase do
   use ExUnit.CaseTemplate
 
   using do
@@ -194,7 +196,7 @@ defmodule Brando.Integration.TestCase do
   end
 end
 
-defmodule Brando.Integration.Guardian do
+defmodule BrandoIntegration.Guardian do
   def encode_and_sign(user) do
     {:ok, "user:#{user.id}", %{}}
   end
@@ -212,7 +214,7 @@ defmodule Brando.Integration.Guardian do
   end
 end
 
-defmodule Brando.Integration.ModuleWithDatasource do
+defmodule BrandoIntegration.ModuleWithDatasource do
   use Brando.Datasource
   use Brando.Web, :schema
 

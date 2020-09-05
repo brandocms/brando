@@ -1,4 +1,4 @@
 defmodule <%= module %>View do
-  use <%= base %>Web, :view
-  # import <%= base %>Web.Gettext
+  use <%= web_module %>, :view
+  # import <%= web_module %>.Gettext
 end

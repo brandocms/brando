@@ -1,9 +1,9 @@
-defmodule Brando.Integration.LockdownController do
+defmodule BrandoIntegration.LockdownController do
   use Phoenix.Controller,
     namespace: Brando
 end
 
-defmodule Brando.Integration.TestSchema do
+defmodule BrandoIntegration.TestSchema do
   use Absinthe.Schema
   use Brando.Schema
 
@@ -103,7 +103,7 @@ defmodule RouterHelper do
   end
 end
 
-defmodule Brando.Integration.Router do
+defmodule BrandoIntegrationWeb.Router do
   @moduledoc false
   use Phoenix.Router
   import Brando.Images.Routes.Admin.API
@@ -131,7 +131,7 @@ defmodule Brando.Integration.Router do
   end
 
   scope "/coming-soon" do
-    get "/", Brando.Integration.LockdownController, :index
+    get "/", BrandoIntegration.LockdownController, :index
   end
 
   scope "/" do

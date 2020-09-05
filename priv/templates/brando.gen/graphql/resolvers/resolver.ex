@@ -1,9 +1,9 @@
-defmodule <%= base %>.<%= domain %>.<%= alias %>Resolver do
+defmodule <%= app_module %>.<%= domain %>.<%= alias %>Resolver do
   @moduledoc """
   Resolver for <%= plural %>
   """
   use Brando.Web, :resolver
-  alias <%= base %>.<%= domain %>
+  alias <%= app_module %>.<%= domain %>
 
   @doc """
   Get all <%= plural %>

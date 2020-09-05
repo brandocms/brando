@@ -1,7 +1,7 @@
-defmodule Brando.Integration.UserTest do
+defmodule BrandoIntegration.UserTest do
   use ExUnit.Case
   use Brando.ConnCase
-  use Brando.Integration.TestCase
+  use BrandoIntegration.TestCase
 
   alias Brando.Factory
   alias Brando.Users

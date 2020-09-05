@@ -1,7 +1,7 @@
 defmodule Brando.Images.Processing.SizingTest do
   use ExUnit.Case
   use Brando.ConnCase
-  use Brando.Integration.TestCase
+  use BrandoIntegration.TestCase
 
   import Brando.Images.Operations.Sizing
   alias Brando.Images.ConversionParameters

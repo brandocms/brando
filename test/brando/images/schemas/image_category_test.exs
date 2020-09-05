@@ -1,7 +1,7 @@
-defmodule Brando.Integration.ImageCategoryTest do
+defmodule BrandoIntegration.ImageCategoryTest do
   use ExUnit.Case
   use Brando.ConnCase
-  use Brando.Integration.TestCase
+  use BrandoIntegration.TestCase
   alias Brando.Factory
 
   setup do

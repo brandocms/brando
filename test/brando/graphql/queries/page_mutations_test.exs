@@ -27,7 +27,7 @@ defmodule Brando.GraphQL.Mutations.PageMutationsTest do
 
     assert Absinthe.run(
              @update_page,
-             Brando.Integration.TestSchema,
+             BrandoIntegration.TestSchema,
              opts ++
                [
                  variables: %{

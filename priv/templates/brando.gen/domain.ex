@@ -1,4 +1,4 @@
-defmodule <%= base %>.<%= domain %> do
+defmodule <%= app_module %>.<%= domain %> do
   @moduledoc """
   Context for <%= human %>
   """
@@ -10,7 +10,7 @@ defmodule <%= base %>.<%= domain %> do
   # __types
 
   use Brando.Query
-  alias <%= base %>.Repo
+  alias <%= app_module %>.Repo
   import Ecto.Query
 
   # ++header

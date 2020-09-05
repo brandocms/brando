@@ -11,13 +11,15 @@ defmodule Brando.Generators.Domain do
     Mix.Brando.add_to_file(
       binding[:domain_filename],
       "types",
-      "@type #{binding[:singular]} :: #{binding[:base]}.#{binding[:domain]}.#{binding[:scoped]}.t()"
+      "@type #{binding[:singular]} :: #{binding[:app_module]}.#{binding[:domain]}.#{
+        binding[:scoped]
+      }.t()"
     )
 
     Mix.Brando.add_to_file(
       binding[:domain_filename],
       "header",
-      "alias #{binding[:base]}.#{binding[:domain]}.#{binding[:scoped]}"
+      "alias #{binding[:app_module]}.#{binding[:domain]}.#{binding[:scoped]}"
     )
 
     domain_code =
