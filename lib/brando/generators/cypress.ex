@@ -13,7 +13,7 @@ defmodule Brando.Generators.Cypress do
     Mix.Brando.add_to_file(
       "lib/#{Mix.Brando.otp_app()}/factory.ex",
       "aliases",
-      "alias #{binding[:base]}.#{binding[:domain]}.#{binding[:alias]}"
+      "alias #{binding[:app_module]}.#{binding[:domain]}.#{binding[:alias]}"
     )
 
     factory_code =

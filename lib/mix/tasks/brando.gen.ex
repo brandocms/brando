@@ -256,7 +256,7 @@ defmodule Mix.Tasks.Brando.Gen do
       Mix.Brando.add_to_file(
         "lib/#{Mix.Brando.otp_app()}_web/channels/admin_channel.ex",
         "imports",
-        "alias #{binding[:base]}.#{binding[:domain]}",
+        "alias #{binding[:app_module]}.#{binding[:domain]}",
         singular: true
       )
 

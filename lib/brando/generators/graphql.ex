@@ -16,9 +16,9 @@ defmodule Brando.Generators.GraphQL do
     Mix.Brando.add_to_file(
       "lib/#{Mix.Brando.otp_app()}/graphql/schema.ex",
       "dataloader",
-      "  |> Dataloader.add_source(#{binding[:base]}.#{binding[:domain]}, #{binding[:base]}.#{
-        binding[:domain]
-      }.data())",
+      "  |> Dataloader.add_source(#{binding[:app_module]}.#{binding[:domain]}, #{
+        binding[:app_module]
+      }.#{binding[:domain]}.data())",
       singular: true
     )
 
@@ -38,7 +38,7 @@ defmodule Brando.Generators.GraphQL do
     Mix.Brando.add_to_file(
       "lib/#{Mix.Brando.otp_app()}/graphql/schema/types.ex",
       "types",
-      "import_types #{binding[:base]}.Schema.Types.#{binding[:alias]}"
+      "import_types #{binding[:app_module]}.Schema.Types.#{binding[:alias]}"
     )
 
     binding
