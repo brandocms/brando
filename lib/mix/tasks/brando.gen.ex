@@ -123,6 +123,8 @@ defmodule Mix.Tasks.Brando.Gen do
     binding =
       Keyword.delete(binding, :module) ++
         [
+          app_module: Brando.config(:app_module),
+          web_module: Brando.config(:web_module),
           attrs: attrs,
           assocs: assocs,
           domain_filename: domain_filename,
