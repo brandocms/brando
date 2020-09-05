@@ -45,6 +45,12 @@ config :brando, :warn_on_http_auth, true
 config :brando, :default_language, "no"
 config :brando, :default_admin_language, "no"
 
+config :brando, Oban,
+  crontab: false,
+  queues: false,
+  plugins: false,
+  repo: Brando.Integration.DummyRepo
+
 config :brando, :languages, [
   [value: "no", text: "Norsk"],
   [value: "en", text: "English"]

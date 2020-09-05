@@ -22,14 +22,15 @@ defmodule Brando.Supervisor do
   end
 
   defp oban_config do
-    [
-      repo: Brando.repo(),
-      plugins: [Oban.Plugins.Pruner],
-      queues: [default: 10],
-      crontab: [
-        # Generate a Sitemap every night at 02:00
-        {"0 2 * * *", Brando.Worker.SitemapWorker}
+    Application.get_env(:brando, Oban) ||
+      [
+        repo: Brando.repo(),
+        plugins: [Oban.Plugins.Pruner],
+        queues: [default: 10],
+        crontab: [
+          # Generate a Sitemap every night at 02:00
+          {"0 2 * * *", Brando.Worker.SitemapWorker}
+        ]
       ]
-    ]
   end
 end

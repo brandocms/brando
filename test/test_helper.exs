@@ -6,13 +6,6 @@ File.mkdir_p!(Path.join([Mix.Project.app_path(), "tmp", "media"]))
 
 {:ok, _} = Application.ensure_all_started(:ex_machina)
 
-Supervisor.start_link(
-  [{Phoenix.PubSub, name: Brando.Integration.PubSub, pool_size: 1}],
-  strategy: :one_for_one
-)
-
-ExUnit.start()
-
 defmodule Brando.Integration.Repo do
   use Ecto.Repo,
     otp_app: :brando,
@@ -20,6 +13,21 @@ defmodule Brando.Integration.Repo do
 
   use Brando.SoftDelete.Repo
 end
+
+defmodule Brando.Integration.DummyRepo do
+  use Ecto.Repo,
+    otp_app: :brando,
+    adapter: Ecto.Adapters.Postgres
+
+  use Brando.SoftDelete.Repo
+end
+
+Supervisor.start_link(
+  [{Phoenix.PubSub, name: Brando.Integration.PubSub, pool_size: 1}, Brando],
+  strategy: :one_for_one
+)
+
+ExUnit.start()
 
 defmodule Brando.Integration.Presence do
   use Phoenix.Presence, otp_app: :brando, pubsub_server: Brando.Integration.PubSub
