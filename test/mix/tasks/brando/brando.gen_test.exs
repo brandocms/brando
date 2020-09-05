@@ -97,7 +97,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       end)
 
       assert_file("lib/brando/graphql/schema/types.ex", fn file ->
-        assert file =~ "import_types Brando.Schema.Types.Pirate"
+        assert file =~ "import_types BrandoIntegration.Schema.Types.Pirate"
       end)
 
       assert_file("lib/brando/graphql/schema/types/pirate.ex", fn file ->
