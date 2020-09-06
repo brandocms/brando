@@ -13,6 +13,7 @@ locals_without_parens = [
   cannot: 3,
   rules: 2,
   assign: 2,
+  merge: 1,
   many: 2,
   selection: 3,
   one: 2
