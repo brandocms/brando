@@ -28,6 +28,16 @@ defmodule Brando.LivePreview do
     layout_module = opts |> Keyword.fetch!(:layout_module) |> Macro.expand(__CALLER__)
     layout_template = opts |> Keyword.get(:layout_template, "app.html")
     template_prop = opts |> Keyword.get(:template_prop, nil)
+    preloads = opts |> Keyword.get(:preloads, [])
+
+    merge =
+      opts
+      |> Keyword.get(
+        :merge,
+        quote do
+          fn e -> e end
+        end
+      )
 
     quote location: :keep do
       @doc """
@@ -40,6 +50,12 @@ defmodule Brando.LivePreview do
         template = unquote(opts[:template]).(entry)
         section = unquote(opts[:section]).(entry)
         var!(cache_key) = cache_key
+
+        # preloads
+        entry =
+          entry
+          |> Brando.repo().preload(unquote(preloads))
+          |> unquote(merge).()
 
         # run block assigns
         var!(extra_vars) = []
@@ -76,12 +92,12 @@ defmodule Brando.LivePreview do
           ([
              {:conn, conn},
              {:section, section},
+             {:LIVE_PREVIEW, true},
              {atom_prop, entry}
            ] ++ unquote(Macro.var(:extra_vars, nil)))
           |> Enum.into(%{})
 
         inner = Phoenix.View.render(unquote(view_module), template, render_assigns)
-
         root_assigns = render_assigns |> Map.put(:inner_content, inner) |> Map.delete(:layout)
 
         Phoenix.View.render_to_string(
@@ -129,7 +145,7 @@ defmodule Brando.LivePreview do
         {:ok, cache_key}
       rescue
         err ->
-          {:error, "Initialization failed. #{inspect err}"}
+          {:error, "Initialization failed. #{inspect(err)}"}
       end
     else
       {:error, "No render/5 function found in LivePreview module"}
