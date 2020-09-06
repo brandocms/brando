@@ -70,22 +70,16 @@ defmodule Brando.Pages do
 
       {:language, language}, query ->
         from t in query,
-          where: t.language == ^language,
-          preload: [fragments: ^build_fragments_query()]
+          where: t.language == ^language
 
       {:key, key}, query ->
         from t in query,
           where: t.key == ^key,
           preload: [fragments: ^build_fragments_query()]
 
-      {:parent_key, parent_key}, query ->
-        from t in query,
-          where: t.parent_key == ^parent_key,
-          preload: [fragments: ^build_fragments_query()]
-
       {:path, path}, query when is_list(path) ->
         from t in query,
-          where: t.key == ^Path.join(path, "/"),
+          where: t.key == ^Path.join(path),
           preload: [fragments: ^build_fragments_query()]
 
       {:path, path}, query ->
@@ -308,6 +302,11 @@ defmodule Brando.Pages do
   @doc """
   Get fragment from page
   """
+  def get_fragment(%Page{fragments: %Ecto.Association.NotLoaded{}} = page, key) do
+    page = Brando.repo().preload(page, [:fragments])
+    Enum.find(page.fragments, &(&1.key == key))
+  end
+
   def get_fragment(%Page{fragments: fragments}, key) do
     Enum.find(fragments, &(&1.key == key))
   end
@@ -529,11 +528,5 @@ defmodule Brando.Pages do
     from f in PageFragment,
       where: is_nil(f.deleted_at),
       order_by: [asc: f.sequence, asc: f.key]
-  end
-
-  defp build_children_query do
-    from p in Page,
-      where: is_nil(p.deleted_at),
-      order_by: [asc: p.sequence, asc: p.key]
   end
 end

@@ -104,6 +104,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:template, :text)
       add(:meta_description, :text)
       add(:meta_image, :jsonb)
+      add(:publish_at, :utc_datetime)
       sequenced()
       soft_delete()
       timestamps()
