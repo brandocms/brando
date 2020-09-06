@@ -21,6 +21,12 @@ defmodule Brando.LivePreview do
   Set `template_prop` if your template uses another way to reference the entry than what
   is used in Vue. For instance, if in Vue it is a `project`, but you want `entry`, then
   set `template_prop: :entry`
+
+  `preloads` - List of atoms to preload on `entry``
+  `merge` - function to merge in additional data to `entry`
+
+      merge: fn entry -> %{entry | title: "custom"} end
+
   """
   defmacro target(opts, do: block) do
     schema_module = opts |> Keyword.fetch!(:schema_module) |> Macro.expand(__CALLER__)
