@@ -2,8 +2,12 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.47.0-dev
 
+* Dynamic navigation V1
 * Cleaned up `Brando.Pages.get_page/*` functions
 * Add `publish_at` logic to pages.
+* Use `imageType` fragment in generator
+* Add `select` logic to `Brando.Query`
+* Fix nonstandard module naming bugs in generator (NNCA would become Nnca etc)
 
 
 ## 0.46.0
