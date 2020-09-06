@@ -64,12 +64,32 @@ defmodule Brando.Query do
       defp with_select(query, {:map, fields}), do: from(q in query, select: map(q, ^fields))
       defp with_select(query, {:struct, fields}), do: from(q in query, select: ^fields)
       defp with_select(query, fields), do: from(q in query, select: map(q, ^fields))
-      defp with_status(query, "all"), do: query
+      defp with_status(query, "all", _), do: query
 
-      defp with_status(query, "deleted"),
+      defp with_status(query, "deleted", _),
         do: from(q in exclude(query, :where), where: not is_nil(q.deleted_at))
 
-      defp with_status(query, status), do: from(q in query, where: q.status == ^status)
+      defp with_status(query, "published_all", true),
+        do:
+          from(q in query,
+            where: q.status == 1
+          )
+
+      defp with_status(query, "published", true),
+        do:
+          from(q in query,
+            where:
+              (q.status == 1 and is_nil(q.publish_at)) or
+                fragment("?::timestamp", q.publish_at) < ^NaiveDateTime.utc_now()
+          )
+
+      defp with_status(query, "published", false),
+        do: from(q in query, where: q.status == 1)
+
+      defp with_status(query, status, publish_at?) when is_atom(status),
+        do: with_status(query, to_string(status), publish_at?)
+
+      defp with_status(query, status, _), do: from(q in query, where: q.status == ^status)
 
       @doc """
       Preloads
@@ -122,8 +142,12 @@ defmodule Brando.Query do
         end
       end
   """
-  defmacro query(:list, module, do: block), do: query_list(module, block)
-  defmacro query(:single, module, do: block), do: query_single(module, block)
+  defmacro query(:list, module, do: block),
+    do: query_list(Macro.expand(module, __CALLER__), block)
+
+  defmacro query(:single, module, do: block),
+    do: query_single(Macro.expand(module, __CALLER__), block)
+
   defmacro filters(module, do: block), do: filter_query(module, block)
   defmacro matches(module, do: block), do: match_query(module, block)
 
@@ -140,8 +164,16 @@ defmodule Brando.Query do
           end
       """)
 
-  defp query_list({_, _, module_list} = module, block) do
-    name = module_list |> List.last() |> Inflex.underscore() |> Inflex.pluralize()
+  defp query_list(module, block) do
+    # check for publish_at field
+    publish_at? = Map.has_key?(module.__struct__, :publish_at)
+
+    name =
+      module
+      |> Module.split()
+      |> List.last()
+      |> Inflex.underscore()
+      |> Inflex.pluralize()
 
     quote do
       def unquote(:"list_#{name}")(args \\ %{}, stream \\ false) do
@@ -166,7 +198,7 @@ defmodule Brando.Query do
               query |> limit(^limit)
 
             {:status, status}, query ->
-              query |> with_status(status)
+              query |> with_status(to_string(status), unquote(publish_at?))
 
             {:preload, preload}, query ->
               query |> with_preload(preload)
@@ -184,9 +216,13 @@ defmodule Brando.Query do
     end
   end
 
-  defp query_single({_, _, module_list} = module, block) do
+  defp query_single(module, block) do
+    # check for publish_at field
+    publish_at? = Map.has_key?(module.__struct__, :publish_at)
+
     name =
-      module_list
+      module
+      |> Module.split()
       |> List.last()
       |> Inflex.underscore()
 
@@ -213,7 +249,7 @@ defmodule Brando.Query do
               query |> limit(^limit)
 
             {:status, status}, query ->
-              query |> with_status(status)
+              query |> with_status(status, unquote(publish_at?))
 
             {:preload, preload}, query ->
               query |> with_preload(preload)

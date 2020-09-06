@@ -56,9 +56,17 @@ defmodule Mix.Tasks.Brando.Gen do
       Mix.shell().prompt("""
       + Enter schema fields:
 
-        ## Example
+        ## Field examples
 
-        name:string slug:slug:name status:status meta_description:text avatar:image data:villain image_series:gallery user:references:users
+        name:string
+        slug:slug:name
+        status:status
+        meta_description:text
+        avatar:image
+        data:villain
+        publish_at:utc_datetime
+        image_series:gallery
+        user:references:users
 
       """)
       |> String.trim("\n")

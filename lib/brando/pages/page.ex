@@ -15,7 +15,7 @@ defmodule Brando.Pages.Page do
   alias Brando.JSONLD
 
   @required_fields ~w(key language slug title data status template creator_id)a
-  @optional_fields ~w(parent_id meta_description meta_image html css_classes sequence deleted_at)a
+  @optional_fields ~w(parent_id meta_description meta_image html css_classes sequence deleted_at publish_at)a
   @derived_fields ~w(
     id
     key
@@ -35,6 +35,7 @@ defmodule Brando.Pages.Page do
     inserted_at
     updated_at
     deleted_at
+    publish_at
   )a
 
   @derive {Jason.Encoder, only: @derived_fields}
@@ -49,6 +50,7 @@ defmodule Brando.Pages.Page do
     field :css_classes, :string
     field :meta_description, :string
     field :meta_image, Brando.Type.Image
+    field :publish_at, :utc_datetime
 
     belongs_to :creator, Brando.Users.User
     belongs_to :parent, __MODULE__

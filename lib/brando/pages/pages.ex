@@ -61,6 +61,40 @@ defmodule Brando.Pages do
     end
   end
 
+  query :single, Page, do: fn query -> from q in query, where: is_nil(q.deleted_at) end
+
+  matches Page do
+    fn
+      {:id, id}, query ->
+        from t in query, where: t.id == ^id
+
+      {:language, language}, query ->
+        from t in query,
+          where: t.language == ^language,
+          preload: [fragments: ^build_fragments_query()]
+
+      {:key, key}, query ->
+        from t in query,
+          where: t.key == ^key,
+          preload: [fragments: ^build_fragments_query()]
+
+      {:parent_key, parent_key}, query ->
+        from t in query,
+          where: t.parent_key == ^parent_key,
+          preload: [fragments: ^build_fragments_query()]
+
+      {:path, path}, query when is_list(path) ->
+        from t in query,
+          where: t.key == ^Path.join(path, "/"),
+          preload: [fragments: ^build_fragments_query()]
+
+      {:path, path}, query ->
+        from t in query,
+          where: t.key == ^path,
+          preload: [fragments: ^build_fragments_query()]
+    end
+  end
+
   @doc """
   Create new page
   """
@@ -160,94 +194,6 @@ defmodule Brando.Pages do
       |> Enum.map(&%{name: Path.rootname(&1), value: &1})
 
     {:ok, main_templates}
-  end
-
-  @doc """
-  Get page
-  """
-  def get_page(path) when is_list(path) do
-    key = Enum.join(path, "/")
-    get_page(key)
-  end
-
-  def get_page(key) when is_binary(key) do
-    query =
-      from t in Page,
-        where: t.key == ^key and is_nil(t.deleted_at),
-        preload: [fragments: ^build_fragments_query()]
-
-    case Brando.repo().one(query) do
-      nil -> {:error, {:page, :not_found}}
-      page -> {:ok, page}
-    end
-  end
-
-  def get_page(id) do
-    query =
-      from t in Page,
-        where: t.id == ^id and is_nil(t.deleted_at),
-        preload: [fragments: ^build_fragments_query()]
-
-    case Brando.repo().one(query) do
-      nil -> {:error, {:page, :not_found}}
-      page -> {:ok, page}
-    end
-  end
-
-  @doc """
-  Get page by key
-  """
-  def get_page(key, lang) when is_binary(key) do
-    q =
-      from p in Page,
-        where: p.key == ^key and p.language == ^lang and is_nil(p.deleted_at),
-        preload: [fragments: ^build_fragments_query()]
-
-    case Brando.repo().one(q) do
-      nil -> {:error, {:page, :not_found}}
-      page -> {:ok, page}
-    end
-  end
-
-  @doc """
-  Get page by key
-  """
-  def get_page_with_children(key, lang) when is_binary(key) do
-    q =
-      from p in Page,
-        join: c in assoc(p, :children),
-        where: p.key == ^key and p.language == ^lang and is_nil(p.deleted_at),
-        preload: [children: ^build_children_query(), fragments: ^build_fragments_query()]
-
-    case Brando.repo().one(q) do
-      nil -> {:error, {:page, :not_found}}
-      page -> {:ok, page}
-    end
-  end
-
-  @doc """
-  Get page by parent_key and key
-  """
-  def get_page(nil, key, lang) when is_binary(key), do: get_page(key, lang)
-
-  @doc """
-  Get page by parent_key, key and language
-  """
-  def get_page(parent_key, key, lang) when is_binary(key) do
-    q =
-      from p in Page,
-        left_join: pp in assoc(p, :parent),
-        where:
-          p.key == ^key and
-            pp.key == ^parent_key and
-            p.language == ^lang and
-            is_nil(p.deleted_at),
-        preload: [fragments: ^build_fragments_query()]
-
-    case Brando.repo().one(q) do
-      nil -> {:error, {:page, :not_found}}
-      page -> {:ok, page}
-    end
   end
 
   @doc """

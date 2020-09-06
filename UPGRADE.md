@@ -18,6 +18,10 @@
         Brando
       ]
 
+* Removed and unified most of the `Brando.Pages.get_page/*` functions. Now uses `matches`
+
+      Brando.Pages.get_page(%{matches: %{key: "index", status: :published}})
+
 
 ## 0.46.0
 

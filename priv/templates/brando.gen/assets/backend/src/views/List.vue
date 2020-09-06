@@ -99,7 +99,7 @@ export default {
         filter: null,
         offset: 0,
         limit: 50<%= if status do %>,
-        status: 'published'<% end %>
+        status: 'all'<% end %>
       },
       page: 0,
       // if the entries has children, enable this

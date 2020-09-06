@@ -1,5 +1,11 @@
 See `UPGRADE.md` for instructions on upgrading between versions.
 
+## 0.47.0-dev
+
+* Cleaned up `Brando.Pages.get_page/*` functions
+* Add `publish_at` logic to pages.
+
+
 ## 0.46.0
 
 * New parser for template language!

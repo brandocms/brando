@@ -22,6 +22,7 @@ defmodule Brando.Schema.Types.Page do
     field :inserted_at, :time
     field :updated_at, :time
     field :deleted_at, :time
+    field :publish_at, :time
   end
 
   input_object :page_params do
@@ -35,6 +36,7 @@ defmodule Brando.Schema.Types.Page do
     field :css_classes, :string
     field :meta_description, :string
     field :meta_image, :upload_or_image
+    field :publish_at, :time
   end
 
   @desc "Filtering options for page"
