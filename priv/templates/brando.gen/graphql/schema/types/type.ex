@@ -5,7 +5,7 @@ defmodule <%= app_module %>.Schema.Types.<%= alias %> do
   use <%= web_module %>, :absinthe
 
   object :<%= singular %> do
-    field :id, :id<%= for {_v, k} <- gql_types do %>
+    field :id, :integer<%= for {_v, k} <- gql_types do %>
     <%= k %><% end %><%= if soft_delete do %>
     field :deleted_at, :time<% end %><%= if creator do %>
     field :creator, :user, resolve: dataloader(Brando.Users)<% end %>

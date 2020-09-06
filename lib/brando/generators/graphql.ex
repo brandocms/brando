@@ -51,7 +51,7 @@ defmodule Brando.Generators.GraphQL do
     gql_types =
       Enum.map(attrs, fn
         {k, {:references, _}} ->
-          {k, ~s<\n    field #{inspect(k)}_id, :id>}
+          {k, ~s<\n    field #{inspect(k)}_id, :integer>}
 
         {k, {:array, _}} ->
           {k, ~s<field #{inspect(k)}, list_of\(:string\)>}
