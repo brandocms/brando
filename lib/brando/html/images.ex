@@ -104,6 +104,16 @@ defmodule Brando.HTML.Images do
 
   # when we're not given a struct
   def picture_tag(img_map, opts) do
+    #! TODO: this is very hacky, but only a stopgap until we do away
+    #! with `prefix` media_url's entirely
+
+    opts =
+      if img_map["original"] && String.starts_with?(img_map["original"], "/media") do
+        Keyword.drop(opts, [:prefix])
+      else
+        opts
+      end
+
     image_struct = Utils.stringy_struct(Brando.Type.Image, img_map)
     picture_tag(image_struct, opts)
   end
