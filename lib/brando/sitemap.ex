@@ -51,25 +51,28 @@ defmodule Brando.Sitemap do
   """
   def generate_sitemap() do
     sitemap_module = Brando.web_module(Sitemap)
-    sitemap_functions = sitemap_module.__info__(:functions)
-    entries = Stream.flat_map(sitemap_functions, &apply(sitemap_module, elem(&1, 0), []))
 
-    sitemap_path = Path.join([Brando.config(:media_path), "sitemaps"])
-    File.mkdir_p!(sitemap_path)
+    if Code.ensure_compiled?(sitemap_module) do
+      sitemap_functions = sitemap_module.__info__(:functions)
+      entries = Stream.flat_map(sitemap_functions, &apply(sitemap_module, elem(&1, 0), []))
 
-    opts = [
-      sitemap_url: Brando.endpoint().url,
-      store: Sitemapper.FileStore,
-      store_config: [
-        path: sitemap_path
+      sitemap_path = Path.join([Brando.config(:media_path), "sitemaps"])
+      File.mkdir_p!(sitemap_path)
+
+      opts = [
+        sitemap_url: Brando.endpoint().url,
+        store: Sitemapper.FileStore,
+        store_config: [
+          path: sitemap_path
+        ]
       ]
-    ]
 
-    Brando.repo().transaction(fn ->
-      entries
-      |> Sitemapper.generate(opts)
-      |> Sitemapper.persist(opts)
-      |> Enum.to_list()
-    end)
+      Brando.repo().transaction(fn ->
+        entries
+        |> Sitemapper.generate(opts)
+        |> Sitemapper.persist(opts)
+        |> Enum.to_list()
+      end)
+    end
   end
 end
