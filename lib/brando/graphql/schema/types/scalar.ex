@@ -3,34 +3,42 @@ defmodule Brando.Schema.Types.Scalar do
   require Logger
 
   scalar :time, description: "ISOz time" do
-    parse fn p ->
-      case Timex.parse(p.value, "{ISO:Extended:Z}") do
-        {:ok, v} ->
-          {:ok, v}
+    parse fn
+      %{value: value} ->
+        case Timex.parse(value, "{ISO:Extended:Z}") do
+          {:ok, v} ->
+            {:ok, v}
 
-        {:error, err} ->
-          Logger.error("==> :time scalar parse failed")
-          Logger.error("value: #{inspect(p.value, pretty: true)}")
-          Logger.error("error: #{inspect(err, pretty: true)}")
-          :error
-      end
+          {:error, err} ->
+            Logger.error("==> :time scalar parse failed")
+            Logger.error("value: #{inspect(value, pretty: true)}")
+            Logger.error("error: #{inspect(err, pretty: true)}")
+            :error
+        end
+
+      _ ->
+        {:ok, nil}
     end
 
     serialize &Timex.format!(&1, "{ISO:Extended:Z}")
   end
 
   scalar :date, description: "ISOz time" do
-    parse fn p ->
-      case Timex.parse(p.value, "%Y-%m-%d", :strftime) do
-        {:ok, v} ->
-          {:ok, v}
+    parse fn
+      %{value: value} ->
+        case Timex.parse(value, "%Y-%m-%d", :strftime) do
+          {:ok, v} ->
+            {:ok, v}
 
-        {:error, err} ->
-          Logger.error("==> :date scalar parse failed")
-          Logger.error("value: #{inspect(p.value, pretty: true)}")
-          Logger.error("error: #{inspect(err, pretty: true)}")
-          :error
-      end
+          {:error, err} ->
+            Logger.error("==> :date scalar parse failed")
+            Logger.error("value: #{inspect(value, pretty: true)}")
+            Logger.error("error: #{inspect(err, pretty: true)}")
+            :error
+        end
+
+      _ ->
+        {:ok, nil}
     end
 
     serialize &Timex.format!(&1, "%Y-%m-%d", :strftime)
