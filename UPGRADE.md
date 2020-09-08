@@ -90,6 +90,8 @@
   ```
   - Remove all webpack packages from `assets/frontend/package.json`
   - `rm assets/frontend/webpack.*`
+  - You must `import ./index` at the end of the polyfill files `polyfill.legacy.js`
+    and `polyfill.modern.js`
   - Add `~r"priv/static/css/.*(css)$",` to live_preload patterns in `config/dev.exs` to ensure
     automatic loading of compiled CSS.
 
