@@ -78,8 +78,9 @@ defmodule Brando.Query do
       defp with_status(query, "published", true),
         do:
           from(q in query,
+            where: q.status == 1,
             where:
-              (q.status == 1 and is_nil(q.publish_at)) or
+              is_nil(q.publish_at) or
                 fragment("?::timestamp", q.publish_at) < ^NaiveDateTime.utc_now()
           )
 
