@@ -184,14 +184,14 @@ defmodule Brando.Lexer.Filter do
 
   def date(%NaiveDateTime{} = value, format, _), do: Timex.format!(value, format, :strftime)
 
+  def date("now", format, context), do: date(DateTime.utc_now(), format, context)
+  def date("today", format, context), do: date(Date.utc_today(), format, context)
+
   def date(value, format, _) when is_binary(value) do
     value
     |> Timex.parse!("{RFC3339z}")
     |> Timex.format!(format, :strftime)
   end
-
-  def date("now", format, context), do: date(DateTime.utc_now(), format, context)
-  def date("today", format, context), do: date(Date.utc_today(), format, context)
 
   @doc """
   Allows you to specify a fallback in case a value doesn’t exist. default will show its value
