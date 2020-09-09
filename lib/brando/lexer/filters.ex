@@ -2,6 +2,7 @@ defmodule Brando.Lexer.Filter do
   @moduledoc """
   Contains all the basic filters for Liquid
   """
+  require Logger
 
   @callback apply(any, {:filter, [...]}, map) :: any
 
@@ -172,6 +173,7 @@ defmodule Brando.Lexer.Filter do
       iex> Brando.Lexer.Filter.date(~U[2020-07-06 15:00:00.000000Z], "%m/%d/%Y", %{})
       "07/06/2020"
   """
+
   def date(%Date{} = value, format, _), do: Timex.format!(value, format, :strftime)
 
   def date(%DateTime{} = value, format, _) do
@@ -181,6 +183,12 @@ defmodule Brando.Lexer.Filter do
   end
 
   def date(%NaiveDateTime{} = value, format, _), do: Timex.format!(value, format, :strftime)
+
+  def date(value, format, _) when is_binary(value) do
+    value
+    |> Timex.parse!("{RFC3339z}")
+    |> Timex.format!(format, :strftime)
+  end
 
   def date("now", format, context), do: date(DateTime.utc_now(), format, context)
   def date("today", format, context), do: date(Date.utc_today(), format, context)
