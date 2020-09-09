@@ -70,7 +70,7 @@ defmodule <%= application_module %>.MixProject do
      {:plug_heartbeat, "~> 1.0"},
 
      # brando
-     # {:brando, github: "twined/brando"}
+     # {:brando, github: "brandocms/brando"}
      {:brando, path: "../../brando"}
     ]
   end
