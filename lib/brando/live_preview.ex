@@ -2,6 +2,7 @@ defmodule Brando.LivePreview do
   @moduledoc """
   Coming up
   """
+  require Logger
 
   @preview_coder Hashids.new(
                    alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
@@ -151,6 +152,20 @@ defmodule Brando.LivePreview do
         {:ok, cache_key}
       rescue
         err ->
+          Logger.error("""
+          Livepreview Initialization failed.
+
+          Error:
+
+          #{inspect(err, pretty: true)}
+
+
+          Stacktrace:
+
+          #{inspect(__STACKTRACE__, pretty: true)}
+
+          """)
+
           {:error, "Initialization failed. #{inspect(err)}"}
       end
     else
