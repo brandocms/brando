@@ -2,6 +2,7 @@ defmodule Brando.Plug.LivePreviewTest do
   use ExUnit.Case
   use Brando.ConnCase
   use Plug.Test
+  import ExUnit.CaptureLog
 
   alias Brando.Plug.LivePreview
 
@@ -30,34 +31,38 @@ defmodule Brando.Plug.LivePreviewTest do
   end
 
   test "live preview halts on missing cache", %{opts: opts} do
-    conn =
-      :get
-      |> conn("__livepreview?key=LIVEPREVIEWKEY")
-      |> put_req_header("content-type", "application/json")
-      |> Plug.Parsers.call(opts)
-      |> LivePreview.call([])
+    capture_log(fn ->
+      conn =
+        :get
+        |> conn("__livepreview?key=LIVEPREVIEWKEY")
+        |> put_req_header("content-type", "application/json")
+        |> Plug.Parsers.call(opts)
+        |> LivePreview.call([])
 
-    assert conn.halted == true
-    assert conn.resp_body == "LIVE PREVIEW FAILED. NO DATA SET FOR KEY LIVEPREVIEWKEY"
+      assert conn.halted == true
+      assert conn.resp_body == "LIVE PREVIEW FAILED. NO DATA SET FOR KEY LIVEPREVIEWKEY"
+    end)
   end
 
   test "live preview fails on weird data", %{opts: opts} do
-    Brando.LivePreview.store_cache(
-      "LIVEPREVIEWKEY",
-      [nil, []]
-    )
+    capture_log(fn ->
+      Brando.LivePreview.store_cache(
+        "LIVEPREVIEWKEY",
+        [nil, []]
+      )
 
-    conn =
-      :get
-      |> conn("__livepreview?key=LIVEPREVIEWKEY")
-      |> put_req_header("content-type", "application/json")
-      |> Plug.Parsers.call(opts)
-      |> LivePreview.call([])
+      conn =
+        :get
+        |> conn("__livepreview?key=LIVEPREVIEWKEY")
+        |> put_req_header("content-type", "application/json")
+        |> Plug.Parsers.call(opts)
+        |> LivePreview.call([])
 
-    assert conn.halted == true
+      assert conn.halted == true
 
-    assert conn.resp_body ==
-             "LIVE PREVIEW FAILED\n\n%FunctionClauseError{\n  args: nil,\n  arity: 3,\n  clauses: nil,\n  function: :split,\n  kind: nil,\n  module: String\n}"
+      assert conn.resp_body ==
+               "LIVE PREVIEW FAILED\n\n%FunctionClauseError{\n  args: nil,\n  arity: 3,\n  clauses: nil,\n  function: :split,\n  kind: nil,\n  module: String\n}"
+    end)
   end
 
   test "live preview succeeds", %{opts: opts} do

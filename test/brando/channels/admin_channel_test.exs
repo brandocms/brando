@@ -3,6 +3,7 @@ defmodule Brando.AdminChannelTest do
   use ExUnit.Case, async: false
 
   import Ecto.Query
+  import ExUnit.CaptureLog
 
   alias Brando.Factory
   alias BrandoIntegration.AdminChannel
@@ -432,15 +433,17 @@ defmodule Brando.AdminChannelTest do
     test "livepreview:initialize", %{socket: socket} do
       entry = %{"title" => "Page title!"}
 
-      ref =
-        push(socket, "livepreview:initialize", %{
-          "schema" => "Brando.Users.User",
-          "entry" => entry,
-          "key" => "data",
-          "prop" => "page"
-        })
+      capture_log(fn ->
+        ref =
+          push(socket, "livepreview:initialize", %{
+            "schema" => "Brando.Users.User",
+            "entry" => entry,
+            "key" => "data",
+            "prop" => "page"
+          })
 
-      assert_reply ref, :error, %{code: 404}
+        assert_reply ref, :error, %{code: 404}
+      end)
 
       ref =
         push(socket, "livepreview:initialize", %{
