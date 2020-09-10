@@ -228,7 +228,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "assets/backend/src/styles/blocks.pcss", "assets/backend/src/styles/blocks.pcss"},
 
     # Frontend assets
-    {:keep, "assets/frontend/fonts", "assets/frontend/fonts"},
+    {:keep, "assets/frontend/fonts", "assets/frontend/static/fonts"},
     {:copy, "assets/frontend/babel.config.js", "assets/frontend/babel.config.js"},
     {:copy, "assets/frontend/eslintrc.js", "assets/frontend/.eslintrc.js"},
     {:copy, "assets/frontend/europa.config.js", "assets/frontend/europa.config.js"},
