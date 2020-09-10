@@ -72,13 +72,13 @@ defmodule Brando.Villain.Parser do
       alias Brando.Lexer
       alias Brando.Villain
 
-      def render_caption(%{"title" => "", "credits" => ""}),
+      def render_caption(%{"title" => nil, "credits" => nil}),
         do: ""
 
-      def render_caption(%{"title" => title, "credits" => ""}),
+      def render_caption(%{"title" => title, "credits" => nil}),
         do: "<figcaption>#{title}</figcaption>"
 
-      def render_caption(%{"title" => "", "credits" => credits}),
+      def render_caption(%{"title" => nil, "credits" => credits}),
         do: "<figcaption>#{credits}</figcaption>"
 
       def render_caption(%{"title" => title, "credits" => credits}),
@@ -336,6 +336,8 @@ defmodule Brando.Villain.Parser do
       Convert image to html, with caption and credits and optional link
       """
       def picture(data, _) do
+        title = Map.get(data, "title", nil)
+        credits = Map.get(data, "credits", nil)
         alt = Map.get(data, "alt", nil)
         width = Map.get(data, "width", nil)
         height = Map.get(data, "height", nil)
@@ -349,6 +351,9 @@ defmodule Brando.Villain.Parser do
         srcset = Map.get(data, "srcset", "")
 
         media_queries = Map.get(data, "media_queries", "")
+
+        title = if title == "", do: nil, else: title
+        credits = if credits == "", do: nil, else: credits
 
         {link_open, link_close} =
           if link != "" do
@@ -364,7 +369,7 @@ defmodule Brando.Villain.Parser do
             {"", ""}
           end
 
-        caption = render_caption(data)
+        caption = render_caption(Map.merge(data, %{"title" => title, "credits" => credits}))
 
         srcset =
           if srcset == "",
@@ -385,7 +390,7 @@ defmodule Brando.Villain.Parser do
               caption
 
             true ->
-              "Ill."
+              ""
           end
 
         ptag =
