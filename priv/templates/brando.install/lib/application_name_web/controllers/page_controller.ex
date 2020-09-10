@@ -23,7 +23,7 @@ defmodule <%= application_module %>Web.PageController do
   @doc false
   @spec show(conn, map) :: page_not_found | conn
   def show(conn, %{"path" => path}) when is_list(path) do
-    with {:ok, page} <- Pages.get_page(%{path: path, status: :published) do
+    with {:ok, page} <- Pages.get_page(%{path: path, status: :published}) do
       #  {:ok, partials} <- Pages.get_fragments("partials") do
       conn
       |> put_section(page.key)
