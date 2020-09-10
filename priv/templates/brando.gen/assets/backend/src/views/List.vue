@@ -14,7 +14,7 @@
       </template>
     </ContentHeader>
 
-    <div class="row">
+    <div class="row baseline">
       <div class="half">
         <h2>
           {{ $t('<%= vue_plural %>.index') }}
