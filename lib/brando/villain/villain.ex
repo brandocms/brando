@@ -402,4 +402,30 @@ defmodule Brando.Villain do
       end)
     end
   end
+
+  @doc """
+  Look through all templates for `search_terms` and rerender all villains that
+  use this template
+  """
+  @spec rerender_matching_villains([any], binary | [binary]) :: any
+  def rerender_matching_templates(_villains, search_terms) do
+    # first look through templates
+    query = from(t in Brando.Villain.Template, select: t.id)
+
+    built_query =
+      Enum.reduce(search_terms, query, fn search_term, query ->
+        from q in query,
+          or_where: ilike(type(q.code, :string), ^"%#{search_term}%")
+      end)
+
+    case Brando.repo().all(built_query) do
+      [] ->
+        nil
+
+      ids ->
+        for id <- ids do
+          update_template_in_fields(id)
+        end
+    end
+  end
 end

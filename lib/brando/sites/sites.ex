@@ -132,16 +132,19 @@ defmodule Brando.Sites do
 
   def update_villains_referencing_identity({:ok, identity}) do
     search_terms = [
-      "${IDENTITY:",
-      "${CONFIG:",
-      "${LINK:",
       "${identity:",
       "${config:",
       "${link:"
     ]
 
     villains = Villain.list_villains()
+
+    # Check for instances in data fields
     Villain.rerender_matching_villains(villains, search_terms)
+
+    # Check for instances in templates
+    Villain.rerender_matching_templates(villains, search_terms)
+
     {:ok, identity}
   end
 end
