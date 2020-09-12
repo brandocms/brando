@@ -245,6 +245,8 @@ defmodule Brando.Utils do
   @doc """
   Convert string map to struct
   """
+  def stringy_struct(string_struct, nil), do: struct(string_struct, %{})
+
   def stringy_struct(string_struct, params) when is_map(params) do
     keys =
       string_struct
