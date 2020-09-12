@@ -10,16 +10,36 @@ defmodule Brando.Sequence.Schema do
         sequenced()
       end
 
-  `sequence` gets called from admin_channel like this:
 
-  With composite keys:
-
-      sequence %{"composite_keys" => [%{"id" => 1, "additional_id" => 2}, %{...}]}
-
-  With regular ids
+  ### With regular ids
 
       sequence %{"ids" => [3, 5, 1]}
 
+
+  ### With composite keys:
+
+  In your vue file, set the `<ContentList>`'s sort prop to `@sort="orderThings($event, exhibitionId)"`
+
+  The sort function could then be
+
+      sortWorks (workIds, exhibitionId) {
+        const compositeKeys = workIds.map(workId => ({
+          exhibition_id: exhibitionId,
+          work_id: workId
+        }))
+
+        this.adminChannel.channel
+          .push('exhibited_works:sequence_exhibited_works', { composite_keys: compositeKeys })
+          .receive('ok', payload => {
+            this.$toast.success({ message: 'Order updated' })
+          })
+      }
+
+  Which will then produce
+
+      sequence %{"composite_keys" => [%{"id" => 1, "additional_id" => 2}, %{...}]}
+
+  in your admin channel
   """
 
   defmacro __using__(_) do
