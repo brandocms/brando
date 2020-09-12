@@ -284,9 +284,7 @@ defmodule Brando.HTML.Images do
           height
       end
 
-    orientation =
-      (img_width > img_height && "landscape") || (img_width == img_height && "square") ||
-        "portrait"
+    orientation = Brando.Images.get_image_orientation(img_width, img_height)
 
     attrs
     |> put_in([:img, :width], width)

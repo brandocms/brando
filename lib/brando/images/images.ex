@@ -484,4 +484,16 @@ defmodule Brando.Images do
     series = Brando.repo().all(from t in ImageSeries, where: not is_nil(t.deleted_at))
     Images.Utils.get_orphaned_series(categories, series, starts_with: "images/site")
   end
+
+  @spec get_image_orientation(integer, integer) :: binary
+  def get_image_orientation(width, height) do
+    (width > height && "landscape") || (width == height && "square") ||
+      "portrait"
+  end
+
+  @spec get_image_orientation(map) :: binary
+  def get_image_orientation(%{width: width, height: height}) do
+    (width > height && "landscape") || (width == height && "square") ||
+      "portrait"
+  end
 end
