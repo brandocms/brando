@@ -3,6 +3,7 @@ defmodule Brando.VillainTest do
     @behaviour Brando.Villain.Parser
 
     def text(%{"text" => _, "type" => _}, _), do: "other parser"
+    def render_caption(_), do: ""
     def datatable(_, _), do: nil
     def datasource(_, _), do: nil
     def markdown(_, _), do: nil
