@@ -348,13 +348,14 @@ defmodule Brando.Pages do
     raise "deprecated!"
   end
 
-  def list_fragments_translations(
-        parent_key,
-        opts \\ []
-      ) do
+  def list_fragments_translations(parent_key, opts \\ []) do
     exclude_lang = Keyword.get(opts, :exclude_language)
 
-    query = where(PageFragment, [p], p.parent_key == ^parent_key)
+    query =
+      PageFragment
+      |> where([p], p.parent_key == ^parent_key)
+      |> exclude_deleted()
+      |> order_by([p], [:sequence, :key])
 
     query =
       if exclude_lang do
@@ -363,11 +364,7 @@ defmodule Brando.Pages do
         query
       end
 
-    fragments =
-      query
-      |> exclude_deleted()
-      |> order_by([p], asc: p.parent_key, asc: p.sequence)
-      |> Brando.repo().all
+    fragments = Brando.repo().all(query)
 
     # group keys as "key -> [fragment, fragment2]
     split_fragments = Brando.Utils.split_by(fragments, :key)
