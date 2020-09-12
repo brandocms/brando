@@ -96,7 +96,10 @@ defmodule Brando.HTML.Images do
       )
 
     if Keyword.get(opts, :lightbox, false) do
-      wrap_lightbox(picture_tag, Keyword.get(attrs.img, :src))
+      wrap_lightbox(
+        picture_tag,
+        Keyword.get(attrs.img, (Keyword.get(opts, :lazyload) && :data_src) || :src)
+      )
     else
       picture_tag
     end
