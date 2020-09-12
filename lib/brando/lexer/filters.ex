@@ -390,6 +390,18 @@ defmodule Brando.Lexer.Filter do
   def newline_to_br(value, _), do: String.replace(value, "\n", "<br />\n")
 
   @doc """
+  Gets orientation for image
+  ## Examples
+      iex> Brando.Lexer.Filter.orientation(%{width: 500, height: 500}, %{})
+      "square"
+      iex> Brando.Lexer.Filter.orientation(%{width: 600, height: 500}, %{})
+      "landscape"
+      iex> Brando.Lexer.Filter.orientation(%{width: 500, height: 600}, %{})
+      "portrait"
+  """
+  def orientation(value, _), do: Brando.Images.get_image_orientation(value)
+
+  @doc """
   Adds a number to another number.
   ## Examples
       iex> Brando.Lexer.Filter.plus(4, 2, %{})
