@@ -98,6 +98,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:data, :json)
       add(:html, :text)
       add(:status, :integer)
+      add(:is_homepage, :boolean)
       add(:parent_id, references(:pages_pages), default: nil)
       add(:creator_id, references(:users_users))
       add(:css_classes, :text)
