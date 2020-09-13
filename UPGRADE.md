@@ -1,5 +1,7 @@
 ## 0.47.0
 
+*
+
 * Start Brando from your application
   In `application.ex`, add `Brando` to your supervision tree as the last child:
 

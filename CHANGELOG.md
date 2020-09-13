@@ -2,9 +2,18 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.47.0-dev
 
+* Fix ordering of translation fragments
+* Fix lightbox src with lazyload in `picture_tag`
+* Rerender matching templates in Villains when updating globals or identity
+* Add `render_caption` callback to Villain parser. Picture blocks call this to render captions.
+* Set fehn 3.0 as default Docker image (Ubuntu 20.04)
+* Allow parsing RFC 3339z datetime strings in date filter
+* Add sitemap logic, `Brando.Sitemap`.
+* Add `oban` for cron jobs.
+* Add `orientation` filter
 * Dynamic navigation V1
 * Cleaned up `Brando.Pages.get_page/*` functions
-* Add `publish_at` logic to pages.
+* Added `publish_at` logic to pages.
 * Use `imageType` fragment in generator
 * Add `select` logic to `Brando.Query`
 * Fix nonstandard module naming bugs in generator (NNCA would become Nnca etc)
