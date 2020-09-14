@@ -281,6 +281,10 @@ defmodule Mix.Tasks.Brando.Gen.Test do
         assert file =~ "data\n"
         assert file =~ "cover {\n    ...imageType\n  }"
       end)
+
+      assert_file("assets/backend/src/views/games/CaptainForm.vue", fn file ->
+        assert file =~ "v-model=\"captain.data\""
+      end)
     end)
   end
 end
