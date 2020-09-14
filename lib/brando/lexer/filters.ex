@@ -251,6 +251,17 @@ defmodule Brando.Lexer.Filter do
   end
 
   @doc """
+  Get src of image
+  """
+  def src(%Brando.Type.Image{} = img, size, _) do
+    Brando.Utils.img_url(img, size, prefix: Brando.Utils.media_url())
+  end
+
+  def src(img, size, _) do
+    Brando.Utils.img_url(img, size)
+  end
+
+  @doc """
   Divides a number by another number.
   ## Examples
   The result is rounded down to the nearest integer (that is, the floor) if the divisor is an integer.
