@@ -50,5 +50,12 @@ defmodule Brando.Sites.Global do
       |> Phoenix.HTML.raw()
       |> Phoenix.HTML.Safe.to_iodata()
     end
+
+    def to_iodata(%{type: "color", data: data}) do
+      data
+      |> Map.get("value", "")
+      |> Phoenix.HTML.raw()
+      |> Phoenix.HTML.Safe.to_iodata()
+    end
   end
 end
