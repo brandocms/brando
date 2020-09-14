@@ -175,7 +175,7 @@ defmodule Brando.Generators.Vue do
           {k, "''"}
 
         {k, :villain} ->
-          k = (k == :data && :data) || String.to_atom(Atom.to_string(k) <> "_data")
+          k = (k == "data" && "data") || "#{k}_data"
           {k, "null"}
 
         {k, _} ->
@@ -309,8 +309,8 @@ defmodule Brando.Generators.Vue do
         {k, type} ->
           k =
             cond do
-              type == :villain and k == :data ->
-                :data
+              type == :villain and k == "data" ->
+                "data"
 
               type == :villain ->
                 "#{k}Data"
