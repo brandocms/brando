@@ -64,7 +64,7 @@ defmodule Mix.Tasks.Brando.Gen do
         meta_description:text
         avatar:image
         data:villain
-        publish_at:utc_datetime
+        publish_at:datetime    # utc
         image_series:gallery
         user:references:users
 
