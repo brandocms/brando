@@ -12,7 +12,7 @@ defmodule Brando.DatasourcesTest do
       end
 
       many :all_of_them, fn _, _ ->
-        {:ok, [%{id: 1}, %{id: 2}, %{id: 3}]}
+        {:ok, [%{id: 1, name: "1"}, %{id: 2, name: "2"}, %{id: 3, name: "3"}]}
       end
 
       many :all_more, fn _, arg ->
@@ -84,8 +84,6 @@ defmodule Brando.DatasourcesTest do
   end
 
   test "update_datasource" do
-    t1 = Factory.insert(:template, code: "hello!", wrapper: "yes, thanks. ${content}")
-
     data = [
       %{
         "type" => "datasource",
@@ -93,12 +91,19 @@ defmodule Brando.DatasourcesTest do
           "module" => "Elixir.Brando.DatasourcesTest.TestDatasource",
           "type" => "many",
           "query" => "all_of_them",
-          "template" => t1.id
+          "code" => """
+          {% for entry <- entries %}
+          <li>${entry:name}</li>
+          {% endfor %}
+          """
         }
       }
     ]
 
-    _p1 = Factory.insert(:page, data: data)
+    page_params = Factory.params_for(:page, data: data)
+    user = Factory.insert(:random_user)
+    {:ok, p1} = Brando.Pages.create_page(page_params, user)
+    assert p1.html == "\n<li>1</li>\n\n<li>2</li>\n\n<li>3</li>\n\n"
 
     assert Brando.Datasource.update_datasource(TestDatasource, :pass_through) ==
              {:ok, :pass_through}

@@ -1,6 +1,8 @@
 ## 0.47.0
 
-*
+* Moved Villain `DatasourceBlock` code from template to it's own code prop.
+  This means you must copy the code from the template the Datasource is using into the datasource's config.
+  The datasource code has an `${entries}` variable that you can iterate on instead of using a wrapper.
 
 * Start Brando from your application
   In `application.ex`, add `Brando` to your supervision tree as the last child:
