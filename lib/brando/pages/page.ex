@@ -58,6 +58,7 @@ defmodule Brando.Pages.Page do
     belongs_to :parent, __MODULE__
     has_many :children, __MODULE__, foreign_key: :parent_id
     has_many :fragments, Brando.Pages.PageFragment
+    has_many :properties, Brando.Pages.Property, on_replace: :delete
 
     sequenced()
     timestamps()
@@ -112,6 +113,7 @@ defmodule Brando.Pages.Page do
   def changeset(schema, params \\ %{}, user \\ :system) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
+    |> cast_assoc(:properties)
     |> put_creator(user)
     |> put_slug()
     |> validate_required(@required_fields)
