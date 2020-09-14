@@ -204,15 +204,14 @@ defmodule Brando.Villain.Parser do
               "module" => module,
               "type" => "many",
               "query" => query,
-              "template" => template_id
+              "code" => code
             } = data,
             _
           ) do
         arg = Map.get(data, "arg", nil)
 
-        with {:ok, entries} <- Datasource.get_many(module, query, arg),
-             {:ok, template} <- Villain.get_template(template_id) do
-          render_datasource_entries(template, entries)
+        with {:ok, entries} <- Datasource.get_many(module, query, arg) do
+          render_datasource_entries(code, entries)
         end
       end
 
@@ -221,16 +220,15 @@ defmodule Brando.Villain.Parser do
               "module" => module,
               "type" => "selection",
               "query" => query,
-              "ids" => ids,
-              "template" => template_id
+              "code" => code,
+              "ids" => ids
             } = data,
             _
           ) do
         arg = Map.get(data, "arg", nil)
 
-        with {:ok, entries} <- Datasource.get_selection(module, query, ids),
-             {:ok, template} <- Villain.get_template(template_id) do
-          render_datasource_entries(template, entries)
+        with {:ok, entries} <- Datasource.get_selection(module, query, ids) do
+          render_datasource_entries(code, entries)
         end
       end
 
@@ -712,25 +710,10 @@ defmodule Brando.Villain.Parser do
         |> Lexer.Context.assign("links", identity.links)
       end
 
-      defp render_datasource_entries(template, entries) do
+      defp render_datasource_entries(code, entries) do
         base_context = get_base_context()
-
-        content =
-          entries
-          |> Enum.map(
-            &Lexer.parse_and_render(
-              template.code,
-              Lexer.Context.assign(base_context, "entry", &1)
-            )
-          )
-          |> Enum.join("\n")
-
-        context =
-          base_context
-          |> Lexer.Context.assign("entries", entries)
-          |> Lexer.Context.assign("content", content)
-
-        Lexer.parse_and_render(template.wrapper, context)
+        context = Lexer.Context.assign(base_context, "entries", entries)
+        Lexer.parse_and_render(code, context)
       end
 
       defp render_refs(template_code, refs, id) do
