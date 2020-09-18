@@ -251,6 +251,26 @@ defmodule Brando.Lexer.Filter do
   end
 
   @doc """
+  Get srcset picture of image
+
+  %{entry:cover|srcset:"Attivo.Team.Employee:cover"}
+  """
+  def srcset(%Brando.Type.Image{} = img, srcset, _) do
+    [module_string, field_string] = String.split(srcset, ":")
+    module = Module.concat([module_string])
+    field = String.to_existing_atom(field_string)
+
+    img
+    |> Brando.HTML.picture_tag(
+      placeholder: :svg,
+      lazyload: true,
+      srcset: {module, field},
+      prefix: Brando.Utils.media_url()
+    )
+    |> Phoenix.HTML.safe_to_string()
+  end
+
+  @doc """
   Get src of image
   """
   def src(%Brando.Type.Image{} = img, size, _) do
