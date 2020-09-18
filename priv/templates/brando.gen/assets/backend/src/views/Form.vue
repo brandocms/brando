@@ -4,7 +4,7 @@
     :back="{ name: '<%= vue_plural %>' }"
     @save="save">
     <section class="row">
-      <div class="half">
+      <div class="sized">
         <!--
         FORM FIELDS HERE
         --><%= for {_, html} <- vue_inputs do %>

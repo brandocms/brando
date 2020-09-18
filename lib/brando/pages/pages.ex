@@ -61,7 +61,8 @@ defmodule Brando.Pages do
     end
   end
 
-  query :single, Page, do: fn query -> from q in query, where: is_nil(q.deleted_at) end
+  query :single, Page,
+    do: fn query -> from q in query, where: is_nil(q.deleted_at), preload: [:properties] end
 
   matches Page do
     fn
@@ -104,7 +105,7 @@ defmodule Brando.Pages do
   """
   def update_page(page_id, params, user) do
     page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
-    {:ok, page} = get_page(page_id)
+    {:ok, page} = get_page(%{matches: %{id: page_id}})
 
     page
     |> Page.changeset(params, user)
@@ -122,7 +123,7 @@ defmodule Brando.Pages do
         page_id
       end
 
-    {:ok, page} = get_page(page_id)
+    {:ok, page} = get_page(%{matches: %{id: page_id}})
     Brando.repo().soft_delete!(page)
     {:ok, page}
   end
@@ -132,7 +133,7 @@ defmodule Brando.Pages do
   """
   def duplicate_page(page_id) do
     page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
-    {:ok, page} = get_page(page_id)
+    {:ok, page} = get_page(%{matches: %{id: page_id}})
 
     page = Map.merge(page, %{key: "#{page.key}_kopi", title: "#{page.title} (kopi)"})
     page = Map.delete(page, [:id, :children, :parent])
@@ -193,8 +194,8 @@ defmodule Brando.Pages do
   @doc """
   Re-render page
   """
-  def rerender_page(id) do
-    {:ok, page} = get_page(id)
+  def rerender_page(page_id) do
+    {:ok, page} = get_page(%{matches: %{id: page_id}})
     changeset = Ecto.Changeset.change(page)
     Brando.Villain.rerender_html(changeset)
   end

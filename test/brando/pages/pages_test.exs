@@ -53,7 +53,7 @@ defmodule Brando.PagesTest do
     _pf2 = Factory.insert(:page_fragment, key: "frag2", parent_key: "parent", page_id: p.id)
     _pf3 = Factory.insert(:page_fragment, key: "frag3", parent_key: "parent", page_id: p.id)
 
-    {:ok, page} = Pages.get_page(p.id)
+    {:ok, page} = Pages.get_page(%{matches: %{id: p.id}})
     frag = Pages.get_fragment(page, "frag1")
     assert frag.key == "frag1"
   end

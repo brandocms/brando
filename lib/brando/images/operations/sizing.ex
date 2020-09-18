@@ -414,14 +414,34 @@ defmodule Brando.Images.Operations.Sizing do
 
   @doc """
   Extract crop dimensions from image config as a tuple of integers
+
+  If one of the dimensions is missing, look for `ratio` key and calculate
+  missing dimension.
   """
   def get_crop_dimensions_from_cfg(cfg) do
-    [target_width, target_height] =
-      cfg["size"]
-      |> String.replace(~r/\^|\!|\>|\<|\%/, "")
-      |> String.split("x")
+    cleaned_size_string = String.replace(cfg["size"], ~r/\^|\!|\>|\<|\%/, "")
 
-    {String.to_integer(target_width), String.to_integer(target_height)}
+    case String.split(cleaned_size_string, "x") do
+      [target_width] ->
+        ratio = parse_ratio_string(cfg["ratio"])
+        {String.to_integer(target_width), round(String.to_integer(target_width) / ratio)}
+
+      ["", target_height] ->
+        ratio = parse_ratio_string(cfg["ratio"])
+        {round(String.to_integer(target_height) * ratio), String.to_integer(target_height)}
+
+      [target_width, ""] ->
+        ratio = parse_ratio_string(cfg["ratio"])
+        {String.to_integer(target_width), round(String.to_integer(target_width) / ratio)}
+
+      [target_width, target_height] ->
+        {String.to_integer(target_width), String.to_integer(target_height)}
+    end
+  end
+
+  def parse_ratio_string(ratio_string) do
+    [r1, r2] = String.split(ratio_string, "/")
+    String.to_integer(r1) / String.to_integer(r2)
   end
 
   @doc """

@@ -99,6 +99,14 @@ defmodule Brando.HTML do
   end
 
   @doc """
+  Replace $csrftoken in `html` with .. csrf token!
+
+  This is useful for rendered forms from Villain that needs a token for submission
+  """
+  def replace_csrf_token(html) when is_binary(html),
+    do: String.replace(html, "$csrftoken", Plug.CSRFProtection.get_csrf_token())
+
+  @doc """
   Returns `active` if `conn`'s `full_path` matches `current_path`.
   """
   @spec active(conn, binary) :: binary
