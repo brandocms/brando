@@ -1,6 +1,5 @@
 defmodule Brando.Migrations.CreatePageProperties do
   use Ecto.Migration
-  import Ecto.Query
 
   def change do
     create table(:pages_properties) do
