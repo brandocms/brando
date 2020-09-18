@@ -28,7 +28,7 @@ defmodule Mix.Tasks.Brando.Gen.Authorization do
       {:eex, "lib/application_name/authorization.ex", "lib/application_name/authorization.ex"}
     ]
 
-    Mix.Brando.copy_from(apps(), "priv/templates/brando.install", "", binding, files)
+    Mix.Brando.copy_from(apps(), "priv/templates/brando.gen.authorization", "", binding, files)
   end
 
   defp apps do

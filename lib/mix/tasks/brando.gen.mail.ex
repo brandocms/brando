@@ -36,7 +36,7 @@ defmodule Mix.Tasks.Brando.Gen.Mail do
     Mix.shell().info([:green, "\n==> Add to mix.exs deps\n"])
 
     Mix.shell().info("""
-        {:swoosh, "~> 0.25"},
+        {:swoosh, "~> 1.0"},
     """)
 
     Mix.shell().info([:green, "\n==> Add to config/dev.exs\n"])
