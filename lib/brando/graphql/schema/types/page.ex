@@ -18,6 +18,7 @@ defmodule Brando.Schema.Types.Page do
     field :parent, :page, resolve: dataloader(Brando.Pages)
     field :children, list_of(:page), resolve: dataloader(Brando.Pages)
     field :fragments, list_of(:page_fragment), resolve: dataloader(Brando.Pages)
+    field :properties, list_of(:page_property), resolve: dataloader(Brando.Pages)
     field :meta_description, :string
     field :meta_image, :image_type
     field :inserted_at, :time
@@ -35,10 +36,27 @@ defmodule Brando.Schema.Types.Page do
     field :template, :string
     field :is_homepage, :boolean
     field :data, :json
+    field :properties, list_of(:page_property_params)
     field :css_classes, :string
     field :meta_description, :string
     field :meta_image, :upload_or_image
     field :publish_at, :time
+  end
+
+  object :page_property do
+    field :id, :id
+    field :label, :string
+    field :type, :string
+    field :key, :string
+    field :data, :json
+  end
+
+  input_object :page_property_params do
+    field :id, :id
+    field :label, :string
+    field :type, :string
+    field :key, :string
+    field :data, :json
   end
 
   @desc "Filtering options for page"
