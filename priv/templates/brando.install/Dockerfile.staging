@@ -5,7 +5,7 @@
 # - job: dependencies
 # -----------------------------------
 
-FROM twined/fehn:2.4 AS deps
+FROM twined/fehn:3.0 AS deps
 
 ARG MIX_ENV=staging
 ARG HEX_MIRROR_URL=https://repo.hex.pm
