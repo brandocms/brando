@@ -44,7 +44,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.11.2",
-    "@sentry/browser": "^5.23.0",
+    "@sentry/browser": "^5.24.2",
     "@univers-agency/jupiter": "^3.37.0",
     "core-js": "3.6.5",
     "custom-event-polyfill": "^1.0.7",
@@ -53,7 +53,7 @@
     "objectFitPolyfill": "^2.3.0",
     "picturefill": "^3.0.3",
     "regenerator-runtime": "^0.13.7",
-    "rollup": "^2.26.11"
+    "rollup": "^2.27.1"
   },
   "devDependencies": {
     "@babel/core": "^7.11.6",
@@ -67,7 +67,7 @@
     "@rollup/plugin-node-resolve": "^9.0.0",
     "@rollup/plugin-replace": "^2.3.3",
     "@univers-agency/europacss": "^0.2.3",
-    "autoprefixer": "^9.8.6",
+    "autoprefixer": "^10.0.0",
     "css-mqgroup": "^7.1.0",
     "cssnano": "^4.1.10",
     "dotenv": "^8.2.0",
@@ -75,20 +75,20 @@
     "eslint-plugin-compat": "^3.8.0",
     "eslint-plugin-cypress": "^2.11.1",
     "glob-all": "^3.2.1",
-    "moment": "^2.27.0",
+    "moment": "^2.28.0",
     "move-file-cli": "^2.0.0",
-    "postcss": "^7.0.32",
+    "postcss": "^8.0.5",
     "postcss-easy-import": "twined/postcss-easy-import",
     "postcss-import": "^12.0.0",
     "postcss-preset-env": "^6.4.0",
-    "postcss-reporter": "^6.0.1",
+    "postcss-reporter": "^7.0.0",
     "rollup-plugin-copy": "^3.3.0",
     "rollup-plugin-postcss": "^3.1.8",
     "rollup-plugin-sizes": "^1.0.3",
     "rollup-plugin-terser": "^7.0.2",
     "snazzy": "^8.0.0",
     "standard": "^14.3.4",
-    "stylelint": "^13.7.0",
+    "stylelint": "^13.7.1",
     "stylelint-config-recommended": "^3.0.0"
   }
 }
