@@ -25,6 +25,7 @@ defmodule Brando.Lexer.Argument do
 
   def eval({:keyword, [key, value]}, context), do: {key, eval(value, context)}
 
+  defp do_eval(%Brando.Type.File{path: path}, []), do: Brando.Utils.media_url(path)
   defp do_eval(%Villain.Var{type: "boolean", value: "true"}, []), do: true
   defp do_eval(%Villain.Var{type: "boolean", value: "false"}, []), do: false
   defp do_eval(%Villain.Var{value: value}, []), do: value
