@@ -58,7 +58,8 @@ defmodule <%= schema_module %> do
     |> validate_required(@required_fields)<%= if villain_fields != [] do %><%= for {_k, v} <- villain_fields do %><%= if v == :data do %>
     |> generate_html()<% else %>
     |> generate_html(<%= inspect v %>)<% end %><% end %><% end %><%= if img_fields != [] do %><%= for {_v, k} <- img_fields do %>
-    |> validate_upload({:image, <%= inspect k %>}, user)<% end %><% end %><%= if slug do %>
+    |> validate_upload({:image, <%= inspect k %>}, user)<% end %><% end %><%= if file_fields != [] do %><%= for {_v, k} <- file_fields do %>
+    |> validate_upload({:file, <%= inspect k %>}, user)<% end %><% end %><%= if slug do %>
     |> avoid_slug_collision()<% end %>
   end
 end
