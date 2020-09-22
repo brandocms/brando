@@ -1,5 +1,6 @@
 <%= if gallery do %>#import "brandojs/src/gql/images/IMAGE_SERIES_FRAGMENT.graphql"<% end %><%= if image_field do %>
-#import "brandojs/src/gql/images/IMAGE_TYPE_FRAGMENT.graphql"<% end %>
+#import "brandojs/src/gql/images/IMAGE_TYPE_FRAGMENT.graphql"<% end %><%= if file_field do %>
+#import "brandojs/src/gql/files/FILE_TYPE_FRAGMENT.graphql"<% end %>
 fragment <%= vue_singular %> on <%= Recase.to_pascal(vue_singular) %> {
   id<%= for {_k, v} <- gql_query_fields do %>
   <%= v %><% end %><%= if creator do %>

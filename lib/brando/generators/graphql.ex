@@ -182,7 +182,7 @@ defmodule Brando.Generators.GraphQL do
           {k, ~s<#{k}Id>}
 
         {k, :file} ->
-          file_code = "#{Recase.to_camel(k)} {\n    url\n  }"
+          file_code = "#{Recase.to_camel(k)} {\n    ...fileType\n  }"
           {k, file_code}
 
         {k, :image} ->
