@@ -16,7 +16,7 @@ defmodule Brando.Type.File do
   @doc """
   Returns the internal type representation of our `Role` type for pg
   """
-  def type, do: :json
+  def type, do: :map
 
   @doc """
   Cast should return OUR type no matter what the input.

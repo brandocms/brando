@@ -79,6 +79,7 @@ defmodule Mix.Tasks.Brando.Gen do
     sequenced? = Mix.shell().yes?("\nMake schema sequenceable?")
     soft_delete? = Mix.shell().yes?("\nAdd soft deletion?")
     creator? = Mix.shell().yes?("\nAdd creator?")
+    file_field? = :file in Keyword.values(attrs)
     image_field? = :image in Keyword.values(attrs)
     gallery? = :gallery in Keyword.values(attrs)
     status? = :status in Keyword.values(attrs)
@@ -141,6 +142,7 @@ defmodule Mix.Tasks.Brando.Gen do
           domain_filename: domain_filename,
           plural: plural,
           route: route,
+          file_field: file_field?,
           image_field: image_field?,
           villain: villain?,
           gallery: gallery?,
@@ -286,7 +288,7 @@ defmodule Mix.Tasks.Brando.Gen do
   end
 
   def migration_type({k, :image}), do: {k, :jsonb}
-  def migration_type({k, :file}), do: {k, :text}
+  def migration_type({k, :file}), do: {k, :jsonb}
   def migration_type({k, :slug}), do: {k, :slug}
   def migration_type({k, :text}), do: {k, :text}
   def migration_type({k, :status}), do: {k, :integer}
