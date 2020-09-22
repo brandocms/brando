@@ -73,6 +73,9 @@ defmodule Brando.Sequence.Schema do
             Brando.repo().update_all(q, [])
           end
         end)
+
+        # update referenced Datasources in Villains
+        Brando.Datasource.update_datasource(__MODULE__)
       end
 
       def sequence(%{"ids" => ids}) do
@@ -92,6 +95,9 @@ defmodule Brando.Sequence.Schema do
             Brando.repo().update_all(q, [])
           end)
         end)
+
+        # update referenced Datasources in Villains
+        Brando.Datasource.update_datasource(__MODULE__)
       end
     end
   end

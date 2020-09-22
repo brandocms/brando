@@ -204,7 +204,7 @@ defmodule Brando.Datasource do
   @doc """
   Look through all villains for datasources using `schema`
   """
-  def update_datasource(datasource, entry) do
+  def update_datasource(datasource, entry \\ nil) do
     villains = Villain.list_villains()
 
     for {schema, fields} <- villains,
