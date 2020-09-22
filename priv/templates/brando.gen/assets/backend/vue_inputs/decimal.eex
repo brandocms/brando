@@ -4,4 +4,4 @@
           rules="required"
           :label="$t('<%= vue_plural %>.fields.<%= k %>.label')"
           :placeholder="$t('<%= vue_plural %>.fields.<%= k %>.placeholder')"
-          :help-text="$t('<%= vue_plural %>.fields.<%= k %>.help_text')" />
+          :help-text="$t('<%= vue_plural %>.fields.<%= k %>.helpText')" />
