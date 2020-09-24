@@ -26,7 +26,7 @@ defmodule Brando.Supervisor do
       [
         repo: Brando.repo(),
         plugins: [Oban.Plugins.Pruner],
-        queues: [default: 10],
+        queues: [default: 1],
         crontab: [
           # Generate a Sitemap every night at 02:00
           {"0 2 * * *", Brando.Worker.SitemapWorker}
