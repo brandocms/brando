@@ -270,6 +270,10 @@ defmodule Brando.Lexer.Filter do
     |> Phoenix.HTML.safe_to_string()
   end
 
+  def srcset(_, _, _) do
+    ""
+  end
+
   @doc """
   Get src of image
   """
