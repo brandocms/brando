@@ -25,6 +25,7 @@ defmodule Brando.Supervisor do
     Application.get_env(:brando, Oban) ||
       [
         repo: Brando.repo(),
+        poll_interval: :timer.minutes(15),
         queues: [default: [limit: 1, poll_interval: :timer.minutes(15)]],
         crontab: [
           # Generate a Sitemap every night at 02:00
