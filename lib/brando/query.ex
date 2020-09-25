@@ -55,6 +55,17 @@ defmodule Brando.Query do
           {_, :random}, query ->
             query |> order_by(fragment("RANDOM()"))
 
+          {modulo, :modulo}, query ->
+            order_by(
+              query,
+              [q],
+              fragment(
+                "(extract(epoch from ?) * 100000)::bigint % ?",
+                field(q, :inserted_at),
+                ^modulo
+              )
+            )
+
           {dir, by}, query ->
             query |> order_by({^dir, ^by})
         end)
