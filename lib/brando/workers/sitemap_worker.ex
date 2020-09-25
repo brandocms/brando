@@ -1,5 +1,5 @@
 defmodule Brando.Worker.SitemapWorker do
-  use Oban.Worker
+  use Oban.Worker, queue: :default, max_attempts: 2
   require Logger
 
   @impl Oban.Worker
@@ -11,5 +11,5 @@ defmodule Brando.Worker.SitemapWorker do
   end
 
   @impl Oban.Worker
-  def timeout(_job), do: :timer.seconds(120)
+  def timeout(_job), do: :timer.seconds(180)
 end
