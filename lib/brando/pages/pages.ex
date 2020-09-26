@@ -7,6 +7,7 @@ defmodule Brando.Pages do
 
   alias Brando.Pages.Page
   alias Brando.Pages.PageFragment
+  alias Brando.Pages.Property
   alias Brando.Users.User
   alias Brando.Villain
 
@@ -445,6 +446,35 @@ defmodule Brando.Pages do
   end
 
   @doc """
+  Get a property from Page.
+
+  Returns the rendered value of the property.
+  """
+  @spec get_prop(%{properties: [Property.t()]}, binary) :: any
+  def get_prop(%Page{properties: []}, _), do: nil
+
+  def get_prop(%Page{properties: properties}, property) do
+    case Enum.find(properties, &(&1.key == property)) do
+      nil -> nil
+      prop -> render_prop(prop)
+    end
+  end
+
+  def has_prop?(%Page{properties: []}, _), do: nil
+
+  def has_prop?(%Page{properties: properties}, property) do
+    case Enum.find(properties, &(&1.key == property)) do
+      nil -> false
+      _ -> true
+    end
+  end
+
+  def render_prop(%Property{type: "text", data: data}), do: Map.get(data, "value", "")
+  def render_prop(%Property{type: "boolean", data: data}), do: Map.get(data, "value", false)
+  def render_prop(%Property{type: "html", data: data}), do: Map.get(data, "value", "")
+  def render_prop(%Property{type: "color", data: data}), do: Map.get(data, "value", "")
+
+  @doc """
   Check all fields for references to `fragment`.
   Rerender if found.
   """
@@ -489,9 +519,7 @@ defmodule Brando.Pages do
     end
   end
 
-  def render_fragment(%PageFragment{} = fragment) do
-    Phoenix.HTML.raw(fragment.html)
-  end
+  def render_fragment(%PageFragment{} = fragment), do: Phoenix.HTML.raw(fragment.html)
 
   def render_fragment(fragments, key) when is_map(fragments) do
     case Map.get(fragments, key) do

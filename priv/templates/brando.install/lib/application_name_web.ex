@@ -102,7 +102,7 @@ defmodule <%= application_module %>Web do
 
       import Brando.HTML
       import Brando.Utils
-      import Brando.Pages, only: [render_fragment: 2, render_fragment: 3]
+      import Brando.Pages, only: [render_fragment: 2, render_fragment: 3, get_prop: 2]
 
       import <%= application_module %>Web.ErrorHelpers
       import <%= application_module %>Web.Gettext
