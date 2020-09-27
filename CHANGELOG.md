@@ -1,7 +1,8 @@
 See `UPGRADE.md` for instructions on upgrading between versions.
 
-## 0.47.0-dev
+## 0.47.0
 
+* Add page properties.
 * Fix ordering of translation fragments
 * Fix lightbox src with lazyload in `picture_tag`
 * Rerender matching templates in Villains when updating globals or identity
