@@ -23,7 +23,6 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "images:rerender_image_series",
     "livepreview:initialize",
     "livepreview:render",
-    "menu_items:sequence_items",
     "menus:sequence_menus",
     "pages:list_parents",
     "pages:list_templates",
@@ -228,11 +227,6 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
 
   def do_handle_in("page_fragment:rerender_all", _, socket) do
     Pages.rerender_fragments()
-    {:reply, {:ok, %{code: 200}}, socket}
-  end
-
-  def do_handle_in("menu_items:sequence_items", params, socket) do
-    Navigation.Item.sequence(params)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
