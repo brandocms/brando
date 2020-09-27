@@ -7,26 +7,18 @@ defmodule Brando.Navigation.Item do
   @type user :: Brando.Users.User.t() | :system
 
   use Brando.Web, :schema
-  use Brando.Sequence.Schema
 
-  schema "navigation_items" do
+  embedded_schema do
     field :status, Brando.Type.Status
     field :title, :string
     field :key, :string
     field :url, :string
     field :open_in_new_window, :boolean, default: false
-
-    belongs_to :creator, Brando.Users.User
-    belongs_to :menu, Brando.Navigation.Menu
-    belongs_to :parent, __MODULE__
-    has_many :items, __MODULE__, foreign_key: :parent_id
-
-    sequenced()
-    timestamps()
+    embeds_many :items, __MODULE__, on_replace: :delete
   end
 
-  @required_fields ~w(status title key url open_in_new_window creator_id menu_id)a
-  @optional_fields ~w(sequence parent_id)a
+  @required_fields ~w(status title key url open_in_new_window)a
+  @optional_fields ~w()a
 
   @doc """
   Casts and validates `params` against `schema` to create a valid changeset
@@ -36,12 +28,11 @@ defmodule Brando.Navigation.Item do
       schema_changeset = changeset(%__MODULE__{}, :create, params)
 
   """
-  @spec changeset(t, Keyword.t() | Options.t(), user) :: Ecto.Changeset.t()
-  def changeset(schema, params \\ %{}, user \\ :system) do
+  @spec changeset(t, Keyword.t() | Options.t()) :: Ecto.Changeset.t()
+  def changeset(schema, params \\ %{}) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
-    |> put_creator(user)
+    |> cast_embed(:items)
     |> validate_required(@required_fields)
-    |> unique_constraint([:parent_id, :key])
   end
 end

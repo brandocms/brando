@@ -28,7 +28,6 @@ defmodule Brando.Navigation do
 
   alias Brando.Navigation.Menu
   alias Brando.Navigation.Item
-  alias Brando.Users.User
 
   import Ecto.Query
 
@@ -124,8 +123,7 @@ defmodule Brando.Navigation do
   def get_menu(id) do
     query =
       from t in Menu,
-        where: t.id == ^id,
-        preload: [items: ^build_items_query()]
+        where: t.id == ^id
 
     case Brando.repo().one(query) do
       nil -> {:error, {:menu, :not_found}}
@@ -142,8 +140,7 @@ defmodule Brando.Navigation do
   def get_menu(key, lang) when is_binary(key) do
     q =
       from p in Menu,
-        where: p.key == ^key and p.language == ^lang,
-        preload: [items: ^build_items_query()]
+        where: p.key == ^key and p.language == ^lang
 
     case Brando.repo().one(q) do
       nil -> {:error, {:menu, :not_found}}
@@ -229,66 +226,5 @@ defmodule Brando.Navigation do
       |> Brando.repo().all
 
     {:ok, items}
-  end
-
-  @doc """
-  Create new menu item
-  """
-  @spec create_item(any, any) :: {:ok, item} | {:error, changeset}
-  def create_item(params, user) do
-    %Item{}
-    |> Item.changeset(params, user)
-    |> Brando.repo().insert()
-  end
-
-  @doc """
-  Update menu item
-  """
-  @spec update_item(id, params, user) :: any
-  def update_item(item_id, params, user) do
-    item_id = (is_binary(item_id) && String.to_integer(item_id)) || item_id
-
-    {:ok, item} = get_item(item_id)
-
-    case item
-         |> Item.changeset(params, user)
-         |> Brando.repo().update do
-      {:ok, item} ->
-        {:ok, item}
-
-      err ->
-        err
-    end
-  end
-
-  @doc """
-  Delete item
-  """
-  @spec delete_item(id) :: {:ok, item}
-  def delete_item(item_id) do
-    {:ok, item} = get_item(item_id)
-    Brando.repo().delete(item)
-  end
-
-  @doc """
-  Duplicate menu item
-  """
-  @spec duplicate_item(id) ::
-          {:ok, map} | {:error, {:item, :not_found}} | {:error, changeset}
-  def duplicate_item(item_id) do
-    item_id = (is_binary(item_id) && String.to_integer(item_id)) || item_id
-
-    with {:ok, item} <- get_item(item_id) do
-      item
-      |> Map.merge(%{key: "#{item.key}_kopi"})
-      |> Map.delete([:id, :parent])
-      |> Map.from_struct()
-      |> create_item(%User{id: item.creator_id})
-    end
-  end
-
-  defp build_items_query do
-    from f in Item,
-      order_by: [asc: f.sequence, asc: f.key]
   end
 end

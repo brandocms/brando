@@ -17,7 +17,7 @@ defmodule Brando.Navigation.Menu do
     field :template, :string
 
     belongs_to :creator, Brando.Users.User
-    has_many :items, Brando.Navigation.Item
+    embeds_many :items, Brando.Navigation.Item, on_replace: :delete
 
     sequenced()
     timestamps()
@@ -38,6 +38,7 @@ defmodule Brando.Navigation.Menu do
   def changeset(schema, params \\ %{}, user \\ :system) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
+    |> cast_embed(:items, with: &Brando.Navigation.Item.changeset/2)
     |> put_creator(user)
     |> validate_required(@required_fields)
     |> unique_constraint([:key])
