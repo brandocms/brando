@@ -74,7 +74,7 @@ defmodule Brando.Mixfile do
       {:hashids, "~> 2.0"},
 
       # Parsing
-      {:nimble_parsec, "~> 1.0", override: true},
+      {:nimble_parsec, "~> 0.5 or ~> 1.0"},
       {:html_entities, "~> 0.5"},
       {:html_sanitize_ex, "~> 1.4"},
 
