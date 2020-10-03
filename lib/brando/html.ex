@@ -44,10 +44,18 @@ defmodule Brando.HTML do
   end
 
   defp get_video_cover(false, _, _, _), do: ""
+  defp get_video_cover(url, _, _, _), do: url
 
-  defp get_video_cover(url, _, _, _) do
-    url
-  end
+  defp get_play_button(false), do: ""
+
+  defp get_play_button(true),
+    do: """
+    <div class="video-play-button-wrapper">
+      <button class="video-play-button">
+        <div class="video-play-button-inside"></div>
+      </button>
+    </div>
+    """
 
   @doc """
   Returns a video tag with an overlay for lazyloading
@@ -67,10 +75,12 @@ defmodule Brando.HTML do
     preload = Map.get(opts, :preload, false)
     cover = Map.get(opts, :cover, false)
     poster = Map.get(opts, :poster, false)
+    play_button = Map.get(opts, :play_button, false)
     autoplay = (Map.get(opts, :autoplay, false) && "autoplay") || ""
 
     ~s(
       <div class="video-wrapper" data-smart-video>
+        #{get_play_button(play_button)}
         #{get_video_cover(cover, width, height, opacity)}
         <video
           tabindex="0"

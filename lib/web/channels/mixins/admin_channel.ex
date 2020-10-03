@@ -24,6 +24,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "livepreview:initialize",
     "livepreview:render",
     "menus:sequence_menus",
+    "oembed:get",
     "pages:list_parents",
     "pages:list_templates",
     "pages:sequence_pages",
@@ -168,6 +169,11 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
       ) do
     image = Brando.Images.get_image!(id)
     {:reply, {:ok, %{code: 200, image: image.image}}, socket}
+  end
+
+  def do_handle_in("oembed:get", %{"source" => source, "url" => url}, socket) do
+    {:ok, result} = Brando.OEmbed.get(source, url)
+    {:reply, {:ok, %{code: 200, result: result}}, socket}
   end
 
   def do_handle_in("pages:list_parents", _, socket) do

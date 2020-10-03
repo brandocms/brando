@@ -10,4 +10,5 @@ defmodule Brando.Schema.Types do
   import_types Brando.Schema.Types.PageFragment
   import_types Brando.Schema.Types.Scalar
   import_types Brando.Schema.Types.User
+  import_types Brando.Schema.Types.Video
 end
