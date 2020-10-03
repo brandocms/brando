@@ -13,6 +13,7 @@ defmodule Brando.System do
     run_checks()
     Cache.Identity.set()
     Cache.Globals.set()
+    Cache.Navigation.set()
     :ok
   end
 

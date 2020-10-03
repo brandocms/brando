@@ -200,6 +200,18 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :global_category_id, references(:sites_global_categories, on_delete: :delete_all)
     end
 
+    create table(:navigation_menus) do
+      add :status, :integer
+      add :title, :text
+      add :key, :text
+      add :language, :text
+      add :template, :text
+      add :creator_id, references(:users_users)
+      add :items, :map
+      sequenced()
+      timestamps()
+    end
+
     create table(:tags) do
     end
 

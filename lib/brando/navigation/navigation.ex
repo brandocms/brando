@@ -26,8 +26,8 @@ defmodule Brando.Navigation do
   use Brando.Web, :context
   use Brando.Query
 
+  alias Brando.Cache
   alias Brando.Navigation.Menu
-  alias Brando.Navigation.Item
 
   import Ecto.Query
 
@@ -35,7 +35,6 @@ defmodule Brando.Navigation do
   @type params :: map
   @type changeset :: Ecto.Changeset.t()
   @type menu :: Brando.Navigation.Menu.t()
-  @type item :: Brando.Navigation.Item.t()
   @type user :: Brando.Users.User.t() | :system
 
   @doc """
@@ -51,16 +50,10 @@ defmodule Brando.Navigation do
   @doc """
   Dataloader queries
   """
-  def query(Item = query, _) do
-    query
-    |> order_by([t], asc: t.sequence)
-  end
-
+  def query(Item = query, _), do: order_by(query, [t], asc: t.sequence)
   def query(queryable, _), do: queryable
 
-  query :list, Menu do
-    fn query -> from(q in query) end
-  end
+  query :list, Menu, do: fn query -> from(q in query) end
 
   filters Menu do
     fn {:title, title}, query ->
@@ -76,6 +69,7 @@ defmodule Brando.Navigation do
     %Menu{}
     |> Menu.changeset(params, user)
     |> Brando.repo().insert
+    |> Cache.Navigation.update()
   end
 
   @doc """
@@ -88,6 +82,7 @@ defmodule Brando.Navigation do
     menu
     |> Menu.changeset(params, user)
     |> Brando.repo().update
+    |> Cache.Navigation.update()
   end
 
   @doc """
@@ -133,16 +128,10 @@ defmodule Brando.Navigation do
 
   @doc """
   Get menu.
-
-  !TODO: Try cache first
   """
   @spec get_menu(binary, binary) :: {:error, {:menu, :not_found}} | {:ok, menu}
   def get_menu(key, lang) when is_binary(key) do
-    q =
-      from p in Menu,
-        where: p.key == ^key and p.language == ^lang
-
-    case Brando.repo().one(q) do
+    case Cache.Navigation.get("#{key}.#{lang}") do
       nil -> {:error, {:menu, :not_found}}
       menu -> {:ok, menu}
     end
@@ -156,74 +145,6 @@ defmodule Brando.Navigation do
       Item
       |> order_by([p], asc: p.menu_id, asc: p.sequence)
       |> Brando.repo().all()
-
-    {:ok, items}
-  end
-
-  @doc """
-  Get menu item
-  """
-  @spec get_item(binary | integer) ::
-          {:error, {:item, :not_found}} | {:ok, item}
-  def get_item(key) when is_binary(key) do
-    query = from t in Item, where: t.key == ^key
-
-    case Brando.repo().one(query) do
-      nil -> {:error, {:item, :not_found}}
-      item -> {:ok, item}
-    end
-  end
-
-  def get_item(id) do
-    query = from t in Item, where: t.id == ^id
-
-    case Brando.repo().one(query) do
-      nil -> {:error, {:item, :not_found}}
-      menu -> {:ok, menu}
-    end
-  end
-
-  @spec get_item(any, any, any) ::
-          {:error, {:item, :not_found}} | {:ok, item}
-  def get_item(parent_key, key, language \\ nil) do
-    language = language || Brando.config(:default_language)
-
-    query =
-      from p in Item,
-        where:
-          p.parent_key == ^parent_key and
-            p.key == ^key and
-            p.language == ^language
-
-    case Brando.repo().one(query) do
-      nil -> {:error, {:item, :not_found}}
-      item -> {:ok, item}
-    end
-  end
-
-  @doc """
-  Get set of items by parent key
-  """
-  def list_items(parent_key) do
-    items =
-      Item
-      |> where([p], p.parent_key == ^parent_key)
-      |> order_by([p], asc: p.parent_key, asc: p.sequence, asc: p.language)
-      |> Brando.repo().all
-
-    {:ok, items}
-  end
-
-  @doc """
-  Get set of items by parent key and language
-  """
-  def list_items(parent_key, language) do
-    items =
-      Item
-      |> where([p], p.parent_key == ^parent_key)
-      |> where([p], p.language == ^language)
-      |> order_by([p], asc: p.parent_key, asc: p.sequence)
-      |> Brando.repo().all
 
     {:ok, items}
   end
