@@ -411,6 +411,7 @@ def create_path():
         sudo('mkdir -p %s' % env.path, user=env.project_user)
 
     create_acme_dir()
+    pgbackup()
     fixprojectperms()
 
 
@@ -902,3 +903,11 @@ def _notify_build_complete(version):
 def create_acme_dir():
     sudo('mkdir -p %s/acme-challenge/.well-known' % env.path, user=env.project_user)
     _setowner(os.path.join(env.path, 'acme-challenge/.well-known'))
+
+
+def pgbackup():
+    sudo('mkdir -p /backups/postgres')
+    sudo('chown -R postgres:postgres /backups')
+    put('etc/pgbkup.sh', '/backups/postgres', use_sudo=True)
+    sudo('chmod +x /backups/postgres/pgbkup.sh')
+    sudo('echo "0 3 * * * /backups/postgres/pgbkup.sh" | crontab -', user='postgres')

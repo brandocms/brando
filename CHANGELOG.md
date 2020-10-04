@@ -1,5 +1,13 @@
 See `UPGRADE.md` for instructions on upgrading between versions.
 
+## 0.48.0-dev
+
+* Villain: Allow undeleting refs in template blocks
+* BrandoJS/config: allow `templates` config to be a function. Gets called with `page`
+* Add `Brando.Type.Video` with corresponding `KInputVideo`
+* Cache navigation menus
+
+
 ## 0.47.0
 
 * Add page properties.

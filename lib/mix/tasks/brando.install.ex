@@ -30,6 +30,7 @@ defmodule Mix.Tasks.Brando.Install do
 
     # Etc. Various OS config files and log directory.
     {:keep, "log", "log"},
+    {:eex, "etc/pgbkup.sh", "etc/pgbkup.sh"},
     {:eex, "etc/logrotate/prod.conf", "etc/logrotate/prod.conf"},
     {:eex, "etc/logrotate/staging.conf", "etc/logrotate/staging.conf"},
     {:eex, "etc/nginx/prod.conf", "etc/nginx/prod.conf"},

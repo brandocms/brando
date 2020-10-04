@@ -2,7 +2,6 @@ defmodule Brando.Type.Video do
   @moduledoc """
   Defines a type for video field.
   """
-
   use Ecto.Type
 
   @type t :: %__MODULE__{}
