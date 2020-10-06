@@ -88,11 +88,11 @@ defmodule Brando.Users.User do
         "crop" => true
       }
     },
-    srcset: %{
-      "small" => "300w",
-      "medium" => "500w",
-      "large" => "700w"
-    }
+    srcset: [
+      {"small", "300w"},
+      {"medium", "500w"},
+      {"large", "700w"}
+    ]
   }
 
   @doc """
