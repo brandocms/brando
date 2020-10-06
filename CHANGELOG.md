@@ -6,6 +6,8 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * BrandoJS/config: allow `templates` config to be a function. Gets called with `page`
 * Add `Brando.Type.Video` with corresponding `KInputVideo`
 * Cache navigation menus
+* Add Query cache. `Page.list_pages(%{status: :published, cache: true})`
+* Add `sizes: "auto"` to `picture_tag`
 
 
 ## 0.47.0
