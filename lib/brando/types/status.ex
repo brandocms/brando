@@ -59,4 +59,6 @@ defmodule Brando.Type.Status do
   def dump(binary) when is_binary(binary), do: {:ok, String.to_integer(binary)}
   def dump(integer) when is_integer(integer), do: {:ok, integer}
   def dump(_), do: :error
+
+  def dummy(:published_all), do: nil
 end
