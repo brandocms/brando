@@ -14,7 +14,8 @@ defmodule Brando.Supervisor do
   def init([]) do
     children = [
       supervisor(Brando.Registry, []),
-      worker(Cachex, [:cache, []]),
+      worker(Cachex, [:cache, []], id: :main_cache),
+      worker(Cachex, [:query, []], id: :query_cache),
       {Oban, oban_config()}
     ]
 
