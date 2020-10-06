@@ -402,6 +402,7 @@ defmodule Brando.Villain.Parser do
             lightbox: lightbox,
             placeholder: :svg,
             lazyload: true,
+            sizes: "auto",
             srcset: srcset
             # cache: img.updated_at,
           )
