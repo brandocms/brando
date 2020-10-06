@@ -22,7 +22,7 @@ defmodule <%= application_module %>.MixProject do
   def application do
     [
       mod: {<%= application_module %>.Application, []},
-      extra_applications: [:logger, :runtime_tools, :recon, :sasl]
+      extra_applications: [:logger, :runtime_tools, :recon, :sasl, :os_mon]
     ]
   end
 

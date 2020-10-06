@@ -5,6 +5,7 @@ defmodule <%= application_module %>Web.Router do
   import Brando.Images.Routes.Admin.API
   import Brando.Villain.Routes.Admin.API
   import Phoenix.LiveDashboard.Router
+  import Plug.BasicAuth
 
   @sql_sandbox Application.get_env(:<%= application_name %>, :sql_sandbox) || false
 
@@ -40,7 +41,7 @@ defmodule <%= application_module %>Web.Router do
     # }
   end
 
-  pipeline :basic_auth do
+  pipeline :basic_httpauth do
     plug :basic_auth, username: "admin", password: "<%= :os.timestamp |> :erlang.phash2 |> Integer.to_string(32) |> String.downcase %>"
   end
 
@@ -64,8 +65,8 @@ defmodule <%= application_module %>Web.Router do
   end
 
   scope "/__dashboard" do
-    pipe_through [:browser, :basic_auth]
-    live_dashboard "/"
+    pipe_through [:browser, :basic_httpauth]
+    live_dashboard "/", metrics: <%= application_module %>Web.Telemetry
   end
 
   scope "/admin", as: :admin do
