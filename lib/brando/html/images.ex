@@ -22,6 +22,8 @@ defmodule Brando.HTML.Images do
     * `img_class` - class added to the img element. I.e img_class: "img-fluid"
     * `img_attrs` - list of attributes to add to img element. I.e img_attrs: [data_test: true]
     * `media_queries` - list of media queries to add to source.
+    * `sizes` - set to "auto" for adding `data-sizes="auto"` which Jupiter parses and updates to image's size.
+       You can also set as a list of sizes: `["30vw"]`
     * `cache` - key to cache by, i.e `cache: schema.updated_at`
       I.e `media_queries: [{"(min-width: 0px) and (max-width: 760px)", [{"mobile", "700w"}]}]`
     * `srcset` - if you want to use the srcset attribute. Set in the form of `{module, field}`.
@@ -31,12 +33,12 @@ defmodule Brando.HTML.Images do
       I.e `srcset: image_series.cfg`
 
       Or supply a srcset directly:
-        srcset: %{
-          "small" => "300w",
-          "medium" => "582w",
-          "large" => "936w",
-          "xlarge" => "1200w"
-        }
+        srcset: [
+          {"small", "300w"},
+          {"medium", "582w"},
+          {"large", "936w"},
+          {"xlarge", "1200w"}
+        ]
 
       Or a list of srcsets to generate multiple source elements:
 
@@ -160,10 +162,16 @@ defmodule Brando.HTML.Images do
   end
 
   defp add_sizes(attrs) do
-    sizes = (Keyword.get(attrs.opts, :sizes) && get_sizes(attrs.opts[:sizes])) || false
+    {data_sizes, sizes} =
+      case Keyword.get(attrs.opts, :sizes) do
+        "auto" -> {"auto", false}
+        nil -> {false, false}
+        val -> {false, get_sizes(val)}
+      end
 
     attrs
     |> put_in([:img, :sizes], sizes)
+    |> put_in([:img, :data_sizes], data_sizes)
     |> put_in([:source, :sizes], sizes)
   end
 
@@ -229,7 +237,7 @@ defmodule Brando.HTML.Images do
   defp add_src(%{lazyload: true} = attrs, image_struct) do
     placeholder = Keyword.get(attrs.opts, :placeholder, false)
 
-    key = Keyword.get(attrs.opts, :key) || :xlarge
+    key = Keyword.get(attrs.opts, :key) || :small
     src = Utils.img_url(image_struct, key, attrs.opts)
 
     fallback =
@@ -317,12 +325,12 @@ defmodule Brando.HTML.Images do
       You can also reference a config struct directly:
       I.e `srcset: image_series.cfg`
       Or supply a srcset directly:
-        srcset: %{
-          "small" => "300w",
-          "medium" => "582w",
-          "large" => "936w",
-          "xlarge" => "1200w"
-        }
+        srcset: [
+          {"small", "300w"},
+          {"medium", "582w"},
+          {"large", "936w"},
+          {"xlarge", "1200w"}
+        ]
     * `attrs` - extra attributes to the tag, ie data attrs
   """
   def img_tag(image_field, size, opts \\ []) do
