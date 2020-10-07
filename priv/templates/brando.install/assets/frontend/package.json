@@ -75,7 +75,7 @@
     "eslint-plugin-compat": "^3.8.0",
     "eslint-plugin-cypress": "^2.11.1",
     "glob-all": "^3.2.1",
-    "moment": "^2.28.0",
+    "moment": "^2.29.1",
     "move-file-cli": "^2.0.0",
     "postcss": "^8.0.5",
     "postcss-easy-import": "twined/postcss-easy-import",
