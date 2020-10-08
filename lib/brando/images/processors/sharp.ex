@@ -15,7 +15,7 @@ defmodule Brando.Images.Processor.Sharp do
   def command(cmd, params, opts), do: System.cmd(cmd, params, opts)
 
   @doc """
-  Process image conversion when crop is false
+  Process image conversion
   """
   def process_image(%Images.ConversionParameters{
         id: id,
@@ -91,9 +91,6 @@ defmodule Brando.Images.Processor.Sharp do
      }}
   end
 
-  @doc """
-  Process image conversion when crop is true
-  """
   def process_image(%Images.ConversionParameters{
         id: id,
         size_key: size_key,

@@ -58,7 +58,7 @@ defmodule Brando.Mixfile do
       {:oban, "~> 2.1"},
 
       # sitemaps
-      {:sitemapper, "~> 0.4.0"},
+      {:sitemapper, "~> 0.5"},
 
       # images
       {:mogrify, "~> 0.5"},

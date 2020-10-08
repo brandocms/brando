@@ -62,9 +62,6 @@ defmodule Brando.Images.Operations.Sizing do
      }}
   end
 
-  @doc """
-  Create image size for png/jpeg
-  """
   def create_image_size(%Images.Operation{
         type: type,
         id: id,
@@ -254,7 +251,10 @@ defmodule Brando.Images.Operations.Sizing do
   def add_resize_dimensions(%{crop: false} = params), do: params
 
   @doc """
+  Add size values to parameters
+
   Add resize and crop values to conversion parameters if `crop` is true
+  Add resize geometry from size config to conversion parameters if `crop` is false
   """
   def add_values(
         %{
@@ -283,9 +283,6 @@ defmodule Brando.Images.Operations.Sizing do
     |> Map.put(:crop_values, crop_values)
   end
 
-  @doc """
-  Add resize geometry from size config to conversion parameters if `crop` is false
-  """
   def add_values(%{crop: false, size_cfg: %{"size" => resize_geography}} = conversion_parameters) do
     resize_values =
       resize_geography

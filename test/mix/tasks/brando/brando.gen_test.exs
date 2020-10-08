@@ -74,7 +74,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
 
       assert_file("assets/backend/src/views/games/CaptainEditView.vue", fn file ->
         assert file =~
-                 "const captainParams = this.$utils.stripParams(\n        this.captain, [\n          '__typename',\n          'id',\n          'insertedAt',\n          'updatedAt',\n          'deletedAt',\n          'creator',\n          'imageSeries'\n        ]\n      )"
+                 "const captainParams = this.$utils.stripParams(\n        this.captain, [\n          '__typename',\n          'id',\n          'insertedAt',\n          'updatedAt',\n          'deletedAt',\n          'creator',\n'imageSeries'\n        ]\n      )"
       end)
 
       send(self(), {:mix_shell_input, :prompt, "Games"})

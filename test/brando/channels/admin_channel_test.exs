@@ -34,7 +34,7 @@ defmodule Brando.AdminChannelTest do
       ids = [i1.id, i2.id]
 
       ref = push(socket, "images:delete_images", %{"ids" => ids})
-      assert_reply ref, :ok, %{code: 200, ids: ids}
+      assert_reply ref, :ok, %{code: 200, ids: ^ids}
     end
 
     test "images:sequence_images", %{socket: socket} do
