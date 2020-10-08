@@ -20,7 +20,13 @@ defmodule Brando.Cache do
     end
   end
 
-  def put(key, val, ttl \\ :timer.minutes(15)) do
+  def put(key, var, ttl \\ :timer.minutes(15))
+
+  def put(key, val, :infinite) do
+    @cache_module.put(:cache, key, val)
+  end
+
+  def put(key, val, ttl) do
     @cache_module.put(:cache, key, val, ttl: ttl)
   end
 
