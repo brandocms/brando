@@ -77,7 +77,9 @@ defmodule Brando.Villain do
       |> Enum.reduce([], fn data_node, acc ->
         type_atom = String.to_atom(data_node["type"])
         data_node_content = data_node["data"]
-        [apply(parser, type_atom, [data_node_content, opts]) | acc]
+
+        (data_node["hidden"] && ["" | acc]) ||
+          [apply(parser, type_atom, [data_node_content, opts]) | acc]
       end)
       |> Enum.reverse()
       |> Enum.join()
