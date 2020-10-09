@@ -11,7 +11,7 @@ defmodule <%= application_module %>Web.PageController do
   @doc false
   @spec index(conn, map) :: page_not_found | conn
   def index(conn, _params) do
-    page_opts = %{matches: %{key: "index", status: :published}}
+    page_opts = %{matches: %{key: "index"}, status: :published}
     with {:ok, page} <- Pages.get_page(page_opts) do
       conn
       |> put_section("index")
@@ -24,7 +24,7 @@ defmodule <%= application_module %>Web.PageController do
   @doc false
   @spec show(conn, map) :: page_not_found | conn
   def show(conn, %{"path" => path}) when is_list(path) do
-    page_opts = %{matches: %{path: path, status: :published}}
+    page_opts = %{matches: %{path: path}, status: :published}
 
     with {:ok, page} <- Pages.get_page(page_opts) do
       #  {:ok, partials} <- Pages.get_fragments("partials") do
