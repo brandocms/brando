@@ -27,7 +27,8 @@ defmodule <%= application_module %>Web.Endpoint do
     only: ~w(css fonts img images js ico favicon.ico robots.txt)
 
   plug Plug.Static,
-    at: "/media", from: Brando.config(:media_path),
+    at: "/media",
+    from: Brando.config(:media_path),
     cache_control_for_etags: "public, max-age=31536000",
     cache_control_for_vsn_requests: "public, max-age=31536000"
 
@@ -39,6 +40,8 @@ defmodule <%= application_module %>Web.Endpoint do
     plug Phoenix.CodeReloader
     plug Phoenix.Ecto.CheckRepoStatus, otp_app: :<%= application_name %>
   end
+
+  plug Brando.Plug.LivePreview
 
   plug Phoenix.LiveDashboard.RequestLogger,
     param_key: "request_logger",

@@ -7,6 +7,7 @@ defmodule <%= application_module %>Web.AdminSocket do
   ## Channels
   channel "admin", <%= application_module %>.AdminChannel
   channel "user:*", Brando.UserChannel
+  channel "live_preview:*", Brando.LivePreviewChannel
 
   @doc """
   Connect socket with token
