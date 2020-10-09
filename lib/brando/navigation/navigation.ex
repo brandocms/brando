@@ -108,9 +108,11 @@ defmodule Brando.Navigation do
     menu_id = (is_binary(menu_id) && String.to_integer(menu_id)) || menu_id
     {:ok, menu} = get_menu(menu_id)
 
-    menu = Map.merge(menu, %{key: "#{menu.key}_kopi", title: "#{menu.title} (kopi)"})
-    menu = Map.delete(menu, [:id, :children, :parent])
-    menu = Map.from_struct(menu)
+    menu =
+      menu
+      |> Map.merge(%{key: "#{menu.key}_kopi", title: "#{menu.title} (kopi)"})
+      |> Map.delete([:id, :children, :parent])
+      |> ensure_nested_map()
 
     create_menu(menu, %Brando.Users.User{id: menu.creator_id})
   end
@@ -148,4 +150,14 @@ defmodule Brando.Navigation do
 
     {:ok, items}
   end
+
+  defp do_sample(_key, value), do: ensure_nested_map(value)
+  defp ensure_nested_map(list) when is_list(list), do: Enum.map(list, &ensure_nested_map/1)
+
+  defp ensure_nested_map(%{__struct__: _} = struct) do
+    map = Map.from_struct(struct)
+    :maps.map(&do_sample/2, map)
+  end
+
+  defp ensure_nested_map(data), do: data
 end
