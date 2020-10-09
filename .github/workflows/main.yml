@@ -15,8 +15,8 @@ jobs:
       fail-fast: false
       matrix:
         pair:
-          - erlang: 22.2
-            elixir: 1.10.2
+          - erlang: 23.1
+            elixir: 1.11.0
 
     services:
       db:
