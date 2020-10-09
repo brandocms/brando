@@ -125,38 +125,12 @@ Merge frontend translations
     $ mix gettext.merge priv/gettext/frontend
 
 
-Now we register our otp app's modules in Brando's registry to automatically set Gettext locales.
-Open up you application's `lib/application.ex` and add to `start/2`:
-
-    Brando.Registry.register(MyApp.Web, [:gettext])
-
-
 ## Generator
 
 Generate templates:
 
     $ mix brando.gen
 
-`name:string avatar:image data:villain image_series:gallery`
-
-Also supports `user:references:users_users` to add a `belongs_to` assoc.
-
-If you use Gettext, register your module in `lib/application.ex`:
-
-```diff
-    def start(_type, _args) do
-      import Supervisor.Spec, warn: false
-
-      children = [
-        # Start the endpoint when the application starts
-        supervisor(MyApp.Web.Endpoint, []),
-        # Start the Ecto repository
-        supervisor(MyApp.Repo, []),
-        # Here you could define other workers and supervisors as children
-        # worker(MyApp.Worker, [arg1, arg2, arg3]),
-      ]
-
-+     Brando.Registry.register(MyAppWeb.MyModule, [:gettext])
 ```
 
 ## Serve static from DO Spaces

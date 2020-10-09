@@ -8,7 +8,7 @@ defmodule Brando.I18nController do
 
   @doc false
   def switch_language(conn, %{"language" => language}) do
-    Brando.I18n.put_locale_for_all_modules(language)
+    Gettext.put_locale(Brando.app_module(Gettext), language)
 
     conn
     |> put_language(language)

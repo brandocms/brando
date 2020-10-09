@@ -2,7 +2,7 @@ defmodule Brando.Supervisor do
   @moduledoc """
   Main Brando supervisor.
 
-  Looks after `Brando.Registry` and our cache.
+  Looks after our cache.
   """
   use Supervisor
 
@@ -13,9 +13,8 @@ defmodule Brando.Supervisor do
 
   def init([]) do
     children = [
-      supervisor(Brando.Registry, []),
-      worker(Cachex, [:cache, []], id: :main_cache),
-      worker(Cachex, [:query, []], id: :query_cache),
+      Supervisor.child_spec({Cachex, name: :cache}, id: :main_cache),
+      Supervisor.child_spec({Cachex, name: :query}, id: :query_cache),
       {Oban, oban_config()}
     ]
 

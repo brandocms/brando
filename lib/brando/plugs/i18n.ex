@@ -52,7 +52,6 @@ defmodule Brando.Plug.I18n do
 
     # set for default brando backend
     Gettext.put_locale(Brando.Gettext, language)
-    Brando.I18n.put_locale_for_all_modules(language)
     conn
   end
 

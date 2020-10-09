@@ -8,6 +8,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * Cache navigation menus
 * Add Query cache. `Page.list_pages(%{status: :published, cache: true})`
 * Add `sizes: "auto"` to `picture_tag`
+* Removed `Brando.Registry` and old i18n logic
 
 
 ## 0.47.0
