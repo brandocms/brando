@@ -13,8 +13,8 @@ defmodule Brando.Supervisor do
 
   def init([]) do
     children = [
-      Supervisor.child_spec({Cachex, name: :cache}, id: :main_cache),
-      Supervisor.child_spec({Cachex, name: :query}, id: :query_cache),
+      %{id: :main_cache, start: {Cachex, :start_link, [:cache, []]}},
+      %{id: :query_cache, start: {Cachex, :start_link, [:query, []]}},
       {Oban, oban_config()}
     ]
 
@@ -27,6 +27,7 @@ defmodule Brando.Supervisor do
         repo: Brando.repo(),
         poll_interval: :timer.minutes(15),
         queues: [default: [limit: 1, poll_interval: :timer.minutes(15)]],
+        plugins: [Oban.Plugins.Pruner],
         crontab: [
           # Generate a Sitemap every night at 02:00
           {"0 2 * * *", Brando.Worker.SitemapWorker}
