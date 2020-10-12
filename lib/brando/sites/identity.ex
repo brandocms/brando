@@ -63,8 +63,8 @@ defmodule Brando.Sites.Identity do
     }
   )
 
-  @required_fields ~w(name type email description title url)a
-  @optional_fields ~w(alternate_name image phone address zipcode city country logo title_prefix title_postfix)a
+  @required_fields ~w(name type description url)a
+  @optional_fields ~w(alternate_name image phone address zipcode city country logo title title_prefix title_postfix email)a
 
   @doc """
   Creates a changeset based on the `schema` and `params`.
