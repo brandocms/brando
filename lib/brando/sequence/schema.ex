@@ -78,23 +78,23 @@ defmodule Brando.Sequence.Schema do
         Brando.Datasource.update_datasource(__MODULE__)
       end
 
-      def sequence(%{"ids" => ids}) do
+      def sequence(%{"ids" => keys}) do
         # standard list of ids
-        vals = Range.new(0, length(ids))
-
-        order = Enum.zip(vals, ids)
+        vals = Range.new(0, length(keys) - 1) |> Enum.to_list()
         table = __MODULE__.__schema__(:source)
 
-        Brando.repo().transaction(fn ->
-          Enum.map(order, fn {val, id} ->
-            q =
-              from t in table,
-                where: field(t, :id) == ^id,
-                update: [set: [sequence: ^val]]
+        q =
+          from a in table,
+            join:
+              numbers in fragment(
+                "SELECT * FROM unnest(?, ?) AS t(key, value)",
+                type(^keys, {:array, :integer}),
+                type(^vals, {:array, :integer})
+              ),
+            on: a.id == numbers.key,
+            update: [set: [sequence: numbers.value]]
 
-            Brando.repo().update_all(q, [])
-          end)
-        end)
+        Brando.repo().update_all(q, [])
 
         # update referenced Datasources in Villains
         Brando.Datasource.update_datasource(__MODULE__)
