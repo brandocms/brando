@@ -16,7 +16,7 @@ defmodule Brando.Plug.I18n do
   @spec put_locale(Plug.Conn.t(), Keyword.t()) :: Plug.Conn.t()
   def put_locale(%{private: %{plug_session: %{"language" => language}}} = conn, []) do
     language = extract_language_from_path(conn) || language
-    Gettext.put_locale(Brando.app_module(Gettext), language)
+    Gettext.put_locale(Brando.web_module(Gettext), language)
 
     conn
     |> put_language(language)
@@ -25,7 +25,7 @@ defmodule Brando.Plug.I18n do
 
   def put_locale(conn, []) do
     language = extract_language_from_path(conn)
-    Gettext.put_locale(Brando.app_module(Gettext), language)
+    Gettext.put_locale(Brando.web_module(Gettext), language)
 
     conn
     |> put_language(language)
