@@ -8,43 +8,16 @@
       </a>
     </figure>
 
+    <%= if assigns[:navigation] do %>
     <section class="main">
       <ul>
+        <%= for menu_item <- @navigation.items do %>
         <li>
-          <a class="<%%= Brando.HTML.active(@conn, "/nyheter/*") %>" href="/nyheter">
-            Nyheter
+          <a class="<%= Brando.HTML.active(@conn, "#{menu_item.url}*") %>" href="<%= menu_item.url %>">
+            <%= menu_item.title %>
           </a>
         </li>
-        <li>
-          <a class="<%%= Brando.HTML.active(@conn, "/produkter/*") %>" href="/produkter">
-            Produkter
-          </a>
-        </li>
-        <li>
-          <a class="<%%= Brando.HTML.active(@conn, "/leverandorer/*") %>" href="/leverandorer">
-            Leverandører
-          </a>
-        </li>
-        <li>
-          <a class="<%%= Brando.HTML.active(@conn, "/kampanjer/*") %>" href="/kampanjer">
-            Kampanjer
-          </a>
-        </li>
-      </ul>
-    </section>
-
-    <section class="aux">
-      <ul>
-        <li>
-          <a class="<%%= Brando.HTML.active(@conn, "/om") %>" href="/om">
-            Om oss
-          </a>
-        </li>
-        <li>
-          <a class="<%%= Brando.HTML.active(@conn, "/kontakt") %>" href="/kontakt">
-            Kontakt
-          </a>
-        </li>
+        <% end %>
       </ul>
     </section>
 
@@ -63,15 +36,15 @@
           </span>
         </a>
       </noscript>
-      <button
-        class="hamburger hamburger--spin"
-        type="button"
+      <a
+        href="#menu"
+        class="hamburger noanim"
         aria-label="Menu"
         aria-controls="nav">
-        <span class="hamburger-box">
-          <span class="hamburger-inner"></span>
-        </span>
-      </button>
+        <i></i>
+        <i></i>
+        <i></i>
+      </a>
     </figure>
   </nav>
 </header>
