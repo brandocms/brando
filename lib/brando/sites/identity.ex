@@ -12,6 +12,7 @@ defmodule Brando.Sites.Identity do
     field :email, :string
     field :phone, :string
     field :address, :string
+    field :address2, :string
     field :zipcode, :string
     field :city, :string
     field :country, :string
@@ -64,7 +65,7 @@ defmodule Brando.Sites.Identity do
   )
 
   @required_fields ~w(name type description url)a
-  @optional_fields ~w(alternate_name image phone address zipcode city country logo title title_prefix title_postfix email)a
+  @optional_fields ~w(alternate_name image phone address address2 zipcode city country logo title title_prefix title_postfix email)a
 
   @doc """
   Creates a changeset based on the `schema` and `params`.
