@@ -1,6 +1,24 @@
 defmodule Brando.I18n do
   @moduledoc """
-  Helper functions for I18n.
+
+  ### Routing
+
+  In your `router.ex`
+
+      scope "/", assigns: %{language: "no"} do
+        pipe_through :browser
+
+        get "/switch-language/:language", Brando.I18nController, :switch_language
+
+        # collections // english
+        scope "/en", assigns: %{language: "en"}, as: "en" do
+          get "/projects", ProjectController, :list
+          get "/project/:slug", ProjectController, :detail
+        end
+
+        get "/*path", PageController, :show
+      end
+
   """
   import Plug.Conn, only: [put_session: 3, assign: 3]
 
