@@ -1,74 +1,96 @@
 import {
-  TweenLite, Power3, TimelineLite, Sine
+  Dom, gsap
 } from '@univers-agency/jupiter'
 
 export default () => ({
-  logoColor: '#ffffff',
-  hamburgerColor: '#ffffff',
-  contentSelector: 'section.primary',
+  logoColor: '#000',
+  logoPathSelector: 'svg path',
+  contentSelector: 'section.main',
+  hamburgerColor: '#000',
 
   onResize: m => {
     if (document.body.classList.contains('open-menu')) {
-      TweenLite.to(m.bg, 0.1, { height: window.innerHeight })
+      gsap.set(m.bg, { height: window.innerHeight })
     }
   },
 
   openTween: m => {
-    const timeline = new TimelineLite()
+    const timeline = gsap.timeline()
+    const lines = Dom.all('.hamburger i')
 
     m.hamburger.classList.toggle('is-active')
     document.body.classList.toggle('open-menu')
+    const inner = Dom.find(m.bg, '.inner')
 
     timeline
-      .timeScale(1.8)
-      .set(m.lis, { autoAlpha: 0 })
-      .set(m.bg, { display: 'block' })
-      .fromTo(m.bg, 0.35, { x: '0%', opacity: 0, height: window.innerHeight }, { opacity: 1, ease: Sine.easeIn })
-      .to(m.logo, 0.5, { opacity: 0, ease: Power3.easeOut }, '-=0.35')
-      .to(m.hamburger, 0.5, { opacity: 0, ease: Power3.easeOut }, '-=0.35')
-      .to(m.header, 0.55, { backgroundColor: 'transparent', ease: Power3.easeOut }, '-=0.35')
-      .set(m.nav, { height: window.innerHeight })
-      .call(() => {
-        TweenLite.set(m.content, { display: 'block' })
-        const distanceToTop = m.logo.getBoundingClientRect().bottom
-        TweenLite.set(m.content, { y: (distanceToTop / 2) * -1 })
-        TweenLite.set(m.hamburger, { className: '+=close' })
+      .set(m.lis, {
+        opacity: 0,
+        x: 20
       })
-      .set(m.logoPath, { fill: m.opts.logoColor })
-      .set(m.hamburger, { borderColor: '#ffffff', color: '#ffffff' })
-      .call(() => { m.hamburger.innerHTML = 'Lukk' })
-      .staggerFromTo(m.lis, 1, { x: 20 }, { x: 0, autoAlpha: 1, ease: Power3.easeOut }, 0.05)
-      .to(m.logo, 0.55, { opacity: 1, xPercent: 0, ease: Power3.ease }, '-=1.2')
-      .to(m.hamburger, 0.55, { opacity: 1, xPercent: 0, ease: Power3.ease }, '-=1.2')
+      .set(inner, {
+        opacity: 0,
+        x: 0
+      })
+      .to(lines[1], { opacity: 0, duration: 0.3 })
+      .to(lines[0], { y: 7, rotate: '45deg', transformOrigin: '50% 50%', duration: 0.3 }, '<')
+      .to(lines[2], { y: -7, rotate: '-45deg', transformOrigin: '50% 50%', duration: 0.3 }, '<')
+      .call(() => {
+        gsap.to(m.header, { backgroundColor: 'transparent' })
+      })
+      .fromTo(m.bg, {
+        duration: 0.35,
+        x: '0%',
+        opacity: 0,
+        height: window.innerHeight
+      }, {
+        display: 'block',
+        duration: 0.35,
+        opacity: 1,
+        ease: 'sine.in'
+      })
+      .to(inner, { opacity: 1, duration: 0.35 }, '-=0.35')
+      .set(m.content, { display: 'block' })
+      .to(m.lis, {
+        duration: 1,
+        x: 0,
+        opacity: 1,
+        ease: 'power3.out',
+        stagger: 0.05
+      })
       .call(m._emitMobileMenuOpenEvent)
   },
 
   closeTween: m => {
+    const lines = Dom.all('.hamburger i')
     document.body.classList.toggle('open-menu')
-    const timeline = new TimelineLite()
+    const timeline = gsap.timeline()
+    const inner = Dom.find(m.bg, '.inner')
 
     timeline
-      .timeScale(1.8)
       .call(() => { m.hamburger.classList.toggle('is-active') })
-      .fromTo(m.logo, 0.5, { opacity: 1 }, { opacity: 0, ease: Power3.easeOut })
-      .fromTo(m.hamburger, 0.5, { opacity: 1 }, { opacity: 0, ease: Power3.easeOut }, '-=0.4')
-      .set(m.logoPath, { clearProps: 'fill' })
-      .set(m.hamburger, { clearProps: 'color,borderColor' })
-      .staggerTo(m.lis, 0.5, { opacity: 0, x: 20, ease: Power3.easeOut }, 0.04, '-=0.4')
-      .set(m.nav, { clearProps: 'height' })
-      .set(m.content, { display: 'none' })
-      .call(() => {
-        TweenLite.set(m.content, { y: 0 })
-      })
-      .call(() => {
-        m.hamburger.innerHTML = 'Meny'
-        TweenLite.set(m.hamburger, { className: '-=close' })
-      })
-      .to(m.bg, 1.25, { opacity: 0, ease: Sine.easeIn }, '-=0.3')
+      .to(lines[1], { opacity: 1 })
+      .to(lines[0], { y: 0, rotate: '0deg', transformOrigin: '50% 50%' }, '<')
+      .to(lines[2], { y: 0, rotate: '0deg', transformOrigin: '50% 50%' }, '<')
+      .to(m.lis, {
+        duration: 0.5, opacity: 0, x: 20, ease: 'power3.out', stagger: 0.04
+      }, '<')
+
+      .to(inner, {
+        duration: 0.25,
+        x: '100%',
+        ease: 'sine.in'
+      }, '-=0.3')
+      .to(m.bg, {
+        duration: 0.25,
+        opacity: 0,
+        ease: 'sine.in'
+      }, '-=0.2')
       .call(() => { m._emitMobileMenuClosedEvent() })
+      .set(m.content, { display: 'none' })
       .set(m.lis, { clearProps: 'opacity' })
-      .to(m.logo, 0.35, { opacity: 1, ease: Power3.easeIn }, '-=0.8')
-      .to(m.hamburger, 0.55, { opacity: 1, ease: Power3.easeIn }, '-=0.6')
-      .set(m.bg, { display: 'none' })
+      .set(m.header, { clearProps: 'background-color' })
+      .call(() => {
+        m.app.header.update()
+      })
   }
 })

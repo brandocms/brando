@@ -1,11 +1,12 @@
-import { TweenLite, Sine } from '@univers-agency/jupiter'
+import { gsap } from '@univers-agency/jupiter'
 
 export default () => ({
   onFadeIn: hero => {
-    TweenLite.to(hero.el, 1, {
+    gsap.to(hero.el, {
       opacity: 1,
       delay: 0.5,
-      ease: Sine.easeIn
+      ease: 'sine.in',
+      duration: 1
     })
   }
 })

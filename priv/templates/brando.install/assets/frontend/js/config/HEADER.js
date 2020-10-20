@@ -1,7 +1,10 @@
 import {
-  TimelineLite, TweenLite, Power3, Sine
+  gsap
 } from '@univers-agency/jupiter'
 
 export default application => ({
-  el: 'header[data-nav]'
+  el: 'header[data-nav]',
+  default: {
+    unPinOnResize: false
+  }
 })
