@@ -56,6 +56,7 @@ defmodule Brando.Villain do
     parser = Brando.config(Brando.Villain)[:parser]
     identity = Brando.Cache.Identity.get()
     globals = Brando.Cache.Globals.get()
+    navigation = Brando.Cache.Navigation.get()
 
     entry = if opts[:data_field], do: Map.put(entry, opts[:data_field], nil), else: entry
     entry = if opts[:html_field], do: Map.put(entry, opts[:html_field], nil), else: entry
@@ -69,6 +70,7 @@ defmodule Brando.Villain do
       |> Lexer.Context.assign("identity", identity)
       |> Lexer.Context.assign("configs", identity.configs)
       |> Lexer.Context.assign("links", identity.links)
+      |> Lexer.Context.assign("navigation", navigation)
 
     opts = Keyword.put(opts, :context, context)
 
