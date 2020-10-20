@@ -10,7 +10,7 @@ defmodule Brando.Plug.Navigation do
 
   @doc false
   def call(conn, menu_key) do
-    locale = Gettext.get_locale(Brando.app_module(Gettext))
+    locale = Gettext.get_locale(Brando.web_module(Gettext))
     menu = Cache.Navigation.get("#{menu_key}.#{locale}")
     Plug.Conn.assign(conn, :navigation, menu)
   end
