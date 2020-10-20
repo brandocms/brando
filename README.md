@@ -118,7 +118,7 @@ To extract your frontend translations:
 
 Create your frontend translation directories: (for norwegian)
 
-    $ mkdir -p priv/gettext/frontend/nb/LC_MESSAGES
+    $ mkdir -p priv/gettext/frontend/no/LC_MESSAGES
 
 Merge frontend translations
 
@@ -131,7 +131,6 @@ Generate templates:
 
     $ mix brando.gen
 
-```
 
 ## Serve static from DO Spaces
 
