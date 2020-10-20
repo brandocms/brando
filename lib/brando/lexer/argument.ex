@@ -3,6 +3,7 @@ defmodule Brando.Lexer.Argument do
 
   alias Brando.Lexer.Context
   alias Brando.Globals
+  alias Brando.Navigation
   alias Brando.Pages
   alias Brando.Villain
 
@@ -47,6 +48,12 @@ defmodule Brando.Lexer.Argument do
     value
     |> length()
     |> do_eval(tail)
+  end
+
+  # ${menu:key.language.*}
+  defp do_eval(_value, [{:key, "menu"} | [{:key, key}, {:key, language} | tail]]) do
+    {:ok, menu} = Navigation.get_menu(key, language)
+    do_eval(menu, tail)
   end
 
   # ${global:category.key}
