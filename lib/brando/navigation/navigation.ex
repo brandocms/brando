@@ -139,6 +139,11 @@ defmodule Brando.Navigation do
     end
   end
 
+  @spec get :: map
+  def get do
+    Brando.Cache.Navigation.get()
+  end
+
   @doc """
   List all menu items
   """
