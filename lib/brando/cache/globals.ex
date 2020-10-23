@@ -40,10 +40,14 @@ defmodule Brando.Cache.Globals do
   def update({:error, changeset}), do: {:error, changeset}
 
   defp process_globals(global_categories) do
-    for category <- global_categories,
-        global <- category.globals,
-        into: %{} do
-      {"#{category.key}.#{global.key}", global}
-    end
+    Enum.map(global_categories, fn cat ->
+      globals_for_cat =
+        cat.globals
+        |> Enum.map(&{&1.key, &1})
+        |> Enum.into(%{})
+
+      {cat.key, globals_for_cat}
+    end)
+    |> Enum.into(%{})
   end
 end
