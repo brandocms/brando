@@ -7,17 +7,21 @@ defmodule Brando.DatasourcesTest do
     use Brando.Datasource
 
     datasources do
-      many :all, fn module, _ ->
+      list(:all, fn module, _ ->
         {:ok, module}
-      end
+      end)
 
-      many :all_of_them, fn _, _ ->
+      list(:all_of_them, fn _, _ ->
         {:ok, [%{id: 1, name: "1"}, %{id: 2, name: "2"}, %{id: 3, name: "3"}]}
-      end
+      end)
 
-      many :all_more, fn _, arg ->
+      list(:all_more, fn _, arg ->
         {:ok, arg}
-      end
+      end)
+
+      single(:single, fn module, _ ->
+        {:ok, module}
+      end)
 
       selection :featured,
                 fn _, _ ->
@@ -43,7 +47,7 @@ defmodule Brando.DatasourcesTest do
   alias Brando.DatasourcesTest.TestDatasource
 
   test "__datasources__" do
-    assert TestDatasource.__datasources__(:many) == [:all_more, :all_of_them, :all]
+    assert TestDatasource.__datasources__(:list) == [:all_more, :all_of_them, :all]
   end
 
   test "list datasources" do
@@ -52,12 +56,16 @@ defmodule Brando.DatasourcesTest do
 
   test "list datasource keys" do
     assert Brando.Datasource.list_datasource_keys(TestDatasource) ==
-             {:ok, %{many: [:all_more, :all_of_them, :all], one: [], selection: [:featured]}}
+             {:ok, %{list: [:all_more, :all_of_them, :all], single: [], selection: [:featured]}}
   end
 
-  test "get_many" do
-    assert Brando.Datasource.get_many(TestDatasource, "all", nil) == {:ok, TestDatasource}
-    assert Brando.Datasource.get_many(TestDatasource, "all_more", "argument") == {:ok, "argument"}
+  test "get_list" do
+    assert Brando.Datasource.get_list(TestDatasource, "all", nil) == {:ok, TestDatasource}
+    assert Brando.Datasource.get_list(TestDatasource, "all_more", "argument") == {:ok, "argument"}
+  end
+
+  test "get_single" do
+    assert Brando.Datasource.get_single(TestDatasource, "single", nil) == {:ok, TestDatasource}
   end
 
   test "list_selection" do
@@ -89,11 +97,11 @@ defmodule Brando.DatasourcesTest do
         "type" => "datasource",
         "data" => %{
           "module" => "Elixir.Brando.DatasourcesTest.TestDatasource",
-          "type" => "many",
+          "type" => "list",
           "query" => "all_of_them",
           "code" => """
-          {% for entry <- entries %}
-          <li>${entry:name}</li>
+          {% for entry in entries %}
+          <li>{{ entry.name }}</li>
           {% endfor %}
           """
         }

@@ -13,12 +13,36 @@ defmodule Brando.Globals do
   @type params :: map
 
   @doc """
+  Get global by category and key
+  """
+  def get_global(cat_key, key, globals) when is_map(globals) do
+    case get_in(globals, [cat_key, key]) do
+      nil -> {:error, {:global, :not_found}}
+      val -> {:ok, val}
+    end
+  end
+
+  @doc """
   Get global by key path
   """
-  def get_global(key_path, globals \\ Cache.Globals.get()) do
-    case Map.fetch(globals, key_path) do
-      {:ok, val} -> {:ok, val}
-      :error -> {:error, {:global, :not_found}}
+  def get_global(key_path, globals) when is_map(globals) do
+    case String.split(key_path, ".") do
+      [cat_key, key] -> get_global(cat_key, key, globals)
+      _ -> {:error, {:global, :not_found}}
+    end
+  end
+
+  def get_global(cat_key, key) do
+    case get_in(Cache.Globals.get(), [cat_key, key]) do
+      nil -> {:error, {:global, :not_found}}
+      val -> {:ok, val}
+    end
+  end
+
+  def get_global(key_path) do
+    case String.split(key_path, ".") do
+      [cat_key, key] -> get_global(cat_key, key, Cache.Globals.get())
+      _ -> {:error, {:global, :not_found}}
     end
   end
 
@@ -43,9 +67,9 @@ defmodule Brando.Globals do
   Render global by key path
   """
   def render_global(key_path, globals \\ Cache.Globals.get()) do
-    case Map.fetch(globals, key_path) do
-      {:ok, val} -> val
-      :error -> ""
+    case get_global(key_path, globals) do
+      {:ok, global} -> global
+      _ -> ""
     end
   end
 
@@ -114,10 +138,7 @@ defmodule Brando.Globals do
   def update_villains_referencing_global({:error, changeset}), do: {:error, changeset}
 
   def update_villains_referencing_global({:ok, global_category}) do
-    search_terms = [
-      "${GLOBAL:",
-      "${global:"
-    ]
+    search_terms = ["{{ globals\.(.*?) }}"]
 
     villains = Villain.list_villains()
     Villain.rerender_matching_villains(villains, search_terms)

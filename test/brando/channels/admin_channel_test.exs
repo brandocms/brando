@@ -394,7 +394,7 @@ defmodule Brando.AdminChannelTest do
 
       assert_reply ref, :ok, %{
         code: 200,
-        available_module_keys: %{many: [:all], one: [], selection: [:featured]}
+        available_module_keys: %{list: [:all], single: [], selection: [:featured]}
       }
     end
 

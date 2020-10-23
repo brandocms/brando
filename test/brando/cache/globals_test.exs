@@ -18,8 +18,12 @@ defmodule Brando.Cache.GlobalsTest do
     assert Brando.Cache.Globals.update({:ok, :dummy}) === {:ok, :dummy}
 
     global_map = Brando.Cache.Globals.get()
-    assert Map.keys(global_map) === ["system.key-0", "system.key-1"]
-    assert get_in(global_map, [Access.key("system.key-0"), Access.key(:key)]) === "key-0"
-    assert get_in(global_map, [Access.key("system.key-1"), Access.key(:key)]) === "key-1"
+    assert Map.keys(global_map) === ["system"]
+
+    assert get_in(global_map, [Access.key("system"), Access.key("key-0"), Access.key(:key)]) ===
+             "key-0"
+
+    assert get_in(global_map, [Access.key("system"), Access.key("key-1"), Access.key(:key)]) ===
+             "key-1"
   end
 end

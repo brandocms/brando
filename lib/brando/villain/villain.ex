@@ -5,37 +5,35 @@ defmodule Brando.Villain do
 
   ### Available variables when rendering
 
-    - `${entry:<key>}`
+    - `{{ entry.<key> }}`
     Gets `<key>` from currently rendering entry. So if we are rendering a `%Page{}` and we
-    want the `meta_description` we can do `${entry:meta_description}
+    want the `meta_description` we can do `{{ entry.meta_description }}
 
-    - `${fragment:<parent_key>/<key>/<language>}`
-    Gets rendered fragment according to values.
-
-    - `${link:<key>}`
+    - `{{ links.<key> }}`
     Gets `<key>` from list of links in the Identity configuration.
 
-    - `${global:<key>}`
-    Gets `<key>` from list of globals in the Identity configuration.
+    - `{{ globals.<category_key>.<key> }}`
+    Gets `<key>` from `<category_key>` in list of globals in the Identity configuration.
 
-    - `${forloop.index}`
+    - `{{ forloop.index }}`
     Only available inside for loops or templates with `multi` set to true. Returns the current index
     of the for loop, starting at `1`
 
-    - `${forloop.index0}`
+    - `{{ forloop.index0 }}`
     Only available inside for loops or templates with `multi` set to true. Returns the current index
     of the for loop, starting at `0`
 
-    - `${forloop.count}`
+    - `{{ forloop.count }}`
     Only available inside for loops or templates with `multi` set to true. Returns the total amount
     of entries in the for loop
 
   """
   import Ecto.Query
 
-  alias Brando.Lexer
+  alias Brando.Cache
   alias Brando.Pages
   alias Brando.Utils
+  alias Liquex.Context
 
   @doc """
   Parses `json` (in Villain-format).
@@ -54,24 +52,12 @@ defmodule Brando.Villain do
 
   defp do_parse(data, entry, opts) do
     parser = Brando.config(Brando.Villain)[:parser]
-    identity = Brando.Cache.Identity.get()
-    globals = Brando.Cache.Globals.get()
-    navigation = Brando.Cache.Navigation.get()
 
     entry = if opts[:data_field], do: Map.put(entry, opts[:data_field], nil), else: entry
     entry = if opts[:html_field], do: Map.put(entry, opts[:html_field], nil), else: entry
     entry = maybe_put_timestamps(entry)
 
-    context =
-      %{}
-      |> Lexer.Context.new()
-      |> Lexer.Context.assign("entry", entry)
-      |> Lexer.Context.assign("globals", globals)
-      |> Lexer.Context.assign("identity", identity)
-      |> Lexer.Context.assign("configs", identity.configs)
-      |> Lexer.Context.assign("links", identity.links)
-      |> Lexer.Context.assign("navigation", navigation)
-
+    context = Context.assign(get_base_context(), "entry", entry)
     opts = Keyword.put(opts, :context, context)
 
     html =
@@ -86,7 +72,33 @@ defmodule Brando.Villain do
       |> Enum.reverse()
       |> Enum.join()
 
-    Lexer.parse_and_render(html, context)
+    parse_and_render(html, context)
+  end
+
+  def get_base_context() do
+    identity = Cache.Identity.get()
+    globals = Cache.Globals.get()
+    navigation = Cache.Navigation.get()
+    links = Enum.map(identity.links, &{String.downcase(&1.name), &1}) |> Enum.into(%{})
+    configs = Enum.map(identity.configs, &{String.downcase(&1.key), &1}) |> Enum.into(%{})
+
+    %{}
+    |> Context.new(
+      filter_module: Brando.Villain.Filters,
+      render_module: Brando.Villain.LiquexRenderer
+    )
+    |> Context.assign("identity", identity)
+    |> Context.assign("configs", configs)
+    |> Context.assign("links", links)
+    |> Context.assign("globals", globals)
+    |> Context.assign("navigation", navigation)
+  end
+
+  def parse_and_render(html, context) do
+    {:ok, parsed_doc} = Liquex.parse(html, Brando.Villain.LiquexParser)
+
+    {result, _} = Liquex.Render.render([], parsed_doc, context)
+    Enum.join(result)
   end
 
   defp maybe_put_timestamps(%{inserted_at: nil} = entry) do
@@ -396,7 +408,7 @@ defmodule Brando.Villain do
   def rerender_matching_villains(villains, search_terms) do
     for {schema, fields} <- villains do
       Enum.reduce(fields, [], fn {_, data_field, html_field}, acc ->
-        case search_villains_for_text(schema, data_field, search_terms) do
+        case search_villains_for_regex(schema, data_field, search_terms) do
           [] ->
             acc
 
@@ -411,7 +423,7 @@ defmodule Brando.Villain do
   Look through all templates for `search_terms` and rerender all villains that
   use this template
   """
-  @spec rerender_matching_villains([any], binary | [binary]) :: any
+  @spec rerender_matching_templates([any], binary | [binary]) :: any
   def rerender_matching_templates(_villains, search_terms) do
     # first look through templates
     query = from(t in Brando.Villain.Template, select: t.id)
@@ -419,7 +431,7 @@ defmodule Brando.Villain do
     built_query =
       Enum.reduce(search_terms, query, fn search_term, query ->
         from q in query,
-          or_where: ilike(type(q.code, :string), ^"%#{search_term}%")
+          or_where: fragment("? ~* ?", type(q.code, :string), ^"#{search_term}")
       end)
 
     case Brando.repo().all(built_query) do

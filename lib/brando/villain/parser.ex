@@ -69,8 +69,9 @@ defmodule Brando.Villain.Parser do
 
       alias Brando.Cache
       alias Brando.Datasource
-      alias Brando.Lexer
       alias Brando.Villain
+
+      alias Liquex.Context
 
       def render_caption(%{"title" => nil, "credits" => nil}),
         do: ""
@@ -135,11 +136,8 @@ defmodule Brando.Villain.Parser do
           ) do
         {:ok, template} =
           case Keyword.get(opts, :cache_templates) do
-            true ->
-              Brando.Villain.get_cached_template(id)
-
-            _ ->
-              Brando.Villain.get_template(id)
+            true -> Brando.Villain.get_cached_template(id)
+            _ -> Brando.Villain.get_template(id)
           end
 
         # multi template
@@ -160,41 +158,39 @@ defmodule Brando.Villain.Parser do
 
             context =
               base_context
-              |> Lexer.Context.assign(vars)
-              |> Lexer.Context.assign("forloop", forloop)
+              |> add_vars_to_context(vars)
+              |> Context.assign("forloop", forloop)
 
             template.code
             |> render_refs(refs, id)
-            |> Lexer.parse_and_render(context)
+            |> Villain.parse_and_render(context)
           end)
           |> Enum.join("\n")
 
         context =
           base_context
-          |> Lexer.Context.assign("entries", entries)
-          |> Lexer.Context.assign("content", content)
+          |> Context.assign("entries", entries)
+          |> Context.assign("content", content)
 
-        Lexer.parse_and_render(template.wrapper, context)
+        Villain.parse_and_render(template.wrapper, context)
       end
 
       def template(%{"id" => id, "refs" => refs} = block, opts) do
         {:ok, template} =
           case Keyword.get(opts, :cache_templates) do
-            true ->
-              Brando.Villain.get_cached_template(id)
-
-            _ ->
-              Brando.Villain.get_template(id)
+            true -> Brando.Villain.get_cached_template(id)
+            _ -> Brando.Villain.get_template(id)
           end
 
         vars = Map.get(block, "vars")
         base_context = opts[:context]
         vars = process_vars(vars)
-        context = Lexer.Context.assign(base_context, vars)
+
+        context = add_vars_to_context(base_context, vars)
 
         template.code
         |> render_refs(refs, id)
-        |> Lexer.parse_and_render(context)
+        |> Villain.parse_and_render(context)
       end
 
       defoverridable template: 2
@@ -202,7 +198,7 @@ defmodule Brando.Villain.Parser do
       def datasource(
             %{
               "module" => module,
-              "type" => "many",
+              "type" => "list",
               "query" => query,
               "code" => code
             } = data,
@@ -210,7 +206,7 @@ defmodule Brando.Villain.Parser do
           ) do
         arg = Map.get(data, "arg", nil)
 
-        with {:ok, entries} <- Datasource.get_many(module, query, arg) do
+        with {:ok, entries} <- Datasource.get_list(module, query, arg) do
           render_datasource_entries(code, entries)
         end
       end
@@ -478,6 +474,8 @@ defmodule Brando.Villain.Parser do
       Slideshow
       """
       def slideshow(%{"images" => images} = data, _) do
+        default_srcset = Brando.config(Brando.Images)[:default_srcset]
+
         items =
           Enum.map_join(images, "\n", fn img ->
             orientation = (img["width"] > img["height"] && "landscape") || "portrait"
@@ -490,6 +488,8 @@ defmodule Brando.Villain.Parser do
                 width: true,
                 height: true,
                 placeholder: :svg,
+                sizes: "auto",
+                srcset: default_srcset,
                 lazyload: true,
                 lightbox: data["lightbox"] || false
               )
@@ -701,20 +701,14 @@ defmodule Brando.Villain.Parser do
         {name, %Villain.Var{label: label, type: type, value: value}}
       end
 
-      defp get_base_context() do
-        identity = Cache.Identity.get()
-
-        %{}
-        |> Lexer.Context.new()
-        |> Lexer.Context.assign("identity", identity)
-        |> Lexer.Context.assign("configs", identity.configs)
-        |> Lexer.Context.assign("links", identity.links)
+      defp add_vars_to_context(context, vars) do
+        Enum.reduce(vars, context, fn {k, v}, acc -> Context.assign(acc, k, v) end)
       end
 
       defp render_datasource_entries(code, entries) do
-        base_context = get_base_context()
-        context = Lexer.Context.assign(base_context, "entries", entries)
-        Lexer.parse_and_render(code, context)
+        base_context = Villain.get_base_context()
+        context = Context.assign(base_context, "entries", entries)
+        Villain.parse_and_render(code, context)
       end
 
       defp render_refs(template_code, refs, id) do

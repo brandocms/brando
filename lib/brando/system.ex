@@ -136,7 +136,7 @@ defmodule Brando.System do
     Logger.error("""
 
 
-      ==> Found deprecated global variable format `${global:key}`. Try `${global:system.key}` instead.
+      ==> Found deprecated global variable format `${global:key}`. Try `{{ globals.system.key }}` instead.
       ==> Schema.: #{inspect(schema)}
       ==> Ids....: #{inspect(ids)}
     """)
@@ -151,6 +151,10 @@ defmodule Brando.System do
         if t.wrapper && String.contains?(t.wrapper, "${CONTENT}") do
           log_invalid_wrapper_content(t)
         end
+
+        if t.wrapper && String.contains?(t.wrapper, "${content}") do
+          log_invalid_wrapper_content(t)
+        end
       end
     end
 
@@ -163,7 +167,7 @@ defmodule Brando.System do
     Logger.error("""
 
 
-      ==> Found deprecated wrapper content format `${CONTENT}`. Use `${content}` instead.
+      ==> Found deprecated wrapper content format `${CONTENT}`. Use `{{ content }}` instead.
       ==> Schema.: Template
       ==> Id.....: #{t.id} - #{t.name}
     """)

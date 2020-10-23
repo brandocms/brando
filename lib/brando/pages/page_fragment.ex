@@ -83,7 +83,7 @@ defmodule Brando.Pages.PageFragment do
         language = Ecto.Changeset.get_field(changeset, :language)
 
         # build a fragment ref string
-        ref_string = "${fragment:#{parent_key}/#{key}/#{language}}"
+        ref_string = "{% fragment #{parent_key} #{key} #{language} %}"
 
         if String.contains?(json, ref_string) do
           Ecto.Changeset.add_error(
@@ -106,10 +106,10 @@ defmodule Brando.Pages.PageFragment do
 
     def to_iodata(%{wrapper: wrapper} = fragment) do
       wrapper
-      |> String.replace("${CONTENT}", fragment.html)
-      |> String.replace("${PARENT_KEY}", fragment.parent_key)
-      |> String.replace("${KEY}", fragment.key)
-      |> String.replace("${LANGUAGE}", fragment.language)
+      |> String.replace("{{ content }}", fragment.html)
+      |> String.replace("{{ parent_key }}", fragment.parent_key)
+      |> String.replace("{{ key }}", fragment.key)
+      |> String.replace("{{ language }}", fragment.language)
       |> Phoenix.HTML.raw()
       |> Phoenix.HTML.Safe.to_iodata()
     end

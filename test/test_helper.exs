@@ -223,8 +223,7 @@ defmodule BrandoIntegration.ModuleWithDatasource do
   end
 
   datasources do
-    many :all,
-         fn _, _ -> {:ok, [1, 2, 3]} end
+    list :all, fn _, _ -> {:ok, [1, 2, 3]} end
 
     selection :featured,
               fn _, _ ->

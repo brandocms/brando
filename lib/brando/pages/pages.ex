@@ -480,7 +480,7 @@ defmodule Brando.Pages do
   """
   @spec update_villains_referencing_fragment(fragment :: Brando.Pages.PageFragment.t()) :: [any]
   def update_villains_referencing_fragment(fragment) do
-    search_term = "${FRAGMENT:#{fragment.parent_key}/#{fragment.key}/#{fragment.language}"
+    search_term = "{% fragment #{fragment.parent_key} #{fragment.key} #{fragment.language} %}"
     villains = Villain.list_villains()
 
     Villain.rerender_matching_villains(villains, search_term)

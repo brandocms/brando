@@ -1,3 +1,15 @@
+## 0.48.0-dev
+
+* Move to liquex parsing. This means a bunch of updates:
+
+  - All `${variables:key}` are changed to `{{ variables.key }}`
+    This is handled for your through a migration
+  - `${content}` -> `{{ content }}`
+  - `{% for entry <- entries %}` -> `{% for entry in entries %}`
+
+* Brando.Datasource - rename `many` to `list`
+
+
 ## 0.47.0
 
 * Moved Villain `DatasourceBlock` code from template to it's own code prop.

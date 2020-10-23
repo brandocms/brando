@@ -104,6 +104,7 @@ defmodule Brando.Query do
       |> Inflex.pluralize()
 
     quote do
+      @spec unquote(:"list_#{name}")(map(), boolean) :: {:ok, any}
       def unquote(:"list_#{name}")(args \\ %{}, stream \\ false) do
         initial_query = unquote(block).(unquote(module))
         cache_args = Map.get(args, :cache)
@@ -159,6 +160,8 @@ defmodule Brando.Query do
     atom = String.to_existing_atom(name)
 
     quote do
+      @spec unquote(:"get_#{name}")(integer | binary | map()) ::
+              {:ok, any} | {:error, {unquote(atom), :not_found}}
       def unquote(:"get_#{name}")(id) when is_binary(id) or is_integer(id) do
         query = unquote(block).(unquote(module)) |> where([t], t.id == ^id)
 

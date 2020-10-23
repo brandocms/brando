@@ -1,6 +1,12 @@
 defmodule Brando.Plug.Navigation do
   @moduledoc """
   Add `navigation` to conn assigns
+
+  Plug this in your controller or pipeline
+
+      plug Brando.Plug.Navigation "main"
+      plug Brando.Plug.Navigation "footer", as: :footer_navigation
+
   """
 
   alias Brando.Cache
@@ -9,9 +15,10 @@ defmodule Brando.Plug.Navigation do
   def init(opts), do: opts
 
   @doc false
-  def call(conn, menu_key) do
+  def call(conn, menu_key, opts \\ []) do
+    name = Keyword.get(opts, :as, :navigation)
     locale = Gettext.get_locale(Brando.web_module(Gettext))
     menu = Cache.Navigation.get("#{menu_key}.#{locale}")
-    Plug.Conn.assign(conn, :navigation, menu)
+    Plug.Conn.assign(conn, name, menu)
   end
 end

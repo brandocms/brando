@@ -58,4 +58,27 @@ defmodule Brando.Sites.Global do
       |> Phoenix.HTML.Safe.to_iodata()
     end
   end
+
+  defimpl Liquex.Protocol, for: Brando.Sites.Global do
+    def render(%{type: "text", data: data}) do
+      data
+      |> Map.get("value", "")
+    end
+
+    def render(%{type: "boolean", data: data}) do
+      data
+      |> Map.get("value", false)
+      |> to_string()
+    end
+
+    def render(%{type: "html", data: data}) do
+      data
+      |> Map.get("value", "")
+    end
+
+    def render(%{type: "color", data: data}) do
+      data
+      |> Map.get("value", "")
+    end
+  end
 end
