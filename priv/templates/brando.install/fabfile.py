@@ -236,6 +236,8 @@ def bootstrap_release():
 
     restart()
     prune_dangling_docker_images()
+    pgbackup()
+
     _success()
     _notify_build_complete(version)
 
@@ -845,6 +847,12 @@ def createuser():
             sudo('groupadd -f %s' % env.project_group)
             # add to group
             sudo('usermod -a -G %s %s' % (env.project_group, env.project_user))
+
+            # copy ssh id
+            sudo('mkdir /home/%s/.ssh' % env.project_user)
+            sudo('cp ~/.ssh/authorized_keys /home/%s/.ssh/' % env.project_user)
+            sudo('chown -R %s:%s /home/%s/.ssh' % (env.project_user, env.project_user, env.project_user))
+
             output = sudo('id %s' % env.project_user)
             if output.failed:
                 abort('==> error: could not create user!')
@@ -906,6 +914,9 @@ def create_acme_dir():
 
 
 def pgbackup():
+    """
+    Copies postgresql backup script to host and adds to crontab
+    """
     sudo('mkdir -p /backups/postgres')
     sudo('chown -R postgres:postgres /backups')
     put('etc/pgbkup.sh', '/backups/postgres', use_sudo=True)
