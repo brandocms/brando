@@ -450,7 +450,7 @@ defmodule Brando.Pages do
 
   Returns the rendered value of the property.
   """
-  @spec get_prop(%{properties: [Property.t()]}, binary) :: any
+  @spec get_prop(page, binary) :: any
   def get_prop(%Page{properties: []}, _), do: nil
 
   def get_prop(%Page{properties: properties}, property) do

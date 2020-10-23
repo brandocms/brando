@@ -2,8 +2,8 @@ defmodule Brando.Plug.I18n do
   @moduledoc """
   A plug for checking i18n
   """
-  import Brando.I18n
   import Brando.Utils, only: [current_user: 1]
+  alias Brando.I18n
 
   @doc """
   Assign current locale.
@@ -14,22 +14,22 @@ defmodule Brando.Plug.I18n do
   Otherwise adds to session and assigns, and sets it through gettext
   """
   @spec put_locale(Plug.Conn.t(), Keyword.t()) :: Plug.Conn.t()
-  def put_locale(%{private: %{plug_session: %{"language" => language}}} = conn, []) do
-    language = extract_language_from_path(conn) || language
-    Gettext.put_locale(Brando.web_module(Gettext), language)
+  def put_locale(%{private: %{plug_session: %{"language" => _}}} = conn, []) do
+    {extracted_language, _} = I18n.parse_path(conn.path_info)
+    Gettext.put_locale(Brando.web_module(Gettext), extracted_language)
 
     conn
-    |> put_language(language)
-    |> assign_language(language)
+    |> I18n.put_language(extracted_language)
+    |> I18n.assign_language(extracted_language)
   end
 
   def put_locale(conn, []) do
-    language = extract_language_from_path(conn)
-    Gettext.put_locale(Brando.web_module(Gettext), language)
+    {extracted_language, _} = I18n.parse_path(conn.path_info)
+    Gettext.put_locale(Brando.web_module(Gettext), extracted_language)
 
     conn
-    |> put_language(language)
-    |> assign_language(language)
+    |> I18n.put_language(extracted_language)
+    |> I18n.assign_language(extracted_language)
   end
 
   @doc """
@@ -53,22 +53,5 @@ defmodule Brando.Plug.I18n do
     # set for default brando backend
     Gettext.put_locale(Brando.Gettext, language)
     conn
-  end
-
-  @spec extract_language_from_path(Plug.Conn.t()) :: binary | nil
-  defp extract_language_from_path(conn) do
-    lang = List.first(conn.path_info)
-
-    if lang do
-      langs =
-        :languages
-        |> Brando.config()
-        |> List.flatten()
-        |> Keyword.get_values(:value)
-
-      if lang in langs, do: lang, else: Brando.config(:default_language)
-    else
-      Brando.config(:default_language)
-    end
   end
 end

@@ -10,7 +10,7 @@ defmodule Brando.Cache.Navigation do
   @doc """
   Get all menus from cache
   """
-  @spec get :: map()
+  @spec get :: map() | nil
   def get, do: Cache.get(:navigation)
 
   @doc """
