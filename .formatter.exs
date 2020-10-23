@@ -15,8 +15,9 @@ locals_without_parens = [
   assign: 2,
   merge: 1,
   many: 2,
+  list: 2,
   selection: 3,
-  one: 2
+  single: 2
 ]
 
 [
