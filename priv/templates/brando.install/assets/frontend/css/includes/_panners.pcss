@@ -1,0 +1,53 @@
+[data-panner-container] {
+  position: relative;
+}
+
+[data-v] {
+  @space padding-top 20px $sm;
+
+  [data-panner] {
+    @space padding-left container;
+    @space padding-right container;
+    a {
+      cursor: grab;
+    }
+
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    flex-wrap: nowrap !important;
+
+    &:after {
+      content: '';
+      clear: both;
+      display: table;
+    }
+
+    [data-panner-item] {
+      @column 5:1/12 $lg;
+      @space padding-right 1:1/12 $lg;
+      @column 9:1/12 ipad_portrait;
+      @space padding-right 1:1/12 ipad_portrait;
+      @column 11:1/12 $mobile;
+      @space padding-right 1:1/12 $mobile;
+
+      align-self: flex-start;
+
+      &:last-of-type {
+        @space width calc(var[5/12] + var[container]) $lg;
+        @space flex-basis calc(var[5/12] + var[container]) $lg;
+        @space max-width calc(var[5/12] + var[container]) $lg;
+
+        @space width calc(var[9/12] + var[container]) ipad_portrait;
+        @space flex-basis calc(var[9/12] + var[container]) ipad_portrait;
+        @space max-width calc(var[9/12] + var[container]) ipad_portrait;
+
+        @space width calc(var[11/12] + var[container]) $mobile;
+        @space flex-basis calc(var[11/12] + var[container]) $mobile;
+        @space max-width calc(var[11/12] + var[container]) $mobile;
+        @space padding-right container;
+      }
+    }
+  }
+}

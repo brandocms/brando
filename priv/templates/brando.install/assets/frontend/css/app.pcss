@@ -22,6 +22,7 @@
 @import "./includes/lightbox.pcss";
 @import "./includes/modules.pcss";
 @import "./includes/newsletter.pcss";
+@import "./includes/panners.pcss";
 @import "./includes/paragraphs.pcss";
 @import "./includes/popup.pcss";
 @import "./includes/navigation.pcss";
@@ -68,6 +69,36 @@ a.plain {
     text-decoration: none;
   }
 }
+
+/** css moonwalk **/
+/* html.moonwalk {
+  [data-moonwalk=""] {
+    transform: translateY(0);
+    transition: transform 0.65s cubic-bezier(0.39, 0.575, 0.565, 1),
+                 opacity 0.65s cubic-bezier(0.47, 0, 0.745, 0.715);
+    transition-delay: 0.02s;
+    opacity: 0;
+
+    &.moonwalked {
+      transform: translateY(0);
+      opacity: 1;
+      visibility: visible;
+    }
+  }
+
+  [data-moonwalk="panner"] {
+    transform: translateX(0);
+    transition: transform 0.65s cubic-bezier(0.39, 0.575, 0.565, 1),
+                 opacity 0.65s cubic-bezier(0.47, 0, 0.745, 0.715);
+    opacity: 0;
+
+    &.moonwalked {
+      transform: translateX(0);
+      opacity: 1;
+      visibility: visible;
+    }
+  }
+} */
 
 body {
   background-color: theme(colors.body.background);

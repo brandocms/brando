@@ -121,7 +121,7 @@ header[data-nav] {
     }
 
     section {
-      @responsive >=desktop_md {
+      @responsive >=ipad_landscape {
         display: block !important;
       }
 
@@ -137,7 +137,7 @@ header[data-nav] {
         padding: 0;
         flex-direction: column;
 
-        @responsive >=desktop_md {
+        @responsive >=ipad_landscape {
           width: 100%;
           flex-direction: row;
         }
@@ -150,7 +150,7 @@ header[data-nav] {
         > li {
           @font extended;
           @unpack theme.typography.sections.navigation;
-          @responsive >=desktop_md {
+          @responsive >=ipad_landscape {
             color: theme(colors.light);
             display: inline-block;
             white-space: nowrap;
@@ -164,7 +164,7 @@ header[data-nav] {
             font-weight: 400;
             color: #000;
 
-            @responsive <=ipad_landscape {
+            @responsive <=ipad_portrait {
               @fontsize 30px;
               color: theme(colors.light) !important;
               display: inline-block;
@@ -175,7 +175,7 @@ header[data-nav] {
               }
             }
 
-            @responsive >=desktop_md {
+            @responsive >=ipad_landscape {
               position: relative;
               &:first-of-type {
                 margin: 0;
