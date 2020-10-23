@@ -10,7 +10,7 @@ defmodule Brando.Datasource do
 
   User can pick entries manually.
 
-  Required both a `list` function and a `get` function. The `list` function must return a list of maps in
+  Requires both a `list` function and a `get` function. The `list` function must return a list of maps in
   the shape of `[%{id: 1, label: "Label"}]`.
 
   The get function queries by a supplied list of `ids`:
@@ -34,11 +34,11 @@ defmodule Brando.Datasource do
       use Brando.Datasource
 
       datasources do
-        many :all_posts_from_year, fn module, arg ->
+        list :all_posts_from_year, fn module, arg ->
           {:ok, Repo.all(from t in module, where: t.year == ^arg)}
         end
 
-        many :all_posts, fn _, _ -> Posts.list_posts() end
+        list :all_posts, fn _, _ -> Posts.list_posts() end
 
         selection
           :featured,
@@ -69,8 +69,8 @@ defmodule Brando.Datasource do
     quote do
       import Ecto.Query
       import unquote(__MODULE__)
-      Module.register_attribute(__MODULE__, :datasources_many, accumulate: true)
-      Module.register_attribute(__MODULE__, :datasources_one, accumulate: true)
+      Module.register_attribute(__MODULE__, :datasources_list, accumulate: true)
+      Module.register_attribute(__MODULE__, :datasources_single, accumulate: true)
       Module.register_attribute(__MODULE__, :datasources_selection, accumulate: true)
       @before_compile unquote(__MODULE__)
     end
@@ -78,31 +78,31 @@ defmodule Brando.Datasource do
 
   @doc false
   defmacro __before_compile__(env) do
-    datasources_many = Module.get_attribute(env.module, :datasources_many)
-    datasources_one = Module.get_attribute(env.module, :datasources_one)
+    datasources_list = Module.get_attribute(env.module, :datasources_list)
+    datasources_single = Module.get_attribute(env.module, :datasources_single)
     datasources_selection = Module.get_attribute(env.module, :datasources_selection)
 
     [
-      compile(:many, datasources_many),
-      compile(:one, datasources_one),
+      compile(:list, datasources_list),
+      compile(:single, datasources_single),
       compile(:selection, datasources_selection)
     ]
   end
 
   @doc false
-  def compile(:many, datasources_many) do
+  def compile(:list, datasources_list) do
     quote do
-      def __datasources__(:many) do
-        unquote(datasources_many)
+      def __datasources__(:list) do
+        unquote(datasources_list)
       end
     end
   end
 
   @doc false
-  def compile(:one, datasources_one) do
+  def compile(:single, datasources_single) do
     quote do
-      def __datasources__(:one) do
-        unquote(datasources_one)
+      def __datasources__(:single) do
+        unquote(datasources_single)
       end
     end
   end
@@ -122,13 +122,43 @@ defmodule Brando.Datasource do
     end
   end
 
-  defmacro many(key, fun) do
+  defmacro list(key, fun) do
     quote do
-      Module.put_attribute(__MODULE__, :datasources_many, unquote(key))
+      Module.put_attribute(__MODULE__, :datasources_list, unquote(key))
 
-      def __datasource__(:many, unquote(key)) do
+      def __datasource__(:list, unquote(key)) do
         case unquote(fun) do
           {:ok, []} -> {:error, :no_entries}
+          {:ok, nil} -> {:error, :no_entries}
+          result -> result
+        end
+      end
+    end
+  end
+
+  @deprecated """
+  Datasource.many/2 is deprecated. Use list/2 instead.
+  """
+  defmacro many(key, fun) do
+    quote do
+      Module.put_attribute(__MODULE__, :datasources_list, unquote(key))
+
+      def __datasource__(:list, unquote(key)) do
+        case unquote(fun) do
+          {:ok, []} -> {:error, :no_entries}
+          {:ok, nil} -> {:error, :no_entries}
+          result -> result
+        end
+      end
+    end
+  end
+
+  defmacro single(key, fun) do
+    quote do
+      Module.put_attribute(__MODULE__, :datasources_single, unquote(key))
+
+      def __datasource__(:single, unquote(key)) do
+        case unquote(fun) do
           {:ok, nil} -> {:error, :no_entries}
           result -> result
         end
@@ -170,19 +200,19 @@ defmodule Brando.Datasource do
   def list_datasource_keys(module) do
     mod = Module.concat([module])
 
-    many_keys = mod.__datasources__(:many)
+    list_keys = mod.__datasources__(:list)
     selection_keys = mod.__datasources__(:selection)
-    one_keys = []
+    single_keys = []
 
-    {:ok, %{many: many_keys, one: one_keys, selection: selection_keys}}
+    {:ok, %{list: list_keys, single: single_keys, selection: selection_keys}}
   end
 
   @doc """
-  Grab entry from database
+  Grab list of entries from database
   """
-  def get_many(module, query, arg) do
+  def get_list(module, query, arg) do
     mod = Module.concat([module])
-    mod.__datasource__(:many, String.to_existing_atom(query)).(module, arg)
+    mod.__datasource__(:list, String.to_existing_atom(query)).(module, arg)
   end
 
   @doc """
@@ -199,6 +229,14 @@ defmodule Brando.Datasource do
   def get_selection(module, query, ids) do
     mod = Module.concat([module])
     mod.__datasource__(:get_selection, String.to_existing_atom(query)).(module, ids)
+  end
+
+  @doc """
+  Grab single entry from database
+  """
+  def get_single(module, query, arg) do
+    mod = Module.concat([module])
+    mod.__datasource__(:single, String.to_existing_atom(query)).(module, arg)
   end
 
   @doc """
