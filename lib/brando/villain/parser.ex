@@ -697,9 +697,7 @@ defmodule Brando.Villain.Parser do
       defp process_vars(nil), do: %{}
       defp process_vars(vars), do: Enum.map(vars, &process_var(&1)) |> Enum.into(%{})
 
-      defp process_var({name, %{"label" => label, "type" => type, "value" => value}}) do
-        {name, %Villain.Var{label: label, type: type, value: value}}
-      end
+      defp process_var({name, %{"label" => _, "type" => _, "value" => value}}), do: {name, value}
 
       defp add_vars_to_context(context, vars) do
         Enum.reduce(vars, context, fn {k, v}, acc -> Context.assign(acc, k, v) end)

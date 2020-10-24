@@ -79,19 +79,55 @@ defmodule Brando.Villain do
     identity = Cache.Identity.get()
     globals = Cache.Globals.get()
     navigation = Cache.Navigation.get()
-    links = Enum.map(identity.links, &{String.downcase(&1.name), &1}) |> Enum.into(%{})
-    configs = Enum.map(identity.configs, &{String.downcase(&1.key), &1}) |> Enum.into(%{})
 
     %{}
-    |> Context.new(
+    |> create_context()
+    |> add_to_context("identity", identity)
+    |> add_to_context("configs", identity.configs)
+    |> add_to_context("links", identity.links)
+    |> add_to_context("globals", globals)
+    |> add_to_context("navigation", navigation)
+  end
+
+  def create_context(vars) do
+    Context.new(
+      vars,
       filter_module: Brando.Villain.Filters,
       render_module: Brando.Villain.LiquexRenderer
     )
-    |> Context.assign("identity", identity)
-    |> Context.assign("configs", configs)
-    |> Context.assign("links", links)
-    |> Context.assign("globals", globals)
-    |> Context.assign("navigation", navigation)
+  end
+
+  def add_to_context(context, "configs" = key, value) do
+    configs = Enum.map(value, &{String.downcase(&1.key), &1}) |> Enum.into(%{})
+    Context.assign(context, key, configs)
+  end
+
+  def add_to_context(context, "links" = key, value) do
+    links = Enum.map(value, &{String.downcase(&1.name), &1}) |> Enum.into(%{})
+    Context.assign(context, key, links)
+  end
+
+  def add_to_context(context, "globals" = key, global_categories) do
+    parsed_globals =
+      Enum.map(global_categories, fn {g_key, g_category} ->
+        cat_globs =
+          Enum.map(g_category, fn
+            {key, %{type: "text", data: %{"value" => value}}} -> {key, value}
+            {key, %{type: "html", data: %{"value" => value}}} -> {key, value}
+            {key, %{type: "color", data: %{"value" => value}}} -> {key, value}
+            {key, %{type: "boolean", data: %{"value" => value}}} -> {key, value}
+          end)
+          |> Enum.into(%{})
+
+        {g_key, cat_globs}
+      end)
+      |> Enum.into(%{})
+
+    Context.assign(context, key, parsed_globals)
+  end
+
+  def add_to_context(context, key, value) do
+    Context.assign(context, key, value)
   end
 
   def parse_and_render(html, context) do

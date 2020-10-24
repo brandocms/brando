@@ -53,8 +53,8 @@ defmodule Brando.Type.File do
     {:ok, val}
   end
 
-  defimpl Liquex.Protocol, for: __MODULE__ do
-    def render(%Brando.Type.File{path: path}) do
+  defimpl String.Chars, for: __MODULE__ do
+    def to_string(%Brando.Type.File{path: path}) do
       Brando.Utils.media_url(path)
     end
   end
