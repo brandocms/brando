@@ -2,7 +2,7 @@
   <article v-if="identity">
     <ContentHeader>
       <template v-slot:title>
-        Administrasjonsområde
+        {{ $t('title') }}
       </template>
       <template v-slot:subtitle>
         {{ identity.name }}
@@ -27,3 +27,14 @@ export default {
 }
 
 </script>
+
+<i18n>
+  {
+    "en": {
+      "title": "Admin area"
+    },
+    "no": {
+      "title": "Administrasjonsområde"
+    }
+  }
+</i18n>
