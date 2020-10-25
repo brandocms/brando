@@ -10,6 +10,12 @@ export default () => ({
       transition: null
     },
 
+    panner: {
+      interval: 0.2, // was 0.03
+      duration: 0.65,
+      transition: null
+    },
+
     slide: {
       interval: 0.2, // was 0.03
       duration: 0.65,

@@ -208,14 +208,8 @@ defmodule Brando.Utils do
 
   # Walk the list and stringify the keys of
   # of any map members
-  def stringify_keys([head | rest]) do
-    [stringify_keys(head) | stringify_keys(rest)]
-  end
-
-  def stringify_keys(not_a_map) do
-    not_a_map
-  end
-
+  def stringify_keys([head | rest]), do: [stringify_keys(head) | stringify_keys(rest)]
+  def stringify_keys(not_a_map), do: not_a_map
   defp stringify_key(key) when is_atom(key), do: Atom.to_string(key)
   defp stringify_key(key), do: key
 

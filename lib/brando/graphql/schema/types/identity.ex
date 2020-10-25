@@ -13,6 +13,7 @@ defmodule Brando.Schema.Types.Identity do
     field :phone, :string
     field :address, :string
     field :address2, :string
+    field :address3, :string
     field :zipcode, :string
     field :city, :string
     field :country, :string
@@ -112,6 +113,7 @@ defmodule Brando.Schema.Types.Identity do
     field :phone, :string
     field :address, :string
     field :address2, :string
+    field :address3, :string
     field :zipcode, :string
     field :city, :string
     field :country, :string

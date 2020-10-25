@@ -2,7 +2,6 @@ MIT License
 
 Copyright (c) Univers TM
 
-Parser derived from the amazing Liquex, Copyright (c) Mark Glenn https://github.com/markglenn/liquex
 M2M helpers derived from the great PhoenixM2M, Copyright (c) 2016 Adam Daniels https://github.com/adam12/phoenix_mtm
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software

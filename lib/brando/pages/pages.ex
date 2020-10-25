@@ -450,7 +450,7 @@ defmodule Brando.Pages do
 
   Returns the rendered value of the property.
   """
-  @spec get_prop(%{properties: [Property.t()]}, binary) :: any
+  @spec get_prop(page, binary) :: any
   def get_prop(%Page{properties: []}, _), do: nil
 
   def get_prop(%Page{properties: properties}, property) do
@@ -480,7 +480,10 @@ defmodule Brando.Pages do
   """
   @spec update_villains_referencing_fragment(fragment :: Brando.Pages.PageFragment.t()) :: [any]
   def update_villains_referencing_fragment(fragment) do
-    search_term = "${FRAGMENT:#{fragment.parent_key}/#{fragment.key}/#{fragment.language}"
+    search_term = [
+      fragment: "{% fragment #{fragment.parent_key} #{fragment.key} #{fragment.language} %}"
+    ]
+
     villains = Villain.list_villains()
 
     Villain.rerender_matching_villains(villains, search_term)

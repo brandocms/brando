@@ -10,17 +10,27 @@ defmodule Brando.Cache.Navigation do
   @doc """
   Get all menus from cache
   """
-  @spec get :: map()
+  @spec get :: map() | nil
   def get, do: Cache.get(:navigation)
 
   @doc """
   Get menu from cache by path
-  Menu path is the key of the menu plus language seperated by a dot i.e:
 
       get("main.en")
   """
   @spec get(binary) :: map()
-  def get(menu_path), do: Map.get(get(), menu_path)
+  def get(path) do
+    [key, lang] = String.split(path, ".")
+    get(key, lang)
+  end
+
+  @doc """
+  Get menu from cache by key and language
+
+      get("main", "en")
+  """
+  @spec get(binary, binary) :: map()
+  def get(key, lang), do: get_in(get(), [key, lang])
 
   @doc """
   Set initial navigation cache. Called on startup
@@ -46,6 +56,13 @@ defmodule Brando.Cache.Navigation do
 
   defp get_menu_map do
     {:ok, menus} = Navigation.list_menus()
-    for menu <- menus, into: %{}, do: {"#{menu.key}.#{menu.language}", menu}
+
+    Enum.reduce(menus, %{}, fn menu, acc ->
+      if Map.has_key?(acc, menu.key) do
+        put_in(acc, [menu.key, menu.language], menu)
+      else
+        Map.put(acc, menu.key, %{menu.language => menu})
+      end
+    end)
   end
 end

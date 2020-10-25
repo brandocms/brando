@@ -5,37 +5,35 @@ defmodule Brando.Villain do
 
   ### Available variables when rendering
 
-    - `${entry:<key>}`
+    - `{{ entry.<key> }}`
     Gets `<key>` from currently rendering entry. So if we are rendering a `%Page{}` and we
-    want the `meta_description` we can do `${entry:meta_description}
+    want the `meta_description` we can do `{{ entry.meta_description }}
 
-    - `${fragment:<parent_key>/<key>/<language>}`
-    Gets rendered fragment according to values.
-
-    - `${link:<key>}`
+    - `{{ links.<key> }}`
     Gets `<key>` from list of links in the Identity configuration.
 
-    - `${global:<key>}`
-    Gets `<key>` from list of globals in the Identity configuration.
+    - `{{ globals.<category_key>.<key> }}`
+    Gets `<key>` from `<category_key>` in list of globals in the Identity configuration.
 
-    - `${forloop.index}`
+    - `{{ forloop.index }}`
     Only available inside for loops or templates with `multi` set to true. Returns the current index
     of the for loop, starting at `1`
 
-    - `${forloop.index0}`
+    - `{{ forloop.index0 }}`
     Only available inside for loops or templates with `multi` set to true. Returns the current index
     of the for loop, starting at `0`
 
-    - `${forloop.count}`
+    - `{{ forloop.count }}`
     Only available inside for loops or templates with `multi` set to true. Returns the total amount
     of entries in the for loop
 
   """
   import Ecto.Query
 
-  alias Brando.Lexer
+  alias Brando.Cache
   alias Brando.Pages
   alias Brando.Utils
+  alias Liquex.Context
 
   @doc """
   Parses `json` (in Villain-format).
@@ -54,24 +52,12 @@ defmodule Brando.Villain do
 
   defp do_parse(data, entry, opts) do
     parser = Brando.config(Brando.Villain)[:parser]
-    identity = Brando.Cache.Identity.get()
-    globals = Brando.Cache.Globals.get()
-    navigation = Brando.Cache.Navigation.get()
 
     entry = if opts[:data_field], do: Map.put(entry, opts[:data_field], nil), else: entry
     entry = if opts[:html_field], do: Map.put(entry, opts[:html_field], nil), else: entry
     entry = maybe_put_timestamps(entry)
 
-    context =
-      %{}
-      |> Lexer.Context.new()
-      |> Lexer.Context.assign("entry", entry)
-      |> Lexer.Context.assign("globals", globals)
-      |> Lexer.Context.assign("identity", identity)
-      |> Lexer.Context.assign("configs", identity.configs)
-      |> Lexer.Context.assign("links", identity.links)
-      |> Lexer.Context.assign("navigation", navigation)
-
+    context = Context.assign(get_base_context(), "entry", entry)
     opts = Keyword.put(opts, :context, context)
 
     html =
@@ -86,7 +72,69 @@ defmodule Brando.Villain do
       |> Enum.reverse()
       |> Enum.join()
 
-    Lexer.parse_and_render(html, context)
+    parse_and_render(html, context)
+  end
+
+  def get_base_context() do
+    identity = Cache.Identity.get()
+    globals = Cache.Globals.get()
+    navigation = Cache.Navigation.get()
+
+    %{}
+    |> create_context()
+    |> add_to_context("identity", identity)
+    |> add_to_context("configs", identity.configs)
+    |> add_to_context("links", identity.links)
+    |> add_to_context("globals", globals)
+    |> add_to_context("navigation", navigation)
+  end
+
+  def create_context(vars) do
+    Context.new(
+      vars,
+      filter_module: Brando.Villain.Filters,
+      render_module: Brando.Villain.LiquexRenderer
+    )
+  end
+
+  def add_to_context(context, "configs" = key, value) do
+    configs = Enum.map(value, &{String.downcase(&1.key), &1}) |> Enum.into(%{})
+    Context.assign(context, key, configs)
+  end
+
+  def add_to_context(context, "links" = key, value) do
+    links = Enum.map(value, &{String.downcase(&1.name), &1}) |> Enum.into(%{})
+    Context.assign(context, key, links)
+  end
+
+  def add_to_context(context, "globals" = key, global_categories) do
+    parsed_globals =
+      Enum.map(global_categories, fn {g_key, g_category} ->
+        cat_globs =
+          Enum.map(g_category, fn
+            {key, %{type: "text", data: %{"value" => value}}} -> {key, value}
+            {key, %{type: "html", data: %{"value" => value}}} -> {key, value}
+            {key, %{type: "color", data: %{"value" => value}}} -> {key, value}
+            {key, %{type: "boolean", data: %{"value" => value}}} -> {key, value}
+          end)
+          |> Enum.into(%{})
+
+        {g_key, cat_globs}
+      end)
+      |> Enum.into(%{})
+
+    Context.assign(context, key, parsed_globals)
+  end
+
+  def add_to_context(context, key, value) do
+    Context.assign(context, key, value)
+  end
+
+  def parse_and_render(html, context) do
+    {:ok, parsed_doc} = Liquex.parse(html, Brando.Villain.LiquexParser)
+
+    {result, _} = Liquex.Render.render([], parsed_doc, context)
+    Enum.join(result)
   end
 
   defp maybe_put_timestamps(%{inserted_at: nil} = entry) do
@@ -376,14 +424,47 @@ defmodule Brando.Villain do
           data_field :: atom,
           search_terms :: binary | [binary]
         ) :: [any]
-  def search_villains_for_regex(schema, data_field, search_terms) do
+  def search_villains_for_regex(schema, data_field, search_terms, with_data \\ nil) do
     search_terms = (is_list(search_terms) && search_terms) || [search_terms]
-    org_query = from s in schema, select: s.id
+    org_query = from s in schema, select: %{"id" => s.id}
 
     built_query =
-      Enum.reduce(search_terms, org_query, fn search_term, query ->
+      Enum.reduce(search_terms, org_query, fn {search_name, search_term}, query ->
         from q in query,
-          or_where: fragment("? ~* ?", type(field(q, ^data_field), :string), ^"#{search_term}")
+          select_merge: %{
+            ^to_string(search_name) =>
+              fragment(
+                "regexp_matches(?, ?, 'g')",
+                type(field(q, ^data_field), :string),
+                ^search_term
+              )
+          }
+      end)
+
+    if with_data,
+      do: Brando.repo().all(built_query),
+      else: Brando.repo().all(built_query) |> Enum.map(& &1["id"])
+  end
+
+  @spec search_templates_for_regex(search_terms :: keyword | [keyword]) :: [any]
+  def search_templates_for_regex(search_terms) do
+    search_terms = (is_list(search_terms) && search_terms) || [search_terms]
+
+    org_query =
+      from s in "pages_templates",
+        select: %{"id" => s.id, "namespace" => s.namespace, "name" => s.name}
+
+    built_query =
+      Enum.reduce(search_terms, org_query, fn {search_name, search_term}, query ->
+        from q in query,
+          select_merge: %{
+            ^to_string(search_name) =>
+              fragment(
+                "regexp_matches(?, ?, 'g')",
+                type(field(q, :code), :string),
+                ^search_term
+              )
+          }
       end)
 
     Brando.repo().all(built_query)
@@ -396,7 +477,7 @@ defmodule Brando.Villain do
   def rerender_matching_villains(villains, search_terms) do
     for {schema, fields} <- villains do
       Enum.reduce(fields, [], fn {_, data_field, html_field}, acc ->
-        case search_villains_for_text(schema, data_field, search_terms) do
+        case search_villains_for_regex(schema, data_field, search_terms) do
           [] ->
             acc
 
@@ -411,25 +492,11 @@ defmodule Brando.Villain do
   Look through all templates for `search_terms` and rerender all villains that
   use this template
   """
-  @spec rerender_matching_villains([any], binary | [binary]) :: any
+  @spec rerender_matching_templates([any], binary | [binary]) :: any
   def rerender_matching_templates(_villains, search_terms) do
-    # first look through templates
-    query = from(t in Brando.Villain.Template, select: t.id)
-
-    built_query =
-      Enum.reduce(search_terms, query, fn search_term, query ->
-        from q in query,
-          or_where: ilike(type(q.code, :string), ^"%#{search_term}%")
-      end)
-
-    case Brando.repo().all(built_query) do
-      [] ->
-        nil
-
-      ids ->
-        for id <- ids do
-          update_template_in_fields(id)
-        end
+    case search_templates_for_regex(search_terms) |> Enum.map(& &1["id"]) do
+      [] -> nil
+      ids -> for id <- ids, do: update_template_in_fields(id)
     end
   end
 end

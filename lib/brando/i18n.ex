@@ -32,9 +32,32 @@ defmodule Brando.I18n do
   """
   def assign_language(conn, language), do: assign(conn, :language, language)
 
+  @spec get_language(atom | %{assigns: map}) :: any
   @doc """
   Get `language` from assigns.
   """
   def get_language(conn),
     do: Map.get(conn.assigns, :language, Brando.config(:default_admin_language))
+
+  @doc """
+  Extract language from path or fall back to default language
+  """
+  @spec parse_path(list) :: {language :: binary, modified_path :: list} | nil
+  def parse_path([]), do: {Brando.config(:default_language), ["index"]}
+
+  def parse_path(path) do
+    [first_path_segment | rest] = path
+
+    langs =
+      :languages
+      |> Brando.config()
+      |> List.flatten()
+      |> Keyword.get_values(:value)
+
+    if first_path_segment in langs do
+      (Enum.empty?(rest) && {first_path_segment, ["index"]}) || {first_path_segment, rest}
+    else
+      {Brando.config(:default_language), path}
+    end
+  end
 end

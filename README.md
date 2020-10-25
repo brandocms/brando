@@ -196,9 +196,9 @@ Naming guidelines
 You may reference other fragments by entering
 
 ```
-${FRAGMENT:index/01_intro/en}
-            ^     ^       ^
-            |     |       `-- language
+{% fragment index 01_intro en %}
+            ^     ^        ^
+            |     |        `-- language
             |     `-- fragment key
             `-- parent key
 ```

@@ -4,15 +4,19 @@ defmodule Brando.Navigation do
 
   ## Usage in .eex
 
-  First grab the menu in your controller:
+  First get the menu through the navigation plug in your controller:
 
-      {:ok, menu} = Brando.Navigation.get_menu("main_menu", "en")
+      defmodule MyController do
+        plug Brando.Plug.Navigation, "main"
+        # ...
 
-  Then in your template:
+  Then your "main" menu will be available as `@navigation`
+
+  In your template:
 
       <nav>
         <ul>
-        <%= for item <- @menu.items do %>
+        <%= for item <- @navigation.items do %>
           <li>
             <a href="<%= item.url %>">
               <%= item.title %>
@@ -22,12 +26,20 @@ defmodule Brando.Navigation do
         </ul>
       </nav>
 
+
+  If used in a Villain/Liquid template:
+
+      {% for item in navigation.main.en.items %}
+        {{ item.url }}
+      {% endfor %}
+
   """
   use Brando.Web, :context
   use Brando.Query
 
   alias Brando.Cache
   alias Brando.Navigation.Menu
+  alias Brando.Villain
 
   import Ecto.Query
 
@@ -70,6 +82,7 @@ defmodule Brando.Navigation do
     |> Menu.changeset(params, user)
     |> Brando.repo().insert
     |> Cache.Navigation.update()
+    |> update_villains_referencing_navigation()
   end
 
   @doc """
@@ -83,6 +96,7 @@ defmodule Brando.Navigation do
     |> Menu.changeset(params, user)
     |> Brando.repo().update
     |> Cache.Navigation.update()
+    |> update_villains_referencing_navigation()
   end
 
   @doc """
@@ -98,7 +112,7 @@ defmodule Brando.Navigation do
 
     {:ok, menu} = get_menu(menu_id)
     Brando.repo().delete!(menu)
-    {:ok, menu}
+    update_villains_referencing_navigation({:ok, menu})
   end
 
   @doc """
@@ -133,7 +147,7 @@ defmodule Brando.Navigation do
   """
   @spec get_menu(binary, binary) :: {:error, {:menu, :not_found}} | {:ok, menu}
   def get_menu(key, lang) when is_binary(key) do
-    case Cache.Navigation.get("#{key}.#{lang}") do
+    case Cache.Navigation.get(key, lang) do
       nil -> {:error, {:menu, :not_found}}
       menu -> {:ok, menu}
     end
@@ -154,6 +168,27 @@ defmodule Brando.Navigation do
       |> Brando.repo().all()
 
     {:ok, items}
+  end
+
+  @doc """
+  Check all fields for references to GLOBAL
+  Rerender if found.
+  """
+  @spec update_villains_referencing_navigation({:ok, menu} | {:error, changeset}) ::
+          {:ok, menu} | {:error, changeset}
+  def update_villains_referencing_navigation({:error, changeset}), do: {:error, changeset}
+
+  def update_villains_referencing_navigation({:ok, menu}) do
+    search_terms = [
+      navigation_vars: "{{ navigation\.(.*?) }}",
+      navigation_for_loops: "{% for (.*?) in navigation\.(.*?) %}"
+    ]
+
+    villains = Villain.list_villains()
+    Villain.rerender_matching_villains(villains, search_terms)
+    Villain.rerender_matching_templates(villains, search_terms)
+
+    {:ok, menu}
   end
 
   defp do_sample(_key, value), do: ensure_nested_map(value)

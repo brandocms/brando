@@ -35,7 +35,7 @@ defmodule Brando.Factory do
 
   def global_factory do
     %Global{
-      type: "string",
+      type: "text",
       label: "Global label",
       key: sequence(:key, &"key-#{&1}"),
       data: %{

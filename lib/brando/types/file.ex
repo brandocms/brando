@@ -52,4 +52,10 @@ defmodule Brando.Type.File do
     val = Jason.encode!(val)
     {:ok, val}
   end
+
+  defimpl String.Chars, for: __MODULE__ do
+    def to_string(%Brando.Type.File{path: path}) do
+      Brando.Utils.media_url(path)
+    end
+  end
 end

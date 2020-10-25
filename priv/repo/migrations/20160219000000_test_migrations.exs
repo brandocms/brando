@@ -168,6 +168,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :email, :string
       add :phone, :string
       add :address, :string
+      add :address2, :string
+      add :address3, :string
       add :zipcode, :string
       add :city, :string
       add :country, :string

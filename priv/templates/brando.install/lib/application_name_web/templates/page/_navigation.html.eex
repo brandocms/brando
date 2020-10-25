@@ -8,18 +8,19 @@
       </a>
     </figure>
 
-    <%= if assigns[:navigation] do %>
+    <%%= if assigns[:navigation] do %>
     <section class="main">
       <ul>
-        <%= for menu_item <- @navigation.items do %>
+        <%%= for menu_item <- @navigation.items do %>
         <li>
-          <a class="<%= Brando.HTML.active(@conn, "#{menu_item.url}*") %>" href="<%= menu_item.url %>">
-            <%= menu_item.title %>
+          <a class="<%%= Brando.HTML.active(@conn, "#{menu_item.url}/*") %>" href="<%%= menu_item.url %>">
+            <%%= menu_item.title %>
           </a>
         </li>
-        <% end %>
+        <%% end %>
       </ul>
     </section>
+    <%% end %>
 
     <figure class="menu-button">
       <noscript>
