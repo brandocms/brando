@@ -25,7 +25,8 @@ defmodule Brando.System do
     {:ok, {:identity, :exists}} = check_identity_exists()
     {:ok, {:bucket, :exists}} = check_cdn_bucket_exists()
     {:ok, {:authorization, :exists}} = check_authorization_exists()
-    {:ok, {:globals, _}} = check_valid_globals()
+    {:ok, {:template_syntax, _}} = check_template_syntax()
+    {:ok, {:entry_syntax, _}} = check_entry_syntax()
     {:ok, _} = check_invalid_wrapper_content()
 
     Logger.info("==> Brando >> System checks complete!")
@@ -109,37 +110,95 @@ defmodule Brando.System do
     {:ok, {:module_config, :exists}}
   end
 
-  defp check_valid_globals do
-    search_terms = ["\\${GLOBAL:(\\w+)}", "\\${global:(\\w+)}"]
+  # check Villain templates for deprecated syntax.
+  def check_template_syntax do
+    search_terms = [vars: "\\${(.*?)}", for_loops: "{\\% (for .*? <- .*?) \\%}"]
 
-    invalid_ids =
-      for {schema, fields} <- Villain.list_villains() do
-        Enum.reduce(fields, [], fn {_, data_field, _html_field}, acc ->
-          case Villain.search_villains_for_regex(schema, data_field, search_terms) do
-            [] ->
-              acc
+    results = Villain.search_templates_for_regex(search_terms)
 
-            ids ->
-              log_invalid_global(schema, ids)
-              [ids | acc]
-          end
-        end)
-      end
+    Enum.map(results, fn result ->
+      log_invalid_template_syntax(:vars, result)
+      log_invalid_template_syntax(:for_loops, result)
+    end)
 
     # Return valid no matter what. We only want to warn
-    {:ok, {:globals, invalid_ids}}
+    {:ok, {:template_syntax, nil}}
   end
 
-  defp log_invalid_global(schema, ids) do
-    require Logger
+  def check_entry_syntax do
+    search_terms = [vars: "\\${(.*?)}", for_loops: "{\\% (for .*? <- .*?) \\%}"]
 
-    Logger.error("""
+    for {schema, fields} <- Villain.list_villains() do
+      for {_, data_field, _html_field} <- fields do
+        case Villain.search_villains_for_regex(schema, data_field, search_terms, :with_data) do
+          [] ->
+            nil
 
+          results ->
+            meta = %{
+              "namespace" => "#{inspect(schema)}#{inspect(data_field)}",
+              "name" => "Entry"
+            }
 
-      ==> Found deprecated global variable format `${global:key}`. Try `{{ globals.system.key }}` instead.
-      ==> Schema.: #{inspect(schema)}
-      ==> Ids....: #{inspect(ids)}
-    """)
+            Enum.map(results, fn result ->
+              log_invalid_template_syntax(:vars, Map.merge(result, meta))
+              log_invalid_template_syntax(:for_loops, Map.merge(result, meta))
+            end)
+        end
+      end
+    end
+
+    # Enum.map(results, fn result ->
+    #   log_invalid_template_syntax(:vars, result)
+    #   log_invalid_template_syntax(:for_loops, result)
+    # end)
+
+    # Return valid no matter what. We only want to warn
+    {:ok, {:entry_syntax, nil}}
+  end
+
+  defp log_invalid_template_syntax(:vars, %{"vars" => nil}), do: nil
+
+  defp log_invalid_template_syntax(:vars, %{
+         "vars" => matches,
+         "name" => name,
+         "namespace" => namespace,
+         "id" => id
+       }) do
+    for match <- matches do
+      IO.warn(
+        """
+        Deprecated template syntax `${#{match}}`. Try `{{ #{String.replace(match, ":", ".")} }}` instead.
+
+        Template..: #{inspect(name)}
+        Namespace.: #{inspect(namespace)}
+        Id........: #{inspect(id)}
+        """,
+        []
+      )
+    end
+  end
+
+  defp log_invalid_template_syntax(:for_loops, %{"for_loops" => nil}), do: nil
+
+  defp log_invalid_template_syntax(:for_loops, %{
+         "for_loops" => matches,
+         "name" => name,
+         "namespace" => namespace,
+         "id" => id
+       }) do
+    for match <- matches do
+      IO.warn(
+        """
+        Deprecated for loop syntax `{% #{match} %}`. Try `{% #{String.replace(match, "<-", "in")} %}` instead.
+
+        Template..: #{inspect(name)}
+        Namespace.: #{inspect(namespace)}
+        Id........: #{inspect(id)}
+        """,
+        []
+      )
+    end
   end
 
   # wrapper should be moved from datasource block to template
@@ -148,11 +207,7 @@ defmodule Brando.System do
 
     if Enum.count(templates) > 0 do
       for t <- templates do
-        if t.wrapper && String.contains?(t.wrapper, "${CONTENT}") do
-          log_invalid_wrapper_content(t)
-        end
-
-        if t.wrapper && String.contains?(t.wrapper, "${content}") do
+        if t.wrapper && String.contains?(t.wrapper, ["${content}", "${CONTENT}"]) do
           log_invalid_wrapper_content(t)
         end
       end
@@ -162,15 +217,15 @@ defmodule Brando.System do
   end
 
   defp log_invalid_wrapper_content(t) do
-    require Logger
+    IO.warn(
+      """
+      Found deprecated wrapper content format `${CONTENT}`. Use `{{ content }}` instead.
 
-    Logger.error("""
-
-
-      ==> Found deprecated wrapper content format `${CONTENT}`. Use `{{ content }}` instead.
-      ==> Schema.: Template
-      ==> Id.....: #{t.id} - #{t.name}
-    """)
+      Schema.: Template
+      Id.....: #{t.id} - #{t.name}
+      """,
+      []
+    )
   end
 end
 

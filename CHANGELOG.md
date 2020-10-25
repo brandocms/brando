@@ -2,6 +2,13 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.48.0-dev
 
+* Switch to Liquex.
+  `{% for item <- entry.items %}` -> `{% for item in entry.items %}`
+  `${global:category_key.global_key}` -> `{{ globals.category_key.global_key }}`
+  `${menu:main.en}` -> `{{ navigation.main.en }}`
+
+  Brando checks for old syntax and warns on system startup.
+
 * Villain: Allow undeleting refs in template blocks
 * BrandoJS/config: allow `templates` config to be a function. Gets called with `page`
 * Add `Brando.Type.Video` with corresponding `KInputVideo`

@@ -132,12 +132,12 @@ defmodule Brando.Sites do
 
   def update_villains_referencing_identity({:ok, identity}) do
     search_terms = [
-      "{{ identity\.(.*?) }}",
-      "{{ configs\.(.*?) }}",
-      "{{ links\.(.*?) }}",
-      "{% for (.*?) in links\.(.*?) %}",
-      "{% for (.*?) in configs\.(.*?) %}",
-      "{% for (.*?) in identity\.(.*?) %}"
+      identity: "{{ identity\.(.*?) }}",
+      configs: "{{ configs\.(.*?) }}",
+      links: "{{ links\.(.*?) }}",
+      links_for: "{% for (.*?) in links\.(.*?) %}",
+      configs_for: "{% for (.*?) in configs\.(.*?) %}",
+      identity_for: "{% for (.*?) in identity\.(.*?) %}"
     ]
 
     villains = Villain.list_villains()

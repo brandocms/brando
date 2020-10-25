@@ -424,14 +424,47 @@ defmodule Brando.Villain do
           data_field :: atom,
           search_terms :: binary | [binary]
         ) :: [any]
-  def search_villains_for_regex(schema, data_field, search_terms) do
+  def search_villains_for_regex(schema, data_field, search_terms, with_data \\ nil) do
     search_terms = (is_list(search_terms) && search_terms) || [search_terms]
-    org_query = from s in schema, select: s.id
+    org_query = from s in schema, select: %{"id" => s.id}
 
     built_query =
-      Enum.reduce(search_terms, org_query, fn search_term, query ->
+      Enum.reduce(search_terms, org_query, fn {search_name, search_term}, query ->
         from q in query,
-          or_where: fragment("? ~* ?", type(field(q, ^data_field), :string), ^"#{search_term}")
+          select_merge: %{
+            ^to_string(search_name) =>
+              fragment(
+                "regexp_matches(?, ?, 'g')",
+                type(field(q, ^data_field), :string),
+                ^search_term
+              )
+          }
+      end)
+
+    if with_data,
+      do: Brando.repo().all(built_query),
+      else: Brando.repo().all(built_query) |> Enum.map(& &1["id"])
+  end
+
+  @spec search_templates_for_regex(search_terms :: keyword | [keyword]) :: [any]
+  def search_templates_for_regex(search_terms) do
+    search_terms = (is_list(search_terms) && search_terms) || [search_terms]
+
+    org_query =
+      from s in "pages_templates",
+        select: %{"id" => s.id, "namespace" => s.namespace, "name" => s.name}
+
+    built_query =
+      Enum.reduce(search_terms, org_query, fn {search_name, search_term}, query ->
+        from q in query,
+          select_merge: %{
+            ^to_string(search_name) =>
+              fragment(
+                "regexp_matches(?, ?, 'g')",
+                type(field(q, :code), :string),
+                ^search_term
+              )
+          }
       end)
 
     Brando.repo().all(built_query)
@@ -461,23 +494,9 @@ defmodule Brando.Villain do
   """
   @spec rerender_matching_templates([any], binary | [binary]) :: any
   def rerender_matching_templates(_villains, search_terms) do
-    # first look through templates
-    query = from(t in Brando.Villain.Template, select: t.id)
-
-    built_query =
-      Enum.reduce(search_terms, query, fn search_term, query ->
-        from q in query,
-          or_where: fragment("? ~* ?", type(q.code, :string), ^"#{search_term}")
-      end)
-
-    case Brando.repo().all(built_query) do
-      [] ->
-        nil
-
-      ids ->
-        for id <- ids do
-          update_template_in_fields(id)
-        end
+    case search_templates_for_regex(search_terms) |> Enum.map(& &1["id"]) do
+      [] -> nil
+      ids -> for id <- ids, do: update_template_in_fields(id)
     end
   end
 end

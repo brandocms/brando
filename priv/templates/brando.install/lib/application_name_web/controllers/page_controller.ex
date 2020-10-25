@@ -29,7 +29,7 @@ defmodule <%= application_module %>Web.PageController do
   @doc false
   @spec show(conn, map) :: page_not_found | conn
   def show(conn, %{"path" => path}) when is_list(path) do
-    {language, parsed_path} = I18n.parse_path(conn.path)
+    {language, parsed_path} = I18n.parse_path(path)
     page_opts = %{matches: %{path: parsed_path, language: language}, status: :published}
 
     with {:ok, page} <- Pages.get_page(page_opts),

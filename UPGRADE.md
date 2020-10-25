@@ -3,9 +3,19 @@
 * Move to liquex parsing. This means a bunch of updates:
 
   - All `${variables:key}` are changed to `{{ variables.key }}`
-    This is handled for your through a migration
   - `${content}` -> `{{ content }}`
   - `{% for entry <- entries %}` -> `{% for entry in entries %}`
+  - `${global:category_key.global_key}` -> `{{ globals.category_key.global_key }}`
+  - `${link:instagram}` -> `{{ links.instagram.url }}`
+  - `${config:key}` -> `{{ configs.key }}`
+  - `${menu:main.en}` -> `{{ navigation.main.en }}`
+  - `${fragment:parent_key/key/language}` -> `{% fragment parent_key key language %}`
+
+  Brando checks this on startup, but it is a very simple check (doesn't understand
+  the new globals syntax etc). You can invoke this check from iex when developing:
+
+      iex> Brando.System.check_entry_syntax()
+      iex> Brando.System.check_template_syntax()
 
 * Brando.Datasource - rename `many` to `list`
 

@@ -138,7 +138,7 @@ defmodule Brando.Globals do
   def update_villains_referencing_global({:error, changeset}), do: {:error, changeset}
 
   def update_villains_referencing_global({:ok, global_category}) do
-    search_terms = ["{{ globals\.(.*?) }}"]
+    search_terms = [globals: "{{ globals\.(.*?) }}"]
 
     villains = Villain.list_villains()
     Villain.rerender_matching_villains(villains, search_terms)

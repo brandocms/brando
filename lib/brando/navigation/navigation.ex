@@ -180,8 +180,8 @@ defmodule Brando.Navigation do
 
   def update_villains_referencing_navigation({:ok, menu}) do
     search_terms = [
-      "{{ navigation\.(.*?) }}",
-      "{% for (.*?) in navigation\.(.*?) %}"
+      navigation_vars: "{{ navigation\.(.*?) }}",
+      navigation_for_loops: "{% for (.*?) in navigation\.(.*?) %}"
     ]
 
     villains = Villain.list_villains()

@@ -26,6 +26,7 @@ defmodule Brando.VillainTest do
   use ExUnit.Case
   use Brando.ConnCase
   alias Brando.Factory
+  alias Brando.Villain
 
   setup do
     user = Factory.insert(:random_user)
@@ -195,7 +196,7 @@ defmodule Brando.VillainTest do
       Brando.Villain.search_villains_for_regex(
         Brando.Pages.PageFragment,
         :data,
-        "{{ globals\.(.*?) }}"
+        globals: "{{ globals\.(.*?) }}"
       )
 
     assert resulting_ids === [pf1.id, pf4.id]
@@ -411,5 +412,51 @@ defmodule Brando.VillainTest do
 
     assert pf1.html == "Hello from the fragment!"
     assert pf2.html == "--> Hello from the fragment! <--"
+  end
+
+  test "search templates for regex" do
+    ExMachina.Sequence.reset()
+
+    _tp1 =
+      Factory.insert(:template, %{
+        code: """
+        this is some code ${globals:old.varstyle}, ${testoldvar}
+        {% for test <- old_style %}
+          blip
+        {% end %}
+        """,
+        name: "Old style",
+        help_text: "Help text",
+        refs: [],
+        namespace: "Namespace",
+        class: "css class"
+      })
+
+    _tp2 =
+      Factory.insert(:template, %{
+        code: """
+        {{ new_style }}
+        {% for test in bla %}
+          hello
+        {% end %}
+        """,
+        name: "New style",
+        help_text: "Help text",
+        refs: [],
+        namespace: "Namespace",
+        class: "css class"
+      })
+
+    search_terms = [old_vars: "\\${.*?}", old_for_loops: "{\\% for .*? <- .*? \\%}"]
+
+    [r1, r2] = Villain.search_templates_for_regex(search_terms)
+
+    assert r1["name"] == "Old style"
+    assert r1["old_for_loops"] == ["{% for test <- old_style %}"]
+    assert r1["old_vars"] == ["${globals:old.varstyle}"]
+
+    assert r2["name"] == "Old style"
+    assert r2["old_for_loops"] == nil
+    assert r2["old_vars"] == ["${testoldvar}"]
   end
 end
