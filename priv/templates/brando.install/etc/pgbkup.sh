@@ -58,7 +58,7 @@ MAILCONTENT="log"
 MAXATTSIZE="4000"
 
 # Email Address to send mail to? (user@domain.com)
-MAILADDR="user@domain""
+MAILADDR="user@domain"
 
 
 # ============================================================
