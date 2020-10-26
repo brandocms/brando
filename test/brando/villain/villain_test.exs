@@ -16,6 +16,7 @@ defmodule Brando.VillainTest do
     def divider(_, _), do: nil
     def header(_, _), do: nil
     def image(_, _), do: nil
+    def media(_, _), do: nil
     def list(_, _), do: nil
     def slideshow(_, _), do: nil
     def video(_, _), do: nil

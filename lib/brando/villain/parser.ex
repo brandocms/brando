@@ -15,6 +15,9 @@ defmodule Brando.Villain.Parser do
   @doc "Parses video"
   @callback video(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
+  @doc "Parses media"
+  @callback media(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+
   @doc "Parses map"
   @callback map(data :: %{binary => any}, opts :: Keyword.t()) :: binary
 
@@ -325,6 +328,12 @@ defmodule Brando.Villain.Parser do
       end
 
       defoverridable video: 2
+
+      @doc """
+      A media block, means that the user did not pick a media type -- so just return empty
+      """
+      def media(_, _), do: ""
+      defoverridable media: 2
 
       @doc """
       Convert image to html, with caption and credits and optional link
