@@ -78,8 +78,15 @@ defmodule Brando.HTML do
     play_button = Map.get(opts, :play_button, false)
     autoplay = (Map.get(opts, :autoplay, false) && "autoplay") || ""
 
+    aspect_ratio =
+      if width && height do
+        ~s(style="--aspect-ratio: #{height / width}" )
+      else
+        ""
+      end
+
     ~s(
-      <div class="video-wrapper" data-smart-video>
+      <div #{aspect_ratio}class="video-wrapper" data-smart-video>
         #{get_play_button(play_button)}
         #{get_video_cover(cover, width, height, opacity)}
         <video
