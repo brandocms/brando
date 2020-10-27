@@ -5,7 +5,7 @@ defmodule Brando.Sites.Identity do
   @type t :: %__MODULE__{}
   @type changeset :: Ecto.Changeset.t()
 
-  schema "sites_identities" do
+  schema "sites_identity" do
     field :type, :string
     field :name, :string
     field :alternate_name, :string
