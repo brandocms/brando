@@ -137,7 +137,7 @@ defmodule Brando.Datasource do
   end
 
   @deprecated """
-  Datasource.many/2 is deprecated. Use list/2 instead.
+  Use Datasource.list/2 instead.
   """
   defmacro many(key, fun) do
     quote do
