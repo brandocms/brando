@@ -53,7 +53,7 @@ export default {
           }
         })
 
-        this.$toast.success({ message: 'Objekt opprettet' })
+        this.$toast.success({ message: this.$t('<%= vue_plural %>.created') })
         this.$router.push({ name: '<%= vue_plural %>' })
       } catch (err) {
         this.$utils.showError(err)
