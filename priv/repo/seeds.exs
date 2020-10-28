@@ -46,6 +46,9 @@
   fallback_meta_title: "Fallback meta title",
   fallback_meta_image: nil,
   base_url: "https://www.domain.tld",
-  robots: "Disallow: /admin"
+  robots: """
+  User-agent: *
+  Disallow: /admin/
+  """
 }
 |> Brando.repo().insert!

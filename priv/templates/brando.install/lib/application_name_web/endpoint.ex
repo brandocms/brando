@@ -24,7 +24,7 @@ defmodule <%= application_module %>Web.Endpoint do
     at: "/",
     from: :<%= application_name %>,
     gzip: false,
-    only: ~w(css fonts img images js ico favicon.ico robots.txt)
+    only: ~w(css fonts img images js ico favicon.ico)
 
   plug Plug.Static,
     at: "/media",
