@@ -42,4 +42,18 @@ defmodule Brando.MetaSchemaTest do
 
     assert :__meta_field__ in Keyword.keys(Brando.Pages.Page.__info__(:functions))
   end
+
+  test "fallback" do
+    data = %{meta_title: "META title", title: "Title", foo: "bar"}
+    assert Brando.Meta.Schema.fallback(data, [:meta_title, :title]) == "META title"
+    assert Brando.Meta.Schema.fallback(data, [:title, :meta_title]) == "Title"
+    assert Brando.Meta.Schema.fallback(data, [:title, :foo]) == "Title"
+    assert Brando.Meta.Schema.fallback(data, [:foo, :title]) == "bar"
+
+    data = %{meta_title: nil, title: "Title", foo: "bar"}
+    assert Brando.Meta.Schema.fallback(data, [:meta_title, :title]) == "Title"
+
+    data = %{meta_title: nil, title: nil, foo: "bar"}
+    assert Brando.Meta.Schema.fallback(data, [:meta_title, :title]) == nil
+  end
 end

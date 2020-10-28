@@ -15,7 +15,7 @@ defmodule Brando.Pages.Page do
   alias Brando.JSONLD
 
   @required_fields ~w(key language slug title data status template creator_id)a
-  @optional_fields ~w(parent_id meta_description meta_image html is_homepage css_classes sequence deleted_at publish_at)a
+  @optional_fields ~w(parent_id meta_title meta_description meta_image html is_homepage css_classes sequence deleted_at publish_at)a
   @derived_fields ~w(
     id
     key
@@ -50,6 +50,7 @@ defmodule Brando.Pages.Page do
     villain()
     field :status, Brando.Type.Status
     field :css_classes, :string
+    field :meta_title, :string
     field :meta_description, :string
     field :meta_image, Brando.Type.Image
     field :publish_at, :utc_datetime
@@ -96,9 +97,9 @@ defmodule Brando.Pages.Page do
 
   meta_schema do
     field ["description", "og:description"], [:meta_description]
-    field ["title", "og:title"], [:title]
+    field ["title", "og:title"], &fallback(&1, [:meta_title, :title])
     field "og:image", [:meta_image]
-    field "og:locale", [:language], &Brando.Meta.Utils.encode_locale/1
+    field "og:locale", [:language], &encode_locale/1
   end
 
   @doc """

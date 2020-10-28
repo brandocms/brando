@@ -6,18 +6,28 @@ defmodule Brando.Meta.Schema do
 
   In your schema:
 
+      use Brando.Meta.Schema
+
       meta_schema do
-        field :description, [:meta_description], &Brando.HTML.truncate(&1, 155)
-        field :title, [:heading], fn data -> do_something(data) end
-        field :image, [:cover]
+        field ["description", "og:description"], &Brando.HTML.truncate(&1, 155)
+        field ["title", "og:title"], [:title]
+        field ["title", "og:title"], &fallback(&1, [:meta_title, :title])
+        field "og:image", [:meta_image]
+        field "og:locale", [:language], &encode_locale/1
       end
+
+  `fallback(data, keys)` tries `keys` until it gets a value, so in the above example it
+  first tries to get `data.meta_title`, if that fails it tries `data.title`.
+
+  `encode_locale(language)` converts the locale to a format facebook/opengraph understands.
 
   """
 
   @doc false
   defmacro __using__(_) do
     quote do
-      import Brando.Meta.Schema, only: [meta_schema: 1]
+      import Brando.Meta.Schema, only: [meta_schema: 1, fallback: 2]
+      import Brando.Meta.Utils
       Module.register_attribute(__MODULE__, :meta_fields, accumulate: true)
     end
   end
@@ -155,5 +165,14 @@ defmodule Brando.Meta.Schema do
         Map.put(acc, name, mod.__meta_field__(name, data))
       end
     )
+  end
+
+  def fallback(data, keys) when is_list(keys) do
+    Enum.reduce_while(keys, nil, fn key, _ ->
+      case Map.get(data, key) do
+        nil -> {:cont, nil}
+        val -> {:halt, val}
+      end
+    end)
   end
 end

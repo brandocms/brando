@@ -1,4 +1,15 @@
-## 0.48.0-dev
+## 0.49.0-dev
+
+* Remove `robots.txt` from Plug.Static in your endpoint. It is now handled through the `robots` field in `sites_seo`
+  which you can configure from `Configure -> SEO`
+* In your `router.ex`, add
+
+    get "/robots.txt", Brando.SEOController, :robots
+
+  under your "/" scope.
+
+
+## 0.48.0
 
 * Move to liquex parsing. This means a bunch of updates:
 

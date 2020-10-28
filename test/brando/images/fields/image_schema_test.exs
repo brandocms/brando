@@ -35,13 +35,14 @@ defmodule Brando.Field.Image.SchemaTest do
     assert Brando.Field.Image.Schema.list_image_fields() == [
              %{fields: [:image], source: "images_images"},
              %{fields: [:meta_image], source: "pages_pages"},
-             %{fields: [:logo, :image], source: "sites_identities"},
+             %{fields: [:logo], source: "sites_identity"},
+             %{fields: [:fallback_meta_image], source: "sites_seo"},
              %{fields: [:avatar], source: "users_users"}
            ]
   end
 
   test "generate_image_fields_migration" do
     assert Brando.Field.Image.Schema.generate_image_fields_migration() ==
-             "\n          execute \"\"\"\n          alter table images_images alter column image type jsonb using image::JSON\n          \"\"\"\n          \n\n          execute \"\"\"\n          alter table pages_pages alter column meta_image type jsonb using meta_image::JSON\n          \"\"\"\n          \n\n          execute \"\"\"\n          alter table sites_identities alter column logo type jsonb using logo::JSON\n          \"\"\"\n          \n\n          execute \"\"\"\n          alter table sites_identities alter column image type jsonb using image::JSON\n          \"\"\"\n          \n\n          execute \"\"\"\n          alter table users_users alter column avatar type jsonb using avatar::JSON\n          \"\"\"\n          "
+             "\n          execute \"\"\"\n          alter table images_images alter column image type jsonb using image::JSON\n          \"\"\"\n          \n\n          execute \"\"\"\n          alter table pages_pages alter column meta_image type jsonb using meta_image::JSON\n          \"\"\"\n          \n\n          execute \"\"\"\n          alter table sites_identity alter column logo type jsonb using logo::JSON\n          \"\"\"\n          \n\n          execute \"\"\"\n          alter table sites_seo alter column fallback_meta_image type jsonb using fallback_meta_image::JSON\n          \"\"\"\n          \n\n          execute \"\"\"\n          alter table users_users alter column avatar type jsonb using avatar::JSON\n          \"\"\"\n          "
   end
 end

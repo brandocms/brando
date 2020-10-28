@@ -20,18 +20,18 @@ defmodule Brando.JSONLD.Schema.Corporation do
             sameAs: nil,
             url: nil
 
-  def build(%Sites.Identity{} = corporation) do
+  def build({%Sites.Identity{} = corporation, %Sites.SEO{} = seo}) do
     %__MODULE__{
       "@id": Path.join(Brando.Utils.hostname(), "#identity"),
       address: Schema.PostalAddress.build(corporation),
       alternateName: corporation.alternate_name,
-      description: corporation.description,
+      description: seo.fallback_meta_description,
       email: corporation.email,
-      image: Schema.ImageObject.build(corporation.image),
+      image: Schema.ImageObject.build(seo.fallback_meta_image),
       logo: Schema.ImageObject.build(corporation.logo),
       name: corporation.name,
       sameAs: build_social_media(corporation),
-      url: corporation.url
+      url: seo.base_url
     }
   end
 

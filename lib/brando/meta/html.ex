@@ -33,16 +33,16 @@ defmodule Brando.Meta.HTML do
   @spec render_meta(conn) :: {:safe, term}
   def render_meta(conn) do
     app_name = Brando.config(:app_name)
-    title = Brando.Utils.get_page_title(conn)
+    seo = Brando.Cache.SEO.get()
 
     conn
-    |> put_meta_if_missing("title", "#{title}")
-    |> put_meta_if_missing("og:title", "#{title}")
+    |> put_meta_if_missing("title", seo.fallback_meta_title)
+    |> put_meta_if_missing("og:title", seo.fallback_meta_title)
     |> put_meta_if_missing("og:site_name", app_name)
     |> put_meta_if_missing("og:type", "website")
     |> put_meta_if_missing("og:url", Brando.Utils.current_url(conn))
-    |> maybe_put_meta_description()
-    |> maybe_put_meta_image()
+    |> maybe_put_meta_description(seo.fallback_meta_description)
+    |> maybe_put_meta_image(seo.fallback_meta_image)
     |> get_meta()
     |> Enum.map(&safe_to_string(meta_tag(&1)))
     |> maybe_add_see_also()
@@ -74,27 +74,22 @@ defmodule Brando.Meta.HTML do
     end
   end
 
-  defp maybe_put_meta_description(conn) do
+  defp maybe_put_meta_description(conn, fallback_meta_description) do
     case get_meta(conn, "description") do
       nil ->
-        if meta_description = Cache.get(:identity, :description) do
-          conn
-          |> put_meta("description", meta_description)
-          |> put_meta("og:description", meta_description)
-        else
-          conn
-        end
+        conn
+        |> put_meta("description", fallback_meta_description)
+        |> put_meta("og:description", fallback_meta_description)
 
       _ ->
         conn
     end
   end
 
-  defp maybe_put_meta_image(conn) do
+  defp maybe_put_meta_image(conn, fallback_meta_image) do
     case get_meta(conn, "og:image") do
       nil ->
-        default_meta_image = Cache.get(:identity, :image)
-        put_meta_image(conn, default_meta_image)
+        put_meta_image(conn, fallback_meta_image)
 
       meta_image ->
         put_meta_image(conn, meta_image)

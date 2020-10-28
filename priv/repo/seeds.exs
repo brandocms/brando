@@ -8,13 +8,10 @@
   zipcode: "0000",
   city: "Oslo",
   country: "NO",
-  description: "Beskrivelse av organisasjonen/nettsiden",
   title_prefix: "Firma | ",
   title: "Velkommen!",
   title_postfix: "",
-  image: nil,
   logo: nil,
-  url: "https://www.domain.tld",
   links: [
     %Brando.Link{
       name: "Instagram",
@@ -41,5 +38,17 @@
       value: "value2"
     }
   ]
+}
+|> Brando.repo().insert!
+
+%Brando.Sites.SEO{
+  fallback_meta_description: "Fallback meta description",
+  fallback_meta_title: "Fallback meta title",
+  fallback_meta_image: nil,
+  base_url: "https://www.domain.tld",
+  robots: """
+  User-agent: *
+  Disallow: /admin/
+  """
 }
 |> Brando.repo().insert!

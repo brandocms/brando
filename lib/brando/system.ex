@@ -12,6 +12,7 @@ defmodule Brando.System do
   def initialize do
     run_checks()
     Cache.Identity.set()
+    Cache.SEO.set()
     Cache.Globals.set()
     Cache.Navigation.set()
     :ok
@@ -23,6 +24,7 @@ defmodule Brando.System do
     {:ok, {:module_config, :exists}} = check_module_config_exists()
     {:ok, {:executable, :exists}} = check_image_processing_executable()
     {:ok, {:identity, :exists}} = check_identity_exists()
+    {:ok, {:seo, :exists}} = check_seo_exists()
     {:ok, {:bucket, :exists}} = check_cdn_bucket_exists()
     {:ok, {:authorization, :exists}} = check_authorization_exists()
     {:ok, {:template_syntax, _}} = check_template_syntax()
@@ -55,6 +57,25 @@ defmodule Brando.System do
 
       _ ->
         {:ok, {:identity, :exists}}
+    end
+  end
+
+  defp check_seo_exists do
+    with [] <- Brando.repo().all(Brando.Sites.SEO),
+         {:ok, _} <- Brando.Sites.create_default_seo() do
+      {:ok, {:seo, :exists}}
+    else
+      {:error, _} ->
+        raise ConfigError,
+          message: """
+
+
+          Failed creating default `seo` table.
+
+          """
+
+      _ ->
+        {:ok, {:seo, :exists}}
     end
   end
 

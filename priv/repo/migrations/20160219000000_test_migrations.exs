@@ -103,6 +103,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:creator_id, references(:users_users))
       add(:css_classes, :text)
       add(:template, :text)
+      add(:meta_title, :text)
       add(:meta_description, :text)
       add(:meta_image, :jsonb)
       add(:publish_at, :utc_datetime)
@@ -162,7 +163,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
 
     create index(:pages_templates, [:namespace])
 
-    create table(:sites_identities) do
+    create table(:sites_identity) do
       add :name, :string
       add :alternate_name, :string
       add :email, :string
@@ -186,6 +187,16 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :configs, :map
       add :type, :string, default: "organization"
 
+      timestamps()
+    end
+
+    create table(:sites_seo) do
+      add :fallback_meta_description, :text
+      add :fallback_meta_title, :text
+      add :fallback_meta_image, :jsonb
+      add :base_url, :text
+      add :robots, :text
+      add :redirects, :map
       timestamps()
     end
 

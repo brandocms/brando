@@ -7,11 +7,13 @@ defmodule Brando.Sites do
 
   alias Brando.Cache
   alias Brando.Sites.Identity
+  alias Brando.Sites.SEO
   alias Brando.Villain
 
   @type changeset :: Ecto.Changeset.t()
   @type id :: integer | binary
   @type identity :: Brando.Sites.Identity.t()
+  @type seo :: Brando.Sites.SEO.t()
   @type params :: map
   @type user :: Brando.Users.User.t()
 
@@ -87,13 +89,10 @@ defmodule Brando.Sites do
       zipcode: "0000",
       city: "Oslo",
       country: "NO",
-      description: "Beskrivelse av organisasjonen/nettsiden",
       title_prefix: "Firma | ",
       title: "Velkommen!",
       title_postfix: "",
-      image: nil,
-      logo: nil,
-      url: "https://www.domain.tld"
+      logo: nil
     }
     |> Brando.repo().insert!
   end
@@ -149,5 +148,50 @@ defmodule Brando.Sites do
     Villain.rerender_matching_templates(villains, search_terms)
 
     {:ok, identity}
+  end
+
+  @doc """
+  Get seo
+  """
+  @spec get_seo() ::
+          {:ok, seo} | {:error, {:seo, :not_found}}
+  def get_seo do
+    case SEO |> first() |> Brando.repo().one do
+      nil -> {:error, {:seo, :not_found}}
+      seo -> {:ok, seo}
+    end
+  end
+
+  @doc """
+  Create new seo
+  """
+  @spec create_seo(params, user | :system) ::
+          {:ok, seo} | {:error, Ecto.Changeset.t()}
+  def create_seo(seo_params, user \\ :system) do
+    changeset = Identity.changeset(%SEO{}, seo_params, user)
+    Brando.repo().insert(changeset)
+  end
+
+  @doc """
+  Update existing seo
+  """
+  @spec update_seo(params, user | :system) :: {:ok, seo} | {:error, changeset}
+  def update_seo(seo_params, user \\ :system) do
+    {:ok, seo} = get_seo()
+
+    seo
+    |> SEO.changeset(seo_params, user)
+    |> Brando.repo().update()
+    |> Cache.SEO.update()
+
+    #! TODO: |> update_villains_referencing_seo()
+  end
+
+  @doc """
+  Create default seo
+  """
+  def create_default_seo do
+    %SEO{}
+    |> Brando.repo().insert!
   end
 end
