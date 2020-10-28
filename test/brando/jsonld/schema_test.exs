@@ -124,8 +124,9 @@ defmodule Brando.JSONLDSchemaTest do
 
   test "Brando.JSONLD.Schema.Corporation" do
     cached_identity = Brando.Cache.get(:identity)
+    cached_seo = Brando.Cache.get(:seo)
 
-    assert Brando.JSONLD.Schema.Corporation.build(cached_identity) ==
+    assert Brando.JSONLD.Schema.Corporation.build({cached_identity, cached_seo}) ==
              %Brando.JSONLD.Schema.Corporation{
                "@context": "http://schema.org",
                "@id": "http://localhost/#identity",
@@ -138,7 +139,7 @@ defmodule Brando.JSONLDSchemaTest do
                  postalCode: "0000"
                },
                alternateName: "Kortversjon av navnet",
-               description: "Beskrivelse av organisasjonen/nettsiden",
+               description: "Fallback meta description",
                email: "mail@domain.tld",
                image: nil,
                logo: nil,

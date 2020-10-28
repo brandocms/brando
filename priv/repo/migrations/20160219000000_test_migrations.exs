@@ -190,6 +190,16 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       timestamps()
     end
 
+    create table(:sites_seo) do
+      add :fallback_meta_description, :text
+      add :fallback_meta_title, :text
+      add :fallback_meta_image, :jsonb
+      add :base_url, :text
+      add :robots, :text
+      add :redirects, :map
+      timestamps()
+    end
+
     create table(:sites_global_categories) do
       add :key, :string
       add :label, :text

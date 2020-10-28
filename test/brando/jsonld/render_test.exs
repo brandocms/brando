@@ -40,7 +40,8 @@ defmodule Brando.JSONLDRenderTest do
   ]
 
   test "render json ld" do
-    Brando.Sites.update_identity(%{image: @img, links: @links})
+    Brando.Sites.update_identity(%{links: @links})
+    Brando.Sites.update_seo(%{fallback_meta_image: @img})
     mock_conn = Brando.Plug.HTML.put_json_ld(%Plug.Conn{}, Brando.Pages.Page, @mock_data)
     rendered_json_ld = Brando.HTML.render_json_ld(mock_conn)
 
@@ -53,7 +54,7 @@ defmodule Brando.JSONLDRenderTest do
                  "script",
                  [[32, "type", 61, 34, "application/ld+json", 34]],
                  62,
-                 "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Kortversjon av navnet\",\"description\":\"Beskrivelse av organisasjonen/nettsiden\",\"email\":\"mail@domain.tld\",\"image\":{\"@type\":\"ImageObject\",\"height\":933,\"url\":\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\",\"width\":1900},\"name\":\"Organisasjonens navn\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}",
+                 "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Kortversjon av navnet\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"image\":{\"@type\":\"ImageObject\",\"height\":933,\"url\":\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\",\"width\":1900},\"name\":\"Organisasjonens navn\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}",
                  60,
                  47,
                  "script",
@@ -76,11 +77,12 @@ defmodule Brando.JSONLDRenderTest do
              }
            ]
 
-    Brando.Sites.update_identity(%{image: nil})
+    Brando.Sites.update_seo(%{fallback_meta_image: nil})
   end
 
   test "render json ld :corporation" do
-    Brando.Sites.update_identity(%{image: @img, links: @links})
+    Brando.Sites.update_identity(%{links: @links})
+    Brando.Sites.update_seo(%{fallback_meta_image: @img})
     rendered_json_ld = Brando.HTML.render_json_ld(:corporation)
 
     assert rendered_json_ld == [
@@ -91,7 +93,7 @@ defmodule Brando.JSONLDRenderTest do
                 "script",
                 [[32, "type", 61, 34, "application/ld+json", 34]],
                 62,
-                "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Kortversjon av navnet\",\"description\":\"Beskrivelse av organisasjonen/nettsiden\",\"email\":\"mail@domain.tld\",\"image\":{\"@type\":\"ImageObject\",\"height\":933,\"url\":\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\",\"width\":1900},\"name\":\"Organisasjonens navn\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}",
+                "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Kortversjon av navnet\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"image\":{\"@type\":\"ImageObject\",\"height\":933,\"url\":\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\",\"width\":1900},\"name\":\"Organisasjonens navn\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}",
                 60,
                 47,
                 "script",
@@ -100,7 +102,7 @@ defmodule Brando.JSONLDRenderTest do
              []
            ]
 
-    Brando.Sites.update_identity(%{image: nil})
+    Brando.Sites.update_seo(%{fallback_meta_image: nil})
   end
 
   test "render json ld :breadcrumbs" do
@@ -114,30 +116,34 @@ defmodule Brando.JSONLDRenderTest do
     rendered_json_ld = Brando.HTML.render_json_ld(mock_conn)
 
     assert rendered_json_ld == [
-             {:safe,
-              [
-                60,
-                "script",
-                [[32, "type", 61, 34, "application/ld+json", 34]],
-                62,
-                "{\"@context\":\"https://schema.org\",\"@type\":\"BreadcrumbList\",\"itemListElement\":[{\"@type\":\"ListItem\",\"item\":\"/\",\"name\":\"Home\",\"position\":1},{\"@type\":\"ListItem\",\"item\":\"/about\",\"name\":\"About\",\"position\":2},{\"@type\":\"ListItem\",\"item\":\"/about/contact\",\"name\":\"Contact\",\"position\":3}]}",
-                60,
-                47,
-                "script",
-                62
-              ]},
-             {:safe,
-              [
-                60,
-                "script",
-                [[32, "type", 61, 34, "application/ld+json", 34]],
-                62,
-                "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Kortversjon av navnet\",\"description\":\"Beskrivelse av organisasjonen/nettsiden\",\"email\":\"mail@domain.tld\",\"name\":\"Organisasjonens navn\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}",
-                60,
-                47,
-                "script",
-                62
-              ]},
+             {
+               :safe,
+               [
+                 60,
+                 "script",
+                 [[32, "type", 61, 34, "application/ld+json", 34]],
+                 62,
+                 "{\"@context\":\"https://schema.org\",\"@type\":\"BreadcrumbList\",\"itemListElement\":[{\"@type\":\"ListItem\",\"item\":\"/\",\"name\":\"Home\",\"position\":1},{\"@type\":\"ListItem\",\"item\":\"/about\",\"name\":\"About\",\"position\":2},{\"@type\":\"ListItem\",\"item\":\"/about/contact\",\"name\":\"Contact\",\"position\":3}]}",
+                 60,
+                 47,
+                 "script",
+                 62
+               ]
+             },
+             {
+               :safe,
+               [
+                 60,
+                 "script",
+                 [[32, "type", 61, 34, "application/ld+json", 34]],
+                 62,
+                 "{\"@context\":\"http://schema.org\",\"@id\":\"http://localhost/#identity\",\"@type\":\"Organization\",\"address\":{\"@type\":\"PostalAddress\",\"addressCountry\":\"NO\",\"addressLocality\":\"Oslo\",\"addressRegion\":\"Oslo\",\"postalCode\":\"0000\"},\"alternateName\":\"Kortversjon av navnet\",\"description\":\"Fallback meta description\",\"email\":\"mail@domain.tld\",\"name\":\"Organisasjonens navn\",\"sameAs\":[\"https://instagram.com/test\",\"https://facebook.com/test\"],\"url\":\"https://www.domain.tld\"}",
+                 60,
+                 47,
+                 "script",
+                 62
+               ]
+             },
              []
            ]
   end

@@ -243,6 +243,7 @@ Repo.start_link()
 Mix.Task.run("ecto.seed", ["-r", Repo, "--quiet"])
 
 Brando.Cache.Identity.set()
+Brando.Cache.SEO.set()
 Brando.Cache.Globals.set()
 
 Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)

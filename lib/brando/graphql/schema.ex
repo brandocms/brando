@@ -30,6 +30,7 @@ defmodule Brando.Schema do
       import_fields :page_fragment_mutations
       import_fields :user_mutations
       import_fields :identity_mutations
+      import_fields :seo_mutations
       import_fields :global_mutations
     end
   end
@@ -46,6 +47,7 @@ defmodule Brando.Schema do
       import_fields :page_fragment_queries
       import_fields :user_queries
       import_fields :identity_queries
+      import_fields :seo_queries
       import_fields :global_queries
     end
   end

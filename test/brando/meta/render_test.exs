@@ -65,7 +65,7 @@ defmodule Brando.MetaRenderTest do
     rendered_meta = Brando.Meta.HTML.render_meta(mock_conn)
 
     assert safe_to_string(rendered_meta) ==
-             "<meta content=\"value2\" name=\"key2\"><meta content=\"value1\" name=\"key1\"><meta content=\"https://facebook.com/test\" property=\"og:see_also\"><meta content=\"https://instagram.com/test\" property=\"og:see_also\"><meta content=\"@ Our description\" name=\"description\"><meta content=\"Generated.\" name=\"generated_title\"><meta content=\"@ Our title\" name=\"mutated_title\"><meta content=\"@ Our description\" property=\"og:description\"><meta content=\"MyApp\" property=\"og:site_name\"><meta content=\"Firma | Velkommen!\" property=\"og:title\"><meta content=\"website\" property=\"og:type\"><meta content=\"http://localhost\" property=\"og:url\"><meta content=\"Our title\" name=\"title\">"
+             "<meta content=\"value2\" name=\"key2\"><meta content=\"value1\" name=\"key1\"><meta content=\"https://facebook.com/test\" property=\"og:see_also\"><meta content=\"https://instagram.com/test\" property=\"og:see_also\"><meta content=\"@ Our description\" name=\"description\"><meta content=\"Generated.\" name=\"generated_title\"><meta content=\"@ Our title\" name=\"mutated_title\"><meta content=\"@ Our description\" property=\"og:description\"><meta content=\"MyApp\" property=\"og:site_name\"><meta content=\"Fallback meta title\" property=\"og:title\"><meta content=\"website\" property=\"og:type\"><meta content=\"http://localhost\" property=\"og:url\"><meta content=\"Our title\" name=\"title\">"
 
     mock_conn_with_image =
       mock_conn |> Brando.Plug.HTML.put_meta("og:image", "https://test.com/my_image.jpg")
@@ -73,17 +73,19 @@ defmodule Brando.MetaRenderTest do
     rendered_meta = Brando.Meta.HTML.render_meta(mock_conn_with_image)
 
     assert safe_to_string(rendered_meta) ==
-             "<meta content=\"value2\" name=\"key2\"><meta content=\"value1\" name=\"key1\"><meta content=\"https://facebook.com/test\" property=\"og:see_also\"><meta content=\"https://instagram.com/test\" property=\"og:see_also\"><meta content=\"@ Our description\" name=\"description\"><meta content=\"Generated.\" name=\"generated_title\"><meta content=\"https://test.com/my_image.jpg\" name=\"image\"><meta content=\"@ Our title\" name=\"mutated_title\"><meta content=\"@ Our description\" property=\"og:description\"><meta content=\"https://test.com/my_image.jpg\" property=\"og:image\"><meta content=\"image/jpeg\" property=\"og:image:type\"><meta content=\"MyApp\" property=\"og:site_name\"><meta content=\"Firma | Velkommen!\" property=\"og:title\"><meta content=\"website\" property=\"og:type\"><meta content=\"http://localhost\" property=\"og:url\"><meta content=\"Our title\" name=\"title\">"
+             "<meta content=\"value2\" name=\"key2\"><meta content=\"value1\" name=\"key1\"><meta content=\"https://facebook.com/test\" property=\"og:see_also\"><meta content=\"https://instagram.com/test\" property=\"og:see_also\"><meta content=\"@ Our description\" name=\"description\"><meta content=\"Generated.\" name=\"generated_title\"><meta content=\"https://test.com/my_image.jpg\" name=\"image\"><meta content=\"@ Our title\" name=\"mutated_title\"><meta content=\"@ Our description\" property=\"og:description\"><meta content=\"https://test.com/my_image.jpg\" property=\"og:image\"><meta content=\"image/jpeg\" property=\"og:image:type\"><meta content=\"MyApp\" property=\"og:site_name\"><meta content=\"Fallback meta title\" property=\"og:title\"><meta content=\"website\" property=\"og:type\"><meta content=\"http://localhost\" property=\"og:url\"><meta content=\"Our title\" name=\"title\">"
 
     # change identity values
-    Brando.Sites.update_identity(%{links: [], metas: [], image: @img})
+    Brando.Sites.update_identity(%{links: [], metas: []})
+    Brando.Sites.update_seo(%{fallback_meta_image: @img})
 
     rendered_meta = Brando.Meta.HTML.render_meta(mock_conn)
 
     assert safe_to_string(rendered_meta) ==
-             "<meta content=\"@ Our description\" name=\"description\"><meta content=\"Generated.\" name=\"generated_title\"><meta content=\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\" name=\"image\"><meta content=\"@ Our title\" name=\"mutated_title\"><meta content=\"@ Our description\" property=\"og:description\"><meta content=\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\" property=\"og:image\"><meta content=\"933\" property=\"og:image:height\"><meta content=\"image/jpeg\" property=\"og:image:type\"><meta content=\"1900\" property=\"og:image:width\"><meta content=\"MyApp\" property=\"og:site_name\"><meta content=\"Firma | Velkommen!\" property=\"og:title\"><meta content=\"website\" property=\"og:type\"><meta content=\"http://localhost\" property=\"og:url\"><meta content=\"Our title\" name=\"title\">"
+             "<meta content=\"@ Our description\" name=\"description\"><meta content=\"Generated.\" name=\"generated_title\"><meta content=\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\" name=\"image\"><meta content=\"@ Our title\" name=\"mutated_title\"><meta content=\"@ Our description\" property=\"og:description\"><meta content=\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\" property=\"og:image\"><meta content=\"933\" property=\"og:image:height\"><meta content=\"image/jpeg\" property=\"og:image:type\"><meta content=\"1900\" property=\"og:image:width\"><meta content=\"MyApp\" property=\"og:site_name\"><meta content=\"Fallback meta title\" property=\"og:title\"><meta content=\"website\" property=\"og:type\"><meta content=\"http://localhost\" property=\"og:url\"><meta content=\"Our title\" name=\"title\">"
 
-    Brando.Sites.update_identity(%{image: nil, links: @links, metas: @metas})
+    Brando.Sites.update_identity(%{links: @links, metas: @metas})
+    Brando.Sites.update_seo(%{image: nil})
   end
 
   test "meta_tag" do

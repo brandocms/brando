@@ -36,7 +36,7 @@ defmodule Brando.JSONLD.HTML do
 
   def render_json_ld(:corporation, _) do
     corporation_json =
-      Brando.Cache.get(:identity)
+      {Brando.Cache.get(:identity), Brando.Cache.get(:seo)}
       |> JSONLD.Schema.Corporation.build()
       |> JSONLD.to_json()
 
@@ -45,7 +45,7 @@ defmodule Brando.JSONLD.HTML do
 
   def render_json_ld(:organization, _) do
     organization_json =
-      Brando.Cache.get(:identity)
+      {Brando.Cache.get(:identity), Brando.Cache.get(:seo)}
       |> JSONLD.Schema.Organization.build()
       |> JSONLD.to_json()
 

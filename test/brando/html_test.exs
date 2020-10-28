@@ -134,8 +134,8 @@ defmodule Brando.HTMLTest do
       |> safe_to_string()
 
     assert html =~ ~s(<meta content="MyApp" property="og:site_name">)
-    assert html =~ ~s(<meta content="Firma | Velkommen!" property="og:title">)
-    assert html =~ ~s(<meta content="Firma | Velkommen!" name="title">)
+    assert html =~ ~s(<meta content="Fallback meta title" property="og:title">)
+    assert html =~ ~s(<meta content="Fallback meta title" name="title">)
     assert html =~ ~s(<meta content="http://localhost" property="og:url">)
   end
 
