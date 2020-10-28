@@ -65,7 +65,7 @@
     "@rollup/plugin-babel": "^5.2.1",
     "@rollup/plugin-commonjs": "^15.0.0",
     "@rollup/plugin-node-resolve": "^9.0.0",
-    "@rollup/plugin-replace": "^2.3.3",
+    "@rollup/plugin-replace": "^2.3.4",
     "@univers-agency/europacss": "^0.2.3",
     "autoprefixer": "^10.0.0",
     "css-mqgroup": "^7.1.0",
