@@ -106,6 +106,8 @@ defmodule Brando.JSONLDRenderTest do
   end
 
   test "render json ld :breadcrumbs" do
+    Brando.Sites.update_seo(%{fallback_meta_image: nil})
+
     breadcrumbs = [
       {"Home", "/"},
       {"About", "/about"},
