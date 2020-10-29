@@ -2,6 +2,8 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.49.0-dev
 
+* Dynamic redirects.
+
 ## 0.48.0
 
 * Switch to Liquex.

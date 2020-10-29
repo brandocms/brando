@@ -20,7 +20,7 @@ defmodule Brando.Schema.Types.SEO do
     field :id, :id
     field :from, :string
     field :to, :string
-    field :code, :integer
+    field :code, :string
   end
 
   input_object :seo_params do
@@ -36,7 +36,7 @@ defmodule Brando.Schema.Types.SEO do
     field :id, :id
     field :from, :string
     field :to, :string
-    field :code, :integer
+    field :code, :string
   end
 
   object :seo_queries do

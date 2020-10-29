@@ -1,7 +1,14 @@
 ## 0.49.0-dev
 
+* Dynamic redirects. Switch out your fallback controller in `page_controller.ex`:
+
+    action_fallback Brando.FallbackController
+
+  so when a page is not found, look through the redirects and redirect if neccessary.
+
 * Remove `robots.txt` from Plug.Static in your endpoint. It is now handled through the `robots` field in `sites_seo`
   which you can configure from `Configure -> SEO`
+
 * In your `router.ex`, add
 
     get "/robots.txt", Brando.SEOController, :robots
