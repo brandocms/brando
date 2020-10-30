@@ -42,20 +42,63 @@ defmodule Brando.SoftDelete.Repo do
     quote do
       def maybe_slug(%Ecto.Changeset{data: %{slug: slug}} = changeset) do
         changeset
-        |> Ecto.Changeset.force_change(:slug, slug)
+        |> Ecto.Changeset.force_change(:slug, normalize_slug(slug))
+        |> Brando.Utils.Schema.avoid_slug_collision()
+      end
+
+      def maybe_slug(%{slug: slug} = struct) do
+        struct
+        |> Ecto.Changeset.force_change(:slug, normalize_slug(slug))
         |> Brando.Utils.Schema.avoid_slug_collision()
       end
 
       def maybe_slug(changeset), do: changeset
 
+      def randomize_slug(slug), do: "#{slug}$$$#{Brando.Utils.random_string(slug)}"
+
+      def normalize_slug(slug) do
+        case String.split(slug, "$$$") do
+          [slug, _] -> slug
+          [slug] -> slug
+        end
+      end
+
       def soft_delete_all(queryable) do
         update_all(queryable, set: [deleted_at: utc_now()])
+      end
+
+      def soft_delete(%Ecto.Changeset{data: %{slug: slug}} = changeset) do
+        changeset
+        |> Ecto.Changeset.change(slug: randomize_slug(slug))
+        |> Ecto.Changeset.change(deleted_at: utc_now())
+        |> update()
+      end
+
+      def soft_delete(%{slug: slug} = struct) do
+        struct
+        |> Ecto.Changeset.change(slug: randomize_slug(slug))
+        |> Ecto.Changeset.change(deleted_at: utc_now())
+        |> update()
       end
 
       def soft_delete(struct_or_changeset) do
         struct_or_changeset
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update()
+      end
+
+      def soft_delete!(%Ecto.Changeset{data: %{slug: slug}} = changeset) do
+        changeset
+        |> Ecto.Changeset.change(slug: randomize_slug(slug))
+        |> Ecto.Changeset.change(deleted_at: utc_now())
+        |> update!()
+      end
+
+      def soft_delete!(%{slug: slug} = struct) do
+        struct
+        |> Ecto.Changeset.change(slug: randomize_slug(slug))
+        |> Ecto.Changeset.change(deleted_at: utc_now())
+        |> update!()
       end
 
       def soft_delete!(struct_or_changeset) do
