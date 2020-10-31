@@ -12,12 +12,22 @@ locals_without_parens = [
   cannot: 2,
   cannot: 3,
   rules: 2,
-  assign: 2,
   merge: 1,
   many: 2,
   list: 2,
   selection: 3,
-  single: 2
+  single: 2,
+  #
+  preview_target: 2,
+  assign: 2,
+  schema_module: 1,
+  schema_preloads: 1,
+  mutate_data: 1,
+  layout_module: 1,
+  view_module: 1,
+  view_template: 1,
+  template_section: 1
+  template_prop: 1
 ]
 
 [

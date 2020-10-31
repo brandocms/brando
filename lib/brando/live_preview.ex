@@ -16,36 +16,43 @@ defmodule Brando.LivePreview do
     end
   end
 
+  defmacro target(_, _) do
+    raise """
+    Brando.LivePreview.target/2 is deprecated, use preview_target/2 instead:
+
+        preview_target Brando.Pages.Page do
+          mutate_data(fn entry -> %{entry | title: "custom"} end)
+
+          layout_module(MyAppWeb.LayoutView)
+          view_module(MyAppWeb.PageView)
+          view_template(fn e -> e.template end)
+          template_section(fn e -> e.key end)
+
+          assign :navigation, fn -> Brando.Navigation.get_menu("main", "en") |> elem(1) end
+          assign :partials, fn -> Brando.Pages.get_fragments("partials") |> elem(1) end
+        end
+    """
+  end
+
   @doc """
   Generates a render function for live previewing
 
   Set `template_prop` if your template uses another way to reference the entry than what
   is used in Vue. For instance, if in Vue it is a `project`, but you want `entry`, then
-  set `template_prop: :entry`
+  set `template_prop :entry`
 
-  `preloads` - List of atoms to preload on `entry``
-  `merge` - function to merge in additional data to `entry`
-
-      merge: fn entry -> %{entry | title: "custom"} end
+    - `schema_preloads` - List of atoms to preload on `entry``
+    - `mutate_data` - function to mutate entry data `entry`
+        mutate_data fn entry -> %{entry | title: "custom"} end
+    - `layout_module` - The layout view module we want to use for rendering
+    - `layout_template` - The layout template we want to use for rendering
+    - `view_module` - The view module we want to use for rendering
+    - `view_template` - The template we want to use for rendering
+    - `template_prop` - What we are refering to entry as
+    - `template_section` - Run this with `put_section` on conn
 
   """
-  defmacro target(opts, do: block) do
-    schema_module = opts |> Keyword.fetch!(:schema_module) |> Macro.expand(__CALLER__)
-    view_module = opts |> Keyword.fetch!(:view_module) |> Macro.expand(__CALLER__)
-    layout_module = opts |> Keyword.fetch!(:layout_module) |> Macro.expand(__CALLER__)
-    layout_template = opts |> Keyword.get(:layout_template, "app.html")
-    template_prop = opts |> Keyword.get(:template_prop, nil)
-    preloads = opts |> Keyword.get(:preloads, [])
-
-    merge =
-      opts
-      |> Keyword.get(
-        :merge,
-        quote do
-          fn e -> e end
-        end
-      )
-
+  defmacro preview_target(schema_module, do: block) do
     quote location: :keep do
       @doc """
       `entry` - data structure of our entry
@@ -54,23 +61,32 @@ defmodule Brando.LivePreview do
       `cache_key` - unique key for this live preview
       """
       def render(unquote(schema_module), entry, key, prop, cache_key) do
-        template = unquote(opts[:template]).(entry)
-        section = unquote(opts[:section]).(entry)
         var!(cache_key) = cache_key
+
+        var!(opts) = [
+          layout_template: "app.html",
+          mutate_data: fn e -> e end,
+          schema_preloads: []
+        ]
+
+        var!(extra_vars) = []
+
+        unquote(block)
+
+        processed_opts = var!(opts)
+
+        template = processed_opts[:view_template].(entry)
+        section = processed_opts[:template_section].(entry)
 
         # preloads
         entry =
           entry
-          |> Brando.repo().preload(unquote(preloads))
-          |> unquote(merge).()
-
-        # run block assigns
-        var!(extra_vars) = []
-        unquote(block)
+          |> Brando.repo().preload(processed_opts[:schema_preloads])
+          |> processed_opts[:mutate_data].()
 
         atom_prop =
-          if unquote(template_prop) !== nil,
-            do: unquote(template_prop),
+          if processed_opts[:template_prop] !== nil,
+            do: processed_opts[:template_prop],
             else: String.to_existing_atom(prop)
 
         # if key, then parse villain
@@ -104,15 +120,57 @@ defmodule Brando.LivePreview do
            ] ++ unquote(Macro.var(:extra_vars, nil)))
           |> Enum.into(%{})
 
-        inner = Phoenix.View.render(unquote(view_module), template, render_assigns)
+        inner = Phoenix.View.render(processed_opts[:view_module], template, render_assigns)
         root_assigns = render_assigns |> Map.put(:inner_content, inner) |> Map.delete(:layout)
 
         Phoenix.View.render_to_string(
-          unquote(layout_module),
-          unquote(layout_template),
+          processed_opts[:layout_module],
+          processed_opts[:layout_template],
           root_assigns
         )
       end
+    end
+  end
+
+  defmacro schema_preloads(schema_preloads) do
+    quote do
+      var!(opts) = Keyword.put(var!(opts), :schema_preloads, unquote(schema_preloads))
+    end
+  end
+
+  defmacro mutate_data(mutate_data) do
+    quote do
+      var!(opts) = Keyword.put(var!(opts), :mutate_data, unquote(mutate_data))
+    end
+  end
+
+  defmacro layout_module(layout_module) do
+    quote do
+      var!(opts) = Keyword.put(var!(opts), :layout_module, unquote(layout_module))
+    end
+  end
+
+  defmacro view_module(view_module) do
+    quote do
+      var!(opts) = Keyword.put(var!(opts), :view_module, unquote(view_module))
+    end
+  end
+
+  defmacro view_template(view_template) do
+    quote do
+      var!(opts) = Keyword.put(var!(opts), :view_template, unquote(view_template))
+    end
+  end
+
+  defmacro template_section(template_section) do
+    quote do
+      var!(opts) = Keyword.put(var!(opts), :template_section, unquote(template_section))
+    end
+  end
+
+  defmacro template_prop(template_prop) do
+    quote do
+      var!(opts) = Keyword.put(var!(opts), :template_prop, unquote(template_prop))
     end
   end
 
@@ -132,6 +190,7 @@ defmodule Brando.LivePreview do
   def store_cache(key, html), do: Cachex.put(:cache, "__live_preview__" <> key, html)
   def get_cache(key), do: Cachex.get(:cache, "__live_preview__" <> key)
 
+  @spec initialize(any, any, any, any) :: {:error, <<_::384>>} | {:ok, <<_::64, _::_*8>>}
   def initialize(schema, entry, key, prop) do
     preview_module = get_preview_module()
 
@@ -154,11 +213,15 @@ defmodule Brando.LivePreview do
         err ->
           Logger.error("""
           Livepreview Initialization failed.
+          """)
 
+          Logger.error("""
           Error:
 
           #{inspect(err, pretty: true)}
+          """)
 
+          Logger.error("""
 
           Stacktrace:
 
@@ -178,7 +241,6 @@ defmodule Brando.LivePreview do
     schema_module = Module.concat([schema])
     entry_struct = Brando.Utils.stringy_struct(schema_module, entry)
     wrapper_html = preview_module.render(schema_module, entry_struct, key, prop, cache_key)
-
     Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
     cache_key
   end

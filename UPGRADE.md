@@ -1,5 +1,18 @@
 ## 0.49.0-dev
 
+* Live Preview: Changed syntax:
+
+    preview_target Brando.Pages.Page do
+      layout_module MyAppWeb.LayoutView
+      view_module MyAppWeb.PageView
+      view_template fn e -> e.template end
+      template_section fn e -> e.key end
+      template_prop :entry
+
+      assign :navigation, fn -> Brando.Navigation.get_menu("main", "en") |> elem(1) end
+      assign :partials, fn -> Brando.Pages.get_fragments("partials") |> elem(1) end
+    end
+
 * Dynamic redirects. Switch out your fallback controller in `page_controller.ex`:
 
     action_fallback Brando.FallbackController

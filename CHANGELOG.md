@@ -3,6 +3,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 ## 0.49.0-dev
 
 * Dynamic redirects.
+* Live preview: Changed syntax - see UPGRADE.md
 
 ## 0.48.0
 
