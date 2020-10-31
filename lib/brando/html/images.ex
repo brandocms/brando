@@ -107,6 +107,12 @@ defmodule Brando.HTML.Images do
     end
   end
 
+  # when we receive a base64 from vue. This is for live preview, when we
+  # do not have a stored copy of the image.
+  def picture_tag(%{"base64" => base64}, opts) do
+    content_tag(:picture, tag(:img, src: base64))
+  end
+
   # when we're not given a struct
   def picture_tag(img_map, opts) do
     #! TODO: this is very hacky, but only a stopgap until we do away

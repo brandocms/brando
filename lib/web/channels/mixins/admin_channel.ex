@@ -308,15 +308,15 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         "livepreview:render",
         %{
           "schema" => schema,
-          "entry" => entry,
+          "entry" => camel_cased_entry_diff,
           "key" => key,
           "prop" => prop,
           "cache_key" => cache_key
         },
         socket
       ) do
-    entry = Brando.Utils.snake_case(entry)
-    Brando.LivePreview.update(schema, entry, key, prop, cache_key)
+    entry_diff = Brando.Utils.snake_case(camel_cased_entry_diff)
+    Brando.LivePreview.update(schema, entry_diff, key, prop, cache_key)
     {:reply, {:ok, %{code: 200, cache_key: cache_key}}, socket}
   end
 end

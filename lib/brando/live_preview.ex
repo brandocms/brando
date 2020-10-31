@@ -198,6 +198,7 @@ defmodule Brando.LivePreview do
       cache_key = build_cache_key(:erlang.system_time())
       schema_module = Module.concat([schema])
       entry_struct = Brando.Utils.stringy_struct(schema_module, entry)
+      set_entry(cache_key, entry)
 
       try do
         wrapper_html = preview_module.render(schema_module, entry_struct, key, prop, cache_key)
@@ -236,20 +237,35 @@ defmodule Brando.LivePreview do
     end
   end
 
-  def update(schema, entry, key, prop, cache_key) do
+  def update(schema, entry_diff, key, prop, cache_key) do
     preview_module = get_preview_module()
     schema_module = Module.concat([schema])
-    entry_struct = Brando.Utils.stringy_struct(schema_module, entry)
-    wrapper_html = preview_module.render(schema_module, entry_struct, key, prop, cache_key)
+    entry = get_entry(cache_key)
+    merged_diff_entry = Map.merge(entry, entry_diff)
+    set_entry(cache_key, merged_diff_entry)
+    entry_diff_struct = Brando.Utils.stringy_struct(schema_module, merged_diff_entry)
+    wrapper_html = preview_module.render(schema_module, entry_diff_struct, key, prop, cache_key)
     Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
     cache_key
   end
 
+  def get_entry(cache_key) do
+    case Cachex.get(:cache, "#{cache_key}__ENTRY") do
+      {:ok, val} ->
+        val
+    end
+  end
+
+  def set_entry(cache_key, entry) do
+    Cachex.put(:cache, "#{cache_key}__ENTRY", entry, ttl: :timer.minutes(60))
+    entry
+  end
+
   def get_var(cache_key, key, fallback_fn) do
-    case Cachex.get(:cache, "#{cache_key}__#{key}") do
+    case Cachex.get(:cache, "#{cache_key}__VAR__#{key}") do
       {:ok, nil} ->
         val = fallback_fn.()
-        Cachex.put(:cache, "#{cache_key}__#{key}", val, ttl: :timer.seconds(120))
+        Cachex.put(:cache, "#{cache_key}__VAR__#{key}", val, ttl: :timer.seconds(120))
         val
 
       {:ok, val} ->
