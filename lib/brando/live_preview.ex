@@ -150,6 +150,12 @@ defmodule Brando.LivePreview do
     end
   end
 
+  defmacro layout_template(layout_template) do
+    quote do
+      var!(opts) = Keyword.put(var!(opts), :layout_template, unquote(layout_template))
+    end
+  end
+
   defmacro view_module(view_module) do
     quote do
       var!(opts) = Keyword.put(var!(opts), :view_module, unquote(view_module))

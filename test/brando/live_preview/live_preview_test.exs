@@ -16,14 +16,13 @@ defmodule Brando.LivePreviewTest do
   defmodule LivePreview do
     use Brando.LivePreview
 
-    target(
-      schema_module: Brando.Pages.Page,
-      view_module: Brando.LivePreviewTest.TestView,
-      layout_module: Brando.LivePreviewTest.LayoutView,
-      layout_template: "app.html",
-      template: fn entry -> "#{entry.key}.html" end,
-      section: fn entry -> entry.key end
-    ) do
+    preview_target Brando.Pages.Page do
+      view_module Brando.LivePreviewTest.TestView
+      layout_module Brando.LivePreviewTest.LayoutView
+      layout_template "app.html"
+      view_template fn entry -> "#{entry.key}.html" end
+      template_section fn entry -> entry.key end
+
       assign :restaurants, fn -> __MODULE__.list_restaurants!() end
       assign :employees, fn -> __MODULE__.list_employees!() end
     end

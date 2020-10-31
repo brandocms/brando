@@ -151,17 +151,13 @@ end
 defmodule BrandoIntegrationWeb.LivePreview do
   use Brando.LivePreview
 
-  target(
-    schema_module: Brando.Pages.Page,
-    view_module: BrandoIntegrationWeb.PageView,
-    layout_module: BrandoIntegrationWeb.LayoutView,
-    template: fn _ -> "index.html" end,
-    section: fn _ -> "index" end,
-    template_prop: :page
-  ) do
-    assign :test, fn ->
-      "zapp"
-    end
+  preview_target Brando.Pages.Page do
+    view_module BrandoIntegrationWeb.PageView
+    layout_module BrandoIntegrationWeb.LayoutView
+    view_template fn _ -> "index.html" end
+    template_section fn _ -> "index" end
+    template_prop :page
+    assign :test, fn -> "zapp" end
   end
 end
 

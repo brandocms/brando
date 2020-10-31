@@ -24,6 +24,7 @@ locals_without_parens = [
   schema_preloads: 1,
   mutate_data: 1,
   layout_module: 1,
+  layout_template: 1,
   view_module: 1,
   view_template: 1,
   template_section: 1
