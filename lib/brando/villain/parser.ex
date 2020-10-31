@@ -321,7 +321,7 @@ defmodule Brando.Villain.Parser do
           height: data["height"],
           cover: :svg,
           poster: data["poster"] || nil,
-          preload: true,
+          preload: data["preload"] || true,
           opacity: 0.1
         })
         |> safe_to_string()
