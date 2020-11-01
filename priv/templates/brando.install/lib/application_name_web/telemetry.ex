@@ -35,6 +35,9 @@ defmodule <%= application_module %>Web.Telemetry do
       summary("<%= application_name %>.repo.query.queue_time", unit: {:native, :millisecond}),
       summary("<%= application_name %>.repo.query.idle_time", unit: {:native, :millisecond}),
 
+      # Brando
+      summary("brando.villain.parse_and_render.duration", unit: {:native, :millisecond}),
+
       # VM Metrics
       summary("vm.memory.total", unit: {:byte, :kilobyte}),
       summary("vm.total_run_queue_lengths.total"),

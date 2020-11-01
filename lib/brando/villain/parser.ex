@@ -4,61 +4,61 @@ defmodule Brando.Villain.Parser do
   """
 
   @doc "Parses a comment"
-  @callback comment(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback comment(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses a header"
-  @callback header(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback header(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses text/paragraphs"
-  @callback text(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback text(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses video"
-  @callback video(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback video(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses media"
-  @callback media(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback media(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses map"
-  @callback map(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback map(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses image"
-  @callback image(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback image(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses input"
-  @callback input(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback input(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses slideshow"
-  @callback slideshow(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback slideshow(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses divider"
-  @callback divider(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback divider(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses list"
-  @callback list(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback list(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses blockquote"
-  @callback blockquote(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback blockquote(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses columns"
-  @callback columns(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback columns(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses datatables"
-  @callback datatable(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback datatable(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses markdown"
-  @callback markdown(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback markdown(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses html"
-  @callback html(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback html(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses svg"
-  @callback svg(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback svg(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses template"
-  @callback template(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback template(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Parses datasource"
-  @callback datasource(data :: %{binary => any}, opts :: Keyword.t()) :: binary
+  @callback datasource(data :: %{binary => any}, opts :: map) :: binary
 
   @doc "Renders caption for picture block"
   @callback render_caption(data :: %{binary => any}) :: binary
@@ -138,7 +138,7 @@ defmodule Brando.Villain.Parser do
             opts
           ) do
         {:ok, template} =
-          case Keyword.get(opts, :cache_templates) do
+          case Map.get(opts, :cache_templates) do
             true -> Brando.Villain.get_cached_template(id)
             _ -> Brando.Villain.get_template(id)
           end
@@ -146,7 +146,7 @@ defmodule Brando.Villain.Parser do
         # multi template
         {:ok, template} = Brando.Villain.get_template(id)
 
-        base_context = opts[:context]
+        base_context = opts.context
 
         content =
           Enum.map(Enum.with_index(entries), fn {%{"refs" => refs, "vars" => vars}, index} ->
@@ -180,13 +180,13 @@ defmodule Brando.Villain.Parser do
 
       def template(%{"id" => id, "refs" => refs} = block, opts) do
         {:ok, template} =
-          case Keyword.get(opts, :cache_templates) do
+          case Map.get(opts, :cache_templates) do
             true -> Brando.Villain.get_cached_template(id)
             _ -> Brando.Villain.get_template(id)
           end
 
         vars = Map.get(block, "vars")
-        base_context = opts[:context]
+        base_context = opts.context
         vars = process_vars(vars)
 
         context = add_vars_to_context(base_context, vars)

@@ -44,21 +44,21 @@ defmodule Brando.Villain do
   def parse(data, entry \\ nil, opts \\ [])
   def parse("", _, _), do: ""
   def parse(nil, _, _), do: ""
-
-  def parse(json, entry, opts) when is_binary(json),
-    do: do_parse(Poison.decode!(json), entry, opts)
-
+  def parse(json, entry, opts) when is_binary(json), do: do_parse(Poison.decode!(json), entry, opts)
   def parse(json, entry, opts) when is_list(json), do: do_parse(json, entry, opts)
 
   defp do_parse(data, entry, opts) do
+    start = System.monotonic_time()
+    opts_map = Enum.into(opts, %{})
     parser = Brando.config(Brando.Villain)[:parser]
 
-    entry = if opts[:data_field], do: Map.put(entry, opts[:data_field], nil), else: entry
-    entry = if opts[:html_field], do: Map.put(entry, opts[:html_field], nil), else: entry
-    entry = maybe_put_timestamps(entry)
+    entry =
+      entry
+      |> maybe_nil_fields(opts_map)
+      |> maybe_put_timestamps()
 
     context = Context.assign(get_base_context(), "entry", entry)
-    opts = Keyword.put(opts, :context, context)
+    opts_map = Map.put(opts_map, :context, context)
 
     html =
       data
@@ -67,13 +67,20 @@ defmodule Brando.Villain do
         data_node_content = data_node["data"]
 
         (data_node["hidden"] && ["" | acc]) ||
-          [apply(parser, type_atom, [data_node_content, opts]) | acc]
+          [apply(parser, type_atom, [data_node_content, opts_map]) | acc]
       end)
       |> Enum.reverse()
       |> Enum.join()
 
-    parse_and_render(html, context)
+    output = parse_and_render(html, context)
+    :telemetry.execute([:brando, :villain, :parse_and_render], %{duration: System.monotonic_time() - start})
+    output
   end
+
+  # so we don't pass around unneccessary data in the parser
+  defp maybe_nil_fields(entry, %{data_field: data_field, html_field: html_field}), do: %{entry | data_field => nil, html_field => nil}
+  defp maybe_nil_fields(entry, %{data_field: data_field}), do: %{entry | data_field => nil}
+  defp maybe_nil_fields(entry, %{html_field: html_field}),  do: %{entry | html_field => nil}
 
   def get_base_context() do
     identity = Cache.Identity.get()

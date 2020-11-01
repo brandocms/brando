@@ -1,5 +1,12 @@
 ## 0.49.0-dev
 
+* Added telemetry for Villain `parse_and_render`. Add to your `telemetry.ex`:
+
+    summary("brando.villain.parse_and_render.duration", unit: {:native, :millisecond}),
+
+* Changed `opts` parameter in Villain parser blocks from `Keyword` to `map`. If you have overridden any of the
+  parser functions that uses `opts`, adjust accordingly: `Keyword.get(opts, :context)` -> `Map.get(opts, :context)`
+
 * Live Preview: Changed syntax:
 
     preview_target Brando.Pages.Page do
