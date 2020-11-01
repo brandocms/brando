@@ -27,7 +27,7 @@ locals_without_parens = [
   layout_template: 1,
   view_module: 1,
   view_template: 1,
-  template_section: 1
+  template_section: 1,
   template_prop: 1
 ]
 

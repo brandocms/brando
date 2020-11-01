@@ -1,5 +1,25 @@
 defmodule Brando.Sites.Redirects do
-  def match_redirect(test_url, from, to) do
+  @doc """
+  Check `test_path` against registered redirects
+  """
+  @spec test_redirect(list) ::
+          {:ok, {:redirect, {binary, binary}}} | {:error, {:redirects, :no_match}}
+  def test_redirect(test_path) do
+    test_url = "/" <> Enum.join(test_path, "/")
+    seo = Brando.Cache.SEO.get()
+
+    Enum.reduce_while(seo.redirects, {:error, {:redirects, :no_match}}, fn redirect, _acc ->
+      case match_redirect(test_url, redirect.from, redirect.to) do
+        {:error, _} ->
+          {:cont, {:error, {:redirects, :no_match}}}
+
+        url ->
+          {:halt, {:ok, {:redirect, {url, redirect.code}}}}
+      end
+    end)
+  end
+
+  defp match_redirect(test_url, from, to) do
     from_regex =
       from
       |> String.split("/")
@@ -14,7 +34,7 @@ defmodule Brando.Sites.Redirects do
 
     case Regex.named_captures(from_regex, test_url) do
       nil ->
-        test_url
+        {:error, {:redirects, :no_match}}
 
       captured_segments ->
         to
