@@ -80,7 +80,8 @@ defmodule Brando.Villain do
   # so we don't pass around unneccessary data in the parser
   defp maybe_nil_fields(entry, %{data_field: data_field, html_field: html_field}), do: %{entry | data_field => nil, html_field => nil}
   defp maybe_nil_fields(entry, %{data_field: data_field}), do: %{entry | data_field => nil}
-  defp maybe_nil_fields(entry, %{html_field: html_field}),  do: %{entry | html_field => nil}
+  defp maybe_nil_fields(entry, %{html_field: html_field}), do: %{entry | html_field => nil}
+  defp maybe_nil_fields(entry, _), do: entry
 
   def get_base_context() do
     identity = Cache.Identity.get()
