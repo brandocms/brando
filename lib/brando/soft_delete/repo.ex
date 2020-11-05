@@ -48,7 +48,7 @@ defmodule Brando.SoftDelete.Repo do
 
       def maybe_slug(%{slug: slug} = struct) do
         struct
-        |> Ecto.Changeset.force_change(:slug, normalize_slug(slug))
+        |> Ecto.Changeset.change(slug: normalize_slug(slug))
         |> Brando.Utils.Schema.avoid_slug_collision()
       end
 
