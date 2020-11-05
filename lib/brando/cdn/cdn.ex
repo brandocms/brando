@@ -17,7 +17,7 @@ defmodule Brando.CDN do
   @doc """
 
   """
-  @spec upload_file(changeset, binary, map) :: {:ok, :task_started}
+  @spec upload_file(changeset, atom | binary, map) :: {:ok, :task_started}
   def upload_file(changeset, name, %Brando.Type.Image{} = field) do
     Task.start_link(__MODULE__, :do_upload_image, [{changeset, name, field}])
     {:ok, :task_started}

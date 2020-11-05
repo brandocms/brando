@@ -44,7 +44,10 @@ defmodule Brando.Villain do
   def parse(data, entry \\ nil, opts \\ [])
   def parse("", _, _), do: ""
   def parse(nil, _, _), do: ""
-  def parse(json, entry, opts) when is_binary(json), do: do_parse(Poison.decode!(json), entry, opts)
+
+  def parse(json, entry, opts) when is_binary(json),
+    do: do_parse(Poison.decode!(json), entry, opts)
+
   def parse(json, entry, opts) when is_list(json), do: do_parse(json, entry, opts)
 
   defp do_parse(data, entry, opts) do
@@ -73,12 +76,18 @@ defmodule Brando.Villain do
       |> Enum.join()
 
     output = parse_and_render(html, context)
-    :telemetry.execute([:brando, :villain, :parse_and_render], %{duration: System.monotonic_time() - start})
+
+    :telemetry.execute([:brando, :villain, :parse_and_render], %{
+      duration: System.monotonic_time() - start
+    })
+
     output
   end
 
   # so we don't pass around unneccessary data in the parser
-  defp maybe_nil_fields(entry, %{data_field: data_field, html_field: html_field}), do: %{entry | data_field => nil, html_field => nil}
+  defp maybe_nil_fields(entry, %{data_field: data_field, html_field: html_field}),
+    do: %{entry | data_field => nil, html_field => nil}
+
   defp maybe_nil_fields(entry, %{data_field: data_field}), do: %{entry | data_field => nil}
   defp maybe_nil_fields(entry, %{html_field: html_field}), do: %{entry | html_field => nil}
   defp maybe_nil_fields(entry, _), do: entry
@@ -274,6 +283,7 @@ defmodule Brando.Villain do
   @doc """
   List all registered Villain fields
   """
+  @spec list_villains :: [module()]
   def list_villains do
     {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
 
@@ -430,7 +440,7 @@ defmodule Brando.Villain do
   @spec search_villains_for_regex(
           schema :: any,
           data_field :: atom,
-          search_terms :: binary | [binary]
+          search_terms :: {atom, binary} | [{atom, binary}]
         ) :: [any]
   def search_villains_for_regex(schema, data_field, search_terms, with_data \\ nil) do
     search_terms = (is_list(search_terms) && search_terms) || [search_terms]
@@ -454,7 +464,7 @@ defmodule Brando.Villain do
       else: Brando.repo().all(built_query) |> Enum.map(& &1["id"])
   end
 
-  @spec search_templates_for_regex(search_terms :: keyword | [keyword]) :: [any]
+  @spec search_templates_for_regex(search_terms :: {atom, binary} | [{atom, binary}]) :: [any]
   def search_templates_for_regex(search_terms) do
     search_terms = (is_list(search_terms) && search_terms) || [search_terms]
 
@@ -481,16 +491,13 @@ defmodule Brando.Villain do
   @doc """
   Look through all `villains` for `search_term` and rerender all matching
   """
-  @spec rerender_matching_villains([any], binary | [binary]) :: [any]
+  @spec rerender_matching_villains([module], {atom, binary} | [{atom, binary}]) :: [any]
   def rerender_matching_villains(villains, search_terms) do
     for {schema, fields} <- villains do
       Enum.reduce(fields, [], fn {_, data_field, html_field}, acc ->
         case search_villains_for_regex(schema, data_field, search_terms) do
-          [] ->
-            acc
-
-          ids ->
-            [rerender_html_from_ids({schema, data_field, html_field}, ids) | acc]
+          [] -> acc
+          ids -> [rerender_html_from_ids({schema, data_field, html_field}, ids) | acc]
         end
       end)
     end
@@ -500,7 +507,7 @@ defmodule Brando.Villain do
   Look through all templates for `search_terms` and rerender all villains that
   use this template
   """
-  @spec rerender_matching_templates([any], binary | [binary]) :: any
+  @spec rerender_matching_templates([module], {atom, binary} | [{atom, binary}]) :: any
   def rerender_matching_templates(_villains, search_terms) do
     case search_templates_for_regex(search_terms) |> Enum.map(& &1["id"]) do
       [] -> nil

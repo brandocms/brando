@@ -4,64 +4,64 @@ defmodule Brando.Villain.Parser do
   """
 
   @doc "Parses a comment"
-  @callback comment(data :: %{binary => any}, opts :: map) :: binary
+  @callback comment(data :: map, opts :: map) :: binary
 
   @doc "Parses a header"
-  @callback header(data :: %{binary => any}, opts :: map) :: binary
+  @callback header(data :: map, opts :: map) :: binary
 
   @doc "Parses text/paragraphs"
-  @callback text(data :: %{binary => any}, opts :: map) :: binary
+  @callback text(data :: map, opts :: map) :: binary
 
   @doc "Parses video"
-  @callback video(data :: %{binary => any}, opts :: map) :: binary
+  @callback video(data :: map, opts :: map) :: binary
 
   @doc "Parses media"
-  @callback media(data :: %{binary => any}, opts :: map) :: binary
+  @callback media(data :: map, opts :: map) :: binary
 
   @doc "Parses map"
-  @callback map(data :: %{binary => any}, opts :: map) :: binary
+  @callback map(data :: map, opts :: map) :: binary
 
   @doc "Parses image"
-  @callback image(data :: %{binary => any}, opts :: map) :: binary
+  @callback image(data :: map, opts :: map) :: binary
 
   @doc "Parses input"
-  @callback input(data :: %{binary => any}, opts :: map) :: binary
+  @callback input(data :: map, opts :: map) :: binary
 
   @doc "Parses slideshow"
-  @callback slideshow(data :: %{binary => any}, opts :: map) :: binary
+  @callback slideshow(data :: map, opts :: map) :: binary
 
   @doc "Parses divider"
-  @callback divider(data :: %{binary => any}, opts :: map) :: binary
+  @callback divider(data :: map, opts :: map) :: binary
 
   @doc "Parses list"
-  @callback list(data :: %{binary => any}, opts :: map) :: binary
+  @callback list(data :: map, opts :: map) :: binary
 
   @doc "Parses blockquote"
-  @callback blockquote(data :: %{binary => any}, opts :: map) :: binary
+  @callback blockquote(data :: map, opts :: map) :: binary
 
   @doc "Parses columns"
-  @callback columns(data :: %{binary => any}, opts :: map) :: binary
+  @callback columns(data :: map, opts :: map) :: binary
 
   @doc "Parses datatables"
-  @callback datatable(data :: %{binary => any}, opts :: map) :: binary
+  @callback datatable(data :: map, opts :: map) :: binary
 
   @doc "Parses markdown"
-  @callback markdown(data :: %{binary => any}, opts :: map) :: binary
+  @callback markdown(data :: map, opts :: map) :: binary
 
   @doc "Parses html"
-  @callback html(data :: %{binary => any}, opts :: map) :: binary
+  @callback html(data :: map, opts :: map) :: binary
 
   @doc "Parses svg"
-  @callback svg(data :: %{binary => any}, opts :: map) :: binary
+  @callback svg(data :: map, opts :: map) :: binary
 
   @doc "Parses template"
-  @callback template(data :: %{binary => any}, opts :: map) :: binary
+  @callback template(data :: map, opts :: map) :: binary
 
   @doc "Parses datasource"
-  @callback datasource(data :: %{binary => any}, opts :: map) :: binary
+  @callback datasource(data :: map, opts :: map) :: binary
 
   @doc "Renders caption for picture block"
-  @callback render_caption(data :: %{binary => any}) :: binary
+  @callback render_caption(data :: map) :: binary
 
   defmacro __using__(_) do
     quote do

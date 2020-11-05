@@ -50,6 +50,7 @@ function plugins({ type } = {}) {
         comments: false
       },
       compress: {
+        pure_funcs: ['console.info', 'console.debug', 'console.warn'],
         global_defs: {
           module: false
         }
@@ -69,7 +70,7 @@ const moduleConfig = {
     format: 'esm',
     entryFileNames: 'js/app.js',
     sourcemap: true,
-    banner: '/* hepp */'
+    banner: '/* B/bundle */'
   },
   plugins: plugins({ type: 'module' }),
   watch: { clearScreen: false }

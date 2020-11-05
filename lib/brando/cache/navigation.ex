@@ -18,7 +18,7 @@ defmodule Brando.Cache.Navigation do
 
       get("main.en")
   """
-  @spec get(binary) :: map()
+  @spec get(binary) :: map() | nil
   def get(path) do
     [key, lang] = String.split(path, ".")
     get(key, lang)
@@ -29,7 +29,7 @@ defmodule Brando.Cache.Navigation do
 
       get("main", "en")
   """
-  @spec get(binary, binary) :: map()
+  @spec get(binary, binary) :: map() | nil
   def get(key, lang), do: get_in(get(), [key, lang])
 
   @doc """

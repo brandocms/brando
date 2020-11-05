@@ -41,8 +41,7 @@ defmodule Brando.Navigation.NavigationResolver do
   Delete menu
   """
   def delete_menu(%{menu_id: menu_id}, %{context: %{current_user: _current_user}}) do
-    menu_id
-    |> Navigation.delete_menu()
+    Navigation.delete_menu(menu_id)
   end
 
   @doc """

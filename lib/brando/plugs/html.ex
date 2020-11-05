@@ -20,10 +20,10 @@ defmodule Brando.Plug.HTML do
       plug :put_section, "users"
   """
 
-  @spec put_section(Plug.Conn.t(), binary) :: Plug.Conn.t()
+  @spec put_section(conn, binary) :: conn
   def put_section(conn, name), do: put_private(conn, :brando_section_name, name)
 
-  @spec get_section(Plug.Conn.t()) :: binary
+  @spec get_section(conn) :: binary
   def get_section(conn), do: conn.private.brando_section_name
 
   @doc """
@@ -34,7 +34,7 @@ defmodule Brando.Plug.HTML do
       import Brando.Plug.HTML
       plug :put_css_classes, "wrapper box"
   """
-  @spec put_css_classes(Plug.Conn.t(), binary | [binary]) :: Plug.Conn.t()
+  @spec put_css_classes(conn, binary | [binary]) :: conn
   def put_css_classes(conn, classes) when is_binary(classes),
     do: put_private(conn, :brando_css_classes, classes)
 

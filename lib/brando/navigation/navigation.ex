@@ -153,7 +153,7 @@ defmodule Brando.Navigation do
     end
   end
 
-  @spec get :: map
+  @spec get :: map | nil
   def get do
     Brando.Cache.Navigation.get()
   end
