@@ -69,18 +69,18 @@ defmodule Brando.LivePreview do
           schema_preloads: []
         ]
 
+        var!(entry) = entry
         var!(extra_vars) = []
 
         unquote(block)
-
         processed_opts = var!(opts)
 
-        template = processed_opts[:view_template].(entry)
-        section = processed_opts[:template_section].(entry)
+        template = processed_opts[:view_template].(var!(entry))
+        section = processed_opts[:template_section].(var!(entry))
 
         # preloads
-        entry =
-          entry
+        var!(entry) =
+          var!(entry)
           |> Brando.repo().preload(processed_opts[:schema_preloads])
           |> processed_opts[:mutate_data].()
 
@@ -90,25 +90,25 @@ defmodule Brando.LivePreview do
             else: String.to_existing_atom(prop)
 
         # if key, then parse villain
-        entry =
+        var!(entry) =
           if key do
             html_key = key |> String.replace("data", "html") |> String.to_existing_atom()
             atom_key = String.to_existing_atom(key)
 
             html =
-              Brando.Villain.parse(Map.get(entry, atom_key), entry,
+              Brando.Villain.parse(Map.get(var!(entry), atom_key), var!(entry),
                 cache_templates: true,
                 data_field: atom_key,
                 html_field: html_key
               )
 
-            entry = Map.put(entry, :html, html)
+            Map.put(var!(entry), :html, html)
           else
-            entry
+            var!(entry)
           end
 
         # build conn
-        conn = %Plug.Conn{host: "localhost", private: %{phoenix_endpoint: Brando.endpoint()}}
+        conn = Phoenix.ConnTest.build_conn()
         conn = Brando.Plug.HTML.put_section(conn, section)
 
         render_assigns =
@@ -116,7 +116,7 @@ defmodule Brando.LivePreview do
              {:conn, conn},
              {:section, section},
              {:LIVE_PREVIEW, true},
-             {atom_prop, entry}
+             {atom_prop, var!(entry)}
            ] ++ unquote(Macro.var(:extra_vars, nil)))
           |> Enum.into(%{})
 
@@ -184,7 +184,7 @@ defmodule Brando.LivePreview do
     quote do
       cached_var =
         Brando.LivePreview.get_var(unquote(Macro.var(:cache_key, nil)), unquote(var_name), fn ->
-          unquote(var_value).()
+          unquote(var_value).(var!(entry))
         end)
 
       var!(extra_vars) = [{unquote(var_name), cached_var} | unquote(Macro.var(:extra_vars, nil))]
