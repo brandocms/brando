@@ -16,9 +16,18 @@
       template_section fn e -> e.key end
       template_prop :entry
 
-      assign :navigation, fn -> Brando.Navigation.get_menu("main", "en") |> elem(1) end
-      assign :partials, fn -> Brando.Pages.get_fragments("partials") |> elem(1) end
+      assign :navigation, fn _entry -> Brando.Navigation.get_menu("main", "en") |> elem(1) end
+      assign :partials, fn _entry -> Brando.Pages.get_fragments("partials") |> elem(1) end
     end
+
+  Also note that `assign/2` now requires the passed anonymous function to have `/1` arity. This
+  means you change
+
+      assign :navigation, fn -> Brando.Navigation.get_menu("main", "en") |> elem(1) end
+
+  to
+
+      assign :navigation, fn _entry -> Brando.Navigation.get_menu("main", "en") |> elem(1) end
 
 * Dynamic redirects. Switch out your fallback controller in `page_controller.ex`:
 
