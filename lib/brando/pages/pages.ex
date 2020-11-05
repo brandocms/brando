@@ -230,19 +230,6 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  List all page fragments
-  """
-  def list_page_fragments do
-    fragments =
-      PageFragment
-      |> order_by([p], asc: p.parent_key, asc: p.sequence, asc: p.language)
-      |> exclude_deleted()
-      |> Brando.repo().all()
-
-    {:ok, fragments}
-  end
-
-  @doc """
   Get page fragment
   """
   @spec get_page_fragment(binary | integer) ::
@@ -311,6 +298,19 @@ defmodule Brando.Pages do
 
   def get_fragment(%Page{fragments: fragments}, key) do
     Enum.find(fragments, &(&1.key == key))
+  end
+
+  @doc """
+  List all page fragments
+  """
+  def list_page_fragments do
+    fragments =
+      PageFragment
+      |> order_by([p], asc: p.parent_key, asc: p.sequence, asc: p.language)
+      |> exclude_deleted()
+      |> Brando.repo().all()
+
+    {:ok, fragments}
   end
 
   @doc """
@@ -478,14 +478,13 @@ defmodule Brando.Pages do
   Check all fields for references to `fragment`.
   Rerender if found.
   """
-  @spec update_villains_referencing_fragment(fragment :: Brando.Pages.PageFragment.t()) :: [any]
+  @spec update_villains_referencing_fragment(fragment) :: [any]
   def update_villains_referencing_fragment(fragment) do
     search_term = [
       fragment: "{% fragment #{fragment.parent_key} #{fragment.key} #{fragment.language} %}"
     ]
 
     villains = Villain.list_villains()
-
     Villain.rerender_matching_villains(villains, search_term)
   end
 
