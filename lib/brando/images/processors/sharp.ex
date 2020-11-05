@@ -53,6 +53,8 @@ defmodule Brando.Images.Processor.Sharp do
     ]
 
     extra_params = [
+      "rotate",
+      "--",
       "--quality",
       to_string(quality),
       "--palette",
@@ -76,6 +78,22 @@ defmodule Brando.Images.Processor.Sharp do
 
         Params:
         #{inspect(Enum.join(params, " "), pretty: true)}
+        """)
+
+      {"", 139} ->
+        Logger.error("""
+        ==> process_image/ERROR -- SEGMENT FAULT!
+
+        Resize values:
+        #{inspect(resize_values)}
+
+        Params:
+        #{inspect(Enum.join(params, " "), pretty: true)}
+
+        NOTE:
+
+        This usually means there is something wrong with either your libvips installation or sharp-cli installation. Try reinstalling
+
         """)
 
       {_, 0} ->
@@ -133,6 +151,8 @@ defmodule Brando.Images.Processor.Sharp do
     ]
 
     extra_params = [
+      "rotate",
+      "--",
       "--quality",
       to_string(quality),
       "--format",
@@ -158,6 +178,22 @@ defmodule Brando.Images.Processor.Sharp do
 
         Params:
         #{inspect(Enum.join(params, " "), pretty: true)}
+        """)
+
+      {"", 139} ->
+        Logger.error("""
+        ==> process_image/ERROR -- SEGMENT FAULT!
+
+        Resize values:
+        #{inspect(resize_values)}
+
+        Params:
+        #{inspect(Enum.join(params, " "), pretty: true)}
+
+        NOTE:
+
+        This usually means there is something wrong with either your libvips installation or sharp-cli installation. Try reinstalling
+
         """)
 
       {_, 0} ->
