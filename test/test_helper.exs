@@ -157,7 +157,7 @@ defmodule BrandoIntegrationWeb.LivePreview do
     view_template fn _ -> "index.html" end
     template_section fn _ -> "index" end
     template_prop :page
-    assign :test, fn -> "zapp" end
+    assign :test, fn _ -> "zapp" end
   end
 end
 

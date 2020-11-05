@@ -23,8 +23,8 @@ defmodule Brando.LivePreviewTest do
       view_template fn entry -> "#{entry.key}.html" end
       template_section fn entry -> entry.key end
 
-      assign :restaurants, fn -> __MODULE__.list_restaurants!() end
-      assign :employees, fn -> __MODULE__.list_employees!() end
+      assign :restaurants, fn _ -> __MODULE__.list_restaurants!() end
+      assign :employees, fn _ -> __MODULE__.list_employees!() end
     end
 
     def list_restaurants! do
