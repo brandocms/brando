@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "brandojs": "file:.yalc/brandojs",
-    "core-js": "^3.6.5",
+    "core-js": "^3.7.0",
     "vue": "^2.6.12"
   },
   "devDependencies": {
