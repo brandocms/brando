@@ -11,8 +11,9 @@ defmodule Brando.Cache.Identity do
   @doc """
   Get Identity from cache
   """
-  @spec get :: identity
+  @spec get(binary) :: any
   def get, do: Cache.get(:identity)
+  def get(key), do: Map.get(get(), key)
 
   @doc """
   Set initial identity cache. Called on startup
