@@ -1,6 +1,23 @@
 defmodule Brando.LivePreview do
   @moduledoc """
-  Coming up
+
+  Create a `MyAppWeb.LivePreview` module if it does not already exist
+
+  ```
+  use Brando.LivePreview
+
+  preview_target Brando.Pages.Page do
+    mutate_data fn entry -> %{entry | title: "custom"} end
+
+    layout_module MyAppWeb.LayoutView
+    view_module MyAppWeb.PageView
+    view_template fn e -> e.template end
+    template_section fn e -> e.key end
+
+    assign :navigation, fn _ -> Brando.Navigation.get_menu("main", "en") |> elem(1) end
+    assign :partials, fn _ -> Brando.Pages.get_fragments("partials") |> elem(1) end
+  end
+  ```
   """
   require Logger
 
@@ -21,15 +38,15 @@ defmodule Brando.LivePreview do
     Brando.LivePreview.target/2 is deprecated, use preview_target/2 instead:
 
         preview_target Brando.Pages.Page do
-          mutate_data(fn entry -> %{entry | title: "custom"} end)
+          mutate_data fn entry -> %{entry | title: "custom"} end
 
-          layout_module(MyAppWeb.LayoutView)
-          view_module(MyAppWeb.PageView)
-          view_template(fn e -> e.template end)
-          template_section(fn e -> e.key end)
+          layout_module MyAppWeb.LayoutView
+          view_module MyAppWeb.PageView
+          view_template fn e -> e.template end
+          template_section fn e -> e.key end
 
-          assign :navigation, fn -> Brando.Navigation.get_menu("main", "en") |> elem(1) end
-          assign :partials, fn -> Brando.Pages.get_fragments("partials") |> elem(1) end
+          assign :navigation, fn _ -> Brando.Navigation.get_menu("main", "en") |> elem(1) end
+          assign :partials, fn _ -> Brando.Pages.get_fragments("partials") |> elem(1) end
         end
     """
   end
@@ -138,6 +155,15 @@ defmodule Brando.LivePreview do
     end
   end
 
+  @doc """
+  Mutate the entry available for rendering
+
+  ### Example
+
+      mutate_data fn entry -> %{entry | title: "custom"} end
+
+  Will add `title` with value `custom` to the `entry`
+  """
   defmacro mutate_data(mutate_data) do
     quote do
       var!(opts) = Keyword.put(var!(opts), :mutate_data, unquote(mutate_data))
