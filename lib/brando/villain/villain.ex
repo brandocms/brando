@@ -104,6 +104,7 @@ defmodule Brando.Villain do
     |> add_to_context("links", identity.links)
     |> add_to_context("globals", globals)
     |> add_to_context("navigation", navigation)
+    |> add_to_context("language", Gettext.get_locale(Brando.gettext()))
   end
 
   def create_context(vars) do

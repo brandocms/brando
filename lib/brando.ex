@@ -48,6 +48,11 @@ defmodule Brando do
   def factory, do: app_module(Factory)
 
   @doc """
+  Gets the parent app's gettext module, as set in config.exs
+  """
+  def gettext, do: app_module(Gettext)
+
+  @doc """
   Gets the parent app's helpers, as set in config.exs
   """
   def helpers, do: web_module(Router.Helpers)
