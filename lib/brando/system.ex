@@ -7,6 +7,7 @@ defmodule Brando.System do
   alias Brando.Exception.ConfigError
   alias Brando.Cache
   alias Brando.CDN
+  alias Brando.System.Log
   alias Brando.Villain
 
   def initialize do
@@ -20,7 +21,7 @@ defmodule Brando.System do
 
   def run_checks do
     Logger.info("==> Brando >> Running system checks...")
-
+    Brando.Cache.put(:warnings, [], :infinite)
     {:ok, {:module_config, :exists}} = check_module_config_exists()
     {:ok, {:executable, :exists}} = check_image_processing_executable()
     {:ok, {:identity, :exists}} = check_identity_exists()
@@ -169,12 +170,6 @@ defmodule Brando.System do
       end
     end
 
-    # Enum.map(results, fn result ->
-    #   log_invalid_template_syntax(:vars, result)
-    #   log_invalid_template_syntax(:for_loops, result)
-    # end)
-
-    # Return valid no matter what. We only want to warn
     {:ok, {:entry_syntax, nil}}
   end
 
@@ -187,16 +182,13 @@ defmodule Brando.System do
          "id" => id
        }) do
     for match <- matches do
-      IO.warn(
-        """
-        Deprecated template syntax `${#{match}}`. Try `{{ #{String.replace(match, ":", ".")} }}` instead.
+      Log.warn("""
+      Deprecated template syntax `${#{match}}`. Try `{{ #{String.replace(match, ":", ".")} }}` instead.
 
-        Template..: #{inspect(name)}
-        Namespace.: #{inspect(namespace)}
-        Id........: #{inspect(id)}
-        """,
-        []
-      )
+      Template..: #{inspect(name)}
+      Namespace.: #{inspect(namespace)}
+      Id........: #{inspect(id)}
+      """)
     end
   end
 
@@ -209,16 +201,13 @@ defmodule Brando.System do
          "id" => id
        }) do
     for match <- matches do
-      IO.warn(
-        """
-        Deprecated for loop syntax `{% #{match} %}`. Try `{% #{String.replace(match, "<-", "in")} %}` instead.
+      Log.warn("""
+      Deprecated for loop syntax `{% #{match} %}`. Try `{% #{String.replace(match, "<-", "in")} %}` instead.
 
-        Template..: #{inspect(name)}
-        Namespace.: #{inspect(namespace)}
-        Id........: #{inspect(id)}
-        """,
-        []
-      )
+      Template..: #{inspect(name)}
+      Namespace.: #{inspect(namespace)}
+      Id........: #{inspect(id)}
+      """)
     end
   end
 
@@ -238,15 +227,12 @@ defmodule Brando.System do
   end
 
   defp log_invalid_wrapper_content(t) do
-    IO.warn(
-      """
-      Found deprecated wrapper content format `${CONTENT}`. Use `{{ content }}` instead.
+    Log.warn("""
+    Found deprecated wrapper content format `${CONTENT}` or {{ CONTENT }}. Use `{{ content }}` instead.
 
-      Schema.: Template
-      Id.....: #{t.id} - #{t.name}
-      """,
-      []
-    )
+    Schema.: Template
+    Id.....: #{t.id} - #{t.name}
+    """)
   end
 end
 

@@ -105,6 +105,10 @@ defmodule Brando.Schema.Types.Identity do
     field :value, :string
   end
 
+  object :logged_warning do
+    field :msg, :string
+  end
+
   input_object :identity_params do
     field :type, :string
     field :name, :string
@@ -166,6 +170,11 @@ defmodule Brando.Schema.Types.Identity do
     @desc "Get identity"
     field :identity, type: :identity do
       resolve &Brando.Sites.IdentityResolver.get/2
+    end
+
+    @desc "Get warnings"
+    field :logged_warnings, type: list_of(:logged_warning) do
+      resolve &Brando.Sites.LoggedWarningResolver.all/2
     end
   end
 
