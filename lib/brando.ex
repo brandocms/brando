@@ -50,7 +50,7 @@ defmodule Brando do
   @doc """
   Gets the parent app's gettext module, as set in config.exs
   """
-  def gettext, do: app_module(Gettext)
+  def gettext, do: web_module(Gettext)
 
   @doc """
   Gets the parent app's helpers, as set in config.exs
