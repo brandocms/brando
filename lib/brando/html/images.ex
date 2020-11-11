@@ -21,11 +21,11 @@ defmodule Brando.HTML.Images do
     * `placeholder` - for lazyloading. :svg for svg placeholder -- :micro for blur-up -- :none for nothing
     * `img_class` - class added to the img element. I.e img_class: "img-fluid"
     * `img_attrs` - list of attributes to add to img element. I.e img_attrs: [data_test: true]
+    * `cache` - key to cache by, i.e `cache: schema.updated_at`
     * `media_queries` - list of media queries to add to source.
+       I.e `media_queries: [{"(min-width: 0px) and (max-width: 760px)", [{"mobile", "700w"}]}]`
     * `sizes` - set to "auto" for adding `data-sizes="auto"` which Jupiter parses and updates to image's size.
        You can also set as a list of sizes: `["30vw"]`
-    * `cache` - key to cache by, i.e `cache: schema.updated_at`
-      I.e `media_queries: [{"(min-width: 0px) and (max-width: 760px)", [{"mobile", "700w"}]}]`
     * `srcset` - if you want to use the srcset attribute. Set in the form of `{module, field}`.
       I.e `srcset: {Brando.Users.User, :avatar}`
 
