@@ -33,6 +33,10 @@ defmodule BrandoIntegration.Presence do
   use Phoenix.Presence, otp_app: :brando, pubsub_server: BrandoIntegration.PubSub
 end
 
+defmodule BrandoIntegration.Gettext do
+  use Gettext, otp_app: :brando, priv: "priv/gettext/frontend"
+end
+
 defmodule Brando.Villain.ParserTest.Parser do
   use Brando.Villain.Parser
 end
