@@ -8,6 +8,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * Live preview: Send base64 of images on entry creation
 * Villain: Added telemetry for `parse_and_render`
 * Try to rotate images by EXIF info on upload
+* Add system startup warnings to Brando JS
 
 
 ## 0.48.0
