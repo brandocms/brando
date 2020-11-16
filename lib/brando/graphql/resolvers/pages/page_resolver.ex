@@ -4,6 +4,7 @@ defmodule Brando.Pages.PageResolver do
   """
   use Brando.Web, :resolver
   alias Brando.Pages
+  alias Brando.Villain
 
   @doc """
   Find page
@@ -23,8 +24,7 @@ defmodule Brando.Pages.PageResolver do
   Create page
   """
   def create(%{page_params: page_params}, %{context: %{current_user: current_user}}) do
-    page_params
-    |> Pages.create_page(current_user)
+    Pages.create_page(page_params, current_user)
   end
 
   @doc """
@@ -33,16 +33,14 @@ defmodule Brando.Pages.PageResolver do
   def update(%{page_id: page_id, page_params: page_params}, %{
         context: %{current_user: current_user}
       }) do
-    page_id
-    |> Pages.update_page(page_params, current_user)
+    Pages.update_page(page_id, page_params, current_user)
   end
 
   @doc """
   Delete page
   """
   def delete(%{page_id: page_id}, %{context: %{current_user: _current_user}}) do
-    page_id
-    |> Pages.delete_page()
+    Pages.delete_page(page_id)
   end
 
   @doc """
@@ -56,4 +54,49 @@ defmodule Brando.Pages.PageResolver do
   """
   def duplicate_section(%{section_id: section_id}, %{context: %{current_user: _}}),
     do: Pages.duplicate_page_fragment(section_id)
+
+  @doc """
+  Duplicate template
+  """
+  def duplicate_template(%{template_id: template_id}, %{context: %{current_user: _}}),
+    do: Villain.duplicate_template(template_id)
+
+  @doc """
+  Get all templates
+  """
+  def all_templates(args, %{context: %{current_user: _current_user}}) do
+    Villain.list_templates(args)
+  end
+
+  @doc """
+  Find template
+  """
+  def find_template(%{template_id: template_id}, %{context: %{current_user: _current_user}}) do
+    Villain.get_template(%{matches: %{id: template_id}})
+  end
+
+  @doc """
+  Delete template
+  """
+  def delete_template(%{template_id: template_id}, %{context: %{current_user: _current_user}}) do
+    Villain.delete_template(template_id)
+  end
+
+  @doc """
+  Create template
+  """
+  def create_template(%{template_params: template_params}, %{
+        context: %{current_user: _current_user}
+      }) do
+    Villain.create_template(template_params)
+  end
+
+  @doc """
+  Update template
+  """
+  def update_template(%{template_id: template_id, template_params: template_params}, %{
+        context: %{current_user: _current_user}
+      }) do
+    Villain.update_template(template_id, template_params)
+  end
 end

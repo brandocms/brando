@@ -86,7 +86,7 @@ defmodule Brando.API.Villain.VillainController do
 
   @doc false
   def templates(conn, %{"slug" => slug}) do
-    {:ok, templates} = Villain.list_templates(slug)
+    {:ok, templates} = Villain.list_templates(%{filter: %{namespace: slug}})
 
     formatted_templates =
       Enum.map(templates, fn template ->
@@ -97,49 +97,6 @@ defmodule Brando.API.Villain.VillainController do
       end)
 
     json(conn, formatted_templates)
-  end
-
-  @doc false
-  def store_template(conn, %{"template" => json_template}) do
-    with {:ok, decoded_template} <- Jason.decode(json_template),
-         {:ok, stored_template} <- Villain.update_or_create_template(decoded_template) do
-      payload = %{
-        status: 200,
-        template: stored_template
-      }
-
-      json(conn, payload)
-    end
-  end
-
-  @doc false
-  def delete_template(conn, %{"id" => template_id}) do
-    with {:ok, _} <- Villain.delete_template(template_id) do
-      payload = %{
-        status: 200
-      }
-
-      json(conn, payload)
-    end
-  end
-
-  def sequence_templates(conn, %{"sequence" => json_sequence}) do
-    with {:ok, decoded_sequence} <- Jason.decode(json_sequence),
-         fixed_sequence <- Enum.map(decoded_sequence, &String.to_integer/1),
-         _ <- Brando.Villain.Template.sequence(%{"ids" => fixed_sequence}) do
-      payload = %{
-        status: 200
-      }
-
-      json(conn, payload)
-    else
-      _ ->
-        payload = %{
-          status: 400
-        }
-
-        json(conn, payload)
-    end
   end
 
   defp sizes_with_media_url(image),

@@ -47,14 +47,6 @@ defmodule Brando.Villain.ControllerTest do
     assert Enum.count(resp_map) == 2
   end
 
-  test "store_template", %{conn: conn} do
-    t1 = Factory.insert(:template)
-    encoded_t1 = Jason.encode!(%{"data" => t1})
-    conn = VillainController.store_template(conn, %{"template" => encoded_t1})
-    resp_map = Jason.decode!(conn.resp_body)
-    assert resp_map["status"] == 200
-  end
-
   test "upload", %{conn: conn} do
     _is1 = Factory.insert(:image_series, name: "test", slug: "test")
 
@@ -98,28 +90,5 @@ defmodule Brando.Villain.ControllerTest do
 
     assert resp_map["error"] ==
              "Image series `non_existing` not found. Make sure it exists before using it as an upload target"
-  end
-
-  test "delete_template", %{conn: conn} do
-    t1 = Factory.insert(:template)
-    conn = VillainController.delete_template(conn, %{"id" => t1.id})
-    resp_map = Jason.decode!(conn.resp_body)
-    assert resp_map["status"] == 200
-  end
-
-  test "sequence_templates", %{conn: conn} do
-    t1 = Factory.insert(:template)
-    t2 = Factory.insert(:template)
-    t3 = Factory.insert(:template)
-
-    encoded_sequence = Jason.encode!([to_string(t3.id), to_string(t2.id), to_string(t1.id)])
-
-    conn =
-      VillainController.sequence_templates(conn, %{
-        "sequence" => encoded_sequence
-      })
-
-    resp_map = Jason.decode!(conn.resp_body)
-    assert resp_map["status"] == 200
   end
 end

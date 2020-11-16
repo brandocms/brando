@@ -140,11 +140,12 @@ defmodule Brando.Villain.Parser do
         {:ok, template} =
           case Map.get(opts, :cache_templates) do
             true -> Brando.Villain.get_cached_template(id)
-            _ -> Brando.Villain.get_template(id)
+            _ -> Brando.Villain.get_template(%{matches: %{id: id}})
           end
 
         # multi template
-        {:ok, template} = Brando.Villain.get_template(id)
+        #! TODO: WHY IS THIS OVERRIDDEN
+        {:ok, template} = Brando.Villain.get_template(%{matches: %{id: id}})
 
         base_context = opts.context
 
@@ -182,7 +183,7 @@ defmodule Brando.Villain.Parser do
         {:ok, template} =
           case Map.get(opts, :cache_templates) do
             true -> Brando.Villain.get_cached_template(id)
-            _ -> Brando.Villain.get_template(id)
+            _ -> Brando.Villain.get_template(%{matches: %{id: id}})
           end
 
         vars = Map.get(block, "vars")

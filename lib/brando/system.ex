@@ -213,7 +213,7 @@ defmodule Brando.System do
 
   # wrapper should be moved from datasource block to template
   defp check_invalid_wrapper_content do
-    {:ok, templates} = Brando.Villain.list_templates("all")
+    {:ok, templates} = Brando.Villain.list_templates(%{filter: %{namespace: "all"}})
 
     if Enum.count(templates) > 0 do
       for t <- templates do

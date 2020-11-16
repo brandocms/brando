@@ -66,6 +66,45 @@ defmodule Brando.Schema.Types.Page do
     field :title, :string
   end
 
+  object :template do
+    field :id, :id
+    field :name, :string
+    field :namespace, :string
+    field :help_text, :string
+    field :class, :string
+    field :code, :string
+    field :refs, :json
+    field :vars, :json
+    field :svg, :string
+    field :multi, :boolean
+    field :wrapper, :string
+    field :inserted_at, :time
+    field :updated_at, :time
+    field :deleted_at, :time
+  end
+
+  input_object :template_params do
+    field :name, :string
+    field :namespace, :string
+    field :help_text, :string
+    field :class, :string
+    field :code, :string
+    field :refs, :json
+    field :vars, :json
+    field :svg, :string
+    field :multi, :boolean
+    field :wrapper, :string
+    field :inserted_at, :time
+    field :updated_at, :time
+    field :deleted_at, :time
+  end
+
+  @desc "Filtering options for template"
+  input_object :template_filter do
+    field :name, :string
+    field :namespace, :string
+  end
+
   object :page_queries do
     @desc "Get all pages"
     field :pages, type: list_of(:page) do
@@ -81,6 +120,23 @@ defmodule Brando.Schema.Types.Page do
     field :page, type: :page do
       arg :page_id, non_null(:id)
       resolve &Brando.Pages.PageResolver.find/2
+    end
+
+    @desc "Get all templates"
+    field :templates, type: list_of(:template) do
+      arg :order, :order,
+        default_value: [{:asc, :namespace}, {:asc, :sequence}, {:asc, :inserted_at}]
+
+      arg :limit, :integer, default_value: 75
+      arg :offset, :integer, default_value: 0
+      arg :filter, :template_filter
+      resolve &Brando.Pages.PageResolver.all_templates/2
+    end
+
+    @desc "Get template"
+    field :template, type: :template do
+      arg :template_id, non_null(:id)
+      resolve &Brando.Pages.PageResolver.find_template/2
     end
   end
 
@@ -104,6 +160,12 @@ defmodule Brando.Schema.Types.Page do
       resolve &Brando.Pages.PageResolver.delete/2
     end
 
+    field :delete_template, type: :template do
+      arg :template_id, non_null(:id)
+
+      resolve &Brando.Pages.PageResolver.delete_template/2
+    end
+
     @desc "Duplicate page"
     field :duplicate_page, type: :page do
       arg :page_id, :id
@@ -116,6 +178,26 @@ defmodule Brando.Schema.Types.Page do
       arg :section_id, :id
 
       resolve &Brando.Pages.PageResolver.duplicate_section/2
+    end
+
+    @desc "Duplicate template"
+    field :duplicate_template, type: :template do
+      arg :template_id, :id
+
+      resolve &Brando.Pages.PageResolver.duplicate_template/2
+    end
+
+    field :create_template, type: :template do
+      arg :template_params, :template_params
+
+      resolve &Brando.Pages.PageResolver.create_template/2
+    end
+
+    field :update_template, type: :template do
+      arg :template_id, non_null(:id)
+      arg :template_params, :template_params
+
+      resolve &Brando.Pages.PageResolver.update_template/2
     end
   end
 end

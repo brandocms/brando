@@ -1,6 +1,7 @@
 defmodule Brando.Mixin.Channels.AdminChannelMixin do
   alias Brando.Navigation
   alias Brando.Pages
+  alias Brando.Villain
 
   @keys [
     "config:get",
@@ -37,6 +38,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "page_fragment:duplicate",
     "page_fragment:rerender_all",
     "templates:list_templates",
+    "templates:sequence_templates",
     "user:deactivate",
     "user:activate",
     "user:state"
@@ -282,9 +284,14 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("templates:list_templates", _, socket) do
-    {:ok, templates} = Brando.Villain.list_templates("all")
+    {:ok, templates} = Villain.list_templates(%{filter: %{namespace: "all"}})
     templates = Enum.map(templates, &%{id: &1.id, name: "#{&1.namespace} - #{&1.name}"})
     {:reply, {:ok, %{code: 200, templates: templates}}, socket}
+  end
+
+  def do_handle_in("templates:sequence_templates", params, socket) do
+    Villain.Template.sequence(params)
+    {:reply, {:ok, %{code: 200}}, socket}
   end
 
   # Live preview

@@ -28,11 +28,15 @@ defmodule Brando.Villain do
     of entries in the for loop
 
   """
+  use Brando.Query
+
   import Ecto.Query
 
   alias Brando.Cache
   alias Brando.Pages
   alias Brando.Utils
+  alias Brando.Villain.Template
+  alias Ecto.Changeset
   alias Liquex.Context
 
   @doc """
@@ -191,13 +195,13 @@ defmodule Brando.Villain do
   Rerender page HTML from data.
   """
   def rerender_html(
-        %Ecto.Changeset{} = changeset,
+        %Changeset{} = changeset,
         field \\ nil
       ) do
     data_field = (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
     html_field = (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
 
-    applied_changes = Ecto.Changeset.apply_changes(changeset)
+    applied_changes = Changeset.apply_changes(changeset)
     data_src = Map.get(applied_changes, data_field)
 
     parsed_data =
@@ -207,7 +211,7 @@ defmodule Brando.Villain do
       )
 
     changeset
-    |> Ecto.Changeset.put_change(html_field, parsed_data)
+    |> Changeset.put_change(html_field, parsed_data)
     |> Brando.repo().update!
   end
 
@@ -266,8 +270,8 @@ defmodule Brando.Villain do
 
     changeset =
       record
-      |> Ecto.Changeset.change()
-      |> Ecto.Changeset.put_change(
+      |> Changeset.change()
+      |> Changeset.put_change(
         html_field,
         parsed_data
       )
@@ -328,26 +332,12 @@ defmodule Brando.Villain do
   end
 
   @doc """
-  Get template from DB
-  """
-  def get_template(id) do
-    query =
-      from t in Brando.Villain.Template,
-        where: t.id == ^id and is_nil(t.deleted_at)
-
-    case Brando.repo().one(query) do
-      nil -> {:error, {:template, :not_found}}
-      t -> {:ok, t}
-    end
-  end
-
-  @doc """
   Get template from CACHE or DB
   """
   def get_cached_template(id) do
     case Cachex.get(:cache, "template__#{id}") do
       {:ok, nil} ->
-        {:ok, template} = get_template(id)
+        {:ok, template} = get_template(%{matches: %{id: id}})
         Cachex.put(:cache, "template__#{id}", template, ttl: :timer.seconds(120))
         {:ok, template}
 
@@ -357,15 +347,29 @@ defmodule Brando.Villain do
   end
 
   @doc """
+  Duplicate template
+  """
+  def duplicate_template(template_id) do
+    template_id = (is_binary(template_id) && String.to_integer(template_id)) || template_id
+    {:ok, template} = get_template(%{matches: %{id: template_id}})
+
+    template =
+      template
+      |> Map.merge(%{name: "#{template.name} copy", class: "#{template.class} copy"})
+      |> Map.delete([:id])
+      |> Map.from_struct()
+
+    create_template(template)
+  end
+
+  @doc """
   Update or create template in DB
   """
-  def update_or_create_template(%{"data" => %{"id" => id} = data}) do
-    with {:ok, template} <- get_template(id) do
-      params = Map.drop(data, ["id"])
-
+  def update_template(id, params) do
+    with {:ok, template} <- get_template(%{matches: %{id: id}}) do
       {:ok, new_template} =
         template
-        |> Brando.Villain.Template.changeset(params)
+        |> Template.changeset(params)
         |> Brando.repo().update
 
       update_template_in_fields(id)
@@ -374,9 +378,9 @@ defmodule Brando.Villain do
     end
   end
 
-  def update_or_create_template(%{"data" => params}) do
-    %Brando.Villain.Template{}
-    |> Brando.Villain.Template.changeset(params)
+  def create_template(params) do
+    %Template{}
+    |> Template.changeset(params)
     |> Brando.repo().insert
   end
 
@@ -384,35 +388,83 @@ defmodule Brando.Villain do
   Delete template by `id`
   """
   def delete_template(id) do
-    {:ok, template} = get_template(id)
+    {:ok, template} = get_template(%{matches: %{id: id}})
     Brando.repo().delete(template)
   end
 
-  @doc """
-  List templates by namespace
-  """
-  def list_templates(namespace) do
-    query =
-      from t in Brando.Villain.Template,
-        where: is_nil(t.deleted_at),
-        order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
-
-    namespace = (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
-
-    query =
-      case namespace do
-        "all" ->
-          query
-
-        namespace_list when is_list(namespace_list) ->
-          from t in query, where: t.namespace in ^namespace_list
-
-        _ ->
-          from t in query, where: t.namespace == ^namespace
-      end
-
-    {:ok, Brando.repo().all(query)}
+  query :list, Template do
+    fn query -> from q in query, where: is_nil(q.deleted_at) end
   end
+
+  filters Template do
+    fn
+      {:name, name}, query ->
+        from q in query, where: ilike(q.name, ^"%#{name}%")
+
+      {:namespace, namespace}, query ->
+        query =
+          from t in query,
+            where: is_nil(t.deleted_at),
+            order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
+
+        namespace =
+          (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
+
+        case namespace do
+          "all" ->
+            query
+
+          namespace_list when is_list(namespace_list) ->
+            from t in query, where: t.namespace in ^namespace_list
+
+          _ ->
+            from t in query, where: t.namespace == ^namespace
+        end
+    end
+  end
+
+  query :single, Template, do: fn query -> from q in query, where: is_nil(q.deleted_at) end
+
+  matches Template do
+    fn
+      {:id, id}, query ->
+        from t in query, where: t.id == ^id
+
+      {:name, name}, query ->
+        from t in query,
+          where: t.name == ^name
+
+      {:namespace, namespace}, query ->
+        from t in query,
+          where: t.namespace == ^namespace
+    end
+  end
+
+  # @doc """
+  # List templates by namespace
+  # """
+  # def list_templates(namespace) when is_binary(namespace) do
+  #   query =
+  #     from t in Template,
+  #       where: is_nil(t.deleted_at),
+  #       order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
+
+  #   namespace = (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
+
+  #   query =
+  #     case namespace do
+  #       "all" ->
+  #         query
+
+  #       namespace_list when is_list(namespace_list) ->
+  #         from t in query, where: t.namespace in ^namespace_list
+
+  #       _ ->
+  #         from t in query, where: t.namespace == ^namespace
+  #     end
+
+  #   {:ok, Brando.repo().all(query)}
+  # end
 
   @doc """
   List all occurences of fragment in `schema`'s `data_field`

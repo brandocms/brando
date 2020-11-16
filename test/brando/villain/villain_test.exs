@@ -242,13 +242,10 @@ defmodule Brando.VillainTest do
       |> Map.from_struct()
       |> Brando.Utils.stringify_keys()
 
-    Brando.Villain.update_or_create_template(%{"data" => tp2})
+    Brando.Villain.update_template(tp1.id, tp2)
 
     {:ok, updated_page} = Brando.Pages.get_page(page.id)
     assert updated_page.html == "-- this is some NEW code Some text! --"
-
-    tp3_params = Factory.params_for(:template)
-    {:ok, _tp3} = Brando.Villain.update_or_create_template(%{"data" => tp3_params})
   end
 
   test "rerender_villains_for" do
