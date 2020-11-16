@@ -9,6 +9,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * Villain: Added telemetry for `parse_and_render`
 * Try to rotate images by EXIF info on upload
 * Add system startup warnings to Brando JS
+* Better Villain template authoring experience
 
 
 ## 0.48.0
