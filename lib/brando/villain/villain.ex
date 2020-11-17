@@ -321,13 +321,11 @@ defmodule Brando.Villain do
   """
   def list_ids_with_template(schema, data_field, template_id) do
     t = [%{type: "template", data: %{id: template_id}}]
-    d = [%{type: "datasource", data: %{template: template_id}}]
 
     Brando.repo().all(
       from s in schema,
         select: s.id,
-        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t),
-        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^d)
+        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t)
     )
   end
 
