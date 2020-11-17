@@ -18,7 +18,7 @@ defmodule <%= application_module %>.Authorization do
     {"Page", Brando.Pages.Page},
     {"PageFragment", Brando.Pages.PageFragment},
     {"Template", Brando.Villain.Template},
-    {"User", Brando.Users.User},
+    {"User", Brando.Users.User}
   ]
 
   # Rules for :superuser
@@ -36,10 +36,13 @@ defmodule <%= application_module %>.Authorization do
   # Rules for :editor
   rules :editor do
     can :manage, :all
+    cannot :manage, "SEO"
     cannot :manage, "Globals"
     cannot :manage, %Brando.Sites.Identity{}
     cannot :manage, %Brando.Villain.Template{}
     cannot :manage, %Brando.Users.User{}
+    cannot :view, "MenuItem", when: %{to: %{name: "navigation"}}
+    cannot :view, "MenuItem", when: %{to: %{name: "config-seo"}}
     cannot :view, "MenuItem", when: %{to: %{name: "config-identity"}}
     cannot :view, "MenuItem", when: %{to: %{name: "config-globals"}}
     cannot :view, "MenuItem", when: %{to: %{name: "templates"}}
