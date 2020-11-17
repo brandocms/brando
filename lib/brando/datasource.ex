@@ -59,7 +59,6 @@ defmodule Brando.Datasource do
   These data source points are now available through the block editor when you create a Datasource block.
 
   """
-  import Ecto.Query
   alias Brando.Villain
 
   @doc """
@@ -261,15 +260,49 @@ defmodule Brando.Datasource do
   end
 
   @doc """
-  List ids of `schema` records that has a datasource matching schema
+  List ids of `schema` records that has a datasource matching schema OR
+  a template containing a datasource matching schema.
   """
   def list_ids_with_datasource(schema, datasource, data_field \\ :data) do
-    t = [%{type: "datasource", data: %{module: datasource}}]
+    q1 = """
+    SELECT
+      id
+    FROM
+      (SELECT
+        id,
+        jsonb_array_elements(#{data_field}::jsonb) AS root_blocks,
+        jsonb_array_elements(jsonb_array_elements(#{data_field}::jsonb)->'data'->'refs') as template_refs
+      FROM
+        #{schema.__schema__(:source)}) root_q
+    WHERE
+      root_blocks->>'type' = 'template'
+    AND
+      template_refs->'data'->>'type' = 'datasource'
+    AND
+      template_refs->'data'->'data'->>'module' = '#{datasource}';
+    """
 
-    Brando.repo().all(
-      from s in schema,
-        select: s.id,
-        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t)
-    )
+    {:ok, %{rows: r1}} = Ecto.Adapters.SQL.query(Brando.repo(), q1, [])
+
+    q2 = """
+    SELECT
+      id
+    FROM
+      (SELECT
+          id,
+          jsonb_array_elements(#{data_field}::jsonb) AS root_blocks
+        FROM
+          #{schema.__schema__(:source)}) root_q
+      WHERE
+        root_blocks->>'type' = 'datasource'
+      AND
+        root_blocks->'data'->>'module' = '#{datasource}';
+    """
+
+    {:ok, %{rows: r2}} = Ecto.Adapters.SQL.query(Brando.repo(), q2, [])
+
+    (r1 ++ r2)
+    |> List.flatten()
+    |> Enum.uniq()
   end
 end
