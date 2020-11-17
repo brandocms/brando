@@ -89,7 +89,7 @@ defmodule Brando.Mixfile do
       {:inflex, "~> 2.0"},
 
       # Dev dependencies
-      {:credo, ">= 0.0.0", only: :dev, runtime: false},
+      {:credo, "~> 1.5", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
 
