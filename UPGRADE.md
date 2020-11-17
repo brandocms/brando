@@ -1,5 +1,8 @@
 ## 0.49.0-dev
 
+* When `use`ing I18n helpers, you now do not need a `helpers` arg. Renamed
+`localized` to `localized_path`.
+
 * Added telemetry for Villain `parse_and_render`. Add to your `telemetry.ex`:
 
     summary("brando.villain.parse_and_render.duration", unit: {:native, :millisecond}),
