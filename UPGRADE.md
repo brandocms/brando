@@ -1,5 +1,11 @@
 ## 0.49.0-dev
 
+* If you have no custom logic in your `authorization.ex` you can rerun
+
+    $ mix brando.gen.authorization
+
+  to get new rules for new configuration menus.
+
 * When `use`ing I18n helpers, you now do not need a `helpers` arg. Renamed
 `localized` to `localized_path`.
 
