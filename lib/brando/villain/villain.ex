@@ -389,6 +389,7 @@ defmodule Brando.Villain do
   """
   def delete_template(id) do
     {:ok, template} = get_template(%{matches: %{id: id}})
+
     Brando.repo().delete(template)
   end
 
@@ -439,32 +440,6 @@ defmodule Brando.Villain do
           where: t.namespace == ^namespace
     end
   end
-
-  # @doc """
-  # List templates by namespace
-  # """
-  # def list_templates(namespace) when is_binary(namespace) do
-  #   query =
-  #     from t in Template,
-  #       where: is_nil(t.deleted_at),
-  #       order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
-
-  #   namespace = (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
-
-  #   query =
-  #     case namespace do
-  #       "all" ->
-  #         query
-
-  #       namespace_list when is_list(namespace_list) ->
-  #         from t in query, where: t.namespace in ^namespace_list
-
-  #       _ ->
-  #         from t in query, where: t.namespace == ^namespace
-  #     end
-
-  #   {:ok, Brando.repo().all(query)}
-  # end
 
   @doc """
   List all occurences of fragment in `schema`'s `data_field`
