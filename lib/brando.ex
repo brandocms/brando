@@ -68,6 +68,11 @@ defmodule Brando do
   def presence, do: app_module(Presence)
 
   @doc """
+  Gets the parent app's sitemap module, as set in config.exs
+  """
+  def sitemap, do: web_module(Sitemap)
+
+  @doc """
   Gets the parent app's otp name, as set in config.exs
   """
   def otp_app, do: config(:otp_app)

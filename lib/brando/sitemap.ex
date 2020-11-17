@@ -45,6 +45,14 @@ defmodule Brando.Sitemap do
   def url(map), do: struct!(Sitemapper.URL, map)
 
   @doc """
+  Check if sitemap exists
+  """
+  def exists?() do
+    sitemap_module = Brando.web_module(Sitemap)
+    function_exported?(sitemap_module, :__info__, 1)
+  end
+
+  @doc """
   Generate sitemaps
 
   Gathers all sitemap functions, generates and persists to disk.

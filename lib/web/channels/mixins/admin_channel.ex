@@ -37,6 +37,8 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "page_fragment:rerender",
     "page_fragment:duplicate",
     "page_fragment:rerender_all",
+    "sitemap:exists",
+    "sitemap:generate",
     "templates:list_templates",
     "templates:sequence_templates",
     "user:deactivate",
@@ -235,6 +237,15 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
 
   def do_handle_in("page_fragment:rerender_all", _, socket) do
     Pages.rerender_fragments()
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in("sitemap:exists", _, socket) do
+    {:reply, {:ok, %{sitemap: Brando.Sitemap.exists?()}}, socket}
+  end
+
+  def do_handle_in("sitemap:generate", _, socket) do
+    Brando.sitemap().generate_sitemap()
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
