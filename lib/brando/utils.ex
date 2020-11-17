@@ -479,6 +479,9 @@ defmodule Brando.Utils do
       nil ->
         ""
 
+      :timestamp ->
+        "?#{DateTime.utc_now() |> DateTime.to_unix()}"
+
       cache when is_binary(cache) ->
         "?#{cache}"
 

@@ -409,8 +409,8 @@ defmodule Brando.Villain.Parser do
             placeholder: :svg,
             lazyload: true,
             sizes: "auto",
-            srcset: srcset
-            # cache: img.updated_at,
+            srcset: srcset,
+            cache: :timestamp
           )
           |> safe_to_string
 
