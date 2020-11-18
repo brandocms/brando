@@ -1,5 +1,10 @@
 ## 0.49.0-dev
 
+* If using `fabfile.py`, be sure to update this to include the new `grant_db` function. You need this to prevent
+  migration errors when running Oban migrations.
+
+    $ cp deps/brando/priv/templates/brando.install/fabfile.py .
+
 * If you have no custom logic in your `authorization.ex` you can rerun
 
     $ mix brando.gen.authorization
