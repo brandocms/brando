@@ -727,6 +727,7 @@ defmodule Brando.Villain.Parser do
       end
 
       defp render_ref(nil, id, match), do: "<!-- REF #{match} missing // template: #{id}. -->"
+      defp render_ref(%{"hidden" => true}, _id, _match), do: "<!-- h -->"
       defp render_ref(%{"deleted" => true}, _id, _match), do: "<!-- d -->"
 
       defp render_ref(ref, _id, _match) do
