@@ -373,6 +373,8 @@ def grant_db():
     with _settings(warn_only=True):
         print(yellow('==> granting privileges on database %s to user %s' % (env.db_name, env.db_user)))
         sudo('psql -c "grant all privileges on database %s to %s;"' % (env.db_name, env.db_user), user='postgres')
+
+        sudo('for tbl in `psql -qAt -c "select proname from pg_proc where pronamespace::regnamespace::text = \'public\';" %s` ; do  psql -c "alter function \"$tbl\" owner to %s" %s; done' %(env.db_name, env.db_user, env.db_name), user='postgres')
         sudo('for tbl in `psql -qAt -c "select tablename from pg_tables where schemaname = \'public\';" %s` ; do  psql -c "alter table \"$tbl\" owner to %s" %s ; done' % (env.db_name, env.db_user, env.db_name), user='postgres')
         sudo('for tbl in `psql -qAt -c "select sequence_name from information_schema.sequences where sequence_schema = \'public\';" %s` ; do  psql -c "alter table \"$tbl\" owner to %s" %s ; done' % (env.db_name, env.db_user, env.db_name), user='postgres')
         sudo('for tbl in `psql -qAt -c "select table_name from information_schema.views where table_schema = \'public\';" %s` ; do  psql -c "alter table \"$tbl\" owner to %s" %s ; done' % (env.db_name, env.db_user, env.db_name), user='postgres')
