@@ -46,7 +46,7 @@
     "@babel/runtime": "^7.11.2",
     "@sentry/browser": "^5.24.2",
     "@univers-agency/jupiter": "^3.37.0",
-    "core-js": "3.6.5",
+    "core-js": "3.7.0",
     "custom-event-polyfill": "^1.0.7",
     "intersection-observer": "^0.11.0",
     "mdn-polyfills": "^5.18.0",
