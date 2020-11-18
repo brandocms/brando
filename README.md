@@ -57,7 +57,7 @@ First register the datasource in your schema:
 ```elixir
   use Brando.Datasource
 
-  datasource :many, %{
+  datasource :list, %{
     shareholders: &MyApplication.Shares.list_shareholders/0
   }
 ```
