@@ -77,7 +77,7 @@ defmodule Brando.Mixfile do
       {:liquex, "~> 0.5"},
 
       # Misc
-      {:brotli, "~> 0.2"},
+      # {:brotli, "~> 0.2"},
       {:httpoison, "~> 1.0"},
       {:gettext, "~> 0.11"},
       {:timex, "~> 3.0"},
