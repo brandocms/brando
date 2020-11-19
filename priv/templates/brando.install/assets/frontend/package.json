@@ -87,7 +87,7 @@
     "rollup-plugin-sizes": "^1.0.3",
     "rollup-plugin-terser": "^7.0.2",
     "snazzy": "^8.0.0",
-    "standard": "^14.3.4",
+    "standard": "^16.0.3",
     "stylelint": "^13.7.1",
     "stylelint-config-recommended": "^3.0.0"
   }
