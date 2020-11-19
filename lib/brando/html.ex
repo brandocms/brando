@@ -33,6 +33,8 @@ defmodule Brando.HTML do
       ~s(
          <div data-cover>
            <img
+             width="#{width}"
+             height="#{height}"
              src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27#{
         width
       }%27%20height%3D%27#{height}%27%20style%3D%27background%3Argba%280%2C0%2C0%2C#{opacity}%29%27%2F%3E" />
