@@ -100,7 +100,8 @@ defmodule Brando.HTML.Images do
     if Keyword.get(opts, :lightbox, false) do
       wrap_lightbox(
         picture_tag,
-        Keyword.get(attrs.img, (Keyword.get(opts, :lazyload) && :data_src) || :src)
+        Keyword.get(attrs.img, (Keyword.get(opts, :lazyload) && :data_src) || :src),
+        Keyword.get(attrs.img, :data_srcset)
       )
     else
       picture_tag
@@ -311,8 +312,8 @@ defmodule Brando.HTML.Images do
     put_in(attrs, [:picture, :data_moonwalk], moonwalk)
   end
 
-  defp wrap_lightbox(rendered_tag, img_src),
-    do: content_tag(:a, rendered_tag, href: img_src, data_lightbox: img_src)
+  defp wrap_lightbox(rendered_tag, img_src, srcset \\ nil),
+    do: content_tag(:a, rendered_tag, href: img_src, data_srcset: srcset, data_lightbox: img_src)
 
   @doc """
   Outputs an `img` tag marked as safe html
