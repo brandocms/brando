@@ -25,6 +25,7 @@ config :logger, :console,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+config :phoenix, :static_compressors, [Phoenix.Digester.Gzip, Brando.Digester.Brotli]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
