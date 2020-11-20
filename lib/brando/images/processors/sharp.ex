@@ -26,6 +26,7 @@ defmodule Brando.Images.Processor.Sharp do
         image_src_path: image_src_path,
         image_dest_path: image_dest_path,
         image_dest_rel_path: image_dest_rel_path,
+        optimize: optimize?,
         resize_values: resize_values
       }) do
     image_dest_dir = Path.dirname(image_dest_path)
@@ -60,7 +61,8 @@ defmodule Brando.Images.Processor.Sharp do
       "--palette",
       "true",
       "--format",
-      format
+      format,
+      (optimize? && "--optimize") || []
     ]
 
     params = List.flatten(file_params ++ extra_params ++ resize_params)
@@ -118,6 +120,7 @@ defmodule Brando.Images.Processor.Sharp do
         image_src_path: image_src_path,
         image_dest_path: image_dest_path,
         image_dest_rel_path: image_dest_rel_path,
+        optimize: optimize?,
         resize_values: resize_values,
         crop_values: crop_values
       }) do
@@ -156,7 +159,8 @@ defmodule Brando.Images.Processor.Sharp do
       "--quality",
       to_string(quality),
       "--format",
-      format
+      format,
+      (optimize? && "--optimize") || []
     ]
 
     params =

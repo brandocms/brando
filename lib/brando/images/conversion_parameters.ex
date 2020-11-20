@@ -10,6 +10,7 @@ defmodule Brando.Images.ConversionParameters do
             image_src_path: nil,
             image_dest_path: nil,
             image_dest_rel_path: nil,
+            optimize: true,
             original_width: nil,
             original_height: nil,
             resize_width: nil,
@@ -21,7 +22,7 @@ defmodule Brando.Images.ConversionParameters do
             original_focal_point: nil,
             transformed_focal_point: nil,
             anchor: nil,
-            quality: "100",
+            quality: "80",
             resize_values: nil,
             crop_values: nil,
             format: nil

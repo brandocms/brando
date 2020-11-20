@@ -2,6 +2,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.49.0-dev
 
+* Add `?vsn=d` to all `fonts.pcss` URLs to fix fonts not caching.
 * Dynamic redirects.
 * Live preview: Changed syntax - see UPGRADE.md
 * Live preview: Now sends entry diffs on update to save some bandwidth
