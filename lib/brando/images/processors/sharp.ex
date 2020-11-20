@@ -62,7 +62,7 @@ defmodule Brando.Images.Processor.Sharp do
       "true",
       "--format",
       format,
-      (optimize? && "--optimize") || []
+      (optimize? && ["--optimize", "true"]) || []
     ]
 
     params = List.flatten(file_params ++ extra_params ++ resize_params)
@@ -160,7 +160,7 @@ defmodule Brando.Images.Processor.Sharp do
       to_string(quality),
       "--format",
       format,
-      (optimize? && "--optimize") || []
+      (optimize? && ["--optimize", "true"]) || []
     ]
 
     params =
