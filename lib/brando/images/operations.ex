@@ -75,7 +75,7 @@ defmodule Brando.Images.Operations do
     operation_results =
       operations
       |> Flow.from_enumerable()
-      |> Flow.partition(stages: 1, hash: fn e -> e.key end)
+      |> Flow.partition(stages: 1)
       |> Flow.map(&resize_image/1)
       |> Flow.reduce(fn -> %{} end, fn operation, map ->
         Map.update(map, operation.id, [operation], &[operation | &1])
