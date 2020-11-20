@@ -110,7 +110,9 @@ defmodule Brando.Images.Processing do
 
     # build operations
     operations =
-      Enum.flat_map(images, fn img_schema ->
+      images
+      |> Enum.filter(&(&1.deleted_at == nil))
+      |> Enum.flat_map(fn img_schema ->
         {:ok, operations} =
           Operations.create(
             img_schema.image,
