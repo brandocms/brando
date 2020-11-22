@@ -2,6 +2,7 @@ defmodule Brando.Plug.HTML do
   @moduledoc """
   A plug with HTML oriented helpers
   """
+  alias Brando.Pages.Page
   alias Brando.Utils
   alias Brando.JSONLD
   import Plug.Conn
@@ -47,6 +48,25 @@ defmodule Brando.Plug.HTML do
   Adds `title` to `conn`'s assigns as `page_title`
   """
   def put_title(conn, title), do: assign(conn, :page_title, title)
+
+  @doc """
+  Adds JSON-LD breadcrumbs to conn
+  """
+  def put_breadcrumbs(conn, %Page{is_homepage: true}) do
+    breadcrumbs = [
+      {Brando.config(:app_name), "/"}
+    ]
+
+    put_json_ld(conn, :breadcrumbs, breadcrumbs)
+  end
+
+  def put_breadcrumbs(conn, %Page{}) do
+    breadcrumbs = [
+      {Brando.config(:app_name), "/"}
+    ]
+
+    put_json_ld(conn, :breadcrumbs, breadcrumbs)
+  end
 
   @doc """
   Adds JSON-LD to conn
