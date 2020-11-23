@@ -5,7 +5,7 @@ defmodule Brando.Images.Processor.Commands do
   def delegate(command, params, opts) do
     module =
       Brando.config(Brando.Images)[:commands_module] ||
-        (Brando.config(Brando.Images)[:processor_module] || Brando.Images.Processor.Mogrify)
+        (Brando.config(Brando.Images)[:processor_module] || Brando.Images.Processor.Sharp)
 
     apply(module, :command, [command, params, opts])
   end

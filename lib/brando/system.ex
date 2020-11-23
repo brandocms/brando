@@ -37,7 +37,7 @@ defmodule Brando.System do
 
   defp check_image_processing_executable do
     image_processing_module =
-      Brando.config(Brando.Images)[:processor_module] || Brando.Images.Processor.Mogrify
+      Brando.config(Brando.Images)[:processor_module] || Brando.Images.Processor.Sharp
 
     apply(image_processing_module, :confirm_executable_exists, [])
   end

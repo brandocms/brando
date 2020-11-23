@@ -61,7 +61,6 @@ defmodule Brando.Mixfile do
       {:sitemapper, "~> 0.5"},
 
       # images
-      {:mogrify, "~> 0.5"},
       {:fastimage, "~> 1.0.0-rc4"},
 
       # AWS

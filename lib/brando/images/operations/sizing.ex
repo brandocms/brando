@@ -10,7 +10,7 @@ defmodule Brando.Images.Operations.Sizing do
   """
   def delegate_processor(conversion_parameters) do
     # grab processor module
-    module = Brando.config(Brando.Images)[:processor_module] || Brando.Images.Processor.Mogrify
+    module = Brando.config(Brando.Images)[:processor_module] || Brando.Images.Processor.Sharp
     apply(module, :process_image, [conversion_parameters])
   end
 

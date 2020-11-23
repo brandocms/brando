@@ -44,7 +44,8 @@ config :my_app, MyApp.Endpoint,
 
 ## Dependencies
 
-  * `imagemagick`/`mogrify` or `sharp`/`sharp-cli` for image processing.
+  * `sharp`/`sharp-cli` for image processing.
+    Installation instructions: https://github.com/brandocms/brando/issues/183
   * `gifsicle` for GIF resizing.
 
 

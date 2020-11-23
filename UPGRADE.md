@@ -1,5 +1,11 @@
 ## 0.49.0-dev
 
+* Set `sharp` and `sharp-cli` as standard image processing lib:
+
+    config :brando, Brando.Images, :processor_module, Brando.Images.Processor.Sharp
+
+  Unless you are running an ancient Brando version, this would already be your default.
+
 * If using `fabfile.py`, be sure to update this to include the new `grant_db` function. You need this to prevent
   migration errors when running Oban migrations.
 
