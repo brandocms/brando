@@ -14,23 +14,23 @@ defmodule Brando.Type.ImageConfig do
   @type t :: %__MODULE__{
           allowed_mimetypes: [binary],
           default_size: binary,
-          upload_path: binary,
           random_filename: boolean,
           size_limit: non_neg_integer,
           sizes: %{optional(binary) => map},
           srcset: %{optional(binary) => map} | nil,
-          target_format: atom | nil
+          target_format: atom | nil,
+          upload_path: binary
         }
 
   @derive Jason.Encoder
   defstruct allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
             default_size: "medium",
-            upload_path: Path.join("images", "default"),
             random_filename: false,
             size_limit: 10_240_000,
             sizes: %{},
             srcset: nil,
-            target_format: nil
+            target_format: nil,
+            upload_path: Path.join("images", "default")
 
   import Brando.Utils, only: [stringy_struct: 2]
 

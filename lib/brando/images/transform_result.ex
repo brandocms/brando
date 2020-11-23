@@ -5,5 +5,6 @@ defmodule Brando.Images.TransformResult do
   defstruct id: nil,
             size_key: nil,
             image_path: nil,
-            cmd_params: nil
+            cmd_params: nil,
+            format: nil
 end

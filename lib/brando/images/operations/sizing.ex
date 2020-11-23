@@ -445,12 +445,13 @@ defmodule Brando.Images.Operations.Sizing do
   Set progress for user
   """
   def set_progress(
-        %{size_key: size_key, id: id} = conversion_parameters,
+        %{size_key: size_key, id: id, format: format} = conversion_parameters,
         progress,
         filename,
         user
       ) do
-    progress_string = "#{filename} &rarr; Oppretter bildestørrelse: <strong>#{size_key}</strong>"
+    progress_string =
+      "#{filename} &rarr; Oppretter bildestørrelse: <strong>#{size_key}</strong>/#{format}"
 
     Progress.update_progress(user, progress_string,
       key: to_string(id),
@@ -460,6 +461,6 @@ defmodule Brando.Images.Operations.Sizing do
     conversion_parameters
   end
 
-  defp maybe_change_format(type) when type in [:jpg, :png, :gif], do: Atom.to_string(type)
+  defp maybe_change_format(type) when type in [:jpg, :png, :gif, :webp], do: Atom.to_string(type)
   defp maybe_change_format(_), do: "jpg"
 end

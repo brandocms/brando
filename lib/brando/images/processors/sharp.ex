@@ -107,6 +107,7 @@ defmodule Brando.Images.Processor.Sharp do
        id: id,
        size_key: size_key,
        image_path: image_dest_rel_path,
+       format: format,
        cmd_params: Enum.join(params, " ")
      }}
   end
@@ -209,7 +210,8 @@ defmodule Brando.Images.Processor.Sharp do
        id: id,
        size_key: size_key,
        image_path: image_dest_rel_path,
-       cmd_params: Enum.join(params, " ")
+       cmd_params: Enum.join(params, " "),
+       format: format
      }}
   end
 

@@ -194,6 +194,17 @@ defmodule Brando.HTMLTest do
              "<picture class=\"avatar\" data-orientation=\"landscape\"><source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\"><img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
 
     assert picture_tag(
+             Map.put(user.avatar, :webp, true),
+             srcset: srcset,
+             prefix: media_url(),
+             key: :small,
+             picture_class: "avatar",
+             img_class: "img-fluid"
+           )
+           |> safe_to_string ==
+             "<picture class=\"avatar\" data-orientation=\"landscape\"><source srcset=\"/media/images/avatars/small/27i97a.webp 300w, /media/images/avatars/medium/27i97a.webp 500w, /media/images/avatars/large/27i97a.webp 700w\"><source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\"><img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+
+    assert picture_tag(
              user.avatar,
              srcset: srcset,
              prefix: media_url(),
@@ -260,6 +271,22 @@ defmodule Brando.HTMLTest do
            )
            |> safe_to_string ==
              "<a data-lightbox=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" href=\"/media/images/avatars/small/27i97a.jpeg\"><picture class=\"avatar\" data-orientation=\"landscape\" data-ll-srcset><source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\"><img class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" height=\"200\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E\" width=\"300\" data-ll-placeholder><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture></a>"
+
+    assert picture_tag(
+             Map.put(user.avatar, :webp, true),
+             lightbox: true,
+             srcset: srcset,
+             prefix: media_url(),
+             key: :small,
+             placeholder: :svg,
+             lazyload: true,
+             height: 200,
+             width: 200,
+             picture_class: "avatar",
+             img_class: "img-fluid"
+           )
+           |> safe_to_string ==
+             "<a data-lightbox=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" href=\"/media/images/avatars/small/27i97a.jpeg\"><picture class=\"avatar\" data-orientation=\"landscape\" data-ll-srcset><source data-srcset=\"/media/images/avatars/small/27i97a.webp 300w, /media/images/avatars/medium/27i97a.webp 500w, /media/images/avatars/large/27i97a.webp 700w\"><source data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\"><img class=\"img-fluid\" data-src=\"/media/images/avatars/small/27i97a.jpeg\" data-srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" height=\"200\" src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.05%29%27%2F%3E\" width=\"300\" data-ll-placeholder><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture></a>"
 
     assert picture_tag(
              user.avatar,

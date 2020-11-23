@@ -142,6 +142,7 @@ defmodule Brando.Images.Utils do
   defp do_image_type(".svg"), do: :svg
   defp do_image_type(".crw"), do: :crw
   defp do_image_type(".webp"), do: :webp
+  defp do_image_type(".avif"), do: :avif
   defp do_image_type(ext), do: raise("Unknown image type #{ext}")
 
   @doc """

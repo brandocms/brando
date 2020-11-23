@@ -73,12 +73,7 @@ defmodule Brando.HTML.Images do
     img_tag = tag(:img, attrs.img)
     noscript_img_tag = tag(:img, attrs.noscript_img)
 
-    source_tag =
-      if Enum.all?(attrs.source, fn {_k, v} -> v == false end) do
-        ""
-      else
-        tag(:source, attrs.source)
-      end
+    source_tag = build_source_tags(image_struct, attrs)
 
     figcaption_tag =
       if Keyword.get(opts, :caption) && image_struct.title && image_struct.title != "" do
@@ -129,6 +124,33 @@ defmodule Brando.HTML.Images do
     image_struct = Utils.stringy_struct(Brando.Type.Image, img_map)
     picture_tag(image_struct, opts)
   end
+
+  defp build_source_tags(%{webp: true}, attrs) do
+    if Enum.all?(attrs.source, fn {_k, v} -> v == false end) do
+      ""
+    else
+      [tag(:source, webp_attrs(attrs.source)), tag(:source, attrs.source)]
+    end
+  end
+
+  defp build_source_tags(_, attrs) do
+    if Enum.all?(attrs.source, fn {_k, v} -> v == false end) do
+      ""
+    else
+      tag(:source, attrs.source)
+    end
+  end
+
+  defp webp_attrs(source_attrs) do
+    Enum.map(source_attrs, fn
+      {:data_srcset, v} -> {:data_srcset, suffix_srcs(v, ".webp")}
+      {:srcset, v} -> {:srcset, suffix_srcs(v, ".webp")}
+      {k, v} -> {k, v}
+    end)
+  end
+
+  defp suffix_srcs(false, _), do: false
+  defp suffix_srcs(srcs, suffix), do: String.replace(srcs, [".jpg", ".jpeg", ".png"], suffix)
 
   defp add_alt(attrs, image_struct) do
     alt = Keyword.get(attrs.opts, :alt, Map.get(image_struct, :alt, ""))

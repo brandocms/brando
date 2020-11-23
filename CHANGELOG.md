@@ -3,6 +3,8 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 ## 0.49.0-dev
 
 * BREAKING: Removed `mogrify`/`imagemagick` -- use `sharp-cli`/`sharp` instead.
+* Add `webp` processing to `png` and `jpeg` assets. Falls back to `png`/`jpeg`
+  if browser does not support webp.
 * Add `?vsn=d` to all `fonts.pcss` URLs to fix fonts not caching.
 * Dynamic redirects.
 * Live preview: Changed syntax - see UPGRADE.md

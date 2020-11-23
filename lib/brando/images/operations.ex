@@ -38,12 +38,19 @@ defmodule Brando.Images.Operations do
       |> Map.keys()
       |> Enum.count()
 
-    operations =
-      for {{size_key, size_cfg}, idx} <- Enum.with_index(Map.get(cfg, :sizes)) do
+    total_operations =
+      if type in [:jpg, :png] do
+        total_operations * 2
+      else
+        total_operations
+      end
+
+    {operations, _} =
+      Enum.reduce(Map.get(cfg, :sizes), {[], 0}, fn {size_key, size_cfg}, {ops, idx} ->
         sized_image_dir = Images.Utils.get_sized_dir(path, size_key)
         sized_image_path = Images.Utils.get_sized_path(path, size_key, type)
 
-        %Images.Operation{
+        operation = %Images.Operation{
           id: id,
           type: type,
           user: user,
@@ -56,9 +63,24 @@ defmodule Brando.Images.Operations do
           total_operations: total_operations,
           operation_index: idx + 1
         }
-      end
 
-    {:ok, operations}
+        if type in [:jpg, :png] do
+          sized_webp_image_path = Images.Utils.get_sized_path(path, size_key, :webp)
+
+          webp_operation = %{
+            operation
+            | type: :webp,
+              sized_image_path: sized_webp_image_path,
+              operation_index: idx + 2
+          }
+
+          {ops ++ [operation, webp_operation], idx + 2}
+        else
+          {ops ++ [operation], idx + 1}
+        end
+      end)
+
+    {:ok, (is_list(operations) && List.flatten(operations)) || operations}
   end
 
   @doc """
@@ -98,7 +120,12 @@ defmodule Brando.Images.Operations do
   defp compile_transform_results(transform_results, operations) do
     for {key, transforms} <- transform_results do
       operation = get_operation_by_key(key, operations)
-      image_struct = %{operation.image_struct | sizes: transforms_to_sizes(transforms)}
+
+      image_struct = %{
+        operation.image_struct
+        | sizes: transforms_to_sizes(transforms),
+          webp: operation.type in [:jpg, :png]
+      }
 
       %Images.OperationResult{
         id: key,
