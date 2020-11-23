@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="format-detection" content="telephone=no">
-    <%%= Brando.HTML.init_js() %>
-    <%%= Brando.HTML.render_meta(@conn) %>
-    <%%= Brando.HTML.render_rel(@conn) %>
+
+    <%%= preload_fonts([]) %>
+    <%%= init_js() %>
+    <%%= render_meta(@conn) %>
+    <%%= render_rel(@conn) %>
 
     <link rel="apple-touch-icon" sizes="180x180" href="/ico/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/ico/favicon-32x32.png">
@@ -21,9 +23,9 @@
 
     <title><%%= Brando.Utils.get_page_title(@conn) %></title>
 
-    <%%= Brando.HTML.include_css(@conn) %>
-    <%%= Brando.HTML.include_js(@conn) %>
-    <%%= Brando.HTML.render_json_ld(@conn) %>
+    <%%= include_css(@conn) %>
+    <%%= include_js(@conn) %>
+    <%%= render_json_ld(@conn) %>
   </head>
   <%%= body_tag @conn, id: "top" %>
     <%%= cookie_law(
@@ -47,7 +49,7 @@
     <%%= render <%= application_module %>Web.PageView, "_footer.html", assigns %>
 <!-- /footer - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
 
-    <%%= Brando.HTML.google_analytics("UA-XXXXXXXX-1") %>
+    <%%= google_analytics("UA-XXXXXXXX-1") %>
 
     <!-- // vsn <%%= Application.spec(:<%= application_name %>, :vsn) %> -->
   </body>
