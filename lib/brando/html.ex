@@ -118,6 +118,31 @@ defmodule Brando.HTML do
   end
 
   @doc """
+  Link preload fonts
+
+  ## Example
+
+      preload_fonts([{:woff2, "/fonts/my-font.woff2"}])
+
+  """
+  def preload_fonts([]), do: []
+
+  def preload_fonts(fonts) when is_list(fonts) do
+    Enum.map(
+      fonts,
+      fn {type, font} ->
+        tag(:link,
+          rel: "preload",
+          href: font,
+          as: "font",
+          type: "font/#{type}",
+          crossorigin: true
+        )
+      end
+    )
+  end
+
+  @doc """
   Replace $csrftoken in `html` with .. csrf token!
 
   This is useful for rendered forms from Villain that needs a token for submission

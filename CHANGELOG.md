@@ -14,6 +14,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * Try to rotate images by EXIF info on upload
 * Add system startup warnings to Brando JS
 * Better Villain template authoring experience
+* Add `Brando.HTML.preload_fonts/1`
 
 
 ## 0.48.0
