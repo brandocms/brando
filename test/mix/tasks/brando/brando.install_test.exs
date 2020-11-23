@@ -45,8 +45,8 @@ defmodule Mix.Tasks.Brando.GenerateTest do
       assert file =~ "BrandoWeb.Gettext"
     end)
 
-    assert_file("config/prod.secret.exs", fn file ->
-      assert file =~ ~s(url: "postgres://brando:PROD_PASSWORD_HERE@localhost/brando_prod")
+    assert_file("config/runtime.exs", fn file ->
+      assert file =~ ~s<url: System.get_env("BRANDO_DB_URL")>
     end)
 
     assert_file("mix.exs", fn file ->

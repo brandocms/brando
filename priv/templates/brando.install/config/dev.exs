@@ -4,7 +4,6 @@ config :<%= application_name %>, show_breakpoint_debug: true
 
 # Configure your database
 config :<%= application_name %>, <%= application_module %>.Repo,
-  url: "postgres://postgres:postgres@localhost/<%= application_name %>_dev",
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 

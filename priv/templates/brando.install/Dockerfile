@@ -7,7 +7,7 @@
 
 FROM twined/fehn:3.1 AS deps
 
-ARG MIX_ENV=staging
+ARG MIX_ENV=prod
 ARG HEX_MIRROR_URL=https://repo.hex.pm
 
 WORKDIR /opt/app
@@ -29,7 +29,7 @@ RUN --mount=type=cache,target=~/.hex/packages/hexpm,sharing=locked \
 FROM deps AS compile_deps
 WORKDIR /opt/app
 
-ARG MIX_ENV=staging
+ARG MIX_ENV=prod
 RUN mix deps.compile
 
 
@@ -41,7 +41,7 @@ RUN mix deps.compile
 FROM compile_deps AS compile_app
 WORKDIR /opt/app
 
-ARG MIX_ENV=staging
+ARG MIX_ENV=prod
 
 COPY lib/ ./lib
 COPY priv/repo/ ./priv/repo
@@ -98,6 +98,7 @@ RUN --mount=type=cache,target=~/.yarn,sharing=locked \
 COPY assets/frontend/ ./
 
 RUN yarn build
+RUN yarn move_srcmaps
 
 
 # -----------------------------------
@@ -108,7 +109,7 @@ RUN yarn build
 FROM compile_deps AS digest
 WORKDIR /opt/app
 
-ARG MIX_ENV=staging
+ARG MIX_ENV=prod
 
 COPY --from=assets_backend /opt/app/priv ./priv
 COPY --from=assets_frontend /opt/app/priv ./priv
@@ -126,8 +127,8 @@ FROM compile_app AS release
 
 WORKDIR /opt/app
 
-ARG MIX_ENV=staging
+ARG MIX_ENV=prod
 
 COPY --from=digest /opt/app/priv/static ./priv/static
 
-RUN mix distillery.release --warnings-as-errors
+RUN mix release --overwrite

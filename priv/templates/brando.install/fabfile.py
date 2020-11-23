@@ -257,6 +257,7 @@ def deploy_release():
     upload_release(version)
     unpack_release(version)
     ensure_log_directory_exists()
+    upload_env()
     restart()
     _success()
     _notify_build_complete(version)
@@ -277,6 +278,7 @@ def deploy_and_migrate_release():
     upload_release(version)
     unpack_release(version)
     ensure_log_directory_exists()
+    upload_env()
     stop()
     migrate_release()
     start()
@@ -630,6 +632,18 @@ def upload_etc():
     print(yellow('==> chmoding etc folder'))
     _setperms('755', os.path.join(env.path, 'etc'))
     _set_logrotate_perms()
+
+
+def upload_env():
+    """
+    Upload .env file for current flavor
+    """
+    if not os.path.exists('.envrc.%s' % env.flavor):
+        abort("Missing `.envrc.%s` in project root." % env.flavor)
+
+    put('.envrc.%s' % env.flavor, "%s/.envrc.prod" % env.path, use_sudo=True)
+    _setperms('600', os.path.join(env.path, '.envrc.prod'))
+    _setowner(os.path.join(env.path, '.envrc.prod'))
 
 
 def _warn(str):

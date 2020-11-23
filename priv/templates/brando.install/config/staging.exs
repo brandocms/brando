@@ -13,9 +13,8 @@ use Mix.Config
 # which you typically run after static files are built.
 config :<%= application_name %>, <%= application_module %>Web.Endpoint,
   http: [:inet6, port: {:system, "PORT"}],
-  url: [scheme: "http", host: "<%= application_name %>.staging.yourhost.name", port: 80],
   # force_ssl: [rewrite_on: [:x_forwarded_proto]],
-  check_origin: ["//*.univers.agency", "//localhost:4000"],
+  check_origin: ["//*.b-y.no", "//localhost:4000"],
   server: true,
   cache_static_manifest: "priv/static/cache_manifest.json"
 
@@ -65,7 +64,3 @@ config :brando, log_dir: "./log"
 #     config :<%= application_name %>, <%= application_module %>Web.Endpoint,
 #       server: true
 #
-
-# Finally import the config/prod.secret.exs
-# which should be versioned separately.
-import_config "staging.secret.exs"

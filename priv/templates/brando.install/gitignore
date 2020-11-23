@@ -28,7 +28,7 @@ erl_crash.dump
 __design
 .DS_Store
 bower_components
-media
+media*
 sql
 prod_rel
 deployment.cfg
@@ -39,3 +39,4 @@ assets/backend/.yalc
 assets/frontend/.yalc
 /release-archives
 /certs
+.envrc*

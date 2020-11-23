@@ -1,0 +1,12 @@
+export BRANDO_DEFAULT_LANGUAGE="en"
+export BRANDO_DB_URL="postgres://<%= application_name %>:<%= :crypto.strong_rand_bytes(64) |> Base.encode64 |> binary_part(0, 25) %>@localhost/<%= application_name %>_prod"
+export BRANDO_SECRET_KEY_BASE="<%= :crypto.strong_rand_bytes(64) |> Base.encode64 |> binary_part(0, 64) %>"
+
+export BRANDO_URL_SCHEME="http"
+export BRANDO_URL_HOST="<%= application_name%>.byXX.b-y.no"
+export BRANDO_URL_PORT="80"
+
+# export BRANDO_URL_SCHEME="https"
+# export BRANDO_URL_HOST="<%= application_name%>.com"
+# export BRANDO_URL_PORT="443"
+

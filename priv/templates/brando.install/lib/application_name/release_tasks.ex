@@ -9,21 +9,16 @@ defmodule <%= application_module %>.ReleaseTasks do
 
   @repos Application.get_env(:<%= application_name %>, :ecto_repos, [])
 
-  def migrate(_argv) do
+  def migrate() do
     start_services()
-
     run_migrations()
-
     stop_services()
   end
 
-  def seed(_argv) do
+  def seed() do
     start_services()
-
     run_migrations()
-
     run_seeds()
-
     stop_services()
   end
 

@@ -7,13 +7,11 @@
 # General application configuration
 use Mix.Config
 
-config :<%= application_name %>,
-  ecto_repos: [<%= application_module %>.Repo]
+config :<%= application_name %>, ecto_repos: [<%= application_module %>.Repo]
 
 # Configures the endpoint
 config :<%= application_name %>, <%= application_module %>Web.Endpoint,
   url: [host: "localhost"],
-  secret_key_base: "<%= secret_key_base %>",
   render_errors: [view: <%= application_module %>Web.ErrorView, accepts: ~w(html json), layout: false],
   pubsub_server: <%= application_module %>.PubSub,
   live_view: [signing_salt: "<%= lv_signing_salt %>"]

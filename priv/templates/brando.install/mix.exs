@@ -5,15 +5,23 @@ defmodule <%= application_module %>.MixProject do
   @test_envs [:test, :e2e]
 
   def project do
-    [app: :<%= application_name %>,
-     version: @version,
-     elixir: "~> 1.10",
-     elixirc_paths: elixirc_paths(Mix.env),
-     compilers: [:phoenix, :gettext] ++ Mix.compilers,
-     start_permanent: Mix.env == :prod,
-     test_paths: test_paths(Mix.env()),
-     aliases: aliases(),
-     deps: deps()]
+    [
+      app: :<%= application_name %>,
+      version: @version,
+      elixir: "~> 1.10",
+      elixirc_paths: elixirc_paths(Mix.env),
+      compilers: [:phoenix, :gettext] ++ Mix.compilers,
+      start_permanent: Mix.env == :prod,
+      test_paths: test_paths(Mix.env()),
+      aliases: aliases(),
+      deps: deps(),
+      releases: [
+        <%= application_name %>: [
+          include_executables_for: [:unix],
+          steps: [:assemble, :tar]
+        ]
+      ]
+    ]
   end
 
   # Configuration for the OTP application.

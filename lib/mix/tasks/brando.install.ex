@@ -19,10 +19,11 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "formatter.exs", ".formatter.exs"},
 
     # Release cfg & setup
-    {:eex, "rel/config.exs", "rel/config.exs"},
-    {:text, "rel/vm.args.staging", "rel/vm.args.staging"},
-    {:text, "rel/vm.args.prod", "rel/vm.args.prod"},
-    {:eex, "rel/commands/migrate.sh", "rel/commands/migrate.sh"},
+    {:eex, ".envrc", ".envrc"},
+    {:eex, ".envrc.prod", ".envrc.prod"},
+    {:eex, ".envrc.staging", ".envrc.staging"},
+    {:eex, "rel/env.sh.eex", "rel/env.sh.eex"},
+    {:eex, "rel/vm.args.eex", "rel/vm.args.eex"},
     {:eex, "lib/application_name/release_tasks.ex", "lib/application_name/release_tasks.ex"},
 
     # Brando migrator
@@ -103,9 +104,8 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "config/dev.exs", "config/dev.exs"},
     {:eex, "config/e2e.exs", "config/e2e.exs"},
     {:eex, "config/prod.exs", "config/prod.exs"},
-    {:eex, "config/prod.secret.exs", "config/prod.secret.exs"},
     {:eex, "config/staging.exs", "config/staging.exs"},
-    {:eex, "config/staging.secret.exs", "config/staging.secret.exs"},
+    {:eex, "config/runtime.exs", "config/runtime.exs"},
 
     # Migration files
     {:eex, "migrations/20150123230712_create_users.exs",
@@ -180,8 +180,7 @@ defmodule Mix.Tasks.Brando.Install do
     # Deployment tools
     {:copy, "gitignore", ".gitignore"},
     {:copy, "dockerignore", ".dockerignore"},
-    {:copy, "Dockerfile.prod", "Dockerfile.prod"},
-    {:copy, "Dockerfile.staging", "Dockerfile.staging"},
+    {:copy, "Dockerfile", "Dockerfile"},
     {:copy, "fabfile.py", "fabfile.py"},
     {:eex, "deployment.cfg", "deployment.cfg"},
     {:eex, "scripts/sync_media_from_local_to_remote.sh",
