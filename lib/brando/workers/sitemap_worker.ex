@@ -4,9 +4,9 @@ defmodule Brando.Worker.SitemapWorker do
 
   @impl Oban.Worker
   def perform(_) do
-    Logger.info("==> Generating sitemap...")
+    Logger.info("==> [CRON] Generating sitemap...")
     Brando.Sitemap.generate_sitemap()
-    Logger.info("==> Generating sitemap... done")
+    Logger.info("==> [CRON] Generating sitemap... done")
     :ok
   end
 

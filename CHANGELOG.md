@@ -1,6 +1,12 @@
 See `UPGRADE.md` for instructions on upgrading between versions.
 
-## 0.49.0-dev
+## 0.50.0-dev
+
+* Query: Add `get_<schema>!` version that raises on no result
+* Soft Delete: Add cron job to check for expired soft deleted entries
+
+
+## 0.49.0
 
 * BREAKING: Removed `mogrify`/`imagemagick` -- use `sharp-cli`/`sharp` instead.
 * Move to mix releases from Distillery for new project template.

@@ -32,20 +32,20 @@ defmodule Brando.Pages do
   def data(_) do
     Dataloader.Ecto.new(
       Brando.repo(),
-      query: &query/2
+      query: &dataloader_query/2
     )
   end
 
   @doc """
   Dataloader queries
   """
-  def query(PageFragment = query, _) do
+  def dataloader_query(PageFragment = query, _) do
     query
     |> where([f], is_nil(f.deleted_at))
     |> order_by([f], asc: f.sequence, asc: fragment("lower(?)", f.key))
   end
 
-  def query(queryable, _), do: queryable
+  def dataloader_query(queryable, _), do: queryable
 
   query :list, Page do
     fn
@@ -57,9 +57,7 @@ defmodule Brando.Pages do
   end
 
   filters Page do
-    fn {:title, title}, query ->
-      from q in query, where: ilike(q.title, ^"%#{title}%")
-    end
+    fn {:title, title}, query -> from q in query, where: ilike(q.title, ^"%#{title}%") end
   end
 
   query :single, Page,
@@ -106,9 +104,9 @@ defmodule Brando.Pages do
   """
   def update_page(page_id, params, user) do
     page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
-    {:ok, page} = get_page(%{matches: %{id: page_id}})
 
-    page
+    page_id
+    |> get_page!()
     |> Page.changeset(params, user)
     |> Brando.repo().update
   end
@@ -117,16 +115,11 @@ defmodule Brando.Pages do
   Delete page
   """
   def delete_page(page_id) do
-    page_id =
-      if is_binary(page_id) do
-        String.to_integer(page_id)
-      else
-        page_id
-      end
+    page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
 
-    {:ok, page} = get_page(%{matches: %{id: page_id}})
-    Brando.repo().soft_delete!(page)
-    {:ok, page}
+    page_id
+    |> get_page!()
+    |> Brando.repo().soft_delete()
   end
 
   @doc """
@@ -134,7 +127,8 @@ defmodule Brando.Pages do
   """
   def duplicate_page(page_id) do
     page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
-    {:ok, page} = get_page(%{matches: %{id: page_id}})
+
+    page = get_page!(page_id)
 
     page
     |> Map.merge(%{key: "#{page.key}_kopi", title: "#{page.title} (kopi)"})
@@ -197,7 +191,7 @@ defmodule Brando.Pages do
 
     page
     |> Ecto.Changeset.change()
-    |> Brando.Villain.rerender_html()
+    |> Villain.rerender_html()
   end
 
   @doc """
@@ -207,7 +201,7 @@ defmodule Brando.Pages do
     {:ok, pages} = list_pages()
 
     for page <- pages do
-      Brando.Villain.rerender_html(Ecto.Changeset.change(page))
+      Villain.rerender_html(Ecto.Changeset.change(page))
     end
   end
 
@@ -218,14 +212,14 @@ defmodule Brando.Pages do
     {:ok, fragments} = list_page_fragments()
 
     for fragment <- fragments do
-      Brando.Villain.rerender_html(Ecto.Changeset.change(fragment))
+      Villain.rerender_html(Ecto.Changeset.change(fragment))
     end
   end
 
   def rerender_fragment(id) do
     {:ok, fragment} = get_page_fragment(id)
     changeset = Ecto.Changeset.change(fragment)
-    Brando.Villain.rerender_html(changeset)
+    Villain.rerender_html(changeset)
   end
 
   @doc """

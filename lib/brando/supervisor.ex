@@ -29,8 +29,10 @@ defmodule Brando.Supervisor do
         queues: [default: [limit: 1, poll_interval: :timer.minutes(15)]],
         plugins: [Oban.Plugins.Pruner],
         crontab: [
-          # Generate a Sitemap every night at 02:00
-          {"0 2 * * *", Brando.Worker.SitemapWorker}
+          # Generate a Sitemap every night at 02:00 UTC
+          {"0 2 * * *", Brando.Worker.SitemapWorker},
+          # Clean up soft deleted entries every night at 03:00 UTC
+          {"6 13 * * *", Brando.Worker.SoftDeleteWorker}
         ]
       ]
   end
