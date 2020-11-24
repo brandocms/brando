@@ -198,6 +198,39 @@ defmodule Brando.Query do
           result -> {:ok, result}
         end
       end
+
+      @spec unquote(:"get_#{name}!")(integer | binary | map()) :: any | no_return
+      def unquote(:"get_#{name}!")(id) when is_binary(id) or is_integer(id) do
+        unquote(block).(unquote(module))
+        |> where([t], t.id == ^id)
+        |> Brando.repo().one!()
+      end
+
+      def unquote(:"get_#{name}!")(args) when is_map(args) do
+        query =
+          args
+          |> Enum.reduce(unquote(module), fn
+            {_, nil}, query ->
+              query
+
+            {:limit, limit}, query ->
+              query |> limit(^limit)
+
+            {:status, status}, query ->
+              query |> with_status(status, unquote(publish_at?))
+
+            {:preload, preload}, query ->
+              query |> with_preload(preload)
+
+            {:matches, match}, query ->
+              query |> with_match(unquote(module), match)
+          end)
+
+        query
+        |> unquote(block).()
+        |> limit(1)
+        |> Brando.repo().one!()
+      end
     end
   end
 

@@ -136,20 +136,17 @@ defmodule Brando.Pages do
     page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
     {:ok, page} = get_page(%{matches: %{id: page_id}})
 
-    page = Map.merge(page, %{key: "#{page.key}_kopi", title: "#{page.title} (kopi)"})
-    page = Map.delete(page, [:id, :children, :parent])
-    page = Map.from_struct(page)
-
-    create_page(page, %Brando.Users.User{id: page.creator_id})
+    page
+    |> Map.merge(%{key: "#{page.key}_kopi", title: "#{page.title} (kopi)"})
+    |> Map.delete([:id, :children, :parent])
+    |> Map.from_struct()
+    |> create_page(%Brando.Users.User{id: page.creator_id})
   end
 
   @doc """
   Only gets schemas that are parents
   """
-  def only_parents(query) do
-    from m in query,
-      where: is_nil(m.parent_id)
-  end
+  def only_parents(query), do: from(m in query, where: is_nil(m.parent_id))
 
   @doc """
   List page parents
@@ -197,8 +194,10 @@ defmodule Brando.Pages do
   """
   def rerender_page(page_id) do
     {:ok, page} = get_page(%{matches: %{id: page_id}})
-    changeset = Ecto.Changeset.change(page)
-    Brando.Villain.rerender_html(changeset)
+
+    page
+    |> Ecto.Changeset.change()
+    |> Brando.Villain.rerender_html()
   end
 
   @doc """

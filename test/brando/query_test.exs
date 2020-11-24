@@ -18,6 +18,18 @@ defmodule Brando.QueryTest do
         {:title, title}, query -> from q in query, where: ilike(q.title, ^"%#{title}%")
       end
     end
+
+    query :single, Brando.Pages.Page do
+      fn
+        query -> from q in query, where: is_nil(q.deleted_at)
+      end
+    end
+
+    matches Brando.Pages.Page do
+      fn
+        {:id, id}, query -> from q in query, where: q.id == ^id
+      end
+    end
   end
 
   test "query :list" do
@@ -49,5 +61,26 @@ defmodule Brando.QueryTest do
     assert page.__struct__ == Brando.Pages.Page
     assert page.title == "page 2"
     assert page.slug == nil
+  end
+
+  test "query :single" do
+    assert __MODULE__.Context.module_info(:functions)
+           |> Keyword.has_key?(:get_page)
+
+    _p1 = Factory.insert(:page, title: "page 1")
+    p2a = Factory.insert(:page, title: "page 2")
+
+    {:ok, p2b} = __MODULE__.Context.get_page(%{matches: %{id: p2a.id}})
+    assert p2b.id == p2a.id
+
+    assert __MODULE__.Context.module_info(:functions)
+           |> Keyword.has_key?(:get_page!)
+
+    p2c = __MODULE__.Context.get_page!(%{matches: %{id: p2a.id}})
+    assert p2c.id == p2a.id
+
+    assert_raise Ecto.NoResultsError, fn ->
+      _a = __MODULE__.Context.get_page!(%{matches: %{id: 2_934_857_239_485_723_948}})
+    end
   end
 end
