@@ -948,9 +948,9 @@ def setup_rclone():
     """
     access = prompt('DO Access key')
     secret = prompt('DO Secret key')
-    sudo('sudo apt update && sudo apt install rclone')
-    sudo('mkdir -p ~/.config/rclone', user=env.project_user)
-    sudo('echo "[BY]\ntype = s3\nprovider = DigitalOcean\nenv_auth = false\naccess_key_id = %s\nsecret_access_key = %s\nendpoint = ams3.digitaloceanspaces.com\nacl = private\nbucket_acl = private\n" > ~/.config/rclone/rclone.conf' % (access, secret), user=env.project_user)
-    sudo('chmod 600 ~/.config/rclone/rclone.conf', user=env.project_user)
+    sudo('curl https://rclone.org/install.sh | sudo bash')
+    sudo('mkdir -p /home/%s/.config/rclone' % env.project_user, user=env.project_user)
+    sudo('echo "[BY]\ntype = s3\nprovider = DigitalOcean\nenv_auth = false\naccess_key_id = %s\nsecret_access_key = %s\nendpoint = ams3.digitaloceanspaces.com\nacl = private\nbucket_acl = private\n" > /home/%s/.config/rclone/rclone.conf' % (access, secret, env.project_user), user=env.project_user)
+    sudo('chmod 600 /home/%s/.config/rclone/rclone.conf' % env.project_user, user=env.project_user)
 
     sudo('echo "15 4 * * * rclone -P sync /backups/postgres/ BY:bielkeyang/backups/%s/postgres\n30 4 * * * rclone -P sync /sites/prod/%s/media BY:bielkeyang/backups/%s/media" | crontab -' % (env.procname, env.project_name, env.procname), user=env.project_user)
