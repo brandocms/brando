@@ -1,4 +1,5 @@
 defmodule Brando.Mixin.Channels.AdminChannelMixin do
+  alias Brando.Images
   alias Brando.Navigation
   alias Brando.Pages
   alias Brando.Villain
@@ -20,8 +21,9 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "images:propagate_category_config",
     "images:get_series_config",
     "images:update_series_config",
-    "images:rerender_image_category",
+    "images:rerender_image",
     "images:rerender_image_series",
+    "images:rerender_image_category",
     "livepreview:initialize",
     "livepreview:render",
     "menus:sequence_menus",
@@ -76,7 +78,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("images:delete_images", %{"ids" => ids}, socket) do
-    Brando.Images.delete_images(ids)
+    Images.delete_images(ids)
     {:reply, {:ok, %{code: 200, ids: ids}}, socket}
   end
 
@@ -86,12 +88,12 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("images:propagate_category_config", %{"category_id" => category_id}, socket) do
-    Brando.Images.propagate_category_config(category_id)
+    Images.propagate_category_config(category_id)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
   def do_handle_in("images:get_category_id_by_slug", %{"slug" => slug}, socket) do
-    case Brando.Images.get_category_id_by_slug(slug) do
+    case Images.get_category_id_by_slug(slug) do
       {:ok, id} ->
         {:reply, {:ok, %{code: 200, category_id: id}}, socket}
 
@@ -102,7 +104,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
 
   def do_handle_in("images:create_image_series", params, socket) do
     user = Guardian.Phoenix.Socket.current_resource(socket)
-    {:ok, series} = Brando.Images.create_series(params, user)
+    {:ok, series} = Images.create_series(params, user)
 
     {:reply,
      {:ok,
@@ -113,12 +115,12 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("images:get_category_config", %{"category_id" => category_id}, socket) do
-    {:ok, config} = Brando.Images.get_category_config(category_id)
+    {:ok, config} = Images.get_category_config(category_id)
     {:reply, {:ok, %{code: 200, config: config}}, socket}
   end
 
   def do_handle_in("images:get_category_config", %{"category_slug" => category_slug}, socket) do
-    {:ok, config} = Brando.Images.get_category_config_by_slug(category_slug)
+    {:ok, config} = Images.get_category_config_by_slug(category_slug)
     {:reply, {:ok, %{code: 200, config: config}}, socket}
   end
 
@@ -127,12 +129,12 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         %{"category_id" => category_id, "config" => config},
         socket
       ) do
-    {:ok, _} = Brando.Images.update_category_config(category_id, config)
+    {:ok, _} = Images.update_category_config(category_id, config)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
   def do_handle_in("images:get_series_config", %{"series_id" => series_id}, socket) do
-    {:ok, config} = Brando.Images.get_series_config(series_id)
+    {:ok, config} = Images.get_series_config(series_id)
     {:reply, {:ok, %{code: 200, config: config}}, socket}
   end
 
@@ -142,7 +144,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         socket
       ) do
     user = Guardian.Phoenix.Socket.current_resource(socket)
-    {:ok, _} = Brando.Images.update_series_config(series_id, config, user)
+    {:ok, _} = Images.update_series_config(series_id, config, user)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
@@ -152,7 +154,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         socket
       ) do
     user = Guardian.Phoenix.Socket.current_resource(socket)
-    Brando.Images.Processing.recreate_sizes_for_category(category_id, user)
+    Images.Processing.recreate_sizes_for_category(category_id, user)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
@@ -162,7 +164,18 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         socket
       ) do
     user = Guardian.Phoenix.Socket.current_resource(socket)
-    Brando.Images.Processing.recreate_sizes_for_series(series_id, user)
+    Images.Processing.recreate_sizes_for_series(series_id, user)
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in(
+        "images:rerender_image",
+        %{"id" => id},
+        socket
+      ) do
+    user = Guardian.Phoenix.Socket.current_resource(socket)
+    {:ok, img} = Images.get_image(id)
+    Images.Processing.recreate_sizes_for_image(img, user)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
@@ -171,7 +184,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         %{"image_id" => id},
         socket
       ) do
-    image = Brando.Images.get_image!(id)
+    image = Images.get_image!(id)
     {:reply, {:ok, %{code: 200, image: image.image}}, socket}
   end
 
