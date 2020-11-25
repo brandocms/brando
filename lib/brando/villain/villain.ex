@@ -186,7 +186,8 @@ defmodule Brando.Villain do
         credits: image_struct.credits,
         inserted_at: image_record.inserted_at,
         width: image_struct.width,
-        height: image_struct.height
+        height: image_struct.height,
+        webp: image_struct.webp
       }
     end)
   end
