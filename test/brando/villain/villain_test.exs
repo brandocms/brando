@@ -115,7 +115,8 @@ defmodule Brando.VillainTest do
                  src: "/media/image/1.jpg",
                  thumb: "/media/image/thumb/1.jpg",
                  title: "Title one",
-                 width: 300
+                 width: 300,
+                 webp: false
                }
              ]
   end
