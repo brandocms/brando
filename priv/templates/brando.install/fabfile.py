@@ -206,7 +206,7 @@ def bootstrap_release():
     print(red('(!) FLAVOR => %s' % env.flavor))
 
     _warn('''
-        Deploying >> %s << %s v%s.\r\n
+        Bootstrapping >> %s << %s v%s.\r\n
         This is a potientially dangerous operation. Make sure you have\r\n
         all your ducks in a row, and that you have checked the configuration\r\n
         files both in etc/ and in the fabfile.py itself!
@@ -236,7 +236,8 @@ def bootstrap_release():
 
     restart()
     prune_dangling_docker_images()
-    pgbackup()
+    setup_pgbackup()
+    setup_rclone()
 
     _success()
     _notify_build_complete(version)
@@ -417,7 +418,7 @@ def create_path():
         sudo('mkdir -p %s' % env.path, user=env.project_user)
 
     create_acme_dir()
-    pgbackup()
+    setup_pgbackup()
     fixprojectperms()
 
 
@@ -639,7 +640,8 @@ def upload_env():
     Upload .env file for current flavor
     """
     if not os.path.exists('.envrc.%s' % env.flavor):
-        abort("Missing `.envrc.%s` in project root." % env.flavor)
+        print(yellow('==> creating missing .envrc.%s' % env.flavor))
+        local('touch .envrc.%s' % env.flavor)
 
     put('.envrc.%s' % env.flavor, "%s/.envrc.prod" % env.path, use_sudo=True)
     _setperms('600', os.path.join(env.path, '.envrc.prod'))
@@ -929,7 +931,7 @@ def create_acme_dir():
     _setowner(os.path.join(env.path, 'acme-challenge/.well-known'))
 
 
-def pgbackup():
+def setup_pgbackup():
     """
     Copies postgresql backup script to host and adds to crontab
     """
@@ -938,3 +940,17 @@ def pgbackup():
     put('etc/pgbkup.sh', '/backups/postgres', use_sudo=True)
     sudo('chmod +x /backups/postgres/pgbkup.sh')
     sudo('echo "0 3 * * * /backups/postgres/pgbkup.sh" | crontab -', user='postgres')
+
+
+def setup_rclone():
+    """
+    Setup rclone
+    """
+    access = prompt('DO Access key')
+    secret = prompt('DO Secret key')
+    sudo('sudo apt update && sudo apt install rclone')
+    sudo('mkdir -p ~/.config/rclone', user=env.project_user)
+    sudo('echo "[BY]\ntype = s3\nprovider = DigitalOcean\nenv_auth = false\naccess_key_id = %s\nsecret_access_key = %s\nendpoint = ams3.digitaloceanspaces.com\nacl = private\nbucket_acl = private\n" > ~/.config/rclone/rclone.conf' % (access, secret), user=env.project_user)
+    sudo('chmod 600 ~/.config/rclone/rclone.conf', user=env.project_user)
+
+    sudo('echo "15 4 * * * rclone -P sync /backups/postgres/ BY:bielkeyang/backups/%s/postgres\n30 4 * * * rclone -P sync /sites/prod/%s/media BY:bielkeyang/backups/%s/media" | crontab -' % (env.procname, env.project_name, env.procname), user=env.project_user)
