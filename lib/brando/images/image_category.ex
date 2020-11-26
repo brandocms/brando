@@ -60,7 +60,7 @@ defmodule Brando.ImageCategory do
     |> put_slug(:name)
     |> avoid_slug_collision()
     |> unique_constraint(:slug)
-    |> put_default_config
+    |> put_default_config()
   end
 
   def changeset(schema, :update, params, user) do
@@ -70,7 +70,7 @@ defmodule Brando.ImageCategory do
     |> put_slug(:name)
     |> avoid_slug_collision()
     |> unique_constraint(:slug)
-    |> validate_paths
+    |> validate_paths()
   end
 
   @doc """
