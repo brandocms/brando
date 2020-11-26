@@ -61,6 +61,7 @@ defmodule Brando.HTML.Images do
       initial_map
       |> add_lazyload()
       |> add_sizes()
+      |> add_type(image_struct)
       |> add_alt(image_struct)
       |> add_srcset(image_struct)
       |> add_mq(image_struct)
@@ -145,6 +146,7 @@ defmodule Brando.HTML.Images do
     Enum.map(source_attrs, fn
       {:data_srcset, v} -> {:data_srcset, suffix_srcs(v, ".webp")}
       {:srcset, v} -> {:srcset, suffix_srcs(v, ".webp")}
+      {:type, _} -> {:type, "image/webp"}
       {k, v} -> {k, v}
     end)
   end
@@ -203,6 +205,20 @@ defmodule Brando.HTML.Images do
     |> put_in([:img, :data_sizes], data_sizes)
     |> put_in([:source, :sizes], sizes)
   end
+
+  defp add_type(attrs, %{sizes: sizes}) when not is_nil(sizes) do
+    type =
+      case sizes |> Map.values() |> List.first() |> Path.extname() do
+        ".jpg" -> "image/jpeg"
+        ".jpeg" -> "image/jpeg"
+        ".png" -> "image/png"
+        ".gif" -> "image/gif"
+      end
+
+    put_in(attrs, [:source, :type], type)
+  end
+
+  defp add_type(attrs, _), do: attrs
 
   defp add_srcset(%{lazyload: true} = attrs, image_struct) do
     placeholder = Keyword.get(attrs.opts, :placeholder, false)
