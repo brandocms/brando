@@ -709,9 +709,8 @@ defmodule Brando.Villain.Parser do
 
       defp process_var({name, %{"label" => _, "type" => _, "value" => value}}), do: {name, value}
 
-      defp add_vars_to_context(context, vars) do
-        Enum.reduce(vars, context, fn {k, v}, acc -> Context.assign(acc, k, v) end)
-      end
+      defp add_vars_to_context(context, vars),
+        do: Enum.reduce(vars, context, fn {k, v}, acc -> Context.assign(acc, k, v) end)
 
       defp render_datasource_entries(code, entries) do
         base_context = Villain.get_base_context()
@@ -721,8 +720,9 @@ defmodule Brando.Villain.Parser do
 
       defp render_refs(template_code, refs, id) do
         Regex.replace(~r/%{(\w+)}/, template_code, fn _, match ->
-          ref = Enum.find(refs, &(&1["name"] == match))
-          render_ref(ref, id, match)
+          refs
+          |> Enum.find(&(&1["name"] == match))
+          |> render_ref(id, match)
         end)
       end
 
