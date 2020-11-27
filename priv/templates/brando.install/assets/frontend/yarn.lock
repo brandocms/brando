@@ -1227,10 +1227,10 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.7"
 
-"@univers-agency/jupiter@^3.39.0":
-  version "3.39.0"
-  resolved "https://registry.yarnpkg.com/@univers-agency/jupiter/-/jupiter-3.39.0.tgz#c929d967efd68eced4aaeb6f80cd1616cce06942"
-  integrity sha512-X1JyLqtrsp0owUfIbdxXVwUFZRmRJvZzTJ6V0J1ecdGdYt3Ufcb3QFvHBfcmRIiJv1oWXGN2ygQIUauusOADGA==
+"@univers-agency/jupiter@^3.39.1":
+  version "3.39.1"
+  resolved "https://registry.yarnpkg.com/@univers-agency/jupiter/-/jupiter-3.39.1.tgz#2df049bbfe647e3d3aab4eddcd96880926942939"
+  integrity sha512-fMj83pPpjLCAgttq3T4T9GLwt3ZwOtlA6uyC+P3co/GIqUok0r0oyZhwyM+EfBu1Y9BqYWC2HacevXfyKXQJew==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^3.1.5"
