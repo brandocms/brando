@@ -171,19 +171,19 @@
 * Switch frontend bundler to Rollup. Commit your code, then:
 
   ```
-  mv assets/frontend/fonts assets/frontend/static`
-  cp deps/brando/priv/templates/brando.install/assets/frontend/rollup.config.js assets/frontend`
-  cp deps/brando/priv/templates/brando.install/assets/frontend/package.json assets/frontend`
+  mv assets/frontend/fonts assets/frontend/static
+  cp deps/brando/priv/templates/brando.install/assets/frontend/rollup.config.js assets/frontend
+  cp deps/brando/priv/templates/brando.install/assets/frontend/package.json assets/frontend
   ```
   Then look through the `package.json` diff and add back your own configurations.
   ```
-  cd assets/frontend && yarn install --dev rollup rollup-plugin-copy @rollup/plugin-commonjs \
+  cd assets/frontend && yarn add --dev rollup rollup-plugin-copy @rollup/plugin-commonjs \
      @rollup/plugin-replace rollup-plugin-delete rollup-plugin-postcss rollup-plugin-terser \
      @rollup/plugin-babel @rollup/plugin-node-resolve
   ```
   - Remove all webpack packages from `assets/frontend/package.json`
   - `rm assets/frontend/webpack.*`
-  - You must `import ./index` at the end of the polyfill files `polyfill.legacy.js`
+  - You must `import './index'` at the end of the polyfill files `polyfill.legacy.js`
     and `polyfill.modern.js`
   - Add `~r"priv/static/css/.*(css)$",` to live_preload patterns in `config/dev.exs` to ensure
     automatic loading of compiled CSS.
