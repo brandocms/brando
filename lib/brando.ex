@@ -23,7 +23,7 @@ defmodule Brando do
   def config(key), do: Application.get_env(:brando, key)
 
   @doc """
-  Gets the parent app's router, as set in config.exs
+  Gets the parent app's router
   """
   def router, do: web_module(Router)
 
@@ -33,47 +33,52 @@ defmodule Brando do
   def timezone, do: config(:timezone) || "Europe/Oslo"
 
   @doc """
-  Gets the parent app's endpoint, as set in config.exs
+  Gets the parent app's endpoint
   """
   def endpoint, do: web_module(Endpoint)
 
   @doc """
-  Gets the parent app's repo, as set in config.exs
+  Gets the parent app's repo
   """
   def repo, do: app_module(Repo)
 
   @doc """
-  Gets the parent app's factory, as set in config.exs
+  Gets the parent app's factory
   """
   def factory, do: app_module(Factory)
 
   @doc """
-  Gets the parent app's gettext module, as set in config.exs
+  Gets the parent app's gettext module
   """
   def gettext, do: web_module(Gettext)
 
   @doc """
-  Gets the parent app's helpers, as set in config.exs
+  Gets the parent app's helpers
   """
   def helpers, do: web_module(Router.Helpers)
 
   @doc """
-  Gets the parent app's authorization module, as set in config.exs
+  Gets the parent app's authorization module
   """
   def authorization, do: app_module(Authorization)
 
   @doc """
-  Gets the parent app's presence module, as set in config.exs
+  Gets the parent app's presence module
   """
   def presence, do: app_module(Presence)
 
   @doc """
-  Gets the parent app's sitemap module, as set in config.exs
+  Gets the parent app's sitemap module
   """
   def sitemap, do: web_module(Sitemap)
 
   @doc """
-  Gets the parent app's otp name, as set in config.exs
+  Gets the parent app's pubsub module
+  """
+  def pubsub, do: app_module(PubSub)
+
+  @doc """
+  Gets the parent app's otp name
   """
   def otp_app, do: config(:otp_app)
 
