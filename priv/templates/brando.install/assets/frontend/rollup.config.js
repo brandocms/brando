@@ -37,6 +37,8 @@ function plugins({ type } = {}) {
       targets: [
         { src: 'static/**/*', dest: pkg.publicDir }
       ],
+      verbose: true,
+      flatten: false,
       copyOnce: true
     })
   ]
