@@ -1,5 +1,9 @@
 ## 0.49.0-dev
 
+* Copy new rollup config with some `rollup-copy-plugin` fixes:
+
+    $ cp deps/brando/priv/templates/brando.install/assets/frontend/rollup.config.js assets/frontend/rollup.config.js
+
 * Set `sharp` and `sharp-cli` as standard image processing lib:
 
     config :brando, Brando.Images, :processor_module, Brando.Images.Processor.Sharp
