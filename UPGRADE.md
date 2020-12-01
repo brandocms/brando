@@ -1,4 +1,6 @@
-## 0.49.0-dev
+## Unreleased
+
+## 0.49.0
 
 * Copy new rollup config with some `rollup-copy-plugin` fixes:
 
