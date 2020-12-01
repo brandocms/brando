@@ -4,7 +4,7 @@ defmodule Brando.Cache.Query do
   """
   @cache_module Application.get_env(:brando, :cache_module, Cachex)
 
-  @spec get(atom | binary) :: any
+  @spec get(any) :: any
   def get(key) do
     case get_from_cache(key) do
       {:ok, val} -> val

@@ -95,6 +95,7 @@ defmodule Brando.Query do
   defp query_list(module, block) do
     # check for publish_at field
     publish_at? = Map.has_key?(module.__struct__, :publish_at)
+    source = module.__schema__(:source)
 
     name =
       module
@@ -109,7 +110,7 @@ defmodule Brando.Query do
         initial_query = unquote(block).(unquote(module))
         cache_args = Map.get(args, :cache)
 
-        case try_cache("list_#{unquote(name)}", cache_args, args) do
+        case try_cache({:list, unquote(source), args}, cache_args) do
           {:miss, cache_key, ttl} ->
             query =
               run_query_reducer(
@@ -326,24 +327,22 @@ defmodule Brando.Query do
   @doc """
   Hash query arguments
   """
-  def hash_query(args) do
-    Base.encode16(<<:erlang.phash2(args)::size(32)>>)
+  def hash_query({query_type, query_name, _} = query_key) do
+    {query_type, query_name,
+     Base.encode16(<<:erlang.phash2(Jason.encode!(query_key))::size(32)>>)}
   end
 
   @doc """
   Check cache for query matching args
   """
-  def try_cache(_query_name, nil, _args), do: :no_cache
-  def try_cache(_query_name, false, _args), do: :no_cache
+  @spec try_cache(any(), any()) :: any()
+  def try_cache(_query_key, nil), do: :no_cache
+  def try_cache(_query_key, false), do: :no_cache
 
-  def try_cache(query_name, true, args),
-    do: try_cache(query_name, {:ttl, :timer.minutes(15)}, args)
+  def try_cache(query_key, true), do: try_cache(query_key, {:ttl, :timer.minutes(15)})
 
-  def try_cache(query_name, {:ttl, ttl}, args) do
-    cache_key =
-      {query_name, args}
-      |> Jason.encode!()
-      |> hash_query
+  def try_cache(query_key, {:ttl, ttl}) do
+    cache_key = hash_query(query_key)
 
     case Brando.Cache.Query.get(cache_key) do
       nil -> {:miss, cache_key, ttl}
@@ -352,31 +351,15 @@ defmodule Brando.Query do
   end
 
   def run_query_reducer(context, args, initial_query, module, publish_at?) do
-    args
-    |> Enum.reduce(initial_query, fn
-      {_, nil}, query ->
-        query
-
-      {:select, select}, query ->
-        query |> with_select(select)
-
-      {:order, order}, query ->
-        query |> with_order(order)
-
-      {:offset, offset}, query ->
-        query |> offset(^offset)
-
-      {:limit, limit}, query ->
-        query |> limit(^limit)
-
-      {:status, status}, query ->
-        query |> with_status(to_string(status), publish_at?)
-
-      {:preload, preload}, query ->
-        query |> with_preload(preload)
-
-      {:filter, filter}, query ->
-        query |> context.with_filter(module, filter)
+    Enum.reduce(args, initial_query, fn
+      {_, nil}, q -> q
+      {:select, select}, q -> with_select(q, select)
+      {:order, order}, q -> with_order(q, order)
+      {:offset, offset}, q -> offset(q, ^offset)
+      {:limit, limit}, q -> limit(q, ^limit)
+      {:status, status}, q -> with_status(q, to_string(status), publish_at?)
+      {:preload, preload}, q -> with_preload(q, preload)
+      {:filter, filter}, q -> context.with_filter(q, module, filter)
     end)
   end
 end
