@@ -32,7 +32,7 @@ defmodule Brando.Supervisor do
           # Generate a Sitemap every night at 02:00 UTC
           {"0 2 * * *", Brando.Worker.SitemapWorker},
           # Clean up soft deleted entries every night at 03:00 UTC
-          {"6 13 * * *", Brando.Worker.SoftDeleteWorker}
+          {"0 3 * * *", Brando.Worker.SoftDeleteWorker}
         ]
       ]
   end
