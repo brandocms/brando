@@ -22,7 +22,11 @@ defmodule Brando.Plug.HTML do
   """
 
   @spec put_section(conn, binary) :: conn
-  def put_section(conn, name), do: put_private(conn, :brando_section_name, name)
+  def put_section(conn, name) do
+    conn
+    |> put_private(:brando_section_name, name)
+    |> assign(:section, name)
+  end
 
   @spec get_section(conn) :: binary
   def get_section(conn), do: conn.private.brando_section_name
