@@ -23,14 +23,14 @@ defmodule <%= app_module %>.<%= domain %> do
   def data() do
     Dataloader.Ecto.new(
       Brando.repo(),
-      query: &query/2
+      query: &dataloader_query/2
     )
   end
 
   @doc """
   Dataloader queries
   """
-  def query(queryable, _), do: queryable
+  def dataloader_query(queryable, _), do: queryable
 
   # __code
 end
