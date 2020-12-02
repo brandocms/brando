@@ -1,5 +1,16 @@
 ## Unreleased
 
+* Added mutations to `Brando.Query`. Add to your context: (if you want to use these)
+
+```
+    mutation :create, MySchema
+    mutation :update, MySchema
+    mutation :delete, MySchema
+```
+
+then you can throw out your `create_<schema>` / `update_<schema>` / `delete_<schema>` functions.
+
+
 ## 0.49.0
 
 * Copy new rollup config with some `rollup-copy-plugin` fixes:

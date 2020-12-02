@@ -2,6 +2,12 @@ defmodule Brando.Query do
   @moduledoc """
   Query macros to DRY up contexts
 
+  # Mutations
+
+      mutation :create, Post
+      mutation :update, Post
+      mutation :delete, Post
+
   # Select
 
   ## Examples
@@ -75,6 +81,10 @@ defmodule Brando.Query do
 
   defmacro query(:single, module, do: block),
     do: query_single(Macro.expand(module, __CALLER__), block)
+
+  defmacro mutation(:create, module), do: mutation_create(Macro.expand(module, __CALLER__))
+  defmacro mutation(:update, module), do: mutation_update(Macro.expand(module, __CALLER__))
+  defmacro mutation(:delete, module), do: mutation_delete(Macro.expand(module, __CALLER__))
 
   defmacro filters(module, do: block), do: filter_query(module, block)
   defmacro matches(module, do: block), do: match_query(module, block)
@@ -361,5 +371,90 @@ defmodule Brando.Query do
       {:preload, preload}, q -> with_preload(q, preload)
       {:filter, filter}, q -> context.with_filter(q, module, filter)
     end)
+  end
+
+  defp mutation_create(module) do
+    name =
+      module
+      |> Module.split()
+      |> List.last()
+      |> Inflex.underscore()
+
+    quote do
+      @spec unquote(:"create_#{name}")(params, user | :system) ::
+              {:ok, any} | {:error, Ecto.Changeset.t()}
+      def unquote(:"create_#{name}")(params, user \\ :system) do
+        with changeset <- unquote(module).changeset(%unquote(module){}, params, user),
+             {:ok, entry} <- Brando.Query.insert(changeset) do
+          Brando.Datasource.update_datasource(unquote(module), entry)
+        else
+          err -> err
+        end
+      end
+    end
+  end
+
+  defp mutation_update(module) do
+    name =
+      module
+      |> Module.split()
+      |> List.last()
+      |> Inflex.underscore()
+
+    quote do
+      @spec unquote(:"update_#{name}")(id, params, user | :system) ::
+              {:ok, any} | {:error, Ecto.Changeset.t()}
+      def unquote(:"update_#{name}")(id, params, user \\ :system) do
+        with {:ok, entry} <- unquote(:"get_#{name}")(id),
+             changeset <- unquote(module).changeset(entry, params, user),
+             {:ok, entry} <- Brando.Query.update(changeset) do
+          Brando.Datasource.update_datasource(unquote(module), entry)
+        else
+          err -> err
+        end
+      end
+    end
+  end
+
+  defp mutation_delete(module) do
+    name =
+      module
+      |> Module.split()
+      |> List.last()
+      |> Inflex.underscore()
+
+    quote do
+      @spec unquote(:"delete_#{name}")(id) :: {:ok, any} | {:error, Ecto.Changeset.t()}
+      def unquote(:"delete_#{name}")(id) do
+        {:ok, entry} = unquote(:"get_#{name}")(id)
+
+        if :__soft_delete__ in (unquote(module).__info__(:functions) |> Keyword.keys()) do
+          Brando.repo().soft_delete(entry)
+        else
+          Brando.Query.delete(entry)
+        end
+
+        if :__gallery_fields__ in (unquote(module).__info__(:functions) |> Keyword.keys()) do
+          for f <- unquote(module).__gallery_fields__ do
+            image_series_id = "#{to_string(f)}_id" |> String.to_existing_atom()
+            Brando.Images.delete_series(Map.get(entry, image_series_id))
+          end
+        end
+
+        Brando.Datasource.update_datasource(unquote(module), entry)
+      end
+    end
+  end
+
+  def insert(changeset) do
+    Brando.repo().insert(changeset)
+  end
+
+  def update(changeset) do
+    Brando.repo().update(changeset)
+  end
+
+  def delete(entry) do
+    Brando.repo().delete(entry)
   end
 end

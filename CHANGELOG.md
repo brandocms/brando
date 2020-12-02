@@ -3,8 +3,8 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 ## 0.50.0-dev
 
 * Query: Add `get_<schema>!` version that raises on no result
+* Query: Add `insert/update/delete` mutations. See `UPGRADE.md`
 * Soft Delete: Add cron job to check for expired soft deleted entries
-
 
 ## 0.49.0
 
