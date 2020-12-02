@@ -44,7 +44,7 @@ defmodule Brando.Field.Image.Schema do
       end
 
       def cleanup_old_images(changeset, :safe) do
-        imagefield_keys = Keyword.keys(__imagefields__())
+        imagefield_keys = Keyword.keys(__image_fields__())
 
         for key <- Map.keys(changeset.changes) do
           if key in imagefield_keys do
@@ -155,7 +155,7 @@ defmodule Brando.Field.Image.Schema do
     imagefields_src = for {name, contents} <- imagefields, do: defcfg(name, contents)
 
     quote do
-      def __imagefields__ do
+      def __image_fields__ do
         unquote(Macro.escape(imagefields))
       end
 
@@ -233,11 +233,11 @@ defmodule Brando.Field.Image.Schema do
     modules = app_modules
 
     modules
-    |> Enum.filter(&({:__imagefields__, 0} in &1.__info__(:functions)))
+    |> Enum.filter(&({:__image_fields__, 0} in &1.__info__(:functions)))
     |> Enum.map(fn module ->
       %{
         source: module.__schema__(:source),
-        fields: module.__imagefields__() |> Keyword.keys()
+        fields: module.__image_fields__() |> Keyword.keys()
       }
     end)
   end

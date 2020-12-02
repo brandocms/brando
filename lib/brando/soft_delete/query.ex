@@ -94,8 +94,8 @@ defmodule Brando.SoftDelete.Query do
   defp clean_up_schema(schema) do
     # check if the schema has image fields
     image_fields =
-      if {:__imagefields__, 0} in schema.__info__(:functions) do
-        Keyword.keys(schema.__imagefields__)
+      if {:__image_fields__, 0} in schema.__info__(:functions) do
+        Keyword.keys(schema.__image_fields__)
       else
         nil
       end
