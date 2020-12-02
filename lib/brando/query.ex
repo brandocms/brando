@@ -428,14 +428,14 @@ defmodule Brando.Query do
       def unquote(:"delete_#{name}")(id) do
         {:ok, entry} = unquote(:"get_#{name}")(id)
 
-        if :__soft_delete__ in (unquote(module).__info__(:functions) |> Keyword.keys()) do
+        if {:__soft_delete__, 0} in unquote(module).__info__(:functions) do
           Brando.repo().soft_delete(entry)
         else
           Brando.Query.delete(entry)
         end
 
-        if :__gallery_fields__ in (unquote(module).__info__(:functions) |> Keyword.keys()) do
-          for f <- unquote(module).__gallery_fields__ do
+        if {:__gallery_fields__, 0} in unquote(module).__info__(:functions) do
+          for f <- apply(unquote(module), :__gallery_fields__, []) do
             image_series_id = "#{to_string(f)}_id" |> String.to_existing_atom()
             Brando.Images.delete_series(Map.get(entry, image_series_id))
           end
