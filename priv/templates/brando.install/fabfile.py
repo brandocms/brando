@@ -302,13 +302,12 @@ def copy_release_from_docker(version):
     """
     print(yellow('==> copying release archive from docker to release-archives/'))
     local('mkdir -p release-archives')
-    local('docker run --rm --entrypoint cat twined/%s_%s /opt/app/_build/%s/rel/%s/releases/%s/%s.tar.gz > release-archives/%s_%s_%s.tar.gz' % (
+    local('docker run --rm --entrypoint cat twined/%s_%s /opt/app/_build/%s/%s-%s.tar.gz > release-archives/%s_%s_%s.tar.gz' % (
         env.project_name,
         env.flavor,
-        env.flavor,
+        env.mix_env,
         env.project_name,
         version,
-        env.project_name,
         env.project_name,
         env.flavor,
         version))
@@ -430,7 +429,7 @@ def migrate_release():
     print(yellow('==> running db migrations escript for remote release'))
     with cd(env.path), shell_env(MIX_ENV='%s' % env.flavor,
                                  HOME='/home/%s' % env.project_user):
-        sudo('bin/%s migrate' % env.project_name,
+        sudo('bin/%s eval "%s.ReleaseTasks.migrate"' % (env.project_name, PROJECT_MODULE),
              user=env.project_user)
 
 
