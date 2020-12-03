@@ -89,38 +89,9 @@ defmodule Brando.Pages do
     end
   end
 
-  @doc """
-  Create new page
-  """
-  @spec create_page(params, user) :: any
-  def create_page(params, user) do
-    %Page{}
-    |> Page.changeset(params, user)
-    |> Brando.repo().insert
-  end
-
-  @doc """
-  Update page
-  """
-  def update_page(page_id, params, user) do
-    page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
-
-    page_id
-    |> get_page!()
-    |> Page.changeset(params, user)
-    |> Brando.repo().update
-  end
-
-  @doc """
-  Delete page
-  """
-  def delete_page(page_id) do
-    page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
-
-    page_id
-    |> get_page!()
-    |> Brando.repo().soft_delete()
-  end
+  mutation :create, Page
+  mutation :update, Page
+  mutation :delete, Page
 
   @doc """
   Duplicate page
