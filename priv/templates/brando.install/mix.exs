@@ -73,7 +73,6 @@ defmodule <%= application_module %>.MixProject do
      {:ex_machina, "~> 2.3"},
 
      # release management and production tools
-     {:distillery, "~> 2.1"},
      {:recon, "~> 2.3"},
      {:plug_heartbeat, "~> 1.0"},
 
