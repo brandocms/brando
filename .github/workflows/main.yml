@@ -16,7 +16,7 @@ jobs:
       matrix:
         pair:
           - erlang: 23.1
-            elixir: 1.11.0
+            elixir: 1.11.2
 
     services:
       db:
@@ -40,6 +40,7 @@ jobs:
         with:
           otp-version: ${{matrix.pair.erlang}}
           elixir-version: ${{matrix.pair.elixir}}
+          experimental-otp: true
 
 
       - name: Cache deps
