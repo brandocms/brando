@@ -72,6 +72,7 @@ defmodule Brando.SoftDelete.Repo do
         |> Ecto.Changeset.change(slug: randomize_slug(slug))
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update()
+        |> Brando.Cache.Query.evict()
       end
 
       def soft_delete(%{slug: slug} = struct) do
@@ -79,12 +80,14 @@ defmodule Brando.SoftDelete.Repo do
         |> Ecto.Changeset.change(slug: randomize_slug(slug))
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update()
+        |> Brando.Cache.Query.evict()
       end
 
       def soft_delete(struct_or_changeset) do
         struct_or_changeset
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update()
+        |> Brando.Cache.Query.evict()
       end
 
       def soft_delete!(%Ecto.Changeset{data: %{slug: slug}} = changeset) do
@@ -92,6 +95,7 @@ defmodule Brando.SoftDelete.Repo do
         |> Ecto.Changeset.change(slug: randomize_slug(slug))
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update!()
+        |> Brando.Cache.Query.evict()
       end
 
       def soft_delete!(%{slug: slug} = struct) do
@@ -99,12 +103,14 @@ defmodule Brando.SoftDelete.Repo do
         |> Ecto.Changeset.change(slug: randomize_slug(slug))
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update!()
+        |> Brando.Cache.Query.evict()
       end
 
       def soft_delete!(struct_or_changeset) do
         struct_or_changeset
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update!()
+        |> Brando.Cache.Query.evict()
       end
 
       def restore(struct_or_changeset) do
@@ -112,6 +118,7 @@ defmodule Brando.SoftDelete.Repo do
         |> Ecto.Changeset.change(deleted_at: nil)
         |> maybe_slug()
         |> update()
+        |> Brando.Cache.Query.evict()
       end
 
       def restore!(struct_or_changeset) do
@@ -119,6 +126,7 @@ defmodule Brando.SoftDelete.Repo do
         |> Ecto.Changeset.change(deleted_at: nil)
         |> maybe_slug()
         |> update!()
+        |> Brando.Cache.Query.evict()
       end
 
       defp utc_now do

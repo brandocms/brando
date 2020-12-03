@@ -447,14 +447,20 @@ defmodule Brando.Query do
   end
 
   def insert(changeset) do
-    Brando.repo().insert(changeset)
+    changeset
+    |> Brando.repo().insert()
+    |> Brando.Cache.Query.evict()
   end
 
   def update(changeset) do
-    Brando.repo().update(changeset)
+    changeset
+    |> Brando.repo().update()
+    |> Brando.Cache.Query.evict()
   end
 
   def delete(entry) do
-    Brando.repo().delete(entry)
+    entry
+    |> Brando.repo().delete()
+    |> Brando.Cache.Query.evict()
   end
 end
