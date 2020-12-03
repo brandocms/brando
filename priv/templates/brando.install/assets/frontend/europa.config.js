@@ -13,7 +13,9 @@ module.exports = {
     breakpointCollections: {
       $mobile: '<=mobile',
       $tablet: 'ipad_portrait/ipad_landscape',
-      $desktop: '>=desktop_md'
+      $desktop: '>=desktop_md',
+      $lg: '>=ipad_landscape',
+      $sm: '<=ipad_portrait'
     },
 
     colors: () => ({

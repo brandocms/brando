@@ -67,8 +67,8 @@ defmodule <%= application_module %>.MixProject do
 
      {:timex, "~> 3.0"},
      {:jason, "~> 1.0"},
-     {:absinthe, "~> 1.5.0-rc"},
-     {:absinthe_plug, "~> 1.5.0-rc"},
+     {:absinthe, "~> 1.5.0"},
+     {:absinthe_plug, "~> 1.5.0"},
      {:dataloader, "~> 1.0"},
      {:ex_machina, "~> 2.3"},
 
