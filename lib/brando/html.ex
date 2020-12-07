@@ -162,7 +162,7 @@ defmodule Brando.HTML do
   @doc """
   Render markdown as html raw
   """
-  def render_markdown(markdown, opts \\ [breaks: true])
+  def render_markdown(markdown, opts \\ [breaks: true, compact_output: true])
   def render_markdown(nil, _), do: ""
   def render_markdown(markdown, opts), do: markdown |> Earmark.as_html!(opts) |> raw
 

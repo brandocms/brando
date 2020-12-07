@@ -371,7 +371,7 @@ defmodule Brando.Villain do
         |> Template.changeset(params)
         |> Brando.repo().update
 
-      update_template_in_fields(id)
+      update_template_in_fields(template.id)
 
       {:ok, new_template}
     end
@@ -392,9 +392,7 @@ defmodule Brando.Villain do
     Brando.repo().delete(template)
   end
 
-  query :list, Template do
-    fn query -> from q in query, where: is_nil(q.deleted_at) end
-  end
+  query :list, Template, do: fn query -> from q in query, where: is_nil(q.deleted_at) end
 
   filters Template do
     fn
