@@ -77,7 +77,7 @@
     "glob-all": "^3.2.1",
     "moment": "^2.28.0",
     "move-file-cli": "^2.0.0",
-    "postcss": "^8.1.9",
+    "postcss": "^8.2.1",
     "postcss-easy-import": "twined/postcss-easy-import",
     "postcss-import": "^13.0.0",
     "postcss-preset-env": "^6.4.0",
