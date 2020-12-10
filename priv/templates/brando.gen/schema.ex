@@ -51,9 +51,9 @@ defmodule <%= schema_module %> do
   with no validation performed.
   """
   def changeset(schema, params \\ %{}, user \\ :system) do
-    schema<%= if creator do %>
+    schema
     |> cast(params, @required_fields ++ @optional_fields)<%= if gallery do %><%= for {_k, v} <- gallery_fields do %>
-    |> cast_assoc(:<%= v %>, with: {Brando.ImageSeries, :changeset, [user]})<% end %><% end %>
+    |> cast_assoc(:<%= v %>, with: {Brando.ImageSeries, :changeset, [user]})<% end %><% end %><%= if creator do %>
     |> put_creator(user)<% end %>
     |> validate_required(@required_fields)<%= if villain_fields != [] do %><%= for {_k, v} <- villain_fields do %><%= if v == :data do %>
     |> generate_html()<% else %>
