@@ -1161,10 +1161,10 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.7"
 
-"@univers-agency/jupiter@^3.39.0":
-  version "3.39.1"
-  resolved "https://registry.yarnpkg.com/@univers-agency/jupiter/-/jupiter-3.39.1.tgz#2df049bbfe647e3d3aab4eddcd96880926942939"
-  integrity sha512-fMj83pPpjLCAgttq3T4T9GLwt3ZwOtlA6uyC+P3co/GIqUok0r0oyZhwyM+EfBu1Y9BqYWC2HacevXfyKXQJew==
+"@univers-agency/jupiter@^3.39.2":
+  version "3.39.2"
+  resolved "https://registry.yarnpkg.com/@univers-agency/jupiter/-/jupiter-3.39.2.tgz#3d2c60bdfa79cdd1a55542a65fb09578493ec408"
+  integrity sha512-5cQHNPyi3wRibzP+ErG8HVKb0e9g/Ru1DCumVt4uEapFuL97DBg/PyMQKdiCvykjlBRDtiei8M1lFMPXMxt0xQ==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^3.1.5"
