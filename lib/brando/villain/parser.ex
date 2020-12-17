@@ -245,7 +245,7 @@ defmodule Brando.Villain.Parser do
             type -> "<div class=\"#{type}\">#{text}</div>"
           end
 
-        Earmark.as_html!(text, %Earmark.Options{breaks: true, compact_output: true})
+        Earmark.as_html!(text, %Earmark.Options{breaks: true})
       end
 
       defoverridable text: 2
@@ -266,7 +266,7 @@ defmodule Brando.Villain.Parser do
       Markdown -> html
       """
       def markdown(%{"text" => markdown}, _) do
-        Earmark.as_html!(markdown, %Earmark.Options{breaks: true, compact_output: true})
+        Earmark.as_html!(markdown, %Earmark.Options{breaks: true})
       end
 
       defoverridable markdown: 2
@@ -621,7 +621,7 @@ defmodule Brando.Villain.Parser do
       """
       def blockquote(%{"text" => text, "cite" => cite}, _)
           when byte_size(cite) > 0 do
-        text_html = Earmark.as_html!(text, compact_output: true)
+        text_html = Earmark.as_html!(text)
 
         """
         <blockquote>
@@ -634,7 +634,7 @@ defmodule Brando.Villain.Parser do
       end
 
       def blockquote(%{"text" => text}, _) do
-        text_html = Earmark.as_html!(text, compact_output: true)
+        text_html = Earmark.as_html!(text)
 
         """
         <blockquote>

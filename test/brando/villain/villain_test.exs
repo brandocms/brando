@@ -72,14 +72,14 @@ defmodule Brando.VillainTest do
     assert Brando.Villain.parse(
              ~s([{"type":"columns","data":[{"class":"col-md-6 six","data":[]},{"class":"col-md-6 six","data":[{"type":"markdown","data":{"text":"Markdown"}}]}]}])
            ) ==
-             "<div class=\"row\"><div class=\"col-md-6 six\"></div><div class=\"col-md-6 six\"><p>Markdown</p></div></div>"
+             "<div class=\"row\"><div class=\"col-md-6 six\"></div><div class=\"col-md-6 six\"><p>Markdown</p>\n</div></div>"
 
     assert Brando.Villain.parse([
              %{
                "type" => "text",
                "data" => %{"text" => "**Some** text here.", "type" => "paragraph"}
              }
-           ]) == "<p><strong>Some</strong> text here.</p>"
+           ]) == "<p><strong>Some</strong> text here.</p>\n"
 
     assert_raise FunctionClauseError, fn ->
       Brando.Villain.parse(%{"text" => "**Some** text here.", "type" => "paragraph"}) ==
@@ -297,7 +297,7 @@ defmodule Brando.VillainTest do
     {:ok, _menu} = Brando.Navigation.update_menu(menu.id, %{title: "New title"}, user)
 
     pf2 = Brando.repo().get(Brando.Pages.PageFragment, pf1.id)
-    assert pf2.html == "<p><strong>Some</strong> New title here.</p>"
+    assert pf2.html == "<p><strong>Some</strong> New title here.</p>\n"
   end
 
   test "ensure villains update on globals changes", %{user: user} do
@@ -316,7 +316,7 @@ defmodule Brando.VillainTest do
     {:ok, gc1} = Brando.Globals.create_global_category(global_category_params)
     {:ok, pf1} = Brando.Pages.create_page_fragment(pf_params, user)
 
-    assert pf1.html == "<p>So the global says: ‘My text’.</p>"
+    assert pf1.html == "<p>So the global says: ‘My text’.</p>\n"
 
     Brando.Globals.update_global_category(gc1.id, %{
       "globals" => [
@@ -326,7 +326,7 @@ defmodule Brando.VillainTest do
 
     pf2 = Brando.repo().get(Brando.Pages.PageFragment, pf1.id)
 
-    assert pf2.html == "<p>So the global says: ‘My replaced text’.</p>"
+    assert pf2.html == "<p>So the global says: ‘My replaced text’.</p>\n"
   end
 
   test "ensure villains update on identity changes", %{user: user} do
@@ -335,12 +335,12 @@ defmodule Brando.VillainTest do
     pf_params = pf_data("So identity.name says: '{{ identity.name }}'.")
 
     {:ok, pf1} = Brando.Pages.create_page_fragment(pf_params, user)
-    assert pf1.html == "<p>So identity.name says: ‘Organisasjonens navn’.</p>"
+    assert pf1.html == "<p>So identity.name says: ‘Organisasjonens navn’.</p>\n"
 
     Brando.Sites.update_identity(%{"name" => "Eddie Hazel Inc"}, user)
 
     pf2 = Brando.repo().get(Brando.Pages.PageFragment, pf1.id)
-    assert pf2.html == "<p>So identity.name says: ‘Eddie Hazel Inc’.</p>"
+    assert pf2.html == "<p>So identity.name says: ‘Eddie Hazel Inc’.</p>\n"
   end
 
   test "ensure villains update on link changes", %{user: user} do
@@ -349,7 +349,7 @@ defmodule Brando.VillainTest do
     pf_params = pf_data("So links.instagram.url says: '{{ links.instagram.url }}'.")
 
     {:ok, pf1} = Brando.Pages.create_page_fragment(pf_params, user)
-    assert pf1.html == "<p>So links.instagram.url says: ‘https://instagram.com/test’.</p>"
+    assert pf1.html == "<p>So links.instagram.url says: ‘https://instagram.com/test’.</p>\n"
 
     Brando.Sites.update_identity(
       %{"links" => [%{"name" => "Instagram", "url" => "https://instagram.com"}]},
@@ -357,7 +357,7 @@ defmodule Brando.VillainTest do
     )
 
     pf2 = Brando.repo().get(Brando.Pages.PageFragment, pf1.id)
-    assert pf2.html == "<p>So links.instagram.url says: ‘https://instagram.com’.</p>"
+    assert pf2.html == "<p>So links.instagram.url says: ‘https://instagram.com’.</p>\n"
   end
 
   test "ensure villains update on config changes", %{user: user} do
@@ -366,7 +366,7 @@ defmodule Brando.VillainTest do
     pf_params = pf_data("So configs.key1.value says: '{{ configs.key1.value }}'.")
 
     {:ok, pf1} = Brando.Pages.create_page_fragment(pf_params, user)
-    assert pf1.html == "<p>So configs.key1.value says: ‘value1’.</p>"
+    assert pf1.html == "<p>So configs.key1.value says: ‘value1’.</p>\n"
 
     Brando.Sites.update_identity(
       %{"configs" => [%{"key" => "key1", "value" => "wow!"}]},
@@ -374,7 +374,7 @@ defmodule Brando.VillainTest do
     )
 
     pf2 = Brando.repo().get(Brando.Pages.PageFragment, pf1.id)
-    assert pf2.html == "<p>So configs.key1.value says: ‘wow!’.</p>"
+    assert pf2.html == "<p>So configs.key1.value says: ‘wow!’.</p>\n"
   end
 
   test "fragment tag", %{user: user} do
