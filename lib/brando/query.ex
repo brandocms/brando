@@ -4,9 +4,21 @@ defmodule Brando.Query do
 
   # Mutations
 
+  ```
       mutation :create, Post
       mutation :update, Post
       mutation :delete, Post
+  ```
+
+  You can pass a function to execute after the mutation is finished:
+
+  ```
+      mutation :create, Post do
+        fn entry ->
+          {:ok, entry}
+        end
+      end
+  ```
 
   # Select
 
@@ -53,6 +65,8 @@ defmodule Brando.Query do
 
   import Ecto.Query
 
+  @default_after_operation {:fn, [], [{:->, [], [[{:entry, [], nil}], {:ok, {:entry, [], nil}}]}]}
+
   defmacro __using__(_) do
     quote do
       import unquote(__MODULE__)
@@ -83,8 +97,18 @@ defmodule Brando.Query do
     do: query_single(Macro.expand(module, __CALLER__), block)
 
   defmacro mutation(:create, module), do: mutation_create(Macro.expand(module, __CALLER__))
+
   defmacro mutation(:update, module), do: mutation_update(Macro.expand(module, __CALLER__))
   defmacro mutation(:delete, module), do: mutation_delete(Macro.expand(module, __CALLER__))
+
+  defmacro mutation(:create, module, do: block),
+    do: mutation_create(Macro.expand(module, __CALLER__), block)
+
+  defmacro mutation(:update, module, do: block),
+    do: mutation_update(Macro.expand(module, __CALLER__), block)
+
+  defmacro mutation(:delete, module, do: block),
+    do: mutation_delete(Macro.expand(module, __CALLER__), block)
 
   defmacro filters(module, do: block), do: filter_query(module, block)
   defmacro matches(module, do: block), do: match_query(module, block)
@@ -373,20 +397,23 @@ defmodule Brando.Query do
     end)
   end
 
-  defp mutation_create(module) do
+  defp mutation_create(module, block \\ nil) do
     name =
       module
       |> Module.split()
       |> List.last()
       |> Inflex.underscore()
 
-    quote do
+    block = (block && block) || @default_after_operation
+
+    quote generated: true do
       @spec unquote(:"create_#{name}")(params, user | :system) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
       def unquote(:"create_#{name}")(params, user \\ :system) do
         with changeset <- unquote(module).changeset(%unquote(module){}, params, user),
              {:ok, entry} <- Brando.Query.insert(changeset) do
           Brando.Datasource.update_datasource(unquote(module), entry)
+          unquote(block).(entry)
         else
           err -> err
         end
@@ -394,12 +421,14 @@ defmodule Brando.Query do
     end
   end
 
-  defp mutation_update(module) do
+  defp mutation_update(module, block \\ nil) do
     name =
       module
       |> Module.split()
       |> List.last()
       |> Inflex.underscore()
+
+    block = (block && block) || @default_after_operation
 
     quote do
       @spec unquote(:"update_#{name}")(id, params, user | :system) ::
@@ -409,6 +438,7 @@ defmodule Brando.Query do
              changeset <- unquote(module).changeset(entry, params, user),
              {:ok, entry} <- Brando.Query.update(changeset) do
           Brando.Datasource.update_datasource(unquote(module), entry)
+          unquote(block).(entry)
         else
           err -> err
         end
@@ -416,12 +446,14 @@ defmodule Brando.Query do
     end
   end
 
-  defp mutation_delete(module) do
+  defp mutation_delete(module, block \\ nil) do
     name =
       module
       |> Module.split()
       |> List.last()
       |> Inflex.underscore()
+
+    block = (block && block) || @default_after_operation
 
     quote do
       @spec unquote(:"delete_#{name}")(id) :: {:ok, any} | {:error, Ecto.Changeset.t()}
@@ -442,6 +474,7 @@ defmodule Brando.Query do
         end
 
         Brando.Datasource.update_datasource(unquote(module), entry)
+        unquote(block).(entry)
       end
     end
   end

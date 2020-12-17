@@ -1,3 +1,6 @@
+#
+# <%= alias %>
+
 mutation :create, <%= alias %>
 mutation :update, <%= alias %>
 mutation :delete, <%= alias %>

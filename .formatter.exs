@@ -17,6 +17,8 @@ locals_without_parens = [
   list: 2,
   selection: 3,
   single: 2,
+  mutation: 2,
+  mutation: 3,
   #
   preview_target: 2,
   assign: 2,
