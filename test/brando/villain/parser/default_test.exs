@@ -19,6 +19,9 @@ defmodule Brando.Villain.ParserTest do
 
     assert text(%{"text" => "**Some** text here.", "type" => "lead"}, []) ==
              ~s(<div class=\"lead\">**Some** text here.</div>)
+
+    assert text(%{"text" => "<h3>A header here</h3><p>Followed by some text</p>"}, []) ==
+             "<h3>A header here</h3><p>Followed by some text</p>"
   end
 
   test "map/1" do
