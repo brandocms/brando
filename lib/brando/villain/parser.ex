@@ -238,14 +238,11 @@ defmodule Brando.Villain.Parser do
       Convert text to HTML through Markdown
       """
       def text(%{"text" => text} = params, _) do
-        text =
-          case Map.get(params, "type") do
-            nil -> text
-            "paragraph" -> text
-            type -> "<div class=\"#{type}\">#{text}</div>"
-          end
-
-        Earmark.as_html!(text, %Earmark.Options{breaks: true})
+        case Map.get(params, "type") do
+          nil -> text
+          "paragraph" -> text
+          type -> "<div class=\"#{type}\">#{text}</div>"
+        end
       end
 
       defoverridable text: 2

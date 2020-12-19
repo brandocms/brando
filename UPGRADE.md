@@ -1,14 +1,29 @@
-## Unreleased
+## 0.50.0
 
 * Added mutations to `Brando.Query`. Add to your context: (if you want to use these)
 
 ```
-    mutation :create, MySchema
-    mutation :update, MySchema
-    mutation :delete, MySchema
+mutation :create, MySchema
+mutation :update, MySchema
+mutation :delete, MySchema
 ```
 
 then you can throw out your `create_<schema>` / `update_<schema>` / `delete_<schema>` functions.
+
+* Villain: Removed markdown parsing from `Text` blocks. You can override this in your own `parser.ex`:
+
+```
+def text(%{"text" => text} = params, _) do
+  text =
+    case Map.get(params, "type") do
+      nil -> text
+      "paragraph" -> text
+      type -> "<div class=\"#{type}\">#{text}</div>"
+    end
+
+  Earmark.as_html!(text, %Earmark.Options{breaks: true})
+end
+```
 
 
 ## 0.49.0

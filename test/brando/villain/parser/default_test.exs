@@ -15,7 +15,7 @@ defmodule Brando.Villain.ParserTest do
 
   test "text/1" do
     assert text(%{"text" => "**Some** text here.", "type" => "paragraph"}, []) ==
-             ~s(<p><strong>Some</strong> text here.</p>\n)
+             ~s(**Some** text here.)
 
     assert text(%{"text" => "**Some** text here.", "type" => "lead"}, []) ==
              ~s(<div class=\"lead\">**Some** text here.</div>)
@@ -88,7 +88,7 @@ defmodule Brando.Villain.ParserTest do
              ],
              []
            ) ==
-             "<div class=\"row\"><div class=\"col-md-6\"><h1>Header 1</h1><p>Paragraph 1</p>\n</div><div class=\"col-md-6\"><h1>Header 2</h1><p>Paragraph 2</p>\n</div></div>"
+             "<div class=\"row\"><div class=\"col-md-6\"><h1>Header 1</h1>Paragraph 1</div><div class=\"col-md-6\"><h1>Header 2</h1>Paragraph 2</div></div>"
   end
 
   test "blockquote/1" do
