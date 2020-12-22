@@ -147,7 +147,7 @@ defmodule Brando.Query do
         case try_cache({:list, unquote(source), args}, cache_args) do
           {:miss, cache_key, ttl} ->
             query =
-              run_query_reducer(
+              run_list_query_reducer(
                 __MODULE__,
                 Map.delete(args, :cache),
                 initial_query,
@@ -164,7 +164,7 @@ defmodule Brando.Query do
 
           :no_cache ->
             query =
-              run_query_reducer(
+              run_list_query_reducer(
                 __MODULE__,
                 args,
                 initial_query,
@@ -208,25 +208,10 @@ defmodule Brando.Query do
 
       def unquote(:"get_#{name}")(args) when is_map(args) do
         query =
-          args
-          |> Enum.reduce(unquote(module), fn
-            {_, nil}, query ->
-              query
-
-            {:limit, limit}, query ->
-              query |> limit(^limit)
-
-            {:status, status}, query ->
-              query |> with_status(status, unquote(publish_at?))
-
-            {:preload, preload}, query ->
-              query |> with_preload(preload)
-
-            {:matches, match}, query ->
-              query |> with_match(unquote(module), match)
-          end)
-
-        query = unquote(block).(query) |> limit(1)
+          __MODULE__
+          |> run_single_query_reducer(args, unquote(module), unquote(publish_at?))
+          |> unquote(block).()
+          |> limit(1)
 
         case Brando.repo().one(query) do
           nil -> {:error, {unquote(atom), :not_found}}
@@ -242,26 +227,8 @@ defmodule Brando.Query do
       end
 
       def unquote(:"get_#{name}!")(args) when is_map(args) do
-        query =
-          args
-          |> Enum.reduce(unquote(module), fn
-            {_, nil}, query ->
-              query
-
-            {:limit, limit}, query ->
-              query |> limit(^limit)
-
-            {:status, status}, query ->
-              query |> with_status(status, unquote(publish_at?))
-
-            {:preload, preload}, query ->
-              query |> with_preload(preload)
-
-            {:matches, match}, query ->
-              query |> with_match(unquote(module), match)
-          end)
-
-        query
+        __MODULE__
+        |> run_single_query_reducer(args, unquote(module), unquote(publish_at?))
         |> unquote(block).()
         |> limit(1)
         |> Brando.repo().one!()
@@ -384,7 +351,7 @@ defmodule Brando.Query do
     end
   end
 
-  def run_query_reducer(context, args, initial_query, module, publish_at?) do
+  def run_list_query_reducer(context, args, initial_query, module, publish_at?) do
     Enum.reduce(args, initial_query, fn
       {_, nil}, q -> q
       {:select, select}, q -> with_select(q, select)
@@ -397,6 +364,16 @@ defmodule Brando.Query do
     end)
   end
 
+  def run_single_query_reducer(context, args, module, publish_at?) do
+    Enum.reduce(args, module, fn
+      {_, nil}, q -> q
+      {:limit, limit}, q -> limit(q, ^limit)
+      {:status, status}, q -> with_status(q, status, publish_at?)
+      {:preload, preload}, q -> with_preload(q, preload)
+      {:matches, match}, q -> context.with_match(q, module, match)
+    end)
+  end
+
   defp mutation_create(module, block \\ nil) do
     name =
       module
@@ -404,7 +381,7 @@ defmodule Brando.Query do
       |> List.last()
       |> Inflex.underscore()
 
-    block = (block && block) || @default_after_operation
+    block = block || @default_after_operation
 
     quote generated: true do
       @spec unquote(:"create_#{name}")(params, user | :system) ::
@@ -428,7 +405,7 @@ defmodule Brando.Query do
       |> List.last()
       |> Inflex.underscore()
 
-    block = (block && block) || @default_after_operation
+    block = block || @default_after_operation
 
     quote do
       @spec unquote(:"update_#{name}")(id, params, user | :system) ::
@@ -453,7 +430,7 @@ defmodule Brando.Query do
       |> List.last()
       |> Inflex.underscore()
 
-    block = (block && block) || @default_after_operation
+    block = block || @default_after_operation
 
     quote do
       @spec unquote(:"delete_#{name}")(id) :: {:ok, any} | {:error, Ecto.Changeset.t()}

@@ -138,10 +138,10 @@ defmodule Brando.System do
 
     results = Villain.search_templates_for_regex(search_terms)
 
-    Enum.map(results, fn result ->
+    for result <- results do
       log_invalid_template_syntax(:vars, result)
       log_invalid_template_syntax(:for_loops, result)
-    end)
+    end
 
     # Return valid no matter what. We only want to warn
     {:ok, {:template_syntax, nil}}
@@ -162,10 +162,10 @@ defmodule Brando.System do
               "name" => "Entry"
             }
 
-            Enum.map(results, fn result ->
+            for result <- results do
               log_invalid_template_syntax(:vars, Map.merge(result, meta))
               log_invalid_template_syntax(:for_loops, Map.merge(result, meta))
-            end)
+            end
         end
       end
     end

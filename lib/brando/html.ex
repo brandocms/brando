@@ -80,12 +80,7 @@ defmodule Brando.HTML do
     play_button = Map.get(opts, :play_button, false)
     autoplay = (Map.get(opts, :autoplay, false) && "autoplay") || ""
 
-    aspect_ratio =
-      if width && height do
-        ~s(style="--aspect-ratio: #{height / width}" )
-      else
-        ""
-      end
+    aspect_ratio = build_aspect_ratio_style_string(width, height)
 
     ~s(
       <div #{aspect_ratio}class="video-wrapper" data-smart-video>
@@ -116,6 +111,12 @@ defmodule Brando.HTML do
       </div>
       ) |> raw
   end
+
+  defp build_aspect_ratio_style_string(nil, _), do: ""
+  defp build_aspect_ratio_style_string(_, nil), do: ""
+
+  defp build_aspect_ratio_style_string(width, height),
+    do: ~s(style="--aspect-ratio: #{height / width}" )
 
   @doc """
   Link preload fonts
