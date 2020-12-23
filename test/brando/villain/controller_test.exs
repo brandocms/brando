@@ -3,7 +3,7 @@ defmodule Brando.Villain.ControllerTest do
   use Brando.ConnCase
 
   alias Brando.Factory
-  alias Brando.API.Villain.VillainController
+  alias Brando.Admin.API.Villain.VillainController
 
   @up_error %Plug.Upload{
     content_type: "image/png",

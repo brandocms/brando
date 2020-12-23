@@ -1,5 +1,8 @@
 ## 0.50.0
 
+* Added `admin_routes()` macro to `Brando.Router`. Import `Brando.Router` in your `router.ex`,
+then remove your entire `scope "/admin"` block and replace it with the `admin_routes()` macro.
+
 * Added mutations to `Brando.Query`. Add to your context: (if you want to use these)
 
 ```

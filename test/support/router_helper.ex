@@ -103,20 +103,38 @@ defmodule RouterHelper do
   end
 end
 
+defmodule BrandoIntegrationWeb.Guardian.TokenPipeline do
+  @moduledoc """
+  Guardian token pipeline
+  """
+  use Guardian.Plug.Pipeline,
+    otp_app: :brando,
+    module: BrandoIntegration.Guardian,
+    error_handler: Brando.Guardian.GQLErrorHandler
+
+  plug Guardian.Plug.VerifyHeader, realm: "Bearer"
+  plug Guardian.Plug.LoadResource, allow_blank: true
+end
+
+defmodule BrandoIntegrationWeb.Guardian.GQLPipeline do
+  @moduledoc """
+  Guardian pipeline
+  """
+  use Guardian.Plug.Pipeline,
+    otp_app: :brando,
+    module: BrandoIntegration.Guardian,
+    error_handler: Brando.Guardian.GQLErrorHandler
+
+  plug Guardian.Plug.VerifyHeader, realm: "Bearer"
+  plug Guardian.Plug.EnsureAuthenticated
+  plug Guardian.Plug.LoadResource, ensure: true
+end
+
 defmodule BrandoIntegrationWeb.Router do
   @moduledoc false
   use Phoenix.Router
-  import Brando.Images.Routes.Admin.API
-  import Brando.Villain.Routes.Admin.API
+  import Brando.Router
   import Brando.Plug.I18n
-
-  pipeline :admin do
-    plug :accepts, ~w(html json)
-    plug :fetch_session
-    plug :fetch_flash
-    plug :put_admin_locale
-    plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
-  end
 
   pipeline :browser do
     plug :accepts, ~w(html)
@@ -124,11 +142,7 @@ defmodule BrandoIntegrationWeb.Router do
     plug :fetch_flash
   end
 
-  scope "/admin", as: :admin do
-    pipe_through :admin
-    api_image_routes("/images")
-    api_villain_routes()
-  end
+  admin_routes()
 
   scope "/coming-soon" do
     get "/", BrandoIntegration.LockdownController, :index

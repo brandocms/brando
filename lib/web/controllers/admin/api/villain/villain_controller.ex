@@ -1,4 +1,4 @@
-defmodule Brando.API.Villain.VillainController do
+defmodule Brando.Admin.API.Villain.VillainController do
   @moduledoc """
   The API backend for villain-editor JS.
   """
