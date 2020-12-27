@@ -1,6 +1,6 @@
 defmodule Brando.Cache do
   @moduledoc """
-
+  Interface for the main cache module
   """
   @cache_module Application.get_env(:brando, :cache_module, Cachex)
 
