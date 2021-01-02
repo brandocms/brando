@@ -1,4 +1,12 @@
 defmodule Brando.Router do
+  defmacro page_routes do
+    quote do
+      get "/robots.txt", Brando.SEOController, :robots
+      get "/", Brando.web_module(PageController), :index
+      get "/*path", Brando.web_module(PageController), :show
+    end
+  end
+
   defmacro admin_routes(path \\ "/admin") do
     quote do
       upload_ctrl = Brando.Admin.API.Images.UploadController
