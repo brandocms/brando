@@ -6,6 +6,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * Query: Add `insert/update/delete` mutations. See `UPGRADE.md`
 * Soft Delete: Add cron job to check for expired soft deleted entries
 * Villain: Removed markdown parsing from `Text` blocks.
+* Router: Added `admin_routes/0` and `page_routes/0`
 
 
 ## 0.49.0
