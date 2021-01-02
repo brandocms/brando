@@ -384,7 +384,7 @@ defmodule Brando.Query do
     block = block || @default_after_operation
 
     quote generated: true do
-      @spec unquote(:"create_#{name}")(params, user | :system) ::
+      @spec unquote(:"create_#{name}")(map, Brando.Users.User.t() | :system) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
       def unquote(:"create_#{name}")(params, user \\ :system) do
         with changeset <- unquote(module).changeset(%unquote(module){}, params, user),
@@ -408,7 +408,7 @@ defmodule Brando.Query do
     block = block || @default_after_operation
 
     quote do
-      @spec unquote(:"update_#{name}")(id, params, user | :system) ::
+      @spec unquote(:"update_#{name}")(integer | binary, map, Brando.Users.User.t() | :system) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
       def unquote(:"update_#{name}")(id, params, user \\ :system) do
         with {:ok, entry} <- unquote(:"get_#{name}")(id),
@@ -433,7 +433,8 @@ defmodule Brando.Query do
     block = block || @default_after_operation
 
     quote do
-      @spec unquote(:"delete_#{name}")(id) :: {:ok, any} | {:error, Ecto.Changeset.t()}
+      @spec unquote(:"delete_#{name}")(integer | binary) ::
+              {:ok, any} | {:error, Ecto.Changeset.t()}
       def unquote(:"delete_#{name}")(id) do
         {:ok, entry} = unquote(:"get_#{name}")(id)
 

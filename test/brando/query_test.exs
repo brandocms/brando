@@ -7,6 +7,10 @@ defmodule Brando.QueryTest do
   defmodule Context do
     use Brando.Query
 
+    mutation :create, Brando.Pages.Page
+    mutation :update, Brando.Pages.Page
+    mutation :delete, Brando.Pages.Page
+
     query :list, Brando.Pages.Page do
       fn
         query -> from q in query, where: is_nil(q.deleted_at)
@@ -81,6 +85,40 @@ defmodule Brando.QueryTest do
 
     assert_raise Ecto.NoResultsError, fn ->
       _a = __MODULE__.Context.get_page!(%{matches: %{id: 2_934_857_239_485_723_948}})
+    end
+  end
+
+  test "mutation :create" do
+    usr = Factory.insert(:random_user)
+
+    assert __MODULE__.Context.module_info(:functions)
+           |> Keyword.has_key?(:create_page)
+
+    pp1 = Factory.params_for(:page)
+
+    {:ok, p1a} = __MODULE__.Context.create_page(pp1, usr)
+    {:ok, p1b} = __MODULE__.Context.get_page(%{matches: %{id: p1a.id}})
+
+    assert p1b.id == p1a.id
+  end
+
+  test "mutation :update and :delete" do
+    usr = Factory.insert(:random_user)
+
+    assert __MODULE__.Context.module_info(:functions)
+           |> Keyword.has_key?(:update_page)
+
+    pp1 = Factory.params_for(:page)
+
+    {:ok, p1a} = __MODULE__.Context.create_page(pp1, usr)
+    {:ok, p2a} = __MODULE__.Context.update_page(p1a.id, %{title: "new title"}, usr)
+
+    assert p2a.title == "new title"
+
+    {:ok, p3a} = __MODULE__.Context.delete_page(p1a.id)
+
+    assert_raise Ecto.NoResultsError, fn ->
+      _a = __MODULE__.Context.get_page!(%{matches: %{id: p3a.id}})
     end
   end
 end
