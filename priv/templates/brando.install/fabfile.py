@@ -104,9 +104,11 @@ def prod():
     env.flavor = 'prod'
     # the process name, also the base name
     env.procname = GLUE_SETTINGS['prod']['process_name']
+    # mix_env
+    env.mix_env = 'prod'
 
     # the dockerfile
-    env.dockerfile = 'Dockerfile.prod'
+    env.dockerfile = 'Dockerfile'
 
     # username for the ssh connection
     env.user = GLUE_SETTINGS['ssh_user']
@@ -154,9 +156,11 @@ def staging():
     env.flavor = 'staging'
     # the process name, also the base name
     env.procname = GLUE_SETTINGS['staging']['process_name']
+    # mix_env
+    env.mix_env = 'prod'
 
     # the dockerfile
-    env.dockerfile = 'Dockerfile.staging'
+    env.dockerfile = 'Dockerfile'
 
     # username for the ssh connection
     env.user = GLUE_SETTINGS['ssh_user']
@@ -642,9 +646,9 @@ def upload_env():
         print(yellow('==> creating missing .envrc.%s' % env.flavor))
         local('touch .envrc.%s' % env.flavor)
 
-    put('.envrc.%s' % env.flavor, "%s/.envrc.prod" % env.path, use_sudo=True)
-    _setperms('600', os.path.join(env.path, '.envrc.prod'))
-    _setowner(os.path.join(env.path, '.envrc.prod'))
+    put('.envrc.%s' % env.flavor, "%s/.envrc.runtime" % env.path, use_sudo=True)
+    _setperms('600', os.path.join(env.path, '.envrc.runtime'))
+    _setowner(os.path.join(env.path, '.envrc.runtime'))
 
 
 def _warn(str):
