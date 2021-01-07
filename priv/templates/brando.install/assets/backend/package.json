@@ -21,7 +21,7 @@
     "@univers-agency/europacss": "^0.2.3",
     "@vue/cli-plugin-babel": "^4.5.6",
     "@vue/cli-plugin-eslint": "^4.5.6",
-    "@vue/cli-plugin-router": "^4.5.6",
+    "@vue/cli-plugin-router": "^4.5.10",
     "@vue/cli-service": "^4.5.6",
     "@vue/eslint-config-standard": "^6.0.0",
     "babel-eslint": "^10.1.0",
