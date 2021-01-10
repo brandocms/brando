@@ -297,7 +297,7 @@ defmodule Mix.Tasks.Brando.Install do
      "assets/frontend/css/includes/_newsletter.pcss"},
     {:copy, "assets/frontend/css/includes/_panners.pcss",
      "assets/frontend/css/includes/_panners.pcss"},
-    {:copy, "assets/frontend/css/includes/_popup.pcss",
+    {:copy, "assets/frontend/css/includes/_paragraphs.pcss",
      "assets/frontend/css/includes/_paragraphs.pcss"},
     {:copy, "assets/frontend/css/includes/_popup.pcss",
      "assets/frontend/css/includes/_popup.pcss"},
