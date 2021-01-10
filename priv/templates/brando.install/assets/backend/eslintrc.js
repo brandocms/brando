@@ -35,6 +35,7 @@ module.exports = {
         allowFirstLine: false
       }
     }],
+    'vue/no-mutating-props': 0,
     'vue/attributes-order': 1,
     'vue/order-in-components': 1,
     'vue/this-in-template': 1
