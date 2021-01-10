@@ -258,6 +258,39 @@ defmodule Brando.Utils do
   end
 
   @doc """
+  Force map into struct.
+
+  Supports both atom and string keys
+  """
+  def map_to_struct(nil, string_struct), do: struct(string_struct, %{})
+
+  def map_to_struct(source_map, target_struct) when is_map(source_map) do
+    map_from_struct =
+      target_struct
+      |> struct([])
+      |> Map.from_struct()
+
+    atom_keys =
+      map_from_struct
+      |> Map.keys()
+      |> Enum.map(&Atom.to_string/1)
+
+    string_map = Map.take(source_map, atom_keys)
+    atom_map = Map.take(source_map, Map.keys(map_from_struct))
+
+    new_map =
+      Enum.map(
+        Map.merge(string_map, atom_map),
+        fn
+          {key, value} when is_binary(key) -> {String.to_existing_atom(key), value}
+          {key, value} when is_atom(key) -> {key, value}
+        end
+      )
+
+    struct(target_struct, new_map)
+  end
+
+  @doc """
   Returns current date & time
   """
   @spec get_now :: binary

@@ -3,6 +3,7 @@ defmodule Brando.Type.Video do
   Defines a type for video field.
   """
   use Ecto.Type
+  alias Brando.Utils
 
   @type t :: %__MODULE__{}
 
@@ -22,14 +23,9 @@ defmodule Brando.Type.Video do
   @doc """
   Cast should return OUR type no matter what the input.
   """
-  def cast(val) when is_binary(val) do
-    val = Poison.decode!(val, as: %Brando.Type.Video{})
-    {:ok, val}
-  end
-
-  def cast(val) when is_map(val) do
-    {:ok, val}
-  end
+  def cast(val) when is_binary(val), do: {:ok, Poison.decode!(val, as: %Brando.Type.Video{})}
+  def cast(%__MODULE__{} = val), do: {:ok, val}
+  def cast(val) when is_map(val), do: {:ok, Utils.map_to_struct(val, %__MODULE__{})}
 
   @doc """
   Integers are never considered blank
