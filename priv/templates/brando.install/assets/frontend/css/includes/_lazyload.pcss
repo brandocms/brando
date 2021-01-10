@@ -1,12 +1,13 @@
 [data-ll-srcset] {
   img {
-    opacity: 1;
-    filter: none;
-    transition: filter 0.5s ease, opacity 0.7s ease;
+    transition: opacity 0.7s ease-in;
+    opacity: 0.1;
+    -webkit-transform: translateZ(0);
+    -webkit-perspective: 1000;
+    -webkit-backface-visibility: hidden;
 
-    &[data-ll-blurred] {
-      opacity: 0.2;
-      filter: blur(35px);
+    &[data-ll-loaded] {
+      opacity: 1;
     }
   }
 }
