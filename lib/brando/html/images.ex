@@ -73,7 +73,6 @@ defmodule Brando.HTML.Images do
 
     img_tag = tag(:img, attrs.img)
     noscript_img_tag = tag(:img, attrs.noscript_img)
-
     source_tag = build_source_tags(image_struct, attrs)
 
     figcaption_tag =
