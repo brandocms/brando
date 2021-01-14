@@ -37,6 +37,17 @@ defmodule Brando.Query do
   Same as the default format, only explicitly marked parameters.
 
 
+  # Order
+
+  ## Examples
+
+        {:ok, posts} = list_posts(%{order: [{:asc, :title}]})
+
+  Orders by `:title` on joined table `:comments`
+
+        {:ok, posts} = list_posts(%{order: [{:asc, {:comments, :title}]})
+
+
   # Preload
 
   ## Examples
@@ -273,6 +284,14 @@ defmodule Brando.Query do
             field(q, :inserted_at),
             ^modulo
           )
+        )
+
+      {dir, {join_assoc, order_field}}, query ->
+        from(
+          q in query,
+          left_join: j in assoc(q, ^join_assoc),
+          order_by: [{^dir, field(j, ^order_field)}],
+          preload: [{^join_assoc, j}]
         )
 
       {dir, by}, query ->
