@@ -36,8 +36,8 @@ defmodule Brando.Mixfile do
       {:ecto_sql, "~> 3.5"},
 
       # graphql
-      {:absinthe, "~> 1.5.0"},
-      {:absinthe_plug, "~> 1.5.0"},
+      {:absinthe, "~> 1.6", override: true},
+      {:absinthe_plug, "~> 1.5"},
       {:dataloader, "~> 1.0"},
 
       # hashing/passwords

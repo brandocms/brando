@@ -48,7 +48,7 @@ defmodule <%= application_module %>.MixProject do
   defp deps do
     [
      # phoenix
-     {:phoenix, "~> 1.5.0"},
+     {:phoenix, "~> 1.5"},
      {:phoenix_pubsub, "~> 2.0"},
      {:plug_cowboy, "~> 2.1"},
      {:phoenix_ecto, "~> 4.1"},
@@ -67,8 +67,8 @@ defmodule <%= application_module %>.MixProject do
 
      {:timex, "~> 3.0"},
      {:jason, "~> 1.0"},
-     {:absinthe, "~> 1.5.0"},
-     {:absinthe_plug, "~> 1.5.0"},
+     {:absinthe, "~> 1.6"},
+     {:absinthe_plug, "~> 1.5"},
      {:dataloader, "~> 1.0"},
      {:ex_machina, "~> 2.3"},
 
