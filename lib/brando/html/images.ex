@@ -205,16 +205,24 @@ defmodule Brando.HTML.Images do
     |> put_in([:source, :sizes], sizes)
   end
 
-  defp add_type(attrs, %{sizes: sizes}) when not is_nil(sizes) do
+  defp add_type(attrs, %{sizes: nil}), do: attrs
+  defp add_type(attrs, %{sizes: sizes}) when sizes == %{}, do: attrs
+
+  defp add_type(attrs, %{sizes: sizes}) do
     type =
       case sizes |> Map.values() |> List.first() |> Path.extname() do
         ".jpg" -> "image/jpeg"
         ".jpeg" -> "image/jpeg"
         ".png" -> "image/png"
         ".gif" -> "image/gif"
+        _ -> nil
       end
 
-    put_in(attrs, [:source, :type], type)
+    if type do
+      put_in(attrs, [:source, :type], type)
+    else
+      attrs
+    end
   end
 
   defp add_type(attrs, _), do: attrs
