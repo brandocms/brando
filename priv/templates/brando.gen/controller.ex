@@ -23,7 +23,9 @@ defmodule <%= module %>Controller do
   @doc false
   @spec detail(conn, map) :: {:error, {:<%= singular %>, :not_found}} | conn
   def detail(conn, %{"slug" => slug}) do
-    with {:ok, <%= singular %>} <- <%= domain %>.get_<%= singular %>(slug: slug) do
+    opts = %{matches: %{slug: slug}, status: :published}
+
+    with {:ok, <%= singular %>} <- <%= domain %>.get_<%= singular %>(opts) do
       conn
       |> assign(:entry, <%= singular %>)
       |> put_section("<%= singular %>")

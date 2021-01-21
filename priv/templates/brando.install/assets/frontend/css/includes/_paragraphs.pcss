@@ -2,21 +2,19 @@ p {
   @fontsize base;
   @space margin-bottom vertical-rhythm(theme.typography.sizes.base);
 
-  font-weight: 200;
-
   &:last-of-type {
     margin-bottom: 0 !important;
   }
 
   > a {
-    color: theme(colors.link.regular);
-    border-color: transparent;
+    @color fg link.regular.text;
+    border-bottom: 1px solid theme(colors.link.regular.border);
     transition: border-color 250ms ease-out, color 250ms ease-out;
     padding-bottom: 3px;
 
     &:hover {
-      color: theme(colors.link.hover);
-      border-bottom: 2px solid theme(colors.link.hoverBorder);
+      @color fg link.hover.text;
+      border-bottom: 1px solid theme(colors.link.hover.border);
       text-decoration: none;
     }
   }

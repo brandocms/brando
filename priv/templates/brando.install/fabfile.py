@@ -450,10 +450,10 @@ def dump_remotedb():
     """
     Dumps remote flavored database
     """
-    print(yellow('==> dumping remote database %s_%s -> sql/db_dump_remote.sql' % (PROJECT_NAME, env.flavor)))
+    print(yellow('==> dumping remote database %s -> sql/db_dump_remote.sql' % env.db_name))
     with cd(env.path):
         sudo('mkdir -p sql', user=env.project_user)
-        sudo('pg_dump --no-owner --no-acl %s_%s > sql/db_dump_remote.sql' % (PROJECT_NAME, env.flavor), user=env.project_user)
+        sudo('pg_dump --no-owner --no-acl %s > sql/db_dump_remote.sql' % env.db_name, user=env.project_user)
 
 
 def upload_db():

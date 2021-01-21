@@ -1,3 +1,6 @@
+#cookies {
+  @space padding-top lg;
+}
 
 .no-js {
   .cookie-container {
@@ -6,29 +9,44 @@
 }
 
 .cookie-container {
+  @color fg dark;
+  @color bg light;
   display: none;
   position: fixed;
   bottom: 0;
   left: 0;
-  background-color: theme(colors.dark);
-  color: theme(colors.light);
-  z-index: 99999;
+  z-index: 9997;
   margin-bottom: 0 !important;
   max-width: 100% !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
+  border-top: 1px solid theme(colors.dark);
 
-  @space padding-y 20px $desktop;
-  @space padding-y 20px $tablet;
-  @space padding-y 15px $mobile;
+  @space padding-y 2xs;
+
+  @responsive >=desktop_md {
+    @space! width 285px;
+    @space right 25px;
+    @space bottom 25px;
+    @space padding-x 0.4;
+    @space padding-y 0.4;
+
+    left: auto;
+    border-radius: 15px;
+    border: 1px solid theme(colors.dark);
+  }
 
   .cookie-law {
-    @container;
     display: flex;
     justify-content: space-between;
     align-items: center;
 
-    @responsive <=ipad_portrait {
+    @responsive <=mobile {
+      flex-direction: column;
+    }
+
+    @responsive >=desktop_md {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
       flex-direction: column;
     }
   }
@@ -36,12 +54,9 @@
   .cookie-law-text {
     width: 100%;
     p {
-      @fontsize base $desktop;
-      @fontsize sm ipad_landscape;
-      @fontsize base ipad_portrait;
-      @fontsize base(0.8) $mobile;
-      @space padding-right 4 $desktop;
-      @space padding-right 4 ipad_landscape;
+      @space margin-bottom 12px >=desktop_md;
+      @space margin-bottom 3px <desktop_md;
+      font-size: 15px;
     }
   }
 
@@ -49,7 +64,7 @@
     flex-shrink: 0;
     text-align: right;
 
-    @responsive <=ipad_portrait {
+    @responsive <=mobile {
       display: flex;
       align-items: center;
       width: 100%;
@@ -57,22 +72,39 @@
       justify-content: space-between;
     }
 
-    @responsive ipad_landscape {
+    @responsive >=desktop_md {
+      text-align: left;
+      width: 100%;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+
+    @responsive ipad_portrait/ipad_landscape {
       padding-left: 15px;
     }
 
     a {
       @extend .plain;
-      color: theme(colors.light);
+      @fontsize 14px;
+      @color fg dark;
     }
 
     button {
-      background-color: theme(colors.light);
-      color: theme(colors.dark);
-      border: 0;
-      padding: 3px 25px;
+      @color fg dark;
+      @color bg transparent;
+      @fontsize 16px;
+      padding: 3px 25px 4px;
+      border-radius: 10px;
+      border: 1px solid theme(colors.dark);
 
-      @responsive >=ipad_landscape {
+      &:hover {
+        @color fg light;
+        @color bg dark;
+      }
+
+      @responsive >=ipad_portrait {
+        padding-top: 5px;
         margin-right: 15px;
       }
     }
