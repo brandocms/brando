@@ -406,11 +406,27 @@ defmodule Brando.VillainTest do
         ]
       })
 
+    pf_params3 =
+      Factory.params_for(:page_fragment, %{
+        parent_key: "parent_test",
+        key: "test_key",
+        data: [
+          %{
+            "type" => "html",
+            "data" => %{
+              "text" => "--> {% hide %}parent_test{% endhide %} <--"
+            }
+          }
+        ]
+      })
+
     {:ok, pf1} = Brando.Pages.create_page_fragment(pf_params1, user)
     {:ok, pf2} = Brando.Pages.create_page_fragment(pf_params2, user)
+    {:ok, pf3} = Brando.Pages.create_page_fragment(pf_params3, user)
 
     assert pf1.html == "Hello from the fragment!"
     assert pf2.html == "--> Hello from the fragment! <--"
+    assert pf3.html == "--> parent_test <--"
   end
 
   test "search templates for regex" do
