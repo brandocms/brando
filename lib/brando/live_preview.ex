@@ -277,6 +277,7 @@ defmodule Brando.LivePreview do
     set_entry(cache_key, merged_diff_entry)
     entry_diff_struct = Brando.Utils.stringy_struct(schema_module, merged_diff_entry)
     wrapper_html = preview_module.render(schema_module, entry_diff_struct, key, prop, cache_key)
+
     Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
     cache_key
   end

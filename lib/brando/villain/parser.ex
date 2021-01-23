@@ -143,10 +143,6 @@ defmodule Brando.Villain.Parser do
             _ -> Brando.Villain.get_template(%{matches: %{id: id}})
           end
 
-        # multi template
-        #! TODO: WHY IS THIS OVERRIDDEN
-        {:ok, template} = Brando.Villain.get_template(%{matches: %{id: id}})
-
         base_context = opts.context
 
         content =
@@ -651,12 +647,12 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert columns to html. Recursive parsing.
       """
-      def columns(cols, _) do
+      def columns(cols, opts) do
         col_html =
           for col <- cols do
             c =
               Enum.reduce(col["data"], [], fn d, acc ->
-                [apply(__MODULE__, String.to_atom(d["type"]), [d["data"], []]) | acc]
+                [apply(__MODULE__, String.to_atom(d["type"]), [d["data"], opts]) | acc]
               end)
 
             class =
@@ -671,7 +667,23 @@ defmodule Brando.Villain.Parser do
         ~s(<div class="row">#{col_html}</div>)
       end
 
-      defoverridable columns: 2
+      @doc """
+      Convert container to html. Recursive parsing.
+      """
+      def container(%{"blocks" => blocks, "class" => class}, opts) do
+        blocks_html =
+          Enum.reduce(blocks, [], fn d, acc ->
+            [apply(__MODULE__, String.to_atom(d["type"]), [d["data"], opts]) | acc]
+          end)
+
+        """
+        <section b-section="#{class}">
+          #{Enum.reverse(blocks_html)}
+        </section>
+        """
+      end
+
+      defoverridable container: 2
 
       @doc """
       Timeline

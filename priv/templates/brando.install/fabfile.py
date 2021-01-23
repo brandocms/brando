@@ -237,6 +237,7 @@ def bootstrap_release():
     logrotatecfg()
 
     dump_local_db_and_load_db_on_remote()
+    upload_env()
 
     restart()
     prune_dangling_docker_images()

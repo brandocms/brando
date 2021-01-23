@@ -1,5 +1,10 @@
 ## 0.50.0
 
+* Villain keeps its data as an object in the Vue backend, so all graphql schemas using it
+  must call `this.$utils.serializeParams(postParams, ['data'])` where `data` is the name
+  of your Villain field. This is called in your `MySchemaCreateView.vue` and `MySchemaEditView.vue`
+  in their `save` methods.
+
 * Added `admin_routes/0` macro to `Brando.Router`. Import `Brando.Router` in your `router.ex`,
 then remove your entire `scope "/admin"` block and replace it with the `admin_routes()` macro.
 

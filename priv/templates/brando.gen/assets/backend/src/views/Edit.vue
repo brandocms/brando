@@ -49,6 +49,7 @@ export default {
 
       <%= if img_fields != [] do %>this.$utils.validateImageParams(<%= vue_singular %>Params, <%= img_fields |> Enum.map(&(to_charlist(elem(&1, 1)))) |> inspect %>)<% end %>
       <%= if file_fields != [] do %>this.$utils.validateFileParams(<%= vue_singular %>Params, <%= file_fields |> Enum.map(&(to_charlist(Recase.to_camel(to_string(elem(&1, 1)))))) |> inspect %>)<% end %>
+      <%= if villain_fields != [] do %>this.$utils.serializeParams(<%= vue_singular %>Params, <%= villain_fields |> Enum.map(&(to_charlist(Recase.to_camel(to_string(elem(&1, 1)))))) |> inspect %>)<% end %>
 
       // if you have a MultiSelect -- it must be mapped out:
       // <%= vue_singular %>Params.myMultiField = this.$utils.mapMultiSelect(<%= vue_singular %>Params.myMultiField)
