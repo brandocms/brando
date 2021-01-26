@@ -380,14 +380,9 @@ defmodule Brando.Villain.Parser do
 
         alt =
           cond do
-            alt ->
-              alt
-
-            caption ->
-              caption
-
-            true ->
-              ""
+            alt -> alt
+            caption -> caption
+            true -> ""
           end
 
         ptag =

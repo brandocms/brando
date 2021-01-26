@@ -154,7 +154,6 @@ defmodule Brando.Villain do
 
   def parse_and_render(html, context) do
     {:ok, parsed_doc} = Liquex.parse(html, Brando.Villain.LiquexParser)
-
     {result, _} = Liquex.Render.render([], parsed_doc, context)
     Enum.join(result)
   end
@@ -319,14 +318,22 @@ defmodule Brando.Villain do
 
   @doc """
   List ids of `schema` records that has `template_id` in `data_field`
+  Also check inside containers
   """
   def list_ids_with_template(schema, data_field, template_id) do
-    t = [%{type: "template", data: %{id: template_id}}]
+    t = [
+      %{type: "template", data: %{id: template_id}}
+    ]
+
+    contained_t = [
+      %{type: "container", data: %{blocks: [%{type: "template", data: %{id: template_id}}]}}
+    ]
 
     Brando.repo().all(
       from s in schema,
         select: s.id,
-        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t)
+        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t),
+        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_t)
     )
   end
 

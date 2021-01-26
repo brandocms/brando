@@ -249,6 +249,62 @@ defmodule Brando.VillainTest do
     assert updated_page.html == "-- this is some NEW code Some text! --"
   end
 
+  test "update template inside container", %{user: user} do
+    tp1 =
+      Factory.insert(:template, %{
+        code: "-- this is some code {{ testvar }} --",
+        name: "Name",
+        help_text: "Help text",
+        refs: [],
+        namespace: "all",
+        class: "css class"
+      })
+
+    data = %{
+      "type" => "container",
+      "data" => %{
+        "class" => "a-container-class",
+        "blocks" => [
+          %{
+            "type" => "template",
+            "data" => %{
+              "deleted_at" => nil,
+              "id" => tp1.id,
+              "multi" => false,
+              "refs" => [],
+              "sequence" => 0,
+              "vars" => %{
+                "testvar" => %{
+                  "label" => "Field name",
+                  "type" => "text",
+                  "value" => "Some text!"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+
+    {:ok, page} = Brando.Pages.create_page(Factory.params_for(:page, %{data: [data]}), user)
+
+    assert page.html ==
+             "<section b-section=\"a-container-class\">\n  -- this is some code Some text! --\n</section>\n"
+
+    tp2 =
+      tp1
+      |> Map.put(:code, "-- this is some NEW code {{ testvar }} --")
+      |> Map.from_struct()
+      |> Brando.Utils.stringify_keys()
+
+    Brando.Villain.update_template(tp1.id, tp2)
+
+    {:ok, updated_page} = Brando.Pages.get_page(page.id)
+
+    assert updated_page.html ==
+             "<section b-section=\"a-container-class\">\n  -- this is some NEW code Some text! --\n</section>\n"
+  end
+
   test "rerender_villains_for" do
     _p1 = Factory.insert(:page, @data)
     _p2 = Factory.insert(:page, @data)

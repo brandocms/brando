@@ -86,17 +86,9 @@ defmodule Brando.Admin.API.Villain.VillainController do
 
   @doc false
   def templates(conn, %{"slug" => slug}) do
-    {:ok, templates} = Villain.list_templates(%{filter: %{namespace: slug}})
-
-    formatted_templates =
-      Enum.map(templates, fn template ->
-        %{
-          type: "template",
-          data: template
-        }
-      end)
-
-    json(conn, formatted_templates)
+    {:ok, tpls} = Villain.list_templates(%{filter: %{namespace: slug}})
+    formatted_tpls = Enum.map(tpls, fn tpl -> %{type: "template", data: tpl} end)
+    json(conn, formatted_tpls)
   end
 
   defp sizes_with_media_url(image),
