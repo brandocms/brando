@@ -9,7 +9,7 @@ defmodule Brando.SoftDelete.QueryTest do
     assert Query.list_soft_delete_schemas() == [
              Brando.Pages.Page,
              Brando.Pages.PageFragment,
-             Brando.Villain.Template,
+             Brando.Villain.Module,
              Brando.Image,
              Brando.ImageCategory,
              Brando.ImageSeries,
@@ -21,7 +21,7 @@ defmodule Brando.SoftDelete.QueryTest do
     assert Query.count_soft_deletions() == [
              {Brando.Pages.Page, 0},
              {Brando.Pages.PageFragment, 0},
-             {Brando.Villain.Template, 0},
+             {Brando.Villain.Module, 0},
              {Brando.Image, 0},
              {Brando.ImageCategory, 0},
              {Brando.ImageSeries, 0},
@@ -49,7 +49,7 @@ defmodule Brando.SoftDelete.QueryTest do
     assert Query.count_soft_deletions() == [
              {Brando.Pages.Page, 1},
              {Brando.Pages.PageFragment, 1},
-             {Brando.Villain.Template, 0},
+             {Brando.Villain.Module, 0},
              {Brando.Image, 1},
              {Brando.ImageCategory, 0},
              {Brando.ImageSeries, 0},
@@ -67,7 +67,7 @@ defmodule Brando.SoftDelete.QueryTest do
     assert Query.count_soft_deletions() == [
              {Brando.Pages.Page, 0},
              {Brando.Pages.PageFragment, 1},
-             {Brando.Villain.Template, 0},
+             {Brando.Villain.Module, 0},
              {Brando.Image, 0},
              {Brando.ImageCategory, 0},
              {Brando.ImageSeries, 0},

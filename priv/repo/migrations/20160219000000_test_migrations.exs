@@ -145,7 +145,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     create(index(:pages_fragments, [:key]))
     create(index(:pages_fragments, [:parent_key]))
 
-    create table(:pages_templates) do
+    create table(:pages_modules) do
       add :name, :string
       add :namespace, :string
       add :help_text, :text
@@ -161,7 +161,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       soft_delete()
     end
 
-    create index(:pages_templates, [:namespace])
+    create index(:pages_modules, [:namespace])
 
     create table(:sites_identity) do
       add :name, :string

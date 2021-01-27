@@ -416,12 +416,15 @@ defmodule Brando.AdminChannelTest do
   # TEMPLATES
   #
 
-  describe "templates" do
-    test "templates:list_templates", %{socket: socket} do
-      _ = Factory.insert(:template)
-      ref = push(socket, "templates:list_templates", %{})
+  describe "modules" do
+    test "modules:list_modules", %{socket: socket} do
+      _ = Factory.insert(:module)
+      ref = push(socket, "villain:list_modules", %{"namespace" => "all"})
 
-      assert_reply ref, :ok, %{code: 200, templates: [%{id: _, name: "posts - test"}]}
+      assert_reply ref, :ok, %{
+        code: 200,
+        modules: [%{type: "module", data: %{id: _, name: "test", namespace: "posts"}}]
+      }
     end
   end
 

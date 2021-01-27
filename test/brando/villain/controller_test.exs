@@ -33,20 +33,6 @@ defmodule Brando.Villain.ControllerTest do
     assert resp_map["status"] == 200
   end
 
-  test "templates", %{conn: conn} do
-    conn = VillainController.templates(conn, %{"slug" => "test"})
-    assert conn.resp_body == "[]"
-
-    Factory.insert(:template)
-    Factory.insert(:template)
-
-    conn = recycle(conn)
-    conn = VillainController.templates(conn, %{"slug" => "all"})
-
-    resp_map = Jason.decode!(conn.resp_body)
-    assert Enum.count(resp_map) == 2
-  end
-
   test "upload", %{conn: conn} do
     _is1 = Factory.insert(:image_series, name: "test", slug: "test")
 

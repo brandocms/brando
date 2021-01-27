@@ -20,7 +20,7 @@ defmodule Brando.VillainTest do
     def list(_, _), do: nil
     def slideshow(_, _), do: nil
     def video(_, _), do: nil
-    def template(_, _), do: nil
+    def module(_, _), do: nil
     def comment(_, _), do: nil
   end
 
@@ -204,9 +204,9 @@ defmodule Brando.VillainTest do
     assert resulting_ids === [pf1.id, pf4.id]
   end
 
-  test "create and update dependent template", %{user: user} do
+  test "create and update dependent module", %{user: user} do
     tp1 =
-      Factory.insert(:template, %{
+      Factory.insert(:module, %{
         code: "-- this is some code {{ testvar }} --",
         name: "Name",
         help_text: "Help text",
@@ -230,7 +230,7 @@ defmodule Brando.VillainTest do
           }
         }
       },
-      "type" => "template"
+      "type" => "module"
     }
 
     {:ok, page} = Brando.Pages.create_page(Factory.params_for(:page, %{data: [data]}), user)
@@ -243,15 +243,15 @@ defmodule Brando.VillainTest do
       |> Map.from_struct()
       |> Brando.Utils.stringify_keys()
 
-    Brando.Villain.update_template(tp1.id, tp2)
+    Brando.Villain.update_module(tp1.id, tp2)
 
     {:ok, updated_page} = Brando.Pages.get_page(page.id)
     assert updated_page.html == "-- this is some NEW code Some text! --"
   end
 
-  test "update template inside container", %{user: user} do
+  test "update module inside container", %{user: user} do
     tp1 =
-      Factory.insert(:template, %{
+      Factory.insert(:module, %{
         code: "-- this is some code {{ testvar }} --",
         name: "Name",
         help_text: "Help text",
@@ -266,7 +266,7 @@ defmodule Brando.VillainTest do
         "class" => "a-container-class",
         "blocks" => [
           %{
-            "type" => "template",
+            "type" => "module",
             "data" => %{
               "deleted_at" => nil,
               "id" => tp1.id,
@@ -297,7 +297,7 @@ defmodule Brando.VillainTest do
       |> Map.from_struct()
       |> Brando.Utils.stringify_keys()
 
-    Brando.Villain.update_template(tp1.id, tp2)
+    Brando.Villain.update_module(tp1.id, tp2)
 
     {:ok, updated_page} = Brando.Pages.get_page(page.id)
 
@@ -315,9 +315,9 @@ defmodule Brando.VillainTest do
     assert result |> List.flatten() |> Keyword.keys() |> Enum.count() == 3
   end
 
-  test "get_cached_template" do
+  test "get_cached_module" do
     tp1 =
-      Factory.insert(:template, %{
+      Factory.insert(:module, %{
         code: "-- this is some code {{ testvar }} --",
         name: "Name",
         help_text: "Help text",
@@ -326,11 +326,11 @@ defmodule Brando.VillainTest do
         class: "css class"
       })
 
-    {:ok, template} = Brando.Villain.get_cached_template(tp1.id)
-    assert template.id == tp1.id
+    {:ok, module} = Brando.Villain.get_cached_module(tp1.id)
+    assert module.id == tp1.id
 
-    {:ok, template} = Brando.Villain.get_cached_template(tp1.id)
-    assert template.id == tp1.id
+    {:ok, module} = Brando.Villain.get_cached_module(tp1.id)
+    assert module.id == tp1.id
   end
 
   test "ensure villains update on navigation changes", %{user: user} do
@@ -485,11 +485,11 @@ defmodule Brando.VillainTest do
     assert pf3.html == "--> parent_test <--"
   end
 
-  test "search templates for regex" do
+  test "search modules for regex" do
     ExMachina.Sequence.reset()
 
     _tp1 =
-      Factory.insert(:template, %{
+      Factory.insert(:module, %{
         code: """
         this is some code ${globals:old.varstyle}, ${testoldvar}
         {% for test <- old_style %}
@@ -504,7 +504,7 @@ defmodule Brando.VillainTest do
       })
 
     _tp2 =
-      Factory.insert(:template, %{
+      Factory.insert(:module, %{
         code: """
         {{ new_style }}
         {% for test in bla %}
@@ -520,7 +520,7 @@ defmodule Brando.VillainTest do
 
     search_terms = [old_vars: "\\${.*?}", old_for_loops: "{\\% for .*? <- .*? \\%}"]
 
-    [r1, r2] = Villain.search_templates_for_regex(search_terms)
+    [r1, r2] = Villain.search_modules_for_regex(search_terms)
 
     assert r1["name"] == "Old style"
     assert r1["old_for_loops"] == ["{% for test <- old_style %}"]
