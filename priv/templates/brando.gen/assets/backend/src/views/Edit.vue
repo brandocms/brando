@@ -51,8 +51,11 @@ export default {
       <%= if file_fields != [] do %>this.$utils.validateFileParams(<%= vue_singular %>Params, <%= file_fields |> Enum.map(&(to_charlist(Recase.to_camel(to_string(elem(&1, 1)))))) |> inspect %>)<% end %>
       <%= if villain_fields != [] do %>this.$utils.serializeParams(<%= vue_singular %>Params, <%= villain_fields |> Enum.map(&(to_charlist(Recase.to_camel(to_string(elem(&1, 1)))))) |> inspect %>)<% end %>
 
-      // if you have a MultiSelect -- it must be mapped out:
-      // <%= vue_singular %>Params.myMultiField = this.$utils.mapMultiSelect(<%= vue_singular %>Params.myMultiField)
+      // if you have MultiSelects -- they must be mapped out:
+      // this.$utils.mapMultiSelects(<%= vue_singular %>Params, ['fieldName'])
+
+      // if you have input tables that are sending objects -- the type names must be stripped:
+      // this.$utils.stripTypenames(<%= vue_singular %>Params, ['fieldName'])
 
       try {
         await this.$apollo.mutate({

@@ -41,8 +41,8 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "page_fragment:rerender_all",
     "sitemap:exists",
     "sitemap:generate",
-    "templates:list_templates",
-    "templates:sequence_templates",
+    "villain:list_modules",
+    "villain:sequence_modules",
     "user:deactivate",
     "user:activate",
     "user:state"
@@ -307,14 +307,14 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     {:reply, {:ok, %{code: 200, available_entries: entries}}, socket}
   end
 
-  def do_handle_in("templates:list_templates", _, socket) do
-    {:ok, templates} = Villain.list_templates(%{filter: %{namespace: "all"}})
-    templates = Enum.map(templates, &%{id: &1.id, name: "#{&1.namespace} - #{&1.name}"})
-    {:reply, {:ok, %{code: 200, templates: templates}}, socket}
+  def do_handle_in("villain:list_modules", %{"namespace" => namespace}, socket) do
+    {:ok, modules} = Villain.list_modules(%{filter: %{namespace: namespace}})
+    formatted_modules = Enum.map(modules, fn mod -> %{type: "module", data: mod} end)
+    {:reply, {:ok, %{code: 200, modules: formatted_modules}}, socket}
   end
 
-  def do_handle_in("templates:sequence_templates", params, socket) do
-    Villain.Template.sequence(params)
+  def do_handle_in("villain:sequence_modules", params, socket) do
+    Villain.Module.sequence(params)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 

@@ -1,9 +1,28 @@
 ## 0.50.0
 
+* Rename all `Brando.Villain.Template` occurences to `Brando.Villain.Module`.
+
+* Some props for Villain have changed:
+
+    ```
+    gsed -i "s=:template-mode=:module-mode=" assets/backend/src/**/*.vue && \
+    gsed -i "s=:template-mode=:module-mode=" assets/backend/src/config.js && \
+    gsed -i "s=:templates=:modules=" assets/backend/src/**/*.vue && \
+    gsed -i "s=:templates=:modules=" assets/backend/src/config.js
+    ```
+
 * Villain keeps its data as an object in the Vue backend, so all graphql schemas using it
   must call `this.$utils.serializeParams(postParams, ['data'])` where `data` is the name
   of your Villain field. This is called in your `MySchemaCreateView.vue` and `MySchemaEditView.vue`
   in their `save` methods.
+
+  If you have MultiSelects -- they must be mapped out (in EDIT views):
+
+      `this.$utils.mapMultiSelects(postParams, ['fieldName'])`
+
+  If you have input tables that are sending objects -- the type names must be stripped (in EDIT views):
+
+      `this.$utils.stripTypenames(postParams, ['fieldName'])`
 
 * Added `admin_routes/0` macro to `Brando.Router`. Import `Brando.Router` in your `router.ex`,
 then remove your entire `scope "/admin"` block and replace it with the `admin_routes()` macro.
@@ -308,7 +327,7 @@ end
   ```
   gsed -i "s=@univers-agency\/kurtz=brandojs=" assets/backend/src/**/*.js && \
   gsed -i "s=@univers-agency\/kurtz=brandojs=" assets/backend/src/**/*.vue && \
-  gsed -i "s=~@univers-agency\/kurtz=~brandojs=" assets/backend/src/**/*.scss &&
+  gsed -i "s=~@univers-agency\/kurtz=~brandojs=" assets/backend/src/**/*.scss
   ```
 * Part 1 of the big backend Vue rewrite has been updating it to use the new Vee-Validate syntax.
   All `<KInput(...)>` components with validation now needs to be wrapped in a `<ValidationObserver>` HOC:

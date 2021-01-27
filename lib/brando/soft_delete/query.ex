@@ -21,7 +21,7 @@ defmodule Brando.SoftDelete.Query do
       [
         Brando.Pages.Page,
         Brando.Pages.PageFragment,
-        Brando.Villain.Template,
+        Brando.Villain.Module,
         Brando.Image,
         Brando.ImageCategory,
         Brando.ImageSeries,

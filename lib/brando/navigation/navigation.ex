@@ -186,7 +186,7 @@ defmodule Brando.Navigation do
 
     villains = Villain.list_villains()
     Villain.rerender_matching_villains(villains, search_terms)
-    Villain.rerender_matching_templates(villains, search_terms)
+    Villain.rerender_matching_modules(villains, search_terms)
 
     {:ok, menu}
   end

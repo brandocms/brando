@@ -54,8 +54,8 @@ defmodule Brando.Villain.Parser do
   @doc "Parses svg"
   @callback svg(data :: map, opts :: map) :: binary
 
-  @doc "Parses template"
-  @callback template(data :: map, opts :: map) :: binary
+  @doc "Parses module"
+  @callback module(data :: map, opts :: map) :: binary
 
   @doc "Parses datasource"
   @callback datasource(data :: map, opts :: map) :: binary
@@ -127,9 +127,9 @@ defmodule Brando.Villain.Parser do
       defoverridable input: 2
 
       @doc """
-      Convert template to html.
+      Convert module to html.
       """
-      def template(
+      def module(
             %{
               "multi" => true,
               "id" => id,
@@ -137,10 +137,10 @@ defmodule Brando.Villain.Parser do
             } = block,
             opts
           ) do
-        {:ok, template} =
-          case Map.get(opts, :cache_templates) do
-            true -> Brando.Villain.get_cached_template(id)
-            _ -> Brando.Villain.get_template(%{matches: %{id: id}})
+        {:ok, module} =
+          case Map.get(opts, :cache_modules) do
+            true -> Brando.Villain.get_cached_module(id)
+            _ -> Brando.Villain.get_module(%{matches: %{id: id}})
           end
 
         base_context = opts.context
@@ -161,7 +161,7 @@ defmodule Brando.Villain.Parser do
               |> add_vars_to_context(vars)
               |> Context.assign("forloop", forloop)
 
-            template.code
+            module.code
             |> render_refs(refs, id)
             |> Villain.parse_and_render(context)
           end)
@@ -172,14 +172,14 @@ defmodule Brando.Villain.Parser do
           |> Context.assign("entries", entries)
           |> Context.assign("content", content)
 
-        Villain.parse_and_render(template.wrapper, context)
+        Villain.parse_and_render(module.wrapper, context)
       end
 
-      def template(%{"id" => id, "refs" => refs} = block, opts) do
-        {:ok, template} =
-          case Map.get(opts, :cache_templates) do
-            true -> Brando.Villain.get_cached_template(id)
-            _ -> Brando.Villain.get_template(%{matches: %{id: id}})
+      def module(%{"id" => id, "refs" => refs} = block, opts) do
+        {:ok, module} =
+          case Map.get(opts, :cache_modules) do
+            true -> Brando.Villain.get_cached_module(id)
+            _ -> Brando.Villain.get_module(%{matches: %{id: id}})
           end
 
         vars = Map.get(block, "vars")
@@ -188,12 +188,12 @@ defmodule Brando.Villain.Parser do
 
         context = add_vars_to_context(base_context, vars)
 
-        template.code
+        module.code
         |> render_refs(refs, id)
         |> Villain.parse_and_render(context)
       end
 
-      defoverridable template: 2
+      defoverridable module: 2
 
       def datasource(
             %{
@@ -722,15 +722,15 @@ defmodule Brando.Villain.Parser do
         Villain.parse_and_render(code, context)
       end
 
-      defp render_refs(template_code, refs, id) do
-        Regex.replace(~r/%{(\w+)}/, template_code, fn _, match ->
+      defp render_refs(module_code, refs, id) do
+        Regex.replace(~r/%{(\w+)}/, module_code, fn _, match ->
           refs
           |> Enum.find(&(&1["name"] == match))
           |> render_ref(id, match)
         end)
       end
 
-      defp render_ref(nil, id, match), do: "<!-- REF #{match} missing // template: #{id}. -->"
+      defp render_ref(nil, id, match), do: "<!-- REF #{match} missing // module: #{id}. -->"
       defp render_ref(%{"hidden" => true}, _id, _match), do: "<!-- h -->"
       defp render_ref(%{"deleted" => true}, _id, _match), do: "<!-- d -->"
 

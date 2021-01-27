@@ -1,6 +1,8 @@
-defmodule Brando.Villain.Template do
+defmodule Brando.Villain.Module do
   @moduledoc """
-  Ecto schema for the Villain Template schema
+  Ecto schema for the Villain Module schema
+
+  A module can hold a setup for multiple blocks.
   """
 
   @type t :: %__MODULE__{}
@@ -15,7 +17,7 @@ defmodule Brando.Villain.Template do
   @derived_fields ~w(id name sequence namespace help_text multi wrapper class code refs vars svg deleted_at)a
   @derive {Jason.Encoder, only: @derived_fields}
 
-  schema "pages_templates" do
+  schema "pages_modules" do
     field :name, :string
     field :namespace, :string
     field :help_text, :string

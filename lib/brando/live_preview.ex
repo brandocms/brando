@@ -114,7 +114,7 @@ defmodule Brando.LivePreview do
 
             html =
               Brando.Villain.parse(Map.get(var!(entry), atom_key), var!(entry),
-                cache_templates: true,
+                cache_modules: true,
                 data_field: atom_key,
                 html_field: html_key
               )

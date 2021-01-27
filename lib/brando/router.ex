@@ -58,10 +58,10 @@ defmodule Brando.Router do
 
           # Villain
           post "/villain/upload", villain_ctrl, :upload_image
-          get "/villain/templates/:slug", villain_ctrl, :templates
-          post "/villain/templates/", villain_ctrl, :store_template
-          post "/villain/templates/delete", villain_ctrl, :delete_template
-          post "/villain/templates/sequence", villain_ctrl, :sequence_templates
+          get "/villain/modules/:slug", villain_ctrl, :modules
+          post "/villain/modules/", villain_ctrl, :store_module
+          post "/villain/modules/delete", villain_ctrl, :delete_module
+          post "/villain/modules/sequence", villain_ctrl, :sequence_modules
           get "/villain/browse/:slug", villain_ctrl, :browse_images
         end
 

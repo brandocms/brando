@@ -28,7 +28,7 @@ defmodule Brando.System do
     {:ok, {:seo, :exists}} = check_seo_exists()
     {:ok, {:bucket, :exists}} = check_cdn_bucket_exists()
     {:ok, {:authorization, :exists}} = check_authorization_exists()
-    {:ok, {:template_syntax, _}} = check_template_syntax()
+    {:ok, {:block_syntax, _}} = check_block_syntax()
     {:ok, {:entry_syntax, _}} = check_entry_syntax()
     {:ok, _} = check_invalid_wrapper_content()
 
@@ -132,19 +132,19 @@ defmodule Brando.System do
     {:ok, {:module_config, :exists}}
   end
 
-  # check Villain templates for deprecated syntax.
-  def check_template_syntax do
+  # check Villain modules for deprecated syntax.
+  def check_block_syntax do
     search_terms = [vars: "\\${(.*?)}", for_loops: "{\\% (for .*? <- .*?) \\%}"]
 
-    results = Villain.search_templates_for_regex(search_terms)
+    results = Villain.search_modules_for_regex(search_terms)
 
     for result <- results do
-      log_invalid_template_syntax(:vars, result)
-      log_invalid_template_syntax(:for_loops, result)
+      log_invalid_block_syntax(:vars, result)
+      log_invalid_block_syntax(:for_loops, result)
     end
 
     # Return valid no matter what. We only want to warn
-    {:ok, {:template_syntax, nil}}
+    {:ok, {:block_syntax, nil}}
   end
 
   def check_entry_syntax do
@@ -163,8 +163,8 @@ defmodule Brando.System do
             }
 
             for result <- results do
-              log_invalid_template_syntax(:vars, Map.merge(result, meta))
-              log_invalid_template_syntax(:for_loops, Map.merge(result, meta))
+              log_invalid_block_syntax(:vars, Map.merge(result, meta))
+              log_invalid_block_syntax(:for_loops, Map.merge(result, meta))
             end
         end
       end
@@ -173,9 +173,9 @@ defmodule Brando.System do
     {:ok, {:entry_syntax, nil}}
   end
 
-  defp log_invalid_template_syntax(:vars, %{"vars" => nil}), do: nil
+  defp log_invalid_block_syntax(:vars, %{"vars" => nil}), do: nil
 
-  defp log_invalid_template_syntax(:vars, %{
+  defp log_invalid_block_syntax(:vars, %{
          "vars" => matches,
          "name" => name,
          "namespace" => namespace,
@@ -183,18 +183,18 @@ defmodule Brando.System do
        }) do
     for match <- matches do
       Log.warn("""
-      Deprecated template syntax `${#{match}}`. Try `{{ #{String.replace(match, ":", ".")} }}` instead.
+      Deprecated module syntax `${#{match}}`. Try `{{ #{String.replace(match, ":", ".")} }}` instead.
 
-      Template..: #{inspect(name)}
+      Module..: #{inspect(name)}
       Namespace.: #{inspect(namespace)}
       Id........: #{inspect(id)}
       """)
     end
   end
 
-  defp log_invalid_template_syntax(:for_loops, %{"for_loops" => nil}), do: nil
+  defp log_invalid_block_syntax(:for_loops, %{"for_loops" => nil}), do: nil
 
-  defp log_invalid_template_syntax(:for_loops, %{
+  defp log_invalid_block_syntax(:for_loops, %{
          "for_loops" => matches,
          "name" => name,
          "namespace" => namespace,
@@ -204,19 +204,19 @@ defmodule Brando.System do
       Log.warn("""
       Deprecated for loop syntax `{% #{match} %}`. Try `{% #{String.replace(match, "<-", "in")} %}` instead.
 
-      Template..: #{inspect(name)}
+      Module..: #{inspect(name)}
       Namespace.: #{inspect(namespace)}
       Id........: #{inspect(id)}
       """)
     end
   end
 
-  # wrapper should be moved from datasource block to template
+  # wrapper should be moved from datasource block to module
   defp check_invalid_wrapper_content do
-    {:ok, templates} = Brando.Villain.list_templates(%{filter: %{namespace: "all"}})
+    {:ok, modules} = Brando.Villain.list_modules(%{filter: %{namespace: "all"}})
 
-    if Enum.count(templates) > 0 do
-      for t <- templates do
+    if Enum.count(modules) > 0 do
+      for t <- modules do
         if t.wrapper && String.contains?(t.wrapper, ["${content}", "${CONTENT}"]) do
           log_invalid_wrapper_content(t)
         end
@@ -230,7 +230,7 @@ defmodule Brando.System do
     Log.warn("""
     Found deprecated wrapper content format `${CONTENT}` or {{ CONTENT }}. Use `{{ content }}` instead.
 
-    Schema.: Template
+    Schema.: Module
     Id.....: #{t.id} - #{t.name}
     """)
   end

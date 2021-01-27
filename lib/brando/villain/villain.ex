@@ -16,15 +16,15 @@ defmodule Brando.Villain do
     Gets `<key>` from `<category_key>` in list of globals in the Identity configuration.
 
     - `{{ forloop.index }}`
-    Only available inside for loops or templates with `multi` set to true. Returns the current index
+    Only available inside for loops or modules with `multi` set to true. Returns the current index
     of the for loop, starting at `1`
 
     - `{{ forloop.index0 }}`
-    Only available inside for loops or templates with `multi` set to true. Returns the current index
+    Only available inside for loops or modules with `multi` set to true. Returns the current index
     of the for loop, starting at `0`
 
     - `{{ forloop.count }}`
-    Only available inside for loops or templates with `multi` set to true. Returns the total amount
+    Only available inside for loops or modules with `multi` set to true. Returns the total amount
     of entries in the for loop
 
   """
@@ -35,7 +35,7 @@ defmodule Brando.Villain do
   alias Brando.Cache
   alias Brando.Pages
   alias Brando.Utils
-  alias Brando.Villain.Template
+  alias Brando.Villain.Module
   alias Ecto.Changeset
   alias Liquex.Context
 
@@ -300,15 +300,15 @@ defmodule Brando.Villain do
   end
 
   @doc """
-  Update all villain fields in database that has a template with `id`.
+  Update all villain fields in database that has a module with `id`.
   """
-  def update_template_in_fields(template_id) do
+  def update_module_in_fields(module_id) do
     villains = list_villains()
 
     result =
       for {schema, fields} <- villains do
         Enum.reduce(fields, [], fn {_, data_field, html_field}, acc ->
-          ids = list_ids_with_template(schema, data_field, template_id)
+          ids = list_ids_with_module(schema, data_field, module_id)
           [acc | rerender_html_from_ids({schema, data_field, html_field}, ids)]
         end)
       end
@@ -317,16 +317,16 @@ defmodule Brando.Villain do
   end
 
   @doc """
-  List ids of `schema` records that has `template_id` in `data_field`
+  List ids of `schema` records that has `module_id` in `data_field`
   Also check inside containers
   """
-  def list_ids_with_template(schema, data_field, template_id) do
+  def list_ids_with_module(schema, data_field, module_id) do
     t = [
-      %{type: "template", data: %{id: template_id}}
+      %{type: "module", data: %{id: module_id}}
     ]
 
     contained_t = [
-      %{type: "container", data: %{blocks: [%{type: "template", data: %{id: template_id}}]}}
+      %{type: "container", data: %{blocks: [%{type: "module", data: %{id: module_id}}]}}
     ]
 
     Brando.repo().all(
@@ -338,70 +338,70 @@ defmodule Brando.Villain do
   end
 
   @doc """
-  Get template from CACHE or DB
+  Get module from CACHE or DB
   """
-  def get_cached_template(id) do
-    case Cachex.get(:cache, "template__#{id}") do
+  def get_cached_module(id) do
+    case Cachex.get(:cache, "module__#{id}") do
       {:ok, nil} ->
-        {:ok, template} = get_template(%{matches: %{id: id}})
-        Cachex.put(:cache, "template__#{id}", template, ttl: :timer.seconds(120))
-        {:ok, template}
+        {:ok, module} = get_module(%{matches: %{id: id}})
+        Cachex.put(:cache, "module__#{id}", module, ttl: :timer.seconds(120))
+        {:ok, module}
 
-      {:ok, template} ->
-        {:ok, template}
+      {:ok, module} ->
+        {:ok, module}
     end
   end
 
   @doc """
-  Duplicate template
+  Duplicate module
   """
-  def duplicate_template(template_id) do
-    template_id = (is_binary(template_id) && String.to_integer(template_id)) || template_id
-    {:ok, template} = get_template(%{matches: %{id: template_id}})
+  def duplicate_module(module_id) do
+    module_id = (is_binary(module_id) && String.to_integer(module_id)) || module_id
+    {:ok, module} = get_module(%{matches: %{id: module_id}})
 
-    template =
-      template
-      |> Map.merge(%{name: "#{template.name} copy", class: "#{template.class} copy"})
+    module =
+      module
+      |> Map.merge(%{name: "#{module.name} copy", class: "#{module.class} copy"})
       |> Map.delete([:id])
       |> Map.from_struct()
 
-    create_template(template)
+    create_module(module)
   end
 
   @doc """
-  Update or create template in DB
+  Update or create module in DB
   """
-  def update_template(id, params) do
-    with {:ok, template} <- get_template(%{matches: %{id: id}}) do
-      {:ok, new_template} =
-        template
-        |> Template.changeset(params)
+  def update_module(id, params) do
+    with {:ok, module} <- get_module(%{matches: %{id: id}}) do
+      {:ok, new_module} =
+        module
+        |> Module.changeset(params)
         |> Brando.repo().update
 
-      update_template_in_fields(template.id)
+      update_module_in_fields(module.id)
 
-      {:ok, new_template}
+      {:ok, new_module}
     end
   end
 
-  def create_template(params) do
-    %Template{}
-    |> Template.changeset(params)
+  def create_module(params) do
+    %Module{}
+    |> Module.changeset(params)
     |> Brando.repo().insert
   end
 
   @doc """
-  Delete template by `id`
+  Delete module by `id`
   """
-  def delete_template(id) do
-    {:ok, template} = get_template(%{matches: %{id: id}})
+  def delete_module(id) do
+    {:ok, module} = get_module(%{matches: %{id: id}})
 
-    Brando.repo().delete(template)
+    Brando.repo().delete(module)
   end
 
-  query :list, Template, do: fn query -> from q in query, where: is_nil(q.deleted_at) end
+  query :list, Module, do: fn query -> from q in query, where: is_nil(q.deleted_at) end
 
-  filters Template do
+  filters Module do
     fn
       {:name, name}, query ->
         from q in query, where: ilike(q.name, ^"%#{name}%")
@@ -428,9 +428,9 @@ defmodule Brando.Villain do
     end
   end
 
-  query :single, Template, do: fn query -> from q in query, where: is_nil(q.deleted_at) end
+  query :single, Module, do: fn query -> from q in query, where: is_nil(q.deleted_at) end
 
-  matches Template do
+  matches Module do
     fn
       {:id, id}, query ->
         from t in query, where: t.id == ^id
@@ -496,12 +496,12 @@ defmodule Brando.Villain do
       else: Brando.repo().all(built_query) |> Enum.map(& &1["id"])
   end
 
-  @spec search_templates_for_regex(search_terms :: {atom, binary} | [{atom, binary}]) :: [any]
-  def search_templates_for_regex(search_terms) do
+  @spec search_modules_for_regex(search_terms :: {atom, binary} | [{atom, binary}]) :: [any]
+  def search_modules_for_regex(search_terms) do
     search_terms = (is_list(search_terms) && search_terms) || [search_terms]
 
     org_query =
-      from s in "pages_templates",
+      from s in "pages_modules",
         select: %{"id" => s.id, "namespace" => s.namespace, "name" => s.name}
 
     built_query =
@@ -536,14 +536,14 @@ defmodule Brando.Villain do
   end
 
   @doc """
-  Look through all templates for `search_terms` and rerender all villains that
-  use this template
+  Look through all modules for `search_terms` and rerender all villains that
+  use this module
   """
-  @spec rerender_matching_templates([module], {atom, binary} | [{atom, binary}]) :: any
-  def rerender_matching_templates(_villains, search_terms) do
-    case search_templates_for_regex(search_terms) |> Enum.map(& &1["id"]) do
+  @spec rerender_matching_modules([module], {atom, binary} | [{atom, binary}]) :: any
+  def rerender_matching_modules(_villains, search_terms) do
+    case search_modules_for_regex(search_terms) |> Enum.map(& &1["id"]) do
       [] -> nil
-      ids -> for id <- ids, do: update_template_in_fields(id)
+      ids -> for id <- ids, do: update_module_in_fields(id)
     end
   end
 end

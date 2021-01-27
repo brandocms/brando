@@ -179,19 +179,19 @@ $ mix brando.static.deploy
 ```
 
 
-## Villain templates
+## Villain modules
 
-Naming guidelines
+Naming conventions
 
 ```
 <!-- header block next to text block -->
-<div class="v-block" data-v="header|text">
+<article b-tpl="header|text">
 
 <!-- image with full bleed -->
-<div class="v-block" data-v="image+bleed">
+<article b-tpl="image+bleed">
 
 <!-- body text with an image underneath -->
-<div class="v-block" data-v="body/image">
+<article b-tpl="body/image">
 ```
 
 You may reference other fragments by entering

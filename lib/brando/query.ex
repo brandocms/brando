@@ -20,6 +20,13 @@ defmodule Brando.Query do
       end
   ```
 
+  You can pass preloads to the `:update` mutation:
+
+  ```
+      mutation :update, {Project, preload: [:tags]}
+  ```
+
+
   # Select
 
   ## Examples
@@ -109,11 +116,17 @@ defmodule Brando.Query do
 
   defmacro mutation(:create, module), do: mutation_create(Macro.expand(module, __CALLER__))
 
+  defmacro mutation(:update, {module, opts}),
+    do: mutation_update({Macro.expand(module, __CALLER__), opts})
+
   defmacro mutation(:update, module), do: mutation_update(Macro.expand(module, __CALLER__))
   defmacro mutation(:delete, module), do: mutation_delete(Macro.expand(module, __CALLER__))
 
   defmacro mutation(:create, module, do: block),
     do: mutation_create(Macro.expand(module, __CALLER__), block)
+
+  defmacro mutation(:update, {module, opts}, do: block),
+    do: mutation_update({Macro.expand(module, __CALLER__), opts}, block)
 
   defmacro mutation(:update, module, do: block),
     do: mutation_update(Macro.expand(module, __CALLER__), block)
@@ -417,7 +430,9 @@ defmodule Brando.Query do
     end
   end
 
-  defp mutation_update(module, block \\ nil) do
+  defp mutation_update(module, block \\ nil)
+
+  defp mutation_update({module, opts}, block) do
     name =
       module
       |> Module.split()
@@ -426,11 +441,36 @@ defmodule Brando.Query do
 
     block = block || @default_after_operation
 
+    do_mutation_update(module, name, block, opts)
+  end
+
+  defp mutation_update(module, block) do
+    name =
+      module
+      |> Module.split()
+      |> List.last()
+      |> Inflex.underscore()
+
+    block = block || @default_after_operation
+
+    do_mutation_update(module, name, block)
+  end
+
+  defp do_mutation_update(module, name, block, opts \\ []) do
+    preloads = Keyword.get(opts, :preload)
+
     quote do
       @spec unquote(:"update_#{name}")(integer | binary, map, Brando.Users.User.t() | :system) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
       def unquote(:"update_#{name}")(id, params, user \\ :system) do
-        with {:ok, entry} <- unquote(:"get_#{name}")(id),
+        get_opts =
+          if unquote(preloads) do
+            %{matches: %{id: id}, preload: unquote(preloads)}
+          else
+            %{matches: %{id: id}}
+          end
+
+        with {:ok, entry} <- unquote(:"get_#{name}")(get_opts),
              changeset <- unquote(module).changeset(entry, params, user),
              {:ok, entry} <- Brando.Query.update(changeset) do
           Brando.Datasource.update_datasource(unquote(module), entry)

@@ -56,47 +56,47 @@ defmodule Brando.Pages.PageResolver do
     do: Pages.duplicate_page_fragment(section_id)
 
   @doc """
-  Duplicate template
+  Duplicate module
   """
-  def duplicate_template(%{template_id: template_id}, %{context: %{current_user: _}}),
-    do: Villain.duplicate_template(template_id)
+  def duplicate_module(%{module_id: module_id}, %{context: %{current_user: _}}),
+    do: Villain.duplicate_module(module_id)
 
   @doc """
-  Get all templates
+  Get all modules
   """
-  def all_templates(args, %{context: %{current_user: _current_user}}) do
-    Villain.list_templates(args)
+  def all_modules(args, %{context: %{current_user: _current_user}}) do
+    Villain.list_modules(args)
   end
 
   @doc """
-  Find template
+  Find module
   """
-  def find_template(%{template_id: template_id}, %{context: %{current_user: _current_user}}) do
-    Villain.get_template(%{matches: %{id: template_id}})
+  def find_module(%{module_id: module_id}, %{context: %{current_user: _current_user}}) do
+    Villain.get_module(%{matches: %{id: module_id}})
   end
 
   @doc """
-  Delete template
+  Delete module
   """
-  def delete_template(%{template_id: template_id}, %{context: %{current_user: _current_user}}) do
-    Villain.delete_template(template_id)
+  def delete_module(%{module_id: module_id}, %{context: %{current_user: _current_user}}) do
+    Villain.delete_module(module_id)
   end
 
   @doc """
-  Create template
+  Create module
   """
-  def create_template(%{template_params: template_params}, %{
+  def create_module(%{module_params: module_params}, %{
         context: %{current_user: _current_user}
       }) do
-    Villain.create_template(template_params)
+    Villain.create_module(module_params)
   end
 
   @doc """
-  Update template
+  Update module
   """
-  def update_template(%{template_id: template_id, template_params: template_params}, %{
+  def update_module(%{module_id: module_id, module_params: module_params}, %{
         context: %{current_user: _current_user}
       }) do
-    Villain.update_template(template_id, template_params)
+    Villain.update_module(module_id, module_params)
   end
 end

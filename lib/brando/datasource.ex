@@ -261,7 +261,7 @@ defmodule Brando.Datasource do
 
   @doc """
   List ids of `schema` records that has a datasource matching schema OR
-  a template containing a datasource matching schema.
+  a module containing a datasource matching schema.
   """
   def list_ids_with_datasource(schema, datasource, data_field \\ :data) do
     q1 = """
@@ -271,15 +271,15 @@ defmodule Brando.Datasource do
       (SELECT
         id,
         jsonb_array_elements(#{data_field}::jsonb) AS root_blocks,
-        jsonb_array_elements(jsonb_array_elements(#{data_field}::jsonb)->'data'->'refs') as template_refs
+        jsonb_array_elements(jsonb_array_elements(#{data_field}::jsonb)->'data'->'refs') as module_refs
       FROM
         #{schema.__schema__(:source)}) root_q
     WHERE
-      root_blocks->>'type' = 'template'
+      root_blocks->>'type' = 'module'
     AND
-      template_refs->'data'->>'type' = 'datasource'
+      module_refs->'data'->>'type' = 'datasource'
     AND
-      template_refs->'data'->'data'->>'module' = '#{datasource}';
+      module_refs->'data'->'data'->>'module' = '#{datasource}';
     """
 
     {:ok, %{rows: r1}} = Ecto.Adapters.SQL.query(Brando.repo(), q1, [])

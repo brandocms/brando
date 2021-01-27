@@ -10,7 +10,7 @@ defmodule Brando.Factory do
   alias Brando.ImageCategory
   alias Brando.ImageSeries
   alias Brando.Users.User
-  alias Brando.Villain.Template
+  alias Brando.Villain.Module
 
   @sizes %{
     "micro" => %{"size" => "25", "quality" => 1},
@@ -95,8 +95,8 @@ defmodule Brando.Factory do
     }
   end
 
-  def template_factory do
-    %Template{
+  def module_factory do
+    %Module{
       name: "test",
       namespace: "posts",
       help_text: "help",

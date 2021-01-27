@@ -66,7 +66,7 @@ defmodule Brando.Schema.Types.Page do
     field :title, :string
   end
 
-  object :template do
+  object :module do
     field :id, :id
     field :name, :string
     field :namespace, :string
@@ -83,7 +83,7 @@ defmodule Brando.Schema.Types.Page do
     field :deleted_at, :time
   end
 
-  input_object :template_params do
+  input_object :module_params do
     field :name, :string
     field :namespace, :string
     field :help_text, :string
@@ -99,8 +99,8 @@ defmodule Brando.Schema.Types.Page do
     field :deleted_at, :time
   end
 
-  @desc "Filtering options for template"
-  input_object :template_filter do
+  @desc "Filtering options for module"
+  input_object :module_filter do
     field :name, :string
     field :namespace, :string
   end
@@ -122,21 +122,21 @@ defmodule Brando.Schema.Types.Page do
       resolve &Brando.Pages.PageResolver.find/2
     end
 
-    @desc "Get all templates"
-    field :templates, type: list_of(:template) do
+    @desc "Get all modules"
+    field :modules, type: list_of(:module) do
       arg :order, :order,
         default_value: [{:asc, :namespace}, {:asc, :sequence}, {:asc, :inserted_at}]
 
       arg :limit, :integer, default_value: 75
       arg :offset, :integer, default_value: 0
-      arg :filter, :template_filter
-      resolve &Brando.Pages.PageResolver.all_templates/2
+      arg :filter, :module_filter
+      resolve &Brando.Pages.PageResolver.all_modules/2
     end
 
-    @desc "Get template"
-    field :template, type: :template do
-      arg :template_id, non_null(:id)
-      resolve &Brando.Pages.PageResolver.find_template/2
+    @desc "Get module"
+    field :module, type: :module do
+      arg :module_id, non_null(:id)
+      resolve &Brando.Pages.PageResolver.find_module/2
     end
   end
 
@@ -160,10 +160,10 @@ defmodule Brando.Schema.Types.Page do
       resolve &Brando.Pages.PageResolver.delete/2
     end
 
-    field :delete_template, type: :template do
-      arg :template_id, non_null(:id)
+    field :delete_module, type: :module do
+      arg :module_id, non_null(:id)
 
-      resolve &Brando.Pages.PageResolver.delete_template/2
+      resolve &Brando.Pages.PageResolver.delete_module/2
     end
 
     @desc "Duplicate page"
@@ -180,24 +180,24 @@ defmodule Brando.Schema.Types.Page do
       resolve &Brando.Pages.PageResolver.duplicate_section/2
     end
 
-    @desc "Duplicate template"
-    field :duplicate_template, type: :template do
-      arg :template_id, :id
+    @desc "Duplicate module"
+    field :duplicate_module, type: :module do
+      arg :module_id, :id
 
-      resolve &Brando.Pages.PageResolver.duplicate_template/2
+      resolve &Brando.Pages.PageResolver.duplicate_module/2
     end
 
-    field :create_template, type: :template do
-      arg :template_params, :template_params
+    field :create_module, type: :module do
+      arg :module_params, :module_params
 
-      resolve &Brando.Pages.PageResolver.create_template/2
+      resolve &Brando.Pages.PageResolver.create_module/2
     end
 
-    field :update_template, type: :template do
-      arg :template_id, non_null(:id)
-      arg :template_params, :template_params
+    field :update_module, type: :module do
+      arg :module_id, non_null(:id)
+      arg :module_params, :module_params
 
-      resolve &Brando.Pages.PageResolver.update_template/2
+      resolve &Brando.Pages.PageResolver.update_module/2
     end
   end
 end
