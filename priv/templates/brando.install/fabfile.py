@@ -24,6 +24,7 @@ config.read('deployment.cfg')
 # Project-specific setup.
 
 PROJECT_NAME = config.get('DEPLOYMENT', 'PROJECT_NAME')
+PROJECT_MODULE = config.get('DEPLOYMENT', 'PROJECT_MODULE')
 PROD_URL = config.get('DEPLOYMENT', 'PROD_URL')
 DB_PASS = config.get('DEPLOYMENT', 'DB_PASS')
 
