@@ -50,7 +50,7 @@
     "custom-event-polyfill": "^1.0.7",
     "intersection-observer": "^0.12.0",
     "mdn-polyfills": "^5.18.0",
-    "objectFitPolyfill": "^2.3.0",
+    "objectFitPolyfill": "^2.3.4",
     "picturefill": "^3.0.3",
     "regenerator-runtime": "^0.13.7",
     "rollup": "^2.38.0"
