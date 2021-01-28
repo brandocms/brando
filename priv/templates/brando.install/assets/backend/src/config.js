@@ -4,15 +4,22 @@ export default {
    */
   name: 'CLIENT NAME',
   /**
-   * If the Villain editor should only show templates as available blocks
+   * Available container sections for Villain
    */
-  templateMode: (page) => {
+  sections: [
+    { label: 'Standard', value: 'standard', color: '#000' },
+    { label: 'Grønn', value: 'green', color: '#cfc' }
+  ],
+  /**
+   * If the Villain editor should only show modules as available blocks
+   */
+  moduleMode: (page) => {
     return true
   },
   /**
-   * Which templates to show ('all', 'pages', etc)
+   * Which modules to show ('all', 'pages', etc)
    */
-  // templates: 'all',
+  // modules: 'all',
   /**
    * Additional styling for the figure element on the login page
    */
