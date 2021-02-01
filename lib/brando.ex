@@ -83,6 +83,11 @@ defmodule Brando do
   def otp_app, do: config(:otp_app)
 
   @doc """
+  Gets the parent app's env
+  """
+  def env, do: config(:env)
+
+  @doc """
   Get Brando version
   """
   def version, do: @version

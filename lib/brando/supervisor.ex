@@ -25,14 +25,17 @@ defmodule Brando.Supervisor do
     Application.get_env(:brando, Oban) ||
       [
         repo: Brando.repo(),
-        poll_interval: :timer.minutes(15),
-        queues: [default: [limit: 1, poll_interval: :timer.minutes(15)]],
-        plugins: [Oban.Plugins.Pruner],
-        crontab: [
-          # Generate a Sitemap every night at 02:00 UTC
-          {"0 2 * * *", Brando.Worker.SitemapWorker},
-          # Clean up soft deleted entries every night at 03:00 UTC
-          {"0 3 * * *", Brando.Worker.SoftDeleteWorker}
+        queues: [default: [limit: 1]],
+        plugins: [
+          {Oban.Plugins.Cron,
+           crontab: [
+             # Generate a Sitemap every night at 02:00 UTC
+             {"0 2 * * *", Brando.Worker.SitemapWorker},
+             # Clean up soft deleted entries every night at 03:00 UTC
+             {"0 3 * * *", Brando.Worker.SoftDeleteWorker}
+           ],
+           timezone: "Etc/UTC"},
+          Oban.Plugins.Pruner
         ]
       ]
   end

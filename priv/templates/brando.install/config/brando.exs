@@ -1,6 +1,6 @@
 # Default generated Brando configuration
 
-use Mix.Config
+import Mix.Config
 
 config :<%= application_name %>, ecto_repos: [<%= application_module %>.Repo]
 
@@ -9,6 +9,7 @@ config :logger, :console,
   metadata: [:request_id]
 
 config :brando,
+  env: config_env(),
   app_name: "<%= application_module %>",
   otp_app: :<%= application_name %>,
   app_module: <%= application_module %>,

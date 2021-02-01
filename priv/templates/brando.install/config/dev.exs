@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 config :<%= application_name %>, show_breakpoint_debug: true
 

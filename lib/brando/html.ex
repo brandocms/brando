@@ -380,6 +380,26 @@ defmodule Brando.HTML do
   end
 
   @doc """
+  If you use Vite assets pipeline
+  """
+  def include_vite_assets() do
+    ~E|
+    <%= if Brando.env() == :prod do %>
+      <!-- prod -->
+      <link phx-track-static rel="stylesheet" href="<%= Brando.Assets.Vite.Manifest.main_css() %>"/>
+      <script type="module" crossorigin defer phx-track-static src="<%=  Brando.Assets.Vite.Manifest.main_js() %>"></script>
+      <link rel="modulepreload" href="<%= Brando.Assets.Vite.Manifest.vendor_js() %>">
+      <!-- end prod -->
+    <% else %>
+      <!-- dev/test -->
+      <script type="module" src="http://localhost:3000/@vite/client"></script>
+      <script type="module" defer src="http://localhost:3000/js/index.js"></script>
+      <!-- end dev -->
+    <% end %>
+    |
+  end
+
+  @doc """
   Run JS init code
   """
   @spec init_js() :: safe_string

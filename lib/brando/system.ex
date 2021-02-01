@@ -30,9 +30,28 @@ defmodule Brando.System do
     {:ok, {:authorization, :exists}} = check_authorization_exists()
     {:ok, {:block_syntax, _}} = check_block_syntax()
     {:ok, {:entry_syntax, _}} = check_entry_syntax()
+    {:ok, {:env, :exists}} = check_env()
     {:ok, _} = check_invalid_wrapper_content()
 
     Logger.info("==> Brando >> System checks complete!")
+  end
+
+  defp check_env do
+    if Brando.env() == nil do
+      raise ConfigError,
+        message: """
+        Environment is not set.
+
+        Add to your `config/brando.exs`:
+
+            import Config
+            # ...
+            config :brando, env: config_env()
+
+        """
+    end
+
+    {:ok, {:env, :exists}}
   end
 
   defp check_image_processing_executable do
