@@ -31,6 +31,7 @@ config :brando, Brando.Images,
     }
   }
 
+config :brando, :env, :test
 config :brando, :app_name, "MyApp"
 config :brando, :auth_sleep_duration, 0
 config :brando, :app_module, BrandoIntegration
