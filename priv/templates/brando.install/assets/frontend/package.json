@@ -43,17 +43,17 @@
     "url": "http://univers.agency"
   },
   "dependencies": {
-    "@babel/runtime": "^7.11.2",
-    "@sentry/browser": "^6.0.1",
+    "@babel/runtime": "^7.12.13",
+    "@sentry/browser": "^6.0.4",
     "@univers-agency/jupiter": "^3.39.2",
     "core-js": "3.8.3",
     "custom-event-polyfill": "^1.0.7",
     "intersection-observer": "^0.12.0",
     "mdn-polyfills": "^5.18.0",
-    "objectFitPolyfill": "^2.3.0",
+    "objectFitPolyfill": "^2.3.5",
     "picturefill": "^3.0.3",
     "regenerator-runtime": "^0.13.7",
-    "rollup": "^2.38.0"
+    "rollup": "^2.38.4"
   },
   "devDependencies": {
     "@babel/core": "^7.12.7",
@@ -62,12 +62,12 @@
     "@babel/plugin-transform-runtime": "^7.11.5",
     "@babel/preset-env": "^7.12.11",
     "@babel/register": "^7.11.5",
-    "@rollup/plugin-babel": "^5.2.1",
-    "@rollup/plugin-commonjs": "^17.0.0",
-    "@rollup/plugin-node-resolve": "^11.1.0",
+    "@rollup/plugin-babel": "^5.2.3",
+    "@rollup/plugin-commonjs": "^17.1.0",
+    "@rollup/plugin-node-resolve": "^11.1.1",
     "@rollup/plugin-replace": "^2.3.3",
     "@univers-agency/europacss": "^0.3.0",
-    "autoprefixer": "^10.2.3",
+    "autoprefixer": "^10.2.4",
     "css-mqgroup": "^7.1.0",
     "cssnano": "^4.1.10",
     "dotenv": "^8.2.0",
