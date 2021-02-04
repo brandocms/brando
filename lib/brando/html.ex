@@ -380,9 +380,16 @@ defmodule Brando.HTML do
   end
 
   @doc """
+  Inject critical css
+  """
+  def inject_critical_css() do
+    "<style>#{Brando.Assets.Vite.Manifest.critical_css()}</style>" |> raw()
+  end
+
+  @doc """
   If you use Vite assets pipeline
   """
-  def include_vite_assets() do
+  def include_assets() do
     ~E|
     <%= if Brando.env() == :prod do %>
       <!-- prod -->

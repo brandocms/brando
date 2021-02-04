@@ -1,5 +1,5 @@
 defmodule Brando.Assets.Vite do
-  defmodule PhxManifestReader do
+  defmodule ViteManifestReader do
     @moduledoc """
     Finding proper path for `cache_manifest.json` in releases is a non-trivial operation,
     so we keep this logic in a dedicated module with some logic copied verbatim from
@@ -8,6 +8,7 @@ defmodule Brando.Assets.Vite do
 
     require Logger
 
+    @vite_manifest "priv/static/manifest.json"
     @cache_key {:vite, "cache_manifest"}
 
     def read() do
@@ -28,36 +29,21 @@ defmodule Brando.Assets.Vite do
     - https://github.com/phoenixframework/phoenix/blob/a206768ff4d02585cda81a2413e922e1dc19d556/lib/phoenix/endpoint/supervisor.ex#L411
     """
     def read(:prod) do
-      if inner = Brando.endpoint().config(:cache_static_manifest) do
-        {app, inner} =
-          case inner do
-            {_, _} = inner -> inner
-            inner when is_binary(inner) -> {Brando.endpoint().config(:otp_app), inner}
-            _ -> raise ArgumentError, ":cache_static_manifest must be a binary or a tuple"
-          end
+      outer = Application.app_dir(Brando.endpoint().config(:otp_app), @vite_manifest)
 
-        outer = Application.app_dir(app, inner)
-
-        if File.exists?(outer) do
-          outer |> File.read!() |> Phoenix.json_library().decode!()
-        else
-          Logger.error(
-            "Could not find static manifest at #{inspect(outer)}. " <>
-              "Run \"mix phx.digest\" after building your static files " <>
-              "or remove the configuration from \"config/prod.exs\"."
-          )
-        end
+      if File.exists?(outer) do
+        outer |> File.read!() |> Jason.decode!()
       else
-        %{}
+        Logger.error(
+          "Could not find static manifest at #{inspect(outer)}. " <>
+            "Run \"mix phx.digest\" after building your static files " <>
+            "or remove the configuration from \"config/prod.exs\"."
+        )
       end
     end
 
     def read(_) do
-      File.read!(manifest_path()) |> Jason.decode!()
-    end
-
-    def manifest_path() do
-      Brando.endpoint().config(:cache_static_manifest) || "priv/static/manifest.json"
+      File.read!(@vite_manifest) |> Jason.decode!()
     end
   end
 
@@ -87,10 +73,12 @@ defmodule Brando.Assets.Vite do
     """
     # specified in vite.config.js in build.rollupOptions.input
     @main_file "js/index.js"
+    @critical_css_file "js/critical.js"
+    @critical_css_cache_key {:vite, "critical_css"}
 
     @spec read() :: map()
     def read() do
-      PhxManifestReader.read()
+      ViteManifestReader.read()
     end
 
     @spec main_js() :: binary()
@@ -101,6 +89,50 @@ defmodule Brando.Assets.Vite do
     @spec main_css() :: binary()
     def main_css() do
       get_css(@main_file)
+    end
+
+    def critical_css do
+      case :persistent_term.get(@critical_css_cache_key, nil) do
+        nil ->
+          critical_css_file = get_in(read(), [@critical_css_file, "css"])
+
+          res =
+            if critical_css_file do
+              critical_css(Brando.env(), critical_css_file)
+            else
+              "/* no critical css */"
+            end
+
+          :persistent_term.put(@critical_css_cache_key, res)
+          res
+
+        res ->
+          res
+      end
+    end
+
+    def critical_css(:prod, critical_css_file) do
+      outer =
+        Application.app_dir(
+          Brando.endpoint().config(:otp_app),
+          Path.join("priv/static", critical_css_file)
+        )
+
+      if File.exists?(outer) do
+        File.read!(outer)
+      else
+        "/* no critical css */"
+      end
+    end
+
+    def critical_css(_, critical_css_file) do
+      outer = Path.join("priv/static", critical_css_file)
+
+      if File.exists?(outer) do
+        File.read!(outer)
+      else
+        "/* no critical css */"
+      end
     end
 
     @spec vendor_js() :: binary()
@@ -124,8 +156,12 @@ defmodule Brando.Assets.Vite do
     end
 
     @spec prepend_slash(binary()) :: binary()
-    defp prepend_slash(file) do
+    defp prepend_slash(file) when is_binary(file) do
       "/" <> file
+    end
+
+    defp prepend_slash(file_list) when is_list(file_list) do
+      Enum.map(file_list, &prepend_slash(&1))
     end
   end
 end
