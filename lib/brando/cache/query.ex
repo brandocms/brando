@@ -13,13 +13,19 @@ defmodule Brando.Cache.Query do
     end
   end
 
-  def put(key, val, ttl \\ :timer.minutes(15)), do: @cache_module.put(:query, key, val, ttl: ttl)
+  def put(key, val, ttl \\ :timer.minutes(15))
+  def put(key, val, ttl), do: @cache_module.put(:query, key, val, ttl: ttl)
+
+  def put({:single, src, hash}, val, ttl, id),
+    do: @cache_module.put(:query, {:single, src, hash, id}, val, ttl: ttl)
+
   defp get_from_cache(key), do: @cache_module.get(:query, key)
 
   @spec evict({:ok, map()} | {:error, changeset}) :: {:ok, map()} | {:error, changeset}
   def evict({:ok, entry}) do
     source = entry.__struct__.__schema__(:source)
     perform_eviction(:list, source)
+    perform_eviction(:single, source, entry.id)
     {:ok, entry}
   end
 
@@ -29,12 +35,22 @@ defmodule Brando.Cache.Query do
   def evict(entry) do
     source = entry.__struct__.__schema__(:source)
     perform_eviction(:list, source)
+    perform_eviction(:single, source, entry.id)
     entry
   end
 
-  @spec perform_eviction(:list | :single, binary()) :: [:ok]
-  defp perform_eviction(type, schema) do
-    ms = [{{:entry, {type, schema, :_}, :_, :_, :_}, [], [:"$_"]}]
+  @spec perform_eviction(:list, binary()) :: [:ok]
+  defp perform_eviction(:list, schema) do
+    ms = [{{:entry, {:list, schema, :_}, :_, :_, :_}, [], [:"$_"]}]
+
+    :query
+    |> Cachex.stream!(ms)
+    |> Enum.map(fn {_, key, _, _, _} -> Cachex.del(:query, key) end)
+  end
+
+  @spec perform_eviction(:single, binary(), integer()) :: [:ok]
+  defp perform_eviction(:single, schema, id) do
+    ms = [{{:entry, {:single, schema, :_, id}, :_, :_, :_}, [], [:"$_"]}]
 
     :query
     |> Cachex.stream!(ms)

@@ -209,6 +209,7 @@ defmodule Brando.Query do
   defp query_single(module, block) do
     # check for publish_at field
     publish_at? = Map.has_key?(module.__struct__, :publish_at)
+    source = module.__schema__(:source)
 
     name =
       module
@@ -231,15 +232,47 @@ defmodule Brando.Query do
       end
 
       def unquote(:"get_#{name}")(args) when is_map(args) do
-        query =
-          __MODULE__
-          |> run_single_query_reducer(args, unquote(module), unquote(publish_at?))
-          |> unquote(block).()
-          |> limit(1)
+        cache_args = Map.get(args, :cache)
 
-        case Brando.repo().one(query) do
-          nil -> {:error, {unquote(atom), :not_found}}
-          result -> {:ok, result}
+        case try_cache({:single, unquote(source), args}, cache_args) do
+          {:miss, cache_key, ttl} ->
+            result =
+              __MODULE__
+              |> run_single_query_reducer(
+                Map.delete(args, :cache),
+                unquote(module),
+                unquote(publish_at?)
+              )
+              |> unquote(block).()
+              |> limit(1)
+              |> Brando.repo().one()
+              |> case do
+                nil ->
+                  {:error, {unquote(atom), :not_found}}
+
+                result ->
+                  Brando.Cache.Query.put(cache_key, result, ttl, result.id)
+                  {:ok, result}
+              end
+
+          {:hit, result} ->
+            {:ok, result}
+
+          :no_cache ->
+            result =
+              __MODULE__
+              |> run_single_query_reducer(
+                Map.delete(args, :cache),
+                unquote(module),
+                unquote(publish_at?)
+              )
+              |> unquote(block).()
+              |> limit(1)
+              |> Brando.repo().one()
+              |> case do
+                nil -> {:error, {unquote(atom), :not_found}}
+                result -> {:ok, result}
+              end
         end
       end
 
@@ -353,7 +386,7 @@ defmodule Brando.Query do
         from t in query, preload: [{^key, ^preload_query}]
 
       preload, query ->
-        query |> preload(^preload)
+        preload(query, ^preload)
     end)
   end
 
@@ -369,6 +402,7 @@ defmodule Brando.Query do
   Check cache for query matching args
   """
   @spec try_cache(any(), any()) :: any()
+  def try_cache(query_key, cache_opts)
   def try_cache(_query_key, nil), do: :no_cache
   def try_cache(_query_key, false), do: :no_cache
 
