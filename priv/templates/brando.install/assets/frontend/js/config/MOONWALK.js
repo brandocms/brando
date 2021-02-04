@@ -1,7 +1,7 @@
 export default () => ({
-  rootMargin: '-10% 0%',
+  rootMargin: '0% 0% -10% 0%',
   threshold: 0,
-  initialDelay: 0.1,
+  initialDelay: 100,
 
   walks: {
     default: {
