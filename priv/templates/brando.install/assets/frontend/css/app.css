@@ -1,31 +1,31 @@
 /**
  * Application-specific CSS.
- * (c) univers/twined 2019
+ * (c) 2021
  */
 
 /**
 * Imports
 */
 
-@import './includes/fonts.pcss';
-@import "./includes/animations.pcss";
-@import "./includes/arrows.pcss";
-@import "./includes/cookies.pcss";
-@import "./includes/containers.pcss";
-@import "./includes/content.pcss";
-@import "./includes/fader.pcss";
-@import "./includes/footer.pcss";
-@import "./includes/general.pcss";
-@import "./includes/header.pcss";
-@import "./includes/headers.pcss";
-@import "./includes/lazyload.pcss";
-@import "./includes/lightbox.pcss";
-@import "./includes/modules.pcss";
-@import "./includes/newsletter.pcss";
-@import "./includes/panners.pcss";
-@import "./includes/paragraphs.pcss";
-@import "./includes/popup.pcss";
-@import "./includes/navigation.pcss";
+@import './includes/fonts.css';
+@import "./includes/animations.css";
+@import "./includes/arrows.css";
+@import "./includes/cookies.css";
+@import "./includes/containers.css";
+@import "./includes/content.css";
+@import "./includes/fader.css";
+@import "./includes/footer.css";
+@import "./includes/general.css";
+@import "./includes/header.css";
+@import "./includes/headers.css";
+@import "./includes/lazyload.css";
+@import "./includes/lightbox.css";
+@import "./includes/modules.css";
+@import "./includes/newsletter.css";
+@import "./includes/panners.css";
+@import "./includes/paragraphs.css";
+@import "./includes/popup.css";
+@import "./includes/navigation.css";
 
 @europa arrows;
 @europa base;
@@ -70,12 +70,20 @@ a.plain {
   }
 }
 
+.no-js body.unloaded {
+  [data-moonwalk],
+  [data-moonwalk-section],
+  [data-moonwalk-run] {
+    opacity: 1;
+  }
+}
+
 /** css moonwalk **/
-/* html.moonwalk {
+html.moonwalk {
   [data-moonwalk=""] {
     transform: translateY(0);
-    transition: transform 0.65s cubic-bezier(0.39, 0.575, 0.565, 1),
-                 opacity 0.65s cubic-bezier(0.47, 0, 0.745, 0.715);
+    transition: transform 0.45s cubic-bezier(0.39, 0.575, 0.565, 1),
+                 opacity 0.45s cubic-bezier(0.47, 0, 0.745, 0.715);
     transition-delay: 0.02s;
     opacity: 0;
 
@@ -88,8 +96,8 @@ a.plain {
 
   [data-moonwalk="panner"] {
     transform: translateX(0);
-    transition: transform 0.65s cubic-bezier(0.39, 0.575, 0.565, 1),
-                 opacity 0.65s cubic-bezier(0.47, 0, 0.745, 0.715);
+    transition: transform 0.45s cubic-bezier(0.39, 0.575, 0.565, 1),
+                 opacity 0.45s cubic-bezier(0.47, 0, 0.745, 0.715);
     opacity: 0;
 
     &.moonwalked {
@@ -98,15 +106,17 @@ a.plain {
       visibility: visible;
     }
   }
-} */
+}
 
 body {
-  background-color: theme(colors.body.background);
+  @fontsize base;
+  @color fg body.foreground;
+  @color bg body.background;
+
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  @fontsize base;
 }
 
 p:last-child {
@@ -131,10 +141,10 @@ p:last-child {
   }
 }
 
-header {
+/* header {
   opacity: 1;
   transition: opacity 2s ease;
-}
+} */
 
 .ft {
   display: inline-block;

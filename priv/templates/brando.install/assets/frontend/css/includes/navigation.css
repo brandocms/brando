@@ -1,4 +1,4 @@
-@import "./navigation-nojs.pcss";
+@import "./navigation-nojs.css";
 
 .hero-slide-img {
   position: relative;
@@ -151,7 +151,7 @@ header[data-nav] {
           @font main;
           @unpack theme.typography.sections.navigation;
           @responsive >=ipad_landscape {
-            color: theme(colors.light);
+            @color fg light;
             display: inline-block;
             white-space: nowrap;
 
@@ -182,6 +182,7 @@ header[data-nav] {
               }
 
               &:after {
+                @color fg dark;
                 transition: opacity .75s ease, transform .75s ease;
                 content: "\25CF";
                 font-size: 18px;
@@ -191,7 +192,6 @@ header[data-nav] {
                 opacity: 0;
                 left: 0;
                 bottom: -21px;
-                color: theme(colors.dark);
                 transform: translateY(5px);
               }
             }
@@ -220,9 +220,9 @@ header[data-nav] {
             }
 
             @responsive <=ipad_landscape {
+              @color fg dark;
               display: inline-block;
               border-bottom: 1px solid transparent;
-              color: theme(colors.dark);
               font-weight: normal;
             }
 

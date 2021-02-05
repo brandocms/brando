@@ -24,6 +24,13 @@ defmodule <%= application_module %>Web.Router do
     # }
   end
 
+  pipeline :browser_api do
+    plug :accepts, ["json"]
+    plug :fetch_session
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+  end
+
   pipeline :basic_httpauth do
     plug :basic_auth, username: "admin", password: "<%= :os.timestamp |> :erlang.phash2 |> Integer.to_string(32) |> String.downcase %>"
   end
@@ -42,6 +49,10 @@ defmodule <%= application_module %>Web.Router do
   scope "/coming-soon" do
     get "/", <%= application_module %>Web.LockdownController, :index
     post "/", <%= application_module %>Web.LockdownController, :post_password
+  end
+
+  scope "/api" do
+    pipe_through :browser_api
   end
 
   scope "/" do

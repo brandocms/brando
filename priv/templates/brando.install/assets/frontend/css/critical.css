@@ -1,0 +1,23 @@
+/** Critical CSS **/
+html.js body.unloaded {
+  opacity: 0;
+}
+
+html.moonwalk {
+  &[data-moonwalk],
+  &[data-moonwalk-section],
+  &[data-moonwalk-run] {
+    opacity: 0;
+  }
+}
+
+.fader {
+  background-color: white;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9998;
+  display: none;
+}

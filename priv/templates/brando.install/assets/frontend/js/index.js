@@ -1,6 +1,6 @@
 /**
- * UNIVERS/TWINED APPLICATION FRONTEND
- * (c) 2020 UNIVERS/TWINED TM
+ * BRANDO APPLICATION FRONTEND
+ * (c) 2021
  */
 
 /**
@@ -37,7 +37,13 @@ import configureMoonwalk from './config/MOONWALK'
 import '../css/app.pcss'
 
 const app = new Application({
-  breakpointConfig: configureBreakpoints
+  breakpointConfig: configureBreakpoints,
+  faderOpts: {
+    fadeIn: (callback) => {
+      document.body.classList.remove('unloaded')
+      callback()
+    }
+  }
 })
 
 app.registerCallback(Events.APPLICATION_READY, () => {

@@ -24,7 +24,10 @@ defmodule <%= application_module %>Web.Endpoint do
     at: "/",
     from: :<%= application_name %>,
     gzip: true,
-    only: ~w(css fonts img images js ico favicon.ico)
+    only: ~w(assets images ico favicon.ico),
+    cache_control_for_etags: (Brando.env() == :prod && "public, max-age=31536000") || false,
+    cache_control_for_vsn_requests:
+      (Brando.env() == :prod && "public, max-age=31536000") || false
 
   plug Plug.Static,
     at: "/media",

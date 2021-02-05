@@ -19,14 +19,14 @@ config :brando,
   # https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
   default_language: "en",
   languages: [
-    [value: "no", text: "Norsk"],
-    [value: "en", text: "English"]
+    [value: "en", text: "English"],
+    [value: "no", text: "Norsk"]
   ],
 
   default_admin_language: "no",
   admin_languages: [
-    [value: "no", text: "Norsk"],
-    [value: "en", text: "English"]
+    [value: "en", text: "English"],
+    [value: "no", text: "Norsk"]
   ],
 
   timezone: "Europe/Oslo",

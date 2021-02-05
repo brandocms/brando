@@ -8,10 +8,10 @@ defmodule <%= application_module %>.MixProject do
     [
       app: :<%= application_name %>,
       version: @version,
-      elixir: "~> 1.10",
-      elixirc_paths: elixirc_paths(Mix.env),
-      compilers: [:phoenix, :gettext] ++ Mix.compilers,
-      start_permanent: Mix.env == :prod,
+      elixir: "~> 1.11",
+      elixirc_paths: elixirc_paths(Mix.env()),
+      compilers: [:phoenix, :gettext] ++ Mix.compilers(),
+      start_permanent: Mix.env() == :prod,
       test_paths: test_paths(Mix.env()),
       aliases: aliases(),
       deps: deps(),
@@ -47,49 +47,49 @@ defmodule <%= application_module %>.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-     # phoenix
-     {:phoenix, "~> 1.5"},
-     {:phoenix_pubsub, "~> 2.0"},
-     {:plug_cowboy, "~> 2.1"},
-     {:phoenix_ecto, "~> 4.1"},
-     {:phoenix_html, "~> 2.12"},
-     {:phoenix_live_reload, "~> 1.2", only: :dev},
-     {:phoenix_live_dashboard, "~> 0.2"},
+      # phoenix
+      {:phoenix, "~> 1.5"},
+      {:phoenix_pubsub, "~> 2.0"},
+      {:plug_cowboy, "~> 2.1"},
+      {:phoenix_ecto, "~> 4.1"},
+      {:phoenix_html, "~> 2.12"},
+      {:phoenix_live_reload, "~> 1.2", only: :dev},
+      {:phoenix_live_dashboard, "~> 0.2"},
+      {:ecto_sql, "~> 3.4"},
+      {:telemetry_metrics, "~> 0.4"},
+      {:telemetry_poller, "~> 0.4"},
 
-     {:ecto_sql, "~> 3.4"},
+      # general deps
+      {:postgrex, "~> 0.15"},
+      {:gettext, "~> 0.11"},
+      {:swoosh, "~> 1.0"},
+      {:timex, "~> 3.0"},
+      {:jason, "~> 1.0"},
+      {:absinthe, "~> 1.6"},
+      {:absinthe_plug, "~> 1.5"},
+      {:dataloader, "~> 1.0"},
+      {:ex_machina, "~> 2.3"},
 
-     {:telemetry_metrics, "~> 0.4"},
-     {:telemetry_poller, "~> 0.4"},
+      # release management and production tools
+      {:recon, "~> 2.3"},
+      {:plug_heartbeat, "~> 1.0"},
 
-     # general deps
-     {:postgrex, "~> 0.15"},
-     {:gettext, "~> 0.11"},
-
-     {:timex, "~> 3.0"},
-     {:jason, "~> 1.0"},
-     {:absinthe, "~> 1.6"},
-     {:absinthe_plug, "~> 1.5"},
-     {:dataloader, "~> 1.0"},
-     {:ex_machina, "~> 2.3"},
-
-     # release management and production tools
-     {:recon, "~> 2.3"},
-     {:plug_heartbeat, "~> 1.0"},
-
-     # brando
-     # {:brando, github: "brandocms/brando"}
-     {:brando, path: "../../brando"}
+      # brando
+      {:brando, github: "brandocms/brando"}
+      # {:brando, path: "../../brando"}
     ]
   end
 
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
-    ["ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
-     "ecto.reset": ["ecto.drop", "ecto.setup"],
-     "test.all": ["test.unit", "test.e2e"],
-     "test.unit": &run_unit_tests/1,
-     "test.e2e": &run_e2e_tests/1,
-     test: ["ecto.create --quiet", "ecto.migrate", "test"]]
+    [
+      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+      "ecto.reset": ["ecto.drop", "ecto.setup"],
+      "test.all": ["test.unit", "test.e2e"],
+      "test.unit": &run_unit_tests/1,
+      "test.e2e": &run_e2e_tests/1,
+      test: ["ecto.create --quiet", "ecto.migrate", "test"]
+    ]
   end
 
   def run_e2e_tests(args), do: test_with_env("e2e", args)
