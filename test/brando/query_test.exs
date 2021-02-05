@@ -2,6 +2,7 @@ defmodule Brando.QueryTest do
   use ExUnit.Case, async: true
   use Brando.ConnCase
   import Ecto.Query
+  import ExUnit.CaptureIO
   alias Brando.Factory
 
   defmodule Context do
@@ -32,6 +33,43 @@ defmodule Brando.QueryTest do
     matches Brando.Pages.Page do
       fn
         {:id, id}, query -> from q in query, where: q.id == ^id
+      end
+    end
+  end
+
+  defmodule Context2 do
+    use Brando.Query
+
+    query :single, Brando.Pages.Page do
+      fn
+        query -> from q in query, where: is_nil(q.deleted_at)
+      end
+    end
+
+    matches Brando.Pages.Page do
+      fn
+        {:id, id}, query -> from q in query, where: q.id == ^id
+      end
+    end
+
+    mutation :create, Brando.Pages.Page do
+      fn entry ->
+        IO.puts("create!")
+        {:ok, entry}
+      end
+    end
+
+    mutation :update, Brando.Pages.Page do
+      fn entry ->
+        IO.puts("update!")
+        {:ok, entry}
+      end
+    end
+
+    mutation :delete, Brando.Pages.Page do
+      fn entry ->
+        IO.puts("delete!")
+        {:ok, entry}
       end
     end
   end
@@ -100,6 +138,49 @@ defmodule Brando.QueryTest do
     {:ok, p1b} = __MODULE__.Context.get_page(%{matches: %{id: p1a.id}})
 
     assert p1b.id == p1a.id
+  end
+
+  test "mutation :create with do block" do
+    usr = Factory.insert(:random_user)
+
+    assert __MODULE__.Context2.module_info(:functions)
+           |> Keyword.has_key?(:create_page)
+
+    pp1 = Factory.params_for(:page)
+
+    assert capture_io(fn ->
+             __MODULE__.Context2.create_page(pp1, usr)
+           end) == "create!\n"
+  end
+
+  test "mutation :update with do block" do
+    usr = Factory.insert(:random_user)
+
+    assert __MODULE__.Context2.module_info(:functions)
+           |> Keyword.has_key?(:create_page)
+
+    pp1 = Factory.params_for(:page)
+
+    {:ok, page} = __MODULE__.Context2.create_page(pp1, usr)
+
+    assert capture_io(fn ->
+             __MODULE__.Context2.update_page(page.id, %{path: "bleh"}, usr)
+           end) == "update!\n"
+  end
+
+  test "mutation :delete with do block" do
+    usr = Factory.insert(:random_user)
+
+    assert __MODULE__.Context2.module_info(:functions)
+           |> Keyword.has_key?(:create_page)
+
+    pp1 = Factory.params_for(:page)
+
+    {:ok, page} = __MODULE__.Context2.create_page(pp1, usr)
+
+    assert capture_io(fn ->
+             __MODULE__.Context2.delete_page(page.id)
+           end) == "delete!\n"
   end
 
   test "mutation :update and :delete" do
