@@ -72,7 +72,9 @@ defmodule Brando.Assets.Vite do
     `
     """
     # specified in vite.config.js in build.rollupOptions.input
-    @main_file "js/index.js"
+    @entry_file "js/index.js"
+    @legacy_entry "js/index-legacy.js"
+    @legacy_polyfills "vite/legacy-polyfills"
     @critical_css_file "js/critical.js"
     @critical_css_cache_key {:vite, "critical_css"}
 
@@ -83,12 +85,22 @@ defmodule Brando.Assets.Vite do
 
     @spec main_js() :: binary()
     def main_js() do
-      get_file(@main_file)
+      get_file(@entry_file)
+    end
+
+    @spec legacy_entry() :: binary()
+    def legacy_entry() do
+      get_file(@legacy_entry)
+    end
+
+    @spec legacy_polyfills() :: binary()
+    def legacy_polyfills() do
+      get_file(@legacy_polyfills)
     end
 
     @spec main_css() :: binary()
     def main_css() do
-      get_css(@main_file)
+      get_css(@entry_file)
     end
 
     def critical_css do
@@ -137,7 +149,7 @@ defmodule Brando.Assets.Vite do
 
     @spec vendor_js() :: binary()
     def vendor_js() do
-      get_imports(@main_file) |> Enum.at(0)
+      get_imports(@entry_file) |> Enum.at(0)
     end
 
     @spec get_file(binary()) :: binary()
@@ -162,6 +174,46 @@ defmodule Brando.Assets.Vite do
 
     defp prepend_slash(file_list) when is_list(file_list) do
       Enum.map(file_list, &prepend_slash(&1))
+    end
+  end
+
+  defmodule Render do
+    import Phoenix.HTML
+    alias Brando.Assets.Vite
+
+    def static_path(file), do: Brando.helpers().static_path(Brando.endpoint(), file)
+
+    def main_css do
+      css_files = Vite.Manifest.main_css()
+
+      for css_file <- css_files do
+        digested_css_file = static_path(css_file)
+        ~E|    <link phx-track-static rel="stylesheet" href="<%= digested_css_file %>">|
+      end
+    end
+
+    def main_js do
+      js_file = Vite.Manifest.main_js()
+      vendor_file = Vite.Manifest.vendor_js()
+
+      digested_js_file = static_path(js_file)
+      digested_vendor_file = static_path(vendor_file)
+
+      ~E|<script type="module" crossorigin defer phx-track-static src="<%= digested_js_file %>"></script>
+    <link rel="modulepreload" href="<%= digested_vendor_file %>">
+    |
+    end
+
+    def legacy_js do
+      legacy_entry = Vite.Manifest.legacy_entry()
+      legacy_polyfills = Vite.Manifest.legacy_polyfills()
+
+      digested_entry = static_path(legacy_entry)
+      digested_polyfills = static_path(legacy_polyfills)
+
+      ~E[<script nomodule>!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>
+      <script nomodule src="<%= digested_polyfills %>"></script>
+      <script nomodule id="vite-legacy-entry" data-src="<%= digested_entry %>">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>]
     end
   end
 end

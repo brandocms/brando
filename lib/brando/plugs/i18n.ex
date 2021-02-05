@@ -6,7 +6,9 @@ defmodule Brando.Plug.I18n do
   alias Brando.I18n
 
   @doc """
-  Assign current locale.
+  Add and assign current locale to `conn`
+
+  Also sets Gettext locale.
   """
   @spec put_locale(Plug.Conn.t(), Keyword.t()) :: Plug.Conn.t()
   def put_locale(conn, opts) do

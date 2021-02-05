@@ -389,22 +389,25 @@ defmodule Brando.HTML do
   @doc """
   If you use Vite assets pipeline
   """
-  def include_assets() do
-    ~E|
-    <%= if Brando.env() == :prod do %>
-      <!-- prod -->
-      <link phx-track-static rel="stylesheet" href="<%= Brando.Assets.Vite.Manifest.main_css() %>"/>
-      <script type="module" crossorigin defer phx-track-static src="<%=  Brando.Assets.Vite.Manifest.main_js() %>"></script>
-      <link rel="modulepreload" href="<%= Brando.Assets.Vite.Manifest.vendor_js() %>">
-      <!-- end prod -->
-    <% else %>
-      <!-- dev/test -->
+  def include_assets do
+    if Brando.env() == :prod do
+      ~E|<%= Brando.Assets.Vite.Render.main_css() %>
+    <%= Brando.Assets.Vite.Render.main_js() %>|
+    else
+      ~E|<!-- dev/test -->
       <script type="module" src="http://localhost:3000/@vite/client"></script>
       <script type="module" defer src="http://localhost:3000/js/index.js"></script>
-      <!-- end dev -->
-    <% end %>
-    |
+      <!-- end dev/test -->|
+    end
   end
+
+  @doc """
+  Include legacy bundles
+
+  Call this right before your closing `</body>` tag.
+  """
+  def include_legacy_assets,
+    do: (Brando.env() == :prod && Brando.Assets.Vite.Render.legacy_js()) || []
 
   @doc """
   Run JS init code

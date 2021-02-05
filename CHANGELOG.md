@@ -4,9 +4,18 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 * Query: Add `get_<schema>!` version that raises on no result
 * Query: Add `insert/update/delete` mutations. See `UPGRADE.md`
+* Query: Add `cache` to `get_*`
+* Query: Add joined `order_by`:
+
+    `{:ok, posts} = list_posts(%{order: [{:asc, {:comments, :title}]})`
+
 * Soft Delete: Add cron job to check for expired soft deleted entries
 * Villain: Removed markdown parsing from `Text` blocks.
+* Villain: Refactored `templates` as `modules`, see `UPGRADE.md`
+* Villain: Add `{% hide %}` tag for hiding content only in the Villain Editor.
 * Router: Added `admin_routes/0` and `page_routes/0`
+* Frontend: Add Vite tooling, see `UPGRADE.md`
+* Releases: Improved `ReleaseTasks` -- works better with Elixir releases.
 
 
 ## 0.49.0

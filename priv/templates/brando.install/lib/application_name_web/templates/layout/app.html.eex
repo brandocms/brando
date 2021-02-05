@@ -8,13 +8,14 @@
 
     <%%= preload_fonts([]) %>
     <%%= init_js() %>
+    <%%= inject_critical_css() %>
+
     <%%= render_meta(@conn) %>
     <%%= render_rel(@conn) %>
 
     <link rel="apple-touch-icon" sizes="180x180" href="/ico/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/ico/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/ico/favicon-16x16.png">
-    <link rel="manifest" href="/ico/site.webmanifest">
     <link rel="mask-icon" href="/ico/safari-pinned-tab.svg" color="#000000">
     <link rel="shortcut icon" href="/ico/favicon.ico">
     <meta name="msapplication-TileColor" content="#da532c">
@@ -23,8 +24,7 @@
 
     <title><%%= Brando.Utils.get_page_title(@conn) %></title>
 
-    <%%= include_css(@conn) %>
-    <%%= include_js(@conn) %>
+    <%%= include_assets() %>
     <%%= render_json_ld(@conn) %>
   </head>
   <%%= body_tag @conn, id: "top" %>
@@ -35,7 +35,6 @@
       info_text: "Personvern"
     ) %>
     <div class="fader" id="fader">
-      <script>var zf = document.getElementById("fader");zf.style.display = 'block';setTimeout(function(){zf.style.display = 'none'},4000);</script>
       <div class="loading-container"></div>
     </div>
     <div class="backdrop"></div>
@@ -49,8 +48,10 @@
     <%%= render <%= application_module %>Web.PageView, "_footer.html", assigns %>
 <!-- /footer - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
 
+    <!--
     <%%= google_analytics("UA-XXXXXXXX-1") %>
-
+    -->
+    <%%= include_legacy_assets() %>
     <!-- // vsn <%%= Application.spec(:<%= application_name %>, :vsn) %> -->
   </body>
 </html>
