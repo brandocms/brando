@@ -1,5 +1,16 @@
 ## 0.50.0
 
+* To upgrade to a Vite frontend, start by backing up your old frontend:
+
+    `$ mv assets/frontend assets/frontend_old`
+
+  Then copy in the new frontend files:
+
+    `$ mix brando.gen.frontend`
+
+  Finally, copy your changed files from `frontend_old` into `frontend`. You must rename `.pcss` files to `.css`, and
+  correct all imports. You will not need your old `polyfill*.js` files.
+
 * Copy in the new `ReleaseTasks` template to `lib/my_app/release_tasks.ex`: (switch out `MyApp` and `:my_app`!)
 
 ```
@@ -89,22 +100,22 @@ end
 
 * Copy new rollup config with some `rollup-copy-plugin` fixes:
 
-    $ cp deps/brando/priv/templates/brando.install/assets/frontend/rollup.config.js assets/frontend/rollup.config.js
+    `$ cp deps/brando/priv/templates/brando.install/assets/frontend/rollup.config.js assets/frontend/rollup.config.js`
 
 * Set `sharp` and `sharp-cli` as standard image processing lib:
 
-    config :brando, Brando.Images, :processor_module, Brando.Images.Processor.Sharp
+    `config :brando, Brando.Images, :processor_module, Brando.Images.Processor.Sharp`
 
   Unless you are running an ancient Brando version, this would already be your default.
 
 * If using `fabfile.py`, be sure to update this to include the new `grant_db` function. You need this to prevent
   migration errors when running Oban migrations.
 
-    $ cp deps/brando/priv/templates/brando.install/fabfile.py .
+    `$ cp deps/brando/priv/templates/brando.install/fabfile.py .`
 
 * If you have no custom logic in your `authorization.ex` you can rerun
 
-    $ mix brando.gen.authorization
+    `$ mix brando.gen.authorization`
 
   to get new rules for new configuration menus.
 
@@ -113,13 +124,14 @@ end
 
 * Added telemetry for Villain `parse_and_render`. Add to your `telemetry.ex`:
 
-    summary("brando.villain.parse_and_render.duration", unit: {:native, :millisecond}),
+    `summary("brando.villain.parse_and_render.duration", unit: {:native, :millisecond}),`
 
 * Changed `opts` parameter in Villain parser blocks from `Keyword` to `map`. If you have overridden any of the
   parser functions that uses `opts`, adjust accordingly: `Keyword.get(opts, :context)` -> `Map.get(opts, :context)`
 
 * Live Preview: Changed syntax:
 
+    ```
     preview_target Brando.Pages.Page do
       layout_module MyAppWeb.LayoutView
       view_module MyAppWeb.PageView
@@ -130,19 +142,20 @@ end
       assign :navigation, fn _entry -> Brando.Navigation.get_menu("main", "en") |> elem(1) end
       assign :partials, fn _entry -> Brando.Pages.get_fragments("partials") |> elem(1) end
     end
+    ```
 
   Also note that `assign/2` now requires the passed anonymous function to have `/1` arity. This
   means you change
 
-      assign :navigation, fn -> Brando.Navigation.get_menu("main", "en") |> elem(1) end
+      `assign :navigation, fn -> Brando.Navigation.get_menu("main", "en") |> elem(1) end`
 
   to
 
-      assign :navigation, fn _entry -> Brando.Navigation.get_menu("main", "en") |> elem(1) end
+      `assign :navigation, fn _entry -> Brando.Navigation.get_menu("main", "en") |> elem(1) end`
 
 * Dynamic redirects. Switch out your fallback controller in `page_controller.ex`:
 
-    action_fallback Brando.FallbackController
+    `action_fallback Brando.FallbackController`
 
   so when a page is not found, look through the redirects and redirect if neccessary.
 
@@ -151,7 +164,7 @@ end
 
 * In your `router.ex`, add
 
-    get "/robots.txt", Brando.SEOController, :robots
+    `get "/robots.txt", Brando.SEOController, :robots`
 
   under your "/" scope.
 
@@ -172,8 +185,8 @@ end
   Brando checks this on startup, but it is a very simple check (doesn't understand
   the new globals syntax etc). You can invoke this check from iex when developing:
 
-      iex> Brando.System.check_entry_syntax()
-      iex> Brando.System.check_template_syntax()
+      `iex> Brando.System.check_entry_syntax()`
+      `iex> Brando.System.check_template_syntax()`
 
 * Brando.Datasource - rename `many` to `list`
 
@@ -187,6 +200,7 @@ end
 * Start Brando from your application
   In `application.ex`, add `Brando` to your supervision tree as the last child:
 
+  ```
       children = [
         # Start the Ecto repository
         MyApp.Repo,
@@ -201,10 +215,11 @@ end
         # Start Brando
         Brando
       ]
+  ```
 
 * Removed and unified most of the `Brando.Pages.get_page/*` functions. Now uses `matches`
 
-      Brando.Pages.get_page(%{matches: %{key: "index", status: :published}})
+      `Brando.Pages.get_page(%{matches: %{key: "index", status: :published}})`
 
 
 ## 0.46.0
