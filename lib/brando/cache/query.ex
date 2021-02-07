@@ -19,6 +19,7 @@ defmodule Brando.Cache.Query do
   def put({:single, src, hash}, val, ttl, id),
     do: @cache_module.put(:query, {:single, src, hash, id}, val, ttl: ttl)
 
+  defp get_from_cache({:single, source, key}), do: find_single_entry(source, key)
   defp get_from_cache(key), do: @cache_module.get(:query, key)
 
   @spec evict({:ok, map()} | {:error, changeset}) :: {:ok, map()} | {:error, changeset}
@@ -55,5 +56,18 @@ defmodule Brando.Cache.Query do
     :query
     |> Cachex.stream!(ms)
     |> Enum.map(fn {_, key, _, _, _} -> Cachex.del(:query, key) end)
+  end
+
+  defp find_single_entry(source, key) do
+    ms = [{{:entry, {:single, source, key, :_}, :_, :_, :_}, [], [:"$_"]}]
+
+    :query
+    |> Cachex.stream!(ms)
+    |> Enum.map(fn {_, _, _, _, entry} -> entry end)
+    |> List.first()
+    |> case do
+      nil -> {:error, nil}
+      entry -> {:ok, entry}
+    end
   end
 end

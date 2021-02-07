@@ -48,7 +48,9 @@ end
     gsed -i "s=:template-mode=:module-mode=" assets/backend/src/**/*.vue && \
     gsed -i "s=:template-mode=:module-mode=" assets/backend/src/config.js && \
     gsed -i "s=:templates=:modules=" assets/backend/src/**/*.vue && \
-    gsed -i "s=:templates=:modules=" assets/backend/src/config.js
+    gsed -i "s=templates\=\"=modules\=\"=" assets/backend/src/**/*.vue && \
+    gsed -i "s=:templates=:modules=" assets/backend/src/config.js && \
+    gsed -i "s=templates\=\"=modules\=\"=" assets/backend/src/config.js
     ```
 
 * Villain keeps its data as an object in the Vue backend, so all graphql schemas using it

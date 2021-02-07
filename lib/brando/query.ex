@@ -236,24 +236,23 @@ defmodule Brando.Query do
 
         case try_cache({:single, unquote(source), args}, cache_args) do
           {:miss, cache_key, ttl} ->
-            result =
-              __MODULE__
-              |> run_single_query_reducer(
-                Map.delete(args, :cache),
-                unquote(module),
-                unquote(publish_at?)
-              )
-              |> unquote(block).()
-              |> limit(1)
-              |> Brando.repo().one()
-              |> case do
-                nil ->
-                  {:error, {unquote(atom), :not_found}}
+            __MODULE__
+            |> run_single_query_reducer(
+              Map.delete(args, :cache),
+              unquote(module),
+              unquote(publish_at?)
+            )
+            |> unquote(block).()
+            |> limit(1)
+            |> Brando.repo().one()
+            |> case do
+              nil ->
+                {:error, {unquote(atom), :not_found}}
 
-                result ->
-                  Brando.Cache.Query.put(cache_key, result, ttl, result.id)
-                  {:ok, result}
-              end
+              result ->
+                Brando.Cache.Query.put(cache_key, result, ttl, result.id)
+                {:ok, result}
+            end
 
           {:hit, result} ->
             {:ok, result}
