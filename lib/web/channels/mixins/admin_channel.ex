@@ -5,6 +5,8 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   alias Brando.Villain
 
   @keys [
+    "cache:list",
+    "cache:empty",
     "config:get",
     "config:set",
     "config:add_key",
@@ -315,6 +317,16 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
 
   def do_handle_in("villain:sequence_modules", params, socket) do
     Villain.Module.sequence(params)
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in("cache:list", _, socket) do
+    {:ok, query_caches} = Cachex.keys(:query)
+    {:reply, {:ok, %{code: 200, caches: %{query: query_caches}}}, socket}
+  end
+
+  def do_handle_in("cache:empty", _, socket) do
+    Cachex.clear(:query)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
