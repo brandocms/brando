@@ -58,6 +58,7 @@ defmodule Brando.Villain do
     start = System.monotonic_time()
     opts_map = Enum.into(opts, %{})
     parser = Brando.config(Brando.Villain)[:parser]
+    {:ok, modules} = list_modules(%{cache: {:ttl, :infinite}})
 
     entry =
       entry
@@ -65,7 +66,11 @@ defmodule Brando.Villain do
       |> maybe_put_timestamps()
 
     context = Context.assign(get_base_context(), "entry", entry)
-    opts_map = Map.put(opts_map, :context, context)
+
+    opts_map =
+      opts_map
+      |> Map.put(:context, context)
+      |> Map.put(:modules, modules)
 
     html =
       data
@@ -338,21 +343,6 @@ defmodule Brando.Villain do
   end
 
   @doc """
-  Get module from CACHE or DB
-  """
-  def get_cached_module(id) do
-    case Cachex.get(:cache, "module__#{id}") do
-      {:ok, nil} ->
-        {:ok, module} = get_module(%{matches: %{id: id}})
-        Cachex.put(:cache, "module__#{id}", module, ttl: :timer.seconds(120))
-        {:ok, module}
-
-      {:ok, module} ->
-        {:ok, module}
-    end
-  end
-
-  @doc """
   Duplicate module
   """
   def duplicate_module(module_id) do
@@ -368,35 +358,28 @@ defmodule Brando.Villain do
     create_module(module)
   end
 
-  @doc """
-  Update or create module in DB
-  """
-  def update_module(id, params) do
-    with {:ok, module} <- get_module(%{matches: %{id: id}}) do
-      {:ok, new_module} =
-        module
-        |> Module.changeset(params)
-        |> Brando.repo().update
+  mutation :create, Module
 
-      update_module_in_fields(module.id)
+  mutation :update, Module do
+    fn entry ->
+      update_module_in_fields(entry.id)
 
-      {:ok, new_module}
+      {:ok, entry}
     end
   end
 
-  def create_module(params) do
-    %Module{}
-    |> Module.changeset(params)
-    |> Brando.repo().insert
-  end
+  mutation :delete, Module
 
   @doc """
-  Delete module by `id`
+  Find module with `id` in `modules`
   """
-  def delete_module(id) do
-    {:ok, module} = get_module(%{matches: %{id: id}})
-
-    Brando.repo().delete(module)
+  def find_module(modules, id) do
+    modules
+    |> Enum.find(&(&1.id == id))
+    |> case do
+      nil -> {:error, {:module, :not_found, id}}
+      mod -> {:ok, mod}
+    end
   end
 
   query :list, Module, do: fn query -> from q in query, where: is_nil(q.deleted_at) end

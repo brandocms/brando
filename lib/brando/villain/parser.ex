@@ -137,13 +137,10 @@ defmodule Brando.Villain.Parser do
             } = block,
             opts
           ) do
-        {:ok, module} =
-          case Map.get(opts, :cache_modules) do
-            true -> Brando.Villain.get_cached_module(id)
-            _ -> Brando.Villain.get_module(%{matches: %{id: id}})
-          end
-
         base_context = opts.context
+        modules = opts.modules
+
+        {:ok, module} = Villain.find_module(modules, id)
 
         content =
           Enum.map(Enum.with_index(entries), fn {%{"refs" => refs, "vars" => vars}, index} ->
@@ -176,11 +173,10 @@ defmodule Brando.Villain.Parser do
       end
 
       def module(%{"id" => id, "refs" => refs} = block, opts) do
-        {:ok, module} =
-          case Map.get(opts, :cache_modules) do
-            true -> Brando.Villain.get_cached_module(id)
-            _ -> Brando.Villain.get_module(%{matches: %{id: id}})
-          end
+        base_context = opts.context
+        modules = opts.modules
+
+        {:ok, module} = Villain.find_module(modules, id)
 
         vars = Map.get(block, "vars")
         base_context = opts.context
