@@ -91,10 +91,9 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     end
 
     create table(:pages_pages) do
-      add(:key, :text)
+      add(:uri, :text)
       add(:language, :text)
       add(:title, :text)
-      add(:slug, :text)
       add(:data, :json)
       add(:html, :text)
       add(:status, :integer)
@@ -113,8 +112,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     end
 
     create(index(:pages_pages, [:language]))
-    create(index(:pages_pages, [:slug]))
-    create(index(:pages_pages, [:key]))
+    create(index(:pages_pages, [:uri]))
+    create(unique_index(:pages_pages, [:uri, :language]))
     create(index(:pages_pages, [:parent_id]))
     create(index(:pages_pages, [:status]))
 

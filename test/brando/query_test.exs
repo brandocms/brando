@@ -102,7 +102,6 @@ defmodule Brando.QueryTest do
 
       assert page.__struct__ == Page
       assert page.title == "page 2"
-      assert page.slug == nil
     end
 
     test "query :single" do

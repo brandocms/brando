@@ -76,9 +76,9 @@ defmodule Brando.ImageSeries do
   Filter used in `avoid_field_collision` to ensure we are only checking slugs
   from the same category.
   """
-  def filter_current_category(cs) do
+  def filter_current_category(changeset) do
     from m in __MODULE__,
-      where: m.image_category_id == ^get_field(cs, :image_category_id)
+      where: m.image_category_id == ^get_field(changeset, :image_category_id)
   end
 
   @doc """

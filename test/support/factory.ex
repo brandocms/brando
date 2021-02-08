@@ -112,11 +112,10 @@ defmodule Brando.Factory do
 
   def page_factory do
     %Page{
-      key: sequence(:key, &"test#{&1}"),
+      uri: sequence(:uri, &"test#{&1}"),
       language: "en",
       status: :published,
       title: "Title",
-      slug: "title",
       template: "default.html",
       data: [],
       creator: build(:random_user)

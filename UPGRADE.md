@@ -1,5 +1,9 @@
 ## 0.50.0
 
+* Renamed `Page.key` to `Page.uri`. Change your code under `PageController.show` from
+
+    `|> put_section(page.key)` to `|> put_section(page.uri)`
+
 * `avoid_slug_collision/2` is now `avoid_field_collision/3`. It can now check multiple fields with a
   required second argument
 

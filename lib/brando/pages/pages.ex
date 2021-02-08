@@ -74,17 +74,27 @@ defmodule Brando.Pages do
 
       {:key, key}, query ->
         from t in query,
-          where: t.key == ^key,
+          where: t.uri == ^key,
           preload: [fragments: ^build_fragments_query()]
 
       {:path, path}, query when is_list(path) ->
         from t in query,
-          where: t.key == ^Path.join(path),
+          where: t.uri == ^Path.join(path),
           preload: [fragments: ^build_fragments_query()]
 
       {:path, path}, query ->
         from t in query,
-          where: t.key == ^path,
+          where: t.uri == ^path,
+          preload: [fragments: ^build_fragments_query()]
+
+      {:uri, uri}, query when is_list(uri) ->
+        from t in query,
+          where: t.uri == ^Path.join(uri),
+          preload: [fragments: ^build_fragments_query()]
+
+      {:uri, uri}, query ->
+        from t in query,
+          where: t.uri == ^uri,
           preload: [fragments: ^build_fragments_query()]
     end
   end
@@ -102,7 +112,7 @@ defmodule Brando.Pages do
     page = get_page!(page_id)
 
     page
-    |> Map.merge(%{key: "#{page.key}_kopi", title: "#{page.title} (kopi)"})
+    |> Map.merge(%{uri: "#{page.uri}_kopi", title: "#{page.title} (kopi)"})
     |> Map.delete([:id, :children, :parent])
     |> Map.from_struct()
     |> create_page(%Brando.Users.User{id: page.creator_id})
@@ -130,7 +140,7 @@ defmodule Brando.Pages do
         parents
         |> Enum.reverse()
         |> Enum.reduce([no_value], fn parent, acc ->
-          acc ++ [%{value: parent.id, name: "#{parent.key} (#{parent.language})"}]
+          acc ++ [%{value: parent.id, name: "#{parent.uri} (#{parent.language})"}]
         end)
       else
         [no_value]

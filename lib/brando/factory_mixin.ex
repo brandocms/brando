@@ -50,10 +50,9 @@ defmodule Brando.FactoryMixin do
 
       def page_factory do
         %Page{
-          key: "a-key",
+          uri: "a-key",
           language: "no",
           title: "Page Title",
-          slug: "page-title",
           html: nil,
           data: nil,
           status: :published,

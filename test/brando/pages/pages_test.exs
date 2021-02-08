@@ -6,19 +6,19 @@ defmodule Brando.PagesTest do
   alias Brando.Factory
 
   test "get page in various forms" do
-    p1 = Factory.insert(:page, key: "test/path")
+    p1 = Factory.insert(:page, uri: "test/path")
 
     {:ok, page} = Pages.get_page(%{matches: %{path: ["test", "path"]}})
     assert page.id == p1.id
-    assert page.key == "test/path"
+    assert page.uri == "test/path"
 
     {:ok, page} = Pages.get_page(%{matches: %{path: "test/path"}})
     assert page.id == p1.id
-    assert page.key == "test/path"
+    assert page.uri == "test/path"
 
     {:ok, page} = Pages.get_page(%{matches: %{path: "test/path", language: "en"}})
     assert page.id == p1.id
-    assert page.key == "test/path"
+    assert page.uri == "test/path"
 
     {:error, _} = Pages.get_page(%{matches: %{path: "test/path", language: "sv"}})
   end

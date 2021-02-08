@@ -3,10 +3,9 @@ defmodule Brando.Schema.Types.Page do
 
   object :page do
     field :id, :id
-    field :key, :string
+    field :uri, :string
     field :language, :string
     field :title, :string
-    field :slug, :string
     field :data, :json
     field :html, :string
     field :status, :string
@@ -30,7 +29,7 @@ defmodule Brando.Schema.Types.Page do
 
   input_object :page_params do
     field :parent_id, :id
-    field :key, :string
+    field :uri, :string
     field :language, :string
     field :title, :string
     field :status, :string
@@ -64,6 +63,7 @@ defmodule Brando.Schema.Types.Page do
   @desc "Filtering options for page"
   input_object :page_filter do
     field :title, :string
+    field :uri, :string
   end
 
   object :module do
@@ -108,7 +108,7 @@ defmodule Brando.Schema.Types.Page do
   object :page_queries do
     @desc "Get all pages"
     field :pages, type: list_of(:page) do
-      arg :order, :order, default_value: [{:asc, :language}, {:asc, :sequence}, {:asc, :key}]
+      arg :order, :order, default_value: [{:asc, :language}, {:asc, :sequence}, {:asc, :uri}]
       arg :limit, :integer, default_value: 25
       arg :offset, :integer, default_value: 0
       arg :filter, :page_filter

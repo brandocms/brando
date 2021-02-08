@@ -36,7 +36,7 @@ defmodule <%= application_module %>Web.PageController do
     with {:ok, page} <- Pages.get_page(page_opts),
          {:ok, partials} <- Pages.get_fragments("partials") do
       conn
-      |> put_section(page.key)
+      |> put_section(page.uri)
       |> put_meta(Pages.Page, page)
       |> put_title(page.title)
       |> assign(:partials, partials)

@@ -9,19 +9,18 @@ defmodule Brando.Pages.Page do
   use Brando.Web, :schema
   use Brando.Field.Image.Schema
   use Brando.Sequence.Schema
-  use Brando.SoftDelete.Schema, obfuscated_fields: [:slug, :key]
+  use Brando.SoftDelete.Schema, obfuscated_fields: [:uri]
   use Brando.Villain.Schema
 
   alias Brando.JSONLD
 
-  @required_fields ~w(key language slug title data status template creator_id)a
+  @required_fields ~w(uri language title data status template creator_id)a
   @optional_fields ~w(parent_id meta_title meta_description meta_image html is_homepage css_classes sequence deleted_at publish_at)a
   @derived_fields ~w(
     id
-    key
+    uri
     language
     title
-    slug
     data
     html
     is_homepage
@@ -41,10 +40,9 @@ defmodule Brando.Pages.Page do
 
   @derive {Jason.Encoder, only: @derived_fields}
   schema "pages_pages" do
-    field :key, :string
+    field :uri, :string
     field :language, :string
     field :title, :string
-    field :slug, :string
     field :template, :string
     field :is_homepage, :boolean
     villain()
@@ -116,11 +114,15 @@ defmodule Brando.Pages.Page do
     |> cast(params, @required_fields ++ @optional_fields)
     |> cast_assoc(:properties)
     |> put_creator(user)
-    |> put_slug()
     |> validate_required(@required_fields)
-    |> unique_constraint([:key, :language])
+    |> avoid_field_collision([:uri], &filter_by_language/1)
+    |> unique_constraint([:uri, :language])
     |> validate_upload({:image, :meta_image}, user)
-    |> avoid_field_collision([:slug, :key])
     |> generate_html()
+  end
+
+  def filter_by_language(changeset) do
+    from m in __MODULE__,
+      where: m.language == ^get_field(changeset, :language)
   end
 end
