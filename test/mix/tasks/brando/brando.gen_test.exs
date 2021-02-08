@@ -127,7 +127,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
         assert file =~ "villain :biography"
         assert file =~ "generate_html()"
         assert file =~ "generate_html(:biography)"
-        assert file =~ "avoid_slug_collision()"
+        assert file =~ "avoid_field_collision([:slug])"
       end)
 
       assert_file("lib/brando/games/games.ex", fn file ->

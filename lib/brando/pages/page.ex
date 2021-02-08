@@ -9,7 +9,7 @@ defmodule Brando.Pages.Page do
   use Brando.Web, :schema
   use Brando.Field.Image.Schema
   use Brando.Sequence.Schema
-  use Brando.SoftDelete.Schema
+  use Brando.SoftDelete.Schema, obfuscated_fields: [:slug, :key]
   use Brando.Villain.Schema
 
   alias Brando.JSONLD
@@ -120,7 +120,7 @@ defmodule Brando.Pages.Page do
     |> validate_required(@required_fields)
     |> unique_constraint([:key, :language])
     |> validate_upload({:image, :meta_image}, user)
-    |> avoid_slug_collision()
+    |> avoid_field_collision([:slug, :key])
     |> generate_html()
   end
 end

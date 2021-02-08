@@ -84,13 +84,6 @@ defmodule Brando.Admin.API.Villain.VillainController do
     end
   end
 
-  @doc false
-  def modules(conn, %{"slug" => slug}) do
-    {:ok, mods} = Villain.list_modules(%{filter: %{namespace: slug}})
-    formatted_mods = Enum.map(mods, fn mod -> %{type: "module", data: mod} end)
-    json(conn, formatted_mods)
-  end
-
   defp sizes_with_media_url(image),
     do: Enum.map(image.image.sizes, fn {k, v} -> {k, Brando.Utils.media_url(v)} end)
 end

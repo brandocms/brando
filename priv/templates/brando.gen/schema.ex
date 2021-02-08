@@ -60,6 +60,6 @@ defmodule <%= schema_module %> do
     |> generate_html(<%= inspect v %>)<% end %><% end %><% end %><%= if img_fields != [] do %><%= for {_v, k} <- img_fields do %>
     |> validate_upload({:image, <%= inspect k %>}, user)<% end %><% end %><%= if file_fields != [] do %><%= for {_v, k} <- file_fields do %>
     |> validate_upload({:file, <%= inspect k %>}, user)<% end %><% end %><%= if slug do %>
-    |> avoid_slug_collision()<% end %>
+    |> avoid_field_collision([:slug])<% end %>
   end
 end

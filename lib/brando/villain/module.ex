@@ -40,7 +40,7 @@ defmodule Brando.Villain.Module do
   If no params are provided, an invalid changeset is returned
   with no validation performed.
   """
-  def changeset(schema, params \\ %{}) do
+  def changeset(schema, params \\ %{}, _user \\ :system) do
     schema
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)

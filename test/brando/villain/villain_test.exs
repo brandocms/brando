@@ -205,15 +205,16 @@ defmodule Brando.VillainTest do
   end
 
   test "create and update dependent module", %{user: user} do
-    tp1 =
-      Factory.insert(:module, %{
-        code: "-- this is some code {{ testvar }} --",
-        name: "Name",
-        help_text: "Help text",
-        refs: [],
-        namespace: "all",
-        class: "css class"
-      })
+    module_params = %{
+      code: "-- this is some code {{ testvar }} --",
+      name: "Name",
+      help_text: "Help text",
+      refs: [],
+      namespace: "all",
+      class: "css class"
+    }
+
+    {:ok, tp1} = Villain.create_module(module_params)
 
     data = %{
       "data" => %{
@@ -250,15 +251,16 @@ defmodule Brando.VillainTest do
   end
 
   test "update module inside container", %{user: user} do
-    tp1 =
-      Factory.insert(:module, %{
-        code: "-- this is some code {{ testvar }} --",
-        name: "Name",
-        help_text: "Help text",
-        refs: [],
-        namespace: "all",
-        class: "css class"
-      })
+    module_params = %{
+      code: "-- this is some code {{ testvar }} --",
+      name: "Name",
+      help_text: "Help text",
+      refs: [],
+      namespace: "all",
+      class: "css class"
+    }
+
+    {:ok, tp1} = Villain.create_module(module_params)
 
     data = %{
       "type" => "container",
@@ -313,24 +315,6 @@ defmodule Brando.VillainTest do
     result = Brando.Villain.rerender_villains_for(Brando.Pages.Page)
 
     assert result |> List.flatten() |> Keyword.keys() |> Enum.count() == 3
-  end
-
-  test "get_cached_module" do
-    tp1 =
-      Factory.insert(:module, %{
-        code: "-- this is some code {{ testvar }} --",
-        name: "Name",
-        help_text: "Help text",
-        refs: [],
-        namespace: "all",
-        class: "css class"
-      })
-
-    {:ok, module} = Brando.Villain.get_cached_module(tp1.id)
-    assert module.id == tp1.id
-
-    {:ok, module} = Brando.Villain.get_cached_module(tp1.id)
-    assert module.id == tp1.id
   end
 
   test "ensure villains update on navigation changes", %{user: user} do

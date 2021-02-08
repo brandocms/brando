@@ -64,7 +64,7 @@ defmodule Brando.ImageSeries do
       |> put_creator(user)
       |> validate_required(@required_fields)
       |> put_slug(:name)
-      |> avoid_slug_collision(&filter_current_category/1)
+      |> avoid_field_collision([:slug], &filter_current_category/1)
       |> inherit_configuration()
 
     cs
@@ -73,7 +73,7 @@ defmodule Brando.ImageSeries do
   end
 
   @doc """
-  Filter used in `avoid_slug_collision` to ensure we are only checking slugs
+  Filter used in `avoid_field_collision` to ensure we are only checking slugs
   from the same category.
   """
   def filter_current_category(cs) do

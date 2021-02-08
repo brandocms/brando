@@ -140,7 +140,7 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  List available page templates
+  List available page eex templates
   """
   def list_templates do
     view_module = Brando.web_module(PageView)
@@ -176,79 +176,69 @@ defmodule Brando.Pages do
     end
   end
 
-  @doc """
-  Rerender all fragments
-  """
-  def rerender_fragments do
-    {:ok, fragments} = list_page_fragments()
+  query :list, PageFragment,
+    do: fn query ->
+      from q in query,
+        where: is_nil(q.deleted_at),
+        order_by: [asc: q.parent_key, asc: q.sequence, asc: q.language]
+    end
 
-    for fragment <- fragments do
-      Villain.rerender_html(Ecto.Changeset.change(fragment))
+  filters PageFragment do
+    fn
+      {:title, title}, query ->
+        from q in query, where: ilike(q.title, ^"%#{title}%")
+
+      {:language, language}, query ->
+        from q in query, where: q.language == ^language
+
+      {:parent_key, parent_key}, query ->
+        from q in query, where: q.parent_key == ^parent_key
     end
   end
 
-  def rerender_fragment(id) do
-    {:ok, fragment} = get_page_fragment(id)
-    changeset = Ecto.Changeset.change(fragment)
-    Villain.rerender_html(changeset)
-  end
+  query :single, PageFragment, do: fn query -> from q in query, where: is_nil(q.deleted_at) end
 
-  @doc """
-  Get page fragment
-  """
-  @spec get_page_fragment(binary | integer) ::
-          {:error, {:page_fragment, :not_found}} | {:ok, fragment}
-  def get_page_fragment(key) when is_binary(key) do
-    query = from t in PageFragment, where: t.key == ^key and is_nil(t.deleted_at)
+  matches PageFragment do
+    fn
+      {:id, id}, query ->
+        from t in query, where: t.id == ^id
 
-    case Brando.repo().one(query) do
-      nil -> {:error, {:page_fragment, :not_found}}
-      fragment -> {:ok, fragment}
+      {:language, language}, query ->
+        from t in query,
+          where: t.language == ^language
+
+      {:key, key}, query ->
+        from t in query,
+          where: t.key == ^key
+
+      {:parent_key, parent_key}, query ->
+        from t in query,
+          where: t.parent_key == ^parent_key
     end
   end
 
-  def get_page_fragment(id) do
-    query = from t in PageFragment, where: t.id == ^id and is_nil(t.deleted_at)
+  mutation :create, PageFragment
 
-    case Brando.repo().one(query) do
-      nil -> {:error, {:page_fragment, :not_found}}
-      page -> {:ok, page}
+  mutation :update, PageFragment do
+    fn entry ->
+      update_villains_referencing_fragment(entry)
+      {:ok, entry}
     end
   end
 
-  @spec get_page_fragment(any, any, any) ::
-          {:error, {:page_fragment, :not_found}} | {:ok, fragment}
-  def get_page_fragment(parent_key, key, language \\ nil) do
-    language = language || Brando.config(:default_language)
-
-    query =
-      from p in PageFragment,
-        where:
-          p.parent_key == ^parent_key and
-            p.key == ^key and
-            p.language == ^language and
-            is_nil(p.deleted_at)
-
-    case Brando.repo().one(query) do
-      nil -> {:error, {:page_fragment, :not_found}}
-      fragment -> {:ok, fragment}
-    end
-  end
+  mutation :delete, PageFragment
 
   @doc """
   Get set of fragments by parent key
   """
-  @deprecated "Use `{:ok, fragments} = get_fragments(parent_key)` instead"
-  def get_page_fragments(parent_key) do
-    {:ok, fragments} = list_page_fragments(parent_key)
-    Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)
+  def get_fragments(parent_key) when is_binary(parent_key) do
+    require Logger
+    IO.warn("get_fragments(binary) is deprecated! Use `get_fragments(map)` instead")
+    get_fragments(%{filter: %{parent_key: parent_key}})
   end
 
-  @doc """
-  Get set of fragments by parent key
-  """
-  def get_fragments(parent_key) do
-    {:ok, fragments} = list_page_fragments(parent_key)
+  def get_fragments(opts) do
+    {:ok, fragments} = list_page_fragments(opts)
     {:ok, Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)}
   end
 
@@ -265,45 +255,20 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  List all page fragments
+  Rerender all fragments
   """
-  def list_page_fragments do
-    fragments =
-      PageFragment
-      |> order_by([p], asc: p.parent_key, asc: p.sequence, asc: p.language)
-      |> exclude_deleted()
-      |> Brando.repo().all()
+  def rerender_fragments do
+    {:ok, fragments} = list_page_fragments()
 
-    {:ok, fragments}
+    for fragment <- fragments do
+      Villain.rerender_html(Ecto.Changeset.change(fragment))
+    end
   end
 
-  @doc """
-  Get set of fragments by parent key
-  """
-  def list_page_fragments(parent_key) do
-    fragments =
-      PageFragment
-      |> where([p], p.parent_key == ^parent_key)
-      |> exclude_deleted()
-      |> order_by([p], asc: p.parent_key, asc: p.sequence, asc: p.language)
-      |> Brando.repo().all
-
-    {:ok, fragments}
-  end
-
-  @doc """
-  Get set of fragments by parent key and language
-  """
-  def list_page_fragments(parent_key, language) do
-    fragments =
-      PageFragment
-      |> where([p], p.parent_key == ^parent_key)
-      |> where([p], p.language == ^language)
-      |> exclude_deleted()
-      |> order_by([p], asc: p.parent_key, asc: p.sequence)
-      |> Brando.repo().all
-
-    {:ok, fragments}
+  def rerender_fragment(id) do
+    {:ok, fragment} = get_page_fragment(id)
+    changeset = Ecto.Changeset.change(fragment)
+    Villain.rerender_html(changeset)
   end
 
   @deprecated "use list_fragment_translations/2 instead. Now takes `:excluded_language` as Keyword opt"
@@ -349,47 +314,6 @@ defmodule Brando.Pages do
       |> Brando.repo().all
 
     Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)
-  end
-
-  @doc """
-  Create new page fragment
-  """
-  @spec create_page_fragment(any, any) :: {:ok, fragment} | {:error, changeset}
-  def create_page_fragment(params, user) do
-    %PageFragment{}
-    |> PageFragment.changeset(params, user)
-    |> Brando.repo().insert()
-  end
-
-  @doc """
-  Update page fragment
-  """
-  @spec update_page_fragment(id, params, user) :: any
-  def update_page_fragment(page_fragment_id, params, user) do
-    page_fragment_id =
-      (is_binary(page_fragment_id) && String.to_integer(page_fragment_id)) || page_fragment_id
-
-    {:ok, page_fragment} = get_page_fragment(page_fragment_id)
-
-    case page_fragment
-         |> PageFragment.changeset(params, user)
-         |> Brando.repo().update do
-      {:ok, page_fragment} ->
-        update_villains_referencing_fragment(page_fragment)
-        {:ok, page_fragment}
-
-      err ->
-        err
-    end
-  end
-
-  @doc """
-  Delete page_fragment
-  """
-  @spec delete_page_fragment(id) :: {:ok, fragment}
-  def delete_page_fragment(page_fragment_id) do
-    {:ok, page_fragment} = get_page_fragment(page_fragment_id)
-    Brando.repo().soft_delete(page_fragment)
   end
 
   @doc """
@@ -502,7 +426,10 @@ defmodule Brando.Pages do
   end
 
   def render_fragment(parent, key, language \\ nil) when is_binary(parent) and is_binary(key) do
-    case get_page_fragment(parent, key, language) do
+    opts = %{matches: %{parent_key: parent, key: key}}
+    opts = (language && put_in(opts.matches, :language, language)) || opts
+
+    case get_page_fragment(opts) do
       {:error, {:page_fragment, :not_found}} ->
         ~s(<div class="page-fragment-missing">
              <strong>Missing page fragment</strong> <br />

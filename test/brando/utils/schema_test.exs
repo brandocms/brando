@@ -21,11 +21,11 @@ defmodule Brando.Utils.SchemaTest do
     assert Utils.Schema.put_slug(%{}) == %{}
   end
 
-  test "avoid_slug_collision pass" do
-    assert Utils.Schema.avoid_slug_collision(%{}, nil) == %{}
+  test "avoid_field_collision pass" do
+    assert Utils.Schema.avoid_field_collision(%{}, nil) == %{}
   end
 
-  test "avoid_slug_collision" do
+  test "avoid_field_collision" do
     u1 = Factory.insert(:random_user)
 
     _ = Factory.insert(:image_category, name: "test", slug: "test")
@@ -48,9 +48,24 @@ defmodule Brando.Utils.SchemaTest do
     _ = Factory.insert(:image_category, name: "test", slug: "test-13")
     _ = Factory.insert(:image_category, name: "test", slug: "test-14")
     _ = Factory.insert(:image_category, name: "test", slug: "test-15")
+    _ = Factory.insert(:image_category, name: "test", slug: "test-16")
+    _ = Factory.insert(:image_category, name: "test", slug: "test-17")
+    _ = Factory.insert(:image_category, name: "test", slug: "test-18")
+    _ = Factory.insert(:image_category, name: "test", slug: "test-19")
+    _ = Factory.insert(:image_category, name: "test", slug: "test-20")
+    _ = Factory.insert(:image_category, name: "test", slug: "test-21")
+    _ = Factory.insert(:image_category, name: "test", slug: "test-22")
+    _ = Factory.insert(:image_category, name: "test", slug: "test-23")
+    _ = Factory.insert(:image_category, name: "test", slug: "test-24")
+    _ = Factory.insert(:image_category, name: "test", slug: "test-25")
+    _ = Factory.insert(:image_category, name: "test", slug: "test-26")
+    _ = Factory.insert(:image_category, name: "test", slug: "test-27")
+    _ = Factory.insert(:image_category, name: "test", slug: "test-28")
+    _ = Factory.insert(:image_category, name: "test", slug: "test-29")
+    _ = Factory.insert(:image_category, name: "test", slug: "test-30")
 
     {:error, changeset} = Brando.Images.create_category(%{name: "test", slug: "test"}, u1)
 
-    assert changeset.errors == [slug: {"Klarte ikke finne en ledig URL tamp.", []}]
+    assert changeset.errors == [slug: {"Klarte ikke finne en ledig verdi for feltet", []}]
   end
 end

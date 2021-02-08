@@ -40,26 +40,44 @@ defmodule Brando.SoftDelete.Repo do
 
   defmacro __using__(_opts) do
     quote do
-      def maybe_slug(%Ecto.Changeset{data: %{slug: slug}} = changeset) do
-        changeset
-        |> Ecto.Changeset.force_change(:slug, normalize_slug(slug))
-        |> Brando.Utils.Schema.avoid_slug_collision()
+      def maybe_obfuscate(%Ecto.Changeset{data: data} = changeset) do
+        obfuscated_fields = changeset.data.__struct__.__soft_delete__(:obfuscated_fields)
+
+        obfuscated_fields
+        |> Enum.reduce(changeset, fn obfuscated_field, new_changeset ->
+          Ecto.Changeset.force_change(
+            new_changeset,
+            obfuscated_field,
+            normalize_field(Map.get(data, obfuscated_field))
+          )
+        end)
+        |> Brando.Utils.Schema.avoid_field_collision(obfuscated_fields)
       end
 
-      def maybe_slug(%{slug: slug} = struct) do
-        struct
-        |> Ecto.Changeset.change(slug: normalize_slug(slug))
-        |> Brando.Utils.Schema.avoid_slug_collision()
+      def maybe_obfuscate(%{} = struct) do
+        obfuscated_fields = struct.__struct__.__soft_delete__(:obfuscated_fields)
+
+        changeset = Ecto.Changeset.change(struct)
+
+        obfuscated_fields
+        |> Enum.reduce(changeset, fn obfuscated_field, new_changeset ->
+          Ecto.Changeset.force_change(
+            new_changeset,
+            obfuscated_field,
+            normalize_field(Map.get(struct, obfuscated_field))
+          )
+        end)
+        |> Brando.Utils.Schema.avoid_field_collision(obfuscated_fields)
       end
 
-      def maybe_slug(changeset), do: changeset
+      def maybe_obfuscate(changeset), do: changeset
 
-      def randomize_slug(slug), do: "#{slug}$$$#{Brando.Utils.random_string(slug)}"
+      def randomize_field(field), do: "#{field}$$$#{Brando.Utils.random_string(field)}"
 
-      def normalize_slug(slug) do
-        case String.split(slug, "$$$") do
-          [slug, _] -> slug
-          [slug] -> slug
+      def normalize_field(field) do
+        case String.split(field, "$$$") do
+          [field, _] -> field
+          [field] -> field
         end
       end
 
@@ -67,17 +85,35 @@ defmodule Brando.SoftDelete.Repo do
         update_all(queryable, set: [deleted_at: utc_now()])
       end
 
-      def soft_delete(%Ecto.Changeset{data: %{slug: slug}} = changeset) do
-        changeset
-        |> Ecto.Changeset.change(slug: randomize_slug(slug))
+      def soft_delete(%Ecto.Changeset{data: data} = changeset) do
+        obfuscated_fields = changeset.data.__struct__.__soft_delete__(:obfuscated_fields)
+
+        obfuscated_fields
+        |> Enum.reduce(changeset, fn obfuscated_field, new_changeset ->
+          Ecto.Changeset.force_change(
+            new_changeset,
+            obfuscated_field,
+            randomize_field(Map.get(data, obfuscated_field))
+          )
+        end)
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update()
         |> Brando.Cache.Query.evict()
       end
 
-      def soft_delete(%{slug: slug} = struct) do
-        struct
-        |> Ecto.Changeset.change(slug: randomize_slug(slug))
+      def soft_delete(%{} = struct) do
+        obfuscated_fields = struct.__struct__.__soft_delete__(:obfuscated_fields)
+        changeset = Ecto.Changeset.change(struct)
+
+        obfuscated_fields
+        |> Enum.reduce(changeset, fn obfuscated_field, new_changeset ->
+          Ecto.Changeset.force_change(
+            new_changeset,
+            obfuscated_field,
+            randomize_field(Map.get(struct, obfuscated_field))
+          )
+        end)
+        |> Brando.Utils.Schema.avoid_field_collision(obfuscated_fields)
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update()
         |> Brando.Cache.Query.evict()
@@ -92,7 +128,7 @@ defmodule Brando.SoftDelete.Repo do
 
       def soft_delete!(%Ecto.Changeset{data: %{slug: slug}} = changeset) do
         changeset
-        |> Ecto.Changeset.change(slug: randomize_slug(slug))
+        |> Ecto.Changeset.change(slug: randomize_field(slug))
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update!()
         |> Brando.Cache.Query.evict()
@@ -100,7 +136,7 @@ defmodule Brando.SoftDelete.Repo do
 
       def soft_delete!(%{slug: slug} = struct) do
         struct
-        |> Ecto.Changeset.change(slug: randomize_slug(slug))
+        |> Ecto.Changeset.change(slug: randomize_field(slug))
         |> Ecto.Changeset.change(deleted_at: utc_now())
         |> update!()
         |> Brando.Cache.Query.evict()
@@ -116,7 +152,7 @@ defmodule Brando.SoftDelete.Repo do
       def restore(struct_or_changeset) do
         struct_or_changeset
         |> Ecto.Changeset.change(deleted_at: nil)
-        |> maybe_slug()
+        |> maybe_obfuscate()
         |> update()
         |> Brando.Cache.Query.evict()
       end
@@ -124,14 +160,12 @@ defmodule Brando.SoftDelete.Repo do
       def restore!(struct_or_changeset) do
         struct_or_changeset
         |> Ecto.Changeset.change(deleted_at: nil)
-        |> maybe_slug()
+        |> maybe_obfuscate()
         |> update!()
         |> Brando.Cache.Query.evict()
       end
 
-      defp utc_now do
-        DateTime.truncate(DateTime.utc_now(), :second)
-      end
+      defp utc_now, do: DateTime.truncate(DateTime.utc_now(), :second)
     end
   end
 end

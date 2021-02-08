@@ -58,7 +58,7 @@ defmodule Brando.ImageCategory do
     |> put_creator(user)
     |> validate_required(@required_fields)
     |> put_slug(:name)
-    |> avoid_slug_collision()
+    |> avoid_field_collision([:slug])
     |> unique_constraint(:slug)
     |> put_default_config()
   end
@@ -68,7 +68,7 @@ defmodule Brando.ImageCategory do
     |> cast(params, @required_fields ++ @optional_fields)
     |> put_creator(user)
     |> put_slug(:name)
-    |> avoid_slug_collision()
+    |> avoid_field_collision([:slug])
     |> unique_constraint(:slug)
     |> validate_paths()
   end

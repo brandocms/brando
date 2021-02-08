@@ -25,7 +25,7 @@ defmodule Brando.PagesTest do
 
   test "get_page_fragment" do
     pf1 = Factory.insert(:page_fragment, key: "frag")
-    {:ok, pf2} = Pages.get_page_fragment("frag")
+    {:ok, pf2} = Pages.get_page_fragment(%{matches: %{key: "frag"}})
     assert pf1.id == pf2.id
 
     {:ok, pf2} = Pages.get_page_fragment(pf1.id)
@@ -37,7 +37,7 @@ defmodule Brando.PagesTest do
     _pf2 = Factory.insert(:page_fragment, key: "frag2", parent_key: "parent")
     _pf3 = Factory.insert(:page_fragment, key: "frag3", parent_key: "parent")
 
-    {:ok, frag_map} = Pages.get_fragments("parent")
+    {:ok, frag_map} = Pages.get_fragments(%{filter: %{parent_key: "parent"}})
 
     f1 = Map.get(frag_map, "frag1")
     assert f1.key == "frag1"
@@ -70,10 +70,12 @@ defmodule Brando.PagesTest do
 
     _pf3 = Factory.insert(:page_fragment, key: "frag3", parent_key: "parent")
 
-    {:ok, fragments} = Pages.list_page_fragments("parent")
+    {:ok, fragments} = Pages.list_page_fragments(%{filter: %{parent_key: "parent"}})
     assert Enum.count(fragments) == 2
 
-    {:ok, fragments} = Pages.list_page_fragments("parent", "sv")
+    {:ok, fragments} =
+      Pages.list_page_fragments(%{filter: %{parent_key: "parent", language: "sv"}})
+
     assert Enum.empty?(fragments)
   end
 
@@ -153,15 +155,15 @@ defmodule Brando.PagesTest do
            ]
   end
 
-  test "get_page_fragments/2" do
+  test "get_fragments/2" do
     _pf1 = Factory.insert(:page_fragment, key: "frag1", parent_key: "parent", language: "no")
     _pf2 = Factory.insert(:page_fragment, key: "frag2", parent_key: "parent", language: "no")
     _pf3 = Factory.insert(:page_fragment, key: "frag3", parent_key: "parent", language: "no")
 
-    frags = Pages.get_page_fragments("parent", "no")
+    {:ok, frags} = Pages.get_fragments(%{filter: %{parent_key: "parent", language: "no"}})
     assert Map.keys(frags) == ["frag1", "frag2", "frag3"]
 
-    frags = Pages.get_page_fragments("parent", "sv")
+    {:ok, frags} = Pages.get_fragments(%{filter: %{parent_key: "parent", language: "sv"}})
     assert frags == %{}
   end
 

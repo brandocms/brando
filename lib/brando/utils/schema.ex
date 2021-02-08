@@ -8,7 +8,7 @@ defmodule Brando.Utils.Schema do
 
   @type changeset :: Ecto.Changeset.t()
 
-  @slug_collision_attemps 15
+  @field_val_collision_attemps 30
 
   @doc """
   Updates a field on `schema`.
@@ -55,33 +55,49 @@ defmodule Brando.Utils.Schema do
     end
   end
 
-  @doc """
-  Precheck :slug in `cs` to make sure we avoid collisions
-  """
-  def avoid_slug_collision(cs, filter_fun \\ nil)
+  defmacro avoid_slug_collision(_) do
+    raise """
+    avoid_slug_collision(changeset, filter_fn \\ nil) is removed.
 
-  def avoid_slug_collision(%{valid?: true} = cs, filter_fun) do
-    q = (filter_fun && filter_fun.(cs)) || cs.data.__struct__
-    slug = Ecto.Changeset.get_change(cs, :slug)
-
-    if slug do
-      case get_unique_slug(cs, q, slug, 0) do
-        {:ok, unique_slug} ->
-          Ecto.Changeset.put_change(cs, :slug, unique_slug)
-
-        {:error, :too_many_attempts} ->
-          Ecto.Changeset.add_error(cs, :slug, "Klarte ikke finne en ledig URL tamp.")
-      end
-    else
-      cs
-    end
+    Use avoid_field_collision(changeset, [:slug], filter_fn \\ nil) instead.
+    """
   end
 
-  def avoid_slug_collision(cs, _), do: cs
+  @doc """
+  Precheck field in `cs` to make sure we avoid collisions
+  """
+  def avoid_field_collision(changeset, fields \\ [:slug], filter_fn \\ nil)
 
-  defp get_unique_slug(cs, q, slug, attempts) when attempts < @slug_collision_attemps do
-    slug_to_test = construct_slug(slug, attempts)
-    test_query = from m in q, where: m.slug == ^slug_to_test
+  def avoid_field_collision(%{valid?: true} = changeset, fields, filter_fn) do
+    src = (filter_fn && filter_fn.(changeset)) || changeset.data.__struct__
+
+    Enum.reduce(fields, changeset, fn field, new_changeset ->
+      field_val = Ecto.Changeset.get_change(new_changeset, field)
+
+      if field_val do
+        case get_unique_field_value(new_changeset, src, field, field_val, 0) do
+          {:ok, unique_value} ->
+            Ecto.Changeset.put_change(new_changeset, field, unique_value)
+
+          {:error, :too_many_attempts} ->
+            Ecto.Changeset.add_error(
+              new_changeset,
+              field,
+              "Klarte ikke finne en ledig verdi for feltet"
+            )
+        end
+      else
+        new_changeset
+      end
+    end)
+  end
+
+  def avoid_field_collision(changeset, _, _), do: changeset
+
+  defp get_unique_field_value(cs, src, field, field_val, attempts)
+       when attempts < @field_val_collision_attemps do
+    field_val_to_test = construct_field_val(field_val, attempts)
+    test_query = from m in src, where: field(m, ^field) == ^field_val_to_test
 
     # if schema is soft deleted, only check non deleted entries.
     test_query =
@@ -93,15 +109,15 @@ defmodule Brando.Utils.Schema do
 
     case Brando.repo().one(test_query) do
       nil ->
-        {:ok, slug_to_test}
+        {:ok, field_val_to_test}
 
       _ ->
-        get_unique_slug(cs, q, slug, attempts + 1)
+        get_unique_field_value(cs, src, field, field_val, attempts + 1)
     end
   end
 
-  defp get_unique_slug(_, _, _, _), do: {:error, :too_many_attempts}
+  defp get_unique_field_value(_, _, _, _, _), do: {:error, :too_many_attempts}
 
-  defp construct_slug(slug, 0), do: slug
-  defp construct_slug(slug, attempts), do: "#{slug}-#{to_string(attempts)}"
+  defp construct_field_val(field_val, 0), do: field_val
+  defp construct_field_val(field_val, attempts), do: "#{field_val}-#{to_string(attempts)}"
 end

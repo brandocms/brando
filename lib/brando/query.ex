@@ -530,11 +530,12 @@ defmodule Brando.Query do
       def unquote(:"delete_#{name}")(id) do
         {:ok, entry} = unquote(:"get_#{name}")(id)
 
-        if {:__soft_delete__, 0} in unquote(module).__info__(:functions) do
-          Brando.repo().soft_delete(entry)
-        else
-          Brando.Query.delete(entry)
-        end
+        {:ok, entry} =
+          if {:__soft_delete__, 0} in unquote(module).__info__(:functions) do
+            Brando.repo().soft_delete(entry)
+          else
+            Brando.Query.delete(entry)
+          end
 
         if {:__gallery_fields__, 0} in unquote(module).__info__(:functions) do
           for f <- apply(unquote(module), :__gallery_fields__, []) do

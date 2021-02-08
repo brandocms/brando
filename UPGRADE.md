@@ -1,5 +1,15 @@
 ## 0.50.0
 
+* `avoid_slug_collision/2` is now `avoid_field_collision/3`. It can now check multiple fields with a
+  required second argument
+
+    `avoid_field_collision(changeset, [:slug, :key])`
+
+* Fragment querying has been streamlined. Instead of `Pages.get_fragments(parent_key)` etc, use a map
+  of query args:
+
+    `Pages.get_fragments(%{filter: %{parent_key: "parent_key"}, cache: {:ttl, :infinite}})`
+
 * To upgrade to a Vite frontend, start by backing up your old frontend:
 
     `$ mv assets/frontend assets/frontend_old`
