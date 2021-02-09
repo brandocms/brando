@@ -1,5 +1,13 @@
 ## 0.50.0
 
+* To improve your security headers, add to your `router.ex`'s `:browser` pipeline:
+
+    ```
+    plug :put_extra_secure_browser_headers
+    ```
+
+    You can override its settings by passing a map of headers to merge in.
+
 * Renamed `Page.key` to `Page.uri`. Change your code under `PageController.show` from
 
     `|> put_section(page.key)` to `|> put_section(page.uri)`

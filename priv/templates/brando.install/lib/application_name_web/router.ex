@@ -8,8 +8,6 @@ defmodule <%= application_module %>Web.Router do
 
   @sql_sandbox Application.get_env(:<%= application_name %>, :sql_sandbox) || false
 
-  # additional optional modules
-
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -17,6 +15,7 @@ defmodule <%= application_module %>Web.Router do
     plug :put_locale
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :put_extra_secure_browser_headers
     plug PlugHeartbeat
     plug Brando.Plug.Identity
     # plug :put_meta, %{
@@ -29,6 +28,7 @@ defmodule <%= application_module %>Web.Router do
     plug :fetch_session
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :put_extra_secure_browser_headers
   end
 
   pipeline :basic_httpauth do

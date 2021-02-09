@@ -13,9 +13,10 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * Villain: Removed markdown parsing from `Text` blocks.
 * Villain: Refactored `templates` as `modules`, see `UPGRADE.md`
 * Villain: Add `{% hide %}` tag for hiding content only in the Villain Editor.
-* Router: Added `admin_routes/0` and `page_routes/0`
+* Router: Add `admin_routes/0` and `page_routes/0`
+* Router: Add `:put_extra_secure_browser_headers`
 * Frontend: Add Vite tooling, see `UPGRADE.md`
-* Releases: Improved `ReleaseTasks` -- works better with Elixir releases.
+* Releases: Improved `ReleaseTasks` -- works better with Elixir releases
 
 
 ## 0.49.0

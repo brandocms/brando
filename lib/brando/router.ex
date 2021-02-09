@@ -1,4 +1,11 @@
 defmodule Brando.Router do
+  @default_extra_secure_headers [
+    {"content-security-policy",
+     "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src * data:; media-src *"},
+    {"referrer-policy", "strict-origin-when-cross-origin"},
+    {"permissions-policy",
+     "accelerometer=(), camera=(), fullscreen=(self), geolocation=(self), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"}
+  ]
   defmacro page_routes do
     quote do
       get "/robots.txt", Brando.SEOController, :robots
@@ -18,6 +25,7 @@ defmodule Brando.Router do
         plug :fetch_flash
         plug :put_admin_locale
         plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
+
         plug :put_secure_browser_headers
       end
 
@@ -73,6 +81,17 @@ defmodule Brando.Router do
 
         get "/*path", Brando.AdminController, :index
       end
+    end
+  end
+
+  @spec put_extra_secure_browser_headers(Plug.Conn.t(), Map.t()) :: Plug.Conn.t()
+  def put_extra_secure_browser_headers(conn, extra_headers \\ %{}) do
+    if Brando.env() == :prod do
+      conn
+      |> Plug.Conn.merge_resp_headers(@default_extra_secure_headers)
+      |> Plug.Conn.merge_resp_headers(extra_headers)
+    else
+      conn
     end
   end
 end
