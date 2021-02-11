@@ -11,7 +11,7 @@
     "@univers-agency/europacss": "^0.3.0",
     "@vitejs/plugin-legacy": "^1.2.3",
     "css-mqgroup": "^7.1.0",
-    "postcss": "^8.2.4",
+    "postcss": "^8.2.6",
     "postcss-import": "^14.0.0",
     "postcss-preset-env": "^6.4.0",
     "postcss-reporter": "^7.0.0",
