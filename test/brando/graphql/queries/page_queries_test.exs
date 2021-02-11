@@ -12,8 +12,8 @@ defmodule Brando.GraphQL.Queries.PageQueriesTest do
   end
 
   @pages_query """
-  query {
-    pages {
+  query Pages ($order: Order, $limit: Int, $offset: Int, $filter: PageFilter, $status: String) {
+    pages (order: $order, limit: $limit, offset: $offset, filter: $filter, status: $status) {
       id
       title
 
@@ -31,15 +31,23 @@ defmodule Brando.GraphQL.Queries.PageQueriesTest do
   """
 
   test "pages", %{opts: opts} do
-    p1 = Factory.insert(:page)
+    p1 = Factory.insert(:page, parent_id: nil)
     p2 = Factory.insert(:page, parent_id: p1.id)
 
     pf1 = Factory.insert(:page_fragment, page_id: p1.id)
 
+    opts_with_filter =
+      opts ++
+        [
+          variables: %{
+            "filter" => %{"parents" => true}
+          }
+        ]
+
     assert Absinthe.run(
              @pages_query,
              BrandoIntegration.TestSchema,
-             opts
+             opts_with_filter
            ) ==
              {
                :ok,
@@ -50,7 +58,9 @@ defmodule Brando.GraphQL.Queries.PageQueriesTest do
                        "children" => [
                          %{"id" => to_string(p2.id), "title" => "Title"}
                        ],
-                       "fragments" => [%{"id" => to_string(pf1.id), "title" => nil}],
+                       "fragments" => [
+                         %{"id" => to_string(pf1.id), "title" => nil}
+                       ],
                        "id" => to_string(p1.id),
                        "title" => "Title"
                      }

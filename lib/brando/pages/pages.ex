@@ -62,8 +62,10 @@ defmodule Brando.Pages do
   end
 
   filters Page do
-    fn {:title, title}, query -> from q in query, where: ilike(q.title, ^"%#{title}%") end
-    fn {:parents, true}, query -> from q in query, where: is_nil(q.parent_id) end
+    fn
+      {:title, title}, query -> from q in query, where: ilike(q.title, ^"%#{title}%")
+      {:parents, true}, query -> from q in query, where: is_nil(q.parent_id)
+    end
   end
 
   query :single, Page,
