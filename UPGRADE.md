@@ -1,3 +1,5 @@
+## 0.51.0
+
 ## 0.50.0
 
 * To improve your security headers, add to your `router.ex`'s `:browser` pipeline:

@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.50.0"
+  @version "0.51.0-dev"
   @description "Brando CMS"
 
   def project do
