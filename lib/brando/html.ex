@@ -396,7 +396,8 @@ defmodule Brando.HTML do
     else
       ~E|<!-- dev/test -->
       <script type="module" src="http://localhost:3000/@vite/client"></script>
-      <script type="module" defer src="http://localhost:3000/js/index.js"></script>
+      <script type="module" src="http://localhost:3000/js/critical.js"></script>
+      <script type="module" src="http://localhost:3000/js/index.js"></script>
       <!-- end dev/test -->|
     end
   end
