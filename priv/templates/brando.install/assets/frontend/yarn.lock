@@ -275,14 +275,14 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.7"
 
-"@univers-agency/jupiter@^3.40.0":
-  version "3.40.0"
-  resolved "https://registry.yarnpkg.com/@univers-agency/jupiter/-/jupiter-3.40.0.tgz#84105ffc3d4906ea34253e5da9906a3820ee672b"
-  integrity sha512-/H7DhoMw3B83LqHzuTfchTfB46aqPMzWDMqGvEFoI7VJ81v1BdKF9Fv5H81+/M1VtWUmRpGW1YVukxrkhpwY3g==
+"@univers-agency/jupiter@^3.40.1":
+  version "3.40.1"
+  resolved "https://registry.yarnpkg.com/@univers-agency/jupiter/-/jupiter-3.40.1.tgz#b85dfc08606d8c3080a749cf3d994156c0ea950c"
+  integrity sha512-IzVKowUhAukiNNklIzQRfRLyYciqM+LywPmmOp9AgqsCgqO1TUWUEuvY6CWhxpDOY9rNPDhc575sxXPvS+H37A==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^3.1.5"
-    gsap "3.5.1"
+    gsap "3.6.0"
     lodash.defaultsdeep "^4.6.1"
 
 "@vitejs/plugin-legacy@^1.2.3":
@@ -783,7 +783,7 @@ glob-parent@^5.1.0:
   dependencies:
     is-glob "^4.0.1"
 
-glob@^7.1.3, glob@^7.1.6:
+glob@^7.1.2, glob@^7.1.3:
   version "7.1.6"
   resolved "https://registry.yarnpkg.com/glob/-/glob-7.1.6.tgz#141f33b81a7c2492e125594307480c46679278a6"
   integrity sha512-LwaxwyZ72Lk7vZINtNNrywX0ZuLyStrdDtabefZKAY5ZGJhVtgdznluResxNmPitE0SAO+O26sWTHeKSI2wMBA==
@@ -840,10 +840,10 @@ gonzales-pe@^4.3.0:
   dependencies:
     minimist "^1.2.5"
 
-gsap@3.5.1:
-  version "3.5.1"
-  resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.5.1.tgz#36cf76787d1758e749469d5e9cbe365c186544c4"
-  integrity sha512-EMV0RSUKZNeTUzLKAizGlwxVOUyif3/g8I3S1aA/hf3gbqwBvmQ02x1RdTBQNQMOpHCVBv9y/vaHwfctoAg8zw==
+gsap@3.6.0:
+  version "3.6.0"
+  resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.6.0.tgz#925f25370c698ce0f6ea563522da8f6b5ed21b0a"
+  integrity sha512-0P3syv1TmYr+A/VZ8UMFzw+s0XoaKSzzDFs8NqkXiJTXI4E/VTi0zRjPgxaPBpiUPPycgRnFjLDe0Tb4dRRf+w==
 
 hard-rejection@^2.1.0:
   version "2.1.0"
@@ -1826,7 +1826,7 @@ postcss-value-parser@^3.3.0:
   resolved "https://registry.yarnpkg.com/postcss-value-parser/-/postcss-value-parser-3.3.1.tgz#9ff822547e2893213cf1c30efa51ac5fd1ba8281"
   integrity sha512-pISE66AbVkp4fDQ7VHBwRNXzAAKJjw4Vw7nWI/+Q3vuly7SNfgYXvm6i5IgFylHGK5sP/xHAbB7N49OS4gWNyQ==
 
-postcss-value-parser@^4.0.0, postcss-value-parser@^4.1.0:
+postcss-value-parser@^4.0.0, postcss-value-parser@^4.0.1, postcss-value-parser@^4.1.0:
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/postcss-value-parser/-/postcss-value-parser-4.1.0.tgz#443f6a20ced6481a2bda4fa8532a6e55d789a2cb"
   integrity sha512-97DXOFbQJhk71ne5/Mt6cOu6yxsSfM0QGQyl0L25Gca4yGWEGJaig7l7gbCX623VqTBNGLRLaVUCnNkcedlRSQ==

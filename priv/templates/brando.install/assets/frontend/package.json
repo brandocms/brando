@@ -19,7 +19,7 @@
     "vite": "^2.0.0-beta.62"
   },
   "dependencies": {
-    "@univers-agency/jupiter": "^3.40.0",
+    "@univers-agency/jupiter": "^3.40.1",
     "objectFitPolyfill": "^2.3.5"
   }
 }
