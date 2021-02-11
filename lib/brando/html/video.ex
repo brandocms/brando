@@ -33,7 +33,7 @@ defmodule Brando.HTML.Video do
         <video
           tabindex="0"
           role="presentation"
-          preload="auto"
+          preload="#{(preload && "none") || "auto"}"
           #{autoplay}
           muted
           loop
