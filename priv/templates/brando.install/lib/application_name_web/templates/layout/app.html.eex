@@ -35,6 +35,7 @@
       info_text: "Personvern"
     ) %>
     <div class="fader" id="fader">
+      <script>var zf = document.getElementById("fader");zf.style.display = 'block';setTimeout(function(){zf.style.display = 'none'},4000);</script>
       <div class="loading-container"></div>
     </div>
     <div class="backdrop"></div>
