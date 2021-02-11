@@ -80,7 +80,7 @@ defmodule Brando.Villain.Filters do
   @doc """
   Get srcset picture of image
 
-  %{entry:cover|srcset:"Attivo.Team.Employee:cover"}
+  {{ entry.cover|srcset:"Attivo.Team.Employee:cover" }}
   """
   def srcset(%Brando.Type.Image{} = img, srcset, _) do
     [module_string, field_string] = String.split(srcset, ":")
