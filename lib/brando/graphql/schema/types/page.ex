@@ -60,12 +60,6 @@ defmodule Brando.Schema.Types.Page do
     field :data, :json
   end
 
-  @desc "Filtering options for page"
-  input_object :page_filter do
-    field :title, :string
-    field :uri, :string
-  end
-
   object :module do
     field :id, :id
     field :name, :string
@@ -97,6 +91,13 @@ defmodule Brando.Schema.Types.Page do
     field :inserted_at, :time
     field :updated_at, :time
     field :deleted_at, :time
+  end
+
+  @desc "Filtering options for page"
+  input_object :page_filter do
+    field :title, :string
+    field :uri, :string
+    field :parents, :boolean
   end
 
   @desc "Filtering options for module"
