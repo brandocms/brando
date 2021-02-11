@@ -1,6 +1,6 @@
 See `UPGRADE.md` for instructions on upgrading between versions.
 
-## 0.50.0-dev
+## 0.50.0
 
 * Query: Add `get_<schema>!` version that raises on no result
 * Query: Add `insert/update/delete` mutations. See `UPGRADE.md`
