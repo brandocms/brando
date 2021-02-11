@@ -10,7 +10,6 @@ defmodule Brando.Migrations.RenameTemplatesToModules do
         |> Enum.reduce([], fn ({_, f, _}, acc) -> [~s<#{f} = REPLACE(#{f}::text, '"type": "template"', '"type": "module"')::jsonb>|acc] end)
         |> Enum.join(",\n")
 
-
       """
       UPDATE
         #{schema.__schema__(:source)}
@@ -21,6 +20,7 @@ defmodule Brando.Migrations.RenameTemplatesToModules do
 
     for action <- actions do
       execute action
+      flush()
     end
 
     flush()
