@@ -128,7 +128,6 @@ defmodule Brando.Datasource do
       def __datasource__(:list, unquote(key)) do
         case unquote(fun) do
           {:ok, []} -> {:error, :no_entries}
-          {:ok, nil} -> {:error, :no_entries}
           result -> result
         end
       end
