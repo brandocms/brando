@@ -26,8 +26,8 @@ defmodule Mix.Tasks.Brando.Gen.Frontend do
 
     files = [
       # Frontend assets
-      {:keep, "assets/frontend/fonts", "assets/frontend/public/fonts"},
-      {:keep, "assets/frontend/fonts", "assets/frontend/public/images"},
+      {:keep, "assets/frontend/public/fonts", "assets/frontend/public/fonts"},
+      {:keep, "assets/frontend/public/fonts", "assets/frontend/public/images"},
       {:copy, "assets/frontend/europa.config.js", "assets/frontend/europa.config.js"},
       {:copy, "assets/frontend/vite.config.js", "assets/frontend/vite.config.js"},
       {:copy, "assets/frontend/postcss.config.js", "assets/frontend/postcss.config.js"},
@@ -53,6 +53,7 @@ defmodule Mix.Tasks.Brando.Gen.Frontend do
 
       # Frontend src - CSS
       {:copy, "assets/frontend/css/app.css", "assets/frontend/css/app.css"},
+      {:copy, "assets/frontend/css/critical.css", "assets/frontend/css/critical.css"},
       {:copy, "assets/frontend/css/includes/animations.css",
        "assets/frontend/css/includes/animations.css"},
       {:copy, "assets/frontend/css/includes/arrows.css",
