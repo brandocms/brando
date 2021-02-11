@@ -11,15 +11,15 @@
     "@univers-agency/europacss": "^0.3.0",
     "@vitejs/plugin-legacy": "^1.2.3",
     "css-mqgroup": "^7.1.0",
-    "postcss": "^8.2.4",
+    "postcss": "^8.2.6",
     "postcss-import": "^14.0.0",
     "postcss-preset-env": "^6.4.0",
     "postcss-reporter": "^7.0.0",
-    "stylelint": "^13.9.0",
-    "vite": "^2.0.0-beta.62"
+    "stylelint": "^13.10.0",
+    "vite": "^2.0.0-beta.68"
   },
   "dependencies": {
-    "@univers-agency/jupiter": "^3.40.0",
+    "@univers-agency/jupiter": "^3.40.1",
     "objectFitPolyfill": "^2.3.5"
   }
 }
