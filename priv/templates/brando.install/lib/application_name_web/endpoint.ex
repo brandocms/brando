@@ -23,8 +23,8 @@ defmodule <%= application_module %>Web.Endpoint do
   plug Plug.Static,
     at: "/",
     from: :<%= application_name %>,
-    gzip: true,
-    only: ~w(assets images ico favicon.ico),
+    gzip: Brando.env() == :prod,
+    only: ~w(assets js fonts images ico favicon.ico),
     cache_control_for_etags: (Brando.env() == :prod && "public, max-age=31536000") || false,
     cache_control_for_vsn_requests:
       (Brando.env() == :prod && "public, max-age=31536000") || false
