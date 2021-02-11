@@ -45,19 +45,25 @@ defmodule Brando.Pages do
     |> order_by([f], asc: f.sequence, asc: fragment("lower(?)", f.key))
   end
 
-  def dataloader_query(queryable, _), do: queryable
+  def dataloader_query(Page = query, _) do
+    where(query, [f], is_nil(f.deleted_at))
+  end
+
+  def dataloader_query(queryable, _) do
+    queryable
+  end
 
   query :list, Page do
     fn
       query ->
         from q in query,
-          where: is_nil(q.deleted_at),
-          where: is_nil(q.parent_id)
+          where: is_nil(q.deleted_at)
     end
   end
 
   filters Page do
     fn {:title, title}, query -> from q in query, where: ilike(q.title, ^"%#{title}%") end
+    fn {:parents, true}, query -> from q in query, where: is_nil(q.parent_id) end
   end
 
   query :single, Page,
@@ -186,12 +192,13 @@ defmodule Brando.Pages do
     end
   end
 
-  query :list, PageFragment,
-    do: fn query ->
+  query :list, PageFragment do
+    fn query ->
       from q in query,
         where: is_nil(q.deleted_at),
         order_by: [asc: q.parent_key, asc: q.sequence, asc: q.language]
     end
+  end
 
   filters PageFragment do
     fn
