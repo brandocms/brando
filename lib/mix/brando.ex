@@ -46,14 +46,24 @@ defmodule Mix.Brando do
 
       target = Path.join(target_dir, target_file_path)
 
-      contents =
-        case format do
-          :text -> File.read!(source)
-          :eex -> EEx.eval_file(source, binding)
-          :eex_trim -> EEx.eval_file(source, binding, trim: true)
-        end
+      case format do
+        :keep ->
+          Mix.Generator.create_directory(target)
 
-      Mix.Generator.create_file(target, contents, force: true)
+        :copy ->
+          File.mkdir_p!(Path.dirname(target))
+          File.copy!(source, target)
+
+        _ ->
+          contents =
+            case format do
+              :text -> File.read!(source)
+              :eex -> EEx.eval_file(source, binding)
+              :eex_trim -> EEx.eval_file(source, binding, trim: true)
+            end
+
+          Mix.Generator.create_file(target, contents, force: true)
+      end
     end
   end
 
