@@ -11,7 +11,8 @@ export default defineConfig({
     sourcemap: true, // we want to debug our code in production
     rollupOptions: {
       input: {
-        main: "js/index.js"
+        main: "js/index.js",
+        critical: "js/critical.js"
       }
     },
     terserOptions: {

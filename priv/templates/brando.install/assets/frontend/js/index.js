@@ -40,8 +40,11 @@ const app = new Application({
   breakpointConfig: configureBreakpoints,
   faderOpts: {
     fadeIn: (callback) => {
-      document.body.classList.remove('unloaded')
-      callback()
+      gsap.to('.fader', { opacity: 0, duration: 0.5, onComplete: () => {
+        gsap.set('.fader', { display: 'none' })
+        document.body.classList.remove('unloaded')
+        callback()
+      }})
     }
   }
 })

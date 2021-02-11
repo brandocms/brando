@@ -7,8 +7,7 @@ export default {
    * Available container sections for Villain
    */
   sections: [
-    { label: 'Standard', value: 'standard', color: '#000' },
-    { label: 'Grønn', value: 'green', color: '#cfc' }
+    { label: 'Standard', value: 'standard', color: '#000', wrapper: '' }
   ],
   /**
    * If the Villain editor should only show modules as available blocks

@@ -1,12 +1,13 @@
 /** Critical CSS **/
-html.js body.unloaded {
+
+/* html.js body.unloaded {
   opacity: 0;
-}
+} */
 
 html.moonwalk {
-  &[data-moonwalk],
-  &[data-moonwalk-section],
-  &[data-moonwalk-run] {
+  [data-moonwalk],
+  [data-moonwalk-section],
+  [data-moonwalk-run] {
     opacity: 0;
   }
 }
@@ -21,3 +22,8 @@ html.moonwalk {
   z-index: 9998;
   display: none;
 }
+
+/* section.hero {
+  background-color: #000;
+  height: 100vh;
+} */
