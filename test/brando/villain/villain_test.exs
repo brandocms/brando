@@ -266,6 +266,7 @@ defmodule Brando.VillainTest do
       "type" => "container",
       "data" => %{
         "class" => "a-container-class",
+        "wrapper" => "",
         "blocks" => [
           %{
             "type" => "module",
@@ -292,6 +293,38 @@ defmodule Brando.VillainTest do
 
     assert page.html ==
              "<section b-section=\"a-container-class\">\n  -- this is some code Some text! --\n</section>\n"
+
+    data = %{
+      "type" => "container",
+      "data" => %{
+        "class" => "a-container-class",
+        "wrapper" => "<div>{{ content }}</div>",
+        "blocks" => [
+          %{
+            "type" => "module",
+            "data" => %{
+              "deleted_at" => nil,
+              "id" => tp1.id,
+              "multi" => false,
+              "refs" => [],
+              "sequence" => 0,
+              "vars" => %{
+                "testvar" => %{
+                  "label" => "Field name",
+                  "type" => "text",
+                  "value" => "Some text!"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+
+    {:ok, page2} = Brando.Pages.create_page(Factory.params_for(:page, %{data: [data]}), user)
+
+    assert page2.html ==
+             "<div>-- this is some code Some text! --</div>"
 
     tp2 =
       tp1
