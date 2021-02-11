@@ -1,7 +1,11 @@
 defmodule Brando.Router do
+  # script-src:
+  # img-src: https://www.google-analytics.com
+  # connect-src: https://www.google-analytics.com
+
   @default_extra_secure_headers [
     {"content-security-policy",
-     "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src * data:; media-src *"},
+     "default-src 'self'; connect-src *; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://www.google-analytics.com https://ssl.google-analytics.com; img-src * data:; media-src *"},
     {"referrer-policy", "strict-origin-when-cross-origin"},
     {"permissions-policy",
      "accelerometer=(), camera=(), fullscreen=(self), geolocation=(self), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"}
