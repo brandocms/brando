@@ -285,13 +285,14 @@
     gsap "3.6.0"
     lodash.defaultsdeep "^4.6.1"
 
-"@vitejs/plugin-legacy@^1.2.3":
-  version "1.2.3"
-  resolved "https://registry.yarnpkg.com/@vitejs/plugin-legacy/-/plugin-legacy-1.2.3.tgz#1007033b0a328e5c0d8d21683383dc40d8fed6a3"
-  integrity sha512-DOceNUiGkN/Iv3dFJGDwJMdIFv4N+5vDt96MdBFOFMlktt1fumOuNJvyCBE8TKc0qC0K5YSxUXpfKeKZhkkyLQ==
+"@vitejs/plugin-legacy@^1.3.0":
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/@vitejs/plugin-legacy/-/plugin-legacy-1.3.0.tgz#1b4f5d46e0cc3eb7d415f7aa9a9b655c2f593325"
+  integrity sha512-lNNNuFIZ3bTnAPlu/dvqi383+mpqVuoo0XpM4WtgxMQHNxK1rTk2liwlxxQk0/ivUJuvYo67YKq0GD1JkrQk5Q==
   dependencies:
     "@babel/standalone" "^7.12.12"
     core-js "^3.8.2"
+    magic-string "^0.25.7"
     regenerator-runtime "^0.13.7"
     systemjs "^6.8.3"
 
@@ -1158,6 +1159,13 @@ lru-cache@^6.0.0:
   integrity sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA==
   dependencies:
     yallist "^4.0.0"
+
+magic-string@^0.25.7:
+  version "0.25.7"
+  resolved "https://registry.yarnpkg.com/magic-string/-/magic-string-0.25.7.tgz#3f497d6fd34c669c6798dcb821f2ef31f5445051"
+  integrity sha512-4CrMT5DOHTDk4HYDlzmwu4FVCcIYI8gauveasrdCu2IKIFOJ3f0v/8MDGJCDL9oD2ppz/Av1b0Nj345H9M+XIA==
+  dependencies:
+    sourcemap-codec "^1.4.4"
 
 map-obj@^1.0.0:
   version "1.0.1"
@@ -2053,6 +2061,11 @@ source-map@^0.6.1:
   version "0.6.1"
   resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.6.1.tgz#74722af32e9614e9c287a8d0bbde48b5e2f1a263"
   integrity sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==
+
+sourcemap-codec@^1.4.4:
+  version "1.4.8"
+  resolved "https://registry.yarnpkg.com/sourcemap-codec/-/sourcemap-codec-1.4.8.tgz#ea804bd94857402e6992d05a38ef1ae35a9ab4c4"
+  integrity sha512-9NykojV5Uih4lgo5So5dtw+f0JgJX30KCNI8gwhz2J9A15wD0Ml6tjHKwf6fTSa6fAdVBdZeNOs9eJ71qCk8vA==
 
 spdx-correct@^3.0.0:
   version "3.1.1"
