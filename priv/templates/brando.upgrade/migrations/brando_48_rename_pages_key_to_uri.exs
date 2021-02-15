@@ -1,4 +1,4 @@
-defmodule Brando.Repo.Migrations.AddTemplateToPage do
+defmodule Brando.Repo.Migrations.RenamePagesKeyToUri do
   use Ecto.Migration
 
   def change do
