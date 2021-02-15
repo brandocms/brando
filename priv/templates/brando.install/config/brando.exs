@@ -1,6 +1,6 @@
 # Default generated Brando configuration
 
-import Mix.Config
+import Config
 
 config :<%= application_name %>, ecto_repos: [<%= application_module %>.Repo]
 
