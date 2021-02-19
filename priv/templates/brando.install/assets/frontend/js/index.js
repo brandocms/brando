@@ -17,7 +17,8 @@ import {
   Moonwalk,
   Popup,
   StackedBoxes,
-  FixedHeader
+  FixedHeader,
+  gsap
 } from '@univers-agency/jupiter'
 
 /**
@@ -34,7 +35,7 @@ import configureMobileMenu from './config/MOBILE_MENU'
 import configureMoonwalk from './config/MOONWALK'
 
 
-import '../css/app.pcss'
+import '../css/app.css'
 
 const app = new Application({
   breakpointConfig: configureBreakpoints,

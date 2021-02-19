@@ -1,11 +1,3 @@
-.v-module {
-  @space padding-y xl/2;
-
-  &:first-of-type {
-    @space! padding-top lg;
-  }
-
-  &:last-of-type {
-    @space! padding-bottom xl;
-  }
+[b-tpl] {
+  @space padding-top block;
 }
