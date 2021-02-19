@@ -32,6 +32,12 @@ defmodule Brando.Villain.Filters do
     |> Timex.format!(format, :strftime)
   end
 
+  def humanize(value, _) do
+    value
+    |> String.replace(["-", "_"], " ")
+    |> String.capitalize()
+  end
+
   @doc """
   Get key from image.
 
