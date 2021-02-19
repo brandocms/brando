@@ -43,7 +43,13 @@ defmodule Brando.Assets.Vite do
     end
 
     def read(_) do
-      File.read!(@vite_manifest) |> Jason.decode!()
+      case File.read(@vite_manifest) do
+        {:error, :enoent} ->
+          %{}
+
+        {:ok, content} ->
+          Jason.decode!(content)
+      end
     end
   end
 
