@@ -285,13 +285,14 @@
     gsap "3.6.0"
     lodash.defaultsdeep "^4.6.1"
 
-"@vitejs/plugin-legacy@^1.2.3":
-  version "1.2.3"
-  resolved "https://registry.yarnpkg.com/@vitejs/plugin-legacy/-/plugin-legacy-1.2.3.tgz#1007033b0a328e5c0d8d21683383dc40d8fed6a3"
-  integrity sha512-DOceNUiGkN/Iv3dFJGDwJMdIFv4N+5vDt96MdBFOFMlktt1fumOuNJvyCBE8TKc0qC0K5YSxUXpfKeKZhkkyLQ==
+"@vitejs/plugin-legacy@^1.3.1":
+  version "1.3.1"
+  resolved "https://registry.yarnpkg.com/@vitejs/plugin-legacy/-/plugin-legacy-1.3.1.tgz#e475213721aa7c5022314c4a6489f961a65e8d4e"
+  integrity sha512-oidELN6ckX+APLjo2vjtyKv3X0Xj3SRzYd6Bm6taInhdH/JA/zlNF9uIUNvc5fIf/vIp0haoIY+mQNInAlKRrw==
   dependencies:
     "@babel/standalone" "^7.12.12"
     core-js "^3.8.2"
+    magic-string "^0.25.7"
     regenerator-runtime "^0.13.7"
     systemjs "^6.8.3"
 
@@ -1158,6 +1159,13 @@ lru-cache@^6.0.0:
   integrity sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA==
   dependencies:
     yallist "^4.0.0"
+
+magic-string@^0.25.7:
+  version "0.25.7"
+  resolved "https://registry.yarnpkg.com/magic-string/-/magic-string-0.25.7.tgz#3f497d6fd34c669c6798dcb821f2ef31f5445051"
+  integrity sha512-4CrMT5DOHTDk4HYDlzmwu4FVCcIYI8gauveasrdCu2IKIFOJ3f0v/8MDGJCDL9oD2ppz/Av1b0Nj345H9M+XIA==
+  dependencies:
+    sourcemap-codec "^1.4.4"
 
 map-obj@^1.0.0:
   version "1.0.1"
@@ -2054,6 +2062,11 @@ source-map@^0.6.1:
   resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.6.1.tgz#74722af32e9614e9c287a8d0bbde48b5e2f1a263"
   integrity sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==
 
+sourcemap-codec@^1.4.4:
+  version "1.4.8"
+  resolved "https://registry.yarnpkg.com/sourcemap-codec/-/sourcemap-codec-1.4.8.tgz#ea804bd94857402e6992d05a38ef1ae35a9ab4c4"
+  integrity sha512-9NykojV5Uih4lgo5So5dtw+f0JgJX30KCNI8gwhz2J9A15wD0Ml6tjHKwf6fTSa6fAdVBdZeNOs9eJ71qCk8vA==
+
 spdx-correct@^3.0.0:
   version "3.1.1"
   resolved "https://registry.yarnpkg.com/spdx-correct/-/spdx-correct-3.1.1.tgz#dece81ac9c1e6713e5f7d1b6f17d468fa53d89a9"
@@ -2345,10 +2358,10 @@ vfile@^4.0.0:
     unist-util-stringify-position "^2.0.0"
     vfile-message "^2.0.0"
 
-vite@^2.0.0-beta.68:
-  version "2.0.0-beta.68"
-  resolved "https://registry.yarnpkg.com/vite/-/vite-2.0.0-beta.68.tgz#e59cab906a1aee24bd2921042e3c48b529cedbe3"
-  integrity sha512-0DyHSY1cOikTgdobkE05m+QGA1JnxFiKSy/DoWHQ6PWgQZ91ciQ9XuzcwoIPDfEcoTGujSCZouZkCzAVrr90DA==
+vite@^2.0.1:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/vite/-/vite-2.0.1.tgz#348fc5c0de510aa90bd01ecf87df210ce741b38e"
+  integrity sha512-x7ZfikjNs+6n4cdvwb9L5r5xBCdjmtmHFHaI4JVR3nAkJbMCK/dynfDWky8/NseZ9Ncz1jVxTQ/Bcf+n1ps1Ww==
   dependencies:
     esbuild "^0.8.34"
     postcss "^8.2.1"

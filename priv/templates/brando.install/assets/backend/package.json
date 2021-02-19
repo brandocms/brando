@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "brandojs": "file:.yalc/brandojs",
-    "core-js": "^3.6.5",
+    "core-js": "^3.9.0",
     "vue": "^2.6.12"
   },
   "devDependencies": {
@@ -25,13 +25,13 @@
     "@vue/cli-service": "^4.5.6",
     "@vue/eslint-config-standard": "^6.0.0",
     "babel-eslint": "^10.1.0",
-    "eslint": "^7.19.0",
+    "eslint": "^7.20.0",
     "eslint-plugin-graphql": "^4.0.0",
     "eslint-plugin-import": "^2.22.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^4.3.1",
     "eslint-plugin-standard": "^5.0.0",
-    "eslint-plugin-vue": "^7.3.0",
+    "eslint-plugin-vue": "^7.6.0",
     "graphql-tag": "^2.11.0",
     "vue-cli-plugin-apollo": "^0.22.2",
     "vue-cli-plugin-i18n": "^1.0.1",
