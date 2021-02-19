@@ -283,9 +283,13 @@ defmodule Brando.Villain do
 
     case Brando.repo().update(changeset) do
       {:ok, %Pages.PageFragment{} = page_fragment} ->
+        Brando.Cache.Query.evict({:ok, page_fragment})
+
         Pages.update_villains_referencing_fragment(page_fragment)
 
       {:ok, result} ->
+        Brando.Cache.Query.evict({:ok, result})
+
         {:ok, result}
     end
   end
