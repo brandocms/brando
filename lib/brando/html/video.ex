@@ -1,7 +1,9 @@
 defmodule Brando.HTML.Video do
   import Phoenix.HTML
+  alias Brando.Type.Video
 
   @type safe_string :: {:safe, [...]}
+  @type video :: Video.t()
 
   @doc """
   Returns a video tag with an overlay for lazyloading
@@ -13,8 +15,47 @@ defmodule Brando.HTML.Video do
       - `html` -> for instance, provide a rendered picture_tag
     - `poster` -> url to poster, i.e. on vimeo.
   """
-  @spec video_tag(binary, map()) :: safe_string
-  def video_tag(src, opts \\ %{}) do
+  @spec video_tag(binary | video, map()) :: safe_string
+  def video_tag(video, opts \\ %{})
+
+  def video_tag(
+        %Video{source: "vimeo", remote_id: remote_id, width: width, height: height},
+        _opts
+      ) do
+    ~E|
+      <iframe src="https://player.vimeo.com/video/<%= remote_id %>?dnt=1"
+              width="<%= width %>"
+              height="<%= height %>"
+              frameborder="0"
+              allow="autoplay; encrypted-media"
+              webkitallowfullscreen
+              mozallowfullscreen
+              allowfullscreen>
+      </iframe>
+    |
+  end
+
+  def video_tag(
+        %Video{source: "youtube", remote_id: remote_id, width: width, height: height},
+        opts
+      ) do
+    autoplay = (Map.get(opts, :autoplay, false) && 1) || 0
+    controls = (Map.get(opts, :controls, false) && 1) || 0
+    params = "autoplay=#{autoplay}&controls=#{controls}&showinfo=0&rel=0"
+    ~E|
+      <iframe src="https://www.youtube.com/embed/<%= remote_id %>?<%= params %>"
+              width="<%= width %>"
+              height="<%= height %>"
+              frameborder="0"
+              allow="autoplay; encrypted-media"
+              webkitallowfullscreen
+              mozallowfullscreen
+              allowfullscreen>
+      </iframe>
+    |
+  end
+
+  def video_tag(src, opts) do
     width = Map.get(opts, :width)
     height = Map.get(opts, :height)
     opacity = Map.get(opts, :opacity, 0)
