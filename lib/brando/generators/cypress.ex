@@ -67,6 +67,14 @@ defmodule Brando.Generators.Cypress do
              "cy.get('.today').click()"
            ]}
 
+        {k, :video} ->
+          {k,
+           [
+             "cy.fixture('video.mp4', 'base64').then(fileContent => {",
+             "  cy.get('##{singular}_#{k}_').upload({ fileContent, fileName: 'video.mp4', mimeType: 'video/mp4' })",
+             "})"
+           ]}
+
         {k, :image} ->
           {k,
            [

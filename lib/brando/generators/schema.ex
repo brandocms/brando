@@ -22,6 +22,7 @@ defmodule Brando.Generators.Schema do
       {binding_map, fields}
       |> maybe_add_gallery_fields()
       |> maybe_add_img_fields()
+      |> maybe_add_video_fields()
       |> maybe_add_file_fields()
       |> maybe_add_soft_delete()
 
@@ -35,6 +36,7 @@ defmodule Brando.Generators.Schema do
     fields =
       binding[:attrs]
       |> Keyword.drop(Keyword.values(binding[:img_fields]))
+      |> Keyword.drop(Keyword.values(binding[:video_fields]))
       |> Keyword.drop(Keyword.values(binding[:file_fields]))
       |> Keyword.drop(Keyword.values(binding[:villain_fields]))
       |> Keyword.drop(Keyword.values(binding[:gallery_fields]))
@@ -125,6 +127,13 @@ defmodule Brando.Generators.Schema do
   defp maybe_add_img_fields({%{img_fields: img_fields} = binding, fields}) do
     img_fields = Enum.map(img_fields, &elem(&1, 1))
     {binding, fields ++ img_fields}
+  end
+
+  defp maybe_add_video_fields({%{video_fields: []} = binding, fields}), do: {binding, fields}
+
+  defp maybe_add_video_fields({%{video_fields: video_fields} = binding, fields}) do
+    video_fields = Enum.map(video_fields, &elem(&1, 1))
+    {binding, fields ++ video_fields}
   end
 
   defp maybe_add_file_fields({%{file_fields: []} = binding, fields}), do: {binding, fields}

@@ -63,6 +63,7 @@ defmodule Mix.Tasks.Brando.Gen do
         status:status
         meta_description:text
         avatar:image
+        video:video
         data:villain
         publish_at:datetime    # utc
         image_series:gallery
@@ -81,6 +82,7 @@ defmodule Mix.Tasks.Brando.Gen do
     creator? = Mix.shell().yes?("\nAdd creator?")
     file_field? = :file in Keyword.values(attrs)
     image_field? = :image in Keyword.values(attrs)
+    video_field? = :video in Keyword.values(attrs)
     gallery? = :gallery in Keyword.values(attrs)
     status? = :status in Keyword.values(attrs)
     slug? = Keyword.has_key?(Keyword.values(attrs), :slug)
@@ -93,6 +95,11 @@ defmodule Mix.Tasks.Brando.Gen do
       attrs
       |> Enum.map(fn {k, v} -> {v, k} end)
       |> Enum.filter(fn {k, _} -> k == :image end)
+
+    video_fields =
+      attrs
+      |> Enum.map(fn {k, v} -> {v, k} end)
+      |> Enum.filter(fn {k, _} -> k == :video end)
 
     file_fields =
       attrs
@@ -144,6 +151,7 @@ defmodule Mix.Tasks.Brando.Gen do
           route: route,
           file_field: file_field?,
           image_field: image_field?,
+          video_field: video_field?,
           villain: villain?,
           gallery: gallery?,
           status: status?,
@@ -152,6 +160,7 @@ defmodule Mix.Tasks.Brando.Gen do
           soft_delete: soft_delete?,
           creator: creator?,
           img_fields: img_fields,
+          video_fields: video_fields,
           file_fields: file_fields,
           villain_fields: villain_fields,
           gallery_fields: gallery_fields,
@@ -288,6 +297,7 @@ defmodule Mix.Tasks.Brando.Gen do
   end
 
   def migration_type({k, :image}), do: {k, :jsonb}
+  def migration_type({k, :video}), do: {k, :jsonb}
   def migration_type({k, :file}), do: {k, :jsonb}
   def migration_type({k, :slug}), do: {k, :slug}
   def migration_type({k, :text}), do: {k, :text}
@@ -342,6 +352,7 @@ defmodule Mix.Tasks.Brando.Gen do
   defp value_to_type(:datetime), do: :utc_datetime
   defp value_to_type(:status), do: Brando.Type.Status
   defp value_to_type(:image), do: Brando.Type.Image
+  defp value_to_type(:video), do: Brando.Type.Video
   defp value_to_type(:file), do: Brando.Type.File
   defp value_to_type(:villain), do: :villain
   defp value_to_type(:gallery), do: :gallery

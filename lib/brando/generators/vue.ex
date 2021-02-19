@@ -109,6 +109,14 @@ defmodule Brando.Generators.Vue do
               class="avatar-sm img-border-lg" />
           </div>)}
 
+        {k, :video} ->
+          {k, ~s(<div class="col-2">
+            <img
+              v-if="entry.#{Recase.to_camel(k)}"
+              :src="entry.#{Recase.to_camel(k)}.thumbnailUrl"
+              class="avatar-sm img-border-lg" />
+          </div>)}
+
         {k, :villain} ->
           {k, ""}
 

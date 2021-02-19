@@ -35,18 +35,23 @@ defmodule Brando.Type.Video do
   @doc """
   Load
   """
-  def load(val) do
-    val = Poison.decode!(val, as: %Brando.Type.Video{})
-    val = if val == nil, do: %Brando.Type.Video{}, else: val
-    {:ok, val}
+  def load(val) when is_map(val) do
+    {:ok, Utils.map_to_struct(val, %__MODULE__{})}
+  end
+
+  def load(val) when is_binary(val) do
+    {:ok, Poison.decode!(val, as: %Brando.Type.Video{})}
   end
 
   @doc """
-  When dumping data to the database we expect a `list`, but check for
+  When dumping data to the database we expect a map, but check for
   other options as well.
   """
-  def dump(val) do
-    val = Jason.encode!(val)
+  def dump(val) when is_binary(val) do
+    {:ok, Poison.decode!(val, as: %Brando.Type.Video{})}
+  end
+
+  def dump(val) when is_map(val) do
     {:ok, val}
   end
 end

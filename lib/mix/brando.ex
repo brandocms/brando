@@ -22,6 +22,7 @@ defmodule Mix.Brando do
     :text,
     :time,
     :uuid,
+    :video,
     :villain
   ]
 
@@ -183,6 +184,9 @@ defmodule Mix.Brando do
         {k, []}
 
       {k, :image} ->
+        {k, nil}
+
+      {k, :video} ->
         {k, nil}
 
       {k, :status} ->

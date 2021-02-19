@@ -80,6 +80,9 @@ defmodule Brando.Generators.GraphQL do
         {k, :file} ->
           {k, ~s<field #{inspect(k)}, :file_type>}
 
+        {k, :video} ->
+          {k, ~s<field #{inspect(k)}, :video_type>}
+
         {k, :image} ->
           {k, ~s<field #{inspect(k)}, :image_type>}
 
@@ -148,6 +151,9 @@ defmodule Brando.Generators.GraphQL do
         {k, :image} ->
           {k, ~s<field #{inspect(k)}, :upload_or_image>}
 
+        {k, :video} ->
+          {k, ~s<field #{inspect(k)}, :video_type_params>}
+
         {k, :file} ->
           {k, ~s<field #{inspect(k)}, :upload>}
 
@@ -188,6 +194,10 @@ defmodule Brando.Generators.GraphQL do
         {k, :image} ->
           image_code = "#{Recase.to_camel(k)} {\n    ...imageType\n  }"
           {k, image_code}
+
+        {k, :video} ->
+          video_code = "#{Recase.to_camel(k)} {\n    ...videoType\n  }"
+          {k, video_code}
 
         {k, :villain} ->
           case k do
