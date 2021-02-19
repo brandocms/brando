@@ -11,6 +11,7 @@ defmodule Brando.Pages.Page do
   use Brando.Sequence.Schema
   use Brando.SoftDelete.Schema, obfuscated_fields: [:uri]
   use Brando.Villain.Schema
+  use Brando.Revisions.Schema
 
   alias Brando.JSONLD
 

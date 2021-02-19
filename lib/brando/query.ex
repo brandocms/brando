@@ -455,6 +455,11 @@ defmodule Brando.Query do
         with changeset <- unquote(module).changeset(%unquote(module){}, params, user),
              {:ok, entry} <- Brando.Query.insert(changeset) do
           Brando.Datasource.update_datasource(unquote(module), entry)
+
+          if {:__revisioned__, 0} in unquote(module).__info__(:functions) do
+            Brando.Revisions.create_revision(entry, user)
+          end
+
           unquote(block).(entry)
         else
           err -> err
@@ -507,6 +512,11 @@ defmodule Brando.Query do
              changeset <- unquote(module).changeset(entry, params, user),
              {:ok, entry} <- Brando.Query.update(changeset) do
           Brando.Datasource.update_datasource(unquote(module), entry)
+
+          if {:__revisioned__, 0} in unquote(module).__info__(:functions) do
+            Brando.Revisions.create_revision(entry, user)
+          end
+
           unquote(block).(entry)
         else
           err -> err

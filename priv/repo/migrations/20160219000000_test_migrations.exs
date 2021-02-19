@@ -234,6 +234,20 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :tag_id, references(:tags, on_delete: :nothing), null: false
       add :photo_id, references(:photos, on_delete: :nothing), null: false
     end
+
+    create table(:revisions, primary_key: false) do
+      add :active, :boolean, default: false
+      add :entry_id, :integer, null: false
+      add :entry_type, :string, null: false
+      add :encoded_entry, :binary, null: false
+      add :creator_id, references(:users_users, on_delete: :nilify_all)
+      add :metadata, :map, null: false
+      add :revision, :integer, null: false
+      add :protected, :boolean, default: false
+      timestamps()
+    end
+
+    create unique_index(:revisions, [:entry_type, :entry_id, :revision])
   end
 
   def down do
