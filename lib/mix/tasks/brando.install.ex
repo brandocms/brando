@@ -255,6 +255,7 @@ defmodule Mix.Tasks.Brando.Install do
 
     # Frontend src - CSS
     {:copy, "assets/frontend/css/app.css", "assets/frontend/css/app.css"},
+    {:copy, "assets/frontend/css/critical.css", "assets/frontend/css/critical.css"},
     {:copy, "assets/frontend/css/includes/animations.css",
      "assets/frontend/css/includes/animations.css"},
     {:copy, "assets/frontend/css/includes/arrows.css", "assets/frontend/css/includes/arrows.css"},
