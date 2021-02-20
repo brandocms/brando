@@ -19,11 +19,11 @@ defmodule Brando.Schema do
   end
 
   @doc """
-  Imports all brando mutations
+  Imports all Brando mutations
   """
   defmacro import_brando_mutations do
     quote do
-      # brando mutations
+      # Brando mutations
       import_fields :image_mutations
       import_fields :page_mutations
       import_fields :navigation_mutations
@@ -40,13 +40,14 @@ defmodule Brando.Schema do
   """
   defmacro import_brando_queries do
     quote do
-      # brando queries
+      # Brando queries
       import_fields :image_queries
       import_fields :page_queries
       import_fields :navigation_queries
       import_fields :page_fragment_queries
       import_fields :user_queries
       import_fields :identity_queries
+      import_fields :revision_queries
       import_fields :seo_queries
       import_fields :global_queries
     end

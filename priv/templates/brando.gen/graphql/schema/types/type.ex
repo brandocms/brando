@@ -23,6 +23,11 @@ defmodule <%= app_module %>.Schema.Types.<%= alias %> do
     # field :featured, :boolean
   end
 
+  @desc "Matching options for <%= singular %>"
+  input_object :<%= singular %>_matches do
+    field :id, :id
+  end
+
   object :<%= singular %>_queries do
     @desc "Get all <%= plural %>"
     field :<%= plural %>, type: list_of(:<%= singular %>) do
@@ -37,7 +42,9 @@ defmodule <%= app_module %>.Schema.Types.<%= alias %> do
 
     @desc "Get <%= singular %>"
     field :<%= singular %>, type: :<%= singular %> do
-      arg :<%= singular %>_id, non_null(:id)
+      arg :matches, :<%= singular %>_matches
+      arg :revision, :id
+      arg :status, :string, default_value: "all"
       resolve &<%= app_module %>.<%= domain %>.<%= alias %>Resolver.get/2
     end
   end

@@ -168,6 +168,24 @@ defmodule Brando.QueryTest do
       {:ok, posts} = __MODULE__.Context.list_pages(%{cache: true})
       assert Enum.map(posts, & &1.title) == [p1.title, p2c.title]
     end
+
+    test "query :single revision" do
+      usr = Factory.insert(:random_user)
+
+      {:ok, p1} = Brando.Pages.create_page(Factory.params_for(:page, title: "Title 1"), usr)
+      {:ok, _p1a} = Brando.Pages.update_page(p1.id, %{title: "Title 2"}, usr)
+      {:ok, _p1b} = Brando.Pages.update_page(p1.id, %{title: "Title 3"}, usr)
+
+      {:ok, p2} = Brando.Pages.get_page(%{matches: %{id: p1.id}, revision: 0})
+      assert p2.title == "Title 1"
+      {:ok, p2} = Brando.Pages.get_page(%{matches: %{id: p1.id}})
+      assert p2.title == "Title 3"
+
+      {:ok, p2} = Brando.Pages.get_page(%{matches: %{id: p1.id}, revision: 1})
+      assert p2.title == "Title 2"
+      {:ok, p2} = Brando.Pages.get_page(%{matches: %{id: p1.id}, revision: 2})
+      assert p2.title == "Title 3"
+    end
   end
 
   describe "mutations" do
