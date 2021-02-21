@@ -32,13 +32,5 @@ defmodule Brando.Schema.Types.Revision do
       arg :filter, :revision_filter
       resolve &Brando.Revisions.RevisionResolver.all/2
     end
-
-    @desc "Get revision"
-    field :revision, type: :revision do
-      arg :entry_type, non_null(:string)
-      arg :entry_id, non_null(:id)
-      arg :revision, non_null(:id)
-      resolve &Brando.Revisions.RevisionResolver.find/2
-    end
   end
 end
