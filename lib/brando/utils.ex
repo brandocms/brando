@@ -718,4 +718,12 @@ defmodule Brando.Utils do
     |> Enum.join()
     |> String.to_atom()
   end
+
+  def hmac_base64_encode(term) do
+    key = Brando.endpoint().config(:secret_key_base)
+
+    :sha256
+    |> :crypto.hmac(key, Jason.encode!(term))
+    |> Base.encode64()
+  end
 end
