@@ -13,10 +13,10 @@ defmodule <%= app_module %>.<%= domain %>.<%= alias %>Resolver do
   end
 
   @doc """
-  Get <%= singular %> by id
+  Get <%= singular %> by args
   """
-  def get(%{<%= singular %>_id: <%= singular %>_id}, %{context: %{current_user: _}}) do
-    <%= domain %>.get_<%= singular %>(<%= singular %>_id)
+  def get(args, _) do
+    <%= domain %>.get_<%= singular %>(args)
   end
 
   @doc """

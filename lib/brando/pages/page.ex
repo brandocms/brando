@@ -30,9 +30,11 @@ defmodule Brando.Pages.Page do
     css_classes
     creator_id
     parent_id
+    meta_title
     meta_description
     meta_image
     sequence
+    properties
     inserted_at
     updated_at
     deleted_at

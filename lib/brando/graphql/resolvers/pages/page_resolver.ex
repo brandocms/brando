@@ -9,8 +9,8 @@ defmodule Brando.Pages.PageResolver do
   @doc """
   Find page
   """
-  def find(%{page_id: page_id}, %{context: %{current_user: _current_user}}) do
-    Pages.get_page(%{matches: %{id: page_id}})
+  def find(args, %{context: %{current_user: _current_user}}) do
+    Pages.get_page(args)
   end
 
   @doc """

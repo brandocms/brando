@@ -32,7 +32,8 @@ export default {
   },
 
   methods: {
-    async save () {
+    async save (setLoader) {
+      setLoader(true)
       const <%= vue_singular %>Params = this.$utils.stripParams(this.<%= vue_singular %>, ['__typename', 'id', 'insertedAt', 'updatedAt', 'deletedAt'])
       <%= if img_fields != [] do %>this.$utils.validateImageParams(<%= vue_singular %>Params, <%= img_fields |> Enum.map(&(to_charlist(Recase.to_camel(to_string(elem(&1, 1)))))) |> inspect %>)<% end %>
       <%= if file_fields != [] do %>this.$utils.validateFileParams(<%= vue_singular %>Params, <%= file_fields |> Enum.map(&(to_charlist(Recase.to_camel(to_string(elem(&1, 1)))))) |> inspect %>)<% end %>
@@ -42,9 +43,7 @@ export default {
         await this.$apollo.mutate({
           mutation: gql`
             mutation Create<%= Recase.to_pascal(vue_singular) %>($<%= vue_singular %>Params: <%= Recase.to_pascal(vue_singular) %>Params) {
-              create<%= Recase.to_pascal(vue_singular) %>(
-                <%= vue_singular %>Params: $<%= vue_singular %>Params
-              ) {
+              create<%= Recase.to_pascal(vue_singular) %>(<%= vue_singular %>Params: $<%= vue_singular %>Params) {
                 id
               }
             }
@@ -54,9 +53,11 @@ export default {
           }
         })
 
+        setLoader(false)
         this.$toast.success({ message: this.$t('<%= vue_plural %>.created') })
         this.$router.push({ name: '<%= vue_plural %>' })
       } catch (err) {
+        setLoader(false)
         this.$utils.showError(err)
       }
     }
