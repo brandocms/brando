@@ -8,6 +8,7 @@ defmodule Brando.Schema.Types do
   import_types Brando.Schema.Types.Navigation
   import_types Brando.Schema.Types.Page
   import_types Brando.Schema.Types.PageFragment
+  import_types Brando.Schema.Types.Revision
   import_types Brando.Schema.Types.Scalar
   import_types Brando.Schema.Types.SEO
   import_types Brando.Schema.Types.User

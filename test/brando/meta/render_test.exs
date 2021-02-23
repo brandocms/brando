@@ -1,5 +1,5 @@
 defmodule Brando.MetaRenderTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
   use Brando.ConnCase
   import Phoenix.HTML
 
@@ -68,7 +68,7 @@ defmodule Brando.MetaRenderTest do
              "<meta content=\"value2\" name=\"key2\"><meta content=\"value1\" name=\"key1\"><meta content=\"https://facebook.com/test\" property=\"og:see_also\"><meta content=\"https://instagram.com/test\" property=\"og:see_also\"><meta content=\"@ Our description\" name=\"description\"><meta content=\"Generated.\" name=\"generated_title\"><meta content=\"@ Our title\" name=\"mutated_title\"><meta content=\"@ Our description\" property=\"og:description\"><meta content=\"MyApp\" property=\"og:site_name\"><meta content=\"Fallback meta title\" property=\"og:title\"><meta content=\"website\" property=\"og:type\"><meta content=\"http://localhost\" property=\"og:url\"><meta content=\"Our title\" name=\"title\">"
 
     mock_conn_with_image =
-      mock_conn |> Brando.Plug.HTML.put_meta("og:image", "https://test.com/my_image.jpg")
+      Brando.Plug.HTML.put_meta(mock_conn, "og:image", "https://test.com/my_image.jpg")
 
     rendered_meta = Brando.Meta.HTML.render_meta(mock_conn_with_image)
 

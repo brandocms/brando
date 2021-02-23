@@ -290,6 +290,18 @@ defmodule Brando.Utils do
     struct(target_struct, new_map)
   end
 
+  def camel_case_map(%Date{} = val), do: val
+  def camel_case_map(%DateTime{} = val), do: val
+  def camel_case_map(%NaiveDateTime{} = val), do: val
+
+  def camel_case_map(map) when is_map(map) do
+    for {key, val} <- map, into: %{} do
+      {Inflex.camelize(key, :lower), camel_case_map(val)}
+    end
+  end
+
+  def camel_case_map(val), do: val
+
   @doc """
   Returns current date & time
   """
