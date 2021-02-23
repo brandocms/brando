@@ -2,7 +2,6 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   alias Brando.Images
   alias Brando.Navigation
   alias Brando.Pages
-  alias Brando.Revisions
   alias Brando.Villain
 
   @keys [
@@ -42,7 +41,6 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "page_fragment:rerender",
     "page_fragment:duplicate",
     "page_fragment:rerender_all",
-    "revision:select",
     "sitemap:exists",
     "sitemap:generate",
     "villain:list_modules",
@@ -254,13 +252,6 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
 
   def do_handle_in("page_fragment:rerender_all", _, socket) do
     Pages.rerender_fragments()
-    {:reply, {:ok, %{code: 200}}, socket}
-  end
-
-  def do_handle_in("revision:select", params, socket) do
-    {:ok, {_revision, {_version, _decoded_entry}}} =
-      Revisions.get_revision(params["entryType"], params["entryId"], params["revision"])
-
     {:reply, {:ok, %{code: 200}}, socket}
   end
 

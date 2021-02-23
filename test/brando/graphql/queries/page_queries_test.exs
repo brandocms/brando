@@ -96,21 +96,21 @@ defmodule Brando.GraphQL.Queries.PageQueriesTest do
              {:ok, %{data: %{"pages" => [%{"title" => "test 1"}]}}}
   end
 
-  @single_page_query """
-  query page($matches: PageMatches) {
-    page(matches: $matches) {
+  @page_id_query """
+  query page($pageId: ID) {
+    page(pageId: $pageId) {
       id
       title
     }
   }
   """
-  test "page(args)", %{opts: opts} do
+  test "page(id)", %{opts: opts} do
     p1 = Factory.insert(:page)
 
     assert Absinthe.run(
-             @single_page_query,
+             @page_id_query,
              BrandoIntegration.TestSchema,
-             opts ++ [variables: %{"matches" => %{"id" => p1.id}}]
+             opts ++ [variables: %{"pageId" => p1.id}]
            ) ==
              {:ok, %{data: %{"page" => %{"id" => to_string(p1.id), "title" => "Title"}}}}
   end

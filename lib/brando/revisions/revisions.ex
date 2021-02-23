@@ -1,49 +1,6 @@
 defmodule Brando.Revisions do
-  @moduledoc """
-
-  **NOTE**: if you use revisions on a schema that has a relation you are
-  preloading i.e:
-
-      `mutation :update, {Project, preload: [:related_projects]}`
-
-  You must pass `use_parent: true` to the field's dataloader to prevent
-  dataloader loading the relation from the original entry, as opposed
-  to leaving it from the revision:
-
-      ```
-      field :related_projects, list_of(:project),
-          resolve: dataloader(MyApp.Projects, use_parent: true)
-      ```
-  """
-
   alias Brando.Revisions.Revision
   import Ecto.Query
-  use Brando.Query
-
-  query :list, Revision do
-    fn query -> from(q in query) end
-  end
-
-  filters Revision do
-    fn
-      {:entry_id, entry_id}, query ->
-        from q in query, where: q.entry_id == ^entry_id
-
-      {:entry_type, entry_type}, query when is_binary(entry_type) ->
-        entry_type = Module.concat([entry_type]) |> to_string()
-        from q in query, where: q.entry_type == ^entry_type
-
-      {:entry_type, entry_type}, query when is_atom(entry_type) ->
-        entry_type = to_string(entry_type)
-        from q in query, where: q.entry_type == ^entry_type
-
-      {:revision, revision}, query ->
-        from q in query, where: q.revision == ^revision
-
-      {:active, active}, query ->
-        from q in query, where: q.active == ^active
-    end
-  end
 
   def create_revision(%{__struct__: entry_type, id: entry_id} = entry, user) do
     user_id = if user == :system, do: nil, else: user.id
@@ -149,10 +106,6 @@ defmodule Brando.Revisions do
   end
 
   def get_revision(%{__struct__: entry_type, id: entry_id}, revision_number) do
-    get_revision(entry_type, entry_id, revision_number)
-  end
-
-  def get_revision(entry_type, entry_id, revision_number) do
     entry_type_binary = to_string(entry_type)
 
     query =

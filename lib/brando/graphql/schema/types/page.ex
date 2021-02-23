@@ -100,11 +100,6 @@ defmodule Brando.Schema.Types.Page do
     field :parents, :boolean
   end
 
-  @desc "Matching options for page"
-  input_object :page_matches do
-    field :id, :id
-  end
-
   @desc "Filtering options for module"
   input_object :module_filter do
     field :name, :string
@@ -124,9 +119,7 @@ defmodule Brando.Schema.Types.Page do
 
     @desc "Get page"
     field :page, type: :page do
-      arg :matches, :page_matches
-      arg :revision, :id
-      arg :status, :string, default_value: "all"
+      arg :page_id, non_null(:id)
       resolve &Brando.Pages.PageResolver.find/2
     end
 
