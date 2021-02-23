@@ -163,12 +163,12 @@ defmodule Mix.Tasks.Brando.Gen.Test do
 
       assert_file("assets/backend/src/gql/games/PIRATE_QUERY.graphql", fn file ->
         assert file =~
-                 "#import \"./PIRATE_FRAGMENT.graphql\"\nquery Pirate($matches: PirateMatches) {\n  pirate(matches: $matches, status: $status, revision: $revision) {\n    ...pirate\n  }\n}\n"
+                 "#import \"./PIRATE_FRAGMENT.graphql\"\nquery Pirate($matches: PirateMatches, $status: String, $revision: ID) {\n  pirate(matches: $matches, status: $status, revision: $revision) {\n    ...pirate\n  }\n}\n"
       end)
 
       assert_file("assets/backend/src/gql/games/CAPTAIN_QUERY.graphql", fn file ->
         assert file =~
-                 "#import \"./CAPTAIN_FRAGMENT.graphql\"\nquery Captain($matches: CaptainMatches) {\n  captain(matches: $matches, status: $status, revision: $revision) {\n    ...captain\n  }\n}\n"
+                 "#import \"./CAPTAIN_FRAGMENT.graphql\"\nquery Captain($matches: CaptainMatches, $status: String, $revision: ID) {\n  captain(matches: $matches, status: $status, revision: $revision) {\n    ...captain\n  }\n}\n"
       end)
 
       assert_file("assets/backend/src/gql/games/CAPTAINS_QUERY.graphql", fn file ->
