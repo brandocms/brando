@@ -236,70 +236,42 @@ defmodule Brando.Query do
 
         case try_cache({:single, unquote(source), args}, cache_args) do
           {:miss, cache_key, ttl} ->
-            args_without_cache = Map.delete(args, :cache)
-
-            reduced_query =
-              run_single_query_reducer(
-                __MODULE__,
-                args_without_cache,
-                unquote(module),
-                unquote(publish_at?)
-              )
-
-            case reduced_query do
-              {:ok, entry} ->
-                Brando.Cache.Query.put(cache_key, entry, ttl, entry.id)
-                {:ok, entry}
-
-              {:error, {:revision, :not_found}} ->
+            __MODULE__
+            |> run_single_query_reducer(
+              Map.delete(args, :cache),
+              unquote(module),
+              unquote(publish_at?)
+            )
+            |> unquote(block).()
+            |> limit(1)
+            |> Brando.repo().one()
+            |> case do
+              nil ->
                 {:error, {unquote(atom), :not_found}}
 
-              query ->
-                query
-                |> unquote(block).()
-                |> limit(1)
-                |> Brando.repo().one()
-                |> case do
-                  nil ->
-                    {:error, {unquote(atom), :not_found}}
-
-                  result ->
-                    Brando.Cache.Query.put(cache_key, result, ttl, result.id)
-                    {:ok, result}
-                end
+              result ->
+                Brando.Cache.Query.put(cache_key, result, ttl, result.id)
+                {:ok, result}
             end
 
           {:hit, result} ->
             {:ok, result}
 
           :no_cache ->
-            args_without_cache = Map.delete(args, :cache)
-
-            reduced_query =
-              run_single_query_reducer(
-                __MODULE__,
-                args_without_cache,
+            result =
+              __MODULE__
+              |> run_single_query_reducer(
+                Map.delete(args, :cache),
                 unquote(module),
                 unquote(publish_at?)
               )
-
-            case reduced_query do
-              {:ok, entry} ->
-                {:ok, entry}
-
-              {:error, {:revision, :not_found}} ->
-                {:error, {unquote(atom), :not_found}}
-
-              query ->
-                query
-                |> unquote(block).()
-                |> limit(1)
-                |> Brando.repo().one()
-                |> case do
-                  nil -> {:error, {unquote(atom), :not_found}}
-                  result -> {:ok, result}
-                end
-            end
+              |> unquote(block).()
+              |> limit(1)
+              |> Brando.repo().one()
+              |> case do
+                nil -> {:error, {unquote(atom), :not_found}}
+                result -> {:ok, result}
+              end
         end
       end
 
@@ -464,18 +436,7 @@ defmodule Brando.Query do
       {:status, status}, q -> with_status(q, status, publish_at?)
       {:preload, preload}, q -> with_preload(q, preload)
       {:matches, match}, q -> context.with_match(q, module, match)
-      {:revision, revision}, _ -> get_revision(module, args, revision)
     end)
-  end
-
-  defp get_revision(module, %{matches: %{id: id}}, revision) do
-    case Brando.Revisions.get_revision(module, id, revision) do
-      :error ->
-        {:error, {:revision, :not_found}}
-
-      {:ok, {_, {_, revisioned_entry}}} ->
-        {:ok, revisioned_entry}
-    end
   end
 
   defp mutation_create(module, block \\ nil) do

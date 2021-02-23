@@ -33,15 +33,6 @@ export default {
     }
   },
 
-  data () {
-    return {
-      // ...
-      queryVars: {
-        matches: { id: this.<%= vue_singular %>Id }
-      }
-    }
-  },
-
   methods: {
     async save () {
       const <%= vue_singular %>Params = this.$utils.stripParams(
@@ -97,7 +88,9 @@ export default {
       query: GET_<%= String.upcase(singular) %>,
       fetchPolicy: 'no-cache',
       variables () {
-        return this.queryVars
+        return {
+          <%= vue_singular %>Id: this.<%= vue_singular %>Id
+        }
       },
 
       skip () {
