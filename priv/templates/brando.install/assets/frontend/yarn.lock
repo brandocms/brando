@@ -261,16 +261,16 @@
   resolved "https://registry.yarnpkg.com/@types/unist/-/unist-2.0.3.tgz#9c088679876f374eb5983f150d4787aa6fb32d7e"
   integrity sha512-FvUupuM3rlRsRtCN+fDudtmytGO6iHJuuRKS1Ss0pG5z8oX0diNEw94UEL7hgDbpN94rgaK5R7sWm6RrSkZuAQ==
 
-"@univers-agency/europacss@^0.3.0":
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/@univers-agency/europacss/-/europacss-0.3.0.tgz#cbf5a7a767c35b918a6c4eb61b6b588af2ea6b37"
-  integrity sha512-tfL4PuGfJycLIWNAD15HnTh6aEh6zAB8xDjCSC3TljvZkFKCCxUJa8NQX2QbeBZBthcrsrH6oAyvV7BWYPpyBg==
+"@univers-agency/europacss@^0.5.0":
+  version "0.5.0"
+  resolved "https://registry.yarnpkg.com/@univers-agency/europacss/-/europacss-0.5.0.tgz#52700b07279fe4e32d71f48050c0c703191306a7"
+  integrity sha512-0nZhmtlbjcja20MOHpDgdmZUwKpyhR3hn9J+5TJq8S0lRHjFbmN8HNeVQ6yBTZc6mFmOu/i6rvzVk2E2TnMtXg==
   dependencies:
     lodash "^4.17.15"
     normalize.css "^8.0.1"
     postcss "^7.0.30"
     postcss-extend-rule "^3.0.0"
-    postcss-functions twined/postcss-functions
+    postcss-functions "github:twined/postcss-functions"
     postcss-nested "^4.2.1"
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.7"
@@ -779,7 +779,7 @@ glob-parent@^5.1.0:
   dependencies:
     is-glob "^4.0.1"
 
-glob@^7.1.2, glob@^7.1.3:
+glob@^7.1.3, glob@^7.1.6:
   version "7.1.6"
   resolved "https://registry.yarnpkg.com/glob/-/glob-7.1.6.tgz#141f33b81a7c2492e125594307480c46679278a6"
   integrity sha512-LwaxwyZ72Lk7vZINtNNrywX0ZuLyStrdDtabefZKAY5ZGJhVtgdznluResxNmPitE0SAO+O26sWTHeKSI2wMBA==
@@ -1552,14 +1552,15 @@ postcss-font-variant@^4.0.0:
   dependencies:
     postcss "^7.0.2"
 
-postcss-functions@twined/postcss-functions:
+"postcss-functions@github:twined/postcss-functions":
   version "4.0.0"
+  uid "7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   dependencies:
-    glob "^7.1.2"
+    glob "^7.1.6"
     object-assign "^4.1.1"
-    postcss "^7.0.17"
-    postcss-value-parser "^4.0.1"
+    postcss "^7.0.32"
+    postcss-value-parser "^4.1.0"
 
 postcss-gap-properties@^2.0.0:
   version "2.0.0"
@@ -1829,7 +1830,7 @@ postcss-value-parser@^3.3.0:
   resolved "https://registry.yarnpkg.com/postcss-value-parser/-/postcss-value-parser-3.3.1.tgz#9ff822547e2893213cf1c30efa51ac5fd1ba8281"
   integrity sha512-pISE66AbVkp4fDQ7VHBwRNXzAAKJjw4Vw7nWI/+Q3vuly7SNfgYXvm6i5IgFylHGK5sP/xHAbB7N49OS4gWNyQ==
 
-postcss-value-parser@^4.0.0, postcss-value-parser@^4.0.1, postcss-value-parser@^4.1.0:
+postcss-value-parser@^4.0.0, postcss-value-parser@^4.1.0:
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/postcss-value-parser/-/postcss-value-parser-4.1.0.tgz#443f6a20ced6481a2bda4fa8532a6e55d789a2cb"
   integrity sha512-97DXOFbQJhk71ne5/Mt6cOu6yxsSfM0QGQyl0L25Gca4yGWEGJaig7l7gbCX623VqTBNGLRLaVUCnNkcedlRSQ==
@@ -1852,16 +1853,7 @@ postcss@^7.0.0, postcss@^7.0.14, postcss@^7.0.17, postcss@^7.0.2, postcss@^7.0.2
     source-map "^0.6.1"
     supports-color "^6.1.0"
 
-postcss@^8.2.1:
-  version "8.2.4"
-  resolved "https://registry.yarnpkg.com/postcss/-/postcss-8.2.4.tgz#20a98a39cf303d15129c2865a9ec37eda0031d04"
-  integrity sha512-kRFftRoExRVXZlwUuay9iC824qmXPcQQVzAjbCCgjpXnkdMCJYBu2gTwAaFBzv8ewND6O8xFb3aELmEkh9zTzg==
-  dependencies:
-    colorette "^1.2.1"
-    nanoid "^3.1.20"
-    source-map "^0.6.1"
-
-postcss@^8.2.6:
+postcss@^8.2.1, postcss@^8.2.6:
   version "8.2.6"
   resolved "https://registry.yarnpkg.com/postcss/-/postcss-8.2.6.tgz#5d69a974543b45f87e464bc4c3e392a97d6be9fe"
   integrity sha512-xpB8qYxgPuly166AGlpRjUdEYtmOWx2iCwGmrv4vqZL9YPVviDVPZPRXxnXr6xPZOdxQ9lp3ZBFCRgWJ7LE3Sg==
