@@ -722,8 +722,8 @@ defmodule Brando.Utils do
   def hmac_base64_encode(term) do
     key = Brando.endpoint().config(:secret_key_base)
 
-    :sha256
-    |> :crypto.hmac(key, Jason.encode!(term))
+    :hmac
+    |> :crypto.mac(:sha256, key, Jason.encode!(term))
     |> Base.encode64()
   end
 end
