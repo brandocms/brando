@@ -98,7 +98,8 @@ RUN --mount=type=cache,target=~/.yarn,sharing=locked \
 COPY assets/frontend/ ./
 
 RUN yarn build
-RUN yarn move_srcmaps
+RUN mkdir -p ../../priv/static/assets/__srcmaps && \
+      mv ../../priv/static/assets/*.map ../../priv/static/assets/__srcmaps/
 
 
 # -----------------------------------
