@@ -52,6 +52,10 @@ defmodule Brando.Sites do
     end
   end
 
+  def get_identity(key) do
+    Cache.Identity.get(key)
+  end
+
   @doc """
   Create new identity
   """
