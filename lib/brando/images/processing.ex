@@ -5,21 +5,20 @@ defmodule Brando.Images.Processing do
   alias Brando.ImageSeries
   alias Brando.Images
   alias Brando.Images.Operations
-  alias Brando.Images.Utils
   alias Brando.Progress
   alias Brando.Type
   alias Brando.Upload
   alias Brando.Users.User
   alias Ecto.Changeset
 
-  @type id :: binary | integer
-  @type user :: User.t() | :system
   @type changeset :: Changeset.t()
+  @type id :: binary | integer
   @type image_schema :: Image.t()
   @type image_series_schema :: ImageSeries.t()
   @type image_type_struct :: Type.Image.t()
   @type image_kind :: :image | :image_series | :image_field
   @type upload :: Upload.t()
+  @type user :: User.t() | :system
 
   @default_focal %{x: 50, y: 50}
 
@@ -38,15 +37,18 @@ defmodule Brando.Images.Processing do
     new_path = Path.join([upload_path, filename])
 
     new_path
-    |> Utils.media_path()
+    |> Images.Utils.media_path()
     |> Fastimage.size()
     |> case do
       {:ok, %{width: width, height: height}} ->
+        dominant_color = Images.Operations.Info.get_dominant_color(new_path)
+
         {:ok,
          %Type.Image{
            path: new_path,
            width: width,
            height: height,
+           dominant_color: dominant_color,
            alt: Map.get(extra_params, :alt),
            title: Map.get(extra_params, :title),
            focal: Map.get(extra_params, :focal, @default_focal)
@@ -64,7 +66,7 @@ defmodule Brando.Images.Processing do
   @spec recreate_sizes_for_image(image_schema, user) :: {:ok, image_schema} | {:error, changeset}
   def recreate_sizes_for_image(img_schema, user \\ :system) do
     {:ok, img_cfg} = Images.get_series_config(img_schema.image_series_id)
-    Utils.delete_sized_images(img_schema.image)
+    Images.Utils.delete_sized_images(img_schema.image)
 
     with {:ok, operations} <- Operations.create(img_schema.image, img_cfg, img_schema.id, user),
          {:ok, [result]} <- Operations.perform(operations, user) do
@@ -101,7 +103,7 @@ defmodule Brando.Images.Processing do
 
     # check if the paths have changed. if so, reload series
     {:ok, image_series} =
-      case Utils.check_image_paths(Image, image_series) do
+      case Images.Utils.check_image_paths(Image, image_series) do
         :changed -> Images.get_image_series(opts)
         :unchanged -> {:ok, image_series}
       end
@@ -151,7 +153,7 @@ defmodule Brando.Images.Processing do
         img_field = Map.get(row, field_name)
 
         if img_field do
-          Utils.delete_sized_images(img_field)
+          Images.Utils.delete_sized_images(img_field)
 
           {:ok, operations} =
             Operations.create(
@@ -192,7 +194,7 @@ defmodule Brando.Images.Processing do
         ) :: {:ok, changeset} | {:error, changeset}
   def recreate_sizes_for_image_field_record(changeset, field_name, user \\ :system) do
     image_struct = Changeset.get_field(changeset, field_name)
-    Utils.delete_sized_images(image_struct)
+    Images.Utils.delete_sized_images(image_struct)
 
     schema = changeset.data.__struct__
     {:ok, cfg} = schema.get_image_cfg(field_name)

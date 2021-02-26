@@ -4,6 +4,7 @@ defmodule Brando.Type.Image do
   """
 
   alias Brando.Images.Focal
+  alias Brando.Utils
 
   @behaviour Ecto.Type
 
@@ -17,7 +18,8 @@ defmodule Brando.Type.Image do
           height: non_neg_integer | nil,
           focal: Focal.t(),
           cdn: boolean,
-          webp: boolean
+          webp: boolean,
+          dominant_color: binary | nil
         }
 
   @derive {Jason.Encoder,
@@ -32,7 +34,8 @@ defmodule Brando.Type.Image do
             height: nil,
             focal: %Focal{x: 50, y: 50},
             cdn: false,
-            webp: false
+            webp: false,
+            dominant_color: nil
 
   @doc """
   Returns the internal type representation of our image type for pg
@@ -45,14 +48,14 @@ defmodule Brando.Type.Image do
   """
   @impl true
   def cast(val) when is_binary(val) do
-    {:ok, Poison.decode!(val, as: %Brando.Type.Image{})}
+    {:ok, Poison.decode!(val, as: %__MODULE__{})}
   end
 
   def cast(%{file: %Plug.Upload{}} = upload) do
     {:ok, {:upload, upload}}
   end
 
-  def cast(%Brando.Type.Image{} = image) do
+  def cast(%__MODULE__{} = image) do
     {:ok, image}
   end
 
@@ -69,16 +72,16 @@ defmodule Brando.Type.Image do
   Load
   """
   @impl true
-  def load(%Brando.Type.Image{} = val) when is_map(val), do: {:ok, val}
+  def load(%__MODULE__{} = val) when is_map(val), do: {:ok, val}
 
   def load(val) do
-    type_struct = Brando.Utils.stringy_struct(__MODULE__, val)
+    type_struct = Utils.stringy_struct(__MODULE__, val)
 
     {:ok,
      put_in(
        type_struct,
        [Access.key(:focal)],
-       Brando.Utils.stringy_struct(Brando.Images.Focal, type_struct.focal)
+       Utils.stringy_struct(Focal, type_struct.focal)
      )}
   end
 
