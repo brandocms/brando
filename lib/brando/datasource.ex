@@ -263,45 +263,58 @@ defmodule Brando.Datasource do
   a module containing a datasource matching schema.
   """
   def list_ids_with_datasource(schema, datasource, data_field \\ :data) do
-    q1 = """
+    query = """
     SELECT
-      id
-    FROM
-      (SELECT
-        id,
-        jsonb_array_elements(#{data_field}::jsonb) AS root_blocks,
-        jsonb_array_elements(jsonb_array_elements(#{data_field}::jsonb)->'data'->'refs') as module_refs
+        id
       FROM
-        #{schema.__schema__(:source)}) root_q
-    WHERE
-      root_blocks->>'type' = 'module'
-    AND
-      module_refs->'data'->>'type' = 'datasource'
-    AND
-      module_refs->'data'->'data'->>'module' = '#{datasource}';
-    """
-
-    {:ok, %{rows: r1}} = Ecto.Adapters.SQL.query(Brando.repo(), q1, [])
-
-    q2 = """
-    SELECT
-      id
-    FROM
-      (SELECT
-          id,
-          jsonb_array_elements(#{data_field}::jsonb) AS root_blocks
-        FROM
-          #{schema.__schema__(:source)}) root_q
+         (SELECT
+            id,
+            jsonb_array_elements(#{data_field}::jsonb) AS root_blocks
+          FROM
+            #{schema.__schema__(:source)}
+          ) root_q
       WHERE
-        root_blocks->>'type' = 'datasource'
+          root_blocks->>'type' = 'datasource'
+    AND
+          root_blocks->'data'->>'module' = '#{datasource}'
+    UNION
+    SELECT
+        id
+      FROM
+         (SELECT
+            id,
+            jsonb_array_elements(#{data_field}::jsonb) AS root_blocks,
+            jsonb_array_elements(jsonb_array_elements(#{data_field}::jsonb)->'data'->'refs') as module_refs
+          FROM
+            #{schema.__schema__(:source)}
+          ) root_q
+      WHERE
+          root_blocks->>'type' = 'module'
       AND
-        root_blocks->'data'->>'module' = '#{datasource}';
+          module_refs->'data'->>'type' = 'datasource'
+      AND
+          module_refs->'data'->'data'->>'module' = '#{datasource}'
+    UNION
+    SELECT
+        id
+      FROM
+         (SELECT
+            id,
+            jsonb_array_elements(#{data_field}::jsonb) AS root_blocks,
+            jsonb_array_elements(jsonb_array_elements(#{data_field}::jsonb)->'data'->'blocks') as container_blocks
+          FROM
+            #{schema.__schema__(:source)}
+          ) root_q
+      WHERE
+          root_blocks->>'type' = 'container'
+      AND
+          container_blocks->>'type' = 'datasource'
+      AND
+          container_blocks->'data'->>'module' = '#{datasource}'
     """
 
-    {:ok, %{rows: r2}} = Ecto.Adapters.SQL.query(Brando.repo(), q2, [])
+    {:ok, %{rows: matches}} = Ecto.Adapters.SQL.query(Brando.repo(), query, [])
 
-    (r1 ++ r2)
-    |> List.flatten()
-    |> Enum.uniq()
+    List.flatten(matches)
   end
 end
