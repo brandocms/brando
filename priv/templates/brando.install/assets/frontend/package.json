@@ -8,15 +8,15 @@
     "serve": "vite preview"
   },
   "devDependencies": {
-    "@univers-agency/europacss": "^0.3.0",
+    "@univers-agency/europacss": "^0.5.0",
     "@vitejs/plugin-legacy": "^1.3.1",
     "css-mqgroup": "^7.1.0",
     "postcss": "^8.2.6",
     "postcss-import": "^14.0.0",
     "postcss-preset-env": "^6.4.0",
     "postcss-reporter": "^7.0.0",
-    "stylelint": "^13.10.0",
-    "vite": "^2.0.1"
+    "stylelint": "^13.11.0",
+    "vite": "^2.0.4"
   },
   "dependencies": {
     "@univers-agency/jupiter": "^3.40.1",
