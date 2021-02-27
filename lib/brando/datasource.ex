@@ -241,17 +241,19 @@ defmodule Brando.Datasource do
   Look through all villains for datasources using `schema`
   """
   def update_datasource(datasource, entry \\ nil) do
-    villains = Villain.list_villains()
+    if {:__datasource__, 2} in datasource.__info__(:functions) do
+      villains = Villain.list_villains()
 
-    for {schema, fields} <- villains,
-        {_, data_field, html_field} <- fields do
-      ids = list_ids_with_datasource(schema, datasource, data_field)
+      for {schema, fields} <- villains,
+          {_, data_field, html_field} <- fields do
+        ids = list_ids_with_datasource(schema, datasource, data_field)
 
-      unless Enum.empty?(ids) do
-        Villain.rerender_html_from_ids(
-          {schema, data_field, html_field},
-          ids
-        )
+        unless Enum.empty?(ids) do
+          Villain.rerender_html_from_ids(
+            {schema, data_field, html_field},
+            ids
+          )
+        end
       end
     end
 
