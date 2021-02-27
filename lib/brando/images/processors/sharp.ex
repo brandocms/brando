@@ -215,6 +215,19 @@ defmodule Brando.Images.Processor.Sharp do
      }}
   end
 
+  def get_dominant_color(image_path) do
+    prefixed_image_path = Images.Utils.media_path(image_path)
+
+    case Processor.Commands.delegate("dominant-color", [prefixed_image_path], []) do
+      {"", 0} -> nil
+      {dominant_color, 0} -> String.trim(dominant_color)
+      _ -> nil
+    end
+  rescue
+    _ ->
+      nil
+  end
+
   def confirm_executable_exists do
     case Processor.Commands.delegate("sharp", ["--version"], []) do
       {_, 0} ->

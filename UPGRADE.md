@@ -1,5 +1,10 @@
 ## 0.51.0
 
+* To automatically add the dominant color of an image to its struct, you
+  can install `dominant-color` on your server/dev machine:
+
+    `$ npm i -g @univers-agency/dominant-color`
+
 * Call single GraphQL resolvers with args. Using `Project` as an example:
   In your `project_resolver.ex`
 
