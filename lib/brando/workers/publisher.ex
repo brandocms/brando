@@ -4,14 +4,52 @@ defmodule Brando.Worker.Publisher do
   """
   use Oban.Worker,
     queue: :default,
-    max_attempts: 10,
-    unique: [keys: [:schema, :id, :status], period: :infinity]
+    max_attempts: 10
 
   require Logger
 
+  # schedule publishing/depublishing an entry
   @impl Oban.Worker
   def perform(%Oban.Job{
-        args: %{"schema" => schema, "id" => id, "status" => status, "user_id" => user_id}
+        args: %{
+          "schema" => schema,
+          "id" => id,
+          "revision" => revision,
+          "user_id" => _user_id
+        }
+      }) do
+    now = DateTime.utc_now()
+
+    single =
+      schema
+      |> String.split(".")
+      |> List.last()
+      |> String.downcase()
+
+    case Brando.Revisions.set_revision(schema, id, revision) do
+      {:ok, new_entry} ->
+        Logger.info("""
+
+        ==> [B/Pub] Published revision ##{revision} of #{single} ##{id}
+        ==> [B/Pub] @ #{now.day}/#{now.month}/#{now.year} #{now.hour}:#{now.minute}:#{now.second} UTC
+        """)
+
+        {:ok, new_entry}
+
+      err ->
+        {:error, err}
+    end
+  end
+
+  # schedule publishing/depublishing an entry
+  @impl Oban.Worker
+  def perform(%Oban.Job{
+        args: %{
+          "schema" => schema,
+          "id" => id,
+          "status" => status,
+          "user_id" => user_id
+        }
       }) do
     now = DateTime.utc_now()
 

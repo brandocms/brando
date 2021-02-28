@@ -40,6 +40,15 @@ defmodule Brando.Publisher do
     {:ok, entry}
   end
 
+  def schedule_revision(schema, id, revision, publish_at, user) do
+    {:ok, publish_at, _} = DateTime.from_iso8601(publish_at)
+    args = %{schema: schema, id: id, revision: revision, user_id: user.id}
+
+    args
+    |> Worker.Publisher.new(replace_args: true, scheduled_at: publish_at)
+    |> Oban.insert()
+  end
+
   def maybe_override_status(%{changes: %{publish_at: publish_at}} = changeset)
       when not is_nil(publish_at) do
     status = Changeset.get_field(changeset, :status)

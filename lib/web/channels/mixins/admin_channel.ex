@@ -2,6 +2,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   alias Brando.Images
   alias Brando.Navigation
   alias Brando.Pages
+  alias Brando.Publisher
   alias Brando.Revisions
   alias Brando.Villain
 
@@ -44,6 +45,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "page_fragment:rerender_all",
     "revision:activate",
     "revision:delete",
+    "revision:schedule",
     "revisions:purge_inactive",
     "sitemap:exists",
     "sitemap:generate",
@@ -275,6 +277,17 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         socket
       ) do
     Revisions.delete_revision(Module.concat([schema]), id, revision)
+
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in(
+        "revision:schedule",
+        %{"schema" => schema, "id" => id, "revision" => revision, "publish_at" => publish_at},
+        socket
+      ) do
+    user = Guardian.Phoenix.Socket.current_resource(socket)
+    Publisher.schedule_revision(Module.concat([schema]), id, revision, publish_at, user)
 
     {:reply, {:ok, %{code: 200}}, socket}
   end
