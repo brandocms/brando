@@ -42,7 +42,9 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "page_fragment:rerender",
     "page_fragment:duplicate",
     "page_fragment:rerender_all",
-    "revision:select",
+    "revision:activate",
+    "revision:delete",
+    "revisions:purge_inactive",
     "sitemap:exists",
     "sitemap:generate",
     "villain:list_modules",
@@ -257,9 +259,32 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
-  def do_handle_in("revision:select", params, socket) do
-    {:ok, {_revision, {_version, _decoded_entry}}} =
-      Revisions.get_revision(params["entryType"], params["entryId"], params["revision"])
+  def do_handle_in(
+        "revision:activate",
+        %{"schema" => schema, "id" => id, "revision" => revision},
+        socket
+      ) do
+    Revisions.set_revision(Module.concat([schema]), id, revision)
+
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in(
+        "revision:delete",
+        %{"schema" => schema, "id" => id, "revision" => revision},
+        socket
+      ) do
+    Revisions.delete_revision(Module.concat([schema]), id, revision)
+
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in(
+        "revisions:purge_inactive",
+        %{"schema" => schema, "id" => id},
+        socket
+      ) do
+    Revisions.purge_revisions(Module.concat([schema]), id)
 
     {:reply, {:ok, %{code: 200}}, socket}
   end
