@@ -1,5 +1,75 @@
 ## 0.51.0
 
+* Revisions:
+
+  Switch out your resolvers with:
+
+  ```
+  use Brando.GraphQL.Resolver,
+    context: MyApp.MyContext,
+    schema: MyApp.MyContext.MySchema
+  ```
+
+  OR
+
+  add a check in your resolver's `update` function:
+
+  ```
+  def update(%{post_id: post_id, post_params: post_params, revision: revision}, %{
+      context: %{current_user: current_user}
+    }) do
+    if revision do
+      Brando.Revisions.create_from_base_revision(
+        Post,
+        revision,
+        post_id,
+        post_params,
+        current_user
+      )
+    else
+      Post.update_post(post_id, post_params, current_user))
+    end
+  end
+  ```
+
+  In your `SchemaEditView.vue`, you need to add a `$revision` param to your `save` function:
+  ```
+  async save (setLoader, revision = 0) {
+    // ...
+    await this.$apollo.mutate({
+      mutation: gql`
+        mutation UpdatePage($pageId: ID!, $pageParams: PageParams, $revision: ID) {
+          updatePage(
+            pageId: $pageId,
+            pageParams: $pageParams,
+            revision: $revision
+          ) {
+            id
+          }
+        }
+      `,
+      variables: {
+        pageParams,
+        pageId: this.page.id,
+        revision: revision
+      }
+    })
+    // ...
+  ```
+
+  You must also add the `revision` arg to the GraphQL mutation:
+
+  ```
+  field :update_page, type: :page do
+    arg :page_id, non_null(:id)
+    arg :page_params, :page_params
+    # add this:
+    arg :revision, :id
+
+    resolve &Brando.Pages.PageResolver.update/2
+  end
+  ```
+
 * To automatically add the dominant color of an image to its struct, you
   can install `dominant-color` on your server/dev machine:
 
