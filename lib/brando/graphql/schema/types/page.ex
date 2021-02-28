@@ -158,6 +158,7 @@ defmodule Brando.Schema.Types.Page do
     field :update_page, type: :page do
       arg :page_id, non_null(:id)
       arg :page_params, :page_params
+      arg :revision, :id
 
       resolve &Brando.Pages.PageResolver.update/2
     end
