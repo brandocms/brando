@@ -492,10 +492,12 @@ defmodule Brando.Query do
               {:ok, any} | {:error, Ecto.Changeset.t()}
       def unquote(:"create_#{name}")(params, user \\ :system) do
         with changeset <- unquote(module).changeset(%unquote(module){}, params, user),
+             changeset <- Brando.Publisher.maybe_override_status(changeset),
              {:ok, entry} <- Brando.Query.insert(changeset) do
           Brando.Datasource.update_datasource(unquote(module), entry)
+          {:ok, entry} = Brando.Publisher.schedule_publishing(entry, changeset, user)
 
-          if {:__revisioned__, 0} in unquote(module).__info__(:functions) do
+          if Brando.Revisions.is_revisioned(unquote(module)) do
             Brando.Revisions.create_revision(entry, user)
           end
 
@@ -549,10 +551,12 @@ defmodule Brando.Query do
 
         with {:ok, entry} <- unquote(:"get_#{name}")(get_opts),
              changeset <- unquote(module).changeset(entry, params, user),
+             changeset <- Brando.Publisher.maybe_override_status(changeset),
              {:ok, entry} <- Brando.Query.update(changeset) do
           Brando.Datasource.update_datasource(unquote(module), entry)
+          {:ok, entry} = Brando.Publisher.schedule_publishing(entry, changeset, user)
 
-          if {:__revisioned__, 0} in unquote(module).__info__(:functions) do
+          if Brando.Revisions.is_revisioned(unquote(module)) do
             Brando.Revisions.create_revision(entry, user)
           end
 
@@ -580,7 +584,7 @@ defmodule Brando.Query do
         {:ok, entry} = unquote(:"get_#{name}")(id)
 
         {:ok, entry} =
-          if {:__soft_delete__, 0} in unquote(module).__info__(:functions) do
+          if Brando.SoftDelete.is_soft_deletable(unquote(module)) do
             Brando.repo().soft_delete(entry)
           else
             Brando.Query.delete(entry)
