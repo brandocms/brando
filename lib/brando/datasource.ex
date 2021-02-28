@@ -187,19 +187,17 @@ defmodule Brando.Datasource do
   """
   def list_datasources do
     {:ok, modules} = :application.get_key(Brando.otp_app(), :modules)
-
-    available_modules = Enum.filter(modules, &({:__datasource__, 2} in &1.__info__(:functions)))
-    {:ok, available_modules}
+    {:ok, Enum.filter(modules, &is_datasource/1)}
   end
 
   @doc """
   List keys for module
   """
-  def list_datasource_keys(module) do
-    mod = Module.concat([module])
+  def list_datasource_keys(module_binary) do
+    module = Module.concat([module_binary])
 
-    list_keys = mod.__datasources__(:list)
-    selection_keys = mod.__datasources__(:selection)
+    list_keys = module.__datasources__(:list)
+    selection_keys = module.__datasources__(:selection)
     single_keys = []
 
     {:ok, %{list: list_keys, single: single_keys, selection: selection_keys}}
@@ -208,45 +206,45 @@ defmodule Brando.Datasource do
   @doc """
   Grab list of entries from database
   """
-  def get_list(module, query, arg) do
-    mod = Module.concat([module])
-    mod.__datasource__(:list, String.to_existing_atom(query)).(module, arg)
+  def get_list(module_binary, query, arg) do
+    module = Module.concat([module_binary])
+    module.__datasource__(:list, String.to_existing_atom(query)).(module_binary, arg)
   end
 
   @doc """
   List available entries in selection from database
   """
-  def list_selection(module, query, arg) do
-    mod = Module.concat([module])
-    mod.__datasource__(:list_selection, String.to_existing_atom(query)).(module, arg)
+  def list_selection(module_binary, query, arg) do
+    module = Module.concat([module_binary])
+    module.__datasource__(:list_selection, String.to_existing_atom(query)).(module_binary, arg)
   end
 
   @doc """
   Get selection by [ids] from database
   """
-  def get_selection(module, query, ids) do
-    mod = Module.concat([module])
-    mod.__datasource__(:get_selection, String.to_existing_atom(query)).(module, ids)
+  def get_selection(module_binary, query, ids) do
+    module = Module.concat([module_binary])
+    module.__datasource__(:get_selection, String.to_existing_atom(query)).(module_binary, ids)
   end
 
   @doc """
   Grab single entry from database
   """
-  def get_single(module, query, arg) do
-    mod = Module.concat([module])
-    mod.__datasource__(:single, String.to_existing_atom(query)).(module, arg)
+  def get_single(module_binary, query, arg) do
+    module = Module.concat([module_binary])
+    module.__datasource__(:single, String.to_existing_atom(query)).(module_binary, arg)
   end
 
   @doc """
   Look through all villains for datasources using `schema`
   """
-  def update_datasource(datasource, entry \\ nil) do
-    if {:__datasource__, 2} in datasource.__info__(:functions) do
+  def update_datasource(datasource_module, entry \\ nil) do
+    if is_datasource(datasource_module) do
       villains = Villain.list_villains()
 
       for {schema, fields} <- villains,
           {_, data_field, html_field} <- fields do
-        ids = list_ids_with_datasource(schema, datasource, data_field)
+        ids = list_ids_with_datasource(schema, datasource_module, data_field)
 
         unless Enum.empty?(ids) do
           Villain.rerender_html_from_ids(
@@ -318,5 +316,12 @@ defmodule Brando.Datasource do
     {:ok, %{rows: matches}} = Ecto.Adapters.SQL.query(Brando.repo(), query, [])
 
     List.flatten(matches)
+  end
+
+  @doc """
+  Check if `schema` is a datasource
+  """
+  def is_datasource(schema) do
+    {:__datasource__, 2} in schema.__info__(:functions)
   end
 end
