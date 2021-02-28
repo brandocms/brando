@@ -30,9 +30,9 @@ defmodule Brando.Supervisor do
           {Oban.Plugins.Cron,
            crontab: [
              # Generate a Sitemap every night at 02:00 UTC
-             {"0 2 * * *", Brando.Worker.SitemapWorker},
+             {"0 2 * * *", Brando.Worker.Sitemap},
              # Clean up soft deleted entries every night at 03:00 UTC
-             {"0 3 * * *", Brando.Worker.SoftDeleteWorker}
+             {"0 3 * * *", Brando.Worker.SoftDelete}
            ],
            timezone: "Etc/UTC"},
           Oban.Plugins.Pruner
