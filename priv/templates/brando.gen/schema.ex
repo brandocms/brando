@@ -1,6 +1,8 @@
 defmodule <%= schema_module %> do
-  use <%= web_module %>, :schema<%= if villain_fields != [] do %>
-  use Brando.Villain.Schema<% end %><%= if gallery do %>
+  use <%= web_module %>, :schema
+  use Brando.Schema<%= if villain_fields != [] do %>
+  use Brando.Villain.Schema<% end %><%= if revisioned do %>
+  use Brando.Revisions.Schema<% end %><%= if gallery do %>
   use Brando.Gallery.Schema<% end %><%= if soft_delete do %>
   use Brando.SoftDelete.Schema<% end %><%= if sequenced do %>
   use Brando.Sequence.Schema<% end %><%= if file_fields != [] do %>
@@ -8,6 +10,12 @@ defmodule <%= schema_module %> do
   use Brando.Field.Image.Schema<% end %>
 
   @type t :: %__MODULE__{}
+
+  identifier fn entry -> entry.<%= List.first(attrs) |> elem(0) %> end
+
+  absolute_url fn -> router, endpoint, entry ->
+    router.<%= singular %>_path(endpoint, :detail, entry.slug)
+  end
 
   schema <%= inspect "#{snake_domain}_#{plural}" %> do
 <%= for schema_field <- schema_fields do %>    <%= schema_field %>
