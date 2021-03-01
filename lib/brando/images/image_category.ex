@@ -9,9 +9,13 @@ defmodule Brando.ImageCategory do
 
   use Brando.Web, :schema
   use Brando.SoftDelete.Schema
+  use Brando.Schema
 
   import Ecto.Query, only: [from: 2]
   import Ecto.Changeset
+
+  identifier false
+  absolute_url false
 
   @required_fields ~w(name creator_id)a
   @optional_fields ~w(cfg slug deleted_at)a

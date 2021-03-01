@@ -6,7 +6,7 @@ defmodule Brando.SoftDelete.SchemaTest do
   end
 
   test "has __soft_delete__" do
-    assert {:__soft_delete__, 0} in __MODULE__.Schema.__info__(:functions)
+    assert Brando.SoftDelete.is_soft_deletable(__MODULE__.Schema)
     assert __MODULE__.Schema.__soft_delete__() == true
   end
 end

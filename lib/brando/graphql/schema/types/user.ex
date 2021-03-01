@@ -1,4 +1,4 @@
-defmodule Brando.Schema.Types.User do
+defmodule Brando.GraphQL.Schema.Types.User do
   use Brando.Web, :absinthe
 
   object :user do

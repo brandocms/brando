@@ -1,4 +1,4 @@
-defmodule Brando.Worker.SoftDeleteWorker do
+defmodule Brando.Worker.SoftDelete do
   use Oban.Worker, queue: :default, max_attempts: 2
   require Logger
 

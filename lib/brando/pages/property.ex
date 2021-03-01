@@ -1,9 +1,13 @@
 defmodule Brando.Pages.Property do
   use Brando.Web, :schema
+  use Brando.Schema
   alias Brando.Pages.Page
 
   @type t :: %__MODULE__{}
   @type changeset :: Ecto.Changeset.t()
+
+  identifier false
+  absolute_url false
 
   schema "pages_properties" do
     field :type, :string

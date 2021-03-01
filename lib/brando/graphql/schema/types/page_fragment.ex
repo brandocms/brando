@@ -1,4 +1,4 @@
-defmodule Brando.Schema.Types.PageFragment do
+defmodule Brando.GraphQL.Schema.Types.PageFragment do
   use Brando.Web, :absinthe
 
   object :page_fragment do

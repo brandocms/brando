@@ -1,4 +1,4 @@
-defmodule Brando.Schema.Types.Scalar do
+defmodule Brando.GraphQL.Schema.Types.Scalar do
   use Brando.Web, :absinthe
   require Logger
 

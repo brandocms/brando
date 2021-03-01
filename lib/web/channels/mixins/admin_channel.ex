@@ -1,7 +1,14 @@
+require Protocol
+
+Protocol.derive(Jason.Encoder, Oban.Job,
+  only: ~w(id meta tags worker state scheduled_at attempt args)a
+)
+
 defmodule Brando.Mixin.Channels.AdminChannelMixin do
   alias Brando.Images
   alias Brando.Navigation
   alias Brando.Pages
+  alias Brando.Publisher
   alias Brando.Revisions
   alias Brando.Villain
 
@@ -42,7 +49,12 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "page_fragment:rerender",
     "page_fragment:duplicate",
     "page_fragment:rerender_all",
-    "revision:select",
+    "publisher:list",
+    "publisher:delete_job",
+    "revision:activate",
+    "revision:delete",
+    "revision:schedule",
+    "revisions:purge_inactive",
     "sitemap:exists",
     "sitemap:generate",
     "villain:list_modules",
@@ -257,9 +269,43 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
-  def do_handle_in("revision:select", params, socket) do
-    {:ok, {_revision, {_version, _decoded_entry}}} =
-      Revisions.get_revision(params["entryType"], params["entryId"], params["revision"])
+  def do_handle_in(
+        "revision:activate",
+        %{"schema" => schema, "id" => id, "revision" => revision},
+        socket
+      ) do
+    Revisions.set_revision(Module.concat([schema]), id, revision)
+
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in(
+        "revision:delete",
+        %{"schema" => schema, "id" => id, "revision" => revision},
+        socket
+      ) do
+    Revisions.delete_revision(Module.concat([schema]), id, revision)
+
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in(
+        "revision:schedule",
+        %{"schema" => schema, "id" => id, "revision" => revision, "publish_at" => publish_at},
+        socket
+      ) do
+    user = Guardian.Phoenix.Socket.current_resource(socket)
+    Publisher.schedule_revision(Module.concat([schema]), id, revision, publish_at, user)
+
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in(
+        "revisions:purge_inactive",
+        %{"schema" => schema, "id" => id},
+        socket
+      ) do
+    Revisions.purge_revisions(Module.concat([schema]), id)
 
     {:reply, {:ok, %{code: 200}}, socket}
   end
@@ -336,6 +382,16 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
 
   def do_handle_in("cache:empty", _, socket) do
     Cachex.clear(:query)
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in("publisher:list", _, socket) do
+    {:ok, jobs} = Publisher.list_jobs()
+    {:reply, {:ok, %{code: 200, jobs: jobs}}, socket}
+  end
+
+  def do_handle_in("publisher:delete_job", %{"job" => %{"id" => job_id}}, socket) do
+    Publisher.delete_job(job_id)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 

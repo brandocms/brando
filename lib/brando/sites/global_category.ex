@@ -1,6 +1,10 @@
 defmodule Brando.Sites.GlobalCategory do
   use Brando.Web, :schema
+  use Brando.Schema
   alias Brando.Sites.Global
+
+  identifier false
+  absolute_url false
 
   @type t :: %__MODULE__{}
   @type changeset :: Ecto.Changeset.t()

@@ -10,8 +10,12 @@ defmodule Brando.Image do
   use Brando.Sequence.Schema
   use Brando.SoftDelete.Schema
   use Brando.Field.Image.Schema
+  use Brando.Schema
 
   import Ecto.Query, only: [from: 2]
+
+  identifier false
+  absolute_url false
 
   @required_fields ~w(image)a
   @optional_fields ~w(sequence image_series_id creator_id deleted_at)a

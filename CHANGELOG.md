@@ -2,6 +2,10 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.51.0-dev
 
+* Images: Add `dominant_color` to image struct.
+* Revisions: Adds initial revision support.
+* Publisher: Add Oban job support for scheduled publishing
+
 ## 0.50.0
 
 * Query: Add `get_<schema>!` version that raises on no result

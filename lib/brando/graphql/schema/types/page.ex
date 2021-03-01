@@ -1,4 +1,4 @@
-defmodule Brando.Schema.Types.Page do
+defmodule Brando.GraphQL.Schema.Types.Page do
   use Brando.Web, :absinthe
 
   object :page do
@@ -127,7 +127,7 @@ defmodule Brando.Schema.Types.Page do
       arg :matches, :page_matches
       arg :revision, :id
       arg :status, :string, default_value: "all"
-      resolve &Brando.Pages.PageResolver.find/2
+      resolve &Brando.Pages.PageResolver.get/2
     end
 
     @desc "Get all modules"
@@ -144,7 +144,7 @@ defmodule Brando.Schema.Types.Page do
     @desc "Get module"
     field :module, type: :module do
       arg :module_id, non_null(:id)
-      resolve &Brando.Pages.PageResolver.find_module/2
+      resolve &Brando.Pages.PageResolver.get_module/2
     end
   end
 
@@ -158,6 +158,7 @@ defmodule Brando.Schema.Types.Page do
     field :update_page, type: :page do
       arg :page_id, non_null(:id)
       arg :page_params, :page_params
+      arg :revision, :id
 
       resolve &Brando.Pages.PageResolver.update/2
     end

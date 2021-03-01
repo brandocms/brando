@@ -1,5 +1,9 @@
 defmodule Brando.Link do
   use Brando.Web, :schema
+  use Brando.Schema
+
+  identifier fn entry -> entry.name end
+  absolute_url fn _, _, entry -> entry.url end
 
   @fields [:name, :url]
 

@@ -5,10 +5,10 @@ end
 
 defmodule BrandoIntegration.TestSchema do
   use Absinthe.Schema
-  use Brando.Schema
+  use Brando.GraphQL.Schema
 
   import_types Absinthe.Plug.Types
-  import_types Brando.Schema.Types
+  import_types Brando.GraphQL.Schema.Types
 
   def context(ctx) do
     loader =
@@ -36,7 +36,7 @@ defmodule BrandoIntegration.TestSchema do
   end
 
   def middleware(middleware, _field, %{identifier: :mutation}),
-    do: middleware ++ [Brando.Schema.Middleware.ChangesetErrors]
+    do: middleware ++ [Brando.GraphQL.Schema.Middleware.ChangesetErrors]
 
   def middleware(middleware, _field, _object), do: middleware
 end

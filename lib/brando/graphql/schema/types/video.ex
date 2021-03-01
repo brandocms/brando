@@ -1,4 +1,4 @@
-defmodule Brando.Schema.Types.Video do
+defmodule Brando.GraphQL.Schema.Types.Video do
   use Brando.Web, :absinthe
 
   object :video_type do

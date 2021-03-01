@@ -1,8 +1,12 @@
 defmodule Brando.Revisions.Revision do
+  use Brando.Web, :schema
+  use Brando.Schema
+
   @type t :: %__MODULE__{}
   @type user :: Brando.Users.User.t() | :system
 
-  use Brando.Web, :schema
+  identifier false
+  absolute_url false
 
   @primary_key false
   schema "revisions" do

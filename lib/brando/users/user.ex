@@ -8,6 +8,7 @@ defmodule Brando.Users.User do
   @type user :: Brando.Users.User.t() | :system
 
   use Brando.Web, :schema
+  use Brando.Schema
   use Brando.Field.Image.Schema
   use Brando.SoftDelete.Schema
 
@@ -94,6 +95,10 @@ defmodule Brando.Users.User do
       {"large", "700w"}
     ]
   }
+
+  identifier fn entry -> entry.name end
+
+  absolute_url false
 
   @doc """
   Casts and validates `params` against `schema` to create a valid changeset

@@ -2,46 +2,12 @@ defmodule Brando.Pages.PageResolver do
   @moduledoc """
   Resolver for Pages
   """
-  use Brando.Web, :resolver
+  use Brando.GraphQL.Resolver,
+    context: Brando.Pages,
+    schema: Brando.Pages.Page
+
   alias Brando.Pages
   alias Brando.Villain
-
-  @doc """
-  Find page
-  """
-  def find(args, %{context: %{current_user: _current_user}}) do
-    Pages.get_page(args)
-  end
-
-  @doc """
-  Get all pages (at parent level)
-  """
-  def all(args, %{context: %{current_user: _current_user}}) do
-    Pages.list_pages(args)
-  end
-
-  @doc """
-  Create page
-  """
-  def create(%{page_params: page_params}, %{context: %{current_user: current_user}}) do
-    Pages.create_page(page_params, current_user)
-  end
-
-  @doc """
-  Update page
-  """
-  def update(%{page_id: page_id, page_params: page_params}, %{
-        context: %{current_user: current_user}
-      }) do
-    Pages.update_page(page_id, page_params, current_user)
-  end
-
-  @doc """
-  Delete page
-  """
-  def delete(%{page_id: page_id}, %{context: %{current_user: _current_user}}) do
-    Pages.delete_page(page_id)
-  end
 
   @doc """
   Duplicate page
@@ -71,7 +37,7 @@ defmodule Brando.Pages.PageResolver do
   @doc """
   Find module
   """
-  def find_module(%{module_id: module_id}, %{context: %{current_user: _current_user}}) do
+  def get_module(%{module_id: module_id}, %{context: %{current_user: _current_user}}) do
     Villain.get_module(%{matches: %{id: module_id}})
   end
 

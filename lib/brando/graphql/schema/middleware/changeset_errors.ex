@@ -1,4 +1,4 @@
-defmodule Brando.Schema.Middleware.ChangesetErrors do
+defmodule Brando.GraphQL.Schema.Middleware.ChangesetErrors do
   @behaviour Absinthe.Middleware
 
   @spec call(Absinthe.Resolution.t(), any()) :: Absinthe.Resolution.t()

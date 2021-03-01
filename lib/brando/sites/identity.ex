@@ -1,9 +1,13 @@
 defmodule Brando.Sites.Identity do
   use Brando.Web, :schema
   use Brando.Field.Image.Schema
+  use Brando.Schema
 
   @type t :: %__MODULE__{}
   @type changeset :: Ecto.Changeset.t()
+
+  identifier false
+  absolute_url false
 
   schema "sites_identity" do
     field :type, :string

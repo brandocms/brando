@@ -1,6 +1,10 @@
 defmodule Brando.Sites.SEO do
   use Brando.Web, :schema
+  use Brando.Schema
   use Brando.Field.Image.Schema
+
+  identifier false
+  absolute_url false
 
   @type t :: %__MODULE__{}
   @type changeset :: Ecto.Changeset.t()

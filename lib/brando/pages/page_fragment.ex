@@ -11,6 +11,10 @@ defmodule Brando.Pages.PageFragment do
   use Brando.Villain.Schema, generate_protocol: false
   use Brando.SoftDelete.Schema
   use Brando.Sequence.Schema
+  use Brando.Schema
+
+  identifier fn entry -> entry.title end
+  absolute_url false
 
   @required_fields ~w(parent_key key language data creator_id)a
   @optional_fields ~w(html page_id title wrapper sequence deleted_at)a

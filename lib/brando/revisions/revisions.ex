@@ -45,13 +45,13 @@ defmodule Brando.Revisions do
     end
   end
 
-  def create_revision(%{__struct__: entry_type, id: entry_id} = entry, user) do
+  def create_revision(%{__struct__: entry_type, id: entry_id} = entry, user, set_active \\ true) do
     user_id = if user == :system, do: nil, else: user.id
     entry_type_binary = to_string(entry_type)
     encoded_entry = encode_entry(entry)
 
     revision = %{
-      active: true,
+      active: set_active,
       entry_type: entry_type_binary,
       entry_id: entry_id,
       encoded_entry: encoded_entry,
@@ -66,8 +66,9 @@ defmodule Brando.Revisions do
     |> Brando.repo().insert()
     |> case do
       {:ok, revision} ->
-        # set all others as inactive
-        set_all_inactive_except(revision)
+        if set_active do
+          set_all_inactive_except(revision)
+        end
 
         {:ok, revision}
 
@@ -76,29 +77,49 @@ defmodule Brando.Revisions do
     end
   end
 
-  defp set_all_inactive_except(revision) do
-    query =
-      from r in Revision,
-        where:
-          r.active == true and
-            r.entry_type == ^revision.entry_type and
-            r.entry_id == ^revision.entry_id and
-            r.revision != ^revision.revision,
-        update: [set: [active: false]]
+  @doc """
+  Create a revision based on `base_revision`.
 
-    Brando.repo().update_all(query, [])
+  Merges in `entry_params` and stores as a new revision
+  """
+  def create_from_base_revision(entry_schema, base_revision_version, entry_id, entry_params, user) do
+    {:ok, {_, {_, decoded_entry}}} = get_revision(entry_schema, entry_id, base_revision_version)
+    updated_entry = Map.merge(decoded_entry, entry_params)
+    create_revision(updated_entry, user, false)
   end
 
-  defp set_active(revision) do
+  def purge_revisions(entry_type, entry_id) do
+    entry_type_binary = to_string(entry_type)
+
     query =
       from r in Revision,
         where:
-          r.entry_type == ^revision.entry_type and
-            r.entry_id == ^revision.entry_id and
-            r.revision == ^revision.revision,
-        update: [set: [active: true]]
+          r.entry_type == ^entry_type_binary and
+            r.entry_id == ^entry_id and
+            r.active == false
 
-    Brando.repo().update_all(query, [])
+    Brando.repo().delete_all(query)
+  end
+
+  def delete_revision(entry_type, entry_id, revision) do
+    entry_type_binary = to_string(entry_type)
+
+    query =
+      from r in Revision,
+        where:
+          r.entry_type == ^entry_type_binary and
+            r.entry_id == ^entry_id and
+            r.revision == ^revision and
+            r.active == false
+
+    Brando.repo().delete_all(query)
+  end
+
+  @doc """
+  Check if `schema` is revisioned
+  """
+  def is_revisioned(schema) do
+    {:__revisioned__, 0} in schema.__info__(:functions)
   end
 
   def get_last_revision(%{__struct__: entry_type, id: entry_id}) do
@@ -120,6 +141,33 @@ defmodule Brando.Revisions do
     end
   end
 
+  def get_active_revision(entry_type, entry_id) do
+    entry_type_binary = to_string(entry_type)
+
+    query =
+      from r in Revision,
+        where:
+          r.entry_type == ^entry_type_binary and
+            r.entry_id == ^entry_id and
+            r.active == true,
+        limit: 1
+
+    case Brando.repo().all(query) do
+      [] ->
+        :error
+
+      [revision] ->
+        decoded_entry = decode_entry(revision.encoded_entry)
+        {:ok, {revision, {revision.revision, decoded_entry}}}
+    end
+  end
+
+  def set_revision(entry_schema, entry_id, revision_number) do
+    {:ok, {revision, {_, new_entry}}} = get_revision(entry_schema, entry_id, revision_number)
+    {:ok, {_, {_, base_entry}}} = get_active_revision(entry_schema, entry_id)
+    do_set_revision(base_entry, new_entry, revision)
+  end
+
   def set_revision(entry, revision_number) do
     {:ok, {revision, {_revision_number, decoded_entry}}} = get_revision(entry, revision_number)
 
@@ -135,12 +183,12 @@ defmodule Brando.Revisions do
   defp do_set_revision(%{__struct__: entry_type, id: _entry_id} = entry, decoded_entry, revision) do
     entry
     |> entry_type.changeset(Map.delete(Map.from_struct(decoded_entry), :__meta__))
-    |> Brando.repo().update
+    |> Brando.Query.update()
     |> case do
       {:ok, new_entry} ->
         set_active(revision)
         set_all_inactive_except(revision)
-
+        Brando.Datasource.update_datasource(entry_type, new_entry)
         {:ok, new_entry}
 
       err ->
@@ -194,5 +242,30 @@ defmodule Brando.Revisions do
       [] -> 0
       [revision] -> revision + 1
     end
+  end
+
+  defp set_all_inactive_except(revision) do
+    query =
+      from r in Revision,
+        where:
+          r.active == true and
+            r.entry_type == ^revision.entry_type and
+            r.entry_id == ^revision.entry_id and
+            r.revision != ^revision.revision,
+        update: [set: [active: false]]
+
+    Brando.repo().update_all(query, [])
+  end
+
+  defp set_active(revision) do
+    query =
+      from r in Revision,
+        where:
+          r.entry_type == ^revision.entry_type and
+            r.entry_id == ^revision.entry_id and
+            r.revision == ^revision.revision,
+        update: [set: [active: true]]
+
+    Brando.repo().update_all(query, [])
   end
 end

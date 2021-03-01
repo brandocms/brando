@@ -8,6 +8,10 @@ defmodule Brando.Navigation.Menu do
 
   use Brando.Web, :schema
   use Brando.Sequence.Schema
+  use Brando.Schema
+
+  identifier fn entry -> "#{entry.title} [#{entry.language}]" end
+  absolute_url false
 
   schema "navigation_menus" do
     field :status, Brando.Type.Status

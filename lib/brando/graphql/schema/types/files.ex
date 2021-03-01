@@ -1,4 +1,4 @@
-defmodule Brando.Schema.Types.Files do
+defmodule Brando.GraphQL.Schema.Types.Files do
   use Brando.Web, :absinthe
 
   object :file_type do

@@ -43,7 +43,8 @@ export default {
   },
 
   methods: {
-    async save () {
+    async save (setLoader, revision = 0) {
+      setLoader(true)
       const <%= vue_singular %>Params = this.$utils.stripParams(
         this.<%= vue_singular %>, [
           '__typename',
@@ -69,10 +70,11 @@ export default {
       try {
         await this.$apollo.mutate({
           mutation: gql`
-            mutation Update<%= Recase.to_pascal(vue_singular) %>($<%= vue_singular %>Id: ID!, $<%= vue_singular %>Params: <%= Recase.to_pascal(vue_singular) %>Params) {
+            mutation Update<%= Recase.to_pascal(vue_singular) %>($<%= vue_singular %>Id: ID!, $<%= vue_singular %>Params: <%= Recase.to_pascal(vue_singular) %>Params, $revision: ID) {
               update<%= Recase.to_pascal(vue_singular) %>(
                 <%= vue_singular %>Id: $<%= vue_singular %>Id,
-                <%= vue_singular %>Params: $<%= vue_singular %>Params
+                <%= vue_singular %>Params: $<%= vue_singular %>Params,
+                revision: $revision
               ) {
                 id
               }
@@ -80,13 +82,17 @@ export default {
           `,
           variables: {
             <%= vue_singular %>Params,
-            <%= vue_singular %>Id: this.<%= vue_singular %>Id
+            <%= vue_singular %>Id: this.<%= vue_singular %>Id,
+            revision
           }
         })
-
+        setLoader(false)
         this.$toast.success({ message: this.$t('<%= vue_plural %>.edited') })
-        this.$router.push({ name: '<%= vue_plural %>' })
+        if (revision === 0) {
+          this.$router.push({ name: '<%= vue_plural %>' })
+        }
       } catch (err) {
+        setLoader(false)
         this.$utils.showError(err)
       }
     }

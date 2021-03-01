@@ -12,10 +12,11 @@ defmodule Brando.GraphQL.Mutations.PageMutationsTest do
   end
 
   @update_page """
-  mutation UpdatePage($pageId: ID!, $pageParams: PageParams) {
+  mutation UpdatePage($pageId: ID!, $pageParams: PageParams, $revision: ID) {
     updatePage(
       pageId: $pageId,
-      pageParams: $pageParams
+      pageParams: $pageParams,
+      revision: $revision
     ) {
       title
     }
@@ -34,7 +35,8 @@ defmodule Brando.GraphQL.Mutations.PageMutationsTest do
                    "pageId" => p1.id,
                    "pageParams" => %{
                      "title" => "A new title!"
-                   }
+                   },
+                   "revision" => "0"
                  }
                ]
            ) ==

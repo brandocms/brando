@@ -1,5 +1,98 @@
 ## 0.51.0
 
+* Renamed `Brando.Schema` to `Brando.GraphQL.Schema`.
+  Switch out in your app's `graphql/schema.ex`.
+
+* Schemas need `use Brando.Schema` now. This is to help generate identifiers for entries.
+  You need to implement `identifier/1` and `absolute_url/1`.
+
+  `identifier/1` tells Brando which field in your schema best describes your entry.
+
+  ```
+  use Brando.Schema
+
+  identifier fn entry -> entry.title end
+
+  absolute_url fn -> router, endpoint, entry ->
+    router.page_path(endpoint, :detail, entry.slug)
+  end
+  ```
+
+* Revisions:
+
+  Switch out your resolvers with:
+
+  ```
+  use Brando.GraphQL.Resolver,
+    context: MyApp.MyContext,
+    schema: MyApp.MyContext.MySchema
+  ```
+
+  OR
+
+  add a check in your resolver's `update` function:
+
+  ```
+  def update(%{post_id: post_id, post_params: post_params, revision: revision}, %{
+      context: %{current_user: current_user}
+    }) do
+    if revision do
+      Brando.Revisions.create_from_base_revision(
+        Post,
+        revision,
+        post_id,
+        post_params,
+        current_user
+      )
+    else
+      Post.update_post(post_id, post_params, current_user))
+    end
+  end
+  ```
+
+  In your `SchemaEditView.vue`, you need to add a `$revision` param to your `save` function:
+  ```
+  async save (setLoader, revision = 0) {
+    // ...
+    await this.$apollo.mutate({
+      mutation: gql`
+        mutation UpdatePage($pageId: ID!, $pageParams: PageParams, $revision: ID) {
+          updatePage(
+            pageId: $pageId,
+            pageParams: $pageParams,
+            revision: $revision
+          ) {
+            id
+          }
+        }
+      `,
+      variables: {
+        pageParams,
+        pageId: this.page.id,
+        revision
+      }
+    })
+
+    // only push new route if not force saving a revision
+    if (revision === 0) { this.$router.push({ name: 'pages' }) }
+    // ...
+  ```
+
+  You must also add the `revision` arg to the GraphQL mutation:
+
+  ```
+  field :update_page, type: :page do
+    arg :page_id, non_null(:id)
+    arg :page_params, :page_params
+    # add this:
+    arg :revision, :id
+
+    resolve &Brando.Pages.PageResolver.update/2
+  end
+  ```
+
+* Status: `published_all` has been removed -- you can replace with `published_and_pending`
+
 * To automatically add the dominant color of an image to its struct, you
   can install `dominant-color` on your server/dev machine:
 

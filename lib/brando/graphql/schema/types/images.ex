@@ -1,4 +1,4 @@
-defmodule Brando.Schema.Types.Images do
+defmodule Brando.GraphQL.Schema.Types.Images do
   use Brando.Web, :absinthe
 
   input_object :image_series_params do
