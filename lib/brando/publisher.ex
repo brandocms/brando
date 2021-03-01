@@ -102,4 +102,8 @@ defmodule Brando.Publisher do
 
     {:ok, Brando.repo().all(query)}
   end
+
+  def delete_job(id) do
+    Brando.repo().delete_all(from j in Oban.Job, where: j.id == ^id)
+  end
 end

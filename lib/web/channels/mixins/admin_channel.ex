@@ -1,7 +1,7 @@
 require Protocol
 
 Protocol.derive(Jason.Encoder, Oban.Job,
-  only: ~w(meta tags worker state scheduled_at attempt args)a
+  only: ~w(id meta tags worker state scheduled_at attempt args)a
 )
 
 defmodule Brando.Mixin.Channels.AdminChannelMixin do
@@ -50,6 +50,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "page_fragment:duplicate",
     "page_fragment:rerender_all",
     "publisher:list",
+    "publisher:delete_job",
     "revision:activate",
     "revision:delete",
     "revision:schedule",
@@ -387,6 +388,11 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   def do_handle_in("publisher:list", _, socket) do
     {:ok, jobs} = Publisher.list_jobs()
     {:reply, {:ok, %{code: 200, jobs: jobs}}, socket}
+  end
+
+  def do_handle_in("publisher:delete_job", %{"job" => %{"id" => job_id}}, socket) do
+    Publisher.delete_job(job_id)
+    {:reply, {:ok, %{code: 200}}, socket}
   end
 
   # Live preview
