@@ -57,6 +57,17 @@ defmodule Brando.Publisher do
     |> Oban.insert()
   end
 
+  # if we have no publish_at but status = pending -- set status published
+  def maybe_override_status(%{changes: %{publish_at: nil}} = changeset) do
+    status = Changeset.get_field(changeset, :status)
+
+    if status == :pending do
+      Changeset.put_change(changeset, :status, :published)
+    else
+      changeset
+    end
+  end
+
   def maybe_override_status(%{changes: %{publish_at: publish_at}} = changeset)
       when not is_nil(publish_at) do
     status = Changeset.get_field(changeset, :status)
@@ -64,7 +75,16 @@ defmodule Brando.Publisher do
     if DateTime.compare(publish_at, DateTime.utc_now()) == :gt and status == :published do
       Changeset.put_change(changeset, :status, :pending)
     else
-      changeset
+      # publish date has passed - if it is still pending, set it to published
+      changeset =
+        if status == :pending do
+          Changeset.put_change(changeset, :status, :published)
+        else
+          changeset
+        end
+
+      # publish date has passed, just nil it.
+      Changeset.put_change(changeset, :publish_at, nil)
     end
   end
 
