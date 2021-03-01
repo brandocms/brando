@@ -47,9 +47,6 @@ defmodule Brando.GraphQL.Resolver do
                 context: %{current_user: user}
               }
             ) do
-          require Logger
-          Logger.error(inspect(revision, pretty: true))
-
           if revision == "0" do
             unquote(context).unquote(:"update_#{singular}")(
               id,
