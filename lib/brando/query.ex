@@ -4,27 +4,27 @@ defmodule Brando.Query do
 
   # Mutations
 
-  ```
+      ```
       mutation :create, Post
       mutation :update, Post
       mutation :delete, Post
-  ```
+      ```
 
   You can pass a function to execute after the mutation is finished:
 
-  ```
+      ```
       mutation :create, Post do
         fn entry ->
           {:ok, entry}
         end
       end
-  ```
+      ```
 
   You can pass preloads to the `:update` mutation:
 
-  ```
+      ```
       mutation :update, {Project, preload: [:tags]}
-  ```
+      ```
 
 
   # Select
@@ -151,8 +151,6 @@ defmodule Brando.Query do
       """)
 
   defp query_list(module, block) do
-    # check for publish_at field
-    publish_at? = Map.has_key?(module.__struct__, :publish_at)
     source = module.__schema__(:source)
 
     name =
@@ -175,8 +173,7 @@ defmodule Brando.Query do
                 __MODULE__,
                 Map.delete(args, :cache),
                 initial_query,
-                unquote(module),
-                unquote(publish_at?)
+                unquote(module)
               )
 
             result = Brando.repo().all(query)
@@ -192,8 +189,7 @@ defmodule Brando.Query do
                 __MODULE__,
                 args,
                 initial_query,
-                unquote(module),
-                unquote(publish_at?)
+                unquote(module)
               )
 
             if stream do
@@ -207,8 +203,6 @@ defmodule Brando.Query do
   end
 
   defp query_single(module, block) do
-    # check for publish_at field
-    publish_at? = Map.has_key?(module.__struct__, :publish_at)
     source = module.__schema__(:source)
 
     name =
@@ -242,8 +236,7 @@ defmodule Brando.Query do
               run_single_query_reducer(
                 __MODULE__,
                 args_without_cache,
-                unquote(module),
-                unquote(publish_at?)
+                unquote(module)
               )
 
             case reduced_query do
@@ -279,8 +272,7 @@ defmodule Brando.Query do
               run_single_query_reducer(
                 __MODULE__,
                 args_without_cache,
-                unquote(module),
-                unquote(publish_at?)
+                unquote(module)
               )
 
             case reduced_query do
@@ -312,7 +304,7 @@ defmodule Brando.Query do
 
       def unquote(:"get_#{name}!")(args) when is_map(args) do
         __MODULE__
-        |> run_single_query_reducer(args, unquote(module), unquote(publish_at?))
+        |> run_single_query_reducer(args, unquote(module))
         |> unquote(block).()
         |> limit(1)
         |> Brando.repo().one!()
@@ -376,33 +368,24 @@ defmodule Brando.Query do
   def with_select(query, {:map, fields}), do: from(q in query, select: map(q, ^fields))
   def with_select(query, {:struct, fields}), do: from(q in query, select: ^fields)
   def with_select(query, fields), do: from(q in query, select: map(q, ^fields))
-  def with_status(query, "all", _), do: query
+  def with_status(query, "all"), do: query
 
-  def with_status(query, "deleted", _),
+  def with_status(query, "deleted"),
     do: from(q in exclude(query, :where), where: not is_nil(q.deleted_at))
 
-  def with_status(query, "published_all", true),
+  def with_status(query, "published_and_pending"),
     do:
       from(q in query,
-        where: q.status == 1
+        where: q.status in [1, 2]
       )
 
-  def with_status(query, "published", true),
-    do:
-      from(q in query,
-        where: q.status == 1,
-        where:
-          is_nil(q.publish_at) or
-            fragment("?::timestamp", q.publish_at) < ^NaiveDateTime.utc_now()
-      )
-
-  def with_status(query, "published", false),
+  def with_status(query, "published"),
     do: from(q in query, where: q.status == 1)
 
-  def with_status(query, status, publish_at?) when is_atom(status),
-    do: with_status(query, to_string(status), publish_at?)
+  def with_status(query, status) when is_atom(status),
+    do: with_status(query, to_string(status))
 
-  def with_status(query, status, _), do: from(q in query, where: q.status == ^status)
+  def with_status(query, status), do: from(q in query, where: q.status == ^status)
 
   def with_preload(query, preloads) do
     Enum.reduce(preloads, query, fn
@@ -444,24 +427,24 @@ defmodule Brando.Query do
     end
   end
 
-  def run_list_query_reducer(context, args, initial_query, module, publish_at?) do
+  def run_list_query_reducer(context, args, initial_query, module) do
     Enum.reduce(args, initial_query, fn
       {_, nil}, q -> q
       {:select, select}, q -> with_select(q, select)
       {:order, order}, q -> with_order(q, order)
       {:offset, offset}, q -> offset(q, ^offset)
       {:limit, limit}, q -> limit(q, ^limit)
-      {:status, status}, q -> with_status(q, to_string(status), publish_at?)
+      {:status, status}, q -> with_status(q, to_string(status))
       {:preload, preload}, q -> with_preload(q, preload)
       {:filter, filter}, q -> context.with_filter(q, module, filter)
     end)
   end
 
-  def run_single_query_reducer(context, args, module, publish_at?) do
+  def run_single_query_reducer(context, args, module) do
     Enum.reduce(args, module, fn
       {_, nil}, q -> q
       {:limit, limit}, q -> limit(q, ^limit)
-      {:status, status}, q -> with_status(q, status, publish_at?)
+      {:status, status}, q -> with_status(q, status)
       {:preload, preload}, q -> with_preload(q, preload)
       {:matches, match}, q -> context.with_match(q, module, match)
       {:revision, revision}, _ -> get_revision(module, args, revision)
