@@ -71,4 +71,13 @@ defmodule Brando.Publisher do
   def maybe_override_status(changeset) do
     changeset
   end
+
+  def list_jobs do
+    query =
+      from j in Oban.Job,
+        where: "publisher" in j.tags,
+        order_by: j.scheduled_at
+
+    {:ok, Brando.repo().all(query)}
+  end
 end

@@ -1,3 +1,6 @@
+require Protocol
+Protocol.derive(Jason.Encoder, Oban.Job, only: ~w(tags worker state scheduled_at attempt args)a)
+
 defmodule Brando.Mixin.Channels.AdminChannelMixin do
   alias Brando.Images
   alias Brando.Navigation
@@ -43,6 +46,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "page_fragment:rerender",
     "page_fragment:duplicate",
     "page_fragment:rerender_all",
+    "publisher:list",
     "revision:activate",
     "revision:delete",
     "revision:schedule",
@@ -375,6 +379,11 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   def do_handle_in("cache:empty", _, socket) do
     Cachex.clear(:query)
     {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in("publisher:list", _, socket) do
+    {:ok, jobs} = Publisher.list_jobs()
+    {:reply, {:ok, %{code: 200, jobs: jobs}}, socket}
   end
 
   # Live preview
