@@ -23,6 +23,7 @@ defmodule Brando.Publisher do
       )
       when not is_nil(publish_at) do
     args = %{schema: schema, id: id, user_id: user.id, status: :published}
+    entry_identifier = Brando.Schema.identifier_for(entry)
 
     Brando.repo().delete_all(
       from j in Oban.Job,
@@ -33,7 +34,8 @@ defmodule Brando.Publisher do
     |> Worker.Publisher.new(
       replace_args: true,
       scheduled_at: publish_at,
-      tags: [:publisher, :status]
+      tags: [:publisher, :status],
+      meta: %{identifier: entry_identifier}
     )
     |> Oban.insert()
 
