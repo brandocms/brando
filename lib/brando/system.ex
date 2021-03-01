@@ -32,6 +32,7 @@ defmodule Brando.System do
     {:ok, {:entry_syntax, _}} = check_entry_syntax()
     {:ok, {:env, :exists}} = check_env()
     {:ok, _} = check_invalid_wrapper_content()
+    {:ok, []} = check_metaless_schemas()
 
     Logger.info("==> Brando >> System checks complete!")
   end
@@ -243,6 +244,13 @@ defmodule Brando.System do
     end
 
     {:ok, {:wrappers, :ok}}
+  end
+
+  defp check_metaless_schemas do
+    case Brando.Schema.metaless_schemas() do
+      [] -> {:ok, []}
+      schemas -> {:error, :metaless_schemas, schemas}
+    end
   end
 
   defp log_invalid_wrapper_content(t) do
