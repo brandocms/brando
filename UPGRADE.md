@@ -54,6 +54,9 @@
         revision: revision
       }
     })
+
+    // only push new route if not force saving a revision
+    if (revision === 0) { this.$router.push({ name: 'pages' }) }
     // ...
   ```
 
