@@ -1,5 +1,23 @@
 ## 0.51.0
 
+* Renamed `Brando.Schema` to `Brando.GraphQL.Schema`.
+  Switch out in your app's `graphql/schema.ex`.
+
+* Schemas need `use Brando.Schema` now. This is to help generate identifiers for entries.
+  You need to implement `identifier/1` and `absolute_url/1`.
+
+  `identifier/1` tells Brando which field in your schema best describes your entry.
+
+  ```
+  use Brando.Schema
+
+  identifier fn entry -> entry.title end
+
+  absolute_url fn -> router, endpoint, entry ->
+    router(endpoint, :detail, entry.slug)
+  end
+  ```
+
 * Revisions:
 
   Switch out your resolvers with:
@@ -72,6 +90,8 @@
     resolve &Brando.Pages.PageResolver.update/2
   end
   ```
+
+* Status: `published_all` has been removed -- you can replace with `published_and_pending`
 
 * To automatically add the dominant color of an image to its struct, you
   can install `dominant-color` on your server/dev machine:
