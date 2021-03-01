@@ -19,7 +19,7 @@ defmodule Brando.Schema do
   """
 
   @doc "Identifies your entry"
-  @callback __identifier__(entry :: map) :: map
+  @callback __identifier__(entry :: map) :: map | nil
 
   @doc "Returns an absolute URL to your entry (or false if it does not have one)"
   @callback __absolute_url__(entry :: map) :: binary | false
@@ -34,6 +34,15 @@ defmodule Brando.Schema do
   @doc """
   Set the field that will be used to identify the entry
   """
+  defmacro identifier(false) do
+    quote do
+      @impl Brando.Schema
+      def __identifier__(entry) do
+        nil
+      end
+    end
+  end
+
   defmacro identifier(fun) do
     quote do
       @impl Brando.Schema
@@ -101,5 +110,66 @@ defmodule Brando.Schema do
 
   def extract_cover(_) do
     nil
+  end
+
+  @doc """
+  List all schemas
+  """
+  @spec list_schemas :: [module()]
+  def list_schemas do
+    {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
+
+    app_modules
+    |> Enum.uniq()
+    |> Enum.filter(&is_schema/1)
+  end
+
+  def is_schema(module) do
+    {:__schema__, 1} in module.__info__(:functions)
+  end
+
+  def metaless_schemas do
+    Enum.reduce(list_schemas(), [], fn schema, acc ->
+      acc =
+        if not ({:__identifier__, 1} in schema.__info__(:functions)) do
+          IO.warn("""
+          Schema `#{inspect(schema)}` is missing `identifier`.
+
+              use Brando.Schema
+
+              identifier entry -> entry.title end
+
+          """)
+
+          [schema | acc]
+        else
+          acc
+        end
+
+      if not ({:__absolute_url__, 1} in schema.__info__(:functions)) do
+        IO.warn("""
+        Schema `#{inspect(schema)}` is missing `absolute_url`.
+        If your entries have URLs:
+
+            use Brando.Schema
+
+            absolute_url fn router, endpoint, entry ->
+              router.post_path(endpoint, :detail, entry.slug)
+            end
+
+        If they don't
+
+            use Brando.Schema
+
+            absolute_url false
+
+        """)
+
+        [schema | acc]
+      else
+        acc
+      end
+    end)
+    |> Enum.uniq()
   end
 end
