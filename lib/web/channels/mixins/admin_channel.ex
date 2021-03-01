@@ -1,5 +1,8 @@
 require Protocol
-Protocol.derive(Jason.Encoder, Oban.Job, only: ~w(tags worker state scheduled_at attempt args)a)
+
+Protocol.derive(Jason.Encoder, Oban.Job,
+  only: ~w(meta tags worker state scheduled_at attempt args)a
+)
 
 defmodule Brando.Mixin.Channels.AdminChannelMixin do
   alias Brando.Images
