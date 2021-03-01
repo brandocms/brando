@@ -7,6 +7,7 @@ defmodule Brando.Pages.Page do
   @type user :: Brando.Users.User.t() | :system
 
   use Brando.Web, :schema
+  use Brando.Schema
   use Brando.Field.Image.Schema
   use Brando.Sequence.Schema
   use Brando.SoftDelete.Schema, obfuscated_fields: [:uri]
@@ -79,6 +80,13 @@ defmodule Brando.Pages.Page do
       "xlarge" => %{"size" => "1200x630", "quality" => 75, "crop" => true}
     }
   }
+
+  identifier fn entry -> entry.title end
+
+  absolute_url fn routes, endpoint, entry ->
+    (entry.uri == "index" && "/") ||
+      routes.page_path(endpoint, :show, String.split(entry.uri, "/"))
+  end
 
   json_ld_schema JSONLD.Schema.Article do
     field :author, {:references, :identity}
