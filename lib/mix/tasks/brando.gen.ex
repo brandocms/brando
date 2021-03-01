@@ -80,6 +80,7 @@ defmodule Mix.Tasks.Brando.Gen do
     sequenced? = Mix.shell().yes?("\nMake schema sequenceable?")
     soft_delete? = Mix.shell().yes?("\nAdd soft deletion?")
     creator? = Mix.shell().yes?("\nAdd creator?")
+    revisioned? = Mix.shell().yes?("\nAdd revisions?")
     file_field? = :file in Keyword.values(attrs)
     image_field? = :image in Keyword.values(attrs)
     video_field? = :video in Keyword.values(attrs)
@@ -159,6 +160,7 @@ defmodule Mix.Tasks.Brando.Gen do
           sequenced: sequenced?,
           soft_delete: soft_delete?,
           creator: creator?,
+          revisioned: revisioned?,
           img_fields: img_fields,
           video_fields: video_fields,
           file_fields: file_fields,
