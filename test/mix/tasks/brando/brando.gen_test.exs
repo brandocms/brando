@@ -37,6 +37,8 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       send(self(), {:mix_shell_input, :yes?, false})
       # creator?
       send(self(), {:mix_shell_input, :yes?, true})
+      # revisioned?
+      send(self(), {:mix_shell_input, :yes?, false})
 
       Mix.Tasks.Brando.Gen.run([])
 
@@ -58,6 +60,8 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       send(self(), {:mix_shell_input, :yes?, false})
       # creator?
       send(self(), {:mix_shell_input, :yes?, true})
+      # revisioned?
+      send(self(), {:mix_shell_input, :yes?, true})
 
       Mix.Tasks.Brando.Gen.run([])
 
@@ -70,6 +74,12 @@ defmodule Mix.Tasks.Brando.Gen.Test do
                  "@required_fields ~w(title age height famous born_at secret first_login alarm creator_id data)a"
 
         assert file =~ "@optional_fields ~w(image_series_id cover)a"
+
+        assert file =~ "use Brando.Schema"
+        assert file =~ "identifier fn entry -> entry.title end"
+
+        assert file =~
+                 "  absolute_url fn -> router, endpoint, entry ->\n    router.captain_path(endpoint, :detail, entry.slug)\n  end"
       end)
 
       assert_file("assets/backend/src/views/games/CaptainEditView.vue", fn file ->
@@ -88,6 +98,8 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       send(self(), {:mix_shell_input, :yes?, false})
       # creator?
       send(self(), {:mix_shell_input, :yes?, true})
+      # revisioned?
+      send(self(), {:mix_shell_input, :yes?, false})
 
       Mix.Tasks.Brando.Gen.run([])
 
@@ -236,6 +248,8 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       send(self(), {:mix_shell_input, :yes?, false})
       # creator?
       send(self(), {:mix_shell_input, :yes?, true})
+      # revisioned?
+      send(self(), {:mix_shell_input, :yes?, false})
 
       Mix.Tasks.Brando.Gen.run([])
 
@@ -257,6 +271,8 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       send(self(), {:mix_shell_input, :yes?, true})
       # creator?
       send(self(), {:mix_shell_input, :yes?, true})
+      # revisioned?
+      send(self(), {:mix_shell_input, :yes?, false})
 
       Mix.Tasks.Brando.Gen.run([])
 
@@ -270,6 +286,9 @@ defmodule Mix.Tasks.Brando.Gen.Test do
 
       assert_file("lib/brando/graphql/resolvers/project_resolver.ex", fn file ->
         assert file =~ "defmodule BrandoIntegration.Projects.ProjectResolver do"
+
+        assert file =~
+                 "  use Brando.GraphQL.Resolver,\n    context: BrandoIntegration.Projects,\n    schema: BrandoIntegration.Projects.Project"
       end)
 
       assert_file("assets/backend/src/gql/projects/PROJECTS_QUERY.graphql", fn file ->
