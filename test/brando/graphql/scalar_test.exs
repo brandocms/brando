@@ -7,7 +7,7 @@ defmodule Brando.ScalarTest do
     use Brando.Schema
 
     import_types Absinthe.Plug.Types
-    import_types Brando.Schema.Types
+    import_types Brando.GraphQL.Schema.Types
 
     query do
       # Query type must exist

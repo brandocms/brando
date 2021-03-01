@@ -1,4 +1,4 @@
-defmodule Brando.Schema.Types.Identity do
+defmodule Brando.GraphQL.Schema.Types.Identity do
   @moduledoc """
   GraphQL type spec, mutations and queries for Identity
   """

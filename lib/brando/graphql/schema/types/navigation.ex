@@ -1,4 +1,4 @@
-defmodule Brando.Schema.Types.Navigation do
+defmodule Brando.GraphQL.Schema.Types.Navigation do
   use Brando.Web, :absinthe
 
   object :menu do

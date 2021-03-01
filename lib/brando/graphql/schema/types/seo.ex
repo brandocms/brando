@@ -1,4 +1,4 @@
-defmodule Brando.Schema.Types.SEO do
+defmodule Brando.GraphQL.Schema.Types.SEO do
   @moduledoc """
   GraphQL type spec, mutations and queries for Identity
   """

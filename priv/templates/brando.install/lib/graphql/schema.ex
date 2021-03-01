@@ -4,10 +4,10 @@ defmodule <%= application_module %>.Schema do
   """
 
   use Absinthe.Schema
-  use Brando.Schema
+  use Brando.GraphQL.Schema
 
   import_types <%= application_module %>.Schema.Types
-  import_types Brando.Schema.Types
+  import_types Brando.GraphQL.Schema.Types
 
   def context(ctx) do
     # ++dataloaders
@@ -43,7 +43,7 @@ defmodule <%= application_module %>.Schema do
   end
 
   def middleware(middleware, _field, %{identifier: :mutation}), do:
-    middleware ++ [Brando.Schema.Middleware.ChangesetErrors]
+    middleware ++ [Brando.GraphQL.Schema.Middleware.ChangesetErrors]
   def middleware(middleware, _field, _object), do:
     middleware
 end

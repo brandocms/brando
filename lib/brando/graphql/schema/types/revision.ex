@@ -1,4 +1,4 @@
-defmodule Brando.Schema.Types.Revision do
+defmodule Brando.GraphQL.Schema.Types.Revision do
   use Brando.Web, :absinthe
 
   object :revision do

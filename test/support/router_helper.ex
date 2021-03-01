@@ -8,7 +8,7 @@ defmodule BrandoIntegration.TestSchema do
   use Brando.Schema
 
   import_types Absinthe.Plug.Types
-  import_types Brando.Schema.Types
+  import_types Brando.GraphQL.Schema.Types
 
   def context(ctx) do
     loader =

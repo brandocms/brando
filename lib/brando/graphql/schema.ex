@@ -1,11 +1,11 @@
-defmodule Brando.Schema do
+defmodule Brando.GraphQL.Schema do
   @moduledoc """
   Use this to import GQL queries and mutations
   """
 
   defmacro __using__(_) do
     quote do
-      import Brando.Schema
+      import Brando.GraphQL.Schema
     end
   end
 

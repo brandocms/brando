@@ -1,4 +1,4 @@
-defmodule Brando.Schema.Types.Page do
+defmodule Brando.GraphQL.Schema.Types.Page do
   use Brando.Web, :absinthe
 
   object :page do
