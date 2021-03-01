@@ -1,5 +1,9 @@
 defmodule Brando.Sites.Redirect do
   use Brando.Web, :schema
+  use Brando.Schema
+
+  identifier false
+  absolute_url false
 
   @fields [:to, :from, :code]
 

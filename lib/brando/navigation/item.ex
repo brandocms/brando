@@ -3,10 +3,14 @@ defmodule Brando.Navigation.Item do
   Ecto schema for the Menu schema.
   """
 
+  use Brando.Web, :schema
+  use Brando.Schema
+
   @type t :: %__MODULE__{}
   @type user :: Brando.Users.User.t() | :system
 
-  use Brando.Web, :schema
+  identifier fn entry -> "#{entry.title}" end
+  absolute_url false
 
   embedded_schema do
     field :status, Brando.Type.Status

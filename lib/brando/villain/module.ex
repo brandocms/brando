@@ -8,8 +8,12 @@ defmodule Brando.Villain.Module do
   @type t :: %__MODULE__{}
 
   use Brando.Web, :schema
+  use Brando.Schema
   use Brando.Sequence.Schema
   use Brando.SoftDelete.Schema
+
+  identifier false
+  absolute_url false
 
   @required_fields ~w(name namespace help_text class code refs)a
   @optional_fields ~w(sequence deleted_at vars svg multi wrapper)a

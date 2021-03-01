@@ -1,5 +1,9 @@
 defmodule Brando.Meta do
   use Brando.Web, :schema
+  use Brando.Schema
+
+  identifier false
+  absolute_url false
 
   @fields [:key, :value]
 

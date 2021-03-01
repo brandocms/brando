@@ -4,15 +4,18 @@ defmodule Brando.ImageSeries do
   and helper functions for dealing with the schema.
   """
 
-  @type t :: %__MODULE__{}
-
   use Brando.Web, :schema
   use Brando.Sequence.Schema
   use Brando.SoftDelete.Schema
+  use Brando.Schema
 
   alias Brando.ImageCategory
-
   import Ecto.Query, only: [from: 2]
+
+  @type t :: %__MODULE__{}
+
+  identifier false
+  absolute_url false
 
   @required_fields ~w(name image_category_id creator_id)a
   @optional_fields ~w(credits sequence cfg slug deleted_at)a
