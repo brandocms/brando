@@ -14,7 +14,7 @@
   identifier fn entry -> entry.title end
 
   absolute_url fn -> router, endpoint, entry ->
-    router(endpoint, :detail, entry.slug)
+    router.page_path(endpoint, :detail, entry.slug)
   end
   ```
 
@@ -69,7 +69,7 @@
       variables: {
         pageParams,
         pageId: this.page.id,
-        revision: revision
+        revision
       }
     })
 
