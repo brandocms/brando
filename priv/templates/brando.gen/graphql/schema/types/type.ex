@@ -59,6 +59,7 @@ defmodule <%= app_module %>.Schema.Types.<%= alias %> do
     field :update_<%= singular %>, type: :<%= singular %> do
       arg :<%= singular %>_id, non_null(:id)
       arg :<%= singular %>_params, :<%= singular %>_params
+      arg :revision, :id
 
       resolve &<%= app_module %>.<%= domain %>.<%= alias %>Resolver.update/2
     end
