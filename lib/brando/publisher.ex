@@ -30,7 +30,11 @@ defmodule Brando.Publisher do
     )
 
     args
-    |> Worker.Publisher.new(replace_args: true, scheduled_at: publish_at)
+    |> Worker.Publisher.new(
+      replace_args: true,
+      scheduled_at: publish_at,
+      tags: [:publisher, :status]
+    )
     |> Oban.insert()
 
     {:ok, entry}
@@ -45,7 +49,11 @@ defmodule Brando.Publisher do
     args = %{schema: schema, id: id, revision: revision, user_id: user.id}
 
     args
-    |> Worker.Publisher.new(replace_args: true, scheduled_at: publish_at)
+    |> Worker.Publisher.new(
+      replace_args: true,
+      scheduled_at: publish_at,
+      tags: [:publisher, :revision]
+    )
     |> Oban.insert()
   end
 
