@@ -83,9 +83,9 @@ defmodule Brando.GraphQL.Resolver do
 
       @doc false
       def delete(%{unquote(:"#{singular}_id") => id}, %{
-            context: %{current_user: _}
+            context: %{current_user: user}
           }) do
-        unquote(context).unquote(:"delete_#{singular}")(id)
+        unquote(context).unquote(:"delete_#{singular}")(id, user)
       end
     end
   end

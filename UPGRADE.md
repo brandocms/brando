@@ -91,6 +91,9 @@
   end
   ```
 
+* If you use custom GraphQL resolvers, make sure you pass your `current_user` to the
+  `delete_<singular>` function.
+
 * Status: `published_all` has been removed -- you can replace with `published_and_pending`
 
 * To automatically add the dominant color of an image to its struct, you

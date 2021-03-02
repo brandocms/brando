@@ -563,7 +563,7 @@ defmodule Brando.Query do
     quote do
       @spec unquote(:"delete_#{name}")(integer | binary) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
-      def unquote(:"delete_#{name}")(id) do
+      def unquote(:"delete_#{name}")(id, user \\ :system) do
         {:ok, entry} = unquote(:"get_#{name}")(id)
 
         {:ok, entry} =

@@ -44,8 +44,8 @@ defmodule Brando.Pages.PageResolver do
   @doc """
   Delete module
   """
-  def delete_module(%{module_id: module_id}, %{context: %{current_user: _current_user}}) do
-    Villain.delete_module(module_id)
+  def delete_module(%{module_id: module_id}, %{context: %{current_user: user}}) do
+    Villain.delete_module(module_id, user)
   end
 
   @doc """
