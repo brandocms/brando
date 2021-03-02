@@ -17,10 +17,18 @@
 
 <script>
 // ++imports
-import locale from '../../locales/<%= vue_plural %>'
+import locale from '../../locales/<%= vue_plural %>'<%= if revisioned do %>
+import Revisions from 'brandojs/src/mixins/Revisions'<% end %>
 // __imports
 
-export default {
+export default {<%= if revisioned do %>
+  mixins: [
+    Revisions({
+      schema: '<%= schema_module %>',
+      prop: '<%= vue_singular %>',
+      key: 'id'
+    })
+  ],<% end %>
   props: {
     <%= vue_singular %>: {
       type: Object,
