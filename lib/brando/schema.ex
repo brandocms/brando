@@ -87,7 +87,11 @@ defmodule Brando.Schema do
         routes = Brando.helpers()
         endpoint = Brando.endpoint()
 
-        unquote(fun).(routes, endpoint, entry)
+        try do
+          unquote(fun).(routes, endpoint, entry)
+        rescue
+          _ -> nil
+        end
       end
     end
   end
