@@ -484,6 +484,11 @@ defmodule Brando.Query do
             Brando.Revisions.create_revision(entry, user)
           end
 
+          case Brando.Schema.identifier_for(entry) do
+            nil -> nil
+            identifier -> Brando.Notifications.push_mutation("created", identifier, user)
+          end
+
           unquote(block).(entry)
         else
           err -> err
@@ -543,6 +548,11 @@ defmodule Brando.Query do
             Brando.Revisions.create_revision(entry, user)
           end
 
+          case Brando.Schema.identifier_for(entry) do
+            nil -> nil
+            identifier -> Brando.Notifications.push_mutation("updated", identifier, user)
+          end
+
           unquote(block).(entry)
         else
           err -> err
@@ -581,6 +591,12 @@ defmodule Brando.Query do
         end
 
         Brando.Datasource.update_datasource(unquote(module), entry)
+
+        case Brando.Schema.identifier_for(entry) do
+          nil -> nil
+          identifier -> Brando.Notifications.push_mutation("deleted", identifier, user)
+        end
+
         unquote(block).(entry)
       end
     end
