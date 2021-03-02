@@ -5469,28 +5469,14 @@ debug@2.6.9, debug@^2.2.0, debug@^2.3.3, debug@^2.6.9:
   dependencies:
     ms "2.0.0"
 
-debug@^3.1.1:
+debug@^3.1.1, debug@^3.2.6:
   version "3.2.7"
   resolved "https://registry.yarnpkg.com/debug/-/debug-3.2.7.tgz#72580b7e9145fb39b6676f9c5e5fb100b934179a"
   integrity sha512-CFjzYYAi4ThfiQvizrFQevTTXHtnCqWfe7x1AhgEscTz6ZbLbfoLRLPugTQyBth6f8ZERVUSyWHFD/7Wu4t1XQ==
   dependencies:
     ms "^2.1.1"
 
-debug@^3.2.6:
-  version "3.2.6"
-  resolved "https://registry.yarnpkg.com/debug/-/debug-3.2.6.tgz#e83d17de16d8a7efb7717edbe5fb10135eee629b"
-  integrity sha512-mel+jf7nrtEl5Pn1Qx46zARXKDpBbvzezse7p7LqINmdoIk8PYP5SySaxEmYv6TZ0JyEKA1hsCId6DIhgITtWQ==
-  dependencies:
-    ms "^2.1.1"
-
-debug@^4.0.0:
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/debug/-/debug-4.1.1.tgz#3b72260255109c6b589cee050f1d516139664791"
-  integrity sha512-pYAIzeRo8J6KPEaJ0VWOh5Pzkbw/RetuzehGM7QRRX5he4fPHx2rdKMB256ehJCkX+XRQm16eZLqLNS8RSZXZw==
-  dependencies:
-    ms "^2.1.1"
-
-debug@^4.0.1, debug@^4.1.0, debug@^4.1.1:
+debug@^4.0.0, debug@^4.0.1, debug@^4.1.0, debug@^4.1.1, debug@^4.3.0:
   version "4.3.1"
   resolved "https://registry.yarnpkg.com/debug/-/debug-4.3.1.tgz#f0d229c505e0c6d8c49ac553d1b13dc183f6b2ee"
   integrity sha512-doEwdvm4PCeK4K3RQN2ZC2BYUBaxwLARCqZmMjtF8a51J2Rb0xpVloFRnCODwqjpwnAoao4pelN8l3RJdv3gRQ==
@@ -13092,12 +13078,12 @@ vue-cli-plugin-apollo@^0.22.2:
     subscriptions-transport-ws "^0.9.16"
     ts-node "^8.10.2"
 
-vue-cli-plugin-i18n@^1.0.1:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/vue-cli-plugin-i18n/-/vue-cli-plugin-i18n-1.0.1.tgz#5a3077de5d62c9b4068e486db1fc97fce9fa0072"
-  integrity sha512-sLo6YzudaWgn5dOMvrKixE5bb/onYGxcxm+0YexqoOx0QtR+7hZ/P5WPFBMM9v/2i1ec2YYe2PvKTBel7KE+tA==
+vue-cli-plugin-i18n@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/vue-cli-plugin-i18n/-/vue-cli-plugin-i18n-2.0.0.tgz#26c138e591dbe995e97db21f6e816be316e171fa"
+  integrity sha512-eYQ1fQWyncOOOac6ModmB6otsBv9n4qQg3sPfnnrbuCaaitNhkudIV149P234yQFRWx6oYfY/2XSfCP7eOFTqA==
   dependencies:
-    debug "^4.1.0"
+    debug "^4.3.0"
     deepmerge "^4.2.0"
     dotenv "^8.2.0"
     flat "^5.0.0"
@@ -13150,12 +13136,7 @@ vue-i18n-extract@1.0.2:
     is-valid-glob "^1.0.0"
     yargs "^13.2.2"
 
-vue-i18n@^8.17.0:
-  version "8.17.5"
-  resolved "https://registry.yarnpkg.com/vue-i18n/-/vue-i18n-8.17.5.tgz#e34ceda4273a83be94c392358a227d66b76acb12"
-  integrity sha512-gijXwvyTH3aeJhuq8EoQ9SDDlm1mgJexNccSK1ctalxsa6C7ifbWiH7V/YGfm9WJ7udYoD8ezfZdazxxvKvKYw==
-
-vue-i18n@^8.22.4:
+vue-i18n@^8.17.0, vue-i18n@^8.22.4:
   version "8.23.0"
   resolved "https://registry.yarnpkg.com/vue-i18n/-/vue-i18n-8.23.0.tgz#4a65681a1dfe716d47e1d00ddbd6e0b88ea36735"
   integrity sha512-mXgniaumwca8tKdp55fmvqIcW658vQQXq0zEyRHp8sgZ6t+Md+Whhu6CCPg9/erVNlvpKzsGsucGjt2N8GrFCA==
@@ -13237,12 +13218,7 @@ vue-upload-component@^2.8.22:
   resolved "https://registry.yarnpkg.com/vue-upload-component/-/vue-upload-component-2.8.22.tgz#7a1573149a4afa5ca6e8c7e0bc70533925fe26b7"
   integrity sha512-AJpETqiZrgqs8bwJQpWTFrRg3i6s7cUodRRZVnb1f94Jvpd0YYfzGY4zluBqPmssNSkUaYu7EteXaK8aW17Osw==
 
-vue@^2.6.11:
-  version "2.6.11"
-  resolved "https://registry.yarnpkg.com/vue/-/vue-2.6.11.tgz#76594d877d4b12234406e84e35275c6d514125c5"
-  integrity sha512-VfPwgcGABbGAue9+sfrD4PuwFar7gPb1yl1UK1MwXoQPAw0BKSqWfoYCT/ThFrdEVWoI51dBuyCoiNU9bZDZxQ==
-
-vue@^2.6.12:
+vue@^2.6.11, vue@^2.6.12:
   version "2.6.12"
   resolved "https://registry.yarnpkg.com/vue/-/vue-2.6.12.tgz#f5ebd4fa6bd2869403e29a896aed4904456c9123"
   integrity sha512-uhmLFETqPPNyuLLbsKz6ioJ4q7AZHzD8ZVFNATNyICSZouqP2Sz0rotWQC8UNBF6VGSCs5abnKJoStA6JbCbfg==
