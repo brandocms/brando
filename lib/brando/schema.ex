@@ -112,8 +112,9 @@ defmodule Brando.Schema do
     end
   end
 
+  @spec identifiers_for([map]) :: {:ok, list}
   def identifiers_for(entries) do
-    Enum.map(entries, &identifier_for/1)
+    {:ok, Enum.map(entries, &identifier_for/1)}
   end
 
   def identifier_for(%{__struct__: schema} = entry) do
@@ -150,7 +151,8 @@ defmodule Brando.Schema do
 
   def list_entry_types(locale) do
     schemas = list_schemas() ++ [Brando.Pages.Page]
-    Enum.map(schemas, &{get_translated_plural(&1, locale), &1})
+    entry_types = Enum.map(schemas, &{get_translated_plural(&1, locale), &1})
+    {:ok, entry_types}
   end
 
   defp get_context_for(schema) do

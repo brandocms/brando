@@ -21,6 +21,8 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "datasource:list_available_entries",
     "datasource:list_modules",
     "datasource:list_module_keys",
+    "entries:types",
+    "entries:list",
     "images:get_image",
     "images:delete_images",
     "images:sequence_images",
@@ -362,6 +364,16 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
       ) do
     {:ok, entries} = Brando.Datasource.list_selection(module, query, nil)
     {:reply, {:ok, %{code: 200, available_entries: entries}}, socket}
+  end
+
+  def do_handle_in("entries:types", %{"locale" => locale}, socket) do
+    {:ok, entry_types} = Brando.Schema.list_entry_types(locale)
+    {:reply, {:ok, %{code: 200, entry_types: entry_types}}, socket}
+  end
+
+  def do_handle_in("entries:list", %{"schema" => schema}, socket) do
+    {:ok, entries} = Brando.Schema.list_entries_for(schema)
+    {:reply, {:ok, %{code: 200, entries: entries}}, socket}
   end
 
   def do_handle_in("villain:list_modules", %{"namespace" => namespace}, socket) do
