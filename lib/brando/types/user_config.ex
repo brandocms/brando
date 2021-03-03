@@ -10,8 +10,9 @@ defmodule Brando.Type.UserConfig do
   @type t :: %__MODULE__{}
   @derive Jason.Encoder
 
-  defstruct show_onboarding: false,
-            reset_password_on_first_login: true
+  defstruct reset_password_on_first_login: true,
+            show_mutation_notifications: true,
+            show_onboarding: false
 
   @doc """
   Returns the internal type representation of our `Role` type for pg

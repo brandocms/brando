@@ -19,11 +19,13 @@ defmodule Brando.GraphQL.Schema.Types.User do
 
   object :user_config do
     field :show_onboarding, :boolean
+    field :show_mutation_notifications, :boolean
     field :reset_password_on_first_login, :boolean
   end
 
   input_object :user_config_params do
     field :show_onboarding, :boolean
+    field :show_mutation_notifications, :boolean
     field :reset_password_on_first_login, :boolean
   end
 
