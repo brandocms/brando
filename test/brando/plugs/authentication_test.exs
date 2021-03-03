@@ -73,7 +73,11 @@ defmodule Brando.Plug.AuthenticationTest do
                  "subject" => "all"
                }
              ],
-             "config" => %{"reset_password_on_first_login" => true, "show_onboarding" => false},
+             "config" => %{
+               "reset_password_on_first_login" => true,
+               "show_onboarding" => false,
+               "show_mutation_notifications" => true
+             },
              "last_login" => nil
            }
 
