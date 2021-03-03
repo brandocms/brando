@@ -275,10 +275,10 @@
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.7"
 
-"@univers-agency/jupiter@^3.40.1":
-  version "3.40.1"
-  resolved "https://registry.yarnpkg.com/@univers-agency/jupiter/-/jupiter-3.40.1.tgz#b85dfc08606d8c3080a749cf3d994156c0ea950c"
-  integrity sha512-IzVKowUhAukiNNklIzQRfRLyYciqM+LywPmmOp9AgqsCgqO1TUWUEuvY6CWhxpDOY9rNPDhc575sxXPvS+H37A==
+"@univers-agency/jupiter@^3.41.2":
+  version "3.41.2"
+  resolved "https://registry.yarnpkg.com/@univers-agency/jupiter/-/jupiter-3.41.2.tgz#9ab505661259f3b68f7de6dcba1ce789e08a21aa"
+  integrity sha512-o8cGebmGrF3mUS7Cz7OlwPWBizNkO2ILSWt5rodu95AO+Pmc1UbsFPCtB66/paLjUr8WwYZd6MiR9j6OIvactw==
   dependencies:
     "@egjs/hammerjs" "^2.0.17"
     body-scroll-lock "^3.1.5"
@@ -1552,8 +1552,9 @@ postcss-font-variant@^4.0.0:
   dependencies:
     postcss "^7.0.2"
 
-"postcss-functions@github:twined/postcss-functions":
+postcss-functions@twined/postcss-functions:
   version "4.0.0"
+  uid "7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   dependencies:
     glob "^7.1.6"
