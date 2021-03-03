@@ -9,6 +9,8 @@ defmodule Brando.Navigation.Item do
   @type t :: %__MODULE__{}
   @type user :: Brando.Users.User.t() | :system
 
+  meta :en, singular: "menu item", plural: "menu items"
+  meta :no, singular: "menypunkt", plural: "menypunkter"
   identifier fn entry -> "#{entry.title}" end
   absolute_url false
 

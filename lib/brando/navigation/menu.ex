@@ -10,6 +10,8 @@ defmodule Brando.Navigation.Menu do
   use Brando.Sequence.Schema
   use Brando.Schema
 
+  meta :en, singular: "menu", plural: "menus"
+  meta :no, singular: "meny", plural: "menyer"
   identifier fn entry -> "#{entry.title} [#{entry.language}]" end
   absolute_url false
 

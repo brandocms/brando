@@ -81,6 +81,8 @@ defmodule Brando.Pages.Page do
     }
   }
 
+  meta :en, singular: "page", plural: "pages"
+  meta :no, singular: "side", plural: "sider"
   identifier fn entry -> entry.title end
 
   absolute_url fn routes, endpoint, entry ->

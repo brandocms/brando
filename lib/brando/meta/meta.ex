@@ -2,6 +2,10 @@ defmodule Brando.Meta do
   use Brando.Web, :schema
   use Brando.Schema
 
+  # :xzibitface:
+  meta :en, singular: "meta", plural: "metas"
+  meta :no, singular: "meta", plural: "metaer"
+
   identifier false
   absolute_url false
 

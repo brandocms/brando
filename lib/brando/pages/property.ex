@@ -6,6 +6,8 @@ defmodule Brando.Pages.Property do
   @type t :: %__MODULE__{}
   @type changeset :: Ecto.Changeset.t()
 
+  meta :en, singular: "page property", plural: "page properties"
+  meta :no, singular: "sideegenskap", plural: "sideegenskaper"
   identifier false
   absolute_url false
 

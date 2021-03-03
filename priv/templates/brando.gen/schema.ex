@@ -11,12 +11,22 @@ defmodule <%= schema_module %> do
 
   @type t :: %__MODULE__{}
 
-  identifier fn entry -> entry.<%= List.first(attrs) |> elem(0) %> end
+  # Schema meta
+  meta :en, singular: <%= inspect(singular) %>, plural: <%= inspect(plural) %>
+  meta :no, singular: <%= inspect(singular) %>, plural: <%= inspect(plural) %>
 
-  absolute_url fn -> router, endpoint, entry ->
+  # Identifier. This is used for representing an entry in BrandoJS
+  identifier fn entry ->
+    entry.<%= List.first(attrs) |> elem(0) %>
+  end
+
+  # Return an absolute URL for `entry`. If your entry has no URL
+  # you can just do `absolute_url false`
+  absolute_url fn router, endpoint, entry ->
     router.<%= singular %>_path(endpoint, :detail, entry.slug)
   end
 
+  # Ecto schema
   schema <%= inspect "#{snake_domain}_#{plural}" %> do
 <%= for schema_field <- schema_fields do %>    <%= schema_field %>
 <% end %><%= for {k, _, m} <- schema_assocs do %>    belongs_to <%= inspect k %>, <%= m %>

@@ -1,6 +1,7 @@
 locals_without_parens = [
   absolute_url: 1,
   identifier: 1,
+  meta: 2,
   sequence: 2,
   villain: 1,
   datasource: 2,

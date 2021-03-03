@@ -2,6 +2,8 @@ defmodule Brando.Link do
   use Brando.Web, :schema
   use Brando.Schema
 
+  meta :en, singular: "link", plural: "links"
+  meta :no, singular: "lenke", plural: "lenker"
   identifier fn entry -> entry.name end
   absolute_url fn _, _, entry -> entry.url end
 

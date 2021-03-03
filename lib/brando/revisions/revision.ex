@@ -5,6 +5,8 @@ defmodule Brando.Revisions.Revision do
   @type t :: %__MODULE__{}
   @type user :: Brando.Users.User.t() | :system
 
+  meta :en, singular: "revision", plural: "revisions"
+  meta :no, singular: "revisjon", plural: "revisjoner"
   identifier false
   absolute_url false
 

@@ -6,6 +6,8 @@ defmodule Brando.Sites.Identity do
   @type t :: %__MODULE__{}
   @type changeset :: Ecto.Changeset.t()
 
+  meta :en, singular: "identity", plural: "identities"
+  meta :no, singular: "identitet", plural: "identiteter"
   identifier false
   absolute_url false
 

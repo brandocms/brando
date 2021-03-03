@@ -3,6 +3,8 @@ defmodule Brando.Sites.SEO do
   use Brando.Schema
   use Brando.Field.Image.Schema
 
+  meta :en, singular: "SEO", plural: "SEO"
+  meta :no, singular: "SEO", plural: "SEO"
   identifier false
   absolute_url false
 

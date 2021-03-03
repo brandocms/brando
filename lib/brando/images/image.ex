@@ -14,6 +14,8 @@ defmodule Brando.Image do
 
   import Ecto.Query, only: [from: 2]
 
+  meta :en, singular: "image", plural: "images"
+  meta :no, singular: "bilde", plural: "bilder"
   identifier false
   absolute_url false
 

@@ -76,10 +76,14 @@ defmodule Mix.Tasks.Brando.Gen.Test do
         assert file =~ "@optional_fields ~w(image_series_id cover)a"
 
         assert file =~ "use Brando.Schema"
-        assert file =~ "identifier fn entry -> entry.title end"
 
         assert file =~
-                 "  absolute_url fn -> router, endpoint, entry ->\n    router.captain_path(endpoint, :detail, entry.slug)\n  end"
+                 "meta :en, singular: \"captain\", plural: \"captains\"\n  meta :no, singular: \"captain\", plural: \"captains\""
+
+        assert file =~ "identifier fn entry ->\n    entry.title\n  end"
+
+        assert file =~
+                 "  absolute_url fn router, endpoint, entry ->\n    router.captain_path(endpoint, :detail, entry.slug)\n  end"
       end)
 
       assert_file("assets/backend/src/views/games/CaptainEditView.vue", fn file ->

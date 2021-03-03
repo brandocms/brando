@@ -13,6 +13,8 @@ defmodule Brando.Pages.PageFragment do
   use Brando.Sequence.Schema
   use Brando.Schema
 
+  meta :en, singular: "page fragment", plural: "page fragments"
+  meta :no, singular: "sidefragment", plural: "sidefragmenter"
   identifier fn entry -> entry.title end
   absolute_url false
 

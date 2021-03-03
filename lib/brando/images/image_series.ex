@@ -14,6 +14,8 @@ defmodule Brando.ImageSeries do
 
   @type t :: %__MODULE__{}
 
+  meta :en, singular: "image series", plural: "image series"
+  meta :no, singular: "bildeserie", plural: "bildeserier"
   identifier false
   absolute_url false
 

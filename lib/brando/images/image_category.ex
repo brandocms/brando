@@ -14,6 +14,8 @@ defmodule Brando.ImageCategory do
   import Ecto.Query, only: [from: 2]
   import Ecto.Changeset
 
+  meta :en, singular: "image category", plural: "image categories"
+  meta :no, singular: "bildekategori", plural: "bildekategorier"
   identifier false
   absolute_url false
 

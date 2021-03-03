@@ -96,8 +96,9 @@ defmodule Brando.Users.User do
     ]
   }
 
+  meta :en, singular: "user", plural: "users"
+  meta :no, singular: "bruker", plural: "brukere"
   identifier fn entry -> entry.name end
-
   absolute_url false
 
   @doc """

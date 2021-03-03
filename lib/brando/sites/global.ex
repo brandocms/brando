@@ -3,6 +3,8 @@ defmodule Brando.Sites.Global do
   use Brando.Schema
   alias Brando.Sites.GlobalCategory
 
+  meta :en, singular: "global", plural: "globals"
+  meta :no, singular: "global", plural: "globaler"
   identifier false
   absolute_url false
 

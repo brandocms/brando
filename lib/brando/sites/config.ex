@@ -2,6 +2,8 @@ defmodule Brando.ConfigEntry do
   use Brando.Web, :schema
   use Brando.Schema
 
+  meta :en, singular: "config entry", plural: "config entries"
+  meta :no, singular: "konfigurasjonspunkt", plural: "konfigurasjonspunkter"
   identifier false
   absolute_url false
 

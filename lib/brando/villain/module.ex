@@ -12,6 +12,9 @@ defmodule Brando.Villain.Module do
   use Brando.Sequence.Schema
   use Brando.SoftDelete.Schema
 
+  meta :en, singular: "module", plural: "modules"
+  meta :no, singular: "modul", plural: "moduler"
+
   identifier false
   absolute_url false
 

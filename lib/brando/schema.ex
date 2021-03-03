@@ -24,10 +24,25 @@ defmodule Brando.Schema do
   @doc "Returns an absolute URL to your entry (or false if it does not have one)"
   @callback __absolute_url__(entry :: map) :: binary | false
 
+  @doc "Returns a meta map for schema"
+  @callback __meta__(locale :: atom, key :: atom) :: binary
+
   defmacro __using__(_) do
     quote do
       @behaviour Brando.Schema
-      import Brando.Schema, only: [identifier: 1, absolute_url: 1]
+      import Brando.Schema, only: [identifier: 1, absolute_url: 1, meta: 2]
+    end
+  end
+
+  defmacro meta(language, opts) do
+    language = (is_binary(language) && String.to_existing_atom(language)) || language
+    singular = Keyword.fetch!(opts, :singular)
+    plural = Keyword.fetch!(opts, :plural)
+
+    quote do
+      @impl Brando.Schema
+      def __meta__(unquote(language), :singular), do: unquote(singular)
+      def __meta__(unquote(language), :plural), do: unquote(plural)
     end
   end
 
@@ -65,7 +80,8 @@ defmodule Brando.Schema do
           type: translated_type,
           status: status,
           absolute_url: absolute_url,
-          cover: cover
+          cover: cover,
+          schema: __MODULE__
         }
       end
     end
@@ -132,6 +148,33 @@ defmodule Brando.Schema do
     {:__schema__, 1} in module.__info__(:functions)
   end
 
+  def list_entry_types(locale) do
+    schemas = list_schemas() ++ [Brando.Pages.Page]
+    Enum.map(schemas, &{get_translated_plural(&1, locale), &1})
+  end
+
+  defp get_context_for(schema) do
+    schema
+    |> Module.split()
+    |> Enum.drop(-1)
+    |> Module.concat()
+  end
+
+  def list_entries_for(schema) do
+    list_opts = %{}
+    context = get_context_for(schema)
+
+    singular =
+      schema
+      |> Module.split()
+      |> List.last()
+      |> Inflex.underscore()
+
+    plural = Inflex.pluralize(singular)
+    {:ok, entries} = apply(context, :"list_#{plural}", [list_opts])
+    identifiers_for(entries)
+  end
+
   def metaless_schemas do
     Enum.reduce(list_schemas(), [], fn schema, acc ->
       acc =
@@ -142,6 +185,23 @@ defmodule Brando.Schema do
               use Brando.Schema
 
               identifier entry -> entry.title end
+
+          """)
+
+          [schema | acc]
+        else
+          acc
+        end
+
+      acc =
+        if not ({:__meta__, 2} in schema.__info__(:functions)) do
+          IO.warn("""
+          Schema `#{inspect(schema)}` is missing `meta`.
+
+              use Brando.Schema
+
+              meta :en, singular: "post", plural: "posts"
+              meta :no, singular: "post", plural: "poster"
 
           """)
 
@@ -175,5 +235,15 @@ defmodule Brando.Schema do
       end
     end)
     |> Enum.uniq()
+  end
+
+  defp get_translated_singular(module, locale) do
+    locale_atom = String.to_existing_atom(locale)
+    module.__meta__(locale_atom, :singular)
+  end
+
+  defp get_translated_plural(module, locale) do
+    locale_atom = String.to_existing_atom(locale)
+    module.__meta__(locale_atom, :plural)
   end
 end
