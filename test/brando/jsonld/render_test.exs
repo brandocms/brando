@@ -1,6 +1,6 @@
 defmodule Brando.JSONLDRenderTest do
   use ExUnit.Case
-  use Brando.ConnCase
+  use Brando.ConnCase, async: false
 
   @mock_data %{
     __meta__: %{

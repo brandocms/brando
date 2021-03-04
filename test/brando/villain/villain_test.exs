@@ -24,7 +24,7 @@ defmodule Brando.VillainTest do
     def comment(_, _), do: nil
   end
 
-  use ExUnit.Case
+  use ExUnit.Case, async: false
   use Brando.ConnCase
   alias Brando.Factory
   alias Brando.Villain
