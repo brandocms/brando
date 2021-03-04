@@ -38,6 +38,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "images:rerender_image_category",
     "livepreview:initialize",
     "livepreview:render",
+    "livepreview:share",
     "menus:sequence_menus",
     "oembed:get",
     "pages:list_parents",
@@ -422,6 +423,18 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
       {:error, err} ->
         {:reply, {:error, %{code: 404, message: err}}, socket}
     end
+  end
+
+  def do_handle_in(
+        "livepreview:share",
+        %{"schema" => schema, "id" => id, "key" => key, "prop" => prop} = args,
+        socket
+      ) do
+    user = Guardian.Phoenix.Socket.current_resource(socket)
+    revision = Map.get(args, "revision")
+
+    {:ok, preview_url} = Brando.LivePreview.share(schema, id, revision, key, prop, user)
+    {:reply, {:ok, %{code: 200, preview_url: preview_url}}, socket}
   end
 
   def do_handle_in(

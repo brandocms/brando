@@ -16,6 +16,7 @@ defmodule Brando.ImageCategory do
 
   meta :en, singular: "image category", plural: "image categories"
   meta :no, singular: "bildekategori", plural: "bildekategorier"
+
   identifier false
   absolute_url false
 

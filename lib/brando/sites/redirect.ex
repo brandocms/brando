@@ -4,6 +4,7 @@ defmodule Brando.Sites.Redirect do
 
   meta :en, singular: "redirect", plural: "redirects"
   meta :no, singular: "ompekning", plural: "ompekninger"
+
   identifier false
   absolute_url false
 

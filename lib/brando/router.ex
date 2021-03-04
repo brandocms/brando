@@ -14,6 +14,7 @@ defmodule Brando.Router do
     quote do
       get "/robots.txt", Brando.SEOController, :robots
       get "/", Brando.web_module(PageController), :index
+      get "/__p__/:preview_key", Brando.PreviewController, :show
       get "/*path", Brando.web_module(PageController), :show
     end
   end

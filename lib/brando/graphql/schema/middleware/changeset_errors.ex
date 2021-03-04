@@ -1,7 +1,6 @@
 defmodule Brando.GraphQL.Schema.Middleware.ChangesetErrors do
   @behaviour Absinthe.Middleware
 
-  @spec call(Absinthe.Resolution.t(), any()) :: Absinthe.Resolution.t()
   def call(res, _) do
     case res do
       %{errors: [%Ecto.Changeset{} = changeset]} ->

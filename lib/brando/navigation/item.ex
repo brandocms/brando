@@ -11,6 +11,7 @@ defmodule Brando.Navigation.Item do
 
   meta :en, singular: "menu item", plural: "menu items"
   meta :no, singular: "menypunkt", plural: "menypunkter"
+
   identifier fn entry -> "#{entry.title}" end
   absolute_url false
 

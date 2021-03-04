@@ -2,11 +2,12 @@ defmodule Brando.Sites do
   @moduledoc """
   Context for Sites
   """
-
+  use Brando.Query
   import Ecto.Query
 
   alias Brando.Cache
   alias Brando.Sites.Identity
+  alias Brando.Sites.Preview
   alias Brando.Sites.SEO
   alias Brando.Villain
 
@@ -194,8 +195,25 @@ defmodule Brando.Sites do
   @doc """
   Create default seo
   """
-  def create_default_seo do
-    %SEO{}
-    |> Brando.repo().insert!
+  def create_default_seo, do: Brando.repo().insert!(%SEO{})
+
+  # Previews
+
+  query :list, Preview, do: fn q -> q end
+  query :single, Preview, do: fn q -> q end
+
+  matches Preview do
+    fn
+      {:id, id}, query ->
+        from t in query, where: t.id == ^id
+
+      {:preview_key, preview_key}, query ->
+        from t in query,
+          where: t.preview_key == ^preview_key
+    end
   end
+
+  mutation :create, Preview
+  mutation :update, Preview
+  mutation :delete, Preview
 end

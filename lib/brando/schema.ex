@@ -155,7 +155,7 @@ defmodule Brando.Schema do
     {:ok, entry_types}
   end
 
-  defp get_context_for(schema) do
+  def get_context_for(schema) do
     schema
     |> Module.split()
     |> Enum.drop(-1)
@@ -237,11 +237,6 @@ defmodule Brando.Schema do
       end
     end)
     |> Enum.uniq()
-  end
-
-  defp get_translated_singular(module, locale) do
-    locale_atom = String.to_existing_atom(locale)
-    module.__meta__(locale_atom, :singular)
   end
 
   defp get_translated_plural(module, locale) do

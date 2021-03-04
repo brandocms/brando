@@ -47,6 +47,17 @@ defmodule Brando.GraphQL.Schema.Types.Identity do
       end
     end
 
+    field :config, :identity_config do
+      resolve fn _, _ ->
+        cfg = %{
+          media_url: Brando.config(:media_url),
+          timezone: Brando.config(:timezone)
+        }
+
+        {:ok, cfg}
+      end
+    end
+
     field :default_admin_language, :string do
       resolve fn _, _ ->
         {:ok, Brando.config(:default_admin_language)}
@@ -63,6 +74,11 @@ defmodule Brando.GraphQL.Schema.Types.Identity do
         {:ok, languages}
       end
     end
+  end
+
+  object :identity_config do
+    field :media_url, :string
+    field :timezone, :string
   end
 
   object :language do

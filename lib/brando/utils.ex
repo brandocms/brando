@@ -116,6 +116,13 @@ defmodule Brando.Utils do
   @doc """
   Generate a random string from `seed`
   """
+  def random_string(length) when is_integer(length) do
+    length
+    |> :crypto.strong_rand_bytes()
+    |> Base.url_encode64(padding: false)
+    |> binary_part(0, length)
+  end
+
   def random_string(seed) do
     rnd_basename_1 =
       {seed, :os.timestamp()}
@@ -725,5 +732,13 @@ defmodule Brando.Utils do
     :hmac
     |> :crypto.mac(:sha256, key, Jason.encode!(term))
     |> Base.encode64()
+  end
+
+  def term_to_binary(term) do
+    :erlang.term_to_binary(term, compressed: 9)
+  end
+
+  def binary_to_term(binary) do
+    :erlang.binary_to_term(binary)
   end
 end

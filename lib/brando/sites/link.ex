@@ -4,6 +4,7 @@ defmodule Brando.Link do
 
   meta :en, singular: "link", plural: "links"
   meta :no, singular: "lenke", plural: "lenker"
+
   identifier fn entry -> entry.name end
   absolute_url fn _, _, entry -> entry.url end
 

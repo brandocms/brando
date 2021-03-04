@@ -17,6 +17,7 @@ defmodule Brando.Revisions do
   """
 
   alias Brando.Revisions.Revision
+  alias Brando.Utils
   import Ecto.Query
   use Brando.Query
 
@@ -48,7 +49,7 @@ defmodule Brando.Revisions do
   def create_revision(%{__struct__: entry_type, id: entry_id} = entry, user, set_active \\ true) do
     user_id = if user == :system, do: nil, else: user.id
     entry_type_binary = to_string(entry_type)
-    encoded_entry = encode_entry(entry)
+    encoded_entry = Utils.term_to_binary(entry)
 
     revision = %{
       active: set_active,
@@ -136,7 +137,7 @@ defmodule Brando.Revisions do
         :error
 
       [revision] ->
-        decoded_entry = decode_entry(revision.encoded_entry)
+        decoded_entry = Utils.binary_to_term(revision.encoded_entry)
         {:ok, {revision, {revision.revision, decoded_entry}}}
     end
   end
@@ -157,7 +158,7 @@ defmodule Brando.Revisions do
         :error
 
       [revision] ->
-        decoded_entry = decode_entry(revision.encoded_entry)
+        decoded_entry = Utils.binary_to_term(revision.encoded_entry)
         {:ok, {revision, {revision.revision, decoded_entry}}}
     end
   end
@@ -217,17 +218,9 @@ defmodule Brando.Revisions do
         :error
 
       [revision] ->
-        decoded_entry = decode_entry(revision.encoded_entry)
+        decoded_entry = Utils.binary_to_term(revision.encoded_entry)
         {:ok, {revision, {revision.revision, decoded_entry}}}
     end
-  end
-
-  defp encode_entry(entry) do
-    :erlang.term_to_binary(entry, compressed: 9)
-  end
-
-  defp decode_entry(binary) do
-    :erlang.binary_to_term(binary)
   end
 
   defp next_revision(entry_type, entry_id) do

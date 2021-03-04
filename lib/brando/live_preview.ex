@@ -20,6 +20,7 @@ defmodule Brando.LivePreview do
   ```
   """
   require Logger
+  alias Brando.Worker
 
   @preview_coder Hashids.new(
                    alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
@@ -219,6 +220,9 @@ defmodule Brando.LivePreview do
 
   @spec build_cache_key(integer) :: binary
   def build_cache_key(seed), do: "PREVIEW-" <> Hashids.encode(@preview_coder, seed)
+
+  @spec build_share_key(integer) :: binary
+  def build_share_key(seed), do: "__SHAREPREVIEW__" <> Hashids.encode(@preview_coder, seed)
   def store_cache(key, html), do: Cachex.put(:cache, "__live_preview__" <> key, html)
   def get_cache(key), do: Cachex.get(:cache, "__live_preview__" <> key)
 
@@ -280,6 +284,58 @@ defmodule Brando.LivePreview do
 
     Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
     cache_key
+  end
+
+  @doc """
+  Renders the entry, stores in DB and returns URL
+  """
+  def share(schema, id, revision, key, prop, user) do
+    preview_module = get_preview_module()
+
+    if function_exported?(preview_module, :render, 5) do
+      schema_module = Module.concat([schema])
+      context = Brando.Schema.get_context_for(schema_module)
+
+      singular =
+        schema_module
+        |> Module.split()
+        |> List.last()
+        |> Inflex.underscore()
+
+      get_opts =
+        if revision do
+          %{matches: %{id: id}, revision: revision}
+        else
+          %{matches: %{id: id}}
+        end
+
+      {:ok, entry} = apply(context, :"get_#{singular}", [get_opts])
+
+      html =
+        schema_module
+        |> preview_module.render(entry, key, prop, nil)
+        |> Brando.Utils.term_to_binary()
+
+      preview_key = Brando.Utils.random_string(12)
+      expires_at = DateTime.add(DateTime.utc_now(), 24, :second)
+
+      preview = %{
+        html: html,
+        preview_key: preview_key,
+        expires_at: expires_at
+      }
+
+      {:ok, preview} = Brando.Sites.create_preview(preview, user)
+
+      %{id: preview.id}
+      |> Worker.PreviewPurger.new(
+        scheduled_at: expires_at,
+        tags: [:preview_purger]
+      )
+      |> Oban.insert()
+
+      {:ok, Brando.Sites.Preview.__absolute_url__(preview)}
+    end
   end
 
   def get_entry(cache_key) do
