@@ -317,7 +317,7 @@ defmodule Brando.LivePreview do
         |> Brando.Utils.term_to_binary()
 
       preview_key = Brando.Utils.random_string(12)
-      expires_at = DateTime.add(DateTime.utc_now(), 24, :second)
+      expires_at = DateTime.add(DateTime.utc_now(), 24 * 60 * 60, :second)
 
       preview = %{
         html: html,
