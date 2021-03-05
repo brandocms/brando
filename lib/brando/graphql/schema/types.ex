@@ -8,6 +8,7 @@ defmodule Brando.GraphQL.Schema.Types do
   import_types Brando.GraphQL.Schema.Types.Navigation
   import_types Brando.GraphQL.Schema.Types.Page
   import_types Brando.GraphQL.Schema.Types.PageFragment
+  import_types Brando.GraphQL.Schema.Types.Pagination
   import_types Brando.GraphQL.Schema.Types.Revision
   import_types Brando.GraphQL.Schema.Types.Scalar
   import_types Brando.GraphQL.Schema.Types.SEO

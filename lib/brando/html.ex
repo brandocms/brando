@@ -105,14 +105,6 @@ defmodule Brando.HTML do
   end
 
   @doc """
-  Returns a red X if value is nil, or a check if the value is truthy
-  """
-  @spec check_or_x(val :: nil | bool) :: binary
-  def check_or_x(nil), do: ~s(<i class="icon-centered fa fa-times text-danger"></i>)
-  def check_or_x(false), do: ~s(<i class="icon-centered fa fa-times text-danger"></i>)
-  def check_or_x(_), do: ~s(<i class="icon-centered fa fa-check text-success"></i>)
-
-  @doc """
   Displays a banner informing about cookie laws
   """
   def cookie_law(_conn, text, opts \\ []) do

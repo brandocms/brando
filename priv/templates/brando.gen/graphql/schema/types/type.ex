@@ -4,6 +4,11 @@ defmodule <%= app_module %>.Schema.Types.<%= alias %> do
   """
   use <%= web_module %>, :absinthe
 
+  object :<%= plural %> do
+    field :entries, list_of(:<%= singular %>)
+    field :pagination_meta, non_null(:pagination_meta)
+  end
+
   object :<%= singular %> do
     field :id, :integer<%= for {_v, k} <- gql_types do %>
     <%= k %><% end %><%= if soft_delete do %>
@@ -30,7 +35,7 @@ defmodule <%= app_module %>.Schema.Types.<%= alias %> do
 
   object :<%= singular %>_queries do
     @desc "Get all <%= plural %>"
-    field :<%= plural %>, type: list_of(:<%= singular %>) do
+    field :<%= plural %>, type: :<%= plural %> do
       arg :order, :order, default_value: [{:asc, <%= if sequenced do %>:sequence<% else %>:<%= main_field %><% end %>}]
       arg :limit, :integer, default_value: 25
       arg :offset, :integer, default_value: 0
@@ -50,12 +55,14 @@ defmodule <%= app_module %>.Schema.Types.<%= alias %> do
   end
 
   object :<%= singular %>_mutations do
+    @desc "Create <%= singular %>"
     field :create_<%= singular %>, type: :<%= singular %> do
       arg :<%= singular %>_params, non_null(:<%= singular %>_params)
 
       resolve &<%= app_module %>.<%= domain %>.<%= alias %>Resolver.create/2
     end
 
+    @desc "Update <%= singular %>"
     field :update_<%= singular %>, type: :<%= singular %> do
       arg :<%= singular %>_id, non_null(:id)
       arg :<%= singular %>_params, :<%= singular %>_params
@@ -64,6 +71,7 @@ defmodule <%= app_module %>.Schema.Types.<%= alias %> do
       resolve &<%= app_module %>.<%= domain %>.<%= alias %>Resolver.update/2
     end
 
+    @desc "Delete <%= singular %>"
     field :delete_<%= singular %>, type: :<%= singular %> do
       arg :<%= singular %>_id, non_null(:id)
 

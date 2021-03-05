@@ -1,5 +1,59 @@
 ## 0.51.0
 
+* Proper pagination in BrandoJS means some changes! If your application `use`s `Brando.GraphQL.Resolver`,
+  the `all` resolver will now return `%{entries: entries, pagination_meta: pagination_meta}`.
+
+  With `page` as an example:
+
+  In your `graphql/types/page.ex`, add a new `:object`:
+
+  ```
+  object :pages do
+    field :entries, list_of(:page)
+    field :pagination_meta, non_null(:pagination_meta)
+  end
+  ```
+
+  Reference this object instead of `list_of(:page)` in your `:pages` query:
+
+  ```
+  object :page_queries do
+    @desc "Get all pages"
+    field :pages, type: :pages do
+      arg :order, :order, default_value: [{:asc, :language}, {:asc, :sequence}, {:asc, :uri}]
+      arg :limit, :integer, default_value: 25
+      arg :offset, :integer, default_value: 0
+      arg :filter, :page_filter
+      arg :status, :string, default_value: "all"
+      resolve &Brando.Pages.PageResolver.all/2
+    end
+  end
+  ```
+
+  Rewrite your query to wrap pages in `entries`:
+
+  ```
+  query Pages ($order: Order, $limit: Int, $offset: Int, $filter: PageFilter, $status: String) {
+    pages (order: $order, limit: $limit, offset: $offset, filter: $filter, status: $status) {
+      entries {
+        ...page
+      }
+
+      paginationMeta {
+        totalEntries
+        totalPages
+        currentPage
+        nextPage
+        previousPage
+      }
+    }
+  }
+  ```
+
+  In your `PageListView.vue`, you can remove `@more` on the ContentList, and
+  the `showMore` method.
+
+
 * Renamed `Brando.Schema` to `Brando.GraphQL.Schema`.
   Switch out in your app's `graphql/schema.ex`.
 
@@ -95,6 +149,7 @@
   `delete_<singular>` function.
 
 * Status: `published_all` has been removed -- you can replace with `published_and_pending`
+  or `published`
 
 * To automatically add the dominant color of an image to its struct, you
   can install `dominant-color` on your server/dev machine:

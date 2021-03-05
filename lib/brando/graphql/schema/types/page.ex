@@ -1,6 +1,11 @@
 defmodule Brando.GraphQL.Schema.Types.Page do
   use Brando.Web, :absinthe
 
+  object :pages do
+    field :entries, list_of(:page)
+    field :pagination_meta, non_null(:pagination_meta)
+  end
+
   object :page do
     field :id, :id
     field :uri, :string
@@ -113,7 +118,7 @@ defmodule Brando.GraphQL.Schema.Types.Page do
 
   object :page_queries do
     @desc "Get all pages"
-    field :pages, type: list_of(:page) do
+    field :pages, type: :pages do
       arg :order, :order, default_value: [{:asc, :language}, {:asc, :sequence}, {:asc, :uri}]
       arg :limit, :integer, default_value: 25
       arg :offset, :integer, default_value: 0

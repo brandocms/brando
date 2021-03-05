@@ -21,7 +21,7 @@ defmodule Brando.GraphQL.Resolver do
     quote generated: true do
       @doc false
       def all(args, %{context: %{current_user: _}}) do
-        unquote(context).unquote(:"list_#{plural}")(args)
+        unquote(context).unquote(:"list_#{plural}")(Map.put(args, :paginated, true))
       end
 
       @doc false

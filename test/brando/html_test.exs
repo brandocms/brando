@@ -25,12 +25,6 @@ defmodule Brando.HTMLTest do
     assert zero_pad("1", 10) == "0000000001"
   end
 
-  test "check_or_x/1" do
-    assert check_or_x(false) == "<i class=\"icon-centered fa fa-times text-danger\"></i>"
-    assert check_or_x(nil) == "<i class=\"icon-centered fa fa-times text-danger\"></i>"
-    assert check_or_x(true) == "<i class=\"icon-centered fa fa-check text-success\"></i>"
-  end
-
   test "body_tag" do
     mock_conn = %{private: %{brando_css_classes: "one two three"}}
 

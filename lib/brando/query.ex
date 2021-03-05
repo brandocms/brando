@@ -161,7 +161,7 @@ defmodule Brando.Query do
       |> Inflex.pluralize()
 
     quote do
-      @spec unquote(:"list_#{name}")(map(), boolean) :: {:ok, any}
+      @spec unquote(:"list_#{name}")(map(), boolean) :: {:ok, list} | {:ok, list, map}
       def unquote(:"list_#{name}")(args \\ %{}, stream \\ false) do
         initial_query = unquote(block).(unquote(module))
         cache_args = Map.get(args, :cache)
@@ -192,10 +192,18 @@ defmodule Brando.Query do
                 unquote(module)
               )
 
+            pagination_meta = maybe_build_pagination_meta(query, args)
+
             if stream do
               Brando.repo().stream(query)
             else
-              {:ok, Brando.repo().all(query)}
+              entries = Brando.repo().all(query)
+
+              if pagination_meta do
+                {:ok, %{entries: entries, pagination_meta: pagination_meta}}
+              else
+                {:ok, entries}
+              end
             end
         end
       end
@@ -437,6 +445,7 @@ defmodule Brando.Query do
       {:status, status}, q -> with_status(q, to_string(status))
       {:preload, preload}, q -> with_preload(q, preload)
       {:filter, filter}, q -> context.with_filter(q, module, filter)
+      {:paginated, true}, q -> q
     end)
   end
 
@@ -600,6 +609,91 @@ defmodule Brando.Query do
         unquote(block).(entry)
       end
     end
+  end
+
+  # only build pagination_meta if offset & limit is set
+  def maybe_build_pagination_meta(query, %{paginated: true, limit: page_size, offset: offset}) do
+    total_entries = get_total_entries(query)
+    total_pages = total_pages(total_entries, page_size)
+    current_page = round(offset / page_size + 1)
+    previous_page = get_previous_page(current_page)
+    next_page = get_next_page(current_page, total_pages)
+
+    %{
+      total_entries: total_entries,
+      total_pages: total_pages,
+      current_page: current_page,
+      previous_page: previous_page,
+      next_page: next_page
+    }
+  end
+
+  def maybe_build_pagination_meta(_, %{paginated: true}) do
+    raise "==> QUERY: When `paginated` is true, you must supply `limit` and `offset` args"
+  end
+
+  def maybe_build_pagination_meta(_, _), do: nil
+
+  defp get_previous_page(1), do: 1
+  defp get_previous_page(0), do: 1
+  defp get_previous_page(page), do: page - 1
+
+  defp get_next_page(page, total_pages) when page >= total_pages, do: total_pages
+  defp get_next_page(page, _), do: page + 1
+
+  defp get_total_entries(query) do
+    total_entries =
+      query
+      |> exclude(:preload)
+      |> exclude(:order_by)
+      |> exclude(:limit)
+      |> exclude(:offset)
+      |> aggregate()
+      |> Brando.repo().one()
+
+    total_entries || 0
+  end
+
+  defp aggregate(%{distinct: %{expr: expr}} = query) when expr == true or is_list(expr) do
+    query
+    |> exclude(:select)
+    |> count()
+  end
+
+  defp aggregate(
+         %{
+           group_bys: [
+             %Ecto.Query.QueryExpr{
+               expr: [
+                 {{:., [], [{:&, [], [source_index]}, field]}, [], []} | _
+               ]
+             }
+             | _
+           ]
+         } = query
+       ) do
+    query
+    |> exclude(:select)
+    |> select([{x, source_index}], struct(x, ^[field]))
+    |> count()
+  end
+
+  defp aggregate(query) do
+    query
+    |> exclude(:select)
+    |> select(count("*"))
+  end
+
+  defp count(query) do
+    query
+    |> subquery
+    |> select(count("*"))
+  end
+
+  defp total_pages(0, _), do: 1
+
+  defp total_pages(total_entries, page_size) do
+    (total_entries / page_size) |> Float.ceil() |> round
   end
 
   def insert(changeset) do

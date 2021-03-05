@@ -14,17 +14,19 @@ defmodule Brando.GraphQL.Queries.PageQueriesTest do
   @pages_query """
   query Pages ($order: Order, $limit: Int, $offset: Int, $filter: PageFilter, $status: String) {
     pages (order: $order, limit: $limit, offset: $offset, filter: $filter, status: $status) {
-      id
-      title
-
-      fragments {
+      entries {
         id
         title
-      }
 
-      children {
-        id
-        title
+        fragments {
+          id
+          title
+        }
+
+        children {
+          id
+          title
+        }
       }
     }
   }
@@ -53,18 +55,20 @@ defmodule Brando.GraphQL.Queries.PageQueriesTest do
                :ok,
                %{
                  data: %{
-                   "pages" => [
-                     %{
-                       "children" => [
-                         %{"id" => to_string(p2.id), "title" => "Title"}
-                       ],
-                       "fragments" => [
-                         %{"id" => to_string(pf1.id), "title" => nil}
-                       ],
-                       "id" => to_string(p1.id),
-                       "title" => "Title"
-                     }
-                   ]
+                   "pages" => %{
+                     "entries" => [
+                       %{
+                         "children" => [
+                           %{"id" => to_string(p2.id), "title" => "Title"}
+                         ],
+                         "fragments" => [
+                           %{"id" => to_string(pf1.id), "title" => nil}
+                         ],
+                         "id" => to_string(p1.id),
+                         "title" => "Title"
+                       }
+                     ]
+                   }
                  }
                }
              }
@@ -73,7 +77,7 @@ defmodule Brando.GraphQL.Queries.PageQueriesTest do
   @filtered_query """
     query Pages ($order: Order, $limit: Int, $offset: Int, $filter: PageFilter, $status: String) {
       pages (order: $order, limit: $limit, offset: $offset, filter: $filter, status: $status) {
-        title
+        entries { title }
       }
     }
   """
@@ -93,7 +97,7 @@ defmodule Brando.GraphQL.Queries.PageQueriesTest do
                  }
                ]
            ) ==
-             {:ok, %{data: %{"pages" => [%{"title" => "test 1"}]}}}
+             {:ok, %{data: %{"pages" => %{"entries" => [%{"title" => "test 1"}]}}}}
   end
 
   @single_page_query """

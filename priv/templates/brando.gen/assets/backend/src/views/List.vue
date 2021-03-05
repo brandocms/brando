@@ -45,8 +45,7 @@
       @sort="sortEntries"<% end %><%= if status do %>
       :status="true"<% end %>
       :filter-keys="['<%= main_field %>']"
-      @updateQuery="queryVars = $event"
-      @more="showMore">
+      @updateQuery="queryVars = $event">
 
       <template v-slot:selected="{ entries, clearSelection }">
         <li>
@@ -115,29 +114,6 @@ export default {
   ],
 
   methods: {
-    showMore () {
-      this.page++
-      // Fetch more data and transform the original result
-      this.$apollo.queries.<%= vue_plural %>.fetchMore({
-        // New variables
-        variables: {
-          ...this.queryVars,
-          offset: this.queryVars.limit * this.page
-        },
-        // Transform the previous result with new data
-        updateQuery: (previousResult, { fetchMoreResult }) => {
-          const newEntries = fetchMoreResult.<%= vue_plural %>
-          // const hasMore = true
-
-          return {
-            <%= vue_plural %>: [
-              ...previousResult.<%= vue_plural %>, ...newEntries
-            ]
-          }
-        }
-      })
-    },
-
     <%= if sequenced do %>sortEntries (seq) {
       this.adminChannel.channel
         .push('<%= vue_plural %>:sequence_<%= vue_plural %>', { ids: seq })

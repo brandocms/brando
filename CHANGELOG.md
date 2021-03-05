@@ -5,6 +5,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * Images: Add `dominant_color` to image struct.
 * Revisions: Adds initial revision support.
 * Publisher: Add Oban job support for scheduled publishing
+* Pagination: Add `pagination: true` to generate pagination meta for `list` queries
 
 ## 0.50.0
 
