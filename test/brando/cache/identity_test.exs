@@ -1,5 +1,5 @@
 defmodule Brando.Cache.IdentityTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
   use Brando.ConnCase
   use BrandoIntegration.TestCase
 

@@ -189,7 +189,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
 
       assert_file("assets/backend/src/gql/games/CAPTAINS_QUERY.graphql", fn file ->
         assert file =~
-                 "#import \"./CAPTAIN_FRAGMENT.graphql\"\nquery Captains ($order: Order, $limit: Int, $offset: Int, $filter: CaptainFilter, $status: String) {\n  captains (order: $order, limit: $limit, offset: $offset, filter: $filter, status: $status) {\n    ...captain\n  }\n}\n"
+                 "#import \"./CAPTAIN_FRAGMENT.graphql\"\nquery Captains ($order: Order, $limit: Int, $offset: Int, $filter: CaptainFilter, $status: String) {\n  captains (order: $order, limit: $limit, offset: $offset, filter: $filter, status: $status) {\n    entries {\n      ...captain\n    }\n\n    paginationMeta {\n      totalEntries\n      totalPages\n      currentPage\n      nextPage\n      previousPage\n    }\n  }\n}\n"
       end)
 
       assert_file("assets/backend/src/views/games/CaptainForm.vue", fn file ->
@@ -297,7 +297,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
 
       assert_file("assets/backend/src/gql/projects/PROJECTS_QUERY.graphql", fn file ->
         assert file =~
-                 "#import \"./PROJECT_FRAGMENT.graphql\"\nquery Projects ($order: Order, $limit: Int, $offset: Int, $filter: ProjectFilter, $status: String) {\n  projects (order: $order, limit: $limit, offset: $offset, filter: $filter, status: $status) {\n    ...project\n  }\n}\n"
+                 "#import \"./PROJECT_FRAGMENT.graphql\"\nquery Projects ($order: Order, $limit: Int, $offset: Int, $filter: ProjectFilter, $status: String) {\n  projects (order: $order, limit: $limit, offset: $offset, filter: $filter, status: $status) {\n    entries {\n      ...project\n    }\n\n    paginationMeta {\n      totalEntries\n      totalPages\n      currentPage\n      nextPage\n      previousPage\n    }\n  }\n}\n"
       end)
 
       assert_file("assets/backend/src/gql/games/CAPTAIN_FRAGMENT.graphql", fn file ->
