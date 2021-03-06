@@ -180,7 +180,9 @@ defmodule Brando.Schema do
   def metaless_schemas do
     Enum.reduce(list_schemas(), [], fn schema, acc ->
       acc =
-        if not ({:__identifier__, 1} in schema.__info__(:functions)) do
+        if {:__identifier__, 1} in schema.__info__(:functions) do
+          acc
+        else
           IO.warn("""
           Schema `#{inspect(schema)}` is missing `identifier`.
 
@@ -191,12 +193,12 @@ defmodule Brando.Schema do
           """)
 
           [schema | acc]
-        else
-          acc
         end
 
       acc =
-        if not ({:__meta__, 2} in schema.__info__(:functions)) do
+        if {:__meta__, 2} in schema.__info__(:functions) do
+          acc
+        else
           IO.warn("""
           Schema `#{inspect(schema)}` is missing `meta`.
 
@@ -208,11 +210,11 @@ defmodule Brando.Schema do
           """)
 
           [schema | acc]
-        else
-          acc
         end
 
-      if not ({:__absolute_url__, 1} in schema.__info__(:functions)) do
+      if {:__absolute_url__, 1} in schema.__info__(:functions) do
+        acc
+      else
         IO.warn("""
         Schema `#{inspect(schema)}` is missing `absolute_url`.
         If your entries have URLs:
@@ -232,8 +234,6 @@ defmodule Brando.Schema do
         """)
 
         [schema | acc]
-      else
-        acc
       end
     end)
     |> Enum.uniq()
