@@ -426,18 +426,6 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in(
-        "livepreview:share",
-        %{"schema" => schema, "id" => id, "key" => key, "prop" => prop} = args,
-        socket
-      ) do
-    user = Guardian.Phoenix.Socket.current_resource(socket)
-    revision = Map.get(args, "revision")
-
-    {:ok, preview_url} = Brando.LivePreview.share(schema, id, revision, key, prop, user)
-    {:reply, {:ok, %{code: 200, preview_url: preview_url}}, socket}
-  end
-
-  def do_handle_in(
         "livepreview:render",
         %{
           "schema" => schema,
@@ -448,8 +436,24 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         },
         socket
       ) do
-    entry_diff = Brando.Utils.snake_case(camel_cased_entry_diff)
+    entry_diff =
+      camel_cased_entry_diff
+      |> Brando.Utils.snake_case()
+      |> Brando.Utils.to_atom_map()
+
     Brando.LivePreview.update(schema, entry_diff, key, prop, cache_key)
     {:reply, {:ok, %{code: 200, cache_key: cache_key}}, socket}
+  end
+
+  def do_handle_in(
+        "livepreview:share",
+        %{"schema" => schema, "id" => id, "key" => key, "prop" => prop} = args,
+        socket
+      ) do
+    user = Guardian.Phoenix.Socket.current_resource(socket)
+    revision = Map.get(args, "revision")
+
+    {:ok, preview_url} = Brando.LivePreview.share(schema, id, revision, key, prop, user)
+    {:reply, {:ok, %{code: 200, preview_url: preview_url}}, socket}
   end
 end

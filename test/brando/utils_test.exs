@@ -266,4 +266,27 @@ defmodule Brando.UtilsTest do
     mock_conn = %{private: %{phoenix_router: BrandoIntegrationWeb.Router}}
     assert helpers(mock_conn) == BrandoIntegrationWeb.Router.Helpers
   end
+
+  test "coerce_struct" do
+    simple_map = %{
+      "name" => "Test Name",
+      "email" => "my@email.com"
+    }
+
+    simple_struct = coerce_struct(simple_map, Brando.Users.User)
+    assert Map.get(simple_struct, :name) == "Test Name"
+    assert Map.get(simple_struct, :email) == "my@email.com"
+
+    assoc_map = %{
+      "title" => "My title",
+      "uri" => "my-title",
+      "creator" => simple_map
+    }
+
+    assoc_struct = coerce_struct(assoc_map, Brando.Pages.Page)
+    assert Map.get(assoc_struct, :title) == "My title"
+    assert Map.get(assoc_struct, :uri) == "my-title"
+    assert Map.get(assoc_struct.creator, :name) == "Test Name"
+    assert Map.get(assoc_struct.creator, :email) == "my@email.com"
+  end
 end

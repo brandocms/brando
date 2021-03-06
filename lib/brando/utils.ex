@@ -114,6 +114,13 @@ defmodule Brando.Utils do
   end
 
   @doc """
+  Tries to access map key as atom or string
+  """
+  def get_indifferent(map, key) when is_atom(key) do
+    Map.get(map, key) || Map.get(map, Atom.to_string(key))
+  end
+
+  @doc """
   Generate a random string from `seed`
   """
   def random_string(length) when is_integer(length) do
@@ -235,10 +242,10 @@ defmodule Brando.Utils do
   end
 
   @doc """
-  Converts `collection` to a map with safe atom keys
+  Converts string map `collection` to a map with safe atom keys
   """
-  def to_atom_map(collection) do
-    for {key, val} <- collection, into: %{} do
+  def to_atom_map(string_map) do
+    for {key, val} <- string_map, into: %{} do
       if is_atom(key), do: {key, val}, else: {String.to_existing_atom(key), val}
     end
   end
@@ -246,11 +253,11 @@ defmodule Brando.Utils do
   @doc """
   Convert string map to struct
   """
-  def stringy_struct(string_struct, nil), do: struct(string_struct, %{})
+  def stringy_struct(schema, nil), do: struct(schema, %{})
 
-  def stringy_struct(string_struct, params) when is_map(params) do
+  def stringy_struct(schema, params) when is_map(params) do
     keys =
-      string_struct
+      schema
       |> struct([])
       |> Map.from_struct()
       |> Map.keys()
@@ -261,7 +268,7 @@ defmodule Brando.Utils do
       |> Map.take(keys)
       |> Enum.map(fn {key, value} -> {String.to_atom(key), value} end)
 
-    struct(string_struct, params)
+    struct(schema, params)
   end
 
   @doc """
@@ -740,5 +747,29 @@ defmodule Brando.Utils do
 
   def binary_to_term(binary) do
     :erlang.binary_to_term(binary)
+  end
+
+  @doc """
+  Forces map and its children into an Ecto `schema` struct.
+  """
+  def coerce_struct(nil, _), do: nil
+  def coerce_struct(%{__struct__: Ecto.Association.NotLoaded} = not_loaded, _), do: not_loaded
+
+  def coerce_struct(list, schema) when is_list(list),
+    do: Enum.map(list, &coerce_struct(&1, schema))
+
+  def coerce_struct(map, schema) do
+    initial_struct = map_to_struct(map, schema)
+    schema_assocs = schema.__schema__(:associations)
+
+    Enum.reduce(schema_assocs, initial_struct, fn assoc, final_struct ->
+      schema_assoc_meta = schema.__schema__(:association, assoc)
+
+      Map.put(
+        final_struct,
+        assoc,
+        coerce_struct(Map.get(final_struct, assoc), schema_assoc_meta.queryable)
+      )
+    end)
   end
 end

@@ -20,6 +20,7 @@ defmodule Brando.LivePreview do
   ```
   """
   require Logger
+  alias Brando.Utils
   alias Brando.Worker
 
   @preview_coder Hashids.new(
@@ -233,8 +234,8 @@ defmodule Brando.LivePreview do
     if function_exported?(preview_module, :render, 5) do
       cache_key = build_cache_key(:erlang.system_time())
       schema_module = Module.concat([schema])
-      entry_struct = Brando.Utils.stringy_struct(schema_module, entry)
-      set_entry(cache_key, entry)
+      entry_struct = Utils.coerce_struct(entry, schema_module)
+      set_entry(cache_key, entry_struct)
 
       try do
         wrapper_html = preview_module.render(schema_module, entry_struct, key, prop, cache_key)
@@ -277,11 +278,9 @@ defmodule Brando.LivePreview do
     preview_module = get_preview_module()
     schema_module = Module.concat([schema])
     entry = get_entry(cache_key)
-    merged_diff_entry = Map.merge(entry, entry_diff)
-    set_entry(cache_key, merged_diff_entry)
-    entry_diff_struct = Brando.Utils.stringy_struct(schema_module, merged_diff_entry)
-    wrapper_html = preview_module.render(schema_module, entry_diff_struct, key, prop, cache_key)
-
+    diffed_entry = Map.merge(entry, entry_diff)
+    set_entry(cache_key, diffed_entry)
+    wrapper_html = preview_module.render(schema_module, diffed_entry, key, prop, cache_key)
     Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
     cache_key
   end
@@ -314,9 +313,9 @@ defmodule Brando.LivePreview do
       html =
         schema_module
         |> preview_module.render(entry, key, prop, nil)
-        |> Brando.Utils.term_to_binary()
+        |> Utils.term_to_binary()
 
-      preview_key = Brando.Utils.random_string(12)
+      preview_key = Utils.random_string(12)
       expires_at = DateTime.add(DateTime.utc_now(), 24 * 60 * 60, :second)
 
       preview = %{
@@ -341,12 +340,18 @@ defmodule Brando.LivePreview do
   def get_entry(cache_key) do
     case Cachex.get(:cache, "#{cache_key}__ENTRY") do
       {:ok, val} ->
-        val
+        :erlang.binary_to_term(val)
     end
   end
 
   def set_entry(cache_key, entry) do
-    Cachex.put(:cache, "#{cache_key}__ENTRY", entry, ttl: :timer.minutes(60))
+    Cachex.put(
+      :cache,
+      "#{cache_key}__ENTRY",
+      :erlang.term_to_binary(entry),
+      ttl: :timer.minutes(60)
+    )
+
     entry
   end
 
