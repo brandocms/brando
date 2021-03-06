@@ -110,9 +110,17 @@ defmodule Brando.LivePreview do
 
         # if key, then parse villain
         var!(entry) =
-          if key do
-            html_key = key |> String.replace("data", "html") |> String.to_existing_atom()
-            atom_key = String.to_existing_atom(key)
+          Enum.reduce(List.wrap(key), var!(entry), fn k, updated_entry ->
+            html_key =
+              k
+              |> Recase.to_snake()
+              |> String.replace("data", "html")
+              |> String.to_existing_atom()
+
+            atom_key =
+              k
+              |> Recase.to_snake()
+              |> String.to_existing_atom()
 
             html =
               Brando.Villain.parse(Map.get(var!(entry), atom_key), var!(entry),
@@ -121,10 +129,8 @@ defmodule Brando.LivePreview do
                 html_field: html_key
               )
 
-            Map.put(var!(entry), :html, html)
-          else
-            var!(entry)
-          end
+            Map.put(updated_entry, html_key, html)
+          end)
 
         # build conn
         conn = Phoenix.ConnTest.build_conn()
