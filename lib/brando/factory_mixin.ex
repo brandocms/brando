@@ -15,6 +15,7 @@ defmodule Brando.FactoryMixin do
       alias Brando.ImageSeries
       alias Brando.Pages.Page
       alias Brando.Pages.PageFragment
+      alias Brando.Villain.Module
       alias Brando.Type.ImageConfig
       alias Brando.Users.User
 
@@ -32,17 +33,7 @@ defmodule Brando.FactoryMixin do
           name: "James Williamson",
           email: "james@thestooges.com",
           password: Bcrypt.hash_pwd_salt("admin"),
-          avatar: %Brando.Type.Image{
-            credits: nil,
-            path: "images/avatars/27i97a.jpeg",
-            title: nil,
-            sizes: %{
-              "thumb" => "images/avatars/thumb/27i97a.jpeg",
-              "small" => "images/avatars/small/27i97a.jpeg",
-              "medium" => "images/avatars/medium/27i97a.jpeg",
-              "large" => "images/avatars/large/27i97a.jpeg"
-            }
-          },
+          avatar: nil,
           role: :superuser,
           language: "en"
         }
@@ -55,6 +46,7 @@ defmodule Brando.FactoryMixin do
           title: "Page Title",
           html: nil,
           data: nil,
+          properties: [],
           status: :published,
           creator: build(:user),
           parent_id: nil
@@ -69,6 +61,36 @@ defmodule Brando.FactoryMixin do
           html: nil,
           data: nil,
           creator: build(:user)
+        }
+      end
+
+      def module_factory do
+        %Module{
+          class: "header middle",
+          code:
+            "<article data-v=\"text center\" data-moonwalk-section>\n  <div class=\"inner\" data-moonwalk>\n    <div class=\"text\">\n      %{H2}\n    </div>\n  </div>\n</article>",
+          deleted_at: nil,
+          help_text: "Help Text",
+          multi: false,
+          name: "Heading",
+          namespace: "general",
+          refs: [
+            %{
+              "data" => %{
+                "data" => %{
+                  "class" => nil,
+                  "id" => nil,
+                  "level" => 2,
+                  "text" => "Heading here"
+                },
+                "type" => "header"
+              },
+              "description" => "A heading",
+              "name" => "H2"
+            }
+          ],
+          vars: %{},
+          wrapper: nil
         }
       end
 
