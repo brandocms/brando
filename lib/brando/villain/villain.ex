@@ -39,6 +39,8 @@ defmodule Brando.Villain do
   alias Ecto.Changeset
   alias Liquex.Context
 
+  @module_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
+
   @doc """
   Parses `json` (in Villain-format).
   Delegates to the parser module configured in the otp_app's brando.exs.
@@ -58,7 +60,7 @@ defmodule Brando.Villain do
     start = System.monotonic_time()
     opts_map = Enum.into(opts, %{})
     parser = Brando.config(Brando.Villain)[:parser]
-    {:ok, modules} = list_modules(%{cache: {:ttl, :infinite}})
+    {:ok, modules} = list_modules(@module_cache_ttl)
 
     entry =
       entry
