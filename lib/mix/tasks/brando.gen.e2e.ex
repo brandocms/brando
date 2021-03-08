@@ -25,7 +25,9 @@ defmodule Mix.Tasks.Brando.Gen.E2e do
     ]
 
     files = [
-      # E2E CYPRESS
+      # E2E w/CYPRESS
+      {:eex, "config/e2e.exs", "config/e2e.exs"},
+      {:eex, "test/e2e/test_helper.exs", "test/e2e/test_helper.exs"},
       {:copy, "e2e/cypress.json", "e2e/cypress.json"},
       {:copy, "e2e/package.json", "e2e/package.json"},
       {:copy, "e2e/cypress/fixtures/avatar.jpg", "e2e/cypress/fixtures/avatar.jpg"},
