@@ -6,6 +6,7 @@ __design
 assets/backend/node_modules
 assets/frontend/node_modules
 deps
+e2e
 media
 priv/static
 release-archives

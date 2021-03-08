@@ -199,20 +199,6 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "assets/backend/stylelint.config.js", "assets/backend/stylelint.config.js"},
     {:copy, "assets/backend/vue.config.js", "assets/backend/vue.config.js"},
 
-    # Backend CYPRESS
-    {:copy, "assets/backend/cypress.json", "assets/backend/cypress.json"},
-    {:copy, "assets/backend/cypress/support/index.js", "assets/backend/cypress/support/index.js"},
-    {:copy, "assets/backend/cypress/support/commands.js",
-     "assets/backend/cypress/support/commands.js"},
-    {:copy, "assets/backend/cypress/integration/example.js",
-     "assets/backend/cypress/integration/example.js"},
-    {:copy, "assets/backend/cypress/integration/builtIns/auth.spec.js",
-     "assets/backend/cypress/integration/builtIns/auth.spec.js"},
-    {:copy, "assets/backend/cypress/integration/builtIns/pages.spec.js",
-     "assets/backend/cypress/integration/builtIns/pages.spec.js"},
-    {:copy, "assets/backend/cypress/integration/builtIns/users.spec.js",
-     "assets/backend/cypress/integration/builtIns/users.spec.js"},
-
     # Backend src
     {:copy, "assets/backend/src/config.js", "assets/backend/src/config.js"},
     {:copy, "assets/backend/src/main.js", "assets/backend/src/main.js"},
@@ -239,19 +225,6 @@ defmodule Mix.Tasks.Brando.Install do
 
     # Frontend static
     {:copy, "assets/frontend/public/favicon.ico", "assets/frontend/public/favicon.ico"},
-
-    # Frontend CYPRESS
-    {:copy, "assets/frontend/cypress.json", "assets/frontend/cypress.json"},
-    {:copy, "assets/frontend/cypress/fixtures/example.json",
-     "assets/frontend/cypress/fixtures/example.json"},
-    {:copy, "assets/frontend/cypress/integration/example.js",
-     "assets/frontend/cypress/integration/example.js"},
-    {:copy, "assets/frontend/cypress/plugins/index.js",
-     "assets/frontend/cypress/plugins/index.js"},
-    {:copy, "assets/frontend/cypress/support/commands.js",
-     "assets/frontend/cypress/support/commands.js"},
-    {:copy, "assets/frontend/cypress/support/index.js",
-     "assets/frontend/cypress/support/index.js"},
 
     # Frontend src - CSS
     {:copy, "assets/frontend/css/app.css", "assets/frontend/css/app.css"},
@@ -306,7 +279,16 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "assets/frontend/js/config/MOBILE_MENU.js",
      "assets/frontend/js/config/MOBILE_MENU.js"},
     {:copy, "assets/frontend/js/config/MOONWALK.js", "assets/frontend/js/config/MOONWALK.js"},
-    {:copy, "assets/frontend/js/config/HEADER.js", "assets/frontend/js/config/HEADER.js"}
+    {:copy, "assets/frontend/js/config/HEADER.js", "assets/frontend/js/config/HEADER.js"},
+
+    # E2E CYPRESS
+    {:copy, "e2e/cypress.json", "e2e/cypress.json"},
+    {:copy, "e2e/package.json", "e2e/package.json"},
+    {:copy, "e2e/cypress/fixtures/avatar.jpg", "e2e/cypress/fixtures/avatar.jpg"},
+    {:copy, "e2e/cypress/support/index.js", "e2e/cypress/support/index.js"},
+    {:copy, "e2e/cypress/support/commands.js", "e2e/cypress/support/commands.js"},
+    {:copy, "e2e/cypress/integration/Brando/Brando.spec.js",
+     "e2e/cypress/integration/Brando/Brando.spec.js"}
   ]
 
   @root Path.expand("../../../priv", __DIR__)

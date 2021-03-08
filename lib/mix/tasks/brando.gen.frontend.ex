@@ -38,19 +38,6 @@ defmodule Mix.Tasks.Brando.Gen.Frontend do
       # Frontend static
       {:copy, "assets/frontend/public/favicon.ico", "assets/frontend/public/favicon.ico"},
 
-      # Frontend CYPRESS
-      {:copy, "assets/frontend/cypress.json", "assets/frontend/cypress.json"},
-      {:copy, "assets/frontend/cypress/fixtures/example.json",
-       "assets/frontend/cypress/fixtures/example.json"},
-      {:copy, "assets/frontend/cypress/integration/example.js",
-       "assets/frontend/cypress/integration/example.js"},
-      {:copy, "assets/frontend/cypress/plugins/index.js",
-       "assets/frontend/cypress/plugins/index.js"},
-      {:copy, "assets/frontend/cypress/support/commands.js",
-       "assets/frontend/cypress/support/commands.js"},
-      {:copy, "assets/frontend/cypress/support/index.js",
-       "assets/frontend/cypress/support/index.js"},
-
       # Frontend src - CSS
       {:copy, "assets/frontend/css/app.css", "assets/frontend/css/app.css"},
       {:copy, "assets/frontend/css/critical.css", "assets/frontend/css/critical.css"},

@@ -2,5 +2,6 @@
   "baseUrl": "http://localhost:4444",
   "chromeWebSecurity": false,
   "viewportHeight": 900,
-  "viewportWidth": 1600
+  "viewportWidth": 1600,
+  "experimentalStudio": true
 }
