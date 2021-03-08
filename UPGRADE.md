@@ -303,8 +303,12 @@ end
 * Some props for Villain have changed:
 
     ```
+    gsed -i "s=templateMode=moduleMode=" assets/backend/src/**/*.vue && \
+    gsed -i "s=templateNamespace=moduleNamespace=" assets/backend/src/**/*.vue && \
+    gsed -i "s=namespacedTemplates=namespacedModules=" assets/backend/src/**/*.vue && \
     gsed -i "s=:template-mode=:module-mode=" assets/backend/src/**/*.vue && \
     gsed -i "s=:template-mode=:module-mode=" assets/backend/src/config.js && \
+    gsed -i "s=:templateMode=:moduleMode=" assets/backend/src/config.js && \
     gsed -i "s=:templates=:modules=" assets/backend/src/**/*.vue && \
     gsed -i "s=templates\=\"=modules\=\"=" assets/backend/src/**/*.vue && \
     gsed -i "s=:templates=:modules=" assets/backend/src/config.js && \
