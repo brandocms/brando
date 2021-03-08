@@ -53,16 +53,11 @@ msgid "Authorization failed"
 msgstr "Autorisasjon feilet"
 
 #: lib/web/templates/admin/image_category/configure.html.eex:8
-#: lib/web/templates/admin/image_category/edit.html.eex:8
-#: lib/web/templates/admin/image_category/propagate_configuration.html.eex:8
-#: lib/web/templates/admin/image_category/sequence.html.eex:26
-#: lib/web/templates/admin/image_series/configure.html.eex:8
-#: lib/web/templates/admin/image_series/edit.html.eex:5
-#: lib/web/templates/admin/image_series/sequence.html.eex:18
-#: lib/web/templates/admin/image_series/upload.html.eex:11
-#: lib/web/templates/admin/user/edit.html.eex:5
-#: lib/web/templates/admin/user/new.html.eex:11
-#: lib/web/templates/admin/user/profile_edit.html.eex:5
+#: lib/web/templates/admin/image_category/edit.html.eex:8 lib/web/templates/admin/image_category/propagate_configuration.html.eex:8
+#: lib/web/templates/admin/image_category/sequence.html.eex:26 lib/web/templates/admin/image_series/configure.html.eex:8
+#: lib/web/templates/admin/image_series/edit.html.eex:5 lib/web/templates/admin/image_series/sequence.html.eex:18
+#: lib/web/templates/admin/image_series/upload.html.eex:11 lib/web/templates/admin/user/edit.html.eex:5
+#: lib/web/templates/admin/user/new.html.eex:11 lib/web/templates/admin/user/profile_edit.html.eex:5
 #: lib/web/templates/admin/user/show.html.eex:6
 msgid "Back to index"
 msgstr "Tilbake til oversikten"
@@ -82,14 +77,12 @@ msgid "Configure image category"
 msgstr "Konfigurer bildekategori"
 
 #: lib/web/controllers/admin/image_series_controller.ex:104
-#: lib/web/controllers/admin/image_series_controller.ex:121
-#: lib/web/templates/admin/image/index.html.eex:99
+#: lib/web/controllers/admin/image_series_controller.ex:121 lib/web/templates/admin/image/index.html.eex:99
 msgid "Configure image series"
 msgstr "Konfigurer bildeserie"
 
 #: lib/web/controllers/admin/image_category_controller.ex:197
-#: lib/web/controllers/admin/image_series_controller.ex:186
-#: lib/web/controllers/admin/user_controller.ex:159
+#: lib/web/controllers/admin/image_series_controller.ex:186 lib/web/controllers/admin/user_controller.ex:159
 msgid "Confirm deletion"
 msgstr "Bekreft sletting"
 
@@ -128,32 +121,26 @@ msgid "Deleted"
 msgstr "Slettet"
 
 #: lib/web/controllers/admin/image_category_controller.ex:60
-#: lib/web/controllers/admin/image_category_controller.ex:84
-#: lib/web/templates/admin/image/index.html.eex:20
+#: lib/web/controllers/admin/image_category_controller.ex:84 lib/web/templates/admin/image/index.html.eex:20
 #: lib/web/templates/admin/image_category/edit.html.eex:1
 msgid "Edit image category"
 msgstr "Rediger bildekategori"
 
 #: lib/web/controllers/admin/image_series_controller.ex:64
-#: lib/web/controllers/admin/image_series_controller.ex:83
-#: lib/web/templates/admin/image/index.html.eex:89
-#: lib/web/templates/admin/image_series/edit.html.eex:1
-#: lib/web/templates/admin/image_series/sequence.html.eex:15
+#: lib/web/controllers/admin/image_series_controller.ex:83 lib/web/templates/admin/image/index.html.eex:89
+#: lib/web/templates/admin/image_series/edit.html.eex:1 lib/web/templates/admin/image_series/sequence.html.eex:15
 #: lib/web/templates/admin/image_series/upload.html.eex:5
 msgid "Edit image series"
 msgstr "Rediger bildeserie"
 
 #: lib/web/controllers/admin/user_controller.ex:59
-#: lib/web/controllers/admin/user_controller.ex:84
-#: lib/web/templates/admin/user/profile_edit.html.eex:1
+#: lib/web/controllers/admin/user_controller.ex:84 lib/web/templates/admin/user/profile_edit.html.eex:1
 msgid "Edit profile"
 msgstr "Rediger profil"
 
 #: lib/web/controllers/admin/user_controller.ex:124
-#: lib/web/controllers/admin/user_controller.ex:147
-#: lib/web/templates/admin/user/edit.html.eex:1
-#: lib/web/templates/admin/user/index.html.eex:4
-#: lib/web/templates/admin/user/new.html.eex:14
+#: lib/web/controllers/admin/user_controller.ex:147 lib/web/templates/admin/user/edit.html.eex:1
+#: lib/web/templates/admin/user/index.html.eex:4 lib/web/templates/admin/user/new.html.eex:14
 #: lib/web/templates/admin/user/show.html.eex:9
 msgid "Edit user"
 msgstr "Rediger bruker"
@@ -163,8 +150,7 @@ msgid "Email"
 msgstr "E-post"
 
 #: lib/web/templates/admin/image/not_found.html.eex:1
-#: lib/web/templates/admin/image_category/not_found.html.eex:1
-#: lib/web/templates/admin/image_series/not_found.html.eex:1
+#: lib/web/templates/admin/image_category/not_found.html.eex:1 lib/web/templates/admin/image_series/not_found.html.eex:1
 msgid "Entry not found"
 msgstr "Oppføring fantes ikke"
 
@@ -173,14 +159,10 @@ msgid "Error"
 msgstr "Feil"
 
 #: lib/web/controllers/admin/image_category_controller.ex:47
-#: lib/web/controllers/admin/image_category_controller.ex:88
-#: lib/web/controllers/admin/image_category_controller.ex:118
-#: lib/web/controllers/admin/image_series_controller.ex:46
-#: lib/web/controllers/admin/image_series_controller.ex:81
-#: lib/web/controllers/admin/image_series_controller.ex:118
-#: lib/web/controllers/admin/user_controller.ex:85
-#: lib/web/controllers/admin/user_controller.ex:111
-#: lib/web/controllers/admin/user_controller.ex:148
+#: lib/web/controllers/admin/image_category_controller.ex:88 lib/web/controllers/admin/image_category_controller.ex:118
+#: lib/web/controllers/admin/image_series_controller.ex:46 lib/web/controllers/admin/image_series_controller.ex:81
+#: lib/web/controllers/admin/image_series_controller.ex:118 lib/web/controllers/admin/user_controller.ex:85
+#: lib/web/controllers/admin/user_controller.ex:111 lib/web/controllers/admin/user_controller.ex:148
 msgid "Errors in form"
 msgstr "Feil i skjemaet"
 
@@ -240,22 +222,19 @@ msgid "Login"
 msgstr "Pålogging"
 
 #: lib/web/controllers/admin/image_category_controller.ex:28
-#: lib/web/controllers/admin/image_category_controller.ex:44
-#: lib/web/templates/admin/image/index.html.eex:119
+#: lib/web/controllers/admin/image_category_controller.ex:44 lib/web/templates/admin/image/index.html.eex:119
 #: lib/web/templates/admin/image_category/new.html.eex:1
 msgid "New image category"
 msgstr "Ny bildekategori"
 
 #: lib/web/controllers/admin/image_series_controller.ex:30
-#: lib/web/controllers/admin/image_series_controller.ex:49
-#: lib/web/templates/admin/image/index.html.eex:10
+#: lib/web/controllers/admin/image_series_controller.ex:49 lib/web/templates/admin/image/index.html.eex:10
 #: lib/web/templates/admin/image_series/new.html.eex:1
 msgid "New image series"
 msgstr "Ny bildeserie"
 
 #: lib/web/controllers/admin/user_controller.ex:96
-#: lib/web/controllers/admin/user_controller.ex:110
-#: lib/web/templates/admin/user/index.html.eex:9
+#: lib/web/controllers/admin/user_controller.ex:110 lib/web/templates/admin/user/index.html.eex:9
 #: lib/web/templates/admin/user/new.html.eex:1
 msgid "New user"
 msgstr "Ny bruker"
@@ -303,8 +282,7 @@ msgid "Server error"
 msgstr "Serverfeil"
 
 #: lib/web/controllers/admin/user_controller.ex:34
-#: lib/web/templates/admin/user/index.html.eex:3
-#: lib/web/templates/admin/user/show.html.eex:2
+#: lib/web/templates/admin/user/index.html.eex:3 lib/web/templates/admin/user/show.html.eex:2
 msgid "Show user"
 msgstr "Vis bruker"
 
@@ -313,8 +291,7 @@ msgid "Sort image category"
 msgstr "Sorter bildekategori"
 
 #: lib/web/templates/admin/image/index.html.eex:25
-#: lib/web/templates/admin/image_series/sequence.html.eex:1
-#: lib/web/templates/admin/image_series/upload.html.eex:8
+#: lib/web/templates/admin/image_series/sequence.html.eex:1 lib/web/templates/admin/image_series/upload.html.eex:8
 msgid "Sort image series"
 msgstr "Sorter bildeserie"
 
@@ -327,8 +304,7 @@ msgid "System info"
 msgstr "Systeminfo"
 
 #: lib/web/templates/admin/image_category/delete_confirm.html.eex:11
-#: lib/web/templates/admin/image_series/delete_confirm.html.eex:11
-#: lib/web/templates/admin/user/delete_confirm.html.eex:11
+#: lib/web/templates/admin/image_series/delete_confirm.html.eex:11 lib/web/templates/admin/user/delete_confirm.html.eex:11
 msgid "This object cannot be restored!"
 msgstr "Dette objektet kan ikke gjenopprettes!"
 
@@ -350,8 +326,7 @@ msgid "User updated"
 msgstr "Bruker oppdatert"
 
 #: lib/web/templates/admin/image_category/delete_confirm.html.eex:6
-#: lib/web/templates/admin/image_series/delete_confirm.html.eex:6
-#: lib/web/templates/admin/user/delete_confirm.html.eex:6
+#: lib/web/templates/admin/image_series/delete_confirm.html.eex:6 lib/web/templates/admin/user/delete_confirm.html.eex:6
 msgid "You are about to delete this object. Please check carefully, and note that any dependent objects will also be removed."
 msgstr "Du er ferd med å slette dette objektet. Kontroller nøye, og legg merke til at alle avhengige objekter også vil bli fjernet."
 
@@ -604,15 +579,15 @@ msgstr "brukere"
 msgid "Delete"
 msgstr "Slett"
 
-#: lib/brando/upload.ex:78
+#: lib/brando/upload.ex:70
 msgid "Empty filename given. Make sure you have a valid filename."
 msgstr "Tomt filnavn gitt. Kontroller at du har et gyldig filnavn."
 
-#: lib/brando/upload.ex:95
+#: lib/brando/upload.ex:85
 msgid "Error while copying"
 msgstr "Feil under kopiering"
 
-#: lib/brando/upload.ex:91
+#: lib/brando/upload.ex:82
 msgid "Path creation failed"
 msgstr "Feil under oppretting av filbane"
 
@@ -624,7 +599,7 @@ msgstr "Adgang nektet."
 msgid "Passwords must match"
 msgstr "Passord må matche"
 
-#: lib/brando/users/user.ex:97 lib/brando/users/user.ex:111
+#: lib/brando/users/user.ex:123
 msgid "Password must be at least 6 characters"
 msgstr "Passord må være minst 6 tegn"
 
@@ -814,16 +789,26 @@ msgstr "Moduler"
 msgid "Error retrieving form \"%{form}\". Not registered."
 msgstr "Feil ved henting av skjema \"%{form}\". Ikke registrert."
 
-#: lib/brando/upload.ex:82
+#: lib/brando/upload.ex:73
 msgid "File type not allowed: %{type}. Must be one of: %{allowed}"
 msgstr "Filtype ikke tillatt: %{type}. Må være en av: %{allowed}"
 
 #, elixir-format
-#: lib/brando/upload.ex:88
+#: lib/brando/upload.ex:79
 msgid "Error while creating image sizes"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/upload.ex:98
+#: lib/brando/upload.ex:89
 msgid "Unknown error while creating image sizes."
 msgstr ""
+
+#, elixir-format
+#: lib/brando/images/operations/sizing.ex:455
+msgid "%{filename} &rarr; Creating image size: <strong>%{size_key}</strong>/%{format}"
+msgstr "%{filename} &rarr; Oppretter bildestørrelse: <strong>%{size_key}</strong>/%{format}"
+
+#, elixir-format
+#: lib/brando/upload.ex:67
+msgid "Failed creating image type struct"
+msgstr "Feil ved oppretting av bildetypens struktur"

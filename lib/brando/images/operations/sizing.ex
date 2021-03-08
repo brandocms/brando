@@ -2,6 +2,7 @@ defmodule Brando.Images.Operations.Sizing do
   @moduledoc """
   Sizing operations
   """
+  import Brando.Gettext
   alias Brando.Images
   alias Brando.Progress
 
@@ -451,7 +452,12 @@ defmodule Brando.Images.Operations.Sizing do
         user
       ) do
     progress_string =
-      "#{filename} &rarr; Oppretter bildestørrelse: <strong>#{size_key}</strong>/#{format}"
+      gettext(
+        "%{filename} &rarr; Creating image size: <strong>%{size_key}</strong>/%{format}",
+        filename: filename,
+        size_key: size_key,
+        format: format
+      )
 
     Progress.update_progress(user, progress_string,
       key: to_string(id),
