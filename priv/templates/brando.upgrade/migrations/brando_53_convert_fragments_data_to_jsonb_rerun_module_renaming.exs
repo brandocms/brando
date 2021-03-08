@@ -1,8 +1,17 @@
-defmodule Brando.Migrations.RenameTemplatesToModules do
+defmodule Brando.Migrations.FragmentsDataJSONBRenameTemplatesToModules do
   use Ecto.Migration
   import Ecto.Query
 
   def change do
+    execute """
+    ALTER TABLE pages_fragments
+      ALTER COLUMN data
+      SET DATA TYPE jsonb
+      USING data::jsonb;
+    """
+
+    flush()
+
     villain_schemas = Brando.Villain.list_villains()
 
     actions =
@@ -17,9 +26,5 @@ defmodule Brando.Migrations.RenameTemplatesToModules do
     for action <- actions do
       Brando.repo().update_all(action, [])
     end
-
-    flush()
-
-    rename table(:pages_templates), to: table(:pages_modules)
   end
 end
