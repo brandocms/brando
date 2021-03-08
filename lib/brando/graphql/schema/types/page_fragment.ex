@@ -27,6 +27,11 @@ defmodule Brando.GraphQL.Schema.Types.PageFragment do
     field :page_id, :id
   end
 
+  @desc "Matching options for page_fragment"
+  input_object :page_fragment_matches do
+    field :id, :id
+  end
+
   object :page_fragment_queries do
     @desc "Get all page_fragments"
     field :page_fragments, type: list_of(:page_fragment) do
@@ -35,8 +40,10 @@ defmodule Brando.GraphQL.Schema.Types.PageFragment do
 
     @desc "Get page_fragment"
     field :page_fragment, type: :page_fragment do
-      arg :page_fragment_id, non_null(:id)
-      resolve &Brando.Pages.PageFragmentResolver.find/2
+      arg :matches, :page_fragment_matches
+      arg :revision, :id
+      arg :status, :string, default_value: "all"
+      resolve &Brando.Pages.PageFragmentResolver.get/2
     end
   end
 
