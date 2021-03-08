@@ -11,13 +11,13 @@ Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
 ## End to end tests with Cypress
 
+  * Install your E2E deps:
+
+    `$ cd e2e && yarn install`
+
   * Dump your SQL structure:
 
     `$ mix ecto.dump`
-
-  * Ensure you have Cypress installed:
-
-    `$ cypress --version`
 
   * Start server and open Cypress:
 
