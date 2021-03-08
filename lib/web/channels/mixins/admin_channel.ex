@@ -233,7 +233,8 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("page:duplicate", %{"id" => page_id}, socket) do
-    {:ok, new_page} = Pages.duplicate_page(page_id)
+    user = Guardian.Phoenix.Socket.current_resource(socket)
+    {:ok, new_page} = Pages.duplicate_page(page_id, user)
     {:reply, {:ok, %{code: 200, page: new_page}}, socket}
   end
 
@@ -253,7 +254,9 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("page_fragment:duplicate", %{"id" => page_id}, socket) do
-    case Pages.duplicate_page_fragment(page_id) do
+    user = Guardian.Phoenix.Socket.current_resource(socket)
+
+    case Pages.duplicate_page_fragment(page_id, user) do
       {:ok, new_fragment} ->
         {:reply, {:ok, %{code: 200, page_fragment: new_fragment}}, socket}
 

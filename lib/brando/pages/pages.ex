@@ -10,15 +10,17 @@ defmodule Brando.Pages do
   alias Brando.Pages.Property
   alias Brando.Users.User
   alias Brando.Villain
+  alias Ecto.Changeset
 
   import Ecto.Query
 
-  @type changeset :: Ecto.Changeset.t()
-  @type fragment :: Brando.Pages.PageFragment.t()
+  @type changeset :: Changeset.t()
+  @type fragment :: PageFragment.t()
+  @type fragment_error :: {:error, {:page_fragment, :not_found}} | {:error, changeset}
   @type id :: binary | integer
-  @type page :: Brando.Pages.Page.t()
+  @type page :: Page.t()
   @type params :: map
-  @type user :: Brando.Users.User.t() | :system
+  @type user :: User.t() | :system
 
   defmacro __using__(_) do
     quote do
@@ -114,7 +116,7 @@ defmodule Brando.Pages do
   @doc """
   Duplicate page
   """
-  def duplicate_page(page_id) do
+  def duplicate_page(page_id, user) do
     page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
 
     page = get_page!(page_id)
@@ -123,7 +125,7 @@ defmodule Brando.Pages do
     |> Map.merge(%{uri: "#{page.uri}_kopi", title: "#{page.title} (kopi)"})
     |> Map.delete([:id, :children, :parent])
     |> Map.from_struct()
-    |> create_page(%Brando.Users.User{id: page.creator_id})
+    |> create_page(user)
   end
 
   @doc """
@@ -179,7 +181,7 @@ defmodule Brando.Pages do
     {:ok, page} = get_page(%{matches: %{id: page_id}})
 
     page
-    |> Ecto.Changeset.change()
+    |> Changeset.change()
     |> Villain.rerender_html()
   end
 
@@ -190,7 +192,7 @@ defmodule Brando.Pages do
     {:ok, pages} = list_pages()
 
     for page <- pages do
-      Villain.rerender_html(Ecto.Changeset.change(page))
+      Villain.rerender_html(Changeset.change(page))
     end
   end
 
@@ -280,13 +282,13 @@ defmodule Brando.Pages do
     {:ok, fragments} = list_page_fragments()
 
     for fragment <- fragments do
-      Villain.rerender_html(Ecto.Changeset.change(fragment))
+      Villain.rerender_html(Changeset.change(fragment))
     end
   end
 
   def rerender_fragment(id) do
     {:ok, fragment} = get_page_fragment(id)
-    changeset = Ecto.Changeset.change(fragment)
+    changeset = Changeset.change(fragment)
     Villain.rerender_html(changeset)
   end
 
@@ -338,9 +340,8 @@ defmodule Brando.Pages do
   @doc """
   Duplicate page fragment
   """
-  @spec duplicate_page_fragment(id) ::
-          {:ok, map} | {:error, {:page_fragment, :not_found}} | {:error, changeset}
-  def duplicate_page_fragment(fragment_id) do
+  @spec duplicate_page_fragment(id, user) :: {:ok, map} | fragment_error
+  def duplicate_page_fragment(fragment_id, user) do
     fragment_id = (is_binary(fragment_id) && String.to_integer(fragment_id)) || fragment_id
 
     with {:ok, fragment} <- get_page_fragment(fragment_id) do
@@ -348,7 +349,7 @@ defmodule Brando.Pages do
       |> Map.merge(%{key: "#{fragment.key}_kopi"})
       |> Map.delete([:id, :parent])
       |> Map.from_struct()
-      |> create_page_fragment(%User{id: fragment.creator_id})
+      |> create_page_fragment(user)
     end
   end
 
@@ -367,6 +368,10 @@ defmodule Brando.Pages do
     end
   end
 
+  @doc """
+  Checks if page has property
+  """
+  @spec has_prop?(page, binary) :: boolean
   def has_prop?(%Page{properties: []}, _), do: nil
 
   def has_prop?(%Page{properties: properties}, property) do
