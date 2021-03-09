@@ -306,14 +306,14 @@ defmodule Brando.Villain.Parser do
 
       # Convert file video to html
       def video(%{"remote_id" => src, "source" => "file"} = data, _) do
-        video_tag(src, %{
+        video_tag(src,
           width: data["width"],
           height: data["height"],
           cover: :svg,
           poster: data["poster"] || nil,
           preload: data["preload"] || true,
           opacity: 0.1
-        })
+        )
         |> safe_to_string()
       end
 
