@@ -15,8 +15,8 @@ defmodule Brando.HTML.Video do
       - `html` -> for instance, provide a rendered picture_tag
     - `poster` -> url to poster, i.e. on vimeo.
   """
-  @spec video_tag(binary | video, map()) :: safe_string
-  def video_tag(video, opts \\ %{})
+  @spec video_tag(binary | video, keyword()) :: safe_string
+  def video_tag(video, opts \\ [])
 
   def video_tag(
         %Video{source: "vimeo", remote_id: remote_id, width: width, height: height},
@@ -39,8 +39,8 @@ defmodule Brando.HTML.Video do
         %Video{source: "youtube", remote_id: remote_id, width: width, height: height},
         opts
       ) do
-    autoplay = (Map.get(opts, :autoplay, false) && 1) || 0
-    controls = (Map.get(opts, :controls, false) && 1) || 0
+    autoplay = (Keyword.get(opts, :autoplay, false) && 1) || 0
+    controls = (Keyword.get(opts, :controls, false) && 1) || 0
     params = "autoplay=#{autoplay}&controls=#{controls}&showinfo=0&rel=0"
     ~E|
       <iframe src="https://www.youtube.com/embed/<%= remote_id %>?<%= params %>"
@@ -56,14 +56,14 @@ defmodule Brando.HTML.Video do
   end
 
   def video_tag(src, opts) do
-    width = Map.get(opts, :width)
-    height = Map.get(opts, :height)
-    opacity = Map.get(opts, :opacity, 0)
-    preload = Map.get(opts, :preload, false)
-    cover = Map.get(opts, :cover, false)
-    poster = Map.get(opts, :poster, false)
-    play_button = Map.get(opts, :play_button, false)
-    autoplay = (Map.get(opts, :autoplay, false) && "autoplay") || ""
+    width = Keyword.get(opts, :width)
+    height = Keyword.get(opts, :height)
+    opacity = Keyword.get(opts, :opacity, 0)
+    preload = Keyword.get(opts, :preload, false)
+    cover = Keyword.get(opts, :cover, false)
+    poster = Keyword.get(opts, :poster, false)
+    play_button = Keyword.get(opts, :play_button, false)
+    autoplay = (Keyword.get(opts, :autoplay, false) && "autoplay") || ""
 
     aspect_ratio = build_aspect_ratio_style_string(width, height)
 
