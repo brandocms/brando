@@ -13,8 +13,14 @@ function forceLazyload(node) {
   } else {
     if (node.querySelectorAll) {
       var images = node.querySelectorAll('img[data-ll-image]:not([data-ll-loaded])')
+      var srcsetImages = node.querySelectorAll('img[data-ll-srcset-image]:not([data-ll-loaded])')
       for (var i = 0; i < images.length; i++) {
         images[i].src = images[i].getAttribute('data-src');
+        images[i].dataset.llLoaded = ''
+      }
+      for (var i = 0; i < srcsetImages.length; i++) {
+        srcsetImages[i].src = srcsetImages[i].getAttribute('data-src');
+        srcsetImages[i].dataset.llLoaded = ''
       }
     }
   }
