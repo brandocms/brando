@@ -1,5 +1,7 @@
 ## 0.51.0
 
+* `video_tag/2` must receive a keyword list as `opts`, not `map`.
+
 * Proper pagination in BrandoJS means some changes! If your application `use`s `Brando.GraphQL.Resolver`,
   the `all` resolver will now return `%{entries: entries, pagination_meta: pagination_meta}`.
 
