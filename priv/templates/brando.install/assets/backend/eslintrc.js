@@ -1,15 +1,11 @@
 module.exports = {
   root: true,
   env: {
-    node: true,
-    'cypress/globals': true
+    node: true
   },
   extends: [
     'plugin:vue/essential',
     '@vue/standard'
-  ],
-  plugins: [
-    'cypress'
   ],
   rules: {
     // allow paren-less arrow functions
