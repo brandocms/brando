@@ -181,6 +181,10 @@ defmodule Brando.HTML.Images do
       [:img, :data_ll_image],
       lazyload && !Keyword.get(attrs.picture, :data_ll_srcset, false)
     )
+    |> put_in(
+      [:img, :data_ll_srcset_image],
+      lazyload && Keyword.get(attrs.picture, :data_ll_srcset, false)
+    )
   end
 
   defp add_attrs(attrs) do
