@@ -439,10 +439,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         },
         socket
       ) do
-    entry_diff =
-      camel_cased_entry_diff
-      |> Brando.Utils.snake_case()
-      |> Brando.Utils.to_atom_map()
+    entry_diff = Brando.Utils.snake_case(camel_cased_entry_diff)
 
     Brando.LivePreview.update(schema, entry_diff, key, prop, cache_key)
     {:reply, {:ok, %{code: 200, cache_key: cache_key}}, socket}

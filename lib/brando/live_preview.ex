@@ -283,9 +283,12 @@ defmodule Brando.LivePreview do
   def update(schema, entry_diff, key, prop, cache_key) do
     preview_module = get_preview_module()
     schema_module = Module.concat([schema])
+    coerced_diff = Utils.coerce_struct(entry_diff, schema_module, :take_keys)
+
     entry = get_entry(cache_key)
-    diffed_entry = Map.merge(entry, entry_diff)
+    diffed_entry = Map.merge(entry, coerced_diff)
     set_entry(cache_key, diffed_entry)
+
     wrapper_html = preview_module.render(schema_module, diffed_entry, key, prop, cache_key)
     Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
     cache_key

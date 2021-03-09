@@ -752,6 +752,18 @@ defmodule Brando.Utils do
   @doc """
   Forces map and its children into an Ecto `schema` struct.
   """
+  def coerce_struct(map, schema, :take_keys) do
+    keys =
+      map
+      |> Map.keys()
+      |> Enum.map(&String.to_existing_atom/1)
+
+    map
+    |> coerce_struct(schema)
+    |> Map.from_struct()
+    |> Map.take(keys)
+  end
+
   def coerce_struct(nil, _), do: nil
   def coerce_struct(%{__struct__: Ecto.Association.NotLoaded} = not_loaded, _), do: not_loaded
 
@@ -761,8 +773,16 @@ defmodule Brando.Utils do
   def coerce_struct(map, schema) do
     initial_struct = map_to_struct(map, schema)
     schema_assocs = schema.__schema__(:associations)
+    schema_fields = schema.__schema__(:fields)
+    schema_meta = schema.__changeset__()
 
-    Enum.reduce(schema_assocs, initial_struct, fn assoc, final_struct ->
+    coerced_fields_struct =
+      Enum.reduce(schema_fields, initial_struct, fn field, final_struct ->
+        field_meta = Map.get(schema_meta, field)
+        Map.put(final_struct, field, coerce_field(Map.get(final_struct, field), field_meta))
+      end)
+
+    Enum.reduce(schema_assocs, coerced_fields_struct, fn assoc, final_struct ->
       schema_assoc_meta = schema.__schema__(:association, assoc)
 
       Map.put(
@@ -771,5 +791,54 @@ defmodule Brando.Utils do
         coerce_struct(Map.get(final_struct, assoc), schema_assoc_meta.queryable)
       )
     end)
+  end
+
+  def coerce_field(
+        value,
+        {:embed,
+         %Ecto.Embedded{
+           cardinality: :many,
+           related: module
+         }}
+      ) do
+    Enum.map(value, &coerce_struct(&1, module))
+  end
+
+  def coerce_field(
+        value,
+        {:embed,
+         %Ecto.Embedded{
+           cardinality: :one,
+           related: module
+         }}
+      ) do
+    coerce_struct(value, module)
+  end
+
+  def coerce_field(nil, _), do: nil
+
+  # special case for Image type
+  def coerce_field(value, Brando.Type.Image) do
+    case Brando.Type.Image.cast(value) do
+      {:ok, {_, value}} -> value
+      {:ok, value} -> value
+    end
+  end
+
+  def coerce_field(value, meta) when is_atom(meta) do
+    if {:cast, 1} in meta.__info__(:functions) do
+      value
+      |> meta.cast()
+      |> elem(1)
+    else
+      value
+    end
+  rescue
+    UndefinedFunctionError ->
+      value
+  end
+
+  def coerce_field(value, _) do
+    value
   end
 end

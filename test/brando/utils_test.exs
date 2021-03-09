@@ -288,5 +288,22 @@ defmodule Brando.UtilsTest do
     assert Map.get(assoc_struct, :uri) == "my-title"
     assert Map.get(assoc_struct.creator, :name) == "Test Name"
     assert Map.get(assoc_struct.creator, :email) == "my@email.com"
+
+    type_map = %{
+      "title" => "My title",
+      "uri" => "my-title",
+      "status" => "published"
+    }
+
+    type_struct = coerce_struct(type_map, Brando.Pages.Page)
+    assert Map.get(type_struct, :status, :published)
+
+    limited_struct = coerce_struct(type_map, Brando.Pages.Page, :take_keys)
+
+    assert limited_struct == %{
+             title: "My title",
+             uri: "my-title",
+             status: :published
+           }
   end
 end
