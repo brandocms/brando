@@ -122,17 +122,17 @@ defmodule Brando.Query do
   defmacro mutation(:update, module), do: mutation_update(Macro.expand(module, __CALLER__))
   defmacro mutation(:delete, module), do: mutation_delete(Macro.expand(module, __CALLER__))
 
-  defmacro mutation(:create, module, do: block),
-    do: mutation_create(Macro.expand(module, __CALLER__), block)
+  defmacro mutation(:create, module, do: callback_block),
+    do: mutation_create(Macro.expand(module, __CALLER__), callback_block)
 
-  defmacro mutation(:update, {module, opts}, do: block),
-    do: mutation_update({Macro.expand(module, __CALLER__), opts}, block)
+  defmacro mutation(:update, {module, opts}, do: callback_block),
+    do: mutation_update({Macro.expand(module, __CALLER__), opts}, callback_block)
 
-  defmacro mutation(:update, module, do: block),
-    do: mutation_update(Macro.expand(module, __CALLER__), block)
+  defmacro mutation(:update, module, do: callback_block),
+    do: mutation_update(Macro.expand(module, __CALLER__), callback_block)
 
-  defmacro mutation(:delete, module, do: block),
-    do: mutation_delete(Macro.expand(module, __CALLER__), block)
+  defmacro mutation(:delete, module, do: callback_block),
+    do: mutation_delete(Macro.expand(module, __CALLER__), callback_block)
 
   defmacro filters(module, do: block), do: filter_query(module, block)
   defmacro matches(module, do: block), do: match_query(module, block)
@@ -470,14 +470,14 @@ defmodule Brando.Query do
     end
   end
 
-  defp mutation_create(module, block \\ nil) do
+  defp mutation_create(module, callback_block \\ nil) do
     name =
       module
       |> Module.split()
       |> List.last()
       |> Inflex.underscore()
 
-    block = block || @default_after_operation
+    callback_block = callback_block || @default_after_operation
 
     quote generated: true do
       @spec unquote(:"create_#{name}")(map, Brando.Users.User.t() | :system) ::
@@ -498,7 +498,7 @@ defmodule Brando.Query do
             identifier -> Brando.Notifications.push_mutation("created", identifier, user)
           end
 
-          unquote(block).(entry)
+          unquote(callback_block).(entry)
         else
           err -> err
         end
@@ -506,33 +506,33 @@ defmodule Brando.Query do
     end
   end
 
-  defp mutation_update(module, block \\ nil)
+  defp mutation_update(module, callback_block \\ nil)
 
-  defp mutation_update({module, opts}, block) do
+  defp mutation_update({module, opts}, callback_block) do
     name =
       module
       |> Module.split()
       |> List.last()
       |> Inflex.underscore()
 
-    block = block || @default_after_operation
+    callback_block = callback_block || @default_after_operation
 
-    do_mutation_update(module, name, block, opts)
+    do_mutation_update(module, name, callback_block, opts)
   end
 
-  defp mutation_update(module, block) do
+  defp mutation_update(module, callback_block) do
     name =
       module
       |> Module.split()
       |> List.last()
       |> Inflex.underscore()
 
-    block = block || @default_after_operation
+    callback_block = callback_block || @default_after_operation
 
-    do_mutation_update(module, name, block)
+    do_mutation_update(module, name, callback_block)
   end
 
-  defp do_mutation_update(module, name, block, opts \\ []) do
+  defp do_mutation_update(module, name, callback_block, opts \\ []) do
     preloads = Keyword.get(opts, :preload)
 
     quote do
@@ -562,7 +562,7 @@ defmodule Brando.Query do
             identifier -> Brando.Notifications.push_mutation("updated", identifier, user)
           end
 
-          unquote(block).(entry)
+          unquote(callback_block).(entry)
         else
           err -> err
         end
@@ -570,14 +570,14 @@ defmodule Brando.Query do
     end
   end
 
-  defp mutation_delete(module, block \\ nil) do
+  defp mutation_delete(module, callback_block \\ nil) do
     name =
       module
       |> Module.split()
       |> List.last()
       |> Inflex.underscore()
 
-    block = block || @default_after_operation
+    callback_block = callback_block || @default_after_operation
 
     quote do
       @spec unquote(:"delete_#{name}")(integer | binary) ::
@@ -606,7 +606,7 @@ defmodule Brando.Query do
           identifier -> Brando.Notifications.push_mutation("deleted", identifier, user)
         end
 
-        unquote(block).(entry)
+        unquote(callback_block).(entry)
       end
     end
   end
