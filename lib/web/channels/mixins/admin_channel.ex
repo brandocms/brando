@@ -374,12 +374,14 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("user:deactivate", %{"user_id" => user_id}, socket) do
-    Brando.Users.set_active(user_id, false)
+    user = Guardian.Phoenix.Socket.current_resource(socket)
+    Brando.Users.set_active(user_id, false, user)
     {:reply, {:ok, %{code: 200, user_id: user_id}}, socket}
   end
 
   def do_handle_in("user:activate", %{"user_id" => user_id}, socket) do
-    Brando.Users.set_active(user_id, true)
+    user = Guardian.Phoenix.Socket.current_resource(socket)
+    Brando.Users.set_active(user_id, true, user)
     {:reply, {:ok, %{code: 200, user_id: user_id}}, socket}
   end
 

@@ -1,6 +1,11 @@
 defmodule Brando.GraphQL.Schema.Types.User do
   use Brando.Web, :absinthe
 
+  object :users do
+    field :entries, list_of(:user)
+    field :pagination_meta, non_null(:pagination_meta)
+  end
+
   object :user do
     field :id, :id
     field :email, :string
@@ -40,6 +45,17 @@ defmodule Brando.GraphQL.Schema.Types.User do
     field :config, :user_config_params
   end
 
+  @desc "Filtering options for user"
+  input_object :user_filter do
+    field :name, :string
+  end
+
+  @desc "Matching options for user"
+  input_object :user_matches do
+    field :id, :id
+    field :email, :string
+  end
+
   object :user_queries do
     @desc "Get current user"
     field :me, type: :user do
@@ -47,14 +63,21 @@ defmodule Brando.GraphQL.Schema.Types.User do
     end
 
     @desc "Get all users"
-    field :users, type: list_of(:user) do
+    field :users, type: :users do
+      arg :order, :order, default_value: [{:asc, :name}]
+      arg :limit, :integer, default_value: 25
+      arg :offset, :integer, default_value: 0
+      arg :filter, :user_filter
+      arg :status, :string
       resolve &Brando.Users.UserResolver.all/2
     end
 
     @desc "Get user"
     field :user, type: :user do
-      arg :user_id, non_null(:id)
-      resolve &Brando.Users.UserResolver.find/2
+      arg :matches, :user_matches
+      arg :revision, :id
+      arg :status, :string, default_value: "all"
+      resolve &Brando.Users.UserResolver.get/2
     end
   end
 

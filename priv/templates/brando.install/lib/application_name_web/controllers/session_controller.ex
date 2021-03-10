@@ -9,7 +9,7 @@ defmodule <%= application_module %>Web.SessionController do
   Create new token
   """
   def create(conn, %{"email" => email, "password" => password}) do
-    case Users.get_user_by_email(email) do
+    case Users.get_user(%{matches: %{email: email, active: true}}) do
       {:error, {:user, :not_found}} ->
         Bcrypt.no_user_verify()
 

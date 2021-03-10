@@ -14,8 +14,10 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
   @user_query """
   query {
     users {
-      id
-      name
+      entries {
+        id
+        name
+      }
     }
   }
   """
@@ -29,24 +31,26 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
              {:ok,
               %{
                 data: %{
-                  "users" => [%{"name" => "James Williamson", "id" => to_string(user.id)}]
+                  "users" => %{
+                    "entries" => [%{"name" => "James Williamson", "id" => to_string(user.id)}]
+                  }
                 }
               }}
   end
 
   @user_id_query """
-  query user($userId: ID) {
-    user(userId: $userId) {
+  query user($matches: UserMatches!) {
+    user(matches: $matches) {
       id
       name
     }
   }
   """
-  test "user(id)", %{opts: opts, user: user} do
+  test "user(matches)", %{opts: opts, user: user} do
     assert Absinthe.run(
              @user_id_query,
              BrandoIntegration.TestSchema,
-             opts ++ [variables: %{"userId" => user.id}]
+             opts ++ [variables: %{"matches" => %{"id" => user.id}}]
            ) ==
              {:ok,
               %{
@@ -58,7 +62,7 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
     assert Absinthe.run(
              @user_id_query,
              BrandoIntegration.TestSchema,
-             opts ++ [variables: %{"userId" => 9_999_999_999}]
+             opts ++ [variables: %{"matches" => %{"id" => 9_999_999_999}}]
            ) ==
              {:ok,
               %{

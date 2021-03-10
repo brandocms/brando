@@ -122,6 +122,12 @@ defmodule Brando.Users.User do
       min: 6,
       too_short: gettext("Password must be at least 6 characters")
     )
+    |> maybe_update_password()
     |> validate_upload({:image, :avatar}, user)
   end
+
+  defp maybe_update_password(%{changes: %{password: password}} = cs),
+    do: put_change(cs, :password, Bcrypt.hash_pwd_salt(password))
+
+  defp maybe_update_password(cs), do: cs
 end
