@@ -51,7 +51,8 @@ defmodule Brando.GraphQL.Schema.Types.Identity do
       resolve fn _, _ ->
         cfg = %{
           media_url: Brando.config(:media_url),
-          timezone: Brando.config(:timezone)
+          timezone: Brando.config(:timezone),
+          url_base: Brando.Utils.hostname()
         }
 
         {:ok, cfg}
@@ -77,6 +78,7 @@ defmodule Brando.GraphQL.Schema.Types.Identity do
   end
 
   object :identity_config do
+    field :url_base, :string
     field :media_url, :string
     field :timezone, :string
   end
