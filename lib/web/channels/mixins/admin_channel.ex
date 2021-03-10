@@ -56,7 +56,10 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "publisher:delete_job",
     "revision:activate",
     "revision:delete",
+    "revision:describe",
+    "revision:protect",
     "revision:schedule",
+    "revision:unprotect",
     "revisions:purge_inactive",
     "sitemap:exists",
     "sitemap:generate",
@@ -280,7 +283,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         %{"schema" => schema, "id" => id, "revision" => revision},
         socket
       ) do
-    Revisions.set_revision(Module.concat([schema]), id, revision)
+    Revisions.set_entry_to_revision(Module.concat([schema]), id, revision)
 
     {:reply, {:ok, %{code: 200}}, socket}
   end
@@ -291,6 +294,36 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
         socket
       ) do
     Revisions.delete_revision(Module.concat([schema]), id, revision)
+
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in(
+        "revision:protect",
+        %{"schema" => schema, "id" => id, "revision" => revision},
+        socket
+      ) do
+    Revisions.protect_revision(Module.concat([schema]), id, revision, true)
+
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in(
+        "revision:unprotect",
+        %{"schema" => schema, "id" => id, "revision" => revision},
+        socket
+      ) do
+    Revisions.protect_revision(Module.concat([schema]), id, revision, false)
+
+    {:reply, {:ok, %{code: 200}}, socket}
+  end
+
+  def do_handle_in(
+        "revision:describe",
+        %{"schema" => schema, "id" => id, "revision" => revision, "description" => description},
+        socket
+      ) do
+    Revisions.describe_revision(Module.concat([schema]), id, revision, description)
 
     {:reply, {:ok, %{code: 200}}, socket}
   end

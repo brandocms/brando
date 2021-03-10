@@ -1,4 +1,4 @@
-defmodule Brando.Worker.Publisher do
+defmodule Brando.Worker.EntryPublisher do
   @moduledoc """
   A Worker for publishing and unpublishing entries
   """
@@ -7,6 +7,7 @@ defmodule Brando.Worker.Publisher do
     max_attempts: 10
 
   require Logger
+  alias Brando.Revisions
 
   # schedule publishing/depublishing an entry
   @impl Oban.Worker
@@ -26,7 +27,7 @@ defmodule Brando.Worker.Publisher do
       |> List.last()
       |> String.downcase()
 
-    case Brando.Revisions.set_revision(schema, id, revision) do
+    case Revisions.set_entry_to_revision(schema, id, revision) do
       {:ok, new_entry} ->
         Logger.info("""
 

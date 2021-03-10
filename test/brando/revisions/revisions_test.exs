@@ -33,7 +33,7 @@ defmodule Brando.Revisions.RevisionsTest do
     {:ok, _} = Revisions.create_revision(s1a, user)
     {:ok, r2} = Revisions.create_revision(s1b, user)
 
-    {:ok, {last_revision, {_, _}}} = Revisions.get_last_revision(%Page{id: 1})
+    {:ok, {last_revision, {_, _}}} = Revisions.get_last_revision(Page, s1a.id)
     assert last_revision.revision == r2.revision
   end
 
@@ -44,12 +44,8 @@ defmodule Brando.Revisions.RevisionsTest do
 
     assert p3.title == "Title no. 3"
 
-    Revisions.set_revision(p3, 1)
+    Revisions.set_entry_to_revision(Page, p1.id, 1)
     {:ok, p4} = Pages.get_page(%{matches: %{id: p3.id}})
     assert p4.title == "Title no. 2"
-
-    Revisions.set_last_revision(p4)
-    {:ok, p4} = Pages.get_page(%{matches: %{id: p3.id}})
-    assert p4.title == "Title no. 3"
   end
 end

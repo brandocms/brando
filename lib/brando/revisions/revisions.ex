@@ -16,10 +16,17 @@ defmodule Brando.Revisions do
       ```
   """
 
+  @type changeset :: Ecto.Changeset.t()
+  @type revision :: Brando.Revisions.Revision.t()
+  @type revision_active :: boolean
+  @type user :: Brando.Users.User
+
+  use Brando.Query
+  import Ecto.Query
+  alias Brando.Datasource
+  alias Brando.Query
   alias Brando.Revisions.Revision
   alias Brando.Utils
-  import Ecto.Query
-  use Brando.Query
 
   query :list, Revision do
     fn query -> from(q in query) end
@@ -46,6 +53,10 @@ defmodule Brando.Revisions do
     end
   end
 
+  @doc """
+  Create a new revision from `entry` struct
+  """
+  @spec create_revision(map, user, revision_active) :: {:ok, revision} | {:error, changeset}
   def create_revision(%{__struct__: entry_type, id: entry_id} = entry, user, set_active \\ true) do
     user_id = if user == :system, do: nil, else: user.id
     entry_type_binary = to_string(entry_type)
@@ -68,7 +79,7 @@ defmodule Brando.Revisions do
     |> case do
       {:ok, revision} ->
         if set_active do
-          set_all_inactive_except(revision)
+          deactivate_all_revisions_except(revision)
         end
 
         {:ok, revision}
@@ -79,16 +90,84 @@ defmodule Brando.Revisions do
   end
 
   @doc """
+  Set description for revision
+
+  ## Example
+
+      describe_revision(Project, entry.id, revision_number, "Different heading")
+
+  """
+  def describe_revision(entry_type, entry_id, revision_number, description) do
+    entry_type_binary = to_string(entry_type)
+
+    query =
+      from r in Revision,
+        where:
+          r.entry_type == ^entry_type_binary and
+            r.entry_id == ^entry_id and
+            r.revision == ^revision_number,
+        update: [set: [description: ^description]]
+
+    Brando.repo().update_all(query, [])
+  end
+
+  @doc """
+  Mark revision as protected
+
+  ## Example
+
+      protect_revision(Project, entry.id, revision_number, true)
+
+  """
+  def protect_revision(entry_type, entry_id, revision_number, protect) do
+    entry_type_binary = to_string(entry_type)
+
+    query =
+      from r in Revision,
+        where:
+          r.entry_type == ^entry_type_binary and
+            r.entry_id == ^entry_id and
+            r.revision == ^revision_number,
+        update: [set: [protected: ^protect]]
+
+    Brando.repo().update_all(query, [])
+  end
+
+  @doc """
   Create a revision based on `base_revision`.
 
   Merges in `entry_params` and stores as a new revision
   """
   def create_from_base_revision(entry_schema, base_revision_version, entry_id, entry_params, user) do
     {:ok, {_, {_, decoded_entry}}} = get_revision(entry_schema, entry_id, base_revision_version)
-    updated_entry = Map.merge(decoded_entry, entry_params)
-    create_revision(updated_entry, user, false)
+
+    decoded_entry
+    |> Map.merge(entry_params)
+    |> create_revision(user, false)
   end
 
+  @doc """
+  Purge all revisions older than 14 days, which are not protected or active
+  """
+  def purge_revisions do
+    query =
+      from r in Revision,
+        where:
+          fragment("? < current_timestamp - interval '14 day'", r.inserted_at) and
+            r.protected == false and
+            r.active == false
+
+    Brando.repo().delete_all(query)
+  end
+
+  @doc """
+  Purge all inactive and unprotected revisions for `entry_type` and `entry_id`
+
+  ## Example
+
+      purge_revisions(Project, entry_id)
+
+  """
   def purge_revisions(entry_type, entry_id) do
     entry_type_binary = to_string(entry_type)
 
@@ -97,11 +176,20 @@ defmodule Brando.Revisions do
         where:
           r.entry_type == ^entry_type_binary and
             r.entry_id == ^entry_id and
+            r.protected == false and
             r.active == false
 
     Brando.repo().delete_all(query)
   end
 
+  @doc """
+  Delete specific revision
+
+  ## Example
+
+      delete_revision(Project, entry_id, revision_number)
+
+  """
   def delete_revision(entry_type, entry_id, revision) do
     entry_type_binary = to_string(entry_type)
 
@@ -123,7 +211,15 @@ defmodule Brando.Revisions do
     {:__revisioned__, 0} in schema.__info__(:functions)
   end
 
-  def get_last_revision(%{__struct__: entry_type, id: entry_id}) do
+  @doc """
+  Get the last revision for `entry_type` and `entry_id`
+
+  ## Example
+
+      get_last_revision(Project, project.id)
+
+  """
+  def get_last_revision(entry_type, entry_id) do
     entry_type_binary = to_string(entry_type)
 
     query =
@@ -142,6 +238,14 @@ defmodule Brando.Revisions do
     end
   end
 
+  @doc """
+  Get active revision for `entry_type` and `entry_id`
+
+  ## Example
+
+      get_active_revision(Project, entry.id)
+
+  """
   def get_active_revision(entry_type, entry_id) do
     entry_type_binary = to_string(entry_type)
 
@@ -163,33 +267,33 @@ defmodule Brando.Revisions do
     end
   end
 
-  def set_revision(entry_schema, entry_id, revision_number) do
+  @doc """
+  Set entry to revision number.
+
+  ## Example
+
+      set_entry_to_revision(Project, project_id, wanted_revision_id)
+
+  """
+  def set_entry_to_revision(entry_schema, entry_id, revision_number) do
     {:ok, {revision, {_, new_entry}}} = get_revision(entry_schema, entry_id, revision_number)
     {:ok, {_, {_, base_entry}}} = get_active_revision(entry_schema, entry_id)
-    do_set_revision(base_entry, new_entry, revision)
+    do_set_entry_to_revision(base_entry, new_entry, revision)
   end
 
-  def set_revision(entry, revision_number) do
-    {:ok, {revision, {_revision_number, decoded_entry}}} = get_revision(entry, revision_number)
-
-    do_set_revision(entry, decoded_entry, revision)
-  end
-
-  def set_last_revision(entry) do
-    {:ok, {revision, {_revision_number, decoded_entry}}} = get_last_revision(entry)
-
-    do_set_revision(entry, decoded_entry, revision)
-  end
-
-  defp do_set_revision(%{__struct__: entry_type, id: _entry_id} = entry, decoded_entry, revision) do
+  defp do_set_entry_to_revision(
+         %{__struct__: entry_type} = entry,
+         decoded_entry,
+         revision
+       ) do
     entry
     |> entry_type.changeset(Map.delete(Map.from_struct(decoded_entry), :__meta__))
-    |> Brando.Query.update()
+    |> Query.update()
     |> case do
       {:ok, new_entry} ->
-        set_active(revision)
-        set_all_inactive_except(revision)
-        Brando.Datasource.update_datasource(entry_type, new_entry)
+        activate_revision(revision)
+        deactivate_all_revisions_except(revision)
+        Datasource.update_datasource(entry_type, new_entry)
         {:ok, new_entry}
 
       err ->
@@ -197,10 +301,14 @@ defmodule Brando.Revisions do
     end
   end
 
-  def get_revision(%{__struct__: entry_type, id: entry_id}, revision_number) do
-    get_revision(entry_type, entry_id, revision_number)
-  end
+  @doc """
+  Get revision
 
+  ## Example
+
+      get_revision(Project, entry.id, revision_number)
+
+  """
   def get_revision(entry_type, entry_id, revision_number) do
     entry_type_binary = to_string(entry_type)
 
@@ -237,7 +345,19 @@ defmodule Brando.Revisions do
     end
   end
 
-  defp set_all_inactive_except(revision) do
+  defp activate_revision(revision) do
+    query =
+      from r in Revision,
+        where:
+          r.entry_type == ^revision.entry_type and
+            r.entry_id == ^revision.entry_id and
+            r.revision == ^revision.revision,
+        update: [set: [active: true]]
+
+    Brando.repo().update_all(query, [])
+  end
+
+  defp deactivate_all_revisions_except(revision) do
     query =
       from r in Revision,
         where:
@@ -246,18 +366,6 @@ defmodule Brando.Revisions do
             r.entry_id == ^revision.entry_id and
             r.revision != ^revision.revision,
         update: [set: [active: false]]
-
-    Brando.repo().update_all(query, [])
-  end
-
-  defp set_active(revision) do
-    query =
-      from r in Revision,
-        where:
-          r.entry_type == ^revision.entry_type and
-            r.entry_id == ^revision.entry_id and
-            r.revision == ^revision.revision,
-        update: [set: [active: true]]
 
     Brando.repo().update_all(query, [])
   end

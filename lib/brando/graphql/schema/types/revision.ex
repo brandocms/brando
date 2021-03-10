@@ -6,9 +6,9 @@ defmodule Brando.GraphQL.Schema.Types.Revision do
     field :entry_id, :integer
     field :entry_type, :string
     field :encoded_entry, :string
-    field :metadata, :json
     field :revision, :integer
     field :protected, :boolean
+    field :description, :string
     field :creator, :user, resolve: dataloader(Brando.Pages)
     field :inserted_at, :time
     field :updated_at, :time

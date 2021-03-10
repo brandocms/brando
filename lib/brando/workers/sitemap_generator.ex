@@ -1,4 +1,4 @@
-defmodule Brando.Worker.Sitemap do
+defmodule Brando.Worker.SitemapGenerator do
   use Oban.Worker, queue: :default, max_attempts: 2
   require Logger
 

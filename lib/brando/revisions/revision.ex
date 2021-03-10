@@ -7,6 +7,7 @@ defmodule Brando.Revisions.Revision do
 
   meta :en, singular: "revision", plural: "revisions"
   meta :no, singular: "revisjon", plural: "revisjoner"
+
   identifier false
   absolute_url false
 
@@ -18,12 +19,13 @@ defmodule Brando.Revisions.Revision do
     field :encoded_entry, :string
     field :metadata, :map
     field :revision, :integer
+    field :description, :string
     field :protected, :boolean, default: false
     timestamps()
     belongs_to :creator, Brando.Users.User
   end
 
-  @optional_fields ~w(active protected)a
+  @optional_fields ~w(active protected description)a
   @required_fields ~w(entry_id entry_type encoded_entry metadata revision creator_id)a
 
   @spec changeset(t, Keyword.t() | Options.t()) :: Ecto.Changeset.t()

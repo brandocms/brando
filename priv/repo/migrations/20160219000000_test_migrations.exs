@@ -241,6 +241,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :entry_type, :string, null: false
       add :encoded_entry, :binary, null: false
       add :creator_id, references(:users_users, on_delete: :nilify_all)
+      add :description, :string
       add :metadata, :map, null: false
       add :revision, :integer, null: false
       add :protected, :boolean, default: false
