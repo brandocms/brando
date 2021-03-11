@@ -27,6 +27,7 @@ function forceLazyload(node) {
 }
 
 channel.on('update', function (payload) {
+  document.documentElement.classList.add('is-updated-live-preview')
   var doc = parser.parseFromString(payload.html, "text/html");
   var newMain = doc.querySelector('main');
   morphdom(main, newMain, {
@@ -36,7 +37,7 @@ channel.on('update', function (payload) {
       }
 
       if (a.dataset.src && b.dataset.src) {
-        if (a.dataset.src === b.dataset.src) {
+        if (a.dataset.src.split('?')[0] === b.dataset.src.split('?')[0]) {
           return false;
         }
 
