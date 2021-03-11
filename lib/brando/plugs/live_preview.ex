@@ -34,12 +34,14 @@ defmodule Brando.Plug.LivePreview do
           #{File.read!(Application.app_dir(:brando, "priv/static/js/livepreview.js"))}
           </script>
           <style>
-          html.is-live-preview [data-moonwalk],
-          html.is-live-preview [data-moonwalk-section],
-            html.is-live-preview [data-moonwalk-run] {
+            html.is-updated-live-preview [data-moonwalk],
+            html.is-updated-live-preview [data-moonwalk-section],
+            html.is-updated-live-preview [data-moonwalk-run],
+            html.is-updated-live-preview [data-ll-srcset] img[data-ll-loaded] {
               opacity: 1 !important;
               visibility: visible !important;
               transform: none !important;
+              transition: none !important;
               clip-path: none !important;
             }
           </style>
