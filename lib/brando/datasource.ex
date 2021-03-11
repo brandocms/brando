@@ -58,6 +58,53 @@ defmodule Brando.Datasource do
 
   These data source points are now available through the block editor when you create a Datasource block.
 
+  ## Common issues
+
+  If your datasource fetches related items, pages using your datasource might not be updated
+  when these related items are created, updated or deleted.
+
+  For instance:
+
+  We have a schema `Area` that has many `Grantee`s.
+
+  The `Area` has this datasource:
+
+      list :all_areas_with_grants, fn _, _ ->
+        grantee_query = from(t in Areas.Grantee, where: t.status == :published, order_by: t.name)
+        opts = %{order: [{:asc, :name}], status: :published, preload: [{:grantees, grantee_query}]}
+        Areas.list_areas(opts)
+      end
+
+  On a page we have a `DatasourceBlock` that grabs `:all_areas_with_grants`. When deleting or
+  updating a grant, this Datasource will not be updated since the datasource is listening for
+  `Area` changes, which are not triggered.
+
+  To solve, we can add it as a callback to each mutation for `Grantee`:
+
+      mutation :create, Grantee do
+        fn entry ->
+          # update datasource that references :all_areas_with_grants
+          Brando.Datasource.update_datasource({Area, :list, :all_areas_with_grants}, entry)
+        end
+      end
+
+      mutation :update, Grantee do
+        fn entry ->
+          # update datasource that references :all_areas_with_grants
+          Brando.Datasource.update_datasource({Area, :list, :all_areas_with_grants}, entry)
+        end
+      end
+
+      mutation :delete, Grantee do
+        fn entry ->
+          # update datasource that references :all_areas_with_grants
+          Brando.Datasource.update_datasource({Area, :list, :all_areas_with_grants}, entry)
+        end
+      end
+
+  OR if you know that all changes to the `:all_areas_with_grants` are coming from `Grantee`
+  mutations, you can move the datasource to the `Grantee` schema instead!
+
   """
   alias Brando.Villain
 
@@ -262,7 +309,81 @@ defmodule Brando.Datasource do
   List ids of `schema` records that has a datasource matching schema OR
   a module containing a datasource matching schema.
   """
-  def list_ids_with_datasource(schema, datasource, data_field \\ :data) do
+  def list_ids_with_datasource(schema, datasource, data_field \\ :data)
+
+  def list_ids_with_datasource(
+        schema,
+        {datasource_module, datasource_type, datasource_query},
+        data_field
+      ) do
+    query = """
+    SELECT
+        id
+      FROM
+         (SELECT
+            id,
+            jsonb_array_elements(#{data_field}::jsonb) AS root_blocks
+          FROM
+            #{schema.__schema__(:source)}
+          ) root_q
+      WHERE
+          root_blocks->>'type' = 'datasource'
+      AND
+          root_blocks->'data'->>'module' = '#{datasource_module}'
+      AND
+          root_blocks->'data'->>'type' = '#{datasource_type}'
+      AND
+          root_blocks->'data'->>'query' = '#{datasource_query}'
+    UNION
+    SELECT
+        id
+      FROM
+         (SELECT
+            id,
+            jsonb_array_elements(#{data_field}::jsonb) AS root_blocks,
+            jsonb_array_elements(jsonb_array_elements(#{data_field}::jsonb)->'data'->'refs') as module_refs
+          FROM
+            #{schema.__schema__(:source)}
+          ) root_q
+      WHERE
+          root_blocks->>'type' = 'module'
+      AND
+          module_refs->'data'->>'type' = 'datasource'
+      AND
+          module_refs->'data'->>'module' = '#{datasource_module}'
+      AND
+          module_refs->'data'->>'type' = '#{datasource_type}'
+      AND
+          module_refs->'data'->>'query' = '#{datasource_query}'
+    UNION
+    SELECT
+        id
+      FROM
+         (SELECT
+            id,
+            jsonb_array_elements(#{data_field}::jsonb) AS root_blocks,
+            jsonb_array_elements(jsonb_array_elements(#{data_field}::jsonb)->'data'->'blocks') as container_blocks
+          FROM
+            #{schema.__schema__(:source)}
+          ) root_q
+      WHERE
+          root_blocks->>'type' = 'container'
+      AND
+          container_blocks->>'type' = 'datasource'
+      AND
+          container_blocks->'data'->>'module' = '#{datasource_module}'
+      AND
+          container_blocks->'data'->>'type' = '#{datasource_type}'
+      AND
+          container_blocks->'data'->>'query' = '#{datasource_query}'
+    """
+
+    {:ok, %{rows: matches}} = Ecto.Adapters.SQL.query(Brando.repo(), query, [])
+
+    List.flatten(matches)
+  end
+
+  def list_ids_with_datasource(schema, datasource, data_field) do
     query = """
     SELECT
         id
@@ -321,6 +442,10 @@ defmodule Brando.Datasource do
   @doc """
   Check if `schema` is a datasource
   """
+  def is_datasource({schema, _, _}) do
+    {:__datasource__, 2} in schema.__info__(:functions)
+  end
+
   def is_datasource(schema) do
     {:__datasource__, 2} in schema.__info__(:functions)
   end
