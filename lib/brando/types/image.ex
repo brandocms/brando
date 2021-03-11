@@ -23,7 +23,19 @@ defmodule Brando.Type.Image do
         }
 
   @derive {Jason.Encoder,
-           only: [:title, :credits, :alt, :path, :sizes, :width, :height, :focal, :cdn, :webp]}
+           only: [
+             :title,
+             :credits,
+             :alt,
+             :path,
+             :sizes,
+             :width,
+             :height,
+             :focal,
+             :cdn,
+             :webp,
+             :dominant_color
+           ]}
 
   defstruct title: nil,
             credits: nil,
