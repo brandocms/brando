@@ -37,7 +37,8 @@ defmodule Brando.Images.ProcessingTest do
              path: Path.join(upload.cfg.upload_path, upload.plug.filename),
              sizes: %{},
              title: nil,
-             width: 608
+             width: 608,
+             dominant_color: nil
            }
   end
 

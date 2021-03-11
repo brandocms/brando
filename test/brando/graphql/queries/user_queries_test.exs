@@ -70,7 +70,7 @@ defmodule Brando.GraphQL.Queries.UserQueriesTest do
                 errors: [
                   %{
                     locations: [%{column: 3, line: 2}],
-                    message: "User id 9999999999 not found",
+                    message: "User not found",
                     path: ["user"]
                   }
                 ]

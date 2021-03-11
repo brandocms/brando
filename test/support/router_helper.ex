@@ -38,7 +38,8 @@ defmodule BrandoIntegration.TestSchema do
   def middleware(middleware, _field, %{identifier: :mutation}),
     do: middleware ++ [Brando.GraphQL.Schema.Middleware.ChangesetErrors]
 
-  def middleware(middleware, _field, _object), do: middleware
+  def middleware(middleware, _field, _object),
+    do: middleware ++ [Brando.GraphQL.Schema.Middleware.QueryErrors]
 end
 
 defmodule RouterHelper do
