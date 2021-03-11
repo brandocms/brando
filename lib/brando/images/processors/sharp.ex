@@ -224,7 +224,10 @@ defmodule Brando.Images.Processor.Sharp do
       _ -> nil
     end
   rescue
-    _ ->
+    err ->
+      require Logger
+      Logger.error("==> get_dominant_color errored:")
+      Logger.error(inspect(err, pretty: true))
       nil
   end
 
