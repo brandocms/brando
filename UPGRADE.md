@@ -74,9 +74,12 @@
   ```
   use Brando.Schema
 
+  meta :en, singular: "page", plural: "pages"
+  meta :no, singular: "side", plural: "sider"
+
   identifier fn entry -> entry.title end
 
-  absolute_url fn -> router, endpoint, entry ->
+  absolute_url fn router, endpoint, entry ->
     router.page_path(endpoint, :detail, entry.slug)
   end
   ```
@@ -166,14 +169,6 @@
     `$ npm i -g @univers-agency/dominant-color`
 
 * Call single GraphQL resolvers with args. Using `Project` as an example:
-  In your `project_resolver.ex`
-
-    ```
-    def get(args, _) do
-      Projects.get_project(args)
-    end
-    ```
-
   In your GraphQL schemas, you need to add these new args to your single query:
 
     ```
@@ -205,21 +200,14 @@
   Finally your `ProjectEditView.vue` needs an update:
 
     ```
-    data () {
-      return {
-        // ...
-        queryVars: {
-          matches: { id: this.projectId }
-        }
-      }
-    },
-
     apollo: {
       project: {
         query: GET_PROJECT,
         fetchPolicy: 'no-cache',
         variables () {
-          return this.queryVars
+          return {
+            matches: { id: this.areaId }
+          }
         },
 
         skip () {
@@ -434,12 +422,6 @@ end
 
 * Remove `robots.txt` from Plug.Static in your endpoint. It is now handled through the `robots` field in `sites_seo`
   which you can configure from `Configure -> SEO`
-
-* In your `router.ex`, add
-
-    `get "/robots.txt", Brando.SEOController, :robots`
-
-  under your "/" scope.
 
 
 ## 0.48.0
