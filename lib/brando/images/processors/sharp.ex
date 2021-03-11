@@ -219,9 +219,16 @@ defmodule Brando.Images.Processor.Sharp do
     prefixed_image_path = Images.Utils.media_path(image_path)
 
     case Processor.Commands.delegate("dominant-color", [prefixed_image_path], []) do
-      {"", 0} -> nil
-      {dominant_color, 0} -> String.trim(dominant_color)
-      _ -> nil
+      {"", 0} ->
+        nil
+
+      {dominant_color, 0}
+      when not is_nil(dominant_color) and
+             is_binary(dominant_color) ->
+        String.trim(dominant_color)
+
+      _ ->
+        nil
     end
   rescue
     err ->
