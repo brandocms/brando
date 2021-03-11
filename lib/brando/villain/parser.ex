@@ -492,7 +492,7 @@ defmodule Brando.Villain.Parser do
             """
             <figure data-panner-item data-orientation="#{orientation}" data-moonwalk="panner">
               #{ptag}
-              <figcaption><p>#{caption}</p></figcaption>
+              <figcaption>#{caption}</figcaption>
             </figure>
             """
           end)
