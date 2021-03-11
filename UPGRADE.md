@@ -1,9 +1,16 @@
 ## 0.51.0
 
+* In order to pass related data to the live preview when *creating* a new entry,
+  you must now process `KMultiSelects` in your `<Schema>CreateView`'s `save`
+  function in the same way as in `<Schema>EditView`:
+
+  `this.$utils.mapMultiSelects(postParams, ['fieldName'])`
+
 * `video_tag/2` must receive a keyword list as `opts`, not `map`.
 
-* Proper pagination in BrandoJS means some changes! If your application `use`s `Brando.GraphQL.Resolver`,
-  the `all` resolver will now return `%{entries: entries, pagination_meta: pagination_meta}`.
+* Proper pagination in BrandoJS means some changes! If your application `use`s
+  `Brando.GraphQL.Resolver`, the `all` resolver will now return
+  `%{entries: entries, pagination_meta: pagination_meta}`.
 
   With `page` as an example:
 
