@@ -286,8 +286,9 @@ defmodule Brando.Revisions do
          decoded_entry,
          revision
        ) do
+    # recursively convert structs to maps
     entry
-    |> entry_type.changeset(Map.delete(Map.from_struct(decoded_entry), :__meta__))
+    |> entry_type.changeset(Utils.map_from_struct(decoded_entry))
     |> Query.update()
     |> case do
       {:ok, new_entry} ->
