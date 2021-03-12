@@ -351,7 +351,7 @@ defmodule Brando.Villain do
   @doc """
   Duplicate module
   """
-  def duplicate_module(module_id) do
+  def duplicate_module(module_id, user) do
     module_id = (is_binary(module_id) && String.to_integer(module_id)) || module_id
     {:ok, module} = get_module(%{matches: %{id: module_id}})
 
@@ -361,7 +361,7 @@ defmodule Brando.Villain do
       |> Map.delete([:id])
       |> Map.from_struct()
 
-    create_module(module)
+    create_module(module, user)
   end
 
   mutation :create, Module

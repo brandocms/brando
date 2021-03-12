@@ -83,7 +83,10 @@ defmodule Brando.Query do
 
   import Ecto.Query
 
-  @default_after_operation {:fn, [], [{:->, [], [[{:entry, [], nil}], {:ok, {:entry, [], nil}}]}]}
+  alias Brando.Cache
+  alias Brando.Revisions
+
+  @default_callback {:fn, [], [{:->, [], [[{:entry, [], nil}], {:ok, {:entry, [], nil}}]}]}
 
   defmacro __using__(_) do
     quote do
@@ -153,7 +156,7 @@ defmodule Brando.Query do
   defp query_list(module, block) do
     source = module.__schema__(:source)
 
-    name =
+    pluralized_schema =
       module
       |> Module.split()
       |> List.last()
@@ -161,8 +164,8 @@ defmodule Brando.Query do
       |> Inflex.pluralize()
 
     quote do
-      @spec unquote(:"list_#{name}")(map(), boolean) :: {:ok, list} | {:ok, list, map}
-      def unquote(:"list_#{name}")(args \\ %{}, stream \\ false) do
+      @spec unquote(:"list_#{pluralized_schema}")(map(), boolean) :: {:ok, list}
+      def unquote(:"list_#{pluralized_schema}")(args \\ %{}, stream \\ false) do
         initial_query = unquote(block).(unquote(module))
         cache_args = Map.get(args, :cache)
 
@@ -213,27 +216,27 @@ defmodule Brando.Query do
   defp query_single(module, block) do
     source = module.__schema__(:source)
 
-    name =
+    singular_schema =
       module
       |> Module.split()
       |> List.last()
       |> Inflex.underscore()
 
-    atom = String.to_existing_atom(name)
+    singular_schema_atom = String.to_existing_atom(singular_schema)
 
     quote do
-      @spec unquote(:"get_#{name}")(integer | binary | map()) ::
-              {:ok, any} | {:error, {unquote(atom), :not_found}}
-      def unquote(:"get_#{name}")(id) when is_binary(id) or is_integer(id) do
+      @spec unquote(:"get_#{singular_schema}")(integer | binary | map()) ::
+              {:ok, any} | {:error, {unquote(singular_schema_atom), :not_found}}
+      def unquote(:"get_#{singular_schema}")(id) when is_binary(id) or is_integer(id) do
         query = unquote(block).(unquote(module)) |> where([t], t.id == ^id)
 
         case Brando.repo().one(query) do
-          nil -> {:error, {unquote(atom), :not_found}}
+          nil -> {:error, {unquote(singular_schema_atom), :not_found}}
           result -> {:ok, result}
         end
       end
 
-      def unquote(:"get_#{name}")(args) when is_map(args) do
+      def unquote(:"get_#{singular_schema}")(args) when is_map(args) do
         cache_args = Map.get(args, :cache)
 
         case try_cache({:single, unquote(source), args}, cache_args) do
@@ -253,7 +256,7 @@ defmodule Brando.Query do
                 {:ok, entry}
 
               {:error, {:revision, :not_found}} ->
-                {:error, {unquote(atom), :not_found}}
+                {:error, {unquote(singular_schema_atom), :not_found}}
 
               query ->
                 query
@@ -262,7 +265,7 @@ defmodule Brando.Query do
                 |> Brando.repo().one()
                 |> case do
                   nil ->
-                    {:error, {unquote(atom), :not_found}}
+                    {:error, {unquote(singular_schema_atom), :not_found}}
 
                   result ->
                     Brando.Cache.Query.put(cache_key, result, ttl, result.id)
@@ -288,7 +291,7 @@ defmodule Brando.Query do
                 {:ok, entry}
 
               {:error, {:revision, :not_found}} ->
-                {:error, {unquote(atom), :not_found}}
+                {:error, {unquote(singular_schema_atom), :not_found}}
 
               query ->
                 query
@@ -296,21 +299,21 @@ defmodule Brando.Query do
                 |> limit(1)
                 |> Brando.repo().one()
                 |> case do
-                  nil -> {:error, {unquote(atom), :not_found}}
+                  nil -> {:error, {unquote(singular_schema_atom), :not_found}}
                   result -> {:ok, result}
                 end
             end
         end
       end
 
-      @spec unquote(:"get_#{name}!")(integer | binary | map()) :: any | no_return
-      def unquote(:"get_#{name}!")(id) when is_binary(id) or is_integer(id) do
+      @spec unquote(:"get_#{singular_schema}!")(integer | binary | map()) :: any | no_return
+      def unquote(:"get_#{singular_schema}!")(id) when is_binary(id) or is_integer(id) do
         unquote(block).(unquote(module))
         |> where([t], t.id == ^id)
         |> Brando.repo().one!()
       end
 
-      def unquote(:"get_#{name}!")(args) when is_map(args) do
+      def unquote(:"get_#{singular_schema}!")(args) when is_map(args) do
         __MODULE__
         |> run_single_query_reducer(args, unquote(module))
         |> unquote(block).()
@@ -429,7 +432,7 @@ defmodule Brando.Query do
   def try_cache(query_key, {:ttl, ttl}) do
     cache_key = hash_query(query_key)
 
-    case Brando.Cache.Query.get(cache_key) do
+    case Cache.Query.get(cache_key) do
       nil -> {:miss, cache_key, ttl}
       result -> {:hit, result}
     end
@@ -461,7 +464,7 @@ defmodule Brando.Query do
   end
 
   defp get_revision(module, %{matches: %{id: id}}, revision) do
-    case Brando.Revisions.get_revision(module, id, revision) do
+    case Revisions.get_revision(module, id, revision) do
       :error ->
         {:error, {:revision, :not_found}}
 
@@ -471,37 +474,24 @@ defmodule Brando.Query do
   end
 
   defp mutation_create(module, callback_block \\ nil) do
-    name =
+    singular_schema =
       module
       |> Module.split()
       |> List.last()
       |> Inflex.underscore()
 
-    callback_block = callback_block || @default_after_operation
+    callback_block = callback_block || @default_callback
 
     quote generated: true do
-      @spec unquote(:"create_#{name}")(map, Brando.Users.User.t() | :system) ::
+      @spec unquote(:"create_#{singular_schema}")(map, Brando.Users.User.t() | :system) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
-      def unquote(:"create_#{name}")(params, user \\ :system) do
-        with changeset <- unquote(module).changeset(%unquote(module){}, params, user),
-             changeset <- Brando.Publisher.maybe_override_status(changeset),
-             {:ok, entry} <- Brando.Query.insert(changeset) do
-          Brando.Datasource.update_datasource(unquote(module), entry)
-          {:ok, entry} = Brando.Publisher.schedule_publishing(entry, changeset, user)
-
-          if Brando.Revisions.is_revisioned(unquote(module)) do
-            Brando.Revisions.create_revision(entry, user)
-          end
-
-          case Brando.Schema.identifier_for(entry) do
-            nil -> nil
-            identifier -> Brando.Notifications.push_mutation("created", identifier, user)
-          end
-
-          unquote(callback_block).(entry)
-        else
-          err -> err
-        end
+      def unquote(:"create_#{singular_schema}")(params, user) do
+        Brando.Query.Mutations.create(
+          unquote(module),
+          params,
+          user,
+          unquote(callback_block)
+        )
       end
     end
   end
@@ -509,104 +499,75 @@ defmodule Brando.Query do
   defp mutation_update(module, callback_block \\ nil)
 
   defp mutation_update({module, opts}, callback_block) do
-    name =
+    singular_schema =
       module
       |> Module.split()
       |> List.last()
       |> Inflex.underscore()
 
-    callback_block = callback_block || @default_after_operation
+    callback_block = callback_block || @default_callback
 
-    do_mutation_update(module, name, callback_block, opts)
+    do_mutation_update(module, singular_schema, callback_block, opts)
   end
 
   defp mutation_update(module, callback_block) do
-    name =
+    singular_schema =
       module
       |> Module.split()
       |> List.last()
       |> Inflex.underscore()
 
-    callback_block = callback_block || @default_after_operation
+    callback_block = callback_block || @default_callback
 
-    do_mutation_update(module, name, callback_block)
+    do_mutation_update(module, singular_schema, callback_block)
   end
 
-  defp do_mutation_update(module, name, callback_block, opts \\ []) do
+  defp do_mutation_update(module, singular_schema, callback_block, opts \\ []) do
     preloads = Keyword.get(opts, :preload)
 
     quote do
-      @spec unquote(:"update_#{name}")(integer | binary, map, Brando.Users.User.t() | :system) ::
+      @spec unquote(:"update_#{singular_schema}")(
+              integer | binary,
+              map,
+              Brando.Users.User.t() | :system
+            ) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
-      def unquote(:"update_#{name}")(id, params, user \\ :system) do
-        get_opts =
-          if unquote(preloads) do
-            %{matches: %{id: id}, preload: unquote(preloads)}
-          else
-            %{matches: %{id: id}}
-          end
-
-        with {:ok, entry} <- unquote(:"get_#{name}")(get_opts),
-             changeset <- unquote(module).changeset(entry, params, user),
-             changeset <- Brando.Publisher.maybe_override_status(changeset),
-             {:ok, entry} <- Brando.Query.update(changeset) do
-          Brando.Datasource.update_datasource(unquote(module), entry)
-          {:ok, entry} = Brando.Publisher.schedule_publishing(entry, changeset, user)
-
-          if Brando.Revisions.is_revisioned(unquote(module)) do
-            Brando.Revisions.create_revision(entry, user)
-          end
-
-          case Brando.Schema.identifier_for(entry) do
-            nil -> nil
-            identifier -> Brando.Notifications.push_mutation("updated", identifier, user)
-          end
-
-          unquote(callback_block).(entry)
-        else
-          err -> err
-        end
+      def unquote(:"update_#{singular_schema}")(id, params, user) do
+        Brando.Query.Mutations.update(
+          __MODULE__,
+          unquote(module),
+          unquote(singular_schema),
+          id,
+          params,
+          user,
+          unquote(preloads),
+          unquote(callback_block)
+        )
       end
     end
   end
 
   defp mutation_delete(module, callback_block \\ nil) do
-    name =
+    singular_schema =
       module
       |> Module.split()
       |> List.last()
       |> Inflex.underscore()
 
-    callback_block = callback_block || @default_after_operation
+    callback_block = callback_block || @default_callback
 
     quote do
-      @spec unquote(:"delete_#{name}")(integer | binary) ::
+      @spec unquote(:"delete_#{singular_schema}")(integer | binary) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
-      def unquote(:"delete_#{name}")(id, user \\ :system) do
-        {:ok, entry} = unquote(:"get_#{name}")(id)
-
-        {:ok, entry} =
-          if Brando.SoftDelete.is_soft_deletable(unquote(module)) do
-            Brando.repo().soft_delete(entry)
-          else
-            Brando.Query.delete(entry)
-          end
-
-        if {:__gallery_fields__, 0} in unquote(module).__info__(:functions) do
-          for f <- apply(unquote(module), :__gallery_fields__, []) do
-            image_series_id = "#{to_string(f)}_id" |> String.to_existing_atom()
-            Brando.Images.delete_series(Map.get(entry, image_series_id))
-          end
-        end
-
-        Brando.Datasource.update_datasource(unquote(module), entry)
-
-        case Brando.Schema.identifier_for(entry) do
-          nil -> nil
-          identifier -> Brando.Notifications.push_mutation("deleted", identifier, user)
-        end
-
-        unquote(callback_block).(entry)
+      def unquote(:"delete_#{singular_schema}")(id, user \\ :system) do
+        Brando.Query.Mutations.delete(
+          __MODULE__,
+          unquote(module),
+          unquote(singular_schema),
+          id,
+          user,
+          unquote(callback_block)
+        )
       end
     end
   end
@@ -699,18 +660,18 @@ defmodule Brando.Query do
   def insert(changeset) do
     changeset
     |> Brando.repo().insert()
-    |> Brando.Cache.Query.evict()
+    |> Cache.Query.evict()
   end
 
   def update(changeset) do
     changeset
     |> Brando.repo().update()
-    |> Brando.Cache.Query.evict()
+    |> Cache.Query.evict()
   end
 
   def delete(entry) do
     entry
     |> Brando.repo().delete()
-    |> Brando.Cache.Query.evict()
+    |> Cache.Query.evict()
   end
 end

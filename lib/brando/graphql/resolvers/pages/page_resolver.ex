@@ -24,8 +24,8 @@ defmodule Brando.Pages.PageResolver do
   @doc """
   Duplicate module
   """
-  def duplicate_module(%{module_id: module_id}, %{context: %{current_user: _}}),
-    do: Villain.duplicate_module(module_id)
+  def duplicate_module(%{module_id: module_id}, %{context: %{current_user: user}}),
+    do: Villain.duplicate_module(module_id, user)
 
   @doc """
   Get all modules
@@ -52,17 +52,17 @@ defmodule Brando.Pages.PageResolver do
   Create module
   """
   def create_module(%{module_params: module_params}, %{
-        context: %{current_user: _current_user}
+        context: %{current_user: user}
       }) do
-    Villain.create_module(module_params)
+    Villain.create_module(module_params, user)
   end
 
   @doc """
   Update module
   """
   def update_module(%{module_id: module_id, module_params: module_params}, %{
-        context: %{current_user: _current_user}
+        context: %{current_user: user}
       }) do
-    Villain.update_module(module_id, module_params)
+    Villain.update_module(module_id, module_params, user)
   end
 end
