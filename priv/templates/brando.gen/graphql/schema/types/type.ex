@@ -2,7 +2,8 @@ defmodule <%= app_module %>.Schema.Types.<%= alias %> do
   @moduledoc """
   GraphQL type spec, mutations and queries for <%= alias %>
   """
-  use <%= web_module %>, :absinthe
+  use <%= web_module %>, :absinthe<%= if meta do %>
+  use Brando.Meta.GraphQL<% end %>
 
   object :<%= plural %> do
     field :entries, list_of(:<%= singular %>)
@@ -14,9 +15,7 @@ defmodule <%= app_module %>.Schema.Types.<%= alias %> do
     <%= k %><% end %><%= if soft_delete do %>
     field :deleted_at, :time<% end %><%= if creator do %>
     field :creator, :user, resolve: dataloader(Brando.Users)<% end %><%= if meta do %>
-    field :meta_title, :string
-    field :meta_description, :string
-    field :meta_image, :image_type<% end %><%= if publish_at do %>
+    meta_fields()<% end %><%= if publish_at do %>
     field :publish_at, :time<% end %>
     field :inserted_at, :time
     field :updated_at, :time
@@ -24,9 +23,7 @@ defmodule <%= app_module %>.Schema.Types.<%= alias %> do
 
   input_object :<%= singular %>_params do<%= for {_v, k} <- gql_inputs do %>
     <%= k %><% end %><%= if meta do %>
-    field :meta_title, :string
-    field :meta_description, :string
-    field :meta_image, :upload_or_image<% end %>
+    meta_params()<% end %>
   end
 
   @desc "Filtering options for <%= singular %>"

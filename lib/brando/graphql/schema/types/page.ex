@@ -1,5 +1,6 @@
 defmodule Brando.GraphQL.Schema.Types.Page do
   use Brando.Web, :absinthe
+  use Brando.Meta.GraphQL
 
   object :pages do
     field :entries, list_of(:page)
@@ -23,9 +24,7 @@ defmodule Brando.GraphQL.Schema.Types.Page do
     field :children, list_of(:page), resolve: dataloader(Brando.Pages)
     field :fragments, list_of(:page_fragment), resolve: dataloader(Brando.Pages)
     field :properties, list_of(:page_property), resolve: dataloader(Brando.Pages)
-    field :meta_title, :string
-    field :meta_description, :string
-    field :meta_image, :image_type
+    meta_fields()
     field :inserted_at, :time
     field :updated_at, :time
     field :deleted_at, :time
@@ -43,9 +42,7 @@ defmodule Brando.GraphQL.Schema.Types.Page do
     field :data, :json
     field :properties, list_of(:page_property_params)
     field :css_classes, :string
-    field :meta_title, :string
-    field :meta_description, :string
-    field :meta_image, :upload_or_image
+    meta_params()
     field :publish_at, :time
   end
 
