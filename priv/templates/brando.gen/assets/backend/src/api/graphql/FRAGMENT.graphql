@@ -1,4 +1,4 @@
-<%= if gallery do %>#import "brandojs/src/gql/images/IMAGE_SERIES_FRAGMENT.graphql"<% end %><%= if image_field do %>
+<%= if gallery do %>#import "brandojs/src/gql/images/IMAGE_SERIES_FRAGMENT.graphql"<% end %><%= if image_field or meta do %>
 #import "brandojs/src/gql/images/IMAGE_TYPE_FRAGMENT.graphql"<% end %><%= if file_field do %>
 #import "brandojs/src/gql/files/FILE_TYPE_FRAGMENT.graphql"<% end %><%= if video_field do %>
 #import "brandojs/src/gql/videos/VIDEO_TYPE_FRAGMENT.graphql"<% end %>
@@ -14,7 +14,10 @@ fragment <%= vue_singular %> on <%= Recase.to_pascal(vue_singular) %> {
   }<% end %><%= if gallery do %><%= for {_k, v} <- gallery_fields do %>
   <%= v %> {
     ...imageSeries
-  }<% end %><% end %><%= if soft_delete do %>
+  }<% end %><% end %><%= if meta do %>
+  metaTitle
+  metaDescription
+  metaImage { ...imageType }<% end %><%= if soft_delete do %>
   deletedAt<% end %>
   insertedAt
   updatedAt
