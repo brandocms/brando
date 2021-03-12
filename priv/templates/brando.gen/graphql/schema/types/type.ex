@@ -13,13 +13,20 @@ defmodule <%= app_module %>.Schema.Types.<%= alias %> do
     field :id, :integer<%= for {_v, k} <- gql_types do %>
     <%= k %><% end %><%= if soft_delete do %>
     field :deleted_at, :time<% end %><%= if creator do %>
-    field :creator, :user, resolve: dataloader(Brando.Users)<% end %>
+    field :creator, :user, resolve: dataloader(Brando.Users)<% end %><%= if meta do %>
+    field :meta_title, :string
+    field :meta_description, :string
+    field :meta_image, :image_type<% end %><%= if publish_at do %>
+    field :publish_at, :time<% end %>
     field :inserted_at, :time
     field :updated_at, :time
   end
 
   input_object :<%= singular %>_params do<%= for {_v, k} <- gql_inputs do %>
-    <%= k %><% end %>
+    <%= k %><% end %><%= if meta do %>
+    field :meta_title, :string
+    field :meta_description, :string
+    field :meta_image, :upload_or_image<% end %>
   end
 
   @desc "Filtering options for <%= singular %>"
@@ -50,6 +57,7 @@ defmodule <%= app_module %>.Schema.Types.<%= alias %> do
       arg :matches, :<%= singular %>_matches
       arg :revision, :id
       arg :status, :string, default_value: "all"
+
       resolve &<%= app_module %>.<%= domain %>.<%= alias %>Resolver.get/2
     end
   end

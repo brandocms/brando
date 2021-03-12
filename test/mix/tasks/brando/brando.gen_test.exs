@@ -39,6 +39,10 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       send(self(), {:mix_shell_input, :yes?, true})
       # revisioned?
       send(self(), {:mix_shell_input, :yes?, false})
+      # meta?
+      send(self(), {:mix_shell_input, :yes?, false})
+      # scheduled publishing?
+      send(self(), {:mix_shell_input, :yes?, false})
 
       Mix.Tasks.Brando.Gen.run([])
 
@@ -62,6 +66,10 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       send(self(), {:mix_shell_input, :yes?, true})
       # revisioned?
       send(self(), {:mix_shell_input, :yes?, true})
+      # meta?
+      send(self(), {:mix_shell_input, :yes?, true})
+      # scheduled publishing?
+      send(self(), {:mix_shell_input, :yes?, true})
 
       Mix.Tasks.Brando.Gen.run([])
 
@@ -73,7 +81,8 @@ defmodule Mix.Tasks.Brando.Gen.Test do
         assert file =~
                  "@required_fields ~w(title age height famous born_at secret first_login alarm creator_id data)a"
 
-        assert file =~ "@optional_fields ~w(image_series_id cover)a"
+        assert file =~
+                 "@optional_fields ~w(image_series_id cover meta_title meta_description meta_image publish_at)a"
 
         assert file =~ "use Brando.Schema"
 
@@ -104,6 +113,10 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       send(self(), {:mix_shell_input, :yes?, true})
       # revisioned?
       send(self(), {:mix_shell_input, :yes?, false})
+      # meta?
+      send(self(), {:mix_shell_input, :yes?, true})
+      # scheduled publishing?
+      send(self(), {:mix_shell_input, :yes?, true})
 
       Mix.Tasks.Brando.Gen.run([])
 
@@ -254,6 +267,10 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       send(self(), {:mix_shell_input, :yes?, true})
       # revisioned?
       send(self(), {:mix_shell_input, :yes?, false})
+      # meta?
+      send(self(), {:mix_shell_input, :yes?, true})
+      # scheduled publishing?
+      send(self(), {:mix_shell_input, :yes?, true})
 
       Mix.Tasks.Brando.Gen.run([])
 
@@ -277,6 +294,10 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       send(self(), {:mix_shell_input, :yes?, true})
       # revisioned?
       send(self(), {:mix_shell_input, :yes?, false})
+      # meta?
+      send(self(), {:mix_shell_input, :yes?, true})
+      # scheduled publishing?
+      send(self(), {:mix_shell_input, :yes?, true})
 
       Mix.Tasks.Brando.Gen.run([])
 

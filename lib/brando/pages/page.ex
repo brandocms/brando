@@ -9,6 +9,7 @@ defmodule Brando.Pages.Page do
   use Brando.Web, :schema
   use Brando.Schema
   use Brando.Field.Image.Schema
+  use Brando.Meta.Schema
   use Brando.Sequence.Schema
   use Brando.SoftDelete.Schema, obfuscated_fields: [:uri]
   use Brando.Villain.Schema
@@ -52,9 +53,7 @@ defmodule Brando.Pages.Page do
     villain()
     field :status, Brando.Type.Status
     field :css_classes, :string
-    field :meta_title, :string
-    field :meta_description, :string
-    field :meta_image, Brando.Type.Image
+    meta_fields()
     field :publish_at, :utc_datetime
 
     belongs_to :creator, Brando.Users.User

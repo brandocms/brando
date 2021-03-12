@@ -47,6 +47,7 @@ defmodule Brando.MetaRenderTest do
 
   defmodule Page do
     use Brando.Web, :schema
+    use Brando.Meta.Schema
 
     meta_schema do
       field "title", [:title]

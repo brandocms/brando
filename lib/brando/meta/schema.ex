@@ -26,9 +26,20 @@ defmodule Brando.Meta.Schema do
   @doc false
   defmacro __using__(_) do
     quote do
-      import Brando.Meta.Schema, only: [meta_schema: 1, fallback: 2]
+      import Brando.Meta.Schema, only: [meta_fields: 0, meta_schema: 1, fallback: 2]
       import Brando.Meta.Utils
       Module.register_attribute(__MODULE__, :meta_fields, accumulate: true)
+    end
+  end
+
+  @doc """
+  Adds Meta fields to schema
+  """
+  defmacro meta_fields do
+    quote do
+      Ecto.Schema.field(:meta_title, :string)
+      Ecto.Schema.field(:meta_description, :string)
+      Ecto.Schema.field(:meta_image, Brando.Type.Image)
     end
   end
 

@@ -57,7 +57,6 @@ defmodule Brando.Web do
     quote do
       use Ecto.Schema
       use Brando.JSONLD.Schema
-      use Brando.Meta.Schema
 
       import Ecto
       import Ecto.Changeset

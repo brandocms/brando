@@ -81,6 +81,8 @@ defmodule Mix.Tasks.Brando.Gen do
     soft_delete? = Mix.shell().yes?("\nAdd soft deletion?")
     creator? = Mix.shell().yes?("\nAdd creator?")
     revisioned? = Mix.shell().yes?("\nAdd revisions?")
+    meta? = Mix.shell().yes?("\nAdd META fields?")
+    publish_at? = Mix.shell().yes?("\nAdd scheduled publishing?")
     file_field? = :file in Keyword.values(attrs)
     image_field? = :image in Keyword.values(attrs)
     video_field? = :video in Keyword.values(attrs)
@@ -161,6 +163,8 @@ defmodule Mix.Tasks.Brando.Gen do
           soft_delete: soft_delete?,
           creator: creator?,
           revisioned: revisioned?,
+          meta: meta?,
+          publish_at: publish_at?,
           img_fields: img_fields,
           video_fields: video_fields,
           file_fields: file_fields,

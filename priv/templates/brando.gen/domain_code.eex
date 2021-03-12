@@ -30,4 +30,3 @@ matches <%= alias %> do
       from t in query, where: t.slug == ^slug<% end %>
   end
 end
-

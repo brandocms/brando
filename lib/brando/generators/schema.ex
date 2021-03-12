@@ -25,6 +25,8 @@ defmodule Brando.Generators.Schema do
       |> maybe_add_video_fields()
       |> maybe_add_file_fields()
       |> maybe_add_soft_delete()
+      |> maybe_add_meta_fields()
+      |> maybe_add_scheduled_publishing()
 
     optional_fields = "~w(#{Enum.join(fields, " ")})a"
     Keyword.put(binding, :optional_fields, optional_fields)
@@ -147,5 +149,18 @@ defmodule Brando.Generators.Schema do
 
   defp maybe_add_soft_delete({%{soft_delete: true} = binding, fields}) do
     {binding, fields ++ ["deleted_at"]}
+  end
+
+  defp maybe_add_meta_fields({%{meta: false} = binding, fields}), do: {binding, fields}
+
+  defp maybe_add_meta_fields({%{meta: true} = binding, fields}) do
+    {binding, fields ++ ["meta_title", "meta_description", "meta_image"]}
+  end
+
+  defp maybe_add_scheduled_publishing({%{publish_at: false} = binding, fields}),
+    do: {binding, fields}
+
+  defp maybe_add_scheduled_publishing({%{publish_at: true} = binding, fields}) do
+    {binding, fields ++ ["publish_at"]}
   end
 end

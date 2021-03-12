@@ -2,7 +2,9 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
   use Ecto.Migration
   use Brando.Sequence.Migration
   use Brando.Tag, :migration
+
   import Brando.SoftDelete.Migration
+  import Brando.Meta.Migration
 
   def up do
     create table(:users_users) do
@@ -102,9 +104,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:creator_id, references(:users_users))
       add(:css_classes, :text)
       add(:template, :text)
-      add(:meta_title, :text)
-      add(:meta_description, :text)
-      add(:meta_image, :jsonb)
+      meta_fields()
       add(:publish_at, :utc_datetime)
       sequenced()
       soft_delete()
