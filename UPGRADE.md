@@ -1,5 +1,52 @@
 ## 0.51.0
 
+* Improved E2E testing. Commit your code, then run:
+
+  `mix brando.gen.e2e`
+
+  If you have edited your `priv/repo/seeds.exs`, they will be overwritten,
+  so go through the diff and keep the `Page` and `PageFragment` changes.
+
+  Install cypress:
+
+  `cd e2e && yarn install`
+
+  Update your `aliases` key in `mix.exs`:
+
+  ```
+  defp aliases do
+    [
+      "ecto.setup": [
+        "ecto.create",
+        "ecto.load",
+        "ecto.migrate",
+        "run priv/repo/seeds.exs"
+      ],
+      "ecto.reset": ["ecto.drop", "ecto.setup", "run priv/repo/seeds.exs"],
+      "test.all": ["test.unit", "test.e2e"],
+      "test.unit": &run_unit_tests/1,
+      "test.e2e": &run_e2e_tests/1,
+      test: ["ecto.create", "ecto.load --skip-if-loaded", "test"]
+    ]
+  end
+  ```
+
+  Dump your sql structure:
+
+  `mix ecto.dump`
+
+  Reset your test DB:
+
+  `MIX_ENV=e2e mix ecto.reset`
+
+  Ensure your `factory.ex` uses `ExMachina.Ecto`:
+
+  `use ExMachina.Ecto, repo: MyApp.Repo`
+
+  Then run tests:
+
+  `mix test.e2e`
+
 * In order to pass related data to the live preview when *creating* a new entry,
   you must now process `KMultiSelects` in your `<Schema>CreateView`'s `save`
   function in the same way as in `<Schema>EditView`:

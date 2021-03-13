@@ -54,5 +54,9 @@ defmodule Brando.Plug.E2ETest do
     end
   end
 
+  post "/db/default_language" do
+    send_resp(conn, 200, Brando.config(:default_language))
+  end
+
   match _, do: send_resp(conn, 404, "not found")
 end
