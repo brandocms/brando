@@ -4,6 +4,20 @@
 
   `mix brando.gen.e2e`
 
+  First and foremost, edit your `config/runtime.exs` and make sure that
+  the DB config won't run under our `:e2e` environment:
+
+  ```
+  unless config_env() == :e2e do
+    config :your_app, YourApp.Repo,
+      url: System.get_env("BRANDO_DB_URL"),
+      pool_size: String.to_integer(System.get_env("POOL_SIZE") || "15")
+  end
+  ```
+
+  This is to prevent us from blowing out our database when we reset the
+  test db later on.
+
   If you have edited your `priv/repo/seeds.exs`, they will be overwritten,
   so go through the diff and keep the `Page` and `PageFragment` changes.
 
@@ -35,7 +49,7 @@
 
   `mix ecto.dump`
 
-  Reset your test DB:
+  Reset your test DB (NOTE: make sure you have done the `runtime.exs` changes above):
 
   `MIX_ENV=e2e mix ecto.reset`
 
