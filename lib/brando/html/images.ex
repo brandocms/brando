@@ -18,7 +18,11 @@ defmodule Brando.HTML.Images do
     * `prefix` - string to prefix to the image's url. I.e. `prefix: media_url()`
     * `picture_class` - class added to the picture root element
     * `picture_attrs` - list of attributes to add to picture element. I.e picture_attrs: [data_test: true]
-    * `placeholder` - for lazyloading. :svg for svg placeholder -- :micro for blur-up -- :none for nothing
+    * `placeholder` - for lazyloading.
+      - :svg for svg placeholder
+      - :dominant_color
+      - :micro for blur-up
+      - :none for nothing
     * `img_class` - class added to the img element. I.e img_class: "img-fluid"
     * `img_attrs` - list of attributes to add to img element. I.e img_attrs: [data_test: true]
     * `cache` - key to cache by, i.e `cache: schema.updated_at`
@@ -67,6 +71,7 @@ defmodule Brando.HTML.Images do
       |> add_mq(image_struct)
       |> add_dims(image_struct)
       |> add_src(image_struct)
+      |> add_dominant_color(image_struct)
       |> add_attrs()
       |> add_classes()
       |> add_moonwalk()
@@ -269,6 +274,7 @@ defmodule Brando.HTML.Images do
   end
 
   defp srcset_placeholder?(:svg), do: true
+  defp srcset_placeholder?(:dominant_color), do: true
   defp srcset_placeholder?(false), do: true
   defp srcset_placeholder?(_), do: false
 
@@ -299,6 +305,7 @@ defmodule Brando.HTML.Images do
     fallback =
       case placeholder do
         :svg -> svg_fallback(image_struct, 0.05, attrs.opts)
+        :dominant_color -> svg_fallback(image_struct, 0, attrs.opts)
         false -> false
         _ -> Utils.img_url(image_struct, placeholder, attrs.opts)
       end
@@ -318,6 +325,20 @@ defmodule Brando.HTML.Images do
     |> put_in([:img, :src], src)
     |> put_in([:img, :data_src], false)
     |> put_in([:noscript_img, :src], src)
+  end
+
+  defp add_dominant_color(attrs, image_struct) do
+    case Keyword.get(attrs.opts, :placeholder) do
+      :dominant_color ->
+        attrs
+        |> put_in(
+          [:picture, :style],
+          "background-color: #{image_struct.dominant_color || "transparent"}"
+        )
+
+      _ ->
+        attrs
+    end
   end
 
   defp add_dims(attrs, image_struct) do
@@ -523,7 +544,13 @@ defmodule Brando.HTML.Images do
 
     srcset_values =
       for {k, v} <- cfg.srcset do
-        path = Utils.img_url(image_field, (placeholder !== :svg && placeholder) || k, opts)
+        path =
+          Utils.img_url(
+            image_field,
+            (placeholder not in [:svg, :dominant_color] && placeholder) || k,
+            opts
+          )
+
         "#{path} #{v}"
       end
 
@@ -539,7 +566,13 @@ defmodule Brando.HTML.Images do
 
     srcset_values =
       for {k, v} <- srcset do
-        path = Utils.img_url(image_field, (placeholder !== :svg && placeholder) || k, opts)
+        path =
+          Utils.img_url(
+            image_field,
+            (placeholder not in [:svg, :dominant_color] && placeholder) || k,
+            opts
+          )
+
         "#{path} #{v}"
       end
 
@@ -549,7 +582,13 @@ defmodule Brando.HTML.Images do
   def get_srcset(image_field, srcset, opts, placeholder) do
     srcset_values =
       for {k, v} <- srcset do
-        path = Utils.img_url(image_field, (placeholder !== :svg && placeholder) || k, opts)
+        path =
+          Utils.img_url(
+            image_field,
+            (placeholder not in [:svg, :dominant_color] && placeholder) || k,
+            opts
+          )
+
         "#{path} #{v}"
       end
 

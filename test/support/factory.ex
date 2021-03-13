@@ -56,6 +56,7 @@ defmodule Brando.Factory do
         credits: nil,
         path: "images/avatars/27i97a.jpeg",
         title: "Title!",
+        dominant_color: "#deadb33f",
         sizes: %{
           "micro" => "images/avatars/micro/27i97a.jpeg",
           "thumb" => "images/avatars/thumb/27i97a.jpeg",
