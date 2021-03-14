@@ -22,24 +22,29 @@ defmodule Brando.Publisher do
         user
       )
       when not is_nil(publish_at) do
-    args = %{schema: schema, id: id, user_id: user.id, status: :published}
-    entry_identifier = Brando.Schema.identifier_for(entry)
+    if DateTime.compare(publish_at, DateTime.utc_now()) == :lt do
+      # the publishing date is in the past, just leave it
+      {:ok, entry}
+    else
+      args = %{schema: schema, id: id, user_id: user.id, status: :published}
+      entry_identifier = Brando.Schema.identifier_for(entry)
 
-    Brando.repo().delete_all(
-      from j in Oban.Job,
-        where: fragment("? @> ?", j.args, ^args)
-    )
+      Brando.repo().delete_all(
+        from j in Oban.Job,
+          where: fragment("? @> ?", j.args, ^args)
+      )
 
-    args
-    |> Worker.EntryPublisher.new(
-      replace_args: true,
-      scheduled_at: publish_at,
-      tags: [:publisher, :status],
-      meta: %{identifier: entry_identifier}
-    )
-    |> Oban.insert()
+      args
+      |> Worker.EntryPublisher.new(
+        replace_args: true,
+        scheduled_at: publish_at,
+        tags: [:publisher, :status],
+        meta: %{identifier: entry_identifier}
+      )
+      |> Oban.insert()
 
-    {:ok, entry}
+      {:ok, entry}
+    end
   end
 
   def schedule_publishing(entry, _, _) do
@@ -78,15 +83,11 @@ defmodule Brando.Publisher do
       Changeset.put_change(changeset, :status, :pending)
     else
       # publish date has passed - if it is still pending, set it to published
-      changeset =
-        if status == :pending do
-          Changeset.put_change(changeset, :status, :published)
-        else
-          changeset
-        end
-
-      # publish date has passed, just nil it.
-      Changeset.put_change(changeset, :publish_at, nil)
+      if status == :pending do
+        Changeset.put_change(changeset, :status, :published)
+      else
+        changeset
+      end
     end
   end
 
