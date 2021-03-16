@@ -18,6 +18,8 @@ defmodule <%= application_module %>Web.Router do
     plug :put_extra_secure_browser_headers
     plug PlugHeartbeat
     plug Brando.Plug.Identity
+    plug Brando.Plug.Navigation, key: "main", as: :navigation
+    plug Brando.Plug.Fragment, parent_key: "partials", as: :partials
     # plug :put_meta, %{
     #   "google-site-verification" => "GSV"
     # }
