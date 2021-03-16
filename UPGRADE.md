@@ -1,5 +1,15 @@
 ## 0.51.0
 
+* Changed `Brando.Plug.Navigation` to require a keyword list as arg:
+
+  ```
+  # before
+  plug Brando.Plug.Navigation, "main"
+
+  # after
+  plug Brando.Plug.Navigation, key: "main", as: :navigation
+  ```
+
 * Improved E2E testing. Commit your code, then run:
 
   `mix brando.gen.e2e`
