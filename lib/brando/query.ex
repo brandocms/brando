@@ -164,7 +164,7 @@ defmodule Brando.Query do
       |> Inflex.pluralize()
 
     quote do
-      @spec unquote(:"list_#{pluralized_schema}")(map(), boolean) :: {:ok, list}
+      @spec unquote(:"list_#{pluralized_schema}")(map(), boolean) :: {:ok, list()}
       def unquote(:"list_#{pluralized_schema}")(args \\ %{}, stream \\ false) do
         initial_query = unquote(block).(unquote(module))
         cache_args = Map.get(args, :cache)
