@@ -6,6 +6,11 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * Revisions: Adds initial revision support.
 * Publisher: Add Oban job support for scheduled publishing
 * Pagination: Add `pagination: true` to generate pagination meta for `list` queries
+* Router: Add `Brando.Plug.Fragment` to assign a map of fragments to you connection:
+
+  ```
+  plug Brando.Plug.Fragment, parent_key: "partials", as: :partials
+  ```
 
 ## 0.50.0
 
