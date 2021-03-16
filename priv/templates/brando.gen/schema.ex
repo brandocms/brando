@@ -78,7 +78,7 @@ defmodule <%= schema_module %> do
   meta_schema do
     field ["description", "og:description"], &fallback(&1, [:meta_description])
     field ["title", "og:title"], &fallback(&1, [:meta_title, :<%= List.first(attrs) |> elem(0) %>])
-    field "og:image", <%= if Enum.empty?(img_fields) do %>[:meta_image]<% else %>&fallback(&1, [:meta_image, :<%= List.first(img_fields) |> elem(0) %>]<% end %>
+    field "og:image", <%= if Enum.empty?(img_fields) do %>[:meta_image]<% else %>&fallback(&1, [:meta_image, :<%= List.first(img_fields) |> elem(0) %>])<% end %>
   end
 <% end %>
   @required_fields <%= required_fields %>
