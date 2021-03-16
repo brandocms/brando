@@ -19,7 +19,7 @@ defmodule Brando.Revisions do
   @type changeset :: Ecto.Changeset.t()
   @type revision :: Brando.Revisions.Revision.t()
   @type revision_active :: boolean
-  @type user :: Brando.Users.User
+  @type user :: Brando.Users.User.t()
 
   use Brando.Query
   import Ecto.Query
