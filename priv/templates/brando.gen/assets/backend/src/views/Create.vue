@@ -27,7 +27,9 @@ export default {
 
   data () {
     return {
-      <%= vue_singular %>: {}
+      <%= vue_singular %>: {
+        <%= if status do %>status: 'draft'<% end%>
+      }
     }
   },
 

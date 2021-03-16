@@ -59,7 +59,7 @@
       <template v-slot:row="{ entry }">
         <%= for {_, v} <- vue_contentlist_rows do %><%= v %>
         <% end %>
-        <%= if creator do %><div class="col-3">
+        <%= if creator do %><div class="col-4">
           <ItemMeta
             :entry="entry"
             :user="entry.creator" />
