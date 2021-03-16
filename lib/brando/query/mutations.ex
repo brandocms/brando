@@ -1,4 +1,6 @@
 defmodule Brando.Query.Mutations do
+  import Brando.Gettext
+
   alias Brando.Datasource
   alias Brando.Images
   alias Brando.Notifications
@@ -20,7 +22,7 @@ defmodule Brando.Query.Mutations do
 
       case Schema.identifier_for(entry) do
         nil -> nil
-        identifier -> Notifications.push_mutation("created", identifier, user)
+        identifier -> Notifications.push_mutation(gettext("created"), identifier, user)
       end
 
       callback_block.(entry)
@@ -49,7 +51,7 @@ defmodule Brando.Query.Mutations do
 
       case Schema.identifier_for(entry) do
         nil -> nil
-        identifier -> Notifications.push_mutation("updated", identifier, user)
+        identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
       end
 
       callback_block.(entry)
@@ -79,7 +81,7 @@ defmodule Brando.Query.Mutations do
 
     case Schema.identifier_for(entry) do
       nil -> nil
-      identifier -> Notifications.push_mutation("deleted", identifier, user)
+      identifier -> Notifications.push_mutation(gettext("deleted"), identifier, user)
     end
 
     callback_block.(entry)

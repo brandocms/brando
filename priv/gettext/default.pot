@@ -1,792 +1,13 @@
-#: lib/web/templates/admin/dashboard/dashboard.html.eex:3
-msgid "Go to frontend website"
-msgstr ""
-
-#: lib/web/templates/admin/dashboard/system_info.html.eex:1
-msgid "System information"
-msgstr ""
-
-#: lib/web/templates/admin/dashboard/system_info.html.eex:3
-msgid "Memory"
-msgstr ""
-
-#: lib/web/templates/admin/dashboard/system_info.html.eex:16
-msgid "atoms"
-msgstr ""
-
-#: lib/web/templates/admin/dashboard/system_info.html.eex:66
-msgid "last updated"
-msgstr ""
-
-#: lib/web/templates/admin/dashboard/system_info.html.eex:6
-msgid "total"
-msgstr ""
-
-#: lib/web/templates/session/no_access.html.eex:1
-msgid "Access denied"
-msgstr ""
-
-#: lib/web/menus/admin_menu.ex:10
-msgid "Admin"
-msgstr ""
-
-#: lib/web/templates/session/layout/auth.html.eex:10
-msgid "Authorization"
-msgstr ""
-
-#: lib/web/controllers/session_controller.ex:26
-msgid "Authorization failed"
-msgstr ""
-
-#: lib/web/templates/admin/image_category/configure.html.eex:8
-#: lib/web/templates/admin/image_category/edit.html.eex:8 lib/web/templates/admin/image_category/propagate_configuration.html.eex:8
-#: lib/web/templates/admin/image_category/sequence.html.eex:26 lib/web/templates/admin/image_series/configure.html.eex:8
-#: lib/web/templates/admin/image_series/edit.html.eex:5 lib/web/templates/admin/image_series/sequence.html.eex:18
-#: lib/web/templates/admin/image_series/upload.html.eex:11 lib/web/templates/admin/user/edit.html.eex:5
-#: lib/web/templates/admin/user/new.html.eex:11 lib/web/templates/admin/user/profile_edit.html.eex:5
-#: lib/web/templates/admin/user/show.html.eex:6
-msgid "Back to index"
-msgstr ""
-
-#: lib/web/templates/admin/image_category/configure.html.eex:1
-#: lib/web/templates/admin/image_series/configure.html.eex:1
-msgid "Configure"
-msgstr ""
-
-#: lib/web/templates/admin/image/index.html.eex:30
-msgid "Configure category"
-msgstr ""
-
-#: lib/web/controllers/admin/image_category_controller.ex:98
-#: lib/web/controllers/admin/image_category_controller.ex:113
-msgid "Configure image category"
-msgstr ""
-
-#: lib/web/controllers/admin/image_series_controller.ex:104
-#: lib/web/controllers/admin/image_series_controller.ex:121 lib/web/templates/admin/image/index.html.eex:99
-msgid "Configure image series"
-msgstr ""
-
-#: lib/web/controllers/admin/image_category_controller.ex:197
-#: lib/web/controllers/admin/image_series_controller.ex:186 lib/web/controllers/admin/user_controller.ex:159
-msgid "Confirm deletion"
-msgstr ""
-
-#: lib/web/menus/admin_menu.ex:12
-msgid "Dashboard"
-msgstr ""
-
-#: lib/web/templates/error/db_error.html.eex:3
-msgid "Database error"
-msgstr ""
-
-#: lib/web/templates/admin/image/index.html.eex:35
-msgid "Delete category"
-msgstr ""
-
-#: lib/web/templates/admin/image_category/delete_confirm.html.eex:3
-msgid "Delete image category"
-msgstr ""
-
-#: lib/web/templates/admin/image/index.html.eex:104
-#: lib/web/templates/admin/image_series/delete_confirm.html.eex:3
-msgid "Delete image series"
-msgstr ""
-
-#: lib/web/templates/admin/image/index.html.eex:53
-msgid "Delete images"
-msgstr ""
-
-#: lib/web/templates/admin/user/delete_confirm.html.eex:3
-#: lib/web/templates/admin/user/index.html.eex:5
-msgid "Delete user"
-msgstr ""
-
-#: lib/brando/html.ex:183 lib/brando/html.ex:183
-msgid "Deleted"
-msgstr ""
-
-#: lib/web/controllers/admin/image_category_controller.ex:60
-#: lib/web/controllers/admin/image_category_controller.ex:84 lib/web/templates/admin/image/index.html.eex:20
-#: lib/web/templates/admin/image_category/edit.html.eex:1
-msgid "Edit image category"
-msgstr ""
-
-#: lib/web/controllers/admin/image_series_controller.ex:64
-#: lib/web/controllers/admin/image_series_controller.ex:83 lib/web/templates/admin/image/index.html.eex:89
-#: lib/web/templates/admin/image_series/edit.html.eex:1 lib/web/templates/admin/image_series/sequence.html.eex:15
-#: lib/web/templates/admin/image_series/upload.html.eex:5
-msgid "Edit image series"
-msgstr ""
-
-#: lib/web/controllers/admin/user_controller.ex:59
-#: lib/web/controllers/admin/user_controller.ex:84 lib/web/templates/admin/user/profile_edit.html.eex:1
-msgid "Edit profile"
-msgstr ""
-
-#: lib/web/controllers/admin/user_controller.ex:124
-#: lib/web/controllers/admin/user_controller.ex:147 lib/web/templates/admin/user/edit.html.eex:1
-#: lib/web/templates/admin/user/index.html.eex:4 lib/web/templates/admin/user/new.html.eex:14
-#: lib/web/templates/admin/user/show.html.eex:9
-msgid "Edit user"
-msgstr ""
-
-#: lib/brando/users/user.ex:221 lib/web/templates/session/login.html.eex:3
-msgid "Email"
-msgstr ""
-
-#: lib/web/templates/admin/image/not_found.html.eex:1
-#: lib/web/templates/admin/image_category/not_found.html.eex:1 lib/web/templates/admin/image_series/not_found.html.eex:1
-msgid "Entry not found"
-msgstr ""
-
-#: lib/web/templates/error/catch_all.html.eex:2
-msgid "Error"
-msgstr ""
-
-#: lib/web/controllers/admin/image_category_controller.ex:47
-#: lib/web/controllers/admin/image_category_controller.ex:88 lib/web/controllers/admin/image_category_controller.ex:118
-#: lib/web/controllers/admin/image_series_controller.ex:46 lib/web/controllers/admin/image_series_controller.ex:81
-#: lib/web/controllers/admin/image_series_controller.ex:118 lib/web/controllers/admin/user_controller.ex:85
-#: lib/web/controllers/admin/user_controller.ex:111 lib/web/controllers/admin/user_controller.ex:148
-msgid "Errors in form"
-msgstr ""
-
-#: lib/web/templates/admin/image_series/upload.html.eex:16
-msgid "Existing images in this series"
-msgstr ""
-
-#: lib/web/controllers/admin/dashboard_controller.ex:58
-msgid "File not found"
-msgstr ""
-
-#: lib/web/templates/session/no_access.html.eex:5
-msgid "Go back"
-msgstr ""
-
-#: lib/web/controllers/admin/image_category_controller.ex:39
-msgid "Image category created"
-msgstr ""
-
-#: lib/web/controllers/admin/image_category_controller.ex:207
-msgid "Image category deleted"
-msgstr ""
-
-#: lib/web/controllers/admin/image_category_controller.ex:73
-#: lib/web/controllers/admin/image_category_controller.ex:80
-msgid "Image category updated"
-msgstr ""
-
-#: lib/web/controllers/admin/image_series_controller.ex:43
-msgid "Image series created"
-msgstr ""
-
-#: lib/web/controllers/admin/image_series_controller.ex:197
-msgid "Image series deleted"
-msgstr ""
-
-#: lib/web/controllers/admin/image_series_controller.ex:77
-msgid "Image series updated"
-msgstr ""
-
-#: lib/web/controllers/admin/image_controller.ex:21
-#: lib/web/templates/admin/image/index.html.eex:1
-msgid "Index - images"
-msgstr ""
-
-#: lib/web/controllers/admin/user_controller.ex:24
-#: lib/web/templates/admin/user/index.html.eex:1
-msgid "Index - users"
-msgstr ""
-
-#: lib/web/menus/admin_menu.ex:14
-msgid "Log out"
-msgstr ""
-
-#: lib/web/templates/session/login.html.eex:10
-msgid "Login"
-msgstr ""
-
-#: lib/web/controllers/admin/image_category_controller.ex:28
-#: lib/web/controllers/admin/image_category_controller.ex:44 lib/web/templates/admin/image/index.html.eex:119
-#: lib/web/templates/admin/image_category/new.html.eex:1
-msgid "New image category"
-msgstr ""
-
-#: lib/web/controllers/admin/image_series_controller.ex:30
-#: lib/web/controllers/admin/image_series_controller.ex:49 lib/web/templates/admin/image/index.html.eex:10
-#: lib/web/templates/admin/image_series/new.html.eex:1
-msgid "New image series"
-msgstr ""
-
-#: lib/web/controllers/admin/user_controller.ex:96
-#: lib/web/controllers/admin/user_controller.ex:110 lib/web/templates/admin/user/index.html.eex:9
-#: lib/web/templates/admin/user/new.html.eex:1
-msgid "New user"
-msgstr ""
-
-#: lib/web/templates/admin/image/index.html.eex:114
-msgid "No image series"
-msgstr ""
-
-#: lib/web/templates/admin/image/index.html.eex:72
-#: lib/web/templates/admin/image_category/sequence.html.eex:15
-msgid "No images"
-msgstr ""
-
-#: lib/web/templates/error/not_found.html.eex:3
-msgid "Page not found"
-msgstr ""
-
-#: lib/brando/users/user.ex:223 lib/web/templates/session/login.html.eex:6
-msgid "Password"
-msgstr ""
-
-#: lib/web/templates/session/no_access.html.eex:3
-msgid "Please contact an administrator."
-msgstr ""
-
-#: lib/web/controllers/admin/user_controller.ex:45
-#: lib/web/menus/users_menu.ex:13
-msgid "Profile"
-msgstr ""
-
-#: lib/web/controllers/admin/user_controller.ex:76
-msgid "Profile updated"
-msgstr ""
-
-#: lib/web/templates/admin/image_category/sequence.html.eex:23
-msgid "Save sorted category"
-msgstr ""
-
-#: lib/web/templates/admin/image_series/sequence.html.eex:12
-msgid "Save sorted series"
-msgstr ""
-
-#: lib/web/templates/error/server_error.html.eex:3
-msgid "Server error"
-msgstr ""
-
-#: lib/web/controllers/admin/user_controller.ex:34
-#: lib/web/templates/admin/user/index.html.eex:3 lib/web/templates/admin/user/show.html.eex:2
-msgid "Show user"
-msgstr ""
-
-#: lib/web/templates/admin/image_category/sequence.html.eex:1
-msgid "Sort image category"
-msgstr ""
-
-#: lib/web/templates/admin/image/index.html.eex:25
-#: lib/web/templates/admin/image_series/sequence.html.eex:1 lib/web/templates/admin/image_series/upload.html.eex:8
-msgid "Sort image series"
-msgstr ""
-
-#: lib/web/templates/admin/image/index.html.eex:94
-msgid "Sort images"
-msgstr ""
-
-#: lib/web/menus/admin_menu.ex:13
-msgid "System info"
-msgstr ""
-
-#: lib/web/templates/admin/image_category/delete_confirm.html.eex:11
-#: lib/web/templates/admin/image_series/delete_confirm.html.eex:11 lib/web/templates/admin/user/delete_confirm.html.eex:11
-msgid "This object cannot be restored!"
-msgstr ""
-
-#: lib/web/controllers/admin/image_series_controller.ex:153
-#: lib/web/templates/admin/image/index.html.eex:78
-msgid "Upload images"
-msgstr ""
-
-#: lib/web/templates/admin/image_series/upload.html.eex:1
-msgid "Upload to this image series"
-msgstr ""
-
-#: lib/web/controllers/admin/user_controller.ex:105
-msgid "User created"
-msgstr ""
-
-#: lib/web/controllers/admin/user_controller.ex:140
-msgid "User updated"
-msgstr ""
-
-#: lib/web/templates/admin/image_category/delete_confirm.html.eex:6
-#: lib/web/templates/admin/image_series/delete_confirm.html.eex:6 lib/web/templates/admin/user/delete_confirm.html.eex:6
-msgid "You are about to delete this object. Please check carefully, and note that any dependent objects will also be removed."
-msgstr ""
-
-#: lib/web/templates/session/no_access.html.eex:2
-msgid "You do not have the proper clearance for this area."
-msgstr ""
-
-#: lib/web/templates/session/logout.html.eex:2
-msgid "You have been logged out of the admin area."
-msgstr ""
-
-#: lib/web/controllers/admin/user_controller.ex:171
-msgid "deleted"
-msgstr ""
-
-#: lib/web/menus/users_menu.ex:14
-msgid "Add new"
-msgstr ""
-
-#: lib/brando/images/image_series.ex:157 lib/web/menus/images_menu.ex:10
-msgid "Images"
-msgstr ""
-
-#: lib/web/menus/images_menu.ex:11 lib/web/menus/users_menu.ex:12
-msgid "Index"
-msgstr ""
-
-#: lib/web/menus/users_menu.ex:10
-msgid "Users"
-msgstr ""
-
-#: lib/brando/html/inspect.ex:145
-msgid "** censored **"
-msgstr ""
-
-#: lib/brando/html/inspect.ex:231
-msgid "Association not fetched"
-msgstr ""
-
-#: lib/brando/users/user.ex:229
-msgid "Avatar"
-msgstr ""
-
-#: lib/brando/images/image_category.ex:124
-msgid "Config"
-msgstr ""
-
-#: lib/brando/images/image_series.ex:153
-msgid "Configuration"
-msgstr ""
-
-#: lib/brando/html/inspect.ex:116
-msgid "Configuration data"
-msgstr ""
-
-#: lib/brando/form/fields.ex:603
-msgid "Confirm"
-msgstr ""
-
-#: lib/brando/html/inspect.ex:249
-msgid "Connected"
-msgstr ""
-
-#: lib/brando/images/image.ex:80 lib/brando/images/image_category.ex:125
-#: lib/brando/images/image_series.ex:156
-msgid "Creator"
-msgstr ""
-
-#: lib/brando/images/image_series.ex:154
-msgid "Credits"
-msgstr ""
-
-#: lib/brando/html.ex:177 lib/brando/html.ex:177
-msgid "Draft"
-msgstr ""
-
-#: lib/brando/html/inspect.ex:225 lib/brando/html/inspect.ex:234
-msgid "Empty association"
-msgstr ""
-
-#: lib/brando/html/inspect.ex:108
-msgid "Encoded value"
-msgstr ""
-
-#: lib/brando/users/user.ex:222
-msgid "Full name"
-msgstr ""
-
-#: lib/brando/images/image.ex:77 lib/brando/images/image_category.ex:121
-#: lib/brando/images/image_series.ex:150 lib/brando/users/user.ex:219
-msgid "ID"
-msgstr ""
-
-#: lib/brando/images/image.ex:78
-msgid "Image"
-msgstr ""
-
-#: lib/brando/images/image_series.ex:158 lib/brando/images/image_series.ex:159
-msgid "Image category"
-msgstr ""
-
-#: lib/brando/images/image.ex:81 lib/brando/images/image_category.ex:126
-msgid "Image series"
-msgstr ""
-
-#: lib/brando/images/image.ex:82 lib/brando/images/image_category.ex:127
-#: lib/brando/images/image_series.ex:160 lib/brando/users/user.ex:227
-msgid "Inserted at"
-msgstr ""
-
-#: lib/brando/users/user.ex:225
-msgid "Language"
-msgstr ""
-
-#: lib/brando/users/user.ex:226
-msgid "Last login"
-msgstr ""
-
-#: lib/brando/images/image_category.ex:122 lib/brando/images/image_series.ex:151
-msgid "Name"
-msgstr ""
-
-#: lib/brando/html/inspect.ex:112
-msgid "No connected image"
-msgstr ""
-
-#: lib/brando/html/tablize.ex:64 lib/brando/html/tablize.ex:65
-msgid "No results"
-msgstr ""
-
-#: lib/brando/html/inspect.ex:80 lib/brando/html/inspect.ex:88
-#: lib/brando/html/inspect.ex:171 lib/brando/html/inspect.ex:175
-msgid "No value"
-msgstr ""
-
-#: lib/brando/html.ex:171 lib/brando/html.ex:171
-msgid "Pending"
-msgstr ""
-
-#: lib/brando/html.ex:165 lib/brando/html.ex:165
-msgid "Published"
-msgstr ""
-
-#: lib/brando/users/user.ex:231
-msgid "Rights"
-msgstr ""
-
-#: lib/brando/users/user.ex:224
-msgid "Roles"
-msgstr ""
-
-#: lib/brando/form/fields.ex:91 lib/brando/images/utils.ex:398
-msgid "Save"
-msgstr ""
-
-#: lib/brando/images/image.ex:79 lib/brando/images/image_series.ex:155
-msgid "Sequence"
-msgstr ""
-
-#: lib/brando/images/image_category.ex:123 lib/brando/images/image_series.ex:152
-msgid "Slug"
-msgstr ""
-
-#: lib/brando/images/image.ex:83 lib/brando/images/image_category.ex:128
-#: lib/brando/images/image_series.ex:161 lib/brando/users/user.ex:228
-msgid "Updated at"
-msgstr ""
-
-#: lib/brando/users/user.ex:232
-msgid "User information"
-msgstr ""
-
-#: lib/brando/users/user.ex:220
-msgid "Username"
-msgstr ""
-
-#: lib/brando/html/inspect.ex:100
-msgid "admin"
-msgstr ""
-
-#: lib/brando/form/fields.ex:716
-msgid "can't be blank"
-msgstr ""
-
-#: lib/brando/form/fields.ex:720
-msgid "has invalid format"
-msgstr ""
-
-#: lib/brando/images/image.ex:73
-msgid "image"
-msgstr ""
-
-#: lib/brando/images/image_category.ex:118
-msgid "image categories"
-msgstr ""
-
-#: lib/brando/images/image_category.ex:117
-msgid "image category"
-msgstr ""
-
-#: lib/brando/images/image_series.ex:147
-msgid "image(s)"
-msgstr ""
-
-#: lib/brando/images/image.ex:74
-msgid "images"
-msgstr ""
-
-#: lib/brando/images/image_series.ex:142
-msgid "imageserie"
-msgstr ""
-
-#: lib/brando/images/image_series.ex:143
-msgid "imageseries"
-msgstr ""
-
-#: lib/brando/form/fields.ex:722
-msgid "is invalid"
-msgstr ""
-
-#: lib/brando/form/fields.ex:724
-msgid "is reserved"
-msgstr ""
-
-#: lib/brando/form/fields.ex:718
-msgid "must be unique"
-msgstr ""
-
-#: lib/brando/form/fields.ex:728 lib/brando/form/fields.ex:730
-msgid "should be at least %{count} characters"
-msgstr ""
-
-#: lib/brando/html/inspect.ex:101
-msgid "staff"
-msgstr ""
-
-#: lib/brando/html/inspect.ex:99
-msgid "superuser"
-msgstr ""
-
-#: lib/brando/users/user.ex:215
-msgid "user"
-msgstr ""
-
-#: lib/brando/users/user.ex:216
-msgid "users"
-msgstr ""
-
-#: lib/brando/html.ex:179
-msgid "Delete"
-msgstr ""
-
-#: lib/brando/upload.ex:70
-msgid "Empty filename given. Make sure you have a valid filename."
-msgstr ""
-
-#: lib/brando/upload.ex:85
-msgid "Error while copying"
-msgstr ""
-
-#: lib/brando/upload.ex:82
-msgid "Path creation failed"
-msgstr ""
-
-#: lib/web/controllers/auth_handler.ex:9
-msgid "Access denied."
-msgstr ""
-
-#: lib/brando/users/user.ex:111 lib/brando/users/user.ex:136
-msgid "Passwords must match"
-msgstr ""
-
-#: lib/brando/users/user.ex:123
-msgid "Password must be at least 6 characters"
-msgstr ""
-
-#: lib/web/templates/admin/dashboard/system_info.html.eex:60
-msgid "Log"
-msgstr ""
-
-#: lib/web/templates/admin/dashboard/system_info.html.eex:48
-msgid "Servers"
-msgstr ""
-
-#: lib/web/templates/admin/dashboard/system_info.html.eex:21
-msgid "binary"
-msgstr ""
-
-#: lib/web/templates/admin/dashboard/system_info.html.eex:31
-msgid "code"
-msgstr ""
-
-#: lib/web/templates/admin/dashboard/system_info.html.eex:36
-msgid "ets"
-msgstr ""
-
-#: lib/web/templates/admin/dashboard/system_info.html.eex:26
-msgid "process"
-msgstr ""
-
-#: lib/web/templates/admin/dashboard/system_info.html.eex:11
-msgid "system"
-msgstr ""
-
-#: lib/brando/html.ex:415
-msgid "You are trying to authorize from an insecure URL. <a href=\"%{url}\">Please try again from this URL</a> or proceed at your own risk!"
-msgstr ""
-
-#: lib/brando/images/utils.ex:360
-msgid "Allowed mimetypes"
-msgstr ""
-
-#: lib/web/controllers/admin/image_category_controller.ex:156
-msgid "Category propagated"
-msgstr ""
-
-#: lib/web/controllers/admin/image_category_controller.ex:109
-#: lib/web/controllers/admin/image_series_controller.ex:115
-msgid "Configuration updated"
-msgstr ""
-
-#: lib/brando/images/utils.ex:365
-msgid "Default size"
-msgstr ""
-
-#: lib/web/templates/admin/image_category/configure.html.eex:11
-msgid "Propagate configuration to dependent image series"
-msgstr ""
-
-#: lib/brando/images/utils.ex:369
-msgid "Random filename"
-msgstr ""
-
-#: lib/web/templates/admin/image_series/configure.html.eex:11
-msgid "Recreate sizes for this series"
-msgstr ""
-
-#: lib/web/controllers/admin/image_series_controller.ex:139
-msgid "Recreated sizes for image series"
-msgstr ""
-
-#: lib/brando/images/utils.ex:374
-msgid "Size limit"
-msgstr ""
-
-#: lib/brando/images/utils.ex:380
-msgid "Upload path"
-msgstr ""
-
-#: lib/web/templates/admin/image_category/configure.html.eex:1
-msgid "category"
-msgstr ""
-
-#: lib/web/templates/admin/image_series/configure.html.eex:1
-msgid "image series"
-msgstr ""
-
-#: lib/web/controllers/admin/image_category_controller.ex:152
-msgid "Category propagated, but you have orphaned series. Click <a href=\"%{url}\">here</a> to verify and delete"
-msgstr ""
-
-#: lib/web/templates/admin/image_category/handle_orphans.html.eex:23
-msgid "Delete orphans"
-msgstr ""
-
-#: lib/web/controllers/admin/image_category_controller.ex:171
-msgid "Handle orphaned image series"
-msgstr ""
-
-#: lib/web/controllers/admin/image_category_controller.ex:184
-msgid "Orphans deleted"
-msgstr ""
-
-#: lib/web/templates/admin/image_category/handle_orphans.html.eex:10
-msgid "These folders cannot be restored!"
-msgstr ""
-
-#: lib/web/templates/admin/image_category/handle_orphans.html.eex:5
-msgid "You are about to delete these folders. Please check carefully before proceeding."
-msgstr ""
-
-#: lib/brando/form/fields.ex:726
-msgid "has already been taken"
-msgstr ""
-
-#: lib/web/templates/admin/dashboard/system_info.html.eex:41
-msgid "system uptime"
-msgstr ""
-
-#: lib/web/templates/error/_feedback.html.eex:4
-msgid "A short description of the events leading to the error"
-msgstr ""
-
-#: lib/web/templates/error/500.html.eex:3
-#: lib/web/templates/error/admin_500.html.eex:3
-msgid "Application error"
-msgstr ""
-
-#: lib/web/templates/error/_feedback.html.eex:3
-msgid "Developers have been notified about this error, but if you can provide extra information about the error, please do so in the textbox below. If not, that's OK too!"
-msgstr ""
-
-#: lib/web/templates/error/_feedback.html.eex:16
-msgid "Thanks!"
-msgstr ""
-
-#: lib/web/templates/admin/image_category/edit.html.eex:3
-msgid "Changing the name of a category is a large operation which includes moving and recreating all dependent image series. This may take some time, so please be patient!"
-msgstr ""
-
-#: lib/web/templates/admin/image_category/handle_orphans.html.eex:2
-msgid "Handle orphans"
-msgstr ""
-
-#: lib/web/templates/admin/image_category/propagate_configuration.html.eex:3
-msgid "Please wait while we propagate the configuration to dependent image series"
-msgstr ""
-
-#: lib/web/templates/admin/image_category/propagate_configuration.html.eex:1
-msgid "Propagating configuration"
-msgstr ""
-
-#: lib/brando/images/utils.ex:390
-msgid "Add master key (portrait/landscape)"
-msgstr ""
-
-#: lib/brando/images/utils.ex:387
-msgid "Add master key (standard)"
-msgstr ""
-
-#: lib/brando/images/utils.ex:463
-msgid "Orientation"
-msgstr ""
-
-#: lib/brando/images/utils.ex:435
-msgid "key"
-msgstr ""
-
-#: lib/brando/images/utils.ex:443
-msgid "masterkey"
-msgstr ""
-
-#: lib/web/channels/system_channel.ex:61
-msgid "Error retrieving form \"%{form}\""
-msgstr ""
-
-#: lib/web/templates/error/bad_request.html.eex:3
-msgid "Bad request"
-msgstr ""
-
-#: lib/brando/html/inspect.ex:126
-msgid "No connected file"
-msgstr ""
-
-#: lib/web/templates/admin/dashboard/system_info.html.eex:77
-msgid "Deps"
-msgstr ""
-
-#: lib/web/channels/system_channel.ex:66
-msgid "Error retrieving form \"%{form}\". Not registered."
-msgstr ""
-
-#: lib/brando/upload.ex:73
-msgid "File type not allowed: %{type}. Must be one of: %{allowed}"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/upload.ex:79
-msgid "Error while creating image sizes"
-msgstr ""
-
-#, elixir-format
-#: lib/brando/upload.ex:89
-msgid "Unknown error while creating image sizes."
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new translations manually only if they're dynamic
+## translations that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here as no
+## effect: edit them in PO (.po) files instead.
+msgid ""
 msgstr ""
 
 #, elixir-format
@@ -795,6 +16,102 @@ msgid "%{filename} &rarr; Creating image size: <strong>%{size_key}</strong>/%{fo
 msgstr ""
 
 #, elixir-format
+#: lib/web/templates/error/_feedback.html.eex:4
+msgid "A short description of the events leading to the error"
+msgstr ""
+
+#, elixir-format
+#: lib/web/templates/error/500.html.eex:3
+#: lib/web/templates/error/admin_500.html.eex:3
+msgid "Application error"
+msgstr ""
+
+#, elixir-format
+#: lib/web/templates/error/bad_request.html.eex:3
+msgid "Bad request"
+msgstr ""
+
+#, elixir-format
+#: lib/web/templates/error/db_error.html.eex:3
+msgid "Database error"
+msgstr ""
+
+#, elixir-format
+#: lib/web/templates/error/_feedback.html.eex:3
+msgid "Developers have been notified about this error, but if you can provide extra information about the error, please do so in the textbox below. If not, that's OK too!"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/upload.ex:70
+msgid "Empty filename given. Make sure you have a valid filename."
+msgstr ""
+
+#, elixir-format
+#: lib/web/templates/error/catch_all.html.eex:2
+msgid "Error"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/upload.ex:85
+msgid "Error while copying"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/upload.ex:79
+msgid "Error while creating image sizes"
+msgstr ""
+
+#, elixir-format
 #: lib/brando/upload.ex:67
 msgid "Failed creating image type struct"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/upload.ex:73
+msgid "File type not allowed: %{type}. Must be one of: %{allowed}"
+msgstr ""
+
+#, elixir-format
+#: lib/web/templates/error/not_found.html.eex:3
+msgid "Page not found"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:123
+msgid "Password must be at least 6 characters"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/upload.ex:82
+msgid "Path creation failed"
+msgstr ""
+
+#, elixir-format
+#: lib/web/templates/error/server_error.html.eex:3
+msgid "Server error"
+msgstr ""
+
+#, elixir-format
+#: lib/web/templates/error/_feedback.html.eex:16
+msgid "Thanks!"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/upload.ex:89
+msgid "Unknown error while creating image sizes."
+msgstr ""
+
+#, elixir-format
+#: lib/brando/query/mutations.ex:25
+msgid "created"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/query/mutations.ex:84
+msgid "deleted"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/query/mutations.ex:54
+msgid "updated"
 msgstr ""
