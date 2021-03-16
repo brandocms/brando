@@ -23,7 +23,8 @@ defmodule <%= app_module %>.Schema.Types.<%= alias %> do
 
   input_object :<%= singular %>_params do<%= for {_v, k} <- gql_inputs do %>
     <%= k %><% end %><%= if meta do %>
-    meta_params()<% end %>
+    meta_params()<% end %><%= if publish_at do %>
+    field :publish_at, :time<% end %>
   end
 
   @desc "Filtering options for <%= singular %>"
