@@ -1,5 +1,5 @@
 <footer>
-  <div data-moonwalk-section>
-    Footer.
+  <div class="inner">
+    <%= @partials["footer"] %>
   </div>
 </footer>

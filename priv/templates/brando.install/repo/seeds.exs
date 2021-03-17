@@ -48,15 +48,95 @@ ss_cfg = %Brando.Type.ImageConfig{
 password = Bcrypt.hash_pwd_salt("admin")
 
 user = %Brando.Users.User{
-  name: "Twined Admin",
-  email: "admin@twined.net",
+  name: "Brando Admin",
+  email: "admin@brandocms.com",
   password: password,
   avatar: nil,
   role: :superuser,
-  language: "no"
+  language: "en"
 }
 
 user = <%= application_module %>.Repo.insert!(user)
+
+%Brando.Navigation.Menu{
+  creator_id: user.id,
+  items: [
+    %Brando.Navigation.Item{
+      items: [],
+      key: "brando",
+      open_in_new_window: true,
+      status: :published,
+      title: "Brando CMS",
+      url: "https://brandocms.com"
+    },
+    %Brando.Navigation.Item{
+      items: [],
+      key: "documentation",
+      open_in_new_window: true,
+      status: :published,
+      title: "API Documentation",
+      url: "https://hexdocs.pm/brando"
+    },
+    %Brando.Navigation.Item{
+      items: [],
+      key: "guides",
+      open_in_new_window: true,
+      status: :published,
+      title: "Guides",
+      url: "https://brandocms.com/guides"
+    }
+  ],
+  key: "main",
+  language: "en",
+  sequence: 0,
+  status: :published,
+  template: nil,
+  title: "Main menu"
+}
+|> <%= application_module %>.Repo.insert!()
+
+example_module =
+  %Brando.Villain.Module{
+    class: "example",
+    code:
+      "<article b-tpl=\"example\">\n\t<div class=\"inner\">\n\t\t%{h1}\n        %{p}\n\t</div>\n</article>",
+    help_text: "Used for the introduction page",
+    multi: false,
+    name: "Example module",
+    namespace: "general",
+    refs: [
+      %{
+        "data" => %{
+          "data" => %{
+            "class" => nil,
+            "id" => nil,
+            "level" => 1,
+            "text" => "Heading"
+          },
+          "type" => "header"
+        },
+        "description" => "",
+        "name" => "h1"
+      },
+      %{
+        "data" => %{
+          "data" => %{
+            "extensions" => [],
+            "text" => "Text",
+            "type" => "paragraph"
+          },
+          "type" => "text"
+        },
+        "description" => "",
+        "name" => "p"
+      }
+    ],
+    sequence: 0,
+    svg: nil,
+    vars: %{},
+    wrapper: nil
+  }
+  |> <%= application_module %>.Repo.insert!()
 
 post_category = %Brando.ImageCategory{
   creator_id: user.id,
@@ -93,13 +173,49 @@ page = %Brando.Pages.Page{
   css_classes: nil,
   data: [
     %{
-      "data" => %{"text" => "<p>Index text.</p>", "type" => "paragraph"},
-      "type" => "text"
+      "data" => %{
+        "deleted_at" => nil,
+        "id" => example_module.id,
+        "multi" => false,
+        "refs" => [
+          %{
+            "data" => %{
+              "data" => %{
+                "class" => nil,
+                "id" => nil,
+                "level" => 1,
+                "text" => "Welcome to Brando!"
+              },
+              "type" => "header"
+            },
+            "description" => "",
+            "name" => "h1"
+          },
+          %{
+            "data" => %{
+              "data" => %{
+                "extensions" => [],
+                "text" =>
+                  "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius auctor tellus ut hendrerit. Vivamus lectus libero, condimentum vitae tellus nec, vehicula iaculis nisi. Morbi at pulvinar neque, vitae maximus magna. Morbi bibendum pulvinar tellus, eu pellentesque arcu porta et. Pellentesque sagittis nisi a sem cursus, in fringilla metus tristique. Maecenas vel enim quis diam mollis viverra. Nulla pulvinar tristique erat nec rhoncus. Maecenas at nisl dignissim, rhoncus purus vitae, consequat diam. Curabitur sed sapien tempor, eleifend dolor cursus, rhoncus turpis. Vestibulum dolor eros, fermentum ac feugiat ut, interdum in nulla. Pellentesque faucibus, arcu eu gravida sollicitudin, massa lacus aliquam lorem, sed ultrices ligula mauris in velit. Fusce ac dolor facilisis lacus suscipit lobortis quis et leo. </p>",
+                "type" => "paragraph"
+              },
+              "type" => "text"
+            },
+            "description" => "",
+            "name" => "p"
+          }
+        ],
+        "sequence" => 0,
+        "vars" => %{}
+      },
+      "type" => "module",
+      "uid" => "KMDHFWOUSTVCR"
     }
   ],
   deleted_at: nil,
   fragments: [],
-  html: "<p>Index text.</p>",
+  html:
+    "<article b-tpl=\"example\">\n\t<div class=\"inner\">\n\t\t<h1>Welcome to Brando!</h1>\n        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius auctor tellus ut hendrerit. Vivamus lectus libero, condimentum vitae tellus nec, vehicula iaculis nisi. Morbi at pulvinar neque, vitae maximus magna. Morbi bibendum pulvinar tellus, eu pellentesque arcu porta et. Pellentesque sagittis nisi a sem cursus, in fringilla metus tristique. Maecenas vel enim quis diam mollis viverra. Nulla pulvinar tristique erat nec rhoncus. Maecenas at nisl dignissim, rhoncus purus vitae, consequat diam. Curabitur sed sapien tempor, eleifend dolor cursus, rhoncus turpis. Vestibulum dolor eros, fermentum ac feugiat ut, interdum in nulla. Pellentesque faucibus, arcu eu gravida sollicitudin, massa lacus aliquam lorem, sed ultrices ligula mauris in velit. Fusce ac dolor facilisis lacus suscipit lobortis quis et leo. </p>\n\t</div>\n</article>",
   is_homepage: true,
   uri: "index",
   language: "en",
@@ -118,10 +234,10 @@ footer_fragment = %Brando.Pages.PageFragment{
   key: "footer",
   title: "Footer",
   language: "en",
-  html: "<footer>Footer</footer>",
+  html: "<p>(c) BrandoCMS — all rights reserved</p>",
   data: [
     %{
-      "data" => %{"text" => "<footer>Footer</footer>", "type" => "paragraph"},
+      "data" => %{"text" => "(c) BrandoCMS — all rights reserved", "type" => "paragraph"},
       "type" => "text"
     }
   ],

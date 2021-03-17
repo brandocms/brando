@@ -110,17 +110,17 @@ module.exports = {
 
     typography: {
       /* `base` is the px value of 1rem set as font-size on the html element. */
-      base: '18px',
+      base: '20px',
 
       /* line heights per breakpoint */
       lineHeight: {
-        iphone: 1.4,
-        mobile: 1.4,
-        ipad_portrait: 1.4,
-        ipad_landscape: 1.4,
-        desktop_md: 1.4,
-        desktop_lg: 1.4,
-        desktop_xl: 1.4
+        iphone: 1.5,
+        mobile: 1.5,
+        ipad_portrait: 1.5,
+        ipad_landscape: 1.5,
+        desktop_md: 1.5,
+        desktop_lg: 1.5,
+        desktop_xl: 1.5
       },
 
       /* main font sizing map */
@@ -128,34 +128,34 @@ module.exports = {
         /* this is per SIZE followed by per BREAKPOINT */
         base: {
           iphone: '16px',
-          mobile: '17px',
-          ipad_portrait: '17px',
-          ipad_landscape: '17px',
-          desktop_md: '18px',
-          desktop_lg: '19px',
-          desktop_xl: '22px'
+          mobile: 'between(18px-24px)',
+          ipad_portrait: 'between(20px-24px)',
+          ipad_landscape: 'between(20px-22px)',
+          desktop_md: 'between(22px-24px)',
+          desktop_lg: 'between(24px-28px)',
+          desktop_xl: '30px'
+        },
+
+        xl: {
+          iphone: '30px',
+          mobile: 'between(40px-60px)',
+          ipad_portrait: 'between(60px-68px)',
+          ipad_landscape: 'between(68px-78px)',
+          desktop_md: 'between(78px-88px)',
+          desktop_lg: 'between(88px-100px)',
+          desktop_xl: '110px'
         }
       },
 
       sections: {
         navigation: {
-          iphone: {},
-          mobile: {},
-
-          desktop_md: {
-            'font-size': '16px',
-            'line-height': '12px'
-          },
-
-          desktop_lg: {
-            'font-size': '18px',
-            'line-height': '14px'
-          },
-
-          desktop_xl: {
-            'font-size': '21px',
-            'line-height': '15px'
-          }
+          iphone: '34px',
+          mobile: '34px',
+          ipad_portrait: '42px',
+          ipad_landscape: '20px',
+          desktop_md: '20px',
+          desktop_lg: '20px',
+          desktop_xl: '20px',
         }
       },
 
@@ -191,14 +191,24 @@ module.exports = {
 
     spacing: {
       block: {
-        iphone: '55px',
-        mobile: '55px',
-        ipad_portrait: '55px',
-        ipad_landscape: '55px',
-        desktop_md: '55px',
-        desktop_lg: '55px',
-        desktop_xl: '55px'
+        iphone: '18px',
+        mobile: 'between(20px-30px)',
+        ipad_portrait: 'between(30px-35px)',
+        ipad_landscape: 'between(35px-45px)',
+        desktop_md: 'between(50px-58px)',
+        desktop_lg: 'between(58px-66px)',
+        desktop_xl: '66px'
       },
+
+      xs: {
+        iphone: '15px',
+        mobile: 'between(15px-18px)',
+        ipad_portrait: 'between(18px-20px)',
+        ipad_landscape: 'between(20px-25px)',
+        desktop_md: 'between(25px-35px)',
+        desktop_lg: 'between(35px-45px)',
+        desktop_xl: '50px'
+      }
     },
 
     header: {
@@ -206,31 +216,31 @@ module.exports = {
         brand: {
           iphone: {
             width: '100px',
-            height: '81.05px'
+            height: '100px'
           },
           mobile: {
             width: '100px',
-            height: '81.05px'
+            height: '100px'
           },
           ipad_portrait: {
             width: '100px',
-            height: '81.05px'
+            height: '100px'
           },
           ipad_landscape: {
             width: '100px',
-            height: '81.05px'
+            height: '100px'
           },
           desktop_md: {
-            width: '100%',
-            height: '100%'
+            width: '100px',
+            height: '100px'
           },
           desktop_lg: {
-            width: '100%',
-            height: '100%'
+            width: '100px',
+            height: '100px'
           },
           desktop_xl: {
-            width: '100%',
-            height: '100%'
+            width: '100px',
+            height: '100px'
           }
         }
       },

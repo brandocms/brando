@@ -173,7 +173,10 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "lib/application_name/authorization.ex", "lib/application_name/authorization.ex"},
 
     # Telemetry
-    {:eex, "lib/application_name_web/telemetry.ex", "lib/application_name_web/telemetry.ex"}
+    {:eex, "lib/application_name_web/telemetry.ex", "lib/application_name_web/telemetry.ex"},
+
+    # Live Preview
+    {:eex, "lib/application_name_web/live_preview.ex", "lib/application_name_web/live_preview.ex"}
   ]
 
   @static [

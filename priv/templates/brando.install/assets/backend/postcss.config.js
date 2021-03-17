@@ -1,6 +1,6 @@
 module.exports = {
   plugins: [
-    require('@univers-agency/europacss'),
+    require('@brandocms/europacss'),
     require('autoprefixer')()
   ]
 }
