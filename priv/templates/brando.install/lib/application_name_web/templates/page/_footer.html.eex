@@ -1,5 +1,5 @@
 <footer>
   <div class="inner">
-    <%= @partials["footer"] %>
+    <%%= @partials["footer"] %>
   </div>
 </footer>
