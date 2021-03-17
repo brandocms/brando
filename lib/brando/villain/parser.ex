@@ -64,7 +64,7 @@ defmodule Brando.Villain.Parser do
   @callback render_caption(data :: map) :: binary
 
   defmacro __using__(_) do
-    quote do
+    quote location: :keep do
       @behaviour Brando.Villain.Parser
 
       import Brando.HTML
@@ -198,12 +198,14 @@ defmodule Brando.Villain.Parser do
               "query" => query,
               "code" => code
             } = data,
-            _
+            opts
           ) do
         arg = Map.get(data, "arg", nil)
+        src_module_id = Map.get(data, "module_id", nil)
+        src = (src_module_id && {:module, src_module_id}) || {:code, code}
 
         with {:ok, entries} <- Datasource.get_list(module, query, arg) do
-          render_datasource_entries(code, entries)
+          render_datasource_entries(src, entries, opts)
         end
       end
 
@@ -215,12 +217,14 @@ defmodule Brando.Villain.Parser do
               "code" => code,
               "ids" => ids
             } = data,
-            _
+            opts
           ) do
         arg = Map.get(data, "arg", nil)
+        src_module_id = Map.get(data, "module_id", nil)
+        src = (src_module_id && {:module, src_module_id}) || {:code, code}
 
         with {:ok, entries} <- Datasource.get_selection(module, query, ids) do
-          render_datasource_entries(code, entries)
+          render_datasource_entries(src, entries, opts)
         end
       end
 
@@ -721,10 +725,19 @@ defmodule Brando.Villain.Parser do
       defp add_vars_to_context(context, vars),
         do: Enum.reduce(vars, context, fn {k, v}, acc -> Context.assign(acc, k, v) end)
 
-      defp render_datasource_entries(code, entries) do
-        base_context = Villain.get_base_context()
+      defp render_datasource_entries({:code, code}, entries, opts) do
+        base_context = opts.context
         context = Context.assign(base_context, "entries", entries)
         Villain.parse_and_render(code, context)
+      end
+
+      defp render_datasource_entries({:module, module_id}, entries, opts) do
+        base_context = opts.context
+        modules = opts.modules
+
+        {:ok, module} = Villain.find_module(modules, module_id)
+        context = Context.assign(base_context, "entries", entries)
+        Villain.parse_and_render(module.code, context)
       end
 
       defp render_refs(module_code, refs, id) do

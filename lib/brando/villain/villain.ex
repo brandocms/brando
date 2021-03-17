@@ -329,7 +329,7 @@ defmodule Brando.Villain do
 
   @doc """
   List ids of `schema` records that has `module_id` in `data_field`
-  Also check inside containers
+  Also check inside containers and datasources
   """
   def list_ids_with_module(schema, data_field, module_id) do
     t = [
@@ -340,11 +340,16 @@ defmodule Brando.Villain do
       %{type: "container", data: %{blocks: [%{type: "module", data: %{id: module_id}}]}}
     ]
 
+    datasourced_t = [
+      %{type: "datasource", data: %{module_id: module_id}}
+    ]
+
     Brando.repo().all(
       from s in schema,
         select: s.id,
         where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t),
-        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_t)
+        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_t),
+        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^datasourced_t)
     )
   end
 

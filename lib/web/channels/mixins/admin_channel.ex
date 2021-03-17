@@ -20,7 +20,8 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "config:add_key",
     "datasource:list_available_entries",
     "datasource:list_modules",
-    "datasource:list_module_keys",
+    "datasource:list_datasources",
+    "datasource:list_datasource_keys",
     "entries:types",
     "entries:list",
     "images:get_image",
@@ -386,14 +387,20 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("datasource:list_modules", _, socket) do
-    {:ok, available_modules} = Brando.Datasource.list_datasources()
-    available_modules = Enum.map(available_modules, &Map.put(%{}, :module, &1))
-    {:reply, {:ok, %{code: 200, available_modules: available_modules}}, socket}
+    {:ok, modules} = Brando.Villain.list_modules(%{filter: %{namespace: "all"}})
+    mapped_modules = Enum.map(modules, &%{id: &1.id, name: "#{&1.namespace} - #{&1.name}"})
+    {:reply, {:ok, %{code: 200, modules: mapped_modules}}, socket}
   end
 
-  def do_handle_in("datasource:list_module_keys", %{"module" => module}, socket) do
+  def do_handle_in("datasource:list_datasources", _, socket) do
+    {:ok, available_datasources} = Brando.Datasource.list_datasources()
+    available_datasources = Enum.map(available_datasources, &Map.put(%{}, :module, &1))
+    {:reply, {:ok, %{code: 200, available_datasources: available_datasources}}, socket}
+  end
+
+  def do_handle_in("datasource:list_datasource_keys", %{"module" => module}, socket) do
     {:ok, available_keys} = Brando.Datasource.list_datasource_keys(module)
-    {:reply, {:ok, %{code: 200, available_module_keys: available_keys}}, socket}
+    {:reply, {:ok, %{code: 200, available_datasource_keys: available_keys}}, socket}
   end
 
   def do_handle_in(
