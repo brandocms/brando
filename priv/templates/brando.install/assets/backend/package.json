@@ -19,7 +19,7 @@
   "devDependencies": {
     "@intlify/vue-i18n-loader": "^1.0.0",
     "@kazupon/vue-i18n-loader": "^0.5.0",
-    "@univers-agency/europacss": "^0.5.0",
+    "@univers-agency/europacss": "^0.6.0",
     "@vue/cli-plugin-babel": "^4.5.6",
     "@vue/cli-plugin-eslint": "^4.5.6",
     "@vue/cli-plugin-router": "^4.5.6",
