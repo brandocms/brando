@@ -85,7 +85,6 @@ defmodule <%= application_module %>.MixProject do
     [
       "ecto.setup": [
         "ecto.create",
-        "ecto.load",
         "ecto.migrate",
         "run priv/repo/seeds.exs"
       ],
@@ -93,7 +92,7 @@ defmodule <%= application_module %>.MixProject do
       "test.all": ["test.unit", "test.e2e"],
       "test.unit": &run_unit_tests/1,
       "test.e2e": &run_e2e_tests/1,
-      test: ["ecto.create --quiet", "ecto.load --skip-if-loaded", "test"]
+      test: ["ecto.create --quiet", "ecto.migrate", "test"]
     ]
   end
 

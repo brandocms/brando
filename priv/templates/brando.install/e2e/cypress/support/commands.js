@@ -9,6 +9,7 @@
 // ***********************************************
 
 import 'cypress-file-upload'
+import '../../../assets/backend/node_modules/brandojs/e2e/commands'
 
 Cypress.Commands.add('checkoutdb', () => {
   cy.request('POST', '/__e2e/db/checkout').as('checkoutDb')

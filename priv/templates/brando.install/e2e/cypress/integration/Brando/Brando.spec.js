@@ -1,1 +1,1 @@
-import '../../../../assets/backend/node_modules/brandojs/specs/Brando.spec.js'
+import '../../../../assets/backend/node_modules/brandojs/e2e/specs/Brando.spec.js'
