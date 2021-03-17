@@ -1,10 +1,3 @@
-@import "./navigation-nojs.css";
-
-.hero-slide-img {
-  position: relative;
-  backface-visibility: hidden;
-}
-
 header[data-nav] {
   @container;
   @unpack theme.header.padding.large;
@@ -93,11 +86,11 @@ header[data-nav] {
 
         .hamburger {
           @color fg dark;
+          @space width 22px $mobile;
+          @space height 17px $mobile;
           font-size: 17px;
           text-align: center;
           position: relative;
-          @space width 22px $mobile;
-          @space height 17px $mobile;
 
           i {
             transition: background-color 0.5s ease;
@@ -165,7 +158,6 @@ header[data-nav] {
             color: #000;
 
             @responsive <=ipad_portrait {
-              @fontsize 30px;
               color: theme(colors.light) !important;
               display: inline-block;
               text-transform: none;
@@ -180,30 +172,11 @@ header[data-nav] {
               &:first-of-type {
                 margin: 0;
               }
-
-              &:after {
-                @color fg dark;
-                transition: opacity .75s ease, transform .75s ease;
-                content: "\25CF";
-                font-size: 18px;
-                position: absolute;
-                width: 100%;
-                text-align: center;
-                opacity: 0;
-                left: 0;
-                bottom: -21px;
-                transform: translateY(5px);
-              }
             }
 
             &.active, &:hover {
               @responsive >=desktop_md {
                 transition: border-color 250ms ease, transform 250ms ease;
-
-                &:after {
-                  opacity: 1;
-                  transform: translateY(0);
-                }
               }
 
               @responsive <=ipad_landscape {
@@ -239,11 +212,6 @@ header[data-nav] {
     }
   }
 }
-
-figure {
-  margin: 0;
-}
-
 
 .open-menu {
   .hamburger.is-active i {

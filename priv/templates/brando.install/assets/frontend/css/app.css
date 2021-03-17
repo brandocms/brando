@@ -8,23 +8,8 @@
 */
 
 @import './includes/fonts.css';
-@import "./includes/animations.css";
-@import "./includes/arrows.css";
 @import "./includes/cookies.css";
-@import "./includes/containers.css";
-@import "./includes/content.css";
-@import "./includes/fader.css";
-@import "./includes/footer.css";
-@import "./includes/general.css";
-@import "./includes/header.css";
-@import "./includes/headers.css";
-@import "./includes/lazyload.css";
-@import "./includes/lightbox.css";
 @import "./includes/modules.css";
-@import "./includes/newsletter.css";
-@import "./includes/panners.css";
-@import "./includes/paragraphs.css";
-@import "./includes/popup.css";
 @import "./includes/navigation.css";
 
 @europa arrows;
@@ -116,11 +101,32 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
 }
 
-p:last-child {
-  margin-bottom: 0;
+p {
+  @fontsize base;
+  @space margin-bottom vertical-rhythm(theme.typography.sizes.base);
+
+  &:last-of-type {
+    margin-bottom: 0 !important;
+  }
+
+  > a {
+    @color fg link.regular.text;
+    border-bottom: 1px solid theme(colors.link.regular.border);
+    transition: border-color 250ms ease-out, color 250ms ease-out;
+    padding-bottom: 3px;
+
+    &:hover {
+      @color fg link.hover.text;
+      border-bottom: 1px solid theme(colors.link.hover.border);
+      text-decoration: none;
+    }
+  }
+
+  > ul > li {
+    font-size: inherit;
+  }
 }
 
 .blink {
@@ -140,11 +146,6 @@ p:last-child {
     opacity: .8;
   }
 }
-
-/* header {
-  opacity: 1;
-  transition: opacity 2s ease;
-} */
 
 .ft {
   display: inline-block;

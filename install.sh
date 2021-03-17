@@ -15,7 +15,7 @@ then
   echo "==> Starting installation"
   gsed -i '/{:phoenix,/i\      {:brando, github: "brandocms/brando"},' mix.exs
   mix do deps.get, deps.compile, brando.install --module $MODULE, deps.get, deps.compile
-  cd assets/frontend && yarn && yarn upgrade @univers-agency/jupiter @univers-agency/europacss && cd ../backend && yalc add brandojs && yarn && yarn lint --fix && cd ../../
+  cd assets/frontend && yarn && yarn upgrade @brandocms/jupiter @brandocms/europacss && cd ../backend && yalc add brandojs && yarn && yarn lint --fix && cd ../../
   direnv allow
   mix do deps.get, deps.compile --force
   mix brando.upgrade

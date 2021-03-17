@@ -3,8 +3,8 @@
     <div class="mobile-bg"></div>
     <figure class="brand">
       <a href="/">
-        <h1 class="sr-only">APP NAME</h1>
-        <%%= render <%= application_module %>Web.PageView, "__logo.html" %>
+        <h1 class="sr-only">BrandoCMS</h1>
+        <%%= render <%= application_module %>Web.PageView, "_logo.html" %>
       </a>
     </figure>
 

@@ -381,20 +381,20 @@ defmodule Brando.AdminChannelTest do
   #
 
   describe "datasources" do
-    test "datasource:list_modules", %{socket: socket} do
-      ref = push(socket, "datasource:list_modules", %{})
-      assert_reply ref, :ok, %{code: 200, available_modules: []}
+    test "datasource:list_datasources", %{socket: socket} do
+      ref = push(socket, "datasource:list_datasources", %{})
+      assert_reply ref, :ok, %{code: 200, available_datasources: []}
     end
 
-    test "datasource:list_module_keys", %{socket: socket} do
+    test "datasource:list_datasource_keys", %{socket: socket} do
       ref =
-        push(socket, "datasource:list_module_keys", %{
+        push(socket, "datasource:list_datasource_keys", %{
           "module" => "Elixir.BrandoIntegration.ModuleWithDatasource"
         })
 
       assert_reply ref, :ok, %{
         code: 200,
-        available_module_keys: %{list: [:all], single: [], selection: [:featured]}
+        available_datasource_keys: %{list: [:all], single: [], selection: [:featured]}
       }
     end
 

@@ -10,16 +10,12 @@ import {
   Application,
   Cookies,
   Events,
-  Lazyload,
-  Lightbox,
   Links,
   MobileMenu,
   Moonwalk,
-  Popup,
-  StackedBoxes,
   FixedHeader,
   gsap
-} from '@univers-agency/jupiter'
+} from '@brandocms/jupiter'
 
 /**
  * APP SPECIFIC MODULE IMPORTS
@@ -30,10 +26,8 @@ import {
  */
 import configureBreakpoints from './config/BREAKPOINTS'
 import configureHeader from './config/HEADER'
-import configureLightbox from './config/LIGHTBOX'
 import configureMobileMenu from './config/MOBILE_MENU'
 import configureMoonwalk from './config/MOONWALK'
-
 
 import '../css/app.css'
 
@@ -41,11 +35,7 @@ const app = new Application({
   breakpointConfig: configureBreakpoints,
   faderOpts: {
     fadeIn: (callback) => {
-      gsap.to('.fader', { opacity: 0, duration: 0.5, onComplete: () => {
-        gsap.set('.fader', { display: 'none' })
-        document.body.classList.remove('unloaded')
         callback()
-      }})
     }
   }
 })
@@ -55,12 +45,14 @@ app.registerCallback(Events.APPLICATION_READY, () => {
 })
 
 app.registerCallback(Events.APPLICATION_PRELUDIUM, () => {
-  app.lightbox = new Lightbox(app, configureLightbox(app))
-  app.lazyload = new Lazyload(app, { useNativeLazyloadIfAvailable: false })
   app.moonwalk = new Moonwalk(app, configureMoonwalk(app))
   app.header = new FixedHeader(app, configureHeader(app))
   app.mobileMenu = new MobileMenu(app, configureMobileMenu(app))
   app.cookies = new Cookies(app)
+})
+
+app.registerCallback(Events.APPLICATION_REVEALED, () => {
+  // called after Application is finished revealing
 })
 
 // trigger ready state

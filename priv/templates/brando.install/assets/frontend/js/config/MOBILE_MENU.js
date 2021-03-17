@@ -1,6 +1,6 @@
 import {
   Dom, gsap
-} from '@univers-agency/jupiter'
+} from '@brandocms/jupiter'
 
 export default () => ({
   logoColor: '#000',
