@@ -51,6 +51,7 @@ defmodule Brando.GraphQL.Schema do
       import_fields :revision_queries
       import_fields :seo_queries
       import_fields :global_queries
+      import_fields :blueprint_queries
     end
   end
 end

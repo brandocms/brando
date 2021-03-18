@@ -33,7 +33,13 @@ locals_without_parens = [
   view_module: 1,
   view_template: 1,
   template_section: 1,
-  template_prop: 1
+  template_prop: 1,
+  # blueprints
+  application: 1,
+  domain: 1,
+  schema: 1,
+  singular: 1,
+  plural: 1
 ]
 
 [

@@ -2,6 +2,7 @@ defmodule Brando.GraphQL.Schema.Types do
   use Brando.Web, :absinthe
 
   # brando types
+  import_types Brando.GraphQL.Schema.Types.Blueprint
   import_types Brando.GraphQL.Schema.Types.Common
   import_types Brando.GraphQL.Schema.Types.Files
   import_types Brando.GraphQL.Schema.Types.Identity
