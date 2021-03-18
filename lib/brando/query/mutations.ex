@@ -45,16 +45,20 @@ defmodule Brando.Query.Mutations do
          {:ok, entry} <- Query.update(changeset),
          {:ok, _} <- Datasource.update_datasource(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
-      if Revisions.is_revisioned(module) do
-        Revisions.create_revision(entry, user)
-      end
+      if has_changes(changeset) do
+        if Revisions.is_revisioned(module) do
+          Revisions.create_revision(entry, user)
+        end
 
-      case Schema.identifier_for(entry) do
-        nil -> nil
-        identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
-      end
+        case Schema.identifier_for(entry) do
+          nil -> nil
+          identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
+        end
 
-      callback_block.(entry)
+        callback_block.(entry)
+      else
+        {:ok, entry}
+      end
     else
       err -> err
     end
@@ -86,4 +90,7 @@ defmodule Brando.Query.Mutations do
 
     callback_block.(entry)
   end
+
+  defp has_changes(%Ecto.Changeset{changes: changes}) when map_size(changes) > 0, do: true
+  defp has_changes(_), do: false
 end
