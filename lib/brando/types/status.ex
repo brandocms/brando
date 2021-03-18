@@ -4,9 +4,10 @@ defmodule Brando.Type.Status do
   """
 
   use Ecto.Type
+  import Brando.Gettext
 
+  @type status :: :disabled | :draft | :pending | :published
   @status_codes [draft: 0, published: 1, pending: 2, disabled: 3]
-
   @doc """
   Returns the internal type representation of our `Role` type for pg
   """
@@ -34,6 +35,12 @@ defmodule Brando.Type.Status do
   # Cast anything else is a failure
   def cast(_), do: :error
 
+  @spec translate(status) :: binary
+  def translate(:draft), do: gettext("draft")
+  def translate(:published), do: gettext("published")
+  def translate(:pending), do: gettext("pending")
+  def translate(:disabled), do: gettext("disabled")
+
   # Integers are never considered blank
   def blank?(_), do: false
 
@@ -60,5 +67,7 @@ defmodule Brando.Type.Status do
   def dump(integer) when is_integer(integer), do: {:ok, integer}
   def dump(_), do: :error
 
+  # just a dummy to establish :published_and_pending as an existing atom
+  # so we don't fail in String.to_existing_atom
   def dummy(:published_and_pending), do: nil
 end
