@@ -9,9 +9,41 @@ defmodule Brando.Blueprint do
   alias Brando.Blueprint
 
   defmacro __using__(_) do
+    require Logger
+    Logger.error("==> using")
+
     quote do
+      require Logger
+      Logger.error("==> using quote begin")
       import Brando.Blueprint
+      import Brando.Blueprint.Naming
+      Module.register_attribute(__MODULE__, :naming, [])
       var!(config) = %Brando.Blueprint{}
+      var!(traits) = []
+      @before_compile unquote(__MODULE__)
+      Logger.error("==> using quote end")
+    end
+  end
+
+  defmacro __before_compile__(env) do
+    naming = Module.get_attribute(env.module, :naming)
+    require Logger
+    Logger.error("==> before_compile")
+
+    quote do
+      require Logger
+      Logger.error("==> before_compile quote")
+      Logger.error(unquote(__MODULE__).__application__())
+
+      def __naming__ do
+        Macro.escape(@naming)
+      end
+    end
+  end
+
+  defmacro trait(name) do
+    quote do
+      List.insert_at(var!(traits), 0, unquote(name))
     end
   end
 
@@ -47,36 +79,6 @@ defmodule Brando.Blueprint do
     }
 
     Map.merge(blueprint, updates)
-  end
-
-  defmacro application(value) do
-    quote do
-      var!(config) = Map.put(var!(config), :application, unquote(value))
-    end
-  end
-
-  defmacro domain(value) do
-    quote do
-      var!(config) = Map.put(var!(config), :domain, unquote(value))
-    end
-  end
-
-  defmacro schema(value) do
-    quote do
-      var!(config) = Map.put(var!(config), :schema, unquote(value))
-    end
-  end
-
-  defmacro singular(value) do
-    quote do
-      var!(config) = Map.put(var!(config), :singular, unquote(value))
-    end
-  end
-
-  defmacro plural(value) do
-    quote do
-      var!(config) = Map.put(var!(config), :plural, unquote(value))
-    end
   end
 
   defmacro absolute_url(false) do
@@ -131,6 +133,8 @@ defmodule Brando.Blueprint do
       end
     end
   end
+
+  ##
 
   defmacro data_schema(do: block) do
     quote do

@@ -39,7 +39,8 @@ locals_without_parens = [
   domain: 1,
   schema: 1,
   singular: 1,
-  plural: 1
+  plural: 1,
+  trait: 1
 ]
 
 [
