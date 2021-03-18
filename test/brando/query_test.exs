@@ -223,7 +223,7 @@ defmodule Brando.QueryTest do
       pp1 = Factory.params_for(:page)
 
       {:ok, page, :create} = __MODULE__.Context2.create_page(pp1, usr)
-      assert {:ok, _, :update} = __MODULE__.Context2.update_page(page.id, %{path: "bleh"}, usr)
+      assert {:ok, _, :update} = __MODULE__.Context2.update_page(page.id, %{uri: "blehzzz"}, usr)
     end
 
     test "mutation :delete with do block" do
