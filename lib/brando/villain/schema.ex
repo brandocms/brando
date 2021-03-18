@@ -111,16 +111,20 @@ defmodule Brando.Villain.Schema do
     data_field = (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
     html_field = (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
 
-    applied_changes = Ecto.Changeset.apply_changes(changeset)
-    data_src = Map.get(applied_changes, data_field)
+    if Ecto.Changeset.get_change(changeset, data_field) do
+      applied_changes = Ecto.Changeset.apply_changes(changeset)
+      data_src = Map.get(applied_changes, data_field)
 
-    parsed_data =
-      Brando.Villain.parse(data_src, applied_changes,
-        data_field: data_field,
-        html_field: html_field
-      )
+      parsed_data =
+        Brando.Villain.parse(data_src, applied_changes,
+          data_field: data_field,
+          html_field: html_field
+        )
 
-    Ecto.Changeset.put_change(changeset, html_field, parsed_data)
+      Ecto.Changeset.put_change(changeset, html_field, parsed_data)
+    else
+      changeset
+    end
   end
 
   def generate_html(changeset, _), do: changeset
