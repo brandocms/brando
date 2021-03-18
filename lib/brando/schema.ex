@@ -155,11 +155,21 @@ defmodule Brando.Schema do
     {:ok, entry_types}
   end
 
-  def get_context_for(schema) do
-    schema
+  def get_context_for(schema_module) do
+    schema_module
     |> Module.split()
     |> Enum.drop(-1)
     |> Module.concat()
+  end
+
+  @doc """
+  Get singular for `schema_module`
+  """
+  def get_singular_for(schema_module) do
+    schema_module
+    |> Module.split()
+    |> List.last()
+    |> Inflex.underscore()
   end
 
   def list_entries_for(schema) do
