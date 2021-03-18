@@ -39,7 +39,7 @@ defmodule Brando.SoftDelete.Repo do
               Ecto.Schema.t()
 
   defmacro __using__(_opts) do
-    quote do
+    quote location: :keep do
       def maybe_obfuscate(%Ecto.Changeset{data: data} = changeset) do
         obfuscated_fields = changeset.data.__struct__.__soft_delete__(:obfuscated_fields)
 
