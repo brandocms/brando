@@ -32,6 +32,7 @@ defmodule Brando.GraphQL.Schema do
       import_fields :identity_mutations
       import_fields :seo_mutations
       import_fields :global_mutations
+      import_fields :common_mutations
     end
   end
 
