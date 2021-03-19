@@ -132,9 +132,11 @@ defmodule Mix.Tasks.Brando.Install do
     # Repo seeds
     {:eex, "repo/seeds.exs", "priv/repo/seeds.exs"},
 
-    # Master app template.
+    # Layouts
     {:eex, "lib/application_name_web/templates/layout/app.html.eex",
      "lib/application_name_web/templates/layout/app.html.eex"},
+    {:eex, "lib/application_name_web/templates/layout/bare.html.eex",
+     "lib/application_name_web/templates/layout/bare.html.eex"},
 
     # Gettext templates
     {:keep, "priv/static/gettext/backend/nb", "priv/static/gettext/backend/nb/LC_MESSAGES"},
