@@ -188,6 +188,7 @@ defmodule Brando.Villain do
         src: Utils.media_url(image_struct.path),
         thumb: image_struct |> Utils.img_url(:thumb) |> Utils.media_url(),
         sizes: sizes,
+        alt: image_struct.alt,
         title: image_struct.title,
         credits: image_struct.credits,
         inserted_at: image_record.inserted_at,

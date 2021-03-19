@@ -30,6 +30,9 @@ defmodule Brando.Villain.Parser do
   @doc "Parses slideshow"
   @callback slideshow(data :: map, opts :: map) :: binary
 
+  @doc "Parses gallery"
+  @callback gallery(data :: map, opts :: map) :: binary
+
   @doc "Parses divider"
   @callback divider(data :: map, opts :: map) :: binary
 
@@ -513,6 +516,59 @@ defmodule Brando.Villain.Parser do
       end
 
       defoverridable slideshow: 2
+
+      @doc """
+      Gallery
+      """
+      def gallery(%{"images" => images} = data, _) do
+        class = Map.get(data, "class", "")
+        default_srcset = Brando.config(Brando.Images)[:default_srcset]
+
+        items =
+          Enum.map_join(images, "\n", fn img ->
+            title = Map.get(img, "title", nil)
+            credits = Map.get(img, "credits", nil)
+            alt = Map.get(img, "alt", nil)
+            width = Map.get(img, "width", nil)
+            height = Map.get(img, "height", nil)
+            placeholder = Map.get(data, "placeholder", :svg)
+            orientation = (img["width"] > img["height"] && "landscape") || "portrait"
+            caption = render_caption(Map.merge(img, %{"title" => title, "credits" => credits}))
+
+            ptag =
+              picture_tag(img,
+                key: :xlarge,
+                alt: alt,
+                width: true,
+                height: true,
+                placeholder: placeholder,
+                sizes: "auto",
+                srcset: default_srcset,
+                lazyload: true,
+                lightbox: data["lightbox"] || false
+              )
+              |> safe_to_string
+
+            """
+            <div class="picture-wrapper" data-orientation="#{orientation}">
+              #{ptag}
+              #{caption}
+            </div>
+            """
+          end)
+
+        """
+        <div data-gallery="#{class}">
+          <div class="inner">
+            <section data-gallery-items>
+              #{items}
+            </section>
+          </div>
+        </div>
+        """
+      end
+
+      defoverridable gallery: 2
 
       @doc """
       List
