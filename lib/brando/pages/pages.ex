@@ -112,21 +112,7 @@ defmodule Brando.Pages do
   mutation :create, Page
   mutation :update, Page
   mutation :delete, Page
-
-  @doc """
-  Duplicate page
-  """
-  def duplicate_page(page_id, user) do
-    page_id = (is_binary(page_id) && String.to_integer(page_id)) || page_id
-
-    page = get_page!(page_id)
-
-    page
-    |> Map.merge(%{uri: "#{page.uri}_kopi", title: "#{page.title} (kopi)"})
-    |> Map.delete([:id, :children, :parent])
-    |> Map.from_struct()
-    |> create_page(user)
-  end
+  mutation :duplicate, {Page, delete_fields: [:children, :parent], change_fields: [:uri, :title]}
 
   @doc """
   Only gets schemas that are parents
@@ -248,6 +234,7 @@ defmodule Brando.Pages do
   end
 
   mutation :delete, PageFragment
+  mutation :duplicate, {PageFragment, delete_fields: [:parent], change_fields: [:key]}
 
   @doc """
   Get set of fragments by parent key
@@ -335,22 +322,6 @@ defmodule Brando.Pages do
       |> Brando.repo().all
 
     Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)
-  end
-
-  @doc """
-  Duplicate page fragment
-  """
-  @spec duplicate_page_fragment(id, user) :: {:ok, map} | fragment_error
-  def duplicate_page_fragment(fragment_id, user) do
-    fragment_id = (is_binary(fragment_id) && String.to_integer(fragment_id)) || fragment_id
-
-    with {:ok, fragment} <- get_page_fragment(fragment_id) do
-      fragment
-      |> Map.merge(%{key: "#{fragment.key}_kopi"})
-      |> Map.delete([:id, :parent])
-      |> Map.from_struct()
-      |> create_page_fragment(user)
-    end
   end
 
   @doc """

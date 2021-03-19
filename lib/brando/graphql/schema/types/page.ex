@@ -179,16 +179,16 @@ defmodule Brando.GraphQL.Schema.Types.Page do
 
     @desc "Duplicate page"
     field :duplicate_page, type: :page do
-      arg :page_id, :id
+      arg :id, :id
 
       resolve &Brando.Pages.PageResolver.duplicate/2
     end
 
     @desc "Duplicate section"
     field :duplicate_section, type: :page_fragment do
-      arg :section_id, :id
+      arg :id, :id
 
-      resolve &Brando.Pages.PageResolver.duplicate_section/2
+      resolve &Brando.Pages.PageFragmentResolver.duplicate/2
     end
 
     @desc "Duplicate module"

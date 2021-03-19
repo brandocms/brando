@@ -8,6 +8,7 @@ defmodule Brando.Query do
       mutation :create, Post
       mutation :update, Post
       mutation :delete, Post
+      mutation :duplicate, {Post, change_fields: [:title], delete_fields: [:comments]}
       ```
 
   You can pass a function to execute after the mutation is finished:
@@ -25,7 +26,6 @@ defmodule Brando.Query do
       ```
       mutation :update, {Project, preload: [:tags]}
       ```
-
 
   # Select
 
@@ -124,6 +124,12 @@ defmodule Brando.Query do
 
   defmacro mutation(:update, module), do: mutation_update(Macro.expand(module, __CALLER__))
   defmacro mutation(:delete, module), do: mutation_delete(Macro.expand(module, __CALLER__))
+
+  defmacro mutation(:duplicate, {module, opts}),
+    do: mutation_duplicate({Macro.expand(module, __CALLER__), opts})
+
+  defmacro mutation(:duplicate, module),
+    do: mutation_duplicate(Macro.expand(module, __CALLER__))
 
   defmacro mutation(:create, module, do: callback_block),
     do: mutation_create(Macro.expand(module, __CALLER__), callback_block)
@@ -542,6 +548,35 @@ defmodule Brando.Query do
           user,
           unquote(preloads),
           unquote(callback_block)
+        )
+      end
+    end
+  end
+
+  defp mutation_duplicate({module, opts}), do: do_mutation_duplicate(module, opts)
+  defp mutation_duplicate(module), do: do_mutation_duplicate(module, [])
+
+  defp do_mutation_duplicate(module, opts) do
+    singular_schema =
+      module
+      |> Module.split()
+      |> List.last()
+      |> Inflex.underscore()
+
+    quote do
+      @spec unquote(:"duplicate_#{singular_schema}")(
+              integer | binary,
+              Brando.Users.User.t() | :system
+            ) ::
+              {:ok, any} | {:error, Ecto.Changeset.t()}
+      def unquote(:"duplicate_#{singular_schema}")(id, user) do
+        Brando.Query.Mutations.duplicate(
+          __MODULE__,
+          unquote(module),
+          unquote(singular_schema),
+          id,
+          unquote(opts),
+          user
         )
       end
     end

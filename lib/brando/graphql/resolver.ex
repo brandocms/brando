@@ -29,6 +29,13 @@ defmodule Brando.GraphQL.Resolver do
         unquote(context).unquote(:"get_#{singular}")(args)
       end
 
+      if {unquote(:"duplicate_#{singular}"), 2} in unquote(context).__info__(:functions) do
+        @doc false
+        def duplicate(%{id: id}, %{context: %{current_user: user}}) do
+          unquote(context).unquote(:"duplicate_#{singular}")(id, user)
+        end
+      end
+
       @doc false
       def create(%{unquote(:"#{singular}_params") => params}, %{
             context: %{current_user: user}

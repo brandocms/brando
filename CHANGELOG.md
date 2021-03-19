@@ -2,6 +2,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.51.0-dev
 
+* Query: Add `mutation :duplicate`
 * Images: Add `dominant_color` to image struct.
 * Revisions: Adds initial revision support.
 * Publisher: Add Oban job support for scheduled publishing

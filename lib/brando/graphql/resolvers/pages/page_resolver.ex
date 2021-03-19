@@ -6,20 +6,7 @@ defmodule Brando.Pages.PageResolver do
     context: Brando.Pages,
     schema: Brando.Pages.Page
 
-  alias Brando.Pages
   alias Brando.Villain
-
-  @doc """
-  Duplicate page
-  """
-  def duplicate(%{page_id: page_id}, %{context: %{current_user: user}}),
-    do: Pages.duplicate_page(page_id, user)
-
-  @doc """
-  Duplicate section
-  """
-  def duplicate_section(%{section_id: section_id}, %{context: %{current_user: user}}),
-    do: Pages.duplicate_page_fragment(section_id, user)
 
   @doc """
   Duplicate module
