@@ -18,8 +18,16 @@ defmodule Brando.I18n.Helpers do
       def localized(locale, fun, args),
         do: localized_path(locale, fun, args)
 
-      def localized_path(locale, fun, args),
-        do: apply(Brando.helpers(), :"#{locale}_#{fun}", args)
+      if Brando.config(:scope_default_language_routes) do
+        # if the locale is the default language, we use the regular path
+        def localized_path(locale, fun, args) when locale == Brando.config(:default_language) do
+          apply(Brando.helpers(), :"#{fun}", args)
+        end
+      end
+
+      def localized_path(locale, fun, args) do
+        apply(Brando.helpers(), :"#{locale}_#{fun}", args)
+      end
     end
   end
 end
