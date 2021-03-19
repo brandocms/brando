@@ -363,6 +363,16 @@ defmodule Brando.HTMLTest do
            )
            |> safe_to_string ==
              "<picture class=\"avatar\" data-orientation=\"landscape\" data-test-params=\"hepp\" data-test><source media=\"(min-width: 0px) and (max-width: 760px)\" srcset=\"/media/images/avatars/mobile/27i97a.jpeg 700w\"><source srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img alt=\"hepp!\" class=\"img-fluid\" data-test2-params=\"hepp\" src=\"/media/images/avatars/small/27i97a.jpeg\" srcset=\"/media/images/avatars/small/27i97a.jpeg 300w, /media/images/avatars/medium/27i97a.jpeg 500w, /media/images/avatars/large/27i97a.jpeg 700w\" data-test2><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
+
+    assert picture_tag(
+             user.avatar,
+             key: :small,
+             prefix: media_url(),
+             picture_class: "avatar",
+             img_class: "img-fluid"
+           )
+           |> safe_to_string ==
+             "<picture class=\"avatar\" data-orientation=\"landscape\"><img class=\"img-fluid\" src=\"/media/images/avatars/small/27i97a.jpeg\"><noscript><img src=\"/media/images/avatars/small/27i97a.jpeg\"></noscript></picture>"
   end
 
   test "svg_fallback" do

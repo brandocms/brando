@@ -88,6 +88,7 @@ defmodule Brando.HTML.Images do
       end
 
     mq_source_tags = attrs.mq_sources
+
     noscript_tag = content_tag(:noscript, noscript_img_tag)
 
     picture_tag =
@@ -131,7 +132,9 @@ defmodule Brando.HTML.Images do
   end
 
   defp build_source_tags(%{webp: true}, attrs) do
-    if Enum.all?(attrs.source, fn {_k, v} -> v == false end) do
+    # if all source attrs are false (except type, which we don't care about)
+    # drop the source tag
+    if Enum.all?(Keyword.drop(attrs.source, [:type]), fn {_k, v} -> v == false end) do
       ""
     else
       [tag(:source, webp_attrs(attrs.source)), tag(:source, attrs.source)]
@@ -139,7 +142,9 @@ defmodule Brando.HTML.Images do
   end
 
   defp build_source_tags(_, attrs) do
-    if Enum.all?(attrs.source, fn {_k, v} -> v == false end) do
+    # if all source attrs are false (except type, which we don't care about)
+    # drop the source tag
+    if Enum.all?(Keyword.drop(attrs.source, [:type]), fn {_k, v} -> v == false end) do
       ""
     else
       tag(:source, attrs.source)
