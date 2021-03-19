@@ -29,6 +29,8 @@ config :brando,
     [value: "no", text: "Norsk"]
   ],
 
+  scope_default_language_routes: false,
+
   timezone: "Europe/Oslo",
 
   lockdown: true,
