@@ -9,7 +9,7 @@ defmodule Brando.I18n.Helpers do
 
   You can then call
 
-      <a href="<%= localized_path(@language, :page_path, [@conn, :about]) %>"><%= gettext("About") %>
+      <a href="<%= localized_path(@language, :page_path, [@conn, :about]) %>"><%= gettext("About") %></a>
 
   """
   defmacro __using__(_) do
