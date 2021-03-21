@@ -28,6 +28,7 @@ defmodule Brando.Utils.Schema do
   @doc """
   Puts `id` from `user` in the `params` map.
   """
+  @deprecated "Move to using Brando.Traits.Creator instead!"
   @spec put_creator(changeset | map, map | :system) :: changeset
   def put_creator(%Ecto.Changeset{} = cs, :system), do: cs
 

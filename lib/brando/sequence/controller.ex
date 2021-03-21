@@ -9,7 +9,7 @@ defmodule Brando.Sequence.Controller do
       Sequence schema and render :sequence post
       """
       def sequence_post(conn, %{"order" => ids}) do
-        unquote(schema_module).sequence(%{"ids" => ids})
+        Brando.Traits.Sequence.sequence(unquote(schema_module), %{"ids" => ids})
         render(conn, :sequence_post)
       end
     end

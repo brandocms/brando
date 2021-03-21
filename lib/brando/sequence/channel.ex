@@ -19,7 +19,7 @@ defmodule Brando.Sequence.Channel do
     quote generated: true do
       @doc false
       def handle_in("#{unquote(key)}:sequence_#{unquote(key)}", params, socket) do
-        unquote(module).sequence(params)
+        Brando.Traits.Sequence.sequence(unquote(module), params)
         {:reply, {:ok, %{code: 200}}, socket}
       end
     end

@@ -19,6 +19,7 @@ defmodule Brando.VillainTest do
     def media(_, _), do: nil
     def list(_, _), do: nil
     def slideshow(_, _), do: nil
+    def gallery(_, _), do: nil
     def video(_, _), do: nil
     def module(_, _), do: nil
     def comment(_, _), do: nil
@@ -116,6 +117,7 @@ defmodule Brando.VillainTest do
                  thumb: "/media/image/thumb/1.jpg",
                  title: "Title one",
                  width: 300,
+                 alt: nil,
                  webp: false
                }
              ]

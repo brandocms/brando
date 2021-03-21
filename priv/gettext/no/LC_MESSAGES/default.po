@@ -108,11 +108,111 @@ msgid "created"
 msgstr "opprettet"
 
 #, elixir-format
-#: lib/brando/query/mutations.ex:84
+#: lib/brando/query/mutations.ex:124
 msgid "deleted"
 msgstr "slettet"
 
 #, elixir-format
-#: lib/brando/query/mutations.ex:54
+#: lib/brando/query/mutations.ex:55
 msgid "updated"
 msgstr "oppdaterte"
+
+#, elixir-format
+#: lib/brando/blueprints/pages/page.ex:22
+msgid "Advanced configuration"
+msgstr "Avansert konfigurasjon"
+
+#, elixir-format
+#: lib/brando/blueprints/pages/page.ex:60
+msgid "Contents"
+msgstr "Innhold"
+
+#, elixir-format
+#: lib/brando/blueprints/pages/page.ex:52
+msgid "Extra CSS classes"
+msgstr "Ekstra CSS-klasser"
+
+#, elixir-format
+#: lib/brando/blueprints/pages/page.ex:48
+msgid "Homepage"
+msgstr "Nettstedets hovedside"
+
+#, elixir-format
+#: lib/brando/blueprints/pages/page.ex:26
+msgid "Language"
+msgstr "Språk"
+
+#, elixir-format
+#: lib/brando/blueprints/pages/page.ex:65
+msgid "Leave blank if you wish to publish immidiately"
+msgstr "La være blank om du ønsker å publisere umiddelbart"
+
+#, elixir-format
+#: lib/brando/blueprints/pages/page.ex:56
+msgid "Page properties (advanced)"
+msgstr "Sideegenskaper (avansert)"
+
+#, elixir-format
+#: lib/brando/blueprints/pages/page.ex:30
+msgid "Parent page"
+msgstr "Tilhørende side"
+
+#, elixir-format
+#: lib/brando/blueprints/pages/page.ex:44
+msgid "Path for routing"
+msgstr "Lenkemål for siden"
+
+#, elixir-format
+#: lib/brando/blueprints/pages/page.ex:64
+msgid "Publish at"
+msgstr "Publiseringstidspunkt"
+
+#, elixir-format
+#: lib/brando/blueprints/pages/page.ex:38
+msgid "Template"
+msgstr "Sidemal"
+
+#, elixir-format
+#: lib/brando/blueprints/pages/page.ex:34
+msgid "Title"
+msgstr "Tittel"
+
+#, elixir-format
+#: lib/brando/blueprints/pages/page.ex:42
+msgid "URI"
+msgstr "Lenkemål/URI"
+
+#, elixir-format
+#: lib/brando/types/status.ex:42
+msgid "disabled"
+msgstr "deaktivert"
+
+#, elixir-format
+#: lib/brando/types/status.ex:39
+msgid "draft"
+msgstr "utkast"
+
+#, elixir-format
+#: lib/brando/blueprints/pages/page.ex:18
+msgid "page"
+msgstr "side"
+
+#, elixir-format
+#: lib/brando/blueprints/pages/page.ex:19
+msgid "pages"
+msgstr "sider"
+
+#, elixir-format
+#: lib/brando/types/status.ex:41
+msgid "pending"
+msgstr "venter"
+
+#, elixir-format
+#: lib/brando/types/status.ex:40
+msgid "published"
+msgstr "publisert"
+
+#, elixir-format
+#: lib/brando/blueprints/pages/page.ex:43
+msgid "uri/goes/here"
+msgstr "min/lenke/her"

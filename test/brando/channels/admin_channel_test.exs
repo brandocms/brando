@@ -302,7 +302,7 @@ defmodule Brando.AdminChannelTest do
 
       assert_reply ref, :ok, %{
         code: 200,
-        page_fragment: %Brando.Pages.PageFragment{key: "header_kopi"}
+        page_fragment: %Brando.Pages.PageFragment{key: "header_dupl"}
       }
 
       ref = push(socket, "page_fragment:duplicate", %{"id" => 9_999_999_999})

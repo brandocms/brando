@@ -1,50 +1,98 @@
-defmodule Brando.Blueprints.Pages.Page do
-  use Brando.Blueprint
+# defmodule Brando.Blueprints.Pages.Page do
+#   use Brando.Blueprint
+#   import Brando.Gettext
+#   alias Brando.Pages
 
-  application "Brando"
-  # domain "Pages"
-  # schema "Page"
-  # singular "page"
-  # plural "pages"
+#   # traits do
+#   #   trait :meta
+#   #   trait :villain
+#   #   trait :creator
+#   #   trait :scheduled_publishing
+#   #   trait :revisioned
+#   #   trait :sequenced
+#   # end
 
-  # trait :sequence
-  # trait :creator
-  # trait :meta
-  # trait :status
-  # trait :soft_delete
-  # trait :revisions
-end
+#   def identifier(entry), do: entry.name
 
-#   identifier_file = Path.join(:code.priv_dir(:brando), "blueprints/pages/page/identifier.exs")
-#   {ret, _} = Code.eval_file(identifier_file)
+#   def get_absolute_url(routes, endpoint, entry),
+#     do: routes.page_path(endpoint, :show, [entry.uri])
 
-#   require Logger
-#   Logger.error(inspect(ret.(%{name: "Hello hello!"}), pretty: true))
+#   # def data_layer do
+#   #   attributes do
+#   #     attribute :title, :string, max_length: 160
+#   #     attribute :slug, :slug, from: :title
+#   #     attribute :uri, :string
+#   #     attribute :language, :string
+#   #     attribute :template, :string
+#   #     attribute :is_homepage, :boolean
+#   #     attribute :status, :status
+#   #     attribute :css_classes, :string
+#   #     attribute :data, :villain
+#   #   end
 
-#   blueprint do
-#     application "Brando"
-#     domain "Pages"
-#     schema "Page"
-#     singular "page"
-#     plural "pages"
+#   #   relations do
+#   #     belongs_to :parent, __MODULE__
+#   #     has_many :children, __MODULE__, foreign_key: :parent_id
+#   #     has_many :fragments, PageFragment
+#   #     has_many :properties, Property, on_replace: :delete
+#   #   end
+#   # end
 
-#     identifier fn entry -> entry.title end
-
-#     absolute_url fn routes, endpoint, entry ->
-#       (entry.uri == "index" && "/") ||
-#         routes.page_path(endpoint, :show, String.split(entry.uri, "/"))
+#   def translations(:naming) do
+#     translation do
+#       t [:singular], gettext("page")
+#       t [:plural], gettext("pages")
 #     end
+#   end
 
-#     # data_schema do
-#     #   field :name
-#     #   field :email
-#     # end
+#   def translations(:fields) do
+#     translation do
+#       t [:advanced_config] do
+#         t :label, gettext("Advanced configuration")
+#       end
 
-#     # meta_schema do
-#     #   field ["description", "og:description"], [:meta_description]
-#     #   field ["title", "og:title"], &Brando.Meta.Schema.fallback(&1, [:meta_title, :title])
-#     #   field "og:image", [:meta_image]
-#     #   field "og:locale", [:language], &Brando.Meta.Utils.encode_locale/1
-#     # end
+#       t [:language] do
+#         t :label, gettext("Language")
+#       end
+
+#       t [:parent_id] do
+#         t :label, gettext("Parent page")
+#       end
+
+#       t [:title] do
+#         t :label, gettext("Title")
+#       end
+
+#       t [:template] do
+#         t :label, gettext("Template")
+#       end
+
+#       t [:uri] do
+#         t :label, gettext("URI")
+#         t :placeholder, gettext("uri/goes/here")
+#         t :instructions, gettext("Path for routing")
+#       end
+
+#       t [:is_homepage] do
+#         t :label, gettext("Homepage")
+#       end
+
+#       t [:css_classes] do
+#         t :label, gettext("Extra CSS classes")
+#       end
+
+#       t [:properties] do
+#         t :label, gettext("Page properties (advanced)")
+#       end
+
+#       t [:data] do
+#         t :label, gettext("Contents")
+#       end
+
+#       t [:publish_at] do
+#         t :label, gettext("Publish at")
+#         t :instructions, gettext("Leave blank if you wish to publish immidiately")
+#       end
+#     end
 #   end
 # end

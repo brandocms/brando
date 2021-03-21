@@ -40,7 +40,13 @@ locals_without_parens = [
   schema: 1,
   singular: 1,
   plural: 1,
-  trait: 1
+  trait: 1,
+  trait: 2,
+  t: 2,
+  attribute: 2,
+  attribute: 3,
+  relation: 2,
+  relation: 3
 ]
 
 [

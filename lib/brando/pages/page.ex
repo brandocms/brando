@@ -7,15 +7,34 @@ defmodule Brando.Pages.Page do
   @type user :: Brando.Users.User.t() | :system
 
   use Brando.Web, :schema
+  # use Brando.Blueprint
   use Brando.Schema
   use Brando.Field.Image.Schema
   use Brando.Meta.Schema
-  use Brando.Sequence.Schema
   use Brando.SoftDelete.Schema, obfuscated_fields: [:uri]
   use Brando.Villain.Schema
   use Brando.Revisions.Schema
+  use Brando.Sequence.Schema
 
   alias Brando.JSONLD
+
+  # # ++ Naming
+  # application "MyApp"
+  # domain "Projects"
+  # schema "Project"
+  # singular "project"
+  # plural "projects"
+  # # --
+
+  # # ++ Traits
+  # trait :sequence
+  # trait :soft_delete, obfuscated_fields: [:uri]
+  # trait :revisions
+  # trait :meta
+  # # --
+
+  meta :en, singular: "page", plural: "pages"
+  meta :no, singular: "side", plural: "sider"
 
   @required_fields ~w(uri language title data status template creator_id)a
   @optional_fields ~w(parent_id meta_title meta_description meta_image html is_homepage css_classes sequence deleted_at publish_at)a
@@ -45,9 +64,9 @@ defmodule Brando.Pages.Page do
 
   @derive {Jason.Encoder, only: @derived_fields}
   schema "pages_pages" do
+    field :title, :string
     field :uri, :string
     field :language, :string
-    field :title, :string
     field :template, :string
     field :is_homepage, :boolean
     villain()
@@ -62,7 +81,7 @@ defmodule Brando.Pages.Page do
     has_many :fragments, Brando.Pages.PageFragment
     has_many :properties, Brando.Pages.Property, on_replace: :delete
 
-    sequenced()
+    field :sequence, :integer, default: 0
     timestamps()
     soft_delete()
   end
@@ -79,9 +98,6 @@ defmodule Brando.Pages.Page do
       "xlarge" => %{"size" => "1200x630", "quality" => 75, "crop" => true}
     }
   }
-
-  meta :en, singular: "page", plural: "pages"
-  meta :no, singular: "side", plural: "sider"
 
   identifier fn entry -> entry.title end
 

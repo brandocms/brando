@@ -1,164 +1,256 @@
 defmodule Brando.Blueprint do
-  defstruct application: nil,
-            domain: nil,
-            schema: nil,
-            meta: %{},
-            identifier_fn: nil,
-            absolute_url_fn: nil
-
-  alias Brando.Blueprint
-
   defmacro __using__(_) do
-    require Logger
-    Logger.error("==> using")
-
-    quote do
-      require Logger
-      Logger.error("==> using quote begin")
-      import Brando.Blueprint
-      import Brando.Blueprint.Naming
-      Module.register_attribute(__MODULE__, :naming, [])
-      var!(config) = %Brando.Blueprint{}
-      var!(traits) = []
-      @before_compile unquote(__MODULE__)
-      Logger.error("==> using quote end")
-    end
-  end
-
-  defmacro __before_compile__(env) do
-    naming = Module.get_attribute(env.module, :naming)
-    require Logger
-    Logger.error("==> before_compile")
-
-    quote do
-      require Logger
-      Logger.error("==> before_compile quote")
-      Logger.error(unquote(__MODULE__).__application__())
-
-      def __naming__ do
-        Macro.escape(@naming)
-      end
-    end
-  end
-
-  defmacro trait(name) do
-    quote do
-      List.insert_at(var!(traits), 0, unquote(name))
-    end
-  end
-
-  defmacro blueprint(do: block) do
     quote location: :keep do
-      result = unquote(block)
-      str = var!(config)
-      @blueprint Brando.Blueprint.process_blueprint(str)
+      require Logger
+      Logger.error("==> setting @traits []")
+      @traits []
+      @attributes []
+      @relations []
 
-      def __blueprint__ do
-        @blueprint
-      end
-    end
-  end
+      @before_compile Brando.Blueprint
 
-  def process_blueprint(blueprint) do
-    source_module =
-      Module.concat([blueprint.application, :Blueprints, blueprint.domain, blueprint.schema])
+      import unquote(__MODULE__)
+      import unquote(__MODULE__).Trait
+      import unquote(__MODULE__).Naming
+      import unquote(__MODULE__).Translations
 
-    schema_module = Module.concat([blueprint.application, blueprint.domain, blueprint.schema])
-    context_module = Module.concat([blueprint.application, blueprint.domain])
+      use Ecto.Schema
+      use Brando.JSONLD.Schema
 
-    blueprint_modules = %Blueprint.Modules{
-      blueprint: source_module,
-      schema: schema_module,
-      context: context_module
-    }
+      import Ecto
+      import Ecto.Changeset
+      import Ecto.Query, only: [from: 1, from: 2]
+      import Brando.Utils.Schema
 
-    updates = %{
-      modules: blueprint_modules,
-      identifier_fn: &source_module.__identifier__/1,
-      absolute_url_fn: &source_module.__absolute_url__/1
-    }
+      def __relations__, do: []
+      defoverridable __relations__: 0
 
-    Map.merge(blueprint, updates)
-  end
+      def __modules__ do
+        application_module =
+          Module.concat([
+            apply(__MODULE__, :__application__, [])
+          ])
 
-  defmacro absolute_url(false) do
-    quote do
-      def __absolute_url__(_) do
-        false
-      end
-    end
-  end
+        context_module =
+          Module.concat([
+            apply(__MODULE__, :__application__, []),
+            apply(__MODULE__, :__domain__, [])
+          ])
 
-  defmacro absolute_url(fun) do
-    quote do
-      def __absolute_url__(entry) do
-        routes = Brando.helpers()
-        endpoint = Brando.endpoint()
-
-        try do
-          unquote(fun).(routes, endpoint, entry)
-        rescue
-          _ -> nil
-        end
-      end
-    end
-  end
-
-  defmacro identifier(false) do
-    quote do
-      def __identifier__(_) do
-        nil
-      end
-    end
-  end
-
-  defmacro identifier(fun) do
-    quote do
-      def __identifier__(entry) do
-        title = unquote(fun).(entry)
-        type = __MODULE__.__blueprint__().singular
-        status = Map.get(entry, :status, nil)
-        absolute_url = __MODULE__.__absolute_url__(entry)
-        cover = Brando.Schema.extract_cover(entry)
+        schema_module =
+          Module.concat([
+            apply(__MODULE__, :__application__, []),
+            apply(__MODULE__, :__domain__, []),
+            apply(__MODULE__, :__schema__, [])
+          ])
 
         %{
-          id: entry.id,
-          title: title,
-          type: type,
-          status: status,
-          absolute_url: absolute_url,
-          cover: cover,
-          schema: __MODULE__
+          application: application_module,
+          context: context_module,
+          schema: schema_module
         }
       end
+
+      def __modules__(type), do: Map.get(__modules__(), type)
+
+      # generate changeset
+      def test_changeset(schema, params \\ %{}, user \\ :system) do
+        schema
+        # @required_attrs ++ @optional_attrs
+        |> cast(params, __required_attrs__() ++ __optional_attrs__())
+        # |> cast_assoc(:properties)
+        |> Brando.Trait.run_changeset_mutators(__MODULE__, __traits__(), user)
+
+        # |> validate_required(@required_fields)
+        # |> avoid_field_collision([:uri], &filter_by_language/1)
+        # |> unique_constraint([:uri, :language])
+        # |> validate_upload({:image, :meta_image}, user)
+        # |> generate_html()
+      end
     end
   end
 
-  ##
-
-  defmacro data_schema(do: block) do
+  def build_attr(attr) do
     quote do
-      var!(macro_ctx) = :data_schema
-      unquote(block)
+      field unquote(attr.name), unquote(attr.type)
     end
   end
 
-  defmacro meta_schema(do: block) do
+  def build_relation(%{type: :belongs_to, opts: opts, name: name}) do
     quote do
-      var!(macro_ctx) = :meta_schema
-      unquote(block)
+      belongs_to unquote(name), unquote(opts.module)
     end
   end
 
-  defmacro field(name) do
+  defmacro build_schema(name, attrs, relations) do
     quote do
-      if var!(macro_ctx) == :schema do
-        var!(config)
+      schema unquote(name) do
+        Enum.map(unquote(attrs), fn
+          %{type: :slug, name: name, opts: opts} ->
+            Ecto.Schema.field(name, :string)
+
+          %{type: :datetime, name: name, opts: opts} ->
+            Ecto.Schema.field(name, :utc_datetime)
+
+          attr ->
+            Ecto.Schema.field(attr.name, attr.type)
+        end)
+
+        Enum.map(unquote(relations), fn
+          %{type: :belongs_to, name: name, opts: opts} ->
+            Ecto.Schema.belongs_to(name, Keyword.fetch!(opts, :module))
+
+          attr ->
+            require Logger
+            Logger.error(inspect(attr, pretty: true))
+        end)
+      end
+    end
+  end
+
+  def get_required_attrs(attrs) do
+    attrs
+    |> Enum.filter(&Keyword.get(&1.opts, :required))
+    |> Enum.map(& &1.name)
+  end
+
+  def get_optional_attrs(attrs) do
+    attrs
+    |> Enum.reject(&Keyword.get(&1.opts, :required))
+    |> Enum.map(& &1.name)
+  end
+
+  def get_required_relations(rels) do
+    rels
+    |> Enum.filter(&Keyword.get(&1.opts, :required))
+    |> Enum.map(&get_relation_key/1)
+  end
+
+  def get_relation_key(%{type: :belongs_to, name: name}), do: :"#{name}_id"
+
+  defmacro __before_compile__(_) do
+    quote do
+      if Module.get_attribute(__MODULE__, :domain) == nil, do: raise("Missing domain/1")
+      if Module.get_attribute(__MODULE__, :plural) == nil, do: raise("Missing plural/1")
+
+      def has_trait(key), do: key in @traits
+      require Logger
+      Logger.error("==> defining __traits__ :/")
+      def __traits__, do: Enum.reverse(@traits)
+
+      @required_attrs Brando.Blueprint.get_required_attrs(@attrs) ++
+                        Brando.Blueprint.get_required_relations(@relations)
+      def __required_attrs__ do
+        @required_attrs
       end
 
-      if var!(macro_ctx) == :meta_schema do
-        var!(config)
+      @optional_attrs Brando.Blueprint.get_optional_attrs(@attrs)
+      def __optional_attrs__ do
+        @optional_attrs
       end
+
+      @villain_fields Enum.filter(@attrs, &(&1.type == :villain))
+      def __villain_fields__ do
+        @villain_fields
+      end
+
+      def __image_fields__ do
+        Enum.filter(@attrs, &(&1.type == :image))
+      end
+
+      def __video_fields__ do
+        Enum.filter(@attrs, &(&1.type == :video))
+      end
+
+      def __slug_fields__ do
+        Enum.filter(@attrs, &(&1.type == :video))
+      end
+
+      build_schema("#{String.downcase(@domain)}_#{@plural}", @attrs, @relations)
+    end
+  end
+
+  @valid_attributes [
+    :array,
+    :boolean,
+    :date,
+    :datetime,
+    :decimal,
+    :file,
+    :float,
+    :gallery,
+    :image,
+    :integer,
+    :map,
+    :slug,
+    :status,
+    :string,
+    :text,
+    :time,
+    :uuid,
+    :video,
+    :villain
+  ]
+  defp validate_attr!(type) when type in @valid_attributes, do: true
+
+  defp validate_attr!(type),
+    do: raise("Unknown type `#{inspect(type)}` given in blueprint")
+
+  defmacro attributes(do: block) do
+    quote generated: true, location: :keep do
+      var!(attribute_list) = []
+      unquote(block)
+      require Logger
+      Logger.error("==> get_attributes(@traits)")
+      @attrs Enum.reverse(var!(attribute_list)) ++ Brando.Trait.get_attributes(@traits)
+
+      def __attributes__ do
+        require Logger
+        Logger.error("==> __attributes__() called!")
+        @attrs
+      end
+    end
+  end
+
+  defmacro attribute(name, type, opts \\ []) do
+    validate_attr!(type)
+
+    quote location: :keep do
+      field = %{
+        name: unquote(name),
+        type: unquote(type),
+        opts: unquote(opts)
+      }
+
+      var!(attribute_list) = [field | var!(attribute_list)]
+    end
+  end
+
+  defmacro relations(do: block) do
+    quote location: :keep do
+      var!(relations_list) = []
+      unquote(block)
+      require Logger
+      Logger.error("==> get_relations(@traits)")
+      @relations Enum.reverse(var!(relations_list)) ++ Brando.Trait.get_relations(@traits)
+
+      def __relations__ do
+        require Logger
+        Logger.error("==> __relations__() called!")
+        @relations
+      end
+    end
+  end
+
+  defmacro relation(name, type, opts \\ []) do
+    quote location: :keep do
+      field = %{
+        name: unquote(name),
+        type: unquote(type),
+        opts: unquote(opts)
+      }
+
+      var!(relations_list) = [field | var!(relations_list)]
     end
   end
 end

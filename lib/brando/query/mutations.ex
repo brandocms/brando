@@ -65,18 +65,23 @@ defmodule Brando.Query.Mutations do
   end
 
   def duplicate(context, _module, name, id, opts, user) do
-    {:ok, entry} = apply(context, :"get_#{name}", [id])
-    opts = Enum.into(opts, %{})
+    case apply(context, :"get_#{name}", [id]) do
+      {:ok, entry} ->
+        opts = Enum.into(opts, %{})
 
-    params =
-      entry
-      |> maybe_change_fields(opts)
-      |> maybe_delete_fields(opts)
-      |> maybe_set_status()
-      |> Map.from_struct()
-      |> drop_id()
+        params =
+          entry
+          |> maybe_change_fields(opts)
+          |> maybe_delete_fields(opts)
+          |> maybe_set_status()
+          |> Map.from_struct()
+          |> drop_id()
 
-    apply(context, :"create_#{name}", [params, user])
+        apply(context, :"create_#{name}", [params, user])
+
+      err ->
+        err
+    end
   end
 
   defp drop_id(%{id: _} = entry), do: Map.drop(entry, [:id])

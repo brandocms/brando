@@ -48,40 +48,5 @@ translation :messages do
 end
 
 translation :fields do
-  t :advanced_config do
-    label "Advanced configuration"
-  end
-  t :language do
-    label "Language"
-  end
-  t :parent_id do
-    label "Parent page"
-  end
-  t :title do
-    label "Title"
-  end
-  t :template do
-    label "Template"
-  end
-  t :uri do
-    label "URI"
-    placeholder "uri/goes/here"
-    instructions "Path for routing"
-  end
-  t :is_homepage do
-    label "Homepage"
-  end
-  t :css_classes do
-    label "Extra CSS classes"
-  end
-  t :properties do
-    label "Page properties (advanced)"
-  end
-  t :data do
-    label "Contents"
-  end
-  t :publish_at do
-    label "Publish at"
-    instructions "Leave blank if you wish to publish immidiately"
-  end
+
 end
