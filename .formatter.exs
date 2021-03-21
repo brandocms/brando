@@ -46,7 +46,8 @@ locals_without_parens = [
   attribute: 2,
   attribute: 3,
   relation: 2,
-  relation: 3
+  relation: 3,
+  extra_field: 3
 ]
 
 [

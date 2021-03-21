@@ -1,16 +1,14 @@
 defmodule Brando.Blueprint do
   defmacro __using__(_) do
     quote location: :keep do
-      require Logger
-      Logger.error("==> setting @traits []")
+      # Module.register_attribute(__MODULE__, :traits, accumulate: true)
       @traits []
-      @attributes []
-      @relations []
 
       @before_compile Brando.Blueprint
 
       import unquote(__MODULE__)
       import unquote(__MODULE__).Trait
+      import unquote(__MODULE__).DataLayer
       import unquote(__MODULE__).Naming
       import unquote(__MODULE__).Translations
 
@@ -21,9 +19,6 @@ defmodule Brando.Blueprint do
       import Ecto.Changeset
       import Ecto.Query, only: [from: 1, from: 2]
       import Brando.Utils.Schema
-
-      def __relations__, do: []
-      defoverridable __relations__: 0
 
       def __modules__ do
         application_module =
@@ -130,21 +125,33 @@ defmodule Brando.Blueprint do
 
   defmacro __before_compile__(_) do
     quote do
+      def __attributes__ do
+        Enum.reverse(@attrs) ++ Brando.Trait.get_attributes(@traits)
+      end
+
+      def __relations__ do
+        Enum.reverse(@relations) ++ Brando.Trait.get_relations(@traits)
+      end
+
       if Module.get_attribute(__MODULE__, :domain) == nil, do: raise("Missing domain/1")
       if Module.get_attribute(__MODULE__, :plural) == nil, do: raise("Missing plural/1")
 
       def has_trait(key), do: key in @traits
-      require Logger
-      Logger.error("==> defining __traits__ :/")
       def __traits__, do: Enum.reverse(@traits)
 
-      @required_attrs Brando.Blueprint.get_required_attrs(@attrs) ++
-                        Brando.Blueprint.get_required_relations(@relations)
+      @required_attrs Brando.Blueprint.get_required_attrs(
+                        Enum.reverse(@attrs) ++ Brando.Trait.get_attributes(@traits)
+                      ) ++
+                        Brando.Blueprint.get_required_relations(
+                          Enum.reverse(@relations) ++ Brando.Trait.get_relations(@traits)
+                        )
       def __required_attrs__ do
         @required_attrs
       end
 
-      @optional_attrs Brando.Blueprint.get_optional_attrs(@attrs)
+      @optional_attrs Brando.Blueprint.get_optional_attrs(
+                        Enum.reverse(@attrs) ++ Brando.Trait.get_attributes(@traits)
+                      )
       def __optional_attrs__ do
         @optional_attrs
       end
@@ -166,91 +173,11 @@ defmodule Brando.Blueprint do
         Enum.filter(@attrs, &(&1.type == :video))
       end
 
-      build_schema("#{String.downcase(@domain)}_#{@plural}", @attrs, @relations)
-    end
-  end
-
-  @valid_attributes [
-    :array,
-    :boolean,
-    :date,
-    :datetime,
-    :decimal,
-    :file,
-    :float,
-    :gallery,
-    :image,
-    :integer,
-    :map,
-    :slug,
-    :status,
-    :string,
-    :text,
-    :time,
-    :uuid,
-    :video,
-    :villain
-  ]
-  defp validate_attr!(type) when type in @valid_attributes, do: true
-
-  defp validate_attr!(type),
-    do: raise("Unknown type `#{inspect(type)}` given in blueprint")
-
-  defmacro attributes(do: block) do
-    quote generated: true, location: :keep do
-      var!(attribute_list) = []
-      unquote(block)
-      require Logger
-      Logger.error("==> get_attributes(@traits)")
-      @attrs Enum.reverse(var!(attribute_list)) ++ Brando.Trait.get_attributes(@traits)
-
-      def __attributes__ do
-        require Logger
-        Logger.error("==> __attributes__() called!")
-        @attrs
-      end
-    end
-  end
-
-  defmacro attribute(name, type, opts \\ []) do
-    validate_attr!(type)
-
-    quote location: :keep do
-      field = %{
-        name: unquote(name),
-        type: unquote(type),
-        opts: unquote(opts)
-      }
-
-      var!(attribute_list) = [field | var!(attribute_list)]
-    end
-  end
-
-  defmacro relations(do: block) do
-    quote location: :keep do
-      var!(relations_list) = []
-      unquote(block)
-      require Logger
-      Logger.error("==> get_relations(@traits)")
-      @relations Enum.reverse(var!(relations_list)) ++ Brando.Trait.get_relations(@traits)
-
-      def __relations__ do
-        require Logger
-        Logger.error("==> __relations__() called!")
-        @relations
-      end
-    end
-  end
-
-  defmacro relation(name, type, opts \\ []) do
-    quote location: :keep do
-      field = %{
-        name: unquote(name),
-        type: unquote(type),
-        opts: unquote(opts)
-      }
-
-      var!(relations_list) = [field | var!(relations_list)]
+      build_schema(
+        "#{String.downcase(@domain)}_#{@plural}",
+        Enum.reverse(@attrs) ++ Brando.Trait.get_attributes(@traits),
+        Enum.reverse(@relations) ++ Brando.Trait.get_relations(@traits)
+      )
     end
   end
 end

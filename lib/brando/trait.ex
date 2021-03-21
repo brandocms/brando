@@ -6,18 +6,38 @@ defmodule Brando.Trait do
   @callback changeset_mutator(module, changeset, user) :: changeset
 
   defmacro __using__(_) do
-    quote do
+    quote location: :keep do
+      @before_compile Brando.Trait
       @behaviour Brando.Trait
-      import Brando.Blueprint
+      import Brando.Trait
+      import Brando.Blueprint.DataLayer
 
       def changeset_mutator(_module, changeset, _user), do: changeset
       defoverridable changeset_mutator: 3
+    end
+  end
 
-      def __attributes__, do: []
-      defoverridable __attributes__: 0
+  defmacro __before_compile__(_) do
+    quote do
+      if Module.get_attribute(__MODULE__, :attrs) do
+        def __attributes__ do
+          @attrs
+        end
+      else
+        def __attributes__ do
+          []
+        end
+      end
 
-      def __relations__, do: []
-      defoverridable __relations__: 0
+      if Module.get_attribute(__MODULE__, :relations) do
+        def __relations__ do
+          @relations
+        end
+      else
+        def __relations__ do
+          []
+        end
+      end
     end
   end
 
@@ -38,9 +58,6 @@ defmodule Brando.Trait do
   def get_attributes(nil), do: []
 
   def get_attributes(traits) do
-    require Logger
-    Logger.error("==> here we ask for trait.__attributes__()")
-
     Enum.reduce(traits, [], fn trait, rf ->
       trait.__attributes__() ++ rf
     end)
