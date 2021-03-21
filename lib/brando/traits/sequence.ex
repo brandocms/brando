@@ -17,11 +17,11 @@ defmodule Brando.Traits.Sequence do
 
   With composite keys:
 
-      sequence %{"composite_keys" => [%{"id" => 1, "additional_id" => 2}, %{...}]}
+      sequence %{module, "composite_keys" => [%{"id" => 1, "additional_id" => 2}, %{...}]}
 
   With regular ids
 
-      sequence %{"ids" => [3, 5, 1]}
+      sequence %{module, "ids" => [3, 5, 1]}
 
   """
   def sequence(module, %{"composite_keys" => composite_keys}) do

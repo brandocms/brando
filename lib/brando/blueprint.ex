@@ -20,34 +20,6 @@ defmodule Brando.Blueprint do
       import Ecto.Query, only: [from: 1, from: 2]
       import Brando.Utils.Schema
 
-      def __modules__ do
-        application_module =
-          Module.concat([
-            apply(__MODULE__, :__application__, [])
-          ])
-
-        context_module =
-          Module.concat([
-            apply(__MODULE__, :__application__, []),
-            apply(__MODULE__, :__domain__, [])
-          ])
-
-        schema_module =
-          Module.concat([
-            apply(__MODULE__, :__application__, []),
-            apply(__MODULE__, :__domain__, []),
-            apply(__MODULE__, :__schema__, [])
-          ])
-
-        %{
-          application: application_module,
-          context: context_module,
-          schema: schema_module
-        }
-      end
-
-      def __modules__(type), do: Map.get(__modules__(), type)
-
       # generate changeset
       def test_changeset(schema, params \\ %{}, user \\ :system) do
         schema
@@ -81,14 +53,8 @@ defmodule Brando.Blueprint do
     quote do
       schema unquote(name) do
         Enum.map(unquote(attrs), fn
-          %{type: :slug, name: name, opts: opts} ->
-            Ecto.Schema.field(name, :string)
-
-          %{type: :datetime, name: name, opts: opts} ->
-            Ecto.Schema.field(name, :utc_datetime)
-
           attr ->
-            Ecto.Schema.field(attr.name, attr.type)
+            Ecto.Schema.field(attr.name, to_ecto_type(attr.type))
         end)
 
         Enum.map(unquote(relations), fn
@@ -124,53 +90,94 @@ defmodule Brando.Blueprint do
   def get_relation_key(%{type: :belongs_to, name: name}), do: :"#{name}_id"
 
   defmacro __before_compile__(_) do
-    quote do
+    quote location: :keep do
+      @all_attributes Enum.reverse(@attrs) ++ Brando.Trait.get_attributes(@traits)
       def __attributes__ do
-        Enum.reverse(@attrs) ++ Brando.Trait.get_attributes(@traits)
+        @all_attributes
       end
 
+      @all_relations Enum.reverse(@relations) ++ Brando.Trait.get_relations(@traits)
       def __relations__ do
-        Enum.reverse(@relations) ++ Brando.Trait.get_relations(@traits)
+        @all_relations
       end
 
       if Module.get_attribute(__MODULE__, :domain) == nil, do: raise("Missing domain/1")
       if Module.get_attribute(__MODULE__, :plural) == nil, do: raise("Missing plural/1")
 
       def has_trait(key), do: key in @traits
-      def __traits__, do: Enum.reverse(@traits)
 
-      @required_attrs Brando.Blueprint.get_required_attrs(
-                        Enum.reverse(@attrs) ++ Brando.Trait.get_attributes(@traits)
-                      ) ++
-                        Brando.Blueprint.get_required_relations(
-                          Enum.reverse(@relations) ++ Brando.Trait.get_relations(@traits)
-                        )
+      @all_traits Enum.reverse(@traits)
+      def __traits__, do: @all_traits
+
+      @required_attrs Brando.Blueprint.get_required_attrs(@all_attributes)
+      @required_relations Brando.Blueprint.get_required_relations(@all_relations)
+
+      @all_required_attrs @required_attrs ++ @required_relations
       def __required_attrs__ do
-        @required_attrs
+        @all_required_attrs
       end
 
-      @optional_attrs Brando.Blueprint.get_optional_attrs(
-                        Enum.reverse(@attrs) ++ Brando.Trait.get_attributes(@traits)
-                      )
+      @optional_attrs Brando.Blueprint.get_optional_attrs(@all_attributes)
       def __optional_attrs__ do
         @optional_attrs
       end
+
+      def __naming__ do
+        %{
+          application: @application,
+          domain: @domain,
+          schema: @schema,
+          singular: @singular,
+          plural: @plural
+        }
+      end
+
+      def __modules__ do
+        application_module =
+          Module.concat([
+            @application
+          ])
+
+        context_module =
+          Module.concat([
+            @application,
+            @domain
+          ])
+
+        schema_module =
+          Module.concat([
+            @application,
+            @domain,
+            @schema
+          ])
+
+        %{
+          application: application_module,
+          context: context_module,
+          schema: schema_module
+        }
+      end
+
+      def __modules__(type), do: Map.get(__modules__(), type)
 
       @villain_fields Enum.filter(@attrs, &(&1.type == :villain))
       def __villain_fields__ do
         @villain_fields
       end
 
+      @image_fields Enum.filter(@attrs, &(&1.type == :image))
       def __image_fields__ do
-        Enum.filter(@attrs, &(&1.type == :image))
+        @image_fields
       end
 
+      @video_fields Enum.filter(@attrs, &(&1.type == :video))
       def __video_fields__ do
-        Enum.filter(@attrs, &(&1.type == :video))
+        @video_fields
       end
 
+      @slug_fields Enum.filter(@attrs, &(&1.type == :slug))
       def __slug_fields__ do
-        Enum.filter(@attrs, &(&1.type == :video))
+        @slug_fields
       end
 
       build_schema(

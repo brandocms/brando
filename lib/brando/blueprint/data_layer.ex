@@ -89,4 +89,13 @@ defmodule Brando.Blueprint.DataLayer do
       Module.put_attribute(__MODULE__, :relations, rel)
     end
   end
+
+  def to_ecto_type(:text), do: :string
+  def to_ecto_type(:status), do: Brando.Type.Status
+  def to_ecto_type(:image), do: Brando.Type.Image
+  def to_ecto_type(:video), do: Brando.Type.Video
+  def to_ecto_type(:villain), do: :map
+  def to_ecto_type(:slug), do: :string
+  def to_ecto_type(:datetime), do: :utc_datetime
+  def to_ecto_type(type), do: type
 end

@@ -3,11 +3,8 @@ defmodule Brando.Traits.Status do
   Adds `deleted_at`
   """
   use Brando.Trait
-  alias Ecto.Changeset
 
-  @type changeset :: Changeset.t()
-
-  def fields do
-    # field :status, Brando.Type.Status
+  attributes do
+    attribute :status, :status, required: true
   end
 end

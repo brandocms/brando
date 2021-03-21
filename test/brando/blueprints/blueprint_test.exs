@@ -45,16 +45,6 @@ defmodule Brando.Blueprint.BlueprintTest do
            ]
   end
 
-  test "creator trait exposes relationship" do
-    assert Brando.Traits.Creator.__relations__() == [
-             %{
-               name: :creator,
-               opts: [module: Brando.Users.User, required: true],
-               type: :belongs_to
-             }
-           ]
-  end
-
   test "changeset mutators" do
     mutated_cs =
       __MODULE__.Project.test_changeset(%__MODULE__.Project{}, %{title: "my title"}, %{id: 1})
