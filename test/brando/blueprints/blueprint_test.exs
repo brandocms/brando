@@ -47,7 +47,11 @@ defmodule Brando.Blueprint.BlueprintTest do
 
   test "changeset mutators" do
     mutated_cs =
-      __MODULE__.Project.test_changeset(%__MODULE__.Project{}, %{title: "my title"}, %{id: 1})
+      __MODULE__.Project.changeset(
+        %__MODULE__.Project{},
+        %{title: "my title", slug: "my-title"},
+        %{id: 1}
+      )
 
     assert mutated_cs.changes.creator_id == 1
     assert mutated_cs.changes.title == "my title"

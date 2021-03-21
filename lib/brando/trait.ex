@@ -2,8 +2,12 @@ defmodule Brando.Trait do
   @type changeset :: Ecto.Changeset.t()
   @type entry :: map()
   @type user :: Brando.Users.User.t()
+  @type config :: list()
 
-  @callback changeset_mutator(module, changeset, user) :: changeset
+  @callback changeset_mutator(module, config, changeset, user) :: changeset
+  @callback trait_attributes() :: list()
+  @callback trait_relations() :: list()
+  @callback validate(module, config) :: true | no_return
 
   defmacro __using__(_) do
     quote location: :keep do
@@ -12,29 +16,37 @@ defmodule Brando.Trait do
       import Brando.Trait
       import Brando.Blueprint.DataLayer
 
-      def changeset_mutator(_module, changeset, _user), do: changeset
-      defoverridable changeset_mutator: 3
+      def changeset_mutator(_module, _cfg, changeset, _user) do
+        require Logger
+        Logger.error(inspect(changeset, pretty: true))
+        changeset
+      end
+
+      defoverridable changeset_mutator: 4
+
+      def validate(_, _), do: true
+      defoverridable validate: 2
     end
   end
 
   defmacro __before_compile__(_) do
     quote do
       if Module.get_attribute(__MODULE__, :attrs) do
-        def __attributes__ do
+        def trait_attributes do
           @attrs
         end
       else
-        def __attributes__ do
+        def trait_attributes do
           []
         end
       end
 
       if Module.get_attribute(__MODULE__, :relations) do
-        def __relations__ do
+        def trait_relations do
           @relations
         end
       else
-        def __relations__ do
+        def trait_relations do
           []
         end
       end
@@ -43,7 +55,8 @@ defmodule Brando.Trait do
 
   def run_changeset_mutators(changeset, module, traits, user) do
     Enum.reduce(traits, changeset, fn trait, updated_changeset ->
-      trait.changeset_mutator(module, updated_changeset, user)
+      cfg = module.__trait__(trait)
+      trait.changeset_mutator(module, cfg, updated_changeset, user)
     end)
   end
 
@@ -51,7 +64,7 @@ defmodule Brando.Trait do
 
   def get_relations(traits) do
     Enum.reduce(traits, [], fn trait, rf ->
-      trait.__relations__() ++ rf
+      trait.trait_relations() ++ rf
     end)
   end
 
@@ -59,7 +72,7 @@ defmodule Brando.Trait do
 
   def get_attributes(traits) do
     Enum.reduce(traits, [], fn trait, rf ->
-      trait.__attributes__() ++ rf
+      trait.trait_attributes() ++ rf
     end)
   end
 end

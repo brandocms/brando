@@ -1,15 +1,8 @@
 defmodule Brando.Blueprint.Trait do
   defmacro trait(name, opts \\ []) do
     quote location: :keep, generated: true do
-      case unquote(name) do
-        :sequence ->
-          use Brando.Sequence.Schema
+      Module.put_attribute(__MODULE__, :traits, unquote(name))
 
-        _ ->
-          nil
-      end
-
-      @traits [unquote(name) | @traits]
       def __trait__(unquote(name)) do
         unquote(opts)
       end

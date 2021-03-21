@@ -105,11 +105,14 @@ defmodule Brando.Villain.Schema do
         |> generate_html()
       end
   """
-  def generate_html(changeset, field \\ nil)
+  def generate_html(changeset, data_field \\ :data)
 
-  def generate_html(%Ecto.Changeset{valid?: true} = changeset, field) do
-    data_field = (field && field |> to_string |> Kernel.<>("_data") |> String.to_atom()) || :data
-    html_field = (field && field |> to_string |> Kernel.<>("_html") |> String.to_atom()) || :html
+  def generate_html(%Ecto.Changeset{valid?: true} = changeset, data_field) do
+    html_field =
+      data_field
+      |> to_string()
+      |> String.replace("data", "html")
+      |> String.to_atom()
 
     if Ecto.Changeset.get_change(changeset, data_field) do
       applied_changes = Ecto.Changeset.apply_changes(changeset)
@@ -127,5 +130,7 @@ defmodule Brando.Villain.Schema do
     end
   end
 
-  def generate_html(changeset, _), do: changeset
+  def generate_html(changeset, _) do
+    changeset
+  end
 end

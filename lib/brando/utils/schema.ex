@@ -67,11 +67,34 @@ defmodule Brando.Utils.Schema do
   @doc """
   Precheck field in `cs` to make sure we avoid collisions
   """
-  def avoid_field_collision(changeset, fields \\ [:slug], filter_fn \\ nil)
+
+  def avoid_field_collision(_module, %{valid?: true} = changeset, fields, nil) do
+    src = changeset.data.__struct__
+    do_avoid_field_collision(fields, changeset, src)
+  end
+
+  def avoid_field_collision(module, %{valid?: true} = changeset, fields, filter_fn) do
+    src = filter_fn.(module, changeset)
+    do_avoid_field_collision(fields, changeset, src)
+  end
+
+  def avoid_field_collision(changeset, _, _, _), do: changeset
 
   def avoid_field_collision(%{valid?: true} = changeset, fields, filter_fn) do
-    src = (filter_fn && filter_fn.(changeset)) || changeset.data.__struct__
+    src = filter_fn.(changeset)
+    do_avoid_field_collision(fields, changeset, src)
+  end
 
+  def avoid_field_collision(changeset, _, _), do: changeset
+
+  def avoid_field_collision(%{valid?: true} = changeset, fields) do
+    src = changeset.data.__struct__
+    do_avoid_field_collision(fields, changeset, src)
+  end
+
+  def avoid_field_collision(changeset, _), do: changeset
+
+  def do_avoid_field_collision(fields, changeset, src) do
     Enum.reduce(fields, changeset, fn field, new_changeset ->
       field_val = Ecto.Changeset.get_change(new_changeset, field)
 
@@ -92,8 +115,6 @@ defmodule Brando.Utils.Schema do
       end
     end)
   end
-
-  def avoid_field_collision(changeset, _, _), do: changeset
 
   defp get_unique_field_value(cs, src, field, field_val, attempts)
        when attempts < @field_val_collision_attemps do

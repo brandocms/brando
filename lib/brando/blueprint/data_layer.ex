@@ -10,6 +10,7 @@ defmodule Brando.Blueprint.DataLayer do
     :gallery,
     :image,
     :integer,
+    :language,
     :map,
     :slug,
     :status,
@@ -25,7 +26,18 @@ defmodule Brando.Blueprint.DataLayer do
   def validate_attr!(type),
     do: raise("Unknown type `#{inspect(type)}` given in blueprint")
 
-  def build_attr(name, type, opts \\ []) do
+  def build_attr(name, type, opts \\ [])
+
+  def build_attr(name, :language, _opts) do
+    languages =
+      Enum.map(Brando.config(:languages), fn [value: lang_code, text: _] ->
+        String.to_existing_atom(lang_code)
+      end)
+
+    %{name: name, type: :language, opts: [values: languages, required: true]}
+  end
+
+  def build_attr(name, type, opts) do
     %{name: name, type: type, opts: opts}
   end
 
@@ -93,9 +105,16 @@ defmodule Brando.Blueprint.DataLayer do
   def to_ecto_type(:text), do: :string
   def to_ecto_type(:status), do: Brando.Type.Status
   def to_ecto_type(:image), do: Brando.Type.Image
+  def to_ecto_type(:language), do: Ecto.Enum
   def to_ecto_type(:video), do: Brando.Type.Video
-  def to_ecto_type(:villain), do: :map
+  def to_ecto_type(:villain), do: {:array, :map}
   def to_ecto_type(:slug), do: :string
   def to_ecto_type(:datetime), do: :utc_datetime
   def to_ecto_type(type), do: type
+
+  def to_ecto_opts(:language, opts) do
+    opts
+  end
+
+  def to_ecto_opts(_type, _opts), do: []
 end

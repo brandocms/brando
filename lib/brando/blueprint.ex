@@ -1,10 +1,12 @@
 defmodule Brando.Blueprint do
   defmacro __using__(_) do
     quote location: :keep do
-      # Module.register_attribute(__MODULE__, :traits, accumulate: true)
-      @traits []
+      Module.register_attribute(__MODULE__, :traits, accumulate: true)
+      Module.register_attribute(__MODULE__, :attrs, accumulate: true)
+      Module.register_attribute(__MODULE__, :relations, accumulate: true)
 
       @before_compile Brando.Blueprint
+      @after_compile Brando.Blueprint
 
       import unquote(__MODULE__)
       import unquote(__MODULE__).Trait
@@ -19,33 +21,18 @@ defmodule Brando.Blueprint do
       import Ecto.Changeset
       import Ecto.Query, only: [from: 1, from: 2]
       import Brando.Utils.Schema
-
-      # generate changeset
-      def test_changeset(schema, params \\ %{}, user \\ :system) do
-        schema
-        # @required_attrs ++ @optional_attrs
-        |> cast(params, __required_attrs__() ++ __optional_attrs__())
-        # |> cast_assoc(:properties)
-        |> Brando.Trait.run_changeset_mutators(__MODULE__, __traits__(), user)
-
-        # |> validate_required(@required_fields)
-        # |> avoid_field_collision([:uri], &filter_by_language/1)
-        # |> unique_constraint([:uri, :language])
-        # |> validate_upload({:image, :meta_image}, user)
-        # |> generate_html()
-      end
     end
   end
 
   def build_attr(attr) do
     quote do
-      field unquote(attr.name), unquote(attr.type)
+      field(unquote(attr.name), unquote(attr.type))
     end
   end
 
   def build_relation(%{type: :belongs_to, opts: opts, name: name}) do
     quote do
-      belongs_to unquote(name), unquote(opts.module)
+      belongs_to(unquote(name), unquote(opts.module))
     end
   end
 
@@ -53,8 +40,38 @@ defmodule Brando.Blueprint do
     quote do
       schema unquote(name) do
         Enum.map(unquote(attrs), fn
+          %{type: :villain, name: :data} = attr ->
+            [
+              Ecto.Schema.field(
+                attr.name,
+                to_ecto_type(attr.type),
+                to_ecto_opts(attr.type, attr.opts)
+              ),
+              Ecto.Schema.field(:html, :string)
+            ]
+
+          %{type: :villain, name: name} = attr ->
+            html_attr =
+              name
+              |> to_string
+              |> String.replace("_data", "_html")
+              |> String.to_atom()
+
+            [
+              Ecto.Schema.field(
+                name,
+                to_ecto_type(attr.type),
+                to_ecto_opts(attr.type, attr.opts)
+              ),
+              Ecto.Schema.field(:"#{html_attr}", :string)
+            ]
+
           attr ->
-            Ecto.Schema.field(attr.name, to_ecto_type(attr.type))
+            Ecto.Schema.field(
+              attr.name,
+              to_ecto_type(attr.type),
+              to_ecto_opts(attr.type, attr.opts)
+            )
         end)
 
         Enum.map(unquote(relations), fn
@@ -78,6 +95,7 @@ defmodule Brando.Blueprint do
   def get_optional_attrs(attrs) do
     attrs
     |> Enum.reject(&Keyword.get(&1.opts, :required))
+    |> maybe_add_villain_html_fields()
     |> Enum.map(& &1.name)
   end
 
@@ -88,6 +106,23 @@ defmodule Brando.Blueprint do
   end
 
   def get_relation_key(%{type: :belongs_to, name: name}), do: :"#{name}_id"
+
+  defp maybe_add_villain_html_fields(attrs) do
+    Enum.reduce(attrs, attrs, fn attr, updated_attrs ->
+      if attr.type == :villain do
+        html_attr =
+          attr.name
+          |> to_string
+          |> String.replace("data", "html")
+          |> String.to_atom()
+
+        [%{name: html_attr, opts: [], type: :text} | updated_attrs]
+        # updated_attrs
+      else
+        updated_attrs
+      end
+    end)
+  end
 
   defmacro __before_compile__(_) do
     quote location: :keep do
@@ -117,9 +152,9 @@ defmodule Brando.Blueprint do
         @all_required_attrs
       end
 
-      @optional_attrs Brando.Blueprint.get_optional_attrs(@all_attributes)
+      @all_optional_attrs Brando.Blueprint.get_optional_attrs(@all_attributes)
       def __optional_attrs__ do
-        @optional_attrs
+        @all_optional_attrs
       end
 
       def __naming__ do
@@ -182,9 +217,39 @@ defmodule Brando.Blueprint do
 
       build_schema(
         "#{String.downcase(@domain)}_#{@plural}",
-        Enum.reverse(@attrs) ++ Brando.Trait.get_attributes(@traits),
-        Enum.reverse(@relations) ++ Brando.Trait.get_relations(@traits)
+        @all_attributes,
+        @all_relations
       )
+
+      # generate changeset
+      def changeset(schema, params \\ %{}, user \\ :system) do
+        require Logger
+
+        Logger.error("""
+        * Building changeset function
+
+        ==> Required attrs: #{inspect(@all_required_attrs)}
+        ==> Optional attrs: #{inspect(@all_optional_attrs)}
+        """)
+
+        schema
+        |> cast(params, @all_required_attrs() ++ @all_optional_attrs())
+        # |> cast_assoc(:properties)
+        |> validate_required(@all_required_attrs)
+        |> Brando.Trait.run_changeset_mutators(__MODULE__, @all_traits, user)
+
+        # |> avoid_field_collision([:uri], &filter_by_language/1)
+        # |> unique_constraint([:uri, :language])
+        # |> validate_upload({:image, :meta_image}, user)
+      end
     end
+  end
+
+  defmacro __after_compile__(env, _) do
+    # validate traits
+    Enum.each(
+      env.module.__traits__,
+      & &1.validate(env.module, env.module.__trait__(&1))
+    )
   end
 end

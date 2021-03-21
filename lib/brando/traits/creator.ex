@@ -6,6 +6,7 @@ defmodule Brando.Traits.Creator do
   alias Ecto.Changeset
 
   @type changeset :: Changeset.t()
+  @type config :: list()
 
   relations do
     relation :creator, :belongs_to, module: Brando.Users.User, required: true
@@ -14,14 +15,14 @@ defmodule Brando.Traits.Creator do
   @doc """
   Add creator to changeset
   """
-  @spec changeset_mutator(module, changeset, map | :system) :: changeset
-  def changeset_mutator(_, %Changeset{} = cs, :system), do: cs
+  @spec changeset_mutator(module, config, changeset, map | :system) :: changeset
+  def changeset_mutator(_, _cfg, %Changeset{valid?: true} = cs, :system), do: cs
 
-  def changeset_mutator(_, %Changeset{} = cs, user) when is_map(user),
+  def changeset_mutator(_, _cfg, %Changeset{valid?: true} = cs, user) when is_map(user),
     do: Changeset.put_change(cs, :creator_id, user.id)
 
-  def changeset_mutator(_, %Changeset{} = cs, user_id),
+  def changeset_mutator(_, _cfg, %Changeset{valid?: true} = cs, user_id),
     do: Changeset.put_change(cs, :creator_id, user_id)
 
-  def changeset_mutator(_, params, :system), do: params
+  def changeset_mutator(_, _, changeset, _), do: changeset
 end

@@ -1,5 +1,6 @@
 defmodule Brando.Blueprint.TraitTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
+  use Brando.ConnCase
   alias Brando.Traits
   alias Brando.Pages.Page
   alias Brando.Users.User
@@ -14,15 +15,20 @@ defmodule Brando.Blueprint.TraitTest do
     @plural "projects"
 
     trait Brando.Traits.Sequence
+    trait Brando.Traits.Villain
+    trait Brando.Traits.Translatable
+    trait Brando.Traits.Unique, attributes: [:title]
 
     attributes do
-      attribute :title, :text
+      attribute :title, :string
+      attribute :data, :villain
+      attribute :bio_data, :villain
     end
   end
 
   describe "creator trait" do
     test "exposes relationship" do
-      assert Traits.Creator.__relations__() == [
+      assert Traits.Creator.trait_relations() == [
                %{
                  name: :creator,
                  opts: [module: User, required: true],
@@ -33,14 +39,14 @@ defmodule Brando.Blueprint.TraitTest do
 
     test "mutates changeset" do
       changeset = Page.changeset(%Page{}, %{title: "Iggy Pop"})
-      mutated_changeset = Traits.Creator.changeset_mutator(nil, changeset, %{id: 1})
+      mutated_changeset = Traits.Creator.changeset_mutator(nil, [], changeset, %{id: 1})
       assert mutated_changeset.changes.creator_id == 1
     end
   end
 
   describe "status trait" do
     test "exposes attribute" do
-      assert Traits.Status.__attributes__() == [
+      assert Traits.Status.trait_attributes() == [
                %{
                  name: :status,
                  opts: [required: true],
@@ -52,7 +58,7 @@ defmodule Brando.Blueprint.TraitTest do
 
   describe "sequence trait" do
     test "exposes attribute" do
-      assert Traits.Sequence.__attributes__() == [
+      assert Traits.Sequence.trait_attributes() == [
                %{
                  name: :sequence,
                  opts: [default: 0],
@@ -60,9 +66,51 @@ defmodule Brando.Blueprint.TraitTest do
                }
              ]
     end
+  end
 
-    test "injects sequence/2" do
-      assert __MODULE__
+  describe "villain trait" do
+    test "adds _html field" do
+      assert :html in __MODULE__.Project.__schema__(:fields)
+      assert :bio_html in __MODULE__.Project.__schema__(:fields)
+    end
+
+    test "changeset mutator" do
+      bio_data = [
+        %{
+          "data" => %{
+            "extensions" => [],
+            "text" => "Some glorious text",
+            "type" => "paragraph"
+          },
+          "type" => "text"
+        }
+      ]
+
+      mutated_cs =
+        __MODULE__.Project.changeset(
+          %__MODULE__.Project{},
+          %{title: "my title!", bio_data: bio_data, data: bio_data, html: "WTF"},
+          %{id: 1}
+        )
+
+      assert mutated_cs.valid?
+      assert mutated_cs.changes.title == "my title!"
+      assert mutated_cs.changes.html == "Some glorious text"
+      assert mutated_cs.changes.bio_html == "Some glorious text"
+    end
+  end
+
+  describe "language trait" do
+    test "adds language field" do
+      assert :language in __MODULE__.Project.__schema__(:fields)
+
+      assert __MODULE__.Project.__changeset__()[:language] ==
+               {:parameterized, Ecto.Enum,
+                %{
+                  on_dump: %{en: "en", no: "no"},
+                  on_load: %{"en" => :en, "no" => :no},
+                  values: [:no, :en]
+                }}
     end
   end
 end
