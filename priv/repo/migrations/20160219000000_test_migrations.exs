@@ -170,6 +170,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :html, :text
       add :bio_data, :jsonb
       add :bio_html, :text
+      add :cover, :jsonb
       add :creator_id, references(:users_users, on_delete: :nilify_all)
       sequenced()
       soft_delete()

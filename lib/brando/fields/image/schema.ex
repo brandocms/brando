@@ -27,6 +27,20 @@ defmodule Brando.Field.Image.Schema do
   import Ecto.Changeset
 
   defmacro __using__(_) do
+    IO.warn("""
+    Using `Brando.Field.Image.Schema` is deprecated.
+
+    It is recommended to move to Blueprints instead:
+
+        use Brando.Blueprint
+
+        trait Brando.Traits.Upload
+
+        attributes do
+          attribute :cover, :image, my_cfg
+        end
+    """)
+
     quote do
       Module.register_attribute(__MODULE__, :imagefields, accumulate: true)
       alias Brando.Images
@@ -40,19 +54,11 @@ defmodule Brando.Field.Image.Schema do
       Cleans up old images on update
       """
       defmacro cleanup_old_images(_) do
-        raise "cleanup_old_images() should not be used in changesets anymore, just remove it."
+        raise "cleanup_old_images/1 should not be used in changesets anymore, just remove it."
       end
 
-      def cleanup_old_images(changeset, :safe) do
-        imagefield_keys = Keyword.keys(__image_fields__())
-
-        for key <- Map.keys(changeset.changes) do
-          if key in imagefield_keys do
-            delete_original_and_sized_images(changeset.data, key)
-          end
-        end
-
-        changeset
+      defmacro cleanup_old_images(_, _) do
+        raise "cleanup_old_images/2 should not be used in changesets anymore, just remove it."
       end
 
       @doc """
@@ -88,7 +94,6 @@ defmodule Brando.Field.Image.Schema do
                  {:ok, cfg} <- grab_cfg(cfg, field_name, changeset),
                  {:ok, {:handled, name, field}} <-
                    Images.Upload.Field.handle_upload(field_name, upload_params, cfg, user) do
-              cleanup_old_images(changeset, :safe)
               if Brando.CDN.enabled?(), do: Brando.CDN.upload_file(changeset, name, field)
               put_change(changeset, name, field)
             else

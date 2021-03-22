@@ -1,4 +1,6 @@
 defmodule Brando.Blueprint do
+  import Ecto.Changeset
+
   defmacro __using__(_) do
     quote location: :keep do
       Module.register_attribute(__MODULE__, :traits, accumulate: true)
@@ -124,11 +126,32 @@ defmodule Brando.Blueprint do
     end)
   end
 
+  def run_cast_relations(changeset, relations) do
+    Enum.reduce(relations, changeset, fn
+      %{type: :belongs_to, opts: opts} = relation, updated_changeset ->
+        if with_opts = Keyword.get(opts, :with, nil) do
+          require Logger
+          Logger.error(inspect(with_opts, pretty: true))
+          cast_assoc(updated_changeset, relation.name)
+        else
+          cast_assoc(updated_changeset, relation.name)
+        end
+    end)
+
+    # cast_assoc: [with: {Brando.ImageSeries, :changeset}, user: true]
+  end
+
   defmacro __before_compile__(_) do
     quote location: :keep do
       @all_attributes Enum.reverse(@attrs) ++ Brando.Trait.get_attributes(@traits)
       def __attributes__ do
         @all_attributes
+      end
+
+      def __attribute_opts__(attr) do
+        @all_attributes
+        |> Enum.find(&(&1.name == attr))
+        |> Map.get(:opts, [])
       end
 
       @all_relations Enum.reverse(@relations) ++ Brando.Trait.get_relations(@traits)
@@ -205,6 +228,11 @@ defmodule Brando.Blueprint do
         @image_fields
       end
 
+      @file_fields Enum.filter(@attrs, &(&1.type == :file))
+      def __file_fields__ do
+        @file_fields
+      end
+
       @video_fields Enum.filter(@attrs, &(&1.type == :video))
       def __video_fields__ do
         @video_fields
@@ -238,6 +266,9 @@ defmodule Brando.Blueprint do
         schema
         |> cast(params, @all_required_attrs() ++ @all_optional_attrs())
         # |> cast_assoc(:properties)
+        |> run_cast_relations(@all_relations)
+        # |> run_cast_embeds(@all_relations)
+        # |> run_cast_collections(@all_relations)
         |> Brando.Trait.run_changeset_mutators(
           __MODULE__,
           traits_before_validate_required,

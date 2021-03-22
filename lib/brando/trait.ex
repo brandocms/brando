@@ -1,4 +1,13 @@
 defmodule Brando.Trait do
+  @moduledoc """
+  ## Changeset phase
+
+  If you need your trait's `changeset_mutator` to run before `validate_required`
+  when your `changeset` is generated, you can set `@changeset_phase :before_validate_required`
+  in your trait. This is useful if you're inserting a required field  into the changeset and
+  do not want it erroring out. The default changeset phase is `:after_validate_required`.
+  """
+
   @type changeset :: Ecto.Changeset.t()
   @type entry :: map()
   @type user :: Brando.Users.User.t()

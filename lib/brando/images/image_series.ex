@@ -64,7 +64,7 @@ defmodule Brando.ImageSeries do
   """
   @spec changeset(t, map) :: Ecto.Changeset.t()
   def changeset(schema, params \\ %{}, user \\ :system) do
-    cs =
+    changeset =
       schema
       |> cast(params, @required_fields ++ @optional_fields)
       |> put_creator(user)
@@ -73,8 +73,8 @@ defmodule Brando.ImageSeries do
       |> avoid_field_collision([:slug], &filter_current_category/1)
       |> inherit_configuration()
 
-    cs
-    |> cast_assoc(:images, with: {Brando.Image, :changeset, [user, get_field(cs, :cfg)]})
+    changeset
+    |> cast_assoc(:images, with: {Brando.Image, :changeset, [user, get_field(changeset, :cfg)]})
     |> validate_paths()
   end
 
