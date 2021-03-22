@@ -11,16 +11,18 @@ defmodule Brando.Trait do
 
   defmacro __using__(_) do
     quote location: :keep do
-      @before_compile Brando.Trait
-      @behaviour Brando.Trait
       import Brando.Trait
       import Brando.Blueprint.DataLayer
 
-      def changeset_mutator(_module, _cfg, changeset, _user) do
-        require Logger
-        Logger.error(inspect(changeset, pretty: true))
-        changeset
-      end
+      @before_compile Brando.Trait
+      @behaviour Brando.Trait
+
+      @changeset_phase :after_validate_required
+
+      # Runs if no mutator is set.
+      # NOTE: This does not function as a fallback clause if a mutator is implemented.
+      #       In that case you must implement the fallback yourself.
+      def changeset_mutator(_module, _cfg, changeset, _user), do: changeset
 
       defoverridable changeset_mutator: 4
 
@@ -50,6 +52,10 @@ defmodule Brando.Trait do
           []
         end
       end
+
+      def __changeset_phase__ do
+        @changeset_phase
+      end
     end
   end
 
@@ -58,6 +64,10 @@ defmodule Brando.Trait do
       cfg = module.__trait__(trait)
       trait.changeset_mutator(module, cfg, updated_changeset, user)
     end)
+  end
+
+  def split_traits_by_changeset_phase(traits) do
+    Enum.split_with(traits, &(&1.__changeset_phase__() == :before_validate_required))
   end
 
   def get_relations(nil), do: []

@@ -96,7 +96,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:uri, :text)
       add(:language, :text)
       add(:title, :text)
-      add(:data, :json)
+      add(:data, :jsonb)
       add(:html, :text)
       add(:status, :integer)
       add(:is_homepage, :boolean)
@@ -131,7 +131,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:language, :text)
       add(:title, :text)
       add(:wrapper, :text)
-      add(:data, :json)
+      add(:data, :jsonb)
       add(:html, :text)
       add(:sequence, :integer)
       add(:creator_id, references(:users_users))
@@ -161,6 +161,20 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     end
 
     create index(:pages_modules, [:namespace])
+
+    create table(:projects_projects) do
+      add :title, :string
+      add :slug, :string
+      add :language, :string
+      add :data, :jsonb
+      add :html, :text
+      add :bio_data, :jsonb
+      add :bio_html, :text
+      add :creator_id, references(:users_users, on_delete: :nilify_all)
+      sequenced()
+      soft_delete()
+      timestamps()
+    end
 
     create table(:sites_identity) do
       add :name, :string

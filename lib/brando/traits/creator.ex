@@ -15,6 +15,7 @@ defmodule Brando.Traits.Creator do
   @doc """
   Add creator to changeset
   """
+  @changeset_phase :before_validate_required
   @spec changeset_mutator(module, config, changeset, map | :system) :: changeset
   def changeset_mutator(_, _cfg, %Changeset{valid?: true} = cs, :system), do: cs
 

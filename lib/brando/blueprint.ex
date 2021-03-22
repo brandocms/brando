@@ -226,17 +226,29 @@ defmodule Brando.Blueprint do
         require Logger
 
         Logger.error("""
-        * Building changeset function
+        * Building changeset function for #{inspect(schema.__struct__)}
 
         ==> Required attrs: #{inspect(@all_required_attrs)}
         ==> Optional attrs: #{inspect(@all_optional_attrs)}
         """)
 
+        {traits_before_validate_required, traits_after_validate_required} =
+          Brando.Trait.split_traits_by_changeset_phase(@all_traits)
+
         schema
         |> cast(params, @all_required_attrs() ++ @all_optional_attrs())
         # |> cast_assoc(:properties)
+        |> Brando.Trait.run_changeset_mutators(
+          __MODULE__,
+          traits_before_validate_required,
+          user
+        )
         |> validate_required(@all_required_attrs)
-        |> Brando.Trait.run_changeset_mutators(__MODULE__, @all_traits, user)
+        |> Brando.Trait.run_changeset_mutators(
+          __MODULE__,
+          traits_after_validate_required,
+          user
+        )
 
         # |> avoid_field_collision([:uri], &filter_by_language/1)
         # |> unique_constraint([:uri, :language])

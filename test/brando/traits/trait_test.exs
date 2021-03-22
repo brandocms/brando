@@ -2,18 +2,18 @@ defmodule Brando.Blueprint.TraitTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
   alias Brando.Traits
-  alias Brando.Pages.Page
   alias Brando.Users.User
 
   defmodule Project do
     use Brando.Blueprint
 
     @application "Brando"
-    @domain "TraitTest"
+    @domain "Projects"
     @schema "Project"
     @singular "project"
     @plural "projects"
 
+    trait Brando.Traits.Creator
     trait Brando.Traits.Sequence
     trait Brando.Traits.Villain
     trait Brando.Traits.Translatable
@@ -35,12 +35,6 @@ defmodule Brando.Blueprint.TraitTest do
                  type: :belongs_to
                }
              ]
-    end
-
-    test "mutates changeset" do
-      changeset = Page.changeset(%Page{}, %{title: "Iggy Pop"})
-      mutated_changeset = Traits.Creator.changeset_mutator(nil, [], changeset, %{id: 1})
-      assert mutated_changeset.changes.creator_id == 1
     end
   end
 
@@ -89,11 +83,17 @@ defmodule Brando.Blueprint.TraitTest do
       mutated_cs =
         __MODULE__.Project.changeset(
           %__MODULE__.Project{},
-          %{title: "my title!", bio_data: bio_data, data: bio_data, html: "WTF"},
+          %{
+            title: "my title!",
+            bio_data: bio_data,
+            data: bio_data,
+            language: "en"
+          },
           %{id: 1}
         )
 
       assert mutated_cs.valid?
+      assert mutated_cs.changes.creator_id == 1
       assert mutated_cs.changes.title == "my title!"
       assert mutated_cs.changes.html == "Some glorious text"
       assert mutated_cs.changes.bio_html == "Some glorious text"
