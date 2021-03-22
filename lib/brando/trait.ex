@@ -21,7 +21,8 @@ defmodule Brando.Trait do
   defmacro __using__(_) do
     quote location: :keep do
       import Brando.Trait
-      import Brando.Blueprint.DataLayer
+      import Brando.Blueprint.Attributes
+      import Brando.Blueprint.Relations
 
       @before_compile Brando.Trait
       @behaviour Brando.Trait

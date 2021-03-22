@@ -30,6 +30,8 @@ defmodule Brando.Field.Image.Schema do
     IO.warn("""
     Using `Brando.Field.Image.Schema` is deprecated.
 
+    Offending module: #{inspect(__CALLER__.module)}
+
     It is recommended to move to Blueprints instead:
 
         use Brando.Blueprint
@@ -228,38 +230,5 @@ defmodule Brando.Field.Image.Schema do
 
       Module.put_attribute(__MODULE__, :imagefields, {unquote(field_name), val})
     end
-  end
-
-  @doc """
-  List all registered image fields
-  """
-  def list_image_fields do
-    app_modules = Application.spec(Brando.otp_app(), :modules)
-    modules = app_modules
-
-    modules
-    |> Enum.filter(&({:__image_fields__, 0} in &1.__info__(:functions)))
-    |> Enum.map(fn module ->
-      %{
-        source: module.__schema__(:source),
-        fields: module.__image_fields__() |> Keyword.keys()
-      }
-    end)
-  end
-
-  def generate_image_fields_migration do
-    img_fields = list_image_fields()
-
-    Enum.map(img_fields, fn %{source: source, fields: fields} ->
-      Enum.map(fields, fn field ->
-        ~s(
-          execute """
-          alter table #{source} alter column #{field} type jsonb using #{field}::JSON
-          """
-          )
-      end)
-      |> Enum.join("\n")
-    end)
-    |> Enum.join("\n")
   end
 end

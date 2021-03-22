@@ -18,10 +18,9 @@ defmodule Brando.Blueprint.TraitTest do
     trait Brando.Traits.Villain
     trait Brando.Traits.Translatable
     trait Brando.Traits.Upload
-    trait Brando.Traits.Unique, attributes: [:title]
 
     attributes do
-      attribute :title, :string
+      attribute :title, :string, unique: true
       attribute :data, :villain
       attribute :bio_data, :villain
 
@@ -56,7 +55,7 @@ defmodule Brando.Blueprint.TraitTest do
       assert Traits.Creator.trait_relations() == [
                %{
                  name: :creator,
-                 opts: [module: User, required: true],
+                 opts: %{module: User, required: true},
                  type: :belongs_to
                }
              ]
@@ -68,7 +67,7 @@ defmodule Brando.Blueprint.TraitTest do
       assert Traits.Status.trait_attributes() == [
                %{
                  name: :status,
-                 opts: [required: true],
+                 opts: %{required: true},
                  type: :status
                }
              ]
@@ -80,7 +79,7 @@ defmodule Brando.Blueprint.TraitTest do
       assert Traits.Sequence.trait_attributes() == [
                %{
                  name: :sequence,
-                 opts: [default: 0],
+                 opts: %{default: 0},
                  type: :integer
                }
              ]

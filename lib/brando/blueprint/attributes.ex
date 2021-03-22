@@ -1,9 +1,41 @@
-defmodule Brando.Blueprint.DataLayer do
+defmodule Brando.Blueprint.Attributes do
+  @moduledoc """
+  ### Attributes
+
+  #### Uniqueness
+
+  To create an unique index in the db as well as running
+  `unique_constraint` in the changeset:
+
+      attribute :email, unique: true
+
+  If you have fields that need to be unique together:
+
+      attribute :email, unique: [with: :other_field]
+
+  If you need uniqueness, but are fine with changing the attribute
+
+      attribute :slug, unique: [prevent_collision: true]
+
+  This is good for URL slugs. If it detects a collision it will add
+  `-{x}` to the value, where x is the next in sequence.
+
+  If you need uniqueness, but validated against another field - for
+  instance if you have a `slug` field, but also a `language` field:
+
+      attribute :slug, unique: [prevent_collision: :language]
+
+  This allows you to have `%{slug: "test", language: "en"}` and
+  `%{slug: "test", language: "dk"}` without erroring.
+
+  """
+
   @valid_attributes [
     :array,
     :boolean,
     :date,
     :datetime,
+    :naive_datetime,
     :decimal,
     :file,
     :float,
@@ -22,6 +54,7 @@ defmodule Brando.Blueprint.DataLayer do
     :villain
   ]
   def validate_attr!(type) when type in @valid_attributes, do: true
+  def validate_attr!({:__aliases__, _, _}), do: true
 
   def validate_attr!(type),
     do: raise("Unknown type `#{inspect(type)}` given in blueprint")
@@ -34,15 +67,11 @@ defmodule Brando.Blueprint.DataLayer do
         String.to_existing_atom(lang_code)
       end)
 
-    %{name: name, type: :language, opts: [values: languages, required: true]}
+    %{name: name, type: :language, opts: %{values: languages, required: true}}
   end
 
   def build_attr(name, type, opts) do
-    %{name: name, type: type, opts: opts}
-  end
-
-  def build_relation(name, type, opts \\ []) do
-    %{name: name, type: type, opts: opts}
+    %{name: name, type: type, opts: Enum.into(opts, %{})}
   end
 
   defmacro attributes(do: block) do
@@ -74,34 +103,6 @@ defmodule Brando.Blueprint.DataLayer do
     end
   end
 
-  defmacro relations(do: block) do
-    relations(__CALLER__, block)
-  end
-
-  defp relations(_caller, block) do
-    quote location: :keep do
-      Module.register_attribute(__MODULE__, :relations, accumulate: true)
-      unquote(block)
-    end
-  end
-
-  defmacro relation(name, type, opts \\ []) do
-    relation(__CALLER__, name, type, opts)
-  end
-
-  defp relation(_caller, name, type, opts) do
-    quote location: :keep do
-      rel =
-        build_relation(
-          unquote(name),
-          unquote(type),
-          unquote(opts)
-        )
-
-      Module.put_attribute(__MODULE__, :relations, rel)
-    end
-  end
-
   def to_ecto_type(:text), do: :string
   def to_ecto_type(:status), do: Brando.Type.Status
   def to_ecto_type(:image), do: Brando.Type.Image
@@ -112,9 +113,6 @@ defmodule Brando.Blueprint.DataLayer do
   def to_ecto_type(:datetime), do: :utc_datetime
   def to_ecto_type(type), do: type
 
-  def to_ecto_opts(:language, opts) do
-    opts
-  end
-
-  def to_ecto_opts(_type, _opts), do: []
+  def to_ecto_opts(:language, opts), do: Map.to_list(opts)
+  def to_ecto_opts(_type, opts), do: Map.to_list(opts)
 end

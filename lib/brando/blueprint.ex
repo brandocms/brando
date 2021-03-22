@@ -1,5 +1,6 @@
 defmodule Brando.Blueprint do
   import Ecto.Changeset
+  import Ecto.Query
 
   defmacro __using__(_) do
     quote location: :keep do
@@ -12,7 +13,8 @@ defmodule Brando.Blueprint do
 
       import unquote(__MODULE__)
       import unquote(__MODULE__).Trait
-      import unquote(__MODULE__).DataLayer
+      import unquote(__MODULE__).Attributes
+      import unquote(__MODULE__).Relations
       import unquote(__MODULE__).Naming
       import unquote(__MODULE__).Translations
 
@@ -23,18 +25,6 @@ defmodule Brando.Blueprint do
       import Ecto.Changeset
       import Ecto.Query, only: [from: 1, from: 2]
       import Brando.Utils.Schema
-    end
-  end
-
-  def build_attr(attr) do
-    quote do
-      field(unquote(attr.name), unquote(attr.type))
-    end
-  end
-
-  def build_relation(%{type: :belongs_to, opts: opts, name: name}) do
-    quote do
-      belongs_to(unquote(name), unquote(opts.module))
     end
   end
 
@@ -78,32 +68,34 @@ defmodule Brando.Blueprint do
 
         Enum.map(unquote(relations), fn
           %{type: :belongs_to, name: name, opts: opts} ->
-            Ecto.Schema.belongs_to(name, Keyword.fetch!(opts, :module))
+            Ecto.Schema.belongs_to(name, Map.fetch!(opts, :module))
 
           attr ->
             require Logger
             Logger.error(inspect(attr, pretty: true))
         end)
+
+        Ecto.Schema.timestamps()
       end
     end
   end
 
   def get_required_attrs(attrs) do
     attrs
-    |> Enum.filter(&Keyword.get(&1.opts, :required))
+    |> Enum.filter(&Map.get(&1.opts, :required))
     |> Enum.map(& &1.name)
   end
 
   def get_optional_attrs(attrs) do
     attrs
-    |> Enum.reject(&Keyword.get(&1.opts, :required))
+    |> Enum.reject(&Map.get(&1.opts, :required))
     |> maybe_add_villain_html_fields()
     |> Enum.map(& &1.name)
   end
 
   def get_required_relations(rels) do
     rels
-    |> Enum.filter(&Keyword.get(&1.opts, :required))
+    |> Enum.filter(&Map.get(&1.opts, :required))
     |> Enum.map(&get_relation_key/1)
   end
 
@@ -126,19 +118,98 @@ defmodule Brando.Blueprint do
     end)
   end
 
-  def run_cast_relations(changeset, relations) do
-    Enum.reduce(relations, changeset, fn
-      %{type: :belongs_to, opts: opts} = relation, updated_changeset ->
-        if with_opts = Keyword.get(opts, :with, nil) do
-          require Logger
-          Logger.error(inspect(with_opts, pretty: true))
-          cast_assoc(updated_changeset, relation.name)
-        else
-          cast_assoc(updated_changeset, relation.name)
-        end
-    end)
+  def run_cast_relations(changeset, relations, user) do
+    Enum.reduce(relations, changeset, fn rel, cs -> run_cast_relation(rel, cs, user) end)
+  end
 
-    # cast_assoc: [with: {Brando.ImageSeries, :changeset}, user: true]
+  def run_cast_relation(
+        %{type: :belongs_to, opts: %{cast: true, module: _module, name: name}},
+        changeset,
+        _user
+      ) do
+    cast_assoc(changeset, name)
+  end
+
+  def run_cast_relation(
+        %{type: :belongs_to, opts: %{cast: :with_user, module: module, name: name}},
+        changeset,
+        user
+      ) do
+    cast_assoc(changeset, name, with: {module, :changeset, [user]})
+  end
+
+  def run_cast_relation(
+        %{type: :belongs_to, opts: %{cast: cast_opts, name: name}},
+        changeset,
+        user
+      ) do
+    case Keyword.get(cast_opts, :with) do
+      {with_mod, with_fun, with_user: true} ->
+        cast_assoc(changeset, name, with: {with_mod, with_fun, [user]})
+
+      {with_mod, with_fun} ->
+        cast_assoc(changeset, name, with: {with_mod, with_fun, []})
+    end
+  end
+
+  def run_cast_relation(%{type: :belongs_to}, updated_changeset, _user) do
+    updated_changeset
+  end
+
+  def run_unique_constraints(changeset, module, attributes) do
+    attributes
+    |> Enum.filter(&Map.get(&1.opts, :unique, false))
+    |> Enum.reduce(changeset, fn
+      %{opts: %{unique: true}} = f, new_changeset ->
+        unique_constraint(new_changeset, f.name)
+
+      %{opts: %{unique: [with: with_field]}} = f, new_changeset ->
+        unique_constraint(new_changeset, [f.name, with_field])
+
+      %{opts: %{unique: [prevent_collision: true]}} = f, new_changeset ->
+        new_changeset
+        |> Brando.Utils.Schema.avoid_field_collision([f.name])
+        |> unique_constraint(f.name)
+
+      %{opts: %{unique: [prevent_collision: :language]}} = f, new_changeset ->
+        new_changeset
+        |> Brando.Utils.Schema.avoid_field_collision(module, [f.name], &filter_by_language/2)
+        |> unique_constraint([f.name, :language])
+    end)
+  end
+
+  def run_validations(changeset, _module, attributes) do
+    attributes
+    |> Enum.filter(&Map.get(&1.opts, :validate, false))
+    |> Enum.reduce(changeset, fn
+      %{opts: %{validate: validations}} = f, new_changeset ->
+        validations_map = Enum.into(validations, %{})
+
+        Enum.reduce(validations_map, new_changeset, fn
+          {:min_length, min_length}, validated_changeset ->
+            validate_length(validated_changeset, f.name, min: min_length)
+
+          {:max_length, max_length}, validated_changeset ->
+            validate_length(validated_changeset, f.name, max: max_length)
+
+          {:length, length}, validated_changeset ->
+            validate_length(validated_changeset, f.name, is: length)
+
+          {:format, format}, validated_changeset ->
+            validate_format(validated_changeset, f.name, format)
+
+          {:acceptance, true}, validated_changeset ->
+            validate_acceptance(validated_changeset, f.name)
+
+          {:confirmation, true}, validated_changeset ->
+            validate_confirmation(validated_changeset, f.name)
+        end)
+    end)
+  end
+
+  defp filter_by_language(module, changeset) do
+    from m in module,
+      where: m.language == ^get_field(changeset, :language)
   end
 
   defmacro __before_compile__(_) do
@@ -251,30 +322,21 @@ defmodule Brando.Blueprint do
 
       # generate changeset
       def changeset(schema, params \\ %{}, user \\ :system) do
-        require Logger
-
-        Logger.error("""
-        * Building changeset function for #{inspect(schema.__struct__)}
-
-        ==> Required attrs: #{inspect(@all_required_attrs)}
-        ==> Optional attrs: #{inspect(@all_optional_attrs)}
-        """)
-
         {traits_before_validate_required, traits_after_validate_required} =
           Brando.Trait.split_traits_by_changeset_phase(@all_traits)
 
         schema
         |> cast(params, @all_required_attrs() ++ @all_optional_attrs())
         # |> cast_assoc(:properties)
-        |> run_cast_relations(@all_relations)
-        # |> run_cast_embeds(@all_relations)
-        # |> run_cast_collections(@all_relations)
+        |> run_cast_relations(@all_relations, user)
         |> Brando.Trait.run_changeset_mutators(
           __MODULE__,
           traits_before_validate_required,
           user
         )
         |> validate_required(@all_required_attrs)
+        |> run_unique_constraints(__MODULE__, @all_attributes)
+        |> run_validations(__MODULE__, @all_attributes)
         |> Brando.Trait.run_changeset_mutators(
           __MODULE__,
           traits_after_validate_required,

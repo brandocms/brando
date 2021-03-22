@@ -7,6 +7,7 @@ defmodule Brando.Traits.Upload do
   alias Brando.Images
   alias Brando.Utils
   alias Brando.Type
+  alias Brando.CDN
   alias Ecto.Changeset
   import Ecto.Changeset
 
@@ -107,8 +108,12 @@ defmodule Brando.Traits.Upload do
     Images.get_series_config(image_series_id)
   end
 
-  defp get_image_cfg(cfg, _, _) do
+  defp get_image_cfg(%Type.ImageConfig{} = cfg, _, _) do
     {:ok, cfg}
+  end
+
+  defp get_image_cfg(cfg, _, _) do
+    {:ok, Brando.Utils.map_to_struct(cfg, Type.ImageConfig)}
   end
 
   defp get_image_data(changeset, field_name) do

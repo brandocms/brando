@@ -97,14 +97,17 @@ defmodule Brando.Blueprint.BlueprintTest do
     attrs = __MODULE__.Project.__attributes__()
 
     assert attrs == [
-             %{name: :title, opts: [], type: :string},
-             %{name: :slug, opts: [from: :title, required: true], type: :slug},
+             %{name: :title, opts: %{}, type: :string},
+             %{
+               name: :slug,
+               opts: %{from: :title, required: true},
+               type: :slug
+             },
              %{
                name: :cover,
-               opts: [
+               opts: %{
                  allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
                  default_size: "medium",
-                 upload_path: "images/avatars",
                  random_filename: true,
                  size_limit: 10_240_000,
                  sizes: %{
@@ -115,41 +118,42 @@ defmodule Brando.Blueprint.BlueprintTest do
                    "thumb" => %{"crop" => true, "quality" => 65, "size" => "150x150"},
                    "xlarge" => %{"crop" => true, "quality" => 65, "size" => "900x900"}
                  },
-                 srcset: [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}]
-               ],
+                 srcset: [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}],
+                 upload_path: "images/avatars"
+               },
                type: :image
              },
-             %{name: :deleted_at, opts: [], type: :datetime},
-             %{name: :sequence, opts: [default: 0], type: :integer}
+             %{name: :deleted_at, opts: %{}, type: :datetime},
+             %{
+               name: :sequence,
+               opts: %{default: 0},
+               type: :integer
+             }
            ]
   end
 
   test "attribute_opts" do
     attr_opts = __MODULE__.Project.__attribute_opts__(:slug)
-    assert attr_opts == [from: :title, required: true]
+    assert attr_opts == %{from: :title, required: true}
 
     attr_opts = __MODULE__.Project.__attribute_opts__(:cover)
 
-    assert attr_opts == [
-             {
-               :allowed_mimetypes,
-               ["image/jpeg", "image/png", "image/gif"]
+    assert attr_opts == %{
+             allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
+             default_size: "medium",
+             random_filename: true,
+             size_limit: 10_240_000,
+             sizes: %{
+               "large" => %{"crop" => true, "quality" => 65, "size" => "700x700"},
+               "medium" => %{"crop" => true, "quality" => 65, "size" => "500x500"},
+               "micro" => %{"crop" => false, "quality" => 10, "size" => "25"},
+               "small" => %{"crop" => true, "quality" => 65, "size" => "300x300"},
+               "thumb" => %{"crop" => true, "quality" => 65, "size" => "150x150"},
+               "xlarge" => %{"crop" => true, "quality" => 65, "size" => "900x900"}
              },
-             {:default_size, "medium"},
-             {:upload_path, "images/avatars"},
-             {:random_filename, true},
-             {:size_limit, 10_240_000},
-             {:sizes,
-              %{
-                "large" => %{"crop" => true, "quality" => 65, "size" => "700x700"},
-                "medium" => %{"crop" => true, "quality" => 65, "size" => "500x500"},
-                "micro" => %{"crop" => false, "quality" => 10, "size" => "25"},
-                "small" => %{"crop" => true, "quality" => 65, "size" => "300x300"},
-                "thumb" => %{"crop" => true, "quality" => 65, "size" => "150x150"},
-                "xlarge" => %{"crop" => true, "quality" => 65, "size" => "900x900"}
-              }},
-             {:srcset, [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}]}
-           ]
+             srcset: [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}],
+             upload_path: "images/avatars"
+           }
   end
 
   test "relations" do
@@ -158,7 +162,7 @@ defmodule Brando.Blueprint.BlueprintTest do
     assert relations == [
              %{
                name: :creator,
-               opts: [module: Brando.Users.User, required: true],
+               opts: %{module: Brando.Users.User, required: true},
                type: :belongs_to
              }
            ]
@@ -166,6 +170,17 @@ defmodule Brando.Blueprint.BlueprintTest do
 
   test "ecto schema" do
     schema = __MODULE__.Project.__schema__(:fields)
-    assert schema == [:id, :title, :slug, :cover, :deleted_at, :sequence, :creator_id]
+
+    assert schema == [
+             :id,
+             :title,
+             :slug,
+             :cover,
+             :deleted_at,
+             :sequence,
+             :creator_id,
+             :inserted_at,
+             :updated_at
+           ]
   end
 end
