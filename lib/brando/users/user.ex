@@ -37,32 +37,8 @@ defmodule Brando.Users.User do
   use Brando.Blueprint
   import Brando.Gettext
 
-  use Brando.Field.Image.Schema
-
-  has_image_field :avatar, %{
-    allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-    default_size: "medium",
-    upload_path: Path.join("images", "avatars"),
-    random_filename: true,
-    size_limit: 10_240_000,
-    sizes: %{
-      "micro" => %{"size" => "25", "quality" => 10, "crop" => false},
-      "thumb" => %{"size" => "150x150", "quality" => 65, "crop" => true},
-      "small" => %{"size" => "300x300", "quality" => 65, "crop" => true},
-      "medium" => %{"size" => "500x500", "quality" => 65, "crop" => true},
-      "large" => %{"size" => "700x700", "quality" => 65, "crop" => true},
-      "xlarge" => %{"size" => "900x900", "quality" => 65, "crop" => true}
-    },
-    srcset: [
-      {"small", "300w"},
-      {"medium", "500w"},
-      {"large", "700w"}
-    ]
-  }
-
   trait Brando.Traits.Password
   trait Brando.Traits.SoftDelete
-  trait Brando.Traits.Upload
 
   attributes do
     attribute :name, :string, required: true
@@ -84,6 +60,8 @@ defmodule Brando.Users.User do
       required: true
   end
 
+  identifier "{{ entry.name }}"
+
   @derived_fields ~w(
     id
     name
@@ -100,13 +78,10 @@ defmodule Brando.Users.User do
 
   @derive {Jason.Encoder, only: @derived_fields}
 
-  import Brando.Schema
+  # meta :en, singular: "user", plural: "users"
+  # meta :no, singular: "bruker", plural: "brukere"
 
-  meta :en, singular: "user", plural: "users"
-  meta :no, singular: "bruker", plural: "brukere"
-
-  identifier fn entry -> entry.name end
-  absolute_url false
+  # absolute_url false
 
   @doc """
   Casts and validates `params` against `schema` to create a valid changeset

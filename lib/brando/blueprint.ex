@@ -1,22 +1,22 @@
 defmodule Brando.Blueprint do
-  import Ecto.Changeset
-  import Ecto.Query
+  alias Ecto.Changeset
+
+  alias Brando.Blueprint.Relations
+  alias Brando.Blueprint.Upload
+  alias Brando.Blueprint.Unique
+  alias Brando.Blueprint.Validations
+  alias Brando.Blueprint.Villain
+  alias Brando.Trait
 
   defmacro __using__(_) do
     quote location: :keep do
       Module.register_attribute(__MODULE__, :traits, accumulate: true)
       Module.register_attribute(__MODULE__, :attrs, accumulate: true)
       Module.register_attribute(__MODULE__, :relations, accumulate: true)
+      Module.register_attribute(__MODULE__, :translations, accumulate: true)
 
       @before_compile Brando.Blueprint
       @after_compile Brando.Blueprint
-
-      import unquote(__MODULE__)
-      import unquote(__MODULE__).Trait
-      import unquote(__MODULE__).Attributes
-      import unquote(__MODULE__).Relations
-      import unquote(__MODULE__).Naming
-      import unquote(__MODULE__).Translations
 
       use Ecto.Schema
       use Brando.JSONLD.Schema
@@ -24,7 +24,20 @@ defmodule Brando.Blueprint do
       import Ecto
       import Ecto.Changeset
       import Ecto.Query, only: [from: 1, from: 2]
+
+      import unquote(__MODULE__)
+      import unquote(__MODULE__).Trait
+      import unquote(__MODULE__).Attributes
+      import unquote(__MODULE__).Relations
+      import unquote(__MODULE__).Naming
+      import unquote(__MODULE__).Translations
+      import unquote(__MODULE__).Identifier
+
       import Brando.Utils.Schema
+
+      def __absolute_url__(_) do
+        false
+      end
     end
   end
 
@@ -68,10 +81,42 @@ defmodule Brando.Blueprint do
 
         Enum.map(unquote(relations), fn
           %{type: :belongs_to, name: name, opts: opts} ->
-            Ecto.Schema.belongs_to(name, Map.fetch!(opts, :module))
+            Ecto.Schema.belongs_to(
+              name,
+              Map.fetch!(opts, :module)
+            )
+
+          %{type: :many_to_many, name: name, opts: opts} ->
+            Ecto.Schema.many_to_many(
+              name,
+              Map.fetch!(opts, :module),
+              to_ecto_opts(:many_to_many, opts)
+            )
+
+          %{type: :has_many, name: name, opts: opts} ->
+            Ecto.Schema.has_many(
+              name,
+              Map.fetch!(opts, :module),
+              to_ecto_opts(:has_many, opts)
+            )
+
+          %{type: :embeds_one, name: name, opts: opts} ->
+            Ecto.Schema.embeds_one(
+              name,
+              Map.fetch!(opts, :module),
+              to_ecto_opts(:embeds_one, opts)
+            )
+
+          %{type: :embeds_many, name: name, opts: opts} ->
+            Ecto.Schema.embeds_many(
+              name,
+              Map.fetch!(opts, :module),
+              to_ecto_opts(:embeds_many, opts)
+            )
 
           attr ->
             require Logger
+            Logger.error("==> relation type not caught")
             Logger.error(inspect(attr, pretty: true))
         end)
 
@@ -89,7 +134,7 @@ defmodule Brando.Blueprint do
   def get_optional_attrs(attrs) do
     attrs
     |> Enum.reject(&Map.get(&1.opts, :required))
-    |> maybe_add_villain_html_fields()
+    |> Villain.maybe_add_villain_html_fields()
     |> Enum.map(& &1.name)
   end
 
@@ -100,117 +145,6 @@ defmodule Brando.Blueprint do
   end
 
   def get_relation_key(%{type: :belongs_to, name: name}), do: :"#{name}_id"
-
-  defp maybe_add_villain_html_fields(attrs) do
-    Enum.reduce(attrs, attrs, fn attr, updated_attrs ->
-      if attr.type == :villain do
-        html_attr =
-          attr.name
-          |> to_string
-          |> String.replace("data", "html")
-          |> String.to_atom()
-
-        [%{name: html_attr, opts: [], type: :text} | updated_attrs]
-        # updated_attrs
-      else
-        updated_attrs
-      end
-    end)
-  end
-
-  def run_cast_relations(changeset, relations, user) do
-    Enum.reduce(relations, changeset, fn rel, cs -> run_cast_relation(rel, cs, user) end)
-  end
-
-  def run_cast_relation(
-        %{type: :belongs_to, opts: %{cast: true, module: _module, name: name}},
-        changeset,
-        _user
-      ) do
-    cast_assoc(changeset, name)
-  end
-
-  def run_cast_relation(
-        %{type: :belongs_to, opts: %{cast: :with_user, module: module, name: name}},
-        changeset,
-        user
-      ) do
-    cast_assoc(changeset, name, with: {module, :changeset, [user]})
-  end
-
-  def run_cast_relation(
-        %{type: :belongs_to, opts: %{cast: cast_opts, name: name}},
-        changeset,
-        user
-      ) do
-    case Keyword.get(cast_opts, :with) do
-      {with_mod, with_fun, with_user: true} ->
-        cast_assoc(changeset, name, with: {with_mod, with_fun, [user]})
-
-      {with_mod, with_fun} ->
-        cast_assoc(changeset, name, with: {with_mod, with_fun, []})
-    end
-  end
-
-  def run_cast_relation(%{type: :belongs_to}, updated_changeset, _user) do
-    updated_changeset
-  end
-
-  def run_unique_constraints(changeset, module, attributes) do
-    attributes
-    |> Enum.filter(&Map.get(&1.opts, :unique, false))
-    |> Enum.reduce(changeset, fn
-      %{opts: %{unique: true}} = f, new_changeset ->
-        unique_constraint(new_changeset, f.name)
-
-      %{opts: %{unique: [with: with_field]}} = f, new_changeset ->
-        unique_constraint(new_changeset, [f.name, with_field])
-
-      %{opts: %{unique: [prevent_collision: true]}} = f, new_changeset ->
-        new_changeset
-        |> Brando.Utils.Schema.avoid_field_collision([f.name])
-        |> unique_constraint(f.name)
-
-      %{opts: %{unique: [prevent_collision: :language]}} = f, new_changeset ->
-        new_changeset
-        |> Brando.Utils.Schema.avoid_field_collision(module, [f.name], &filter_by_language/2)
-        |> unique_constraint([f.name, :language])
-    end)
-  end
-
-  def run_validations(changeset, _module, attributes) do
-    attributes
-    |> Enum.filter(&Map.get(&1.opts, :validate, false))
-    |> Enum.reduce(changeset, fn
-      %{opts: %{validate: validations}} = f, new_changeset ->
-        validations_map = Enum.into(validations, %{})
-
-        Enum.reduce(validations_map, new_changeset, fn
-          {:min_length, min_length}, validated_changeset ->
-            validate_length(validated_changeset, f.name, min: min_length)
-
-          {:max_length, max_length}, validated_changeset ->
-            validate_length(validated_changeset, f.name, max: max_length)
-
-          {:length, length}, validated_changeset ->
-            validate_length(validated_changeset, f.name, is: length)
-
-          {:format, format}, validated_changeset ->
-            validate_format(validated_changeset, f.name, format)
-
-          {:acceptance, true}, validated_changeset ->
-            validate_acceptance(validated_changeset, f.name)
-
-          {:confirmation, true}, validated_changeset ->
-            validate_confirmation(validated_changeset, f.name)
-        end)
-    end)
-  end
-
-  defp filter_by_language(module, changeset) do
-    from m in module,
-      where: m.language == ^get_field(changeset, :language)
-  end
 
   defmacro __before_compile__(_) do
     quote location: :keep do
@@ -322,32 +256,52 @@ defmodule Brando.Blueprint do
 
       # generate changeset
       def changeset(schema, params \\ %{}, user \\ :system) do
-        {traits_before_validate_required, traits_after_validate_required} =
-          Brando.Trait.split_traits_by_changeset_phase(@all_traits)
-
-        schema
-        |> cast(params, @all_required_attrs() ++ @all_optional_attrs())
-        # |> cast_assoc(:properties)
-        |> run_cast_relations(@all_relations, user)
-        |> Brando.Trait.run_changeset_mutators(
+        run_changeset(
           __MODULE__,
-          traits_before_validate_required,
-          user
+          schema,
+          params,
+          user,
+          @all_traits,
+          @all_attributes,
+          @all_relations,
+          @all_required_attrs,
+          @all_optional_attrs
         )
-        |> validate_required(@all_required_attrs)
-        |> run_unique_constraints(__MODULE__, @all_attributes)
-        |> run_validations(__MODULE__, @all_attributes)
-        |> Brando.Trait.run_changeset_mutators(
-          __MODULE__,
-          traits_after_validate_required,
-          user
-        )
-
-        # |> avoid_field_collision([:uri], &filter_by_language/1)
-        # |> unique_constraint([:uri, :language])
-        # |> validate_upload({:image, :meta_image}, user)
       end
     end
+  end
+
+  def run_changeset(
+        module,
+        schema,
+        params,
+        user,
+        all_traits,
+        all_attributes,
+        all_relations,
+        all_required_attrs,
+        all_optional_attrs
+      ) do
+    {traits_before_validate_required, traits_after_validate_required} =
+      Trait.split_traits_by_changeset_phase(all_traits)
+
+    schema
+    |> Changeset.cast(params, all_required_attrs ++ all_optional_attrs)
+    |> Relations.run_cast_relations(all_relations, user)
+    |> Trait.run_changeset_mutators(
+      module,
+      traits_before_validate_required,
+      user
+    )
+    |> Changeset.validate_required(all_required_attrs)
+    |> Unique.run_unique_constraints(module, all_attributes)
+    |> Validations.run_validations(module, all_attributes)
+    |> Trait.run_changeset_mutators(
+      module,
+      traits_after_validate_required,
+      user
+    )
+    |> Upload.run_upload_validations(module, all_attributes, user)
   end
 
   defmacro __after_compile__(env, _) do

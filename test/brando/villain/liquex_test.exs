@@ -42,4 +42,51 @@ defmodule Brando.Villain.LiquexTest do
 
     assert html == "\n  Boolean is false\n"
   end
+
+  test "route tag" do
+    tpl =
+      """
+      the route is {% route project_path index %}
+      """
+      |> String.trim()
+
+    {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
+
+    assert parsed_tpl == [
+             {:text, "the route is "},
+             {:route_tag,
+              [
+                function: "project_path",
+                action: "index",
+                args: []
+              ]}
+           ]
+
+    # render it
+    {result, _} = Liquex.Render.render([], parsed_tpl, Brando.Villain.get_base_context())
+    assert Enum.join(result) == "the route is /projects"
+
+    tpl =
+      """
+      the route is {% route project_path show entry.uri %}
+      """
+      |> String.trim()
+
+    {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
+
+    assert parsed_tpl == [
+             {:text, "the route is "},
+             {:route_tag,
+              [
+                function: "project_path",
+                action: "show",
+                args: [{:field, [key: "entry", key: "uri"]}]
+              ]}
+           ]
+
+    entry = %{uri: "the-uri"}
+    context = Liquex.Context.assign(Brando.Villain.get_base_context(), "entry", entry)
+    {result, _} = Liquex.Render.render([], parsed_tpl, context)
+    assert Enum.join(result) == "the route is /project/the-uri"
+  end
 end

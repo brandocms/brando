@@ -3,6 +3,14 @@ defmodule BrandoIntegration.LockdownController do
     namespace: Brando
 end
 
+defmodule BrandoIntegration.ProjectController do
+  use Phoenix.Controller,
+    namespace: Brando
+
+  def index(conn, _), do: send_resp(conn, 200, "index")
+  def show(conn, _), do: send_resp(conn, 200, "show")
+end
+
 defmodule BrandoIntegration.TestSchema do
   use Absinthe.Schema
   use Brando.GraphQL.Schema
@@ -151,5 +159,7 @@ defmodule BrandoIntegrationWeb.Router do
 
   scope "/" do
     pipe_through :browser
+    get "/projects", BrandoIntegration.ProjectController, :index
+    get "/project/:uri", BrandoIntegration.ProjectController, :show
   end
 end

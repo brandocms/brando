@@ -187,68 +187,6 @@ defmodule Brando.Schema do
     identifiers_for(entries)
   end
 
-  def metaless_schemas do
-    Enum.reduce(list_schemas(), [], fn schema, acc ->
-      acc =
-        if {:__identifier__, 1} in schema.__info__(:functions) do
-          acc
-        else
-          IO.warn("""
-          Schema `#{inspect(schema)}` is missing `identifier`.
-
-              use Brando.Schema
-
-              identifier entry -> entry.title end
-
-          """)
-
-          [schema | acc]
-        end
-
-      acc =
-        if {:__meta__, 2} in schema.__info__(:functions) do
-          acc
-        else
-          IO.warn("""
-          Schema `#{inspect(schema)}` is missing `meta`.
-
-              use Brando.Schema
-
-              meta :en, singular: "post", plural: "posts"
-              meta :no, singular: "post", plural: "poster"
-
-          """)
-
-          [schema | acc]
-        end
-
-      if {:__absolute_url__, 1} in schema.__info__(:functions) do
-        acc
-      else
-        IO.warn("""
-        Schema `#{inspect(schema)}` is missing `absolute_url`.
-        If your entries have URLs:
-
-            use Brando.Schema
-
-            absolute_url fn router, endpoint, entry ->
-              router.post_path(endpoint, :detail, entry.slug)
-            end
-
-        If they don't
-
-            use Brando.Schema
-
-            absolute_url false
-
-        """)
-
-        [schema | acc]
-      end
-    end)
-    |> Enum.uniq()
-  end
-
   defp get_translated_plural(module, locale) do
     locale_atom = String.to_existing_atom(locale)
     module.__meta__(locale_atom, :plural)

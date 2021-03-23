@@ -114,5 +114,10 @@ defmodule Brando.Blueprint.Attributes do
   def to_ecto_type(type), do: type
 
   def to_ecto_opts(:language, opts), do: Map.to_list(opts)
+  def to_ecto_opts(:many_to_many, opts), do: opts |> Map.drop([:cast, :module]) |> Map.to_list()
+  def to_ecto_opts(:has_many, opts), do: opts |> Map.drop([:cast, :module]) |> Map.to_list()
+  def to_ecto_opts(:embeds_one, opts), do: opts |> Map.drop([:cast, :module]) |> Map.to_list()
+  def to_ecto_opts(:embeds_many, opts), do: opts |> Map.drop([:cast, :module]) |> Map.to_list()
+
   def to_ecto_opts(_type, opts), do: Map.to_list(opts)
 end

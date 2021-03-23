@@ -38,6 +38,19 @@
 #   #   end
 #   # end
 
+# translations do
+#   translation :naming do
+#     singular gettext("page")
+#     plural gettext("pages")
+#   end
+
+#   translation :fields do
+#     t [:advanced_config] do
+#       t :label, gettext("Advanced configuration")
+#     end
+#   end
+# end
+
 #   def translations(:naming) do
 #     translation do
 #       t [:singular], gettext("page")

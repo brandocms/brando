@@ -177,6 +177,11 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       timestamps()
     end
 
+    create table(:projects_related) do
+      add :project_id, references(:projects_projects)
+      add :related_project_id, references(:projects_projects)
+    end
+
     create table(:sites_identity) do
       add :name, :string
       add :alternate_name, :string
