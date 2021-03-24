@@ -17,6 +17,24 @@ defmodule Brando.Villain.LiquexRenderer do
     {[rendered_route], context}
   end
 
+  def render({:picture_tag, [source: source, args: args]}, context) do
+    evaled_source = Liquex.Argument.eval(source, context)
+
+    evaled_args =
+      args
+      |> Enum.map(fn arg ->
+        {key, val} = Liquex.Argument.eval(arg, context)
+        {String.to_existing_atom(key), val}
+      end)
+
+    html =
+      evaled_source
+      |> Brando.HTML.Images.picture_tag(evaled_args)
+      |> Phoenix.HTML.safe_to_string()
+
+    {[html], context}
+  end
+
   # Ignore this tag if we don't match
   def render(_, _), do: false
 end

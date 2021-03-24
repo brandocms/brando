@@ -1,6 +1,7 @@
 defmodule Brando.Villain.LiquexTest do
   use ExUnit.Case, async: true
   use Brando.ConnCase
+  alias Brando.Factory
 
   test "if statement" do
     Brando.Cache.Globals.set()
@@ -88,5 +89,44 @@ defmodule Brando.Villain.LiquexTest do
     context = Liquex.Context.assign(Brando.Villain.get_base_context(), "entry", entry)
     {result, _} = Liquex.Render.render([], parsed_tpl, context)
     assert Enum.join(result) == "the route is /project/the-uri"
+  end
+
+  test "picture tag" do
+    tpl =
+      """
+      {% picture entry.cover %}
+      """
+      |> String.trim()
+
+    {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
+
+    assert parsed_tpl == [{:picture_tag, [source: {:field, [key: "entry", key: "cover"]}]}]
+
+    tpl =
+      """
+      {% picture entry.avatar { size: \"auto\", lazyload: true, srcset: "Brando.Users.User:avatar" } %}
+      """
+      |> String.trim()
+
+    {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
+
+    assert parsed_tpl == [
+             picture_tag: [
+               {:source, {:field, [key: "entry", key: "avatar"]}},
+               {:args,
+                [
+                  keyword: ["size", {:literal, "auto"}],
+                  keyword: ["lazyload", {:literal, true}],
+                  keyword: ["srcset", {:literal, "Brando.Users.User:avatar"}]
+                ]}
+             ]
+           ]
+
+    user = Factory.insert(:random_user)
+    context = Liquex.Context.assign(Brando.Villain.get_base_context(), "entry", user)
+    {result, _} = Liquex.Render.render([], parsed_tpl, context)
+
+    assert Enum.join(result) ==
+             "<picture data-orientation=\"landscape\" data-ll-srcset><source data-srcset=\"images/avatars/small/27i97a.jpeg 300w, images/avatars/medium/27i97a.jpeg 500w, images/avatars/large/27i97a.jpeg 700w\" type=\"image/jpeg\"><img data-src=\"images/avatars/small/27i97a.jpeg\" data-srcset=\"images/avatars/small/27i97a.jpeg 300w, images/avatars/medium/27i97a.jpeg 500w, images/avatars/large/27i97a.jpeg 700w\" height=\"200\" width=\"300\" data-ll-placeholder data-ll-srcset-image><noscript><img src=\"images/avatars/small/27i97a.jpeg\"></noscript></picture>"
   end
 end
