@@ -14,7 +14,7 @@ defmodule Brando.FactoryMixin do
       alias Brando.ImageCategory
       alias Brando.ImageSeries
       alias Brando.Pages.Page
-      alias Brando.Pages.PageFragment
+      alias Brando.Pages.Fragment
       alias Brando.Villain.Module
       alias Brando.Type.ImageConfig
       alias Brando.Users.User
@@ -53,8 +53,8 @@ defmodule Brando.FactoryMixin do
         }
       end
 
-      def page_fragment_factory do
-        %PageFragment{
+      def fragment_factory do
+        %Fragment{
           parent_key: "parent",
           key: "a-key",
           language: "no",

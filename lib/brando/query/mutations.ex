@@ -8,7 +8,7 @@ defmodule Brando.Query.Mutations do
   alias Brando.Query
   alias Brando.Revisions
   alias Brando.Schema
-  alias Brando.SoftDelete
+  alias Brando.Trait
 
   def create(module, params, user, callback_block) do
     with changeset <- module.changeset(struct(module), params, user),
@@ -16,7 +16,7 @@ defmodule Brando.Query.Mutations do
          {:ok, entry} <- Query.insert(changeset),
          {:ok, _} <- Datasource.update_datasource(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
-      if Revisions.is_revisioned(module) do
+      if module.__trait__(Trait.Revisioned) do
         Revisions.create_revision(entry, user)
       end
 
@@ -46,7 +46,7 @@ defmodule Brando.Query.Mutations do
          {:ok, _} <- Datasource.update_datasource(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
       if has_changes(changeset) do
-        if Revisions.is_revisioned(module) do
+        if module.__trait__(Trait.Revisioned) do
           Revisions.create_revision(entry, user)
         end
 
@@ -109,7 +109,7 @@ defmodule Brando.Query.Mutations do
     {:ok, entry} = apply(context, :"get_#{name}", [id])
 
     {:ok, entry} =
-      if SoftDelete.is_soft_deletable(module) do
+      if module.__trait__(Trait.SoftDelete) do
         Brando.repo().soft_delete(entry)
       else
         Query.delete(entry)

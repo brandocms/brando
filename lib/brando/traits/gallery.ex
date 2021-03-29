@@ -1,4 +1,4 @@
-defmodule Brando.Traits.Gallery do
+defmodule Brando.Trait.Gallery do
   @moduledoc """
 
   """

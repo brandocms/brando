@@ -6,7 +6,7 @@ defmodule Brando.Pages do
   use Brando.Query
 
   alias Brando.Pages.Page
-  alias Brando.Pages.PageFragment
+  alias Brando.Pages.Fragment
   alias Brando.Pages.Property
   alias Brando.Users.User
   alias Brando.Villain
@@ -15,8 +15,8 @@ defmodule Brando.Pages do
   import Ecto.Query
 
   @type changeset :: Changeset.t()
-  @type fragment :: PageFragment.t()
-  @type fragment_error :: {:error, {:page_fragment, :not_found}} | {:error, changeset}
+  @type fragment :: Fragment.t()
+  @type fragment_error :: {:error, {:fragment, :not_found}} | {:error, changeset}
   @type id :: binary | integer
   @type page :: Page.t()
   @type params :: map
@@ -24,7 +24,7 @@ defmodule Brando.Pages do
 
   defmacro __using__(_) do
     quote do
-      import Brando.Pages, only: [get_page_fragments: 1, render_fragment: 2, get_fragments: 1]
+      import Brando.Pages, only: [get_fragments: 1, render_fragment: 2, get_fragments: 2]
     end
   end
 
@@ -41,7 +41,7 @@ defmodule Brando.Pages do
   @doc """
   Dataloader queries
   """
-  def dataloader_query(PageFragment = query, _) do
+  def dataloader_query(Fragment = query, _) do
     query
     |> where([f], is_nil(f.deleted_at))
     |> order_by([f], asc: f.sequence, asc: fragment("lower(?)", f.key))
@@ -182,7 +182,7 @@ defmodule Brando.Pages do
     end
   end
 
-  query :list, PageFragment do
+  query :list, Fragment do
     fn query ->
       from q in query,
         where: is_nil(q.deleted_at),
@@ -190,7 +190,7 @@ defmodule Brando.Pages do
     end
   end
 
-  filters PageFragment do
+  filters Fragment do
     fn
       {:title, title}, query ->
         from q in query, where: ilike(q.title, ^"%#{title}%")
@@ -203,9 +203,9 @@ defmodule Brando.Pages do
     end
   end
 
-  query :single, PageFragment, do: fn query -> from q in query, where: is_nil(q.deleted_at) end
+  query :single, Fragment, do: fn query -> from q in query, where: is_nil(q.deleted_at) end
 
-  matches PageFragment do
+  matches Fragment do
     fn
       {:id, id}, query ->
         from t in query, where: t.id == ^id
@@ -224,17 +224,17 @@ defmodule Brando.Pages do
     end
   end
 
-  mutation :create, PageFragment
+  mutation :create, Fragment
 
-  mutation :update, PageFragment do
+  mutation :update, Fragment do
     fn entry ->
       update_villains_referencing_fragment(entry)
       {:ok, entry}
     end
   end
 
-  mutation :delete, PageFragment
-  mutation :duplicate, {PageFragment, delete_fields: [:parent], change_fields: [:key]}
+  mutation :delete, Fragment
+  mutation :duplicate, {Fragment, delete_fields: [:parent], change_fields: [:key]}
 
   @doc """
   Get set of fragments by parent key
@@ -245,8 +245,8 @@ defmodule Brando.Pages do
     get_fragments(%{filter: %{parent_key: parent_key}})
   end
 
-  def get_fragments(opts) do
-    {:ok, fragments} = list_page_fragments(opts)
+  def get_fragments(opts) when is_map(opts) do
+    {:ok, fragments} = list_fragments(opts)
     {:ok, Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)}
   end
 
@@ -266,7 +266,7 @@ defmodule Brando.Pages do
   Rerender all fragments
   """
   def rerender_fragments do
-    {:ok, fragments} = list_page_fragments()
+    {:ok, fragments} = list_fragments()
 
     for fragment <- fragments do
       Villain.rerender_html(Changeset.change(fragment))
@@ -274,24 +274,16 @@ defmodule Brando.Pages do
   end
 
   def rerender_fragment(id) do
-    {:ok, fragment} = get_page_fragment(id)
+    {:ok, fragment} = get_fragment(id)
     changeset = Changeset.change(fragment)
     Villain.rerender_html(changeset)
-  end
-
-  @deprecated "use list_fragment_translations/2 instead. Now takes `:excluded_language` as Keyword opt"
-  def list_page_fragments_translations(
-        _,
-        _
-      ) do
-    raise "deprecated!"
   end
 
   def list_fragments_translations(parent_key, opts \\ []) do
     exclude_lang = Keyword.get(opts, :exclude_language)
 
     query =
-      PageFragment
+      Fragment
       |> where([p], p.parent_key == ^parent_key)
       |> exclude_deleted()
       |> order_by([p], [:sequence, :key])
@@ -313,9 +305,9 @@ defmodule Brando.Pages do
   @doc """
   Get set of fragments by parent key and language
   """
-  def get_page_fragments(parent_key, language) do
+  def get_fragments(parent_key, language) do
     fragments =
-      PageFragment
+      Fragment
       |> where([p], p.parent_key == ^parent_key)
       |> where([p], p.language == ^language)
       |> exclude_deleted()
@@ -387,7 +379,7 @@ defmodule Brando.Pages do
 
     fragment =
       Brando.repo().one(
-        from p in PageFragment,
+        from p in Fragment,
           where: p.key == ^key and p.language == ^language and is_nil(p.deleted_at)
       )
 
@@ -404,7 +396,7 @@ defmodule Brando.Pages do
     end
   end
 
-  def render_fragment(%PageFragment{} = fragment), do: Phoenix.HTML.raw(fragment.html)
+  def render_fragment(%Fragment{} = fragment), do: Phoenix.HTML.raw(fragment.html)
 
   def render_fragment(fragments, key) when is_map(fragments) do
     case Map.get(fragments, key) do
@@ -424,8 +416,8 @@ defmodule Brando.Pages do
     opts = %{matches: %{parent_key: parent, key: key}}
     opts = (language && put_in(opts.matches, :language, language)) || opts
 
-    case get_page_fragment(opts) do
-      {:error, {:page_fragment, :not_found}} ->
+    case get_fragment(opts) do
+      {:error, {:fragment, :not_found}} ->
         ~s(<div class="page-fragment-missing">
              <strong>Missing page fragment</strong> <br />
              parent: #{parent}<br />
@@ -439,7 +431,7 @@ defmodule Brando.Pages do
   end
 
   defp build_fragments_query do
-    from f in PageFragment,
+    from f in Fragment,
       where: is_nil(f.deleted_at),
       order_by: [asc: f.sequence, asc: f.key]
   end

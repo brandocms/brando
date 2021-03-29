@@ -11,6 +11,14 @@ defmodule BrandoIntegration.ProjectController do
   def show(conn, _), do: send_resp(conn, 200, "show")
 end
 
+defmodule BrandoIntegrationWeb.PageController do
+  use Phoenix.Controller,
+    namespace: Brando
+
+  def index(conn, _), do: send_resp(conn, 200, "index")
+  def show(conn, _), do: send_resp(conn, 200, "show")
+end
+
 defmodule BrandoIntegration.TestSchema do
   use Absinthe.Schema
   use Brando.GraphQL.Schema
@@ -161,5 +169,7 @@ defmodule BrandoIntegrationWeb.Router do
     pipe_through :browser
     get "/projects", BrandoIntegration.ProjectController, :index
     get "/project/:uri", BrandoIntegration.ProjectController, :show
+    get "/project/:uri/:id", BrandoIntegration.ProjectController, :show
+    page_routes()
   end
 end

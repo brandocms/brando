@@ -1,4 +1,4 @@
-defmodule Brando.Traits.Password do
+defmodule Brando.Trait.Password do
   @moduledoc """
   Hashes pw on changes
   """
@@ -23,8 +23,6 @@ defmodule Brando.Traits.Password do
     do: put_change(changeset, :password, Bcrypt.hash_pwd_salt(password))
 
   defp maybe_update_password(changeset) do
-    require Logger
-    Logger.error(inspect(changeset.errors, pretty: true))
     changeset
   end
 end

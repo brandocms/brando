@@ -1,4 +1,4 @@
-# Logger.configure(level: :info)
+# Logger.configure(level: :debug)
 
 # Clear tmp dir
 File.rm_rf!(Path.join([Mix.Project.app_path(), "tmp", "media"]))

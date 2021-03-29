@@ -274,7 +274,7 @@ defmodule Brando.Images do
   """
   def create_category(data, user) do
     %ImageCategory{}
-    |> ImageCategory.changeset(:create, data, user)
+    |> ImageCategory.changeset(data, user)
     |> Brando.repo().insert()
   end
 
@@ -286,7 +286,7 @@ defmodule Brando.Images do
     changeset =
       ImageCategory
       |> Brando.repo().get_by(id: id)
-      |> ImageCategory.changeset(:update, data, user)
+      |> ImageCategory.changeset(data, user)
 
     changeset
     |> Brando.repo().update()
@@ -461,7 +461,7 @@ defmodule Brando.Images do
       cfg: Map.put(cat.cfg, :upload_path, "images/site/" <> cat.slug <> "-kopi")
     }
 
-    cs = ImageCategory.changeset(%ImageCategory{}, :create, params)
+    cs = ImageCategory.changeset(%ImageCategory{}, params)
     Brando.repo().insert(cs)
   end
 

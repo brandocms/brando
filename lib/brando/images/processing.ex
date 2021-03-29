@@ -146,7 +146,14 @@ defmodule Brando.Images.Processing do
         ) :: [any()]
   def recreate_sizes_for_image_field(schema, field_name, user_id \\ :system) do
     rows = Brando.repo().all(schema)
-    {:ok, cfg} = schema.get_image_cfg(field_name)
+
+    #! TODO Remove when moving to blueprints
+    {:ok, cfg} =
+      if {:__blueprint__, 0} in schema.__info__(:functions) do
+        {:ok, schema.__attribute_opts__(field_name)}
+      else
+        schema.get_image_cfg(field_name)
+      end
 
     operations =
       Enum.flat_map(rows, fn row ->
@@ -197,7 +204,14 @@ defmodule Brando.Images.Processing do
     Images.Utils.delete_sized_images(image_struct)
 
     schema = changeset.data.__struct__
-    {:ok, cfg} = schema.get_image_cfg(field_name)
+
+    #! TODO Remove when moving to blueprints
+    {:ok, cfg} =
+      if {:__blueprint__, 0} in schema.__info__(:functions) do
+        {:ok, schema.__attribute_opts__(field_name)}
+      else
+        schema.get_image_cfg(field_name)
+      end
 
     with {:ok, operations} <- Operations.create(image_struct, cfg, nil, user),
          {:ok, results} <- Operations.perform(operations, user) do

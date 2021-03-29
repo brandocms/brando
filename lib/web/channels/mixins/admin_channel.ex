@@ -49,10 +49,10 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     "page:rerender",
     "page:duplicate",
     "page:rerender_all",
-    "page_fragments:sequence_fragments",
-    "page_fragment:rerender",
-    "page_fragment:duplicate",
-    "page_fragment:rerender_all",
+    "fragments:sequence_fragments",
+    "fragment:rerender",
+    "fragment:duplicate",
+    "fragment:rerender_all",
     "publisher:list",
     "publisher:delete_job",
     "revision:activate",
@@ -106,7 +106,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("images:sequence_images", params, socket) do
-    Brando.Traits.Sequence.sequence(Brando.Image, params)
+    Brando.Trait.Sequence.sequence(Brando.Image, params)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
@@ -227,7 +227,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("pages:sequence_pages", params, socket) do
-    Brando.Traits.Sequence.sequence(Pages.Page, params)
+    Brando.Trait.Sequence.sequence(Pages.Page, params)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
@@ -252,29 +252,29 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
-  def do_handle_in("page_fragments:sequence_fragments", params, socket) do
-    Brando.Traits.Sequence.sequence(Pages.PageFragment, params)
+  def do_handle_in("fragments:sequence_fragments", params, socket) do
+    Brando.Trait.Sequence.sequence(Pages.Fragment, params)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
-  def do_handle_in("page_fragment:duplicate", %{"id" => page_id}, socket) do
+  def do_handle_in("fragment:duplicate", %{"id" => page_id}, socket) do
     user = Guardian.Phoenix.Socket.current_resource(socket)
 
-    case Pages.duplicate_page_fragment(page_id, user) do
+    case Pages.duplicate_fragment(page_id, user) do
       {:ok, new_fragment} ->
-        {:reply, {:ok, %{code: 200, page_fragment: new_fragment}}, socket}
+        {:reply, {:ok, %{code: 200, fragment: new_fragment}}, socket}
 
-      {:error, {:page_fragment, :not_found}} ->
+      {:error, {:fragment, :not_found}} ->
         {:reply, {:error, %{code: 400, message: "Fragment not found!"}}, socket}
     end
   end
 
-  def do_handle_in("page_fragment:rerender", %{"id" => fragment_id}, socket) do
+  def do_handle_in("fragment:rerender", %{"id" => fragment_id}, socket) do
     Pages.rerender_fragment(String.to_integer(fragment_id))
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
-  def do_handle_in("page_fragment:rerender_all", _, socket) do
+  def do_handle_in("fragment:rerender_all", _, socket) do
     Pages.rerender_fragments()
     {:reply, {:ok, %{code: 200}}, socket}
   end
@@ -360,7 +360,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("menus:sequence_menus", params, socket) do
-    Brando.Traits.Sequence.sequence(Navigation.Menu, params)
+    Brando.Trait.Sequence.sequence(Navigation.Menu, params)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
@@ -429,7 +429,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("villain:sequence_modules", params, socket) do
-    Brando.Traits.Sequence.sequence(Villain.Module, params)
+    Brando.Trait.Sequence.sequence(Villain.Module, params)
 
     {:reply, {:ok, %{code: 200}}, socket}
   end

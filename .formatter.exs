@@ -22,7 +22,7 @@ locals_without_parens = [
   single: 2,
   mutation: 2,
   mutation: 3,
-  #
+  # live preview
   preview_target: 2,
   assign: 2,
   schema_module: 1,
@@ -47,7 +47,19 @@ locals_without_parens = [
   attribute: 3,
   relation: 2,
   relation: 3,
-  extra_field: 3
+  extra_field: 3,
+  label: 1,
+  placeholder: 1,
+  instructions: 1,
+  translate: 2,
+  meta_schema: 1,
+  meta_field: 2,
+  meta_field: 3,
+  json_ld_schema: 2,
+  json_ld_field: 2,
+  json_ld_field: 3,
+  json_ld_field: 4,
+  table: 1
 ]
 
 [

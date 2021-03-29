@@ -1,7 +1,7 @@
-defmodule Brando.GraphQL.Schema.Types.PageFragment do
+defmodule Brando.GraphQL.Schema.Types.Fragment do
   use Brando.Web, :absinthe
 
-  object :page_fragment do
+  object :fragment do
     field :id, :id
     field :title, :string
     field :parent_key, :string
@@ -17,7 +17,7 @@ defmodule Brando.GraphQL.Schema.Types.PageFragment do
     field :deleted_at, :time
   end
 
-  input_object :page_fragment_params do
+  input_object :fragment_params do
     field :title, :string
     field :parent_key, :string
     field :key, :string
@@ -27,44 +27,44 @@ defmodule Brando.GraphQL.Schema.Types.PageFragment do
     field :page_id, :id
   end
 
-  @desc "Matching options for page_fragment"
-  input_object :page_fragment_matches do
+  @desc "Matching options for fragment"
+  input_object :fragment_matches do
     field :id, :id
   end
 
-  object :page_fragment_queries do
-    @desc "Get all page_fragments"
-    field :page_fragments, type: list_of(:page_fragment) do
-      resolve &Brando.Pages.PageFragmentResolver.all/2
+  object :fragment_queries do
+    @desc "Get all fragments"
+    field :fragments, type: list_of(:fragment) do
+      resolve &Brando.Pages.FragmentResolver.all/2
     end
 
-    @desc "Get page_fragment"
-    field :page_fragment, type: :page_fragment do
-      arg :matches, :page_fragment_matches
+    @desc "Get fragment"
+    field :fragment, type: :fragment do
+      arg :matches, :fragment_matches
       arg :revision, :id
       arg :status, :string, default_value: "all"
-      resolve &Brando.Pages.PageFragmentResolver.get/2
+      resolve &Brando.Pages.FragmentResolver.get/2
     end
   end
 
-  object :page_fragment_mutations do
-    field :create_page_fragment, type: :page_fragment do
-      arg :page_fragment_params, non_null(:page_fragment_params)
+  object :fragment_mutations do
+    field :create_fragment, type: :fragment do
+      arg :fragment_params, non_null(:fragment_params)
 
-      resolve &Brando.Pages.PageFragmentResolver.create/2
+      resolve &Brando.Pages.FragmentResolver.create/2
     end
 
-    field :update_page_fragment, type: :page_fragment do
-      arg :page_fragment_id, non_null(:id)
-      arg :page_fragment_params, :page_fragment_params
+    field :update_fragment, type: :fragment do
+      arg :fragment_id, non_null(:id)
+      arg :fragment_params, :fragment_params
 
-      resolve &Brando.Pages.PageFragmentResolver.update/2
+      resolve &Brando.Pages.FragmentResolver.update/2
     end
 
-    field :delete_page_fragment, type: :page_fragment do
-      arg :page_fragment_id, non_null(:id)
+    field :delete_fragment, type: :fragment do
+      arg :fragment_id, non_null(:id)
 
-      resolve &Brando.Pages.PageFragmentResolver.delete/2
+      resolve &Brando.Pages.FragmentResolver.delete/2
     end
   end
 end

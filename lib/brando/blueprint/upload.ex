@@ -2,8 +2,6 @@ defmodule Brando.Blueprint.Upload do
   @moduledoc """
   Villain parsing
   """
-  use Brando.Trait
-  alias Brando.Exception.ConfigError
   alias Brando.Images
   alias Brando.Utils
   alias Brando.Type
@@ -118,11 +116,7 @@ defmodule Brando.Blueprint.Upload do
     attributes
     |> Enum.filter(&(&1.type in [:image, :file]))
     |> Enum.reduce(changeset, fn %{type: type, name: name}, mutated_changeset ->
-      field_cfg =
-        name
-        |> module.__attribute_opts__()
-        |> Enum.into(%{})
-
+      field_cfg = module.__attribute_opts__(name)
       validate_upload(mutated_changeset, {type, name}, user, field_cfg)
     end)
   end

@@ -47,6 +47,7 @@ defmodule Brando.Admin.API.Villain.VillainController do
                 uid: uid,
                 image: %{
                   id: image.id,
+                  dominant_color: image.image.dominant_color,
                   sizes: sizes_map,
                   src: Brando.Utils.media_url(image.image.path),
                   width: image.image.width,

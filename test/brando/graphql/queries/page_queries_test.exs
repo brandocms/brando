@@ -36,7 +36,7 @@ defmodule Brando.GraphQL.Queries.PageQueriesTest do
     p1 = Factory.insert(:page, parent_id: nil)
     p2 = Factory.insert(:page, parent_id: p1.id)
 
-    pf1 = Factory.insert(:page_fragment, page_id: p1.id)
+    pf1 = Factory.insert(:fragment, page_id: p1.id)
 
     opts_with_filter =
       opts ++

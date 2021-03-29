@@ -4,72 +4,87 @@ defmodule Brando.Blueprint do
   alias Brando.Blueprint.Relations
   alias Brando.Blueprint.Upload
   alias Brando.Blueprint.Unique
-  alias Brando.Blueprint.Validations
+  alias Brando.Blueprint.Constraints
   alias Brando.Blueprint.Villain
   alias Brando.Trait
 
-  defmacro __using__(_) do
+  defstruct naming: %{},
+            modules: %{},
+            translations: [],
+            attributes: [],
+            relations: [],
+            traits: []
+
+  defmacro __using__(opts) do
+    Module.register_attribute(__CALLER__.module, :application, accumulate: false)
+    Module.put_attribute(__CALLER__.module, :application, Keyword.fetch!(opts, :application))
+
+    Module.register_attribute(__CALLER__.module, :domain, accumulate: false)
+    Module.put_attribute(__CALLER__.module, :domain, Keyword.fetch!(opts, :domain))
+
+    Module.register_attribute(__CALLER__.module, :schema, accumulate: false)
+    Module.put_attribute(__CALLER__.module, :schema, Keyword.fetch!(opts, :schema))
+
+    Module.register_attribute(__CALLER__.module, :singular, accumulate: false)
+    Module.put_attribute(__CALLER__.module, :singular, Keyword.fetch!(opts, :singular))
+
+    Module.register_attribute(__CALLER__.module, :plural, accumulate: false)
+    Module.put_attribute(__CALLER__.module, :plural, Keyword.fetch!(opts, :plural))
+
+    Module.register_attribute(__CALLER__.module, :ctx, accumulate: false)
+    Module.put_attribute(__CALLER__.module, :ctx, nil)
+
     quote location: :keep do
+      Module.register_attribute(__MODULE__, :json_ld_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :json_ld_schema, accumulate: false)
+      Module.register_attribute(__MODULE__, :meta_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :traits, accumulate: true)
       Module.register_attribute(__MODULE__, :attrs, accumulate: true)
       Module.register_attribute(__MODULE__, :relations, accumulate: true)
-      Module.register_attribute(__MODULE__, :translations, accumulate: true)
+      Module.register_attribute(__MODULE__, :translations, accumulate: false)
+      Module.register_attribute(__MODULE__, :table_name, accumulate: false)
+      @translations %{}
+      @table_name "#{String.downcase(@domain)}_#{@plural}"
 
       @before_compile Brando.Blueprint
       @after_compile Brando.Blueprint
 
       use Ecto.Schema
-      use Brando.JSONLD.Schema
 
       import Ecto
       import Ecto.Changeset
       import Ecto.Query, only: [from: 1, from: 2]
 
       import unquote(__MODULE__)
-      import unquote(__MODULE__).Trait
+      import unquote(__MODULE__).AbsoluteURL
       import unquote(__MODULE__).Attributes
-      import unquote(__MODULE__).Relations
-      import unquote(__MODULE__).Naming
-      import unquote(__MODULE__).Translations
       import unquote(__MODULE__).Identifier
+      import unquote(__MODULE__).JSONLD
+      import unquote(__MODULE__).Meta
+      import unquote(__MODULE__).Naming
+      import unquote(__MODULE__).Relations
+      import unquote(__MODULE__).Trait
+      import unquote(__MODULE__).Translations
 
       import Brando.Utils.Schema
 
       def __absolute_url__(_) do
         false
       end
+
+      defoverridable __absolute_url__: 1
     end
   end
 
   defmacro build_schema(name, attrs, relations) do
-    quote do
+    quote location: :keep do
       schema unquote(name) do
         Enum.map(unquote(attrs), fn
-          %{type: :villain, name: :data} = attr ->
-            [
-              Ecto.Schema.field(
-                attr.name,
-                to_ecto_type(attr.type),
-                to_ecto_opts(attr.type, attr.opts)
-              ),
-              Ecto.Schema.field(:html, :string)
-            ]
+          %{name: :inserted_at} ->
+            Ecto.Schema.timestamps()
 
-          %{type: :villain, name: name} = attr ->
-            html_attr =
-              name
-              |> to_string
-              |> String.replace("_data", "_html")
-              |> String.to_atom()
-
-            [
-              Ecto.Schema.field(
-                name,
-                to_ecto_type(attr.type),
-                to_ecto_opts(attr.type, attr.opts)
-              ),
-              Ecto.Schema.field(:"#{html_attr}", :string)
-            ]
+          %{name: :updated_at} ->
+            []
 
           attr ->
             Ecto.Schema.field(
@@ -119,8 +134,6 @@ defmodule Brando.Blueprint do
             Logger.error("==> relation type not caught")
             Logger.error(inspect(attr, pretty: true))
         end)
-
-        Ecto.Schema.timestamps()
       end
     end
   end
@@ -146,26 +159,80 @@ defmodule Brando.Blueprint do
 
   def get_relation_key(%{type: :belongs_to, name: name}), do: :"#{name}_id"
 
+  def access_key(key) do
+    fn
+      :get, data, next ->
+        next.(Keyword.get(data, key, []))
+
+      :get_and_update, data, next ->
+        value = Keyword.get(data, key, [])
+
+        case next.(value) do
+          {get, update} -> {get, Keyword.put(data, key, update)}
+          :pop -> {value, Keyword.delete(data, key)}
+        end
+    end
+  end
+
+  def run_translations(module, translations, ctx \\ nil) do
+    gettext_module = module.__modules__(:gettext)
+    %{domain: domain, schema: schema} = module.__naming__()
+    gettext_domain = String.downcase("#{domain}_#{schema}_#{ctx}")
+
+    translations
+    |> Enum.map(fn
+      {key, value} when is_map(value) ->
+        {key, run_translations(module, value, ctx || key)}
+
+      {key, value} ->
+        {key, Gettext.dgettext(gettext_module, gettext_domain, value)}
+    end)
+  end
+
+  defmacro table(table_name) do
+    quote do
+      @table_name unquote(table_name)
+    end
+  end
+
   defmacro __before_compile__(_) do
-    quote location: :keep do
-      @all_attributes Enum.reverse(@attrs) ++ Brando.Trait.get_attributes(@traits)
+    quote location: :keep,
+          unquote: false do
+      @all_attributes Enum.reverse(@attrs) ++
+                        Brando.Trait.get_attributes(@attrs, @relations, @traits)
       def __attributes__ do
         @all_attributes
       end
 
-      def __attribute_opts__(attr) do
-        @all_attributes
-        |> Enum.find(&(&1.name == attr))
-        |> Map.get(:opts, [])
+      for attr <- @all_attributes do
+        def __attribute__(unquote(attr.name)) do
+          unquote(Macro.escape(attr))
+        end
       end
 
-      @all_relations Enum.reverse(@relations) ++ Brando.Trait.get_relations(@traits)
+      unless Enum.empty?(@all_attributes) do
+        def __attribute_opts__(name) do
+          Map.get(__attribute__(name), :opts, [])
+        end
+      end
+
+      @all_relations Enum.reverse(@relations) ++
+                       Brando.Trait.get_relations(@attrs, @relations, @traits)
       def __relations__ do
         @all_relations
       end
 
-      if Module.get_attribute(__MODULE__, :domain) == nil, do: raise("Missing domain/1")
-      if Module.get_attribute(__MODULE__, :plural) == nil, do: raise("Missing plural/1")
+      for rel <- @all_relations do
+        def __relation__(unquote(rel.name)) do
+          unquote(Macro.escape(rel))
+        end
+      end
+
+      unless Enum.empty?(@all_relations) do
+        def __relation_opts__(name) do
+          Map.get(__relation__(name), :opts, [])
+        end
+      end
 
       def has_trait(key), do: key in @traits
 
@@ -214,10 +281,17 @@ defmodule Brando.Blueprint do
             @schema
           ])
 
+        gettext_module =
+          Module.concat([
+            @application,
+            "Gettext"
+          ])
+
         %{
           application: application_module,
           context: context_module,
-          schema: schema_module
+          schema: schema_module,
+          gettext: gettext_module
         }
       end
 
@@ -248,8 +322,12 @@ defmodule Brando.Blueprint do
         @slug_fields
       end
 
+      def __translations__ do
+        run_translations(__MODULE__, @translations)
+      end
+
       build_schema(
-        "#{String.downcase(@domain)}_#{@plural}",
+        @table_name,
         @all_attributes,
         @all_relations
       )
@@ -268,6 +346,30 @@ defmodule Brando.Blueprint do
           @all_optional_attrs
         )
       end
+
+      def __blueprint__ do
+        %Brando.Blueprint{
+          naming: __naming__(),
+          modules: __modules__(),
+          translations: __translations__(),
+          attributes: __attributes__(),
+          relations: __relations__(),
+          traits: __traits__()
+        }
+      end
+
+      for {trait, trait_opts} <- @all_traits do
+        defimpl Module.concat([trait, Implemented]),
+          for: __MODULE__ do
+          def implemented(_), do: true
+        end
+
+        def __trait__(unquote(trait)) do
+          unquote(trait_opts)
+        end
+      end
+
+      def __trait__(_), do: false
     end
   end
 
@@ -295,7 +397,7 @@ defmodule Brando.Blueprint do
     )
     |> Changeset.validate_required(all_required_attrs)
     |> Unique.run_unique_constraints(module, all_attributes)
-    |> Validations.run_validations(module, all_attributes)
+    |> Constraints.run_validations(module, all_attributes)
     |> Trait.run_changeset_mutators(
       module,
       traits_after_validate_required,
@@ -306,9 +408,6 @@ defmodule Brando.Blueprint do
 
   defmacro __after_compile__(env, _) do
     # validate traits
-    Enum.each(
-      env.module.__traits__,
-      & &1.validate(env.module, env.module.__trait__(&1))
-    )
+    Enum.each(env.module.__traits__(), &elem(&1, 0).validate(env.module, elem(&1, 1)))
   end
 end

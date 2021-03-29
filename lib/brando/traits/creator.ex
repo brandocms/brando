@@ -1,4 +1,4 @@
-defmodule Brando.Traits.Creator do
+defmodule Brando.Trait.Creator do
   @moduledoc """
   Automatically sets creator to user
   """

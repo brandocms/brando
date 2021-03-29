@@ -22,7 +22,7 @@ defmodule Brando.GraphQL.Schema.Types.Page do
     field :parent_id, :id
     field :parent, :page, resolve: dataloader(Brando.Pages)
     field :children, list_of(:page), resolve: dataloader(Brando.Pages)
-    field :fragments, list_of(:page_fragment), resolve: dataloader(Brando.Pages)
+    field :fragments, list_of(:fragment), resolve: dataloader(Brando.Pages)
     field :properties, list_of(:page_property), resolve: dataloader(Brando.Pages)
     meta_fields()
     field :inserted_at, :time
@@ -185,10 +185,10 @@ defmodule Brando.GraphQL.Schema.Types.Page do
     end
 
     @desc "Duplicate section"
-    field :duplicate_section, type: :page_fragment do
+    field :duplicate_section, type: :fragment do
       arg :id, :id
 
-      resolve &Brando.Pages.PageFragmentResolver.duplicate/2
+      resolve &Brando.Pages.FragmentResolver.duplicate/2
     end
 
     @desc "Duplicate module"

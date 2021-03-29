@@ -8,9 +8,10 @@ defmodule Brando.Blueprint.Relations do
   """
   import Ecto.Changeset
   import Brando.M2M
+  alias Brando.Blueprint.Relation
 
   def build_relation(name, type, opts \\ []) do
-    %{name: name, type: type, opts: Enum.into(opts, %{})}
+    %Relation{name: name, type: type, opts: Enum.into(opts, %{})}
   end
 
   defmacro relations(do: block) do
@@ -91,11 +92,11 @@ defmodule Brando.Blueprint.Relations do
   ##
   ## has_many
   def run_cast_relation(
-        %{type: :has_many, name: name, opts: %{cast: true, module: module}},
+        %{type: :has_many, name: name, opts: %{cast: true, module: _module}},
         changeset,
         _user
       ) do
-    cast_assoc(changeset, name, module)
+    cast_assoc(changeset, name)
   end
 
   ##

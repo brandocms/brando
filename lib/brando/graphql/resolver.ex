@@ -43,7 +43,7 @@ defmodule Brando.GraphQL.Resolver do
         unquote(context).unquote(:"create_#{singular}")(params, user)
       end
 
-      if Brando.Revisions.is_revisioned(unquote(schema)) do
+      if unquote(schema).__trait__(Brando.Trait.Revisioned) do
         def update(
               %{
                 unquote(:"#{singular}_id") => id,

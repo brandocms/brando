@@ -1,0 +1,61 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new translations manually only if they're dynamic
+## translations that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here as no
+## effect: edit them in PO (.po) files instead.
+msgid ""
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:106
+msgid "Activate user"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:103
+msgid "Administrate users"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:104
+msgid "Create user"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:108
+msgid "Deactivate user"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:105
+msgid "Edit user"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:100
+msgid "Error"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:101
+msgid "Superuser cannot be deactivated"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:107
+msgid "User activated"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:109
+msgid "User deactivated"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:102
+msgid "Users"
+msgstr ""

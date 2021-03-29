@@ -1,31 +1,19 @@
 defmodule <%= schema_module %> do
-  use <%= web_module %>, :schema
-  use Brando.Schema<%= if meta do %>
-  use Brando.Meta.Schema<% end %><%= if villain_fields != [] do %>
-  use Brando.Villain.Schema<% end %><%= if revisioned do %>
-  use Brando.Revisions.Schema<% end %><%= if gallery do %>
-  use Brando.Gallery.Schema<% end %><%= if soft_delete do %>
-  use Brando.SoftDelete.Schema<% end %><%= if sequenced do %>
-  use Brando.Sequence.Schema<% end %><%= if file_fields != [] do %>
-  use Brando.Field.File.Schema<% end %><%= if img_fields != [] do %>
-  use Brando.Field.Image.Schema<% end %>
+  use Brando.Blueprint,
+    application: "<%= app_module %>",
+    domain: "<%= domain %>",
+    schema: "<%= scoped %>",
+    singular: "<%= singular %>",
+    plural: "<%= plural %>"
 
   @type t :: %__MODULE__{}
 
-  # Schema meta
-  meta :en, singular: <%= inspect(singular) %>, plural: <%= inspect(plural) %>
-  meta :no, singular: <%= inspect(singular) %>, plural: <%= inspect(plural) %>
-
   # Identifier. This is used for representing an entry in BrandoJS
-  identifier fn entry ->
-    entry.<%= List.first(attrs) |> elem(0) %>
-  end
+  identifier "{{ entry.<%= List.first(attrs) |> elem(0) %> }}"
 
   # Return an absolute URL for `entry`. If your entry has no URL
   # you can just do `absolute_url false`
-  absolute_url fn router, endpoint, entry ->
-    router.<%= singular %>_path(endpoint, :detail, entry.slug)
-  end
+  absolute_url "{% route <%= singular %>_path detail { entry.slug } %}"
 
   # Ecto schema
   schema <%= inspect "#{snake_domain}_#{plural}" %> do
@@ -81,26 +69,4 @@ defmodule <%= schema_module %> do
     field "og:image", <%= if Enum.empty?(img_fields) do %>[:meta_image]<% else %>&fallback(&1, [:meta_image, :<%= List.first(img_fields) |> elem(0) %>])<% end %>
   end
 <% end %>
-  @required_fields <%= required_fields %>
-  @optional_fields <%= optional_fields %>
-
-  @doc """
-  Creates a changeset based on the `schema` and `params`.
-
-  If no params are provided, an invalid changeset is returned
-  with no validation performed.
-  """
-  def changeset(schema, params \\ %{}, user \\ :system) do
-    schema
-    |> cast(params, @required_fields ++ @optional_fields)<%= if gallery do %><%= for {_k, v} <- gallery_fields do %>
-    |> cast_assoc(:<%= v %>, with: {Brando.ImageSeries, :changeset, [user]})<% end %><% end %><%= if creator do %>
-    |> put_creator(user)<% end %>
-    |> validate_required(@required_fields)<%= if villain_fields != [] do %><%= for {_k, v} <- villain_fields do %><%= if v == :data do %>
-    |> generate_html()<% else %>
-    |> generate_html(<%= inspect v %>)<% end %><% end %><% end %><%= if meta do %>
-    |> validate_upload({:image, :meta_image}, user)<% end %><%= if img_fields != [] do %><%= for {_v, k} <- img_fields do %>
-    |> validate_upload({:image, <%= inspect k %>}, user)<% end %><% end %><%= if file_fields != [] do %><%= for {_v, k} <- file_fields do %>
-    |> validate_upload({:file, <%= inspect k %>}, user)<% end %><% end %><%= if slug do %>
-    |> avoid_field_collision([:slug])<% end %>
-  end
 end

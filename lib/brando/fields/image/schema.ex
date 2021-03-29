@@ -27,21 +27,21 @@ defmodule Brando.Field.Image.Schema do
   import Ecto.Changeset
 
   defmacro __using__(_) do
-    IO.warn("""
-    Using `Brando.Field.Image.Schema` is deprecated.
+    # IO.warn("""
+    # Using `Brando.Field.Image.Schema` is deprecated.
 
-    Offending module: #{inspect(__CALLER__.module)}
+    # Offending module: #{inspect(__CALLER__.module)}
 
-    It is recommended to move to Blueprints instead:
+    # It is recommended to move to Blueprints instead:
 
-        use Brando.Blueprint
+    #     use Brando.Blueprint
 
-        trait Brando.Traits.Upload
+    #     trait Brando.Trait.Upload
 
-        attributes do
-          attribute :cover, :image, my_cfg
-        end
-    """)
+    #     attributes do
+    #       attribute :cover, :image, my_cfg
+    #     end
+    # """)
 
     quote do
       Module.register_attribute(__MODULE__, :imagefields, accumulate: true)

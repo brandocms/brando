@@ -23,19 +23,10 @@ defmodule Brando.Field.File.Schema do
   import Brando.Upload
 
   defmacro __using__(_) do
-    IO.warn("""
-    Using `Brando.Field.File.Schema` is deprecated.
-
-    It is recommended to move to Blueprints instead:
-
-        use Brando.Blueprint
-
-        trait Brando.Traits.Upload
-
-        attributes do
-          attribute :cover, :file, my_cfg
-        end
-    """)
+    # IO.warn("""
+    # Using `Brando.Field.File.Schema` is deprecated.
+    # It is recommended to move to Blueprints instead.
+    # """)
 
     quote do
       Module.register_attribute(__MODULE__, :filefields, accumulate: true)

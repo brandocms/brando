@@ -273,20 +273,20 @@ defmodule Brando.AdminChannelTest do
       assert_reply ref, :ok, %{code: 200}
     end
 
-    test "page_fragments:sequence_fragments", %{socket: socket} do
-      p1 = Factory.insert(:page_fragment)
-      p2 = Factory.insert(:page_fragment)
-      p3 = Factory.insert(:page_fragment)
+    test "fragments:sequence_fragments", %{socket: socket} do
+      p1 = Factory.insert(:fragment)
+      p2 = Factory.insert(:fragment)
+      p3 = Factory.insert(:fragment)
 
       assert p1.sequence == 0
       assert p2.sequence == 0
       assert p3.sequence == 0
 
-      ref = push(socket, "page_fragments:sequence_fragments", %{"ids" => [p2.id, p3.id, p1.id]})
+      ref = push(socket, "fragments:sequence_fragments", %{"ids" => [p2.id, p3.id, p1.id]})
       assert_reply ref, :ok, %{code: 200}
 
       q =
-        from t in Brando.Pages.PageFragment,
+        from t in Brando.Pages.Fragment,
           order_by: :sequence,
           select: [t.id]
 
@@ -295,17 +295,17 @@ defmodule Brando.AdminChannelTest do
       assert pages == [[p2.id], [p3.id], [p1.id]]
     end
 
-    test "page_fragment:duplicate", %{socket: socket} do
-      p1 = Factory.insert(:page_fragment, data: [])
+    test "fragment:duplicate", %{socket: socket} do
+      p1 = Factory.insert(:fragment, data: [])
 
-      ref = push(socket, "page_fragment:duplicate", %{"id" => p1.id})
+      ref = push(socket, "fragment:duplicate", %{"id" => p1.id})
 
       assert_reply ref, :ok, %{
         code: 200,
-        page_fragment: %Brando.Pages.PageFragment{key: "header_dupl"}
+        fragment: %Brando.Pages.Fragment{key: "header_dupl"}
       }
 
-      ref = push(socket, "page_fragment:duplicate", %{"id" => 9_999_999_999})
+      ref = push(socket, "fragment:duplicate", %{"id" => 9_999_999_999})
 
       assert_reply ref, :error, %{
         code: 400,
@@ -313,9 +313,9 @@ defmodule Brando.AdminChannelTest do
       }
     end
 
-    test "page_fragment:rerender", %{socket: socket} do
+    test "fragment:rerender", %{socket: socket} do
       p1 =
-        Factory.insert(:page_fragment,
+        Factory.insert(:fragment,
           data: [
             %{
               "type" => "text",
@@ -324,13 +324,13 @@ defmodule Brando.AdminChannelTest do
           ]
         )
 
-      ref = push(socket, "page_fragment:rerender", %{"id" => to_string(p1.id)})
+      ref = push(socket, "fragment:rerender", %{"id" => to_string(p1.id)})
       assert_reply ref, :ok, %{code: 200}
     end
 
-    test "page_fragment:rerender_all", %{socket: socket} do
+    test "fragment:rerender_all", %{socket: socket} do
       _ =
-        Factory.insert(:page_fragment,
+        Factory.insert(:fragment,
           data: [
             %{
               "type" => "text",
@@ -339,7 +339,7 @@ defmodule Brando.AdminChannelTest do
           ]
         )
 
-      ref = push(socket, "page_fragment:rerender_all", %{})
+      ref = push(socket, "fragment:rerender_all", %{})
       assert_reply ref, :ok, %{code: 200}
     end
   end

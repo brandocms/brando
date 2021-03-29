@@ -1,4 +1,4 @@
-defmodule Brando.Traits.Status do
+defmodule Brando.Trait.Status do
   @moduledoc """
   Adds `deleted_at`
   """

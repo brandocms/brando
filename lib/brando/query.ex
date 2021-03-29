@@ -341,6 +341,18 @@ defmodule Brando.Query do
     quote do
       def with_match(query, unquote(module), match) do
         Enum.reduce(match, query, unquote(block))
+        # rescue
+        #   e in FunctionClauseError ->
+        #     require Logger
+        #     Logger.error(inspect(e, pretty: true))
+
+        #     raise Brando.Exception.NoMatchingQueryMatchClause,
+        #       message: """
+        #       Could not find a matching query `matches` clause in `#{inspect(unquote(module))}
+        #       """
+
+        #   e ->
+        #     reraise e, __STACKTRACE__
       end
     end
   end

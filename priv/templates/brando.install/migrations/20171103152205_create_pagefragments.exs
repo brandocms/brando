@@ -1,4 +1,4 @@
-defmodule <%= application_module %>.Repo.Migrations.CreatePageFragments do
+defmodule <%= application_module %>.Repo.Migrations.CreateFragments do
   use Ecto.Migration
 
   def up do

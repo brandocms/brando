@@ -20,22 +20,23 @@ defmodule Brando.PagesTest do
     assert page.id == p1.id
     assert page.uri == "test/path"
 
-    {:error, _} = Pages.get_page(%{matches: %{path: "test/path", language: "sv"}})
+    assert {:error, {:page, :not_found}} =
+             Pages.get_page(%{matches: %{path: "test/path", language: "no"}})
   end
 
-  test "get_page_fragment" do
-    pf1 = Factory.insert(:page_fragment, key: "frag")
-    {:ok, pf2} = Pages.get_page_fragment(%{matches: %{key: "frag"}})
+  test "get_fragment" do
+    pf1 = Factory.insert(:fragment, key: "frag")
+    {:ok, pf2} = Pages.get_fragment(%{matches: %{key: "frag"}})
     assert pf1.id == pf2.id
 
-    {:ok, pf2} = Pages.get_page_fragment(pf1.id)
+    {:ok, pf2} = Pages.get_fragment(pf1.id)
     assert pf1.id == pf2.id
   end
 
   test "get_fragments" do
-    _pf1 = Factory.insert(:page_fragment, key: "frag1", parent_key: "parent")
-    _pf2 = Factory.insert(:page_fragment, key: "frag2", parent_key: "parent")
-    _pf3 = Factory.insert(:page_fragment, key: "frag3", parent_key: "parent")
+    _pf1 = Factory.insert(:fragment, key: "frag1", parent_key: "parent")
+    _pf2 = Factory.insert(:fragment, key: "frag2", parent_key: "parent")
+    _pf3 = Factory.insert(:fragment, key: "frag3", parent_key: "parent")
 
     {:ok, frag_map} = Pages.get_fragments(%{filter: %{parent_key: "parent"}})
 
@@ -49,43 +50,42 @@ defmodule Brando.PagesTest do
   test "get_fragment from %Page{}" do
     p = Factory.insert(:page)
 
-    _pf1 = Factory.insert(:page_fragment, key: "frag1", parent_key: "parent", page_id: p.id)
-    _pf2 = Factory.insert(:page_fragment, key: "frag2", parent_key: "parent", page_id: p.id)
-    _pf3 = Factory.insert(:page_fragment, key: "frag3", parent_key: "parent", page_id: p.id)
+    _pf1 = Factory.insert(:fragment, key: "frag1", parent_key: "parent", page_id: p.id)
+    _pf2 = Factory.insert(:fragment, key: "frag2", parent_key: "parent", page_id: p.id)
+    _pf3 = Factory.insert(:fragment, key: "frag3", parent_key: "parent", page_id: p.id)
 
     {:ok, page} = Pages.get_page(%{matches: %{id: p.id}})
     frag = Pages.get_fragment(page, "frag1")
     assert frag.key == "frag1"
   end
 
-  test "list_page_fragments" do
-    _pf1 = Factory.insert(:page_fragment, key: "frag1", parent_key: "parent")
+  test "list_fragments" do
+    _pf1 = Factory.insert(:fragment, key: "frag1", parent_key: "parent")
 
     _pf2 =
-      Factory.insert(:page_fragment,
+      Factory.insert(:fragment,
         key: "frag2",
         parent_key: "parent",
         deleted_at: DateTime.utc_now()
       )
 
-    _pf3 = Factory.insert(:page_fragment, key: "frag3", parent_key: "parent")
+    _pf3 = Factory.insert(:fragment, key: "frag3", parent_key: "parent")
 
-    {:ok, fragments} = Pages.list_page_fragments(%{filter: %{parent_key: "parent"}})
+    {:ok, fragments} = Pages.list_fragments(%{filter: %{parent_key: "parent"}})
     assert Enum.count(fragments) == 2
 
-    {:ok, fragments} =
-      Pages.list_page_fragments(%{filter: %{parent_key: "parent", language: "sv"}})
+    {:ok, fragments} = Pages.list_fragments(%{filter: %{parent_key: "parent", language: "no"}})
 
     assert Enum.empty?(fragments)
   end
 
-  test "list_page_fragments_translations" do
-    _pf1 = Factory.insert(:page_fragment, key: "frag1", parent_key: "parent", sequence: 0)
-    _pf2 = Factory.insert(:page_fragment, key: "frag2", parent_key: "parent", sequence: 3)
-    _pf3 = Factory.insert(:page_fragment, key: "frag3", parent_key: "parent", sequence: 6)
+  test "list_fragments_translations" do
+    _pf1 = Factory.insert(:fragment, key: "frag1", parent_key: "parent", sequence: 0)
+    _pf2 = Factory.insert(:fragment, key: "frag2", parent_key: "parent", sequence: 3)
+    _pf3 = Factory.insert(:fragment, key: "frag3", parent_key: "parent", sequence: 6)
 
     _pf4 =
-      Factory.insert(:page_fragment,
+      Factory.insert(:fragment,
         key: "frag1",
         parent_key: "parent",
         language: "no",
@@ -93,7 +93,7 @@ defmodule Brando.PagesTest do
       )
 
     _pf5 =
-      Factory.insert(:page_fragment,
+      Factory.insert(:fragment,
         key: "frag2",
         parent_key: "parent",
         language: "no",
@@ -101,35 +101,11 @@ defmodule Brando.PagesTest do
       )
 
     _pf6 =
-      Factory.insert(:page_fragment,
+      Factory.insert(:fragment,
         key: "frag3",
         parent_key: "parent",
         language: "no",
         sequence: 7
-      )
-
-    _pf7 =
-      Factory.insert(:page_fragment,
-        key: "frag1",
-        parent_key: "parent",
-        language: "dk",
-        sequence: 2
-      )
-
-    _pf8 =
-      Factory.insert(:page_fragment,
-        key: "frag2",
-        parent_key: "parent",
-        language: "dk",
-        sequence: 5
-      )
-
-    _pf9 =
-      Factory.insert(:page_fragment,
-        key: "frag3",
-        parent_key: "parent",
-        language: "dk",
-        sequence: 8
       )
 
     {:ok, frags} = Pages.list_fragments_translations("parent")
@@ -139,45 +115,45 @@ defmodule Brando.PagesTest do
     frag_tree = Enum.map(frags, fn {k, v} -> {k, Enum.map(v, & &1.language)} end)
 
     assert frag_tree == [
-             {"frag1", ["en", "no", "dk"]},
-             {"frag2", ["en", "no", "dk"]},
-             {"frag3", ["en", "no", "dk"]}
+             {"frag1", [:en, :no]},
+             {"frag2", [:en, :no]},
+             {"frag3", [:en, :no]}
            ]
 
-    {:ok, frags} = Pages.list_fragments_translations("parent", exclude_language: "dk")
+    {:ok, frags} = Pages.list_fragments_translations("parent", exclude_language: "en")
 
     frag_tree = Enum.map(frags, fn {k, v} -> {k, Enum.map(v, & &1.language)} end)
 
     assert frag_tree == [
-             {"frag1", ["en", "no"]},
-             {"frag2", ["en", "no"]},
-             {"frag3", ["en", "no"]}
+             {"frag1", [:no]},
+             {"frag2", [:no]},
+             {"frag3", [:no]}
            ]
   end
 
   test "get_fragments/2" do
-    _pf1 = Factory.insert(:page_fragment, key: "frag1", parent_key: "parent", language: "no")
-    _pf2 = Factory.insert(:page_fragment, key: "frag2", parent_key: "parent", language: "no")
-    _pf3 = Factory.insert(:page_fragment, key: "frag3", parent_key: "parent", language: "no")
+    _pf1 = Factory.insert(:fragment, key: "frag1", parent_key: "parent", language: "no")
+    _pf2 = Factory.insert(:fragment, key: "frag2", parent_key: "parent", language: "no")
+    _pf3 = Factory.insert(:fragment, key: "frag3", parent_key: "parent", language: "no")
 
     {:ok, frags} = Pages.get_fragments(%{filter: %{parent_key: "parent", language: "no"}})
     assert Map.keys(frags) == ["frag1", "frag2", "frag3"]
 
-    {:ok, frags} = Pages.get_fragments(%{filter: %{parent_key: "parent", language: "sv"}})
+    {:ok, frags} = Pages.get_fragments(%{filter: %{parent_key: "parent", language: "en"}})
     assert frags == %{}
   end
 
-  test "update_page_fragment" do
+  test "update_fragment" do
     u1 = Factory.insert(:random_user)
-    pf1 = Factory.insert(:page_fragment, key: "frag1", parent_key: "parent", language: "no")
-    {:ok, pf2} = Pages.update_page_fragment(pf1.id, %{key: "frag2"}, u1)
+    pf1 = Factory.insert(:fragment, key: "frag1", parent_key: "parent", language: "no")
+    {:ok, pf2} = Pages.update_fragment(pf1.id, %{key: "frag2"}, u1)
     assert pf2.key == "frag2"
     refute pf1.key == pf2.key
   end
 
-  test "delete_page_fragment" do
-    pf1 = Factory.insert(:page_fragment, key: "frag1", parent_key: "parent", language: "no")
-    {:ok, pf2} = Pages.delete_page_fragment(pf1.id)
+  test "delete_fragment" do
+    pf1 = Factory.insert(:fragment, key: "frag1", parent_key: "parent", language: "no")
+    {:ok, pf2} = Pages.delete_fragment(pf1.id)
     refute pf2.deleted_at == nil
   end
 
@@ -188,7 +164,7 @@ defmodule Brando.PagesTest do
 
   test "fetch_fragment" do
     _pf1 =
-      Factory.insert(:page_fragment,
+      Factory.insert(:fragment,
         key: "frag1",
         parent_key: "parent",
         language: "no",
@@ -200,7 +176,7 @@ defmodule Brando.PagesTest do
 
   test "render_fragment" do
     pf1 =
-      Factory.insert(:page_fragment,
+      Factory.insert(:fragment,
         key: "frag1",
         parent_key: "parent",
         language: "no",
@@ -211,11 +187,11 @@ defmodule Brando.PagesTest do
   end
 
   test "render_fragment map of fragments" do
-    _pf1 = Factory.insert(:page_fragment, key: "frag1", parent_key: "parent", language: "no")
-    _pf2 = Factory.insert(:page_fragment, key: "frag2", parent_key: "parent", language: "no")
-    _pf3 = Factory.insert(:page_fragment, key: "frag3", parent_key: "parent", language: "no")
+    _pf1 = Factory.insert(:fragment, key: "frag1", parent_key: "parent", language: "no")
+    _pf2 = Factory.insert(:fragment, key: "frag2", parent_key: "parent", language: "no")
+    _pf3 = Factory.insert(:fragment, key: "frag3", parent_key: "parent", language: "no")
 
-    frags = Pages.get_page_fragments("parent", "no")
+    frags = Pages.get_fragments("parent", "no")
 
     assert Pages.render_fragment(frags, "non_existing") |> Phoenix.HTML.safe_to_string() =~
              "Missing page fragment"
@@ -225,9 +201,9 @@ defmodule Brando.PagesTest do
   end
 
   test "render_fragment parent_key + key" do
-    _pf1 = Factory.insert(:page_fragment, key: "frag1", parent_key: "parent", language: "no")
-    _pf2 = Factory.insert(:page_fragment, key: "frag2", parent_key: "parent", language: "no")
-    _pf3 = Factory.insert(:page_fragment, key: "frag3", parent_key: "parent", language: "no")
+    _pf1 = Factory.insert(:fragment, key: "frag1", parent_key: "parent", language: "no")
+    _pf2 = Factory.insert(:fragment, key: "frag2", parent_key: "parent", language: "no")
+    _pf3 = Factory.insert(:fragment, key: "frag3", parent_key: "parent", language: "no")
 
     assert Pages.render_fragment("parent", "non_existing") |> Phoenix.HTML.safe_to_string() =~
              "Missing page fragment"

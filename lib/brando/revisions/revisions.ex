@@ -206,13 +206,6 @@ defmodule Brando.Revisions do
   end
 
   @doc """
-  Check if `schema` is revisioned
-  """
-  def is_revisioned(schema) do
-    {:__revisioned__, 0} in schema.__info__(:functions)
-  end
-
-  @doc """
   Get the last revision for `entry_type` and `entry_id`
 
   ## Example

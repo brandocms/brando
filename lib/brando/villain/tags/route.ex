@@ -17,9 +17,30 @@ defmodule Brando.Villain.Tags.Route do
     |> ignore(Literal.whitespace())
     |> unwrap_and_tag(Field.identifier(), :action)
     |> ignore(Literal.whitespace())
-    |> optional(tag(repeat(Literal.argument()), :args))
+    |> optional(tag(braced_args(), :args))
     |> ignore(Tag.close_tag())
     |> tag(:route_tag)
+  end
+
+  def braced_args(combinator \\ empty()) do
+    combinator
+    |> ignore(string("{ "))
+    |> repeat(
+      lookahead_not(string(" }"))
+      |> arg_list()
+    )
+    |> ignore(string(" }"))
+  end
+
+  def arg_list(combinator \\ empty()) do
+    combinator
+    |> Literal.argument()
+    |> repeat(
+      ignore(Literal.whitespace())
+      |> ignore(string(","))
+      |> ignore(Literal.whitespace())
+      |> concat(Literal.argument())
+    )
   end
 
   def element(combinator \\ empty()) do

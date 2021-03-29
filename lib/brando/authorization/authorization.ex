@@ -8,7 +8,7 @@ defmodule Brando.Authorization do
       types [
         {"User", Brando.Users.User},
         {"Page", Brando.Pages.Page},
-        {"PageFragment", Brando.Pages.PageFragment}
+        {"Fragment", Brando.Pages.Fragment}
       ]
 
       rules :superuser do

@@ -1,10 +1,10 @@
-defmodule Brando.Pages.PageFragmentResolver do
+defmodule Brando.Pages.FragmentResolver do
   @moduledoc """
   Resolver for page fragments
   """
   use Brando.Web, :resolver
 
   use Brando.GraphQL.Resolver,
-    schema: Brando.Pages.PageFragment,
+    schema: Brando.Pages.Fragment,
     context: Brando.Pages
 end

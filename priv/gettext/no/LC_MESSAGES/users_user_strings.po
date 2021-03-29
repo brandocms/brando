@@ -1,0 +1,62 @@
+## "msgid"s in this file come from POT (.pot) files.
+##
+## Do not add, change, or remove "msgid"s manually here as
+## they're tied to the ones in the corresponding POT file
+## (with the same domain).
+##
+## Use "mix gettext.extract --merge" or "mix gettext.merge"
+## to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: no\n"
+"Plural-Forms: nplurals=2\n"
+
+#, elixir-format
+#: lib/brando/users/user.ex:106
+msgid "Activate user"
+msgstr "Aktivér bruker"
+
+#, elixir-format
+#: lib/brando/users/user.ex:103
+msgid "Administrate users"
+msgstr "Administrér brukere"
+
+#, elixir-format
+#: lib/brando/users/user.ex:104
+msgid "Create user"
+msgstr "Opprett bruker"
+
+#, elixir-format
+#: lib/brando/users/user.ex:108
+msgid "Deactivate user"
+msgstr "Deaktivér bruker"
+
+#, elixir-format
+#: lib/brando/users/user.ex:105
+msgid "Edit user"
+msgstr "Endre bruker"
+
+#, elixir-format
+#: lib/brando/users/user.ex:100
+msgid "Error"
+msgstr "Feil"
+
+#, elixir-format
+#: lib/brando/users/user.ex:101
+msgid "Superuser cannot be deactivated"
+msgstr "Superbrukeren kan ikke deaktiveres"
+
+#, elixir-format
+#: lib/brando/users/user.ex:107
+msgid "User activated"
+msgstr "Bruker aktivert"
+
+#, elixir-format
+#: lib/brando/users/user.ex:109
+msgid "User deactivated"
+msgstr "Bruker deaktivert"
+
+#, elixir-format
+#: lib/brando/users/user.ex:102
+msgid "Users"
+msgstr "Brukere"

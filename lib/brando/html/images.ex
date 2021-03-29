@@ -539,8 +539,21 @@ defmodule Brando.HTML.Images do
   def get_srcset(image_field, cfg, opts, placeholder \\ false)
   def get_srcset(_, nil, _, _), do: nil
 
+  def get_srcset(image_field, srcset, opts, placeholder) when is_binary(srcset) do
+    [module_string, field_string] = String.split(srcset, ":")
+    module = Module.concat([module_string])
+    field = String.to_existing_atom(field_string)
+    get_srcset(image_field, {module, field}, opts, placeholder)
+  end
+
   def get_srcset(image_field, {mod, field}, opts, placeholder) do
-    {:ok, cfg} = apply(mod, :get_image_cfg, [field])
+    #! TODO Remove this when we move to Blueprints completely
+    {:ok, cfg} =
+      if {:get_image_cfg, 1} in mod.__info__(:functions) do
+        apply(mod, :get_image_cfg, [field])
+      else
+        {:ok, apply(mod, :__attribute_opts__, [field])}
+      end
 
     if !cfg.srcset do
       raise ArgumentError,

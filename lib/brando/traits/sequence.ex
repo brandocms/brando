@@ -1,4 +1,4 @@
-defmodule Brando.Traits.Sequence do
+defmodule Brando.Trait.Sequence do
   @moduledoc """
   A sequenced resource
   """

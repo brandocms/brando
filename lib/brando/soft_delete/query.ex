@@ -4,6 +4,7 @@ defmodule Brando.SoftDelete.Query do
   """
 
   alias Brando.Images
+  alias Brando.Trait
   import Ecto.Query
 
   @doc """
@@ -15,20 +16,7 @@ defmodule Brando.SoftDelete.Query do
   List all soft delete enabled schemas
   """
   def list_soft_delete_schemas do
-    {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
-
-    modules =
-      [
-        Brando.Pages.Page,
-        Brando.Pages.PageFragment,
-        Brando.Villain.Module,
-        Brando.Image,
-        Brando.ImageCategory,
-        Brando.ImageSeries,
-        Brando.Users.User
-      ] ++ app_modules
-
-    Enum.filter(Enum.uniq(modules), &({:__soft_delete__, 0} in &1.__info__(:functions)))
+    Trait.SoftDelete.list_implementations()
   end
 
   @doc """

@@ -34,6 +34,7 @@ defmodule Brando.Villain do
 
   alias Brando.Cache
   alias Brando.Pages
+  alias Brando.Trait
   alias Brando.Utils
   alias Brando.Villain.Module
   alias Ecto.Changeset
@@ -188,6 +189,7 @@ defmodule Brando.Villain do
         src: Utils.media_url(image_struct.path),
         thumb: image_struct |> Utils.img_url(:thumb) |> Utils.media_url(),
         sizes: sizes,
+        dominant_color: image_struct.dominant_color,
         alt: image_struct.alt,
         title: image_struct.title,
         credits: image_struct.credits,
@@ -238,10 +240,9 @@ defmodule Brando.Villain do
           select: s.id
       )
 
-    {_, villain_fields} = schema.__villain_fields__()
-
-    Enum.map(villain_fields, fn {:villain, data_field, html_field} ->
-      rerender_html_from_ids({schema, data_field, html_field}, ids)
+    Enum.map(schema.__villain_fields__(), fn data_field ->
+      html_field = get_html_field(schema, data_field)
+      rerender_html_from_ids({schema, data_field.name, html_field.name}, ids)
     end)
   end
 
@@ -285,10 +286,10 @@ defmodule Brando.Villain do
       )
 
     case Brando.repo().update(changeset) do
-      {:ok, %Pages.PageFragment{} = page_fragment} ->
-        Brando.Cache.Query.evict({:ok, page_fragment})
+      {:ok, %Pages.Fragment{} = fragment} ->
+        Brando.Cache.Query.evict({:ok, fragment})
 
-        Pages.update_villains_referencing_fragment(page_fragment)
+        Pages.update_villains_referencing_fragment(fragment)
 
       {:ok, result} ->
         Brando.Cache.Query.evict({:ok, result})
@@ -302,13 +303,7 @@ defmodule Brando.Villain do
   """
   @spec list_villains :: [module()]
   def list_villains do
-    {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
-
-    modules = (app_modules ++ [Pages.Page, Pages.PageFragment]) |> Enum.uniq()
-
-    modules
-    |> Enum.filter(&({:__villain_fields__, 0} in &1.__info__(:functions)))
-    |> Enum.map(& &1.__villain_fields__())
+    Enum.map(Trait.Villain.list_implementations(), &{&1, &1.__villain_fields__()})
   end
 
   @doc """
@@ -319,13 +314,26 @@ defmodule Brando.Villain do
 
     result =
       for {schema, fields} <- villains do
-        Enum.reduce(fields, [], fn {_, data_field, html_field}, acc ->
-          ids = list_ids_with_module(schema, data_field, module_id)
-          [acc | rerender_html_from_ids({schema, data_field, html_field}, ids)]
+        Enum.reduce(fields, [], fn data_field, acc ->
+          html_field = get_html_field(schema, data_field)
+          ids = list_ids_with_module(schema, data_field.name, module_id)
+          [acc | rerender_html_from_ids({schema, data_field.name, html_field.name}, ids)]
         end)
       end
 
     {:ok, result}
+  end
+
+  defp get_html_field(schema, %{name: :data}) do
+    schema.__attribute__(:html)
+  end
+
+  defp get_html_field(schema, %{name: data_name}) do
+    data_name
+    |> to_string
+    |> String.replace("_data", "_html")
+    |> String.to_existing_atom()
+    |> schema.__attribute__
   end
 
   @doc """
@@ -470,11 +478,10 @@ defmodule Brando.Villain do
           search_terms :: {atom, binary} | [{atom, binary}]
         ) :: [any]
   def search_villains_for_regex(schema, data_field, search_terms, with_data \\ nil) do
-    search_terms = (is_list(search_terms) && search_terms) || [search_terms]
     org_query = from s in schema, select: %{"id" => s.id}
 
     built_query =
-      Enum.reduce(search_terms, org_query, fn {search_name, search_term}, query ->
+      Enum.reduce(List.wrap(search_terms), org_query, fn {search_name, search_term}, query ->
         from q in query,
           select_merge: %{
             ^to_string(search_name) =>
@@ -521,10 +528,15 @@ defmodule Brando.Villain do
   @spec rerender_matching_villains([module], {atom, binary} | [{atom, binary}]) :: [any]
   def rerender_matching_villains(villains, search_terms) do
     for {schema, fields} <- villains do
-      Enum.reduce(fields, [], fn {_, data_field, html_field}, acc ->
-        case search_villains_for_regex(schema, data_field, search_terms) do
-          [] -> acc
-          ids -> [rerender_html_from_ids({schema, data_field, html_field}, ids) | acc]
+      Enum.reduce(fields, [], fn data_field, acc ->
+        html_field = get_html_field(schema, data_field)
+
+        case search_villains_for_regex(schema, data_field.name, search_terms) do
+          [] ->
+            acc
+
+          ids ->
+            [rerender_html_from_ids({schema, data_field.name, html_field.name}, ids) | acc]
         end
       end)
     end

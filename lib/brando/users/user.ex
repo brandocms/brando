@@ -7,12 +7,6 @@ defmodule Brando.Users.User do
   @type t :: %__MODULE__{}
   @type user :: Brando.Users.User.t() | :system
 
-  @application "Brando"
-  @domain "Users"
-  @schema "User"
-  @singular "user"
-  @plural "users"
-
   @avatar_cfg [
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
     default_size: "medium",
@@ -34,17 +28,24 @@ defmodule Brando.Users.User do
     ]
   ]
 
-  use Brando.Blueprint
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Users",
+    schema: "User",
+    singular: "user",
+    plural: "users"
+
   import Brando.Gettext
 
-  trait Brando.Traits.Password
-  trait Brando.Traits.SoftDelete
+  trait Brando.Trait.Password
+  trait Brando.Trait.SoftDelete
+  trait Brando.Trait.Timestamps
 
   attributes do
     attribute :name, :string, required: true
 
     attribute :email, :string,
-      validate: [format: ~r/@/],
+      constraints: [format: ~r/@/],
       unique: true,
       required: true
 
@@ -56,7 +57,7 @@ defmodule Brando.Users.User do
     attribute :last_login, :naive_datetime
 
     attribute :password, :string,
-      validate: [min_length: 6],
+      constraints: [min_length: 6],
       required: true
   end
 
@@ -78,32 +79,35 @@ defmodule Brando.Users.User do
 
   @derive {Jason.Encoder, only: @derived_fields}
 
-  # meta :en, singular: "user", plural: "users"
-  # meta :no, singular: "bruker", plural: "brukere"
+  translations do
+    context :naming do
+      translate :singular, t("user")
+      translate :plural, t("users")
+    end
 
-  # absolute_url false
+    context :fields do
+      translate :name do
+        label t("Name")
+        placeholder t("Name")
+      end
 
-  @doc """
-  Casts and validates `params` against `schema` to create a valid changeset
+      translate :email do
+        label t("Email")
+        placeholder t("Email")
+      end
+    end
 
-  ## Example
-
-      schema_changeset = changeset(%__MODULE__{}, :create, params)
-
-  """
-
-  # def changeset(schema, params, user) do
-  #   schema
-  #   # |> cast(params, @required_fields ++ @optional_fields)
-  #   # |> validate_required(@required_fields)
-  #   # |> validate_format(:email, ~r/@/)
-  #   # |> unique_constraint(:email)
-  #   # |> validate_length(:password,
-  #   #   min: 6,
-  #   #   too_short: gettext("Password must be at least 6 characters")
-  #   # )
-  #   # |> maybe_update_password()
-
-  #   # |> validate_upload({:image, :avatar}, user)
-  # end
+    context :strings do
+      translate [:user, :error], t("Error")
+      translate [:user, :superuser_cannot_be_deactivated], t("Superuser cannot be deactivated")
+      translate [:user, :title], t("Users")
+      translate [:user, :subtitle], t("Administrate users")
+      translate [:user, :new], t("Create user")
+      translate [:user, :edit], t("Edit user")
+      translate [:user, :activate], t("Activate user")
+      translate [:user, :activated], t("User activated")
+      translate [:user, :deactivate], t("Deactivate user")
+      translate [:user, :deactivated], t("User deactivated")
+    end
+  end
 end

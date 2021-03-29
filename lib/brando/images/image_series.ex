@@ -4,143 +4,69 @@ defmodule Brando.ImageSeries do
   and helper functions for dealing with the schema.
   """
 
-  use Brando.Web, :schema
-  use Brando.Sequence.Schema
-  use Brando.SoftDelete.Schema
-  use Brando.Schema
+  defmodule Trait.Slug do
+    use Brando.Trait
+    import Ecto.Changeset
+    @changeset_phase :before_validate_required
 
-  alias Brando.ImageCategory
-  import Ecto.Query, only: [from: 2]
-
-  @type t :: %__MODULE__{}
-
-  meta :en, singular: "image series", plural: "image series"
-  meta :no, singular: "bildeserie", plural: "bildeserier"
-
-  identifier false
-  absolute_url false
-
-  @required_fields ~w(name image_category_id creator_id)a
-  @optional_fields ~w(credits sequence cfg slug deleted_at)a
-
-  @derive {Jason.Encoder,
-           only: [
-             :id,
-             :name,
-             :slug,
-             :credits,
-             :cfg,
-             :creator,
-             :creator_id,
-             :image_category_id,
-             :image_category,
-             :images,
-             :sequence,
-             :inserted_at,
-             :updated_at,
-             :deleted_at
-           ]}
-
-  schema "images_series" do
-    field :name, :string
-    field :slug, :string
-    field :credits, :string
-    field :cfg, Brando.Type.ImageConfig
-    belongs_to :creator, Brando.Users.User
-    belongs_to :image_category, Brando.ImageCategory
-    has_many :images, Brando.Image
-    sequenced()
-    timestamps()
-    soft_delete()
-  end
-
-  @doc """
-  Casts and validates `params` against `schema` to create a valid changeset
-
-  ## Example
-
-      schema_changeset = changeset(%__MODULE__{}, params)
-
-  """
-  @spec changeset(t, map) :: Ecto.Changeset.t()
-  def changeset(schema, params \\ %{}, user \\ :system) do
-    changeset =
-      schema
-      |> cast(params, @required_fields ++ @optional_fields)
-      |> put_creator(user)
-      |> validate_required(@required_fields)
-      |> put_slug(:name)
-      |> avoid_field_collision([:slug], &filter_current_category/1)
-      |> inherit_configuration()
-
-    changeset
-    |> cast_assoc(:images, with: {Brando.Image, :changeset, [user, get_field(changeset, :cfg)]})
-    |> validate_paths()
-  end
-
-  @doc """
-  Filter used in `avoid_field_collision` to ensure we are only checking slugs
-  from the same category.
-  """
-  def filter_current_category(changeset) do
-    from m in __MODULE__,
-      where: m.image_category_id == ^get_field(changeset, :image_category_id)
-  end
-
-  @doc """
-  Get all imageseries in category `id`.
-  """
-  @spec by_category_id(integer) :: Ecto.Queryable.t()
-  def by_category_id(id) do
-    from m in __MODULE__,
-      where: m.image_category_id == ^id,
-      order_by: m.sequence,
-      preload: [:images]
-  end
-
-  @doc """
-  Before inserting changeset. Copies the series' category config.
-  """
-  def inherit_configuration(%{valid?: true} = cs) do
-    case get_change(cs, :cfg) do
-      nil ->
-        cat_id = get_field(cs, :image_category_id)
-
-        if !cat_id do
-          raise "inherit_configuration => image_category_id === nil!"
-        end
-
-        slug = get_change(cs, :slug)
-
-        if slug do
-          category = Brando.repo().get(ImageCategory, cat_id)
-          new_upload_path = Path.join(Map.get(category.cfg, :upload_path), slug)
-          cfg = Map.put(category.cfg, :upload_path, new_upload_path)
-          put_change(cs, :cfg, cfg)
-        else
-          cs
-        end
-
-      _ ->
-        cs
+    def changeset_mutator(_module, _config, changeset, _user) do
+      Brando.Utils.Schema.put_slug(changeset, :name)
     end
   end
 
-  def inherit_configuration(cs) do
-    cs
+  defmodule Trait.CastImages do
+    use Brando.Trait
+    import Ecto.Changeset
+
+    def changeset_mutator(_module, _config, changeset, user) do
+      cast_assoc(changeset, :images,
+        with: {Brando.Image, :changeset, [user, get_field(changeset, :cfg)]}
+      )
+    end
   end
 
-  @doc """
-  Checks if slug was changed in changeset.
+  defmodule Trait.InheritConfiguration do
+    use Brando.Trait
+    import Ecto.Changeset
 
-  If it is, move and fix paths/files + redo thumbs
-  """
-  def validate_paths(%Ecto.Changeset{valid?: true, data: %{id: id}} = cs) when not is_nil(id) do
-    slug = get_change(cs, :slug)
+    def changeset_mutator(_, _, changeset, _) do
+      case get_change(changeset, :cfg) do
+        nil ->
+          cat_id = get_field(changeset, :image_category_id)
 
-    if slug do
-      cfg = cs.data.cfg
-      split_path = Path.split(cfg.upload_path)
+          if !cat_id do
+            raise "inherit_configuration => image_category_id === nil!"
+          end
+
+          slug = get_change(changeset, :slug)
+
+          if slug do
+            category = Brando.repo().get(Brando.ImageCategory, cat_id)
+            new_upload_path = Path.join(Map.get(category.cfg, :upload_path), slug)
+            cfg = Map.put(category.cfg, :upload_path, new_upload_path)
+            put_change(changeset, :cfg, cfg)
+          else
+            changeset
+          end
+
+        _ ->
+          changeset
+      end
+    end
+  end
+
+  defmodule Trait.ValidatePaths do
+    use Brando.Trait
+    import Ecto.Changeset
+
+    def changeset_mutator(
+          _module,
+          _config,
+          %Ecto.Changeset{data: %{id: _}, changes: %{slug: slug}} = changeset,
+          _user
+        ) do
+      old_cfg = get_field(changeset, :cfg)
+      split_path = Path.split(old_cfg.upload_path)
 
       new_path =
         split_path
@@ -148,12 +74,60 @@ defmodule Brando.ImageSeries do
         |> Path.join()
         |> Path.join(slug)
 
-      cfg = Map.put(cfg, :upload_path, new_path)
-      put_change(cs, :cfg, cfg)
-    else
-      cs
+      new_cfg = Map.put(old_cfg, :upload_path, new_path)
+
+      put_change(changeset, :cfg, new_cfg)
+    end
+
+    def changeset_mutator(_, _, changeset, _) do
+      changeset
     end
   end
 
-  def validate_paths(cs), do: cs
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Images",
+    schema: "ImageSeries",
+    singular: "image_series",
+    plural: "image_series"
+
+  import Ecto.Query
+
+  table "images_series"
+
+  trait Brando.Trait.Creator
+  trait Brando.Trait.Sequence
+  trait Brando.Trait.SoftDelete
+  trait Brando.Trait.Timestamps
+  trait __MODULE__.Trait.Slug
+  trait __MODULE__.Trait.CastImages
+  trait __MODULE__.Trait.InheritConfiguration
+
+  identifier "{{ entry.name }}"
+
+  attributes do
+    attribute :name, :string, required: true
+
+    attribute :slug, :slug,
+      from: :name,
+      required: true,
+      unique: [prevent_collision: &Brando.ImageSeries.filter_current_category/2]
+
+    attribute :credits, :string
+    attribute :cfg, Brando.Type.ImageConfig
+  end
+
+  relations do
+    relation :image_category, :belongs_to, module: Brando.ImageCategory, required: true
+    relation :images, :has_many, module: Brando.Image
+  end
+
+  @doc """
+  Filter used in `avoid_field_collision` to ensure we are only checking slugs
+  from the same category.
+  """
+  def filter_current_category(module, changeset) do
+    from m in module,
+      where: m.image_category_id == ^get_field(changeset, :image_category_id)
+  end
 end

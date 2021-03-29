@@ -8,7 +8,7 @@ defmodule Brando.SoftDelete.QueryTest do
   test "list_soft_delete_schemas" do
     assert Query.list_soft_delete_schemas() == [
              Brando.Pages.Page,
-             Brando.Pages.PageFragment,
+             Brando.Pages.Fragment,
              Brando.Villain.Module,
              Brando.Image,
              Brando.ImageCategory,
@@ -20,7 +20,7 @@ defmodule Brando.SoftDelete.QueryTest do
   test "count_soft_deletions" do
     assert Query.count_soft_deletions() == [
              {Brando.Pages.Page, 0},
-             {Brando.Pages.PageFragment, 0},
+             {Brando.Pages.Fragment, 0},
              {Brando.Villain.Module, 0},
              {Brando.Image, 0},
              {Brando.ImageCategory, 0},
@@ -44,11 +44,11 @@ defmodule Brando.SoftDelete.QueryTest do
       deleted_at: Timex.subtract(DateTime.utc_now(), Timex.Duration.from_days(60))
     )
 
-    Factory.insert(:page_fragment, deleted_at: DateTime.utc_now())
+    Factory.insert(:fragment, deleted_at: DateTime.utc_now())
 
     assert Query.count_soft_deletions() == [
              {Brando.Pages.Page, 1},
-             {Brando.Pages.PageFragment, 1},
+             {Brando.Pages.Fragment, 1},
              {Brando.Villain.Module, 0},
              {Brando.Image, 1},
              {Brando.ImageCategory, 0},
@@ -66,7 +66,7 @@ defmodule Brando.SoftDelete.QueryTest do
 
     assert Query.count_soft_deletions() == [
              {Brando.Pages.Page, 0},
-             {Brando.Pages.PageFragment, 1},
+             {Brando.Pages.Fragment, 1},
              {Brando.Villain.Module, 0},
              {Brando.Image, 0},
              {Brando.ImageCategory, 0},

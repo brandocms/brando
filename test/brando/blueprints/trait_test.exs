@@ -1,59 +1,16 @@
 defmodule Brando.Blueprint.TraitTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
-  alias Brando.Traits
+  alias Brando.Blueprint.Attribute
+  alias Brando.Blueprint.Relation
+  alias Brando.Trait
+  alias Brando.Trait
   alias Brando.Users.User
-
-  defmodule Project do
-    use Brando.Blueprint
-
-    @application "Brando"
-    @domain "Projects"
-    @schema "Project"
-    @singular "project"
-    @plural "projects"
-
-    trait Brando.Traits.Creator
-    trait Brando.Traits.Sequence
-    trait Brando.Traits.Villain
-    trait Brando.Traits.Translatable
-    trait Brando.Traits.Upload
-
-    attributes do
-      attribute :title, :string, unique: true
-      attribute :data, :villain
-      attribute :bio_data, :villain
-
-      attribute :cover, :image,
-        allowed_mimetypes: [
-          "image/jpeg",
-          "image/png",
-          "image/gif"
-        ],
-        default_size: "medium",
-        upload_path: Path.join("images", "avatars"),
-        random_filename: true,
-        size_limit: 10_240_000,
-        sizes: %{
-          "micro" => %{"size" => "25", "quality" => 10, "crop" => false},
-          "thumb" => %{"size" => "150x150", "quality" => 65, "crop" => true},
-          "small" => %{"size" => "300x300", "quality" => 65, "crop" => true},
-          "medium" => %{"size" => "500x500", "quality" => 65, "crop" => true},
-          "large" => %{"size" => "700x700", "quality" => 65, "crop" => true},
-          "xlarge" => %{"size" => "900x900", "quality" => 65, "crop" => true}
-        },
-        srcset: [
-          {"small", "300w"},
-          {"medium", "500w"},
-          {"large", "700w"}
-        ]
-    end
-  end
 
   describe "creator trait" do
     test "exposes relationship" do
-      assert Traits.Creator.trait_relations() == [
-               %{
+      assert Trait.Creator.trait_relations(nil, nil) == [
+               %Relation{
                  name: :creator,
                  opts: %{module: User, required: true},
                  type: :belongs_to
@@ -64,8 +21,8 @@ defmodule Brando.Blueprint.TraitTest do
 
   describe "status trait" do
     test "exposes attribute" do
-      assert Traits.Status.trait_attributes() == [
-               %{
+      assert Trait.Status.trait_attributes(nil, nil) == [
+               %Attribute{
                  name: :status,
                  opts: %{required: true},
                  type: :status
@@ -76,8 +33,8 @@ defmodule Brando.Blueprint.TraitTest do
 
   describe "sequence trait" do
     test "exposes attribute" do
-      assert Traits.Sequence.trait_attributes() == [
-               %{
+      assert Trait.Sequence.trait_attributes(nil, nil) == [
+               %Attribute{
                  name: :sequence,
                  opts: %{default: 0},
                  type: :integer
@@ -88,8 +45,8 @@ defmodule Brando.Blueprint.TraitTest do
 
   describe "villain trait" do
     test "adds _html field" do
-      assert :html in __MODULE__.Project.__schema__(:fields)
-      assert :bio_html in __MODULE__.Project.__schema__(:fields)
+      assert :html in Brando.TraitTest.Project.__schema__(:fields)
+      assert :bio_html in Brando.TraitTest.Project.__schema__(:fields)
     end
 
     test "changeset mutator" do
@@ -105,8 +62,8 @@ defmodule Brando.Blueprint.TraitTest do
       ]
 
       mutated_cs =
-        __MODULE__.Project.changeset(
-          %__MODULE__.Project{},
+        Brando.TraitTest.Project.changeset(
+          %Brando.TraitTest.Project{},
           %{
             title: "my title!",
             bio_data: bio_data,
@@ -126,15 +83,27 @@ defmodule Brando.Blueprint.TraitTest do
 
   describe "language trait" do
     test "adds language field" do
-      assert :language in __MODULE__.Project.__schema__(:fields)
+      assert :language in Brando.TraitTest.Project.__schema__(:fields)
 
-      assert __MODULE__.Project.__changeset__()[:language] ==
+      assert Brando.TraitTest.Project.__changeset__()[:language] ==
                {:parameterized, Ecto.Enum,
                 %{
                   on_dump: %{en: "en", no: "no"},
                   on_load: %{"en" => :en, "no" => :no},
                   values: [:no, :en]
                 }}
+    end
+  end
+
+  describe "implementations" do
+    test "list" do
+      # NOTE: Project will not show up here since the protocol is not consolidated in exs test file
+      assert Trait.list_implementations(Brando.Trait.SoftDelete) == [
+               Brando.Pages.Fragment,
+               Brando.BlueprintTest.Project,
+               Brando.Pages.Page,
+               Brando.Users.User
+             ]
     end
   end
 end

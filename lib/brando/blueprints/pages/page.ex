@@ -33,7 +33,7 @@
 #   #   relations do
 #   #     belongs_to :parent, __MODULE__
 #   #     has_many :children, __MODULE__, foreign_key: :parent_id
-#   #     has_many :fragments, PageFragment
+#   #     has_many :fragments, Fragment
 #   #     has_many :properties, Property, on_replace: :delete
 #   #   end
 #   # end

@@ -41,7 +41,10 @@ defmodule Brando.SoftDelete.Repo do
   defmacro __using__(_opts) do
     quote location: :keep do
       def maybe_obfuscate(%Ecto.Changeset{data: data} = changeset) do
-        obfuscated_fields = changeset.data.__struct__.__soft_delete__(:obfuscated_fields)
+        module = changeset.data.__struct__
+
+        obfuscated_fields =
+          Keyword.get(module.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields)
 
         obfuscated_fields
         |> Enum.reduce(changeset, fn obfuscated_field, new_changeset ->
@@ -55,7 +58,10 @@ defmodule Brando.SoftDelete.Repo do
       end
 
       def maybe_obfuscate(%{} = struct) do
-        obfuscated_fields = struct.__struct__.__soft_delete__(:obfuscated_fields)
+        module = struct.__struct__
+
+        obfuscated_fields =
+          Keyword.get(module.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields)
 
         changeset = Ecto.Changeset.change(struct)
 
@@ -86,7 +92,10 @@ defmodule Brando.SoftDelete.Repo do
       end
 
       def soft_delete(%Ecto.Changeset{data: data} = changeset) do
-        obfuscated_fields = changeset.data.__struct__.__soft_delete__(:obfuscated_fields)
+        module = changeset.data.__struct__
+
+        obfuscated_fields =
+          Keyword.get(module.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields)
 
         obfuscated_fields
         |> Enum.reduce(changeset, fn obfuscated_field, new_changeset ->
@@ -102,7 +111,11 @@ defmodule Brando.SoftDelete.Repo do
       end
 
       def soft_delete(%{} = struct) do
-        obfuscated_fields = struct.__struct__.__soft_delete__(:obfuscated_fields)
+        module = struct.__struct__
+
+        obfuscated_fields =
+          Keyword.get(module.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields, [])
+
         changeset = Ecto.Changeset.change(struct)
 
         obfuscated_fields

@@ -5,8 +5,9 @@ defmodule Brando.Utils.Schema do
 
   import Ecto.Query
   alias Brando.SoftDelete
+  alias Ecto.Changeset
 
-  @type changeset :: Ecto.Changeset.t()
+  @type changeset :: Changeset.t()
 
   @field_val_collision_attemps 30
 
@@ -21,22 +22,22 @@ defmodule Brando.Utils.Schema do
   """
 
   def update_field(schema, coll) do
-    changeset = Ecto.Changeset.change(schema, coll)
+    changeset = Changeset.change(schema, coll)
     {:ok, Brando.repo().update!(changeset)}
   end
 
   @doc """
   Puts `id` from `user` in the `params` map.
   """
-  @deprecated "Move to using Brando.Traits.Creator instead!"
+  # @deprecated "Move to using Brando.Trait.Creator instead!"
   @spec put_creator(changeset | map, map | :system) :: changeset
-  def put_creator(%Ecto.Changeset{} = cs, :system), do: cs
+  def put_creator(%Changeset{} = cs, :system), do: cs
 
-  def put_creator(%Ecto.Changeset{} = cs, user) when is_map(user),
-    do: Ecto.Changeset.put_change(cs, :creator_id, user.id)
+  def put_creator(%Changeset{} = cs, user) when is_map(user),
+    do: Changeset.put_change(cs, :creator_id, user.id)
 
-  def put_creator(%Ecto.Changeset{} = cs, user_id),
-    do: Ecto.Changeset.put_change(cs, :creator_id, user_id)
+  def put_creator(%Changeset{} = cs, user_id),
+    do: Changeset.put_change(cs, :creator_id, user_id)
 
   def put_creator(params, :system), do: params
 
@@ -44,15 +45,15 @@ defmodule Brando.Utils.Schema do
   Put slug in changeset
   """
   def put_slug(%{changes: %{title: title}} = cs) do
-    Ecto.Changeset.change(cs, %{slug: Brando.Utils.slugify(title)})
+    Changeset.change(cs, %{slug: Brando.Utils.slugify(title)})
   end
 
   def put_slug(cs), do: cs
 
   def put_slug(%{changes: _} = cs, field) do
-    case Ecto.Changeset.get_change(cs, field) do
+    case Changeset.get_change(cs, field) do
       nil -> cs
-      to_slug -> Ecto.Changeset.change(cs, %{slug: Brando.Utils.slugify(to_slug)})
+      to_slug -> Changeset.change(cs, %{slug: Brando.Utils.slugify(to_slug)})
     end
   end
 
@@ -67,27 +68,30 @@ defmodule Brando.Utils.Schema do
   @doc """
   Precheck field in `cs` to make sure we avoid collisions
   """
-
-  def avoid_field_collision(_module, %{valid?: true} = changeset, fields, nil) do
+  def avoid_field_collision(%Changeset{valid?: true} = changeset, _module, fields, nil) do
     src = changeset.data.__struct__
     do_avoid_field_collision(fields, changeset, src)
   end
 
-  def avoid_field_collision(module, %{valid?: true} = changeset, fields, filter_fn) do
+  def avoid_field_collision(%Changeset{valid?: true} = changeset, module, fields, filter_fn) do
     src = filter_fn.(module, changeset)
     do_avoid_field_collision(fields, changeset, src)
   end
 
-  def avoid_field_collision(changeset, _, _, _), do: changeset
+  def avoid_field_collision(%Changeset{} = changeset, _, _, _) do
+    changeset
+  end
 
-  def avoid_field_collision(%{valid?: true} = changeset, fields, filter_fn) do
+  def avoid_field_collision(%Changeset{valid?: true} = changeset, fields, filter_fn)
+      when is_list(fields) do
     src = filter_fn.(changeset)
     do_avoid_field_collision(fields, changeset, src)
   end
 
-  def avoid_field_collision(changeset, _, _), do: changeset
+  def avoid_field_collision(%Changeset{} = changeset, _, _), do: changeset
 
-  def avoid_field_collision(%{valid?: true} = changeset, fields) do
+  def avoid_field_collision(%Changeset{valid?: true} = changeset, fields)
+      when is_list(fields) do
     src = changeset.data.__struct__
     do_avoid_field_collision(fields, changeset, src)
   end
@@ -96,15 +100,15 @@ defmodule Brando.Utils.Schema do
 
   def do_avoid_field_collision(fields, changeset, src) do
     Enum.reduce(fields, changeset, fn field, new_changeset ->
-      field_val = Ecto.Changeset.get_change(new_changeset, field)
+      field_val = Changeset.get_change(new_changeset, field)
 
       if field_val do
         case get_unique_field_value(new_changeset, src, field, field_val, 0) do
           {:ok, unique_value} ->
-            Ecto.Changeset.put_change(new_changeset, field, unique_value)
+            Changeset.put_change(new_changeset, field, unique_value)
 
           {:error, :too_many_attempts} ->
-            Ecto.Changeset.add_error(
+            Changeset.add_error(
               new_changeset,
               field,
               "Klarte ikke finne en ledig verdi for feltet"

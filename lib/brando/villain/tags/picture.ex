@@ -4,7 +4,6 @@ defmodule Brando.Villain.Tags.Picture do
   import NimbleParsec
   alias Liquex.Parser.Base
   alias Liquex.Parser.Literal
-  alias Liquex.Parser.Field
   alias Liquex.Parser.Tag
   alias Liquex.Parser.Object
 
@@ -17,19 +16,12 @@ defmodule Brando.Villain.Tags.Picture do
     |> ignore(Literal.whitespace())
     |> unwrap_and_tag(Literal.argument(), :source)
     |> ignore(Literal.whitespace())
-    |> optional(tag(json_args(), :args))
+    |> optional(tag(braced_args(), :args))
     |> ignore(Tag.close_tag())
     |> tag(:picture_tag)
   end
 
-  def json_args(combinator \\ empty()) do
-    # combinator
-    # |> ignore(string("{"))
-    # |> ignore(Literal.whitespace())
-    # |> tag(:args)
-    # |> ignore(Literal.whitespace())
-    # |> ignore(string("}"))
-
+  def braced_args(combinator \\ empty()) do
     combinator
     |> ignore(string("{ "))
     |> repeat(
@@ -38,15 +30,6 @@ defmodule Brando.Villain.Tags.Picture do
     )
     |> ignore(string(" }"))
   end
-
-  # def json_args(combinator \\ empty()) do
-  #   combinator
-  #   |> ignore(string("{"))
-  #   |> ignore(Literal.whitespace())
-  #   |> tag(:args)
-  #   |> ignore(Literal.whitespace())
-  #   |> ignore(string("}"))
-  # end
 
   def element(combinator \\ empty()) do
     # Add the `custom_tag/1` parsing function to the supported element tag list

@@ -1,4 +1,4 @@
-defmodule Brando.Traits.Upload do
+defmodule Brando.Trait.Upload do
   @moduledoc """
   Villain parsing
   """
@@ -18,7 +18,7 @@ defmodule Brando.Traits.Upload do
     if module.__image_fields__ == [] and module.__file_fields__ == [] do
       raise ConfigError,
         message: """
-        Resource `#{inspect(module)}` is declaring Brando.Traits.Upload, but there are no attributes of type `:image` or `:file` found.
+        Resource `#{inspect(module)}` is declaring Brando.Trait.Upload, but there are no attributes of type `:image` or `:file` found.
 
             attributes do
               attribute :cover, :image
@@ -133,20 +133,12 @@ defmodule Brando.Traits.Upload do
   def changeset_mutator(module, _config, %{valid?: true} = changeset, user) do
     image_changeset =
       Enum.reduce(module.__image_fields__(), changeset, fn f, mutated_changeset ->
-        image_cfg =
-          f.name
-          |> module.__attribute_opts__()
-          |> Enum.into(%{})
-
+        image_cfg = module.__attribute_opts__(f.name)
         validate_upload(mutated_changeset, {:image, f.name}, user, image_cfg)
       end)
 
     Enum.reduce(module.__file_fields__(), image_changeset, fn f, mutated_changeset ->
-      file_cfg =
-        f.name
-        |> module.__attribute_opts__()
-        |> Enum.into(%{})
-
+      file_cfg = module.__attribute_opts__(f.name)
       validate_upload(mutated_changeset, {:file, f.name}, user, file_cfg)
     end)
   end

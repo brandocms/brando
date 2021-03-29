@@ -58,8 +58,7 @@ defmodule Brando.Villain.LiquexTest do
              {:route_tag,
               [
                 function: "project_path",
-                action: "index",
-                args: []
+                action: "index"
               ]}
            ]
 
@@ -69,7 +68,7 @@ defmodule Brando.Villain.LiquexTest do
 
     tpl =
       """
-      the route is {% route project_path show entry.uri %}
+      the route is {% route project_path show { entry.uri } %}
       """
       |> String.trim()
 
@@ -89,6 +88,29 @@ defmodule Brando.Villain.LiquexTest do
     context = Liquex.Context.assign(Brando.Villain.get_base_context(), "entry", entry)
     {result, _} = Liquex.Render.render([], parsed_tpl, context)
     assert Enum.join(result) == "the route is /project/the-uri"
+
+    tpl =
+      """
+      the route is {% route project_path show { entry.uri, entry.id } %}
+      """
+      |> String.trim()
+
+    {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
+
+    assert parsed_tpl == [
+             {:text, "the route is "},
+             {:route_tag,
+              [
+                function: "project_path",
+                action: "show",
+                args: [{:field, [key: "entry", key: "uri"]}, {:field, [key: "entry", key: "id"]}]
+              ]}
+           ]
+
+    entry = %{uri: "the-uri", id: 500}
+    context = Liquex.Context.assign(Brando.Villain.get_base_context(), "entry", entry)
+    {result, _} = Liquex.Render.render([], parsed_tpl, context)
+    assert Enum.join(result) == "the route is /project/the-uri/500"
   end
 
   test "picture tag" do

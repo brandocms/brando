@@ -49,7 +49,7 @@ defmodule Brando.VillainTest do
   }
 
   defp pf_data(text) do
-    Factory.params_for(:page_fragment, %{
+    Factory.params_for(:fragment, %{
       parent_key: "blabla",
       key: "blabla",
       data: [
@@ -90,8 +90,15 @@ defmodule Brando.VillainTest do
 
   test "list_villains" do
     assert Brando.Villain.list_villains() == [
-             {Brando.Pages.Page, [{:villain, :data, :html}]},
-             {Brando.Pages.PageFragment, [{:villain, :data, :html}]}
+             {Brando.TraitTest.Project,
+              [
+                %Brando.Blueprint.Attribute{name: :bio_data, opts: %{}, type: :villain},
+                %Brando.Blueprint.Attribute{name: :data, opts: %{}, type: :villain}
+              ]},
+             {Brando.Pages.Fragment,
+              [%Brando.Blueprint.Attribute{name: :data, opts: %{required: true}, type: :villain}]},
+             {Brando.Pages.Page,
+              [%Brando.Blueprint.Attribute{name: :data, opts: %{}, type: :villain}]}
            ]
   end
 
@@ -117,6 +124,7 @@ defmodule Brando.VillainTest do
                  thumb: "/media/image/thumb/1.jpg",
                  title: "Title one",
                  width: 300,
+                 dominant_color: nil,
                  alt: nil,
                  webp: false
                }
@@ -125,7 +133,7 @@ defmodule Brando.VillainTest do
 
   test "search_villains_for_text" do
     pf1 =
-      Factory.insert(:page_fragment, %{
+      Factory.insert(:fragment, %{
         data: [
           %{
             "type" => "text",
@@ -134,11 +142,11 @@ defmodule Brando.VillainTest do
         ]
       })
 
-    _pf2 = Factory.insert(:page_fragment, %{data: []})
-    _pf3 = Factory.insert(:page_fragment, %{data: []})
+    _pf2 = Factory.insert(:fragment, %{data: []})
+    _pf3 = Factory.insert(:fragment, %{data: []})
 
     pf4 =
-      Factory.insert(:page_fragment, %{
+      Factory.insert(:fragment, %{
         data: [
           %{
             "type" => "text",
@@ -149,7 +157,7 @@ defmodule Brando.VillainTest do
 
     resulting_ids =
       Brando.Villain.search_villains_for_text(
-        Brando.Pages.PageFragment,
+        Brando.Pages.Fragment,
         :data,
         "text"
       )
@@ -159,7 +167,7 @@ defmodule Brando.VillainTest do
 
   test "search_villains_for_regex" do
     pf1 =
-      Factory.insert(:page_fragment, %{
+      Factory.insert(:fragment, %{
         data: [
           %{
             "type" => "text",
@@ -171,10 +179,10 @@ defmodule Brando.VillainTest do
         ]
       })
 
-    _pf2 = Factory.insert(:page_fragment, %{data: []})
+    _pf2 = Factory.insert(:fragment, %{data: []})
 
     _pf3 =
-      Factory.insert(:page_fragment, %{
+      Factory.insert(:fragment, %{
         data: [
           %{
             "type" => "text",
@@ -184,7 +192,7 @@ defmodule Brando.VillainTest do
       })
 
     pf4 =
-      Factory.insert(:page_fragment, %{
+      Factory.insert(:fragment, %{
         data: [
           %{
             "type" => "text",
@@ -198,7 +206,7 @@ defmodule Brando.VillainTest do
 
     resulting_ids =
       Brando.Villain.search_villains_for_regex(
-        Brando.Pages.PageFragment,
+        Brando.Pages.Fragment,
         :data,
         globals: "{{ globals\.(.*?) }}"
       )
@@ -366,12 +374,12 @@ defmodule Brando.VillainTest do
       )
 
     pf_params = pf_data("**Some** {{ navigation.main.en.title }} here.")
-    {:ok, pf1} = Brando.Pages.create_page_fragment(pf_params, user)
+    {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
 
     Brando.Cache.Navigation.set()
     {:ok, _menu} = Brando.Navigation.update_menu(menu.id, %{title: "New title"}, user)
 
-    pf2 = Brando.repo().get(Brando.Pages.PageFragment, pf1.id)
+    pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
     assert pf2.html == "**Some** New title here."
   end
 
@@ -389,7 +397,7 @@ defmodule Brando.VillainTest do
     pf_params = pf_data("So the global says: '{{ globals.system.text }}'.")
 
     {:ok, gc1} = Brando.Globals.create_global_category(global_category_params)
-    {:ok, pf1} = Brando.Pages.create_page_fragment(pf_params, user)
+    {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
 
     assert pf1.html == "So the global says: 'My text'."
 
@@ -399,7 +407,7 @@ defmodule Brando.VillainTest do
       ]
     })
 
-    pf2 = Brando.repo().get(Brando.Pages.PageFragment, pf1.id)
+    pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
 
     assert pf2.html == "So the global says: 'My replaced text'."
   end
@@ -409,12 +417,12 @@ defmodule Brando.VillainTest do
 
     pf_params = pf_data("So identity.name says: '{{ identity.name }}'.")
 
-    {:ok, pf1} = Brando.Pages.create_page_fragment(pf_params, user)
+    {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
     assert pf1.html == "So identity.name says: 'Organisasjonens navn'."
 
     Brando.Sites.update_identity(%{"name" => "Eddie Hazel Inc"}, user)
 
-    pf2 = Brando.repo().get(Brando.Pages.PageFragment, pf1.id)
+    pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
     assert pf2.html == "So identity.name says: 'Eddie Hazel Inc'."
   end
 
@@ -423,7 +431,7 @@ defmodule Brando.VillainTest do
 
     pf_params = pf_data("So links.instagram.url says: '{{ links.instagram.url }}'.")
 
-    {:ok, pf1} = Brando.Pages.create_page_fragment(pf_params, user)
+    {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
     assert pf1.html == "So links.instagram.url says: 'https://instagram.com/test'."
 
     Brando.Sites.update_identity(
@@ -431,7 +439,7 @@ defmodule Brando.VillainTest do
       user
     )
 
-    pf2 = Brando.repo().get(Brando.Pages.PageFragment, pf1.id)
+    pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
     assert pf2.html == "So links.instagram.url says: 'https://instagram.com'."
   end
 
@@ -440,7 +448,7 @@ defmodule Brando.VillainTest do
 
     pf_params = pf_data("So configs.key1.value says: '{{ configs.key1.value }}'.")
 
-    {:ok, pf1} = Brando.Pages.create_page_fragment(pf_params, user)
+    {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
     assert pf1.html == "So configs.key1.value says: 'value1'."
 
     Brando.Sites.update_identity(
@@ -448,13 +456,13 @@ defmodule Brando.VillainTest do
       user
     )
 
-    pf2 = Brando.repo().get(Brando.Pages.PageFragment, pf1.id)
+    pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
     assert pf2.html == "So configs.key1.value says: 'wow!'."
   end
 
   test "fragment tag", %{user: user} do
     pf_params1 =
-      Factory.params_for(:page_fragment, %{
+      Factory.params_for(:fragment, %{
         parent_key: "parent_test",
         key: "frag_key",
         data: [
@@ -468,7 +476,7 @@ defmodule Brando.VillainTest do
       })
 
     pf_params2 =
-      Factory.params_for(:page_fragment, %{
+      Factory.params_for(:fragment, %{
         parent_key: "parent_test",
         key: "test_key",
         data: [
@@ -482,7 +490,7 @@ defmodule Brando.VillainTest do
       })
 
     pf_params3 =
-      Factory.params_for(:page_fragment, %{
+      Factory.params_for(:fragment, %{
         parent_key: "parent_test",
         key: "test_key",
         data: [
@@ -495,9 +503,9 @@ defmodule Brando.VillainTest do
         ]
       })
 
-    {:ok, pf1} = Brando.Pages.create_page_fragment(pf_params1, user)
-    {:ok, pf2} = Brando.Pages.create_page_fragment(pf_params2, user)
-    {:ok, pf3} = Brando.Pages.create_page_fragment(pf_params3, user)
+    {:ok, pf1} = Brando.Pages.create_fragment(pf_params1, user)
+    {:ok, pf2} = Brando.Pages.create_fragment(pf_params2, user)
+    {:ok, pf3} = Brando.Pages.create_fragment(pf_params3, user)
 
     assert pf1.html == "Hello from the fragment!"
     assert pf2.html == "--> Hello from the fragment! <--"

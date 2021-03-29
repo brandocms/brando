@@ -27,7 +27,7 @@ defmodule Brando.GraphQL.Schema do
       import_fields :image_mutations
       import_fields :page_mutations
       import_fields :navigation_mutations
-      import_fields :page_fragment_mutations
+      import_fields :fragment_mutations
       import_fields :user_mutations
       import_fields :identity_mutations
       import_fields :seo_mutations
@@ -45,7 +45,7 @@ defmodule Brando.GraphQL.Schema do
       import_fields :image_queries
       import_fields :page_queries
       import_fields :navigation_queries
-      import_fields :page_fragment_queries
+      import_fields :fragment_queries
       import_fields :user_queries
       import_fields :identity_queries
       import_fields :revision_queries

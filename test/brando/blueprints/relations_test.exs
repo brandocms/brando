@@ -18,13 +18,12 @@ defmodule Brando.Blueprint.RelationsTest do
       end
     end
 
-    use Brando.Blueprint
-
-    application "Brando"
-    domain "Projects"
-    schema "Project"
-    singular "project"
-    plural "projects"
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "Projects",
+      schema: "Project",
+      singular: "project",
+      plural: "projects"
 
     attributes do
       attribute :title, :string, unique: true

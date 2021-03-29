@@ -16,7 +16,7 @@ defmodule <%= application_module %>.Authorization do
     {"ImageSeries", Brando.ImageSeries},
     {"ImageCategory", Brando.ImageCategory},
     {"Page", Brando.Pages.Page},
-    {"PageFragment", Brando.Pages.PageFragment},
+    {"Fragment", Brando.Pages.Fragment},
     {"Module", Brando.Villain.Module},
     {"User", Brando.Users.User}
   ]

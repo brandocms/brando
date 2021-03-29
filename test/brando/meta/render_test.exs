@@ -46,15 +46,19 @@ defmodule Brando.MetaRenderTest do
   ]
 
   defmodule Page do
-    use Brando.Web, :schema
-    use Brando.Meta.Schema
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "Pages",
+      schema: "Page",
+      singular: "page",
+      plural: "pages"
 
     meta_schema do
-      field "title", [:title]
-      field "mutated_title", [:title], &mutator_function/1
-      field "generated_title", &generator_function/1
-      field ["description", "og:description"], [:description], &mutator_function/1
-      field "og:url", & &1.__meta__.current_url
+      meta_field "title", [:title]
+      meta_field "mutated_title", [:title], &mutator_function/1
+      meta_field "generated_title", &generator_function/1
+      meta_field ["description", "og:description"], [:description], &mutator_function/1
+      meta_field "og:url", & &1.__meta__.current_url
     end
 
     def mutator_function(data), do: "@ #{data}"

@@ -79,8 +79,10 @@ defmodule Brando.Villain.Parser do
 
       alias Liquex.Context
 
-      def render_caption(%{"title" => nil, "credits" => nil}),
-        do: ""
+      def render_caption(%{"title" => nil, "credits" => nil}), do: ""
+      def render_caption(%{"title" => "", "credits" => nil}), do: ""
+      def render_caption(%{"title" => nil, "credits" => ""}), do: ""
+      def render_caption(%{"title" => "", "credits" => ""}), do: ""
 
       def render_caption(%{"title" => title, "credits" => nil}),
         do: "<figcaption>#{title}</figcaption>"
@@ -532,6 +534,10 @@ defmodule Brando.Villain.Parser do
             width = Map.get(img, "width", nil)
             height = Map.get(img, "height", nil)
             placeholder = Map.get(data, "placeholder", :svg)
+
+            placeholder =
+              (is_binary(placeholder) && String.to_existing_atom(placeholder)) || placeholder
+
             orientation = (img["width"] > img["height"] && "landscape") || "portrait"
             caption = render_caption(Map.merge(img, %{"title" => title, "credits" => credits}))
 

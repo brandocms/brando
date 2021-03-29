@@ -6,6 +6,13 @@
 use Mix.Config
 
 config :brando, ecto_repos: [BrandoIntegration.Repo]
+
+config :brando,
+  languages: [
+    [value: "en", text: "English"],
+    [value: "no", text: "Norsk"]
+  ]
+
 config :phoenix, :json_library, Jason
 
 # These are defaults for internals, mostly overridden for testing

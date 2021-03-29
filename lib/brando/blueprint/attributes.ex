@@ -30,7 +30,10 @@ defmodule Brando.Blueprint.Attributes do
 
   """
 
+  alias Brando.Blueprint.Attribute
+
   @valid_attributes [
+    {:array, :map},
     :array,
     :boolean,
     :date,
@@ -49,6 +52,7 @@ defmodule Brando.Blueprint.Attributes do
     :string,
     :text,
     :time,
+    :timestamp,
     :uuid,
     :video,
     :villain
@@ -67,11 +71,35 @@ defmodule Brando.Blueprint.Attributes do
         String.to_existing_atom(lang_code)
       end)
 
-    %{name: name, type: :language, opts: %{values: languages, required: true}}
+    %Attribute{
+      name: name,
+      type: :language,
+      opts: %{values: languages, required: true}
+    }
+  end
+
+  def build_attr(name, :file, opts) do
+    %Attribute{
+      name: name,
+      type: :file,
+      opts: opts |> Enum.into(%{}) |> Brando.Utils.map_to_struct(Brando.Type.FileConfig)
+    }
+  end
+
+  def build_attr(name, :image, opts) do
+    %Attribute{
+      name: name,
+      type: :image,
+      opts: opts |> Enum.into(%{}) |> Brando.Utils.map_to_struct(Brando.Type.ImageConfig)
+    }
   end
 
   def build_attr(name, type, opts) do
-    %{name: name, type: type, opts: Enum.into(opts, %{})}
+    %Attribute{
+      name: name,
+      type: type,
+      opts: Enum.into(opts, %{})
+    }
   end
 
   defmacro attributes(do: block) do

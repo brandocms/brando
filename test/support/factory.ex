@@ -5,7 +5,7 @@ defmodule Brando.Factory do
   alias Brando.Sites.GlobalCategory
   alias Brando.Type.ImageConfig
   alias Brando.Pages.Page
-  alias Brando.Pages.PageFragment
+  alias Brando.Pages.Fragment
   alias Brando.Image
   alias Brando.ImageCategory
   alias Brando.ImageSeries
@@ -123,8 +123,8 @@ defmodule Brando.Factory do
     }
   end
 
-  def page_fragment_factory do
-    %PageFragment{
+  def fragment_factory do
+    %Fragment{
       parent_key: "index",
       key: "header",
       language: "en",

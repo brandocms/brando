@@ -229,7 +229,7 @@ page = %Brando.Pages.Page{
 
 p1 = <%= application_module %>.Repo.insert!(page)
 
-footer_fragment = %Brando.Pages.PageFragment{
+footer_fragment = %Brando.Pages.Fragment{
   parent_key: "partials",
   key: "footer",
   title: "Footer",

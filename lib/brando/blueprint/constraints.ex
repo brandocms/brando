@@ -1,15 +1,15 @@
-defmodule Brando.Blueprint.Validations do
+defmodule Brando.Blueprint.Constraints do
   import Ecto.Changeset
 
   def run_validations(changeset, _module, attributes) do
     attributes
     |> Enum.filter(&Map.get(&1.opts, :validate, false))
     |> Enum.reduce(changeset, fn
-      %{opts: %{validate: validations}} = attr, new_changeset ->
-        validations_map = Enum.into(validations, %{})
+      %{opts: %{constraints: constraints}} = attr, new_changeset ->
+        constraints_map = Enum.into(constraints, %{})
 
-        Enum.reduce(validations_map, new_changeset, fn validation, validated_changeset ->
-          run_validation(validation, validated_changeset, attr)
+        Enum.reduce(constraints_map, new_changeset, fn constraint, validated_changeset ->
+          run_validation(constraint, validated_changeset, attr)
         end)
     end)
   end
