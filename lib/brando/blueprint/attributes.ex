@@ -31,7 +31,6 @@ defmodule Brando.Blueprint.Attributes do
   """
 
   alias Brando.Blueprint.Attribute
-  import Brando.Blueprint.Utils
 
   @valid_attributes [
     {:array, :map},
