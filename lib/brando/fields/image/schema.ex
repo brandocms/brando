@@ -29,17 +29,10 @@ defmodule Brando.Field.Image.Schema do
   defmacro __using__(_) do
     # IO.warn("""
     # Using `Brando.Field.Image.Schema` is deprecated.
+    # It is recommended to move to Blueprints
 
     # Offending module: #{inspect(__CALLER__.module)}
 
-    # It is recommended to move to Blueprints instead:
-
-    #     use Brando.Blueprint
-
-    #     trait Brando.Trait.Upload
-
-    #     attributes do
-    #       attribute :cover, :image, my_cfg
     #     end
     # """)
 

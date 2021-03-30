@@ -1,45 +1,23 @@
 defmodule Brando.Navigation.Item do
-  @moduledoc """
-  Ecto schema for the Menu schema.
-  """
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Navigation",
+    schema: "Item",
+    singular: "item",
+    plural: "items"
 
-  use Brando.Web, :schema
-  use Brando.Schema
+  data_layer :embedded
+  identifier "{{ entry.title }}"
 
-  @type t :: %__MODULE__{}
-  @type user :: Brando.Users.User.t() | :system
-
-  meta :en, singular: "menu item", plural: "menu items"
-  meta :no, singular: "menypunkt", plural: "menypunkter"
-
-  identifier fn entry -> "#{entry.title}" end
-  absolute_url false
-
-  embedded_schema do
-    field :status, Brando.Type.Status
-    field :title, :string
-    field :key, :string
-    field :url, :string
-    field :open_in_new_window, :boolean, default: false
-    embeds_many :items, __MODULE__, on_replace: :delete
+  attributes do
+    attribute :status, :status, required: true
+    attribute :title, :string, required: true
+    attribute :key, :string, required: true
+    attribute :url, :string, required: true
+    attribute :open_in_new_window, :boolean, default: false, required: true
   end
 
-  @required_fields ~w(status title key url open_in_new_window)a
-  @optional_fields ~w()a
-
-  @doc """
-  Casts and validates `params` against `schema` to create a valid changeset
-
-  ## Example
-
-      schema_changeset = changeset(%__MODULE__{}, :create, params)
-
-  """
-  @spec changeset(t, Keyword.t() | Options.t()) :: Ecto.Changeset.t()
-  def changeset(schema, params \\ %{}) do
-    schema
-    |> cast(params, @required_fields ++ @optional_fields)
-    |> cast_embed(:items)
-    |> validate_required(@required_fields)
+  relations do
+    relation :items, :embeds_many, module: __MODULE__, on_replace: :delete
   end
 end

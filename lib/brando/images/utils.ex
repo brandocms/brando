@@ -197,13 +197,13 @@ defmodule Brando.Images.Utils do
   Checks that the existing images' path matches the config. these may differ
   when series has been renamed!
   """
-  @spec check_image_paths(module, map | image_series_schema) :: :unchanged | :changed
-  def check_image_paths(schema, image_series) do
+  @spec check_image_paths(module, map | image_series_schema, user) :: :unchanged | :changed
+  def check_image_paths(schema, image_series, user) do
     upload_path = image_series.cfg.upload_path
 
     {_, paths} =
       Enum.map_reduce(image_series.images, [], fn image, acc ->
-        case check_image_path(schema, image, upload_path) do
+        case check_image_path(schema, image, upload_path, user) do
           nil -> {image, acc}
           path -> {image, [path | acc]}
         end
@@ -215,8 +215,8 @@ defmodule Brando.Images.Utils do
     end
   end
 
-  @spec check_image_path(module, map, binary) :: Ecto.Schema.t() | nil
-  defp check_image_path(schema, image, upload_dirname) do
+  @spec check_image_path(module, map, binary, user) :: Ecto.Schema.t() | nil
+  defp check_image_path(schema, image, upload_dirname, user) do
     image_path = image.image.path
     image_dirname = Path.dirname(image.image.path)
     image_basename = Path.basename(image.image.path)
@@ -227,7 +227,7 @@ defmodule Brando.Images.Utils do
     if image_struct != nil do
       # store new image
       image
-      |> schema.changeset(%{image: image_struct})
+      |> schema.changeset(%{image: image_struct}, user)
       |> Brando.repo().update!
     end
   end

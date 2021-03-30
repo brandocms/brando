@@ -31,6 +31,7 @@ defmodule Brando.Blueprint.Attributes do
   """
 
   alias Brando.Blueprint.Attribute
+  import Brando.Blueprint.Utils
 
   @valid_attributes [
     {:array, :map},
@@ -68,7 +69,7 @@ defmodule Brando.Blueprint.Attributes do
   def build_attr(name, :language, _opts) do
     languages =
       Enum.map(Brando.config(:languages), fn [value: lang_code, text: _] ->
-        String.to_existing_atom(lang_code)
+        String.to_atom(lang_code)
       end)
 
     %Attribute{
@@ -83,6 +84,14 @@ defmodule Brando.Blueprint.Attributes do
       name: name,
       type: :file,
       opts: opts |> Enum.into(%{}) |> Brando.Utils.map_to_struct(Brando.Type.FileConfig)
+    }
+  end
+
+  def build_attr(name, :image, :db) do
+    %Attribute{
+      name: name,
+      type: :image,
+      opts: %{db: true, required: true}
     }
   end
 
@@ -130,22 +139,4 @@ defmodule Brando.Blueprint.Attributes do
       Module.put_attribute(__MODULE__, :attrs, attr)
     end
   end
-
-  def to_ecto_type(:text), do: :string
-  def to_ecto_type(:status), do: Brando.Type.Status
-  def to_ecto_type(:image), do: Brando.Type.Image
-  def to_ecto_type(:language), do: Ecto.Enum
-  def to_ecto_type(:video), do: Brando.Type.Video
-  def to_ecto_type(:villain), do: {:array, :map}
-  def to_ecto_type(:slug), do: :string
-  def to_ecto_type(:datetime), do: :utc_datetime
-  def to_ecto_type(type), do: type
-
-  def to_ecto_opts(:language, opts), do: Map.to_list(opts)
-  def to_ecto_opts(:many_to_many, opts), do: opts |> Map.drop([:cast, :module]) |> Map.to_list()
-  def to_ecto_opts(:has_many, opts), do: opts |> Map.drop([:cast, :module]) |> Map.to_list()
-  def to_ecto_opts(:embeds_one, opts), do: opts |> Map.drop([:cast, :module]) |> Map.to_list()
-  def to_ecto_opts(:embeds_many, opts), do: opts |> Map.drop([:cast, :module]) |> Map.to_list()
-
-  def to_ecto_opts(_type, opts), do: Map.to_list(opts)
 end

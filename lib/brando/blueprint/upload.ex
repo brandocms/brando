@@ -86,7 +86,7 @@ defmodule Brando.Blueprint.Upload do
     {:ok, changeset}
   end
 
-  defp get_image_cfg(:db, _, changeset) do
+  defp get_image_cfg(%{db: true}, _, changeset) do
     image_series_id = get_field(changeset, :image_series_id)
     Images.get_series_config(image_series_id)
   end

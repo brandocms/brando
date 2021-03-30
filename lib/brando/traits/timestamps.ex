@@ -1,4 +1,4 @@
-defmodule Brando.Trait.Timestamps do
+defmodule Brando.Trait.Timestamped do
   @moduledoc """
   Adds timestamps
   """

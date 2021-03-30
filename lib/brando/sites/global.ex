@@ -1,40 +1,27 @@
 defmodule Brando.Sites.Global do
-  use Brando.Web, :schema
-  use Brando.Schema
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Sites",
+    schema: "Global",
+    singular: "global",
+    plural: "globals"
+
   alias Brando.Sites.GlobalCategory
 
-  meta :en, singular: "global", plural: "globals"
-  meta :no, singular: "global", plural: "globaler"
-  identifier false
-  absolute_url false
+  identifier "{{ entry.label }}"
 
-  @type t :: %__MODULE__{}
-  @type changeset :: Ecto.Changeset.t()
-
-  schema "sites_globals" do
-    field :type, :string
-    field :label, :string
-    field :key, :string
-    field :data, :map
-    belongs_to :global_category, GlobalCategory
+  attributes do
+    attribute :type, :string, required: true
+    attribute :label, :string, required: true
+    attribute :key, :string, required: true
+    attribute :data, :map, required: true
   end
 
-  @required_fields ~w(label key data type)a
-  @optional_fields ~w()a
-
-  @doc """
-  Creates a changeset based on the `schema` and `params`.
-
-  If no params are provided, an invalid changeset is returned
-  with no validation performed.
-  """
-  def changeset(schema, params \\ %{}) do
-    schema
-    |> cast(params, @required_fields ++ @optional_fields)
-    |> validate_required(@required_fields)
+  relations do
+    relation :global_category, :belongs_to, module: GlobalCategory
   end
 
-  defimpl Phoenix.HTML.Safe, for: Brando.Sites.Global do
+  defimpl Phoenix.HTML.Safe, for: __MODULE__ do
     def to_iodata(%{type: "text", data: data}) do
       data
       |> Map.get("value", "")

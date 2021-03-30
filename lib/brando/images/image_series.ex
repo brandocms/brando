@@ -96,9 +96,9 @@ defmodule Brando.ImageSeries do
   table "images_series"
 
   trait Brando.Trait.Creator
-  trait Brando.Trait.Sequence
+  trait Brando.Trait.Sequenced
   trait Brando.Trait.SoftDelete
-  trait Brando.Trait.Timestamps
+  trait Brando.Trait.Timestamped
   trait __MODULE__.Trait.Slug
   trait __MODULE__.Trait.CastImages
   trait __MODULE__.Trait.InheritConfiguration

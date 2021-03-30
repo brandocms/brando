@@ -6,12 +6,14 @@ defmodule Brando.ImagesTest do
   alias Brando.Images
 
   test "create_image" do
-    assert {:ok, _} = Images.create_image(Factory.params_for(:image), :system)
+    user = Factory.insert(:random_user)
+    assert {:ok, _} = Images.create_image(Factory.params_for(:image), user)
   end
 
   test "update_image" do
+    user = Factory.insert(:random_user)
     img = Factory.insert(:image)
-    assert {:ok, img} = Images.update_image(img, %{sequence: 99})
+    assert {:ok, img} = Images.update_image(img, %{sequence: 99}, user)
     assert img.sequence == 99
   end
 
@@ -28,6 +30,7 @@ defmodule Brando.ImagesTest do
   end
 
   test "update_image_meta" do
+    user = Factory.insert(:random_user)
     img = Factory.insert(:image, image_series: Factory.build(:image_series))
     fixture = Path.join([Path.expand("../../", __DIR__), "fixtures", "sample.jpg"])
     target = Path.join([Images.Utils.media_path(img.image.path)])
@@ -38,10 +41,10 @@ defmodule Brando.ImagesTest do
       target
     )
 
-    assert {:ok, img2} = Images.update_image_meta(img, %{focal: %{x: 0, y: 0}}, :system)
+    assert {:ok, img2} = Images.update_image_meta(img, %{focal: %{x: 0, y: 0}}, user)
     assert img2.image.focal == %{x: 0, y: 0}
 
-    assert {:ok, img3} = Images.update_image_meta(img, %{title: "Hello!"})
+    assert {:ok, img3} = Images.update_image_meta(img, %{title: "Hello!"}, user)
     assert img3.image.title == "Hello!"
   end
 

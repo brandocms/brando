@@ -18,7 +18,7 @@ defmodule Brando.Images.Processing do
   @type image_type_struct :: Type.Image.t()
   @type image_kind :: :image | :image_series | :image_field
   @type upload :: Upload.t()
-  @type user :: User.t() | :system
+  @type user :: User.t()
 
   @default_focal %{x: 50, y: 50}
 
@@ -64,7 +64,7 @@ defmodule Brando.Images.Processing do
   Deletes all image's sizes and recreates them.
   """
   @spec recreate_sizes_for_image(image_schema, user) :: {:ok, image_schema} | {:error, changeset}
-  def recreate_sizes_for_image(img_schema, user \\ :system) do
+  def recreate_sizes_for_image(img_schema, user) do
     {:ok, img_cfg} = Images.get_series_config(img_schema.image_series_id)
     Images.Utils.delete_sized_images(img_schema.image)
 
@@ -87,7 +87,7 @@ defmodule Brando.Images.Processing do
   end
 
   @spec recreate_sizes_for_category(id, user) :: [{:ok, image_schema} | {:error, changeset}]
-  def recreate_sizes_for_category(category_id, user \\ :system) do
+  def recreate_sizes_for_category(category_id, user) do
     {:ok, category} =
       Images.get_image_category(%{matches: [id: category_id], preload: [:image_series]})
 
@@ -97,13 +97,13 @@ defmodule Brando.Images.Processing do
   end
 
   @spec recreate_sizes_for_series(id, user) :: [{:ok, image_schema} | {:error, changeset}]
-  def recreate_sizes_for_series(series_id, user \\ :system) do
+  def recreate_sizes_for_series(series_id, user) do
     opts = %{matches: [id: series_id], preload: [:images]}
     {:ok, image_series} = Images.get_image_series(opts)
 
     # check if the paths have changed. if so, reload series
     {:ok, image_series} =
-      case Images.Utils.check_image_paths(Image, image_series) do
+      case Images.Utils.check_image_paths(Image, image_series, user) do
         :changed -> Images.get_image_series(opts)
         :unchanged -> {:ok, image_series}
       end
@@ -130,7 +130,7 @@ defmodule Brando.Images.Processing do
 
     for result <- operation_results do
       img_schema = Enum.find(images, &(&1.id == result.id))
-      Images.update_image(img_schema, %{image: result.image_struct})
+      Images.update_image(img_schema, %{image: result.image_struct}, user)
     end
   end
 
@@ -142,9 +142,9 @@ defmodule Brando.Images.Processing do
   @spec recreate_sizes_for_image_field(
           schema :: any,
           field_name :: atom | binary,
-          user_id :: id | :system
+          user
         ) :: [any()]
-  def recreate_sizes_for_image_field(schema, field_name, user_id \\ :system) do
+  def recreate_sizes_for_image_field(schema, field_name, user) do
     rows = Brando.repo().all(schema)
 
     #! TODO Remove when moving to blueprints
@@ -167,7 +167,7 @@ defmodule Brando.Images.Processing do
               img_field,
               cfg,
               row.id,
-              user_id
+              user.id
             )
 
           operations
@@ -176,7 +176,7 @@ defmodule Brando.Images.Processing do
         end
       end)
 
-    {:ok, operation_results} = Operations.perform(operations, user_id)
+    {:ok, operation_results} = Operations.perform(operations, user.id)
 
     for result <- operation_results do
       rows
@@ -197,9 +197,9 @@ defmodule Brando.Images.Processing do
   @spec recreate_sizes_for_image_field_record(
           changeset :: changeset,
           field_name :: atom,
-          user :: user | :system
+          user
         ) :: {:ok, changeset} | {:error, changeset}
-  def recreate_sizes_for_image_field_record(changeset, field_name, user \\ :system) do
+  def recreate_sizes_for_image_field_record(changeset, field_name, user) do
     image_struct = Changeset.get_field(changeset, field_name)
     Images.Utils.delete_sized_images(image_struct)
 

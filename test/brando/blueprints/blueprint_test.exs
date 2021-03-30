@@ -21,8 +21,8 @@ defmodule Brando.Blueprint.BlueprintTest do
     assert Brando.BlueprintTest.Project.__traits__() == [
              {Brando.Trait.Creator, []},
              {Brando.Trait.SoftDelete, []},
-             {Brando.Trait.Sequence, []},
-             {Brando.Trait.Timestamps, []}
+             {Brando.Trait.Sequenced, []},
+             {Brando.Trait.Timestamped, []}
            ]
   end
 
@@ -119,6 +119,11 @@ defmodule Brando.Blueprint.BlueprintTest do
     relations = Brando.BlueprintTest.Project.__relations__()
 
     assert relations == [
+             %Brando.Blueprint.Relation{
+               name: :properties,
+               opts: %{module: Brando.BlueprintTest.Property},
+               type: :embeds_many
+             },
              %Relation{
                name: :creator,
                opts: %{module: Brando.Users.User, required: true},
@@ -139,6 +144,7 @@ defmodule Brando.Blueprint.BlueprintTest do
              :sequence,
              :inserted_at,
              :updated_at,
+             :properties,
              :creator_id
            ]
   end

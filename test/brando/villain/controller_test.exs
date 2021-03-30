@@ -34,7 +34,9 @@ defmodule Brando.Villain.ControllerTest do
   end
 
   test "upload", %{conn: conn} do
+    user = Factory.insert(:random_user)
     _is1 = Factory.insert(:image_series, name: "test", slug: "test")
+    conn = Guardian.Plug.put_current_resource(conn, user)
 
     conn =
       VillainController.upload_image(conn, %{
@@ -48,6 +50,7 @@ defmodule Brando.Villain.ControllerTest do
     assert resp_map["status"] == 500
 
     conn = recycle(conn)
+    conn = Guardian.Plug.put_current_resource(conn, user)
 
     conn =
       VillainController.upload_image(conn, %{
@@ -62,6 +65,7 @@ defmodule Brando.Villain.ControllerTest do
     assert resp_map["uid"] == "test1234"
 
     conn = recycle(conn)
+    conn = Guardian.Plug.put_current_resource(conn, user)
 
     conn =
       VillainController.upload_image(conn, %{

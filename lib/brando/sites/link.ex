@@ -1,27 +1,21 @@
 defmodule Brando.Link do
-  use Brando.Web, :schema
-  use Brando.Schema
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Sites",
+    schema: "Link",
+    singular: "link",
+    plural: "links"
 
-  meta :en, singular: "link", plural: "links"
-  meta :no, singular: "lenke", plural: "lenker"
+  data_layer :embedded
+  identifier "{{ entry.name }}"
+  absolute_url "{{ entry.url }}"
 
-  identifier fn entry -> entry.name end
-  absolute_url fn _, _, entry -> entry.url end
-
-  @fields [:name, :url]
-
-  embedded_schema do
-    field :name
-    field :url
+  attributes do
+    attribute :name, :string, required: true
+    attribute :url, :string, required: true
   end
 
-  def changeset(schema, params \\ %{}) do
-    schema
-    |> cast(params, @fields)
-    |> validate_required(@fields)
-  end
-
-  defimpl Phoenix.HTML.Safe, for: Brando.Link do
+  defimpl Phoenix.HTML.Safe, for: __MODULE__ do
     def to_iodata(link) do
       link.url
       |> Phoenix.HTML.raw()

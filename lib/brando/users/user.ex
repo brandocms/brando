@@ -39,7 +39,7 @@ defmodule Brando.Users.User do
 
   trait Brando.Trait.Password
   trait Brando.Trait.SoftDelete
-  trait Brando.Trait.Timestamps
+  trait Brando.Trait.Timestamped
 
   attributes do
     attribute :name, :string, required: true

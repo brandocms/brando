@@ -16,8 +16,8 @@ defmodule Brando.Pages.Fragment do
 
   trait Brando.Trait.Creator
   trait Brando.Trait.SoftDelete
-  trait Brando.Trait.Sequence
-  trait Brando.Trait.Timestamps
+  trait Brando.Trait.Sequenced
+  trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable
   trait Brando.Trait.Villain
   trait Brando.Trait.Villain.CircularReferencesGuard

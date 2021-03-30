@@ -15,11 +15,12 @@ defmodule Brando.Images do
   alias Brando.ImageCategory
   alias Brando.Images
   alias Brando.ImageSeries
+  alias Brando.Users.User
 
   @type id :: binary | integer
   @type changeset :: changeset
   @type params :: map
-  @type user :: Brando.Users.User.t() | :system
+  @type user :: User.t()
 
   @doc """
   Dataloader initializer
@@ -96,10 +97,10 @@ defmodule Brando.Images do
   @doc """
   Update image
   """
-  @spec update_image(schema :: Image.t(), params) :: {:ok, Image.t()} | {:error, changeset}
-  def update_image(schema, params) do
+  @spec update_image(schema :: Image.t(), params, user) :: {:ok, Image.t()} | {:error, changeset}
+  def update_image(schema, params, user) do
     schema
-    |> Image.changeset(params)
+    |> Image.changeset(params, user)
     |> Brando.repo().update
   end
 
@@ -162,12 +163,12 @@ defmodule Brando.Images do
       _ = Images.Processing.recreate_sizes_for_image(updated_schema, user)
     end
 
-    update_image(schema, %{"image" => image})
+    update_image(schema, %{"image" => image}, user)
   end
 
-  def update_image_meta(schema, params, _) do
+  def update_image_meta(schema, params, user) do
     image = Map.merge(schema.image, params)
-    update_image(schema, %{"image" => image})
+    update_image(schema, %{"image" => image}, user)
   end
 
   @doc """

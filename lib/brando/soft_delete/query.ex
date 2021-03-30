@@ -83,7 +83,7 @@ defmodule Brando.SoftDelete.Query do
     # check if the schema has image fields
     image_fields =
       if {:__image_fields__, 0} in schema.__info__(:functions) do
-        Keyword.keys(schema.__image_fields__)
+        Enum.map(schema.__image_fields__(), & &1.name)
       else
         nil
       end
@@ -91,7 +91,7 @@ defmodule Brando.SoftDelete.Query do
     # check if the schema has galleries
     galleries =
       if {:__gallery_fields__, 0} in schema.__info__(:functions) do
-        schema.__gallery_fields__()
+        Enum.map(schema.__gallery_fields__(), & &1.name)
       else
         nil
       end

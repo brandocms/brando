@@ -7,7 +7,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
   import Brando.Meta.Migration
 
   def up do
-    create table(:users_users) do
+    create table(:users) do
       add(:name, :text)
       add(:email, :text)
       add(:password, :text)
@@ -21,7 +21,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       soft_delete()
     end
 
-    create(index(:users_users, [:email], unique: true))
+    create(index(:users, [:email], unique: true))
 
     create table(:posts) do
       add(:language, :text)
@@ -32,7 +32,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:html, :text)
       add(:cover, :text)
       add(:status, :integer)
-      add(:creator_id, references(:users_users))
+      add(:creator_id, references(:users))
       add(:meta_description, :text)
       add(:featured, :boolean)
       add(:published, :boolean)
@@ -51,7 +51,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:name, :text)
       add(:slug, :text)
       add(:cfg, :json)
-      add(:creator_id, references(:users_users))
+      add(:creator_id, references(:users))
       soft_delete()
       timestamps()
     end
@@ -63,16 +63,16 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:slug, :text)
       add(:credits, :text)
       add(:cfg, :json)
-      add(:creator_id, references(:users_users))
+      add(:creator_id, references(:users))
       add(:image_category_id, references(:images_categories))
       soft_delete()
       sequenced()
       timestamps()
     end
 
-    create table(:images_images) do
+    create table(:images) do
       add(:image, :jsonb)
-      add(:creator_id, references(:users_users))
+      add(:creator_id, references(:users))
       add(:image_series_id, references(:images_series))
       soft_delete()
       sequenced()
@@ -92,7 +92,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:status, :integer, default: 1)
     end
 
-    create table(:pages_pages) do
+    create table(:pages) do
       add(:uri, :text)
       add(:language, :text)
       add(:title, :text)
@@ -100,8 +100,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:html, :text)
       add(:status, :integer)
       add(:is_homepage, :boolean)
-      add(:parent_id, references(:pages_pages), default: nil)
-      add(:creator_id, references(:users_users))
+      add(:parent_id, references(:pages), default: nil)
+      add(:creator_id, references(:users))
       add(:css_classes, :text)
       add(:template, :text)
       meta_fields()
@@ -111,18 +111,18 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       timestamps()
     end
 
-    create(index(:pages_pages, [:language]))
-    create(index(:pages_pages, [:uri]))
-    create(unique_index(:pages_pages, [:uri, :language]))
-    create(index(:pages_pages, [:parent_id]))
-    create(index(:pages_pages, [:status]))
+    create(index(:pages, [:language]))
+    create(index(:pages, [:uri]))
+    create(unique_index(:pages, [:uri, :language]))
+    create(index(:pages, [:parent_id]))
+    create(index(:pages, [:status]))
 
     create table(:pages_properties) do
       add :key, :string
       add :label, :text
       add :type, :string
       add :data, :jsonb
-      add :page_id, references(:pages_pages, on_delete: :delete_all)
+      add :page_id, references(:pages, on_delete: :delete_all)
     end
 
     create table(:pages_fragments) do
@@ -134,8 +134,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:data, :jsonb)
       add(:html, :text)
       add(:sequence, :integer)
-      add(:creator_id, references(:users_users))
-      add(:page_id, references(:pages_pages))
+      add(:creator_id, references(:users))
+      add(:page_id, references(:pages))
       soft_delete()
       timestamps()
     end
@@ -162,7 +162,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
 
     create index(:pages_modules, [:namespace])
 
-    create table(:projects_projects) do
+    create table(:projects) do
       add :title, :string
       add :slug, :string
       add :language, :string
@@ -171,15 +171,16 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :bio_data, :jsonb
       add :bio_html, :text
       add :cover, :jsonb
-      add :creator_id, references(:users_users, on_delete: :nilify_all)
+      add :properties, :map
+      add :creator_id, references(:users, on_delete: :nilify_all)
       sequenced()
       soft_delete()
       timestamps()
     end
 
     create table(:projects_related) do
-      add :project_id, references(:projects_projects)
-      add :related_project_id, references(:projects_projects)
+      add :project_id, references(:projects)
+      add :related_project_id, references(:projects)
     end
 
     create table(:sites_identity) do
@@ -238,7 +239,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :key, :text
       add :language, :text
       add :template, :text
-      add :creator_id, references(:users_users)
+      add :creator_id, references(:users)
       add :items, :map
       sequenced()
       timestamps()
@@ -260,7 +261,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :entry_id, :integer, null: false
       add :entry_type, :string, null: false
       add :encoded_entry, :binary, null: false
-      add :creator_id, references(:users_users, on_delete: :nilify_all)
+      add :creator_id, references(:users, on_delete: :nilify_all)
       add :description, :string
       add :metadata, :map, null: false
       add :revision, :integer, null: false
@@ -272,8 +273,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
   end
 
   def down do
-    drop(table(:users_users))
-    drop(index(:users_users, [:email], unique: true))
+    drop(table(:users))
+    drop(index(:users, [:email], unique: true))
 
     drop(table(:posts))
     drop(index(:posts, [:language]))
@@ -287,7 +288,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     drop(table(:images_series))
     drop(index(:images_series, [:slug]))
 
-    drop(table(:images_images))
+    drop(table(:images))
 
     drop(table(:instagramimages))
 

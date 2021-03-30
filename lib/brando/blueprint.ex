@@ -1,10 +1,24 @@
 defmodule Brando.Blueprint do
+  @moduledoc """
+
+
+  ## Embedded schema
+
+      use Brando.Blueprint,
+        application: "MyApp",
+        domain: "Projects",
+        schema: "Project",
+        singular: "project",
+        plural: "projects"
+
+      data_layer :embedded
+  """
   alias Ecto.Changeset
 
+  alias Brando.Blueprint.Constraints
   alias Brando.Blueprint.Relations
   alias Brando.Blueprint.Upload
   alias Brando.Blueprint.Unique
-  alias Brando.Blueprint.Constraints
   alias Brando.Blueprint.Villain
   alias Brando.Trait
 
@@ -43,17 +57,23 @@ defmodule Brando.Blueprint do
       Module.register_attribute(__MODULE__, :relations, accumulate: true)
       Module.register_attribute(__MODULE__, :translations, accumulate: false)
       Module.register_attribute(__MODULE__, :table_name, accumulate: false)
+      Module.register_attribute(__MODULE__, :data_layer, accumulate: false)
+
+      @data_layer :database
+      @primary_key {:id, :id, autogenerate: true}
       @translations %{}
-      @table_name "#{String.downcase(@domain)}_#{@plural}"
+
+      if String.downcase(@domain) == String.downcase(@plural) do
+        @table_name "#{@plural}"
+      else
+        @table_name "#{String.downcase(@domain)}_#{@plural}"
+      end
 
       @before_compile Brando.Blueprint
       @after_compile Brando.Blueprint
 
       use Ecto.Schema
-
-      import Ecto
       import Ecto.Changeset
-      import Ecto.Query, only: [from: 1, from: 2]
 
       import unquote(__MODULE__)
       import unquote(__MODULE__).AbsoluteURL
@@ -65,6 +85,7 @@ defmodule Brando.Blueprint do
       import unquote(__MODULE__).Relations
       import unquote(__MODULE__).Trait
       import unquote(__MODULE__).Translations
+      import unquote(__MODULE__).Utils
 
       import Brando.Utils.Schema
 
@@ -76,64 +97,85 @@ defmodule Brando.Blueprint do
     end
   end
 
+  defmacro build_attrs(attrs) do
+    quote do
+      Enum.map(unquote(attrs), fn
+        %{name: :inserted_at} ->
+          Ecto.Schema.timestamps()
+
+        %{name: :updated_at} ->
+          []
+
+        attr ->
+          Ecto.Schema.field(
+            attr.name,
+            to_ecto_type(attr.type),
+            to_ecto_opts(attr.type, attr.opts)
+          )
+      end)
+    end
+  end
+
+  defmacro build_relations(relations) do
+    quote do
+      Enum.map(unquote(relations), fn
+        %{type: :belongs_to, name: name, opts: opts} ->
+          Ecto.Schema.belongs_to(
+            name,
+            Map.fetch!(opts, :module),
+            to_ecto_opts(:belongs_to, opts)
+          )
+
+        %{type: :many_to_many, name: name, opts: opts} ->
+          Ecto.Schema.many_to_many(
+            name,
+            Map.fetch!(opts, :module),
+            to_ecto_opts(:many_to_many, opts)
+          )
+
+        %{type: :has_many, name: name, opts: opts} ->
+          Ecto.Schema.has_many(
+            name,
+            Map.fetch!(opts, :module),
+            to_ecto_opts(:has_many, opts)
+          )
+
+        %{type: :embeds_one, name: name, opts: opts} ->
+          Ecto.Schema.embeds_one(
+            name,
+            Map.fetch!(opts, :module),
+            to_ecto_opts(:embeds_one, opts)
+          )
+
+        %{type: :embeds_many, name: name, opts: opts} ->
+          Ecto.Schema.embeds_many(
+            name,
+            Map.fetch!(opts, :module),
+            to_ecto_opts(:embeds_many, opts)
+          )
+
+        attr ->
+          require Logger
+          Logger.error("==> relation type not caught")
+          Logger.error(inspect(attr, pretty: true))
+      end)
+    end
+  end
+
   defmacro build_schema(name, attrs, relations) do
     quote location: :keep do
       schema unquote(name) do
-        Enum.map(unquote(attrs), fn
-          %{name: :inserted_at} ->
-            Ecto.Schema.timestamps()
+        build_attrs(unquote(attrs))
+        build_relations(unquote(relations))
+      end
+    end
+  end
 
-          %{name: :updated_at} ->
-            []
-
-          attr ->
-            Ecto.Schema.field(
-              attr.name,
-              to_ecto_type(attr.type),
-              to_ecto_opts(attr.type, attr.opts)
-            )
-        end)
-
-        Enum.map(unquote(relations), fn
-          %{type: :belongs_to, name: name, opts: opts} ->
-            Ecto.Schema.belongs_to(
-              name,
-              Map.fetch!(opts, :module)
-            )
-
-          %{type: :many_to_many, name: name, opts: opts} ->
-            Ecto.Schema.many_to_many(
-              name,
-              Map.fetch!(opts, :module),
-              to_ecto_opts(:many_to_many, opts)
-            )
-
-          %{type: :has_many, name: name, opts: opts} ->
-            Ecto.Schema.has_many(
-              name,
-              Map.fetch!(opts, :module),
-              to_ecto_opts(:has_many, opts)
-            )
-
-          %{type: :embeds_one, name: name, opts: opts} ->
-            Ecto.Schema.embeds_one(
-              name,
-              Map.fetch!(opts, :module),
-              to_ecto_opts(:embeds_one, opts)
-            )
-
-          %{type: :embeds_many, name: name, opts: opts} ->
-            Ecto.Schema.embeds_many(
-              name,
-              Map.fetch!(opts, :module),
-              to_ecto_opts(:embeds_many, opts)
-            )
-
-          attr ->
-            require Logger
-            Logger.error("==> relation type not caught")
-            Logger.error(inspect(attr, pretty: true))
-        end)
+  defmacro build_embedded_schema(_name, attrs, relations) do
+    quote location: :keep do
+      embedded_schema do
+        build_attrs(unquote(attrs))
+        build_relations(unquote(relations))
       end
     end
   end
@@ -195,6 +237,18 @@ defmodule Brando.Blueprint do
     end
   end
 
+  defmacro data_layer(type) do
+    quote do
+      @data_layer unquote(type)
+    end
+  end
+
+  defmacro primary_key(opts) do
+    quote do
+      @primary_key unquote(opts)
+    end
+  end
+
   defmacro __before_compile__(_) do
     quote location: :keep,
           unquote: false do
@@ -252,13 +306,18 @@ defmodule Brando.Blueprint do
         @all_optional_attrs
       end
 
+      def __table_name__ do
+        @table_name
+      end
+
       def __naming__ do
         %{
           application: @application,
           domain: @domain,
           schema: @schema,
           singular: @singular,
-          plural: @plural
+          plural: @plural,
+          table_name: @table_name
         }
       end
 
@@ -326,11 +385,19 @@ defmodule Brando.Blueprint do
         run_translations(__MODULE__, @translations)
       end
 
-      build_schema(
-        @table_name,
-        @all_attributes,
-        @all_relations
-      )
+      if @data_layer == :embedded do
+        build_embedded_schema(
+          @table_name,
+          @all_attributes,
+          @all_relations
+        )
+      else
+        build_schema(
+          @table_name,
+          @all_attributes,
+          @all_relations
+        )
+      end
 
       # generate changeset
       def changeset(schema, params \\ %{}, user \\ :system) do

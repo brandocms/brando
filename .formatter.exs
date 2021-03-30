@@ -59,7 +59,9 @@ locals_without_parens = [
   json_ld_field: 2,
   json_ld_field: 3,
   json_ld_field: 4,
-  table: 1
+  table: 1,
+  primary_key: 1,
+  data_layer: 1
 ]
 
 [

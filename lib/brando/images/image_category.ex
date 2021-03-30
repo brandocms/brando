@@ -76,7 +76,7 @@ defmodule Brando.ImageCategory do
 
   trait Brando.Trait.Creator
   trait Brando.Trait.SoftDelete
-  trait Brando.Trait.Timestamps
+  trait Brando.Trait.Timestamped
   trait __MODULE__.Trait.Slug
   trait __MODULE__.Trait.DefaultConfig
   trait __MODULE__.Trait.ValidatePaths

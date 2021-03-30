@@ -1,10 +1,10 @@
-defmodule Brando.ConfigEntry do
+defmodule Brando.Meta do
   use Brando.Blueprint,
     application: "Brando",
     domain: "Sites",
-    schema: "Config",
-    singular: "config",
-    plural: "configs"
+    schema: "Meta",
+    singular: "meta",
+    plural: "metas"
 
   data_layer :embedded
   identifier "{{ entry.key }}"

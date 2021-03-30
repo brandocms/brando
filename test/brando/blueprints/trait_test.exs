@@ -33,7 +33,7 @@ defmodule Brando.Blueprint.TraitTest do
 
   describe "sequence trait" do
     test "exposes attribute" do
-      assert Trait.Sequence.trait_attributes(nil, nil) == [
+      assert Trait.Sequenced.trait_attributes(nil, nil) == [
                %Attribute{
                  name: :sequence,
                  opts: %{default: 0},
@@ -101,8 +101,12 @@ defmodule Brando.Blueprint.TraitTest do
       assert Trait.list_implementations(Brando.Trait.SoftDelete) == [
                Brando.Pages.Fragment,
                Brando.BlueprintTest.Project,
+               Brando.Villain.Module,
+               Brando.Image,
+               Brando.ImageCategory,
                Brando.Pages.Page,
-               Brando.Users.User
+               Brando.Users.User,
+               Brando.ImageSeries
              ]
     end
   end

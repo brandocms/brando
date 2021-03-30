@@ -19,9 +19,9 @@ defmodule Brando.Villain.Module do
   # @derived_fields ~w(id name sequence namespace help_text multi wrapper class code refs vars svg deleted_at)a
   # @derive {Jason.Encoder, only: @derived_fields}
 
-  trait Brando.Trait.Sequence
+  trait Brando.Trait.Sequenced
   trait Brando.Trait.SoftDelete
-  trait Brando.Trait.Timestamps
+  trait Brando.Trait.Timestamped
 
   attributes do
     attribute :name, :string, required: true

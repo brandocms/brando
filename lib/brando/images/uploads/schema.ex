@@ -5,10 +5,11 @@ defmodule Brando.Images.Uploads.Schema do
   For ImageFields, see Brando.Images.Uploads.Field
   """
 
-  @type user :: Brando.Users.User.t()
-
   alias Brando.Images
   alias Brando.Upload
+  alias Brando.Users.User
+
+  @type user :: User.t()
 
   @doc """
   Handle upload of Brando.Image.

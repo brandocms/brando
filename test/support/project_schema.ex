@@ -8,8 +8,8 @@ defmodule Brando.BlueprintTest.Project do
 
   trait Brando.Trait.Creator
   trait Brando.Trait.SoftDelete
-  trait Brando.Trait.Sequence
-  trait Brando.Trait.Timestamps
+  trait Brando.Trait.Sequenced
+  trait Brando.Trait.Timestamped
 
   attributes do
     attribute :title, :string
@@ -41,6 +41,7 @@ defmodule Brando.BlueprintTest.Project do
   end
 
   relations do
+    relation :properties, :embeds_many, module: Brando.BlueprintTest.Property
   end
 end
 
@@ -53,7 +54,7 @@ defmodule Brando.TraitTest.Project do
     plural: "projects"
 
   trait Brando.Trait.Creator
-  trait Brando.Trait.Sequence
+  trait Brando.Trait.Sequenced
   trait Brando.Trait.Villain
   trait Brando.Trait.Translatable
 
@@ -85,5 +86,21 @@ defmodule Brando.TraitTest.Project do
         {"medium", "500w"},
         {"large", "700w"}
       ]
+  end
+end
+
+defmodule Brando.BlueprintTest.Property do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Projects",
+    schema: "Property",
+    singular: "property",
+    plural: "properties"
+
+  data_layer :embedded
+
+  attributes do
+    attribute :key, :string
+    attribute :value, :string
   end
 end

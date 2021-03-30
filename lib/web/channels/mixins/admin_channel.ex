@@ -106,7 +106,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("images:sequence_images", params, socket) do
-    Brando.Trait.Sequence.sequence(Brando.Image, params)
+    Brando.Trait.Sequenced.sequence(Brando.Image, params)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
@@ -227,7 +227,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("pages:sequence_pages", params, socket) do
-    Brando.Trait.Sequence.sequence(Pages.Page, params)
+    Brando.Trait.Sequenced.sequence(Pages.Page, params)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
@@ -253,7 +253,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("fragments:sequence_fragments", params, socket) do
-    Brando.Trait.Sequence.sequence(Pages.Fragment, params)
+    Brando.Trait.Sequenced.sequence(Pages.Fragment, params)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
@@ -360,7 +360,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("menus:sequence_menus", params, socket) do
-    Brando.Trait.Sequence.sequence(Navigation.Menu, params)
+    Brando.Trait.Sequenced.sequence(Navigation.Menu, params)
     {:reply, {:ok, %{code: 200}}, socket}
   end
 
@@ -429,7 +429,7 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in("villain:sequence_modules", params, socket) do
-    Brando.Trait.Sequence.sequence(Villain.Module, params)
+    Brando.Trait.Sequenced.sequence(Villain.Module, params)
 
     {:reply, {:ok, %{code: 200}}, socket}
   end

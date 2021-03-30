@@ -4,23 +4,27 @@ defmodule Brando.Image do
   and helper functions for dealing with the schema.
   """
 
-  @type t :: %__MODULE__{}
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Images",
+    schema: "Image",
+    singular: "image",
+    plural: "images"
 
-  use Brando.Web, :schema
-  use Brando.Sequence.Schema
-  use Brando.SoftDelete.Schema
-  use Brando.Field.Image.Schema
-  use Brando.Schema
+  trait Brando.Trait.Creator
+  trait Brando.Trait.Sequenced
+  trait Brando.Trait.SoftDelete
+  trait Brando.Trait.Timestamped
 
-  import Ecto.Query, only: [from: 2]
+  identifier "{{ entry.id }}"
 
-  meta :en, singular: "image", plural: "images"
-  meta :no, singular: "bilde", plural: "bilder"
-  identifier false
-  absolute_url false
+  attributes do
+    attribute :image, :image, :db
+  end
 
-  @required_fields ~w(image)a
-  @optional_fields ~w(sequence image_series_id creator_id deleted_at)a
+  relations do
+    relation :image_series, :belongs_to, module: Brando.ImageSeries
+  end
 
   @derive {Jason.Encoder,
            only: [
@@ -35,32 +39,4 @@ defmodule Brando.Image do
              :updated_at,
              :deleted_at
            ]}
-
-  schema "images_images" do
-    field :image, Brando.Type.Image
-    belongs_to :creator, Brando.Users.User
-    belongs_to :image_series, Brando.ImageSeries
-    sequenced()
-    timestamps()
-    soft_delete()
-  end
-
-  has_image_field(:image, :db)
-
-  @doc """
-  Casts and validates `params` against `schema` to create a valid changeset
-
-  ## Example
-
-      schema_changeset = changeset(%__MODULE__{}, :create, params)
-
-  """
-  @spec changeset(t, map) :: any
-  def changeset(schema, params, user \\ :system, cfg \\ nil) do
-    schema
-    |> cast(params, @required_fields ++ @optional_fields)
-    |> put_creator(user)
-    |> validate_required(@required_fields)
-    |> validate_upload({:image, :image}, user, cfg)
-  end
 end

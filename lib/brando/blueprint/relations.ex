@@ -8,6 +8,7 @@ defmodule Brando.Blueprint.Relations do
   """
   import Ecto.Changeset
   import Brando.M2M
+  import Brando.Blueprint.Utils
   alias Brando.Blueprint.Relation
 
   def build_relation(name, type, opts \\ []) do
@@ -50,33 +51,39 @@ defmodule Brando.Blueprint.Relations do
   ## belongs_to
 
   def run_cast_relation(
-        %{type: :belongs_to, opts: %{cast: true, module: _module, name: name}},
+        %{type: :belongs_to, opts: %{cast: true, module: _module, name: name} = opts},
         changeset,
         _user
       ) do
-    cast_assoc(changeset, name)
+    cast_assoc(changeset, name, to_changeset_opts(:belongs_to, opts))
   end
 
   def run_cast_relation(
-        %{type: :belongs_to, opts: %{cast: :with_user, module: module, name: name}},
+        %{type: :belongs_to, opts: %{cast: :with_user, module: module, name: name} = opts},
         changeset,
         user
       ) do
-    cast_assoc(changeset, name, with: {module, :changeset, [user]})
+    with_opts = [with: {module, :changeset, [user]}]
+    merged_opts = Keyword.merge(to_changeset_opts(:belongs_to, opts), with_opts)
+    cast_assoc(changeset, name, merged_opts)
   end
 
   def run_cast_relation(
-        %{type: :belongs_to, opts: %{cast: cast_opts, name: name}},
+        %{type: :belongs_to, opts: %{cast: cast_opts, name: name} = opts},
         changeset,
         user
       ) do
-    case Keyword.get(cast_opts, :with) do
-      {with_mod, with_fun, with_user: true} ->
-        cast_assoc(changeset, name, with: {with_mod, with_fun, [user]})
+    with_opts =
+      case Keyword.get(cast_opts, :with) do
+        {with_mod, with_fun, with_user: true} ->
+          [with: {with_mod, with_fun, [user]}]
 
-      {with_mod, with_fun} ->
-        cast_assoc(changeset, name, with: {with_mod, with_fun, []})
-    end
+        {with_mod, with_fun} ->
+          cast_assoc(changeset, name, with: {with_mod, with_fun, []})
+      end
+
+    merged_opts = Keyword.merge(to_changeset_opts(:belongs_to, opts), with_opts)
+    cast_assoc(changeset, name, merged_opts)
   end
 
   ##
@@ -92,31 +99,31 @@ defmodule Brando.Blueprint.Relations do
   ##
   ## has_many
   def run_cast_relation(
-        %{type: :has_many, name: name, opts: %{cast: true, module: _module}},
+        %{type: :has_many, name: name, opts: %{cast: true, module: _module} = opts},
         changeset,
         _user
       ) do
-    cast_assoc(changeset, name)
+    cast_assoc(changeset, name, to_changeset_opts(:has_many, opts))
   end
 
   ##
   ## embeds_one
   def run_cast_relation(
-        %{type: :embeds_one, name: name, opts: %{module: module}},
+        %{type: :embeds_one, name: name, opts: opts},
         changeset,
         _user
       ) do
-    cast_embed(changeset, name, module)
+    cast_embed(changeset, name, to_changeset_opts(:embeds_one, opts))
   end
 
   ##
   ## embeds_many
   def run_cast_relation(
-        %{type: :embeds_many, name: name, opts: %{module: module}},
+        %{type: :embeds_many, name: name, opts: opts},
         changeset,
         _user
       ) do
-    cast_embed(changeset, name, module)
+    cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
   end
 
   ##
