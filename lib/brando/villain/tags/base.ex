@@ -11,6 +11,7 @@ defmodule Brando.Villain.Tags.Base do
     |> choice([
       Tags.Picture.picture_tag(),
       Tags.Route.route_tag(),
+      Tags.RouteI18n.route_i18n_tag(),
       Tags.Fragment.fragment_tag(),
       Tags.Hide.hide_tag(),
       Tags.EndHide.end_hide_tag(),

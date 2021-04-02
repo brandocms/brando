@@ -12,8 +12,6 @@ defmodule Brando.Blueprint.Snapshot do
 
   alias Brando.Blueprint.Snapshot
 
-  @default_snapshot_root "priv/blueprints/snapshots"
-
   defstruct attributes: nil,
             relations: nil,
             traits: nil,
@@ -23,16 +21,18 @@ defmodule Brando.Blueprint.Snapshot do
   @type t :: %__MODULE__{}
   @type snapshot :: __MODULE__.t()
 
+  @default_opts [snapshot_path: "priv/blueprints/snapshots"]
+
   @spec get_latest_snapshot(module) :: snapshot | nil
-  def get_latest_snapshot(module) do
-    version = get_snapshot_version(module)
-    get_snapshot(module, version)
+  def get_latest_snapshot(module, opts \\ @default_opts) do
+    version = get_snapshot_version(module, opts)
+    get_snapshot(module, version, opts)
   end
 
   @spec get_snapshot(module, integer()) :: snapshot | nil
-  def get_snapshot(module, version) do
+  def get_snapshot(module, version, opts \\ @default_opts) do
     module
-    |> build_filename(version)
+    |> build_filename(version, opts)
     |> File.read!()
     |> :erlang.binary_to_term()
   rescue
@@ -40,10 +40,9 @@ defmodule Brando.Blueprint.Snapshot do
   end
 
   @spec store_snapshot(module) :: :ok | no_return
-  def store_snapshot(module) do
+  def store_snapshot(module, opts \\ @default_opts) do
     snapshot = build_snapshot(module)
-
-    filename = build_filename(module, snapshot.version)
+    filename = build_filename(module, snapshot.version, opts)
     File.write!(filename, :erlang.term_to_binary(snapshot))
   end
 
@@ -60,15 +59,16 @@ defmodule Brando.Blueprint.Snapshot do
     }
   end
 
-  defp build_filename(module, version) do
-    snapshot_path = build_path(module)
+  defp build_filename(module, version, opts) do
+    snapshot_path = build_path(module, opts)
+    File.mkdir_p!(snapshot_path)
     filename = "#{String.pad_leading(to_string(version), 3, "0")}.snapshot"
     Path.join([snapshot_path, filename])
   end
 
-  defp get_snapshot_version(module) do
+  defp get_snapshot_version(module, opts \\ @default_opts) do
     # get sequence
-    snapshot_path = build_path(module)
+    snapshot_path = build_path(module, opts)
     File.mkdir_p!(snapshot_path)
 
     case Path.wildcard(Path.join(snapshot_path, "*.snapshot")) do
@@ -87,7 +87,9 @@ defmodule Brando.Blueprint.Snapshot do
     get_snapshot_version(module) + 1
   end
 
-  defp build_path(module) do
+  defp build_path(module, opts) do
+    root_path = Keyword.get(opts, :snapshot_path)
+
     snapshot_path =
       [
         module.__naming__().application,
@@ -95,11 +97,8 @@ defmodule Brando.Blueprint.Snapshot do
         module.__naming__().schema
       ]
       |> Enum.map(&String.downcase/1)
+      |> Enum.join("_")
 
-    Path.join(
-      List.wrap(Application.app_dir(Brando.config(:otp_app))) ++
-        List.wrap(@default_snapshot_root) ++
-        snapshot_path
-    )
+    Path.join(root_path, snapshot_path)
   end
 end

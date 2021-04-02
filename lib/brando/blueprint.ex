@@ -1,6 +1,37 @@
 defmodule Brando.Blueprint do
   @moduledoc """
 
+  # Relations
+
+  ## Many to many
+
+    - create the join schema yourself
+
+      use Brando.Blueprint,
+        application: "MyApp",
+        domain: "Projects",
+        schema: "ProjectWorker",
+        singular: "project_worker",
+        plural: "project_workers"
+
+      relations do
+        relation :project_id, :belongs_to, module: Project
+        relation :worker_id, :belongs_to, module: Worker
+      end
+
+    - then add the relation as a m2m:
+
+      use Brando.Blueprint,
+        application: "MyApp",
+        domain: "Projects",
+        schema: "Project",
+        singular: "project",
+        plural: "projects"
+
+      relations do
+        relation :projects_workers, :many_to_many, module: ProjectWorker
+      end
+
 
   ## Embedded schema
 
@@ -288,10 +319,14 @@ defmodule Brando.Blueprint do
         end
       end
 
-      def has_trait(key), do: key in @traits
-
       @all_traits Enum.reverse(@traits)
       def __traits__, do: @all_traits
+
+      for {trait, trait_opts} <- @all_traits do
+        def has_trait(unquote(trait)), do: true
+      end
+
+      def has_trait(_), do: false
 
       @required_attrs Brando.Blueprint.get_required_attrs(@all_attributes)
       @required_relations Brando.Blueprint.get_required_relations(@all_relations)

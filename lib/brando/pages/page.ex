@@ -104,4 +104,23 @@ defmodule Brando.Pages.Page do
     json_ld_field :publisher, {:references, :identity}
     json_ld_field :url, :string, [:__meta__, :current_url]
   end
+
+  defimpl Phoenix.HTML.Safe, for: __MODULE__ do
+    def to_iodata(%{html: html}) do
+      html
+      |> Phoenix.HTML.raw()
+      |> Phoenix.HTML.Safe.to_iodata()
+    end
+
+    def to_iodata(entry) do
+      raise """
+
+      Failed to auto generate protocol for #{inspect(__MODULE__)} struct.
+      Missing `:html` key.
+
+      Call `use Brando.Villain.Schema, generate_protocol: false` instead
+
+      """
+    end
+  end
 end

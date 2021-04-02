@@ -1,0 +1,29 @@
+defmodule Brando.Migrations.Projects.Project.Blueprint001 do
+  use Ecto.Migration
+
+  def up do
+    create table(:projects) do
+      add :title, :text
+      add :status, :integer
+      add :slug, :slug
+      add :cover, :jsonb
+      add :data, :jsonb
+      add :deleted_at, :utc_datetime
+      add :sequence, :integer
+      timestamps()
+      add :language, :text
+      add :properties, :jsonb
+      add :creator, references(:users)
+    end
+
+    create unique_index(:projects, [:slug, :language])
+    create index(:projects, [:language])
+  end
+
+  def down do
+    drop table(:projects)
+
+    drop unique_index(:projects, [:slug, :language])
+    drop index(:projects, [:language])
+  end
+end

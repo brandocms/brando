@@ -16,10 +16,13 @@ defmodule Brando.Plug.Navigation do
 
   @doc false
   def call(conn, opts) when is_list(opts) do
+    require Logger
+    Logger.error(inspect(opts, pretty: true))
     menu_key = Keyword.fetch!(opts, :key)
     name = Keyword.get(opts, :as, :navigation)
     locale = Gettext.get_locale(Brando.web_module(Gettext))
     menu = Cache.Navigation.get("#{menu_key}.#{locale}")
+    Logger.error(inspect(menu, pretty: true))
     Plug.Conn.assign(conn, name, menu)
   end
 

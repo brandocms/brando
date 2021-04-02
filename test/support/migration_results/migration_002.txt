@@ -1,0 +1,29 @@
+defmodule Brando.Migrations.Projects.Project.Blueprint002 do
+  use Ecto.Migration
+
+  def up do
+    alter table(:projects) do
+      add :summary, :text
+      add :unique_hash, :text
+      add :meta_image, :jsonb
+      add :meta_description, :text
+      add :meta_title, :text
+      add :more_properties, :jsonb
+    end
+
+    create unique_index(:projects, [:unique_hash])
+  end
+
+  def down do
+    alter table(:projects) do
+      remove :summary
+      remove :unique_hash
+      remove :meta_image
+      remove :meta_description
+      remove :meta_title
+      remove :more_properties
+    end
+
+    drop unique_index(:projects, [:unique_hash])
+  end
+end

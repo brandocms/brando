@@ -20,7 +20,7 @@ defmodule Brando.Pages.Fragment do
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable
   trait Brando.Trait.Villain
-  trait Brando.Trait.Villain.CircularReferencesGuard
+  trait Brando.Trait.Villain.PreventCircularReferences
 
   identifier "{{ entry.title }}"
 

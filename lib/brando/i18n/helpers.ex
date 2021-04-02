@@ -4,7 +4,7 @@ defmodule Brando.I18n.Helpers do
 
   ## Usage:
 
-      use Brando.I18n.Helpers
+      import Brando.I18n.Helpers
 
 
   You can then call
@@ -13,21 +13,19 @@ defmodule Brando.I18n.Helpers do
 
   """
   defmacro __using__(_) do
-    quote do
-      @deprecated "Use `localized_path/3` instead"
-      def localized(locale, fun, args),
-        do: localized_path(locale, fun, args)
+    raise "using Brando.I18n.Helpers is deprecated. `import Brando.I18n.Helpers` instead"
+  end
 
-      if Brando.config(:scope_default_language_routes) do
-        # if the locale is the default language, we use the regular path
-        def localized_path(locale, fun, args) when locale == Brando.config(:default_language) do
-          apply(Brando.helpers(), :"#{fun}", args)
-        end
-      end
+  @deprecated "Use `localized_path/3` instead"
+  def localized(locale, fun, args),
+    do: localized_path(locale, fun, args)
 
-      def localized_path(locale, fun, args) do
-        apply(Brando.helpers(), :"#{locale}_#{fun}", args)
-      end
+  def localized_path(locale, fun, args) do
+    if Brando.config(:scope_default_language_routes) do
+      # if the locale is the default language, we use the regular path
+      apply(Brando.helpers(), :"#{fun}", args)
+    else
+      apply(Brando.helpers(), :"#{locale}_#{fun}", args)
     end
   end
 end

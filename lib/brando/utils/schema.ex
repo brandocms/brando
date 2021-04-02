@@ -73,8 +73,13 @@ defmodule Brando.Utils.Schema do
     do_avoid_field_collision(fields, changeset, src)
   end
 
-  def avoid_field_collision(%Changeset{valid?: true} = changeset, module, fields, filter_fn) do
-    src = filter_fn.(module, changeset)
+  def avoid_field_collision(
+        %Changeset{valid?: true} = changeset,
+        module,
+        fields,
+        {filter_field, filter_fn}
+      ) do
+    src = filter_fn.(module, filter_field, changeset)
     do_avoid_field_collision(fields, changeset, src)
   end
 

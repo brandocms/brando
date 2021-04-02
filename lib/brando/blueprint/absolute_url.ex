@@ -9,8 +9,11 @@ defmodule Brando.Blueprint.AbsoluteURL do
       @parsed_absolute_url unquote(parsed_absolute_url)
       def __absolute_url__(entry) do
         context = Liquex.Context.assign(Brando.Villain.get_base_context(), "entry", entry)
-        {result, _} = Liquex.Render.render([], @parsed_absolute_url, context)
-        result
+
+        []
+        |> Liquex.Render.render(@parsed_absolute_url, context)
+        |> elem(0)
+        |> Enum.join()
       end
     end
   end

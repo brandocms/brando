@@ -59,9 +59,9 @@ defmodule Brando.Cache.Navigation do
 
     Enum.reduce(menus, %{}, fn menu, acc ->
       if Map.has_key?(acc, menu.key) do
-        put_in(acc, [menu.key, menu.language], menu)
+        put_in(acc, [menu.key, to_string(menu.language)], menu)
       else
-        Map.put(acc, menu.key, %{menu.language => menu})
+        Map.put(acc, menu.key, %{to_string(menu.language) => menu})
       end
     end)
   end
