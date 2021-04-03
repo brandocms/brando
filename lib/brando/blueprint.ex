@@ -416,6 +416,16 @@ defmodule Brando.Blueprint do
         @slug_fields
       end
 
+      @status_fields Enum.filter(@attrs, &(&1.type == :status))
+      def __status_fields__ do
+        @status_fields
+      end
+
+      @gallery_fields Enum.filter(@attrs, &(&1.type == :gallery))
+      def __gallery_fields__ do
+        @gallery_fields
+      end
+
       def __translations__ do
         run_translations(__MODULE__, @translations)
       end

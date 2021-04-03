@@ -112,7 +112,7 @@ defmodule Brando.Pages.Page do
       |> Phoenix.HTML.Safe.to_iodata()
     end
 
-    def to_iodata(entry) do
+    def to_iodata(_) do
       raise """
 
       Failed to auto generate protocol for #{inspect(__MODULE__)} struct.

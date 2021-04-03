@@ -14,7 +14,8 @@ defmodule Brando.SoftDelete.QueryTest do
              Brando.ImageCategory,
              Brando.Pages.Page,
              Brando.Users.User,
-             Brando.ImageSeries
+             Brando.ImageSeries,
+             Brando.MigrationTest.Project
            ]
   end
 
@@ -27,7 +28,8 @@ defmodule Brando.SoftDelete.QueryTest do
              {Brando.ImageCategory, 0},
              {Brando.Pages.Page, 0},
              {Brando.Users.User, 0},
-             {Brando.ImageSeries, 0}
+             {Brando.ImageSeries, 0},
+             {Brando.MigrationTest.Project, 0}
            ]
 
     Factory.insert(:page,
@@ -56,7 +58,8 @@ defmodule Brando.SoftDelete.QueryTest do
              {Brando.ImageCategory, 0},
              {Brando.Pages.Page, 1},
              {Brando.Users.User, 2},
-             {Brando.ImageSeries, 0}
+             {Brando.ImageSeries, 0},
+             {Brando.MigrationTest.Project, 0}
            ]
 
     deleted_users = Query.list_soft_deleted_entries(Brando.Users.User)
@@ -75,7 +78,8 @@ defmodule Brando.SoftDelete.QueryTest do
              {Brando.ImageCategory, 0},
              {Brando.Pages.Page, 0},
              {Brando.Users.User, 0},
-             {Brando.ImageSeries, 0}
+             {Brando.ImageSeries, 0},
+             {Brando.MigrationTest.Project, 0}
            ]
   end
 end

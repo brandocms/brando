@@ -44,7 +44,6 @@ defmodule Brando.MigrationTest.ProjectUpdate1 do
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Meta
-  trait Brando.Trait.SoftDelete
   trait Brando.Trait.Sequenced
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable
@@ -82,7 +81,6 @@ defmodule Brando.MigrationTest.ProjectUpdate2 do
     singular: "project",
     plural: "projects"
 
-  trait Brando.Trait.SoftDelete
   trait Brando.Trait.Sequenced
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable

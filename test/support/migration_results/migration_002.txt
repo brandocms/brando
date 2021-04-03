@@ -9,6 +9,7 @@ defmodule Brando.Migrations.Projects.Project.Blueprint002 do
       add :meta_description, :text
       add :meta_title, :text
       add :more_properties, :jsonb
+      remove :deleted_at
     end
 
     create unique_index(:projects, [:unique_hash])
@@ -22,6 +23,7 @@ defmodule Brando.Migrations.Projects.Project.Blueprint002 do
       remove :meta_description
       remove :meta_title
       remove :more_properties
+      add :deleted_at, :utc_datetime
     end
 
     drop unique_index(:projects, [:unique_hash])

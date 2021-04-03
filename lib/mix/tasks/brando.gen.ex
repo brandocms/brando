@@ -26,22 +26,20 @@ defmodule Mix.Tasks.Brando.Gen do
 
     """)
 
-    domain =
-      Mix.shell().prompt("+ Enter domain name (e.g. Blog, Accounts, News)") |> String.trim("\n")
-
-    create_schema(domain)
+    blueprint = Mix.shell().prompt("+ Enter blueprint module") |> String.trim("\n")
+    blueprint_module = Module.concat([blueprint])
+    build_from_blueprint(blueprint_module)
   end
 
   defp otp_app, do: Mix.Project.config() |> Keyword.fetch!(:app)
 
-  @spec create_schema(any) :: no_return
-  defp create_schema(domain_name) do
-    Mix.shell().info("""
-    == Schema for #{domain_name}
-    """)
+  @spec build_from_blueprint(module) :: no_return
+  defp build_from_blueprint(blueprint_module) do
+    blueprint = blueprint_module.__blueprint__()
+    domain = blueprint.naming.domain
 
     snake_domain =
-      domain_name
+      domain
       |> Phoenix.Naming.underscore()
       |> String.split("/")
       |> List.last()
@@ -49,50 +47,29 @@ defmodule Mix.Tasks.Brando.Gen do
     domain_filename = "lib/#{otp_app()}/#{snake_domain}/#{snake_domain}.ex"
     domain_exists? = File.exists?(domain_filename)
 
-    singular = Mix.shell().prompt("+ Enter schema name (e.g. Post)") |> String.trim("\n")
-    plural = Mix.shell().prompt("+ Enter plural name (e.g. posts)") |> String.trim("\n")
+    singular = blueprint.naming.singular |> String.capitalize()
+    plural = blueprint.naming.plural
 
-    attrs =
-      Mix.shell().prompt("""
-      + Enter schema fields:
-
-        ## Field examples
-
-        name:string
-        slug:slug:name
-        status:status
-        meta_description:text
-        avatar:image
-        video:video
-        data:villain
-        publish_at:datetime    # utc
-        image_series:gallery
-        user:references:users
-
-      """)
-      |> String.trim("\n")
-
-    org_attrs = attrs |> String.split(" ")
-    attrs = org_attrs |> Mix.Brando.attrs()
+    # build attrs
+    attrs = Mix.Brando.attrs(blueprint)
     main_field = attrs |> List.first() |> elem(0)
 
-    villain? = :villain in Keyword.values(attrs)
-    sequenced? = Mix.shell().yes?("\nMake schema sequenceable?")
-    soft_delete? = Mix.shell().yes?("\nAdd soft deletion?")
-    creator? = Mix.shell().yes?("\nAdd creator?")
-    revisioned? = Mix.shell().yes?("\nAdd revisions?")
-    meta? = Mix.shell().yes?("\nAdd META fields?")
-    publish_at? = Mix.shell().yes?("\nAdd scheduled publishing?")
-    file_field? = :file in Keyword.values(attrs)
-    image_field? = :image in Keyword.values(attrs)
-    video_field? = :video in Keyword.values(attrs)
-    gallery? = :gallery in Keyword.values(attrs)
-    status? = :status in Keyword.values(attrs)
-    slug? = Keyword.has_key?(Keyword.values(attrs), :slug)
+    sequenced? = blueprint_module.has_trait(Brando.Trait.Sequenced)
+    soft_delete? = blueprint_module.has_trait(Brando.Trait.SoftDelete)
+    creator? = blueprint_module.has_trait(Brando.Trait.Creator)
+    revisioned? = blueprint_module.has_trait(Brando.Trait.Revisioned)
+    meta? = blueprint_module.has_trait(Brando.Trait.Meta)
+    publish_at? = blueprint_module.has_trait(Brando.Trait.ScheduledPublishing)
+    file_field? = blueprint_module.__file_fields__() != []
+    image_field? = blueprint_module.__image_fields__() != []
+    video_field? = blueprint_module.__video_fields__() != []
+    villain? = blueprint_module.__villain_fields__() != []
+    gallery? = blueprint_module.__gallery_fields__() != []
+    status? = blueprint_module.__status_fields__() != []
+    slug? = blueprint_module.__slug_fields__() != []
 
     binding = Mix.Brando.inflect(singular)
     path = binding[:path]
-    migration = String.replace(path, "/", "_")
 
     img_fields =
       attrs
@@ -130,7 +107,6 @@ defmodule Mix.Tasks.Brando.Gen do
     web_module = to_string(Brando.config(:web_module)) |> String.replace("Elixir.", "")
 
     module = Enum.join([web_module, binding[:scoped]], ".")
-    schema_module = Enum.join([app_module, domain_name, binding[:scoped]], ".")
 
     vue_plural = Recase.to_camel(plural)
     vue_singular = Recase.to_camel(singular)
@@ -171,23 +147,21 @@ defmodule Mix.Tasks.Brando.Gen do
           villain_fields: villain_fields,
           gallery_fields: gallery_fields,
           module: module,
-          schema_module: schema_module,
           params: Mix.Brando.params(attrs),
           snake_domain: snake_domain,
-          domain: domain_name,
+          schema_module: blueprint.modules.schema,
+          domain: domain,
           main_field: main_field,
           types: types,
           migration_types: migration_types,
           defaults: defs,
           params: params,
-          vue_singular: Recase.to_camel(binding[:singular]),
-          vue_plural: Recase.to_camel(vue_plural)
+          vue_singular: vue_singular,
+          vue_plural: vue_plural
         ]
 
     binding = Enum.reduce(@generator_modules, binding, &apply(&1, :before_copy, [&2]))
 
-    migration_path = "priv/repo/migrations/" <> "#{timestamp()}_create_#{migration}.exs"
-    schema_path = "lib/application_name/#{snake_domain}/#{path}.ex"
     schema_test_path = "test/schemas/#{path}_test.exs"
 
     files =
@@ -205,15 +179,7 @@ defmodule Mix.Tasks.Brando.Gen do
           {:eex, "view.ex", "lib/application_name_web/views/#{path}_view.ex"},
 
           # DB
-          {:eex, "migration.exs", migration_path},
-          {:eex, "schema.ex", schema_path},
           {:eex, "schema_test.exs", schema_test_path},
-
-          # GQL
-          {:eex, "graphql/schema/types/type.ex",
-           "lib/application_name/graphql/schema/types/#{path}.ex"},
-          {:eex, "graphql/resolvers/resolver.ex",
-           "lib/application_name/graphql/resolvers/#{path}_resolver.ex"},
 
           # Backend JS
           {:eex, "assets/backend/src/api/graphql/ALL_QUERY.graphql",
@@ -254,7 +220,13 @@ defmodule Mix.Tasks.Brando.Gen do
           {:eex, "assets/backend/src/locale.js",
            "assets/backend/src/locales/#{vue_plural}/index.js"},
           {:eex, "assets/backend/cypress/integration/spec.js",
-           "assets/backend/cypress/integration/#{snake_domain}/#{Recase.to_pascal(vue_singular)}.spec.js"}
+           "assets/backend/cypress/integration/#{snake_domain}/#{Recase.to_pascal(vue_singular)}.spec.js"},
+
+          # GQL
+          {:eex, "graphql/schema/types/type.ex",
+           "lib/application_name/graphql/schema/types/#{path}.ex"},
+          {:eex, "graphql/resolvers/resolver.ex",
+           "lib/application_name/graphql/resolvers/#{path}_resolver.ex"}
         ]
 
     :ok = Mix.Brando.check_module_name_availability(binding[:module] <> "Controller")
@@ -318,14 +290,6 @@ defmodule Mix.Tasks.Brando.Gen do
     end)
   end
 
-  defp timestamp do
-    {{y, m, d}, {hh, mm, ss}} = :calendar.universal_time()
-    "#{y}#{pad(m)}#{pad(d)}#{pad(hh)}#{pad(mm)}#{pad(ss)}"
-  end
-
-  defp pad(i) when i < 10, do: <<?0, ?0 + i>>
-  defp pad(i), do: to_string(i)
-
   defp types(attrs) do
     Enum.into(attrs, %{}, fn
       {k, {:references, target}} ->
@@ -352,6 +316,7 @@ defmodule Mix.Tasks.Brando.Gen do
   defp value_to_type(:integer), do: :integer
   defp value_to_type(:text), do: :string
   defp value_to_type(:string), do: :string
+  defp value_to_type(:slug), do: :string
   defp value_to_type(:uuid), do: Ecto.UUID
   defp value_to_type(:date), do: :date
   defp value_to_type(:time), do: :time

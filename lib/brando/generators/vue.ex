@@ -54,7 +54,7 @@ defmodule Brando.Generators.Vue do
 
     for {_, {:references, target}} <- binding[:assocs] do
       [gql_domain, gql_target] =
-        case String.split(Atom.to_string(target), "_") do
+        case String.split(target, "_") do
           [d, s] -> [d, String.upcase(s)]
           [s] -> [binding[:snake_domain], String.upcase(s)]
         end
@@ -236,7 +236,7 @@ defmodule Brando.Generators.Vue do
       queries =
         Enum.reduce(assocs, "", fn {_field, {:references, target}}, acc ->
           trimmed_target =
-            case String.split(Atom.to_string(target), "_") do
+            case String.split(target, "_") do
               [_, t] -> t
               [t] -> t
             end
@@ -272,7 +272,7 @@ defmodule Brando.Generators.Vue do
           k = String.to_atom(Atom.to_string(k) <> "Id")
 
           [ref_target_domain, ref_target_schema] =
-            case String.split(Atom.to_string(ref_target), "_") do
+            case String.split(ref_target, "_") do
               [d, s] -> [d, s]
               [s] -> [nil, s]
             end

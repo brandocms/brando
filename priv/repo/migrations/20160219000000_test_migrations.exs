@@ -164,6 +164,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
 
     create table(:projects) do
       add :title, :string
+      add :status, :integer
       add :slug, :string
       add :language, :string
       add :data, :jsonb

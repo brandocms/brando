@@ -14,6 +14,7 @@ defmodule Mix.Brando do
     :gallery,
     :image,
     :integer,
+    :language,
     :map,
     :references,
     :slug,
@@ -124,13 +125,26 @@ defmodule Mix.Brando do
   @doc """
   Parses the attrs as received by generators.
   """
-  def attrs(attrs) do
-    Enum.map(attrs, fn attr ->
-      attr
-      |> String.split(":", parts: 3)
-      |> list_to_attr()
-      |> validate_attr!()
-    end)
+  def attrs(blueprint) do
+    attrs =
+      Enum.map(blueprint.attributes, fn
+        %{name: name, type: :slug, opts: %{from: target}} ->
+          validate_attr!({name, {:slug, target}})
+
+        %{name: name, type: type} ->
+          validate_attr!({name, type})
+      end)
+
+    rels =
+      blueprint.relations
+      |> Enum.filter(&(&1.type == :belongs_to))
+      |> Enum.map(fn %{name: name, opts: opts} ->
+        target_module = opts.module
+        target_source = target_module.__schema__(:source)
+        validate_attr!({name, {:references, target_source}})
+      end)
+
+    attrs ++ rels
   end
 
   @doc """
@@ -324,13 +338,6 @@ defmodule Mix.Brando do
 
   def otp_app do
     Mix.Project.config() |> Keyword.fetch!(:app)
-  end
-
-  defp list_to_attr([key]), do: {String.to_atom(key), :string}
-  defp list_to_attr([key, value]), do: {String.to_atom(key), String.to_atom(value)}
-
-  defp list_to_attr([key, comp, value]) do
-    {String.to_atom(key), {String.to_atom(comp), String.to_atom(value)}}
   end
 
   defp validate_attr!({_name, type} = attr) when type in @valid_attributes, do: attr

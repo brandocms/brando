@@ -106,7 +106,8 @@ defmodule Brando.Blueprint.TraitTest do
                Brando.ImageCategory,
                Brando.Pages.Page,
                Brando.Users.User,
-               Brando.ImageSeries
+               Brando.ImageSeries,
+               Brando.MigrationTest.Project
              ]
     end
   end
