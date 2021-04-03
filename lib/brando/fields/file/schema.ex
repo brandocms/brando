@@ -3,11 +3,8 @@ defmodule Brando.Field.File.Schema do
   #! TODO: Delete when moving Blueprints
   @moduledoc """
   Assign a schema's field as a file field.
-
   ## Example
-
   In your `my_schema.ex`:
-
       has_file_field :pdf_report,
         %{allowed_mimetypes: ["application/pdf"],
           random_filename: true,
@@ -15,7 +12,6 @@ defmodule Brando.Field.File.Schema do
           size_limit: 10_240_000,
         }
       }
-
   """
   alias Brando.Images
   alias Brando.Utils
@@ -30,6 +26,48 @@ defmodule Brando.Field.File.Schema do
 
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
+
+      @doc """
+      Validates upload in changeset
+      """
+      def validate_upload(changeset, {:file, field_name}, user),
+        do: do_validate_upload(changeset, {:file, field_name}, user)
+
+      def validate_upload(changeset, {:file, field_name}),
+        do: do_validate_upload(changeset, {:file, field_name}, :system)
+
+      defp do_validate_upload(changeset, {:file, field_name}, _user) do
+        with {:ok, plug} <- Brando.Utils.field_has_changed(changeset, field_name),
+             {:ok, _} <- Brando.Utils.changeset_has_no_errors(changeset),
+             {:ok, cfg} <- get_file_cfg(field_name),
+             {:ok, {:handled, name, field}} <- handle_file_upload(field_name, plug, cfg) do
+          put_change(changeset, name, field)
+        else
+          :unchanged ->
+            changeset
+
+          :has_errors ->
+            changeset
+
+          {:error, {name, {:error, error_msg}}} ->
+            add_error(changeset, name, error_msg)
+        end
+      end
+
+      @doc """
+      Cleans up old files on update
+      """
+      def cleanup_old_files(changeset) do
+        filefield_keys = Keyword.keys(__filefields__())
+
+        for key <- Map.keys(changeset.changes) do
+          if key in filefield_keys do
+            delete_original(changeset.data, key)
+          end
+        end
+
+        changeset
+      end
     end
   end
 
@@ -67,11 +105,8 @@ defmodule Brando.Field.File.Schema do
   @doc """
   Set the form's `field_name` as being an file_field, and store
   it to the module's @filefields.
-
   Converts the `opts` map to an FileConfig struct.
-
   ## Options
-
     * `allowed_exts`:
       A list of allowed file extensions.
       Example: `["pdf", "txt"]`
@@ -84,7 +119,6 @@ defmodule Brando.Field.File.Schema do
     * `size_limit`:
       Enforce a size limit when uploading files.
       Example: `10_240_000`
-
   """
   defmacro has_file_field(field_name, opts) do
     quote do
@@ -93,5 +127,57 @@ defmodule Brando.Field.File.Schema do
 
       Module.put_attribute(__MODULE__, :filefields, {unquote(field_name), cfg_struct})
     end
+  end
+
+  @doc """
+  Handles the upload by starting a chain of operations on the plug.
+  This function handles upload when we have an file field on a schema.
+  ## Parameters
+    * `name`:
+    * `plug`: a Plug.Upload struct.
+    * `cfg`: the field's cfg from has_image_field
+  """
+  @spec handle_file_upload(atom, Plug.Upload.t() | map, Brando.Type.FileConfig.t()) ::
+          {:ok, {:handled, Brando.Type.File}}
+          | {:ok, {:unhandled, atom, term}}
+          | {:error, {atom, {:error, binary}}}
+  def handle_file_upload(name, %Plug.Upload{} = plug, cfg) do
+    with {:ok, upload} <- process_upload(plug, cfg),
+         {:ok, field} <- create_file_struct(upload) do
+      {:ok, {:handled, name, field}}
+    else
+      err -> {:error, {name, handle_upload_error(err)}}
+    end
+  end
+
+  def handle_file_upload(name, file, _) do
+    {:ok, {:unhandled, name, file}}
+  end
+
+  @doc """
+  Creates a File{} struct pointing to the copied uploaded file.
+  """
+  @spec create_file_struct(Brando.Upload.t()) :: {:ok, Brando.Type.File.t()}
+  def create_file_struct(%Brando.Upload{
+        plug: %{uploaded_file: file, content_type: mime_type},
+        cfg: cfg
+      }) do
+    {_, filename} = Utils.split_path(file)
+    upload_path = Map.get(cfg, :upload_path)
+
+    file_path = Path.join([upload_path, filename])
+
+    file_stat =
+      file_path
+      |> Images.Utils.media_path()
+      |> File.stat!()
+
+    file_struct =
+      %Brando.Type.File{}
+      |> Map.put(:path, file_path)
+      |> Map.put(:size, file_stat.size)
+      |> Map.put(:mimetype, mime_type)
+
+    {:ok, file_struct}
   end
 end

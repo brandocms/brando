@@ -22,8 +22,8 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       send(self(), {:mix_shell_input, :prompt, "Brando.BlueprintTest.Project"})
       Mix.Tasks.Brando.Gen.run([])
 
-      assert_file("assets/backend/src/views/games/CaptainForm.vue", fn file ->
-        assert file =~ "v-model=\"captain.data\""
+      assert_file("assets/backend/src/views/projects/ProjectForm.vue", fn file ->
+        assert file =~ "v-model=\"project.title\""
       end)
     end)
   end

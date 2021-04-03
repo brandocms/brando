@@ -3,14 +3,10 @@ defmodule Brando.Field.Image.Schema do
   #! TODO: Delete when moving Blueprints
   @moduledoc """
   Assign a schema's field as an image field.
-
   This means you can configure the field with different sizes that will be
   automatically created on file upload.
-
   ## Example
-
   In your `my_schema.ex`:
-
       has_image_field :avatar,
         %{allowed_exts: ["jpg", "jpeg", "png"],
          default_size: "medium",
@@ -24,7 +20,6 @@ defmodule Brando.Field.Image.Schema do
            "large" =>  %{"size" => "700x", "quality" => 10},
         }
       }
-
   """
   import Ecto.Changeset
 
@@ -42,11 +37,19 @@ defmodule Brando.Field.Image.Schema do
       Cleans up old images on update
       """
       defmacro cleanup_old_images(_) do
-        raise "cleanup_old_images/1 should not be used in changesets anymore, just remove it."
+        raise "cleanup_old_images() should not be used in changesets anymore, just remove it."
       end
 
-      defmacro cleanup_old_images(_, _) do
-        raise "cleanup_old_images/2 should not be used in changesets anymore, just remove it."
+      def cleanup_old_images(changeset, :safe) do
+        imagefield_keys = Keyword.keys(__image_fields__())
+
+        for key <- Map.keys(changeset.changes) do
+          if key in imagefield_keys do
+            delete_original_and_sized_images(changeset.data, key)
+          end
+        end
+
+        changeset
       end
 
       @doc """
@@ -82,6 +85,7 @@ defmodule Brando.Field.Image.Schema do
                  {:ok, cfg} <- grab_cfg(cfg, field_name, changeset),
                  {:ok, {:handled, name, field}} <-
                    Images.Upload.Field.handle_upload(field_name, upload_params, cfg, user) do
+              cleanup_old_images(changeset, :safe)
               if Brando.CDN.enabled?(), do: Brando.CDN.upload_file(changeset, name, field)
               put_change(changeset, name, field)
             else
@@ -171,11 +175,8 @@ defmodule Brando.Field.Image.Schema do
   @doc """
   Set the form's `field_name` as being an image_field, and store
   it to the module's @imagefields.
-
   Converts the `opts` map to an ImageConfig struct.
-
   ## Options
-
     * `allowed_exts`:
       A list of allowed image extensions.
       Example: `["jpg", "jpeg", "png"]`
@@ -199,7 +200,6 @@ defmodule Brando.Field.Image.Schema do
            small:  [size: "300x",    quality: 100],
            large:  [size: "700x",    quality: 100]
         ]
-
   """
   defmacro has_image_field(field_name, opts) do
     quote do
@@ -216,5 +216,38 @@ defmodule Brando.Field.Image.Schema do
 
       Module.put_attribute(__MODULE__, :imagefields, {unquote(field_name), val})
     end
+  end
+
+  @doc """
+  List all registered image fields
+  """
+  def list_image_fields do
+    app_modules = Application.spec(Brando.otp_app(), :modules)
+    modules = app_modules
+
+    modules
+    |> Enum.filter(&({:__image_fields__, 0} in &1.__info__(:functions)))
+    |> Enum.map(fn module ->
+      %{
+        source: module.__schema__(:source),
+        fields: module.__image_fields__() |> Keyword.keys()
+      }
+    end)
+  end
+
+  def generate_image_fields_migration do
+    img_fields = list_image_fields()
+
+    Enum.map(img_fields, fn %{source: source, fields: fields} ->
+      Enum.map(fields, fn field ->
+        ~s(
+          execute """
+          alter table #{source} alter column #{field} type jsonb using #{field}::JSON
+          """
+          )
+      end)
+      |> Enum.join("\n")
+    end)
+    |> Enum.join("\n")
   end
 end
