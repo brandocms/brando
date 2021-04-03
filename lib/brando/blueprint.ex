@@ -518,6 +518,8 @@ defmodule Brando.Blueprint do
     |> Upload.run_upload_validations(module, all_attributes, user)
   end
 
+  def blueprint?(module), do: {:__blueprint__, 0} in module.__info__(:functions)
+
   defmacro __after_compile__(env, _) do
     # validate traits
     Enum.each(env.module.__traits__(), &elem(&1, 0).validate(env.module, elem(&1, 1)))

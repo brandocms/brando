@@ -18,7 +18,8 @@ defmodule Brando.GraphQL.Resolver do
       |> Keyword.fetch!(:context)
       |> Macro.expand(__CALLER__)
 
-    quote generated: true do
+    quote generated: true,
+          location: :keep do
       @doc false
       def all(args, %{context: %{current_user: _}}) do
         unquote(context).unquote(:"list_#{plural}")(Map.put(args, :paginated, true))
@@ -43,7 +44,15 @@ defmodule Brando.GraphQL.Resolver do
         unquote(context).unquote(:"create_#{singular}")(params, user)
       end
 
-      if unquote(schema).__trait__(Brando.Trait.Revisioned) do
+      #! TODO: Remove when moving to Blueprints
+      revisioned? =
+        if Brando.Blueprint.blueprint?(unquote(schema)) do
+          unquote(schema).__trait__(Brando.Trait.Revisioned)
+        else
+          {:__revisioned__, 0} in unquote(schema).__info__(:functions)
+        end
+
+      if revisioned? do
         def update(
               %{
                 unquote(:"#{singular}_id") => id,
