@@ -1,4 +1,6 @@
 defmodule Brando.Field.Image.Schema do
+  @deprecated "Move to Blueprints instead"
+  #! TODO: Delete when moving Blueprints
   @moduledoc """
   Assign a schema's field as an image field.
 
@@ -27,15 +29,6 @@ defmodule Brando.Field.Image.Schema do
   import Ecto.Changeset
 
   defmacro __using__(_) do
-    # IO.warn("""
-    # Using `Brando.Field.Image.Schema` is deprecated.
-    # It is recommended to move to Blueprints
-
-    # Offending module: #{inspect(__CALLER__.module)}
-
-    #     end
-    # """)
-
     quote do
       Module.register_attribute(__MODULE__, :imagefields, accumulate: true)
       alias Brando.Images

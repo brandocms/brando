@@ -29,7 +29,7 @@ defmodule Brando.Utils.Schema do
   @doc """
   Puts `id` from `user` in the `params` map.
   """
-  # @deprecated "Move to using Brando.Trait.Creator instead!"
+  @deprecated "Move to Blueprints/Brando.Trait.Creator instead!"
   @spec put_creator(changeset | map, map | :system) :: changeset
   def put_creator(%Changeset{} = cs, :system), do: cs
 
