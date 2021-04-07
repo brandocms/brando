@@ -3,12 +3,14 @@ defmodule Brando.Blueprint.Constraints do
 
   def run_validations(changeset, _module, attributes) do
     attributes
-    |> Enum.filter(&Map.get(&1.opts, :validate, false))
+    |> Enum.filter(&Map.get(&1.opts, :constraints, false))
     |> Enum.reduce(changeset, fn
       %{opts: %{constraints: constraints}} = attr, new_changeset ->
         constraints_map = Enum.into(constraints, %{})
 
         Enum.reduce(constraints_map, new_changeset, fn constraint, validated_changeset ->
+          require Logger
+          Logger.error(inspect(constraint, pretty: true))
           run_validation(constraint, validated_changeset, attr)
         end)
     end)

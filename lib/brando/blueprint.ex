@@ -105,6 +105,7 @@ defmodule Brando.Blueprint do
       Module.register_attribute(__MODULE__, :traits, accumulate: true)
       Module.register_attribute(__MODULE__, :attrs, accumulate: true)
       Module.register_attribute(__MODULE__, :relations, accumulate: true)
+      Module.register_attribute(__MODULE__, :form, accumulate: true)
       Module.register_attribute(__MODULE__, :translations, accumulate: false)
       Module.register_attribute(__MODULE__, :table_name, accumulate: false)
       Module.register_attribute(__MODULE__, :data_layer, accumulate: false)
@@ -131,6 +132,7 @@ defmodule Brando.Blueprint do
       import unquote(__MODULE__)
       import unquote(__MODULE__).AbsoluteURL
       import unquote(__MODULE__).Attributes
+      import unquote(__MODULE__).Form
       import unquote(__MODULE__).Identifier
       import unquote(__MODULE__).JSONLD
       import unquote(__MODULE__).Meta
@@ -498,6 +500,10 @@ defmodule Brando.Blueprint do
           @all_attributes,
           @all_relations
         )
+      end
+
+      def __form__ do
+        @form
       end
 
       # generate changeset

@@ -152,6 +152,7 @@ defmodule BrandoIntegrationWeb.Router do
   use Phoenix.Router
   import Brando.Router
   import Brando.Plug.I18n
+  import Phoenix.LiveView.Router
 
   pipeline :browser do
     plug :accepts, ~w(html)

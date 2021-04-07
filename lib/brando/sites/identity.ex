@@ -6,6 +6,8 @@ defmodule Brando.Sites.Identity do
     singular: "identity",
     plural: "identities"
 
+  import Brando.Gettext
+
   trait Brando.Trait.Timestamped
 
   table "sites_identity"
@@ -28,7 +30,7 @@ defmodule Brando.Sites.Identity do
     attribute :type, :string, required: true
     attribute :name, :string, required: true
     attribute :alternate_name, :string
-    attribute :email, :string
+    attribute :email, :string, constraints: [format: ~r/@/]
     attribute :phone, :string
     attribute :address, :string
     attribute :address2, :string
@@ -48,4 +50,50 @@ defmodule Brando.Sites.Identity do
     relation :links, :embeds_many, module: Brando.Link, on_replace: :delete
     relation :configs, :embeds_many, module: Brando.ConfigEntry, on_replace: :delete
   end
+
+  form do
+    fieldset do
+      input :type, :radios,
+        options: [
+          {:organization, gettext("Organization")},
+          {:corporation, gettext("Corporation")}
+        ]
+
+      input :name, :text, class: "half"
+      input :alternate_name, :text, class: "half"
+      input :email, :email, class: "half"
+      input :phone, :phone, class: "half"
+
+      input :address, :text
+      input :address2, :text
+      input :address3, :text
+
+      input :zipcode, :text, class: "third"
+      input :city, :text, class: "third"
+      input :country, :text, class: "third"
+
+      input :title_prefix, :text, class: "third"
+      input :title, :text, class: "third"
+      input :title_postfix, :text, class: "third"
+    end
+  end
+
+  #   fieldset do
+  #
+  #   end
+
+  #   fieldset do
+  #     input :logo, :image, type: :small
+  #   end
+
+  #   fieldset do
+  #     input :links, :table do
+  #       editable? true
+  #       deletable? true
+
+  #       input :name, :text
+  #       input :url, :text
+  #     end
+  #   end
+  # end
 end

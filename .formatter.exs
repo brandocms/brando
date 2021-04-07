@@ -61,7 +61,11 @@ locals_without_parens = [
   json_ld_field: 4,
   table: 1,
   primary_key: 1,
-  data_layer: 1
+  data_layer: 1,
+  input: 2,
+  input: 3,
+  fieldset: 1,
+  fieldset: 2
 ]
 
 [

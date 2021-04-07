@@ -31,10 +31,13 @@ defmodule Brando.Mixfile do
       {:phoenix, "~> 1.4"},
       {:phoenix_html, "~> 2.6"},
       {:phoenix_ecto, "~> 4.0"},
-      {:phoenix_live_view, "~> 0.15.4"},
       {:postgrex, "~> 0.14"},
       {:ecto, "~> 3.5"},
       {:ecto_sql, "~> 3.5"},
+
+      # liveview
+      {:phoenix_live_view, "~> 0.15.4"},
+      {:surface, "~> 0.3"},
       {:floki, ">= 0.27.0", only: :test},
 
       # graphql
