@@ -1,5 +1,7 @@
 ## 0.51.0
 
+* `list_page_fragments` -> `list_fragments`
+
 * Changed `Brando.Plug.Navigation` to require a keyword list as arg:
 
   ```
