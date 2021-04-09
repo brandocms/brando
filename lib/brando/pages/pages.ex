@@ -234,7 +234,7 @@ defmodule Brando.Pages do
   end
 
   mutation :delete, Fragment
-  mutation :duplicate, {Fragment, delete_fields: [:parent], change_fields: [:key]}
+  mutation :duplicate, {Fragment, delete_fields: [], change_fields: [:key]}
 
   @doc """
   Get set of fragments by parent key
