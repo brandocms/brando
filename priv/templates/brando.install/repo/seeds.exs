@@ -218,7 +218,7 @@ page = %Brando.Pages.Page{
     "<article b-tpl=\"example\">\n\t<div class=\"inner\">\n\t\t<h1>Welcome to Brando!</h1>\n        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius auctor tellus ut hendrerit. Vivamus lectus libero, condimentum vitae tellus nec, vehicula iaculis nisi. Morbi at pulvinar neque, vitae maximus magna. Morbi bibendum pulvinar tellus, eu pellentesque arcu porta et. Pellentesque sagittis nisi a sem cursus, in fringilla metus tristique. Maecenas vel enim quis diam mollis viverra. Nulla pulvinar tristique erat nec rhoncus. Maecenas at nisl dignissim, rhoncus purus vitae, consequat diam. Curabitur sed sapien tempor, eleifend dolor cursus, rhoncus turpis. Vestibulum dolor eros, fermentum ac feugiat ut, interdum in nulla. Pellentesque faucibus, arcu eu gravida sollicitudin, massa lacus aliquam lorem, sed ultrices ligula mauris in velit. Fusce ac dolor facilisis lacus suscipit lobortis quis et leo. </p>\n\t</div>\n</article>",
   is_homepage: true,
   uri: "index",
-  language: "en",
+  language: :en,
   meta_description: nil,
   meta_image: nil,
   parent_id: nil,
@@ -233,7 +233,7 @@ footer_fragment = %Brando.Pages.Fragment{
   parent_key: "partials",
   key: "footer",
   title: "Footer",
-  language: "en",
+  language: :en,
   html: "<p>(c) BrandoCMS — all rights reserved</p>",
   data: [
     %{
