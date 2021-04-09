@@ -230,6 +230,12 @@ defmodule Brando.Blueprint do
     |> Enum.map(&get_relation_key/1)
   end
 
+  def get_castable_relation_fields(rels) do
+    rels
+    |> Enum.filter(&(&1.type == :belongs_to))
+    |> Enum.map(&(&1.name |> to_string |> Kernel.<>("_id") |> String.to_atom()))
+  end
+
   def get_relation_key(%{type: :belongs_to, name: name}), do: :"#{name}_id"
 
   def access_key(key) do
@@ -339,6 +345,11 @@ defmodule Brando.Blueprint do
       @all_optional_attrs Brando.Blueprint.get_optional_attrs(@all_attributes)
       def __optional_attrs__ do
         @all_optional_attrs
+      end
+
+      @castable_relations Brando.Blueprint.get_castable_relation_fields(@all_relations)
+      def __castable_rels__ do
+        @castable_relations
       end
 
       def __table_name__ do
@@ -454,6 +465,7 @@ defmodule Brando.Blueprint do
           @all_traits,
           @all_attributes,
           @all_relations,
+          @castable_relations,
           @all_required_attrs,
           @all_optional_attrs
         )
@@ -493,6 +505,7 @@ defmodule Brando.Blueprint do
         all_traits,
         all_attributes,
         all_relations,
+        castable_relations,
         all_required_attrs,
         all_optional_attrs
       ) do
@@ -500,7 +513,7 @@ defmodule Brando.Blueprint do
       Trait.split_traits_by_changeset_phase(all_traits)
 
     schema
-    |> Changeset.cast(params, all_required_attrs ++ all_optional_attrs)
+    |> Changeset.cast(params, all_required_attrs ++ all_optional_attrs ++ castable_relations)
     |> Relations.run_cast_relations(all_relations, user)
     |> Trait.run_changeset_mutators(
       module,
