@@ -16,7 +16,15 @@ defmodule Brando.Query.Mutations do
          {:ok, entry} <- Query.insert(changeset),
          {:ok, _} <- Datasource.update_datasource(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
-      if module.__trait__(Trait.Revisioned) do
+      #! TODO: Remove when moving to Blueprints
+      revisioned? =
+        if Brando.Blueprint.blueprint?(module) do
+          module.__trait__(Trait.Revisioned)
+        else
+          {:__revisioned__, 0} in module.__info__(:functions)
+        end
+
+      if revisioned? do
         Revisions.create_revision(entry, user)
       end
 
@@ -46,7 +54,15 @@ defmodule Brando.Query.Mutations do
          {:ok, _} <- Datasource.update_datasource(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
       if has_changes(changeset) do
-        if module.__trait__(Trait.Revisioned) do
+        #! TODO: Remove when moving to Blueprints
+        revisioned? =
+          if Brando.Blueprint.blueprint?(module) do
+            module.__trait__(Trait.Revisioned)
+          else
+            {:__revisioned__, 0} in module.__info__(:functions)
+          end
+
+        if revisioned? do
           Revisions.create_revision(entry, user)
         end
 
@@ -76,6 +92,7 @@ defmodule Brando.Query.Mutations do
           |> maybe_set_status()
           |> Map.from_struct()
           |> drop_id()
+          |> IO.inspect(pretty: true)
 
         apply(context, :"create_#{name}", [params, user])
 
@@ -108,12 +125,19 @@ defmodule Brando.Query.Mutations do
   def delete(context, module, name, id, user, callback_block) do
     {:ok, entry} = apply(context, :"get_#{name}", [id])
 
-    {:ok, entry} =
-      if module.__trait__(Trait.SoftDelete) do
-        Brando.repo().soft_delete(entry)
+    #! TODO: Remove when moving to Blueprints
+    soft_deletable? =
+      if Brando.Blueprint.blueprint?(module) do
+        module.__trait__(Trait.SoftDelete)
       else
-        Query.delete(entry)
+        {:__soft_delete__, 0} in module.__info__(:functions)
       end
+
+    if soft_deletable? do
+      Brando.repo().soft_delete(entry)
+    else
+      Query.delete(entry)
+    end
 
     if {:__gallery_fields__, 0} in module.__info__(:functions) do
       for f <- apply(module, :__gallery_fields__, []) do
