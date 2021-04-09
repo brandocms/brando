@@ -24,24 +24,24 @@ defmodule Brando.Pages.Fragment do
 
   identifier "{{ entry.title }}"
 
-  # @derived_fields ~w(
-  #   id
-  #   title
-  #   parent_key
-  #   key
-  #   language
-  #   data
-  #   html
-  #   wrapper
-  #   sequence
-  #   creator_id
-  #   page_id
-  #   inserted_at
-  #   updated_at
-  #   deleted_at
-  # )a
+  @derived_fields ~w(
+    id
+    title
+    parent_key
+    key
+    language
+    data
+    html
+    wrapper
+    sequence
+    creator_id
+    page_id
+    inserted_at
+    updated_at
+    deleted_at
+  )a
 
-  # @derive {Jason.Encoder, only: @derived_fields}
+  @derive {Jason.Encoder, only: @derived_fields}
 
   attributes do
     attribute :title, :string
