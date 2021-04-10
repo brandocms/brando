@@ -1,4 +1,4 @@
-defmodule BrandoWebView do
+defmodule BrandoWeb.AdminView do
   @moduledoc """
   Main view for Brando admin.
   """

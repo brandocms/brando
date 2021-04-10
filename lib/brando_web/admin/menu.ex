@@ -1,66 +1,68 @@
 defmodule BrandoWeb.Admin.Menu do
+  import Brando.Gettext
+
   def get_menu do
     [
       %{
-        name: "System",
+        name: gettext("System"),
         items: [
           %{
-            name: "Dashboard",
+            name: gettext("Dashboard"),
             url: "/admin"
           },
           %{
-            name: "Configuration",
+            name: gettext("Configuration"),
             url: nil,
             items: [
               %{
-                text: "Identity",
+                text: gettext("Identity"),
                 url: "/admin/config/identity"
               },
               %{
-                text: "SEO",
+                text: gettext("SEO"),
                 url: "/admin/config/seo"
               },
               %{
-                text: "Global variables",
+                text: gettext("Global variables"),
                 url: "/admin/config/globals"
               },
               %{
-                text: "Planned publishing",
+                text: gettext("Planned publishing"),
                 url: "/admin/config/planned-publishing"
               },
               %{
-                text: "Cache",
+                text: gettext("Cache"),
                 url: "/admin/config/cache"
               },
               %{
-                text: "Content modules",
+                text: gettext("Content modules"),
                 url: "/admin/config/modules"
               }
             ]
           },
           %{
-            name: "Navigation",
+            name: gettext("Navigation"),
             url: "/admin/navigation"
           },
           %{
-            name: "Users",
+            name: gettext("Users"),
             url: "/admin/users"
           },
           %{
-            name: "Image Library",
+            name: gettext("Image Library"),
             url: "/admin/images"
           },
           %{
-            name: "File Library",
+            name: gettext("File Library"),
             url: "/admin/files"
           }
         ]
       },
       %{
-        name: "Content",
+        name: gettext("Content"),
         items: [
           %{
-            name: "Pages & Sections",
+            name: gettext("Pages & Sections"),
             url: "/admin/pages"
           }
         ]

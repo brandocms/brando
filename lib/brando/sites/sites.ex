@@ -4,8 +4,11 @@ defmodule Brando.Sites do
   """
   use Brando.Query
   import Ecto.Query
+  import Brando.Gettext
 
   alias Brando.Cache
+  alias Brando.Schema
+  alias Brando.Notifications
   alias Brando.Sites.Identity
   alias Brando.Sites.Preview
   alias Brando.Sites.SEO
@@ -78,8 +81,20 @@ defmodule Brando.Sites do
     |> Identity.changeset(identity_params, user)
     |> Brando.repo().update()
     |> Cache.Identity.update()
+    |> push_identity_mutation_notification(user)
     |> update_villains_referencing_identity()
   end
+
+  defp push_identity_mutation_notification({:ok, identity}, user) do
+    case Schema.identifier_for(identity) do
+      nil -> nil
+      identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
+    end
+
+    {:ok, identity}
+  end
+
+  defp push_identity_mutation_notification(passthrough, _), do: passthrough
 
   @doc """
   Create default identity
