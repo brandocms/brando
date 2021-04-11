@@ -90,7 +90,8 @@ defmodule Brando.Blueprint.TraitTest do
                 %{
                   on_dump: %{en: "en", no: "no"},
                   on_load: %{"en" => :en, "no" => :no},
-                  values: [:no, :en]
+                  values: [:no, :en],
+                  type: :string
                 }}
     end
   end

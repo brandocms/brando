@@ -92,7 +92,6 @@ defmodule Brando.Query.Mutations do
           |> maybe_set_status()
           |> Map.from_struct()
           |> drop_id()
-          |> IO.inspect(pretty: true)
 
         apply(context, :"create_#{name}", [params, user])
 
