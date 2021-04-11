@@ -132,11 +132,12 @@ defmodule Brando.Query.Mutations do
         {:__soft_delete__, 0} in module.__info__(:functions)
       end
 
-    if soft_deletable? do
-      Brando.repo().soft_delete(entry)
-    else
-      Query.delete(entry)
-    end
+    {:ok, entry} =
+      if soft_deletable? do
+        Brando.repo().soft_delete(entry)
+      else
+        Query.delete(entry)
+      end
 
     if {:__gallery_fields__, 0} in module.__info__(:functions) do
       for f <- apply(module, :__gallery_fields__, []) do
