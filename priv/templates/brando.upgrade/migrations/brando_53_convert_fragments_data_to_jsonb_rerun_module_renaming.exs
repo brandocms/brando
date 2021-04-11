@@ -16,9 +16,15 @@ defmodule Brando.Migrations.FragmentsDataJSONBRenameTemplatesToModules do
 
     actions =
       for {schema, fields} <- villain_schemas do
-        Enum.map(fields, fn {_, f, _} ->
-          from t in schema.__schema__(:source),
-            update: [set: [{^f, fragment("REPLACE(?::text, '\"type\": \"template\"', '\"type\": \"module\"')::jsonb", field(t, ^f))}]]
+        Enum.map(fields, fn
+          {_, f, _} ->
+            from t in schema.__schema__(:source),
+              update: [set: [{^f, fragment("REPLACE(?::text, '\"type\": \"template\"', '\"type\": \"module\"')::jsonb", field(t, ^f))}]]
+
+              %{name: f} ->
+                source = if schema.__schema__(:source) == "pages", do: "pages_pages", else: schema.__schema__(:source)
+                from t in source,
+                  update: [set: [{^f, fragment("REPLACE(?::text, '\"type\": \"template\"', '\"type\": \"module\"')::jsonb", field(t, ^f))}]]
         end)
       end
       |> List.flatten()
