@@ -307,8 +307,8 @@ defmodule Brando.Villain do
   """
   @spec list_villains :: [module()]
   def list_villains do
-    trait_implementations =
-      Enum.map(Trait.Villain.list_implementations(), &{&1, &1.__villain_fields__()})
+    blueprint_impls = Trait.Villain.list_implementations()
+    trait_implementations = Enum.map(blueprint_impls, &{&1, &1.__villain_fields__()})
 
     {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
 
@@ -316,8 +316,14 @@ defmodule Brando.Villain do
 
     legacy_villains =
       modules
+      |> Enum.filter(&(&1 not in blueprint_impls))
       |> Enum.filter(&({:__villain_fields__, 0} in &1.__info__(:functions)))
       |> Enum.map(& &1.__villain_fields__())
+      |> Enum.map(fn
+        {_, [{:villain, _, _}]} = legacy -> legacy
+        _ -> nil
+      end)
+      |> Enum.reject(&(&1 == nil))
 
     trait_implementations ++ legacy_villains
   end
