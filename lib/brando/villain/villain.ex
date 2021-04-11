@@ -240,9 +240,13 @@ defmodule Brando.Villain do
           select: s.id
       )
 
-    Enum.map(schema.__villain_fields__(), fn data_field ->
-      html_field = get_html_field(schema, data_field)
-      rerender_html_from_ids({schema, data_field.name, html_field.name}, ids)
+    Enum.map(schema.__villain_fields__(), fn
+      {:villain, data_field, html_field} ->
+        rerender_html_from_ids({schema, data_field, html_field}, ids)
+
+      data_field ->
+        html_field = get_html_field(schema, data_field)
+        rerender_html_from_ids({schema, data_field.name, html_field.name}, ids)
     end)
   end
 
@@ -303,7 +307,19 @@ defmodule Brando.Villain do
   """
   @spec list_villains :: [module()]
   def list_villains do
-    Enum.map(Trait.Villain.list_implementations(), &{&1, &1.__villain_fields__()})
+    trait_implementations =
+      Enum.map(Trait.Villain.list_implementations(), &{&1, &1.__villain_fields__()})
+
+    {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
+
+    modules = app_modules |> Enum.uniq()
+
+    legacy_villains =
+      modules
+      |> Enum.filter(&({:__villain_fields__, 0} in &1.__info__(:functions)))
+      |> Enum.map(& &1.__villain_fields__())
+
+    trait_implementations ++ legacy_villains
   end
 
   @doc """
@@ -314,10 +330,15 @@ defmodule Brando.Villain do
 
     result =
       for {schema, fields} <- villains do
-        Enum.reduce(fields, [], fn data_field, acc ->
-          html_field = get_html_field(schema, data_field)
-          ids = list_ids_with_module(schema, data_field.name, module_id)
-          [acc | rerender_html_from_ids({schema, data_field.name, html_field.name}, ids)]
+        Enum.reduce(fields, [], fn
+          {:villain, data_field, html_field}, acc ->
+            ids = list_ids_with_module(schema, data_field, module_id)
+            [acc | rerender_html_from_ids({schema, data_field, html_field}, ids)]
+
+          data_field, acc ->
+            html_field = get_html_field(schema, data_field)
+            ids = list_ids_with_module(schema, data_field.name, module_id)
+            [acc | rerender_html_from_ids({schema, data_field.name, html_field.name}, ids)]
         end)
       end
 
@@ -528,16 +549,26 @@ defmodule Brando.Villain do
   @spec rerender_matching_villains([module], {atom, binary} | [{atom, binary}]) :: [any]
   def rerender_matching_villains(villains, search_terms) do
     for {schema, fields} <- villains do
-      Enum.reduce(fields, [], fn data_field, acc ->
-        html_field = get_html_field(schema, data_field)
+      Enum.reduce(fields, [], fn
+        {:villain, data_field, html_field}, acc ->
+          case search_villains_for_regex(schema, data_field, search_terms) do
+            [] ->
+              acc
 
-        case search_villains_for_regex(schema, data_field.name, search_terms) do
-          [] ->
-            acc
+            ids ->
+              [rerender_html_from_ids({schema, data_field, html_field}, ids) | acc]
+          end
 
-          ids ->
-            [rerender_html_from_ids({schema, data_field.name, html_field.name}, ids) | acc]
-        end
+        data_field, acc ->
+          html_field = get_html_field(schema, data_field)
+
+          case search_villains_for_regex(schema, data_field.name, search_terms) do
+            [] ->
+              acc
+
+            ids ->
+              [rerender_html_from_ids({schema, data_field.name, html_field.name}, ids) | acc]
+          end
       end)
     end
   end
