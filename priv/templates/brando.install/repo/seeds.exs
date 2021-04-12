@@ -87,7 +87,7 @@ user = <%= application_module %>.Repo.insert!(user)
     }
   ],
   key: "main",
-  language: "en",
+  language: :en,
   sequence: 0,
   status: :published,
   template: nil,
