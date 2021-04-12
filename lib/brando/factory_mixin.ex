@@ -42,7 +42,7 @@ defmodule Brando.FactoryMixin do
       def page_factory do
         %Page{
           uri: "a-key",
-          language: "no",
+          language: "en",
           title: "Page Title",
           html: nil,
           data: nil,
