@@ -74,7 +74,7 @@ defmodule Brando.Pages.Fragment do
       |> String.replace("{{ content }}", fragment.html)
       |> String.replace("{{ parent_key }}", fragment.parent_key)
       |> String.replace("{{ key }}", fragment.key)
-      |> String.replace("{{ language }}", fragment.language)
+      |> String.replace("{{ language }}", to_string(fragment.language))
       |> Phoenix.HTML.raw()
       |> Phoenix.HTML.Safe.to_iodata()
     end
