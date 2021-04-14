@@ -59,22 +59,22 @@ defmodule Brando.Sites.Identity do
           {:corporation, gettext("Corporation")}
         ]
 
-      input :name, :text, class: "half"
-      input :alternate_name, :text, class: "half"
-      input :email, :email, class: "half"
-      input :phone, :phone, class: "half"
+      # input :name, :text, class: "half"
+      # input :alternate_name, :text, class: "half"
+      # input :email, :email, class: "half"
+      # input :phone, :phone, class: "half"
 
-      input :address, :text
-      input :address2, :text
-      input :address3, :text
+      # input :address, :text
+      # input :address2, :text
+      # input :address3, :text
 
-      input :zipcode, :text, class: "third"
-      input :city, :text, class: "third"
-      input :country, :text, class: "third"
+      # input :zipcode, :text, class: "third"
+      # input :city, :text, class: "third"
+      # input :country, :text, class: "third"
 
-      input :title_prefix, :text, class: "third"
-      input :title, :text, class: "third"
-      input :title_postfix, :text, class: "third"
+      # input :title_prefix, :text, class: "third"
+      # input :title, :text, class: "third"
+      # input :title_postfix, :text, class: "third"
     end
   end
 
