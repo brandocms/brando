@@ -206,7 +206,7 @@ defmodule Brando.Assets.Vite do
       digested_vendor_file = static_path(vendor_file)
 
       ~E|<script type="module" crossorigin defer phx-track-static src="<%= digested_js_file %>"></script>
-    <link rel="modulepreload" href="<%= digested_vendor_file %>">
+    <link rel="modulepreload" phx-track-static href="<%= digested_vendor_file %>">
     |
     end
 
@@ -218,8 +218,8 @@ defmodule Brando.Assets.Vite do
       digested_polyfills = static_path(legacy_polyfills)
 
       ~E[<script nomodule>!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>
-      <script nomodule src="<%= digested_polyfills %>"></script>
-      <script nomodule id="vite-legacy-entry" data-src="<%= digested_entry %>">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>]
+      <script nomodule phx-track-static src="<%= digested_polyfills %>"></script>
+      <script nomodule phx-track-static id="vite-legacy-entry" data-src="<%= digested_entry %>">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>]
     end
   end
 end
