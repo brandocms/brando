@@ -38,6 +38,7 @@ defmodule Brando.Blueprint.Attributes do
     :boolean,
     :date,
     :datetime,
+    :enum,
     :naive_datetime,
     :decimal,
     :file,
@@ -66,8 +67,10 @@ defmodule Brando.Blueprint.Attributes do
   def build_attr(name, type, opts \\ [])
 
   def build_attr(name, :language, _opts) do
+    default_languages = Brando.config(:languages) || []
+
     languages =
-      Enum.map(Brando.config(:languages), fn [value: lang_code, text: _] ->
+      Enum.map(default_languages, fn [value: lang_code, text: _] ->
         String.to_atom(lang_code)
       end)
 
