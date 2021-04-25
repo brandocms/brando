@@ -52,7 +52,7 @@ defmodule Brando.I18n do
         end
       end
 
-  In your templates:
+  In your templates: (import Brando.I18n.Helpers)
 
       <a href="<%= localized_path(@language, :post_path, [@conn, :list]) %>"><%= gettext("List posts") %></a>
 
