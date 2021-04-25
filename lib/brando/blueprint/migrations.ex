@@ -6,7 +6,7 @@ defmodule Brando.Blueprint.Migrations do
   alias Brando.Blueprint.Relation
 
   @default_opts [
-    migration_path: "priv/repo/migration",
+    migration_path: "priv/repo/migrations",
     snapshot_path: "priv/blueprints/snapshots"
   ]
 
