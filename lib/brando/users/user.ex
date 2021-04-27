@@ -40,6 +40,7 @@ defmodule Brando.Users.User do
   trait Brando.Trait.Password
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Timestamped
+  trait Brando.Trait.Translatable
 
   attributes do
     attribute :name, :string, required: true
@@ -52,7 +53,6 @@ defmodule Brando.Users.User do
     attribute :avatar, :image, @avatar_cfg
     attribute :role, Brando.Type.Role
     attribute :config, Brando.Type.UserConfig, default: %Brando.Type.UserConfig{}
-    attribute :language, :string, required: true
     attribute :active, :boolean, default: true
     attribute :last_login, :naive_datetime
 
