@@ -13,10 +13,6 @@ defmodule Brando.Utils.SchemaTest do
     assert schema.name == "James Bond"
   end
 
-  test "put_creator :system" do
-    assert Utils.Schema.put_creator(%{}, :system) == %{}
-  end
-
   test "put_slug pass" do
     assert Utils.Schema.put_slug(%{}) == %{}
   end
