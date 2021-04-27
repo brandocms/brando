@@ -1,5 +1,9 @@
 ## 0.51.0
 
+* OTP24 needs a newer `jose` version:
+
+  `$ mix deps.update jose`
+
 * `list_page_fragments` -> `list_fragments`
 
 * Changed `Brando.Plug.Navigation` to require a keyword list as arg:
