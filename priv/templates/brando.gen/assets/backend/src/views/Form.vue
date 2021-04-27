@@ -53,6 +53,11 @@ export default {
     }
   },
 
+  inject: [
+    'adminChannel',
+    'GLOBALS'
+  ],
+
   // ++apollo
   <%= vue_form_queries %>
   // __apollo

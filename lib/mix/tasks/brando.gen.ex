@@ -26,6 +26,7 @@ defmodule Mix.Tasks.Brando.Gen do
 
     """)
 
+    Mix.Task.run("compile")
     blueprint = Mix.shell().prompt("+ Enter blueprint module") |> String.trim("\n")
     blueprint_module = Module.concat([blueprint])
     build_from_blueprint(blueprint_module)
@@ -320,6 +321,7 @@ defmodule Mix.Tasks.Brando.Gen do
   defp value_to_type(:uuid), do: Ecto.UUID
   defp value_to_type(:date), do: :date
   defp value_to_type(:time), do: :time
+  defp value_to_type(:language), do: :string
   defp value_to_type(:datetime), do: :utc_datetime
   defp value_to_type(:status), do: Brando.Type.Status
   defp value_to_type(:image), do: Brando.Type.Image

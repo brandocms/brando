@@ -1,0 +1,8 @@
+        <KInputSelect
+          v-model="<%= vue_singular %>.<%= k %>"
+          name="<%= vue_singular %>[<%= k %>]"
+          rules="required"
+          :options="GLOBALS.identity.languages"
+          option-value-key="id"
+          :label="$t('<%= vue_plural %>.fields.<%= k %>.label')"
+          :help-text="$t('<%= vue_plural %>.fields.<%= k %>.helpText')" />
