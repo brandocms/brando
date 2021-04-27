@@ -2,6 +2,7 @@ defmodule Brando.Blueprint.Upload do
   @moduledoc """
   Villain parsing
   """
+  alias Brando.Files
   alias Brando.Images
   alias Brando.Utils
   alias Brando.Type
