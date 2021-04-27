@@ -53,7 +53,7 @@ user = %Brando.Users.User{
   password: password,
   avatar: nil,
   role: :superuser,
-  language: "en"
+  language: :en
 }
 
 user = <%= application_module %>.Repo.insert!(user)
