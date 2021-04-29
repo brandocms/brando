@@ -1,5 +1,5 @@
 defmodule Brando.Blueprint.Migrations.Operations.Relation.Remove do
-  import Brando.Blueprint.Migrations.Types
+  # import Brando.Blueprint.Migrations.Types
 
   defstruct relation: nil,
             module: nil,
