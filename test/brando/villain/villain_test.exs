@@ -441,6 +441,16 @@ defmodule Brando.VillainTest do
 
     pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
     assert pf2.html == "So links.instagram.url says: 'https://instagram.com'."
+
+    Brando.Sites.update_identity(
+      %{
+        "links" => [
+          %{"name" => "Instagram", "url" => "https://instagram.com/test"},
+          %{"name" => "Facebook", "url" => "https://facebook.com/test"}
+        ]
+      },
+      user
+    )
   end
 
   test "ensure villains update on config changes", %{user: user} do

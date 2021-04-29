@@ -1,5 +1,5 @@
 defmodule Brando.JSONLDSchemaTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   @mock_data %{
     __meta__: %{
