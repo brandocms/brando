@@ -12,6 +12,12 @@ defmodule Brando.Blueprint.Migrations.Operations.Attribute.Remove do
 
   def down(%{attribute: %{name: :updated_at}}), do: ""
 
+  def down(%{attribute: attr}) do
+    """
+    add #{inspect(attr.name)}, #{inspect(migration_type(attr.type))}
+    """
+  end
+
   def up(%{attribute: %{name: :inserted_at}}) do
     """
     remove :inserted_at
@@ -24,19 +30,13 @@ defmodule Brando.Blueprint.Migrations.Operations.Attribute.Remove do
     """
   end
 
-  def down(%{attribute: attr}) do
-    """
-    add #{inspect(attr.name)}, #{inspect(migration_type(attr.type))}
-    """
-  end
-
   def up(%{attribute: attr}) do
     """
     remove #{inspect(attr.name)}
     """
   end
 
-  def down_indexes(%{attribute: %{name: name, type: :language, opts: opts}, module: module}) do
+  def down_indexes(%{attribute: %{name: name, type: :language, opts: _opts}, module: module}) do
     table_name = module.__naming__().table_name
 
     """
@@ -136,7 +136,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Attribute.Remove do
     """
   end
 
-  def up_indexes(attr) do
+  def up_indexes(_attr) do
     ""
   end
 end

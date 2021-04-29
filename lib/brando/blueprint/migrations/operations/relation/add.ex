@@ -1,5 +1,5 @@
 defmodule Brando.Blueprint.Migrations.Operations.Relation.Add do
-  import Brando.Blueprint.Migrations.Types
+  # import Brando.Blueprint.Migrations.Types
 
   defstruct relation: nil,
             module: nil,
@@ -31,6 +31,10 @@ defmodule Brando.Blueprint.Migrations.Operations.Relation.Add do
     """
   end
 
+  def up(%{relation: _}) do
+    ""
+  end
+
   def down(%{
         relation: %{type: :belongs_to, name: name}
       }) do
@@ -56,10 +60,6 @@ defmodule Brando.Blueprint.Migrations.Operations.Relation.Add do
   end
 
   def down(%{relation: _}) do
-    ""
-  end
-
-  def up(%{relation: _}) do
     ""
   end
 

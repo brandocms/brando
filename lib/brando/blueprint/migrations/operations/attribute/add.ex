@@ -24,7 +24,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Attribute.Add do
     """
   end
 
-  def up_indexes(%{attribute: %{name: name, type: :language, opts: opts}, module: module}) do
+  def up_indexes(%{attribute: %{name: name, type: :language, opts: _opts}, module: module}) do
     table_name = module.__naming__().table_name
 
     """
@@ -124,7 +124,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Attribute.Add do
     """
   end
 
-  def down_indexes(attr) do
+  def down_indexes(_attr) do
     ""
   end
 end
