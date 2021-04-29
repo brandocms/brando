@@ -1,5 +1,9 @@
 ## 0.51.0
 
+* Move your contexts to the application root:
+
+  `lib/my_app/accounts/accounts.ex` -> `lib/my_app/accounts.ex`
+
 * OTP24 needs a newer `jose` version:
 
   `$ mix deps.update jose`

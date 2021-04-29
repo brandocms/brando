@@ -48,7 +48,7 @@ defmodule Mix.Tasks.Brando.Gen do
       |> String.split("/")
       |> List.last()
 
-    domain_filename = "lib/#{otp_app()}/#{snake_domain}/#{snake_domain}.ex"
+    domain_filename = "lib/#{otp_app()}/#{snake_domain}.ex"
     domain_exists? = File.exists?(domain_filename)
 
     singular = blueprint.naming.singular |> String.capitalize()
@@ -170,7 +170,7 @@ defmodule Mix.Tasks.Brando.Gen do
 
     files =
       (domain_exists? && []) ||
-        [{:eex, "domain.ex", "lib/application_name/#{snake_domain}/#{snake_domain}.ex"}]
+        [{:eex, "domain.ex", "lib/application_name/#{snake_domain}.ex"}]
 
     files =
       files ++
