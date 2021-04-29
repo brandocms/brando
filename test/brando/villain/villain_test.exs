@@ -89,16 +89,16 @@ defmodule Brando.VillainTest do
   end
 
   test "list_villains" do
-    assert Brando.Villain.list_villains() == [
+    assert Enum.sort(Brando.Villain.list_villains()) == [
+             {Brando.Pages.Fragment,
+              [%Brando.Blueprint.Attribute{name: :data, opts: %{required: true}, type: :villain}]},
+             {Brando.Pages.Page,
+              [%Brando.Blueprint.Attribute{name: :data, opts: %{}, type: :villain}]},
              {Brando.TraitTest.Project,
               [
                 %Brando.Blueprint.Attribute{name: :bio_data, opts: %{}, type: :villain},
                 %Brando.Blueprint.Attribute{name: :data, opts: %{}, type: :villain}
-              ]},
-             {Brando.Pages.Fragment,
-              [%Brando.Blueprint.Attribute{name: :data, opts: %{required: true}, type: :villain}]},
-             {Brando.Pages.Page,
-              [%Brando.Blueprint.Attribute{name: :data, opts: %{}, type: :villain}]}
+              ]}
            ]
   end
 

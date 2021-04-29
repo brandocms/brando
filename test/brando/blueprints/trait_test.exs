@@ -99,16 +99,16 @@ defmodule Brando.Blueprint.TraitTest do
   describe "implementations" do
     test "list" do
       # NOTE: Project will not show up here since the protocol is not consolidated in exs test file
-      assert Trait.list_implementations(Brando.Trait.SoftDelete) == [
-               Brando.Pages.Fragment,
+      assert Enum.sort(Trait.list_implementations(Brando.Trait.SoftDelete)) == [
                Brando.BlueprintTest.Project,
-               Brando.Villain.Module,
                Brando.Image,
                Brando.ImageCategory,
+               Brando.ImageSeries,
+               Brando.MigrationTest.Project,
+               Brando.Pages.Fragment,
                Brando.Pages.Page,
                Brando.Users.User,
-               Brando.ImageSeries,
-               Brando.MigrationTest.Project
+               Brando.Villain.Module
              ]
     end
   end
