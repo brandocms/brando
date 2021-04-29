@@ -21,7 +21,7 @@ defmodule Brando.Plug.I18nTest do
   end
 
   test "put_admin_locale" do
-    u1 = Factory.insert(:random_user, language: "sv")
+    u1 = Factory.insert(:random_user, language: "en")
     mock_conn = %Plug.Conn{path_info: ["news"], private: %{plug_session: %{}}}
     _conn = I18n.put_admin_locale(mock_conn, [])
     assert Gettext.get_locale(Brando.Gettext) == "no"
@@ -33,6 +33,6 @@ defmodule Brando.Plug.I18nTest do
     mock_conn = put_private(mock_conn, :guardian_default_resource, u1)
 
     _conn = I18n.put_admin_locale(mock_conn, [])
-    assert Gettext.get_locale(Brando.Gettext) == "sv"
+    assert Gettext.get_locale(Brando.Gettext) == "en"
   end
 end

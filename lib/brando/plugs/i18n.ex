@@ -37,6 +37,7 @@ defmodule Brando.Plug.I18n do
       end
 
     # set for default brando backend
+    language = (is_atom(language) && to_string(language)) || language
     Gettext.put_locale(Brando.Gettext, language)
     conn
   end
