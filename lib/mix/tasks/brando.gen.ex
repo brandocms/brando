@@ -233,9 +233,6 @@ defmodule Mix.Tasks.Brando.Gen do
            "lib/application_name/graphql/resolvers/#{path}_resolver.ex"}
         ]
 
-    :ok = Mix.Brando.check_module_name_availability(binding[:module] <> "Controller")
-    :ok = Mix.Brando.check_module_name_availability(binding[:module] <> "View")
-
     Mix.Brando.copy_from(apps(), "priv/templates/brando.gen", "", binding, files)
 
     instructions = """
