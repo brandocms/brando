@@ -29,7 +29,7 @@ defmodule Brando.Blueprint.Migrations do
         _module,
         _opts
       ) do
-    nil
+    {nil, "No changes neccessary"}
   end
 
   def do_create_migration(
