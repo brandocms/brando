@@ -20,6 +20,11 @@ defmodule Brando.Plug.Authentication do
     super(conn, opts)
   end
 
+  get "/login" do
+    conn
+    |> send_resp(200, "LOGIN :)")
+  end
+
   post "/login" do
     authorization_module = conn.private.authorization_module
 

@@ -1,4 +1,4 @@
-defmodule Brando.GraphQL.Queries.PageQueriesTest do
+defmodule BrandoGraphQL.Queries.PageQueriesTest do
   use ExUnit.Case, async: true
   use Brando.ConnCase
 

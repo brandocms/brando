@@ -1,12 +1,12 @@
-defmodule Brando.Web do
+defmodule BrandoWeb do
   @moduledoc """
   A module that keeps using definitions for controllers,
   views and so on.
 
   This can be used in your application as:
 
-      use Brando.Web, :controller
-      use Brando.Web, :view
+      use BrandoWeb, :controller
+      use BrandoWeb, :view
 
   Keep the definitions in this module short and clean,
   mostly focused on imports, uses and aliases.
@@ -14,10 +14,12 @@ defmodule Brando.Web do
 
   def view do
     quote do
-      use Phoenix.View, root: "lib/web/templates"
+      use Phoenix.View, root: "lib/brando_web/templates"
 
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_flash: 2]
+      import Phoenix.LiveView.Helpers
+      import Surface
 
       import Plug.Conn, only: [get_session: 2]
 
@@ -27,6 +29,9 @@ defmodule Brando.Web do
       # Import all HTML functions (forms, tags, etc)
       use Phoenix.HTML
       use Brando.HTML
+
+      import Brando.Gettext
+      import BrandoWeb.ErrorHelpers
     end
   end
 

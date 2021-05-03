@@ -216,7 +216,7 @@ end
 
 defmodule BrandoIntegration.ModuleWithDatasource do
   use Brando.Datasource
-  use Brando.Web, :schema
+  use BrandoWeb, :schema
 
   schema "zapp" do
     field :title, :string

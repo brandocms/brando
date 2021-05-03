@@ -1,4 +1,4 @@
-defmodule Brando.GraphQL.Queries.ImageQueriesTest do
+defmodule BrandoGraphQL.Queries.ImageQueriesTest do
   use ExUnit.Case, async: true
   use Brando.ConnCase
 

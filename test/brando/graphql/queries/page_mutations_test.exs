@@ -1,4 +1,4 @@
-defmodule Brando.GraphQL.Mutations.PageMutationsTest do
+defmodule BrandoGraphQL.Mutations.PageMutationsTest do
   use ExUnit.Case, async: true
   use Brando.ConnCase
 

@@ -8,6 +8,7 @@
 
 * Move your contexts to the application root:
 
+* Rename all `Brando.GraphQL` -> `BrandoGraphQL`
   `lib/my_app/accounts/accounts.ex` -> `lib/my_app/accounts.ex`
 
 * OTP24 needs a newer `jose` version:

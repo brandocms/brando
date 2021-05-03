@@ -21,16 +21,21 @@ defmodule Brando.Router do
 
   defmacro admin_routes(path \\ "/admin") do
     quote do
-      upload_ctrl = Brando.Admin.API.Images.UploadController
-      villain_ctrl = Brando.Admin.API.Villain.VillainController
+      import BrandoWeb.UserAuth
+
+      upload_ctrl = BrandoWeb.API.Images.UploadController
+      villain_ctrl = BrandoWeb.API.Villain.VillainController
 
       pipeline :admin do
-        plug :accepts, ~w(html json)
+        plug :accepts, ["html"]
         plug :fetch_session
-        plug :fetch_flash
+        plug :fetch_live_flash
         plug :put_admin_locale
-        plug :put_layout, {Brando.Admin.LayoutView, "admin.html"}
+        plug :protect_from_forgery
         plug :put_secure_browser_headers
+        plug :put_extra_secure_browser_headers
+        plug :put_root_layout, {BrandoWeb.LayoutView, :root}
+        plug :fetch_current_user
       end
 
       pipeline :graphql do
@@ -56,11 +61,35 @@ defmodule Brando.Router do
       end
 
       scope unquote(path), as: :admin do
-        pipe_through :admin
+        scope "/", BrandoWeb do
+          pipe_through [:admin, :redirect_if_user_is_authenticated]
 
-        forward "/auth", Brando.Plug.Authentication,
-          guardian_module: Brando.web_module(Guardian),
-          authorization_module: Brando.app_module(Authorization)
+          get "/users/register", UserRegistrationController, :new
+          post "/users/register", UserRegistrationController, :create
+          get "/users/log_in", UserSessionController, :new
+          post "/users/log_in", UserSessionController, :create
+          get "/users/reset_password", UserResetPasswordController, :new
+          post "/users/reset_password", UserResetPasswordController, :create
+          get "/users/reset_password/:token", UserResetPasswordController, :edit
+          put "/users/reset_password/:token", UserResetPasswordController, :update
+        end
+
+        scope "/", BrandoWeb do
+          pipe_through [:admin, :require_authenticated_user]
+
+          get "/users/settings", UserSettingsController, :edit
+          put "/users/settings", UserSettingsController, :update
+          get "/users/settings/confirm_email/:token", UserSettingsController, :confirm_email
+        end
+
+        scope "/", BrandoWeb do
+          pipe_through [:admin]
+
+          delete "/users/log_out", UserSessionController, :delete
+          get "/users/confirm", UserConfirmationController, :new
+          post "/users/confirm", UserConfirmationController, :create
+          get "/users/confirm/:token", UserConfirmationController, :confirm
+        end
 
         scope "/api" do
           pipe_through [:api, :token, :authenticated]
@@ -82,8 +111,6 @@ defmodule Brando.Router do
           pipe_through [:graphql]
           forward "/", Absinthe.Plug, schema: Brando.app_module(Schema)
         end
-
-        get "/*path", Brando.AdminController, :index
       end
     end
   end

@@ -2,9 +2,10 @@ defmodule Brando.Users do
   @moduledoc """
   Context for Users.
   """
-  use Brando.Web, :context
+  use BrandoWeb, :context
   use Brando.Query
   alias Brando.Users.User
+  alias Brando.Users.UserToken
   alias Brando.Utils
   import Ecto.Query
 
@@ -43,6 +44,7 @@ defmodule Brando.Users do
     fn
       {:id, id}, q -> from t in q, where: t.id == ^id
       {:email, email}, q -> from t in q, where: t.email == ^email
+      {:password, password}, q -> from t in q, where: t.password == ^password
       {:active, active}, q -> from t in q, where: t.active == ^active
       {field, value}, q -> from t in q, where: field(t, ^field) == ^value
     end
@@ -75,5 +77,30 @@ defmodule Brando.Users do
   def can_login?(user) do
     {:ok, role} = Brando.Type.Role.dump(user.role)
     (role > 0 && true) || false
+  end
+
+  @doc """
+  Generates a session token.
+  """
+  def generate_user_session_token(user) do
+    {token, user_token} = UserToken.build_session_token(user)
+    Brando.repo().insert!(user_token)
+    token
+  end
+
+  @doc """
+  Gets the user with the given signed token.
+  """
+  def get_user_by_session_token(token) do
+    {:ok, query} = UserToken.verify_session_token_query(token)
+    Brando.repo().one(query)
+  end
+
+  @doc """
+  Deletes the signed token with the given context.
+  """
+  def delete_session_token(token) do
+    Brando.repo().delete_all(UserToken.token_and_context_query(token, "session"))
+    :ok
   end
 end

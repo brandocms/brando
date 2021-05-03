@@ -5,7 +5,7 @@ defmodule Brando.Images do
   Interfaces with database
   """
 
-  use Brando.Web, :context
+  use BrandoWeb, :context
   use Brando.Query
 
   import Ecto.Query
