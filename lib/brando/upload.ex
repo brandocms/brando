@@ -13,9 +13,9 @@ defmodule Brando.Upload do
 
   This module contains helper functions for both paths.
   """
-  defstruct plug: nil,
+  defstruct upload_entry: nil,
             cfg: nil,
-            extra_info: nil
+            meta: nil
 
   @type t :: %__MODULE__{}
   @type img_config :: Brando.Type.ImageConfig.t()
@@ -30,24 +30,41 @@ defmodule Brando.Upload do
   Checks `plug` for filename, checks mimetype,
   creates upload path and copies files
   """
-  @spec process_upload(upload_plug :: Plug.Upload.t(), cfg_struct :: img_config) ::
-          {:ok, t()}
-          | {:error, :empty_filename}
-          | {:error, :content_type, binary, any}
-          | {:error, :mkdir, binary}
-          | {:error, :cp, {binary, binary, binary}}
-  def process_upload(plug, cfg_struct) do
-    with {:ok, upload} <- create_upload_struct(plug, cfg_struct),
+
+  # @spec process_upload(upload_plug :: Plug.Upload.t(), cfg_struct :: img_config) ::
+  #         {:ok, t()}
+  #         | {:error, :empty_filename}
+  #         | {:error, :content_type, binary, any}
+  #         | {:error, :mkdir, binary}
+  #         | {:error, :cp, {binary, binary, binary}}
+  # def process_upload(plug, cfg_struct) do
+  #   with {:ok, upload} <- create_upload_struct(plug, cfg_struct),
+  #        {:ok, upload} <- get_valid_filename(upload),
+  #        {:ok, upload} <- ensure_correct_ext(upload),
+  #        {:ok, upload} <- check_mimetype(upload),
+  #        {:ok, upload} <- create_upload_path(upload),
+  #        {:ok, upload} <- copy_uploaded_file(upload) do
+  #     {:ok, upload}
+  #   end
+  # end
+
+  def handle_upload(meta, upload_entry, cfg) do
+    require Logger
+    Logger.error(inspect(meta, pretty: true))
+    Logger.error(inspect(upload_entry, pretty: true))
+    Logger.error(inspect(cfg, pretty: true))
+
+    with {:ok, upload} <- create_upload_struct(meta, upload_entry, cfg),
          {:ok, upload} <- get_valid_filename(upload),
          {:ok, upload} <- ensure_correct_ext(upload),
          {:ok, upload} <- check_mimetype(upload),
          {:ok, upload} <- create_upload_path(upload),
          {:ok, upload} <- copy_uploaded_file(upload) do
-      {:ok, upload}
+      require Logger
+      Logger.error(inspect(upload, pretty: true))
+      %Brando.Type.Image{path: Path.join(upload.cfg.upload_path, upload.meta.filename)}
     end
-  end
 
-  def handle_upload(meta, entry, cfg) do
     # first copy file
     # with {:ok, image_struct} <-
     #        Images.Processing.create_image_type_struct(upload, user, upload_params),
@@ -57,7 +74,6 @@ defmodule Brando.Upload do
     #     results
     #     |> List.first()
     #     |> Map.get(:image_struct)
-    %Brando.Type.Image{path: meta.path}
   end
 
   @doc """
@@ -105,36 +121,41 @@ defmodule Brando.Upload do
     {:error, message}
   end
 
-  defp create_upload_struct(plug, cfg_struct) do
-    {:ok, %__MODULE__{plug: plug, cfg: cfg_struct}}
+  defp create_upload_struct(meta, upload_entry, cfg_struct) do
+    {:ok, %__MODULE__{meta: meta, upload_entry: upload_entry, cfg: cfg_struct}}
   end
 
-  defp get_valid_filename(%__MODULE__{plug: %Plug.Upload{filename: ""}}) do
+  defp get_valid_filename(%__MODULE__{upload_entry: %{client_name: ""}}) do
     {:error, :empty_filename}
   end
 
-  defp get_valid_filename(%__MODULE__{plug: %Plug.Upload{filename: filename}, cfg: cfg} = upload) do
+  defp get_valid_filename(%__MODULE__{upload_entry: %{client_name: filename}, cfg: cfg} = upload) do
     upload =
       case Map.get(cfg, :random_filename, false) do
-        true -> put_in(upload.plug.filename, random_filename(filename))
-        _ -> put_in(upload.plug.filename, slugify_filename(filename))
+        true ->
+          new_meta = Map.merge(upload.meta, %{filename: random_filename(filename)})
+          put_in(upload.meta, new_meta)
+
+        _ ->
+          new_meta = Map.merge(upload.meta, %{filename: slugify_filename(filename)})
+          put_in(upload.meta, new_meta)
       end
 
     {:ok, upload}
   end
 
-  defp ensure_correct_ext(%__MODULE__{plug: %Plug.Upload{filename: ""}}) do
+  defp ensure_correct_ext(%__MODULE__{meta: %{filename: ""}}) do
     {:error, :empty_filename}
   end
 
   # make sure jpeg's extension are jpg to avoid headaches w/sharp-cli
-  defp ensure_correct_ext(%__MODULE__{plug: %Plug.Upload{filename: filename}} = upload) do
-    upload = put_in(upload.plug.filename, ensure_correct_extension(filename))
+  defp ensure_correct_ext(%__MODULE__{meta: %{filename: filename}} = upload) do
+    upload = put_in(upload.meta.filename, ensure_correct_extension(filename))
 
     {:ok, upload}
   end
 
-  defp check_mimetype(%__MODULE__{plug: %{content_type: content_type}, cfg: cfg} = upload) do
+  defp check_mimetype(%__MODULE__{upload_entry: %{client_type: content_type}, cfg: cfg} = upload) do
     if content_type in Map.get(cfg, :allowed_mimetypes) do
       {:ok, upload}
     else
@@ -151,7 +172,7 @@ defmodule Brando.Upload do
 
     case File.mkdir_p(upload_path) do
       :ok ->
-        {:ok, put_in(upload.plug, Map.put(upload.plug, :upload_path, upload_path))}
+        {:ok, put_in(upload.meta, Map.put(upload.meta, :upload_path, upload_path))}
 
       {:error, reason} ->
         {:error, :mkdir, reason}
@@ -159,7 +180,7 @@ defmodule Brando.Upload do
   end
 
   defp copy_uploaded_file(
-         %__MODULE__{plug: %{filename: fname, path: src, upload_path: ul_path}} = upload
+         %__MODULE__{meta: %{filename: fname, path: src, upload_path: ul_path}} = upload
        ) do
     joined_dest = Path.join(ul_path, fname)
 
@@ -168,7 +189,7 @@ defmodule Brando.Upload do
 
     case File.cp(src, dest, fn _, _ -> false end) do
       :ok ->
-        {:ok, put_in(upload.plug, Map.put(upload.plug, :uploaded_file, dest))}
+        {:ok, put_in(upload.meta, Map.put(upload.meta, :uploaded_file, dest))}
 
       {:error, reason} ->
         {:error, :cp, {reason, src, dest}}

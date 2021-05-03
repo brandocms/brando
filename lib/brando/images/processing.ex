@@ -28,7 +28,7 @@ defmodule Brando.Images.Processing do
   @spec create_image_type_struct(upload, user, extra_params :: any) ::
           {:error, {:create_image_type_struct, any}} | {:ok, image_type_struct}
   def create_image_type_struct(
-        %Upload{plug: %{uploaded_file: file}, cfg: cfg},
+        %Upload{upload_entry: %{uploaded_file: file}, cfg: cfg},
         user,
         extra_params \\ %{}
       ) do
