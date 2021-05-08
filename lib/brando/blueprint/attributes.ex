@@ -66,13 +66,19 @@ defmodule Brando.Blueprint.Attributes do
 
   def build_attr(name, type, opts \\ [])
 
-  def build_attr(name, :language, _opts) do
+  def build_attr(name, :language, opts) do
     default_languages =
-      Brando.config(:languages) ||
-        [
-          [value: "en", text: "English"],
-          [value: "no", text: "Norsk"]
-        ]
+      case Keyword.get(opts, :languages) do
+        nil ->
+          Brando.config(:languages) ||
+            [
+              [value: "en", text: "English"],
+              [value: "no", text: "Norsk"]
+            ]
+
+        supplied_langs ->
+          supplied_langs
+      end
 
     languages =
       Enum.map(default_languages, fn [value: lang_code, text: _] ->
