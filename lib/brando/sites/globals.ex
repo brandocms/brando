@@ -3,6 +3,7 @@ defmodule Brando.Globals do
   Globals
   """
   alias Brando.Cache
+  alias Brando.Sites.Global
   alias Brando.Sites.GlobalCategory
   alias Brando.Villain
 
@@ -62,6 +63,14 @@ defmodule Brando.Globals do
       _ -> ""
     end
   end
+
+  def get_global_value!(key_path) when is_binary(key_path) do
+    get_global!(key_path)
+    |> get_global_value!()
+  end
+
+  def get_global_value!(%Global{type: "boolean", data: %{"value" => ""}}), do: false
+  def get_global_value!(%Global{type: "boolean", data: %{"value" => _}}), do: true
 
   @doc """
   Render global by key path
