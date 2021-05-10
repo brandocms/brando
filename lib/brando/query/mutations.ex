@@ -10,8 +10,10 @@ defmodule Brando.Query.Mutations do
   alias Brando.Schema
   alias Brando.Trait
 
-  def create(module, params, user, callback_block) do
-    with changeset <- module.changeset(struct(module), params, user),
+  def create(module, params, user, callback_block, custom_changeset) do
+    changeset_fun = (custom_changeset && custom_changeset) || (&module.changeset/3)
+
+    with changeset <- changeset_fun.(struct(module), params, user),
          changeset <- Publisher.maybe_override_status(changeset),
          {:ok, entry} <- Query.insert(changeset),
          {:ok, _} <- Datasource.update_datasource(module, entry),
@@ -39,7 +41,9 @@ defmodule Brando.Query.Mutations do
     end
   end
 
-  def update(context, module, name, id, params, user, preloads, callback_block) do
+  def update(context, module, name, id, params, user, preloads, callback_block, custom_changeset) do
+    changeset_fun = (custom_changeset && custom_changeset) || (&module.changeset/3)
+
     get_opts =
       if preloads do
         %{matches: %{id: id}, preload: preloads}
@@ -48,7 +52,7 @@ defmodule Brando.Query.Mutations do
       end
 
     with {:ok, entry} <- apply(context, :"get_#{name}", [get_opts]),
-         changeset <- module.changeset(entry, params, user),
+         changeset <- changeset_fun.(entry, params, user),
          changeset <- Publisher.maybe_override_status(changeset),
          {:ok, entry} <- Query.update(changeset),
          {:ok, _} <- Datasource.update_datasource(module, entry),
