@@ -198,16 +198,16 @@
     "@babel/helper-validator-identifier" "^7.12.11"
     to-fast-properties "^2.0.0"
 
-"@brandocms/europacss@^0.6.0":
-  version "0.6.0"
-  resolved "https://registry.yarnpkg.com/@brandocms/europacss/-/europacss-0.6.0.tgz#16ece5b350445c04f41962f95b385940ca06e553"
-  integrity sha512-LUvoIzm3tCe+IXK5DIKgE5OuChaYouSMtO03gVo/aw5cVfuCoxNrdg+WMvFnxW6UiBvKtrMULrhp4ts+PjHGjg==
+"@brandocms/europacss@^0.6.1":
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/@brandocms/europacss/-/europacss-0.6.1.tgz#abe8f430de2134272b33c069006c30a9414facdd"
+  integrity sha512-DLvYCp+WZs+f9xQLO4yyZlYKwq1KqXtQu3f2jYLx0437/+z0zZhh9bmarFbzsZYRdz30ftiHLdH3DQdim9uCeg==
   dependencies:
     lodash "^4.17.21"
     normalize.css "^8.0.1"
     postcss "^7.0.30"
     postcss-extend-rule "^3.0.0"
-    postcss-functions twined/postcss-functions
+    postcss-functions "github:twined/postcss-functions"
     postcss-nested "^4.2.1"
     postcss-reporter "^6.0.1"
     reduce-css-calc "^2.1.8"
@@ -1187,12 +1187,7 @@ lodash.truncate@^4.4.2:
   resolved "https://registry.yarnpkg.com/lodash.truncate/-/lodash.truncate-4.4.2.tgz#5a350da0b1113b837ecfffd5812cbe58d6eae193"
   integrity sha1-WjUNoLERO4N+z//VgSy+WNbq4ZM=
 
-lodash@^4.17.11:
-  version "4.17.20"
-  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.20.tgz#b44a9b6297bcb698f1c51a3545a2b3b368d59c52"
-  integrity sha512-PlhdFcillOINfeV7Ni6oF1TAEayyZBoZ8bcshTHqOYJYlrqzRK5hagpagky5o4HfCzzd1TRkXPMFq6cKk9rGmA==
-
-lodash@^4.17.21:
+lodash@^4.17.11, lodash@^4.17.21:
   version "4.17.21"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
   integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==
@@ -1616,8 +1611,9 @@ postcss-font-variant@^4.0.0:
   dependencies:
     postcss "^7.0.2"
 
-postcss-functions@twined/postcss-functions:
+"postcss-functions@github:twined/postcss-functions":
   version "4.0.0"
+  uid "7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   dependencies:
     glob "^7.1.6"
