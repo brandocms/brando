@@ -351,11 +351,11 @@ defmodule Brando.Villain do
     {:ok, result}
   end
 
-  defp get_html_field(schema, %{name: :data}) do
+  def get_html_field(schema, %{name: :data}) do
     schema.__attribute__(:html)
   end
 
-  defp get_html_field(schema, %{name: data_name}) do
+  def get_html_field(schema, %{name: data_name}) do
     data_name
     |> to_string
     |> String.replace("_data", "_html")
