@@ -12,7 +12,7 @@ defmodule Brando.Migrations.Projects.Project.Blueprint003 do
       remove :meta_title
       remove :properties
       remove :more_properties
-      remove :creator
+      remove :creator_id
     end
 
     drop unique_index(:projects, [:slug, :language])
@@ -22,14 +22,14 @@ defmodule Brando.Migrations.Projects.Project.Blueprint003 do
     alter table(:projects) do
       add :title, :text
       add :status, :integer
-      add :slug, :slug
+      add :slug, :text
       add :cover, :jsonb
       add :meta_image, :jsonb
       add :meta_description, :text
       add :meta_title, :text
       add :properties, :jsonb
       add :more_properties, :jsonb
-      add :creator, references(:users)
+      add :creator_id, references(:users)
     end
 
     create unique_index(:projects, [:slug, :language])

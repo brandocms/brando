@@ -5,7 +5,7 @@ defmodule Brando.Migrations.Projects.Project.Blueprint001 do
     create table(:projects) do
       add :title, :text
       add :status, :integer
-      add :slug, :slug
+      add :slug, :text
       add :cover, :jsonb
       add :data, :jsonb
       add :deleted_at, :utc_datetime
@@ -13,7 +13,7 @@ defmodule Brando.Migrations.Projects.Project.Blueprint001 do
       timestamps()
       add :language, :text
       add :properties, :jsonb
-      add :creator, references(:users)
+      add :creator_id, references(:users)
     end
 
     create unique_index(:projects, [:slug, :language])
