@@ -380,12 +380,21 @@ defmodule Brando.Villain do
       %{type: "datasource", data: %{module_id: module_id}}
     ]
 
+    contained_datasourced_t = [
+      %{
+        type: "container",
+        data: %{blocks: [%{type: "datasource", data: %{module_id: module_id}}]}
+      }
+    ]
+
     Brando.repo().all(
       from s in schema,
         select: s.id,
         where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t),
         or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_t),
-        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^datasourced_t)
+        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^datasourced_t),
+        or_where:
+          fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_datasourced_t)
     )
   end
 
