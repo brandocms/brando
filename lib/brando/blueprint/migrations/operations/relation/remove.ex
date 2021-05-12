@@ -11,7 +11,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Relation.Remove do
     referenced_table = referenced_module.__schema__(:source)
 
     """
-    add #{inspect(name)}, references(:#{referenced_table})
+    add #{inspect(name)}_id, references(:#{referenced_table})
     """
   end
 
@@ -39,7 +39,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Relation.Remove do
         relation: %{type: :belongs_to, name: name}
       }) do
     """
-    remove #{inspect(name)}
+    remove #{inspect(name)}_id
     """
   end
 
