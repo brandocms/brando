@@ -289,20 +289,33 @@ defmodule Brando.Datasource do
     if is_datasource(datasource_module) do
       villains = Villain.list_villains()
 
-      for {schema, fields} <- villains,
-          {_, data_field, html_field} <- fields do
-        ids = list_ids_with_datasource(schema, datasource_module, data_field)
-
-        unless Enum.empty?(ids) do
-          Villain.rerender_html_from_ids(
-            {schema, data_field, html_field},
-            ids
-          )
-        end
+      for {schema, fields} <- villains do
+        Enum.map(fields, &parse_fields(datasource_module, &1, schema))
       end
     end
 
     {:ok, entry}
+  end
+
+  defp parse_fields(datasource_module, {:villain, data_field, html_field}, schema) do
+    process_field(schema, datasource_module, data_field, html_field)
+  end
+
+  defp parse_fields(datasource_module, field, schema) do
+    process_field(
+      schema,
+      datasource_module,
+      field.name,
+      Villain.get_html_field(schema, field).name
+    )
+  end
+
+  defp process_field(schema, datasource_module, data_field, html_field) do
+    ids = list_ids_with_datasource(schema, datasource_module, data_field)
+
+    unless Enum.empty?(ids) do
+      Villain.rerender_html_from_ids({schema, data_field, html_field}, ids)
+    end
   end
 
   @doc """
