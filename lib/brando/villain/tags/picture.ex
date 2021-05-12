@@ -7,7 +7,7 @@ defmodule Brando.Villain.Tags.Picture do
   alias Liquex.Parser.Tag
   alias Liquex.Parser.Object
 
-  # {% picture entry.cover { size: 'auto', lazyload: true } %}
+  # {% picture entry.cover { size: 'auto', lazyload: true, prefix: 'media' } %}
 
   def picture_tag(combinator \\ empty()) do
     combinator

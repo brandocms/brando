@@ -542,8 +542,19 @@ defmodule Brando.HTML.Images do
   def get_srcset(image_field, srcset, opts, placeholder) when is_binary(srcset) do
     [module_string, field_string] = String.split(srcset, ":")
     module = Module.concat([module_string])
-    field = String.to_existing_atom(field_string)
-    get_srcset(image_field, {module, field}, opts, placeholder)
+
+    case String.split(field_string, ".") do
+      [field, key] ->
+        get_srcset(
+          image_field,
+          {module, String.to_existing_atom(field), String.to_existing_atom(key)},
+          opts,
+          placeholder
+        )
+
+      [field] ->
+        get_srcset(image_field, {module, String.to_existing_atom(field)}, opts, placeholder)
+    end
   end
 
   def get_srcset(image_field, {mod, field}, opts, placeholder) do
@@ -555,6 +566,8 @@ defmodule Brando.HTML.Images do
         {:ok, apply(mod, :__attribute_opts__, [field])}
       end
 
+    #! END
+
     if !cfg.srcset do
       raise ArgumentError,
         message: "no `:srcset` key set in #{inspect(mod)}'s #{inspect(field)} image config"
@@ -562,6 +575,51 @@ defmodule Brando.HTML.Images do
 
     srcset_values =
       for {k, v} <- cfg.srcset do
+        path =
+          Utils.img_url(
+            image_field,
+            (placeholder not in [:svg, :dominant_color] && placeholder) || k,
+            opts
+          )
+
+        "#{path} #{v}"
+      end
+
+    Enum.join(srcset_values, ", ")
+  end
+
+  # this is for srcsets with keys:
+  #
+  # srcset: %{
+  #   regular: [
+  #     {"small", "700w"},
+  #     {"medium", "1100w"},
+  #     {"large", "1700w"},
+  #     {"xlarge", "2100w"}
+  #   ],
+  #   cropped: [
+  #     {"small_crop", "700w"},
+  #     {"medium_crop", "1100w"}
+  #   ]
+  # }
+  def get_srcset(image_field, {mod, field, key}, opts, placeholder) do
+    #! TODO Remove this when we move to Blueprints completely
+    {:ok, cfg} =
+      if {:get_image_cfg, 1} in mod.__info__(:functions) do
+        apply(mod, :get_image_cfg, [field])
+      else
+        {:ok, apply(mod, :__attribute_opts__, [field])}
+      end
+
+    #! END
+
+    if !cfg.srcset do
+      raise ArgumentError,
+        message: "no `:srcset` key set in #{inspect(mod)}'s #{inspect(field)} image config"
+    end
+
+    srcset_values =
+      for {k, v} <- Map.get(cfg.srcset, key) do
         path =
           Utils.img_url(
             image_field,
