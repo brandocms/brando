@@ -11,7 +11,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Relation.Add do
     referenced_table = referenced_module.__schema__(:source)
 
     """
-    add #{inspect(name)}, references(:#{referenced_table})
+    add #{inspect(name)}_id, references(:#{referenced_table})
     """
   end
 
