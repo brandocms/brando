@@ -1,5 +1,16 @@
 defmodule Brando.Generators.Vue do
   @locales ["en", "no"]
+  @stripped_attrs [
+    "inserted_at",
+    "updated_at",
+    "deleted_at",
+    "meta_title",
+    "meta_description",
+    "meta_image",
+    "publish_at",
+    "sequence",
+    "html"
+  ]
 
   def before_copy(binding) do
     binding
@@ -48,9 +59,7 @@ defmodule Brando.Generators.Vue do
     )
 
     filename =
-      "assets/backend/src/views/#{binding[:snake_domain]}/#{
-        Recase.to_pascal(binding[:vue_singular])
-      }Form.vue"
+      "assets/backend/src/views/#{binding[:snake_domain]}/#{Recase.to_pascal(binding[:vue_singular])}Form.vue"
 
     for {_, {:references, target}} <- binding[:assocs] do
       [gql_domain, gql_target] =
@@ -77,6 +86,7 @@ defmodule Brando.Generators.Vue do
     vue_contentlist_rows =
       attrs
       |> Enum.map(fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.reject(fn {k, _} -> k in @stripped_attrs end)
       |> Enum.map(fn
         {k, {:array, _}} ->
           {k, ""}
@@ -298,6 +308,7 @@ defmodule Brando.Generators.Vue do
     vue_inputs =
       attrs
       |> Enum.map(fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.reject(fn {k, _} -> k in @stripped_attrs end)
       |> Enum.map(fn
         {k, {:array, _}} ->
           {k, nil, nil}
