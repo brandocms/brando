@@ -33,6 +33,9 @@ defmodule Brando.HTML.Images do
     * `srcset` - if you want to use the srcset attribute. Set in the form of `{module, field}`.
       I.e `srcset: {Brando.Users.User, :avatar}`
 
+      Or with a key:
+      I.e `srcset: {Brando.Users.User, :avatar, :cropped_key}`
+
       You can also reference a config struct:
       I.e `srcset: image_series.cfg`
 
@@ -77,7 +80,6 @@ defmodule Brando.HTML.Images do
       |> add_moonwalk()
 
     img_tag = tag(:img, attrs.img)
-    noscript_img_tag = tag(:img, attrs.noscript_img)
     source_tag = build_source_tags(image_struct, attrs)
 
     figcaption_tag =
@@ -89,6 +91,8 @@ defmodule Brando.HTML.Images do
 
     mq_source_tags = attrs.mq_sources
 
+    noscript_alt = Keyword.get(attrs.opts, :alt, Map.get(image_struct, :alt, ""))
+    noscript_img_tag = tag(:img, attrs.noscript_img ++ [alt: noscript_alt])
     noscript_tag = content_tag(:noscript, noscript_img_tag)
 
     picture_tag =
@@ -246,17 +250,18 @@ defmodule Brando.HTML.Images do
 
     no_srcset_placeholder = srcset_placeholder?(placeholder)
 
-    srcset =
+    {cropped_ratio, srcset} =
       (Keyword.get(attrs.opts, :srcset) &&
          get_srcset(image_struct, attrs.opts[:srcset], attrs.opts)) ||
-        false
+        {false, false}
 
-    placeholder_srcset =
+    {_, placeholder_srcset} =
       (Keyword.get(attrs.opts, :srcset) &&
          get_srcset(image_struct, attrs.opts[:srcset], attrs.opts, placeholder)) ||
-        false
+        {false, false}
 
     attrs
+    |> Map.put(:cropped_ratio, cropped_ratio)
     |> put_in([:picture, :data_ll_srcset], !!srcset)
     |> put_in([:img, :srcset], if(no_srcset_placeholder, do: false, else: placeholder_srcset))
     |> put_in([:img, :data_ll_placeholder], !!placeholder_srcset)
@@ -266,12 +271,13 @@ defmodule Brando.HTML.Images do
   end
 
   defp add_srcset(%{lazyload: false} = attrs, image_struct) do
-    srcset =
+    {cropped_ratio, srcset} =
       (Keyword.get(attrs.opts, :srcset) &&
          get_srcset(image_struct, attrs.opts[:srcset], attrs.opts)) ||
-        false
+        {false, false}
 
     attrs
+    |> Map.put(:cropped_ratio, cropped_ratio)
     |> put_in([:img, :srcset], srcset)
     |> put_in([:img, :data_srcset], false)
     |> put_in([:source, :srcset], srcset)
@@ -346,7 +352,7 @@ defmodule Brando.HTML.Images do
     end
   end
 
-  defp add_dims(attrs, image_struct) do
+  defp add_dims(%{cropped_ratio: false} = attrs, image_struct) do
     img_width = Map.get(image_struct, :width)
     img_height = Map.get(image_struct, :height)
 
@@ -375,6 +381,36 @@ defmodule Brando.HTML.Images do
       end
 
     orientation = Brando.Images.get_image_orientation(img_width, img_height)
+
+    attrs
+    |> put_in([:img, :width], width)
+    |> put_in([:img, :height], height)
+    |> put_in([:picture, :data_orientation], orientation)
+  end
+
+  defp add_dims(%{cropped_ratio: cropped_ratio} = attrs, image_struct) do
+    img_width = Map.get(image_struct, :width)
+    img_height = Map.get(image_struct, :height)
+
+    width =
+      case img_width do
+        nil ->
+          false
+
+        width ->
+          width
+      end
+
+    height =
+      case img_height do
+        nil ->
+          false
+
+        _ ->
+          round(width / cropped_ratio)
+      end
+
+    orientation = Brando.Images.get_image_orientation(width, height)
 
     attrs
     |> put_in([:img, :width], width)
@@ -455,7 +491,9 @@ defmodule Brando.HTML.Images do
   end
 
   defp extract_srcset_attr(img_field, opts),
-    do: (Keyword.get(opts, :srcset) && [srcset: get_srcset(img_field, opts[:srcset], opts)]) || []
+    do:
+      (Keyword.get(opts, :srcset) &&
+         [srcset: get_srcset(img_field, opts[:srcset], opts) |> elem(1)]) || []
 
   defp extract_sizes_attr(_, opts),
     do: (Keyword.get(opts, :sizes) && [sizes: get_sizes(opts[:sizes])]) || []
@@ -537,7 +575,7 @@ defmodule Brando.HTML.Images do
   Get srcset from image config
   """
   def get_srcset(image_field, cfg, opts, placeholder \\ false)
-  def get_srcset(_, nil, _, _), do: nil
+  def get_srcset(_, nil, _, _), do: {false, nil}
 
   def get_srcset(image_field, srcset, opts, placeholder) when is_binary(srcset) do
     [module_string, field_string] = String.split(srcset, ":")
@@ -585,7 +623,7 @@ defmodule Brando.HTML.Images do
         "#{path} #{v}"
       end
 
-    Enum.join(srcset_values, ", ")
+    {false, Enum.join(srcset_values, ", ")}
   end
 
   # this is for srcsets with keys:
@@ -618,6 +656,9 @@ defmodule Brando.HTML.Images do
         message: "no `:srcset` key set in #{inspect(mod)}'s #{inspect(field)} image config"
     end
 
+    # check if it is cropped
+    cropped_ratio = check_cropped(cfg, key)
+
     srcset_values =
       for {k, v} <- Map.get(cfg.srcset, key) do
         path =
@@ -630,7 +671,7 @@ defmodule Brando.HTML.Images do
         "#{path} #{v}"
       end
 
-    Enum.join(srcset_values, ", ")
+    {cropped_ratio, Enum.join(srcset_values, ", ")}
   end
 
   def get_srcset(image_field, %Brando.Type.ImageConfig{} = cfg, opts, placeholder) do
@@ -652,7 +693,7 @@ defmodule Brando.HTML.Images do
         "#{path} #{v}"
       end
 
-    Enum.join(srcset_values, ", ")
+    {false, Enum.join(srcset_values, ", ")}
   end
 
   def get_srcset(image_field, srcset, opts, placeholder) do
@@ -668,7 +709,44 @@ defmodule Brando.HTML.Images do
         "#{path} #{v}"
       end
 
-    Enum.join(srcset_values, ", ")
+    {false, Enum.join(srcset_values, ", ")}
+  end
+
+  defp check_cropped(%{sizes: sizes, srcset: srcset}, key) do
+    string_key = to_string(key)
+
+    if String.contains?(string_key, "crop") do
+      cropped_srcset = Map.get(srcset, key)
+
+      cfg_key_to_check =
+        cropped_srcset
+        |> List.last()
+        |> elem(0)
+
+      size = Map.get(sizes, cfg_key_to_check)
+
+      calc_ratio(size)
+    else
+      false
+    end
+  end
+
+  defp calc_ratio(%{"ratio" => ratio}) do
+    [w, h] =
+      ratio
+      |> String.split("/")
+      |> Enum.map(&String.to_integer/1)
+
+    Kernel./(w, h)
+  end
+
+  defp calc_ratio(%{"size" => size}) do
+    [w, h] =
+      size
+      |> String.split("x")
+      |> Enum.map(&String.to_integer/1)
+
+    Kernel./(w, h)
   end
 
   def get_mq(image_field, mq, opts) do
