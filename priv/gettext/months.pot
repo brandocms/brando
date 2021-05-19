@@ -7,15 +7,38 @@
 ## Run "mix gettext.extract" to bring this file up to
 ## date. Leave "msgstr"s empty as changing them here as no
 ## effect: edit them in PO (.po) files instead.
-msgid ""
+msgid "month_1"
 msgstr ""
 
-#, elixir-format
-#: lib/brando/users/user.ex:95 lib/brando/users/user.ex:96
-msgid "Email"
+msgid "month_2"
 msgstr ""
 
-#, elixir-format
-#: lib/brando/users/user.ex:90 lib/brando/users/user.ex:91
-msgid "Name"
+msgid "month_3"
+msgstr ""
+
+msgid "month_4"
+msgstr ""
+
+msgid "month_5"
+msgstr ""
+
+msgid "month_6"
+msgstr ""
+
+msgid "month_7"
+msgstr ""
+
+msgid "month_8"
+msgstr ""
+
+msgid "month_9"
+msgstr ""
+
+msgid "month_10"
+msgstr ""
+
+msgid "month_11"
+msgstr ""
+
+msgid "month_12"
 msgstr ""

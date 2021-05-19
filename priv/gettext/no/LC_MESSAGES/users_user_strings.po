@@ -12,51 +12,51 @@ msgstr ""
 "Plural-Forms: nplurals=2\n"
 
 #, elixir-format
-#: lib/brando/users/user.ex:106
+#: lib/brando/users/user.ex:107
 msgid "Activate user"
 msgstr "Aktivér bruker"
 
 #, elixir-format
-#: lib/brando/users/user.ex:103
+#: lib/brando/users/user.ex:104
 msgid "Administrate users"
 msgstr "Administrér brukere"
 
 #, elixir-format
-#: lib/brando/users/user.ex:104
+#: lib/brando/users/user.ex:105
 msgid "Create user"
 msgstr "Opprett bruker"
 
 #, elixir-format
-#: lib/brando/users/user.ex:108
+#: lib/brando/users/user.ex:109
 msgid "Deactivate user"
 msgstr "Deaktivér bruker"
 
 #, elixir-format
-#: lib/brando/users/user.ex:105
+#: lib/brando/users/user.ex:106
 msgid "Edit user"
 msgstr "Endre bruker"
 
 #, elixir-format
-#: lib/brando/users/user.ex:100
+#: lib/brando/users/user.ex:101
 msgid "Error"
 msgstr "Feil"
 
 #, elixir-format
-#: lib/brando/users/user.ex:101
+#: lib/brando/users/user.ex:102
 msgid "Superuser cannot be deactivated"
 msgstr "Superbrukeren kan ikke deaktiveres"
 
 #, elixir-format
-#: lib/brando/users/user.ex:107
+#: lib/brando/users/user.ex:108
 msgid "User activated"
 msgstr "Bruker aktivert"
 
 #, elixir-format
-#: lib/brando/users/user.ex:109
+#: lib/brando/users/user.ex:110
 msgid "User deactivated"
 msgstr "Bruker deaktivert"
 
 #, elixir-format
-#: lib/brando/users/user.ex:102
+#: lib/brando/users/user.ex:103
 msgid "Users"
 msgstr "Brukere"

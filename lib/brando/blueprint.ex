@@ -89,8 +89,10 @@ defmodule Brando.Blueprint do
       Module.register_attribute(__MODULE__, :translations, accumulate: false)
       Module.register_attribute(__MODULE__, :table_name, accumulate: false)
       Module.register_attribute(__MODULE__, :data_layer, accumulate: false)
+      Module.register_attribute(__MODULE__, :allow_mark_as_deleted, accumulate: false)
 
       @data_layer :database
+      @allow_mark_as_deleted false
       @primary_key {:id, :id, autogenerate: true}
       @translations %{}
 
@@ -277,6 +279,7 @@ defmodule Brando.Blueprint do
   defmacro data_layer(type) do
     quote do
       @data_layer unquote(type)
+      @allow_mark_as_deleted unquote(type) == :embedded
     end
   end
 
@@ -441,6 +444,10 @@ defmodule Brando.Blueprint do
         run_translations(__MODULE__, @translations)
       end
 
+      def __allow_mark_as_deleted__ do
+        @allow_mark_as_deleted
+      end
+
       if @data_layer == :embedded do
         build_embedded_schema(
           @table_name,
@@ -521,7 +528,8 @@ defmodule Brando.Blueprint do
       user
     )
     |> Changeset.validate_required(all_required_attrs)
-    |> Unique.run_unique_constraints(module, all_attributes)
+    |> Unique.run_unique_attribute_constraints(module, all_attributes)
+    |> Unique.run_unique_relation_constraints(module, all_relations)
     |> Constraints.run_validations(module, all_attributes)
     |> Trait.run_changeset_mutators(
       module,
@@ -529,6 +537,19 @@ defmodule Brando.Blueprint do
       user
     )
     |> Upload.run_upload_validations(module, all_attributes, user)
+    |> maybe_mark_for_deletion(module, params)
+  end
+
+  defp maybe_mark_for_deletion(changeset, module, %{"delete" => "true"}) do
+    if module.__allow_mark_as_deleted__ do
+      %{changeset | action: :delete}
+    else
+      changeset
+    end
+  end
+
+  defp maybe_mark_for_deletion(changeset, _, _) do
+    changeset
   end
 
   def blueprint?(module), do: {:__blueprint__, 0} in module.__info__(:functions)

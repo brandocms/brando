@@ -8,15 +8,15 @@
 ## to merge POT files into PO files.
 msgid ""
 msgstr ""
-"Language: no\n"
+"Language: en\n"
 "Plural-Forms: nplurals=2\n"
 
 #, elixir-format
 #: lib/brando/users/user.ex:95 lib/brando/users/user.ex:96
 msgid "Email"
-msgstr "Epost"
+msgstr ""
 
 #, elixir-format
 #: lib/brando/users/user.ex:90 lib/brando/users/user.ex:91
 msgid "Name"
-msgstr "Navn"
+msgstr ""

@@ -386,11 +386,16 @@ defmodule Brando.HTML do
       ~E|<%= Brando.Assets.Vite.Render.main_css() %>
     <%= Brando.Assets.Vite.Render.main_js() %>|
     else
-      ~E|<!-- dev/test -->
-      <script type="module" src="http://localhost:3000/@vite/client"></script>
-      <script type="module" src="http://localhost:3000/js/critical.js"></script>
-      <script type="module" src="http://localhost:3000/js/index.js"></script>
-      <!-- end dev/test -->|
+      if Brando.config(:hmr) === false do
+        ~E|<%= Brando.Assets.Vite.Render.main_css() %>
+        <%= Brando.Assets.Vite.Render.main_js() %>|
+      else
+        ~E|<!-- dev/test -->
+        <script type="module" src="http://localhost:3000/@vite/client"></script>
+        <script type="module" src="http://localhost:3000/js/critical.js"></script>
+        <script type="module" src="http://localhost:3000/js/index.js"></script>
+        <!-- end dev/test -->|
+      end
     end
   end
 
@@ -429,4 +434,8 @@ defmodule Brando.HTML do
   """
   @spec render_rel(conn) :: [safe_string]
   def render_rel(_), do: []
+
+  def absolute_url(%{__struct__: module} = entry) do
+    module.__absolute_url__(entry)
+  end
 end

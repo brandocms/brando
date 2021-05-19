@@ -708,12 +708,14 @@ defmodule Brando.Query do
 
   def insert(changeset) do
     changeset
+    |> Map.put(:action, :insert)
     |> Brando.repo().insert()
     |> Cache.Query.evict()
   end
 
   def update(changeset) do
     changeset
+    |> Map.put(:action, :update)
     |> Brando.repo().update()
     |> Cache.Query.evict()
   end

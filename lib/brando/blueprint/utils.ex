@@ -10,7 +10,7 @@ defmodule Brando.Blueprint.Utils do
   def to_ecto_type(:datetime), do: :utc_datetime
   def to_ecto_type(type), do: type
 
-  @strip_ecto_opts [:cast, :module, :required]
+  @strip_ecto_opts [:cast, :module, :required, :unique]
   def to_ecto_opts(:language, opts), do: Map.to_list(opts)
   def to_ecto_opts(:belongs_to, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()
   def to_ecto_opts(:many_to_many, opts), do: opts |> Map.drop(@strip_ecto_opts) |> Map.to_list()

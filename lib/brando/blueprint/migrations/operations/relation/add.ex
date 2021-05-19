@@ -63,6 +63,18 @@ defmodule Brando.Blueprint.Migrations.Operations.Relation.Add do
     ""
   end
 
+  def up_indexes(%{
+        relation: %{type: :belongs_to, name: name, opts: %{unique: [with: other_field]}},
+        module: module
+      })
+      when is_atom(other_field) do
+    table_name = module.__naming__().table_name
+
+    """
+    create unique_index(:#{table_name}, [:#{name}_id, :#{other_field}])
+    """
+  end
+
   def up_indexes(_) do
     ""
   end

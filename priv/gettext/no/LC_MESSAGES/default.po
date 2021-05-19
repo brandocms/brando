@@ -98,17 +98,17 @@ msgid "Unknown error while creating image sizes."
 msgstr "Ukjent feil ved oppretting av bildestørrelser"
 
 #, elixir-format
-#: lib/brando/query/mutations.ex:25
+#: lib/brando/query/mutations.ex:35
 msgid "created"
 msgstr "opprettet"
 
 #, elixir-format
-#: lib/brando/query/mutations.ex:129
+#: lib/brando/query/mutations.ex:157
 msgid "deleted"
 msgstr "slettet"
 
 #, elixir-format
-#: lib/brando/query/mutations.ex:55
+#: lib/brando/query/mutations.ex:75
 msgid "updated"
 msgstr "oppdaterte"
 
@@ -131,3 +131,8 @@ msgstr "venter"
 #: lib/brando/types/status.ex:40
 msgid "published"
 msgstr "publisert"
+
+#, elixir-format
+#: lib/brando/traits/villain/prevent_circular_references.ex:26
+msgid "Fragment contains circular reference to itself, %{ref_string}"
+msgstr ""

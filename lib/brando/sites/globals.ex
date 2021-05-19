@@ -70,6 +70,7 @@ defmodule Brando.Globals do
   end
 
   def get_global_value!(%Global{type: "boolean", data: %{"value" => ""}}), do: false
+  def get_global_value!(%Global{type: "boolean", data: %{"value" => false}}), do: false
   def get_global_value!(%Global{type: "boolean", data: %{"value" => _}}), do: true
 
   @doc """

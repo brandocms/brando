@@ -11,11 +11,11 @@ msgid ""
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:95 lib/brando/users/user.ex:96
-msgid "Email"
+#: lib/brando/pages/fragment.ex:60
+msgid "user"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:90 lib/brando/users/user.ex:91
-msgid "Name"
+#: lib/brando/pages/fragment.ex:61
+msgid "users"
 msgstr ""

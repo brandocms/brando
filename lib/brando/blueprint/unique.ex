@@ -3,7 +3,7 @@ defmodule Brando.Blueprint.Unique do
   import Ecto.Changeset
   import Ecto.Query
 
-  def run_unique_constraints(changeset, module, attributes) do
+  def run_unique_attribute_constraints(changeset, module, attributes) do
     attributes
     |> Enum.filter(&Map.get(&1.opts, :unique, false))
     |> Enum.reduce(changeset, fn
@@ -32,6 +32,19 @@ defmodule Brando.Blueprint.Unique do
           {filter_field, &filter_by_field/3}
         )
         |> unique_constraint([f.name, filter_field])
+    end)
+  end
+
+  def run_unique_relation_constraints(changeset, _, relations) do
+    relations
+    |> Enum.filter(&Map.get(&1.opts, :unique, false))
+    |> Enum.reduce(changeset, fn
+      %{opts: %{unique: true}} = f, new_changeset ->
+        unique_constraint(new_changeset, f.name)
+
+      %{opts: %{unique: [with: with_field]}} = f, new_changeset ->
+        field = "#{to_string(f.name)}_id" |> String.to_existing_atom()
+        unique_constraint(new_changeset, [field, with_field])
     end)
   end
 

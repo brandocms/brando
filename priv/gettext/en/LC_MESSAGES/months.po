@@ -1,0 +1,48 @@
+## "msgid"s in this file come from POT (.pot) files.
+##
+## Do not add, change, or remove "msgid"s manually here as
+## they're tied to the ones in the corresponding POT file
+## (with the same domain).
+##
+## Use "mix gettext.extract --merge" or "mix gettext.merge"
+## to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2\n"
+
+msgid "month_1"
+msgstr "January"
+
+msgid "month_2"
+msgstr "February"
+
+msgid "month_3"
+msgstr "March"
+
+msgid "month_4"
+msgstr "April"
+
+msgid "month_5"
+msgstr "May"
+
+msgid "month_6"
+msgstr "June"
+
+msgid "month_7"
+msgstr "July"
+
+msgid "month_8"
+msgstr "August"
+
+msgid "month_9"
+msgstr "September"
+
+msgid "month_10"
+msgstr "October"
+
+msgid "month_11"
+msgstr "November"
+
+msgid "month_12"
+msgstr "December"
