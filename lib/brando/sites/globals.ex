@@ -73,6 +73,11 @@ defmodule Brando.Globals do
   def get_global_value!(%Global{type: "boolean", data: %{"value" => false}}), do: false
   def get_global_value!(%Global{type: "boolean", data: %{"value" => _}}), do: true
 
+  def get_global_value!(%Global{type: "datetime", data: %{"value" => value}}) do
+    {:ok, datetime, _} = DateTime.from_iso8601(value)
+    datetime
+  end
+
   @doc """
   Render global by key path
   """

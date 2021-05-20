@@ -14,6 +14,7 @@ defmodule Brando.Plug.I18n do
   def put_locale(conn, opts) do
     opts = Enum.into(opts, %{})
     extracted_language = extract_language(conn, opts)
+
     Gettext.put_locale(Brando.web_module(Gettext), extracted_language)
 
     conn
