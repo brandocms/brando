@@ -114,16 +114,18 @@ defmodule Brando.Villain.Schema do
       |> String.replace("data", "html")
       |> String.to_atom()
 
-    if Ecto.Changeset.get_change(changeset, data_field) do
-      applied_changes = Ecto.Changeset.apply_changes(changeset)
-      data_src = Map.get(applied_changes, data_field)
+    existing_html = Ecto.Changeset.get_field(changeset, html_field)
 
-      parsed_data =
-        Brando.Villain.parse(data_src, applied_changes,
-          data_field: data_field,
-          html_field: html_field
-        )
+    applied_changes = Ecto.Changeset.apply_changes(changeset)
+    data_src = Map.get(applied_changes, data_field)
 
+    parsed_data =
+      Brando.Villain.parse(data_src, applied_changes,
+        data_field: data_field,
+        html_field: html_field
+      )
+
+    if parsed_data != existing_html do
       Ecto.Changeset.put_change(changeset, html_field, parsed_data)
     else
       changeset
