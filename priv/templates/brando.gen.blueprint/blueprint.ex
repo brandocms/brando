@@ -13,7 +13,7 @@ defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
   # trait Brando.Trait.Revisioned
   # trait Brando.Trait.ScheduledPublishing
   # trait Brando.Trait.Sequenced
-  # trait Brando.Trait.SoftDelete
+  # trait Brando.Trait.SoftDelete, obfuscated_fields: [:slug]
   # trait Brando.Trait.Status
   # trait Brando.Trait.Timestamped
   # trait Brando.Trait.Translatable
