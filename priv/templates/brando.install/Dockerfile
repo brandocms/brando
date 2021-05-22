@@ -5,7 +5,8 @@
 # - job: dependencies
 # -----------------------------------
 
-FROM twined/fehn:3.1 AS deps
+# 3.2 = OTP24 + elixir 1.12
+FROM twined/fehn:3.2 AS deps
 
 ARG MIX_ENV=prod
 ARG HEX_MIRROR_URL=https://repo.hex.pm
