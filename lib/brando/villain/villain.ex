@@ -146,6 +146,7 @@ defmodule Brando.Villain do
             {key, %{type: "html", data: %{"value" => value}}} -> {key, value}
             {key, %{type: "color", data: %{"value" => value}}} -> {key, value}
             {key, %{type: "boolean", data: %{"value" => value}}} -> {key, value}
+            {key, %{type: "datetime", data: %{"value" => value}}} -> {key, value}
           end)
           |> Enum.into(%{})
 
