@@ -625,6 +625,7 @@ defmodule Brando.Query do
   def maybe_build_pagination_meta(query, %{paginated: true, limit: page_size, offset: offset}) do
     total_entries = get_total_entries(query)
     total_pages = total_pages(total_entries, page_size)
+    offset = offset || 0
     current_page = round(offset / page_size + 1)
     previous_page = get_previous_page(current_page)
     next_page = get_next_page(current_page, total_pages)
