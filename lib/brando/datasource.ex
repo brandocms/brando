@@ -107,6 +107,7 @@ defmodule Brando.Datasource do
 
   """
   alias Brando.Villain
+  import Ecto.Query
 
   @doc """
   List all registered data sources
@@ -329,127 +330,69 @@ defmodule Brando.Datasource do
         {datasource_module, datasource_type, datasource_query},
         data_field
       ) do
-    query = """
-    SELECT
-        id
-      FROM
-         (SELECT
-            id,
-            jsonb_array_elements(#{data_field}::jsonb) AS root_blocks
-          FROM
-            #{schema.__schema__(:source)}
-          ) root_q
-      WHERE
-          root_blocks->>'type' = 'datasource'
-      AND
-          root_blocks->'data'->>'module' = '#{datasource_module}'
-      AND
-          root_blocks->'data'->>'type' = '#{datasource_type}'
-      AND
-          root_blocks->'data'->>'query' = '#{datasource_query}'
-    UNION
-    SELECT
-        id
-      FROM
-         (SELECT
-            id,
-            jsonb_array_elements(#{data_field}::jsonb) AS root_blocks,
-            jsonb_array_elements(jsonb_array_elements(#{data_field}::jsonb)->'data'->'refs') as module_refs
-          FROM
-            #{schema.__schema__(:source)}
-          ) root_q
-      WHERE
-          root_blocks->>'type' = 'module'
-      AND
-          module_refs->'data'->>'type' = 'datasource'
-      AND
-          module_refs->'data'->>'module' = '#{datasource_module}'
-      AND
-          module_refs->'data'->>'type' = '#{datasource_type}'
-      AND
-          module_refs->'data'->>'query' = '#{datasource_query}'
-    UNION
-    SELECT
-        id
-      FROM
-         (SELECT
-            id,
-            jsonb_array_elements(#{data_field}::jsonb) AS root_blocks,
-            jsonb_array_elements(jsonb_array_elements(#{data_field}::jsonb)->'data'->'blocks') as container_blocks
-          FROM
-            #{schema.__schema__(:source)}
-          ) root_q
-      WHERE
-          root_blocks->>'type' = 'container'
-      AND
-          container_blocks->>'type' = 'datasource'
-      AND
-          container_blocks->'data'->>'module' = '#{datasource_module}'
-      AND
-          container_blocks->'data'->>'type' = '#{datasource_type}'
-      AND
-          container_blocks->'data'->>'query' = '#{datasource_query}'
-    """
+    ds_block = %{
+      type: "datasource",
+      data: %{module: datasource_module, type: datasource_type, query: datasource_query}
+    }
 
-    {:ok, %{rows: matches}} = Ecto.Adapters.SQL.query(Brando.repo(), query, [])
+    t = [
+      ds_block
+    ]
 
-    List.flatten(matches)
+    refed_t = [
+      %{
+        type: "module",
+        data: %{refs: [%{data: ds_block}]}
+      }
+    ]
+
+    contained_t = [
+      %{
+        type: "container",
+        data: %{blocks: [ds_block]}
+      }
+    ]
+
+    Brando.repo().all(
+      from s in schema,
+        select: s.id,
+        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t),
+        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_t),
+        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^refed_t)
+    )
   end
 
-  def list_ids_with_datasource(schema, datasource, data_field) do
-    query = """
-    SELECT
-        id
-      FROM
-         (SELECT
-            id,
-            jsonb_array_elements(#{data_field}::jsonb) AS root_blocks
-          FROM
-            #{schema.__schema__(:source)}
-          ) root_q
-      WHERE
-          root_blocks->>'type' = 'datasource'
-    AND
-          root_blocks->'data'->>'module' = '#{datasource}'
-    UNION
-    SELECT
-        id
-      FROM
-         (SELECT
-            id,
-            jsonb_array_elements(#{data_field}::jsonb) AS root_blocks,
-            jsonb_array_elements(jsonb_array_elements(#{data_field}::jsonb)->'data'->'refs') as module_refs
-          FROM
-            #{schema.__schema__(:source)}
-          ) root_q
-      WHERE
-          root_blocks->>'type' = 'module'
-      AND
-          module_refs->'data'->>'type' = 'datasource'
-      AND
-          module_refs->'data'->'data'->>'module' = '#{datasource}'
-    UNION
-    SELECT
-        id
-      FROM
-         (SELECT
-            id,
-            jsonb_array_elements(#{data_field}::jsonb) AS root_blocks,
-            jsonb_array_elements(jsonb_array_elements(#{data_field}::jsonb)->'data'->'blocks') as container_blocks
-          FROM
-            #{schema.__schema__(:source)}
-          ) root_q
-      WHERE
-          root_blocks->>'type' = 'container'
-      AND
-          container_blocks->>'type' = 'datasource'
-      AND
-          container_blocks->'data'->>'module' = '#{datasource}'
-    """
+  def list_ids_with_datasource(schema, datasource_module, data_field) do
+    ds_block = %{
+      type: "datasource",
+      data: %{module: datasource_module}
+    }
 
-    {:ok, %{rows: matches}} = Ecto.Adapters.SQL.query(Brando.repo(), query, [])
+    t = [
+      ds_block
+    ]
 
-    List.flatten(matches)
+    refed_t = [
+      %{
+        type: "module",
+        data: %{refs: [%{data: ds_block}]}
+      }
+    ]
+
+    contained_t = [
+      %{
+        type: "container",
+        data: %{blocks: [ds_block]}
+      }
+    ]
+
+    Brando.repo().all(
+      from s in schema,
+        select: s.id,
+        where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t),
+        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_t),
+        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^refed_t)
+    )
   end
 
   @doc """
