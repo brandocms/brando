@@ -1,5 +1,6 @@
 defmodule Brando.ErrorView do
   import Brando.Gettext
+  require Logger
 
   @moduledoc """
   Error views for Brando.
@@ -21,7 +22,8 @@ defmodule Brando.ErrorView do
   end
 
   def render("500.html", %{conn: %Plug.Conn{path_info: [_]}} = assigns) do
-    render("app_error.html", assigns)
+    Logger.error("==> 500 (app_error.html)")
+    render("catch_all.html", assigns)
   end
 
   def render("504.html", assigns) do
