@@ -9,8 +9,6 @@ defmodule Brando.Blueprint.Constraints do
         constraints_map = Enum.into(constraints, %{})
 
         Enum.reduce(constraints_map, new_changeset, fn constraint, validated_changeset ->
-          require Logger
-          Logger.error(inspect(constraint, pretty: true))
           run_validation(constraint, validated_changeset, attr)
         end)
     end)

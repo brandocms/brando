@@ -1,0 +1,86 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new translations manually only if they're dynamic
+## translations that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here as no
+## effect: edit them in PO (.po) files instead.
+msgid ""
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:101
+msgid "A shortform version of the name"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:99 lib/brando/sites/identity.ex:100
+msgid "Alternate name"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:94 lib/brando/sites/identity.ex:95
+msgid "Name"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:89 lib/brando/sites/identity.ex:90
+msgid "Type"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:115 lib/brando/sites/identity.ex:116
+msgid "Address"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:120 lib/brando/sites/identity.ex:121
+msgid "Address - second line"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:125 lib/brando/sites/identity.ex:126
+msgid "Address - third line"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:135 lib/brando/sites/identity.ex:136
+msgid "City"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:140 lib/brando/sites/identity.ex:141
+msgid "Country"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:105 lib/brando/sites/identity.ex:106
+msgid "Email"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:110 lib/brando/sites/identity.ex:111
+msgid "Phone"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:150 lib/brando/sites/identity.ex:151
+msgid "Title"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:155 lib/brando/sites/identity.ex:156
+msgid "Title (postfix)"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:145 lib/brando/sites/identity.ex:146
+msgid "Title (prefix)"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:130 lib/brando/sites/identity.ex:131
+msgid "Zipcode"
+msgstr ""

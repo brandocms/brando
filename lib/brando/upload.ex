@@ -47,6 +47,19 @@ defmodule Brando.Upload do
     end
   end
 
+  def handle_upload(meta, entry, cfg) do
+    # first copy file
+    # with {:ok, image_struct} <-
+    #        Images.Processing.create_image_type_struct(upload, user, upload_params),
+    #      {:ok, operations} <- Images.Operations.create(image_struct, cfg, nil, user),
+    #      {:ok, results} <- Images.Operations.perform(operations, user) do
+    #   image_struct =
+    #     results
+    #     |> List.first()
+    #     |> Map.get(:image_struct)
+    %Brando.Type.Image{path: meta.path}
+  end
+
   @doc """
   Filters out all fields except `%Plug.Upload{}` fields.
   """

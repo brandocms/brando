@@ -1,0 +1,87 @@
+## "msgid"s in this file come from POT (.pot) files.
+##
+## Do not add, change, or remove "msgid"s manually here as
+## they're tied to the ones in the corresponding POT file
+## (with the same domain).
+##
+## Use "mix gettext.extract --merge" or "mix gettext.merge"
+## to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: no\n"
+"Plural-Forms: nplurals=2\n"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:101
+msgid "A shortform version of the name"
+msgstr "Kortformsversjon av navnet"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:99 lib/brando/sites/identity.ex:100
+msgid "Alternate name"
+msgstr "Alternativt navn"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:94 lib/brando/sites/identity.ex:95
+msgid "Name"
+msgstr "Navn"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:89 lib/brando/sites/identity.ex:90
+msgid "Type"
+msgstr "Type"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:115 lib/brando/sites/identity.ex:116
+msgid "Address"
+msgstr "Adresse"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:120 lib/brando/sites/identity.ex:121
+msgid "Address - second line"
+msgstr "Adresse - linje 2"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:125 lib/brando/sites/identity.ex:126
+msgid "Address - third line"
+msgstr "Adresse - linje 3"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:135 lib/brando/sites/identity.ex:136
+msgid "City"
+msgstr "Poststed"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:140 lib/brando/sites/identity.ex:141
+msgid "Country"
+msgstr "Land"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:105 lib/brando/sites/identity.ex:106
+msgid "Email"
+msgstr "Epost"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:110 lib/brando/sites/identity.ex:111
+msgid "Phone"
+msgstr "Telefon"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:150 lib/brando/sites/identity.ex:151
+msgid "Title"
+msgstr "Tittel"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:155 lib/brando/sites/identity.ex:156
+msgid "Title (postfix)"
+msgstr "Tittel (postfix)"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:145 lib/brando/sites/identity.ex:146
+msgid "Title (prefix)"
+msgstr "Tittel (prefix)"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:130 lib/brando/sites/identity.ex:131
+msgid "Zipcode"
+msgstr "Postnr"

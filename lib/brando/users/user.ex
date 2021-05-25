@@ -110,4 +110,16 @@ defmodule Brando.Users.User do
       translate [:user, :deactivated], t("User deactivated")
     end
   end
+
+  form do
+    fieldset :half do
+      input :name, :text
+      input :email, :email
+      input :phone, :phone
+      input :password, :text
+      input :language, :text
+      input :role, :text
+      input :avatar, :image
+    end
+  end
 end
