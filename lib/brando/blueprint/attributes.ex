@@ -31,6 +31,7 @@ defmodule Brando.Blueprint.Attributes do
   """
 
   alias Brando.Blueprint.Attribute
+  alias Brando.Blueprint.Relation
 
   @valid_attributes [
     {:array, :map},
@@ -109,7 +110,7 @@ defmodule Brando.Blueprint.Attributes do
   end
 
   def build_attr(name, :image, opts) do
-    %Attribute{
+    %Relation{
       name: name,
       type: :image,
       opts: opts |> Enum.into(%{}) |> Brando.Utils.map_to_struct(Brando.Type.ImageConfig)

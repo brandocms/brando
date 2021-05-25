@@ -11,7 +11,17 @@ defmodule Brando.Blueprint.Relations do
   import Brando.Blueprint.Utils
   alias Brando.Blueprint.Relation
 
-  def build_relation(name, type, opts \\ []) do
+  def build_relation(name, type, opts \\ [])
+
+  def build_relation(name, :image, opts) do
+    %Relation{
+      name: name,
+      type: :embeds_one,
+      opts: Map.merge(Enum.into(opts, %{}), %{module: Brando.Images.Image})
+    }
+  end
+
+  def build_relation(name, type, opts) do
     %Relation{name: name, type: type, opts: Enum.into(opts, %{})}
   end
 
@@ -43,7 +53,19 @@ defmodule Brando.Blueprint.Relations do
     end
   end
 
+  def run_embed_attributes(changeset, attributes, user, module) do
+    attributes
+    |> Enum.filter(&(&1.type == :image))
+    |> Enum.map(fn image ->
+      Map.merge(image, %{type: :embeds_one, opts: %{module: Brando.Images.Image}})
+    end)
+    |> Enum.reduce(changeset, fn rel, cs ->
+      run_cast_relation(rel, cs, user)
+    end)
+  end
+
   def run_cast_relations(changeset, relations, user) do
+    # if we have images or video, add these here, since we should cast_embed them
     Enum.reduce(relations, changeset, fn rel, cs -> run_cast_relation(rel, cs, user) end)
   end
 

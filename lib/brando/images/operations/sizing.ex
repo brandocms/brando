@@ -4,6 +4,7 @@ defmodule Brando.Images.Operations.Sizing do
   """
   import Brando.Gettext
   alias Brando.Images
+  alias Brando.Images.Focal
   alias Brando.Progress
 
   @doc """
@@ -152,6 +153,10 @@ defmodule Brando.Images.Operations.Sizing do
   @doc """
   Convert and add focal point to conversion parameters
   """
+  def add_focal_point(conversion_parameters, nil) do
+    Map.put(conversion_parameters, :focal_point, %Focal{})
+  end
+
   def add_focal_point(conversion_parameters, focal) do
     focal =
       focal

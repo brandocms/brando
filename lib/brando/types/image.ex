@@ -1,4 +1,6 @@
 defmodule Brando.Type.Image do
+  @deprecated "Deprecate this in favor of Brando.Images.Image (embeds_one)"
+
   @moduledoc """
   Defines a type for an image field.
   """

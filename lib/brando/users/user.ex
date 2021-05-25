@@ -50,7 +50,7 @@ defmodule Brando.Users.User do
       required: true
 
     attribute :avatar, :image, @avatar_cfg
-    attribute :role, Brando.Type.Role
+    attribute :role, :enum, values: [:user, :editor, :admin, :superuser], required: true
     attribute :config, Brando.Type.UserConfig, default: %Brando.Type.UserConfig{}
     attribute :active, :boolean, default: true
     attribute :last_login, :naive_datetime
@@ -95,6 +95,24 @@ defmodule Brando.Users.User do
         label t("Email")
         placeholder t("Email")
       end
+
+      translate :password do
+        label t("Password")
+        placeholder t("Password")
+      end
+
+      translate :language do
+        label t("Language")
+        placeholder t("Language")
+      end
+
+      translate :role do
+        label t("Role")
+      end
+
+      translate :avatar do
+        label t("Profile picture")
+      end
     end
 
     context :strings do
@@ -115,7 +133,6 @@ defmodule Brando.Users.User do
     fieldset :half do
       input :name, :text
       input :email, :email
-      input :phone, :phone
       input :password, :text
       input :language, :text
       input :role, :text

@@ -8,7 +8,7 @@ defmodule Brando.Images.Operations do
   alias Brando.Progress
   alias Brando.Utils
 
-  @type image_type_struct :: Brando.Type.Image.t()
+  @type image_type_struct :: Brando.Images.Image.t()
   @type image_config :: Brando.Type.ImageConfig.t()
   @type operation :: Brando.Images.Operation.t()
   @type operation_result :: Brando.Images.OperationResult.t()

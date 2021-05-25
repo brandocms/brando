@@ -19,8 +19,9 @@ defmodule Brando.Trait.Password do
 
   def changeset_mutator(_, _, changeset, _), do: maybe_update_password(changeset)
 
-  defp maybe_update_password(%{changes: %{password: password}} = changeset),
-    do: put_change(changeset, :password, Bcrypt.hash_pwd_salt(password))
+  defp maybe_update_password(%{changes: %{password: password}} = changeset) do
+    put_change(changeset, :password, Bcrypt.hash_pwd_salt(password))
+  end
 
   defp maybe_update_password(changeset) do
     changeset

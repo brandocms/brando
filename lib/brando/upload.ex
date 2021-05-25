@@ -25,55 +25,55 @@ defmodule Brando.Upload do
   import Brando.Gettext
   import Brando.Utils
 
+  alias Brando.Images
+  alias Brando.Images.Image
+  alias Brando.Type.ImageConfig
+  alias Brando.Type.FileConfig
+
   @doc """
   Initiate the upload handling.
   Checks `plug` for filename, checks mimetype,
   creates upload path and copies files
   """
-
-  # @spec process_upload(upload_plug :: Plug.Upload.t(), cfg_struct :: img_config) ::
-  #         {:ok, t()}
-  #         | {:error, :empty_filename}
-  #         | {:error, :content_type, binary, any}
-  #         | {:error, :mkdir, binary}
-  #         | {:error, :cp, {binary, binary, binary}}
-  # def process_upload(plug, cfg_struct) do
-  #   with {:ok, upload} <- create_upload_struct(plug, cfg_struct),
-  #        {:ok, upload} <- get_valid_filename(upload),
-  #        {:ok, upload} <- ensure_correct_ext(upload),
-  #        {:ok, upload} <- check_mimetype(upload),
-  #        {:ok, upload} <- create_upload_path(upload),
-  #        {:ok, upload} <- copy_uploaded_file(upload) do
-  #     {:ok, upload}
-  #   end
-  # end
-
-  def handle_upload(meta, upload_entry, cfg) do
+  def handle_upload(meta, upload_entry, cfg, user) do
     require Logger
-    Logger.error(inspect(meta, pretty: true))
-    Logger.error(inspect(upload_entry, pretty: true))
-    Logger.error(inspect(cfg, pretty: true))
+    Logger.error("handle_upload start")
 
+    with {:ok, upload} <- preprocess_upload(meta, upload_entry, cfg),
+         {:ok, image_struct} <- handle_upload_type(upload),
+         {:ok, operations} <- Images.Operations.create(image_struct, cfg, nil, user),
+         {:ok, results} <- Images.Operations.perform(operations, user) do
+      results
+      |> List.first()
+      |> Map.get(:image_struct)
+    end
+  end
+
+  @doc """
+  Handle upload by type.
+
+  Image or file
+  """
+  def handle_upload_type(%{cfg: %ImageConfig{}} = upload) do
+    {:ok, %Image{path: upload.meta.media_path}}
+  end
+
+  def handle_upload_type(%{cfg: %FileConfig{}} = _upload) do
+    {:ok, nil}
+  end
+
+  @doc """
+  Create an upload struct and preprocess the filename, check mimetype etc
+  and copy the uploaded file to intended target destination
+  """
+  def preprocess_upload(meta, upload_entry, cfg) do
     with {:ok, upload} <- create_upload_struct(meta, upload_entry, cfg),
          {:ok, upload} <- get_valid_filename(upload),
          {:ok, upload} <- ensure_correct_ext(upload),
          {:ok, upload} <- check_mimetype(upload),
-         {:ok, upload} <- create_upload_path(upload),
-         {:ok, upload} <- copy_uploaded_file(upload) do
-      require Logger
-      Logger.error(inspect(upload, pretty: true))
-      %Brando.Type.Image{path: Path.join(upload.cfg.upload_path, upload.meta.filename)}
+         {:ok, upload} <- create_upload_path(upload) do
+      copy_uploaded_file(upload)
     end
-
-    # first copy file
-    # with {:ok, image_struct} <-
-    #        Images.Processing.create_image_type_struct(upload, user, upload_params),
-    #      {:ok, operations} <- Images.Operations.create(image_struct, cfg, nil, user),
-    #      {:ok, results} <- Images.Operations.perform(operations, user) do
-    #   image_struct =
-    #     results
-    #     |> List.first()
-    #     |> Map.get(:image_struct)
   end
 
   @doc """
@@ -180,7 +180,10 @@ defmodule Brando.Upload do
   end
 
   defp copy_uploaded_file(
-         %__MODULE__{meta: %{filename: fname, path: src, upload_path: ul_path}} = upload
+         %__MODULE__{
+           meta: %{filename: fname, path: src, upload_path: ul_path},
+           cfg: %{upload_path: media_target_path}
+         } = upload
        ) do
     joined_dest = Path.join(ul_path, fname)
 
@@ -189,7 +192,14 @@ defmodule Brando.Upload do
 
     case File.cp(src, dest, fn _, _ -> false end) do
       :ok ->
-        {:ok, put_in(upload.meta, Map.put(upload.meta, :uploaded_file, dest))}
+        {:ok,
+         put_in(
+           upload.meta,
+           Map.merge(upload.meta, %{
+             uploaded_file: dest,
+             media_path: Path.join(media_target_path, Path.basename(dest))
+           })
+         )}
 
       {:error, reason} ->
         {:error, :cp, {reason, src, dest}}

@@ -1,8 +1,30 @@
-defmodule Brando.Image do
+defmodule Brando.Images.Image do
+  defmodule Trait.PutDefaultFocal do
+    use Brando.Trait
+    import Ecto.Changeset
+
+    def changeset_mutator(_module, _config, %{changes: %{focal: _}} = changeset, _user) do
+      changeset
+    end
+
+    def changeset_mutator(_module, _config, %{data: %{focal: nil}} = changeset, _user) do
+      put_change(changeset, :focal, %{x: 50, y: 50})
+    end
+
+    def changeset_mutator(_module, _config, %{changes: %{focal: nil}} = changeset, _user) do
+      put_change(changeset, :focal, %{x: 50, y: 50})
+    end
+
+    def changeset_mutator(_module, _config, changeset, _user) do
+      changeset
+    end
+  end
+
   @moduledoc """
-  Ecto schema for the Image schema
-  and helper functions for dealing with the schema.
+  Embedded image
   """
+
+  alias Brando.Images.Focal
 
   use Brando.Blueprint,
     application: "Brando",
@@ -11,32 +33,40 @@ defmodule Brando.Image do
     singular: "image",
     plural: "images"
 
-  trait Brando.Trait.Creator
-  trait Brando.Trait.Sequenced
-  trait Brando.Trait.SoftDelete
-  trait Brando.Trait.Timestamped
+  data_layer :embedded
+  @primary_key false
 
-  identifier "{{ entry.id }}"
+  trait __MODULE__.Trait.PutDefaultFocal
 
   attributes do
-    attribute :image, :image, :db
+    attribute :title, :text
+    attribute :credits, :text
+    attribute :alt, :text
+    attribute :path, :text, required: true
+    attribute :width, :integer
+    attribute :height, :integer
+    attribute :sizes, :map
+    attribute :cdn, :boolean, default: false
+    attribute :webp, :boolean, default: false
+    attribute :dominant_color, :text
   end
 
   relations do
-    relation :image_series, :belongs_to, module: Brando.ImageSeries
+    relation :focal, :embeds_one, module: Focal
   end
 
   @derive {Jason.Encoder,
            only: [
-             :id,
-             :image,
-             :creator,
-             :creator_id,
-             :image_series_id,
-             :image_series,
-             :sequence,
-             :inserted_at,
-             :updated_at,
-             :deleted_at
+             :title,
+             :credits,
+             :alt,
+             :focal,
+             :path,
+             :sizes,
+             :width,
+             :height,
+             :cdn,
+             :webp,
+             :dominant_color
            ]}
 end

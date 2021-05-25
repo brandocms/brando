@@ -161,6 +161,14 @@ defmodule Brando.Blueprint do
         %{name: :updated_at} ->
           []
 
+        %{type: :image} = attr ->
+          # images are embedded
+          Ecto.Schema.embeds_one(
+            attr.name,
+            Brando.Images.Image,
+            on_replace: :delete
+          )
+
         attr ->
           Ecto.Schema.field(
             attr.name,
@@ -239,12 +247,14 @@ defmodule Brando.Blueprint do
 
   def get_required_attrs(attrs) do
     attrs
+    |> Enum.reject(&(&1.type == :image))
     |> Enum.filter(&Map.get(&1.opts, :required))
     |> Enum.map(& &1.name)
   end
 
   def get_optional_attrs(attrs) do
     attrs
+    |> Enum.reject(&(&1.type == :image))
     |> Enum.reject(&Map.get(&1.opts, :required))
     |> Villain.maybe_add_villain_html_fields()
     |> Enum.map(& &1.name)
@@ -567,6 +577,7 @@ defmodule Brando.Blueprint do
 
     schema
     |> Changeset.cast(params, all_required_attrs ++ all_optional_attrs ++ castable_relations)
+    |> Relations.run_embed_attributes(all_attributes, user, module)
     |> Relations.run_cast_relations(all_relations, user)
     |> Trait.run_changeset_mutators(
       module,
