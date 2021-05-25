@@ -67,7 +67,6 @@ defmodule Brando.Blueprint do
 
   alias Brando.Blueprint.Constraints
   alias Brando.Blueprint.Relations
-  alias Brando.Blueprint.Upload
   alias Brando.Blueprint.Unique
   alias Brando.Blueprint.Villain
   alias Brando.Trait
@@ -77,6 +76,8 @@ defmodule Brando.Blueprint do
             translations: [],
             attributes: [],
             relations: [],
+            listings: [],
+            form: %{},
             traits: []
 
   defmacro __using__(opts) do
@@ -106,6 +107,7 @@ defmodule Brando.Blueprint do
       Module.register_attribute(__MODULE__, :attrs, accumulate: true)
       Module.register_attribute(__MODULE__, :relations, accumulate: true)
       Module.register_attribute(__MODULE__, :form, accumulate: true)
+      Module.register_attribute(__MODULE__, :listings, accumulate: true)
       Module.register_attribute(__MODULE__, :translations, accumulate: false)
       Module.register_attribute(__MODULE__, :table_name, accumulate: false)
       Module.register_attribute(__MODULE__, :data_layer, accumulate: false)
@@ -135,6 +137,7 @@ defmodule Brando.Blueprint do
       import unquote(__MODULE__).Form
       import unquote(__MODULE__).Identifier
       import unquote(__MODULE__).JSONLD
+      import unquote(__MODULE__).Listings
       import unquote(__MODULE__).Meta
       import unquote(__MODULE__).Naming
       import unquote(__MODULE__).Relations
@@ -166,7 +169,7 @@ defmodule Brando.Blueprint do
           Ecto.Schema.embeds_one(
             attr.name,
             Brando.Images.Image,
-            on_replace: :delete
+            on_replace: :update
           )
 
         attr ->
@@ -209,7 +212,7 @@ defmodule Brando.Blueprint do
           Ecto.Schema.embeds_one(
             name,
             Map.fetch!(opts, :module),
-            to_ecto_opts(:embeds_one, opts)
+            to_ecto_opts(:embeds_one, opts) ++ [on_replace: :update]
           )
 
         %{type: :embeds_many, name: name, opts: opts} ->
@@ -302,6 +305,12 @@ defmodule Brando.Blueprint do
       {key, value} ->
         {key, Gettext.dgettext(gettext_module, gettext_domain, value)}
     end)
+  end
+
+  def build_id(application, domain, schema) do
+    [application, domain, schema]
+    |> Enum.map(&String.downcase/1)
+    |> Enum.join("-")
   end
 
   defmacro table(table_name) do
@@ -416,7 +425,8 @@ defmodule Brando.Blueprint do
           schema: @schema,
           singular: @singular,
           plural: @plural,
-          table_name: @table_name
+          table_name: @table_name,
+          id: build_id(@application, @domain, @schema)
         }
       end
 
@@ -512,6 +522,10 @@ defmodule Brando.Blueprint do
         )
       end
 
+      def __listings__ do
+        @listings
+      end
+
       def __form__ do
         @form
       end
@@ -540,6 +554,8 @@ defmodule Brando.Blueprint do
           translations: __translations__(),
           attributes: __attributes__(),
           relations: __relations__(),
+          listings: __listings__(),
+          form: __form__(),
           traits: __traits__()
         }
       end

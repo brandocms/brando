@@ -65,7 +65,13 @@ locals_without_parens = [
   input: 2,
   input: 3,
   fieldset: 1,
-  fieldset: 2
+  fieldset: 2,
+  listing_field: 1,
+  listing_field: 2,
+  listing_field: 3,
+  listing_template: 1,
+  listing_template: 2,
+  listing_query: 1
 ]
 
 [

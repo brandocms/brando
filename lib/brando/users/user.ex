@@ -129,11 +129,26 @@ defmodule Brando.Users.User do
     end
   end
 
+  listings do
+    listing do
+      listing_query %{filter: %{title: "hello"}}
+      listing_field :status, :status
+      listing_field :avatar, :image, columns: 2
+
+      listing_template """
+                       {{ entry.name }}<br>
+                       {{ entry.email }}<br>
+                       <div class="badge">{{ entry.role }}</div>
+                       """,
+                       columns: 7
+    end
+  end
+
   form do
     fieldset :half do
       input :name, :text
       input :email, :email
-      input :password, :text
+      input :password, :password
       input :language, :text
       input :role, :text
       input :avatar, :image
