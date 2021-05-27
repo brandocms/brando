@@ -4,9 +4,12 @@ defmodule Brando.Blueprint.Listings do
   """
 
   defmodule Listing do
-    defstruct label: nil,
+    defstruct name: nil,
+              label: nil,
               query: %{},
-              fields: []
+              fields: [],
+              actions: [],
+              selection_actions: []
   end
 
   defmodule Field do
@@ -31,25 +34,32 @@ defmodule Brando.Blueprint.Listings do
     end
   end
 
-  defmacro listing(label, do: block) do
-    do_listing(label, block)
+  defmacro listing(name, do: block) do
+    do_listing(name, block)
   end
 
   defmacro listing(do: block) do
-    do_listing(nil, block)
+    do_listing(:default, block)
   end
 
-  defp do_listing(label, block) do
-    quote location: :keep do
+  defp do_listing(name, block) do
+    quote location: :keep,
+          generated: true do
       var!(brando_listing_fields) = []
       var!(brando_listing_query) = %{}
+      var!(brando_listing_label) = nil
+      var!(brando_listing_actions) = []
+      var!(brando_listing_selection_actions) = []
       unquote(block)
 
       named_listing =
         build_listing(
-          unquote(label),
+          unquote(name),
           var!(brando_listing_query),
-          Enum.reverse(var!(brando_listing_fields))
+          var!(brando_listing_label),
+          Enum.reverse(var!(brando_listing_fields)),
+          var!(brando_listing_actions),
+          var!(brando_listing_selection_actions)
         )
 
       Module.put_attribute(__MODULE__, :listings, named_listing)
@@ -57,7 +67,8 @@ defmodule Brando.Blueprint.Listings do
   end
 
   defmacro listing_field(name, type, opts \\ []) do
-    quote location: :keep,
+    quote generated: true,
+          location: :keep,
           bind_quoted: [name: name, type: type, opts: opts] do
       var!(brando_listing_fields) =
         List.wrap(build_field(name, type, opts)) ++ var!(brando_listing_fields)
@@ -65,7 +76,8 @@ defmodule Brando.Blueprint.Listings do
   end
 
   defmacro listing_template(template, opts \\ []) do
-    quote location: :keep,
+    quote generated: true,
+          location: :keep,
           bind_quoted: [template: template, opts: opts] do
       var!(brando_listing_fields) =
         List.wrap(build_template(template, opts)) ++ var!(brando_listing_fields)
@@ -73,17 +85,45 @@ defmodule Brando.Blueprint.Listings do
   end
 
   defmacro listing_query(query) do
-    quote location: :keep,
+    quote generated: true,
+          location: :keep,
           bind_quoted: [query: query] do
       var!(brando_listing_query) = query
     end
   end
 
-  def build_listing(label, query, fields) do
+  defmacro listing_label(label) do
+    quote generated: true,
+          location: :keep,
+          bind_quoted: [label: label] do
+      var!(brando_listing_label) = label
+    end
+  end
+
+  defmacro listing_actions(actions) do
+    quote generated: true,
+          location: :keep,
+          bind_quoted: [actions: actions] do
+      var!(brando_listing_actions) = actions
+    end
+  end
+
+  defmacro listing_selection_actions(actions) do
+    quote generated: true,
+          location: :keep,
+          bind_quoted: [actions: actions] do
+      var!(brando_listing_selection_actions) = actions
+    end
+  end
+
+  def build_listing(name, query, label, fields, actions, selection_actions) do
     %__MODULE__.Listing{
+      name: name,
       label: label,
       query: query,
-      fields: fields
+      fields: fields,
+      actions: actions,
+      selection_actions: selection_actions
     }
   end
 

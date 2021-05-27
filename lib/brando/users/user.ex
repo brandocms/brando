@@ -131,8 +131,7 @@ defmodule Brando.Users.User do
 
   listings do
     listing do
-      listing_query %{filter: %{title: "hello"}}
-      listing_field :status, :status
+      # listing_query %{filter: %{active: false}}
       listing_field :avatar, :image, columns: 2
 
       listing_template """

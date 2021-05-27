@@ -88,7 +88,8 @@ defmodule Brando.Villain.Filters do
 
   {{ entry.cover|srcset:"Attivo.Team.Employee:cover" }}
   """
-  def srcset(%Brando.Type.Image{} = img, srcset, _) do
+  def srcset(%struct_type{} = img, srcset, _)
+      when struct_type in [Brando.Type.Image, Brando.Images.Image] do
     img
     |> Brando.HTML.picture_tag(
       placeholder: :svg,

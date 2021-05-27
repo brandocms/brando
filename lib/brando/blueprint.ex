@@ -68,6 +68,7 @@ defmodule Brando.Blueprint do
   alias Brando.Blueprint.Constraints
   alias Brando.Blueprint.Relations
   alias Brando.Blueprint.Unique
+  alias Brando.Blueprint.Upload
   alias Brando.Blueprint.Villain
   alias Brando.Trait
 
@@ -362,6 +363,8 @@ defmodule Brando.Blueprint do
           unquote(Macro.escape(attr))
         end
       end
+
+      def __attribute__(_), do: nil
 
       unless Enum.empty?(@all_attributes) do
         def __attribute_opts__(name) do
