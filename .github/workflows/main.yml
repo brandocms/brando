@@ -44,7 +44,7 @@ jobs:
 
 
       - name: Cache deps
-        uses: actions/cache@v2.1.5
+        uses: actions/cache@v2.1.6
         with:
           path: deps
           key: ${{ env.CACHE_VERSION }}-deps-build-${{ env.MIX_ENV }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}
@@ -52,7 +52,7 @@ jobs:
             ${{ env.CACHE_VERSION }}-deps-build-${{ env.MIX_ENV }}-${{ matrix.otp }}-${{ matrix.elixir }}-
 
       - name: Cache _build
-        uses: actions/cache@v2.1.5
+        uses: actions/cache@v2.1.6
         with:
           path: _build/${{ env.MIX_ENV }}
           key: ${{ env.CACHE_VERSION }}-_build-${{ env.MIX_ENV }}-${{ matrix.otp }}-${{ matrix.elixir }}-
