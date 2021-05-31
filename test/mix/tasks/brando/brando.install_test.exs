@@ -42,7 +42,7 @@ defmodule Mix.Tasks.Brando.GenerateTest do
     assert_file("lib/brando_web/villain/parser.ex")
 
     assert_file("lib/brando_web.ex", fn file ->
-      assert file =~ "BrandoWeb.Gettext"
+      assert file =~ "BrandoAdmin.Gettext"
     end)
 
     assert_file("config/runtime.exs", fn file ->

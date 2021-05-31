@@ -8,6 +8,7 @@ defmodule Brando.Blueprint.Listings do
               label: nil,
               query: %{},
               fields: [],
+              filters: [],
               actions: [],
               selection_actions: []
   end
@@ -48,6 +49,7 @@ defmodule Brando.Blueprint.Listings do
       var!(brando_listing_fields) = []
       var!(brando_listing_query) = %{}
       var!(brando_listing_label) = nil
+      var!(brando_listing_filters) = []
       var!(brando_listing_actions) = []
       var!(brando_listing_selection_actions) = []
       unquote(block)
@@ -58,6 +60,7 @@ defmodule Brando.Blueprint.Listings do
           var!(brando_listing_query),
           var!(brando_listing_label),
           Enum.reverse(var!(brando_listing_fields)),
+          var!(brando_listing_filters),
           var!(brando_listing_actions),
           var!(brando_listing_selection_actions)
         )
@@ -100,6 +103,14 @@ defmodule Brando.Blueprint.Listings do
     end
   end
 
+  defmacro listing_filters(filters) do
+    quote generated: true,
+          location: :keep,
+          bind_quoted: [filters: filters] do
+      var!(brando_listing_filters) = filters
+    end
+  end
+
   defmacro listing_actions(actions) do
     quote generated: true,
           location: :keep,
@@ -116,12 +127,13 @@ defmodule Brando.Blueprint.Listings do
     end
   end
 
-  def build_listing(name, query, label, fields, actions, selection_actions) do
+  def build_listing(name, query, label, fields, filters, actions, selection_actions) do
     %__MODULE__.Listing{
       name: name,
       label: label,
       query: query,
       fields: fields,
+      filters: filters,
       actions: actions,
       selection_actions: selection_actions
     }

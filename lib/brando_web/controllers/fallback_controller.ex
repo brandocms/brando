@@ -1,4 +1,4 @@
-defmodule Brando.FallbackController do
+defmodule BrandoWeb.FallbackController do
   use BrandoWeb, :controller
   alias Brando.Sites.Redirects
 

@@ -2,7 +2,7 @@ defmodule Brando.Images.ImageSeriesResolver do
   @moduledoc """
   Resolver for image series
   """
-  use BrandoWeb, :resolver
+  use BrandoAdmin, :resolver
   alias Brando.Images
 
   @doc """

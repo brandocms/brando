@@ -1,5 +1,5 @@
 defmodule BrandoGraphQL.Schema.Types do
-  use BrandoWeb, :absinthe
+  use BrandoAdmin, :absinthe
 
   # brando types
   import_types BrandoGraphQL.Schema.Types.Blueprint

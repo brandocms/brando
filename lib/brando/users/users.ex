@@ -2,7 +2,7 @@ defmodule Brando.Users do
   @moduledoc """
   Context for Users.
   """
-  use BrandoWeb, :context
+  use BrandoAdmin, :context
   use Brando.Query
   alias Brando.Users.User
   alias Brando.Users.UserToken

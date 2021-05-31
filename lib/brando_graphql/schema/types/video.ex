@@ -1,5 +1,5 @@
 defmodule BrandoGraphQL.Schema.Types.Video do
-  use BrandoWeb, :absinthe
+  use BrandoAdmin, :absinthe
 
   object :video_type do
     field :url, :string

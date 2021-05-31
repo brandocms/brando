@@ -1,5 +1,5 @@
 defmodule BrandoGraphQL.Schema.Types.Images do
-  use BrandoWeb, :absinthe
+  use BrandoAdmin, :absinthe
 
   input_object :image_series_params do
     field :name, :string

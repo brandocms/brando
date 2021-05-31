@@ -1,5 +1,5 @@
 defmodule BrandoGraphQL.Schema.Types.User do
-  use BrandoWeb, :absinthe
+  use BrandoAdmin, :absinthe
 
   object :users do
     field :entries, list_of(:user)

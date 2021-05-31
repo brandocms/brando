@@ -1,5 +1,5 @@
 defmodule BrandoGraphQL.Schema.Types.Pagination do
-  use BrandoWeb, :absinthe
+  use BrandoAdmin, :absinthe
 
   object :pagination_meta do
     field :current_page, non_null(:integer)

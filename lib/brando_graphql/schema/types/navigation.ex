@@ -1,5 +1,5 @@
 defmodule BrandoGraphQL.Schema.Types.Navigation do
-  use BrandoWeb, :absinthe
+  use BrandoAdmin, :absinthe
 
   object :menu do
     field :id, :id

@@ -2,7 +2,7 @@ defmodule Brando.Users.UserResolver do
   @moduledoc """
   Resolver for Users
   """
-  use BrandoWeb, :resolver
+  use BrandoAdmin, :resolver
 
   use BrandoGraphQL.Resolver,
     context: Brando.Users,

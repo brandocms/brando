@@ -1,5 +1,5 @@
 defmodule BrandoGraphQL.Schema.Types.Common do
-  use BrandoWeb, :absinthe
+  use BrandoAdmin, :absinthe
 
   object :status_entry do
     field :id, :id

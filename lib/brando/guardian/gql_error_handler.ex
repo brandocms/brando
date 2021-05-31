@@ -2,7 +2,7 @@ defmodule Brando.Guardian.GQLErrorHandler do
   @moduledoc """
   Guardian error handler
   """
-  use BrandoWeb, :controller
+  use BrandoAdmin, :controller
 
   @doc """
   Auth error handlers

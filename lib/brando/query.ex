@@ -466,7 +466,7 @@ defmodule Brando.Query do
       {:status, status}, q -> with_status(q, to_string(status))
       {:preload, preload}, q -> with_preload(q, preload)
       {:filter, filter}, q -> context.with_filter(q, module, filter)
-      {:paginated, true}, q -> q
+      {:paginate, true}, q -> q
     end)
   end
 
@@ -622,10 +622,10 @@ defmodule Brando.Query do
   end
 
   # only build pagination_meta if offset & limit is set
-  def maybe_build_pagination_meta(query, %{paginated: true, limit: page_size, offset: offset}) do
+  def maybe_build_pagination_meta(query, %{paginate: true, limit: page_size} = list_opts) do
     total_entries = get_total_entries(query)
     total_pages = total_pages(total_entries, page_size)
-    offset = offset || 0
+    offset = Map.get(list_opts, :offset, 0)
     current_page = round(offset / page_size + 1)
     previous_page = get_previous_page(current_page)
     next_page = get_next_page(current_page, total_pages)
@@ -635,12 +635,16 @@ defmodule Brando.Query do
       total_pages: total_pages,
       current_page: current_page,
       previous_page: previous_page,
-      next_page: next_page
+      next_page: next_page,
+      offset: offset,
+      next_offset: offset + page_size,
+      previous_offset: max(offset - page_size, 0),
+      page_size: page_size
     }
   end
 
-  def maybe_build_pagination_meta(_, %{paginated: true}) do
-    raise "==> QUERY: When `paginated` is true, you must supply `limit` and `offset` args"
+  def maybe_build_pagination_meta(_, %{paginate: true}) do
+    raise "==> QUERY: When `paginate` is true, you must supply `limit` args"
   end
 
   def maybe_build_pagination_meta(_, _), do: nil

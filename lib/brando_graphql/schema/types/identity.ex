@@ -2,7 +2,7 @@ defmodule BrandoGraphQL.Schema.Types.Identity do
   @moduledoc """
   GraphQL type spec, mutations and queries for Identity
   """
-  use BrandoWeb, :absinthe
+  use BrandoAdmin, :absinthe
 
   object :identity do
     field :id, :id

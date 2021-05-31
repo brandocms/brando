@@ -1,4 +1,4 @@
-defmodule Brando.I18nController do
+defmodule BrandoWeb.I18nController do
   @moduledoc """
   Controller for i18n actions.
   """

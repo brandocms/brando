@@ -1,5 +1,5 @@
 defmodule BrandoGraphQL.Schema.Types.Revision do
-  use BrandoWeb, :absinthe
+  use BrandoAdmin, :absinthe
 
   object :revision do
     field :active, :boolean

@@ -1,5 +1,5 @@
 defmodule BrandoGraphQL.Schema.Types.Page do
-  use BrandoWeb, :absinthe
+  use BrandoAdmin, :absinthe
   use Brando.Meta.GraphQL
 
   object :pages do

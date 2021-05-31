@@ -22,7 +22,7 @@ defmodule BrandoGraphQL.Resolver do
           location: :keep do
       @doc false
       def all(args, %{context: %{current_user: _}}) do
-        unquote(context).unquote(:"list_#{plural}")(Map.put(args, :paginated, true))
+        unquote(context).unquote(:"list_#{plural}")(Map.put(args, :paginate, true))
       end
 
       @doc false

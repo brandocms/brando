@@ -2,7 +2,7 @@ defmodule Brando.Sites.LoggedWarningResolver do
   @moduledoc """
   Resolver for logged warnings
   """
-  use BrandoWeb, :resolver
+  use BrandoAdmin, :resolver
 
   @doc """
   Get all logged warnings

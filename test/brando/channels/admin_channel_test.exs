@@ -1,4 +1,4 @@
-defmodule BrandoWebChannelTest do
+defmodule BrandoAdminChannelTest do
   use Brando.ChannelCase, async: false
   use ExUnit.Case, async: false
 

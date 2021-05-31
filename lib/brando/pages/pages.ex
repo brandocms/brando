@@ -2,7 +2,7 @@ defmodule Brando.Pages do
   @moduledoc """
   Context for pages
   """
-  use BrandoWeb, :context
+  use BrandoAdmin, :context
   use Brando.Query
 
   alias Brando.Pages.Page

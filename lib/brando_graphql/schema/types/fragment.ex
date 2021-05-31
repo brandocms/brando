@@ -1,5 +1,5 @@
 defmodule BrandoGraphQL.Schema.Types.Fragment do
-  use BrandoWeb, :absinthe
+  use BrandoAdmin, :absinthe
 
   object :fragment do
     field :id, :id

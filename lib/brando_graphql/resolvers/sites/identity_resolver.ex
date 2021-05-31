@@ -2,7 +2,7 @@ defmodule Brando.Sites.IdentityResolver do
   @moduledoc """
   Resolver for identitys
   """
-  use BrandoWeb, :resolver
+  use BrandoAdmin, :resolver
   alias Brando.Sites
 
   @doc """

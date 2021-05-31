@@ -1,5 +1,5 @@
 defmodule BrandoGraphQL.Schema.Types.Blueprint do
-  use BrandoWeb, :absinthe
+  use BrandoAdmin, :absinthe
 
   object :blueprint do
     field :source, :string

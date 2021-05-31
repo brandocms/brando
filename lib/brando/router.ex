@@ -21,10 +21,10 @@ defmodule Brando.Router do
 
   defmacro admin_routes(path \\ "/admin") do
     quote do
-      import BrandoWeb.UserAuth
+      import BrandoAdmin.UserAuth
 
-      upload_ctrl = BrandoWeb.API.Images.UploadController
-      villain_ctrl = BrandoWeb.API.Villain.VillainController
+      upload_ctrl = BrandoAdmin.API.Images.UploadController
+      villain_ctrl = BrandoAdmin.API.Villain.VillainController
 
       pipeline :admin do
         plug :accepts, ["html"]
@@ -34,7 +34,7 @@ defmodule Brando.Router do
         plug :protect_from_forgery
         plug :put_secure_browser_headers
         plug :put_extra_secure_browser_headers
-        plug :put_root_layout, {BrandoWeb.LayoutView, :root}
+        plug :put_root_layout, {BrandoAdmin.LayoutView, :root}
         plug :fetch_current_user
       end
 
@@ -61,7 +61,7 @@ defmodule Brando.Router do
       end
 
       scope unquote(path), as: :admin do
-        scope "/", BrandoWeb do
+        scope "/", BrandoAdmin do
           pipe_through [:admin, :redirect_if_user_is_authenticated]
 
           get "/users/register", UserRegistrationController, :new
@@ -74,7 +74,7 @@ defmodule Brando.Router do
           put "/users/reset_password/:token", UserResetPasswordController, :update
         end
 
-        scope "/", BrandoWeb do
+        scope "/", BrandoAdmin do
           pipe_through [:admin, :require_authenticated_user]
 
           get "/users/settings", UserSettingsController, :edit
@@ -82,7 +82,7 @@ defmodule Brando.Router do
           get "/users/settings/confirm_email/:token", UserSettingsController, :confirm_email
         end
 
-        scope "/", BrandoWeb do
+        scope "/", BrandoAdmin do
           pipe_through [:admin]
 
           delete "/users/log_out", UserSessionController, :delete

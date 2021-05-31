@@ -2,7 +2,7 @@ defmodule Brando.Sites.SEOResolver do
   @moduledoc """
   Resolver for seos
   """
-  use BrandoWeb, :resolver
+  use BrandoAdmin, :resolver
   alias Brando.Sites
 
   @doc """

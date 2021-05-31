@@ -2,7 +2,7 @@ defmodule Brando.Revisions.RevisionResolver do
   @moduledoc """
   Resolver for Revisions
   """
-  use BrandoWeb, :resolver
+  use BrandoAdmin, :resolver
   alias Brando.Revisions
 
   @doc """

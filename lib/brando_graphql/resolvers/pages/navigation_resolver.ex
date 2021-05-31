@@ -2,7 +2,7 @@ defmodule Brando.Navigation.NavigationResolver do
   @moduledoc """
   Resolver for Navigation
   """
-  use BrandoWeb, :resolver
+  use BrandoAdmin, :resolver
   alias Brando.Navigation
 
   @doc """

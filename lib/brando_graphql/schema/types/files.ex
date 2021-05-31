@@ -1,5 +1,5 @@
 defmodule BrandoGraphQL.Schema.Types.Files do
-  use BrandoWeb, :absinthe
+  use BrandoAdmin, :absinthe
 
   object :file_type do
     field :mimetype, :string

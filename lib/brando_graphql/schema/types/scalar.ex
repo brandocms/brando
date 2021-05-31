@@ -1,5 +1,5 @@
 defmodule BrandoGraphQL.Schema.Types.Scalar do
-  use BrandoWeb, :absinthe
+  use BrandoAdmin, :absinthe
   require Logger
 
   scalar :time, description: "ISOz time" do

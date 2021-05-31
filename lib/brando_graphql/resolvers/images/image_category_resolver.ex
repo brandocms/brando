@@ -2,7 +2,7 @@ defmodule Brando.Images.ImageCategoryResolver do
   @moduledoc """
   Resolver for image categories
   """
-  use BrandoWeb, :resolver
+  use BrandoAdmin, :resolver
   alias Brando.Images
 
   @doc """
