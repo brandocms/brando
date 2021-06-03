@@ -337,6 +337,8 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert image to html, with caption and credits and optional link
       """
+      def picture(%{"url" => ""}, _), do: ""
+
       def picture(data, _) do
         title = Map.get(data, "title", nil)
         credits = Map.get(data, "credits", nil)
