@@ -42,6 +42,10 @@ defmodule Brando.Blueprint.Unique do
       %{opts: %{unique: true}} = f, new_changeset ->
         unique_constraint(new_changeset, f.name)
 
+      %{opts: %{unique: [with: with_fields]}} = f, new_changeset when is_list(with_fields) ->
+        field = "#{to_string(f.name)}_id" |> String.to_existing_atom()
+        unique_constraint(new_changeset, [field] ++ with_fields)
+
       %{opts: %{unique: [with: with_field]}} = f, new_changeset ->
         field = "#{to_string(f.name)}_id" |> String.to_existing_atom()
         unique_constraint(new_changeset, [field, with_field])
@@ -49,7 +53,8 @@ defmodule Brando.Blueprint.Unique do
   end
 
   defp filter_by_field(module, field, changeset) do
-    from m in module,
+    from(m in module,
       where: field(m, ^field) == ^get_field(changeset, field)
+    )
   end
 end
