@@ -187,29 +187,17 @@ defmodule Mix.Tasks.Brando.Gen do
 
           # Backend JS
           {:eex, "assets/backend/src/api/graphql/ALL_QUERY.graphql",
-           "assets/backend/src/gql/#{snake_domain}/#{
-             singular |> Inflex.underscore() |> Inflex.pluralize() |> String.upcase()
-           }_QUERY.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/#{singular |> Inflex.underscore() |> Inflex.pluralize() |> String.upcase()}_QUERY.graphql"},
           {:eex, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql",
-           "assets/backend/src/gql/#{snake_domain}/#{
-             singular |> Inflex.underscore() |> String.upcase()
-           }_QUERY.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/#{singular |> Inflex.underscore() |> String.upcase()}_QUERY.graphql"},
           {:eex, "assets/backend/src/api/graphql/FRAGMENT.graphql",
-           "assets/backend/src/gql/#{snake_domain}/#{
-             singular |> Inflex.underscore() |> String.upcase()
-           }_FRAGMENT.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/#{singular |> Inflex.underscore() |> String.upcase()}_FRAGMENT.graphql"},
           {:eex, "assets/backend/src/api/graphql/CREATE_MUTATION.graphql",
-           "assets/backend/src/gql/#{snake_domain}/CREATE_#{
-             singular |> Inflex.underscore() |> String.upcase()
-           }_MUTATION.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/CREATE_#{singular |> Inflex.underscore() |> String.upcase()}_MUTATION.graphql"},
           {:eex, "assets/backend/src/api/graphql/UPDATE_MUTATION.graphql",
-           "assets/backend/src/gql/#{snake_domain}/UPDATE_#{
-             singular |> Inflex.underscore() |> String.upcase()
-           }_MUTATION.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/UPDATE_#{singular |> Inflex.underscore() |> String.upcase()}_MUTATION.graphql"},
           {:eex, "assets/backend/src/api/graphql/DELETE_MUTATION.graphql",
-           "assets/backend/src/gql/#{snake_domain}/DELETE_#{
-             singular |> Inflex.underscore() |> String.upcase()
-           }_MUTATION.graphql"},
+           "assets/backend/src/gql/#{snake_domain}/DELETE_#{singular |> Inflex.underscore() |> String.upcase()}_MUTATION.graphql"},
           {:eex, "assets/backend/src/menus/menu.js", "assets/backend/src/menus/#{vue_plural}.js"},
           {:eex, "assets/backend/src/routes/route.js",
            "assets/backend/src/routes/#{vue_plural}.js"},
@@ -329,6 +317,7 @@ defmodule Mix.Tasks.Brando.Gen do
   defp value_to_type(:file), do: Brando.Type.File
   defp value_to_type(:villain), do: :villain
   defp value_to_type(:gallery), do: :gallery
+  defp value_to_type(:enum), do: Ecto.Enum
 
   defp value_to_type(v) do
     if Code.ensure_loaded?(Ecto.Type) and not Ecto.Type.primitive?(v) do

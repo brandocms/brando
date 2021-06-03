@@ -7,6 +7,7 @@ defmodule Mix.Brando do
     :array,
     :boolean,
     :date,
+    :enum,
     :datetime,
     :decimal,
     :file,
