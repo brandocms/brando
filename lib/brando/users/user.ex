@@ -159,8 +159,15 @@ defmodule Brando.Users.User do
       input :name, :text
       input :email, :email
       input :password, :password
-      input :language, :text
-      input :role, :text
+      input :language, :radios, options: :languages
+
+      input :role, :radios,
+        options: [
+          %{label: gettext("Superuser"), value: :superuser},
+          %{label: gettext("Admin"), value: :admin},
+          %{label: gettext("Editor"), value: :editor},
+          %{label: gettext("User"), value: :user}
+        ]
     end
 
     fieldset :half do
