@@ -5,3 +5,5 @@ export BRANDO_SECRET_KEY_BASE="<%= :crypto.strong_rand_bytes(64) |> Base.encode6
 export BRANDO_URL_SCHEME="http"
 export BRANDO_URL_HOST="<%= application_name%>.byXX.b-y.no"
 export BRANDO_URL_PORT="80"
+
+export RELEASE_NODE="<%= application_name%>_staging@127.0.0.1"
