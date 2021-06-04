@@ -37,7 +37,7 @@ defmodule Brando.Mixfile do
 
       # liveview
       {:phoenix_live_view, "~> 0.15.4"},
-      {:surface, "~> 0.3"},
+      {:surface, github: "surface-ui/surface"},
       {:floki, ">= 0.27.0", only: :test},
 
       # graphql
