@@ -136,9 +136,9 @@ defmodule Brando.Villain.Parser do
       """
       def module(
             %{
-              "multi" => true,
-              "id" => id,
-              "entries" => entries
+              multi: true,
+              module_id: id,
+              entries: entries
             } = block,
             opts
           ) do
@@ -177,7 +177,7 @@ defmodule Brando.Villain.Parser do
         Villain.parse_and_render(module.wrapper, context)
       end
 
-      def module(%{"id" => id, "refs" => refs} = block, opts) do
+      def module(%{module_id: id, refs: refs} = block, opts) do
         base_context = opts.context
         modules = opts.modules
 
@@ -238,8 +238,8 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert text to HTML through Markdown
       """
-      def text(%{"text" => text} = params, _) do
-        case Map.get(params, "type") do
+      def text(%{text: text} = params, _) do
+        case Map.get(params, :type) do
           nil -> text
           "paragraph" -> text
           type -> "<div class=\"#{type}\">#{text}</div>"
@@ -338,24 +338,25 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert image to html, with caption and credits and optional link
       """
-      def picture(%{"url" => ""}, _), do: ""
+      def picture(%{url: ""}, _), do: ""
 
       def picture(data, _) do
-        title = Map.get(data, "title", nil)
-        credits = Map.get(data, "credits", nil)
-        alt = Map.get(data, "alt", nil)
-        width = Map.get(data, "width", nil)
-        height = Map.get(data, "height", nil)
+        data = Brando.Utils.coerce_struct(data, Brando.Images.Image)
+        title = Map.get(data, :title, nil)
+        credits = Map.get(data, :credits, nil)
+        alt = Map.get(data, :alt, nil)
+        width = Map.get(data, :width, nil)
+        height = Map.get(data, :height, nil)
         orientation = (width > height && "landscape") || "portrait"
-        lightbox = Map.get(data, "lightbox", nil)
+        lightbox = Map.get(data, :lightbox, nil)
         default_srcset = Brando.config(Brando.Images)[:default_srcset]
 
-        link = Map.get(data, "link") || ""
-        img_class = Map.get(data, "img_class", "")
-        picture_class = Map.get(data, "picture_class", "")
-        srcset = Map.get(data, "srcset", "")
+        link = Map.get(data, :link) || ""
+        img_class = Map.get(data, :img_class, "")
+        picture_class = Map.get(data, :picture_class, "")
+        srcset = Map.get(data, :srcset, "")
 
-        media_queries = Map.get(data, "media_queries", "")
+        media_queries = Map.get(data, :media_queries, "")
 
         title = if title == "", do: nil, else: title
         credits = if credits == "", do: nil, else: credits
@@ -525,23 +526,23 @@ defmodule Brando.Villain.Parser do
       @doc """
       Gallery
       """
-      def gallery(%{"images" => images} = data, _) do
-        class = Map.get(data, "class", "")
+      def gallery(%{images: images} = data, _) do
+        class = Map.get(data, :class, "")
         default_srcset = Brando.config(Brando.Images)[:default_srcset]
 
         items =
           Enum.map_join(images, "\n", fn img ->
-            title = Map.get(img, "title", nil)
-            credits = Map.get(img, "credits", nil)
-            alt = Map.get(img, "alt", nil)
-            width = Map.get(img, "width", nil)
-            height = Map.get(img, "height", nil)
-            placeholder = Map.get(data, "placeholder", :svg)
+            title = Map.get(img, :title, nil)
+            credits = Map.get(img, :credits, nil)
+            alt = Map.get(img, :alt, nil)
+            width = Map.get(img, :width, nil)
+            height = Map.get(img, :height, nil)
+            placeholder = Map.get(data, :placeholder, :svg)
 
             placeholder =
               (is_binary(placeholder) && String.to_existing_atom(placeholder)) || placeholder
 
-            orientation = (img["width"] > img["height"] && "landscape") || "portrait"
+            orientation = (img.width > img.height && "landscape") || "portrait"
             caption = render_caption(Map.merge(img, %{"title" => title, "credits" => credits}))
 
             ptag =
@@ -554,7 +555,7 @@ defmodule Brando.Villain.Parser do
                 sizes: "auto",
                 srcset: default_srcset,
                 lazyload: true,
-                lightbox: data["lightbox"] || false
+                lightbox: data.lightbox || false
               )
               |> safe_to_string
 
@@ -576,6 +577,9 @@ defmodule Brando.Villain.Parser do
         </div>
         """
       end
+
+      # empty gallery
+      def gallery(data, _), do: ""
 
       defoverridable gallery: 2
 
@@ -808,18 +812,18 @@ defmodule Brando.Villain.Parser do
       defp render_refs(module_code, refs, id) do
         Regex.replace(~r/%{(\w+)}/, module_code, fn _, match ->
           refs
-          |> Enum.find(&(&1["name"] == match))
+          |> Enum.find(&(&1.name == match))
           |> render_ref(id, match)
         end)
       end
 
       defp render_ref(nil, id, match), do: "<!-- REF #{match} missing // module: #{id}. -->"
-      defp render_ref(%{"hidden" => true}, _id, _match), do: "<!-- h -->"
-      defp render_ref(%{"deleted" => true}, _id, _match), do: "<!-- d -->"
+      defp render_ref(%{hidden: true}, _id, _match), do: "<!-- h -->"
+      defp render_ref(%{deleted: true}, _id, _match), do: "<!-- d -->"
 
       defp render_ref(ref, _id, _match) do
-        block = Map.get(ref, "data")
-        apply(__MODULE__, String.to_atom(block["type"]), [block["data"], []])
+        block = ref.data
+        apply(__MODULE__, String.to_atom(block.type), [block.data, []])
       end
     end
   end

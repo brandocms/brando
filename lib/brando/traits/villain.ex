@@ -42,12 +42,42 @@ defmodule Brando.Trait.Villain do
   end
 
   @doc """
-  Add creator to changeset
+  Generate HTML
   """
   @spec changeset_mutator(module, config, changeset, map | :system) :: changeset
-  def changeset_mutator(module, _config, %{valid?: true} = changeset, _user) do
-    Enum.reduce(module.__villain_fields__(), changeset, fn vf, mutated_changeset ->
-      Brando.Villain.Schema.generate_html(mutated_changeset, vf.name)
-    end)
+  def changeset_mutator(module, _config, changeset, _user) do
+    casted_changeset =
+      Enum.reduce(module.__villain_fields__(), changeset, fn vf, mutated_changeset ->
+        PolymorphicEmbed.cast_polymorphic_embed(mutated_changeset, vf.name)
+        # case Map.get(mutated_changeset.params, to_string(vf.name)) do
+        #   nil ->
+        #     mutated_changeset
+
+        #   params ->
+        #     new_params =
+        #       Map.put(
+        #         mutated_changeset.params,
+        #         to_string(vf.name),
+        #         transform_indexed_map_to_list(params)
+        #       )
+
+        #     Map.put(changeset, :params, new_params)
+        # end
+        # |> PolymorphicEmbed.cast_polymorphic_embed(vf.name)
+      end)
+
+    if casted_changeset.valid? do
+      Enum.reduce(module.__villain_fields__(), casted_changeset, fn vf, mutated_changeset ->
+        Brando.Villain.Schema.generate_html(mutated_changeset, vf.name)
+      end)
+    else
+      casted_changeset
+    end
+  end
+
+  def changeset_mutator(_module, _config, changeset, _user), do: changeset
+
+  defp transform_indexed_map_to_list(indexed_map) do
+    Enum.map(indexed_map, &elem(&1, 1))
   end
 end

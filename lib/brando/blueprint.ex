@@ -93,6 +93,7 @@ defmodule Brando.Blueprint do
   alias Brando.Blueprint.Unique
   alias Brando.Blueprint.Upload
   alias Brando.Blueprint.Villain
+  alias Brando.Blueprint.Villain.Blocks
   alias Brando.Trait
 
   defstruct naming: %{},
@@ -187,6 +188,19 @@ defmodule Brando.Blueprint do
 
         %{name: :updated_at} ->
           []
+
+        %{type: :villain} = attr ->
+          Ecto.Schema.field(
+            attr.name,
+            to_ecto_type(:villain),
+            to_ecto_opts(attr.type, attr.opts) ++
+              [
+                types: Brando.Blueprint.Villain.Blocks.list_blocks(),
+                type_field: :type,
+                on_type_not_found: :raise,
+                on_replace: :delete
+              ]
+          )
 
         %{type: :image} = attr ->
           # images are embedded
@@ -623,8 +637,12 @@ defmodule Brando.Blueprint do
     {traits_before_validate_required, traits_after_validate_required} =
       Trait.split_traits_by_changeset_phase(all_traits)
 
+    fields_to_cast =
+      (all_required_attrs ++ all_optional_attrs ++ castable_relations)
+      |> strip_villains_from_fields_to_cast(module)
+
     schema
-    |> Changeset.cast(params, all_required_attrs ++ all_optional_attrs ++ castable_relations)
+    |> Changeset.cast(params, fields_to_cast)
     |> Relations.run_embed_attributes(all_attributes, user, module)
     |> Relations.run_cast_relations(all_relations, user)
     |> Trait.run_changeset_mutators(
@@ -661,6 +679,11 @@ defmodule Brando.Blueprint do
 
   defp maybe_mark_for_deletion(changeset, _, _) do
     changeset
+  end
+
+  defp strip_villains_from_fields_to_cast(fields_to_cast, module) do
+    villain_fields = Enum.map(module.__villain_fields__(), & &1.name)
+    Enum.reject(fields_to_cast, &(&1 in villain_fields))
   end
 
   def blueprint?(module), do: {:__blueprint__, 0} in module.__info__(:functions)

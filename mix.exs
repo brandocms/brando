@@ -82,6 +82,7 @@ defmodule Brando.Mixfile do
 
       # Misc
       # {:brotli, "~> 0.2"},
+      {:polymorphic_embed, "~> 1.6"},
       {:httpoison, "~> 1.0"},
       {:gettext, "~> 0.11"},
       {:timex, "~> 3.0"},
