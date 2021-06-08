@@ -80,7 +80,7 @@ defmodule Brando.Mixfile do
       {:httpoison, "~> 1.0"},
       {:gettext, "~> 0.11"},
       {:timex, "~> 3.0"},
-      {:earmark, "1.4.4"},
+      {:earmark, "1.4.14"},
       {:jason, "~> 1.0"},
       {:poison, "~> 4.0"},
       {:flow, "~> 1.0"},
