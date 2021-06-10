@@ -178,6 +178,10 @@ defmodule Brando.Assets.Vite do
     defp prepend_slash(file_list) when is_list(file_list) do
       Enum.map(file_list, &prepend_slash(&1))
     end
+
+    defp prepend_slash(_) do
+      []
+    end
   end
 
   defmodule Render do
