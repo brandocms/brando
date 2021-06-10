@@ -34,11 +34,8 @@ defmodule Brando.Assets.Vite do
       if File.exists?(outer) do
         outer |> File.read!() |> Jason.decode!()
       else
-        Logger.error(
-          "Could not find static manifest at #{inspect(outer)}. " <>
-            "Run \"mix phx.digest\" after building your static files " <>
-            "or remove the configuration from \"config/prod.exs\"."
-        )
+        Logger.error("Could not find vite manifest at #{inspect(outer)}.")
+        %{}
       end
     end
 
