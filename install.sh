@@ -17,7 +17,7 @@ then
   mix do deps.get, deps.compile, brando.install --module $MODULE, deps.get, deps.compile
   direnv allow
   cd e2e && yarn && cd ../assets/frontend && yarn && yarn upgrade @brandocms/jupiter @brandocms/europacss && cd ../backend && yalc add brandojs && yarn && yarn lint --fix && cd ../../
-  mix brando.upgrade
+  mix deps.get && mix brando.upgrade
   mix ecto.setup
   mix ecto.dump
 fi
