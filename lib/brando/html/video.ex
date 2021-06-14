@@ -60,6 +60,7 @@ defmodule Brando.HTML.Video do
     height = Keyword.get(opts, :height)
     opacity = Keyword.get(opts, :opacity, 0)
     preload = Keyword.get(opts, :preload, false)
+    preload = if preload == true, do: "auto", else: preload
     cover = Keyword.get(opts, :cover, false)
     poster = Keyword.get(opts, :poster, false)
     play_button = Keyword.get(opts, :play_button, false)
@@ -74,7 +75,7 @@ defmodule Brando.HTML.Video do
         <video
           tabindex="0"
           role="presentation"
-          preload="#{(preload && "none") || "auto"}"
+          preload="#{(preload && preload) || "none"}"
           #{autoplay}
           muted
           loop
@@ -104,9 +105,7 @@ defmodule Brando.HTML.Video do
            <img
              width="#{width}"
              height="#{height}"
-             src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27#{
-        width
-      }%27%20height%3D%27#{height}%27%20style%3D%27background%3Argba%280%2C0%2C0%2C#{opacity}%29%27%2F%3E" />
+             src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27#{width}%27%20height%3D%27#{height}%27%20style%3D%27background%3Argba%280%2C0%2C0%2C#{opacity}%29%27%2F%3E" />
          </div>
        )
     else
@@ -114,6 +113,7 @@ defmodule Brando.HTML.Video do
     end
   end
 
+  defp get_video_cover("false", _, _, _), do: ""
   defp get_video_cover(false, _, _, _), do: ""
   defp get_video_cover(url, _, _, _), do: url
 
