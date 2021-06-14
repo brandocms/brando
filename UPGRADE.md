@@ -1,5 +1,7 @@
 ## 0.51.0
 
+* Vite: Respect `hmr` config setting. Set it to `true` in your `dev.exs`, and `false` in `prod.exs`
+
 * Move your contexts to the application root:
 
   `lib/my_app/accounts/accounts.ex` -> `lib/my_app/accounts.ex`

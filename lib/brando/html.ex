@@ -386,7 +386,7 @@ defmodule Brando.HTML do
       ~E|<%= Brando.Assets.Vite.Render.main_css() %>
     <%= Brando.Assets.Vite.Render.main_js() %>|
     else
-      if Brando.config(:hmr) === false do
+      if Application.get_env(Brando.otp_app(), :hmr) === false do
         ~E|<%= Brando.Assets.Vite.Render.main_css() %>
         <%= Brando.Assets.Vite.Render.main_js() %>|
       else

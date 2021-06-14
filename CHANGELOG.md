@@ -2,6 +2,7 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 
 ## 0.51.0-dev
 
+* Vite: Respect `hmr` config setting. Set it to `true` in your `dev.exs`, and `false` in `prod.exs`
 * Query: Add `mutation :duplicate`
 * Images: Add `dominant_color` to image struct.
 * Revisions: Adds initial revision support.

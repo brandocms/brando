@@ -14,7 +14,8 @@ defmodule Brando.Assets.Vite do
     def read() do
       case :persistent_term.get(@cache_key, nil) do
         nil ->
-          res = read(Brando.env())
+          hmr? = Application.get_env(Brando.otp_app(), :hmr)
+          res = read(hmr?)
           :persistent_term.put(@cache_key, res)
           res
 
@@ -28,7 +29,17 @@ defmodule Brando.Assets.Vite do
     - `defp cache_static_manifest(endpoint)`
     - https://github.com/phoenixframework/phoenix/blob/a206768ff4d02585cda81a2413e922e1dc19d556/lib/phoenix/endpoint/supervisor.ex#L411
     """
-    def read(:prod) do
+    def read(true) do
+      case File.read(@vite_manifest) do
+        {:error, :enoent} ->
+          %{}
+
+        {:ok, content} ->
+          Jason.decode!(content)
+      end
+    end
+
+    def read(_) do
       outer = Application.app_dir(Brando.endpoint().config(:otp_app), @vite_manifest)
 
       if File.exists?(outer) do
@@ -39,15 +50,7 @@ defmodule Brando.Assets.Vite do
       end
     end
 
-    def read(_) do
-      case File.read(@vite_manifest) do
-        {:error, :enoent} ->
-          %{}
 
-        {:ok, content} ->
-          Jason.decode!(content)
-      end
-    end
   end
 
   defmodule Manifest do
@@ -152,7 +155,8 @@ defmodule Brando.Assets.Vite do
 
     @spec vendor_js() :: binary()
     def vendor_js() do
-      get_imports(@entry_file) |> Enum.at(0)
+      get_imports(@entry_file)
+      |> Enum.at(0)
     end
 
     @spec get_file(binary()) :: binary()
@@ -167,7 +171,8 @@ defmodule Brando.Assets.Vite do
 
     @spec get_imports(binary()) :: list(binary())
     def get_imports(file) do
-      read() |> get_in([file, "imports"]) |> Enum.map(&get_file/1)
+      imports = get_in(read(), [file, "imports"]) || []
+      Enum.map(imports, &get_file/1)
     end
 
     @spec prepend_slash(binary()) :: binary()
@@ -180,7 +185,7 @@ defmodule Brando.Assets.Vite do
     end
 
     defp prepend_slash(_) do
-      []
+      nil
     end
   end
 
@@ -191,11 +196,15 @@ defmodule Brando.Assets.Vite do
     def static_path(file), do: Brando.helpers().static_path(Brando.endpoint(), file)
 
     def main_css do
-      css_files = Vite.Manifest.main_css()
+      case Vite.Manifest.main_css() do
+        nil ->
+          ""
 
-      for css_file <- css_files do
-        digested_css_file = static_path(css_file)
-        ~E|    <link phx-track-static rel="stylesheet" href="<%= digested_css_file %>">|
+        css_files ->
+          for css_file <- css_files do
+            digested_css_file = static_path(css_file)
+            ~E|    <link phx-track-static rel="stylesheet" href="<%= digested_css_file %>">|
+          end
       end
     end
 
@@ -203,24 +212,52 @@ defmodule Brando.Assets.Vite do
       js_file = Vite.Manifest.main_js()
       vendor_file = Vite.Manifest.vendor_js()
 
-      digested_js_file = static_path(js_file)
-      digested_vendor_file = static_path(vendor_file)
+      digested_script =
+        if js_file do
+          digested_js_file = static_path(js_file)
 
-      ~E|<script type="module" crossorigin defer phx-track-static src="<%= digested_js_file %>"></script>
-    <link rel="modulepreload" phx-track-static href="<%= digested_vendor_file %>">
-    |
+          ~E|<script type="module" crossorigin defer phx-track-static src="<%= digested_js_file %>"></script>|
+        else
+          ""
+        end
+
+      digested_vendor =
+        if vendor_file do
+          digested_vendor_file = static_path(vendor_file)
+          ~E|<link rel="modulepreload" phx-track-static href="<%= digested_vendor_file %>">|
+        else
+          ""
+        end
+
+      [digested_script, digested_vendor]
     end
 
     def legacy_js do
       legacy_entry = Vite.Manifest.legacy_entry()
       legacy_polyfills = Vite.Manifest.legacy_polyfills()
 
-      digested_entry = static_path(legacy_entry)
-      digested_polyfills = static_path(legacy_polyfills)
+      digested_legacy_polyfills =
+        if legacy_polyfills do
+          digested_polyfills = static_path(legacy_polyfills)
 
-      ~E[<script nomodule>!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>
-      <script nomodule phx-track-static src="<%= digested_polyfills %>"></script>
-      <script nomodule phx-track-static id="vite-legacy-entry" data-src="<%= digested_entry %>">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>]
+          ~E[<script nomodule phx-track-static src="<%= digested_polyfills %>"></script>]
+        else
+          ""
+        end
+
+      digested_entry_script =
+        if legacy_entry do
+          digested_entry = static_path(legacy_entry)
+
+          ~E[<script nomodule phx-track-static id="vite-legacy-entry" data-src="<%= digested_entry %>">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>]
+        else
+          ""
+        end
+
+      helper =
+        ~E[<script nomodule>!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>]
+
+      [helper, digested_legacy_polyfills, digested_entry_script]
     end
   end
 end
