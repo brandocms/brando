@@ -319,9 +319,10 @@ defmodule Brando.Villain.Parser do
           width: data["width"],
           height: data["height"],
           cover: :svg,
+          autoplay: data["autoplay"] || nil,
           poster: data["poster"] || nil,
           preload: data["preload"] || true,
-          opacity: 0.1
+          opacity: data["opacity"] || 0.1,
         )
         |> safe_to_string()
       end
