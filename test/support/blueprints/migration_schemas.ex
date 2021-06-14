@@ -107,3 +107,49 @@ defmodule Brando.MigrationTest.Property do
     attribute :value, :string
   end
 end
+
+defmodule Brando.MigrationTest.Profile do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Persons",
+    schema: "Person",
+    singular: "profiles",
+    plural: "profile"
+
+  trait Brando.Trait.Creator
+  trait Brando.Trait.SoftDelete
+  trait Brando.Trait.Sequenced
+  trait Brando.Trait.Timestamped
+
+  primary_key :uuid
+
+  attributes do
+    attribute :status, :string
+  end
+end
+
+defmodule Brando.MigrationTest.Person do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Persons",
+    schema: "Person",
+    singular: "person",
+    plural: "persons"
+
+  trait Brando.Trait.Creator
+  trait Brando.Trait.SoftDelete
+  trait Brando.Trait.Sequenced
+  trait Brando.Trait.Timestamped
+  trait Brando.Trait.Translatable
+
+  primary_key :uuid
+
+  attributes do
+    attribute :name, :string
+    attribute :email, :string, required: true
+  end
+
+  relations do
+    relation :profile, :belongs_to, module: Brando.MigrationTest.Profile, type: :binary_id
+  end
+end

@@ -43,6 +43,23 @@ defmodule Brando.Blueprint do
         plural: "projects"
 
       data_layer :embedded
+
+  ## UUID primary key
+
+      use Brando.Blueprint,
+        application: "MyApp",
+        domain: "Projects",
+        schema: "Project",
+        singular: "project",
+        plural: "projects"
+
+      primary_key :uuid
+
+      # for relations that have uuids
+      relations do
+        relation :some_module, :belongs_to, module: SomeModule, type: :binary_id
+      end
+
   """
   alias Ecto.Changeset
 
@@ -89,6 +106,7 @@ defmodule Brando.Blueprint do
       Module.register_attribute(__MODULE__, :translations, accumulate: false)
       Module.register_attribute(__MODULE__, :table_name, accumulate: false)
       Module.register_attribute(__MODULE__, :data_layer, accumulate: false)
+      Module.register_attribute(__MODULE__, :primary_key, accumulate: false)
       Module.register_attribute(__MODULE__, :allow_mark_as_deleted, accumulate: false)
 
       @data_layer :database
@@ -153,9 +171,11 @@ defmodule Brando.Blueprint do
     quote do
       Enum.map(unquote(relations), fn
         %{type: :belongs_to, name: name, opts: opts} ->
+          referenced_module = Map.fetch!(opts, :module)
+
           Ecto.Schema.belongs_to(
             name,
-            Map.fetch!(opts, :module),
+            referenced_module,
             to_ecto_opts(:belongs_to, opts)
           )
 
@@ -283,6 +303,18 @@ defmodule Brando.Blueprint do
     end
   end
 
+  defmacro primary_key(:uuid) do
+    quote do
+      @primary_key {:id, :binary_id, autogenerate: true}
+    end
+  end
+
+  defmacro primary_key(:id) do
+    quote do
+      @primary_key {:id, :id, autogenerate: true}
+    end
+  end
+
   defmacro primary_key(opts) do
     quote do
       @primary_key unquote(opts)
@@ -292,6 +324,10 @@ defmodule Brando.Blueprint do
   defmacro __before_compile__(_) do
     quote location: :keep,
           unquote: false do
+      def __primary_key__ do
+        @primary_key
+      end
+
       @all_attributes Enum.reverse(@attrs) ++
                         Brando.Trait.get_attributes(@attrs, @relations, @traits)
       def __attributes__ do

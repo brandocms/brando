@@ -9,10 +9,17 @@ defmodule Brando.Blueprint.Migrations.Operations.Relation.Add do
         relation: %{type: :belongs_to, name: name, opts: %{module: referenced_module}}
       }) do
     referenced_table = referenced_module.__schema__(:source)
+    uuid? = referenced_module.__primary_key__() == {:id, :binary_id, autogenerate: true}
 
-    """
-    add #{inspect(name)}_id, references(:#{referenced_table})
-    """
+    if uuid? do
+      """
+      add #{inspect(name)}_id, references(:#{referenced_table}, type: :uuid)
+      """
+    else
+      """
+      add #{inspect(name)}_id, references(:#{referenced_table})
+      """
+    end
   end
 
   def up(%{

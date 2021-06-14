@@ -1,0 +1,25 @@
+defmodule Brando.Migrations.Persons.Person.Blueprint001 do
+  use Ecto.Migration
+
+  def up do
+    create table(:persons, primary_key: false) do
+      add :id, :uuid, primary_key: true
+      add :name, :text
+      add :email, :text
+      add :deleted_at, :utc_datetime
+      add :sequence, :integer
+      timestamps()
+      add :language, :text
+      add :profile_id, references(:persons_profile, type: :uuid)
+      add :creator_id, references(:users)
+    end
+
+    create index(:persons, [:language])
+  end
+
+  def down do
+    drop table(:persons)
+
+    drop index(:persons, [:language])
+  end
+end

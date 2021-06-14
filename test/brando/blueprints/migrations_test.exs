@@ -26,5 +26,9 @@ defmodule Brando.Blueprint.MigrationsTest do
     Migrations.create_migration(Brando.MigrationTest.ProjectUpdate2, @test_opts)
     assert [file] = Path.wildcard("tmp/test_migrations/*_brando_projects_project_003.exs")
     assert File.read!(file) == File.read!("test/support/migration_results/migration_003.txt")
+
+    Migrations.create_migration(Brando.MigrationTest.Person, @test_opts)
+    assert [file] = Path.wildcard("tmp/test_migrations/*_brando_persons_person_001.exs")
+    assert File.read!(file) == File.read!("test/support/migration_results/migration_004.txt")
   end
 end

@@ -184,6 +184,29 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :related_project_id, references(:projects)
     end
 
+    create table(:persons_profile, primary_key: false) do
+      add :id, :uuid, primary_key: true
+      add :status, :text
+      add :sequence, :integer
+      add :deleted_at, :utc_datetime
+      timestamps()
+      add :creator_id, references(:users)
+    end
+
+    create table(:persons, primary_key: false) do
+      add :id, :uuid, primary_key: true
+      add :name, :text
+      add :email, :text
+      add :deleted_at, :utc_datetime
+      add :sequence, :integer
+      timestamps()
+      add :language, :text
+      add :profile_id, references(:persons_profile, type: :uuid)
+      add :creator_id, references(:users)
+    end
+
+    create index(:persons, [:language])
+
     create table(:sites_identity) do
       add :name, :string
       add :alternate_name, :string

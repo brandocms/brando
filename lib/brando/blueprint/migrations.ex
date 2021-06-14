@@ -91,25 +91,51 @@ defmodule Brando.Blueprint.Migrations do
     table_name = module.__naming__().table_name
     migration_module = "#{application}.Migrations.#{domain}.#{schema}.Blueprint#{sequence}"
 
-    """
-    defmodule #{migration_module} do
-      use Ecto.Migration
+    uuid? = module.__primary_key__() == {:id, :binary_id, autogenerate: true}
 
-      def up do
-        create table(:#{table_name}) do
-          #{up}
+    if uuid? do
+      """
+      defmodule #{migration_module} do
+        use Ecto.Migration
+
+        def up do
+          create table(:#{table_name}, primary_key: false) do
+            add :id, :uuid, primary_key: true
+            #{up}
+          end
+
+          #{up_indexes}
         end
 
-        #{up_indexes}
-      end
+        def down do
+          drop table(:#{table_name})
 
-      def down do
-        drop table(:#{table_name})
-
-        #{down_indexes}
+          #{down_indexes}
+        end
       end
+      """
+    else
+      """
+      defmodule #{migration_module} do
+        use Ecto.Migration
+
+        def up do
+          create table(:#{table_name}) do
+            #{up}
+          end
+
+          #{up_indexes}
+        end
+
+        def down do
+          drop table(:#{table_name})
+
+          #{down_indexes}
+        end
+      end
+      """
     end
-    """
+
   end
 
   defp wrap_in_operation_type({up, down}, {up_indexes, down_indexes}, :alter, module, sequence) do
