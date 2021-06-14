@@ -59,6 +59,21 @@ defmodule Brando.Blueprint.Snapshot do
     }
   end
 
+  defp build_path(module, opts) do
+    root_path = Keyword.get(opts, :snapshot_path)
+
+    snapshot_path =
+      [
+        module.__naming__().application,
+        module.__naming__().domain,
+        module.__naming__().schema
+      ]
+      |> Enum.map(&String.downcase/1)
+      |> Enum.join("_")
+
+    Path.join(root_path, snapshot_path)
+  end
+
   defp build_filename(module, version, opts) do
     snapshot_path = build_path(module, opts)
     File.mkdir_p!(snapshot_path)
@@ -87,18 +102,4 @@ defmodule Brando.Blueprint.Snapshot do
     get_snapshot_version(module) + 1
   end
 
-  defp build_path(module, opts) do
-    root_path = Keyword.get(opts, :snapshot_path)
-
-    snapshot_path =
-      [
-        module.__naming__().application,
-        module.__naming__().domain,
-        module.__naming__().schema
-      ]
-      |> Enum.map(&String.downcase/1)
-      |> Enum.join("_")
-
-    Path.join(root_path, snapshot_path)
-  end
 end
