@@ -572,6 +572,14 @@ defmodule Brando.HTML.Images do
       )
 
   @doc """
+  Get just the srcset
+  """
+  def get_srcset!(image_field, srcset, opts, placeholder \\ false) do
+    {_, srcset} = get_srcset(image_field, srcset, opts, placeholder)
+    srcset
+  end
+
+  @doc """
   Get srcset from image config
   """
   def get_srcset(image_field, cfg, opts, placeholder \\ false)
