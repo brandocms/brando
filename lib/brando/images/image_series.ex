@@ -20,7 +20,7 @@ defmodule Brando.ImageSeries do
 
     def changeset_mutator(_module, _config, changeset, user) do
       cast_assoc(changeset, :images,
-        with: {Brando.Image, :changeset, [user, get_field(changeset, :cfg)]}
+        with: {Brando.Image, :changeset, [user, [image_db_config: get_field(changeset, :cfg)]]}
       )
     end
   end
@@ -100,8 +100,8 @@ defmodule Brando.ImageSeries do
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Timestamped
   trait __MODULE__.Trait.Slug
-  trait __MODULE__.Trait.CastImages
   trait __MODULE__.Trait.InheritConfiguration
+  trait __MODULE__.Trait.CastImages
 
   identifier "{{ entry.name }}"
 

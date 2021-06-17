@@ -13,8 +13,9 @@ defmodule Brando.Blueprint.Upload do
   @type changeset :: Changeset.t()
   @type config :: list()
 
-  def validate_upload(changeset, {:image, field_name}, user, cfg),
-    do: do_validate_upload(changeset, {:image, field_name}, user, cfg)
+  def validate_upload(changeset, {:image, field_name}, user, cfg) do
+    do_validate_upload(changeset, {:image, field_name}, user, cfg)
+  end
 
   def validate_upload(changeset, {:file, field_name}, _user, cfg) do
     with {:ok, plug} <- Utils.field_has_changed(changeset, field_name),
@@ -113,12 +114,17 @@ defmodule Brando.Blueprint.Upload do
   @doc """
   Find image and file attributes and validate upload
   """
-  def run_upload_validations(changeset, module, attributes, user) do
+  def run_upload_validations(changeset, module, attributes, user, image_db_config) do
     attributes
     |> Enum.filter(&(&1.type in [:image, :file]))
     |> Enum.reduce(changeset, fn %{type: type, name: name}, mutated_changeset ->
-      field_cfg = module.__attribute_opts__(name)
-      validate_upload(mutated_changeset, {type, name}, user, field_cfg)
+      case module.__attribute_opts__(name) do
+        %{db: true} ->
+          validate_upload(mutated_changeset, {type, name}, user, image_db_config)
+
+        field_cfg ->
+          validate_upload(mutated_changeset, {type, name}, user, field_cfg)
+      end
     end)
   end
 end

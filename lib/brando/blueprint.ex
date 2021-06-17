@@ -32,6 +32,8 @@ defmodule Brando.Blueprint do
         relation :projects_workers, :many_to_many, module: ProjectWorker
       end
 
+    # add `cast: :collection` to :projects_workers opts if you need M2M casting
+
 
   ## Embedded schema
 
@@ -499,7 +501,7 @@ defmodule Brando.Blueprint do
       end
 
       # generate changeset
-      def changeset(schema, params \\ %{}, user \\ :system) do
+      def changeset(schema, params \\ %{}, user \\ :system, extra \\ []) do
         run_changeset(
           __MODULE__,
           schema,
@@ -510,7 +512,8 @@ defmodule Brando.Blueprint do
           @all_relations,
           @castable_relations,
           @all_required_attrs,
-          @all_optional_attrs
+          @all_optional_attrs,
+          extra
         )
       end
 
@@ -550,7 +553,8 @@ defmodule Brando.Blueprint do
         all_relations,
         castable_relations,
         all_required_attrs,
-        all_optional_attrs
+        all_optional_attrs,
+        extra
       ) do
     {traits_before_validate_required, traits_after_validate_required} =
       Trait.split_traits_by_changeset_phase(all_traits)
@@ -568,7 +572,12 @@ defmodule Brando.Blueprint do
     |> Unique.run_unique_relation_constraints(module, all_relations)
     |> Constraints.run_validations(module, all_attributes)
     |> Constraints.run_fk_constraints(module, all_relations)
-    |> Upload.run_upload_validations(module, all_attributes, user)
+    |> Upload.run_upload_validations(
+      module,
+      all_attributes,
+      user,
+      Keyword.get(extra, :image_db_config)
+    )
     |> Trait.run_changeset_mutators(
       module,
       traits_after_validate_required,
