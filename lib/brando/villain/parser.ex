@@ -322,7 +322,7 @@ defmodule Brando.Villain.Parser do
           autoplay: data["autoplay"] || nil,
           poster: data["poster"] || nil,
           preload: data["preload"] || true,
-          opacity: data["opacity"] || 0.1,
+          opacity: data["opacity"] || 0.1
         )
         |> safe_to_string()
       end
