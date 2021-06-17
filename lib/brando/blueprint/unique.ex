@@ -10,9 +10,6 @@ defmodule Brando.Blueprint.Unique do
       %{opts: %{unique: true}} = f, new_changeset ->
         unique_constraint(new_changeset, f.name)
 
-      %{opts: %{unique: [with: with_field]}} = f, new_changeset ->
-        unique_constraint(new_changeset, [f.name, with_field])
-
       %{opts: %{unique: [prevent_collision: true]}} = f, new_changeset ->
         new_changeset
         |> Utils.Schema.avoid_field_collision(module, [f.name], nil)
@@ -32,6 +29,20 @@ defmodule Brando.Blueprint.Unique do
           {filter_field, &filter_by_field/3}
         )
         |> unique_constraint([f.name, filter_field])
+
+      %{opts: %{unique: unique_opts}} = f, new_changeset ->
+        message = Keyword.get(unique_opts, :message, "has already been taken")
+
+        case Keyword.get(unique_opts, :with) do
+          nil ->
+            nil
+
+          with_fields when is_list(with_fields) ->
+            unique_constraint(new_changeset, [f.name] ++ with_fields, message: message)
+
+          with_field ->
+            unique_constraint(new_changeset, [f.name, with_field], message: message)
+        end
     end)
   end
 
@@ -42,13 +53,21 @@ defmodule Brando.Blueprint.Unique do
       %{opts: %{unique: true}} = f, new_changeset ->
         unique_constraint(new_changeset, f.name)
 
-      %{opts: %{unique: [with: with_fields]}} = f, new_changeset when is_list(with_fields) ->
-        field = "#{to_string(f.name)}_id" |> String.to_existing_atom()
-        unique_constraint(new_changeset, [field] ++ with_fields)
+      %{opts: %{unique: unique_opts}} = f, new_changeset ->
+        message = Keyword.get(unique_opts, :message, "has already been taken")
 
-      %{opts: %{unique: [with: with_field]}} = f, new_changeset ->
-        field = "#{to_string(f.name)}_id" |> String.to_existing_atom()
-        unique_constraint(new_changeset, [field, with_field])
+        case Keyword.get(unique_opts, :with) do
+          nil ->
+            nil
+
+          with_fields when is_list(with_fields) ->
+            field = "#{to_string(f.name)}_id" |> String.to_existing_atom()
+            unique_constraint(new_changeset, [field] ++ with_fields, message: message)
+
+          with_field ->
+            field = "#{to_string(f.name)}_id" |> String.to_existing_atom()
+            unique_constraint(new_changeset, [field, with_field], message: message)
+        end
     end)
   end
 
