@@ -6,18 +6,19 @@ defmodule Brando.Blueprint.Migrations.Operations.Relation.Add do
             opts: nil
 
   def up(%{
-        relation: %{type: :belongs_to, name: name, opts: %{module: referenced_module}}
+        relation: %{type: :belongs_to, name: name, opts: %{module: referenced_module} = opts}
       }) do
     referenced_table = referenced_module.__schema__(:source)
     uuid? = referenced_module.__primary_key__() == {:id, :binary_id, autogenerate: true}
+    on_delete = Map.get(opts, :on_delete, :nothing)
 
     if uuid? do
       """
-      add #{inspect(name)}_id, references(:#{referenced_table}, type: :uuid)
+      add #{inspect(name)}_id, references(:#{referenced_table}, on_delete: #{inspect(on_delete)}, type: :uuid)
       """
     else
       """
-      add #{inspect(name)}_id, references(:#{referenced_table})
+      add #{inspect(name)}_id, references(:#{referenced_table}, on_delete: #{inspect(on_delete)})
       """
     end
   end
@@ -68,6 +69,20 @@ defmodule Brando.Blueprint.Migrations.Operations.Relation.Add do
 
   def down(%{relation: _}) do
     ""
+  end
+
+  def up_indexes(%{
+        relation: %{type: :belongs_to, name: name, opts: %{unique: [with: other_fields]}},
+        module: module
+      })
+      when is_list(other_fields) do
+    table_name = module.__naming__().table_name
+
+    name_id = String.to_existing_atom("#{name}_id")
+
+    """
+    create unique_index(:#{table_name}, #{inspect([name_id] ++ other_fields)})
+    """
   end
 
   def up_indexes(%{
