@@ -47,6 +47,8 @@ defmodule Brando.Cache.Query do
     :query
     |> Cachex.stream!(ms)
     |> Enum.map(fn {_, key, _, _, _} -> Cachex.del(:query, key) end)
+  rescue
+    Cachex.ExecutionError -> :ok
   end
 
   @spec perform_eviction(:single, binary(), integer()) :: [:ok]
@@ -56,6 +58,8 @@ defmodule Brando.Cache.Query do
     :query
     |> Cachex.stream!(ms)
     |> Enum.map(fn {_, key, _, _, _} -> Cachex.del(:query, key) end)
+  rescue
+    Cachex.ExecutionError -> :ok
   end
 
   defp find_single_entry(source, key) do
