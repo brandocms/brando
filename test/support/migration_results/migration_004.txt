@@ -10,8 +10,8 @@ defmodule Brando.Migrations.Persons.Person.Blueprint001 do
       add :sequence, :integer
       timestamps()
       add :language, :text
-      add :profile_id, references(:persons_profile, type: :uuid)
-      add :creator_id, references(:users)
+      add :profile_id, references(:persons_profile, on_delete: :nothing, type: :uuid)
+      add :creator_id, references(:users, on_delete: :nothing)
     end
 
     create index(:persons, [:language])
