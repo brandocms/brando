@@ -51,7 +51,7 @@ defmodule Brando.Blueprint.Relations do
   ## belongs_to
 
   def run_cast_relation(
-        %{type: :belongs_to, opts: %{cast: true, module: _module, name: name} = opts},
+        %{type: :belongs_to, name: name, opts: %{cast: true, module: _module} = opts},
         changeset,
         _user
       ) do
@@ -59,17 +59,18 @@ defmodule Brando.Blueprint.Relations do
   end
 
   def run_cast_relation(
-        %{type: :belongs_to, opts: %{cast: :with_user, module: module, name: name} = opts},
+        %{type: :belongs_to, name: name, opts: %{cast: :with_user, module: module} = opts},
         changeset,
         user
       ) do
     with_opts = [with: {module, :changeset, [user]}]
     merged_opts = Keyword.merge(to_changeset_opts(:belongs_to, opts), with_opts)
+
     cast_assoc(changeset, name, merged_opts)
   end
 
   def run_cast_relation(
-        %{type: :belongs_to, opts: %{cast: cast_opts, name: name} = opts},
+        %{type: :belongs_to, name: name, opts: %{cast: cast_opts} = opts},
         changeset,
         user
       ) do
