@@ -55,14 +55,28 @@ defmodule Brando.Publisher do
     {:ok, publish_at, _} = DateTime.from_iso8601(publish_at)
     args = %{schema: schema, id: id, revision: revision, user_id: user.id}
 
+    {:ok, {revision, {_, decoded_entry}}} = Brando.Revisions.get_revision(schema, id, revision)
+
+    revision_identifier =
+      decoded_entry
+      |> Brando.Schema.identifier_for()
+      |> maybe_add_revision_description(revision)
+
     args
     |> Worker.EntryPublisher.new(
       replace_args: true,
       scheduled_at: publish_at,
-      tags: [:publisher, :revision]
+      tags: [:publisher, :revision],
+      meta: %{identifier: revision_identifier}
     )
     |> Oban.insert()
   end
+
+  defp maybe_add_revision_description(identifier, %{description: nil}), do: identifier
+  defp maybe_add_revision_description(identifier, %{description: ""}), do: identifier
+
+  defp maybe_add_revision_description(identifier, %{description: description}),
+    do: Map.update!(identifier, :title, &"#{&1} (#{description})")
 
   # if we have no publish_at but status = pending -- set status published
   def maybe_override_status(%{changes: %{publish_at: nil}} = changeset) do
