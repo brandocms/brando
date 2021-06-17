@@ -1,5 +1,9 @@
 ## 0.51.0
 
+* If you use legacy schemas/changeset and use `generate_html` with a custom villain name,
+  you must call it by its data name. So for instance, if you have `generate_html(:biography)`,
+  switch to `generate_html(:biography_data)`
+
 * Vite: Respect `hmr` config setting. Set it to `true` in your `dev.exs`, and `false` in `prod.exs`
 
 * Move your contexts to the application root:
