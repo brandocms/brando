@@ -67,6 +67,18 @@ defmodule Brando.Blueprint.Migrations.Operations.Attribute.Remove do
   end
 
   def down_indexes(%{
+        attribute: %{name: name, opts: %{unique: [with: other_fields]}},
+        module: module
+      })
+      when is_list(other_fields) do
+    table_name = module.__naming__().table_name
+
+    """
+    create unique_index(:#{table_name}, #{inspect([name] ++ other_fields)})
+    """
+  end
+
+  def down_indexes(%{
         attribute: %{name: name, opts: %{unique: [with: other_field]}},
         module: module
       })
