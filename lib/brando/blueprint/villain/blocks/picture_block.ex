@@ -15,14 +15,8 @@ defmodule Brando.Blueprint.Villain.Blocks.PictureBlock do
   end
 
   def changeset(struct, params \\ %{}) do
-    cs =
-      struct
-      |> cast(params, ~w(type hidden deleted)a)
-      |> cast_embed(:data)
-
-    require Logger
-    Logger.error(inspect(cs.data, pretty: true))
-
-    cs
+    struct
+    |> cast(params, ~w(type hidden deleted)a)
+    |> cast_embed(:data)
   end
 end
