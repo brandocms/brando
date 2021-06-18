@@ -134,9 +134,20 @@ defmodule Brando.Users.User do
       # listing_query %{filter: %{active: false}}
       listing_field :avatar, :image, columns: 2
 
+      listing_filters([
+        [label: gettext("Name"), filter: "name"],
+        [label: gettext("Email"), filter: "email"]
+      ])
+
       listing_template """
-                       {{ entry.name }}<br>
-                       {{ entry.email }}<br>
+                       <a
+                        class="entry-link"
+                        data-phx-link="redirect"
+                        data-phx-link-state="push"
+                        href="/admin/users/update/{{ entry.id }}">
+                        {{ entry.name }}
+                       </a><br>
+                       <small>{{ entry.email }}</small><br>
                        <div class="badge">{{ entry.role }}</div>
                        """,
                        columns: 7

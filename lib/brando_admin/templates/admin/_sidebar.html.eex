@@ -98,7 +98,7 @@
                          class="<%= Brando.HTML.active(@conn, "#{item.url}") %>"
                          data-phx-link="redirect"
                          data-phx-link-state="push">
-                        <%= sub_item.text %>
+                        <%= sub_item.name %>
                       </a>
                     </li>
                     <% end %>

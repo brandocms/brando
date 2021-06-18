@@ -55,7 +55,30 @@ defmodule Brando.Upload do
   Image or file
   """
   def handle_upload_type(%{cfg: %ImageConfig{}} = upload) do
-    {:ok, %Image{path: upload.meta.media_path}}
+    media_path = upload.meta.media_path
+
+    media_path
+    |> Images.Utils.media_path()
+    |> Fastimage.size()
+    |> case do
+      {:ok, %{width: width, height: height}} ->
+        dominant_color = Images.Operations.Info.get_dominant_color(media_path)
+
+        {:ok,
+         %Image{
+           path: media_path,
+           width: width,
+           height: height,
+           dominant_color: dominant_color
+           #  alt: Map.get(extra_params, :alt),
+           #  title: Map.get(extra_params, :title),
+           #  focal: Map.get(extra_params, :focal, @default_focal
+         }}
+
+      {:error, _} ->
+        # Progress.hide_progress(user)
+        {:error, {:create_image_type_struct, "Fastimage.size() failed."}}
+    end
   end
 
   def handle_upload_type(%{cfg: %FileConfig{}} = _upload) do

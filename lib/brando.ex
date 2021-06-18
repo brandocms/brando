@@ -98,6 +98,11 @@ defmodule Brando do
   def app_module(module), do: Module.concat(config(:app_module), module)
 
   @doc """
+  Concat the configured application module with `module`
+  """
+  def admin_module(module), do: Module.concat(config(:admin_module), module)
+
+  @doc """
   Concat the configured web module with `module`
   """
   def web_module(module), do: Module.concat(config(:web_module), module)

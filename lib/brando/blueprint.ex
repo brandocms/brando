@@ -62,6 +62,29 @@ defmodule Brando.Blueprint do
         relation :some_module, :belongs_to, module: SomeModule, type: :binary_id
       end
 
+  # Extra changesets
+
+  Sometimes you will need additional changeset functions to process different
+  subsets of your fields. Currently you'd just add your own function to your schema:
+
+  ```elixir
+  def name_changeset(schema, params, user \\ :system) do
+    schema
+    |> cast(params, [:name])
+    |> validate_required([:name])
+  end
+  ```
+
+  Then force your mutation to use this changeset by passing it explicitly:
+
+  ```elixir
+  {:ok, project} = Projects.update_project(
+    project_id,
+    %{"name" => "New Name"},
+    user, changeset: &Projects.Project.name_changeset/3)
+  )
+  ```
+
   """
   alias Ecto.Changeset
 
@@ -496,6 +519,12 @@ defmodule Brando.Blueprint do
       @status_fields Enum.filter(@attrs, &(&1.type == :status))
       def __status_fields__ do
         @status_fields
+      end
+
+      if Enum.empty?(@status_fields) do
+        def has_status?, do: false
+      else
+        def has_status?, do: true
       end
 
       @gallery_fields Enum.filter(@attrs, &(&1.type == :gallery))

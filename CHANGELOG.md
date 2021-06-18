@@ -1,5 +1,9 @@
 See `UPGRADE.md` for instructions on upgrading between versions.
 
+## 0.52.0-dev
+
+* Config: Add `admin_module: MyAppAdmin` to your `config/brando.exs`
+
 ## 0.51.0-dev
 
 * Vite: Respect `hmr` config setting. Set it to `true` in your `dev.exs`, and `false` in `prod.exs`

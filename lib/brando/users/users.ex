@@ -33,6 +33,8 @@ defmodule Brando.Users do
   filters User do
     fn
       {:active, active}, q -> from t in q, where: t.active == ^active
+      {:name, name}, q -> from t in q, where: ilike(t.name, ^"%#{name}%")
+      {:email, email}, q -> from t in q, where: ilike(t.email, ^"%#{email}%")
     end
   end
 
