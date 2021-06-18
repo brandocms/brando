@@ -13,6 +13,7 @@ import Config
 # which you typically run after static files are built.
 config :<%= application_name %>, <%= application_module %>Web.Endpoint,
   http: [:inet6, port: {:system, "PORT"}],
+  # http: [:inet6, port: {:system, "PORT"}, protocol_options: [idle_timeout: 360_000]],
   # force_ssl: [hsts: true, rewrite_on: [:x_forwarded_proto]],
   check_origin: [
     "//<%= application_name %>.com",
