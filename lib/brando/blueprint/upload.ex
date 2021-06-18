@@ -40,7 +40,7 @@ defmodule Brando.Blueprint.Upload do
       :unchanged ->
         changeset
 
-      {:ok, changeset} ->
+      {:ok, _} ->
         changeset
 
         # {:ok, {:update, update_params}} ->

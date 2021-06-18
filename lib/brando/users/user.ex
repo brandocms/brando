@@ -161,6 +161,9 @@ defmodule Brando.Users.User do
       input :password, :password
       input :language, :text
       input :role, :text
+    end
+
+    fieldset :half do
       input :avatar, :image
     end
   end

@@ -559,7 +559,7 @@ defmodule Brando.Blueprint do
       end
 
       def __form__ do
-        @form
+        Enum.reverse(@form)
       end
 
       # generate changeset
