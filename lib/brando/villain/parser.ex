@@ -822,6 +822,9 @@ defmodule Brando.Villain.Parser do
       defp render_ref(%{deleted: true}, _id, _match), do: "<!-- d -->"
 
       defp render_ref(ref, _id, _match) do
+        require Logger
+        Logger.error("render_ref")
+        Logger.error(inspect(ref, pretty: true))
         block = ref.data
         apply(__MODULE__, String.to_atom(block.type), [block.data, []])
       end

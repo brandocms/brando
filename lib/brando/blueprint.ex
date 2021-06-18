@@ -546,6 +546,11 @@ defmodule Brando.Blueprint do
         @gallery_fields
       end
 
+      @poly_fields Enum.filter(@attrs, &(&1.type == PolymorphicEmbed))
+      def __poly_fields__ do
+        @poly_fields
+      end
+
       def __translations__ do
         run_translations(__MODULE__, @translations)
       end
@@ -640,6 +645,10 @@ defmodule Brando.Blueprint do
     fields_to_cast =
       (all_required_attrs ++ all_optional_attrs ++ castable_relations)
       |> strip_villains_from_fields_to_cast(module)
+      |> strip_polymorphic_embeds_from_fields_to_cast(module)
+
+    require Logger
+    Logger.error("=> #{inspect(module)}:fields_to_cast = #{inspect(fields_to_cast)}")
 
     schema
     |> Changeset.cast(params, fields_to_cast)
@@ -684,6 +693,11 @@ defmodule Brando.Blueprint do
   defp strip_villains_from_fields_to_cast(fields_to_cast, module) do
     villain_fields = Enum.map(module.__villain_fields__(), & &1.name)
     Enum.reject(fields_to_cast, &(&1 in villain_fields))
+  end
+
+  defp strip_polymorphic_embeds_from_fields_to_cast(fields_to_cast, module) do
+    poly_fields = Enum.map(module.__poly_fields__(), & &1.name)
+    Enum.reject(fields_to_cast, &(&1 in poly_fields))
   end
 
   def blueprint?(module), do: {:__blueprint__, 0} in module.__info__(:functions)

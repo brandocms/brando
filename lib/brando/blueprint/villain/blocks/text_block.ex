@@ -1,6 +1,7 @@
 defmodule Brando.Blueprint.Villain.Blocks.TextBlock do
   alias Brando.Blueprint.Villain.Blocks
   use Ecto.Schema
+  import Ecto.Changeset
 
   @primary_key false
 
@@ -12,5 +13,11 @@ defmodule Brando.Blueprint.Villain.Blocks.TextBlock do
       field :type, :string
       field :extensions, {:array, :string}
     end
+  end
+
+  def changeset(struct, params \\ %{}) do
+    struct
+    |> cast(params, ~w(type)a)
+    |> cast_embed(:data)
   end
 end
