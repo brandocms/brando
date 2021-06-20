@@ -24,16 +24,12 @@ defmodule Mix.Tasks.Brando.Ssg do
     ------------------------------
     """)
 
-    ssg_path = Path.join([File.cwd!, "ssg"])
+    ssg_path = Path.join([File.cwd!(), "ssg"])
     {:ok, ssg_urls} = Brando.SSG.get_urls()
 
     Application.put_env(:brando, :ssg_run, true)
     Application.put_env(Brando.config(:otp_app), :hmr, false)
     Application.put_env(Brando.config(:otp_app), :show_breakpoint_debug, false)
-
-    for url <- ssg_urls do
-      HTTPoison.get! Path.join([@default_host, url])
-    end
 
     if Mix.shell().yes?("\nGenerate static files? (cleans priv/static first)") do
       # delete static
@@ -44,6 +40,12 @@ defmodule Mix.Tasks.Brando.Ssg do
       vite_path = Path.join([File.cwd!(), "assets", "frontend", "node_modules", ".bin", "vite"])
       System.cmd(vite_path, ["build"], cd: assets_path)
       File.cp_r!(static_path, ssg_path)
+    end
+
+    if Mix.shell().yes?("\nGenerate HTML?") do
+      for url <- ssg_urls do
+        HTTPoison.get!(Path.join([@default_host, url]))
+      end
     end
 
     if Mix.shell().yes?("\nCopy media directory?") do
