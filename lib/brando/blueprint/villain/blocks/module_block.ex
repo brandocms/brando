@@ -2,6 +2,8 @@ defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
   alias Brando.Blueprint.Villain.Blocks.ModuleBlock
   alias Brando.Blueprint.Villain.Blocks
 
+  # TODO: Split into ModuleBlock and MultiModuleBlock?
+
   defmodule Ref do
     use Brando.Blueprint,
       application: "Brando",
