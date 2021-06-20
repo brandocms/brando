@@ -149,13 +149,13 @@ module.exports = {
 
       sections: {
         navigation: {
-          iphone: '34px',
-          mobile: '34px',
-          ipad_portrait: '42px',
-          ipad_landscape: '20px',
-          desktop_md: '20px',
-          desktop_lg: '20px',
-          desktop_xl: '20px',
+          iphone: { 'font-size': '34px' },
+          mobile: { 'font-size': '34px' },
+          ipad_portrait: { 'font-size': '42px' },
+          ipad_landscape: { 'font-size': '20px' },
+          desktop_md: { 'font-size': '20px' },
+          desktop_lg: { 'font-size': '20px' },
+          desktop_xl: { 'font-size': '20px' }
         }
       },
 
