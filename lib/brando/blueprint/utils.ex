@@ -1,6 +1,7 @@
 defmodule Brando.Blueprint.Utils do
   def to_ecto_type(:text), do: :string
   def to_ecto_type(:status), do: Brando.Type.Status
+  def to_ecto_type(:file), do: Brando.Type.File
   def to_ecto_type(:image), do: Brando.Type.Image
   def to_ecto_type(:language), do: Ecto.Enum
   def to_ecto_type(:enum), do: Ecto.Enum
