@@ -66,6 +66,7 @@ defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
   identifier "{{ entry.type }}"
 
   attributes do
+    attribute :uid, :string
     attribute :type, :string, required: true
     attribute :hidden, :boolean, default: false
     attribute :deleted, :boolean, default: false

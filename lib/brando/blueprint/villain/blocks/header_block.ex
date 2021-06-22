@@ -6,7 +6,10 @@ defmodule Brando.Blueprint.Villain.Blocks.HeaderBlock do
   @primary_key false
 
   embedded_schema do
+    field :uid, :string
     field :type, :string
+    field :hidden, :boolean, default: false
+    field :deleted, :boolean, default: false
 
     embeds_one :data, Data, primary_key: false do
       field :text, :string

@@ -6,6 +6,7 @@ defmodule Brando.Blueprint.Villain.Blocks.GalleryBlock do
   @primary_key false
 
   embedded_schema do
+    field :uid, :string
     field :type, :string
     field :hidden, :boolean, default: false
     field :deleted, :boolean, default: false
