@@ -146,14 +146,18 @@ defmodule Brando.Upload do
   end
 
   defp copy_uploaded_file(
-         %__MODULE__{plug: %{filename: fname, path: src, upload_path: ul_path}} = upload
+         %__MODULE__{cfg: cfg, plug: %{filename: fname, path: src, upload_path: ul_path}} = upload
        ) do
     joined_dest = Path.join(ul_path, fname)
 
     dest =
-      (File.exists?(joined_dest) && Path.join(ul_path, unique_filename(fname))) || joined_dest
+      if cfg.overwrite do
+        joined_dest
+      else
+        (File.exists?(joined_dest) && Path.join(ul_path, unique_filename(fname))) || joined_dest
+      end
 
-    case File.cp(src, dest, fn _, _ -> false end) do
+    case File.cp(src, dest, fn _, _ -> cfg.overwrite end) do
       :ok ->
         {:ok, put_in(upload.plug, Map.put(upload.plug, :uploaded_file, dest))}
 
