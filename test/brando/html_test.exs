@@ -148,7 +148,7 @@ defmodule Brando.HTMLTest do
 
     assert video_tag("https://src.vid", opts) ==
              {:safe,
-              "\n      <div style=\"--aspect-ratio: 0.75\" class=\"video-wrapper\" data-smart-video>\n        \n        \n         <div data-cover>\n           <img\n             width=\"400\"\n             height=\"300\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27400%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.5%29%27%2F%3E\" />\n         </div>\n       \n        <video\n          tabindex=\"0\"\n          role=\"presentation\"\n          preload=\"auto\"\n          autoplay\n          muted\n          loop\n          playsinline\n          data-video\n          poster=\"my_poster.jpg\"\n          data-src=\"https://src.vid\"\n          ></video>\n        <noscript>\n          <video\n            tabindex=\"0\"\n            role=\"presentation\"\n            preload=\"metadata\"\n            muted\n            loop\n            playsinline\n            src=\"https://src.vid\"></video>\n        </noscript>\n      </div>\n      "}
+              "\n      <div style=\"--aspect-ratio: 0.75\" class=\"video-wrapper\" data-smart-video>\n        \n        \n         <div data-cover>\n           <img\n             width=\"400\"\n             height=\"300\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27400%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.5%29%27%2F%3E\" />\n         </div>\n       \n        <video\n          width=\"400\"\n          height=\"300\"\n          alt=\"\"\n          tabindex=\"0\"\n          role=\"presentation\"\n          preload=\"auto\"\n          autoplay\n          muted\n          loop\n          playsinline\n          data-video\n          poster=\"my_poster.jpg\"\n          data-src=\"https://src.vid\"\n          ></video>\n        <noscript>\n          <video\n            width=\"400\"\n            height=\"300\"\n            alt=\"\"\n            tabindex=\"0\"\n            role=\"presentation\"\n            preload=\"metadata\"\n            muted\n            loop\n            playsinline\n            src=\"https://src.vid\"></video>\n        </noscript>\n      </div>\n      "}
   end
 
   test "img_tag" do
@@ -458,11 +458,7 @@ defmodule Brando.HTMLTest do
                safe: [
                  60,
                  "script",
-                 [
-                   [32, "src", 61, 34, "/js/app.js", 34],
-                   [32, "type", 61, 34, "module", 34],
-                   [32, "defer"]
-                 ],
+                 [[32, "src", 61, 34, "/js/app.js", 34], [32, "type", 61, 34, "module", 34]],
                  62,
                  [],
                  60,
