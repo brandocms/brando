@@ -63,8 +63,14 @@ defmodule Brando.HTML do
   def replace_csrf_token(html) when is_binary(html),
     do: String.replace(html, "$csrftoken", Plug.CSRFProtection.get_csrf_token())
 
-  def replace_timestamp(html) when is_binary(html),
-    do: String.replace(html, "$timestamp", DateTime.to_unix(DateTime.utc_now()))
+  def replace_timestamp(html) when is_binary(html) do
+    timestamp =
+      DateTime.utc_now()
+      |> DateTime.to_unix()
+      |> to_string()
+
+    String.replace(html, "$timestamp", timestamp)
+  end
 
   @doc """
   Returns `active` if `conn`'s `full_path` matches `current_path`.
