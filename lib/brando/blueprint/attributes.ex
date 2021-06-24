@@ -153,4 +153,10 @@ defmodule Brando.Blueprint.Attributes do
       Module.put_attribute(__MODULE__, :attrs, attr)
     end
   end
+
+  def maybe_add_marked_as_deleted_attribute(true) do
+    [build_attr(:mark_for_deletion, :boolean, default: false, virtual: true)]
+  end
+
+  def maybe_add_marked_as_deleted_attribute(_), do: []
 end

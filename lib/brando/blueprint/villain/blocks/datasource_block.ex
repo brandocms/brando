@@ -1,4 +1,4 @@
-defmodule Brando.Blueprint.Villain.Blocks.TextBlock do
+defmodule Brando.Blueprint.Villain.Blocks.DatasourceBlock do
   defmodule Data do
     use Ecto.Schema
     import Ecto.Changeset
@@ -6,14 +6,20 @@ defmodule Brando.Blueprint.Villain.Blocks.TextBlock do
     @primary_key false
 
     embedded_schema do
-      field :text, :string
-      field :type, Ecto.Enum, values: [:paragraph, :lede], default: :paragraph
-      field :extensions, {:array, :string}
+      field :module, :string
+      field :type, Ecto.Enum, values: [:list, :single, :selection]
+      field :query, :string
+      field :code, :string
+      field :arg, :string
+      field :limit, :string
+      field :ids, {:array, :id}
+      field :description, :string
+      field :module_id, :id
     end
 
     def changeset(struct, params \\ %{}) do
       struct
-      |> cast(params, ~w(text type extensions)a)
+      |> cast(params, ~w(module type query code arg limit ids description module_id)a)
     end
   end
 

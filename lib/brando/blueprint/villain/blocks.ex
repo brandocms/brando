@@ -3,10 +3,11 @@ defmodule Brando.Blueprint.Villain.Blocks do
 
   def list_blocks do
     [
-      module: Blocks.ModuleBlock,
-      picture: Blocks.PictureBlock,
+      datasource: Blocks.DatasourceBlock,
       gallery: Blocks.GalleryBlock,
       header: Blocks.HeaderBlock,
+      module: Blocks.ModuleBlock,
+      picture: Blocks.PictureBlock,
       text: Blocks.TextBlock
     ]
   end

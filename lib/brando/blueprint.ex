@@ -390,7 +390,10 @@ defmodule Brando.Blueprint do
       end
 
       @all_attributes Enum.reverse(@attrs) ++
-                        Brando.Trait.get_attributes(@attrs, @relations, @traits)
+                        Brando.Trait.get_attributes(@attrs, @relations, @traits) ++
+                        Brando.Blueprint.Attributes.maybe_add_marked_as_deleted_attribute(
+                          @allow_mark_as_deleted
+                        )
       def __attributes__ do
         @all_attributes
       end
@@ -647,9 +650,6 @@ defmodule Brando.Blueprint do
       |> strip_villains_from_fields_to_cast(module)
       |> strip_polymorphic_embeds_from_fields_to_cast(module)
 
-    require Logger
-    Logger.error("=> #{inspect(module)}:fields_to_cast = #{inspect(fields_to_cast)}")
-
     schema
     |> Changeset.cast(params, fields_to_cast)
     |> Relations.run_embed_attributes(all_attributes, user, module)
@@ -675,10 +675,10 @@ defmodule Brando.Blueprint do
       traits_after_validate_required,
       user
     )
-    |> maybe_mark_for_deletion(module, params)
+    |> maybe_mark_for_deletion(module)
   end
 
-  defp maybe_mark_for_deletion(changeset, module, %{"delete" => "true"}) do
+  defp maybe_mark_for_deletion(%{changes: %{mark_for_deletion: true}} = changeset, module) do
     if module.__allow_mark_as_deleted__ do
       %{changeset | action: :delete}
     else
@@ -686,7 +686,7 @@ defmodule Brando.Blueprint do
     end
   end
 
-  defp maybe_mark_for_deletion(changeset, _, _) do
+  defp maybe_mark_for_deletion(changeset, _) do
     changeset
   end
 

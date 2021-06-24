@@ -21,6 +21,7 @@ defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
     attributes do
       attribute :name, :text, required: true
       attribute :description, :text
+      attribute :deleted, :boolean, default: false
 
       attribute :data, PolymorphicEmbed,
         types: Blocks.list_blocks(),
@@ -69,7 +70,6 @@ defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
     attribute :uid, :string
     attribute :type, :string, required: true
     attribute :hidden, :boolean, default: false
-    attribute :deleted, :boolean, default: false
   end
 
   relations do

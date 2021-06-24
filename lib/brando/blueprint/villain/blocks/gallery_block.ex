@@ -9,7 +9,7 @@ defmodule Brando.Blueprint.Villain.Blocks.GalleryBlock do
     field :uid, :string
     field :type, :string
     field :hidden, :boolean, default: false
-    field :deleted, :boolean, default: false
+    field :mark_for_deletion, :boolean, default: false, virtual: true
 
     embeds_one :data, Data, primary_key: false do
       embeds_many :images, Brando.Images.Image
