@@ -32,13 +32,13 @@ defmodule Brando.Blueprint.Villain.Blocks.DatasourceBlock do
     field :uid, :string
     field :type, :string
     field :hidden, :boolean, default: false
-    field :mark_for_deletion, :boolean, default: false, virtual: true
+    field :marked_as_deleted, :boolean, default: false, virtual: true
     embeds_one :data, __MODULE__.Data
   end
 
   def changeset(struct, params \\ %{}) do
     struct
-    |> cast(params, ~w(uid type hidden mark_for_deletion)a)
+    |> cast(params, ~w(uid type hidden marked_as_deleted)a)
     |> cast_embed(:data)
   end
 end

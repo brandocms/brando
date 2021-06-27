@@ -9,7 +9,7 @@ defmodule Brando.Blueprint.Villain.Blocks.HeaderBlock do
     field :uid, :string
     field :type, :string
     field :hidden, :boolean, default: false
-    field :mark_for_deletion, :boolean, default: false, virtual: true
+    field :marked_as_deleted, :boolean, default: false, virtual: true
 
     embeds_one :data, Data, primary_key: false do
       field :text, :string

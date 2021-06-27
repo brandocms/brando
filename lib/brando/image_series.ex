@@ -9,7 +9,7 @@ defmodule Brando.ImageSeries do
     import Ecto.Changeset
     @changeset_phase :before_validate_required
 
-    def changeset_mutator(_module, _config, changeset, _user) do
+    def changeset_mutator(_module, _config, changeset, _user, _opts) do
       Brando.Utils.Schema.put_slug(changeset, :name)
     end
   end
@@ -18,7 +18,7 @@ defmodule Brando.ImageSeries do
     use Brando.Trait
     import Ecto.Changeset
 
-    def changeset_mutator(_module, _config, changeset, user) do
+    def changeset_mutator(_module, _config, changeset, user, _opts) do
       cast_assoc(changeset, :images,
         with: {Brando.Image, :changeset, [user, [image_db_config: get_field(changeset, :cfg)]]}
       )
@@ -29,7 +29,7 @@ defmodule Brando.ImageSeries do
     use Brando.Trait
     import Ecto.Changeset
 
-    def changeset_mutator(_, _, changeset, _) do
+    def changeset_mutator(_, _, changeset, _, _opts) do
       case get_change(changeset, :cfg) do
         nil ->
           cat_id = get_field(changeset, :image_category_id)
@@ -63,7 +63,8 @@ defmodule Brando.ImageSeries do
           _module,
           _config,
           %Ecto.Changeset{data: %{id: _}, changes: %{slug: slug}} = changeset,
-          _user
+          _user,
+          _opts
         ) do
       old_cfg = get_field(changeset, :cfg)
       split_path = Path.split(old_cfg.upload_path)
@@ -79,7 +80,7 @@ defmodule Brando.ImageSeries do
       put_change(changeset, :cfg, new_cfg)
     end
 
-    def changeset_mutator(_, _, changeset, _) do
+    def changeset_mutator(_, _, changeset, _, _opts) do
       changeset
     end
   end

@@ -9,7 +9,7 @@ defmodule Brando.ImageCategory do
     import Ecto.Changeset
     @changeset_phase :before_validate_required
 
-    def changeset_mutator(_module, _config, changeset, _user) do
+    def changeset_mutator(_module, _config, changeset, _user, _opts) do
       Brando.Utils.Schema.put_slug(changeset, :name)
     end
   end
@@ -18,7 +18,7 @@ defmodule Brando.ImageCategory do
     use Brando.Trait
     import Ecto.Changeset
 
-    def changeset_mutator(_module, _config, changeset, _user) do
+    def changeset_mutator(_module, _config, changeset, _user, _opts) do
       if get_change(changeset, :cfg, nil) do
         changeset
       else
@@ -44,7 +44,8 @@ defmodule Brando.ImageCategory do
           _module,
           _config,
           %Ecto.Changeset{data: %{id: _}, changes: %{slug: slug}} = changeset,
-          _user
+          _user,
+          _opts
         ) do
       old_cfg = get_field(changeset, :cfg)
       split_path = Path.split(old_cfg.upload_path)
@@ -60,7 +61,7 @@ defmodule Brando.ImageCategory do
       put_change(changeset, :cfg, new_cfg)
     end
 
-    def changeset_mutator(_, _, changeset, _) do
+    def changeset_mutator(_, _, changeset, _, _) do
       changeset
     end
   end

@@ -12,8 +12,9 @@ defmodule Brando.Trait do
   @type entry :: map()
   @type user :: Brando.Users.User.t()
   @type config :: list()
+  @type opts :: Keyword.t()
 
-  @callback changeset_mutator(module, config, changeset, user) :: changeset
+  @callback changeset_mutator(module, config, changeset, user, opts) :: changeset
   @callback trait_attributes(list(), list()) :: list()
   @callback trait_relations(list(), list()) :: list()
   @callback validate(module, config) :: true | no_return
@@ -37,8 +38,8 @@ defmodule Brando.Trait do
       # Runs if no mutator is set.
       # NOTE: This does not function as a fallback clause if a mutator is implemented.
       #       In that case you must implement the fallback yourself.
-      def changeset_mutator(_module, _cfg, changeset, _user), do: changeset
-      defoverridable changeset_mutator: 4
+      def changeset_mutator(_module, _cfg, changeset, _user, _opts), do: changeset
+      defoverridable changeset_mutator: 5
 
       def validate(_, _), do: true
       defoverridable validate: 2
@@ -76,9 +77,9 @@ defmodule Brando.Trait do
     end
   end
 
-  def run_changeset_mutators(changeset, module, traits, user) do
+  def run_changeset_mutators(changeset, module, traits, user, opts) do
     Enum.reduce(traits, changeset, fn {trait, trait_opts}, updated_changeset ->
-      trait.changeset_mutator(module, trait_opts, updated_changeset, user)
+      trait.changeset_mutator(module, trait_opts, updated_changeset, user, opts)
     end)
   end
 

@@ -44,38 +44,34 @@ defmodule Brando.Trait.Villain do
   @doc """
   Generate HTML
   """
-  @spec changeset_mutator(module, config, changeset, map | :system) :: changeset
-  def changeset_mutator(module, _config, changeset, _user) do
-    casted_changeset =
-      Enum.reduce(module.__villain_fields__(), changeset, fn vf, mutated_changeset ->
-        PolymorphicEmbed.cast_polymorphic_embed(mutated_changeset, vf.name)
-        # case Map.get(mutated_changeset.params, to_string(vf.name)) do
-        #   nil ->
-        #     mutated_changeset
+  def changeset_mutator(module, _config, changeset, _user, skip_villain: true) do
+    require Logger
+    Logger.error("==> action: #{changeset.action} -- skip_villain")
+    cast_poly(changeset, module.__villain_fields__())
+  end
 
-        #   params ->
-        #     new_params =
-        #       Map.put(
-        #         mutated_changeset.params,
-        #         to_string(vf.name),
-        #         transform_indexed_map_to_list(params)
-        #       )
+  def changeset_mutator(module, _config, changeset, _user, _opts) do
+    require Logger
+    Logger.error("==> action: #{changeset.action} -- generate HTML")
 
-        #     Map.put(changeset, :params, new_params)
-        # end
-        # |> PolymorphicEmbed.cast_polymorphic_embed(vf.name)
-      end)
+    case cast_poly(changeset, module.__villain_fields__()) do
+      %{valid?: true} = casted_changeset ->
+        Enum.reduce(module.__villain_fields__(), casted_changeset, fn vf, mutated_changeset ->
+          Brando.Villain.Schema.generate_html(mutated_changeset, vf.name)
+        end)
 
-    if casted_changeset.valid? do
-      Enum.reduce(module.__villain_fields__(), casted_changeset, fn vf, mutated_changeset ->
-        Brando.Villain.Schema.generate_html(mutated_changeset, vf.name)
-      end)
-    else
-      casted_changeset
+      casted_changeset ->
+        casted_changeset
     end
   end
 
-  def changeset_mutator(_module, _config, changeset, _user), do: changeset
+  def changeset_mutator(_module, _config, changeset, _user, _), do: changeset
+
+  defp cast_poly(changeset, villain_fields) do
+    Enum.reduce(villain_fields, changeset, fn vf, mutated_changeset ->
+      PolymorphicEmbed.cast_polymorphic_embed(mutated_changeset, vf.name)
+    end)
+  end
 
   defp transform_indexed_map_to_list(indexed_map) do
     Enum.map(indexed_map, &elem(&1, 1))

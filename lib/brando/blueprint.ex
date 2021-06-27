@@ -585,7 +585,7 @@ defmodule Brando.Blueprint do
       end
 
       # generate changeset
-      def changeset(schema, params \\ %{}, user \\ :system, extra \\ []) do
+      def changeset(schema, params \\ %{}, user \\ :system, opts \\ []) do
         run_changeset(
           __MODULE__,
           schema,
@@ -597,7 +597,7 @@ defmodule Brando.Blueprint do
           @castable_relations,
           @all_required_attrs,
           @all_optional_attrs,
-          extra
+          opts
         )
       end
 
@@ -640,8 +640,12 @@ defmodule Brando.Blueprint do
         castable_relations,
         all_required_attrs,
         all_optional_attrs,
-        extra
+        opts
       ) do
+    require Logger
+    Logger.error("run_changeset opts")
+    Logger.error(inspect(opts, pretty: true))
+
     {traits_before_validate_required, traits_after_validate_required} =
       Trait.split_traits_by_changeset_phase(all_traits)
 
@@ -657,7 +661,8 @@ defmodule Brando.Blueprint do
     |> Trait.run_changeset_mutators(
       module,
       traits_before_validate_required,
-      user
+      user,
+      opts
     )
     |> Changeset.validate_required(all_required_attrs)
     |> Unique.run_unique_attribute_constraints(module, all_attributes)
@@ -668,17 +673,18 @@ defmodule Brando.Blueprint do
       module,
       all_attributes,
       user,
-      Keyword.get(extra, :image_db_config)
+      Keyword.get(opts, :image_db_config)
     )
     |> Trait.run_changeset_mutators(
       module,
       traits_after_validate_required,
-      user
+      user,
+      opts
     )
     |> maybe_mark_for_deletion(module)
   end
 
-  defp maybe_mark_for_deletion(%{changes: %{mark_for_deletion: true}} = changeset, module) do
+  defp maybe_mark_for_deletion(%{changes: %{marked_as_deleted: true}} = changeset, module) do
     if module.__allow_mark_as_deleted__ do
       %{changeset | action: :delete}
     else

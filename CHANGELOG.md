@@ -3,6 +3,8 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 ## 0.52.0-dev
 
 * Config: Add `admin_module: MyAppAdmin` to your `config/brando.exs`
+* `Trait.changeset_mutator/4` is now `Trait.changeset_mutator/5`. It receives 
+  some additional opts from changeset, that normally would not be touched.
 
 ## 0.51.0-dev
 

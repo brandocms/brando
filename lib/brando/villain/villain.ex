@@ -77,11 +77,16 @@ defmodule Brando.Villain do
 
     html =
       data
-      |> Enum.reduce([], fn data_node, acc ->
-        type_atom = String.to_atom(data_node.type)
-        data_node_content = data_node.data
+      |> Enum.reduce([], fn
+        %{hidden: true}, acc ->
+          acc
 
-        (data_node.hidden && ["" | acc]) ||
+        %{marked_as_deleted: true}, acc ->
+          acc
+
+        data_node, acc ->
+          type_atom = String.to_atom(data_node.type)
+          data_node_content = data_node.data
           [apply(parser, type_atom, [data_node_content, opts_map]) | acc]
       end)
       |> Enum.reverse()
