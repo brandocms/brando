@@ -1,4 +1,5 @@
 defmodule Brando.Type.Video do
+  @deprecated "Deprecate this in favor of Brando.Videos.Video (embeds_one)"
   @moduledoc """
   Defines a type for video field.
   """

@@ -9,7 +9,8 @@ defmodule Brando.Image do
     domain: "Images",
     schema: "Image",
     singular: "image",
-    plural: "images"
+    plural: "images",
+    gettext_module: Brando.Gettext
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Sequenced

@@ -79,18 +79,18 @@ defmodule Brando.Villain.Parser do
 
       alias Liquex.Context
 
-      def render_caption(%{"title" => nil, "credits" => nil}), do: ""
-      def render_caption(%{"title" => "", "credits" => nil}), do: ""
-      def render_caption(%{"title" => nil, "credits" => ""}), do: ""
-      def render_caption(%{"title" => "", "credits" => ""}), do: ""
+      def render_caption(%{title: nil, credits: nil}), do: ""
+      def render_caption(%{title: "", credits: nil}), do: ""
+      def render_caption(%{title: nil, credits: ""}), do: ""
+      def render_caption(%{title: "", credits: ""}), do: ""
 
-      def render_caption(%{"title" => title, "credits" => nil}),
+      def render_caption(%{title: title, credits: nil}),
         do: "<figcaption>#{title}</figcaption>"
 
-      def render_caption(%{"title" => nil, "credits" => credits}),
+      def render_caption(%{title: nil, credits: credits}),
         do: "<figcaption>#{credits}</figcaption>"
 
-      def render_caption(%{"title" => title, "credits" => credits}),
+      def render_caption(%{title: title, credits: credits}),
         do: "<figcaption>#{title} — #{credits}</figcaption>"
 
       defoverridable render_caption: 1
@@ -98,22 +98,22 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert header to HTML
       """
-      def header(%{"text" => text, "level" => level, "anchor" => anchor}, _) do
-        h = header(%{"text" => text, "level" => level}, [])
+      def header(%{text: text, level: level, anchor: anchor}, _) do
+        h = header(%{text: text, level: level}, [])
         ~s(<a name="#{anchor}"></a>#{h})
       end
 
-      def header(%{"text" => text, "level" => level} = data, _) do
+      def header(%{text: text, level: level} = data, _) do
         classes =
-          if Map.get(data, "class", nil) do
-            ~s( class="#{Map.get(data, "class")}")
+          if Map.get(data, :class, nil) do
+            ~s( class="#{Map.get(data, :class)}")
           else
             ""
           end
 
         id =
-          if Map.get(data, "id", nil) do
-            ~s( id="#{Map.get(data, "id")}")
+          if Map.get(data, :id, nil) do
+            ~s( id="#{Map.get(data, :id)}")
           else
             ""
           end
@@ -122,13 +122,13 @@ defmodule Brando.Villain.Parser do
         "<#{header_size}#{classes}#{id}>" <> nl2br(text) <> "</#{header_size}>"
       end
 
-      def header(%{"text" => text}, _), do: "<h1>" <> nl2br(text) <> "</h1>"
+      def header(%{text: text}, _), do: "<h1>" <> nl2br(text) <> "</h1>"
       defoverridable header: 2
 
       @doc """
       Value of an InputBlock.
       """
-      def input(%{"value" => value}, _), do: value
+      def input(%{value: value}, _), do: value
       defoverridable input: 2
 
       @doc """
@@ -148,7 +148,7 @@ defmodule Brando.Villain.Parser do
         {:ok, module} = Villain.find_module(modules, id)
 
         content =
-          Enum.map(Enum.with_index(entries), fn {%{"refs" => refs, "vars" => vars}, index} ->
+          Enum.map(Enum.with_index(entries), fn {%{refs: refs, vars: vars}, index} ->
             # add vars to context
             vars = process_vars(vars)
 
@@ -183,7 +183,7 @@ defmodule Brando.Villain.Parser do
 
         {:ok, module} = Villain.find_module(modules, id)
 
-        vars = Map.get(block, "vars")
+        vars = Map.get(block, :vars)
         base_context = opts.context
         vars = process_vars(vars)
 
@@ -198,15 +198,15 @@ defmodule Brando.Villain.Parser do
 
       def datasource(
             %{
-              "module" => module,
-              "type" => "list",
-              "query" => query,
-              "code" => code
+              module: module,
+              type: :list,
+              query: query,
+              code: code
             } = data,
             opts
           ) do
-        arg = Map.get(data, "arg", nil)
-        src_module_id = Map.get(data, "module_id", nil)
+        arg = Map.get(data, :arg, nil)
+        src_module_id = Map.get(data, :module_id, nil)
         src = (src_module_id && {:module, src_module_id}) || {:code, code}
 
         with {:ok, entries} <- Datasource.get_list(module, query, arg) do
@@ -216,16 +216,16 @@ defmodule Brando.Villain.Parser do
 
       def datasource(
             %{
-              "module" => module,
-              "type" => "selection",
-              "query" => query,
-              "code" => code,
-              "ids" => ids
+              module: module,
+              type: :selection,
+              query: query,
+              code: code,
+              ids: ids
             } = data,
             opts
           ) do
-        arg = Map.get(data, "arg", nil)
-        src_module_id = Map.get(data, "module_id", nil)
+        arg = Map.get(data, :arg, nil)
+        src_module_id = Map.get(data, :module_id, nil)
         src = (src_module_id && {:module, src_module_id}) || {:code, code}
 
         with {:ok, entries} <- Datasource.get_selection(module, query, ids) do
@@ -251,19 +251,19 @@ defmodule Brando.Villain.Parser do
       @doc """
       Html -> html. Easy as pie.
       """
-      def html(%{"text" => html}, _), do: html
+      def html(%{text: html}, _), do: html
       defoverridable html: 2
 
       @doc """
       Svg -> html. Easy as pie.
       """
-      def svg(%{"code" => html}, _), do: html
+      def svg(%{code: html}, _), do: html
       defoverridable svg: 2
 
       @doc """
       Markdown -> html
       """
-      def markdown(%{"text" => markdown}, _) do
+      def markdown(%{text: markdown}, _) do
         Earmark.as_html!(markdown, %Earmark.Options{breaks: true})
       end
 
@@ -272,7 +272,7 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert GMaps url to iframe html
       """
-      def map(%{"embed_url" => embed_url, "source" => "gmaps"}, _) do
+      def map(%{embed_url: embed_url, source: "gmaps"}, _) do
         ~s(<div class="map-wrapper">
              <iframe width="420"
                      height="315"
@@ -288,7 +288,7 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert YouTube video to iframe html
       """
-      def video(%{"remote_id" => remote_id, "source" => "youtube"}, _) do
+      def video(%{remote_id: remote_id, source: "youtube"}, _) do
         params = "autoplay=1&controls=0&showinfo=0&rel=0"
         ~s(<div class="video-wrapper">
              <iframe width="420"
@@ -300,7 +300,7 @@ defmodule Brando.Villain.Parser do
            </div>)
       end
 
-      def video(%{"remote_id" => remote_id, "source" => "vimeo"}, _) do
+      def video(%{remote_id: remote_id, source: "vimeo"}, _) do
         ~s(<div class="video-wrapper">
              <iframe src="//player.vimeo.com/video/#{remote_id}?dnt=1"
                      width="500"
@@ -314,15 +314,15 @@ defmodule Brando.Villain.Parser do
       end
 
       # Convert file video to html
-      def video(%{"remote_id" => src, "source" => "file"} = data, _) do
+      def video(%{remote_id: src, source: "file"} = data, _) do
         video_tag(src,
-          width: data["width"],
-          height: data["height"],
+          width: data.width,
+          height: data.height,
           cover: :svg,
-          autoplay: data["autoplay"] || nil,
-          poster: data["poster"] || nil,
-          preload: data["preload"] || true,
-          opacity: data["opacity"] || 0.1
+          autoplay: data.autoplay || nil,
+          poster: data.poster || nil,
+          preload: data.preload || true,
+          opacity: data.opacity || 0.1
         )
         |> safe_to_string()
       end
@@ -375,7 +375,7 @@ defmodule Brando.Villain.Parser do
             {"", ""}
           end
 
-        caption = render_caption(Map.merge(data, %{"title" => title, "credits" => credits}))
+        caption = render_caption(Map.merge(data, %{title: title, credits: credits}))
 
         srcset =
           if srcset == "",
@@ -427,14 +427,14 @@ defmodule Brando.Villain.Parser do
       Convert image to html, with caption and credits and optional link
       """
       def image(data, _) do
-        title = Map.get(data, "title", "")
-        credits = Map.get(data, "credits", "")
-        link = Map.get(data, "link", "")
-        class = Map.get(data, "class", "")
+        title = Map.get(data, :title, "")
+        credits = Map.get(data, :credits, "")
+        link = Map.get(data, :link, "")
+        class = Map.get(data, :class, "")
 
         {link_open, link_close} =
           if link != "" do
-            {~s(<a href="#{data["link"]}" title="#{title}">), ~s(</a>)}
+            {~s(<a href="#{data.link}" title="#{title}">), ~s(</a>)}
           else
             {"", ""}
           end
@@ -480,7 +480,7 @@ defmodule Brando.Villain.Parser do
       @doc """
       Slideshow
       """
-      def slideshow(%{"images" => images} = data, _) do
+      def slideshow(%{images: images} = data, _) do
         default_srcset = Brando.config(Brando.Images)[:default_srcset]
 
         items =
@@ -498,7 +498,7 @@ defmodule Brando.Villain.Parser do
                 sizes: "auto",
                 srcset: default_srcset,
                 lazyload: true,
-                lightbox: data["lightbox"] || false
+                lightbox: data.lightbox || false
               )
               |> safe_to_string
 
@@ -543,7 +543,7 @@ defmodule Brando.Villain.Parser do
               (is_binary(placeholder) && String.to_existing_atom(placeholder)) || placeholder
 
             orientation = (img.width > img.height && "landscape") || "portrait"
-            caption = render_caption(Map.merge(img, %{"title" => title, "credits" => credits}))
+            caption = render_caption(Map.merge(img, %{title: title, credits: credits}))
 
             ptag =
               picture_tag(img,
@@ -586,11 +586,11 @@ defmodule Brando.Villain.Parser do
       @doc """
       List
       """
-      def list(%{"rows" => rows} = data, _) do
+      def list(%{rows: rows} = data, _) do
         rows_html =
           Enum.map_join(rows, "\n", fn row ->
-            class = (row["class"] && ~s( class="#{row["class"]}")) || ""
-            value = row["value"]
+            class = (row.class && ~s( class="#{row.class}")) || ""
+            value = row.value
 
             """
             <li#{class}>
@@ -599,8 +599,8 @@ defmodule Brando.Villain.Parser do
             """
           end)
 
-        ul_id = (data["id"] && ~s( id="#{data["id"]}")) || ""
-        ul_class = (data["class"] && ~s( class="#{data["class"]}")) || ""
+        ul_id = (data.id && ~s( id="#{data.id}")) || ""
+        ul_class = (data.class && ~s( class="#{data.class}")) || ""
 
         """
         <ul#{ul_id}#{ul_class}>
@@ -614,16 +614,16 @@ defmodule Brando.Villain.Parser do
       @doc """
       Datatable
       """
-      def datatable(%{"rows" => rows}, _) do
+      def datatable(%{rows: rows}, _) do
         rows_html =
           Enum.map_join(rows, "\n", fn row ->
             """
             <tr>
               <td class="key">
-                #{row["key"]}
+                #{row.key}
               </td>
               <td class="value">
-                #{row["value"]}
+                #{row.value}
               </td>
             </tr>
             """
@@ -647,10 +647,10 @@ defmodule Brando.Villain.Parser do
             """
             <tr>
               <td class="key">
-                #{row["key"]}
+                #{row.key}
               </td>
               <td class="value">
-                #{row["value"]}
+                #{row.value}
               </td>
             </tr>
             """
@@ -676,7 +676,7 @@ defmodule Brando.Villain.Parser do
       @doc """
       Converts quote to html.
       """
-      def blockquote(%{"text" => text, "cite" => cite}, _)
+      def blockquote(%{text: text, cite: cite}, _)
           when byte_size(cite) > 0 do
         text_html = Earmark.as_html!(text)
 
@@ -690,7 +690,7 @@ defmodule Brando.Villain.Parser do
         """
       end
 
-      def blockquote(%{"text" => text}, _) do
+      def blockquote(%{text: text}, _) do
         text_html = Earmark.as_html!(text)
 
         """
@@ -734,7 +734,7 @@ defmodule Brando.Villain.Parser do
       @doc """
       Convert container to html. Recursive parsing.
       """
-      def container(%{"blocks" => blocks, "class" => class, "wrapper" => wrapper}, opts) do
+      def container(%{blocks: blocks, class: class, wrapper: wrapper}, opts) do
         blocks_html =
           blocks
           |> Enum.reduce([], fn d, acc ->
@@ -768,12 +768,12 @@ defmodule Brando.Villain.Parser do
                 <li class="villain-timeline-item">
                   <div class="villain-timeline-item-date">
                     <div class="villain-timeline-item-date-inner">
-                      #{Map.get(item, "caption")}
+                      #{Map.get(item, :caption)}
                     </div>
                   </div>
                   <div class="villain-timeline-item-content">
                     <div class="villain-timeline-item-content-inner">
-                      #{Map.get(item, "text")}
+                      #{Map.get(item, :text)}
                     </div>
                   </div>
                 </li>
@@ -822,9 +822,6 @@ defmodule Brando.Villain.Parser do
       defp render_ref(%{deleted: true}, _id, _match), do: "<!-- d -->"
 
       defp render_ref(ref, _id, _match) do
-        require Logger
-        Logger.error("render_ref")
-        Logger.error(inspect(ref, pretty: true))
         block = ref.data
         apply(__MODULE__, String.to_atom(block.type), [block.data, []])
       end

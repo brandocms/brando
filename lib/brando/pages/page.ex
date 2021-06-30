@@ -10,7 +10,8 @@ defmodule Brando.Pages.Page do
     domain: "Pages",
     schema: "Page",
     singular: "page",
-    plural: "pages"
+    plural: "pages",
+    gettext_module: Brando.Gettext
 
   alias Brando.Pages.Fragment
   alias Brando.Pages.Property

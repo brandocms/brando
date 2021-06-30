@@ -4,7 +4,8 @@ defmodule Brando.Sites.Redirect do
     domain: "Sites",
     schema: "Redirect",
     singular: "redirect",
-    plural: "redirects"
+    plural: "redirects",
+    gettext_module: Brando.Gettext
 
   data_layer :embedded
   identifier "{{ entry.from }} -> {{ entry.to }}"

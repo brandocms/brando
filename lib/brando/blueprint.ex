@@ -1,6 +1,17 @@
 defmodule Brando.Blueprint do
   @moduledoc """
 
+  # Override Gettext module
+
+  If you have a nonstandard named gettext module for your app (not MyAppWeb.Gettext),
+  you can supply a `gettext_module` option to your use statement:
+
+      use Brando.Blueprint,
+        application: "MyApp",
+        # ...
+        gettext_module: MyApp.Gettext.Frontend
+
+
   # Relations
 
   ## Many to many
@@ -120,6 +131,14 @@ defmodule Brando.Blueprint do
 
     Module.register_attribute(__CALLER__.module, :plural, accumulate: false)
     Module.put_attribute(__CALLER__.module, :plural, Keyword.fetch!(opts, :plural))
+
+    Module.register_attribute(__CALLER__.module, :gettext_module, accumulate: false)
+
+    Module.put_attribute(
+      __CALLER__.module,
+      :gettext_module,
+      Macro.expand(Keyword.get(opts, :gettext_module), __CALLER__)
+    )
 
     Module.register_attribute(__CALLER__.module, :ctx, accumulate: false)
     Module.put_attribute(__CALLER__.module, :ctx, nil)
@@ -479,6 +498,11 @@ defmodule Brando.Blueprint do
             @application
           ])
 
+        web_module =
+          Module.concat([
+            :"#{@application}Web"
+          ])
+
         context_module =
           Module.concat([
             @application,
@@ -493,10 +517,13 @@ defmodule Brando.Blueprint do
           ])
 
         gettext_module =
-          Module.concat([
-            @application,
-            "Gettext"
-          ])
+          if @gettext_module,
+            do: @gettext_module,
+            else:
+              Module.concat([
+                web_module,
+                "Gettext"
+              ])
 
         %{
           application: application_module,
@@ -642,10 +669,6 @@ defmodule Brando.Blueprint do
         all_optional_attrs,
         opts
       ) do
-    require Logger
-    Logger.error("run_changeset opts")
-    Logger.error(inspect(opts, pretty: true))
-
     {traits_before_validate_required, traits_after_validate_required} =
       Trait.split_traits_by_changeset_phase(all_traits)
 

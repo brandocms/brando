@@ -4,7 +4,8 @@ defmodule Brando.Link do
     domain: "Sites",
     schema: "Link",
     singular: "link",
-    plural: "links"
+    plural: "links",
+    gettext_module: Brando.Gettext
 
   data_layer :embedded
   identifier "{{ entry.name }}"

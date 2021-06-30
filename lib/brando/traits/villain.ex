@@ -45,15 +45,10 @@ defmodule Brando.Trait.Villain do
   Generate HTML
   """
   def changeset_mutator(module, _config, changeset, _user, skip_villain: true) do
-    require Logger
-    Logger.error("==> action: #{changeset.action} -- skip_villain")
     cast_poly(changeset, module.__villain_fields__())
   end
 
   def changeset_mutator(module, _config, changeset, _user, _opts) do
-    require Logger
-    Logger.error("==> action: #{changeset.action} -- generate HTML")
-
     case cast_poly(changeset, module.__villain_fields__()) do
       %{valid?: true} = casted_changeset ->
         Enum.reduce(module.__villain_fields__(), casted_changeset, fn vf, mutated_changeset ->

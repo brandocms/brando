@@ -564,6 +564,15 @@ defmodule Brando.Query do
           Keyword.get(opts, :changeset, nil)
         )
       end
+
+      def unquote(:"update_#{singular_schema}")(changeset, user) do
+        Brando.Query.Mutations.update_with_changeset(
+          unquote(module),
+          changeset,
+          user,
+          unquote(callback_block)
+        )
+      end
     end
   end
 

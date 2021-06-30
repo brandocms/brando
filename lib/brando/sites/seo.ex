@@ -4,7 +4,8 @@ defmodule Brando.Sites.SEO do
     domain: "Sites",
     schema: "SEO",
     singular: "seo",
-    plural: "seo"
+    plural: "seo",
+    gettext_module: Brando.Gettext
 
   @image_cfg [
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],

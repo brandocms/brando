@@ -6,7 +6,8 @@ defmodule Brando.Blueprint.Meta do
 
   In your blueprint:
 
-      use Brando.Blueprint
+      use Brando.Blueprint,
+        # ...
 
       meta_schema do
         meta_field ["description", "og:description"], &Brando.HTML.truncate(&1, 155)

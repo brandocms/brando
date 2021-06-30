@@ -10,7 +10,8 @@ defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
       domain: "Villain",
       schema: "ModuleBlockRef",
       singular: "module_block_ref",
-      plural: "module_blocks_refs"
+      plural: "module_blocks_refs",
+      gettext_module: Brando.Gettext
 
     @primary_key false
     data_layer :embedded
@@ -37,7 +38,8 @@ defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
       domain: "Villain",
       schema: "ModuleBlockData",
       singular: "module_block_data",
-      plural: "module_blocks_data"
+      plural: "module_blocks_data",
+      gettext_module: Brando.Gettext
 
     @primary_key false
     data_layer :embedded
@@ -60,7 +62,8 @@ defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
     domain: "Villain",
     schema: "ModuleBlock",
     singular: "module_block",
-    plural: "module_blocks"
+    plural: "module_blocks",
+    gettext_module: Brando.Gettext
 
   @primary_key false
   data_layer :embedded

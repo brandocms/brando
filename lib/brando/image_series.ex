@@ -90,7 +90,8 @@ defmodule Brando.ImageSeries do
     domain: "Images",
     schema: "ImageSeries",
     singular: "image_series",
-    plural: "image_series"
+    plural: "image_series",
+    gettext_module: Brando.Gettext
 
   import Ecto.Query
 

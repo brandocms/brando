@@ -4,7 +4,8 @@ defmodule Brando.Sites.GlobalCategory do
     domain: "Sites",
     schema: "GlobalCategory",
     singular: "global_category",
-    plural: "global_categories"
+    plural: "global_categories",
+    gettext_module: Brando.Gettext
 
   alias Brando.Sites.Global
 

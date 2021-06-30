@@ -10,7 +10,8 @@ defmodule Brando.Pages.Fragment do
     domain: "Pages",
     schema: "Fragment",
     singular: "fragment",
-    plural: "fragments"
+    plural: "fragments",
+    gettext_module: Brando.Gettext
 
   import Brando.Gettext
 

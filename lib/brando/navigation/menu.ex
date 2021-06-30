@@ -4,7 +4,8 @@ defmodule Brando.Navigation.Menu do
     domain: "Navigation",
     schema: "Menu",
     singular: "menu",
-    plural: "menus"
+    plural: "menus",
+    gettext_module: Brando.Gettext
 
   trait Brando.Trait.Sequenced
   trait Brando.Trait.Timestamped

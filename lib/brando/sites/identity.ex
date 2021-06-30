@@ -4,7 +4,8 @@ defmodule Brando.Sites.Identity do
     domain: "Sites",
     schema: "Identity",
     singular: "identity",
-    plural: "identities"
+    plural: "identities",
+    gettext_module: Brando.Gettext
 
   import Brando.Gettext
 

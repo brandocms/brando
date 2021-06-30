@@ -4,7 +4,8 @@ defmodule Brando.Images.Focal do
     domain: "Images",
     schema: "Focal",
     singular: "focal",
-    plural: "focals"
+    plural: "focals",
+    gettext_module: Brando.Gettext
 
   @primary_key false
   data_layer :embedded

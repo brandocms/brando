@@ -31,7 +31,8 @@ defmodule Brando.Images.Image do
     domain: "Images",
     schema: "Image",
     singular: "image",
-    plural: "images"
+    plural: "images",
+    gettext_module: Brando.Gettext
 
   data_layer :embedded
   @primary_key false

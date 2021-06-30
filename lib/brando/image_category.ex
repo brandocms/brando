@@ -71,7 +71,8 @@ defmodule Brando.ImageCategory do
     domain: "Images",
     schema: "ImageCategory",
     singular: "image_category",
-    plural: "image_categories"
+    plural: "image_categories",
+    gettext_module: Brando.Gettext
 
   table "images_categories"
 

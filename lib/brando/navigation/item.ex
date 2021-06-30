@@ -4,7 +4,8 @@ defmodule Brando.Navigation.Item do
     domain: "Navigation",
     schema: "Item",
     singular: "item",
-    plural: "items"
+    plural: "items",
+    gettext_module: Brando.Gettext
 
   data_layer :embedded
   identifier "{{ entry.title }}"

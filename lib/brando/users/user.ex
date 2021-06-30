@@ -33,7 +33,8 @@ defmodule Brando.Users.User do
     domain: "Users",
     schema: "User",
     singular: "user",
-    plural: "users"
+    plural: "users",
+    gettext_module: Brando.Gettext
 
   import Brando.Gettext
 

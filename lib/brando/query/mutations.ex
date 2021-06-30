@@ -54,6 +54,40 @@ defmodule Brando.Query.Mutations do
     with {:ok, entry} <- apply(context, :"get_#{name}", [get_opts]),
          changeset <- changeset_fun.(entry, params, user),
          changeset <- Publisher.maybe_override_status(changeset),
+         changeset <- set_action(changeset, :update),
+         {:ok, entry} <- Query.update(changeset),
+         {:ok, _} <- Datasource.update_datasource(module, entry),
+         {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
+      if has_changes(changeset) do
+        #! TODO: Remove when moving to Blueprints
+        revisioned? =
+          if Brando.Blueprint.blueprint?(module) do
+            module.__trait__(Trait.Revisioned)
+          else
+            {:__revisioned__, 0} in module.__info__(:functions)
+          end
+
+        if revisioned? do
+          Revisions.create_revision(entry, user)
+        end
+
+        case Schema.identifier_for(entry) do
+          nil -> nil
+          identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
+        end
+
+        callback_block.(entry)
+      else
+        {:ok, entry}
+      end
+    else
+      err -> err
+    end
+  end
+
+  def update_with_changeset(module, changeset, user, callback_block) do
+    with changeset <- Publisher.maybe_override_status(changeset),
+         changeset <- set_action(changeset, :update),
          {:ok, entry} <- Query.update(changeset),
          {:ok, _} <- Datasource.update_datasource(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
@@ -124,6 +158,8 @@ defmodule Brando.Query.Mutations do
   end
 
   defp maybe_delete_fields(entry, _), do: entry
+
+  defp set_action(changeset, action), do: %{changeset | action: action}
 
   def delete(context, module, name, id, user, callback_block) do
     {:ok, entry} = apply(context, :"get_#{name}", [id])

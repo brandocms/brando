@@ -12,7 +12,8 @@ defmodule Brando.Villain.Module do
     domain: "Pages",
     schema: "Module",
     singular: "module",
-    plural: "modules"
+    plural: "modules",
+    gettext_module: Brando.Gettext
 
   identifier "{{ entry.name }}"
 
