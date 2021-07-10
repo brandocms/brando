@@ -21,6 +21,5 @@
 <% end %>
 
 <p>
-  <%= link "Register", to: Brando.helpers().admin_user_registration_path(@conn, :new) %> |
   <%= link "Log in", to: Brando.helpers().admin_user_session_path(@conn, :new) %>
 </p>

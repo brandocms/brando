@@ -525,11 +525,25 @@ defmodule Brando.Blueprint do
                 "Gettext"
               ])
 
+        admin_list_view =
+          Module.concat([
+            web_module,
+            "#{String.capitalize(@singular)}ListLive"
+          ])
+
+        admin_update_view =
+          Module.concat([
+            web_module,
+            "#{String.capitalize(@singular)}UpdateLive"
+          ])
+
         %{
           application: application_module,
           context: context_module,
           schema: schema_module,
-          gettext: gettext_module
+          gettext: gettext_module,
+          admin_list_view: admin_list_view,
+          admin_update_view: admin_update_view
         }
       end
 

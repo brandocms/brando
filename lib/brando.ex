@@ -56,6 +56,7 @@ defmodule Brando do
   Gets the parent app's helpers
   """
   def helpers, do: web_module(Router.Helpers)
+  def routes, do: web_module(Router.Helpers)
 
   @doc """
   Gets the parent app's authorization module
