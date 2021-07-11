@@ -115,7 +115,7 @@ defmodule Brando.FactoryMixin do
       end
 
       def image_type_factory do
-        %Brando.Type.Image{
+        %Brando.Images.Image{
           credits: nil,
           path: "images/default/sample.png",
           sizes: %{

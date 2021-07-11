@@ -29,7 +29,7 @@ defmodule Brando.Images.ProcessingTest do
 
     {:ok, image_struct} = Processing.create_image_type_struct(upload, u1)
 
-    assert image_struct == %Brando.Type.Image{
+    assert image_struct == %Brando.Images.Image{
              alt: nil,
              credits: nil,
              focal: %{x: 50, y: 50},

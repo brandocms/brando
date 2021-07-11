@@ -44,7 +44,7 @@ defmodule Brando.Villain.Filters do
   It is prefered to use |size:"thumb" instead of this, but keeping these for backwards
   compatibility
   """
-  def large(%Brando.Type.Image{} = img, _) do
+  def large(%Brando.Images.Image{} = img, _) do
     img
     |> Brando.HTML.picture_tag(key: :large, prefix: Brando.Utils.media_url())
     |> Phoenix.HTML.safe_to_string()
@@ -56,7 +56,7 @@ defmodule Brando.Villain.Filters do
     |> Phoenix.HTML.safe_to_string()
   end
 
-  def xlarge(%Brando.Type.Image{} = img, _) do
+  def xlarge(%Brando.Images.Image{} = img, _) do
     img
     |> Brando.HTML.picture_tag(key: :xlarge, prefix: Brando.Utils.media_url())
     |> Phoenix.HTML.safe_to_string()
@@ -71,7 +71,7 @@ defmodule Brando.Villain.Filters do
   @doc """
   Get sized version of image
   """
-  def size(%Brando.Type.Image{} = img, size, _) do
+  def size(%Brando.Images.Image{} = img, size, _) do
     img
     |> Brando.HTML.picture_tag(key: size, prefix: Brando.Utils.media_url())
     |> Phoenix.HTML.safe_to_string()
@@ -89,7 +89,7 @@ defmodule Brando.Villain.Filters do
   {{ entry.cover|srcset:"Attivo.Team.Employee:cover" }}
   """
   def srcset(%struct_type{} = img, srcset, _)
-      when struct_type in [Brando.Type.Image, Brando.Images.Image] do
+      when struct_type in [Brando.Images.Image] do
     img
     |> Brando.HTML.picture_tag(
       placeholder: :svg,

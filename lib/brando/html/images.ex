@@ -54,7 +54,8 @@ defmodule Brando.HTML.Images do
   @spec picture_tag(map, keyword()) :: {:safe, [...]}
   def picture_tag(image_struct, opts \\ [])
 
-  def picture_tag(%struct_type{} = image_struct, opts) when struct_type in [Brando.Type.Image, Brando.Images.Image] do
+  def picture_tag(%struct_type{} = image_struct, opts)
+      when struct_type in [Brando.Images.Image] do
     initial_map = %{
       img: [],
       picture: [],
@@ -131,7 +132,7 @@ defmodule Brando.HTML.Images do
         opts
       end
 
-    image_struct = Utils.stringy_struct(Brando.Type.Image, img_map)
+    image_struct = Utils.stringy_struct(Brando.Images.Image, img_map)
     picture_tag(image_struct, opts)
   end
 

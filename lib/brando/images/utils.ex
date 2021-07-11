@@ -6,7 +6,7 @@ defmodule Brando.Images.Utils do
   @type image_kind :: :image | :image_series | :image_field
   @type image_schema :: Brando.Image.t()
   @type image_series_schema :: Brando.ImageSeries.t()
-  @type image_struct :: Brando.Type.Image.t()
+  @type image_struct :: Brando.Images.Image.t()
   @type user :: Brando.Users.User.t() | :system
 
   alias Brando.Image

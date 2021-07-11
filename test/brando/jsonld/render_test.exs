@@ -13,7 +13,7 @@ defmodule Brando.JSONLDRenderTest do
     meta_description: "Meta description"
   }
 
-  @img %Brando.Type.Image{
+  @img %Brando.Images.Image{
     alt: nil,
     credits: nil,
     focal: %{"x" => 50, "y" => 50},

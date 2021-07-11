@@ -312,7 +312,7 @@ defmodule Mix.Tasks.Brando.Gen do
   defp value_to_type(:language), do: :string
   defp value_to_type(:datetime), do: :utc_datetime
   defp value_to_type(:status), do: Brando.Type.Status
-  defp value_to_type(:image), do: Brando.Type.Image
+  defp value_to_type(:image), do: :image
   defp value_to_type(:video), do: Brando.Type.Video
   defp value_to_type(:file), do: Brando.Type.File
   defp value_to_type(:villain), do: :villain

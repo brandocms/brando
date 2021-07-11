@@ -50,7 +50,7 @@ defmodule Brando.Factory do
       name: "James Williamson",
       email: "james@thestooges.com",
       password: @encrypted_password,
-      avatar: %Brando.Type.Image{
+      avatar: %Brando.Images.Image{
         width: 300,
         height: 200,
         credits: nil,
@@ -76,7 +76,7 @@ defmodule Brando.Factory do
       name: "James Williamson",
       email: sequence(:email, &"james#{&1}@thestooges.com"),
       password: @encrypted_password,
-      avatar: %Brando.Type.Image{
+      avatar: %Brando.Images.Image{
         width: 300,
         height: 200,
         credits: nil,
@@ -149,7 +149,7 @@ defmodule Brando.Factory do
     %Image{
       image_series_id: nil,
       creator_id: nil,
-      image: %Brando.Type.Image{
+      image: %Brando.Images.Image{
         width: 300,
         height: 292,
         credits: "Credits",
@@ -176,7 +176,7 @@ defmodule Brando.Factory do
   end
 
   def image_type_factory do
-    %Brando.Type.Image{
+    %Brando.Images.Image{
       credits: nil,
       path: "images/default/sample.png",
       sizes: %{

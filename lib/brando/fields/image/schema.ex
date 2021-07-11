@@ -102,7 +102,7 @@ defmodule Brando.Field.Image.Schema do
                 add_error(changeset, name, error_msg)
             end
 
-          {:ok, %Brando.Type.Image{}} ->
+          {:ok, %Brando.Images.Image{}} ->
             # image from API - villain gallery/image
             changeset
         end

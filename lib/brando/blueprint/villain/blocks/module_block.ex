@@ -49,7 +49,7 @@ defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
       attribute :module_id, :integer, required: true
       attribute :sequence, :integer
       attribute :multi, :boolean, default: false
-      attribute :vars, :map
+      attribute :vars, :map, default: %{}
     end
 
     relations do

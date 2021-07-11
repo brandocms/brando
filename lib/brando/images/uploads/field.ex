@@ -6,7 +6,7 @@ defmodule Brando.Images.Upload.Field do
   """
 
   @type image_config :: Brando.Type.ImageConfig.t()
-  @type image_type :: Brando.Type.Image.t()
+  @type image_type :: Brando.Images.Image.t()
   @type user :: Brando.Users.User.t() | :system
 
   alias Brando.Images

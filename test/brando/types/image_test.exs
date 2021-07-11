@@ -1,6 +1,6 @@
 defmodule Brando.Types.ImageTest do
   use ExUnit.Case
-  alias Brando.Type.Image
+  alias Brando.Images.Image
 
   @raw %{
     "height" => 292,

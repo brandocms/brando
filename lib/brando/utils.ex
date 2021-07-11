@@ -849,6 +849,7 @@ defmodule Brando.Utils do
   def coerce_field(nil, _), do: nil
 
   # special case for Image type
+  # TODO: deprecate
   def coerce_field(value, Brando.Type.Image) do
     case Brando.Type.Image.cast(value) do
       {:ok, {_, value}} -> value

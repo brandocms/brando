@@ -17,7 +17,7 @@ defmodule Brando.JSONLDSchemaTest do
     {:copyrightYear, :string, [:inserted_at, :year]}
   ]
 
-  @image %Brando.Type.Image{
+  @image %Brando.Images.Image{
     credits: nil,
     path: "images/avatars/27i97a.jpeg",
     title: nil,

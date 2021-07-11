@@ -2,6 +2,11 @@ defmodule Brando.Blueprint.Form do
   @moduledoc """
   ### Form
   """
+  defmodule Subform do
+    defstruct size: :full,
+              field: nil,
+              sub_fields: []
+  end
 
   defmodule Fieldset do
     defstruct size: :full,
@@ -42,11 +47,32 @@ defmodule Brando.Blueprint.Form do
     end
   end
 
+  defmacro subform(field, size, do: block) do
+    do_subform(field, size, block)
+  end
+
+  defp do_subform(field, size, block) do
+    quote location: :keep do
+      var!(fs) = []
+      unquote(block)
+      named_subform = build_subform(unquote(field), unquote(size), Enum.reverse(var!(fs)))
+      Module.put_attribute(__MODULE__, :form, named_subform)
+    end
+  end
+
   defmacro input(name, type, opts \\ []) do
     quote location: :keep,
           bind_quoted: [name: name, type: type, opts: opts] do
       var!(fs) = List.wrap(build_input(name, type, opts)) ++ var!(fs)
     end
+  end
+
+  def build_subform(field, size, sub_fields) do
+    %__MODULE__.Subform{
+      size: size,
+      field: field,
+      sub_fields: sub_fields
+    }
   end
 
   def build_fieldset(size, fields) do
