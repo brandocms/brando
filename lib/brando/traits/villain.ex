@@ -10,6 +10,7 @@ defmodule Brando.Trait.Villain do
   @type changeset :: Changeset.t()
   @type config :: list()
 
+  @impl true
   def trait_attributes(attributes, _relations) do
     attributes
     |> Enum.filter(&(&1.type == :villain))
@@ -26,6 +27,7 @@ defmodule Brando.Trait.Villain do
     end)
   end
 
+  @impl true
   def validate(module, _config) do
     if module.__villain_fields__ == [] do
       raise ConfigError,
@@ -44,6 +46,7 @@ defmodule Brando.Trait.Villain do
   @doc """
   Generate HTML
   """
+  @impl true
   def changeset_mutator(module, _config, changeset, _user, skip_villain: true) do
     cast_poly(changeset, module.__villain_fields__())
   end
@@ -59,8 +62,6 @@ defmodule Brando.Trait.Villain do
         casted_changeset
     end
   end
-
-  def changeset_mutator(_module, _config, changeset, _user, _), do: changeset
 
   defp cast_poly(changeset, villain_fields) do
     Enum.reduce(villain_fields, changeset, fn vf, mutated_changeset ->

@@ -52,7 +52,6 @@ defmodule Brando.Users.User do
 
     attribute :avatar, :image, @avatar_cfg
     attribute :role, :enum, values: [:user, :editor, :admin, :superuser], required: true
-    attribute :config, Brando.Type.UserConfig, default: %Brando.Type.UserConfig{}
     attribute :active, :boolean, default: true
     attribute :last_login, :naive_datetime
     attribute :language, :language, languages: Brando.config(:admin_languages)
@@ -60,6 +59,10 @@ defmodule Brando.Users.User do
     attribute :password, :string,
       constraints: [min_length: 6],
       required: true
+  end
+
+  relations do
+    relation :config, :embeds_one, module: Brando.Users.UserConfig
   end
 
   identifier "{{ entry.name }}"
@@ -173,6 +176,11 @@ defmodule Brando.Users.User do
 
     fieldset :half do
       input :avatar, :image
+
+      # subform :config do
+      #   input :reset_password_on_first_login, :toggle
+      #   input :show_mutation_notifications, :toggle
+      # end
     end
   end
 end

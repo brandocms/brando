@@ -5,7 +5,9 @@ defmodule BrandoAdmin.UserSessionController do
   alias BrandoAdmin.UserAuth
 
   def new(conn, _params) do
-    render(conn, "new.html", error_message: nil)
+    conn
+    |> put_root_layout(false)
+    |> render("new.html", error_message: nil)
   end
 
   def create(conn, %{"user" => user_params}) do

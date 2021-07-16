@@ -67,6 +67,7 @@ locals_without_parens = [
   fieldset: 1,
   fieldset: 2,
   subform: 3,
+  subform_many: 3,
   listing_field: 1,
   listing_field: 2,
   listing_field: 3,

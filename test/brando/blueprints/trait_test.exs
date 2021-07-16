@@ -76,8 +76,8 @@ defmodule Brando.Blueprint.TraitTest do
       assert mutated_cs.valid?
       assert mutated_cs.changes.creator_id == 1
       assert mutated_cs.changes.title == "my title!"
-      assert mutated_cs.changes.html == "Some glorious text"
-      assert mutated_cs.changes.bio_html == "Some glorious text"
+      assert mutated_cs.changes.html == "<div class=\"paragraph\">Some glorious text</div>"
+      assert mutated_cs.changes.bio_html == "<div class=\"paragraph\">Some glorious text</div>"
     end
   end
 

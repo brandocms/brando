@@ -141,23 +141,21 @@ defmodule Brando.Blueprint do
     )
 
     Module.register_attribute(__CALLER__.module, :ctx, accumulate: false)
-    Module.put_attribute(__CALLER__.module, :ctx, nil)
+    Module.register_attribute(__CALLER__.module, :json_ld_fields, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :json_ld_schema, accumulate: false)
+    Module.register_attribute(__CALLER__.module, :meta_fields, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :traits, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :attrs, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :relations, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :form, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :listings, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :translations, accumulate: false)
+    Module.register_attribute(__CALLER__.module, :table_name, accumulate: false)
+    Module.register_attribute(__CALLER__.module, :data_layer, accumulate: false)
+    Module.register_attribute(__CALLER__.module, :primary_key, accumulate: false)
+    Module.register_attribute(__CALLER__.module, :allow_mark_as_deleted, accumulate: false)
 
     quote location: :keep do
-      Module.register_attribute(__MODULE__, :json_ld_fields, accumulate: true)
-      Module.register_attribute(__MODULE__, :json_ld_schema, accumulate: false)
-      Module.register_attribute(__MODULE__, :meta_fields, accumulate: true)
-      Module.register_attribute(__MODULE__, :traits, accumulate: true)
-      Module.register_attribute(__MODULE__, :attrs, accumulate: true)
-      Module.register_attribute(__MODULE__, :relations, accumulate: true)
-      Module.register_attribute(__MODULE__, :form, accumulate: true)
-      Module.register_attribute(__MODULE__, :listings, accumulate: true)
-      Module.register_attribute(__MODULE__, :translations, accumulate: false)
-      Module.register_attribute(__MODULE__, :table_name, accumulate: false)
-      Module.register_attribute(__MODULE__, :data_layer, accumulate: false)
-      Module.register_attribute(__MODULE__, :primary_key, accumulate: false)
-      Module.register_attribute(__MODULE__, :allow_mark_as_deleted, accumulate: false)
-
       @data_layer :database
       @allow_mark_as_deleted false
       @primary_key {:id, :id, autogenerate: true}
@@ -723,7 +721,7 @@ defmodule Brando.Blueprint do
 
   defp maybe_mark_for_deletion(%{changes: %{marked_as_deleted: true}} = changeset, module) do
     if module.__allow_mark_as_deleted__ do
-      %{changeset | action: :delete}
+      %{changeset | action: :ignore}
     else
       changeset
     end

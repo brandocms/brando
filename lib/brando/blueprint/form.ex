@@ -5,7 +5,10 @@ defmodule Brando.Blueprint.Form do
   defmodule Subform do
     defstruct size: :full,
               field: nil,
-              sub_fields: []
+              cardinality: :one,
+              sub_fields: [],
+              style: :regular,
+              default: nil
   end
 
   defmodule Fieldset do
@@ -47,15 +50,44 @@ defmodule Brando.Blueprint.Form do
     end
   end
 
-  defmacro subform(field, size, do: block) do
-    do_subform(field, size, block)
+  defmacro subform(field, opts, do: block) do
+    do_subform(field, opts, block)
   end
 
-  defp do_subform(field, size, block) do
+  defp do_subform(field, opts, block) do
+    size = Keyword.get(opts, :size, :full)
+
     quote location: :keep do
       var!(fs) = []
       unquote(block)
       named_subform = build_subform(unquote(field), unquote(size), Enum.reverse(var!(fs)))
+      Module.put_attribute(__MODULE__, :form, named_subform)
+    end
+  end
+
+  defmacro subform_many(field, opts, do: block) do
+    do_subform_many(field, opts, block)
+  end
+
+  defp do_subform_many(field, opts, block) do
+    size = Keyword.get(opts, :size, :full)
+    default = Keyword.get(opts, :default, nil)
+    style = Keyword.get(opts, :style, nil)
+
+    quote location: :keep do
+      var!(fs) = []
+      unquote(block)
+
+      named_subform =
+        build_subform(
+          unquote(field),
+          unquote(size),
+          Enum.reverse(var!(fs)),
+          :many,
+          unquote(default),
+          unquote(style)
+        )
+
       Module.put_attribute(__MODULE__, :form, named_subform)
     end
   end
@@ -67,11 +99,21 @@ defmodule Brando.Blueprint.Form do
     end
   end
 
-  def build_subform(field, size, sub_fields) do
+  def build_subform(
+        field,
+        size,
+        sub_fields,
+        cardinality \\ :one,
+        default \\ nil,
+        style \\ :regular
+      ) do
     %__MODULE__.Subform{
       size: size,
       field: field,
-      sub_fields: sub_fields
+      sub_fields: sub_fields,
+      cardinality: cardinality,
+      default: default,
+      style: style
     }
   end
 
