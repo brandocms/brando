@@ -703,6 +703,7 @@ defmodule Brando.Blueprint do
     |> Unique.run_unique_attribute_constraints(module, all_attributes)
     |> Unique.run_unique_relation_constraints(module, all_relations)
     |> Constraints.run_validations(module, all_attributes)
+    |> Constraints.run_validations(module, all_relations)
     |> Constraints.run_fk_constraints(module, all_relations)
     |> Upload.run_upload_validations(
       module,

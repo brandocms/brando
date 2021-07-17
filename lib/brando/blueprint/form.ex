@@ -3,8 +3,7 @@ defmodule Brando.Blueprint.Form do
   ### Form
   """
   defmodule Subform do
-    defstruct size: :full,
-              field: nil,
+    defstruct field: nil,
               cardinality: :one,
               sub_fields: [],
               style: :regular,
@@ -29,7 +28,16 @@ defmodule Brando.Blueprint.Form do
   defp form(_caller, block) do
     quote generated: true, location: :keep do
       Module.register_attribute(__MODULE__, :form, accumulate: true)
+
+      var!(b_fieldset) = []
+      var!(b_subform) = []
+      var!(b_form_ctx) = :fieldset
+
       unquote(block)
+
+      _ = var!(b_subform)
+      _ = var!(b_fieldset)
+      _ = var!(b_form_ctx)
     end
   end
 
@@ -43,78 +51,60 @@ defmodule Brando.Blueprint.Form do
 
   defp do_fieldset(size, block) do
     quote location: :keep do
-      var!(fs) = []
+      var!(b_form_ctx) = :fieldset
+      var!(b_fieldset) = []
+      var!(b_subform) = []
+
       unquote(block)
-      named_fieldset = build_fieldset(unquote(size), Enum.reverse(var!(fs)))
+      named_fieldset = build_fieldset(unquote(size), Enum.reverse(var!(b_fieldset)))
       Module.put_attribute(__MODULE__, :form, named_fieldset)
+
+      _ = var!(b_subform)
+      _ = var!(b_fieldset)
+      _ = var!(b_form_ctx)
     end
   end
 
-  defmacro subform(field, opts, do: block) do
-    do_subform(field, opts, block)
+  defmacro inputs_for(field, do: block) do
+    do_inputs_for(field, [], block)
   end
 
-  defp do_subform(field, opts, block) do
-    size = Keyword.get(opts, :size, :full)
+  defmacro inputs_for(field, opts, do: block) do
+    do_inputs_for(field, opts, block)
+  end
 
+  defp do_inputs_for(field, opts, block) do
     quote location: :keep do
-      var!(fs) = []
+      _ = var!(b_subform)
+      _ = var!(b_fieldset)
+      _ = var!(b_form_ctx)
+
+      var!(b_form_ctx) = :subform
+      var!(b_subform) = []
       unquote(block)
-      named_subform = build_subform(unquote(field), unquote(size), Enum.reverse(var!(fs)))
-      Module.put_attribute(__MODULE__, :form, named_subform)
-    end
-  end
-
-  defmacro subform_many(field, opts, do: block) do
-    do_subform_many(field, opts, block)
-  end
-
-  defp do_subform_many(field, opts, block) do
-    size = Keyword.get(opts, :size, :full)
-    default = Keyword.get(opts, :default, nil)
-    style = Keyword.get(opts, :style, nil)
-
-    quote location: :keep do
-      var!(fs) = []
-      unquote(block)
-
-      named_subform =
-        build_subform(
-          unquote(field),
-          unquote(size),
-          Enum.reverse(var!(fs)),
-          :many,
-          unquote(default),
-          unquote(style)
-        )
-
-      Module.put_attribute(__MODULE__, :form, named_subform)
+      named_subform = build_subform(unquote(field), unquote(opts), Enum.reverse(var!(b_subform)))
+      var!(b_fieldset) = List.wrap(named_subform) ++ var!(b_fieldset)
+      var!(b_form_ctx) = :fieldset
     end
   end
 
   defmacro input(name, type, opts \\ []) do
     quote location: :keep,
           bind_quoted: [name: name, type: type, opts: opts] do
-      var!(fs) = List.wrap(build_input(name, type, opts)) ++ var!(fs)
+      {var!(b_subform), var!(b_fieldset)} =
+        if var!(b_form_ctx) == :subform do
+          {List.wrap(build_input(name, type, opts)) ++ var!(b_subform), var!(b_fieldset)}
+        else
+          {var!(b_subform), List.wrap(build_input(name, type, opts)) ++ var!(b_fieldset)}
+        end
+
+      # _ = var!(b_subform)
     end
   end
 
-  def build_subform(
-        field,
-        size,
-        sub_fields,
-        cardinality \\ :one,
-        default \\ nil,
-        style \\ :regular
-      ) do
-    %__MODULE__.Subform{
-      size: size,
-      field: field,
-      sub_fields: sub_fields,
-      cardinality: cardinality,
-      default: default,
-      style: style
-    }
+  def build_subform(field, opts, sub_fields) do
+    mapped_opts = Enum.into(opts, %{})
+    Map.merge(%__MODULE__.Subform{field: field, sub_fields: sub_fields}, mapped_opts)
   end
 
   def build_fieldset(size, fields) do
