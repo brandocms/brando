@@ -63,38 +63,18 @@ defmodule Brando.Sites do
   @doc """
   Create new identity
   """
-  @spec create_identity(params, user | :system) ::
-          {:ok, identity} | {:error, Ecto.Changeset.t()}
-  def create_identity(identity_params, user \\ :system) do
-    changeset = Identity.changeset(%Identity{}, identity_params, user)
-    Brando.repo().insert(changeset)
-  end
+  mutation :create, Identity
 
   @doc """
   Update existing identity
   """
-  @spec update_identity(params, user | :system) :: {:ok, identity} | {:error, changeset}
-  def update_identity(identity_params, user \\ :system) do
-    {:ok, identity} = get_identity()
-
-    identity
-    |> Identity.changeset(identity_params, user)
-    |> Brando.repo().update()
-    |> Cache.Identity.update()
-    |> push_identity_mutation_notification(user)
-    |> update_villains_referencing_identity()
-  end
-
-  defp push_identity_mutation_notification({:ok, identity}, user) do
-    case Schema.identifier_for(identity) do
-      nil -> nil
-      identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
+  mutation :update, Identity do
+    fn entry ->
+      {:ok, entry}
+      |> Cache.Identity.update()
+      |> update_villains_referencing_identity()
     end
-
-    {:ok, identity}
   end
-
-  defp push_identity_mutation_notification(passthrough, _), do: passthrough
 
   @doc """
   Create default identity

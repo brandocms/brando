@@ -159,7 +159,7 @@ defmodule Brando.Users.User do
   end
 
   form do
-    fieldset :half do
+    fieldset size: :half do
       input :name, :text
       input :email, :email
       input :password, :password
@@ -174,7 +174,7 @@ defmodule Brando.Users.User do
         ]
     end
 
-    fieldset :half do
+    fieldset size: :half do
       input :avatar, :image
 
       inputs_for :config do

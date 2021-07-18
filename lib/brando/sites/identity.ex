@@ -56,29 +56,55 @@ defmodule Brando.Sites.Identity do
     fieldset do
       input :type, :radios,
         options: [
-          {:organization, gettext("Organization")},
-          {:corporation, gettext("Corporation")}
+          %{value: :organization, label: gettext("Organization")},
+          %{value: :corporation, label: gettext("Corporation")}
         ]
+    end
 
-      input :name, :text, class: "half"
-      input :alternate_name, :text, class: "half"
+    fieldset style: :inline do
+      input :name, :text
+      input :alternate_name, :text
+    end
 
-      input :email, :email, class: "half"
-      input :phone, :phone, class: "half"
+    fieldset style: :inline do
+      input :email, :email
+      input :phone, :phone
+    end
 
+    fieldset do
       input :address, :text
       input :address2, :text
       input :address3, :text
+    end
 
-      input :zipcode, :text, class: "third"
-      input :city, :text, class: "third"
-      input :country, :text, class: "third"
+    fieldset style: :inline do
+      input :zipcode, :text
+      input :city, :text
+      input :country, :text
+    end
 
-      input :title_prefix, :text, class: "third"
-      input :title, :text, class: "third"
-      input :title_postfix, :text, class: "third"
+    fieldset style: :inline do
+      input :title_prefix, :text
+      input :title, :text
+      input :title_postfix, :text
+    end
 
+    fieldset do
       input :logo, :image
+    end
+
+    fieldset size: :full do
+      inputs_for :links, style: :inline, cardinality: :many, size: :full, default: %Brando.Link{} do
+        input :name, :text
+        input :url, :text
+      end
+    end
+
+    fieldset size: :full do
+      inputs_for :metas, style: :inline, cardinality: :many, size: :full, default: %Brando.Meta{} do
+        input :key, :text
+        input :value, :text
+      end
     end
   end
 

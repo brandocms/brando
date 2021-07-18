@@ -12,6 +12,7 @@ defmodule Brando.Blueprint.Form do
 
   defmodule Fieldset do
     defstruct size: :full,
+              style: :regular,
               fields: []
   end
 
@@ -41,22 +42,22 @@ defmodule Brando.Blueprint.Form do
     end
   end
 
-  defmacro fieldset(size, do: block) do
-    do_fieldset(size, block)
-  end
-
   defmacro fieldset(do: block) do
-    do_fieldset(:full, block)
+    do_fieldset([], block)
   end
 
-  defp do_fieldset(size, block) do
+  defmacro fieldset(opts, do: block) do
+    do_fieldset(opts, block)
+  end
+
+  defp do_fieldset(opts, block) do
     quote location: :keep do
       var!(b_form_ctx) = :fieldset
       var!(b_fieldset) = []
       var!(b_subform) = []
 
       unquote(block)
-      named_fieldset = build_fieldset(unquote(size), Enum.reverse(var!(b_fieldset)))
+      named_fieldset = build_fieldset(unquote(opts), Enum.reverse(var!(b_fieldset)))
       Module.put_attribute(__MODULE__, :form, named_fieldset)
 
       _ = var!(b_subform)
@@ -107,11 +108,15 @@ defmodule Brando.Blueprint.Form do
     Map.merge(%__MODULE__.Subform{field: field, sub_fields: sub_fields}, mapped_opts)
   end
 
-  def build_fieldset(size, fields) do
-    %__MODULE__.Fieldset{
-      size: size,
-      fields: fields
-    }
+  def build_fieldset(opts, fields) do
+    mapped_opts = Enum.into(opts, %{})
+
+    Map.merge(
+      %__MODULE__.Fieldset{
+        fields: fields
+      },
+      mapped_opts
+    )
   end
 
   def build_input(name, type, opts) do

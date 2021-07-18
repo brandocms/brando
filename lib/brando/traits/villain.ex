@@ -51,7 +51,7 @@ defmodule Brando.Trait.Villain do
     cast_poly(changeset, module.__villain_fields__())
   end
 
-  def changeset_mutator(module, _config, changeset, _user, _opts) do
+  def changeset_mutator(module, _config, changeset, _user, opts) do
     case cast_poly(changeset, module.__villain_fields__()) do
       %{valid?: true} = casted_changeset ->
         Enum.reduce(module.__villain_fields__(), casted_changeset, fn vf, mutated_changeset ->

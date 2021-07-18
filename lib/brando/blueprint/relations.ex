@@ -136,7 +136,23 @@ defmodule Brando.Blueprint.Relations do
         changeset,
         _user
       ) do
-    cast_embed(changeset, name, to_changeset_opts(:embeds_one, opts))
+    # TODO: Find a way to differentiate a deleted embed from an updated/created embed.
+    # - If it is a deleted embed, we can `put_embed(changeset, name, nil)`
+    # - If it is an upserted embed, we can `cast_embed(changeset, name ...
+    require Logger
+
+    Logger.error(
+      "-- pre  cast_embed -> #{inspect(name)}: #{inspect(Map.get(changeset.changes, name), pretty: true)}"
+    )
+
+    Logger.error(inspect(changeset.params, pretty: true))
+    we = cast_embed(changeset, name, to_changeset_opts(:embeds_one, opts))
+
+    Logger.error(
+      "-- post cast_embed -> #{inspect(name)}: #{inspect(Map.get(we.changes, name), pretty: true)}"
+    )
+
+    we
   end
 
   ##

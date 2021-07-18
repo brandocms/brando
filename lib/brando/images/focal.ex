@@ -7,8 +7,10 @@ defmodule Brando.Images.Focal do
     plural: "focals",
     gettext_module: Brando.Gettext
 
-  @primary_key false
   data_layer :embedded
+
+  @primary_key false
+  @allow_mark_as_deleted false
 
   attributes do
     attribute :x, :integer, required: true, default: 50
