@@ -150,7 +150,7 @@ defmodule Brando.Villain.Filters do
   @doc """
   Get src of image
   """
-  def src(%Brando.Type.Image{} = img, size, _) do
+  def src(%Brando.Images.Image{} = img, size, _) do
     Brando.Utils.img_url(img, size, prefix: Brando.Utils.media_url())
   end
 

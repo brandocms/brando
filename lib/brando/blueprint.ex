@@ -722,6 +722,8 @@ defmodule Brando.Blueprint do
 
   defp maybe_mark_for_deletion(%{changes: %{marked_as_deleted: true}} = changeset, module) do
     if module.__allow_mark_as_deleted__ do
+      # require Logger
+      # Logger.error inspect
       %{changeset | action: :ignore}
     else
       changeset

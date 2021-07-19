@@ -226,9 +226,9 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :logo, :jsonb
       add :url, :string
 
-      add :metas, :map
-      add :links, :map
-      add :configs, :map
+      add :metas, :jsonb
+      add :links, :jsonb
+      add :configs, :jsonb
       add :type, :string, default: "organization"
 
       timestamps()

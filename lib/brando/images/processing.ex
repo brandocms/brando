@@ -6,7 +6,6 @@ defmodule Brando.Images.Processing do
   alias Brando.Images
   alias Brando.Images.Operations
   alias Brando.Progress
-  alias Brando.Type
   alias Brando.Upload
   alias Brando.Users.User
   alias Ecto.Changeset
@@ -15,7 +14,6 @@ defmodule Brando.Images.Processing do
   @type id :: binary | integer
   @type image_schema :: Image.t()
   @type image_series_schema :: ImageSeries.t()
-  @type image_type_struct :: Type.Image.t()
   @type image_kind :: :image | :image_series | :image_field
   @type upload :: Upload.t()
   @type user :: User.t()
@@ -25,8 +23,6 @@ defmodule Brando.Images.Processing do
   @doc """
   Create an image struct from upload, cfg and extra info
   """
-  @spec create_image_type_struct(upload, user, extra_params :: any) ::
-          {:error, {:create_image_type_struct, any}} | {:ok, image_type_struct}
   def create_image_type_struct(
         %Upload{upload_entry: %{uploaded_file: file}, cfg: cfg},
         user,
@@ -44,7 +40,7 @@ defmodule Brando.Images.Processing do
         dominant_color = Images.Operations.Info.get_dominant_color(new_path)
 
         {:ok,
-         %Type.Image{
+         %Images.Image{
            path: new_path,
            width: width,
            height: height,

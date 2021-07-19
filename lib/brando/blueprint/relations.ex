@@ -53,7 +53,7 @@ defmodule Brando.Blueprint.Relations do
     end
   end
 
-  def run_embed_attributes(changeset, attributes, user, module) do
+  def run_embed_attributes(changeset, attributes, user, _module) do
     attributes
     |> Enum.filter(&(&1.type == :image))
     |> Enum.map(fn image ->
@@ -136,23 +136,11 @@ defmodule Brando.Blueprint.Relations do
         changeset,
         _user
       ) do
-    # TODO: Find a way to differentiate a deleted embed from an updated/created embed.
-    # - If it is a deleted embed, we can `put_embed(changeset, name, nil)`
-    # - If it is an upserted embed, we can `cast_embed(changeset, name ...
-    require Logger
-
-    Logger.error(
-      "-- pre  cast_embed -> #{inspect(name)}: #{inspect(Map.get(changeset.changes, name), pretty: true)}"
-    )
-
-    Logger.error(inspect(changeset.params, pretty: true))
-    we = cast_embed(changeset, name, to_changeset_opts(:embeds_one, opts))
-
-    Logger.error(
-      "-- post cast_embed -> #{inspect(name)}: #{inspect(Map.get(we.changes, name), pretty: true)}"
-    )
-
-    we
+    # A hack to remove an embeds_one, specifically an image
+    case Map.get(changeset.params, to_string(name)) do
+      "" -> put_embed(changeset, name, nil)
+      _ -> cast_embed(changeset, name, to_changeset_opts(:embeds_one, opts))
+    end
   end
 
   ##
@@ -162,16 +150,53 @@ defmodule Brando.Blueprint.Relations do
         changeset,
         _user
       ) do
-    cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
+    casted_changeset = cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
+    param = Map.get(changeset.params, to_string(name))
+    field = Ecto.Changeset.get_field(casted_changeset, name)
+
+    require Logger
+
+    if name == :metas do
+      Logger.error("==> embeds_many :metas")
+      Logger.error(inspect(Map.get(casted_changeset.changes, :metas), pretty: true))
+      Logger.error(inspect(Map.get(casted_changeset.params, "metas"), pretty: true))
+      Logger.error(inspect(Keyword.get(casted_changeset.errors, :metas), pretty: true))
+    end
+
+    # if Map.get(casted_changeset.params, to_string(name)) == "null" do
+    #   Logger.error("==> it is null, put_embed empty list")
+    #   cs = Ecto.Changeset.delete_change(casted_changeset, name)
+    #   # cs = put_embed(casted_changeset, name, [])
+    #   # cs = %{cs | errors: Keyword.delete(cs.errors, name)}
+    #   Logger.error(inspect(cs, pretty: true))
+    #   cs
+    # else
+    #   casted_changeset
+    # end
+
+    casted_changeset
+
+    # A hack to remove the last embeds_many in a list
+    # if is_map(param) && Map.keys(param) == ["0"] &&
+    #      get_in(param, ["0", "marked_as_deleted"]) == "true" do
+    #   if field == [] do
+    #     cs = put_embed(casted_changeset, name, nil)
+    #     require Logger
+    #     Logger.error("==> field == []")
+    #     Logger.error(cs.changes, pretty: true)
+    #     Logger.error(cs.errors, pretty: true)
+    #     %{cs | errors: Keyword.delete(cs.errors, name)}
+    #   else
+    #     require Logger
+    #     Logger.error("==> field != []")
+    #     casted_changeset
+    #   end
+    # else
+    #   casted_changeset
+    # end
   end
 
   ##
   ## catch all for non casted relations
-  def run_cast_relation(
-        _,
-        changeset,
-        _user
-      ) do
-    changeset
-  end
+  def run_cast_relation(_, changeset, _user), do: changeset
 end
