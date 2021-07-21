@@ -12,103 +12,57 @@ msgstr ""
 "Plural-Forms: nplurals=2\n"
 
 #, elixir-format
-#: lib/brando/images/operations/sizing.ex:455
+#: lib/brando/images/operations/sizing.ex:460
 msgid "%{filename} &rarr; Creating image size: <strong>%{size_key}</strong>/%{format}"
 msgstr "%{filename} &rarr; Oppretter bildestørrelse: <strong>%{size_key}</strong>/%{format}"
 
 #, elixir-format
-#: lib/brando_web/templates/error/_feedback.html.eex:4
-msgid "A short description of the events leading to the error"
-msgstr "En kort beskrivelse av handlingene som førte til feilen"
-
-#, elixir-format
-#: lib/brando_web/templates/error/500.html.eex:3
-#: lib/brando_web/templates/error/admin_500.html.eex:3
-msgid "Application error"
-msgstr "Applikasjonsfeil"
-
-#, elixir-format
-#: lib/brando_web/templates/error/bad_request.html.eex:3
-msgid "Bad request"
-msgstr "Feil i spørringen"
-
-#, elixir-format
-#: lib/brando_web/templates/error/db_error.html.eex:3
-msgid "Database error"
-msgstr "Database feil"
-
-#, elixir-format
-#: lib/brando_web/templates/error/_feedback.html.eex:3
-msgid "Developers have been notified about this error, but if you can provide extra information about the error, please do so in the textbox below. If not, that's OK too!"
-msgstr "Utviklere har blitt varslet om feilen, men om du kan gi oss ekstra informasjon om feilen, vennligst skriv i tekstboksen under."
-
-#, elixir-format
-#: lib/brando/upload.ex:70
+#: lib/brando/upload.ex:122
 msgid "Empty filename given. Make sure you have a valid filename."
 msgstr "Tomt filnavn mottatt. Pass på at du har et gyldig filnavn"
 
 #, elixir-format
-#: lib/brando_web/templates/error/catch_all.html.eex:2
-msgid "Error"
-msgstr "Feil"
-
-#, elixir-format
-#: lib/brando/upload.ex:85
+#: lib/brando/upload.ex:137
 msgid "Error while copying"
 msgstr "Feil ved kopiering"
 
 #, elixir-format
-#: lib/brando/upload.ex:79
+#: lib/brando/upload.ex:131
 msgid "Error while creating image sizes"
 msgstr "Feil ved oppretting av bildestørrelse"
 
 #, elixir-format
-#: lib/brando/upload.ex:67
+#: lib/brando/upload.ex:119
 msgid "Failed creating image type struct"
 msgstr "Feiled ved oppretting av bildestruktur"
 
 #, elixir-format
-#: lib/brando/upload.ex:73
+#: lib/brando/upload.ex:125
 msgid "File type not allowed: %{type}. Must be one of: %{allowed}"
 msgstr "Filtypen er ikke tillatt: %{type}. Må være en av: %{allowed}"
 
 #, elixir-format
-#: lib/brando_web/templates/error/not_found.html.eex:3
-msgid "Page not found"
-msgstr "Siden fantes ikke"
-
-#, elixir-format
-#: lib/brando/upload.ex:82
+#: lib/brando/upload.ex:134
 msgid "Path creation failed"
 msgstr "Feil ved oppretting av sti"
 
 #, elixir-format
-#: lib/brando_web/templates/error/server_error.html.eex:3
-msgid "Server error"
-msgstr "Serverfeil"
-
-#, elixir-format
-#: lib/brando_web/templates/error/_feedback.html.eex:16
-msgid "Thanks!"
-msgstr "Tusen takk!"
-
-#, elixir-format
-#: lib/brando/upload.ex:89
+#: lib/brando/upload.ex:141
 msgid "Unknown error while creating image sizes."
 msgstr "Ukjent feil ved oppretting av bildestørrelser"
 
 #, elixir-format
-#: lib/brando/query/mutations.ex:33
+#: lib/brando/query/mutations.ex:35
 msgid "created"
 msgstr "opprettet"
 
 #, elixir-format
-#: lib/brando/query/mutations.ex:153
+#: lib/brando/query/mutations.ex:193
 msgid "deleted"
 msgstr "slettet"
 
 #, elixir-format
-#: lib/brando/query/mutations.ex:71 lib/brando/sites/sites.ex:91
+#: lib/brando/query/mutations.ex:76 lib/brando/query/mutations.ex:109
 msgid "updated"
 msgstr "oppdaterte"
 
@@ -133,91 +87,142 @@ msgid "published"
 msgstr "publisert"
 
 #, elixir-format
-#: lib/brando_web/admin/menu.ex:34
-msgid "Cache"
-msgstr "Mellomlagring"
-
-#, elixir-format
-#: lib/brando_web/admin/menu.ex:14
-msgid "Configuration"
-msgstr "Konfigurasjon"
-
-#, elixir-format
-#: lib/brando_web/admin/menu.ex:62
-msgid "Content"
-msgstr "Innhold"
-
-#, elixir-format
-#: lib/brando_web/admin/menu.ex:38
-msgid "Content modules"
-msgstr "Innholdsmoduler"
-
-#, elixir-format
-#: lib/brando/sites/identity.ex:59
-msgid "Corporation"
-msgstr "Bedrift"
-
-#, elixir-format
-#: lib/brando_web/admin/menu.ex:10
-msgid "Dashboard"
-msgstr "Dashbord"
-
-#, elixir-format
-#: lib/brando_web/admin/menu.ex:56
-msgid "File Library"
-msgstr "Filbibliotek"
-
-#, elixir-format
-#: lib/brando/traits/villain/prevent_circular_references.ex:26
+#: lib/brando/traits/villain/prevent_circular_references.ex:21
 msgid "Fragment contains circular reference to itself, %{ref_string}"
 msgstr "Fragmentet inneholder en referanse til seg selv, %{ref_string}"
 
 #, elixir-format
-#: lib/brando_web/admin/menu.ex:26
+#: lib/brando/users/user.ex:171
+msgid "Admin"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:106
+msgid "Cache"
+msgstr "Mellomlagring"
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:86
+msgid "Configuration"
+msgstr "Konfigurasjon"
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:134
+msgid "Content"
+msgstr "Innhold"
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:110
+msgid "Content modules"
+msgstr "Innholdsmoduler"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:60
+msgid "Corporation"
+msgstr "Bedrift"
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:82
+msgid "Dashboard"
+msgstr "Dashbord"
+
+#, elixir-format
+#: lib/brando_admin/templates/admin/_sidebar.html.eex:51
+msgid "Edit profile"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:172
+msgid "Editor"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:143
+#: lib/brando_admin/templates/user_session/new.html.eex:33
+msgid "Email"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:128
+msgid "File Library"
+msgstr "Filbibliotek"
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:98
 msgid "Global variables"
 msgstr "Globale variabler"
 
 #, elixir-format
-#: lib/brando_web/admin/menu.ex:18
+#: lib/brando_admin/menu.ex:90
 msgid "Identity"
 msgstr "Identitet"
 
 #, elixir-format
-#: lib/brando_web/admin/menu.ex:52
+#: lib/brando_admin/menu.ex:124
 msgid "Image Library"
 msgstr "Bildebibliotek"
 
 #, elixir-format
-#: lib/brando_web/admin/menu.ex:44
+#: lib/brando_admin/templates/user_session/new.html.eex:48
+msgid "Keep me logged in for 60 days"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/templates/admin/_sidebar.html.eex:59
+msgid "Log out"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:142
+msgid "Name"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:116
 msgid "Navigation"
 msgstr "Navigasjon"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:58
+#: lib/brando/sites/identity.ex:59
 msgid "Organization"
 msgstr "Organisasjon"
 
 #, elixir-format
-#: lib/brando_web/admin/menu.ex:65
+#: lib/brando_admin/menu.ex:138
 msgid "Pages & Sections"
 msgstr "Sider & seksjoner"
 
 #, elixir-format
-#: lib/brando_web/admin/menu.ex:30
+#: lib/brando_admin/templates/user_session/new.html.eex:40
+msgid "Password"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:102
 msgid "Planned publishing"
 msgstr "Planlagt publisering"
 
 #, elixir-format
-#: lib/brando_web/admin/menu.ex:22
+#: lib/brando_admin/menu.ex:94
 msgid "SEO"
 msgstr "SEO"
 
 #, elixir-format
-#: lib/brando_web/admin/menu.ex:7
+#: lib/brando/users/user.ex:170
+msgid "Superuser"
+msgstr ""
+
+#, elixir-format
+#: lib/brando_admin/menu.ex:79
 msgid "System"
 msgstr "System"
 
+#, elixir-format, fuzzy
+#: lib/brando/users/user.ex:173
+msgid "User"
+msgstr "Brukere"
+
 #, elixir-format
-#: lib/brando_web/admin/menu.ex:48
+#: lib/brando_admin/menu.ex:120
 msgid "Users"
 msgstr "Brukere"

@@ -5,7 +5,7 @@ defmodule Brando.Images.Operations do
   require Logger
 
   alias Brando.Images
-  alias Brando.Progress
+  alias BrandoAdmin.Progress
   alias Brando.Utils
 
   @type image_type_struct :: Brando.Images.Image.t()
@@ -88,7 +88,7 @@ defmodule Brando.Images.Operations do
   """
   @spec perform([operation], user) :: {:ok, [operation_result]}
   def perform(operations, user) do
-    Progress.show_progress(user)
+    Progress.show(user)
 
     Logger.debug("==> Brando.Images.Operations: Starting #{Enum.count(operations)} operations..")
 
@@ -111,7 +111,7 @@ defmodule Brando.Images.Operations do
 
     Logger.debug("==> Brando.Images.Operations: Finished in #{seconds_lapsed} seconds..")
 
-    Progress.hide_progress(user)
+    Progress.hide(user)
 
     {:ok, operation_results}
   end

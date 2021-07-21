@@ -76,7 +76,7 @@ defmodule Brando.Upload do
          }}
 
       {:error, _} ->
-        # Progress.hide_progress(user)
+        # Progress.hide(user)
         {:error, {:create_image_type_struct, "Fastimage.size() failed."}}
     end
   end

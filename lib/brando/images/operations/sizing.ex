@@ -5,7 +5,7 @@ defmodule Brando.Images.Operations.Sizing do
   import Brando.Gettext
   alias Brando.Images
   alias Brando.Images.Focal
-  alias Brando.Progress
+  alias BrandoAdmin.Progress
 
   @doc """
   Get processor module from config and call process function
@@ -464,7 +464,7 @@ defmodule Brando.Images.Operations.Sizing do
         format: format
       )
 
-    Progress.update_progress(user, progress_string,
+    Progress.update(user, progress_string,
       key: to_string(id),
       percent: progress
     )

@@ -28,8 +28,37 @@ defmodule BrandoAdmin.Menu do
     end
   end
 
+  @doc """
+  Generate a menu item from blueprint schema
+  """
+  defmacro menu_item(schema) do
+    do_menu_item(schema)
+  end
+
+  @doc """
+  Add custom URL to menu
+  """
   defmacro menu_item(name, url) do
     do_menu_item(name, url)
+  end
+
+  defp do_menu_item(schema) do
+    quote location: :keep,
+          generated: true,
+          bind_quoted: [schema: schema] do
+      plural = schema.__naming__().plural
+      url_base = "/admin/#{plural}"
+      default_listing = Enum.find(schema.__listings__, &(&1.name == :default))
+
+      query_params =
+        default_listing.query
+        |> URI.encode_query()
+        |> String.replace("%3A", ":")
+
+      url = Enum.join([url_base, query_params], "?")
+
+      Module.put_attribute(__MODULE__, :menus, %{name: String.capitalize(plural), url: url})
+    end
   end
 
   defp do_menu_item(name, url) do
@@ -42,6 +71,8 @@ defmodule BrandoAdmin.Menu do
 
   def get_menu do
     content_menus = Brando.admin_module(Menus).__menus__()
+    require Logger
+    Logger.error("==> getting menu for #{Gettext.get_locale()}")
 
     [
       %{

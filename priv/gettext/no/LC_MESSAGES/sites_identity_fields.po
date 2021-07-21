@@ -12,76 +12,81 @@ msgstr ""
 "Plural-Forms: nplurals=2\n"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:101
+#: lib/brando/sites/identity.ex:131
 msgid "A shortform version of the name"
 msgstr "Kortformsversjon av navnet"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:99 lib/brando/sites/identity.ex:100
+#: lib/brando/sites/identity.ex:129 lib/brando/sites/identity.ex:130
 msgid "Alternate name"
 msgstr "Alternativt navn"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:94 lib/brando/sites/identity.ex:95
+#: lib/brando/sites/identity.ex:124 lib/brando/sites/identity.ex:125
 msgid "Name"
 msgstr "Navn"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:89 lib/brando/sites/identity.ex:90
+#: lib/brando/sites/identity.ex:119 lib/brando/sites/identity.ex:120
 msgid "Type"
 msgstr "Type"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:115 lib/brando/sites/identity.ex:116
+#: lib/brando/sites/identity.ex:145 lib/brando/sites/identity.ex:146
 msgid "Address"
 msgstr "Adresse"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:120 lib/brando/sites/identity.ex:121
+#: lib/brando/sites/identity.ex:150 lib/brando/sites/identity.ex:151
 msgid "Address - second line"
 msgstr "Adresse - linje 2"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:125 lib/brando/sites/identity.ex:126
+#: lib/brando/sites/identity.ex:155 lib/brando/sites/identity.ex:156
 msgid "Address - third line"
 msgstr "Adresse - linje 3"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:135 lib/brando/sites/identity.ex:136
+#: lib/brando/sites/identity.ex:165 lib/brando/sites/identity.ex:166
 msgid "City"
 msgstr "Poststed"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:140 lib/brando/sites/identity.ex:141
+#: lib/brando/sites/identity.ex:170 lib/brando/sites/identity.ex:171
 msgid "Country"
 msgstr "Land"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:105 lib/brando/sites/identity.ex:106
+#: lib/brando/sites/identity.ex:135 lib/brando/sites/identity.ex:136
 msgid "Email"
 msgstr "Epost"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:110 lib/brando/sites/identity.ex:111
+#: lib/brando/sites/identity.ex:140 lib/brando/sites/identity.ex:141
 msgid "Phone"
 msgstr "Telefon"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:150 lib/brando/sites/identity.ex:151
+#: lib/brando/sites/identity.ex:180 lib/brando/sites/identity.ex:181
 msgid "Title"
 msgstr "Tittel"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:155 lib/brando/sites/identity.ex:156
+#: lib/brando/sites/identity.ex:185 lib/brando/sites/identity.ex:186
 msgid "Title (postfix)"
 msgstr "Tittel (postfix)"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:145 lib/brando/sites/identity.ex:146
+#: lib/brando/sites/identity.ex:175 lib/brando/sites/identity.ex:176
 msgid "Title (prefix)"
 msgstr "Tittel (prefix)"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:130 lib/brando/sites/identity.ex:131
+#: lib/brando/sites/identity.ex:160 lib/brando/sites/identity.ex:161
 msgid "Zipcode"
 msgstr "Postnr"
+
+#, elixir-format
+#: lib/brando/sites/identity.ex:190 lib/brando/sites/identity.ex:191
+msgid "Logo"
+msgstr ""

@@ -5,7 +5,7 @@ defmodule Brando.Images.Processing do
   alias Brando.ImageSeries
   alias Brando.Images
   alias Brando.Images.Operations
-  alias Brando.Progress
+  alias BrandoAdmin.Progress
   alias Brando.Upload
   alias Brando.Users.User
   alias Ecto.Changeset
@@ -51,7 +51,7 @@ defmodule Brando.Images.Processing do
          }}
 
       {:error, _} ->
-        Progress.hide_progress(user)
+        Progress.hide(user)
         {:error, {:create_image_type_struct, "Fastimage.size() failed."}}
     end
   end

@@ -12,6 +12,6 @@ msgstr ""
 "Plural-Forms: nplurals=2\n"
 
 #, elixir-format
-#: lib/brando/sites/identity.ex:83 lib/brando/sites/identity.ex:84
+#: lib/brando/sites/identity.ex:113 lib/brando/sites/identity.ex:114
 msgid "identity"
 msgstr "identitet"

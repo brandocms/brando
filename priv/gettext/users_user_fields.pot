@@ -11,11 +11,31 @@ msgid ""
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:95 lib/brando/users/user.ex:96
+#: lib/brando/users/user.ex:99 lib/brando/users/user.ex:100
 msgid "Email"
 msgstr ""
 
 #, elixir-format
-#: lib/brando/users/user.ex:90 lib/brando/users/user.ex:91
+#: lib/brando/users/user.ex:94 lib/brando/users/user.ex:95
 msgid "Name"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:109 lib/brando/users/user.ex:110
+msgid "Language"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:104 lib/brando/users/user.ex:105
+msgid "Password"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:118
+msgid "Profile picture"
+msgstr ""
+
+#, elixir-format
+#: lib/brando/users/user.ex:114
+msgid "Role"
 msgstr ""

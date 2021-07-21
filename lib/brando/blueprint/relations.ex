@@ -150,50 +150,10 @@ defmodule Brando.Blueprint.Relations do
         changeset,
         _user
       ) do
-    casted_changeset = cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
-    param = Map.get(changeset.params, to_string(name))
-    field = Ecto.Changeset.get_field(casted_changeset, name)
-
-    require Logger
-
-    if name == :metas do
-      Logger.error("==> embeds_many :metas")
-      Logger.error(inspect(Map.get(casted_changeset.changes, :metas), pretty: true))
-      Logger.error(inspect(Map.get(casted_changeset.params, "metas"), pretty: true))
-      Logger.error(inspect(Keyword.get(casted_changeset.errors, :metas), pretty: true))
+    case Map.get(changeset.params, to_string(name)) do
+      "" -> put_embed(changeset, name, [])
+      _ -> cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
     end
-
-    # if Map.get(casted_changeset.params, to_string(name)) == "null" do
-    #   Logger.error("==> it is null, put_embed empty list")
-    #   cs = Ecto.Changeset.delete_change(casted_changeset, name)
-    #   # cs = put_embed(casted_changeset, name, [])
-    #   # cs = %{cs | errors: Keyword.delete(cs.errors, name)}
-    #   Logger.error(inspect(cs, pretty: true))
-    #   cs
-    # else
-    #   casted_changeset
-    # end
-
-    casted_changeset
-
-    # A hack to remove the last embeds_many in a list
-    # if is_map(param) && Map.keys(param) == ["0"] &&
-    #      get_in(param, ["0", "marked_as_deleted"]) == "true" do
-    #   if field == [] do
-    #     cs = put_embed(casted_changeset, name, nil)
-    #     require Logger
-    #     Logger.error("==> field == []")
-    #     Logger.error(cs.changes, pretty: true)
-    #     Logger.error(cs.errors, pretty: true)
-    #     %{cs | errors: Keyword.delete(cs.errors, name)}
-    #   else
-    #     require Logger
-    #     Logger.error("==> field != []")
-    #     casted_changeset
-    #   end
-    # else
-    #   casted_changeset
-    # end
   end
 
   ##
