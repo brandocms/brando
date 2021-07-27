@@ -500,9 +500,9 @@ defmodule Brando.Utils do
   def helpers(conn), do: Phoenix.Controller.router_module(conn).__helpers__
 
   @doc """
-  Return the current user set in session.
+  Return the current user
   """
-  defdelegate current_user(conn), to: Guardian.Plug, as: :current_resource
+  def current_user(conn), do: Map.get(conn.assigns, :current_user)
 
   @doc """
   Checks if `conn`'s `full_path` matches `current_path`.
