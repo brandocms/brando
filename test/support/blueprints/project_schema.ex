@@ -43,6 +43,12 @@ defmodule Brando.BlueprintTest.Project do
   relations do
     relation :properties, :embeds_many, module: Brando.BlueprintTest.Property
   end
+
+  listings do
+    listing do
+      listing_query %{status: :published}
+    end
+  end
 end
 
 defmodule Brando.TraitTest.Project do
