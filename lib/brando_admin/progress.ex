@@ -6,33 +6,34 @@ defmodule BrandoAdmin.Progress do
 
   defmacro __using__(_) do
     quote do
-      def handle_info({:progress, :update, data}, socket) do
-        {:noreply, push_event(socket, "b:progress", %{action: :update, data: data})}
+      def handle_info({:progress, :update, user_id, data}, socket) do
+        {:noreply, push_event(socket, "b:progress:#{user_id}", %{action: :update, data: data})}
       end
 
-      def handle_info({:progress, :show, data}, socket) do
-        {:noreply, push_event(socket, "b:progress", %{action: :show, data: data})}
+      def handle_info({:progress, :show, user_id, data}, socket) do
+        {:noreply, push_event(socket, "b:progress:#{user_id}", %{action: :show, data: data})}
       end
 
-      def handle_info({:progress, :hide, data}, socket) do
-        {:noreply, push_event(socket, "b:progress", %{action: :hide, data: data})}
+      def handle_info({:progress, :hide, user_id, data}, socket) do
+        {:noreply, push_event(socket, "b:progress:#{user_id}", %{action: :hide, data: data})}
       end
     end
   end
 
+  @spec show(atom | %{:id => any, optional(any) => any}) :: :ok | {:error, any}
   def show(user) do
     Phoenix.PubSub.broadcast(
       Brando.pubsub(),
-      "#{@topic}:#{user.id}",
-      {:progress, :show, %{}}
+      @topic,
+      {:progress, :show, user.id, %{}}
     )
   end
 
   def hide(user) do
     Phoenix.PubSub.broadcast(
       Brando.pubsub(),
-      "#{@topic}:#{user.id}",
-      {:progress, :hide, %{}}
+      @topic,
+      {:progress, :hide, user.id, %{}}
     )
   end
 
@@ -45,12 +46,12 @@ defmodule BrandoAdmin.Progress do
 
     Phoenix.PubSub.broadcast(
       Brando.pubsub(),
-      "#{@topic}:#{user.id}",
-      {:progress, :update, payload}
+      @topic,
+      {:progress, :update, user.id, payload}
     )
   end
 
-  def update_delayed(status, opts) do
+  def update_delayed(user, status, opts) do
     payload = %{
       status: status,
       percent: Keyword.get(opts, :percent, nil),
@@ -63,7 +64,7 @@ defmodule BrandoAdmin.Progress do
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
         @topic,
-        {:progress, :update, payload}
+        {:progress, :update, user.id, payload}
       )
     end)
   end
