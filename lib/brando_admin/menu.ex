@@ -12,7 +12,7 @@ defmodule BrandoAdmin.Menu do
     quote location: :keep,
           unquote: false do
       def __menus__ do
-        @menus
+        Enum.reverse(@menus)
       end
     end
   end
@@ -38,6 +38,10 @@ defmodule BrandoAdmin.Menu do
   @doc """
   Add custom URL to menu
   """
+  defmacro menu_item(name, do: block) do
+    do_menu_item(name, do: block)
+  end
+
   defmacro menu_item(name, url) do
     do_menu_item(name, url)
   end
@@ -50,6 +54,11 @@ defmodule BrandoAdmin.Menu do
       url_base = "/admin/#{plural}"
       default_listing = Enum.find(schema.__listings__, &(&1.name == :default))
 
+      if !default_listing do
+        raise Brando.Exception.BlueprintError,
+          message: "Missing default listing for menu_item `#{inspect(schema)}`"
+      end
+
       query_params =
         default_listing.query
         |> URI.encode_query()
@@ -61,6 +70,20 @@ defmodule BrandoAdmin.Menu do
     end
   end
 
+  defp do_menu_item(name, do: block) do
+    quote location: :keep,
+          generated: true do
+      var!(b_menu_subitems) = []
+      subitems = unquote(block)
+
+      Module.put_attribute(__MODULE__, :menus, %{
+        name: unquote(name),
+        items: Enum.reverse(subitems),
+        url: nil
+      })
+    end
+  end
+
   defp do_menu_item(name, url) do
     quote location: :keep,
           generated: true,
@@ -69,10 +92,19 @@ defmodule BrandoAdmin.Menu do
     end
   end
 
+  defmacro menu_subitem(name, url) do
+    do_menu_subitem(name, url)
+  end
+
+  defp do_menu_subitem(name, url) do
+    quote location: :keep,
+          generated: true do
+      var!(b_menu_subitems) = [%{name: unquote(name), url: unquote(url)} | var!(b_menu_subitems)]
+    end
+  end
+
   def get_menu do
     content_menus = Brando.admin_module(Menus).__menus__()
-    require Logger
-    Logger.error("==> getting menu for #{Gettext.get_locale()}")
 
     [
       %{
