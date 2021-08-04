@@ -59,12 +59,14 @@ defmodule Brando.Pages do
     fn
       query ->
         from q in query,
-          where: is_nil(q.deleted_at)
+          where: is_nil(q.deleted_at),
+          preload: [:fragments, :children]
     end
   end
 
   filters Page do
     fn
+      {:uri, uri}, query -> from q in query, where: ilike(q.uri, ^"%#{uri}%")
       {:title, title}, query -> from q in query, where: ilike(q.title, ^"%#{title}%")
       {:parents, true}, query -> from q in query, where: is_nil(q.parent_id)
     end
@@ -152,10 +154,7 @@ defmodule Brando.Pages do
     view_module = Brando.web_module(PageView)
     {_, _, templates} = view_module.__templates__
 
-    main_templates =
-      templates
-      |> Enum.filter(&(not String.starts_with?(&1, "_")))
-      |> Enum.map(&%{name: Path.rootname(&1), value: &1})
+    main_templates = Enum.filter(templates, &(not String.starts_with?(&1, "_")))
 
     {:ok, main_templates}
   end

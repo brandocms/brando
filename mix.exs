@@ -29,14 +29,15 @@ defmodule Brando.Mixfile do
   defp deps do
     [
       {:phoenix, "~> 1.4"},
-      {:phoenix_html, "~> 2.6"},
+      # {:phoenix_html, "~> 2.6"},
       {:phoenix_ecto, "~> 4.0"},
       {:postgrex, "~> 0.14"},
       {:ecto, "~> 3.5"},
       {:ecto_sql, "~> 3.5"},
 
       # liveview
-      {:phoenix_live_view, "~> 0.15.4"},
+      {:phoenix_live_view, github: "phoenixframework/phoenix_live_view", override: true},
+      {:phoenix_html, github: "phoenixframework/phoenix_html", override: true},
       {:surface, "~> 0.5"},
       {:floki, ">= 0.27.0", only: :test},
 

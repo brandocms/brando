@@ -1,7 +1,0 @@
-        <KInputSelect
-          v-model="<%= vue_singular %>.<%= k %>"
-          :options="<%= ref_target_domain && ref_target_schema || ref_target %>"
-          :label="$t('<%= vue_plural %>.fields.<%= k %>.label')"
-          option-value-key="id"
-          option-label-key="name"
-          name="<%= vue_singular %>[<%= k %>]" />

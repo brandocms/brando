@@ -159,12 +159,6 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "lib/application_name_web/channels/admin_socket.ex",
      "lib/application_name_web/channels/admin_socket.ex"},
 
-    # Absinthe/GraphQL
-    {:eex, "lib/graphql/schema.ex", "lib/application_name/graphql/schema.ex"},
-    {:eex, "lib/graphql/schema/types.ex", "lib/application_name/graphql/schema/types.ex"},
-    {:keep, "lib/graphql/schema/types", "lib/application_name/graphql/schema/types"},
-    {:keep, "lib/graphql/resolvers", "lib/application_name/graphql/resolvers"},
-
     # Endpoint
     {:eex, "lib/application_name_web/endpoint.ex", "lib/application_name_web/endpoint.ex"},
 

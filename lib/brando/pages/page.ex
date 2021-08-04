@@ -13,8 +13,13 @@ defmodule Brando.Pages.Page do
     plural: "pages",
     gettext_module: Brando.Gettext
 
+  alias Brando.Pages
   alias Brando.Pages.Fragment
   alias Brando.Pages.Property
+  alias BrandoAdmin.Components.Pages.PropertyData
+
+  import Brando.Gettext
+  import Surface
 
   # ++ Traits
   trait Brando.Trait.Creator
@@ -104,6 +109,86 @@ defmodule Brando.Pages.Page do
     json_ld_field :name, :string, [:title]
     json_ld_field :publisher, {:references, :identity}
     json_ld_field :url, :string, [:__meta__, :current_url]
+  end
+
+  listings do
+    listing do
+      listing_query %{status: :published, order: [{:asc, :sequence}, {:desc, :inserted_at}]}
+
+      listing_filters([
+        [label: gettext("URI"), filter: "uri"],
+        [label: gettext("Title"), filter: "title"]
+      ])
+
+      listing_actions([
+        [label: gettext("Edit page"), event: "edit_entry"],
+        [
+          label: gettext("Delete page"),
+          event: "delete_entry",
+          confirm: gettext("Are you sure?")
+        ],
+        [label: gettext("Duplicate page"), event: "duplicate_entry"]
+      ])
+
+      listing_selection_actions([
+        [label: gettext("Delete pages"), event: "delete_selected"]
+      ])
+
+      # listing_field :cover, :image, columns: 2, class: "padded"
+      listing_field :language, :language, columns: 1
+
+      listing_template(
+        """
+        <a
+          data-phx-link="redirect"
+          data-phx-link-state="push"
+          href="/admin/pages/update/{{ entry.id }}"
+          class="entry-link">
+          {{ entry.title }}
+        </a>
+        <br>
+        <div class="badge"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12"><path fill="none" d="M0 0h24v24H0z"/><path d="M6.235 6.453a8 8 0 0 0 8.817 12.944c.115-.75-.137-1.47-.24-1.722-.23-.56-.988-1.517-2.253-2.844-.338-.355-.316-.628-.195-1.437l.013-.091c.082-.554.22-.882 2.085-1.178.948-.15 1.197.228 1.542.753l.116.172c.328.48.571.59.938.756.165.075.37.17.645.325.652.373.652.794.652 1.716v.105c0 .391-.038.735-.098 1.034a8.002 8.002 0 0 0-3.105-12.341c-.553.373-1.312.902-1.577 1.265-.135.185-.327 1.132-.95 1.21-.162.02-.381.006-.613-.009-.622-.04-1.472-.095-1.744.644-.173.468-.203 1.74.356 2.4.09.105.107.3.046.519-.08.287-.241.462-.292.498-.096-.056-.288-.279-.419-.43-.313-.365-.705-.82-1.211-.96-.184-.051-.386-.093-.583-.135-.549-.115-1.17-.246-1.315-.554-.106-.226-.105-.537-.105-.865 0-.417 0-.888-.204-1.345a1.276 1.276 0 0 0-.306-.43zM12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg> {{ entry.uri }}</div><br>
+        """,
+        columns: 8
+      )
+
+      listing_field [:fragments, :children], :children_button, columns: 1
+    end
+  end
+
+  form do
+    fieldset size: :half do
+      input :status, :status
+
+      input :title, :text
+      input :uri, :text
+    end
+
+    fieldset size: :half do
+      input :is_homepage, :toggle
+      input :template, :select, options: &__MODULE__.get_templates/2
+      input :css_classes, :text
+    end
+
+    fieldset size: :full do
+      inputs_for :properties, {:component, BrandoAdmin.Components.Form.Input.PageProperties}
+
+      # cardinality: :many,
+      #   style: :inline,
+      #   default: %Property{type: "boolean", data: %{"value" => "false"}} do
+      #   input :label, :text
+      #   input :type, :text
+      #   input :key, :text
+
+      #   input :data, {:component, PropertyData}, from: :type
+
+      input :data, :blocks
+    end
+  end
+
+  def get_templates(_, _) do
+    {:ok, templates} = Pages.list_templates()
+    Enum.map(templates, &%{value: &1, label: &1})
   end
 
   defimpl Phoenix.HTML.Safe, for: __MODULE__ do

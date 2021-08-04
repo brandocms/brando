@@ -497,9 +497,13 @@ defmodule Brando.Blueprint do
           ])
 
         web_module =
-          Module.concat([
-            :"#{@application}Web"
-          ])
+          if @application == "Brando" do
+            BrandoAdmin
+          else
+            Module.concat([
+              :"#{@application}Web"
+            ])
+          end
 
         context_module =
           Module.concat([

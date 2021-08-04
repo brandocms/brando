@@ -179,9 +179,9 @@ defmodule Brando.UtilsTest do
              "Wrong size key for img_url function."
 
     assert img_url(img, :thumb) == "images/thumb/file.jpg"
-    assert img_url(nil, :thumb, default: "default.jpg", prefix: "prefix") == "thumb/default.jpg"
-    assert img_url(nil, :thumb, default: "default.jpg") == "thumb/default.jpg"
-    assert img_url("", :thumb, default: "default.jpg") == "thumb/default.jpg"
+    assert img_url(nil, :thumb, default: "default.jpg", prefix: "prefix") == "default.jpg"
+    assert img_url(nil, :thumb, default: "default.jpg") == "default.jpg"
+    assert img_url("", :thumb, default: "default.jpg") == "default.jpg"
 
     assert img_url(img, :thumb, default: "default.jpg", prefix: "prefix") ==
              "prefix/images/thumb/file.jpg"

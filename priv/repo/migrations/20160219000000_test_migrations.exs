@@ -12,7 +12,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add(:email, :text)
       add(:password, :text)
       add(:avatar, :jsonb)
-      add(:role, :integer)
+      add(:role, :string)
       add(:config, :map)
       add(:active, :boolean, default: true)
       add(:language, :text, default: "no")

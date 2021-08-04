@@ -182,43 +182,16 @@ defmodule Mix.Tasks.Brando.Gen do
            "lib/application_name_web/templates/#{path}/__#{binding[:singular]}.html.eex"},
           {:eex, "view.ex", "lib/application_name_web/views/#{path}_view.ex"},
 
-          # DB
-          {:eex, "schema_test.exs", schema_test_path},
+          # ADMIN
+          {:eex, "admin/list.ex",
+           "lib/application_name_web/admin/live/#{snake_domain}/#{singular}_list_live.ex"},
+          {:eex, "admin/form.ex",
+           "lib/application_name_web/admin/live/#{snake_domain}/#{singular}_create_live.ex"},
+          {:eex, "admin/form.ex",
+           "lib/application_name_web/admin/live/#{snake_domain}/#{singular}_update_live.ex"},
 
-          # Backend JS
-          {:eex, "assets/backend/src/api/graphql/ALL_QUERY.graphql",
-           "assets/backend/src/gql/#{snake_domain}/#{singular |> Inflex.underscore() |> Inflex.pluralize() |> String.upcase()}_QUERY.graphql"},
-          {:eex, "assets/backend/src/api/graphql/SINGLE_QUERY.graphql",
-           "assets/backend/src/gql/#{snake_domain}/#{singular |> Inflex.underscore() |> String.upcase()}_QUERY.graphql"},
-          {:eex, "assets/backend/src/api/graphql/FRAGMENT.graphql",
-           "assets/backend/src/gql/#{snake_domain}/#{singular |> Inflex.underscore() |> String.upcase()}_FRAGMENT.graphql"},
-          {:eex, "assets/backend/src/api/graphql/CREATE_MUTATION.graphql",
-           "assets/backend/src/gql/#{snake_domain}/CREATE_#{singular |> Inflex.underscore() |> String.upcase()}_MUTATION.graphql"},
-          {:eex, "assets/backend/src/api/graphql/UPDATE_MUTATION.graphql",
-           "assets/backend/src/gql/#{snake_domain}/UPDATE_#{singular |> Inflex.underscore() |> String.upcase()}_MUTATION.graphql"},
-          {:eex, "assets/backend/src/api/graphql/DELETE_MUTATION.graphql",
-           "assets/backend/src/gql/#{snake_domain}/DELETE_#{singular |> Inflex.underscore() |> String.upcase()}_MUTATION.graphql"},
-          {:eex, "assets/backend/src/menus/menu.js", "assets/backend/src/menus/#{vue_plural}.js"},
-          {:eex, "assets/backend/src/routes/route.js",
-           "assets/backend/src/routes/#{vue_plural}.js"},
-          {:eex, "assets/backend/src/views/List.vue",
-           "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}ListView.vue"},
-          {:eex_trim, "assets/backend/src/views/Create.vue",
-           "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}CreateView.vue"},
-          {:eex_trim, "assets/backend/src/views/Edit.vue",
-           "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}EditView.vue"},
-          {:eex, "assets/backend/src/views/Form.vue",
-           "assets/backend/src/views/#{snake_domain}/#{Recase.to_pascal(vue_singular)}Form.vue"},
-          {:eex, "assets/backend/src/locale.js",
-           "assets/backend/src/locales/#{vue_plural}/index.js"},
-          {:eex, "assets/backend/cypress/integration/spec.js",
-           "assets/backend/cypress/integration/#{snake_domain}/#{Recase.to_pascal(vue_singular)}.spec.js"},
-
-          # GQL
-          {:eex, "graphql/schema/types/type.ex",
-           "lib/application_name/graphql/schema/types/#{path}.ex"},
-          {:eex, "graphql/resolvers/resolver.ex",
-           "lib/application_name/graphql/resolvers/#{path}_resolver.ex"}
+          # TEST
+          {:eex, "schema_test.exs", schema_test_path}
         ]
 
     Mix.Brando.copy_from(apps(), "priv/templates/brando.gen", "", binding, files)
@@ -228,37 +201,16 @@ defmodule Mix.Tasks.Brando.Gen do
 
         $ mix ecto.migrate
 
-    Then lint the Vue backend files:
+    Then add these routes to your router
 
-        $ cd assets/backend && yarn lint --fix && cd ../..
+        live "/#{plural}", #{web_module}.#{Recase.to_pascal(vue_singular)}ListLive
+        live "/#{plural}/create", #{web_module}.#{Recase.to_pascal(vue_singular)}CreateLive
+        live "/#{plural}/update/:entry_id", #{web_module}.#{Recase.to_pascal(vue_singular)}UpdateLive
 
     ================================================================================================
     """
 
     binding = Enum.reduce(@generator_modules, binding, &apply(&1, :after_copy, [&2]))
-
-    # Add content to files
-    if sequenced? do
-      Mix.Brando.add_to_file(
-        "lib/#{Mix.Brando.otp_app()}_web/channels/admin_channel.ex",
-        "imports",
-        "alias #{binding[:app_module]}.#{binding[:domain]}",
-        singular: true
-      )
-
-      Mix.Brando.add_to_file(
-        "lib/#{Mix.Brando.otp_app()}_web/channels/admin_channel.ex",
-        "macros",
-        "sequence #{inspect(plural)}, #{binding[:domain]}.#{binding[:alias]}"
-      )
-
-      Mix.Brando.add_to_file(
-        "lib/#{Mix.Brando.otp_app()}_web/channels/admin_channel.ex",
-        "imports",
-        "use Brando.Sequence.Channel",
-        singular: true
-      )
-    end
 
     Mix.shell().info(instructions)
   end

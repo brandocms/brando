@@ -6,8 +6,8 @@ defmodule BrandoGraphQL.Schema.Types.Scalar do
     parse fn
       %{value: value} ->
         case Timex.parse(value, "{ISO:Extended:Z}") do
-          {:ok, v} ->
-            {:ok, v}
+          {:ok, parsed_value} ->
+            {:ok, parsed_value}
 
           {:error, err} ->
             Logger.error("==> :time scalar parse failed")

@@ -7,7 +7,8 @@ defmodule Brando.Blueprint.Form do
               cardinality: :one,
               sub_fields: [],
               style: :regular,
-              default: nil
+              default: nil,
+              component: nil
   end
 
   defmodule Fieldset do
@@ -19,6 +20,7 @@ defmodule Brando.Blueprint.Form do
   defmodule Input do
     defstruct name: nil,
               type: nil,
+              template: nil,
               opts: %{}
   end
 
@@ -66,12 +68,34 @@ defmodule Brando.Blueprint.Form do
     end
   end
 
+  defmacro inputs_for(field, {:component, component}) do
+    do_inputs_for(field, component, [])
+  end
+
   defmacro inputs_for(field, do: block) do
     do_inputs_for(field, [], block)
   end
 
+  defmacro inputs_for(field, {:component, component}, opts) do
+    do_inputs_for(field, component, opts)
+  end
+
   defmacro inputs_for(field, opts, do: block) do
     do_inputs_for(field, opts, block)
+  end
+
+  defp do_inputs_for(field, component, opts) when is_atom(component) do
+    quote location: :keep do
+      _ = var!(b_subform)
+      _ = var!(b_fieldset)
+      _ = var!(b_form_ctx)
+
+      var!(b_form_ctx) = :subform
+      named_subform = build_subform(unquote(field), unquote(opts), unquote(component))
+
+      var!(b_fieldset) = List.wrap(named_subform) ++ var!(b_fieldset)
+      var!(b_form_ctx) = :fieldset
+    end
   end
 
   defp do_inputs_for(field, opts, block) do
@@ -89,6 +113,17 @@ defmodule Brando.Blueprint.Form do
     end
   end
 
+  defmacro input(do: tpl) do
+    quote location: :keep do
+      {var!(b_subform), var!(b_fieldset)} =
+        if var!(b_form_ctx) == :subform do
+          {List.wrap(build_input(unquote(tpl), :surface)) ++ var!(b_subform), var!(b_fieldset)}
+        else
+          {var!(b_subform), List.wrap(build_input(unquote(tpl), :surface)) ++ var!(b_fieldset)}
+        end
+    end
+  end
+
   defmacro input(name, type, opts \\ []) do
     quote location: :keep,
           bind_quoted: [name: name, type: type, opts: opts] do
@@ -103,7 +138,12 @@ defmodule Brando.Blueprint.Form do
     end
   end
 
-  def build_subform(field, opts, sub_fields) do
+  def build_subform(field, component, opts) when is_atom(component) do
+    mapped_opts = Enum.into(opts, %{})
+    Map.merge(%__MODULE__.Subform{field: field, component: component}, mapped_opts)
+  end
+
+  def build_subform(field, opts, sub_fields) when is_list(opts) do
     mapped_opts = Enum.into(opts, %{})
     Map.merge(%__MODULE__.Subform{field: field, sub_fields: sub_fields}, mapped_opts)
   end
@@ -117,6 +157,14 @@ defmodule Brando.Blueprint.Form do
       },
       mapped_opts
     )
+  end
+
+  def build_input(tpl, type) do
+    %__MODULE__.Input{
+      template: tpl,
+      type: type,
+      opts: []
+    }
   end
 
   def build_input(name, type, opts) do

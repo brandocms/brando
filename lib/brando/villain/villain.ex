@@ -52,9 +52,6 @@ defmodule Brando.Villain do
   def parse("", _, _), do: ""
   def parse(nil, _, _), do: ""
 
-  def parse(json, entry, opts) when is_binary(json),
-    do: do_parse(Poison.decode!(json), entry, opts)
-
   def parse(json, entry, opts) when is_list(json), do: do_parse(json, entry, opts)
 
   defp do_parse(data, entry, opts) do
@@ -242,8 +239,9 @@ defmodule Brando.Villain do
   def rerender_villains_for(schema) do
     ids =
       Brando.repo().all(
-        from s in schema,
+        from(s in schema,
           select: s.id
+        )
       )
 
     Enum.map(schema.__villain_fields__(), fn
@@ -281,8 +279,9 @@ defmodule Brando.Villain do
         ) :: any()
   def rerender_html_from_id({schema, data_field, html_field}, id) do
     query =
-      from s in schema,
+      from(s in schema,
         where: s.id == ^id
+      )
 
     record = Brando.repo().one(query)
     parsed_data = Brando.Villain.parse(Map.get(record, data_field), record)
@@ -394,13 +393,13 @@ defmodule Brando.Villain do
     ]
 
     Brando.repo().all(
-      from s in schema,
+      from(s in schema,
         select: s.id,
         where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t),
         or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_t),
         or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^datasourced_t),
-        or_where:
-          fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_datasourced_t)
+        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_datasourced_t)
+      )
     )
   end
 
@@ -420,7 +419,7 @@ defmodule Brando.Villain do
     create_module(module, user)
   end
 
-  mutation :create, Module
+  mutation(:create, Module)
 
   mutation :update, Module do
     fn entry ->
@@ -430,7 +429,7 @@ defmodule Brando.Villain do
     end
   end
 
-  mutation :delete, Module
+  mutation(:delete, Module)
 
   @doc """
   Find module with `id` in `modules`
@@ -444,49 +443,51 @@ defmodule Brando.Villain do
     end
   end
 
-  query :list, Module, do: fn query -> from q in query, where: is_nil(q.deleted_at) end
+  query(:list, Module, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end)
 
   filters Module do
     fn
       {:name, name}, query ->
-        from q in query, where: ilike(q.name, ^"%#{name}%")
+        from(q in query, where: ilike(q.name, ^"%#{name}%"))
 
       {:namespace, namespace}, query ->
         query =
-          from t in query,
+          from(t in query,
             where: is_nil(t.deleted_at),
             order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
+          )
 
-        namespace =
-          (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
+        namespace = (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
 
         case namespace do
           "all" ->
             query
 
           namespace_list when is_list(namespace_list) ->
-            from t in query, where: t.namespace in ^namespace_list
+            from(t in query, where: t.namespace in ^namespace_list)
 
           _ ->
-            from t in query, where: t.namespace == ^namespace
+            from(t in query, where: t.namespace == ^namespace)
         end
     end
   end
 
-  query :single, Module, do: fn query -> from q in query, where: is_nil(q.deleted_at) end
+  query(:single, Module, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end)
 
   matches Module do
     fn
       {:id, id}, query ->
-        from t in query, where: t.id == ^id
+        from(t in query, where: t.id == ^id)
 
       {:name, name}, query ->
-        from t in query,
+        from(t in query,
           where: t.name == ^name
+        )
 
       {:namespace, namespace}, query ->
-        from t in query,
+        from(t in query,
           where: t.namespace == ^namespace
+        )
     end
   end
 
@@ -500,12 +501,13 @@ defmodule Brando.Villain do
         ) :: [any]
   def search_villains_for_text(schema, data_field, search_terms) do
     search_terms = (is_list(search_terms) && search_terms) || [search_terms]
-    org_query = from s in schema, select: s.id
+    org_query = from(s in schema, select: s.id)
 
     built_query =
       Enum.reduce(search_terms, org_query, fn search_term, query ->
-        from q in query,
+        from(q in query,
           or_where: ilike(type(field(q, ^data_field), :string), ^"%#{search_term}%")
+        )
       end)
 
     Brando.repo().all(built_query)
@@ -520,11 +522,11 @@ defmodule Brando.Villain do
           search_terms :: {atom, binary} | [{atom, binary}]
         ) :: [any]
   def search_villains_for_regex(schema, data_field, search_terms, with_data \\ nil) do
-    org_query = from s in schema, select: %{"id" => s.id}
+    org_query = from(s in schema, select: %{"id" => s.id})
 
     built_query =
       Enum.reduce(List.wrap(search_terms), org_query, fn {search_name, search_term}, query ->
-        from q in query,
+        from(q in query,
           select_merge: %{
             ^to_string(search_name) =>
               fragment(
@@ -533,6 +535,7 @@ defmodule Brando.Villain do
                 ^search_term
               )
           }
+        )
       end)
 
     if with_data,
@@ -545,12 +548,13 @@ defmodule Brando.Villain do
     search_terms = (is_list(search_terms) && search_terms) || [search_terms]
 
     org_query =
-      from s in "pages_modules",
+      from(s in "pages_modules",
         select: %{"id" => s.id, "namespace" => s.namespace, "name" => s.name}
+      )
 
     built_query =
       Enum.reduce(search_terms, org_query, fn {search_name, search_term}, query ->
-        from q in query,
+        from(q in query,
           select_merge: %{
             ^to_string(search_name) =>
               fragment(
@@ -559,6 +563,7 @@ defmodule Brando.Villain do
                 ^search_term
               )
           }
+        )
       end)
 
     Brando.repo().all(built_query)

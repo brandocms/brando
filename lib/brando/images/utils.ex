@@ -94,6 +94,10 @@ defmodule Brando.Images.Utils do
           binary
   def get_sized_path(path, size, type \\ nil)
 
+  def get_sized_path(path, :original, _type) do
+    path
+  end
+
   def get_sized_path(path, size, type) when is_binary(size) do
     {dir, filename} = split_path(path)
     filename = ensure_correct_extension(filename, type)

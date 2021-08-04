@@ -47,7 +47,8 @@ defmodule BrandoAdmin.MenuTest do
                items: [
                  %{name: "Index", url: "/admin/projects"},
                  %{name: "Create", url: "/admin/projects/new"}
-               ]
+               ],
+               url: nil
              }
            ]
   end

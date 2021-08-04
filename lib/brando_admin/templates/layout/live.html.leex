@@ -1,0 +1,10 @@
+<div id="admin" phx-hook="Brando.Admin">
+  <%= live_component @socket, BrandoAdmin.Components.PresenceEngine, id: "presence-engine", user_id: @current_user.id %>
+  <%= live_component @socket, BrandoAdmin.Components.ProgressEngine %>
+  <%= live_component @socket, BrandoAdmin.Components.ToastEngine %>
+  <main>
+    <article class="content">
+      <%= @inner_content %>
+    </article>
+  </main>
+</div>

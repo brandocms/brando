@@ -593,14 +593,18 @@ defmodule Brando.Utils do
   """
   def img_url(image_field, size, opts \\ [])
 
-  def img_url(nil, size, opts) do
+  def img_url(nil, _size, opts) do
     default = Keyword.get(opts, :default, nil)
-    (default && Brando.Images.Utils.get_sized_path(default, size)) || "" <> add_cache_string(opts)
+
+    (default && Brando.Images.Utils.get_sized_path(default, :original)) ||
+      "" <> add_cache_string(opts)
   end
 
-  def img_url("", size, opts) do
+  def img_url("", _size, opts) do
     default = Keyword.get(opts, :default, nil)
-    (default && Brando.Images.Utils.get_sized_path(default, size)) || "" <> add_cache_string(opts)
+
+    (default && Brando.Images.Utils.get_sized_path(default, :original)) ||
+      "" <> add_cache_string(opts)
   end
 
   def img_url(image_field, :original, opts) do

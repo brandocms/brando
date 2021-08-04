@@ -45,7 +45,7 @@ defmodule Brando.Blueprint.BlueprintTest do
 
   test "__optional_attrs__" do
     optional_attrs = Brando.BlueprintTest.Project.__optional_attrs__()
-    assert optional_attrs == [:title, :cover, :deleted_at, :sequence, :updated_at, :inserted_at]
+    assert optional_attrs == [:title, :deleted_at, :sequence, :updated_at, :inserted_at]
   end
 
   test "attributes" do
