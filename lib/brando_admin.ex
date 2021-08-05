@@ -72,19 +72,6 @@ defmodule BrandoAdmin do
     end
   end
 
-  def absinthe do
-    quote do
-      # Provides us with a DSL for defining GraphQL Types
-      use Absinthe.Schema.Notation
-      import Absinthe.Resolution.Helpers
-    end
-  end
-
-  def resolver do
-    quote do
-    end
-  end
-
   def context do
     quote do
       import Brando.SoftDelete.Query

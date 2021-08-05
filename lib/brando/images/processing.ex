@@ -143,13 +143,7 @@ defmodule Brando.Images.Processing do
   def recreate_sizes_for_image_field(schema, field_name, user) do
     rows = Brando.repo().all(schema)
 
-    #! TODO Remove when moving to blueprints
-    {:ok, cfg} =
-      if {:__blueprint__, 0} in schema.__info__(:functions) do
-        {:ok, schema.__attribute_opts__(field_name)}
-      else
-        schema.get_image_cfg(field_name)
-      end
+    %{cfg: cfg} = schema.__asset_opts__(field_name)
 
     operations =
       Enum.flat_map(rows, fn row ->
@@ -163,7 +157,7 @@ defmodule Brando.Images.Processing do
               img_field,
               cfg,
               row.id,
-              user.id
+              user
             )
 
           operations
@@ -172,7 +166,7 @@ defmodule Brando.Images.Processing do
         end
       end)
 
-    {:ok, operation_results} = Operations.perform(operations, user.id)
+    {:ok, operation_results} = Operations.perform(operations, user)
 
     for result <- operation_results do
       rows
@@ -201,13 +195,7 @@ defmodule Brando.Images.Processing do
 
     schema = changeset.data.__struct__
 
-    #! TODO Remove when moving to blueprints
-    {:ok, cfg} =
-      if {:__blueprint__, 0} in schema.__info__(:functions) do
-        {:ok, schema.__attribute_opts__(field_name)}
-      else
-        schema.get_image_cfg(field_name)
-      end
+    %{cfg: cfg} = schema.__asset_opts__(field_name)
 
     with {:ok, operations} <- Operations.create(image_struct, cfg, nil, user),
          {:ok, results} <- Operations.perform(operations, user) do
@@ -216,7 +204,7 @@ defmodule Brando.Images.Processing do
         |> List.first()
         |> Map.get(:image_struct)
 
-      updated_changeset = Changeset.put_change(changeset, field_name, updated_image_struct)
+      updated_changeset = Changeset.put_embed(changeset, field_name, updated_image_struct)
 
       {:ok, updated_changeset}
     else

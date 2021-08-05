@@ -50,7 +50,6 @@ defmodule Brando.Users.User do
       unique: true,
       required: true
 
-    attribute :avatar, :image, @avatar_cfg
     attribute :role, :enum, values: [:user, :editor, :admin, :superuser], required: true
     attribute :active, :boolean, default: true
     attribute :last_login, :naive_datetime
@@ -59,6 +58,10 @@ defmodule Brando.Users.User do
     attribute :password, :string,
       constraints: [min_length: 6],
       required: true
+  end
+
+  assets do
+    asset :avatar, :image, cfg: @avatar_cfg
   end
 
   relations do

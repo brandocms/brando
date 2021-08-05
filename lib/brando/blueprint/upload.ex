@@ -117,11 +117,11 @@ defmodule Brando.Blueprint.Upload do
     attributes
     |> Enum.filter(&(&1.type in [:image, :file]))
     |> Enum.reduce(changeset, fn %{type: type, name: name}, mutated_changeset ->
-      case module.__attribute_opts__(name) do
-        %{db: true} ->
+      case module.__asset_opts__(name) do
+        %{cfg: %{db: true}} ->
           validate_upload(mutated_changeset, {type, name}, user, image_db_config)
 
-        field_cfg ->
+        %{cfg: field_cfg} ->
           validate_upload(mutated_changeset, {type, name}, user, field_cfg)
       end
     end)

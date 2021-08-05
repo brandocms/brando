@@ -419,10 +419,10 @@ defmodule Brando.Query do
   def with_preload(query, preloads) do
     Enum.reduce(preloads, query, fn
       {key, {mod, pre}}, query ->
-        from t in query, preload: [{^key, ^from(p in mod, order_by: ^pre)}]
+        from(t in query, preload: [{^key, ^from(p in mod, order_by: ^pre)}])
 
       {key, preload_query}, query ->
-        from t in query, preload: [{^key, ^preload_query}]
+        from(t in query, preload: [{^key, ^preload_query}])
 
       preload, query ->
         preload(query, ^preload)
@@ -551,7 +551,9 @@ defmodule Brando.Query do
               Brando.Users.User.t() | :system
             ) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
-      def unquote(:"update_#{singular_schema}")(id, params, user, opts \\ []) do
+      def unquote(:"update_#{singular_schema}")(schema, params, user, opts \\ [])
+
+      def unquote(:"update_#{singular_schema}")(%{id: id}, params, user, opts) do
         Brando.Query.Mutations.update(
           __MODULE__,
           unquote(module),
@@ -565,7 +567,21 @@ defmodule Brando.Query do
         )
       end
 
-      def unquote(:"update_#{singular_schema}")(changeset, user) do
+      def unquote(:"update_#{singular_schema}")(id, params, user, opts) do
+        Brando.Query.Mutations.update(
+          __MODULE__,
+          unquote(module),
+          unquote(singular_schema),
+          id,
+          params,
+          user,
+          unquote(preloads),
+          unquote(callback_block),
+          Keyword.get(opts, :changeset, nil)
+        )
+      end
+
+      def unquote(:"update_#{singular_schema}")(%Ecto.Changeset{} = changeset, user) do
         Brando.Query.Mutations.update_with_changeset(
           unquote(module),
           changeset,

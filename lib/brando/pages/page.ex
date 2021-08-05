@@ -134,7 +134,6 @@ defmodule Brando.Pages.Page do
         [label: gettext("Delete pages"), event: "delete_selected"]
       ])
 
-      # listing_field :cover, :image, columns: 2, class: "padded"
       listing_field :language, :language, columns: 1
 
       listing_template(

@@ -13,7 +13,7 @@ defmodule Brando.JSONLDRenderTest do
     meta_description: "Meta description"
   }
 
-  @img %Brando.Images.Image{
+  @img %{
     alt: nil,
     credits: nil,
     focal: %{"x" => 50, "y" => 50},
@@ -40,7 +40,8 @@ defmodule Brando.JSONLDRenderTest do
   ]
 
   test "render json ld" do
-    Brando.Sites.update_identity(%{links: @links})
+    {:ok, identity} = Brando.Sites.get_identity()
+    Brando.Sites.update_identity(identity.id, %{links: @links}, :system)
     Brando.Sites.update_seo(%{fallback_meta_image: @img})
     mock_conn = Brando.Plug.HTML.put_json_ld(%Plug.Conn{}, Brando.Pages.Page, @mock_data)
     rendered_json_ld = Brando.HTML.render_json_ld(mock_conn)
@@ -81,7 +82,8 @@ defmodule Brando.JSONLDRenderTest do
   end
 
   test "render json ld :corporation" do
-    Brando.Sites.update_identity(%{links: @links})
+    {:ok, identity} = Brando.Sites.get_identity()
+    Brando.Sites.update_identity(identity.id, %{links: @links}, :system)
     Brando.Sites.update_seo(%{fallback_meta_image: @img})
     rendered_json_ld = Brando.HTML.render_json_ld(:corporation)
 

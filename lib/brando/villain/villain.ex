@@ -348,8 +348,14 @@ defmodule Brando.Villain do
 
           data_field, acc ->
             html_field = get_html_field(schema, data_field)
-            ids = list_ids_with_module(schema, data_field.name, module_id)
-            [acc | rerender_html_from_ids({schema, data_field.name, html_field.name}, ids)]
+
+            case list_ids_with_module(schema, data_field.name, module_id) do
+              [] ->
+                acc
+
+              ids ->
+                [acc | rerender_html_from_ids({schema, data_field.name, html_field.name}, ids)]
+            end
         end)
       end
 
@@ -374,11 +380,11 @@ defmodule Brando.Villain do
   """
   def list_ids_with_module(schema, data_field, module_id) do
     t = [
-      %{type: "module", data: %{id: module_id}}
+      %{type: "module", data: %{module_id: module_id}}
     ]
 
     contained_t = [
-      %{type: "container", data: %{blocks: [%{type: "module", data: %{id: module_id}}]}}
+      %{type: "container", data: %{blocks: [%{type: "module", data: %{module_id: module_id}}]}}
     ]
 
     datasourced_t = [
@@ -398,7 +404,8 @@ defmodule Brando.Villain do
         where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^t),
         or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_t),
         or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^datasourced_t),
-        or_where: fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_datasourced_t)
+        or_where:
+          fragment("?::jsonb @> ?::jsonb", field(s, ^data_field), ^contained_datasourced_t)
       )
     )
   end
@@ -419,7 +426,7 @@ defmodule Brando.Villain do
     create_module(module, user)
   end
 
-  mutation(:create, Module)
+  mutation :create, Module
 
   mutation :update, Module do
     fn entry ->
@@ -429,7 +436,7 @@ defmodule Brando.Villain do
     end
   end
 
-  mutation(:delete, Module)
+  mutation :delete, Module
 
   @doc """
   Find module with `id` in `modules`
@@ -457,7 +464,8 @@ defmodule Brando.Villain do
             order_by: [asc: t.sequence, asc: t.id, desc: t.updated_at]
           )
 
-        namespace = (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
+        namespace =
+          (String.contains?(namespace, ",") && String.split(namespace, ",")) || namespace
 
         case namespace do
           "all" ->

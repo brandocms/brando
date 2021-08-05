@@ -49,22 +49,6 @@ defmodule Brando.Navigation do
   @type menu :: Brando.Navigation.Menu.t()
   @type user :: Brando.Users.User.t() | :system
 
-  @doc """
-  Dataloader initializer
-  """
-  def data(_) do
-    Dataloader.Ecto.new(
-      Brando.repo(),
-      query: &query/2
-    )
-  end
-
-  @doc """
-  Dataloader queries
-  """
-  def query(Item = query, _), do: order_by(query, [t], asc: t.sequence)
-  def query(queryable, _), do: queryable
-
   query :list, Menu, do: fn query -> from(q in query) end
 
   filters Menu do

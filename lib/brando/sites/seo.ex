@@ -27,9 +27,12 @@ defmodule Brando.Sites.SEO do
   attributes do
     attribute :fallback_meta_description, :text
     attribute :fallback_meta_title, :text
-    attribute :fallback_meta_image, :image, @image_cfg
     attribute :base_url, :string
     attribute :robots, :text
+  end
+
+  assets do
+    asset :fallback_meta_image, :image, cfg: @image_cfg
   end
 
   relations do

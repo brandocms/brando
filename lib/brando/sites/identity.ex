@@ -42,8 +42,11 @@ defmodule Brando.Sites.Identity do
     attribute :title_prefix, :string
     attribute :title, :string
     attribute :title_postfix, :string
-    attribute :logo, :image, @logo_cfg
     attribute :languages, :map, virtual: true
+  end
+
+  assets do
+    asset :logo, :image, cfg: @logo_cfg
   end
 
   relations do

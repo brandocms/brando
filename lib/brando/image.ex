@@ -19,8 +19,8 @@ defmodule Brando.Image do
 
   identifier "{{ entry.id }}"
 
-  attributes do
-    attribute :image, :image, :db
+  assets do
+    asset :image, :image, cfg: :db
   end
 
   relations do

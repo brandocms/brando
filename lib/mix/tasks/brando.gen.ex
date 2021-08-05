@@ -6,10 +6,7 @@ defmodule Mix.Tasks.Brando.Gen do
   @generator_modules [
     Brando.Generators.Schema,
     Brando.Generators.Migration,
-    Brando.Generators.Domain,
-    Brando.Generators.Vue,
-    Brando.Generators.Cypress,
-    Brando.Generators.GraphQL
+    Brando.Generators.Domain
   ]
 
   @moduledoc """
@@ -185,9 +182,9 @@ defmodule Mix.Tasks.Brando.Gen do
           # ADMIN
           {:eex, "admin/list.ex",
            "lib/application_name_web/admin/live/#{snake_domain}/#{singular}_list_live.ex"},
-          {:eex, "admin/form.ex",
+          {:eex, "admin/create.ex",
            "lib/application_name_web/admin/live/#{snake_domain}/#{singular}_create_live.ex"},
-          {:eex, "admin/form.ex",
+          {:eex, "admin/update.ex",
            "lib/application_name_web/admin/live/#{snake_domain}/#{singular}_update_live.ex"},
 
           # TEST
@@ -210,7 +207,7 @@ defmodule Mix.Tasks.Brando.Gen do
     ================================================================================================
     """
 
-    binding = Enum.reduce(@generator_modules, binding, &apply(&1, :after_copy, [&2]))
+    _binding = Enum.reduce(@generator_modules, binding, &apply(&1, :after_copy, [&2]))
 
     Mix.shell().info(instructions)
   end

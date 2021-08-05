@@ -11,7 +11,7 @@ defmodule Brando.Trait.Villain do
   @type config :: list()
 
   @impl true
-  def trait_attributes(attributes, _relations) do
+  def trait_attributes(attributes, _assets, _relations) do
     attributes
     |> Enum.filter(&(&1.type == :villain))
     |> Enum.map(fn

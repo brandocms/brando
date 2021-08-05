@@ -2,7 +2,7 @@ defmodule Brando.VillainTest do
   defmodule OtherParser do
     @behaviour Brando.Villain.Parser
 
-    def text(%{"text" => _, "type" => _}, _), do: "other parser"
+    def text(%{text: _, type: _}, _), do: "other parser"
     def render_caption(_), do: ""
     def datatable(_, _), do: nil
     def datasource(_, _), do: nil
@@ -42,8 +42,8 @@ defmodule Brando.VillainTest do
   @data %{
     data: [
       %{
-        "type" => "text",
-        "data" => %{"text" => "**Some** text here.", "type" => "paragraph"}
+        type: "text",
+        data: %{text: "**Some** text here.", type: "paragraph"}
       }
     ]
   }
@@ -54,10 +54,10 @@ defmodule Brando.VillainTest do
       key: "blabla",
       data: [
         %{
-          "type" => "text",
-          "data" => %{
-            "text" => text,
-            "type" => "paragraph"
+          type: "text",
+          data: %{
+            text: text,
+            type: :paragraph
           }
         }
       ]
@@ -70,20 +70,15 @@ defmodule Brando.VillainTest do
     assert Brando.Villain.parse("") == ""
     assert Brando.Villain.parse(nil) == ""
 
-    assert Brando.Villain.parse(
-             ~s([{"type":"columns","data":[{"class":"col-md-6 six","data":[]},{"class":"col-md-6 six","data":[{"type":"markdown","data":{"text":"Markdown"}}]}]}])
-           ) ==
-             "<div class=\"row\"><div class=\"col-md-6 six\"></div><div class=\"col-md-6 six\"><p>Markdown</p>\n</div></div>"
-
     assert Brando.Villain.parse([
              %{
-               "type" => "text",
-               "data" => %{"text" => "**Some** text here.", "type" => "paragraph"}
+               type: "text",
+               data: %{text: "**Some** text here.", type: "paragraph"}
              }
            ]) == "**Some** text here."
 
     assert_raise FunctionClauseError, fn ->
-      Brando.Villain.parse(%{"text" => "**Some** text here.", "type" => "paragraph"}) ==
+      Brando.Villain.parse(%{text: "**Some** text here.", type: "paragraph"}) ==
         ""
     end
   end
@@ -91,7 +86,7 @@ defmodule Brando.VillainTest do
   test "list_villains" do
     assert Enum.sort(Brando.Villain.list_villains()) == [
              {Brando.Pages.Fragment,
-              [%Brando.Blueprint.Attribute{name: :data, opts: %{required: true}, type: :villain}]},
+              [%Brando.Blueprint.Attribute{name: :data, opts: %{}, type: :villain}]},
              {Brando.Pages.Page,
               [%Brando.Blueprint.Attribute{name: :data, opts: %{}, type: :villain}]},
              {Brando.TraitTest.Project,
@@ -131,29 +126,34 @@ defmodule Brando.VillainTest do
              ]
   end
 
-  test "search_villains_for_text" do
-    pf1 =
-      Factory.insert(:fragment, %{
-        data: [
-          %{
-            "type" => "text",
-            "data" => %{"text" => "**Some** text here.", "type" => "paragraph"}
-          }
-        ]
-      })
+  test "search_villains_for_text", %{user: user} do
+    params = %{
+      parent_key: "parent_key",
+      key: "key",
+      language: "en",
+      creator_id: user.id,
+      data: [
+        %{
+          type: "text",
+          data: %{text: "**Some** text here.", type: "paragraph"}
+        }
+      ]
+    }
 
-    _pf2 = Factory.insert(:fragment, %{data: []})
-    _pf3 = Factory.insert(:fragment, %{data: []})
+    params_empty_data = %{
+      parent_key: "parent_key",
+      key: "key",
+      language: "en",
+      creator_id: user.id,
+      data: []
+    }
 
-    pf4 =
-      Factory.insert(:fragment, %{
-        data: [
-          %{
-            "type" => "text",
-            "data" => %{"text" => "**Some** text here.", "type" => "paragraph"}
-          }
-        ]
-      })
+    {:ok, pf1} = Brando.Pages.create_fragment(params, :system)
+
+    _pf2 = Brando.Pages.create_fragment(params_empty_data, :system)
+    _pf3 = Brando.Pages.create_fragment(params_empty_data, :system)
+
+    {:ok, pf4} = Brando.Pages.create_fragment(params, :system)
 
     resulting_ids =
       Brando.Villain.search_villains_for_text(
@@ -165,44 +165,37 @@ defmodule Brando.VillainTest do
     assert resulting_ids === [pf1.id, pf4.id]
   end
 
-  test "search_villains_for_regex" do
-    pf1 =
-      Factory.insert(:fragment, %{
-        data: [
-          %{
-            "type" => "text",
-            "data" => %{
-              "text" => "**Some** {{ globals.system.old }} here.",
-              "type" => "paragraph"
-            }
+  test "search_villains_for_regex", %{user: user} do
+    params = %{
+      parent_key: "parent_key",
+      key: "key",
+      language: "en",
+      creator_id: user.id,
+      data: [
+        %{
+          type: "text",
+          data: %{
+            text: "**Some** {{ globals.system.old }} here.",
+            type: "paragraph"
           }
-        ]
-      })
+        }
+      ]
+    }
 
-    _pf2 = Factory.insert(:fragment, %{data: []})
+    params_empty_data = %{
+      parent_key: "parent_key",
+      key: "key",
+      language: "en",
+      creator_id: user.id,
+      data: []
+    }
 
-    _pf3 =
-      Factory.insert(:fragment, %{
-        data: [
-          %{
-            "type" => "text",
-            "data" => %{"text" => "**Some** {{ glob.system.old }} here.", "type" => "paragraph"}
-          }
-        ]
-      })
+    {:ok, pf1} = Brando.Pages.create_fragment(params, :system)
 
-    pf4 =
-      Factory.insert(:fragment, %{
-        data: [
-          %{
-            "type" => "text",
-            "data" => %{
-              "text" => "**Some** {{ globals.system.old }} here.",
-              "type" => "paragraph"
-            }
-          }
-        ]
-      })
+    _pf2 = Brando.Pages.create_fragment(params_empty_data, :system)
+    _pf3 = Brando.Pages.create_fragment(params_empty_data, :system)
+
+    {:ok, pf4} = Brando.Pages.create_fragment(params, :system)
 
     resulting_ids =
       Brando.Villain.search_villains_for_regex(
@@ -216,7 +209,7 @@ defmodule Brando.VillainTest do
 
   test "create and update dependent module", %{user: user} do
     module_params = %{
-      code: "-- this is some code {{ testvar }} --",
+      code: "-- this is some code [{{ testvar }}] --",
       name: "Name",
       help_text: "Help text",
       refs: [],
@@ -227,37 +220,35 @@ defmodule Brando.VillainTest do
     {:ok, tp1} = Villain.create_module(module_params, user)
 
     data = %{
-      "data" => %{
-        "deleted_at" => nil,
-        "id" => tp1.id,
-        "multi" => false,
-        "refs" => [],
-        "sequence" => 0,
-        "vars" => %{
-          "testvar" => %{
-            "label" => "Field name",
-            "type" => "text",
-            "value" => "Some text!"
+      data: %{
+        deleted_at: nil,
+        module_id: tp1.id,
+        multi: false,
+        refs: [],
+        sequence: 0,
+        vars: %{
+          testvar: %{
+            label: "Field name",
+            type: "text",
+            value: "Some text!"
           }
         }
       },
-      "type" => "module"
+      type: "module"
     }
 
     {:ok, page} = Brando.Pages.create_page(Factory.params_for(:page, %{data: [data]}), user)
 
-    assert page.html == "-- this is some code Some text! --"
+    assert page.html == "-- this is some code [Some text!] --"
 
-    tp2 =
-      tp1
-      |> Map.put(:code, "-- this is some NEW code {{ testvar }} --")
-      |> Map.from_struct()
-      |> Brando.Utils.stringify_keys()
-
-    Brando.Villain.update_module(tp1.id, tp2, user)
+    Brando.Villain.update_module(
+      tp1.id,
+      %{code: "-- this is some NEW code [[{{ testvar }}]] --"},
+      user
+    )
 
     {:ok, updated_page} = Brando.Pages.get_page(page.id)
-    assert updated_page.html == "-- this is some NEW code Some text! --"
+    assert updated_page.html == "-- this is some NEW code [[Some text!]] --"
   end
 
   test "update module inside container", %{user: user} do
@@ -272,66 +263,71 @@ defmodule Brando.VillainTest do
 
     {:ok, tp1} = Villain.create_module(module_params, user)
 
-    data = %{
-      "type" => "container",
-      "data" => %{
-        "class" => "a-container-class",
-        "wrapper" => "",
-        "blocks" => [
-          %{
-            "type" => "module",
-            "data" => %{
-              "deleted_at" => nil,
-              "id" => tp1.id,
-              "multi" => false,
-              "refs" => [],
-              "sequence" => 0,
-              "vars" => %{
-                "testvar" => %{
-                  "label" => "Field name",
-                  "type" => "text",
-                  "value" => "Some text!"
+    data = [
+      %{
+        type: "container",
+        data: %{
+          class: "a-container-class",
+          wrapper: "",
+          blocks: [
+            %{
+              type: "module",
+              data: %{
+                module_id: tp1.id,
+                multi: false,
+                refs: [],
+                sequence: 0,
+                vars: %{
+                  testvar: %{
+                    label: "Field name",
+                    type: "text",
+                    value: "Some text!"
+                  }
                 }
               }
             }
-          }
-        ]
+          ]
+        }
       }
-    }
+    ]
 
-    {:ok, page} = Brando.Pages.create_page(Factory.params_for(:page, %{data: [data]}), user)
+    params = Factory.params_for(:page, %{data: data})
+    {:ok, page} = Brando.Pages.create_page(params, user)
 
     assert page.html ==
              "<section b-section=\"a-container-class\">\n  -- this is some code Some text! --\n</section>\n"
 
-    data = %{
-      "type" => "container",
-      "data" => %{
-        "class" => "a-container-class",
-        "wrapper" => "<div>{{ content }}</div>",
-        "blocks" => [
-          %{
-            "type" => "module",
-            "data" => %{
-              "deleted_at" => nil,
-              "id" => tp1.id,
-              "multi" => false,
-              "refs" => [],
-              "sequence" => 0,
-              "vars" => %{
-                "testvar" => %{
-                  "label" => "Field name",
-                  "type" => "text",
-                  "value" => "Some text!"
+    data = [
+      %{
+        type: "container",
+        data: %{
+          class: "a-container-class",
+          wrapper: "<div>{{ content }}</div>",
+          blocks: [
+            %{
+              type: "module",
+              data: %{
+                deleted_at: nil,
+                module_id: tp1.id,
+                multi: false,
+                refs: [],
+                sequence: 0,
+                vars: %{
+                  testvar: %{
+                    label: "Field name",
+                    type: "text",
+                    value: "Some text!"
+                  }
                 }
               }
             }
-          }
-        ]
+          ]
+        }
       }
-    }
+    ]
 
-    {:ok, page2} = Brando.Pages.create_page(Factory.params_for(:page, %{data: [data]}), user)
+    params = Factory.params_for(:page, %{data: data})
+    {:ok, page2} = Brando.Pages.create_page(params, user)
 
     assert page2.html ==
              "<div>-- this is some code Some text! --</div>"
@@ -350,10 +346,42 @@ defmodule Brando.VillainTest do
              "<section b-section=\"a-container-class\">\n  -- this is some NEW code Some text! --\n</section>\n"
   end
 
-  test "rerender_villains_for" do
-    _p1 = Factory.insert(:page, @data)
-    _p2 = Factory.insert(:page, @data)
-    _p3 = Factory.insert(:page, @data)
+  test "rerender_villains_for", %{user: user} do
+    {:ok, _} =
+      Brando.Pages.create_page(
+        Map.merge(@data, %{
+          creator_id: user.id,
+          title: "a",
+          uri: "a",
+          template: "template.html",
+          language: "en"
+        }),
+        :system
+      )
+
+    {:ok, _} =
+      Brando.Pages.create_page(
+        Map.merge(@data, %{
+          creator_id: user.id,
+          title: "a",
+          uri: "a",
+          template: "template.html",
+          language: "en"
+        }),
+        :system
+      )
+
+    {:ok, _} =
+      Brando.Pages.create_page(
+        Map.merge(@data, %{
+          creator_id: user.id,
+          title: "a",
+          uri: "a",
+          template: "template.html",
+          language: "en"
+        }),
+        :system
+      )
 
     result = Brando.Villain.rerender_villains_for(Brando.Pages.Page)
 
@@ -380,17 +408,17 @@ defmodule Brando.VillainTest do
     {:ok, _menu} = Brando.Navigation.update_menu(menu.id, %{title: "New title"}, user)
 
     pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
-    assert pf2.html == "**Some** New title here."
+    assert pf2.html == "<div class=\"paragraph\">**Some** New title here.</div>"
   end
 
   test "ensure villains update on globals changes", %{user: user} do
     Brando.Cache.Globals.set()
 
     global_category_params = %{
-      "label" => "System",
-      "key" => "system",
-      "globals" => [
-        %{type: "text", label: "Text", key: "text", data: %{"value" => "My text"}}
+      label: "System",
+      key: "system",
+      globals: [
+        %{type: "text", label: "Text", key: "text", data: %{value: "My text"}}
       ]
     }
 
@@ -399,17 +427,17 @@ defmodule Brando.VillainTest do
     {:ok, gc1} = Brando.Globals.create_global_category(global_category_params)
     {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
 
-    assert pf1.html == "So the global says: 'My text'."
+    assert pf1.html == "<div class=\"paragraph\">So the global says: 'My text'.</div>"
 
     Brando.Globals.update_global_category(gc1.id, %{
-      "globals" => [
-        %{type: "text", label: "Text", key: "text", data: %{"value" => "My replaced text"}}
+      globals: [
+        %{type: "text", label: "Text", key: "text", data: %{value: "My replaced text"}}
       ]
     })
 
     pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
 
-    assert pf2.html == "So the global says: 'My replaced text'."
+    assert pf2.html == "<div class=\"paragraph\">So the global says: 'My replaced text'.</div>"
   end
 
   test "ensure villains update on identity changes", %{user: user} do
@@ -418,12 +446,15 @@ defmodule Brando.VillainTest do
     pf_params = pf_data("So identity.name says: '{{ identity.name }}'.")
 
     {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
-    assert pf1.html == "So identity.name says: 'Organisasjonens navn'."
 
-    Brando.Sites.update_identity(%{"name" => "Eddie Hazel Inc"}, user)
+    assert pf1.html ==
+             "<div class=\"paragraph\">So identity.name says: 'Organisasjonens navn'.</div>"
+
+    {:ok, identity} = Brando.Sites.get_identity()
+    Brando.Sites.update_identity(identity, %{name: "Eddie Hazel Inc"}, user)
 
     pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
-    assert pf2.html == "So identity.name says: 'Eddie Hazel Inc'."
+    assert pf2.html == "<div class=\"paragraph\">So identity.name says: 'Eddie Hazel Inc'.</div>"
   end
 
   test "ensure villains update on link changes", %{user: user} do
@@ -432,21 +463,31 @@ defmodule Brando.VillainTest do
     pf_params = pf_data("So links.instagram.url says: '{{ links.instagram.url }}'.")
 
     {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
-    assert pf1.html == "So links.instagram.url says: 'https://instagram.com/test'."
+
+    assert pf1.html ==
+             "<div class=\"paragraph\">So links.instagram.url says: 'https://instagram.com/test'.</div>"
+
+    {:ok, identity} = Brando.Sites.get_identity()
 
     Brando.Sites.update_identity(
-      %{"links" => [%{"name" => "Instagram", "url" => "https://instagram.com"}]},
+      identity,
+      %{links: [%{name: "Instagram", url: "https://instagram.com"}]},
       user
     )
 
     pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
-    assert pf2.html == "So links.instagram.url says: 'https://instagram.com'."
+
+    assert pf2.html ==
+             "<div class=\"paragraph\">So links.instagram.url says: 'https://instagram.com'.</div>"
+
+    {:ok, identity} = Brando.Sites.get_identity()
 
     Brando.Sites.update_identity(
+      identity,
       %{
-        "links" => [
-          %{"name" => "Instagram", "url" => "https://instagram.com/test"},
-          %{"name" => "Facebook", "url" => "https://facebook.com/test"}
+        links: [
+          %{name: "Instagram", url: "https://instagram.com/test"},
+          %{name: "Facebook", url: "https://facebook.com/test"}
         ]
       },
       user
@@ -459,15 +500,18 @@ defmodule Brando.VillainTest do
     pf_params = pf_data("So configs.key1.value says: '{{ configs.key1.value }}'.")
 
     {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
-    assert pf1.html == "So configs.key1.value says: 'value1'."
+    assert pf1.html == "<div class=\"paragraph\">So configs.key1.value says: 'value1'.</div>"
+
+    {:ok, identity} = Brando.Sites.get_identity()
 
     Brando.Sites.update_identity(
-      %{"configs" => [%{"key" => "key1", "value" => "wow!"}]},
+      identity,
+      %{configs: [%{key: "key1", value: "wow!"}]},
       user
     )
 
     pf2 = Brando.repo().get(Brando.Pages.Fragment, pf1.id)
-    assert pf2.html == "So configs.key1.value says: 'wow!'."
+    assert pf2.html == "<div class=\"paragraph\">So configs.key1.value says: 'wow!'.</div>"
   end
 
   test "fragment tag", %{user: user} do
@@ -477,9 +521,9 @@ defmodule Brando.VillainTest do
         key: "frag_key",
         data: [
           %{
-            "type" => "html",
-            "data" => %{
-              "text" => "Hello from the fragment!"
+            type: "html",
+            data: %{
+              text: "Hello from the fragment!"
             }
           }
         ]
@@ -491,9 +535,9 @@ defmodule Brando.VillainTest do
         key: "test_key",
         data: [
           %{
-            "type" => "html",
-            "data" => %{
-              "text" => "--> {% fragment parent_test frag_key en %} <--"
+            type: "html",
+            data: %{
+              text: "--> {% fragment parent_test frag_key en %} <--"
             }
           }
         ]
@@ -505,9 +549,9 @@ defmodule Brando.VillainTest do
         key: "test_key",
         data: [
           %{
-            "type" => "html",
-            "data" => %{
-              "text" => "--> {% hide %}parent_test{% endhide %} <--"
+            type: "html",
+            data: %{
+              text: "--> {% hide %}parent_test{% endhide %} <--"
             }
           }
         ]

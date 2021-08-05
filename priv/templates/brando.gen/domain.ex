@@ -17,20 +17,5 @@ defmodule <%= app_module %>.<%= domain %> do
   # __header
 
   # ++code
-  @doc """
-  Dataloader initializer
-  """
-  def data() do
-    Dataloader.Ecto.new(
-      Brando.repo(),
-      query: &dataloader_query/2
-    )
-  end
-
-  @doc """
-  Dataloader queries
-  """
-  def dataloader_query(queryable, _), do: queryable
-
   # __code
 end

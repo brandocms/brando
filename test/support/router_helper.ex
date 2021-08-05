@@ -19,45 +19,6 @@ defmodule BrandoIntegrationWeb.PageController do
   def show(conn, _), do: send_resp(conn, 200, "show")
 end
 
-defmodule BrandoIntegration.TestSchema do
-  use Absinthe.Schema
-  use BrandoGraphQL.Schema
-
-  import_types Absinthe.Plug.Types
-  import_types BrandoGraphQL.Schema.Types
-
-  def context(ctx) do
-    loader =
-      Dataloader.new()
-      |> import_brando_dataloaders(ctx)
-
-    Map.put(ctx, :loader, loader)
-  end
-
-  def plugins do
-    [Absinthe.Middleware.Dataloader] ++ Absinthe.Plugin.defaults()
-  end
-
-  query do
-    import_brando_queries()
-  end
-
-  mutation do
-    import_brando_mutations()
-  end
-
-  enum :sort_order do
-    value :asc
-    value :desc
-  end
-
-  def middleware(middleware, _field, %{identifier: :mutation}),
-    do: middleware ++ [BrandoGraphQL.Schema.Middleware.ChangesetErrors]
-
-  def middleware(middleware, _field, _object),
-    do: middleware ++ [BrandoGraphQL.Schema.Middleware.QueryErrors]
-end
-
 defmodule RouterHelper do
   @moduledoc """
   Conveniences for testing routers and controllers.
@@ -118,33 +79,6 @@ defmodule RouterHelper do
     |> fetch_query_params
     |> Brando.router().call(Brando.router().init([]))
   end
-end
-
-defmodule BrandoIntegrationWeb.Guardian.TokenPipeline do
-  @moduledoc """
-  Guardian token pipeline
-  """
-  use Guardian.Plug.Pipeline,
-    otp_app: :brando,
-    module: BrandoIntegration.Guardian,
-    error_handler: Brando.Guardian.GQLErrorHandler
-
-  plug Guardian.Plug.VerifyHeader, realm: "Bearer"
-  plug Guardian.Plug.LoadResource, allow_blank: true
-end
-
-defmodule BrandoIntegrationWeb.Guardian.GQLPipeline do
-  @moduledoc """
-  Guardian pipeline
-  """
-  use Guardian.Plug.Pipeline,
-    otp_app: :brando,
-    module: BrandoIntegration.Guardian,
-    error_handler: Brando.Guardian.GQLErrorHandler
-
-  plug Guardian.Plug.VerifyHeader, realm: "Bearer"
-  plug Guardian.Plug.EnsureAuthenticated
-  plug Guardian.Plug.LoadResource, ensure: true
 end
 
 defmodule BrandoIntegrationWeb.Router do

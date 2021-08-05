@@ -15,8 +15,9 @@ defmodule Brando.Trait do
   @type opts :: Keyword.t()
 
   @callback changeset_mutator(module, config, changeset, user, opts) :: changeset
-  @callback trait_attributes(list(), list()) :: list()
-  @callback trait_relations(list(), list()) :: list()
+  @callback trait_attributes(list(), list(), list()) :: list()
+  @callback trait_assets(list(), list(), list()) :: list()
+  @callback trait_relations(list(), list(), list()) :: list()
   @callback validate(module, config) :: true | no_return
 
   defmacro __using__(_) do
@@ -28,9 +29,10 @@ defmodule Brando.Trait do
     quote location: :keep do
       @behaviour Brando.Trait
 
-      import Brando.Trait
+      import Brando.Blueprint.Assets
       import Brando.Blueprint.Attributes
       import Brando.Blueprint.Relations
+      import Brando.Trait
 
       @before_compile Brando.Trait
       @changeset_phase :after_validate_required
@@ -51,24 +53,42 @@ defmodule Brando.Trait do
   defmacro __before_compile__(_) do
     quote do
       if Module.get_attribute(__MODULE__, :attrs) do
-        def trait_attributes(_, _) do
+        def trait_attributes(_, _, _) do
           @attrs
         end
 
-        defoverridable trait_attributes: 2
+        defoverridable trait_attributes: 3
       else
-        def trait_attributes(_, _), do: []
-        defoverridable trait_attributes: 2
+        def trait_attributes(_, _, _), do: []
+        defoverridable trait_attributes: 3
       end
 
       if Module.get_attribute(__MODULE__, :relations) do
-        def trait_relations(_, _) do
+        def trait_relations(_, _, _) do
           @relations
         end
+
+        defoverridable trait_relations: 3
       else
-        def trait_relations(_, _) do
+        def trait_relations(_, _, _) do
           []
         end
+
+        defoverridable trait_relations: 3
+      end
+
+      if Module.get_attribute(__MODULE__, :assets) do
+        def trait_assets(_, _, _) do
+          @assets
+        end
+
+        defoverridable trait_assets: 3
+      else
+        def trait_assets(_, _, _) do
+          []
+        end
+
+        defoverridable trait_assets: 3
       end
 
       def __changeset_phase__ do
@@ -94,9 +114,9 @@ defmodule Brando.Trait do
   attributes and relations from other traits, only attrs and relations
   specified directly in the blueprint
   """
-  def get_relations(attrs, relations, traits) do
+  def get_relations(attrs, relations, assets, traits) do
     Enum.reduce(traits, [], fn {trait, _opts}, rf ->
-      trait.trait_relations(attrs, relations) ++ rf
+      trait.trait_relations(attrs, assets, relations) ++ rf
     end)
   end
 
@@ -107,9 +127,22 @@ defmodule Brando.Trait do
   attributes and relations from other traits, only attrs and relations
   specified directly in the blueprint
   """
-  def get_attributes(attrs, relations, traits) do
+  def get_attributes(attrs, assets, relations, traits) do
     Enum.reduce(traits, [], fn {trait, _opts}, rf ->
-      trait.trait_attributes(attrs, relations) ++ rf
+      trait.trait_attributes(attrs, assets, relations) ++ rf
+    end)
+  end
+
+  def get_assets(nil), do: []
+
+  @doc """
+  NOTE: This list of attrs and relations does NOT include added
+  attributes and relations from other traits, only attrs and relations
+  specified directly in the blueprint
+  """
+  def get_assets(attrs, assets, relations, traits) do
+    Enum.reduce(traits, [], fn {trait, _opts}, rf ->
+      trait.trait_assets(attrs, assets, relations) ++ rf
     end)
   end
 

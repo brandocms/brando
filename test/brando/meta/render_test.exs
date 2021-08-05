@@ -8,7 +8,7 @@ defmodule Brando.MetaRenderTest do
     description: "Our description"
   }
 
-  @img %Brando.Images.Image{
+  @img %{
     alt: nil,
     credits: nil,
     focal: %{"x" => 50, "y" => 50},
@@ -81,7 +81,8 @@ defmodule Brando.MetaRenderTest do
              "<meta content=\"value2\" name=\"key2\"><meta content=\"value1\" name=\"key1\"><meta content=\"https://facebook.com/test\" property=\"og:see_also\"><meta content=\"https://instagram.com/test\" property=\"og:see_also\"><meta content=\"@ Our description\" name=\"description\"><meta content=\"Generated.\" name=\"generated_title\"><meta content=\"https://test.com/my_image.jpg\" name=\"image\"><meta content=\"@ Our title\" name=\"mutated_title\"><meta content=\"@ Our description\" property=\"og:description\"><meta content=\"https://test.com/my_image.jpg\" property=\"og:image\"><meta content=\"image/jpeg\" property=\"og:image:type\"><meta content=\"MyApp\" property=\"og:site_name\"><meta content=\"Fallback meta title\" property=\"og:title\"><meta content=\"website\" property=\"og:type\"><meta content=\"http://localhost\" property=\"og:url\"><meta content=\"Our title\" name=\"title\">"
 
     # change identity values
-    Brando.Sites.update_identity(%{links: [], metas: []})
+    {:ok, identity} = Brando.Sites.get_identity()
+    Brando.Sites.update_identity(identity, %{links: [], metas: []}, :system)
     Brando.Sites.update_seo(%{fallback_meta_image: @img})
 
     rendered_meta = Brando.Meta.HTML.render_meta(mock_conn)
@@ -89,7 +90,8 @@ defmodule Brando.MetaRenderTest do
     assert safe_to_string(rendered_meta) ==
              "<meta content=\"@ Our description\" name=\"description\"><meta content=\"Generated.\" name=\"generated_title\"><meta content=\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\" name=\"image\"><meta content=\"@ Our title\" name=\"mutated_title\"><meta content=\"@ Our description\" property=\"og:description\"><meta content=\"http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg\" property=\"og:image\"><meta content=\"933\" property=\"og:image:height\"><meta content=\"image/jpeg\" property=\"og:image:type\"><meta content=\"1900\" property=\"og:image:width\"><meta content=\"MyApp\" property=\"og:site_name\"><meta content=\"Fallback meta title\" property=\"og:title\"><meta content=\"website\" property=\"og:type\"><meta content=\"http://localhost\" property=\"og:url\"><meta content=\"Our title\" name=\"title\">"
 
-    Brando.Sites.update_identity(%{links: @links, metas: @metas})
+    {:ok, identity} = Brando.Sites.get_identity()
+    Brando.Sites.update_identity(identity, %{links: @links, metas: @metas}, :system)
     Brando.Sites.update_seo(%{fallback_meta_image: nil})
   end
 

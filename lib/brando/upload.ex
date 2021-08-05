@@ -36,9 +36,6 @@ defmodule Brando.Upload do
   creates upload path and copies files
   """
   def handle_upload(meta, upload_entry, cfg, user) do
-    require Logger
-    Logger.error("handle_upload start")
-
     with {:ok, upload} <- preprocess_upload(meta, upload_entry, cfg),
          {:ok, image_struct} <- handle_upload_type(upload),
          {:ok, operations} <- Images.Operations.create(image_struct, cfg, nil, user),
@@ -69,10 +66,9 @@ defmodule Brando.Upload do
            path: media_path,
            width: width,
            height: height,
-           dominant_color: dominant_color
-           #  alt: Map.get(extra_params, :alt),
-           #  title: Map.get(extra_params, :title),
-           #  focal: Map.get(extra_params, :focal, @default_focal
+           dominant_color: dominant_color,
+           focal: %{x: 50, y: 50},
+           sizes: %{}
          }}
 
       {:error, _} ->

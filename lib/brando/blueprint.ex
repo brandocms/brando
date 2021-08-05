@@ -12,6 +12,12 @@ defmodule Brando.Blueprint do
         gettext_module: MyApp.Gettext.Frontend
 
 
+  # Assets
+
+      assets do
+        asset :cover, :image, cfg: [...]
+      end
+
   # Relations
 
   ## Many to many
@@ -100,6 +106,9 @@ defmodule Brando.Blueprint do
   alias Ecto.Changeset
 
   alias Brando.Blueprint.Constraints
+  alias Brando.Blueprint.Asset
+  alias Brando.Blueprint.Assets
+  alias Brando.Blueprint.Relation
   alias Brando.Blueprint.Relations
   alias Brando.Blueprint.Unique
   alias Brando.Blueprint.Upload
@@ -112,6 +121,7 @@ defmodule Brando.Blueprint do
             translations: [],
             attributes: [],
             relations: [],
+            assets: [],
             listings: [],
             form: %{},
             traits: []
@@ -147,6 +157,7 @@ defmodule Brando.Blueprint do
     Module.register_attribute(__CALLER__.module, :traits, accumulate: true)
     Module.register_attribute(__CALLER__.module, :attrs, accumulate: true)
     Module.register_attribute(__CALLER__.module, :relations, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :assets, accumulate: true)
     Module.register_attribute(__CALLER__.module, :form, accumulate: true)
     Module.register_attribute(__CALLER__.module, :listings, accumulate: true)
     Module.register_attribute(__CALLER__.module, :translations, accumulate: false)
@@ -175,6 +186,7 @@ defmodule Brando.Blueprint do
 
       import unquote(__MODULE__)
       import unquote(__MODULE__).AbsoluteURL
+      import unquote(__MODULE__).Assets
       import unquote(__MODULE__).Attributes
       import unquote(__MODULE__).Form
       import unquote(__MODULE__).Identifier
@@ -217,14 +229,6 @@ defmodule Brando.Blueprint do
                 on_type_not_found: :raise,
                 on_replace: :delete
               ]
-          )
-
-        %{type: :image} = attr ->
-          # images are embedded
-          Ecto.Schema.embeds_one(
-            attr.name,
-            Brando.Images.Image,
-            on_replace: :update
           )
 
         attr ->
@@ -285,19 +289,55 @@ defmodule Brando.Blueprint do
     end
   end
 
-  defmacro build_schema(name, attrs, relations) do
+  defmacro build_assets(assets) do
+    quote do
+      Enum.map(unquote(assets), fn
+        %Asset{type: :image, name: name} ->
+          # images are embedded
+          Ecto.Schema.embeds_one(
+            name,
+            Brando.Images.Image,
+            on_replace: :delete
+          )
+
+        %Asset{type: :video, name: name} ->
+          # videoes are embedded
+          Ecto.Schema.embeds_one(
+            name,
+            Brando.Videos.Video,
+            on_replace: :delete
+          )
+
+        %Asset{type: :file, name: name} ->
+          # videoes are embedded
+          Ecto.Schema.embeds_one(
+            name,
+            Brando.Files.File,
+            on_replace: :delete
+          )
+
+        asset ->
+          require Logger
+          Logger.error("==> asset type not caught, #{inspect(asset, pretty: true)}")
+      end)
+    end
+  end
+
+  defmacro build_schema(name, attrs, relations, assets) do
     quote location: :keep do
       schema unquote(name) do
         build_attrs(unquote(attrs))
+        build_assets(unquote(assets))
         build_relations(unquote(relations))
       end
     end
   end
 
-  defmacro build_embedded_schema(_name, attrs, relations) do
+  defmacro build_embedded_schema(_name, attrs, relations, assets) do
     quote location: :keep do
       embedded_schema do
         build_attrs(unquote(attrs))
+        build_assets(unquote(assets))
         build_relations(unquote(relations))
       end
     end
@@ -305,14 +345,12 @@ defmodule Brando.Blueprint do
 
   def get_required_attrs(attrs) do
     attrs
-    |> Enum.reject(&(&1.type == :image))
     |> Enum.filter(&Map.get(&1.opts, :required))
     |> Enum.map(& &1.name)
   end
 
   def get_optional_attrs(attrs) do
     attrs
-    |> Enum.reject(&(&1.type == :image))
     |> Enum.reject(&Map.get(&1.opts, :required))
     |> Villain.maybe_add_villain_html_fields()
     |> Enum.map(& &1.name)
@@ -407,7 +445,7 @@ defmodule Brando.Blueprint do
       end
 
       @all_attributes Enum.reverse(@attrs) ++
-                        Brando.Trait.get_attributes(@attrs, @relations, @traits) ++
+                        Brando.Trait.get_attributes(@attrs, @assets, @relations, @traits) ++
                         Brando.Blueprint.Attributes.maybe_add_marked_as_deleted_attribute(
                           @allow_mark_as_deleted
                         )
@@ -430,7 +468,7 @@ defmodule Brando.Blueprint do
       end
 
       @all_relations Enum.reverse(@relations) ++
-                       Brando.Trait.get_relations(@attrs, @relations, @traits)
+                       Brando.Trait.get_relations(@attrs, @assets, @relations, @traits)
       def __relations__ do
         @all_relations
       end
@@ -444,6 +482,24 @@ defmodule Brando.Blueprint do
       unless Enum.empty?(@all_relations) do
         def __relation_opts__(name) do
           Map.get(__relation__(name), :opts, [])
+        end
+      end
+
+      @all_assets Enum.reverse(@assets) ++
+                    Brando.Trait.get_assets(@attrs, @assets, @relations, @traits)
+      def __assets__ do
+        @all_assets
+      end
+
+      for asset <- @all_assets do
+        def __asset__(unquote(asset.name)) do
+          unquote(Macro.escape(asset))
+        end
+      end
+
+      unless Enum.empty?(@all_assets) do
+        def __asset_opts__(name) do
+          Map.get(__asset__(name), :opts, [])
         end
       end
 
@@ -551,24 +607,29 @@ defmodule Brando.Blueprint do
 
       def __modules__(type), do: Map.get(__modules__(), type)
 
-      @villain_fields Enum.filter(@attrs, &(&1.type == :villain))
-      def __villain_fields__ do
-        @villain_fields
-      end
-
-      @image_fields Enum.filter(@attrs, &(&1.type == :image))
-      def __image_fields__ do
-        @image_fields
-      end
-
-      @file_fields Enum.filter(@attrs, &(&1.type == :file))
+      @file_fields Enum.filter(@assets, &(&1.type == :file))
       def __file_fields__ do
         @file_fields
       end
 
-      @video_fields Enum.filter(@attrs, &(&1.type == :video))
+      @image_fields Enum.filter(@assets, &(&1.type == :image))
+      def __image_fields__ do
+        @image_fields
+      end
+
+      @video_fields Enum.filter(@assets, &(&1.type == :video))
       def __video_fields__ do
         @video_fields
+      end
+
+      @gallery_fields Enum.filter(@assets, &(&1.type == :gallery))
+      def __gallery_fields__ do
+        @gallery_fields
+      end
+
+      @villain_fields Enum.filter(@attrs, &(&1.type == :villain))
+      def __villain_fields__ do
+        @villain_fields
       end
 
       @slug_fields Enum.filter(@attrs, &(&1.type == :slug))
@@ -587,12 +648,10 @@ defmodule Brando.Blueprint do
         def has_status?, do: true
       end
 
-      @gallery_fields Enum.filter(@attrs, &(&1.type == :gallery))
-      def __gallery_fields__ do
-        @gallery_fields
-      end
-
-      @poly_fields Enum.filter(@attrs, &(&1.type == PolymorphicEmbed))
+      @poly_fields Enum.filter(
+                     @attrs,
+                     &(&1.type in [{:array, PolymorphicEmbed}, PolymorphicEmbed])
+                   )
       def __poly_fields__ do
         @poly_fields
       end
@@ -609,13 +668,15 @@ defmodule Brando.Blueprint do
         build_embedded_schema(
           @table_name,
           @all_attributes,
-          @all_relations
+          @all_relations,
+          @all_assets
         )
       else
         build_schema(
           @table_name,
           @all_attributes,
-          @all_relations
+          @all_relations,
+          @all_assets
         )
       end
 
@@ -637,6 +698,7 @@ defmodule Brando.Blueprint do
           @all_traits,
           @all_attributes,
           @all_relations,
+          @all_assets,
           @castable_relations,
           @all_required_attrs,
           @all_optional_attrs,
@@ -651,6 +713,7 @@ defmodule Brando.Blueprint do
           translations: __translations__(),
           attributes: __attributes__(),
           relations: __relations__(),
+          assets: __assets__(),
           listings: __listings__(),
           form: __form__(),
           traits: __traits__()
@@ -680,6 +743,7 @@ defmodule Brando.Blueprint do
         all_traits,
         all_attributes,
         all_relations,
+        all_assets,
         castable_relations,
         all_required_attrs,
         all_optional_attrs,
@@ -695,8 +759,8 @@ defmodule Brando.Blueprint do
 
     schema
     |> Changeset.cast(params, fields_to_cast)
-    |> Relations.run_embed_attributes(all_attributes, user, module)
     |> Relations.run_cast_relations(all_relations, user)
+    |> Assets.run_cast_assets(all_assets, user)
     |> Trait.run_changeset_mutators(
       module,
       traits_before_validate_required,

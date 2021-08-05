@@ -605,17 +605,9 @@ defmodule Brando.HTML.Images do
   end
 
   def get_srcset(image_field, {mod, field}, opts, placeholder) do
-    #! TODO Remove this when we move to Blueprints completely
-    {:ok, cfg} =
-      if {:get_image_cfg, 1} in mod.__info__(:functions) do
-        apply(mod, :get_image_cfg, [field])
-      else
-        {:ok, apply(mod, :__attribute_opts__, [field])}
-      end
+    {:ok, %{cfg: cfg}} = {:ok, apply(mod, :__asset_opts__, [field])}
 
-    #! END
-
-    if !cfg.srcset do
+    if !Map.get(cfg, :srcset) do
       raise ArgumentError,
         message: "no `:srcset` key set in #{inspect(mod)}'s #{inspect(field)} image config"
     end

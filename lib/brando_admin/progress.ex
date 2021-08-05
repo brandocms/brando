@@ -21,7 +21,9 @@ defmodule BrandoAdmin.Progress do
   end
 
   @spec show(atom | %{:id => any, optional(any) => any}) :: :ok | {:error, any}
-  def show(user) do
+  def show(:system), do: nil
+
+  def show(%Brando.Users.User{} = user) do
     Phoenix.PubSub.broadcast(
       Brando.pubsub(),
       @topic,
@@ -29,7 +31,9 @@ defmodule BrandoAdmin.Progress do
     )
   end
 
-  def hide(user) do
+  def hide(:system), do: nil
+
+  def hide(%Brando.Users.User{} = user) do
     Phoenix.PubSub.broadcast(
       Brando.pubsub(),
       @topic,
@@ -37,7 +41,9 @@ defmodule BrandoAdmin.Progress do
     )
   end
 
-  def update(user, status, opts) do
+  def update(:system, _, _), do: nil
+
+  def update(%Brando.Users.User{} = user, status, opts) do
     payload = %{
       status: status,
       percent: Keyword.get(opts, :percent, nil),
@@ -51,7 +57,9 @@ defmodule BrandoAdmin.Progress do
     )
   end
 
-  def update_delayed(user, status, opts) do
+  def update_delayed(:system, _, _), do: nil
+
+  def update_delayed(%Brando.Users.User{} = user, status, opts) do
     payload = %{
       status: status,
       percent: Keyword.get(opts, :percent, nil),

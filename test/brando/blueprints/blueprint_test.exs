@@ -1,5 +1,6 @@
 defmodule Brando.Blueprint.BlueprintTest do
   use ExUnit.Case
+  alias Brando.Blueprint.Asset
   alias Brando.Blueprint.Attribute
   alias Brando.Blueprint.Relation
 
@@ -58,27 +59,6 @@ defmodule Brando.Blueprint.BlueprintTest do
                opts: %{from: :title, required: true},
                type: :slug
              },
-             %Attribute{
-               name: :cover,
-               opts: %Brando.Type.ImageConfig{
-                 allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-                 default_size: "medium",
-                 random_filename: true,
-                 size_limit: 10_240_000,
-                 sizes: %{
-                   "large" => %{"crop" => true, "quality" => 65, "size" => "700x700"},
-                   "medium" => %{"crop" => true, "quality" => 65, "size" => "500x500"},
-                   "micro" => %{"crop" => false, "quality" => 10, "size" => "25"},
-                   "small" => %{"crop" => true, "quality" => 65, "size" => "300x300"},
-                   "thumb" => %{"crop" => true, "quality" => 65, "size" => "150x150"},
-                   "xlarge" => %{"crop" => true, "quality" => 65, "size" => "900x900"}
-                 },
-                 srcset: [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}],
-                 upload_path: "images/avatars",
-                 target_format: nil
-               },
-               type: :image
-             },
              %Attribute{name: :deleted_at, opts: %{}, type: :datetime},
              %Attribute{
                name: :sequence,
@@ -93,10 +73,43 @@ defmodule Brando.Blueprint.BlueprintTest do
   test "attribute_opts" do
     attr_opts = Brando.BlueprintTest.Project.__attribute_opts__(:slug)
     assert attr_opts == %{from: :title, required: true}
+  end
 
-    attr_opts = Brando.BlueprintTest.Project.__attribute_opts__(:cover)
+  test "assets" do
+    assets = Brando.BlueprintTest.Project.__assets__()
 
-    assert attr_opts == %Brando.Type.ImageConfig{
+    assert assets == [
+             %Asset{
+               name: :cover,
+               opts: %{
+                 module: Brando.Images.Image,
+                 cfg: %Brando.Type.ImageConfig{
+                   allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
+                   default_size: "medium",
+                   random_filename: true,
+                   size_limit: 10_240_000,
+                   sizes: %{
+                     "large" => %{"crop" => true, "quality" => 65, "size" => "700x700"},
+                     "medium" => %{"crop" => true, "quality" => 65, "size" => "500x500"},
+                     "micro" => %{"crop" => false, "quality" => 10, "size" => "25"},
+                     "small" => %{"crop" => true, "quality" => 65, "size" => "300x300"},
+                     "thumb" => %{"crop" => true, "quality" => 65, "size" => "150x150"},
+                     "xlarge" => %{"crop" => true, "quality" => 65, "size" => "900x900"}
+                   },
+                   srcset: [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}],
+                   target_format: nil,
+                   upload_path: "images/avatars"
+                 }
+               },
+               type: :image
+             }
+           ]
+  end
+
+  test "asset_opts" do
+    %{cfg: cfg} = Brando.BlueprintTest.Project.__asset_opts__(:cover)
+
+    assert cfg == %Brando.Type.ImageConfig{
              allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
              default_size: "medium",
              random_filename: true,
@@ -139,11 +152,11 @@ defmodule Brando.Blueprint.BlueprintTest do
              :id,
              :title,
              :slug,
-             :cover,
              :deleted_at,
              :sequence,
              :inserted_at,
              :updated_at,
+             :cover,
              :properties,
              :creator_id
            ]

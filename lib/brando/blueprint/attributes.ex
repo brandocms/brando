@@ -61,6 +61,7 @@ defmodule Brando.Blueprint.Attributes do
   ]
   def validate_attr!(type) when type in @valid_attributes, do: true
   def validate_attr!({:__aliases__, _, _}), do: true
+  def validate_attr!({:array, {:__aliases__, _, _}}), do: true
 
   def validate_attr!(type),
     do: raise("Unknown type `#{inspect(type)}` given in blueprint")
@@ -90,30 +91,6 @@ defmodule Brando.Blueprint.Attributes do
       name: name,
       type: :language,
       opts: %{values: languages, required: true}
-    }
-  end
-
-  def build_attr(name, :file, opts) do
-    %Attribute{
-      name: name,
-      type: :file,
-      opts: opts |> Enum.into(%{}) |> Brando.Utils.map_to_struct(Brando.Type.FileConfig)
-    }
-  end
-
-  def build_attr(name, :image, :db) do
-    %Attribute{
-      name: name,
-      type: :image,
-      opts: %{db: true, required: true}
-    }
-  end
-
-  def build_attr(name, :image, opts) do
-    %Relation{
-      name: name,
-      type: :image,
-      opts: opts |> Enum.into(%{}) |> Brando.Utils.map_to_struct(Brando.Type.ImageConfig)
     }
   end
 

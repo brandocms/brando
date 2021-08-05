@@ -104,7 +104,7 @@ defmodule Brando.Blueprint.RelationsTest do
                 cardinality: :one,
                 field: :property,
                 on_cast: nil,
-                on_replace: :raise,
+                on_replace: :update,
                 ordered: true,
                 owner: Brando.Blueprint.RelationsTest.P1,
                 related: Brando.Blueprint.RelationsTest.P1.Property,

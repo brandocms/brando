@@ -4,6 +4,7 @@ use Mix.Config
 # you can enable the server option below.
 config :brando, BrandoIntegrationWeb.Endpoint,
   http: [port: 80],
+  debug_errors: true,
   server: false,
   secret_key_base: "verysecret",
   pubsub_server: BrandoIntegration.PubSub

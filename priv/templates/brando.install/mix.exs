@@ -65,9 +65,6 @@ defmodule <%= application_module %>.MixProject do
       {:swoosh, "~> 1.0"},
       {:timex, "~> 3.0"},
       {:jason, "~> 1.0"},
-      {:absinthe, "~> 1.6"},
-      {:absinthe_plug, "~> 1.5"},
-      {:dataloader, "~> 1.0"},
       {:ex_machina, "~> 2.3"},
 
       # release management and production tools

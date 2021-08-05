@@ -48,7 +48,7 @@ defmodule Brando.Pages.Fragment do
     attribute :title, :string
     attribute :parent_key, :string, required: true
     attribute :key, :string, required: true
-    attribute :data, :villain, required: true
+    attribute :data, :villain
     attribute :wrapper, :string
   end
 

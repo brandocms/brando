@@ -143,13 +143,6 @@ defmodule Mix.Tasks.Brando.Install do
     {:keep, "priv/static/gettext/frontend", "priv/static/gettext/frontend"},
     {:eex, "lib/application_name_web/gettext.ex", "lib/application_name_web/gettext.ex"},
 
-    # Guardian templates
-    {:eex, "lib/application_name_web/guardian.ex", "lib/application_name_web/guardian.ex"},
-    {:eex, "lib/application_name_web/guardian/gql_pipeline.ex",
-     "lib/application_name_web/guardian/gql_pipeline.ex"},
-    {:eex, "lib/application_name_web/guardian/token_pipeline.ex",
-     "lib/application_name_web/guardian/token_pipeline.ex"},
-
     # Helpers for frontend
     {:eex, "lib/application_name_web.ex", "lib/application_name_web.ex"},
 

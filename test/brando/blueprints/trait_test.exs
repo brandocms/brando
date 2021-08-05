@@ -9,7 +9,7 @@ defmodule Brando.Blueprint.TraitTest do
 
   describe "creator trait" do
     test "exposes relationship" do
-      assert Trait.Creator.trait_relations(nil, nil) == [
+      assert Trait.Creator.trait_relations(nil, nil, nil) == [
                %Relation{
                  name: :creator,
                  opts: %{module: User, required: true},
@@ -21,7 +21,7 @@ defmodule Brando.Blueprint.TraitTest do
 
   describe "status trait" do
     test "exposes attribute" do
-      assert Trait.Status.trait_attributes(nil, nil) == [
+      assert Trait.Status.trait_attributes(nil, nil, nil) == [
                %Attribute{
                  name: :status,
                  opts: %{required: true},
@@ -33,7 +33,7 @@ defmodule Brando.Blueprint.TraitTest do
 
   describe "sequence trait" do
     test "exposes attribute" do
-      assert Trait.Sequenced.trait_attributes(nil, nil) == [
+      assert Trait.Sequenced.trait_attributes(nil, nil, nil) == [
                %Attribute{
                  name: :sequence,
                  opts: %{default: 0},

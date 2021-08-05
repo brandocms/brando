@@ -62,6 +62,9 @@ locals_without_parens = [
   table: 1,
   primary_key: 1,
   data_layer: 1,
+  assets: 1,
+  asset: 2,
+  asset: 3,
   input: 1,
   input: 2,
   input: 3,
@@ -87,7 +90,7 @@ locals_without_parens = [
 [
   locals_without_parens: locals_without_parens,
   export: [locals_without_parens: locals_without_parens],
-  import_deps: [:absinthe, :ecto, :ecto_sql, :phoenix, :plug, :phoenix_html, :surface],
+  import_deps: [:ecto, :ecto_sql, :phoenix, :plug, :phoenix_html, :surface],
   inputs: ["*.{ex,exs}", "priv/*/seeds.exs", "{config,lib,test}/**/*.{ex,exs}"],
   surface_inputs: ["{lib,test}/**/*.{ex,exs,sface}"],
   subdirectories: ["priv/*/migrations"]

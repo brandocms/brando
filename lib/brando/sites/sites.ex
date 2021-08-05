@@ -22,21 +22,6 @@ defmodule Brando.Sites do
   @type user :: Brando.Users.User.t()
 
   @doc """
-  Dataloader initializer
-  """
-  def data(_) do
-    Dataloader.Ecto.new(
-      Brando.repo(),
-      query: &query/2
-    )
-  end
-
-  @doc """
-  Dataloader queries
-  """
-  def query(queryable, _), do: queryable
-
-  @doc """
   Get identity
   """
   @spec get_identity() ::
@@ -55,6 +40,8 @@ defmodule Brando.Sites do
         {:ok, Map.put(identity, :languages, languages)}
     end
   end
+
+  def get_identity(map) when is_map(map), do: get_identity()
 
   def get_identity(key) do
     Cache.Identity.get(key)

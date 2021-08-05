@@ -10,9 +10,7 @@ defmodule BrandoAdmin.UserSessionController do
     |> render("new.html", error_message: nil)
   end
 
-  def create(conn, %{"user" => user_params}) do
-    %{"email" => email, "password" => password} = user_params
-
+  def create(conn, %{"user" => %{"email" => email, "password" => _password} = user_params}) do
     with {:ok, user} <- Users.get_user(%{matches: %{email: email, active: true}}) do
       UserAuth.log_in_user(conn, user, user_params)
     else

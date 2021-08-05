@@ -589,7 +589,7 @@ defmodule Brando.Villain.Parser do
       def list(%{rows: rows} = data, _) do
         rows_html =
           Enum.map_join(rows, "\n", fn row ->
-            class = (row.class && ~s( class="#{row.class}")) || ""
+            class = (row[:class] && ~s( class="#{row.class}")) || ""
             value = row.value
 
             """
@@ -715,12 +715,12 @@ defmodule Brando.Villain.Parser do
         col_html =
           for col <- cols do
             c =
-              Enum.reduce(col["data"], [], fn d, acc ->
-                [apply(__MODULE__, String.to_atom(d["type"]), [d["data"], opts]) | acc]
+              Enum.reduce(col[:data], [], fn d, acc ->
+                [apply(__MODULE__, String.to_atom(d.type), [d.data, opts]) | acc]
               end)
 
             class =
-              case col["class"] do
+              case col[:class] do
                 "six" -> "col-md-6"
                 other -> other
               end
@@ -738,7 +738,7 @@ defmodule Brando.Villain.Parser do
         blocks_html =
           blocks
           |> Enum.reduce([], fn d, acc ->
-            [apply(__MODULE__, String.to_atom(d["type"]), [d["data"], opts]) | acc]
+            [apply(__MODULE__, String.to_atom(d.type), [d.data, opts]) | acc]
           end)
           |> Enum.reverse()
           |> Enum.join("")
@@ -790,6 +790,7 @@ defmodule Brando.Villain.Parser do
       defp process_vars(vars), do: Enum.map(vars, &process_var(&1)) |> Enum.into(%{})
 
       defp process_var({name, %{"label" => _, "type" => _, "value" => value}}), do: {name, value}
+      defp process_var({name, %{label: _, type: _, value: value}}), do: {name, value}
 
       defp add_vars_to_context(context, vars),
         do: Enum.reduce(vars, context, fn {k, v}, acc -> Context.assign(acc, k, v) end)

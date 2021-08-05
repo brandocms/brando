@@ -38,26 +38,10 @@ defmodule Brando.Router do
         plug :put_admin_locale
       end
 
-      pipeline :graphql do
-        # plug RemoteIp
-        plug Brando.web_module(Guardian.GQLPipeline)
-        plug Brando.Plug.APIContext
-        plug Brando.Plug.SentryUserContext
-      end
-
       pipeline :api do
         plug :accepts, ["json"]
         # plug RemoteIp
         # plug :refresh_token
-      end
-
-      pipeline :token do
-        plug Brando.web_module(Guardian.TokenPipeline)
-        plug Brando.Plug.SentryUserContext
-      end
-
-      pipeline :authenticated do
-        plug Guardian.Plug.EnsureAuthenticated, handler: Brando.AuthHandler.APIAuthHandler
       end
 
       scope unquote(path), as: :admin do
@@ -87,27 +71,6 @@ defmodule Brando.Router do
           get "/users/confirm", UserConfirmationController, :new
           post "/users/confirm", UserConfirmationController, :create
           get "/users/confirm/:token", UserConfirmationController, :confirm
-        end
-
-        scope "/api" do
-          pipe_through [:api, :token, :authenticated]
-
-          # General image uploads
-          post "/images/upload/image_series/:image_series_id", upload_ctrl, :post
-
-          # Villain
-          post "/villain/upload", villain_ctrl, :upload_image
-          get "/villain/modules/:slug", villain_ctrl, :modules
-          post "/villain/modules/", villain_ctrl, :store_module
-          post "/villain/modules/delete", villain_ctrl, :delete_module
-          post "/villain/modules/sequence", villain_ctrl, :sequence_modules
-          get "/villain/browse/:slug", villain_ctrl, :browse_images
-        end
-
-        # Main API scope for GraphQL
-        scope "/graphql" do
-          pipe_through [:graphql]
-          forward "/", Absinthe.Plug, schema: Brando.app_module(Schema)
         end
       end
     end

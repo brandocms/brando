@@ -22,35 +22,6 @@ defmodule Brando.Images do
   @type params :: map
   @type user :: User.t()
 
-  @doc """
-  Dataloader initializer
-  """
-  def data(_) do
-    Dataloader.Ecto.new(
-      Brando.repo(),
-      query: &query/2
-    )
-  end
-
-  @doc """
-  Dataloader queries
-  """
-  def query(Image = query, _) do
-    query
-    |> where([i], is_nil(i.deleted_at))
-    |> order_by([i], asc: i.sequence, desc: i.updated_at)
-  end
-
-  def query(ImageSeries = query, %{limit: limit, offset: offset}) do
-    query
-    |> order_by([is], asc: fragment("lower(?)", is.name))
-    |> where([is], is_nil(is.deleted_at))
-    |> limit([is], ^limit)
-    |> offset([is], ^offset)
-  end
-
-  def query(queryable, _), do: queryable
-
   query :single, ImageCategory, do: fn query -> from(t in query, where: is_nil(t.deleted_at)) end
 
   matches ImageCategory do
@@ -148,27 +119,6 @@ defmodule Brando.Images do
       category ->
         {:ok, category}
     end
-  end
-
-  @spec update_image_meta(schema :: Image.t(), params, user) ::
-          {:ok, Image.t()} | {:error, changeset}
-  def update_image_meta(schema, params, user \\ :system)
-
-  def update_image_meta(schema, %{focal: new_focal} = params, user) do
-    image = Map.merge(schema.image, params)
-    org_focal = Map.get(schema.image, :focal, %{})
-
-    unless Map.equal?(org_focal, new_focal) do
-      updated_schema = put_in(schema.image, image)
-      _ = Images.Processing.recreate_sizes_for_image(updated_schema, user)
-    end
-
-    update_image(schema, %{"image" => image}, user)
-  end
-
-  def update_image_meta(schema, params, user) do
-    image = Map.merge(schema.image, params)
-    update_image(schema, %{"image" => image}, user)
   end
 
   @doc """

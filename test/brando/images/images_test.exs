@@ -29,25 +29,6 @@ defmodule Brando.ImagesTest do
     assert img == img2
   end
 
-  test "update_image_meta" do
-    user = Factory.insert(:random_user)
-    img = Factory.insert(:image, image_series: Factory.build(:image_series))
-    fixture = Path.join([Path.expand("../../", __DIR__), "fixtures", "sample.jpg"])
-    target = Path.join([Images.Utils.media_path(img.image.path)])
-    File.mkdir_p!(Path.dirname(target))
-
-    File.cp_r!(
-      fixture,
-      target
-    )
-
-    assert {:ok, img2} = Images.update_image_meta(img, %{focal: %{x: 0, y: 0}}, user)
-    assert img2.image.focal == %{x: 0, y: 0}
-
-    assert {:ok, img3} = Images.update_image_meta(img, %{title: "Hello!"}, user)
-    assert img3.image.title == "Hello!"
-  end
-
   test "get_category_id_by_slug" do
     c1 = Factory.insert(:image_category)
     assert {:ok, c1_id} = Images.get_category_id_by_slug(c1.slug)

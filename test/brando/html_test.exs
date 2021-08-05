@@ -161,7 +161,7 @@ defmodule Brando.HTMLTest do
              "<img src=\"/media/images/avatars/medium/27i97a.jpeg\">"
 
     assert img_tag(nil, :medium, default: "test.jpg") |> safe_to_string ==
-             "<img src=\"medium/test.jpg\">"
+             "<img src=\"test.jpg\">"
 
     assert img_tag(user.avatar, :medium, prefix: media_url(), srcset: {Brando.Users.User, :avatar})
            |> safe_to_string ==

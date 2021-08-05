@@ -77,9 +77,3 @@ config :brando, Brando.Images,
 
 config :brando, Brando.Villain,
   parser: <%= application_module %>.Villain.Parser
-
-# Configure Guardian for auth.
-config :<%= application_name %>, <%= application_module %>Web.Guardian,
-  issuer: "<%= application_module %>",
-  ttl: {30, :days},
-  secret_key: "<%= :crypto.strong_rand_bytes(64) |> Base.encode64 |> binary_part(0, 64) %>"

@@ -6,7 +6,7 @@ defmodule Brando.Trait.Villain.PreventCircularReferences do
   import Brando.Gettext
 
   def changeset_mutator(_module, _config, %{changes: %{data: data}} = changeset, _user, _) do
-    json = Jason.encode!(data)
+    json = inspect(data)
 
     # we need the keys
     key = Ecto.Changeset.get_field(changeset, :key)

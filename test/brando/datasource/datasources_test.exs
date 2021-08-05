@@ -13,23 +13,23 @@ defmodule Brando.DatasourcesTest do
     help_text: "Help text",
     refs: [
       %{
-        "name" => "p",
-        "data" => %{
-          "type" => "text",
-          "data" => %{
-            "text" => "<p>Hello world</p>"
+        name: "p",
+        data: %{
+          type: "text",
+          data: %{
+            text: "<p>Hello world</p>"
           }
         }
       },
       %{
-        "name" => "ds",
-        "data" => %{
-          "type" => "datasource",
-          "data" => %{
-            "module" => "Elixir.Brando.DatasourcesTest.TestDatasource",
-            "type" => "list",
-            "query" => "all_of_them",
-            "code" => """
+        name: "ds",
+        data: %{
+          type: "datasource",
+          data: %{
+            module: "Elixir.Brando.DatasourcesTest.TestDatasource",
+            type: "list",
+            query: "all_of_them",
+            code: """
             {% for entry in entries %}
             <li>{{ entry.name }}</li>
             {% endfor %}
@@ -44,18 +44,18 @@ defmodule Brando.DatasourcesTest do
 
   @data_root_level_datasource [
     %{
-      "type" => "text",
-      "data" => %{
-        "text" => "<p>Hello world</p>"
+      type: "text",
+      data: %{
+        text: "<p>Hello world</p>"
       }
     },
     %{
-      "type" => "datasource",
-      "data" => %{
-        "module" => "Elixir.Brando.DatasourcesTest.TestDatasource",
-        "type" => "list",
-        "query" => "all_of_them",
-        "code" => """
+      type: "datasource",
+      data: %{
+        module: "Elixir.Brando.DatasourcesTest.TestDatasource",
+        type: "list",
+        query: "all_of_them",
+        code: """
         {% for entry in entries %}
         <li>{{ entry.name }}</li>
         {% endfor %}
@@ -63,54 +63,54 @@ defmodule Brando.DatasourcesTest do
       }
     },
     %{
-      "type" => "text",
-      "data" => %{
-        "text" => "<p>Hello world</p>"
+      type: "text",
+      data: %{
+        text: "<p>Hello world</p>"
       }
     }
   ]
 
   @data_no_datasource [
     %{
-      "type" => "text",
-      "data" => %{
-        "text" => "<p>Hello world</p>"
+      type: "text",
+      data: %{
+        text: "<p>Hello world</p>"
       }
     },
     %{
-      "type" => "text",
-      "data" => %{
-        "text" => "<p>Hello world</p>"
+      type: "text",
+      data: %{
+        text: "<p>Hello world</p>"
       }
     }
   ]
 
   @data_contained_datasource [
     %{
-      "type" => "text",
-      "data" => %{
-        "text" => "<p>Hello world</p>"
+      type: "text",
+      data: %{
+        text: "<p>Hello world</p>"
       }
     },
     %{
-      "type" => "container",
-      "data" => %{
-        "class" => "test",
-        "wrapper" => "",
-        "blocks" => [
+      type: "container",
+      data: %{
+        class: "test",
+        wrapper: "",
+        blocks: [
           %{
-            "type" => "text",
-            "data" => %{
-              "text" => "<p>Hello world</p>"
+            type: "text",
+            data: %{
+              text: "<p>Hello world</p>"
             }
           },
           %{
-            "type" => "datasource",
-            "data" => %{
-              "module" => "Elixir.Brando.DatasourcesTest.TestDatasource",
-              "type" => "list",
-              "query" => "all_of_them",
-              "code" => """
+            type: "datasource",
+            data: %{
+              module: "Elixir.Brando.DatasourcesTest.TestDatasource",
+              type: "list",
+              query: "all_of_them",
+              code: """
               {% for entry in entries %}
               <li>{{ entry.name }}</li>
               {% endfor %}
@@ -121,9 +121,9 @@ defmodule Brando.DatasourcesTest do
       }
     },
     %{
-      "type" => "text",
-      "data" => %{
-        "text" => "<p>Hello world</p>"
+      type: "text",
+      data: %{
+        text: "<p>Hello world</p>"
       }
     }
   ]
@@ -221,12 +221,12 @@ defmodule Brando.DatasourcesTest do
   test "update_datasource" do
     data = [
       %{
-        "type" => "datasource",
-        "data" => %{
-          "module" => "Elixir.Brando.DatasourcesTest.TestDatasource",
-          "type" => "list",
-          "query" => "all_of_them",
-          "code" => """
+        type: "datasource",
+        data: %{
+          module: "Elixir.Brando.DatasourcesTest.TestDatasource",
+          type: "list",
+          query: "all_of_them",
+          code: """
           {% for entry in entries %}
           <li>{{ entry.name }}</li>
           {% endfor %}
@@ -257,34 +257,34 @@ defmodule Brando.DatasourcesTest do
 
     data_refed_datasource = [
       %{
-        "type" => "text",
-        "data" => %{
-          "text" => "<p>Hello world</p>"
+        type: "text",
+        data: %{
+          text: "<p>Hello world</p>"
         }
       },
       %{
-        "type" => "module",
-        "data" => %{
-          "id" => module.id,
-          "refs" => [
+        type: "module",
+        data: %{
+          module_id: module.id,
+          refs: [
             %{
-              "name" => "p",
-              "data" => %{
-                "type" => "text",
-                "data" => %{
-                  "text" => "<p>Hello world</p>"
+              name: "p",
+              data: %{
+                type: "text",
+                data: %{
+                  text: "<p>Hello world</p>"
                 }
               }
             },
             %{
-              "name" => "ds",
-              "data" => %{
-                "type" => "datasource",
-                "data" => %{
-                  "module" => "Elixir.Brando.DatasourcesTest.TestDatasource",
-                  "type" => "list",
-                  "query" => "all_of_them",
-                  "code" => """
+              name: "ds",
+              data: %{
+                type: "datasource",
+                data: %{
+                  module: "Elixir.Brando.DatasourcesTest.TestDatasource",
+                  type: "list",
+                  query: "all_of_them",
+                  code: """
                   {% for entry in entries %}
                   <li>{{ entry.name }}</li>
                   {% endfor %}
@@ -296,9 +296,9 @@ defmodule Brando.DatasourcesTest do
         }
       },
       %{
-        "type" => "text",
-        "data" => %{
-          "text" => "<p>Hello world</p>"
+        type: "text",
+        data: %{
+          text: "<p>Hello world</p>"
         }
       }
     ]

@@ -28,33 +28,6 @@ defmodule Brando.Pages do
     end
   end
 
-  @doc """
-  Dataloader initializer
-  """
-  def data(_) do
-    Dataloader.Ecto.new(
-      Brando.repo(),
-      query: &dataloader_query/2
-    )
-  end
-
-  @doc """
-  Dataloader queries
-  """
-  def dataloader_query(Fragment = query, _) do
-    query
-    |> where([f], is_nil(f.deleted_at))
-    |> order_by([f], asc: f.sequence, asc: fragment("lower(?)", f.key))
-  end
-
-  def dataloader_query(Page = query, _) do
-    where(query, [f], is_nil(f.deleted_at))
-  end
-
-  def dataloader_query(queryable, _) do
-    queryable
-  end
-
   query :list, Page do
     fn
       query ->

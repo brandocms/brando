@@ -41,11 +41,6 @@ defmodule Brando.Mixfile do
       {:surface, "~> 0.5"},
       {:floki, ">= 0.27.0", only: :test},
 
-      # graphql
-      {:absinthe, "~> 1.6", override: true},
-      {:absinthe_plug, "~> 1.5"},
-      {:dataloader, "~> 1.0"},
-
       # hashing/passwords
       {:bcrypt_elixir, "~> 2.0"},
       {:comeonin, "~> 5.0"},

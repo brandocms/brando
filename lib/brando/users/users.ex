@@ -11,21 +11,6 @@ defmodule Brando.Users do
 
   @type user :: User.t()
 
-  @doc """
-  Dataloader initializer
-  """
-  def data(_) do
-    Dataloader.Ecto.new(
-      Brando.repo(),
-      query: &dataloader_query/2
-    )
-  end
-
-  @doc """
-  Dataloader queries
-  """
-  def dataloader_query(queryable, _), do: queryable
-
   query :list, User do
     fn q -> from t in q, where: is_nil(t.deleted_at) end
   end

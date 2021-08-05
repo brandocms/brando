@@ -4,6 +4,7 @@ defmodule Brando.Blueprint.Snapshot do
 
     - traits
     - attributes
+    - assets
     - relations
 
   - Check migrations directory for `*_application_domain_schema_<padded_version>`
@@ -13,6 +14,7 @@ defmodule Brando.Blueprint.Snapshot do
   alias Brando.Blueprint.Snapshot
 
   defstruct attributes: nil,
+            assets: nil,
             relations: nil,
             traits: nil,
             version: nil,
@@ -52,6 +54,7 @@ defmodule Brando.Blueprint.Snapshot do
 
     %Snapshot{
       traits: blueprint.traits,
+      assets: blueprint.assets,
       attributes: blueprint.attributes,
       relations: blueprint.relations,
       updated_at: DateTime.utc_now(),
@@ -101,5 +104,4 @@ defmodule Brando.Blueprint.Snapshot do
   defp get_next_snapshot_version(module) do
     get_snapshot_version(module) + 1
   end
-
 end
