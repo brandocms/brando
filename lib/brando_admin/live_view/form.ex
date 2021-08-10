@@ -4,7 +4,7 @@ defmodule BrandoAdmin.LiveView.Form do
 
   This can be used in your application as:
 
-  use BrandoAdmin.LiveView.Form, schema: MyApp.Projects.Project
+      use BrandoAdmin.LiveView.Form, schema: MyApp.Projects.Project
 
   """
   import Phoenix.LiveView
@@ -39,10 +39,12 @@ defmodule BrandoAdmin.LiveView.Form do
     end
   end
 
-  # with entry_id means it's an edit
+  # with entry_id means it's an update
   def hooks(%{"entry_id" => entry_id}, %{"user_token" => token}, socket, schema) do
     socket =
       socket
+      |> Surface.init()
+      |> assign_action(:update)
       |> assign_schema(schema)
       |> assign_entry(schema, entry_id)
       |> assign_current_user(token)
@@ -55,12 +57,18 @@ defmodule BrandoAdmin.LiveView.Form do
   def hooks(_params, %{"user_token" => token}, socket, schema) do
     socket =
       socket
+      |> Surface.init()
+      |> assign_action(:create)
       |> assign_schema(schema)
       |> assign_current_user(token)
       |> set_admin_locale()
       |> attach_hooks(schema)
 
     {:cont, socket}
+  end
+
+  defp assign_action(socket, action) do
+    assign(socket, :form_action, action)
   end
 
   defp attach_hooks(socket, schema) do

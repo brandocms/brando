@@ -54,6 +54,39 @@ defmodule Brando.BlueprintTest.Project do
       listing_query %{status: :published}
     end
   end
+
+  forms do
+    form do
+      tab "Content" do
+        fieldset size: :half do
+          input :title, :text
+          input :slug, :slug, from: :title
+        end
+      end
+
+      tab "Properties" do
+        fieldset size: :full do
+          inputs_for :properties,
+            cardinality: :many,
+            style: :inline,
+            default: %{} do
+            input :key, :text, placeholder: "Key"
+            input :value, :text, placeholder: "Val"
+          end
+
+          input :data, :blocks
+        end
+      end
+    end
+
+    form :extra do
+      tab "Test" do
+        fieldset size: :half do
+          input :title, :text
+        end
+      end
+    end
+  end
 end
 
 defmodule Brando.TraitTest.Project do

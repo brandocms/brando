@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.ToastEngine do
-  use Surface.Component
+  use Surface.LiveComponent
   @topic "b:toast"
 
   def mount(socket) do

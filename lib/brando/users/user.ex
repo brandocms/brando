@@ -161,28 +161,32 @@ defmodule Brando.Users.User do
     end
   end
 
-  form do
-    fieldset size: :half do
-      input :name, :text
-      input :email, :email
-      input :password, :password
-      input :language, :radios, options: :languages
+  forms do
+    form do
+      tab "Content" do
+        fieldset size: :half do
+          input :name, :text
+          input :email, :email
+          input :password, :password
+          input :language, :radios, options: :languages
 
-      input :role, :radios,
-        options: [
-          %{label: gettext("Superuser"), value: :superuser},
-          %{label: gettext("Admin"), value: :admin},
-          %{label: gettext("Editor"), value: :editor},
-          %{label: gettext("User"), value: :user}
-        ]
-    end
+          input :role, :radios,
+            options: [
+              %{label: gettext("Superuser"), value: :superuser},
+              %{label: gettext("Admin"), value: :admin},
+              %{label: gettext("Editor"), value: :editor},
+              %{label: gettext("User"), value: :user}
+            ]
+        end
 
-    fieldset size: :half do
-      input :avatar, :image
+        fieldset size: :half do
+          input :avatar, :image
 
-      inputs_for :config do
-        input :reset_password_on_first_login, :toggle
-        input :show_mutation_notifications, :toggle
+          inputs_for :config do
+            input :reset_password_on_first_login, :toggle
+            input :show_mutation_notifications, :toggle
+          end
+        end
       end
     end
   end

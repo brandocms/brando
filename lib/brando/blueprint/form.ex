@@ -2,44 +2,89 @@ defmodule Brando.Blueprint.Form do
   @moduledoc """
   ### Form
   """
-  defmodule Subform do
-    defstruct field: nil,
-              cardinality: :one,
-              sub_fields: [],
-              style: :regular,
-              default: nil,
-              component: nil
+  import Brando.Gettext
+
+  defstruct name: :default,
+            tabs: []
+
+  defmacro forms(do: block) do
+    forms(__CALLER__, block)
   end
 
-  defmodule Fieldset do
-    defstruct size: :full,
-              style: :regular,
-              fields: []
+  defp forms(_caller, block) do
+    quote generated: true, location: :keep do
+      Module.register_attribute(__MODULE__, :forms, accumulate: true)
+      var!(b_form_ctx) = :forms
+      unquote(block)
+      _ = var!(b_form_ctx)
+    end
   end
 
-  defmodule Input do
-    defstruct name: nil,
-              type: nil,
-              template: nil,
-              opts: %{}
+  defmacro form(name, do: block) do
+    form(__CALLER__, name, block)
   end
 
   defmacro form(do: block) do
-    form(__CALLER__, block)
+    form(__CALLER__, :default, block)
   end
 
-  defp form(_caller, block) do
+  defp form(_caller, name, block) do
     quote generated: true, location: :keep do
-      Module.register_attribute(__MODULE__, :form, accumulate: true)
-
       var!(b_fieldset) = []
       var!(b_subform) = []
-      var!(b_form_ctx) = :fieldset
+      var!(b_tab) = []
+      var!(b_form) = []
+      var!(b_form_ctx) = :form
 
       unquote(block)
 
+      named_form = %Brando.Blueprint.Form{
+        name: unquote(name),
+        tabs: Enum.reverse(var!(b_form))
+      }
+
+      Module.put_attribute(__MODULE__, :forms, named_form)
+
       _ = var!(b_subform)
       _ = var!(b_fieldset)
+      _ = var!(b_tab)
+      _ = var!(b_form_ctx)
+    end
+  end
+
+  defmacro tab(do: block) do
+    do_tab(gettext("Content"), block)
+  end
+
+  defmacro tab(name, do: block) do
+    do_tab(name, block)
+  end
+
+  defp do_tab(name, block) do
+    quote location: :keep do
+      _ = var!(b_subform)
+      _ = var!(b_fieldset)
+      _ = var!(b_tab)
+
+      prev_ctx = var!(b_form_ctx)
+
+      unless prev_ctx == :form do
+        raise Brando.Exception.BlueprintError,
+          message: """
+          tab must be nested under a form -- #{inspect(prev_ctx)}
+          """
+      end
+
+      var!(b_form_ctx) = :tab
+      var!(b_tab) = []
+
+      unquote(block)
+      named_tab = build_tab(unquote(name), Enum.reverse(var!(b_tab)))
+      var!(b_form) = List.wrap(named_tab) ++ var!(b_form)
+
+      # reset fieldset(s) since tab is processed
+      var!(b_fieldset) = []
+      var!(b_form_ctx) = prev_ctx
       _ = var!(b_form_ctx)
     end
   end
@@ -54,13 +99,25 @@ defmodule Brando.Blueprint.Form do
 
   defp do_fieldset(opts, block) do
     quote location: :keep do
+      prev_ctx = var!(b_form_ctx)
+
+      unless prev_ctx == :tab do
+        raise Brando.Exception.BlueprintError,
+          message: """
+          fieldset must be nested under a tab -- #{inspect(prev_ctx)}
+          """
+      end
+
       var!(b_form_ctx) = :fieldset
-      var!(b_fieldset) = []
       var!(b_subform) = []
+      var!(b_fieldset) = []
 
       unquote(block)
+
       named_fieldset = build_fieldset(unquote(opts), Enum.reverse(var!(b_fieldset)))
-      Module.put_attribute(__MODULE__, :form, named_fieldset)
+      var!(b_tab) = List.wrap(named_fieldset) ++ var!(b_tab)
+
+      var!(b_form_ctx) = prev_ctx
 
       _ = var!(b_subform)
       _ = var!(b_fieldset)
@@ -88,13 +145,18 @@ defmodule Brando.Blueprint.Form do
     quote location: :keep do
       _ = var!(b_subform)
       _ = var!(b_fieldset)
-      _ = var!(b_form_ctx)
 
-      var!(b_form_ctx) = :subform
+      prev_ctx = var!(b_form_ctx)
+
+      unless prev_ctx == :fieldset do
+        raise Brando.Exception.BlueprintError,
+          message: """
+          inputs_for must be nested under a fieldset -- #{inspect(prev_ctx)}
+          """
+      end
+
       named_subform = build_subform(unquote(field), unquote(opts), unquote(component))
-
       var!(b_fieldset) = List.wrap(named_subform) ++ var!(b_fieldset)
-      var!(b_form_ctx) = :fieldset
     end
   end
 
@@ -102,24 +164,51 @@ defmodule Brando.Blueprint.Form do
     quote location: :keep do
       _ = var!(b_subform)
       _ = var!(b_fieldset)
-      _ = var!(b_form_ctx)
+
+      prev_ctx = var!(b_form_ctx)
+
+      unless prev_ctx == :fieldset do
+        raise Brando.Exception.BlueprintError,
+          message: """
+          inputs_for must be nested under a fieldset -- #{inspect(prev_ctx)}
+          """
+      end
 
       var!(b_form_ctx) = :subform
       var!(b_subform) = []
+      _ = var!(b_form_ctx)
+
       unquote(block)
+
       named_subform = build_subform(unquote(field), unquote(opts), Enum.reverse(var!(b_subform)))
       var!(b_fieldset) = List.wrap(named_subform) ++ var!(b_fieldset)
-      var!(b_form_ctx) = :fieldset
+      var!(b_form_ctx) = prev_ctx
+      _ = var!(b_form_ctx)
     end
   end
 
   defmacro input(do: tpl) do
     quote location: :keep do
+      if var!(b_form_ctx) == :tab do
+        raise Brando.Exception.BlueprintError,
+          message: """
+          input must be nested under a subform or fieldset, not a tab -- #{inspect(var!(b_form_ctx))}
+          """
+      end
+
       {var!(b_subform), var!(b_fieldset)} =
-        if var!(b_form_ctx) == :subform do
-          {List.wrap(build_input(unquote(tpl), :surface)) ++ var!(b_subform), var!(b_fieldset)}
-        else
-          {var!(b_subform), List.wrap(build_input(unquote(tpl), :surface)) ++ var!(b_fieldset)}
+        case var!(b_form_ctx) do
+          :subform ->
+            {
+              List.wrap(build_input(unquote(tpl), :surface)) ++ var!(b_subform),
+              var!(b_fieldset)
+            }
+
+          _ ->
+            {
+              var!(b_subform),
+              List.wrap(build_input(unquote(tpl), :surface)) ++ var!(b_fieldset)
+            }
         end
     end
   end
@@ -127,15 +216,32 @@ defmodule Brando.Blueprint.Form do
   defmacro input(name, type, opts \\ []) do
     quote location: :keep,
           bind_quoted: [name: name, type: type, opts: opts] do
-      {var!(b_subform), var!(b_fieldset)} =
-        if var!(b_form_ctx) == :subform do
-          {List.wrap(build_input(name, type, opts)) ++ var!(b_subform), var!(b_fieldset)}
-        else
-          {var!(b_subform), List.wrap(build_input(name, type, opts)) ++ var!(b_fieldset)}
-        end
+      if var!(b_form_ctx) == :tab do
+        raise Brando.Exception.BlueprintError,
+          message: """
+          input must be nested under a subform or fieldset, not a tab -- #{inspect(var!(b_form_ctx))}
+          """
+      end
 
-      # _ = var!(b_subform)
+      {var!(b_subform), var!(b_fieldset)} =
+        case var!(b_form_ctx) do
+          :subform ->
+            {
+              List.wrap(build_input(name, type, opts)) ++ var!(b_subform),
+              var!(b_fieldset)
+            }
+
+          _ ->
+            {
+              var!(b_subform),
+              List.wrap(build_input(name, type, opts)) ++ var!(b_fieldset)
+            }
+        end
     end
+  end
+
+  def build_tab(name, fields) do
+    %__MODULE__.Tab{name: name, fields: fields}
   end
 
   def build_subform(field, component, opts) when is_atom(component) do
@@ -173,5 +279,21 @@ defmodule Brando.Blueprint.Form do
       type: type,
       opts: opts
     }
+  end
+
+  def get_tab_for_field(field, %__MODULE__{tabs: tabs}) do
+    for tab <- tabs,
+        %__MODULE__.Fieldset{fields: inputs} <- tab.fields do
+      find_field(inputs, field) && tab.name
+    end
+    |> Enum.filter(&is_binary(&1))
+    |> List.first()
+  end
+
+  defp find_field(inputs, field) do
+    Enum.find(inputs, fn
+      %{name: name} -> name == field
+      %{field: subform_field} -> subform_field == field
+    end)
   end
 end

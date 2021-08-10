@@ -155,33 +155,32 @@ defmodule Brando.Pages.Page do
     end
   end
 
-  form do
-    fieldset size: :half do
-      input :status, :status
+  forms do
+    form do
+      tab "Content" do
+        fieldset size: :half do
+          input :status, :status
 
-      input :title, :text
-      input :uri, :text
-    end
+          input :title, :text
+          input :uri, :text, monospace: true
+        end
 
-    fieldset size: :half do
-      input :is_homepage, :toggle
-      input :template, :select, options: &__MODULE__.get_templates/2
-      input :css_classes, :text
-    end
+        fieldset size: :full do
+          input :data, :blocks
+        end
+      end
 
-    fieldset size: :full do
-      inputs_for :properties, {:component, BrandoAdmin.Components.Form.Input.PageProperties}
+      tab "Advanced" do
+        fieldset size: :half do
+          input :is_homepage, :toggle
+          input :template, :select, options: &__MODULE__.get_templates/2
+          input :css_classes, :text
+        end
 
-      # cardinality: :many,
-      #   style: :inline,
-      #   default: %Property{type: "boolean", data: %{"value" => "false"}} do
-      #   input :label, :text
-      #   input :type, :text
-      #   input :key, :text
-
-      #   input :data, {:component, PropertyData}, from: :type
-
-      input :data, :blocks
+        fieldset size: :full do
+          inputs_for :properties, {:component, BrandoAdmin.Components.Form.Input.PageProperties}
+        end
+      end
     end
   end
 

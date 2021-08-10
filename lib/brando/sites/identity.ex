@@ -55,58 +55,70 @@ defmodule Brando.Sites.Identity do
     relation :configs, :embeds_many, module: Brando.ConfigEntry, on_replace: :delete
   end
 
-  form do
-    fieldset do
-      input :type, :radios,
-        options: [
-          %{value: :organization, label: gettext("Organization")},
-          %{value: :corporation, label: gettext("Corporation")}
-        ]
-    end
+  forms do
+    form do
+      tab "Content" do
+        fieldset do
+          input :type, :radios,
+            options: [
+              %{value: :organization, label: gettext("Organization")},
+              %{value: :corporation, label: gettext("Corporation")}
+            ]
+        end
 
-    fieldset style: :inline do
-      input :name, :text
-      input :alternate_name, :text
-    end
+        fieldset style: :inline do
+          input :name, :text
+          input :alternate_name, :text
+        end
 
-    fieldset style: :inline do
-      input :email, :email
-      input :phone, :phone
-    end
+        fieldset style: :inline do
+          input :email, :email
+          input :phone, :phone
+        end
 
-    fieldset do
-      input :address, :text
-      input :address2, :text
-      input :address3, :text
-    end
+        fieldset do
+          input :address, :text
+          input :address2, :text
+          input :address3, :text
+        end
 
-    fieldset style: :inline do
-      input :zipcode, :text
-      input :city, :text
-      input :country, :text
-    end
+        fieldset style: :inline do
+          input :zipcode, :text
+          input :city, :text
+          input :country, :text
+        end
 
-    fieldset style: :inline do
-      input :title_prefix, :text
-      input :title, :text
-      input :title_postfix, :text
-    end
+        fieldset style: :inline do
+          input :title_prefix, :text
+          input :title, :text
+          input :title_postfix, :text
+        end
 
-    fieldset do
-      input :logo, :image
-    end
+        fieldset do
+          input :logo, :image
+        end
 
-    fieldset size: :full do
-      inputs_for :links, style: :inline, cardinality: :many, size: :full, default: %Brando.Link{} do
-        input :name, :text
-        input :url, :text
-      end
-    end
+        fieldset size: :full do
+          inputs_for :links,
+            style: :inline,
+            cardinality: :many,
+            size: :full,
+            default: %Brando.Link{} do
+            input :name, :text
+            input :url, :text
+          end
+        end
 
-    fieldset size: :full do
-      inputs_for :metas, style: :inline, cardinality: :many, size: :full, default: %Brando.Meta{} do
-        input :key, :text
-        input :value, :text
+        fieldset size: :full do
+          inputs_for :metas,
+            style: :inline,
+            cardinality: :many,
+            size: :full,
+            default: %Brando.Meta{} do
+            input :key, :text
+            input :value, :text
+          end
+        end
       end
     end
   end

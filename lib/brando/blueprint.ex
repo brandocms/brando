@@ -158,7 +158,7 @@ defmodule Brando.Blueprint do
     Module.register_attribute(__CALLER__.module, :attrs, accumulate: true)
     Module.register_attribute(__CALLER__.module, :relations, accumulate: true)
     Module.register_attribute(__CALLER__.module, :assets, accumulate: true)
-    Module.register_attribute(__CALLER__.module, :form, accumulate: true)
+    Module.register_attribute(__CALLER__.module, :forms, accumulate: true)
     Module.register_attribute(__CALLER__.module, :listings, accumulate: true)
     Module.register_attribute(__CALLER__.module, :translations, accumulate: false)
     Module.register_attribute(__CALLER__.module, :table_name, accumulate: false)
@@ -607,22 +607,22 @@ defmodule Brando.Blueprint do
 
       def __modules__(type), do: Map.get(__modules__(), type)
 
-      @file_fields Enum.filter(@assets, &(&1.type == :file))
+      @file_fields Enum.filter(@all_assets, &(&1.type == :file))
       def __file_fields__ do
         @file_fields
       end
 
-      @image_fields Enum.filter(@assets, &(&1.type == :image))
+      @image_fields Enum.filter(@all_assets, &(&1.type == :image))
       def __image_fields__ do
         @image_fields
       end
 
-      @video_fields Enum.filter(@assets, &(&1.type == :video))
+      @video_fields Enum.filter(@all_assets, &(&1.type == :video))
       def __video_fields__ do
         @video_fields
       end
 
-      @gallery_fields Enum.filter(@assets, &(&1.type == :gallery))
+      @gallery_fields Enum.filter(@all_assets, &(&1.type == :gallery))
       def __gallery_fields__ do
         @gallery_fields
       end
@@ -684,8 +684,16 @@ defmodule Brando.Blueprint do
         @listings
       end
 
+      def __forms__ do
+        Enum.reverse(@forms)
+      end
+
       def __form__ do
-        Enum.reverse(@form)
+        Enum.find(@forms, &(&1.name == :default))
+      end
+
+      def __form__(name) do
+        Enum.find(@forms, &(&1.name == name))
       end
 
       # generate changeset

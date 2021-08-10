@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.ProgressEngine do
-  use Surface.Component
+  use Surface.LiveComponent
   @topic "b:progress"
 
   def mount(socket) do

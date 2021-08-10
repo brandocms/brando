@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.PresenceEngine do
-  use Surface.Component
+  use Surface.LiveComponent
   @topic "b:presence"
 
   prop user_id, :any, required: true
