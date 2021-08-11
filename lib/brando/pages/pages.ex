@@ -46,7 +46,9 @@ defmodule Brando.Pages do
   end
 
   query :single, Page,
-    do: fn query -> from q in query, where: is_nil(q.deleted_at), preload: [:properties] end
+    do: fn query ->
+      from q in query, where: is_nil(q.deleted_at), preload: [:properties, :parent]
+    end
 
   matches Page do
     fn

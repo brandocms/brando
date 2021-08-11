@@ -280,46 +280,6 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
   end
 
   def do_handle_in(
-        "revision:activate",
-        %{"schema" => schema, "id" => id, "revision" => revision},
-        socket
-      ) do
-    Revisions.set_entry_to_revision(Module.concat([schema]), id, revision)
-
-    {:reply, {:ok, %{code: 200}}, socket}
-  end
-
-  def do_handle_in(
-        "revision:delete",
-        %{"schema" => schema, "id" => id, "revision" => revision},
-        socket
-      ) do
-    Revisions.delete_revision(Module.concat([schema]), id, revision)
-
-    {:reply, {:ok, %{code: 200}}, socket}
-  end
-
-  def do_handle_in(
-        "revision:protect",
-        %{"schema" => schema, "id" => id, "revision" => revision},
-        socket
-      ) do
-    Revisions.protect_revision(Module.concat([schema]), id, revision, true)
-
-    {:reply, {:ok, %{code: 200}}, socket}
-  end
-
-  def do_handle_in(
-        "revision:unprotect",
-        %{"schema" => schema, "id" => id, "revision" => revision},
-        socket
-      ) do
-    Revisions.protect_revision(Module.concat([schema]), id, revision, false)
-
-    {:reply, {:ok, %{code: 200}}, socket}
-  end
-
-  def do_handle_in(
         "revision:describe",
         %{"schema" => schema, "id" => id, "revision" => revision, "description" => description},
         socket
@@ -336,16 +296,6 @@ defmodule Brando.Mixin.Channels.AdminChannelMixin do
       ) do
     user = Guardian.Phoenix.Socket.current_resource(socket)
     Publisher.schedule_revision(Module.concat([schema]), id, revision, publish_at, user)
-
-    {:reply, {:ok, %{code: 200}}, socket}
-  end
-
-  def do_handle_in(
-        "revisions:purge_inactive",
-        %{"schema" => schema, "id" => id},
-        socket
-      ) do
-    Revisions.purge_revisions(Module.concat([schema]), id)
 
     {:reply, {:ok, %{code: 200}}, socket}
   end

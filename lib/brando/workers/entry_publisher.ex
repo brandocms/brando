@@ -16,9 +16,10 @@ defmodule Brando.Worker.EntryPublisher do
           "schema" => schema,
           "id" => id,
           "revision" => revision,
-          "user_id" => _user_id
+          "user_id" => user_id
         }
       }) do
+    {:ok, user} = Brando.Users.get_user(user_id)
     now = DateTime.utc_now()
 
     single =
@@ -27,7 +28,7 @@ defmodule Brando.Worker.EntryPublisher do
       |> List.last()
       |> String.downcase()
 
-    case Revisions.set_entry_to_revision(schema, id, revision) do
+    case Revisions.set_entry_to_revision(schema, id, revision, user) do
       {:ok, new_entry} ->
         Logger.info("""
 

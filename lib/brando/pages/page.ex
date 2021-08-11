@@ -74,7 +74,7 @@ defmodule Brando.Pages.Page do
     relation :parent, :belongs_to, module: __MODULE__
     relation :children, :has_many, module: __MODULE__, foreign_key: :parent_id
     relation :fragments, :has_many, module: Fragment
-    relation :properties, :has_many, module: Property, on_replace: :delete, cast: true
+    relation :properties, :has_many, module: Property, on_replace: :delete_if_exists, cast: true
   end
 
   @derive {Jason.Encoder, only: @derived_fields}
@@ -113,7 +113,10 @@ defmodule Brando.Pages.Page do
 
   listings do
     listing do
-      listing_query %{status: :published, order: [{:asc, :sequence}, {:desc, :inserted_at}]}
+      listing_query %{
+        status: :published,
+        order: [{:asc, :sequence}, {:desc, :inserted_at}]
+      }
 
       listing_filters([
         [label: gettext("URI"), filter: "uri"],
@@ -158,11 +161,18 @@ defmodule Brando.Pages.Page do
   forms do
     form do
       tab "Content" do
-        fieldset size: :half do
+        fieldset size: :full do
           input :status, :status
+        end
 
+        fieldset size: :half do
           input :title, :text
           input :uri, :text, monospace: true
+        end
+
+        fieldset size: :half do
+          input :language, :select, options: :languages, narrow: true
+          input :parent_id, :select, options: &__MODULE__.get_parents/2, resetable: true
         end
 
         fieldset size: :full do
@@ -187,6 +197,15 @@ defmodule Brando.Pages.Page do
   def get_templates(_, _) do
     {:ok, templates} = Pages.list_templates()
     Enum.map(templates, &%{value: &1, label: &1})
+  end
+
+  def get_parents(_, _) do
+    {:ok, parents} = Pages.list_pages(%{filter: %{parents: true}})
+
+    Enum.map(
+      parents,
+      &%{value: to_string(&1.id), label: "[#{String.upcase(to_string(&1.language))}] #{&1.title}"}
+    )
   end
 
   defimpl Phoenix.HTML.Safe, for: __MODULE__ do

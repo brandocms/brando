@@ -281,22 +281,31 @@ defmodule Brando.Utils do
     |> map_from_struct()
   end
 
+  def map_from_struct(schema) when is_struct(schema) do
+    schema
+    |> Map.from_struct()
+    |> map_from_struct()
+  end
+
   def map_from_struct(map) when is_map(map) do
     map
     |> Enum.reduce(%{}, fn {key, value}, acc ->
-      value =
+      processed_value =
         case value do
           %_{__meta__: %{__struct__: _}} ->
             map_from_struct(value)
 
-          value when is_list(value) ->
-            value |> Enum.map(&map_from_struct/1)
+          s when is_struct(s) ->
+            map_from_struct(s)
+
+          list when is_list(list) ->
+            Enum.map(list, &map_from_struct/1)
 
           _ ->
             value
         end
 
-      Map.put_new(acc, key, value)
+      Map.put_new(acc, key, processed_value)
     end)
   end
 

@@ -736,17 +736,17 @@ defmodule Brando.Query do
     (total_entries / page_size) |> Float.ceil() |> round
   end
 
-  def insert(changeset) do
+  def insert(changeset, opts \\ []) do
     changeset
     |> Map.put(:action, :insert)
-    |> Brando.repo().insert()
+    |> Brando.repo().insert(opts)
     |> Cache.Query.evict()
   end
 
-  def update(changeset) do
+  def update(changeset, opts \\ []) do
     changeset
     |> Map.put(:action, :update)
-    |> Brando.repo().update()
+    |> Brando.repo().update(opts)
     |> Cache.Query.evict()
   end
 
