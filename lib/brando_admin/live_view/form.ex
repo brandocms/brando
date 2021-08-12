@@ -10,10 +10,13 @@ defmodule BrandoAdmin.LiveView.Form do
   import Phoenix.LiveView
   alias BrandoAdmin.Toast
 
+  @callback query_params(id :: integer | binary) :: map
+
   defmacro __using__(opts) do
     schema = Keyword.fetch!(opts, :schema)
 
     quote do
+      @behaviour BrandoAdmin.LiveView.Form
       use Surface.LiveView, layout: {BrandoAdmin.LayoutView, "live.html"}
       use BrandoAdmin.Progress
       use BrandoAdmin.Toast
@@ -24,7 +27,7 @@ defmodule BrandoAdmin.LiveView.Form do
       on_mount({__MODULE__, :hooks})
 
       def hooks(params, assigns, socket) do
-        BrandoAdmin.LiveView.Form.hooks(params, assigns, socket, unquote(schema))
+        BrandoAdmin.LiveView.Form.hooks(params, assigns, socket, unquote(schema), __MODULE__)
       end
 
       # we need the uri on first load, so inject for now
@@ -36,17 +39,20 @@ defmodule BrandoAdmin.LiveView.Form do
          |> assign(:params, params)
          |> assign(:uri, uri)}
       end
+
+      def query_params(id), do: %{matches: %{id: id}}
+      defoverridable query_params: 1
     end
   end
 
   # with entry_id means it's an update
-  def hooks(%{"entry_id" => entry_id}, %{"user_token" => token}, socket, schema) do
+  def hooks(%{"entry_id" => entry_id}, %{"user_token" => token}, socket, schema, caller) do
     socket =
       socket
       |> Surface.init()
       |> assign_action(:update)
       |> assign_schema(schema)
-      |> assign_entry(schema, entry_id)
+      |> assign_entry(schema, entry_id, caller)
       |> assign_current_user(token)
       |> set_admin_locale()
       |> attach_hooks(schema)
@@ -54,7 +60,7 @@ defmodule BrandoAdmin.LiveView.Form do
     {:cont, socket}
   end
 
-  def hooks(_params, %{"user_token" => token}, socket, schema) do
+  def hooks(_params, %{"user_token" => token}, socket, schema, _caller) do
     socket =
       socket
       |> Surface.init()
@@ -132,9 +138,10 @@ defmodule BrandoAdmin.LiveView.Form do
     end)
   end
 
-  defp assign_entry(socket, schema, entry_id) do
+  defp assign_entry(socket, schema, entry_id, caller) do
+    query_params = apply(caller, :query_params, [entry_id])
     singular = schema.__naming__.singular
     context = schema.__modules__.context
-    assign_new(socket, :entry, fn -> apply(context, :"get_#{singular}!", [entry_id]) end)
+    assign_new(socket, :entry, fn -> apply(context, :"get_#{singular}!", [query_params]) end)
   end
 end

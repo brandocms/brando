@@ -105,7 +105,17 @@ defmodule Brando.Blueprint.Relations do
         changeset,
         _user
       ) do
-    cast_collection(changeset, name, Brando.repo(), module)
+    require Logger
+    Logger.error(inspect("==> casting :collection for #{inspect(name)} -> #{inspect(module)}"))
+    Logger.error(inspect(Map.get(changeset.params, to_string(name))))
+
+    case Map.get(changeset.params, to_string(name)) do
+      "" ->
+        put_assoc(changeset, name, [])
+
+      _ ->
+        cast_collection(changeset, name, Brando.repo(), module)
+    end
   end
 
   ##

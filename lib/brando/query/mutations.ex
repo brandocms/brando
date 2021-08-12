@@ -18,13 +18,30 @@ defmodule Brando.Query.Mutations do
          {:ok, entry} <- Query.insert(changeset),
          {:ok, _} <- Datasource.update_datasource(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
-      #! TODO: Remove when moving to Blueprints
-      revisioned? =
-        if Brando.Blueprint.blueprint?(module) do
-          module.__trait__(Trait.Revisioned)
-        else
-          {:__revisioned__, 0} in module.__info__(:functions)
-        end
+      revisioned? = module.__trait__(Trait.Revisioned)
+
+      if revisioned? do
+        Revisions.create_revision(entry, user)
+      end
+
+      case Schema.identifier_for(entry) do
+        nil -> nil
+        identifier -> Notifications.push_mutation(gettext("created"), identifier, user)
+      end
+
+      callback_block.(entry)
+    else
+      err -> err
+    end
+  end
+
+  def create_with_changeset(module, changeset, user, callback_block) do
+    with changeset <- Publisher.maybe_override_status(changeset),
+         changeset <- set_action(changeset, :insert),
+         {:ok, entry} <- Query.insert(changeset),
+         {:ok, _} <- Datasource.update_datasource(module, entry),
+         {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
+      revisioned? = module.__trait__(Trait.Revisioned)
 
       if revisioned? do
         Revisions.create_revision(entry, user)

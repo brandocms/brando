@@ -503,7 +503,18 @@ defmodule Brando.Query do
     quote generated: true do
       @spec unquote(:"create_#{singular_schema}")(map, Brando.Users.User.t() | :system) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
-      def unquote(:"create_#{singular_schema}")(params, user, opts \\ []) do
+      def unquote(:"create_#{singular_schema}")(params, user, opts \\ [])
+
+      def unquote(:"create_#{singular_schema}")(%Ecto.Changeset{} = changeset, user, _) do
+        Brando.Query.Mutations.create_with_changeset(
+          unquote(module),
+          changeset,
+          user,
+          unquote(callback_block)
+        )
+      end
+
+      def unquote(:"create_#{singular_schema}")(params, user, opts) do
         Brando.Query.Mutations.create(
           unquote(module),
           params,

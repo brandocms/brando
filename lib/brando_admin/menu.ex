@@ -61,6 +61,7 @@ defmodule BrandoAdmin.Menu do
 
       query_params =
         default_listing.query
+        |> BrandoAdmin.Menu.strip_preloads()
         |> URI.encode_query()
         |> String.replace("%3A", ":")
 
@@ -90,6 +91,10 @@ defmodule BrandoAdmin.Menu do
           bind_quoted: [name: name, url: url] do
       Module.put_attribute(__MODULE__, :menus, %{name: name, url: url})
     end
+  end
+
+  def strip_preloads(query) do
+    Map.drop(query, [:preload])
   end
 
   defmacro menu_subitem(name, url) do
