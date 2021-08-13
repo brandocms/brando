@@ -4,7 +4,7 @@ defmodule Brando.Blueprint.Relations do
 
   ## Many to many
 
-  If you want to pass just ids of your many_to_many relation use `cast: :collection`
+  If you want to pass just ids of your many_to_many relation use `cast: true`
   """
   import Ecto.Changeset
   import Brando.M2M
@@ -101,20 +101,13 @@ defmodule Brando.Blueprint.Relations do
   ##
   ## many_to_many
   def run_cast_relation(
-        %{type: :many_to_many, name: name, opts: %{cast: :collection, module: module}},
+        %{type: :many_to_many, name: name, opts: %{cast: true, module: module}},
         changeset,
         _user
       ) do
-    require Logger
-    Logger.error(inspect("==> casting :collection for #{inspect(name)} -> #{inspect(module)}"))
-    Logger.error(inspect(Map.get(changeset.params, to_string(name))))
-
     case Map.get(changeset.params, to_string(name)) do
-      "" ->
-        put_assoc(changeset, name, [])
-
-      _ ->
-        cast_collection(changeset, name, Brando.repo(), module)
+      "" -> put_assoc(changeset, name, [])
+      _ -> cast_collection(changeset, name, Brando.repo(), module)
     end
   end
 

@@ -46,10 +46,10 @@ defmodule Brando.Blueprint do
         plural: "projects"
 
       relations do
-        relation :projects_workers, :many_to_many, module: ProjectWorker
+        relation :projects_workers, :many_to_many, module: ProjectWorker, cast: true
       end
 
-    # add `cast: :collection` to :projects_workers opts if you need M2M casting
+    # add `cast: :true` to :projects_workers opts if you need M2M casting
 
 
   ## Embedded schema
@@ -281,10 +281,10 @@ defmodule Brando.Blueprint do
             to_ecto_opts(:embeds_many, opts)
           )
 
-        attr ->
+        relation ->
           require Logger
           Logger.error("==> relation type not caught")
-          Logger.error(inspect(attr, pretty: true))
+          Logger.error(inspect(relation, pretty: true))
       end)
     end
   end

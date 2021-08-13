@@ -10,7 +10,7 @@ defmodule BrandoAdmin.UserResetPasswordController do
   end
 
   def create(conn, %{"user" => %{"email" => email}}) do
-    if user = Users.get_user_by_email(email) do
+    with {:ok, user} <- Users.get_user(%{matches: %{email: email}}) do
       Users.deliver_user_reset_password_instructions(
         user,
         &Brando.helpers().admin_user_reset_password_url(conn, :edit, &1)
@@ -18,11 +18,11 @@ defmodule BrandoAdmin.UserResetPasswordController do
     end
 
     # Regardless of the outcome, show an impartial success/error message.
-    conn
-    |> put_flash(
-      :info,
+    flash_msg =
       "If your email is in our system, you will receive instructions to reset your password shortly."
-    )
+
+    conn
+    |> put_flash(:info, flash_msg)
     |> redirect(to: "/")
   end
 
