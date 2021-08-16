@@ -164,9 +164,13 @@ defmodule Brando.Villain do
   end
 
   def parse_and_render(html, context) do
-    {:ok, parsed_doc} = Liquex.parse(html, Brando.Villain.LiquexParser)
-    {result, _} = Liquex.Render.render([], parsed_doc, context)
-    Enum.join(result)
+    with {:ok, parsed_doc} <- Liquex.parse(html, Brando.Villain.LiquexParser),
+         {result, _} <- Liquex.Render.render([], parsed_doc, context) do
+      Enum.join(result)
+    else
+      {:error, "expected end of string", _} ->
+        ">>> Error parsing liquex template <<<"
+    end
   end
 
   defp maybe_put_timestamps(%{inserted_at: nil} = entry) do

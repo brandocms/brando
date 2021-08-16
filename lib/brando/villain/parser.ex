@@ -190,7 +190,7 @@ defmodule Brando.Villain.Parser do
         context = add_vars_to_context(base_context, vars)
 
         module.code
-        |> render_refs(refs, id)
+        |> render_refs(refs, id, opts)
         |> Villain.parse_and_render(context)
       end
 
@@ -810,20 +810,34 @@ defmodule Brando.Villain.Parser do
         Villain.parse_and_render(module.code, context)
       end
 
-      defp render_refs(module_code, refs, id) do
-        Regex.replace(~r/%{(\w+)}/, module_code, fn _, match ->
+      defp render_refs(module_code, refs, id, opts \\ %{}) do
+        render_for_admin = Map.get(opts, :render_for_admin) && :render_for_admin
+
+        Regex.replace(~r/%{(\w+)}/, module_code, fn _, ref_name ->
           refs
-          |> Enum.find(&(&1.name == match))
-          |> render_ref(id, match)
+          |> Enum.find(&(&1.name == ref_name))
+          |> render_ref(id, ref_name, render_for_admin)
         end)
       end
 
-      defp render_ref(nil, id, match), do: "<!-- REF #{match} missing // module: #{id}. -->"
-      defp render_ref(%{hidden: true}, _id, _match), do: "<!-- h -->"
-      defp render_ref(%{deleted: true}, _id, _match), do: "<!-- d -->"
+      defp render_ref(nil, id, ref_name, _),
+        do: "<!-- REF #{ref_name} missing // module: #{id}. -->"
 
-      defp render_ref(ref, _id, _match) do
-        block = ref.data
+      defp render_ref(%{hidden: true}, _id, _ref_name, _), do: "<!-- h -->"
+      defp render_ref(%{data: %{hidden: true}}, _id, _ref_name, _), do: "<!-- h -->"
+      defp render_ref(%{deleted: true}, _id, _ref_name, _), do: "<!-- d -->"
+
+      defp render_ref(%{data: block, description: description}, id, ref_name, :render_for_admin) do
+        rendered_ref = apply(__MODULE__, String.to_atom(block.type), [block.data, []])
+
+        """
+        <section phx-click="edit_ref" b-module-id="#{id}" b-ref="#{ref_name}" b-ref-desc="#{description}">
+          #{rendered_ref}
+        </section>
+        """
+      end
+
+      defp render_ref(%{data: block, description: description}, _id, ref_name, _) do
         apply(__MODULE__, String.to_atom(block.type), [block.data, []])
       end
     end

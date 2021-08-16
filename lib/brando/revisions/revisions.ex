@@ -273,12 +273,7 @@ defmodule Brando.Revisions do
     {:ok, {revision, {_, new_entry}}} = get_revision(entry_schema, entry_id, revision_number)
     {:ok, {_, {_, base_entry}}} = get_active_revision(entry_schema, entry_id)
 
-    require Logger
-    Logger.error(inspect(new_entry.properties, pretty: true))
-    Logger.error(inspect(base_entry.properties, pretty: true))
-
     new_params = Utils.map_from_struct(new_entry)
-    Logger.error(inspect(new_params.properties, pretty: true))
 
     base_entry
     |> entry_schema.changeset(new_params, user, skip_villain: true)

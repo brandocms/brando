@@ -9,11 +9,15 @@ defmodule Brando.Villain.Module do
 
   use Brando.Blueprint,
     application: "Brando",
-    domain: "Pages",
+    domain: "Villain",
     schema: "Module",
     singular: "module",
     plural: "modules",
     gettext_module: Brando.Gettext
+
+  import Brando.Gettext
+
+  table "pages_modules"
 
   identifier "{{ entry.name }}"
 
@@ -35,5 +39,42 @@ defmodule Brando.Villain.Module do
     attribute :svg, :text
     attribute :multi, :boolean
     attribute :wrapper, :text
+  end
+
+  listings do
+    listing do
+      listing_query %{
+        status: :published,
+        order: [{:asc, :namespace}, {:asc, :sequence}, {:desc, :inserted_at}]
+      }
+
+      listing_filters([
+        [label: gettext("Name"), filter: "name"],
+        [label: gettext("Namespace"), filter: "namespace"],
+        [label: gettext("Class"), filter: "class"]
+      ])
+
+      listing_template(
+        """
+        <div class="badge">{{ entry.namespace }}</div><br>
+        """,
+        columns: 3
+      )
+
+      listing_template(
+        """
+        <a
+          data-phx-link="redirect"
+          data-phx-link-state="push"
+          href="/admin/pages/update/{{ entry.id }}"
+          class="entry-link">
+          {{ entry.name }}
+        </a>
+        <br>
+        <small>{{ entry.help_text }}</small>
+        """,
+        columns: 10
+      )
+    end
   end
 end

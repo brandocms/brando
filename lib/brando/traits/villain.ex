@@ -68,8 +68,4 @@ defmodule Brando.Trait.Villain do
       PolymorphicEmbed.cast_polymorphic_embed(mutated_changeset, vf.name)
     end)
   end
-
-  defp transform_indexed_map_to_list(indexed_map) do
-    Enum.map(indexed_map, &elem(&1, 1))
-  end
 end
