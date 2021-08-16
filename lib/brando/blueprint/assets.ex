@@ -58,6 +58,14 @@ defmodule Brando.Blueprint.Assets do
     }
   end
 
+  def build_asset(name, :gallery, opts) do
+    %Asset{
+      name: name,
+      type: :gallery,
+      opts: Map.merge(Enum.into(opts, %{}), %{module: Brando.ImageSeries})
+    }
+  end
+
   def build_asset(name, type, opts) do
     %Asset{name: name, type: type, opts: Enum.into(opts, %{})}
   end

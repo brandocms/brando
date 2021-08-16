@@ -5,7 +5,6 @@ defmodule Mix.Tasks.Brando.Gen do
 
   @generator_modules [
     Brando.Generators.Schema,
-    Brando.Generators.Migration,
     Brando.Generators.Domain
   ]
 

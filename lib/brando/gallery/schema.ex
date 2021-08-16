@@ -1,4 +1,5 @@
 defmodule Brando.Gallery.Schema do
+  @deprecated "Move to Blueprints instead"
   @moduledoc """
   Schema macro for Gallery
   """

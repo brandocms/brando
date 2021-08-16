@@ -44,8 +44,6 @@ defmodule Brando.Blueprint.Attributes do
     :decimal,
     :file,
     :float,
-    :gallery,
-    :image,
     :integer,
     :language,
     :map,
@@ -56,7 +54,6 @@ defmodule Brando.Blueprint.Attributes do
     :time,
     :timestamp,
     :uuid,
-    :video,
     :villain
   ]
   def validate_attr!(type) when type in @valid_attributes, do: true
