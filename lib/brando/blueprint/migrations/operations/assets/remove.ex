@@ -31,7 +31,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Asset.Remove do
         asset: %{type: :gallery, name: name}
       }) do
     """
-    add #{inspect(name)}_id, references(:images_series, on_delete: :delete_all)
+    add #{inspect(name)}, :jsonb
     """
   end
 
@@ -67,7 +67,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Asset.Remove do
         asset: %{type: :gallery, name: name}
       }) do
     """
-    remove #{inspect(name)}_id
+    remove #{inspect(name)}
     """
   end
 

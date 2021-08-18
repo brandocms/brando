@@ -194,11 +194,11 @@ defmodule Brando.Blueprint.Migrations do
 
     assets_to_add =
       Enum.reject(current_snapshot.assets, fn asset ->
-        Enum.find(previous_snapshot.assets, &(&1.name == asset.name))
+        Enum.find(Map.get(previous_snapshot, :assets, []), &(&1.name == asset.name))
       end)
 
     assets_to_remove =
-      Enum.reject(previous_snapshot.assets, fn asset ->
+      Enum.reject(Map.get(previous_snapshot, :assets, []), fn asset ->
         Enum.find(current_snapshot.assets, &(&1.name == asset.name))
       end)
 

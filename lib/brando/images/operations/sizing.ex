@@ -118,7 +118,7 @@ defmodule Brando.Images.Operations.Sizing do
           |> add_values()
           |> delegate_processor()
 
-        progress_percent = operation_index / total_operations * 100
+        progress_percent = floor(operation_index / total_operations * 100)
         set_progress(conversion_parameters, progress_percent, filename, user)
 
         result
@@ -458,16 +458,16 @@ defmodule Brando.Images.Operations.Sizing do
       ) do
     progress_string =
       gettext(
-        "%{filename} &rarr; Creating image size: <strong>%{size_key}</strong>/%{format}",
-        filename: filename,
+        "Creating image size: <strong>%{size_key}</strong>/%{format}",
         size_key: size_key,
         format: format
       )
 
-    Progress.update(user, progress_string,
+    Progress.update(user, progress_string, %{
       key: to_string(id),
-      percent: progress
-    )
+      percent: progress,
+      filename: filename
+    })
 
     conversion_parameters
   end

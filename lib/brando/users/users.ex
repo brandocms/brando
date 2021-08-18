@@ -90,4 +90,12 @@ defmodule Brando.Users do
     Brando.repo().delete_all(UserToken.token_and_context_query(token, "session"))
     :ok
   end
+
+  def build_token(id) do
+    Phoenix.Token.sign(Brando.endpoint(), "user_token", id)
+  end
+
+  def verify_token(token) do
+    Phoenix.Token.verify(Brando.endpoint(), "user_token", token, max_age: 86400)
+  end
 end

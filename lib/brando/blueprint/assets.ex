@@ -59,10 +59,28 @@ defmodule Brando.Blueprint.Assets do
   end
 
   def build_asset(name, :gallery, opts) do
+    opts_map = Map.merge(Enum.into(opts, %{}), %{module: Brando.Images.Image})
+    cfg = Map.get(opts_map, :cfg)
+
+    if !cfg do
+      raise Brando.Exception.BlueprintError,
+        message: """
+        Missing :cfg key for gallery asset `#{inspect(name)}`
+
+            assets do
+              asset #{inspect(name)}, :gallery, cfg: [...]
+            end
+        """
+    end
+
+    cfg_struct = struct(Brando.Type.ImageConfig, cfg)
+
+    opts_map = Map.put(opts_map, :cfg, cfg_struct)
+
     %Asset{
       name: name,
       type: :gallery,
-      opts: Map.merge(Enum.into(opts, %{}), %{module: Brando.ImageSeries})
+      opts: opts_map
     }
   end
 
@@ -121,6 +139,17 @@ defmodule Brando.Blueprint.Assets do
   ## embeds_many
   def run_cast_asset(
         %{type: :embeds_many, name: name, opts: opts},
+        changeset,
+        _user
+      ) do
+    case Map.get(changeset.params, to_string(name)) do
+      "" -> put_embed(changeset, name, [])
+      _ -> cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
+    end
+  end
+
+  def run_cast_asset(
+        %{type: :gallery, name: name, opts: opts},
         changeset,
         _user
       ) do

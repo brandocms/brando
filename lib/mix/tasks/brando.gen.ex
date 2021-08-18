@@ -4,7 +4,6 @@ defmodule Mix.Tasks.Brando.Gen do
   @shortdoc "Generates a Brando-styled schema"
 
   @generator_modules [
-    Brando.Generators.Schema,
     Brando.Generators.Domain
   ]
 

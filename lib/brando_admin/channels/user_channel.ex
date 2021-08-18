@@ -14,11 +14,14 @@ defmodule Brando.UserChannel do
   @doc """
   Join user channel for your user
   """
-  def join("user:" <> _user_id, _params, socket) do
-    user = Guardian.Phoenix.Socket.current_resource(socket)
-    socket = assign(socket, :user_id, user.id)
-    vsn = Application.spec(Brando.config(:otp_app), :vsn) |> to_string()
-    {:ok, %{user_id: user.id, vsn: vsn}, socket}
+  def join("user:" <> user_id, _params, socket) do
+    assigned_user_id = socket.assigns.user_id
+
+    if assigned_user_id == String.to_integer(user_id) do
+      {:ok, %{}, socket}
+    else
+      :error
+    end
   end
 
   def handle_out("alert", payload, socket) do

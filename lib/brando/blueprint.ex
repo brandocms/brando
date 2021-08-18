@@ -316,6 +316,14 @@ defmodule Brando.Blueprint do
             on_replace: :delete
           )
 
+        %Asset{type: :gallery, name: name} ->
+          # galleries are embedded
+          Ecto.Schema.embeds_many(
+            name,
+            Brando.Images.Image,
+            on_replace: :delete
+          )
+
         asset ->
           require Logger
           Logger.error("==> asset type not caught, #{inspect(asset, pretty: true)}")

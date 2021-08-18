@@ -15,7 +15,6 @@ defmodule BrandoAdmin.LiveView.Listing do
 
     quote do
       use Surface.LiveView, layout: {BrandoAdmin.LayoutView, "live.html"}
-      use BrandoAdmin.Progress
       use BrandoAdmin.Toast
       use BrandoAdmin.Presence
       use Phoenix.HTML

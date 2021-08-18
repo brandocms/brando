@@ -36,9 +36,12 @@ defmodule Brando.Upload do
   creates upload path and copies files
   """
   def handle_upload(meta, upload_entry, cfg, user) do
-    with {:ok, upload} <- preprocess_upload(meta, upload_entry, cfg),
-         {:ok, image_struct} <- handle_upload_type(upload),
-         {:ok, operations} <- Images.Operations.create(image_struct, cfg, nil, user),
+    preprocess_upload(meta, upload_entry, cfg)
+  end
+
+  def process_upload(upload, user) do
+    with {:ok, image_struct} <- handle_upload_type(upload),
+         {:ok, operations} <- Images.Operations.create(image_struct, upload.cfg, nil, user),
          {:ok, results} <- Images.Operations.perform(operations, user) do
       results
       |> List.first()
