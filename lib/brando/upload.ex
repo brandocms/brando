@@ -32,16 +32,25 @@ defmodule Brando.Upload do
 
   @doc """
   Initiate the upload handling.
-  Checks `plug` for filename, checks mimetype,
-  creates upload path and copies files
+
+  Create an upload struct and preprocess the filename, check mimetype etc
+  and copy the uploaded file to intended target destination
+
+  Finally returns an image struct
   """
-  def handle_upload(meta, upload_entry, cfg, user) do
-    preprocess_upload(meta, upload_entry, cfg)
+  def handle_upload(meta, upload_entry, cfg) do
+    with {:ok, upload} <- create_upload_struct(meta, upload_entry, cfg),
+         {:ok, upload} <- get_valid_filename(upload),
+         {:ok, upload} <- ensure_correct_ext(upload),
+         {:ok, upload} <- check_mimetype(upload),
+         {:ok, upload} <- create_upload_path(upload),
+         {:ok, upload} <- copy_uploaded_file(upload) do
+      handle_upload_type(upload)
+    end
   end
 
-  def process_upload(upload, user) do
-    with {:ok, image_struct} <- handle_upload_type(upload),
-         {:ok, operations} <- Images.Operations.create(image_struct, upload.cfg, nil, user),
+  def process_upload(image_struct, cfg, user) do
+    with {:ok, operations} <- Images.Operations.create(image_struct, cfg, nil, user),
          {:ok, results} <- Images.Operations.perform(operations, user) do
       results
       |> List.first()
@@ -82,20 +91,6 @@ defmodule Brando.Upload do
 
   def handle_upload_type(%{cfg: %FileConfig{}} = _upload) do
     {:ok, nil}
-  end
-
-  @doc """
-  Create an upload struct and preprocess the filename, check mimetype etc
-  and copy the uploaded file to intended target destination
-  """
-  def preprocess_upload(meta, upload_entry, cfg) do
-    with {:ok, upload} <- create_upload_struct(meta, upload_entry, cfg),
-         {:ok, upload} <- get_valid_filename(upload),
-         {:ok, upload} <- ensure_correct_ext(upload),
-         {:ok, upload} <- check_mimetype(upload),
-         {:ok, upload} <- create_upload_path(upload) do
-      copy_uploaded_file(upload)
-    end
   end
 
   @doc """

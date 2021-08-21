@@ -501,7 +501,7 @@ defmodule Brando.Query do
     callback_block = callback_block || @default_callback
 
     quote generated: true do
-      @spec unquote(:"create_#{singular_schema}")(map, Brando.Users.User.t() | :system) ::
+      @spec unquote(:"create_#{singular_schema}")(map, map | :system) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
       def unquote(:"create_#{singular_schema}")(params, user, opts \\ [])
 

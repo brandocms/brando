@@ -34,11 +34,14 @@ defmodule Brando.Villain.Module do
     attribute :help_text, :text, required: true
     attribute :class, :string, required: true
     attribute :code, :text, required: true
-    attribute :refs, {:array, :map}, required: true
     attribute :vars, :map
     attribute :svg, :text
     attribute :multi, :boolean
     attribute :wrapper, :text
+  end
+
+  relations do
+    relation :refs, :embeds_many, module: __MODULE__.Ref, on_replace: :delete
   end
 
   listings do
@@ -66,7 +69,7 @@ defmodule Brando.Villain.Module do
         <a
           data-phx-link="redirect"
           data-phx-link-state="push"
-          href="/admin/pages/update/{{ entry.id }}"
+          href="/admin/config/modules/update/{{ entry.id }}"
           class="entry-link">
           {{ entry.name }}
         </a>
