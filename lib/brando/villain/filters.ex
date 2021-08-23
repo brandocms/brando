@@ -32,6 +32,18 @@ defmodule Brando.Villain.Filters do
     |> Timex.format!(format, :strftime)
   end
 
+  # {{ entry.inserted_at | date:"%A","nb_NO" }}
+  def date(value, format, locale, _) do
+    Calendar.strftime(value, format,
+      month_names: fn month ->
+        get_month_name(month, locale)
+      end,
+      day_of_week_names: fn day ->
+        get_day_name(day, locale)
+      end
+    )
+  end
+
   def humanize(value, _) do
     value
     |> String.replace(["-", "_"], " ")
