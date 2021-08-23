@@ -26,6 +26,7 @@ defmodule Brando.Upload do
   import Brando.Utils
 
   alias Brando.Images
+  alias Brando.Images.Focal
   alias Brando.Images.Image
   alias Brando.Type.ImageConfig
   alias Brando.Type.FileConfig
@@ -79,7 +80,7 @@ defmodule Brando.Upload do
            width: width,
            height: height,
            dominant_color: dominant_color,
-           focal: %{x: 50, y: 50},
+           focal: %Focal{x: 50, y: 50},
            sizes: %{}
          }}
 

@@ -29,7 +29,6 @@ defmodule Brando.Images.Image do
   end
 
   relations do
-    # , on_replace: :delete
     relation :focal, :embeds_one, module: Focal
   end
 

@@ -4,6 +4,7 @@ defmodule Brando.Images.Processing do
   alias Brando.Image
   alias Brando.ImageSeries
   alias Brando.Images
+  alias Brando.Images.Focal
   alias Brando.Images.Operations
   alias BrandoAdmin.Progress
   alias Brando.Upload
@@ -18,7 +19,7 @@ defmodule Brando.Images.Processing do
   @type upload :: Upload.t()
   @type user :: User.t()
 
-  @default_focal %{x: 50, y: 50}
+  @default_focal %Focal{x: 50, y: 50}
 
   @doc """
   Create an image struct from upload, cfg and extra info

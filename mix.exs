@@ -32,8 +32,8 @@ defmodule Brando.Mixfile do
       # {:phoenix_html, "~> 2.6"},
       {:phoenix_ecto, "~> 4.0"},
       {:postgrex, "~> 0.14"},
-      {:ecto, "~> 3.5"},
-      {:ecto_sql, "~> 3.5"},
+      {:ecto, "~> 3.7"},
+      {:ecto_sql, "~> 3.7"},
 
       # liveview
       {:phoenix_live_view, "~> 0.16"},

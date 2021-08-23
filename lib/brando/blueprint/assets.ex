@@ -153,9 +153,22 @@ defmodule Brando.Blueprint.Assets do
         changeset,
         _user
       ) do
+    require Logger
+    Logger.error("==> cast_asset #{inspect(name)}")
+    Logger.error(inspect(Map.get(changeset.params, to_string(name))))
+
     case Map.get(changeset.params, to_string(name)) do
-      "" -> put_embed(changeset, name, [])
-      _ -> cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
+      nil ->
+        Logger.error("==> gallery: params are nil, so ignoring!?")
+        changeset
+
+      "" ->
+        Logger.error("==> gallery: params are \"\", so putting put_embed []")
+        put_embed(changeset, name, [])
+
+      _ ->
+        Logger.error("==> gallery: params are there, so cast_embed")
+        cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
     end
   end
 

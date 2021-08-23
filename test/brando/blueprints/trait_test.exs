@@ -85,14 +85,14 @@ defmodule Brando.Blueprint.TraitTest do
     test "adds language field" do
       assert :language in Brando.TraitTest.Project.__schema__(:fields)
 
-      assert Brando.TraitTest.Project.__changeset__()[:language] ==
-               {:parameterized, Ecto.Enum,
-                %{
-                  on_dump: %{en: "en", no: "no"},
-                  on_load: %{"en" => :en, "no" => :no},
-                  values: [:no, :en],
-                  type: :string
-                }}
+      {:parameterized, Ecto.Enum,
+       %{
+         on_cast: %{"en" => :en, "no" => :no},
+         on_load: %{"en" => :en, "no" => :no},
+         on_dump: %{en: "en", no: "no"},
+         type: :string,
+         mappings: [no: "no", en: "en"]
+       }}
     end
   end
 
