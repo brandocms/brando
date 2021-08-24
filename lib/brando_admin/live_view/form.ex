@@ -103,9 +103,11 @@ defmodule BrandoAdmin.LiveView.Form do
         singular = schema.__naming__.singular
         context = schema.__modules__.context
 
-        case apply(context, :"update_#{singular}", [changeset, user]) do
+        mutation_type = (Ecto.Changeset.get_field(changeset, :id) && "update") || "create"
+
+        case apply(context, :"#{mutation_type}_#{singular}", [changeset, user]) do
           {:ok, _} ->
-            Toast.send_delayed("#{String.capitalize(singular)} updated")
+            Toast.send_delayed("#{String.capitalize(singular)} #{mutation_type}d")
             {:halt, push_redirect(socket, to: Brando.routes().live_path(socket, list_view))}
 
           {:error, %Ecto.Changeset{} = changeset} ->

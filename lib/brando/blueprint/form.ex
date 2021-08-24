@@ -5,6 +5,7 @@ defmodule Brando.Blueprint.Form do
   import Brando.Gettext
 
   defstruct name: :default,
+            default_params: %{},
             tabs: []
 
   defmacro forms(do: block) do
@@ -20,15 +21,37 @@ defmodule Brando.Blueprint.Form do
     end
   end
 
+  @doc """
+
+  ## Default params
+
+  You can supply a `default_params` option if you want the form to be
+  prepopulated with your own defaults when creating a new entry:
+
+      form default_params: %{status: :draft} do
+        # ...
+      end
+
+  """
+  defmacro form(name, opts, do: block) when is_list(opts) do
+    form(__CALLER__, name, opts, block)
+  end
+
+  defmacro form(opts, do: block) when is_list(opts) do
+    form(__CALLER__, :default, opts, block)
+  end
+
   defmacro form(name, do: block) do
-    form(__CALLER__, name, block)
+    form(__CALLER__, name, [], block)
   end
 
   defmacro form(do: block) do
-    form(__CALLER__, :default, block)
+    form(__CALLER__, :default, [], block)
   end
 
-  defp form(_caller, name, block) do
+  defp form(caller, name, opts, block) do
+    default_params = Keyword.get(opts, :default_params, %{})
+
     quote generated: true, location: :keep do
       var!(b_fieldset) = []
       var!(b_subform) = []
@@ -38,9 +61,12 @@ defmodule Brando.Blueprint.Form do
 
       unquote(block)
 
+      default_params = unquote(Macro.escape(default_params))
+
       named_form = %Brando.Blueprint.Form{
         name: unquote(name),
-        tabs: Enum.reverse(var!(b_form))
+        tabs: Enum.reverse(var!(b_form)),
+        default_params: default_params
       }
 
       Module.put_attribute(__MODULE__, :forms, named_form)
