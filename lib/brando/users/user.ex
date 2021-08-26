@@ -138,12 +138,20 @@ defmodule Brando.Users.User do
 
   listings do
     listing do
-      # listing_query %{filter: %{active: false}}
       listing_field :avatar, :image, columns: 2
 
       listing_filters([
         [label: gettext("Name"), filter: "name"],
         [label: gettext("Email"), filter: "email"]
+      ])
+
+      listing_actions([
+        [label: gettext("Edit user"), event: "edit_entry"],
+        [
+          label: gettext("Disable user"),
+          event: "disable_user",
+          confirm: gettext("Are you sure?")
+        ]
       ])
 
       listing_template """
@@ -157,7 +165,7 @@ defmodule Brando.Users.User do
                        <small>{{ entry.email }}</small><br>
                        <div class="badge">{{ entry.role }}</div>
                        """,
-                       columns: 7
+                       columns: 13
     end
   end
 

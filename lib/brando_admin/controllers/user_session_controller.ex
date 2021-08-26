@@ -6,7 +6,7 @@ defmodule BrandoAdmin.UserSessionController do
 
   def new(conn, _params) do
     conn
-    |> put_root_layout(false)
+    |> put_root_layout(:auth)
     |> render("new.html", error_message: nil)
   end
 
@@ -14,7 +14,10 @@ defmodule BrandoAdmin.UserSessionController do
     with {:ok, user} <- Users.get_user(%{matches: %{email: email, active: true}}) do
       UserAuth.log_in_user(conn, user, user_params)
     else
-      _ -> render(conn, "new.html", error_message: "Invalid email or password")
+      _ ->
+        conn
+        |> put_root_layout(:auth)
+        |> render("new.html", error_message: "Invalid email or password")
     end
   end
 

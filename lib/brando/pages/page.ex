@@ -88,29 +88,6 @@ defmodule Brando.Pages.Page do
   {% endif %}
   """
 
-  meta_schema do
-    meta_field ["description", "og:description"], [:meta_description]
-    meta_field ["title", "og:title"], &fallback(&1, [:meta_title, :title])
-    meta_field "og:image", [:meta_image]
-    meta_field "og:locale", [:language], &encode_locale/1
-  end
-
-  json_ld_schema JSONLD.Schema.Article do
-    json_ld_field :author, {:references, :identity}
-    json_ld_field :copyrightHolder, {:references, :identity}
-    json_ld_field :copyrightYear, :string, [:inserted_at, :year]
-    json_ld_field :creator, {:references, :identity}
-    json_ld_field :dateModified, :string, [:updated_at], &JSONLD.to_datetime/1
-    json_ld_field :datePublished, :string, [:inserted_at], &JSONLD.to_datetime/1
-    json_ld_field :description, :string, [:meta_description]
-    json_ld_field :headline, :string, [:title]
-    json_ld_field :inLanguage, :string, [:language]
-    json_ld_field :mainEntityOfPage, :string, [:__meta__, :current_url]
-    json_ld_field :name, :string, [:title]
-    json_ld_field :publisher, {:references, :identity}
-    json_ld_field :url, :string, [:__meta__, :current_url]
-  end
-
   listings do
     listing do
       listing_query %{
@@ -130,7 +107,9 @@ defmodule Brando.Pages.Page do
           event: "delete_entry",
           confirm: gettext("Are you sure?")
         ],
-        [label: gettext("Duplicate page"), event: "duplicate_entry"]
+        [label: gettext("Duplicate page"), event: "duplicate_entry"],
+        [label: gettext("Create subpage"), event: "create_subpage"],
+        [label: gettext("Create section"), event: "create_section"]
       ])
 
       listing_selection_actions([
@@ -192,6 +171,29 @@ defmodule Brando.Pages.Page do
         end
       end
     end
+  end
+
+  meta_schema do
+    meta_field ["description", "og:description"], [:meta_description]
+    meta_field ["title", "og:title"], &fallback(&1, [:meta_title, :title])
+    meta_field "og:image", [:meta_image]
+    meta_field "og:locale", [:language], &encode_locale/1
+  end
+
+  json_ld_schema JSONLD.Schema.Article do
+    json_ld_field :author, {:references, :identity}
+    json_ld_field :copyrightHolder, {:references, :identity}
+    json_ld_field :copyrightYear, :string, [:inserted_at, :year]
+    json_ld_field :creator, {:references, :identity}
+    json_ld_field :dateModified, :string, [:updated_at], &JSONLD.to_datetime/1
+    json_ld_field :datePublished, :string, [:inserted_at], &JSONLD.to_datetime/1
+    json_ld_field :description, :string, [:meta_description]
+    json_ld_field :headline, :string, [:title]
+    json_ld_field :inLanguage, :string, [:language]
+    json_ld_field :mainEntityOfPage, :string, [:__meta__, :current_url]
+    json_ld_field :name, :string, [:title]
+    json_ld_field :publisher, {:references, :identity}
+    json_ld_field :url, :string, [:__meta__, :current_url]
   end
 
   def get_templates(_, _) do
