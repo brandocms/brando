@@ -173,6 +173,14 @@ defmodule Brando.Villain.Filters do
     schema.__absolute_url__(entry)
   end
 
+  def schema(%{__struct__: schema}, _) do
+    to_string(schema)
+  end
+
+  def schema(_, _) do
+    nil
+  end
+
   @doc """
   Get src of image
   """
