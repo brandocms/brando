@@ -6,7 +6,8 @@ defmodule Brando.Blueprint.Form do
 
   defstruct name: :default,
             default_params: %{},
-            tabs: []
+            tabs: [],
+            redirect_on_save: nil
 
   defmacro forms(do: block) do
     forms(__CALLER__, block)
@@ -32,6 +33,10 @@ defmodule Brando.Blueprint.Form do
         # ...
       end
 
+  ## Redirect after save
+
+  By default, we will redirect to the List view of your blueprint. You
+  can override this by using `redirect_on_save/1`
   """
   defmacro form(name, opts, do: block) when is_list(opts) do
     form(__CALLER__, name, opts, block)
@@ -49,7 +54,7 @@ defmodule Brando.Blueprint.Form do
     form(__CALLER__, :default, [], block)
   end
 
-  defp form(caller, name, opts, block) do
+  defp form(_caller, name, opts, block) do
     default_params = Keyword.get(opts, :default_params, %{})
 
     quote generated: true, location: :keep do
@@ -57,6 +62,7 @@ defmodule Brando.Blueprint.Form do
       var!(b_subform) = []
       var!(b_tab) = []
       var!(b_form) = []
+      var!(b_redirect_on_save) = nil
       var!(b_form_ctx) = :form
 
       unquote(block)
@@ -66,7 +72,8 @@ defmodule Brando.Blueprint.Form do
       named_form = %Brando.Blueprint.Form{
         name: unquote(name),
         tabs: Enum.reverse(var!(b_form)),
-        default_params: default_params
+        default_params: default_params,
+        redirect_on_save: var!(b_redirect_on_save)
       }
 
       Module.put_attribute(__MODULE__, :forms, named_form)
@@ -75,6 +82,63 @@ defmodule Brando.Blueprint.Form do
       _ = var!(b_fieldset)
       _ = var!(b_tab)
       _ = var!(b_form_ctx)
+    end
+  end
+
+  @doc """
+  Where to redirect after a successful save
+
+  Accepts a 2-arity function as `target`. The function should return a path/url.
+
+  ## Example
+
+      form do
+        redirect_on_save &__MODULE__.my_custom_redirect/2
+      end
+
+      def my_custom_redirect(socket, _entry) do
+        Brando.routes().live_path(socket, BrandoAdmin.PageListView)
+      end
+  """
+  defmacro redirect_on_save(target) do
+    do_redirect_on_save(target)
+  end
+
+  defp do_redirect_on_save(target) do
+    quote location: :keep do
+      prev_ctx = var!(b_form_ctx)
+
+      unless prev_ctx == :form do
+        raise Brando.Exception.BlueprintError,
+          message: """
+          `redirect_on_save/1` must be nested directly under a form. was: `#{inspect(prev_ctx)}`
+
+          Example:
+
+              form do
+                redirect_on_save "/admin/dashboard"
+              end
+          """
+      end
+
+      unless is_function(unquote(target), 2) do
+        raise Brando.Exception.BlueprintError,
+          message: """
+          `redirect_on_save/1` needs a 2-arity function as parameter
+
+          Example:
+
+              form do
+                redirect_on_save &__MODULE__.my_custom_redirect/2
+              end
+
+              def my_custom_redirect(socket, entry) do
+                # ...
+              end
+          """
+      end
+
+      var!(b_redirect_on_save) = unquote(target)
     end
   end
 
