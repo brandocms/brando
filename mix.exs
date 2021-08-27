@@ -28,8 +28,7 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "~> 1.4"},
-      # {:phoenix_html, "~> 2.6"},
+      {:phoenix, "~> 1.6.0-rc.0", override: true},
       {:phoenix_ecto, "~> 4.0"},
       {:postgrex, "~> 0.14"},
       {:ecto, "~> 3.7"},
@@ -37,7 +36,7 @@ defmodule Brando.Mixfile do
 
       # liveview
       {:phoenix_live_view, "~> 0.16"},
-      {:phoenix_html, "~> 3.0.0", override: true},
+      {:phoenix_html, "~> 3.0", override: true},
       {:surface, "~> 0.5"},
       {:floki, ">= 0.27.0", only: :test},
 
