@@ -10,6 +10,8 @@ defmodule BrandoAdmin.LiveView.Listing do
   import Phoenix.LiveView
   alias BrandoAdmin.Toast
 
+  @callback query_params() :: map
+
   defmacro __using__(opts) do
     schema = Keyword.fetch!(opts, :schema)
 
@@ -23,7 +25,7 @@ defmodule BrandoAdmin.LiveView.Listing do
       on_mount({__MODULE__, :hooks})
 
       def hooks(params, assigns, socket) do
-        BrandoAdmin.LiveView.Listing.hooks(params, assigns, socket, unquote(schema))
+        BrandoAdmin.LiveView.Listing.hooks(params, assigns, socket, unquote(schema), __MODULE__)
       end
 
       # we need the uri on first load, so inject for now
@@ -35,10 +37,13 @@ defmodule BrandoAdmin.LiveView.Listing do
          |> assign(:params, params)
          |> assign(:uri, uri)}
       end
+
+      def query_params(), do: %{}
+      defoverridable query_params: 0
     end
   end
 
-  def hooks(_params, %{"user_token" => token}, socket, schema) do
+  def hooks(_params, %{"user_token" => token}, socket, schema, caller) do
     subscribe_listing("content_listing_#{schema}_default")
 
     if Phoenix.LiveView.connected?(socket) do
@@ -51,6 +56,7 @@ defmodule BrandoAdmin.LiveView.Listing do
       |> set_admin_locale()
       |> assign_schema(schema)
       |> assign_blueprint(schema)
+      # |> assign_entries(schema, caller)
       |> attach_hooks(schema)
 
     {:cont, socket}
@@ -129,6 +135,10 @@ defmodule BrandoAdmin.LiveView.Listing do
       Brando.Users.get_user_by_session_token(token)
     end)
   end
+
+  # defp assign_entries(socket, schema, caller) do
+
+  # end
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do
     current_user.language
