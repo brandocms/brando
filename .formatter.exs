@@ -82,6 +82,7 @@ locals_without_parens = [
   listing_filters: 1,
   listing_actions: 1,
   listing_selection_actions: 1,
+  listing_child_listing: 1,
   menu_item: 1,
   menu_item: 2,
   menu_subitem: 2
