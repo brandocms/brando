@@ -9,6 +9,7 @@ defmodule Brando.Query.Mutations do
   alias Brando.Revisions
   alias Brando.Schema
   alias Brando.Trait
+  alias Brando.Utils
 
   def create(module, params, user, callback_block, custom_changeset) do
     changeset_fun = (custom_changeset && custom_changeset) || (&module.changeset/3)
@@ -94,7 +95,7 @@ defmodule Brando.Query.Mutations do
           |> maybe_change_fields(opts)
           |> maybe_delete_fields(opts)
           |> maybe_set_status()
-          |> Map.from_struct()
+          |> Utils.map_from_struct()
           |> drop_id()
 
         apply(context, :"create_#{name}", [params, user])
