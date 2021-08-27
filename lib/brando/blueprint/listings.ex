@@ -10,7 +10,8 @@ defmodule Brando.Blueprint.Listings do
               fields: [],
               filters: [],
               actions: [],
-              selection_actions: []
+              selection_actions: [],
+              child_listing: nil
   end
 
   defmodule Field do
@@ -52,6 +53,7 @@ defmodule Brando.Blueprint.Listings do
       var!(brando_listing_filters) = []
       var!(brando_listing_actions) = []
       var!(brando_listing_selection_actions) = []
+      var!(brando_listing_child_listing) = nil
       unquote(block)
 
       named_listing =
@@ -62,7 +64,8 @@ defmodule Brando.Blueprint.Listings do
           Enum.reverse(var!(brando_listing_fields)),
           var!(brando_listing_filters),
           var!(brando_listing_actions),
-          var!(brando_listing_selection_actions)
+          var!(brando_listing_selection_actions),
+          var!(brando_listing_child_listing)
         )
 
       Module.put_attribute(__MODULE__, :listings, named_listing)
@@ -92,6 +95,14 @@ defmodule Brando.Blueprint.Listings do
           location: :keep,
           bind_quoted: [query: query] do
       var!(brando_listing_query) = query
+    end
+  end
+
+  defmacro listing_child_listing(listing_name) do
+    quote generated: true,
+          location: :keep,
+          bind_quoted: [listing_name: listing_name] do
+      var!(brando_listing_child_listing) = listing_name
     end
   end
 
@@ -127,7 +138,16 @@ defmodule Brando.Blueprint.Listings do
     end
   end
 
-  def build_listing(name, query, label, fields, filters, actions, selection_actions) do
+  def build_listing(
+        name,
+        query,
+        label,
+        fields,
+        filters,
+        actions,
+        selection_actions,
+        child_listing
+      ) do
     %__MODULE__.Listing{
       name: name,
       label: label,
@@ -135,7 +155,8 @@ defmodule Brando.Blueprint.Listings do
       fields: fields,
       filters: filters,
       actions: actions,
-      selection_actions: selection_actions
+      selection_actions: selection_actions,
+      child_listing: child_listing
     }
   end
 
