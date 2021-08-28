@@ -10,8 +10,6 @@ defmodule BrandoAdmin.LiveView.Listing do
   import Phoenix.LiveView
   alias BrandoAdmin.Toast
 
-  @callback query_params() :: map
-
   defmacro __using__(opts) do
     schema = Keyword.fetch!(opts, :schema)
 
@@ -37,9 +35,6 @@ defmodule BrandoAdmin.LiveView.Listing do
          |> assign(:params, params)
          |> assign(:uri, uri)}
       end
-
-      def query_params(), do: %{}
-      defoverridable query_params: 0
     end
   end
 
@@ -56,7 +51,6 @@ defmodule BrandoAdmin.LiveView.Listing do
       |> set_admin_locale()
       |> assign_schema(schema)
       |> assign_blueprint(schema)
-      # |> assign_entries(schema, caller)
       |> attach_hooks(schema)
 
     {:cont, socket}
@@ -135,10 +129,6 @@ defmodule BrandoAdmin.LiveView.Listing do
       Brando.Users.get_user_by_session_token(token)
     end)
   end
-
-  # defp assign_entries(socket, schema, caller) do
-
-  # end
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do
     current_user.language
