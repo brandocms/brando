@@ -6,20 +6,9 @@ defmodule BrandoAdmin.LiveView.Form do
 
       use BrandoAdmin.LiveView.Form, schema: MyApp.Projects.Project
 
-
-      ## Custom query params
-
-  You can define a callback in your form view that sets custom query params.
-
-      def query_params(id), do: %{matches: %{id: id}}
-
-  The above example is the default call.
-
   """
   import Phoenix.LiveView
   alias BrandoAdmin.Toast
-
-  @callback query_params(id :: integer | binary) :: map
 
   defmacro __using__(opts) do
     schema = Keyword.fetch!(opts, :schema)
@@ -35,7 +24,7 @@ defmodule BrandoAdmin.LiveView.Form do
       on_mount({__MODULE__, :hooks})
 
       def hooks(params, assigns, socket) do
-        BrandoAdmin.LiveView.Form.hooks(params, assigns, socket, unquote(schema), __MODULE__)
+        BrandoAdmin.LiveView.Form.hooks(params, assigns, socket, unquote(schema))
       end
 
       # we need the uri on first load, so inject for now
@@ -47,20 +36,17 @@ defmodule BrandoAdmin.LiveView.Form do
          |> assign(:params, params)
          |> assign(:uri, uri)}
       end
-
-      def query_params(id), do: %{matches: %{id: id}}
-      defoverridable query_params: 1
     end
   end
 
   # with entry_id means it's an update
-  def hooks(%{"entry_id" => entry_id}, %{"user_token" => token}, socket, schema, caller) do
+  def hooks(%{"entry_id" => entry_id}, %{"user_token" => token} = assigns, socket, schema) do
     socket =
       socket
       |> Surface.init()
       |> assign_action(:update)
       |> assign_schema(schema)
-      |> assign_entry(schema, entry_id, caller)
+      |> assign_entry_id(entry_id)
       |> assign_current_user(token)
       |> set_admin_locale()
       |> attach_hooks(schema)
@@ -156,10 +142,7 @@ defmodule BrandoAdmin.LiveView.Form do
     end)
   end
 
-  defp assign_entry(socket, schema, entry_id, caller) do
-    query_params = apply(caller, :query_params, [entry_id])
-    singular = schema.__naming__.singular
-    context = schema.__modules__.context
-    assign_new(socket, :entry, fn -> apply(context, :"get_#{singular}!", [query_params]) end)
+  defp assign_entry_id(socket, entry_id) do
+    assign(socket, :entry_id, entry_id)
   end
 end

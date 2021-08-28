@@ -5,6 +5,7 @@ defmodule Brando.Blueprint.Form do
   import Brando.Gettext
 
   defstruct name: :default,
+            query: &__MODULE__.default_query/1,
             default_params: %{},
             tabs: [],
             redirect_on_save: nil
@@ -63,6 +64,7 @@ defmodule Brando.Blueprint.Form do
       var!(b_tab) = []
       var!(b_form) = []
       var!(b_redirect_on_save) = nil
+      var!(b_query) = &Brando.Blueprint.Form.default_query/1
       var!(b_form_ctx) = :form
 
       unquote(block)
@@ -73,7 +75,8 @@ defmodule Brando.Blueprint.Form do
         name: unquote(name),
         tabs: Enum.reverse(var!(b_form)),
         default_params: default_params,
-        redirect_on_save: var!(b_redirect_on_save)
+        redirect_on_save: var!(b_redirect_on_save),
+        query: var!(b_query)
       }
 
       Module.put_attribute(__MODULE__, :forms, named_form)
@@ -139,6 +142,64 @@ defmodule Brando.Blueprint.Form do
       end
 
       var!(b_redirect_on_save) = unquote(target)
+    end
+  end
+
+  @doc """
+  Set your form's entry query
+
+  Default query is `%{matches: %{id: id}}`, but if you for instance need some preloads:
+
+      forms do
+        form do
+          form_query &__MODULE__.query_with_preloads/1
+        end
+      end
+
+      def query_with_preloads(id) do
+        %{matches: %{id: id}, preload: [:illustrators]}
+      end
+
+  """
+  defmacro form_query(query_fun) do
+    do_form_query(query_fun)
+  end
+
+  defp do_form_query(query_fun) do
+    quote location: :keep do
+      prev_ctx = var!(b_form_ctx)
+
+      unless prev_ctx == :form do
+        raise Brando.Exception.BlueprintError,
+          message: """
+          `form_query/1` must be nested directly under a form. was: `#{inspect(prev_ctx)}`
+
+          Example:
+
+              form do
+                form_query &__MODULE__.form_query/1
+              end
+          """
+      end
+
+      unless is_function(unquote(query_fun), 1) do
+        raise Brando.Exception.BlueprintError,
+          message: """
+          `form_query/1` needs a 1-arity function as parameter
+
+          Example:
+
+              form do
+                form_query &__MODULE__.form_query/1
+              end
+
+              def form_query(id) do
+                %{matches: %{id: id}, preload: [:clients]}
+              end
+          """
+      end
+
+      var!(b_query) = unquote(query_fun)
     end
   end
 
@@ -379,6 +440,8 @@ defmodule Brando.Blueprint.Form do
     |> Enum.filter(&is_binary(&1))
     |> List.first()
   end
+
+  def default_query(id), do: %{matches: %{id: id}}
 
   defp find_field(inputs, field) do
     Enum.find(inputs, fn
