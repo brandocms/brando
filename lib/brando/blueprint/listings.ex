@@ -1,6 +1,20 @@
 defmodule Brando.Blueprint.Listings do
   @moduledoc """
-  ### Listings
+  # Listings
+
+  ### Custom query params
+
+  To set preloads or ordering for your listing you can call
+
+      listings do
+        listing do
+          listing_query %{preload: [fragments: :creator], order: [{:asc, :sequence}]}
+          # ...
+        end
+      end
+
+  This will merge in your listing_query as the starting point for your queries
+
   """
 
   defmodule Listing do
