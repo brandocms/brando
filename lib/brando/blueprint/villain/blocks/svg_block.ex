@@ -1,14 +1,12 @@
-defmodule Brando.Blueprint.Villain.Blocks.HeaderBlock do
+defmodule Brando.Blueprint.Villain.Blocks.SvgBlock do
   defmodule Data do
     use Brando.Blueprint,
       application: "Brando",
       domain: "Villain",
-      schema: "HeaderBlockData",
-      singular: "header_block_data",
-      plural: "header_block_datas",
+      schema: "SvgBlockData",
+      singular: "svg_block_data",
+      plural: "svg_block_datas",
       gettext_module: Brando.Gettext
-
-    alias Brando.Blueprint.Villain.Blocks
 
     @primary_key false
     data_layer :embedded
@@ -16,12 +14,10 @@ defmodule Brando.Blueprint.Villain.Blocks.HeaderBlock do
 
     attributes do
       attribute :class, :text
-      attribute :text, :text
-      attribute :level, :integer
-      attribute :placeholder, :text
+      attribute :code, :text
     end
   end
 
   use Brando.Blueprint.Villain.Block,
-    type: "header"
+    type: "svg"
 end

@@ -763,6 +763,13 @@ defmodule Brando.Utils do
     end
   end
 
+  def generate_uid do
+    Base62.encode(:erlang.system_time(:nanosecond)) <>
+      (:crypto.strong_rand_bytes(8)
+       |> :binary.decode_unsigned()
+       |> Base62.encode())
+  end
+
   @doc """
   Generates a secure cookie based on `:crypto.strong_rand_bytes/1`.
   """

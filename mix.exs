@@ -43,6 +43,7 @@ defmodule Brando.Mixfile do
       # hashing/passwords
       {:bcrypt_elixir, "~> 2.0"},
       {:comeonin, "~> 5.0"},
+      {:base62, "~> 1.2"},
 
       # tokens/auth
       {:guardian, "~> 2.0"},

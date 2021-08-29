@@ -16,14 +16,24 @@ defmodule Brando.Blueprint.Villain.Block do
         field :type, :string
         field :hidden, :boolean, default: false
         field :marked_as_deleted, :boolean, default: false, virtual: true
-        embeds_one :data, __MODULE__.Data
+        embeds_one :data, __MODULE__.Data, on_replace: :delete
       end
 
       def changeset(struct, params \\ %{}) do
         struct
         |> cast(params, ~w(uid type hidden marked_as_deleted)a)
         |> cast_embed(:data)
+        |> IO.inspect(label: "before ensure")
+        |> ensure_uid()
+        |> IO.inspect(label: "after ensure")
         |> maybe_mark_for_deletion()
+      end
+
+      defp ensure_uid(changeset) do
+        case get_field(changeset, :uid) do
+          nil -> put_change(changeset, :uid, Brando.Utils.generate_uid())
+          uid -> changeset
+        end
       end
 
       defp maybe_mark_for_deletion(%{changes: %{marked_as_deleted: true}} = changeset) do

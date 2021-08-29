@@ -1,23 +1,44 @@
 defmodule Brando.Blueprint.Villain.Blocks.PictureBlock do
-  alias Brando.Blueprint.Villain.Blocks
+  defmodule Data do
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "Villain",
+      schema: "PictureBlockData",
+      singular: "picture_block_data",
+      plural: "picture_block_datas",
+      gettext_module: Brando.Gettext
 
-  use Ecto.Schema
-  import Ecto.Changeset
+    alias Brando.Blueprint.Villain.Blocks
+    alias Brando.Images.Focal
 
-  @primary_key false
+    @primary_key false
+    data_layer :embedded
+    identifier "{{ entry.type }}"
 
-  embedded_schema do
-    field :uid, :string
-    field :type, :string
-    field :hidden, :boolean, default: false
-    field :marked_as_deleted, :boolean, default: false, virtual: true
+    attributes do
+      attribute :picture_class, :text
+      attribute :img_class, :text
+      attribute :link, :text
+      attribute :srcset, :text
+      attribute :media_queries, :text
 
-    embeds_one :data, Brando.Images.Image
+      attribute :title, :text
+      attribute :credits, :text
+      attribute :alt, :text
+      attribute :path, :text
+      attribute :width, :integer
+      attribute :height, :integer
+      attribute :sizes, :map
+      attribute :cdn, :boolean, default: false
+      attribute :webp, :boolean, default: false
+      attribute :dominant_color, :text
+    end
+
+    relations do
+      relation :focal, :embeds_one, module: Focal
+    end
   end
 
-  def changeset(struct, params \\ %{}) do
-    struct
-    |> cast(params, ~w(uid type hidden marked_as_deleted)a)
-    |> cast_embed(:data)
-  end
+  use Brando.Blueprint.Villain.Block,
+    type: "picture"
 end

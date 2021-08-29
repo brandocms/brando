@@ -1,17 +1,19 @@
 defmodule Brando.Blueprint.Villain.Blocks.HtmlBlock do
   defmodule Data do
-    use Ecto.Schema
-    import Ecto.Changeset
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "Villain",
+      schema: "SvgBlockData",
+      singular: "svg_block_data",
+      plural: "svg_block_datas",
+      gettext_module: Brando.Gettext
 
     @primary_key false
+    data_layer :embedded
+    identifier "{{ entry.type }}"
 
-    embedded_schema do
-      field :text, :string
-    end
-
-    def changeset(struct, params \\ %{}) do
-      struct
-      |> cast(params, ~w(text)a)
+    attributes do
+      attribute :text, :text
     end
   end
 

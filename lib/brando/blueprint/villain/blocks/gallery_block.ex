@@ -1,22 +1,32 @@
 defmodule Brando.Blueprint.Villain.Blocks.GalleryBlock do
-  alias Brando.Blueprint.Villain.Blocks
+  defmodule Data do
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "Villain",
+      schema: "GalleryBlockData",
+      singular: "gallery_block_data",
+      plural: "gallery_block_datas",
+      gettext_module: Brando.Gettext
 
-  use Ecto.Schema
+    alias Brando.Blueprint.Villain.Blocks
+    alias Brando.Images.Focal
 
-  @primary_key false
+    @primary_key false
+    data_layer :embedded
+    identifier "{{ entry.type }}"
 
-  embedded_schema do
-    field :uid, :string
-    field :type, :string
-    field :hidden, :boolean, default: false
-    field :marked_as_deleted, :boolean, default: false, virtual: true
+    attributes do
+      attribute :class, :string
+      attribute :series_slug, :string, default: "post"
+      attribute :lightbox, :boolean, default: false
+      attribute :placeholder, :string, default: "dominant_color"
+    end
 
-    embeds_one :data, Data, primary_key: false do
-      embeds_many :images, Brando.Images.Image
-      field :class, :string
-      field :series_slug, :string, default: "post"
-      field :lightbox, :boolean, default: false
-      field :placeholder, :string, default: "dominant_color"
+    relations do
+      relation :images, :embeds_many, module: Blocks.PictureBlockData
     end
   end
+
+  use Brando.Blueprint.Villain.Block,
+    type: "gallery"
 end

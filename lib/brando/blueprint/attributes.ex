@@ -31,10 +31,12 @@ defmodule Brando.Blueprint.Attributes do
   """
 
   alias Brando.Blueprint.Attribute
-  alias Brando.Blueprint.Relation
 
   @valid_attributes [
     {:array, :map},
+    {:array, :id},
+    {:array, :integer},
+    {:array, :string},
     :array,
     :boolean,
     :date,
@@ -44,6 +46,7 @@ defmodule Brando.Blueprint.Attributes do
     :decimal,
     :file,
     :float,
+    :id,
     :integer,
     :language,
     :map,

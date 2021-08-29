@@ -34,7 +34,6 @@ defmodule Brando.Villain.Module do
     attribute :help_text, :text, required: true
     attribute :class, :string, required: true
     attribute :code, :text, required: true
-    attribute :vars, :map
     attribute :svg, :text
     attribute :multi, :boolean
     attribute :wrapper, :text
@@ -42,12 +41,12 @@ defmodule Brando.Villain.Module do
 
   relations do
     relation :refs, :embeds_many, module: __MODULE__.Ref, on_replace: :delete
+    relation :vars, :embeds_many, module: __MODULE__.Var, on_replace: :delete
   end
 
   listings do
     listing do
       listing_query %{
-        status: :published,
         order: [{:asc, :namespace}, {:asc, :sequence}, {:desc, :inserted_at}]
       }
 
