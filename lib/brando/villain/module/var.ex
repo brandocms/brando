@@ -14,6 +14,7 @@ defmodule Brando.Villain.Module.Var do
     plural: "vars",
     gettext_module: Brando.Gettext
 
+  @primary_key false
   data_layer :embedded
   identifier "{{ entry.name }}"
 

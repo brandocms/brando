@@ -13,7 +13,7 @@ defmodule Brando.Blueprint.Villain.Block do
 
       embedded_schema do
         field :uid, :string
-        field :type, :string
+        field :type, :string, default: unquote(type)
         field :hidden, :boolean, default: false
         field :marked_as_deleted, :boolean, default: false, virtual: true
         embeds_one :data, __MODULE__.Data, on_replace: :delete
@@ -23,9 +23,7 @@ defmodule Brando.Blueprint.Villain.Block do
         struct
         |> cast(params, ~w(uid type hidden marked_as_deleted)a)
         |> cast_embed(:data)
-        |> IO.inspect(label: "before ensure")
         |> ensure_uid()
-        |> IO.inspect(label: "after ensure")
         |> maybe_mark_for_deletion()
       end
 
