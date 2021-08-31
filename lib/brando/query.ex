@@ -620,9 +620,6 @@ defmodule Brando.Query do
             ) ::
               {:ok, any} | {:error, Ecto.Changeset.t()}
       def unquote(:"duplicate_#{singular_schema}")(id, user) do
-        require Logger
-        Logger.error("==> dup #{unquote(singular_schema)}")
-
         Brando.Query.Mutations.duplicate(
           __MODULE__,
           unquote(module),
