@@ -593,19 +593,22 @@ defmodule Brando.Blueprint do
 
         admin_list_view =
           Module.concat([
-            context_module,
+            web_module,
+            @domain,
             "#{String.capitalize(@singular)}ListLive"
           ])
 
         admin_create_view =
           Module.concat([
-            context_module,
+            web_module,
+            @domain,
             "#{String.capitalize(@singular)}CreateLive"
           ])
 
         admin_update_view =
           Module.concat([
-            context_module,
+            web_module,
+            @domain,
             "#{String.capitalize(@singular)}UpdateLive"
           ])
 
