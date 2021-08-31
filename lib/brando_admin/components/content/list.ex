@@ -34,9 +34,7 @@ defmodule BrandoAdmin.Components.Content.List do
   data creator?, :boolean
 
   def mount(socket) do
-    {:ok,
-     socket
-     |> assign(:selected_rows, [])}
+    {:ok, assign(socket, :selected_rows, [])}
   end
 
   def update(%{action: :update_entries} = assigns, socket) do
@@ -54,84 +52,94 @@ defmodule BrandoAdmin.Components.Content.List do
 
   def render(assigns) do
     ~F"""
-    <article class="content-list" data-moonwalk-run="brandoList">
-      {#if @listing.label}
-        <h2>{@listing.label}</h2>
-      {/if}
+    <div class="content-list-wrapper">
+      <article class="content-list" data-moonwalk-run="brandoList">
+        {#if @listing.label}
+          <h2>{@listing.label}</h2>
+        {/if}
 
-      <Tools
-        schema={@schema}
-        listing={@listing}
-        active_filter={@active_filter}
-        list_opts={@list_opts}
-        update_status="update_status"
-        update_filter="update_filter"
-        next_filter_key="next_filter_key"
-        delete_filter="delete_filter" />
-
-      <Entries
-        target={@myself}
-        listing_name={@listing.name}
-        entries={entry <- @entries.entries}>
-        <Row
-          id={"list-row-#{@singular}-#{entry.id}"}
-          entry={entry}
-          sortable?={@sortable?}
-          status?={@status?}
-          creator?={@creator?}
-          listing={@listing}
+        <Tools
           schema={@schema}
-          selected_rows={@selected_rows}
+          listing={@listing}
+          active_filter={@active_filter}
+          list_opts={@list_opts}
+          update_status="update_status"
+          update_filter="update_filter"
+          next_filter_key="next_filter_key"
+          delete_filter="delete_filter" />
+
+        <Entries
           target={@myself}
-          click="select_row" />
-      </Entries>
+          listing_name={@listing.name}
+          entries={entry <- @entries.entries}>
+          <:empty>
+            <div class="empty-list">
+              <figure>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100" height="100"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/></svg>
+              </figure>
+              {gettext("No matching entries found")}
+            </div>
+          </:empty>
+          <Row
+            id={"list-row-#{@singular}-#{entry.id}"}
+            entry={entry}
+            sortable?={@sortable?}
+            status?={@status?}
+            creator?={@creator?}
+            listing={@listing}
+            schema={@schema}
+            selected_rows={@selected_rows}
+            target={@myself}
+            click="select_row" />
+        </Entries>
 
-      <Pagination
-        pagination_meta={@entries.pagination_meta}
-        change_page="change_page" />
-    </article>
+        <Pagination
+          pagination_meta={@entries.pagination_meta}
+          change_page="change_page" />
+      </article>
 
-    <div class={"selected-rows", hidden: Enum.empty?(@selected_rows)}">
-      <div class="clear-selection">
-        <button
-          phx-click="clear_selection"
-          phx-target={@myself}
-          type="button"
-          class="btn-outline-primary inverted">
-          {gettext("Clear selection")}
-        </button>
-      </div>
-      <div class="selection-actions">
-        {gettext("With")}
-        <div class="circle"><span>{Enum.count(@selected_rows)}</span></div>
-        {gettext("selected, perform action")}: →
-        <div
-          id="selected_rows_dropdown"
-          class="circle-dropdown wrapper"
-          phx-hook="Brando.CircleDropdown">
+      <div class={"selected-rows", hidden: Enum.empty?(@selected_rows)}">
+        <div class="clear-selection">
           <button
-            class="circle-dropdown-button"
-            data-testid="circle-dropdown-button"
-            type="button">
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="20" cy="20" r="19.5" fill="#0047FF" class="main-circle inverted"></circle>
-              <line x1="12" y1="12.5" x2="28" y2="12.5" stroke="white" class="inverted"></line>
-              <line x1="18" y1="26.5" x2="28" y2="26.5" stroke="white" class="inverted"></line>
-              <line x1="12" y1="19.5" x2="28" y2="19.5" stroke="white" class="inverted"></line>
-              <circle cx="13.5" cy="26.5" r="1.5" fill="white" class="inverted"></circle>
-            </svg>
+            phx-click="clear_selection"
+            phx-target={@myself}
+            type="button"
+            class="btn-outline-primary inverted">
+            {gettext("Clear selection")}
           </button>
-          <ul data-testid="circle-dropdown-content" class="dropdown-content">
-            {#for action <- @listing.selection_actions}
-              <li>
-                <button
-                  :on-click={action[:event], target: :live_view}
-                  phx-value-ids={Jason.encode!(@selected_rows)}>
-                  {action[:label]}
-                </button>
-              </li>
-            {/for}
-          </ul>
+        </div>
+        <div class="selection-actions">
+          {gettext("With")}
+          <div class="circle"><span>{Enum.count(@selected_rows)}</span></div>
+          {gettext("selected, perform action")}: →
+          <div
+            id="selected_rows_dropdown"
+            class="circle-dropdown wrapper"
+            phx-hook="Brando.CircleDropdown">
+            <button
+              class="circle-dropdown-button"
+              data-testid="circle-dropdown-button"
+              type="button">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="20" cy="20" r="19.5" fill="#0047FF" class="main-circle inverted"></circle>
+                <line x1="12" y1="12.5" x2="28" y2="12.5" stroke="white" class="inverted"></line>
+                <line x1="18" y1="26.5" x2="28" y2="26.5" stroke="white" class="inverted"></line>
+                <line x1="12" y1="19.5" x2="28" y2="19.5" stroke="white" class="inverted"></line>
+                <circle cx="13.5" cy="26.5" r="1.5" fill="white" class="inverted"></circle>
+              </svg>
+            </button>
+            <ul data-testid="circle-dropdown-content" class="dropdown-content">
+              {#for action <- @listing.selection_actions}
+                <li>
+                  <button
+                    :on-click={action[:event], target: :live_view}
+                    phx-value-ids={Jason.encode!(@selected_rows)}>
+                    {action[:label]}
+                  </button>
+                </li>
+              {/for}
+            </ul>
+          </div>
         </div>
       </div>
     </div>
@@ -221,14 +229,11 @@ defmodule BrandoAdmin.Components.Content.List do
   def handle_event("sequenced", params, socket) do
     schema = socket.assigns.schema
     Sequenced.sequence(schema, params)
-    # TODO: refetch here or just reorder our entries?
     Toast.send("Sequence updated")
     {:noreply, assign_entries(socket, socket.assigns)}
   end
 
-  defp select_row(%{assigns: assigns} = socket, id) do
-    selected_rows = Map.get(assigns, :selected_rows, [])
-
+  defp select_row(%{assigns: %{selected_rows: selected_rows}} = socket, id) do
     updated_selected_rows =
       if id in selected_rows do
         List.delete(selected_rows, id)
