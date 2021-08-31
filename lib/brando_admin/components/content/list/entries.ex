@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Content.List.Entries do
 
   @doc "The list of columns defining the Grid"
   slot default, args: [entry: ^entries]
+  slot empty
 
   def render(assigns) do
     ~F"""
@@ -19,6 +20,9 @@ defmodule BrandoAdmin.Components.Content.List.Entries do
       data-sortable-id={"content_listing_#{@listing_name}"}
       data-sortable-handle=".sequence-handle"
       data-sortable-selector=".list-row">
+      {#if Enum.empty?(@entries)}
+        <#slot name="empty" />
+      {/if}
       {#for entry <- @entries}
         {#for {_, index} <- Enum.with_index(@default)}
           <#slot name="default" index={index} :args={entry: entry} />
