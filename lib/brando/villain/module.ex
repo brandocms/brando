@@ -56,6 +56,23 @@ defmodule Brando.Villain.Module do
         [label: gettext("Class"), filter: "class"]
       ])
 
+      listing_actions([
+        [label: gettext("Edit module"), event: "edit_entry"],
+        [
+          label: gettext("Delete module"),
+          event: "delete_entry",
+          confirm: gettext("Are you sure?")
+        ],
+        [label: gettext("Duplicate module"), event: "duplicate_entry"]
+      ])
+
+      listing_template(
+        """
+        <div class="svg">{{ entry.svg }}</div><br>
+        """,
+        columns: 3
+      )
+
       listing_template(
         """
         <div class="badge">{{ entry.namespace }}</div><br>
@@ -75,7 +92,7 @@ defmodule Brando.Villain.Module do
         <br>
         <small>{{ entry.help_text }}</small>
         """,
-        columns: 10
+        columns: 9
       )
     end
   end

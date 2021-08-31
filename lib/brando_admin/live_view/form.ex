@@ -54,7 +54,7 @@ defmodule BrandoAdmin.LiveView.Form do
     {:cont, socket}
   end
 
-  def hooks(_params, %{"user_token" => token}, socket, schema, _caller) do
+  def hooks(_params, %{"user_token" => token}, socket, schema) do
     socket =
       socket
       |> Surface.init()
@@ -96,6 +96,7 @@ defmodule BrandoAdmin.LiveView.Form do
       {:save, changeset, form}, %{assigns: %{current_user: user}} = socket ->
         generated_list_view = schema.__modules__.admin_list_view
 
+        # if redirect_on_save is set in form, use this
         redirect_fn =
           (form.redirect_on_save && form.redirect_on_save) ||
             fn socket, _entry ->

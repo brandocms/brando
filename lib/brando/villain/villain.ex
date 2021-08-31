@@ -317,24 +317,7 @@ defmodule Brando.Villain do
   @spec list_villains :: [module()]
   def list_villains do
     blueprint_impls = Trait.Villain.list_implementations()
-    trait_implementations = Enum.map(blueprint_impls, &{&1, &1.__villain_fields__()})
-
-    {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
-
-    modules = app_modules |> Enum.uniq()
-
-    legacy_villains =
-      modules
-      |> Enum.filter(&(&1 not in blueprint_impls))
-      |> Enum.filter(&({:__villain_fields__, 0} in &1.__info__(:functions)))
-      |> Enum.map(& &1.__villain_fields__())
-      |> Enum.map(fn
-        {_, [{:villain, _, _}]} = legacy -> legacy
-        _ -> nil
-      end)
-      |> Enum.reject(&(&1 == nil))
-
-    trait_implementations ++ legacy_villains
+    Enum.map(blueprint_impls, &{&1, &1.__villain_fields__()})
   end
 
   @doc """
@@ -414,22 +397,6 @@ defmodule Brando.Villain do
     )
   end
 
-  @doc """
-  Duplicate module
-  """
-  def duplicate_module(module_id, user) do
-    module_id = (is_binary(module_id) && String.to_integer(module_id)) || module_id
-    {:ok, module} = get_module(%{matches: %{id: module_id}})
-
-    module =
-      module
-      |> Map.merge(%{name: "#{module.name} copy", class: "#{module.class} copy"})
-      |> Map.delete([:id])
-      |> Map.from_struct()
-
-    create_module(module, user)
-  end
-
   mutation :create, Module
 
   mutation :update, Module do
@@ -441,6 +408,7 @@ defmodule Brando.Villain do
   end
 
   mutation :delete, Module
+  mutation :duplicate, {Module, change_fields: [:name, :class]}
 
   @doc """
   Find module with `id` in `modules`
@@ -454,12 +422,15 @@ defmodule Brando.Villain do
     end
   end
 
-  query(:list, Module, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end)
+  query :list, Module, do: fn query -> from(q in query, where: is_nil(q.deleted_at)) end
 
   filters Module do
     fn
       {:name, name}, query ->
         from(q in query, where: ilike(q.name, ^"%#{name}%"))
+
+      {:class, class}, query ->
+        from(q in query, where: ilike(q.class, ^"%#{class}%"))
 
       {:namespace, namespace}, query ->
         query =

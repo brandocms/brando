@@ -210,7 +210,7 @@ defmodule Brando.Pages.Page do
   end
 
   forms do
-    form do
+    form default_params: %{status: :draft} do
       tab "Content" do
         fieldset size: :full do
           input :status, :status

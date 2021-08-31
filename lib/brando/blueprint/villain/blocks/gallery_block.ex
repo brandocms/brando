@@ -23,7 +23,7 @@ defmodule Brando.Blueprint.Villain.Blocks.GalleryBlock do
     end
 
     relations do
-      relation :images, :embeds_many, module: Blocks.PictureBlockData
+      relation :images, :embeds_many, module: Blocks.PictureBlock.Data
     end
   end
 

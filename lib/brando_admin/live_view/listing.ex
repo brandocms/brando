@@ -84,9 +84,19 @@ defmodule BrandoAdmin.LiveView.Listing do
         Logger.error("==> delete selected #{inspect(ids)}")
         {:halt, socket}
 
-      "duplicate_entry", _params, socket ->
-        require Logger
-        Logger.error("==> duplicate_entry (not impl)")
+      "duplicate_entry", %{"id" => entry_id}, %{assigns: %{current_user: user}} = socket ->
+        singular = schema.__naming__.singular
+        context = schema.__modules__.context
+
+        case apply(context, :"duplicate_#{singular}", [entry_id, user]) do
+          {:ok, _} ->
+            Toast.send_delayed("#{String.capitalize(singular)} duplicated")
+            update_list_entries(schema)
+
+          {:error, _error} ->
+            Toast.send_delayed("Error duplicating #{String.capitalize(singular)}")
+        end
+
         {:halt, socket}
 
       _, _, socket ->
