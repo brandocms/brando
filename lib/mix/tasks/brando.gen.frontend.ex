@@ -13,7 +13,7 @@ defmodule Mix.Tasks.Brando.Gen.Frontend do
   def run(_) do
     Mix.shell().info("""
     % Brando frontend tpl generator
-    ---------------------------------------
+    -------------------------------
 
     """)
 

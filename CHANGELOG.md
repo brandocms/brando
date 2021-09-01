@@ -6,19 +6,24 @@ See `UPGRADE.md` for instructions on upgrading between versions.
 * `Trait.changeset_mutator/4` is now `Trait.changeset_mutator/5`. It receives 
   some additional opts from changeset, that normally would not be touched.
 
-## 0.51.0-dev
+## 0.51.0
 
+* NOTE: This will be the final GraphQL/Vue version. Next version will be with LiveViews!
 * Vite: Respect `hmr` config setting. Set it to `true` in your `dev.exs`, and `false` in `prod.exs`
 * Query: Add `mutation :duplicate`
 * Images: Add `dominant_color` to image struct.
 * Revisions: Adds initial revision support.
 * Publisher: Add Oban job support for scheduled publishing
 * Pagination: Add `pagination: true` to generate pagination meta for `list` queries
+* SSG: Add barebones start
+* Villain: Replace $timestamp in Villain HTML
+* Villain: Added localized date filter
 * Router: Add `Brando.Plug.Fragment` to assign a map of fragments to you connection:
 
   ```
   plug Brando.Plug.Fragment, parent_key: "partials", as: :partials
   ```
+
 
 ## 0.50.0
 
