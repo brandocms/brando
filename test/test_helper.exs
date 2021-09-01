@@ -71,7 +71,7 @@ end
 defmodule BrandoIntegration.Authorization do
   use Brando.Authorization
 
-  types [{"User", Brando.Users.User}]
+  types([{"User", Brando.Users.User}])
 
   # Rules for :superuser
   rules :superuser do
@@ -230,4 +230,4 @@ Brando.Cache.Globals.set()
 
 Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)
 Brando.endpoint().start_link
-Brando.presence().start_link
+# Brando.presence().start

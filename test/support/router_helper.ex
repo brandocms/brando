@@ -94,7 +94,8 @@ defmodule BrandoIntegrationWeb.Router do
     plug :fetch_flash
   end
 
-  admin_routes()
+  admin_routes do
+  end
 
   scope "/coming-soon" do
     get "/", BrandoIntegration.LockdownController, :index
