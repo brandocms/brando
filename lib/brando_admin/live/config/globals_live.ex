@@ -18,21 +18,11 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
     ~F"""
     <Content.Header
       title="Globals"
-      subtitle="Configure global variables"
-      instructions="" />
+      subtitle="Configure global variables" />
 
     {inspect @global_categories}
 
     """
-  end
-
-  def handle_params(params, url, socket) do
-    uri = URI.parse(url)
-
-    {:noreply,
-     socket
-     |> assign(:params, params)
-     |> assign(:uri, uri)}
   end
 
   def handle_info({:save, changeset, _form}, %{assigns: %{current_user: user}} = socket) do
@@ -43,7 +33,7 @@ defmodule BrandoAdmin.Sites.GlobalsLive do
     case apply(context, :"update_#{singular}", [changeset, user]) do
       {:ok, _} ->
         Toast.send_delayed("#{String.capitalize(singular)} updated")
-        {:noreply, push_redirect(socket, to: Brando.routes().live_path(socket, list_view))}
+        {:noreply, push_redirect(socket, to: Brando.routes().admin_live_path(socket, list_view))}
 
       {:error, %Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset)}

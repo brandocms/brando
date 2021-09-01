@@ -41,7 +41,7 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
     <Form for={@changeset} :let={form: form} change="validate" submit="save">
       <div class="block-editor">
         <div class="code">
-          <Input.Code form={form} field={:code} />
+          <Input.Code id={"#{form.id}-code"} form={form} field={:code} />
         </div>
         <div class="properties shaded">
           <div class="inner">
@@ -57,11 +57,11 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
             </div>
 
             <Modal title="Edit wrapper" id={"#{form.id}-wrapper"}>
-              <Input.Code form={form} field={:wrapper} />
+              <Input.Code id={"#{form.id}-wrapper"} form={form} field={:wrapper} />
             </Modal>
 
             <Modal title="Edit icon" id={"#{form.id}-icon"}>
-              <Input.Code form={form} field={:svg} />
+              <Input.Code id={"#{form.id}-svg"} form={form} field={:svg} />
             </Modal>
 
             <div class="refs">
@@ -134,7 +134,7 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
                               {#match "svg"}
                                 {#for block_data <- inputs_for_block(ref_data, :data)}
                                   <Input.Text form={block_data} field={:class} />
-                                  <Input.Code form={block_data} field={:code} />
+                                  <Input.Code id={"#{form.id}-ref-#{input_value(ref, :name)}-svg-code"} form={block_data} field={:code} />
                                 {/for}
 
                               {#match "text"}

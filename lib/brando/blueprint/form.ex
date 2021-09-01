@@ -99,7 +99,7 @@ defmodule Brando.Blueprint.Form do
       end
 
       def my_custom_redirect(socket, _entry) do
-        Brando.routes().live_path(socket, BrandoAdmin.PageListView)
+        Brando.routes().admin_live_path(socket, BrandoAdmin.PageListView)
       end
   """
   defmacro redirect_on_save(target) do

@@ -28,7 +28,7 @@ defmodule BrandoAdmin.Pages.PageListLive do
     {:noreply,
      push_redirect(socket,
        to:
-         Brando.routes().live_path(socket, BrandoAdmin.PageCreateLive,
+         Brando.routes().admin_live_path(socket, BrandoAdmin.Pages.PageCreateLive,
            parent_id: parent_id,
            language: language
          )
@@ -39,7 +39,7 @@ defmodule BrandoAdmin.Pages.PageListLive do
     {:noreply,
      push_redirect(socket,
        to:
-         Brando.routes().live_path(socket, BrandoAdmin.PageFragmentCreateLive,
+         Brando.routes().admin_live_path(socket, BrandoAdmin.Pages.PageFragmentCreateLive,
            page_id: page_id,
            language: language
          )

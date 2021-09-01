@@ -44,7 +44,7 @@ defmodule BrandoAdmin.Villain.ModuleListLive do
 
     {:noreply,
      push_redirect(socket,
-       to: Brando.routes().live_path(socket, BrandoAdmin.ConfigModulesUpdateLive, new_module.id)
+       to: Brando.routes().admin_live_path(socket, BrandoAdmin.Villain.ModuleUpdateLive, new_module.id)
      )}
   end
 end

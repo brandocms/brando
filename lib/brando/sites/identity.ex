@@ -57,6 +57,8 @@ defmodule Brando.Sites.Identity do
 
   forms do
     form do
+      redirect_on_save &__MODULE__.redirect/2
+
       tab "Content" do
         fieldset do
           input :type, :radios,
@@ -208,22 +210,7 @@ defmodule Brando.Sites.Identity do
     end
   end
 
-  #   fieldset do
-  #
-  #   end
-
-  #   fieldset do
-  #     input :logo, :image, type: :small
-  #   end
-
-  #   fieldset do
-  #     input :links, :table do
-  #       editable? true
-  #       deletable? true
-
-  #       input :name, :text
-  #       input :url, :text
-  #     end
-  #   end
-  # end
+  def redirect(socket, _entry) do
+    Brando.routes().admin_live_path(socket, BrandoAdmin.Sites.IdentityLive)
+  end
 end

@@ -26,7 +26,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     {:ok, assign(socket, block_count: 0, insert_index: 0)}
   end
 
-  def update(%{input: %{name: name, opts: opts}} = assigns, socket) do
+  def update(%{input: %{name: name, opts: _opts}} = assigns, socket) do
     blocks = inputs_for_blocks(assigns.form, name)
     block_count = Enum.count(blocks)
 
@@ -44,12 +44,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       form={@form}
       field={name}>
 
+      {!-- extract to BlockRenderer?
+        insert_block
+        insert_section
+        @insert_index
+        @blocks
+        duplicate_block
+      --}
       <div class="blocks-wrapper">
         <Blocks.ModulePicker
           id={"#{@form.id}-#{name}-module-picker"}
           insert_block="insert_block"
           insert_section="insert_section"
           insert_index={@insert_index} />
+
         {#if Enum.empty?(@blocks)}
           <div class="blocks-empty-instructions">
             Click the plus to start adding content to your entry!
@@ -62,9 +70,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         {#for {block_form, index} <- Enum.with_index(@blocks)}
           <Blocks.DynamicBlock
             index={index}
+            base_form={@form}
             block_count={@block_count}
             block={block_form}
-            base_form={@form}
             insert_block={"show_module_picker"}
             duplicate_block={"duplicate_block"} />
         {/for}
@@ -98,9 +106,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     new_block = %Brando.Blueprint.Villain.Blocks.ContainerBlock{
       type: "container",
       data: %Brando.Blueprint.Villain.Blocks.ContainerBlock.Data{
-        class: "default",
-        description: "Default section style",
-        wrapper: nil
+        class: nil,
+        description: nil,
+        wrapper: nil,
+        blocks: []
       },
       uid: Brando.Utils.generate_uid()
     }

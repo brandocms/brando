@@ -6,9 +6,7 @@ defmodule BrandoAdmin.Pages.PageUpdateLive do
 
   def render(assigns) do
     ~F"""
-    <Content.Header
-      title={gettext("Edit page")}
-      instructions="" />
+    <Content.Header title={gettext("Edit page")} />
 
     <Form
       id="page_form"

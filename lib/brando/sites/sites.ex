@@ -21,6 +21,15 @@ defmodule Brando.Sites do
   @type params :: map
   @type user :: Brando.Users.User.t()
 
+  query :single, Identity, do: fn q -> q end
+
+  matches Identity do
+    fn
+      {:id, id}, query ->
+        from t in query, where: t.id == ^id
+    end
+  end
+
   @doc """
   Get identity
   """
@@ -41,9 +50,7 @@ defmodule Brando.Sites do
     end
   end
 
-  def get_identity(map) when is_map(map), do: get_identity()
-
-  def get_identity(key) do
+  def get_identity(key) when is_binary(key) do
     Cache.Identity.get(key)
   end
 

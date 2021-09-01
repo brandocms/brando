@@ -14,7 +14,6 @@ defmodule BrandoAdmin.LiveView.Form do
     schema = Keyword.fetch!(opts, :schema)
 
     quote do
-      @behaviour BrandoAdmin.LiveView.Form
       use Surface.LiveView, layout: {BrandoAdmin.LayoutView, "live.html"}
       use BrandoAdmin.Toast
       use BrandoAdmin.Presence
@@ -94,14 +93,12 @@ defmodule BrandoAdmin.LiveView.Form do
     end)
     |> attach_hook(:b_form_infos, :handle_info, fn
       {:save, changeset, form}, %{assigns: %{current_user: user}} = socket ->
-        generated_list_view = schema.__modules__.admin_list_view
-
         # if redirect_on_save is set in form, use this
         redirect_fn =
           (form.redirect_on_save && form.redirect_on_save) ||
             fn socket, _entry ->
               generated_list_view = schema.__modules__.admin_list_view
-              Brando.routes().live_path(socket, generated_list_view)
+              Brando.routes().admin_live_path(socket, generated_list_view)
             end
 
         singular = schema.__naming__.singular

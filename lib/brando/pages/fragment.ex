@@ -123,7 +123,7 @@ defmodule Brando.Pages.Fragment do
   end
 
   def redirect(socket, _entry) do
-    Brando.routes().live_path(socket, BrandoAdmin.PageListLive)
+    Brando.routes().admin_live_path(socket, BrandoAdmin.Pages.PageListLive)
   end
 
   def get_pages(_, _) do

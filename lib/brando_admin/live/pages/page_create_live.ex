@@ -20,9 +20,7 @@ defmodule BrandoAdmin.Pages.PageCreateLive do
 
   def render(assigns) do
     ~F"""
-    <Content.Header
-      title={gettext("Create page")}
-      instructions="" />
+    <Content.Header title={gettext("Create page")} />
 
     <Form
       id="page_form"

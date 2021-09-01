@@ -61,7 +61,9 @@ defmodule BrandoAdmin.LiveView.Listing do
     |> attach_hook(:b_listing_events, :handle_event, fn
       "edit_entry", %{"id" => id}, socket ->
         update_view = schema.__modules__.admin_update_view
-        {:halt, push_redirect(socket, to: Brando.routes().live_path(socket, update_view, id))}
+
+        {:halt,
+         push_redirect(socket, to: Brando.routes().admin_live_path(socket, update_view, id))}
 
       "delete_entry", %{"id" => entry_id}, %{assigns: %{current_user: user}} = socket ->
         singular = schema.__naming__.singular
