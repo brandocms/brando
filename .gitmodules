@@ -1,4 +1,0 @@
-[submodule "assets/brandojs"]
-	path = assets/brandojs
-	url = git@github.com:brandocms/brandojs.git
-	fetchrecursesubmodules = true
