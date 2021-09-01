@@ -1,4 +1,4 @@
-defmodule BrandoAdmin.Components.Form.Plus do
+defmodule BrandoAdmin.Components.Form.Input.Blocks.Plus do
   use Surface.Component
 
   prop index, :integer

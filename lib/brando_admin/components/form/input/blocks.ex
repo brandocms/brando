@@ -3,17 +3,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   use Phoenix.HTML
 
   import Ecto.Changeset
-  import PolymorphicEmbed.HTML.Form
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
 
-  alias Surface.Components.Form.TextInput
-  alias Surface.Components.Form.HiddenInput
   alias Brando.Villain
   alias BrandoAdmin.Components.Modal
-  alias BrandoAdmin.Components.Form.Input.Blocks
-  alias BrandoAdmin.Components.Form.Input.DynamicBlock
   alias BrandoAdmin.Components.Form.FieldBase
-  alias BrandoAdmin.Components.Form.Plus
+  alias BrandoAdmin.Components.Form.Input.Blocks
 
   prop form, :form
   prop blueprint, :any
@@ -44,39 +39,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       form={@form}
       field={name}>
 
-      {!-- extract to BlockRenderer?
-        insert_block
-        insert_section
-        @insert_index
-        @blocks
-        duplicate_block
-      --}
-      <div class="blocks-wrapper">
-        <Blocks.ModulePicker
-          id={"#{@form.id}-#{name}-module-picker"}
-          insert_block="insert_block"
-          insert_section="insert_section"
-          insert_index={@insert_index} />
+      <Blocks.BlockRenderer
+        id={"#{@form.id}-#{name}-blocks"}
+        base_form={@form}
+        blocks={@blocks}
+        block_count={@block_count}
+        insert_index={@insert_index}
+        insert_block="insert_block"
+        insert_section="insert_section"
+        show_module_picker="show_module_picker"
+        duplicate_block="duplicate_block" />
 
-        {#if Enum.empty?(@blocks)}
-          <div class="blocks-empty-instructions">
-            Click the plus to start adding content to your entry!
-          </div>
-          <Plus
-            index={0}
-            click="show_module_picker" />
-        {/if}
-
-        {#for {block_form, index} <- Enum.with_index(@blocks)}
-          <Blocks.DynamicBlock
-            index={index}
-            base_form={@form}
-            block_count={@block_count}
-            block={block_form}
-            insert_block={"show_module_picker"}
-            duplicate_block={"duplicate_block"} />
-        {/for}
-      </div>
     </FieldBase>
     """
   end
@@ -86,7 +59,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         %{"index" => index_binary},
         %{assigns: %{form: form, input: %{name: name}}} = socket
       ) do
-    modal_id = "#{form.id}-#{name}-module-picker"
+    modal_id = "#{form.id}-#{name}-blocks-module-picker"
     Modal.show(modal_id)
 
     {:noreply, assign(socket, insert_index: index_binary)}
@@ -97,7 +70,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         %{"index" => index_binary},
         %{assigns: %{form: form, input: %{name: name}}} = socket
       ) do
-    modal_id = "#{form.id}-#{name}-module-picker"
+    modal_id = "#{form.id}-#{name}-blocks-module-picker"
 
     changeset = form.source
     module = changeset.data.__struct__
@@ -117,7 +90,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     {index, ""} = Integer.parse(index_binary)
 
     new_data = List.insert_at(get_blocks_data(changeset), index, new_block)
-    updated_changeset = Ecto.Changeset.put_change(changeset, :data, new_data)
+    updated_changeset = put_change(changeset, :data, new_data)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
@@ -135,7 +108,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         %{"index" => index_binary, "module-id" => module_id_binary},
         %{assigns: %{form: form, input: %{name: name}}} = socket
       ) do
-    modal_id = "#{form.id}-#{name}-module-picker"
+    modal_id = "#{form.id}-#{name}-blocks-module-picker"
 
     changeset = form.source
     module = changeset.data.__struct__
@@ -161,7 +134,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     {index, ""} = Integer.parse(index_binary)
 
     new_data = List.insert_at(get_blocks_data(changeset), index, new_block)
-    updated_changeset = Ecto.Changeset.put_change(changeset, :data, new_data)
+    updated_changeset = put_change(changeset, :data, new_data)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
@@ -180,7 +153,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         %{assigns: %{form: form}} = socket
       ) do
     changeset = form.source
-    data = Ecto.Changeset.get_field(changeset, :data)
+    data = get_field(changeset, :data)
     source_position = Enum.find_index(data, &(&1.uid == block_uid))
 
     module = changeset.data.__struct__
@@ -192,7 +165,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       |> Map.put(:uid, Brando.Utils.random_string(13) |> String.upcase())
 
     new_data = List.insert_at(data, source_position + 1, duplicated_block)
-    updated_changeset = Ecto.Changeset.put_change(changeset, :data, new_data)
+    updated_changeset = put_change(changeset, :data, new_data)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
@@ -203,18 +176,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   end
 
   defp get_blocks_data(changeset) do
-    Ecto.Changeset.get_field(changeset, :data) || []
-  end
-
-  defp get_data(changeset, field, type) do
-    struct = Ecto.Changeset.apply_changes(changeset)
-
-    case Map.get(struct, field) do
-      nil ->
-        struct(PolymorphicEmbed.get_polymorphic_module(struct.__struct__, field, type))
-
-      data ->
-        data
-    end
+    get_field(changeset, :data) || []
   end
 end

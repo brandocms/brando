@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
   alias Surface.Components.Form.Checkbox
   alias Surface.Components.Form.HiddenInput
   alias BrandoAdmin.Components.Modal
-  alias BrandoAdmin.Components.Form.Plus
+  alias BrandoAdmin.Components.Form.Input.Blocks
 
   prop block, :any
   prop base_form, :any
@@ -51,7 +51,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
         hidden: @hidden,
         deleted: @marked_as_deleted
       }>
-      <Plus
+      <Blocks.Plus
         :if={!@is_ref?}
         index={@index}
         click={@insert_block} />
@@ -129,7 +129,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
         </div>
       </div>
       {#if @last_block?}
-        <Plus
+        <Blocks.Plus
           :if={!@is_ref?}
           index={@index + 1}
           click={@insert_block} />
