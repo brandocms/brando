@@ -78,22 +78,34 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   end
 
   def assign_input_options(%{assigns: %{form: form, input: %{opts: opts}}} = socket) do
-    input_options =
-      case Keyword.get(opts, :options) do
-        :languages ->
-          languages = Brando.config(:languages)
-          Enum.map(languages, fn [{:value, val}, {:text, text}] -> %{label: text, value: val} end)
-
-        nil ->
-          # schema = blueprint.modules.schema
-          []
-
-        options_fun when is_function(options_fun) ->
-          options_fun.(form, opts)
-      end
-
-    assign(socket, :input_options, input_options)
+    assign_new(socket, :input_options, fn -> get_input_options(form, opts) end)
   end
+
+  def update_input_options(%{assigns: %{form: form, input: %{opts: opts}}} = socket) do
+    assign(socket, :input_options, get_input_options(form, opts))
+  end
+
+  defp get_input_options(form, opts) do
+    case Keyword.get(opts, :options) do
+      :languages ->
+        languages = Brando.config(:languages)
+        Enum.map(languages, fn [{:value, val}, {:text, text}] -> %{label: text, value: val} end)
+
+      nil ->
+        # schema = blueprint.modules.schema
+        []
+
+      options_fun when is_function(options_fun) ->
+        options_fun.(form, opts)
+    end
+    |> Enum.map(&ensure_string_values/1)
+  end
+
+  defp ensure_string_values(%{label: label, value: value}) when not is_binary(value) do
+    %{label: label, value: to_string(value)}
+  end
+
+  defp ensure_string_values(map), do: map
 
   def assign_label(
         %{assigns: %{input_options: input_options, selected_option: selected_option}} = socket

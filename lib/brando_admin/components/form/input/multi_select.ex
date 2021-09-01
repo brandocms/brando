@@ -107,23 +107,19 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   defp get_input_options(form, opts) do
-    require Logger
-    Logger.error("==> getting input options ")
+    case Keyword.get(opts, :options) do
+      :languages ->
+        languages = Brando.config(:languages)
+        Enum.map(languages, fn [{:value, val}, {:text, text}] -> %{label: text, value: val} end)
 
-    input_options =
-      case Keyword.get(opts, :options) do
-        :languages ->
-          languages = Brando.config(:languages)
-          Enum.map(languages, fn [{:value, val}, {:text, text}] -> %{label: text, value: val} end)
+      nil ->
+        # schema = blueprint.modules.schema
+        []
 
-        nil ->
-          # schema = blueprint.modules.schema
-          []
-
-        options_fun when is_function(options_fun) ->
-          options_fun.(form, opts)
-      end
-      |> Enum.map(&ensure_string_values/1)
+      options_fun when is_function(options_fun) ->
+        options_fun.(form, opts)
+    end
+    |> Enum.map(&ensure_string_values/1)
   end
 
   defp ensure_string_values(%{label: label, value: value}) when not is_binary(value) do
