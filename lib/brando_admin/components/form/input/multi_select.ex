@@ -130,9 +130,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     %{label: label, value: to_string(value)}
   end
 
-  defp ensure_string_values(map) do
-    map
-  end
+  defp ensure_string_values(map), do: map
 
   def assign_label(
         %{assigns: %{input_options: input_options, selected_options: selected_options}} = socket
