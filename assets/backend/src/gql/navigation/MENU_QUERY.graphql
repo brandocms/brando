@@ -1,0 +1,6 @@
+#import "./MENU_FRAGMENT.graphql"
+query Menu ($menuId: ID!) {
+  menu (menuId: $menuId) {
+    ...menu
+  }
+}

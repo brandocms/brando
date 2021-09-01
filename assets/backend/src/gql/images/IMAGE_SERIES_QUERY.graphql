@@ -1,0 +1,6 @@
+#import "./IMAGE_SERIES_FRAGMENT.graphql"
+query ImageSeries ($seriesId: ID!) {
+  imageSeries (seriesId: $seriesId){
+    ...imageSeries
+  }
+}

@@ -1,0 +1,13 @@
+fragment globalCategory on GlobalCategory {
+  id
+  label
+  key
+
+  globals {
+    id
+    label
+    key
+    type
+    data
+  }
+}

@@ -1,0 +1,30 @@
+
+{
+  "code": "nb_NO",
+  "messages": {
+    "alpha": "kan bare inneholde bokstaver",
+    "alpha_dash": "kan bare inneholde alfanumeriske tegn, samt bindestrek og understrek",
+    "alpha_num": "kan bare inneholde alfanumeriske tegn",
+    "alpha_spaces": "kan bare inneholde alfanumeriske tegn og mellomrom",
+    "between": "må være imellom {min} og {max}",
+    "confirmed": "bekreftelsesfeltet matcher ikke kildefeltet",
+    "digits": "må være numerisk og inneholde nøyaktig {length} siffer",
+    "dimensions": "må være {width} ganger {height} piksler",
+    "email": "ugyldig e-postadresse",
+    "excluded": "må være en gyldig verdi",
+    "ext": "må være en gyldig fil",
+    "image": "må være et bilde",
+    "oneOf": "må være en gyldig verdi",
+    "max": "kan maksimalt inneholde {length} tegn",
+    "max_value": "må være {max} eller mindre",
+    "mimes": "må ha en gyldig filtype",
+    "min": "må minst inneholde {length} tegn",
+    "min_value": "må være {min} eller mer",
+    "numeric": "kan bare inneholde nummer",
+    "regex": "feltets formatering er ugyldig",
+    "required": "obligatorisk",
+    "required_if": "obligatorisk",
+    "size": "må være mindre enn {size}KB",
+    "double": "må være en gyldig desimal"
+  }
+}

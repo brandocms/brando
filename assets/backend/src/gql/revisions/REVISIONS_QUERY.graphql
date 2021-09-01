@@ -1,0 +1,6 @@
+#import "./REVISION_FRAGMENT.graphql"
+query Revisions ($order: Order, $limit: Int, $offset: Int, $filter: RevisionFilter) {
+  revisions (order: $order, limit: $limit, offset: $offset, filter: $filter) {
+    ...revision
+  }
+}

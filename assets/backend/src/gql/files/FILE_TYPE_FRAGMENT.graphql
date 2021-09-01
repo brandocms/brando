@@ -1,0 +1,6 @@
+fragment fileType on FileType {
+  mimetype
+  path
+  size
+  url
+}

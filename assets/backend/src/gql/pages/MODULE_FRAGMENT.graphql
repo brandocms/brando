@@ -1,0 +1,16 @@
+fragment module on Module {
+  id
+  name
+  namespace
+  helpText
+  class
+  code
+  refs
+  vars
+  svg
+  multi
+  wrapper
+  insertedAt
+  updatedAt
+  deletedAt
+}

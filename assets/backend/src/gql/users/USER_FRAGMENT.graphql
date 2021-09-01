@@ -1,0 +1,27 @@
+fragment user on User {
+  id
+  name
+  email
+
+  avatar {
+    focal
+    alt
+    title
+    thumb: url(size: "thumb")
+    medium: url(size: "medium")
+    xlarge: url(size: "xlarge")
+  }
+
+  role
+  language
+  active
+
+  config {
+    showOnboarding
+    showMutationNotifications
+    resetPasswordOnFirstLogin
+  }
+
+  lastLogin
+  deletedAt
+}

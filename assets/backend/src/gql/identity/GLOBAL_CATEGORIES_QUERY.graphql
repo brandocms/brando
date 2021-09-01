@@ -1,0 +1,6 @@
+#import "./GLOBAL_CATEGORY_FRAGMENT.graphql"
+query GlobalCategories {
+  globalCategories {
+    ...globalCategory
+  }
+}

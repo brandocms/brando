@@ -1,0 +1,147 @@
+#import "../images/IMAGE_TYPE_FRAGMENT.graphql"
+fragment page on Page {
+  id
+  status
+  uri
+  title
+  template
+  language
+  data
+  cssClasses
+  isHomepage
+
+  metaTitle
+  metaDescription
+
+  metaImage {
+    ...imageType
+  }
+
+  creator {
+    id
+    name
+    avatar {
+      thumb: url(size: "xlarge")
+    }
+  }
+
+  parentId
+  parent {
+    id
+    uri
+    language
+    title
+    data
+
+    updatedAt
+  }
+
+  properties {
+    id
+    label
+    key
+    type
+    data
+  }
+
+  children {
+    id
+    uri
+    title
+    language
+    data
+
+    properties {
+      id
+      label
+      key
+      type
+      data
+    }
+
+    creator {
+      id
+      name
+      avatar {
+        thumb: url(size: "xlarge")
+      }
+    }
+
+    insertedAt
+    updatedAt
+
+    children {
+      id
+      uri
+      title
+      language
+      data
+
+      properties {
+        id
+        label
+        key
+        type
+        data
+      }
+
+      creator {
+        id
+        name
+        avatar {
+          thumb: url(size: "xlarge")
+        }
+      }
+
+      insertedAt
+      updatedAt
+    }
+
+    fragments {
+      id
+      title
+      key
+      parentKey
+      language
+      pageId
+      data
+
+      creator {
+        id
+        name
+        avatar {
+          thumb: url(size: "xlarge")
+        }
+      }
+
+      insertedAt
+      updatedAt
+    }
+  }
+
+  fragments {
+    id
+    title
+    key
+    parentKey
+    language
+    pageId
+    data
+
+    creator {
+      id
+      name
+      avatar {
+        thumb: url(size: "xlarge")
+      }
+    }
+
+    insertedAt
+    updatedAt
+  }
+
+  insertedAt
+  updatedAt
+  deletedAt
+  publishAt
+}

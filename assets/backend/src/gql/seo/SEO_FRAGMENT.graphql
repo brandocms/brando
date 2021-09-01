@@ -1,0 +1,21 @@
+fragment seo on Seo {
+  id
+  fallbackMetaTitle
+  fallbackMetaDescription
+
+  fallbackMetaImage {
+    thumb: url(size: "original")
+    xlarge: url(size: "xlarge")
+    focal
+  }
+
+  robots
+  baseUrl
+
+  redirects {
+    id
+    to
+    from
+    code
+  }
+}
