@@ -5,7 +5,6 @@ defmodule <%= application_module %>Web.AdminSocket do
   use Phoenix.Socket
 
   ## Channels
-  channel "admin", <%= application_module %>.AdminChannel
   channel "user:*", Brando.UserChannel
   channel "live_preview:*", Brando.LivePreviewChannel
 
@@ -13,10 +12,10 @@ defmodule <%= application_module %>Web.AdminSocket do
   Connect socket with token
   """
   @impl true
-  def connect(%{"guardian_token" => jwt}, socket) do
-    case Guardian.Phoenix.Socket.authenticate(socket, <%= application_module %>Web.Guardian, jwt) do
-      {:ok, authed_socket} ->
-        {:ok, authed_socket}
+  def connect(%{"token" => token}, socket) do
+    case Brando.Users.verify_token(token) do
+      {:ok, user_id} ->
+        {:ok, assign(socket, :user_id, user_id)}
 
       {:error, _} ->
         :error

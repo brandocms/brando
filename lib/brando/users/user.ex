@@ -138,14 +138,14 @@ defmodule Brando.Users.User do
 
   listings do
     listing do
-      listing_field :avatar, :image, columns: 2
+      field :avatar, :image, columns: 2
 
-      listing_filters([
+      filters([
         [label: gettext("Name"), filter: "name"],
         [label: gettext("Email"), filter: "email"]
       ])
 
-      listing_actions([
+      actions([
         [label: gettext("Edit user"), event: "edit_entry"],
         [
           label: gettext("Disable user"),
@@ -154,18 +154,18 @@ defmodule Brando.Users.User do
         ]
       ])
 
-      listing_template """
-                       <a
-                        class="entry-link"
-                        data-phx-link="redirect"
-                        data-phx-link-state="push"
-                        href="/admin/users/update/{{ entry.id }}">
-                        {{ entry.name }}
-                       </a><br>
-                       <small>{{ entry.email }}</small><br>
-                       <div class="badge">{{ entry.role }}</div>
-                       """,
-                       columns: 13
+      template """
+               <a
+                class="entry-link"
+                data-phx-link="redirect"
+                data-phx-link-state="push"
+                href="/admin/users/update/{{ entry.id }}">
+                {{ entry.name }}
+               </a><br>
+               <small>{{ entry.email }}</small><br>
+               <div class="badge">{{ entry.role }}</div>
+               """,
+               columns: 13
     end
   end
 

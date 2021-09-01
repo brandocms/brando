@@ -14,6 +14,7 @@ config :brando,
   otp_app: :<%= application_name %>,
   app_module: <%= application_module %>,
   web_module: <%= application_module %>Web,
+  admin_module: <%= application_module %>Admin,
 
   # Languages follow ISO 639-1
   # https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes

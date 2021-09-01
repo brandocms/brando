@@ -96,12 +96,12 @@ defmodule Brando.Pages.Page do
         order: [{:asc, :sequence}, {:desc, :inserted_at}]
       }
 
-      listing_filters([
+      filters([
         [label: gettext("URI"), filter: "uri"],
         [label: gettext("Title"), filter: "title"]
       ])
 
-      listing_actions([
+      actions([
         [label: gettext("Edit page"), event: "edit_entry"],
         [
           label: gettext("Delete page"),
@@ -113,13 +113,13 @@ defmodule Brando.Pages.Page do
         [label: gettext("Create fragment"), event: "create_fragment"]
       ])
 
-      listing_selection_actions([
+      selection_actions([
         [label: gettext("Delete pages"), event: "delete_selected"]
       ])
 
-      listing_field :language, :language, columns: 1
+      field(:language, :language, columns: 1)
 
-      listing_template(
+      template(
         """
         <a
           data-phx-link="redirect"
@@ -134,23 +134,23 @@ defmodule Brando.Pages.Page do
         columns: 8
       )
 
-      listing_field [:fragments, :children], :children_button, columns: 1
+      field([:fragments, :children], :children_button, columns: 1)
 
-      listing_child_listing [
+      child_listing([
         {Brando.Pages.Fragment, :fragment_children},
         {Brando.Pages.Page, :page_children}
-      ]
+      ])
     end
 
     listing :fragment_children do
-      listing_template """
-                       <div class="center">⤷</div>
-                       """,
-                       columns: 1
+      template """
+               <div class="center">⤷</div>
+               """,
+               columns: 1
 
-      listing_field :language, :language, columns: 1
+      field :language, :language, columns: 1
 
-      listing_template(
+      template(
         """
         <a
           data-phx-link="redirect"
@@ -165,7 +165,7 @@ defmodule Brando.Pages.Page do
         columns: 8
       )
 
-      listing_actions([
+      actions([
         [label: gettext("Edit fragment"), event: "edit_entry"],
         [
           label: gettext("Delete fragment"),
@@ -176,14 +176,14 @@ defmodule Brando.Pages.Page do
     end
 
     listing :page_children do
-      listing_template """
-                       <div class="center">⤷</div>
-                       """,
-                       columns: 1
+      template """
+               <div class="center">⤷</div>
+               """,
+               columns: 1
 
-      listing_field :language, :language, columns: 1
+      field :language, :language, columns: 1
 
-      listing_template(
+      template(
         """
         <a
           data-phx-link="redirect"
@@ -198,7 +198,7 @@ defmodule Brando.Pages.Page do
         columns: 8
       )
 
-      listing_actions([
+      actions([
         [label: gettext("Edit sub page"), event: "edit_entry"],
         [
           label: gettext("Delete sub page"),

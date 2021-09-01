@@ -107,7 +107,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "config/staging.exs", "config/staging.exs"},
     {:eex, "config/runtime.exs", "config/runtime.exs"},
 
-    # Migration files
+    # Initial migration files
     {:eex, "migrations/20150123230712_create_users.exs",
      "priv/repo/migrations/20150123230712_create_users.exs"},
     {:eex, "migrations/20150215090305_create_imagecategories.exs",
@@ -165,7 +165,11 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "lib/application_name_web/telemetry.ex", "lib/application_name_web/telemetry.ex"},
 
     # Live Preview
-    {:eex, "lib/application_name_web/live_preview.ex", "lib/application_name_web/live_preview.ex"}
+    {:eex, "lib/application_name_web/live_preview.ex",
+     "lib/application_name_web/live_preview.ex"},
+
+    # Admin
+    {:eex, "lib/application_name_admin/menus.ex", "lib/application_name_admin/menus.ex"}
   ]
 
   @static [
@@ -180,30 +184,29 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "scripts/sync_media_from_remote_to_local.sh",
      "scripts/sync_media_from_remote_to_local.sh"},
 
-    # Backend assets
-    {:copy, "assets/backend/apollo.config.js", "assets/backend/apollo.config.js"},
-    {:copy, "assets/backend/babel.config.js", "assets/backend/babel.config.js"},
-    {:copy, "assets/backend/browserslistrc", "assets/backend/.browserslistrc"},
-    {:copy, "assets/backend/eslintrc.js", "assets/backend/.eslintrc.js"},
+    # Backend tooling
     {:copy, "assets/backend/europa.config.js", "assets/backend/europa.config.js"},
     {:copy, "assets/backend/package.json", "assets/backend/package.json"},
     {:copy, "assets/backend/postcss.config.js", "assets/backend/postcss.config.js"},
-    {:copy, "assets/backend/stylelint.config.js", "assets/backend/stylelint.config.js"},
-    {:copy, "assets/backend/vue.config.js", "assets/backend/vue.config.js"},
+    {:copy, "assets/backend/README.md", "assets/backend/README.md"},
+    {:copy, "assets/backend/svelte.config.cjs", "assets/backend/svelte.config.cjs"},
+    {:copy, "assets/backend/vite.config.js", "assets/backend/vite.config.js"},
+
+    # Backend resources
+    {:copy, "assets/backend/public/favicon.ico", "assets/backend/public/favicon.ico"},
+    {:copy, "assets/backend/public/fonts/Mono.woff2", "assets/backend/public/fonts/Mono.woff2"},
+    {:copy, "assets/backend/public/images/admin/avatar.svg",
+     "assets/backend/public/images/admin/avatar.svg"},
 
     # Backend src
-    {:copy, "assets/backend/src/config.js", "assets/backend/src/config.js"},
     {:copy, "assets/backend/src/main.js", "assets/backend/src/main.js"},
-    {:copy, "assets/backend/src/menus/index.js", "assets/backend/src/menus/index.js"},
-    {:copy, "assets/backend/src/routes/dashboard.js", "assets/backend/src/routes/dashboard.js"},
-    {:copy, "assets/backend/src/routes/index.js", "assets/backend/src/routes/index.js"},
-    {:copy, "assets/backend/src/views/dashboard/DashboardView.vue",
-     "assets/backend/src/views/dashboard/DashboardView.vue"},
-    {:copy, "assets/backend/public/fonts/fontsplaceholder",
-     "assets/backend/public/fonts/fontsplaceholder"},
-    {:copy, "assets/backend/public/images/admin/avatar.png",
-     "assets/backend/public/images/admin/avatar.png"},
-    {:copy, "assets/backend/src/styles/blocks.pcss", "assets/backend/src/styles/blocks.pcss"},
+    {:copy, "assets/backend/src/auth.js", "assets/backend/src/auth.js"},
+    {:copy, "assets/backend/src/hooks/index.js", "assets/backend/src/hooks/index.js"},
+    {:copy, "assets/backend/css/app.css", "assets/backend/css/app.css"},
+    {:copy, "assets/backend/css/blocks.css", "assets/backend/css/blocks.css"},
+    {:copy, "assets/backend/css/fonts.css", "assets/backend/css/fonts.css"},
+
+    # {:copy, "assets/backend/src/styles/blocks.pcss", "assets/backend/src/styles/blocks.pcss"},
 
     # Frontend assets
     {:keep, "assets/frontend/public/fonts", "assets/frontend/public/fonts"},
@@ -240,16 +243,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "assets/frontend/js/config/MOBILE_MENU.js",
      "assets/frontend/js/config/MOBILE_MENU.js"},
     {:copy, "assets/frontend/js/config/MOONWALK.js", "assets/frontend/js/config/MOONWALK.js"},
-    {:copy, "assets/frontend/js/config/HEADER.js", "assets/frontend/js/config/HEADER.js"},
-
-    # E2E CYPRESS
-    {:copy, "e2e/cypress.json", "e2e/cypress.json"},
-    {:copy, "e2e/package.json", "e2e/package.json"},
-    {:copy, "e2e/cypress/fixtures/avatar.jpg", "e2e/cypress/fixtures/avatar.jpg"},
-    {:copy, "e2e/cypress/support/index.js", "e2e/cypress/support/index.js"},
-    {:copy, "e2e/cypress/support/commands.js", "e2e/cypress/support/commands.js"},
-    {:copy, "e2e/cypress/integration/Brando/Brando.spec.js",
-     "e2e/cypress/integration/Brando/Brando.spec.js"}
+    {:copy, "assets/frontend/js/config/HEADER.js", "assets/frontend/js/config/HEADER.js"}
   ]
 
   @root Path.expand("../../../priv", __DIR__)

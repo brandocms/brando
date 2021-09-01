@@ -23,7 +23,7 @@ defmodule BrandoAdmin.LiveView.Listing do
       on_mount({__MODULE__, :hooks})
 
       def hooks(params, assigns, socket) do
-        BrandoAdmin.LiveView.Listing.hooks(params, assigns, socket, unquote(schema), __MODULE__)
+        BrandoAdmin.LiveView.Listing.hooks(params, assigns, socket, unquote(schema))
       end
 
       # we need the uri on first load, so inject for now
@@ -38,7 +38,7 @@ defmodule BrandoAdmin.LiveView.Listing do
     end
   end
 
-  def hooks(_params, %{"user_token" => token}, socket, schema, caller) do
+  def hooks(_params, %{"user_token" => token}, socket, schema) do
     subscribe_listing("content_listing_#{schema}_default")
 
     if Phoenix.LiveView.connected?(socket) do

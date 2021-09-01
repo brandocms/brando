@@ -1,6 +1,7 @@
 {
   "name": "@brandocms/brandojs",
   "version": "0.51.0",
+  "main": "src/index.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -12,6 +13,10 @@
     "@codemirror/lang-html": "^0.19.1",
     "@fontsource/jetbrains-mono": "^4.5.0",
     "@shopify/draggable": "^1.0.0-beta.12",
+    "@tiptap/core": "^2.0.0-beta.101",
+    "@tiptap/extension-character-count": "^2.0.0-beta.13",
+    "@tiptap/extension-typography": "^2.0.0-beta.14",
+    "@tiptap/starter-kit": "^2.0.0-beta.99",
     "@tiptap/extension-focus": "^2.0.0-beta.24",
     "@tiptap/extension-link": "^2.0.0-beta.19",
     "autosize": "^5.0.1",
@@ -34,10 +39,6 @@
   "devDependencies": {
     "@brandocms/europacss": "^0.6.2",
     "@sveltejs/vite-plugin-svelte": "1.0.0-next.19",
-    "@tiptap/core": "^2.0.0-beta.101",
-    "@tiptap/extension-character-count": "^2.0.0-beta.13",
-    "@tiptap/extension-typography": "^2.0.0-beta.14",
-    "@tiptap/starter-kit": "^2.0.0-beta.99",
     "autoprefixer": "^10.3.2",
     "svelte": "^3.42.3",
     "svelte-preprocess": "^4.8.0",

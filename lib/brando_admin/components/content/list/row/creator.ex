@@ -4,13 +4,28 @@ defmodule BrandoAdmin.Components.Content.List.Row.Creator do
   prop entry, :any, required: true
   prop soft_delete?, :boolean, required: true
 
+  data avatar, :string
+
+  def update(%{entry: %{creator: %{avatar: avatar}}} = assigns, socket) do
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(
+       :avatar,
+       Brando.Utils.img_url(avatar, :thumb,
+         prefix: "/media",
+         default: "/images/admin/avatar.svg"
+       )
+     )}
+  end
+
   def render(assigns) do
     ~F"""
     <div class="col-4">
       <article class="item-meta">
         <section class="avatar-wrapper">
           <div class="avatar">
-            <img src={"/media/#{Map.get(@entry.creator.avatar.sizes, "thumb")}"}>
+            <img src={@avatar}>
           </div>
         </section>
         <section class="content">

@@ -148,6 +148,17 @@ defmodule Brando.System do
         """
     end
 
+    if Application.get_env(:brando, :admin_module) == nil do
+      raise ConfigError,
+        message: """
+
+
+        Admin module not set in `config/brando.exs`. Add:
+
+        config :brando, admin_module: MyAppAdmin
+        """
+    end
+
     {:ok, {:module_config, :exists}}
   end
 

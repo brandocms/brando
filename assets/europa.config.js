@@ -264,6 +264,16 @@ module.exports = {
           desktop_xl: '20px'
         },
 
+        badge: {
+          iphone: '10px',
+          mobile: '10px',
+          ipad_portrait: '12px',
+          ipad_landscape: '0.8333333333333334vw',
+          desktop_md: '0.8333333333333334vw',
+          desktop_lg: '12px',
+          desktop_xl: '12px'
+        },
+
         lg: {
           iphone: {
             'font-size': '24px'

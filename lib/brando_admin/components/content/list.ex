@@ -54,10 +54,6 @@ defmodule BrandoAdmin.Components.Content.List do
     ~F"""
     <div class="content-list-wrapper">
       <article class="content-list" data-moonwalk-run="brandoList">
-        {#if @listing.label}
-          <h2>{@listing.label}</h2>
-        {/if}
-
         <Tools
           schema={@schema}
           listing={@listing}
@@ -343,7 +339,6 @@ defmodule BrandoAdmin.Components.Content.List do
         filter_atom = String.to_existing_atom(filter_key)
         Map.put(new_list_opts, :filter, %{filter_atom => value})
     end)
-    |> IO.inspect(label: "list_opts")
   end
 
   defp maybe_order_by_sequence(list_opts, schema) do

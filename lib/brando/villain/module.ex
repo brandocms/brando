@@ -50,13 +50,13 @@ defmodule Brando.Villain.Module do
         order: [{:asc, :namespace}, {:asc, :sequence}, {:desc, :inserted_at}]
       }
 
-      listing_filters([
+      filters([
         [label: gettext("Name"), filter: "name"],
         [label: gettext("Namespace"), filter: "namespace"],
         [label: gettext("Class"), filter: "class"]
       ])
 
-      listing_actions([
+      actions([
         [label: gettext("Edit module"), event: "edit_entry"],
         [
           label: gettext("Delete module"),
@@ -66,21 +66,21 @@ defmodule Brando.Villain.Module do
         [label: gettext("Duplicate module"), event: "duplicate_entry"]
       ])
 
-      listing_template(
+      template(
         """
         <div class="svg">{{ entry.svg }}</div><br>
         """,
         columns: 3
       )
 
-      listing_template(
+      template(
         """
         <div class="badge">{{ entry.namespace }}</div><br>
         """,
         columns: 3
       )
 
-      listing_template(
+      template(
         """
         <a
           data-phx-link="redirect"

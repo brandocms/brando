@@ -17,9 +17,8 @@ defmodule Brando.Blueprint.Form do
   defp forms(_caller, block) do
     quote generated: true, location: :keep do
       Module.register_attribute(__MODULE__, :forms, accumulate: true)
-      var!(b_form_ctx) = :forms
+      Module.put_attribute(__MODULE__, :brando_macro_context, :forms)
       unquote(block)
-      _ = var!(b_form_ctx)
     end
   end
 
@@ -59,13 +58,14 @@ defmodule Brando.Blueprint.Form do
     default_params = Keyword.get(opts, :default_params, %{})
 
     quote generated: true, location: :keep do
+      Module.put_attribute(__MODULE__, :brando_macro_context, :form)
+
+      var!(b_tab) = []
       var!(b_fieldset) = []
       var!(b_subform) = []
-      var!(b_tab) = []
       var!(b_form) = []
       var!(b_redirect_on_save) = nil
       var!(b_query) = &Brando.Blueprint.Form.default_query/1
-      var!(b_form_ctx) = :form
 
       unquote(block)
 
@@ -84,7 +84,6 @@ defmodule Brando.Blueprint.Form do
       _ = var!(b_subform)
       _ = var!(b_fieldset)
       _ = var!(b_tab)
-      _ = var!(b_form_ctx)
     end
   end
 
@@ -109,12 +108,10 @@ defmodule Brando.Blueprint.Form do
 
   defp do_redirect_on_save(target) do
     quote location: :keep do
-      prev_ctx = var!(b_form_ctx)
-
-      unless prev_ctx == :form do
+      unless @brando_macro_context == :form do
         raise Brando.Exception.BlueprintError,
           message: """
-          `redirect_on_save/1` must be nested directly under a form. was: `#{inspect(prev_ctx)}`
+          `redirect_on_save/1` must be nested directly under a form. was: `#{inspect(@brando_macro_context)}`
 
           Example:
 
@@ -167,12 +164,10 @@ defmodule Brando.Blueprint.Form do
 
   defp do_form_query(query_fun) do
     quote location: :keep do
-      prev_ctx = var!(b_form_ctx)
-
-      unless prev_ctx == :form do
+      unless @brando_macro_context == :form do
         raise Brando.Exception.BlueprintError,
           message: """
-          `form_query/1` must be nested directly under a form. was: `#{inspect(prev_ctx)}`
+          `form_query/1` must be nested directly under a form. was: `#{inspect(@brando_macro_context)}`
 
           Example:
 
@@ -217,26 +212,28 @@ defmodule Brando.Blueprint.Form do
       _ = var!(b_fieldset)
       _ = var!(b_tab)
 
-      prev_ctx = var!(b_form_ctx)
+      prev_ctx = @brando_macro_context
 
-      unless prev_ctx == :form do
+      unless @brando_macro_context == :form do
         raise Brando.Exception.BlueprintError,
           message: """
-          tab must be nested under a form -- #{inspect(prev_ctx)}
+          tab must be nested under a form -- #{inspect(@brando_macro_context)}
           """
       end
 
-      var!(b_form_ctx) = :tab
+      Module.put_attribute(__MODULE__, :brando_macro_context, :tab)
+
       var!(b_tab) = []
 
       unquote(block)
+
       named_tab = build_tab(unquote(name), Enum.reverse(var!(b_tab)))
       var!(b_form) = List.wrap(named_tab) ++ var!(b_form)
 
+      Module.put_attribute(__MODULE__, :brando_macro_context, prev_ctx)
+
       # reset fieldset(s) since tab is processed
       var!(b_fieldset) = []
-      var!(b_form_ctx) = prev_ctx
-      _ = var!(b_form_ctx)
     end
   end
 
@@ -250,16 +247,17 @@ defmodule Brando.Blueprint.Form do
 
   defp do_fieldset(opts, block) do
     quote location: :keep do
-      prev_ctx = var!(b_form_ctx)
+      prev_ctx = @brando_macro_context
 
-      unless prev_ctx == :tab do
+      unless @brando_macro_context == :tab do
         raise Brando.Exception.BlueprintError,
           message: """
-          fieldset must be nested under a tab -- #{inspect(prev_ctx)}
+          fieldset must be nested under a tab -- #{inspect(@brando_macro_context)}
           """
       end
 
-      var!(b_form_ctx) = :fieldset
+      Module.put_attribute(__MODULE__, :brando_macro_context, :fieldset)
+
       var!(b_subform) = []
       var!(b_fieldset) = []
 
@@ -268,11 +266,10 @@ defmodule Brando.Blueprint.Form do
       named_fieldset = build_fieldset(unquote(opts), Enum.reverse(var!(b_fieldset)))
       var!(b_tab) = List.wrap(named_fieldset) ++ var!(b_tab)
 
-      var!(b_form_ctx) = prev_ctx
+      Module.put_attribute(__MODULE__, :brando_macro_context, prev_ctx)
 
       _ = var!(b_subform)
       _ = var!(b_fieldset)
-      _ = var!(b_form_ctx)
     end
   end
 
@@ -297,17 +294,21 @@ defmodule Brando.Blueprint.Form do
       _ = var!(b_subform)
       _ = var!(b_fieldset)
 
-      prev_ctx = var!(b_form_ctx)
+      prev_ctx = @brando_macro_context
 
-      unless prev_ctx == :fieldset do
+      unless @brando_macro_context == :fieldset do
         raise Brando.Exception.BlueprintError,
           message: """
-          inputs_for must be nested under a fieldset -- #{inspect(prev_ctx)}
+          inputs_for must be nested under a fieldset -- #{inspect(@brando_macro_context)}
           """
       end
 
+      Module.put_attribute(__MODULE__, :brando_macro_context, :subform)
+
       named_subform = build_subform(unquote(field), unquote(opts), unquote(component))
       var!(b_fieldset) = List.wrap(named_subform) ++ var!(b_fieldset)
+
+      Module.put_attribute(__MODULE__, :brando_macro_context, prev_ctx)
     end
   end
 
@@ -316,39 +317,39 @@ defmodule Brando.Blueprint.Form do
       _ = var!(b_subform)
       _ = var!(b_fieldset)
 
-      prev_ctx = var!(b_form_ctx)
+      prev_ctx = @brando_macro_context
 
-      unless prev_ctx == :fieldset do
+      unless @brando_macro_context == :fieldset do
         raise Brando.Exception.BlueprintError,
           message: """
-          inputs_for must be nested under a fieldset -- #{inspect(prev_ctx)}
+          inputs_for must be nested under a fieldset -- #{inspect(@brando_macro_context)}
           """
       end
 
-      var!(b_form_ctx) = :subform
+      Module.put_attribute(__MODULE__, :brando_macro_context, :subform)
+
       var!(b_subform) = []
-      _ = var!(b_form_ctx)
 
       unquote(block)
 
       named_subform = build_subform(unquote(field), unquote(opts), Enum.reverse(var!(b_subform)))
       var!(b_fieldset) = List.wrap(named_subform) ++ var!(b_fieldset)
-      var!(b_form_ctx) = prev_ctx
-      _ = var!(b_form_ctx)
+
+      Module.put_attribute(__MODULE__, :brando_macro_context, prev_ctx)
     end
   end
 
   defmacro input(do: tpl) do
     quote location: :keep do
-      if var!(b_form_ctx) == :tab do
+      if @brando_macro_context == :tab do
         raise Brando.Exception.BlueprintError,
           message: """
-          input must be nested under a subform or fieldset, not a tab -- #{inspect(var!(b_form_ctx))}
+          input must be nested under a subform or fieldset, not a tab -- #{inspect(@brando_macro_context)}
           """
       end
 
       {var!(b_subform), var!(b_fieldset)} =
-        case var!(b_form_ctx) do
+        case @brando_macro_context do
           :subform ->
             {
               List.wrap(build_input(unquote(tpl), :surface)) ++ var!(b_subform),
@@ -367,15 +368,15 @@ defmodule Brando.Blueprint.Form do
   defmacro input(name, type, opts \\ []) do
     quote location: :keep,
           bind_quoted: [name: name, type: type, opts: opts] do
-      if var!(b_form_ctx) == :tab do
+      if @brando_macro_context == :tab do
         raise Brando.Exception.BlueprintError,
           message: """
-          input must be nested under a subform or fieldset, not a tab -- #{inspect(var!(b_form_ctx))}
+          input must be nested under a subform or fieldset, not a tab -- #{inspect(@brando_macro_context)}
           """
       end
 
       {var!(b_subform), var!(b_fieldset)} =
-        case var!(b_form_ctx) do
+        case @brando_macro_context do
           :subform ->
             {
               List.wrap(build_input(name, type, opts)) ++ var!(b_subform),

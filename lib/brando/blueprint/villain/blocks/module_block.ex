@@ -5,34 +5,6 @@ defmodule Brando.Blueprint.Villain.Blocks.ModuleBlock do
 
   # TODO: Split into ModuleBlock and MultiModuleBlock?
 
-  # defmodule Ref do
-  #   use Brando.Blueprint,
-  #     application: "Brando",
-  #     domain: "Villain",
-  #     schema: "ModuleBlockRef",
-  #     singular: "module_block_ref",
-  #     plural: "module_blocks_refs",
-  #     gettext_module: Brando.Gettext
-
-  #   @primary_key false
-  #   data_layer :embedded
-  #   identifier "{{ entry.type }}"
-
-  #   trait Brando.Trait.CastPolymorphicEmbeds
-
-  #   attributes do
-  #     attribute :name, :text, required: true
-  #     attribute :description, :text
-  #     attribute :deleted, :boolean, default: false
-
-  #     attribute :data, PolymorphicEmbed,
-  #       types: Blocks.list_blocks(),
-  #       type_field: :type,
-  #       on_type_not_found: :raise,
-  #       on_replace: :update
-  #   end
-  # end
-
   defmodule Data do
     use Brando.Blueprint,
       application: "Brando",

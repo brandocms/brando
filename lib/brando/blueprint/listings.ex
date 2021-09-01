@@ -19,7 +19,6 @@ defmodule Brando.Blueprint.Listings do
 
   defmodule Listing do
     defstruct name: nil,
-              label: nil,
               query: %{},
               fields: [],
               filters: [],
@@ -65,7 +64,6 @@ defmodule Brando.Blueprint.Listings do
       Module.put_attribute(__MODULE__, :brando_macro_context, :listing)
       var!(brando_listing_fields) = []
       var!(brando_listing_query) = %{}
-      var!(brando_listing_label) = nil
       var!(brando_listing_filters) = []
       var!(brando_listing_actions) = []
       var!(brando_listing_selection_actions) = []
@@ -76,7 +74,6 @@ defmodule Brando.Blueprint.Listings do
         build_listing(
           unquote(name),
           var!(brando_listing_query),
-          var!(brando_listing_label),
           Enum.reverse(var!(brando_listing_fields)),
           var!(brando_listing_filters),
           var!(brando_listing_actions),
@@ -88,7 +85,7 @@ defmodule Brando.Blueprint.Listings do
     end
   end
 
-  defmacro listing_field(name, type, opts \\ []) do
+  defmacro field(name, type, opts \\ []) do
     quote generated: true,
           location: :keep,
           bind_quoted: [name: name, type: type, opts: opts] do
@@ -97,7 +94,7 @@ defmodule Brando.Blueprint.Listings do
     end
   end
 
-  defmacro listing_template(template, opts \\ []) do
+  defmacro template(template, opts \\ []) do
     quote generated: true,
           location: :keep,
           bind_quoted: [template: template, opts: opts] do
@@ -114,7 +111,7 @@ defmodule Brando.Blueprint.Listings do
     end
   end
 
-  defmacro listing_child_listing(listing_name) do
+  defmacro child_listing(listing_name) do
     quote generated: true,
           location: :keep,
           bind_quoted: [listing_name: listing_name] do
@@ -122,15 +119,7 @@ defmodule Brando.Blueprint.Listings do
     end
   end
 
-  defmacro listing_label(label) do
-    quote generated: true,
-          location: :keep,
-          bind_quoted: [label: label] do
-      var!(brando_listing_label) = label
-    end
-  end
-
-  defmacro listing_filters(filters) do
+  defmacro filters(filters) do
     quote generated: true,
           location: :keep,
           bind_quoted: [filters: filters] do
@@ -138,7 +127,7 @@ defmodule Brando.Blueprint.Listings do
     end
   end
 
-  defmacro listing_actions(actions) do
+  defmacro actions(actions) do
     quote generated: true,
           location: :keep,
           bind_quoted: [actions: actions] do
@@ -146,7 +135,7 @@ defmodule Brando.Blueprint.Listings do
     end
   end
 
-  defmacro listing_selection_actions(actions) do
+  defmacro selection_actions(actions) do
     quote generated: true,
           location: :keep,
           bind_quoted: [actions: actions] do
@@ -157,7 +146,6 @@ defmodule Brando.Blueprint.Listings do
   def build_listing(
         name,
         query,
-        label,
         fields,
         filters,
         actions,
@@ -166,7 +154,6 @@ defmodule Brando.Blueprint.Listings do
       ) do
     %__MODULE__.Listing{
       name: name,
-      label: label,
       query: query,
       fields: fields,
       filters: filters,

@@ -123,7 +123,6 @@ defmodule BrandoIntegration.AdminChannel do
   """
 
   use Phoenix.Channel
-  use Brando.Mixin.Channels.AdminChannelMixin
 
   # ++imports
   use Brando.Sequence.Channel

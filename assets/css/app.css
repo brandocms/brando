@@ -791,10 +791,10 @@ h3 {
 }
 
 .badge {
+  @fontsize badge;
   display: inline-flex;
   align-items: center;
   font-family: theme(typography.families.mono);
-  font-size: 12px;
   text-transform: uppercase;
   padding: 5px 8px 4px;
   line-height: 1;

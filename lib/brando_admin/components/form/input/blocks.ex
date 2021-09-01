@@ -56,9 +56,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       field={name}>
 
       <div class="blocks-wrapper">
+        {!-- extract ModulePicker begin --}
         <Modal title="Add content block" id={"#{@form.id}-#{name}-module-picker"} medium>
           <div class="button-group-horizontal">
-            <button type="button" class="builtin-button">
+            <button
+              type="button"
+              class="builtin-button"
+              :on-click="insert_section"
+              phx-value-index={@insert_index}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 3h18a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm17 8H4v8h16v-8zm0-2V5H4v4h16zM9 6h2v2H9V6zM5 6h2v2H5V6z"/></svg>
               Insert section
             </button>
@@ -125,6 +130,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
             {/for}
           </div>
         </Modal>
+        {!-- extract ModulePicker end --}
 
         {#if Enum.empty?(@blocks)}
           <div class="blocks-empty-instructions">
@@ -158,6 +164,43 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     Modal.show(modal_id)
 
     {:noreply, assign(socket, insert_index: index_binary)}
+  end
+
+  def handle_event(
+        "insert_section",
+        %{"index" => index_binary},
+        %{assigns: %{form: form, input: %{name: name}}} = socket
+      ) do
+    modal_id = "#{form.id}-#{name}-module-picker"
+
+    changeset = form.source
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__.singular}_form"
+
+    new_block = %Brando.Blueprint.Villain.Blocks.ContainerBlock{
+      type: "container",
+      data: %Brando.Blueprint.Villain.Blocks.ContainerBlock.Data{
+        class: "default",
+        description: "Default section style",
+        wrapper: nil
+      },
+      uid: Brando.Utils.generate_uid()
+    }
+
+    {index, ""} = Integer.parse(index_binary)
+
+    new_data = List.insert_at(get_blocks_data(changeset), index, new_block)
+    updated_changeset = Ecto.Changeset.put_change(changeset, :data, new_data)
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
+
+    Modal.hide(modal_id)
+    selector = "[data-block-uid=\"#{new_block.uid}\"]"
+
+    {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
   end
 
   def handle_event(

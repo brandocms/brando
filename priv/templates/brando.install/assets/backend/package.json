@@ -1,42 +1,21 @@
 {
-  "name": "admin",
-  "version": "0.1.0",
-  "private": true,
+  "name": "backend",
+  "version": "0.0.0",
   "scripts": {
-    "test": "cypress open",
-    "lint": "vue-cli-service lint",
-    "serve": "vue-cli-service serve",
-    "watch": "vue-cli-service build --watch --no-clean",
-    "build": "vue-cli-service build",
-    "build-report": "vue-cli-service build --report",
-    "i18n:report": "vue-cli-service i18n:report --src './src/**/*.?(js|vue)' --locales './src/locales/**/*.json'"
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
   },
   "dependencies": {
-    "brandojs": "file:.yalc/brandojs",
-    "core-js": "^3.9.1",
-    "vue": "^2.6.12"
+    "@brandocms/brandojs": "file:../../../../brando",
+    "@brandocms/jupiter": "^3.42.0"
   },
   "devDependencies": {
-    "@brandocms/europacss": "^0.6.0",
-    "@intlify/vue-i18n-loader": "^1.1.0",
-    "@kazupon/vue-i18n-loader": "^0.5.0",
-    "@vue/cli-plugin-babel": "^4.5.12",
-    "@vue/cli-plugin-eslint": "^4.5.12",
-    "@vue/cli-plugin-router": "^4.5.12",
-    "@vue/cli-service": "^4.5.12",
-    "@vue/eslint-config-standard": "^6.0.0",
-    "babel-eslint": "^10.1.0",
-    "cypress-file-upload": "^5.0.2",
-    "eslint": "^7.22.0",
-    "eslint-plugin-graphql": "^4.0.0",
-    "eslint-plugin-import": "^2.22.0",
-    "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-promise": "^4.3.1",
-    "eslint-plugin-standard": "^5.0.0",
-    "eslint-plugin-vue": "^7.7.0",
-    "graphql-tag": "^2.11.0",
-    "vue-cli-plugin-apollo": "^0.22.2",
-    "vue-cli-plugin-i18n": "^1.0.1",
-    "vue-template-compiler": "^2.6.12"
+    "@brandocms/europacss": "^0.6.2",
+    "@sveltejs/vite-plugin-svelte": "1.0.0-next.19",
+    "autoprefixer": "^10.3.3",
+    "svelte": "^3.42.4",
+    "svelte-preprocess": "^4.8.0",
+    "vite": "^2.5.2"
   }
 }

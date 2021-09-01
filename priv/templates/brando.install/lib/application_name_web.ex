@@ -72,6 +72,7 @@ defmodule <%= application_module %>Web do
       use Phoenix.Router
       import Plug.Conn
       import Phoenix.Controller
+      import Phoenix.LiveView.Router
     end
   end
 
@@ -91,6 +92,7 @@ defmodule <%= application_module %>Web do
     quote do
       # Use all HTML functionality (forms, tags, etc)
       use Phoenix.HTML
+      import Phoenix.LiveView.Helpers
 
       import Brando.HTML
       import Brando.Utils

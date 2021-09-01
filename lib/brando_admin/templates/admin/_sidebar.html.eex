@@ -16,7 +16,7 @@
         class="button">
         <section class="avatar-wrapper">
           <div class="avatar">
-            <img src="<%= Brando.Utils.img_url(@current_user.avatar, :thumb, prefix: Brando.Utils.media_url()) %>" />
+            <img src="<%= Brando.Utils.img_url(@current_user.avatar, :thumb, prefix: Brando.Utils.media_url(), default: "/images/admin/avatar.svg") %>" />
           </div>
         </section>
         <section class="content">
