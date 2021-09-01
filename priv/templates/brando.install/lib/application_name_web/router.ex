@@ -5,8 +5,7 @@ defmodule <%= application_module %>Web.Router do
   import Brando.Router
   import Phoenix.LiveDashboard.Router
   import Plug.BasicAuth
-
-  @sql_sandbox Application.get_env(:<%= application_name %>, :sql_sandbox) || false
+  import BrandoAdmin.UserAuth
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -26,19 +25,15 @@ defmodule <%= application_module %>Web.Router do
   end
 
   pipeline :browser_api do
-    plug :accepts, ["json"]
+    plug :accepts, ["html"]
     plug :fetch_session
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug :put_extra_secure_browser_headers
+    # plug :put_extra_secure_browser_headers
   end
 
   pipeline :basic_httpauth do
-    plug :basic_auth, username: "admin", password: "<%= :os.timestamp |> :erlang.phash2 |> Integer.to_string(32) |> String.downcase %>"
-  end
-
-  if @sql_sandbox do
-    forward "/__e2e", Brando.Plug.E2ETest
+    plug :basic_auth, username: "admin", password: "<%= Brando.Utils.random_string(10) %>"
   end
 
   scope "/__dashboard" do
@@ -46,15 +41,20 @@ defmodule <%= application_module %>Web.Router do
     live_dashboard "/", metrics: <%= application_module %>Web.Telemetry
   end
 
-  admin_routes()
-
-  scope "/coming-soon" do
-    get "/", <%= application_module %>Web.LockdownController, :index
-    post "/", <%= application_module %>Web.LockdownController, :post_password
+  admin_routes do
+    # live "/projects", <%= application_module %>Web.Projects.ProjectListLive
+    # live "/projects/create", <%= application_module %>Web.Projects.ProjectCreateLive
+    # live "/projects/update/:entry_id", <%= application_module %>Web.Projects.ProjectUpdateLive
   end
 
-  scope "/api" do
+  scope "/coming-soon", <%= application_module %>Web do
+    get "/", LockdownController, :index
+    post "/", LockdownController, :post_password
+  end
+
+  scope "/api", <%= application_module %>Web do
     pipe_through :browser_api
+    # get "/projects/all/:page", PostController, :api_get
   end
 
   scope "/" do

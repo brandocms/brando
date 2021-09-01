@@ -1,0 +1,45 @@
+.selected-rows {
+  @container;
+  @color bg dark;
+  @color fg peach;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 25px;
+  padding-right: 15px;
+  padding-top: 25px;
+  padding-bottom: 25px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 5;
+  
+  transition: transform 250ms ease, opacity 250ms ease;
+  transform: translateY(0);
+  opacity: 1;
+
+  &.hidden {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+
+  .selection-actions {
+    display: flex;
+    align-items: center;
+  }
+
+  .circle {
+    margin-left: 15px;
+    margin-right: 15px;
+    border: 1px solid theme(colors.peach);
+
+    span {
+      @color fg peach;
+    }
+  }
+
+  .wrapper {
+    margin-left: 25px;
+  }
+}

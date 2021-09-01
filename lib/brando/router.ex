@@ -19,7 +19,7 @@ defmodule Brando.Router do
     end
   end
 
-  defmacro admin_routes(path \\ "/admin") do
+  defmacro admin_routes(path \\ "/admin", do: block) do
     quote do
       import BrandoAdmin.UserAuth
 
@@ -44,6 +44,10 @@ defmodule Brando.Router do
         # plug :refresh_token
       end
 
+      pipeline :root_layout do
+        plug :put_root_layout, {BrandoAdmin.LayoutView, :root}
+      end
+
       scope unquote(path), as: :admin do
         scope "/", BrandoAdmin do
           pipe_through [:admin, :redirect_if_user_is_authenticated]
@@ -60,6 +64,32 @@ defmodule Brando.Router do
           pipe_through [:admin]
 
           get "/logout", UserSessionController, :delete
+        end
+      end
+
+      scope unquote(path), as: :admin do
+        pipe_through [:admin, :root_layout, :require_authenticated_user]
+
+        live_session :admin do
+          # brando routes
+          live "/navigation", BrandoAdmin.NavigationLive
+          live "/config/identity", BrandoAdmin.Sites.IdentityLive
+          live "/config/globals", BrandoAdmin.Sites.GlobalsLive
+          live "/config/modules", BrandoAdmin.Villain.ModuleListLive
+          live "/config/modules/update/:entry_id", BrandoAdmin.Villain.ModuleUpdateLive
+          live "/pages", BrandoAdmin.Pages.PageListLive
+          live "/pages/create", BrandoAdmin.Pages.PageCreateLive
+          live "/pages/create/:parent_id", BrandoAdmin.Pages.PageCreateLive
+          live "/pages/update/:entry_id", BrandoAdmin.Pages.PageUpdateLive
+          live "/pages/fragments/create", BrandoAdmin.Pages.PageFragmentCreateLive
+          live "/pages/fragments/create/:parent_id", BrandoAdmin.Pages.PageFragmentCreateLive
+          live "/pages/fragments/update/:entry_id", BrandoAdmin.Pages.PageFragmentUpdateLive
+          live "/users", BrandoAdmin.Users.UserListLive
+          live "/users/create", BrandoAdmin.Users.UserCreateLive
+          live "/users/update/:entry_id", BrandoAdmin.Users.UserUpdateLive
+
+          # app routes
+          unquote(block)
         end
       end
     end

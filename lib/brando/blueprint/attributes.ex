@@ -108,6 +108,7 @@ defmodule Brando.Blueprint.Attributes do
 
   defp attributes(_caller, block) do
     quote generated: true, location: :keep do
+      Module.put_attribute(__MODULE__, :brando_macro_context, :attributes)
       Module.register_attribute(__MODULE__, :attrs, accumulate: true)
       unquote(block)
     end

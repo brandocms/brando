@@ -1,0 +1,254 @@
+.shaded {
+  background-color: #fdf8f7;
+  padding: 15px;
+  border-radius: 20px;
+
+  input.text, textarea.text {
+    @color bg white;
+  }
+
+}
+
+.compact {
+  display: flex;
+  align-items: center;
+
+  .check-wrapper {
+    margin-top: 0 !important;
+    margin-right: 15px;
+
+    .form-check {
+      margin-bottom: 0 !important;
+    }
+  }
+
+  .label-wrapper {
+    margin-bottom: 0 !important;
+  }
+}
+
+.field-wrapper {
+  width: 100%;
+  margin-bottom: 30px;
+
+  .field-wrapper-header {
+    display: flex;
+
+    .switch-description {
+      font-size: 12px;
+      margin-right: 6px;
+      margin-top: 3px;
+    }
+  }
+
+  &.subform {
+    background-color: #fdf8f7;
+    padding: 15px;
+    border-radius: 20px;
+
+    .text, .tiptap-wrapper {
+      background-color: #fff;
+    }
+
+    .text {
+      @fontsize sm;
+
+      &::placeholder {
+        @fontsize sm;
+      }
+    }
+
+    .label-wrapper {
+      margin-bottom: 15px;
+    }
+
+    .subform-empty {
+      font-size: 18px;
+    }
+
+    .subform-entry {
+      border-left: 4px solid #dac5d1;
+      padding-left: 15px;
+
+      &.inline {
+        display: flex;
+        flex-wrap: nowrap;
+        width: 100%;
+        margin-bottom: 15px;
+        padding-left: 0;
+        border-left: none;
+
+        .subform-tools {
+          display: flex;
+          flex-direction: column;
+          padding-right: 15px;
+          justify-content: flex-end;
+
+          button {
+            border: none;
+            background-color: white;
+            padding: 5px;
+            border-radius: 50%;
+
+            &:first-of-type {
+              margin-bottom: 5px;
+            }
+
+            &:hover {
+              @color bg dark;
+              svg path.s {
+                fill: theme(colors.peach);
+              }
+            }
+          }
+
+          label.subform-delete {
+            cursor: pointer;
+            background-color: white;
+            padding: 5px;
+            border-radius: 50%;
+
+            &:hover {
+              @color bg dark;
+              svg path.s {
+                fill: theme(colors.peach);
+              }
+            }
+
+            input {
+              position: absolute;
+              opacity: 0;
+              cursor: pointer;
+              height: 0;
+              width: 0;
+            }
+
+            svg {
+              pointer-events: none;
+            }
+          }
+        }
+
+        .brando-input {
+          flex-grow: 1;
+          margin-right: 5px;
+
+          &.full-width {
+            flex-basis: 100%;
+            flex-shrink: 1;
+          }
+
+          .field-wrapper {
+            margin-bottom: 0;
+          }
+
+          .label-wrapper {
+            margin-bottom: 3px;
+
+            label {
+              font-size: 14px;
+            }
+
+            .field-error {
+              font-size: 11px;
+              padding-right: 5px;
+            }
+          }
+        }
+      }
+    }
+
+    .add-subentry {
+      border: 1px solid theme(colors.dark);
+      font-size: 17px;
+      padding: 12px 20px 10px;
+      border-radius: 25px;
+      display: flex;
+      align-items: center;
+      margin-top: 15px;
+
+      svg {
+        margin-bottom: 4px;
+        margin-right: 10px;
+
+        path:nth-of-type(2) {
+          fill: theme(colors.dark);
+        }
+      }
+
+      &:hover {
+        @color bg dark;
+        @color fg peach;
+        svg path:nth-of-type(2) {
+          fill: theme(colors.peach);
+        }
+      }
+    }
+  }
+
+  .label-wrapper {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+
+    > span.field-error {
+      font-size: 14px;
+    }
+
+    label {
+      @fontsize form.label;
+      font-weight: 500;
+      position: relative;
+
+      &:before {
+        transition: opacity 0.5s ease;
+        content: '';
+        opacity: 0;
+        position: absolute;
+        top: 1px;
+        width: 13px;
+        height: 13px;
+        margin-top: 1px;
+        background-image: url("data:image/svg+xml,%3Csvg width='13' height='13' viewBox='0 0 13 13' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='6.5' cy='6.5' r='6.5' fill='%23FF0000'/%3E%3C/svg%3E%0A");
+      }
+
+      span {
+        transition: padding-left 500ms ease;
+        transition-delay: 0.25s;
+        padding-left: 0;
+      }
+
+      &.failed {
+        &:before {
+          transition: opacity 0.5s ease;
+          transition-delay: 0.25s;
+          opacity: 1;
+        }
+
+        span {
+          transition: padding-left 500ms ease;
+          padding-left: 20px;
+        }
+      }
+    }
+  }
+
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    position: absolute;
+
+    .help-text {
+      @fontsize form.help;
+      margin-left: 15px;
+    }
+
+    .extra {
+      font-size: 12px;
+      border: 1px solid theme(colors.dark);
+      border-radius: 16px;
+      padding: 3px 5px 2px;
+    }
+  }
+}

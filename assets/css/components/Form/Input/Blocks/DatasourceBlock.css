@@ -1,0 +1,33 @@
+.datasource-block {
+  .row-wrap {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .villain-block-datasource-info,
+  .villain-block-datasource-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    .inside {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    svg {
+      margin-bottom: 25px;
+    }
+  }
+
+  .selected-entry {
+    margin-top: 15px;
+    padding: 7px 0;
+    border-bottom: 1px solid theme(colors.peach);
+  }
+}

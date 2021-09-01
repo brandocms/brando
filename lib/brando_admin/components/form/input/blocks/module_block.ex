@@ -37,7 +37,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     {:ok,
      socket
      |> assign(assigns)
-     |> render_module()
      |> assign_module_data()
      |> parse_module_code()}
   end
@@ -79,22 +78,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     |> assign(:splits, splits)
   end
 
-  defp render_module(%{assigns: %{block: block_form, base_form: base_form}} = socket) do
-    {:ok, modules} = Brando.Villain.list_modules(%{cache: {:ttl, :infinite}})
-    parser = Brando.app_module(Villain.Parser)
-    context = Liquex.Context.assign(Brando.Villain.get_base_context(), "entry", base_form.data)
-
-    rendered_block =
-      parser.module(block_form.data.data, %{
-        context: context,
-        modules: modules,
-        render_for_admin: true
-      })
-      |> raw
-
-    assign(socket, :rendered_block, rendered_block)
-  end
-
   def render(assigns) do
     ~F"""
     <div
@@ -126,7 +109,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
                   {raw split}
               {/case}
             {/for}
-
 
             <HiddenInput form={block_data} field={:module_id} />
             <HiddenInput form={block_data} field={:sequence} />

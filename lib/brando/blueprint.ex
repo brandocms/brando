@@ -129,20 +129,17 @@ defmodule Brando.Blueprint do
   defmacro __using__(opts) do
     Module.register_attribute(__CALLER__.module, :application, accumulate: false)
     Module.put_attribute(__CALLER__.module, :application, Keyword.fetch!(opts, :application))
-
     Module.register_attribute(__CALLER__.module, :domain, accumulate: false)
     Module.put_attribute(__CALLER__.module, :domain, Keyword.fetch!(opts, :domain))
-
     Module.register_attribute(__CALLER__.module, :schema, accumulate: false)
     Module.put_attribute(__CALLER__.module, :schema, Keyword.fetch!(opts, :schema))
-
     Module.register_attribute(__CALLER__.module, :singular, accumulate: false)
     Module.put_attribute(__CALLER__.module, :singular, Keyword.fetch!(opts, :singular))
-
     Module.register_attribute(__CALLER__.module, :plural, accumulate: false)
     Module.put_attribute(__CALLER__.module, :plural, Keyword.fetch!(opts, :plural))
-
     Module.register_attribute(__CALLER__.module, :gettext_module, accumulate: false)
+    Module.register_attribute(__CALLER__.module, :brando_macro_context, accumulate: false)
+    Module.put_attribute(__CALLER__.module, :brando_macro_context, nil)
 
     Module.put_attribute(
       __CALLER__.module,
@@ -812,6 +809,22 @@ defmodule Brando.Blueprint do
       opts
     )
     |> maybe_mark_for_deletion(module)
+  end
+
+  defmacro query(arg) do
+    quote generated: true, location: :keep do
+      case Module.get_attribute(__MODULE__, :brando_macro_context) do
+        :form ->
+          Brando.Blueprint.Form.form_query(unquote(arg))
+
+        :listing ->
+          Brando.Blueprint.Listing.listing_query(unquote(arg))
+
+        _ ->
+          raise Brando.Exception.BlueprintError,
+            message: "query/1 can only be used inside of listing or form declarations"
+      end
+    end
   end
 
   defp maybe_mark_for_deletion(%{changes: %{marked_as_deleted: true}} = changeset, module) do

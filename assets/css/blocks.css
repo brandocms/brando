@@ -1,0 +1,31 @@
+/*
+*/
+
+/* [b-tpl="contact info"] {
+  .info {
+    @row 3;
+    > * {
+      @column 4/12;
+    }
+  }
+}
+
+[b-tpl="image | image"] {
+  .images {
+    @row 2;
+
+    > * {
+      @column 6/12;
+    }
+  }
+} */
+
+[b-editor-tpl="image | image"] {
+  .images {
+    @row 2;
+  }
+
+  [b-ref] {
+    @column 6/12;
+  }
+}

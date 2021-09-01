@@ -31,6 +31,7 @@ defmodule Brando.Blueprint.Relations do
 
   defp relations(_caller, block) do
     quote location: :keep do
+      Module.put_attribute(__MODULE__, :brando_macro_context, :relations)
       Module.register_attribute(__MODULE__, :relations, accumulate: true)
       unquote(block)
     end

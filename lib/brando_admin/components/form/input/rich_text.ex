@@ -41,7 +41,7 @@ defmodule BrandoAdmin.Components.Form.Input.RichText do
         <div
           id={"#{@form.id}-#{name}-text"}
           phx-update="ignore"
-          phx-hook="Brando.Component"
+          phx-hook="Brando.TipTap"
           data-name="TipTap"
           data-props={Jason.encode!(%{content: @value || v(@form, name)})}>
         </div>

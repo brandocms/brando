@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   alias Surface.Components.Form.HiddenInput
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.MapInputs
+  alias BrandoAdmin.Components.Modal
 
   prop base_form, :any
   prop block, :any
@@ -23,6 +24,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   # def v(form, field), do: input_value(form, field)
   def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
 
+  def mount(socket) do
+    {:ok, assign(socket, images: [])}
+  end
+
   def update(assigns, socket) do
     extracted_path = v(assigns.block, :data).path
 
@@ -35,17 +40,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
      socket
      |> assign(assigns)
      |> assign(:block_data, block_data)
-     |> assign(:extracted_path, extracted_path)}
+     |> assign(:extracted_path, extracted_path)
+     |> assign(:uid, v(assigns.block, :uid))}
   end
 
   def render(assigns) do
     ~F"""
     <div
-      id={"#{v(@block, :uid)}-wrapper"}
+      class="picture-block"
+      id={"#{@uid}-wrapper"}
       data-block-index={@index}
-      data-block-uid={v(@block, :uid)}>
+      data-block-uid={@uid}>
       <Block
-        id={"#{v(@block, :uid)}-base"}
+        id={"#{@uid}-base"}
         index={@index}
         is_ref?={@is_ref?}
         block_count={@block_count}
@@ -60,10 +67,42 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             {@extracted_path}
           {/if}
         </:description>
-        <div class="picture-block">
-          <img src={@extracted_path} />
-          <TextInput form={@block_data} field={:class} />
-        </div>
+        {#if @extracted_path}
+          <div class="preview">
+            <img src={@extracted_path} />
+          </div>
+        {#else}
+          <div class="empty">
+            <figure>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M21 15v3h3v2h-3v3h-2v-3h-3v-2h3v-3h2zm.008-12c.548 0 .992.445.992.993V13h-2V5H4v13.999L14 9l3 3v2.829l-3-3L6.827 19H14v2H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3h18.016zM8 7a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>
+            </figure>
+            <div class="instructions">
+              Click or drag an image to upload or
+              <button type="button" class="tiny" :on-click="show_image_picker">pick an existing image</button>
+            </div>
+          </div>
+        {/if}
+
+        <Modal
+          title="Pick image"
+          center_header={true}
+          id={"#{@uid}-image-picker"}>
+          <div class="image-picker-images">
+            {#for image <- @images}
+              <div class="image-picker-image" :on-click="select_image" phx-value-id={image.id}>
+                <img src={"/media/#{image.image.sizes["thumb"]}"} />
+              </div>
+            {/for}
+          </div>
+        </Modal>
+
+        <Modal
+          title="Image info"
+          center_header={true}
+          id={"#{@uid}-image-info"}>
+          Info about the image here :)
+        </Modal>
+
         <:config>
           {#for block_data <- inputs_for(@block, :data)}
             <TextInput class="text" form={block_data} field={:alt} />
@@ -98,5 +137,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       </Block>
     </div>
     """
+  end
+
+  def handle_event("select_image", %{"id" => id}, %{assigns: %{uid: uid}} = socket) do
+    image_picker_modal_id = "#{uid}-image-picker"
+    image_info_modal_id = "#{uid}-image-info"
+    Modal.hide(image_picker_modal_id)
+    Modal.show(image_info_modal_id)
+    {:noreply, socket}
+  end
+
+  def handle_event("show_image_picker", _, %{assigns: %{uid: uid}} = socket) do
+    modal_id = "#{uid}-image-picker"
+    {:ok, image_series} = Brando.Images.get_series_by_slug("post", "post")
+    Modal.show(modal_id)
+
+    {:noreply, assign(socket, :images, image_series.images)}
   end
 end

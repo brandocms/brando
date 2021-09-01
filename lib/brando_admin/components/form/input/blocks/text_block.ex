@@ -69,7 +69,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TextBlock do
                 id={"#{@uid}-text"}
                 data-block-uid={@id}
                 phx-update="ignore"
-                phx-hook="Brando.Component"
+                phx-hook="Brando.TipTap"
                 data-name="TipTap"
                 data-props={Jason.encode!(%{content: v(block_data, :text)})}>
               </div>

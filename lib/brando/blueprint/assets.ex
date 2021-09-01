@@ -94,6 +94,7 @@ defmodule Brando.Blueprint.Assets do
 
   defp assets(_caller, block) do
     quote location: :keep do
+      Module.put_attribute(__MODULE__, :brando_macro_context, :assets)
       Module.register_attribute(__MODULE__, :assets, accumulate: true)
       unquote(block)
     end

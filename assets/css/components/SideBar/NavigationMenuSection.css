@@ -1,0 +1,29 @@
+#navigation {
+  .navigation-section {
+    @space margin-top sm;
+
+    header {
+      display: flex;
+      margin-bottom: 10px;
+      position: relative;
+
+      h3 {
+        @font mono nav.section;
+        font-style: normal;
+        font-weight: normal;
+        letter-spacing: 0.05rem;
+        color: rgba(0, 0, 0, 0.7);
+        text-transform: uppercase;
+      }
+
+      .line {
+        @color bg dark;
+        height: 1px;
+        width: 100%;
+        left: 0;
+        transform: translateY(10px);
+        margin-left: 10px;
+      }
+    }
+  }
+}

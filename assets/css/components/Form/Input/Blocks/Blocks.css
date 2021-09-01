@@ -1,0 +1,102 @@
+.blocks-wrapper {
+  background: repeating-linear-gradient(-45deg, #fff, #FFF 2px, #faeeea 2px, #faeeea 3px);
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+
+  .modules {
+    @space margin-top 15px;
+  }
+}
+
+.blocks-empty-instructions {
+  text-align: center;
+  @space margin-y 25px;
+}
+
+.namespace-button {
+  @color bg peachDarker;
+
+  &:hover {
+    @color bg peachDarkest;
+  }
+
+  .info .name {
+    text-transform: uppercase;
+  }
+}
+
+.builtin-button {
+  @fontsize button;
+  border: 1px solid #666;
+  padding: 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+
+  &:hover {
+    @color bg peach;
+  }
+
+  svg {
+    width: 20px;
+    height: auto;
+    margin-right: 12px;
+    margin-top: -4px;
+  }
+}
+  
+.namespace-modules + .namespace-button {
+  margin-top: -1px;
+}
+
+.namespace-modules + .module-button {
+  margin-top: -1px;
+}
+
+.module-button, .namespace-button {
+  @fontsize button;
+  border: 1px solid #666;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+
+  &:hover {
+    @color bg peach;
+  }
+
+  + .module-button {
+    margin-top: -1px;
+  }
+
+  + .namespace-button {
+    margin-top: -1px;
+  }
+
+  + .namespace-modules {
+    margin-top: -1px;
+  }
+
+  figure {
+    min-width: 115px;
+    svg {
+      width: 115px;
+      height: auto;
+    }
+  }
+
+  .info {
+    @space margin-left 15px;
+    text-align: left;
+
+    .name {
+      font-weight: 500;
+    }
+
+    .instructions {
+      @space padding-top 3px;
+      @fontsize sm;
+    }
+  }
+}

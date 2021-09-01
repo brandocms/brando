@@ -1,0 +1,40 @@
+.children-button {
+
+  justify-content: center;
+  display: flex;
+
+  a {
+    padding-top: 16px;
+    display: inline-block;
+  }
+
+  button {
+    padding-top: 10px;
+  }
+
+  button, a {
+    @fontsize xs/1;
+    color: theme(colors.dark);
+    border: 1px solid theme(colors.dark);
+    background-color: transparent;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    padding-bottom: 9px;
+    user-select: none;
+    text-align: center;
+    transition: background-color 0.25s ease, border-color 0.25s ease;
+
+    &.active {
+      background-color: theme(colors.dark);
+      border-color: theme(colors.dark);
+      color: theme(colors.peach);
+    }
+
+    &:hover {
+      background-color: theme(colors.dark);
+      border-color: theme(colors.dark);
+      color: theme(colors.peach);
+    }
+  }
+}

@@ -1,0 +1,43 @@
+input.text {
+  @fontsize base;
+  @color bg input;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  padding-left: 15px;
+  padding-right: 15px;
+  width: 100%;
+  border: 0;
+
+  &.monospace {
+    @font mono;
+
+    &::placeholder {
+      @font mono;
+    }
+  }
+
+  &.invert {
+    @color fg input;
+    @color bg dark;
+  }
+}
+
+textarea.text {
+  @fontsize base;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  padding-left: 15px;
+  padding-right: 15px;
+  width: 100%;
+  background-color: theme(colors.input);
+  border: 0;
+
+  &.monospace {
+    @font mono;
+  }
+
+  .counter {
+    font-size: 12px;
+    float: right;
+  }
+}

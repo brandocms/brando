@@ -1,0 +1,79 @@
+.block-editor {
+  @row 2;
+
+  .code {
+    @column 11/16;
+  }
+
+  .properties {
+    @column 5/16;
+    
+    .field-wrapper {
+      @space margin-bottom 1;
+    }
+
+    .button-group {
+      width: 100%;
+      button {
+        width: 100%;
+        @space margin-top 0;
+
+        + button {
+          margin-top: -1px;
+        }
+      }
+    }
+
+    .inner {
+      @space padding-x 0.5rem;
+
+      input.text, label, textarea {
+        font-size: 15px;
+      }
+
+      .refs, .vars {
+        @space margin-top 20px;
+        
+        h2 {
+          font-size: 16px;
+          display: flex;
+          width: 100%;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1px solid #00000011;
+          padding-bottom: 10px;
+          padding-top: 5px;
+
+          > div {
+            display: flex;
+            align-items: center;
+
+            span {
+              margin-left: 10px;
+            }
+          }
+        }
+
+        ul {
+          margin: 0;
+          padding: 0;
+          @space padding-top 10px;
+
+          li {
+            @space padding-y 8px;
+            @space padding-x 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            list-style-type: none;
+
+            &:nth-of-type(even) {
+              background-color: #efefef;
+            }
+          }
+        }
+      }
+    }
+  }
+}
