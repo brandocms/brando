@@ -1,9 +1,8 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   use Surface.LiveComponent
   use Phoenix.HTML
-
+  import Ecto.Changeset
   alias BrandoAdmin.Components.Form.Input.Blocks
-  alias BrandoAdmin.Components.Form.Input.Blocks.Block
 
   prop block, :any
   prop base_form, :any
@@ -19,9 +18,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   data block_count, :integer
   data insert_index, :integer
 
-  def v(form, field) do
-    Ecto.Changeset.get_field(form.source, field)
-  end
+  def v(form, field), do: get_field(form.source, field)
 
   def mount(socket) do
     {:ok, assign(socket, block_count: 0, insert_index: 0)}
@@ -52,7 +49,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       class="container-block"
       data-block-index={@index}
       data-block-uid={@uid}>
-      <Block
+      <Blocks.Block
         id={"#{@uid}-base"}
         index={@index}
         block_count={@block_count}
@@ -78,7 +75,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
           insert_section="insert_section"
           show_module_picker="show_module_picker"
           duplicate_block="duplicate_block" />
-      </Block>
+      </Blocks.Block>
     </div>
     """
   end

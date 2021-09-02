@@ -11,6 +11,8 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
 
   alias Brando.Villain
   alias Brando.Villain.Module.Ref
+  alias Brando.Villain.Module.Var
+
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.MapInputs
@@ -29,7 +31,8 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
      |> assign_current_user(token)
      |> assign_changeset()
      |> set_admin_locale()
-     |> assign(ref_name: nil)}
+     |> assign(ref_name: nil)
+     |> assign(var_name: nil)}
   end
 
   def render(assigns) do
@@ -77,6 +80,7 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
                   for={:ref_form}
                   change={"update_ref_name"}>
                   <input
+                    id={"#{form.id}-create-ref-input"}
                     type="text"
                     name="ref_name"
                     value={@ref_name}
@@ -190,16 +194,47 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
               </ul>
             </div>
 
+            <Modal title="Create var" id={"#{form.id}-create-var"} narrow>
+              <Form
+                for={:var_form}
+                change={"update_var_name"}>
+                <input
+                  id={"#{form.id}-create-var-input"}
+                  type="text"
+                  name="var_name"
+                  value={@var_name}
+                  placeholder="var name"
+                  autocomplete="off"
+                />
+              </Form>
+
+              <div class="button-group">
+                <button disabled={!@var_name} type="button" :on-click="create_var" phx-value-type={"text"} phx-value-id={"#{form.id}-create-var"} class="secondary">
+                  Text
+                </button>
+                <button disabled={!@var_name} type="button" :on-click="create_var" phx-value-type={"string"} phx-value-id={"#{form.id}-create-var"} class="secondary">
+                  String
+                </button>
+                <button disabled={!@var_name} type="button" :on-click="create_var" phx-value-type={"boolean"} phx-value-id={"#{form.id}-create-var"} class="secondary">
+                  Boolean
+                </button>
+                <button disabled={!@var_name} type="button" :on-click="create_var" phx-value-type={"color"} phx-value-id={"#{form.id}-create-var"} class="secondary">
+                  Color
+                </button>
+              </div>
+            </Modal>
+
             <div class="vars">
               <h2>
                 <div class="header-spread">Vars <span class="circle small">{Enum.count(input_value(form, :vars))}</span></div>
-                <button type="button" class="circle">
+                <button :on-click="show_modal" phx-value-id={"#{form.id}-create-var"} type="button" class="circle">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></svg>
                 </button>
               </h2>
               <ul>
-                <Inputs form={form} for={:vars} :let={form: var}>
-                  <li class="text-mono padded">
+                <Inputs form={form} for={:vars} :let={form: var, index: idx}>
+                  <li class="padded">
+                    {idx}
                     <Modal title="Edit var" id={"#{form.id}-var-#{input_value(var, :name)}"}>
                       <Input.Toggle form={var} field={:important} />
                       <Input.Text form={var} field={:name} />
@@ -224,7 +259,7 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
                           <Input.Text form={var} field={:value} />
                       {/case}
                     </Modal>
-                    {input_value(var, :type)} - %&lcub;{input_value(var, :name)}&rcub;
+                    <span class="text-mono">{input_value(var, :type)} - &lcub;&lcub; {input_value(var, :name)} &rcub;&rcub;</span>
                     <div class="actions">
                       <button class="tiny" type="button" :on-click="show_modal" phx-value-id={"#{form.id}-var-#{input_value(var, :name)}"}>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12"><path fill="none" d="M0 0h24v24H0z"/><path d="M6.414 16L16.556 5.858l-1.414-1.414L5 14.586V16h1.414zm.829 2H3v-4.243L14.435 2.322a1 1 0 0 1 1.414 0l2.829 2.829a1 1 0 0 1 0 1.414L7.243 18zM3 20h18v2H3v-2z"/></svg>
@@ -267,6 +302,10 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
     {:noreply, assign(socket, :ref_name, ref_name)}
   end
 
+  def handle_event("update_var_name", %{"var_name" => var_name}, socket) do
+    {:noreply, assign(socket, :var_name, var_name)}
+  end
+
   def handle_event(
         "create_ref",
         %{"type" => block_type, "id" => modal_id},
@@ -281,9 +320,6 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
       }
     }
 
-    require Logger
-    Logger.error(inspect(new_ref, pretty: true))
-
     updated_changeset = put_change(changeset, :refs, [new_ref | refs])
     Modal.hide(modal_id)
 
@@ -291,6 +327,27 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
      socket
      |> assign(:changeset, updated_changeset)
      |> assign(:ref_name, nil)}
+  end
+
+  def handle_event(
+        "create_var",
+        %{"type" => var_type, "id" => modal_id},
+        %{assigns: %{var_name: var_name, changeset: changeset}} = socket
+      ) do
+    vars = get_field(changeset, :vars)
+
+    new_var = %Var{
+      name: var_name,
+      type: var_type
+    }
+
+    updated_changeset = put_change(changeset, :vars, [new_var | vars])
+    Modal.hide(modal_id)
+
+    {:noreply,
+     socket
+     |> assign(:changeset, updated_changeset)
+     |> assign(:var_name, nil)}
   end
 
   def handle_event(
@@ -311,7 +368,7 @@ defmodule BrandoAdmin.Villain.ModuleUpdateLive do
     changeset = %{changeset | action: :update}
 
     case Villain.update_module(changeset, user) do
-      {:ok, entry} ->
+      {:ok, _entry} ->
         Toast.send_delayed("Module updated")
         {:noreply, push_redirect(socket, to: "/admin/config/modules")}
 
