@@ -27,6 +27,7 @@ defmodule Brando.Villain.Module do
   trait Brando.Trait.Sequenced
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Timestamped
+  trait __MODULE__.Trait.ValidateCode
 
   attributes do
     attribute :name, :string, required: true

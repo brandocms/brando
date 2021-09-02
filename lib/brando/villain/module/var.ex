@@ -20,7 +20,7 @@ defmodule Brando.Villain.Module.Var do
 
   attributes do
     attribute :name, :text, required: true
-    attribute :value, :text, required: true
+    attribute :value, :text
     attribute :label, :text, required: true
     attribute :type, :enum, values: [:boolean, :color, :text, :string], required: true
     attribute :important, :boolean, default: false

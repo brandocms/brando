@@ -2,6 +2,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   use Surface.LiveComponent
   use Phoenix.HTML
   alias Surface.Components.Form.HiddenInput
+  alias Brando.Villain
   alias BrandoAdmin.Components.Form.MapInputs
   alias BrandoAdmin.Components.Form.Input.Blocks
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
@@ -17,6 +18,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   prop duplicate_block, :event, required: true
 
   data module_name, :string
+  data important_vars, :list
 
   def v(form, field) do
     # input_value(form, field)
@@ -50,12 +52,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
       |> List.first()
 
     refs = Enum.with_index(inputs_for(block_data, :refs))
+    important_vars = Enum.filter(inputs_for(block_data, :vars), &(&1.important == true))
+    require Logger
+    Logger.error(inspect(inputs_for(block_data, :vars), pretty: true))
+    Logger.error(inspect(important_vars, pretty: true))
 
     socket
     |> assign(:uid, v(block, :uid))
+    |> assign(:block_data, block_data)
     |> assign(:module_name, module.name)
     |> assign(:module_class, module.class)
     |> assign(:module_code, module.code)
+    |> assign(:important_vars, important_vars)
     |> assign(:refs, refs)
   end
 
@@ -93,7 +101,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
         insert_block={@insert_block}
         duplicate_block={@duplicate_block}>
         <:description>{@module_name}</:description>
-        <:config></:config>
+        <:config>
+          <button type="button" class="secondary" :on-click="reinit_vars">
+            Reinitialize variables
+          </button>
+        </:config>
+        {#for var <- @important_vars}
+          {var.name} - {var.type}<br>
+        {/for}
 
         {#for block_data <- inputs_for(@block, :data)}
           <div class="module-block" b-editor-tpl={@module_class}>
@@ -124,5 +139,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
       </Block>
     </div>
     """
+  end
+
+  def handle_event("reinit_vars", _, %{assigns: %{uid: uid, block_data: block_data}} = socket) do
+    require Logger
+    Logger.error(inspect("reinit_vars"))
+    module_id = input_value(block_data, :module_id)
+    Logger.error(inspect(module_id))
+    {:ok, module} = Villain.get_module(module_id)
+    vars_blueprint = module.vars
+
+    Logger.error(inspect(vars_blueprint, pretty: true))
+    Logger.error(inspect(uid, pretty: true))
+
+    {:noreply, socket}
   end
 end
