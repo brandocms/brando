@@ -53,28 +53,6 @@
   }
 }
 
-/* .module-block {
-  .base-block {
-    display: none;
-  }
-} */
-
-/* [data-block-type="module"] {
-  [b-ref] {
-    background-color: #fdf8f7;
-    padding: 15px;
-    border-radius: 10px;
-    &:before {
-      @font mono 12px;
-      border: 1px solid;
-      padding: 5px;
-      content: "Ref: %{" attr(b-ref) "}";
-      margin-bottom: 15px;
-      display: inline-block;
-    }
-  }
-} */
-
 .base-block {
   opacity: 0;
 

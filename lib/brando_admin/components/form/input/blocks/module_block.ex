@@ -4,7 +4,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   alias Surface.Components.Form.HiddenInput
   alias Brando.Villain
   alias BrandoAdmin.Components.Form.MapInputs
+  alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
+  alias BrandoAdmin.Components.Form.Input.Blocks.RenderVar
   alias BrandoAdmin.Components.Form.Input.Blocks.Block
   alias BrandoAdmin.Components.Form.Input.Blocks.Ref
   import BrandoAdmin.Components.Form.Input.Blocks.Utils
@@ -17,8 +19,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   prop insert_block, :event, required: true
   prop duplicate_block, :event, required: true
 
+  data splits, :list
   data module_name, :string
+  data module_class, :string
+  data module_code, :string
+  data refs, :list
   data important_vars, :list
+  data uid, :string
+  data module_not_found, :boolean
 
   def v(form, field) do
     # input_value(form, field)
@@ -27,12 +35,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   end
 
   defp get_module(id) do
-    {:ok, modules} = Brando.Villain.list_modules(%{cache: {:ttl, :infinite}})
+    {:ok, modules} = Villain.list_modules(%{cache: {:ttl, :infinite}})
 
     case Enum.find(modules, &(&1.id == id)) do
       nil -> nil
       module -> module
     end
+  end
+
+  def mount(socket) do
+    {:ok, assign(socket, :module_not_found, false)}
   end
 
   def update(assigns, socket) do
@@ -44,27 +56,32 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
   end
 
   defp assign_module_data(%{assigns: %{block: block}} = socket) do
-    module = get_module(v(block, :data).module_id)
+    case get_module(v(block, :data).module_id) do
+      nil ->
+        assign(socket, :module_not_found, true)
 
-    block_data =
-      block
-      |> inputs_for(:data)
-      |> List.first()
+      module ->
+        block_data =
+          block
+          |> inputs_for(:data)
+          |> List.first()
 
-    refs = Enum.with_index(inputs_for(block_data, :refs))
-    important_vars = Enum.filter(inputs_for(block_data, :vars), &(&1.important == true))
-    require Logger
-    Logger.error(inspect(inputs_for(block_data, :vars), pretty: true))
-    Logger.error(inspect(important_vars, pretty: true))
+        refs = Enum.with_index(inputs_for(block_data, :refs))
+        important_vars = Enum.filter(v(block_data, :vars), &(&1.important == true))
 
+        socket
+        |> assign(:uid, v(block, :uid))
+        |> assign(:block_data, block_data)
+        |> assign(:module_name, module.name)
+        |> assign(:module_class, module.class)
+        |> assign(:module_code, module.code)
+        |> assign(:important_vars, important_vars)
+        |> assign(:refs, refs)
+    end
+  end
+
+  defp parse_module_code(%{assigns: %{module_not_found: true}} = socket) do
     socket
-    |> assign(:uid, v(block, :uid))
-    |> assign(:block_data, block_data)
-    |> assign(:module_name, module.name)
-    |> assign(:module_class, module.class)
-    |> assign(:module_code, module.code)
-    |> assign(:important_vars, important_vars)
-    |> assign(:refs, refs)
   end
 
   defp parse_module_code(
@@ -84,6 +101,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
 
     socket
     |> assign(:splits, splits)
+  end
+
+  def render(%{module_not_found: true} = assigns) do
+    ~F"""
+    Missing module!
+    """
   end
 
   def render(assigns) do
@@ -106,17 +129,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
             Reinitialize variables
           </button>
         </:config>
-        {#for var <- @important_vars}
-          {var.name} - {var.type}<br>
-        {/for}
 
         {#for block_data <- inputs_for(@block, :data)}
           <div class="module-block" b-editor-tpl={@module_class}>
+
+            {#unless Enum.empty?(@important_vars)}
+              <div class="important-vars">
+                {#for var <- inputs_for(block_data, :vars)}
+                  <RenderVar var={var} important />
+                {/for}
+              </div>
+            {/unless}
+
             {#for split <- @splits}
               {#case split}
                 {#match {:ref, ref}}
                   <Ref
-                    id={"#{@uid}-base-#{ref}"}
                     module_refs={@refs}
                     module_ref_name={ref}
                     base_form={@base_form} />
@@ -141,16 +169,45 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ModuleBlock do
     """
   end
 
-  def handle_event("reinit_vars", _, %{assigns: %{uid: uid, block_data: block_data}} = socket) do
+  def handle_event(
+        "reinit_vars",
+        _,
+        %{assigns: %{base_form: base_form, uid: block_uid, block_data: block_data}} = socket
+      ) do
     require Logger
     Logger.error(inspect("reinit_vars"))
     module_id = input_value(block_data, :module_id)
-    Logger.error(inspect(module_id))
     {:ok, module} = Villain.get_module(module_id)
-    vars_blueprint = module.vars
 
-    Logger.error(inspect(vars_blueprint, pretty: true))
-    Logger.error(inspect(uid, pretty: true))
+    # update_block(uid, %{vars: vars_blueprint})
+    changeset = base_form.source
+    # TODO -- get data field name somehow
+    blocks = Ecto.Changeset.get_field(changeset, :data)
+
+    # TODO -- deep search? inside sections, etc
+    source_position = Enum.find_index(blocks, &(&1.uid == block_uid))
+
+    schema = changeset.data.__struct__
+    form_id = "#{schema.__naming__.singular}_form"
+
+    old_block = Enum.at(blocks, source_position)
+    new_block = put_in(old_block, [Access.key(:data), Access.key(:vars)], module.vars)
+
+    new_blocks =
+      put_in(
+        blocks,
+        [
+          Access.filter(&match?(%{uid: ^block_uid}, &1))
+        ],
+        new_block
+      )
+
+    updated_changeset = Ecto.Changeset.put_change(changeset, :data, new_blocks)
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      updated_changeset: updated_changeset
+    )
 
     {:noreply, socket}
   end

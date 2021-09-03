@@ -1,0 +1,22 @@
+.module-block {
+  .important-vars {
+    @color bg peach;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+
+    .field-wrapper {
+      @space margin-bottom 1;
+    }
+
+    input.text, textarea.text {
+      @color bg white;
+      @color fg dark;
+      @fontsize sm;
+
+      &::placeholder {
+        @fontsize sm;
+      }
+    }
+  }
+}

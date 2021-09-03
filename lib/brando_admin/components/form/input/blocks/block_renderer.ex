@@ -24,7 +24,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.BlockRenderer do
 
       {#if Enum.empty?(@blocks)}
         <div class="blocks-empty-instructions">
-          Click the plus to start adding content to your entry!
+          Click the plus to start adding content blocks
         </div>
         <Blocks.Plus
           index={0}

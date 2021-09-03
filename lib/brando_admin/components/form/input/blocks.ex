@@ -150,10 +150,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
   def handle_event(
         "duplicate_block",
         %{"block_uid" => block_uid},
-        %{assigns: %{form: form}} = socket
+        %{assigns: %{form: form, input: %{name: data_field}}} = socket
       ) do
     changeset = form.source
-    data = get_field(changeset, :data)
+    data = get_field(changeset, data_field)
     source_position = Enum.find_index(data, &(&1.uid == block_uid))
 
     module = changeset.data.__struct__
@@ -165,7 +165,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
       |> Map.put(:uid, Brando.Utils.random_string(13) |> String.upcase())
 
     new_data = List.insert_at(data, source_position + 1, duplicated_block)
-    updated_changeset = put_change(changeset, :data, new_data)
+    updated_changeset = put_change(changeset, data_field, new_data)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
