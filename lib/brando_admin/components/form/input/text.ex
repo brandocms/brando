@@ -13,7 +13,7 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
   prop placeholder, :string
   prop instructions, :string
   prop class, :string
-  prop monospace, :string
+  prop monospace, :boolean, default: false
   prop disabled, :boolean
 
   def update(%{blueprint: blueprint, input: %{name: name, opts: opts}} = assigns, socket) do
@@ -28,7 +28,7 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
        placeholder: placeholder,
        value: value,
        class: opts[:class],
-       monospace: opts[:monospace],
+       monospace: opts[:monospace] || false,
        disabled: assigns[:disabled] || false
      )}
   end
@@ -42,7 +42,7 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
      |> assign(
        value: value,
        class: assigns.class,
-       monospace: assigns.monospace
+       monospace: assigns.monospace || false
      )}
   end
 
@@ -76,7 +76,7 @@ defmodule BrandoAdmin.Components.Form.Input.Text do
         field={@field}
         value={@value}
         opts={disabled: @disabled}
-        class={"text"} />
+        class={"text", monospace: @monospace} />
     </FieldBase>
     """
   end

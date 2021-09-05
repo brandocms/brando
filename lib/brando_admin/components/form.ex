@@ -73,7 +73,8 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:changeset, updated_changeset)
-     |> assign(:processing, false)}
+     |> assign(:processing, false)
+     |> push_event("b:validate", %{})}
   end
 
   def update(
@@ -155,6 +156,11 @@ defmodule BrandoAdmin.Components.Form do
       |> Code.eval_quoted()
       |> elem(0)
     end)
+  end
+
+  defp assign_default_params(%{assigns: %{name: name, schema: schema}} = socket) do
+    raise Brando.Exception.BlueprintError,
+      message: "Missing form `#{inspect(name)}` for `#{inspect(schema)}`"
   end
 
   defp force_svelte_remounts(socket) do
@@ -519,7 +525,7 @@ defmodule BrandoAdmin.Components.Form do
       end)
 
       image_struct =
-        if is_map(Map.get(entry, key)) do
+        if entry && is_map(Map.get(entry, key)) do
           # keep the :alt, :title and :credits field and set a default focal point
           Map.merge(image_struct, Map.take(Map.get(entry, key), [:alt, :title, :credits]))
         else

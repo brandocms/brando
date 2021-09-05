@@ -736,7 +736,7 @@ defmodule Brando.Villain.Parser do
       """
       def container(%{blocks: blocks, class: class, wrapper: wrapper}, opts) do
         blocks_html =
-          blocks
+          (blocks || [])
           |> Enum.reduce([], fn d, acc ->
             [apply(__MODULE__, String.to_atom(d.type), [d.data, opts]) | acc]
           end)

@@ -557,6 +557,15 @@ defmodule Brando.Blueprint do
             @application
           ])
 
+        admin_module =
+          if @application == "Brando" do
+            BrandoAdmin
+          else
+            Module.concat([
+              :"#{@application}Admin"
+            ])
+          end
+
         web_module =
           if @application == "Brando" do
             BrandoAdmin
@@ -590,21 +599,21 @@ defmodule Brando.Blueprint do
 
         admin_list_view =
           Module.concat([
-            web_module,
+            admin_module,
             @domain,
             "#{String.capitalize(@singular)}ListLive"
           ])
 
         admin_create_view =
           Module.concat([
-            web_module,
+            admin_module,
             @domain,
             "#{String.capitalize(@singular)}CreateLive"
           ])
 
         admin_update_view =
           Module.concat([
-            web_module,
+            admin_module,
             @domain,
             "#{String.capitalize(@singular)}UpdateLive"
           ])

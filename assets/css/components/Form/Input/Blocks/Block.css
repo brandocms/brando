@@ -41,18 +41,6 @@
   }
 }
 
-.blocks-wrapper {
-  > [data-block-uid] {
-    &.is-sorting {
-      opacity: 0.5;
-
-      .block-plus {
-        opacity: 0;
-      }
-    }
-  }
-}
-
 .base-block {
   opacity: 0;
 
@@ -96,7 +84,6 @@
 }
 
 .base-block {
-  margin: 1rem;
   position: relative;
 
   .base-block {

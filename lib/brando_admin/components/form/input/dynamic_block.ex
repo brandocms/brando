@@ -19,7 +19,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.DynamicBlock do
   data block_module, :module
   data random_id, :string
 
-  def v(form, field), do: Ecto.Changeset.get_field(form.source, field)
+  def v(form, field), do: input_value(form, field)
+  # Ecto.Changeset.get_field(form.source, field)
 
   def update(assigns, socket) do
     socket =

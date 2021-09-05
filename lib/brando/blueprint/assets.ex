@@ -131,8 +131,17 @@ defmodule Brando.Blueprint.Assets do
       when type in [:image, :file, :video] do
     # A hack to remove an embeds_one, specifically an image
     case Map.get(changeset.params, to_string(name)) do
-      "" -> put_embed(changeset, name, nil)
-      _ -> cast_embed(changeset, name, to_changeset_opts(:embeds_one, opts))
+      "" ->
+        if Map.get(opts, :required) do
+          changeset
+          |> put_embed(name, nil)
+          |> add_error(name, "can't be blank")
+        else
+          put_embed(changeset, name, nil)
+        end
+
+      _ ->
+        cast_embed(changeset, name, to_changeset_opts(:embeds_one, opts))
     end
   end
 

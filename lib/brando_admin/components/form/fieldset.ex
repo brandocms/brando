@@ -13,7 +13,12 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
 
   def render(assigns) do
     ~F"""
-    <fieldset class={@fieldset.size, inline: @fieldset.style == :inline}>
+    <fieldset class={
+      @fieldset.size,
+      "align-end": @fieldset.align == :end,
+      "inline": @fieldset.style == :inline,
+      "shaded": @fieldset.shaded
+    }>
       {#for input <- @fieldset.fields}
         {#if input.__struct__ == Brando.Blueprint.Form.Subform}
           {#if input.component}

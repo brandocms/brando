@@ -15,12 +15,14 @@ defmodule BrandoAdmin.Components.Content.List.Tools do
 
   data statuses, :list
   data filters, :list
+  data has_status?, :boolean
 
   def update(assigns, socket) do
     {:ok,
      socket
      |> assign(:active_filter, assigns.active_filter)
      |> assign(:list_opts, assigns.list_opts)
+     |> assign(:has_status?, assigns.schema.has_trait(Brando.Trait.Status))
      |> assign_new(:schema, fn -> assigns.schema end)
      |> assign_new(:listing, fn -> assigns.listing end)
      |> assign_new(:update_filter, fn -> assigns.update_filter end)
@@ -35,7 +37,7 @@ defmodule BrandoAdmin.Components.Content.List.Tools do
     ~F"""
     <div class="list-tools-wrapper">
       <div class="list-tools">
-        {#if @schema.has_status?}
+        {#if @has_status?}
           <div class="statuses">
             {#for status <- @statuses}
               <button

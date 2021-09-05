@@ -111,8 +111,10 @@ defmodule BrandoAdmin.Components.Content.List do
       current_params
       |> Map.merge(extra_params)
       |> Enum.filter(fn {_k, v} -> v != "" end)
-      |> URI.encode_query()
+      |> Plug.Conn.Query.encode()
       |> String.replace("%3A", ":")
+      |> String.replace("%5B", "[")
+      |> String.replace("%5D", "]")
 
     to =
       if String.length(new_params) > 0 do
@@ -289,6 +291,16 @@ defmodule BrandoAdmin.Components.Content.List do
 
         offset = Map.get(list_opts, :limit, 25) * page_number
         Map.put(new_list_opts, :offset, offset)
+
+      {"order", order}, new_list_opts ->
+        order =
+          order
+          |> Enum.map(fn
+            {k, v} when is_binary(k) -> {String.to_existing_atom(k), String.to_existing_atom(v)}
+            {k, v} -> {k, v}
+          end)
+
+        Map.put(new_list_opts, :order, order)
 
       {"status", value}, new_list_opts ->
         Map.put(new_list_opts, :status, String.to_existing_atom(value))

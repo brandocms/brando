@@ -1,10 +1,19 @@
 .blocks-wrapper {
-  background: repeating-linear-gradient(-45deg, #fff, #FFF 2px, #faeeea 2px, #faeeea 3px);
   padding-top: 1rem;
   padding-bottom: 1rem;
 
   .modules {
     @space margin-top 15px;
+  }
+
+  > [data-block-uid] {
+    &.is-sorting {
+      opacity: 0.5;
+
+      .block-plus {
+        opacity: 0;
+      }
+    }
   }
 }
 

@@ -118,7 +118,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
     {:ok, modules} = Villain.list_modules(%{cache: {:ttl, :infinite}})
     module = Enum.find(modules, &(&1.id == module_id))
 
-    # build a module block from module
+    generated_uid = Brando.Utils.generate_uid() |> IO.inspect(label: "generated UID")
+
+    refs_with_generated_uids =
+      put_in(
+        module.refs,
+        [Access.all(), Access.key(:data), Access.key(:uid)],
+        Brando.Utils.generate_uid()
+      )
 
     new_block = %Brando.Blueprint.Villain.Blocks.ModuleBlock{
       type: "module",
@@ -126,9 +133,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks do
         module_id: module_id,
         multi: module.multi,
         vars: module.vars,
-        refs: module.refs
+        refs: refs_with_generated_uids
       },
-      uid: Brando.Utils.generate_uid()
+      uid: generated_uid
     }
 
     {index, ""} = Integer.parse(index_binary)

@@ -104,6 +104,7 @@ defmodule Mix.Tasks.Brando.Gen do
 
     app_module = to_string(Brando.config(:app_module)) |> String.replace("Elixir.", "")
     web_module = to_string(Brando.config(:web_module)) |> String.replace("Elixir.", "")
+    admin_module = to_string(Brando.config(:admin_module)) |> String.replace("Elixir.", "")
 
     module = Enum.join([web_module, binding[:scoped]], ".")
 
@@ -122,6 +123,7 @@ defmodule Mix.Tasks.Brando.Gen do
         [
           app_module: app_module,
           web_module: web_module,
+          admin_module: admin_module,
           attrs: attrs,
           assocs: assocs,
           domain_filename: domain_filename,
@@ -179,11 +181,11 @@ defmodule Mix.Tasks.Brando.Gen do
 
           # ADMIN
           {:eex, "admin/list.ex",
-           "lib/application_name_web/admin/live/#{snake_domain}/#{singular}_list_live.ex"},
+           "lib/application_name_admin/live/#{snake_domain}/#{binding[:singular]}_list_live.ex"},
           {:eex, "admin/create.ex",
-           "lib/application_name_web/admin/live/#{snake_domain}/#{singular}_create_live.ex"},
+           "lib/application_name_admin/live/#{snake_domain}/#{binding[:singular]}_create_live.ex"},
           {:eex, "admin/update.ex",
-           "lib/application_name_web/admin/live/#{snake_domain}/#{singular}_update_live.ex"},
+           "lib/application_name_admin/live/#{snake_domain}/#{binding[:singular]}_update_live.ex"},
 
           # TEST
           {:eex, "schema_test.exs", schema_test_path}
@@ -198,9 +200,9 @@ defmodule Mix.Tasks.Brando.Gen do
 
     Then add these routes to your router
 
-        live "/#{plural}", #{web_module}.#{Recase.to_pascal(vue_singular)}ListLive
-        live "/#{plural}/create", #{web_module}.#{Recase.to_pascal(vue_singular)}CreateLive
-        live "/#{plural}/update/:entry_id", #{web_module}.#{Recase.to_pascal(vue_singular)}UpdateLive
+        live "/#{snake_domain}/#{plural}", #{admin_module}.#{domain}.#{Recase.to_pascal(vue_singular)}ListLive
+        live "/#{snake_domain}/#{plural}/create", #{admin_module}.#{domain}.#{Recase.to_pascal(vue_singular)}CreateLive
+        live "/#{snake_domain}/#{plural}/update/:entry_id", #{admin_module}.#{domain}.#{Recase.to_pascal(vue_singular)}UpdateLive
 
     ================================================================================================
     """

@@ -8,10 +8,13 @@ defmodule Brando.Globals do
   alias Brando.Villain
 
   import Ecto.Query
+  use Brando.Query
 
   @type changeset :: Ecto.Changeset.t()
   @type global_category :: Brando.Sites.GlobalCategory.t()
   @type params :: map
+
+  mutation :delete, GlobalCategory
 
   @doc """
   Get global by category and key

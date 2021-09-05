@@ -87,7 +87,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
           </div>
         {/if}
         <div class="block-actions">
+
           <div
+            :if={!@is_ref?}
             class="block-action move">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5.828L9.172 7.657 7.757 6.243 12 2l4.243 4.243-1.415 1.414L13 5.828V11h5.172l-1.829-1.828 1.414-1.415L22 12l-4.243 4.243-1.414-1.415L18.172 13H13v5.172l1.828-1.829 1.415 1.414L12 22l-4.243-4.243 1.415-1.414L11 18.172V13H5.828l1.829 1.828-1.414 1.415L2 12l4.243-4.243 1.414 1.415L5.828 11z"/></svg>
           </div>
@@ -97,9 +99,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
             :on-click="toggle_help">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-1-5h2v2h-2v-2zm2-1.645V14h-2v-1.5a1 1 0 0 1 1-1 1.5 1.5 0 1 0-1.471-1.794l-1.962-.393A3.501 3.501 0 1 1 13 13.355z"/></svg>
           </div>
-          {!-- TODO: Check if this is a ref block -- don't allow duplicating those --}
-          {!-- TODO: We need an index here to figure out where to insert the duplication! --}
+
           <button
+            :if={!@is_ref?}
             type="button"
             phx-value-block_uid={@uid}
             class="block-action duplicate"
@@ -120,6 +122,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.Block do
           </button>
 
           <Label
+            :if={!@is_ref?}
             form={@block}
             field={:marked_as_deleted}
             class="block-action toggler">

@@ -36,6 +36,7 @@
 @import './components/SideBar/NavigationMenuSection.css';
 @import './components/SideBar/NavigationMenuSectionItem.css';
 @import './components/SideBar/SideBar.css';
+@import './views/config/Globals.css';
 
 @europa base;
 

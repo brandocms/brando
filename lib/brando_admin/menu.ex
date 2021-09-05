@@ -50,8 +50,10 @@ defmodule BrandoAdmin.Menu do
     quote location: :keep,
           generated: true,
           bind_quoted: [schema: schema] do
+      domain = schema.__naming__().domain |> Recase.to_snake()
       plural = schema.__naming__().plural
-      url_base = "/admin/#{plural}"
+
+      url_base = "/admin/#{domain}/#{plural}"
       default_listing = Enum.find(schema.__listings__, &(&1.name == :default))
 
       if !default_listing do
@@ -62,8 +64,10 @@ defmodule BrandoAdmin.Menu do
       query_params =
         default_listing.query
         |> BrandoAdmin.Menu.strip_preloads()
-        |> URI.encode_query()
+        |> Plug.Conn.Query.encode()
         |> String.replace("%3A", ":")
+        |> String.replace("%5B", "[")
+        |> String.replace("%5D", "]")
 
       url = Enum.join([url_base, query_params], "?")
 
@@ -124,6 +128,10 @@ defmodule BrandoAdmin.Menu do
             url: nil,
             items: [
               %{
+                name: gettext("Navigation"),
+                url: "/admin/config/navigation"
+              },
+              %{
                 name: gettext("Identity"),
                 url: "/admin/config/identity"
               },
@@ -146,24 +154,38 @@ defmodule BrandoAdmin.Menu do
               %{
                 name: gettext("Content modules"),
                 url: "/admin/config/modules"
+              },
+              %{
+                name: gettext("Content templates"),
+                url: "/admin/config/templates"
+              },
+              %{
+                name: gettext("Content sections"),
+                url: "/admin/config/sections"
               }
             ]
           },
           %{
-            name: gettext("Navigation"),
-            url: "/admin/navigation"
+            name: gettext("Assets"),
+            url: nil,
+            items: [
+              %{
+                name: gettext("Files"),
+                url: "/admin/assets/files"
+              },
+              %{
+                name: gettext("Images"),
+                url: "/admin/assets/images"
+              },
+              %{
+                name: gettext("Videos"),
+                url: "/admin/assets/videos"
+              }
+            ]
           },
           %{
             name: gettext("Users"),
             url: "/admin/users"
-          },
-          %{
-            name: gettext("Image Library"),
-            url: "/admin/images"
-          },
-          %{
-            name: gettext("File Library"),
-            url: "/admin/files"
           }
         ]
       },

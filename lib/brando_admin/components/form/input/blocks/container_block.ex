@@ -1,7 +1,10 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   use Surface.LiveComponent
   use Phoenix.HTML
+
   import Ecto.Changeset
+  import BrandoAdmin.Components.Form.Input.Blocks.Utils
+
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
   alias BrandoAdmin.Components.Modal
@@ -18,6 +21,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
   data uid, :string
   data class, :string
   data blocks, :list
+  data block_forms, :list
   data block_data, :form
   data block_count, :integer
   data insert_index, :integer
@@ -35,6 +39,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
       |> List.first()
 
     blocks = v(block_data, :blocks)
+    block_forms = inputs_for_blocks(block_data, :blocks)
 
     block_count = Enum.count(blocks || [])
 
@@ -44,6 +49,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
      |> assign(:uid, v(block, :uid))
      |> assign(:class, v(block_data, :class))
      |> assign(:blocks, blocks || [])
+     |> assign(:block_forms, block_forms || [])
      |> assign(:block_data, block_data)
      |> assign(:block_count, block_count)}
   end
@@ -79,7 +85,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         <Blocks.BlockRenderer
           id={"#{@block.id}-container-blocks"}
           base_form={@base_form}
-          blocks={@blocks}
+          blocks={@block_forms}
           block_count={@block_count}
           insert_index={@insert_index}
           insert_block="insert_block"
@@ -107,7 +113,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
         %{"index" => index_binary, "module-id" => module_id_binary},
         %{
           assigns: %{
-            blocks: blocks,
             base_form: form,
             uid: block_uid,
             block: %{id: block_id}
@@ -126,45 +131,48 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.ContainerBlock do
 
     # build a module block from module
 
+    generated_uid = Brando.Utils.generate_uid() |> IO.inspect(label: "generated UID")
+
+    refs_with_generated_uids =
+      put_in(
+        module.refs,
+        [Access.all(), Access.key(:data), Access.key(:uid)],
+        Brando.Utils.generate_uid()
+      )
+
     new_block = %Brando.Blueprint.Villain.Blocks.ModuleBlock{
       type: "module",
       data: %Brando.Blueprint.Villain.Blocks.ModuleBlock.Data{
         module_id: module_id,
         multi: module.multi,
         vars: module.vars,
-        refs: module.refs
+        refs: refs_with_generated_uids
       },
-      uid: Brando.Utils.generate_uid()
+      uid: generated_uid
     }
 
     # TODO -- deep search? inside sections, etc
     data = get_field(changeset, :data)
     source_position = Enum.find_index(data, &(&1.uid == block_uid))
-    old_block = Enum.at(data, source_position)
+    original_block = Enum.at(data, source_position)
+    sub_blocks = original_block.data.blocks || []
 
     # TODO: use dynamic data field
     {index, ""} = Integer.parse(index_binary)
-    new_blocks = List.insert_at(blocks, index, new_block)
-    updated_block = put_in(old_block, [Access.key(:data), Access.key(:blocks)], new_blocks)
+    new_blocks = List.insert_at(sub_blocks, index, new_block)
+    updated_block = put_in(original_block, [Access.key(:data), Access.key(:blocks)], new_blocks)
 
     # switch out container block
     # TODO: deep search?
     # TODO: use dynamic data field here
 
-    new_data =
-      put_in(
-        data,
-        [
-          Access.filter(&match?(%{uid: ^block_uid}, &1))
-        ],
-        updated_block
-      )
+    new_data = put_in(data, [Access.filter(&match?(%{uid: ^block_uid}, &1))], updated_block)
 
     updated_changeset = put_change(changeset, :data, new_data)
 
     require Logger
     Logger.error("updated_changeset")
-    Logger.error(inspect(updated_changeset, pretty: true))
+    Logger.error(inspect(updated_changeset.changes, pretty: true))
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,

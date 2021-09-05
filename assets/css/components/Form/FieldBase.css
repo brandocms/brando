@@ -2,6 +2,7 @@
   background-color: #fdf8f7;
   padding: 15px;
   border-radius: 20px;
+  margin-bottom: 30px;
 
   input.text, textarea.text {
     @color bg white;
@@ -30,6 +31,12 @@
 .field-wrapper {
   width: 100%;
   margin-bottom: 30px;
+
+  .shaded & {
+    &:last-of-type {
+      margin-bottom: 0;
+    }
+  }
 
   .field-wrapper-header {
     display: flex;
