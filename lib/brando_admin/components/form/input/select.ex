@@ -6,9 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Modal
   alias BrandoAdmin.Toast
-
   alias Surface.Components.Form
-  alias Surface.Components.Form.Submit
 
   prop blueprint, :any
   prop form, :form
@@ -28,6 +26,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   data modal_id, :string
   data show_filter, :boolean
   data narrow, :boolean
+  data resetable, :boolean
 
   slot default
 
@@ -194,7 +193,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
             {/if}
 
             <div class="options">
-              <h2>Available options</h2>
+              <h2 class="titlecase">Available options</h2>
               {#if Enum.empty?(@input_options)}
                 No options found
               {/if}
@@ -335,7 +334,8 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     {:noreply,
      socket
      |> assign(:selected_option, value)
-     |> assign(:label, label)}
+     |> assign(:label, label)
+     |> push_event("b:validate", %{})}
   end
 
   def handle_event(
