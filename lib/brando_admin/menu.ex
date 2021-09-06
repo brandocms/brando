@@ -1,4 +1,16 @@
 defmodule BrandoAdmin.Menu do
+  @moduledoc """
+      menus do
+        menu_item gettext("Projects") do
+          menu_subitem gettext("Projects"), "/admin/projects/projects"
+          menu_subitem gettext("Categories"), "/admin/projects/categories"
+          menu_subitem MyApp.Project.Something
+        end
+
+        menu_item MyApp.Team.Member
+      end
+  """
+
   import Brando.Gettext
 
   defmacro __using__(_) do
@@ -12,7 +24,8 @@ defmodule BrandoAdmin.Menu do
     quote location: :keep,
           unquote: false do
       def __menus__ do
-        Enum.reverse(@menus)
+        @menus
+        |> Enum.reverse()
       end
     end
   end
@@ -101,8 +114,49 @@ defmodule BrandoAdmin.Menu do
     Map.drop(query, [:preload])
   end
 
+  defmacro menu_subitem(schema) do
+    do_menu_subitem(schema)
+  end
+
   defmacro menu_subitem(name, url) do
     do_menu_subitem(name, url)
+  end
+
+  defp do_menu_subitem(schema) do
+    quote location: :keep,
+          generated: true,
+          bind_quoted: [schema: schema] do
+      domain = schema.__naming__().domain |> Recase.to_snake()
+      plural = schema.__naming__().plural
+      require Logger
+      Logger.error("==> running with locale: #{inspect(Gettext.get_locale())}")
+
+      translated_plural =
+        Brando.Utils.try_path(schema.__translations__, [:naming, :plural]) || plural
+
+      url_base = "/admin/#{domain}/#{plural}"
+      default_listing = Enum.find(schema.__listings__, &(&1.name == :default))
+
+      if !default_listing do
+        raise Brando.Exception.BlueprintError,
+          message: "Missing default listing for menu_subitem `#{inspect(schema)}`"
+      end
+
+      query_params =
+        default_listing.query
+        |> BrandoAdmin.Menu.strip_preloads()
+        |> Plug.Conn.Query.encode()
+        |> String.replace("%3A", ":")
+        |> String.replace("%5B", "[")
+        |> String.replace("%5D", "]")
+
+      url = Enum.join([url_base, query_params], "?")
+
+      # TODO: Translation for plural?
+      var!(b_menu_subitems) = [
+        %{name: String.capitalize(translated_plural), url: url} | var!(b_menu_subitems)
+      ]
+    end
   end
 
   defp do_menu_subitem(name, url) do
