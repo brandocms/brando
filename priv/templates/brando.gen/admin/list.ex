@@ -10,7 +10,7 @@ defmodule <%= app_module %>Admin.<%= domain %>.<%= Recase.to_pascal(vue_singular
       title={gettext("<%= String.capitalize(plural) %>")}
       subtitle={gettext("Overview")}>
       <LivePatch to="/admin/<%= snake_domain %>/<%= plural %>/create" class="primary">
-        Create new
+        {gettext("Create new")}
       </LivePatch>
     </Content.Header>
 
