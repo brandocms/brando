@@ -438,9 +438,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           Enum.reject(selected_options, &(&1 == value))
       end
 
-    require Logger
-    Logger.error("==> select_option = #{inspect(selected_options, pretty: true)}")
-
     {:noreply,
      socket
      |> assign(:selected_options, selected_options)
