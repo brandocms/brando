@@ -147,8 +147,6 @@ defmodule Mix.Tasks.Brando.Install do
     {:eex, "lib/application_name_web.ex", "lib/application_name_web.ex"},
 
     # Channel + socket
-    {:eex, "lib/application_name_web/channels/admin_channel.ex",
-     "lib/application_name_web/channels/admin_channel.ex"},
     {:eex, "lib/application_name_web/channels/admin_socket.ex",
      "lib/application_name_web/channels/admin_socket.ex"},
 
