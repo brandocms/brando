@@ -87,6 +87,7 @@ locals_without_parens = [
   child_listing: 1,
   menu_item: 1,
   menu_item: 2,
+  menu_subitem: 1,
   menu_subitem: 2
 ]
 
