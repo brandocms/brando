@@ -55,7 +55,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Relation.Add do
         relation: %{type: :belongs_to, name: name}
       }) do
     """
-    remove #{inspect(name)}
+    remove #{inspect(name)}_id
     """
   end
 
